@@ -172,17 +172,20 @@ struct FailE {
   // CREATORS
   static FailE Throw_(std::monostate a0) { return {a0}; }
 
-  template <typename T1, typename T2> std::shared_ptr<ITree<T2>> cast_() const {
-    return itree_bind(itree_trigger(*this),
-                      [](const Empty_set &) -> std::shared_ptr<ITree<T2>> {
-                        throw std::logic_error("absurd case");
-                      });
-  }
+  template <typename T1, typename T2> std::shared_ptr<ITree<T2>> cast_() const;
 };
 
 template <typename T1 = void, typename T2>
 std::shared_ptr<ITree<T2>> raise0(const Nat &) {
   return FailE::Throw_(std::monostate{}).template cast_<std::any, T2>();
+}
+
+template <typename T1, typename T2>
+std::shared_ptr<ITree<T2>> FailE::cast_() const {
+  return itree_bind(itree_trigger(*this),
+                    [](const Empty_set &) -> std::shared_ptr<ITree<T2>> {
+                      throw std::logic_error("absurd case");
+                    });
 }
 
 #endif // INCLUDED_PROMOTED_METHOD_LEAKS_PARAM

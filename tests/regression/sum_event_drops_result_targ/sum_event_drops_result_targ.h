@@ -168,12 +168,7 @@ struct FailE {
   // CREATORS
   static FailE Throw_(std::monostate a0) { return {a0}; }
 
-  template <typename T1, typename T2> std::shared_ptr<ITree<T2>> cast_() const {
-    return itree_bind(itree_trigger(*this),
-                      [](const Empty_set &) -> std::shared_ptr<ITree<T2>> {
-                        throw std::logic_error("absurd case");
-                      });
-  }
+  template <typename T1, typename T2> std::shared_ptr<ITree<T2>> cast_() const;
 };
 
 template <typename T1 = void, typename T2>
@@ -186,5 +181,13 @@ template <typename x = void> using E2 = Sum1<FailE, FailE, x>;
 struct SumEventDropsResultTarg {
   static std::shared_ptr<ITree<std::pair<Nat, Nat>>> use(const List<Nat> &l);
 };
+
+template <typename T1, typename T2>
+std::shared_ptr<ITree<T2>> FailE::cast_() const {
+  return itree_bind(itree_trigger(*this),
+                    [](const Empty_set &) -> std::shared_ptr<ITree<T2>> {
+                      throw std::logic_error("absurd case");
+                    });
+}
 
 #endif // INCLUDED_SUM_EVENT_DROPS_RESULT_TARG

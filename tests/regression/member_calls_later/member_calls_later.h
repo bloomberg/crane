@@ -1,7 +1,6 @@
 #ifndef INCLUDED_MEMBER_CALLS_LATER
 #define INCLUDED_MEMBER_CALLS_LATER
 
-#include "crane_fn.h"
 #include "small_vector.h"
 #include <atomic>
 #include <memory>
@@ -141,56 +140,16 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  Nat deeper() const {
-    const Tree *_self = this;
-
-    /// _Enter: captures varying parameters for each recursive call.
-    struct _Enter {
-      const Tree *_self;
-    };
-
-    /// _After_Node: saves [a0], dispatches next recursive call.
-    struct _After_Node {
-      Tree *a0;
-    };
-
-    /// _Combine_Node: receives partial results, combines with _result from
-    /// final call.
-    struct _Combine_Node {
-      Nat _result;
-    };
-
-    using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
-    Nat _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{_self});
-    /// Loopified deeper: _Enter -> _After_Node -> _Combine_Node.
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
-        const Tree *_self = _f._self;
-        auto &&_sv = *_self;
-        if (std::holds_alternative<typename Tree::Leaf>(_sv.v())) {
-          _result = Nat::o();
-        } else {
-          const auto &[a0, a1] = std::get<typename Tree::Node>(_sv.v());
-          _stack.emplace_back(_After_Node{crane_raw(a0)});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
-        }
-      } else if (std::holds_alternative<_After_Node>(_frame)) {
-        auto _f = std::move(std::get<_After_Node>(_frame));
-        _stack.emplace_back(_Combine_Node{std::move(_result)});
-        _stack.emplace_back(_Enter{_f.a0});
-      } else {
-        auto _f = std::move(std::get<_Combine_Node>(_frame));
-        _result =
-            Nat::s(Helper::pick(std::move(_result), std::move(_f._result)));
-      }
-    }
-    return _result;
-  }
+  Nat deeper() const;
 };
+
+inline Nat Tree::deeper() const {
+  if (std::holds_alternative<typename Tree::Leaf>(this->v())) {
+    return Nat::o();
+  } else {
+    const auto &[a0, a1] = std::get<typename Tree::Node>(this->v());
+    return Nat::s(Helper::pick(a0->deeper(), a1->deeper()));
+  }
+}
 
 #endif // INCLUDED_MEMBER_CALLS_LATER

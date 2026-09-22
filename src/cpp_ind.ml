@@ -142,6 +142,23 @@ let impl_decls = function
         defs;
       List.map (fun (ds, env, _) -> (env, ds)) defs
 
+(** The struct a module's declarations are written inside of, when the module is
+    written as a struct at all.
+
+    An imported module's wrapper is recorded, because the name it is given is
+    not always its own.  A module declared in the unit being extracted is not:
+    it is emitted as a struct named after itself, and nothing records that,
+    because nothing has to -- the visibility stack is still standing where its
+    members are spelled.  Both kinds are emitted after every datatype, so a
+    datatype's member naming either one is naming something still to come. *)
+let module_struct_name (mp : ModPath.t) : string option =
+  match Hashtbl.find_opt wrapper_module_table mp with
+  | Some name -> Some name
+  | None -> (
+    match mp with
+    | MPdot (_, lbl) -> Some (String.capitalize_ascii (Label.to_string lbl))
+    | MPfile _ | MPbound _ -> None )
+
 (** Member definitions a datatype struct at namespace scope gave up because
     their bodies name a module's struct, which is emitted after every datatype
     and cannot be moved in front of one it holds by value.  Written at the very
@@ -590,7 +607,7 @@ let ind_header_decls kn ind =
             ~names:(fun r ->
               let mp = modpath_of_r r in
               (not (ModPath.equal mp home))
-              && Hashtbl.mem wrapper_module_table mp
+              && module_struct_name mp <> None
               (* A module path in the table says where the name was written in
                  Rocq, not which struct it ends up in: a function promoted onto
                  a datatype is emitted with that datatype, among the structs
@@ -605,8 +622,7 @@ let ind_header_decls kn ind =
                  after itself, and a module of that same name is merged into
                  it -- so the callee is a sibling already above us, not a
                  struct still to come. *)
-              && not (List.mem (Hashtbl.find_opt wrapper_module_table mp)
-                        own_nspace_names) )
+              && not (List.mem (module_struct_name mp) own_nspace_names) )
             group
         in
         (* Rendered here rather than carried to the assembly as declarations:
