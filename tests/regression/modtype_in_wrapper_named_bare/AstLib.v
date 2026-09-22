@@ -13,7 +13,7 @@
 
 From Crane Require Import Mapping.Std.
 From Stdlib Require Import Arith PeanoNat.
-From CraneTestsWIP Require Import modtype_in_wrapper_named_bare.Rid.
+From CraneTestsRegression Require Import modtype_in_wrapper_named_bare.Rid.
 
 (** Colliding: its capitalised label is [Coll]'s inductive, so it fires the
     wrapper -- and the printer flattens it into the wrapper's body. *)

@@ -2352,6 +2352,25 @@ let do_struct_with_decl_tracking ~is_header f s =
                     (String.capitalize_ascii (string_of_modfile mp)))
           in
           if is_header then
+            (* A module type is a concept, and C++ has no member concepts, so
+               one written among a wrapper's children cannot stay there -- and
+               cannot simply move ahead of the wrapper either, because a
+               functor elsewhere may be constrained by it and be emitted
+               first.  It goes where the concepts of a nested module's
+               typeclasses already go, which is the top of the file.  Being
+               unwritable inside the struct used to be answered by dropping
+               it. *)
+            let modtype_sels, sel =
+              List.partition
+                (fun (_, se) -> match se with SEmodtype _ -> true | _ -> false)
+                sel
+            in
+            List.iter
+              (fun x ->
+                let pp = f x in
+                if not (Pp.ismt pp) then
+                  file_scope_concepts := !file_scope_concepts @ [pp] )
+              modtype_sels;
             let non_colliding_pp, colliding_pp =
               with_render_ctx
                 (fun c -> { c with rc_in_struct = true })
@@ -2401,16 +2420,19 @@ let do_struct_with_decl_tracking ~is_header f s =
               else
                 non_colliding_pp ++ cut2 () ++ colliding_pp
             in
-            if Pp.ismt body then
-              mt ()
-            else
-              str "struct "
-              ++ str parent_name
-              ++ str " {"
-              ++ fnl ()
-              ++ body
-              ++ fnl ()
-              ++ str "};"
+            let struct_pp =
+              if Pp.ismt body then
+                mt ()
+              else
+                str "struct "
+                ++ str parent_name
+                ++ str " {"
+                ++ fnl ()
+                ++ body
+                ++ fnl ()
+                ++ str "};"
+            in
+            struct_pp
           else
             let non_colliding_pp, colliding_pp =
               with_render_ctx

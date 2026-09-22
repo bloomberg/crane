@@ -1,8 +1,8 @@
 From Crane Require Import Mapping.Std.
-From CraneTestsWIP Require Import modtype_in_wrapper_named_bare.Coll.
-From CraneTestsWIP Require Import modtype_in_wrapper_named_bare.Rid.
-From CraneTestsWIP Require Import modtype_in_wrapper_named_bare.AstLib.
-From CraneTestsWIP Require Import modtype_in_wrapper_named_bare.MkTbl.
+From CraneTestsRegression Require Import modtype_in_wrapper_named_bare.Coll.
+From CraneTestsRegression Require Import modtype_in_wrapper_named_bare.Rid.
+From CraneTestsRegression Require Import modtype_in_wrapper_named_bare.AstLib.
+From CraneTestsRegression Require Import modtype_in_wrapper_named_bare.MkTbl.
 
 (** The control: the bystander named through a [::] reference. *)
 Definition viaQualified (a b : raw_id) : bool :=

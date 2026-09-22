@@ -5,6 +5,7 @@
 #include "small_vector.h"
 #include <any>
 #include <atomic>
+#include <concepts>
 #include <memory>
 #include <stdexcept>
 #include <utility>
@@ -14,6 +15,13 @@ struct Nat;
 template <typename A> struct List;
 struct Collider;
 struct Raw_id;
+template <typename M>
+concept Ord = requires {
+  typename M::t;
+  {
+    M::eq_dec(std::declval<typename M::t>(), std::declval<typename M::t>())
+  } -> std::same_as<bool>;
+};
 
 struct Nat {
   // TYPES
