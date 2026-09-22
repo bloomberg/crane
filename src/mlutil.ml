@@ -1231,16 +1231,20 @@ let rec named_lams ids a =
 
 (** {2 The same for a specific identifier (resp. anonymous, dummy)} *)
 
+(** [many_lams id a tys] wraps [a] in one lambda per entry of [tys], all bound
+    to [id].  The list is in de Bruijn order: its head becomes the innermost
+    binder, index 1 in [a]. *)
 let rec many_lams id a = function
-  | 0 -> a
-  | n -> many_lams id (MLlam (id, Taxiom, a)) (pred n)
-(* Taxiom is safe here: anonym_tmp_lams is only called from general_optimize_fix,
-   where normalize immediately beta-reduces these lambdas away before any C++
-   translation path sees them. *)
+  | [] -> a
+  | ty :: tys -> many_lams id (MLlam (id, ty, a)) tys
 
-let anonym_tmp_lams a n = many_lams (Tmp anonymous_name) a n
+let anonym_tmp_lams a tys = many_lams (Tmp anonymous_name) a tys
 
-let dummy_lams a n = many_lams Dummy a n
+(* [Taxiom] is written deliberately here and nowhere else: these binders are
+   [Dummy], so the erasure pass removes them and no C++ path ever asks what
+   they are.  A binder that survives needs a real type -- see
+   {!general_optimize_fix}. *)
+let dummy_lams a n = many_lams Dummy a (List.init n (fun _ -> Taxiom))
 
 (** {2 mixed according to a signature} *)
 
@@ -2029,7 +2033,30 @@ let general_optimize_fix f ids n args m c =
   in
   List.iteri aux args;
   let args_f = List.rev_map (fun i -> MLrel (i + m + 1)) (Array.to_list v) in
-  let new_f = anonym_tmp_lams (MLapp (MLrel (n + m + 1), args_f)) m in
+  (* The [m] binders introduced here stand for [args], one each, so a binder's
+     type is the type of the outer binder its argument names -- [aux] above has
+     already established that every argument is such an [MLrel].  Binder [d]
+     counting from the innermost is argument [m - d], because [args_f] maps
+     argument [i] to [MLrel (m - i)].
+
+     They used to be written [Taxiom] on the premise that [normalize]
+     beta-reduces them away before any C++ path sees them.  The premise holds
+     only where the recursive occurrence is {e applied}: a point-free
+     self-reference is no redex, the lambdas survive, and [Taxiom] prints as
+     the undeclared C++ type [axiom]. *)
+  let arg_ty = function
+    | MLrel j -> (
+      match List.nth_opt ids (j - 1) with Some (_, ty) -> ty | None -> Tunknown
+      )
+    | _ -> Tunknown
+  in
+  let new_tys =
+    List.init m (fun d ->
+        match List.nth_opt args (m - 1 - d) with
+        | Some arg -> arg_ty arg
+        | None -> Tunknown )
+  in
+  let new_f = anonym_tmp_lams (MLapp (MLrel (n + m + 1), args_f)) new_tys in
   let new_c = named_lams ids (normalize (MLapp (ast_subst new_f c, args))) in
   MLfix (0, [|f|], [|new_c|], false)
 

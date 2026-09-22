@@ -9793,3 +9793,14 @@
   (alias runtest)
   (deps eta_expanded_class_method_param_erased.t.exe)
   (action (run ./eta_expanded_class_method_param_erased.t.exe))))
+
+(subdir point_free_fix_binder_untyped
+ (rule
+  (targets point_free_fix_binder_untyped.t.exe)
+  (deps Use.vo point_free_fix_binder_untyped.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} point_free_fix_binder_untyped.t.exe point_free_fix_binder_untyped.cpp point_free_fix_binder_untyped.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps point_free_fix_binder_untyped.t.exe)
+  (action (run ./point_free_fix_binder_untyped.t.exe))))
