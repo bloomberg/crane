@@ -1,7 +1,7 @@
 #include "hk_constraint_carrier_two_params.h"
 
 template <typename _CraneTcArg>
-using _crane_carrier_tc =
+using _crane_carrier_tc_56255da4efec539e =
     outer1<_CraneTcArg, two<_CraneTcArg, List<_CraneTcArg>>>;
 
 List<std::any> TFunctor_list(std::function<std::any(std::any)> x0_,
@@ -11,7 +11,7 @@ List<std::any> TFunctor_list(std::function<std::any(std::any)> x0_,
 
 outer1<Nat, two<Nat, List<Nat>>>
 HkConstraintCarrierTwoParams::run(const outer1<Nat, two<Nat, List<Nat>>> &m) {
-  return tfmap<_crane_carrier_tc>(
+  return tfmap<_crane_carrier_tc_56255da4efec539e>(
       []() {
         return [](std::function<std::any(std::any)> _x0,
                   outer1<std::any, two<std::any, List<std::any>>> _x1)

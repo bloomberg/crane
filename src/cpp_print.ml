@@ -914,16 +914,27 @@ let ctor_holder_name_for ~base body =
     argument. *)
 let ctor_alias_tvar = Minicpp.ctor_alias_tvar
 
+(** The name of the alias template for [body], as a function of [body] alone.
+
+    Not a counter.  {!ctor_alias_decls} is drained once per file, so a counter
+    allocated against it restarts in the implementation file and binds the
+    names the header already bound to different bodies -- and the use sites,
+    written from whichever file reached them, then name entries their own
+    table never declared.  Repeating a [using] with the same definition is
+    legal, which is what makes the per-file draining sound; repeating the
+    {e name} with a different definition is the error it was read as being.
+
+    A digest is what makes the two agree without either file knowing what the
+    other minted: the same body is the same name in both, so both may declare
+    it and every use site names what it meant.  The body is a rendered C++
+    type, so the digest is over text that is already canonical. *)
 let ctor_alias_name_for ~base body =
   match List.assoc_opt body !ctor_alias_decls with
   | Some name -> name
   | None ->
-    let taken name = List.exists (fun (_, n) -> String.equal n name) !ctor_alias_decls in
-    let rec fresh i =
-      let name = base ^ "_tc" ^ (if i = 0 then "" else string_of_int i) in
-      if taken name then fresh (i + 1) else name
+    let name =
+      base ^ "_tc_" ^ String.sub (Digest.to_hex (Digest.string body)) 0 16
     in
-    let name = fresh 0 in
     ctor_alias_decls := (body, name) :: !ctor_alias_decls;
     name
 
@@ -3866,7 +3877,13 @@ let take_forward_struct_decls () =
     the implementation file, which includes it, has no use for one.  An alias
     is minted by whichever file writes the use that needs it, and a use in the
     implementation file is reached while the header has already been handed
-    over -- so it has to be declared where it was minted. *)
+    over -- so it has to be declared where it was minted.
+
+    Draining is sound only because {!ctor_alias_name_for} names an alias after
+    its body rather than after its position in this list: a body minted in both
+    files gets one name and two identical declarations, which is legal, while a
+    counter would give the second file the first file's names for other
+    bodies. *)
 let take_ctor_alias_decls ~is_header () =
   let l =
     List.rev_map

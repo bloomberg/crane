@@ -13,7 +13,7 @@ struct Nat;
 enum class AE;
 struct FailE;
 template <typename _CraneTcArg>
-using itree_tc = std::shared_ptr<ITree<_CraneTcArg>>;
+using itree_tc_296b3b7af4bd1a71 = std::shared_ptr<ITree<_CraneTcArg>>;
 
 struct Nat {
   // TYPES
@@ -94,17 +94,19 @@ using st = Nat;
 
 struct M {
   template <typename T1 = void, typename T2>
-  static Monads::template stateT<st, itree_tc, T2> base(AE) {
+  static Monads::template stateT<st, itree_tc_296b3b7af4bd1a71, T2> base(AE) {
     return [](Nat s) { return itree_ret(std::make_pair(s, s)); };
   }
 
   template <typename T1 = void, typename T2, typename F0>
-  static Monads::template stateT<st, itree_tc, T2> run(F0 &&h, AE e) {
+  static Monads::template stateT<st, itree_tc_296b3b7af4bd1a71, T2> run(F0 &&h,
+                                                                        AE e) {
     return [=](const Nat &s) mutable { return h(e)(s); };
   }
 
   template <typename T1 = void, typename T2>
-  static Monads::template stateT<st, itree_tc, T2> fused(AE e) {
+  static Monads::template stateT<st, itree_tc_296b3b7af4bd1a71, T2>
+  fused(AE e) {
     return run<T1, T2>(
         []<typename _T2>(const AE<_T2> &a0) -> decltype(auto) {
           return base<_T2, std::invoke_result_t<decltype(a0) &, _T2 &>>(a0);

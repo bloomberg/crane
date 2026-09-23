@@ -1,7 +1,8 @@
 #include "hk_carrier_alias_applied_as_type.h"
 
 template <typename _CraneTcArg>
-using _crane_carrier_tc = modul<_CraneTcArg, List<_CraneTcArg>>;
+using _crane_carrier_tc_ca986222598eb83d =
+    modul<_CraneTcArg, List<_CraneTcArg>>;
 
 List<std::any> TFunctor_list(std::function<std::any(std::any)> x0_,
                              const List<std::any> &x1_) {
@@ -10,7 +11,7 @@ List<std::any> TFunctor_list(std::function<std::any(std::any)> x0_,
 
 modul<Nat, List<Nat>>
 HkCarrierAliasAppliedAsType::run(const modul<Nat, List<Nat>> &m) {
-  return tfmap<_crane_carrier_tc>(
+  return tfmap<_crane_carrier_tc_ca986222598eb83d>(
       []() {
         return [](std::function<std::any(std::any)> _x0,
                   modul<std::any, List<std::any>> _x1)

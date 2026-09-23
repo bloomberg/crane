@@ -1,7 +1,7 @@
 #include "erased_pair_pattern_probed_at_any.h"
 
 template <typename _CraneTcArg>
-using _crane_carrier_tc = pairs<_CraneTcArg, box<_CraneTcArg>>;
+using _crane_carrier_tc_e12ce0a4016b700b = pairs<_CraneTcArg, box<_CraneTcArg>>;
 
 List<std::any> TFunctor_list(std::function<std::any(std::any)> x0_,
                              const List<std::any> &x1_) {
@@ -14,7 +14,7 @@ box<std::any> TFunctor_box(std::function<std::any(std::any)> f,
 }
 
 pairs<bool, box<bool>> run(const pairs<Nat, box<Nat>> &m) {
-  return tfmap<_crane_carrier_tc>(
+  return tfmap<_crane_carrier_tc_e12ce0a4016b700b>(
       []() {
         return [](std::function<std::any(std::any)> _x0,
                   pairs<std::any, box<std::any>> _x1)

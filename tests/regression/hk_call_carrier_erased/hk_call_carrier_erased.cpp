@@ -1,9 +1,10 @@
 #include "hk_call_carrier_erased.h"
 
 template <typename _CraneTcArg>
-using _crane_carrier_tc = List<box<_CraneTcArg>>;
+using _crane_carrier_tc_659c8e94e4cfa3a6 = List<box<_CraneTcArg>>;
 template <typename _CraneTcArg>
-using _crane_carrier_tc1 = outer<_CraneTcArg, List<_CraneTcArg>>;
+using _crane_carrier_tc_9829950dbe1dea9a =
+    outer<_CraneTcArg, List<_CraneTcArg>>;
 
 List<std::any> TFunctor_list(std::function<std::any(std::any)> x0_,
                              const List<std::any> &x1_) {
@@ -18,7 +19,7 @@ box<std::any> TFunctor_box(std::function<std::any(std::any)> f,
 Nat HkCallCarrierErased::bump(Nat n) { return Nat::s(std::move(n)); }
 
 List<box<Nat>> HkCallCarrierErased::on_boxes(const List<box<Nat>> &l) {
-  return tfmap<_crane_carrier_tc>(
+  return tfmap<_crane_carrier_tc_659c8e94e4cfa3a6>(
       []() {
         return [](std::function<std::any(std::any)> _x0,
                   List<box<std::any>> _x1) -> List<box<std::any>> {
@@ -34,7 +35,7 @@ List<box<Nat>> HkCallCarrierErased::on_boxes(const List<box<Nat>> &l) {
 
 outer<Nat, List<Nat>>
 HkCallCarrierErased::on_outer(const outer<Nat, List<Nat>> &m) {
-  return tfmap<_crane_carrier_tc1>(
+  return tfmap<_crane_carrier_tc_9829950dbe1dea9a>(
       []() {
         return [](std::function<std::any(std::any)> _x0,
                   outer<std::any, List<std::any>> _x1)

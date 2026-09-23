@@ -15,7 +15,7 @@
 struct Nat;
 enum class LocalE;
 template <typename _CraneTcArg>
-using itree_tc = std::shared_ptr<ITree<_CraneTcArg>>;
+using itree_tc_296b3b7af4bd1a71 = std::shared_ptr<ITree<_CraneTcArg>>;
 
 struct Nat {
   // TYPES
@@ -110,21 +110,24 @@ concept Params = requires {
 };
 
 template <Params _tcI0, typename T1 = void, typename T2>
-Monads::template stateT<lenv, itree_tc, T2> handle_local_debug(LocalE) {
+Monads::template stateT<lenv, itree_tc_296b3b7af4bd1a71, T2>
+handle_local_debug(LocalE) {
   return [=](Nat s) mutable {
     return itree_ret(std::make_pair(s, s.add(_tcI0::width())));
   };
 }
 
 template <typename T1 = void, typename T2, typename F0>
-Monads::template stateT<lenv, itree_tc, T2> handle_local_stack(F0 &&h,
-                                                               LocalE e) {
+Monads::template stateT<lenv, itree_tc_296b3b7af4bd1a71, T2>
+handle_local_stack(F0 &&h, LocalE e) {
   return h(e);
 }
 
 template <typename T1 = void, typename T2>
-Monads::template stateT<Big, itree_tc, T2>
-on_ls(std::type_identity_t<Monads::template stateT<lenv, itree_tc, T2>> c) {
+Monads::template stateT<Big, itree_tc_296b3b7af4bd1a71, T2>
+on_ls(std::type_identity_t<
+      Monads::template stateT<lenv, itree_tc_296b3b7af4bd1a71, T2>>
+          c) {
   return [=](const std::pair<Nat, Nat> &b) mutable {
     std::pair<Nat, T2> sa = c(b.first);
     return itree_ret(
@@ -133,11 +136,12 @@ on_ls(std::type_identity_t<Monads::template stateT<lenv, itree_tc, T2>> c) {
 }
 
 template <Params _tcI0, typename T1>
-Monads::template stateT<Big, itree_tc, T1> fused_local(LocalE e) {
+Monads::template stateT<Big, itree_tc_296b3b7af4bd1a71, T1>
+fused_local(LocalE e) {
   return on_ls<LocalE, T1>(handle_local_stack<LocalE, T1>(
       []() {
-        return [](LocalE _x0)
-                   -> Monads::template stateT<lenv, itree_tc, std::any> {
+        return [](LocalE _x0) -> Monads::template stateT<
+                                  lenv, itree_tc_296b3b7af4bd1a71, std::any> {
           return handle_local_debug<_tcI0, LocalE>(_x0);
         };
       }(),

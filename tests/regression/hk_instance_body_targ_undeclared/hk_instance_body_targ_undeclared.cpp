@@ -1,9 +1,9 @@
 #include "hk_instance_body_targ_undeclared.h"
 
 template <typename _CraneTcArg>
-using _crane_carrier_tc = std::optional<List<_CraneTcArg>>;
+using _crane_carrier_tc_3993875251ddebba = std::optional<List<_CraneTcArg>>;
 template <typename _CraneTcArg>
-using _crane_carrier_tc1 = List<List<_CraneTcArg>>;
+using _crane_carrier_tc_81cb5e99b5f39a8b = List<List<_CraneTcArg>>;
 
 List<std::any> TFunctor_list(std::function<std::any(std::any)> x0_,
                              const List<std::any> &x1_) {
@@ -14,7 +14,7 @@ Nat HkInstanceBodyTargUndeclared::bump(Nat n) { return Nat::s(std::move(n)); }
 
 std::optional<List<Nat>>
 HkInstanceBodyTargUndeclared::on_option(const std::optional<List<Nat>> &o) {
-  return tfmap<_crane_carrier_tc>(
+  return tfmap<_crane_carrier_tc_3993875251ddebba>(
       []() {
         return [](std::function<std::any(std::any)> _x0,
                   std::optional<List<std::any>> _x1)
@@ -31,7 +31,7 @@ HkInstanceBodyTargUndeclared::on_option(const std::optional<List<Nat>> &o) {
 
 List<List<Nat>>
 HkInstanceBodyTargUndeclared::on_list(const List<List<Nat>> &l) {
-  return tfmap<_crane_carrier_tc1>(
+  return tfmap<_crane_carrier_tc_81cb5e99b5f39a8b>(
       []() {
         return [](std::function<std::any(std::any)> _x0,
                   List<List<std::any>> _x1) -> List<List<std::any>> {

@@ -16,7 +16,7 @@
 struct Nat;
 template <typename T> struct MemM;
 template <typename _CraneTcArg>
-using itree_tc = std::shared_ptr<ITree<_CraneTcArg>>;
+using itree_tc_296b3b7af4bd1a71 = std::shared_ptr<ITree<_CraneTcArg>>;
 
 struct Nat {
   // TYPES
@@ -133,7 +133,7 @@ concept Params = requires {
 };
 
 template <Params _tcI0, typename T1 = void, typename T2>
-Monads::template stateT<st, itree_tc, T2> base(MemM<T2> m) {
+Monads::template stateT<st, itree_tc_296b3b7af4bd1a71, T2> base(MemM<T2> m) {
   return [=](const Nat &s) mutable {
     const auto &[a0] = m;
     return itree_ret(std::make_pair(s.add(_tcI0::width()), a0));
@@ -141,18 +141,21 @@ Monads::template stateT<st, itree_tc, T2> base(MemM<T2> m) {
 }
 
 template <typename T1 = void, typename T2, typename F0>
-Monads::template stateT<st, itree_tc, T2> run(F0 &&h, const MemM<T2> &m) {
+Monads::template stateT<st, itree_tc_296b3b7af4bd1a71, T2>
+run(F0 &&h, const MemM<T2> &m) {
   return h(m);
 }
 
 template <Params _tcI0, typename T1>
-Monads::template stateT<st, itree_tc, T1> fused(const MemM<T1> &m) {
+Monads::template stateT<st, itree_tc_296b3b7af4bd1a71, T1>
+fused(const MemM<T1> &m) {
   return run(
       []() {
-        return []<typename T2>(
-                   MemM<T2> _x0) -> Monads::template stateT<st, itree_tc, T2> {
-          return base<_tcI0>(_x0);
-        };
+        return
+            []<typename T2>(MemM<T2> _x0)
+                -> Monads::template stateT<st, itree_tc_296b3b7af4bd1a71, T2> {
+              return base<_tcI0>(_x0);
+            };
       }(),
       m);
 }

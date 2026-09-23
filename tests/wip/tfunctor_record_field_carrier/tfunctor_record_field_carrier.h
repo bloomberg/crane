@@ -18,7 +18,7 @@ template <typename A> struct List;
 template <typename t> struct Exp;
 template <typename t> struct glob;
 template <typename _CraneTcArg>
-using _crane_carrier_tc = std::optional<Exp<_CraneTcArg>>;
+using _crane_carrier_tc_6170063419090647 = std::optional<Exp<_CraneTcArg>>;
 
 struct Nat {
   // TYPES
@@ -418,7 +418,7 @@ glob<std::any> TFunctor_glob(std::function<std::any(std::any)> f,
 template <typename F0>
   requires std::is_invocable_r_v<Nat, F0 &, Nat &>
 std::optional<Exp<Nat>> use_option(F0 &&f, const std::optional<Exp<Nat>> &o) {
-  return tfmap<_crane_carrier_tc>(
+  return tfmap<_crane_carrier_tc_6170063419090647>(
       []() {
         return [](std::function<std::any(std::any)> _x0,
                   std::optional<Exp<std::any>> _x1)
