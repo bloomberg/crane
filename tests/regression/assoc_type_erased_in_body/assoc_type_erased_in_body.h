@@ -165,7 +165,6 @@ I>concept IPtr = requires {
 } || requires {
   { I::zero_iptr } -> std::convertible_to<typename I::iptr>;
 });
-using iptr = std::any;
 
 struct IPZ {
   using iptr = Nat;
@@ -179,6 +178,7 @@ const prov nil_prov = List<Nat>::nil();
 template <typename
 I>concept PTR = requires {
   typename I::ptr;
+  { I::ptr_tag() } -> std::convertible_to<Nat>;
 } && (requires {
   { I::null() } -> std::convertible_to<typename I::ptr>;
 } || requires {
@@ -187,10 +187,14 @@ I>concept PTR = requires {
 
 template <IPtr _tcI0> struct PointerV {
   using iptr = typename _tcI0::iptr;
-  using ptr = std::pair<iptr, prov>;
+  using ptr = std::pair<typename _tcI0::iptr, prov>;
 
-  static std::pair<iptr, prov> null() {
-    return std::make_pair(std::any(_tcI0::zero_iptr()), nil_prov);
+  static std::pair<typename _tcI0::iptr, prov> null() {
+    return std::make_pair(_tcI0::zero_iptr(), nil_prov);
+  }
+
+  static Nat ptr_tag() {
+    return Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))));
   }
 };
 

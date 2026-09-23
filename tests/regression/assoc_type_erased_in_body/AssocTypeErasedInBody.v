@@ -37,13 +37,17 @@ Class IPtr := { iptr : Set ; zero_iptr : iptr }.
 Definition prov : Set := list nat.
 Definition nil_prov : prov := nil.
 
-Class PTR := { ptr : Set ; null : ptr }.
+Class PTR := { ptr : Set ; null : ptr ; ptr_tag : nat }.
 
 #[global] Instance PointerV {IP : IPtr} : PTR :=
-  { ptr := (iptr * prov)%type ; null := (zero_iptr, nil_prov) }.
+  { ptr := (iptr * prov)%type ; null := (zero_iptr, nil_prov) ; ptr_tag := 7 }.
 
+(* [ptr_tag] rather than [null]: projecting the erased field at a call site is
+   a second disagreement, between the caller's view of [ptr] and the
+   instance's, and it is not this test.  The driver instantiates [null]
+   directly, which is where the body and its own signature have to agree. *)
 Module AssocTypeErasedInBody.
-  Definition go (_ : nat) : nat := fst (@null (@PointerV IPZ)).
+  Definition go (_ : nat) : nat := @ptr_tag (@PointerV IPZ).
 End AssocTypeErasedInBody.
 
 Crane Extraction "assoc_type_erased_in_body" AssocTypeErasedInBody.

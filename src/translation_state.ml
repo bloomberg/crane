@@ -276,6 +276,14 @@ let with_method_self_ns (ns : Refset'.t) (f : unit -> 'a) : 'a =
     (fun ns -> tctx := { !tctx with method_self_ns = ns })
     ns f
 
+(** [with_promoted_var_map m f] runs [f] with [m] as the resolution for the
+    promoted type variables in scope -- see {!translation_ctx.promoted_var_map}. *)
+let with_promoted_var_map (m : (Id.t * cpp_type) list) (f : unit -> 'a) : 'a =
+  with_field
+    (fun c -> c.promoted_var_map)
+    (fun m -> tctx := { !tctx with promoted_var_map = m })
+    m f
+
 (** [with_in_constructor_expr b f] runs [f] with
     {!translation_ctx.in_constructor_expr} set to [b]. *)
 let with_in_constructor_expr (b : bool) (f : unit -> 'a) : 'a =

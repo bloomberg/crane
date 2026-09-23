@@ -18,6 +18,17 @@
 
 ; Test rules - compile C++ and run tests
 
+(subdir assoc_type_erased_in_body
+ (rule
+  (targets assoc_type_erased_in_body.t.exe)
+  (deps AssocTypeErasedInBody.vo assoc_type_erased_in_body.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} assoc_type_erased_in_body.t.exe assoc_type_erased_in_body.cpp assoc_type_erased_in_body.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps assoc_type_erased_in_body.t.exe)
+  (action (run ./assoc_type_erased_in_body.t.exe))))
+
 (subdir erased_dict_param_kept_at_use_site
  (rule
   (targets erased_dict_param_kept_at_use_site.t.exe)

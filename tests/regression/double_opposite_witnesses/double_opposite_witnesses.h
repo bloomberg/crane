@@ -103,11 +103,12 @@ struct DoubleOppositeWitnessesCase {
   template <PreCategory _tcI0> struct opposite_category {
     using Obj = typename _tcI0::Obj;
 
-    static std::any identity(Obj x) {
+    static std::any identity(typename _tcI0::Obj x) {
       return crane_erase_fn(_tcI0::identity(std::move(x)));
     }
 
-    static std::any compose(Obj x, Obj y, Obj z, std::any f, std::any g) {
+    static std::any compose(typename _tcI0::Obj x, typename _tcI0::Obj y,
+                            typename _tcI0::Obj z, std::any f, std::any g) {
       return crane_erase_fn(
           _tcI0::compose(std::move(z), std::move(y), std::move(x), g, f));
     }
@@ -133,9 +134,13 @@ struct DoubleOppositeWitnessesCase {
     using base_category = opposite_category<typename _tcI0::base_category>;
     using Obj = typename base_category::Obj;
 
-    static Obj zero_object() { return _tcI0::zero_object(); }
+    static typename _tcI0::base_category::Obj zero_object() {
+      return _tcI0::zero_object();
+    }
 
-    static Obj suspension(std::any x) { return _tcI0::suspension(x); }
+    static typename _tcI0::base_category::Obj suspension(std::any x) {
+      return _tcI0::suspension(x);
+    }
   };
 
   struct nat_category {

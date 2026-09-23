@@ -867,6 +867,30 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
   (* Template params: typeclass params first, then type vars (matches gen_dfun
      convention) *)
   let template_params = tc_temps @ tv_temps in
+  (* A promoted associated type named inside the instance's own field bodies is
+     the associated type of one of its class-typed parameters, and resolves
+     through that parameter -- [typename _tcI0::iptr] -- exactly as it does in
+     the signature of a function taking the same parameter ({!gen_dfun} builds
+     the same map from the same function).
+
+     Without it the bodies are generated as the module-level constructor
+     expressions they are for an unparameterised instance, where an unresolved
+     promoted variable falls back to [std::any] because a module-level alias is
+     all there is to name.  Here there is [_tcI0], and the declaration next to
+     the body already uses it, so the fallback puts the two in disagreement
+     inside one struct. *)
+  let promoted_var_resolutions =
+    List.concat_map
+      (fun (tt, inst_id) ->
+        match tt with
+        | TTconcept (class_ref, _) ->
+          promoted_resolutions class_ref (Tinstance (inst_id, class_ref))
+        | _ -> [] )
+      tc_temps
+  in
+  with_promoted_var_map
+    (promoted_var_resolutions @ (!tctx).promoted_var_map)
+  @@ fun () ->
   (* Now inner_ty should be Tglob(class_ref, type_args, _) and inner_body should
      be MLcons(...) *)
   match inner_ty with
