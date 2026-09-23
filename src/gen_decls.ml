@@ -856,13 +856,33 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
     | Miniml.Tglob (_, tys, _) -> List.fold_left collect_ml_tvars acc tys
     | _ -> acc
   in
-  let tv_temps =
+  let instance_tvars =
     match inner_ty with
     | Tglob (_, type_args, _) ->
-      let raw = List.fold_left collect_ml_tvars [] type_args in
-      List.sort compare raw
-      |> List.mapi (fun i _ -> (TTtypename, tvar_id (i + 1)))
+      List.sort compare (List.fold_left collect_ml_tvars [] type_args)
     | _ -> []
+  in
+  let tv_temps =
+    List.mapi (fun i _ -> (TTtypename, tvar_id (i + 1))) instance_tvars
+  in
+  (* The declared parameters are dense -- the first one written is [T1] -- but
+     the variables they stand for need not be.  [Monad_stateT] binds [m] before
+     [S] and reaches [m] through its [Monad m] dictionary, so the carrier
+     [stateT S m] writes [Tvar 2] alone and the instance declares one parameter
+     for it.  A name list read positionally would then answer [T1] for [m] and
+     nothing for [S].  Names are therefore placed at the index each variable
+     actually has, with the gaps filled by a placeholder: a variable the
+     instance binds and does not declare has no C++ spelling here, and the
+     substitution that resolves it -- through the dictionary -- runs before
+     anything reads this list. *)
+  let tv_names_by_index =
+    let named = List.mapi (fun i v -> (v, tvar_id (i + 1))) instance_tvars in
+    List.init
+      (List.fold_left max 0 instance_tvars)
+      (fun k ->
+        match List.assoc_opt (k + 1) named with
+        | Some id -> id
+        | None -> Id.of_string "_" )
   in
   (* Template params: typeclass params first, then type vars (matches gen_dfun
      convention) *)
@@ -919,11 +939,21 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
       (* How many type variables the instance itself binds.  Not the number of
          template parameters it declares: a higher-kinded carrier ([Instance
          ... (M : Type -> Type)]) is a variable the instance's arguments name,
-         but it becomes an associated type rather than a parameter. *)
+         but it becomes an associated type rather than a parameter.
+
+         Nor is it what the carrier {e writes}.  [Monad_stateT] binds [S] and
+         [m] and its carrier [stateT S m] names only [S]: the inner monad
+         reaches the instance through the dictionary [Monad m], so it is in
+         [ty] and nowhere in [type_args].  A method body still numbers its own
+         quantifiers after it, so counting from the arguments alone leaves the
+         body's [A] one slot too high -- and the two are then read as one
+         method variable too many, which spends [_A0] on the inner monad and
+         erases [A], the variable the name was for.  The instance's own type
+         is where every variable it binds is visible. *)
       let instance_tvar_count =
         List.fold_left
           (fun n t -> max n (Mlutil.type_maxvar t))
-          (List.length tv_temps)
+          (max (List.length tv_temps) (Mlutil.type_maxvar ty))
           type_args
       in
       (* Register promoted type bindings for this instance so that call sites
@@ -955,7 +985,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
          lam_params into the env so these references resolve correctly. *)
       let base_env = snd (push_vars' (List.rev lam_params) (empty_env ())) in
       (* Collect type var names for convert_ml_type_to_cpp_type *)
-      let type_var_names = List.map snd tv_temps in
+      let type_var_names = tv_names_by_index in
       (* Set up type variable context for fixpoint lifting. Without this,
          fixpoints inside methods get lifted with wrong names and missing
          template parameters. *)

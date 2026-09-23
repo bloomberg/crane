@@ -139,6 +139,20 @@ and eq_ml_meta m1 m2 =
     as [Tunknown]: [holder[_, box[_]]].  Applying that is filling each hole,
     not appending, which would give [holder] a third argument it does not
     take. *)
+let rec type_has_hole = function
+  | Tunknown -> true
+  | Tglob (_, l, _) | Tapp (_, l) -> List.exists type_has_hole l
+  | Tarr (a, b) -> type_has_hole a || type_has_hole b
+  | Tmeta {contents = Some t} -> type_has_hole t
+  | _ -> false
+
+let rec fill_type_hole a = function
+  | Tunknown -> a
+  | Tglob (r, l, e) -> Tglob (r, List.map (fill_type_hole a) l, e)
+  | Tapp (j, l) -> Tapp (j, List.map (fill_type_hole a) l)
+  | Tarr (x, y) -> Tarr (fill_type_hole a x, fill_type_hole a y)
+  | t -> t
+
 let fill_placeholders pre args =
   let rec drop rpre n =
     match (rpre, n) with
@@ -146,28 +160,15 @@ let fill_placeholders pre args =
     | _ -> rpre
   in
   let kept = List.rev (drop (List.rev pre) (List.length args)) in
-  let rec has_hole = function
-    | Tunknown -> true
-    | Tglob (_, l, _) | Tapp (_, l) -> List.exists has_hole l
-    | Tarr (a, b) -> has_hole a || has_hole b
-    | Tmeta {contents = Some t} -> has_hole t
-    | _ -> false
-  in
-  let rec fill a = function
-    | Tunknown -> a
-    | Tglob (r, l, e) -> Tglob (r, List.map (fill a) l, e)
-    | Tapp (j, l) -> Tapp (j, List.map (fill a) l)
-    | Tarr (x, y) -> Tarr (fill a x, fill a y)
-    | t -> t
-  in
   match args with
   (* Every trailing placeholder was consumed, so the head was eta-expanded and
      appending is right.  Only a head that had too few of them -- and holes
      somewhere inside -- is a lambda body, and one argument is all such a
      spelling can say where to put. *)
   | [arg]
-    when List.length pre - List.length kept < 1 && List.exists has_hole pre ->
-    List.map (fill arg) pre
+    when List.length pre - List.length kept < 1
+         && List.exists type_has_hole pre ->
+    List.map (fill_type_hole arg) pre
   | _ -> kept @ args
 
 (** Apply a type to [args], contracting the application when the head is
@@ -204,6 +205,17 @@ let rec apply_ml_type head args =
         let u = new_meta () in
         pending_applications := (m.id, args, u) :: !pending_applications;
         u )
+    | Tarr _ when type_has_hole head -> (
+      (* A carrier that is a type-level lambda has no MiniML spelling, so what
+         extraction leaves is its body with the binder written as [Tunknown]
+         (see {!fill_placeholders}).  Where that body's head is an arrow there
+         is no constructor to extend, and applying it is filling the hole:
+         [Basics.Monads.stateT S m] unfolds to [S -> m (S * _)], and the
+         method's own variable belongs in that hole.  Left unfilled the
+         element position stays erased while everything around it is spelled,
+         which is the [std::any] in a [pair<T1, std::any>] whose neighbour is
+         concrete. *)
+      match args with [a] -> fill_type_hole a head | _ -> head )
     | Tunknown -> (
       (* The only heads extraction leaves unknown here are type constructors it
          could not name, and the one such constructor a class can be

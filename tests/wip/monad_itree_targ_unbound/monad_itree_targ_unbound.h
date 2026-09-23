@@ -148,24 +148,17 @@ struct Monads {
     template <typename _A0> using m = typename _tcI0::template m<_A0>;
 
     template <typename _A0>
-    static std::function<
-        typename _tcI0::template m<std::pair<_A0, std::any>>(_A0)>
+    static std::function<typename _tcI0::template m<std::pair<T1, _A0>>(T1)>
     ret(_A0 a) {
-      return [=](_A0 s) mutable {
-        return itree_ret(std::make_pair(s, std::any(a)));
-      };
+      return [=](T1 s) mutable { return itree_ret(std::make_pair(s, a)); };
     }
 
     template <typename _A0, typename _A1>
-    static std::function<
-        typename _tcI0::template m<std::pair<_A0, std::any>>(_A0)>
-    bind(
-        std::function<typename _tcI0::template m<std::pair<_A0, std::any>>(_A0)>
-            t,
-        std::function<typename _tcI0::template m<std::pair<_A0, std::any>>(_A0,
-                                                                           _A0)>
-            k) {
-      return [=](const _A0 &s) mutable {
+    static std::function<typename _tcI0::template m<std::pair<T1, _A1>>(T1)>
+    bind(std::function<typename _tcI0::template m<std::pair<T1, _A0>>(T1)> t,
+         std::function<typename _tcI0::template m<std::pair<T1, _A1>>(_A0, T1)>
+             k) {
+      return [=](const T1 &s) mutable {
         return itree_bind(t(s), [=](const auto &sa) mutable {
           return k(sa.second, sa.first);
         });
