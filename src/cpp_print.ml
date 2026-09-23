@@ -890,6 +890,18 @@ let ctor_alias_emitted : (string, unit) Hashtbl.t = Hashtbl.create 16
 
 let reset_ctor_alias_emitted () = Hashtbl.reset ctor_alias_emitted
 
+(** Whether [text] spells [name].  A synthesised name ends in a digest of the
+    body it abbreviates, so it cannot be a fragment of another identifier and
+    a plain substring search is exact. *)
+let mentions_name text name =
+  let n = String.length name and m = String.length text in
+  let rec go i = i + n <= m && (String.sub text i n = name || go (i + 1)) in
+  n > 0 && go 0
+
+(** The synthesised names minted but not yet declared. *)
+let pending_ctor_alias_names () =
+  List.map snd !ctor_alias_decls @ List.map snd !ctor_holder_decls
+
 (** The C++ identifiers appearing in [text], as whole tokens.  Used to tell
     whether a rendered type body really names a template parameter, which a
     structural walk over the type cannot: a custom mapping's replacement text
@@ -3900,7 +3912,7 @@ let take_forward_struct_decls () =
     files gets one name and two identical declarations, which is legal, while a
     counter would give the second file the first file's names for other
     bodies. *)
-let take_ctor_alias_decls ~is_header () =
+let take_ctor_alias_decls ?(select = fun _ -> true) ~is_header () =
   let unemitted l =
     List.filter
       (fun (_, name) ->
@@ -3908,6 +3920,18 @@ let take_ctor_alias_decls ~is_header () =
         else (Hashtbl.add ctor_alias_emitted name (); true) )
       l
   in
+  let taken, kept = List.partition (fun (_, name) -> select name) !ctor_alias_decls in
+  ctor_alias_decls := taken;
+  let held_taken, held_kept =
+    (* A holder is named by the body of the alias that captured it, not by the
+       text that uses the alias, so it comes along with whichever aliases go. *)
+    let needed name =
+      select name
+      || List.exists (fun (body, _) -> mentions_name body name) taken
+    in
+    List.partition (fun (_, name) -> needed name) !ctor_holder_decls
+  in
+  if is_header then ctor_holder_decls := held_taken;
   let l =
     List.rev_map
       (fun (body, name) ->
@@ -3920,7 +3944,7 @@ let take_ctor_alias_decls ~is_header () =
         ++ str ";")
       (unemitted !ctor_alias_decls)
   in
-  ctor_alias_decls := [];
+  ctor_alias_decls := kept;
   (* A holder is a struct, and a struct may be defined once.  An alias above
      may be minted in whichever file writes the use, because repeating a
      [using] with the same definition is legal and a use in the implementation
@@ -3966,7 +3990,7 @@ let take_ctor_alias_decls ~is_header () =
         ++ str "; };" )
       (unemitted !ctor_holder_decls)
   in
-  if is_header then ctor_holder_decls := [];
+  if is_header then ctor_holder_decls := held_kept;
   holders @ l
 
 (** Print a complete template parameter including name and optional default *)

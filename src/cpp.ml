@@ -2152,6 +2152,26 @@ type wrapper_render = {
   wr_lifted_specs : Pp.t;
 }
 
+(** Declare, in front of [p], those synthesised aliases whose names [p] spells.
+
+    Called on each chunk of the file in the order the chunks are written, so an
+    alias is declared in front of the earliest text that uses it and nowhere
+    else: the registry keeps what nothing has asked for yet.  Rendering [p] to
+    a string is the whole test, and is skipped when there is nothing pending,
+    so a file that mints no alias pays nothing. *)
+let prefix_mentioned_aliases ~is_header p =
+  match Cpp_print.pending_ctor_alias_names () with
+  | [] -> p
+  | pending ->
+    let text = Pp.string_of_ppcmds p in
+    if not (List.exists (Cpp_print.mentions_name text) pending) then p
+    else
+      let select name = Cpp_print.mentions_name text name in
+      match Cpp_print.take_ctor_alias_decls ~select ~is_header () with
+      | [] -> p
+      | l when Pp.ismt p -> prlist_with_sep fnl (fun x -> x) l
+      | l -> prlist_with_sep fnl (fun x -> x) l ++ cut2 () ++ p
+
 (** Main structure renderer with declaration tracking.
 
     PASS 1: Process all wrapper modules to populate pending_wrapper_decls. PASS
@@ -2184,30 +2204,33 @@ let do_struct_with_decl_tracking ~is_header f s =
      alias template -- and then no prologue entry could have helped and the
      alias has to follow the {e definition}.
 
-     Here it does by construction.  The element that minted the alias spells
-     the same types in its own declarations -- that is where the carrier came
-     from -- so anything the body names is already declared by the time that
-     element is legal, and one line earlier is still after it.  Which is also
-     why this needs no knowledge of what a given body names: the question is
-     answered by the position rather than by an analysis.
+     The element to go in front of is the one that {e uses} the alias, which is
+     not the one that minted it: a use written into a deferred member
+     definition is minted while some earlier element is rendering but placed at
+     the end of the file, and following the mint puts the declaration hundreds
+     of lines ahead of everything the body names.  A use, by contrast, sits in
+     code that manipulates values of the types the body names, and so comes
+     after their definitions -- as a tendency and not as a guarantee: the use
+     spells the alias, not the types inside it, so nothing here forces the
+     margin to be positive.  On Vellvm it is about eleven thousand lines, and
+     on this corpus the two placements coincide exactly, nothing in it being
+     deferred.
+
+     So the alias waits in the registry until some rendered chunk spells it,
+     and is emitted in front of that chunk -- which needs no knowledge of what
+     the body names, only of where its name appears.  See
+     {!prefix_mentioned_aliases}, applied here per top-level element and again
+     to each section of the assembled file.
 
      Only at the outermost call.  [f] recurses through module children, and a
      nested element is rendered inside a struct, where an alias template would
-     acquire that struct's scope while its use sites spell it unqualified.
-     Anything still in the table when the file is assembled -- minted by the
-     lifted-declaration pass, which runs after all of these -- falls through to
-     the prologue as before. *)
+     acquire that struct's scope while its use sites spell it unqualified. *)
   let f =
     let depth = ref 0 in
     fun x ->
       incr depth;
       let p = Fun.protect ~finally:(fun () -> decr depth) (fun () -> f x) in
-      if !depth <> 0 then p
-      else
-        match Cpp_print.take_ctor_alias_decls ~is_header () with
-        | [] -> p
-        | l when Pp.ismt p -> prlist_with_sep fnl (fun x -> x) l
-        | l -> prlist_with_sep fnl (fun x -> x) l ++ cut2 () ++ p
+      if !depth <> 0 then p else prefix_mentioned_aliases ~is_header p
   in
   Cpp_print.reset_ctor_alias_emitted ();
   ignore (Translation.take_lifted_decls ());
@@ -2622,9 +2645,11 @@ let do_struct_with_decl_tracking ~is_header f s =
       if is_header then Cpp_print.take_forward_struct_decls ()
       else (ignore (Cpp_print.take_forward_struct_decls ()); [])
     in
-    (* Aliases go wherever they were minted; see
-       {!Cpp_print.take_ctor_alias_decls}. *)
-    match structs @ Cpp_print.take_ctor_alias_decls ~is_header () with
+    (* Aliases go in front of the text that uses them; see
+       {!prefix_mentioned_aliases}.  Only what no text asked for is left for
+       the prologue, and it is collected below, after every section has had
+       its turn. *)
+    match structs with
     | [] -> mt ()
     | l -> prlist_with_sep fnl (fun x -> x) l ++ cut2 ()
   in
@@ -2678,16 +2703,23 @@ let do_struct_with_decl_tracking ~is_header f s =
       cut2 () ++ prlist_with_sep cut2 (fun x -> x) ds
   in
   let deferred_lifted = deferred_lifted () in
-  v 0
-    ( forward_decls
-    ++ hoisted_concepts
-    ++ hoisted_wrappers
-    ++ lifted_fun_specs
-    ++ p
-    ++ pass2_post_pp
-    ++ deferred_lifted
-    ++ deferred_defs
-    ++ deferred_members )
+  (* In writing order, so that an alias no single element claimed -- one whose
+     only use is in a section assembled out of several -- still lands in front
+     of the first section that spells it rather than in the prologue. *)
+  let sections =
+    List.map (prefix_mentioned_aliases ~is_header)
+      [ hoisted_concepts; hoisted_wrappers; lifted_fun_specs; p; pass2_post_pp;
+        deferred_lifted; deferred_defs; deferred_members ]
+  in
+  (* Whatever nothing spelled.  A body may still name something defined later,
+     which is the case the placement above exists for, but an alias with no use
+     in the file has no later position to be after either. *)
+  let leftover_aliases =
+    match Cpp_print.take_ctor_alias_decls ~is_header () with
+    | [] -> mt ()
+    | l -> prlist_with_sep fnl (fun x -> x) l ++ cut2 ()
+  in
+  v 0 (forward_decls ++ leftover_aliases ++ prlist (fun x -> x) sections)
   ++ fnl ()
 
 (** Main entry point: render structure to C++ implementation file. *)
