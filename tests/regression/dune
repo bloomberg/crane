@@ -9945,3 +9945,14 @@
   (alias runtest)
   (deps mixed_class_dict_carrier_crossed.t.exe)
   (action (run ./mixed_class_dict_carrier_crossed.t.exe))))
+
+(subdir carrier_traversed_under_pair
+ (rule
+  (targets carrier_traversed_under_pair.t.exe)
+  (deps CarrierTraversedUnderPair.vo carrier_traversed_under_pair.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} carrier_traversed_under_pair.t.exe carrier_traversed_under_pair.cpp carrier_traversed_under_pair.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps carrier_traversed_under_pair.t.exe)
+  (action (run ./carrier_traversed_under_pair.t.exe))))
