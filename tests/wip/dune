@@ -147,15 +147,3 @@
   (alias runtest)
   (deps hk_carrier_written_at_partial_app.t.exe)
   (action (run ./hk_carrier_written_at_partial_app.t.exe))))
-
-
-(subdir generic_monad_result_rewrapped
- (rule
-  (targets generic_monad_result_rewrapped.t.exe)
-  (deps GenericMonadResultRewrapped.vo generic_monad_result_rewrapped.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} generic_monad_result_rewrapped.t.exe generic_monad_result_rewrapped.cpp generic_monad_result_rewrapped.t.cpp)))
- (rule
-  (alias runtest)
-  (deps generic_monad_result_rewrapped.t.exe)
-  (action (run ./generic_monad_result_rewrapped.t.exe))))
