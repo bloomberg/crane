@@ -9913,13 +9913,3 @@
   (alias runtest)
   (deps generic_monad_result_rewrapped.t.exe)
   (action (run ./generic_monad_result_rewrapped.t.exe))))
-(subdir tfunctor_record_field_carrier
- (rule
-  (targets tfunctor_record_field_carrier.t.exe)
-  (deps TfunctorRecordFieldCarrier.vo tfunctor_record_field_carrier.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} tfunctor_record_field_carrier.t.exe tfunctor_record_field_carrier.cpp tfunctor_record_field_carrier.t.cpp)))
- (rule
-  (alias runtest)
-  (deps tfunctor_record_field_carrier.t.exe)
-  (action (run ./tfunctor_record_field_carrier.t.exe))))
