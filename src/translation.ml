@@ -4148,14 +4148,49 @@ and dict_carrier_type_args env tvars id args =
     | _ -> None
   in
   let* cod = Option.map strip_class (dict_ml_type dict) in
-  (* Abstracted over the {e leading} argument, as {!apply_hkt_tyctors} does:
-     the class applies its carrier to the traversed type, and this idiom writes
-     that type first, so the two agree on one body and the printer mints one
-     alias for both. *)
+  (* Abstracted over the traversed type, as {!apply_hkt_tyctors} does: the
+     class applies its carrier to it and this idiom writes it first, so the two
+     agree on one body and the printer mints one alias for both.
+
+     The carrier need not apply to it {e directly}.  A composed carrier
+     [fun t => option (Exp t)] reaches it through the constructors it composes,
+     and the codomain's leading argument is then [Exp t] rather than [t];
+     abstracting over that yields [option] alone -- the composition's outer
+     head, which is the arity deduction would have guessed and precisely what
+     a composition is not.  So the leading arguments are descended to the type
+     that is not itself an application: that is what the whole composition is
+     applied to, and where the carrier is a plain head the descent stops at
+     once.
+
+     Descended only where the composition is fully known.  An occurrence
+     {!apply_carrier} declined to fill is left as the [Tapp] it was, and by
+     then nothing tells it apart from one that was recovered; writing it out
+     spells a carrier built partly from a class parameter that is in scope and
+     is not the one meant.  There the leading argument is abstracted over as
+     before, which yields the outer head alone -- still wrong, but wrong the
+     way deduction is wrong, and absorbed wherever a converting constructor
+     absorbs it.  A wrong spelling is worse than an unrecovered one.
+
+     Only occurrences among the {e arguments} count.  The head may be a [Tapp]
+     and be right: a carrier that {e is} a class parameter is written as that
+     parameter, which the enclosing declaration has in scope. *)
+  let rec unrecovered t =
+    match resolve_tmeta t with
+    | Miniml.Tapp _ -> true
+    | Miniml.Tglob (_, targs, _) -> List.exists unrecovered targs
+    | _ -> false
+  in
+  let rec traversed t =
+    match resolve_tmeta t with
+    | Miniml.Tglob (_, t0 :: _, _) | Miniml.Tapp (_, t0 :: _) -> traversed t0
+    | t -> t
+  in
   let* over =
-    match cod with
-    | Miniml.Tglob (_, (t0 :: _), _) | Miniml.Tapp (_, (t0 :: _)) ->
-      Some (template_arg_of_ml_type env tvars t0)
+    match resolve_tmeta cod with
+    | Miniml.Tglob (_, (t0 :: _ as targs), _)
+    | Miniml.Tapp (_, (t0 :: _ as targs)) ->
+      let whole = if List.exists unrecovered targs then t0 else traversed cod in
+      Some (template_arg_of_ml_type env tvars whole)
     | _ -> None
   in
   let* carrier =
