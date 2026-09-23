@@ -102,15 +102,15 @@ template <Monad _tcI0, typename T1> struct Monad_stateT {
   template <typename _A0> using m = typename _tcI0::template m<_A0>;
 
   template <typename _A0>
-  static stateT<T1, typename _tcI0::template m<_A0>> ret(_A0 x) {
+  static stateT<T1, typename _tcI0::template m<_A0>, _A0> ret(_A0 x) {
     return stateT<std::any, std::any, std::any>{
         [=](const auto &s) mutable { return itree_ret(std::make_pair(x, s)); }};
   }
 
   template <typename _A0, typename _A1>
-  static stateT<T1, typename _tcI0::template m<_A1>>
-  bind(stateT<T1, typename _tcI0::template m<_A0>> c1,
-       std::function<stateT<T1, typename _tcI0::template m<_A1>>(_A0)> c2) {
+  static stateT<T1, typename _tcI0::template m<_A1>, _A1> bind(
+      stateT<T1, typename _tcI0::template m<_A0>, _A0> c1,
+      std::function<stateT<T1, typename _tcI0::template m<_A1>, _A1>(_A0)> c2) {
     return stateT<std::any, std::any, std::any>{[=](const auto &s) mutable {
       return itree_bind(c1.runStateT(s),
                         [=](const std::pair<std::any, std::any> &vs) mutable {

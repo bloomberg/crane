@@ -160,14 +160,19 @@ let fill_placeholders pre args =
     | _ -> rpre
   in
   let kept = List.rev (drop (List.rev pre) (List.length args)) in
+  (* The trailing run of placeholders is the eta-expansion, whichever part of
+     it these arguments reach; a hole anywhere else is a binder the lambda
+     body writes.  [stateT S m] arrives as [stateT(S, m _, _)] -- the record's
+     monad parameter is applied to the element, so the binder is written
+     twice, and dropping the trailing occurrence would leave the other
+     unfilled and the glob an argument short.  Where such a hole survives, the
+     application is a fill of every occurrence at once, and one argument is
+     all such a spelling can say where to put. *)
+  let beyond_eta =
+    List.rev (drop (List.rev pre) (List.length pre))
+  in
   match args with
-  (* Every trailing placeholder was consumed, so the head was eta-expanded and
-     appending is right.  Only a head that had too few of them -- and holes
-     somewhere inside -- is a lambda body, and one argument is all such a
-     spelling can say where to put. *)
-  | [arg]
-    when List.length pre - List.length kept < 1
-         && List.exists type_has_hole pre ->
+  | [arg] when List.exists type_has_hole beyond_eta ->
     List.map (fill_type_hole arg) pre
   | _ -> kept @ args
 

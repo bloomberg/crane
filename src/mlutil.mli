@@ -121,6 +121,11 @@ val type_mem_kn : MutInd.t -> ml_type -> bool
             [0] if none does.  [Rigid] nodes are not considered. *)
 val type_maxvar : ml_type -> int
 
+(** Whether a type carries a [Tunknown] hole -- the spelling extraction gives a
+    type-level lambda, whose binder is where the hole is.  See
+    {!fill_placeholders}. *)
+val type_has_hole : ml_type -> bool
+
 (** Decompose an ML type into a list of argument types and a result type.
     @return [(args, result)] where [args] are the curried parameter types
             and [result] is the final return type *)

@@ -1058,11 +1058,22 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
           in
           (* Extraction eta-expands a type-constructor argument, so the
              carrier arrives as [option<_>] rather than the bare [option] the
-             application needs; contract it before substituting. *)
+             application needs; contract it before substituting.
+
+             Unless the carrier is written with a [Tunknown] hole.  Then it is
+             already the type-level lambda, the hole is its binder, and the
+             binder may be written more than once: [stateT S m] arrives as
+             [stateT(S, m _, _)], because the record's monad parameter is
+             itself applied to the element.  Dropping the trailing argument
+             keeps one occurrence and loses the other, and what comes out is a
+             [stateT] short a template argument.  Applying a hole is filling
+             it -- every occurrence at once -- which {!Mlutil.apply_ml_type}
+             already does, so there is nothing to contract here. *)
           let subst_args =
             List.mapi
               (fun i t ->
                 match t with
+                | _ when Mlutil.type_has_hole t -> t
                 | Miniml.Tglob (r, _ :: _, es)
                   when Table.is_hkt_param class_ref i ->
                   (* Only the eta-expanded arguments come off: a carrier that
