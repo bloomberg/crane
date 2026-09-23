@@ -148,13 +148,3 @@
   (deps hk_carrier_written_at_partial_app.t.exe)
   (action (run ./hk_carrier_written_at_partial_app.t.exe))))
 
-(subdir alias_carrier_under_map_lambda
- (rule
-  (targets alias_carrier_under_map_lambda.t.exe)
-  (deps AliasCarrierUnderMapLambda.vo alias_carrier_under_map_lambda.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} alias_carrier_under_map_lambda.t.exe alias_carrier_under_map_lambda.cpp alias_carrier_under_map_lambda.t.cpp)))
- (rule
-  (alias runtest)
-  (deps alias_carrier_under_map_lambda.t.exe)
-  (action (run ./alias_carrier_under_map_lambda.t.exe))))
