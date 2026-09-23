@@ -527,6 +527,19 @@ let type_extraction_declined = function
     @param j Next available ML type variable index; [0] means no new type vars are generated
     @param c The Rocq term to extract as a type (possibly a type-level function)
     @param args Arguments accumulated during [App] spine traversal *)
+(* Extracting a class to answer a question about one of its projections can
+   reach that projection again; the memo table that would stop the recursion is
+   only written once the extraction completes, so the guard has to be here. *)
+let extracting_inds = ref Names.Mindset.empty
+
+let already_extracting mind = Names.Mindset.mem mind !extracting_inds
+
+let with_extracting mind f =
+  extracting_inds := Names.Mindset.add mind !extracting_inds;
+  Fun.protect ~finally:(fun () ->
+      extracting_inds := Names.Mindset.remove mind !extracting_inds )
+    f
+
 let rec extract_type env sg db j c args =
   match EConstr.kind sg (whd_betaiotazeta env sg c) with
   | App (d, args') ->
@@ -596,6 +609,31 @@ let rec extract_type env sg db j c args =
          concrete arguments, try full reduction with whd_all.  This resolves
          expressions like Obj(base_category(toy_prestable)) → nat, which
          whd_betaiotazeta cannot reduce because it lacks delta. *)
+      (* [is_promoted_type_var] is answered out of a table that
+         {!extract_really_ind} fills, so before the class this projects from
+         has been extracted it answers [false] -- and this occurrence is kept
+         abstract while a later one, after the class has been reached by some
+         other route, reduces.  Two occurrences of one Rocq type then have two
+         different ML types, which is not a thing any later pass can notice:
+         both are well-formed, and only the disagreement between them is
+         wrong.
+
+         Extracting the class first makes the answer independent of the order
+         uses are met in.  Which class it is, the projection's own type says:
+         it takes the record it projects from as its first argument. *)
+      let () =
+        if lang () == Cpp && args <> [] && not (Table.is_promoted_type_var r)
+        then
+          match EConstr.kind sg (whd_all env sg typ) with
+          | Prod (_, dom, _) -> (
+            match EConstr.kind sg (EConstr.decompose_app sg dom |> fst) with
+            | Ind ((mind, _), _) when not (already_extracting mind) ->
+              with_extracting mind (fun () ->
+                  try ignore (extract_ind env mind)
+                  with e when CErrors.noncritical e -> () )
+            | _ -> () )
+          | _ -> ()
+      in
       if lang () == Cpp && args <> [] && Table.is_promoted_type_var r then
         let full = EConstr.applist (EConstr.mkConstU (kn, u), args) in
         let reduced =

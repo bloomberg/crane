@@ -2,8 +2,8 @@
 
 /// Both parameters have the same Rocq type, written at a named instance.
 Nat AssocTypeErasedAtCallSite::tag_of(const std::pair<Nat, List<Nat>> &,
-                                      ptr b) {
-  return b.first;
+                                      const std::pair<Nat, prov> &x0_) {
+  return x0_.first;
 }
 
 Nat AssocTypeErasedAtCallSite::go(const Nat &) {

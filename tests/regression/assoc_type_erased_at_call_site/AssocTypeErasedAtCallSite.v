@@ -36,22 +36,38 @@
    the C++ generator is therefore wrong; by then the information is already
    destroyed.
 
-   Where it is: [extract_type]'s [Const]/[TypeScheme] case in
-   [extraction.ml:599].  It [whd_all]s a promoted projection applied to
-   arguments, and rejects the result as [is_stuck] when it is a [Case] -- which
-   is what the eliminator of a non-primitive record reduces to.  One domain per
-   function comes back stuck and keeps [Tglob ptr]; the others reduce to
-   [(iptr * prov)].  The pattern is structural, not positional-first: with
-   three parameters of this type the first two reduce and the third does not,
-   and with one parameter that one does not.  It is always the innermost arrow.
+   Where it is: the guard in front of that reduction, not the reduction.
+   [extract_type]'s [Const]/[TypeScheme] case only tries [whd_all] when
+   [Table.is_promoted_type_var] says the constant is one, and that table is
+   filled by [extract_really_ind].  Before the class has been extracted it
+   answers [false] and the occurrence is kept abstract; after, it reduces.  The
+   two occurrences here straddle that write:
 
-   Not yet explained: why the innermost arrow's domain reduces differently from
-   its siblings when the Rocq term is the same in all of them.  The stuck
-   reduction reports its scrutinee as the bare class [PTR] rather than
-   [@PointerV IPZ], so something is reaching [whd_all] without the instance
-   substituted, and until that is known the fix cannot be chosen -- relaxing
-   [is_stuck] to accept a [Case] would change all of them, and a perturbation
-   that moves every occurrence is evidence about none. *)
+     PROBEY ...ptr args=1 promoted=false        (kept abstract)
+     PROBEX ...ptr args=1 reduced=(iptr * prov)
+
+   One Rocq type, two ML types, in one extraction.  Neither is malformed on its
+   own, so nothing downstream can object -- only the disagreement between them
+   is wrong, and a disagreement has no single site to be reported at.
+
+   An earlier reading of this file said the cause was [is_stuck] rejecting a
+   [Case], and that the pattern was "always the innermost arrow."  Both were
+   wrong, and wrong in the same way: they were built from counts of which
+   parameters resolved at arity one and arity three, and an instrument that
+   reports position cannot distinguish a positional mechanism from a temporal
+   one.  [is_stuck] is never consulted for the failing occurrence.
+
+   The ordering was nearly missed a second time.  The first read of the probe
+   was [grep PROBE | sort | uniq -c], which shows both answers present and
+   reads as two contexts; [sort] destroys the one property that was the whole
+   finding.
+
+   Fixed by extracting the class before asking, which makes the answer
+   independent of the order uses are met in.  Which class to extract, the
+   projection's own type says: it takes the record it projects from as its
+   first argument.  The recursion guard is needed because extracting the class
+   can reach the projection again before the memo that would stop it is
+   written. *)
 
 From Crane Require Import Mapping.Std.
 From Stdlib Require Import List.

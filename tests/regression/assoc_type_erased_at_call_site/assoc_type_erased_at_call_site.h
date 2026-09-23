@@ -180,7 +180,6 @@ I>concept PTR = requires {
 } || requires {
   { I::null } -> std::convertible_to<typename I::ptr>;
 });
-using ptr = std::any;
 
 template <IPtr _tcI0> struct PointerV {
   using iptr = typename _tcI0::iptr;
@@ -197,7 +196,8 @@ template <IPtr _tcI0> struct PointerV {
 
 struct AssocTypeErasedAtCallSite {
   /// Both parameters have the same Rocq type, written at a named instance.
-  static Nat tag_of(const std::pair<Nat, List<Nat>> &_x, ptr b);
+  static Nat tag_of(const std::pair<Nat, List<Nat>> &_x,
+                    const std::pair<Nat, prov> &x0_);
   static Nat go(const Nat &_x);
 };
 
