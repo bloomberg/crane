@@ -3365,6 +3365,21 @@ let gen_dfun n b cty ty temps =
         List.exists is_hk_arg args && alias_rhs_is_fun kn
       | _ -> false
     in
+    (* A callable parameter the recursion could not forward keeps its
+       [std::function] spelling, and that is not a fallback: the type erasure
+       is what makes the recursion close.  Rebuilding the callable at each step
+       gives a new closure type at each step, so an [F &&] would instantiate a
+       fresh specialisation forever.  But the spelling names this function's
+       own template parameters, and a lambda argument never has that type --
+       so the same deduction failure as the alias above, for the same reason,
+       and the same repair.  Where the type names no parameter there is
+       nothing to deduce and nothing to shield. *)
+    let rec spelled_fun_is_deduced_against ty =
+      match ty with
+      | Tconst t | Tref t -> spelled_fun_is_deduced_against t
+      | Tfun _ -> get_tvar_indices ty <> []
+      | _ -> false
+    in
     (* The wrapper the ownership pass put on stays where it is; only the type
        it wraps is taken out of deduction. *)
     let rec at_core f ty =
@@ -3375,7 +3390,7 @@ let gen_dfun n b cty ty temps =
     in
     List.map
       (fun (x, ty) ->
-        if alias_hides_fun ty then
+        if alias_hides_fun ty || spelled_fun_is_deduced_against ty then
           ( x,
             at_core
               (fun t -> Tid_external ("std::type_identity_t", [t]))

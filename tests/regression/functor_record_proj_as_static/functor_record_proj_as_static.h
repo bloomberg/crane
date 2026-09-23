@@ -1655,9 +1655,10 @@ template <Int I, OrderedType X> struct Raw {
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
-  static bool equal_cont(F0 &&cmp, const tree<T1> &m1,
-                         std::function<bool(enumeration<T1>)> cont,
-                         const enumeration<T1> &e2) {
+  static bool
+  equal_cont(F0 &&cmp, const tree<T1> &m1,
+             std::type_identity_t<std::function<bool(enumeration<T1>)>> cont,
+             const enumeration<T1> &e2) {
     if (std::holds_alternative<typename tree<T1>::Leaf>(m1.v())) {
       return cont(e2);
     } else {
