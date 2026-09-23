@@ -4095,14 +4095,24 @@ and dict_carrier_type_args env tvars id args =
     | Miniml.MLglob (r, _) -> Some r
     | _ -> None
   in
-  let rec dict_ml_type = function
-    | Miniml.MLlam (_, _, b) | Miniml.MLmagic (_, b) -> dict_ml_type b
+  (* [depth] counts the binders descended through to reach the term in hand.
+     The dictionary arrives wrapped in the adapter lambda that erases its
+     arguments, so a dictionary that is a binder of the enclosing declaration
+     is spelled at an index shifted by that lambda's own parameters, while the
+     environment those indices are resolved against does not have them.  Left
+     unshifted, the first dictionary of a class context reads past the end and
+     the second reads the first one's constraint -- so the carriers of two
+     sibling traversals come out crossed rather than merely missing, which is
+     the shape that made this findable. *)
+  let rec dict_ml_type ?(depth = 0) = function
+    | Miniml.MLlam (_, _, b) -> dict_ml_type ~depth:(depth + 1) b
+    | Miniml.MLmagic (_, b) -> dict_ml_type ~depth b
     | Miniml.MLapp (b, dicts) as tm ->
       (* The head's codomain still names its own class parameters; the
          dictionaries it is applied to are what say which carriers those are.
          Without this the generic instance's binder is what gets written, and
          at a site with no binder in scope it does not even name anything. *)
-      let* cod = dict_ml_type b in
+      let* cod = dict_ml_type ~depth b in
       let params =
         match Option.bind (head_glob tm) find_type_opt with
         | Some ty -> class_params ty
@@ -4111,7 +4121,7 @@ and dict_carrier_type_args env tvars id args =
       Some
         (List.fold_left
            (fun acc (p, k) ->
-             match Option.bind (List.nth_opt dicts p) dict_ml_type with
+             match Option.bind (List.nth_opt dicts p) (dict_ml_type ~depth) with
              | Some carrier -> subst_carrier k carrier acc
              | None -> acc )
            cod params )
@@ -4120,6 +4130,7 @@ and dict_carrier_type_args env tvars id args =
          is [box B]. *)
       Option.map (fun t -> resolve_tmeta (ml_codomain t)) (find_type_opt r)
     | Miniml.MLrel i ->
+      let i = i - depth in
       let constraint_arg t =
         match Option.map resolve_tmeta t with
         | Some (Miniml.Tglob (_, [_], _) as t) -> Some (strip_class t)

@@ -16,6 +16,8 @@ struct Nat;
 template <typename A> struct List;
 template <typename T> struct box;
 template <typename T, typename Body> struct holder;
+template <typename _CraneTcArg>
+using _crane_carrier_tc_659c8e94e4cfa3a6 = List<box<_CraneTcArg>>;
 
 struct HkDictFromConstraintParam {
   static holder<Nat, List<Nat>> run(const holder<Nat, List<Nat>> &m);
@@ -247,7 +249,7 @@ TFunctor_holder(std::type_identity_t<TFunctor<T1>> h,
                 std::type_identity_t<TFunctor<box>> h0, F2 &&f,
                 const holder<std::any, T1<std::any>> &m) {
   return holder<std::any, T1<std::any>>{
-      tfmap<List>(
+      tfmap<_crane_carrier_tc_659c8e94e4cfa3a6>(
           [=]() mutable {
             return [=](std::function<std::any(std::any)> _x0,
                        List<box<std::any>> _x1) mutable -> List<box<std::any>> {
