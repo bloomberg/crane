@@ -18,6 +18,17 @@
 
 ; Test rules - compile C++ and run tests
 
+(subdir erased_dict_param_kept_at_use_site
+ (rule
+  (targets erased_dict_param_kept_at_use_site.t.exe)
+  (deps ErasedDictParamKeptAtUseSite.vo erased_dict_param_kept_at_use_site.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} erased_dict_param_kept_at_use_site.t.exe erased_dict_param_kept_at_use_site.cpp erased_dict_param_kept_at_use_site.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps erased_dict_param_kept_at_use_site.t.exe)
+  (action (run ./erased_dict_param_kept_at_use_site.t.exe))))
+
 (subdir anon_lift_name_collision
  (rule
   (targets anon_lift_name_collision.t.exe)

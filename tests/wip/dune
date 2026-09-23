@@ -12,17 +12,6 @@
    ITree Equations ExtLib Paco)
  (flags (:standard -output-directory ../../tests/wip)))
 
-(subdir erased_dict_param_kept_at_use_site
- (rule
-  (targets erased_dict_param_kept_at_use_site.t.exe)
-  (deps ErasedDictParamKeptAtUseSite.vo erased_dict_param_kept_at_use_site.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} erased_dict_param_kept_at_use_site.t.exe erased_dict_param_kept_at_use_site.cpp erased_dict_param_kept_at_use_site.t.cpp)))
- (rule
-  (alias runtest)
-  (deps erased_dict_param_kept_at_use_site.t.exe)
-  (action (run ./erased_dict_param_kept_at_use_site.t.exe))))
-
 (subdir z_abs_min
  (rule
   (targets z_abs_min.t.exe)
