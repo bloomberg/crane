@@ -12,6 +12,17 @@
    ITree Equations ExtLib Paco)
  (flags (:standard -output-directory ../../tests/wip)))
 
+(subdir assoc_type_erased_in_body
+ (rule
+  (targets assoc_type_erased_in_body.t.exe)
+  (deps AssocTypeErasedInBody.vo assoc_type_erased_in_body.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} assoc_type_erased_in_body.t.exe assoc_type_erased_in_body.cpp assoc_type_erased_in_body.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps assoc_type_erased_in_body.t.exe)
+  (action (run ./assoc_type_erased_in_body.t.exe))))
+
 (subdir z_abs_min
  (rule
   (targets z_abs_min.t.exe)
