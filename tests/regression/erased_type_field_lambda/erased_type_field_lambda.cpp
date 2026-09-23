@@ -7,6 +7,9 @@
 /// body adds to a std::any besides.
 uint64_t ErasedTypeFieldLambda::weigh(const ErasedTypeFieldLambda::slot &s) {
   return s.pairs.template fold_left<uint64_t>(
-      [](uint64_t a, const auto &p) { return (a + p.second(p.first)); },
+      [](uint64_t a,
+         const std::pair<ErasedTypeFieldLambda::sty,
+                         std::function<uint64_t(ErasedTypeFieldLambda::sty)>>
+             &p) { return (a + p.second(p.first)); },
       UINT64_C(0));
 }

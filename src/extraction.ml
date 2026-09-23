@@ -904,14 +904,28 @@ and extract_really_ind env kn mib =
                      (b) a TypeClass-classified inductive — the field
                          carries a typeclass dictionary that becomes a
                          concept-constrained template parameter in C++. *)
+                  (* [is_typeclass] is answered out of a table this very
+                     function fills, so a class asked about before it has been
+                     extracted answers [false] and the field holding it is not
+                     promoted -- the whole nested dictionary is then missing
+                     from the resolutions, and its associated types print as
+                     the file-scope [using allocationId = std::any].  Extract
+                     it first, under the same guard {!extract_type} uses for
+                     the sibling case: the answer must not depend on the order
+                     uses are met in. *)
                   let is_typeclass_ind t =
-                    match Constr.kind t with
-                    | Ind ((mind, i), _) ->
+                    let of_ind (mind, i) =
+                      if not (already_extracting mind) then
+                        with_extracting mind (fun () ->
+                            try ignore (extract_ind env mind)
+                            with e when CErrors.noncritical e -> () );
                       Table.is_typeclass (GlobRef.IndRef (mind, i))
+                    in
+                    match Constr.kind t with
+                    | Ind (ind, _) -> of_ind ind
                     | App (f, _) -> (
                       match Constr.kind f with
-                      | Ind ((mind, i), _) ->
-                        Table.is_typeclass (GlobRef.IndRef (mind, i))
+                      | Ind (ind, _) -> of_ind ind
                       | _ -> false )
                     | _ -> false
                   in

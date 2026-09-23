@@ -876,6 +876,24 @@ let recover_erased_types ?only (expected : ml_type) (a : ml_ast) : ml_ast =
     | Some t when uninformative have && not (uninformative t) && accepts t -> t
     | _ -> have
   in
+  (* The callee's declared domains for this call, instantiated at the call's
+     own type arguments -- or [[]] when the declaration is unknown or does not
+     describe this call.  An arity that disagrees means the flattening and the
+     declaration are counting different things, and pairing them up would
+     hand each argument the wrong neighbour's type. *)
+  let callee_doms r tys args =
+    match (try Some (Table.find_type r) with Not_found -> None) with
+    | None -> []
+    | Some sch ->
+      let doms, _ =
+        type_decomp (if tys = [] then sch else type_subst_list tys sch)
+      in
+      (* An erased type argument is an arrow in the declaration and nothing in
+         the application, so the two are only comparable once it is dropped. *)
+      let doms = List.filter (fun d -> not (isTdummy d)) doms in
+      if List.length doms = List.length args then List.map Option.make doms
+      else []
+  in
   let rec go env expected a =
     match a with
     | MLlam (i, ty, b) when isTdummy ty ->
@@ -915,6 +933,13 @@ let recover_erased_types ?only (expected : ml_type) (a : ml_ast) : ml_ast =
       MLcase (ty, go env None scrut, Array.map branch branches)
     | MLcons (ty, c, args) ->
       MLcons (better ~have:ty ~from:expected, c, List.map (go env None) args)
+    | MLapp ((MLglob (r, tys) as f), args) when callee_doms r tys args <> [] ->
+      (* A lambda passed as an argument is the case with no second witness:
+         its binder's type occurs nowhere in the enclosing declaration -- it
+         is spelled only by the callee's parameter at that position, with this
+         call's type arguments substituted in.  That is an authority of the
+         same kind as the declared type, so it is pushed down the same way. *)
+      MLapp (f, List.map2 (fun d e -> go env d e) (callee_doms r tys args) args)
     | MLapp (f, args) ->
       MLapp (go env None f, List.map (go env None) args)
     | MLmagic (m, e) -> MLmagic (m, go env expected e)
