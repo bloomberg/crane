@@ -3,7 +3,6 @@
 
 #include "crane_fn.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <memory>

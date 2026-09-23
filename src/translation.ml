@@ -9499,6 +9499,22 @@ and is_typeclass_instance_arg env ml_arg =
 
 (* Convert type class instance args to template type arguments *)
 and ml_arg_to_template_type env ml_arg =
+  (* The type arguments an instance's generated struct has parameters for.
+
+     Its declaration mints one per parameter erasure left standing, so a type
+     argument erasure removed has no position to be written at and an argument
+     written for it overruns the template head -- [ParamsV<IPZ, std::any>]
+     against [template <IPtr _tcI0> struct ParamsV].  Erased instance
+     parameters are already gone from the application's arguments by the time
+     this sees them; an erased {e type} parameter is still in the [MLglob]'s
+     list, as [Tdummy], and this is where it leaves.
+
+     {!Ml_type_util.filter_erased_type_args} is the same all-or-nothing filter
+     a call applies to its own: a position is what gives the others their
+     meaning, so one that cannot be written costs the list. *)
+  let instance_type_args r ts =
+    filter_erased_type_args (build_template_params env [] (kept_type_args r ts))
+  in
   match strip_magic ml_arg with
   | MLglob (r, ts) ->
     if ref_returns_skipped r then
@@ -9506,7 +9522,7 @@ and ml_arg_to_template_type env ml_arg =
       Tvoid
     else
       (* Use the instance struct as a type - convert to Tglob *)
-      Tglob (r, build_template_params env [] (kept_type_args r ts), [])
+      Tglob (r, instance_type_args r ts, [])
   | MLrel i ->
     (* The instance is a lambda parameter - look up its name in the env and
        create a Tvar reference to the template parameter *)
@@ -9533,10 +9549,7 @@ and ml_arg_to_template_type env ml_arg =
     (* Instance parameters come first in the generated struct's template
        list ([template <typename _tcI0, typename T1>]), so the instance
        arguments must precede the type arguments here too. *)
-    Tglob
-      ( r,
-        template_args @ build_template_params env [] (kept_type_args r ts),
-        [] )
+    Tglob (r, template_args @ instance_type_args r ts, [])
   | MLcase (_, scrutinee, branches)
     when Array.length branches = 1 ->
     (* Record field projection — e.g., [base_category(PS)].
