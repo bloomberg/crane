@@ -4169,7 +4169,15 @@ let rec names_promoted_type_var = function
     spells whichever one heads the list at all three.  Run
     {!Mlutil.recover_erased_types} first -- the declared type names the holes
     it can, and the guess is then left with only the ones nothing else could
-    name. *)
+    name.
+
+    A metavariable is {e shared} -- the same node is reachable from more than
+    one declaration's annotations -- so resolving one in place publishes this
+    declaration's guess to every other declaration that mentions it, and
+    publishes it {e before} their own recovery runs.  The authority then finds
+    a concrete type where a hole used to be, cannot tell it from one the body
+    meant, and declines to correct it.  The guess is therefore written into the
+    type this declaration is printed from and nowhere else. *)
 let rewrite_ml_ast_types
     (carrier_refs : (GlobRef.t * int) list)
     (ast : ml_ast) : ml_ast =
@@ -4180,14 +4188,8 @@ let rewrite_ml_ast_types
     let rec rty t =
       match t with
       | Miniml.Tunknown -> Miniml.Tglob (carrier_ref, [], [])
-      | Miniml.Tmeta ({contents = Some inner} as meta) ->
-        let inner' = rty inner in
-        if inner != inner' then meta.contents <- Some inner';
-        t
-      | Miniml.Tmeta ({contents = None} as meta) ->
-        (* Unresolved meta — resolve to carrier *)
-        meta.contents <- Some (Miniml.Tglob (carrier_ref, [], []));
-        t
+      | Miniml.Tmeta {contents = Some inner} -> rty inner
+      | Miniml.Tmeta {contents = None} -> Miniml.Tglob (carrier_ref, [], [])
       | Miniml.Tarr (t1, t2) -> Miniml.Tarr (rty t1, rty t2)
       | Miniml.Tglob (r, ts, a) ->
         let ts' = List.map rty ts in
