@@ -9892,3 +9892,14 @@
   (alias runtest)
   (deps erased_arg_callable_spelled_std_function.t.exe)
   (action (run ./erased_arg_callable_spelled_std_function.t.exe))))
+
+(subdir ternary_of_two_lambdas
+ (rule
+  (targets ternary_of_two_lambdas.t.exe)
+  (deps TernaryOfTwoLambdas.vo ternary_of_two_lambdas.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} ternary_of_two_lambdas.t.exe ternary_of_two_lambdas.cpp ternary_of_two_lambdas.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps ternary_of_two_lambdas.t.exe)
+  (action (run ./ternary_of_two_lambdas.t.exe))))
