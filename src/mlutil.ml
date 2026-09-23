@@ -907,10 +907,18 @@ let recover_erased_types ?only ?(refine_only = false) (expected : ml_type)
     | _ -> have
   in
   (* The callee's declared domains for this call, instantiated at the call's
-     own type arguments -- or [[]] when the declaration is unknown or does not
-     describe this call.  An arity that disagrees means the flattening and the
-     declaration are counting different things, and pairing them up would
-     hand each argument the wrong neighbour's type. *)
+     own type arguments -- one offer per argument, [None] where the
+     declaration does not reach.
+
+     The two lists are aligned from the left and the shorter one runs out.
+     Both ways of running out are ordinary and neither says the declaration is
+     describing a different call: a monad whose carrier unfolds to a function
+     takes the arguments of that function too, so [bind : m A -> (A -> m B) ->
+     m B] at [m = stateT S m'] is declared with two domains and applied to
+     three; and a partial application has fewer.  Only the positions the
+     declaration actually spells are offered, which is exactly the prefix.
+     Requiring the lengths to agree instead withdrew every offer at such a
+     call -- including the ones the declaration named perfectly well. *)
   let callee_doms r tys args =
     match (try Some (Table.find_type r) with Not_found -> None) with
     | None -> []
@@ -921,8 +929,9 @@ let recover_erased_types ?only ?(refine_only = false) (expected : ml_type)
       (* An erased type argument is an arrow in the declaration and nothing in
          the application, so the two are only comparable once it is dropped. *)
       let doms = List.filter (fun d -> not (isTdummy d)) doms in
-      if List.length doms = List.length args then List.map Option.make doms
-      else []
+      if doms = [] then []
+      else
+        List.mapi (fun i _ -> List.nth_opt doms i) args
   in
   let rec go env expected a =
     match a with
