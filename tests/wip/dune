@@ -147,3 +147,14 @@
   (alias runtest)
   (deps hk_carrier_written_at_partial_app.t.exe)
   (action (run ./hk_carrier_written_at_partial_app.t.exe))))
+
+(subdir alias_minted_before_its_body_type
+ (rule
+  (targets alias_minted_before_its_body_type.t.exe)
+  (deps AliasMintedBeforeItsBodyType.vo alias_minted_before_its_body_type.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} alias_minted_before_its_body_type.t.exe alias_minted_before_its_body_type.cpp alias_minted_before_its_body_type.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps alias_minted_before_its_body_type.t.exe)
+  (action (run ./alias_minted_before_its_body_type.t.exe))))
