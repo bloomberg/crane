@@ -148,3 +148,13 @@
   (deps hk_carrier_written_at_partial_app.t.exe)
   (action (run ./hk_carrier_written_at_partial_app.t.exe))))
 
+(subdir mixed_class_dict_carrier_crossed
+ (rule
+  (targets mixed_class_dict_carrier_crossed.t.exe)
+  (deps MixedClassDictCarrierCrossed.vo mixed_class_dict_carrier_crossed.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mixed_class_dict_carrier_crossed.t.exe mixed_class_dict_carrier_crossed.cpp mixed_class_dict_carrier_crossed.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mixed_class_dict_carrier_crossed.t.exe)
+  (action (run ./mixed_class_dict_carrier_crossed.t.exe))))
