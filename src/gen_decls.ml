@@ -206,6 +206,28 @@ let class_promoted_concrete ?(tvar_base = 0) class_ref type_args =
     type_args
   |> List.filteri (fun i _ -> not (is_class_tparam class_ref i))
 
+(** Whether an [ip_vars] entry named [v] is really an associated type of
+    [class_ref].
+
+    A field whose type is a class is promoted while extraction still sees a
+    class there, but whether that class survives as a concept is decided
+    later, by {!Extract_env.demote_value_typeclasses}: one used in value
+    position comes out as a plain struct, and the field holding it stays an
+    ordinary value field.  Asking for it as [typename I::f] then sits beside
+    the method requirement the value side emits, and a concept wanting one
+    name both as a type and as a function is satisfied by no instance at all.
+    The declaration says whether something is a class; only the back end says
+    whether it stayed one. *)
+let promoted_var_is_associated_type class_ref v =
+  List.for_all
+    (fun (field_opt, field_ty) ->
+      match (field_opt, field_ty) with
+      | Some fr, Miniml.Tglob (r, _, _)
+        when Id.equal (Common.id_of_global Term fr) v ->
+        Table.is_typeclass r
+      | _ -> true )
+    (Table.get_record_field_bindings class_ref)
+
 (** The associated-type ("promoted") variables of a class, in [ip_vars] order,
     each paired with its arity: [0] for a plain associated type, [n] for a
     higher-kinded carrier, which is an alias template of [n] parameters. *)
@@ -214,6 +236,7 @@ let class_promoted_vars_arities class_ref =
     (fun i v -> (v, Table.get_ind_hkt_arity class_ref i))
     (Table.get_ind_ip_vars class_ref)
   |> List.filteri (fun i _ -> not (is_class_tparam class_ref i))
+  |> List.filter (fun (v, _) -> promoted_var_is_associated_type class_ref v)
 
 (** The associated-type ("promoted") variables of a class, in [ip_vars]
     order. *)
@@ -499,9 +522,10 @@ let gen_typeclass_cpp name fields ind =
       ind.ip_vars
   in
   let param_vars = List.filteri (fun i _ -> is_tparam i) prefixed_ip_vars in
-  let promoted_vars =
-    List.filteri (fun i _ -> not (is_tparam i)) prefixed_ip_vars
-  in
+  (* Read the promoted half off {!class_promoted_vars} rather than re-deriving
+     it here: the two must agree element for element, because [type_reqs]
+     below pairs them up. *)
+  let promoted_vars = class_promoted_vars name in
   (* Only param vars become concept template parameters; promoted vars become
      typename requirements inside the requires block *)
   let ty_vars = List.map (fun x -> (TTtypename, x)) param_vars in

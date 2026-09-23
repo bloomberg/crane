@@ -10033,3 +10033,14 @@
   (alias runtest)
   (deps lambda_binder_from_callee.t.exe)
   (action (run ./lambda_binder_from_callee.t.exe))))
+
+(subdir value_position_class_promoted
+ (rule
+  (targets value_position_class_promoted.t.exe)
+  (deps ValuePositionClassPromoted.vo value_position_class_promoted.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} value_position_class_promoted.t.exe value_position_class_promoted.cpp value_position_class_promoted.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps value_position_class_promoted.t.exe)
+  (action (run ./value_position_class_promoted.t.exe))))
