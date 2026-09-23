@@ -14,8 +14,6 @@
 
 struct Nat;
 enum class LocalE;
-template <typename _CraneTcArg>
-using itree_tc_296b3b7af4bd1a71 = std::shared_ptr<ITree<_CraneTcArg>>;
 
 struct Nat {
   // TYPES
@@ -108,6 +106,8 @@ template <typename I>
 concept Params = requires {
   { I::width() } -> std::convertible_to<Nat>;
 };
+template <typename _CraneTcArg>
+using itree_tc_296b3b7af4bd1a71 = std::shared_ptr<ITree<_CraneTcArg>>;
 
 template <Params _tcI0, typename T1 = void, typename T2>
 Monads::template stateT<lenv, itree_tc_296b3b7af4bd1a71, T2>

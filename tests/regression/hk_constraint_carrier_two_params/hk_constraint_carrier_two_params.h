@@ -17,10 +17,6 @@ template <typename A> struct List;
 template <typename T, typename Body> struct two;
 template <typename T, typename Body> struct outer1;
 
-template <template <typename> class _F0> struct _crane_carrier_tch {
-  template <typename _CraneTcArg> using c = two<_CraneTcArg, _F0<_CraneTcArg>>;
-};
-
 struct HkConstraintCarrierTwoParams {
   static outer1<Nat, two<Nat, List<Nat>>>
   run(const outer1<Nat, two<Nat, List<Nat>>> &m);
@@ -248,6 +244,10 @@ template <typename T, typename Body> struct outer1 {
       }
     }()};
   }
+};
+
+template <template <typename> class _F0> struct _crane_carrier_tch {
+  template <typename _CraneTcArg> using c = two<_CraneTcArg, _F0<_CraneTcArg>>;
 };
 
 template <template <typename> class T1, typename F2>

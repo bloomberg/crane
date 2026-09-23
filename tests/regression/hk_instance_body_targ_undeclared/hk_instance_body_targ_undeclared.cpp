@@ -1,14 +1,14 @@
 #include "hk_instance_body_targ_undeclared.h"
 
-template <typename _CraneTcArg>
-using _crane_carrier_tc_3993875251ddebba = std::optional<List<_CraneTcArg>>;
-template <typename _CraneTcArg>
-using _crane_carrier_tc_81cb5e99b5f39a8b = List<List<_CraneTcArg>>;
-
 List<std::any> TFunctor_list(std::function<std::any(std::any)> x0_,
                              const List<std::any> &x1_) {
   return x1_.template map<std::any>(std::move(x0_));
 }
+
+template <typename _CraneTcArg>
+using _crane_carrier_tc_3993875251ddebba = std::optional<List<_CraneTcArg>>;
+template <typename _CraneTcArg>
+using _crane_carrier_tc_81cb5e99b5f39a8b = List<List<_CraneTcArg>>;
 
 Nat HkInstanceBodyTargUndeclared::bump(Nat n) { return Nat::s(std::move(n)); }
 

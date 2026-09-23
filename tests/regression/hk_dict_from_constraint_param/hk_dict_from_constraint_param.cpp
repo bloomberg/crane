@@ -1,9 +1,5 @@
 #include "hk_dict_from_constraint_param.h"
 
-template <typename _CraneTcArg>
-using _crane_carrier_tc_22a0a745a0d1d82d =
-    holder<_CraneTcArg, List<_CraneTcArg>>;
-
 List<std::any> TFunctor_list(std::function<std::any(std::any)> x0_,
                              const List<std::any> &x1_) {
   return x1_.template map<std::any>(std::move(x0_));
@@ -13,6 +9,10 @@ box<std::any> TFunctor_box(std::function<std::any(std::any)> f,
                            const box<std::any> &b) {
   return box<std::any>{f(b.b_payload)};
 }
+
+template <typename _CraneTcArg>
+using _crane_carrier_tc_22a0a745a0d1d82d =
+    holder<_CraneTcArg, List<_CraneTcArg>>;
 
 holder<Nat, List<Nat>>
 HkDictFromConstraintParam::run(const holder<Nat, List<Nat>> &m) {

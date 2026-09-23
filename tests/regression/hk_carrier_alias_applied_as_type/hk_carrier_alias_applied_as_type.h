@@ -17,10 +17,6 @@ template <typename A> struct List;
 template <typename T, typename Body> struct two;
 template <typename T, typename Body> struct modul;
 
-template <template <typename> class _F0> struct _crane_carrier_tch {
-  template <typename _CraneTcArg> using c = two<_CraneTcArg, _F0<_CraneTcArg>>;
-};
-
 struct HkCarrierAliasAppliedAsType {
   static modul<Nat, List<Nat>> run(const modul<Nat, List<Nat>> &m);
 };
@@ -249,6 +245,10 @@ template <typename T, typename Body> struct modul {
   template <typename _U0, typename _U1> operator modul<_U0, _U1>() const {
     return {crane_convert<List<two<_U0, _U1>>>(m_items)};
   }
+};
+
+template <template <typename> class _F0> struct _crane_carrier_tch {
+  template <typename _CraneTcArg> using c = two<_CraneTcArg, _F0<_CraneTcArg>>;
 };
 
 template <template <typename> class T1, typename F2>

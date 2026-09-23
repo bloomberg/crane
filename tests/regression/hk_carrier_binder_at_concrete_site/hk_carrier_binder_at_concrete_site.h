@@ -14,9 +14,6 @@
 struct Nat;
 template <typename T> struct box;
 template <typename T, typename Body> struct holder;
-template <typename _CraneTcArg>
-using _crane_carrier_tc_904911fedcfba566 =
-    holder<_CraneTcArg, box<_CraneTcArg>>;
 
 struct Nat {
   // TYPES
@@ -168,6 +165,9 @@ T1<bool> convert(std::type_identity_t<Convert<T1>> convert0, const Nat &x0_,
   return crane_container_cast<T1<bool>>(convert0(x0_, std::move(x1_)));
 }
 
+template <typename _CraneTcArg>
+using _crane_carrier_tc_904911fedcfba566 =
+    holder<_CraneTcArg, box<_CraneTcArg>>;
 const Convert<_crane_carrier_tc_904911fedcfba566> Convert_holder =
     [](Nat n, const holder<Nat, box<Nat>> &eta0_) {
       return tfmap<_crane_carrier_tc_904911fedcfba566>(

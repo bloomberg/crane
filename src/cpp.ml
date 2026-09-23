@@ -2174,6 +2174,42 @@ type wrapper_render = {
             implementation), including lifted declarations and deferred
             out-of-line function definitions. *)
 let do_struct_with_decl_tracking ~is_header f s =
+  (* A synthesised alias is emitted in front of the top-level element whose
+     rendering minted it, rather than collected into the file's prologue.
+
+     The prologue is only sound for a body naming top-level class templates:
+     those can be forward-declared, so the prologue's forward declarations make
+     the names readable there.  A body may name something that cannot be
+     forward-declared at all -- a member template of another struct, or another
+     alias template -- and then no prologue entry could have helped and the
+     alias has to follow the {e definition}.
+
+     Here it does by construction.  The element that minted the alias spells
+     the same types in its own declarations -- that is where the carrier came
+     from -- so anything the body names is already declared by the time that
+     element is legal, and one line earlier is still after it.  Which is also
+     why this needs no knowledge of what a given body names: the question is
+     answered by the position rather than by an analysis.
+
+     Only at the outermost call.  [f] recurses through module children, and a
+     nested element is rendered inside a struct, where an alias template would
+     acquire that struct's scope while its use sites spell it unqualified.
+     Anything still in the table when the file is assembled -- minted by the
+     lifted-declaration pass, which runs after all of these -- falls through to
+     the prologue as before. *)
+  let f =
+    let depth = ref 0 in
+    fun x ->
+      incr depth;
+      let p = Fun.protect ~finally:(fun () -> decr depth) (fun () -> f x) in
+      if !depth <> 0 then p
+      else
+        match Cpp_print.take_ctor_alias_decls ~is_header () with
+        | [] -> p
+        | l when Pp.ismt p -> prlist_with_sep fnl (fun x -> x) l
+        | l -> prlist_with_sep fnl (fun x -> x) l ++ cut2 () ++ p
+  in
+  Cpp_print.reset_ctor_alias_emitted ();
   ignore (Translation.take_lifted_decls ());
   hoisted_module_structs := [];
   Cpp_ind.deferred_member_defs := [];

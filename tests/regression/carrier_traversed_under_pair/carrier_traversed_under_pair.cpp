@@ -1,9 +1,5 @@
 #include "carrier_traversed_under_pair.h"
 
-template <typename _CraneTcArg>
-using _crane_carrier_tc_f3d015532548dd2b =
-    List<std::pair<std::optional<Nat>, Exp<_CraneTcArg>>>;
-
 List<std::pair<std::optional<Nat>, Exp<std::any>>>
 TFunctor_tagged(std::function<std::any(std::any)> f,
                 const List<std::pair<std::optional<Nat>, Exp<std::any>>> &l) {
@@ -11,6 +7,10 @@ TFunctor_tagged(std::function<std::any(std::any)> f,
     return std::make_pair(p.first, p.second.template exp_map<std::any>(f));
   });
 }
+
+template <typename _CraneTcArg>
+using _crane_carrier_tc_f3d015532548dd2b =
+    List<std::pair<std::optional<Nat>, Exp<_CraneTcArg>>>;
 
 blk<std::any> TFunctor_blk(std::function<std::any(std::any)> f,
                            const blk<std::any> &b) {

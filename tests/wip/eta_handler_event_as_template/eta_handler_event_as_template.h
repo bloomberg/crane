@@ -12,8 +12,6 @@
 struct Nat;
 enum class AE;
 struct FailE;
-template <typename _CraneTcArg>
-using itree_tc_296b3b7af4bd1a71 = std::shared_ptr<ITree<_CraneTcArg>>;
 
 struct Nat {
   // TYPES
@@ -91,6 +89,8 @@ struct FailE {
 };
 
 using st = Nat;
+template <typename _CraneTcArg>
+using itree_tc_296b3b7af4bd1a71 = std::shared_ptr<ITree<_CraneTcArg>>;
 
 struct M {
   template <typename T1 = void, typename T2>

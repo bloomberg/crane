@@ -874,6 +874,22 @@ let ctor_alias_decls : (string * string) list ref = ref []
     in what they call their parameters share one holder. *)
 let ctor_holder_decls : (string * string) list ref = ref []
 
+(** The alias and holder names already declared in the file being written.
+
+    {!take_ctor_alias_decls} is called once per top-level element rather than
+    once per file, so that an alias lands after the definitions its body names
+    ({!Cpp.do_struct_with_decl_tracking}).  Draining empties the registry, and
+    a later element reaching the same constructor mints the same name again --
+    the same name, because it is a digest of the body.  Repeating the
+    declaration would be legal and is what this avoids: the earlier one is
+    still in scope, so the repeat says nothing.
+
+    Per file, because the two files declare independently: a use in the
+    implementation file is reached after the header has been handed over. *)
+let ctor_alias_emitted : (string, unit) Hashtbl.t = Hashtbl.create 16
+
+let reset_ctor_alias_emitted () = Hashtbl.reset ctor_alias_emitted
+
 (** The C++ identifiers appearing in [text], as whole tokens.  Used to tell
     whether a rendered type body really names a template parameter, which a
     structural walk over the type cannot: a custom mapping's replacement text
@@ -3885,6 +3901,13 @@ let take_forward_struct_decls () =
     counter would give the second file the first file's names for other
     bodies. *)
 let take_ctor_alias_decls ~is_header () =
+  let unemitted l =
+    List.filter
+      (fun (_, name) ->
+        if Hashtbl.mem ctor_alias_emitted name then false
+        else (Hashtbl.add ctor_alias_emitted name (); true) )
+      l
+  in
   let l =
     List.rev_map
       (fun (body, name) ->
@@ -3895,7 +3918,7 @@ let take_ctor_alias_decls ~is_header () =
         ++ str " = "
         ++ str body
         ++ str ";")
-      !ctor_alias_decls
+      (unemitted !ctor_alias_decls)
   in
   ctor_alias_decls := [];
   (* A holder is a struct, and a struct may be defined once.  An alias above
@@ -3941,7 +3964,7 @@ let take_ctor_alias_decls ~is_header () =
         ++ str "> using c = "
         ++ str body
         ++ str "; };" )
-      !ctor_holder_decls
+      (unemitted !ctor_holder_decls)
   in
   if is_header then ctor_holder_decls := [];
   holders @ l

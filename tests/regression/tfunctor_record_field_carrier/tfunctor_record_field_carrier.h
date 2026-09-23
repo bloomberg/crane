@@ -17,8 +17,6 @@ struct Nat;
 template <typename A> struct List;
 template <typename t> struct Exp;
 template <typename t> struct glob;
-template <typename _CraneTcArg>
-using _crane_carrier_tc_6170063419090647 = std::optional<Exp<_CraneTcArg>>;
 
 struct Nat {
   // TYPES
@@ -412,6 +410,8 @@ template <typename t> struct glob {
 
 glob<std::any> TFunctor_glob(std::function<std::any(std::any)> f,
                              const glob<std::any> &g);
+template <typename _CraneTcArg>
+using _crane_carrier_tc_6170063419090647 = std::optional<Exp<_CraneTcArg>>;
 
 /// The composed carrier at a top-level argument: this one is already correct,
 /// and is kept as the control that says the emitter can do it.

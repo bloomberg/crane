@@ -17,8 +17,6 @@ struct Empty_set;
 struct Nat;
 struct FailE;
 enum class Ev;
-template <typename _CraneTcArg>
-using itree_tc_296b3b7af4bd1a71 = std::shared_ptr<ITree<_CraneTcArg>>;
 
 struct Empty_set {
   Empty_set() = delete;
@@ -192,6 +190,8 @@ concept Params = requires {
   { I::width() } -> std::convertible_to<Nat>;
 };
 using env = Nat;
+template <typename _CraneTcArg>
+using itree_tc_296b3b7af4bd1a71 = std::shared_ptr<ITree<_CraneTcArg>>;
 
 template <Params _tcI0, typename T1 = void>
 Monads::template stateT<env, itree_tc_296b3b7af4bd1a71, Nat> step(Nat n) {

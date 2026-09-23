@@ -16,8 +16,6 @@ struct Nat;
 template <typename A> struct List;
 template <typename T> struct box;
 template <typename T, typename Body> struct outer;
-template <typename _CraneTcArg>
-using _crane_carrier_tc_659c8e94e4cfa3a6 = List<box<_CraneTcArg>>;
 
 struct HkCallCarrierErased {
   static Nat bump(Nat n);
@@ -244,6 +242,9 @@ template <typename T, typename Body> struct outer {
             }()};
   }
 };
+
+template <typename _CraneTcArg>
+using _crane_carrier_tc_659c8e94e4cfa3a6 = List<box<_CraneTcArg>>;
 
 template <template <typename> class T1, typename F1>
 outer<std::any, T1<std::any>>

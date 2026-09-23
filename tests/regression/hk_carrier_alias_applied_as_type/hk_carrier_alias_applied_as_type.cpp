@@ -1,13 +1,13 @@
 #include "hk_carrier_alias_applied_as_type.h"
 
-template <typename _CraneTcArg>
-using _crane_carrier_tc_ca986222598eb83d =
-    modul<_CraneTcArg, List<_CraneTcArg>>;
-
 List<std::any> TFunctor_list(std::function<std::any(std::any)> x0_,
                              const List<std::any> &x1_) {
   return x1_.template map<std::any>(std::move(x0_));
 }
+
+template <typename _CraneTcArg>
+using _crane_carrier_tc_ca986222598eb83d =
+    modul<_CraneTcArg, List<_CraneTcArg>>;
 
 modul<Nat, List<Nat>>
 HkCarrierAliasAppliedAsType::run(const modul<Nat, List<Nat>> &m) {

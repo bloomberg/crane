@@ -1,9 +1,5 @@
 #include "partial_application.h"
 
-template <typename _CraneTcArg>
-using _crane_carrier_tc_09d65374579680a4 =
-    std::pair<_CraneTcArg, Box<_CraneTcArg>>;
-
 Box<std::any> TFunctor_box(Endo<Nat>, std::function<std::any(std::any)> x0_,
                            const Box<std::any> &x1_) {
   return ft_box<std::any, std::any>(std::move(x0_), x1_);
@@ -15,6 +11,10 @@ TFunctor_pair(std::type_identity_t<TFunctor<Box>> x0_,
               const std::pair<std::any, Box<std::any>> &x2_) {
   return ft_pair<std::any, std::any>(std::move(x0_), std::move(x1_), x2_);
 }
+
+template <typename _CraneTcArg>
+using _crane_carrier_tc_09d65374579680a4 =
+    std::pair<_CraneTcArg, Box<_CraneTcArg>>;
 
 std::pair<bool, Box<bool>>
 PartialApplication::convert(const std::pair<Nat, Box<Nat>> &p) {

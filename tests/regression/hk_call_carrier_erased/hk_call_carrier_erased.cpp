@@ -1,11 +1,5 @@
 #include "hk_call_carrier_erased.h"
 
-template <typename _CraneTcArg>
-using _crane_carrier_tc_659c8e94e4cfa3a6 = List<box<_CraneTcArg>>;
-template <typename _CraneTcArg>
-using _crane_carrier_tc_9829950dbe1dea9a =
-    outer<_CraneTcArg, List<_CraneTcArg>>;
-
 List<std::any> TFunctor_list(std::function<std::any(std::any)> x0_,
                              const List<std::any> &x1_) {
   return x1_.template map<std::any>(std::move(x0_));
@@ -15,6 +9,12 @@ box<std::any> TFunctor_box(std::function<std::any(std::any)> f,
                            const box<std::any> &b) {
   return box<std::any>{f(b.b_payload)};
 }
+
+template <typename _CraneTcArg>
+using _crane_carrier_tc_659c8e94e4cfa3a6 = List<box<_CraneTcArg>>;
+template <typename _CraneTcArg>
+using _crane_carrier_tc_9829950dbe1dea9a =
+    outer<_CraneTcArg, List<_CraneTcArg>>;
 
 Nat HkCallCarrierErased::bump(Nat n) { return Nat::s(std::move(n)); }
 

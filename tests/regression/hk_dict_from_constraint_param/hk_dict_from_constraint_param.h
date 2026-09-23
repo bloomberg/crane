@@ -16,8 +16,6 @@ struct Nat;
 template <typename A> struct List;
 template <typename T> struct box;
 template <typename T, typename Body> struct holder;
-template <typename _CraneTcArg>
-using _crane_carrier_tc_659c8e94e4cfa3a6 = List<box<_CraneTcArg>>;
 
 struct HkDictFromConstraintParam {
   static holder<Nat, List<Nat>> run(const holder<Nat, List<Nat>> &m);
@@ -242,6 +240,9 @@ template <typename T, typename Body> struct holder {
             }()};
   }
 };
+
+template <typename _CraneTcArg>
+using _crane_carrier_tc_659c8e94e4cfa3a6 = List<box<_CraneTcArg>>;
 
 template <template <typename> class T1, typename F2>
 holder<std::any, T1<std::any>>
