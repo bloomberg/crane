@@ -4063,11 +4063,22 @@ let erased_proj_tvar_map (class_ref : GlobRef.t) : (GlobRef.t * int) list =
     else
       let mp = MutInd.modpath kn in
       let n_promoted = List.length promoted_vars in
+      (* The index is a position in the class's whole [ip_vars], so it is
+         computed before anything is dropped.  What is dropped is a field the
+         back end decided against: a class demoted to a struct leaves its
+         field an ordinary value, and a guess that spells the field's name
+         writes a type nothing declares.  Same question as
+         {!promoted_var_is_associated_type} asks of the concept -- this is the
+         third list derived from [ip_vars], and all three must agree. *)
       List.mapi
         (fun i var_id ->
           let knp = Constant.make2 mp (Label.of_id var_id) in
-          (ConstRef knp, n_promoted - i) )
+          (var_id, (ConstRef knp, n_promoted - i)) )
         promoted_vars
+      |> List.filter_map (fun (var_id, entry) ->
+             if promoted_var_is_associated_type class_ref var_id then
+               Some entry
+             else None )
   | _ -> []
 
 (** Expand TC-typed carrier refs to their nested Type-valued promoted vars.
