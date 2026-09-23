@@ -4091,10 +4091,29 @@ let rec replace_erased_proj_refs
   | Miniml.Tunknown -> Miniml.Tvar (Rigid, 1)
   | _ -> t
 
+(** Whether a recovered type is one {!rewrite_ml_ast_types} would otherwise
+    have guessed at, and so worth writing back into the binder it came from.
+    Anything else in a body already has a pass that reads it from somewhere
+    better than the declaration -- an alias, for one, is a type in its own
+    right and the body wants the type it stands for. *)
+let rec names_promoted_type_var = function
+  | Miniml.Tglob (r, args, _) ->
+    Table.is_promoted_type_var r || List.exists names_promoted_type_var args
+  | Miniml.Tarr (a, b) -> names_promoted_type_var a || names_promoted_type_var b
+  | Miniml.Tmeta {contents = Some t} -> names_promoted_type_var t
+  | _ -> false
+
 (** Replace Tunresolved in all type annotations within an ML AST body with the
     GlobRef of the first promoted type var (the carrier). This allows
     convert_ml_type_to_cpp_type to detect it as a promoted type var.
-    [carrier_refs] is a list of (GlobRef.t * int) from erased_proj_tvar_map. *)
+    [carrier_refs] is a list of (GlobRef.t * int) from erased_proj_tvar_map.
+
+    The carrier is a guess and can only be one: every hole in the body is
+    filled with the same associated type, so a class declaring three of them
+    spells whichever one heads the list at all three.  Run
+    {!Mlutil.recover_erased_types} first -- the declared type names the holes
+    it can, and the guess is then left with only the ones nothing else could
+    name. *)
 let rewrite_ml_ast_types
     (carrier_refs : (GlobRef.t * int) list)
     (ast : ml_ast) : ml_ast =
@@ -4203,6 +4222,7 @@ let gen_decl_for_pp__inner n b ty =
       expand_tc_typed_carriers class_ref carrier_refs
     | _ -> carrier_refs
   in
+  let b = Mlutil.recover_erased_types ~only:names_promoted_type_var ty b in
   let b = rewrite_ml_ast_types carrier_refs b in
   let b = resolve_body_tvars b ty in
   with_method_ns_for_locals @@ fun () ->
@@ -4276,6 +4296,7 @@ let gen_dfun_def__inner n b ty =
   (* Rewrite Tunresolved in body types to promoted carrier refs. This allows
      convert_ml_type_to_cpp_type to resolve them correctly. *)
   let carrier_refs = get_erased_proj_map_from_type ty in
+  let b = Mlutil.recover_erased_types ~only:names_promoted_type_var ty b in
   let b = rewrite_ml_ast_types carrier_refs b in
   let b = resolve_body_tvars b ty in
   with_method_ns_for_locals @@ fun () ->

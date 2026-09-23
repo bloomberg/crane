@@ -320,7 +320,8 @@ val has_unknown : ml_type -> bool
     erased to [Tunknown], using the type [a] is known to have. Only erased
     annotations are touched, and only where the context supplies something
     better. *)
-val recover_erased_types : ml_type -> ml_ast -> ml_ast
+val recover_erased_types :
+  ?only:(ml_type -> bool) -> ml_type -> ml_ast -> ml_ast
 
 (** Map a function over all immediate subterms with a binding-depth counter.
     @param f   the transformation; receives the current depth and the child term

@@ -10011,3 +10011,14 @@
   (alias runtest)
   (deps alias_minted_before_its_body_type.t.exe)
   (action (run ./alias_minted_before_its_body_type.t.exe))))
+
+(subdir promoted_var_collapse
+ (rule
+  (targets promoted_var_collapse.t.exe)
+  (deps PromotedVarCollapse.vo promoted_var_collapse.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} promoted_var_collapse.t.exe promoted_var_collapse.cpp promoted_var_collapse.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps promoted_var_collapse.t.exe)
+  (action (run ./promoted_var_collapse.t.exe))))

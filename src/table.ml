@@ -437,14 +437,11 @@ let is_coinductive_type = function
 (** Get the list of field references for a record or typeclass inductive type.
 *)
 let get_record_fields r =
-  let kn =
-    let open GlobRef in
-    match r with
-    | ConstructRef ((kn, _), _) -> kn
-    | IndRef (kn, _) -> kn
-    | _ -> assert false
-  in
-  match Mindmap_env.find_opt kn !inductive_kinds with
+  (* A reference that names no inductive at all has no fields, which is the
+     same answer already given for an inductive that is not a record.  It is
+     reachable: {!record_fields_of_type} asks this of whatever a [Tglob]
+     carries, and an ML type may perfectly well be headed by a constant. *)
+  match inductive_kind_of r with
   | Some (Record f | TypeClass f) -> List.map fst f
   | _ -> []
 

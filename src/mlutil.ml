@@ -840,8 +840,19 @@ let rec has_unknown = function
 
     Only annotations that mention [Tunknown] are touched, and only where the
     context supplies something better, so a term whose types survived
-    extraction intact passes through unchanged. *)
-let recover_erased_types (expected : ml_type) (a : ml_ast) : ml_ast =
+    extraction intact passes through unchanged.
+
+    [~only] narrows the recovery to the types the caller wants the declaration
+    to speak about, and, where it does speak, writes the recovered type into
+    the binder's own annotation as well as into the environment's copy of it.
+    Both halves answer the same question.  A caller that reads its parameters
+    straight off the declared signature wants the annotation left alone and
+    every recovery taken; a caller whose parameter types are about to be
+    guessed at wants the arrow to speak first, but only over the holes that
+    guess would otherwise fill -- everywhere else the body has a pass that
+    knows better than the declaration does, and an alias in particular is a
+    type in its own right whose spelling the body must keep. *)
+let recover_erased_types ?only (expected : ml_type) (a : ml_ast) : ml_ast =
   (* [env] holds the binders' types, innermost first, as de Bruijn demands. *)
   let type_of_rel env n = try Some (List.nth env (n - 1)) with _ -> None in
   (* [Tunknown] is not the only way an annotation says nothing.  A
@@ -859,9 +870,10 @@ let recover_erased_types (expected : ml_type) (a : ml_ast) : ml_ast =
     | Tglob (_, l, _) -> List.exists uninformative l
     | _ -> false
   in
+  let accepts = match only with None -> fun _ -> true | Some p -> p in
   let better ~have ~from =
     match from with
-    | Some t when uninformative have && not (uninformative t) -> t
+    | Some t when uninformative have && not (uninformative t) && accepts t -> t
     | _ -> have
   in
   let rec go env expected a =
@@ -876,12 +888,15 @@ let recover_erased_types (expected : ml_type) (a : ml_ast) : ml_ast =
         | Some (Tarr (d, c)) -> (Some d, Some c)
         | _ -> (None, None)
       in
-      (* The binder's own annotation is left alone -- the caller recovers
-         parameter types from the declared signature directly, and rewriting
-         them here would disturb how the parameters are collected.  Only the
-         environment learns the better type, so the [MLcase] heads below can
-         use it. *)
-      MLlam (i, ty, go (better ~have:ty ~from:dom :: env) cod b)
+      (* Under [~only], the binder's annotation is recovered too.  A parameter
+         whose type extraction erased is a hole that a later pass will guess
+         at, and a guess made from the class rather than from the arrow cannot
+         tell one associated type from another -- [takes_three (a :
+         allocationId) (p : prov)] came out taking two [prov]s.  The arrow
+         knows; write it down where the guess would otherwise land. *)
+      let better_ty = better ~have:ty ~from:dom in
+      let ty = if only = None then ty else better_ty in
+      MLlam (i, ty, go (better_ty :: env) cod b)
     | MLletin (i, ty, e, b) ->
       let e = go env (if has_unknown ty then None else Some ty) e in
       MLletin (i, ty, e, go (ty :: env) expected b)
