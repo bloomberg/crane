@@ -10022,3 +10022,14 @@
   (alias runtest)
   (deps promoted_var_collapse.t.exe)
   (action (run ./promoted_var_collapse.t.exe))))
+
+(subdir lambda_binder_from_callee
+ (rule
+  (targets lambda_binder_from_callee.t.exe)
+  (deps LambdaBinderFromCallee.vo lambda_binder_from_callee.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} lambda_binder_from_callee.t.exe lambda_binder_from_callee.cpp lambda_binder_from_callee.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps lambda_binder_from_callee.t.exe)
+  (action (run ./lambda_binder_from_callee.t.exe))))
