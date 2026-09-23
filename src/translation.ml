@@ -1346,6 +1346,56 @@ let is_reified_monadic_expr ml_expr =
     | Miniml.Tarr (_, res) when n > 0 -> ml_result_after (n - 1) res
     | t -> t
   in
+  (* A callee generic over a monad class returns [m (list B)]: a [Tapp] headed
+     by the class's carrier variable, which no test against a concrete monad
+     glob can recognise.  The monad is nonetheless known {e here} -- the call
+     supplies the dictionary, and the instance the emitter writes for it is
+     [Monad_itree<std::any>] -- so the question is put to the call site rather
+     than to the callee's type, which is the only side that does not know the
+     answer.
+
+     The dictionary is identified by the domain it fills: a class applied to
+     the very carrier the result is headed by.  An instance passed for another
+     class, or for another carrier, says nothing about this result. *)
+  let instance_carrier_is_reified g =
+    match Option.map ml_codomain (find_type_opt g) with
+    | Some t -> (
+      match Ml_type_util.resolve_tmeta t with
+      | Miniml.Tglob (_, targs, _) ->
+        List.exists
+          (fun t ->
+            match Ml_type_util.resolve_tmeta t with
+            | Miniml.Tglob (m, _, _) -> Table.is_monad m && is_monad_reified m
+            | _ -> false )
+          targs
+      | _ -> false )
+    | None -> false
+  in
+  let reified_via_dictionary ty args head =
+    (* A carrier of arrow kind stands in its class's argument list as the
+       [Tapp] it would be if applied, with nothing applied to it yet. *)
+    let names_carrier t =
+      match Ml_type_util.resolve_tmeta t with
+      | Miniml.Tvar (_, i) | Miniml.Tapp (i, _) -> Int.equal i head
+      | _ -> false
+    in
+    let rec go doms args =
+      match (doms, args) with
+      | dom :: doms', _ when Mlutil.isTdummy dom -> go doms' args
+      | dom :: doms', a :: args' ->
+        let fills_this_carrier =
+          match Ml_type_util.resolve_tmeta dom with
+          | Miniml.Tglob (_, targs, _) -> List.exists names_carrier targs
+          | _ -> false
+        in
+        ( match a with
+        | Miniml.MLglob (g, _) when fills_this_carrier ->
+          instance_carrier_is_reified g
+        | _ -> go doms' args' )
+      | _ -> false
+    in
+    go (Ml_type_util.ml_domains ty) args
+  in
   match ml_expr with
   | MLrel i ->
     (match get_env_type_opt i with Some ty -> is_monadic_ml_type ty | None -> false)
@@ -1360,11 +1410,16 @@ let is_reified_monadic_expr ml_expr =
     && ( match find_type_opt r with
        | Some ty ->
          let res = ml_result_after nargs ty in
-         is_monadic_ml_type res
-         && ( (not (Table.is_inline_custom r))
-            || match Ml_type_util.resolve_tmeta res with
-               | Miniml.Tglob (m, _, _) -> is_monad_reified m
-               | _ -> false )
+         ( match Ml_type_util.resolve_tmeta res with
+         | Miniml.Tapp (head, _) ->
+           let args = match ml_expr with MLapp (_, args) -> args | _ -> [] in
+           reified_via_dictionary ty args head
+         | _ ->
+           is_monadic_ml_type res
+           && ( (not (Table.is_inline_custom r))
+              || match Ml_type_util.resolve_tmeta res with
+                 | Miniml.Tglob (m, _, _) -> is_monad_reified m
+                 | _ -> false ) )
        | None -> false )
   | MLcons (ty, _, _) -> is_monadic_ml_type ty
   | _ -> false

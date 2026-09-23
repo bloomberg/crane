@@ -227,10 +227,7 @@ struct GenericMonadResultRewrapped {
   template <typename T1 = void>
   static std::shared_ptr<ITree<List<Nat>>> run(const List<Nat> &l) {
     return itree_bind(
-        [=]() mutable -> std::shared_ptr<ITree<List<Nat>>> {
-          return ITree<List<Nat>>::ret(
-              map_monad<Monad_itree<std::any>, Nat, Nat>(twice<std::any>, l));
-        }(),
+        map_monad<Monad_itree<std::any>, Nat, Nat>(twice<std::any>, l),
         [](List<Nat> ys) { return itree_ret(ys); });
   }
 
