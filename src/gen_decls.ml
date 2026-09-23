@@ -29,11 +29,11 @@ module IntSet = Escape.IntSet
     a lookup of a parameter's type answers with a stale, unrelated entry (for
     a class's associated [Type], the unresolved class type variable, which
     reads as erased and provokes a spurious [any_cast]). *)
-let with_method_env_types env params f =
+let with_method_env_types ?(cpp = []) env params f =
   let saved_env_types = (!tctx).env_types in
   let saved_erased = save_erased_env () in
   reset_env_types ();
-  push_binders env params;
+  push_binders ~cpp env params;
   Fun.protect
     ~finally:(fun () ->
       tctx := { !tctx with env_types = saved_env_types };
@@ -1094,8 +1094,8 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
              arrived with the substitution as further parameters: they belong
              to the value the accessor returns. *)
           let declared_arity = count_ml_value_arrows field_ml_ty in
-          let method_args_and_ret () =
-            let args, ret = get_args_and_ret [] subst_ty in
+          let split_at_declared_arity ty =
+            let args, ret = get_args_and_ret [] ty in
             let rec split n acc = function
               | t :: rest
                 when Mlutil.isTdummy t || Table.is_typeclass_type t ->
@@ -1107,6 +1107,8 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
             ( kept,
               List.fold_right (fun a r -> Miniml.Tarr (a, r)) surplus ret )
           in
+          let method_args_and_ret () = split_at_declared_arity subst_ty in
+          let orig_args_and_ret () = split_at_declared_arity field_ml_ty in
           (* With the quantifier back, the method is a member template:
              [template <typename _A0> static Opt<_A0> mret(_A0)] rather than a
              signature erased to [std::any].  Its own type variables sit past
@@ -1283,16 +1285,61 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
           (* The instance's own binders were extracted at the class's erased
              field types.  For a higher-kinded class the declared signature
              ([subst_ty]) knows better: it still names the element type. *)
+          (* Each kept argument beside the class's own statement of it.  The
+             substituted type is what to spell; the class's is what says at
+             which arity, and the two questions have different answers as soon
+             as substitution unfolds an alias into arrows.  [bind]'s callback
+             is declared [A -> m B] -- one value arrow -- and the instance's
+             [m] is [stateT S m0], whose body is itself an arrow, so the
+             substituted parameter has two.  Flattened, that is a
+             [std::function] of two arguments against a call site that hands
+             it one.
+
+             The class's list is taken by the same split as the substituted
+             one, so the two align where they are the same length.  Where they
+             are not -- substitution can erase a parameter the class declared,
+             and the splits then consume different numbers of dummies -- no
+             pairing is attempted and the arity is left unsaid.  A neighbour's
+             arity is worse than none: it would respell a parameter that was
+             right. *)
+          let declared_arg_pairs =
+            let subst_args = fst (method_args_and_ret ()) in
+            let orig_args = fst (orig_args_and_ret ()) in
+            if List.length subst_args = List.length orig_args then
+              List.map2 (fun s o -> (s, Some o)) subst_args orig_args
+            else List.map (fun s -> (s, None)) subst_args
+          in
+          let kept_arg_pairs =
+            List.filter (fun (t, _) -> not (Mlutil.isTdummy t))
+              declared_arg_pairs
+          in
           let declared_arg_tys =
             if method_tvars = [] then [||]
             else
               (* A class-typed binder keeps its slot here: it still stands as a
                  lambda in the body, and dropping it would misalign the
                  declared types against the binders they retype. *)
-              Array.of_list
-                (List.filter
-                   (fun t -> not (Mlutil.isTdummy t))
-                   (fst (method_args_and_ret ())) )
+              Array.of_list (List.map fst kept_arg_pairs)
+          in
+          let declared_arg_arities =
+            Array.of_list
+              (List.map
+                 (fun (_, o) -> Option.map count_ml_value_arrows o)
+                 kept_arg_pairs )
+          in
+          (* The parameter's C++ type at the arity its declaration was written
+             at.  {!Minicpp.recurry_to} exists for exactly this: it puts the
+             arrows substitution moved into the callable's parameter list back
+             where the signature had them. *)
+          let param_cpp_ty n ml_ty =
+            let ty = convert_ml_type_to_cpp_type base_env type_var_names ml_ty in
+            match
+              (if n < Array.length declared_arg_arities then
+                 declared_arg_arities.(n)
+               else None)
+            with
+            | Some k when k > 0 -> Minicpp.recurry_to k ty
+            | _ -> ty
           in
           (* A class-typed argument is not a value in C++: the class is a
              concept, and the instance satisfying it is a type.  Such a binder
@@ -1343,11 +1390,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                 ( {
                     mb_name = id_of_mlid id;
                     mb_ml_ty = resolved_ty;
-                    mb_cpp_ty =
-                      convert_ml_type_to_cpp_type
-                        base_env
-                        type_var_names
-                        resolved_ty;
+                    mb_cpp_ty = param_cpp_ty n resolved_ty;
                     mb_kind =
                       ( if Table.is_typeclass_type resolved_ty then
                           `Instance
@@ -1592,8 +1635,15 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                  parameter (e.g. [Sz (nat -> nat)]'s [f]) from an erased one. *)
               let stmts =
                 with_param_types (List.rev renamed_ml) @@ fun () ->
-                with_method_env_types env renamed_ml (fun () ->
-                  gen_stmts env (fun x -> Sreturn (Some x)) inner_body )
+                (* The declared parameter types, so the body reads the
+                   arities the signature was written at rather than
+                   re-deriving them from ML types substitution has since
+                   given extra arrows.  Same order as [renamed_ml]. *)
+                with_method_env_types
+                  ~cpp:(List.rev_map (fun b -> Some b.mb_cpp_ty) binders)
+                  env renamed_ml
+                  (fun () ->
+                    gen_stmts env (fun x -> Sreturn (Some x)) inner_body )
               in
               (cpp_params, method_ret_ty, stmts, tc_tparams)
           in

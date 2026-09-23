@@ -11440,6 +11440,21 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
         ( try
             let ty = get_env_type i in
             let n = count_ml_value_arrows ty in
+            (* The declaration is what says how the arrows are taken.  A
+               parameter the class declares as [A -> m B], whose [m] this
+               instance fixes at something itself arrow-shaped, has one domain
+               in C++ and two arrows in ML; flattened, the call hands both at
+               once to a callable that takes one.  Where the binding site
+               recorded a declared type, that is the answer -- but only where
+               it takes {e fewer}, since a declaration with more domains is
+               the under-application the ML count already handles and a
+               re-derived type is not a declaration. *)
+            let n =
+              match binder_cpp_type i with
+              | Some (Tfun (dom, _)) when List.length dom < n ->
+                List.length dom
+              | _ -> n
+            in
             if n < List.length args && ml_codomain_is_tvar ty then
               List.length args
             else n
