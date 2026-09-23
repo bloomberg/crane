@@ -103,9 +103,8 @@ template <Monad _tcI0, typename T1> struct Monad_stateT {
 
   template <typename _A0>
   static stateT<T1, typename _tcI0::template m<_A0>> ret(_A0 x) {
-    return stateT<std::any, std::any, std::any>{[=](const auto &s) mutable {
-      return itree_ret(std::make_pair(std::any(x), std::any(s)));
-    }};
+    return stateT<std::any, std::any, std::any>{
+        [=](const auto &s) mutable { return itree_ret(std::make_pair(x, s)); }};
   }
 
   template <typename _A0, typename _A1>

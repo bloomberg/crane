@@ -103,24 +103,24 @@ const std::deque<grammar_entry> entries =
       return _a1;
     }(SigT<std::pair<Nonterminal, std::deque<Symbol>>,
            std::pair<std::any, std::any>>::
-          existt(std::make_pair(
-                     Nonterminal::DOC,
-                     [](auto _a0, auto _a1) {
-                       _a1.push_front(_a0);
-                       return _a1;
-                     }(Symbol::nt(Nonterminal::ITEMS), std::deque<Symbol>{})),
-                 std::make_pair(
-                     std::any(crane_erase_fn([](const auto &tup) {
-                       const auto &[_x, _x0] =
-                           std::any_cast<std::pair<std::any, std::any>>(tup);
-                       return true;
-                     })),
-                     std::any(crane_erase_fn([](const auto &tup) {
-                       const auto &[ts, _x] =
-                           std::any_cast<std::pair<std::any, std::any>>(tup);
-                       return rec{crane_container_cast<std::deque<elt>>(
-                           std::any_cast<std::deque<std::any>>(ts))};
-                     })))),
+          existt(
+              std::make_pair(
+                  Nonterminal::DOC,
+                  [](auto _a0, auto _a1) {
+                    _a1.push_front(_a0);
+                    return _a1;
+                  }(Symbol::nt(Nonterminal::ITEMS), std::deque<Symbol>{})),
+              std::make_pair(
+                  std::any(crane_erase_fn(
+                      [](const std::pair<symbol_semty, std::monostate> &tup) {
+                        const auto &[_x, _x0] = tup;
+                        return true;
+                      })),
+                  std::any(crane_erase_fn(
+                      [](std::pair<std::deque<elt>, std::monostate> tup) {
+                        const auto &[ts, _x] = tup;
+                        return rec{ts};
+                      })))),
       [](auto _a0, auto _a1) {
         _a1.push_front(_a0);
         return _a1;
@@ -153,18 +153,17 @@ const std::deque<grammar_entry> entries =
                   std::make_pair(
                       std::any(
                           crane_erase_fn([](const auto &) { return true; })),
-                      std::any(crane_erase_fn([](const auto &tup) {
-                        const auto &[n, y] =
-                            std::any_cast<std::pair<std::any, std::any>>(tup);
-                        const auto &[ts, _x] =
-                            std::any_cast<std::pair<std::any, std::any>>(y);
-                        return [](auto _a0, auto _a1) {
-                          _a1.push_front(_a0);
-                          return _a1;
-                        }(elt{std::any_cast<uint64_t>(n),
-                               std::any_cast<uint64_t>(n)},
-                               std::any_cast<std::deque<std::any>>(ts));
-                      })))),
+                      std::any(crane_erase_fn(
+                          [](std::pair<uint64_t, std::pair<std::deque<elt>,
+                                                           std::monostate>>
+                                 tup) {
+                            const auto &[n, y] = tup;
+                            const auto &[ts, _x] = y;
+                            return [](auto _a0, auto _a1) {
+                              _a1.push_front(_a0);
+                              return _a1;
+                            }(elt{n, n}, ts);
+                          })))),
           std::deque<SigT<std::pair<Nonterminal, std::deque<Symbol>>,
                           std::pair<std::any, std::any>>>{})));
 uint64_t num_entries(std::monostate _x);

@@ -373,40 +373,41 @@ struct MySym {
 };
 
 using MyDefs = DefsFn<MySym>;
-const MyDefs::grammar entries =
-    List<SigT<std::pair<MySym::Nt, List<MyDefs::symbol>>,
-              std::pair<std::any, std::any>>>::
-        cons(SigT<std::pair<MySym::Nt, List<MyDefs::symbol>>,
-                  std::pair<std::any, std::any>>::
-                 existt(
-                     std::make_pair(
-                         MySym::Nt::LST,
-                         List<MyDefs::symbol>::cons(
-                             MyDefs::symbol::t(MySym::Term::LBRACE),
-                             List<MyDefs::symbol>::cons(
-                                 MyDefs::symbol::nt(MySym::Nt::ELEM),
-                                 List<MyDefs::symbol>::cons(
-                                     MyDefs::symbol::nt(MySym::Nt::LST),
-                                     List<MyDefs::symbol>::cons(
-                                         MyDefs::symbol::t(MySym::Term::RBRACE),
-                                         List<MyDefs::symbol>::nil()))))),
-                     std::make_pair(
-                         std::any(
-                             crane_erase_fn([](const auto &) { return true; })),
-                         std::any(crane_erase_fn([](const auto &tup) {
-                           const auto &[_x, y0] =
-                               std::any_cast<std::pair<std::any, std::any>>(
-                                   tup);
-                           const auto &[pr, y1] =
-                               std::any_cast<std::pair<std::any, std::any>>(y0);
-                           const auto &[prs, y2] =
-                               std::any_cast<std::pair<std::any, std::any>>(y1);
-                           const auto &[_x0, _x1] =
-                               std::any_cast<std::pair<std::any, std::any>>(y2);
-                           return List<std::any>::cons(
-                               pr, std::any_cast<List<std::any>>(prs));
-                         })))),
-             List<SigT<std::pair<MySym::Nt, List<MyDefs::symbol>>,
-                       std::pair<std::any, std::any>>>::nil());
+const MyDefs::grammar entries = List<
+    SigT<std::pair<MySym::Nt, List<MyDefs::symbol>>,
+         std::pair<std::any, std::any>>>::
+    cons(
+        SigT<std::pair<MySym::Nt, List<MyDefs::symbol>>,
+             std::pair<std::any, std::any>>::
+            existt(
+                std::make_pair(
+                    MySym::Nt::LST,
+                    List<MyDefs::symbol>::cons(
+                        MyDefs::symbol::t(MySym::Term::LBRACE),
+                        List<MyDefs::symbol>::cons(
+                            MyDefs::symbol::nt(MySym::Nt::ELEM),
+                            List<MyDefs::symbol>::cons(
+                                MyDefs::symbol::nt(MySym::Nt::LST),
+                                List<MyDefs::symbol>::cons(
+                                    MyDefs::symbol::t(MySym::Term::RBRACE),
+                                    List<MyDefs::symbol>::nil()))))),
+                std::make_pair(
+                    std::any(crane_erase_fn([](const auto &) { return true; })),
+                    std::any(crane_erase_fn(
+                        [](const std::pair<
+                            std::any,
+                            std::pair<
+                                std::any,
+                                std::pair<List<std::any>,
+                                          std::pair<std::any, std::monostate>>>>
+                               &tup) {
+                          const auto &[_x, y0] = tup;
+                          const auto &[pr, y1] = y0;
+                          const auto &[prs, y2] = y1;
+                          const auto &[_x0, _x1] = y2;
+                          return List<std::any>::cons(pr, prs);
+                        })))),
+        List<SigT<std::pair<MySym::Nt, List<MyDefs::symbol>>,
+                  std::pair<std::any, std::any>>>::nil());
 
 #endif // INCLUDED_ERASED_LIST_CONS

@@ -4614,9 +4614,17 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
      [pair<List<std::any>, std::any>] field of a [sigT] receiving a
      [(l, @length A)] whose components are concrete here -- and it is the
      destination's shape that every consumer reads back, so a component
-     landing in one of its erased positions has to be boxed.  Only those
-     positions are taken over: elsewhere the local instantiation is the more
-     precise one. *)
+     landing in one of its erased positions has to be boxed.
+
+     It goes the other way too, and for the same reason.  This constructor's
+     own annotation can name a type variable the enclosing scope has no
+     spelling for -- the [A] of the [bind] whose callback this body is -- and
+     [std::any] is then not a statement that the position is boxed, only that
+     the annotation could not be written here.  The destination can write it:
+     the call that takes this value spells the very type [A] stands for
+     ([typename _tcI0::iptr]).  Where one side is erased and the other is not,
+     the one that says something is the one to believe; where both say
+     something, the local instantiation is the more precise. *)
   let ctor_temps_at_slot =
     match (expected_ty, r) with
     | Some exp, GlobRef.ConstructRef ((kn, i), _) -> (
@@ -4625,7 +4633,10 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
         when GlobRef.CanOrd.equal en (GlobRef.IndRef (kn, i))
              && List.length eargs = List.length draft_ctor_temps_for_wrap ->
         List.map2
-          (fun local slot -> if slot = Tany then Tany else local)
+          (fun local slot ->
+            if slot = Tany then Tany
+            else if prints_as_any local then slot
+            else local )
           draft_ctor_temps_for_wrap eargs
       | _ -> draft_ctor_temps_for_wrap )
     | _ -> draft_ctor_temps_for_wrap
@@ -9741,6 +9752,41 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
       in
       collect fn_ml_ty
     in
+    (* The two lists above are not indexed alike.  Each drops the parameters
+       that are [Tdummy] in the type it was collected from, and substitution
+       can make a parameter dummy that was not one before -- the [m A] of a
+       [bind] whose instance erases [m].  From that parameter on, one position
+       in the unsubstituted list is one position further left in the
+       substituted one.
+
+       Most readers stay within a single list, so the skew is invisible to
+       them.  A reader holding an unsubstituted position and wanting the
+       substituted type at it has to convert, and this is that conversion:
+       [None] where substitution erased the parameter outright, so that no
+       neighbour is returned in its place.
+
+       The count is taken over the unsubstituted list's own elements rather
+       than by walking the two arrow spines side by side.  Substitution can
+       uncover an alias whose expansion has a different arity, and paired
+       spines then drift against each other -- which is the failure this is
+       here to prevent, not one to reintroduce. *)
+    let subst_index_of_orig =
+      let subst_is_dummy t =
+        match resolve_tmeta (try type_subst_list tys t with _ -> t) with
+        | Miniml.Tdummy _ -> true
+        | _ -> false
+      in
+      fun o ->
+        match List.nth_opt fn_param_ml_tys_orig o with
+        | None -> None
+        | Some t when subst_is_dummy t -> None
+        | Some _ ->
+          let dropped =
+            List.length
+              (List.filter subst_is_dummy (safe_firstn o fn_param_ml_tys_orig))
+          in
+          Some (o - dropped)
+    in
     (* {b Concrete T1 for excess-arg calls.}  When [tys = []] and there
        are excess args, the callee's polymorphic return type [Tvar i] can't
        be resolved by substitution.  We compute the concrete type [T1]
@@ -9891,14 +9937,38 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
          callee's parameters are indexed from its class-dictionary arguments,
          which [regular_ml_args] does not include. *)
       let param_index = i + List.length typeclass_ml_args in
+      (* This parameter's substituted C++ type.  [param_index] counts
+         positions of the unsubstituted type, so it has to be converted before
+         it indexes the substituted list -- see [subst_index_of_orig]. *)
+      let param_expected_subst () =
+        (* The conversion says which substituted parameter stands at an
+           unsubstituted position.  That is a statement about the callee's ML
+           type, and it is worth making only where the ML type is what the
+           callee's C++ signature was built from.
+
+           For a callee whose C++ form is written out by hand it is not: the
+           replacement text is what says how the arguments are taken, and it
+           need not take them at the Rocq types.  [crane_itree.h] invokes
+           [itree_vis]'s continuation at [std::any] whatever its Rocq domain
+           [X] is, so the substituted domain ([std::monostate]) is the one
+           type the lambda will never be called at -- while [itree_bind]'s,
+           two lines away in the same header, is taken at exactly its Rocq
+           domain.  Nothing here can tell those apart, so this path is left
+           reading the position it always read: no better answer is available,
+           and a confident wrong one is worse than the familiar one. *)
+        if Table.is_inline_custom id then
+          param_expected_cpp_ty ~at:param_index fn_param_ml_tys
+        else
+          Option.bind (subst_index_of_orig param_index) (fun k ->
+              param_expected_cpp_ty ~at:k fn_param_ml_tys )
+      in
       (* Just the re-currying: [None] where the declaration's arity is already
          the shape the substituted parameter type has, so a producer that has
          its own better source keeps it. *)
       let param_expected_recurried () =
         match List.nth_opt fn_param_ml_tys_orig param_index with
         | Some orig ->
-          Option.bind
-            (param_expected_cpp_ty ~at:param_index fn_param_ml_tys)
+          Option.bind (param_expected_subst ())
             (recurry_to_opt (count_ml_value_arrows orig))
         | None -> None
       in
@@ -9907,7 +9977,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
         | Some _ as t -> t
         | None -> (
           match List.nth_opt fn_param_ml_tys_orig param_index with
-          | Some _ -> param_expected_cpp_ty ~at:param_index fn_param_ml_tys
+          | Some _ -> param_expected_subst ()
           | None -> None )
       in
       (* The callee declares this parameter as one of its own template

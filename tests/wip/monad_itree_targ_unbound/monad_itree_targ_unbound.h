@@ -152,7 +152,7 @@ struct Monads {
         typename _tcI0::template m<std::pair<_A0, std::any>>(_A0)>
     ret(_A0 a) {
       return [=](_A0 s) mutable {
-        return itree_ret(std::make_pair(std::any(s), std::any(a)));
+        return itree_ret(std::make_pair(s, std::any(a)));
       };
     }
 

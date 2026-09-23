@@ -265,7 +265,7 @@ TFunctor_pairs(std::type_identity_t<TFunctor<T1>> h, F1 &&f,
                   [=](std::pair<ident, std::any> pat) mutable {
                     const auto &[id, t] = pat;
                     return std::make_pair(std::any_cast<ident>(id),
-                                          std::any(crane_call_erased(f, t)));
+                                          crane_call_erased(f, t));
                   },
                   m.p_defs),
       tfmap<T1, std::any>(std::move(h), f, m.p_body)};

@@ -18,6 +18,17 @@
 
 ; Test rules - compile C++ and run tests
 
+(subdir assoc_type_erased_in_lambda_body
+ (rule
+  (targets assoc_type_erased_in_lambda_body.t.exe)
+  (deps AssocTypeErasedInLambdaBody.vo assoc_type_erased_in_lambda_body.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} assoc_type_erased_in_lambda_body.t.exe assoc_type_erased_in_lambda_body.cpp assoc_type_erased_in_lambda_body.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps assoc_type_erased_in_lambda_body.t.exe)
+  (action (run ./assoc_type_erased_in_lambda_body.t.exe))))
+
 (subdir assoc_type_erased_in_body
  (rule
   (targets assoc_type_erased_in_body.t.exe)
