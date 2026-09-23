@@ -365,6 +365,12 @@ val dump_unused_vars : ml_ast -> ml_ast
 (** Normalize an ML term by beta-reduction and simplification. *)
 val normalize : ml_ast -> ml_ast
 
+(** [apply_eta_args f args] is [f] applied to [args], with the application
+    placed where [f] produces its value rather than wrapped around [f] -- for
+    callers that build an application after simplification has already run,
+    such as eta-expansion to a declaration's arity. *)
+val apply_eta_args : ml_ast -> ml_ast list -> ml_ast
+
 (** Optimize fixpoint expressions. *)
 val optimize_fix : ml_ast -> ml_ast
 

@@ -2643,8 +2643,14 @@ let is_unit_cpp_type = function
     A nested lambda is traversed under its own declared return type, since a
     [tt] returned from a lambda that really does return [unit] is well-typed. *)
 let dead_unit_returns_to_abort (cod : cpp_type) (body : cpp_stmt list) =
-  let is_tt = function
+  (* A [tt] can also reach the return as the head of a call, when the branch's
+     type is a function type and eta-expansion pushed the invented argument
+     inside the match: the impossible branch then returns [tt(x)].  Applying a
+     value that carries no information is no more reachable than returning
+     one, and is the same branch seen one step later. *)
+  let rec is_tt = function
     | CPPglob (r, _, _) -> Table.is_tt_constructor r
+    | CPPfun_call (_, f, _) -> is_tt f
     | _ -> false
   in
   (* [ret_ty] is [None] inside a lambda with a deduced return type: there is no
@@ -3700,7 +3706,7 @@ let gen_dfun n b cty ty temps =
             (List.mapi (fun i x -> (i, x)) missing)) in
           List.map
             (glob_subst_stmt n rec_call)
-            (gen_body_stmts env cofix_wrap (MLapp (lifted_b, args)))
+            (gen_body_stmts env cofix_wrap (apply_eta_args lifted_b args))
       in
       let b = return_captures_by_value b in
       (* let b = List.map forward_fun_args b in *)
@@ -4861,7 +4867,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
                if isTdummy t then None else Some (MLrel (i + 1)) )
              (List.mapi (fun i x -> (i, x)) missing) )
       in
-      (missing @ ids_with_types, MLapp (lifted_b, args))
+      (missing @ ids_with_types, apply_eta_args lifted_b args)
   in
   let ids_converted, typeclass_temps =
     promote_typeclass_params

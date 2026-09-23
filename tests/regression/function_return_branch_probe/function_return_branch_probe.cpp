@@ -5,16 +5,13 @@
 /// causing C++ to fail to deduce a common return type across the two distinct
 /// closure types.
 Nat FunctionReturnBranchProbe::make_adder(const Nat &n, const Nat &x0_) {
-  return [=]() mutable -> std::function<Nat(Nat)> {
-    if (std::holds_alternative<typename Nat::O>(n.v())) {
-      return [](Nat x) { return x; };
-    } else {
-      const auto &[a0] = std::get<typename Nat::S>(n.v());
-      const Nat &a0_value = *a0;
-      std::function<Nat(Nat)> f = [=](Nat _x0) mutable -> Nat {
-        return make_adder(a0_value, _x0);
-      };
-      return [=](const Nat &x) mutable { return Nat::s(f(x)); };
-    }
-  }()(x0_);
+  if (std::holds_alternative<typename Nat::O>(n.v())) {
+    return x0_;
+  } else {
+    const auto &[a0] = std::get<typename Nat::S>(n.v());
+    std::function<Nat(Nat)> f = [&](Nat _x0) -> Nat {
+      return make_adder(*a0, _x0);
+    };
+    return Nat::s(f(x0_));
+  }
 }

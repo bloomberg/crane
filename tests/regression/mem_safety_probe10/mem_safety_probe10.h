@@ -129,26 +129,19 @@ struct MemSafetyProbe10 {
         auto _f = std::move(std::get<_Enter>(_frame));
         const tree *_self = _f._self;
         uint64_t x0_ = _f.x0_;
-        tree _self_val = *_self;
-        _result = [=]() mutable -> std::function<uint64_t(uint64_t)> {
-          if (std::holds_alternative<typename tree::Leaf>(_self_val.v())) {
-            return [](uint64_t n) { return n; };
-          } else {
-            const auto &[a0, a1, a2] =
-                std::get<typename tree::Node>(_self_val.v());
-            const tree &a0_value = *a0;
-            const tree &a2_value = *a2;
-            std::function<uint64_t(uint64_t)> fl =
-                [=](uint64_t _x0) mutable -> uint64_t {
-              return a0_value.tree_to_adder(_x0);
-            };
-            std::function<uint64_t(uint64_t)> fr =
-                [=](uint64_t _x0) mutable -> uint64_t {
-              return a2_value.tree_to_adder(_x0);
-            };
-            return [=](uint64_t n) mutable { return fl((a1 + fr(n))); };
-          }
-        }()(x0_);
+        auto &&_sv = *_self;
+        if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
+          _result = std::move(x0_);
+        } else {
+          const auto &[a0, a1, a2] = std::get<typename tree::Node>(_sv.v());
+          std::function<uint64_t(uint64_t)> fl = [&](uint64_t _x0) -> uint64_t {
+            return a0->tree_to_adder(_x0);
+          };
+          std::function<uint64_t(uint64_t)> fr = [&](uint64_t _x0) -> uint64_t {
+            return a2->tree_to_adder(_x0);
+          };
+          _result = fl((a1 + fr(x0_)));
+        }
       }
       return _result;
     }
@@ -513,45 +506,23 @@ struct MemSafetyProbe10 {
   /// TEST 2: Build closures during list traversal,
   /// where each closure captures the HEAD of the list
   /// and the closure from the previous step.
-  static uint64_t
-  chain_adders(const mylist<uint64_t> &l, std::function<uint64_t(uint64_t)> acc,
-               uint64_t x0_) { /// _Enter: captures varying parameters for each
-                               /// recursive call.
-
-    struct _Enter {
-      uint64_t x0_;
-      std::function<uint64_t(uint64_t)> acc;
-      mylist<uint64_t> l;
-    };
-
-    using _Frame = std::variant<_Enter>;
-    uint64_t _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{x0_, std::move(acc), l});
-    /// Loopified chain_adders: _Enter.
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      auto _f = std::move(std::get<_Enter>(_frame));
-      uint64_t x0_ = _f.x0_;
-      std::function<uint64_t(uint64_t)> acc = std::move(_f.acc);
-      const mylist<uint64_t> &l = std::move(_f.l);
-      _result = [=]() mutable -> std::function<uint64_t(uint64_t)> {
-        if (std::holds_alternative<typename mylist<uint64_t>::Mynil>(l.v())) {
-          return acc;
-        } else {
-          const auto &[a0, a1] =
-              std::get<typename mylist<uint64_t>::Mycons>(l.v());
-          const mylist<uint64_t> &a1_value = *a1;
-          return [=](uint64_t _x0) mutable -> uint64_t {
-            return chain_adders(
-                a1_value, [=](uint64_t n) mutable { return acc((a0 + n)); },
-                _x0);
-          };
-        }
-      }()(x0_);
+  static uint64_t chain_adders(const mylist<uint64_t> &l,
+                               std::function<uint64_t(uint64_t)> acc,
+                               uint64_t x0_) {
+    std::function<uint64_t(uint64_t)> _loop_acc = std::move(acc);
+    mylist<uint64_t> _loop_l = l;
+    while (true) {
+      if (std::holds_alternative<typename mylist<uint64_t>::Mynil>(
+              _loop_l.v())) {
+        return _loop_acc(x0_);
+      } else {
+        const auto &[a0, a1] =
+            std::get<typename mylist<uint64_t>::Mycons>(_loop_l.v());
+        const mylist<uint64_t> &a1_value = *a1;
+        _loop_acc = [=](uint64_t n) mutable { return _loop_acc((a0 + n)); };
+        _loop_l = a1_value;
+      }
     }
-    return _result;
   }
 
   static inline const uint64_t test_chain = []() {

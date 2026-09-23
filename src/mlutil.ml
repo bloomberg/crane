@@ -2020,6 +2020,20 @@ let normalize a =
   in
   norm a
 
+(** [apply_eta_args f args] is [f] applied to [args], with the application
+    placed where [f] produces its value rather than wrapped around [f].
+
+    Eta-expansion invents its parameters after simplification has run, so the
+    application it builds is a redex nothing has looked at.  Around a
+    conditional that redex is not merely unsimplified but untranslatable: the
+    branches of [if even n then f_even n else f_odd n] are two closures with
+    two closure types, and C++ has no common type to give the conditional --
+    even though each branch, applied, is an ordinary call.  {!simpl_app}
+    already knows where an application belongs; this is the entry point for
+    the callers that build one late. *)
+let apply_eta_args f args =
+  match args with [] -> f | _ -> simpl_app (optims ()) args f
+
 (** {1 Special treatment of fixpoint for pretty-printing purpose} *)
 
 (** Optimizes a fixpoint by reordering arguments so that [n] leading arguments

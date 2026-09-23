@@ -16,22 +16,16 @@ struct FixDirectReturn {
   template <typename F1>
     requires std::is_invocable_r_v<uint64_t, F1 &, uint64_t &>
   static uint64_t make_callback(uint64_t base, F1 &&x0_) {
-    return [=]() mutable {
-      auto add_impl = [=](auto &_self_add, uint64_t x) mutable -> uint64_t {
-        if (x <= 0) {
-          return base;
-        } else {
-          uint64_t x_ = x - 1;
-          return (_self_add(_self_add, x_) + 1);
-        }
-      };
-      auto add = [=](uint64_t x) mutable -> uint64_t {
-        return add_impl(add_impl, x);
-      };
-      return [=](std::function<uint64_t(uint64_t)> g) mutable {
-        return (g(add(UINT64_C(0))) + add(UINT64_C(1)));
-      };
-    }()(x0_);
+    auto add_impl = [&](auto &_self_add, uint64_t x) -> uint64_t {
+      if (x <= 0) {
+        return base;
+      } else {
+        uint64_t x_ = x - 1;
+        return (_self_add(_self_add, x_) + 1);
+      }
+    };
+    auto add = [&](uint64_t x) -> uint64_t { return add_impl(add_impl, x); };
+    return (x0_(add(UINT64_C(0))) + add(UINT64_C(1)));
   }
 
   /// test1: make_callback(42)(fun x => x) = id(42) + 43 = 85.

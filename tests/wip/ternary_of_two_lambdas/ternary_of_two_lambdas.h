@@ -1,17 +1,14 @@
-#ifndef INCLUDED_IF_BRANCH_FUNCTION_PARAMS
-#define INCLUDED_IF_BRANCH_FUNCTION_PARAMS
+#ifndef INCLUDED_TERNARY_OF_TWO_LAMBDAS
+#define INCLUDED_TERNARY_OF_TWO_LAMBDAS
 
 #include "crane_fn.h"
 #include "small_vector.h"
 #include <atomic>
 #include <memory>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
-enum class Bool0;
 struct Nat;
-enum class Bool0 { TRUE_, FALSE_ };
 
 struct Nat {
   // TYPES
@@ -70,6 +67,44 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
+  Nat mul(const Nat &m) const {
+    const Nat *_self = this;
+
+    /// _Enter: captures varying parameters for each recursive call.
+    struct _Enter {
+      const Nat *_self;
+    };
+
+    /// _Resume_S: resumes after recursive call with _result.
+    struct _Resume_S {};
+
+    using _Frame = std::variant<_Enter, _Resume_S>;
+    Nat _result{};
+    crane::small_vector<_Frame> _stack;
+    _stack.emplace_back(_Enter{_self});
+    /// Loopified mul: _Enter -> _Resume_S.
+    while (!_stack.empty()) {
+      _Frame _frame = std::move(_stack.back());
+      _stack.pop_back();
+      if (std::holds_alternative<_Enter>(_frame)) {
+        auto _f = std::move(std::get<_Enter>(_frame));
+        const Nat *_self = _f._self;
+        auto &&_sv = *_self;
+        if (std::holds_alternative<typename Nat::O>(_sv.v())) {
+          _result = Nat::o();
+        } else {
+          const auto &[a0] = std::get<typename Nat::S>(_sv.v());
+          _stack.emplace_back(_Resume_S{});
+          _stack.emplace_back(_Enter{crane_raw(a0)});
+        }
+      } else {
+        auto _f = std::move(std::get<_Resume_S>(_frame));
+        _result = m.add(std::move(_result));
+      }
+    }
+    return _result;
+  }
+
   Nat add(Nat m) const {
     std::shared_ptr<Nat> _head{};
     std::shared_ptr<Nat> *_write = &_head;
@@ -93,33 +128,15 @@ public:
   }
 };
 
-/// An if whose two branches are two *different* function-typed parameters is
-/// emitted as an immediately-invoked lambda with a deduced return type.  The
-/// two return statements hand back two distinct closure types, so deduction
-/// reports conflicting types.  Returning the same function in both branches,
-/// or one branch returning a literal lambda, happens to work; two different
-/// binders do not.
-struct IfBranchFunctionParams {
-  template <typename F1, typename F2>
-    requires std::is_invocable_r_v<Nat, F1 &, Nat &> &&
-             std::is_invocable_r_v<Nat, F2 &, Nat &>
-  static Nat h(Bool0 b, F1 &&f, F2 &&g, Nat x0_) {
-    switch (b) {
-    case Bool0::TRUE_: {
-      return f(std::move(x0_));
-    }
-    case Bool0::FALSE_: {
-      return g(std::move(x0_));
-    }
-    default:
-      std::unreachable();
-    }
-  }
-
-  static inline const Nat run = h(
-      Bool0::FALSE_, [](Nat x) { return Nat::s(x); },
-      [](const Nat &x) { return x.add(Nat::s(Nat::s(Nat::o()))); },
-      Nat::s(Nat::o()));
+struct PeanoNat {
+  static bool even(const Nat &n);
 };
 
-#endif // INCLUDED_IF_BRANCH_FUNCTION_PARAMS
+Nat f_even(const Nat &x0_, const Nat &x1_);
+Nat f_odd(const Nat &x0_, const Nat &x1_);
+/// Point-free: the body is an if whose branches are functions, and no
+/// argument is written.
+Nat pick(const Nat &n, Nat x0_);
+Nat go(const Nat &x0_, const Nat &x1_);
+
+#endif // INCLUDED_TERNARY_OF_TWO_LAMBDAS

@@ -16,20 +16,16 @@ struct FixComposeEscape {
   template <typename F1>
     requires std::is_invocable_r_v<uint64_t, F1 &, uint64_t &>
   static uint64_t compose_add(uint64_t base, F1 &&g, uint64_t x0_) {
-    return [=]() mutable {
-      auto add_impl = [=](auto &_self_add, uint64_t x) mutable -> uint64_t {
-        if (x <= 0) {
-          return base;
-        } else {
-          uint64_t x_ = x - 1;
-          return (_self_add(_self_add, x_) + 1);
-        }
-      };
-      auto add = [=](uint64_t x) mutable -> uint64_t {
-        return add_impl(add_impl, x);
-      };
-      return [=](uint64_t x) mutable { return g(add(x)); };
-    }()(x0_);
+    auto add_impl = [&](auto &_self_add, uint64_t x) -> uint64_t {
+      if (x <= 0) {
+        return base;
+      } else {
+        uint64_t x_ = x - 1;
+        return (_self_add(_self_add, x_) + 1);
+      }
+    };
+    auto add = [&](uint64_t x) -> uint64_t { return add_impl(add_impl, x); };
+    return g(add(x0_));
   }
 
   /// test1: compose_add 42 id 3 = id (42 + 3) = 45

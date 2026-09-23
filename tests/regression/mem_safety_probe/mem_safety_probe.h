@@ -562,45 +562,25 @@ struct MemSafetyProbe {
   /// ---- TEST 4: Fold composing closures ----
   /// Each iteration wraps the accumulator in a new closure that captures
   /// a tree value. Tests deep closure chaining with value type captures.
-  static uint64_t
-  fold_compose(const mylist<tree> &trees, std::function<uint64_t(uint64_t)> acc,
-               uint64_t x0_) { /// _Enter: captures varying parameters for each
-                               /// recursive call.
-
-    struct _Enter {
-      uint64_t x0_;
-      std::function<uint64_t(uint64_t)> acc;
-      mylist<tree> trees;
-    };
-
-    using _Frame = std::variant<_Enter>;
-    uint64_t _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{x0_, std::move(acc), trees});
-    /// Loopified fold_compose: _Enter.
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      auto _f = std::move(std::get<_Enter>(_frame));
-      uint64_t x0_ = _f.x0_;
-      std::function<uint64_t(uint64_t)> acc = std::move(_f.acc);
-      const mylist<tree> &trees = std::move(_f.trees);
-      _result = [=]() mutable -> std::function<uint64_t(uint64_t)> {
-        if (std::holds_alternative<typename mylist<tree>::Mynil>(trees.v())) {
-          return acc;
-        } else {
-          const auto &[a0, a1] =
-              std::get<typename mylist<tree>::Mycons>(trees.v());
-          const mylist<tree> &a1_value = *a1;
-          return [=](uint64_t _x0) mutable -> uint64_t {
-            return fold_compose(
-                a1_value,
-                [=](uint64_t n) mutable { return acc(a0.sum_values(n)); }, _x0);
-          };
-        }
-      }()(x0_);
+  static uint64_t fold_compose(const mylist<tree> &trees,
+                               std::function<uint64_t(uint64_t)> acc,
+                               uint64_t x0_) {
+    std::function<uint64_t(uint64_t)> _loop_acc = std::move(acc);
+    mylist<tree> _loop_trees = trees;
+    while (true) {
+      if (std::holds_alternative<typename mylist<tree>::Mynil>(
+              _loop_trees.v())) {
+        return _loop_acc(x0_);
+      } else {
+        const auto &[a0, a1] =
+            std::get<typename mylist<tree>::Mycons>(_loop_trees.v());
+        const mylist<tree> &a1_value = *a1;
+        _loop_acc = [=](uint64_t n) mutable {
+          return _loop_acc(a0.sum_values(n));
+        };
+        _loop_trees = a1_value;
+      }
     }
-    return _result;
   }
 
   static inline const uint64_t test_fold_compose = []() {

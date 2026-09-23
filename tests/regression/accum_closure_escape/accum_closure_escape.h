@@ -564,19 +564,14 @@ struct AccumClosureEscape {
   static uint64_t compose_from_list(const mylist<uint64_t> &l,
                                     std::function<uint64_t(uint64_t)> acc,
                                     uint64_t x0_) {
-    return [=]() mutable -> std::function<uint64_t(uint64_t)> {
-      if (std::holds_alternative<typename mylist<uint64_t>::Mynil>(l.v())) {
-        return acc;
-      } else {
-        const auto &[a0, a1] =
-            std::get<typename mylist<uint64_t>::Mycons>(l.v());
-        const mylist<uint64_t> &a1_value = *a1;
-        return [=](uint64_t _x0) mutable -> uint64_t {
-          return compose_from_list(
-              a1_value, [=](uint64_t x) mutable { return acc((a0 + x)); }, _x0);
-        };
-      }
-    }()(x0_);
+    if (std::holds_alternative<typename mylist<uint64_t>::Mynil>(l.v())) {
+      return acc(x0_);
+    } else {
+      const auto &[a0, a1] = std::get<typename mylist<uint64_t>::Mycons>(l.v());
+      const mylist<uint64_t> &a1_value = *a1;
+      return compose_from_list(
+          a1_value, [=](uint64_t x) mutable { return acc((a0 + x)); }, x0_);
+    }
   }
 
   /// test3: compose_from_list 10, 20, 30 id

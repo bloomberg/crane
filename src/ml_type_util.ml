@@ -194,7 +194,8 @@ let eta_expand_to ty b =
         (List.rev missing)
     in
     let args = List.init k (fun i -> Miniml.MLrel (k - i)) in
-    Mlutil.named_lams (extra @ ids) (Miniml.MLapp (Mlutil.ast_lift k inner, args))
+    Mlutil.named_lams (extra @ ids)
+      (Mlutil.apply_eta_args (Mlutil.ast_lift k inner) args)
 
 (** A class method's type with the quantifier a concept erased put back.
 
