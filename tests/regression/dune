@@ -9881,3 +9881,14 @@
   (alias runtest)
   (deps loop_transform_reassigns_closure_typed_var.t.exe)
   (action (run ./loop_transform_reassigns_closure_typed_var.t.exe))))
+
+(subdir erased_arg_callable_spelled_std_function
+ (rule
+  (targets erased_arg_callable_spelled_std_function.t.exe)
+  (deps ErasedArgCallableSpelledStdFunction.vo erased_arg_callable_spelled_std_function.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} erased_arg_callable_spelled_std_function.t.exe erased_arg_callable_spelled_std_function.cpp erased_arg_callable_spelled_std_function.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps erased_arg_callable_spelled_std_function.t.exe)
+  (action (run ./erased_arg_callable_spelled_std_function.t.exe))))
