@@ -375,7 +375,7 @@ TFunctor_option(std::type_identity_t<TFunctor<T1>> h, F1 &&f,
                 const std::optional<T1<std::any>> &o) {
   if (o.has_value()) {
     const auto &x = *o;
-    return std::make_optional<T1<std::any>>(tfmap(h, f, x));
+    return std::make_optional<T1<std::any>>(tfmap<T1, std::any>(h, f, x));
   } else {
     return std::optional<T1<std::any>>();
   }

@@ -10,9 +10,9 @@ Ann<std::any> TFunctor_ann(std::function<std::any(std::any)> f,
     const auto &[t, e] = a0;
     return Ann<std::any>::ann_prefix(std::make_pair(
         std::any(crane_call_erased(f, t)),
-        tfmap([](auto &&_ec0,
-                 Exp0<std::any> _ec1) { return _ec1.TFunctor_exp(_ec0); },
-              f, e)));
+        tfmap<Exp0>([](auto &&_ec0,
+                       Exp0<std::any> _ec1) { return _ec1.TFunctor_exp(_ec0); },
+                    f, e)));
   }
 }
 

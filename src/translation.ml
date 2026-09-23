@@ -13075,9 +13075,20 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
             | _ -> false) args
         in
         if fix_a_fired || not (Id.Set.is_empty tany_pat_var_names) then
+          (* Deduction is what this pass falls back on, so it may only give
+             up an argument deduction could have recovered.  A type
+             constructor is the one thing it cannot: the carrier occupies a
+             non-deduced position, which is why it was written out in the
+             first place, and an erased argument is the very case that made
+             it unrecoverable.  Stripping it hands the call to a deduction
+             that reads through the alias to its body and answers with the
+             wrong constructor. *)
+          let recovered_carrier tys =
+            List.exists (function Ttyctor _ -> true | _ -> false) tys
+          in
           let rec fix_expr e = match e with
-            | CPPfun_call (res, CPPglob (r, _ :: _, ci), args)
-              when should_strip (to_reversed args) ->
+            | CPPfun_call (res, CPPglob (r, (_ :: _ as tys), ci), args)
+              when (not (recovered_carrier tys)) && should_strip (to_reversed args) ->
               CPPfun_call
                 (res, CPPglob (r, [], ci), map_args fix_expr args)
             | _ -> map_expr fix_expr fix_stmt Fun.id e
