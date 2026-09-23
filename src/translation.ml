@@ -4191,9 +4191,30 @@ and dict_carrier_type_args env tvars id args =
     | Miniml.Tglob (_, targs, _) -> List.exists unrecovered targs
     | _ -> false
   in
+  (* Which argument the composition is applied {e in}, which is a different
+     question from how far to descend and only looks like the same one while
+     every constructor in the chain takes a single argument.  The carrier is
+     the method's codomain abstracted over the variable the method quantifies,
+     so the argument to follow is the one that variable occurs in:
+     [fun t => list (nat * Exp t)] reaches it through the {e second} component
+     of the pair, and following the leading argument abstracts over [nat]
+     instead -- a carrier of the right shape, varying in the wrong place, which
+     nothing downstream can tell from the right one. *)
+  let rec mentions_traversed t =
+    match resolve_tmeta t with
+    | Miniml.Tunknown | Miniml.Tvar _ -> true
+    | Miniml.Tglob (_, targs, _) | Miniml.Tapp (_, targs) ->
+      List.exists mentions_traversed targs
+    | Miniml.Tarr (a, b) -> mentions_traversed a || mentions_traversed b
+    | _ -> false
+  in
   let rec traversed t =
     match resolve_tmeta t with
-    | Miniml.Tglob (_, t0 :: _, _) | Miniml.Tapp (_, t0 :: _) -> traversed t0
+    | Miniml.Tglob (_, (t0 :: _ as targs), _)
+    | Miniml.Tapp (_, (t0 :: _ as targs)) ->
+      (* No argument mentioning it means there is nothing better to say than
+         what the leading one says, which is what this did before. *)
+      traversed (Option.default t0 (List.find_opt mentions_traversed targs))
     | t -> t
   in
   let* over =
