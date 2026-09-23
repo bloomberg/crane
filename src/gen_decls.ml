@@ -592,6 +592,27 @@ let gen_typeclass_cpp name fields ind =
     | Miniml.Tglob (r, _, _) -> Table.is_typeclass r
     | _ -> false
   in
+  (* This is the same question {!promoted_var_is_associated_type} asks, so the
+     two lists partition the fields and no name can reach both.  They are
+     computed in different places and could drift apart again; a concept that
+     wants one name as a type and as a function is satisfied by no instance at
+     all, and nothing downstream of it instantiates, so the failure is silent
+     everywhere except in the error count of whatever used it. *)
+  if Sys.getenv_opt "CRANE_CHECK_IR" <> None then
+    List.iter
+      (fun (field_opt, field_ty) ->
+        match field_opt with
+        | Some fr when not (is_typeclass_field_type field_ty) ->
+          let fid = Common.id_of_global Term fr in
+          if List.exists (Id.equal fid) promoted_vars then
+            CErrors.user_err
+              Pp.(
+                str "Crane: concept '"
+                ++ Id.print (Common.id_of_global Type name)
+                ++ str "' requires '" ++ Id.print fid
+                ++ str "' both as a type and as a method." )
+        | _ -> () )
+      fields;
   (* Generate a single method requirement. Returns either: - `Normal (params,
      (call, constraint))` for regular methods - `Disjunctive expr` for fields
      whose type is a bare promoted Tvar *)
