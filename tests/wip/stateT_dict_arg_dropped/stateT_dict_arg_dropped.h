@@ -103,7 +103,7 @@ template <Monad _tcI0, typename T1> struct Monad_stateT {
 
   template <typename _A0>
   static stateT<T1, typename _tcI0::template m<_A0>, _A0> ret(_A0 x) {
-    return stateT<std::any, std::any, std::any>{
+    return stateT<T1, typename _tcI0::template m<_A0>, _A0>{
         [=](const auto &s) mutable { return itree_ret(std::make_pair(x, s)); }};
   }
 
@@ -111,16 +111,18 @@ template <Monad _tcI0, typename T1> struct Monad_stateT {
   static stateT<T1, typename _tcI0::template m<_A1>, _A1> bind(
       stateT<T1, typename _tcI0::template m<_A0>, _A0> c1,
       std::function<stateT<T1, typename _tcI0::template m<_A1>, _A1>(_A0)> c2) {
-    return stateT<std::any, std::any, std::any>{[=](const auto &s) mutable {
-      return itree_bind(c1.runStateT(s),
-                        [=](const std::pair<std::any, std::any> &vs) mutable {
-                          const auto &[v, s0] =
-                              std::any_cast<std::pair<std::any, std::any>>(vs);
-                          return crane_container_cast<
-                              typename _tcI0::template m<std::pair<_A1, T1>>>(
-                              crane_call_erased(c2, v).runStateT(s0));
-                        });
-    }};
+    return stateT<T1, typename _tcI0::template m<_A1>, _A1>{
+        [=](const auto &s) mutable {
+          return itree_bind(
+              c1.runStateT(s),
+              [=](const std::pair<std::any, std::any> &vs) mutable {
+                const auto &[v, s0] =
+                    std::any_cast<std::pair<std::any, std::any>>(vs);
+                return crane_container_cast<
+                    typename _tcI0::template m<std::pair<_A1, T1>>>(
+                    crane_call_erased(c2, v).runStateT(s0));
+              });
+        }};
   }
 };
 

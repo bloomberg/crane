@@ -8509,7 +8509,11 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
               | None -> tys )
             | _ -> tys
           in
-          let temps = build_template_params env [] tys in
+          (* Named against the enclosing scope's type variables.  Inside an
+             instance member template a recovered [Tvar 3] is the method's
+             own [_A0], and an empty name list spells it as the anonymous
+             [T3] -- a free name where the erasure at least compiled. *)
+          let temps = template_params_of_ml env tys in
           if Table.is_coinductive n then
             mk_call
               (CPPalloc (Alloc_heap, Tglob (n, temps, [])))

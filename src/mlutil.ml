@@ -844,9 +844,24 @@ let rec has_unknown = function
 let recover_erased_types (expected : ml_type) (a : ml_ast) : ml_ast =
   (* [env] holds the binders' types, innermost first, as de Bruijn demands. *)
   let type_of_rel env n = try Some (List.nth env (n - 1)) with _ -> None in
+  (* [Tunknown] is not the only way an annotation says nothing.  A
+     metavariable unification never resolved is just as empty, and it is what
+     a record constructor inside an instance method carries: [mkStateT]'s
+     annotation arrives as [stateT ?1 ?2 _], three positions and not one of
+     them determined.  Asking only about [Tunknown] declines the recovery and
+     the printer then erases all three to [std::any], against a signature that
+     by now spells every one of them. *)
+  let rec uninformative = function
+    | Tmeta {contents = None} -> true
+    | Tmeta {contents = Some t} -> uninformative t
+    | Tunknown -> true
+    | Tarr (a, b) -> uninformative a || uninformative b
+    | Tglob (_, l, _) -> List.exists uninformative l
+    | _ -> false
+  in
   let better ~have ~from =
     match from with
-    | Some t when has_unknown have && not (has_unknown t) -> t
+    | Some t when uninformative have && not (uninformative t) -> t
     | _ -> have
   in
   let rec go env expected a =
