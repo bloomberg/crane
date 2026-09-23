@@ -4211,6 +4211,18 @@ let get_erased_proj_map_from_type (ty : ml_type) : (GlobRef.t * int) list =
       (erased_proj_tvar_map class_ref)
   | _ -> []
 
+(** Fill a body's empty type annotations, declaration first and guess last.
+
+    [~only] scopes the authority and nothing scopes the guess, so without the
+    second pass a hole the declaration names perfectly well -- but which
+    happens not to mention a promoted type var -- is declined by the one pass
+    that knows the answer and then filled by the one that is guessing.  A
+    recovery is only sound over the holes nothing else can name. *)
+let recover_then_guess carrier_refs ty b =
+  let b = Mlutil.recover_erased_types ~only:names_promoted_type_var ty b in
+  let b = Mlutil.recover_erased_types ~refine_only:true ty b in
+  rewrite_ml_ast_types carrier_refs b
+
 (** Generate C++ declaration from ML definition (main entry point) *)
 let gen_decl__inner n b ty =
   with_itree_mode_for ty @@ fun () ->
@@ -4278,8 +4290,7 @@ let gen_decl_for_pp__inner n b ty =
       expand_tc_typed_carriers class_ref carrier_refs
     | _ -> carrier_refs
   in
-  let b = Mlutil.recover_erased_types ~only:names_promoted_type_var ty b in
-  let b = rewrite_ml_ast_types carrier_refs b in
+  let b = recover_then_guess carrier_refs ty b in
   let b = resolve_body_tvars b ty in
   with_method_ns_for_locals @@ fun () ->
   let cty = convert_ml_type_to_cpp_type (empty_env ()) [] ty in
@@ -4352,8 +4363,7 @@ let gen_dfun_def__inner n b ty =
   (* Rewrite Tunresolved in body types to promoted carrier refs. This allows
      convert_ml_type_to_cpp_type to resolve them correctly. *)
   let carrier_refs = get_erased_proj_map_from_type ty in
-  let b = Mlutil.recover_erased_types ~only:names_promoted_type_var ty b in
-  let b = rewrite_ml_ast_types carrier_refs b in
+  let b = recover_then_guess carrier_refs ty b in
   let b = resolve_body_tvars b ty in
   with_method_ns_for_locals @@ fun () ->
   let cty = convert_ml_type_to_cpp_type (empty_env ()) [] ty in

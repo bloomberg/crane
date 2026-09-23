@@ -210,8 +210,7 @@ struct GenericMonadResultRewrapped {
             return _tcI0::template bind<List<T3>, List<T3>>(
                 map_monad<_tcI0, T2, T3>(f, a1_value),
                 [=](const auto &ys) mutable {
-                  return _tcI0::template ret<List<T3>>(
-                      List<std::any>::cons(y, ys));
+                  return _tcI0::template ret<List<T3>>(List<T3>::cons(y, ys));
                 });
           });
     }

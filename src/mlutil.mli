@@ -321,7 +321,11 @@ val has_unknown : ml_type -> bool
     annotations are touched, and only where the context supplies something
     better. *)
 val recover_erased_types :
-  ?only:(ml_type -> bool) -> ml_type -> ml_ast -> ml_ast
+  ?only:(ml_type -> bool) ->
+  ?refine_only:bool ->
+  ml_type ->
+  ml_ast ->
+  ml_ast
 
 (** Map a function over all immediate subterms with a binding-depth counter.
     @param f   the transformation; receives the current depth and the child term

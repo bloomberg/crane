@@ -852,7 +852,8 @@ let rec has_unknown = function
     guess would otherwise fill -- everywhere else the body has a pass that
     knows better than the declaration does, and an alias in particular is a
     type in its own right whose spelling the body must keep. *)
-let recover_erased_types ?only (expected : ml_type) (a : ml_ast) : ml_ast =
+let recover_erased_types ?only ?(refine_only = false) (expected : ml_type)
+    (a : ml_ast) : ml_ast =
   (* [env] holds the binders' types, innermost first, as de Bruijn demands. *)
   let type_of_rel env n = try Some (List.nth env (n - 1)) with _ -> None in
   (* [Tunknown] is not the only way an annotation says nothing.  A
@@ -870,10 +871,39 @@ let recover_erased_types ?only (expected : ml_type) (a : ml_ast) : ml_ast =
     | Tglob (_, l, _) -> List.exists uninformative l
     | _ -> false
   in
+  (* The declaration may {e refine} an annotation, not {e respell} it.  A
+     partially-known [sigT nat (unit -> _)] and the declaration's [entry] may
+     well denote the same type, but they are different spellings of it, and
+     taking the second throws away the structure the body had already pinned
+     down -- the printer then asks a [SigT<...>] for a member named [entry].
+     An alias is a type in its own right.  So the declaration is taken only
+     where it agrees with the annotation head for head, filling the holes and
+     changing nothing else. *)
+  let rec refines ~have ~from =
+    match (have, from) with
+    | (Tunknown | Tmeta {contents = None}), _ -> true
+    | Tmeta {contents = Some h}, f -> refines ~have:h ~from:f
+    | h, Tmeta {contents = Some f} -> refines ~have:h ~from:f
+    | Tarr (a, b), Tarr (c, d) ->
+      refines ~have:a ~from:c && refines ~have:b ~from:d
+    | Tglob (r, l, _), Tglob (r', l', _) ->
+      GlobRef.CanOrd.equal r r'
+      && Int.equal (List.length l) (List.length l')
+      && List.for_all2 (fun a b -> refines ~have:a ~from:b) l l'
+    | Tapp (i, l), Tapp (j, l') ->
+      Int.equal i j
+      && Int.equal (List.length l) (List.length l')
+      && List.for_all2 (fun a b -> refines ~have:a ~from:b) l l'
+    | _ -> false
+  in
   let accepts = match only with None -> fun _ -> true | Some p -> p in
   let better ~have ~from =
     match from with
-    | Some t when uninformative have && not (uninformative t) && accepts t -> t
+    | Some t
+      when uninformative have
+           && (not (uninformative t))
+           && ((not refine_only) || refines ~have ~from:t)
+           && accepts t -> t
     | _ -> have
   in
   (* The callee's declared domains for this call, instantiated at the call's
