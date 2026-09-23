@@ -16,6 +16,8 @@ struct Nat;
 template <typename A> struct List;
 template <typename T> struct box;
 template <typename T, typename Body> struct outer;
+template <typename _CraneTcArg>
+using _crane_carrier_tc_659c8e94e4cfa3a6 = List<box<_CraneTcArg>>;
 
 struct HkCallCarrierErased {
   static Nat bump(Nat n);
@@ -248,7 +250,7 @@ outer<std::any, T1<std::any>>
 TFunctor_outer(std::type_identity_t<TFunctor<T1>> h, F1 &&f,
                const outer<std::any, T1<std::any>> &m) {
   return outer<std::any, T1<std::any>>{
-      tfmap<List>(
+      tfmap<_crane_carrier_tc_659c8e94e4cfa3a6>(
           []() {
             return [](std::function<std::any(std::any)> _x0,
                       List<box<std::any>> _x1) -> List<box<std::any>> {
