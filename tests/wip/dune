@@ -158,3 +158,14 @@
   (alias runtest)
   (deps subevent_forward_loses_kind.t.exe)
   (action (run ./subevent_forward_loses_kind.t.exe))))
+
+(subdir skipped_dict_family_unconstrained
+ (rule
+  (targets skipped_dict_family_unconstrained.t.exe)
+  (deps SkippedDictFamilyUnconstrained.vo skipped_dict_family_unconstrained.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} skipped_dict_family_unconstrained.t.exe skipped_dict_family_unconstrained.cpp skipped_dict_family_unconstrained.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps skipped_dict_family_unconstrained.t.exe)
+  (action (run ./skipped_dict_family_unconstrained.t.exe))))
