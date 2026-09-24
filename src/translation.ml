@@ -6293,9 +6293,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
            parameter list below is filtered: a binder whose recorded type is
            dummy is still a parameter where the body names it. *)
         let emitted_binder i (_, ty) =
-          ( is_runtime_binder ((), ty)
-          && not ((!tctx).itree_mode = Reified && ml_type_is_unit ty) )
-          || Mlutil.ast_occurs (i + 1) a
+          is_runtime_binder ((), ty) || Mlutil.ast_occurs (i + 1) a
         in
         let k =
           n - List.length (List.filteri (fun i b -> emitted_binder i b) args)
@@ -6312,15 +6310,10 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
         else if
           (* The expected C++ arity has to be backed by the same number of ML
              domains that genuinely carry a value.  A reified tree's
-             continuation is typed [unit -> itree ...] and prints as taking
-             one [std::monostate]; the binder is deliberately not emitted, so
-             the C++ signature says one parameter where the term rightly
-             writes none, and the shortfall is a convention rather than a
-             gap. *)
-          let real ty =
-            is_runtime_binder ((), ty)
-            && not ((!tctx).itree_mode = Reified && ml_type_is_unit ty)
-          in
+             continuation is typed [unit -> itree ...] and takes one
+             [std::monostate]: the value carries nothing but the slot is real,
+             so the binder counts like any other. *)
+          let real ty = is_runtime_binder ((), ty) in
           let rec leading i ty =
             i = 0
             ||
@@ -6403,18 +6396,25 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     let args_with_owned =
       List.map2 (fun (id, ty) owned -> (id, ty, owned)) args owned_flags
     in
-    (* A binder typed [Tdummy] -- or [unit] under a reified tree -- carries
-       nothing, so it is not a C++ parameter.  Unless the body names it: an
+    (* A binder typed [Tdummy] carries nothing, so it is not a C++ parameter.
+       Unless the body names it: an
        instance method's body is read at the class's erased method type, where
        a value binder the class quantified over has no type left to record,
        and dropping it leaves the body naming a variable nothing declares.
        What the body does with a binder settles whether it is one; the
        recorded type only says so where there is nothing to go on. *)
+    (* A reified tree's continuation is typed [unit -> itree ...] and its
+       consumer invokes it with one [std::monostate], so the slot is real even
+       though the value carries nothing.  For a named function the signature is
+       written from the type and the parameter is there whether or not a binder
+       was; a lambda's parameter list {e is} its binder list, so dropping the
+       binder drops the parameter and the callable comes out nullary.  A
+       reified [unit] binder is therefore kept -- as an ordinary unused
+       parameter -- and only the genuinely absent types are filtered. *)
     let filtered_args_with_owned =
       List.filteri
         (fun i (_, ty, _) ->
-          ((not (isTdummy ty)) && not (ml_type_is_void ty)
-           && not ((!tctx).itree_mode = Reified && ml_type_is_unit ty))
+          ((not (isTdummy ty)) && not (ml_type_is_void ty))
           || Mlutil.ast_occurs (i + 1) a )
         args_with_owned
     in
