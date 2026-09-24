@@ -98,7 +98,7 @@ std::shared_ptr<ITree<T3>> cast(_P0 e) {
 
 template <typename T1 = void, typename T2>
 std::shared_ptr<ITree<T2>> boom(Nat n) {
-  return itree_bind(cast<FailE, std::any, Empty_set>(FailE::fail(std::move(n))),
+  return itree_bind(cast<void, std::any, Empty_set>(FailE::fail(std::move(n))),
                     [](const Empty_set &) -> std::shared_ptr<ITree<T2>> {
                       throw std::logic_error("absurd case");
                     });

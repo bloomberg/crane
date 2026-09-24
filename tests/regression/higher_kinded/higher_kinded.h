@@ -191,15 +191,16 @@ struct HigherKinded {
   static inline const Tree<uint64_t> test_tree_map =
       tree_map<uint64_t, uint64_t>([](uint64_t n) { return (n * UINT64_C(2)); },
                                    test_tree);
-  static inline const std::optional<uint64_t> test_hk_option = hk_map(
-      []<typename _T1>(auto &&a0,
-                       const std::optional<_T1> &a1) -> decltype(auto) {
-        return map_option<_T1, std::invoke_result_t<decltype(a0) &, _T1 &>>(
-            std::forward<decltype(a0)>(a0), a1);
-      },
-      [](uint64_t n) { return (n + UINT64_C(1)); },
-      std::make_optional<uint64_t>(UINT64_C(5)));
-  static inline const Tree<uint64_t> test_hk_tree = hk_map(
+  static inline const std::optional<uint64_t> test_hk_option =
+      hk_map<std::optional, uint64_t>(
+          []<typename _T1>(auto &&a0,
+                           const std::optional<_T1> &a1) -> decltype(auto) {
+            return map_option<_T1, std::invoke_result_t<decltype(a0) &, _T1 &>>(
+                std::forward<decltype(a0)>(a0), a1);
+          },
+          [](uint64_t n) { return (n + UINT64_C(1)); },
+          std::make_optional<uint64_t>(UINT64_C(5)));
+  static inline const Tree<uint64_t> test_hk_tree = hk_map<Tree, uint64_t>(
       []<typename _T1>(auto &&a0, const Tree<_T1> &a1) -> decltype(auto) {
         return tree_map<_T1, std::invoke_result_t<decltype(a0) &, _T1 &>>(
             std::forward<decltype(a0)>(a0), a1);

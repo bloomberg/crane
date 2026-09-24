@@ -1692,14 +1692,20 @@ let hkt_spelled_type_args r ts =
       let n = IntSet.fold max (collect_tvars_set IntSet.empty ml_ty) 0 in
       let keep = keeps_type_arg_position r in
       let kept = List.filter keep (List.init n (fun i -> i + 1)) in
+      let relaxed = Ml_type_util.relaxed_applied_ml_tvars ml_ty in
       if List.length kept <> List.length ts then ts
       else
         List.map2
           (fun i t ->
-            match t with
-            | Minicpp.Ttyctor _ -> t
-            | _ when Hashtbl.mem arities i -> Minicpp.Ttyctor t
-            | _ -> t )
+            (* The declaration relaxed this one out of its head: what is left
+               at the position is a phantom defaulted to [void], and the
+               application it stood for is deduced from the argument. *)
+            if IntSet.mem i relaxed then Minicpp.Tvoid
+            else
+              match t with
+              | Minicpp.Ttyctor _ -> t
+              | _ when Hashtbl.mem arities i -> Minicpp.Ttyctor t
+              | _ -> t )
           kept ts
 
 (** Collect all Tvar indices from an ML AST, using collect_tvars on embedded
@@ -2264,7 +2270,11 @@ let rec infer_ml_body_type (a : ml_ast) : ml_type option =
     The result is indexed the way {!Mlutil.type_subst_list} expects: position
     [i] instantiates [Tvar (_, i + 1)].  A variable no argument mentions keeps
     itself, so substituting leaves it alone. *)
-and tvar_instantiation_found ?(in_scope = false) callee_ty args =
+and tvar_instantiation_found
+    ?(in_scope = false)
+    ?(constructors = false)
+    callee_ty
+    args =
   (* A binder's type is not on the [MLrel] that names it; it was written down
      where it was bound, which is what {!Translation_state.env_types} keeps.
      Only a caller generating code {e inside} that scope may read it, which is
@@ -2294,6 +2304,32 @@ and tvar_instantiation_found ?(in_scope = false) callee_ty args =
        down against each other; the arguments do. *)
     | Miniml.Tapp (_, a1), Miniml.Tapp (_, a2)
       when List.length a1 = List.length a2 -> List.iter2 unify a1 a2
+    (* An applied variable against a concrete application of the same arity: the
+       variable stands for the head, which the actual type names, and the
+       arguments are what both are applied to. This is the only place a [Type ->
+       Type] argument can still be read off -- MiniML erases the argument
+       itself, and what is left is the constraint that mentions it.
+
+       Asked for, not assumed: where a class's carrier is what the variable
+       stands for, the head alone is the wrong answer. A composed carrier [fun t
+       => option (Exp t)] meets an [option (Exp any)] here and the head is
+       [option], which is the arity deduction would have guessed and precisely
+       what a composition is not. The dictionary routes recover those, and they
+       must be left to reach them. *)
+    | Miniml.Tapp (k, a1), Miniml.Tglob (g, a2, l)
+      when constructors && List.length a1 = List.length a2 ->
+      if not (Hashtbl.mem found k) then
+        Hashtbl.replace found k (Miniml.Tglob (g, [], l));
+      List.iter2 unify a1 a2
+    (* A type alias meets an actual type already written as what it expands to:
+       a class with a single field is inlined to that field, so a constraint
+       spelled [Sub UBE E] meets an [UBE X -> UBE X]. Expanding puts both in the
+       same form, and the alias's arguments are what its own parameters stand
+       for. *)
+    | Miniml.Tglob (GlobRef.ConstRef kn, cargs, _), actual when constructors ->
+      ( match Table.lookup_typedef_unchecked kn with
+      | Some body -> unify (Mlutil.type_subst_list cargs body) actual
+      | None -> () )
     | _ -> ()
   in
   (* [args] holds the value arguments only, so a [Tdummy] formal -- an erased
@@ -2355,6 +2391,59 @@ and complete_short_tys id tys args =
         if List.for_all Option.has_some recovered then
           tys @ List.map Option.get recovered
         else tys
+
+(** [fill_erased_tys id tys args] replaces an erased entry of a call's
+    type-argument list with what the value arguments say it stands for.
+
+    MiniML erases a [Type -> Type] argument, but the callee still declares a
+    template parameter for it -- and the erasure is contagious: template
+    arguments are positional, so the all-or-nothing rule in
+    {!Ml_type_util.filter_erased_type_args} drops the concrete entries beside
+    it. One lost family therefore costs every type argument the call could have
+    written, including the ones nothing can deduce.
+
+    The family survives in the type of whatever argument is constrained in it --
+    [Sub UBE E] against a [Sub UBE UBE] -- which is what
+    {!tvar_instantiation_found} reads.
+
+    Unlike {!complete_short_tys} this fills interior positions, which is sound
+    for the same reason: the entry it replaces stands for a variable the callee
+    quantifies at exactly that position. *)
+and fill_erased_tys id tys args =
+  let erased = function
+    | Miniml.Tdummy Miniml.Ktype -> true
+    | _ -> false
+  in
+  if not (List.exists erased tys) then
+    tys
+  else
+    match
+      find_type_opt id
+    with
+    | None -> tys
+    | Some callee_ty ->
+      (* Only a variable the callee applies: this pass exists because MiniML
+         erases a [Type -> Type] argument, and a plain type argument that came
+         out erased is erased for a reason a value argument cannot undo. *)
+      let applied = Ml_type_util.applied_ml_tvar_arities [callee_ty] in
+      let found =
+        tvar_instantiation_found
+          ~in_scope:true
+          ~constructors:true
+          callee_ty
+          args
+      in
+      List.mapi
+        (fun k t ->
+          if erased t && Hashtbl.mem applied (k + 1) then
+            match
+              List.assoc_opt (k + 1) found
+            with
+            | Some t' when not (erased t') -> t'
+            | _ -> t
+          else
+            t )
+        tys
 
 (** Check if a GlobRef returns a typeclass type (possibly through Tarr layers).
 *)
@@ -10449,6 +10538,11 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
        in [typename I::m<T>] and in the return type, both non-deduced.  The
        arguments still say what they are, so finish the list from them. *)
     let tys = complete_short_tys id tys primary_ml_args in
+    (* The whole list is built as a function of [tys] because it may have to be
+       built twice: what a call writes is decided by the erasure filters, and
+       the recoveries below run only where they left nothing.  A pass that
+       fills one position would otherwise silently disable them. *)
+    let build_type_args tys =
     let regular_type_args =
       (* A type argument standing for a higher-kinded class parameter is not a
          template parameter of the callee (it is the instance's associated
@@ -10635,15 +10729,15 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
     let typeclass_type_args =
       List.filter (fun t -> t <> Tvoid) typeclass_type_args
     in
-    let all_type_args =
-      typeclass_type_args
-      (* Truncated last: {!hkt_spelled_type_args} rebuilds the correspondence
-         between arguments and positions by length, so a list shortened before
-         it reaches it is left unrespelled -- the carrier comes out as
-         [typename I::m] where the position wants [I::template m]. *)
-      @ truncate_to_writable id (hkt_spelled_type_args id regular_type_args)
-      @ promoted_type_args
+    typeclass_type_args
+    (* Truncated last: {!hkt_spelled_type_args} rebuilds the correspondence
+       between arguments and positions by length, so a list shortened before
+       it reaches it is left unrespelled -- the carrier comes out as
+       [typename I::m] where the position wants [I::template m]. *)
+    @ truncate_to_writable id (hkt_spelled_type_args id regular_type_args)
+    @ promoted_type_args
     in
+    let all_type_args = build_type_args tys in
     (* Nothing survived the erasure filters, so if the callee opens with
        parameters its signature never mentions, deduction has nothing to work
        from and the call has to name them. *)
@@ -10663,7 +10757,14 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
              call passes for the class still does. *)
           match dict_carrier_type_args env tvars id primary_ml_args with
           | Some targs -> targs
-          | None -> phantom_prefix_args id )
+          | None -> (
+            (* Neither route knew the carrier.  An argument's type may still
+               say what an erased plain type argument was, which is worth
+               writing only here: filling a position is what would have taken
+               the two routes above out of reach. *)
+            match build_type_args (fill_erased_tys id tys primary_ml_args) with
+            | [] -> phantom_prefix_args id
+            | targs -> targs ) )
       else all_type_args
     in
 

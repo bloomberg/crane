@@ -206,12 +206,12 @@ List<T2> trigger_cast(_P0) {
 struct SubeventForwardLosesKind {
   template <template <typename> class T1, typename T2>
   static List<T2> raiseUB(std::type_identity_t<Sub<UBE, T1>> s) {
-    return trigger_cast<T1, T2>(
-        inj(std::move(s), UBE<std::any>::throwub(Unit::TT)));
+    return trigger_cast<void, T2>(
+        inj<UBE, T1, Nat>(std::move(s), UBE<std::any>::throwub(Unit::TT)));
   }
 
   static UBE<std::any> sub_refl(UBE<std::any> e);
-  static inline const Nat run = raiseUB(sub_refl).length();
+  static inline const Nat run = raiseUB<UBE, Nat>(sub_refl).length();
 };
 
 #endif // INCLUDED_SUBEVENT_FORWARD_LOSES_KIND

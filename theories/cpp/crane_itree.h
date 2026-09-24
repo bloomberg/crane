@@ -520,6 +520,24 @@ template<typename C, typename R, typename A>
 struct crane_fn_arg<R (C::*)(A) const> { using type = std::decay_t<A>; };
 template<typename C, typename R, typename A>
 struct crane_fn_arg<R (C::*)(A)> { using type = std::decay_t<A>; };
+template<typename R, typename A>
+struct crane_fn_arg<R (*)(A)> { using type = std::decay_t<A>; };
+template<typename R, typename A>
+struct crane_fn_arg<R(A)> { using type = std::decay_t<A>; };
+
+// The same question asked of the callable itself.
+//
+// A continuation need not be a closure: a named function template left to
+// decay -- [void_elim<std::shared_ptr<ITree<R>>>], eliminating an absurd
+// response -- arrives as a function pointer, which has no [operator()] to
+// take the address of.  Spelling [&K::operator()] at the use site is a hard
+// error there rather than a substitution failure, so the choice is made here.
+template<typename K, typename = void>
+struct crane_callable_arg : crane_fn_arg<std::decay_t<K>> {};
+template<typename K>
+struct crane_callable_arg<K,
+    std::void_t<decltype(&std::decay_t<K>::operator())>>
+    : crane_fn_arg<decltype(&std::decay_t<K>::operator())> {};
 
 // Binding a trigger directly.
 //
@@ -565,7 +583,7 @@ auto itree_bind(itree_trigger_t m, K k) {
             std::function<tree_b(std::any)>(
                 [k](std::any x) { return k(std::move(x)); }));
     } else {
-        using A = typename crane_fn_arg<decltype(&K::operator())>::type;
+        using A = typename crane_callable_arg<K>::type;
         using tree_b = decltype(k(std::declval<const A &>()));
         if constexpr (std::is_same_v<tree_b, std::any>)
             return itree_erased_bind_t{

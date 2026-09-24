@@ -10055,3 +10055,14 @@
   (alias runtest)
   (deps skipped_dict_family_unconstrained.t.exe)
   (action (run ./skipped_dict_family_unconstrained.t.exe))))
+
+(subdir subevent_forward_loses_kind
+ (rule
+  (targets subevent_forward_loses_kind.t.exe)
+  (deps SubeventForwardLosesKind.vo subevent_forward_loses_kind.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} subevent_forward_loses_kind.t.exe subevent_forward_loses_kind.cpp subevent_forward_loses_kind.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps subevent_forward_loses_kind.t.exe)
+  (action (run ./subevent_forward_loses_kind.t.exe))))

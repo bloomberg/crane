@@ -1314,6 +1314,64 @@ let applied_ml_tvar_arities tys =
   List.iter scan tys;
   arities
 
+(** The type variables a declaration of type [ml_ty] relaxes out of its template
+    head.
+
+    {!Gen_decls.relax_applied_return} replaces a higher-kinded parameter that is
+    only ever {e applied} in the parameter list with one fresh [typename] per
+    application, deduced from the argument, and leaves the original a phantom
+    defaulted to [void]. A call must then not write a template name there,
+    because the position no longer takes one.
+
+    Asked here of the ML type rather than read back from the declaration: a
+    table gen_decls fills cannot be consulted at a call site, since emission
+    interleaves with body generation. The two agree because the condition is a
+    property of the type both are built from -- applied somewhere in the
+    domains, and spelled nowhere unapplied and nowhere in the codomain. *)
+let relaxed_applied_ml_tvars ml_ty =
+  let doms = ml_domains ml_ty
+  and ret = ml_return_type ml_ty in
+  let applied = Hashtbl.create 4
+  and bare = ref IntSet.empty in
+  let rec scan = function
+    (* A variable of kind [Type -> Type] handed over as a bare template name --
+       as the argument of an alias, [Sub UBE E] -- is written applied to the
+       alias's own placeholder. That is an occurrence the declaration has to
+       keep the parameter for, not an application it can relax. *)
+    | Miniml.Tapp (i, args)
+      when args = []
+           || List.exists
+                (fun a ->
+                  match resolve_tmeta a with
+                  | Miniml.Tunknown -> true
+                  | _ -> false )
+                args -> bare := IntSet.add i !bare
+    | Miniml.Tapp (i, args) ->
+      Hashtbl.replace applied i ();
+      List.iter scan args
+    | Miniml.Tvar (_, i) -> bare := IntSet.add i !bare
+    | Miniml.Tglob (_, args, _) -> List.iter scan args
+    | Miniml.Tarr (a, b) ->
+      scan a;
+      scan b
+    | Miniml.Tmeta {contents = Some t} -> scan t
+    | _ -> ()
+  in
+  List.iter scan doms;
+  let in_doms =
+    Hashtbl.fold (fun i () acc -> IntSet.add i acc) applied IntSet.empty
+  in
+  let in_doms = IntSet.diff in_doms !bare in
+  bare := IntSet.empty;
+  Hashtbl.reset applied;
+  scan ret;
+  let in_ret =
+    IntSet.union
+      !bare
+      (Hashtbl.fold (fun i () acc -> IntSet.add i acc) applied IntSet.empty)
+  in
+  IntSet.diff in_doms in_ret
+
 (** The type variables [tys] uses as the event family of a reified tree.
 
     A reified monad's own spelling drops the family -- [itree E R] is

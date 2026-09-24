@@ -555,6 +555,13 @@ val applied_ml_tvar_arities : Miniml.ml_type list -> (int, int) Hashtbl.t
     those the application can simply be taken back off. *)
 val higher_kinded_ml_tvars : Miniml.ml_type list -> IntSet.t
 
+(** The type variables a declaration of type [ml_ty] relaxes out of its
+    template head: applied somewhere in the domains, and spelled nowhere
+    unapplied and nowhere in the codomain.  {!Gen_decls.relax_applied_return}
+    turns each such application into its own deduced parameter and leaves the
+    original a phantom, so a call must not write a template name there. *)
+val relaxed_applied_ml_tvars : Miniml.ml_type -> IntSet.t
+
 (** The type variables [tys] uses as the event family of a reified tree.  Such
     a family is emitted as a plain struct, so there is no template name a call
     could ever pass for it, and {!higher_kinded_ml_tvars} refuses the higher
