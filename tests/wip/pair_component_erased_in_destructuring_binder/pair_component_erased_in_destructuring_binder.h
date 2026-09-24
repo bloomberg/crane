@@ -246,7 +246,7 @@ static_assert(Monad<EOU_monad>);
 template <typename T1, typename T2>
 EOU<std::pair<List<std::pair<T1, T2>>, List<T2>>> combine(List<T2> l) {
   return EOU_monad::template ret<std::pair<List<std::pair<T1, T2>>, List<T2>>>(
-      std::make_pair(List<std::pair<std::any, std::any>>::nil(), std::move(l)));
+      std::make_pair(List<std::pair<T1, T2>>::nil(), std::move(l)));
 }
 
 template <typename T1, typename T2>
@@ -259,7 +259,8 @@ EOU<std::pair<List<std::pair<T1, T2>>, List<T2>>> go(T1 a, T2 b,
         const auto &[p, vargs] = x;
         return EOU_monad::template ret<
             std::pair<List<std::pair<T1, T2>>, List<T2>>>(std::make_pair(
-            List<std::pair<T1, T2>>::cons(std::make_pair(a, b), p), vargs));
+            List<std::pair<T1, T2>>::cons(std::make_pair(a, b), p),
+            std::any_cast<List<std::any>>(vargs)));
       });
 }
 

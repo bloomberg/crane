@@ -4491,27 +4491,76 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
         (* Aligned at the right: a type constructor that reached the slot
            partially applied ([F] at [F A]) keeps the placeholder arguments it
            was carrying in front of the ones applied to it. *)
-        (* Only a ground type is worth taking: a slot that is itself abstract
-           ([m_carrier M]) names a type variable that does not exist in this
-           scope, and spelling it here would not even compile. *)
-        let rec is_ground = function
-          | Miniml.Tglob (_, args, _) -> List.for_all is_ground args
-          | Miniml.Tarr (a, b) -> is_ground a && is_ground b
-          | Miniml.Tmeta {contents = Some t} -> is_ground t
-          | Miniml.Tvar (_, _) | Miniml.Tapp _ | Miniml.Tunknown
-          | Miniml.Tmeta {contents = None} -> false
+        (* Only a type this scope can write is worth taking.  That is not the
+           same as a ground one: [list (A * B)] in a declaration that binds
+           [A] and [B] is as writable as [list nat], and refusing it leaves a
+           nullary constructor at [list<pair<any, any>>] inside a function
+           whose every neighbour spells [T1] and [T2].  What must be refused
+           is a variable from {e another} scope -- a slot read off an
+           abstract carrier ([m_carrier M]) -- which would not compile. *)
+        let rec is_writable = function
+          | Miniml.Tglob (_, args, _) -> List.for_all is_writable args
+          | Miniml.Tarr (a, b) -> is_writable a && is_writable b
+          | Miniml.Tmeta {contents = Some t} -> is_writable t
+          | Miniml.Tvar (_, _) as t ->
+            names_only_scoped_tvars (cpp_of_ml env t)
+          | Miniml.Tapp _ | Miniml.Tunknown | Miniml.Tmeta {contents = None} ->
+            false
           | _ -> true
         in
         let m = Array.length recovered in
         List.iteri
           (fun i t ->
             let i = i - (List.length exp_tys - m) in
-            if i >= 0 && recovered.(i) = Miniml.Tunknown && is_ground t then
+            if i >= 0 && recovered.(i) = Miniml.Tunknown && is_writable t then
               recovered.(i) <- t )
           exp_tys
       | _ -> () );
       Miniml.Tglob (n, Array.to_list recovered, sc)
     | _ -> ty
+  in
+  (* The same reading of the slot, but pointwise and at any depth.  A type
+     argument the term never spells -- the element of a [nil] nested inside a
+     pair -- arrives erased wherever it sits, while the position states the
+     whole shape; the recovery above only looks at the constructor's own
+     outermost arguments.
+
+     Erased nodes only.  The position may fill what the term left open and may
+     never respell what it stated, and a variable from another scope is not
+     writable here however concrete the position is (see {!is_writable}). *)
+  let ty =
+    if
+      slot.deep_erase
+      || ( match expected_ty with
+         | Some t -> has_tany_in_type (unfold_cpp_typedef env t)
+         | None -> false )
+    then ty
+    else
+      match slot.expected_ml_ty with
+      | None -> ty
+      | Some want ->
+        let erased t =
+          match t with
+          | Miniml.Tunknown | Miniml.Tdummy _ -> true
+          | Miniml.Tmeta {contents = None} -> true
+          | _ -> false
+        in
+        let writable t =
+          (not (erased t)) && names_only_scoped_tvars (cpp_of_ml env t)
+        in
+        let rec go have want =
+          let have = resolve_tmeta have and want = resolve_tmeta want in
+          match (have, want) with
+          | h, w when erased h -> if writable w then w else h
+          | Miniml.Tglob (n, ha, sc), Miniml.Tglob (m, wa, _)
+            when GlobRef.CanOrd.equal n m
+                 && List.length ha = List.length wa ->
+            Miniml.Tglob (n, List.map2 go ha wa, sc)
+          | Miniml.Tarr (a, b), Miniml.Tarr (c, d) ->
+            Miniml.Tarr (go a c, go b d)
+          | h, _ -> h
+        in
+        go ty want
   in
   (* Try to fold binary positive chains inside Z/N constructors to avoid
      unsigned-int overflow.  Zpos(xI(xO(...xH...))) and Zneg(...) chains
@@ -9607,8 +9656,13 @@ and project_through_instance env x tys args inst =
     (List.mapi
        (fun i a ->
          let expected = param_expected_cpp_ty env operand_ml_tys i in
+         let slot =
+           {empty_slot with
+             expected_cpp_ty = expected;
+             expected_ml_ty = List.nth_opt operand_ml_tys i }
+         in
          with_cpp_return_type expected (fun () ->
-             gen_expr ?expected_ty:expected env a ) )
+             gen_expr ?expected_ty:expected ~slot env a ) )
        operands )
 
 (* The instance a projection call would project through, where Crane kept it.
