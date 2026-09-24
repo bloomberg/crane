@@ -927,11 +927,34 @@ let recover_erased_types ?only ?(refine_only = false) (expected : ml_type)
         type_decomp (if tys = [] then sch else type_subst_list tys sch)
       in
       (* An erased type argument is an arrow in the declaration and nothing in
-         the application, so the two are only comparable once it is dropped. *)
-      let doms = List.filter (fun d -> not (isTdummy d)) doms in
-      if doms = [] then []
-      else
-        List.mapi (fun i _ -> List.nth_opt doms i) args
+         the application, so the two are only comparable once it is dropped.
+         [Tdummy] does not say which arrows those are: it is equally what a
+         *value* argument's type erases to, and such an argument is still
+         passed.  [bind] on a transformer over an erased carrier declares
+         [Dt -> Monad[Dt] -> Dt -> Dt -> Dt -> (nat -> Dt) -> Dt] for the same
+         three arguments the informative instance spells with one [Dt] fewer,
+         and dropping every one of them slides the continuation a position
+         left -- so the lambda is offered the monadic value's type, or nothing.
+
+         What the two do agree on is how many positions survive.  The erased
+         type arguments come from the prenex quantifiers, so they are the
+         leftmost dummies; drop only that many, from the left, and the rest
+         line up with the application. *)
+      let n_drop = List.length doms - List.length args in
+      let doms =
+        if n_drop <= 0 then doms
+        else
+          let left = ref n_drop in
+          List.filter
+            (fun d ->
+              if !left > 0 && isTdummy d then begin
+                decr left;
+                false
+              end
+              else true )
+            doms
+      in
+      if doms = [] then [] else List.mapi (fun i _ -> List.nth_opt doms i) args
   in
   let rec go env expected a =
     match a with
