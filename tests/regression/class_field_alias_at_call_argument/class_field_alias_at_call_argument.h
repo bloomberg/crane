@@ -211,7 +211,7 @@ return n;}
 static_assert(IPtr<natIPtr>);
 struct ClassFieldAliasAtCallArgument {
 static inline const std::pair<Nat, bool> the_null = crane_any_cast<std::pair<Nat, bool>>(PointerV<natIPtr>::null());
-static Nat use(ptr p);
+static Nat use(const typename PointerV<natIPtr>::ptr& p);
 static inline const Nat run = use(the_null);
 };
 

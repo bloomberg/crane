@@ -360,9 +360,22 @@ let promoted_resolutions_of_body b =
   (* An applied instance is read at its application: the head on its own says
      the same instance at no arguments, which is a second, poorer answer to the
      same name and would make the pair ambiguous with itself. *)
+  (* An instance applied to a lambda parameter is spelled by that parameter's
+     template name, which only the term's own environment knows; there is none
+     here, and a resolution nobody can spell is not one to offer. *)
+  let closed e =
+    let ok = ref true in
+    let rec go t =
+      (match t with MLrel _ -> ok := false | _ -> ());
+      Mlutil.ast_iter go t
+    in
+    go e;
+    !ok
+  in
   let rec walk e =
     match strip_magic e with
-    | MLapp (MLglob (r, _), args) when instance_class r <> None ->
+    | MLapp (MLglob (r, _), args)
+      when instance_class r <> None && closed (strip_magic e) ->
       add r (ml_arg_to_template_type (empty_env ()) (strip_magic e));
       List.iter walk args
     | MLglob (r, _) -> add r (Tglob (r, [], []))
@@ -380,6 +393,16 @@ let promoted_resolutions_of_body b =
     standing for [M A] is [typename _tcI0::M] — an associated type of the
     instance, not a template parameter.  Left as a free template parameter it
     would be undeducible: nothing in the signature determines it. *)
+
+(** Generate a declaration's type and its body against the resolution its body
+    supplies -- see {!promoted_resolutions_of_body}.  An enclosing instance
+    struct answers first: a variable it declares is the one this method is
+    written in, whatever else the body mentions. *)
+let with_body_resolutions b f =
+  with_promoted_var_map
+    ((!tctx).promoted_var_map @ promoted_resolutions_of_body b)
+    f
+
 let hkt_tvar_resolutions_of_type ty =
   List.map
     (fun { htp_tvar; htp_instance; htp_field } ->
@@ -4433,6 +4456,7 @@ let recover_then_guess carrier_refs ty b =
 
 (** Generate C++ declaration from ML definition (main entry point) *)
 let gen_decl__inner n b ty =
+  with_body_resolutions b @@ fun () ->
   with_itree_mode_for ty @@ fun () ->
   with_method_ns_for_locals @@ fun () ->
   let cty = convert_ml_type_to_cpp_type (empty_env ()) [] ty in
@@ -4485,6 +4509,7 @@ let gen_decl n b ty =
 
 (** Generate C++ declaration with pretty-printing adjustments *)
 let gen_decl_for_pp__inner n b ty =
+  with_body_resolutions b @@ fun () ->
   let carrier_refs = get_erased_proj_map_from_type ty in
   (* Expand TC-typed carrier refs: when a carrier ref points to a
      typeclass-typed promoted field (e.g., base_category : PreCategory),
@@ -4566,6 +4591,7 @@ let gen_decl_for_pp n b ty =
     converts to C++ types, and delegates to {!gen_dfun} for the actual
     definition.  Returns [(decl, env, tvars)]. *)
 let gen_dfun_def__inner n b ty =
+  with_body_resolutions b @@ fun () ->
   (* Simplify the ML type to resolve metavariables before converting to C++ *)
   let ty = type_simpl ty in
   (* Rewrite Tunresolved in body types to promoted carrier refs. This allows
@@ -4622,11 +4648,7 @@ let gen_dfun_def n b ty =
 
 (** Generate C++ function specification (for header files) *)
 let gen_spec__inner n b ty =
-  (* The constant's type and its body are generated against the same
-     resolution: see {!promoted_resolutions_of_body}. *)
-  with_promoted_var_map
-    (promoted_resolutions_of_body b @ (!tctx).promoted_var_map)
-  @@ fun () ->
+  with_body_resolutions b @@ fun () ->
   let ty = type_simpl ty in
   let ml_ty = ty in  (* preserve ML type before C++ conversion *)
   let unit_void = ml_type_is_void_call ty in

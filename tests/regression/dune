@@ -53,3 +53,14 @@
   (alias runtest)
   (deps promoted_var_of_specialised_instance_argument.t.exe)
   (action (run ./promoted_var_of_specialised_instance_argument.t.exe))))
+
+(subdir class_field_alias_at_call_argument
+ (rule
+  (targets class_field_alias_at_call_argument.t.exe)
+  (deps ClassFieldAliasAtCallArgument.vo class_field_alias_at_call_argument.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} class_field_alias_at_call_argument.t.exe class_field_alias_at_call_argument.cpp class_field_alias_at_call_argument.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps class_field_alias_at_call_argument.t.exe)
+  (action (run ./class_field_alias_at_call_argument.t.exe))))

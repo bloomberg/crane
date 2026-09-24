@@ -13,7 +13,16 @@
    parameter.
 
    The import list is not harness configuration -- it selects the emission
-   path. *)
+   path.
+
+   Fixed: the resolution the body supplies was installed at one of the four
+   sites that generate a declaration against its body, and this one needs the
+   other three.  A constant went through [gen_spec__inner]; a function's
+   signature and definition go through [gen_decl__inner],
+   [gen_dfun_def__inner] and [gen_decl_for_pp__inner], and the header and the
+   [.cpp] disagreeing is what a partial installation looks like.  The rule now
+   has one entry point, [with_body_resolutions], and an enclosing instance
+   struct still answers first. *)
 
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std Monads.ITreeReified.
