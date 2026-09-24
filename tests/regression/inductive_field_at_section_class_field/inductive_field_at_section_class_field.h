@@ -23,7 +23,7 @@ template <typename
 A> struct EOU;
 struct EOU_monad;
 struct ProvenanceV;
-struct Dval;
+template <typename ptr> struct Dval;
 struct natIPtr;
 struct Nat {
   // TYPES
@@ -199,8 +199,8 @@ std::pair<typename _tcI0::iptr, bool>>(_tcI0::from_Z(std::move(i)),
 a) mutable {
 return EOU_monad::template ret<std::pair<typename _tcI0::iptr, bool>>(std::make_pair(a, pr));
 });}
-};
-struct Dval {
+};template <typename
+ptr>struct Dval {
   // TYPES
 struct DPtr {
 ptr p;
@@ -218,10 +218,20 @@ public:
 Dval() {}
 explicit Dval(DPtr _v) : v_(std::move(_v)) {}
 explicit Dval(DNat _v) : v_(std::move(_v)) {}
-static Dval dptr(ptr p) {
-return Dval(DPtr{std::move(p)});}
-static Dval dnat(Nat n) {
-return Dval(DNat{std::move(n)});}
+template <typename
+_U>
+Dval(const Dval<_U>& _other) {
+if (std::holds_alternative<typename Dval<_U>::DPtr>(_other.v())) {
+const auto& [p] = std::get<typename Dval<_U>::DPtr>(_other.v());
+this->v_ = DPtr{p};
+} else {
+const auto& [n] = std::get<typename Dval<_U>::DNat>(_other.v());
+this->v_ = DNat{n};
+}}
+static Dval<ptr> dptr(ptr p) {
+return Dval<ptr>(DPtr{std::move(p)});}
+static Dval<ptr> dnat(Nat n) {
+return Dval<ptr>(DNat{std::move(n)});}
   // MANIPULATORS
 inline variant_t& v_mut() {
 return v_;}
@@ -241,14 +251,14 @@ return n;}
 static_assert(IPtr<natIPtr>);
 struct InductiveFieldAtSectionClassField {
 static inline const std::pair<Nat, bool> the_null = crane_any_cast<std::pair<Nat, bool>>(PointerV<natIPtr>::null());
-static inline const Dval boxed = Dval::dptr(the_null);
+static inline const Dval<typename PointerV<natIPtr>::ptr> boxed = Dval<typename PointerV<natIPtr>::ptr>::dptr(the_null);
 static inline const Nat run = []() {
 auto&& _sv2 = boxed;
-if (std::holds_alternative<typename Dval::DPtr>(_sv2.v())) {
-const auto& [p2] = std::get<typename Dval::DPtr>(_sv2.v());
+if (std::holds_alternative<typename Dval<typename PointerV<natIPtr>::ptr>::DPtr>(_sv2.v())) {
+const auto& [p2] = std::get<typename Dval<typename PointerV<natIPtr>::ptr>::DPtr>(_sv2.v());
 return PIV<natIPtr>::ptr_to_int(p2);
 } else {
-const auto& [n2] = std::get<typename Dval::DNat>(_sv2.v());
+const auto& [n2] = std::get<typename Dval<typename PointerV<natIPtr>::ptr>::DNat>(_sv2.v());
 return n2;
 }
 }();

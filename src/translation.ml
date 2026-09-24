@@ -3055,6 +3055,7 @@ let rec convert_ml_type_to_cpp_type
       | _ -> converted_ts
     in
     let converted_ts = apply_hkt_tyctors g converted_ts in
+    let converted_ts = converted_ts @ ind_promoted_type_args g in
     let core = Tglob (g, converted_ts, []) in
     ( match g with
     | GlobRef.IndRef _ ->
@@ -3436,12 +3437,36 @@ and iife_closure_return env typ pv stmts =
     here, which is a different thing from having an erased one. *)
 and promoted_var_resolution g =
   match Table.promoted_type_var_name g with
-  | Some var_id ->
-    Option.map snd
-      (List.find_opt
-         (fun (n, _) -> Id.equal n var_id)
-         (!tctx).promoted_var_map )
+  | Some var_id -> promoted_var_binding var_id
   | None -> None
+
+(** [ind_promoted_type_args g] -- the trailing template arguments a mention of
+    the inductive [g] passes for the promoted variables its payloads name.
+
+    Such a variable is a type the inductive does not own: it belongs to
+    whichever instance was in scope where the inductive was declared, so it is
+    a parameter there (see {!Table.ind_promoted_params} and its use in
+    [Cpp_ind]) and an argument at every use.  Inside the inductive's own
+    declaration the argument is that parameter, which is what the [Tpromoted]
+    fallback spells; a scope that knows no instance spells the file-scope
+    alias, as it did before there was a parameter at all. *)
+and ind_promoted_type_args = function
+  | GlobRef.IndRef (kn, _) ->
+    List.map
+      (fun v ->
+        match promoted_var_binding v with Some t -> t | None -> Tpromoted v )
+      (Table.ind_promoted_params kn)
+  | _ -> []
+
+(** [promoted_var_binding var_id] -- what the scope says the promoted variable
+    named [var_id] stands for, by name.  Reached from a globref through
+    {!promoted_var_resolution}, and by name alone where only the name survives
+    -- see {!Table.ind_promoted_params}. *)
+and promoted_var_binding var_id =
+  Option.map snd
+    (List.find_opt
+       (fun (n, _) -> Id.equal n var_id)
+       (!tctx).promoted_var_map )
 
 (** [names_only_scoped_tvars ty] -- whether every type variable [ty] spells is
     one this scope declares.  A slot type read off a callee's signature is
@@ -5141,6 +5166,7 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
          disagree with the type the declaration spells. *)
       let temps = template_params_of_ml ~curry:false env tys in
       let temps = filter_erased_type_args temps in
+      let temps = temps @ ind_promoted_type_args n in
       (* Step 2b: Recover type args from the return type when unresolved metas
          caused all type args to be erased.  This happens for nullary custom
          constructors (e.g., None) inside let-bindings: the extraction phase
@@ -7966,6 +7992,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           (* The factory has to be qualified by the very instantiation the
              declaration spells. *)
           let temps = apply_hkt_tyctors n temps in
+          let temps = temps @ ind_promoted_type_args n in
           let ctor_struct = ctor_struct_name_of_ref r in
           let ind_type_name = Common.pp_global_name Type n in
           let fname =
@@ -11941,7 +11968,10 @@ and ctor_type_of_match env (typ : ml_type) (cname : GlobRef.t) : cpp_type =
     in
     (* The constructor struct is nested in the instantiation, so it has to be
        qualified by the same one the declaration spells. *)
-    let temps = apply_hkt_tyctors r (template_params_of_ml env tys) in
+    let temps =
+      apply_hkt_tyctors r (template_params_of_ml env tys)
+      @ ind_promoted_type_args r
+    in
     let is_local_ind =
       List.exists
         (globref_equal r)

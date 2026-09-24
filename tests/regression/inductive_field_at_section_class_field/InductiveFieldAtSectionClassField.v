@@ -19,7 +19,20 @@
    types that met, not where either came from.
 
    The import list is not harness configuration -- it selects the emission
-   path. *)
+   path.
+
+   Fixed by parameterising the inductive by the promoted variables its payloads
+   name ([Table.ind_promoted_params], a trailing template parameter in
+   [Cpp_ind]) and passing one at every mention ([Translation.
+   ind_promoted_type_args]: the type position, the constructor factory's
+   qualifier, and the constructor struct a match names).  What the argument
+   stands for comes from the scope: a body that mentions an instance already
+   said so, and a declaration whose own Rocq type applies the inductive to one
+   -- [boxed : @dval natIPtr] -- says it there, which is the only place it is
+   written down at all ([Gen_decls.ind_type_resolutions] over
+   [Table.get_ind_class_args], recorded from the Rocq constructor types).  A
+   scope that knows no instance spells the file-scope alias, as it did before
+   there was a parameter. *)
 
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std Monads.ITreeReified.

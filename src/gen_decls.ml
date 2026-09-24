@@ -305,20 +305,35 @@ let promoted_resolutions ?fields class_ref inst_ty =
     is why one list serves both.  An argument applied to a different number is
     left alone: that it is applied at all says it has a context, and a context
     this one cannot supply is not one to guess at. *)
+let resolutions_of_shapes ~own_instances arg_shapes =
+  List.concat_map
+    (fun (arg_ref, n_applied) ->
+      match Table.get_instance_class_shape arg_ref with
+      | Some (arg_class, _)
+        when Table.is_typeclass arg_class
+             && (n_applied = 0 || n_applied = List.length own_instances) ->
+        promoted_resolutions arg_class
+          (Tglob (arg_ref, (if n_applied = 0 then [] else own_instances), []))
+      | _ -> [] )
+    arg_shapes
+
 let instance_arg_resolutions ~own_instances inst_ref =
   match Table.get_instance_class_shape inst_ref with
   | None -> []
-  | Some (_, arg_shapes) ->
-    List.concat_map
-      (fun (arg_ref, n_applied) ->
-        match Table.get_instance_class_shape arg_ref with
-        | Some (arg_class, _)
-          when Table.is_typeclass arg_class
-               && (n_applied = 0 || n_applied = List.length own_instances) ->
-          promoted_resolutions arg_class
-            (Tglob (arg_ref, (if n_applied = 0 then [] else own_instances), []))
-        | _ -> [] )
-      arg_shapes
+  | Some (_, arg_shapes) -> resolutions_of_shapes ~own_instances arg_shapes
+
+(** The resolution a declaration's own type supplies when that type is an
+    inductive whose constructor fields name an instance -- see
+    {!Table.get_ind_class_args}.  [boxed : @dval natIPtr] is what says which
+    [IPtr] the [ptr] inside [dval] belongs to, and the only thing that does:
+    the ML type keeps neither the argument nor the dependence. *)
+let ind_type_resolutions r =
+  match Table.get_instance_class_shape r with
+  | Some (GlobRef.IndRef (kn, _), arg_shapes) ->
+    resolutions_of_shapes
+      ~own_instances:(List.map (fun (a, _) -> Tglob (a, [], [])) arg_shapes)
+      (Table.get_ind_class_args kn)
+  | _ -> []
 
 (** The resolution a term supplies for the promoted type variables its own type
     leaves unresolved.
@@ -395,12 +410,15 @@ let promoted_resolutions_of_body b =
     would be undeducible: nothing in the signature determines it. *)
 
 (** Generate a declaration's type and its body against the resolution its body
-    supplies -- see {!promoted_resolutions_of_body}.  An enclosing instance
-    struct answers first: a variable it declares is the one this method is
-    written in, whatever else the body mentions. *)
-let with_body_resolutions b f =
+    supplies -- see {!promoted_resolutions_of_body} -- and the one its own type
+    does, see {!ind_type_resolutions}.  An enclosing instance struct answers
+    first: a variable it declares is the one this method is written in,
+    whatever else the body mentions. *)
+let with_body_resolutions r b f =
   with_promoted_var_map
-    ((!tctx).promoted_var_map @ promoted_resolutions_of_body b)
+    ( (!tctx).promoted_var_map
+    @ promoted_resolutions_of_body b
+    @ ind_type_resolutions r )
     f
 
 let hkt_tvar_resolutions_of_type ty =
@@ -4456,7 +4474,7 @@ let recover_then_guess carrier_refs ty b =
 
 (** Generate C++ declaration from ML definition (main entry point) *)
 let gen_decl__inner n b ty =
-  with_body_resolutions b @@ fun () ->
+  with_body_resolutions n b @@ fun () ->
   with_itree_mode_for ty @@ fun () ->
   with_method_ns_for_locals @@ fun () ->
   let cty = convert_ml_type_to_cpp_type (empty_env ()) [] ty in
@@ -4509,7 +4527,7 @@ let gen_decl n b ty =
 
 (** Generate C++ declaration with pretty-printing adjustments *)
 let gen_decl_for_pp__inner n b ty =
-  with_body_resolutions b @@ fun () ->
+  with_body_resolutions n b @@ fun () ->
   let carrier_refs = get_erased_proj_map_from_type ty in
   (* Expand TC-typed carrier refs: when a carrier ref points to a
      typeclass-typed promoted field (e.g., base_category : PreCategory),
@@ -4591,7 +4609,7 @@ let gen_decl_for_pp n b ty =
     converts to C++ types, and delegates to {!gen_dfun} for the actual
     definition.  Returns [(decl, env, tvars)]. *)
 let gen_dfun_def__inner n b ty =
-  with_body_resolutions b @@ fun () ->
+  with_body_resolutions n b @@ fun () ->
   (* Simplify the ML type to resolve metavariables before converting to C++ *)
   let ty = type_simpl ty in
   (* Rewrite Tunresolved in body types to promoted carrier refs. This allows
@@ -4648,7 +4666,7 @@ let gen_dfun_def n b ty =
 
 (** Generate C++ function specification (for header files) *)
 let gen_spec__inner n b ty =
-  with_body_resolutions b @@ fun () ->
+  with_body_resolutions n b @@ fun () ->
   let ty = type_simpl ty in
   let ml_ty = ty in  (* preserve ML type before C++ conversion *)
   let unit_void = ml_type_is_void_call ty in

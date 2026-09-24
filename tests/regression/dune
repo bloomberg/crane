@@ -64,3 +64,14 @@
   (alias runtest)
   (deps class_field_alias_at_call_argument.t.exe)
   (action (run ./class_field_alias_at_call_argument.t.exe))))
+
+(subdir inductive_field_at_section_class_field
+ (rule
+  (targets inductive_field_at_section_class_field.t.exe)
+  (deps InductiveFieldAtSectionClassField.vo inductive_field_at_section_class_field.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} inductive_field_at_section_class_field.t.exe inductive_field_at_section_class_field.cpp inductive_field_at_section_class_field.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps inductive_field_at_section_class_field.t.exe)
+  (action (run ./inductive_field_at_section_class_field.t.exe))))

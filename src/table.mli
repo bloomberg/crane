@@ -597,6 +597,28 @@ val add_instance_class_shape :
 val get_instance_class_shape :
   GlobRef.t -> (GlobRef.t * (GlobRef.t * int) list) option
 
+(** [ind_promoted_params kn] -- the promoted type variables the constructor
+    payloads of [kn] mention, in order of first appearance.
+
+    An inductive declared under a [Context] may carry a field whose type is a
+    field of that context variable.  The dictionary is erased, so the ML
+    inductive has no parameter for it and the field falls back to the
+    file-scope alias: the emitted struct claims to be one type when it is one
+    per instance.  These names are what it is really parameterised by, and
+    they become its remaining template parameters. *)
+val ind_promoted_params : MutInd.t -> Id.t list
+
+(** [add_ind_class_arg kn (inst, n)] records that a constructor field type of
+    [kn] names the instance [inst] applied to [n] arguments -- the same shape
+    {!add_instance_class_shape} records, and read by the same rule.  The Rocq
+    constructor type is the only place an inductive's dependence on an instance
+    is written down; the ML inductive keeps no parameter for it. *)
+val add_ind_class_arg : MutInd.t -> GlobRef.t * int -> unit
+
+(** The shapes recorded by {!add_ind_class_arg}, in order of first
+    appearance. *)
+val get_ind_class_args : MutInd.t -> (GlobRef.t * int) list
+
 (** Add info axiom. *)
 val add_info_axiom : GlobRef.t -> unit
 

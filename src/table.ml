@@ -1133,6 +1133,81 @@ let add_instance_class_shape r shape =
 
 let get_instance_class_shape r = GlobRef.Map.find_opt r !instance_class_shapes
 
+(* The class instances an inductive's constructor field types name.
+
+   [Variant dval := DPtr (p : @ptr ProvenanceV PointerV)] depends on
+   [PointerV], and on whatever [PointerV] is applied to, through nothing the ML
+   inductive keeps: the dictionary is erased and [ptr] arrives applied to no
+   arguments.  Recorded in the same shape as {!instance_class_shapes} -- the
+   instance and how many arguments it is applied to -- so that one reader
+   serves both. *)
+let ind_class_arg_shapes =
+  ref (Mindmap_env.empty : (GlobRef.t * int) list Mindmap_env.t)
+
+let init_ind_class_arg_shapes () = ind_class_arg_shapes := Mindmap_env.empty
+
+let add_ind_class_arg kn shape =
+  let prev =
+    Option.default [] (Mindmap_env.find_opt kn !ind_class_arg_shapes)
+  in
+  if not (List.mem shape prev) then
+    ind_class_arg_shapes :=
+      Mindmap_env.add kn (prev @ [shape]) !ind_class_arg_shapes
+
+let get_ind_class_args kn =
+  Option.default [] (Mindmap_env.find_opt kn !ind_class_arg_shapes)
+
+(* The promoted type variables an inductive's constructor payloads mention.
+
+   An inductive declared under a [Context {IP : IPtr}] may carry a field whose
+   type is a field of that context variable -- [DPtr (p : ptr)].  The
+   dictionary is erased, so the ML inductive has no parameter for it and the
+   field's type resolves to the file-scope [using ptr = std::any;]: the
+   emitted struct claims to be one type when it is one per instance.  The
+   names it mentions are what it is really parameterised by, and they are
+   listed here in order of first appearance.
+
+   Computed on demand and cached, not recorded during extraction: whether a
+   reference is a promoted variable is only settled once the class it belongs
+   to has been extracted, and an inductive may be reached before that. *)
+let ind_promoted_params_cache = ref (Mindmap_env.empty : Id.t list Mindmap_env.t)
+
+let init_ind_promoted_params () = ind_promoted_params_cache := Mindmap_env.empty
+
+let ind_promoted_params kn =
+  match Mindmap_env.find_opt kn !ind_promoted_params_cache with
+  | Some v -> v
+  | None ->
+    let v =
+      try
+        let ind = unsafe_lookup_ind kn in
+        match ind.Miniml.ind_kind with
+        | Miniml.Record _ | Miniml.TypeClass _ -> []
+        | _ ->
+          let acc = ref [] in
+          let rec collect = function
+            | Miniml.Tglob (g, ts, _) ->
+              ( match
+                  (if is_promoted_type_var g then promoted_type_var_name g
+                   else None)
+                with
+              | Some v when not (List.exists (Id.equal v) !acc) ->
+                acc := !acc @ [v]
+              | _ -> () );
+              List.iter collect ts
+            | Miniml.Tarr (a, b) -> collect a; collect b
+            | Miniml.Tmeta {contents = Some t} -> collect t
+            | _ -> ()
+          in
+          Array.iter
+            (fun p -> Array.iter (List.iter collect) p.Miniml.ip_types)
+            ind.Miniml.ind_packets;
+          !acc
+      with Not_found | Invalid_argument _ -> []
+    in
+    ind_promoted_params_cache := Mindmap_env.add kn v !ind_promoted_params_cache;
+    v
+
 (* Table of projections used in higher-order positions (as function values).
    Projections not in this set are only accessed via record->field syntax and
    don't need standalone C++ function definitions. *)
@@ -3663,6 +3738,8 @@ let reset_tables () =
   init_value_dep_type_schemes ();
   init_instance_promoted_types ();
   init_instance_class_shapes ();
+  init_ind_promoted_params ();
+  init_ind_class_arg_shapes ();
   init_higher_order_projections ();
   init_phantom_tvars ();
   init_axioms ();

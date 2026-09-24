@@ -881,6 +881,31 @@ and extract_really_ind env kn mib =
           | _ -> [||]
         in
         let orig_dbmap = parse_ind_args p.ip_sign args (nprods + ndecls) in
+        (* A field whose type is a class projection -- [p : @ptr ProvenanceV
+           PointerV] -- makes this inductive depend on the instances the
+           projection is applied to, and on whatever they are applied to in
+           turn.  Nothing of that survives into the ML inductive, so it is
+           recorded here; see {!Table.add_ind_class_arg}. *)
+        List.iter
+          (fun decl ->
+            let fty = Context.Rel.Declaration.get_type decl in
+            let rec scan c =
+              ( match Constr.kind c with
+              | App (f, cargs) when Constr.isConst f ->
+                Array.iter
+                  (fun a ->
+                    let h, a_args = Constr.decompose_app a in
+                    match Constr.kind h with
+                    | Const (ac, _) ->
+                      Table.add_ind_class_arg kn
+                        (GlobRef.ConstRef ac, Array.length a_args)
+                    | _ -> () )
+                  cargs
+              | _ -> () );
+              Constr.iter scan c
+            in
+            scan fty )
+          prods;
         (* For C++ records: detect Sort-typed fields and promote to type vars
            during initial extraction (instead of re-extracting later). *)
         let dbmap, _promoted_vars =
