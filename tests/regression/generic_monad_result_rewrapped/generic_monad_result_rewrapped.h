@@ -201,19 +201,16 @@ struct GenericMonadResultRewrapped {
   static typename _tcI0::template m<List<T3>> map_monad(F0 &&f,
                                                         const List<T2> &l) {
     if (std::holds_alternative<typename List<T2>::Nil>(l.v())) {
-      return _tcI0::template ret<List<T3>>(List<std::any>::nil());
+      return _tcI0::template ret<List<T3>>(List<T3>::nil());
     } else {
       const auto &[a0, a1] = std::get<typename List<T2>::Cons>(l.v());
       const List<T2> &a1_value = *a1;
-      return _tcI0::template bind<T3, List<T3>>(
-          f(a0), [=](const auto &y) mutable {
-            return _tcI0::template bind<List<T3>, List<T3>>(
-                map_monad<_tcI0, T2, T3>(f, a1_value),
-                [=](const auto &ys) mutable {
-                  return _tcI0::template ret<List<T3>>(
-                      List<std::any>::cons(y, ys));
-                });
-          });
+      return _tcI0::template bind<T3, List<T3>>(f(a0), [=](T3 y) mutable {
+        return _tcI0::template bind<List<T3>, List<T3>>(
+            map_monad<_tcI0, T2, T3>(f, a1_value), [=](const auto &ys) mutable {
+              return _tcI0::template ret<List<T3>>(List<T3>::cons(y, ys));
+            });
+      });
     }
   }
 

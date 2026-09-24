@@ -220,12 +220,12 @@ Interp::interp(std::type_identity_t<MonadIter<_tcI0::template m>> iM, F1 &&h0,
           const auto &_itf = *std::get_if<typename ITree<T3>::Ret>(&_cs);
           auto r = _itf.value;
           return _tcI0::template ret<Sum<std::shared_ptr<ITree<T3>>, T3>>(
-              Sum<std::shared_ptr<ITree<std::any>>, T3>::inr(r));
+              Sum<std::shared_ptr<ITree<T3>>, T3>::inr(r));
         } else if (std::holds_alternative<typename ITree<T3>::Tau>(_cs)) {
           const auto &_itf = *std::get_if<typename ITree<T3>::Tau>(&_cs);
           auto t0 = _itf.next;
           return _tcI0::template ret<Sum<std::shared_ptr<ITree<T3>>, T3>>(
-              Sum<std::shared_ptr<ITree<T3>>, std::any>::inl(t0));
+              Sum<std::shared_ptr<ITree<T3>>, T3>::inl(t0));
         } else {
           const auto &_itf = *std::get_if<typename ITree<T3>::Vis>(&_cs);
           auto e = crane_event_as<std::any>(_itf.effect);

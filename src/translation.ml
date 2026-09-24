@@ -9567,9 +9567,49 @@ and project_through_instance env x tys args inst =
   let targs =
     match tys with [] -> [] | _ :: rest -> List.map (cpp_of_ml env) rest
   in
+  (* What each operand is written into.  [tys] leads with the carrier, which
+     is how the field's own type numbers the class parameter, so the single
+     substitution that instantiates the method also resolves [m A] -- and
+     without it an operand that spells its type for the first time, a match
+     whose branches have to agree on one return type, is built at whatever
+     the enclosing declaration returns.  An argument is not a tail position,
+     so that is never the right answer; see {!slot_cpp_ty}.
+
+     Two substitutions, because the projection's type quantifies over the
+     class's carrier as well as the method's own variables and [tys] carries
+     only the latter -- its leading entry, the carrier's, is [Tdummy].  The
+     carrier is what the instance is an instance {e at}, the sole argument of
+     its class type; without it every [m A] absorbs its argument and says
+     [std::any].
+
+     The method's value parameters are the {e trailing} domains: the carrier,
+     the dictionary and the erased type arguments all stand in front of them,
+     and only a suffix as long as the operand list is safe to read. *)
+  let operand_ml_tys =
+    match find_type x with
+    | exception Not_found -> []
+    | ty ->
+      let ty =
+        match resolve_tmeta (instance_class_ty env inst) with
+        | Miniml.Tglob (_, [carrier], _) -> subst_dict_carrier carrier ty
+        | _ -> ty
+      in
+      let doms =
+        ml_domains (if tys = [] then ty else type_subst_list tys ty)
+        |> List.filter (fun t ->
+               match resolve_tmeta t with Miniml.Tdummy _ -> false | _ -> true)
+      in
+      let extra = List.length doms - List.length operands in
+      if extra >= 0 then List.filteri (fun i _ -> i >= extra) doms else []
+  in
   mk_call
     (CPPscope (gen_expr env inst, Common.id_of_global Term x, targs))
-    (List.map (fun a -> gen_expr env a) operands)
+    (List.mapi
+       (fun i a ->
+         let expected = param_expected_cpp_ty env operand_ml_tys i in
+         with_cpp_return_type expected (fun () ->
+             gen_expr ?expected_ty:expected env a ) )
+       operands )
 
 (* The instance a projection call would project through, where Crane kept it.
 
