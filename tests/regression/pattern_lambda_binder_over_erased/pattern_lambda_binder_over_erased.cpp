@@ -9,15 +9,16 @@ Phi<std::any> TFunctor_phi(std::type_identity_t<TFunctor<Exp0>> h,
                            std::function<std::any(std::any)> f,
                            const Phi<std::any> &p) {
   const auto &[es0] = p;
-  return Phi<std::any>::phi0(tfmap<List>(
-      [](auto &&_ec0, List<std::any> _ec1) {
-        return TFunctor_list(_ec0, _ec1);
-      },
-      [=](std::pair<Nat, Exp0<std::any>> ie) mutable {
-        const auto &[i, e] = ie;
-        return std::make_pair(std::any_cast<Nat>(i), tfmap<Exp0>(h, f, e));
-      },
-      es0));
+  return Phi<std::any>::phi0(
+      tfmap<List>([](auto &&_ec0,
+                     List<std::any> _ec1) { return TFunctor_list(_ec0, _ec1); },
+                  [=](std::pair<Nat, Exp0<std::any>> ie) mutable {
+                    const auto &[i, e] = ie;
+                    return std::make_pair(
+                        std::any_cast<Nat>(i),
+                        tfmap<Exp0>(h, f, std::any_cast<Exp0<std::any>>(e)));
+                  },
+                  es0));
 }
 
 Nat PatternLambdaBinderOverErased::bump(Nat n) { return Nat::s(std::move(n)); }

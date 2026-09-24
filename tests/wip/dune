@@ -148,13 +148,3 @@
   (deps hk_carrier_written_at_partial_app.t.exe)
   (action (run ./hk_carrier_written_at_partial_app.t.exe))))
 
-(subdir error_ctor_through_monad_instance
- (rule
-  (targets error_ctor_through_monad_instance.t.exe)
-  (deps ErrorCtorThroughMonadInstance.vo error_ctor_through_monad_instance.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} error_ctor_through_monad_instance.t.exe error_ctor_through_monad_instance.cpp error_ctor_through_monad_instance.t.cpp)))
- (rule
-  (alias runtest)
-  (deps error_ctor_through_monad_instance.t.exe)
-  (action (run ./error_ctor_through_monad_instance.t.exe))))

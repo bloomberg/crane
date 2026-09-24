@@ -111,17 +111,18 @@ template <Monad _tcI0, typename T1> struct Monad_stateT {
   static stateT<T1, typename _tcI0::template m<_A1>, _A1> bind(
       stateT<T1, typename _tcI0::template m<_A0>, _A0> c1,
       std::function<stateT<T1, typename _tcI0::template m<_A1>, _A1>(_A0)> c2) {
-    return stateT<T1, typename _tcI0::template m<_A1>, _A1>{
-        [=](const auto &s) mutable {
-          return itree_bind(
-              c1.runStateT(s),
-              [=](const std::pair<std::any, std::any> &vs) mutable {
-                const auto &[v, s0] = vs;
-                return crane_container_cast<
-                    typename _tcI0::template m<std::pair<_A1, T1>>>(
-                    c2(v).runStateT(s0));
-              });
-        }};
+    return stateT<T1, typename _tcI0::template m<_A1>, _A1>{[=](const auto &
+                                                                    s) mutable {
+      return itree_bind(
+          crane_container_cast<typename _tcI0::template m<std::pair<_A0, T1>>>(
+              c1.runStateT(s)),
+          [=](const std::pair<std::any, std::any> &vs) mutable {
+            const auto &[v, s0] = vs;
+            return crane_container_cast<
+                typename _tcI0::template m<std::pair<_A1, T1>>>(
+                c2(v).runStateT(s0));
+          });
+    }};
   }
 };
 

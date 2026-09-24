@@ -4060,37 +4060,45 @@ and hkt_carrier_type_args env tvars ?result id tys =
   in
   if is_plain_head carrier then None else Some [Minicpp.Ttyctor carrier]
 
-(** The carrier of a higher-kinded class parameter, read off the {e dictionary}
-    the call passes for that class.
+(** [subst_dict_carrier carrier ty] puts [carrier] in place of the leading
+    class parameter throughout [ty].  A class parameter stands in a method's
+    own types as [Tapp (1, _)] -- the carrier applied -- and the call's type
+    arguments instantiate the method's [forall]s, not the class's, so without
+    this substitution a parameter declared [m A] resolves to nothing at all.
 
-    {!hkt_carrier_type_args} recovers a carrier from the type the result is
-    expected to have, which needs the result to mention it.  An instance
-    {e method} for a nested functor does not qualify: [TFunctor_list']'s result
-    is [list (T1 B)], and by the time the call is built the expected type has
-    already erased the element to [std::any], so there is nothing left to
-    abstract over.
+    [carrier] is a type constructor written as an application whose
+    placeholders stand for what it is applied to, so applying it is filling
+    them -- which is what {!Mlutil.apply_ml_type} does, including for the
+    type-level lambda [fun T => holder T (box T)] whose binder occurs twice.
 
-    What still knows the carrier is the dictionary argument.  A parameter of
-    class type -- [TFunctor T1] -- is instantiated by the instance for exactly
-    one type constructor, and that instance's method returns [T1] applied: the
-    dictionary for [box] is a function whose codomain is [box B].  So the head
-    of the dictionary's codomain {e is} the carrier.
+    An occurrence that cannot be filled is left as the [Tapp] it was: a type of
+    the wrong arity in its place is worse than an unrecovered one, which is
+    only a missed opportunity. *)
+and subst_dict_carrier ?(at = 1) carrier ty =
+  let apply k xs =
+    match carrier with
+    | Miniml.Tglob _ -> Mlutil.apply_ml_type carrier xs
+    | _ -> Miniml.Tapp (k, xs)
+  in
+  let rec go t =
+    match resolve_tmeta t with
+    | Miniml.Tapp (j, xs) when j = at -> apply j (List.map go xs)
+    | Miniml.Tapp (j, xs) -> Miniml.Tapp (j, List.map go xs)
+    | Miniml.Tglob (c, a, l) -> Miniml.Tglob (c, List.map go a, l)
+    | Miniml.Tarr (a, b) -> Miniml.Tarr (go a, go b)
+    | t -> t
+  in
+  go ty
+
+(** The carrier a call's dictionary argument fixes, as an ML type.
 
     The dictionary reaches the call wrapped in the adapter lambda that erases
     its arguments, so the instance is found by descending to the head of the
     lambda's body.  It need not be an instance at all: where the enclosing
     function abstracts over the instance, the dictionary is a binder, and the
     carrier is written in the constraint that binder's own type spells.  Both
-    sources end at an ML type headed by the carrier, and are consumed as one.
-
-    Nothing is claimed when neither source yields a type, or when that type is
-    not an application -- a carrier has to be applied to something to be one.
-
-    Written unconditionally, unlike the result route: [T1] here occupies a
-    non-deduced position ([std::type_identity_t<TFunctor<T1>>], and [T1<std::any>]
-    against an already-erased argument), so even a carrier that is a plain
-    template name has to be named rather than left to deduction. *)
-and dict_carrier_type_args env tvars id args =
+    sources end at an ML type headed by the carrier, and are consumed as one. *)
+and dict_carrier_ml_type id args =
   let ( let* ) = Option.bind in
   let* ml_ty = find_type_opt id in
   (* The class parameter is quantified first, and an explicit argument list is
@@ -4154,28 +4162,6 @@ and dict_carrier_type_args env tvars id args =
     in
     go 0 [] (ml_domains ty)
   in
-  (* [carrier] is a type constructor written as an application whose
-     placeholders stand for what it is applied to, so applying it is filling
-     them -- which is what {!Mlutil.apply_ml_type} does, including for the
-     type-level lambda [fun T => holder T (box T)] whose binder occurs twice. *)
-  let apply_carrier carrier k xs =
-    match carrier with
-    | Miniml.Tglob _ -> Mlutil.apply_ml_type carrier xs
-    (* Not an applied type, so the two do not line up.  Leave the occurrence as
-       it was rather than put a type in its place that has the wrong arity -- a
-       wrong spelling is worse than an unrecovered one, which is only a missed
-       opportunity. *)
-    | _ -> Miniml.Tapp (k, xs)
-  in
-  let rec subst_carrier k carrier t =
-    let go = subst_carrier k carrier in
-    match resolve_tmeta t with
-    | Miniml.Tapp (j, xs) when j = k -> apply_carrier carrier k (List.map go xs)
-    | Miniml.Tapp (j, xs) -> Miniml.Tapp (j, List.map go xs)
-    | Miniml.Tglob (c, a, l) -> Miniml.Tglob (c, List.map go a, l)
-    | Miniml.Tarr (a, b) -> Miniml.Tarr (go a, go b)
-    | t -> t
-  in
   let rec head_glob = function
     | Miniml.MLlam (_, _, b) | Miniml.MLmagic (_, b) | Miniml.MLapp (b, _) ->
       head_glob b
@@ -4209,7 +4195,7 @@ and dict_carrier_type_args env tvars id args =
         (List.fold_left
            (fun acc (p, k) ->
              match Option.bind (List.nth_opt dicts p) (dict_ml_type ~depth) with
-             | Some carrier -> subst_carrier k carrier acc
+             | Some carrier -> subst_dict_carrier ~at:k carrier acc
              | None -> acc )
            cod params )
     | Miniml.MLglob (r, _) ->
@@ -4245,7 +4231,41 @@ and dict_carrier_type_args env tvars id args =
         else constraint_arg (List.nth_opt doms (n - i)) )
     | _ -> None
   in
-  let* cod = Option.map strip_class (dict_ml_type dict) in
+  Option.map strip_class (dict_ml_type dict)
+
+(** The carrier of a higher-kinded class parameter, read off the {e dictionary}
+    the call passes for that class.
+
+    {!hkt_carrier_type_args} recovers a carrier from the type the result is
+    expected to have, which needs the result to mention it.  An instance
+    {e method} for a nested functor does not qualify: [TFunctor_list']'s result
+    is [list (T1 B)], and by the time the call is built the expected type has
+    already erased the element to [std::any], so there is nothing left to
+    abstract over.
+
+    What still knows the carrier is the dictionary argument.  A parameter of
+    class type -- [TFunctor T1] -- is instantiated by the instance for exactly
+    one type constructor, and that instance's method returns [T1] applied: the
+    dictionary for [box] is a function whose codomain is [box B].  So the head
+    of the dictionary's codomain {e is} the carrier.
+
+    The dictionary reaches the call wrapped in the adapter lambda that erases
+    its arguments, so the instance is found by descending to the head of the
+    lambda's body.  It need not be an instance at all: where the enclosing
+    function abstracts over the instance, the dictionary is a binder, and the
+    carrier is written in the constraint that binder's own type spells.  Both
+    sources end at an ML type headed by the carrier, and are consumed as one.
+
+    Nothing is claimed when neither source yields a type, or when that type is
+    not an application -- a carrier has to be applied to something to be one.
+
+    Written unconditionally, unlike the result route: [T1] here occupies a
+    non-deduced position ([std::type_identity_t<TFunctor<T1>>], and [T1<std::any>]
+    against an already-erased argument), so even a carrier that is a plain
+    template name has to be named rather than left to deduction. *)
+and dict_carrier_type_args env tvars id args =
+  let ( let* ) = Option.bind in
+  let* cod = dict_carrier_ml_type id args in
   (* Abstracted over the traversed type, as {!apply_hkt_tyctors} does: the
      class applies its carrier to it and this idiom writes it first, so the two
      agree on one body and the printer mints one alias for both.
@@ -9870,7 +9890,21 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
        (e.g., unsigned int after resolving a promoted type var). *)
     let fn_ml_ty = find_type id in
     ();
-    let fn_ml_ty_subst = try type_subst_list tys fn_ml_ty with _ -> fn_ml_ty in
+    (* The one substitution that takes the callee's declared types to this
+       call's.  [tys] instantiates the callee's own [forall]s; a class
+       parameter is not among them, and stands in every parameter type as the
+       carrier applied -- so the dictionary argument has to be read first or a
+       [bind]'s [m A] resolves to nothing and the argument generated into it
+       is left with no stated type at all. *)
+    let subst_ml_ty ty =
+      let ty =
+        match dict_carrier_ml_type id primary_ml_args with
+        | Some carrier -> subst_dict_carrier carrier ty
+        | None -> ty
+      in
+      try type_subst_list tys ty with _ -> ty
+    in
+    let fn_ml_ty_subst = subst_ml_ty fn_ml_ty in
     let fn_param_ml_tys =
       let rec collect ty =
         match expand_ml_fun_alias ty with
@@ -9912,7 +9946,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
        here to prevent, not one to reintroduce. *)
     let subst_index_of_orig =
       let subst_is_dummy t =
-        match resolve_tmeta (try type_subst_list tys t with _ -> t) with
+        match resolve_tmeta (subst_ml_ty t) with
         | Miniml.Tdummy _ -> true
         | _ -> false
       in
@@ -10187,6 +10221,11 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
            carries this producer's instantiation, which the parameter type may
            have erased.  So take the currying and nothing else. *)
         | MLcons _ -> param_expected_recurried ()
+        (* A match in argument position becomes an immediately-invoked lambda,
+           whose branches have to agree on one return type -- and the branches
+           are where a value is spelled for the first time, so nothing inside
+           states it.  Only the slot does. *)
+        | MLcase _ -> param_expected_at_declared_arity ()
         | _ -> None ) )
       in
       let arg_expected_ml_ty =
@@ -10214,7 +10253,11 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
       let expr =
         let ret =
           if param_resolves_to_any then Some Tany
-          else (!tctx).current_cpp_return_type
+          (* An argument is not a tail position, so the enclosing function's
+             return type does not describe it -- and what the parameter says
+             does.  Left to {!slot_cpp_ty}'s fallback, a match in argument
+             position builds its branches at the type the {e call} returns. *)
+          else arg_expected_ty
         in
         with_cpp_return_type ret (fun () ->
             gen_expr ?expected_ty:arg_expected_ty

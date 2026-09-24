@@ -10089,4 +10089,13 @@
   (deps event_family_only_in_return_type.t.exe)
   (action (run ./event_family_only_in_return_type.t.exe))))
 
-
+(subdir error_ctor_through_monad_instance
+ (rule
+  (targets error_ctor_through_monad_instance.t.exe)
+  (deps ErrorCtorThroughMonadInstance.vo error_ctor_through_monad_instance.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} error_ctor_through_monad_instance.t.exe error_ctor_through_monad_instance.cpp error_ctor_through_monad_instance.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps error_ctor_through_monad_instance.t.exe)
+  (action (run ./error_ctor_through_monad_instance.t.exe))))
