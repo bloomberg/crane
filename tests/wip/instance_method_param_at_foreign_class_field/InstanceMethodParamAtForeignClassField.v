@@ -40,19 +40,33 @@ Arguments Err {A}.
   {| ret  := fun _ a => Ok a
    ; bind := fun _ _ m k => match m with Ok a => k a | Err c => Err c end |}.
 
-Class IPtr := { iptr : Type ; prov : Type ; from_Z : nat -> EOU iptr }.
+Class IPtr :=
+  { iptr : Type ; prov : Type ; from_Z : nat -> EOU iptr ; prov_nat : prov -> nat }.
 
-Class ITOP (P : IPtr) := { ptr : Type ; int_to_ptr : nat -> @prov P -> EOU ptr }.
+(** [int_to_ptr] returns [EOU nat], not [EOU ptr].  The carrier field is kept
+    -- the instance still builds it from [iptr] and [prov] -- but the method's
+    result stays concrete, so that a definition typed by a class field
+    projected through a known instance, which is a separate defect, is not on
+    this reduction's path.  See
+    instance_carrier_unqualified_at_known_instance. *)
+Class ITOP (P : IPtr) := { ptr : Type ; int_to_ptr : nat -> @prov P -> EOU nat }.
 
 #[global] Instance PIV {IP : IPtr} : ITOP IP :=
   {| ptr := (iptr * prov)%type
-   ; int_to_ptr := fun i pr => bind (from_Z i) (fun a => ret (a, pr)) |}.
+   ; int_to_ptr := fun i pr => bind (from_Z i) (fun _ => ret (prov_nat pr)) |}.
 
 #[global] Instance natIPtr : IPtr :=
-  {| iptr := nat ; prov := bool ; from_Z := fun n => ret n |}.
+  {| iptr := nat ; prov := bool ; from_Z := fun n => ret n
+   ; prov_nat := fun b => if b then 1 else 0 |}.
 
+(** The match is the smallest consumer that still forces [int_to_ptr] to be
+    emitted. *)
 Module InstanceMethodParamAtForeignClassField.
-  Definition run := @int_to_ptr natIPtr (@PIV natIPtr) 1 true.
+  Definition run : bool :=
+    match @int_to_ptr natIPtr (@PIV natIPtr) 1 true with
+    | Ok _ => true
+    | Err _ => false
+    end.
 End InstanceMethodParamAtForeignClassField.
 
 Set Crane Format Style "None".

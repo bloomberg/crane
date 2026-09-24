@@ -136,11 +136,11 @@ template <typename _A0, typename _A1>
 static EOU<_A1> bind(EOU<_A0> m,
 std::function<EOU<_A1>(_A0)> k) {
 if (std::holds_alternative<typename EOU<_A0>::Ok>(m.v())) {
-const auto& [a00] = std::get<typename EOU<_A0>::Ok>(m.v());
-return k(a00);
+const auto& [a01] = std::get<typename EOU<_A0>::Ok>(m.v());
+return k(a01);
 } else {
-const auto& [a00] = std::get<typename EOU<_A0>::Err>(m.v());
-return EOU<_A1>::err(a00);
+const auto& [a01] = std::get<typename EOU<_A0>::Err>(m.v());
+return EOU<_A1>::err(a01);
 }}
 };
 static_assert(Monad<EOU_monad>);template <typename
@@ -148,23 +148,31 @@ I>concept IPtr = requires {
   typename I::iptr;
   typename I::prov;
   { I::from_Z(std::declval<Nat>()) } -> std::convertible_to<EOU<typename I::iptr>>;
-};using iptr = std::any;using prov = std::any;template <typename
+  { I::prov_nat(std::declval<typename I::prov>()) } -> std::convertible_to<Nat>;
+};using iptr = std::any;using prov =
+std::any;
+/// int_to_ptr returns EOU nat, not EOU ptr.  The carrier field is kept
+/// -- the instance still builds it from iptr and prov -- but the method's
+/// result stays concrete, so that a definition typed by a class field
+/// projected through a known instance, which is a separate defect, is not on
+/// this reduction's path.  See
+/// instance_carrier_unqualified_at_known_instance.
+template <typename
 I>concept ITOP = requires {
   typename I::ptr;
   { I::int_to_ptr(std::declval<Nat>(),
-std::declval<prov>()) } -> std::convertible_to<EOU<typename I::ptr>>;
-};using ptr = std::any;template <IPtr
+std::declval<prov>()) } -> std::convertible_to<EOU<Nat>>;
+};template <IPtr
 _tcI0>struct PIV {
 using iptr = typename _tcI0::iptr;
 using prov = typename _tcI0::prov;
 using ptr = std::pair<typename _tcI0::iptr, typename _tcI0::prov>;
-static EOU<std::pair<typename _tcI0::iptr, typename _tcI0::prov>> int_to_ptr(Nat i,
-std::any pr) {
+static EOU<Nat> int_to_ptr(Nat i,
+typename _tcI0::prov pr) {
 return EOU_monad::template bind<typename _tcI0::iptr,
-std::pair<typename _tcI0::iptr, typename _tcI0::prov>>(_tcI0::from_Z(std::move(i)),
-[=](typename _tcI0::iptr
-a) mutable {
-return EOU_monad::template ret<std::pair<typename _tcI0::iptr, typename _tcI0::prov>>(std::make_pair(a, pr));
+Nat>(_tcI0::from_Z(std::move(i)),
+[=](const typename _tcI0::iptr&) mutable {
+return EOU_monad::template ret<Nat>(_tcI0::prov_nat(pr));
 });}
 };
 struct natIPtr {
@@ -172,11 +180,15 @@ using iptr = Nat;
 using prov = bool;
 static EOU<Nat> from_Z(Nat n) {
 return EOU_monad::template ret<Nat>(std::move(n));}
+static Nat prov_nat(bool b) {
+if (b) { return Nat::s(Nat::o()); } else { return Nat::o(); }}
 };
 static_assert(IPtr<natIPtr>);
+/// The match is the smallest consumer that still forces int_to_ptr to be
+/// emitted.
 struct InstanceMethodParamAtForeignClassField {
-static inline const EOU<ptr> run = PIV<natIPtr>::int_to_ptr(Nat::s(Nat::o()),
-true);
+static inline const bool run = (std::holds_alternative<typename EOU<Nat>::Ok>(PIV<natIPtr>::int_to_ptr(Nat::s(Nat::o()),
+true).v()) ? true : false);
 };
 
 #endif // INCLUDED_INSTANCE_METHOD_PARAM_AT_FOREIGN_CLASS_FIELD

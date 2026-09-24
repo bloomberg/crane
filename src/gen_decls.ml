@@ -1390,13 +1390,34 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
             List.filter (fun (t, _) -> not (Mlutil.isTdummy t))
               declared_arg_pairs
           in
-          let declared_arg_tys =
-            if method_tvars = [] then [||]
+          (* A class-typed binder keeps its slot here: it still stands as a
+             lambda in the body, and dropping it would misalign the declared
+             types against the binders they retype. *)
+          let declared_arg_tys = Array.of_list (List.map fst kept_arg_pairs) in
+          (* How much of the declaration a binder is given.
+
+             A member template's binders are retyped outright: the body was
+             extracted against the class's erased method type, where the
+             method's own [forall A] has no witness at all, so its annotations
+             are not a weaker statement of the declared type but a different
+             one.
+
+             Everywhere else the declaration only fills what the body left
+             open.  It has to be offered at all -- a field type standing as a
+             type in another class's method domain ([int_to_ptr : nat ->
+             @prov P -> EOU ptr]) reaches the body erased, while the same
+             [prov] in the codomain is spelled [typename _tcI0::prov] four
+             lines up -- and it may not be taken whole, because the body's own
+             annotation is the one its statements were generated against. *)
+          let offer_declared have want =
+            if method_tvars <> [] then want
             else
-              (* A class-typed binder keeps its slot here: it still stands as a
-                 lambda in the body, and dropping it would misalign the
-                 declared types against the binders they retype. *)
-              Array.of_list (List.map fst kept_arg_pairs)
+              Ml_type_util.refine_erased
+                ~writable:(fun t ->
+                  not
+                    (Ml_type_util.has_unbound_tvar type_var_names
+                       (convert_ml_type_to_cpp_type base_env type_var_names t)) )
+                have want
           in
           let declared_arg_arities =
             Array.of_list
@@ -1457,9 +1478,10 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                 rest
             | MLlam (id, ty, rest) ->
               let resolved_ty =
+                let have = subst_promoted_tvars ty in
                 if n < Array.length declared_arg_tys then
-                  declared_arg_tys.(n)
-                else subst_promoted_tvars ty
+                  offer_declared have declared_arg_tys.(n)
+                else have
               in
               extract_params
                 (n + 1)
