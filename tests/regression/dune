@@ -9744,7 +9744,7 @@
 (subdir noncolliding_child_unregistered
  (rule
   (targets noncolliding_child_unregistered.t.exe)
-  (deps Use.vo noncolliding_child_unregistered.t.cpp (source_tree .))
+  (deps AstLib.vo noncolliding_child_unregistered.t.cpp (source_tree .))
   (action
    (run %{project_root}/scripts/compile-std.sh %{project_root} noncolliding_child_unregistered.t.exe noncolliding_child_unregistered.cpp noncolliding_child_unregistered.t.cpp)))
  (rule
@@ -9754,7 +9754,7 @@
 (subdir bystander_named_bare
  (rule
   (targets bystander_named_bare.t.exe)
-  (deps User.vo bystander_named_bare.t.cpp (source_tree .))
+  (deps AstLib.vo bystander_named_bare.t.cpp (source_tree .))
   (action
    (run %{project_root}/scripts/compile-std.sh %{project_root} bystander_named_bare.t.exe bystander_named_bare.cpp bystander_named_bare.t.cpp)))
  (rule
@@ -9765,7 +9765,7 @@
 (subdir method_body_names_later_struct
  (rule
   (targets method_body_names_later_struct.t.exe)
-  (deps Use.vo method_body_names_later_struct.t.cpp (source_tree .))
+  (deps A.vo method_body_names_later_struct.t.cpp (source_tree .))
   (action
    (run %{project_root}/scripts/compile-std.sh %{project_root} method_body_names_later_struct.t.exe method_body_names_later_struct.cpp method_body_names_later_struct.t.cpp)))
  (rule
@@ -9776,7 +9776,7 @@
 (subdir template_merge_outlined_member
  (rule
   (targets template_merge_outlined_member.t.exe)
-  (deps Use.vo template_merge_outlined_member.t.cpp (source_tree .))
+  (deps A.vo template_merge_outlined_member.t.cpp (source_tree .))
   (action
    (run %{project_root}/scripts/compile-std.sh %{project_root} template_merge_outlined_member.t.exe template_merge_outlined_member.cpp template_merge_outlined_member.t.cpp)))
  (rule
@@ -9787,7 +9787,7 @@
 (subdir nested_owner_two_template_heads
  (rule
   (targets nested_owner_two_template_heads.t.exe)
-  (deps Use.vo nested_owner_two_template_heads.t.cpp (source_tree .))
+  (deps A.vo nested_owner_two_template_heads.t.cpp (source_tree .))
   (action
    (run %{project_root}/scripts/compile-std.sh %{project_root} nested_owner_two_template_heads.t.exe nested_owner_two_template_heads.cpp nested_owner_two_template_heads.t.cpp)))
  (rule
@@ -9798,7 +9798,7 @@
 (subdir modtype_in_wrapper_named_bare
  (rule
   (targets modtype_in_wrapper_named_bare.t.exe)
-  (deps User.vo modtype_in_wrapper_named_bare.t.cpp (source_tree .))
+  (deps AstLib.vo modtype_in_wrapper_named_bare.t.cpp (source_tree .))
   (action
    (run %{project_root}/scripts/compile-std.sh %{project_root} modtype_in_wrapper_named_bare.t.exe modtype_in_wrapper_named_bare.cpp modtype_in_wrapper_named_bare.t.cpp)))
  (rule
@@ -9820,7 +9820,7 @@
 (subdir modtype_alias_emitted_before_original
  (rule
   (targets modtype_alias_emitted_before_original.t.exe)
-  (deps Use.vo modtype_alias_emitted_before_original.t.cpp (source_tree .))
+  (deps Alias.vo modtype_alias_emitted_before_original.t.cpp (source_tree .))
   (action
    (run %{project_root}/scripts/compile-std.sh %{project_root} modtype_alias_emitted_before_original.t.exe modtype_alias_emitted_before_original.cpp modtype_alias_emitted_before_original.t.cpp)))
  (rule
@@ -9830,7 +9830,7 @@
 (subdir eta_expanded_class_method_param_erased
  (rule
   (targets eta_expanded_class_method_param_erased.t.exe)
-  (deps Use.vo eta_expanded_class_method_param_erased.t.cpp (source_tree .))
+  (deps Cls.vo eta_expanded_class_method_param_erased.t.cpp (source_tree .))
   (action
    (run %{project_root}/scripts/compile-std.sh %{project_root} eta_expanded_class_method_param_erased.t.exe eta_expanded_class_method_param_erased.cpp eta_expanded_class_method_param_erased.t.cpp)))
  (rule
@@ -9841,7 +9841,7 @@
 (subdir point_free_fix_binder_untyped
  (rule
   (targets point_free_fix_binder_untyped.t.exe)
-  (deps Use.vo point_free_fix_binder_untyped.t.cpp (source_tree .))
+  (deps Denote.vo point_free_fix_binder_untyped.t.cpp (source_tree .))
   (action
    (run %{project_root}/scripts/compile-std.sh %{project_root} point_free_fix_binder_untyped.t.exe point_free_fix_binder_untyped.cpp point_free_fix_binder_untyped.t.cpp)))
  (rule
@@ -9852,7 +9852,7 @@
 (subdir instance_in_collision_wrapper_named_bare
  (rule
   (targets instance_in_collision_wrapper_named_bare.t.exe)
-  (deps User.vo instance_in_collision_wrapper_named_bare.t.cpp (source_tree .))
+  (deps AstLike.vo instance_in_collision_wrapper_named_bare.t.cpp (source_tree .))
   (action
    (run %{project_root}/scripts/compile-std.sh %{project_root} instance_in_collision_wrapper_named_bare.t.exe instance_in_collision_wrapper_named_bare.cpp instance_in_collision_wrapper_named_bare.t.cpp)))
  (rule
@@ -9907,7 +9907,7 @@
 (subdir collision_wrapper_drops_child_module
  (rule
   (targets collision_wrapper_drops_child_module.t.exe)
-  (deps User.vo collision_wrapper_drops_child_module.t.cpp (source_tree .))
+  (deps AstLike.vo collision_wrapper_drops_child_module.t.cpp (source_tree .))
   (action
    (run %{project_root}/scripts/compile-std.sh %{project_root} collision_wrapper_drops_child_module.t.exe collision_wrapper_drops_child_module.cpp collision_wrapper_drops_child_module.t.cpp)))
  (rule
@@ -10077,3 +10077,14 @@
   (alias runtest)
   (deps error_ctor_type_from_enclosing_return.t.exe)
   (action (run ./error_ctor_type_from_enclosing_return.t.exe))))
+
+(subdir event_family_only_in_return_type
+ (rule
+  (targets event_family_only_in_return_type.t.exe)
+  (deps EventFamilyOnlyInReturnType.vo event_family_only_in_return_type.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} event_family_only_in_return_type.t.exe event_family_only_in_return_type.cpp event_family_only_in_return_type.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps event_family_only_in_return_type.t.exe)
+  (action (run ./event_family_only_in_return_type.t.exe))))
