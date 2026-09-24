@@ -148,3 +148,13 @@
   (deps hk_carrier_written_at_partial_app.t.exe)
   (action (run ./hk_carrier_written_at_partial_app.t.exe))))
 
+(subdir instance_method_param_at_foreign_class_field
+ (rule
+  (targets instance_method_param_at_foreign_class_field.t.exe)
+  (deps InstanceMethodParamAtForeignClassField.vo instance_method_param_at_foreign_class_field.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} instance_method_param_at_foreign_class_field.t.exe instance_method_param_at_foreign_class_field.cpp instance_method_param_at_foreign_class_field.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps instance_method_param_at_foreign_class_field.t.exe)
+  (action (run ./instance_method_param_at_foreign_class_field.t.exe))))
