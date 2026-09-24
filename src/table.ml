@@ -680,7 +680,8 @@ let (init_flat_inductives, add_flat_inductive, is_flat_inductive_registered) =
    the inductive's header is generated, and read back when a *use* of the
    inductive is converted: such a position must receive a bare template name
    ([holder<std::optional>]), not an instantiation. *)
-let hkt_ind_params : (GlobRef.t, int list) Hashtbl.t = Hashtbl.create 16
+let hkt_ind_params : (GlobRef.t, (int * int) list) Hashtbl.t =
+  Hashtbl.create 16
 
 let init_hkt_ind_params () = Hashtbl.reset hkt_ind_params
 
@@ -689,10 +690,12 @@ let () = register_census "hkt_ind_params" (fun () -> Hashtbl.length hkt_ind_para
 let add_hkt_ind_params r positions =
   if positions <> [] then Hashtbl.replace hkt_ind_params r positions
 
-let is_hkt_ind_param r i =
+let hkt_ind_param_arity r i =
   match Hashtbl.find_opt hkt_ind_params r with
-  | Some s -> List.mem i s
-  | None -> false
+  | Some s -> List.assoc_opt i s
+  | None -> None
+
+let is_hkt_ind_param r i = hkt_ind_param_arity r i <> None
 
 (* Positions (0-based) of a type alias's parameters that its right-hand side
    never spells: an erased event family is the case in point.  Populated by

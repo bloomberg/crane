@@ -437,8 +437,14 @@ val is_flat_inductive : GlobRef.t -> bool
 
 (** Record the 0-based positions of an inductive's template parameters that are
     declared [template <typename> class] because a constructor field applies
-    them; see [Gen_decls.ind_templates]. *)
-val add_hkt_ind_params : GlobRef.t -> int list -> unit
+    them, each paired with the arity it is declared at; see
+    [Gen_decls.ind_templates]. *)
+val add_hkt_ind_params : GlobRef.t -> (int * int) list -> unit
+
+(** The arity the template template parameter at 0-based position [i] is
+    declared at, or [None] where that position is not one.  A variable handed
+    to such a position is higher-kinded whether or not anything applies it. *)
+val hkt_ind_param_arity : GlobRef.t -> int -> int option
 
 (** Whether the template parameter at 0-based position [i] of this inductive is
     a template template parameter, so a use of the inductive must pass a bare

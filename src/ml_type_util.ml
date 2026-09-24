@@ -1369,6 +1369,46 @@ let higher_kinded_ml_tvars tys =
   List.iter (scan ~generated_arg:false) tys;
   !hk
 
+(** [hkt_arg_ml_tvar_arities tys] maps a type variable to the arity it is
+    higher-kinded at because [tys] hands it, bare, to a position another
+    constructor declares [template <typename> class].
+
+    Being applied is the usual evidence for the higher kind, and
+    {!higher_kinded_ml_tvars} and [Gen_decls.applied_tvar_arities] both look
+    for it.  It is not the only evidence.  [raiseUB (E : Type -> Type)
+    (S : Sub UBE E) (B : Type)] applies [E] nowhere -- its result is [list B],
+    and in the Vellvm original the result [itree E X] loses the event
+    parameter on the way to [ITree<X>] -- so [E] survives only as an argument
+    of [Sub].  But [Sub] is itself emitted higher-kinded, so the declaration
+    that omits the kind cannot type-check against its own parameter's type:
+    [Sub<UBE, T1>] wants a template where [T1] is a [typename].
+
+    The position's kind is not guessed here.  It was decided and recorded by
+    {!Gen_decls.hkt_templates} when the constructor's own header was emitted,
+    which is the same authority a {e use} of that constructor already consults
+    to decide it must pass a bare template name. *)
+let hkt_arg_ml_tvar_arities tys =
+  let arities = Hashtbl.create 4 in
+  let rec scan t =
+    match t with
+    | Miniml.Tglob (r, args, _) ->
+      List.iteri
+        (fun i a ->
+          match (resolve_tmeta a, Table.hkt_ind_param_arity r i) with
+          | Miniml.Tvar (_, v), Some arity -> Hashtbl.replace arities v arity
+          | Miniml.Tapp (v, args), Some _ ->
+            Hashtbl.replace arities v (List.length args)
+          | _ -> () )
+        args;
+      List.iter scan args
+    | Miniml.Tapp (_, args) -> List.iter scan args
+    | Miniml.Tarr (a, b) -> scan a; scan b
+    | Miniml.Tmeta {contents = Some t} -> scan t
+    | _ -> ()
+  in
+  List.iter scan tys;
+  Hashtbl.fold (fun k v acc -> (k, v) :: acc) arities []
+
 (** Whether a function type returns a type variable that its arguments carry
     only as the type index of an inductive with several constructors.
 

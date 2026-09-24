@@ -2135,6 +2135,13 @@ let with_applied_tvars ?ml_ty cty temps =
         cty
       |> ignore;
       List.iter (Hashtbl.remove arities) !veto;
+      (* A variable handed bare to a position another constructor declares
+         [template <typename> class] is higher-kinded whether or not anything
+         applies it, and no application can be taken back off to make it not
+         be.  Added after the veto, which speaks only about applications. *)
+      List.iter
+        (fun (i, arity) -> Hashtbl.replace arities (tvar_id i) arity)
+        (Ml_type_util.hkt_arg_ml_tvar_arities [ty]);
       arities
   in
   if Hashtbl.length arities = 0 then temps
@@ -2143,9 +2150,19 @@ let with_applied_tvars ?ml_ty cty temps =
       (fun (tt, id) ->
         (* A phantom parameter is already spelled with a default, which a
            template template parameter cannot carry; leave it alone -- nothing
-           in the signature will apply it either. *)
+           in the signature will apply it either.
+
+           Unless something does.  A variable handed to a position another
+           constructor declares [template <typename> class] is written in the
+           signature, at that position, and the phantom pass does not see it:
+           translation spells such an argument as a bare template name, and
+           the traversal that decides what is rendered reads the application
+           it replaced.  Kept phantom, the declaration contradicts its own
+           parameter's type -- [Sub<UBE, T1>] wants a template where [T1] is
+           a [typename] -- so the arity wins over the default. *)
         match (tt, Hashtbl.find_opt arities id) with
-        | TTtypename, Some arity -> (TTtemplate arity, id)
+        | (TTtypename | TTtypename_default Tvoid), Some arity ->
+          (TTtemplate arity, id)
         | _ -> (tt, id) )
       temps
 
@@ -2182,8 +2199,12 @@ let hkt_templates ?applied r vars tys =
     List.filteri (fun i _ -> p i) (List.mapi (fun i _ -> i) temps)
   in
   Table.add_hkt_ind_params r
-    (positions_of (fun i ->
-         match List.nth temps i with TTtemplate _, _ -> true | _ -> false ));
+    (List.filter_map
+       (fun i ->
+         match List.nth temps i with
+         | TTtemplate arity, _ -> Some (i, arity)
+         | _ -> None )
+       (List.mapi (fun i _ -> i) temps) );
   Table.add_phantom_type_params r
     (positions_of (fun i -> not (rendered_in_cpp (i + 1))));
   temps
