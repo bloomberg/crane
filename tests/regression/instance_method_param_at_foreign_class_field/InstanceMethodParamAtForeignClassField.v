@@ -15,6 +15,12 @@
    this case is [prov] standing as a type in the projected method's own
    {e domain}.
 
+   Fixed: the declaration's domains were offered to the body's binders only
+   when the method was a member template, which is unrelated to whether the
+   declaration states more than the body.  They are now offered always, and
+   outside the member-template case they only fill what the body left open --
+   the body's own annotation is what its statements were generated against.
+
    Distinct from instance_method_param_at_class_carrier, which was the same
    shape in an instance's {e class type} and is fixed: an instance's type
    arguments are now taken per position from whichever of the two types
