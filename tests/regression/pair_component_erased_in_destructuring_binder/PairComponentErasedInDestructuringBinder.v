@@ -15,14 +15,13 @@
    [List<std::pair<std::any, std::any>>::nil()], both components erased,
    which compiled only because [nil()] converts nothing.
 
-   That second half is fixed: a custom constructor's erased type arguments
-   are now refined against the slot pointwise and at any depth, so the [nil]
-   reads [List<std::pair<T1, T2>>].  The binder is not, and the count is not
-   the oracle here -- the error is gone because the position now accepts
-   what the term offers, while the binder still reads [std::any] in its
-   second component and the body casts through [List<std::any>].  Read the
-   emitted text, not the exit status.  The remaining work is to carry the
-   slot's stated type into the destructuring lambda's parameter.
+   Both are fixed, and by one reading applied at two places: the position may
+   fill what the term left open.  A custom constructor's erased type arguments
+   are refined against the slot pointwise and at any depth, and a lambda
+   binder's are refined against the domain the slot declares -- at the ML type
+   rather than the C++ spelling, so the body decomposes the pair at the type
+   it really has instead of unboxing at the erased view its own generation
+   assumed.
 
    The import list is not harness configuration -- it selects the emission
    path.  Without the reified mapping the same term comes out through the

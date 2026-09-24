@@ -255,12 +255,11 @@ EOU<std::pair<List<std::pair<T1, T2>>, List<T2>>> go(T1 a, T2 b,
   return EOU_monad::template bind<std::pair<List<std::pair<T1, T2>>, List<T2>>,
                                   std::pair<List<std::pair<T1, T2>>, List<T2>>>(
       combine<T1, T2>(l),
-      [=](std::pair<List<std::pair<T1, T2>>, std::any> x) mutable {
+      [=](std::pair<List<std::pair<T1, T2>>, List<T2>> x) mutable {
         const auto &[p, vargs] = x;
         return EOU_monad::template ret<
             std::pair<List<std::pair<T1, T2>>, List<T2>>>(std::make_pair(
-            List<std::pair<T1, T2>>::cons(std::make_pair(a, b), p),
-            std::any_cast<List<std::any>>(vargs)));
+            List<std::pair<T1, T2>>::cons(std::make_pair(a, b), p), vargs));
       });
 }
 

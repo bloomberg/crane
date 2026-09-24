@@ -1100,6 +1100,32 @@ let prune_unwritten_args =
     erased argument in a position nothing writes never reaches the C++. *)
 let has_tany_written t = has_tany_in_type (prune_unwritten_args t)
 
+let rec refine_erased ~writable have want =
+  let have = resolve_tmeta have and want = resolve_tmeta want in
+  let erased = function
+    | Miniml.Tunknown | Miniml.Tdummy _ | Miniml.Tmeta {contents = None} -> true
+    | _ -> false
+  in
+  match (have, want) with
+  | Miniml.Tmeta ({contents = None} as cell), w
+    when (not (erased w)) && writable w ->
+    (* An uninstantiated [Tmeta] is not merely an erased node, it is the hole
+       extraction left for exactly this answer -- and the term shares the cell
+       with everything else that mentions the same unknown, so the annotation
+       on a match over this binder and the binder's own type are one write, not
+       two.  Filling it is what keeps the body's generation in step with the
+       signature; replacing the type around it would leave the body reading the
+       hole. *)
+    cell.Miniml.contents <- Some w;
+    w
+  | h, w when erased h -> if (not (erased w)) && writable w then w else h
+  | Miniml.Tglob (n, ha, sc), Miniml.Tglob (m, wa, _)
+    when GlobRef.CanOrd.equal n m && List.length ha = List.length wa ->
+    Miniml.Tglob (n, List.map2 (refine_erased ~writable) ha wa, sc)
+  | Miniml.Tarr (a, b), Miniml.Tarr (c, d) ->
+    Miniml.Tarr (refine_erased ~writable a c, refine_erased ~writable b d)
+  | h, _ -> h
+
 let refine_param_from_slot ~tvars ~slot bare =
   let spelled_by_bare = Minicpp.tvar_names bare in
   let nameable n =

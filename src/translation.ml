@@ -4523,11 +4523,7 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
      argument the term never spells -- the element of a [nil] nested inside a
      pair -- arrives erased wherever it sits, while the position states the
      whole shape; the recovery above only looks at the constructor's own
-     outermost arguments.
-
-     Erased nodes only.  The position may fill what the term left open and may
-     never respell what it stated, and a variable from another scope is not
-     writable here however concrete the position is (see {!is_writable}). *)
+     outermost arguments. *)
   let ty =
     if
       slot.deep_erase
@@ -4539,28 +4535,9 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
       match slot.expected_ml_ty with
       | None -> ty
       | Some want ->
-        let erased t =
-          match t with
-          | Miniml.Tunknown | Miniml.Tdummy _ -> true
-          | Miniml.Tmeta {contents = None} -> true
-          | _ -> false
-        in
-        let writable t =
-          (not (erased t)) && names_only_scoped_tvars (cpp_of_ml env t)
-        in
-        let rec go have want =
-          let have = resolve_tmeta have and want = resolve_tmeta want in
-          match (have, want) with
-          | h, w when erased h -> if writable w then w else h
-          | Miniml.Tglob (n, ha, sc), Miniml.Tglob (m, wa, _)
-            when GlobRef.CanOrd.equal n m
-                 && List.length ha = List.length wa ->
-            Miniml.Tglob (n, List.map2 go ha wa, sc)
-          | Miniml.Tarr (a, b), Miniml.Tarr (c, d) ->
-            Miniml.Tarr (go a c, go b d)
-          | h, _ -> h
-        in
-        go ty want
+        Ml_type_util.refine_erased
+          ~writable:(fun t -> names_only_scoped_tvars (cpp_of_ml env t))
+          ty want
   in
   (* Try to fold binary positive chains inside Z/N constructors to avoid
      unsigned-int overflow.  Zpos(xI(xO(...xH...))) and Zneg(...) chains
@@ -6531,6 +6508,45 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       | Some (n, _) when n > 0 -> (
         match extend n with Some r -> r | None -> (args, a) )
       | _ -> (args, a)
+    in
+    (* A binder's recorded type is whatever extraction managed to infer for
+       it, and a component it never inferred stays erased even where the rest
+       of the type is spelled in full: [pair(list(pair(A, B)), Tdummy)] for a
+       [x] the callee declares at [pair(list(pair(A, B)), list(B))].  The slot
+       states the whole shape, so refine the binder against it -- here, at the
+       {e ML} type, before anything reads it.
+
+       Doing it here rather than on the C++ spelling is the point.  The
+       signature and the body are generated from this one type: correct it at
+       the declaration and the body decomposes the pair at the type it really
+       has, while correcting the spelling alone leaves the body unboxing at the
+       erased view its own generation assumed (see
+       {!Ml_type_util.refine_param_from_slot}, which for that reason may only
+       refine as far as still-erased).
+
+       [args] is innermost-first and a signature's domains are in source order,
+       so the two are indexed opposite ways. *)
+    let args =
+      match (slot.deep_erase, slot.expected_ml_ty) with
+      | false, Some fn_ty ->
+        let rec domains ty =
+          match resolve_tmeta ty with
+          | Miniml.Tarr (d, cod) -> d :: domains cod
+          | _ -> []
+        in
+        let doms = Array.of_list (domains fn_ty) in
+        let n = List.length args in
+        List.mapi
+          (fun i (x, ty) ->
+            if n - 1 - i >= Array.length doms then (x, ty)
+            else
+              ( x,
+                Ml_type_util.refine_erased
+                  ~writable:(fun t -> names_only_scoped_tvars (cpp_of_ml env t))
+                  ty
+                  doms.(n - 1 - i) ) )
+          args
+      | _ -> args
     in
     let lam_params = List.map (fun (x, y) -> (id_of_mlid x, y)) args in
     let args, env = push_vars' lam_params env in

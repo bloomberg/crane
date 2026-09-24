@@ -457,6 +457,31 @@ val prune_unwritten_args : Minicpp.cpp_type -> Minicpp.cpp_type
     erased argument in a position nothing writes never reaches the C++. *)
 val has_tany_written : Minicpp.cpp_type -> bool
 
+(** [refine_erased ~writable have want] is [have] with each of its erased
+    nodes replaced by whatever [want] states in the same position, at any
+    depth.
+
+    Erased nodes only, and that is the whole discipline: the position may fill
+    what the term left open and may never respell what it stated.  Structure
+    has to match before the descent continues -- a different head, or a
+    different arity, means the two are not talking about the same position and
+    [have] stands.
+
+    An uninstantiated [Tmeta] is filled rather than replaced: it is the hole
+    extraction left, and the term shares the cell with every other mention of
+    the same unknown, so one write reaches the annotation on a match over the
+    value as well as the value's own type.
+
+    [writable] decides whether a type [want] offers can be written where
+    [have] is going.  A type variable belonging to another scope is not, however
+    concrete [want] looks; the caller supplies that judgement because only it
+    knows which names its scope declares. *)
+val refine_erased :
+  writable:(Miniml.ml_type -> bool) ->
+  Miniml.ml_type ->
+  Miniml.ml_type ->
+  Miniml.ml_type
+
 (** [refine_param_from_slot ~tvars ~slot bare] spells a parameter from the
     slot it flows into rather than from its own uninferred type.  Type
     variables [slot] borrows from the callee's declaration -- the ones neither
