@@ -147,14 +147,3 @@
   (alias runtest)
   (deps hk_carrier_written_at_partial_app.t.exe)
   (action (run ./hk_carrier_written_at_partial_app.t.exe))))
-
-(subdir promoted_var_of_specialised_instance_argument
- (rule
-  (targets promoted_var_of_specialised_instance_argument.t.exe)
-  (deps PromotedVarOfSpecialisedInstanceArgument.vo promoted_var_of_specialised_instance_argument.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} promoted_var_of_specialised_instance_argument.t.exe promoted_var_of_specialised_instance_argument.cpp promoted_var_of_specialised_instance_argument.t.cpp)))
- (rule
-  (alias runtest)
-  (deps promoted_var_of_specialised_instance_argument.t.exe)
-  (action (run ./promoted_var_of_specialised_instance_argument.t.exe))))

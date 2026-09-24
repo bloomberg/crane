@@ -286,31 +286,94 @@ let promoted_resolutions ?fields class_ref inst_ty =
   in
   List.map (fun v -> (v, Tqualified (inst_ty, v))) direct @ nested
 
+(** The resolutions a class argument supplies to the instance that was given
+    it.
+
+    [PIV : @PI ProvenanceV PointerV] owns no type of its own: [ptr] belongs to
+    [PointerV] and [prov] to [ProvenanceV].  Both are given concretely, so
+    neither becomes a template parameter and neither survives into the ML type
+    -- the class stands there alone as [PI] -- and their promoted variables
+    keep their names while losing the path that gave them meaning, falling back
+    to the file-scope [using prov = std::any;].  The variables that {e do}
+    resolve are exactly the ones whose instance survived as a parameter: one
+    declaration, and the only difference is whether the owner is still there.
+
+    [own_instances] is what a class argument is applied to when it takes
+    arguments.  At the instance's own definition these are its class
+    parameters; at a use site they are the arguments the use writes.  The two
+    share a context -- [PointerV] takes the [_tcI0] that [PIV] takes -- which
+    is why one list serves both.  An argument applied to a different number is
+    left alone: that it is applied at all says it has a context, and a context
+    this one cannot supply is not one to guess at. *)
+let instance_arg_resolutions ~own_instances inst_ref =
+  match Table.get_instance_class_shape inst_ref with
+  | None -> []
+  | Some (_, arg_shapes) ->
+    List.concat_map
+      (fun (arg_ref, n_applied) ->
+        match Table.get_instance_class_shape arg_ref with
+        | Some (arg_class, _)
+          when Table.is_typeclass arg_class
+               && (n_applied = 0 || n_applied = List.length own_instances) ->
+          promoted_resolutions arg_class
+            (Tglob (arg_ref, (if n_applied = 0 then [] else own_instances), []))
+        | _ -> [] )
+      arg_shapes
+
 (** The resolution a term supplies for the promoted type variables its own type
     leaves unresolved.
 
     A class's [Type] field is a promoted type variable, and a type mentioning
     one says nothing about which instance it belongs to: extraction records
-    [run : EOU ptr] with [ptr] applied to no arguments at all, while the term is
-    a projection whose scrutinee names the instance outright ([@int_to_ptr
-    natIPtr (@PIV natIPtr) 1 true]).  Outside any instance struct there is no
-    [promoted_var_map], so the marker falls back to the file-scope [using ptr =
-    std::any] -- which is the right answer for a use with no instance in sight,
-    and the erased one here.
+    [run : EOU ptr] with [ptr] applied to no arguments at all.  Outside any
+    instance struct there is then no [promoted_var_map], so the marker falls
+    back to the file-scope alias -- which is the right answer for a use with no
+    instance in sight, and the erased one here, because the term names one.
 
-    Only a scrutinee that names a concrete instance is read: the C++ type of the
-    instance is the one a call through it already uses, so the declared type and
-    its initialiser agree by construction. *)
+    Every concrete instance the term mentions is read, and each contributes
+    what it knows: the promoted variables of its own class, and those of the
+    class arguments it was given (see {!instance_arg_resolutions}).  A name two
+    instances answer differently is dropped rather than decided -- the term
+    mentions both and nothing here says which one the type meant. *)
 let promoted_resolutions_of_body b =
-  match strip_magic b with
-  | MLcase (Tglob (class_ref, _, _), scrutinee, [|_|])
-    when Table.is_typeclass class_ref
-         && ( match strip_magic scrutinee with
-            | MLglob _ | MLapp (MLglob _, _) -> true
-            | _ -> false ) ->
-    promoted_resolutions class_ref
-      (ml_arg_to_template_type (empty_env ()) scrutinee)
-  | _ -> []
+  let found = ref [] in
+  (* A recorded shape is only an instance's when its head is a class: the
+     record is taken at extraction, before the tables that would say so are
+     filled, so the question is asked here instead. *)
+  let instance_class r =
+    match Table.get_instance_class_shape r with
+    | Some (class_ref, _) when Table.is_typeclass class_ref -> Some class_ref
+    | _ -> None
+  in
+  let add inst_ref inst_ty =
+    match Table.get_instance_class_shape inst_ref with
+    | Some (class_ref, _) when Table.is_typeclass class_ref ->
+      let own_instances =
+        match inst_ty with Tglob (_, args, _) -> args | _ -> []
+      in
+      found :=
+        !found
+        @ promoted_resolutions class_ref inst_ty
+        @ instance_arg_resolutions ~own_instances inst_ref
+    | _ -> ()
+  in
+  (* An applied instance is read at its application: the head on its own says
+     the same instance at no arguments, which is a second, poorer answer to the
+     same name and would make the pair ambiguous with itself. *)
+  let rec walk e =
+    match strip_magic e with
+    | MLapp (MLglob (r, _), args) when instance_class r <> None ->
+      add r (ml_arg_to_template_type (empty_env ()) (strip_magic e));
+      List.iter walk args
+    | MLglob (r, _) -> add r (Tglob (r, [], []))
+    | _ -> Mlutil.ast_iter walk e
+  in
+  walk b;
+  List.filter
+    (fun (n, t) ->
+      not
+        (List.exists (fun (m, u) -> Id.equal n m && u <> t) !found) )
+    !found
 
 (** Map a function's own type variables to the associated types they really
     stand for.  In [mret : forall M, Mon M -> forall A, A -> M A] the variable
@@ -979,8 +1042,24 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
         | _ -> [] )
       tc_temps
   in
+  (* The promoted variables of this instance's class arguments, which were
+     specialised away and reach C++ through nothing else -- see
+     {!instance_arg_resolutions}.  They come second, so a variable the
+     surviving parameters already resolve keeps that resolution. *)
+  let specialised_arg_resolutions =
+    instance_arg_resolutions
+      ~own_instances:
+        (List.filter_map
+           (fun (tt, inst_id) ->
+             match tt with
+             | TTconcept (class_ref, _) -> Some (Tinstance (inst_id, class_ref))
+             | _ -> None )
+           tc_temps )
+      name
+  in
   with_promoted_var_map
-    (promoted_var_resolutions @ (!tctx).promoted_var_map)
+    ( promoted_var_resolutions @ specialised_arg_resolutions
+    @ (!tctx).promoted_var_map )
   @@ fun () ->
   (* Now inner_ty should be Tglob(class_ref, type_args, _) and inner_body should
      be MLcons(...) *)

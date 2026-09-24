@@ -2587,6 +2587,37 @@ let rec ml_return_type_is_erased = function
   | Miniml.Tunknown -> true
   | _ -> false
 
+(** [ml_projection_field_type a] -- the type of the field a single-branch
+    record projection reads, applied to whatever the projection applies it to.
+
+    A projection is an [MLcase] over the instance whose one branch returns a
+    destructured field, and the class declares that field's type.  The
+    branch's own return annotation does not: it is written where the class's
+    carrier is erased, so it says [Tunknown] in the position the field names.
+    This is therefore the only place a projection's result type is written
+    down. *)
+let ml_projection_field_type = function
+  | Miniml.MLcase (Tglob (r, _, _), _, pv) when Array.length pv = 1 ->
+    let ids, _, _, proj_body = pv.(0) in
+    let n = List.length ids in
+    let projected = function
+      | Miniml.MLrel i | MLmagic (_, MLrel i) when i >= 1 && i <= n ->
+        Some (n - i, 0)
+      | MLapp ((MLrel i | MLmagic (_, MLrel i)), args) when i >= 1 && i <= n ->
+        Some (n - i, count_real_ml_args args)
+      | _ -> None
+    in
+    ( match projected proj_body with
+    | Some (idx, nargs) ->
+      ( match
+          List.nth_opt (filter_value_types (Table.record_field_types r)) idx
+        with
+      | Some field_ty -> if nargs = 0 then Some field_ty
+                         else strip_tarr_n nargs field_ty
+      | None -> None )
+    | None -> None )
+  | _ -> None
+
 (** Check if an ML expression is (or starts with) a record field projection
     whose projected field returns a promoted type var (erased to [std::any] in
     C++).  This detects the gap between Coq-level types and C++ types that
@@ -2613,30 +2644,9 @@ let rec ml_body_returns_erased_field = function
     (match full with Miniml.MLapp (f, _) -> ml_body_returns_erased_field f | _ -> false)
   | Miniml.MLapp (f, _) -> ml_body_returns_erased_field f
   | MLmagic (_, f) -> ml_body_returns_erased_field f
-  | MLcase (typ, _, pv) when Array.length pv = 1 ->
-    let ids, _, _, proj_body = pv.(0) in
-    let n = List.length ids in
-    let proj_idx =
-      match proj_body with
-      | MLrel i when i >= 1 && i <= n -> Some (n - i)
-      | MLmagic (_, MLrel i) when i >= 1 && i <= n -> Some (n - i)
-      | MLapp (MLrel i, _) when i >= 1 && i <= n -> Some (n - i)
-      | MLapp (MLmagic (_, MLrel i), _) when i >= 1 && i <= n -> Some (n - i)
-      | _ -> None
-    in
-    ( match proj_idx with
-    | Some idx -> (
-      match typ with
-      | Tglob (r, _, _) ->
-        let all_field_types = Table.record_field_types r in
-        let non_erased =
-          filter_value_types all_field_types
-        in
-        ( try
-            let field_ty = List.nth non_erased idx in
-            ml_return_type_is_erased field_ty
-          with _ -> false )
-      | _ -> false )
+  | MLcase _ as c ->
+    ( match ml_projection_field_type c with
+    | Some field_ty -> ml_return_type_is_erased field_ty
     | None -> false )
   | _ -> false
 
@@ -2962,12 +2972,8 @@ let rec convert_ml_type_to_cpp_type
   | Tglob (g, ts, _) when Table.is_promoted_type_var g ->
     ( match Table.promoted_type_var_name g with
     | Some var_id ->
-      (match
-        List.find_opt
-          (fun (n, _) -> Id.equal n var_id)
-          (!tctx).promoted_var_map
-      with
-      | Some (_, resolved) -> resolved
+      ( match promoted_var_resolution g with
+      | Some resolved -> resolved
       | None ->
         (* No resolution found.  When the constructor-expression flag is set,
            all promoted vars become [Tany] (= std::any) because module-level
@@ -3421,6 +3427,21 @@ and iife_closure_return env typ pv stmts =
       match Array.to_list pv with (_, rty, _, _) :: _ -> rty | [] -> typ
     in
     match cpp_of_ml env branch_rty with Tfun _ as r -> Some r | _ -> None
+
+(** [promoted_var_resolution g] -- what the promoted type variable [g] stands
+    for here, if the scope says.  A promoted variable is a class's [Type]
+    field, and the type that mentions one records the field alone, never the
+    instance it belongs to; the enclosing scope is what supplies that, through
+    [promoted_var_map].  A variable the scope does not answer has no spelling
+    here, which is a different thing from having an erased one. *)
+and promoted_var_resolution g =
+  match Table.promoted_type_var_name g with
+  | Some var_id ->
+    Option.map snd
+      (List.find_opt
+         (fun (n, _) -> Id.equal n var_id)
+         (!tctx).promoted_var_map )
+  | None -> None
 
 (** [names_only_scoped_tvars ty] -- whether every type variable [ty] spells is
     one this scope declares.  A slot type read off a callee's signature is
@@ -12501,13 +12522,34 @@ and gen_cpp_case (typ : ml_type) t env pv =
   (* When the match type annotation has unresolved Tvars, try to resolve from
      context. This handles monomorphic functions where MLcase has Tvar but the
      concrete type is known. *)
-  let resolve_tvar_type typ candidate =
+  let rec resolvable_here = function
+    | Miniml.Tglob (g, ts, _) ->
+      ( (not (Table.is_promoted_type_var g))
+      || promoted_var_resolution g <> None )
+      && List.for_all resolvable_here ts
+    | Miniml.Tarr (a, b) -> resolvable_here a && resolvable_here b
+    | Miniml.Tmeta {contents = Some t} -> resolvable_here t
+    | _ -> true
+  in  let resolve_tvar_type typ candidate =
     match (typ, candidate) with
     | Miniml.Tglob (r1, _, _), Miniml.Tglob (r2, _, _)
       when globref_equal r1 r2
            && has_tvar typ
            && not (has_tvar candidate) -> candidate
-    | _ -> typ
+    | _ ->
+      (* The annotation may state the inductive and leave its argument open --
+         [EOU _] for a call whose declared result is [EOU ptr] -- and then the
+         match spells [std::any] where the value has a type.  The candidate is
+         the declaration the scrutinee was produced by, so it may fill what the
+         annotation left open, and nothing more: see
+         {!Ml_type_util.refine_erased}.  A promoted variable this scope cannot
+         resolve is not an answer, and neither is an erased one. *)
+      Ml_type_util.refine_erased
+        ~writable:(fun t ->
+          resolvable_here t
+          && names_only_scoped_tvars (cpp_of_ml env t)
+          && not (Ml_type_util.has_tany_in_type (cpp_of_ml env t)) )
+        typ candidate
   in
   let typ =
     match t with
@@ -12534,22 +12576,19 @@ and gen_cpp_case (typ : ml_type) t env pv =
       match get_param_type_by_index i with
       | Some (Miniml.Tglob _ as param_ty) -> resolve_tvar_type typ param_ty
       | _ -> typ )
-    | MLapp (func_expr, _) | MLmagic (_, MLapp (func_expr, _)) ->
-      (* Scrutinee is a function call — use function's return type *)
-      let func_ref =
-        match func_expr with
-        | MLglob (r, _) | MLmagic (_, MLglob (r, _)) -> Some r
-        | _ -> None
-      in
-      ( match func_ref with
-      | Some r ->
-        ( match find_type_opt r with
-        | Some ty ->
-          let ret_ty = ml_return_type ty in
-          resolve_tvar_type typ ret_ty
-        | None -> typ )
+    | _ ->
+      (* Anything else: the scrutinee's own structure says what it produces,
+         through the one reader -- a call's instantiated codomain, a
+         projection's field type.  Reading it here rather than re-deriving a
+         callee's return type keeps a projection, which is an [MLcase] and not
+         an application at all, from being left out. *)
+      ( match
+          ( match ml_projection_field_type (strip_magic t) with
+          | Some _ as c -> c
+          | None -> infer_ml_body_type t )
+        with
+      | Some cand -> resolve_tvar_type typ cand
       | None -> typ )
-    | _ -> typ
   in
   (* When the type is still unresolved (Tunresolved / Tdummy / non-Tglob),
      recover the inductive from the first branch's constructor pattern -- a

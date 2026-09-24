@@ -188,10 +188,10 @@ return std::make_pair(_tcI0::zero_iptr(), ProvenanceV::nil_prov());}
 };template <IPtr
 _tcI0>struct PIV {
 using iptr = typename _tcI0::iptr;
-static Nat ptr_to_int(ptr p) {
+static Nat ptr_to_int(typename PointerV<_tcI0>::ptr p) {
 return _tcI0::to_Z(p.first);}
-static EOU<ptr> int_to_ptr(Nat i,
-prov pr) {
+static EOU<typename PointerV<_tcI0>::ptr> int_to_ptr(Nat i,
+typename ProvenanceV::prov pr) {
 return EOU_monad::template bind<typename _tcI0::iptr,
 std::pair<typename _tcI0::iptr, bool>>(_tcI0::from_Z(std::move(i)),
 [=](typename _tcI0::iptr
@@ -214,8 +214,8 @@ static inline const std::pair<Nat, bool> the_null = crane_any_cast<std::pair<Nat
 static inline const Nat run = []() {
 auto&& _sv2 = PIV<natIPtr>::int_to_ptr(Nat::s(Nat::o()),
 true);
-if (std::holds_alternative<typename EOU<std::any>::Ok>(_sv2.v())) {
-const auto& [a02] = std::get<typename EOU<std::any>::Ok>(_sv2.v());
+if (std::holds_alternative<typename EOU<typename PointerV<natIPtr>::ptr>::Ok>(_sv2.v())) {
+const auto& [a02] = std::get<typename EOU<typename PointerV<natIPtr>::ptr>::Ok>(_sv2.v());
 return PIV<natIPtr>::ptr_to_int(a02);
 } else {
 return Nat::o();

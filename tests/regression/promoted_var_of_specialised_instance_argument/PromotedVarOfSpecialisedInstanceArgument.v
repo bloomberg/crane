@@ -22,7 +22,22 @@
    term at all; they are the class arguments of the enclosing instance.
 
    The import list is not harness configuration -- it selects the emission
-   path. *)
+   path.
+
+   Fixed in two halves, because the defect has two sites.
+
+   At the instance's own definition, the class arguments are recorded where
+   they are still written down -- the Rocq type, at extraction -- and the
+   promoted variables they own are resolved through them, so [PIV]'s methods
+   read [typename PointerV<_tcI0>::ptr] and [typename ProvenanceV::prov].
+
+   At a use, the match over the call's result annotated [EOU<std::any>]: the
+   annotation states the inductive and leaves its argument open, and the
+   projection that produces the value is an [MLcase], not an application, so
+   the reader that would have supplied the missing argument never looked at
+   it.  The class declares the projected field's type, and that is now what
+   fills the hole -- erased positions only, and only with a spelling this
+   scope can resolve. *)
 
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std Monads.ITreeReified.

@@ -1111,6 +1111,28 @@ let get_instance_promoted_types r =
   | Some bindings -> bindings
   | None -> []
 
+(* The class an instance instantiates, and the instances that class is applied
+   to.  [PIV : @PI ProvenanceV PointerV] records [(PI, [(ProvenanceV, 0);
+   (PointerV, 1)])] -- the second component's [int] is how many arguments the
+   class argument is itself applied to.  None of this survives into the ML
+   type, where the class stands alone as [PI]; the Rocq type is the only place
+   it is visible, so it is taken there. *)
+let instance_class_shapes =
+  ref (GlobRef.Map.empty
+       : (GlobRef.t * (GlobRef.t * int) list) GlobRef.Map.t)
+
+let init_instance_class_shapes () =
+  instance_class_shapes := GlobRef.Map.empty
+
+let () =
+  register_census "instance_class_shapes" (fun () ->
+      GlobRef.Map.cardinal !instance_class_shapes )
+
+let add_instance_class_shape r shape =
+  instance_class_shapes := GlobRef.Map.add r shape !instance_class_shapes
+
+let get_instance_class_shape r = GlobRef.Map.find_opt r !instance_class_shapes
+
 (* Table of projections used in higher-order positions (as function values).
    Projections not in this set are only accessed via record->field syntax and
    don't need standalone C++ function definitions. *)
@@ -3640,6 +3662,7 @@ let reset_tables () =
   init_erased_type_consts ();
   init_value_dep_type_schemes ();
   init_instance_promoted_types ();
+  init_instance_class_shapes ();
   init_higher_order_projections ();
   init_phantom_tvars ();
   init_axioms ();

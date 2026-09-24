@@ -2634,7 +2634,36 @@ let extract_constant access env kn cb =
       add_throwing_value r;
       Dterm (r, MLaxiom (Constant.to_string kn), t) )
   in
+  (* An instance's class arguments are where its erased names come from.
+     [PIV : @PI ProvenanceV PointerV] declares no type of its own: [ptr]
+     belongs to [PointerV] and [prov] to [ProvenanceV], and neither reaches the
+     ML type, which records the class alone.  This is the last point at which
+     the connection is written down, so it is recorded here rather than
+     rediscovered; see {!Table.add_instance_class_shape}.
+
+     No [is_typeclass] test: the tables it would consult are filled as
+     extraction proceeds, and the reader runs after all of it. *)
+  let record_class_shape () =
+    let _, concl = EConstr.decompose_prod sg typ in
+    let hd, args = EConstr.decompose_app sg concl in
+    match EConstr.kind sg hd with
+    | Ind (ind, _) ->
+      let arg_shape a =
+        let h, a_args = EConstr.decompose_app sg a in
+        match EConstr.kind sg h with
+        | Const (c, _) -> Some (GlobRef.ConstRef c, Array.length a_args)
+        | _ -> None
+      in
+      let shapes = List.map arg_shape (Array.to_list args) in
+      (* All or none: an argument that cannot be named leaves the others
+         without the positions that give them their meaning. *)
+      if List.for_all Option.has_some shapes then
+        Table.add_instance_class_shape r
+          (GlobRef.IndRef ind, List.map Option.get shapes)
+    | _ -> ()
+  in
   let mk_def c =
+    record_class_shape ();
     let e, t = extract_std_constant env sg kn c typ in
     (* [record_constant_type] registered the {i short} type, the one still
        spelled with the abbreviations the user wrote.  Where the body's binders

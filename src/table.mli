@@ -581,6 +581,22 @@ val add_instance_promoted_types :
 val get_instance_promoted_types :
   GlobRef.t -> (Names.Id.t * Miniml.ml_type) list
 
+(** [add_instance_class_shape r (class_ref, args)] records the class [r] is an
+    instance of and the instances that class is applied to, each paired with
+    how many arguments it is itself applied to.
+
+    A class argument is erased from the ML type -- [PIV : @PI ProvenanceV
+    PointerV] reaches translation as an instance of [PI] and nothing more -- so
+    the promoted type variables that belong to those arguments arrive with no
+    way back to them.  The Rocq type is the only place the connection is still
+    written down. *)
+val add_instance_class_shape :
+  GlobRef.t -> GlobRef.t * (GlobRef.t * int) list -> unit
+
+(** The shape recorded by {!add_instance_class_shape}, if any. *)
+val get_instance_class_shape :
+  GlobRef.t -> (GlobRef.t * (GlobRef.t * int) list) option
+
 (** Add info axiom. *)
 val add_info_axiom : GlobRef.t -> unit
 
