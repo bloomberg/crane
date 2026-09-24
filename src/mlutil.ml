@@ -954,7 +954,18 @@ let recover_erased_types ?only ?(refine_only = false) (expected : ml_type)
               else true )
             doms
       in
-      if doms = [] then [] else List.mapi (fun i _ -> List.nth_opt doms i) args
+      if doms = [] then []
+      else
+        (* A dummy that survives the alignment is a position whose type the
+           declaration erased.  That is not an answer, and offering it as one
+           writes [Tdummy] over a binder that is still there -- which is how a
+           binder gets removed rather than typed. *)
+        List.mapi
+          (fun i _ ->
+            match List.nth_opt doms i with
+            | Some d when isTdummy d -> None
+            | o -> o )
+          args
   in
   let rec go env expected a =
     match a with
