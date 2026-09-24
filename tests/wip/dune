@@ -147,3 +147,14 @@
   (alias runtest)
   (deps hk_carrier_written_at_partial_app.t.exe)
   (action (run ./hk_carrier_written_at_partial_app.t.exe))))
+
+(subdir pair_component_erased_in_destructuring_binder
+ (rule
+  (targets pair_component_erased_in_destructuring_binder.t.exe)
+  (deps PairComponentErasedInDestructuringBinder.vo pair_component_erased_in_destructuring_binder.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} pair_component_erased_in_destructuring_binder.t.exe pair_component_erased_in_destructuring_binder.cpp pair_component_erased_in_destructuring_binder.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps pair_component_erased_in_destructuring_binder.t.exe)
+  (action (run ./pair_component_erased_in_destructuring_binder.t.exe))))
