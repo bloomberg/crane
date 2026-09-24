@@ -969,6 +969,9 @@ val is_ret : GlobRef.t -> bool
 (** Get monad template string if reference is a registered monad. *)
 val get_monad_template_opt : GlobRef.t -> string option
 
+(** Whether a monad's C++ spelling names [ITree], i.e. it is reified. *)
+val is_monad_reified : GlobRef.t -> bool
+
 (** Check if reference is void type. *)
 val is_void : GlobRef.t -> bool
 

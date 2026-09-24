@@ -10044,3 +10044,14 @@
   (alias runtest)
   (deps value_position_class_promoted.t.exe)
   (action (run ./value_position_class_promoted.t.exe))))
+
+(subdir skipped_dict_family_unconstrained
+ (rule
+  (targets skipped_dict_family_unconstrained.t.exe)
+  (deps SkippedDictFamilyUnconstrained.vo skipped_dict_family_unconstrained.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} skipped_dict_family_unconstrained.t.exe skipped_dict_family_unconstrained.cpp skipped_dict_family_unconstrained.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps skipped_dict_family_unconstrained.t.exe)
+  (action (run ./skipped_dict_family_unconstrained.t.exe))))

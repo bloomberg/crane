@@ -250,13 +250,11 @@ let ml_result_type ty =
   | _ -> cod
 
 (** Check if a monad reference uses the reified ITree extraction mode
-    (i.e. its monad template string contains ["ITree"]). *)
-let is_monad_reified monad_ref =
-  match Table.get_monad_template_opt monad_ref with
-  | Some t ->
-    ( try ignore (Str.search_forward (Str.regexp_string "ITree") t 0); true
-      with Not_found -> false )
-  | None -> false
+    (i.e. its monad template string contains ["ITree"]).
+
+    Lives in {!Table} because {!Ml_type_util} asks it too, to recognise an
+    event family. *)
+let is_monad_reified = Table.is_monad_reified
 
 (** If the codomain of [ty] is a registered monad, return its reference. *)
 let extract_monad_from_codomain ty =

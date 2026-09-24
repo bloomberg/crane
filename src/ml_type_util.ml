@@ -1314,6 +1314,45 @@ let applied_ml_tvar_arities tys =
   List.iter scan tys;
   arities
 
+(** The type variables [tys] uses as the event family of a reified tree.
+
+    A reified monad's own spelling drops the family -- [itree E R] is
+    [std::shared_ptr<ITree<R>>] -- and the families themselves are emitted as
+    plain structs, because a [Type -> Type] inductive whose constructors sit at
+    differing indices has no C++ template to be.  So there is never a template
+    name to pass for such a variable, and declaring it
+    [template <typename> class] leaves a parameter nothing can satisfy.
+
+    The occurrence in the tree is what identifies the family; the application
+    that would otherwise demand the higher kind is elsewhere in the signature
+    ([trigger_cast' (e : E void) : itree E A] applies it in the domain and
+    names it in the codomain).  That application is taken back off by
+    {!Gen_decls.deapply_plain_tvars} once the kind is refused. *)
+let event_family_ml_tvars tys =
+  let fams = ref IntSet.empty in
+  let rec scan t =
+    match t with
+    | Miniml.Tglob (r, (_ :: _ as args), _)
+      when Table.is_monad r && Table.is_monad_reified r ->
+      (* A reified monad parameterises on its result last; everything before
+         it is the event family. *)
+      List.iteri
+        (fun i a ->
+          if i < List.length args - 1 then
+            match resolve_tmeta a with
+            | Miniml.Tvar (_, v) | Miniml.Tapp (v, _) ->
+              fams := IntSet.add v !fams
+            | _ -> () )
+        args;
+      List.iter scan args
+    | Miniml.Tglob (_, args, _) | Miniml.Tapp (_, args) -> List.iter scan args
+    | Miniml.Tarr (a, b) -> scan a; scan b
+    | Miniml.Tmeta {contents = Some t} -> scan t
+    | _ -> ()
+  in
+  List.iter scan tys;
+  !fams
+
 (** The type variables an ML signature genuinely demands be declared
     [template <typename> class] rather than plain [typename].
 
@@ -1341,9 +1380,11 @@ let applied_ml_tvar_arities tys =
     point the kinds are chosen has not been through the signature relaxations,
     so the occurrences that would justify the higher kind are not yet in it --
     see the [hkt-kind-demotion-dead-end] note. *)
+
 let higher_kinded_ml_tvars tys =
   let hk = ref IntSet.empty in
-  let demand i = hk := IntSet.add i !hk in
+  let families = event_family_ml_tvars tys in
+  let demand i = if not (IntSet.mem i families) then hk := IntSet.add i !hk in
   let survived_erasure a =
     match resolve_tmeta a with
     | Miniml.Tunknown | Miniml.Tdummy _ | Miniml.Tmeta _ -> false

@@ -3272,6 +3272,18 @@ let get_monad_template_opt m =
   | Some (_, _, template) -> Some template
   | None -> None
 
+(** Whether a monad's C++ spelling is a reified tree, i.e. names [ITree].
+
+    A reified monad's event family is data, not a type constructor: the tree
+    boxes the event and the index it was applied at is erased. *)
+let is_monad_reified m =
+  match get_monad_template_opt m with
+  | None -> false
+  | Some t ->
+    let n = String.length t and k = String.length "ITree" in
+    let rec at i = i + k <= n && (String.sub t i k = "ITree" || at (i + 1)) in
+    at 0
+
 let monad_extraction : GlobRef.t * GlobRef.t * GlobRef.t * string -> obj =
   declare_object
   @@ superglobal_object

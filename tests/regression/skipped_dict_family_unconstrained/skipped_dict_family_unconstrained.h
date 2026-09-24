@@ -113,8 +113,8 @@ public:
   const variant_t &v() const { return v_; }
 };
 
-template <template <typename> class T1, typename T2>
-std::shared_ptr<ITree<T2>> trigger_cast_(T1<Void0> e) {
+template <typename T1, typename T2>
+std::shared_ptr<ITree<T2>> trigger_cast_(T1 e) {
   return itree_bind(itree_trigger(e),
                     [](const Void0 &_x) { return _x.void_elim(); });
 }

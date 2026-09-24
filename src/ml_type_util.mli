@@ -555,6 +555,12 @@ val applied_ml_tvar_arities : Miniml.ml_type list -> (int, int) Hashtbl.t
     those the application can simply be taken back off. *)
 val higher_kinded_ml_tvars : Miniml.ml_type list -> IntSet.t
 
+(** The type variables [tys] uses as the event family of a reified tree.  Such
+    a family is emitted as a plain struct, so there is no template name a call
+    could ever pass for it, and {!higher_kinded_ml_tvars} refuses the higher
+    kind for one however it is applied elsewhere. *)
+val event_family_ml_tvars : Miniml.ml_type list -> IntSet.t
+
 (** [hkt_arg_ml_tvar_arities tys] maps a type variable's index to the arity it
     is higher-kinded at because [tys] hands it, bare, to a position another
     constructor declares [template <typename> class].  Application is the

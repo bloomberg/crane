@@ -530,6 +530,28 @@ struct crane_fn_arg<R (C::*)(A)> { using type = std::decay_t<A>; };
 // names it, and the tree is converted at that type; one written generically
 // -- which is what an absurd response leaves -- is handed the boxed response
 // as it stands, with no type to recover it at.
+// The result of a bind whose continuation's own result type erased.
+//
+// A continuation returning a type variable -- [void_elim : void -> A],
+// eliminating an absurd response -- comes out returning [std::any], so the
+// bind has no tree type to be.  The use site always names one, as it does for
+// [itree_trigger_t], and the deferral is the same.
+struct itree_erased_bind_t {
+    std::function<std::any()> effect;
+    std::function<std::any(std::any)> cont;
+
+    template <typename R>
+    operator std::shared_ptr<ITree<R>>() const {
+        auto k = cont;
+        return ITree<R>::vis(effect,
+            std::function<std::shared_ptr<ITree<R>>(std::any)>(
+                [k](std::any x) {
+                    return crane_any_cast<std::shared_ptr<ITree<R>>>(
+                        k(std::move(x)));
+                }));
+    }
+};
+
 template<typename K>
 auto itree_bind(itree_trigger_t m, K k) {
     if constexpr (std::is_invocable_v<K &>)
@@ -544,8 +566,16 @@ auto itree_bind(itree_trigger_t m, K k) {
                 [k](std::any x) { return k(std::move(x)); }));
     } else {
         using A = typename crane_fn_arg<decltype(&K::operator())>::type;
-        return itree_bind(
-            static_cast<std::shared_ptr<ITree<A>>>(m), std::move(k));
+        using tree_b = decltype(k(std::declval<const A &>()));
+        if constexpr (std::is_same_v<tree_b, std::any>)
+            return itree_erased_bind_t{
+                m.effect,
+                std::function<std::any(std::any)>([k](std::any x) {
+                    return k(crane_any_cast<A>(std::move(x)));
+                })};
+        else
+            return itree_bind(
+                static_cast<std::shared_ptr<ITree<A>>>(m), std::move(k));
     }
 }
 
