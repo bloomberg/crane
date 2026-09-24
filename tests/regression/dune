@@ -10066,3 +10066,14 @@
   (alias runtest)
   (deps subevent_forward_loses_kind.t.exe)
   (action (run ./subevent_forward_loses_kind.t.exe))))
+
+(subdir error_ctor_type_from_enclosing_return
+ (rule
+  (targets error_ctor_type_from_enclosing_return.t.exe)
+  (deps ErrorCtorTypeFromEnclosingReturn.vo error_ctor_type_from_enclosing_return.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} error_ctor_type_from_enclosing_return.t.exe error_ctor_type_from_enclosing_return.cpp error_ctor_type_from_enclosing_return.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps error_ctor_type_from_enclosing_return.t.exe)
+  (action (run ./error_ctor_type_from_enclosing_return.t.exe))))

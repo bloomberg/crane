@@ -264,10 +264,10 @@ struct NestedTree {
   static List<List<T2>> _flatten_tree_go(const std::function<List<T2>(T1)> f,
                                          const tree t0) {
     if (std::holds_alternative<typename tree::Leaf>(t0.v())) {
-      return List<List<T1>>::nil();
+      return List<List<T2>>::nil();
     } else {
       const auto &[a0, a1] = std::get<typename tree::Node>(t0.v());
-      return List<List<T1>>::cons(
+      return List<List<T2>>::cons(
           f(a0), _flatten_tree_go<T1, T2>(
                      [=](std::pair<T1, T1> _x0) mutable -> List<T2> {
                        return lift<T1, T2>(f, _x0);
@@ -278,7 +278,7 @@ struct NestedTree {
 
   template <typename T1> static List<List<T1>> flatten_tree(const tree &t) {
     return _flatten_tree_go<T1, T1>(
-        [](T1 x) { return List<List<T1>>::cons(x, List<T1>::nil()); }, t);
+        [](T1 x) { return List<T1>::cons(x, List<T1>::nil()); }, t);
   }
 };
 

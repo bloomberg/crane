@@ -147,14 +147,3 @@
   (alias runtest)
   (deps hk_carrier_written_at_partial_app.t.exe)
   (action (run ./hk_carrier_written_at_partial_app.t.exe))))
-
-(subdir error_ctor_type_from_enclosing_return
- (rule
-  (targets error_ctor_type_from_enclosing_return.t.exe)
-  (deps ErrorCtorTypeFromEnclosingReturn.vo error_ctor_type_from_enclosing_return.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} error_ctor_type_from_enclosing_return.t.exe error_ctor_type_from_enclosing_return.cpp error_ctor_type_from_enclosing_return.t.cpp)))
- (rule
-  (alias runtest)
-  (deps error_ctor_type_from_enclosing_return.t.exe)
-  (action (run ./error_ctor_type_from_enclosing_return.t.exe))))

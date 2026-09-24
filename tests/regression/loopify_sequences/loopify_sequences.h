@@ -319,7 +319,7 @@ struct LoopifySequences {
                 const List<List<T1>> &l = *_f.l;
                 if (std::holds_alternative<typename List<List<T1>>::Nil>(
                         l.v())) {
-                  _result = List<List<T1>>::nil();
+                  _result = List<T1>::nil();
                 } else {
                   const auto &[a00, a10] =
                       std::get<typename List<List<T1>>::Cons>(l.v());
@@ -334,8 +334,7 @@ struct LoopifySequences {
                 }
               } else {
                 auto _f = std::move(std::get<_Resume_Cons>(_frame));
-                _result =
-                    List<List<T1>>::cons(std::move(_f.a01), std::move(_result));
+                _result = List<T1>::cons(std::move(_f.a01), std::move(_result));
               }
             }
             return _result;

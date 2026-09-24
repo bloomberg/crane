@@ -649,11 +649,11 @@ struct LoopifyLists {
               const list<T1> &lst = *_f.lst;
               uint64_t k = _f.k;
               if (k <= 0) {
-                _result = list<list<T1>>::nil();
+                _result = list<T1>::nil();
               } else {
                 uint64_t m = k - 1;
                 if (std::holds_alternative<typename list<T1>::Nil>(lst.v())) {
-                  _result = list<list<T1>>::nil();
+                  _result = list<T1>::nil();
                 } else {
                   const auto &[a0, a1] =
                       std::get<typename list<T1>::Cons>(lst.v());
@@ -663,8 +663,7 @@ struct LoopifyLists {
               }
             } else {
               auto _f = std::move(std::get<_Resume_Cons>(_frame));
-              _result =
-                  list<list<T1>>::cons(std::move(_f.a0), std::move(_result));
+              _result = list<T1>::cons(std::move(_f.a0), std::move(_result));
             }
           }
           return _result;
@@ -682,7 +681,7 @@ struct LoopifyLists {
               uint64_t m = _loop_k - 1;
               if (std::holds_alternative<typename list<T1>::Nil>(
                       _loop_lst.v_mut())) {
-                return list<list<T1>>::nil();
+                return list<T1>::nil();
               } else {
                 auto &[a00, a10] =
                     std::get<typename list<T1>::Cons>(_loop_lst.v_mut());
@@ -1112,12 +1111,12 @@ struct LoopifyLists {
               auto _f = std::move(std::get<_Enter>(_frame));
               const list<list<T1>> &l = *_f.l;
               if (std::holds_alternative<typename list<list<T1>>::Nil>(l.v())) {
-                _result = list<list<T1>>::nil();
+                _result = list<T1>::nil();
               } else {
                 const auto &[a0, a1] =
                     std::get<typename list<list<T1>>::Cons>(l.v());
                 if (std::holds_alternative<typename list<T1>::Nil>(a0.v())) {
-                  _result = list<list<T1>>::nil();
+                  _result = list<T1>::nil();
                 } else {
                   const auto &[a00, a10] =
                       std::get<typename list<T1>::Cons>(a0.v());
@@ -1127,8 +1126,7 @@ struct LoopifyLists {
               }
             } else {
               auto _f = std::move(std::get<_Resume_Cons>(_frame));
-              _result =
-                  list<list<T1>>::cons(std::move(_f.a00), std::move(_result));
+              _result = list<T1>::cons(std::move(_f.a00), std::move(_result));
             }
           }
           return _result;

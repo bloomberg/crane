@@ -7607,11 +7607,59 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
          at: once a function type has been substituted for a type variable,
          its arrows are indistinguishable from the callee's own, so converting
          the annotation cannot recover the shape. *)
+      (* Refine, never respell.  The position says what an argument the
+         annotation left erased is -- and equally what one it erased too
+         deeply is, since two producers for one declared field must agree
+         about which of its arguments are [std::any].  What it may not do is
+         overrule a concrete argument with a different concrete one: inside a
+         bind's action the expected type is the enclosing declaration's
+         result, not the action's, and a constructor whose type parameter none
+         of its arguments constrains would then be built at [EOU<Dv>] where
+         the action is an [EOU<bool>].
+
+         Currying is not a respelling: an element type that reached the slot
+         through one of the callee's type variables keeps the arity the
+         declaration wrote it at, which converting the annotation cannot know
+         -- the arrows of a function substituted into a type variable are
+         indistinguishable from the callee's own.  Two spellings that curry
+         to the same type are therefore one type, and the position's is the
+         one a template argument position requires.  So is an alias and what
+         it expands to: the position names [List<entry<T1>>] where the
+         annotation has the pair behind it, and the name is what the
+         declaration wrote. *)
       let temps_from_slot ind temps =
-        match Option.map (unfold_cpp_typedef env) expected_ty with
+        let erased_anywhere = exists_cpp_type prints_as_any in
+        match
+          Option.map
+            (fun t -> unfold_cpp_typedef env (Ml_type_util.unqualify_ty t))
+            expected_ty
+        with
         | Some (Tglob (ind', args, _))
           when globref_equal ind' ind && List.length args = List.length temps ->
-          args
+          List.map2
+            (fun local outer ->
+              (* Compared after unfolding throughout, not only at the head:
+                 the same type is written [entry<T1>] in one place and the
+                 pair behind it in the other, and one of the two spellings
+                 carries the namespace the declaration is read in. *)
+              let rec expand t =
+                let t' =
+                  match unfold_cpp_typedef env t with
+                  | Tnamespace (_, inner) -> inner
+                  | t' -> t'
+                in
+                if t' = t then t else expand t'
+              in
+              let norm t = map_cpp_type expand t in
+              let same_type a b =
+                curry_fun_type (norm a) = curry_fun_type (norm b)
+              in
+              if
+                erased_anywhere local || erased_anywhere outer
+                || same_type local outer
+              then outer
+              else local )
+            temps args
         | _ -> temps
       in
       (* Generate: Type<temps>::ctor::Constructor_(args) *)
@@ -7803,24 +7851,12 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             else temps
           in
           (* The slot has already written this constructor's type down -- a
-             record field declared at [SigT<std::any, std::any>], say.  That
-             spelling, not the one recomputed from this producer's own
-             instantiation, is what the value has to be built at: two
-             producers for one field otherwise disagree about how deeply the
-             field's type arguments are erased, and neither initialises it.
-
-             It is the whole spelling that is taken, not only its erased
-             positions: a branch that builds the value at its own
-             instantiation and a branch that builds it at another are the same
-             disagreement, and the slot is what both are converting to. *)
-          let temps =
-            match Option.map Ml_type_util.unqualify_ty expected_ty with
-            | Some (Tglob (n', args', _))
-              when globref_equal n' n
-                   && List.length args' = List.length temps ->
-              args'
-            | _ -> temps
-          in
+             record field declared at [SigT<std::any, std::any>], say.  At the
+             positions it erased, that spelling and not the one recomputed
+             from this producer's own instantiation is what the value has to
+             be built at, or two producers for one field disagree about the
+             erasure and neither initialises it. *)
+          let temps = temps_from_slot n temps in
           (* The factory has to be qualified by the very instantiation the
              declaration spells. *)
           let temps = apply_hkt_tyctors n temps in

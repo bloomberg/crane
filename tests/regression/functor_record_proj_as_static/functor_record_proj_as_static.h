@@ -695,7 +695,8 @@ template <OrderedType X> struct Coq_Raw {
               List<std::pair<typename X::t, T1>> l) {
     if (o.has_value()) {
       const T1 &e = *o;
-      return List<std::pair<key, T1>>::cons(std::make_pair(k, e), std::move(l));
+      return List<std::pair<typename X::t, T1>>::cons(std::make_pair(k, e),
+                                                      std::move(l));
     } else {
       return l;
     }
@@ -1791,11 +1792,11 @@ template <Int I, OrderedType X> struct Raw {
     template <typename T1>
     static List<std::pair<key, T1>> flatten_e(const enumeration<T1> &e) {
       if (std::holds_alternative<typename enumeration<T1>::End>(e.v())) {
-        return List<std::pair<key, T1>>::nil();
+        return List<std::pair<typename X::t, T1>>::nil();
       } else {
         const auto &[a0, a1, a2, a3] =
             std::get<typename enumeration<T1>::More>(e.v());
-        return List<std::pair<key, T1>>::cons(
+        return List<std::pair<typename X::t, T1>>::cons(
             std::make_pair(a0, a1), elements<T1>(a2).app(flatten_e<T1>(*a3)));
       }
     }

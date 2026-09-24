@@ -27,7 +27,7 @@ EOU<Dv> ErrorCtorTypeFromEnclosingReturn::eval_icmp(const Nat &x,
           return ret<Bool0>(Bool0::TRUE_);
         }
         case Bool0::FALSE_: {
-          return EOU<Dv>::err(
+          return EOU<Bool0>::err(
               Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))));
         }
         default:
