@@ -147,14 +147,3 @@
   (alias runtest)
   (deps hk_carrier_written_at_partial_app.t.exe)
   (action (run ./hk_carrier_written_at_partial_app.t.exe))))
-
-(subdir instance_method_param_at_class_carrier
- (rule
-  (targets instance_method_param_at_class_carrier.t.exe)
-  (deps InstanceMethodParamAtClassCarrier.vo instance_method_param_at_class_carrier.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} instance_method_param_at_class_carrier.t.exe instance_method_param_at_class_carrier.cpp instance_method_param_at_class_carrier.t.cpp)))
- (rule
-  (alias runtest)
-  (deps instance_method_param_at_class_carrier.t.exe)
-  (action (run ./instance_method_param_at_class_carrier.t.exe))))

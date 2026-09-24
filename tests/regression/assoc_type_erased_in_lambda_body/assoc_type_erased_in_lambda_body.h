@@ -210,12 +210,12 @@ typename _tcI0::template m<T3> bind0(typename _tcI0::template m<T2> x,
 template <typename a> using Id = a;
 
 struct MonId {
-  template <typename _A0> using m = _A0;
+  template <typename _A0> using m = Id<_A0>;
 
-  template <typename _A0> static _A0 ret(_A0 a) { return a; }
+  template <typename _A0> static Id<_A0> ret(_A0 a) { return a; }
 
   template <typename _A0, typename _A1>
-  static _A1 bind0(_A0 ma, std::function<_A1(_A0)> k) {
+  static Id<_A1> bind0(Id<_A0> ma, std::function<Id<_A1>(_A0)> k) {
     return k(std::move(ma));
   }
 };

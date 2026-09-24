@@ -84,7 +84,9 @@ concept Show = requires {
 template <Carrier _tcI0> struct showCarr {
   using carr = typename _tcI0::carr;
 
-  static Nat show(std::any a0) { return _tcI0::render(a0); }
+  static Nat show(typename _tcI0::carr a0) {
+    return _tcI0::render(std::move(a0));
+  }
 };
 
 template <Carrier _tcI0> Nat describe(const typename _tcI0::carr &x) {

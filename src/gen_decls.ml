@@ -976,9 +976,30 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
       (* For promoted dependent records, the definition type Tglob(Magma,[],[])
          has no type_args, but the MLcons type Tglob(Magma,[nat],[]) carries the
          concrete types extracted from the erased constructor args. *)
+      (* The constructor's type arguments are preferred because extraction
+         unified them against the body, which the definition's type need not
+         mention.  But a position extraction {e erased} says less, not more,
+         and the two disagree exactly there: [Instance showCarr {C : Carrier}
+         : Show carr] reaches here as [Show carr] in its declared type and
+         [Show _] in its constructor's, because a class field standing as a
+         type is a projection the constructor's unification drops.  Take the
+         better of the two at each position rather than one list whole. *)
       let type_args =
+        let erased t =
+          match resolve_tmeta t with
+          | Miniml.Tunknown | Miniml.Tdummy _ -> true
+          | _ -> false
+        in
         match cons_ty with
-        | Tglob (_, ta, _) when ta <> [] -> ta
+        | Tglob (_, ta, _) when ta <> [] ->
+          List.mapi
+            (fun i t ->
+              if not (erased t) then t
+              else
+                match List.nth_opt type_args i with
+                | Some d when not (erased d) -> d
+                | _ -> t )
+            ta
         | _ -> type_args
       in
       (* How many type variables the instance itself binds.  Not the number of
