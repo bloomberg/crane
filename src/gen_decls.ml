@@ -286,6 +286,32 @@ let promoted_resolutions ?fields class_ref inst_ty =
   in
   List.map (fun v -> (v, Tqualified (inst_ty, v))) direct @ nested
 
+(** The resolution a term supplies for the promoted type variables its own type
+    leaves unresolved.
+
+    A class's [Type] field is a promoted type variable, and a type mentioning
+    one says nothing about which instance it belongs to: extraction records
+    [run : EOU ptr] with [ptr] applied to no arguments at all, while the term is
+    a projection whose scrutinee names the instance outright ([@int_to_ptr
+    natIPtr (@PIV natIPtr) 1 true]).  Outside any instance struct there is no
+    [promoted_var_map], so the marker falls back to the file-scope [using ptr =
+    std::any] -- which is the right answer for a use with no instance in sight,
+    and the erased one here.
+
+    Only a scrutinee that names a concrete instance is read: the C++ type of the
+    instance is the one a call through it already uses, so the declared type and
+    its initialiser agree by construction. *)
+let promoted_resolutions_of_body b =
+  match strip_magic b with
+  | MLcase (Tglob (class_ref, _, _), scrutinee, [|_|])
+    when Table.is_typeclass class_ref
+         && ( match strip_magic scrutinee with
+            | MLglob _ | MLapp (MLglob _, _) -> true
+            | _ -> false ) ->
+    promoted_resolutions class_ref
+      (ml_arg_to_template_type (empty_env ()) scrutinee)
+  | _ -> []
+
 (** Map a function's own type variables to the associated types they really
     stand for.  In [mret : forall M, Mon M -> forall A, A -> M A] the variable
     standing for [M A] is [typename _tcI0::M] — an associated type of the
@@ -4517,6 +4543,11 @@ let gen_dfun_def n b ty =
 
 (** Generate C++ function specification (for header files) *)
 let gen_spec__inner n b ty =
+  (* The constant's type and its body are generated against the same
+     resolution: see {!promoted_resolutions_of_body}. *)
+  with_promoted_var_map
+    (promoted_resolutions_of_body b @ (!tctx).promoted_var_map)
+  @@ fun () ->
   let ty = type_simpl ty in
   let ml_ty = ty in  (* preserve ML type before C++ conversion *)
   let unit_void = ml_type_is_void_call ty in

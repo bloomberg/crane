@@ -127,6 +127,13 @@ type slot = {
 (** The slot properties of a position that constrains nothing. *)
 val empty_slot : slot
 
+(** [ml_arg_to_template_type env a] is the C++ type that names the instance [a]
+    stands for: the struct an instance definition generated, at the arguments
+    the term applies it to.  This is the spelling a call through the instance
+    already uses, so a type that has to agree with such a call takes it from
+    here rather than rebuilding it. *)
+val ml_arg_to_template_type : env -> ml_ast -> cpp_type
+
 (** Generate a C++ expression from an ML AST. *)
 val gen_expr : ?expected_ty:cpp_type -> ?slot:slot -> env -> ml_ast -> cpp_expr
 

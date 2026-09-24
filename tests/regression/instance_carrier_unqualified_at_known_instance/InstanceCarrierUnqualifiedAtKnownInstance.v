@@ -17,6 +17,14 @@
    instance in sight must resolve to, and there are such uses; the defect is
    that a use with an instance in sight resolves to it anyway.
 
+   Fixed: the resolution is taken from the term.  The type records [ptr]
+   applied to no arguments at all -- extraction keeps no trace of the instance
+   there -- but the body is a projection whose scrutinee names it, and the C++
+   type of that scrutinee is the one the emitted call already uses, so the
+   declaration and its initialiser agree by construction:
+
+     static inline const EOU<typename PIV<natIPtr>::ptr> run = PIV<natIPtr>::...
+
    This lands on any consumer of a method whose result mentions a class field,
    which is why instance_method_param_at_foreign_class_field -- the same class
    shapes, fixed in b776fe215 -- deliberately returns [EOU nat] instead.  The

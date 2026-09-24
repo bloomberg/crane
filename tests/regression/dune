@@ -32,3 +32,13 @@
   (alias runtest)
   (deps instance_method_param_at_foreign_class_field.t.exe)
   (action (run ./instance_method_param_at_foreign_class_field.t.exe))))
+(subdir instance_carrier_unqualified_at_known_instance
+ (rule
+  (targets instance_carrier_unqualified_at_known_instance.t.exe)
+  (deps InstanceCarrierUnqualifiedAtKnownInstance.vo instance_carrier_unqualified_at_known_instance.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} instance_carrier_unqualified_at_known_instance.t.exe instance_carrier_unqualified_at_known_instance.cpp instance_carrier_unqualified_at_known_instance.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps instance_carrier_unqualified_at_known_instance.t.exe)
+  (action (run ./instance_carrier_unqualified_at_known_instance.t.exe))))

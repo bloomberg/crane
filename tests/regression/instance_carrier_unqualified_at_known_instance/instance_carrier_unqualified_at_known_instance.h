@@ -175,7 +175,7 @@ return EOU_monad::template ret<Nat>(std::move(n));}
 };
 static_assert(IPtr<natIPtr>);
 struct InstanceCarrierUnqualifiedAtKnownInstance {
-static inline const EOU<ptr> run = PIV<natIPtr>::int_to_ptr(Nat::s(Nat::o()),
+static inline const EOU<typename PIV<natIPtr>::ptr> run = PIV<natIPtr>::int_to_ptr(Nat::s(Nat::o()),
 true);
 };
 
