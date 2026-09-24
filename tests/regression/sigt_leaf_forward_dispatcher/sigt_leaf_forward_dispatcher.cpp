@@ -21,7 +21,7 @@
 /// representation.
 bool wrap_string(const std::string &s) { return String0::eqb1(s, s); }
 
-bool mk_action(uint64_t n, std::any tup) {
+bool mk_action(uint64_t n, domty tup) {
   if (n <= 0) {
     const auto &[v, _x] = std::any_cast<std::pair<std::any, std::any>>(tup);
     return wrap_string(std::any_cast<std::string>(v));

@@ -1,7 +1,8 @@
 #include "dim10_tower_proof_chain.h"
 
 Dim10TowerProofChainCase::nat_le
-Dim10TowerProofChainCase::nat_le_of_lt(uint64_t n, uint64_t m, std::any h_) {
+Dim10TowerProofChainCase::nat_le_of_lt(uint64_t n, uint64_t m,
+                                       Dim10TowerProofChainCase::nat_lt h_) {
   if (n <= 0) {
     if (m <= 0) {
       throw std::logic_error("unreachable: impossible dependent match branch");
@@ -15,7 +16,7 @@ Dim10TowerProofChainCase::nat_le_of_lt(uint64_t n, uint64_t m, std::any h_) {
       throw std::logic_error("absurd case");
     } else {
       uint64_t n1 = m - 1;
-      return nat_le_of_lt(n0, n1, h_);
+      return nat_le_of_lt(n0, n1, std::move(h_));
     }
   }
 }

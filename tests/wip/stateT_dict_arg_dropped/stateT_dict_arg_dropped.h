@@ -149,7 +149,7 @@ stateT<env, std::shared_ptr<ITree<std::any>>, Nat> twice(const Nat &n) {
   return Monad_stateT<Monad_itree<std::any>, env>::template bind<Nat, Nat>(
       step<std::any>(n), [](const Nat &a) {
         return Monad_stateT<Monad_itree<std::any>, env>::template bind<
-            Nat, Nat>(step<std::any>(a), [](const auto &b) {
+            Nat, Nat>(step<std::any>(a), [](const Nat &b) {
           return Monad_stateT<Monad_itree<std::any>, env>::template ret<Nat>(b);
         });
       });

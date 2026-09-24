@@ -212,7 +212,7 @@ Monads::template stateT<env, itree_tc_296b3b7af4bd1a71, T2> twice(Ev e) {
   return Monads::template Monad_stateT<Monad_itree<T1>, env>::template bind<
       T2, T2>(handle<T1, T2>(e), [](const auto &res) {
     return Monads::template Monad_stateT<Monad_itree<T1>, env>::template bind<
-        Nat, T2>(step<_tcI0, T1>(Nat::s(Nat::o())), [=](const auto &) mutable {
+        Nat, T2>(step<_tcI0, T1>(Nat::s(Nat::o())), [=](const Nat &) mutable {
       return Monads::template Monad_stateT<Monad_itree<T1>,
                                            env>::template ret<T2>(res);
     });

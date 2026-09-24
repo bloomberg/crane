@@ -44,7 +44,7 @@ template <typename A, typename P> struct SigT {
 struct Dim10TowerProofChainCase {
   using nat_lt = std::any;
   using nat_le = std::any;
-  static nat_le nat_le_of_lt(uint64_t n, uint64_t m, std::any h_);
+  static nat_le nat_le_of_lt(uint64_t n, uint64_t m, nat_lt h_);
 
   struct QPos {
     uint64_t qpos_num;

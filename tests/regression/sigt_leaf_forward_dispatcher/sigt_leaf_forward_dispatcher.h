@@ -164,7 +164,7 @@ using pred_ty = std::any;
 using act_ty = std::any;
 using psem = std::pair<pred_ty, act_ty>;
 using entry = SigT<prod2, psem>;
-bool mk_action(uint64_t n, std::any tup);
+bool mk_action(uint64_t n, domty tup);
 const entry my_entry = SigT<prod2, psem>::existt(
     std::make_pair(UINT64_C(0), List<uint64_t>::nil()),
     std::make_pair(std::any(crane_erase_fn([](domty _x0) -> bool {

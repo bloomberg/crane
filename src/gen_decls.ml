@@ -4159,6 +4159,43 @@ let rec names_promoted_type_var = function
   | Miniml.Tmeta {contents = Some t} -> names_promoted_type_var t
   | _ -> false
 
+(** Whether a recovered type says something the guess cannot say wrongly.
+
+    The gate above asks whether the {e offer} names a promoted type var, but
+    what decides soundness is whether the {e hole} would otherwise be guessed
+    at -- and the guess fills every hole, so every one of them would.  The
+    population that misses is the one where the declaration knows a perfectly
+    ordinary type: [memS_mon::bind] declares its continuation
+    [std::function<MemS<..,_A1>(_A0)>] and the call is [bind<unit, unit>], so
+    the answer [unit] is spelled one line above the binder -- and [unit] names
+    no promoted type var, so the gate declines and the guess writes the
+    class's first associated type instead.
+
+    A type with no variable in it is one the guess can only get wrong.  It
+    mentions nothing whose meaning depends on where it is read, so it means
+    the same at the binder as it did in the declaration.  A variable does not:
+    [itreeF]'s [Vis] quantifies over the event's result as well as the tree's,
+    and a call that instantiates that existential at the caller's own third
+    variable offers a name which, read at the lambda, denotes the deduced type
+    of a function parameter.  That offer is faithful to the term and still
+    unusable, so variables stay out.
+
+    [Tdummy] is out for the same reason read the other way round: an erased
+    position says nothing anywhere, so an offer carrying one cannot beat the
+    guess at the same hole -- it only respells [List<T3>] as [List<std::any>].
+    Closed is the wrong word for it; the predicate wants types that are both
+    closed and informative, and [Tdummy] is the canonical uninformative one. *)
+let rec is_closed_type = function
+  | Miniml.Tglob (_, args, _) -> List.for_all is_closed_type args
+  | Miniml.Tarr (a, b) -> is_closed_type a && is_closed_type b
+  | Miniml.Tmeta {contents = Some t} -> is_closed_type t
+  | Miniml.Tstring -> true
+  | Miniml.Tdummy _ | Miniml.Tvar _ | Miniml.Tapp _
+  | Miniml.Tmeta {contents = None} | Miniml.Tunknown | Miniml.Taxiom ->
+    false
+
+let writable_offer ty = names_promoted_type_var ty || is_closed_type ty
+
 (** Replace Tunresolved in all type annotations within an ML AST body with the
     GlobRef of the first promoted type var (the carrier). This allows
     convert_ml_type_to_cpp_type to detect it as a promoted type var.
@@ -4222,7 +4259,7 @@ let get_erased_proj_map_from_type (ty : ml_type) : (GlobRef.t * int) list =
     recovery is only sound over the holes nothing else can name. *)
 let recover_then_guess carrier_refs ty b =
   let b = Mlutil.recover_erased_types ~only:names_promoted_type_var ty b in
-  let b = Mlutil.recover_erased_types ~refine_only:true ty b in
+  let b = Mlutil.recover_erased_types ~only:writable_offer ~refine_only:true ty b in
   rewrite_ml_ast_types carrier_refs b
 
 (** Generate C++ declaration from ML definition (main entry point) *)

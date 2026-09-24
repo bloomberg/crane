@@ -6564,6 +6564,19 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                     | None -> bare_cpp_ty
                   in
                   wrap_param_by_ownership ~is_owned:owned refined
+                | None
+                  when (!tctx).itree_mode = Reified && ml_type_is_unit ty ->
+                  (* A reified tree's continuation is typed [unit -> itree ...]
+                     in ML, but [unit] is not one C++ type here: the value a
+                     reified tree carries is whatever its consumer chose, and
+                     the same Rocq type reaches the printer as [std::monostate]
+                     over a concrete tree and as [std::any] over one whose
+                     event type was erased.  The binder is under-determined
+                     rather than erased -- nothing in the term says which -- so
+                     it deduces.  Committing to [std::monostate] rejects every
+                     call through an erased tree.  The slot is still emitted;
+                     see the parameter filter above. *)
+                  Tref (Tconst Tauto)
                 | None when Ml_type_util.has_tany_written bare_cpp_ty ->
                   (* The type is spelled with erased positions (std::any).  Use
                      [const auto&] so the C++ compiler deduces the concrete
