@@ -61,7 +61,43 @@
     the first one to drop when narrowing.
 
     Reduced by the Vellvm-side session; ported here unchanged in substance from
-    [src/crane/reductions/bind_continuation_binder_from_class_field]. *)
+    [src/crane/reductions/bind_continuation_binder_from_class_field].
+
+    {b The h:40336 attribution above was withdrawn by its author and is kept
+    only as the record of a near-miss.}  The reading it rests on --- that the
+    wrong spelling is [Dv<A>] with the head dropped and the argument kept ---
+    is an artefact of this file, where [addr] is simultaneously [Dv]'s first
+    argument and a field of [Params], so the two readings are indistinguishable;
+    widening [dv] to two fields does not separate them either.  In Vellvm the
+    element is [Dvalue<_tcI0::PTR::ptr, _tcI0::IPTR::iptr>] and the binder
+    writes [_tcI0::IPTR], which is neither argument nor head.  A reduction that
+    matches an artifact's text is not one that matches its derivation.
+
+    {b What probing this file does establish, and it points back at h:40336 by a
+    different route.}  Neither wrong binder is a substitution at all.  Both end
+    as an {e unresolved} type: the outer binder [f] as a bare ML type variable,
+    the inner binder [r] as [list] of an uninstantiated [Tmeta].  A later pass
+    fills such a position with the enclosing scope's promoted type variable ---
+    which is [_tcI0::addr] here and would be [_tcI0::IPTR] in Vellvm, with no
+    need for either to be an argument of anything.  On that reading the element
+    half is not a second defect but the same filling as the codomain half,
+    landing in a binder instead of a return type.  Stated as a hypothesis; what
+    is measured is only the two unresolved positions.
+
+    Two facts from the offer machinery ([Mlutil.recover_erased_types]), both
+    reproducible and neither yet explained:
+
+    - The continuation position {e is} offered the declared domain --- the
+      offers for [bind] come out [T;-;T], so nothing is withdrawn there --- but
+      the offer for [f] is the declaration's own type variable, uninstantiated.
+      [bind] is called with three type arguments against a four-quantifier
+      scheme, and a substitution that does not reach [A] offers a variable in
+      its place.  An offer that is present and vacuous, not absent.
+
+    - The inner binder is offered [list<dv>] against [list<Tmeta>] {e twice},
+      with identical [have] and identical [from], and takes it once and declines
+      it once.  Same input, two outcomes, so the difference is in the caller's
+      [~only]/[~refine_only] and not in the types. *)
 
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std.
