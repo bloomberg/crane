@@ -242,3 +242,16 @@
   (alias runtest)
   (deps lifted_inner_fix_drops_class_param.t.exe)
   (action (run ./lifted_inner_fix_drops_class_param.t.exe))))
+
+; --- Twelfth round of Vellvm reductions, against Crane c40203139.
+
+(subdir inline_inner_fix_writes_instance
+ (rule
+  (targets inline_inner_fix_writes_instance.t.exe)
+  (deps InlineInnerFixWritesInstance.vo inline_inner_fix_writes_instance.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} inline_inner_fix_writes_instance.t.exe inline_inner_fix_writes_instance.cpp inline_inner_fix_writes_instance.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps inline_inner_fix_writes_instance.t.exe)
+  (action (run ./inline_inner_fix_writes_instance.t.exe))))
