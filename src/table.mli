@@ -608,16 +608,31 @@ val get_instance_class_shape :
     they become its remaining template parameters. *)
 val ind_promoted_params : MutInd.t -> Id.t list
 
-(** [add_ind_class_arg kn (inst, n)] records that a constructor field type of
-    [kn] names the instance [inst] applied to [n] arguments -- the same shape
+(** {!ind_promoted_params} for any type global: an inductive, or a type-level
+    [Definition] whose body was recorded by {!add_type_alias_body}.  The
+    property is transitive -- a type that reaches such a type depends on the
+    same variables. *)
+val promoted_type_params : GlobRef.t -> Id.t list
+
+(** [add_type_alias_body r t] records the right-hand side of the type-level
+    [Definition] [r], which is otherwise nowhere the closure above can read.
+    An alias has no constructor payloads, so its body is what it reaches. *)
+val add_type_alias_body : GlobRef.t -> Miniml.ml_type -> unit
+
+(** Whether {!add_type_alias_body} has recorded a body for [r], i.e. whether
+    [r] is a type-level [Definition] rather than a term. *)
+val has_type_alias_body : GlobRef.t -> bool
+
+(** [add_ind_class_arg r (inst, n)] records that a constructor field type of
+    [r] names the instance [inst] applied to [n] arguments -- the same shape
     {!add_instance_class_shape} records, and read by the same rule.  The Rocq
     constructor type is the only place an inductive's dependence on an instance
     is written down; the ML inductive keeps no parameter for it. *)
-val add_ind_class_arg : MutInd.t -> GlobRef.t * int -> unit
+val add_ind_class_arg : GlobRef.t -> GlobRef.t * int -> unit
 
 (** The shapes recorded by {!add_ind_class_arg}, in order of first
     appearance. *)
-val get_ind_class_args : MutInd.t -> (GlobRef.t * int) list
+val get_type_class_args : GlobRef.t -> (GlobRef.t * int) list
 
 (** Add info axiom. *)
 val add_info_axiom : GlobRef.t -> unit

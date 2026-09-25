@@ -897,7 +897,7 @@ and extract_really_ind env kn mib =
                     let h, a_args = Constr.decompose_app a in
                     match Constr.kind h with
                     | Const (ac, _) ->
-                      Table.add_ind_class_arg kn
+                      Table.add_ind_class_arg (GlobRef.IndRef (kn, 0))
                         (GlobRef.ConstRef ac, Array.length a_args)
                     | _ -> () )
                   cargs
@@ -2627,6 +2627,10 @@ let extract_constant access env kn cb =
        | Tunknown | Taxiom -> add_erased_type_const r
        | _ -> ());
       Table.add_type_scheme_arity r (List.length vl);
+      (* An alias body is where a type-level [Definition] under a [Context]
+         writes its dependence on that context; see
+         {!Table.add_type_alias_body}. *)
+      Table.add_type_alias_body r t;
       Dtype (r, vl, t)
     end
   in
@@ -2671,8 +2675,21 @@ let extract_constant access env kn cb =
   let record_class_shape () =
     let _, concl = EConstr.decompose_prod sg typ in
     let hd, args = EConstr.decompose_app sg concl in
-    match EConstr.kind sg hd with
-    | Ind (ind, _) ->
+    let head_ref =
+      match EConstr.kind sg hd with
+      | Ind (ind, _) -> Some (GlobRef.IndRef ind)
+      (* A type-level [Definition] is a conclusion head for the same reason an
+         inductive is: [packed : @dbox natIPtr] is where the alias is applied
+         to the instance its body depends on.  Whether the head is an alias is
+         not asked here -- extraction reaches declarations before their types,
+         so the alias body may not be recorded yet; a head that turns out to
+         have no class arguments resolves nothing, which is what it did when
+         it was not recorded at all. *)
+      | Const (c, _) -> Some (GlobRef.ConstRef c)
+      | _ -> None
+    in
+    match head_ref with
+    | Some head_ref ->
       let arg_shape a =
         let h, a_args = EConstr.decompose_app sg a in
         match EConstr.kind sg h with
@@ -2683,9 +2700,8 @@ let extract_constant access env kn cb =
       (* All or none: an argument that cannot be named leaves the others
          without the positions that give them their meaning. *)
       if List.for_all Option.has_some shapes then
-        Table.add_instance_class_shape r
-          (GlobRef.IndRef ind, List.map Option.get shapes)
-    | _ -> ()
+        Table.add_instance_class_shape r (head_ref, List.map Option.get shapes)
+    | None -> ()
   in
   let mk_def c =
     record_class_shape ();

@@ -238,7 +238,7 @@ return v_;}
   // ACCESSORS
 const variant_t& v() const {
 return v_;}
-};using dbox = std::pair<Dval<ptr>, Nat>;
+};template <typename ptr> using dbox = std::pair<Dval<ptr>, Nat>;
 struct natIPtr {
 using iptr = Nat;
 static Nat zero_iptr() {
@@ -251,7 +251,7 @@ return n;}
 static_assert(IPtr<natIPtr>);
 struct TypeAliasOfSectionInductive {
 static inline const std::pair<Nat, bool> the_null = crane_any_cast<std::pair<Nat, bool>>(PointerV<natIPtr>::null());
-static inline const dbox packed = std::make_pair(Dval<ptr>::dptr(the_null), Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))));
+static inline const dbox<typename PointerV<natIPtr>::ptr> packed = std::make_pair(Dval<typename PointerV<natIPtr>::ptr>::dptr(the_null), Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))));
 static inline const Nat run = []() {
 auto&& _sv2 = packed.first;
 if (std::holds_alternative<typename Dval<typename PointerV<natIPtr>::ptr>::DPtr>(_sv2.v())) {

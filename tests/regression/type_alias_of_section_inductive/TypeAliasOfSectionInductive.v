@@ -15,7 +15,17 @@
    syntactic category cannot reach a defect in another.
 
    The import list is not harness configuration -- it selects the emission
-   path. *)
+   path.
+
+   Fixed: the closure was generalised from an inductive's constructor payloads
+   to any type global's definition -- [Table.promoted_type_params] and
+   [Table.get_type_class_args] are now keyed by globref and reach a type-level
+   [Definition] through its right-hand side, recorded at extraction by
+   [Table.add_type_alias_body].  [Gen_decls.gen_type_alias] gives the alias the
+   promoted variables as trailing template parameters, which is where
+   [Translation.ind_promoted_type_args] passes them, and [record_class_shape]
+   accepts a [Const] conclusion head so [packed : @dbox natIPtr] says which
+   instance the [ptr] inside belongs to. *)
 
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std Monads.ITreeReified.

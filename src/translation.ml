@@ -3441,22 +3441,22 @@ and promoted_var_resolution g =
   | None -> None
 
 (** [ind_promoted_type_args g] -- the trailing template arguments a mention of
-    the inductive [g] passes for the promoted variables its payloads name.
+    the type [g] passes for the promoted variables its definition names.  [g]
+    is an inductive, whose payloads name them, or a type-level [Definition],
+    whose body does.
 
-    Such a variable is a type the inductive does not own: it belongs to
-    whichever instance was in scope where the inductive was declared, so it is
-    a parameter there (see {!Table.ind_promoted_params} and its use in
-    [Cpp_ind]) and an argument at every use.  Inside the inductive's own
+    Such a variable is a type the definition does not own: it belongs to
+    whichever instance was in scope where it was declared, so it is a
+    parameter there (see {!Table.promoted_type_params} and its uses in
+    [Cpp_ind] and [Gen_decls.gen_type_alias]) and an argument at every use.  Inside the inductive's own
     declaration the argument is that parameter, which is what the [Tpromoted]
     fallback spells; a scope that knows no instance spells the file-scope
     alias, as it did before there was a parameter at all. *)
-and ind_promoted_type_args = function
-  | GlobRef.IndRef (kn, _) ->
-    List.map
-      (fun v ->
-        match promoted_var_binding v with Some t -> t | None -> Tpromoted v )
-      (Table.ind_promoted_params kn)
-  | _ -> []
+and ind_promoted_type_args g =
+  List.map
+    (fun v ->
+      match promoted_var_binding v with Some t -> t | None -> Tpromoted v )
+    (Table.promoted_type_params g)
 
 (** [promoted_var_binding var_id] -- what the scope says the promoted variable
     named [var_id] stands for, by name.  Reached from a globref through

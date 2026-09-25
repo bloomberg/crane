@@ -324,16 +324,16 @@ let instance_arg_resolutions ~own_instances inst_ref =
 
 (** The resolution a declaration's own type supplies when that type is an
     inductive whose constructor fields name an instance -- see
-    {!Table.get_ind_class_args}.  [boxed : @dval natIPtr] is what says which
+    {!Table.get_type_class_args}.  [boxed : @dval natIPtr] is what says which
     [IPtr] the [ptr] inside [dval] belongs to, and the only thing that does:
     the ML type keeps neither the argument nor the dependence. *)
 let ind_type_resolutions r =
   match Table.get_instance_class_shape r with
-  | Some (GlobRef.IndRef (kn, _), arg_shapes) ->
+  | Some (head, arg_shapes) ->
     resolutions_of_shapes
       ~own_instances:(List.map (fun (a, _) -> Tglob (a, [], [])) arg_shapes)
-      (Table.get_ind_class_args kn)
-  | _ -> []
+      (Table.get_type_class_args head)
+  | None -> []
 
 (** The resolution a term supplies for the promoted type variables its own type
     leaves unresolved.
@@ -2424,6 +2424,13 @@ let gen_type_alias r vars ot =
   let du_tparams =
     hkt_templates ?applied:du_rhs r vars
       (match ot with Some t -> [t] | None -> [])
+    (* The promoted variables the body names are parameters here for the same
+       reason they are on an inductive: they belong to the instance in scope
+       where the alias was declared, not to the alias.  Trailing, which is
+       where {!Translation.ind_promoted_type_args} passes them. *)
+    @ List.map
+        (fun v -> (TTtypename, v))
+        (Table.promoted_type_params r)
   in
   Dusing {du_tparams; du_name = r; du_rhs; du_note}
 

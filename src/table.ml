@@ -1142,20 +1142,17 @@ let get_instance_class_shape r = GlobRef.Map.find_opt r !instance_class_shapes
    instance and how many arguments it is applied to -- so that one reader
    serves both. *)
 let ind_class_arg_shapes =
-  ref (Mindmap_env.empty : (GlobRef.t * int) list Mindmap_env.t)
+  ref (Refmap'.empty : (GlobRef.t * int) list Refmap'.t)
 
-let init_ind_class_arg_shapes () = ind_class_arg_shapes := Mindmap_env.empty
+let init_ind_class_arg_shapes () = ind_class_arg_shapes := Refmap'.empty
 
-let add_ind_class_arg kn shape =
-  let prev =
-    Option.default [] (Mindmap_env.find_opt kn !ind_class_arg_shapes)
-  in
+let add_ind_class_arg r shape =
+  let prev = Option.default [] (Refmap'.find_opt r !ind_class_arg_shapes) in
   if not (List.mem shape prev) then
-    ind_class_arg_shapes :=
-      Mindmap_env.add kn (prev @ [shape]) !ind_class_arg_shapes
+    ind_class_arg_shapes := Refmap'.add r (prev @ [shape]) !ind_class_arg_shapes
 
-let get_ind_class_args_own kn =
-  Option.default [] (Mindmap_env.find_opt kn !ind_class_arg_shapes)
+let get_class_args_own r =
+  Option.default [] (Refmap'.find_opt r !ind_class_arg_shapes)
 
 (* The promoted type variables an inductive's constructor payloads mention.
 
@@ -1170,57 +1167,90 @@ let get_ind_class_args_own kn =
    Computed on demand and cached, not recorded during extraction: whether a
    reference is a promoted variable is only settled once the class it belongs
    to has been extracted, and an inductive may be reached before that. *)
-let ind_promoted_params_cache = ref (Mindmap_env.empty : Id.t list Mindmap_env.t)
+let promoted_type_params_cache = ref (Refmap'.empty : Id.t list Refmap'.t)
 
-let init_ind_promoted_params () = ind_promoted_params_cache := Mindmap_env.empty
+let init_ind_promoted_params () = promoted_type_params_cache := Refmap'.empty
 
-(* The types a constructor payload of [kn] mentions, folded with [f]. *)
-let fold_ind_payload_types f kn acc =
-  try
-    let ind = unsafe_lookup_ind kn in
-    match ind.Miniml.ind_kind with
-    | Miniml.Record _ | Miniml.TypeClass _ -> acc
-    | _ ->
-      let acc = ref acc in
-      let rec collect t =
-        acc := f !acc t;
-        match t with
-        | Miniml.Tglob (_, ts, _) -> List.iter collect ts
-        | Miniml.Tarr (a, b) -> collect a; collect b
-        | Miniml.Tmeta {contents = Some t} -> collect t
-        | _ -> ()
-      in
-      Array.iter
-        (fun p -> Array.iter (List.iter collect) p.Miniml.ip_types)
-        ind.Miniml.ind_packets;
-      !acc
-  with Not_found | Invalid_argument _ -> acc
+(* The right-hand side of a type-level [Definition], recorded because the same
+   questions are asked of it as of an inductive: a [Definition dbox : Type :=
+   (dval * nat)] under a [Context] depends on that context variable through its
+   body, and an alias has no constructors for a closure over payloads to
+   reach. *)
+let type_alias_bodies = ref (Refmap'.empty : Miniml.ml_type Refmap'.t)
 
-(* The inductives [kn]'s constructor payloads reach, transitively, [kn]
-   excluded.  Depending on an inductive that depends on a promoted type
-   variable is depending on the variable, so the properties below are the
-   closure of a one-hop test over this relation: an inductive declared in the
-   same [Section] arrives as a payload that names no class field itself. *)
-let rec ind_payload_inds ~seen kn =
-  let seen = kn :: seen in
-  fold_ind_payload_types
+let init_type_alias_bodies () = type_alias_bodies := Refmap'.empty
+
+let has_type_alias_body r = Refmap'.mem r !type_alias_bodies
+
+let add_type_alias_body r t =
+  type_alias_bodies := Refmap'.add r t !type_alias_bodies
+
+(* The types [r]'s own definition writes: an inductive's constructor payloads,
+   a type alias's right-hand side.  Folded with [f] over every subterm. *)
+let fold_type_body_types f r acc =
+  let roots =
+    match r with
+    | GlobRef.IndRef (kn, _) ->
+      ( try
+          let ind = unsafe_lookup_ind kn in
+          match ind.Miniml.ind_kind with
+          | Miniml.Record _ | Miniml.TypeClass _ -> []
+          | _ ->
+            Array.fold_left
+              (fun acc p ->
+                Array.fold_left (fun acc l -> acc @ l) acc p.Miniml.ip_types )
+              [] ind.Miniml.ind_packets
+        with Not_found | Invalid_argument _ -> [] )
+    | GlobRef.ConstRef _ ->
+      ( match Refmap'.find_opt r !type_alias_bodies with
+      | Some t -> [t]
+      | None -> [] )
+    | _ -> []
+  in
+  let acc = ref acc in
+  let rec collect t =
+    acc := f !acc t;
+    match t with
+    | Miniml.Tglob (_, ts, _) -> List.iter collect ts
+    | Miniml.Tarr (a, b) -> collect a; collect b
+    | Miniml.Tmeta {contents = Some t} -> collect t
+    | _ -> ()
+  in
+  List.iter collect roots;
+  !acc
+
+(* The type globals [r]'s definition reaches, transitively, [r] excluded.
+   Depending on a type that depends on a promoted type variable is depending on
+   the variable, so the properties below are the closure of a one-hop test over
+   this relation: a type declared in the same [Section] arrives as a payload or
+   an alias body that names no class field itself. *)
+let rec type_globals_reached ~seen r =
+  let seen = r :: seen in
+  let known g =
+    match g with
+    | GlobRef.IndRef _ -> true
+    | GlobRef.ConstRef _ -> Refmap'.mem g !type_alias_bodies
+    | _ -> false
+  in
+  fold_type_body_types
     (fun acc t ->
       match t with
-      | Miniml.Tglob (GlobRef.IndRef (kn', _), _, _)
-        when (not (List.exists (MutInd.CanOrd.equal kn') seen))
-             && not (List.exists (MutInd.CanOrd.equal kn') acc) ->
-        let acc = acc @ [kn'] in
+      | Miniml.Tglob (g, _, _)
+        when known g
+             && (not (List.exists (GlobRef.CanOrd.equal g) seen))
+             && not (List.exists (GlobRef.CanOrd.equal g) acc) ->
         List.fold_left
           (fun acc k ->
-            if List.exists (MutInd.CanOrd.equal k) acc then acc else acc @ [k] )
-          acc
-          (ind_payload_inds ~seen kn')
+            if List.exists (GlobRef.CanOrd.equal k) acc then acc else acc @ [k]
+            )
+          (acc @ [g])
+          (type_globals_reached ~seen g)
       | _ -> acc )
-    kn []
+    r []
 
-(* The promoted type variables [kn]'s own payloads name, one hop. *)
-let ind_own_promoted_params kn =
-  fold_ind_payload_types
+(* The promoted type variables [r]'s own definition names, one hop. *)
+let own_promoted_type_params r =
+  fold_type_body_types
     (fun acc t ->
       match t with
       | Miniml.Tglob (g, _, _) when is_promoted_type_var g ->
@@ -1228,10 +1258,16 @@ let ind_own_promoted_params kn =
         | Some v when not (List.exists (Id.equal v) acc) -> acc @ [v]
         | _ -> acc )
       | _ -> acc )
-    kn []
+    r []
 
-let ind_promoted_params kn =
-  match Mindmap_env.find_opt kn !ind_promoted_params_cache with
+(* An inductive is keyed by its block: the closure runs over every packet. *)
+let type_key = function
+  | GlobRef.IndRef (kn, _) -> GlobRef.IndRef (kn, 0)
+  | r -> r
+
+let promoted_type_params r =
+  let r = type_key r in
+  match Refmap'.find_opt r !promoted_type_params_cache with
   | Some v -> v
   | None ->
     let v =
@@ -1241,25 +1277,27 @@ let ind_promoted_params kn =
             (fun acc v ->
               if List.exists (Id.equal v) acc then acc else acc @ [v] )
             acc
-            (ind_own_promoted_params k) )
-        (ind_own_promoted_params kn)
-        (ind_payload_inds ~seen:[] kn)
+            (own_promoted_type_params k) )
+        (own_promoted_type_params r)
+        (type_globals_reached ~seen:[] r)
     in
-    ind_promoted_params_cache := Mindmap_env.add kn v !ind_promoted_params_cache;
+    promoted_type_params_cache := Refmap'.add r v !promoted_type_params_cache;
     v
 
-(* Transitive, for the same reason {!ind_promoted_params} is: an inductive
-   inherits the instances the inductives its payloads reach were declared
-   against. *)
-let get_ind_class_args kn =
+let ind_promoted_params kn = promoted_type_params (GlobRef.IndRef (kn, 0))
+
+(* Transitive, for the same reason {!promoted_type_params} is: a type inherits
+   the instances the types it reaches were declared against. *)
+let get_type_class_args r =
+  let r = type_key r in
   List.fold_left
     (fun acc k ->
       List.fold_left
         (fun acc sh -> if List.mem sh acc then acc else acc @ [sh])
         acc
-        (get_ind_class_args_own k) )
-    (get_ind_class_args_own kn)
-    (ind_payload_inds ~seen:[] kn)
+        (get_class_args_own k) )
+    (get_class_args_own r)
+    (type_globals_reached ~seen:[] r)
 
 (* Table of projections used in higher-order positions (as function values).
    Projections not in this set are only accessed via record->field syntax and
@@ -3793,6 +3831,7 @@ let reset_tables () =
   init_instance_class_shapes ();
   init_ind_promoted_params ();
   init_ind_class_arg_shapes ();
+  init_type_alias_bodies ();
   init_higher_order_projections ();
   init_phantom_tvars ();
   init_axioms ();

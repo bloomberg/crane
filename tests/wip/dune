@@ -148,13 +148,3 @@
   (deps hk_carrier_written_at_partial_app.t.exe)
   (action (run ./hk_carrier_written_at_partial_app.t.exe))))
 
-(subdir type_alias_of_section_inductive
- (rule
-  (targets type_alias_of_section_inductive.t.exe)
-  (deps TypeAliasOfSectionInductive.vo type_alias_of_section_inductive.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} type_alias_of_section_inductive.t.exe type_alias_of_section_inductive.cpp type_alias_of_section_inductive.t.cpp)))
- (rule
-  (alias runtest)
-  (deps type_alias_of_section_inductive.t.exe)
-  (action (run ./type_alias_of_section_inductive.t.exe))))

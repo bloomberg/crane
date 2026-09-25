@@ -86,3 +86,14 @@
   (alias runtest)
   (deps inductive_payload_from_same_section.t.exe)
   (action (run ./inductive_payload_from_same_section.t.exe))))
+
+(subdir type_alias_of_section_inductive
+ (rule
+  (targets type_alias_of_section_inductive.t.exe)
+  (deps TypeAliasOfSectionInductive.vo type_alias_of_section_inductive.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} type_alias_of_section_inductive.t.exe type_alias_of_section_inductive.cpp type_alias_of_section_inductive.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps type_alias_of_section_inductive.t.exe)
+  (action (run ./type_alias_of_section_inductive.t.exe))))
