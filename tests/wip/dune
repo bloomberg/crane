@@ -149,3 +149,14 @@
   (alias runtest)
   (deps hk_class_field_result_cast_to_concept.t.exe)
   (action (run ./hk_class_field_result_cast_to_concept.t.exe))))
+
+(subdir lifted_param_const_v_mut
+ (rule
+  (targets lifted_param_const_v_mut.t.exe)
+  (deps LiftedParamConstVMut.vo lifted_param_const_v_mut.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} lifted_param_const_v_mut.t.exe lifted_param_const_v_mut.cpp lifted_param_const_v_mut.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps lifted_param_const_v_mut.t.exe)
+  (action (run ./lifted_param_const_v_mut.t.exe))))
