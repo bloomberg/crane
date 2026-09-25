@@ -254,11 +254,19 @@ let class_fields_with_types = Table.get_record_field_bindings
     [inst_ty] is the instance those names hang off: [Tinstance (_tcI0, Mon)]
     for a function's instance argument, [Tinstance (I, Mon)] inside the class's
     own concept.  A direct associated type of [class_ref] resolves to [typename
-    I::Obj].  A promoted field that is itself a type class contributes its own
+    I::Obj].  A field that is itself a type class contributes its own
     associated types one level deeper ([typename I::base_category::Obj]) —
     extraction marks those with the same bare name, so they are otherwise
     indistinguishable from direct ones.  Direct entries win: a name is never
     resolved through a field when the class declares it itself.
+
+    The field need not be a promoted variable of [class_ref].  A class-typed
+    field is spelled [typename I::PROV] whether or not it was promoted -- that
+    is what the concept requires of [I] -- so the path exists either way, and
+    a class whose every field is an instance promotes nothing at all.
+    Requiring promotion here left [ParamsV]'s [PROV] and [PTR] contributing no
+    resolutions, so [provenance], [ptr] and the rest fell back to the
+    file-scope [using provenance = std::any;].
 
     [fields] defaults to {!class_fields_with_types}; pass it when the caller
     already holds the pairing, as it does while generating the class itself. *)
@@ -274,13 +282,11 @@ let promoted_resolutions ?fields class_ref inst_ty =
         match (field_opt, field_ty) with
         | Some field_ref, Miniml.Tglob (r, _, _) when Table.is_typeclass r ->
           let field_id = Common.id_of_global Term field_ref in
-          if is_direct field_id then
-            List.filter_map
-              (fun v ->
-                if is_direct v then None
-                else Some (v, Tqualified (Tqualified (inst_ty, field_id), v)) )
-              (class_promoted_vars r)
-          else []
+          List.filter_map
+            (fun v ->
+              if is_direct v then None
+              else Some (v, Tqualified (Tqualified (inst_ty, field_id), v)) )
+            (class_promoted_vars r)
         | _ -> [] )
       fields
   in
