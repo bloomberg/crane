@@ -268,3 +268,14 @@
   (alias runtest)
   (deps bind_continuation_binder_from_class_field.t.exe)
   (action (run ./bind_continuation_binder_from_class_field.t.exe))))
+
+(subdir inner_fix_codomain_from_class
+ (rule
+  (targets inner_fix_codomain_from_class.t.exe)
+  (deps InnerFixCodomainFromClass.vo inner_fix_codomain_from_class.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} inner_fix_codomain_from_class.t.exe inner_fix_codomain_from_class.cpp inner_fix_codomain_from_class.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps inner_fix_codomain_from_class.t.exe)
+  (action (run ./inner_fix_codomain_from_class.t.exe))))

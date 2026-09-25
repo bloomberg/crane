@@ -147,17 +147,3 @@
   (alias runtest)
   (deps hk_carrier_written_at_partial_app.t.exe)
   (action (run ./hk_carrier_written_at_partial_app.t.exe))))
-
-; --- Twelfth round of Vellvm reductions, against Crane f00bb4e73.
-
-(subdir inner_fix_codomain_from_class
- (rule
-  (targets inner_fix_codomain_from_class.t.exe)
-  (deps InnerFixCodomainFromClass.vo inner_fix_codomain_from_class.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} inner_fix_codomain_from_class.t.exe inner_fix_codomain_from_class.cpp inner_fix_codomain_from_class.t.cpp)))
- (rule
-  (alias runtest)
-  (deps inner_fix_codomain_from_class.t.exe)
-  (action (run ./inner_fix_codomain_from_class.t.exe))))
-
