@@ -738,6 +738,40 @@ let gen_record_cpp name fields ind =
       ds_needs_shared_from_this = false;
     }
 
+(** The trailing concept arguments: the promoted variables [class_ref]
+    mentions without declaring, which {!gen_typeclass_cpp} made template
+    parameters of the concept.  Every use of the concept has to end with
+    them, in this order, or the constraint does not match. *)
+let mentioned_promoted_args class_ref =
+  List.map (fun v -> Tpromoted v) (Table.promoted_type_params class_ref)
+
+(** The concept constraint an instance parameter of type [ty] carries.
+
+    Three things go into the argument list, and the only reason this is a
+    function is that two call sites -- {!strip_outer_layers} for a lambda's
+    instance binder and {!promote_typeclass_params} for a declared one -- have
+    to agree on all three or the constraint does not match the concept:
+
+    - the instance itself, which the printer supplies as the first argument;
+    - the class's kept type arguments, for a multi-parameter concept;
+    - the promoted variables the class {e mentions} without declaring, which
+      {!gen_typeclass_cpp} makes template parameters of the concept.  They are
+      written as the bare names the class spells, so the pass that resolves a
+      bare promoted name against the instance owning it reaches them the way it
+      reaches every other position in the signature. *)
+let concept_constraint_of_class_type ty =
+  match ty with
+  | Miniml.Tglob (class_ref, type_args, _) ->
+    let kept =
+      if Table.get_ind_nb_tparams class_ref = 0 then []
+      else
+        List.map
+          (convert_ml_type_to_cpp_type (empty_env ()) [])
+          (Table.drop_hkt_args class_ref type_args)
+    in
+    Some (TTconcept (class_ref, kept @ mentioned_promoted_args class_ref))
+  | _ -> None
+
 (** Generate a C++ concept from a type class.
    Type class Eq(A) with method eqb : A -> A -> bool becomes:
    template<typename I, typename A>
@@ -777,7 +811,17 @@ let gen_typeclass_cpp name fields ind =
   (* Only param vars become concept template parameters; promoted vars become
      typename requirements inside the requires block *)
   let ty_vars = List.map (fun x -> (TTtypename, x)) param_vars in
-  let all_params = (TTtypename, inst_id) :: ty_vars in
+  (* The promoted variables the class {e mentions} without declaring them --
+     [ptr] and [iptr], reached through a field whose type is a section
+     inductive.  They are template parameters here for the same reason they
+     are on {!gen_record_cpp}'s struct: the text spells them bare, and bare is
+     what a template parameter of that name makes correct. *)
+  let mentioned_promoted =
+    List.map (fun v -> (TTtypename, v)) (Table.promoted_type_params name)
+  in
+  let all_params =
+    ((TTtypename, inst_id) :: ty_vars) @ mentioned_promoted
+  in
   (* Build typename requirements for promoted vars: typename I::field; *)
   (* A higher-kinded carrier is an alias template, so the concept cannot ask
      for it bare: it is probed at [std::any], the same erased element type the
@@ -1081,7 +1125,7 @@ type method_binder = {
    Returns: (struct_decl option, class_ref option, type_args)
    The class_ref and type_args are used to generate static_assert in cpp.ml *)
 let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
-    cpp_decl option * GlobRef.t option * ml_type list =
+    cpp_decl option * GlobRef.t option * cpp_type list =
   (* For parameterized instances, strip Tarr/MLlam layers to get to the inner
      typeclass type and constructor body. Collect template parameters along the
      way. Example: numOption has type Tarr(Tdummy, Tarr(Tglob(Numeric,[A],[]),
@@ -1112,14 +1156,8 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                carry their kept type args so a [requires C<_tcI0, T1>] clause
                can be emitted at the use site instead of silently degrading to
                an unconstrained [typename] (CWE-693 / CWE-345). *)
-            if Table.get_ind_nb_tparams r = 0 then TTconcept (r, [])
-            else
-              let type_arg_cpp =
-                List.map
-                  (convert_ml_type_to_cpp_type (empty_env ()) [])
-                  (Table.drop_hkt_args r type_args)
-              in
-              TTconcept (r, type_arg_cpp)
+            Option.default TTtypename
+              (concept_constraint_of_class_type arg_ty)
           | _ -> TTtypename
         in
         strip_outer_layers
@@ -1215,6 +1253,28 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
              | _ -> None )
            tc_temps )
       name
+  in
+  (* The arguments the instance's [static_assert] spells.  They are the ones
+     {!concept_constraint_of_class_type} gives every other use of the concept
+     -- the class's kept arguments, then the promoted variables it mentions --
+     and the mentioned ones are resolved against this instance rather than
+     left bare, because bare at namespace scope is the file-scope
+     [using ptr = std::any;] and not the instance standing beside it. *)
+  let concept_args class_ref args =
+    List.map (convert_ml_type_to_cpp_type (empty_env ()) []) args
+    @ List.map
+        (fun t ->
+          match t with
+          | Tpromoted v -> (
+            match
+              List.find_opt
+                (fun (v', _) -> Id.equal v v')
+                (!tctx).promoted_var_map
+            with
+            | Some (_, r) -> r
+            | None -> t )
+          | t -> t )
+        (mentioned_promoted_args class_ref)
   in
   with_promoted_var_map
     ( promoted_var_resolutions @ specialised_arg_resolutions
@@ -2354,7 +2414,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
       in
       let all_usings = direct_usings @ nested_promoted_usings in
       if methods = [] && all_usings = [] then
-        (None, Some class_ref, non_promoted_type_args)
+        (None, Some class_ref, concept_args class_ref non_promoted_type_args)
       else
         let decl =
           Dstruct
@@ -2369,7 +2429,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
         ( Some
             (apply_hkt_resolutions_decl (hkt_tvar_resolutions_of_type ty) decl),
           Some class_ref,
-          non_promoted_type_args )
+          concept_args class_ref non_promoted_type_args )
     | MLglob (other, _) ->
       (* The instance is nothing but another instance's name.  C++ has a
          spelling for exactly that, and without it the name is never
@@ -2381,8 +2441,8 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                du_rhs = Some (Tglob (other, [], []));
                du_note = None } ),
         Some class_ref,
-        type_args )
-    | _ -> (None, Some class_ref, type_args) )
+        concept_args class_ref type_args )
+    | _ -> (None, Some class_ref, concept_args class_ref type_args) )
   | _ -> (None, None, [])
 
 (** Check if a term is a type class instance (constructs a type class record) *)
@@ -3278,15 +3338,8 @@ let promote_typeclass_params (params : (Id.t * ml_type) list) =
              declared. *)
           let tt =
             match ty with
-            | Miniml.Tglob (class_ref, type_args, _) ->
-              if Table.get_ind_nb_tparams class_ref = 0 then
-                TTconcept (class_ref, [])
-              else
-                TTconcept
-                  ( class_ref,
-                    List.map
-                      (fun t -> convert_ml_type_to_cpp_type (empty_env ()) [] t)
-                      (Table.drop_hkt_args class_ref type_args) )
+            | Miniml.Tglob _ as ty ->
+              Option.get (concept_constraint_of_class_type ty)
             | _ ->
               (* Unreachable: [Table.is_typeclass_type] only holds of a
                  [Tglob]. *)
@@ -3915,7 +3968,20 @@ let gen_dfun n b cty ty temps =
   in
   (* Add type class instance template parameters - instance types come first *)
   let typeclass_temps_basic =
-    List.map (fun (tt, id, _, _) -> (tt, id)) typeclass_temps
+    (* A constraint's arguments are types like any other and get the same
+       resolution the signature does: [ToDvalueBase<_tcI0, T1, ptr, iptr>]
+       spells the two promoted variables bare, and bare is the file-scope
+       [std::any] rather than the [Params] instance standing beside it. *)
+    List.map
+      (fun (tt, id, _, _) ->
+        let tt =
+          match tt with
+          | TTconcept (r, (_ :: _ as args)) when has_type_resolutions ->
+            TTconcept (r, List.map resolve_promoted_in_type args)
+          | tt -> tt
+        in
+        (tt, id) )
+      typeclass_temps
   in
   (* Build recursive call reference with typeclass and type params only.
      Function type params (from fun_tys) are excluded because they should be

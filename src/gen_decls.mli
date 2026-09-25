@@ -145,13 +145,15 @@ val gen_record_methods :
 
 (** Generate a C++ struct for a type class instance. Type class instances become
     structs with static methods. Returns (struct_decl option, class_ref option,
-    type_args). The class_ref and type_args are used by cpp.ml to generate
-    static_assert verifying the instance satisfies the concept. *)
+    concept arguments). The last two are used by cpp_ind.ml to generate the
+    static_assert verifying the instance satisfies the concept; the arguments
+    come back already converted and resolved, because they are only correct in
+    the promoted-variable scope of the instance they were read in. *)
 val gen_instance_struct :
   GlobRef.t ->
   ml_ast ->
   ml_type ->
-  cpp_decl option * GlobRef.t option * ml_type list
+  cpp_decl option * GlobRef.t option * cpp_type list
 
 (** [gen_type_alias r vars ot] is the [using] declaration for a type alias.
 

@@ -665,7 +665,9 @@ let ind_header_decls kn ind =
     namespace scope; an instance declared inside a module is lifted out of the
     module's struct rather than emitted as a member of it. *)
 let instance_decls r a t =
-  let ds_opt, class_ref_opt, type_args = Gen_decls.gen_instance_struct r a t in
+  let ds_opt, class_ref_opt, concept_args =
+    Gen_decls.gen_instance_struct r a t
+  in
   let struct_decl =
     match ds_opt with
     | Some ds -> [(empty_env (), ds)]
@@ -680,12 +682,8 @@ let instance_decls r a t =
   let static_assert_decl =
     match class_ref_opt with
     | Some class_ref when not is_template ->
-      let tys =
-        List.map
-          (fun ty -> convert_ml_type_to_cpp_type (empty_env ()) [] ty)
-          type_args
-      in
-      [(empty_env (), Dstatic_assert (CPPconcept_app (class_ref, r, tys), None))]
+      [ ( empty_env (),
+          Dstatic_assert (CPPconcept_app (class_ref, r, concept_args), None) ) ]
     | _ -> []
   in
   struct_decl @ static_assert_decl

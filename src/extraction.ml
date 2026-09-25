@@ -2760,13 +2760,30 @@ let extract_constant access env kn cb =
       | None -> None
       | Some head_ref ->
         let shapes =
-          List.map class_arg
+          List.map
+            (fun x ->
+              match class_arg x with
+              | Some sh -> Some sh
+              | None ->
+                (* A {e type} argument is not a class argument and never
+                   resolves anything; all it owes the reader is its position.
+                   [@ToDvalueBase natParams nat] has an inductive at the second
+                   position, which [class_arg] cannot name, and refusing the
+                   whole shape for it also threw away the [natParams] beside
+                   it -- the only thing that says which [ptr] the instance
+                   means.  An argument that is not a type is different: it is
+                   one the reader would have had to spell, so all-or-none
+                   still applies there. *)
+                if
+                  EConstr.Vars.closed0 sg x
+                  && (try is_info_scheme env sg (type_of env sg x)
+                      with _ -> false)
+                then Some Table.Carg_unknown
+                else None )
             (List.filter
                (arg_survives_extraction env sg)
                (Array.to_list args) )
         in
-        (* All or none: an argument that cannot be named leaves the others
-           without the positions that give them their meaning. *)
         if List.for_all Option.has_some shapes then
           Some (head_ref, List.map Option.get shapes)
         else None

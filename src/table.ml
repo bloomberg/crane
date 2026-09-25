@@ -1201,11 +1201,21 @@ let fold_type_body_types f r acc =
       ( try
           let ind = unsafe_lookup_ind kn in
           match ind.Miniml.ind_kind with
-          (* A class is skipped, and only a class: its fields *are* the
-             promoted variables, so a class that reached them would be
-             parameterised by its own contents.  A record's fields are data
-             like any constructor's payload. *)
-          | Miniml.TypeClass _ -> []
+          (* A class's fields are read like any other payload, and what keeps
+             it from being parameterised by its own contents is
+             {!declares_promoted_var} below, which is the precise statement of
+             it: a class is not parameterised by the associated types it
+             declares, and it says nothing about the ones it merely mentions.
+
+             Skipping classes outright was the imprecise version, and it lost
+             the case where the dependence arrives through a third type:
+             [Class ToDvalueBase I := { tdb : I -> dvalue_base }] names no
+             class at all, while [dvalue_base] -- a [Variant] from the same
+             section -- is parameterised by [ptr] and [iptr].  Nothing looked
+             there, so both spellings fell to the file-scope
+             [using ptr = std::any;]. *)
+          | Miniml.TypeClass _ ->
+            List.map snd (get_record_field_bindings r)
           | _ ->
             Array.fold_left
               (fun acc p ->
@@ -1259,22 +1269,38 @@ let rec type_globals_reached ~seen r =
       | _ -> acc )
     r []
 
+(* An inductive is keyed by its block: the closure runs over every packet. *)
+let type_key = function
+  | GlobRef.IndRef (kn, _) -> GlobRef.IndRef (kn, 0)
+  | r -> r
+
+(* Whether [g] is one of the associated types [r] itself declares.
+
+   A class is parameterised by the promoted variables it {e mentions} and not
+   by the ones it {e declares}: [Params] declaring [ptr] is what makes [ptr] a
+   variable in the first place, so [Params] taking a [ptr] parameter would be
+   circular, while [ToDvalueBase] mentioning one through a field's type is an
+   ordinary dependence. *)
+let declares_promoted_var r g =
+  List.exists
+    (fun (field_opt, _) ->
+      match field_opt with
+      | Some fr -> GlobRef.CanOrd.equal fr g
+      | None -> false )
+    (get_record_field_bindings (type_key r))
+
 (* The promoted type variables [r]'s own definition names, one hop. *)
 let own_promoted_type_params r =
   fold_type_body_types
     (fun acc t ->
       match t with
-      | Miniml.Tglob (g, _, _) when is_promoted_type_var g ->
+      | Miniml.Tglob (g, _, _)
+        when is_promoted_type_var g && not (declares_promoted_var r g) ->
         ( match promoted_type_var_name g with
         | Some v when not (List.exists (Id.equal v) acc) -> acc @ [v]
         | _ -> acc )
       | _ -> acc )
     r []
-
-(* An inductive is keyed by its block: the closure runs over every packet. *)
-let type_key = function
-  | GlobRef.IndRef (kn, _) -> GlobRef.IndRef (kn, 0)
-  | r -> r
 
 let promoted_type_params r =
   let r = type_key r in

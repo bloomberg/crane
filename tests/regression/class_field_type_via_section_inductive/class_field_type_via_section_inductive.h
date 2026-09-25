@@ -28,9 +28,7 @@ I>concept Params = requires {
 } || requires {
   { I::zeroi } -> std::convertible_to<typename I::iptr>;
 });
-/// Takes only I.  Its field's type is the section inductive, so its
-/// dependence on Params is never written down.
-template <typename _Inst, typename I>
+template <typename _Inst, typename I, typename ptr, typename iptr>
 concept ToDvalueBase = requires {
   {
     _Inst::tdb(std::declval<I>())
@@ -95,8 +93,6 @@ public:
   const variant_t &v() const { return v_; }
 };
 
-/// Declared in the section, so discharge parameterises it by ptr and
-/// iptr.  This is what carries Params into the class below.
 template <typename ptr, typename iptr> struct Dvalue_base {
   // TYPES
   struct DVALUE_Pointer {
@@ -151,7 +147,7 @@ public:
 };
 
 template <typename _tcI0, Params _tcI1, Params _tcI2, typename T1>
-  requires ToDvalueBase<_tcI0, T1>
+  requires ToDvalueBase<_tcI0, T1, typename _tcI1::ptr, typename _tcI1::iptr>
 Dvalue_base<typename _tcI1::ptr, typename _tcI1::iptr> to_base(const T1 &x) {
   return _tcI0::tdb(x);
 }
@@ -168,12 +164,15 @@ struct natParams {
 static_assert(Params<natParams>);
 
 struct natToBase {
-  static Dvalue_base<ptr, iptr> tdb(Nat n) {
-    return Dvalue_base<ptr, iptr>::dvalue_iptr(std::move(n));
+  static Dvalue_base<typename natParams::ptr, typename natParams::iptr>
+  tdb(Nat n) {
+    return Dvalue_base<typename natParams::ptr,
+                       typename natParams::iptr>::dvalue_iptr(std::move(n));
   }
 };
 
-static_assert(ToDvalueBase<natToBase, Nat>);
+static_assert(ToDvalueBase<natToBase, Nat, typename natParams::ptr,
+                           typename natParams::iptr>);
 
 struct ClassFieldTypeViaSectionInductive {
   static inline const Dvalue_base<typename natParams::ptr,

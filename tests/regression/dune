@@ -339,3 +339,16 @@
   (alias runtest)
   (deps lifted_lambda_passes_class_instance.t.exe)
   (action (run ./lifted_lambda_passes_class_instance.t.exe))))
+
+; --- A class whose Params dependence is carried by a section inductive.
+
+(subdir class_field_type_via_section_inductive
+ (rule
+  (targets class_field_type_via_section_inductive.t.exe)
+  (deps ClassFieldTypeViaSectionInductive.vo class_field_type_via_section_inductive.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} class_field_type_via_section_inductive.t.exe class_field_type_via_section_inductive.cpp class_field_type_via_section_inductive.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps class_field_type_via_section_inductive.t.exe)
+  (action (run ./class_field_type_via_section_inductive.t.exe))))
