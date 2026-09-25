@@ -16,6 +16,15 @@
    against a [runM] whose signature says [Dval<typename
    ParamsV<natIPtr>::PTR::ptr, typename ParamsV<natIPtr>::IPTR::iptr>].
 
+   Fixed: the resolution was there all along -- [runM]'s own declaration
+   supplies it, and [with_body_resolutions] reads the globals the body names.
+   What erased [iptr] was a second, wrong answer for it: a class field is an
+   instance of its own class ([@IPTR P] is an [IPtr]), so it is recorded as
+   one, and [class_arg_type] spelled the record it is selected from as a
+   template argument -- [IPTR<ParamsV<natIPtr>>].  Two answers for one name
+   are dropped, so the wrong one took the right one with it.  A projection
+   applied to one argument is now [Tqualified].
+
    The import list is not harness configuration -- it selects the emission
    path. *)
 

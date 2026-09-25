@@ -150,14 +150,3 @@
 
 
 
-
-(subdir itree_bind_binder_at_named_decl
- (rule
-  (targets itree_bind_binder_at_named_decl.t.exe)
-  (deps ItreeBindBinderAtNamedDecl.vo itree_bind_binder_at_named_decl.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} itree_bind_binder_at_named_decl.t.exe itree_bind_binder_at_named_decl.cpp itree_bind_binder_at_named_decl.t.cpp)))
- (rule
-  (alias runtest)
-  (deps itree_bind_binder_at_named_decl.t.exe)
-  (action (run ./itree_bind_binder_at_named_decl.t.exe))))
