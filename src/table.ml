@@ -3294,6 +3294,48 @@ let non_atomic_rc () = non_atomic_rc_requested () && not (unit_is_concurrent ())
 let count_rc () =
   Sys.getenv_opt "CRANE_COUNT_RC" = Some "1" && not (non_atomic_rc ())
 
+(* [CRANE_STAMP=1] prints, as a comment at the top of every generated file, a
+   digest of the plugin binary that produced it.  Like [CRANE_COUNT_RC] it is
+   an environment variable rather than a vernacular flag because it is a
+   property of the measurement and not of the program.
+
+   The question it answers is one no other check can.  A run that loads a stale
+   plugin produces an artifact byte-identical to one that loads the new plugin
+   and is simply unaffected by it, and certifying the [.cmxs] on disk before
+   and after separates those two only by asserting that what was on disk is
+   what was loaded.  The stamp makes the artifact witness its own producer, so
+   [cmp]-identity across two installs means "consumed and inert" rather than
+   ambiguous.
+
+   Off by default, and deliberately so: on, it would change every committed
+   test output, and a line that differs in every file is one no diff can be
+   read past.  Adding a comment is print-additive by construction --- it is not
+   a type, so no pass reads it and no decision turns on it --- which is exactly
+   the property a measuring device has to have and that a substituted type
+   cannot. *)
+let stamp_build () = Sys.getenv_opt "CRANE_STAMP" = Some "1"
+
+(* Found through findlib, which is the same resolution Rocq itself used to load
+   the plugin: asking where the package is answers with the file that was
+   actually loaded, rather than with a path we guessed.  Any failure to find or
+   read it is reported in the stamp rather than raised --- a missing witness
+   must not stop an extraction, and must not be mistaken for a present one. *)
+let plugin_digest =
+  lazy
+    ( try
+        let dir = Findlib.package_directory "rocq-crane.plugin" in
+        match
+          List.filter
+            (fun f -> Filename.check_suffix f ".cmxs")
+            (Array.to_list (Sys.readdir dir))
+        with
+        | [f] -> Digest.to_hex (Digest.file (Filename.concat dir f))
+        | [] -> "no-cmxs-found"
+        | _ :: _ -> "ambiguous-cmxs"
+      with _ -> "unavailable" )
+
+let plugin_build_stamp () = Lazy.force plugin_digest
+
 let shared_ptr_name () =
   if count_rc () then Crane_rt.counting_ptr
   else if non_atomic_rc () then Crane_rt.rc

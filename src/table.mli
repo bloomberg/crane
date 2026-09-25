@@ -855,6 +855,20 @@ val count_rc : unit -> bool
     [crane::counting_ptr] (count_rc.h) so the run reports its reference-count
     traffic. Measurement-only; never true in ordinary extraction. *)
 
+val stamp_build : unit -> bool
+(** Whether [CRANE_STAMP=1] is set: print a digest of the plugin binary as a
+    comment at the top of every generated file, so the artifact witnesses which
+    binary produced it instead of leaving that to a filesystem check made
+    alongside the run. Measurement-only; off by default because on, it would
+    change every committed test output. *)
+
+val plugin_build_stamp : unit -> string
+(** The digest of the loaded plugin [.cmxs], resolved through findlib so the
+    answer is the file Rocq actually loaded. Computed once. A failure to find
+    or read it yields a marker string ([unavailable], [no-cmxs-found],
+    [ambiguous-cmxs]) rather than an exception: a missing witness must not stop
+    an extraction, and must not read as a present one. *)
+
 (** Resolved smart-pointer type/factory names for string-level codegen, honoring
     [CRANE_COUNT_RC], [Crane NonAtomicRc] and the std/BDE flavor. *)
 val shared_ptr_name : unit -> string

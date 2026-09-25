@@ -696,8 +696,19 @@ let include_guard_name s =
     are already included transitively via the component's own header (both
     share the same accumulator during discovery). *)
 let header fn () =
+  (* The producing binary, named by the artifact itself under [CRANE_STAMP]:
+     see {!Table.stamp_build}.  The implementation file is stamped as well as
+     the header because both are compared, and a witness on one of two files
+     leaves the other saying nothing. *)
+  let build_stamp =
+    if Table.stamp_build () then
+      str ("// crane-plugin " ^ Table.plugin_build_stamp ()) ++ fnl ()
+    else mt ()
+  in
   (* Component's own header must be first include (BDE Rule 5.5) *)
   let self_include =
+    build_stamp
+    ++
     match fn with
     | Some s ->
       let s = Filename.basename s in
@@ -740,9 +751,20 @@ let spec_header ?(unit_includes = []) si () =
       header_imports_bsl @ extra_std
     else needed_std_headers ()
   in
+  (* The producing binary, named by the artifact itself under [CRANE_STAMP]:
+     see {!Table.stamp_build}.  Ahead of the include guard so it survives a
+     second inclusion being skipped, and a comment so nothing downstream reads
+     it. *)
+  let build_stamp =
+    if Table.stamp_build () then
+      str ("// crane-plugin " ^ Table.plugin_build_stamp ()) ++ fnl ()
+    else mt ()
+  in
   (* Include guard (BDE Rule 4.2.3): #ifndef INCLUDED_NAME *)
   let guard_name = Option.map include_guard_name si in
   let guard_open =
+    build_stamp
+    ++
     match guard_name with
     | Some g ->
       str ("#ifndef " ^ g) ++ fnl () ++ str ("#define " ^ g) ++ fnl2 ()
@@ -754,6 +776,7 @@ let spec_header ?(unit_includes = []) si () =
       (str "")
       (himports @ imps)
   in
+
   (* [Set Crane Arena] master switch.  Defined before the runtime headers
      (arena.h / rc.h) are pulled in below so rc.h's arena-backed control-block
      fields and its [arena.h] include are compiled in.  When the switch is off

@@ -22,6 +22,7 @@
    rocq-runtime.kernel
    rocq-runtime.library
    rocq-runtime.vernac
-   rocq-runtime.plugins.extraction))
+   rocq-runtime.plugins.extraction
+   findlib))
 
 (coq.pp (modules g_extraction))
