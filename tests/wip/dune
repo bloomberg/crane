@@ -160,3 +160,14 @@
   (alias runtest)
   (deps hk_class_field_result_cast_to_concept.t.exe)
   (action (run ./hk_class_field_result_cast_to_concept.t.exe))))
+
+(subdir concept_mentions_alias_and_module_type
+ (rule
+  (targets concept_mentions_alias_and_module_type.t.exe)
+  (deps ConceptMentionsAliasAndModuleType.vo concept_mentions_alias_and_module_type.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} concept_mentions_alias_and_module_type.t.exe concept_mentions_alias_and_module_type.cpp concept_mentions_alias_and_module_type.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps concept_mentions_alias_and_module_type.t.exe)
+  (action (run ./concept_mentions_alias_and_module_type.t.exe))))
