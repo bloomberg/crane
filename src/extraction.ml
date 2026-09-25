@@ -1291,6 +1291,14 @@ and mlt_env env r =
   | IndRef _ | ConstructRef _ | VarRef _ -> None
   | ConstRef kn ->
     if Table.is_custom r then None
+      (* A promoted type variable is a name, not an abbreviation.  Its Rocq
+         body is the record projection -- a [match] -- which [extract_type]
+         can only answer [Tunknown] for, so delta-reducing it replaces the
+         one spelling that still says which class field this is with the
+         erasure.  [frame := list ptr] then expands to [list unk] and the
+         parameter is written [List<std::any>] against a return type that
+         still names [frame<typename I::PTR::ptr>]. *)
+    else if Table.is_promoted_type_var r then None
     else
     let cb = Environ.lookup_constant kn env in
     ( match cb.const_body with
