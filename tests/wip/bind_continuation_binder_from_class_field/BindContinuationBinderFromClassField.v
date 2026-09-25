@@ -132,11 +132,18 @@
       PROBE-MGU meta#28 := addr
     v}
 
-    Three separate writes, not one write reaching three positions.  So the
-    single spelling across unrelated lost types is not one fill shared by many
-    holes; it is unification independently concluding the same wrong answer
-    every time.  Whatever supplies [Tglob addr] as the known side of [mgu] is
-    the defect, and it is supplying it once per hole.
+    Three separate writes, not one write reaching three positions.  {b Both that
+    reading and the shared-cell reading it replaced are void}: reordering the
+    class's fields so the emitted filler becomes [tag] leaves every [mgu] write
+    still saying [addr].  The writes are the legitimate pattern binders of
+    [DAddr : addr -> dv P] in the synthesised [dv] conversion function.  They
+    carried the spelling being hunted and nothing else.
+
+    The probe was the problem, not the reading of it.  It read an internal event
+    on one input; an account that cannot be made to move with the output has not
+    been tested against anything.  Any further probe here must be differential by
+    construction --- reorder the class fields and require the instrumented value
+    to move from [addr] to [tag].
 
     This also withdraws the prediction the shared-cell account licensed --- that
     the defective sites cannot be fixed in groups.  On three independent cells
