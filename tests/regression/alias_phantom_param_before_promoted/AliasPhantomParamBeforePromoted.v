@@ -17,7 +17,13 @@
    at the declaration.
 
    The import list is not harness configuration -- it selects the emission
-   path. *)
+   path.
+
+   Fixed: where a defaulted parameter precedes them, the promoted parameters
+   take a default too, and [std::any] is the right one -- it is the file-scope
+   alias the variable stood for before it was a parameter.  Where none does
+   they stay plain, so a mention site that forgets the argument is still an
+   error. *)
 
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std Monads.ITreeReified.

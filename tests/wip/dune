@@ -148,13 +148,3 @@
   (deps hk_carrier_written_at_partial_app.t.exe)
   (action (run ./hk_carrier_written_at_partial_app.t.exe))))
 
-(subdir alias_phantom_param_before_promoted
- (rule
-  (targets alias_phantom_param_before_promoted.t.exe)
-  (deps AliasPhantomParamBeforePromoted.vo alias_phantom_param_before_promoted.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} alias_phantom_param_before_promoted.t.exe alias_phantom_param_before_promoted.cpp alias_phantom_param_before_promoted.t.cpp)))
- (rule
-  (alias runtest)
-  (deps alias_phantom_param_before_promoted.t.exe)
-  (action (run ./alias_phantom_param_before_promoted.t.exe))))
