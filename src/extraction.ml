@@ -2712,54 +2712,83 @@ let extract_constant access env kn cb =
      No [is_typeclass] test: the tables it would consult are filled as
      extraction proceeds, and the reader runs after all of it. *)
   let record_class_shape () =
-    let _, concl = EConstr.decompose_prod sg typ in
-    let hd, args = EConstr.decompose_app sg concl in
-    let head_ref =
-      match EConstr.kind sg hd with
-      | Ind (ind, _) -> Some (GlobRef.IndRef ind)
-      (* A type-level [Definition] is a conclusion head for the same reason an
-         inductive is: [packed : @dbox natIPtr] is where the alias is applied
-         to the instance its body depends on.  Whether the head is an alias is
-         not asked here -- extraction reaches declarations before their types,
-         so the alias body may not be recorded yet; a head that turns out to
-         have no class arguments resolves nothing, which is what it did when
-         it was not recorded at all. *)
-      | Const (c, _) -> Some (GlobRef.ConstRef c)
+    (* Recursive: [@ParamsV natIPtr] and [@ParamsV IP] differ only in the
+       argument, and the reader has to spell one of them.  An argument whose
+       head is not a constant is [Carg_unknown] -- the position is kept, so
+       the reader can fill it from the instances it holds. *)
+    let rec class_arg a =
+      let h, a_args = EConstr.decompose_app sg a in
+      match EConstr.kind sg h with
+      | Const (c, _) ->
+        Some
+          (Table.Carg
+             ( GlobRef.ConstRef c
+             , List.filter_map
+                 (fun x ->
+                   if arg_survives_extraction env sg x then
+                     Some (Option.default Table.Carg_unknown (class_arg x))
+                   else None )
+                 (Array.to_list a_args) ) )
       | _ -> None
     in
-    match head_ref with
-    | Some head_ref ->
-      (* Recursive: [@ParamsV natIPtr] and [@ParamsV IP] differ only in the
-         argument, and the reader has to spell one of them.  An argument whose
-         head is not a constant is [Carg_unknown] -- the position is kept, so
-         the reader can fill it from the instances it holds. *)
-      let rec class_arg a =
-        let h, a_args = EConstr.decompose_app sg a in
-        match EConstr.kind sg h with
-        | Const (c, _) ->
-          Some
-            (Table.Carg
-               ( GlobRef.ConstRef c
-               , List.filter_map
-                   (fun x ->
-                     if arg_survives_extraction env sg x then
-                       Some (Option.default Table.Carg_unknown (class_arg x))
-                     else None )
-                   (Array.to_list a_args) ) )
+    (* The shape an applied type writes, if its head is one a reader can name.
+
+       A type-level [Definition] is such a head for the same reason an
+       inductive is: [packed : @dbox natIPtr] is where the alias is applied to
+       the instance its body depends on.  Whether the head is an alias is not
+       asked here -- extraction reaches declarations before their types, so the
+       alias body may not be recorded yet; a head that turns out to have no
+       class arguments resolves nothing, which is what it did when it was not
+       recorded at all. *)
+    let shape_of t =
+      let hd, args = EConstr.decompose_app sg t in
+      let head_ref =
+        match EConstr.kind sg hd with
+        | Ind (ind, _) -> Some (GlobRef.IndRef ind)
+        | Const (c, _) -> Some (GlobRef.ConstRef c)
         | _ -> None
       in
-      let arg_shape = class_arg in
-      let shapes =
-        List.map arg_shape
-          (List.filter
-             (arg_survives_extraction env sg)
-             (Array.to_list args) )
-      in
-      (* All or none: an argument that cannot be named leaves the others
-         without the positions that give them their meaning. *)
-      if List.for_all Option.has_some shapes then
-        Table.add_instance_class_shape r (head_ref, List.map Option.get shapes)
-    | None -> ()
+      match head_ref with
+      | None -> None
+      | Some head_ref ->
+        let shapes =
+          List.map class_arg
+            (List.filter
+               (arg_survives_extraction env sg)
+               (Array.to_list args) )
+        in
+        (* All or none: an argument that cannot be named leaves the others
+           without the positions that give them their meaning. *)
+        if List.for_all Option.has_some shapes then
+          Some (head_ref, List.map Option.get shapes)
+        else None
+    in
+    (* The instance need not be applied at the conclusion's head.  [w0 :=
+       @wrap (@ParamsV natIPtr)] has type [dval -> option (list dval)]: the
+       head is an arrow, and under it the applied type sits inside [list],
+       inside [option].  A declaration whose type mentions an instance anywhere
+       is a declaration whose reader can spell it, so the whole type is
+       searched -- outermost first, so the conclusion's own head still wins,
+       and the first applied type that says something about a class is
+       kept. *)
+    let rec search t =
+      match shape_of t with
+      | Some ((_, _ :: _) as sh) -> Some sh
+      | _ ->
+        EConstr.fold sg
+          (fun acc sub -> match acc with Some _ -> acc | None -> search sub)
+          None t
+    in
+    let _, concl = EConstr.decompose_prod sg typ in
+    match search typ with
+    | Some sh -> Table.add_instance_class_shape r sh
+    | None -> (
+      (* Nothing in the type applies a class.  The conclusion's head is still
+         worth recording: what it reaches through its own payloads
+         ({!Table.get_type_class_args}) is read from the head alone. *)
+      match shape_of concl with
+      | Some sh -> Table.add_instance_class_shape r sh
+      | None -> () )
   in
   let mk_def c =
     record_class_shape ();
