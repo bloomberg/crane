@@ -96,8 +96,33 @@
 
     - The inner binder is offered [list<dv>] against [list<Tmeta>] {e twice},
       with identical [have] and identical [from], and takes it once and declines
-      it once.  Same input, two outcomes, so the difference is in the caller's
-      [~only]/[~refine_only] and not in the types. *)
+      it once.  Two passes run over the same body ([Gen_decls], [~only] being
+      [names_promoted_type_var] then [writable_offer]), and the first declines
+      what the second accepts, so this pair is expected rather than anomalous.
+
+    {b What the types are by the time the lambda is built.}  Probing the
+    parameter site in [Translation] gives three lambdas over the same Rocq type:
+
+    {v
+      ml=addr                 <- outer binder [f]
+      ml=list, 0)[addr]       <- inner binder [r]
+      ml=list, 0)[dv,  0)]    <- the control lambda, outside the fix
+    v}
+
+    So the wrong binders do not reach the printer unresolved after all.  By this
+    point they hold [Tglob addr] --- the class {e field}, as an ML type --- and
+    the recovery's own answer, [list<dv>], survives only in the control.
+    Something between [Mlutil.recover_erased_types] and here overwrites the two
+    positions inside the [fix] and leaves the one outside it alone.
+
+    The account that covers this and the Vellvm census together: the binder's
+    [Tmeta] and the [fix]'s codomain hole are the {e same cell}.  Filling a
+    shared cell reaches every position that shares it, so one filler writes one
+    spelling into structurally unrelated positions --- which is exactly what the
+    artifact shows, fourteen defective sites all spelling [typename _tcI0::IPTR]
+    where the lost types include both [Dvalue<ptr,iptr>] and
+    [EOU<List<Dvalue<ptr,iptr>>>].  Not yet confirmed: confirming it means
+    checking the two [Tmeta]s for physical equality, which is the next probe. *)
 
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std.
