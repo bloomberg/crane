@@ -75,3 +75,14 @@
   (alias runtest)
   (deps inductive_field_at_section_class_field.t.exe)
   (action (run ./inductive_field_at_section_class_field.t.exe))))
+
+(subdir inductive_payload_from_same_section
+ (rule
+  (targets inductive_payload_from_same_section.t.exe)
+  (deps InductivePayloadFromSameSection.vo inductive_payload_from_same_section.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} inductive_payload_from_same_section.t.exe inductive_payload_from_same_section.cpp inductive_payload_from_same_section.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps inductive_payload_from_same_section.t.exe)
+  (action (run ./inductive_payload_from_same_section.t.exe))))

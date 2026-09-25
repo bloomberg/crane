@@ -24,7 +24,7 @@ A> struct EOU;
 struct EOU_monad;
 struct ProvenanceV;
 template <typename ptr> struct Dval;
-struct Dnest;
+template <typename ptr> struct Dnest;
 struct natIPtr;
 struct Nat {
   // TYPES
@@ -239,8 +239,8 @@ return v_;}
   // ACCESSORS
 const variant_t& v() const {
 return v_;}
-};
-struct Dnest {
+};template <typename
+ptr>struct Dnest {
   // TYPES
 struct DBox {
 Dval<ptr> d;
@@ -258,10 +258,19 @@ public:
 Dnest() {}
 explicit Dnest(DBox _v) : v_(std::move(_v)) {}
 explicit Dnest(DUnit _v) : v_(_v) {}
-static Dnest dbox(Dval<ptr> d) {
-return Dnest(DBox{std::move(d)});}
-static Dnest dunit() {
-return Dnest(DUnit{});}
+template <typename
+_U>
+Dnest(const Dnest<_U>& _other) {
+if (std::holds_alternative<typename Dnest<_U>::DBox>(_other.v())) {
+const auto& [d] = std::get<typename Dnest<_U>::DBox>(_other.v());
+this->v_ = DBox{d};
+} else {
+this->v_ = DUnit{};
+}}
+static Dnest<ptr> dbox(Dval<ptr> d) {
+return Dnest<ptr>(DBox{std::move(d)});}
+static Dnest<ptr> dunit() {
+return Dnest<ptr>(DUnit{});}
   // MANIPULATORS
 inline variant_t& v_mut() {
 return v_;}
@@ -281,11 +290,11 @@ return n;}
 static_assert(IPtr<natIPtr>);
 struct InductivePayloadFromSameSection {
 static inline const std::pair<Nat, bool> the_null = crane_any_cast<std::pair<Nat, bool>>(PointerV<natIPtr>::null());
-static inline const Dnest nested = Dnest::dbox(Dval<ptr>::dptr(the_null));
+static inline const Dnest<typename PointerV<natIPtr>::ptr> nested = Dnest<typename PointerV<natIPtr>::ptr>::dbox(Dval<typename PointerV<natIPtr>::ptr>::dptr(the_null));
 static inline const Nat run = []() {
 auto&& _sv2 = nested;
-if (std::holds_alternative<typename Dnest::DBox>(_sv2.v())) {
-const auto& [d2] = std::get<typename Dnest::DBox>(_sv2.v());
+if (std::holds_alternative<typename Dnest<typename PointerV<natIPtr>::ptr>::DBox>(_sv2.v())) {
+const auto& [d2] = std::get<typename Dnest<typename PointerV<natIPtr>::ptr>::DBox>(_sv2.v());
 if (std::holds_alternative<typename Dval<typename PointerV<natIPtr>::ptr>::DPtr>(d2.v())) {
 const auto& [p3] = std::get<typename Dval<typename PointerV<natIPtr>::ptr>::DPtr>(d2.v());
 return PIV<natIPtr>::ptr_to_int(p3);

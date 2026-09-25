@@ -14,6 +14,12 @@
    payloads.  Follows inductive_field_at_section_class_field, which fixed the
    one hop.
 
+   Fixed by taking the closure: [Table.ind_payload_inds] is the inductives a
+   constructor payload reaches, transitively, and both the promoted parameters
+   ([ind_promoted_params]) and the instances an inductive was declared against
+   ([get_ind_class_args]) are unions over it.  Depending on an inductive that
+   depends on a promoted variable is depending on the variable.
+
    The import list is not harness configuration -- it selects the emission
    path. *)
 

@@ -1154,7 +1154,7 @@ let add_ind_class_arg kn shape =
     ind_class_arg_shapes :=
       Mindmap_env.add kn (prev @ [shape]) !ind_class_arg_shapes
 
-let get_ind_class_args kn =
+let get_ind_class_args_own kn =
   Option.default [] (Mindmap_env.find_opt kn !ind_class_arg_shapes)
 
 (* The promoted type variables an inductive's constructor payloads mention.
@@ -1174,39 +1174,92 @@ let ind_promoted_params_cache = ref (Mindmap_env.empty : Id.t list Mindmap_env.t
 
 let init_ind_promoted_params () = ind_promoted_params_cache := Mindmap_env.empty
 
+(* The types a constructor payload of [kn] mentions, folded with [f]. *)
+let fold_ind_payload_types f kn acc =
+  try
+    let ind = unsafe_lookup_ind kn in
+    match ind.Miniml.ind_kind with
+    | Miniml.Record _ | Miniml.TypeClass _ -> acc
+    | _ ->
+      let acc = ref acc in
+      let rec collect t =
+        acc := f !acc t;
+        match t with
+        | Miniml.Tglob (_, ts, _) -> List.iter collect ts
+        | Miniml.Tarr (a, b) -> collect a; collect b
+        | Miniml.Tmeta {contents = Some t} -> collect t
+        | _ -> ()
+      in
+      Array.iter
+        (fun p -> Array.iter (List.iter collect) p.Miniml.ip_types)
+        ind.Miniml.ind_packets;
+      !acc
+  with Not_found | Invalid_argument _ -> acc
+
+(* The inductives [kn]'s constructor payloads reach, transitively, [kn]
+   excluded.  Depending on an inductive that depends on a promoted type
+   variable is depending on the variable, so the properties below are the
+   closure of a one-hop test over this relation: an inductive declared in the
+   same [Section] arrives as a payload that names no class field itself. *)
+let rec ind_payload_inds ~seen kn =
+  let seen = kn :: seen in
+  fold_ind_payload_types
+    (fun acc t ->
+      match t with
+      | Miniml.Tglob (GlobRef.IndRef (kn', _), _, _)
+        when (not (List.exists (MutInd.CanOrd.equal kn') seen))
+             && not (List.exists (MutInd.CanOrd.equal kn') acc) ->
+        let acc = acc @ [kn'] in
+        List.fold_left
+          (fun acc k ->
+            if List.exists (MutInd.CanOrd.equal k) acc then acc else acc @ [k] )
+          acc
+          (ind_payload_inds ~seen kn')
+      | _ -> acc )
+    kn []
+
+(* The promoted type variables [kn]'s own payloads name, one hop. *)
+let ind_own_promoted_params kn =
+  fold_ind_payload_types
+    (fun acc t ->
+      match t with
+      | Miniml.Tglob (g, _, _) when is_promoted_type_var g ->
+        ( match promoted_type_var_name g with
+        | Some v when not (List.exists (Id.equal v) acc) -> acc @ [v]
+        | _ -> acc )
+      | _ -> acc )
+    kn []
+
 let ind_promoted_params kn =
   match Mindmap_env.find_opt kn !ind_promoted_params_cache with
   | Some v -> v
   | None ->
     let v =
-      try
-        let ind = unsafe_lookup_ind kn in
-        match ind.Miniml.ind_kind with
-        | Miniml.Record _ | Miniml.TypeClass _ -> []
-        | _ ->
-          let acc = ref [] in
-          let rec collect = function
-            | Miniml.Tglob (g, ts, _) ->
-              ( match
-                  (if is_promoted_type_var g then promoted_type_var_name g
-                   else None)
-                with
-              | Some v when not (List.exists (Id.equal v) !acc) ->
-                acc := !acc @ [v]
-              | _ -> () );
-              List.iter collect ts
-            | Miniml.Tarr (a, b) -> collect a; collect b
-            | Miniml.Tmeta {contents = Some t} -> collect t
-            | _ -> ()
-          in
-          Array.iter
-            (fun p -> Array.iter (List.iter collect) p.Miniml.ip_types)
-            ind.Miniml.ind_packets;
-          !acc
-      with Not_found | Invalid_argument _ -> []
+      List.fold_left
+        (fun acc k ->
+          List.fold_left
+            (fun acc v ->
+              if List.exists (Id.equal v) acc then acc else acc @ [v] )
+            acc
+            (ind_own_promoted_params k) )
+        (ind_own_promoted_params kn)
+        (ind_payload_inds ~seen:[] kn)
     in
     ind_promoted_params_cache := Mindmap_env.add kn v !ind_promoted_params_cache;
     v
+
+(* Transitive, for the same reason {!ind_promoted_params} is: an inductive
+   inherits the instances the inductives its payloads reach were declared
+   against. *)
+let get_ind_class_args kn =
+  List.fold_left
+    (fun acc k ->
+      List.fold_left
+        (fun acc sh -> if List.mem sh acc then acc else acc @ [sh])
+        acc
+        (get_ind_class_args_own k) )
+    (get_ind_class_args_own kn)
+    (ind_payload_inds ~seen:[] kn)
 
 (* Table of projections used in higher-order positions (as function values).
    Projections not in this set are only accessed via record->field syntax and
