@@ -160,3 +160,14 @@
   (alias runtest)
   (deps hk_class_field_result_cast_to_concept.t.exe)
   (action (run ./hk_class_field_result_cast_to_concept.t.exe))))
+
+(subdir class_value_ctor_drops_promoted
+ (rule
+  (targets class_value_ctor_drops_promoted.t.exe)
+  (deps ClassValueCtorDropsPromoted.vo class_value_ctor_drops_promoted.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} class_value_ctor_drops_promoted.t.exe class_value_ctor_drops_promoted.cpp class_value_ctor_drops_promoted.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps class_value_ctor_drops_promoted.t.exe)
+  (action (run ./class_value_ctor_drops_promoted.t.exe))))
