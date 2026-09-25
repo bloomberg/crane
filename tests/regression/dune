@@ -378,3 +378,16 @@
   (alias runtest)
   (deps class_value_ctor_drops_promoted.t.exe)
   (action (run ./class_value_ctor_drops_promoted.t.exe))))
+
+; --- A hoisted concept spells a type printed inside a file's struct.
+
+(subdir concept_mentions_eponymous_file_type
+ (rule
+  (targets concept_mentions_eponymous_file_type.t.exe)
+  (deps ConceptMentionsEponymousFileType.vo concept_mentions_eponymous_file_type.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} concept_mentions_eponymous_file_type.t.exe concept_mentions_eponymous_file_type.cpp concept_mentions_eponymous_file_type.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps concept_mentions_eponymous_file_type.t.exe)
+  (action (run ./concept_mentions_eponymous_file_type.t.exe))))

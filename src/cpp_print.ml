@@ -4557,6 +4557,14 @@ let nspace_wrapper_name id =
     | GlobRef.IndRef _ -> String.capitalize_ascii (str_global Type id)
     | _ -> string_of_ppcmds (pp_global Type id) )
 
+(** Whether the inductive [r] is written inside a wrapper that other
+    declarations were queued against -- a file module of the same name, whose
+    functions go in beside it -- and so is spelled [List::list] rather than
+    [List].  A struct written inside another is named by member lookup, which
+    no forward declaration answers. *)
+let nested_in_wrapper r =
+  Hashtbl.mem pending_wrapper_decls (nspace_wrapper_name r)
+
 (** Whether a wrapper and the struct inside it are written as one struct
     rather than two.  A sole struct is merged into its wrapper and takes the
     wrapper's name; a wrapper holding anything else, or one that declarations
@@ -4570,8 +4578,7 @@ let nspace_wrapper_name id =
     member definition of its owner, which must agree about how many names the
     qualifier has. *)
 let nspace_merges (w : dm_wrapper) : bool =
-  w.dw_sole_child
-  && not (Hashtbl.mem pending_wrapper_decls (nspace_wrapper_name w.dw_ref))
+  w.dw_sole_child && not (nested_in_wrapper w.dw_ref)
 
 (** Pretty-print a MiniCpp declaration as C++ source. Handles templates,
     namespaces/structs, functions, assignments, enums, etc.

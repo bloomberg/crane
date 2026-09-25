@@ -15,13 +15,6 @@
 
 struct Nat;
 struct dshowNat;
-template <typename a> using DList = std::function<List::list<a>(List::list<a>)>;
-using DString = DList<bool>;
-template <typename I, typename A>
-concept DShow = requires {
-  { I::dshow(std::declval<A>()) } -> std::convertible_to<DString>;
-  { I::dlist(std::declval<A>()) } -> std::convertible_to<List::list<Nat>>;
-};
 
 struct Nat {
   // TYPES
@@ -173,6 +166,14 @@ struct List {
 
   template <typename T1>
   static std::optional<T1> nth_error(const List::list<T1> &l, const Nat &n);
+};
+
+template <typename a> using DList = std::function<List::list<a>(List::list<a>)>;
+using DString = DList<bool>;
+template <typename I, typename A>
+concept DShow = requires {
+  { I::dshow(std::declval<A>()) } -> std::convertible_to<DString>;
+  { I::dlist(std::declval<A>()) } -> std::convertible_to<List::list<Nat>>;
 };
 
 struct dshowNat {

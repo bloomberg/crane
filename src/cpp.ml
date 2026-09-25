@@ -2250,11 +2250,20 @@ let prefix_mentioned_aliases ~is_header p =
     and the concept has left that position.  The answer is by label, which is
     what an element can check about itself while it renders.
 
+    An inductive is spelled qualified when it is written inside a wrapper
+    struct rather than merged with it -- [List::list], beside the functions of
+    the file module [List] -- and that is a question only the printer's table
+    answers ({!Cpp_print.nested_in_wrapper}), so this is asked once the
+    wrapper modules have queued their declarations.
+
     Transitive, and only through the elements themselves: an alias in the set
     spells types that then have to precede {e it}, and one of those may be
-    another alias.  It does not descend into a module that is already in the
-    set, because moving a struct moves everything in it. *)
-let concept_prereqs (s : ml_structure) : Names.Label.Set.t =
+    another alias.  A struct in the set wants more than names: its payloads
+    and the functions [wrapper_sels] merges into it are written out, so every
+    inductive they mention has to be complete there, forward-declared or not.
+    It does not descend into a module that is already in the set, because
+    moving a struct moves everything in it. *)
+let concept_prereqs ~wrapper_sels (s : ml_structure) : Names.Label.Set.t =
   let add_type_refs acc ty =
     let rec go acc = function
       | Miniml.Tglob (r, args, _) ->
@@ -2289,10 +2298,50 @@ let concept_prereqs (s : ml_structure) : Names.Label.Set.t =
         | _ -> acc )
       Refset'.empty elements
   in
-  let label_of (mp, l, se) needed =
+  let packet_refs kn ind =
+    List.init (Array.length ind.Miniml.ind_packets) (fun i ->
+        GlobRef.IndRef (kn, i) )
+  in
+  (* What a struct's body writes out: its payloads, and the signatures of the
+     functions merged into it. *)
+  let body_refs kn ind =
+    let payloads =
+      Array.fold_left
+        (fun acc p ->
+          Array.fold_left
+            (fun acc tys -> List.fold_left add_type_refs acc tys)
+            acc p.Miniml.ip_types )
+        Refset'.empty ind.Miniml.ind_packets
+    in
+    List.fold_left
+      (fun acc r ->
+        List.fold_left
+          (fun acc (_, se) ->
+            match se with
+            | Miniml.SEdecl (Miniml.Dterm (_, _, ty)) -> add_type_refs acc ty
+            | Miniml.SEdecl (Miniml.Dfix (_, _, tys)) ->
+              Array.fold_left add_type_refs acc tys
+            | _ -> acc )
+          acc
+          (wrapper_sels (Cpp_print.nspace_wrapper_name r)) )
+      payloads (packet_refs kn ind)
+  in
+  let label_of (mp, l, se) (needed, complete) =
     match se with
     | Miniml.SEdecl (Miniml.Dtype (r, _, _)) ->
       if Refset'.mem r needed then Some l else None
+    | Miniml.SEdecl (Miniml.Dind (kn, ind)) -> (
+      match ind.Miniml.ind_kind with
+      | Miniml.TypeClass _ -> None
+      | _ ->
+        if
+          List.exists
+            (fun r ->
+              Refset'.mem r complete
+              || (Refset'.mem r needed && Cpp_print.nested_in_wrapper r) )
+            (packet_refs kn ind)
+        then Some l
+        else None )
     | Miniml.SEmodule _ ->
       let inner = MPdot (mp, l) in
       let rec under m =
@@ -2307,28 +2356,34 @@ let concept_prereqs (s : ml_structure) : Names.Label.Set.t =
       else None
     | _ -> None
   in
-  let rec fixpoint needed labels =
-    let labels', needed' =
+  let rec fixpoint ((needed, complete) as refs) labels =
+    let labels', (needed', complete') =
       List.fold_left
-        (fun (labels, needed) ((_, l, se) as e) ->
-          match label_of e needed with
-          | None -> (labels, needed)
+        (fun (labels, ((needed, complete) as refs)) ((_, l, se) as e) ->
+          match label_of e refs with
+          | None -> (labels, refs)
           | Some l' ->
             let labels = Names.Label.Set.add l' labels in
-            let needed =
+            let refs =
               match se with
-              | Miniml.SEdecl (Miniml.Dtype (_, _, ty)) -> add_type_refs needed ty
-              | _ -> needed
+              | Miniml.SEdecl (Miniml.Dtype (_, _, ty)) ->
+                (add_type_refs needed ty, complete)
+              | Miniml.SEdecl (Miniml.Dind (kn, ind)) ->
+                let body = body_refs kn ind in
+                (Refset'.union body needed, Refset'.union body complete)
+              | _ -> refs
             in
-            (labels, needed) )
-        (labels, needed) elements
+            (labels, refs) )
+        (labels, refs) elements
     in
-    if Refset'.equal needed needed' && Names.Label.Set.equal labels labels' then
-      labels'
-    else
-      fixpoint needed' labels'
+    if
+      Refset'.equal needed needed'
+      && Refset'.equal complete complete'
+      && Names.Label.Set.equal labels labels'
+    then labels'
+    else fixpoint (needed', complete') labels'
   in
-  fixpoint seed Names.Label.Set.empty
+  fixpoint (seed, Refset'.empty) Names.Label.Set.empty
 
 (** Main structure renderer with declaration tracking.
 
@@ -2403,8 +2458,7 @@ let do_struct_with_decl_tracking ~is_header f s =
         else
           p
   in
-  concept_prereq_labels :=
-    (if is_header then concept_prereqs s else Names.Label.Set.empty);
+  concept_prereq_labels := Names.Label.Set.empty;
   file_scope_concept_prereqs := [];
   Cpp_print.reset_ctor_alias_emitted ();
   ignore (Translation.take_lifted_decls ());
@@ -2467,6 +2521,16 @@ let do_struct_with_decl_tracking ~is_header f s =
             } )
       wrapper_names
   in
+  (* Asked only now, because whether an inductive is written inside a wrapper
+     depends on the declarations just queued against it. *)
+  if is_header then
+    concept_prereq_labels :=
+      concept_prereqs s ~wrapper_sels:(fun name ->
+          List.concat_map
+            (fun ((_, sel), wrapper_name) ->
+              if wrapper_name = Some name then List.filter is_func_decl sel
+              else [] )
+            wrapper_names );
   let joined pick =
     prlist
       (fun part ->
