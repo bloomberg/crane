@@ -279,3 +279,39 @@
   (alias runtest)
   (deps inner_fix_codomain_from_class.t.exe)
   (action (run ./inner_fix_codomain_from_class.t.exe))))
+
+; --- Widenings of bind_continuation_binder_from_class_field: two
+; --- class-dependent element fields, and a class field in the enclosing
+; --- Fixpoint's own domain.  Ported from the Vellvm session 1341e658/65656e00.
+(subdir bind_continuation_binder_ctor_order
+ (rule
+  (targets bind_continuation_binder_ctor_order.t.exe)
+  (deps BindContinuationBinderCtorOrder.vo bind_continuation_binder_ctor_order.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bind_continuation_binder_ctor_order.t.exe bind_continuation_binder_ctor_order.cpp bind_continuation_binder_ctor_order.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps bind_continuation_binder_ctor_order.t.exe)
+  (action (run ./bind_continuation_binder_ctor_order.t.exe))))
+
+(subdir bind_continuation_binder_field_order
+ (rule
+  (targets bind_continuation_binder_field_order.t.exe)
+  (deps BindContinuationBinderFieldOrder.vo bind_continuation_binder_field_order.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bind_continuation_binder_field_order.t.exe bind_continuation_binder_field_order.cpp bind_continuation_binder_field_order.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps bind_continuation_binder_field_order.t.exe)
+  (action (run ./bind_continuation_binder_field_order.t.exe))))
+
+(subdir bind_continuation_binder_mlt_domain
+ (rule
+  (targets bind_continuation_binder_mlt_domain.t.exe)
+  (deps BindContinuationBinderMltDomain.vo bind_continuation_binder_mlt_domain.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bind_continuation_binder_mlt_domain.t.exe bind_continuation_binder_mlt_domain.cpp bind_continuation_binder_mlt_domain.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps bind_continuation_binder_mlt_domain.t.exe)
+  (action (run ./bind_continuation_binder_mlt_domain.t.exe))))
