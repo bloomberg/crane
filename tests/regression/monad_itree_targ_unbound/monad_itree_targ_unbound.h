@@ -17,6 +17,23 @@ struct Empty_set;
 struct Nat;
 struct FailE;
 enum class Ev;
+template <typename I>
+concept Monad = requires {
+  typename I::template m<std::any>;
+  {
+    I::template ret<std::any>(std::declval<std::any>())
+  } -> std::convertible_to<typename I::template m<std::any>>;
+  {
+    I::template bind<std::any, std::any>(
+        std::declval<typename I::template m<std::any>>(),
+        std::declval<
+            std::function<typename I::template m<std::any>(std::any)>>())
+  } -> std::convertible_to<typename I::template m<std::any>>;
+};
+template <typename I>
+concept Params = requires {
+  { I::width() } -> std::convertible_to<Nat>;
+};
 
 struct Empty_set {
   Empty_set() = delete;
@@ -126,20 +143,6 @@ public:
   }
 };
 
-template <typename I>
-concept Monad = requires {
-  typename I::template m<std::any>;
-  {
-    I::template ret<std::any>(std::declval<std::any>())
-  } -> std::convertible_to<typename I::template m<std::any>>;
-  {
-    I::template bind<std::any, std::any>(
-        std::declval<typename I::template m<std::any>>(),
-        std::declval<
-            std::function<typename I::template m<std::any>(std::any)>>())
-  } -> std::convertible_to<typename I::template m<std::any>>;
-};
-
 struct Monads {
   template <typename s, template <typename> class m, typename a>
   using stateT = std::function<m<std::pair<s, a>>(s)>;
@@ -179,10 +182,6 @@ struct FailE {
   static FailE Throw_(std::monostate a0) { return {a0}; }
 };
 enum class Ev { EV0 };
-template <typename I>
-concept Params = requires {
-  { I::width() } -> std::convertible_to<Nat>;
-};
 using env = Nat;
 template <typename _CraneTcArg>
 using itree_tc_296b3b7af4bd1a71 = std::shared_ptr<ITree<_CraneTcArg>>;
@@ -198,9 +197,11 @@ template <typename T1 = void, typename T2>
 Monads::template stateT<env, itree_tc_296b3b7af4bd1a71, T2> handle(Ev) {
   return [](Nat s) {
     if (s.eqb(Nat::o())) {
-      return itree_vis(FailE::Throw_(std::monostate{}), [](const auto &) {
-        throw std::logic_error("absurd case");
-      });
+      return itree_vis(
+          FailE::Throw_(std::monostate{}),
+          [](const auto &) -> std::shared_ptr<ITree<std::pair<Nat, T2>>> {
+            throw std::logic_error("absurd case");
+          });
     } else {
       return itree_ret(std::make_pair(s, s));
     }

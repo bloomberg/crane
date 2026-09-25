@@ -93,17 +93,6 @@
 
 ; --- Eleventh round of Vellvm reductions, against Crane 1e85ca2d9.
 
-(subdir monad_itree_targ_unbound
- (rule
-  (targets monad_itree_targ_unbound.t.exe)
-  (deps MonadItreeTargUnbound.vo monad_itree_targ_unbound.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} monad_itree_targ_unbound.t.exe monad_itree_targ_unbound.cpp monad_itree_targ_unbound.t.cpp)))
- (rule
-  (alias runtest)
-  (deps monad_itree_targ_unbound.t.exe)
-  (action (run ./monad_itree_targ_unbound.t.exe))))
-
 (subdir eta_handler_event_as_template
  (rule
   (targets eta_handler_event_as_template.t.exe)

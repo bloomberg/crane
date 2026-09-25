@@ -404,3 +404,16 @@
   (alias runtest)
   (deps promoted_var_bare_in_body.t.exe)
   (action (run ./promoted_var_bare_in_body.t.exe))))
+
+; --- A ~> handler into ITree stateT keeps its event parameter; an absurd continuation.
+
+(subdir monad_itree_targ_unbound
+ (rule
+  (targets monad_itree_targ_unbound.t.exe)
+  (deps MonadItreeTargUnbound.vo monad_itree_targ_unbound.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} monad_itree_targ_unbound.t.exe monad_itree_targ_unbound.cpp monad_itree_targ_unbound.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps monad_itree_targ_unbound.t.exe)
+  (action (run ./monad_itree_targ_unbound.t.exe))))

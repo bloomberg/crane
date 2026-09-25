@@ -5075,6 +5075,15 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
     List.rev (List.mapi (fun i e ->
       let saved_ret = (!tctx).current_cpp_return_type in
       let new_expected =
+        match List.nth_opt field_types_for_wrap i with
+        | Some (Miniml.Tvar (_, j) as ft) -> (
+          match List.nth_opt ty_args_for_expected (j - 1) with
+          | Some (Tdummy _) | None -> Some ft
+          | x -> x )
+        | Some ft when ty_args_for_expected <> [] ->
+          Some (Mlutil.type_subst_list ty_args_for_expected ft)
+        | Some ft -> Some ft
+        | None ->
         match List.nth_opt ty_args_for_expected i with
         | Some (Tdummy _) | None ->
           (* A [Tdummy] here means extraction couldn't statically reduce this

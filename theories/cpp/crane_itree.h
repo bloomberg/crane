@@ -429,15 +429,21 @@ auto crane_event_as(std::function<std::any()> effect) {
         return crane_any_cast<E>(effect());
 }
 
-// Trigger with template argument deduction.  An event given an effect
-// spelling is already the thunk [ITree::vis] wants; one that is plain data is
-// reified as the thunk that yields it, for a handler to interpret later.
+// An event as a tree stores it.  One given an effect spelling is already the
+// thunk [ITree::vis] wants; one that is plain data is reified as the thunk
+// that yields it, for a handler to interpret later.
+template<typename E>
+std::function<std::any()> itree_reify_event(E e) {
+    if constexpr (std::is_invocable_r_v<std::any, E &>)
+        return std::function<std::any()>(std::move(e));
+    else
+        return [e = std::move(e)]() -> std::any { return std::any(e); };
+}
+
+// Trigger with template argument deduction.
 template<typename E>
 itree_trigger_t itree_trigger(E e) {
-    if constexpr (std::is_invocable_r_v<std::any, E &>)
-        return {std::function<std::any()>(std::move(e))};
-    else
-        return {[e = std::move(e)]() -> std::any { return std::any(e); }};
+    return {itree_reify_event(std::move(e))};
 }
 
 // A sum of event families: [E +' F].
@@ -616,7 +622,7 @@ auto itree_vis(Effect effect, Cont cont) {
         if constexpr (std::is_same_v<std::decay_t<Effect>, std::any>)
             eff = std::any_cast<std::function<std::any()>>(effect);
         else
-            eff = std::function<std::any()>(std::move(effect));
+            eff = itree_reify_event(std::move(effect));
         return TreeT::vis(std::move(eff),
             std::function<TreePtr(std::any)>(std::move(cont)));
     }

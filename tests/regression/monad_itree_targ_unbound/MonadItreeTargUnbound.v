@@ -28,7 +28,23 @@
         fun _ e => (res <- handle_global e;; update_globals_ref e;; ret res)%monad.
 
     11 of the 47 [use of undeclared identifier] errors in that build are this
-    shape. *)
+    shape.
+
+    Once the head declared [T1], two further defects in [handle] were
+    reachable, both on the [vis] with an absurd continuation:
+
+    - The continuation [fun x : void => match x with end] is a lambda whose
+      body only throws, so its deduced return type is [void], and
+      [itree_vis] cannot read a tree type off it.  The lambda is annotated
+      with its slot's codomain in that case, but the slot it was handed was
+      the tree's {e result} type: [gen_expr_custom_cons] gave the i-th value
+      argument the i-th type argument, which is right for [pair] and wrong
+      for [VisF], whose second field is [X -> itree E R].
+
+    - The event reaching [itree_vis] is plain data -- the [subevent]
+      injection into an abstract [E] leaves the bare [FailE] -- and
+      [itree_vis] took only an event already spelled as a thunk, where
+      [itree_trigger] reified plain data. *)
 
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std Monads.ITreeReified.
