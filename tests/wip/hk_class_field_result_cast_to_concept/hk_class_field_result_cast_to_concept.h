@@ -16,6 +16,10 @@ struct natPtr;
 struct natProv;
 struct natState;
 struct natMMP;
+using ptr = std::any;
+using provenance = std::any;
+using state = std::any;
+template <typename x = void> using memM = std::any;
 template <typename
 I>concept PtrC = requires {
   typename I::ptr;
@@ -116,11 +120,6 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 };
-
-using ptr = std::any;
-using provenance = std::any;
-using state = std::any;
-template <typename x = void> using memM = std::any;
 
 template <MMP _tcI0, typename T1> memM<T1> mret(const T1 &x) {
   return std::any_cast<memM<T1>>(_tcI0::mret(x));

@@ -451,6 +451,19 @@ let hoisted_concept_defs : Pp.t list ref = owned_list "hoisted_concept_defs"
     emitted at file scope instead. *)
 let file_scope_concepts : Pp.t list ref = owned_list "file_scope_concepts"
 
+(** The landing pads for erasure: file-scope [using X = std::any;] for a name
+    that survived into the output with no C++ spelling behind it.
+
+    They are collected rather than left in place because the text that lands on
+    them is not in one place and need not follow them.  A concept is the case
+    that forces it -- {!file_scope_concepts} moves concepts to the top of the
+    file, and a concept body spells such a name bare -- but the dependency is
+    general: an alias to [std::any] names nothing, so it is correct everywhere
+    and cheapest to put first, and then no later pass that reorders the file
+    can move something in front of it. *)
+let file_scope_erased_aliases : Pp.t list ref =
+  owned_list "file_scope_erased_aliases"
+
 (** A concept a frame is holding back until after the struct it was written
     in, identified by whatever declares it. *)
 type held_concept =

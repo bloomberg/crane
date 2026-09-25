@@ -855,7 +855,37 @@ let rec pp_structure_elem ~is_header f = function
        right before the declaration that produced it instead; helpers produced
        elsewhere keep their file-scope placement. *)
     ignore (Translation.take_lifted_decls ());
-    let body = pp_decls (f d) in
+    let rendered = f d in
+    let body = pp_decls rendered in
+    (* An erasure landing pad -- [using X = std::any;] -- travels to the very
+       top of the file, ahead of the concepts.
+
+       It is correct there because it names nothing: the right-hand side is
+       [std::any] and the parameters, if any, are its own.  It is {e needed}
+       there because the text that lands on it does not follow it.  A concept
+       body spells such a name bare, and concepts are hoisted to the top by the
+       case below, so leaving the alias where it was written puts the use in
+       front of the declaration.  Hoisting both and ordering them here is what
+       makes that pair of placements independent of each other, and of any
+       later pass that reorders the file. *)
+    let body =
+      let is_erased_alias = function
+        | _, Minicpp.Dusing {du_rhs = Some rhs; _} ->
+          Cpp_erasure.is_any_shaped rhs
+        | _ -> false
+      in
+      if
+        is_header
+        && (not (!render_ctx).rc_in_struct)
+        && rendered <> []
+        && List.for_all is_erased_alias rendered
+        && not (Pp.ismt body)
+      then (
+        file_scope_erased_aliases := !file_scope_erased_aliases @ [body];
+        mt () )
+      else
+        body
+    in
     (* A type class rendered at file scope is a concept, and a concept has no
        forward declaration to bridge a use that precedes it.  One such use is
        written unconditionally: a lifted helper's spec goes ahead of every
@@ -2665,6 +2695,13 @@ let do_struct_with_decl_tracking ~is_header f s =
     repeat (List.length wrapper_names) pop_visible ();
   (* Pop the initial visibility entries pushed at the top of this function. *)
   List.iter (fun _ -> pop_visible ()) initial_mps;
+  let hoisted_erased_aliases =
+    match !file_scope_erased_aliases with
+    | [] -> mt ()
+    | l ->
+      file_scope_erased_aliases := [];
+      prlist_with_sep fnl (fun x -> x) l ++ cut2 ()
+  in
   let hoisted_concepts =
     match !file_scope_concepts with
     | [] -> mt ()
@@ -2740,7 +2777,7 @@ let do_struct_with_decl_tracking ~is_header f s =
      of the first section that spells it rather than in the prologue. *)
   let sections =
     List.map (prefix_mentioned_aliases ~is_header)
-      [ hoisted_concepts; hoisted_wrappers; lifted_fun_specs; p; pass2_post_pp;
+      [ hoisted_erased_aliases; hoisted_concepts; hoisted_wrappers; lifted_fun_specs; p; pass2_post_pp;
         deferred_lifted; deferred_defs; deferred_members ]
   in
   (* Whatever nothing spelled.  A body may still name something defined later,

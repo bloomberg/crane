@@ -19,6 +19,7 @@ template <typename A> struct Directed;
 template <typename A> struct UndirectedEdge;
 template <typename A> struct Undirected;
 struct NatEq;
+template <typename g = void, typename a = void> using edge = std::any;
 
 struct Nat {
   // TYPES
@@ -218,8 +219,6 @@ concept Graph = requires {
     I::edges(std::declval<typename I::template G<A>>(), std::declval<A>())
   } -> std::convertible_to<List<typename I::edge>>;
 };
-
-template <typename g = void, typename a = void> using edge = std::any;
 
 /// An edge in a directed graph, from edge_from to edge_to.
 template <typename A> struct DirectedEdge {

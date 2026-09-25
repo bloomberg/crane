@@ -154,6 +154,12 @@ val hoisted_concept_defs : Pp.t list ref
     struct -- is collected here and emitted at file scope instead. *)
 val file_scope_concepts : Pp.t list ref
 
+(** The landing pads for erasure: file-scope [using X = std::any;] for a name
+    with no C++ spelling behind it.  Emitted before everything, including the
+    concepts, because an alias to [std::any] names nothing and the text that
+    lands on it does not follow it. *)
+val file_scope_erased_aliases : Pp.t list ref
+
 (** A concept a frame is holding back until after the struct it was written
     in, identified by whatever declares it. *)
 type held_concept =
