@@ -1,3 +1,5 @@
+(env (_ (env-vars (INSIDE_DUNE "1") (CRANE_CHECK_IR "1"))))
+
 
 
 (subdir instance_method_param_at_class_carrier
