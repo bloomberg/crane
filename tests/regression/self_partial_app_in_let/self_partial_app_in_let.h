@@ -151,10 +151,14 @@ struct Pos {
   static T1 peano_rect(T1 a,
                        std::type_identity_t<std::function<T1(Positive, T1)>> f,
                        const Positive &p) {
-    std::function<T1(Positive)> f2 = peano_rect<T1>(
-        f(Positive::xh(), a), [=](Positive p0, const T1 &x) mutable {
-          return f(succ(Positive::xo(p0)), f(Positive::xo(p0), x));
-        });
+    std::function<T1(Positive)> f2 = [=](Positive _x0) mutable -> T1 {
+      return peano_rect<T1>(
+          f(Positive::xh(), a),
+          [=](Positive p0, const T1 &x) mutable {
+            return f(succ(Positive::xo(p0)), f(Positive::xo(p0), x));
+          },
+          _x0);
+    };
     if (std::holds_alternative<typename Positive::XI>(p.v())) {
       const auto &[a0] = std::get<typename Positive::XI>(p.v());
       return f(Positive::xo(*a0), f2(*a0));

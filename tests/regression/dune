@@ -430,3 +430,16 @@
   (alias runtest)
   (deps lifted_param_const_v_mut.t.exe)
   (action (run ./lifted_param_const_v_mut.t.exe))))
+
+; --- A fixpoint binds a partial application of itself.
+
+(subdir self_partial_app_in_let
+ (rule
+  (targets self_partial_app_in_let.t.exe)
+  (deps SelfPartialAppInLet.vo self_partial_app_in_let.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} self_partial_app_in_let.t.exe self_partial_app_in_let.cpp self_partial_app_in_let.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps self_partial_app_in_let.t.exe)
+  (action (run ./self_partial_app_in_let.t.exe))))

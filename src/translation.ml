@@ -11451,7 +11451,18 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
               && not (is_skipped_cpp_type t) )
             dom
         in
-        let missing_args = get_eta_args dom args in
+        (* [dom] is the substituted type's, and substitution can erase a
+           parameter the declaration still takes -- an argument given at it
+           is passed, but has no place in [dom] to be counted against, and
+           the call would look saturated one argument early.  Those are
+           discounted; see [subst_index_of_orig]. *)
+        let missing_args =
+          let n_tc = List.length typeclass_ml_args in
+          get_eta_args dom
+            (List.filteri
+               (fun i _ -> subst_index_of_orig (i + n_tc) <> None)
+               args )
+        in
         (* When excess args exist (from the ML-level arity split above), do
            NOT eta-expand even if the flattened C++ type has more domain
            elements than ML args.  The mismatch occurs when the callee's
@@ -11649,6 +11660,12 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
             match decl_cod with
             | Some slot when !decl_spoke ->
               Ml_type_util.refine_param_from_slot ~tvars ~slot cod
+            (* A result the substitution erased outright has no other
+               statement than the declaration's, which is taken whole
+               wherever this scope can spell it. *)
+            | Some slot when prints_as_any cod && names_only_scoped_tvars slot
+              ->
+              slot
             | _ -> cod
           in
           let ret_ty, body =

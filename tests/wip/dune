@@ -149,14 +149,3 @@
   (alias runtest)
   (deps hk_class_field_result_cast_to_concept.t.exe)
   (action (run ./hk_class_field_result_cast_to_concept.t.exe))))
-
-(subdir self_partial_app_in_let
- (rule
-  (targets self_partial_app_in_let.t.exe)
-  (deps SelfPartialAppInLet.vo self_partial_app_in_let.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} self_partial_app_in_let.t.exe self_partial_app_in_let.cpp self_partial_app_in_let.t.cpp)))
- (rule
-  (alias runtest)
-  (deps self_partial_app_in_let.t.exe)
-  (action (run ./self_partial_app_in_let.t.exe))))
