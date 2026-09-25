@@ -438,7 +438,7 @@ let promoted_resolutions_of_body b =
     !ok
   in
   let rec walk e =
-    match strip_magic e with
+        match strip_magic e with
     | MLapp (MLglob (r, _), args)
       when instance_class r <> None && closed (strip_magic e) ->
       add r (ml_arg_to_template_type (empty_env ()) (strip_magic e));
@@ -3945,7 +3945,17 @@ let gen_dfun n b cty ty temps =
      [Tpromoted "Obj"] in type annotations will be resolved to
      qualified access through the typeclass instance chain. *)
   let saved_promoted_var_map = (!tctx).promoted_var_map in
-  tctx := { !tctx with promoted_var_map = promoted_var_resolutions };
+  (* Extend, never replace.  This declaration's own instance parameters answer
+     first -- a variable they declare is the one the body is written in -- but
+     what {!with_body_resolutions} read from the body and from the declarations
+     it names is the only answer a function with no instance parameter of its
+     own has.  [check : unit -> nat] whose body applies [@runS (@ParamsV
+     natIPtr)] has none, and replacing the map dropped the answer on the way
+     in, so the body spelled the file-scope erased alias in a scope that knew
+     the instance perfectly well. *)
+  tctx :=
+    { !tctx with
+      promoted_var_map = promoted_var_resolutions @ saved_promoted_var_map };
   (* Name the declaration being generated: inner fixpoints lifted out of it
      take their identity from it. *)
   let saved_decl_ref = !Table.current_decl_ref in
