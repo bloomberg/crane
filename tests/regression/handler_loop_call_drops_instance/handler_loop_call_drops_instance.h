@@ -257,7 +257,7 @@ struct Denot {
                 Sum1<OtherE, FailE<typename _tcI0::ptr>, std::any>>(
                 _itf.effect);
             auto k = _itf.cont;
-            auto _cs1 = exc_of_event(e);
+            auto _cs1 = exc_of_event<_tcI0>(e);
             if (_cs1.has_value()) {
               const dvalue<typename _tcI0::ptr> &x = *_cs1;
               return itree_ret(

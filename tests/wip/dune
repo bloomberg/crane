@@ -150,17 +150,6 @@
   (deps hk_class_field_result_cast_to_concept.t.exe)
   (action (run ./hk_class_field_result_cast_to_concept.t.exe))))
 
-(subdir handler_loop_call_drops_instance
- (rule
-  (targets handler_loop_call_drops_instance.t.exe)
-  (deps HandlerLoopCallDropsInstance.vo handler_loop_call_drops_instance.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} handler_loop_call_drops_instance.t.exe handler_loop_call_drops_instance.cpp handler_loop_call_drops_instance.t.cpp)))
- (rule
-  (alias runtest)
-  (deps handler_loop_call_drops_instance.t.exe)
-  (action (run ./handler_loop_call_drops_instance.t.exe))))
-
 (subdir mrec_ctx_wrapped_in_ret
  (rule
   (targets mrec_ctx_wrapped_in_ret.t.exe)

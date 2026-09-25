@@ -13912,11 +13912,23 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
           let recovered_carrier tys =
             List.exists (function Ttyctor _ -> true | _ -> false) tys
           in
+          (* Nor can it recover a class instance, which no argument's type
+             states -- it is named for that reason.  Instances lead the list,
+             so they are kept and only what follows them is given up. *)
+          let is_instance_arg = function
+            | Tvar (_, Some id) -> Common.is_tc_instance_id id
+            | Tglob (g, _, _) -> ref_is_instance g
+            | _ -> false
+          in
+          let rec instance_prefix = function
+            | t :: rest when is_instance_arg t -> t :: instance_prefix rest
+            | _ -> []
+          in
           let rec fix_expr e = match e with
             | CPPfun_call (res, CPPglob (r, (_ :: _ as tys), ci), args)
               when (not (recovered_carrier tys)) && should_strip (to_reversed args) ->
               CPPfun_call
-                (res, CPPglob (r, [], ci), map_args fix_expr args)
+                (res, CPPglob (r, instance_prefix tys, ci), map_args fix_expr args)
             | _ -> map_expr fix_expr fix_stmt Fun.id e
           and fix_stmt s = map_stmt fix_expr fix_stmt Fun.id s in
           List.map fix_stmt br_stmts
