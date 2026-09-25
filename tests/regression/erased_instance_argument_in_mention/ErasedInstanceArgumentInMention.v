@@ -17,7 +17,16 @@
    the same arguments.
 
    The import list is not harness configuration -- it selects the emission
-   path. *)
+   path.
+
+   Fixed: a proof argument is dropped where the record is taken, by
+   [Extraction.arg_survives_extraction] -- the sort of the argument's type, so
+   [natIPtrTheory : IPtrTheory natIPtr] goes and [natIPtr : IPtr] stays.  The
+   reader has no Rocq type left to ask, and the emitter has already made this
+   decision once.  An argument that names a binder keeps its position: it is
+   the [Carg_unknown] the reader fills, and it cannot be typed in that
+   environment anyway.  Textually, [ParamsV<natIPtr, natIPtrTheory>::ADDR]
+   becomes [ParamsV<natIPtr>::ADDR]. *)
 
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std Monads.ITreeReified.
