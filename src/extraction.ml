@@ -122,6 +122,28 @@ let is_info_scheme env sg t =
   | Info, TypeScheme -> true
   | _ -> false
 
+(** Whether an argument of an applied instance survives extraction.
+
+    [ParamsV {IP : IPtr} {IPT : IPtrTheory IP}] with [IPtrTheory] a [Prop]
+    class is emitted as [template <IPtr _tcI0> struct ParamsV]: the proof
+    argument takes no template parameter.  A class-argument record
+    ({!Table.class_arg}) is read from the Rocq type, upstream of that erasure,
+    and spelled downstream of it, so it must be projected through the erasure
+    where it is taken -- the reader has no Rocq type left to ask. *)
+let arg_survives_extraction env sg a =
+  (* The sort of the argument's TYPE: [natIPtrTheory : IPtrTheory natIPtr] is
+     a proof and erases, [natIPtr : IPtr] is data and does not.  A retyping
+     failure keeps the argument -- dropping one silently would be spelled as a
+     shorter list, which reads as a correct one. *)
+  if not (EConstr.Vars.closed0 sg a) then
+    (* An argument that names a binder -- a context variable -- is the
+       [Carg_unknown] the reader fills positionally; it cannot be typed in this
+       environment and its position must be kept regardless. *)
+    true
+  else
+    try info_of_family (sort_of env sg (type_of env sg a)) != Logic
+    with Retyping.RetypeError _ -> true
+
 (** Pushes a named assumption into the Rocq environment. *)
 let push_rel_assum (n, t) env = EConstr.push_rel (LocalAssum (n, t)) env
 
@@ -899,8 +921,16 @@ and extract_really_ind env kn mib =
                     Some
                       (Table.Carg
                          ( GlobRef.ConstRef ac
-                         , List.map
-                             (fun x -> Option.default Table.Carg_unknown (class_arg x))
+                         , List.filter_map
+                             (fun x ->
+                               if
+                                 arg_survives_extraction epar sg
+                                   (EConstr.of_constr x)
+                               then
+                                 Some
+                                   (Option.default Table.Carg_unknown
+                                      (class_arg x) )
+                               else None )
                              (Array.to_list a_args) ) )
                   | _ -> None
                 in
@@ -2710,13 +2740,21 @@ let extract_constant access env kn cb =
           Some
             (Table.Carg
                ( GlobRef.ConstRef c
-               , List.map
-                   (fun x -> Option.default Table.Carg_unknown (class_arg x))
+               , List.filter_map
+                   (fun x ->
+                     if arg_survives_extraction env sg x then
+                       Some (Option.default Table.Carg_unknown (class_arg x))
+                     else None )
                    (Array.to_list a_args) ) )
         | _ -> None
       in
       let arg_shape = class_arg in
-      let shapes = List.map arg_shape (Array.to_list args) in
+      let shapes =
+        List.map arg_shape
+          (List.filter
+             (arg_survives_extraction env sg)
+             (Array.to_list args) )
+      in
       (* All or none: an argument that cannot be named leaves the others
          without the positions that give them their meaning. *)
       if List.for_all Option.has_some shapes then
