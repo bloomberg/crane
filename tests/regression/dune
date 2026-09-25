@@ -196,3 +196,14 @@
   (alias runtest)
   (deps itree_bind_binder_at_named_decl.t.exe)
   (action (run ./itree_bind_binder_at_named_decl.t.exe))))
+
+(subdir partial_app_alias_value_slot
+ (rule
+  (targets partial_app_alias_value_slot.t.exe)
+  (deps PartialAppAliasValueSlot.vo partial_app_alias_value_slot.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} partial_app_alias_value_slot.t.exe partial_app_alias_value_slot.cpp partial_app_alias_value_slot.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps partial_app_alias_value_slot.t.exe)
+  (action (run ./partial_app_alias_value_slot.t.exe))))

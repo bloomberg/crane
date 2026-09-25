@@ -19,6 +19,11 @@
    invisible to every unbound-name instrument and why the diagnostic lands
    several calls downstream.
 
+   Fixed: [gen_type_alias] converted the body with an empty type-variable list,
+   leaving each [Tvar] anonymous for the printer to resolve by position.  The
+   alias's own [vars] are passed instead, so the body names the parameter the
+   eta-expansion added rather than whichever one happens to be first.
+
    The import list is not harness configuration -- it selects the emission
    path. *)
 
