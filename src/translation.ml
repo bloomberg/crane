@@ -10414,8 +10414,20 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
           (* An argument is not a tail position, so the enclosing function's
              return type does not describe it -- and what the parameter says
              does.  Left to {!slot_cpp_ty}'s fallback, a match in argument
-             position builds its branches at the type the {e call} returns. *)
-          else arg_expected_ty
+             position builds its branches at the type the {e call} returns.
+
+             Only where the parameter's type can be written, though: installed
+             as a return type it is written out, as the argument's own explicit
+             template arguments among other places, and a type naming a skipped
+             global renders there as a bare argument list -- [<std::any,
+             <std::any, std::any>>].  Where it cannot be written the enclosing
+             return type is not right, but it is spellable, and a parameter
+             that answers in text no compiler takes has not answered. *)
+          else
+            match arg_expected_ty with
+            | Some t when Ml_type_util.has_no_cpp_spelling t ->
+              (!tctx).current_cpp_return_type
+            | t -> t
         in
         with_cpp_return_type ret (fun () ->
             gen_expr ?expected_ty:arg_expected_ty

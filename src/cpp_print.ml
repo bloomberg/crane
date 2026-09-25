@@ -731,44 +731,8 @@ let record_file_scope_type d = Option.iter record_file_scope_name (decl_type_nam
 (** The C++ token an {!Minicpp.obj_access} prints as. *)
 let pp_obj_access = function Adot -> "." | Aarrow -> "->"
 
-(** Whether [r] has no C++ name to be written as.
-
-    Two ways that happens, and they have to be asked together because both
-    produce text no compiler will take.  A global mapped to the empty string --
-    what [Crane Extract Skip] records -- vanishes, so a type applied to it
-    renders as a bare argument list, [<typename I::PROV>].  A global from a
-    module [Crane Extract Skip Module] left out renders as the name it would
-    have had, [IO_axioms::ioE], which nothing in the file introduces. *)
-let ref_has_no_cpp_name r =
-  let rec mp_skipped mp =
-    is_skip_module mp
-    || match mp with MPdot (parent, _) -> mp_skipped parent | _ -> false
-  in
-  Ml_type_util.ref_has_no_spelling r || mp_skipped (modpath_of_r r)
-
-(** Whether [ty] mentions anywhere a global with no C++ name.
-
-    Asked of the type {e as the printer will write it}, not as it stands: an
-    application of a nameless constructor comes out as its arguments, so the
-    constructor having no name of its own costs the type nothing, and asking
-    before stripping it would condemn a type that prints perfectly well.  That
-    is not hypothetical -- it is every reified [Vis] whose event type is a
-    projection through a dictionary, and answering "no name" there gives up a
-    spelling the generator had.
-
-    Asked before writing a type into a position that has an alternative to
-    writing it. *)
-let has_no_cpp_spelling ty =
-  let as_printed =
-    Minicpp.map_cpp_type
-      (function
-        | Tapply (Tglob (r, _, _), [arg]) when ref_has_no_cpp_name r -> arg
-        | t -> t )
-      ty
-  in
-  Minicpp.exists_cpp_type
-    (function Tglob (r, _, _) -> ref_has_no_cpp_name r | _ -> false)
-    as_printed
+let ref_has_no_cpp_name = Ml_type_util.ref_has_no_cpp_name
+let has_no_cpp_spelling = Ml_type_util.has_no_cpp_spelling
 
 (** Report what {!has_no_cpp_spelling} saw.
 

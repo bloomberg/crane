@@ -328,6 +328,8 @@ val ref_has_no_spelling : Names.GlobRef.t -> bool
 val ref_is_skipped : Names.GlobRef.t -> bool
 
 (** Whether an ML type has no C++ spelling, because its head has none. *)
+val ref_has_no_cpp_name : Names.GlobRef.t -> bool
+val has_no_cpp_spelling : Minicpp.cpp_type -> bool
 val ml_type_has_no_spelling : Miniml.ml_type -> bool
 
 (** Whether an ML type's result is a skipped type, such as a [ReSum]

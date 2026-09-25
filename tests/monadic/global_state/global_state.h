@@ -13,7 +13,6 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -21,6 +20,12 @@ template <typename A> struct List;
 template <typename Err> struct ExceptE;
 struct Err;
 struct GlobRefNat;
+
+struct ListDef {
+  static List<uint64_t> seq(uint64_t start, uint64_t len);
+};
+
+struct Nat {};
 
 template <typename A> struct List {
   // TYPES
@@ -52,18 +57,15 @@ public:
       const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
       this->v_ =
           Cons{[&]() -> A {
-                 if constexpr (std::is_same_v<_U, std::any>) {
-                   return crane_any_cast<A>(a);
+                 if constexpr (crane_convertible<A, const _U &>) {
+                   return crane_convert<A>(a);
                  } else {
-                   if constexpr (std::is_constructible_v<A, const _U &>) {
-                     return A(a);
-                   } else {
-                     throw std::logic_error("unreachable: inactive constructor "
-                                            "field at this instantiation");
-                   }
+                   throw std::logic_error("unreachable: inactive constructor "
+                                          "field at this instantiation");
                  }
                }(),
-               (l ? std::make_shared<List<A>>(*l) : nullptr)};
+               (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                  : nullptr)};
     }
   }
 
@@ -114,25 +116,17 @@ template <typename Err> struct ExceptE {
 
   template <typename _U> operator ExceptE<_U>() const {
     return {[&]() -> _U {
-      if constexpr (std::is_same_v<Err, std::any>) {
-        return crane_any_cast<_U>(a0);
+      if constexpr (crane_convertible<_U, const Err &>) {
+        return crane_convert<_U>(a0);
       } else {
-        if constexpr (std::is_constructible_v<_U, const Err &>) {
-          return _U(a0);
-        } else {
-          throw std::logic_error(
-              "unreachable: inactive constructor field at this instantiation");
-        }
+        throw std::logic_error(
+            "unreachable: inactive constructor field at this instantiation");
       }
     }()};
   }
 
   // CREATORS
   static ExceptE<Err> Throw_(Err a0) { return {std::move(a0)}; }
-};
-
-struct ListDef {
-  static List<uint64_t> seq(uint64_t start, uint64_t len);
 };
 
 template <typename I, typename T>
@@ -153,8 +147,6 @@ concept Ix = requires {
   { I::max(std::declval<T>(), std::declval<T>()) } -> std::convertible_to<T>;
   { I::zero() } -> std::convertible_to<T>;
 };
-
-struct Nat {};
 
 struct Err {
   // DATA
@@ -195,10 +187,7 @@ struct GlobRefNat {
   // CREATORS
   static GlobRefNat mkglobref(uint64_t a) { return {a}; }
 
-  uint64_t GlobRefToIxNat() const {
-    const auto &[a] = *this;
-    return a;
-  }
+  uint64_t GlobRefToIxNat() const;
 };
 
 struct GlobalStateTests {
@@ -316,6 +305,11 @@ template <typename _tcI0, typename T1>
   requires Ix<_tcI0, T1>
 T1 GlobalStateExamples::ctr_idx() {
   return _tcI0::suc(_tcI0::suc(_tcI0::zero()));
+}
+
+inline uint64_t GlobRefNat::GlobRefToIxNat() const {
+  const auto &[a] = *this;
+  return a;
 }
 
 #endif // INCLUDED_GLOBAL_STATE
