@@ -1324,7 +1324,7 @@ let rec pp_structure_elem ~is_header f = function
                            and its use in [Cpp_ind]; the head spelled here must
                            be the one the struct is generated with. *)
                         found :=
-                          Some (param_vars @ Table.ind_promoted_params kn) )
+                          Some (Table.ind_promoted_params kn @ param_vars) )
                     ind.ind_packets;
                   !found
                 | _ -> None )

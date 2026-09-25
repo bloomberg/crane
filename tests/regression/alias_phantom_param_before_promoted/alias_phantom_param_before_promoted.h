@@ -238,7 +238,7 @@ return v_;}
   // ACCESSORS
 const variant_t& v() const {
 return v_;}
-};template <typename e = void, typename ptr = std::any> using dfun =
+};template <typename ptr, typename e = void> using dfun =
 std::function<Nat(Dval<ptr>)>;
 struct natIPtr {
 using iptr = Nat;
@@ -252,7 +252,7 @@ return n;}
 static_assert(IPtr<natIPtr>);
 struct AliasPhantomParamBeforePromoted {
 static inline const std::pair<Nat, bool> the_null = crane_any_cast<std::pair<Nat, bool>>(PointerV<natIPtr>::null());
-static inline const dfun<std::any, typename PointerV<natIPtr>::ptr> handler = [](const Dval<typename PointerV<natIPtr>::ptr>& d) {
+static inline const dfun<typename PointerV<natIPtr>::ptr, std::any> handler = [](const Dval<typename PointerV<natIPtr>::ptr>& d) {
 if (std::holds_alternative<typename Dval<typename PointerV<natIPtr>::ptr>::DPtr>(d.v())) {
 const auto& [p0] = std::get<typename Dval<typename PointerV<natIPtr>::ptr>::DPtr>(d.v());
 return PIV<natIPtr>::ptr_to_int(p0);

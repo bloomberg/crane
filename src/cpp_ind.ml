@@ -67,8 +67,8 @@ let ind_cpp_decls kn ind =
              inductive was declared, so it is a parameter here and an argument at
              every use.  See {!Table.ind_promoted_params}. *)
           let param_vars =
-            List.map Common.tparam_name raw_pvars
-            @ Table.ind_promoted_params kn
+            Table.ind_promoted_params kn
+            @ List.map Common.tparam_name raw_pvars
           in
           ( empty_env (),
             gen_ind_cpp ~consarg_names:p.ip_consarg_names param_vars names.(i)
@@ -252,8 +252,8 @@ let ind_header_decls kn ind =
                  inductive was declared, so it is a parameter here and an argument at
                  every use.  See {!Table.ind_promoted_params}. *)
               let param_vars =
-                List.map Common.tparam_name raw_pvars
-                @ Table.ind_promoted_params kn
+                Table.ind_promoted_params kn
+                @ List.map Common.tparam_name raw_pvars
               in
               (* The forward declaration carries the same name and the same
                  template parameters as the full definition below; both are
@@ -502,8 +502,8 @@ let ind_header_decls kn ind =
              inductive was declared, so it is a parameter here and an argument at
              every use.  See {!Table.ind_promoted_params}. *)
           let param_vars =
-            List.map Common.tparam_name raw_pvars
-            @ Table.ind_promoted_params kn
+            Table.ind_promoted_params kn
+            @ List.map Common.tparam_name raw_pvars
           in
           (* Register methods that return std::any (for indexed inductives). A
              method returns std::any if its ML return type becomes an unnamed

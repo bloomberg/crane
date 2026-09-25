@@ -3055,7 +3055,7 @@ let rec convert_ml_type_to_cpp_type
       | _ -> converted_ts
     in
     let converted_ts = apply_hkt_tyctors g converted_ts in
-    let converted_ts = converted_ts @ ind_promoted_type_args g in
+    let converted_ts = ind_promoted_type_args g @ converted_ts in
     let core = Tglob (g, converted_ts, []) in
     ( match g with
     | GlobRef.IndRef _ ->
@@ -3440,7 +3440,7 @@ and promoted_var_resolution g =
   | Some var_id -> promoted_var_binding var_id
   | None -> None
 
-(** [ind_promoted_type_args g] -- the trailing template arguments a mention of
+(** [ind_promoted_type_args g] -- the leading template arguments a mention of
     the type [g] passes for the promoted variables its definition names.  [g]
     is an inductive, whose payloads name them, or a type-level [Definition],
     whose body does.
@@ -5166,7 +5166,7 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
          disagree with the type the declaration spells. *)
       let temps = template_params_of_ml ~curry:false env tys in
       let temps = filter_erased_type_args temps in
-      let temps = temps @ ind_promoted_type_args n in
+      let temps = ind_promoted_type_args n @ temps in
       (* Step 2b: Recover type args from the return type when unresolved metas
          caused all type args to be erased.  This happens for nullary custom
          constructors (e.g., None) inside let-bindings: the extraction phase
@@ -7992,7 +7992,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           (* The factory has to be qualified by the very instantiation the
              declaration spells. *)
           let temps = apply_hkt_tyctors n temps in
-          let temps = temps @ ind_promoted_type_args n in
+          let temps = ind_promoted_type_args n @ temps in
           let ctor_struct = ctor_struct_name_of_ref r in
           let ind_type_name = Common.pp_global_name Type n in
           let fname =
@@ -11969,8 +11969,8 @@ and ctor_type_of_match env (typ : ml_type) (cname : GlobRef.t) : cpp_type =
     (* The constructor struct is nested in the instantiation, so it has to be
        qualified by the same one the declaration spells. *)
     let temps =
-      apply_hkt_tyctors r (template_params_of_ml env tys)
-      @ ind_promoted_type_args r
+      ind_promoted_type_args r
+      @ apply_hkt_tyctors r (template_params_of_ml env tys)
     in
     let is_local_ind =
       List.exists

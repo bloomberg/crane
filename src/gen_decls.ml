@@ -609,8 +609,8 @@ let gen_record_cpp name fields ind =
      {!Table.promoted_type_params} and its use for the other inductive
      kinds. *)
   let ty_vars =
-    List.map (fun x -> (TTtypename, x)) vars
-    @ List.map (fun v -> (TTtypename, v)) (Table.promoted_type_params name)
+    List.map (fun v -> (TTtypename, v)) (Table.promoted_type_params name)
+    @ List.map (fun x -> (TTtypename, x)) vars
   in
   let conversion_field =
     conversion_to_other_instantiation ~name ~templates:ty_vars ~vars
@@ -2437,30 +2437,8 @@ let gen_type_alias r vars ot =
       (match ot with Some t -> [t] | None -> [])
   in
   let du_tparams =
-    du_tparams_head
-    (* The promoted variables the body names are parameters here for the same
-       reason they are on an inductive: they belong to the instance in scope
-       where the alias was declared, not to the alias.  Trailing, which is
-       where {!Translation.ind_promoted_type_args} passes them.
-
-       A phantom parameter carries a default (see {!hkt_templates}) and a
-       defaulted parameter may not be followed by a plain one, so where one
-       precedes them these take a default too.  [std::any] is the right one:
-       it is the file-scope alias the variable stood for before it was a
-       parameter, which is what a scope that knows no instance still means. *)
-    @
-    let defaulted =
-      List.exists
-        (function TTtypename_default _, _ -> true | _ -> false)
-        du_tparams_head
-    in
-    let kind =
-      if defaulted then (
-        require_header "any";
-        TTtypename_default (Tid_external ("std::any", [])) )
-      else TTtypename
-    in
-    List.map (fun v -> (kind, v)) (Table.promoted_type_params r)
+    List.map (fun v -> (TTtypename, v)) (Table.promoted_type_params r)
+    @ du_tparams_head
   in
   Dusing {du_tparams; du_name = r; du_rhs; du_note}
 

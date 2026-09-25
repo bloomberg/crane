@@ -1003,7 +1003,7 @@ let compute_returns_any
                  parameters of the generated struct too, so they are in scope
                  in a method's return type.  See {!Table.ind_promoted_params}. *)
               Hashtbl.replace ind_param_vars ind_ref
-                (param_vars @ Table.ind_promoted_params kn) )
+                (Table.ind_promoted_params kn @ param_vars) )
             ind.ind_packets
         | SEdecl (Dterm (r, _, ty)) -> Hashtbl.replace method_types r ty
         | SEdecl (Dfix (rv, _, typs)) ->
