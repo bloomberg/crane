@@ -4413,6 +4413,77 @@ and dict_carrier_ml_type id args =
   in
   Option.map strip_class (dict_ml_type dict)
 
+(** The explicit type arguments a call to a lifted helper has to carry.
+
+    Lifting turns the body's type variables into template parameters of a new
+    top-level function, and a parameter that occurs only in the {e return}
+    type is deducible from nothing: the call must spell it or the overload is
+    discarded.  [binder_ty] is the lifted thing's own ML type, whose codomain
+    is matched against the enclosing function's C++ return type to say what
+    each variable beyond [outer_tvars] stands for at this call.
+
+    What the parameters already spell is left to deduction, because one
+    explicit list stands for every reference while the instantiations need not
+    agree -- a polymorphic local helper may be used at two types in one body.
+    Explicit arguments are positional, so only a trailing deducible run can be
+    dropped.
+
+    Both lift paths ask this, and the only difference between them is where
+    the type and the parameters come from. *)
+and lifted_call_type_args
+    ~class_args ~env ~outer_tvars ~all_tvar_names ~binder_ty ~param_ml_tys =
+  class_args
+  @
+  let extra_tvar_names =
+    List.filter
+      (fun id -> not (List.exists (Id.equal id) outer_tvars))
+      all_tvar_names
+  in
+  if extra_tvar_names = [] then
+    List.map (fun id -> named_tvar id) outer_tvars
+  else
+    let tmpl_cod =
+      match convert_ml_type_to_cpp_type env all_tvar_names binder_ty with
+      | Tfun (_, cod) -> cod
+      | t -> t
+    in
+    let tvar_map =
+      match (!tctx).current_cpp_return_type with
+      | Some conc_ret -> extract_tvar_map tmpl_cod conc_ret
+      | None -> []
+    in
+    let args =
+      List.map (fun id -> named_tvar id) outer_tvars
+      @ List.map
+          (fun tvar_name ->
+            match
+              List.find_opt (fun (id, _) -> Id.equal id tvar_name) tvar_map
+            with
+            | Some (_, ty) -> ty
+            | None -> (
+              match (!tctx).current_cpp_return_type with
+              | Some ret_ty -> ret_ty
+              | None -> named_tvar tvar_name ) )
+          extra_tvar_names
+    in
+    let deducible =
+      List.concat_map
+        (fun ml_ty ->
+          get_tvars (convert_ml_type_to_cpp_type env all_tvar_names ml_ty) )
+        param_ml_tys
+    in
+    if List.length all_tvar_names <> List.length args then
+      args
+    else
+      let rec strip = function
+        | [] -> []
+        | (id, ty) :: rest -> (
+          match strip rest with
+          | [] when List.exists (Id.equal id) deducible -> []
+          | rest -> (id, ty) :: rest )
+      in
+      List.map snd (strip (List.combine all_tvar_names args))
+
 (** What an application of a global yields, as an ML type.
 
     The callee's declared type says it, once instantiated the way the call
@@ -14425,71 +14496,12 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
          references, extra tvars are resolved to concrete types from the
          enclosing function's return type. *)
       let call_type_args =
-        class_args
-        @
-        let extra_tvar_names =
-          List.filter
-            (fun id -> not (List.exists (Id.equal id) outer_tvars))
-            all_tvar_names
-        in
-        if extra_tvar_names = [] then
-          List.map (fun id -> named_tvar id) outer_tvars
-        else
-          let fix_ty = snd ids.(0) in
-          let tmpl_cpp_ty =
-            convert_ml_type_to_cpp_type env all_tvar_names fix_ty
-          in
-          let tmpl_cod =
-            match tmpl_cpp_ty with
-            | Tfun (_, cod) -> cod
-            | t -> t
-          in
-          let outer_args = List.map (fun id -> named_tvar id) outer_tvars in
-          let tvar_map =
-            match (!tctx).current_cpp_return_type with
-            | Some conc_ret -> extract_tvar_map tmpl_cod conc_ret
-            | None -> []
-          in
-          let extra_args =
-            List.map
-              (fun tvar_name ->
-                match List.find_opt
-                        (fun (id, _) -> Id.equal id tvar_name)
-                        tvar_map with
-                | Some (_, ty) -> ty
-                | None ->
-                  match (!tctx).current_cpp_return_type with
-                  | Some ret_ty -> ret_ty
-                  | None -> named_tvar tvar_name )
-              extra_tvar_names
-          in
-          let args = outer_args @ extra_args in
-          (* An argument the parameter types already spell is deduced at the
-             call, and must be left to be: one explicit argument list stands
-             for every reference to the fix, while the instantiations need
-             not agree -- a polymorphic local fix may well be used at two
-             types in the same body.  Only a trailing run can be dropped,
-             explicit arguments being positional. *)
-          let deducible =
-            match List.nth_opt funs_compiled x with
-            | Some (_, params, _) ->
-              List.concat_map
-                (fun (_, ml_ty) ->
-                  get_tvars
-                    (convert_ml_type_to_cpp_type env all_tvar_names ml_ty) )
-                params
-            | None -> []
-          in
-          if List.length all_tvar_names <> List.length args then args
-          else
-            let rec strip = function
-              | [] -> []
-              | (id, ty) :: rest ->
-                ( match strip rest with
-                | [] when List.exists (Id.equal id) deducible -> []
-                | rest -> (id, ty) :: rest )
-            in
-            List.map snd (strip (List.combine all_tvar_names args))
+        lifted_call_type_args ~class_args ~env ~outer_tvars ~all_tvar_names
+          ~binder_ty:(snd ids.(0))
+          ~param_ml_tys:
+            ( match List.nth_opt funs_compiled x with
+            | Some (_, params, _) -> List.map snd params
+            | None -> [] )
       in
       let lifted_call = mk_cppglob lifted_ref call_type_args in
       (* Phase 2: shift move tracking for the single let binding *)
@@ -14824,6 +14836,14 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
                params )
         in
         let n_actual_params = List.length param_ml_tys in
+        (* A lifted lambda's own type variables become template parameters of
+           the new top-level function, and one that occurs only in the return
+           type is deducible from nothing -- the call has to spell it.  Same
+           question, same answer, as the lifted-fix path. *)
+        let call_type_args =
+          lifted_call_type_args ~class_args ~env ~outer_tvars
+            ~all_tvar_names ~binder_ty:t ~param_ml_tys
+        in
         (* [args] in source order, as [param_ml_tys] is. *)
         let name_lifted_args args =
           List.mapi
@@ -14847,7 +14867,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
               ~params:(List.map (cpp_of_ml env) param_ml_tys)
               ~saturated:(fun here ->
                 CPPfun_call
-                  (call_opaque, mk_cppglob lifted class_args,
+                  (call_opaque, mk_cppglob lifted call_type_args,
                     of_reversed (free_args @ List.rev (name_lifted_args here)) ) )
               (List.map sub (call_args args))
           | CPPvar id when Id.equal id target ->
@@ -14856,7 +14876,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
                param. Capture by value ([=]) so that free variables don't
                dangle when the wrapper outlives the current stack frame. *)
             if free_args = [] && n_actual_params = 0 then
-              mk_cppglob lifted class_args
+              mk_cppglob lifted call_type_args
             else
               let fresh_ids =
                 List.init n_actual_params (fun i ->
@@ -14876,7 +14896,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
                     [ Sreturn
                         (Some
                            (CPPfun_call
-                              ( call_opaque, mk_cppglob lifted class_args,
+                              ( call_opaque, mk_cppglob lifted call_type_args,
                                 of_reversed wrapper_call_args ) ) ) ];
                   cl_by_value = true }
           | CPPany_cast (_, CPPfun_call (_, CPPvar id, args))
@@ -14886,7 +14906,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
                std::any), so drop the cast and replace with the lifted call. *)
             CPPfun_call
               (call_opaque,
-                mk_cppglob lifted class_args,
+                mk_cppglob lifted call_type_args,
                 of_reversed (free_args @ List.map sub (to_reversed args)) )
           | CPPany_cast (ty, e') -> Cpp_erasure.unbox ty (sub e')
           | _ ->
