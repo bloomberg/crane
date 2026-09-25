@@ -1805,15 +1805,17 @@ and extract_cst_app env sg mle mlt kn args =
   let schema = (nb, expand env t) in
   (* Can we instantiate types variables for this constant ? *)
   (* In Ocaml, inside the definition of this constant, the answer is no. *)
+  (* The metas the scheme's type variables are instantiated with, kept so
+     that the call's own type arguments can be given to them below. *)
+  let tvar_metas = Array.init (fst schema) (fun _ -> new_meta ()) in
+  let rigid =
+    lang () == Cpp
+    && List.exists (fun c -> QConstant.equal env kn c) !current_fixpoints
+  in
   let instantiated =
     (* This is the version of the type that is instantiated (shocker) *)
-    if
-      lang () == Cpp
-      && List.exists (fun c -> QConstant.equal env kn c) !current_fixpoints
-    then
-      rigidify (snd schema)
-    else
-      instantiation schema
+    if rigid then rigidify (snd schema)
+    else type_subst_vect tvar_metas (snd schema)
   in
   (* Then the expected type of this constant. *)
   let a = new_meta () in
@@ -1836,6 +1838,36 @@ and extract_cst_app env sg mle mlt kn args =
     with Failure _ -> List.map (fun _ -> Tunknown) args
   in
   let domain = make_tyargs env sg mle args metas ~orig_typs in
+  (* The type arguments the Rocq term passes are a statement about the
+     scheme's type variables, and the value arguments need not repeat it: a
+     monad's [bind] erases its carrier, so [m A] pins nothing, and [A] reaches
+     the continuation's binder only from here.  Given where the count lines
+     up and the argument says something; a variable an argument already
+     settled otherwise keeps that answer.
+
+     Only a ground argument is given.  One naming a type variable names it
+     the way [make_tyargs] reads the Rocq context, which need not be the way
+     the term around it numbers its own -- a fixpoint's are rigid -- and
+     binding a meta to the wrong one plants a mismatch that surfaces later as
+     a coercion. *)
+  let () =
+    if lang () == Cpp && not rigid then
+      let rec informative = function
+        | Tdummy _ | Tunknown | Taxiom | Tapp _ | Tvar _ -> false
+        | Tmeta {contents = None} -> false
+        | Tarr (a, b) -> informative a && informative b
+        | Tglob (_, l, _) -> List.for_all informative l
+        | Tmeta {contents = Some u} -> informative u
+        | Tstring -> true
+      in
+      let tyargs =
+        List.filter (function Tdummy Kprop -> false | _ -> true) domain
+      in
+      if List.length tyargs = Array.length tvar_metas then
+        List.iteri
+          (fun i t -> if informative t then try_mgu tvar_metas.(i) t)
+          tyargs
+  in
   let mla = make_mlargs env sg mle s args metas in
   (* let dargs = List.map (fun t -> extract_type env sg [] 1 t []) (List.firstn (max 1 (la - (List.length mla))) args) in *)
   (* let domain = List.firstn (la - (List.length mla)) metas in (* or (fst (type_decomp instantiated)) *) *)

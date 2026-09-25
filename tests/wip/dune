@@ -149,14 +149,3 @@
   (alias runtest)
   (deps hk_class_field_result_cast_to_concept.t.exe)
   (action (run ./hk_class_field_result_cast_to_concept.t.exe))))
-
-(subdir lifted_fix_extra_targ_at_call
- (rule
-  (targets lifted_fix_extra_targ_at_call.t.exe)
-  (deps LiftedFixExtraTargAtCall.vo lifted_fix_extra_targ_at_call.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} lifted_fix_extra_targ_at_call.t.exe lifted_fix_extra_targ_at_call.cpp lifted_fix_extra_targ_at_call.t.cpp)))
- (rule
-  (alias runtest)
-  (deps lifted_fix_extra_targ_at_call.t.exe)
-  (action (run ./lifted_fix_extra_targ_at_call.t.exe))))

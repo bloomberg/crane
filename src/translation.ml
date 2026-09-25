@@ -4431,7 +4431,16 @@ and dict_carrier_ml_type id args =
     Both lift paths ask this, and the only difference between them is where
     the type and the parameters come from. *)
 and lifted_call_type_args
-    ~class_args ~env ~outer_tvars ~all_tvar_names ~binder_ty ~param_ml_tys =
+    ~class_args ~env ~outer_tvars ~head ~all_tvar_names ~binder_ty ~param_ml_tys =
+  (* Only what the declaration's head still declares can be named; [None]
+     where the head is every variable. *)
+  let in_head id =
+    match head with
+    | None -> true
+    | Some h -> List.exists (Id.equal id) h
+  in
+  let outer_tvars = List.filter in_head outer_tvars in
+  let all_tvar_names = List.filter in_head all_tvar_names in
   class_args
   @
   let extra_tvar_names =
@@ -14542,8 +14551,8 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
          references, extra tvars are resolved to concrete types from the
          enclosing function's return type. *)
       let call_type_args =
-        lifted_call_type_args ~class_args ~env ~outer_tvars ~all_tvar_names
-          ~binder_ty:(snd ids.(0))
+        lifted_call_type_args ~class_args ~env ~outer_tvars ~head:None
+          ~all_tvar_names ~binder_ty:(snd ids.(0))
           ~param_ml_tys:
             ( match List.nth_opt funs_compiled x with
             | Some (_, params, _) -> List.map snd params
@@ -14882,14 +14891,6 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
                params )
         in
         let n_actual_params = List.length param_ml_tys in
-        (* A lifted lambda's own type variables become template parameters of
-           the new top-level function, and one that occurs only in the return
-           type is deducible from nothing -- the call has to spell it.  Same
-           question, same answer, as the lifted-fix path. *)
-        let call_type_args =
-          lifted_call_type_args ~class_args ~env ~outer_tvars
-            ~all_tvar_names ~binder_ty:t ~param_ml_tys
-        in
         (* [args] in source order, as [param_ml_tys] is. *)
         let name_lifted_args args =
           List.mapi
@@ -14901,7 +14902,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         in
         let rec subst_lifted_call_expr
             (target : Id.t)
-            (lifted : GlobRef.t)
+            (lifted : cpp_expr)
             (free_args : cpp_expr list)
             (e : cpp_expr) =
           let sub = subst_lifted_call_expr target lifted free_args in
@@ -14913,7 +14914,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
               ~params:(List.map (cpp_of_ml env) param_ml_tys)
               ~saturated:(fun here ->
                 CPPfun_call
-                  (call_opaque, mk_cppglob lifted call_type_args,
+                  (call_opaque, lifted,
                     of_reversed (free_args @ List.rev (name_lifted_args here)) ) )
               (List.map sub (call_args args))
           | CPPvar id when Id.equal id target ->
@@ -14922,7 +14923,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
                param. Capture by value ([=]) so that free variables don't
                dangle when the wrapper outlives the current stack frame. *)
             if free_args = [] && n_actual_params = 0 then
-              mk_cppglob lifted call_type_args
+              lifted
             else
               let fresh_ids =
                 List.init n_actual_params (fun i ->
@@ -14942,7 +14943,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
                     [ Sreturn
                         (Some
                            (CPPfun_call
-                              ( call_opaque, mk_cppglob lifted call_type_args,
+                              ( call_opaque, lifted,
                                 of_reversed wrapper_call_args ) ) ) ];
                   cl_by_value = true }
           | CPPany_cast (_, CPPfun_call (_, CPPvar id, args))
@@ -14952,7 +14953,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
                std::any), so drop the cast and replace with the lifted call. *)
             CPPfun_call
               (call_opaque,
-                mk_cppglob lifted call_type_args,
+                lifted,
                 of_reversed (free_args @ List.map sub (to_reversed args)) )
           | CPPany_cast (ty, e') -> Cpp_erasure.unbox ty (sub e')
           | _ ->
@@ -14963,7 +14964,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
               Fun.id e
         and subst_lifted_call_stmt
             (target : Id.t)
-            (lifted : GlobRef.t)
+            (lifted : cpp_expr)
             (free_args : cpp_expr list)
             (s : cpp_stmt) =
           map_stmt
@@ -15105,8 +15106,21 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         let free_var_cpps =
           List.map (fun (name, _, _) -> CPPvar name) free_vars
         in
+        (* A lifted lambda's own type variables become template parameters of
+           the new top-level function, and one that occurs only in the return
+           type is deducible from nothing -- the call has to spell it.  Same
+           question, same answer, as the lifted-fix path; but asked of the head
+           the declaration ended up with, since generalisation may have moved
+           a parameter out of it. *)
+        let call_type_args =
+          lifted_call_type_args ~class_args ~env ~outer_tvars
+            ~head:(Some (List.map snd all_temps_with_funs))
+            ~all_tvar_names ~binder_ty:t ~param_ml_tys
+        in
         List.map
-          (subst_lifted_call_stmt x_lifted lifted_ref free_var_cpps)
+          (subst_lifted_call_stmt x_lifted
+             (mk_cppglob lifted_ref call_type_args)
+             free_var_cpps )
           cont
   | MLletin (x, t, a, b) ->
     let x' = cpp_id_of_id (id_of_mlid x) in
