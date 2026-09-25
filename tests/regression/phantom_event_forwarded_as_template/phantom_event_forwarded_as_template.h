@@ -180,7 +180,7 @@ using ptr = std::any;
 template <typename ptr, typename e = void>
 using semantic_function =
     std::function<std::shared_ptr<ITree<Nat>>(List<ptr>, std::optional<ptr>)>;
-template <typename ptr, template <typename> class e>
+template <typename ptr, typename e>
 using intrinsic_definitions = List<std::pair<Nat, semantic_function<ptr, e>>>;
 
 template <Params _tcI0, typename T1>
@@ -191,7 +191,7 @@ semantic_function<typename _tcI0::ptr, T1> one() {
   };
 }
 
-template <Params _tcI0, template <typename> class T1>
+template <Params _tcI0, typename T1>
 intrinsic_definitions<typename _tcI0::ptr, T1> defined_intrinsics() {
   return List<std::pair<Nat, std::function<std::shared_ptr<ITree<Nat>>(
                                  List<typename _tcI0::ptr>,

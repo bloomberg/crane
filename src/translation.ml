@@ -2881,11 +2881,17 @@ let apply_hkt_tyctors g temps =
       if Table.is_hkt_ind_param g i then Ttyctor (abstract_leading_arg t)
       else
         match t with
-        | Tapply ((Tvar _ as head), _) when Table.is_phantom_type_param g i ->
-          (* A parameter the declaration never spells is a plain [typename]
-             there, so an instantiation cannot be written in its position --
-             and need not be: what the position holds is an erased family,
-             whose head alone says everything the declaration can use. *)
+        | Tapply ((Tvar _ as head), _) ->
+          (* The position is a plain [typename] -- the first branch took every
+             one the declaration made a template -- so an instantiation cannot
+             be written in it, and need not be: what it holds is an erased
+             family, whose head alone says everything the declaration can use.
+
+             Not restricted to a {e phantom} position.  A parameter the
+             declaration spells only by forwarding it into another one's
+             typename slot is not phantom and is not higher-kinded either, and
+             writing the application there is what made the two disagree about
+             its kind. *)
           head
         | _ -> t )
     temps

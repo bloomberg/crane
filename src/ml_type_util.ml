@@ -1271,6 +1271,34 @@ let get_rendered_tvar_indices t =
   in
   aux [] t
 
+(** The arity at which the {e rendered} type applies each type variable.
+
+    Asked instead of the ML reading wherever a rendered type is available,
+    because erasure happens between the two and they then disagree without
+    either being wrong.  An event family is the case in point: [semantic_
+    function := list ptr -> itree E nat] applies [E] in ML and spells it
+    nowhere in C++, and an alias that merely {e forwards} [E] into that one
+    still has the application in its expanded ML body.  Reading the arity
+    there makes the forwarder [template <typename> class e] while the alias it
+    hands it to declared [typename e], which is the mismatch.  What the
+    rendered type does with the variable is what its users have to agree
+    with. *)
+let rendered_tvar_arities t =
+  let arities = Hashtbl.create 4 in
+  let rec aux = function
+    | Tapply (Tvar (i, _), tys) ->
+      Hashtbl.replace arities i (List.length tys);
+      List.iter aux tys
+    | Tglob (g, tys, _) -> List.iter aux (written_type_args g tys)
+    | Tfun (tys, ty) -> List.iter aux (ty :: tys)
+    | Tconst ty | Tnamespace (_, ty) | Tref ty | Tshared_ptr ty -> aux ty
+    | Tvariant tys -> List.iter aux tys
+    | Tapply (ty, tys) -> List.iter aux (ty :: tys)
+    | _ -> ()
+  in
+  aux t;
+  arities
+
 (** Tvar names, sorted by index *)
 let get_tvars t = List.map snd (get_tvars_indexed t)
 

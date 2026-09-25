@@ -2474,7 +2474,15 @@ let with_applied_tvars ?ml_ty cty temps =
     types are converted.  Registers the template template positions so that
     {e uses} of [r] pass a bare template name; see {!Table.is_hkt_ind_param}. *)
 let hkt_templates ?applied r vars tys =
-  let arities = Ml_type_util.applied_ml_tvar_arities tys in
+  (* Read from the rendered type where there is one: the ML body still applies
+     a variable that erasure removed, and the parameter list has to agree with
+     what the users of this name can see.  See
+     {!Ml_type_util.rendered_tvar_arities}. *)
+  let arities =
+    match applied with
+    | Some a -> Ml_type_util.rendered_tvar_arities a
+    | None -> Ml_type_util.applied_ml_tvar_arities tys
+  in
   (* A parameter the rendered type never spells is phantom, whatever its Rocq
      kind was.  An erased event family is the case in point:
      [semantic_function := list nat -> itree E nat] writes no [E] in C++ at

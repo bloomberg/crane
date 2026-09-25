@@ -547,6 +547,7 @@ val get_tvar_indices : Minicpp.cpp_type -> int list
 
 (** The type-variable indices a C++ type actually renders, skipping the
     positions a custom template drops. *)
+val rendered_tvar_arities : Minicpp.cpp_type -> (int, int) Hashtbl.t
 val get_rendered_tvar_indices : Minicpp.cpp_type -> int list
 
 (** [primary_tvar_indices dom cod] is the set of type-variable indices

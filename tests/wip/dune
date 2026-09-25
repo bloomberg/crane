@@ -147,14 +147,3 @@
   (alias runtest)
   (deps hk_carrier_written_at_partial_app.t.exe)
   (action (run ./hk_carrier_written_at_partial_app.t.exe))))
-
-(subdir phantom_event_forwarded_as_template
- (rule
-  (targets phantom_event_forwarded_as_template.t.exe)
-  (deps PhantomEventForwardedAsTemplate.vo phantom_event_forwarded_as_template.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} phantom_event_forwarded_as_template.t.exe phantom_event_forwarded_as_template.cpp phantom_event_forwarded_as_template.t.cpp)))
- (rule
-  (alias runtest)
-  (deps phantom_event_forwarded_as_template.t.exe)
-  (action (run ./phantom_event_forwarded_as_template.t.exe))))
