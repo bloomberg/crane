@@ -581,21 +581,25 @@ val add_instance_promoted_types :
 val get_instance_promoted_types :
   GlobRef.t -> (Names.Id.t * Miniml.ml_type) list
 
+(** An applied instance, as the Rocq type writes it: a head and what it is
+    applied to, recursively.  [Carg_unknown] is an argument whose head is not a
+    constant -- a context variable, typically -- which the reader fills
+    positionally from the instances it is holding. *)
+type class_arg = Carg of GlobRef.t * class_arg list | Carg_unknown
+
 (** [add_instance_class_shape r (class_ref, args)] records the class [r] is an
-    instance of and the instances that class is applied to, each paired with
-    how many arguments it is itself applied to.
+    instance of and the instances that class is applied to, each with its own
+    arguments.
 
     A class argument is erased from the ML type -- [PIV : @PI ProvenanceV
     PointerV] reaches translation as an instance of [PI] and nothing more -- so
     the promoted type variables that belong to those arguments arrive with no
     way back to them.  The Rocq type is the only place the connection is still
     written down. *)
-val add_instance_class_shape :
-  GlobRef.t -> GlobRef.t * (GlobRef.t * int) list -> unit
+val add_instance_class_shape : GlobRef.t -> GlobRef.t * class_arg list -> unit
 
 (** The shape recorded by {!add_instance_class_shape}, if any. *)
-val get_instance_class_shape :
-  GlobRef.t -> (GlobRef.t * (GlobRef.t * int) list) option
+val get_instance_class_shape : GlobRef.t -> (GlobRef.t * class_arg list) option
 
 (** [ind_promoted_params kn] -- the promoted type variables the constructor
     payloads of [kn] mention, in order of first appearance.
@@ -623,16 +627,16 @@ val add_type_alias_body : GlobRef.t -> Miniml.ml_type -> unit
     [r] is a type-level [Definition] rather than a term. *)
 val has_type_alias_body : GlobRef.t -> bool
 
-(** [add_ind_class_arg r (inst, n)] records that a constructor field type of
-    [r] names the instance [inst] applied to [n] arguments -- the same shape
+(** [add_ind_class_arg r arg] records that a constructor field type of
+    [r] names the applied instance [arg] -- the same shape
     {!add_instance_class_shape} records, and read by the same rule.  The Rocq
     constructor type is the only place an inductive's dependence on an instance
     is written down; the ML inductive keeps no parameter for it. *)
-val add_ind_class_arg : GlobRef.t -> GlobRef.t * int -> unit
+val add_ind_class_arg : GlobRef.t -> class_arg -> unit
 
 (** The shapes recorded by {!add_ind_class_arg}, in order of first
     appearance. *)
-val get_type_class_args : GlobRef.t -> (GlobRef.t * int) list
+val get_type_class_args : GlobRef.t -> class_arg list
 
 (** Add info axiom. *)
 val add_info_axiom : GlobRef.t -> unit

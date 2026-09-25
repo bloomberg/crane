@@ -1111,15 +1111,24 @@ let get_instance_promoted_types r =
   | Some bindings -> bindings
   | None -> []
 
+(* An applied instance, as the Rocq type writes it: a head and what it is
+   applied to, recursively.  [Carg_unknown] is an argument whose head is not a
+   constant -- a context variable, typically -- which the reader fills
+   positionally from the instances it is holding.
+
+   A pair of head and arity would not do.  [@ParamsV natIPtr] and [@ParamsV IP]
+   have the same head and the same arity, and the reader has to spell one of
+   them; given only the arity it can do no better than invent an argument, and
+   the argument it invents is the head again. *)
+type class_arg = Carg of GlobRef.t * class_arg list | Carg_unknown
+
 (* The class an instance instantiates, and the instances that class is applied
-   to.  [PIV : @PI ProvenanceV PointerV] records [(PI, [(ProvenanceV, 0);
-   (PointerV, 1)])] -- the second component's [int] is how many arguments the
-   class argument is itself applied to.  None of this survives into the ML
-   type, where the class stands alone as [PI]; the Rocq type is the only place
-   it is visible, so it is taken there. *)
+   to.  [PIV : @PI ProvenanceV PointerV] records [(PI, [Carg (ProvenanceV, []);
+   Carg (PointerV, [Carg_unknown])])].  None of this survives into the ML type,
+   where the class stands alone as [PI]; the Rocq type is the only place it is
+   visible, so it is taken there. *)
 let instance_class_shapes =
-  ref (GlobRef.Map.empty
-       : (GlobRef.t * (GlobRef.t * int) list) GlobRef.Map.t)
+  ref (GlobRef.Map.empty : (GlobRef.t * class_arg list) GlobRef.Map.t)
 
 let init_instance_class_shapes () =
   instance_class_shapes := GlobRef.Map.empty
@@ -1138,11 +1147,9 @@ let get_instance_class_shape r = GlobRef.Map.find_opt r !instance_class_shapes
    [Variant dval := DPtr (p : @ptr ProvenanceV PointerV)] depends on
    [PointerV], and on whatever [PointerV] is applied to, through nothing the ML
    inductive keeps: the dictionary is erased and [ptr] arrives applied to no
-   arguments.  Recorded in the same shape as {!instance_class_shapes} -- the
-   instance and how many arguments it is applied to -- so that one reader
-   serves both. *)
-let ind_class_arg_shapes =
-  ref (Refmap'.empty : (GlobRef.t * int) list Refmap'.t)
+   arguments.  Recorded in the same shape as {!instance_class_shapes} -- a
+   {!class_arg} -- so that one reader serves both. *)
+let ind_class_arg_shapes = ref (Refmap'.empty : class_arg list Refmap'.t)
 
 let init_ind_class_arg_shapes () = ind_class_arg_shapes := Refmap'.empty
 

@@ -119,3 +119,14 @@
   (alias runtest)
   (deps record_field_of_section_alias.t.exe)
   (action (run ./record_field_of_section_alias.t.exe))))
+
+(subdir nested_instance_field_resolution
+ (rule
+  (targets nested_instance_field_resolution.t.exe)
+  (deps NestedInstanceFieldResolution.vo nested_instance_field_resolution.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nested_instance_field_resolution.t.exe nested_instance_field_resolution.cpp nested_instance_field_resolution.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps nested_instance_field_resolution.t.exe)
+  (action (run ./nested_instance_field_resolution.t.exe))))

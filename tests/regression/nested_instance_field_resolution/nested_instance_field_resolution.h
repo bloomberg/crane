@@ -267,31 +267,36 @@ return Nat::o();}
 };
 struct NestedInstanceFieldResolution {
 static inline const Dval<typename PointerV::ptr,
-typename ParamsV<ParamsV>::IPTR::iptr,
-typename ParamsV<ParamsV>::ADDR> boxed_ptr = Dval<typename PointerV::ptr,
-typename ParamsV<ParamsV>::IPTR::iptr,
-typename ParamsV<ParamsV>::ADDR>::dptr(PointerV::null());
-static inline const Dval<typename ParamsV<ParamsV>::PTR::ptr,
+typename ParamsV<natIPtr>::IPTR::iptr,
+typename ParamsV<natIPtr>::ADDR> boxed_ptr = Dval<typename PointerV::ptr,
+typename ParamsV<natIPtr>::IPTR::iptr,
+typename ParamsV<natIPtr>::ADDR>::dptr(PointerV::null());
+static inline const Dval<typename ParamsV<natIPtr>::PTR::ptr,
 typename natIPtr::iptr,
-typename ParamsV<ParamsV>::ADDR> boxed_iptr = Dval<typename ParamsV<ParamsV>::PTR::ptr,
+typename ParamsV<natIPtr>::ADDR> boxed_iptr = Dval<typename ParamsV<natIPtr>::PTR::ptr,
 typename natIPtr::iptr,
-typename ParamsV<ParamsV>::ADDR>::diptr(natIPtr::zero_iptr());
+typename ParamsV<natIPtr>::ADDR>::diptr(natIPtr::zero_iptr());
 static inline const Nat addr0 = std::any_cast<Nat>(ParamsV<natIPtr>::zero_addr());
 static inline const Nat run = []() {
 auto&& _sv2 = boxed_iptr;
-if (std::holds_alternative<typename Dval<ptr, typename natIPtr::iptr,
-ADDR>::DPtr>(_sv2.v())) {
-const auto& [p2] = std::get<typename Dval<ptr, typename natIPtr::iptr,
-ADDR>::DPtr>(_sv2.v());
+if (std::holds_alternative<typename Dval<typename ParamsV<natIPtr>::PTR::ptr,
+typename natIPtr::iptr,
+typename ParamsV<natIPtr>::ADDR>::DPtr>(_sv2.v())) {
+const auto& [p2] = std::get<typename Dval<typename ParamsV<natIPtr>::PTR::ptr,
+typename natIPtr::iptr,
+typename ParamsV<natIPtr>::ADDR>::DPtr>(_sv2.v());
 return crane_any_cast<std::pair<Nat, bool>>(p2).first;
-} else if (std::holds_alternative<typename Dval<ptr, typename natIPtr::iptr,
-ADDR>::DIptr>(_sv2.v())) {
-const auto& [i2] = std::get<typename Dval<ptr, typename natIPtr::iptr,
-ADDR>::DIptr>(_sv2.v());
+} else if (std::holds_alternative<typename Dval<typename ParamsV<natIPtr>::PTR::ptr,
+typename natIPtr::iptr,
+typename ParamsV<natIPtr>::ADDR>::DIptr>(_sv2.v())) {
+const auto& [i2] = std::get<typename Dval<typename ParamsV<natIPtr>::PTR::ptr,
+typename natIPtr::iptr,
+typename ParamsV<natIPtr>::ADDR>::DIptr>(_sv2.v());
 return natIPtr::to_Z(i2);
 } else {
-const auto& [a2] = std::get<typename Dval<ptr, typename natIPtr::iptr,
-ADDR>::DAddr>(_sv2.v());
+const auto& [a2] = std::get<typename Dval<typename ParamsV<natIPtr>::PTR::ptr,
+typename natIPtr::iptr,
+typename ParamsV<natIPtr>::ADDR>::DAddr>(_sv2.v());
 return std::any_cast<Nat>(a2);
 }
 }();

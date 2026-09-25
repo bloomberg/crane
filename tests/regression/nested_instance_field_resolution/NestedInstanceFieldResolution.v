@@ -16,7 +16,22 @@
    Fix the shape record before the reader: a shape is a tree, not a pair.
 
    The import list is not harness configuration -- it selects the emission
-   path. *)
+   path.
+
+   Fixed: a recorded class argument is now [Table.class_arg] -- a head and its
+   arguments, recursively, with [Carg_unknown] for a head that is not a
+   constant -- so [@ParamsV natIPtr] and [@ParamsV IP] are no longer the same
+   record.  [Gen_decls.class_arg_type] spells one back, filling a
+   [Carg_unknown] positionally from the instances the reader holds, which is
+   the old behaviour and now only the fallback.  Textually,
+   [ParamsV<ParamsV>::ADDR] becomes [ParamsV<natIPtr>::ADDR] and the bare
+   [ParamsV::PTR::ptr] gains its argument.
+
+   And a second, smaller half: the type a match spells is resolved by the
+   scrutinee's declaration, not by the match body, so
+   [Gen_decls.with_body_resolutions] reads [ind_type_resolutions] of the
+   globals the body names -- last, because an instance the body mentions
+   directly is the nearer answer. *)
 
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std Monads.ITreeReified.

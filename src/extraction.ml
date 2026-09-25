@@ -892,14 +892,23 @@ and extract_really_ind env kn mib =
             let rec scan c =
               ( match Constr.kind c with
               | App (f, cargs) when Constr.isConst f ->
+                let rec class_arg a =
+                  let h, a_args = Constr.decompose_app a in
+                  match Constr.kind h with
+                  | Const (ac, _) ->
+                    Some
+                      (Table.Carg
+                         ( GlobRef.ConstRef ac
+                         , List.map
+                             (fun x -> Option.default Table.Carg_unknown (class_arg x))
+                             (Array.to_list a_args) ) )
+                  | _ -> None
+                in
                 Array.iter
                   (fun a ->
-                    let h, a_args = Constr.decompose_app a in
-                    match Constr.kind h with
-                    | Const (ac, _) ->
-                      Table.add_ind_class_arg (GlobRef.IndRef (kn, 0))
-                        (GlobRef.ConstRef ac, Array.length a_args)
-                    | _ -> () )
+                    match class_arg a with
+                    | Some sh -> Table.add_ind_class_arg (GlobRef.IndRef (kn, 0)) sh
+                    | None -> () )
                   cargs
               | _ -> () );
               Constr.iter scan c
@@ -2690,12 +2699,23 @@ let extract_constant access env kn cb =
     in
     match head_ref with
     | Some head_ref ->
-      let arg_shape a =
+      (* Recursive: [@ParamsV natIPtr] and [@ParamsV IP] differ only in the
+         argument, and the reader has to spell one of them.  An argument whose
+         head is not a constant is [Carg_unknown] -- the position is kept, so
+         the reader can fill it from the instances it holds. *)
+      let rec class_arg a =
         let h, a_args = EConstr.decompose_app sg a in
         match EConstr.kind sg h with
-        | Const (c, _) -> Some (GlobRef.ConstRef c, Array.length a_args)
+        | Const (c, _) ->
+          Some
+            (Table.Carg
+               ( GlobRef.ConstRef c
+               , List.map
+                   (fun x -> Option.default Table.Carg_unknown (class_arg x))
+                   (Array.to_list a_args) ) )
         | _ -> None
       in
+      let arg_shape = class_arg in
       let shapes = List.map arg_shape (Array.to_list args) in
       (* All or none: an argument that cannot be named leaves the others
          without the positions that give them their meaning. *)

@@ -305,16 +305,42 @@ let promoted_resolutions ?fields class_ref inst_ty =
     is why one list serves both.  An argument applied to a different number is
     left alone: that it is applied at all says it has a context, and a context
     this one cannot supply is not one to guess at. *)
+let rec class_arg_type ~own_instances sh =
+  match sh with
+  | Table.Carg_unknown -> None
+  | Table.Carg (r, []) -> Some (Tglob (r, [], []))
+  | Table.Carg (r, args) ->
+    (* A recorded argument spells itself; an unknown one is the context the
+       recorded type shares with [own_instances] -- [PointerV] takes the
+       [_tcI0] that [PIV] takes -- and is filled by position.  A list of a
+       different length is not one to guess at. *)
+    let ts =
+      List.mapi
+        (fun i a ->
+          match class_arg_type ~own_instances a with
+          | Some t -> Some t
+          | None ->
+            if List.length args = List.length own_instances then
+              List.nth_opt own_instances i
+            else None )
+        args
+    in
+    if List.for_all Option.has_some ts then
+      Some (Tglob (r, List.map Option.get ts, []))
+    else None
+
 let resolutions_of_shapes ~own_instances arg_shapes =
   List.concat_map
-    (fun (arg_ref, n_applied) ->
-      match Table.get_instance_class_shape arg_ref with
-      | Some (arg_class, _)
-        when Table.is_typeclass arg_class
-             && (n_applied = 0 || n_applied = List.length own_instances) ->
-        promoted_resolutions arg_class
-          (Tglob (arg_ref, (if n_applied = 0 then [] else own_instances), []))
-      | _ -> [] )
+    (fun sh ->
+      match sh with
+      | Table.Carg_unknown -> []
+      | Table.Carg (arg_ref, _) -> (
+        match
+          (Table.get_instance_class_shape arg_ref, class_arg_type ~own_instances sh)
+        with
+        | Some (arg_class, _), Some inst_ty when Table.is_typeclass arg_class ->
+          promoted_resolutions arg_class inst_ty
+        | _ -> [] ) )
     arg_shapes
 
 let instance_arg_resolutions ~own_instances inst_ref =
@@ -330,8 +356,14 @@ let instance_arg_resolutions ~own_instances inst_ref =
 let ind_type_resolutions r =
   match Table.get_instance_class_shape r with
   | Some (head, arg_shapes) ->
-    resolutions_of_shapes
-      ~own_instances:(List.map (fun (a, _) -> Tglob (a, [], [])) arg_shapes)
+    let own_instances =
+      (* The arguments the declaration's own type writes, spelled as written:
+         [@dval (@ParamsV natIPtr)] holds [ParamsV<natIPtr>], not [ParamsV].
+         All or none, because they are read by position. *)
+      let ts = List.map (class_arg_type ~own_instances:[]) arg_shapes in
+      if List.for_all Option.has_some ts then List.map Option.get ts else []
+    in
+    resolutions_of_shapes ~own_instances
       (* The instances the type is applied to resolve their own classes'
          variables, not only the ones its fields name: a field whose type
          unfolds a projection spells the class variable of the context
@@ -413,6 +445,24 @@ let promoted_resolutions_of_body b =
     instance, not a template parameter.  Left as a free template parameter it
     would be undeducible: nothing in the signature determines it. *)
 
+(** What the declarations a term names resolve through {e their} own types.
+
+    A match over [boxed_iptr : @dval (@ParamsV natIPtr)] spells the
+    constructor's type, and that type's promoted variables are resolved by the
+    scrutinee's declaration, not by anything the match body mentions.  Read
+    last: an instance the body names directly is a nearer answer than one
+    inherited from a name it reads. *)
+let type_resolutions_of_referenced_globals b =
+  let found = ref [] in
+  let rec walk e =
+    ( match strip_magic e with
+    | MLglob (r, _) -> found := !found @ ind_type_resolutions r
+    | _ -> () );
+    Mlutil.ast_iter walk e
+  in
+  walk b;
+  !found
+
 (** Generate a declaration's type and its body against the resolution its body
     supplies -- see {!promoted_resolutions_of_body} -- and the one its own type
     does, see {!ind_type_resolutions}.  An enclosing instance struct answers
@@ -422,7 +472,8 @@ let with_body_resolutions r b f =
   with_promoted_var_map
     ( (!tctx).promoted_var_map
     @ promoted_resolutions_of_body b
-    @ ind_type_resolutions r )
+    @ ind_type_resolutions r
+    @ type_resolutions_of_referenced_globals b )
     f
 
 let hkt_tvar_resolutions_of_type ty =
