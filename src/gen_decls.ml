@@ -568,6 +568,15 @@ let apply_hkt_resolutions_decl resolutions decl =
     Minicpp.map_decl fe fs ft decl
 
 
+(** The arguments for the promoted variables [r] mentions without declaring,
+    which are template parameters of whatever [r] is generated as -- see
+    {!Table.promoted_type_params}.  They trail a concept's arguments (the
+    instance comes first, see {!gen_typeclass_cpp}) and lead a struct's (see
+    [Cpp_ind]); every use has to supply them in this order, or it names a
+    different template. *)
+let mentioned_promoted_args r =
+  List.map (fun v -> Tpromoted v) (Table.promoted_type_params r)
+
 (** The conversion function by which a value is read at another instantiation
     of its own type -- [Box<Nat>] reaching a slot spelled [Box<std::any>].
 
@@ -584,10 +593,15 @@ let apply_hkt_resolutions_decl resolutions decl =
     differently.  Nothing is emitted where the type has no parameters, or no
     fields: there is no other instantiation to read it at.
 
+    [leading] are arguments the conversion keeps rather than respells: the
+    promoted variables a caller did not put in [vars] (see
+    {!mentioned_promoted_args}), which belong to the scope the type was
+    declared in and not to the instantiation being converted.
+
     No constraint excludes [_U = T].  A conversion function to its own class
     type is never selected, so declaring it is harmless and saying so costs a
     [requires] clause on every generated struct. *)
-let conversion_to_other_instantiation ~name ~templates ~vars ~fields =
+let conversion_to_other_instantiation ~leading ~name ~templates ~vars ~fields =
   if vars = [] || fields = [] then []
   else
     let n_vars = List.length vars in
@@ -629,7 +643,7 @@ let conversion_to_other_instantiation ~name ~templates ~vars ~fields =
           { mf_name = Id.of_string "operator_at_other_instantiation";
             mf_globref = None;
             mf_tparams = tparams;
-            mf_ret_type = Tglob (name, u_tys, []);
+            mf_ret_type = Tglob (name, leading @ u_tys, []);
             mf_params = [];
             mf_body = [Sreturn (Some (CPPbraced converted))];
             mf_is_const = true;
@@ -720,7 +734,8 @@ let gen_record_cpp name fields ind =
     @ List.map (fun x -> (TTtypename, x)) vars
   in
   let conversion_field =
-    conversion_to_other_instantiation ~name ~templates:ty_vars ~vars
+    conversion_to_other_instantiation ~leading:(mentioned_promoted_args name)
+      ~name ~templates:(List.map (fun x -> (TTtypename, x)) vars) ~vars
       ~fields:
         (List.mapi
            (fun i (x, t) ->
@@ -737,13 +752,6 @@ let gen_record_cpp name fields ind =
       ds_constraint = None;
       ds_needs_shared_from_this = false;
     }
-
-(** The trailing concept arguments: the promoted variables [class_ref]
-    mentions without declaring, which {!gen_typeclass_cpp} made template
-    parameters of the concept.  Every use of the concept has to end with
-    them, in this order, or the constraint does not match. *)
-let mentioned_promoted_args class_ref =
-  List.map (fun v -> Tpromoted v) (Table.promoted_type_params class_ref)
 
 (** The concept constraint an instance parameter of type [ty] carries.
 
@@ -6038,7 +6046,9 @@ let gen_ind_header_v2
             VPublic, SAccessors )
         in
         let conversion_field =
-          conversion_to_other_instantiation ~name ~templates ~vars
+          (* An inductive's [vars] already begin with its promoted variables
+             (see [Cpp_ind]), so nothing is left to keep. *)
+          conversion_to_other_instantiation ~leading:[] ~name ~templates ~vars
             ~fields:
               (List.mapi
                  (fun j ty ->

@@ -146,7 +146,7 @@ template <typename ptr, typename iptr, typename I> struct ToDvalueBase {
   std::function<Dvalue_base<ptr, iptr>(I)> tdb;
 
   // ACCESSORS
-  template <typename _U> operator ToDvalueBase<_U>() const {
+  template <typename _U> operator ToDvalueBase<ptr, iptr, _U>() const {
     return {std::function<Dvalue_base<ptr, iptr>(_U)>(tdb)};
   }
 };
@@ -162,13 +162,11 @@ struct natParams {
 
 static_assert(Params<natParams>);
 
-/// Built and returned, so the class is data here and the struct is
-/// constructed in an expression position.
 template <Params _tcI0, typename T1, typename F0>
   requires std::is_invocable_r_v<
       Dvalue_base<typename _tcI0::ptr, typename _tcI0::iptr>, F0 &, T1 &>
 ToDvalueBase<typename _tcI0::ptr, typename _tcI0::iptr, T1> mk_to_base(F0 &&f) {
-  return ToDvalueBase<T1>{f};
+  return ToDvalueBase<typename _tcI0::ptr, typename _tcI0::iptr, T1>{f};
 }
 
 template <Params _tcI0, typename T1>
