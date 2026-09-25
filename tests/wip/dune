@@ -147,3 +147,14 @@
   (alias runtest)
   (deps hk_carrier_written_at_partial_app.t.exe)
   (action (run ./hk_carrier_written_at_partial_app.t.exe))))
+
+(subdir erased_dval_in_container
+ (rule
+  (targets erased_dval_in_container.t.exe)
+  (deps ErasedDvalInContainer.vo erased_dval_in_container.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} erased_dval_in_container.t.exe erased_dval_in_container.cpp erased_dval_in_container.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps erased_dval_in_container.t.exe)
+  (action (run ./erased_dval_in_container.t.exe))))
