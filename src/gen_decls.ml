@@ -3990,16 +3990,10 @@ let gen_dfun n b cty ty temps =
       regular_temps
   in
   set_current_type_vars type_var_ids;
-  (* Of those, the ones the head spells [typename]: see
-     {!Translation_state.current_typename_vars}. *)
-  let saved_typename_vars = (!tctx).current_typename_vars in
-  set_current_typename_vars
-    (List.filter_map
-       (fun (tt, id) ->
-         match tt with
-         | TTtypename | TTtypename_default _ -> Some id
-         | _ -> None )
-       regular_temps );
+  (* The head itself, at the kinds it declares: see
+     {!Translation_state.current_template_head}. *)
+  let saved_template_head = get_current_template_head () in
+  set_current_template_head (typeclass_temps_basic @ regular_temps);
   set_current_param_types all_ids;
   (* Activate promoted var resolution for body generation — types like
      [Tpromoted "Obj"] in type annotations will be resolved to
@@ -4254,7 +4248,7 @@ let gen_dfun n b cty ty temps =
   tctx := { !tctx with current_cpp_return_type = saved_return_type };
   Table.current_decl_ref := saved_decl_ref;
   tctx := { !tctx with promoted_var_map = saved_promoted_var_map };
-  set_current_typename_vars saved_typename_vars;
+  set_current_template_head saved_template_head;
   (* {b Entry point detection for monadic [main].}
 
      When a Rocq definition named [main] has a monadic return type, it is

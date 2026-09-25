@@ -147,14 +147,3 @@
   (alias runtest)
   (deps hk_carrier_written_at_partial_app.t.exe)
   (action (run ./hk_carrier_written_at_partial_app.t.exe))))
-
-(subdir lifted_inner_fix_drops_class_param
- (rule
-  (targets lifted_inner_fix_drops_class_param.t.exe)
-  (deps LiftedInnerFixDropsClassParam.vo lifted_inner_fix_drops_class_param.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} lifted_inner_fix_drops_class_param.t.exe lifted_inner_fix_drops_class_param.cpp lifted_inner_fix_drops_class_param.t.cpp)))
- (rule
-  (alias runtest)
-  (deps lifted_inner_fix_drops_class_param.t.exe)
-  (action (run ./lifted_inner_fix_drops_class_param.t.exe))))

@@ -187,11 +187,9 @@ template <typename T1> EOU<T1> eou_ret(T1 a) {
 
 /// The outer Fixpoint is what makes the inner one a let-bound fix
 /// rather than a top-level definition.
-template <typename T1>
-std::optional<List<dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>>
-_collect_go_all(const std::optional<Nat> pad) {
+template <Params _tcI0> auto _collect_go_all(const std::optional<Nat> pad) {
   auto go_impl =
-      [=](auto &_self_go, T1 m,
+      [=](auto &_self_go, auto m,
           List<dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>
               ys) mutable
       -> std::optional<
@@ -227,7 +225,7 @@ _collect_go_all(const std::optional<Nat> pad) {
       }
     }
   };
-  auto go = [=](T1 m,
+  auto go = [=](auto m,
                 List<dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>
                     ys) mutable
       -> std::optional<
@@ -252,7 +250,7 @@ EOU<dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>> collect(
         std::pair<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>::Cons>(
         xs.v());
     if (std::holds_alternative<typename Nat::O>(n.v())) {
-      auto _cs = _collect_go_all(std::optional<Nat>())(n, xs);
+      auto _cs = _collect_go_all<_tcI0>(std::optional<Nat>())(n, xs);
       if (_cs.has_value()) {
         const List<dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>
             &l = *_cs;

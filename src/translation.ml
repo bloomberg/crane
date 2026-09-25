@@ -2189,6 +2189,80 @@ let build_lifted_cpp_params ?(non_fwd_source_indices = []) convert_fn base_temps
   let all_temps_with_funs = base_temps @ extra_temps in
   (cpp_params, all_temps_with_funs)
 
+(** [generalize_lambda_only_tparams temps params ret body] moves a lifted
+    helper's undeducible type parameters into the lambda that is their only
+    occurrence, returning the shortened head and the rewritten body.
+
+    A parameter the helper's own signature does not mention cannot be deduced
+    from a call.  When every occurrence it does have is the binder of a lambda
+    the helper returns, the polymorphism belongs to that lambda rather than to
+    the helper -- C++ spells that [auto], and the head is shorter by one.  A
+    parameter occurring anywhere else is left where it is: [auto] is not a
+    type one may write as a template argument.
+
+    Sound only where call sites name no type argument of their own beyond a
+    leading prefix they always name, since a positional explicit argument list
+    would be renumbered by the drop. *)
+let generalize_lambda_only_tparams temps params ret body =
+  let candidates =
+    List.filter
+      (fun (tt, id) ->
+        tt = TTtypename
+        && (not (tvar_named id ret))
+        && not (List.exists (fun (_, ty) -> tvar_named id ty) params) )
+      temps
+  in
+  if candidates = [] then (temps, body)
+  else
+    (* Occurrences that are not a lambda binder, and so pin the variable
+       down where it stands. *)
+    let pinned = ref [] in
+    let note ty =
+      List.iter
+        (fun (_, id) ->
+          if tvar_named id ty && not (List.exists (Id.equal id) !pinned) then
+            pinned := id :: !pinned )
+        candidates;
+      ty
+    in
+    let rec scan_e e =
+      match e with
+      | CPPlambda l ->
+        CPPlambda
+          { l with
+            cl_ret = Option.map note l.cl_ret;
+            cl_body = List.map scan_s l.cl_body }
+      | _ -> map_expr scan_e scan_s note e
+    and scan_s s = map_stmt scan_e scan_s note s in
+    List.iter (fun s -> ignore (scan_s s)) body;
+    let movable =
+      List.filter (fun (_, id) -> not (List.exists (Id.equal id) !pinned)) candidates
+    in
+    if movable = [] then (temps, body)
+    else
+      let to_auto ty =
+        match tvar_name ty with
+        | Some n when List.exists (fun (_, id) -> Id.equal id n) movable -> Tauto
+        | _ -> ty
+      in
+      let rec rw_e e =
+        match e with
+        | CPPlambda l ->
+          CPPlambda
+            { l with
+              cl_params =
+                of_reversed
+                  (List.map
+                     (fun (ty, id) -> (to_auto ty, id))
+                     (to_reversed l.cl_params) );
+              cl_body = List.map rw_s l.cl_body }
+        | _ -> map_expr rw_e rw_s Fun.id e
+      and rw_s s = map_stmt rw_e rw_s Fun.id s in
+      ( List.filter
+          (fun (_, id) -> not (List.exists (fun (_, m) -> Id.equal id m) movable))
+          temps,
+        List.map rw_s body )
+
 (** The type variables a type spells out in a deducible position.  A
     function-typed parameter reaches C++ as an opaque template parameter [F0]
     rather than as a written-out signature, so a variable occurring only
@@ -14185,6 +14259,14 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
          fresh names T<i> *)
       let all_tvar_names = build_tvar_names ~outer_tvars fix_tvar_indices in
       let all_temps = List.map (fun id -> (TTtypename, id)) all_tvar_names in
+      (* The body being lifted was written against the enclosing declaration's
+         class instances -- it spells [typename _tcI0::PTR::ptr] -- and a
+         concept-constrained parameter is not an ML type variable, so
+         [fix_tvar_indices] cannot mention one.  Carry the head's own
+         instances over, ahead of the type variables and explicit at every
+         reference: nothing deduces a class instance from an argument. *)
+      let class_temps = current_class_temps () in
+      let class_args = List.map (fun (_, id) -> named_tvar id) class_temps in
       (* Generate the lifted function name *)
       let fix_name = fst ids.(x) in
       let lifted_ref = lifted_fix_ref fix_name in
@@ -14232,13 +14314,14 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           (* Replace recursive self-references (CPPvar renamed_n) with calls to
              the lifted function *)
           let rec_call =
-            mk_cppglob
-              lifted_ref
-              (List.map (fun id -> named_tvar id) all_tvar_names)
+            mk_cppglob lifted_ref
+              (class_args @ List.map (fun id -> named_tvar id) all_tvar_names)
           in
           let body = List.map (local_var_subst_stmt renamed_id rec_call) body in
           let inner = Dfun (mk_dfun ~ret:cod lifted_ref (Ddef (cpp_params, body))) in
-          let lifted_decl = Dtemplate (all_temps_with_funs, None, inner) in
+          let lifted_decl =
+            Dtemplate (class_temps @ all_temps_with_funs, None, inner)
+          in
           add_lifted_decl lifted_decl )
         funs_compiled;
       (* In the continuation body b, the fixpoint name should resolve to a call
@@ -14252,6 +14335,8 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
          references, extra tvars are resolved to concrete types from the
          enclosing function's return type. *)
       let call_type_args =
+        class_args
+        @
         let extra_tvar_names =
           List.filter
             (fun id -> not (List.exists (Id.equal id) outer_tvars))
@@ -14620,6 +14705,14 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
            fresh names *)
         let all_tvar_names = build_tvar_names ~outer_tvars tvar_indices in
         let all_temps = List.map (fun id -> (TTtypename, id)) all_tvar_names in
+        (* The body being lifted was written against the enclosing
+           declaration's class instances -- it spells [typename
+           _tcI0::PTR::ptr] -- and a concept-constrained parameter is not an
+           ML type variable, so [tvar_indices] cannot mention one.  Carry the
+           head's own instances over, ahead of the type variables and explicit
+           at every reference: nothing deduces a class instance. *)
+        let class_temps = current_class_temps () in
+        let class_args = List.map (fun (_, id) -> named_tvar id) class_temps in
 
         let extended_tvar_names =
           build_extended_tvar_names tvar_indices all_tvar_names all_body_tvars
@@ -14669,7 +14762,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
               ~params:(List.map (cpp_of_ml env) param_ml_tys)
               ~saturated:(fun here ->
                 CPPfun_call
-                  (call_opaque, mk_cppglob lifted [],
+                  (call_opaque, mk_cppglob lifted class_args,
                     of_reversed (free_args @ List.rev (name_lifted_args here)) ) )
               (List.map sub (call_args args))
           | CPPvar id when Id.equal id target ->
@@ -14678,7 +14771,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
                param. Capture by value ([=]) so that free variables don't
                dangle when the wrapper outlives the current stack frame. *)
             if free_args = [] && n_actual_params = 0 then
-              mk_cppglob lifted []
+              mk_cppglob lifted class_args
             else
               let fresh_ids =
                 List.init n_actual_params (fun i ->
@@ -14698,7 +14791,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
                     [ Sreturn
                         (Some
                            (CPPfun_call
-                              ( call_opaque, mk_cppglob lifted [],
+                              ( call_opaque, mk_cppglob lifted class_args,
                                 of_reversed wrapper_call_args ) ) ) ];
                   cl_by_value = true }
           | CPPany_cast (_, CPPfun_call (_, CPPvar id, args))
@@ -14708,7 +14801,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
                std::any), so drop the cast and replace with the lifted call. *)
             CPPfun_call
               (call_opaque,
-                mk_cppglob lifted [],
+                mk_cppglob lifted class_args,
                 of_reversed (free_args @ List.map sub (to_reversed args)) )
           | CPPany_cast (ty, e') -> Cpp_erasure.unbox ty (sub e')
           | _ ->
@@ -14820,16 +14913,33 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
             t
         in
         let cod =
-          match cpp_ty with
-          | Tfun (_, cod) -> cod
-          | _ -> cpp_ty
+          (* [collect_lams] stops at the first non-lambda, so a let-bound
+             [fix] keeps its own binders: the helper takes fewer parameters
+             than its type has domains, and what it returns is the closure
+             standing for the rest.  A closure type has no spelling, and
+             [auto] is how C++ declines to give it one. *)
+          let ml_dom, _ = Mlutil.type_decomp t in
+          if List.length ml_dom > n_params then Tauto
+          else
+            match cpp_ty with
+            | Tfun (_, cod) -> cod
+            | _ -> cpp_ty
         in
 
-        (* 9. Build and register the lifted declaration *)
+        (* 9. Build and register the lifted declaration.  Call sites below
+           name the class prefix and nothing else, so a type parameter whose
+           only occurrence is a returned lambda's binder can move into that
+           lambda instead of sitting undeducible in the head. *)
+        let all_temps_with_funs, compiled_body =
+          generalize_lambda_only_tparams all_temps_with_funs cpp_params cod
+            compiled_body
+        in
         let inner =
           Dfun (mk_dfun ~ret:cod lifted_ref (Ddef (cpp_params, compiled_body)))
         in
-        let lifted_decl = Dtemplate (all_temps_with_funs, None, inner) in
+        let lifted_decl =
+          Dtemplate (class_temps @ all_temps_with_funs, None, inner)
+        in
         add_lifted_decl lifted_decl;
 
         (* 10. Compile the continuation body b, substituting calls to x' with
@@ -15208,6 +15318,14 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       (* Lift the polymorphic inner fixpoint to a top-level function *)
       let all_tvar_names = build_tvar_names ~outer_tvars fix_tvar_indices in
       let all_temps = List.map (fun id -> (TTtypename, id)) all_tvar_names in
+      (* The body being lifted was written against the enclosing declaration's
+         class instances -- it spells [typename _tcI0::PTR::ptr] -- and a
+         concept-constrained parameter is not an ML type variable, so
+         [fix_tvar_indices] cannot mention one.  Carry the head's own
+         instances over, ahead of the type variables and explicit at every
+         reference: nothing deduces a class instance from an argument. *)
+      let class_temps = current_class_temps () in
+      let class_args = List.map (fun (_, id) -> named_tvar id) class_temps in
       let extended_tvar_names =
         build_extended_tvar_names fix_tvar_indices all_tvar_names all_body_tvars
       in
@@ -15257,13 +15375,14 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
               params
           in
           let rec_call =
-            mk_cppglob
-              lifted_ref
-              (List.map (fun id -> named_tvar id) all_tvar_names)
+            mk_cppglob lifted_ref
+              (class_args @ List.map (fun id -> named_tvar id) all_tvar_names)
           in
           let body = List.map (local_var_subst_stmt renamed_id rec_call) body in
           let inner = Dfun (mk_dfun ~ret:cod lifted_ref (Ddef (cpp_params, body))) in
-          let lifted_decl = Dtemplate (all_temps_with_funs, None, inner) in
+          let lifted_decl =
+            Dtemplate (class_temps @ all_temps_with_funs, None, inner)
+          in
           add_lifted_decl lifted_decl )
         funs_compiled;
       (* Generate args in outer scope and call the lifted function. Build
@@ -15272,6 +15391,8 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
          that appear as the fixpoint's return type are resolved to the enclosing
          function's C++ return type (current_cpp_return_type). *)
       let call_type_args =
+        class_args
+        @
         let extra_tvar_names =
           List.filter
             (fun id -> not (List.exists (Id.equal id) outer_tvars))

@@ -58,14 +58,20 @@ type translation_ctx = {
   output : translation_output;  (** What the pass has produced; see below. *)
   (* Template type variables for the function currently being translated. *)
   current_type_vars : Id.t list;
-  (* Those of {!current_type_vars} the declaration's template head spells a
-     plain [typename] rather than [template <typename> class].  An applied
-     occurrence of one cannot be written -- the head alone is what the
-     position can take -- whereas an applied occurrence of a
-     template-template parameter is exactly what a [typename] position wants.
-     Only the emitters that build the head know which is which, so a scope
-     that does not say leaves this empty and nothing is stripped. *)
-  current_typename_vars : Id.t list;
+  (* The declaration's template head, verbatim: every parameter it declares,
+     with the kind it declares it at.  Two questions are answered from it and
+     neither can be answered from {!current_type_vars}, which keeps only the
+     names and only the ML-indexed ones:
+
+     - whether an occurrence may be written applied, which turns on [typename]
+       versus [template <typename> class] (see {!is_current_typename_var});
+     - which parameters are the enclosing class instances, which a lifted
+       helper must redeclare because the body it lifts spells them (see
+       {!current_class_temps}).
+
+     Only the emitters that build the head know it, so a scope that does not
+     say leaves this empty and both readers answer negatively. *)
+  current_template_head : (template_type * Id.t) list;
   (* 1-indexed parameter types for the current function; used to recover
      erased type info at call sites. *)
   current_param_types : (int * ml_type) list;
@@ -194,7 +200,7 @@ let tctx =
     {
         output = {pending_lifted_decls = []; seen_lifted_refs = []};
         current_type_vars = [];
-        current_typename_vars = [];
+        current_template_head = [];
         current_param_types = [];
         current_cpp_return_type = None;
         env_types = [];
@@ -247,14 +253,31 @@ let set_current_type_vars (tvars : Id.t list) =
 let get_current_type_vars () = (!tctx).current_type_vars
 let clear_current_type_vars () = tctx := { !tctx with current_type_vars = [] }
 
-(** Accessors for {!translation_ctx.current_typename_vars}.  Set only by an
+(** Accessors for {!translation_ctx.current_template_head}.  Set only by an
     emitter that has just built the declaration's template head, and restored
     by it on the way out; every other scope leaves the enclosing answer
-    standing rather than guessing at one. *)
-let set_current_typename_vars (ids : Id.t list) =
-  tctx := { !tctx with current_typename_vars = ids }
+    standing rather than guessing at one.  The readers below derive their
+    answers from it rather than each keeping a list of their own. *)
+let set_current_template_head (head : (template_type * Id.t) list) =
+  tctx := { !tctx with current_template_head = head }
+let get_current_template_head () = (!tctx).current_template_head
+
+(** Whether the head declares [id] as a plain [typename], so that an applied
+    occurrence of it cannot be written. *)
 let is_current_typename_var (id : Id.t) =
-  List.exists (Id.equal id) (!tctx).current_typename_vars
+  List.exists
+    (fun (tt, i) ->
+      Id.equal id i
+      && match tt with TTtypename | TTtypename_default _ -> true | _ -> false )
+    (!tctx).current_template_head
+
+(** The head's concept-constrained parameters: the class instances the
+    declaration is written against.  A helper lifted out of its body spells
+    them, so it has to declare them too. *)
+let current_class_temps () =
+  List.filter
+    (fun (tt, _) -> match tt with TTconcept _ -> true | _ -> false)
+    (!tctx).current_template_head
 
 (** [with_type_vars tvars f] runs [f] with [tvars] as the type-variable scope,
     and puts the enclosing scope back on the way out however [f] leaves --
