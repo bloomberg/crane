@@ -18,7 +18,23 @@
    silent; this is the case that makes it loud.
 
    The import list is not harness configuration -- it selects the emission
-   path. *)
+   path.
+
+   Fixed: two things, and the first hid the second.  The resolutions inherited
+   from the declarations a body names ([type_resolutions_of_referenced_globals])
+   were not run through the ambiguity filter, so [a0]'s spelling was put on
+   [y], whose value is built at [boolIPtr] -- [Dval<typename natIPtr::iptr> y =
+   inner<boolIPtr>()].  Every list of resolutions read from a term now passes
+   the same [drop_ambiguous].  That leaves the binder's type holding a
+   [Tpromoted] nothing answered, which printed as the file-scope [std::any]
+   alias and failed one level down; a binding whose type holds an unanswered
+   promoted variable is now declared [auto], as one holding [std::any] already
+   was.  The initialiser knows the instance the scope cannot name.  Textually,
+   both binders become [auto].
+
+   The ambiguity filter fires nowhere else in the suite, so this is the case
+   that makes a regression in it loud: with the filter disabled the test fails
+   with [no viable conversion from 'const bool' to 'Nat']. *)
 
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std Monads.ITreeReified.

@@ -149,13 +149,3 @@
   (action (run ./hk_carrier_written_at_partial_app.t.exe))))
 
 
-(subdir two_instances_disagree_on_promoted_name
- (rule
-  (targets two_instances_disagree_on_promoted_name.t.exe)
-  (deps TwoInstancesDisagreeOnPromotedName.vo two_instances_disagree_on_promoted_name.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} two_instances_disagree_on_promoted_name.t.exe two_instances_disagree_on_promoted_name.cpp two_instances_disagree_on_promoted_name.t.cpp)))
- (rule
-  (alias runtest)
-  (deps two_instances_disagree_on_promoted_name.t.exe)
-  (action (run ./two_instances_disagree_on_promoted_name.t.exe))))
