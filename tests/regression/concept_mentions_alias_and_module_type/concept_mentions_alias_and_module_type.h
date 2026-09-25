@@ -14,70 +14,6 @@
 enum class Bool0;
 struct Nat;
 struct showNat;
-template <typename I, typename A>
-concept Show = requires {
-  { I::show(std::declval<A>()) } -> std::convertible_to<Name>;
-  { I::tag(std::declval<A>()) } -> std::convertible_to<Coll::bag<Bool0>>;
-};
-enum class Bool0 { TRUE_, FALSE_ };
-
-struct Nat {
-  // TYPES
-  struct O {};
-
-  struct S {
-    std::shared_ptr<Nat> a0;
-  };
-
-  using variant_t = std::variant<O, S>;
-
-private:
-  // DATA
-  variant_t v_;
-
-public:
-  // CREATORS
-  Nat() {}
-
-  explicit Nat(O _v) : v_(_v) {}
-
-  explicit Nat(S _v) : v_(std::move(_v)) {}
-
-  static Nat o() { return Nat(O{}); }
-
-  static Nat s(Nat a0) { return Nat(S{std::make_shared<Nat>(std::move(a0))}); }
-
-  // MANIPULATORS
-  ~Nat() {
-    crane::small_vector<std::shared_ptr<Nat>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
-      if (auto *_alt = std::get_if<S>(&_v)) {
-        if (_alt->a0) {
-          _stack.push_back(std::move(_alt->a0));
-        }
-      }
-    };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
-    }
-  }
-
-  Nat(const Nat &) = default;
-  Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
-
-  inline variant_t &v_mut() { return v_; }
-
-  // ACCESSORS
-  const variant_t &v() const { return v_; }
-};
 
 /// Named qualified by the concept, so a forward declaration will not do.
 struct Coll {
@@ -165,6 +101,70 @@ struct Coll {
 
 /// An alias, which is the kind of declaration C++ cannot forward-declare.
 using Name = Coll::bag<Nat>;
+template <typename I, typename A>
+concept Show = requires {
+  { I::show(std::declval<A>()) } -> std::convertible_to<Name>;
+  { I::tag(std::declval<A>()) } -> std::convertible_to<Coll::bag<Bool0>>;
+};
+enum class Bool0 { TRUE_, FALSE_ };
+
+struct Nat {
+  // TYPES
+  struct O {};
+
+  struct S {
+    std::shared_ptr<Nat> a0;
+  };
+
+  using variant_t = std::variant<O, S>;
+
+private:
+  // DATA
+  variant_t v_;
+
+public:
+  // CREATORS
+  Nat() {}
+
+  explicit Nat(O _v) : v_(_v) {}
+
+  explicit Nat(S _v) : v_(std::move(_v)) {}
+
+  static Nat o() { return Nat(O{}); }
+
+  static Nat s(Nat a0) { return Nat(S{std::make_shared<Nat>(std::move(a0))}); }
+
+  // MANIPULATORS
+  ~Nat() {
+    crane::small_vector<std::shared_ptr<Nat>> _stack = {};
+    auto _drain = [&](variant_t &_v) {
+      if (auto *_alt = std::get_if<S>(&_v)) {
+        if (_alt->a0) {
+          _stack.push_back(std::move(_alt->a0));
+        }
+      }
+    };
+    _drain(v_mut());
+    while (!_stack.empty()) {
+      auto _cur = std::move(_stack.back());
+      _stack.pop_back();
+      if (_cur.use_count() == 1) {
+        std::atomic_thread_fence(std::memory_order_acquire);
+        _drain(_cur->v_mut());
+      }
+    }
+  }
+
+  Nat(const Nat &) = default;
+  Nat &operator=(const Nat &) = default;
+  Nat(Nat &&) noexcept = default;
+  Nat &operator=(Nat &&) noexcept = default;
+
+  inline variant_t &v_mut() { return v_; }
+
+  // ACCESSORS
+  const variant_t &v() const { return v_; }
+};
 
 struct showNat {
   static Name show(Nat n) {

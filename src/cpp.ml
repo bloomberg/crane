@@ -2234,6 +2234,102 @@ let prefix_mentioned_aliases ~is_header p =
       | l when Pp.ismt p -> prlist_with_sep fnl (fun x -> x) l
       | l -> prlist_with_sep fnl (fun x -> x) l ++ cut2 () ++ p
 
+(** The top-level elements a hoisted concept cannot be read without.
+
+    Hoisting a file-scope concept to the top of the file is answered, for
+    almost everything it spells, by the forward declarations already in front
+    of it: a [requires] body is unevaluated, so a plain mention wants the name
+    declared and not defined.  Two kinds want more.  C++ admits no forward
+    declaration for a [using], and a name spelled {e qualified} is a member
+    lookup in a type that has to be complete.  Both are answered by moving the
+    element itself, and the question this asks is which elements those are.
+
+    It is asked of the whole file rather than at each element, because the
+    element that has to move is almost always written {e after} the class that
+    names it -- Rocq's own order guarantees only that it precedes the class,
+    and the concept has left that position.  The answer is by label, which is
+    what an element can check about itself while it renders.
+
+    Transitive, and only through the elements themselves: an alias in the set
+    spells types that then have to precede {e it}, and one of those may be
+    another alias.  It does not descend into a module that is already in the
+    set, because moving a struct moves everything in it. *)
+let concept_prereqs (s : ml_structure) : Names.Label.Set.t =
+  let add_type_refs acc ty =
+    let rec go acc = function
+      | Miniml.Tglob (r, args, _) ->
+        List.fold_left go (Refset'.add r acc) args
+      | Miniml.Tarr (a, b) -> go (go acc a) b
+      | Miniml.Tmeta {contents = Some t} -> go acc t
+      | _ -> acc
+    in
+    go acc ty
+  in
+  let elements =
+    List.concat_map
+      (fun (mp, ms) -> List.map (fun (l, se) -> (mp, l, se)) ms)
+      s
+  in
+  (* What the file-scope concepts spell: the field types of every type class
+     declared here. *)
+  let seed =
+    List.fold_left
+      (fun acc (_, _, se) ->
+        match se with
+        | Miniml.SEdecl (Miniml.Dind (_, ind)) -> (
+          match ind.Miniml.ind_kind with
+          | Miniml.TypeClass _ ->
+            Array.fold_left
+              (fun acc p ->
+                Array.fold_left
+                  (fun acc tys -> List.fold_left add_type_refs acc tys)
+                  acc p.Miniml.ip_types )
+              acc ind.Miniml.ind_packets
+          | _ -> acc )
+        | _ -> acc )
+      Refset'.empty elements
+  in
+  let label_of (mp, l, se) needed =
+    match se with
+    | Miniml.SEdecl (Miniml.Dtype (r, _, _)) ->
+      if Refset'.mem r needed then Some l else None
+    | Miniml.SEmodule _ ->
+      let inner = MPdot (mp, l) in
+      let rec under m =
+        ModPath.equal m inner
+        || match m with MPdot (m', _) -> under m' | _ -> false
+      in
+      if
+        Refset'.exists
+          (fun r -> under (modpath_of_r r))
+          needed
+      then Some l
+      else None
+    | _ -> None
+  in
+  let rec fixpoint needed labels =
+    let labels', needed' =
+      List.fold_left
+        (fun (labels, needed) ((_, l, se) as e) ->
+          match label_of e needed with
+          | None -> (labels, needed)
+          | Some l' ->
+            let labels = Names.Label.Set.add l' labels in
+            let needed =
+              match se with
+              | Miniml.SEdecl (Miniml.Dtype (_, _, ty)) -> add_type_refs needed ty
+              | _ -> needed
+            in
+            (labels, needed) )
+        (labels, needed) elements
+    in
+    if Refset'.equal needed needed' && Names.Label.Set.equal labels labels' then
+      labels'
+    else
+      fixpoint needed' labels'
+  in
+  fixpoint seed Names.Label.Set.empty
+
 (** Main structure renderer with declaration tracking.
 
     PASS 1: Process all wrapper modules to populate pending_wrapper_decls. PASS
@@ -2289,11 +2385,27 @@ let do_struct_with_decl_tracking ~is_header f s =
      acquire that struct's scope while its use sites spell it unqualified. *)
   let f =
     let depth = ref 0 in
-    fun x ->
+    fun ((l, _) as x) ->
       incr depth;
       let p = Fun.protect ~finally:(fun () -> decr depth) (fun () -> f x) in
-      if !depth <> 0 then p else prefix_mentioned_aliases ~is_header p
+      if !depth <> 0 then
+        p
+      else
+        let p = prefix_mentioned_aliases ~is_header p in
+        (* An element the concepts cannot be read without travels with them.
+           Decided here rather than inside the element because the question is
+           about the file -- see {!concept_prereqs} -- and answered by label
+           because that is what the element knows about itself. *)
+        if Names.Label.Set.mem l !concept_prereq_labels && not (Pp.ismt p)
+        then (
+          file_scope_concept_prereqs := !file_scope_concept_prereqs @ [p];
+          mt () )
+        else
+          p
   in
+  concept_prereq_labels :=
+    (if is_header then concept_prereqs s else Names.Label.Set.empty);
+  file_scope_concept_prereqs := [];
   Cpp_print.reset_ctor_alias_emitted ();
   ignore (Translation.take_lifted_decls ());
   hoisted_module_structs := [];
@@ -2702,6 +2814,13 @@ let do_struct_with_decl_tracking ~is_header f s =
       file_scope_erased_aliases := [];
       prlist_with_sep fnl (fun x -> x) l ++ cut2 ()
   in
+  let hoisted_concept_prereqs =
+    match !file_scope_concept_prereqs with
+    | [] -> mt ()
+    | l ->
+      file_scope_concept_prereqs := [];
+      prlist_with_sep cut2 (fun x -> x) l ++ cut2 ()
+  in
   let hoisted_concepts =
     match !file_scope_concepts with
     | [] -> mt ()
@@ -2777,7 +2896,7 @@ let do_struct_with_decl_tracking ~is_header f s =
      of the first section that spells it rather than in the prologue. *)
   let sections =
     List.map (prefix_mentioned_aliases ~is_header)
-      [ hoisted_erased_aliases; hoisted_concepts; hoisted_wrappers; lifted_fun_specs; p; pass2_post_pp;
+      [ hoisted_erased_aliases; hoisted_concept_prereqs; hoisted_concepts; hoisted_wrappers; lifted_fun_specs; p; pass2_post_pp;
         deferred_lifted; deferred_defs; deferred_members ]
   in
   (* Whatever nothing spelled.  A body may still name something defined later,

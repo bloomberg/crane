@@ -464,6 +464,24 @@ let file_scope_concepts : Pp.t list ref = owned_list "file_scope_concepts"
 let file_scope_erased_aliases : Pp.t list ref =
   owned_list "file_scope_erased_aliases"
 
+(** The top-level elements that have to travel with the hoisted concepts,
+    identified by their label, and their rendered text.
+
+    Hoisting a concept to the top of the file is answered, for most of what a
+    concept spells, by the forward declarations already in front of it: a
+    [requires] body is unevaluated, so a plain mention needs the name declared
+    and not defined.  Two kinds are not answered by one.  C++ admits no
+    forward declaration for a [using] at all, and a name spelled {e qualified}
+    is a member lookup, which needs the definition.  Those elements move with
+    the concepts rather than being enumerated at the concepts' expense -- the
+    set is computed from what the concepts spell, in {!Cpp.concept_prereqs},
+    and the band keeps them in source order so that one naming another still
+    reads. *)
+let concept_prereq_labels : Names.Label.Set.t ref = owned_ref Names.Label.Set.empty
+
+let file_scope_concept_prereqs : Pp.t list ref =
+  owned_list "file_scope_concept_prereqs"
+
 (** A concept a frame is holding back until after the struct it was written
     in, identified by whatever declares it. *)
 type held_concept =

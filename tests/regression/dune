@@ -352,3 +352,16 @@
   (alias runtest)
   (deps class_field_type_via_section_inductive.t.exe)
   (action (run ./class_field_type_via_section_inductive.t.exe))))
+
+; --- A hoisted concept names an alias and a module's type.
+
+(subdir concept_mentions_alias_and_module_type
+ (rule
+  (targets concept_mentions_alias_and_module_type.t.exe)
+  (deps ConceptMentionsAliasAndModuleType.vo concept_mentions_alias_and_module_type.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} concept_mentions_alias_and_module_type.t.exe concept_mentions_alias_and_module_type.cpp concept_mentions_alias_and_module_type.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps concept_mentions_alias_and_module_type.t.exe)
+  (action (run ./concept_mentions_alias_and_module_type.t.exe))))

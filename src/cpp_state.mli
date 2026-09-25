@@ -160,6 +160,17 @@ val file_scope_concepts : Pp.t list ref
     lands on it does not follow it. *)
 val file_scope_erased_aliases : Pp.t list ref
 
+(** The top-level elements that travel with the hoisted concepts, by label.
+
+    A [requires] body is unevaluated, so most of what a concept spells is
+    answered by the forward declarations already in front of it.  A [using]
+    has no forward declaration in C++, and a qualified name is a member
+    lookup that needs the definition; those two kinds move instead. *)
+val concept_prereq_labels : Names.Label.Set.t ref
+
+(** The rendered text of {!concept_prereq_labels}, in source order. *)
+val file_scope_concept_prereqs : Pp.t list ref
+
 (** A concept a frame is holding back until after the struct it was written
     in, identified by whatever declares it. *)
 type held_concept =
