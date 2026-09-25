@@ -8961,8 +8961,11 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
              whole inductive, not this field).  An applied parameter is taken
              unconditionally, as it always resolved that way; for any other
              field the substitution is only an improvement when it left neither
-             erasure nor a stray type variable behind -- otherwise the slot
-             remains the better guess. *)
+             erasure nor a stray type variable behind.  Otherwise the slot is
+             the better guess, but only for a field of the inductive's own
+             type -- the recursive spine, where the slot does state the field.
+             Any other field is not what the slot states, and a constructor
+             built in it would take the enclosing one's type for its own. *)
           let expected_ml_for_arg =
             match ft_opt with
             | Some ft -> (
@@ -8973,7 +8976,12 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                 when (not (ml_type_contains_erased ~in_arrows:true inst))
                      && not (Ml_type_util.ml_type_contains_tvar inst) ->
                 Some inst
-              | _ -> slot.expected_ml_ty )
+              | Miniml.Tglob (g, _, _)
+                when ( match resolve_tmeta ty with
+                     | Miniml.Tglob (n_ind, _, _) -> globref_equal g n_ind
+                     | _ -> false ) ->
+                slot.expected_ml_ty
+              | _ -> None )
             | None -> slot.expected_ml_ty
           in
           let expr =

@@ -207,9 +207,8 @@ run_exc(const std::shared_ptr<ITree<T1>> &t) {
           auto a = _itf.value;
           return itree_ret(
               Sum<std::shared_ptr<ITree<T1>>,
-                  Sum<Dvalue<typename _tcI0::ptr>, T1>>::
-                  inr(Sum<Dvalue<typename _tcI0::ptr>,
-                          Sum<Dvalue<typename _tcI0::ptr>, T1>>::inr(a)));
+                  Sum<Dvalue<typename _tcI0::ptr>,
+                      T1>>::inr(Sum<Dvalue<typename _tcI0::ptr>, T1>::inr(a)));
         } else if (std::holds_alternative<typename ITree<T1>::Tau>(_cs)) {
           const auto &_itf = *std::get_if<typename ITree<T1>::Tau>(&_cs);
           auto u_ = _itf.next;
@@ -225,8 +224,7 @@ run_exc(const std::shared_ptr<ITree<T1>> &t) {
             return itree_ret(
                 Sum<std::shared_ptr<ITree<T1>>,
                     Sum<Dvalue<typename _tcI0::ptr>, T1>>::
-                    inr(Sum<Dvalue<typename _tcI0::ptr>,
-                            Sum<Dvalue<typename _tcI0::ptr>, T1>>::inl(x)));
+                    inr(Sum<Dvalue<typename _tcI0::ptr>, T1>::inl(x)));
           } else {
             return itree_vis(e, [=](const auto &y) mutable {
               return itree_ret(Sum<std::shared_ptr<ITree<T1>>,

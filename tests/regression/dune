@@ -443,3 +443,16 @@
   (alias runtest)
   (deps self_partial_app_in_let.t.exe)
   (action (run ./self_partial_app_in_let.t.exe))))
+
+; --- A nested custom constructor built one level too deep.
+
+(subdir nested_custom_ctor_field_type
+ (rule
+  (targets nested_custom_ctor_field_type.t.exe)
+  (deps NestedCustomCtorFieldType.vo nested_custom_ctor_field_type.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nested_custom_ctor_field_type.t.exe nested_custom_ctor_field_type.cpp nested_custom_ctor_field_type.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps nested_custom_ctor_field_type.t.exe)
+  (action (run ./nested_custom_ctor_field_type.t.exe))))
