@@ -160,3 +160,14 @@
   (alias runtest)
   (deps hk_class_field_result_cast_to_concept.t.exe)
   (action (run ./hk_class_field_result_cast_to_concept.t.exe))))
+
+(subdir promoted_var_bare_in_body
+ (rule
+  (targets promoted_var_bare_in_body.t.exe)
+  (deps PromotedVarBareInBody.vo promoted_var_bare_in_body.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} promoted_var_bare_in_body.t.exe promoted_var_bare_in_body.cpp promoted_var_bare_in_body.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps promoted_var_bare_in_body.t.exe)
+  (action (run ./promoted_var_bare_in_body.t.exe))))
