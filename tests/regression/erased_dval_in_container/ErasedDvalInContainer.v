@@ -21,7 +21,15 @@
    [w0]'s own type -- but only under [option] and [list], not at its head.
 
    The import list is not harness configuration -- it selects the emission
-   path. *)
+   path.
+
+   Fixed: the shape a declaration's type writes about a class was read from the
+   conclusion's head alone, so a type whose head is an arrow, or whose instance
+   sits inside a container, recorded nothing.  [record_class_shape] now
+   searches the whole type, outermost first -- the conclusion's own head still
+   wins -- and keeps the first applied type that says something about a class.
+   Textually, [Dval<ptr, ...>] in [run] becomes
+   [Dval<typename ParamsV<natIPtr>::PTR::ptr, ...>]. *)
 
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std Monads.ITreeReified.
