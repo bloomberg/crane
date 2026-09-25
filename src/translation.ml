@@ -14993,15 +14993,14 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
               let lam_param_ids, lam_env = push_vars' param_ids env in
               restore_env_types saved_env_types;
               push_binders env lam_param_ids;
-              (* Lambda bodies have their own return type; clear the enclosing
-                 function's void flag to avoid bare 'return;' inside the lambda. *)
+              (* The helper is a function of its own: its return type is not
+                 the enclosing one's, and nothing in it is owned -- every
+                 parameter, captured or not, is declared const by
+                 {!build_lifted_cpp_params}.  The enclosing ownership would
+                 not even name the same variables, being indexed from outside
+                 the lambda's binders. *)
               let compiled_body =
-                let ret =
-                  match (!tctx).current_cpp_return_type with
-                  | Some Tvoid -> None
-                  | rt -> rt
-                in
-                with_cpp_return_type ret (fun () ->
+                with_escape_analysis (fun () ->
                     gen_stmts lam_env (fun x -> Sreturn (Some x)) body )
               in
               restore_env_types saved_env_types;

@@ -417,3 +417,16 @@
   (alias runtest)
   (deps monad_itree_targ_unbound.t.exe)
   (action (run ./monad_itree_targ_unbound.t.exe))))
+
+; --- A lifted helper's const value parameter matched as owned.
+
+(subdir lifted_param_const_v_mut
+ (rule
+  (targets lifted_param_const_v_mut.t.exe)
+  (deps LiftedParamConstVMut.vo lifted_param_const_v_mut.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} lifted_param_const_v_mut.t.exe lifted_param_const_v_mut.cpp lifted_param_const_v_mut.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps lifted_param_const_v_mut.t.exe)
+  (action (run ./lifted_param_const_v_mut.t.exe))))

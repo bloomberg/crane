@@ -367,9 +367,9 @@ public:
 template <Params _tcI0, typename T1>
 auto _den_body(const T1 tag, const Dvalue<typename _tcI0::ptr> u) {
   if (std::holds_alternative<typename Dvalue<typename _tcI0::ptr>::DVALUE_Base>(
-          u.v_mut())) {
-    auto &[a0] =
-        std::get<typename Dvalue<typename _tcI0::ptr>::DVALUE_Base>(u.v_mut());
+          u.v())) {
+    const auto &[a0] =
+        std::get<typename Dvalue<typename _tcI0::ptr>::DVALUE_Base>(u.v());
     if (std::holds_alternative<
             typename Dvalue_base<typename _tcI0::ptr>::DVALUE_Pointer>(
             a0.v())) {
@@ -415,18 +415,18 @@ den(List<Dvalue<typename _tcI0::ptr>> x0_) {
           x0_.v_mut())) {
     return std::optional<Sum<Nat, Dvalue<typename _tcI0::ptr>>>();
   } else {
-    auto &[a00, a10] =
+    auto &[a0, a1] =
         std::get<typename List<Dvalue<typename _tcI0::ptr>>::Cons>(x0_.v_mut());
-    const List<Dvalue<typename _tcI0::ptr>> &a10_value = *a10;
+    const List<Dvalue<typename _tcI0::ptr>> &a1_value = *a1;
     if (std::holds_alternative<typename List<Dvalue<typename _tcI0::ptr>>::Nil>(
-            a10_value.v())) {
+            a1_value.v())) {
       return Datatypes::template option_map<
           std::pair<Nat, Dvalue<typename _tcI0::ptr>>,
           Sum<Nat, Dvalue<typename _tcI0::ptr>>>(
           [](const std::pair<Nat, Dvalue<typename _tcI0::ptr>> &p) {
             return Sum<Nat, Dvalue<typename _tcI0::ptr>>::inr(p.second);
           },
-          _den_body<_tcI0>(Nat::o(), std::move(a00)));
+          _den_body<_tcI0>(Nat::o(), std::move(a0)));
     } else {
       return std::optional<Sum<Nat, Dvalue<typename _tcI0::ptr>>>();
     }
