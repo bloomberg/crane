@@ -149,3 +149,25 @@
   (alias runtest)
   (deps hk_class_field_result_cast_to_concept.t.exe)
   (action (run ./hk_class_field_result_cast_to_concept.t.exe))))
+
+(subdir lifted_fix_extra_targ_at_call
+ (rule
+  (targets lifted_fix_extra_targ_at_call.t.exe)
+  (deps LiftedFixExtraTargAtCall.vo lifted_fix_extra_targ_at_call.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} lifted_fix_extra_targ_at_call.t.exe lifted_fix_extra_targ_at_call.cpp lifted_fix_extra_targ_at_call.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps lifted_fix_extra_targ_at_call.t.exe)
+  (action (run ./lifted_fix_extra_targ_at_call.t.exe))))
+
+(subdir nested_custom_ctor_field_type
+ (rule
+  (targets nested_custom_ctor_field_type.t.exe)
+  (deps NestedCustomCtorFieldType.vo nested_custom_ctor_field_type.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nested_custom_ctor_field_type.t.exe nested_custom_ctor_field_type.cpp nested_custom_ctor_field_type.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps nested_custom_ctor_field_type.t.exe)
+  (action (run ./nested_custom_ctor_field_type.t.exe))))
