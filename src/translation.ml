@@ -1331,7 +1331,7 @@ let is_reified_monadic_var ml_expr =
     exception is a mapping whose result is a {e reified} monad: that monad's
     values are trees, so its mappings -- [itree_trigger], [itree_ret] -- are
     spelled as expressions that build one, and wrapping would double it. *)
-let is_reified_monadic_expr ml_expr =
+let rec is_reified_monadic_expr ml_expr =
   (* The result of applying [n] arguments to something of ML type [ty].  A
      dummy domain is an erased type parameter, which the term does not pass, so
      it is stepped over without spending an argument. *)
@@ -1394,11 +1394,30 @@ let is_reified_monadic_expr ml_expr =
     in
     go (Ml_type_util.ml_domains ty) args
   in
+  (* A local's type may say nothing -- a rank-2 [D ~> itree E] parameter is
+     erased, so what it returns is a type variable -- and then the Rocq
+     typing of the position is the only statement there is: an argument at a
+     monadic parameter has that monadic type, and every value of a reified
+     monad is a tree.  Only a type that says something else is evidence of a
+     plain value. *)
+  let says_monadic ty =
+    is_monadic_ml_type ty
+    ||
+    match Ml_type_util.resolve_tmeta ty with
+    | Miniml.Tvar _ | Miniml.Tunknown | Miniml.Tmeta {contents = None} -> true
+    | _ -> false
+  in
   match ml_expr with
+  (* A coercion changes the type a value is read at, not whether it is a
+     tree: the question is asked of what is under it. *)
+  | MLmagic (_, e) -> is_reified_monadic_expr e
+  | MLapp (MLmagic (_, f), args) -> is_reified_monadic_expr (MLapp (f, args))
   | MLrel i ->
-    (match get_env_type_opt i with Some ty -> is_monadic_ml_type ty | None -> false)
-  | MLapp (MLrel i, _) ->
-    (match get_env_type_opt i with Some ty -> is_monadic_ml_type (ml_codomain ty) | None -> false)
+    (match get_env_type_opt i with Some ty -> says_monadic ty | None -> false)
+  | MLapp (MLrel i, args) ->
+    (match get_env_type_opt i with
+     | Some ty -> says_monadic (ml_result_after (List.length args) ty)
+     | None -> false)
   (* A global of monadic type is already a tree whether or not it is applied:
      a zero-arity constant like [get : itree E nat] is the same value that its
      applied form would be, and wrapping it in [ret] builds a tree of trees. *)
@@ -11160,13 +11179,16 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
       in
       (* A higher-kinded argument is a type constructor, and [std::any] is not
          a spelling of one: a list with an erased one in it cannot be written
-         out at all, so those calls keep deducing. *)
+         out at all, so those calls keep deducing.  Higher-kinded as the
+         declaration has it ({!Ml_type_util.higher_kinded_ml_tvars}), not
+         merely applied: an event family is applied everywhere it occurs and
+         is still declared a plain [typename]. *)
       let no_erased_hkt_arg () =
         match find_type_opt id with
         | None -> true
         | Some ml_ty ->
-          let arities = Ml_type_util.applied_ml_tvar_arities [ml_ty] in
-          Hashtbl.length arities = 0
+          let hk = Ml_type_util.higher_kinded_ml_tvars [ml_ty] in
+          IntSet.is_empty hk
           ||
           let n = IntSet.fold max (collect_tvars_set IntSet.empty ml_ty) 0 in
           let kept =
@@ -11176,7 +11198,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
           List.length kept <> List.length regular_type_args
           || not
                (List.exists2
-                  (fun i t -> Hashtbl.mem arities i && prints_as_any t)
+                  (fun i t -> IntSet.mem i hk && prints_as_any t)
                   kept regular_type_args)
       in
       let written_out () =
