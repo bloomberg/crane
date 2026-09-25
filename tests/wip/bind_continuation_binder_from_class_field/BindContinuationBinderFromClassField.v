@@ -186,6 +186,34 @@
     fills in place, because the recovery is never offered anything for these
     holes in the first place.  Measured, not assumed.
 
+    {b What declining costs, measured over the whole corpus.}  Disabling
+    [rewrite_ml_ast_types] outright and re-extracting all 1022 tests changes
+    {e three} generated files: [monadic/stmonad], [regression/double_opposite_witnesses]
+    and this one.  Both of the others still pass, [dune build @runtest] is
+    identical to its baseline (the one [stmonad] benchmark failure is
+    pre-existing and reproduces with the guess in place), and basics and
+    monadic are green.  Nothing in the corpus depends on the guess being right.
+
+    The Vellvm-side session measured the same question at the artifact, by
+    substituting [std::any] at each of the 14 defective sites and recompiling:
+    eleven of them --- all of Cluster B and all three element sites --- accept
+    erasure with {e no} change to the error multiset.  The cost is exactly the
+    three inline-[fix] codomains, which are the positions where there is
+    nothing to decline {e to}: the carrier is a type field of the monad class
+    and MiniML cannot express it.  So the guess is not a trade-off, it is a
+    partition, and only the codomain third needs an answer supplied rather
+    than withheld.
+
+    {b Declining is necessary here and not sufficient.}  With the guess off,
+    every element position in this test is spelled correctly
+    ([Dv<typename _tcI0::addr> f], [List<Dv<...>>] at the leaf and at [cons]).
+    The test still fails, on two defects the guess was masking: the [fix] is
+    now {e lifted} --- the annotations it turned on have changed --- and the
+    lifted helper is called as [bytes_to_dv<_tcI0>(k, bs0)] with [k] a free
+    variable it never received.  A separate defect, in the same family as
+    [tests/regression/inline_inner_fix_writes_instance]; noted here so the
+    remaining diagnostics are not read as the filler surviving.
+
     This also withdraws the prediction the shared-cell account licensed --- that
     the defective sites cannot be fixed in groups.  On three independent cells
     they can be, so a partial fix is not evidence of anything either way. *)
