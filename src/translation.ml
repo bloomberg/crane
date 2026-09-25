@@ -2633,6 +2633,37 @@ let rec collect_free_rels_set n_bound acc = function
 let collect_free_rels n_bound body =
   IntSet.elements (collect_free_rels_set n_bound IntSet.empty body)
 
+(** Which free variables of a body being lifted become trailing parameters.
+
+    Lifting moves a body out of the scope that bound its free variables, so
+    each one has to arrive as an argument instead -- but not every free rel is
+    a value there is anything to pass.
+
+    - A class instance is already carried by {!current_class_temps} as a
+      template parameter, explicit at every reference because nothing deduces
+      one.  Passing it again emits [const Params _tcI0], which is ill-formed
+      (a concept is not a type) and shadows the template parameter it is named
+      after, so every use in the body then resolves to the value.
+    - An erased or void binder has no value at all.
+
+    Both lift paths ask this, and they ask it of the same [env]: the names are
+    the enclosing scope's, so a compiled body needs no substitution and only
+    the head and the call sites grow. *)
+let lifted_free_vars ~class_temps env free_indices =
+  List.filter_map
+    (fun i ->
+      let name = Common.get_db_name i env in
+      let ty = get_env_type i in
+      if
+        List.exists (fun (_, id) -> Id.equal id name) class_temps
+        || isTdummy ty
+        || ml_type_is_void ty
+      then
+        None
+      else
+        Some (name, ty, i) )
+    free_indices
+
 (** Compute ownership flags for function parameters.  Combines escape analysis
     with sub-binding escape for value-typed (prod) params: a param is owned if
     it escapes the body, or if its sub-bindings escape and its ML type is a
@@ -14319,20 +14350,9 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
          path below does.  The names are the outer scope's, so the compiled
          body needs no substitution: only the head and the call sites do. *)
       let free_vars =
-        List.filter
-          (fun (name, ty) ->
-            (* A class instance is already carried by [class_temps], as a
-               template argument explicit at every reference; passing it again
-               as a value would shadow the template parameter it is named
-               after.  An erased binder has no value to pass at all. *)
-            (not (List.exists (fun (_, id) -> Id.equal id name) class_temps))
-            && (not (isTdummy ty))
-            && not (ml_type_is_void ty) )
-          (List.map
-             (fun i -> (get_db_name i env, get_env_type i))
-             (collect_free_rels 0 fix_term) )
+        lifted_free_vars ~class_temps env (collect_free_rels 0 fix_term)
       in
-      let free_args = List.map (fun (name, _) -> CPPvar name) free_vars in
+      let free_args = List.map (fun (name, _, _) -> CPPvar name) free_vars in
       (* Generate the lifted function name *)
       let fix_name = fst ids.(x) in
       let lifted_ref = lifted_fix_ref fix_name in
@@ -14375,7 +14395,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
               ~non_fwd_source_indices
               (convert_ml_type_to_cpp_type env all_tvar_names)
               all_temps
-              (free_vars @ params)
+              (List.map (fun (n, t, _) -> (n, t)) free_vars @ params)
           in
           (* Replace recursive self-references (CPPvar renamed_n) with calls to
              the lifted function *)
@@ -14732,15 +14752,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       let x' = cpp_id_of_id (id_of_mlid x) in
 
       (* 1. Collect free variables in the lambda body *)
-      let free_indices = collect_free_rels n_params body in
-      let free_vars =
-        List.map
-          (fun i ->
-            let name = get_db_name i env in
-            let ty = get_env_type i in
-            (name, ty, i) )
-          (List.sort Int.compare free_indices)
-      in
+      let free_indices = List.sort Int.compare (collect_free_rels n_params body) in
 
       (* Check if all parameters are dummy/void - if so, this is likely a thunk
          for monadic ops *)
@@ -14785,6 +14797,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
            at every reference: nothing deduces a class instance. *)
         let class_temps = current_class_temps () in
         let class_args = List.map (fun (_, id) -> named_tvar id) class_temps in
+        let free_vars = lifted_free_vars ~class_temps env free_indices in
 
         let extended_tvar_names =
           build_extended_tvar_names tvar_indices all_tvar_names all_body_tvars

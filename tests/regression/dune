@@ -315,3 +315,16 @@
   (alias runtest)
   (deps bind_continuation_binder_mlt_domain.t.exe)
   (action (run ./bind_continuation_binder_mlt_domain.t.exe))))
+
+; --- The lambda half of the lifted-class-instance defect; Vellvm §190.
+
+(subdir lifted_lambda_passes_class_instance
+ (rule
+  (targets lifted_lambda_passes_class_instance.t.exe)
+  (deps LiftedLambdaPassesClassInstance.vo lifted_lambda_passes_class_instance.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} lifted_lambda_passes_class_instance.t.exe lifted_lambda_passes_class_instance.cpp lifted_lambda_passes_class_instance.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps lifted_lambda_passes_class_instance.t.exe)
+  (action (run ./lifted_lambda_passes_class_instance.t.exe))))
