@@ -121,8 +121,26 @@
     spelling into structurally unrelated positions --- which is exactly what the
     artifact shows, fourteen defective sites all spelling [typename _tcI0::IPTR]
     where the lost types include both [Dvalue<ptr,iptr>] and
-    [EOU<List<Dvalue<ptr,iptr>>>].  Not yet confirmed: confirming it means
-    checking the two [Tmeta]s for physical equality, which is the next probe. *)
+    [EOU<List<Dvalue<ptr,iptr>>>].
+
+    {b That account is refuted.}  Logging every unification that writes a
+    promoted type variable into a meta gives {e three distinct cells}:
+
+    {v
+      PROBE-MGU meta#3  := addr
+      PROBE-MGU meta#26 := addr
+      PROBE-MGU meta#28 := addr
+    v}
+
+    Three separate writes, not one write reaching three positions.  So the
+    single spelling across unrelated lost types is not one fill shared by many
+    holes; it is unification independently concluding the same wrong answer
+    every time.  Whatever supplies [Tglob addr] as the known side of [mgu] is
+    the defect, and it is supplying it once per hole.
+
+    This also withdraws the prediction the shared-cell account licensed --- that
+    the defective sites cannot be fixed in groups.  On three independent cells
+    they can be, so a partial fix is not evidence of anything either way. *)
 
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std.
