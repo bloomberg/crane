@@ -147,3 +147,15 @@
   (alias runtest)
   (deps hk_carrier_written_at_partial_app.t.exe)
   (action (run ./hk_carrier_written_at_partial_app.t.exe))))
+
+(subdir expanded_product_wrong_class_field
+ (rule
+  (targets expanded_product_wrong_class_field.t.exe)
+  (deps ExpandedProductWrongClassField.vo expanded_product_wrong_class_field.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} expanded_product_wrong_class_field.t.exe expanded_product_wrong_class_field.cpp expanded_product_wrong_class_field.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps expanded_product_wrong_class_field.t.exe)
+  (action (run ./expanded_product_wrong_class_field.t.exe))))
+
