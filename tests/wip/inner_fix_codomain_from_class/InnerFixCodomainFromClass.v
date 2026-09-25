@@ -37,7 +37,26 @@
     One cause, two fillings, decided by whether the [fix] was lifted.  The
     neighbouring case that returns via a concrete constructor is correct and is
     pinned by [tests/regression/inline_inner_fix_writes_instance]: going through
-    the class is what loses the codomain. *)
+    the class is what loses the codomain.
+
+    {b What is known so far, so it is not re-derived.}
+
+    - The hole is at the ML level, not the C++ one.  The let-binding's ML type
+      is a chain of instantiated [Tmeta] cells ending at a genuinely {e free}
+      type variable.  The carrier is a type {e field} of the monad class, which
+      MiniML cannot express, so it erases to a free variable and there is
+      nothing left in the ML type to recover it from.  Any repair has to come
+      from the dictionary, not from [t].
+
+    - Extending [generalize_lambda_only_tparams] to release a lambda's return
+      {e annotation} --- deleting it rather than replacing it, so C++ deduces
+      from the body, which does spell the type --- is the right shape and is
+      {e not} sufficient on its own.  [T2] is additionally pinned by an
+      occurrence in the type-argument list of the [mret] call, which the printer
+      then truncates away.  So the analysis declines on an occurrence that never
+      reaches the text.  Deciding that correctly means asking the same question
+      the printer asks about which prefix it writes, and that is printer-side
+      knowledge the lift does not currently have. *)
 
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std.
