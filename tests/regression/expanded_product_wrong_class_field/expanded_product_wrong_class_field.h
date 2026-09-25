@@ -146,28 +146,38 @@ using fused = std::pair<state<provenance, allocationId, ptr>, frame<ptr>>;
 /// Reads the expanded product, so the caller's parameter is inferred at it
 /// rather than at the alias.
 template <ParamsV _tcI0>
-ptr top(
-    const std::pair<state<provenance, allocationId, ptr>, List<std::any>> &p) {
+typename _tcI0::PTR::ptr
+top(const std::pair<
+    state<typename _tcI0::PROV::provenance, typename _tcI0::PROV::allocationId,
+          typename _tcI0::PTR::ptr>,
+    List<typename _tcI0::PTR::ptr>> &p) {
   return p.first.st_ptr;
 }
 
 /// s is unannotated: Rocq infers it from top's domain.  The return type
 /// still names fused.
 template <ParamsV _tcI0>
-fused<provenance, allocationId, ptr>
-step(const std::pair<state<provenance, allocationId, ptr>, List<std::any>> &s) {
+fused<typename _tcI0::PROV::provenance, typename _tcI0::PROV::allocationId,
+      typename _tcI0::PTR::ptr>
+step(const std::pair<
+     state<typename _tcI0::PROV::provenance, typename _tcI0::PROV::allocationId,
+           typename _tcI0::PTR::ptr>,
+     List<typename _tcI0::PTR::ptr>> &s) {
   return std::make_pair(s.first, s.second);
 }
 
-template <ParamsV _tcI0> fused<provenance, allocationId, ptr> initial() {
+template <ParamsV _tcI0>
+fused<typename _tcI0::PROV::provenance, typename _tcI0::PROV::allocationId,
+      typename _tcI0::PTR::ptr>
+initial() {
   return std::make_pair(state{_tcI0::PROV::a_provenance(),
                               _tcI0::PROV::an_allocationId(),
                               _tcI0::PTR::zero_ptr()},
-                        List<std::any>::nil());
+                        List<typename _tcI0::PTR::ptr>::nil());
 }
 
 struct ExpandedProductWrongClassField {
-  template <ParamsV _tcI0> static ptr use() {
+  template <ParamsV _tcI0> static typename _tcI0::PTR::ptr use() {
     return top<_tcI0>(step<_tcI0>(initial<_tcI0>()));
   }
 };
