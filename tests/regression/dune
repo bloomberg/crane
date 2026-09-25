@@ -269,6 +269,17 @@
   (deps bind_continuation_binder_from_class_field.t.exe)
   (action (run ./bind_continuation_binder_from_class_field.t.exe))))
 
+(subdir lifted_spec_before_class_concept
+ (rule
+  (targets lifted_spec_before_class_concept.t.exe)
+  (deps LiftedSpecBeforeClassConcept.vo lifted_spec_before_class_concept.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} lifted_spec_before_class_concept.t.exe lifted_spec_before_class_concept.cpp lifted_spec_before_class_concept.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps lifted_spec_before_class_concept.t.exe)
+  (action (run ./lifted_spec_before_class_concept.t.exe))))
+
 (subdir inner_fix_codomain_from_class
  (rule
   (targets inner_fix_codomain_from_class.t.exe)

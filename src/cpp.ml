@@ -856,6 +856,33 @@ let rec pp_structure_elem ~is_header f = function
        elsewhere keep their file-scope placement. *)
     ignore (Translation.take_lifted_decls ());
     let body = pp_decls (f d) in
+    (* A type class rendered at file scope is a concept, and a concept has no
+       forward declaration to bridge a use that precedes it.  One such use is
+       written unconditionally: a lifted helper's spec goes ahead of every
+       section, because its callers are members of the struct it came out of,
+       and its constraint names this concept.  So the concept travels to the
+       top of the file, where the concepts of a nested module's type classes
+       already go.
+
+       Only at file scope: inside a struct the concept has already been
+       hoisted or held back by {!pp_structure_elements}, which knows which of
+       those two it is and this does not. *)
+    let body =
+      if
+        is_header
+        && (not (!render_ctx).rc_in_struct)
+        && (not (!render_ctx).rc_concepts_hoisted)
+        && (match d with
+           | Miniml.Dind (_, ind) -> (
+             match ind.ind_kind with Miniml.TypeClass _ -> true | _ -> false )
+           | _ -> false)
+        && not (Pp.ismt body)
+      then (
+        file_scope_concepts := !file_scope_concepts @ [pp_doc_comment l ++ body];
+        mt () )
+      else
+        body
+    in
     let member_lifted =
       if not is_header then mt ()
       else
