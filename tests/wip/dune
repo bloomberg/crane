@@ -150,13 +150,3 @@
 
 
 
-(subdir instance_only_in_body_application
- (rule
-  (targets instance_only_in_body_application.t.exe)
-  (deps InstanceOnlyInBodyApplication.vo instance_only_in_body_application.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} instance_only_in_body_application.t.exe instance_only_in_body_application.cpp instance_only_in_body_application.t.cpp)))
- (rule
-  (alias runtest)
-  (deps instance_only_in_body_application.t.exe)
-  (action (run ./instance_only_in_body_application.t.exe))))

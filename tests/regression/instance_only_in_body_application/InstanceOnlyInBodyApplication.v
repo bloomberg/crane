@@ -18,7 +18,18 @@
    scope that HAS the instance; it is available and simply not used.
 
    The import list is not harness configuration -- it selects the emission
-   path. *)
+   path.
+
+   Fixed: the resolutions WERE found -- [promoted_resolutions_of_body] reads
+   the dictionary term the application still carries -- and then thrown away.
+   [Gen_decls.gen_dfun] REPLACED [promoted_var_map] with the resolutions of the
+   declaration's own instance parameters, of which [check] has none, so a
+   fourteen-entry map became empty between [with_body_resolutions] installing
+   it and the body being spelled.  It now extends: the declaration's own
+   parameters answer first, and what the body said stands behind them.
+   Textually, all three mentions of [Sum<Nat, Dval<ptr, iptr>>] become
+   [Sum<Nat, Dval<typename ParamsV<natIPtr>::PTR::ptr, typename
+   ParamsV<natIPtr>::IPTR::iptr>>]. *)
 
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std Monads.ITreeReified.
