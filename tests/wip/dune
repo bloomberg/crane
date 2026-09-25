@@ -160,3 +160,14 @@
   (alias runtest)
   (deps handler_loop_call_drops_instance.t.exe)
   (action (run ./handler_loop_call_drops_instance.t.exe))))
+
+(subdir mrec_ctx_wrapped_in_ret
+ (rule
+  (targets mrec_ctx_wrapped_in_ret.t.exe)
+  (deps MrecCtxWrappedInRet.vo mrec_ctx_wrapped_in_ret.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mrec_ctx_wrapped_in_ret.t.exe mrec_ctx_wrapped_in_ret.cpp mrec_ctx_wrapped_in_ret.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mrec_ctx_wrapped_in_ret.t.exe)
+  (action (run ./mrec_ctx_wrapped_in_ret.t.exe))))
