@@ -58,6 +58,14 @@ type translation_ctx = {
   output : translation_output;  (** What the pass has produced; see below. *)
   (* Template type variables for the function currently being translated. *)
   current_type_vars : Id.t list;
+  (* Those of {!current_type_vars} the declaration's template head spells a
+     plain [typename] rather than [template <typename> class].  An applied
+     occurrence of one cannot be written -- the head alone is what the
+     position can take -- whereas an applied occurrence of a
+     template-template parameter is exactly what a [typename] position wants.
+     Only the emitters that build the head know which is which, so a scope
+     that does not say leaves this empty and nothing is stripped. *)
+  current_typename_vars : Id.t list;
   (* 1-indexed parameter types for the current function; used to recover
      erased type info at call sites. *)
   current_param_types : (int * ml_type) list;
@@ -186,6 +194,7 @@ let tctx =
     {
         output = {pending_lifted_decls = []; seen_lifted_refs = []};
         current_type_vars = [];
+        current_typename_vars = [];
         current_param_types = [];
         current_cpp_return_type = None;
         env_types = [];
@@ -237,6 +246,15 @@ let set_current_type_vars (tvars : Id.t list) =
   tctx := { !tctx with current_type_vars = tvars }
 let get_current_type_vars () = (!tctx).current_type_vars
 let clear_current_type_vars () = tctx := { !tctx with current_type_vars = [] }
+
+(** Accessors for {!translation_ctx.current_typename_vars}.  Set only by an
+    emitter that has just built the declaration's template head, and restored
+    by it on the way out; every other scope leaves the enclosing answer
+    standing rather than guessing at one. *)
+let set_current_typename_vars (ids : Id.t list) =
+  tctx := { !tctx with current_typename_vars = ids }
+let is_current_typename_var (id : Id.t) =
+  List.exists (Id.equal id) (!tctx).current_typename_vars
 
 (** [with_type_vars tvars f] runs [f] with [tvars] as the type-variable scope,
     and puts the enclosing scope back on the way out however [f] leaves --

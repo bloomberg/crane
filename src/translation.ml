@@ -2881,17 +2881,22 @@ let apply_hkt_tyctors g temps =
       if Table.is_hkt_ind_param g i then Ttyctor (abstract_leading_arg t)
       else
         match t with
-        | Tapply ((Tvar _ as head), _) ->
-          (* The position is a plain [typename] -- the first branch took every
-             one the declaration made a template -- so an instantiation cannot
-             be written in it, and need not be: what it holds is an erased
-             family, whose head alone says everything the declaration can use.
+        | Tapply ((Tvar (_, name) as head), _)
+          when Table.is_phantom_type_param g i
+               || Option.cata is_current_typename_var false name ->
+          (* The application cannot be written, so the head alone stands for
+             it -- which is all a phantom position reads anyway, and all an
+             erased family has left to say.
 
-             Not restricted to a {e phantom} position.  A parameter the
-             declaration spells only by forwarding it into another one's
-             typename slot is not phantom and is not higher-kinded either, and
-             writing the application there is what made the two disagree about
-             its kind. *)
+             The deciding fact is the {e variable's} kind in the head this
+             declaration is being given, not the position's: the first branch
+             already took every position [g] made a template, so what is left
+             is a plain [typename], and a plain [typename] is where an applied
+             template-template parameter belongs ([List::list<T1<std::any>>]).
+             Stripping there is what breaks it.  A parameter the declaration
+             spells [typename] is the opposite case: it is neither phantom nor
+             higher-kinded, and writing the application is what made two
+             readings disagree about its kind. *)
           head
         | _ -> t )
     temps
