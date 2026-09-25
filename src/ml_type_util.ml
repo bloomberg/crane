@@ -621,6 +621,14 @@ let has_tany_in_type = exists_cpp_type is_tany_node
 let has_erased_type_in_type =
   exists_cpp_type (fun t -> is_tany_node t || is_cpp_dummy_type t)
 
+(** Whether a C++ type still holds a promoted type variable the scope could not
+    answer.  [Tpromoted] survives only where [promoted_var_binding] said
+    nothing -- a mention with no instance in sight, or one whose instance the
+    term leaves genuinely ambiguous -- so it is erased in the same sense as
+    [std::any], and a binding annotated with it is better left to deduction. *)
+let has_unresolved_promoted_in_type =
+  exists_cpp_type (function Tpromoted _ -> true | _ -> false)
+
 (** Check if a C++ type is the [dummy_prop] marker from proof erasure.
 
     In the extraction pipeline, [Tdummy Kprop] in the ML AST gets converted

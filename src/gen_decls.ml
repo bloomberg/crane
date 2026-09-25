@@ -371,6 +371,20 @@ let ind_type_resolutions r =
       (arg_shapes @ Table.get_type_class_args head)
   | None -> []
 
+(** Drop a promoted name the list answers with two different types.
+
+    Two right answers look exactly like none, and they must: a term that names
+    [natIPtr] and [boolIPtr] says nothing about which one a bare [iptr] meant,
+    and spelling either one puts [Dval<typename natIPtr::iptr>] on the value
+    built at the other.  The erased alias is the only answer that is not wrong
+    somewhere.  Every list of resolutions read from a term passes through
+    here -- a list that skipped it would reinstate the guess. *)
+let drop_ambiguous res =
+  List.filter
+    (fun (n, t) ->
+      not (List.exists (fun (m, u) -> Id.equal n m && u <> t) res) )
+    res
+
 (** The resolution a term supplies for the promoted type variables its own type
     leaves unresolved.
 
@@ -446,11 +460,7 @@ let promoted_resolutions_of_body b =
     | _ -> Mlutil.ast_iter walk e
   in
   walk b;
-  List.filter
-    (fun (n, t) ->
-      not
-        (List.exists (fun (m, u) -> Id.equal n m && u <> t) !found) )
-    !found
+  drop_ambiguous !found
 
 (** Map a function's own type variables to the associated types they really
     stand for.  In [mret : forall M, Mon M -> forall A, A -> M A] the variable
@@ -474,7 +484,7 @@ let type_resolutions_of_referenced_globals b =
     Mlutil.ast_iter walk e
   in
   walk b;
-  !found
+  drop_ambiguous !found
 
 (** Generate a declaration's type and its body against the resolution its body
     supplies -- see {!promoted_resolutions_of_body} -- and the one its own type

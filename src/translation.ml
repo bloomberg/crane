@@ -15129,7 +15129,9 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
                 in
                 Tfun (param_tys, ret_ty)
               | _, CPPlambda _ -> cpp_ty
-              | _, _ when has_erased_type_in_type cpp_ty ->
+              | _, _
+                when has_erased_type_in_type cpp_ty
+                     || Ml_type_util.has_unresolved_promoted_in_type cpp_ty ->
                 (* Type contains erased positions (Tany or dummy_type marker)
                    but the expression is not a lambda with inferable types.
                    Use [auto] so the C++ compiler deduces the concrete type

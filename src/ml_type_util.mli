@@ -276,6 +276,10 @@ val has_tany_in_type : Minicpp.cpp_type -> bool
 (** Whether a C++ type contains an erased type anywhere within it. *)
 val has_erased_type_in_type : Minicpp.cpp_type -> bool
 
+(** Whether a C++ type still holds a promoted type variable this scope could
+    not answer -- erased in the same sense as [std::any]. *)
+val has_unresolved_promoted_in_type : Minicpp.cpp_type -> bool
+
 (** Whether a C++ type is a dummy Prop type. *)
 val is_cpp_dummy_prop : Minicpp.cpp_type -> bool
 
