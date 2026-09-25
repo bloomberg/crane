@@ -16,7 +16,17 @@
    asked for the second -- or is asked and answers once.
 
    The import list is not harness configuration -- it selects the emission
-   path. *)
+   path.
+
+   Fixed: the body walker read the application and its argument as two
+   mentions.  Each answers [iptr] -- the application as [typename
+   ParamsV<natIPtr>::IPTR::iptr], the argument as [typename natIPtr::iptr] --
+   so the ambiguity filter, which is right to drop a name two instances answer
+   differently, dropped it.  [ptr] survived only because [natIPtr] has nothing
+   to say about it.  An instance's own dictionary arguments are not
+   independent mentions: what they say is already said, in the outer
+   instance's spelling, by [Gen_decls.instance_arg_resolutions].  Textually,
+   the bare [iptr] becomes [typename ParamsV<natIPtr>::IPTR::iptr]. *)
 
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std Monads.ITreeReified.

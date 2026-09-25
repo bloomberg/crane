@@ -147,14 +147,3 @@
   (alias runtest)
   (deps hk_carrier_written_at_partial_app.t.exe)
   (action (run ./hk_carrier_written_at_partial_app.t.exe))))
-
-(subdir section_definition_instantiated_outside
- (rule
-  (targets section_definition_instantiated_outside.t.exe)
-  (deps SectionDefinitionInstantiatedOutside.vo section_definition_instantiated_outside.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} section_definition_instantiated_outside.t.exe section_definition_instantiated_outside.cpp section_definition_instantiated_outside.t.cpp)))
- (rule
-  (alias runtest)
-  (deps section_definition_instantiated_outside.t.exe)
-  (action (run ./section_definition_instantiated_outside.t.exe))))
