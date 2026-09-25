@@ -160,3 +160,14 @@
   (alias runtest)
   (deps hk_class_field_result_cast_to_concept.t.exe)
   (action (run ./hk_class_field_result_cast_to_concept.t.exe))))
+
+(subdir class_field_type_via_section_inductive
+ (rule
+  (targets class_field_type_via_section_inductive.t.exe)
+  (deps ClassFieldTypeViaSectionInductive.vo class_field_type_via_section_inductive.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} class_field_type_via_section_inductive.t.exe class_field_type_via_section_inductive.cpp class_field_type_via_section_inductive.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps class_field_type_via_section_inductive.t.exe)
+  (action (run ./class_field_type_via_section_inductive.t.exe))))
