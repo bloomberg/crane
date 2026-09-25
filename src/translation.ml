@@ -1865,14 +1865,15 @@ let rec resolve_type_metas ~next_tvar = function
     builds (see the typing note on {!Miniml.ml_ast}), so it is the one node
     that knows its type without reconstruction; a recursive call, by
     definition, says nothing the fixpoint's own type does not already. *)
-let rec tail_constructed_type = function
+let rec tail_result_type ~app_result = function
   | MLlam (_, _, b) | MLletin (_, _, _, b) | MLmagic (_, b) ->
-    tail_constructed_type b
+    tail_result_type ~app_result b
   | MLcons (ty, _, _) -> Some ty
+  | MLapp (f, args) -> app_result f args
   | MLcase (_, _, brs) ->
     Array.fold_left
       (fun acc (_, _, _, b) ->
-        match acc with Some _ -> acc | None -> tail_constructed_type b )
+        match acc with Some _ -> acc | None -> tail_result_type ~app_result b )
       None brs
   | _ -> None
 
@@ -1893,14 +1894,20 @@ let rec tail_constructed_type = function
     alone.  So is one whose body builds nothing:
     [tests/regression/anon_lift_name_collision]'s [_count_F] returns [T1] from
     integer literals, and its call site supplies the argument. *)
-let recover_fix_codomain ((id, ty) : Id.t * ml_type) (body : ml_ast) :
-    (Id.t * ml_type) * ml_ast =
+let recover_fix_codomain ~app_result ((id, ty) : Id.t * ml_type)
+    (body : ml_ast) : (Id.t * ml_type) * ml_ast =
   let dom, cod = Mlutil.type_decomp ty in
   match cod with
+  | Miniml.Tmeta ({contents = None} as cell) -> (
+    (* A hole, not a variable: the cell is shared with every annotation the
+       body writes it into, so filling it {e is} the substitution. *)
+    match tail_result_type ~app_result body with
+    | Some t -> cell.Miniml.contents <- Some t; ((id, ty), body)
+    | None -> ((id, ty), body) )
   | Miniml.Tvar (_, i)
     when (not (List.exists (fun t -> collect_tvars [] t |> List.mem i) dom))
-         && tail_constructed_type body <> None ->
-    let subst = [(i, Option.get (tail_constructed_type body))] in
+         && tail_result_type ~app_result body <> None ->
+    let subst = [(i, Option.get (tail_result_type ~app_result body))] in
     ( (id, subst_tvars_type subst ty),
       map_types_in_ast (subst_tvars_type subst) body )
   | _ -> ((id, ty), body)
@@ -1909,10 +1916,10 @@ let recover_fix_codomain ((id, ty) : Id.t * ml_type) (body : ml_ast) :
     body where erasure lost it, then mint [Tvar]s for the metas that remain.
     The order is the point -- a variable already standing for the result type
     is no longer asking what the body builds. *)
-let resolve_fix_types ~next_tvar ids funs =
+let resolve_fix_types ~app_result ~next_tvar ids funs =
   Array.iteri
     (fun i idty ->
-      let idty, body = recover_fix_codomain idty funs.(i) in
+      let idty, body = recover_fix_codomain ~app_result idty funs.(i) in
       ids.(i) <- idty;
       funs.(i) <- body )
     ids;
@@ -1969,28 +1976,39 @@ let rec resolve_metas_in_ast resolve_metas = function
     and a top-level [any_cast] on [repl] is dropped.  Callers whose [repl] is
     an [any_cast] of [target] use this -- the cast already there was chosen by
     the code that built that use site and knows its runtime encoding, so
-    nesting the two casts would throw [std::bad_any_cast]. *)
-let rec local_var_subst_expr ?(keep_cast = false) (target : Id.t)
-    (repl : cpp_expr) (e : cpp_expr) =
+    nesting the two casts would throw [std::bad_any_cast].
+
+    With [~extra_args], an occurrence in callee position also gains those
+    arguments.  Lifting a local binding to a top-level function turns its free
+    variables into trailing parameters, and every call has to grow to match;
+    the list is given already reversed, as {!CPPfun_call} stores its
+    arguments. *)
+let rec local_var_subst_expr ?(keep_cast = false) ?(extra_args = [])
+    (target : Id.t) (repl : cpp_expr) (e : cpp_expr) =
+  let sub = local_var_subst_expr ~keep_cast ~extra_args target repl in
   match e with
   | CPPany_cast (ty, CPPvar id) when keep_cast && Id.equal id target ->
     Cpp_erasure.unbox ty
       (match repl with CPPany_cast (_, inner) -> inner | r -> r)
+  | CPPfun_call (o, CPPvar id, args) when extra_args <> [] && Id.equal id target
+    ->
+    CPPfun_call
+      (o, repl, of_reversed (extra_args @ List.map sub (to_reversed args)))
   | CPPvar id when Id.equal id target -> repl
   | _ ->
     map_expr
-      (local_var_subst_expr ~keep_cast target repl)
-      (local_var_subst_stmt ~keep_cast target repl)
+      sub
+      (local_var_subst_stmt ~keep_cast ~extra_args target repl)
       Fun.id
       e
 
 (** Statement-level counterpart of [local_var_subst_expr]: substitute
     [CPPvar target] with [repl] inside a single C++ statement. *)
-and local_var_subst_stmt ?(keep_cast = false) (target : Id.t) (repl : cpp_expr)
-    (s : cpp_stmt) =
+and local_var_subst_stmt ?(keep_cast = false) ?(extra_args = [])
+    (target : Id.t) (repl : cpp_expr) (s : cpp_stmt) =
   map_stmt
-    (local_var_subst_expr ~keep_cast target repl)
-    (local_var_subst_stmt ~keep_cast target repl)
+    (local_var_subst_expr ~keep_cast ~extra_args target repl)
+    (local_var_subst_stmt ~keep_cast ~extra_args target repl)
     Fun.id
     s
 
@@ -4363,6 +4381,34 @@ and dict_carrier_ml_type id args =
     | _ -> None
   in
   Option.map strip_class (dict_ml_type dict)
+
+(** What an application of a global yields, as an ML type.
+
+    The callee's declared type says it, once instantiated the way the call
+    instantiates it: [tys] for its own [forall]s, and the dictionary argument
+    for the class parameter its parameter types spell as the carrier applied.
+    That is the same pair of substitutions {!gen_app}'s [subst_ml_ty] makes,
+    read at the codomain instead of at a domain.
+
+    [None] where the callee has no recorded type, or fewer value arrows than
+    the call has value arguments -- a partial application returns a function,
+    which is not what the callers of this want. *)
+and ml_app_result_type (f : ml_ast) (args : ml_ast list) : ml_type option =
+  let ( let* ) = Option.bind in
+  match f with
+  | MLglob (id, tys) ->
+    let value_args =
+      List.filter (function MLdummy _ -> false | _ -> true) args
+    in
+    let* ty = find_type_opt id in
+    let ty =
+      match dict_carrier_ml_type id value_args with
+      | Some carrier -> subst_dict_carrier carrier ty
+      | None -> ty
+    in
+    let ty = try type_subst_list tys ty with _ -> ty in
+    Ml_type_util.ml_codomain_after (List.length value_args) ty
+  | _ -> None
 
 (** The carrier of a higher-kinded class parameter, read off the {e dictionary}
     the call passes for that class.
@@ -14238,11 +14284,11 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
      {!with_cpp_return_type}, which {!slot_cpp_ty} falls back to. *)
   let slot = {slot with expected_cpp_ty = None} in
   match ast with
-  | MLletin (_, _, MLfix (x, ids, funs, _), b) as _whole ->
+  | MLletin (_, _, (MLfix (x, ids, funs, _) as fix_term), b) as _whole ->
     (* Special case for let-fix: the let binding name is the fix function name *)
     (* Resolve unresolved metas in fix function types to Tvars using mgu. *)
     let next_tvar = ref 1 in
-    resolve_fix_types ~next_tvar ids funs;
+    resolve_fix_types ~app_result:ml_app_result_type ~next_tvar ids funs;
     (* Collect all Tvar indices from the fixpoint types *)
     let fix_tvar_indices =
       Array.fold_left (fun acc (_, ty) -> collect_tvars acc ty) [] ids
@@ -14267,6 +14313,26 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
          reference: nothing deduces a class instance from an argument. *)
       let class_temps = current_class_temps () in
       let class_args = List.map (fun (_, id) -> named_tvar id) class_temps in
+      (* A lifted fix no longer sits inside the scope that bound its free
+         variables, so each one becomes a trailing parameter and each call
+         grows an argument -- the same closure conversion the lifted-lambda
+         path below does.  The names are the outer scope's, so the compiled
+         body needs no substitution: only the head and the call sites do. *)
+      let free_vars =
+        List.filter
+          (fun (name, ty) ->
+            (* A class instance is already carried by [class_temps], as a
+               template argument explicit at every reference; passing it again
+               as a value would shadow the template parameter it is named
+               after.  An erased binder has no value to pass at all. *)
+            (not (List.exists (fun (_, id) -> Id.equal id name) class_temps))
+            && (not (isTdummy ty))
+            && not (ml_type_is_void ty) )
+          (List.map
+             (fun i -> (get_db_name i env, get_env_type i))
+             (collect_free_rels 0 fix_term) )
+      in
+      let free_args = List.map (fun (name, _) -> CPPvar name) free_vars in
       (* Generate the lifted function name *)
       let fix_name = fst ids.(x) in
       let lifted_ref = lifted_fix_ref fix_name in
@@ -14309,7 +14375,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
               ~non_fwd_source_indices
               (convert_ml_type_to_cpp_type env all_tvar_names)
               all_temps
-              params
+              (free_vars @ params)
           in
           (* Replace recursive self-references (CPPvar renamed_n) with calls to
              the lifted function *)
@@ -14317,7 +14383,11 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
             mk_cppglob lifted_ref
               (class_args @ List.map (fun id -> named_tvar id) all_tvar_names)
           in
-          let body = List.map (local_var_subst_stmt renamed_id rec_call) body in
+          let body =
+            List.map
+              (local_var_subst_stmt ~extra_args:free_args renamed_id rec_call)
+              body
+          in
           let inner = Dfun (mk_dfun ~ret:cod lifted_ref (Ddef (cpp_params, body))) in
           let lifted_decl =
             Dtemplate (class_temps @ all_temps_with_funs, None, inner)
@@ -14406,7 +14476,9 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       let result =
         with_shifted_move_tracking 1 (fun () -> gen_stmts ~slot env_with_fix k b)
       in
-      List.map (local_var_subst_stmt fix_name lifted_call) result )
+      List.map
+        (local_var_subst_stmt ~extra_args:free_args fix_name lifted_call)
+        result )
     else
       (* No extra Tvars — proceed with local fixpoint approach.
 
@@ -15299,7 +15371,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
        Traverse types and assign Tvar 1, 2, ... to each unresolved meta. *)
     let next_tvar = ref 1 in
     let resolve_metas = resolve_type_metas ~next_tvar in
-    resolve_fix_types ~next_tvar ids funs;
+    resolve_fix_types ~app_result:ml_app_result_type ~next_tvar ids funs;
     Array.iter (resolve_metas_in_ast resolve_metas) funs;
     List.iter (resolve_metas_in_ast resolve_metas) args;
     (* Collect Tvars from bodies too *)
@@ -15518,7 +15590,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
        called in place), it will always escape.  Use the Y-combinator pattern:
        the generated wrapper lambda [fix_name] is already a plain callable. *)
     let next_tvar = ref 1 in
-    resolve_fix_types ~next_tvar ids funs;
+    resolve_fix_types ~app_result:ml_app_result_type ~next_tvar ids funs;
     let all_fix_ids_list = Array.to_list ids in
     let funs_compiled =
       Array.to_list

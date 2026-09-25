@@ -4414,108 +4414,11 @@ let gen_sfun n b dom cod temps =
   | [] -> (inner, env)
   | l -> (Dtemplate (l, None, inner), env)
 
-(** Build a map from erased field projection GlobRefs to their Tvar index for a
-    promoted dependent record / typeclass. Returns [(GlobRef.t * int) list]
-    where int is the 1-based Tvar index. *)
-let erased_proj_tvar_map (class_ref : GlobRef.t) : (GlobRef.t * int) list =
-  let open GlobRef in
-  match class_ref with
-  | IndRef (kn, _) | ConstructRef ((kn, _), _) ->
-    let promoted_vars = Table.get_ind_ip_vars class_ref in
-    if promoted_vars = [] then
-      []
-    else
-      let mp = MutInd.modpath kn in
-      let n_promoted = List.length promoted_vars in
-      (* The index is a position in the class's whole [ip_vars], so it is
-         computed before anything is dropped.  What is dropped is a field the
-         back end decided against: a class demoted to a struct leaves its
-         field an ordinary value, and a guess that spells the field's name
-         writes a type nothing declares.  Same question as
-         {!promoted_var_is_associated_type} asks of the concept -- this is the
-         third list derived from [ip_vars], and all three must agree. *)
-      List.mapi
-        (fun i var_id ->
-          let knp = Constant.make2 mp (Label.of_id var_id) in
-          (var_id, (ConstRef knp, n_promoted - i)) )
-        promoted_vars
-      |> List.filter_map (fun (var_id, entry) ->
-             if promoted_var_is_associated_type class_ref var_id then
-               Some entry
-             else None )
-  | _ -> []
-
-(** Expand TC-typed carrier refs to their nested Type-valued promoted vars.
-
-    When a typeclass has a promoted field whose ML type is itself a typeclass
-    (e.g., [base_category : PreCategory] in [PreStableCategory]),
-    [erased_proj_tvar_map] returns a reference to the TC-typed field (e.g.,
-    [ConstRef base_category]).  Using that directly in [rewrite_ml_ast_types]
-    produces the wrong C++ type — [typename _tcI0::base_category] instead of
-    [typename _tcI0::base_category::Obj].
-
-    This function replaces TC-typed carrier refs with the Type-valued promoted
-    vars of the nested typeclass.  Expansion is recursive: if the nested TC
-    itself has TC-typed promoted vars, they are expanded further.
-
-    @param class_ref  The containing typeclass (e.g., [PreStableCategory])
-    @param carrier_refs  The list from [erased_proj_tvar_map] *)
-let rec expand_tc_typed_carriers
-    (class_ref : GlobRef.t)
-    (carrier_refs : (GlobRef.t * int) list)
-    : (GlobRef.t * int) list =
-  let field_type_pairs = Table.get_record_field_bindings class_ref in
-  let expanded =
-      List.concat_map (fun (ref, idx) ->
-        let ref_name = Common.pp_global_name Common.Term ref in
-        match List.find_opt (fun (fopt, _) ->
-          match fopt with
-          | Some fr -> Common.pp_global_name Common.Term fr = ref_name
-          | None -> false
-        ) field_type_pairs with
-        | Some (_, Miniml.Tglob (r, _, _)) when Table.is_typeclass r ->
-          (* TC-typed carrier — expand to the nested TC's promoted vars *)
-          let nested = erased_proj_tvar_map r in
-          if nested = [] then [(ref, idx)]
-          else expand_tc_typed_carriers r nested
-        | _ -> [(ref, idx)]
-      ) carrier_refs
-  in
-  (* Sort by ascending tvar index so the first-declared field (lowest
-     index) comes first.  [erased_proj_tvar_map] assigns index
-     [n_promoted - i], so field 0 gets index 1 (lowest).  This matters
-     because [rewrite_ml_ast_types] uses [List.hd] to pick the carrier. *)
-  List.sort (fun (_, i1) (_, i2) -> compare i1 i2) expanded
-
-(** Replace Tglob references to erased projections with a rigid type variable
-    in an ML type. *)
-let rec replace_erased_proj_refs
-    (proj_map : (GlobRef.t * int) list)
-    (t : ml_type) : ml_type =
-  let find_in_map r =
-    List.find_map
-      (fun (ref, idx) -> if GlobRef.CanOrd.equal r ref then Some idx else None)
-      proj_map
-  in
-  match t with
-  | Miniml.Tglob (r, ts, args) ->
-    ( match find_in_map r with
-    | Some idx -> Miniml.Tvar (Rigid, idx)
-    | None ->
-      let ts' = List.map (replace_erased_proj_refs proj_map) ts in
-      if ts == ts' then t else Miniml.Tglob (r, ts', args) )
-  | Miniml.Tarr (t1, t2) ->
-    let t1' = replace_erased_proj_refs proj_map t1 in
-    let t2' = replace_erased_proj_refs proj_map t2 in
-    if t1 == t1' && t2 == t2' then t else Miniml.Tarr (t1', t2')
-  | Miniml.Tunknown -> Miniml.Tvar (Rigid, 1)
-  | _ -> t
-
-(** Whether a recovered type is one {!rewrite_ml_ast_types} would otherwise
-    have guessed at, and so worth writing back into the binder it came from.
-    Anything else in a body already has a pass that reads it from somewhere
-    better than the declaration -- an alias, for one, is a type in its own
-    right and the body wants the type it stands for. *)
+(** Whether a recovered type names an associated type of the enclosing class,
+    and so is worth writing back into the binder it came from.  Anything else
+    in a body already has a pass that reads it from somewhere better than the
+    declaration -- an alias, for one, is a type in its own right and the body
+    wants the type it stands for. *)
 let rec names_promoted_type_var = function
   | Miniml.Tglob (r, args, _) ->
     Table.is_promoted_type_var r || List.exists names_promoted_type_var args
@@ -4523,19 +4426,17 @@ let rec names_promoted_type_var = function
   | Miniml.Tmeta {contents = Some t} -> names_promoted_type_var t
   | _ -> false
 
-(** Whether a recovered type says something the guess cannot say wrongly.
+(** Whether a recovered type says something that means the same at the hole as
+    it did in the declaration.
 
-    The gate above asks whether the {e offer} names a promoted type var, but
-    what decides soundness is whether the {e hole} would otherwise be guessed
-    at -- and the guess fills every hole, so every one of them would.  The
-    population that misses is the one where the declaration knows a perfectly
-    ordinary type: [memS_mon::bind] declares its continuation
-    [std::function<MemS<..,_A1>(_A0)>] and the call is [bind<unit, unit>], so
-    the answer [unit] is spelled one line above the binder -- and [unit] names
-    no promoted type var, so the gate declines and the guess writes the
-    class's first associated type instead.
+    The gate above asks whether the {e offer} names a promoted type var, which
+    is too narrow: the population it misses is the one where the declaration
+    knows a perfectly ordinary type.  [memS_mon::bind] declares its
+    continuation [std::function<MemS<..,_A1>(_A0)>] and the call is
+    [bind<unit, unit>], so the answer [unit] is spelled one line above the
+    binder -- and [unit] names no promoted type var.
 
-    A type with no variable in it is one the guess can only get wrong.  It
+    A type with no variable in it is one this pass can only get right.  It
     mentions nothing whose meaning depends on where it is read, so it means
     the same at the binder as it did in the declaration.  A variable does not:
     [itreeF]'s [Vis] quantifies over the event's result as well as the tree's,
@@ -4560,71 +4461,22 @@ let rec is_closed_type = function
 
 let writable_offer ty = names_promoted_type_var ty || is_closed_type ty
 
-(** Replace Tunresolved in all type annotations within an ML AST body with the
-    GlobRef of the first promoted type var (the carrier). This allows
-    convert_ml_type_to_cpp_type to detect it as a promoted type var.
-    [carrier_refs] is a list of (GlobRef.t * int) from erased_proj_tvar_map.
+(** Fill a body's empty type annotations from the declaration, in two passes.
 
-    The carrier is a guess and can only be one: every hole in the body is
-    filled with the same associated type, so a class declaring three of them
-    spells whichever one heads the list at all three.  Run
-    {!Mlutil.recover_erased_types} first -- the declared type names the holes
-    it can, and the guess is then left with only the ones nothing else could
-    name.
+    The first pass is the narrow one and the second widens it: a hole the
+    declaration names perfectly well -- but which happens not to mention a
+    promoted type var -- would otherwise be declined by the one pass that
+    knows the answer.
 
-    A metavariable is {e shared} -- the same node is reachable from more than
-    one declaration's annotations -- so resolving one in place publishes this
-    declaration's guess to every other declaration that mentions it, and
-    publishes it {e before} their own recovery runs.  The authority then finds
-    a concrete type where a hole used to be, cannot tell it from one the body
-    meant, and declines to correct it.  The guess is therefore written into the
-    type this declaration is printed from and nowhere else. *)
-let rewrite_ml_ast_types
-    (carrier_refs : (GlobRef.t * int) list)
-    (ast : ml_ast) : ml_ast =
-  if carrier_refs = [] then
-    ast
-  else
-    let carrier_ref = fst (List.hd carrier_refs) in
-    let rec rty t =
-      match t with
-      | Miniml.Tunknown -> Miniml.Tglob (carrier_ref, [], [])
-      | Miniml.Tmeta {contents = Some inner} -> rty inner
-      | Miniml.Tmeta {contents = None} -> Miniml.Tglob (carrier_ref, [], [])
-      | Miniml.Tarr (t1, t2) -> Miniml.Tarr (rty t1, rty t2)
-      | Miniml.Tglob (r, ts, a) ->
-        let ts' = List.map rty ts in
-        Miniml.Tglob (r, ts', a)
-      | _ -> t
-    in
-    Mlutil.ast_map_types rty ast
-
-(** Get the erased projection map for a function's type, if it takes a promoted
-    typeclass as first argument.
-
-    A higher-kinded carrier is left out: it stands for a type constructor, so it
-    can never be the type of a value, and {!rewrite_ml_ast_types} would spell
-    its name -- a bare [M] -- wherever a body has an unknown annotation that
-    really wants the element type. *)
-let get_erased_proj_map_from_type (ty : ml_type) : (GlobRef.t * int) list =
-  match ty with
-  | Tarr (Tglob (class_ref, _, _), _) when Table.is_typeclass class_ref ->
-    List.filteri
-      (fun i _ -> not (Table.is_hkt_param class_ref i))
-      (erased_proj_tvar_map class_ref)
-  | _ -> []
-
-(** Fill a body's empty type annotations, declaration first and guess last.
-
-    [~only] scopes the authority and nothing scopes the guess, so without the
-    second pass a hole the declaration names perfectly well -- but which
-    happens not to mention a promoted type var -- is declined by the one pass
-    that knows the answer and then filled by the one that is guessing.  A
-    recovery is only sound over the holes nothing else can name. *)
-let recover_then_guess carrier_refs ty b =
+    A hole neither pass can name is left a hole.  There used to be a third
+    pass here that filled every remaining one with the enclosing class's
+    first-declared associated type, which is right only when the class
+    declares exactly one and the hole is the carrier; where it is not, the
+    guess is what the body is printed from, and it pre-empts the passes in
+    {!Translation} that can still read the answer off the term. *)
+let recover_erased_body_types ty b =
   let b = Mlutil.recover_erased_types ~only:names_promoted_type_var ty b in
-  let b = Mlutil.recover_erased_types ~only:writable_offer ~refine_only:true ty b in
-  rewrite_ml_ast_types carrier_refs b
+  Mlutil.recover_erased_types ~only:writable_offer ~refine_only:true ty b
 
 (** Generate C++ declaration from ML definition (main entry point) *)
 let gen_decl__inner n b ty =
@@ -4682,20 +4534,7 @@ let gen_decl n b ty =
 (** Generate C++ declaration with pretty-printing adjustments *)
 let gen_decl_for_pp__inner n b ty =
   with_body_resolutions n b @@ fun () ->
-  let carrier_refs = get_erased_proj_map_from_type ty in
-  (* Expand TC-typed carrier refs: when a carrier ref points to a
-     typeclass-typed promoted field (e.g., base_category : PreCategory),
-     replace it with the nested TC's Type-valued promoted vars (e.g., Obj).
-     This ensures rewrite_ml_ast_types replaces Tunresolved with the actual
-     type-level field rather than the struct-level typeclass field. *)
-  let carrier_refs =
-    match ty with
-    | Miniml.Tarr (Miniml.Tglob (class_ref, _, _), _)
-      when Table.is_typeclass class_ref ->
-      expand_tc_typed_carriers class_ref carrier_refs
-    | _ -> carrier_refs
-  in
-  let b = recover_then_guess carrier_refs ty b in
+  let b = recover_erased_body_types ty b in
   let b = resolve_body_tvars b ty in
   with_method_ns_for_locals @@ fun () ->
   let cty = convert_ml_type_to_cpp_type (empty_env ()) [] ty in
@@ -4766,10 +4605,7 @@ let gen_dfun_def__inner n b ty =
   with_body_resolutions n b @@ fun () ->
   (* Simplify the ML type to resolve metavariables before converting to C++ *)
   let ty = type_simpl ty in
-  (* Rewrite Tunresolved in body types to promoted carrier refs. This allows
-     convert_ml_type_to_cpp_type to resolve them correctly. *)
-  let carrier_refs = get_erased_proj_map_from_type ty in
-  let b = recover_then_guess carrier_refs ty b in
+  let b = recover_erased_body_types ty b in
   let b = resolve_body_tvars b ty in
   with_method_ns_for_locals @@ fun () ->
   let cty = convert_ml_type_to_cpp_type (empty_env ()) [] ty in

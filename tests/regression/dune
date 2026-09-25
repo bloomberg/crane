@@ -255,3 +255,16 @@
   (alias runtest)
   (deps inline_inner_fix_writes_instance.t.exe)
   (action (run ./inline_inner_fix_writes_instance.t.exe))))
+
+; --- Element half of Vellvm Cluster A, reduced by the Vellvm-side session.
+
+(subdir bind_continuation_binder_from_class_field
+ (rule
+  (targets bind_continuation_binder_from_class_field.t.exe)
+  (deps BindContinuationBinderFromClassField.vo bind_continuation_binder_from_class_field.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bind_continuation_binder_from_class_field.t.exe bind_continuation_binder_from_class_field.cpp bind_continuation_binder_from_class_field.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps bind_continuation_binder_from_class_field.t.exe)
+  (action (run ./bind_continuation_binder_from_class_field.t.exe))))

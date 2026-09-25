@@ -216,7 +216,41 @@
 
     This also withdraws the prediction the shared-cell account licensed --- that
     the defective sites cannot be fixed in groups.  On three independent cells
-    they can be, so a partial fix is not evidence of anything either way. *)
+    they can be, so a partial fix is not evidence of anything either way.
+
+    {b The fix, in three parts, and why the first of them is not optional.}
+
+    - {e The guess is deleted, not bypassed.}  [Gen_decls.rewrite_ml_ast_types]
+      and its support are gone.  The measurement above shows declining is
+      affordable; what makes deletion {e mandatory} is ordering: [Gen_decls]
+      runs before [Translation], so with the guess in place it fills the same
+      shared cells with [addr] first and the recovery below never sees a hole
+      to fill.  The guess does not merely duplicate a later pass, it pre-empts
+      it.  Re-enabling it reproduces [-> typename _tcI0::addr] exactly.
+
+    - {e The codomain is recovered from the term.}  [recover_fix_codomain]
+      already claimed to do this and missed on two axes, both of which apply
+      here: it matched only an already-minted [Tvar] codomain and not a
+      [Tmeta {contents = None}], and its tail reader recognised only an
+      [MLcons] tail and not an application.  Widening both, plus a new
+      [ml_app_result_type] that instantiates a callee's declared codomain the
+      way [gen_app]'s [subst_ml_ty] instantiates its domains (the call's own
+      type arguments, then the dictionary's carrier), answers it.  Filling the
+      [Tmeta] cell {e is} the substitution --- see
+      [[fill-the-hole-not-the-type]].
+
+    - {e The lifted [fix] gets closure conversion.}  There are two lift paths
+      in [Translation] and only the lifted-{e lambda} one ever had it; the
+      [MLletin (_, _, MLfix ...)] path lifted a body out of the scope that
+      bound its free variables and left every call unchanged, which is the
+      [k]-never-received defect noted above.  The lambda path's conventions
+      are reused rather than re-invented.  One exclusion is load-bearing: a
+      class instance is {e not} a free value.  [current_class_temps] already
+      carries [_tcI0] as a template parameter explicit at every reference, and
+      passing it again emits [const Params _tcI0], shadowing its own template
+      parameter.
+
+    With all three the [fix] is inline again and every position is correct. *)
 
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std.

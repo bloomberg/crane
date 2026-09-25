@@ -175,9 +175,22 @@ I>concept Ptr = requires {
   { I::zero_ptr } -> std::convertible_to<typename I::ptr>;
 });
 using ptr = std::any;
-/// Both fields are themselves instances, as Params is in Vellvm.  IPTR is
-/// the one Crane writes; it is the last field, and that is worth keeping in
-/// view when diagnosing how the hole is filled.
+/// Both fields are themselves instances, as Params is in Vellvm.
+///
+/// {b An earlier version of this comment said IPTR "is the one Crane writes;
+/// it is the last field, and that is worth keeping in view".}  That was
+/// speculation about the Vellvm artifact, not a measurement of this test, and
+/// read as a measurement it contradicts the filler rule.  It is wrong twice
+/// over.  This test emits {e no} bare typename _tcI0::IPTR at all --- all 29
+/// occurrences of each field here are legitimate ::iptr and ::ptr
+/// projections --- because its inner fix is {e lifted}, so the hole escapes
+/// as an undeducible template parameter instead of being filled.  There is
+/// nothing to fill and so nothing to be positional about.  And in Vellvm's own
+/// Params, IPTR is the {e first} field, not the last.
+///
+/// The filler, where one exists, is the first Type-valued or instance field of
+/// the enclosing class in declaration order; see
+/// tests/wip/bind_continuation_binder_from_class_field.
 template <typename I>
 concept Params = requires {
   typename I::PTR;
@@ -280,12 +293,12 @@ struct EOU_monad {
 static_assert(MyMonad<EOU_monad>);
 template <typename ptr, typename iptr> using dv = std::pair<ptr, iptr>;
 
-template <Params _tcI0, typename T2>
-auto _collect_go_all(const std::optional<Nat> pad) {
+template <Params _tcI0> auto _collect_go_all(const std::optional<Nat> pad) {
   auto go_impl =
       [=](auto &_self_go, auto m,
           List<dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>
-              ys) mutable -> T2 {
+              ys) mutable
+      -> EOU<List<dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>> {
     if (std::holds_alternative<typename List<
             dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>::Nil>(
             ys.v())) {
@@ -323,7 +336,10 @@ auto _collect_go_all(const std::optional<Nat> pad) {
   };
   auto go = [=](auto m,
                 List<dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>
-                    ys) mutable -> T2 { return go_impl(go_impl, m, ys); };
+                    ys) mutable
+      -> EOU<List<dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>> {
+    return go_impl(go_impl, m, ys);
+  };
   return go;
 }
 
