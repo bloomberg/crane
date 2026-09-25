@@ -428,7 +428,20 @@ let promoted_resolutions_of_body b =
     | MLapp (MLglob (r, _), args)
       when instance_class r <> None && closed (strip_magic e) ->
       add r (ml_arg_to_template_type (empty_env ()) (strip_magic e));
-      List.iter walk args
+      (* An instance's own dictionary arguments are not independent mentions.
+         What they say is already said, in this instance's spelling, by
+         {!instance_arg_resolutions}; read separately they answer the same name
+         in their own spelling -- [natIPtr::iptr] beside [typename
+         ParamsV<natIPtr>::IPTR::iptr] -- and the pair is then dropped as
+         ambiguous, leaving the name erased. *)
+      List.iter
+        (fun a ->
+          match strip_magic a with
+          | MLglob (r', _) | MLapp (MLglob (r', _), _)
+            when instance_class r' <> None ->
+            ()
+          | _ -> walk a )
+        args
     | MLglob (r, _) -> add r (Tglob (r, [], []))
     | _ -> Mlutil.ast_iter walk e
   in

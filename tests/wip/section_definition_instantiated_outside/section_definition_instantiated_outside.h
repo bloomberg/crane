@@ -191,7 +191,8 @@ static Nat zero_addr() {
 return Nat::o();}
 };
 struct SectionDefinitionInstantiatedOutside {
-static Nat eqb0(const Dval<typename ParamsV<natIPtr>::PTR::ptr, iptr>& x0_);
+static Nat eqb0(const Dval<typename ParamsV<natIPtr>::PTR::ptr,
+typename ParamsV<natIPtr>::IPTR::iptr>& x0_);
 static inline const Dval<typename ParamsV<natIPtr>::PTR::ptr,
 typename ParamsV<natIPtr>::IPTR::iptr> zero0 = inner_zero<ParamsV<natIPtr>>();
 static inline const Nat run = eqb0(zero0);
