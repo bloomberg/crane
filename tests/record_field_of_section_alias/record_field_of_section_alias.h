@@ -24,7 +24,7 @@ A> struct EOU;
 struct EOU_monad;
 struct ProvenanceV;
 template <typename ptr> struct Dval;
-struct frame;
+template <typename iptr, typename ptr> struct frame;
 struct natIPtr;
 struct Nat {
   // TYPES
@@ -260,7 +260,8 @@ return v_;}
 const variant_t& v() const {
 return v_;}
 };template <typename ptr> using dbox = std::pair<Dval<ptr>, Nat>;
-struct frame {
+template <typename iptr, typename
+ptr>struct frame {
 std::pair<iptr, bool> fptr;
 dbox<ptr> vars;
 };
@@ -276,7 +277,7 @@ return n;}
 static_assert(IPtr<natIPtr>);
 struct RecordFieldOfSectionAlias {
 static inline const std::pair<Nat, bool> the_null = crane_any_cast<std::pair<Nat, bool>>(PointerV<natIPtr>::null());
-static inline const dbox<typename PointerV<natIPtr>::ptr> packed = std::make_pair(Dval<typename PointerV<natIPtr>::ptr>::dptr(the_null), Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))));static inline const frame fr = frame{the_null, packed};
+static inline const dbox<typename PointerV<natIPtr>::ptr> packed = std::make_pair(Dval<typename PointerV<natIPtr>::ptr>::dptr(the_null), Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))));static inline const frame<typename natIPtr::iptr, typename PointerV<natIPtr>::ptr> fr = frame{the_null, packed};
 static inline const Nat run = PIV<natIPtr>::ptr_to_int(fr.fptr).add([]() {
 auto&& _sv1 = fr.vars.first;
 if (std::holds_alternative<typename Dval<typename PointerV<natIPtr>::ptr>::DPtr>(_sv1.v())) {

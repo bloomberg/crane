@@ -16,7 +16,15 @@
    promoted variables themselves; skipping Record is not.
 
    The import list is not harness configuration -- it selects the emission
-   path. *)
+   path.
+
+   Fixed: [fold_type_body_types] now skips only the TypeClass kind, so a
+   record's fields are payloads like any other and [gen_record_cpp] gives it
+   the promoted variables as trailing template parameters.  A field whose type
+   unfolds a projection spells the context instance's class variable directly
+   ([std::pair<iptr, bool>] rather than [ptr]), so the instances the
+   declaration's own type applies -- [@frame natIPtr] -- resolve their classes'
+   variables too, not only the ones the fields name. *)
 
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std Monads.ITreeReified.

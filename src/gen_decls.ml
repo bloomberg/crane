@@ -332,7 +332,11 @@ let ind_type_resolutions r =
   | Some (head, arg_shapes) ->
     resolutions_of_shapes
       ~own_instances:(List.map (fun (a, _) -> Tglob (a, [], [])) arg_shapes)
-      (Table.get_type_class_args head)
+      (* The instances the type is applied to resolve their own classes'
+         variables, not only the ones its fields name: a field whose type
+         unfolds a projection spells the class variable of the context
+         instance directly, and [@frame natIPtr] is what says which. *)
+      (arg_shapes @ Table.get_type_class_args head)
   | None -> []
 
 (** The resolution a term supplies for the promoted type variables its own type
@@ -600,7 +604,14 @@ let gen_record_cpp name fields ind =
         (Fvar' (field_name i x, field_cpp_ty vars t), VPublic, SNoTag) )
       fields
   in
-  let ty_vars = List.map (fun x -> (TTtypename, x)) vars in
+  (* A record's fields are payloads like any other, so the promoted variables
+     they name are template parameters here too -- see
+     {!Table.promoted_type_params} and its use for the other inductive
+     kinds. *)
+  let ty_vars =
+    List.map (fun x -> (TTtypename, x)) vars
+    @ List.map (fun v -> (TTtypename, v)) (Table.promoted_type_params name)
+  in
   let conversion_field =
     conversion_to_other_instantiation ~name ~templates:ty_vars ~vars
       ~fields:

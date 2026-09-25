@@ -1194,7 +1194,11 @@ let fold_type_body_types f r acc =
       ( try
           let ind = unsafe_lookup_ind kn in
           match ind.Miniml.ind_kind with
-          | Miniml.Record _ | Miniml.TypeClass _ -> []
+          (* A class is skipped, and only a class: its fields *are* the
+             promoted variables, so a class that reached them would be
+             parameterised by its own contents.  A record's fields are data
+             like any constructor's payload. *)
+          | Miniml.TypeClass _ -> []
           | _ ->
             Array.fold_left
               (fun acc p ->

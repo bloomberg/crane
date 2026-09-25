@@ -148,13 +148,3 @@
   (deps hk_carrier_written_at_partial_app.t.exe)
   (action (run ./hk_carrier_written_at_partial_app.t.exe))))
 
-(subdir record_field_of_section_alias
- (rule
-  (targets record_field_of_section_alias.t.exe)
-  (deps RecordFieldOfSectionAlias.vo record_field_of_section_alias.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} record_field_of_section_alias.t.exe record_field_of_section_alias.cpp record_field_of_section_alias.t.cpp)))
- (rule
-  (alias runtest)
-  (deps record_field_of_section_alias.t.exe)
-  (action (run ./record_field_of_section_alias.t.exe))))
