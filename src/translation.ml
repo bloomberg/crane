@@ -8995,17 +8995,22 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       in
       gen_ctor_call (List.rev (List.mapi gen_and_wrap ts_updated))
     | _ ->
-      (* The leading arguments for the promoted variables the record mentions
-         without declaring, which are parameters of its struct like any other
-         inductive's -- see {!ind_promoted_type_args}.  Read before the scope
-         is cleared below, since it is the scope that resolves them. *)
-      let promoted_args =
-        match ty with Tglob (n, _, _) -> ind_promoted_type_args n | _ -> []
+      (* Records: a record struct erases the promoted variables it does not
+         take as parameters to [std::any], so a lambda assigned to one of its
+         fields has to spell them that way too, and the scope forgets how to
+         resolve them.  The ones it mentions without declaring are parameters
+         of the struct like any other inductive's (see
+         {!ind_promoted_type_args}), so its fields spell them resolved, and so
+         must everything built for them here. *)
+      let mentioned =
+        match ty with Tglob (n, _, _) -> Table.promoted_type_params n | _ -> []
       in
-      (* Records: clear [promoted_var_map] because record structs use erased
-         types (std::any) for promoted fields.  Lambda parameters assigned to
-         record fields must use std::any to match the field types. *)
-      tctx := { !tctx with promoted_var_map = [] };
+      tctx :=
+        { !tctx with
+          promoted_var_map =
+            List.filter
+              (fun (v, _) -> List.exists (Id.equal v) mentioned)
+              (!tctx).promoted_var_map };
       let nstempmod args =
         match ty with
         | Tglob (n, tys, _) ->
@@ -9022,7 +9027,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
              instance member template a recovered [Tvar 3] is the method's
              own [_A0], and an empty name list spells it as the anonymous
              [T3] -- a free name where the erasure at least compiled. *)
-          let temps = promoted_args @ template_params_of_ml env tys in
+          let temps = ind_promoted_type_args n @ template_params_of_ml env tys in
           if Table.is_coinductive n then
             mk_call
               (CPPalloc (Alloc_heap, Tglob (n, temps, [])))
