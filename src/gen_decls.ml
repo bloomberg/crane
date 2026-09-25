@@ -388,12 +388,29 @@ let ind_type_resolutions r =
     and spelling either one puts [Dval<typename natIPtr::iptr>] on the value
     built at the other.  The erased alias is the only answer that is not wrong
     somewhere.  Every list of resolutions read from a term passes through
-    here -- a list that skipped it would reinstate the guess. *)
+    here -- a list that skipped it would reinstate the guess.
+
+    A discard destroys evidence, so under [CRANE_CHECK_IR] it says so.  Two
+    right answers are benign, but one right answer and one {e wrong} one
+    annihilate just the same, and the wrong one would have been an undeclared
+    identifier: the filter turns a compile error into a silent [std::any].  The
+    spellings are printed because which of them is nonsense is a question only
+    a reader can answer. *)
 let drop_ambiguous res =
-  List.filter
-    (fun (n, t) ->
-      not (List.exists (fun (m, u) -> Id.equal n m && u <> t) res) )
-    res
+  let ambiguous (n, t) =
+    List.exists (fun (m, u) -> Id.equal n m && u <> t) res
+  in
+  if Sys.getenv_opt "CRANE_CHECK_IR" <> None then
+    List.iter
+      (fun (n, t) ->
+        if ambiguous (n, t) then
+          Feedback.msg_warning
+            Pp.(
+              str "promoted variable " ++ Id.print n
+              ++ str " is answered more than once; dropping "
+              ++ str (Translation.render_cpp_type_in_template t) ) )
+      res;
+  List.filter (fun e -> not (ambiguous e)) res
 
 (** The resolution a term supplies for the promoted type variables its own type
     leaves unresolved.
@@ -2514,7 +2531,16 @@ let gen_type_alias r vars ot =
         Table.add_erased_type_const r;
         require_header "any";
         (Some (Tid_external ("std::any", [])), Some "AXIOM TO BE REALIZED")
-      | Some t -> (Some (convert_ml_type_to_cpp_type (empty_env ()) [] t), None) )
+      | Some t ->
+        (* Name the body's type variables from the alias's own list.  Left
+           anonymous they are resolved by position against the emitted
+           parameters, and the promoted ones lead (they are defaulted, and a
+           default may not precede a plain parameter) -- so [Definition Top :=
+           itree TopE], eta-expanded to supply [itree]'s missing value
+           parameter, read the value slot off the FRONT and wrote [ITree<iptr>].
+           Eta-expansion appends; positional resolution reads from the
+           beginning. *)
+        (Some (convert_ml_type_to_cpp_type (empty_env ()) vars t), None) )
   in
   let du_tparams_head =
     hkt_templates ?applied:du_rhs r vars
