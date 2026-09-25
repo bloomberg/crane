@@ -309,6 +309,15 @@ let rec class_arg_type ~own_instances sh =
   match sh with
   | Table.Carg_unknown -> None
   | Table.Carg (r, []) -> Some (Tglob (r, [], []))
+  | Table.Carg (r, [arg]) when Table.is_projection r ->
+    (* A class field is an instance of its own class -- [@IPTR P] is an [IPtr]
+       -- but it is not applied to the record, it is selected from it.  Spelling
+       it as a template gives the undeclared [IPTR<ParamsV<natIPtr>>], and a
+       second, wrong answer for every name it owns is indistinguishable from
+       none: {!drop_ambiguous} then drops the right one with it. *)
+    Option.map
+      (fun t -> Tqualified (t, Common.id_of_global Term r))
+      (class_arg_type ~own_instances arg)
   | Table.Carg (r, args) ->
     (* A recorded argument spells itself; an unknown one is the context the
        recorded type shares with [own_instances] -- [PointerV] takes the
@@ -336,7 +345,8 @@ let resolutions_of_shapes ~own_instances arg_shapes =
       | Table.Carg_unknown -> []
       | Table.Carg (arg_ref, _) -> (
         match
-          (Table.get_instance_class_shape arg_ref, class_arg_type ~own_instances sh)
+          ( Table.get_instance_class_shape arg_ref
+          , class_arg_type ~own_instances sh )
         with
         | Some (arg_class, _), Some inst_ty when Table.is_typeclass arg_class ->
           promoted_resolutions arg_class inst_ty
