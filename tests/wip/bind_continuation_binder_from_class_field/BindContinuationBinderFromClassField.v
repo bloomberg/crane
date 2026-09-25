@@ -145,6 +145,47 @@
     construction --- reorder the class fields and require the instrumented value
     to move from [addr] to [tag].
 
+    {b The site, found by that probe and passing that criterion.}  It is
+    [Gen_decls.rewrite_ml_ast_types], and it has described itself all along:
+
+    {v
+      let carrier_ref = fst (List.hd carrier_refs) in
+      let rec rty t = match t with
+        | Tunknown -> Tglob (carrier_ref, [], [])
+        | Tmeta {contents = None} -> Tglob (carrier_ref, [], [])
+        ...
+    v}
+
+    Every empty annotation in the body is replaced by {e one} globref, and
+    [carrier_refs] is sorted so its head is the class's first-declared
+    associated type.  Its own docstring says so --- "the carrier is a guess and
+    can only be one: every hole in the body is filled with the same associated
+    type, so a class declaring three of them spells whichever one heads the
+    list at all three".  The defect is not a wrong answer; it is a guess
+    running where no answer was available, and the artifact is what that guess
+    looks like when the holes are not the carrier.
+
+    Instrumented, it fires 28 times in this file, every one of them naming
+    [addr]; reorder [Params] to put a [tag] field first and all 28 name [tag],
+    moving with the emitted filler.  That is the acceptance criterion the
+    voided probes could not meet.
+
+    The lift asymmetry falls out of the same site: a lifted helper's codomain
+    is a real type variable in its own template head, not a [Tmeta] or a
+    [Tunknown], so [rty] does not match it and nothing is filled --- which is
+    exactly the undeducible parameter
+    [tests/wip/inner_fix_codomain_from_class] shows.  One guess, two outcomes,
+    decided by whether the hole survived as a hole.
+
+    {b What the fix is not.}  [recover_then_guess] runs
+    [Mlutil.recover_erased_types] first so the declaration can name the holes
+    it can, and the guess is meant to see only the rest.  Making the recovery
+    {e write the cell} it accepts --- so a recovered answer reaches every
+    position sharing that metavariable, rather than only the occurrence asked
+    about --- is a real improvement and is {e not} this fix: it leaves all 28
+    fills in place, because the recovery is never offered anything for these
+    holes in the first place.  Measured, not assumed.
+
     This also withdraws the prediction the shared-cell account licensed --- that
     the defective sites cannot be fixed in groups.  On three independent cells
     they can be, so a partial fix is not evidence of anything either way. *)
