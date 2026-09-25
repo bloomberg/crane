@@ -147,3 +147,16 @@
   (alias runtest)
   (deps hk_carrier_written_at_partial_app.t.exe)
   (action (run ./hk_carrier_written_at_partial_app.t.exe))))
+
+; --- An HK class field application cast to the concept; from the §174/§192 probe.
+
+(subdir hk_class_field_result_cast_to_concept
+ (rule
+  (targets hk_class_field_result_cast_to_concept.t.exe)
+  (deps HkClassFieldResultCastToConcept.vo hk_class_field_result_cast_to_concept.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} hk_class_field_result_cast_to_concept.t.exe hk_class_field_result_cast_to_concept.cpp hk_class_field_result_cast_to_concept.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps hk_class_field_result_cast_to_concept.t.exe)
+  (action (run ./hk_class_field_result_cast_to_concept.t.exe))))
