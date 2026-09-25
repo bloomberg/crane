@@ -2421,16 +2421,35 @@ let gen_type_alias r vars ot =
         (Some (Tid_external ("std::any", [])), Some "AXIOM TO BE REALIZED")
       | Some t -> (Some (convert_ml_type_to_cpp_type (empty_env ()) [] t), None) )
   in
-  let du_tparams =
+  let du_tparams_head =
     hkt_templates ?applied:du_rhs r vars
       (match ot with Some t -> [t] | None -> [])
+  in
+  let du_tparams =
+    du_tparams_head
     (* The promoted variables the body names are parameters here for the same
        reason they are on an inductive: they belong to the instance in scope
        where the alias was declared, not to the alias.  Trailing, which is
-       where {!Translation.ind_promoted_type_args} passes them. *)
-    @ List.map
-        (fun v -> (TTtypename, v))
-        (Table.promoted_type_params r)
+       where {!Translation.ind_promoted_type_args} passes them.
+
+       A phantom parameter carries a default (see {!hkt_templates}) and a
+       defaulted parameter may not be followed by a plain one, so where one
+       precedes them these take a default too.  [std::any] is the right one:
+       it is the file-scope alias the variable stood for before it was a
+       parameter, which is what a scope that knows no instance still means. *)
+    @
+    let defaulted =
+      List.exists
+        (function TTtypename_default _, _ -> true | _ -> false)
+        du_tparams_head
+    in
+    let kind =
+      if defaulted then (
+        require_header "any";
+        TTtypename_default (Tid_external ("std::any", [])) )
+      else TTtypename
+    in
+    List.map (fun v -> (kind, v)) (Table.promoted_type_params r)
   in
   Dusing {du_tparams; du_name = r; du_rhs; du_note}
 
