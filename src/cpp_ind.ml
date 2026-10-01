@@ -61,15 +61,7 @@ let ind_cpp_decls kn ind =
         else if is_enum_cached (GlobRef.IndRef ip) then
           pp (i + 1) (* Enums have no .cpp body *)
         else
-          let (raw_pvars, _) = Table.ind_param_vars ind p in
-          (* A promoted variable a payload mentions is a type this inductive does
-             not own: it belongs to whichever instance was in scope where the
-             inductive was declared, so it is a parameter here and an argument at
-             every use.  See {!Table.ind_promoted_params}. *)
-          let param_vars =
-            Table.ind_promoted_params kn
-            @ List.map Common.tparam_name raw_pvars
-          in
+          let param_vars = Common.ind_struct_tparams kn ind p in
           ( empty_env (),
             gen_ind_cpp ~consarg_names:p.ip_consarg_names param_vars names.(i)
               cnames.(i) p.ip_types )
@@ -246,15 +238,7 @@ let ind_header_decls kn ind =
                  (see param_vars below at the struct gen site). Parameters
                  (before the colon) become template params; indices (after the
                  colon) are erased. *)
-              let (raw_pvars, _) = Table.ind_param_vars ind p in
-              (* A promoted variable a payload mentions is a type this inductive does
-                 not own: it belongs to whichever instance was in scope where the
-                 inductive was declared, so it is a parameter here and an argument at
-                 every use.  See {!Table.ind_promoted_params}. *)
-              let param_vars =
-                Table.ind_promoted_params kn
-                @ List.map Common.tparam_name raw_pvars
-              in
+              let param_vars = Common.ind_struct_tparams kn ind p in
               (* The forward declaration carries the same name and the same
                  template parameters as the full definition below; both are
                  built from [param_vars] and printed by the same node. *)
@@ -496,15 +480,7 @@ let ind_header_decls kn ind =
              ind.ind_nparams gives the number of Rocq parameters. p.ip_sign
              covers all args (params + indices). Count Keep entries in the first
              nparams positions to get param type var count. *)
-          let (raw_pvars, _) = Table.ind_param_vars ind p in
-          (* A promoted variable a payload mentions is a type this inductive does
-             not own: it belongs to whichever instance was in scope where the
-             inductive was declared, so it is a parameter here and an argument at
-             every use.  See {!Table.ind_promoted_params}. *)
-          let param_vars =
-            Table.ind_promoted_params kn
-            @ List.map Common.tparam_name raw_pvars
-          in
+          let param_vars = Common.ind_struct_tparams kn ind p in
           (* Register methods that return std::any (for indexed inductives). A
              method returns std::any if its ML return type becomes an unnamed
              Tvar (indicating type erasure) after C++ conversion. *)

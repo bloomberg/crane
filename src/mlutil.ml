@@ -24,6 +24,43 @@ exception Found
 
 exception Impossible
 
+(** {1 Generic traversals of ML types}
+
+    Every traversal below sees through a resolved meta and visits every child,
+    a [Tapp]'s arguments as much as a [Tglob]'s.  A walk written by hand has to
+    remember both, and several did not. *)
+
+module IntSet = Stdlib.Set.Make (Stdlib.Int)
+
+let rec ml_resolve = function
+  | Tmeta {contents = Some t} -> ml_resolve t
+  | t -> t
+
+let ml_type_children = function
+  | Tarr (a, b) -> [a; b]
+  | Tglob (_, l, _) | Tapp (_, l) -> l
+  | _ -> []
+
+let rec exists_ml_type p t =
+  let t = ml_resolve t in
+  p t || List.exists (exists_ml_type p) (ml_type_children t)
+
+let rec fold_ml_type f acc t =
+  let t = ml_resolve t in
+  List.fold_left (fold_ml_type f) (f acc t) (ml_type_children t)
+
+let rec map_ml_type f t =
+  match ml_resolve t with
+  | Tarr (a, b) -> f (Tarr (map_ml_type f a, map_ml_type f b))
+  | Tglob (r, l, e) -> f (Tglob (r, List.map (map_ml_type f) l, e))
+  | Tapp (i, l) -> f (Tapp (i, List.map (map_ml_type f) l))
+  | t -> f t
+
+let ml_tvars t =
+  fold_ml_type
+    (fun s -> function Tvar (_, i) | Tapp (i, _) -> IntSet.add i s | _ -> s)
+    IntSet.empty t
+
 (** {1 Names operations} *)
 
 let anonymous_name = Id.of_string "x"
@@ -149,19 +186,11 @@ and eq_ml_meta m1 m2 =
     [sum1 (CE _) (FailE _) _] nested in [CE +' FailE +' ...] became
     [Sum1<CE, FailE, X, X>].  [~generated:false] says the head is such a
     mapping. *)
-let rec type_has_hole = function
-  | Tunknown -> true
-  | Tglob (_, l, _) | Tapp (_, l) -> List.exists type_has_hole l
-  | Tarr (a, b) -> type_has_hole a || type_has_hole b
-  | Tmeta {contents = Some t} -> type_has_hole t
-  | _ -> false
+let type_has_hole = exists_ml_type (function Tunknown -> true | _ -> false)
 
-let rec fill_type_hole a = function
-  | Tunknown -> a
-  | Tglob (r, l, e) -> Tglob (r, List.map (fill_type_hole a) l, e)
-  | Tapp (j, l) -> Tapp (j, List.map (fill_type_hole a) l)
-  | Tarr (x, y) -> Tarr (fill_type_hole a x, fill_type_hole a y)
-  | t -> t
+(* Sees through a resolved meta, as [type_has_hole] does: one that answered
+   "there is a hole" for a hole this could not reach filled nothing. *)
+let fill_type_hole a = map_ml_type (function Tunknown -> a | t -> t)
 
 let rec drop_placeholders rpre n =
   match (rpre, n) with

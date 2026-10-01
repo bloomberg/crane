@@ -144,6 +144,28 @@ let arg_survives_extraction env sg a =
     try info_of_family (sort_of env sg (type_of env sg a)) != Logic
     with Retyping.RetypeError _ -> true
 
+(** The class-argument shape an applied term writes ({!Table.class_arg}), if
+    its head is a constant.  Recursive: [@ParamsV natIPtr] and [@ParamsV IP]
+    differ only in the argument, and the reader has to spell one of them.  An
+    argument whose head is not a constant is [Carg_unknown] -- the position is
+    kept, so the reader can fill it from the instances it holds -- and one
+    that erases ({!arg_survives_extraction}) takes no position at all. *)
+let rec class_arg_shape env sg a =
+  let h, a_args = EConstr.decompose_app sg a in
+  match EConstr.kind sg h with
+  | Const (c, _) ->
+    Some
+      (Table.Carg
+         ( GlobRef.ConstRef c,
+           List.filter_map
+             (fun x ->
+               if arg_survives_extraction env sg x then
+                 Some
+                   (Option.default Table.Carg_unknown (class_arg_shape env sg x))
+               else None )
+             (Array.to_list a_args) ))
+  | _ -> None
+
 (** Pushes a named assumption into the Rocq environment. *)
 let push_rel_assum (n, t) env = EConstr.push_rel (LocalAssum (n, t)) env
 
@@ -914,29 +936,9 @@ and extract_really_ind env kn mib =
             let rec scan c =
               ( match Constr.kind c with
               | App (f, cargs) when Constr.isConst f ->
-                let rec class_arg a =
-                  let h, a_args = Constr.decompose_app a in
-                  match Constr.kind h with
-                  | Const (ac, _) ->
-                    Some
-                      (Table.Carg
-                         ( GlobRef.ConstRef ac
-                         , List.filter_map
-                             (fun x ->
-                               if
-                                 arg_survives_extraction epar sg
-                                   (EConstr.of_constr x)
-                               then
-                                 Some
-                                   (Option.default Table.Carg_unknown
-                                      (class_arg x) )
-                               else None )
-                             (Array.to_list a_args) ) )
-                  | _ -> None
-                in
                 Array.iter
                   (fun a ->
-                    match class_arg a with
+                    match class_arg_shape epar sg (EConstr.of_constr a) with
                     | Some sh -> Table.add_ind_class_arg (GlobRef.IndRef (kn, 0)) sh
                     | None -> () )
                   cargs
@@ -2789,25 +2791,7 @@ let extract_constant access env kn cb =
      No [is_typeclass] test: the tables it would consult are filled as
      extraction proceeds, and the reader runs after all of it. *)
   let record_class_shape () =
-    (* Recursive: [@ParamsV natIPtr] and [@ParamsV IP] differ only in the
-       argument, and the reader has to spell one of them.  An argument whose
-       head is not a constant is [Carg_unknown] -- the position is kept, so
-       the reader can fill it from the instances it holds. *)
-    let rec class_arg a =
-      let h, a_args = EConstr.decompose_app sg a in
-      match EConstr.kind sg h with
-      | Const (c, _) ->
-        Some
-          (Table.Carg
-             ( GlobRef.ConstRef c
-             , List.filter_map
-                 (fun x ->
-                   if arg_survives_extraction env sg x then
-                     Some (Option.default Table.Carg_unknown (class_arg x))
-                   else None )
-                 (Array.to_list a_args) ) )
-      | _ -> None
-    in
+    let class_arg = class_arg_shape env sg in
     (* The shape an applied type writes, if its head is one a reader can name.
 
        A type-level [Definition] is such a head for the same reason an

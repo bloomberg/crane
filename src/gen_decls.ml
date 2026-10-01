@@ -1007,32 +1007,13 @@ let gen_typeclass_cpp name fields ind =
      type that bare name really denotes ([typename I::Obj], or
      [typename I::base_category::Obj] when it comes from a typeclass-typed
      promoted field).  A name with no entry is left as a plain type variable. *)
-  let rec subst_promoted_in_cpp_type = function
-    | Tpromoted vname | Tvar (_, Some vname) -> (
-      match List.find_opt (fun (n, _) -> Id.equal n vname) promoted_map with
-      | Some (_, replacement) -> replacement
-      | None -> named_tvar vname )
-    | Tfun (args, ret) ->
-      Tfun
-        ( List.map subst_promoted_in_cpp_type args,
-          subst_promoted_in_cpp_type ret )
-    | Tglob (r, ts, es) -> Tglob (r, List.map subst_promoted_in_cpp_type ts, es)
-    | Tshared_ptr t -> Tshared_ptr (subst_promoted_in_cpp_type t)
-    | Tnamespace (r, t) -> Tnamespace (r, subst_promoted_in_cpp_type t)
-    | Tqualified (b, id) -> Tqualified (subst_promoted_in_cpp_type b, id)
-    | Tapply (h, ts) ->
-      Tapply
-        (subst_promoted_in_cpp_type h, List.map subst_promoted_in_cpp_type ts)
-    | Tref t -> Tref (subst_promoted_in_cpp_type t)
-    | Tfwd_ref t -> Tfwd_ref (subst_promoted_in_cpp_type t)
-    | Tvariant ts -> Tvariant (List.map subst_promoted_in_cpp_type ts)
-    | Tid (id, ts) -> Tid (id, List.map subst_promoted_in_cpp_type ts)
-    | Tid_external (id, ts) -> Tid_external (id, List.map subst_promoted_in_cpp_type ts)
-    | Tnondeduced t -> Tnondeduced (subst_promoted_in_cpp_type t)
-    | Trebind (h, x) ->
-      Trebind (subst_promoted_in_cpp_type h, subst_promoted_in_cpp_type x)
-    | Tconst t -> Tconst (subst_promoted_in_cpp_type t)
-    | t -> t
+  let subst_promoted_in_cpp_type =
+    rewrite_cpp_type (function
+      | Tpromoted vname | Tvar (_, Some vname) -> (
+        match List.find_opt (fun (n, _) -> Id.equal n vname) promoted_map with
+        | Some (_, replacement) -> Some replacement
+        | None -> Some (named_tvar vname) )
+      | _ -> None )
   in
   (* Check if a type is a bare promoted Tvar — a Tvar whose index is beyond the
      real type parameters. This indicates the field's type is entirely
@@ -2780,7 +2761,7 @@ let hkt_templates ?applied r vars tys =
           List.iter scan tys
         | Tglob (_, tys, _) | Tvariant tys -> List.iter scan tys
         | Tfun (tys, ty) -> List.iter scan (ty :: tys)
-        | Tconst ty | Tnamespace (_, ty) | Tref ty | Tfwd_ref ty | Tshared_ptr ty -> scan ty
+        | Tconst ty | Tnamespace (_, ty) | Tref (_, ty) | Tshared_ptr ty -> scan ty
         | Tapply (ty, tys) -> List.iter scan (ty :: tys)
         | _ -> ()
       in
@@ -2979,8 +2960,8 @@ let relax_applied_return temps decl =
             Some
               (Tid_external
                  ( "std::invoke_result_t",
-                   Tref (Tid_external (Id.to_string fid, []))
-                   :: List.map (fun d -> Tref d) doms
+                   Tref (Lvalue, Tid_external (Id.to_string fid, []))
+                   :: List.map (fun d -> Tref (Lvalue, d)) doms
                  ) )
           | _ -> None )
         temps
@@ -3060,8 +3041,8 @@ let relax_tt_applied_return temps decl =
         let ret =
           Tid_external
             ( "std::invoke_result_t",
-              Tref (Tid_external (Id.to_string fid, []))
-              :: List.map (fun d -> Tref (at_ret_arg d)) doms )
+              Tref (Lvalue, Tid_external (Id.to_string fid, []))
+              :: List.map (fun d -> Tref (Lvalue, at_ret_arg d)) doms )
         in
         let temps =
           List.filter_map
@@ -4136,37 +4117,20 @@ let gen_dfun n b cty ty temps =
   in
   (* Substitute promoted type var markers [Tpromoted name] with their
      qualified resolutions throughout a C++ type tree. *)
-  let rec resolve_promoted_in_type ty =
-    match ty with
-    | Tvar (i, _) when List.mem_assoc i hkt_tvar_resolutions ->
-      List.assoc i hkt_tvar_resolutions
-    | Tpromoted name -> (
-      match List.find_opt
-              (fun (n, _) -> Id.equal n name)
-              promoted_var_resolutions with
-      | Some (_, resolved) -> resolved
-      | None -> ty )
-    | Tglob (r, tys, es) ->
-      Tglob (r, List.map resolve_promoted_in_type tys, es)
-    | Tfun (doms, cod) ->
-      Tfun (List.map resolve_promoted_in_type doms,
-            resolve_promoted_in_type cod)
-    | Tconst t -> Tconst (resolve_promoted_in_type t)
-    | Tref t -> Tref (resolve_promoted_in_type t)
-    | Tfwd_ref t -> Tfwd_ref (resolve_promoted_in_type t)
-    | Tshared_ptr t -> Tshared_ptr (resolve_promoted_in_type t)
-    | Tvariant ts -> Tvariant (List.map resolve_promoted_in_type ts)
-    | Tqualified (b, id) -> Tqualified (resolve_promoted_in_type b, id)
-    | Tapply (h, ts) ->
-      Tapply (resolve_promoted_in_type h, List.map resolve_promoted_in_type ts)
-    | Ttyctor t -> Ttyctor (resolve_promoted_in_type t)
-    | Tnamespace (r, t) -> Tnamespace (r, resolve_promoted_in_type t)
-    | Tid (id, ts) -> Tid (id, List.map resolve_promoted_in_type ts)
-    | Tid_external (id, ts) -> Tid_external (id, List.map resolve_promoted_in_type ts)
-    | Tnondeduced t -> Tnondeduced (resolve_promoted_in_type t)
-    | Trebind (h, x) -> Trebind (resolve_promoted_in_type h, resolve_promoted_in_type x)
-    | Tptr t -> Tptr (resolve_promoted_in_type t)
-    | _ -> ty
+  let resolve_promoted_in_type =
+    rewrite_cpp_type (function
+      | Tvar (i, _) when List.mem_assoc i hkt_tvar_resolutions ->
+        Some (List.assoc i hkt_tvar_resolutions)
+      | Tpromoted name as ty ->
+        Some
+          ( match
+              List.find_opt
+                (fun (n, _) -> Id.equal n name)
+                promoted_var_resolutions
+            with
+          | Some (_, resolved) -> resolved
+          | None -> ty )
+      | _ -> None )
   in
   (* Apply promoted var resolution to domain and codomain types *)
   let has_type_resolutions =
@@ -4321,7 +4285,7 @@ let gen_dfun n b cty ty temps =
           when (not (is_non_fwd_param_source (List.length ids - i - 1)))
                && not (is_erased_fun_param ty) ->
           ( x,
-            Tfwd_ref (named_tvar (fun_tparam_id (List.length ids - i - 1))) )
+            Tref (Forwarding, named_tvar (fun_tparam_id (List.length ids - i - 1))) )
         | _ -> (x, ty) )
       ids
   in
@@ -4345,7 +4309,7 @@ let gen_dfun n b cty ty temps =
       match a with
       | Ttyctor _ -> true
       | Tapply (Tvar _, _) -> true
-      | Tconst t | Tref t | Tfwd_ref t -> is_hk_arg t
+      | Tconst t | Tref (_, t) -> is_hk_arg t
       | _ -> false
     in
     (* The alias stands for a callable.  A struct behind an alias deduces
@@ -4366,7 +4330,7 @@ let gen_dfun n b cty ty temps =
        so the two agree on what has to be written. *)
     let rec alias_hides_fun ty =
       match ty with
-      | Tconst t | Tref t | Tfwd_ref t -> alias_hides_fun t
+      | Tconst t | Tref (_, t) -> alias_hides_fun t
       | Tapply (Tglob (GlobRef.ConstRef kn, [], _), args)
        |Tglob (GlobRef.ConstRef kn, (_ :: _ as args), _) ->
         (List.exists is_hk_arg args || get_tvar_indices ty <> [])
@@ -4384,7 +4348,7 @@ let gen_dfun n b cty ty temps =
        nothing to deduce and nothing to shield. *)
     let rec spelled_fun_is_deduced_against ty =
       match ty with
-      | Tconst t | Tref t | Tfwd_ref t -> spelled_fun_is_deduced_against t
+      | Tconst t | Tref (_, t) -> spelled_fun_is_deduced_against t
       | Tfun _ -> get_tvar_indices ty <> []
       | _ -> false
     in
@@ -4393,8 +4357,7 @@ let gen_dfun n b cty ty temps =
     let rec at_core f ty =
       match ty with
       | Tconst t -> Tconst (at_core f t)
-      | Tref t -> Tref (at_core f t)
-      | Tfwd_ref t -> Tfwd_ref (at_core f t)
+      | Tref (k, t) -> Tref (k, at_core f t)
       | t -> f t
     in
     List.map
@@ -4437,7 +4400,7 @@ let gen_dfun n b cty ty temps =
     let rec mentions = function
       | Tglob (r, args, _) | Tnamespace (r, Tglob (_, args, _)) ->
         Table.is_non_uniform_inductive r || List.exists mentions args
-      | Tconst t | Tnamespace (_, t) | Tref t | Tfwd_ref t | Tshared_ptr t -> mentions t
+      | Tconst t | Tnamespace (_, t) | Tref (_, t) | Tshared_ptr t -> mentions t
       | Tfun (d, c) -> List.exists mentions d || mentions c
       | _ -> false
     in
@@ -5775,8 +5738,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
       Tglob (r, List.map strip_self_ptr args, es)
     | Tfun (args, ret) ->
       Tfun (List.map strip_self_ptr args, strip_self_ptr ret)
-    | Tref t -> Tref (strip_self_ptr t)
-    | Tfwd_ref t -> Tfwd_ref (strip_self_ptr t)
+    | Tref (k, t) -> Tref (k, strip_self_ptr t)
     | Tconst t -> Tconst (strip_self_ptr t)
     | _ -> ty
   in
@@ -5938,7 +5900,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
       (fun (id, cpp_ty, i, owned) ->
         let wrapped =
           match cpp_ty with
-          | Tfun _ -> Tfwd_ref (named_tvar (fun_tparam_id i))
+          | Tfun _ -> Tref (Forwarding, named_tvar (fun_tparam_id i))
           | _ -> wrap_param_by_ownership ~is_owned:owned cpp_ty
         in
         (id, wrapped) )
@@ -7422,7 +7384,7 @@ let gen_ind_header_v2
                            CPPint 1)),
                        [Scontinue], []) ]
                    @ unique_fence
-                   @ [Sasgn (ev, Declare (Tref Tauto), CPPderef (CPPvar pv))]
+                   @ [Sasgn (ev, Declare (Tref (Lvalue, Tauto)), CPPderef (CPPvar pv))]
                    @ body_for on_spine (CPPvar ev))]
             end
           in
@@ -7518,7 +7480,7 @@ let gen_ind_header_v2
                         mk_call
                           (CPPstd_holds_alternative (Tqualified (ls, cons_id)))
                           [arrow0 (CPPvar lp) "v"],
-                        [ Sasgn (lc, Declare (Tref Tauto),
+                        [ Sasgn (lc, Declare (Tref (Lvalue, Tauto)),
                             CPPstd_get (Tqualified (ls, cons_id),
                               Some (arrow0 (CPPvar lp) "v_mut")));
                           push_self_stmt
@@ -7650,7 +7612,7 @@ let gen_ind_header_v2
             in
             let next_lambda =
               mk_lambda
-                [(Tref variant_t_ty, Some _v_id)]
+                [(Tref (Lvalue, variant_t_ty), Some _v_id)]
                 (Some ptr_ty)
                 (List.map take fields @ [Sreturn (Some CPPnullptr)])
                 ~capture:Immediate
@@ -7675,7 +7637,7 @@ let gen_ind_header_v2
             let _drain_id = Id.of_string "_drain" in
             let drain_lambda =
               mk_lambda
-                [(Tref variant_t_ty, Some _v_id)]
+                [(Tref (Lvalue, variant_t_ty), Some _v_id)]
                 None drain_stmts ~capture:Immediate
             in
             let body =
@@ -7722,7 +7684,7 @@ let gen_ind_header_v2
             let _drain_self_id = Id.of_string "_drain_self" in
             let drain_self_lambda =
               mk_lambda
-                [(Tref variant_t_ty, Some _v_id)]
+                [(Tref (Lvalue, variant_t_ty), Some _v_id)]
                 None drain_stmts ~capture:Immediate
             in
             (* Build the per-partner drain logic used inside the while loop.
@@ -7770,7 +7732,7 @@ let gen_ind_header_v2
                 let inner = build_if_chain rest in
                 let partner_body =
                   [Sif (sp_alive_and_unique,
-                    Sasgn (_pv_id, Declare (Tref Tauto),
+                    Sasgn (_pv_id, Declare (Tref (Lvalue, Tauto)),
                       CPPaccess_call (Aarrow, deref_sp,
                         Id.of_string "v_mut", []))
                     :: partner_drains, [])]
@@ -7934,7 +7896,7 @@ let gen_ind_header_v2
               let param_ty =
                 match storage_ty with
                 | Tshared_ptr _ ->
-                  if is_coinductive then Tref (Tconst api_ty)
+                  if is_coinductive then Tref (Lvalue, Tconst api_ty)
                   else api_ty
                 | _ -> api_ty
               in
@@ -8349,7 +8311,7 @@ let gen_ind_header_v2
               in
               let ctor_params =
                 [(other_id,
-                  Tref (Tconst source_ty))]
+                  Tref (Lvalue, Tconst source_ty))]
               in
               (* The variant is initialised, not assigned: default-constructing
                  it first needs the first alternative's fields to have a
@@ -8405,8 +8367,7 @@ let gen_ind_header_v2
                   mf_tparams = [];
                   mf_ret_type =
                     Tconst
-                      (Tref
-                         (Tid_external
+                      (Tref (Lvalue, Tid_external
                             (Crane_rt.lazy_, [variant_alias_ty])));
                   mf_params = [];
                   mf_body = [Sreturn (Some (CPPvar vmn_id))];
@@ -8433,7 +8394,7 @@ let gen_ind_header_v2
                 mf_globref = None;
                 mf_tparams = [];
                 mf_ret_type =
-                  Tconst (Tref variant_alias_ty);
+                  Tconst (Tref (Lvalue, variant_alias_ty));
                 mf_params = [];
                 mf_body =
                   [
@@ -8462,7 +8423,7 @@ let gen_ind_header_v2
                 mf_globref = None;
                 mf_tparams = [];
                 mf_ret_type =
-                  Tconst (Tref variant_alias_ty);
+                  Tconst (Tref (Lvalue, variant_alias_ty));
                 mf_params = [];
                 mf_body = [Sreturn (Some (CPPvar vmn_id))];
                 mf_is_const = true;
@@ -8491,7 +8452,7 @@ let gen_ind_header_v2
                   mf_name = Id.of_string "v_mut";
                   mf_globref = None;
                   mf_tparams = [];
-                  mf_ret_type = Tref variant_alias_ty;
+                  mf_ret_type = Tref (Lvalue, variant_alias_ty);
                   mf_params = [];
                   mf_body = [Sreturn (Some (CPPvar vmn_id))];
                   mf_is_const = false;

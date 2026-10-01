@@ -793,7 +793,7 @@ let report_unspellable where ty =
       | Tnondeduced _ -> "Tnondeduced"
       | Trebind _ -> "Trebind"
       | Thole -> "Thole"
-      | Tfwd_ref _ -> "Tfwd_ref"
+      | Tref (Forwarding, _) -> "Tfwd_ref"
       | Texpr_type _ -> "Texpr_type"
       | Tdecltype_auto -> "Tdecltype_auto"
       | Ttyctor _ -> "Ttyctor"
@@ -1059,7 +1059,7 @@ let rec pp_cpp_type ?(lead = true) par vl t =
       require_header "any";
       str Crane_rt.rebind ++ str "<" ++ pp_list (pp_rec false) [ h; x ] ++ str ">"
     | Thole -> str ctor_alias_tvar
-    | Tfwd_ref t -> pp_rec false t ++ str "&&"
+    | Tref (Forwarding, t) -> pp_rec false t ++ str "&&"
     | Texpr_type e -> str "decltype(" ++ pp_cpp_expr ([], Id.Set.empty) [] e ++ str ")"
     | Tdecltype_auto -> str "decltype(auto)"
     | Tid_external (id_s, args) ->
@@ -1134,7 +1134,7 @@ let rec pp_cpp_type ?(lead = true) par vl t =
       cpp_angle
         Crane_rt.fn
         (pp_rec false c ++ pp_par true (pp_list (pp_rec false) d))
-    | Tref t -> pp_rec false t ++ str "&"
+    | Tref (Lvalue, t) -> pp_rec false t ++ str "&"
     | Tptr t -> pp_rec false t ++ str "*"
     | Tconst t -> str "const " ++ pp_rec false t
     | Tnamespace (r, t) ->
@@ -1354,7 +1354,7 @@ let rec pp_cpp_type ?(lead = true) par vl t =
           | Tvariant ts ->
             List.iter go ts
           | Tfun (dom, cod) -> List.iter go dom; go cod
-          | Tconst t | Tshared_ptr t | Tref t | Tfwd_ref t | Tptr t | Tnamespace (_, t)
+          | Tconst t | Tshared_ptr t | Tref (_, t) | Tptr t | Tnamespace (_, t)
           | Tqualified (t, _) | Tdecay t | Ttyctor t | Tnondeduced t ->
             go t
           | Trebind (h, x) -> go h; go x
@@ -1385,7 +1385,7 @@ let rec pp_cpp_type ?(lead = true) par vl t =
             | Tvariant ts ->
               List.iter go ts
             | Tfun (dom, cod) -> List.iter go dom; go cod
-            | Tconst t | Tshared_ptr t | Tref t | Tfwd_ref t | Tptr t | Tnamespace (_, t)
+            | Tconst t | Tshared_ptr t | Tref (_, t) | Tptr t | Tnamespace (_, t)
             | Tqualified (t, _) | Tdecay t | Ttyctor t | Tnondeduced t ->
               go t
             | Trebind (h, x) -> go h; go x
@@ -1548,12 +1548,6 @@ let rec pp_cpp_type ?(lead = true) par vl t =
         | None -> pp_rec false (Tglob (r, [], [])) )
       | _ -> str (cut_at_argument_list (Pp.string_of_ppcmds (pp_rec false t))) ) )
     | Tauto -> str "auto"
-    | Tdecltype e ->
-      (* Print std::decay_t<decltype(expr)> where expr has been rewritten by
-         rewrite_field_access_for_decltype to use std::declval.
-         decay_t converts function types to function pointers and array types
-         to pointers, which is necessary when storing values in frame structs. *)
-      str "std::decay_t<decltype(" ++ pp_cpp_expr ([], Id.Set.empty) [] e ++ str ")>"
     | Tdecay t ->
       require_header "type_traits";
       str "std::decay_t<" ++ pp_rec false t ++ str ">"
@@ -1876,7 +1870,7 @@ and pp_cpp_expr env args t =
       (* A declared parameter carries however many qualifiers the declaration
          gave it; the lambda spells its own, so they all come off first. *)
       let rec unqualified = function
-        | Tref t | Tfwd_ref t | Tconst t -> unqualified t
+        | Tref (_, t) | Tconst t -> unqualified t
         | t -> t
       in
       let declared_param i name =
@@ -2841,26 +2835,6 @@ and pp_cpp_expr env args t =
     ++ str ">("
     ++ pp_cpp_expr env args e
     ++ str ")"
-  | CPPconvertible (t1, t2) ->
-    str "crane_convertible<"
-    ++ pp_cpp_type false [] t1
-    ++ str ", "
-    ++ pp_cpp_type false [] t2
-    ++ str ">"
-  | CPPis_constructible (t1, t2) ->
-    require_header "type_traits";
-    str "std::is_constructible_v<"
-    ++ pp_cpp_type false [] t1
-    ++ str ", "
-    ++ pp_cpp_type false [] t2
-    ++ str ">"
-  | CPPis_same (t1, t2) ->
-    require_header "type_traits";
-    str "std::is_same_v<"
-    ++ pp_cpp_type false [] t1
-    ++ str ", "
-    ++ pp_cpp_type false [] t2
-    ++ str ">"
   | CPPstd_get_if (ty, e) ->
     require_header "variant";
     str ((sn ()).get_if ^ "<") ++ pp_cpp_type false [] ty ++ str ">("
@@ -2991,10 +2965,12 @@ and pp_cpp_stmt env args = function
       fnl () ++ str "assert(" ++ str expr_str ++ str ");"
     | Pstated _ -> mt () )
   (* Reuse optimization constructs *)
-  | Sif_constexpr (cond, then_stmts, else_stmts) ->
-    str "if constexpr ("
-    ++ pp_cpp_expr env args cond
-    ++ str ") {"
+  | Sif_constexpr (Tt_convertible (t1, t2), then_stmts, else_stmts) ->
+    str "if constexpr (crane_convertible<"
+    ++ pp_cpp_type false [] t1
+    ++ str ", "
+    ++ pp_cpp_type false [] t2
+    ++ str ">) {"
     ++ fnl ()
     ++ pp_list_stmt (pp_cpp_stmt env args) then_stmts
     ++ fnl ()
@@ -3374,7 +3350,7 @@ and is_pure_return_type = function
   | Tshared_ptr _ -> false
   | Tvoid | Tvar _ | Tany | Topaque | Tauto | Tunresolved -> false
   | Tglob (r, _, _) when is_axiom_type_ref r -> false
-  | Tconst t | Tref t | Tfwd_ref t | Tptr t -> is_pure_return_type t
+  | Tconst t | Tref (_, t) | Tptr t -> is_pure_return_type t
   | _ -> true
 
 (** Check if a C++ type is a literal type eligible for [constexpr] context.
@@ -3382,7 +3358,7 @@ and is_pure_return_type = function
     Strictly stronger than {!is_pure_return_type}: in addition to the same
     exclusions (allocation, side-effects, unknowns), also rejects:
     - [Tfun]: [std::function] uses type-erased internal storage
-    - [Tdecltype]: the expression may reference non-constexpr entities
+    - [decltype]: the expression may reference non-constexpr entities
     - Composite types where any component is non-literal
 
     The check is recursive for container types ([Tvariant], [Tglob], [Tid],
@@ -3395,7 +3371,7 @@ and is_constexpr_type ty =
   | Tvoid | Tvar _ | Tinstance _ | Tpromoted _ | Tany | Topaque | Tauto
   | Tunresolved -> false
   | Tfun _ -> false  (* std::function uses type erasure *)
-  | Tdecltype _ | Tdecay _ -> false
+  | Tdecay _ -> false
   | Tglob (r, _, _) when is_axiom_type_ref r -> false
   | Tglob (GlobRef.IndRef _ as r, tys, _) ->
     (* Crane-generated non-enum inductives have user-provided constructors
@@ -3403,7 +3379,7 @@ and is_constexpr_type ty =
        so the types are not literal.  Only enum inductives (generated as
        [enum class]) are literal types. *)
     Table.is_enum_inductive r && List.for_all is_constexpr_type tys
-  | Tconst t | Tref t | Tptr t -> is_constexpr_type t
+  | Tconst t | Tref (Lvalue, t) | Tptr t -> is_constexpr_type t
   | Tvariant tys -> List.for_all is_constexpr_type tys
   | Tglob (GlobRef.ConstRef _, [], _) -> false  (* defined constant with no type args — opaque alias *)
   | Tglob (_, tys, _) -> List.for_all is_constexpr_type tys
@@ -3412,7 +3388,7 @@ and is_constexpr_type ty =
   | Tnondeduced t -> is_constexpr_type t
   | Trebind (h, x) -> is_constexpr_type h && is_constexpr_type x
   | Thole -> true
-  | Tfwd_ref t -> is_constexpr_type t
+  | Tref (Forwarding, t) -> is_constexpr_type t
   | Texpr_type _ | Tdecltype_auto -> false
   | Tnamespace (_, t) -> is_constexpr_type t
   | Tqualified (t, _) -> is_constexpr_type t
@@ -4686,7 +4662,7 @@ let claim_template_defaults decl =
     let rec key_of = function
       | Dtemplate (_, _, inner) -> key_of inner
       | Dfun f -> List.map fst (dfun_path_list f.df_path)
-      | d -> Option.cata (fun r -> [r]) [] (decl_globref d)
+      | d -> Stdlib.Option.to_list (decl_globref d)
     in
     let key = key_of decl in
     let same k =

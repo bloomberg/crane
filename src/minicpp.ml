@@ -97,6 +97,8 @@ type capture =
 
 (** {2 C++ type expressions} *)
 
+type ref_kind = Lvalue | Forwarding
+
 type cpp_type =
   | Tvar of int * Id.t option
   | Tinstance of Id.t * GlobRef.t
@@ -127,7 +129,7 @@ type cpp_type =
          when the head is an associated type, [C<A>] otherwise.  This is how a
          higher-kinded class parameter ([M : Type -> Type]) is used, the head
          being the instance's associated alias template. *)
-  | Tref of cpp_type
+  | Tref of ref_kind * cpp_type
   | Tptr of cpp_type
   | Tvariant of cpp_type list
   | Tshared_ptr of cpp_type
@@ -149,7 +151,6 @@ type cpp_type =
        at a declaration or storage position, writing [std::any] is what makes
        a value boxed, so [materialise_opaque] turns it into [Tany] there. *)
   | Tauto (* auto - for phantom tvar positions where C++ cannot deduce the type *)
-  | Tdecltype of cpp_expr (* decltype(expr) *)
   | Tdecay of cpp_type (* std::decay_t<T> - strips references/cv from template params *)
   | Tnondeduced of cpp_type
     (* [std::type_identity_t<T>]: the type [T], in a position template
@@ -162,7 +163,6 @@ type cpp_type =
   | Thole
     (* The argument position in the body of a carrier abstraction
        ({!Ttyctor}): the alias template's own parameter, [_CraneTcArg]. *)
-  | Tfwd_ref of cpp_type
     (* [T&&]: a forwarding reference, as a deduced parameter takes one. *)
   | Texpr_type of cpp_expr
     (* [decltype(e)], undecayed: the declared type of a name, references and
@@ -178,6 +178,8 @@ and asgn_target =
   | Existing
 
 (** C++ statements. *)
+and type_test = Tt_convertible of cpp_type * cpp_type
+
 and cpp_stmt =
   | Sreturn of cpp_expr option
   | Sdecl of Id.t * cpp_type
@@ -194,7 +196,7 @@ and cpp_stmt =
     (* switch on enum: scrutinee, enum type, branches, optional default body *)
   | Sassert of precondition (* a Rocq precondition, checked or merely stated *)
   | Sif of cpp_expr * cpp_stmt list * cpp_stmt list
-  | Sif_constexpr of cpp_expr * cpp_stmt list * cpp_stmt list
+  | Sif_constexpr of type_test * cpp_stmt list * cpp_stmt list
     (* if-else: condition, then-branch, else-branch. An empty else-branch
        prints as an [if] with no [else]. *)
   | Sif_decl of Id.t * cpp_type * cpp_expr * cpp_stmt list * cpp_stmt list
@@ -411,9 +413,6 @@ and cpp_expr =
   | CPPstd_holds_alternative of cpp_type
     (* std::holds_alternative<T>(…) or std::holds_alternative<typename T::Ctor>(…) *)
   | CPPdeclval of cpp_type
-  | CPPis_same of cpp_type * cpp_type
-  | CPPis_constructible of cpp_type * cpp_type
-  | CPPconvertible of cpp_type * cpp_type
     (* crane_convertible<Dst, Src> -- whether crane_convert has a route *)
     (* std::declval<T>() *)
   | CPPtype_name of cpp_type
@@ -675,9 +674,8 @@ let static_fun ~name ~ret ~params ~body =
     mf_is_conversion = false;
     mf_ref_qual = Rq_any }
 
-(** Rvalue reference type [T&&].  Uses the double-{!Tref} encoding that the
-    pretty-printer already handles: [Tref(Tref(t))] prints as [t&&]. *)
-let rval_ref ty = Tfwd_ref ty
+(** Rvalue reference type [T&&]. *)
+let rval_ref ty = Tref (Forwarding, ty)
 
 (** The instance parameter a type is qualified under, if any: [typename
     _tcI0::M] (and longer chains like [typename _tcI0::M::inner]) yield the
@@ -728,9 +726,9 @@ let rec applied_head = function
   | Tnamespace (_, h) -> applied_head h
   | _ -> false
 
-(** Whether a global is a type parameterised by families; installed by
-    [Table], which records them. *)
-let family_parameterised : (GlobRef.t -> bool) ref = ref (fun _ -> false)
+(** Whether a global is a type parameterised by families, whose erased index
+    is its own and not a carrier's element. *)
+let family_parameterised = Tparam_kinds.has_family
 
 (** [h], an instantiated carrier standing for a family written applied,
     read at [args]: the carrier is written at the erased element, so each
@@ -746,13 +744,13 @@ let rebind_applied_head h args =
       match t with
       | Tany | Topaque -> a
       (* A family's own struct keeps its erased index. *)
-      | Tglob (r, _, _) when !family_parameterised r -> t
+      | Tglob (r, _, _) when family_parameterised r -> t
       | Tglob (r, tys, es) -> Tglob (r, List.map sub tys, es)
       | Tid (id, tys) -> Tid (id, List.map sub tys)
       | Tid_external (id, tys) -> Tid_external (id, List.map sub tys)
       | Tnondeduced t -> Tnondeduced (sub t)
       | Trebind (h, x) -> Trebind (sub h, sub x)
-      | Tfwd_ref t -> Tfwd_ref (sub t)
+      | Tref (Forwarding, t) -> Tref (Forwarding, sub t)
       | Tnamespace (r, t) -> Tnamespace (r, sub t)
       | Tconst t -> Tconst (sub t)
       | Tfun (d, c) -> Tfun (List.map sub d, sub c)
@@ -761,7 +759,7 @@ let rebind_applied_head h args =
     in
     ( match h with
     | Tglob (r, _, _) | Tnamespace (_, Tglob (r, _, _))
-      when !family_parameterised r -> h
+      when family_parameterised r -> h
     | Tglob (r, tys, es) -> Tglob (r, List.map sub tys, es)
     | Tnamespace (r, Tglob (g, tys, es)) ->
       Tnamespace (r, Tglob (g, List.map sub tys, es))
@@ -786,7 +784,7 @@ let rec map_cpp_type (f : cpp_type -> cpp_type) (ty : cpp_type) : cpp_type =
   | Tfun (dom, cod) -> Tfun (List.map (map_cpp_type f) dom, map_cpp_type f cod)
   | Tconst t -> Tconst (map_cpp_type f t)
   | Tshared_ptr t -> Tshared_ptr (map_cpp_type f t)
-  | Tref t -> Tref (map_cpp_type f t)
+  | Tref (k, t) -> Tref (k, map_cpp_type f t)
   | Tptr t -> Tptr (map_cpp_type f t)
   | Tvariant ts -> Tvariant (List.map (map_cpp_type f) ts)
   | Tnamespace (r, t) -> Tnamespace (r, map_cpp_type f t)
@@ -797,11 +795,9 @@ let rec map_cpp_type (f : cpp_type -> cpp_type) (ty : cpp_type) : cpp_type =
     | h when erased_head h -> Tany
     | h when applied_head h -> rebind_applied_head h (List.map (map_cpp_type f) ts)
     | h -> Tapply (h, List.map (map_cpp_type f) ts) )
-  | Tdecltype _ -> ty (* decltype wraps CPPraw, no sub-types to map *)
   | Tdecay t -> Tdecay (map_cpp_type f t)
   | Tnondeduced t -> Tnondeduced (map_cpp_type f t)
   | Trebind (h, x) -> Trebind (map_cpp_type f h, map_cpp_type f x)
-  | Tfwd_ref t -> Tfwd_ref (map_cpp_type f t)
   | Texpr_type _ | Tdecltype_auto -> ty
   (* [Ttyctor] is a leaf: only its head is printed, so rewriting inside it
      (erasing an argument to [std::any], say) could only make it unprintable. *)
@@ -809,17 +805,50 @@ let rec map_cpp_type (f : cpp_type -> cpp_type) (ty : cpp_type) : cpp_type =
   | Tvar _ | Tinstance _ | Tpromoted _ | Tvoid | Tunresolved | Tany | Topaque
   | Tauto | Thole -> ty
 
+(** [rewrite_cpp_type f ty]: where [f] answers, its answer replaces the node
+    and is not descended into; elsewhere the node is rebuilt from its rewritten
+    children, exactly as it was -- no application is re-normalised, and a
+    [Ttyctor]'s head is reached like any other child. *)
+let rec rewrite_cpp_type (f : cpp_type -> cpp_type option) (ty : cpp_type) :
+    cpp_type =
+  match f ty with
+  | Some t -> t
+  | None -> (
+    let go = rewrite_cpp_type f in
+    match ty with
+    | Tglob (r, tys, args) -> Tglob (r, List.map go tys, args)
+    | Tid (id, tys) -> Tid (id, List.map go tys)
+    | Tid_external (id, tys) -> Tid_external (id, List.map go tys)
+    | Tfun (dom, cod) -> Tfun (List.map go dom, go cod)
+    | Tconst t -> Tconst (go t)
+    | Tshared_ptr t -> Tshared_ptr (go t)
+    | Tref (k, t) -> Tref (k, go t)
+    | Tptr t -> Tptr (go t)
+    | Tvariant ts -> Tvariant (List.map go ts)
+    | Tnamespace (r, t) -> Tnamespace (r, go t)
+    | Tqualified (t, id) -> Tqualified (go t, id)
+    | Tapply (h, ts) -> Tapply (go h, List.map go ts)
+    | Tdecay t -> Tdecay (go t)
+    | Tnondeduced t -> Tnondeduced (go t)
+    | Trebind (h, x) -> Trebind (go h, go x)
+    | Ttyctor t -> Ttyctor (go t)
+    | Texpr_type _ | Tdecltype_auto | Tvar _ | Tinstance _ | Tpromoted _
+    | Tvoid | Tunresolved | Tany | Topaque | Tauto | Thole ->
+      ty )
+
 let ctor_alias_tvar = "_CraneTcArg"
 
 let abstract_cpp_type ~over ty =
   let sentinel = Thole in
   let fired = ref false in
-  (* Structural equality, but never descending into a [Tdecltype]: it wraps an
+  (* Structural equality, but never descending into a [decltype]: it wraps an
      expression, and comparing two of those raises on the closures an
      expression can hold. *)
   let same a b =
     match (a, b) with
-    | (Tdecltype _ | Texpr_type _), _ | _, (Tdecltype _ | Texpr_type _) -> false
+    | (Tdecay (Texpr_type _) | Texpr_type _), _
+    | _, (Tdecay (Texpr_type _) | Texpr_type _) ->
+      false
     (* A type variable is its index; the name beside it is a spelling hint one
        side may not have been given. *)
     | Tvar (i, _), Tvar (j, _) -> i = j
@@ -952,7 +981,7 @@ let rec subst_cpp_tvars (sub : int -> cpp_type option) (ty : cpp_type) : cpp_typ
   | Tfun (dom, cod) -> Tfun (List.map go dom, go cod)
   | Tconst t -> Tconst (go t)
   | Tshared_ptr t -> Tshared_ptr (go t)
-  | Tref t -> Tref (go t)
+  | Tref (k, t) -> Tref (k, go t)
   | Tptr t -> Tptr (go t)
   | Tvariant ts -> Tvariant (List.map go ts)
   | Tnamespace (r, t) -> Tnamespace (r, go t)
@@ -964,14 +993,13 @@ let rec subst_cpp_tvars (sub : int -> cpp_type option) (ty : cpp_type) : cpp_typ
   | Tdecay t -> Tdecay (go t)
   | Tnondeduced t -> Tnondeduced (go t)
   | Trebind (h, x) -> Trebind (go h, go x)
-  | Tfwd_ref t -> Tfwd_ref (go t)
   | Texpr_type _ | Tdecltype_auto -> ty
   (* Unlike {!map_cpp_type}, this does reach inside a [Ttyctor]: substituting
      a type variable for what it stands for -- the carrier of a higher-kinded
      class parameter, say -- replaces one template name with another, and
      leaves the position printable. *)
   | Ttyctor t -> Ttyctor (go t)
-  | Tdecltype _ | Tinstance _ | Tpromoted _ | Tvoid | Tunresolved
+  | Tinstance _ | Tpromoted _ | Tvoid | Tunresolved
   | Tany | Topaque | Tauto | Thole -> ty
 
 
@@ -990,8 +1018,8 @@ let rec exists_cpp_type (p : cpp_type -> bool) (ty : cpp_type) : bool =
     List.exists (exists_cpp_type p) tys
   | Tfun (dom, cod) ->
     List.exists (exists_cpp_type p) dom || exists_cpp_type p cod
-  | Tconst t | Tshared_ptr t | Tref t | Tptr t | Tnamespace (_, t)
-  | Tqualified (t, _) | Tdecay t | Tnondeduced t | Tfwd_ref t ->
+  | Tconst t | Tshared_ptr t | Tref (Lvalue, t) | Tptr t | Tnamespace (_, t)
+  | Tqualified (t, _) | Tdecay t | Tnondeduced t | Tref (Forwarding, t) ->
     exists_cpp_type p t
   | Texpr_type _ | Tdecltype_auto -> false
   | Trebind (h, x) -> exists_cpp_type p h || exists_cpp_type p x
@@ -1002,7 +1030,6 @@ let rec exists_cpp_type (p : cpp_type -> bool) (ty : cpp_type) : bool =
      this signature" has to say yes, or the declaration drops a parameter its
      own arguments use. *)
   | Ttyctor t -> exists_cpp_type p t
-  | Tdecltype _ (* wraps a [CPPraw]: no sub-types *)
   | Tvar _ | Tinstance _ | Tpromoted _ | Tvoid | Tunresolved
   | Tany | Topaque | Tauto | Thole ->
     false
@@ -1137,7 +1164,7 @@ let rebind_plain_var ~in_scope head args =
 (** [t] without the spelling a parameter's declared type wraps around it:
     [const], a reference, and the non-deduced context. *)
 let rec strip_param_spelling = function
-  | Tnondeduced t | Tconst t | Tref t | Tfwd_ref t -> strip_param_spelling t
+  | Tnondeduced t | Tconst t | Tref (_, t) -> strip_param_spelling t
   | t -> t
 
 (** Every name the type variables in [ty] answer to.
@@ -1250,9 +1277,6 @@ let map_expr
   | CPPstd_get (ty, e_opt) -> CPPstd_get (ft ty, Option.map fe e_opt)
   | CPPstd_holds_alternative ty -> CPPstd_holds_alternative (ft ty)
   | CPPdeclval ty -> CPPdeclval (ft ty)
-  | CPPis_same (t1, t2) -> CPPis_same (ft t1, ft t2)
-  | CPPis_constructible (t1, t2) -> CPPis_constructible (ft t1, ft t2)
-  | CPPconvertible (t1, t2) -> CPPconvertible (ft t1, ft t2)
   | CPPtype_name ty -> CPPtype_name (ft ty)
   | CPPlit (ty, s) -> CPPlit (ft ty, s)
   | CPPraw _ | CPPrt _ -> e
@@ -1306,7 +1330,9 @@ let map_stmt
        Option.map (List.map fs) default)
   | Sassert _ -> s
   | Sif_constexpr (cond, then_br, else_br) ->
-    Sif_constexpr (fe cond, List.map fs then_br, List.map fs else_br)
+    let (Tt_convertible (d, src)) = cond in
+    Sif_constexpr
+      (Tt_convertible (ft d, ft src), List.map fs then_br, List.map fs else_br)
   | Sif (cond, then_br, else_br) ->
     Sif (fe cond, List.map fs then_br, List.map fs else_br)
   | Sif_decl (id, ty, init, then_br, else_br) ->
@@ -1347,7 +1373,6 @@ let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
   | CPPvar _ | CPPglob _ | CPPalloc _
   | CPPstring _ | CPPuint _ | CPPfloat _ | CPPconvertible_to _
   | CPPabort _ | CPPenum_val _ | CPPnullptr | CPPstd_holds_alternative _
-  | CPPis_same _ | CPPis_constructible _ | CPPconvertible _
   | CPPdeclval _ | CPPtype_name _ | CPPqualified_t _ | CPPlit _
    |CPPraw _ | CPPrt _
   | CPPbool _ | CPPint _
@@ -1388,8 +1413,8 @@ let iter_stmt_children ~on_expr ~on_stmts (s : cpp_stmt) : unit =
   | Sreturn None | Sdecl _ | Sthrow _ | Sassert _ | Sraw _ | Scomment _
   | Sstruct_def _ | Susing _ | Sdecl_init _ | Scontinue | Sbreak -> ()
   | Sasgn (_, _, e) -> on_expr e
-  | Sif_constexpr (cond, then_br, else_br) ->
-    on_expr cond; on_stmts then_br; on_stmts else_br
+  | Sif_constexpr (_, then_br, else_br) ->
+    on_stmts then_br; on_stmts else_br
   | Sif (cond, then_br, else_br) ->
     on_expr cond; on_stmts then_br; on_stmts else_br
   | Sif_decl (_, _, init, then_br, else_br) ->
@@ -1511,7 +1536,6 @@ let fold_expr_children ~(on_expr : 'a -> cpp_expr -> 'a)
   | CPPvar _ | CPPglob _ | CPPalloc _
   | CPPstring _ | CPPuint _ | CPPfloat _ | CPPconvertible_to _
   | CPPabort _ | CPPenum_val _ | CPPnullptr | CPPstd_holds_alternative _
-  | CPPis_same _ | CPPis_constructible _ | CPPconvertible _
   | CPPdeclval _ | CPPtype_name _ | CPPqualified_t _ | CPPlit _
    |CPPraw _ | CPPrt _
   | CPPbool _ | CPPint _
@@ -1550,8 +1574,8 @@ let fold_stmt_children ~on_expr ~on_stmts (acc : 'a) (s : cpp_stmt) : 'a =
   | Sreturn None | Sdecl _ | Sthrow _ | Sassert _ | Sraw _ | Scomment _
   | Sstruct_def _ | Susing _ | Sdecl_init _ | Scontinue | Sbreak -> acc
   | Sasgn (_, _, e) -> on_expr acc e
-  | Sif_constexpr (cond, then_br, else_br) ->
-    on_stmts (on_stmts (on_expr acc cond) then_br) else_br
+  | Sif_constexpr (_, then_br, else_br) ->
+    on_stmts (on_stmts acc then_br) else_br
   | Sif (cond, then_br, else_br) ->
     on_stmts (on_stmts (on_expr acc cond) then_br) else_br
   | Sif_decl (_, _, init, then_br, else_br) ->

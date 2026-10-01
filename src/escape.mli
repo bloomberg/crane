@@ -22,28 +22,30 @@ open Miniml
             branches is used (conservative upper bound) *)
 val nb_occur_match : int -> ml_ast -> int
 
-(** [escapes k t] checks if de Bruijn index [k] escapes in [t] (value outlives
-    its scope). Escaping positions: constructor args (when [cons_escapes]),
-    lambda captures, tail position, fixpoint captures, partial-application
-    captures.
+(** What an escape query is about, which decides how precisely it reads two
+    positions.
+    - [Conservative]: a lambda passed as an argument forces its captures to
+      escape, and so does a constructor argument.
+    - [Of_sub_binding]: a lambda passed as an argument is inspected instead;
+      a constructor argument still escapes, so a scrutinee whose
+      sub-bindings are rebuilt into a new constructor stays owned and they
+      can move out of it.
+    - [Of_param]: as [Of_sub_binding], and a constructor argument is read once
+      to copy into the new value's field, like a call argument, rather than
+      forcing ownership.  Only for a parameter's own ownership, never for
+      something extracted from it. *)
+type escape_query = Conservative | Of_sub_binding | Of_param
 
-    @param refined when [true], treats function arguments more precisely: a
-                   lambda passed as an argument does not automatically force
-                   its captures to escape; instead the lambda body is
-                   inspected.  Defaults to [false] (conservative).
-    @param cons_escapes when [false], an occurrence as a constructor argument
-                   ([MLcons]/[MLtuple]) is treated like a function-call
-                   argument -- read once to copy into the new value's field,
-                   not an escape -- rather than forcing ownership.  Defaults
-                   to [true]: {!sub_bindings_escape}'s scan of a match
-                   branch relies on the default to keep a scrutinee owned
-                   when its sub-bindings are rebuilt into a new constructor,
-                   so only a caller deciding a parameter's own ownership
-                   (not something extracted from it) should turn it off.
+(** [escapes k t] checks if de Bruijn index [k] escapes in [t] (value outlives
+    its scope). Escaping positions: constructor args (except for an
+    [Of_param] query), lambda captures, tail position, fixpoint captures,
+    partial-application captures.
+
+    @param query defaults to [Conservative]
     @param k de Bruijn index to check (1 = innermost binder)
     @param t the MiniML term to analyse
     @return [true] if the value bound at index [k] may outlive its scope *)
-val escapes : ?refined:bool -> ?cons_escapes:bool -> int -> ml_ast -> bool
+val escapes : ?query:escape_query -> int -> ml_ast -> bool
 
 (** [partial_app_remaining head args] returns [Some remaining] when
     [MLapp(head, args)] is a partial application with [remaining] args still
@@ -108,7 +110,7 @@ val infer_sub_bindings_escape_params : int -> ml_ast -> bool list
 (** {2 Utility functions} *)
 
 (** Set of integers for tracking de Bruijn indices. *)
-module IntSet : Set.S with type elt = int
+module IntSet = Mlutil.IntSet
 
 (** [free_rels depth t] returns free de Bruijn indices in [t], shifted by
     [depth]. An index [i > depth] contributes [i - depth].

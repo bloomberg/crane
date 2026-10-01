@@ -493,8 +493,7 @@ let rec qualify_inductives ?(skip = fun _ -> false) = function
     | Tnamespace (g2, _) when GlobRef.CanOrd.equal g g2 -> inner
     | _ -> Tnamespace (g, inner) )
   | Tshared_ptr t -> Tshared_ptr (qualify_inductives ~skip t)
-  | Tref t -> Tref (qualify_inductives ~skip t)
-  | Tfwd_ref t -> Tfwd_ref (qualify_inductives ~skip t)
+  | Tref (k, t) -> Tref (k, qualify_inductives ~skip t)
   | Tconst t -> Tconst (qualify_inductives ~skip t)
   | Tptr t -> Tptr (qualify_inductives ~skip t)
   | Tfun (args, ret) ->
@@ -546,7 +545,7 @@ let build_guard_compare_stmts n ids =
   | Some ctor_ref ->
     let strip_wrappers t =
       let rec go = function
-        | Tref t | Tfwd_ref t | Tconst t | Tnamespace (_, t) -> go t
+        | Tref (_, t) | Tconst t | Tnamespace (_, t) -> go t
         | t -> t
       in
       go t
@@ -1172,7 +1171,7 @@ let rec gen_type_conversion_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
           ~bindings:bindings ~branches:branches ~args:[] in
         mk_call
           (mk_lambda
-             [(Tconst (Tref Tauto), Some scrut_id)]
+             [(Tconst (Tref (Lvalue, Tauto)), Some scrut_id)]
              (Some (qualify_inductives ~skip orig_dst_ty'))
              [Sraw body]
              ~capture:Immediate )
@@ -1287,7 +1286,7 @@ let rec gen_type_conversion_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
         let dst = qualify_inductives ~skip orig_dst_ty in
         mk_iife (Some dst)
           [ Sif_constexpr
-              ( CPPconvertible (dst, Tref (Tconst src_ty)),
+              ( Tt_convertible (dst, Tref (Lvalue, Tconst src_ty)),
                 [Sreturn (Some (CPPconvert (dst, expr)))],
                 (* [U] is neither a box nor anything else [A] can be read
                    from.  A converting constructor converts every field of
@@ -1736,14 +1735,7 @@ module IntSet = Escape.IntSet
 
 (** Collect all Tvar indices from an ml_type. Used to find type variables beyond
     those of the containing inductive/record. *)
-let rec collect_tvars_set acc = function
-  | Miniml.Tvar (_, i) -> IntSet.add i acc
-  | Miniml.Tarr (t1, t2) -> collect_tvars_set (collect_tvars_set acc t1) t2
-  | Miniml.Tglob (_, args, _) -> List.fold_left collect_tvars_set acc args
-  | Miniml.Tapp (i, args) ->
-    List.fold_left collect_tvars_set (IntSet.add i acc) args
-  | Miniml.Tmeta {contents = Some t} -> collect_tvars_set acc t
-  | _ -> acc
+let collect_tvars_set acc ty = IntSet.union acc (Mlutil.ml_tvars ty)
 
 (** Convert an IntSet of type variable indices back to a list, wrapping
     [collect_tvars_set]. Used to collect all Tvar indices from an ml_type. *)
@@ -2414,7 +2406,7 @@ let build_lifted_cpp_params ?(non_fwd_source_indices = []) convert_fn base_temps
       (fun (id, ty) ->
         let cpp_ty = convert_fn ty in
         match cpp_ty with
-        | Tshared_ptr _ -> (id, Tref (Tconst cpp_ty))
+        | Tshared_ptr _ -> (id, Tref (Lvalue, Tconst cpp_ty))
         | _ -> (id, Tconst cpp_ty) )
       params
   in
@@ -2439,7 +2431,7 @@ let build_lifted_cpp_params ?(non_fwd_source_indices = []) convert_fn base_temps
       (fun j (x, ty) ->
         match unwrap_fun_ty ty with
         | Some (Tfun _) when not (is_non_fwd_db j) ->
-          (x, Tfwd_ref (named_tvar (fun_tparam_id (n_params - j - 1))))
+          (x, Tref (Forwarding, named_tvar (fun_tparam_id (n_params - j - 1))))
         | _ -> (x, ty) )
       cpp_params
   in
@@ -2955,8 +2947,7 @@ let make_subst_extra_tvars num_ind_vars extra_tvar_map =
     | Tfun (dom, cod) -> Tfun (List.map subst dom, subst cod)
     | Tshared_ptr t -> Tshared_ptr (subst t)
     | Tglob (r, args, e) -> Tglob (r, List.map subst args, e)
-    | Tref t -> Tref (subst t)
-    | Tfwd_ref t -> Tfwd_ref (subst t)
+    | Tref (k, t) -> Tref (k, subst t)
     | Tconst t -> Tconst (subst t)
     | Tvariant tys -> Tvariant (List.map subst tys)
     | Tnamespace (r, t) -> Tnamespace (r, subst t)
@@ -3067,16 +3058,16 @@ let infer_owned_flags n_params body params_with_types =
 let wrap_param_by_ownership ?(is_owned = false) cpp_ty =
   match cpp_ty with
   | Tshared_ptr _ when is_owned -> cpp_ty
-  | Tshared_ptr _ -> Tref (Tconst cpp_ty)
+  | Tshared_ptr _ -> Tref (Lvalue, Tconst cpp_ty)
   | _ when is_inductive_value_type cpp_ty ->
     if is_owned then cpp_ty  (* pass by value, caller moves *)
-    else Tref (Tconst cpp_ty)  (* const T& for borrowing *)
+    else Tref (Lvalue, Tconst cpp_ty)  (* const T& for borrowing *)
   | Tvar _ | Tqualified _ ->
     (* Template type parameters and dependent types (e.g. typename C::t) have
        unknown concrete size; always pass by const-ref to avoid deep copies.
        When owned (caller moves in), pass by value to enable move semantics. *)
     if is_owned then cpp_ty
-    else Tref (Tconst cpp_ty)
+    else Tref (Lvalue, Tconst cpp_ty)
   | _ -> cpp_ty
 
 (** Check if the return type of an ML function type is erased — i.e., it
@@ -3213,8 +3204,7 @@ let rec clean_self_ns t =
     clean_self_ns (Tglob (g_r, args, gns))
   | Tnamespace (ns_r, inner) -> Tnamespace (ns_r, clean_self_ns inner)
   | Tglob (gr, args, ns) -> Tglob (gr, List.map clean_self_ns args, ns)
-  | Tref t -> Tref (clean_self_ns t)
-  | Tfwd_ref t -> Tfwd_ref (clean_self_ns t)
+  | Tref (k, t) -> Tref (k, clean_self_ns t)
   | Tshared_ptr t -> Tshared_ptr (clean_self_ns t)
   | t -> t
 
@@ -3794,8 +3784,7 @@ and erase_unresolved_tvars = function
   | Tfun (dom, cod) ->
     Tfun (List.map erase_unresolved_tvars dom, erase_unresolved_tvars cod)
   | Tshared_ptr t -> Tshared_ptr (erase_unresolved_tvars t)
-  | Tref t -> Tref (erase_unresolved_tvars t)
-  | Tfwd_ref t -> Tfwd_ref (erase_unresolved_tvars t)
+  | Tref (k, t) -> Tref (k, erase_unresolved_tvars t)
   | t -> t
 
 (** Whether a bare reference to global [x] must be spelled [x()]: it is
@@ -4390,7 +4379,7 @@ and pinned_by_pattern i =
     type of the value the binder denotes.  [const auto &] assigns [Tauto]:
     a deduced parameter is never physically a box. *)
 and strip_param_wrappers = function
-  | Tref t | Tfwd_ref t | Tconst t -> strip_param_wrappers t
+  | Tref (_, t) | Tconst t -> strip_param_wrappers t
   | t -> t
 
 (** Save the current binder-type state for later restoration. *)
@@ -4745,8 +4734,8 @@ and hkt_carrier_type_args env tvars ?result id tys =
   let sentinel = Minicpp.Thole in
   let rec is_plain_head = function
     (* A namespace or a const/reference wrapper is spelling, not structure. *)
-    | Minicpp.Tnamespace (_, t) | Minicpp.Tconst t | Minicpp.Tref t
-    | Minicpp.Tfwd_ref t ->
+    | Minicpp.Tnamespace (_, t) | Minicpp.Tconst t | Minicpp.Tref (Minicpp.Lvalue, t)
+    | Minicpp.Tref (Minicpp.Forwarding, t) ->
       is_plain_head t
     | Minicpp.Tglob (_, [arg], _)
     | Minicpp.Tid (_, [arg])
@@ -7447,7 +7436,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       let rec as_fun t =
         match t with
         | Tnondeduced t' -> as_fun t'
-        | Tconst t' | Tref t' -> as_fun t'
+        | Tconst t' | Tref (Lvalue, t') -> as_fun t'
         | Tfun _ -> Some t
         | t -> (
           match unfold_cpp_typedef env t with
@@ -7467,7 +7456,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
        become the closure it returns. *)
     let args, a =
       let rec fun_ty_of = function
-        | Tconst t | Tref t | Tfwd_ref t -> fun_ty_of t
+        | Tconst t | Tref (_, t) -> fun_ty_of t
         | Tfun (dom, cod) -> Some (List.length dom, cod)
         | _ -> None
       in
@@ -7834,7 +7823,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
               in
               let param_cpp_ty =
                 match body_subst with
-                | Some _ -> Tref (Tconst stored_cpp_ty)
+                | Some _ -> Tref (Lvalue, Tconst stored_cpp_ty)
                 (* A binder the body never reads is a parameter only for its
                    callers, and the slot's own spelling is the one they call it
                    at: [Id_<std::any, ...>] takes its object as a box, whatever
@@ -7856,7 +7845,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                   when rank2_carrier <> None
                        && has_tany_in_type bare_cpp_ty
                        && not (Rank2.is_bare_box bare_cpp_ty) ->
-                  Tref (Tconst (at_carrier bare_cpp_ty))
+                  Tref (Lvalue, Tconst (at_carrier bare_cpp_ty))
                 | None
                   when prints_as_any bare_cpp_ty
                        && ( match slot_param_cpp_ty j with
@@ -7923,7 +7912,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                      it deduces.  Committing to [std::monostate] rejects every
                      call through an erased tree.  The slot is still emitted;
                      see the parameter filter above. *)
-                  Tref (Tconst Tauto)
+                  Tref (Lvalue, Tconst Tauto)
                 | None when Ml_type_util.has_tany_written bare_cpp_ty ->
                   (* The type is spelled with erased positions (std::any).  Use
                      [const auto&] so the C++ compiler deduces the concrete
@@ -7938,7 +7927,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                      with a [std::any] -- [crane_erase_fn] does -- instantiates
                      the body at [std::any] and fails inside it, where no
                      [requires] can catch it. *)
-                  Tref (Tconst Tauto)
+                  Tref (Lvalue, Tconst Tauto)
                 | None -> wrap_param_by_ownership ~is_owned:owned bare_cpp_ty
               in
               (param_cpp_ty, Some id, body_subst) )
@@ -7996,7 +7985,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                     the value is already what the body wants. *)
                  let assigned =
                    match (ty, expected_param_cpp_tys) with
-                   | Tref (Tconst Tauto), Some doms
+                   | Tref (Lvalue, Tconst Tauto), Some doms
                      when ( match List.nth_opt doms (slot_dom j) with
                           | Some d -> prints_as_any d
                           | None -> false ) ->
@@ -8144,7 +8133,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                       let param_ty =
                         match bare with
                         | Tshared_ptr _ ->
-                          Tref (Tconst bare)
+                          Tref (Lvalue, Tconst bare)
                         | _ -> bare
                       in
                       (param_ty,
@@ -8341,7 +8330,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           in
           let local_ty ty = template_arg_of_ml_type env local_tvars ty in
           (* A forwarding parameter, and the argument that forwards it. *)
-          let forwarding = Tfwd_ref Tauto in
+          let forwarding = Tref (Forwarding, Tauto) in
           let forward x = CPPforward (Texpr_type x, x) in
           (* What the callee returns once given its value arguments, in the
              lambda's own variables. *)
@@ -8372,7 +8361,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
               List.map
                 (function
                   | Miniml.Tarr _ -> forwarding
-                  | ty -> Tref (Tconst (local_ty ty)) )
+                  | ty -> Tref (Lvalue, Tconst (local_ty ty)) )
                 non_dummy_param_tys
             in
             let fwd_args =
@@ -8384,8 +8373,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             let invoke_result =
               Tid_external
                 ( "std::invoke_result_t",
-                  Tref (Texpr_type (List.hd arg_vars))
-                  :: List.map (fun j -> Tref (Tvar (j, Some (local_tvar j))))
+                  Tref (Lvalue, Texpr_type (List.hd arg_vars))
+                  :: List.map (fun j -> Tref (Lvalue, Tvar (j, Some (local_tvar j))))
                        deducible_tvars )
             in
             let ty_args =
@@ -8431,8 +8420,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                   match ty with
                   | Miniml.Tarr _ -> forwarding
                   | _ when IntSet.is_empty (spelled_tvars_of IntSet.empty ty) ->
-                    Tref (Tconst (convert_ml_type_to_cpp_type env [] ty))
-                  | _ when own_index -> Tref (Tconst Tauto)
+                    Tref (Lvalue, Tconst (convert_ml_type_to_cpp_type env [] ty))
+                  | _ when own_index -> Tref (Lvalue, Tconst Tauto)
                   | _ -> forwarding )
                 non_dummy_param_tys
             in
@@ -9334,7 +9323,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                 let n_params = List.length params in
                 let new_params = List.map (fun (orig_ty, orig_id) ->
                   let bare = strip_cpp_ref_const orig_ty in
-                  if bare <> Tany then (Tconst (Tref Tany), orig_id)
+                  if bare <> Tany then (Tconst (Tref (Lvalue, Tany)), orig_id)
                   else (orig_ty, orig_id)
                 ) params in
                 let ml_concrete_param_tys =
@@ -9505,7 +9494,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                 let new_params = List.mapi (fun j (orig_ty, orig_id) ->
                   if j < List.length param_tys && List.nth param_tys j = Tany then
                     let bare = strip_cpp_ref_const orig_ty in
-                    if bare <> Tany then (Tconst (Tref Tany), orig_id)
+                    if bare <> Tany then (Tconst (Tref (Lvalue, Tany)), orig_id)
                     else (orig_ty, orig_id)
                   else (orig_ty, orig_id)
                 ) params in
@@ -9708,7 +9697,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                    && strip_cpp_ref_const orig_ty <> Tany
                 then
                   (* Replace concrete type with std::any, preserving const ref *)
-                  Tconst (Tref Tany)
+                  Tconst (Tref (Lvalue, Tany))
                 else orig_ty
               in
               (erased_ty, orig_id)
@@ -9906,7 +9895,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                     List.exists erased_outside_family_apps args
                   | Tfun (ps, r) ->
                     List.exists erased_outside_family_apps (r :: ps)
-                  | Tshared_ptr t | Tconst t | Tref t | Tfwd_ref t | Tnamespace (_, t) ->
+                  | Tshared_ptr t | Tconst t | Tref (_, t) | Tnamespace (_, t) ->
                     erased_outside_family_apps t
                   | t -> prints_as_any t
                 in
@@ -10806,7 +10795,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                 Table.mark_needs_erase_fn ();
                 mk_iife (Some ty)
                   [ Sif_constexpr
-                      ( CPPconvertible (ty, Tref (Tconst (cpp_of_ml env from))),
+                      ( Tt_convertible (ty, Tref (Lvalue, Tconst (cpp_of_ml env from))),
                         [Sreturn (Some (CPPconvert (ty, inner)))],
                         [Sthrow Minicpp.dead_branch_message] ) ]
               | _ -> CPPabort (Minicpp.dead_branch_message, ty) )
@@ -11846,7 +11835,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
         | Some pt when count_ml_value_arrows pt > 0 ->
           mk_lambda
             (List.init (count_ml_value_arrows pt) (fun _ ->
-                 (Tref (Tconst Tauto), None) ))
+                 (Tref (Lvalue, Tconst Tauto), None) ))
             None
             [Sreturn (Some Cpp_erasure.empty_box)]
             ~capture:Closure
@@ -12491,7 +12480,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
         let params =
           List.mapi
             (fun j ty ->
-              (Tref (Tconst ty), Some (Id.of_string (Printf.sprintf "_wa%d" j))))
+              (Tref (Lvalue, Tconst ty), Some (Id.of_string (Printf.sprintf "_wa%d" j))))
             dom_cpps
         in
         let args =
@@ -13552,7 +13541,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
                 in
                 let wrapped =
                   match ty with
-                  | Tshared_ptr _ -> Tref (Tconst ty)
+                  | Tshared_ptr _ -> Tref (Lvalue, Tconst ty)
                   (* A parameter erased in part takes whatever instantiation
                      the caller has and is read at this one by
                      [crane_convert] (see [call_args]): a slot spelled
@@ -13561,7 +13550,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
                      because [std::optional]'s conversion between the two
                      is disabled by the aggregate [box<std::any>]. *)
                   | _ when erased_eta_param ty || mentions_unresolved_promoted ty ->
-                    Tref (Tconst Tauto)
+                    Tref (Lvalue, Tconst Tauto)
                   | _ -> ty
                 in
                 (wrapped, Some (eta_param_id i)) )
@@ -14730,7 +14719,7 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
             Some
               (Sasgn
                  ( value_id,
-                   Declare (Tref (Tconst bare_ty)),
+                   Declare (Tref (Lvalue, Tconst bare_ty)),
                    rhs ))
           else None
         else None)
@@ -16215,7 +16204,7 @@ and gen_local_fix_by_ref env renamed_ids funs_with_params owned_flags_per_fun =
     List.map2
       (fun (((_fix_id, fty), impl_id), owned_flags) (args, body) ->
         let self_params =
-          List.rev_map (fun sid -> (Tref Tauto, Some sid)) self_ids
+          List.rev_map (fun sid -> (Tref (Lvalue, Tauto), Some sid)) self_ids
         in
         let orig_params =
           List.map2
@@ -16406,7 +16395,7 @@ and gen_local_fix_ycomb env renamed_ids funs_with_params =
     List.map2
       (fun ((_fix_id, fty), impl_id) (args, body) ->
         let self_params =
-          List.rev_map (fun sid -> (Tref Tauto, Some sid)) self_ids
+          List.rev_map (fun sid -> (Tref (Lvalue, Tauto), Some sid)) self_ids
         in
         let orig_params =
           List.map
@@ -17505,7 +17494,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
             in
             (* Apply const-ref binding when safe. *)
             let cpp_ty =
-              if use_const_ref then Tref (Tconst cpp_ty)
+              if use_const_ref then Tref (Lvalue, Tconst cpp_ty)
               else cpp_ty
             in
             begin match extract_block_template e with
@@ -18057,7 +18046,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
             in
             let decl_ty =
               if has_tany_in_type api_ty_for_decl then
-                Tref (Tconst Tauto)
+                Tref (Lvalue, Tconst Tauto)
               else
                 api_ty_for_decl
             in

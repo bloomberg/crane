@@ -37,7 +37,7 @@ let reads_stmts l = named (count_stmts IdMap.empty l)
    the first is silently a copy, and the second names something the caller
    still holds. *)
 let rec is_borrowed = function
-  | Tref _ | Tfwd_ref _ | Tconst _ -> true
+  | Tref _ | Tconst _ -> true
   | Tnamespace (_, t) -> is_borrowed t
   | _ -> false
 
@@ -233,7 +233,6 @@ and walk_stmt scope live s =
     (Sif (c, t, e), live)
   | Sif_constexpr (c, t, e) ->
     let (t, e), live = two_alts scope live t e in
-    let c, live = walk_expr scope live c in
     (Sif_constexpr (c, t, e), live)
   | Sif_decl (id, ty, c, t, e) ->
     let (t, e), live = two_alts scope live t e in

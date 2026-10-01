@@ -254,10 +254,10 @@ let rec is_value_type_ret = function
     so frame-field bindings should remain copies rather than [const T&]. *)
 let rec is_trivially_copyable_type = function
   | Tvoid | Tauto | Tunresolved | Tany -> true
-  | Tptr _ | Tref _ | Tfwd_ref _ -> true
+  | Tptr _ | Tref _ -> true
   | Tconst t | Tnamespace (_, t) | Tqualified (t, _) ->
     is_trivially_copyable_type t
-  | Tdecltype _ -> true
+  | Tdecay (Texpr_type _) -> true
   | Tvar _ -> true
   | Tid (id, ts) -> is_trivially_copyable_named (Id.to_string id) ts
   | Tid_external (s, ts) -> is_trivially_copyable_named s ts
@@ -292,15 +292,14 @@ let rec worthwhile_move_type = function
   | Tnondeduced t -> worthwhile_move_type t
   | Trebind (h, x) -> worthwhile_move_type h || worthwhile_move_type x
   | Thole -> false
-  | Tfwd_ref t -> worthwhile_move_type t
+  | Tref (Forwarding, t) -> worthwhile_move_type t
   | Texpr_type _ | Tdecltype_auto -> false
   | Tconst t | Tnamespace (_, t) | Tqualified (t, _) | Tapply (t, _)
-  | Tref t ->
+  | Tref (Lvalue, t) ->
     worthwhile_move_type t
   | Tvar _ | Tinstance _ | Tpromoted _ -> true
   | Tdecay t -> worthwhile_move_type t
-  | Ttyctor _ | Tptr _ | Tvoid | Tauto | Tunresolved | Tany | Topaque
-  | Tdecltype _ ->
+  | Ttyctor _ | Tptr _ | Tvoid | Tauto | Tunresolved | Tany | Topaque ->
     false
 
 (* Global mutable state in this file and their reset granularity:
@@ -597,7 +596,7 @@ let unstable_locals ~(stable : Id.Set.t) (body : cpp_stmt list) : Id.Set.t =
      enclosing block.  Locals bound from a dereference or a field are plain
      aliases and live as long as what they name. *)
   let rec is_alias_ty = function
-    | Tref _ | Tfwd_ref _ -> true
+    | Tref _ -> true
     | Tconst t -> is_alias_ty t
     | _ -> false
   in
@@ -892,9 +891,6 @@ let rec collect_expr (check : call_checker) expr =
    |CPPstring _
    |CPPuint _
    |CPPfloat _
-   |CPPis_same _
-   |CPPis_constructible _
-   |CPPconvertible _
    |CPPconcept_app _
    |CPPrequires _ -> []
 
@@ -958,9 +954,8 @@ and collect_stmt check ~in_visitor = function
   | Sexpr e -> collect_expr check e
   | Sasgn (_, _, e) -> collect_expr check e
   | Sassign_expr (lhs, e) -> collect_expr check lhs @ collect_expr check e
-  | Sif_constexpr (cond, then_br, else_br) ->
-    collect_expr check cond
-    @ collect_stmts check ~in_visitor then_br
+  | Sif_constexpr (_, then_br, else_br) ->
+    collect_stmts check ~in_visitor then_br
     @ collect_stmts check ~in_visitor else_br
   | Sif (cond, then_br, else_br) ->
     collect_expr check cond
@@ -1346,10 +1341,10 @@ let shadow_name (id : Id.t) : Id.t =
 
 (** Strip reference and const modifiers from a type, converting it to a value
     type suitable for local variable declarations. [const shared_ptr<T> &]
-    becomes [shared_ptr<T>], and [F0 &&] (= [Tref(Tref(Tvar))]) becomes [Tvar].
+    becomes [shared_ptr<T>], and [F0 &&] ([Tref (Forwarding, Tvar)]) becomes [Tvar].
 *)
 let rec strip_ref_type = function
-  | Tref t | Tfwd_ref t -> strip_ref_type t
+  | Tref (_, t) -> strip_ref_type t
   | t -> t
 
 (** Strip reference types AND const modifiers from a type. Used for shadow
@@ -1360,7 +1355,7 @@ let rec strip_ref_type = function
     through the pointer — removing it would break [_loop_self = this] when
     [this] is [const T *] in a const method. *)
 let rec strip_ref_and_const_type = function
-  | Tref t | Tfwd_ref t -> strip_ref_and_const_type t
+  | Tref (_, t) -> strip_ref_and_const_type t
   | Tconst (Tptr _) as t -> t
   | Tconst t -> strip_ref_and_const_type t
   | t -> t
@@ -1370,7 +1365,7 @@ let rec strip_ref_and_const_type = function
     a pessimizing-move warning since the move constructor receives [const T&&]
     and falls back to copy anyway. *)
 let is_moveable_param_type = function
-  | Tref _ | Tfwd_ref _ -> false
+  | Tref _ -> false
   | Tconst _ -> false
   | _ -> true
 
@@ -1393,16 +1388,16 @@ let is_moveable_param_type = function
 
     @return [Some pointee_type] when the parameter qualifies, [None] otherwise *)
 let borrowed_value_param_pointee = function
-  | Tref (Tconst t) when is_value_type_ret t -> Some t
-  | Tconst (Tref t) when is_value_type_ret t -> Some t
+  | Tref (Lvalue, Tconst t) when is_value_type_ret t -> Some t
+  | Tconst (Tref (Lvalue, t)) when is_value_type_ret t -> Some t
   | t when Table.reuse () && Table.non_atomic_rc () && is_value_type_ret t ->
     Some t
   | _ -> None
 
 (** Extract the underlying type variable id from a forwarding-reference type.
-    [Tref(Tref(Tvar(_, Some id)))] → [Some id] *)
+    [Tref (Forwarding, Tvar (_, Some id))] → [Some id] *)
 let rec extract_fwd_ref_tvar = function
-  | Tref inner | Tfwd_ref inner -> extract_fwd_ref_tvar inner
+  | Tref (_, inner) -> extract_fwd_ref_tvar inner
   | Tvar (_, Some id) -> Some id
   | _ -> None
 
@@ -3453,7 +3448,7 @@ let borrow_frame_bound_matches stmts =
   let ids = ref [] in
   let rec scan s =
     ( match s with
-    | Sasgn (id, Declare (Tref (Tconst _) | Tptr _), _) ->
+    | Sasgn (id, Declare (Tref (Lvalue, Tconst _) | Tptr _), _) ->
       ids := id :: !ids
     | _ -> () );
     ignore (map_stmt Fun.id (fun s -> scan s; s) Fun.id s)
@@ -4055,7 +4050,7 @@ let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
     (* A forwarding parameter's value is held at [std::decay_t<F>]: its [F]
        may be deduced as a reference. *)
     Option.map
-      (function Tfwd_ref t -> Tdecay (strip_ref_type t) | t -> strip_ref_type t)
+      (function Tref (Forwarding, t) -> Tdecay (strip_ref_type t) | t -> strip_ref_type t)
       (lookup_var_type env id)
   | CPPmove inner -> infer_saved_type tparams env inner
   | CPPderef inner ->
@@ -4066,7 +4061,7 @@ let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
        pointer's type while the push and the handler both use it as a
        value. *)
     let rec pointee = function
-      | Tref t | Tfwd_ref t | Tconst t -> pointee t
+      | Tref (_, t) | Tconst t -> pointee t
       | Tshared_ptr t | Tptr t -> t
       | t -> t
     in
@@ -4330,7 +4325,7 @@ let make_cont_bindings ~offset ~field_names cont_vars cont_types =
       | Tshared_ptr _ -> Sasgn (id, Declare ty, CPPmove field_expr)
       | Tunresolved -> Sasgn (id, Existing, field_expr)
       | Tconst inner when not (is_trivially_copyable_type inner) ->
-        Sasgn (id, Declare (Tref (Tconst inner)), field_expr)
+        Sasgn (id, Declare (Tref (Lvalue, Tconst inner)), field_expr)
       | t when not (is_trivially_copyable_type t) ->
         (* Move from frame field to avoid O(n) deep copy of owned value types
            (e.g. [List<T>]).  Safe because [_f] was obtained via
@@ -4538,9 +4533,8 @@ and stmt_has_unique_owner_decomposition check tparams env = function
   | Sassign_expr (lhs, e) ->
     expr_has_unique_owner_decomposition check tparams env lhs
     || expr_has_unique_owner_decomposition check tparams env e
-  | Sif_constexpr (cond, then_br, else_br) ->
-    expr_has_unique_owner_decomposition check tparams env cond
-    || body_has_unique_owner_decomposition check tparams env then_br
+  | Sif_constexpr (_, then_br, else_br) ->
+    body_has_unique_owner_decomposition check tparams env then_br
     || body_has_unique_owner_decomposition check tparams env else_br
   | Sif (cond, then_br, else_br) ->
     expr_has_unique_owner_decomposition check tparams env cond
@@ -6532,7 +6526,7 @@ let rewrite_enter_stmt ctx stmt =
 let make_stack_init varying_params =
   let move_if_needed ty v =
     match ty with
-    | Tconst _ | Tref _ | Tfwd_ref _ -> v
+    | Tconst _ | Tref _ -> v
     | t when not (is_trivially_copyable_type t) -> CPPmove v
     | _ -> v
   in
@@ -6566,7 +6560,7 @@ let make_param_copies varying_params =
     | Tconst inner when not (is_trivially_copyable_type inner) ->
       (* Const-ref param stored in frame: bind by [const T&] reference, cheaper
          than cloning. *)
-      Sasgn (id, Declare (Tref (Tconst inner)), f)
+      Sasgn (id, Declare (Tref (Lvalue, Tconst inner)), f)
     | t when not (is_trivially_copyable_type t) ->
       (* Owned non-trivial type (e.g. [List<T>]): move from frame field to avoid
          an O(n) deep-copy.  [_f] was obtained via [std::move(std::get<...>(_frame))]
@@ -6589,7 +6583,7 @@ let make_param_copies varying_params =
       else
         match borrowed_value_param_pointee ty with
         | Some t ->
-          Sasgn (id, Declare (Tref (Tconst t)),
+          Sasgn (id, Declare (Tref (Lvalue, Tconst t)),
                  CPPderef (CPPaccess (Adot, CPPvar (id_f), id)))
         | None ->
           let stripped = strip_ref_type ty in
@@ -6942,7 +6936,7 @@ let optimize_frame_push_args frame_field_types stmts =
     in
     let is_owned_decl_type ty =
       let rec has_ref = function
-        | Tref _ | Tfwd_ref _ -> true
+        | Tref _ -> true
         | Tconst t -> has_ref t
         | _ -> false
       in
@@ -7212,7 +7206,7 @@ let rec rewrite_field_access_for_decltype env expr =
     let extra =
       List.map
         (fun id ->
-          (Tref (strip_ref_type (Option.get (lookup_var_type env id))), Some id))
+          (Tref (Lvalue, strip_ref_type (Option.get (lookup_var_type env id))), Some id))
         free
     in
     (* Both lambda parameters and call arguments are stored reversed relative
@@ -7234,7 +7228,7 @@ let rec rewrite_field_access_for_decltype env expr =
     ( match lookup_var_type env id with
     | Some ty ->
       let base_ty = strip_ref_type ty in
-      CPPdeclval (Tref base_ty)
+      CPPdeclval (Tref (Lvalue, base_ty))
     | None -> expr )
   | CPPget (CPPvar id, field) ->
     (* Dot access on a variable.  Strip const to get the struct type for
@@ -7247,7 +7241,7 @@ let rec rewrite_field_access_for_decltype env expr =
         | Tconst t -> t
         | t -> t
       in
-      CPPaccess (Adot, CPPdeclval (Tref struct_ty), field)
+      CPPaccess (Adot, CPPdeclval (Tref (Lvalue, struct_ty)), field)
     | None -> expr )
   | CPPaccess (Aarrow, CPPvar id, field) ->
     (* Arrow access on a pointer variable — used by Smatch bindings
@@ -7260,7 +7254,7 @@ let rec rewrite_field_access_for_decltype env expr =
         | Tptr (Tconst t) | Tptr t -> t
         | t -> t
       in
-      CPPaccess (Adot, CPPdeclval (Tref pointee_ty), field)
+      CPPaccess (Adot, CPPdeclval (Tref (Lvalue, pointee_ty)), field)
     | None -> expr )
   | CPPlambda ({cl_body = body; _} as l) ->
     (* Rewrite variables inside the lambda body to use std::declval, and remove
@@ -7272,18 +7266,18 @@ let rec rewrite_field_access_for_decltype env expr =
   | _ ->
     map_expr (rewrite_field_access_for_decltype env) Fun.id Fun.id expr
 
-(** Build a [Tdecltype(expr)] type, suitable for struct field type annotations
+(** Build a [std::decay_t<decltype(expr)>] type, suitable for struct field type annotations
     when the actual type is unknown. Rewrites variable references to use
     std::declval so that decltype is valid at struct definition scope.
 
     @param env      Type environment for resolving variable types in the
                     [decltype] expression
     @param expr     The expression whose type to capture via [decltype]
-    @return [Tdecltype(rewritten_expr)] where [rewritten_expr] uses
+    @return [std::decay_t<decltype(rewritten_expr)>] where [rewritten_expr] uses
             [std::declval] for any in-scope variables *)
 let make_decltype_ty env expr =
   let expr = rewrite_field_access_for_decltype env expr in
-  Tdecltype expr
+  Tdecay (Texpr_type expr)
 
 (** Fix bindings in a continuation frame handler for fields that became
     pointer-safe after [compute_frame_pointer_safe].
@@ -7337,14 +7331,14 @@ let fix_handler_bindings field_names cf_ps handler =
               | _ -> strip_ref_and_const_type orig_ty
             in
             remapped := id :: !remapped;
-            Sasgn (id, Declare (Tref (Tconst base_ty)), CPPderef e)
+            Sasgn (id, Declare (Tref (Lvalue, Tconst base_ty)), CPPderef e)
           | Sasgn (id, Declare orig_ty, e) when is_ps_field_access e ->
             let base_ty = match orig_ty with
               | Tshared_ptr inner -> inner
               | _ -> strip_ref_and_const_type orig_ty
             in
             remapped := id :: !remapped;
-            Sasgn (id, Declare (Tref (Tconst base_ty)), CPPderef e)
+            Sasgn (id, Declare (Tref (Lvalue, Tconst base_ty)), CPPderef e)
           | s -> s)
         handler
     in
@@ -7455,7 +7449,7 @@ let transform_nontail ?(fn_name : string option) ?adopted ?(outer_env = [])
             let t = strip_ref_and_const_type t
             and r = strip_ref_and_const_type ret_ty in
             match (t, r) with
-            | Tdecltype _, _ | _, Tdecltype _ -> false
+            | Tdecay (Texpr_type _), _ | _, Tdecay (Texpr_type _) -> false
             | _ -> ( try t <> r with Invalid_argument _ -> false ) )
           | None -> false
         in
@@ -7594,7 +7588,7 @@ let transform_nontail ?(fn_name : string option) ?adopted ?(outer_env = [])
      deduced from a [const T &] or a value and is never a reference. *)
   let frame_field_type ty =
     match ty with
-    | Tfwd_ref t -> Tdecay (strip_ref_and_const_type t)
+    | Tref (Forwarding, t) -> Tdecay (strip_ref_and_const_type t)
     | ty -> strip_ref_and_const_type ty
   in
   let entry_fields ee =
@@ -7676,7 +7670,7 @@ let transform_nontail ?(fn_name : string option) ?adopted ?(outer_env = [])
                  (match extract_lambda_return_expr body with
                   | Some ret_expr ->
                     let rewritten = rewrite_field_access_for_decltype cf.cf_env ret_expr in
-                    Tfun (param_types, Tdecltype rewritten)
+                    Tfun (param_types, Tdecay (Texpr_type rewritten))
                   | None -> make_decltype_ty cf.cf_env expr)
                | _ -> make_decltype_ty cf.cf_env expr)
             | Some ty -> ty)
@@ -8147,7 +8141,7 @@ let try_inline_mutual_into names body =
         (fun (pid, ty) ->
           let ty =
             match ty with
-            | Tfwd_ref (Tvar _) -> Tfwd_ref Tauto
+            | Tref (Forwarding, Tvar _) -> Tref (Forwarding, Tauto)
             | ty -> ty
           in
           (List.assoc pid rename_map, ty))
@@ -9348,7 +9342,7 @@ let transform_method ~tparams ~self_ty mf =
          assignment happens first. *)
       let self_store_ty =
         let rec pointee = function
-          | Tref t | Tfwd_ref t | Tconst t -> pointee t
+          | Tref (_, t) | Tconst t -> pointee t
           | Tptr t | Tshared_ptr t -> Some (strip_ref_and_const_type t)
           | _ -> None
         in

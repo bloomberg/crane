@@ -467,6 +467,12 @@ val db_fallback_id : int -> Id.t
     ["t_"]); identity under the standard flavor. *)
 val tparam_name : Id.t -> Id.t
 
+(** The template parameter names of the struct generated for packet [p] of
+    inductive [kn]: the promoted variables its payloads name, then its own
+    parameters. *)
+val ind_struct_tparams :
+  MutInd.t -> Miniml.ml_ind -> Miniml.ml_ind_packet -> Id.t list
+
 (** Compute the C++ enum constructor name for a single already-uppercased
     string [s]: applies the BDE [e_] prefix, or escapes a spelling
     {!is_reserved_cpp_name} rules out.  Does not perform collision avoidance;

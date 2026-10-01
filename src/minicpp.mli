@@ -90,6 +90,10 @@ type capture =
   | Immediate
   | Closure
 
+(** What a reference type is: [T&], or [T&&] as a deduced parameter takes
+    it -- a forwarding reference, which binds either value category. *)
+type ref_kind = Lvalue | Forwarding
+
 (** C++ type representation. *)
 type cpp_type =
   | Tvar of int * Id.t option
@@ -123,7 +127,7 @@ type cpp_type =
   | Tapply of cpp_type * cpp_type list
       (** An alias template applied to arguments: [typename I::template C<A>]
           when the head is an associated type, [C<A>] otherwise. *)
-  | Tref of cpp_type  (** C++ reference type *)
+  | Tref of ref_kind * cpp_type
   | Tptr of cpp_type  (** C++ pointer type *)
   | Tvariant of cpp_type list  (** std::variant<...> for sum types *)
   | Tshared_ptr of cpp_type  (** std::shared_ptr<T> for managed memory *)
@@ -154,7 +158,6 @@ type cpp_type =
           there is what makes the value boxed. *)
   | Tauto
       (** auto for phantom tvar positions where C++ cannot deduce the type *)
-  | Tdecltype of cpp_expr  (** decltype(expr) for deduced types *)
   | Tdecay of cpp_type  (** std::decay_t<T> - strips references/cv from template params *)
   | Tnondeduced of cpp_type
       (** [std::type_identity_t<T>]: the type [T], in a position template
@@ -166,7 +169,6 @@ type cpp_type =
   | Thole
       (** The argument position in the body of a carrier abstraction
           ({!Ttyctor}): the alias template's own parameter, [_CraneTcArg]. *)
-  | Tfwd_ref of cpp_type  (** [T&&]: a forwarding reference *)
   | Texpr_type of cpp_expr
       (** [decltype(e)], undecayed: what [std::forward] is instantiated at *)
   | Tdecltype_auto  (** [decltype(auto)]: a reference-preserving return type *)
@@ -182,6 +184,13 @@ and asgn_target =
       (** [ty x = e;] -- a declaration with an initialiser; [Tauto] gives
           [auto x = e;]. *)
   | Existing  (** [x = e;] -- [x] is already in scope. *)
+
+(** A compile-time question about types, the condition of an
+    {!Sif_constexpr}. *)
+and type_test =
+  | Tt_convertible of cpp_type * cpp_type
+      (** [crane_convertible<Dst, Src>]: whether [crane_convert] has a route
+          from [Src] to [Dst]. *)
 
 (** C++ statement representation. *)
 and cpp_stmt =
@@ -210,10 +219,11 @@ and cpp_stmt =
       (** Conditional: condition, then-branch, else-branch.  An empty
           else-branch is the [if] with no [else]; there is no second node for
           that shape, so one C++ form has one encoding. *)
-  | Sif_constexpr of cpp_expr * cpp_stmt list * cpp_stmt list
-      (** [if constexpr (cond) { ... } else { ... }] -- a branch resolved when
+  | Sif_constexpr of type_test * cpp_stmt list * cpp_stmt list
+      (** [if constexpr (test) { ... } else { ... }] -- a branch resolved when
           the enclosing template is instantiated, so only the taken side is
-          required to compile. *)
+          required to compile.  Its condition is a question about types, the
+          only kind such a branch is asked. *)
   | Sif_decl of Id.t * cpp_type * cpp_expr * cpp_stmt list * cpp_stmt list
       (** C++17 if-with-declaration: [if (type id = expr) { then } else { else }].
           The declaration doubles as the condition (pointer truthiness). *)
@@ -479,15 +489,6 @@ and cpp_expr =
       (** [std::holds_alternative<T>] -- see {!CPPstd_get} on naming an
           alternative. *)
   | CPPdeclval of cpp_type  (** std::declval<T>() *)
-  | CPPis_same of cpp_type * cpp_type
-      (** [std::is_same_v<T, U>] -- a compile-time type comparison, so it can
-          only be asked inside an {!Sif_constexpr}. *)
-  | CPPis_constructible of cpp_type * cpp_type
-  | CPPconvertible of cpp_type * cpp_type
-    (* crane_convertible<Dst, Src> -- whether crane_convert has a route *)
-      (** [std::is_constructible_v<T, U>] -- whether [T(u)] is well-formed for
-          a [u] of type [U].  Like {!CPPis_same}, only askable inside an
-          {!Sif_constexpr}. *)
   | CPPtype_name of cpp_type
       (** A type named where an expression is expected: the head of an
           aggregate initialisation, [typename T::Ctor{...}]. *)
@@ -772,9 +773,9 @@ type cpp_schema = int * cpp_type
 val ind_ty_ptr : GlobRef.t -> cpp_type list -> cpp_type
 
 (** Rvalue reference type [T&&].  Uses the double-{!Tref} encoding that the
-    pretty-printer already handles: [Tref(Tref(t))] prints as [t&&].
+    pretty-printer already handles: [Tref (Lvalue, Tref(t))] prints as [t&&].
     @param ty the base type to wrap as an rvalue reference
-    @return [Tref (Tref ty)] *)
+    @return [Tref (Lvalue, Tref ty)] *)
 val rval_ref : cpp_type -> cpp_type
 
 (** The instance parameter a type is qualified under, if any: [typename
@@ -800,8 +801,8 @@ val is_cpp_dummy_type : cpp_type -> bool
 val prints_as_any : cpp_type -> bool
 
 (** Whether a global is a type parameterised by families, whose erased index
-    is its own and not a carrier's element; installed by [Table]. *)
-val family_parameterised : (Names.GlobRef.t -> bool) ref
+    is its own and not a carrier's element. *)
+val family_parameterised : Names.GlobRef.t -> bool
 
 (** A plain type-constructor parameter [head] applied at [args], read through
     {!Trebind} where the argument is not erased and names only variables in
@@ -815,6 +816,14 @@ val strip_param_spelling : cpp_type -> cpp_type
     carrier abstraction (a {!Ttyctor} over a body carrying the
     {!ctor_alias_tvar} sentinel); an erased head erases the application. *)
 val tapply : cpp_type -> cpp_type list -> cpp_type
+
+(** [rewrite_cpp_type f ty] replaces each node [f] answers for with its answer,
+    without descending into it, and rebuilds every other node from its
+    rewritten children as it was: no application is re-normalised, and a
+    [Ttyctor]'s head is reached like any other child.  Unlike
+    {!map_cpp_type}, a substitution written with it cannot rewrite what it
+    substituted. *)
+val rewrite_cpp_type : (cpp_type -> cpp_type option) -> cpp_type -> cpp_type
 
 (** [map_cpp_type f ty] applies [f] to every sub-type in [ty]. Use this to build
     type transformations: pass a function that handles your custom case and

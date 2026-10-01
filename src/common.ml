@@ -830,7 +830,7 @@ let inductive_names_of_sel sel =
          the module's struct, in the same scope: [Handler.v] declares both a
          [Module Handler] and a [Definition Handler], and one of the two names
          has to give way. *)
-      | SEdecl d -> Option.cata (fun n -> [n]) [] (type_alias_name_of_decl d)
+      | SEdecl d -> Stdlib.Option.to_list (type_alias_name_of_decl d)
       | _ -> [] )
     sel
 
@@ -849,7 +849,7 @@ let file_colliding_type_names sel =
       | SEdecl (Dind (_kn, ind)) ->
         Array.to_list
           (Array.map (fun p -> modular_rename Type p.ip_typename) ind.ind_packets)
-      | SEdecl d -> Option.cata (fun n -> [n]) [] (type_alias_name_of_decl d)
+      | SEdecl d -> Stdlib.Option.to_list (type_alias_name_of_decl d)
       | _ -> [] )
     sel
 
@@ -1824,6 +1824,14 @@ let db_fallback_id i = Id.of_string (db_fallback_name i)
 let tparam_name id =
   if Table.std_lib () = "BDE" then Id.of_string ("t_" ^ Id.to_string id)
   else id
+
+(* A promoted variable a payload mentions is a type the inductive does not
+   own: it belongs to whichever instance was in scope where the inductive was
+   declared, so it is a parameter of the struct and an argument at every use.
+   See {!Table.ind_promoted_params}. *)
+let ind_struct_tparams kn ind p =
+  let raw_pvars, _ = Table.ind_param_vars ind p in
+  Table.ind_promoted_params kn @ List.map tparam_name raw_pvars
 
 let enum_ctor_name s =
   let upper = String.uppercase_ascii s in

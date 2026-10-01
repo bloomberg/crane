@@ -22,7 +22,7 @@ let at_carrier x ty =
   map_cpp_type (function Topaque | Tany -> carrier_type x | t -> t) ty
 
 let rec is_bare_box = function
-  | Tconst t | Tref t | Tfwd_ref t -> is_bare_box t
+  | Tconst t | Tref (_, t) -> is_bare_box t
   | Tany | Topaque -> true
   | _ -> false
 

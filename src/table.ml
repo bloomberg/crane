@@ -696,7 +696,7 @@ let rec is_typeclass_type_cpp = function
   | Minicpp.Tglob (r, _, _) -> is_typeclass r
   | Minicpp.Tconst t ->
     is_typeclass_type_cpp t (* Unwrap const/static/extern *)
-  | Minicpp.Tref t | Minicpp.Tfwd_ref t ->
+  | Minicpp.Tref (Minicpp.Lvalue, t) | Minicpp.Tref (Minicpp.Forwarding, t) ->
     is_typeclass_type_cpp t (* Unwrap references *)
   | Minicpp.Tshared_ptr t -> is_typeclass_type_cpp t (* Unwrap shared_ptr *)
   | _ -> false
@@ -708,75 +708,31 @@ let (init_flat_inductives, add_flat_inductive, is_flat_inductive_registered) =
 
 (** {2 Higher-kinded inductive parameters} *)
 
-(* Positions (0-based, in the C++ template parameter list) of an inductive's
-   parameters that are declared [template <typename> class] because a
-   constructor field applies them.  Populated by [Gen_decls.hkt_templates] when
-   the inductive's header is generated, and read back when a *use* of the
-   inductive is converted: such a position must receive a bare template name
-   ([holder<std::optional>]), not an instantiation. *)
-let hkt_ind_params : (GlobRef.t, (int * int) list) Hashtbl.t =
-  Hashtbl.create 16
+(* What each template parameter of a generated inductive or alias is lives in
+   {!Tparam_kinds}, below this module so that {!Minicpp} can read it; these
+   are its entry points for the rest of the plugin. *)
+let () = on_reset Tparam_kinds.reset
 
-let init_hkt_ind_params () = Hashtbl.reset hkt_ind_params
+let () =
+  List.iter
+    (fun (name, _) ->
+      register_census name (fun () ->
+          List.assoc name (Tparam_kinds.sizes ()) ) )
+    (Tparam_kinds.sizes ())
 
-let () = on_reset init_hkt_ind_params
+let add_hkt_ind_params = Tparam_kinds.add_template_template
 
-let () = register_census "hkt_ind_params" (fun () -> Hashtbl.length hkt_ind_params)
-
-let add_hkt_ind_params r positions =
-  if positions <> [] then Hashtbl.replace hkt_ind_params r positions
-
-let hkt_ind_param_arity r i =
-  match Hashtbl.find_opt hkt_ind_params r with
-  | Some s -> List.assoc_opt i s
-  | None -> None
+let hkt_ind_param_arity = Tparam_kinds.template_template_arity
 
 let is_hkt_ind_param r i = hkt_ind_param_arity r i <> None
 
-(* Positions (0-based) of an inductive's or alias's parameters that are applied
-   in its definition and still declared a plain [typename]: event families,
-   applied only at indices, whose argument is the family's own struct.
-   Populated by [Gen_decls.hkt_templates] alongside [hkt_ind_params]; a
-   variable handed to such a position is a family wherever it is used. *)
-let family_ind_params : (GlobRef.t, int list) Hashtbl.t = Hashtbl.create 16
+let add_family_ind_params = Tparam_kinds.add_family
 
-let init_family_ind_params () = Hashtbl.reset family_ind_params
+let is_family_ind_param = Tparam_kinds.is_family
 
-let () = on_reset init_family_ind_params
+let add_phantom_type_params = Tparam_kinds.add_phantom
 
-let add_family_ind_params r positions =
-  if positions <> [] then Hashtbl.replace family_ind_params r positions
-
-let is_family_ind_param r i =
-  match Hashtbl.find_opt family_ind_params r with
-  | Some l -> List.mem i l
-  | None -> false
-
-let () =
-  Minicpp.family_parameterised := fun r -> Hashtbl.mem family_ind_params r
-
-(* Positions (0-based) of a type alias's parameters that its right-hand side
-   never spells: an erased event family is the case in point.  Populated by
-   [Gen_decls.hkt_templates] alongside [hkt_ind_params], and read back when a
-   *use* of the alias is converted: such a position is a plain [typename]
-   there, so no instantiation may be written in it. *)
-let phantom_type_params : (GlobRef.t, int list) Hashtbl.t = Hashtbl.create 16
-
-let init_phantom_type_params () = Hashtbl.reset phantom_type_params
-
-let () = on_reset init_phantom_type_params
-
-let () =
-  register_census "phantom_type_params" (fun () ->
-      Hashtbl.length phantom_type_params )
-
-let add_phantom_type_params r positions =
-  if positions <> [] then Hashtbl.replace phantom_type_params r positions
-
-let is_phantom_type_param r i =
-  match Hashtbl.find_opt phantom_type_params r with
-  | Some s -> List.mem i s
-  | None -> false
+let is_phantom_type_param = Tparam_kinds.is_phantom
 
 (** Check whether [ty] mentions the inductive [kn] (optionally restricted to a
     specific packet index [packet_idx]), either directly or nested inside type

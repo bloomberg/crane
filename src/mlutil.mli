@@ -17,6 +17,30 @@ open Names
 open Miniml
 open Table
 
+(** {2 Generic traversals}
+
+    Each sees through a resolved meta and visits every child type, a [Tapp]'s
+    arguments included. *)
+
+module IntSet : Stdlib.Set.S with type elt = int and type t = Stdlib.Set.Make(Stdlib.Int).t
+
+(** [t] with every resolved meta at its root taken off. *)
+val ml_resolve : ml_type -> ml_type
+
+(** The immediate sub-types of an already resolved type. *)
+val ml_type_children : ml_type -> ml_type list
+
+val exists_ml_type : (ml_type -> bool) -> ml_type -> bool
+
+(** Pre-order: [f] sees a node before its children. *)
+val fold_ml_type : ('a -> ml_type -> 'a) -> 'a -> ml_type -> 'a
+
+(** Bottom-up: [f] sees a node after its children were mapped. *)
+val map_ml_type : (ml_type -> ml_type) -> ml_type -> ml_type
+
+(** The indices of every type variable in [t], an applied one included. *)
+val ml_tvars : ml_type -> IntSet.t
+
 (** {2 Utility functions over ML types with meta} *)
 
 (** Reset the meta variable counter. *)

@@ -88,7 +88,7 @@ let rec extract_tvar_map tmpl conc =
     when List.length args1 = List.length args2 ->
     List.concat (List.map2 extract_tvar_map args1 args2)
     @ extract_tvar_map ret1 ret2
-  | Tref t1, Tref t2 | Tfwd_ref t1, Tfwd_ref t2 -> extract_tvar_map t1 t2
+  | Tref (k1, t1), Tref (k2, t2) when k1 = k2 -> extract_tvar_map t1 t2
   | Tconst t1, Tconst t2 -> extract_tvar_map t1 t2
   | Tnamespace (_, t1), Tnamespace (_, t2) -> extract_tvar_map t1 t2
   (* A qualification is spelling, not structure: seen through on the way down.
@@ -379,7 +379,7 @@ let rec cpp_ty_eq t1 t2 =
     && List.length ts1 = List.length ts2
     && List.for_all2 cpp_ty_eq ts1 ts2
   | Tvar (i1, _), Tvar (i2, _) -> i1 = i2
-  | Tref t1', Tref t2' | Tfwd_ref t1', Tfwd_ref t2' -> cpp_ty_eq t1' t2'
+  | Tref (Lvalue, t1'), Tref (Lvalue, t2') | Tref (Forwarding, t1'), Tref (Forwarding, t2') -> cpp_ty_eq t1' t2'
   | Tshared_ptr t1', Tshared_ptr t2' -> cpp_ty_eq t1' t2'
   | Tfun (d1, c1), Tfun (d2, c2) ->
     List.length d1 = List.length d2
@@ -426,7 +426,7 @@ let rec unqualify_ty = function
     template" from a template applied to nothing. *)
 let rec template_args t =
   match unqualify_ty t with
-  | Minicpp.Tref t | Minicpp.Tfwd_ref t | Minicpp.Tptr t | Minicpp.Tshared_ptr t ->
+  | Minicpp.Tref (_, t) | Minicpp.Tptr t | Minicpp.Tshared_ptr t ->
     template_args t
   | Minicpp.Tglob (_, args, _)
   | Minicpp.Tid (_, args)
@@ -789,24 +789,11 @@ let rec subst_tvars_type subst = function
     inductives). Used when a type has Tvars that don't correspond to any
     template parameters. This is defined early so it can be used in
     gen_match_branch and gen_ind_header_v2. *)
-let rec tvar_erase_type (ty : cpp_type) : cpp_type =
-  match ty with
-  | Tvar (_, None) -> Tany
-  | Tvar (_, Some _) -> ty (* Named Tvars are kept *)
-  | Tglob (r, tys, args) -> Tglob (r, List.map tvar_erase_type tys, args)
-  | Tfun (tys, ty) -> Tfun (List.map tvar_erase_type tys, tvar_erase_type ty)
-  | Tconst ty -> Tconst (tvar_erase_type ty)
-  | Tnamespace (r, ty) -> Tnamespace (r, tvar_erase_type ty)
-  | Tref ty -> Tref (tvar_erase_type ty)
-  | Tfwd_ref ty -> Tfwd_ref (tvar_erase_type ty)
-  | Tvariant tys -> Tvariant (List.map tvar_erase_type tys)
-  | Tshared_ptr ty -> Tshared_ptr (tvar_erase_type ty)
-  | Tid (id, tys) -> Tid (id, List.map tvar_erase_type tys)
-  | Tid_external (id, tys) -> Tid_external (id, List.map tvar_erase_type tys)
-  | Tnondeduced ty -> Tnondeduced (tvar_erase_type ty)
-  | Trebind (h, x) -> Trebind (tvar_erase_type h, tvar_erase_type x)
-  | Tqualified (ty, id) -> Tqualified (tvar_erase_type ty, id)
-  | _ -> ty (* Tvoid, Tunresolved, Tany *)
+let tvar_erase_type =
+  rewrite_cpp_type (function
+    | Tvar (_, None) -> Some Tany
+    | Tvar (_, Some _) as ty -> Some ty (* Named Tvars are kept *)
+    | _ -> None )
 
 (** Erase a type argument down to its outermost applied type constructors,
     boxing every leaf: [List<Nat>] becomes [List<std::any>] and a bare [Nat]
@@ -956,8 +943,8 @@ let rec strip_tarr_n n ty =
     Unlike [Loopify.strip_ref_and_const_type] this is intentionally
     non-recursive: a forwarding reference [T&&] becomes [T&]. *)
 let strip_cpp_ref_const = function
-  | Tref t | Tconst t -> t
-  | Tfwd_ref t -> Tref t
+  | Tref (Lvalue, t) | Tconst t -> t
+  | Tref (Forwarding, t) -> Tref (Lvalue, t)
   | t -> t
 
 (** Count non-erased arguments in an ML application.
@@ -1113,9 +1100,8 @@ let rec refine_erased_by ~expected actual =
         ( List.map2 (fun e a -> refine_erased_by ~expected:e a) ed ad,
           refine_erased_by ~expected:ec ac )
     | Minicpp.Tconst e, Minicpp.Tconst a -> Minicpp.Tconst (refine_erased_by ~expected:e a)
-    | Minicpp.Tref e, Minicpp.Tref a -> Minicpp.Tref (refine_erased_by ~expected:e a)
-    | Minicpp.Tfwd_ref e, Minicpp.Tfwd_ref a ->
-      Minicpp.Tfwd_ref (refine_erased_by ~expected:e a)
+    | Minicpp.Tref (ke, e), Minicpp.Tref (ka, a) when ke = ka ->
+      Minicpp.Tref (ka, refine_erased_by ~expected:e a)
     | Minicpp.Tptr e, Minicpp.Tptr a -> Minicpp.Tptr (refine_erased_by ~expected:e a)
     | Minicpp.Tshared_ptr e, Minicpp.Tshared_ptr a ->
       Minicpp.Tshared_ptr (refine_erased_by ~expected:e a)
@@ -1248,7 +1234,7 @@ let get_tvars_indexed t =
     | Tfun (tys, ty) -> List.fold_left aux l (ty :: tys)
     | Tconst ty -> aux l ty
     | Tnamespace (_, ty) -> aux l ty
-    | Tref ty | Tfwd_ref ty -> aux l ty
+    | Tref (_, ty) -> aux l ty
     | Tvariant tys -> List.fold_left aux l tys
     | Tshared_ptr ty -> aux l ty
     | Tapply (ty, tys) -> List.fold_left aux l (ty :: tys)
@@ -1275,7 +1261,7 @@ let get_rendered_tvar_indices t =
     | Tfun (tys, ty) -> List.fold_left aux l (ty :: tys)
     | Tconst ty -> aux l ty
     | Tnamespace (_, ty) -> aux l ty
-    | Tref ty | Tfwd_ref ty -> aux l ty
+    | Tref (_, ty) -> aux l ty
     | Tvariant tys -> List.fold_left aux l tys
     | Tshared_ptr ty -> aux l ty
     | Tapply (ty, tys) -> List.fold_left aux l (ty :: tys)
@@ -1303,7 +1289,7 @@ let rendered_tvar_arities t =
       List.iter aux tys
     | Tglob (g, tys, _) -> List.iter aux (written_type_args g tys)
     | Tfun (tys, ty) -> List.iter aux (ty :: tys)
-    | Tconst ty | Tnamespace (_, ty) | Tref ty | Tfwd_ref ty | Tshared_ptr ty -> aux ty
+    | Tconst ty | Tnamespace (_, ty) | Tref (_, ty) | Tshared_ptr ty -> aux ty
     | Tvariant tys -> List.iter aux tys
     | Tapply (ty, tys) -> List.iter aux (ty :: tys)
     | _ -> ()
@@ -1395,18 +1381,7 @@ let collect_ml_type_index_tvars ml_ty =
     while the body and the call sites still number their arguments by the ML
     type.  A declaration that omitted such a variable would leave the body
     naming something the head never bound. *)
-let collect_ml_tvars ml_ty =
-  let result = ref IntSet.empty in
-  let rec walk = function
-    | Miniml.Tvar (_, i) -> result := IntSet.add i !result
-    | Miniml.Tapp (i, ts) -> result := IntSet.add i !result; List.iter walk ts
-    | Miniml.Tarr (a, b) -> walk a; walk b
-    | Miniml.Tglob (_, ts, _) -> List.iter walk ts
-    | Miniml.Tmeta {contents = Some t} -> walk t
-    | _ -> ()
-  in
-  walk ml_ty;
-  !result
+let collect_ml_tvars = Mlutil.ml_tvars
 
 (** Arity of every type variable that [tys] applies to arguments, keyed by its
     1-based de Bruijn index.  A Rocq parameter of kind [Type -> Type] reaches

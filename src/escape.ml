@@ -124,14 +124,14 @@ let is_partial_app head args =
     - Lambda body (MLlam) → captured by closure
     - Tail position → returned to caller (caller owns it)
     - Fixpoint body (MLfix) → captured by recursive closure
-    - Constructor argument (MLcons/MLtuple), when [cons_escapes] (the
-      default) → stored in a data structure
+    - Constructor argument (MLcons/MLtuple), unless the query is
+      [Of_param] → stored in a data structure
 
     Non-escaping positions:
     - Case scrutinee (MLcase) → destructured immediately
     - Under MLmagic → transparent wrapper
     - Function arguments (MLapp) → callee's responsibility
-    - Constructor argument (MLcons/MLtuple), when [not cons_escapes] →
+    - Constructor argument (MLcons/MLtuple), for an [Of_param] query →
       callee's responsibility too: building [(s, a)] or [Ctor s] reads [s]
       once to copy it into the new value's field, exactly as calling a
       function with [s] does.  The field needs a copy either way; a
@@ -142,16 +142,20 @@ let is_partial_app head args =
       monad's [bind], reading [s] to call [t]), and only the latter used
       to be recognized as borrowable.
 
-      [cons_escapes] stays [true] by default -- and always for
-      {!sub_bindings_escape}'s scan of a match branch's body -- because a
+      Every other query treats it as an escape -- {!sub_bindings_escape}'s
+      scan of a match branch's body among them -- because a
       sub-binding destructured out of an owned scrutinee and rebuilt into a
       new constructor ([match t with Node l x r -> Node (f l) x (f r)])
       needs the scrutinee owned so [x] can move out of it; relaxing that
       occurrence too would silently turn the move back into a copy.  Only
       {!infer_owned_params}'s direct query -- is this *parameter itself*,
       not something extracted from it, merely read to build a new value --
-      asks with it turned off. *)
-let escapes ?(refined = false) ?(cons_escapes = true) k t =
+      asks [Of_param]. *)
+type escape_query = Conservative | Of_sub_binding | Of_param
+
+let escapes ?(query = Conservative) k t =
+  let refined = query <> Conservative in
+  let cons_escapes = query <> Of_param in
   let rec check k in_tail in_fn_arg = function
     | MLrel i -> i = k && in_tail
     | MLcase (_, scrut, branches) ->
@@ -219,7 +223,7 @@ let sub_bindings_escape k body =
       Array.exists (fun (ids, _, _, branch_body) ->
         let n = List.length ids in
         List.exists (fun j ->
-          escapes ~refined:true (j + 1) branch_body
+          escapes ~query:Of_sub_binding (j + 1) branch_body
         ) (List.init n Fun.id)
       ) branches
     | MLcase (_, scrut, branches) ->
@@ -314,7 +318,7 @@ let infer_owned_params n_params body =
   let reuse_on = reuse () && non_atomic_rc () in
   List.init n_params (fun i ->
     let k = i + 1 in
-    escapes ~refined:true ~cons_escapes:false k body
+    escapes ~query:Of_param k body
     || (reuse_on && is_reuse_scrutinee k body))
 
 (** Like [infer_owned_params] but returns only the [sub_bindings_escape]
@@ -327,7 +331,7 @@ let infer_sub_bindings_escape_params n_params body =
 (** {2 Utility functions} *)
 
 (** Set of integers for tracking de Bruijn indices. *)
-module IntSet = Set.Make (Int)
+module IntSet = Mlutil.IntSet
 
 (** Compute free de Bruijn indices in [t], shifted by [depth]. An index
     [i > depth] in [t] contributes [i - depth] to the result. *)

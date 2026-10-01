@@ -62,7 +62,7 @@ let alias_name = function
     [using] declaration, or because it is an axiom type. *)
 let rec is_any_shaped = function
   | Tany | Topaque -> true
-  | Tconst inner | Tref inner | Tfwd_ref inner | Tnamespace (_, inner) ->
+  | Tconst inner | Tref (_, inner) | Tnamespace (_, inner) ->
     is_any_shaped inner
   | Tid (id, []) -> Id.Set.mem id !any_type_aliases
   | Tglob (g, _, _) as t

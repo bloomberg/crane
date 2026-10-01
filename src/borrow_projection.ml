@@ -25,7 +25,7 @@ let is_projection m =
   (not m.mf_is_static) && m.mf_is_const && m.mf_params = []
   && m.mf_ref_qual = Rq_any && (not m.mf_is_conversion)
   && ( match m.mf_ret_type with
-     | Tref _ | Tfwd_ref _ | Tvoid -> false
+     | Tref _ | Tvoid -> false
      | _ -> true )
   &&
   match m.mf_body with
@@ -42,7 +42,7 @@ let is_projection m =
    receiver, and a copy for a temporary one, which dies at the end of the
    full expression that called it. *)
 let split m =
-  [ Fmethod {m with mf_ret_type = Tref (Tconst m.mf_ret_type); mf_ref_qual = Rq_lvalue};
+  [ Fmethod {m with mf_ret_type = Tref (Lvalue, Tconst m.mf_ret_type); mf_ref_qual = Rq_lvalue};
     Fmethod {m with mf_ref_qual = Rq_rvalue} ]
 
 let fields fs =
