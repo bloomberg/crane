@@ -39,6 +39,10 @@
 
 #include "crane_fn.h"  // crane_any_cast
 
+// A response, with the side an injected effect was stored under taken off;
+// see [sum1_erased].
+crane::obj crane_injected_response(crane::obj response);
+
 template <typename R>
 struct ITree : public std::enable_shared_from_this<ITree<R>> {
     // The tree's own result type, for helpers that have only the pointer.
@@ -51,15 +55,46 @@ struct ITree : public std::enable_shared_from_this<ITree<R>> {
         std::function<std::shared_ptr<ITree<R>>(crane::obj)> cont;
     };
     using variant_t = std::variant<Ret, Tau, Vis>;
-    variant_t node;
 
   private:
+    // A [Tau] whose child is not built yet: see [delay].  [observe] builds it
+    // and stores it as an ordinary [Tau], so nothing outside sees the state.
+    mutable variant_t node;
+    mutable crane::fn<std::shared_ptr<ITree<R>>()> pending;
+
     // Passkey: only ITree's own factories can name it, so the public
     // constructor cannot be called from outside despite make_shared needing it.
     struct Private { explicit Private() = default; };
 
   public:
     ITree(Private, variant_t n) : node(std::move(n)) {}
+    ITree(Private, crane::fn<std::shared_ptr<ITree<R>>()> p)
+        : node(Tau{}), pending(std::move(p)) {}
+
+    // A [Tau] chain is as long as the loop that built it, so it is torn down
+    // a link at a time rather than by each node's destructor calling the
+    // next one's.
+    ~ITree() {
+        auto *t = std::get_if<Tau>(&node);
+        if (!t)
+            return;
+        std::shared_ptr<ITree<R>> next = std::move(t->next);
+        while (next && next.use_count() == 1) {
+            auto *nt = std::get_if<Tau>(&next->node);
+            if (!nt)
+                break;
+            next = std::shared_ptr<ITree<R>>(std::move(nt->next));
+        }
+    }
+
+    // A [Tau] whose child is computed when the node is first observed.
+    // [bind] and [iter] produce one where an eager child would recurse: down
+    // a [Tau] chain, or into the next step of an iteration that answered at
+    // once -- one C++ frame per step, so a long pure loop overflowed.
+    static std::shared_ptr<ITree<R>> delay(
+        crane::fn<std::shared_ptr<ITree<R>>()> next) {
+        return std::make_shared<ITree<R>>(Private{}, std::move(next));
+    }
 
     static std::shared_ptr<ITree<R>> ret(R value) {
         return std::make_shared<ITree<R>>(Private{}, Ret{std::move(value)});
@@ -87,23 +122,32 @@ struct ITree : public std::enable_shared_from_this<ITree<R>> {
             // observe() lets callers hold onto and re-run the same tree, so
             // moving out of a shared node would corrupt it for later runs
             // (finding 37, CWE-664).
-            if (auto *r = std::get_if<Ret>(&cur->node))
+            const auto &n = cur->observe();
+            if (auto *r = std::get_if<Ret>(&n))
                 return r->value;
-            if (auto *t = std::get_if<Tau>(&cur->node)) {
+            if (auto *t = std::get_if<Tau>(&n)) {
                 if (!t->next)
                     throw std::runtime_error("crane: ITree Tau has a null next");
                 cur = t->next;
                 continue;
             }
-            auto &v = std::get<Vis>(cur->node);
-            crane::obj response = v.effect();
+            auto &v = std::get<Vis>(n);
+            crane::obj response = crane_injected_response(v.effect());
             auto next = v.cont(std::move(response));
             if (!next)
                 throw std::runtime_error("crane: ITree Vis continuation returned null");
             cur = std::move(next);
         }
     }
-    const variant_t &observe() const { return node; }
+    const variant_t &observe() const {
+        if (pending) {
+            auto next = std::exchange(pending, nullptr)();
+            if (!next)
+                throw std::runtime_error("crane: a delayed ITree Tau has a null next");
+            node = Tau{std::move(next)};
+        }
+        return node;
+    }
 };
 
 // Void specialization (Ret holds nothing).
@@ -118,13 +162,38 @@ struct ITree<void> : public std::enable_shared_from_this<ITree<void>> {
         std::function<std::shared_ptr<ITree<void>>(crane::obj)> cont;
     };
     using variant_t = std::variant<Ret, Tau, Vis>;
-    variant_t node;
 
   private:
+    mutable variant_t node;
+    mutable crane::fn<std::shared_ptr<ITree<void>>()> pending;
+
     struct Private { explicit Private() = default; };
 
   public:
     ITree(Private, variant_t n) : node(std::move(n)) {}
+    ITree(Private, crane::fn<std::shared_ptr<ITree<void>>()> p)
+        : node(Tau{}), pending(std::move(p)) {}
+
+    // A [Tau] chain is as long as the loop that built it, so it is torn down
+    // a link at a time rather than by each node's destructor calling the
+    // next one's.
+    ~ITree() {
+        auto *t = std::get_if<Tau>(&node);
+        if (!t)
+            return;
+        std::shared_ptr<ITree<void>> next = std::move(t->next);
+        while (next && next.use_count() == 1) {
+            auto *nt = std::get_if<Tau>(&next->node);
+            if (!nt)
+                break;
+            next = std::shared_ptr<ITree<void>>(std::move(nt->next));
+        }
+    }
+
+    static std::shared_ptr<ITree<void>> delay(
+        crane::fn<std::shared_ptr<ITree<void>>()> next) {
+        return std::make_shared<ITree<void>>(Private{}, std::move(next));
+    }
 
     static std::shared_ptr<ITree<void>> ret() {
         return std::make_shared<ITree<void>>(Private{}, Ret{});
@@ -150,23 +219,32 @@ struct ITree<void> : public std::enable_shared_from_this<ITree<void>> {
         // continuation may release the last other owner mid-run (finding 86).
         auto cur = this->shared_from_this();
         while (true) {
-            if (std::holds_alternative<Ret>(cur->node))
+            const auto &n = cur->observe();
+            if (std::holds_alternative<Ret>(n))
                 return;
-            if (auto *t = std::get_if<Tau>(&cur->node)) {
+            if (auto *t = std::get_if<Tau>(&n)) {
                 if (!t->next)
                     throw std::runtime_error("crane: ITree Tau has a null next");
                 cur = t->next;
                 continue;
             }
-            auto &v = std::get<Vis>(cur->node);
-            crane::obj response = v.effect();
+            auto &v = std::get<Vis>(n);
+            crane::obj response = crane_injected_response(v.effect());
             auto next = v.cont(std::move(response));
             if (!next)
                 throw std::runtime_error("crane: ITree Vis continuation returned null");
             cur = std::move(next);
         }
     }
-    const variant_t &observe() const { return node; }
+    const variant_t &observe() const {
+        if (pending) {
+            auto next = std::exchange(pending, nullptr)();
+            if (!next)
+                throw std::runtime_error("crane: a delayed ITree Tau has a null next");
+            node = Tau{std::move(next)};
+        }
+        return node;
+    }
 };
 
 // Type alias for itreeF — makes template argument deduction work
@@ -205,11 +283,13 @@ auto itree_bind(std::shared_ptr<ITree<A>> m, K k)
     using node_b = typename tree_b::element_type;
     if (!m)
         throw std::invalid_argument("crane: itree_bind given a null tree");
-    if (auto *r = std::get_if<typename ITree<A>::Ret>(&m->node))
+    const auto &n = m->observe();
+    if (auto *r = std::get_if<typename ITree<A>::Ret>(&n))
         return crane_itree_apply(k, r->value);
-    if (auto *t = std::get_if<typename ITree<A>::Tau>(&m->node))
-        return node_b::tau(itree_bind(t->next, k));
-    auto &v = std::get<typename ITree<A>::Vis>(m->node);
+    if (auto *t = std::get_if<typename ITree<A>::Tau>(&n))
+        return node_b::delay(
+            [next = t->next, k]() -> tree_b { return itree_bind(next, k); });
+    auto &v = std::get<typename ITree<A>::Vis>(n);
     auto cont = v.cont;
     return node_b::vis(
         v.effect,
@@ -225,11 +305,13 @@ auto itree_bind(std::shared_ptr<ITree<void>> m, K k)
     using node_b = typename tree_b::element_type;
     if (!m)
         throw std::invalid_argument("crane: itree_bind given a null tree");
-    if (std::get_if<typename ITree<void>::Ret>(&m->node))
+    const auto &n = m->observe();
+    if (std::get_if<typename ITree<void>::Ret>(&n))
         return k();
-    if (auto *t = std::get_if<typename ITree<void>::Tau>(&m->node))
-        return node_b::tau(itree_bind(t->next, k));
-    auto &v = std::get<typename ITree<void>::Vis>(m->node);
+    if (auto *t = std::get_if<typename ITree<void>::Tau>(&n))
+        return node_b::delay(
+            [next = t->next, k]() -> tree_b { return itree_bind(next, k); });
+    auto &v = std::get<typename ITree<void>::Vis>(n);
     auto cont = v.cont;
     return node_b::vis(
         v.effect,
@@ -296,6 +378,8 @@ auto itree_tau(std::shared_ptr<ITree<R>> next) {
 // injection.  The loop is written as a `Tau`-guarded self-call rather than a
 // C++ loop: the tree it builds is the tree Rocq's definition denotes, and an
 // iteration that never answers is then a divergent tree rather than a hang.
+// The `Tau`'s child is delayed, so building the tree runs one step, not all
+// of them.
 //
 // The sum is whatever Crane generated for `I + R` in the caller's file, so it
 // is read through the shape every Crane variant has -- `v()`, a nested `Inl`
@@ -319,7 +403,8 @@ auto itree_iter(Step step, I i)
             [step](const Sum &s) -> std::shared_ptr<ITree<R>> {
                 if (std::holds_alternative<typename Sum::Inl>(s.v())) {
                     const auto &[next] = *std::get_if<typename Sum::Inl>(&s.v());
-                    return itree_tau(itree_iter(step, next));
+                    return ITree<R>::delay(
+                        [step, next]() { return itree_iter(step, next); });
                 }
                 return itree_ret(itree_iter_rhs(s));
             }));
@@ -392,61 +477,6 @@ std::shared_ptr<ITree<B>> crane_cast_to(crane_tag<std::shared_ptr<ITree<B>>>,
                         cont(std::move(x)));
                 }));
     }
-}
-
-// The event of a [Vis] node, as a pattern match over the node sees it.
-//
-// A tree stores its event as the thunk that yields it -- see [itree_trigger]
-// -- because a tree that only carries an event has no name for its type.  A
-// handler is the first thing that does name it, in its own parameter, so the
-// recovery belongs at the conversion rather than at the projection: the thunk
-// is run and its box opened at whatever type the use site asks for.  Asking
-// for the thunk itself gets it back unchanged, which is what a match that
-// only passes the event along to another [Vis] wants.
-struct crane_event {
-    std::function<crane::obj()> effect;
-
-    operator std::function<crane::obj()>() const { return effect; }
-
-    template <typename E>
-    operator E() const { return crane_any_cast<E>(effect()); }
-};
-
-// The event of a [Vis] node, bound at whatever the generator knows about it.
-//
-// Deferring the recovery to the use site is right when the binding site has
-// nothing to say, and wrong when it does: a match on the event in the branch
-// that binds it never reaches a use that names a type, so it asks a
-// [crane_event] for the variant accessor an event inductive has and a thunk
-// does not.  Where the generator does know the type, binding at it is what
-// makes that match compile.
-//
-// [crane::obj] is the generator saying it does not know -- either the type was
-// erased or it names something this file cannot spell -- and there the old
-// deferral is exactly what is wanted, so it is what comes back.
-template <typename E>
-auto crane_event_as(std::function<crane::obj()> effect) {
-    if constexpr (std::is_same_v<E, crane::obj>)
-        return crane_event{std::move(effect)};
-    else
-        return crane_any_cast<E>(effect());
-}
-
-// An event as a tree stores it.  One given an effect spelling is already the
-// thunk [ITree::vis] wants; one that is plain data is reified as the thunk
-// that yields it, for a handler to interpret later.
-template<typename E>
-std::function<crane::obj()> itree_reify_event(E e) {
-    if constexpr (std::is_invocable_r_v<crane::obj, E &>)
-        return std::function<crane::obj()>(std::move(e));
-    else
-        return [e = std::move(e)]() -> crane::obj { return crane::obj(e); };
-}
-
-// Trigger with template argument deduction.
-template<typename E>
-itree_trigger_t itree_trigger(E e) {
-    return {itree_reify_event(std::move(e))};
 }
 
 // A sum of event families: [E +' F].
@@ -522,6 +552,139 @@ template<typename F> sum1_inr_t<F> sum1_inr(F a0) { return {std::move(a0)}; }
 template<typename T> struct is_sum1_injection : std::false_type {};
 template<typename E> struct is_sum1_injection<sum1_inl_t<E>> : std::true_type {};
 template<typename F> struct is_sum1_injection<sum1_inr_t<F>> : std::true_type {};
+
+template<typename E> E crane_event_read(crane::obj o);
+
+// The event of a [Vis] node, as a pattern match over the node sees it.
+//
+// A tree stores its event as the thunk that yields it -- see [itree_trigger]
+// -- because a tree that only carries an event has no name for its type.  A
+// handler is the first thing that does name it, in its own parameter, so the
+// recovery belongs at the conversion rather than at the projection: the thunk
+// is run and its box opened at whatever type the use site asks for.  Asking
+// for the thunk itself gets it back unchanged, which is what a match that
+// only passes the event along to another [Vis] wants.
+struct crane_event {
+    std::function<crane::obj()> effect;
+
+    operator std::function<crane::obj()>() const { return effect; }
+
+    template <typename E>
+    operator E() const { return crane_event_read<E>(effect()); }
+};
+
+// An injection as a tree stores it.
+//
+// A [Vis] keeps its event as a thunk, and a sum names no type at the trigger,
+// so the side an injection names is stored next to the event it carries:
+// [inl1 e] and [inr1 e] are different events even where [E] and [F] are the
+// same type, and a handler over [E +' F] dispatches on which one it got.
+//
+// An injection of an effect -- a thunk that performs I/O when run, as an IO
+// event is -- is still unwrapped: [run] performs whatever a [Vis] holds, and
+// no handler will ever take that event apart.
+struct sum1_erased {
+    bool right;
+    crane::obj a0;
+};
+
+template<typename T> struct injected_leaf { using type = T; };
+template<typename E> struct injected_leaf<sum1_inl_t<E>> : injected_leaf<E> {};
+template<typename F> struct injected_leaf<sum1_inr_t<F>> : injected_leaf<F> {};
+
+template<typename T>
+inline constexpr bool injects_effect =
+    std::is_invocable_r_v<crane::obj, typename injected_leaf<T>::type &>;
+
+template<typename T>
+crane::obj erase_injected(T e) {
+    // A handler written generically ([translate]'s) is handed the event as
+    // the deferral a match binds; what it stands for is what its thunk
+    // yields.
+    if constexpr (std::is_same_v<T, crane_event>)
+        return e.effect();
+    else if constexpr (is_sum1_injection<T>::value)
+        return crane::obj(sum1_erased{
+            !std::is_same_v<T, sum1_inl_t<decltype(e.a0)>>,
+            erase_injected(std::move(e.a0))});
+    else
+        return crane::obj(std::move(e));
+}
+
+template<typename T> struct is_sum1 : std::false_type {};
+template<typename E, typename F, typename X>
+struct is_sum1<Sum1<E, F, X>> : std::true_type {};
+
+// An event read back at the type a use site names.  A sum is rebuilt from
+// the side stored with it; anything else is opened at that type.
+template<typename E>
+E crane_event_read(crane::obj o) {
+    if constexpr (std::is_same_v<E, crane::obj>)
+        return o;
+    else if constexpr (is_sum1<E>::value) {
+        if (const auto *s = crane::any_cast<sum1_erased>(&o)) {
+            using L = std::remove_cvref_t<decltype(std::declval<typename E::Inl1>().a0)>;
+            using R = std::remove_cvref_t<decltype(std::declval<typename E::Inr1>().a0)>;
+            if (s->right)
+                return E::inr1(crane_event_read<R>(s->a0));
+            return E::inl1(crane_event_read<L>(s->a0));
+        }
+        return crane_any_cast<E>(std::move(o));
+    } else
+        return crane_any_cast<E>(std::move(o));
+}
+
+// What [run] gives a continuation: an effect injected into a sum was
+// performed, and its response is the effect's own, whatever side it was
+// injected at.
+inline crane::obj crane_injected_response(crane::obj response) {
+    while (const auto *s = crane::any_cast<sum1_erased>(&response)) {
+        crane::obj inner = s->a0;
+        response = std::move(inner);
+    }
+    return response;
+}
+
+// The event of a [Vis] node, bound at whatever the generator knows about it.
+//
+// Deferring the recovery to the use site is right when the binding site has
+// nothing to say, and wrong when it does: a match on the event in the branch
+// that binds it never reaches a use that names a type, so it asks a
+// [crane_event] for the variant accessor an event inductive has and a thunk
+// does not.  Where the generator does know the type, binding at it is what
+// makes that match compile.
+//
+// [crane::obj] is the generator saying it does not know -- either the type was
+// erased or it names something this file cannot spell -- and there the old
+// deferral is exactly what is wanted, so it is what comes back.
+template <typename E>
+auto crane_event_as(std::function<crane::obj()> effect) {
+    if constexpr (std::is_same_v<E, crane::obj>)
+        return crane_event{std::move(effect)};
+    else
+        return crane_event_read<E>(effect());
+}
+
+// An event as a tree stores it.  One given an effect spelling is already the
+// thunk [ITree::vis] wants; one that is plain data is reified as the thunk
+// that yields it, for a handler to interpret later.
+template<typename E>
+std::function<crane::obj()> itree_reify_event(E e) {
+    if constexpr (is_sum1_injection<E>::value && injects_effect<E>)
+        return itree_reify_event(std::move(e.a0));
+    else if constexpr (is_sum1_injection<E>::value)
+        return [o = erase_injected(std::move(e))]() -> crane::obj { return o; };
+    else if constexpr (std::is_invocable_r_v<crane::obj, E &>)
+        return std::function<crane::obj()>(std::move(e));
+    else
+        return [e = std::move(e)]() -> crane::obj { return crane::obj(e); };
+}
+
+// Trigger with template argument deduction.
+template<typename E>
+itree_trigger_t itree_trigger(E e) {
+    return {itree_reify_event(std::move(e))};
+}
 
 // The single argument a non-generic callable takes.
 template<typename T> struct crane_fn_arg;
@@ -612,14 +775,10 @@ template<typename Effect, typename Cont>
 auto itree_vis(Effect effect, Cont cont) {
     using TreePtr = std::invoke_result_t<Cont, crane::obj>;
     using TreeT = typename TreePtr::element_type;
-    // A [Vis] stores its effect as a thunk, so the sum an injection names has
-    // no representation here: [inl1 e] and [inr1 e] are both carried as [e].
-    // The proxy's whole job is to defer the sum type to a use site, and this
-    // use site is one that never spells it -- so it is unwrapped rather than
-    // converted.  Which side it came from is recovered by the handler, from
-    // the [Sum1] the *handler's* signature spells.
+    // An injection is stored with its side; see [itree_reify_event].
     if constexpr (is_sum1_injection<std::decay_t<Effect>>::value)
-        return itree_vis(std::move(effect.a0), std::move(cont));
+        return TreeT::vis(itree_reify_event(std::move(effect)),
+            std::function<TreePtr(crane::obj)>(std::move(cont)));
     else {
         std::function<crane::obj()> eff;
         if constexpr (std::is_same_v<std::decay_t<Effect>, crane::obj>)
@@ -629,6 +788,37 @@ auto itree_vis(Effect effect, Cont cont) {
         return TreeT::vis(std::move(eff),
             std::function<TreePtr(crane::obj)>(std::move(cont)));
     }
+}
+
+// [translate h t]: [t] with [h] applied to every event.
+//
+// A [Vis] keeps its event as a thunk, so the translated event is a thunk too,
+// applying [h] to what the original yields when it is asked for -- by a
+// handler, which reads the event, or by [run], which performs it.  [h] is
+// handed the deferral a match binds, so a handler declared at its event
+// struct reads it there and a generic one passes it on.  The [Tau] child is
+// delayed, as [bind]'s is, so a long tree is translated a step at a time.
+template<typename H, typename R>
+std::shared_ptr<ITree<R>> itree_translate(H h, std::shared_ptr<ITree<R>> t) {
+    if (!t)
+        throw std::invalid_argument("crane: itree_translate given a null tree");
+    const auto &n = t->observe();
+    if (std::holds_alternative<typename ITree<R>::Ret>(n))
+        return t;
+    if (auto *u = std::get_if<typename ITree<R>::Tau>(&n))
+        return ITree<R>::delay(
+            [h, next = u->next]() { return itree_translate(h, next); });
+    const auto &v = std::get<typename ITree<R>::Vis>(n);
+    auto effect = v.effect;
+    auto cont = v.cont;
+    return ITree<R>::vis(
+        [h, effect]() -> crane::obj {
+            return itree_reify_event(h(crane_event{effect}))();
+        },
+        std::function<std::shared_ptr<ITree<R>>(crane::obj)>(
+            [h, cont](crane::obj x) {
+                return itree_translate(h, cont(std::move(x)));
+            }));
 }
 
 #endif // INCLUDED_CRANE_ITREE

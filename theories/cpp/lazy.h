@@ -1,6 +1,7 @@
 // Copyright 2025 Bloomberg Finance L.P.
 // Distributed under the terms of the GNU LGPL v2.1 license.
 #pragma once
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -8,16 +9,15 @@
 
 namespace crane {
 
+CRANE_RC_POLICY_BEGIN
+
 namespace lazy_detail {
 // What a node of any instantiation starts with, so that a converted cell can
 // own the cell it was converted from without knowing its type.
-struct base {
-  mutable fn_detail::count rc;
-  void (*const destroy)(const void *) noexcept;
-};
+using base = shared_block;
 inline void release(const base *b) noexcept {
-  if (b && b->rc.dec())
-    fn_detail::free_block(b, b->destroy);
+  if (b)
+    b->release();
 }
 } // namespace lazy_detail
 
@@ -123,23 +123,24 @@ public:
   }
 
   const T &force() const {
+    if (!p_)
+      throw std::logic_error("crane: forced a lazy value that holds nothing");
     // Run what is pending until the chain from here ends at a value.
     node *end = p_;
     for (;;) {
       switch (end->state.index()) {
-      case 0: {
-        fn<T()> thunk = std::get<0>(end->state);
-        end->state.template emplace<2>(thunk());
+      case 0:
+        end->template run<0, 2>();
         break;
-      }
-      case 1: {
-        fn<lazy()> thunk = std::get<1>(end->state);
-        end->state.template emplace<3>(thunk());
+      case 1:
+        end->template run<1, 3>();
         continue;
-      }
       case 3:
         end = std::get<3>(end->state).p_;
         continue;
+      case 4:
+        throw std::logic_error(
+            "crane: a lazy value was forced while it was being computed");
       default:
         break;
       }
@@ -164,7 +165,24 @@ public:
 
 template <typename T>
 struct lazy<T>::node : base, pool_detail::pooled<typename lazy<T>::node> {
-  std::variant<fn<T()>, fn<lazy()>, T, lazy> state;
+  // The last alternative marks a thunk that is running: forcing the node
+  // again from inside it -- a computation that needs its own result -- is
+  // an error, as it is for OCaml's [Lazy.force], and not a second run that
+  // would destroy the first one's result under it.
+  std::variant<fn<T()>, fn<lazy()>, T, lazy, std::monostate> state;
+
+  // Runs the thunk in alternative [From] and stores its result as [To].  A
+  // thunk that throws leaves the node as it found it.
+  template <std::size_t From, std::size_t To> void run() {
+    auto thunk = std::get<From>(std::move(state));
+    state.template emplace<4>();
+    try {
+      state.template emplace<To>(thunk());
+    } catch (...) {
+      state.template emplace<From>(std::move(thunk));
+      throw;
+    }
+  }
   // The cell this one was converted from, if it was, and the
   // instantiation it has; see [converted_from].
   const base *origin = nullptr;
@@ -178,5 +196,7 @@ struct lazy<T>::node : base, pool_detail::pooled<typename lazy<T>::node> {
     delete static_cast<const node *>(static_cast<const base *>(b));
   }
 };
+
+CRANE_RC_POLICY_END
 
 } // namespace crane

@@ -22,6 +22,15 @@ val v : 'a -> 'b -> 'b
     horizontal-or-vertical box construction. *)
 val hov : 'a -> 'b -> 'b
 
+(** {2 Owned cells}
+
+    A cell made by one of these is emptied by {!reset_cpp_state}, enrolled where
+    it is defined.  [census] reports the size to {!Table.census}. *)
+
+val owned_table : ?census:bool -> string -> ('a, 'b) Hashtbl.t
+val owned_list : ?census:bool -> string -> 'a list ref
+val owned_ref : 'a -> 'a ref
+
 (** {2 Method registry} *)
 
 (** Per-run and global method registries plus their accessors. *)

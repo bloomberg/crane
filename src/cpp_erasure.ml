@@ -44,7 +44,7 @@ let is_axiom_type_ref (r : GlobRef.t) = Hashtbl.mem axiom_type_refs r
 (** Names introduced by [using X = std::any;].  Populated as declarations are
     walked, in the order they are emitted, so an alias is visible exactly where
     C++ would see it. *)
-let any_type_aliases : Id.Set.t ref = ref Id.Set.empty
+let any_type_aliases : Id.Set.t ref = Cpp_state.owned_ref Id.Set.empty
 
 (** The member aliases the struct being walked declares.  A type-level
     declaration whose body erased -- a higher-kinded class field [memM] among

@@ -23,6 +23,9 @@ Crane Extract Inlined Constant observe => "".
     [trigger] a spelling of its own; that is why this lives here rather than
     in [ITreeBase.v]. *)
 Crane Extract Skip ITree.trigger.
+(** An erased tree is its result, its events already performed where they
+    were written, so relabelling them is the identity. *)
+Crane Extract Inlined Constant translate => "%a1".
 
 (** The ITree library defines [Ret] as a [Notation]. We shadow it with
     a [Definition] so Crane's monad registration can reference it as a

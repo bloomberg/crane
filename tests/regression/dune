@@ -11457,3 +11457,69 @@
   (alias runtest)
   (deps borrow_construction_argument.t.exe)
   (action (run ./borrow_construction_argument.t.exe))))
+
+(subdir sum_side_survives_vis
+ (rule
+  (targets sum_side_survives_vis.t.exe)
+  (deps SumSideSurvivesVis.vo sum_side_survives_vis.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sum_side_survives_vis.t.exe sum_side_survives_vis.cpp sum_side_survives_vis.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sum_side_survives_vis.t.exe)
+  (action (run ./sum_side_survives_vis.t.exe))))
+
+(subdir rc_policy_names_every_block
+ (rule
+  (targets rc_policy_names_every_block.t.exe)
+  (deps RcPolicyNamesEveryBlock.vo rc_policy_names_every_block.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} rc_policy_names_every_block.t.exe rc_policy_names_every_block.cpp rc_policy_names_every_block.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps rc_policy_names_every_block.t.exe)
+  (action (run ./rc_policy_names_every_block.t.exe))))
+
+(subdir erased_unit_result
+ (rule
+  (targets erased_unit_result.t.exe)
+  (deps ErasedUnitResult.vo erased_unit_result.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} erased_unit_result.t.exe erased_unit_result.cpp erased_unit_result.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps erased_unit_result.t.exe)
+  (action (run ./erased_unit_result.t.exe))))
+
+(subdir runtime_block_invariants
+ (rule
+  (targets runtime_block_invariants.t.exe)
+  (deps RuntimeBlockInvariants.vo runtime_block_invariants.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} runtime_block_invariants.t.exe runtime_block_invariants.cpp runtime_block_invariants.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps runtime_block_invariants.t.exe)
+  (action (run ./runtime_block_invariants.t.exe))))
+
+(subdir itree_iter_long_pure_loop
+ (rule
+  (targets itree_iter_long_pure_loop.t.exe)
+  (deps ItreeIterLongPureLoop.vo itree_iter_long_pure_loop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} itree_iter_long_pure_loop.t.exe itree_iter_long_pure_loop.cpp itree_iter_long_pure_loop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps itree_iter_long_pure_loop.t.exe)
+  (action (run ./itree_iter_long_pure_loop.t.exe))))
+
+(subdir translate_applies_handler
+ (rule
+  (targets translate_applies_handler.t.exe)
+  (deps TranslateAppliesHandler.vo translate_applies_handler.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} translate_applies_handler.t.exe translate_applies_handler.cpp translate_applies_handler.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps translate_applies_handler.t.exe)
+  (action (run ./translate_applies_handler.t.exe))))

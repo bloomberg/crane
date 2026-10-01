@@ -1566,17 +1566,8 @@ let return_captures_by_value stmts =
   List.map
     (fun s ->
       match s with
-      | Sreturn (Some (CPPlambda
-        { cl_params = args;
-          cl_ret = ret;
-          cl_body = body;
-          cl_capture = Immediate })) ->
-        Sreturn (Some (CPPlambda
-          { cl_params = args;
-            cl_tparams = [];
-            cl_ret = ret;
-            cl_body = body;
-            cl_capture = Closure }))
+      | Sreturn (Some (CPPlambda ({ cl_capture = Immediate; _ } as l))) ->
+        Sreturn (Some (CPPlambda { l with cl_capture = Closure }))
       | Sreturn (Some e) -> Sreturn (Some (expr e))
       | s -> s )
     stmts
@@ -5654,6 +5645,56 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
       | _ -> false )
     | _ -> false
   in
+  (* Whether this constructor's value lands in a DEEPLY erased slot: one
+     whose consumer does not merely read a [std::any] back, but
+     reconstructs the shape underneath it and reads every component boxed
+     as well ([any_cast<pair<any,any>>]).  Two things put a value in that
+     position, and they mean the same thing:
+
+     - a sibling field of this very constructor is erased, so the whole
+       tuple is read back in erased form -- e.g. [(v, tt)] at
+       [symbols_semty [x] = prod (symbol_semty x) unit], where the first
+       component is erased and the second is a concrete [unit];
+     - the value flows straight out into a value-dependent erased slot,
+       the enclosing function's C++ return type having resolved to
+       [std::any] (e.g. [domty n], a type-level match).
+
+     In both cases a concrete component stored as itself would produce
+     [pair<string, monostate>], which the consumer's
+     [any_cast<pair<any,any>>] cannot recover.  A custom LIST cons is
+     excluded from the second case: its elements keep their own container
+     type (see [is_already_container] below).  *)
+  let is_list_cons_ctor =
+    match r with
+    | GlobRef.ConstructRef ((kn, _), _) ->
+      let ind = GlobRef.IndRef (kn, 0) in
+      Ml_type_util.is_custom_list_global ind
+    | _ -> false
+  in
+  (* "A sibling field is erased" is a statement about fields, so only the
+     type arguments this constructor's fields actually stand at count.
+     [itreeF]'s event index erases -- no [E] has a C++ spelling -- and
+     [RetF]'s one field is an [R]; reading the erasure off the whole
+     argument list would box that field for a reason no field of [RetF]
+     has anything to do with. *)
+  let erased_arg_under_a_field =
+    let occupied =
+      List.fold_left collect_tvars [] field_types_for_wrap
+    in
+    (* Read at the destination's refinement, as [field_slot] below is: a
+       field the annotation erased and the destination writes is not
+       erased. *)
+    List.exists
+      (fun j -> List.nth_opt ctor_temps_at_slot (j - 1) = Some Tany)
+      occupied
+  in
+  let slot_is_deeply_erased =
+    erased_arg_under_a_field
+    || ((not is_list_cons_ctor)
+        && match (!tctx).current_cpp_return_type with
+           | Some t -> resolves_to_any_type t
+           | None -> false)
+  in
   let args =
     List.rev (List.mapi (fun i e ->
       let saved_ret = (!tctx).current_cpp_return_type in
@@ -5800,56 +5841,6 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
       (erased_fn_slot, result)
       in
 
-      (* Whether this constructor's value lands in a DEEPLY erased slot: one
-         whose consumer does not merely read a [std::any] back, but
-         reconstructs the shape underneath it and reads every component boxed
-         as well ([any_cast<pair<any,any>>]).  Two things put a value in that
-         position, and they mean the same thing:
-
-         - a sibling field of this very constructor is erased, so the whole
-           tuple is read back in erased form -- e.g. [(v, tt)] at
-           [symbols_semty [x] = prod (symbol_semty x) unit], where the first
-           component is erased and the second is a concrete [unit];
-         - the value flows straight out into a value-dependent erased slot,
-           the enclosing function's C++ return type having resolved to
-           [std::any] (e.g. [domty n], a type-level match).
-
-         In both cases a concrete component stored as itself would produce
-         [pair<string, monostate>], which the consumer's
-         [any_cast<pair<any,any>>] cannot recover.  A custom LIST cons is
-         excluded from the second case: its elements keep their own container
-         type (see [is_already_container] below).  *)
-      let is_list_cons_ctor =
-        match r with
-        | GlobRef.ConstructRef ((kn, _), _) ->
-          let ind = GlobRef.IndRef (kn, 0) in
-          Ml_type_util.is_custom_list_global ind
-        | _ -> false
-      in
-      (* "A sibling field is erased" is a statement about fields, so only the
-         type arguments this constructor's fields actually stand at count.
-         [itreeF]'s event index erases -- no [E] has a C++ spelling -- and
-         [RetF]'s one field is an [R]; reading the erasure off the whole
-         argument list would box that field for a reason no field of [RetF]
-         has anything to do with. *)
-      let erased_arg_under_a_field =
-        let occupied =
-          List.fold_left collect_tvars [] field_types_for_wrap
-        in
-        (* Read at the destination's refinement, as [field_slot] below is: a
-           field the annotation erased and the destination writes is not
-           erased. *)
-        List.exists
-          (fun j -> List.nth_opt ctor_temps_at_slot (j - 1) = Some Tany)
-          occupied
-      in
-      let slot_is_deeply_erased =
-        erased_arg_under_a_field
-        || ((not is_list_cons_ctor)
-            && match (!tctx).current_cpp_return_type with
-               | Some t -> resolves_to_any_type t
-               | None -> false)
-      in
       (* Where this argument is stored, as far as its representation goes:
          [Some Tany] when the slot is erased and the value has to be boxed
          into it, [None] when it is stored as itself. *)
@@ -8968,6 +8959,28 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             temps args
         | _ -> temps
       in
+      (* In dependent types, if a constructor arg at position i is
+         [MLdummy Ktype] (a type-valued argument — e.g. [x : A] where
+         [A : Type]), any template param at a later position j > i must
+         also be erased to [std::any].
+         Rationale: later params often have types that are functions of
+         the erased type variable (e.g. [P x] for [sigT A P]).  When A
+         is erased, [P x] is equally abstract and the concrete type
+         inferred from the value argument (e.g. [bool] from [true : bool])
+         would produce an incompatible template instantiation
+         ([SigT<std::any, Bool0>] vs. the declared
+         [SigT<std::any, List<std::any>>]).  {!index_erase_type} is the
+         same erasure the type side applies to those positions in
+         {!convert_ml_type_to_cpp_type}, so the two agree by construction. *)
+      let erase_past_type_arg temps =
+        let rec first_ktype_dummy i = function
+          | [] -> max_int
+          | (MLdummy Ktype | MLmagic (_, MLdummy Ktype)) :: _ -> i
+          | _ :: rest -> first_ktype_dummy (i + 1) rest
+        in
+        let cutoff = first_ktype_dummy 0 ts_updated in
+        List.mapi (fun i t -> if i > cutoff then index_erase_type t else t) temps
+      in
       (* Generate: Type<temps>::ctor::Constructor_(args) *)
       let gen_ctor_call args =
         match ty with
@@ -9117,30 +9130,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
               | _ -> temps)
             else temps
           in
-          (* In dependent types, if a constructor arg at position i is
-             [MLdummy Ktype] (a type-valued argument — e.g. [x : A] where
-             [A : Type]), any template param at a later position j > i must
-             also be erased to [std::any].
-             Rationale: later params often have types that are functions of
-             the erased type variable (e.g. [P x] for [sigT A P]).  When A
-             is erased, [P x] is equally abstract and the concrete type
-             inferred from the value argument (e.g. [bool] from [true : bool])
-             would produce an incompatible template instantiation
-             ([SigT<std::any, Bool0>] vs. the declared
-             [SigT<std::any, List<std::any>>]).  {!index_erase_type} is the
-             same erasure the type side applies to those positions in
-             {!convert_ml_type_to_cpp_type}, so the two agree by construction. *)
-          let temps =
-            let rec first_ktype_dummy i = function
-              | [] -> max_int
-              | (MLdummy Ktype | MLmagic (_, MLdummy Ktype)) :: _ -> i
-              | _ :: rest -> first_ktype_dummy (i + 1) rest
-            in
-            let cutoff = first_ktype_dummy 0 ts_updated in
-            List.mapi
-              (fun i t -> if i > cutoff then index_erase_type t else t)
-              temps
-          in
+          let temps = erase_past_type_arg temps in
           (* When this constructor value flows into an erased ([std::any]) slot
              ([deep_erase]) — e.g. a [Prod] pair built inside a
              value-dependent action whose result is boxed into [std::any] —
@@ -9282,8 +9272,11 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
              at: the fields are instantiated from these, and a tail built at a
              curried element type spells a list its head does not convert
              to. *)
+          (* The fields are instantiated at the arguments the call is
+             printed with, so a position the call erases is erased here too. *)
           let temps =
-            temps_from_slot n (template_params_of_ml ~curry:false env tys_filt)
+            erase_past_type_arg
+              (temps_from_slot n (template_params_of_ml ~curry:false env tys_filt))
           in
           if Table.has_dependent_params n then
             let expected_temps =
@@ -12201,26 +12194,13 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
          [std::function<...>] return type instead of the raw closure type. *)
       let expr =
         match split_ret_ty, expr with
-        | Some ret_ty, CPPlambda
-          { cl_params = params;
-            cl_ret = None;
-            cl_body = body;
-            cl_capture = cap } ->
-          CPPlambda
-            { cl_params = params;
-            cl_tparams = [];
-              cl_ret = Some ret_ty;
-              cl_body = body;
-              cl_capture = cap }
+        | Some ret_ty, CPPlambda ({ cl_ret = None; _ } as l) ->
+          CPPlambda { l with cl_ret = Some ret_ty }
         | _ -> expr
       in
       let expr =
         match (param_ml_ty, expr) with
-        | Some param_ty, CPPlambda
-          { cl_params = params;
-            cl_ret = ret_opt;
-            cl_body = body;
-            cl_capture = cap } ->
+        | Some param_ty, CPPlambda ({ cl_body = body; _ } as l) ->
           let param_cpp_ty =
             cpp_of_ml env param_ty
           in
@@ -12232,11 +12212,9 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
               | s -> map_stmt Fun.id wrap_stmt Fun.id s
             in
             CPPlambda
-              { cl_params = params;
-              cl_tparams = [];
+              { l with
                 cl_ret = Some (Tshared_ptr inner);
-                cl_body = List.map wrap_stmt body;
-                cl_capture = cap }
+                cl_body = List.map wrap_stmt body }
           | _ -> expr )
         | _ -> expr
       in

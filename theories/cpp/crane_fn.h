@@ -11,6 +11,7 @@
 #include <optional>
 #include <type_traits>
 #include <utility>
+#include <variant>
 #include <vector>
 #include "fn.h"
 //
@@ -77,6 +78,16 @@ template <class A> decltype(auto) crane_erase_fn_unbox(crane::obj &as) {
   }
 }
 
+// The value a callable returning [void] -- a Rocq [unit] -- yields at [Ret].
+// Erased, unit is boxed as [std::monostate], which is what a consumer opens;
+// an empty [crane::obj] would hold nothing to open.
+template <class Ret> Ret crane_unit_as() {
+  if constexpr (std::is_same_v<Ret, crane::obj>)
+    return crane::obj(std::monostate{});
+  else
+    return Ret{};
+}
+
 // [Ret] is the result type of the adapted callable: [crane::obj] when the
 // consumer erases the result too, or a concrete type when only the arguments
 // are erased (e.g. a higher-kinded class method taking
@@ -90,7 +101,7 @@ crane_erase_fn_impl(crane::fn<R(A...)> *, F &&f) {
              std::conditional_t<true, crane::obj, A>... as) -> Ret {
     if constexpr (std::is_void_v<R>) {
       f(crane_erase_fn_unbox<A>(as)...);
-      return Ret{};
+      return crane_unit_as<Ret>();
     } else {
       return crane_convert<Ret>(f(crane_erase_fn_unbox<A>(as)...));
     }
@@ -110,7 +121,7 @@ template <class Ret = crane::obj, class F> auto crane_erase_fn(F &&f) {
         [f = std::forward<F>(f)](crane::obj a) -> Ret {
           if constexpr (std::is_void_v<decltype(f(a))>) {
             f(a);
-            return Ret{};
+            return crane_unit_as<Ret>();
           } else if constexpr (std::is_same_v<std::decay_t<decltype(f(a))>,
                                               crane::obj>) {
             // A generic lambda over an erased domain hands back whatever it

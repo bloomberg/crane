@@ -210,3 +210,14 @@
 
 ; --- A local fix captured by reference escapes through a state-monad bind.
 
+
+(subdir case_handler_concrete_result
+ (rule
+  (targets case_handler_concrete_result.t.exe)
+  (deps CaseHandlerConcreteResult.vo case_handler_concrete_result.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} case_handler_concrete_result.t.exe case_handler_concrete_result.cpp case_handler_concrete_result.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps case_handler_concrete_result.t.exe)
+  (action (run ./case_handler_concrete_result.t.exe))))

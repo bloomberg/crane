@@ -73,7 +73,7 @@ enum class BE { B0 };
 
 template <typename T1>
 std::shared_ptr<ITree<T1>> w(const std::shared_ptr<ITree<T1>> &x) {
-  return x;
+  return itree_translate([](AE x0) { return sum1_inl(x0); }, x);
 }
 
 #endif // INCLUDED_TRANSLATE_CALLEE_HAS_NO_NAME

@@ -55,11 +55,6 @@ Crane Extract Skip ITree.forever.
 Crane Extract Skip ITree.spin.
 Crane Extract Skip ITree.ignore.
 Crane Extract Skip ITree.cat.
-(* Relabelling a reified tree's events is the identity: a [Vis] stores its
-   effect as a thunk, so the event family it was written at is already gone
-   from the representation.  Skipped, [translate] left a call with no callee;
-   what it means here is the tree it was given. *)
-Crane Extract Inlined Constant translate => "%a1" From "crane_itree.h".
 Crane Extract Skip translateF.
 
 Crane Extract Inlined Constant Functor_itree =>

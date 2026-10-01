@@ -896,6 +896,23 @@ let spec_header ?(unit_includes = []) si () =
     else
       h
   in
+  (* A unit that spawns threads needs atomic counts in every shared runtime
+     block it can reach, and within one translation unit the policy is fixed
+     by whichever runtime header came first -- possibly another unit's, under
+     [Crane NonAtomicRc].  That is checked here, after every include, so it is
+     a compile error rather than a race. *)
+  let h =
+    if Table.unit_is_concurrent () then
+      h
+      ++ mk_include_quoted "shared_block.h"
+      ++ fnl ()
+      ++ str
+           "static_assert(crane::rc_is_atomic, \"this unit spawns threads, but \
+            a header included before it chose CRANE_NON_ATOMIC_RC\");"
+      ++ fnl ()
+    else
+      h
+  in
   let fun_concept =
     if is_bde () then
       "template <class From, class To>\n\

@@ -1,6 +1,7 @@
 #ifndef INCLUDED_THREAD
 #define INCLUDED_THREAD
 
+#include "shared_block.h"
 #include <chrono>
 #include <crane_itree.h>
 #include <cstdint>
@@ -8,6 +9,9 @@
 #include <string>
 #include <thread>
 #include <variant>
+static_assert(crane::rc_is_atomic,
+              "this unit spawns threads, but a header included before it chose "
+              "CRANE_NON_ATOMIC_RC");
 
 using namespace std::string_literals;
 

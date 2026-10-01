@@ -4020,8 +4020,7 @@ let take_ctor_alias_decls ?(select = fun _ -> true) ~is_header () =
            plain family the declaration deapplied. *)
         let names = identifier_tokens body in
         let rec params i =
-          if i > 8 then []
-          else if List.mem ("_F" ^ string_of_int i) names then
+          if List.mem ("_F" ^ string_of_int i) names then
             (str "template <typename> class _F" ++ int i) :: params (i + 1)
           else if List.mem ("_P" ^ string_of_int i) names then
             (str "typename _P" ++ int i) :: params (i + 1)

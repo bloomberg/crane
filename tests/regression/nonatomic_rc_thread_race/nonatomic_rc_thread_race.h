@@ -1,6 +1,7 @@
 #ifndef INCLUDED_NONATOMIC_RC_THREAD_RACE
 #define INCLUDED_NONATOMIC_RC_THREAD_RACE
 
+#include "shared_block.h"
 #include <atomic>
 #include <chrono>
 #include <crane_itree.h>
@@ -11,6 +12,9 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+static_assert(crane::rc_is_atomic,
+              "this unit spawns threads, but a header included before it chose "
+              "CRANE_NON_ATOMIC_RC");
 
 using namespace std::string_literals;
 

@@ -17,11 +17,8 @@
 // a moved-from value -- does not compile.  Only a callable that can be called
 // through a [const] reference converts to an [fn].
 //
-// The count is non-atomic when the generated header defines
-// CRANE_NON_ATOMIC_RC (the [Crane NonAtomicRc] policy, withheld from units
-// that spawn threads), and atomic otherwise.  The two layouts live in
-// different inline namespaces, so a program that mixes them fails to link
-// rather than sharing a block between the two disciplines.
+// The block is a [shared_block], counted under the policy shared_block.h
+// describes.
 //
 // Compile every translation unit with CRANE_FN_STATS to count blocks made,
 // copies shared, calls and frees; the totals are written to stderr at exit.
@@ -32,9 +29,7 @@
 #include <type_traits>
 #include <utility>
 #include "pool.h"
-#ifndef CRANE_NON_ATOMIC_RC
-#include <atomic>
-#endif
+#include "shared_block.h"
 #ifdef CRANE_FN_STATS
 #include <cstdio>
 #endif
@@ -61,81 +56,9 @@ inline fn_stats_t &fn_stats() noexcept {
 #define CRANE_FN_STAT(field) ((void)0)
 #endif
 
-#ifdef CRANE_NON_ATOMIC_RC
-inline namespace fn_local {
-#else
-inline namespace fn_shared {
-#endif
+CRANE_RC_POLICY_BEGIN
 
 namespace fn_detail {
-
-#ifdef CRANE_NON_ATOMIC_RC
-struct count {
-  std::size_t n{1};
-  void inc() noexcept { ++n; }
-  bool dec() noexcept { return --n == 0; }
-  bool sole() const noexcept { return n == 1; }
-};
-#else
-struct count {
-  std::atomic<std::size_t> n{1};
-  void inc() noexcept { n.fetch_add(1, std::memory_order_relaxed); }
-  bool dec() noexcept { return n.fetch_sub(1, std::memory_order_acq_rel) == 1; }
-  bool sole() const noexcept { return n.load(std::memory_order_acquire) == 1; }
-};
-#endif
-
-// Frees a block whose count reached zero without recursing into what it
-// held.  A block's destructor releases what it captured, which may free
-// another block, and so on down a chain as long as the program's longest
-// continuation or tree: freed recursively, that is one C++ frame per link.
-// Instead a free that happens while another is running is queued, and the
-// outermost one drains the queue.
-struct pending_free {
-  const void *block;
-  void (*destroy)(const void *) noexcept;
-};
-//
-// The queue has no destructor: a value in a static is freed after the
-// thread's own thread_local objects are gone, so the queue must still work
-// then.  Its buffer lives as long as the thread.
-struct free_queue {
-  bool draining = false;
-  pending_free *items = nullptr;
-  std::size_t size = 0, cap = 0;
-  void push(pending_free f) {
-    if (size == cap) {
-      std::size_t ncap = cap ? cap * 2 : 64;
-      auto *n = static_cast<pending_free *>(
-          ::operator new(ncap * sizeof(pending_free)));
-      for (std::size_t i = 0; i < size; ++i)
-        n[i] = items[i];
-      ::operator delete(items);
-      items = n;
-      cap = ncap;
-    }
-    items[size++] = f;
-  }
-};
-inline free_queue &frees() noexcept {
-  static constinit thread_local free_queue q;
-  return q;
-}
-inline void free_block(const void *block,
-                       void (*destroy)(const void *) noexcept) noexcept {
-  free_queue &q = frees();
-  if (q.draining) {
-    q.push({block, destroy});
-    return;
-  }
-  q.draining = true;
-  destroy(block);
-  while (q.size != 0) {
-    pending_free f = q.items[--q.size];
-    f.destroy(f.block);
-  }
-  q.draining = false;
-}
 
 // What every block of one signature starts with.  The entry points are
 // function pointers rather than a vtable so the header is three words and
@@ -148,11 +71,9 @@ inline void free_block(const void *block,
 // once, in its own parameter.  Through a single by-value entry every
 // argument the caller kept -- a field of a node, a loop's state -- was
 // copied at the call whatever the callable did with it.
-template <class R, class... A> struct block {
-  mutable count rc;
+template <class R, class... A> struct block : shared_block {
   R (*const invoke)(const block *, A &&...);
   R (*const invoke_ref)(const block *, const A &...);
-  void (*const destroy)(const void *) noexcept;
 };
 
 // [std::invoke_r], which is C++23; the BDE flavour compiles as C++20.
@@ -170,7 +91,7 @@ struct holder : block<R, A...>,
 
   template <class G>
   explicit holder(G &&g)
-      : block<R, A...>{{}, &call, &call_ref, &drop}, f(std::forward<G>(g)) {}
+      : block<R, A...>{{{}, &drop}, &call, &call_ref}, f(std::forward<G>(g)) {}
 
   static R call(const block<R, A...> *b, A &&...a) {
     return invoke_as<R>(static_cast<const holder *>(b)->f,
@@ -185,7 +106,8 @@ struct holder : block<R, A...>,
       return invoke_as<R>(f, A(a)...);
   }
   static void drop(const void *b) noexcept {
-    delete static_cast<const holder *>(static_cast<const block<R, A...> *>(b));
+    CRANE_FN_STAT(freed);
+    delete static_cast<const holder *>(static_cast<const shared_block *>(b));
   }
 };
 
@@ -219,15 +141,13 @@ template <class R, class... A> class fn<R(A...)> {
 
   void retain() const noexcept {
     if (p_) {
-      p_->rc.inc();
+      p_->retain();
       CRANE_FN_STAT(shared);
     }
   }
   void release() const noexcept {
-    if (p_ && p_->rc.dec()) {
-      CRANE_FN_STAT(freed);
-      fn_detail::free_block(p_, p_->destroy);
-    }
+    if (p_)
+      p_->release();
   }
 
 public:
@@ -308,7 +228,7 @@ template <class R, class... A> fn(R (*)(A...)) -> fn<R(A...)>;
 template <class F>
 fn(F) -> fn<typename fn_detail::sig_of<decltype(&F::operator())>::type>;
 
-} // inline namespace
+CRANE_RC_POLICY_END
 
 // Whether [T] is some [fn<...>]: the [std::function]-shaped type generated
 // code writes for a function type.

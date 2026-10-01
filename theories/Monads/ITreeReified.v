@@ -88,6 +88,12 @@ Crane Extract Inlined Constant Monad.ret =>
 Crane Extract Inlined Constant ITree.trigger =>
   "itree_trigger(%a0)" From "crane_itree.h".
 
+(* [translate h t] applies [h] to every event of [t].  It is not the
+   identity even for an injection: a [Vis] keeps the side an [inl1] or [inr1]
+   names, and a handler over the sum reads it.  Its value arguments are the
+   handler and the tree; the two event families come first, erased. *)
+Crane Extract Inlined Constant translate =>
+  "itree_translate(%a0, %a1)" From "crane_itree.h".
 (* Extract observe as method call *)
 Crane Extract Inlined Constant observe =>
   "%a0->observe()" From "crane_itree.h".

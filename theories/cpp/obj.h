@@ -25,9 +25,11 @@
 #include <type_traits>
 #include <typeinfo>
 #include <utility>
-#include "fn.h"
+#include "shared_block.h"
 
 namespace crane {
+
+CRANE_RC_POLICY_BEGIN
 
 namespace obj_detail {
 
@@ -36,17 +38,13 @@ inline constexpr bool held_inline = std::is_trivially_copyable_v<T> &&
                                     sizeof(T) <= sizeof(void *) &&
                                     alignof(T) <= alignof(void *);
 
-struct box_base {
-  mutable fn_detail::count rc;
-  void (*const destroy)(const void *) noexcept;
-};
-
-template <class T> struct box : box_base {
+template <class T> struct box : shared_block {
   T value;
   template <class... A>
-  explicit box(A &&...a) : box_base{{}, &drop}, value(std::forward<A>(a)...) {}
+  explicit box(A &&...a)
+      : shared_block{{}, &drop}, value(std::forward<A>(a)...) {}
   static void drop(const void *b) noexcept {
-    delete static_cast<const box *>(static_cast<const box_base *>(b));
+    delete static_cast<const box *>(static_cast<const shared_block *>(b));
   }
 };
 
@@ -63,18 +61,18 @@ inline constexpr type_tag tag_of{typeid(T), held_inline<T>};
 class obj {
   const obj_detail::type_tag *tag_ = nullptr;
   union {
-    const obj_detail::box_base *box_;
+    const shared_block *box_;
     alignas(void *) unsigned char bytes_[sizeof(void *)];
   };
 
   bool boxed() const noexcept { return tag_ && !tag_->inline_; }
   void retain() const noexcept {
     if (boxed())
-      box_->rc.inc();
+      box_->retain();
   }
   void release() noexcept {
-    if (boxed() && box_->rc.dec())
-      fn_detail::free_block(box_, box_->destroy);
+    if (boxed())
+      box_->release();
   }
 
   template <class T> friend const T *any_cast(const obj *) noexcept;
@@ -166,6 +164,8 @@ template <class T> std::remove_cvref_t<T> any_cast(obj &&o) {
       return std::move(*p);
   return *p;
 }
+
+CRANE_RC_POLICY_END
 
 // rebind_t<F, X>: a carrier written at the erased element, read at X.
 //
