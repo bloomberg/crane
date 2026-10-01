@@ -1764,6 +1764,16 @@ let keeps_type_arg_position r =
         (not (List.mem i hkt))
         && (IntSet.is_empty occurring || IntSet.mem i occurring) )
 
+(** [ty] with every family variable written applied taken back to the bare
+    variable: a plain family is declared without its index. *)
+let deapply_families =
+  map_cpp_type (function Tapply ((Tvar _ as v), _) -> v | t -> t)
+
+(** The 1-based positions among [1..n] that {!keeps_type_arg_position} keeps
+    for [r]: the written type arguments of a call to [r]. *)
+let kept_type_arg_positions r n =
+  List.filter (keeps_type_arg_position r) (List.init n (fun i -> i + 1))
+
 (** [r]'s type arguments, less those {!keeps_type_arg_position} rules out. *)
 let kept_type_args r ts =
   let keep = keeps_type_arg_position r in
@@ -1820,7 +1830,7 @@ let types_at_plain_positions r ts =
   | Some ml_ty ->
     let hk = Ml_type_util.higher_kinded_ml_tvars [ml_ty] in
     let n = IntSet.fold max (collect_tvars_set IntSet.empty ml_ty) 0 in
-    let kept = List.filter (keeps_type_arg_position r) (List.init n (fun i -> i + 1)) in
+    let kept = kept_type_arg_positions r n in
     List.mapi
       (fun k t ->
         match List.nth_opt kept k with
@@ -4056,6 +4066,10 @@ and names_only_scoped_tvars ty =
   let scope = current_scope_type_names () in
   List.for_all (fun id -> List.exists (Id.equal id) scope) (get_tvars ty)
 
+(** [ty], where this scope can write it: every variable it names is in scope,
+    and it is not erased. *)
+and spell_in_scope ty =
+  if names_only_scoped_tvars ty && not (prints_as_any ty) then Some ty else None
 
 (** [glob_declared_cod_erases r] -- whether the declaration of [r] returns a
     box.  A declaration is converted from the global's own ML type with no
@@ -4640,7 +4654,7 @@ and drop_relaxed_tt_position id targs =
   match (relaxed_tt_return_var id, declared_tvar_count id) with
   | Some h, Some n ->
     let kept =
-      List.filter (keeps_type_arg_position id) (List.init n (fun i -> i + 1))
+      kept_type_arg_positions id n
     in
     let rec index k = function
       | [] -> None
@@ -10466,13 +10480,10 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
            and the method declares it as a template parameter.  It leaves the
            argument list for the callee's explicit template arguments, which is
            the only place that parameter can be given. *)
-        let tc_args, value_args =
+        let tc_args, _, value_args =
           (* The arguments stand under the branch's binders, as [arg_exprs]
              below generates them. *)
-          List.partition (is_typeclass_instance_arg env') value_args
-        in
-        let tc_args =
-          List.filter (fun a -> not (instance_arg_is_erased env' a)) tc_args
+          split_instance_args env' value_args
         in
         let call =
           (* The arguments live under the branch's binders, so the ML type
@@ -10858,9 +10869,7 @@ and callee_result_bindings env id ~explicit expected =
     in
     (* A family is written applied at an erased index and declared plain: in
        the pattern it is the variable itself. *)
-    let cod =
-      map_cpp_type (function Tapply ((Tvar _ as v), _) -> v | t -> t) cod
-    in
+    let cod = deapply_families cod in
     (* The enclosing function's result is this call's only where the call is
        what it returns, which nothing here says; a codomain with structure has
        to match it to count as evidence, a bare variable matches anything --
@@ -11099,6 +11108,14 @@ and kept_instance_of_projection env x args =
            (record_fields_of_type (instance_class_ty env a)) )
     args
 
+(** [split_instance_args env args] -- the class dictionaries a call passes,
+    the ones an erasure removed left out; how many were removed, which still
+    occupy a parameter of the declaration; and the regular arguments. *)
+and split_instance_args env args =
+  let tc, regular = List.partition (is_typeclass_instance_arg env) args in
+  let erased, kept = List.partition (instance_arg_is_erased env) tc in
+  (kept, List.length erased, regular)
+
 and instance_arg_is_erased env ml_arg =
   (* An instance argument is not a value argument, but only one whose class
      Crane kept is a template argument either: {!collect_typeclass_param_ids}
@@ -11206,9 +11223,7 @@ and instance_family_binding env r ts expected =
          it is the variable itself. *)
       let carrier =
         Ml_type_util.unqualify_ty
-          (map_cpp_type
-             (function Tapply ((Tvar _ as v), _) -> v | t -> t)
-             (convert_ml_type_to_cpp_type env names carrier) )
+          (deapply_families (convert_ml_type_to_cpp_type env names carrier))
       in
       match (carrier, Ml_type_util.unqualify_ty (unfold_cpp_typedef env exp)) with
       | Tglob (h1, cargs, _), Tglob (h2, eargs, _)
@@ -11500,17 +11515,11 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
        can only be read off the ML types. *)
     let primary_ml_args = args in
     (* Partition args into type class instances and regular args *)
-    let typeclass_ml_args, regular_ml_args =
-      List.partition (is_typeclass_instance_arg env) args
-    in
     (* An erased instance leaves the call but not the declaration: its
        parameter is still one of the callee's, so a position counted in the
        declaration's parameter list steps over it. *)
-    let n_erased_instance_args =
-      List.length (List.filter (instance_arg_is_erased env) typeclass_ml_args)
-    in
-    let typeclass_ml_args =
-      List.filter (fun a -> not (instance_arg_is_erased env a)) typeclass_ml_args
+    let typeclass_ml_args, n_erased_instance_args, regular_ml_args =
+      split_instance_args env args
     in
     (* How many of the callee's declared parameters the dictionaries occupy:
        a regular argument's declared position starts after them. *)
@@ -11558,7 +11567,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
             | t -> t
           in
           let t = cpp_of_ml env (subst (ml_codomain (find_type id))) in
-          if names_only_scoped_tvars t && not (prints_as_any t) then Some t else None
+          spell_in_scope t
       in
       match expected_result with
       | Some e when exists_cpp_type prints_as_any e -> (
@@ -12069,7 +12078,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
         | (result_names, (_ :: _ as m)), Some pt -> (
           let d =
             convert_ml_type_to_cpp_type env result_names (type_simpl pt)
-            |> map_cpp_type (function Tapply ((Tvar _ as v), _) -> v | t -> t)
+            |> deapply_families
             |> map_cpp_type (function
                  | Tvar (_, Some v) as t -> (
                    match List.find_opt (fun (v', _) -> Id.equal v v') m with
@@ -12081,8 +12090,9 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
           (* No slot at all: the declaration's type is the slot, where it is
              one this scope can write. *)
           | None | Some Tany ->
-            if names_only_scoped_tvars d && not (prints_as_any d) then Some d
-            else arg_expected_ty
+            ( match spell_in_scope d with
+            | Some _ as t -> t
+            | None -> arg_expected_ty )
           (* A slot erased inside: each erased part is filled from the
              declaration where it says; what the declaration still says in
              its own variables is no answer. *)
@@ -12392,17 +12402,9 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
                possibly recursive) element as boxed — disagreeing with the
                generic declaration and breaking template argument deduction.
                Suppress boxing here to match the declaration. *)
-            let rec ml_type_contains_tvar = function
-              | Miniml.Tvar (_, _) -> true
-              | Miniml.Tarr (a, b) ->
-                ml_type_contains_tvar a || ml_type_contains_tvar b
-              | Miniml.Tglob (_, ts, _) -> List.exists ml_type_contains_tvar ts
-              | Miniml.Tmeta {contents = Some t} -> ml_type_contains_tvar t
-              | _ -> false
-            in
             let callee_generic_here =
               match Param_pos.nth fn_param_ml_tys_orig param_index with
-              | Some t -> ml_type_contains_tvar t
+              | Some t -> Ml_type_util.ml_type_contains_tvar t
               | None -> false
             in
             CPPcontainer_cast (clean_cpp_ty, inner, callee_generic_here)
@@ -12832,8 +12834,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
           ||
           let n = IntSet.fold max (collect_tvars_set IntSet.empty ml_ty) 0 in
           let kept =
-            List.filter (keeps_type_arg_position id)
-              (List.init n (fun i -> i + 1))
+            kept_type_arg_positions id n
           in
           List.length kept <> List.length regular_type_args
           || not
@@ -12852,8 +12853,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
       let from_expected targs =
         let names, m = Lazy.force result_tvar_map in
         let kept =
-          List.filter (keeps_type_arg_position id)
-            (List.init (List.length names) (fun i -> i + 1))
+          kept_type_arg_positions id (List.length names)
         in
         if List.length kept <> List.length targs then targs
         else
@@ -13843,10 +13843,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
        the method the callee projects declares it as a template parameter.  It
        leaves the argument list for the callee's explicit template arguments,
        which is the only place that parameter can be given. *)
-    let tc_args, args = List.partition (is_typeclass_instance_arg env) args in
-    let tc_args =
-      List.filter (fun a -> not (instance_arg_is_erased env a)) tc_args
-    in
+    let tc_args, _, args = split_instance_args env args in
     let gen_callee () =
       match (tc_args, gen_expr env f) with
       | [], e -> e
@@ -15884,8 +15881,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
               | Some ml_ty, Some deducible ->
                 let n = IntSet.fold max (collect_tvars_set IntSet.empty ml_ty) 0 in
                 let kept =
-                  List.filter (keeps_type_arg_position r)
-                    (List.init n (fun i -> i + 1))
+                  kept_type_arg_positions r n
                 in
                 if List.length kept <> List.length regular then None
                 else Some (List.map (fun i -> not (IntSet.mem i deducible)) kept)
@@ -17384,8 +17380,9 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
             if ml_type_contains_erased t_effective then (!tctx).current_cpp_return_type
             else
               let c = cpp_of_ml env t_effective in
-              if names_only_scoped_tvars c && not (prints_as_any c) then Some c
-              else (!tctx).current_cpp_return_type
+              match spell_in_scope c with
+              | Some _ as t -> t
+              | None -> (!tctx).current_cpp_return_type
           in
           with_cpp_return_type rhs_result (fun () ->
             gen_stmts
