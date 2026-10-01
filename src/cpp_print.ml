@@ -1072,20 +1072,14 @@ let rec pp_cpp_type ?(lead = true) par vl t =
       ( match args with
         | [] -> str id_s
         | _ -> str id_s ++ str "<" ++ pp_list (pp_rec false) args ++ str ">" )
+    (* Erasure markers should never reach the C++ output.  When one does
+       survive -- a template argument of [SigT<nat, dummy_prop>] -- it is
+       rendered as the erased type. *)
+    | Terased _ ->
+      require_header "any";
+      str Crane_rt.obj
     | Tglob (r, tys, args) ->
-      (* Erased type/prop/implicit markers (from Tdummy in the ML AST) should
-         never reach the C++ output. When they do survive — e.g. as a template
-         argument of SigT<nat, dummy_prop> — render them as std::any. *)
-      ( match r with
-      | GlobRef.VarRef id
-        when let name = Id.to_string id in
-             name = "dummy_type"
-             || name = "dummy_prop"
-             || name = "dummy_implicit" ->
-        require_header "any";
-        str Crane_rt.obj
-      | _ ->
-      match find_custom_opt r with
+      ( match find_custom_opt r with
       | Some s when to_inline r ->
         let cmds =
           parse_term_template (custom_template_with_args s (List.length tys))
@@ -3387,7 +3381,7 @@ and is_constexpr_type ty =
   | Tid (_, tys) | Tid_external (_, tys) -> List.for_all is_constexpr_type tys
   | Tnondeduced t -> is_constexpr_type t
   | Trebind (h, x) -> is_constexpr_type h && is_constexpr_type x
-  | Thole -> true
+  | Thole | Terased _ -> true
   | Tref (Forwarding, t) -> is_constexpr_type t
   | Texpr_type _ | Tdecltype_auto -> false
   | Tnamespace (_, t) -> is_constexpr_type t

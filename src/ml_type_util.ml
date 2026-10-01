@@ -651,8 +651,7 @@ let has_unresolved_promoted_in_type =
     @param t C++ type to check
     @return [true] if [t] is the dummy_prop marker, [false] otherwise *)
 let is_cpp_dummy_prop = function
-  | Minicpp.Tglob (GlobRef.VarRef id, [], _) ->
-    Id.to_string id = "dummy_prop"
+  | Minicpp.Terased Minicpp.Ek_prop -> true
   | _ -> false
 
 (** Filter erased type arguments from a template argument list using a

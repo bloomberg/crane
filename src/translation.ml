@@ -3727,10 +3727,9 @@ let rec convert_ml_type_to_cpp_type
      gen_expr, eta_fun, and gen_decl_for_pp) can detect and drop them. These
      markers should never survive to the C++ output — the filtering pipeline
      removes them from template argument lists and function signatures. *)
-  | Tdummy Ktype -> Tglob (GlobRef.VarRef (Id.of_string "dummy_type"), [], [])
-  | Tdummy Kprop -> Tglob (GlobRef.VarRef (Id.of_string "dummy_prop"), [], [])
-  | Tdummy (Kimplicit _) ->
-    Tglob (GlobRef.VarRef (Id.of_string "dummy_implicit"), [], [])
+  | Tdummy Ktype -> Terased Ek_type
+  | Tdummy Kprop -> Terased Ek_prop
+  | Tdummy (Kimplicit _) -> Terased Ek_implicit
   | Tstring ->
     Tid_external ("std::string", [])
   (* Extraction gave up naming this type.  It prints as [std::any], but we
@@ -3815,6 +3814,9 @@ and glob_is_nullary_function x =
     value as [std::any] at runtime. *)
 and resolves_to_any_type = function
   | Tany | Topaque -> true
+  (* An erasure marker is a position the filtering passes drop, not a value
+     that resolves to a box. *)
+  | Terased _ -> false
   | Tglob (g, [], _) when Table.is_erased_type_const g -> true
   | Tglob (g, [], _) ->
     let via_ml_ty =
@@ -5196,7 +5198,7 @@ and build_template_params ?curry env tvars tys =
            params. This means the Tvar index exceeds the scope of tvars.
            Mark as dummy_type to trigger full erasure via filter_erased_type_args.
            Using the unbound Tvar would generate invalid C++ references. *)
-        Tglob (GlobRef.VarRef (Id.of_string "dummy_type"), [], [])
+        Terased Ek_type
       | _ ->
         (* Type is either bound, or we're in an untyped context (tvars = []).
            Keep the type as-is. *)
@@ -8525,7 +8527,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           in
           match t with
           | Tvar (_, None) when tvars <> [] ->
-            Tglob (GlobRef.VarRef (Id.of_string "dummy_type"), [], [])
+            Terased Ek_type
           | _ -> t )
         tys
     in
@@ -12739,7 +12741,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
                 nothing. *)
              match t with
              | Tvar (_, None) ->
-               Tglob (GlobRef.VarRef (Id.of_string "dummy_type"), [], [])
+               Terased Ek_type
              | t when has_unnamed_tvar t -> Ml_type_util.resolve_tvars_to_any t
              | t -> t )
       |> fill_phantom_prefix id

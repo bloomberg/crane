@@ -94,6 +94,10 @@ type capture =
     it -- a forwarding reference, which binds either value category. *)
 type ref_kind = Lvalue | Forwarding
 
+(** What a {!Terased} position erased: a type, a proof, or an implicit
+    argument -- [Tdummy Ktype], [Kprop] and [Kimplicit] in the ML AST. *)
+type erased_kind = Ek_type | Ek_prop | Ek_implicit
+
 (** C++ type representation. *)
 type cpp_type =
   | Tvar of int * Id.t option
@@ -128,6 +132,10 @@ type cpp_type =
       (** An alias template applied to arguments: [typename I::template C<A>]
           when the head is an associated type, [C<A>] otherwise. *)
   | Tref of ref_kind * cpp_type
+  | Terased of erased_kind
+      (** A position erasure removed: a type, proof or implicit parameter.
+          The filtering passes drop it from template argument lists and
+          signatures; one that survives prints as [crane::obj]. *)
   | Tptr of cpp_type  (** C++ pointer type *)
   | Tvariant of cpp_type list  (** std::variant<...> for sum types *)
   | Tshared_ptr of cpp_type  (** std::shared_ptr<T> for managed memory *)

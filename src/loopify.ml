@@ -285,7 +285,7 @@ let rec worthwhile_move_type = function
                          && not (Table.is_coinductive r)
                          && (not (Table.is_custom r)
                              || List.exists worthwhile_move_type tparams)
-  | Tshared_ptr _ | Tfun _ -> true
+  | Tshared_ptr _ | Tfun _ | Terased _ -> true
   | Tvariant ts -> List.exists worthwhile_move_type ts
   | Tid (_, ts) | Tid_external (_, ts) ->
     List.exists worthwhile_move_type ts

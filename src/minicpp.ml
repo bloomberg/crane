@@ -99,6 +99,8 @@ type capture =
 
 type ref_kind = Lvalue | Forwarding
 
+type erased_kind = Ek_type | Ek_prop | Ek_implicit
+
 type cpp_type =
   | Tvar of int * Id.t option
   | Tinstance of Id.t * GlobRef.t
@@ -130,6 +132,7 @@ type cpp_type =
          higher-kinded class parameter ([M : Type -> Type]) is used, the head
          being the instance's associated alias template. *)
   | Tref of ref_kind * cpp_type
+  | Terased of erased_kind
   | Tptr of cpp_type
   | Tvariant of cpp_type list
   | Tshared_ptr of cpp_type
@@ -685,18 +688,13 @@ let rec instance_dependent = function
   | Tinstance (id, class_ref) -> Some (id, class_ref)
   | _ -> None
 
-(** Check if a C++ type is a dummy type glob (e.g., dummy_type, dummy_prop,
-    dummy_implicit). These arise from Tdummy Ktype/Kprop/Kimplicit in the ML
-    AST, which convert_ml_type_to_cpp_type maps to Tglob(VarRef "dummy_type")
-    etc. These intermediate markers are used by the filtering pipeline
+(** Check if a C++ type is an erasure marker ({!Terased}). These arise from
+    Tdummy Ktype/Kprop/Kimplicit in the ML AST.  They are used by the
+    filtering pipeline
     (gen_expr, eta_fun, gen_decl_for_pp) to detect erased parameters and drop
     them before they reach the C++ renderer — they should never appear in the
     final generated output. *)
-let is_cpp_dummy_type = function
-  | Tglob (GlobRef.VarRef id, [], _) ->
-    let name = Id.to_string id in
-    name = "dummy_type" || name = "dummy_prop" || name = "dummy_implicit"
-  | _ -> false
+let is_cpp_dummy_type = function Terased _ -> true | _ -> false
 
 (** [prints_as_any t] — true if [t] is spelled [std::any] in the generated
     header: either of the two erased type nodes, or a dummy glob left behind by
@@ -801,7 +799,7 @@ let rec map_cpp_type (f : cpp_type -> cpp_type) (ty : cpp_type) : cpp_type =
      (erasing an argument to [std::any], say) could only make it unprintable. *)
   | Ttyctor _
   | Tvar _ | Tinstance _ | Tpromoted _ | Tvoid | Tunresolved | Tany | Topaque
-  | Tauto | Thole -> ty
+  | Tauto | Thole | Terased _ -> ty
 
 (** [rewrite_cpp_type f ty]: where [f] answers, its answer replaces the node
     and is not descended into; elsewhere the node is rebuilt from its rewritten
@@ -831,7 +829,7 @@ let rec rewrite_cpp_type (f : cpp_type -> cpp_type option) (ty : cpp_type) :
     | Trebind (h, x) -> Trebind (go h, go x)
     | Ttyctor t -> Ttyctor (go t)
     | Texpr_type _ | Tdecltype_auto | Tvar _ | Tinstance _ | Tpromoted _
-    | Tvoid | Tunresolved | Tany | Topaque | Tauto | Thole ->
+    | Tvoid | Tunresolved | Tany | Topaque | Tauto | Thole | Terased _ ->
       ty )
 
 let ctor_alias_tvar = "_CraneTcArg"
@@ -998,7 +996,7 @@ let rec subst_cpp_tvars (sub : int -> cpp_type option) (ty : cpp_type) : cpp_typ
      leaves the position printable. *)
   | Ttyctor t -> Ttyctor (go t)
   | Tinstance _ | Tpromoted _ | Tvoid | Tunresolved
-  | Tany | Topaque | Tauto | Thole -> ty
+  | Tany | Topaque | Tauto | Thole | Terased _ -> ty
 
 
 (** [exists_cpp_type p ty] holds when [p] holds of [ty] itself or of any type
@@ -1029,7 +1027,7 @@ let rec exists_cpp_type (p : cpp_type -> bool) (ty : cpp_type) : bool =
      own arguments use. *)
   | Ttyctor t -> exists_cpp_type p t
   | Tvar _ | Tinstance _ | Tpromoted _ | Tvoid | Tunresolved
-  | Tany | Topaque | Tauto | Thole ->
+  | Tany | Topaque | Tauto | Thole | Terased _ ->
     false
 
 (** Whether [ty] mentions a [std::shared_ptr] anywhere, however deeply — as the
