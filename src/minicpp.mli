@@ -94,6 +94,32 @@ type capture =
     it -- a forwarding reference, which binds either value category. *)
 type ref_kind = Lvalue | Forwarding
 
+(** What an inline custom's replacement text does with its arguments, as far
+    as the passes that inspect it need to know.  The text is classified here
+    and nowhere else. *)
+type inline_shape =
+  | Inline_identity  (** ["%a0"]: its one argument, unchanged *)
+  | Inline_pair_projection  (** reads [.first] or [.second] of its argument *)
+  | Inline_other
+
+(** How an inline mapping's text is printed. *)
+type inline_form =
+  | Block_iife
+      (** It names [%result]: a statement block, printed as an immediately
+          invoked lambda where it stands for a value. *)
+  | Bare_callee
+      (** It has no placeholder: a callee, printed with the call's type and
+          value arguments after it. *)
+  | Templated  (** It places its arguments itself. *)
+
+(** An inline mapping's replacement text, with what the passes ask of it
+    decided once. *)
+type inline_template = {
+  it_text : string;
+  it_form : inline_form;
+  it_shape : inline_shape;
+}
+
 (** What a {!Terased} position erased: a type, a proof, or an implicit
     argument -- [Tdummy Ktype], [Kprop] and [Kimplicit] in the ML AST. *)
 type erased_kind = Ek_type | Ek_prop | Ek_implicit
@@ -741,8 +767,8 @@ and ref_qual =
 (** Custom extraction metadata for manually mapped entities.  Resolved once
     during translation. *)
 and custom_info = {
-  ci_inline : string option;
-      (** Some code if entity should be inlined, None otherwise *)
+  ci_inline : inline_template option;
+      (** The replacement text, where the entity is inlined *)
   ci_is_custom : bool;  (** True if entity has custom C++ mapping *)
   ci_yields : cpp_type option;
       (** For a [%result] block template used as a value: what the block
@@ -763,15 +789,10 @@ val static_fun :
   body:cpp_stmt list ->
   method_field
 
-(** What an inline custom's replacement text does with its arguments, as far
-    as the passes that inspect it need to know.  The text is classified here
-    and nowhere else. *)
-type inline_shape =
-  | Inline_identity  (** ["%a0"]: its one argument, unchanged *)
-  | Inline_pair_projection  (** reads [.first] or [.second] of its argument *)
-  | Inline_other
-
 val inline_shape_of_text : string -> inline_shape
+
+(** An inline mapping's text, classified once when the use is resolved. *)
+val inline_template : string -> inline_template
 
 (** The shape of [ci]'s replacement text, [None] where it is not inlined. *)
 val inline_shape : custom_info -> inline_shape option

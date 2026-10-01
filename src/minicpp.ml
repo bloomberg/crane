@@ -99,6 +99,22 @@ type capture =
 
 type ref_kind = Lvalue | Forwarding
 
+(** What an inline custom's replacement text does with its arguments, as far
+    as the passes that inspect it need to know: forward its one argument
+    unchanged, project a component out of a pair, or anything else. *)
+type inline_shape =
+  | Inline_identity
+  | Inline_pair_projection
+  | Inline_other
+
+type inline_form = Block_iife | Bare_callee | Templated
+
+type inline_template = {
+  it_text : string;
+  it_form : inline_form;
+  it_shape : inline_shape;
+}
+
 type erased_kind = Ek_type | Ek_prop | Ek_implicit
 
 type cpp_type =
@@ -622,20 +638,12 @@ and ref_qual =
 
 (** Custom extraction info, resolved once during translation. *)
 and custom_info = {
-  ci_inline : string option; (* Some code if to_inline, None otherwise *)
+  ci_inline : inline_template option;
   ci_is_custom : bool;
   (* For a [%result] block template used as a value: what the block evaluates
      to, recorded while the global's ML type was still in hand. *)
   ci_yields : cpp_type option;
 }
-
-(** What an inline custom's replacement text does with its arguments, as far
-    as the passes that inspect it need to know: forward its one argument
-    unchanged, project a component out of a pair, or anything else. *)
-type inline_shape =
-  | Inline_identity
-  | Inline_pair_projection
-  | Inline_other
 
 let inline_shape_of_text s =
   if String.equal s "%a0" then Inline_identity
@@ -648,7 +656,20 @@ let inline_shape_of_text s =
     if contains ".first" || contains ".second" then Inline_pair_projection
     else Inline_other
 
-let inline_shape ci = Option.map inline_shape_of_text ci.ci_inline
+let inline_template s =
+  let contains sub =
+    let n = String.length s and m = String.length sub in
+    let rec at i = i + m <= n && (String.sub s i m = sub || at (i + 1)) in
+    at 0
+  in
+  { it_text = s;
+    it_form =
+      ( if contains "%result" then Block_iife
+        else if String.contains s '%' then Templated
+        else Bare_callee );
+    it_shape = inline_shape_of_text s }
+
+let inline_shape ci = Option.map (fun t -> t.it_shape) ci.ci_inline
 
 (** C++ type schema. The integer is the number of variables in the schema. *)
 type cpp_schema = int * cpp_type

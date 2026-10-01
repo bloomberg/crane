@@ -1763,10 +1763,10 @@ and pp_cpp_expr env args t =
             ++ str ">(" ++ Id.print id ++ str ")"
         end )
       | None -> Id.print id )
-  | CPPglob (x, tys, Some ci) when ci.ci_inline <> None ->
-    let custom = Option.get ci.ci_inline in
-    if Common.contains_substring custom "%result" then
-      gen_block_iife ?yields:ci.ci_yields x custom tys []
+  | CPPglob (x, tys, Some {ci_inline = Some tmpl; ci_yields; _}) ->
+    let custom = tmpl.it_text in
+    if tmpl.it_form = Block_iife then
+      gen_block_iife ?yields:ci_yields x custom tys []
     else
     let cmds = parse_type_template custom in
     pp_custom
@@ -2054,15 +2054,14 @@ and pp_cpp_expr env args t =
   | CPPnamespace (r, t) ->
     let name, _ = inductive_name_info r in
     h (name ++ str "::" ++ pp_cpp_expr env args t)
-  | CPPfun_call (res, CPPglob (n, tys, Some ci), ts) when ci.ci_inline <> None ->
-    let s = Option.get ci.ci_inline in
-    if Common.contains_substring s "%result" then
+  | CPPfun_call (res, CPPglob (n, tys, Some {ci_inline = Some tmpl; _}), ts) ->
+    let s = tmpl.it_text in
+    if tmpl.it_form = Block_iife then
       gen_block_iife
         ?yields:(match res.cs_yields with Ryields ty -> Some ty | Ropaque -> None)
         n s tys (call_args ts)
     else
-    let has_placeholder = String.contains s '%' in
-    if not has_placeholder then
+    if tmpl.it_form = Bare_callee then
       let ty_args_s =
         match tys with
         | [] -> mt ()

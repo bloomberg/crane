@@ -36,7 +36,10 @@ let get_local_inductives () = !local_inductives
 let mk_cppglob ?yields (r : GlobRef.t) (tys : cpp_type list) : cpp_expr =
   let ci =
     {
-      ci_inline = (if Table.to_inline r then Table.find_custom_opt r else None);
+      ci_inline =
+        ( if Table.to_inline r then
+            Option.map Minicpp.inline_template (Table.find_custom_opt r)
+          else None );
       ci_is_custom = Table.is_custom r;
       ci_yields = yields;
     }

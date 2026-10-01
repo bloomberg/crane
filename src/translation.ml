@@ -638,7 +638,7 @@ let rewrite_state_threading_moves
     match fn with
     | CPPglob (_, _, Some ci) -> (
       match ci.ci_inline with
-      | Some s -> Common.contains_substring s "make_pair"
+      | Some t -> Common.contains_substring t.it_text "make_pair"
       | None -> false )
     | _ -> false
   in
@@ -7033,7 +7033,7 @@ and glob_yields env x tys =
     let is_result_block =
       Table.to_inline x
       && match Table.find_custom_opt x with
-         | Some tmpl -> Common.contains_substring tmpl "%result"
+         | Some tmpl -> (Minicpp.inline_template tmpl).it_form = Block_iife
          | None -> false
     in
     let inst = Mlutil.type_subst_list tys ml_ty in
@@ -15961,13 +15961,13 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
 and extract_block_template = function
   | CPPglob (ref, tys, Some ci) -> begin
     match ci.ci_inline with
-    | Some tmpl when Common.contains_substring tmpl "%result" ->
+    | Some {it_form = Block_iife; it_text = tmpl; _} ->
       Some (ref, tmpl, [], tys)
     | _ -> None
     end
   | CPPfun_call (_, CPPglob (ref, tys, Some ci), args) -> begin
     match ci.ci_inline with
-    | Some tmpl when Common.contains_substring tmpl "%result" ->
+    | Some {it_form = Block_iife; it_text = tmpl; _} ->
       Some (ref, tmpl, call_args args, tys)
     | _ -> None
     end
