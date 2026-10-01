@@ -151,7 +151,7 @@ let impl_decls = function
     members are spelled.  Both kinds are emitted after every datatype, so a
     datatype's member naming either one is naming something still to come. *)
 let module_struct_name (mp : ModPath.t) : string option =
-  match Hashtbl.find_opt wrapper_module_table mp with
+  match wrapper_struct mp with
   | Some name -> Some name
   | None -> (
     match mp with

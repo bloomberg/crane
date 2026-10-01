@@ -781,26 +781,38 @@ let is_typeclass_instance _body ty =
   | Miniml.Tglob (class_ref, _, _) -> Table.is_typeclass class_ref
   | _ -> false
 
-(** Wrapper module table: maps ModPath.t of imported modules to their
-   wrapper struct name. When a module like Stdlib.Init.Nat is wrapped
-   in 'struct Nat { ... }', this table records the mapping so that
-   references to functions in that module get properly qualified. *)
-let wrapper_module_table : (ModPath.t, string) Hashtbl.t =
-  owned_table "wrapper_module_table"
+(** How a module sits in the wrapper struct it is emitted in. *)
+type wrapper_role =
+  | Own  (** The wrapper is the module's own struct. *)
+  | Flattened
+      (** A child whose name collides with a global inductive, flattened into
+          its parent's struct: {!wrapper_qualify_name} strips its qualifier. *)
+  | Bystander
+      (** A child a collision wrapper absorbed without a collision of its own:
+          it keeps its own nesting, so the wrapper's name goes in front of its
+          own rather than in place of it. *)
 
-(** Collision wrapper table: tracks modpaths that were registered as
-    collision-wrapped (i.e., a child module whose name collides with a global
-    inductive, wrapped into a parent struct). For these, wrapper_qualify_name
-    strips the child qualifier. *)
-let collision_wrapper_table : (ModPath.t, unit) Hashtbl.t =
-  owned_table "collision_wrapper_table"
+(** Module paths emitted inside a wrapper struct, with the struct's name and
+    their role in it.  When a module like Stdlib.Init.Nat is wrapped in
+    [struct Nat { ... }], this records it so that references to functions in
+    that module get properly qualified. *)
+let wrapper_table : (ModPath.t, string * wrapper_role) Hashtbl.t =
+  owned_table "wrapper_table"
 
-(** Module paths a collision wrapper absorbed without a collision of their own.
-    These keep their own nesting inside the wrapper struct, so
-    {!wrapper_qualify_name} puts the wrapper's name in front of theirs rather
-    than in place of it. *)
-let wrapper_bystander_table : (ModPath.t, unit) Hashtbl.t =
-  owned_table "wrapper_bystander_table"
+let wrapper_struct mp = Option.map fst (Hashtbl.find_opt wrapper_table mp)
+
+let wrapper_role mp = Option.map snd (Hashtbl.find_opt wrapper_table mp)
+
+(** Record [mp]'s wrapper struct.  [role] defaults to the one already
+    recorded, and to [Own] where there is none. *)
+let register_wrapper ?role mp name =
+  let role =
+    match (role, wrapper_role mp) with
+    | Some r, _ -> r
+    | None, Some r -> r
+    | None, None -> Own
+  in
+  Hashtbl.replace wrapper_table mp (name, role)
 
 (** The name each type class's concept is emitted under, for the classes whose
     own name does not settle it: a concept is declared at file scope, so two
@@ -945,25 +957,23 @@ let wrapper_qualify_name (r : GlobRef.t) (name : string) : string =
     name
   | _ ->
     let mp = modpath_of_r r in
-    ( match Hashtbl.find_opt wrapper_module_table mp with
-    | Some struct_name when not (String.contains name ':') ->
+    ( match Hashtbl.find_opt wrapper_table mp with
+    | Some (struct_name, role) when not (String.contains name ':') ->
       (* A bare name is the one a use written inside the reference's own module
          would say, and the wrapper's name alone does not get back to it: a
          bystander keeps its own struct, so the path runs through that struct
          too.  Flattened children have no struct left to name, and for them the
          wrapper's name is the whole of it. *)
       let through_child =
-        if Hashtbl.mem wrapper_bystander_table mp then
-          Common.emitted_module_name mp ^ "::"
-        else ""
+        if role = Bystander then Common.emitted_module_name mp ^ "::" else ""
       in
       struct_name ^ "::" ^ through_child ^ name
-    | Some struct_name when String.contains name ':' ->
+    | Some (struct_name, role) when String.contains name ':' ->
       (* Name is already qualified (e.g., "N::add" from visibility stack). Only
          strip the child qualifier for collision-wrapped entries (e.g., BinNat
          wrapping N). For normal wrappers (e.g., List wrapping list), keep the
          full qualification. *)
-      if Hashtbl.mem collision_wrapper_table mp then
+      if role = Flattened then
         match
           String.index_opt name ':'
         with
@@ -976,7 +986,7 @@ let wrapper_qualify_name (r : GlobRef.t) (name : string) : string =
           in
           struct_name ^ "::" ^ func_part
         | _ -> name
-      else if Hashtbl.mem wrapper_bystander_table mp then
+      else if role = Bystander then
         (* Nested rather than flattened: the child's own qualifier stays and the
            wrapper's name goes in front of it, unless it is already there. *)
         let prefix = struct_name ^ "::" in
@@ -999,14 +1009,11 @@ let wrapper_qualify_name (r : GlobRef.t) (name : string) : string =
     argument needs [typename], and that decision is left alone: a bystander's
     struct is a concrete one, never dependent. *)
 let wrapper_qualify_modname (mp : ModPath.t) (name : string) : string =
-  if not (Hashtbl.mem wrapper_bystander_table mp) then
-    name
-  else
-    match Hashtbl.find_opt wrapper_module_table mp with
-    | Some struct_name ->
-      let prefix = struct_name ^ "::" in
-      if String.starts_with ~prefix name then name else prefix ^ name
-    | None -> name
+  match Hashtbl.find_opt wrapper_table mp with
+  | Some (struct_name, Bystander) ->
+    let prefix = struct_name ^ "::" in
+    if String.starts_with ~prefix name then name else prefix ^ name
+  | _ -> name
 
 (** Register a method with the method registry.
     @param func_ref the global reference of the function being registered as a method

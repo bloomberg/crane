@@ -23,7 +23,7 @@
     {2 Usage}
 
     {[
-      let nrc = Name_resolution.create analysis wrapper_module_table ... in
+      let nrc = Name_resolution.create ~structure_analysis:analysis ... in
       match Name_resolution.resolve_type nrc r with
       | Some name -> (* use pre-resolved name *)
       | None -> (* fall back to current logic *)
@@ -63,10 +63,8 @@ type resolved_term_name = {
 
 (** Create a name resolution cache from analysis results. Should be called once
     per extraction pass, after Structure_analysis.analyze and after
-    wrapper_module_table / collision_wrapper_table are populated.
+    the wrapper table is populated.
     @param structure_analysis the result of {!Structure_analysis.analyze}
-    @param wrapper_modules table mapping module paths to their wrapper struct names
-    @param collision_wrappers set of module paths whose wrapper names collide
       with an inductive from another module
     @param global_scope_enums set of enum inductives that appear at global scope
     @param eponymous_records set of inductive references that are eponymous records
@@ -74,8 +72,6 @@ type resolved_term_name = {
     @return a freshly built name resolution cache *)
 val create :
   structure_analysis:Structure_analysis.t ->
-  wrapper_modules:(ModPath.t, string) Hashtbl.t ->
-  collision_wrappers:(ModPath.t, unit) Hashtbl.t ->
   global_scope_enums:(GlobRef.t, unit) Hashtbl.t ->
   eponymous_records:(GlobRef.t, unit) Hashtbl.t ->
   unmerged:(string, unit) Hashtbl.t ->

@@ -152,8 +152,6 @@ let classify_inductive
     classifications for all inductive types without side effects. *)
 let create
     ~structure_analysis:_
-    ~wrapper_modules:_
-    ~collision_wrappers:_
     ~global_scope_enums
     ~eponymous_records
     ~unmerged

@@ -337,19 +337,26 @@ val is_typeclass_instance : 'a -> Miniml.ml_type -> bool
 
 (** {2 Wrapper and scope tables} *)
 
-(** Tables tracking wrapper modules, collisions, and global-scope entities. *)
-val wrapper_module_table : (Names.ModPath.t, string) Hashtbl.t
+(** How a module sits in the wrapper struct it is emitted in. *)
+type wrapper_role =
+  | Own  (** The wrapper is the module's own struct. *)
+  | Flattened
+      (** A colliding child flattened into its parent's struct: its own
+          qualifier is stripped. *)
+  | Bystander
+      (** A child absorbed without a collision of its own: it keeps its own
+          nesting under the wrapper's name. *)
 
-(** Module paths that were collision-wrapped (a child module whose name clashes
-    with a global inductive, folded into a parent struct); for these,
-    [wrapper_qualify_name] strips the child qualifier. Cleared by
-    [reset_cpp_state]. *)
-val collision_wrapper_table : (Names.ModPath.t, unit) Hashtbl.t
+(** Module paths emitted inside a wrapper struct, with the struct's name and
+    their role in it. *)
+val wrapper_table : (Names.ModPath.t, string * wrapper_role) Hashtbl.t
 
-(** Module paths a collision wrapper absorbed without a collision of their own;
-    for these, [wrapper_qualify_name] prepends the wrapper's name to the child's
-    own qualifier instead of replacing it. Cleared by [reset_cpp_state]. *)
-val wrapper_bystander_table : (Names.ModPath.t, unit) Hashtbl.t
+val wrapper_struct : Names.ModPath.t -> string option
+val wrapper_role : Names.ModPath.t -> wrapper_role option
+
+(** Record a module's wrapper struct.  [role] defaults to the one already
+    recorded, and to [Own] where there is none. *)
+val register_wrapper : ?role:wrapper_role -> Names.ModPath.t -> string -> unit
 
 (** [wrapper_qualify_modname mp name] re-roots [name] at the wrapper struct
     holding [mp], when [mp] is a bystander that struct nests under its own name.

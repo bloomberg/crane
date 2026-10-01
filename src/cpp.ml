@@ -2138,23 +2138,18 @@ let install_analysis
   List.iter register_eponymous_record eponymous_records;
   List.iter Common.register_namespace_scope_ref lifted_instances;
   List.iter
-    (fun (mp, name) ->
-      Hashtbl.replace wrapper_module_table mp name;
-      Hashtbl.replace collision_wrapper_table mp () )
+    (fun (mp, name) -> register_wrapper ~role:Flattened mp name)
     collision_wrappers;
-  (* Only [wrapper_module_table]: a bystander is nested inside the wrapper, not
-     flattened into it, and [collision_wrapper_table] is what says "flattened". *)
+  (* A bystander is nested inside the wrapper, not flattened into it. *)
   List.iter
-    (fun (mp, name) ->
-      Hashtbl.replace wrapper_module_table mp name;
-      Hashtbl.replace wrapper_bystander_table mp () )
+    (fun (mp, name) -> register_wrapper ~role:Bystander mp name)
     wrapper_bystanders;
   List.iter
     (fun (mi : Structure_analysis.module_info) ->
       match mi.wrapper_name with
       | None -> ()
       | Some name ->
-        Hashtbl.replace wrapper_module_table mi.modpath name;
+        register_wrapper mi.modpath name;
         (* Not everything a wrapper module declares ends up inside the wrapper
            struct.  A type alias is emitted at global C++ scope as
            [using T = ...;], and a type class instance is lifted out to
@@ -2585,8 +2580,6 @@ let do_struct_with_decl_tracking ~is_header f s =
     Some
       (Name_resolution.create
          ~structure_analysis:analysis
-         ~wrapper_modules:wrapper_module_table
-         ~collision_wrappers:collision_wrapper_table
          ~global_scope_enums:global_scope_enum_table
          ~eponymous_records:global_eponymous_record_registry
          ~unmerged:unmerged_wrappers
@@ -2658,14 +2651,15 @@ let do_struct_with_decl_tracking ~is_header f s =
            layout, decided by {!Structure_analysis} before any rendering began;
            here we only read the answer back. *)
         let is_colliding_child l _se =
-          Hashtbl.mem collision_wrapper_table (MPdot (mp, l))
+          wrapper_role (MPdot (mp, l)) = Some Flattened
         in
         (* Whether a wrapper formed is not the same question as which children
            it flattens: a bystander is recorded only when one did, so a child
            in either table says the struct is there to be written. *)
         let is_wrapped_child l =
-          Hashtbl.mem collision_wrapper_table (MPdot (mp, l))
-          || Hashtbl.mem wrapper_bystander_table (MPdot (mp, l))
+          match wrapper_role (MPdot (mp, l)) with
+          | Some (Flattened | Bystander) -> true
+          | Some Own | None -> false
         in
         let has_child_collision =
           List.exists
@@ -2681,7 +2675,7 @@ let do_struct_with_decl_tracking ~is_header f s =
               (fun (l, se) ->
                 match se with
                 | SEmodule _ when is_wrapped_child l ->
-                  Hashtbl.find_opt wrapper_module_table (MPdot (mp, l))
+                  wrapper_struct (MPdot (mp, l))
                 | _ -> None )
               sel
             |> Option.default
