@@ -43,12 +43,18 @@
 // see [sum1_erased].
 crane::obj crane_injected_response(crane::obj response);
 
+// What a [Ret] leaf holds: the result, or [std::monostate] for a tree whose
+// result is [unit] and spelled [void].
+template <typename R> struct itree_value { using type = R; };
+template <> struct itree_value<void> { using type = std::monostate; };
+
 template <typename R>
 struct ITree : public std::enable_shared_from_this<ITree<R>> {
     // The tree's own result type, for helpers that have only the pointer.
     using result_type = R;
+    using value_type = typename itree_value<R>::type;
 
-    struct Ret { R value; };
+    struct Ret { value_type value{}; };
     struct Tau { std::shared_ptr<ITree<R>> next; };
     struct Vis {
         std::function<crane::obj()> effect;
@@ -96,8 +102,13 @@ struct ITree : public std::enable_shared_from_this<ITree<R>> {
         return std::make_shared<ITree<R>>(Private{}, std::move(next));
     }
 
-    static std::shared_ptr<ITree<R>> ret(R value) {
+    static std::shared_ptr<ITree<R>> ret(value_type value) {
         return std::make_shared<ITree<R>>(Private{}, Ret{std::move(value)});
+    }
+    static std::shared_ptr<ITree<R>> ret()
+        requires std::is_void_v<R>
+    {
+        return ret(std::monostate{});
     }
     static std::shared_ptr<ITree<R>> tau(std::shared_ptr<ITree<R>> next) {
         if (!next)
@@ -123,105 +134,12 @@ struct ITree : public std::enable_shared_from_this<ITree<R>> {
             // moving out of a shared node would corrupt it for later runs
             // (finding 37, CWE-664).
             const auto &n = cur->observe();
-            if (auto *r = std::get_if<Ret>(&n))
-                return r->value;
-            if (auto *t = std::get_if<Tau>(&n)) {
-                if (!t->next)
-                    throw std::runtime_error("crane: ITree Tau has a null next");
-                cur = t->next;
-                continue;
+            if (auto *r = std::get_if<Ret>(&n)) {
+                if constexpr (std::is_void_v<R>)
+                    return;
+                else
+                    return r->value;
             }
-            auto &v = std::get<Vis>(n);
-            crane::obj response = crane_injected_response(v.effect());
-            auto next = v.cont(std::move(response));
-            if (!next)
-                throw std::runtime_error("crane: ITree Vis continuation returned null");
-            cur = std::move(next);
-        }
-    }
-    const variant_t &observe() const {
-        if (pending) {
-            auto next = std::exchange(pending, nullptr)();
-            if (!next)
-                throw std::runtime_error("crane: a delayed ITree Tau has a null next");
-            node = Tau{std::move(next)};
-        }
-        return node;
-    }
-};
-
-// Void specialization (Ret holds nothing).
-template <>
-struct ITree<void> : public std::enable_shared_from_this<ITree<void>> {
-    using result_type = void;
-
-    struct Ret { std::monostate value = {}; };
-    struct Tau { std::shared_ptr<ITree<void>> next; };
-    struct Vis {
-        std::function<crane::obj()> effect;
-        std::function<std::shared_ptr<ITree<void>>(crane::obj)> cont;
-    };
-    using variant_t = std::variant<Ret, Tau, Vis>;
-
-  private:
-    mutable variant_t node;
-    mutable crane::fn<std::shared_ptr<ITree<void>>()> pending;
-
-    struct Private { explicit Private() = default; };
-
-  public:
-    ITree(Private, variant_t n) : node(std::move(n)) {}
-    ITree(Private, crane::fn<std::shared_ptr<ITree<void>>()> p)
-        : node(Tau{}), pending(std::move(p)) {}
-
-    // A [Tau] chain is as long as the loop that built it, so it is torn down
-    // a link at a time rather than by each node's destructor calling the
-    // next one's.
-    ~ITree() {
-        auto *t = std::get_if<Tau>(&node);
-        if (!t)
-            return;
-        std::shared_ptr<ITree<void>> next = std::move(t->next);
-        while (next && next.use_count() == 1) {
-            auto *nt = std::get_if<Tau>(&next->node);
-            if (!nt)
-                break;
-            next = std::shared_ptr<ITree<void>>(std::move(nt->next));
-        }
-    }
-
-    static std::shared_ptr<ITree<void>> delay(
-        crane::fn<std::shared_ptr<ITree<void>>()> next) {
-        return std::make_shared<ITree<void>>(Private{}, std::move(next));
-    }
-
-    static std::shared_ptr<ITree<void>> ret() {
-        return std::make_shared<ITree<void>>(Private{}, Ret{});
-    }
-    static std::shared_ptr<ITree<void>> ret(std::monostate) {
-        return std::make_shared<ITree<void>>(Private{}, Ret{});
-    }
-    static std::shared_ptr<ITree<void>> tau(std::shared_ptr<ITree<void>> next) {
-        if (!next)
-            throw std::invalid_argument("crane: ITree::tau given a null next");
-        return std::make_shared<ITree<void>>(Private{}, Tau{std::move(next)});
-    }
-    static std::shared_ptr<ITree<void>> vis(
-        std::function<crane::obj()> effect,
-        std::function<std::shared_ptr<ITree<void>>(crane::obj)> cont) {
-        if (!effect || !cont)
-            throw std::invalid_argument("crane: ITree::vis given a null effect or continuation");
-        return std::make_shared<ITree<void>>(Private{}, Vis{std::move(effect), std::move(cont)});
-    }
-
-    void run() {
-        // Owning reference (not a non-owning alias of [this]): an effect or
-        // continuation may release the last other owner mid-run (finding 86).
-        auto cur = this->shared_from_this();
-        while (true) {
-            const auto &n = cur->observe();
-            if (std::holds_alternative<Ret>(n))
-                return;
             if (auto *t = std::get_if<Tau>(&n)) {
                 if (!t->next)
                     throw std::runtime_error("crane: ITree Tau has a null next");
@@ -278,8 +196,10 @@ decltype(auto) crane_itree_apply(K &k, const A &value) {
 
 template<typename A, typename K>
 auto itree_bind(std::shared_ptr<ITree<A>> m, K k)
-    -> decltype(crane_itree_apply(k, std::declval<const A &>())) {
-    using tree_b = decltype(crane_itree_apply(k, std::declval<const A &>()));
+    -> decltype(crane_itree_apply(
+        k, std::declval<const typename ITree<A>::value_type &>())) {
+    using tree_b = decltype(crane_itree_apply(
+        k, std::declval<const typename ITree<A>::value_type &>()));
     using node_b = typename tree_b::element_type;
     if (!m)
         throw std::invalid_argument("crane: itree_bind given a null tree");
@@ -290,28 +210,6 @@ auto itree_bind(std::shared_ptr<ITree<A>> m, K k)
         return node_b::delay(
             [next = t->next, k]() -> tree_b { return itree_bind(next, k); });
     auto &v = std::get<typename ITree<A>::Vis>(n);
-    auto cont = v.cont;
-    return node_b::vis(
-        v.effect,
-        std::function<tree_b(crane::obj)>(
-            [cont, k](crane::obj x) { return itree_bind(cont(std::move(x)), k); }));
-}
-
-// Bind specialization for void first argument.
-template<typename K>
-auto itree_bind(std::shared_ptr<ITree<void>> m, K k)
-    -> decltype(k()) {
-    using tree_b = decltype(k());
-    using node_b = typename tree_b::element_type;
-    if (!m)
-        throw std::invalid_argument("crane: itree_bind given a null tree");
-    const auto &n = m->observe();
-    if (std::get_if<typename ITree<void>::Ret>(&n))
-        return k();
-    if (auto *t = std::get_if<typename ITree<void>::Tau>(&n))
-        return node_b::delay(
-            [next = t->next, k]() -> tree_b { return itree_bind(next, k); });
-    auto &v = std::get<typename ITree<void>::Vis>(n);
     auto cont = v.cont;
     return node_b::vis(
         v.effect,

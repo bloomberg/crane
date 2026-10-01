@@ -388,29 +388,17 @@ template <class Dst, class Src> Dst crane_container_cast(Src &&src) {
     return crane_container_cast_impl<Dst>(std::forward<Src>(src));
 }
 
-// Whether [crane_convert<Dst>] has a route from [Src]: one disjunct per
-// branch of the dispatch below, in the same order.  A generated converting
-// constructor asks this before converting, because it is written for every
-// field of every constructor and only the source's own constructor is ever
-// reached -- a field of some other one may have no route at all, and saying
-// so is not an error.
-template <class Dst, class Src>
-concept crane_convertible =
-    std::is_same_v<Dst, std::remove_cvref_t<Src>> ||
-    std::is_same_v<std::remove_cvref_t<Src>, crane::obj> ||
-    requires(Src &&s) {
-      crane_cast_to(crane_tag<Dst>{}, std::forward<Src>(s));
-    } || std::is_constructible_v<Dst, Src> ||
-    requires { typename Dst::value_type; };
+// The routes [crane_convert<Dst>] has from [Src], in the order it tries them.
+// One function decides, and both the conversion and the question of whether
+// there is one read its answer, so the two cannot drift apart.
+enum class crane_route { identity, unbox, box_all_any, hook, construct, walk, none };
 
-// A value reaching a slot spelled at another instantiation of its own type.
-// Conversion is the ordinary answer; a carrier that cannot be constructed
-// from itself at another element type answers through [crane_cast_to].
-template <class Dst, class Src> Dst crane_convert(Src &&src) {
-  if constexpr (std::is_same_v<Dst, std::remove_cvref_t<Src>>)
-    return std::forward<Src>(src);
-  else if constexpr (std::is_same_v<std::remove_cvref_t<Src>, crane::obj>)
-    return crane_any_cast<Dst>(src);
+template <class Dst, class Src> consteval crane_route crane_convert_route() {
+  using S = std::remove_cvref_t<Src>;
+  if constexpr (std::is_same_v<Dst, S>)
+    return crane_route::identity;
+  else if constexpr (std::is_same_v<S, crane::obj>)
+    return crane_route::unbox;
   // Into a box, a generated inductive goes at the instantiation code that
   // erased its parameters reads it at -- the all-[crane::obj] one (see
   // [crane_all_any]) -- and a reader at a concrete instantiation recovers it
@@ -418,28 +406,53 @@ template <class Dst, class Src> Dst crane_convert(Src &&src) {
   // inside an event already boxed at [Sum1<any, any, any>] is read by the
   // inner [case_] at the same shape.
   else if constexpr (std::is_same_v<Dst, crane::obj> &&
-                     requires {
-                       typename crane_all_any<std::remove_cvref_t<Src>>::type;
-                     }) {
+                     requires { typename crane_all_any<S>::type; })
+    return crane_route::box_all_any;
+  else if constexpr (requires(Src &&s) {
+                       crane_cast_to(crane_tag<Dst>{}, std::forward<Src>(s));
+                     })
+    return crane_route::hook;
+  else if constexpr (std::is_constructible_v<Dst, Src>)
+    return crane_route::construct;
+  else if constexpr (requires { typename Dst::value_type; })
+    return crane_route::walk;
+  else
+    return crane_route::none;
+}
+
+// Whether [crane_convert<Dst>] has a route from [Src].  A generated
+// converting constructor asks this before converting, because it is written
+// for every field of every constructor and only the source's own constructor
+// is ever reached -- a field of some other one may have no route at all, and
+// saying so is not an error.
+template <class Dst, class Src>
+concept crane_convertible = crane_convert_route<Dst, Src>() != crane_route::none;
+
+// A value reaching a slot spelled at another instantiation of its own type.
+// Conversion is the ordinary answer; a carrier that cannot be constructed
+// from itself at another element type answers through [crane_cast_to].
+template <class Dst, class Src> Dst crane_convert(Src &&src) {
+  constexpr crane_route route = crane_convert_route<Dst, Src>();
+  if constexpr (route == crane_route::identity)
+    return std::forward<Src>(src);
+  else if constexpr (route == crane_route::unbox)
+    return crane_any_cast<Dst>(src);
+  else if constexpr (route == crane_route::box_all_any) {
     using S = std::remove_cvref_t<Src>;
     using E = typename crane_all_any<S>::type;
     if constexpr (!std::is_same_v<E, S> && std::is_constructible_v<E, const S &>)
       return crane::obj(E(src));
     else
       return crane::obj(std::forward<Src>(src));
-  }
-  else if constexpr (requires {
-                       crane_cast_to(crane_tag<Dst>{}, std::forward<Src>(src));
-                     })
+  } else if constexpr (route == crane_route::hook)
     return crane_cast_to(crane_tag<Dst>{}, std::forward<Src>(src));
-  else if constexpr (std::is_constructible_v<Dst, Src>)
+  else if constexpr (route == crane_route::construct)
     return Dst(std::forward<Src>(src));
-  else if constexpr (requires { typename Dst::value_type; })
+  else if constexpr (route == crane_route::walk)
     return crane_container_cast_impl<Dst>(std::forward<Src>(src));
   else
-    // [!crane_convertible<Dst, Src>]: let the conversion itself be the
-    // diagnostic, rather than a failure inside machinery the reader did not
-    // write.
+    // No route: let the conversion itself be the diagnostic, rather than a
+    // failure inside machinery the reader did not write.
     return Dst(std::forward<Src>(src));
 }
 
