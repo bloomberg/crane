@@ -1,9 +1,8 @@
 #ifndef INCLUDED_POLY_FN_AS_ARG_TVAR_LEAK
 #define INCLUDED_POLY_FN_AS_ARG_TVAR_LEAK
 
-#include "small_vector.h"
+#include "fn.h"
 #include <atomic>
-#include <functional>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -39,22 +38,18 @@ public:
 
   // MANIPULATORS
   ~Nat() {
-    crane::small_vector<std::shared_ptr<Nat>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<Nat> {
       if (auto *_alt = std::get_if<S>(&_v)) {
-        if (_alt->a0) {
-          _stack.push_back(std::move(_alt->a0));
+        if (_alt->a0 && _alt->a0.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a0);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<Nat> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -80,11 +75,11 @@ struct PolyFnAsArgTvarLeak {
   }
 
   static inline const Nat run = []() {
-    return twice<std::function<Nat(Nat)>>(
-        [](std::function<Nat(Nat)> _ec0) {
-          return [=](Nat _ec1) mutable { return twice<Nat>(_ec0, _ec1); };
+    return twice<crane::fn<Nat(Nat)>>(
+        [](crane::fn<Nat(Nat)> _ec0) {
+          return [=](Nat _ec1) { return twice<Nat>(_ec0, _ec1); };
         },
-        [](Nat x) { return Nat::s(x); })(Nat::o());
+        [](const Nat &x) { return Nat::s(x); })(Nat::o());
   }();
 };
 

@@ -2,12 +2,12 @@
 #define INCLUDED_DECL_ORDER_METHOD_CALL
 
 #include "crane_fn.h"
-#include "small_vector.h"
+#include "obj.h"
 #include <any>
 #include <atomic>
 #include <memory>
 #include <optional>
-#include <type_traits>
+#include <stdexcept>
 #include <utility>
 #include <variant>
 
@@ -37,21 +37,26 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U> List(const List<_U> &_other) {
-    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->v_ = Nil{};
-    } else {
-      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>) {
-                          return crane_any_cast<A>(a);
-                        } else {
-                          return A(a);
-                        }
-                      }(),
-                      (l ? std::make_shared<List<A>>(*l) : nullptr)};
-    }
-  }
+  template <typename _U>
+  List(const List<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+            return Nil{};
+          } else {
+            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const _U &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                   : nullptr)};
+          }
+        }()) {}
 
   static List<A> nil() { return List<A>(Nil{}); }
 
@@ -61,22 +66,18 @@ public:
 
   // MANIPULATORS
   ~List() {
-    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
-        if (_alt->l) {
-          _stack.push_back(std::move(_alt->l));
+        if (_alt->l && _alt->l.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->l);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<List<A>> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -127,7 +128,7 @@ public:
 struct Regs {
   template <typename T1>
   static std::optional<List<T1>> replace_nth(const List<T1> &l, uint64_t i,
-                                             T1 x);
+                                             const T1 &x);
   static std::optional<List<Rv>> write_r(const List<Rv> &x0_, uint64_t x1_,
                                          const Rv &x2_);
 };
@@ -173,7 +174,8 @@ const bool out_of_range = []() -> bool {
 }();
 
 template <typename T1>
-std::optional<List<T1>> Regs::replace_nth(const List<T1> &l, uint64_t i, T1 x) {
+std::optional<List<T1>> Regs::replace_nth(const List<T1> &l, uint64_t i,
+                                          const T1 &x) {
   if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
     return std::optional<List<T1>>();
   } else {

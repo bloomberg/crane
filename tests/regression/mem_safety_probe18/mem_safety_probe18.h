@@ -2,11 +2,13 @@
 #define INCLUDED_MEM_SAFETY_PROBE18
 
 #include "crane_fn.h"
+#include "fn.h"
+#include "obj.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
-#include <functional>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -59,10 +61,10 @@ struct MemSafetyProbe18 {
       crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a2) {
+          if (_alt->a2 && _alt->a2.use_count() == 1) {
             _stack.push_back(std::move(_alt->a2));
           }
         }
@@ -102,7 +104,7 @@ struct MemSafetyProbe18 {
     uint64_t chain_transforms() const {
       tree t1 = tree::node(*this, UINT64_C(0), tree::leaf());
       tree t2 = tree::node(tree::leaf(), UINT64_C(0), std::move(t1));
-      tree t3 = tree::node(std::move(t2), UINT64_C(0), std::move(*this));
+      tree t3 = tree::node(std::move(t2), UINT64_C(0), *this);
       return std::move(t3).tree_sum();
     }
 
@@ -199,7 +201,7 @@ struct MemSafetyProbe18 {
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
-        std::decay_t<T1> _result;
+        T1 _result;
         tree a2;
         uint64_t a1;
         tree a0;
@@ -261,7 +263,7 @@ struct MemSafetyProbe18 {
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
-        std::decay_t<T1> _result;
+        T1 _result;
         tree a2;
         uint64_t a1;
         tree a0;
@@ -324,22 +326,29 @@ struct MemSafetyProbe18 {
 
     explicit mylist(Mycons _v) : v_(std::move(_v)) {}
 
-    template <typename _U> mylist(const mylist<_U> &_other) {
-      if (std::holds_alternative<typename mylist<_U>::Mynil>(_other.v())) {
-        this->v_ = Mynil{};
-      } else {
-        const auto &[a0, a1] =
-            std::get<typename mylist<_U>::Mycons>(_other.v());
-        this->v_ = Mycons{[&]() -> A {
-                            if constexpr (std::is_same_v<_U, std::any>) {
-                              return crane_any_cast<A>(a0);
-                            } else {
-                              return A(a0);
-                            }
-                          }(),
-                          (a1 ? std::make_shared<mylist<A>>(*a1) : nullptr)};
-      }
-    }
+    template <typename _U>
+    mylist(const mylist<_U> &_other)
+        : v_([&]() -> variant_t {
+            if (std::holds_alternative<typename mylist<_U>::Mynil>(
+                    _other.v())) {
+              return Mynil{};
+            } else {
+              const auto &[a0, a1] =
+                  std::get<typename mylist<_U>::Mycons>(_other.v());
+              return Mycons{[&]() -> A {
+                              if constexpr (crane_convertible<A, const _U &>) {
+                                return crane_convert<A>(a0);
+                              } else {
+                                throw std::logic_error(
+                                    "unreachable: inactive constructor field "
+                                    "at this instantiation");
+                              }
+                            }(),
+                            (a1 ? std::make_shared<mylist<A>>(
+                                      crane_convert<mylist<A>>(*a1))
+                                : nullptr)};
+            }
+          }()) {}
 
     static mylist<A> mynil() { return mylist<A>(Mynil{}); }
 
@@ -350,22 +359,18 @@ struct MemSafetyProbe18 {
 
     // MANIPULATORS
     ~mylist() {
-      crane::small_vector<std::shared_ptr<mylist<A>>> _stack = {};
-      auto _drain = [&](variant_t &_v) {
+      auto _next = [&](variant_t &_v) -> std::shared_ptr<mylist<A>> {
         if (auto *_alt = std::get_if<Mycons>(&_v)) {
-          if (_alt->a1) {
-            _stack.push_back(std::move(_alt->a1));
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
+            return std::move(_alt->a1);
           }
         }
+        return nullptr;
       };
-      _drain(v_mut());
-      while (!_stack.empty()) {
-        auto _cur = std::move(_stack.back());
-        _stack.pop_back();
-        if (_cur.use_count() == 1) {
-          std::atomic_thread_fence(std::memory_order_acquire);
-          _drain(_cur->v_mut());
-        }
+      std::shared_ptr<mylist<A>> _cur = _next(v_mut());
+      while (_cur) {
+        _cur = _next(_cur->v_mut());
       }
     }
 
@@ -441,7 +446,7 @@ struct MemSafetyProbe18 {
       /// _result.
       struct _Resume_Mycons {
         mylist<A> a1;
-        std::decay_t<A> a0;
+        A a0;
       };
 
       using _Frame = std::variant<_Enter, _Resume_Mycons>;
@@ -486,7 +491,7 @@ struct MemSafetyProbe18 {
       /// _result.
       struct _Resume_Mycons {
         mylist<A> a1;
-        std::decay_t<A> a0;
+        A a0;
       };
 
       using _Frame = std::variant<_Enter, _Resume_Mycons>;
@@ -540,7 +545,7 @@ struct MemSafetyProbe18 {
   static inline const uint64_t test_apply_twice = []() {
     return []() {
       tree t = tree::node(tree::leaf(), UINT64_C(7), tree::leaf());
-      std::function<uint64_t(uint64_t)> f = [=](uint64_t n) mutable {
+      crane::fn<uint64_t(uint64_t)> f = [=](uint64_t n) {
         return (t.tree_sum() + n);
       };
       return apply_twice(f, UINT64_C(0));
@@ -628,7 +633,7 @@ struct MemSafetyProbe18 {
   }();
   /// TEST 8: Nested constructor building: build a list of trees
   /// using the same tree in different positions.
-  static mylist<tree> build_tree_list(tree t, uint64_t n);
+  static mylist<tree> build_tree_list(const tree &t, uint64_t n);
   static uint64_t sum_tree_list(const mylist<tree> &l);
   static inline const uint64_t test_build_tree_list = []() {
     tree t = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());

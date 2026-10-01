@@ -2,12 +2,14 @@
 #define INCLUDED_HALIST_DEPENDENT_VALUE
 
 #include "crane_fn.h"
+#include "fn.h"
+#include "obj.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
-#include <functional>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -15,6 +17,10 @@
 template <typename A> struct List;
 template <typename A> struct Sig;
 template <typename A, typename P> struct SigT;
+
+struct Sumbool {
+  static Sig<bool> bool_of_sumbool(bool s);
+};
 
 template <typename A> struct List {
   // TYPES
@@ -39,21 +45,26 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U> List(const List<_U> &_other) {
-    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->v_ = Nil{};
-    } else {
-      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>) {
-                          return crane_any_cast<A>(a);
-                        } else {
-                          return A(a);
-                        }
-                      }(),
-                      (l ? std::make_shared<List<A>>(*l) : nullptr)};
-    }
-  }
+  template <typename _U>
+  List(const List<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+            return Nil{};
+          } else {
+            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const _U &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                   : nullptr)};
+          }
+        }()) {}
 
   static List<A> nil() { return List<A>(Nil{}); }
 
@@ -63,22 +74,18 @@ public:
 
   // MANIPULATORS
   ~List() {
-    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
-        if (_alt->l) {
-          _stack.push_back(std::move(_alt->l));
+        if (_alt->l && _alt->l.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->l);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<List<A>> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -167,6 +174,17 @@ template <typename A> struct Sig {
   // ACCESSORS
   Sig<A> clone() const { return {x}; }
 
+  template <typename _U> operator Sig<_U>() const {
+    return {[&]() -> _U {
+      if constexpr (crane_convertible<_U, const A &>) {
+        return crane_convert<_U>(x);
+      } else {
+        throw std::logic_error(
+            "unreachable: inactive constructor field at this instantiation");
+      }
+    }()};
+  }
+
   // CREATORS
   static Sig<A> exist(A x) { return {std::move(x)}; }
 };
@@ -179,6 +197,25 @@ template <typename A, typename P> struct SigT {
   // ACCESSORS
   SigT<A, P> clone() const { return {x, a1}; }
 
+  template <typename _U0, typename _U1> operator SigT<_U0, _U1>() const {
+    return {[&]() -> _U0 {
+              if constexpr (crane_convertible<_U0, const A &>) {
+                return crane_convert<_U0>(x);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }(),
+            [&]() -> _U1 {
+              if constexpr (crane_convertible<_U1, const P &>) {
+                return crane_convert<_U1>(a1);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }()};
+  }
+
   // CREATORS
   static SigT<A, P> existt(A x, P a1) { return {std::move(x), std::move(a1)}; }
 
@@ -188,28 +225,27 @@ template <typename A, typename P> struct SigT {
   }
 };
 
-template <typename a> using EqDec = std::function<bool(a, a)>;
+template <typename a> using EqDec = crane::fn<bool(a, a)>;
 
 struct EquivDec {
   template <typename T1>
-  static bool equiv_dec(EqDec<T1> eqDec, const T1 &x0_, T1 x1_);
-};
-
-struct Sumbool {
-  static Sig<bool> bool_of_sumbool(bool s);
+  static bool equiv_dec(std::type_identity_t<EqDec<T1>> eqDec, const T1 &x0_,
+                        T1 x1_);
 };
 
 template <typename k, typename v> using halist = List<SigT<k, v>>;
 
 struct HAList0 {
   template <typename T1, typename T2>
-  static halist<T1, T2> halist_remove(EqDec<T1> eq, const T1 &k,
-                                      const List<SigT<T1, T2>> &m);
+  static halist<T1, T2> halist_remove(std::type_identity_t<EqDec<T1>> eq,
+                                      const T1 &k, const List<SigT<T1, T2>> &m);
   template <typename T1, typename T2>
-  static halist<T1, T2> halist_add(EqDec<T1> eq, T1 k, T2 v,
+  static halist<T1, T2> halist_add(std::type_identity_t<EqDec<T1>> eq,
+                                   const T1 &k, const T2 &v,
                                    const List<SigT<T1, T2>> &m);
   template <typename T1, typename T2>
-  static std::optional<T2> halist_lookup(EqDec<T1> eq, const T1 &k,
+  static std::optional<T2> halist_lookup(std::type_identity_t<EqDec<T1>> eq,
+                                         const T1 &k,
                                          const List<SigT<T1, T2>> &l);
 };
 
@@ -247,8 +283,8 @@ struct HalistDependentValue {
     }
   }
 
-  using vty = std::any;
-  static inline const EqDec<Key> keyEq = [](Key x, Key y) {
+  using vty = crane::obj;
+  static inline const EqDec<Key> keyEq = [](Key x, Key y) -> bool {
     switch (x) {
     case Key::KNAT: {
       switch (y) {
@@ -280,22 +316,22 @@ struct HalistDependentValue {
       std::unreachable();
     }
   };
-  static inline const halist<Key, vty> m0 = List<SigT<Key, std::any>>::nil();
+  static inline const halist<Key, vty> m0 = List<SigT<Key, crane::obj>>::nil();
   static inline const halist<Key, vty> m1 =
-      HAList0::halist_add(keyEq, Key::KNAT, std::any(UINT64_C(7)), m0);
+      HAList0::halist_add(keyEq, Key::KNAT, crane::obj(UINT64_C(7)), m0);
   static inline const halist<Key, vty> m2 = HAList0::halist_add(
       keyEq, Key::KLIST,
-      std::any(List<std::any>::cons(
+      crane::obj(List<crane::obj>::cons(
           UINT64_C(1),
-          List<std::any>::cons(
+          List<crane::obj>::cons(
               UINT64_C(2),
-              List<std::any>::cons(UINT64_C(3), List<std::any>::nil())))),
+              List<crane::obj>::cons(UINT64_C(3), List<crane::obj>::nil())))),
       m1);
   static inline const uint64_t run = ([]() -> uint64_t {
     auto _cs = HAList0::halist_lookup(keyEq, Key::KNAT, m2);
     if (_cs.has_value()) {
       const auto &n = *_cs;
-      return std::any_cast<uint64_t>(n);
+      return crane::any_cast<uint64_t>(n);
     } else {
       return UINT64_C(0);
     }
@@ -303,7 +339,7 @@ struct HalistDependentValue {
     auto _cs1 = HAList0::halist_lookup(keyEq, Key::KLIST, m2);
     if (_cs1.has_value()) {
       const auto &l = *_cs1;
-      return List<uint64_t>(std::any_cast<List<std::any>>(l)).length();
+      return List<uint64_t>(crane::any_cast<List<crane::obj>>(l)).length();
     } else {
       return UINT64_C(0);
     }
@@ -311,15 +347,17 @@ struct HalistDependentValue {
 };
 
 template <typename T1>
-bool EquivDec::equiv_dec(EqDec<T1> eqDec, const T1 &x0_, T1 x1_) {
+bool EquivDec::equiv_dec(std::type_identity_t<EqDec<T1>> eqDec, const T1 &x0_,
+                         T1 x1_) {
   return eqDec(x0_, std::move(x1_));
 }
 
 template <typename T1, typename T2>
-halist<T1, T2> HAList0::halist_remove(EqDec<T1> eq, const T1 &k,
+halist<T1, T2> HAList0::halist_remove(std::type_identity_t<EqDec<T1>> eq,
+                                      const T1 &k,
                                       const List<SigT<T1, T2>> &m) {
-  return m.filter([=](const SigT<T1, T2> &k_v) mutable {
-    return !([=]() mutable {
+  return m.filter([=](const SigT<T1, T2> &k_v) {
+    return !([&]() {
       const auto &_sv =
           Sumbool::bool_of_sumbool(EquivDec::equiv_dec(eq, k_v.projT1(), k));
       const auto &[x] = _sv;
@@ -329,15 +367,17 @@ halist<T1, T2> HAList0::halist_remove(EqDec<T1> eq, const T1 &k,
 }
 
 template <typename T1, typename T2>
-halist<T1, T2> HAList0::halist_add(EqDec<T1> eq, T1 k, T2 v,
+halist<T1, T2> HAList0::halist_add(std::type_identity_t<EqDec<T1>> eq,
+                                   const T1 &k, const T2 &v,
                                    const List<SigT<T1, T2>> &m) {
   return List<SigT<T1, T2>>::cons(
-      SigT<T1, T2>::existt(k, std::move(v)),
+      SigT<T1, T2>::existt(k, v),
       HAList0::template halist_remove<T1, T2>(std::move(eq), k, m));
 }
 
 template <typename T1, typename T2>
-std::optional<T2> HAList0::halist_lookup(EqDec<T1> eq, const T1 &k,
+std::optional<T2> HAList0::halist_lookup(std::type_identity_t<EqDec<T1>> eq,
+                                         const T1 &k,
                                          const List<SigT<T1, T2>> &l) {
   if (std::holds_alternative<typename List<SigT<T1, T2>>::Nil>(l.v())) {
     return std::optional<T2>();

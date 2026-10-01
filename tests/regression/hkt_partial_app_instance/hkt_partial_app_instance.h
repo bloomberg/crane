@@ -1,11 +1,11 @@
 #ifndef INCLUDED_HKT_PARTIAL_APP_INSTANCE
 #define INCLUDED_HKT_PARTIAL_APP_INSTANCE
 
-#include "small_vector.h"
+#include "fn.h"
+#include "obj.h"
 #include <any>
 #include <atomic>
 #include <concepts>
-#include <functional>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -41,22 +41,18 @@ public:
 
   // MANIPULATORS
   ~Nat() {
-    crane::small_vector<std::shared_ptr<Nat>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<Nat> {
       if (auto *_alt = std::get_if<S>(&_v)) {
-        if (_alt->a0) {
-          _stack.push_back(std::move(_alt->a0));
+        if (_alt->a0 && _alt->a0.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a0);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<Nat> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -78,12 +74,12 @@ public:
 
 template <typename I>
 concept Fn = requires {
-  typename I::template F<std::any>;
+  typename I::template F<crane::obj>;
   {
-    I::template fm<std::any, std::any>(
-        std::declval<std::function<std::any(std::any)>>(),
-        std::declval<typename I::template F<std::any>>())
-  } -> std::convertible_to<typename I::template F<std::any>>;
+    I::template fm<crane::obj, crane::obj>(
+        std::declval<crane::fn<crane::obj(crane::obj)>>(),
+        std::declval<typename I::template F<crane::obj>>())
+  } -> std::convertible_to<typename I::template F<crane::obj>>;
 };
 
 struct HktPartialAppInstance {
@@ -98,14 +94,14 @@ struct HktPartialAppInstance {
     template <typename _A0> using F = std::pair<T1, _A0>;
 
     template <typename _A0, typename _A1>
-    static std::pair<T1, _A1> fm(std::function<_A1(_A0)> f,
-                                 std::pair<T1, _A0> p) {
+    static std::pair<T1, _A1> fm(crane::fn<_A1(_A0)> f, std::pair<T1, _A0> p) {
       return std::make_pair(p.first, f(p.second));
     }
   };
 
-  static inline const std::pair<bool, Nat> ex = fm<pf<bool>, Nat, Nat>(
-      [](Nat x) { return Nat::s(x); }, std::make_pair(true, Nat::s(Nat::o())));
+  static inline const std::pair<bool, Nat> ex =
+      fm<pf<bool>, Nat, Nat>([](const Nat &x) { return Nat::s(x); },
+                             std::make_pair(true, Nat::s(Nat::o())));
 };
 
 #endif // INCLUDED_HKT_PARTIAL_APP_INSTANCE

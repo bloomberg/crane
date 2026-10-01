@@ -22,13 +22,13 @@ uint64_t FixMoveCapture::sum(const FixMoveCapture::mylist &l) {
 
 /// dup_head stores l in the constructor → l escapes → owned.
 /// This means the caller passes l by value (move semantics).
-FixMoveCapture::mylist FixMoveCapture::dup_head(FixMoveCapture::mylist l) {
-  if (std::holds_alternative<typename FixMoveCapture::mylist::Mynil>(
-          l.v_mut())) {
+FixMoveCapture::mylist
+FixMoveCapture::dup_head(const FixMoveCapture::mylist &l) {
+  if (std::holds_alternative<typename FixMoveCapture::mylist::Mynil>(l.v())) {
     return mylist::mynil();
   } else {
-    auto &[a0, a1] =
-        std::get<typename FixMoveCapture::mylist::Mycons>(l.v_mut());
+    const auto &[a0, a1] =
+        std::get<typename FixMoveCapture::mylist::Mycons>(l.v());
     return mylist::mycons(a0, l);
   }
 }

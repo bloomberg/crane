@@ -2,6 +2,7 @@
 #define INCLUDED_PENDANT_SUMTREE_ROUNDTRIP
 
 #include "crane_fn.h"
+#include "obj.h"
 #include "small_vector.h"
 #include <algorithm>
 #include <any>
@@ -18,6 +19,12 @@ template <typename A> struct Sig;
 template <typename A, typename P> struct SigT;
 template <typename A> struct T0;
 struct T;
+
+struct Nat {};
+
+struct Fin {
+  static T of_nat_lt(uint64_t p, uint64_t n);
+};
 
 template <typename A> struct List {
   // TYPES
@@ -42,21 +49,26 @@ public:
 
   explicit List(Cons0 _v) : v_(std::move(_v)) {}
 
-  template <typename _U> List(const List<_U> &_other) {
-    if (std::holds_alternative<typename List<_U>::Nil0>(_other.v())) {
-      this->v_ = Nil0{};
-    } else {
-      const auto &[a, l] = std::get<typename List<_U>::Cons0>(_other.v());
-      this->v_ = Cons0{[&]() -> A {
-                         if constexpr (std::is_same_v<_U, std::any>) {
-                           return crane_any_cast<A>(a);
-                         } else {
-                           return A(a);
-                         }
-                       }(),
-                       (l ? std::make_shared<List<A>>(*l) : nullptr)};
-    }
-  }
+  template <typename _U>
+  List(const List<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename List<_U>::Nil0>(_other.v())) {
+            return Nil0{};
+          } else {
+            const auto &[a, l] = std::get<typename List<_U>::Cons0>(_other.v());
+            return Cons0{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const _U &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                   : nullptr)};
+          }
+        }()) {}
 
   static List<A> nil0() { return List<A>(Nil0{}); }
 
@@ -67,22 +79,18 @@ public:
 
   // MANIPULATORS
   ~List() {
-    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons0>(&_v)) {
-        if (_alt->l) {
-          _stack.push_back(std::move(_alt->l));
+        if (_alt->l && _alt->l.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->l);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<List<A>> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -150,7 +158,7 @@ public:
 
     /// _Resume_Cons0: saves [a1], resumes after recursive call with _result.
     struct _Resume_Cons0 {
-      std::decay_t<A> a1;
+      A a1;
     };
 
     using _Frame = std::variant<_Enter, _Resume_Cons0>;
@@ -320,6 +328,17 @@ template <typename A> struct Sig {
   // ACCESSORS
   Sig<A> clone() const { return {x}; }
 
+  template <typename _U> operator Sig<_U>() const {
+    return {[&]() -> _U {
+      if constexpr (crane_convertible<_U, const A &>) {
+        return crane_convert<_U>(x);
+      } else {
+        throw std::logic_error(
+            "unreachable: inactive constructor field at this instantiation");
+      }
+    }()};
+  }
+
   // CREATORS
   static Sig<A> exist(A x) { return {std::move(x)}; }
 };
@@ -332,11 +351,28 @@ template <typename A, typename P> struct SigT {
   // ACCESSORS
   SigT<A, P> clone() const { return {x, a1}; }
 
+  template <typename _U0, typename _U1> operator SigT<_U0, _U1>() const {
+    return {[&]() -> _U0 {
+              if constexpr (crane_convertible<_U0, const A &>) {
+                return crane_convert<_U0>(x);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }(),
+            [&]() -> _U1 {
+              if constexpr (crane_convertible<_U1, const P &>) {
+                return crane_convert<_U1>(a1);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }()};
+  }
+
   // CREATORS
   static SigT<A, P> existt(A x, P a1) { return {std::move(x), std::move(a1)}; }
 };
-
-struct Nat {};
 
 template <typename A> struct T0 {
   // TYPES
@@ -362,21 +398,28 @@ public:
 
   explicit T0(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U> T0(const T0<_U> &_other) {
-    if (std::holds_alternative<typename T0<_U>::Nil>(_other.v())) {
-      this->v_ = Nil{};
-    } else {
-      const auto &[h, n, a2] = std::get<typename T0<_U>::Cons>(_other.v());
-      this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>) {
-                          return crane_any_cast<A>(h);
-                        } else {
-                          return A(h);
-                        }
-                      }(),
-                      n, (a2 ? std::make_shared<T0<A>>(*a2) : nullptr)};
-    }
-  }
+  template <typename _U>
+  T0(const T0<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename T0<_U>::Nil>(_other.v())) {
+            return Nil{};
+          } else {
+            const auto &[h, n, a2] =
+                std::get<typename T0<_U>::Cons>(_other.v());
+            return Cons{[&]() -> A {
+                          if constexpr (crane_convertible<A, const _U &>) {
+                            return crane_convert<A>(h);
+                          } else {
+                            throw std::logic_error(
+                                "unreachable: inactive constructor field at "
+                                "this instantiation");
+                          }
+                        }(),
+                        n,
+                        (a2 ? std::make_shared<T0<A>>(crane_convert<T0<A>>(*a2))
+                            : nullptr)};
+          }
+        }()) {}
 
   static T0<A> nil() { return T0<A>(Nil{}); }
 
@@ -428,22 +471,18 @@ public:
 
   // MANIPULATORS
   ~T() {
-    crane::small_vector<std::shared_ptr<T>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<T> {
       if (auto *_alt = std::get_if<FS>(&_v)) {
-        if (_alt->a1) {
-          _stack.push_back(std::move(_alt->a1));
+        if (_alt->a1 && _alt->a1.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a1);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<T> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -457,51 +496,7 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  Sig<uint64_t> to_nat(uint64_t _x) const {
-    const T *_self = this;
-
-    /// _Enter: captures varying parameters for each recursive call.
-    struct _Enter {
-      const T *_self;
-      uint64_t _x;
-    };
-
-    /// _Cont_FS: resumes after recursive call, then processes rest.
-    struct _Cont_FS {};
-
-    using _Frame = std::variant<_Enter, _Cont_FS>;
-    Sig<uint64_t> _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{_self, _x});
-    /// Loopified to_nat: _Enter -> _Cont_FS.
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
-        const T *_self = _f._self;
-        uint64_t _x = _f._x;
-        auto &&_sv = *_self;
-        if (std::holds_alternative<typename T::F1>(_sv.v())) {
-          _result = Sig<uint64_t>::exist(UINT64_C(0));
-        } else {
-          const auto &[n1, a1] = std::get<typename T::FS>(_sv.v());
-          _stack.emplace_back(_Cont_FS{});
-          _stack.emplace_back(_Enter{crane_raw(a1), n1});
-        }
-      } else {
-        auto _f = std::move(std::get<_Cont_FS>(_frame));
-        Sig<uint64_t> _rc1 = std::move(_result);
-        const auto &[x0] = _rc1;
-        _result = Sig<uint64_t>::exist((x0 + 1));
-      }
-    }
-    return _result;
-  }
-};
-
-struct Fin {
-  static T of_nat_lt(uint64_t p, uint64_t n);
+  Sig<uint64_t> to_nat(uint64_t) const;
 };
 
 struct PendantSumtreeRoundtripCase {
@@ -764,8 +759,8 @@ struct PendantSumtreeRoundtripCase {
   static bool option_nat_eqb(const std::optional<uint64_t> &x,
                              const std::optional<uint64_t> &y);
   static bool option_nat_is_some(const std::optional<uint64_t> &x);
-  static T0<digit> digit_vec1(T a);
-  static T0<digit> digit_vec3(T a, T b, T c);
+  static T0<digit> digit_vec1(const T &a);
+  static T0<digit> digit_vec3(const T &a, const T &b, const T &c);
   static inline const CordMeta sample_meta_a =
       CordMeta{Fiber::COTTON, Color::BROWN, Twist::TS, Twist::TZ};
   static inline const CordMeta sample_meta_b =
@@ -883,6 +878,17 @@ template <typename T1> List<T1> Vector::to_list(uint64_t n, const T0<T1> &v) {
     return fold_right_fix_impl(fold_right_fix_impl, _x, v0, b);
   };
   return fold_right_fix(n, v, List<T1>::nil0());
+}
+
+inline Sig<uint64_t> T::to_nat(uint64_t) const {
+  if (std::holds_alternative<typename T::F1>(this->v())) {
+    return Sig<uint64_t>::exist(UINT64_C(0));
+  } else {
+    const auto &[n1, a1] = std::get<typename T::FS>(this->v());
+    const auto &_sv0 = a1->to_nat(n1);
+    const auto &[x0] = _sv0;
+    return Sig<uint64_t>::exist((x0 + 1));
+  }
 }
 
 #endif // INCLUDED_PENDANT_SUMTREE_ROUNDTRIP

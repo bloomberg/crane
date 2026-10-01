@@ -1,5 +1,5 @@
 // A `sigT` payload holding a `list nat` round-trips through the field's
-// erased `std::any`: producer and consumer must agree on the element-erased
+// erased `crane::obj`: producer and consumer must agree on the element-erased
 // representation.
 #include "sigt_list_payload_any_cast.h"
 

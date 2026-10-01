@@ -6,10 +6,10 @@
 int main() {
   // This test reproduces a bug where a higher-rank function argument
   //   f : forall A : Type, A -> A
-  // is extracted as a lambda returning std::any, but the call site returns
-  // that std::any directly from a function whose C++ return type is concrete
+  // is extracted as a lambda returning crane::obj, but the call site returns
+  // that crane::obj directly from a function whose C++ return type is concrete
   // (Bool0), causing a compile error:
-  //   no viable conversion from returned value of type 'std::any'
+  //   no viable conversion from returned value of type 'crane::obj'
   //   to function return type 'Bool0'
   //
   // If this compiles and runs, the bug is fixed.

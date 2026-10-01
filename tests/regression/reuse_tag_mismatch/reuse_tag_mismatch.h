@@ -1,6 +1,7 @@
 #ifndef INCLUDED_REUSE_TAG_MISMATCH
 #define INCLUDED_REUSE_TAG_MISMATCH
 
+#include <atomic>
 #include <type_traits>
 #include <utility>
 #include <variant>

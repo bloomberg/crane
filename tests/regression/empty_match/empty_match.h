@@ -2,7 +2,9 @@
 #define INCLUDED_EMPTY_MATCH
 
 #include "crane_fn.h"
+#include "obj.h"
 #include <any>
+#include <atomic>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -52,29 +54,33 @@ struct EmptyMatch {
     explicit either(Right _v) : v_(std::move(_v)) {}
 
     template <typename _U0, typename _U1>
-    either(const either<_U0, _U1> &_other) {
-      if (std::holds_alternative<typename either<_U0, _U1>::Left>(_other.v())) {
-        const auto &[a0] =
-            std::get<typename either<_U0, _U1>::Left>(_other.v());
-        this->v_ = Left{[&]() -> A {
-          if constexpr (std::is_same_v<_U0, std::any>) {
-            return crane_any_cast<A>(a0);
-          } else {
-            return A(a0);
-          }
-        }()};
-      } else {
-        const auto &[a0] =
-            std::get<typename either<_U0, _U1>::Right>(_other.v());
-        this->v_ = Right{[&]() -> B {
-          if constexpr (std::is_same_v<_U1, std::any>) {
-            return crane_any_cast<B>(a0);
-          } else {
-            return B(a0);
-          }
-        }()};
-      }
-    }
+    either(const either<_U0, _U1> &_other)
+        : v_([&]() -> variant_t {
+            if (std::holds_alternative<typename either<_U0, _U1>::Left>(
+                    _other.v())) {
+              const auto &[a0] =
+                  std::get<typename either<_U0, _U1>::Left>(_other.v());
+              return Left{[&]() -> A {
+                if constexpr (crane_convertible<A, const _U0 &>) {
+                  return crane_convert<A>(a0);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }()};
+            } else {
+              const auto &[a0] =
+                  std::get<typename either<_U0, _U1>::Right>(_other.v());
+              return Right{[&]() -> B {
+                if constexpr (crane_convertible<B, const _U1 &>) {
+                  return crane_convert<B>(a0);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }()};
+            }
+          }()) {}
 
     static either<A, B> left(A a0) { return either<A, B>(Left{std::move(a0)}); }
 

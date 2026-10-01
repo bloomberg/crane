@@ -2,10 +2,11 @@
 #define INCLUDED_ERASED_METHOD_RECEIVER
 
 #include "crane_fn.h"
-#include "small_vector.h"
+#include "obj.h"
 #include <any>
 #include <atomic>
 #include <memory>
+#include <stdexcept>
 #include <utility>
 #include <variant>
 
@@ -42,22 +43,18 @@ public:
 
   // MANIPULATORS
   ~Nat() {
-    crane::small_vector<std::shared_ptr<Nat>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<Nat> {
       if (auto *_alt = std::get_if<S>(&_v)) {
-        if (_alt->a0) {
-          _stack.push_back(std::move(_alt->a0));
+        if (_alt->a0 && _alt->a0.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a0);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<Nat> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -79,6 +76,25 @@ template <typename A, typename P> struct SigT {
 
   // ACCESSORS
   SigT<A, P> clone() const { return {x, a1}; }
+
+  template <typename _U0, typename _U1> operator SigT<_U0, _U1>() const {
+    return {[&]() -> _U0 {
+              if constexpr (crane_convertible<_U0, const A &>) {
+                return crane_convert<_U0>(x);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }(),
+            [&]() -> _U1 {
+              if constexpr (crane_convertible<_U1, const P &>) {
+                return crane_convert<_U1>(a1);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }()};
+  }
 
   // CREATORS
   static SigT<A, P> existt(A x, P a1) { return {std::move(x), std::move(a1)}; }
@@ -142,22 +158,18 @@ public:
 
   // MANIPULATORS
   ~String() {
-    crane::small_vector<std::shared_ptr<String>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<String> {
       if (auto *_alt = std::get_if<String0>(&_v)) {
-        if (_alt->a1) {
-          _stack.push_back(std::move(_alt->a1));
+        if (_alt->a1 && _alt->a1.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a1);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<String> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -196,13 +208,13 @@ public:
 /// An erased value used as the *receiver* of a mapped type's method.  projT2 s
 /// has C++ type std::any and is handed straight to .length() with no cast.
 struct ErasedMethodReceiver {
-  static inline const SigT<std::any, std::any> s =
-      SigT<std::any, std::any>::existt(
-          std::any(), String::string0(Ascii::ascii0(true, false, false, false,
-                                                    true, true, true, false),
-                                      String::emptystring()));
+  static inline const SigT<crane::obj, crane::obj> s =
+      SigT<crane::obj, crane::obj>::existt(
+          crane::obj(), String::string0(Ascii::ascii0(true, false, false, false,
+                                                      true, true, true, false),
+                                        String::emptystring()));
 
-  static inline const Nat run = std::any_cast<String>(s.projT2()).length();
+  static inline const Nat run = crane::any_cast<String>(s.projT2()).length();
 };
 
 #endif // INCLUDED_ERASED_METHOD_RECEIVER

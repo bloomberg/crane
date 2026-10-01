@@ -2,11 +2,12 @@
 #define INCLUDED_SEPEXTLISTCLONEQUAL
 
 #include "crane_fn.h"
+#include "obj.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
 #include <memory>
-#include <type_traits>
+#include <stdexcept>
 #include <utility>
 #include <variant>
 
@@ -39,24 +40,31 @@ public:
 
   explicit Forest(Node _v) : v_(std::move(_v)) {}
 
-  template <typename _U> Forest(const Forest<_U> &_other) {
-    if (std::holds_alternative<typename Forest<_U>::Leaf>(_other.v())) {
-      this->v_ = Leaf{};
-    } else {
-      const auto &[a0, a1] = std::get<typename Forest<_U>::Node>(_other.v());
-      this->v_ = Node{
-          [&]() -> A {
-            if constexpr (std::is_same_v<_U, std::any>) {
-              return crane_any_cast<A>(a0);
-            } else {
-              return A(a0);
-            }
-          }(),
-          (a1 ? std::make_shared<typename Datatypes::template List<Forest<A>>>(
-                    *a1)
-              : nullptr)};
-    }
-  }
+  template <typename _U>
+  Forest(const Forest<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename Forest<_U>::Leaf>(_other.v())) {
+            return Leaf{};
+          } else {
+            const auto &[a0, a1] =
+                std::get<typename Forest<_U>::Node>(_other.v());
+            return Node{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const _U &>) {
+                    return crane_convert<A>(a0);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (a1 ? std::make_shared<
+                          typename Datatypes::template List<Forest<A>>>(
+                          crane_convert<
+                              typename Datatypes::template List<Forest<A>>>(
+                              *a1))
+                    : nullptr)};
+          }
+        }()) {}
 
   static Forest<A> leaf() { return Forest<A>(Leaf{}); }
 

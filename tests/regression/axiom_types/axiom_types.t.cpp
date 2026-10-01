@@ -44,7 +44,7 @@ int main() {
   {
     bool caught = false;
     try {
-      AxiomTypes::mystery_function(std::any{});
+      AxiomTypes::mystery_function(crane::obj{});
     } catch (const std::logic_error &e) {
       caught = true;
     }
@@ -65,9 +65,9 @@ int main() {
 
   // Test axiom_identity with a valid value (non-axiom) succeeds
   {
-    std::any val = 42;
+    crane::obj val = 42;
     auto result = AxiomTypes::axiom_identity(val);
-    ASSERT(std::any_cast<int>(result) == 42);
+    ASSERT(crane::any_cast<int>(result) == 42);
   }
 
   // Test that nested_axiom throws
@@ -97,7 +97,7 @@ int main() {
     auto ind = AxiomTypes::AxiomInductive::axconstr1(42u);
     auto result = AxiomTypes::AxiomInductive_rect<uint64_t>(
         [](uint64_t n) { return n; },
-        [](std::any) -> unsigned int { return 0u; }, ind);
+        [](crane::obj) -> unsigned int { return 0u; }, ind);
     ASSERT(result == 42u);
   }
 

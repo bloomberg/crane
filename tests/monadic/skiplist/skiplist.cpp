@@ -97,7 +97,7 @@ bool skiplist_test::stm_test_update() {
   sl.insert(nat_lt, nat_eq, UINT64_C(5), UINT64_C(50), UINT64_C(0));
   sl.insert(nat_lt, nat_eq, UINT64_C(5), 500u, UINT64_C(0));
   std::optional<uint64_t> v = sl.lookup(nat_lt, nat_eq, UINT64_C(5));
-  return [=]() mutable -> bool {
+  return [&]() -> bool {
     if (v.has_value()) {
       const uint64_t &n = *v;
       return n == 500u;
@@ -115,7 +115,7 @@ bool skiplist_test::stm_test_minimum() {
   sl.insert(nat_lt, nat_eq, UINT64_C(3), UINT64_C(30), UINT64_C(0));
   sl.insert(nat_lt, nat_eq, UINT64_C(7), UINT64_C(70), UINT64_C(0));
   std::optional<std::pair<uint64_t, uint64_t>> minOpt = sl.minimum();
-  return [=]() mutable -> bool {
+  return [&]() -> bool {
     if (minOpt.has_value()) {
       const std::pair<uint64_t, uint64_t> &p = *minOpt;
       const auto &[k, v] = p;

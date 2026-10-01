@@ -18,6 +18,50 @@
 
 ; Test rules - compile C++ and run tests
 
+(subdir assoc_type_erased_in_lambda_body
+ (rule
+  (targets assoc_type_erased_in_lambda_body.t.exe)
+  (deps AssocTypeErasedInLambdaBody.vo assoc_type_erased_in_lambda_body.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} assoc_type_erased_in_lambda_body.t.exe assoc_type_erased_in_lambda_body.cpp assoc_type_erased_in_lambda_body.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps assoc_type_erased_in_lambda_body.t.exe)
+  (action (run ./assoc_type_erased_in_lambda_body.t.exe))))
+
+(subdir assoc_type_erased_at_call_site
+ (rule
+  (targets assoc_type_erased_at_call_site.t.exe)
+  (deps AssocTypeErasedAtCallSite.vo assoc_type_erased_at_call_site.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} assoc_type_erased_at_call_site.t.exe assoc_type_erased_at_call_site.cpp assoc_type_erased_at_call_site.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps assoc_type_erased_at_call_site.t.exe)
+  (action (run ./assoc_type_erased_at_call_site.t.exe))))
+
+(subdir assoc_type_erased_in_body
+ (rule
+  (targets assoc_type_erased_in_body.t.exe)
+  (deps AssocTypeErasedInBody.vo assoc_type_erased_in_body.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} assoc_type_erased_in_body.t.exe assoc_type_erased_in_body.cpp assoc_type_erased_in_body.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps assoc_type_erased_in_body.t.exe)
+  (action (run ./assoc_type_erased_in_body.t.exe))))
+
+(subdir erased_dict_param_kept_at_use_site
+ (rule
+  (targets erased_dict_param_kept_at_use_site.t.exe)
+  (deps ErasedDictParamKeptAtUseSite.vo erased_dict_param_kept_at_use_site.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} erased_dict_param_kept_at_use_site.t.exe erased_dict_param_kept_at_use_site.cpp erased_dict_param_kept_at_use_site.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps erased_dict_param_kept_at_use_site.t.exe)
+  (action (run ./erased_dict_param_kept_at_use_site.t.exe))))
+
 (subdir anon_lift_name_collision
  (rule
   (targets anon_lift_name_collision.t.exe)
@@ -149,6 +193,7 @@
   (alias runtest)
   (deps gadt_eval_branch_type.t.exe)
   (action (run ./gadt_eval_branch_type.t.exe))))
+
 (subdir hkt_instance_carrier_slot
  (rule
   (targets hkt_instance_carrier_slot.t.exe)
@@ -170,6 +215,7 @@
   (alias runtest)
   (deps hkt_lambda_param_carrier.t.exe)
   (action (run ./hkt_lambda_param_carrier.t.exe))))
+
 (subdir hkt_nullary_method_tyarg
  (rule
   (targets hkt_nullary_method_tyarg.t.exe)
@@ -268,6 +314,7 @@
   (alias runtest)
   (deps phantom_type_arg_never_emitted.t.exe)
   (action (run ./phantom_type_arg_never_emitted.t.exe))))
+
 (subdir record_function_field_stdlib_probe
  (rule
   (targets record_function_field_stdlib_probe.t.exe)
@@ -300,6 +347,7 @@
   (alias runtest)
   (deps sigt_erased_structured_binding.t.exe)
   (action (run ./sigt_erased_structured_binding.t.exe))))
+
 (subdir sigt_list_heterogeneous_box
  (rule
   (targets sigt_list_heterogeneous_box.t.exe)
@@ -310,6 +358,7 @@
   (alias runtest)
   (deps sigt_list_heterogeneous_box.t.exe)
   (action (run ./sigt_list_heterogeneous_box.t.exe))))
+
 (subdir tmc_nested_ctor_wrap
  (rule
   (targets tmc_nested_ctor_wrap.t.exe)
@@ -320,6 +369,7 @@
   (alias runtest)
   (deps tmc_nested_ctor_wrap.t.exe)
   (action (run ./tmc_nested_ctor_wrap.t.exe))))
+
 (subdir type_level_tuple_fixpoint
  (rule
   (targets type_level_tuple_fixpoint.t.exe)
@@ -330,6 +380,7 @@
   (alias runtest)
   (deps type_level_tuple_fixpoint.t.exe)
   (action (run ./type_level_tuple_fixpoint.t.exe))))
+
 (subdir type_valued_if_eliminator
  (rule
   (targets type_valued_if_eliminator.t.exe)
@@ -340,6 +391,7 @@
   (alias runtest)
   (deps type_valued_if_eliminator.t.exe)
   (action (run ./type_valued_if_eliminator.t.exe))))
+
 (subdir typeclass_function_field_probe
  (rule
   (targets typeclass_function_field_probe.t.exe)
@@ -7775,6 +7827,7 @@
   (alias runtest)
   (deps option_recursive_match.t.exe)
   (action (run ./option_recursive_match.t.exe))))
+
 (subdir type_level_fun_apply
  (rule
   (targets type_level_fun_apply.t.exe)
@@ -7873,6 +7926,7 @@
   (alias runtest)
   (deps loopify_self_template_args.t.exe)
   (action (run ./loopify_self_template_args.t.exe))))
+
 (subdir vector_cases_deduction
  (rule
   (targets vector_cases_deduction.t.exe)
@@ -9075,7 +9129,7 @@
 (subdir cross_file_module_ref
  (rule
   (targets cross_file_module_ref.t.exe)
-  (deps Use.vo cross_file_module_ref.t.cpp (source_tree .))
+  (deps Lib.vo cross_file_module_ref.t.cpp (source_tree .))
   (action
    (run %{project_root}/scripts/compile-std.sh %{project_root} cross_file_module_ref.t.exe cross_file_module_ref.cpp cross_file_module_ref.t.cpp)))
  (rule
@@ -9121,7 +9175,7 @@
 (subdir name_prefixed_by_file
  (rule
   (targets name_prefixed_by_file.t.exe)
-  (deps Use.vo name_prefixed_by_file.t.cpp (source_tree .))
+  (deps EOU.vo name_prefixed_by_file.t.cpp (source_tree .))
   (action
    (run %{project_root}/scripts/compile-std.sh %{project_root} name_prefixed_by_file.t.exe name_prefixed_by_file.cpp name_prefixed_by_file.t.cpp)))
  (rule
@@ -9145,7 +9199,7 @@
   (targets erased_nested_type_args.t.exe)
   (deps ErasedNestedTypeArgs.vo erased_nested_type_args.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} erased_nested_type_args.t.exe erased_nested_type_args.cpp erased_nested_type_args.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} erased_nested_type_args.t.exe erased_nested_type_args.cpp instance_in_record_literal.cpp erased_nested_type_args.t.cpp)))
  (rule
   (alias runtest)
   (deps erased_nested_type_args.t.exe)
@@ -9154,7 +9208,7 @@
 (subdir file_eponymous_with_alias
  (rule
   (targets file_eponymous_with_alias.t.exe)
-  (deps Use.vo file_eponymous_with_alias.t.cpp (source_tree .))
+  (deps DList.vo file_eponymous_with_alias.t.cpp (source_tree .))
   (action
    (run %{project_root}/scripts/compile-std.sh %{project_root} file_eponymous_with_alias.t.exe file_eponymous_with_alias.cpp file_eponymous_with_alias.t.cpp)))
  (rule
@@ -9165,7 +9219,7 @@
 (subdir nested_eponymous_type
  (rule
   (targets nested_eponymous_type.t.exe)
-  (deps Use.vo nested_eponymous_type.t.cpp (source_tree .))
+  (deps Compare.vo nested_eponymous_type.t.cpp (source_tree .))
   (action
    (run %{project_root}/scripts/compile-std.sh %{project_root} nested_eponymous_type.t.exe nested_eponymous_type.cpp nested_eponymous_type.t.cpp)))
  (rule
@@ -9176,7 +9230,7 @@
 (subdir case_insensitive_eponymy
  (rule
   (targets case_insensitive_eponymy.t.exe)
-  (deps Use.vo case_insensitive_eponymy.t.cpp (source_tree .))
+  (deps CFG.vo case_insensitive_eponymy.t.cpp (source_tree .))
   (action
    (run %{project_root}/scripts/compile-std.sh %{project_root} case_insensitive_eponymy.t.exe case_insensitive_eponymy.cpp case_insensitive_eponymy.t.cpp)))
  (rule
@@ -9187,7 +9241,7 @@
 (subdir fwd_decl_before_concept
  (rule
   (targets fwd_decl_before_concept.t.exe)
-  (deps Use.vo fwd_decl_before_concept.t.cpp (source_tree .))
+  (deps Lib.vo fwd_decl_before_concept.t.cpp (source_tree .))
   (action
    (run %{project_root}/scripts/compile-std.sh %{project_root} fwd_decl_before_concept.t.exe fwd_decl_before_concept.cpp fwd_decl_before_concept.t.cpp)))
  (rule
@@ -9198,7 +9252,7 @@
 (subdir instance_used_before_defined
  (rule
   (targets instance_used_before_defined.t.exe)
-  (deps Use.vo instance_used_before_defined.t.cpp (source_tree .))
+  (deps Lib.vo instance_used_before_defined.t.cpp (source_tree .))
   (action
    (run %{project_root}/scripts/compile-std.sh %{project_root} instance_used_before_defined.t.exe instance_used_before_defined.cpp instance_used_before_defined.t.cpp)))
  (rule
@@ -9209,7 +9263,7 @@
 (subdir lifted_instance_qualified
  (rule
   (targets lifted_instance_qualified.t.exe)
-  (deps Use.vo lifted_instance_qualified.t.cpp (source_tree .))
+  (deps Other.vo lifted_instance_qualified.t.cpp (source_tree .))
   (action
    (run %{project_root}/scripts/compile-std.sh %{project_root} lifted_instance_qualified.t.exe lifted_instance_qualified.cpp lifted_instance_qualified.t.cpp)))
  (rule
@@ -9220,7 +9274,7 @@
 (subdir file_module_eponymous_record
  (rule
   (targets file_module_eponymous_record.t.exe)
-  (deps Catalog.vo FileModuleEponymousRecord.vo file_module_eponymous_record.t.cpp (source_tree .))
+  (deps Catalog.vo file_module_eponymous_record.t.cpp (source_tree .))
   (action
    (run %{project_root}/scripts/compile-std.sh %{project_root} file_module_eponymous_record.t.exe file_module_eponymous_record.cpp file_module_eponymous_record.t.cpp)))
  (rule
@@ -9249,3 +9303,2157 @@
   (alias runtest)
   (deps member_alias_as_tt_arg.t.exe)
   (action (run ./member_alias_as_tt_arg.t.exe))))
+
+(subdir rank3_handler
+ (rule
+  (targets rank3_handler.t.exe)
+  (deps Rank3Handler.vo rank3_handler.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} rank3_handler.t.exe rank3_handler.cpp rank3_handler.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps rank3_handler.t.exe)
+  (action (run ./rank3_handler.t.exe))))
+
+(subdir undeducible_tt_return
+ (rule
+  (targets undeducible_tt_return.t.exe)
+  (deps Handler.vo undeducible_tt_return.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} undeducible_tt_return.t.exe undeducible_tt_return.cpp undeducible_tt_return.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps undeducible_tt_return.t.exe)
+  (action (run ./undeducible_tt_return.t.exe))))
+
+; --- Fifth round of Vellvm reductions, against Crane eee81e8c3.  These three
+; are the reified ITree backend; each adds one Rocq construct to the one
+; before it.
+
+(subdir itree_ret_go
+ (rule
+  (targets itree_ret_go.t.exe)
+  (deps ItreeRetGo.vo itree_ret_go.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} itree_ret_go.t.exe itree_ret_go.cpp itree_ret_go.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps itree_ret_go.t.exe)
+  (action (run ./itree_ret_go.t.exe))))
+
+(subdir itree_poly_event_arg
+ (rule
+  (targets itree_poly_event_arg.t.exe)
+  (deps ItreePolyEventArg.vo itree_poly_event_arg.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} itree_poly_event_arg.t.exe itree_poly_event_arg.cpp itree_poly_event_arg.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps itree_poly_event_arg.t.exe)
+  (action (run ./itree_poly_event_arg.t.exe))))
+
+(subdir itree_nested_bind_instance
+ (rule
+  (targets itree_nested_bind_instance.t.exe)
+  (deps ItreeNestedBindInstance.vo itree_nested_bind_instance.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} itree_nested_bind_instance.t.exe itree_nested_bind_instance.cpp itree_nested_bind_instance.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps itree_nested_bind_instance.t.exe)
+  (action (run ./itree_nested_bind_instance.t.exe))))
+
+(subdir itree_mapping_hijacks_monad
+ (rule
+  (targets itree_mapping_hijacks_monad.t.exe)
+  (deps ItreeMappingHijacksMonad.vo itree_mapping_hijacks_monad.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} itree_mapping_hijacks_monad.t.exe itree_mapping_hijacks_monad.cpp itree_mapping_hijacks_monad.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps itree_mapping_hijacks_monad.t.exe)
+  (action (run ./itree_mapping_hijacks_monad.t.exe))))
+
+(subdir subevent_instance_dropped
+ (rule
+  (targets subevent_instance_dropped.t.exe)
+  (deps SubeventInstanceDropped.vo subevent_instance_dropped.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} subevent_instance_dropped.t.exe subevent_instance_dropped.cpp subevent_instance_dropped.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps subevent_instance_dropped.t.exe)
+  (action (run ./subevent_instance_dropped.t.exe))))
+
+(subdir file_struct_empty_qualifier
+ (rule
+  (targets file_struct_empty_qualifier.t.exe)
+  (deps FileStructEmptyQualifier.vo file_struct_empty_qualifier.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} file_struct_empty_qualifier.t.exe file_struct_empty_qualifier.cpp file_struct_empty_qualifier.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps file_struct_empty_qualifier.t.exe)
+  (action (run ./file_struct_empty_qualifier.t.exe))))
+
+; --- Seventh round of Vellvm reductions, against Crane ca893418f.
+
+(subdir promoted_method_leaks_param
+ (rule
+  (targets promoted_method_leaks_param.t.exe)
+  (deps PromotedMethodLeaksParam.vo promoted_method_leaks_param.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} promoted_method_leaks_param.t.exe promoted_method_leaks_param.cpp promoted_method_leaks_param.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps promoted_method_leaks_param.t.exe)
+  (action (run ./promoted_method_leaks_param.t.exe))))
+
+; --- Eighth round of Vellvm reductions, against Crane 1a9066cef.
+
+(subdir sum_event_drops_result_targ
+ (rule
+  (targets sum_event_drops_result_targ.t.exe)
+  (deps SumEventDropsResultTarg.vo sum_event_drops_result_targ.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sum_event_drops_result_targ.t.exe sum_event_drops_result_targ.cpp sum_event_drops_result_targ.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sum_event_drops_result_targ.t.exe)
+  (action (run ./sum_event_drops_result_targ.t.exe))))
+
+(subdir sum_event_match
+ (rule
+  (targets sum_event_match.t.exe)
+  (deps SumEventMatch.vo sum_event_match.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sum_event_match.t.exe sum_event_match.cpp sum_event_match.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sum_event_match.t.exe)
+  (action (run ./sum_event_match.t.exe))))
+
+(subdir erased_event_alias_targ
+ (rule
+  (targets erased_event_alias_targ.t.exe)
+  (deps ErasedEventAliasTarg.vo erased_event_alias_targ.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} erased_event_alias_targ.t.exe erased_event_alias_targ.cpp erased_event_alias_targ.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps erased_event_alias_targ.t.exe)
+  (action (run ./erased_event_alias_targ.t.exe))))
+
+(subdir iter_callee_has_no_name
+ (rule
+  (targets iter_callee_has_no_name.t.exe)
+  (deps IterCalleeHasNoName.vo iter_callee_has_no_name.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} iter_callee_has_no_name.t.exe iter_callee_has_no_name.cpp iter_callee_has_no_name.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps iter_callee_has_no_name.t.exe)
+  (action (run ./iter_callee_has_no_name.t.exe))))
+
+; --- Landed from wip: folded inductive naming, and [translate] in reified mode.
+
+(subdir folded_inductive_not_capitalized
+ (rule
+  (targets folded_inductive_not_capitalized.t.exe)
+  (deps FoldedInductiveNotCapitalized.vo folded_inductive_not_capitalized.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} folded_inductive_not_capitalized.t.exe folded_inductive_not_capitalized.cpp folded_inductive_not_capitalized.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps folded_inductive_not_capitalized.t.exe)
+  (action (run ./folded_inductive_not_capitalized.t.exe))))
+
+(subdir translate_callee_has_no_name
+ (rule
+  (targets translate_callee_has_no_name.t.exe)
+  (deps TranslateCalleeHasNoName.vo translate_callee_has_no_name.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} translate_callee_has_no_name.t.exe translate_callee_has_no_name.cpp translate_callee_has_no_name.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps translate_callee_has_no_name.t.exe)
+  (action (run ./translate_callee_has_no_name.t.exe))))
+
+; --- Landed from wip: an alias over a phantom alias keeps the kind.
+
+(subdir phantom_alias_targ_unbound
+ (rule
+  (targets phantom_alias_targ_unbound.t.exe)
+  (deps PhantomAliasTargUnbound.vo phantom_alias_targ_unbound.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} phantom_alias_targ_unbound.t.exe phantom_alias_targ_unbound.cpp phantom_alias_targ_unbound.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps phantom_alias_targ_unbound.t.exe)
+  (action (run ./phantom_alias_targ_unbound.t.exe))))
+
+(subdir hk_class_arg_numbering
+ (rule
+  (targets hk_class_arg_numbering.t.exe)
+  (deps HkClassArgNumbering.vo hk_class_arg_numbering.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} hk_class_arg_numbering.t.exe hk_class_arg_numbering.cpp hk_class_arg_numbering.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps hk_class_arg_numbering.t.exe)
+  (action (run ./hk_class_arg_numbering.t.exe))))
+
+(subdir monad_method_targ_misnumbered
+ (rule
+  (targets monad_method_targ_misnumbered.t.exe)
+  (deps MonadMethodTargMisnumbered.vo monad_method_targ_misnumbered.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} monad_method_targ_misnumbered.t.exe monad_method_targ_misnumbered.cpp monad_method_targ_misnumbered.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps monad_method_targ_misnumbered.t.exe)
+  (action (run ./monad_method_targ_misnumbered.t.exe))))
+
+(subdir handler_case_has_no_name
+ (rule
+  (targets handler_case_has_no_name.t.exe)
+  (deps HandlerCaseHasNoName.vo handler_case_has_no_name.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} handler_case_has_no_name.t.exe handler_case_has_no_name.cpp handler_case_has_no_name.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps handler_case_has_no_name.t.exe)
+  (action (run ./handler_case_has_no_name.t.exe))))
+
+(subdir instance_hoisted_over_qualified
+ (rule
+  (targets instance_hoisted_over_qualified.t.exe)
+  (deps Eou.vo instance_hoisted_over_qualified.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} instance_hoisted_over_qualified.t.exe instance_hoisted_over_qualified.cpp instance_hoisted_over_qualified.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps instance_hoisted_over_qualified.t.exe)
+  (action (run ./instance_hoisted_over_qualified.t.exe))))
+
+(subdir handler_indexed_event_arg
+ (rule
+  (targets handler_indexed_event_arg.t.exe)
+  (deps HandlerIndexedEventArg.vo handler_indexed_event_arg.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} handler_indexed_event_arg.t.exe handler_indexed_event_arg.cpp handler_indexed_event_arg.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps handler_indexed_event_arg.t.exe)
+  (action (run ./handler_indexed_event_arg.t.exe))))
+
+(subdir fmap_erased_lambda_param
+ (rule
+  (targets fmap_erased_lambda_param.t.exe)
+  (deps FmapErasedLambdaParam.vo fmap_erased_lambda_param.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fmap_erased_lambda_param.t.exe fmap_erased_lambda_param.cpp fmap_erased_lambda_param.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps fmap_erased_lambda_param.t.exe)
+  (action (run ./fmap_erased_lambda_param.t.exe))))
+
+(subdir event_match_untyped
+ (rule
+  (targets event_match_untyped.t.exe)
+  (deps EventMatchUntyped.vo event_match_untyped.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} event_match_untyped.t.exe event_match_untyped.cpp event_match_untyped.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps event_match_untyped.t.exe)
+  (action (run ./event_match_untyped.t.exe))))
+
+(subdir tail_call_same_name_other_module
+ (rule
+  (targets tail_call_same_name_other_module.t.exe)
+  (deps TailCallSameNameOtherModule.vo tail_call_same_name_other_module.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} tail_call_same_name_other_module.t.exe tail_call_same_name_other_module.cpp tail_call_same_name_other_module.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps tail_call_same_name_other_module.t.exe)
+  (action (run ./tail_call_same_name_other_module.t.exe))))
+
+(subdir lifted_helper_in_member_init
+ (rule
+  (targets lifted_helper_in_member_init.t.exe)
+  (deps LiftedHelperInMemberInit.vo lifted_helper_in_member_init.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} lifted_helper_in_member_init.t.exe lifted_helper_in_member_init.cpp lifted_helper_in_member_init.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps lifted_helper_in_member_init.t.exe)
+  (action (run ./lifted_helper_in_member_init.t.exe))))
+
+(subdir delifted_binary_fixpoint
+ (rule
+  (targets delifted_binary_fixpoint.t.exe)
+  (deps DeliftedBinaryFixpoint.vo delifted_binary_fixpoint.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} delifted_binary_fixpoint.t.exe delifted_binary_fixpoint.cpp delifted_binary_fixpoint.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps delifted_binary_fixpoint.t.exe)
+  (action (run ./delifted_binary_fixpoint.t.exe))))
+
+(subdir partial_application
+ (rule
+  (targets partial_application.t.exe)
+  (deps PartialApplication.vo partial_application.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} partial_application.t.exe partial_application.cpp partial_application.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps partial_application.t.exe)
+  (action (run ./partial_application.t.exe))))
+
+(subdir let_shadows_match_binder
+ (rule
+  (targets let_shadows_match_binder.t.exe)
+  (deps LetShadowsMatchBinder.vo let_shadows_match_binder.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} let_shadows_match_binder.t.exe let_shadows_match_binder.cpp let_shadows_match_binder.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps let_shadows_match_binder.t.exe)
+  (action (run ./let_shadows_match_binder.t.exe))))
+
+(subdir itree_unit_collapses_to_void
+ (rule
+  (targets itree_unit_collapses_to_void.t.exe)
+  (deps ItreeUnitCollapsesToVoid.vo itree_unit_collapses_to_void.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} itree_unit_collapses_to_void.t.exe itree_unit_collapses_to_void.cpp itree_unit_collapses_to_void.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps itree_unit_collapses_to_void.t.exe)
+  (action (run ./itree_unit_collapses_to_void.t.exe))))
+
+(subdir hk_call_carrier_erased
+ (rule
+  (targets hk_call_carrier_erased.t.exe)
+  (deps HkCallCarrierErased.vo hk_call_carrier_erased.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} hk_call_carrier_erased.t.exe hk_call_carrier_erased.cpp hk_call_carrier_erased.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps hk_call_carrier_erased.t.exe)
+  (action (run ./hk_call_carrier_erased.t.exe))))
+
+(subdir hk_dict_from_constraint_param
+ (rule
+  (targets hk_dict_from_constraint_param.t.exe)
+  (deps HkDictFromConstraintParam.vo hk_dict_from_constraint_param.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} hk_dict_from_constraint_param.t.exe hk_dict_from_constraint_param.cpp hk_dict_from_constraint_param.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps hk_dict_from_constraint_param.t.exe)
+  (action (run ./hk_dict_from_constraint_param.t.exe))))
+
+(subdir hk_constraint_carrier_two_params
+ (rule
+  (targets hk_constraint_carrier_two_params.t.exe)
+  (deps HkConstraintCarrierTwoParams.vo hk_constraint_carrier_two_params.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} hk_constraint_carrier_two_params.t.exe hk_constraint_carrier_two_params.cpp hk_constraint_carrier_two_params.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps hk_constraint_carrier_two_params.t.exe)
+  (action (run ./hk_constraint_carrier_two_params.t.exe))))
+
+(subdir hk_carrier_binder_at_concrete_site
+ (rule
+  (targets hk_carrier_binder_at_concrete_site.t.exe)
+  (deps HkCarrierBinderAtConcreteSite.vo hk_carrier_binder_at_concrete_site.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} hk_carrier_binder_at_concrete_site.t.exe hk_carrier_binder_at_concrete_site.cpp hk_carrier_binder_at_concrete_site.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps hk_carrier_binder_at_concrete_site.t.exe)
+  (action (run ./hk_carrier_binder_at_concrete_site.t.exe))))
+
+(subdir pair_field_conv_ctor
+ (rule
+  (targets pair_field_conv_ctor.t.exe)
+  (deps PairFieldConvCtor.vo pair_field_conv_ctor.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} pair_field_conv_ctor.t.exe pair_field_conv_ctor.cpp pair_field_conv_ctor.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps pair_field_conv_ctor.t.exe)
+  (action (run ./pair_field_conv_ctor.t.exe))))
+
+(subdir erased_pair_pattern_probed_at_any
+ (rule
+  (targets erased_pair_pattern_probed_at_any.t.exe)
+  (deps ErasedPairPatternProbedAtAny.vo erased_pair_pattern_probed_at_any.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} erased_pair_pattern_probed_at_any.t.exe erased_pair_pattern_probed_at_any.cpp erased_pair_pattern_probed_at_any.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps erased_pair_pattern_probed_at_any.t.exe)
+  (action (run ./erased_pair_pattern_probed_at_any.t.exe))))
+
+(subdir boxed_pair_field_conv_ctor
+ (rule
+  (targets boxed_pair_field_conv_ctor.t.exe)
+  (deps BoxedPairFieldConvCtor.vo boxed_pair_field_conv_ctor.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} boxed_pair_field_conv_ctor.t.exe boxed_pair_field_conv_ctor.cpp boxed_pair_field_conv_ctor.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps boxed_pair_field_conv_ctor.t.exe)
+  (action (run ./boxed_pair_field_conv_ctor.t.exe))))
+
+(subdir dropped_binder_in_instance_method
+ (rule
+  (targets dropped_binder_in_instance_method.t.exe)
+  (deps DroppedBinderInInstanceMethod.vo dropped_binder_in_instance_method.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} dropped_binder_in_instance_method.t.exe dropped_binder_in_instance_method.cpp dropped_binder_in_instance_method.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps dropped_binder_in_instance_method.t.exe)
+  (action (run ./dropped_binder_in_instance_method.t.exe))))
+
+(subdir eta_partial_app_drops_targs
+ (rule
+  (targets eta_partial_app_drops_targs.t.exe)
+  (deps EtaPartialAppDropsTargs.vo eta_partial_app_drops_targs.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} eta_partial_app_drops_targs.t.exe eta_partial_app_drops_targs.cpp eta_partial_app_drops_targs.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps eta_partial_app_drops_targs.t.exe)
+  (action (run ./eta_partial_app_drops_targs.t.exe))))
+
+(subdir member_calls_later
+ (rule
+  (targets member_calls_later.t.exe)
+  (deps MemberCallsLaterModule.vo member_calls_later.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} member_calls_later.t.exe member_calls_later.cpp member_calls_later.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps member_calls_later.t.exe)
+  (action (run ./member_calls_later.t.exe))))
+
+(subdir noncolliding_child_unregistered
+ (rule
+  (targets noncolliding_child_unregistered.t.exe)
+  (deps AstLib.vo noncolliding_child_unregistered.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} noncolliding_child_unregistered.t.exe noncolliding_child_unregistered.cpp noncolliding_child_unregistered.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps noncolliding_child_unregistered.t.exe)
+  (action (run ./noncolliding_child_unregistered.t.exe))))
+
+(subdir bystander_named_bare
+ (rule
+  (targets bystander_named_bare.t.exe)
+  (deps AstLib.vo bystander_named_bare.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bystander_named_bare.t.exe bystander_named_bare.cpp bystander_named_bare.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps bystander_named_bare.t.exe)
+  (action (run ./bystander_named_bare.t.exe))))
+
+(subdir method_body_names_later_struct
+ (rule
+  (targets method_body_names_later_struct.t.exe)
+  (deps A.vo method_body_names_later_struct.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} method_body_names_later_struct.t.exe method_body_names_later_struct.cpp method_body_names_later_struct.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps method_body_names_later_struct.t.exe)
+  (action (run ./method_body_names_later_struct.t.exe))))
+
+(subdir template_merge_outlined_member
+ (rule
+  (targets template_merge_outlined_member.t.exe)
+  (deps A.vo template_merge_outlined_member.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} template_merge_outlined_member.t.exe template_merge_outlined_member.cpp template_merge_outlined_member.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps template_merge_outlined_member.t.exe)
+  (action (run ./template_merge_outlined_member.t.exe))))
+
+(subdir nested_owner_two_template_heads
+ (rule
+  (targets nested_owner_two_template_heads.t.exe)
+  (deps A.vo nested_owner_two_template_heads.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nested_owner_two_template_heads.t.exe nested_owner_two_template_heads.cpp nested_owner_two_template_heads.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps nested_owner_two_template_heads.t.exe)
+  (action (run ./nested_owner_two_template_heads.t.exe))))
+
+(subdir modtype_in_wrapper_named_bare
+ (rule
+  (targets modtype_in_wrapper_named_bare.t.exe)
+  (deps AstLib.vo modtype_in_wrapper_named_bare.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} modtype_in_wrapper_named_bare.t.exe modtype_in_wrapper_named_bare.cpp modtype_in_wrapper_named_bare.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps modtype_in_wrapper_named_bare.t.exe)
+  (action (run ./modtype_in_wrapper_named_bare.t.exe))))
+
+(subdir functor_record_proj_as_static
+ (rule
+  (targets functor_record_proj_as_static.t.exe)
+  (deps FunctorRecordProjAsStatic.vo functor_record_proj_as_static.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} functor_record_proj_as_static.t.exe functor_record_proj_as_static.cpp functor_record_proj_as_static.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps functor_record_proj_as_static.t.exe)
+  (action (run ./functor_record_proj_as_static.t.exe))))
+
+(subdir modtype_alias_emitted_before_original
+ (rule
+  (targets modtype_alias_emitted_before_original.t.exe)
+  (deps Alias.vo modtype_alias_emitted_before_original.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} modtype_alias_emitted_before_original.t.exe modtype_alias_emitted_before_original.cpp modtype_alias_emitted_before_original.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps modtype_alias_emitted_before_original.t.exe)
+  (action (run ./modtype_alias_emitted_before_original.t.exe))))
+
+(subdir eta_expanded_class_method_param_erased
+ (rule
+  (targets eta_expanded_class_method_param_erased.t.exe)
+  (deps Cls.vo eta_expanded_class_method_param_erased.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} eta_expanded_class_method_param_erased.t.exe eta_expanded_class_method_param_erased.cpp eta_expanded_class_method_param_erased.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps eta_expanded_class_method_param_erased.t.exe)
+  (action (run ./eta_expanded_class_method_param_erased.t.exe))))
+
+(subdir point_free_fix_binder_untyped
+ (rule
+  (targets point_free_fix_binder_untyped.t.exe)
+  (deps Denote.vo point_free_fix_binder_untyped.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} point_free_fix_binder_untyped.t.exe point_free_fix_binder_untyped.cpp point_free_fix_binder_untyped.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps point_free_fix_binder_untyped.t.exe)
+  (action (run ./point_free_fix_binder_untyped.t.exe))))
+
+(subdir instance_in_collision_wrapper_named_bare
+ (rule
+  (targets instance_in_collision_wrapper_named_bare.t.exe)
+  (deps AstLike.vo instance_in_collision_wrapper_named_bare.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} instance_in_collision_wrapper_named_bare.t.exe instance_in_collision_wrapper_named_bare.cpp instance_in_collision_wrapper_named_bare.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps instance_in_collision_wrapper_named_bare.t.exe)
+  (action (run ./instance_in_collision_wrapper_named_bare.t.exe))))
+
+(subdir pattern_lambda_binder_over_erased
+ (rule
+  (targets pattern_lambda_binder_over_erased.t.exe)
+  (deps PatternLambdaBinderOverErased.vo pattern_lambda_binder_over_erased.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} pattern_lambda_binder_over_erased.t.exe pattern_lambda_binder_over_erased.cpp pattern_lambda_binder_over_erased.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps pattern_lambda_binder_over_erased.t.exe)
+  (action (run ./pattern_lambda_binder_over_erased.t.exe))))
+
+(subdir hk_instance_body_targ_undeclared
+ (rule
+  (targets hk_instance_body_targ_undeclared.t.exe)
+  (deps HkInstanceBodyTargUndeclared.vo hk_instance_body_targ_undeclared.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} hk_instance_body_targ_undeclared.t.exe hk_instance_body_targ_undeclared.cpp hk_instance_body_targ_undeclared.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps hk_instance_body_targ_undeclared.t.exe)
+  (action (run ./hk_instance_body_targ_undeclared.t.exe))))
+
+(subdir hk_carrier_alias_applied_as_type
+ (rule
+  (targets hk_carrier_alias_applied_as_type.t.exe)
+  (deps HkCarrierAliasAppliedAsType.vo hk_carrier_alias_applied_as_type.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} hk_carrier_alias_applied_as_type.t.exe hk_carrier_alias_applied_as_type.cpp hk_carrier_alias_applied_as_type.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps hk_carrier_alias_applied_as_type.t.exe)
+  (action (run ./hk_carrier_alias_applied_as_type.t.exe))))
+
+(subdir functor_field_forwards_to_param
+ (rule
+  (targets functor_field_forwards_to_param.t.exe)
+  (deps FunctorFieldForwardsToParam.vo functor_field_forwards_to_param.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} functor_field_forwards_to_param.t.exe functor_field_forwards_to_param.cpp functor_field_forwards_to_param.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps functor_field_forwards_to_param.t.exe)
+  (action (run ./functor_field_forwards_to_param.t.exe))))
+
+(subdir collision_wrapper_drops_child_module
+ (rule
+  (targets collision_wrapper_drops_child_module.t.exe)
+  (deps AstLike.vo collision_wrapper_drops_child_module.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} collision_wrapper_drops_child_module.t.exe collision_wrapper_drops_child_module.cpp collision_wrapper_drops_child_module.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps collision_wrapper_drops_child_module.t.exe)
+  (action (run ./collision_wrapper_drops_child_module.t.exe))))
+
+(subdir loop_transform_reassigns_closure_typed_var
+ (rule
+  (targets loop_transform_reassigns_closure_typed_var.t.exe)
+  (deps LoopTransformReassignsClosureTypedVar.vo loop_transform_reassigns_closure_typed_var.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loop_transform_reassigns_closure_typed_var.t.exe loop_transform_reassigns_closure_typed_var.cpp loop_transform_reassigns_closure_typed_var.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loop_transform_reassigns_closure_typed_var.t.exe)
+  (action (run ./loop_transform_reassigns_closure_typed_var.t.exe))))
+
+(subdir erased_arg_callable_spelled_std_function
+ (rule
+  (targets erased_arg_callable_spelled_std_function.t.exe)
+  (deps ErasedArgCallableSpelledStdFunction.vo erased_arg_callable_spelled_std_function.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} erased_arg_callable_spelled_std_function.t.exe erased_arg_callable_spelled_std_function.cpp erased_arg_callable_spelled_std_function.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps erased_arg_callable_spelled_std_function.t.exe)
+  (action (run ./erased_arg_callable_spelled_std_function.t.exe))))
+
+(subdir ternary_of_two_lambdas
+ (rule
+  (targets ternary_of_two_lambdas.t.exe)
+  (deps TernaryOfTwoLambdas.vo ternary_of_two_lambdas.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} ternary_of_two_lambdas.t.exe ternary_of_two_lambdas.cpp ternary_of_two_lambdas.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps ternary_of_two_lambdas.t.exe)
+  (action (run ./ternary_of_two_lambdas.t.exe))))
+
+(subdir generic_monad_result_rewrapped
+ (rule
+  (targets generic_monad_result_rewrapped.t.exe)
+  (deps GenericMonadResultRewrapped.vo generic_monad_result_rewrapped.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} generic_monad_result_rewrapped.t.exe generic_monad_result_rewrapped.cpp generic_monad_result_rewrapped.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps generic_monad_result_rewrapped.t.exe)
+  (action (run ./generic_monad_result_rewrapped.t.exe))))
+
+(subdir tfunctor_record_field_carrier
+ (rule
+  (targets tfunctor_record_field_carrier.t.exe)
+  (deps TfunctorRecordFieldCarrier.vo tfunctor_record_field_carrier.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} tfunctor_record_field_carrier.t.exe tfunctor_record_field_carrier.cpp tfunctor_record_field_carrier.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps tfunctor_record_field_carrier.t.exe)
+  (action (run ./tfunctor_record_field_carrier.t.exe))))
+
+(subdir alias_carrier_under_map_lambda
+ (rule
+  (targets alias_carrier_under_map_lambda.t.exe)
+  (deps AliasCarrierUnderMapLambda.vo alias_carrier_under_map_lambda.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} alias_carrier_under_map_lambda.t.exe alias_carrier_under_map_lambda.cpp alias_carrier_under_map_lambda.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps alias_carrier_under_map_lambda.t.exe)
+  (action (run ./alias_carrier_under_map_lambda.t.exe))))
+
+(subdir mixed_class_dict_carrier_crossed
+ (rule
+  (targets mixed_class_dict_carrier_crossed.t.exe)
+  (deps MixedClassDictCarrierCrossed.vo mixed_class_dict_carrier_crossed.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mixed_class_dict_carrier_crossed.t.exe mixed_class_dict_carrier_crossed.cpp mixed_class_dict_carrier_crossed.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mixed_class_dict_carrier_crossed.t.exe)
+  (action (run ./mixed_class_dict_carrier_crossed.t.exe))))
+
+(subdir carrier_traversed_under_pair
+ (rule
+  (targets carrier_traversed_under_pair.t.exe)
+  (deps CarrierTraversedUnderPair.vo carrier_traversed_under_pair.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} carrier_traversed_under_pair.t.exe carrier_traversed_under_pair.cpp carrier_traversed_under_pair.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps carrier_traversed_under_pair.t.exe)
+  (action (run ./carrier_traversed_under_pair.t.exe))))
+
+(subdir alias_minted_before_its_body_type
+ (rule
+  (targets alias_minted_before_its_body_type.t.exe)
+  (deps AliasMintedBeforeItsBodyType.vo alias_minted_before_its_body_type.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} alias_minted_before_its_body_type.t.exe alias_minted_before_its_body_type.cpp alias_minted_before_its_body_type.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps alias_minted_before_its_body_type.t.exe)
+  (action (run ./alias_minted_before_its_body_type.t.exe))))
+
+(subdir promoted_var_collapse
+ (rule
+  (targets promoted_var_collapse.t.exe)
+  (deps PromotedVarCollapse.vo promoted_var_collapse.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} promoted_var_collapse.t.exe promoted_var_collapse.cpp promoted_var_collapse.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps promoted_var_collapse.t.exe)
+  (action (run ./promoted_var_collapse.t.exe))))
+
+(subdir lambda_binder_from_callee
+ (rule
+  (targets lambda_binder_from_callee.t.exe)
+  (deps LambdaBinderFromCallee.vo lambda_binder_from_callee.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} lambda_binder_from_callee.t.exe lambda_binder_from_callee.cpp lambda_binder_from_callee.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps lambda_binder_from_callee.t.exe)
+  (action (run ./lambda_binder_from_callee.t.exe))))
+
+(subdir value_position_class_promoted
+ (rule
+  (targets value_position_class_promoted.t.exe)
+  (deps ValuePositionClassPromoted.vo value_position_class_promoted.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} value_position_class_promoted.t.exe value_position_class_promoted.cpp value_position_class_promoted.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps value_position_class_promoted.t.exe)
+  (action (run ./value_position_class_promoted.t.exe))))
+
+(subdir skipped_dict_family_unconstrained
+ (rule
+  (targets skipped_dict_family_unconstrained.t.exe)
+  (deps SkippedDictFamilyUnconstrained.vo skipped_dict_family_unconstrained.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} skipped_dict_family_unconstrained.t.exe skipped_dict_family_unconstrained.cpp skipped_dict_family_unconstrained.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps skipped_dict_family_unconstrained.t.exe)
+  (action (run ./skipped_dict_family_unconstrained.t.exe))))
+
+(subdir subevent_forward_loses_kind
+ (rule
+  (targets subevent_forward_loses_kind.t.exe)
+  (deps SubeventForwardLosesKind.vo subevent_forward_loses_kind.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} subevent_forward_loses_kind.t.exe subevent_forward_loses_kind.cpp subevent_forward_loses_kind.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps subevent_forward_loses_kind.t.exe)
+  (action (run ./subevent_forward_loses_kind.t.exe))))
+
+(subdir error_ctor_type_from_enclosing_return
+ (rule
+  (targets error_ctor_type_from_enclosing_return.t.exe)
+  (deps ErrorCtorTypeFromEnclosingReturn.vo error_ctor_type_from_enclosing_return.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} error_ctor_type_from_enclosing_return.t.exe error_ctor_type_from_enclosing_return.cpp error_ctor_type_from_enclosing_return.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps error_ctor_type_from_enclosing_return.t.exe)
+  (action (run ./error_ctor_type_from_enclosing_return.t.exe))))
+
+(subdir event_family_only_in_return_type
+ (rule
+  (targets event_family_only_in_return_type.t.exe)
+  (deps EventFamilyOnlyInReturnType.vo event_family_only_in_return_type.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} event_family_only_in_return_type.t.exe event_family_only_in_return_type.cpp event_family_only_in_return_type.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps event_family_only_in_return_type.t.exe)
+  (action (run ./event_family_only_in_return_type.t.exe))))
+
+(subdir error_ctor_through_monad_instance
+ (rule
+  (targets error_ctor_through_monad_instance.t.exe)
+  (deps ErrorCtorThroughMonadInstance.vo error_ctor_through_monad_instance.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} error_ctor_through_monad_instance.t.exe error_ctor_through_monad_instance.cpp error_ctor_through_monad_instance.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps error_ctor_through_monad_instance.t.exe)
+  (action (run ./error_ctor_through_monad_instance.t.exe))))
+
+(subdir error_ctor_through_reified_instance
+ (rule
+  (targets error_ctor_through_reified_instance.t.exe)
+  (deps ErrorCtorThroughReifiedInstance.vo error_ctor_through_reified_instance.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} error_ctor_through_reified_instance.t.exe error_ctor_through_reified_instance.cpp error_ctor_through_reified_instance.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps error_ctor_through_reified_instance.t.exe)
+  (action (run ./error_ctor_through_reified_instance.t.exe))))
+
+(subdir instance_method_param_at_class_carrier
+ (rule
+  (targets instance_method_param_at_class_carrier.t.exe)
+  (deps InstanceMethodParamAtClassCarrier.vo instance_method_param_at_class_carrier.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} instance_method_param_at_class_carrier.t.exe instance_method_param_at_class_carrier.cpp instance_method_param_at_class_carrier.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps instance_method_param_at_class_carrier.t.exe)
+  (action (run ./instance_method_param_at_class_carrier.t.exe))))
+
+(subdir pair_component_erased_in_destructuring_binder
+ (rule
+  (targets pair_component_erased_in_destructuring_binder.t.exe)
+  (deps PairComponentErasedInDestructuringBinder.vo pair_component_erased_in_destructuring_binder.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} pair_component_erased_in_destructuring_binder.t.exe pair_component_erased_in_destructuring_binder.cpp pair_component_erased_in_destructuring_binder.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps pair_component_erased_in_destructuring_binder.t.exe)
+  (action (run ./pair_component_erased_in_destructuring_binder.t.exe))))
+
+(subdir instance_method_param_at_foreign_class_field
+ (rule
+  (targets instance_method_param_at_foreign_class_field.t.exe)
+  (deps InstanceMethodParamAtForeignClassField.vo instance_method_param_at_foreign_class_field.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} instance_method_param_at_foreign_class_field.t.exe instance_method_param_at_foreign_class_field.cpp instance_method_param_at_foreign_class_field.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps instance_method_param_at_foreign_class_field.t.exe)
+  (action (run ./instance_method_param_at_foreign_class_field.t.exe))))
+
+(subdir instance_carrier_unqualified_at_known_instance
+ (rule
+  (targets instance_carrier_unqualified_at_known_instance.t.exe)
+  (deps InstanceCarrierUnqualifiedAtKnownInstance.vo instance_carrier_unqualified_at_known_instance.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} instance_carrier_unqualified_at_known_instance.t.exe instance_carrier_unqualified_at_known_instance.cpp instance_carrier_unqualified_at_known_instance.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps instance_carrier_unqualified_at_known_instance.t.exe)
+  (action (run ./instance_carrier_unqualified_at_known_instance.t.exe))))
+
+(subdir promoted_var_of_specialised_instance_argument
+ (rule
+  (targets promoted_var_of_specialised_instance_argument.t.exe)
+  (deps PromotedVarOfSpecialisedInstanceArgument.vo promoted_var_of_specialised_instance_argument.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} promoted_var_of_specialised_instance_argument.t.exe promoted_var_of_specialised_instance_argument.cpp promoted_var_of_specialised_instance_argument.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps promoted_var_of_specialised_instance_argument.t.exe)
+  (action (run ./promoted_var_of_specialised_instance_argument.t.exe))))
+
+(subdir class_field_alias_at_call_argument
+ (rule
+  (targets class_field_alias_at_call_argument.t.exe)
+  (deps ClassFieldAliasAtCallArgument.vo class_field_alias_at_call_argument.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} class_field_alias_at_call_argument.t.exe class_field_alias_at_call_argument.cpp class_field_alias_at_call_argument.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps class_field_alias_at_call_argument.t.exe)
+  (action (run ./class_field_alias_at_call_argument.t.exe))))
+
+(subdir inductive_field_at_section_class_field
+ (rule
+  (targets inductive_field_at_section_class_field.t.exe)
+  (deps InductiveFieldAtSectionClassField.vo inductive_field_at_section_class_field.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} inductive_field_at_section_class_field.t.exe inductive_field_at_section_class_field.cpp inductive_field_at_section_class_field.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps inductive_field_at_section_class_field.t.exe)
+  (action (run ./inductive_field_at_section_class_field.t.exe))))
+
+(subdir inductive_payload_from_same_section
+ (rule
+  (targets inductive_payload_from_same_section.t.exe)
+  (deps InductivePayloadFromSameSection.vo inductive_payload_from_same_section.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} inductive_payload_from_same_section.t.exe inductive_payload_from_same_section.cpp inductive_payload_from_same_section.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps inductive_payload_from_same_section.t.exe)
+  (action (run ./inductive_payload_from_same_section.t.exe))))
+
+(subdir type_alias_of_section_inductive
+ (rule
+  (targets type_alias_of_section_inductive.t.exe)
+  (deps TypeAliasOfSectionInductive.vo type_alias_of_section_inductive.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} type_alias_of_section_inductive.t.exe type_alias_of_section_inductive.cpp type_alias_of_section_inductive.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps type_alias_of_section_inductive.t.exe)
+  (action (run ./type_alias_of_section_inductive.t.exe))))
+
+(subdir alias_phantom_param_before_promoted
+ (rule
+  (targets alias_phantom_param_before_promoted.t.exe)
+  (deps AliasPhantomParamBeforePromoted.vo alias_phantom_param_before_promoted.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} alias_phantom_param_before_promoted.t.exe alias_phantom_param_before_promoted.cpp alias_phantom_param_before_promoted.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps alias_phantom_param_before_promoted.t.exe)
+  (action (run ./alias_phantom_param_before_promoted.t.exe))))
+
+(subdir record_field_of_section_alias
+ (rule
+  (targets record_field_of_section_alias.t.exe)
+  (deps RecordFieldOfSectionAlias.vo record_field_of_section_alias.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} record_field_of_section_alias.t.exe record_field_of_section_alias.cpp record_field_of_section_alias.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps record_field_of_section_alias.t.exe)
+  (action (run ./record_field_of_section_alias.t.exe))))
+
+(subdir nested_instance_field_resolution
+ (rule
+  (targets nested_instance_field_resolution.t.exe)
+  (deps NestedInstanceFieldResolution.vo nested_instance_field_resolution.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nested_instance_field_resolution.t.exe nested_instance_field_resolution.cpp nested_instance_field_resolution.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps nested_instance_field_resolution.t.exe)
+  (action (run ./nested_instance_field_resolution.t.exe))))
+
+(subdir erased_instance_argument_in_mention
+ (rule
+  (targets erased_instance_argument_in_mention.t.exe)
+  (deps ErasedInstanceArgumentInMention.vo erased_instance_argument_in_mention.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} erased_instance_argument_in_mention.t.exe erased_instance_argument_in_mention.cpp erased_instance_argument_in_mention.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps erased_instance_argument_in_mention.t.exe)
+  (action (run ./erased_instance_argument_in_mention.t.exe))))
+
+(subdir section_definition_instantiated_outside
+ (rule
+  (targets section_definition_instantiated_outside.t.exe)
+  (deps SectionDefinitionInstantiatedOutside.vo section_definition_instantiated_outside.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} section_definition_instantiated_outside.t.exe section_definition_instantiated_outside.cpp section_definition_instantiated_outside.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps section_definition_instantiated_outside.t.exe)
+  (action (run ./section_definition_instantiated_outside.t.exe))))
+
+(subdir erased_dval_in_container
+ (rule
+  (targets erased_dval_in_container.t.exe)
+  (deps ErasedDvalInContainer.vo erased_dval_in_container.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} erased_dval_in_container.t.exe erased_dval_in_container.cpp erased_dval_in_container.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps erased_dval_in_container.t.exe)
+  (action (run ./erased_dval_in_container.t.exe))))
+
+(subdir two_instances_disagree_on_promoted_name
+ (rule
+  (targets two_instances_disagree_on_promoted_name.t.exe)
+  (deps TwoInstancesDisagreeOnPromotedName.vo two_instances_disagree_on_promoted_name.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} two_instances_disagree_on_promoted_name.t.exe two_instances_disagree_on_promoted_name.cpp two_instances_disagree_on_promoted_name.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps two_instances_disagree_on_promoted_name.t.exe)
+  (action (run ./two_instances_disagree_on_promoted_name.t.exe))))
+
+(subdir instance_only_in_body_application
+ (rule
+  (targets instance_only_in_body_application.t.exe)
+  (deps InstanceOnlyInBodyApplication.vo instance_only_in_body_application.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} instance_only_in_body_application.t.exe instance_only_in_body_application.cpp instance_only_in_body_application.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps instance_only_in_body_application.t.exe)
+  (action (run ./instance_only_in_body_application.t.exe))))
+
+(subdir itree_bind_binder_at_named_decl
+ (rule
+  (targets itree_bind_binder_at_named_decl.t.exe)
+  (deps ItreeBindBinderAtNamedDecl.vo itree_bind_binder_at_named_decl.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} itree_bind_binder_at_named_decl.t.exe itree_bind_binder_at_named_decl.cpp itree_bind_binder_at_named_decl.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps itree_bind_binder_at_named_decl.t.exe)
+  (action (run ./itree_bind_binder_at_named_decl.t.exe))))
+
+(subdir partial_app_alias_value_slot
+ (rule
+  (targets partial_app_alias_value_slot.t.exe)
+  (deps PartialAppAliasValueSlot.vo partial_app_alias_value_slot.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} partial_app_alias_value_slot.t.exe partial_app_alias_value_slot.cpp partial_app_alias_value_slot.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps partial_app_alias_value_slot.t.exe)
+  (action (run ./partial_app_alias_value_slot.t.exe))))
+
+(subdir phantom_event_forwarded_as_template
+ (rule
+  (targets phantom_event_forwarded_as_template.t.exe)
+  (deps PhantomEventForwardedAsTemplate.vo phantom_event_forwarded_as_template.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} phantom_event_forwarded_as_template.t.exe phantom_event_forwarded_as_template.cpp phantom_event_forwarded_as_template.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps phantom_event_forwarded_as_template.t.exe)
+  (action (run ./phantom_event_forwarded_as_template.t.exe))))
+
+(subdir expanded_product_wrong_class_field
+ (rule
+  (targets expanded_product_wrong_class_field.t.exe)
+  (deps ExpandedProductWrongClassField.vo expanded_product_wrong_class_field.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} expanded_product_wrong_class_field.t.exe expanded_product_wrong_class_field.cpp expanded_product_wrong_class_field.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps expanded_product_wrong_class_field.t.exe)
+  (action (run ./expanded_product_wrong_class_field.t.exe))))
+
+(subdir lifted_inner_fix_drops_class_param
+ (rule
+  (targets lifted_inner_fix_drops_class_param.t.exe)
+  (deps LiftedInnerFixDropsClassParam.vo lifted_inner_fix_drops_class_param.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} lifted_inner_fix_drops_class_param.t.exe lifted_inner_fix_drops_class_param.cpp lifted_inner_fix_drops_class_param.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps lifted_inner_fix_drops_class_param.t.exe)
+  (action (run ./lifted_inner_fix_drops_class_param.t.exe))))
+
+; --- Twelfth round of Vellvm reductions, against Crane c40203139.
+
+(subdir inline_inner_fix_writes_instance
+ (rule
+  (targets inline_inner_fix_writes_instance.t.exe)
+  (deps InlineInnerFixWritesInstance.vo inline_inner_fix_writes_instance.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} inline_inner_fix_writes_instance.t.exe inline_inner_fix_writes_instance.cpp inline_inner_fix_writes_instance.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps inline_inner_fix_writes_instance.t.exe)
+  (action (run ./inline_inner_fix_writes_instance.t.exe))))
+
+; --- Element half of Vellvm Cluster A, reduced by the Vellvm-side session.
+
+(subdir bind_continuation_binder_from_class_field
+ (rule
+  (targets bind_continuation_binder_from_class_field.t.exe)
+  (deps BindContinuationBinderFromClassField.vo bind_continuation_binder_from_class_field.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bind_continuation_binder_from_class_field.t.exe bind_continuation_binder_from_class_field.cpp bind_continuation_binder_from_class_field.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps bind_continuation_binder_from_class_field.t.exe)
+  (action (run ./bind_continuation_binder_from_class_field.t.exe))))
+
+(subdir lifted_spec_before_class_concept
+ (rule
+  (targets lifted_spec_before_class_concept.t.exe)
+  (deps LiftedSpecBeforeClassConcept.vo lifted_spec_before_class_concept.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} lifted_spec_before_class_concept.t.exe lifted_spec_before_class_concept.cpp lifted_spec_before_class_concept.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps lifted_spec_before_class_concept.t.exe)
+  (action (run ./lifted_spec_before_class_concept.t.exe))))
+
+(subdir inner_fix_codomain_from_class
+ (rule
+  (targets inner_fix_codomain_from_class.t.exe)
+  (deps InnerFixCodomainFromClass.vo inner_fix_codomain_from_class.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} inner_fix_codomain_from_class.t.exe inner_fix_codomain_from_class.cpp inner_fix_codomain_from_class.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps inner_fix_codomain_from_class.t.exe)
+  (action (run ./inner_fix_codomain_from_class.t.exe))))
+
+; --- Widenings of bind_continuation_binder_from_class_field: two
+; --- class-dependent element fields, and a class field in the enclosing
+; --- Fixpoint's own domain.  Ported from the Vellvm session 1341e658/65656e00.
+
+(subdir bind_continuation_binder_ctor_order
+ (rule
+  (targets bind_continuation_binder_ctor_order.t.exe)
+  (deps BindContinuationBinderCtorOrder.vo bind_continuation_binder_ctor_order.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bind_continuation_binder_ctor_order.t.exe bind_continuation_binder_ctor_order.cpp bind_continuation_binder_ctor_order.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps bind_continuation_binder_ctor_order.t.exe)
+  (action (run ./bind_continuation_binder_ctor_order.t.exe))))
+
+(subdir bind_continuation_binder_field_order
+ (rule
+  (targets bind_continuation_binder_field_order.t.exe)
+  (deps BindContinuationBinderFieldOrder.vo bind_continuation_binder_field_order.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bind_continuation_binder_field_order.t.exe bind_continuation_binder_field_order.cpp bind_continuation_binder_field_order.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps bind_continuation_binder_field_order.t.exe)
+  (action (run ./bind_continuation_binder_field_order.t.exe))))
+
+(subdir bind_continuation_binder_mlt_domain
+ (rule
+  (targets bind_continuation_binder_mlt_domain.t.exe)
+  (deps BindContinuationBinderMltDomain.vo bind_continuation_binder_mlt_domain.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bind_continuation_binder_mlt_domain.t.exe bind_continuation_binder_mlt_domain.cpp bind_continuation_binder_mlt_domain.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps bind_continuation_binder_mlt_domain.t.exe)
+  (action (run ./bind_continuation_binder_mlt_domain.t.exe))))
+
+; --- The lambda half of the lifted-class-instance defect; Vellvm §190.
+
+(subdir lifted_lambda_passes_class_instance
+ (rule
+  (targets lifted_lambda_passes_class_instance.t.exe)
+  (deps LiftedLambdaPassesClassInstance.vo lifted_lambda_passes_class_instance.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} lifted_lambda_passes_class_instance.t.exe lifted_lambda_passes_class_instance.cpp lifted_lambda_passes_class_instance.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps lifted_lambda_passes_class_instance.t.exe)
+  (action (run ./lifted_lambda_passes_class_instance.t.exe))))
+
+; --- A class whose Params dependence is carried by a section inductive.
+
+(subdir class_field_type_via_section_inductive
+ (rule
+  (targets class_field_type_via_section_inductive.t.exe)
+  (deps ClassFieldTypeViaSectionInductive.vo class_field_type_via_section_inductive.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} class_field_type_via_section_inductive.t.exe class_field_type_via_section_inductive.cpp class_field_type_via_section_inductive.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps class_field_type_via_section_inductive.t.exe)
+  (action (run ./class_field_type_via_section_inductive.t.exe))))
+
+; --- A hoisted concept names an alias and a module's type.
+
+(subdir concept_mentions_alias_and_module_type
+ (rule
+  (targets concept_mentions_alias_and_module_type.t.exe)
+  (deps ConceptMentionsAliasAndModuleType.vo concept_mentions_alias_and_module_type.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} concept_mentions_alias_and_module_type.t.exe concept_mentions_alias_and_module_type.cpp concept_mentions_alias_and_module_type.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps concept_mentions_alias_and_module_type.t.exe)
+  (action (run ./concept_mentions_alias_and_module_type.t.exe))))
+
+; --- A demoted class constructed in an expression position.
+
+(subdir class_value_ctor_drops_promoted
+ (rule
+  (targets class_value_ctor_drops_promoted.t.exe)
+  (deps ClassValueCtorDropsPromoted.vo class_value_ctor_drops_promoted.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} class_value_ctor_drops_promoted.t.exe class_value_ctor_drops_promoted.cpp class_value_ctor_drops_promoted.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps class_value_ctor_drops_promoted.t.exe)
+  (action (run ./class_value_ctor_drops_promoted.t.exe))))
+
+; --- A hoisted concept spells a type printed inside a file's struct.
+
+(subdir concept_mentions_eponymous_file_type
+ (rule
+  (targets concept_mentions_eponymous_file_type.t.exe)
+  (deps ConceptMentionsEponymousFileType.vo concept_mentions_eponymous_file_type.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} concept_mentions_eponymous_file_type.t.exe concept_mentions_eponymous_file_type.cpp concept_mentions_eponymous_file_type.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps concept_mentions_eponymous_file_type.t.exe)
+  (action (run ./concept_mentions_eponymous_file_type.t.exe))))
+
+; --- A promoted variable resolved in a signature, bare in the body.
+
+(subdir promoted_var_bare_in_body
+ (rule
+  (targets promoted_var_bare_in_body.t.exe)
+  (deps PromotedVarBareInBody.vo promoted_var_bare_in_body.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} promoted_var_bare_in_body.t.exe promoted_var_bare_in_body.cpp promoted_var_bare_in_body.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps promoted_var_bare_in_body.t.exe)
+  (action (run ./promoted_var_bare_in_body.t.exe))))
+
+; --- A ~> handler into ITree stateT keeps its event parameter; an absurd continuation.
+
+(subdir monad_itree_targ_unbound
+ (rule
+  (targets monad_itree_targ_unbound.t.exe)
+  (deps MonadItreeTargUnbound.vo monad_itree_targ_unbound.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} monad_itree_targ_unbound.t.exe monad_itree_targ_unbound.cpp monad_itree_targ_unbound.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps monad_itree_targ_unbound.t.exe)
+  (action (run ./monad_itree_targ_unbound.t.exe))))
+
+; --- A lifted helper's const value parameter matched as owned.
+
+(subdir lifted_param_const_v_mut
+ (rule
+  (targets lifted_param_const_v_mut.t.exe)
+  (deps LiftedParamConstVMut.vo lifted_param_const_v_mut.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} lifted_param_const_v_mut.t.exe lifted_param_const_v_mut.cpp lifted_param_const_v_mut.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps lifted_param_const_v_mut.t.exe)
+  (action (run ./lifted_param_const_v_mut.t.exe))))
+
+; --- A fixpoint binds a partial application of itself.
+
+(subdir self_partial_app_in_let
+ (rule
+  (targets self_partial_app_in_let.t.exe)
+  (deps SelfPartialAppInLet.vo self_partial_app_in_let.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} self_partial_app_in_let.t.exe self_partial_app_in_let.cpp self_partial_app_in_let.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps self_partial_app_in_let.t.exe)
+  (action (run ./self_partial_app_in_let.t.exe))))
+
+; --- A nested custom constructor built one level too deep.
+
+(subdir nested_custom_ctor_field_type
+ (rule
+  (targets nested_custom_ctor_field_type.t.exe)
+  (deps NestedCustomCtorFieldType.vo nested_custom_ctor_field_type.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nested_custom_ctor_field_type.t.exe nested_custom_ctor_field_type.cpp nested_custom_ctor_field_type.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps nested_custom_ctor_field_type.t.exe)
+  (action (run ./nested_custom_ctor_field_type.t.exe))))
+
+; --- A lifted helper called with a type argument made up at the call.
+
+(subdir lifted_fix_extra_targ_at_call
+ (rule
+  (targets lifted_fix_extra_targ_at_call.t.exe)
+  (deps LiftedFixExtraTargAtCall.vo lifted_fix_extra_targ_at_call.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} lifted_fix_extra_targ_at_call.t.exe lifted_fix_extra_targ_at_call.cpp lifted_fix_extra_targ_at_call.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps lifted_fix_extra_targ_at_call.t.exe)
+  (action (run ./lifted_fix_extra_targ_at_call.t.exe))))
+
+; --- A call in a handler loop names none of its callee's template arguments.
+
+(subdir handler_loop_call_drops_instance
+ (rule
+  (targets handler_loop_call_drops_instance.t.exe)
+  (deps HandlerLoopCallDropsInstance.vo handler_loop_call_drops_instance.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} handler_loop_call_drops_instance.t.exe handler_loop_call_drops_instance.cpp handler_loop_call_drops_instance.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps handler_loop_call_drops_instance.t.exe)
+  (action (run ./handler_loop_call_drops_instance.t.exe))))
+
+; --- A match three inr1s deep into a family sum loses its type.
+
+(subdir nested_sum1_match_loses_type
+ (rule
+  (targets nested_sum1_match_loses_type.t.exe)
+  (deps NestedSum1MatchLosesType.vo nested_sum1_match_loses_type.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nested_sum1_match_loses_type.t.exe nested_sum1_match_loses_type.cpp nested_sum1_match_loses_type.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps nested_sum1_match_loses_type.t.exe)
+  (action (run ./nested_sum1_match_loses_type.t.exe))))
+
+; --- A coinductive with a family parameter loses its template parameters.
+
+(subdir coind_family_param
+ (rule
+  (targets coind_family_param.t.exe)
+  (deps CoindFamilyParam.vo coind_family_param.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} coind_family_param.t.exe coind_family_param.cpp coind_family_param.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps coind_family_param.t.exe)
+  (action (run ./coind_family_param.t.exe))))
+
+; --- ITree from source: itree_observe_method.
+
+(subdir itree_observe_method
+ (rule
+  (targets itree_observe_method.t.exe)
+  (deps ItreeObserveMethod.vo itree_observe_method.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} itree_observe_method.t.exe itree_observe_method.cpp itree_observe_method.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps itree_observe_method.t.exe)
+  (action (run ./itree_observe_method.t.exe))))
+
+; --- ITree from source: itree_void1_type_arg.
+
+(subdir itree_void1_type_arg
+ (rule
+  (targets itree_void1_type_arg.t.exe)
+  (deps ItreeVoid1TypeArg.vo itree_void1_type_arg.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} itree_void1_type_arg.t.exe itree_void1_type_arg.cpp itree_void1_type_arg.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps itree_void1_type_arg.t.exe)
+  (action (run ./itree_void1_type_arg.t.exe))))
+
+; --- ITree from source: ctor_family_index_any.
+
+(subdir ctor_family_index_any
+ (rule
+  (targets ctor_family_index_any.t.exe)
+  (deps CtorFamilyIndexAny.vo ctor_family_index_any.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} ctor_family_index_any.t.exe ctor_family_index_any.cpp ctor_family_index_any.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps ctor_family_index_any.t.exe)
+  (action (run ./ctor_family_index_any.t.exe))))
+
+; --- ITree from source: cofix_self_call_targs.
+
+(subdir cofix_self_call_targs
+ (rule
+  (targets cofix_self_call_targs.t.exe)
+  (deps CofixSelfCallTargs.vo cofix_self_call_targs.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} cofix_self_call_targs.t.exe cofix_self_call_targs.cpp cofix_self_call_targs.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps cofix_self_call_targs.t.exe)
+  (action (run ./cofix_self_call_targs.t.exe))))
+
+; --- ITree from source: vis_cont_type.
+
+(subdir vis_cont_type
+ (rule
+  (targets vis_cont_type.t.exe)
+  (deps VisContType.vo vis_cont_type.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} vis_cont_type.t.exe vis_cont_type.cpp vis_cont_type.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps vis_cont_type.t.exe)
+  (action (run ./vis_cont_type.t.exe))))
+
+; --- ITree from source: vis_existential_cont.
+
+(subdir vis_existential_cont
+ (rule
+  (targets vis_existential_cont.t.exe)
+  (deps VisExistentialCont.vo vis_existential_cont.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} vis_existential_cont.t.exe vis_existential_cont.cpp vis_existential_cont.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps vis_existential_cont.t.exe)
+  (action (run ./vis_existential_cont.t.exe))))
+
+; --- ITree from source: instance_family_param.
+
+(subdir instance_family_param
+ (rule
+  (targets instance_family_param.t.exe)
+  (deps InstanceFamilyParam.vo instance_family_param.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} instance_family_param.t.exe instance_family_param.cpp instance_family_param.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps instance_family_param.t.exe)
+  (action (run ./instance_family_param.t.exe))))
+
+; --- ITree from source: void1_lambda_result_erased.
+
+(subdir void1_lambda_result_erased
+ (rule
+  (targets void1_lambda_result_erased.t.exe)
+  (deps Void1LambdaResultErased.vo void1_lambda_result_erased.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} void1_lambda_result_erased.t.exe void1_lambda_result_erased.cpp void1_lambda_result_erased.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps void1_lambda_result_erased.t.exe)
+  (action (run ./void1_lambda_result_erased.t.exe))))
+
+(subdir itree_trigger_subevent
+ (rule
+  (targets itree_trigger_subevent.t.exe)
+  (deps ItreeTriggerSubevent.vo itree_trigger_subevent.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} itree_trigger_subevent.t.exe itree_trigger_subevent.cpp itree_trigger_subevent.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps itree_trigger_subevent.t.exe)
+  (action (run ./itree_trigger_subevent.t.exe))))
+
+(subdir family_sum_alias
+ (rule
+  (targets family_sum_alias.t.exe)
+  (deps FamilySumAlias.vo family_sum_alias.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} family_sum_alias.t.exe family_sum_alias.cpp family_sum_alias.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps family_sum_alias.t.exe)
+  (action (run ./family_sum_alias.t.exe))))
+
+(subdir itree_interp
+ (rule
+  (targets itree_interp.t.exe)
+  (deps ItreeInterp.vo itree_interp.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} itree_interp.t.exe itree_interp.cpp itree_interp.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps itree_interp.t.exe)
+  (action (run ./itree_interp.t.exe))))
+
+(subdir itree_mrec
+ (rule
+  (targets itree_mrec.t.exe)
+  (deps ItreeMrec.vo itree_mrec.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} itree_mrec.t.exe itree_mrec.cpp itree_mrec.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps itree_mrec.t.exe)
+  (action (run ./itree_mrec.t.exe))))
+
+(subdir instance_use_drops_family_arg
+ (rule
+  (targets instance_use_drops_family_arg.t.exe)
+  (deps InstanceUseDropsFamilyArg.vo instance_use_drops_family_arg.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} instance_use_drops_family_arg.t.exe instance_use_drops_family_arg.cpp instance_use_drops_family_arg.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps instance_use_drops_family_arg.t.exe)
+  (action (run ./instance_use_drops_family_arg.t.exe))))
+
+(subdir tfunctor_composed_instance
+ (rule
+  (targets tfunctor_composed_instance.t.exe)
+  (deps TfunctorComposedInstance.vo tfunctor_composed_instance.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} tfunctor_composed_instance.t.exe tfunctor_composed_instance.cpp tfunctor_composed_instance.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps tfunctor_composed_instance.t.exe)
+  (action (run ./tfunctor_composed_instance.t.exe))))
+
+(subdir ret_in_iter_lambda
+ (rule
+  (targets ret_in_iter_lambda.t.exe)
+  (deps RetInIterLambda.vo ret_in_iter_lambda.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} ret_in_iter_lambda.t.exe ret_in_iter_lambda.cpp ret_in_iter_lambda.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps ret_in_iter_lambda.t.exe)
+  (action (run ./ret_in_iter_lambda.t.exe))))
+
+(subdir match_observe_alias_family
+ (rule
+  (targets match_observe_alias_family.t.exe)
+  (deps MatchObserveAliasFamily.vo match_observe_alias_family.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} match_observe_alias_family.t.exe match_observe_alias_family.cpp match_observe_alias_family.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps match_observe_alias_family.t.exe)
+  (action (run ./match_observe_alias_family.t.exe))))
+
+(subdir translate_ifun_lambda
+ (rule
+  (targets translate_ifun_lambda.t.exe)
+  (deps TranslateIfunLambda.vo translate_ifun_lambda.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} translate_ifun_lambda.t.exe translate_ifun_lambda.cpp translate_ifun_lambda.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps translate_ifun_lambda.t.exe)
+  (action (run ./translate_ifun_lambda.t.exe))))
+
+(subdir statet_itree_return
+ (rule
+  (targets statet_itree_return.t.exe)
+  (deps StatetItreeReturn.vo statet_itree_return.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} statet_itree_return.t.exe statet_itree_return.cpp statet_itree_return.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps statet_itree_return.t.exe)
+  (action (run ./statet_itree_return.t.exe))))
+
+(subdir tfunctor_record_list_field
+ (rule
+  (targets tfunctor_record_list_field.t.exe)
+  (deps TfunctorRecordListField.vo tfunctor_record_list_field.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} tfunctor_record_list_field.t.exe tfunctor_record_list_field.cpp tfunctor_record_list_field.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps tfunctor_record_list_field.t.exe)
+  (action (run ./tfunctor_record_list_field.t.exe))))
+
+(subdir nested_sum_index_mismatch
+ (rule
+  (targets nested_sum_index_mismatch.t.exe)
+  (deps NestedSumIndexMismatch.vo nested_sum_index_mismatch.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nested_sum_index_mismatch.t.exe nested_sum_index_mismatch.cpp nested_sum_index_mismatch.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps nested_sum_index_mismatch.t.exe)
+  (action (run ./nested_sum_index_mismatch.t.exe))))
+
+(subdir tfunctor_alias_carrier
+ (rule
+  (targets tfunctor_alias_carrier.t.exe)
+  (deps TfunctorAliasCarrier.vo tfunctor_alias_carrier.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} tfunctor_alias_carrier.t.exe tfunctor_alias_carrier.cpp tfunctor_alias_carrier.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps tfunctor_alias_carrier.t.exe)
+  (action (run ./tfunctor_alias_carrier.t.exe))))
+
+(subdir partial_app_carrier
+ (rule
+  (targets partial_app_carrier.t.exe)
+  (deps PartialAppCarrier.vo partial_app_carrier.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} partial_app_carrier.t.exe partial_app_carrier.cpp partial_app_carrier.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps partial_app_carrier.t.exe)
+  (action (run ./partial_app_carrier.t.exe))))
+
+(subdir carrier_holder_file_order
+ (rule
+  (targets carrier_holder_file_order.t.exe)
+  (deps CarrierHolderFileOrder.vo carrier_holder_file_order.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} carrier_holder_file_order.t.exe carrier_holder_file_order.cpp carrier_holder_file_order.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps carrier_holder_file_order.t.exe)
+  (action (run ./carrier_holder_file_order.t.exe))))
+
+(subdir deep_sum1_match
+ (rule
+  (targets deep_sum1_match.t.exe)
+  (deps DeepSum1Match.vo deep_sum1_match.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} deep_sum1_match.t.exe deep_sum1_match.cpp deep_sum1_match.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps deep_sum1_match.t.exe)
+  (action (run ./deep_sum1_match.t.exe))))
+
+(subdir mrec_handler_branch_types
+ (rule
+  (targets mrec_handler_branch_types.t.exe)
+  (deps MrecHandlerBranchTypes.vo mrec_handler_branch_types.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mrec_handler_branch_types.t.exe mrec_handler_branch_types.cpp mrec_handler_branch_types.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mrec_handler_branch_types.t.exe)
+  (action (run ./mrec_handler_branch_types.t.exe))))
+
+(subdir lifted_helper_family_generalised
+ (rule
+  (targets lifted_helper_family_generalised.t.exe)
+  (deps LiftedHelperFamilyGeneralised.vo lifted_helper_family_generalised.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} lifted_helper_family_generalised.t.exe lifted_helper_family_generalised.cpp lifted_helper_family_generalised.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps lifted_helper_family_generalised.t.exe)
+  (action (run ./lifted_helper_family_generalised.t.exe))))
+
+(subdir tfunctor_option_instance
+ (rule
+  (targets tfunctor_option_instance.t.exe)
+  (deps TfunctorOptionInstance.vo tfunctor_option_instance.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} tfunctor_option_instance.t.exe tfunctor_option_instance.cpp tfunctor_option_instance.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps tfunctor_option_instance.t.exe)
+  (action (run ./tfunctor_option_instance.t.exe))))
+
+(subdir tfunctor_record_option_field
+ (rule
+  (targets tfunctor_record_option_field.t.exe)
+  (deps TfunctorRecordOptionField.vo tfunctor_record_option_field.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} tfunctor_record_option_field.t.exe tfunctor_record_option_field.cpp tfunctor_record_option_field.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps tfunctor_record_option_field.t.exe)
+  (action (run ./tfunctor_record_option_field.t.exe))))
+
+(subdir run_bot_handle_existential
+ (rule
+  (targets run_bot_handle_existential.t.exe)
+  (deps RunBotHandleExistential.vo run_bot_handle_existential.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} run_bot_handle_existential.t.exe run_bot_handle_existential.cpp run_bot_handle_existential.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps run_bot_handle_existential.t.exe)
+  (action (run ./run_bot_handle_existential.t.exe))))
+
+(subdir handler_loop_call_drops_result_targ
+ (rule
+  (targets handler_loop_call_drops_result_targ.t.exe)
+  (deps HandlerLoopCallDropsResultTarg.vo handler_loop_call_drops_result_targ.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} handler_loop_call_drops_result_targ.t.exe handler_loop_call_drops_result_targ.cpp handler_loop_call_drops_result_targ.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps handler_loop_call_drops_result_targ.t.exe)
+  (action (run ./handler_loop_call_drops_result_targ.t.exe))))
+
+(subdir nested_class_state_arg
+ (rule
+  (targets nested_class_state_arg.t.exe)
+  (deps NestedClassStateArg.vo nested_class_state_arg.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nested_class_state_arg.t.exe nested_class_state_arg.cpp nested_class_state_arg.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps nested_class_state_arg.t.exe)
+  (action (run ./nested_class_state_arg.t.exe))))
+
+(subdir itree_case_handler
+ (rule
+  (targets itree_case_handler.t.exe)
+  (deps ItreeCaseHandler.vo itree_case_handler.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} itree_case_handler.t.exe itree_case_handler.cpp itree_case_handler.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps itree_case_handler.t.exe)
+  (action (run ./itree_case_handler.t.exe))))
+
+(subdir section_instance_state_field
+ (rule
+  (targets section_instance_state_field.t.exe)
+  (deps SectionInstanceStateField.vo section_instance_state_field.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} section_instance_state_field.t.exe section_instance_state_field.cpp section_instance_state_field.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps section_instance_state_field.t.exe)
+  (action (run ./section_instance_state_field.t.exe))))
+
+(subdir interp_params_family
+ (rule
+  (targets interp_params_family.t.exe)
+  (deps InterpParamsFamily.vo interp_params_family.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} interp_params_family.t.exe interp_params_family.cpp interp_params_family.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps interp_params_family.t.exe)
+  (action (run ./interp_params_family.t.exe))))
+
+(subdir instance_uses_earlier_member
+ (rule
+  (targets instance_uses_earlier_member.t.exe)
+  (deps InstanceUsesEarlierMember.vo instance_uses_earlier_member.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} instance_uses_earlier_member.t.exe instance_uses_earlier_member.cpp instance_uses_earlier_member.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps instance_uses_earlier_member.t.exe)
+  (action (run ./instance_uses_earlier_member.t.exe))))
+
+(subdir promoted_field_ctor_targ_in_lambda
+ (rule
+  (targets promoted_field_ctor_targ_in_lambda.t.exe)
+  (deps PromotedFieldCtorTargInLambda.vo promoted_field_ctor_targ_in_lambda.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} promoted_field_ctor_targ_in_lambda.t.exe promoted_field_ctor_targ_in_lambda.cpp promoted_field_ctor_targ_in_lambda.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps promoted_field_ctor_targ_in_lambda.t.exe)
+  (action (run ./promoted_field_ctor_targ_in_lambda.t.exe))))
+
+(subdir intrinsic_table_curry
+ (rule
+  (targets intrinsic_table_curry.t.exe)
+  (deps IntrinsicTableCurry.vo intrinsic_table_curry.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} intrinsic_table_curry.t.exe intrinsic_table_curry.cpp intrinsic_table_curry.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps intrinsic_table_curry.t.exe)
+  (action (run ./intrinsic_table_curry.t.exe))))
+
+(subdir endo_id_instance
+ (rule
+  (targets endo_id_instance.t.exe)
+  (deps EndoIdInstance.vo endo_id_instance.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} endo_id_instance.t.exe endo_id_instance.cpp endo_id_instance.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps endo_id_instance.t.exe)
+  (action (run ./endo_id_instance.t.exe))))
+
+(subdir hk_class_field_result_cast_to_concept
+ (rule
+  (targets hk_class_field_result_cast_to_concept.t.exe)
+  (deps HkClassFieldResultCastToConcept.vo hk_class_field_result_cast_to_concept.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} hk_class_field_result_cast_to_concept.t.exe hk_class_field_result_cast_to_concept.cpp hk_class_field_result_cast_to_concept.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps hk_class_field_result_cast_to_concept.t.exe)
+  (action (run ./hk_class_field_result_cast_to_concept.t.exe))))
+
+(subdir itree_interp_state
+ (rule
+  (targets itree_interp_state.t.exe)
+  (deps ItreeInterpState.vo itree_interp_state.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} itree_interp_state.t.exe itree_interp_state.cpp itree_interp_state.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps itree_interp_state.t.exe)
+  (action (run ./itree_interp_state.t.exe))))
+
+(subdir resum_id_eta_lambda
+ (rule
+  (targets resum_id_eta_lambda.t.exe)
+  (deps ResumIdEtaLambda.vo resum_id_eta_lambda.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} resum_id_eta_lambda.t.exe resum_id_eta_lambda.cpp resum_id_eta_lambda.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps resum_id_eta_lambda.t.exe)
+  (action (run ./resum_id_eta_lambda.t.exe))))
+
+(subdir interp_state_case_handler
+ (rule
+  (targets interp_state_case_handler.t.exe)
+  (deps InterpStateCaseHandler.vo interp_state_case_handler.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} interp_state_case_handler.t.exe interp_state_case_handler.cpp interp_state_case_handler.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps interp_state_case_handler.t.exe)
+  (action (run ./interp_state_case_handler.t.exe))))
+
+(subdir unapplied_subevent_handler
+ (rule
+  (targets unapplied_subevent_handler.t.exe)
+  (deps UnappliedSubeventHandler.vo unapplied_subevent_handler.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} unapplied_subevent_handler.t.exe unapplied_subevent_handler.cpp unapplied_subevent_handler.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps unapplied_subevent_handler.t.exe)
+  (action (run ./unapplied_subevent_handler.t.exe))))
+
+(subdir handler_combinator_family
+ (rule
+  (targets handler_combinator_family.t.exe)
+  (deps HandlerCombinatorFamily.vo handler_combinator_family.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} handler_combinator_family.t.exe handler_combinator_family.cpp handler_combinator_family.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps handler_combinator_family.t.exe)
+  (action (run ./handler_combinator_family.t.exe))))
+
+(subdir instance_chain_constraint
+ (rule
+  (targets instance_chain_constraint.t.exe)
+  (deps InstanceChainConstraint.vo instance_chain_constraint.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} instance_chain_constraint.t.exe instance_chain_constraint.cpp instance_chain_constraint.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps instance_chain_constraint.t.exe)
+  (action (run ./instance_chain_constraint.t.exe))))
+
+(subdir family_alias_arity_at_call
+ (rule
+  (targets family_alias_arity_at_call.t.exe)
+  (deps FamilyAliasArityAtCall.vo family_alias_arity_at_call.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} family_alias_arity_at_call.t.exe family_alias_arity_at_call.cpp family_alias_arity_at_call.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps family_alias_arity_at_call.t.exe)
+  (action (run ./family_alias_arity_at_call.t.exe))))
+
+(subdir binder_type_names_section_field
+ (rule
+  (targets binder_type_names_section_field.t.exe)
+  (deps BinderTypeNamesSectionField.vo binder_type_names_section_field.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} binder_type_names_section_field.t.exe binder_type_names_section_field.cpp binder_type_names_section_field.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps binder_type_names_section_field.t.exe)
+  (action (run ./binder_type_names_section_field.t.exe))))
+
+(subdir pattern_binder_state_boxed
+ (rule
+  (targets pattern_binder_state_boxed.t.exe)
+  (deps PatternBinderStateBoxed.vo pattern_binder_state_boxed.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} pattern_binder_state_boxed.t.exe pattern_binder_state_boxed.cpp pattern_binder_state_boxed.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps pattern_binder_state_boxed.t.exe)
+  (action (run ./pattern_binder_state_boxed.t.exe))))
+
+(subdir unit_field_call_as_value
+ (rule
+  (targets unit_field_call_as_value.t.exe)
+  (deps UnitFieldCallAsValue.vo unit_field_call_as_value.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} unit_field_call_as_value.t.exe unit_field_call_as_value.cpp unit_field_call_as_value.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps unit_field_call_as_value.t.exe)
+  (action (run ./unit_field_call_as_value.t.exe))))
+
+(subdir dependent_choice_continuation
+ (rule
+  (targets dependent_choice_continuation.t.exe)
+  (deps DependentChoiceContinuation.vo dependent_choice_continuation.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} dependent_choice_continuation.t.exe dependent_choice_continuation.cpp dependent_choice_continuation.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps dependent_choice_continuation.t.exe)
+  (action (run ./dependent_choice_continuation.t.exe))))
+
+(subdir interp_state_after_interp
+ (rule
+  (targets interp_state_after_interp.t.exe)
+  (deps InterpStateAfterInterp.vo interp_state_after_interp.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} interp_state_after_interp.t.exe interp_state_after_interp.cpp interp_state_after_interp.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps interp_state_after_interp.t.exe)
+  (action (run ./interp_state_after_interp.t.exe))))
+
+(subdir let_bound_monad_family
+ (rule
+  (targets let_bound_monad_family.t.exe)
+  (deps LetBoundMonadFamily.vo let_bound_monad_family.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} let_bound_monad_family.t.exe let_bound_monad_family.cpp let_bound_monad_family.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps let_bound_monad_family.t.exe)
+  (action (run ./let_bound_monad_family.t.exe))))
+
+(subdir tfunctor_alias_of_applied
+ (rule
+  (targets tfunctor_alias_of_applied.t.exe)
+  (deps TfunctorAliasOfApplied.vo tfunctor_alias_of_applied.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} tfunctor_alias_of_applied.t.exe tfunctor_alias_of_applied.cpp tfunctor_alias_of_applied.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps tfunctor_alias_of_applied.t.exe)
+  (action (run ./tfunctor_alias_of_applied.t.exe))))
+
+(subdir sibling_module_qualified
+ (rule
+  (targets sibling_module_qualified.t.exe)
+  (deps SiblingModuleQualified.vo sibling_module_qualified.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sibling_module_qualified.t.exe sibling_module_qualified.cpp sibling_module_qualified.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sibling_module_qualified.t.exe)
+  (action (run ./sibling_module_qualified.t.exe))))
+
+(subdir tfunctor_list_of_triples
+ (rule
+  (targets tfunctor_list_of_triples.t.exe)
+  (deps TfunctorListOfTriples.vo tfunctor_list_of_triples.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} tfunctor_list_of_triples.t.exe tfunctor_list_of_triples.cpp tfunctor_list_of_triples.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps tfunctor_list_of_triples.t.exe)
+  (action (run ./tfunctor_list_of_triples.t.exe))))
+
+(subdir interp_chain_perf
+ (rule
+  (targets interp_chain_perf.t.exe)
+  (deps InterpChainPerf.vo interp_chain_perf.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} interp_chain_perf.t.exe interp_chain_perf.cpp interp_chain_perf.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps interp_chain_perf.t.exe)
+  (action (run ./interp_chain_perf.t.exe))))
+
+(subdir captured_record_copied_per_event
+ (rule
+  (targets captured_record_copied_per_event.t.exe)
+  (deps CapturedRecordCopiedPerEvent.vo captured_record_copied_per_event.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} captured_record_copied_per_event.t.exe captured_record_copied_per_event.cpp captured_record_copied_per_event.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps captured_record_copied_per_event.t.exe)
+  (action (run ./captured_record_copied_per_event.t.exe))))
+
+(subdir monad_alias_of_applied
+ (rule
+  (targets monad_alias_of_applied.t.exe)
+  (deps MonadAliasOfApplied.vo monad_alias_of_applied.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} monad_alias_of_applied.t.exe monad_alias_of_applied.cpp monad_alias_of_applied.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps monad_alias_of_applied.t.exe)
+  (action (run ./monad_alias_of_applied.t.exe))))
+
+(subdir loopify_fix_captures_class_param
+ (rule
+  (targets loopify_fix_captures_class_param.t.exe)
+  (deps LoopifyFixCapturesClassParam.vo loopify_fix_captures_class_param.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_fix_captures_class_param.t.exe loopify_fix_captures_class_param.cpp loopify_fix_captures_class_param.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_fix_captures_class_param.t.exe)
+  (action (run ./loopify_fix_captures_class_param.t.exe))))
+
+(subdir borrowed_field_moved_into_method
+ (rule
+  (targets borrowed_field_moved_into_method.t.exe)
+  (deps BorrowedFieldMovedIntoMethod.vo borrowed_field_moved_into_method.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} borrowed_field_moved_into_method.t.exe borrowed_field_moved_into_method.cpp borrowed_field_moved_into_method.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps borrowed_field_moved_into_method.t.exe)
+  (action (run ./borrowed_field_moved_into_method.t.exe))))
+
+(subdir concept_after_use
+ (rule
+  (targets concept_after_use.t.exe)
+  (deps ConceptAfterUse.vo concept_after_use.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} concept_after_use.t.exe concept_after_use.cpp concept_after_use.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps concept_after_use.t.exe)
+  (action (run ./concept_after_use.t.exe))))
+
+(subdir loopify_inner_instance_call
+ (rule
+  (targets loopify_inner_instance_call.t.exe)
+  (deps LoopifyInnerInstanceCall.vo loopify_inner_instance_call.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_inner_instance_call.t.exe loopify_inner_instance_call.cpp loopify_inner_instance_call.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_inner_instance_call.t.exe)
+  (action (run ./loopify_inner_instance_call.t.exe))))
+
+(subdir loopify_result_no_default
+ (rule
+  (targets loopify_result_no_default.t.exe)
+  (deps LoopifyResultNoDefault.vo loopify_result_no_default.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_result_no_default.t.exe loopify_result_no_default.cpp loopify_result_no_default.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_result_no_default.t.exe)
+  (action (run ./loopify_result_no_default.t.exe))))
+
+(subdir loopify_adopted_fix_name_shared
+ (rule
+  (targets loopify_adopted_fix_name_shared.t.exe)
+  (deps LoopifyAdoptedFixNameShared.vo loopify_adopted_fix_name_shared.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_adopted_fix_name_shared.t.exe loopify_adopted_fix_name_shared.cpp loopify_adopted_fix_name_shared.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_adopted_fix_name_shared.t.exe)
+  (action (run ./loopify_adopted_fix_name_shared.t.exe))))
+
+(subdir loopify_mutual_result_types
+ (rule
+  (targets loopify_mutual_result_types.t.exe)
+  (deps LoopifyMutualResultTypes.vo loopify_mutual_result_types.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_mutual_result_types.t.exe loopify_mutual_result_types.cpp loopify_mutual_result_types.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_mutual_result_types.t.exe)
+  (action (run ./loopify_mutual_result_types.t.exe))))
+
+(subdir loopify_frame_lambda_type
+ (rule
+  (targets loopify_frame_lambda_type.t.exe)
+  (deps LoopifyFrameLambdaType.vo loopify_frame_lambda_type.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_frame_lambda_type.t.exe loopify_frame_lambda_type.cpp loopify_frame_lambda_type.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_frame_lambda_type.t.exe)
+  (action (run ./loopify_frame_lambda_type.t.exe))))
+
+(subdir loopify_mutual_partial_app
+ (rule
+  (targets loopify_mutual_partial_app.t.exe)
+  (deps LoopifyMutualPartialApp.vo loopify_mutual_partial_app.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_mutual_partial_app.t.exe loopify_mutual_partial_app.cpp loopify_mutual_partial_app.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_mutual_partial_app.t.exe)
+  (action (run ./loopify_mutual_partial_app.t.exe))))
+
+(subdir closure_copy_shares
+ (rule
+  (targets closure_copy_shares.t.exe)
+  (deps ClosureCopyShares.vo closure_copy_shares.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} closure_copy_shares.t.exe closure_copy_shares.cpp closure_copy_shares.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps closure_copy_shares.t.exe)
+  (action (run ./closure_copy_shares.t.exe))))
+
+(subdir immediate_match_owned_scrutinee
+ (rule
+  (targets immediate_match_owned_scrutinee.t.exe)
+  (deps ImmediateMatchOwnedScrutinee.vo immediate_match_owned_scrutinee.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} immediate_match_owned_scrutinee.t.exe immediate_match_owned_scrutinee.cpp immediate_match_owned_scrutinee.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps immediate_match_owned_scrutinee.t.exe)
+  (action (run ./immediate_match_owned_scrutinee.t.exe))))
+
+(subdir coinductive_node_sharing
+ (rule
+  (targets coinductive_node_sharing.t.exe)
+  (deps CoinductiveNodeSharing.vo coinductive_node_sharing.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} coinductive_node_sharing.t.exe coinductive_node_sharing.cpp coinductive_node_sharing.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps coinductive_node_sharing.t.exe)
+  (action (run ./coinductive_node_sharing.t.exe))))
+
+(subdir local_fix_escapes_by_ref
+ (rule
+  (targets local_fix_escapes_by_ref.t.exe)
+  (deps LocalFixEscapesByRef.vo local_fix_escapes_by_ref.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} local_fix_escapes_by_ref.t.exe local_fix_escapes_by_ref.cpp local_fix_escapes_by_ref.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps local_fix_escapes_by_ref.t.exe)
+  (action (run ./local_fix_escapes_by_ref.t.exe))))
+
+(subdir erased_value_shares
+ (rule
+  (targets erased_value_shares.t.exe)
+  (deps ErasedValueShares.vo erased_value_shares.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} erased_value_shares.t.exe erased_value_shares.cpp erased_value_shares.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps erased_value_shares.t.exe)
+  (action (run ./erased_value_shares.t.exe))))
+
+(subdir ascii_as_char
+ (rule
+  (targets ascii_as_char.t.exe)
+  (deps AsciiAsChar.vo ascii_as_char.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} ascii_as_char.t.exe ascii_as_char.cpp ascii_as_char.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps ascii_as_char.t.exe)
+  (action (run ./ascii_as_char.t.exe))))
+
+(subdir borrow_construction_argument
+ (rule
+  (targets borrow_construction_argument.t.exe)
+  (deps BorrowConstructionArgument.vo borrow_construction_argument.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} borrow_construction_argument.t.exe borrow_construction_argument.cpp borrow_construction_argument.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps borrow_construction_argument.t.exe)
+  (action (run ./borrow_construction_argument.t.exe))))

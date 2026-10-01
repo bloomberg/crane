@@ -1,9 +1,9 @@
 #ifndef INCLUDED_TODO_DEPENDENT_FIELD_ALIAS
 #define INCLUDED_TODO_DEPENDENT_FIELD_ALIAS
 
+#include "obj.h"
 #include <any>
 #include <concepts>
-#include <functional>
 #include <utility>
 
 template <typename I>
@@ -16,7 +16,7 @@ concept Magma = requires {
 };
 
 struct TodoDependentFieldAlias {
-  using carrier = std::any;
+  using carrier = crane::obj;
 
   struct nat_magma {
     using carrier = uint64_t;
@@ -32,13 +32,8 @@ struct TodoDependentFieldAlias {
     return _tcI0::op(x0_, x1_);
   }
 
-  static inline const uint64_t test_value = []() {
-    std::function<uint64_t(uint64_t, uint64_t)> alias =
-        [](uint64_t _x0, uint64_t _x1) -> uint64_t {
-      return pick_op<nat_magma>(_x0, _x1);
-    };
-    return std::any_cast<uint64_t>(alias(UINT64_C(2), UINT64_C(3)));
-  }();
+  static inline const uint64_t test_value =
+      crane::any_cast<uint64_t>(pick_op<nat_magma>(UINT64_C(2), UINT64_C(3)));
 };
 
 #endif // INCLUDED_TODO_DEPENDENT_FIELD_ALIAS

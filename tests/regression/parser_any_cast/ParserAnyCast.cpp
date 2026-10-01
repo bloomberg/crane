@@ -14,16 +14,16 @@ ParserAnyCast::Tag ParserAnyCast::get_tag(ParserAnyCast::entry x0_) {
 }
 
 Datatypes::List<ParserAnyCast::Tag> ParserAnyCast::process_entries(
-    const Datatypes::List<Specif::SigT<ParserAnyCast::Tag, std::any>> &es) {
+    const Datatypes::List<Specif::SigT<ParserAnyCast::Tag, crane::obj>> &es) {
   return es.template map<ParserAnyCast::Tag>(get_tag);
 }
 
 uint64_t ParserAnyCast::get_a_value(
-    const Specif::SigT<ParserAnyCast::Tag, std::any> &e) {
+    const Specif::SigT<ParserAnyCast::Tag, crane::obj> &e) {
   const auto &[x0, a1] = e;
   switch (x0) {
   case Tag::A: {
-    return std::any_cast<uint64_t>(a1);
+    return crane::any_cast<uint64_t>(a1);
   }
   case Tag::B: {
     return UINT64_C(0);
@@ -34,9 +34,11 @@ uint64_t ParserAnyCast::get_a_value(
 }
 
 uint64_t ParserAnyCast::sum_a_entries(
-    const Datatypes::List<Specif::SigT<ParserAnyCast::Tag, std::any>> &es) {
+    const Datatypes::List<Specif::SigT<ParserAnyCast::Tag, crane::obj>> &es) {
   return es.template fold_left<uint64_t>(
-      [](uint64_t acc, const auto &e) { return (acc + get_a_value(e)); },
+      [](uint64_t acc, ParserAnyCast::entry e) {
+        return (acc + get_a_value(e));
+      },
       UINT64_C(0));
 }
 

@@ -1,6 +1,7 @@
 #ifndef INCLUDED_LARGE_MUTUAL
 #define INCLUDED_LARGE_MUTUAL
 
+#include "obj.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
@@ -83,37 +84,37 @@ struct LargeMutual {
 
     // MANIPULATORS
     ~stmt() {
-      crane::small_vector<std::any> _stack = {};
+      crane::small_vector<crane::obj> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<SAssign>(&_v)) {
-          if (_alt->a1) {
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
             _stack.push_back(std::move(_alt->a1));
           }
         }
         if (auto *_alt = std::get_if<SSeq>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a1) {
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
             _stack.push_back(std::move(_alt->a1));
           }
         }
         if (auto *_alt = std::get_if<SIf>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a1) {
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
             _stack.push_back(std::move(_alt->a1));
           }
-          if (_alt->a2) {
+          if (_alt->a2 && _alt->a2.use_count() == 1) {
             _stack.push_back(std::move(_alt->a2));
           }
         }
         if (auto *_alt = std::get_if<SWhile>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a1) {
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
             _stack.push_back(std::move(_alt->a1));
           }
         }
@@ -122,81 +123,81 @@ struct LargeMutual {
       while (!_stack.empty()) {
         auto _cur = std::move(_stack.back());
         _stack.pop_back();
-        if (auto *_sp = std::any_cast<std::shared_ptr<stmt>>(&_cur)) {
+        if (auto *_sp = crane::any_cast<std::shared_ptr<stmt>>(&_cur)) {
           if (*_sp && (*_sp).use_count() == 1) {
             std::atomic_thread_fence(std::memory_order_acquire);
             _drain_self((*_sp)->v_mut());
           }
         } else {
-          if (auto *_sp = std::any_cast<std::shared_ptr<expr>>(&_cur)) {
+          if (auto *_sp = crane::any_cast<std::shared_ptr<expr>>(&_cur)) {
             if (*_sp && (*_sp).use_count() == 1) {
               auto &_pv = (*_sp)->v_mut();
               if (auto *_alt = std::get_if<typename expr::EAdd>(&_pv)) {
-                if (_alt->a0) {
+                if (_alt->a0 && _alt->a0.use_count() == 1) {
                   _stack.push_back(std::move(_alt->a0));
                 }
-                if (_alt->a1) {
+                if (_alt->a1 && _alt->a1.use_count() == 1) {
                   _stack.push_back(std::move(_alt->a1));
                 }
               }
               if (auto *_alt = std::get_if<typename expr::EMul>(&_pv)) {
-                if (_alt->a0) {
+                if (_alt->a0 && _alt->a0.use_count() == 1) {
                   _stack.push_back(std::move(_alt->a0));
                 }
-                if (_alt->a1) {
+                if (_alt->a1 && _alt->a1.use_count() == 1) {
                   _stack.push_back(std::move(_alt->a1));
                 }
               }
               if (auto *_alt = std::get_if<typename expr::ECond>(&_pv)) {
-                if (_alt->a0) {
+                if (_alt->a0 && _alt->a0.use_count() == 1) {
                   _stack.push_back(std::move(_alt->a0));
                 }
-                if (_alt->a1) {
+                if (_alt->a1 && _alt->a1.use_count() == 1) {
                   _stack.push_back(std::move(_alt->a1));
                 }
-                if (_alt->a2) {
+                if (_alt->a2 && _alt->a2.use_count() == 1) {
                   _stack.push_back(std::move(_alt->a2));
                 }
               }
             }
           } else {
-            if (auto *_sp = std::any_cast<std::shared_ptr<bexpr>>(&_cur)) {
+            if (auto *_sp = crane::any_cast<std::shared_ptr<bexpr>>(&_cur)) {
               if (*_sp && (*_sp).use_count() == 1) {
                 auto &_pv = (*_sp)->v_mut();
                 if (auto *_alt = std::get_if<typename bexpr::BEq>(&_pv)) {
-                  if (_alt->a0) {
+                  if (_alt->a0 && _alt->a0.use_count() == 1) {
                     _stack.push_back(std::move(_alt->a0));
                   }
-                  if (_alt->a1) {
+                  if (_alt->a1 && _alt->a1.use_count() == 1) {
                     _stack.push_back(std::move(_alt->a1));
                   }
                 }
                 if (auto *_alt = std::get_if<typename bexpr::BLt>(&_pv)) {
-                  if (_alt->a0) {
+                  if (_alt->a0 && _alt->a0.use_count() == 1) {
                     _stack.push_back(std::move(_alt->a0));
                   }
-                  if (_alt->a1) {
+                  if (_alt->a1 && _alt->a1.use_count() == 1) {
                     _stack.push_back(std::move(_alt->a1));
                   }
                 }
                 if (auto *_alt = std::get_if<typename bexpr::BAnd>(&_pv)) {
-                  if (_alt->a0) {
+                  if (_alt->a0 && _alt->a0.use_count() == 1) {
                     _stack.push_back(std::move(_alt->a0));
                   }
-                  if (_alt->a1) {
+                  if (_alt->a1 && _alt->a1.use_count() == 1) {
                     _stack.push_back(std::move(_alt->a1));
                   }
                 }
                 if (auto *_alt = std::get_if<typename bexpr::BOr>(&_pv)) {
-                  if (_alt->a0) {
+                  if (_alt->a0 && _alt->a0.use_count() == 1) {
                     _stack.push_back(std::move(_alt->a0));
                   }
-                  if (_alt->a1) {
+                  if (_alt->a1 && _alt->a1.use_count() == 1) {
                     _stack.push_back(std::move(_alt->a1));
                   }
                 }
                 if (auto *_alt = std::get_if<typename bexpr::BNot>(&_pv)) {
-                  if (_alt->a0) {
+                  if (_alt->a0 && _alt->a0.use_count() == 1) {
                     _stack.push_back(std::move(_alt->a0));
                   }
                 }
@@ -286,32 +287,32 @@ struct LargeMutual {
 
     // MANIPULATORS
     ~expr() {
-      crane::small_vector<std::any> _stack = {};
+      crane::small_vector<crane::obj> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<EAdd>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a1) {
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
             _stack.push_back(std::move(_alt->a1));
           }
         }
         if (auto *_alt = std::get_if<EMul>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a1) {
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
             _stack.push_back(std::move(_alt->a1));
           }
         }
         if (auto *_alt = std::get_if<ECond>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a1) {
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
             _stack.push_back(std::move(_alt->a1));
           }
-          if (_alt->a2) {
+          if (_alt->a2 && _alt->a2.use_count() == 1) {
             _stack.push_back(std::move(_alt->a2));
           }
         }
@@ -320,86 +321,86 @@ struct LargeMutual {
       while (!_stack.empty()) {
         auto _cur = std::move(_stack.back());
         _stack.pop_back();
-        if (auto *_sp = std::any_cast<std::shared_ptr<expr>>(&_cur)) {
+        if (auto *_sp = crane::any_cast<std::shared_ptr<expr>>(&_cur)) {
           if (*_sp && (*_sp).use_count() == 1) {
             std::atomic_thread_fence(std::memory_order_acquire);
             _drain_self((*_sp)->v_mut());
           }
         } else {
-          if (auto *_sp = std::any_cast<std::shared_ptr<stmt>>(&_cur)) {
+          if (auto *_sp = crane::any_cast<std::shared_ptr<stmt>>(&_cur)) {
             if (*_sp && (*_sp).use_count() == 1) {
               auto &_pv = (*_sp)->v_mut();
               if (auto *_alt = std::get_if<typename stmt::SAssign>(&_pv)) {
-                if (_alt->a1) {
+                if (_alt->a1 && _alt->a1.use_count() == 1) {
                   _stack.push_back(std::move(_alt->a1));
                 }
               }
               if (auto *_alt = std::get_if<typename stmt::SSeq>(&_pv)) {
-                if (_alt->a0) {
+                if (_alt->a0 && _alt->a0.use_count() == 1) {
                   _stack.push_back(std::move(_alt->a0));
                 }
-                if (_alt->a1) {
+                if (_alt->a1 && _alt->a1.use_count() == 1) {
                   _stack.push_back(std::move(_alt->a1));
                 }
               }
               if (auto *_alt = std::get_if<typename stmt::SIf>(&_pv)) {
-                if (_alt->a0) {
+                if (_alt->a0 && _alt->a0.use_count() == 1) {
                   _stack.push_back(std::move(_alt->a0));
                 }
-                if (_alt->a1) {
+                if (_alt->a1 && _alt->a1.use_count() == 1) {
                   _stack.push_back(std::move(_alt->a1));
                 }
-                if (_alt->a2) {
+                if (_alt->a2 && _alt->a2.use_count() == 1) {
                   _stack.push_back(std::move(_alt->a2));
                 }
               }
               if (auto *_alt = std::get_if<typename stmt::SWhile>(&_pv)) {
-                if (_alt->a0) {
+                if (_alt->a0 && _alt->a0.use_count() == 1) {
                   _stack.push_back(std::move(_alt->a0));
                 }
-                if (_alt->a1) {
+                if (_alt->a1 && _alt->a1.use_count() == 1) {
                   _stack.push_back(std::move(_alt->a1));
                 }
               }
             }
           } else {
-            if (auto *_sp = std::any_cast<std::shared_ptr<bexpr>>(&_cur)) {
+            if (auto *_sp = crane::any_cast<std::shared_ptr<bexpr>>(&_cur)) {
               if (*_sp && (*_sp).use_count() == 1) {
                 auto &_pv = (*_sp)->v_mut();
                 if (auto *_alt = std::get_if<typename bexpr::BEq>(&_pv)) {
-                  if (_alt->a0) {
+                  if (_alt->a0 && _alt->a0.use_count() == 1) {
                     _stack.push_back(std::move(_alt->a0));
                   }
-                  if (_alt->a1) {
+                  if (_alt->a1 && _alt->a1.use_count() == 1) {
                     _stack.push_back(std::move(_alt->a1));
                   }
                 }
                 if (auto *_alt = std::get_if<typename bexpr::BLt>(&_pv)) {
-                  if (_alt->a0) {
+                  if (_alt->a0 && _alt->a0.use_count() == 1) {
                     _stack.push_back(std::move(_alt->a0));
                   }
-                  if (_alt->a1) {
+                  if (_alt->a1 && _alt->a1.use_count() == 1) {
                     _stack.push_back(std::move(_alt->a1));
                   }
                 }
                 if (auto *_alt = std::get_if<typename bexpr::BAnd>(&_pv)) {
-                  if (_alt->a0) {
+                  if (_alt->a0 && _alt->a0.use_count() == 1) {
                     _stack.push_back(std::move(_alt->a0));
                   }
-                  if (_alt->a1) {
+                  if (_alt->a1 && _alt->a1.use_count() == 1) {
                     _stack.push_back(std::move(_alt->a1));
                   }
                 }
                 if (auto *_alt = std::get_if<typename bexpr::BOr>(&_pv)) {
-                  if (_alt->a0) {
+                  if (_alt->a0 && _alt->a0.use_count() == 1) {
                     _stack.push_back(std::move(_alt->a0));
                   }
-                  if (_alt->a1) {
+                  if (_alt->a1 && _alt->a1.use_count() == 1) {
                     _stack.push_back(std::move(_alt->a1));
                   }
                 }
                 if (auto *_alt = std::get_if<typename bexpr::BNot>(&_pv)) {
-                  if (_alt->a0) {
+                  if (_alt->a0 && _alt->a0.use_count() == 1) {
                     _stack.push_back(std::move(_alt->a0));
                   }
                 }
@@ -505,42 +506,42 @@ struct LargeMutual {
 
     // MANIPULATORS
     ~bexpr() {
-      crane::small_vector<std::any> _stack = {};
+      crane::small_vector<crane::obj> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<BEq>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a1) {
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
             _stack.push_back(std::move(_alt->a1));
           }
         }
         if (auto *_alt = std::get_if<BLt>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a1) {
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
             _stack.push_back(std::move(_alt->a1));
           }
         }
         if (auto *_alt = std::get_if<BAnd>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a1) {
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
             _stack.push_back(std::move(_alt->a1));
           }
         }
         if (auto *_alt = std::get_if<BOr>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a1) {
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
             _stack.push_back(std::move(_alt->a1));
           }
         }
         if (auto *_alt = std::get_if<BNot>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
         }
@@ -549,76 +550,76 @@ struct LargeMutual {
       while (!_stack.empty()) {
         auto _cur = std::move(_stack.back());
         _stack.pop_back();
-        if (auto *_sp = std::any_cast<std::shared_ptr<bexpr>>(&_cur)) {
+        if (auto *_sp = crane::any_cast<std::shared_ptr<bexpr>>(&_cur)) {
           if (*_sp && (*_sp).use_count() == 1) {
             std::atomic_thread_fence(std::memory_order_acquire);
             _drain_self((*_sp)->v_mut());
           }
         } else {
-          if (auto *_sp = std::any_cast<std::shared_ptr<stmt>>(&_cur)) {
+          if (auto *_sp = crane::any_cast<std::shared_ptr<stmt>>(&_cur)) {
             if (*_sp && (*_sp).use_count() == 1) {
               auto &_pv = (*_sp)->v_mut();
               if (auto *_alt = std::get_if<typename stmt::SAssign>(&_pv)) {
-                if (_alt->a1) {
+                if (_alt->a1 && _alt->a1.use_count() == 1) {
                   _stack.push_back(std::move(_alt->a1));
                 }
               }
               if (auto *_alt = std::get_if<typename stmt::SSeq>(&_pv)) {
-                if (_alt->a0) {
+                if (_alt->a0 && _alt->a0.use_count() == 1) {
                   _stack.push_back(std::move(_alt->a0));
                 }
-                if (_alt->a1) {
+                if (_alt->a1 && _alt->a1.use_count() == 1) {
                   _stack.push_back(std::move(_alt->a1));
                 }
               }
               if (auto *_alt = std::get_if<typename stmt::SIf>(&_pv)) {
-                if (_alt->a0) {
+                if (_alt->a0 && _alt->a0.use_count() == 1) {
                   _stack.push_back(std::move(_alt->a0));
                 }
-                if (_alt->a1) {
+                if (_alt->a1 && _alt->a1.use_count() == 1) {
                   _stack.push_back(std::move(_alt->a1));
                 }
-                if (_alt->a2) {
+                if (_alt->a2 && _alt->a2.use_count() == 1) {
                   _stack.push_back(std::move(_alt->a2));
                 }
               }
               if (auto *_alt = std::get_if<typename stmt::SWhile>(&_pv)) {
-                if (_alt->a0) {
+                if (_alt->a0 && _alt->a0.use_count() == 1) {
                   _stack.push_back(std::move(_alt->a0));
                 }
-                if (_alt->a1) {
+                if (_alt->a1 && _alt->a1.use_count() == 1) {
                   _stack.push_back(std::move(_alt->a1));
                 }
               }
             }
           } else {
-            if (auto *_sp = std::any_cast<std::shared_ptr<expr>>(&_cur)) {
+            if (auto *_sp = crane::any_cast<std::shared_ptr<expr>>(&_cur)) {
               if (*_sp && (*_sp).use_count() == 1) {
                 auto &_pv = (*_sp)->v_mut();
                 if (auto *_alt = std::get_if<typename expr::EAdd>(&_pv)) {
-                  if (_alt->a0) {
+                  if (_alt->a0 && _alt->a0.use_count() == 1) {
                     _stack.push_back(std::move(_alt->a0));
                   }
-                  if (_alt->a1) {
+                  if (_alt->a1 && _alt->a1.use_count() == 1) {
                     _stack.push_back(std::move(_alt->a1));
                   }
                 }
                 if (auto *_alt = std::get_if<typename expr::EMul>(&_pv)) {
-                  if (_alt->a0) {
+                  if (_alt->a0 && _alt->a0.use_count() == 1) {
                     _stack.push_back(std::move(_alt->a0));
                   }
-                  if (_alt->a1) {
+                  if (_alt->a1 && _alt->a1.use_count() == 1) {
                     _stack.push_back(std::move(_alt->a1));
                   }
                 }
                 if (auto *_alt = std::get_if<typename expr::ECond>(&_pv)) {
-                  if (_alt->a0) {
+                  if (_alt->a0 && _alt->a0.use_count() == 1) {
                     _stack.push_back(std::move(_alt->a0));
                   }
-                  if (_alt->a1) {
+                  if (_alt->a1 && _alt->a1.use_count() == 1) {
                     _stack.push_back(std::move(_alt->a1));
                   }
-                  if (_alt->a2) {
+                  if (_alt->a2 && _alt->a2.use_count() == 1) {
                     _stack.push_back(std::move(_alt->a2));
                   }
                 }

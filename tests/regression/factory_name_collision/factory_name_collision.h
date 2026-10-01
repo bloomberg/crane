@@ -49,22 +49,18 @@ struct FactoryNameCollision {
 
     // MANIPULATORS
     ~lst() {
-      crane::small_vector<std::shared_ptr<lst>> _stack = {};
-      auto _drain = [&](variant_t &_v) {
+      auto _next = [&](variant_t &_v) -> std::shared_ptr<lst> {
         if (auto *_alt = std::get_if<Cons>(&_v)) {
-          if (_alt->a1) {
-            _stack.push_back(std::move(_alt->a1));
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
+            return std::move(_alt->a1);
           }
         }
+        return nullptr;
       };
-      _drain(v_mut());
-      while (!_stack.empty()) {
-        auto _cur = std::move(_stack.back());
-        _stack.pop_back();
-        if (_cur.use_count() == 1) {
-          std::atomic_thread_fence(std::memory_order_acquire);
-          _drain(_cur->v_mut());
-        }
+      std::shared_ptr<lst> _cur = _next(v_mut());
+      while (_cur) {
+        _cur = _next(_cur->v_mut());
       }
     }
 

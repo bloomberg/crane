@@ -2,12 +2,13 @@
 #define INCLUDED_MONAD_INSTANCE_MISSING
 
 #include "crane_fn.h"
-#include "small_vector.h"
+#include "fn.h"
+#include "obj.h"
 #include <any>
 #include <atomic>
 #include <concepts>
-#include <functional>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -15,6 +16,23 @@
 struct Nat;
 template <typename X> struct EOU;
 struct EOU_monad;
+template <typename I>
+concept Monad = requires {
+  typename I::template m<crane::obj>;
+  {
+    I::template ret<crane::obj>(std::declval<crane::obj>())
+  } -> std::convertible_to<typename I::template m<crane::obj>>;
+  {
+    I::template bind<crane::obj, crane::obj>(
+        std::declval<typename I::template m<crane::obj>>(),
+        std::declval<
+            crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
+  } -> std::convertible_to<typename I::template m<crane::obj>>;
+};
+
+struct MonadInstanceMissing {
+  static EOU<Nat> use(const Nat &n);
+};
 
 struct Nat {
   // TYPES
@@ -44,22 +62,18 @@ public:
 
   // MANIPULATORS
   ~Nat() {
-    crane::small_vector<std::shared_ptr<Nat>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<Nat> {
       if (auto *_alt = std::get_if<S>(&_v)) {
-        if (_alt->a0) {
-          _stack.push_back(std::move(_alt->a0));
+        if (_alt->a0 && _alt->a0.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a0);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<Nat> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -96,20 +110,6 @@ public:
   }
 };
 
-template <typename I>
-concept Monad = requires {
-  typename I::template m<std::any>;
-  {
-    I::template ret<std::any>(std::declval<std::any>())
-  } -> std::convertible_to<typename I::template m<std::any>>;
-  {
-    I::template bind<std::any, std::any>(
-        std::declval<typename I::template m<std::any>>(),
-        std::declval<
-            std::function<typename I::template m<std::any>(std::any)>>())
-  } -> std::convertible_to<typename I::template m<std::any>>;
-};
-
 struct Monad0 {
   template <Monad _tcI0, typename T2>
   static typename _tcI0::template m<T2> ret(const T2 &x);
@@ -143,21 +143,26 @@ public:
 
   explicit EOU(Raise_ret _v) : v_(std::move(_v)) {}
 
-  template <typename _U> EOU(const EOU<_U> &_other) {
-    if (std::holds_alternative<typename EOU<_U>::Raise_error>(_other.v())) {
-      const auto &[s] = std::get<typename EOU<_U>::Raise_error>(_other.v());
-      this->v_ = Raise_error{s};
-    } else {
-      const auto &[x] = std::get<typename EOU<_U>::Raise_ret>(_other.v());
-      this->v_ = Raise_ret{[&]() -> X {
-        if constexpr (std::is_same_v<_U, std::any>) {
-          return crane_any_cast<X>(x);
-        } else {
-          return X(x);
-        }
-      }()};
-    }
-  }
+  template <typename _U>
+  EOU(const EOU<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename EOU<_U>::Raise_error>(
+                  _other.v())) {
+            const auto &[s] =
+                std::get<typename EOU<_U>::Raise_error>(_other.v());
+            return Raise_error{s};
+          } else {
+            const auto &[x] = std::get<typename EOU<_U>::Raise_ret>(_other.v());
+            return Raise_ret{[&]() -> X {
+              if constexpr (crane_convertible<X, const _U &>) {
+                return crane_convert<X>(x);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }()};
+          }
+        }()) {}
 
   static EOU<X> raise_error(Nat s) { return EOU<X>(Raise_error{std::move(s)}); }
 
@@ -178,7 +183,7 @@ struct EOU_monad {
   }
 
   template <typename _A0, typename _A1>
-  static EOU<_A1> bind(EOU<_A0> c, std::function<EOU<_A1>(_A0)> k) {
+  static EOU<_A1> bind(EOU<_A0> c, crane::fn<EOU<_A1>(_A0)> k) {
     if (std::holds_alternative<typename EOU<_A0>::Raise_error>(c.v())) {
       const auto &[s0] = std::get<typename EOU<_A0>::Raise_error>(c.v());
       return EOU<_A1>::raise_error(s0);
@@ -191,10 +196,6 @@ struct EOU_monad {
 
 static_assert(Monad<EOU_monad>);
 EOU<Nat> double0(const Nat &n);
-
-struct MonadInstanceMissing {
-  static EOU<Nat> use(const Nat &n);
-};
 
 template <Monad _tcI0, typename T2>
 typename _tcI0::template m<T2> Monad0::ret(const T2 &x) {

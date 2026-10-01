@@ -37,7 +37,7 @@ Definition test_pred (a b : nat) : nat :=
 
 End AnyCastNestedPair.
 
-Crane Extract Inlined Constant AnyCastNestedPair.mkSemVal => "std::any(%a0)".
-Crane Extract Inlined Constant AnyCastNestedPair.getSemVal => "std::any_cast<uint64_t>(%a0)".
+Crane Extract Inlined Constant AnyCastNestedPair.mkSemVal => "crane::obj(%a0)".
+Crane Extract Inlined Constant AnyCastNestedPair.getSemVal => "crane::any_cast<uint64_t>(%a0)".
 
 Crane Extraction "any_cast_nested_pair" AnyCastNestedPair.

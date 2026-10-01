@@ -62,7 +62,7 @@ uint64_t GlobalStateTests::counter() {
 }
 
 uint64_t GlobalStateTests::counter_next_mine(uint64_t ctr) {
-  uint64_t a = std::any_cast<uint64_t>(_crane_globals.at(ctr));
+  uint64_t a = crane::any_cast<uint64_t>(_crane_globals.at(ctr));
   _crane_globals[ctr] = (a + UINT64_C(1));
   return a;
 }

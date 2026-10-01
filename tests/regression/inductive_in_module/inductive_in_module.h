@@ -2,7 +2,10 @@
 #define INCLUDED_INDUCTIVE_IN_MODULE
 
 #include "crane_fn.h"
+#include "obj.h"
 #include <any>
+#include <atomic>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -74,20 +77,26 @@ struct InductiveInModule {
 
         explicit option(Some _v) : v_(std::move(_v)) {}
 
-        template <typename _U> option(const option<_U> &_other) {
-          if (std::holds_alternative<typename option<_U>::None>(_other.v())) {
-            this->v_ = None{};
-          } else {
-            const auto &[a] = std::get<typename option<_U>::Some>(_other.v());
-            this->v_ = Some{[&]() -> A {
-              if constexpr (std::is_same_v<_U, std::any>) {
-                return crane_any_cast<A>(a);
-              } else {
-                return A(a);
-              }
-            }()};
-          }
-        }
+        template <typename _U>
+        option(const option<_U> &_other)
+            : v_([&]() -> variant_t {
+                if (std::holds_alternative<typename option<_U>::None>(
+                        _other.v())) {
+                  return None{};
+                } else {
+                  const auto &[a] =
+                      std::get<typename option<_U>::Some>(_other.v());
+                  return Some{[&]() -> A {
+                    if constexpr (crane_convertible<A, const _U &>) {
+                      return crane_convert<A>(a);
+                    } else {
+                      throw std::logic_error(
+                          "unreachable: inactive constructor field at this "
+                          "instantiation");
+                    }
+                  }()};
+                }
+              }()) {}
 
         static option<A> none() { return option<A>(None{}); }
 

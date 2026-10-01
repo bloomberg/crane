@@ -8,9 +8,9 @@
 /// wrap_fn, the translation may use & capture. wrap_fn stores
 /// it in Some and returns. After make_wrapped returns, the
 /// captured base is destroyed.
-std::optional<std::function<uint64_t(uint64_t)>>
+std::optional<crane::fn<uint64_t(uint64_t)>>
 FixHigherOrder::make_wrapped(uint64_t base) {
-  auto go_impl = [=](auto &_self_go, uint64_t x) mutable -> uint64_t {
+  auto go_impl = [=](auto &_self_go, uint64_t x) -> uint64_t {
     if (x <= 0) {
       return base;
     } else {
@@ -18,13 +18,13 @@ FixHigherOrder::make_wrapped(uint64_t base) {
       return (_self_go(_self_go, x_) + 1);
     }
   };
-  auto go = [=](uint64_t x) mutable -> uint64_t { return go_impl(go_impl, x); };
+  auto go = [=](uint64_t x) -> uint64_t { return go_impl(go_impl, x); };
   return wrap_fn(std::move(go));
 }
 
-std::optional<std::optional<std::function<uint64_t(uint64_t)>>>
+std::optional<std::optional<crane::fn<uint64_t(uint64_t)>>>
 FixHigherOrder::make_double_wrapped(uint64_t base) {
-  auto go_impl = [=](auto &_self_go, uint64_t x) mutable -> uint64_t {
+  auto go_impl = [=](auto &_self_go, uint64_t x) -> uint64_t {
     if (x <= 0) {
       return base;
     } else {
@@ -32,6 +32,6 @@ FixHigherOrder::make_double_wrapped(uint64_t base) {
       return (_self_go(_self_go, x_) + 1);
     }
   };
-  auto go = [=](uint64_t x) mutable -> uint64_t { return go_impl(go_impl, x); };
+  auto go = [=](uint64_t x) -> uint64_t { return go_impl(go_impl, x); };
   return double_wrap(std::move(go));
 }

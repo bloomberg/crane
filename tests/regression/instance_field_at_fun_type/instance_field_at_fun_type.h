@@ -1,10 +1,9 @@
 #ifndef INCLUDED_INSTANCE_FIELD_AT_FUN_TYPE
 #define INCLUDED_INSTANCE_FIELD_AT_FUN_TYPE
 
-#include "small_vector.h"
+#include "fn.h"
 #include <atomic>
 #include <concepts>
-#include <functional>
 #include <memory>
 #include <utility>
 #include <variant>
@@ -39,22 +38,18 @@ public:
 
   // MANIPULATORS
   ~Nat() {
-    crane::small_vector<std::shared_ptr<Nat>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<Nat> {
       if (auto *_alt = std::get_if<S>(&_v)) {
-        if (_alt->a0) {
-          _stack.push_back(std::move(_alt->a0));
+        if (_alt->a0 && _alt->a0.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a0);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<Nat> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -86,12 +81,12 @@ struct InstanceFieldAtFunType {
   static_assert(D<dn, Nat>);
 
   struct df {
-    static std::function<Nat(Nat)> d() {
-      return [](Nat x) { return Nat::s(x); };
+    static crane::fn<Nat(Nat)> d() {
+      return [](const Nat &x) { return Nat::s(x); };
     }
   };
 
-  static_assert(D<df, std::function<Nat(Nat)>>);
+  static_assert(D<df, crane::fn<Nat(Nat)>>);
   static Nat ex(const Nat &x0_);
   static inline const Nat run = ex(Nat::s(Nat::o()));
 };

@@ -58,6 +58,20 @@ type translation_ctx = {
   output : translation_output;  (** What the pass has produced; see below. *)
   (* Template type variables for the function currently being translated. *)
   current_type_vars : Id.t list;
+  (* The declaration's template head, verbatim: every parameter it declares,
+     with the kind it declares it at.  Two questions are answered from it and
+     neither can be answered from {!current_type_vars}, which keeps only the
+     names and only the ML-indexed ones:
+
+     - whether an occurrence may be written applied, which turns on [typename]
+       versus [template <typename> class] (see {!is_current_typename_var});
+     - which parameters are the enclosing class instances, which a lifted
+       helper must redeclare because the body it lifts spells them (see
+       {!current_class_temps}).
+
+     Only the emitters that build the head know it, so a scope that does not
+     say leaves this empty and both readers answer negatively. *)
+  current_template_head : (template_type * Id.t) list;
   (* 1-indexed parameter types for the current function; used to recover
      erased type info at call sites. *)
   current_param_types : (int * ml_type) list;
@@ -98,6 +112,12 @@ type translation_ctx = {
      promoted_var_map fall back to Tany (std::any) instead of keeping
      [Tpromoted] markers, because module-level aliases apply. *)
   in_constructor_expr : bool;
+  (* The template parameter of the polymorphic function object being
+     generated, if any.  Inside such a lambda every erased type denotes that
+     one parameter -- it is the type the rank-2 binder quantified over -- so a
+     producer with nothing else to say about a type argument says the carrier
+     instead of [std::any].  See {!Rank2}. *)
+  rank2_carrier : Id.t option;
   (* ITree extraction mode: controls whether itree types are erased
      (Sequential) or preserved as shared_ptr<ITree<R>> (Reified). *)
   itree_mode : itree_extraction_mode;
@@ -180,6 +200,7 @@ let tctx =
     {
         output = {pending_lifted_decls = []; seen_lifted_refs = []};
         current_type_vars = [];
+        current_template_head = [];
         current_param_types = [];
         current_cpp_return_type = None;
         env_types = [];
@@ -191,12 +212,18 @@ let tctx =
         match_param_counter = 0;
         promoted_var_map = [];
         in_constructor_expr = false;
+        rank2_carrier = None;
         itree_mode = Sequential;
         cs_counter = 0;
         pending_reuse_token = None;
         method_self_ns = Refset'.empty;
         cpp_binder_types = IntMap.empty;
     }
+
+(** Modify the produced-so-far half of the context.  Every writer goes through
+    this rather than rebuilding [tctx] in place, so {!with_scope} has exactly one
+    field to carry across a scope boundary. *)
+let update_output f = tctx := { !tctx with output = f (!tctx).output }
 
 (** [with_field get set v f] runs [f] with one context field set to [v], and
     puts the enclosing value back on the way out however [f] leaves --
@@ -210,11 +237,6 @@ let tctx =
     Every dynamic-extent field gets a [with_*] built from this, so that no
     caller writes the save/set/restore by hand -- an omitted restore does not
     fail, it silently leaks the setting into whatever is translated next. *)
-(** Modify the produced-so-far half of the context.  Every writer goes through
-    this rather than rebuilding [tctx] in place, so {!with_scope} has exactly one
-    field to carry across a scope boundary. *)
-let update_output f = tctx := { !tctx with output = f (!tctx).output }
-
 let with_field get set v f =
   let saved = get !tctx in
   set v;
@@ -230,6 +252,39 @@ let set_current_type_vars (tvars : Id.t list) =
   tctx := { !tctx with current_type_vars = tvars }
 let get_current_type_vars () = (!tctx).current_type_vars
 let clear_current_type_vars () = tctx := { !tctx with current_type_vars = [] }
+
+(** Accessors for {!translation_ctx.current_template_head}.  Set only by an
+    emitter that has just built the declaration's template head, and restored
+    by it on the way out; every other scope leaves the enclosing answer
+    standing rather than guessing at one.  The readers below derive their
+    answers from it rather than each keeping a list of their own. *)
+let set_current_template_head (head : (template_type * Id.t) list) =
+  tctx := { !tctx with current_template_head = head }
+let get_current_template_head () = (!tctx).current_template_head
+
+(** Whether the head declares [id] as a plain [typename], so that an applied
+    occurrence of it cannot be written. *)
+let is_current_typename_var (id : Id.t) =
+  List.exists
+    (fun (tt, i) ->
+      Id.equal id i
+      && match tt with TTtypename | TTtypename_default _ -> true | _ -> false )
+    (!tctx).current_template_head
+
+(** The head's concept-constrained parameters: the class instances the
+    declaration is written against.  A helper lifted out of its body spells
+    them, so it has to declare them too. *)
+let current_class_temps () =
+  List.filter
+    (fun (tt, _) -> match tt with TTconcept _ -> true | _ -> false)
+    (!tctx).current_template_head
+
+(** Every type name the current declaration's head puts in scope: its
+    ML-indexed type variables and the class instances it is written against.
+    A resolved class field names the latter -- [typename StateV<_tcI0>::state]
+    -- and is as much this scope's as [T1] is. *)
+let current_scope_type_names () =
+  (!tctx).current_type_vars @ List.map snd (current_class_temps ())
 
 (** [with_type_vars tvars f] runs [f] with [tvars] as the type-variable scope,
     and puts the enclosing scope back on the way out however [f] leaves --
@@ -269,6 +324,14 @@ let with_method_self_ns (ns : Refset'.t) (f : unit -> 'a) : 'a =
     (fun ns -> tctx := { !tctx with method_self_ns = ns })
     ns f
 
+(** [with_promoted_var_map m f] runs [f] with [m] as the resolution for the
+    promoted type variables in scope -- see {!translation_ctx.promoted_var_map}. *)
+let with_promoted_var_map (m : (Id.t * cpp_type) list) (f : unit -> 'a) : 'a =
+  with_field
+    (fun c -> c.promoted_var_map)
+    (fun m -> tctx := { !tctx with promoted_var_map = m })
+    m f
+
 (** [with_in_constructor_expr b f] runs [f] with
     {!translation_ctx.in_constructor_expr} set to [b]. *)
 let with_in_constructor_expr (b : bool) (f : unit -> 'a) : 'a =
@@ -276,6 +339,18 @@ let with_in_constructor_expr (b : bool) (f : unit -> 'a) : 'a =
     (fun c -> c.in_constructor_expr)
     (fun b -> tctx := { !tctx with in_constructor_expr = b })
     b f
+
+(** [with_rank2_carrier x f] runs [f] with [x] as the carrier of the
+    polymorphic function object being generated -- see {!Rank2}.  The extent
+    is the lambda's body, so it has to be put back when that body is done. *)
+let with_rank2_carrier (x : Id.t option) (f : unit -> 'a) : 'a =
+  with_field
+    (fun c -> c.rank2_carrier)
+    (fun x -> tctx := { !tctx with rank2_carrier = x })
+    x f
+
+(** The carrier of the polymorphic function object being generated, if any. *)
+let get_rank2_carrier () = (!tctx).rank2_carrier
 
 (** [with_itree_mode m f] runs [f] extracting itree-typed terms in mode [m].
     The mode is a property of the declaration being generated, so it has to be

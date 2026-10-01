@@ -102,7 +102,7 @@ struct OptionalSelfDeepCopy {
     }
   }
 
-  static std::pair<chain, chain> dup_chain(chain c);
+  static std::pair<chain, chain> dup_chain(const chain &c);
 };
 
 #endif // INCLUDED_OPTIONAL_SELF_DEEP_COPY

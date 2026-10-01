@@ -4,14 +4,14 @@ TypeValuedIfEliminator::sel TypeValuedIfEliminator::zero(bool b) {
   if (b) {
     return Nat::o();
   } else {
-    return List<std::any>::nil();
+    return List<crane::obj>::nil();
   }
 }
 
 Nat TypeValuedIfEliminator::size(bool b, TypeValuedIfEliminator::sel x) {
   if (b) {
-    return std::any_cast<Nat>(std::move(x));
+    return crane::any_cast<Nat>(std::move(x));
   } else {
-    return List<Nat>(std::any_cast<List<std::any>>(x)).length();
+    return List<Nat>(crane::any_cast<List<crane::obj>>(x)).length();
   }
 }

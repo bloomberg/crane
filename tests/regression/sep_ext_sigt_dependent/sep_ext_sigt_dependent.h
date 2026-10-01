@@ -1,12 +1,16 @@
 #ifndef INCLUDED_SEP_EXT_SIGT_DEPENDENT
 #define INCLUDED_SEP_EXT_SIGT_DEPENDENT
 
+#include "crane_fn.h"
+#include "obj.h"
 #include <any>
+#include <stdexcept>
 #include <utility>
 #include <variant>
 
 template <typename A, typename P> struct SigT;
 enum class Tag;
+using tag_type = crane::obj;
 
 template <typename A, typename P> struct SigT {
   // DATA
@@ -15,6 +19,25 @@ template <typename A, typename P> struct SigT {
 
   // ACCESSORS
   SigT<A, P> clone() const { return {x, a1}; }
+
+  template <typename _U0, typename _U1> operator SigT<_U0, _U1>() const {
+    return {[&]() -> _U0 {
+              if constexpr (crane_convertible<_U0, const A &>) {
+                return crane_convert<_U0>(x);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }(),
+            [&]() -> _U1 {
+              if constexpr (crane_convertible<_U1, const P &>) {
+                return crane_convert<_U1>(a1);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }()};
+  }
 
   // CREATORS
   static SigT<A, P> existt(A x, P a1) { return {std::move(x), std::move(a1)}; }
@@ -25,11 +48,10 @@ template <typename A, typename P> struct SigT {
   }
 };
 enum class Tag { TAGA, TAGB, TAGC };
-using tag_type = std::any;
 
 struct Packer {
   static inline const SigT<Tag, tag_type> pack_a =
-      SigT<Tag, std::any>::existt(Tag::TAGA, std::monostate{});
+      SigT<Tag, tag_type>::existt(Tag::TAGA, std::monostate{});
   static SigT<Tag, tag_type> pack_b(uint64_t n);
   static SigT<Tag, tag_type> pack_c(bool b);
   static Tag get_tag(const SigT<Tag, tag_type> &x0_);

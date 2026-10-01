@@ -5,8 +5,8 @@
 
 int main() {
   // This test reproduces a bug where a definition with a dependent return
-  // type (if b then unit else bool) extracts dep() as returning std::any,
-  // but call sites use the concrete type without std::any_cast.
+  // type (if b then unit else bool) extracts dep() as returning crane::obj,
+  // but call sites use the concrete type without crane::any_cast.
   //
   // If this compiles and runs, the bug is fixed.
   auto b = DependentReturnUnitProbe::sample_bool;

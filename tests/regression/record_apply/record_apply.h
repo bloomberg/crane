@@ -1,11 +1,11 @@
 #ifndef INCLUDED_RECORD_APPLY
 #define INCLUDED_RECORD_APPLY
 
-#include <functional>
+#include "fn.h"
 
 struct RecordApply {
   struct R {
-    std::function<uint64_t(uint64_t, uint64_t)> f;
+    crane::fn<uint64_t(uint64_t, uint64_t)> f;
     uint64_t tag_;
   };
 

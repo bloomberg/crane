@@ -2,9 +2,9 @@
 #define INCLUDED_FIX_SHARED_PTR_FIELD
 
 #include "crane_fn.h"
+#include "fn.h"
 #include "small_vector.h"
 #include <atomic>
-#include <functional>
 #include <memory>
 #include <optional>
 #include <type_traits>
@@ -59,22 +59,18 @@ struct FixSharedPtrField {
 
     // MANIPULATORS
     ~mylist() {
-      crane::small_vector<std::shared_ptr<mylist>> _stack = {};
-      auto _drain = [&](variant_t &_v) {
+      auto _next = [&](variant_t &_v) -> std::shared_ptr<mylist> {
         if (auto *_alt = std::get_if<Mycons>(&_v)) {
-          if (_alt->a1) {
-            _stack.push_back(std::move(_alt->a1));
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
+            return std::move(_alt->a1);
           }
         }
+        return nullptr;
       };
-      _drain(v_mut());
-      while (!_stack.empty()) {
-        auto _cur = std::move(_stack.back());
-        _stack.pop_back();
-        if (_cur.use_count() == 1) {
-          std::atomic_thread_fence(std::memory_order_acquire);
-          _drain(_cur->v_mut());
-        }
+      std::shared_ptr<mylist> _cur = _next(v_mut());
+      while (_cur) {
+        _cur = _next(_cur->v_mut());
       }
     }
 
@@ -90,14 +86,13 @@ struct FixSharedPtrField {
 
     /// Local fixpoint captures h : nat (POD) and t : shared_ptr<mylist>
     /// from the match on value-type mylist. Both are captured by &.
-    std::optional<std::function<uint64_t(uint64_t)>> make_list_fn() const {
+    std::optional<crane::fn<uint64_t(uint64_t)>> make_list_fn() const {
       if (std::holds_alternative<typename mylist::Mynil>(this->v())) {
-        return std::optional<std::function<uint64_t(uint64_t)>>();
+        return std::optional<crane::fn<uint64_t(uint64_t)>>();
       } else {
         const auto &[a0, a1] = std::get<typename mylist::Mycons>(this->v());
         const mylist &a1_value = *a1;
-        auto compute_impl = [=](auto &_self_compute,
-                                uint64_t x) mutable -> uint64_t {
+        auto compute_impl = [=](auto &_self_compute, uint64_t x) -> uint64_t {
           if (x <= 0) {
             return (a0 + a1_value.mylist_sum());
           } else {
@@ -105,10 +100,10 @@ struct FixSharedPtrField {
             return (UINT64_C(1) + _self_compute(_self_compute, x_));
           }
         };
-        auto compute = [=](uint64_t x) mutable -> uint64_t {
+        auto compute = [=](uint64_t x) -> uint64_t {
           return compute_impl(compute_impl, x);
         };
-        return std::make_optional<std::function<uint64_t(uint64_t)>>(compute);
+        return std::make_optional<crane::fn<uint64_t(uint64_t)>>(compute);
       }
     }
 
@@ -318,7 +313,7 @@ struct FixSharedPtrField {
                                                             mylist::mynil())))
                    .make_list_fn();
     if (_cs.has_value()) {
-      const std::function<uint64_t(uint64_t)> &f = *_cs;
+      const crane::fn<uint64_t(uint64_t)> &f = *_cs;
       return f(UINT64_C(5));
     } else {
       return UINT64_C(999);
@@ -328,7 +323,7 @@ struct FixSharedPtrField {
   /// l = 100, 200, h=100, t=200, mylist_sum(t)=200.
   /// compute(0) = 100+200 = 300.
   static inline const uint64_t test2 = []() {
-    std::optional<std::function<uint64_t(uint64_t)>> opt =
+    std::optional<crane::fn<uint64_t(uint64_t)>> opt =
         mylist::mycons(UINT64_C(100),
                        mylist::mycons(UINT64_C(200), mylist::mynil()))
             .make_list_fn();
@@ -339,7 +334,7 @@ struct FixSharedPtrField {
                            mylist::mycons(UINT64_C(3), mylist::mynil())))
             .mylist_sum();
     if (opt.has_value()) {
-      const std::function<uint64_t(uint64_t)> &f = *opt;
+      const crane::fn<uint64_t(uint64_t)> &f = *opt;
       return f(UINT64_C(0));
     } else {
       return noise;
@@ -360,14 +355,14 @@ struct FixSharedPtrField {
                                mylist::mycons(UINT64_C(25), mylist::mynil())))))
                    .make_list_fn();
     if (_cs.has_value()) {
-      const std::function<uint64_t(uint64_t)> &f = *_cs;
+      const crane::fn<uint64_t(uint64_t)> &f = *_cs;
       return f(UINT64_C(10));
     } else {
       return UINT64_C(999);
     }
   }();
   /// Dummy use of wrapper to keep it alive for extraction.
-  static wrapper wrap_list(mylist l);
+  static wrapper wrap_list(const mylist &l);
 };
 
 #endif // INCLUDED_FIX_SHARED_PTR_FIELD

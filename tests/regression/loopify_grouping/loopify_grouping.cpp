@@ -2,22 +2,21 @@
 
 List<List<uint64_t>>
 LoopifyGrouping::prepend_to_groups(uint64_t x, bool same,
-                                   List<List<uint64_t>> groups) {
+                                   const List<List<uint64_t>> &groups) {
   if (same) {
     if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(
-            groups.v_mut())) {
+            groups.v())) {
       return List<List<uint64_t>>::cons(
           List<uint64_t>::cons(x, List<uint64_t>::nil()),
           List<List<uint64_t>>::nil());
     } else {
-      auto &[a0, a1] =
-          std::get<typename List<List<uint64_t>>::Cons>(groups.v_mut());
-      return List<List<uint64_t>>::cons(List<uint64_t>::cons(x, std::move(a0)),
-                                        *a1);
+      const auto &[a0, a1] =
+          std::get<typename List<List<uint64_t>>::Cons>(groups.v());
+      return List<List<uint64_t>>::cons(List<uint64_t>::cons(x, a0), *a1);
     }
   } else {
     return List<List<uint64_t>>::cons(
-        List<uint64_t>::cons(x, List<uint64_t>::nil()), std::move(groups));
+        List<uint64_t>::cons(x, List<uint64_t>::nil()), groups);
   }
 }
 

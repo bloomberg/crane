@@ -2,12 +2,14 @@
 #define INCLUDED_COMPREHENSIVE_PATTERNS
 
 #include "crane_fn.h"
+#include "fn.h"
+#include "obj.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
-#include <functional>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -38,21 +40,26 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U> List(const List<_U> &_other) {
-    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->v_ = Nil{};
-    } else {
-      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>) {
-                          return crane_any_cast<A>(a);
-                        } else {
-                          return A(a);
-                        }
-                      }(),
-                      (l ? std::make_shared<List<A>>(*l) : nullptr)};
-    }
-  }
+  template <typename _U>
+  List(const List<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+            return Nil{};
+          } else {
+            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const _U &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                   : nullptr)};
+          }
+        }()) {}
 
   static List<A> nil() { return List<A>(Nil{}); }
 
@@ -62,22 +69,18 @@ public:
 
   // MANIPULATORS
   ~List() {
-    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
-        if (_alt->l) {
-          _stack.push_back(std::move(_alt->l));
+        if (_alt->l && _alt->l.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->l);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<List<A>> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -99,6 +102,17 @@ template <typename A> struct Sig {
   // ACCESSORS
   Sig<A> clone() const { return {x}; }
 
+  template <typename _U> operator Sig<_U>() const {
+    return {[&]() -> _U {
+      if constexpr (crane_convertible<_U, const A &>) {
+        return crane_convert<_U>(x);
+      } else {
+        throw std::logic_error(
+            "unreachable: inactive constructor field at this instantiation");
+      }
+    }()};
+  }
+
   // CREATORS
   static Sig<A> exist(A x) { return {std::move(x)}; }
 };
@@ -110,8 +124,9 @@ struct ComprehensivePatterns {
     uint64_t s_c;
   };
 
-  static std::pair<std::pair<S, uint64_t>, uint64_t> syntactic_variation(S s);
-  static std::pair<S, uint64_t> with_magic(S s);
+  static std::pair<std::pair<S, uint64_t>, uint64_t>
+  syntactic_variation(const S &s);
+  static std::pair<S, uint64_t> with_magic(const S &s);
 
   struct L1 {
     S l1_s;
@@ -137,22 +152,22 @@ struct ComprehensivePatterns {
       std::pair<std::pair<std::pair<std::pair<std::pair<L5, L4>, L3>, L2>, L1>,
                 S>,
       uint64_t>
-  deep_nest(L5 l5);
+  deep_nest(const L5 &l5);
   static std::pair<std::pair<std::pair<S, uint64_t>, uint64_t>, uint64_t>
-  nested_pair_reuse(S s);
-  static std::pair<S, uint64_t> compose(S s);
-  static std::pair<std::function<uint64_t(uint64_t)>, S> lambda_proj(S s);
+  nested_pair_reuse(const S &s);
+  static std::pair<S, uint64_t> compose(const S &s);
+  static std::pair<crane::fn<uint64_t(uint64_t)>, S> lambda_proj(S s);
   static std::pair<std::pair<std::pair<S, uint64_t>, uint64_t>, uint64_t>
-  proj_chain(S s);
+  proj_chain(const S &s);
   static std::pair<
       std::pair<std::pair<S, S>, std::pair<uint64_t, uint64_t>>,
       std::pair<std::pair<uint64_t, uint64_t>, std::pair<uint64_t, uint64_t>>>
-  octuple(S s);
+  octuple(const S &s);
   static std::pair<std::optional<std::pair<S, uint64_t>>, S>
-  nested_containers(S s);
+  nested_containers(const S &s);
   static std::pair<std::pair<S, uint64_t>, uint64_t>
   match_pair(std::pair<S, uint64_t> p);
-  static List<std::pair<S, uint64_t>> make_list(uint64_t n, S s);
+  static List<std::pair<S, uint64_t>> make_list(uint64_t n, const S &s);
   static std::optional<std::pair<S, S>> multi_match(const std::optional<S> &o1,
                                                     const std::optional<S> &o2);
   enum class Three { A, B, C };
@@ -189,14 +204,14 @@ struct ComprehensivePatterns {
     }
   }
 
-  static std::pair<S, uint64_t> match_three(Three t, S s);
-  static std::pair<S, uint64_t> let_in_arg(S s);
-  static std::pair<S, uint64_t> match_record(S s);
-  static std::pair<S, uint64_t> rebind(S s1);
-  static std::pair<std::function<uint64_t(std::monostate)>,
-                   std::function<uint64_t(std::monostate)>>
+  static std::pair<S, uint64_t> match_three(Three t, const S &s);
+  static std::pair<S, uint64_t> let_in_arg(const S &s);
+  static std::pair<S, uint64_t> match_record(const S &s);
+  static std::pair<S, uint64_t> rebind(const S &s1);
+  static std::pair<crane::fn<uint64_t(std::monostate)>,
+                   crane::fn<uint64_t(std::monostate)>>
   closure_pair(S s);
-  static Sig<S> sigma_reuse(S s);
+  static Sig<S> sigma_reuse(const S &s);
   static std::pair<uint64_t, std::pair<uint64_t, uint64_t>>
   multi_proj_arg(const S &s);
 
@@ -261,7 +276,7 @@ struct ComprehensivePatterns {
     }
   };
 
-  static std::pair<Either, Either> both_in_sum(S s);
+  static std::pair<Either, Either> both_in_sum(const S &s);
 
   struct R1 {
     uint64_t r1_val;
@@ -279,31 +294,31 @@ struct ComprehensivePatterns {
   };
 
   static std::pair<std::pair<std::pair<R3, R2>, R1>, uint64_t>
-  hard_proj_chain(R3 r3);
+  hard_proj_chain(const R3 &r3);
   static std::pair<std::pair<R2, R1>, uint64_t> multi_path(const R3 &r3);
-  static std::pair<std::pair<R2, R1>, uint64_t> let_proj(R2 r2);
+  static std::pair<std::pair<R2, R1>, uint64_t> let_proj(const R2 &r2);
   static uint64_t extract_val(const R1 &r1);
-  static std::pair<R2, uint64_t> nested_call(R2 r2);
+  static std::pair<R2, uint64_t> nested_call(const R2 &r2);
   static std::pair<std::pair<R2, R1>, uint64_t> multi_proj_let(uint64_t n);
-  static std::optional<std::pair<R2, R1>> match_proj(R2 r2);
+  static std::optional<std::pair<R2, R1>> match_proj(const R2 &r2);
   static std::pair<std::pair<R1, uint64_t>, uint64_t>
   proj_multi_use(const R2 &r2);
   static std::pair<std::pair<R3, R2>, std::pair<R1, uint64_t>>
-  complex_nest(R3 r3);
+  complex_nest(const R3 &r3);
   static R2 make_r2(uint64_t n);
   static std::pair<std::pair<R2, R1>, uint64_t> from_func(uint64_t n);
   static std::pair<std::pair<R2, R1>, std::pair<R1, uint64_t>>
-  pair_of_pairs(R2 r2);
-  static std::pair<R2, R1> cond_proj(bool b, R2 r2);
-  static List<std::pair<R2, R1>> repeat_r2(uint64_t n, R2 r2);
-  static std::pair<std::pair<R3, R2>, R1> nested_lets(R3 r3);
+  pair_of_pairs(const R2 &r2);
+  static std::pair<R2, R1> cond_proj(bool b, const R2 &r2);
+  static List<std::pair<R2, R1>> repeat_r2(uint64_t n, const R2 &r2);
+  static std::pair<std::pair<R3, R2>, R1> nested_lets(const R3 &r3);
   static std::pair<R1, uint64_t> double_proj(const R3 &r3);
-  static std::pair<std::pair<R3, R2>, R2> mixed_access(R3 r3);
-  static std::pair<R2, R1> return_proj_h(R2 r2);
+  static std::pair<std::pair<R3, R2>, R2> mixed_access(const R3 &r3);
+  static std::pair<R2, R1> return_proj_h(const R2 &r2);
   static std::pair<std::pair<std::pair<R3, R2>, R1>, uint64_t>
-  all_levels(R3 r3);
+  all_levels(const R3 &r3);
   static std::pair<R1, R1> let_and_proj(const R2 &r2);
-  static std::pair<R2, R2> multi_construct(R1 r1);
+  static std::pair<R2, R2> multi_construct(const R1 &r1);
   static std::optional<std::pair<R2, R1>>
   option_proj(const std::optional<R2> &o);
 
@@ -312,8 +327,9 @@ struct ComprehensivePatterns {
     uint64_t dat;
   };
 
-  static std::pair<R, uint64_t> pair_inline_proj(R r);
-  static std::pair<std::pair<R, uint64_t>, uint64_t> nested_pair_inline(R r);
+  static std::pair<R, uint64_t> pair_inline_proj(const R &r);
+  static std::pair<std::pair<R, uint64_t>, uint64_t>
+  nested_pair_inline(const R &r);
   static uint64_t match_bind_and_use(const R &r);
   static uint64_t let_with_type(const R &r);
   static uint64_t proj_of_last_use(const R &r1);
@@ -321,10 +337,10 @@ struct ComprehensivePatterns {
   static uint64_t option_unwrap_proj(const std::optional<R> &o);
   static std::pair<R, uint64_t> fun_result_and_proj(uint64_t n);
   static std::optional<uint64_t> match_multi_use(const std::optional<R> &o);
-  static std::pair<std::pair<R, uint64_t>, uint64_t> tuple_proj(R r);
-  static std::pair<R, uint64_t> chain_to_pair(R r1);
-  static List<std::pair<R, uint64_t>> repeat_pair(uint64_t n, R r);
-  static std::pair<R, uint64_t> cond_pair(bool b, R r);
+  static std::pair<std::pair<R, uint64_t>, uint64_t> tuple_proj(const R &r);
+  static std::pair<R, uint64_t> chain_to_pair(const R &r1);
+  static List<std::pair<R, uint64_t>> repeat_pair(uint64_t n, const R &r);
+  static std::pair<R, uint64_t> cond_pair(bool b, const R &r);
   static uint64_t nested_match(const std::optional<R> &o1,
                                const std::optional<R> &o2);
   static std::pair<uint64_t, uint64_t> both_proj(const R &r);
@@ -391,20 +407,15 @@ struct ComprehensivePatterns {
   static uint64_t f1_fc(uint64_t n);
   static uint64_t f2_fc(uint64_t n);
   static uint64_t bug_multi_calls(const State &s);
-
-  template <typename T1> static T1 _bug_base_and_proj_consume(const T1 x) {
-    return x;
-  }
-
   static std::pair<State, uint64_t> bug_base_and_proj(const State &s);
   static uint64_t sequential_lets(const State &s);
-  static std::pair<State, uint64_t> let_then_use_base(State s);
+  static std::pair<State, uint64_t> let_then_use_base(const State &s);
   static uint64_t two_proj_sequence(const State &s);
   static uint64_t let_multi_proj(const State &s);
   static uint64_t nested_lets_same_base(const State &s);
   static uint64_t if_with_proj(const State &s);
   static uint64_t match_scrutinee_proj(const State &s);
-  static std::pair<State, uint64_t> bind_proj_use_base(State s);
+  static std::pair<State, uint64_t> bind_proj_use_base(const State &s);
 
   struct RSeq {
     uint64_t seq_val;
@@ -452,7 +463,7 @@ struct ComprehensivePatterns {
   };
 
   static uint64_t branch_use(bool b, const RCF &r);
-  static std::pair<RCF, uint64_t> branch_different(bool b, RCF r);
+  static std::pair<RCF, uint64_t> branch_different(bool b, const RCF &r);
   static uint64_t match_with_wild(const std::optional<RCF> &o);
   static uint64_t sum_with_state(uint64_t n, const RCF &r);
   static uint64_t even_count(uint64_t n, const RCF &r);
@@ -501,10 +512,10 @@ struct ComprehensivePatterns {
       crane::small_vector<std::shared_ptr<Tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a2) {
+          if (_alt->a2 && _alt->a2.use_count() == 1) {
             _stack.push_back(std::move(_alt->a2));
           }
         }
@@ -537,11 +548,11 @@ struct ComprehensivePatterns {
 
     Tree flip_tree() const {
       if (std::holds_alternative<typename Tree::Leaf>(this->v())) {
-        auto &[a0] = std::get<typename Tree::Leaf>(this->v());
+        const auto &[a0] = std::get<typename Tree::Leaf>(this->v());
         return Tree::node(*this, a0, *this);
       } else {
-        auto &[a0, a1, a2] = std::get<typename Tree::Node>(this->v());
-        return Tree::leaf(std::move(a1));
+        const auto &[a0, a1, a2] = std::get<typename Tree::Node>(this->v());
+        return Tree::leaf(a1);
       }
     }
 
@@ -686,7 +697,7 @@ struct ComprehensivePatterns {
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
-        std::decay_t<T1> _result;
+        T1 _result;
         Tree a2;
         uint64_t a1;
         Tree a0;
@@ -750,7 +761,7 @@ struct ComprehensivePatterns {
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
-        std::decay_t<T1> _result;
+        T1 _result;
         Tree a2;
         uint64_t a1;
         Tree a0;
@@ -871,9 +882,9 @@ struct ComprehensivePatterns {
   static uint64_t extract_via_match(const StateOP &s);
   static StateOP consume_state(StateOP s);
   static uint64_t match_consumed(const StateOP &s);
-  static std::pair<StateOP, uint64_t> force_owned(StateOP s);
+  static std::pair<StateOP, uint64_t> force_owned(const StateOP &s);
   static std::pair<std::pair<StateOP, StateOP>, uint64_t>
-  pair_then_match(StateOP s);
+  pair_then_match(const StateOP &s);
 };
 
 #endif // INCLUDED_COMPREHENSIVE_PATTERNS

@@ -1415,11 +1415,11 @@ LoopifyLists::remove_if_sum_even(const LoopifyLists::list<uint64_t> &l) {
 std::pair<LoopifyLists::list<uint64_t>, LoopifyLists::list<uint64_t>>
 LoopifyLists::split_at(
     uint64_t n,
-    LoopifyLists::list<uint64_t>
-        l) { /// _Enter: captures varying parameters for each recursive call.
+    const LoopifyLists::list<uint64_t>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
-    LoopifyLists::list<uint64_t> l;
+    const LoopifyLists::list<uint64_t> *l;
     uint64_t n;
   };
 
@@ -1432,27 +1432,28 @@ LoopifyLists::split_at(
   std::pair<LoopifyLists::list<uint64_t>, LoopifyLists::list<uint64_t>>
       _result{};
   crane::small_vector<_Frame> _stack;
-  _stack.emplace_back(_Enter{std::move(l), n});
+  _stack.emplace_back(_Enter{&l, n});
   /// Loopified split_at: _Enter -> _Cont1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      LoopifyLists::list<uint64_t> l = std::move(_f.l);
+      const LoopifyLists::list<uint64_t> &l = *_f.l;
       uint64_t n = _f.n;
       if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
-              l.v_mut())) {
+              l.v())) {
         _result = std::make_pair(list<uint64_t>::nil(), list<uint64_t>::nil());
       } else {
-        auto &[a0, a1] =
-            std::get<typename LoopifyLists::list<uint64_t>::Cons>(l.v_mut());
+        const auto &[a0, a1] =
+            std::get<typename LoopifyLists::list<uint64_t>::Cons>(l.v());
         if (n == UINT64_C(0)) {
           _result = std::make_pair(list<uint64_t>::nil(), l);
         } else {
           _stack.emplace_back(_Cont1{a0});
           _stack.emplace_back(
-              _Enter{*a1, (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))))});
+              _Enter{crane_raw(a1),
+                     (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))))});
         }
       }
     } else {

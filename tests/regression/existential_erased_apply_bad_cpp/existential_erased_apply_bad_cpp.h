@@ -2,12 +2,13 @@
 #define INCLUDED_EXISTENTIAL_ERASED_APPLY_BAD_CPP
 
 #include "crane_fn.h"
+#include "fn.h"
+#include "obj.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
-#include <functional>
 #include <memory>
-#include <type_traits>
+#include <stdexcept>
 #include <utility>
 #include <variant>
 
@@ -36,21 +37,26 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U> List(const List<_U> &_other) {
-    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->v_ = Nil{};
-    } else {
-      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>) {
-                          return crane_any_cast<A>(a);
-                        } else {
-                          return A(a);
-                        }
-                      }(),
-                      (l ? std::make_shared<List<A>>(*l) : nullptr)};
-    }
-  }
+  template <typename _U>
+  List(const List<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+            return Nil{};
+          } else {
+            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const _U &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                   : nullptr)};
+          }
+        }()) {}
 
   static List<A> nil() { return List<A>(Nil{}); }
 
@@ -60,22 +66,18 @@ public:
 
   // MANIPULATORS
   ~List() {
-    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
-        if (_alt->l) {
-          _stack.push_back(std::move(_alt->l));
+        if (_alt->l && _alt->l.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->l);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<List<A>> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -147,32 +149,26 @@ struct ExistentialErasedApplyBadCpp {
   /// through as the expected type there.
   struct dyn {
     // DATA
-    std::any a;
-    std::function<uint64_t(std::any)> a1;
+    crane::obj a;
+    crane::fn<uint64_t(crane::obj)> a1;
 
     // ACCESSORS
     dyn clone() const { return {a, a1}; }
 
     // CREATORS
-    static dyn dyn0(std::any a, std::function<uint64_t(std::any)> a1) {
+    static dyn dyn0(crane::obj a, crane::fn<uint64_t(crane::obj)> a1) {
       return {std::move(a), std::move(a1)};
     }
   };
 
-  template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, std::any &,
-                                   std::function<uint64_t(std::any)> &>
-  static T1 dyn_rect(F0 &&f, const dyn &d) {
+  template <typename T1, typename F0> static T1 dyn_rect(F0 &&f, const dyn &d) {
     const auto &[a0, a1] = d;
-    return std::any_cast<T1>(f(a0, a1));
+    return crane_any_cast<T1>(f(a0, a1));
   }
 
-  template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, std::any &,
-                                   std::function<uint64_t(std::any)> &>
-  static T1 dyn_rec(F0 &&f, const dyn &d) {
+  template <typename T1, typename F0> static T1 dyn_rec(F0 &&f, const dyn &d) {
     const auto &[a0, a1] = d;
-    return std::any_cast<T1>(f(a0, a1));
+    return crane_any_cast<T1>(f(a0, a1));
   }
 
   static uint64_t force(const dyn &d);

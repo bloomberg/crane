@@ -1,9 +1,13 @@
 #ifndef INCLUDED_LOOPIFY_WRAPPER_RECEIVER
 #define INCLUDED_LOOPIFY_WRAPPER_RECEIVER
 
+#include "crane_fn.h"
+#include "obj.h"
 #include "small_vector.h"
+#include <any>
 #include <atomic>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -15,6 +19,17 @@ struct LoopifyWrapperReceiver {
 
     // ACCESSORS
     box<A> clone() const { return {a0}; }
+
+    template <typename _U> operator box<_U>() const {
+      return {[&]() -> _U {
+        if constexpr (crane_convertible<_U, const A &>) {
+          return crane_convert<_U>(a0);
+        } else {
+          throw std::logic_error(
+              "unreachable: inactive constructor field at this instantiation");
+        }
+      }()};
+    }
 
     // CREATORS
     static box<A> b(A a0) { return {std::move(a0)}; }

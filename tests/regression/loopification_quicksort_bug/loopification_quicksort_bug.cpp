@@ -35,7 +35,7 @@ std::string QuicksortFun::list_to_string_helper(
   /// _Resume_Cons: saves [a0, _s1], resumes after recursive call with _result.
   struct _Resume_Cons {
     std::string a0;
-    std::decay_t<decltype(", ")> _s1;
+    std::string _s1;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;

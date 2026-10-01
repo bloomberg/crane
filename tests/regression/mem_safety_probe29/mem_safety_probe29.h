@@ -47,10 +47,10 @@ struct MemSafetyProbe29 {
       crane::small_vector<std::shared_ptr<inner>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<INode>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a2) {
+          if (_alt->a2 && _alt->a2.use_count() == 1) {
             _stack.push_back(std::move(_alt->a2));
           }
         }
@@ -206,7 +206,7 @@ struct MemSafetyProbe29 {
       /// _Combine_INode: receives partial results, combines with _result from
       /// final call.
       struct _Combine_INode {
-        std::decay_t<T1> _result;
+        T1 _result;
         inner a2;
         uint64_t a1;
         inner a0;
@@ -268,7 +268,7 @@ struct MemSafetyProbe29 {
       /// _Combine_INode: receives partial results, combines with _result from
       /// final call.
       struct _Combine_INode {
-        std::decay_t<T1> _result;
+        T1 _result;
         inner a2;
         uint64_t a1;
         inner a0;
@@ -345,10 +345,10 @@ struct MemSafetyProbe29 {
       crane::small_vector<std::shared_ptr<outer>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<ONode>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a2) {
+          if (_alt->a2 && _alt->a2.use_count() == 1) {
             _stack.push_back(std::move(_alt->a2));
           }
         }
@@ -508,7 +508,7 @@ struct MemSafetyProbe29 {
       /// _Combine_ONode: receives partial results, combines with _result from
       /// final call.
       struct _Combine_ONode {
-        std::decay_t<T1> _result;
+        T1 _result;
         outer a2;
         inner a1;
         outer a0;
@@ -571,7 +571,7 @@ struct MemSafetyProbe29 {
       /// _Combine_ONode: receives partial results, combines with _result from
       /// final call.
       struct _Combine_ONode {
-        std::decay_t<T1> _result;
+        T1 _result;
         outer a2;
         inner a1;
         outer a0;
@@ -672,23 +672,23 @@ struct MemSafetyProbe29 {
       crane::small_vector<std::shared_ptr<expr>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Neg>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
         }
         if (auto *_alt = std::get_if<Add>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a1) {
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
             _stack.push_back(std::move(_alt->a1));
           }
         }
         if (auto *_alt = std::get_if<Mul>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a1) {
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
             _stack.push_back(std::move(_alt->a1));
           }
         }
@@ -994,7 +994,7 @@ struct MemSafetyProbe29 {
       /// _Combine_Add: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Add {
-        std::decay_t<T1> _result;
+        T1 _result;
         expr a1;
         expr a0;
       };
@@ -1002,7 +1002,7 @@ struct MemSafetyProbe29 {
       /// _Combine_Mul: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Mul {
-        std::decay_t<T1> _result;
+        T1 _result;
         expr a1;
         expr a0;
       };
@@ -1098,7 +1098,7 @@ struct MemSafetyProbe29 {
       /// _Combine_Add: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Add {
-        std::decay_t<T1> _result;
+        T1 _result;
         expr a1;
         expr a0;
       };
@@ -1106,7 +1106,7 @@ struct MemSafetyProbe29 {
       /// _Combine_Mul: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Mul {
-        std::decay_t<T1> _result;
+        T1 _result;
         expr a1;
         expr a0;
       };
@@ -1212,13 +1212,13 @@ struct MemSafetyProbe29 {
       crane::small_vector<std::shared_ptr<tree3>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<T3Node>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a1) {
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
             _stack.push_back(std::move(_alt->a1));
           }
-          if (_alt->a2) {
+          if (_alt->a2 && _alt->a2.use_count() == 1) {
             _stack.push_back(std::move(_alt->a2));
           }
         }
@@ -1342,7 +1342,7 @@ struct MemSafetyProbe29 {
       /// _After_T3Node_1: saves [_result, a0_0, a3, a2, a1, a0_1], dispatches
       /// next recursive call.
       struct _After_T3Node_1 {
-        std::decay_t<T1> _result;
+        T1 _result;
         const tree3 *a0_0;
         uint64_t a3;
         tree3 a2;
@@ -1353,8 +1353,8 @@ struct MemSafetyProbe29 {
       /// _Combine_T3Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_T3Node {
-        std::decay_t<T1> _result_0;
-        std::decay_t<T1> _result_1;
+        T1 _result_0;
+        T1 _result_1;
         uint64_t a3;
         tree3 a2;
         tree3 a1;
@@ -1431,7 +1431,7 @@ struct MemSafetyProbe29 {
       /// _After_T3Node_1: saves [_result, a0_0, a3, a2, a1, a0_1], dispatches
       /// next recursive call.
       struct _After_T3Node_1 {
-        std::decay_t<T1> _result;
+        T1 _result;
         const tree3 *a0_0;
         uint64_t a3;
         tree3 a2;
@@ -1442,8 +1442,8 @@ struct MemSafetyProbe29 {
       /// _Combine_T3Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_T3Node {
-        std::decay_t<T1> _result_0;
-        std::decay_t<T1> _result_1;
+        T1 _result_0;
+        T1 _result_1;
         uint64_t a3;
         tree3 a2;
         tree3 a1;
@@ -1512,7 +1512,7 @@ struct MemSafetyProbe29 {
     return std::move(o).outer_sum();
   }();
   /// TEST 2: Dup pattern — use inner tree twice in outer construction.
-  static outer dup_inner(inner i);
+  static outer dup_inner(const inner &i);
   static inline const uint64_t test_dup_inner = []() {
     inner i = inner::inode(
         inner::inode(inner::ileaf(), UINT64_C(5), inner::ileaf()), UINT64_C(10),

@@ -2,10 +2,10 @@
 #define INCLUDED_HKT_RECORD_DICT
 
 #include "crane_fn.h"
-#include "small_vector.h"
+#include "fn.h"
+#include "obj.h"
 #include <any>
 #include <atomic>
-#include <functional>
 #include <memory>
 #include <optional>
 #include <utility>
@@ -41,22 +41,18 @@ public:
 
   // MANIPULATORS
   ~Nat() {
-    crane::small_vector<std::shared_ptr<Nat>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<Nat> {
       if (auto *_alt = std::get_if<S>(&_v)) {
-        if (_alt->a0) {
-          _stack.push_back(std::move(_alt->a0));
+        if (_alt->a0 && _alt->a0.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a0);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<Nat> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -77,28 +73,37 @@ public:
 /// scope (f::template fmd<...>).
 struct HktRecordDict {
   template <typename F> struct FnD {
-    std::function<F(std::function<std::any(std::any)>, F)> fmd;
+    crane::fn<F(crane::fn<crane::obj(crane::obj)>, F)> fmd;
+
+    // ACCESSORS
+    template <typename _U> operator FnD<_U>() const {
+      return {
+          crane_convert<crane::fn<_U(crane::fn<crane::obj(crane::obj)>, _U)>>(
+              fmd)};
+    }
   };
 
   template <template <typename> class T1, typename T2, typename F1,
             typename T3 = std::invoke_result_t<F1 &, T2 &>>
-  static T1<T3> fmd(const FnD<T1<std::any>> &f, F1 &&x, T1<T2> x0) {
-    return crane_container_cast<T1<T3>>(f.fmd(
-        crane_erase_fn(x), crane_container_cast<T1<std::any>>(std::move(x0))));
+  static T1<T3> fmd(const FnD<T1<crane::obj>> &f, F1 &&x, T1<T2> x0) {
+    return crane_container_cast<T1<T3>>(
+        f.fmd(crane_erase_fn(x),
+              crane_container_cast<T1<crane::obj>>(std::move(x0))));
   }
 
-  static inline const FnD<std::optional<std::any>> optd =
-      FnD<std::optional<std::any>>{[](const auto &f, const auto &o) {
+  static inline const FnD<std::optional<crane::obj>> optd =
+      FnD<std::optional<crane::obj>>{[]<typename _X>(const crane::fn<_X(_X)> &f,
+                                                     const std::optional<_X> &o)
+                                         -> std::optional<crane::obj> {
         if (o.has_value()) {
           const auto &x = *o;
-          return std::make_optional<std::any>(
-              std::any(crane_call_erased(f, x)));
+          return std::make_optional<_X>(_X(crane_call_erased(f, x)));
         } else {
-          return std::optional<std::any>();
+          return std::optional<_X>();
         }
       }};
-  static inline const std::optional<Nat> ex = fmd(
-      optd, [](Nat x) { return Nat::s(x); },
+  static inline const std::optional<Nat> ex = fmd<std::optional>(
+      optd, [](const Nat &x) { return Nat::s(x); },
       std::make_optional<Nat>(Nat::s(Nat::o())));
 };
 

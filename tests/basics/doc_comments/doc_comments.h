@@ -2,10 +2,11 @@
 #define INCLUDED_DOC_COMMENTS
 
 #include "crane_fn.h"
-#include "small_vector.h"
+#include "obj.h"
 #include <any>
 #include <atomic>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -21,6 +22,26 @@ struct DocComments {
     A fst;
     /// The second element of the pair.
     B snd;
+
+    // ACCESSORS
+    template <typename _U0, typename _U1> operator pair<_U0, _U1>() const {
+      return {[&]() -> _U0 {
+                if constexpr (crane_convertible<_U0, const A &>) {
+                  return crane_convert<_U0>(fst);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }(),
+              [&]() -> _U1 {
+                if constexpr (crane_convertible<_U1, const B &>) {
+                  return crane_convert<_U1>(snd);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }()};
+    }
   };
 
   /// mylist is a polymorphic list type.
@@ -49,21 +70,29 @@ struct DocComments {
 
     explicit mylist(Mycons _v) : v_(std::move(_v)) {}
 
-    template <typename _U> mylist(const mylist<_U> &_other) {
-      if (std::holds_alternative<typename mylist<_U>::Mynil>(_other.v())) {
-        this->v_ = Mynil{};
-      } else {
-        const auto &[a, l] = std::get<typename mylist<_U>::Mycons>(_other.v());
-        this->v_ = Mycons{[&]() -> A {
-                            if constexpr (std::is_same_v<_U, std::any>) {
-                              return crane_any_cast<A>(a);
-                            } else {
-                              return A(a);
-                            }
-                          }(),
-                          (l ? std::make_shared<mylist<A>>(*l) : nullptr)};
-      }
-    }
+    template <typename _U>
+    mylist(const mylist<_U> &_other)
+        : v_([&]() -> variant_t {
+            if (std::holds_alternative<typename mylist<_U>::Mynil>(
+                    _other.v())) {
+              return Mynil{};
+            } else {
+              const auto &[a, l] =
+                  std::get<typename mylist<_U>::Mycons>(_other.v());
+              return Mycons{
+                  [&]() -> A {
+                    if constexpr (crane_convertible<A, const _U &>) {
+                      return crane_convert<A>(a);
+                    } else {
+                      throw std::logic_error(
+                          "unreachable: inactive constructor field at this "
+                          "instantiation");
+                    }
+                  }(),
+                  (l ? std::make_shared<mylist<A>>(crane_convert<mylist<A>>(*l))
+                     : nullptr)};
+            }
+          }()) {}
 
     /// The empty list.
     static mylist<A> mynil() { return mylist<A>(Mynil{}); }
@@ -76,22 +105,18 @@ struct DocComments {
 
     // MANIPULATORS
     ~mylist() {
-      crane::small_vector<std::shared_ptr<mylist<A>>> _stack = {};
-      auto _drain = [&](variant_t &_v) {
+      auto _next = [&](variant_t &_v) -> std::shared_ptr<mylist<A>> {
         if (auto *_alt = std::get_if<Mycons>(&_v)) {
-          if (_alt->l) {
-            _stack.push_back(std::move(_alt->l));
+          if (_alt->l && _alt->l.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
+            return std::move(_alt->l);
           }
         }
+        return nullptr;
       };
-      _drain(v_mut());
-      while (!_stack.empty()) {
-        auto _cur = std::move(_stack.back());
-        _stack.pop_back();
-        if (_cur.use_count() == 1) {
-          std::atomic_thread_fence(std::memory_order_acquire);
-          _drain(_cur->v_mut());
-        }
+      std::shared_ptr<mylist<A>> _cur = _next(v_mut());
+      while (_cur) {
+        _cur = _next(_cur->v_mut());
       }
     }
 

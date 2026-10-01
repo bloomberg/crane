@@ -2,13 +2,13 @@
 #define INCLUDED_COIND_GUARD
 
 #include "crane_fn.h"
+#include "fn.h"
 #include "lazy.h"
-#include "small_vector.h"
+#include "obj.h"
 #include <any>
 #include <atomic>
-#include <functional>
 #include <memory>
-#include <type_traits>
+#include <stdexcept>
 #include <utility>
 #include <variant>
 
@@ -37,21 +37,26 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U> List(const List<_U> &_other) {
-    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->v_ = Nil{};
-    } else {
-      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>) {
-                          return crane_any_cast<A>(a);
-                        } else {
-                          return A(a);
-                        }
-                      }(),
-                      (l ? std::make_shared<List<A>>(*l) : nullptr)};
-    }
-  }
+  template <typename _U>
+  List(const List<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+            return Nil{};
+          } else {
+            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const _U &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                   : nullptr)};
+          }
+        }()) {}
 
   static List<A> nil() { return List<A>(Nil{}); }
 
@@ -61,22 +66,18 @@ public:
 
   // MANIPULATORS
   ~List() {
-    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
-        if (_alt->l) {
-          _stack.push_back(std::move(_alt->l));
+        if (_alt->l && _alt->l.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->l);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<List<A>> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -94,11 +95,12 @@ public:
 struct CoindGuard {
   template <typename A> struct Stream {
     // TYPES
-    struct Cons {
+    template <typename _S0 = Stream<A>> struct Cons_ {
       A a0;
-      std::shared_ptr<Stream<A>> a1;
+      _S0 a1;
     };
 
+    using Cons = Cons_<>;
     using variant_t = std::variant<Cons>;
 
   private:
@@ -107,25 +109,47 @@ struct CoindGuard {
 
   public:
     // CREATORS
+    Stream() {}
+
     explicit Stream(Cons _v)
         : lazy_v_(crane::lazy<variant_t>(variant_t(std::move(_v)))) {}
 
-    explicit Stream(std::function<variant_t()> _thunk)
+    template <typename _U>
+    Stream(const Stream<_U> &_other)
+        : lazy_v_(crane::lazy<variant_t>::converted_from(
+              _other.lazy_cell(), [=]() -> variant_t {
+                const auto &[a0, a1] =
+                    std::get<typename Stream<_U>::Cons>(_other.v());
+                return Cons{[&]() -> A {
+                              if constexpr (crane_convertible<A, const _U &>) {
+                                return crane_convert<A>(a0);
+                              } else {
+                                throw std::logic_error(
+                                    "unreachable: inactive constructor field "
+                                    "at this instantiation");
+                              }
+                            }(),
+                            crane_convert<Stream<A>>(a1)};
+              })) {}
+
+    explicit Stream(crane::fn<variant_t()> _thunk)
         : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
-    static Stream<A> cons(A a0, const Stream<A> &a1) {
-      return Stream<A>(Cons{std::move(a0), std::make_shared<Stream<A>>(a1)});
+    static Stream<A> cons(A a0, Stream<A> a1) {
+      return Stream<A>(Cons{std::move(a0), std::move(a1)});
     }
 
-    static Stream<A> lazy_(std::function<Stream<A>()> thunk) {
-      return Stream<A>(std::function<variant_t()>([=]() mutable -> variant_t {
-        Stream<A> _tmp = thunk();
-        return _tmp.v();
-      }));
+    explicit Stream(crane::lazy<variant_t> _cell) : lazy_v_(std::move(_cell)) {}
+
+    template <typename F> static Stream<A> lazy_(F &&thunk) {
+      return Stream<A>(
+          crane::lazy<variant_t>::delegate(std::forward<F>(thunk)));
     }
 
     // ACCESSORS
     const variant_t &v() const { return lazy_v_.force(); }
+
+    const crane::lazy<variant_t> &lazy_cell() const { return lazy_v_; }
   };
 
   template <typename T1> static T1 hd(Stream<T1> s) {
@@ -135,39 +159,40 @@ struct CoindGuard {
 
   template <typename T1> static Stream<T1> tl(Stream<T1> s) {
     const auto &[a0, a1] = std::get<typename Stream<T1>::Cons>(s.v());
-    return Stream<T1>::lazy_([=]() mutable -> Stream<T1> { return *a1; });
+    return a1;
   }
 
-  template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, T1 &>
-  static Stream<T1> iterate(F0 &&f, T1 x) {
-    return Stream<T1>::lazy_([=]() mutable -> Stream<T1> {
+  template <typename T1>
+  static Stream<T1> iterate(std::type_identity_t<crane::fn<T1(T1)>> f,
+                            const T1 &x) {
+    return Stream<T1>::lazy_([=]() -> Stream<T1> {
       return Stream<T1>::cons(x, iterate<T1>(f, f(x)));
     });
   }
 
-  template <typename T1, typename T2, typename T3, typename F0>
-    requires std::is_invocable_r_v<T3, F0 &, T1 &, T2 &>
-  static Stream<T3> zipWith(F0 &&f, Stream<T1> s1, Stream<T2> s2) {
-    return Stream<T3>::lazy_([=]() mutable -> Stream<T3> {
+  template <typename T1, typename T2, typename T3>
+  static Stream<T3> zipWith(std::type_identity_t<crane::fn<T3(T1, T2)>> f,
+                            Stream<T1> s1, Stream<T2> s2) {
+    return Stream<T3>::lazy_([=]() -> Stream<T3> {
       return Stream<T3>::cons(f(hd<T1>(s1), hd<T2>(s2)),
                               zipWith<T1, T2, T3>(f, tl<T1>(s1), tl<T2>(s2)));
     });
   }
 
-  template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, T1 &>
-  static Stream<T2> smap(F0 &&f, Stream<T1> s) {
-    return Stream<T2>::lazy_([=]() mutable -> Stream<T2> {
+  template <typename T1, typename T2>
+  static Stream<T2> smap(std::type_identity_t<crane::fn<T2(T1)>> f,
+                         Stream<T1> s) {
+    return Stream<T2>::lazy_([=]() -> Stream<T2> {
       return Stream<T2>::cons(f(hd<T1>(s)), smap<T1, T2>(f, tl<T1>(s)));
     });
   }
 
-  template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<std::pair<T1, T2>, F0 &, T2 &>
-  static Stream<T1> unfold(F0 &&f, const T2 &seed) {
+  template <typename T1, typename T2>
+  static Stream<T1>
+  unfold(std::type_identity_t<crane::fn<std::pair<T1, T2>(T2)>> f,
+         const T2 &seed) {
     auto [a, s_] = f(seed);
-    return Stream<T1>::lazy_([=]() mutable -> Stream<T1> {
+    return Stream<T1>::lazy_([=]() -> Stream<T1> {
       return Stream<T1>::cons(a, unfold<T1, T2>(f, s_));
     });
   }

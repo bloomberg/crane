@@ -2,11 +2,11 @@
 #define INCLUDED_SEPEXTUPTRCLONEQUAL
 
 #include "crane_fn.h"
-#include "small_vector.h"
+#include "obj.h"
 #include <any>
 #include <atomic>
 #include <memory>
-#include <type_traits>
+#include <stdexcept>
 #include <utility>
 #include <variant>
 
@@ -39,21 +39,27 @@ public:
 
   explicit MyList(Mycons _v) : v_(std::move(_v)) {}
 
-  template <typename _U> MyList(const MyList<_U> &_other) {
-    if (std::holds_alternative<typename MyList<_U>::Mynil>(_other.v())) {
-      this->v_ = Mynil{};
-    } else {
-      const auto &[a0, a1] = std::get<typename MyList<_U>::Mycons>(_other.v());
-      this->v_ = Mycons{[&]() -> A {
-                          if constexpr (std::is_same_v<_U, std::any>) {
-                            return crane_any_cast<A>(a0);
-                          } else {
-                            return A(a0);
-                          }
-                        }(),
-                        (a1 ? std::make_shared<MyList<A>>(*a1) : nullptr)};
-    }
-  }
+  template <typename _U>
+  MyList(const MyList<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename MyList<_U>::Mynil>(_other.v())) {
+            return Mynil{};
+          } else {
+            const auto &[a0, a1] =
+                std::get<typename MyList<_U>::Mycons>(_other.v());
+            return Mycons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const _U &>) {
+                    return crane_convert<A>(a0);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (a1 ? std::make_shared<MyList<A>>(crane_convert<MyList<A>>(*a1))
+                    : nullptr)};
+          }
+        }()) {}
 
   static MyList<A> mynil() { return MyList<A>(Mynil{}); }
 
@@ -64,22 +70,18 @@ public:
 
   // MANIPULATORS
   ~MyList() {
-    crane::small_vector<std::shared_ptr<MyList<A>>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<MyList<A>> {
       if (auto *_alt = std::get_if<Mycons>(&_v)) {
-        if (_alt->a1) {
-          _stack.push_back(std::move(_alt->a1));
+        if (_alt->a1 && _alt->a1.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a1);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<MyList<A>> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 

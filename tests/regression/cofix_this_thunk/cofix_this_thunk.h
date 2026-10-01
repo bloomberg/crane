@@ -2,12 +2,13 @@
 #define INCLUDED_COFIX_THIS_THUNK
 
 #include "crane_fn.h"
+#include "fn.h"
 #include "lazy.h"
-#include "small_vector.h"
+#include "obj.h"
 #include <any>
 #include <atomic>
-#include <functional>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -37,21 +38,26 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U> List(const List<_U> &_other) {
-    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->v_ = Nil{};
-    } else {
-      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>) {
-                          return crane_any_cast<A>(a);
-                        } else {
-                          return A(a);
-                        }
-                      }(),
-                      (l ? std::make_shared<List<A>>(*l) : nullptr)};
-    }
-  }
+  template <typename _U>
+  List(const List<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+            return Nil{};
+          } else {
+            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const _U &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                   : nullptr)};
+          }
+        }()) {}
 
   static List<A> nil() { return List<A>(Nil{}); }
 
@@ -61,22 +67,18 @@ public:
 
   // MANIPULATORS
   ~List() {
-    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
-        if (_alt->l) {
-          _stack.push_back(std::move(_alt->l));
+        if (_alt->l && _alt->l.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->l);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<List<A>> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -94,11 +96,12 @@ public:
 /// Module name "Sseq" matches coinductive "sseq" -> eponymous
 template <typename A> struct Sseq {
   // TYPES
-  struct SCons {
+  template <typename _S0 = Sseq<A>> struct SCons_ {
     A shead;
-    std::shared_ptr<Sseq<A>> stail;
+    _S0 stail;
   };
 
+  using SCons = SCons_<>;
   using variant_t = std::variant<SCons>;
 
 private:
@@ -107,25 +110,46 @@ private:
 
 public:
   // CREATORS
+  Sseq() {}
+
   explicit Sseq(SCons _v)
       : lazy_v_(crane::lazy<variant_t>(variant_t(std::move(_v)))) {}
 
-  explicit Sseq(std::function<variant_t()> _thunk)
+  template <typename _U>
+  Sseq(const Sseq<_U> &_other)
+      : lazy_v_(crane::lazy<variant_t>::converted_from(
+            _other.lazy_cell(), [=]() -> variant_t {
+              const auto &[shead, stail] =
+                  std::get<typename Sseq<_U>::SCons>(_other.v());
+              return SCons{[&]() -> A {
+                             if constexpr (crane_convertible<A, const _U &>) {
+                               return crane_convert<A>(shead);
+                             } else {
+                               throw std::logic_error(
+                                   "unreachable: inactive constructor field at "
+                                   "this instantiation");
+                             }
+                           }(),
+                           crane_convert<Sseq<A>>(stail)};
+            })) {}
+
+  explicit Sseq(crane::fn<variant_t()> _thunk)
       : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
-  static Sseq<A> scons(A shead, const Sseq<A> &stail) {
-    return Sseq<A>(SCons{std::move(shead), std::make_shared<Sseq<A>>(stail)});
+  static Sseq<A> scons(A shead, Sseq<A> stail) {
+    return Sseq<A>(SCons{std::move(shead), std::move(stail)});
   }
 
-  static Sseq<A> lazy_(std::function<Sseq<A>()> thunk) {
-    return Sseq<A>(std::function<variant_t()>([=]() mutable -> variant_t {
-      Sseq<A> _tmp = thunk();
-      return _tmp.v();
-    }));
+  explicit Sseq(crane::lazy<variant_t> _cell) : lazy_v_(std::move(_cell)) {}
+
+  template <typename F> static Sseq<A> lazy_(F &&thunk) {
+    return Sseq<A>(crane::lazy<variant_t>::delegate(std::forward<F>(thunk)));
   }
 
   // ACCESSORS
   const variant_t &v() const { return lazy_v_.force(); }
+
+  const crane::lazy<variant_t> &lazy_cell() const { return lazy_v_; }
 
   A shead() const {
     const auto &[shead1, stail0] = std::get<typename Sseq<A>::SCons>(this->v());
@@ -134,7 +158,7 @@ public:
 
   Sseq<A> stail() const {
     const auto &[shead0, stail1] = std::get<typename Sseq<A>::SCons>(this->v());
-    return Sseq<A>::lazy_([=]() mutable -> Sseq<A> { return *stail1; });
+    return stail1;
   }
 
   /// This will be methodified on sseq because first arg is sseq A
@@ -149,7 +173,7 @@ public:
     requires std::is_invocable_r_v<A, F0 &, A &>
   Sseq<A> smap(F0 &&f) const {
     Sseq<A> _self_val = *this;
-    return Sseq<A>::lazy_([=]() mutable -> Sseq<A> {
+    return Sseq<A>::lazy_([=]() -> Sseq<A> {
       return Sseq<A>::scons(_self_val.double_head(f),
                             _self_val.stail().smap(f));
     });
@@ -159,7 +183,7 @@ public:
     requires std::is_invocable_r_v<A, F0 &, A &>
   Sseq<A> smap_direct(F0 &&f) const {
     Sseq<A> _self_val = *this;
-    return Sseq<A>::lazy_([=]() mutable -> Sseq<A> {
+    return Sseq<A>::lazy_([=]() -> Sseq<A> {
       return Sseq<A>::scons(f(_self_val.shead()),
                             _self_val.stail().smap_direct(f));
     });
@@ -176,7 +200,7 @@ public:
   }
 
   static Sseq<uint64_t> nats_from(uint64_t n) {
-    return Sseq<uint64_t>::lazy_([=]() mutable -> Sseq<uint64_t> {
+    return Sseq<uint64_t>::lazy_([=]() -> Sseq<uint64_t> {
       return Sseq<uint64_t>::scons(n, nats_from((n + 1)));
     });
   }

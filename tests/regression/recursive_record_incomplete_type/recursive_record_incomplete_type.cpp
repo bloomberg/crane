@@ -16,7 +16,7 @@ List<RecursiveRecordIncompleteType::cell> RecursiveRecordIncompleteType::kids(
 
 uint64_t RecursiveRecordIncompleteType::csum(
     const RecursiveRecordIncompleteType::cell &c) {
-  return (key(c) + [=]() mutable {
+  return (key(c) + [&]() {
     auto go_impl =
         [](auto &_self_go,
            const List<RecursiveRecordIncompleteType::cell> &l) -> uint64_t {

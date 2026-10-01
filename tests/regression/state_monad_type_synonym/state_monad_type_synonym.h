@@ -1,25 +1,23 @@
 #ifndef INCLUDED_STATE_MONAD_TYPE_SYNONYM
 #define INCLUDED_STATE_MONAD_TYPE_SYNONYM
 
-#include <functional>
-#include <type_traits>
+#include "fn.h"
 #include <utility>
 
 /// A state-monad type synonym (st A := nat -> (A * nat)) makes a definition
 /// a value of function type: a bare reference to it is a data member, so it
 /// must not be spelled as a nullary call.
 struct StateMonadTypeSynonym {
-  template <typename a>
-  using st = std::function<std::pair<a, uint64_t>(uint64_t)>;
+  template <typename a> using st = crane::fn<std::pair<a, uint64_t>(uint64_t)>;
 
   template <typename T1> static st<T1> ret(T1 a) {
-    return [=](uint64_t s) mutable { return std::make_pair(a, s); };
+    return [=](uint64_t s) { return std::make_pair(a, s); };
   }
 
-  template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<st<T2>, F1 &, T1 &>
-  static st<T2> bind(st<T1> m, F1 &&f) {
-    return [=](uint64_t s) mutable {
+  template <typename T1, typename T2>
+  static st<T2> bind(std::type_identity_t<st<T1>> m,
+                     std::type_identity_t<crane::fn<st<T2>(T1)>> f) {
+    return [=](uint64_t s) {
       std::pair<T1, uint64_t> p = m(s);
       return f(p.first)(p.second);
     };
@@ -29,10 +27,12 @@ struct StateMonadTypeSynonym {
     return std::make_pair(s, (s + 1));
   };
   static inline const st<uint64_t> prog = []() {
-    return bind<uint64_t, uint64_t>(tick, [](uint64_t a) {
-      return bind<uint64_t, uint64_t>(
-          tick, [=](uint64_t b) mutable { return ret<uint64_t>((a + b)); });
-    });
+    return [](uint64_t eta0_) {
+      return bind<uint64_t, uint64_t>(tick, [](uint64_t a) {
+        return bind<uint64_t, uint64_t>(
+            tick, [=](uint64_t b) { return ret<uint64_t>((a + b)); });
+      })(eta0_);
+    };
   }();
   static inline const uint64_t go = prog(UINT64_C(1)).first;
 };

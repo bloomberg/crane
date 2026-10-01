@@ -15,8 +15,8 @@ LoopifyNontailPair::classify(const List<uint64_t> &l) {
 
 std::pair<std::pair<uint64_t, List<uint64_t>>, List<uint64_t>>
 LoopifyNontailPair::countdown(
-    List<uint64_t>
-        l) { /// _Enter: captures varying parameters for each recursive call.
+    const List<uint64_t>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
     List<uint64_t> l;
@@ -30,14 +30,14 @@ LoopifyNontailPair::countdown(
   using _Frame = std::variant<_Enter, _Cont_x>;
   std::pair<std::pair<uint64_t, List<uint64_t>>, List<uint64_t>> _result{};
   crane::small_vector<_Frame> _stack;
-  _stack.emplace_back(_Enter{std::move(l)});
+  _stack.emplace_back(_Enter{l});
   /// Loopified countdown: _Enter -> _Cont_x.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      List<uint64_t> l = std::move(_f.l);
+      const List<uint64_t> &l = std::move(_f.l);
       auto [_x, o] = classify(l);
       if (o.has_value()) {
         const std::pair<uint64_t, List<uint64_t>> &p = *o;
@@ -46,7 +46,7 @@ LoopifyNontailPair::countdown(
         _stack.emplace_back(_Enter{xs});
       } else {
         _result = std::make_pair(
-            std::make_pair(UINT64_C(0), List<uint64_t>::nil()), std::move(l));
+            std::make_pair(UINT64_C(0), List<uint64_t>::nil()), l);
       }
     } else {
       auto _f = std::move(std::get<_Cont_x>(_frame));

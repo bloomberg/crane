@@ -2,12 +2,14 @@
 #define INCLUDED_FUNCTOR_COMP
 
 #include "crane_fn.h"
+#include "obj.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
 #include <concepts>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -37,21 +39,26 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U> List(const List<_U> &_other) {
-    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->v_ = Nil{};
-    } else {
-      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>) {
-                          return crane_any_cast<A>(a);
-                        } else {
-                          return A(a);
-                        }
-                      }(),
-                      (l ? std::make_shared<List<A>>(*l) : nullptr)};
-    }
-  }
+  template <typename _U>
+  List(const List<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+            return Nil{};
+          } else {
+            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const _U &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                   : nullptr)};
+          }
+        }()) {}
 
   static List<A> nil() { return List<A>(Nil{}); }
 
@@ -61,22 +68,18 @@ public:
 
   // MANIPULATORS
   ~List() {
-    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
-        if (_alt->l) {
-          _stack.push_back(std::move(_alt->l));
+        if (_alt->l && _alt->l.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->l);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<List<A>> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -232,7 +235,7 @@ struct FunctorComp {
   struct Stack {
     using t = List<uint64_t>;
     static inline const t empty = List<uint64_t>::nil();
-    static t push(uint64_t x, List<uint64_t> s);
+    static t push(uint64_t x, const List<uint64_t> &s);
     static std::optional<std::pair<uint64_t, t>> pop(const List<uint64_t> &s);
     static uint64_t size(t x0_);
   };
@@ -255,24 +258,24 @@ struct FunctorComp {
     }
 
     static List<uint64_t> to_list(typename C::t c) {
-      auto go_impl = [](auto &_self_go, uint64_t fuel, List<uint64_t> acc,
+      auto go_impl = [](auto &_self_go, uint64_t fuel,
+                        const List<uint64_t> &acc,
                         typename C::t c0) -> List<uint64_t> {
         if (fuel <= 0) {
-          return std::move(acc).rev();
+          return acc.rev();
         } else {
           uint64_t f = fuel - 1;
           auto _cs = C::pop(c0);
           if (_cs.has_value()) {
             const std::pair<uint64_t, typename C::t> &p = *_cs;
             const auto &[x, c_] = p;
-            return _self_go(_self_go, f,
-                            List<uint64_t>::cons(x, std::move(acc)), c_);
+            return _self_go(_self_go, f, List<uint64_t>::cons(x, acc), c_);
           } else {
-            return std::move(acc).rev();
+            return acc.rev();
           }
         }
       };
-      auto go = [&](uint64_t fuel, List<uint64_t> acc,
+      auto go = [&](uint64_t fuel, const List<uint64_t> &acc,
                     typename C::t c0) -> List<uint64_t> {
         return go_impl(go_impl, fuel, acc, c0);
       };

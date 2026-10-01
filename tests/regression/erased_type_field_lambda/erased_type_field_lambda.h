@@ -2,11 +2,13 @@
 #define INCLUDED_ERASED_TYPE_FIELD_LAMBDA
 
 #include "crane_fn.h"
+#include "fn.h"
+#include "obj.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
-#include <functional>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -36,21 +38,26 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U> List(const List<_U> &_other) {
-    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->v_ = Nil{};
-    } else {
-      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>) {
-                          return crane_any_cast<A>(a);
-                        } else {
-                          return A(a);
-                        }
-                      }(),
-                      (l ? std::make_shared<List<A>>(*l) : nullptr)};
-    }
-  }
+  template <typename _U>
+  List(const List<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+            return Nil{};
+          } else {
+            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const _U &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                   : nullptr)};
+          }
+        }()) {}
 
   static List<A> nil() { return List<A>(Nil{}); }
 
@@ -60,22 +67,18 @@ public:
 
   // MANIPULATORS
   ~List() {
-    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
-        if (_alt->l) {
-          _stack.push_back(std::move(_alt->l));
+        if (_alt->l && _alt->l.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->l);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<List<A>> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -152,39 +155,41 @@ public:
 /// body adds to a std::any besides.
 struct ErasedTypeFieldLambda {
   struct slot {
-    List<std::pair<std::any, std::function<uint64_t(std::any)>>> pairs;
+    List<std::pair<crane::obj, crane::fn<uint64_t(crane::obj)>>> pairs;
   };
 
-  using sty = std::any;
+  using sty = crane::obj;
   static uint64_t weigh(const slot &s);
   static inline const List<slot> slots = List<slot>::cons(
-      slot{List<std::pair<std::any, std::function<uint64_t(std::any)>>>::cons(
+      slot{List<std::pair<crane::obj, crane::fn<uint64_t(crane::obj)>>>::cons(
           std::make_pair(UINT64_C(1),
                          crane_erase_fn<uint64_t>([](const auto &x) {
-                           return std::any_cast<uint64_t>(x);
+                           return crane::any_cast<uint64_t>(x);
                          })),
-          List<std::pair<std::any, std::function<uint64_t(std::any)>>>::cons(
+          List<std::pair<crane::obj, crane::fn<uint64_t(crane::obj)>>>::cons(
               std::make_pair(
                   UINT64_C(2), crane_erase_fn<uint64_t>([](const auto &x) {
-                    return (std::any_cast<uint64_t>(x) * UINT64_C(10));
+                    return (crane::any_cast<uint64_t>(x) * UINT64_C(10));
                   })),
-              List<std::pair<std::any,
-                             std::function<uint64_t(std::any)>>>::nil()))},
+              List<std::pair<crane::obj,
+                             crane::fn<uint64_t(crane::obj)>>>::nil()))},
       List<slot>::cons(
-          slot{List<std::pair<std::any, std::function<uint64_t(std::any)>>>::
-                   cons(std::make_pair(
-                            List<uint64_t>::cons(
-                                UINT64_C(1),
-                                List<uint64_t>::cons(
-                                    UINT64_C(2),
-                                    List<uint64_t>::cons(
-                                        UINT64_C(3), List<uint64_t>::nil()))),
-                            crane_erase_fn<uint64_t>(
-                                [](const List<uint64_t> &_x) {
-                                  return _x.length();
-                                })),
-                        List<std::pair<std::any, std::function<uint64_t(
-                                                     std::any)>>>::nil())},
+          slot{
+              List<std::pair<crane::obj, crane::fn<uint64_t(crane::obj)>>>::
+                  cons(
+                      std::make_pair(
+                          List<uint64_t>::cons(
+                              UINT64_C(1),
+                              List<uint64_t>::cons(
+                                  UINT64_C(2),
+                                  List<uint64_t>::cons(UINT64_C(3),
+                                                       List<uint64_t>::nil()))),
+                          crane_erase_fn<uint64_t>(
+                              [](const List<uint64_t> &_x) {
+                                return _x.length();
+                              })),
+                      List<std::pair<crane::obj,
+                                     crane::fn<uint64_t(crane::obj)>>>::nil())},
           List<slot>::nil()));
   static inline const uint64_t run = slots.template fold_left<uint64_t>(
       [](uint64_t a, const slot &s) { return (a + weigh(s)); }, UINT64_C(0));

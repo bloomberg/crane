@@ -2,9 +2,9 @@
 #define INCLUDED_SIMPLE_LAMBDA_FIELD_CAPTURE
 
 #include "crane_fn.h"
+#include "fn.h"
 #include "small_vector.h"
 #include <atomic>
-#include <functional>
 #include <memory>
 #include <optional>
 #include <type_traits>
@@ -49,22 +49,18 @@ struct SimpleLambdaFieldCapture {
 
     // MANIPULATORS
     ~mylist() {
-      crane::small_vector<std::shared_ptr<mylist>> _stack = {};
-      auto _drain = [&](variant_t &_v) {
+      auto _next = [&](variant_t &_v) -> std::shared_ptr<mylist> {
         if (auto *_alt = std::get_if<Mycons>(&_v)) {
-          if (_alt->a1) {
-            _stack.push_back(std::move(_alt->a1));
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
+            return std::move(_alt->a1);
           }
         }
+        return nullptr;
       };
-      _drain(v_mut());
-      while (!_stack.empty()) {
-        auto _cur = std::move(_stack.back());
-        _stack.pop_back();
-        if (_cur.use_count() == 1) {
-          std::atomic_thread_fence(std::memory_order_acquire);
-          _drain(_cur->v_mut());
-        }
+      std::shared_ptr<mylist> _cur = _next(v_mut());
+      while (_cur) {
+        _cur = _next(_cur->v_mut());
       }
     }
 
@@ -80,16 +76,14 @@ struct SimpleLambdaFieldCapture {
 
     /// Simple lambda captures h and t from match.
     /// Should use = capture (safe).
-    std::optional<std::function<uint64_t(uint64_t)>> head_adder() const {
+    std::optional<crane::fn<uint64_t(uint64_t)>> head_adder() const {
       if (std::holds_alternative<typename mylist::Mynil>(this->v())) {
-        return std::optional<std::function<uint64_t(uint64_t)>>();
+        return std::optional<crane::fn<uint64_t(uint64_t)>>();
       } else {
         const auto &[a0, a1] = std::get<typename mylist::Mycons>(this->v());
         const mylist &a1_value = *a1;
-        return std::make_optional<std::function<uint64_t(uint64_t)>>(
-            [=](uint64_t x) mutable {
-              return ((x + a0) + a1_value.mylist_sum());
-            });
+        return std::make_optional<crane::fn<uint64_t(uint64_t)>>(
+            [=](uint64_t x) { return ((x + a0) + a1_value.mylist_sum()); });
       }
     }
 
@@ -257,7 +251,7 @@ struct SimpleLambdaFieldCapture {
                                                             mylist::mynil())))
                    .head_adder();
     if (_cs.has_value()) {
-      const std::function<uint64_t(uint64_t)> &f = *_cs;
+      const crane::fn<uint64_t(uint64_t)> &f = *_cs;
       return f(UINT64_C(5));
     } else {
       return UINT64_C(999);
@@ -267,7 +261,7 @@ struct SimpleLambdaFieldCapture {
   /// l = 100, 200, h=100, t=200, mylist_sum(t)=200.
   /// f(0) = 0 + 100 + 200 = 300.
   static inline const uint64_t test2 = []() {
-    std::optional<std::function<uint64_t(uint64_t)>> opt =
+    std::optional<crane::fn<uint64_t(uint64_t)>> opt =
         mylist::mycons(UINT64_C(100),
                        mylist::mycons(UINT64_C(200), mylist::mynil()))
             .head_adder();
@@ -278,7 +272,7 @@ struct SimpleLambdaFieldCapture {
                            mylist::mycons(UINT64_C(3), mylist::mynil())))
             .mylist_sum();
     if (opt.has_value()) {
-      const std::function<uint64_t(uint64_t)> &f = *opt;
+      const crane::fn<uint64_t(uint64_t)> &f = *opt;
       return f(UINT64_C(0));
     } else {
       return noise;

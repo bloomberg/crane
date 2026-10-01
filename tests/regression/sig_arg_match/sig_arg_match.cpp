@@ -3,11 +3,11 @@
 Nat SigArgMatch::addp(const Sig<Nat> &p,
                       const Sig<Nat> &q) { // Precondition: q >= 1
   // Precondition: p >= 1
-  return [=]() mutable {
+  return [&]() {
     const auto &[x] = p;
     return x;
   }()
-             .add([=]() mutable {
+             .add([&]() {
                const auto &[x0] = q;
                return x0;
              }());

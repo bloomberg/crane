@@ -1,7 +1,7 @@
 #include "sigma_types.h"
 
-SigT<uint64_t, std::any> SigmaTypes::nat_with_double(uint64_t n) {
-  return SigT<uint64_t, std::any>::existt((n + n), std::any());
+SigT<uint64_t, crane::obj> SigmaTypes::nat_with_double(uint64_t n) {
+  return SigT<uint64_t, crane::obj>::existt((n + n), crane::obj());
 }
 
 Sig<uint64_t> SigmaTypes::positive_succ(uint64_t n) {
@@ -16,11 +16,11 @@ uint64_t SigmaTypes::get_positive(uint64_t n) {
 
 Sig<uint64_t> SigmaTypes::double_positive(uint64_t n) {
   Sig<uint64_t> p = positive_succ(n);
-  return Sig<uint64_t>::exist(([=]() mutable {
+  return Sig<uint64_t>::exist(([&]() {
     auto &[x] = p;
     return x;
   }() +
-                               [=]() mutable {
+                               [&]() {
                                  auto &[x0] = p;
                                  return x0;
                                }()));

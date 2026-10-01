@@ -11,8 +11,8 @@
 // applied to `0` holds.
 //
 // Before the fix, the extracted C++ threw `std::bad_any_cast`: the two functions
-// were stored as raw lambda closures via `std::make_pair(std::any(f),
-// std::any(g))` but read back with `any_cast<std::function<std::any(std::any)>>`.
+// were stored as raw lambda closures via `std::make_pair(crane::obj(f),
+// crane::obj(g))` but read back with `any_cast<std::function<crane::obj(crane::obj)>>`.
 // The fix extends `crane_erase_fn` wrapping to function values boxed into erased
 // fields through a custom constructor (here `std::pair`), so `mk` now emits
 // `std::make_pair(crane_erase_fn(f), crane_erase_fn(g))` and the read matches.

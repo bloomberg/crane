@@ -2,7 +2,7 @@
 
 /// 1. Bool match inside bind action: one branch block template
 std::string EffectBindAction::conditional_read(bool use_stdin) {
-  return [=]() mutable -> std::string {
+  return [&]() -> std::string {
     if (use_stdin) {
       return []() -> std::string {
         std::string _r;
@@ -31,7 +31,7 @@ std::string EffectBindAction::maybe_override(std::string name,
     auto *v = std::getenv(name.c_str());
     return v ? std::optional<std::string>(v) : std::optional<std::string>();
   }();
-  return [=]() mutable -> std::string {
+  return [&]() -> std::string {
     if (r.has_value()) {
       const std::string &v = *r;
       return v;
@@ -80,7 +80,7 @@ std::string EffectBindAction::helper(std::string s) {
 }
 
 std::string EffectBindAction::use_helper(bool flag) {
-  return [=]() mutable -> std::string {
+  return [&]() -> std::string {
     if (flag) {
       return helper("yes");
     } else {

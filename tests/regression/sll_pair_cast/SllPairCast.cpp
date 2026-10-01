@@ -5,7 +5,7 @@
 namespace SllPairCast {
 
 bool SllPairCast::sll_final_config(const SllPairCast::sll_subparser &sp) {
-  std::any _x = sp.sll_pred;
+  crane::obj _x = sp.sll_pred;
   std::pair<SllPairCast::sll_frame, Datatypes::List<SllPairCast::sll_frame>>
       sll_stk0 = sp.sll_stk;
   const auto &[s, l] = sll_stk0;

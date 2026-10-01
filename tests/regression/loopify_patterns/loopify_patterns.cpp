@@ -331,24 +331,24 @@ LoopifyPatterns::sum_prod_count(const LoopifyPatterns::list<uint64_t> &l,
 std::pair<LoopifyPatterns::list<uint64_t>, LoopifyPatterns::list<uint64_t>>
 LoopifyPatterns::split_by_sign_aux(const LoopifyPatterns::list<uint64_t> &l,
                                    uint64_t base,
-                                   LoopifyPatterns::list<uint64_t> pos,
-                                   LoopifyPatterns::list<uint64_t> neg) {
-  LoopifyPatterns::list<uint64_t> _loop_neg = std::move(neg);
-  LoopifyPatterns::list<uint64_t> _loop_pos = std::move(pos);
+                                   const LoopifyPatterns::list<uint64_t> &pos,
+                                   const LoopifyPatterns::list<uint64_t> &neg) {
+  LoopifyPatterns::list<uint64_t> _loop_neg = neg;
+  LoopifyPatterns::list<uint64_t> _loop_pos = pos;
   const LoopifyPatterns::list<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename LoopifyPatterns::list<uint64_t>::Nil>(
             _loop_l->v())) {
-      return std::make_pair(std::move(_loop_pos), std::move(_loop_neg));
+      return std::make_pair(_loop_pos, _loop_neg);
     } else {
       const auto &[a0, a1] =
           std::get<typename LoopifyPatterns::list<uint64_t>::Cons>(
               _loop_l->v());
       if (base <= a0) {
-        _loop_pos = list<uint64_t>::cons(a0, std::move(_loop_pos));
+        _loop_pos = list<uint64_t>::cons(a0, _loop_pos);
         _loop_l = crane_raw(a1);
       } else {
-        _loop_neg = list<uint64_t>::cons(a0, std::move(_loop_neg));
+        _loop_neg = list<uint64_t>::cons(a0, _loop_neg);
         _loop_l = crane_raw(a1);
       }
     }

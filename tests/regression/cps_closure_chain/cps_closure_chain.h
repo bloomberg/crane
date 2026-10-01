@@ -1,9 +1,9 @@
 #ifndef INCLUDED_CPS_CLOSURE_CHAIN
 #define INCLUDED_CPS_CLOSURE_CHAIN
 
+#include "fn.h"
 #include "small_vector.h"
 #include <atomic>
-#include <functional>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -46,10 +46,10 @@ struct CpsClosureChain {
       crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a2) {
+          if (_alt->a2 && _alt->a2.use_count() == 1) {
             _stack.push_back(std::move(_alt->a2));
           }
         }
@@ -116,16 +116,15 @@ struct CpsClosureChain {
   /// is whether the = capture correctly copies all pattern variables,
   /// especially when the pattern match is on a shared_ptr type and the
   /// structured bindings are references.
-  static uint64_t tree_sum_cps(const tree &t,
-                               std::function<uint64_t(uint64_t)> k) {
+  static uint64_t tree_sum_cps(const tree &t, crane::fn<uint64_t(uint64_t)> k) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return k(UINT64_C(0));
     } else {
       const auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v());
       const tree &a0_value = *a0;
       const tree &a2_value = *a2;
-      return tree_sum_cps(a0_value, [=](uint64_t left_sum) mutable {
-        return tree_sum_cps(a2_value, [=](uint64_t right_sum) mutable {
+      return tree_sum_cps(a0_value, [=](uint64_t left_sum) {
+        return tree_sum_cps(a2_value, [=](uint64_t right_sum) {
           return k(((left_sum + a1) + right_sum));
         });
       });
@@ -152,24 +151,22 @@ struct CpsClosureChain {
   /// CPS fold: accumulates results through continuation chain.
   /// This creates closures that capture BOTH a pattern variable
   /// AND the accumulator function.
-  template <typename F2>
-    requires std::is_invocable_r_v<uint64_t, F2 &, uint64_t &, uint64_t &,
-                                   uint64_t &>
-  static uint64_t tree_fold_cps(const tree &t, uint64_t base, F2 &&combine,
-                                std::function<uint64_t(uint64_t)> k) {
+  static uint64_t
+  tree_fold_cps(const tree &t, uint64_t base,
+                crane::fn<uint64_t(uint64_t, uint64_t, uint64_t)> combine,
+                crane::fn<uint64_t(uint64_t)> k) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return k(base);
     } else {
       const auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v());
       const tree &a0_value = *a0;
       const tree &a2_value = *a2;
-      return tree_fold_cps(
-          a0_value, base, combine, [=](uint64_t left_result) mutable {
-            return tree_fold_cps(
-                a2_value, base, combine, [=](uint64_t right_result) mutable {
-                  return k(combine(left_result, a1, right_result));
-                });
-          });
+      return tree_fold_cps(a0_value, base, combine, [=](uint64_t left_result) {
+        return tree_fold_cps(a2_value, base, combine,
+                             [=](uint64_t right_result) {
+                               return k(combine(left_result, a1, right_result));
+                             });
+      });
     }
   }
 

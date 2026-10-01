@@ -46,10 +46,10 @@ struct SharedUptrEscape {
       crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a2) {
+          if (_alt->a2 && _alt->a2.use_count() == 1) {
             _stack.push_back(std::move(_alt->a2));
           }
         }
@@ -175,7 +175,7 @@ struct SharedUptrEscape {
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
-        std::decay_t<T1> _result;
+        T1 _result;
         tree a2;
         uint64_t a1;
         tree a0;
@@ -237,7 +237,7 @@ struct SharedUptrEscape {
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
-        std::decay_t<T1> _result;
+        T1 _result;
         tree a2;
         uint64_t a1;
         tree a0;
@@ -317,7 +317,7 @@ struct SharedUptrEscape {
     return f(a0);
   }
 
-  static wrapper wrap_tree(tree t);
+  static wrapper wrap_tree(const tree &t);
   static inline const uint64_t unwrap_and_dup = []() {
     tree t = tree::node(tree::leaf(), UINT64_C(42), tree::leaf());
     wrapper w = wrap_tree(std::move(t));

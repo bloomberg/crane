@@ -12,9 +12,9 @@ syms_semty concat_tuple(const std::deque<Sym> &xs, const std::deque<Sym> &ys,
     return concat_tuple_nil_case(xs, ys, std::move(vs), std::move(vs_));
   } else {
     const auto &x = xs.front();
-    std::decay_t<decltype(xs)> xs_(xs.begin() + 1, xs.end());
+    std::deque<Sym> xs_(xs.begin() + 1, xs.end());
     return concat_tuple_rec_case(x, xs_, xs, ys, std::move(vs), std::move(vs_),
-                                 concat_tuple);
+                                 crane_erase_fn(concat_tuple));
   }
 }
 
@@ -27,23 +27,25 @@ syms_semty rev_tuple(const std::deque<Sym> &xs, syms_semty vs) {
     return rev_tuple_nil_case(xs, std::move(vs));
   } else {
     const auto &x = xs.front();
-    std::decay_t<decltype(xs)> xs_(xs.begin() + 1, xs.end());
-    return rev_tuple_cons_case(xs, x, xs_, std::move(vs), rev_tuple);
+    std::deque<Sym> xs_(xs.begin() + 1, xs.end());
+    return rev_tuple_cons_case(xs, x, xs_, std::move(vs),
+                               crane_erase_fn(rev_tuple));
   }
 }
 
 uint64_t check(uint64_t n) {
-  const auto &[v, _x] = std::any_cast<std::pair<std::any, std::any>>(rev_tuple(
-      [](auto _a0, auto _a1) {
-        _a1.push_front(_a0);
-        return _a1;
-      }(Sym::A,
-        [](auto _a0, auto _a1) {
-          _a1.push_front(_a0);
-          return _a1;
-        }(Sym::B, std::deque<Sym>{})),
-      std::make_pair(
-          std::any(n),
-          std::any(std::make_pair(std::any(n), std::any(std::monostate{}))))));
-  return std::any_cast<uint64_t>(v);
+  const auto &[v, _x] =
+      crane::any_cast<std::pair<crane::obj, crane::obj>>(rev_tuple(
+          [](auto _a0, auto _a1) {
+            _a1.push_front(_a0);
+            return _a1;
+          }(Sym::A,
+            [](auto _a0, auto _a1) {
+              _a1.push_front(_a0);
+              return _a1;
+            }(Sym::B, std::deque<Sym>{})),
+          std::make_pair(crane::obj(n),
+                         crane::obj(std::make_pair(
+                             crane::obj(n), crane::obj(std::monostate{}))))));
+  return crane::any_cast<uint64_t>(v);
 }

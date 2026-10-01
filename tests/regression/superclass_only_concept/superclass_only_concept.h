@@ -55,6 +55,7 @@ struct SuperclassOnlyConcept {
     using bl1 = L1N;
     using bl2 = L2N;
     using l1_base = typename bl1::l1_base;
+    using l2_base = typename bl2::l2_base;
   };
 
   static_assert(Both<BothN, uint64_t>);

@@ -465,10 +465,9 @@ CoalitionBidHonorTraceCase::coalition_metrics(
 bool CoalitionBidHonorTraceCase::coalition_contains_clan(
     const List<CoalitionBidHonorTraceCase::CoalitionMember> &c,
     CoalitionBidHonorTraceCase::Clan clan) {
-  return c.existsb(
-      [=](const CoalitionBidHonorTraceCase::CoalitionMember &m) mutable {
-        return clan_eqb(m.cm_clan, clan);
-      });
+  return c.existsb([=](const CoalitionBidHonorTraceCase::CoalitionMember &m) {
+    return clan_eqb(m.cm_clan, clan);
+  });
 }
 
 uint64_t CoalitionBidHonorTraceCase::coalition_tonnage(
@@ -479,7 +478,7 @@ uint64_t CoalitionBidHonorTraceCase::coalition_tonnage(
 CoalitionBidHonorTraceCase::Coalition
 CoalitionBidHonorTraceCase::update_coalition_force(
     const List<CoalitionBidHonorTraceCase::CoalitionMember> &c, uint64_t idx,
-    List<CoalitionBidHonorTraceCase::Unit> new_force) {
+    const List<CoalitionBidHonorTraceCase::Unit> &new_force) {
   if (std::holds_alternative<
           typename List<CoalitionBidHonorTraceCase::CoalitionMember>::Nil>(
           c.v())) {
@@ -490,12 +489,11 @@ CoalitionBidHonorTraceCase::update_coalition_force(
         c.v());
     if (idx <= 0) {
       return List<CoalitionBidHonorTraceCase::CoalitionMember>::cons(
-          CoalitionMember{a0.cm_clan, a0.cm_commander, std::move(new_force)},
-          *a1);
+          CoalitionMember{a0.cm_clan, a0.cm_commander, new_force}, *a1);
     } else {
       uint64_t n = idx - 1;
       return List<CoalitionBidHonorTraceCase::CoalitionMember>::cons(
-          a0, update_coalition_force(*a1, n, std::move(new_force)));
+          a0, update_coalition_force(*a1, n, new_force));
     }
   }
 }
@@ -733,23 +731,23 @@ CoalitionBidHonorTraceCase::Honor CoalitionBidHonorTraceCase::ledger_lookup(
 CoalitionBidHonorTraceCase::HonorLedger
 CoalitionBidHonorTraceCase::ledger_update_by_id(
     const List<std::pair<uint64_t, Z>> &ledger, uint64_t warrior_id,
-    Z new_honor) {
+    const Z &new_honor) {
   if (std::holds_alternative<typename List<std::pair<uint64_t, Z>>::Nil>(
           ledger.v())) {
     return List<std::pair<uint64_t, Z>>::cons(
-        std::make_pair(warrior_id, std::move(new_honor)),
+        std::make_pair(warrior_id, new_honor),
         List<std::pair<uint64_t, Z>>::nil());
   } else {
     const auto &[a0, a1] =
         std::get<typename List<std::pair<uint64_t, Z>>::Cons>(ledger.v());
     const auto &[id, honor] = a0;
     if (id == warrior_id) {
-      return List<std::pair<uint64_t, Z>>::cons(
-          std::make_pair(id, std::move(new_honor)), *a1);
+      return List<std::pair<uint64_t, Z>>::cons(std::make_pair(id, new_honor),
+                                                *a1);
     } else {
       return List<std::pair<uint64_t, Z>>::cons(
           std::make_pair(id, honor),
-          ledger_update_by_id(*a1, warrior_id, std::move(new_honor)));
+          ledger_update_by_id(*a1, warrior_id, new_honor));
     }
   }
 }
@@ -758,7 +756,8 @@ CoalitionBidHonorTraceCase::HonorLedger
 CoalitionBidHonorTraceCase::update_honor(
     const List<std::pair<uint64_t, Z>> &ledger,
     const CoalitionBidHonorTraceCase::Commander &actor, const Z &delta) {
-  Z current = ledger_lookup(ledger, actor.cmd_id);
+  CoalitionBidHonorTraceCase::Honor current =
+      ledger_lookup(ledger, actor.cmd_id);
   return ledger_update_by_id(ledger, actor.cmd_id,
                              BinInt::add(std::move(current), delta));
 }

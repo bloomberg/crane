@@ -1,6 +1,9 @@
 #ifndef INCLUDED_FUNCTOR_VALUE_FIELD_CALL
 #define INCLUDED_FUNCTOR_VALUE_FIELD_CALL
 
+#include "crane_fn.h"
+#include "obj.h"
+#include <any>
 #include <concepts>
 #include <utility>
 
@@ -49,7 +52,10 @@ struct FunctorValueFieldCall {
 
   using PN = Pairify<NatC>;
   using Q = Pairify<PN>;
-  static inline const uint64_t go = (Q::zero().first).first;
+  static inline const uint64_t go =
+      crane_any_cast<std::pair<NatC::t, NatC::t>>(
+          crane_any_cast<std::pair<PN::t, PN::t>>(Q::zero()).first)
+          .first;
 };
 
 #endif // INCLUDED_FUNCTOR_VALUE_FIELD_CALL

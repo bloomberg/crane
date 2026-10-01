@@ -2,11 +2,14 @@
 #define INCLUDED_TOPOLOGICAL_SORT
 
 #include "crane_fn.h"
+#include "fn.h"
+#include "obj.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -15,6 +18,10 @@
 using namespace std::string_literals;
 
 template <typename A> struct List;
+
+struct ListDef {
+  static List<uint64_t> seq(uint64_t start, uint64_t len);
+};
 
 template <typename A> struct List {
   // TYPES
@@ -39,21 +46,26 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U> List(const List<_U> &_other) {
-    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->v_ = Nil{};
-    } else {
-      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>) {
-                          return crane_any_cast<A>(a);
-                        } else {
-                          return A(a);
-                        }
-                      }(),
-                      (l ? std::make_shared<List<A>>(*l) : nullptr)};
-    }
-  }
+  template <typename _U>
+  List(const List<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+            return Nil{};
+          } else {
+            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const _U &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                   : nullptr)};
+          }
+        }()) {}
 
   static List<A> nil() { return List<A>(Nil{}); }
 
@@ -63,22 +75,18 @@ public:
 
   // MANIPULATORS
   ~List() {
-    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
-        if (_alt->l) {
-          _stack.push_back(std::move(_alt->l));
+        if (_alt->l && _alt->l.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->l);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<List<A>> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -189,7 +197,7 @@ public:
 
     /// _Resume_Cons: saves [a1], resumes after recursive call with _result.
     struct _Resume_Cons {
-      std::decay_t<A> a1;
+      A a1;
     };
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -346,10 +354,6 @@ public:
   }
 };
 
-struct ListDef {
-  static List<uint64_t> seq(uint64_t start, uint64_t len);
-};
-
 struct ToString {
   template <typename T1, typename T2, typename F0, typename F1>
     requires std::is_invocable_r_v<std::string, F0 &, T1 &> &&
@@ -398,9 +402,10 @@ struct TopologicalSort {
   template <typename node> using graph = List<entry<node>>;
   template <typename node> using order = List<List<node>>;
 
-  template <typename T1, typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
-  static List<T1> get_elems(F0 &&eqb_node, const List<std::pair<T1, T1>> &l) {
+  template <typename T1>
+  static List<T1>
+  get_elems(std::type_identity_t<crane::fn<bool(T1, T1)>> eqb_node,
+            const List<std::pair<T1, T1>> &l) {
     auto get_elems_aux_impl = [&](auto &_self_get_elems_aux,
                                   const List<std::pair<T1, T1>> &l0,
                                   List<T1> h) -> List<T1> {
@@ -413,9 +418,9 @@ struct TopologicalSort {
         const List<std::pair<T1, T1>> &a1_value = *a1;
         const auto &[e1, e2] = a0;
         std::optional<T1> f1 =
-            h.find([=](const T1 &x) mutable { return eqb_node(e1, x); });
+            h.find([=](const T1 &x) { return eqb_node(e1, x); });
         std::optional<T1> f2 =
-            h.find([=](const T1 &x) mutable { return eqb_node(e2, x); });
+            h.find([=](const T1 &x) { return eqb_node(e2, x); });
         if (f1.has_value()) {
           const T1 &_x = *f1;
           if (f2.has_value()) {
@@ -451,13 +456,13 @@ struct TopologicalSort {
     return get_elems_aux(l, List<T1>::nil());
   }
 
-  template <typename T1, typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
-  static entry<T1> make_entry(F0 &&eqb_node, const List<std::pair<T1, T1>> &l,
-                              T1 e) {
+  template <typename T1>
+  static entry<T1>
+  make_entry(std::type_identity_t<crane::fn<bool(T1, T1)>> eqb_node,
+             const List<std::pair<T1, T1>> &l, T1 e) {
     return std::make_pair(
         e, l.template fold_right<List<T1>>(
-               [=](const std::pair<T1, T1> &x, List<T1> ret) mutable {
+               [=](const std::pair<T1, T1> &x, List<T1> ret) -> List<T1> {
                  if (eqb_node(e, x.first)) {
                    return List<T1>::cons(x.second, ret);
                  } else {
@@ -467,22 +472,23 @@ struct TopologicalSort {
                List<T1>::nil()));
   }
 
-  template <typename T1, typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
-  static graph<T1> make_graph(F0 &&eqb_node, List<std::pair<T1, T1>> l) {
+  template <typename T1>
+  static graph<T1>
+  make_graph(std::type_identity_t<crane::fn<bool(T1, T1)>> eqb_node,
+             List<std::pair<T1, T1>> l) {
     List<T1> elems = get_elems<T1>(eqb_node, l);
     return std::move(elems).template fold_right<List<entry<T1>>>(
-        [=](const T1 &e, List<std::pair<T1, List<T1>>> ret) mutable {
+        [=](const T1 &e, const List<std::pair<T1, List<T1>>> &ret) {
           return List<entry<T1>>::cons(make_entry<T1>(eqb_node, l, e), ret);
         },
         List<entry<T1>>::nil());
   }
 
-  template <typename T1, typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
-  static List<T1> graph_lookup(F0 &&eqb_node, const T1 &elem,
-                               const List<std::pair<T1, List<T1>>> &graph0) {
-    auto _cs = graph0.find([=](const std::pair<T1, List<T1>> &entry0) mutable {
+  template <typename T1>
+  static List<T1>
+  graph_lookup(std::type_identity_t<crane::fn<bool(T1, T1)>> eqb_node,
+               const T1 &elem, const List<std::pair<T1, List<T1>>> &graph0) {
+    auto _cs = graph0.find([=](const std::pair<T1, List<T1>> &entry0) {
       return eqb_node(elem, entry0.first);
     });
     if (_cs.has_value()) {
@@ -494,10 +500,10 @@ struct TopologicalSort {
     }
   }
 
-  template <typename T1, typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
-  static bool contains(F0 &&eqb_node, const T1 &elem, const List<T1> &es) {
-    auto _cs = es.find([=](const T1 &x) mutable { return eqb_node(elem, x); });
+  template <typename T1>
+  static bool contains(std::type_identity_t<crane::fn<bool(T1, T1)>> eqb_node,
+                       const T1 &elem, const List<T1> &es) {
+    auto _cs = es.find([=](const T1 &x) { return eqb_node(elem, x); });
     if (_cs.has_value()) {
       const T1 &_x = *_cs;
       return true;
@@ -510,7 +516,7 @@ struct TopologicalSort {
     requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static T1 cycle_entry_aux(F0 &&eqb_node,
                             const List<std::pair<T1, List<T1>>> &graph0,
-                            List<T1> seens, T1 elem, uint64_t counter) {
+                            const List<T1> &seens, T1 elem, uint64_t counter) {
     if (contains<T1>(eqb_node, elem, seens)) {
       return elem;
     } else {
@@ -523,9 +529,8 @@ struct TopologicalSort {
           return elem;
         } else {
           auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v_mut());
-          return cycle_entry_aux<T1>(eqb_node, graph0,
-                                     List<T1>::cons(elem, std::move(seens)),
-                                     std::move(a0), c);
+          return cycle_entry_aux<T1>(
+              eqb_node, graph0, List<T1>::cons(elem, seens), std::move(a0), c);
         }
       }
     }
@@ -549,9 +554,9 @@ struct TopologicalSort {
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
-  static List<T1> cycle_extract_aux(F0 &&eqb_node,
-                                    const List<std::pair<T1, List<T1>>> &graph0,
-                                    uint64_t counter, T1 elem, List<T1> cycl) {
+  static List<T1>
+  cycle_extract_aux(F0 &&eqb_node, const List<std::pair<T1, List<T1>>> &graph0,
+                    uint64_t counter, const T1 &elem, List<T1> cycl) {
     if (counter <= 0) {
       return cycl;
     } else {
@@ -561,7 +566,7 @@ struct TopologicalSort {
       } else {
         return graph_lookup<T1>(eqb_node, elem, graph0)
             .template fold_right<List<T1>>(
-                [=](T1 _x0, List<T1> _x1) mutable -> List<T1> {
+                [=](T1 _x0, List<T1> _x1) -> List<T1> {
                   return cycle_extract_aux<T1>(eqb_node, graph0, c, _x0, _x1);
                 },
                 List<T1>::cons(elem, std::move(cycl)));
@@ -591,10 +596,9 @@ struct TopologicalSort {
     }
   }
 
-  template <typename T1, typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
+  template <typename T1>
   static order<T1>
-  topological_sort_aux(F0 &&eqb_node,
+  topological_sort_aux(std::type_identity_t<crane::fn<bool(T1, T1)>> eqb_node,
                        const List<std::pair<T1, List<T1>>> &graph0,
                        uint64_t counter) {
     if (counter <= 0) {
@@ -619,15 +623,14 @@ struct TopologicalSort {
           mins_ = mins;
         }
         List<std::pair<T1, List<T1>>> rest =
-            graph0.filter([=](const std::pair<T1, List<T1>> &entry0) mutable {
+            graph0.filter([=](const std::pair<T1, List<T1>> &entry0) {
               return !(contains<T1>(eqb_node, entry0.first, mins_));
             });
         List<std::pair<T1, List<T1>>> rest_ =
             std::move(rest).template map<std::pair<T1, List<T1>>>(
-                [=](const std::pair<T1, List<T1>> &entry0) mutable {
+                [=](const std::pair<T1, List<T1>> &entry0) {
                   return std::make_pair(
-                      entry0.first,
-                      entry0.second.filter([=](const T1 &e) mutable {
+                      entry0.first, entry0.second.filter([=](const T1 &e) {
                         return !(contains<T1>(eqb_node, e, mins_));
                       }));
                 });
@@ -666,7 +669,7 @@ struct TopologicalSort {
             [](std::pair<List<T1>, uint64_t> x) {
               const auto &[fs, rk] = x;
               return fs.template map<std::pair<T1, uint64_t>>(
-                  [=](T1 f) mutable { return std::make_pair(f, rk); });
+                  [=](const T1 &f) { return std::make_pair(f, rk); });
             })
         .template concat<std::pair<T1, uint64_t>>();
   }

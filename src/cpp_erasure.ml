@@ -46,13 +46,31 @@ let is_axiom_type_ref (r : GlobRef.t) = Hashtbl.mem axiom_type_refs r
     C++ would see it. *)
 let any_type_aliases : Id.Set.t ref = ref Id.Set.empty
 
+(** The member aliases the struct being walked declares.  A type-level
+    declaration whose body erased -- a higher-kinded class field [memM] among
+    them -- is spelled through its file-scope alias, [using memM = std::any];
+    inside an instance struct the same name is that struct's own alias
+    ([natMMP::memM<A> = A]) and says nothing about a box. *)
+let member_aliases : Id.Set.t ref = ref Id.Set.empty
+
+let alias_name = function
+  | GlobRef.ConstRef c -> Some (Label.to_id (Constant.label c))
+  | _ -> None
+
 (** [is_any_shaped ty] — [ty] is spelled [std::any] in the generated code,
     whether directly, through a type modifier, through an alias introduced by a
     [using] declaration, or because it is an axiom type. *)
 let rec is_any_shaped = function
   | Tany | Topaque -> true
-  | Tconst inner | Tref inner | Tnamespace (_, inner) -> is_any_shaped inner
+  | Tconst inner | Tref inner | Tfwd_ref inner | Tnamespace (_, inner) ->
+    is_any_shaped inner
   | Tid (id, []) -> Id.Set.mem id !any_type_aliases
+  | Tglob (g, _, _) as t
+    when Ml_type_util.names_erased_alias t
+         && ( match alias_name g with
+            | Some id -> not (Id.Set.mem id !member_aliases)
+            | None -> false ) ->
+    true
   | Tglob (GlobRef.ConstRef c, _, _) ->
     is_axiom_type_ref (GlobRef.ConstRef c)
     || ( try
@@ -98,8 +116,12 @@ let needs_deep_recovery = function
   | _ -> false
 
 (** [tolerant ty] — a cast to [ty] cannot be resolved now and must defer to
-    [crane_any_cast]. *)
-let tolerant ty = instance_dependent ty <> None || needs_deep_recovery ty
+    [crane_any_cast].  A bare type variable is one: instantiated at
+    [std::any] -- [trigger]'s answer type under an erased interpretation --
+    a plain [std::any_cast<std::any>] looks for a box inside the box. *)
+let tolerant ty =
+  instance_dependent ty <> None || needs_deep_recovery ty
+  || match ty with Tvar _ -> true | _ -> false
 
 (** [is_method n] -- [n] is rendered as a member function: either a candidate
     collected for the inductive currently being rendered, or one the registry
@@ -120,7 +142,7 @@ let returns_a_box = function
     Cpp_state.method_returns_any n
   | CPPfun_call (_, CPPglob (n, _, _), _) when is_method n ->
     Cpp_state.method_returns_any n
-  | CPPfun_call (_, CPPget' (_, n), _) -> Cpp_state.method_returns_any n
+  | CPPfun_call (_, CPPget' (_, n, _), _) -> Cpp_state.method_returns_any n
   | CPPerased_call _ -> true
   | _ -> false
 
@@ -252,12 +274,17 @@ let unbox ty e =
   | _ when Ml_type_util.prints_as_any ty -> e
   (* A cast applied straight to a box built here is dead work. *)
   | CPPbox (_, inner) -> inner
+  (* Nor is a closure built here a box: [std::any_cast] would wrap it in a
+     [std::any] holding the closure type and throw -- a definitional
+     instance [:= @id lit], eta-expanded, read back at [Endo<lit>]. *)
+  | CPPlambda _ -> e
   | _ -> CPPany_cast (ty, e)
 
 (** [unbox_tolerant ty e] -- see [cpp_erasure.mli]. *)
 let unbox_tolerant ty e =
   match e with
   | CPPbox (_, inner) -> inner
+  | CPPlambda _ -> e
   | _ -> CPPany_cast_tolerant (ty, e)
 
 (** [resolve_casts decl] rewrites every [CPPany_cast] in [decl] to say which
@@ -277,7 +304,21 @@ let rec resolve_casts (d : settled) : settled =
   | Dtemplate (tps, constr, inner) ->
     Dtemplate (tps, Option.map resolve_expr constr, resolve_casts inner)
   | Dnspace (r, decls) -> Dnspace (r, List.map resolve_casts decls)
-  | Dstruct s -> Dstruct {s with ds_fields = List.map resolve_field s.ds_fields}
+  | Dstruct s ->
+    let declared =
+      List.fold_left
+        (fun acc (f, _, _) ->
+          match f with Fnested_using (_, id, _) -> Id.Set.add id acc | _ -> acc )
+        Id.Set.empty s.ds_fields
+    in
+    let saved = !member_aliases in
+    member_aliases := Id.Set.union declared saved;
+    let fields =
+      Fun.protect
+        ~finally:(fun () -> member_aliases := saved)
+        (fun () -> List.map resolve_field s.ds_fields)
+    in
+    Dstruct {s with ds_fields = fields}
   (* A constant initialised from a boxed call has to unbox to reach its own
      declared type.  The printer used to decide this while rendering; saying it
      in the IR means the cast goes through the normalisation above like every
@@ -285,6 +326,126 @@ let rec resolve_casts (d : settled) : settled =
   | Dasgn (id, ty, e) when returns_a_box e && castable_to ty ->
     Dasgn (id, ty, resolve_expr (unbox (Ml_type_util.resolve_tvars_to_any ty) e))
   | _ -> map_decl resolve_expr resolve_stmt (fun t -> t) d
+
+(** [bind_free_tvars decl] spells [std::any] every type variable a body names
+    that nothing in scope declares.
+
+    A declaration's head is the authority on what type variables it has.  The
+    head is built from the instance context a definition sits in; the body is
+    generated against the ML type, which still carries the definition's own
+    [forall].  Where the two disagree the body wins nothing -- it names [T2]
+    under a head declaring [T1], and a name nothing declares does not compile.
+    Erasing the use is the same repair {!Minicpp.drop_tparams} makes for a
+    lambda, one level up, and for the same reason: half a quantifier is worth
+    less than none.
+
+    Scope is threaded rather than collected, because it genuinely nests -- a
+    function template inside a struct template inside a namespace, and a
+    lambda with template parameters of its own inside all three.  The
+    signature counts as declaring: whatever a parameter or the return type
+    names, the head had to declare for the signature itself to compile, so the
+    body may name it too.
+
+    Only bodies are rewritten.  A signature naming a variable its head does
+    not declare is the same defect, but the honest repair there is a different
+    one -- give the head the parameter -- and erasing it here would hide the
+    case rather than fix it. *)
+let bind_free_tvars (d : settled) : settled =
+  let add_ids ids bound =
+    List.fold_left (fun acc id -> Id.Set.add id acc) bound ids
+  in
+  let add_ty ty bound = Id.Set.union (tvar_spellings ty) bound in
+  let add_tys tys bound = List.fold_left (fun acc t -> add_ty t acc) bound tys in
+  let erase bound =
+    map_cpp_type (fun t ->
+      match t with
+      | Tvar _ when not (Id.Set.exists (fun b -> tvar_is b t) bound) -> Tany
+      | _ -> t )
+  in
+  (* A lambda is the one expression that introduces type variables, so it is
+     the one expression this has to spell out. *)
+  let rec fe bound e =
+    match e with
+    | CPPlambda l ->
+      let bound = add_ids l.cl_tparams bound in
+      CPPlambda (map_lambda (fs bound) (erase bound) l)
+    | _ -> map_expr (fe bound) (fs bound) (erase bound) e
+  and fs bound s =
+    match map_stmt (fe bound) (fs bound) (erase bound) s with
+    (* A structured binding writes none of its field types -- [const auto
+       &[a0, a1]] spells only the names -- so a free variable among them is
+       not a name the compiler can fail on, and erasing it would convert an
+       imprecision in the IR into a decision about representation, which the
+       printer then has to paper over with a cast at every use.  Restore them
+       from the statement as it came in. *)
+    | Smatch (scrut, branches', dflt) ->
+      let restore b' b =
+        {b' with smb_field_bindings = b.smb_field_bindings}
+      in
+      let branches =
+        match s with
+        | Smatch (_, branches, _)
+          when List.length branches = List.length branches' ->
+          List.map2 restore branches' branches
+        | _ -> branches'
+      in
+      Smatch (scrut, branches, dflt)
+    | s' -> s'
+  in
+  let body bound stmts = List.map (fs bound) stmts in
+  let method_scope bound mf =
+    bound
+    |> add_ids (List.map snd mf.mf_tparams)
+    |> add_ty mf.mf_ret_type
+    |> add_tys (List.map snd mf.mf_params)
+  in
+  let member bound = function
+    | OLmethod mf ->
+      let bound = method_scope bound mf in
+      OLmethod {mf with mf_body = body bound mf.mf_body}
+    | OLdestructor stmts -> OLdestructor (body bound stmts)
+  in
+  let rec field bound ((f, vis, tag) as fld) =
+    match f with
+    | Fmethod mf ->
+      let bound = method_scope bound mf in
+      (Fmethod {mf with mf_body = body bound mf.mf_body}, vis, tag)
+    | Fconstructor fc ->
+      let bound =
+        bound
+        |> add_ids (List.map snd fc.fc_tparams)
+        |> add_tys (List.map snd fc.fc_params)
+      in
+      (Fconstructor {fc with fc_body = body bound fc.fc_body}, vis, tag)
+    | Fdestructor stmts -> (Fdestructor (body bound stmts), vis, tag)
+    | Fnested_struct (id, fields) ->
+      (Fnested_struct (id, List.map (field bound) fields), vis, tag)
+    (* An {!Fmember_decl} is the half without a body; the body is the
+       {!Dmember_def} that follows, and is reached there. *)
+    | _ -> fld
+  in
+  let rec go bound d =
+    match d with
+    | Dtemplate (tps, cstr, inner) ->
+      Dtemplate (tps, cstr, go (add_ids (List.map snd tps) bound) inner)
+    | Dnspace (r, decls) -> Dnspace (r, List.map (go bound) decls)
+    | Dstruct st -> Dstruct (struct_ bound st)
+    | Dfields st -> Dfields (struct_ bound st)
+    | Dmember_def dm ->
+      let bound = add_ids (List.map snd dm.dm_tparams) bound in
+      Dmember_def {dm with dm_field = member bound dm.dm_field}
+    | Dfun ({df_shape = Ddef (params, stmts); df_ret; _} as f) ->
+      let bound = bound |> add_ty df_ret |> add_tys (List.map snd params) in
+      Dfun {f with df_shape = Ddef (params, body bound stmts)}
+    (* A global's initialiser is a body like any other, and its declared type
+       is as much a signature as a function's return type. *)
+    | Dasgn (r, ty, e) -> Dasgn (r, ty, fe (add_ty ty bound) e)
+    | _ -> d
+  and struct_ bound st =
+    let bound = add_ids (List.map snd st.ds_tparams) bound in
+    {st with ds_fields = List.map (field bound) st.ds_fields}
+  in
+  go Id.Set.empty d
 
 (** [materialise decl] replaces every {!Minicpp.Topaque} in [decl] with
     {!Minicpp.Tany}.

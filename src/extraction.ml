@@ -122,6 +122,28 @@ let is_info_scheme env sg t =
   | Info, TypeScheme -> true
   | _ -> false
 
+(** Whether an argument of an applied instance survives extraction.
+
+    [ParamsV {IP : IPtr} {IPT : IPtrTheory IP}] with [IPtrTheory] a [Prop]
+    class is emitted as [template <IPtr _tcI0> struct ParamsV]: the proof
+    argument takes no template parameter.  A class-argument record
+    ({!Table.class_arg}) is read from the Rocq type, upstream of that erasure,
+    and spelled downstream of it, so it must be projected through the erasure
+    where it is taken -- the reader has no Rocq type left to ask. *)
+let arg_survives_extraction env sg a =
+  (* The sort of the argument's TYPE: [natIPtrTheory : IPtrTheory natIPtr] is
+     a proof and erases, [natIPtr : IPtr] is data and does not.  A retyping
+     failure keeps the argument -- dropping one silently would be spelled as a
+     shorter list, which reads as a correct one. *)
+  if not (EConstr.Vars.closed0 sg a) then
+    (* An argument that names a binder -- a context variable -- is the
+       [Carg_unknown] the reader fills positionally; it cannot be typed in this
+       environment and its position must be kept regardless. *)
+    true
+  else
+    try info_of_family (sort_of env sg (type_of env sg a)) != Logic
+    with Retyping.RetypeError _ -> true
+
 (** Pushes a named assumption into the Rocq environment. *)
 let push_rel_assum (n, t) env = EConstr.push_rel (LocalAssum (n, t)) env
 
@@ -285,6 +307,52 @@ let db_from_sign s =
     | Kill _ :: l -> make i (0 :: acc) l
   in
   make 1 [] s
+
+(** Whether a Rocq type ultimately returns a [Type]/[Set] sort, stripping
+    products on the way: [Type] and [Type -> Type] do, [Type -> Prop] and
+    [nat] do not.  A binder at such a type is a type parameter -- the
+    higher-kinded case included -- and everything else is a value or a proof. *)
+let rec returns_type_sort c =
+  match Constr.kind c with
+  | Sort s -> (
+    match Sorts.family s with
+    | Sorts.InType | Sorts.InSet | Sorts.InQSort -> true
+    | Sorts.InProp | Sorts.InSProp -> false )
+  | Prod (_, _, body) -> returns_type_sort body
+  | _ -> false
+
+(** A db context read off the local context, for the places that have no
+    signature to read it off instead.
+
+    A [Tvar] is numbered among the {e type} binders in scope, outermost first,
+    exactly as {!db_from_sign} numbers them from a signature: a value binder
+    takes no number and contributes [0].  Numbering every binder alike would
+    name a variable no template head has -- [B] under [m], [M], [A], [f], [l],
+    [b] would come out as [Tvar 10] where the declaration calls it [T3].
+
+    A fixpoint's body re-binds the very parameters the declaration quantifies:
+    the context under [fix monad_fold_right A B f l b] holds a second [A] and
+    [B] shadowing the first.  MiniML has no type lambdas, so both spellings
+    are the one type variable, and a named binder therefore takes the number
+    its name already has. *)
+let db_from_rel_context env =
+  let outer_first = List.rev env.env_rel_context.env_rel_ctx in
+  let seen = ref [] in
+  snd
+    (List.fold_left
+       (fun (rank, acc) decl ->
+         if not (returns_type_sort (Context.Rel.Declaration.get_type decl)) then
+           (rank, 0 :: acc)
+         else
+           match Context.Rel.Declaration.get_name decl with
+           | Names.Name.Name id when List.mem_assoc id !seen ->
+             (rank, List.assoc id !seen :: acc)
+           | name ->
+             ( match name with
+             | Names.Name.Name id -> seen := (id, rank) :: !seen
+             | Names.Name.Anonymous -> () );
+             (rank + 1, rank :: acc) )
+       (1, []) outer_first )
 
 (** {2 Create a type variable context from indications taken from an inductive
     type (see just below)} *)
@@ -481,6 +549,19 @@ let type_extraction_declined = function
     @param j Next available ML type variable index; [0] means no new type vars are generated
     @param c The Rocq term to extract as a type (possibly a type-level function)
     @param args Arguments accumulated during [App] spine traversal *)
+(* Extracting a class to answer a question about one of its projections can
+   reach that projection again; the memo table that would stop the recursion is
+   only written once the extraction completes, so the guard has to be here. *)
+let extracting_inds = ref Names.Mindset.empty
+
+let already_extracting mind = Names.Mindset.mem mind !extracting_inds
+
+let with_extracting mind f =
+  extracting_inds := Names.Mindset.add mind !extracting_inds;
+  Fun.protect ~finally:(fun () ->
+      extracting_inds := Names.Mindset.remove mind !extracting_inds )
+    f
+
 let rec extract_type env sg db j c args =
   match EConstr.kind sg (whd_betaiotazeta env sg c) with
   | App (d, args') ->
@@ -550,6 +631,31 @@ let rec extract_type env sg db j c args =
          concrete arguments, try full reduction with whd_all.  This resolves
          expressions like Obj(base_category(toy_prestable)) → nat, which
          whd_betaiotazeta cannot reduce because it lacks delta. *)
+      (* [is_promoted_type_var] is answered out of a table that
+         {!extract_really_ind} fills, so before the class this projects from
+         has been extracted it answers [false] -- and this occurrence is kept
+         abstract while a later one, after the class has been reached by some
+         other route, reduces.  Two occurrences of one Rocq type then have two
+         different ML types, which is not a thing any later pass can notice:
+         both are well-formed, and only the disagreement between them is
+         wrong.
+
+         Extracting the class first makes the answer independent of the order
+         uses are met in.  Which class it is, the projection's own type says:
+         it takes the record it projects from as its first argument. *)
+      let () =
+        if lang () == Cpp && args <> [] && not (Table.is_promoted_type_var r)
+        then
+          match EConstr.kind sg (whd_all env sg typ) with
+          | Prod (_, dom, _) -> (
+            match EConstr.kind sg (EConstr.decompose_app sg dom |> fst) with
+            | Ind ((mind, _), _) when not (already_extracting mind) ->
+              with_extracting mind (fun () ->
+                  try ignore (extract_ind env mind)
+                  with e when CErrors.noncritical e -> () )
+            | _ -> () )
+          | _ -> ()
+      in
       if lang () == Cpp && args <> [] && Table.is_promoted_type_var r then
         let full = EConstr.applist (EConstr.mkConstU (kn, u), args) in
         let reduced =
@@ -797,6 +903,48 @@ and extract_really_ind env kn mib =
           | _ -> [||]
         in
         let orig_dbmap = parse_ind_args p.ip_sign args (nprods + ndecls) in
+        (* A field whose type is a class projection -- [p : @ptr ProvenanceV
+           PointerV] -- makes this inductive depend on the instances the
+           projection is applied to, and on whatever they are applied to in
+           turn.  Nothing of that survives into the ML inductive, so it is
+           recorded here; see {!Table.add_ind_class_arg}. *)
+        List.iter
+          (fun decl ->
+            let fty = Context.Rel.Declaration.get_type decl in
+            let rec scan c =
+              ( match Constr.kind c with
+              | App (f, cargs) when Constr.isConst f ->
+                let rec class_arg a =
+                  let h, a_args = Constr.decompose_app a in
+                  match Constr.kind h with
+                  | Const (ac, _) ->
+                    Some
+                      (Table.Carg
+                         ( GlobRef.ConstRef ac
+                         , List.filter_map
+                             (fun x ->
+                               if
+                                 arg_survives_extraction epar sg
+                                   (EConstr.of_constr x)
+                               then
+                                 Some
+                                   (Option.default Table.Carg_unknown
+                                      (class_arg x) )
+                               else None )
+                             (Array.to_list a_args) ) )
+                  | _ -> None
+                in
+                Array.iter
+                  (fun a ->
+                    match class_arg a with
+                    | Some sh -> Table.add_ind_class_arg (GlobRef.IndRef (kn, 0)) sh
+                    | None -> () )
+                  cargs
+              | _ -> () );
+              Constr.iter scan c
+            in
+            scan fty )
+          prods;
         (* For C++ records: detect Sort-typed fields and promote to type vars
            during initial extraction (instead of re-extracting later). *)
         let dbmap, _promoted_vars =
@@ -820,14 +968,28 @@ and extract_really_ind env kn mib =
                      (b) a TypeClass-classified inductive — the field
                          carries a typeclass dictionary that becomes a
                          concept-constrained template parameter in C++. *)
+                  (* [is_typeclass] is answered out of a table this very
+                     function fills, so a class asked about before it has been
+                     extracted answers [false] and the field holding it is not
+                     promoted -- the whole nested dictionary is then missing
+                     from the resolutions, and its associated types print as
+                     the file-scope [using allocationId = std::any].  Extract
+                     it first, under the same guard {!extract_type} uses for
+                     the sibling case: the answer must not depend on the order
+                     uses are met in. *)
                   let is_typeclass_ind t =
-                    match Constr.kind t with
-                    | Ind ((mind, i), _) ->
+                    let of_ind (mind, i) =
+                      if not (already_extracting mind) then
+                        with_extracting mind (fun () ->
+                            try ignore (extract_ind env mind)
+                            with e when CErrors.noncritical e -> () );
                       Table.is_typeclass (GlobRef.IndRef (mind, i))
+                    in
+                    match Constr.kind t with
+                    | Ind (ind, _) -> of_ind ind
                     | App (f, _) -> (
                       match Constr.kind f with
-                      | Ind ((mind, i), _) ->
-                        Table.is_typeclass (GlobRef.IndRef (mind, i))
+                      | Ind (ind, _) -> of_ind ind
                       | _ -> false )
                     | _ -> false
                   in
@@ -1129,6 +1291,14 @@ and mlt_env env r =
   | IndRef _ | ConstructRef _ | VarRef _ -> None
   | ConstRef kn ->
     if Table.is_custom r then None
+      (* A promoted type variable is a name, not an abbreviation.  Its Rocq
+         body is the record projection -- a [match] -- which [extract_type]
+         can only answer [Tunknown] for, so delta-reducing it replaces the
+         one spelling that still says which class field this is with the
+         erasure.  [frame := list ptr] then expands to [list unk] and the
+         parameter is written [List<std::any>] against a return type that
+         still names [frame<typename I::PTR::ptr>]. *)
+    else if Table.is_promoted_type_var r then None
     else
     let cb = Environ.lookup_constant kn env in
     ( match cb.const_body with
@@ -1237,7 +1407,35 @@ and extract_term env sg mle mlt c args =
     let args' = List.map (EConstr.Vars.lift 1) args in
     ( try
         check_default env sg t1;
+        (* Nothing erased either: an annotation that lost a component would
+           overrule what inference knows about it. *)
+        let rec informative_type = function
+          | Tunknown | Taxiom | Tdummy _ -> false
+          | Tmeta {contents = Some t} -> informative_type t
+          | Tglob (_, l, _) -> List.for_all informative_type l
+          | Tarr (a, b) -> informative_type a && informative_type b
+          | Tapp (_, l) -> List.for_all informative_type l
+          | _ -> true
+        in
         let a = new_meta () in
+        (* The binder's declared type says what inference may not find: [let
+           body : top nat := ...] fixes the event family [top] spells, which a
+           body built from erased carriers ([ret], [fmap]) leaves a free
+           meta -- and a free meta generalises into a parameter no call
+           supplies when the binding is lifted.  Only a ground, fully
+           informative annotation is given: one naming a type variable names
+           it the way this context is numbered, which the term's own
+           variables need not be. *)
+        let () =
+          if lang () == Cpp then
+            match
+              try Some (extract_type env sg (db_from_rel_context env) 0 t1 [])
+              with e when CErrors.noncritical e -> None
+            with
+            | Some ty when Int.equal (type_maxvar ty) 0 && informative_type ty ->
+              try_mgu a ty
+            | _ -> ()
+        in
         let c1' = extract_term env sg mle a c1 [] in
         (* The type of [c1'] is generalized and stored in [mle]. *)
         let mle' =
@@ -1423,9 +1621,7 @@ and make_mlargs env sg e s args typs =
     @param orig_typs Original schema types from function signature
     @return List of ML types for the type arguments *)
 and make_tyargs env sg mle args typs ~orig_typs =
-  let db =
-    List.rev (List.mapi (fun i _ -> i + 1) env.env_rel_context.env_rel_ctx)
-  in
+  let db = db_from_rel_context env in
   let is_kprop = function Tdummy Kprop -> true | _ -> false in
   let is_tdummy = function Tdummy _ -> true | _ -> false in
   (* Recursive helper that processes args/typs/orig_typs in parallel.
@@ -1537,7 +1733,16 @@ and make_tyargs env sg mle args typs ~orig_typs =
                 | Some n -> n > 0
                 | None -> false
               in
-              if Table.is_custom ind_ref || has_cpp_template_params then
+              (* A logical family -- [void1 : Type -> Prop] -- is erased
+                 wherever it is applied, so no struct is ever emitted for it
+                 and its name is no C++ type.  Its position stays, erased like
+                 the types that apply it. *)
+              let logical =
+                try (extract_ind env kn).ind_packets.(i).ip_logical
+                with _ -> false
+              in
+              if logical || Table.is_custom ind_ref || has_cpp_template_params
+              then
                 (* Custom syntax needs template args, or the C++ struct is
                    templated — bare name is invalid. Erase so that
                    [filter_erased_type_args] drops all type args and lets
@@ -1579,41 +1784,6 @@ and make_tyargs env sg mle args typs ~orig_typs =
                  [Tvar n'], else [Tdummy Ktype].
 
                  If the Rel is not a type parameter (proof or value), erase it. *)
-              (* Helper: Check if a Rocq type [c] ultimately returns a Type/Set sort.
-
-                 This recursively strips Prod constructors to examine the codomain.
-                  Returns [true] if the final codomain is a Type/Set sort, [false]
-                  if Prop/SProp or not a sort at all.
-
-                  Examples:
-                  - [Type] → true
-                  - [Type -> Type] → true (codomain is Type)
-                  - [Type -> Prop] → false (codomain is Prop)
-                  - [nat] → false (not a sort)
-
-                  @param c Rocq type to examine (in Constr form, not EConstr)
-                  @return [true] if codomain is Type/Set, [false] otherwise *)
-              let rec returns_type_sort c =
-                match Constr.kind c with
-                | Sort s ->
-                  (* Found a sort - check its family *)
-                  ( match Sorts.family s with
-                    | Sorts.InType | Sorts.InSet | Sorts.InQSort ->
-                      (* Type universe, Set, or QSort - informative type param *)
-                      true
-                    | Sorts.InProp | Sorts.InSProp ->
-                      (* Prop or SProp - proof, should be erased *)
-                      false )
-                | Prod (_, _, body) ->
-                  (* Function type - recurse into codomain.
-                     For [Type -> Type], this strips the domain and examines
-                     the final [Type] codomain. *)
-                  returns_type_sort body
-                | _ ->
-                  (* Other cases (App, Var, Const, etc.) - not a type parameter.
-                     This includes value types like [nat], [list nat], etc. *)
-                  false
-              in
               let is_type_param =
                 try
                   (* Look up the Rel's declaration in the environment *)
@@ -1672,15 +1842,17 @@ and extract_cst_app env sg mle mlt kn args =
   let schema = (nb, expand env t) in
   (* Can we instantiate types variables for this constant ? *)
   (* In Ocaml, inside the definition of this constant, the answer is no. *)
+  (* The metas the scheme's type variables are instantiated with, kept so
+     that the call's own type arguments can be given to them below. *)
+  let tvar_metas = Array.init (fst schema) (fun _ -> new_meta ()) in
+  let rigid =
+    lang () == Cpp
+    && List.exists (fun c -> QConstant.equal env kn c) !current_fixpoints
+  in
   let instantiated =
     (* This is the version of the type that is instantiated (shocker) *)
-    if
-      lang () == Cpp
-      && List.exists (fun c -> QConstant.equal env kn c) !current_fixpoints
-    then
-      rigidify (snd schema)
-    else
-      instantiation schema
+    if rigid then rigidify (snd schema)
+    else type_subst_vect tvar_metas (snd schema)
   in
   (* Then the expected type of this constant. *)
   let a = new_meta () in
@@ -1703,6 +1875,36 @@ and extract_cst_app env sg mle mlt kn args =
     with Failure _ -> List.map (fun _ -> Tunknown) args
   in
   let domain = make_tyargs env sg mle args metas ~orig_typs in
+  (* The type arguments the Rocq term passes are a statement about the
+     scheme's type variables, and the value arguments need not repeat it: a
+     monad's [bind] erases its carrier, so [m A] pins nothing, and [A] reaches
+     the continuation's binder only from here.  Given where the count lines
+     up and the argument says something; a variable an argument already
+     settled otherwise keeps that answer.
+
+     Only a ground argument is given.  One naming a type variable names it
+     the way [make_tyargs] reads the Rocq context, which need not be the way
+     the term around it numbers its own -- a fixpoint's are rigid -- and
+     binding a meta to the wrong one plants a mismatch that surfaces later as
+     a coercion. *)
+  let () =
+    if lang () == Cpp && not rigid then
+      let rec informative = function
+        | Tdummy _ | Tunknown | Taxiom | Tapp _ | Tvar _ -> false
+        | Tmeta {contents = None} -> false
+        | Tarr (a, b) -> informative a && informative b
+        | Tglob (_, l, _) -> List.for_all informative l
+        | Tmeta {contents = Some u} -> informative u
+        | Tstring -> true
+      in
+      let tyargs =
+        List.filter (function Tdummy Kprop -> false | _ -> true) domain
+      in
+      if List.length tyargs = Array.length tvar_metas then
+        List.iteri
+          (fun i t -> if informative t then try_mgu tvar_metas.(i) t)
+          tyargs
+  in
   let mla = make_mlargs env sg mle s args metas in
   (* let dargs = List.map (fun t -> extract_type env sg [] 1 t []) (List.firstn (max 1 (la - (List.length mla))) args) in *)
   (* let domain = List.firstn (la - (List.length mla)) metas in (* or (fst (type_decomp instantiated)) *) *)
@@ -1834,10 +2036,7 @@ and extract_cons_app env sg mle mlt ((((kn, i) as ip), j) as cp) args =
     if lang () == Cpp then begin
       let la_now = List.length args in
       if params_nb > 0 && la_now >= params_nb then begin
-        let db =
-          List.rev
-            (List.mapi (fun i _ -> i + 1) env.env_rel_context.env_rel_ctx)
-        in
+        let db = db_from_rel_context env in
         let param_args = List.firstn params_nb args in
         let n_sign = List.length oi.ip_sign in
         let param_sign = List.firstn (min params_nb n_sign) oi.ip_sign in
@@ -1898,10 +2097,7 @@ and extract_cons_app env sg mle mlt ((((kn, i) as ip), j) as cp) args =
         (* ip_vars has more entries than ip_sign Keep count means there are
            promoted type variables from erased Type fields. Extract concrete
            types from the erased constructor args. *)
-        let db =
-          List.rev
-            (List.mapi (fun i _ -> i + 1) env.env_rel_context.env_rel_ctx)
-        in
+        let db = db_from_rel_context env in
         let la' = max 0 (la - params_nb) in
         let args' = List.lastn la' args in
         let rec extract_promoted s_rem args_rem acc =
@@ -2547,6 +2743,10 @@ let extract_constant access env kn cb =
        | Tunknown | Taxiom -> add_erased_type_const r
        | _ -> ());
       Table.add_type_scheme_arity r (List.length vl);
+      (* An alias body is where a type-level [Definition] under a [Context]
+         writes its dependence on that context; see
+         {!Table.add_type_alias_body}. *)
+      Table.add_type_alias_body r t;
       Dtype (r, vl, t)
     end
   in
@@ -2579,7 +2779,164 @@ let extract_constant access env kn cb =
       add_throwing_value r;
       Dterm (r, MLaxiom (Constant.to_string kn), t) )
   in
+  (* An instance's class arguments are where its erased names come from.
+     [PIV : @PI ProvenanceV PointerV] declares no type of its own: [ptr]
+     belongs to [PointerV] and [prov] to [ProvenanceV], and neither reaches the
+     ML type, which records the class alone.  This is the last point at which
+     the connection is written down, so it is recorded here rather than
+     rediscovered; see {!Table.add_instance_class_shape}.
+
+     No [is_typeclass] test: the tables it would consult are filled as
+     extraction proceeds, and the reader runs after all of it. *)
+  let record_class_shape () =
+    (* Recursive: [@ParamsV natIPtr] and [@ParamsV IP] differ only in the
+       argument, and the reader has to spell one of them.  An argument whose
+       head is not a constant is [Carg_unknown] -- the position is kept, so
+       the reader can fill it from the instances it holds. *)
+    let rec class_arg a =
+      let h, a_args = EConstr.decompose_app sg a in
+      match EConstr.kind sg h with
+      | Const (c, _) ->
+        Some
+          (Table.Carg
+             ( GlobRef.ConstRef c
+             , List.filter_map
+                 (fun x ->
+                   if arg_survives_extraction env sg x then
+                     Some (Option.default Table.Carg_unknown (class_arg x))
+                   else None )
+                 (Array.to_list a_args) ) )
+      | _ -> None
+    in
+    (* The shape an applied type writes, if its head is one a reader can name.
+
+       A type-level [Definition] is such a head for the same reason an
+       inductive is: [packed : @dbox natIPtr] is where the alias is applied to
+       the instance its body depends on.  Whether the head is an alias is not
+       asked here -- extraction reaches declarations before their types, so the
+       alias body may not be recorded yet; a head that turns out to have no
+       class arguments resolves nothing, which is what it did when it was not
+       recorded at all. *)
+    let shape_of t =
+      let hd, args = EConstr.decompose_app sg t in
+      let head_ref =
+        match EConstr.kind sg hd with
+        | Ind (ind, _) -> Some (GlobRef.IndRef ind)
+        | Const (c, _) -> Some (GlobRef.ConstRef c)
+        | _ -> None
+      in
+      match head_ref with
+      | None -> None
+      | Some head_ref ->
+        let shapes =
+          List.map
+            (fun x ->
+              match class_arg x with
+              | Some sh -> Some sh
+              | None ->
+                (* A {e type} argument is not a class argument and never
+                   resolves anything; all it owes the reader is its position.
+                   [@ToDvalueBase natParams nat] has an inductive at the second
+                   position, which [class_arg] cannot name, and refusing the
+                   whole shape for it also threw away the [natParams] beside
+                   it -- the only thing that says which [ptr] the instance
+                   means.  An argument that is not a type is different: it is
+                   one the reader would have had to spell, so all-or-none
+                   still applies there. *)
+                if
+                  EConstr.Vars.closed0 sg x
+                  && (try is_info_scheme env sg (type_of env sg x)
+                      with _ -> false)
+                then Some Table.Carg_unknown
+                else None )
+            (List.filter
+               (arg_survives_extraction env sg)
+               (Array.to_list args) )
+        in
+        if List.for_all Option.has_some shapes then
+          Some (head_ref, List.map Option.get shapes)
+        else None
+    in
+    (* The instance need not be applied at the conclusion's head.  [w0 :=
+       @wrap (@ParamsV natIPtr)] has type [dval -> option (list dval)]: the
+       head is an arrow, and under it the applied type sits inside [list],
+       inside [option].  A declaration whose type mentions an instance anywhere
+       is a declaration whose reader can spell it, so the whole type is
+       searched -- outermost first, so the conclusion's own head still wins,
+       and the first applied type that says something about a class is
+       kept. *)
+    let rec search t =
+      match shape_of t with
+      | Some ((_, _ :: _) as sh) -> Some sh
+      | _ ->
+        EConstr.fold sg
+          (fun acc sub -> match acc with Some _ -> acc | None -> search sub)
+          None t
+    in
+    let _, concl = EConstr.decompose_prod sg typ in
+    match search typ with
+    | Some sh -> Table.add_instance_class_shape r sh
+    | None -> (
+      (* Nothing in the type applies a class.  The conclusion's head is still
+         worth recording: what it reaches through its own payloads
+         ({!Table.get_type_class_args}) is read from the head alone. *)
+      match shape_of concl with
+      | Some sh -> Table.add_instance_class_shape r sh
+      | None -> () )
+  in
+  (* The instances the type applies to the declaration's own class binders --
+     [get_size : forall {Pa : Params}, @memM Pa (@MemStateV Pa) nat].  [memM]
+     reaches the ML type without its dictionary arguments, and a body that
+     only forwards to another declaration names no instance, so nothing
+     downstream says which instance [memM]'s [state] belongs to; see
+     {!Table.add_context_instance_apps}.  A binder is given by its ordinal
+     among the informative class-typed ones, the ones that become the
+     declaration's [_tcI] template parameters. *)
+  let record_context_instance_apps () =
+    let prods, concl = EConstr.decompose_prod sg typ in
+    let outer_first = List.rev prods in
+    let ordinals, _, _ =
+      List.fold_left
+        (fun (ords, k, env) (x, t) ->
+          let is_class =
+            ( match EConstr.kind sg (fst (EConstr.decompose_app sg t)) with
+            | Const (c, _) -> Typeclasses.is_class (GlobRef.ConstRef c)
+            | Ind (i, _) -> Typeclasses.is_class (GlobRef.IndRef i)
+            | _ -> false )
+            && (try is_default env sg t with _ -> false)
+          in
+          ( ords @ [(if is_class then Some k else None)],
+            (if is_class then k + 1 else k),
+            push_rel_assum (x, t) env ) )
+        ([], 0, env) outer_first
+    in
+    let found = ref [] in
+    (* [m] of the declaration's binders are in scope, and [depth] binders of
+       the type's own above them. *)
+    let rec search m depth t =
+      let h, args = EConstr.decompose_app sg t in
+      ( match EConstr.kind sg h with
+      | Const (c, _) when Array.length args > 0 ->
+        let ordinal a =
+          match EConstr.kind sg a with
+          | Rel i when i > depth && i - depth <= m ->
+            List.nth ordinals (m - (i - depth))
+          | _ -> None
+        in
+        let os = List.map ordinal (Array.to_list args) in
+        if List.for_all Option.has_some os then
+          let app = (GlobRef.ConstRef c, List.map Option.get os) in
+          if not (List.mem app !found) then found := !found @ [app]
+      | _ -> () );
+      EConstr.iter_with_binders sg succ (search m) depth t
+    in
+    List.iteri (fun p (_, t) -> search p 0 t) outer_first;
+    search (List.length outer_first) 0 concl;
+    if !found <> [] then Table.add_context_instance_apps r !found
+  in
   let mk_def c =
+    record_class_shape ();
+    record_context_instance_apps ();
     let e, t = extract_std_constant env sg kn c typ in
     (* [record_constant_type] registered the {i short} type, the one still
        spelled with the abbreviations the user wrote.  Where the body's binders

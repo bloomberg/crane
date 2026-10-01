@@ -2,10 +2,11 @@
 #define INCLUDED_EPOCH_CELL_GLYPH_TRACE
 
 #include "crane_fn.h"
-#include "small_vector.h"
+#include "obj.h"
 #include <any>
 #include <atomic>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -15,6 +16,14 @@ enum class Comparison;
 struct Positive;
 struct Z;
 struct Q;
+
+struct Datatypes {
+  static Comparison CompOpp(Comparison r);
+};
+
+struct QArith_base {
+  static bool Qle_bool(const Q &x, const Q &y);
+};
 
 template <typename A> struct List {
   // TYPES
@@ -39,21 +48,26 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U> List(const List<_U> &_other) {
-    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->v_ = Nil{};
-    } else {
-      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>) {
-                          return crane_any_cast<A>(a);
-                        } else {
-                          return A(a);
-                        }
-                      }(),
-                      (l ? std::make_shared<List<A>>(*l) : nullptr)};
-    }
-  }
+  template <typename _U>
+  List(const List<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+            return Nil{};
+          } else {
+            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const _U &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                   : nullptr)};
+          }
+        }()) {}
 
   static List<A> nil() { return List<A>(Nil{}); }
 
@@ -63,22 +77,18 @@ public:
 
   // MANIPULATORS
   ~List() {
-    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
-        if (_alt->l) {
-          _stack.push_back(std::move(_alt->l));
+        if (_alt->l && _alt->l.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->l);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<List<A>> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -93,10 +103,6 @@ public:
   const variant_t &v() const { return v_; }
 };
 enum class Comparison { EQ, LT, GT };
-
-struct Datatypes {
-  static Comparison CompOpp(Comparison r);
-};
 
 struct Positive {
   // TYPES
@@ -138,27 +144,24 @@ public:
 
   // MANIPULATORS
   ~Positive() {
-    crane::small_vector<std::shared_ptr<Positive>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<Positive> {
       if (auto *_alt = std::get_if<XI>(&_v)) {
-        if (_alt->a0) {
-          _stack.push_back(std::move(_alt->a0));
+        if (_alt->a0 && _alt->a0.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a0);
         }
       }
       if (auto *_alt = std::get_if<XO>(&_v)) {
-        if (_alt->a0) {
-          _stack.push_back(std::move(_alt->a0));
+        if (_alt->a0 && _alt->a0.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a0);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<Positive> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -257,7 +260,7 @@ struct BinInt {
   static bool eqb(const Z &x, const Z &y);
   static uint64_t to_nat(const Z &z);
   static std::pair<Z, Z> pos_div_eucl(const Positive &a, const Z &b);
-  static std::pair<Z, Z> div_eucl(Z a, const Z &b);
+  static std::pair<Z, Z> div_eucl(const Z &a, const Z &b);
   static Z div(const Z &a, const Z &b);
   static Z modulo(const Z &a, const Z &b);
   static Z abs(const Z &z);
@@ -266,10 +269,6 @@ struct BinInt {
 struct Q {
   Z Qnum;
   Positive Qden;
-};
-
-struct QArith_base {
-  static bool Qle_bool(const Q &x, const Q &y);
 };
 
 struct EpochCellGlyphTraceCase {
@@ -455,7 +454,7 @@ struct EpochCellGlyphTraceCase {
   static MechanismState step(const MechanismState &s);
   static MechanismState step_reverse(const MechanismState &s);
   static MechanismState step_n(uint64_t n, MechanismState s);
-  static MechanismState state_at_cell(Z cell);
+  static MechanismState state_at_cell(const Z &cell);
   static LunarPhase predict_moon_phase_from_state(const MechanismState &s);
   static Z predict_olympiad_year(const MechanismState &s);
   static ZodiacSign predict_zodiac_sign(const MechanismState &s);
@@ -709,7 +708,7 @@ struct EpochCellGlyphTraceCase {
 
   static EpochReading build_epoch_reading(const Z &epoch_year,
                                           const Z &epoch_month,
-                                          HistoricalEclipse e);
+                                          const HistoricalEclipse &e);
   static bool reading_matches(const EpochReading &reading);
   static uint64_t reading_phase_code(const EpochReading &reading);
   static uint64_t reading_zodiac_code(const EpochReading &reading);

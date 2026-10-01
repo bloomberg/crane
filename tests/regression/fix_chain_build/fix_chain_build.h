@@ -1,7 +1,7 @@
 #ifndef INCLUDED_FIX_CHAIN_BUILD
 #define INCLUDED_FIX_CHAIN_BUILD
 
-#include <functional>
+#include "fn.h"
 #include <utility>
 
 struct FixChainBuild {
@@ -14,7 +14,7 @@ struct FixChainBuild {
   /// current stack frame's parameter), prev (a local variable),
   /// and step itself. When build_chain returns, the stack frame
   /// is destroyed, and the returned closure holds dangling references.
-  static std::pair<uint64_t, std::function<uint64_t(uint64_t)>>
+  static std::pair<uint64_t, crane::fn<uint64_t(uint64_t)>>
   build_chain(uint64_t n);
   /// test1: build_chain(1) = (1, step1).
   /// step1(0) = 1.

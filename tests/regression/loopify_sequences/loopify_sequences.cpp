@@ -320,21 +320,22 @@ LoopifySequences::string_chain(const List<uint64_t> &s, uint64_t n,
 /// split_by_sign l base pos neg splits list based on base threshold.
 std::pair<List<uint64_t>, List<uint64_t>>
 LoopifySequences::split_by_sign(const List<uint64_t> &l, uint64_t base,
-                                List<uint64_t> pos, List<uint64_t> neg) {
-  List<uint64_t> _loop_neg = std::move(neg);
-  List<uint64_t> _loop_pos = std::move(pos);
+                                const List<uint64_t> &pos,
+                                const List<uint64_t> &neg) {
+  List<uint64_t> _loop_neg = neg;
+  List<uint64_t> _loop_pos = pos;
   const List<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      return std::make_pair(std::move(_loop_pos), std::move(_loop_neg));
+      return std::make_pair(_loop_pos, _loop_neg);
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       if (base <= a0) {
-        _loop_pos = List<uint64_t>::cons(a0, std::move(_loop_pos));
+        _loop_pos = List<uint64_t>::cons(a0, _loop_pos);
         _loop_l = crane_raw(a1);
       } else {
-        _loop_neg = List<uint64_t>::cons(a0, std::move(_loop_neg));
+        _loop_neg = List<uint64_t>::cons(a0, _loop_neg);
         _loop_l = crane_raw(a1);
       }
     }

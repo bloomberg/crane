@@ -31,15 +31,15 @@ uint64_t PartialAppMove::sum_values(const PartialAppMove::tree &t, uint64_t x) {
 /// Wrap a tree inside another Node.
 /// In C++, this calls tree::node() which has rvalue ref overloads.
 /// If escape analysis adds std::move(t) here, the move is REAL.
-PartialAppMove::tree PartialAppMove::wrap(PartialAppMove::tree t) {
-  return tree::node(std::move(t), UINT64_C(0), tree::leaf());
+PartialAppMove::tree PartialAppMove::wrap(const PartialAppMove::tree &t) {
+  return tree::node(t, UINT64_C(0), tree::leaf());
 }
 
 /// BUG TRIGGER: partial application creates a & lambda capturing t,
 /// then t is passed to a constructor (actually moved via rvalue ref),
 /// then the lambda accesses the moved-from t.
 uint64_t PartialAppMove::trigger_bug(PartialAppMove::tree t) {
-  std::function<uint64_t(uint64_t)> f = [=](uint64_t _x0) mutable -> uint64_t {
+  crane::fn<uint64_t(uint64_t)> f = [=](uint64_t _x0) -> uint64_t {
     return sum_values(t, _x0);
   };
   PartialAppMove::tree w = wrap(std::move(t));

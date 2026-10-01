@@ -1,6 +1,7 @@
 #ifndef INCLUDED_SEPEXTPAIRNESTEDANY
 #define INCLUDED_SEPEXTPAIRNESTEDANY
 
+#include "obj.h"
 #include <any>
 #include <memory>
 #include <optional>
@@ -11,12 +12,12 @@
 
 namespace SepExtPairNestedAny {
 
-using sem_ty = std::any;
+using sem_ty = crane::obj;
 using token = Specif::SigT<Datatypes::Nat, sem_ty>;
 const std::pair<std::optional<Datatypes::List<token>>, bool> produce =
     std::make_pair(
         std::optional<
-            Datatypes::List<Specif::SigT<Datatypes::Nat, std::any>>>(),
+            Datatypes::List<Specif::SigT<Datatypes::Nat, crane::obj>>>(),
         true);
 const bool use_it = []() -> bool {
   auto [_x, b] = produce;

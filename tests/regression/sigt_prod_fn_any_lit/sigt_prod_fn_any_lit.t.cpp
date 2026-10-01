@@ -8,11 +8,11 @@
 //
 // In Rocq, `check tt` is `true` (predicate `0 =? 0`). The predicate/action
 // lambdas are inline generic literals (`[](const auto&){...}`) stored into an
-// erased `std::pair<std::any,std::any>` payload via a custom constructor.
+// erased `std::pair<crane::obj,crane::obj>` payload via a custom constructor.
 // `gen_expr_custom_cons` now routes such function-valued lambda args through
 // `crane_erase_fn` (which dispatches on whether `std::function` CTAD is
 // viable, falling back to a direct any->any wrap for generic lambdas), so the
-// stored `std::any` matches what `any_cast<std::function<std::any(std::any)>>`
+// stored `crane::obj` matches what `any_cast<std::function<crane::obj(crane::obj)>>`
 // expects on read.
 int main() {
   try {

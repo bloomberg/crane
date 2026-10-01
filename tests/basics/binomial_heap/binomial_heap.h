@@ -2,12 +2,14 @@
 #define INCLUDED_BINOMIAL_HEAP
 
 #include "crane_fn.h"
+#include "fn.h"
+#include "obj.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
-#include <functional>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -37,21 +39,26 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U> List(const List<_U> &_other) {
-    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->v_ = Nil{};
-    } else {
-      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>) {
-                          return crane_any_cast<A>(a);
-                        } else {
-                          return A(a);
-                        }
-                      }(),
-                      (l ? std::make_shared<List<A>>(*l) : nullptr)};
-    }
-  }
+  template <typename _U>
+  List(const List<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+            return Nil{};
+          } else {
+            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const _U &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                   : nullptr)};
+          }
+        }()) {}
 
   static List<A> nil() { return List<A>(Nil{}); }
 
@@ -61,22 +68,18 @@ public:
 
   // MANIPULATORS
   ~List() {
-    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
-        if (_alt->l) {
-          _stack.push_back(std::move(_alt->l));
+        if (_alt->l && _alt->l.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->l);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<List<A>> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -130,10 +133,10 @@ struct BinomialHeap {
       crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
-          if (_alt->a1) {
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
             _stack.push_back(std::move(_alt->a1));
           }
-          if (_alt->a2) {
+          if (_alt->a2 && _alt->a2.use_count() == 1) {
             _stack.push_back(std::move(_alt->a2));
           }
         }
@@ -189,21 +192,19 @@ struct BinomialHeap {
   using priqueue = List<tree>;
   static inline const priqueue empty = List<tree>::nil();
   static tree smash(const tree &t, const tree &u);
-  static List<tree> carry(const List<tree> &q, tree t);
+  static List<tree> carry(const List<tree> &q, const tree &t);
   static priqueue insert(uint64_t x, const List<tree> &q);
-  static priqueue join(const List<tree> &p, const List<tree> &q, tree c);
+  static priqueue join(const List<tree> &p, const List<tree> &q, const tree &c);
 
-  static priqueue unzip(const tree &t,
-                        std::function<List<tree>(List<tree>)> cont) {
+  static priqueue unzip(const tree &t, crane::fn<List<tree>(List<tree>)> cont) {
     if (std::holds_alternative<typename tree::Node>(t.v())) {
       const auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v());
       const tree &a1_value = *a1;
       const tree &a2_value = *a2;
-      std::function<List<tree>(List<tree>)> f =
-          [=](const List<tree> &q) mutable {
-            return List<tree>::cons(tree::node(a0, a1_value, tree::leaf()),
-                                    cont(q));
-          };
+      crane::fn<List<tree>(priqueue)> f = [=](priqueue q) {
+        return List<tree>::cons(tree::node(a0, a1_value, tree::leaf()),
+                                cont(q));
+      };
       return unzip(a2_value, std::move(f));
     } else {
       return cont(List<tree>::nil());
@@ -219,7 +220,7 @@ struct BinomialHeap {
   delete_max(const List<tree> &q);
   static priqueue merge(const List<tree> &p, const List<tree> &q);
   static priqueue insert_list(const List<uint64_t> &l, List<tree> q);
-  static List<uint64_t> make_list(uint64_t n, List<uint64_t> l);
+  static List<uint64_t> make_list(uint64_t n, const List<uint64_t> &l);
   static key help(const List<tree> &c);
   static inline const key example1 = help(merge(
       insert(UINT64_C(5),

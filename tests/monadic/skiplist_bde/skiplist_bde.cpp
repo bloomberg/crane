@@ -12,6 +12,7 @@
 #include <bsl_utility.h>
 #include <bsl_variant.h>
 #include <bsl_vector.h>
+#include <crane_itree.h>
 #include <fstream>
 #include <skipnode.h>
 #include <stm_adapter.h>

@@ -2,11 +2,13 @@
 #define INCLUDED_EXISTENTIAL_CTOR_ERASED_FN
 
 #include "crane_fn.h"
+#include "fn.h"
+#include "obj.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
-#include <functional>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -36,21 +38,26 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U> List(const List<_U> &_other) {
-    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->v_ = Nil{};
-    } else {
-      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>) {
-                          return crane_any_cast<A>(a);
-                        } else {
-                          return A(a);
-                        }
-                      }(),
-                      (l ? std::make_shared<List<A>>(*l) : nullptr)};
-    }
-  }
+  template <typename _U>
+  List(const List<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+            return Nil{};
+          } else {
+            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const _U &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                   : nullptr)};
+          }
+        }()) {}
 
   static List<A> nil() { return List<A>(Nil{}); }
 
@@ -60,22 +67,18 @@ public:
 
   // MANIPULATORS
   ~List() {
-    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
-        if (_alt->l) {
-          _stack.push_back(std::move(_alt->l));
+        if (_alt->l && _alt->l.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->l);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<List<A>> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -150,44 +153,40 @@ struct ExistentialCtorErasedFn {
   /// inductive with an existential constructor rather than through sigT.
   struct dynamic {
     // DATA
-    std::any a;
-    std::function<uint64_t(std::any)> a1;
+    crane::obj a;
+    crane::fn<uint64_t(crane::obj)> a1;
 
     // ACCESSORS
     dynamic clone() const { return {a, a1}; }
 
     // CREATORS
-    static dynamic dyn(std::any a, std::function<uint64_t(std::any)> a1) {
+    static dynamic dyn(crane::obj a, crane::fn<uint64_t(crane::obj)> a1) {
       return {std::move(a), std::move(a1)};
     }
   };
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, std::any &,
-                                   std::function<uint64_t(std::any)> &>
   static T1 dynamic_rect(F0 &&f, const dynamic &d) {
     const auto &[a0, a1] = d;
-    return std::any_cast<T1>(f(a0, a1));
+    return crane_any_cast<T1>(f(a0, a1));
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, std::any &,
-                                   std::function<uint64_t(std::any)> &>
   static T1 dynamic_rec(F0 &&f, const dynamic &d) {
     const auto &[a0, a1] = d;
-    return std::any_cast<T1>(f(a0, a1));
+    return crane_any_cast<T1>(f(a0, a1));
   }
 
   static uint64_t read(const dynamic &d);
   static inline const List<dynamic> items = List<dynamic>::cons(
-      dynamic::dyn(UINT64_C(7), std::function<uint64_t(std::any)>(
-                                    [](const std::any &n) -> uint64_t {
-                                      return std::any_cast<uint64_t>(n);
+      dynamic::dyn(UINT64_C(7), crane::fn<uint64_t(crane::obj)>(
+                                    [](const crane::obj &n) -> uint64_t {
+                                      return crane::any_cast<uint64_t>(n);
                                     })),
       List<dynamic>::cons(
-          dynamic::dyn(true, std::function<uint64_t(std::any)>(
-                                 [](const std::any &b) -> uint64_t {
-                                   if (std::any_cast<bool>(b)) {
+          dynamic::dyn(true, crane::fn<uint64_t(crane::obj)>(
+                                 [](const crane::obj &b) -> uint64_t {
+                                   if (crane::any_cast<bool>(b)) {
                                      return UINT64_C(1);
                                    } else {
                                      return UINT64_C(0);
@@ -195,14 +194,14 @@ struct ExistentialCtorErasedFn {
                                  })),
           List<dynamic>::cons(
               dynamic::dyn(
-                  List<std::any>::cons(
+                  List<crane::obj>::cons(
                       UINT64_C(1),
-                      List<std::any>::cons(
+                      List<crane::obj>::cons(
                           UINT64_C(2),
-                          List<std::any>::cons(UINT64_C(3),
-                                               List<std::any>::nil()))),
+                          List<crane::obj>::cons(UINT64_C(3),
+                                                 List<crane::obj>::nil()))),
                   crane_erase_fn<uint64_t>(
-                      [](const List<std::any> &_x) { return _x.length(); })),
+                      [](const List<crane::obj> &_x) { return _x.length(); })),
               List<dynamic>::nil())));
   static inline const uint64_t total = items.template fold_left<uint64_t>(
       [](uint64_t acc, const dynamic &d) { return (acc + read(d)); },

@@ -1,9 +1,9 @@
 #ifndef INCLUDED_NESTED_MATCH_CLOSURE
 #define INCLUDED_NESTED_MATCH_CLOSURE
 
+#include "fn.h"
 #include "small_vector.h"
 #include <atomic>
-#include <functional>
 #include <memory>
 #include <optional>
 #include <type_traits>
@@ -60,10 +60,10 @@ struct NestedMatchClosure {
       crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a2) {
+          if (_alt->a2 && _alt->a2.use_count() == 1) {
             _stack.push_back(std::move(_alt->a2));
           }
         }
@@ -120,7 +120,7 @@ struct NestedMatchClosure {
   /// Pattern 1: Nested match creating a closure that captures from both levels.
   /// The fixpoint go captures outer_val from outer match and
   /// inner_val from inner match. Both are structured binding refs.
-  static std::optional<std::function<uint64_t(uint64_t)>>
+  static std::optional<crane::fn<uint64_t(uint64_t)>>
   make_combiner(const tree &t);
   /// test1: Node (Node Leaf 10 Leaf) 20 Leaf
   /// outer_val = 20, l = Node Leaf 10 Leaf
@@ -131,14 +131,14 @@ struct NestedMatchClosure {
         tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
                    UINT64_C(20), tree::leaf()));
     if (_cs.has_value()) {
-      const std::function<uint64_t(uint64_t)> &f = *_cs;
+      const crane::fn<uint64_t(uint64_t)> &f = *_cs;
       return f(UINT64_C(5));
     } else {
       return UINT64_C(999);
     }
   }();
   /// Pattern 2: Triple nesting
-  static std::optional<std::function<uint64_t(uint64_t)>>
+  static std::optional<crane::fn<uint64_t(uint64_t)>>
   make_deep_combiner(const tree &t);
   /// test2: Node (Node (Node Leaf 100 Leaf) 200 Leaf) 300 Leaf
   /// v1=300, v2=200, v3=100, total=600
@@ -149,7 +149,7 @@ struct NestedMatchClosure {
                    UINT64_C(200), tree::leaf()),
         UINT64_C(300), tree::leaf()));
     if (_cs.has_value()) {
-      const std::function<uint64_t(uint64_t)> &f = *_cs;
+      const crane::fn<uint64_t(uint64_t)> &f = *_cs;
       return f(UINT64_C(0));
     } else {
       return UINT64_C(999);
@@ -159,7 +159,7 @@ struct NestedMatchClosure {
   /// The fixpoint captures BOTH pattern variables AND the function parameter.
   /// After the function returns, BOTH the pattern variables AND the
   /// function parameter are dead.
-  static std::optional<std::function<uint64_t(uint64_t)>>
+  static std::optional<crane::fn<uint64_t(uint64_t)>>
   make_param_combiner(const tree &t, uint64_t base);
   /// test3: Node (Node Leaf 5 Leaf) 10 (Node Leaf 15 Leaf), base=1000
   /// go(0) = 1000 + 10 + 5 + 15 = 1030
@@ -171,7 +171,7 @@ struct NestedMatchClosure {
                    tree::node(tree::leaf(), UINT64_C(15), tree::leaf())),
         UINT64_C(1000));
     if (_cs.has_value()) {
-      const std::function<uint64_t(uint64_t)> &f = *_cs;
+      const crane::fn<uint64_t(uint64_t)> &f = *_cs;
       return f(UINT64_C(3));
     } else {
       return UINT64_C(999);
@@ -179,12 +179,12 @@ struct NestedMatchClosure {
   }();
   /// Pattern 4: Store closure, THEN clobber stack with heavy computation
   static inline const uint64_t test4 = []() {
-    std::optional<std::function<uint64_t(uint64_t)>> f = make_param_combiner(
+    std::optional<crane::fn<uint64_t(uint64_t)>> f = make_param_combiner(
         tree::node(tree::node(tree::leaf(), UINT64_C(42), tree::leaf()),
                    UINT64_C(100), tree::leaf()),
         UINT64_C(500));
     if (f.has_value()) {
-      const std::function<uint64_t(uint64_t)> &g = *f;
+      const crane::fn<uint64_t(uint64_t)> &g = *f;
       return g(UINT64_C(0));
     } else {
       return UINT64_C(999);

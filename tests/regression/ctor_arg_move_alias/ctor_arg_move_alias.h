@@ -2,10 +2,12 @@
 #define INCLUDED_CTOR_ARG_MOVE_ALIAS
 
 #include "crane_fn.h"
+#include "obj.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -76,22 +78,18 @@ struct CtorArgMoveAlias {
 
     // MANIPULATORS
     ~inner() {
-      crane::small_vector<std::shared_ptr<inner>> _stack = {};
-      auto _drain = [&](variant_t &_v) {
+      auto _next = [&](variant_t &_v) -> std::shared_ptr<inner> {
         if (auto *_alt = std::get_if<ICons>(&_v)) {
-          if (_alt->a1) {
-            _stack.push_back(std::move(_alt->a1));
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
+            return std::move(_alt->a1);
           }
         }
+        return nullptr;
       };
-      _drain(v_mut());
-      while (!_stack.empty()) {
-        auto _cur = std::move(_stack.back());
-        _stack.pop_back();
-        if (_cur.use_count() == 1) {
-          std::atomic_thread_fence(std::memory_order_acquire);
-          _drain(_cur->v_mut());
-        }
+      std::shared_ptr<inner> _cur = _next(v_mut());
+      while (_cur) {
+        _cur = _next(_cur->v_mut());
       }
     }
 
@@ -257,22 +255,29 @@ struct CtorArgMoveAlias {
 
     explicit mylist(Mycons _v) : v_(std::move(_v)) {}
 
-    template <typename _U> mylist(const mylist<_U> &_other) {
-      if (std::holds_alternative<typename mylist<_U>::Mynil>(_other.v())) {
-        this->v_ = Mynil{};
-      } else {
-        const auto &[a0, a1] =
-            std::get<typename mylist<_U>::Mycons>(_other.v());
-        this->v_ = Mycons{[&]() -> A {
-                            if constexpr (std::is_same_v<_U, std::any>) {
-                              return crane_any_cast<A>(a0);
-                            } else {
-                              return A(a0);
-                            }
-                          }(),
-                          (a1 ? std::make_shared<mylist<A>>(*a1) : nullptr)};
-      }
-    }
+    template <typename _U>
+    mylist(const mylist<_U> &_other)
+        : v_([&]() -> variant_t {
+            if (std::holds_alternative<typename mylist<_U>::Mynil>(
+                    _other.v())) {
+              return Mynil{};
+            } else {
+              const auto &[a0, a1] =
+                  std::get<typename mylist<_U>::Mycons>(_other.v());
+              return Mycons{[&]() -> A {
+                              if constexpr (crane_convertible<A, const _U &>) {
+                                return crane_convert<A>(a0);
+                              } else {
+                                throw std::logic_error(
+                                    "unreachable: inactive constructor field "
+                                    "at this instantiation");
+                              }
+                            }(),
+                            (a1 ? std::make_shared<mylist<A>>(
+                                      crane_convert<mylist<A>>(*a1))
+                                : nullptr)};
+            }
+          }()) {}
 
     static mylist<A> mynil() { return mylist<A>(Mynil{}); }
 
@@ -283,22 +288,18 @@ struct CtorArgMoveAlias {
 
     // MANIPULATORS
     ~mylist() {
-      crane::small_vector<std::shared_ptr<mylist<A>>> _stack = {};
-      auto _drain = [&](variant_t &_v) {
+      auto _next = [&](variant_t &_v) -> std::shared_ptr<mylist<A>> {
         if (auto *_alt = std::get_if<Mycons>(&_v)) {
-          if (_alt->a1) {
-            _stack.push_back(std::move(_alt->a1));
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
+            return std::move(_alt->a1);
           }
         }
+        return nullptr;
       };
-      _drain(v_mut());
-      while (!_stack.empty()) {
-        auto _cur = std::move(_stack.back());
-        _stack.pop_back();
-        if (_cur.use_count() == 1) {
-          std::atomic_thread_fence(std::memory_order_acquire);
-          _drain(_cur->v_mut());
-        }
+      std::shared_ptr<mylist<A>> _cur = _next(v_mut());
+      while (_cur) {
+        _cur = _next(_cur->v_mut());
       }
     }
 
@@ -326,7 +327,7 @@ struct CtorArgMoveAlias {
       /// _result.
       struct _Resume_Mycons {
         mylist<A> a1;
-        std::decay_t<A> a0;
+        A a0;
       };
 
       using _Frame = std::variant<_Enter, _Resume_Mycons>;
@@ -371,7 +372,7 @@ struct CtorArgMoveAlias {
       /// _result.
       struct _Resume_Mycons {
         mylist<A> a1;
-        std::decay_t<A> a0;
+        A a0;
       };
 
       using _Frame = std::variant<_Enter, _Resume_Mycons>;
@@ -470,7 +471,7 @@ struct CtorArgMoveAlias {
   static uint64_t osum(const mylist<inner> &o);
   /// h is the sole occurrence of the head field, so Crane moves it out of
   /// o; the sibling argument osum o still reads the whole o.
-  static pack grab(mylist<inner> o);
+  static pack grab(const mylist<inner> &o);
   /// o = [ICons n (ICons (S n) INil)], so osum o = 2n+1 and
   /// isum h = 2n+1; the result is 4n+2, i.e. 6 for n = 1.
   static uint64_t run(uint64_t n);

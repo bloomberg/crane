@@ -2,12 +2,13 @@
 #define INCLUDED_HKT_INSTANCE_ANY_MISMATCH
 
 #include "crane_fn.h"
-#include "small_vector.h"
+#include "fn.h"
+#include "obj.h"
 #include <any>
 #include <atomic>
 #include <concepts>
-#include <functional>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -43,22 +44,18 @@ public:
 
   // MANIPULATORS
   ~Nat() {
-    crane::small_vector<std::shared_ptr<Nat>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<Nat> {
       if (auto *_alt = std::get_if<S>(&_v)) {
-        if (_alt->a0) {
-          _stack.push_back(std::move(_alt->a0));
+        if (_alt->a0 && _alt->a0.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a0);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<Nat> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -95,20 +92,23 @@ public:
 
   explicit Option(None _v) : v_(_v) {}
 
-  template <typename _U> Option(const Option<_U> &_other) {
-    if (std::holds_alternative<typename Option<_U>::Some>(_other.v())) {
-      const auto &[a] = std::get<typename Option<_U>::Some>(_other.v());
-      this->v_ = Some{[&]() -> A {
-        if constexpr (std::is_same_v<_U, std::any>) {
-          return crane_any_cast<A>(a);
-        } else {
-          return A(a);
-        }
-      }()};
-    } else {
-      this->v_ = None{};
-    }
-  }
+  template <typename _U>
+  Option(const Option<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename Option<_U>::Some>(_other.v())) {
+            const auto &[a] = std::get<typename Option<_U>::Some>(_other.v());
+            return Some{[&]() -> A {
+              if constexpr (crane_convertible<A, const _U &>) {
+                return crane_convert<A>(a);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }()};
+          } else {
+            return None{};
+          }
+        }()) {}
 
   static Option<A> some(A a) { return Option<A>(Some{std::move(a)}); }
 
@@ -123,16 +123,16 @@ public:
 
 template <typename I>
 concept Mon = requires {
-  typename I::template M<std::any>;
+  typename I::template M<crane::obj>;
   {
-    I::template ret<std::any>(std::declval<std::any>())
-  } -> std::convertible_to<typename I::template M<std::any>>;
+    I::template ret<crane::obj>(std::declval<crane::obj>())
+  } -> std::convertible_to<typename I::template M<crane::obj>>;
   {
-    I::template bind<std::any, std::any>(
-        std::declval<typename I::template M<std::any>>(),
+    I::template bind<crane::obj, crane::obj>(
+        std::declval<typename I::template M<crane::obj>>(),
         std::declval<
-            std::function<typename I::template M<std::any>(std::any)>>())
-  } -> std::convertible_to<typename I::template M<std::any>>;
+            crane::fn<typename I::template M<crane::obj>(crane::obj)>>())
+  } -> std::convertible_to<typename I::template M<crane::obj>>;
 };
 
 struct HktInstanceAnyMismatch {
@@ -156,7 +156,7 @@ struct HktInstanceAnyMismatch {
     }
 
     template <typename _A0, typename _A1>
-    static Option<_A1> bind(Option<_A0> m, std::function<Option<_A1>(_A0)> f) {
+    static Option<_A1> bind(Option<_A0> m, crane::fn<Option<_A1>(_A0)> f) {
       if (std::holds_alternative<typename Option<_A0>::Some>(m.v())) {
         const auto &[a0] = std::get<typename Option<_A0>::Some>(m.v());
         return f(a0);
@@ -167,9 +167,9 @@ struct HktInstanceAnyMismatch {
   };
 
   static_assert(Mon<optMon>);
-  static inline const Option<Nat> test =
-      bind<optMon, Nat, Nat>(ret<optMon, Nat>(Nat::s(Nat::o())),
-                             [](Nat n) { return ret<optMon, Nat>(Nat::s(n)); });
+  static inline const Option<Nat> test = bind<optMon, Nat, Nat>(
+      ret<optMon, Nat>(Nat::s(Nat::o())),
+      [](const Nat &n) { return ret<optMon, Nat>(Nat::s(n)); });
 };
 
 #endif // INCLUDED_HKT_INSTANCE_ANY_MISMATCH

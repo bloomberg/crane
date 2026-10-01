@@ -1,6 +1,7 @@
 #ifndef INCLUDED_MUTUAL_INDEXED
 #define INCLUDED_MUTUAL_INDEXED
 
+#include "obj.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
@@ -45,10 +46,10 @@ struct MutualIndexed {
 
     // MANIPULATORS
     ~EvenTree() {
-      crane::small_vector<std::any> _stack = {};
+      crane::small_vector<crane::obj> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<ENode>(&_v)) {
-          if (_alt->a2) {
+          if (_alt->a2 && _alt->a2.use_count() == 1) {
             _stack.push_back(std::move(_alt->a2));
           }
         }
@@ -57,17 +58,17 @@ struct MutualIndexed {
       while (!_stack.empty()) {
         auto _cur = std::move(_stack.back());
         _stack.pop_back();
-        if (auto *_sp = std::any_cast<std::shared_ptr<EvenTree>>(&_cur)) {
+        if (auto *_sp = crane::any_cast<std::shared_ptr<EvenTree>>(&_cur)) {
           if (*_sp && (*_sp).use_count() == 1) {
             std::atomic_thread_fence(std::memory_order_acquire);
             _drain_self((*_sp)->v_mut());
           }
         } else {
-          if (auto *_sp = std::any_cast<std::shared_ptr<OddTree>>(&_cur)) {
+          if (auto *_sp = crane::any_cast<std::shared_ptr<OddTree>>(&_cur)) {
             if (*_sp && (*_sp).use_count() == 1) {
               auto &_pv = (*_sp)->v_mut();
               if (auto *_alt = std::get_if<typename OddTree::ONode>(&_pv)) {
-                if (_alt->a2) {
+                if (_alt->a2 && _alt->a2.use_count() == 1) {
                   _stack.push_back(std::move(_alt->a2));
                 }
               }
@@ -114,10 +115,10 @@ struct MutualIndexed {
 
     // MANIPULATORS
     ~OddTree() {
-      crane::small_vector<std::any> _stack = {};
+      crane::small_vector<crane::obj> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<ONode>(&_v)) {
-          if (_alt->a2) {
+          if (_alt->a2 && _alt->a2.use_count() == 1) {
             _stack.push_back(std::move(_alt->a2));
           }
         }
@@ -126,17 +127,17 @@ struct MutualIndexed {
       while (!_stack.empty()) {
         auto _cur = std::move(_stack.back());
         _stack.pop_back();
-        if (auto *_sp = std::any_cast<std::shared_ptr<OddTree>>(&_cur)) {
+        if (auto *_sp = crane::any_cast<std::shared_ptr<OddTree>>(&_cur)) {
           if (*_sp && (*_sp).use_count() == 1) {
             std::atomic_thread_fence(std::memory_order_acquire);
             _drain_self((*_sp)->v_mut());
           }
         } else {
-          if (auto *_sp = std::any_cast<std::shared_ptr<EvenTree>>(&_cur)) {
+          if (auto *_sp = crane::any_cast<std::shared_ptr<EvenTree>>(&_cur)) {
             if (*_sp && (*_sp).use_count() == 1) {
               auto &_pv = (*_sp)->v_mut();
               if (auto *_alt = std::get_if<typename EvenTree::ENode>(&_pv)) {
-                if (_alt->a2) {
+                if (_alt->a2 && _alt->a2.use_count() == 1) {
                   _stack.push_back(std::move(_alt->a2));
                 }
               }

@@ -17,7 +17,7 @@ ReuseAlias::inc_head(const ReuseAlias::mylist<uint64_t> &l) {
 /// If reuse fires on the first call (because evaluation order is
 /// unspecified), the second use of l sees the already-mutated list.
 std::pair<ReuseAlias::mylist<uint64_t>, ReuseAlias::mylist<uint64_t>>
-ReuseAlias::double_use(ReuseAlias::mylist<uint64_t> l) {
+ReuseAlias::double_use(const ReuseAlias::mylist<uint64_t> &l) {
   return std::make_pair(inc_head(l), l);
 }
 
@@ -30,28 +30,28 @@ ReuseAlias::double_call(const ReuseAlias::mylist<uint64_t> &l) {
 /// Alias through let-binding, then use both the alias and the original
 /// in a match.
 std::pair<ReuseAlias::mylist<uint64_t>, uint64_t>
-ReuseAlias::alias_and_match(ReuseAlias::mylist<uint64_t> l) {
+ReuseAlias::alias_and_match(const ReuseAlias::mylist<uint64_t> &l) {
   if (std::holds_alternative<typename ReuseAlias::mylist<uint64_t>::Mynil>(
-          l.v_mut())) {
-    return std::make_pair(std::move(l), UINT64_C(0));
+          l.v())) {
+    return std::make_pair(l, UINT64_C(0));
   } else {
-    auto &[a0, a1] =
-        std::get<typename ReuseAlias::mylist<uint64_t>::Mycons>(l.v_mut());
-    return std::make_pair(std::move(l), a0);
+    const auto &[a0, a1] =
+        std::get<typename ReuseAlias::mylist<uint64_t>::Mycons>(l.v());
+    return std::make_pair(l, a0);
   }
 }
 
 /// Build a result that refers to the scrutinee AND a pattern variable
 /// from the same match.
 std::pair<ReuseAlias::mylist<uint64_t>, ReuseAlias::mylist<uint64_t>>
-ReuseAlias::scrutinee_in_branch(ReuseAlias::mylist<uint64_t> l) {
+ReuseAlias::scrutinee_in_branch(const ReuseAlias::mylist<uint64_t> &l) {
   if (std::holds_alternative<typename ReuseAlias::mylist<uint64_t>::Mynil>(
-          l.v_mut())) {
+          l.v())) {
     return std::make_pair(mylist<uint64_t>::mynil(), mylist<uint64_t>::mynil());
   } else {
-    auto &[a0, a1] =
-        std::get<typename ReuseAlias::mylist<uint64_t>::Mycons>(l.v_mut());
-    return std::make_pair(std::move(l), *a1);
+    const auto &[a0, a1] =
+        std::get<typename ReuseAlias::mylist<uint64_t>::Mycons>(l.v());
+    return std::make_pair(l, *a1);
   }
 }
 

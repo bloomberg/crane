@@ -2,11 +2,11 @@
 #define INCLUDED_ANON_LIFT_NAME_COLLISION
 
 #include "crane_fn.h"
-#include "small_vector.h"
+#include "obj.h"
 #include <any>
 #include <atomic>
 #include <memory>
-#include <type_traits>
+#include <stdexcept>
 #include <utility>
 #include <variant>
 
@@ -35,21 +35,26 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U> List(const List<_U> &_other) {
-    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->v_ = Nil{};
-    } else {
-      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>) {
-                          return crane_any_cast<A>(a);
-                        } else {
-                          return A(a);
-                        }
-                      }(),
-                      (l ? std::make_shared<List<A>>(*l) : nullptr)};
-    }
-  }
+  template <typename _U>
+  List(const List<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+            return Nil{};
+          } else {
+            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const _U &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                   : nullptr)};
+          }
+        }()) {}
 
   static List<A> nil() { return List<A>(Nil{}); }
 
@@ -59,22 +64,18 @@ public:
 
   // MANIPULATORS
   ~List() {
-    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
-        if (_alt->l) {
-          _stack.push_back(std::move(_alt->l));
+        if (_alt->l && _alt->l.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->l);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<List<A>> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -96,32 +97,34 @@ public:
 /// ("use of undeclared identifier '_anon_F'").  A single lifted helper in a
 /// single module works, so the defect is the name, not the lifting.
 struct Helper {
-  template <typename T1> static T1 _count_F(const uint64_t n) {
-    if (n <= 0) {
-      return UINT64_C(0);
-    } else {
-      uint64_t n0 = n - 1;
-      return (_count_F<T1>(n0) + 1);
-    }
-  }
-
   static inline const uint64_t count = []() {
-    return _count_F<uint64_t>(UINT64_C(3));
+    return []() {
+      auto f_impl = [](auto &_self_f, uint64_t n) -> uint64_t {
+        if (n <= 0) {
+          return UINT64_C(0);
+        } else {
+          uint64_t n0 = n - 1;
+          return (_self_f(_self_f, n0) + 1);
+        }
+      };
+      auto f = [&](uint64_t n) -> uint64_t { return f_impl(f_impl, n); };
+      return f(UINT64_C(3));
+    }();
   }();
 };
 
 struct AnonLiftNameCollision {
-  template <typename T1, typename T2> static T2 _run_F(const List<T1> l) {
+  template <typename T1> static uint64_t _run_F(const List<T1> l) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return UINT64_C(0);
     } else {
       const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
-      return (_run_F<T1, T2>(*a1) + 1);
+      return (_run_F<T1>(*a1) + 1);
     }
   }
 
   static inline const uint64_t run = (Helper::count + []() {
-    return _run_F<uint64_t, uint64_t>(
+    return _run_F<uint64_t>(
         List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil()));
   }());
 };

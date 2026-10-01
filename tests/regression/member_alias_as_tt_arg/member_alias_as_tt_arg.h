@@ -1,11 +1,12 @@
 #ifndef INCLUDED_MEMBER_ALIAS_AS_TT_ARG
 #define INCLUDED_MEMBER_ALIAS_AS_TT_ARG
 
-#include "small_vector.h"
+#include "crane_fn.h"
+#include "fn.h"
+#include "obj.h"
 #include <any>
 #include <atomic>
 #include <concepts>
-#include <functional>
 #include <memory>
 #include <optional>
 #include <utility>
@@ -13,6 +14,22 @@
 
 struct Monad_option;
 struct Nat;
+template <typename I>
+concept Monad = requires {
+  typename I::template m<crane::obj>;
+  {
+    I::ret(std::declval<crane::obj>())
+  } -> std::convertible_to<typename I::template m<crane::obj>>;
+  {
+    I::bind(std::declval<typename I::template m<crane::obj>>(),
+            std::declval<
+                crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
+  } -> std::convertible_to<typename I::template m<crane::obj>>;
+};
+
+struct MemberAliasAsTtArg {
+  static std::optional<std::pair<Nat, Nat>> use(const Nat &o);
+};
 
 struct Nat {
   // TYPES
@@ -42,22 +59,18 @@ public:
 
   // MANIPULATORS
   ~Nat() {
-    crane::small_vector<std::shared_ptr<Nat>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<Nat> {
       if (auto *_alt = std::get_if<S>(&_v)) {
-        if (_alt->a0) {
-          _stack.push_back(std::move(_alt->a0));
+        if (_alt->a0 && _alt->a0.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a0);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<Nat> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -72,50 +85,34 @@ public:
   const variant_t &v() const { return v_; }
 };
 
-template <typename I>
-concept Monad = requires {
-  typename I::template m<std::any>;
-  {
-    I::ret(std::declval<std::any>())
-  } -> std::convertible_to<typename I::template m<std::any>>;
-  {
-    I::bind(std::declval<typename I::template m<std::any>>(),
-            std::declval<
-                std::function<typename I::template m<std::any>(std::any)>>())
-  } -> std::convertible_to<typename I::template m<std::any>>;
-};
-
 struct Monad_option {
   template <typename _A0> using m = std::optional<_A0>;
 
-  static std::optional<std::any> ret(std::any x) {
-    return std::make_optional<std::any>(x);
+  static std::optional<crane::obj> ret(crane::obj x) {
+    return std::make_optional<crane::obj>(crane::obj(x));
   }
 
-  static std::optional<std::any>
-  bind(std::optional<std::any> c1,
-       std::function<std::optional<std::any>(std::any)> c2) {
+  static std::optional<crane::obj>
+  bind(std::optional<crane::obj> c1,
+       crane::fn<std::optional<crane::obj>(crane::obj)> c2) {
     if (c1.has_value()) {
-      const std::any &v = *c1;
+      const crane::obj &v = *c1;
       return c2(v);
     } else {
-      return std::optional<std::any>();
+      return std::optional<crane::obj>();
     }
   }
 };
 
 static_assert(Monad<Monad_option>);
 template <typename s, template <typename> class m, typename a>
-using stateT = std::function<m<std::pair<a, s>>(s)>;
+using stateT = crane::fn<m<std::pair<a, s>>(s)>;
 
 template <Monad _tcI0, typename T2>
 typename _tcI0::template m<std::pair<Nat, T2>>
-run(stateT<T2, _tcI0::template m, Nat> step, const T2 &s) {
-  return step(s);
+run(std::type_identity_t<stateT<T2, _tcI0::template m, Nat>> step, T2 x0_) {
+  return crane_container_cast<typename _tcI0::template m<std::pair<Nat, T2>>>(
+      step(std::move(x0_)));
 }
-
-struct MemberAliasAsTtArg {
-  static std::optional<std::pair<Nat, Nat>> use(const Nat &o);
-};
 
 #endif // INCLUDED_MEMBER_ALIAS_AS_TT_ARG

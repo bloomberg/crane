@@ -7,7 +7,7 @@ List<Bool0> PolyRank2RecordField::test1(const List<Nat> &l) {
 List<Nat> PolyRank2RecordField::test2(const List<Bool0> &l) {
   return run<Bool0, Nat>(
       m,
-      [](Bool0 b) {
+      [](Bool0 b) -> Nat {
         switch (b) {
         case Bool0::TRUE_: {
           return Nat::s(Nat::o());

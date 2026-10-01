@@ -17,10 +17,9 @@ uint64_t CPS::list_sum(const List<uint64_t> &l) {
 }
 
 uint64_t CPS::count_evens(const List<uint64_t> &l) {
-  return partition_cps(Nat::even, l,
-                       [](const List<uint64_t> &yes, const List<uint64_t> &) {
-                         return yes.length();
-                       });
+  return partition_cps(
+      Nat::even, l,
+      [](const List<uint64_t> &yes, List<uint64_t>) { return yes.length(); });
 }
 
 bool Nat::even(uint64_t n) {

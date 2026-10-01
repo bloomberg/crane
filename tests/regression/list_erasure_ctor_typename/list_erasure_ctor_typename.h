@@ -2,13 +2,13 @@
 #define INCLUDED_LIST_ERASURE_CTOR_TYPENAME
 
 #include "crane_fn.h"
-#include "small_vector.h"
+#include "fn.h"
+#include "obj.h"
 #include <any>
 #include <atomic>
-#include <functional>
 #include <memory>
 #include <optional>
-#include <type_traits>
+#include <stdexcept>
 #include <utility>
 #include <variant>
 
@@ -37,25 +37,29 @@ struct List {
     explicit list(Cons _v) : v_(std::move(_v)) {}
 
     template <typename _U>
-    list(const typename List::template list<_U> &_other) {
-      if (std::holds_alternative<typename List::template list<_U>::Nil>(
-              _other.v())) {
-        this->v_ = Nil{};
-      } else {
-        const auto &[a, l] =
-            std::get<typename List::template list<_U>::Cons>(_other.v());
-        this->v_ =
-            Cons{[&]() -> A {
-                   if constexpr (std::is_same_v<_U, std::any>) {
-                     return crane_any_cast<A>(a);
-                   } else {
-                     return A(a);
-                   }
-                 }(),
-                 (l ? std::make_shared<typename List::template list<A>>(*l)
-                    : nullptr)};
-      }
-    }
+    list(const typename List::template list<_U> &_other)
+        : v_([&]() -> variant_t {
+            if (std::holds_alternative<typename List::template list<_U>::Nil>(
+                    _other.v())) {
+              return Nil{};
+            } else {
+              const auto &[a, l] =
+                  std::get<typename List::template list<_U>::Cons>(_other.v());
+              return Cons{
+                  [&]() -> A {
+                    if constexpr (crane_convertible<A, const _U &>) {
+                      return crane_convert<A>(a);
+                    } else {
+                      throw std::logic_error(
+                          "unreachable: inactive constructor field at this "
+                          "instantiation");
+                    }
+                  }(),
+                  (l ? std::make_shared<typename List::template list<A>>(
+                           crane_convert<typename List::template list<A>>(*l))
+                     : nullptr)};
+            }
+          }()) {}
 
     static typename List::template list<A> nil() {
       return typename List::template list<A>(Nil{});
@@ -69,23 +73,19 @@ struct List {
 
     // MANIPULATORS
     ~list() {
-      crane::small_vector<std::shared_ptr<typename List::template list<A>>>
-          _stack = {};
-      auto _drain = [&](variant_t &_v) {
+      auto _next = [&](variant_t &_v)
+          -> std::shared_ptr<typename List::template list<A>> {
         if (auto *_alt = std::get_if<Cons>(&_v)) {
-          if (_alt->l) {
-            _stack.push_back(std::move(_alt->l));
+          if (_alt->l && _alt->l.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
+            return std::move(_alt->l);
           }
         }
+        return nullptr;
       };
-      _drain(v_mut());
-      while (!_stack.empty()) {
-        auto _cur = std::move(_stack.back());
-        _stack.pop_back();
-        if (_cur.use_count() == 1) {
-          std::atomic_thread_fence(std::memory_order_acquire);
-          _drain(_cur->v_mut());
-        }
+      std::shared_ptr<typename List::template list<A>> _cur = _next(v_mut());
+      while (_cur) {
+        _cur = _next(_cur->v_mut());
       }
     }
 
@@ -110,11 +110,11 @@ struct List {
 /// its List wrapper struct, those names are dependent and must be spelled
 /// typename List::template list<_U>::Nil.
 struct ListErasureCtorTypename {
-  static std::optional<std::function<uint64_t(uint64_t)>> pick(uint64_t n);
+  static std::optional<crane::fn<uint64_t(uint64_t)>> pick(uint64_t n);
   static inline const uint64_t go = []() -> uint64_t {
     auto _cs = pick(UINT64_C(1));
     if (_cs.has_value()) {
-      const std::function<uint64_t(uint64_t)> &f = *_cs;
+      const crane::fn<uint64_t(uint64_t)> &f = *_cs;
       return f(UINT64_C(21));
     } else {
       return UINT64_C(0);

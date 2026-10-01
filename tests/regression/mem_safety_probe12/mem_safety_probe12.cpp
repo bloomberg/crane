@@ -5,9 +5,7 @@
 /// This should work because f has type std::function<...>
 /// by the time it's passed to Wrap.
 MemSafetyProbe12::wrap MemSafetyProbe12::pack_fn_let(uint64_t base) {
-  std::function<uint64_t(uint64_t)> f = [=](uint64_t x) mutable {
-    return (x + base);
-  };
+  crane::fn<uint64_t(uint64_t)> f = [=](uint64_t x) { return (x + base); };
   return wrap::wrap0(std::move(f));
 }
 
@@ -16,6 +14,6 @@ MemSafetyProbe12::wrap MemSafetyProbe12::pack_fn_let(uint64_t base) {
 /// BUG: The raw lambda type is stored in std::any,
 /// but unwrap tries any_cast<std::function<...>>.
 MemSafetyProbe12::wrap MemSafetyProbe12::pack_fn_direct(uint64_t base) {
-  return wrap::wrap0(std::function<uint64_t(uint64_t)>(
-      [=](uint64_t x) mutable { return (x + base); }));
+  return wrap::wrap0(
+      crane::fn<uint64_t(uint64_t)>([=](uint64_t x) { return (x + base); }));
 }

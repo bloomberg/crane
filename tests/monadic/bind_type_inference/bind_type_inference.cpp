@@ -12,7 +12,7 @@ int64_t BindTypeInference::test2() {
 int64_t BindTypeInference::test3() {
   return nested<std::monostate, bool, int64_t>(
       std::monostate{}, [](std::monostate) { return true; },
-      [](bool b) {
+      [](bool b) -> int64_t {
         if (b) {
           return INT64_C(1);
         } else {

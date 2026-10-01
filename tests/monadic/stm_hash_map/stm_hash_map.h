@@ -2,16 +2,18 @@
 #define INCLUDED_STM_HASH_MAP
 
 #include "crane_fn.h"
-#include "small_vector.h"
+#include "fn.h"
+#include "obj.h"
 #include <any>
 #include <atomic>
+#include <crane_itree.h>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
-#include <functional>
 #include <iostream>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <stm_adapter.h>
 #include <system_error>
 #include <type_traits>
@@ -44,21 +46,26 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U> List(const List<_U> &_other) {
-    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->v_ = Nil{};
-    } else {
-      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>) {
-                          return crane_any_cast<A>(a);
-                        } else {
-                          return A(a);
-                        }
-                      }(),
-                      (l ? std::make_shared<List<A>>(*l) : nullptr)};
-    }
-  }
+  template <typename _U>
+  List(const List<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+            return Nil{};
+          } else {
+            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const _U &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                   : nullptr)};
+          }
+        }()) {}
 
   static List<A> nil() { return List<A>(Nil{}); }
 
@@ -68,22 +75,18 @@ public:
 
   // MANIPULATORS
   ~List() {
-    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
-        if (_alt->l) {
-          _stack.push_back(std::move(_alt->l));
+        if (_alt->l && _alt->l.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->l);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<List<A>> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -99,8 +102,8 @@ public:
 };
 
 template <typename K, typename V> struct CHT {
-  std::function<bool(K, K)> cht_eqb;
-  std::function<int64_t(K)> cht_hash;
+  crane::fn<bool(K, K)> cht_eqb;
+  crane::fn<int64_t(K)> cht_hash;
   std::vector<stm::TVar<List<std::pair<K, V>>>> cht_buckets;
   int64_t cht_nbuckets;
   stm::TVar<List<std::pair<K, V>>> cht_fallback;
@@ -171,10 +174,9 @@ template <typename K, typename V> struct CHT {
   }
 
   std::monostate put(const K &k, const V &v) const {
-    CHT<K, V> _self_val = *this;
     return stm::atomically([&] {
-      return [=]() mutable {
-        _self_val.stm_put(k, v);
+      return [&]() {
+        this->stm_put(k, v);
         return std::monostate{};
       }();
     });
@@ -219,7 +221,7 @@ template <typename K, typename V> struct CHT {
   template <typename T1, typename T2, typename F0>
     requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static List<std::pair<T1, T2>>
-  assoc_insert_or_replace(F0 &&eqb, T1 k, T2 v,
+  assoc_insert_or_replace(F0 &&eqb, const T1 &k, const T2 &v,
                           const List<std::pair<T1, T2>> &xs) {
     if (std::holds_alternative<typename List<std::pair<T1, T2>>::Nil>(xs.v())) {
       return List<std::pair<T1, T2>>::cons(std::make_pair(k, v),
@@ -242,14 +244,13 @@ template <typename K, typename V> struct CHT {
   template <typename T1, typename T2, typename F0>
     requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static std::pair<std::optional<T2>, List<std::pair<T1, T2>>>
-  assoc_remove(F0 &&eqb, const T1 &k, List<std::pair<T1, T2>> xs) {
-    if (std::holds_alternative<typename List<std::pair<T1, T2>>::Nil>(
-            xs.v_mut())) {
+  assoc_remove(F0 &&eqb, const T1 &k, const List<std::pair<T1, T2>> &xs) {
+    if (std::holds_alternative<typename List<std::pair<T1, T2>>::Nil>(xs.v())) {
       return std::make_pair(std::optional<T2>(), xs);
     } else {
-      auto &[a0, a1] =
-          std::get<typename List<std::pair<T1, T2>>::Cons>(xs.v_mut());
-      auto [k_, v_] = std::move(a0);
+      const auto &[a0, a1] =
+          std::get<typename List<std::pair<T1, T2>>::Cons>(xs.v());
+      const auto &[k_, v_] = a0;
       if (eqb(k, k_)) {
         return std::make_pair(std::make_optional<T2>(v_), *a1);
       } else {
@@ -285,10 +286,10 @@ template <typename K, typename V> struct CHT {
     return f(static_cast<unsigned int>(num));
   }
 
-  template <typename T1, typename T2, typename F0, typename F1>
-    requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &> &&
-             std::is_invocable_r_v<int64_t, F1 &, T1 &>
-  static CHT<T1, T2> new_hash(F0 &&eqb, F1 &&hash, int64_t requested) {
+  template <typename T1, typename T2>
+  static CHT<T1, T2> new_hash(std::type_identity_t<crane::fn<bool(T1, T1)>> eqb,
+                              std::type_identity_t<crane::fn<int64_t(T1)>> hash,
+                              int64_t requested) {
     int64_t n = std::max<int64_t>(requested, 1);
     std::vector<stm::TVar<List<std::pair<T1, T2>>>> bs =
         CHT<int, int>::template mk_buckets<T1, T2>(n);
@@ -298,10 +299,10 @@ template <typename K, typename V> struct CHT {
           [&] { return stm::newTVar(List<std::pair<T1, T2>>::nil()); });
       std::vector<stm::TVar<List<std::pair<T1, T2>>>> v = {};
       v.push_back(fb);
-      return CHT<T1, T2>{eqb, hash, v, 1, fb};
+      return CHT<T1, T2>{std::move(eqb), std::move(hash), v, 1, fb};
     } else {
       stm::TVar<List<std::pair<T1, T2>>> b = bs.at(0);
-      return CHT<T1, T2>{eqb, hash, bs, n, std::move(b)};
+      return CHT<T1, T2>{std::move(eqb), std::move(hash), bs, n, std::move(b)};
     }
   }
 };

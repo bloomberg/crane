@@ -1,8 +1,7 @@
 #ifndef INCLUDED_FIX_CAPTURE_FN_ARG
 #define INCLUDED_FIX_CAPTURE_FN_ARG
 
-#include <functional>
-#include <type_traits>
+#include "fn.h"
 #include <utility>
 
 struct FixCaptureFnArg {
@@ -15,11 +14,9 @@ struct FixCaptureFnArg {
   /// returns, f (the std::function object), base, and the local
   /// go are all destroyed. The returned closure dereferences a
   /// destroyed std::function when it calls f.
-  template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
-  static std::pair<uint64_t, std::function<uint64_t(uint64_t)>>
-  make_transform(F0 &&f, uint64_t base) {
-    auto go_impl = [=](auto &_self_go, uint64_t x) mutable -> uint64_t {
+  static std::pair<uint64_t, crane::fn<uint64_t(uint64_t)>>
+  make_transform(crane::fn<uint64_t(uint64_t)> f, uint64_t base) {
+    auto go_impl = [=](auto &_self_go, uint64_t x) -> uint64_t {
       if (x <= 0) {
         return f(base);
       } else {
@@ -27,9 +24,7 @@ struct FixCaptureFnArg {
         return (_self_go(_self_go, x_) + 1);
       }
     };
-    auto go = [=](uint64_t x) mutable -> uint64_t {
-      return go_impl(go_impl, x);
-    };
+    auto go = [=](uint64_t x) -> uint64_t { return go_impl(go_impl, x); };
     return std::make_pair(f(base), go);
   }
 

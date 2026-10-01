@@ -751,11 +751,11 @@ List<List<uint64_t>> LoopifyTrees::tree_levels_fuel(
   return std::move(*_head);
 }
 
-List<List<uint64_t>> LoopifyTrees::tree_levels(LoopifyTrees::tree<uint64_t> t) {
-  return tree_levels_fuel(
-      UINT64_C(100),
-      List<LoopifyTrees::tree<uint64_t>>::cons(
-          std::move(t), List<LoopifyTrees::tree<uint64_t>>::nil()));
+List<List<uint64_t>>
+LoopifyTrees::tree_levels(const LoopifyTrees::tree<uint64_t> &t) {
+  return tree_levels_fuel(UINT64_C(100),
+                          List<LoopifyTrees::tree<uint64_t>>::cons(
+                              t, List<LoopifyTrees::tree<uint64_t>>::nil()));
 }
 
 /// count_nodes t returns tuple (node_count, sum_of_values).

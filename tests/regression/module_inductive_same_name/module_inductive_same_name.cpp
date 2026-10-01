@@ -3,7 +3,8 @@
 /// A submodule containing an inductive of the same name.  A C++ member may
 /// not share its enclosing class's name, so the module is emitted as
 /// struct Color_Mod holding enum class Color.
-uint64_t ModuleInductiveSameName::Color_Mod::v(Color c) {
+uint64_t ModuleInductiveSameName::Color_Mod::v(
+    ModuleInductiveSameName::Color_Mod::Color c) {
   switch (c) {
   case Color::R: {
     return UINT64_C(1);

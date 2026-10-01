@@ -68,9 +68,9 @@ CraneMoveHunt::match_reuse(const CraneMoveHunt::state &s0) {
   }
 }
 
-void tick(CraneMoveHunt::state s) {
+void tick(const CraneMoveHunt::state &s) {
   {
-    toy_tick(std::move(s));
+    toy_tick(s);
     return;
   }
 }

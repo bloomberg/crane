@@ -2,10 +2,11 @@
 #define INCLUDED_NON_UNIFORM_LIST_NEST
 
 #include "crane_fn.h"
-#include "small_vector.h"
+#include "obj.h"
 #include <any>
 #include <atomic>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -35,21 +36,26 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U> List(const List<_U> &_other) {
-    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->v_ = Nil{};
-    } else {
-      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>) {
-                          return crane_any_cast<A>(a);
-                        } else {
-                          return A(a);
-                        }
-                      }(),
-                      (l ? std::make_shared<List<A>>(*l) : nullptr)};
-    }
-  }
+  template <typename _U>
+  List(const List<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+            return Nil{};
+          } else {
+            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const _U &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                   : nullptr)};
+          }
+        }()) {}
 
   static List<A> nil() { return List<A>(Nil{}); }
 
@@ -59,22 +65,18 @@ public:
 
   // MANIPULATORS
   ~List() {
-    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
-        if (_alt->l) {
-          _stack.push_back(std::move(_alt->l));
+        if (_alt->l && _alt->l.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->l);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<List<A>> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -93,7 +95,7 @@ struct NonUniformListNest {
   struct n2 {
     // TYPES
     struct Z2 {
-      std::any a0;
+      crane::obj a0;
     };
 
     struct S2 {
@@ -114,7 +116,7 @@ struct NonUniformListNest {
 
     explicit n2(S2 _v) : v_(std::move(_v)) {}
 
-    static n2 z2(std::any a0) { return n2(Z2{std::move(a0)}); }
+    static n2 z2(crane::obj a0) { return n2(Z2{std::move(a0)}); }
 
     static n2 s2(n2 a0) { return n2(S2{std::make_shared<n2>(std::move(a0))}); }
 
@@ -125,39 +127,40 @@ struct NonUniformListNest {
     const variant_t &v() const { return v_; }
   };
 
-  template <typename T1, typename T2, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, std::any &> &&
+  template <typename T1, typename T2 = void, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, crane::obj &> &&
              std::is_invocable_r_v<T1, F1 &, n2 &, T1 &>
   static T1 n2_rect(F0 &&f, F1 &&f0, const n2 &n) {
     if (std::holds_alternative<typename n2::Z2>(n.v())) {
       const auto &[a0] = std::get<typename n2::Z2>(n.v());
-      return std::any_cast<T1>(f(a0));
+      return crane_any_cast<T1>(f(a0));
     } else {
       const auto &[a0] = std::get<typename n2::S2>(n.v());
-      return std::any_cast<T1>(
+      return crane_any_cast<T1>(
           f0(*a0, n2_rect(crane_erase_fn<T1>(f), f0, *a0)));
     }
   }
 
-  template <typename T1, typename T2, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, std::any &> &&
+  template <typename T1, typename T2 = void, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, crane::obj &> &&
              std::is_invocable_r_v<T1, F1 &, n2 &, T1 &>
   static T1 n2_rec(F0 &&f, F1 &&f0, const n2 &n) {
     if (std::holds_alternative<typename n2::Z2>(n.v())) {
       const auto &[a0] = std::get<typename n2::Z2>(n.v());
-      return std::any_cast<T1>(f(a0));
+      return crane_any_cast<T1>(f(a0));
     } else {
       const auto &[a0] = std::get<typename n2::S2>(n.v());
-      return std::any_cast<T1>(f0(*a0, n2_rec(crane_erase_fn<T1>(f), f0, *a0)));
+      return crane_any_cast<T1>(
+          f0(*a0, n2_rec(crane_erase_fn<T1>(f), f0, *a0)));
     }
   }
 
-  template <typename T1> static uint64_t depth(const n2 &x) {
+  template <typename T1 = void> static uint64_t depth(const n2 &x) {
     if (std::holds_alternative<typename n2::Z2>(x.v())) {
       return UINT64_C(0);
     } else {
       const auto &[a0] = std::get<typename n2::S2>(x.v());
-      return (depth<T1>(*a0) + 1);
+      return (depth<crane::obj>(*a0) + 1);
     }
   }
 

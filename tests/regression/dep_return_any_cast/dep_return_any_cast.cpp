@@ -4,19 +4,21 @@
 /// producer stores a List<uint64_t> but the consumer any_casts to
 /// List<std::any>, so the program compiles and then dies at run time with
 /// an uncaught std::bad_any_cast.
-std::any DepReturnAnyCast::dep(bool b) {
+crane::obj DepReturnAnyCast::dep(bool b) {
   if (b) {
     return UINT64_C(7);
   } else {
-    return List<std::any>::cons(
-        UINT64_C(1), List<std::any>::cons(
-                         UINT64_C(2), List<std::any>::cons(
-                                          UINT64_C(3), List<std::any>::nil())));
+    return List<crane::obj>::cons(
+        UINT64_C(1),
+        List<crane::obj>::cons(
+            UINT64_C(2),
+            List<crane::obj>::cons(UINT64_C(3), List<crane::obj>::nil())));
   }
 }
 
 uint64_t DepReturnAnyCast::run(uint64_t k) {
-  return ((std::any_cast<uint64_t>(dep(true)) +
-           List<uint64_t>(std::any_cast<List<std::any>>(dep(false))).length()) +
-          k);
+  return (
+      (crane::any_cast<uint64_t>(dep(true)) +
+       List<uint64_t>(crane::any_cast<List<crane::obj>>(dep(false))).length()) +
+      k);
 }

@@ -746,7 +746,7 @@ uint64_t LoopifyNumbers::staircase(uint64_t n) {
 uint64_t LoopifyNumbers::iterate_pred(uint64_t n) {
   return church(
       n,
-      [](uint64_t x) {
+      [](uint64_t x) -> uint64_t {
         if (x <= 0) {
           return UINT64_C(0);
         } else {

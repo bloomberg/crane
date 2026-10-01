@@ -6,10 +6,10 @@
 int main() {
   // This test reproduces a bug where a polymorphic record field
   //   apply : forall A : Type, A -> A
-  // is extracted as std::function<std::any(std::any)>, but the generated
+  // is extracted as std::function<crane::obj(crane::obj)>, but the generated
   // call site passes two arguments (an erased type placeholder + the value),
   // causing a compile error:
-  //   no matching function for call to std::function<std::any(std::any)>
+  //   no matching function for call to std::function<crane::obj(crane::obj)>
   //   (requires 1 argument, but 2 were provided)
   //
   // If this compiles and runs, the bug is fixed.

@@ -6,7 +6,7 @@ int main() {
   // Test 1: color_name — enum-based match with effects
   auto r1 = MatchMonadic::color_name(Color::RED);
 
-  // Test 3: nested_match — EXPOSES BUG: let-bound match result typed as std::any
+  // Test 3: nested_match — EXPOSES BUG: let-bound match result typed as crane::obj
   // auto r3 = MatchMonadic::nested_match(0, true);
 
   // Test 4: handle_option
@@ -18,13 +18,13 @@ int main() {
   auto node = Tree<uint64_t>::node(leaf, UINT64_C(10), Tree<uint64_t>::leaf());
   auto r5 = MatchMonadic::tree_sum(node);
 
-  // Test 6: match_then_bind — EXPOSES BUG: std::any for tag variable
+  // Test 6: match_then_bind — EXPOSES BUG: crane::obj for tag variable
   // auto r6 = MatchMonadic::match_then_bind(0);
 
   // Test 7: bind_then_match — works fine
   // (requires stdin) auto r7 = MatchMonadic::bind_then_match();
 
-  // Test 8: multi_match — EXPOSES BUG: std::any for x, y variables
+  // Test 8: multi_match — EXPOSES BUG: crane::obj for x, y variables
   // auto r8 = MatchMonadic::multi_match(true, false);
 
   return 0;

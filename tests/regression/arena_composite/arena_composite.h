@@ -1,6 +1,7 @@
 #ifndef INCLUDED_ARENA_COMPOSITE
 #define INCLUDED_ARENA_COMPOSITE
 
+#include <atomic>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -9,7 +10,6 @@
 #include "arena.h"
 #include "crane_fn.h"
 #include "small_vector.h"
-#include <atomic>
 
 enum class Bool0;
 struct Nat;
@@ -45,22 +45,18 @@ public:
 
   // MANIPULATORS
   ~Nat() {
-    crane::small_vector<std::shared_ptr<Nat>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<Nat> {
       if (auto *_alt = std::get_if<S>(&_v)) {
-        if (_alt->a0) {
-          _stack.push_back(std::move(_alt->a0));
+        if (_alt->a0 && _alt->a0.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a0);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<Nat> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -99,7 +95,7 @@ public:
 
 struct PeanoNat {
   static Bool0 leb(const Nat &n, const Nat &m);
-  static Bool0 ltb(Nat n, const Nat &m);
+  static Bool0 ltb(const Nat &n, const Nat &m);
   static Nat max(Nat n, Nat m);
 };
 
@@ -141,10 +137,10 @@ struct Comp {
       crane::small_vector<std::shared_ptr<expr>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Add>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a1) {
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
             _stack.push_back(std::move(_alt->a1));
           }
         }
@@ -297,7 +293,7 @@ struct Comp {
       /// _Combine_Add: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Add {
-        std::decay_t<T1> _result;
+        T1 _result;
         expr a1;
         expr a0;
       };
@@ -357,7 +353,7 @@ struct Comp {
       /// _Combine_Add: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Add {
-        std::decay_t<T1> _result;
+        T1 _result;
         expr a1;
         expr a0;
       };
@@ -437,10 +433,10 @@ struct Comp {
       crane::small_vector<std::shared_ptr<avl>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a3) {
+          if (_alt->a3 && _alt->a3.use_count() == 1) {
             _stack.push_back(std::move(_alt->a3));
           }
         }
@@ -557,14 +553,12 @@ struct Comp {
       }
     }
 
-    avl insert(Nat k, expr v) const {
+    avl insert(const Nat &k, const expr &v) const {
       const avl *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
       struct _Enter {
         const avl *_self;
-        Nat k;
-        expr v;
       };
 
       /// _Resume_Node: saves [a3, a2, a1], resumes after recursive call with
@@ -586,7 +580,7 @@ struct Comp {
       using _Frame = std::variant<_Enter, _Resume_Node, _Resume_Node_1>;
       avl _result{};
       crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self, std::move(k), std::move(v)});
+      _stack.emplace_back(_Enter{_self});
       /// Loopified insert: _Enter -> _Resume_Node -> _Resume_Node_1.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -594,31 +588,27 @@ struct Comp {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const avl *_self = _f._self;
-          Nat k = std::move(_f.k);
-          expr v = std::move(_f.v);
           auto &&_sv = *_self;
           if (std::holds_alternative<typename avl::Leaf>(_sv.v())) {
-            _result = avl::leaf().mk(std::move(k), std::move(v), avl::leaf());
+            _result = avl::leaf().mk(k, v, avl::leaf());
           } else {
             const auto &[a0, a1, a2, a3, a4] =
                 std::get<typename avl::Node>(_sv.v());
             switch (PeanoNat::ltb(k, a1)) {
             case Bool0::TRUE_: {
               _stack.emplace_back(_Resume_Node{*a3, a2, a1});
-              _stack.emplace_back(
-                  _Enter{crane_raw(a0), std::move(k), std::move(v)});
+              _stack.emplace_back(_Enter{crane_raw(a0)});
               break;
             }
             case Bool0::FALSE_: {
               switch (PeanoNat::ltb(a1, k)) {
               case Bool0::TRUE_: {
                 _stack.emplace_back(_Resume_Node_1{a2, a1, *a0});
-                _stack.emplace_back(
-                    _Enter{crane_raw(a3), std::move(k), std::move(v)});
+                _stack.emplace_back(_Enter{crane_raw(a3)});
                 break;
               }
               case Bool0::FALSE_: {
-                _result = avl::node(*a0, std::move(k), std::move(v), *a3, a4);
+                _result = avl::node(*a0, k, v, *a3, a4);
                 break;
               }
               default:
@@ -687,9 +677,9 @@ struct Comp {
       }
     }
 
-    avl mk(Nat k, expr v, avl r) const {
+    avl mk(const Nat &k, const expr &v, const avl &r) const {
       return avl::node(
-          *this, std::move(k), std::move(v), r,
+          *this, k, v, r,
           Nat::s(Nat::o()).add(PeanoNat::max(this->height(), r.height())));
     }
 
@@ -728,7 +718,7 @@ struct Comp {
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
-        std::decay_t<T1> _result;
+        T1 _result;
         Nat a6;
         avl a5;
         expr a4;
@@ -798,7 +788,7 @@ struct Comp {
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
-        std::decay_t<T1> _result;
+        T1 _result;
         Nat a6;
         avl a5;
         expr a4;

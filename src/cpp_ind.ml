@@ -62,7 +62,14 @@ let ind_cpp_decls kn ind =
           pp (i + 1) (* Enums have no .cpp body *)
         else
           let (raw_pvars, _) = Table.ind_param_vars ind p in
-          let param_vars = List.map Common.tparam_name raw_pvars in
+          (* A promoted variable a payload mentions is a type this inductive does
+             not own: it belongs to whichever instance was in scope where the
+             inductive was declared, so it is a parameter here and an argument at
+             every use.  See {!Table.ind_promoted_params}. *)
+          let param_vars =
+            Table.ind_promoted_params kn
+            @ List.map Common.tparam_name raw_pvars
+          in
           ( empty_env (),
             gen_ind_cpp ~consarg_names:p.ip_consarg_names param_vars names.(i)
               cnames.(i) p.ip_types )
@@ -142,6 +149,30 @@ let impl_decls = function
         defs;
       List.map (fun (ds, env, _) -> (env, ds)) defs
 
+(** The struct a module's declarations are written inside of, when the module is
+    written as a struct at all.
+
+    An imported module's wrapper is recorded, because the name it is given is
+    not always its own.  A module declared in the unit being extracted is not:
+    it is emitted as a struct named after itself, and nothing records that,
+    because nothing has to -- the visibility stack is still standing where its
+    members are spelled.  Both kinds are emitted after every datatype, so a
+    datatype's member naming either one is naming something still to come. *)
+let module_struct_name (mp : ModPath.t) : string option =
+  match Hashtbl.find_opt wrapper_module_table mp with
+  | Some name -> Some name
+  | None -> (
+    match mp with
+    | MPdot (_, lbl) -> Some (String.capitalize_ascii (Label.to_string lbl))
+    | MPfile _ | MPbound _ -> None )
+
+(** Member definitions a datatype struct at namespace scope gave up because
+    their bodies name a module's struct, which is emitted after every datatype
+    and cannot be moved in front of one it holds by value.  Written at the very
+    end of the header by the assembly in {!Cpp}, which is the only place later
+    than every module struct.  In emission order. *)
+let deferred_member_defs : Pp.t list ref = ref []
+
 (** Render inductive type header (.h file).
     TypeClasses become C++ concepts, Records become structs,
     other inductives become variant-like structs with constructors.
@@ -216,7 +247,14 @@ let ind_header_decls kn ind =
                  (before the colon) become template params; indices (after the
                  colon) are erased. *)
               let (raw_pvars, _) = Table.ind_param_vars ind p in
-              let param_vars = List.map Common.tparam_name raw_pvars in
+              (* A promoted variable a payload mentions is a type this inductive does
+                 not own: it belongs to whichever instance was in scope where the
+                 inductive was declared, so it is a parameter here and an argument at
+                 every use.  See {!Table.ind_promoted_params}. *)
+              let param_vars =
+                Table.ind_promoted_params kn
+                @ List.map Common.tparam_name raw_pvars
+              in
               (* The forward declaration carries the same name and the same
                  template parameters as the full definition below; both are
                  built from [param_vars] and printed by the same node. *)
@@ -459,7 +497,14 @@ let ind_header_decls kn ind =
              covers all args (params + indices). Count Keep entries in the first
              nparams positions to get param type var count. *)
           let (raw_pvars, _) = Table.ind_param_vars ind p in
-          let param_vars = List.map Common.tparam_name raw_pvars in
+          (* A promoted variable a payload mentions is a type this inductive does
+             not own: it belongs to whichever instance was in scope where the
+             inductive was declared, so it is a parameter here and an argument at
+             every use.  See {!Table.ind_promoted_params}. *)
+          let param_vars =
+            Table.ind_promoted_params kn
+            @ List.map Common.tparam_name raw_pvars
+          in
           (* Register methods that return std::any (for indexed inductives). A
              method returns std::any if its ML return type becomes an unnamed
              Tvar (indicating type erasure) after C++ conversion. *)
@@ -507,6 +552,7 @@ let ind_header_decls kn ind =
               p.ip_types
               (List.rev methods)
               ind.ind_kind
+            |> Gen_decls.deapply_plain_struct_tvars
           in
           (* Check if this inductive is being promoted into its module struct.
              When promoted, render fields flat (no wrapping struct) since the
@@ -553,14 +599,61 @@ let ind_header_decls kn ind =
        them, so the members that cross the cycle are written after the whole
        group. *)
     let group =
-      if is_mutual && not (!render_ctx).rc_in_struct then
-        let envs = List.map fst group in
-        let decls = Member_hoist.split_group (List.map snd group) in
-        List.map
-          (fun d ->
-            ((match envs with e :: _ -> e | [] -> empty_env ()), d) )
-          decls
-      else group
+      if (!render_ctx).rc_in_struct then
+        group
+      else
+        let group = if is_mutual then Member_hoist.split_group group else group in
+        (* The other cycle a struct at namespace scope can be in, and the one
+           its own layout says nothing about.  A function promoted to a method
+           here may have come from a module, and its body may still call that
+           module's other functions -- but a module's struct is emitted after
+           every datatype, and cannot be moved in front of one it holds by
+           value.  Only the body: out-lining leaves the signature where it
+           was.
+
+           Not the datatype's own home module, though.  Its wrapper is where
+           the datatype itself was hoisted out of, so a member naming a
+           sibling there is naming something already written -- and moving
+           such a member out costs more than it buys, because the definition
+           then has to repeat a return type that named the struct's own
+           nested types in class scope. *)
+        let home = MutInd.modpath kn in
+        let own_nspace_names =
+          Array.to_list
+            (Array.map
+               (fun r -> Some (String.capitalize_ascii (str_global Type r)))
+               names )
+        in
+        let group, defs =
+          Member_hoist.split_named ~body_only:true
+            ~names:(fun r ->
+              let mp = modpath_of_r r in
+              (not (ModPath.equal mp home))
+              && module_struct_name mp <> None
+              (* A module path in the table says where the name was written in
+                 Rocq, not which struct it ends up in: a function promoted onto
+                 a datatype is emitted with that datatype, among the structs
+                 this one is already sitting between.  Reaching for the modpath
+                 to answer "which struct holds this" is the same mistake the
+                 collision wrappers made, where registration and rendering
+                 disagreed about where a declaration belonged; it is worth
+                 distrusting the modpath here for the same reason. *)
+              && is_registered_method r = None
+              (* And not the struct this datatype is written inside of.  At
+                 namespace scope the inductive is wrapped in a struct named
+                 after itself, and a module of that same name is merged into
+                 it -- so the callee is a sibling already above us, not a
+                 struct still to come. *)
+              && not (List.mem (module_struct_name mp) own_nspace_names) )
+            group
+        in
+        (* Rendered here rather than carried to the assembly as declarations:
+           the name environment a member definition is spelled in is this one,
+           and by the end of the header the visibility stack has been unwound
+           past it. *)
+        if defs <> [] then
+          deferred_member_defs := !deferred_member_defs @ [pp_decls defs];
+        group
     in
     forward_decls @ group
 
@@ -573,7 +666,10 @@ let ind_header_decls kn ind =
     namespace scope; an instance declared inside a module is lifted out of the
     module's struct rather than emitted as a member of it. *)
 let instance_decls r a t =
-  let ds_opt, class_ref_opt, type_args = Gen_decls.gen_instance_struct r a t in
+  let ds_opt, class_ref_opt, concept_args =
+    Gen_decls.gen_instance_struct r a t
+  in
+  let ds_opt = Option.map Gen_decls.deapply_plain_struct_tvars ds_opt in
   let struct_decl =
     match ds_opt with
     | Some ds -> [(empty_env (), ds)]
@@ -588,12 +684,8 @@ let instance_decls r a t =
   let static_assert_decl =
     match class_ref_opt with
     | Some class_ref when not is_template ->
-      let tys =
-        List.map
-          (fun ty -> convert_ml_type_to_cpp_type (empty_env ()) [] ty)
-          type_args
-      in
-      [(empty_env (), Dstatic_assert (CPPconcept_app (class_ref, r, tys), None))]
+      [ ( empty_env (),
+          Dstatic_assert (CPPconcept_app (class_ref, r, concept_args), None) ) ]
     | _ -> []
   in
   struct_decl @ static_assert_decl
@@ -617,6 +709,12 @@ let header_decls d =
   | Dind (kn, i) -> ind_header_decls kn i
   | Dtype (_, _, Miniml.Tdummy Miniml.Ktype) ->
     [] (* Skip erased Type aliases *)
+  | Dtype (_, _, t) when Ml_type_util.ml_type_has_no_spelling t ->
+    (* An abbreviation for a type that is not written in C++ is not written
+       either: [Definition E2 := (FailE +' FailE)%type] would otherwise give a
+       [using E2 = ;].  What names the abbreviation was for -- an event family
+       -- is erased at every use, so nothing looks for it. *)
+    []
   | Dtype (r, l, t) -> [(empty_env (), gen_type_alias r l (Some t))]
   | Dterm (r, a, Tglob (ty, args, e)) when is_monad ty ->
     let defs =

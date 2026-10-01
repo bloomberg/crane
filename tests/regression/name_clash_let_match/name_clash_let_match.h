@@ -1,6 +1,7 @@
 #ifndef INCLUDED_NAME_CLASH_LET_MATCH
 #define INCLUDED_NAME_CLASH_LET_MATCH
 
+#include <atomic>
 #include <type_traits>
 #include <utility>
 #include <variant>

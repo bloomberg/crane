@@ -1,11 +1,16 @@
 #ifndef INCLUDED_UNIT_VOID_EDGE2
 #define INCLUDED_UNIT_VOID_EDGE2
 
+#include "crane_fn.h"
+#include "obj.h"
+#include <any>
+#include <crane_itree.h>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <system_error>
 #include <type_traits>
@@ -68,6 +73,25 @@ struct UnitVoidEdge2 {
 
     // ACCESSORS
     pair<A, B> clone() const { return {a0, a1}; }
+
+    template <typename _U0, typename _U1> operator pair<_U0, _U1>() const {
+      return {[&]() -> _U0 {
+                if constexpr (crane_convertible<_U0, const A &>) {
+                  return crane_convert<_U0>(a0);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }(),
+              [&]() -> _U1 {
+                if constexpr (crane_convertible<_U1, const B &>) {
+                  return crane_convert<_U1>(a1);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }()};
+    }
 
     // CREATORS
     static pair<A, B> pair0(A a0, B a1) {

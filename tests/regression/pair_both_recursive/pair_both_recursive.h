@@ -100,7 +100,7 @@ struct PairBothRecursive {
     }
   }
 
-  static t wrap(t acc);
+  static t wrap(const t &acc);
   static inline const t empty = t::leaf(UINT64_C(1));
   static uint64_t size(const t &x);
 };

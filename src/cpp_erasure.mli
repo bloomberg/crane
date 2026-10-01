@@ -108,6 +108,13 @@ val settled_child : parent:settled -> Minicpp.cpp_decl -> settled
     they are met, mirroring where C++ would have them in scope. *)
 val resolve_casts : settled -> settled
 
+(** [bind_free_tvars decl] spells [std::any] every type variable a body names
+    that nothing in scope declares -- the head's own parameters, the enclosing
+    struct's and namespace's, the signature's, and any lambda's along the way.
+    Only bodies are rewritten; a signature short of a parameter is the same
+    defect but wants the opposite repair. *)
+val bind_free_tvars : settled -> settled
+
 (** [materialise decl] replaces every {!Minicpp.Topaque} in [decl] with
     {!Minicpp.Tany}.
 

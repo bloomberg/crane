@@ -10,26 +10,7 @@ uint64_t NestedFixLoopify::outer(
 
   /// _Resume_Cons: saves [_s0], resumes after recursive call with _result.
   struct _Resume_Cons {
-    std::decay_t<decltype([](std::shared_ptr<NestedFixLoopify::lst> &a1,
-                             uint64_t &a0) {
-      auto inner_impl = [&](auto &_self_inner, const NestedFixLoopify::lst &m,
-                            uint64_t a) -> uint64_t {
-        if (std::holds_alternative<typename NestedFixLoopify::lst::Nil>(
-                m.v())) {
-          return a;
-        } else {
-          const auto &[a2, a3] =
-              std::get<typename NestedFixLoopify::lst::Cons>(m.v());
-          return _self_inner(_self_inner, *a3, (a + (a2 * a0)));
-        }
-      };
-      auto inner = [&](const NestedFixLoopify::lst &m, uint64_t a) -> uint64_t {
-        return inner_impl(inner_impl, m, a);
-      };
-      return inner(*a1, UINT64_C(0));
-    }(std::declval<std::shared_ptr<NestedFixLoopify::lst> &>(),
-                          std::declval<uint64_t &>()))>
-        _s0;
+    uint64_t _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;

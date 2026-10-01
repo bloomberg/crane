@@ -5,13 +5,13 @@
 /// instantiation's constructor structs.  Because list is not merged into
 /// its List wrapper struct, those names are dependent and must be spelled
 /// typename List::template list<_U>::Nil.
-std::optional<std::function<uint64_t(uint64_t)>>
+std::optional<crane::fn<uint64_t(uint64_t)>>
 ListErasureCtorTypename::pick(uint64_t n) {
-  return List::template nth_error<std::function<uint64_t(uint64_t)>>(
-      List::template list<std::function<uint64_t(uint64_t)>>::cons(
+  return List::template nth_error<crane::fn<uint64_t(uint64_t)>>(
+      List::template list<crane::fn<uint64_t(uint64_t)>>::cons(
           [](uint64_t k) { return (k + UINT64_C(1)); },
-          List::template list<std::function<uint64_t(uint64_t)>>::cons(
+          List::template list<crane::fn<uint64_t(uint64_t)>>::cons(
               [](uint64_t k) { return (k * UINT64_C(2)); },
-              List::template list<std::function<uint64_t(uint64_t)>>::nil())),
+              List::template list<crane::fn<uint64_t(uint64_t)>>::nil())),
       n);
 }

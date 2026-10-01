@@ -1,11 +1,11 @@
 #ifndef INCLUDED_HKT_CURRIED_PURE_ARITY
 #define INCLUDED_HKT_CURRIED_PURE_ARITY
 
-#include "small_vector.h"
+#include "fn.h"
+#include "obj.h"
 #include <any>
 #include <atomic>
 #include <concepts>
-#include <functional>
 #include <memory>
 #include <optional>
 #include <utility>
@@ -41,22 +41,18 @@ public:
 
   // MANIPULATORS
   ~Nat() {
-    crane::small_vector<std::shared_ptr<Nat>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<Nat> {
       if (auto *_alt = std::get_if<S>(&_v)) {
-        if (_alt->a0) {
-          _stack.push_back(std::move(_alt->a0));
+        if (_alt->a0 && _alt->a0.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a0);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<Nat> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -82,16 +78,16 @@ public:
 /// error: no matching function for call to 'ap'
 template <typename I>
 concept Apply = requires {
-  typename I::template F<std::any>;
+  typename I::template F<crane::obj>;
   {
-    I::template pure<std::any>(std::declval<std::any>())
-  } -> std::convertible_to<typename I::template F<std::any>>;
+    I::template pure<crane::obj>(std::declval<crane::obj>())
+  } -> std::convertible_to<typename I::template F<crane::obj>>;
   {
-    I::template ap<std::any, std::any>(
+    I::template ap<crane::obj, crane::obj>(
         std::declval<
-            typename I::template F<std::function<std::any(std::any)>>>(),
-        std::declval<typename I::template F<std::any>>())
-  } -> std::convertible_to<typename I::template F<std::any>>;
+            typename I::template F<crane::fn<crane::obj(crane::obj)>>>(),
+        std::declval<typename I::template F<crane::obj>>())
+  } -> std::convertible_to<typename I::template F<crane::obj>>;
 };
 
 struct HktCurriedPureArity {
@@ -102,7 +98,7 @@ struct HktCurriedPureArity {
 
   template <Apply _tcI0, typename T2, typename T3>
   static typename _tcI0::template F<T3>
-  ap(typename _tcI0::template F<std::function<T3(T2)>> x,
+  ap(typename _tcI0::template F<crane::fn<T3(T2)>> x,
      typename _tcI0::template F<T2> x0) {
     return _tcI0::template ap<T2, T3>(std::move(x), std::move(x0));
   }
@@ -115,10 +111,10 @@ struct HktCurriedPureArity {
     }
 
     template <typename _A0, typename _A1>
-    static std::optional<_A1> ap(std::optional<std::function<_A1(_A0)>> f,
+    static std::optional<_A1> ap(std::optional<crane::fn<_A1(_A0)>> f,
                                  std::optional<_A0> o) {
       if (f.has_value()) {
-        const std::function<_A1(_A0)> &g = *f;
+        const crane::fn<_A1(_A0)> &g = *f;
         if (o.has_value()) {
           const _A0 &x = *o;
           return std::make_optional<_A1>(g(x));

@@ -2,7 +2,7 @@
 #define INCLUDED_GADT_EVAL_BRANCH_TYPE
 
 #include "crane_fn.h"
-#include "small_vector.h"
+#include "obj.h"
 #include <any>
 #include <atomic>
 #include <memory>
@@ -39,22 +39,18 @@ public:
 
   // MANIPULATORS
   ~Nat() {
-    crane::small_vector<std::shared_ptr<Nat>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<Nat> {
       if (auto *_alt = std::get_if<S>(&_v)) {
-        if (_alt->a0) {
-          _stack.push_back(std::move(_alt->a0));
+        if (_alt->a0 && _alt->a0.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a0);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<Nat> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -134,7 +130,7 @@ struct GadtEvalBranchType {
     const variant_t &v() const { return v_; }
   };
 
-  template <typename T1> static std::any eval(const expr &e) {
+  template <typename T1 = void> static crane::obj eval(const expr &e) {
     if (std::holds_alternative<typename expr::Lit>(e.v())) {
       const auto &[a0] = std::get<typename expr::Lit>(e.v());
       return a0;
@@ -143,14 +139,15 @@ struct GadtEvalBranchType {
       return a0;
     } else if (std::holds_alternative<typename expr::Ite>(e.v())) {
       const auto &[a, a1, a2] = std::get<typename expr::Ite>(e.v());
-      if (std::any_cast<bool>(eval<T1>(*a))) {
-        return eval<T1>(*a1);
+      if (crane::any_cast<bool>(eval<crane::obj>(*a))) {
+        return eval<crane::obj>(*a1);
       } else {
-        return eval<T1>(*a2);
+        return eval<crane::obj>(*a2);
       }
     } else {
       const auto &[a, b] = std::get<typename expr::PairE>(e.v());
-      return std::make_pair(std::any(eval<T1>(*a)), std::any(eval<T1>(*b)));
+      return std::make_pair(crane::obj(eval<crane::obj>(*a)),
+                            crane::obj(eval<crane::obj>(*b)));
     }
   }
 

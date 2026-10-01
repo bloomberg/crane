@@ -2,8 +2,8 @@
 // Distributed under the terms of the GNU LGPL v2.1 license.
 //
 // Test: missing any_cast when accessing projT2 of a SigT<Tag, any>.
-// Bug 1: Crane calls .size() on std::any directly (should cast to deque<Val>)
-// Bug 2: Crane calls .v() on std::any directly (should cast to Val)
+// Bug 1: Crane calls .size() on crane::obj directly (should cast to deque<Val>)
+// Bug 2: Crane calls .v() on crane::obj directly (should cast to Val)
 //
 // Reproduces parse-a-lot's JSON grammar action crash with DequeList mapping.
 // The sigT stores sem_ty(nt) erased to any. When projT2 is used in a branch

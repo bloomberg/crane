@@ -1,7 +1,8 @@
 #include "mutual_tmc_loopify.h"
 
 MutualTmcLoopify::mylist MutualTmcLoopify::evens(
-    Nat n) { /// _Enter: captures varying parameters for each recursive call.
+    const Nat
+        &n) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
     Nat n;
@@ -25,28 +26,28 @@ MutualTmcLoopify::mylist MutualTmcLoopify::evens(
   using _Frame = std::variant<_Enter, _Enter_inl, _Resume_S, _Resume_S_1>;
   MutualTmcLoopify::mylist _result{};
   crane::small_vector<_Frame> _stack;
-  _stack.emplace_back(_Enter{std::move(n)});
+  _stack.emplace_back(_Enter{n});
   /// Loopified evens: _Enter -> _Resume_S -> _Resume_S_1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      Nat n = std::move(_f.n);
-      if (std::holds_alternative<typename Nat::O>(n.v_mut())) {
+      const Nat &n = std::move(_f.n);
+      if (std::holds_alternative<typename Nat::O>(n.v())) {
         _result = mylist::mnil();
       } else {
-        auto &[a0] = std::get<typename Nat::S>(n.v_mut());
+        const auto &[a0] = std::get<typename Nat::S>(n.v());
         _stack.emplace_back(_Resume_S{n});
         _stack.emplace_back(_Enter_inl{*a0});
       }
     } else if (std::holds_alternative<_Enter_inl>(_frame)) {
       auto _f = std::move(std::get<_Enter_inl>(_frame));
-      Nat _inl_n = std::move(_f._inl_n);
-      if (std::holds_alternative<typename Nat::O>(_inl_n.v_mut())) {
+      const Nat &_inl_n = std::move(_f._inl_n);
+      if (std::holds_alternative<typename Nat::O>(_inl_n.v())) {
         _result = mylist::mnil();
       } else {
-        auto &[_inl_a0] = std::get<typename Nat::S>(_inl_n.v_mut());
+        const auto &[_inl_a0] = std::get<typename Nat::S>(_inl_n.v());
         _stack.emplace_back(_Resume_S_1{_inl_n});
         _stack.emplace_back(_Enter{*_inl_a0});
       }
@@ -61,11 +62,11 @@ MutualTmcLoopify::mylist MutualTmcLoopify::evens(
   return _result;
 }
 
-MutualTmcLoopify::mylist MutualTmcLoopify::odds(Nat n) {
-  if (std::holds_alternative<typename Nat::O>(n.v_mut())) {
+MutualTmcLoopify::mylist MutualTmcLoopify::odds(const Nat &n) {
+  if (std::holds_alternative<typename Nat::O>(n.v())) {
     return mylist::mnil();
   } else {
-    auto &[a0] = std::get<typename Nat::S>(n.v_mut());
+    const auto &[a0] = std::get<typename Nat::S>(n.v());
     return mylist::mcons(n, evens(*a0));
   }
 }

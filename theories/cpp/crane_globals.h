@@ -9,9 +9,10 @@
 #define CRANE_GLOBALS_H_
 
 #include <any>
+#include "obj.h"
 #include <cstdint>
 #include <map>
 
-inline std::map<uint64_t, std::any> _crane_globals;
+inline std::map<uint64_t, crane::obj> _crane_globals;
 
 #endif // CRANE_GLOBALS_H_

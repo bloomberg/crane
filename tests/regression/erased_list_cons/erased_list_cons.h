@@ -2,12 +2,15 @@
 #define INCLUDED_ERASED_LIST_CONS
 
 #include "crane_fn.h"
-#include "small_vector.h"
+#include "fn.h"
+#include "obj.h"
 #include <any>
 #include <atomic>
 #include <concepts>
+#include <functional>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -38,21 +41,26 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U> List(const List<_U> &_other) {
-    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->v_ = Nil{};
-    } else {
-      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>) {
-                          return crane_any_cast<A>(a);
-                        } else {
-                          return A(a);
-                        }
-                      }(),
-                      (l ? std::make_shared<List<A>>(*l) : nullptr)};
-    }
-  }
+  template <typename _U>
+  List(const List<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+            return Nil{};
+          } else {
+            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const _U &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                   : nullptr)};
+          }
+        }()) {}
 
   static List<A> nil() { return List<A>(Nil{}); }
 
@@ -62,22 +70,18 @@ public:
 
   // MANIPULATORS
   ~List() {
-    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
-        if (_alt->l) {
-          _stack.push_back(std::move(_alt->l));
+        if (_alt->l && _alt->l.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->l);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<List<A>> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -99,6 +103,25 @@ template <typename A, typename P> struct SigT {
 
   // ACCESSORS
   SigT<A, P> clone() const { return {x, a1}; }
+
+  template <typename _U0, typename _U1> operator SigT<_U0, _U1>() const {
+    return {[&]() -> _U0 {
+              if constexpr (crane_convertible<_U0, const A &>) {
+                return crane_convert<_U0>(x);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }(),
+            [&]() -> _U1 {
+              if constexpr (crane_convertible<_U1, const P &>) {
+                return crane_convert<_U1>(a1);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }()};
+  }
 
   // CREATORS
   static SigT<A, P> existt(A x, P a1) { return {std::move(x), std::move(a1)}; }
@@ -219,36 +242,39 @@ template <SYM Ty> struct DefsFn {
     }
   }
 
-  using symbol_semty = std::any;
-  using tuple = std::any;
+  using symbol_semty = crane::obj;
+  using tuple = crane::obj;
   using production = std::pair<typename Ty::nonterminal, List<symbol>>;
   using symbols_semty = tuple;
-  using predicate_semty = std::any;
-  using action_semty = std::any;
+  using predicate_semty = crane::obj;
+  using action_semty = crane::obj;
   using production_semty = std::pair<predicate_semty, action_semty>;
   using grammar_entry = SigT<production, production_semty>;
   using grammar = List<grammar_entry>;
   using sem_val = SigT<symbol, symbol_semty>;
 
   static std::optional<symbols_semty>
-  assemble(const List<symbol> &ys, const List<SigT<symbol, std::any>> &stk) {
+  assemble(const List<symbol> &ys, const List<SigT<symbol, crane::obj>> &stk) {
     if (std::holds_alternative<typename List<symbol>::Nil>(ys.v())) {
-      return std::make_optional<std::monostate>(std::monostate{});
+      return std::make_optional<symbols_semty>(([]() -> symbols_semty {
+        throw std::logic_error(
+            "unreachable: impossible dependent match branch");
+      })());
     } else {
       const auto &[a0, a1] = std::get<typename List<symbol>::Cons>(ys.v());
-      if (std::holds_alternative<typename List<SigT<symbol, std::any>>::Nil>(
+      if (std::holds_alternative<typename List<SigT<symbol, crane::obj>>::Nil>(
               stk.v())) {
         return std::optional<symbols_semty>();
       } else {
         const auto &[a00, a10] =
-            std::get<typename List<SigT<symbol, std::any>>::Cons>(stk.v());
+            std::get<typename List<SigT<symbol, crane::obj>>::Cons>(stk.v());
         const auto &[x1, a11] = a00;
-        if (symbol_eq_dec(std::any_cast<symbol>(x1), a0)) {
+        if (symbol_eq_dec(crane::any_cast<symbol>(x1), a0)) {
           auto _cs = assemble(*a1, *a10);
           if (_cs.has_value()) {
             const auto &rest = *_cs;
-            return std::make_optional<std::pair<std::any, std::any>>(
-                std::make_pair(std::any(a11), std::any(rest)));
+            return std::make_optional<symbols_semty>(
+                std::make_pair(crane::obj(a11), crane::obj(rest)));
           } else {
             return std::optional<symbols_semty>();
           }
@@ -259,29 +285,30 @@ template <SYM Ty> struct DefsFn {
     }
   }
 
-  static std::any
+  static crane::obj
   action_of(const SigT<std::pair<typename Ty::nonterminal, List<symbol>>,
-                       std::pair<std::any, std::any>> &e,
+                       std::pair<crane::obj, crane::obj>> &e,
             symbols_semty x0_) {
-    return [=]() mutable {
-      const auto &[x0, a1] = e;
-      const auto &[_x, _x0] = x0;
-      const auto &[_x1, a] = std::any_cast<std::pair<std::any, std::any>>(a1);
-      return a;
-    }()(std::move(x0_));
+    const auto &[x0, a1] = e;
+    production x1 = x0;
+    const auto &[_x, _x0] = x1;
+    const auto &[_x1, a] = a1;
+    action_semty act = a;
+    return crane::any_cast<crane::fn<crane::obj(crane::obj)>>(std::move(act))(
+        std::move(x0_));
   }
 
-  static std::optional<std::any>
+  static std::optional<crane::obj>
   run_entry(const SigT<std::pair<typename Ty::nonterminal, List<symbol>>,
-                       std::pair<std::any, std::any>> &e,
-            const List<SigT<symbol, std::any>> &stk) {
+                       std::pair<crane::obj, crane::obj>> &e,
+            const List<SigT<symbol, crane::obj>> &stk) {
     auto _cs = assemble(e.projT1().second, stk);
     if (_cs.has_value()) {
       const auto &vs = *_cs;
-      return std::make_optional<std::any>(
-          std::any(action_of(e, std::any_cast<symbols_semty>(vs))));
+      return std::make_optional<crane::obj>(
+          crane::obj(action_of(e, crane::any_cast<symbols_semty>(vs))));
     } else {
-      return std::optional<std::any>();
+      return std::optional<crane::obj>();
     }
   }
 };
@@ -347,44 +374,47 @@ struct MySym {
   static bool t_eq_dec(Term x, Term y);
   static bool nt_eq_dec(Nt x, Nt y);
   using t_semty = std::monostate;
-  using nt_semty = std::any;
+  using nt_semty = crane::obj;
 };
 
 using MyDefs = DefsFn<MySym>;
-const MyDefs::grammar entries =
-    List<SigT<std::pair<MySym::Nt, List<MyDefs::symbol>>,
-              std::pair<std::any, std::any>>>::
-        cons(SigT<std::pair<MySym::Nt, List<MyDefs::symbol>>,
-                  std::pair<std::any, std::any>>::
-                 existt(
-                     std::make_pair(
-                         MySym::Nt::LST,
-                         List<MyDefs::symbol>::cons(
-                             MyDefs::symbol::t(MySym::Term::LBRACE),
-                             List<MyDefs::symbol>::cons(
-                                 MyDefs::symbol::nt(MySym::Nt::ELEM),
-                                 List<MyDefs::symbol>::cons(
-                                     MyDefs::symbol::nt(MySym::Nt::LST),
-                                     List<MyDefs::symbol>::cons(
-                                         MyDefs::symbol::t(MySym::Term::RBRACE),
-                                         List<MyDefs::symbol>::nil()))))),
-                     std::make_pair(
-                         std::any(
-                             crane_erase_fn([](const auto &) { return true; })),
-                         std::any(crane_erase_fn([](const auto &tup) {
-                           const auto &[_x, y0] =
-                               std::any_cast<std::pair<std::any, std::any>>(
-                                   tup);
-                           const auto &[pr, y1] =
-                               std::any_cast<std::pair<std::any, std::any>>(y0);
-                           const auto &[prs, y2] =
-                               std::any_cast<std::pair<std::any, std::any>>(y1);
-                           const auto &[_x0, _x1] =
-                               std::any_cast<std::pair<std::any, std::any>>(y2);
-                           return List<std::any>::cons(
-                               pr, std::any_cast<List<std::any>>(prs));
-                         })))),
-             List<SigT<std::pair<MySym::Nt, List<MyDefs::symbol>>,
-                       std::pair<std::any, std::any>>>::nil());
+const MyDefs::grammar entries = List<
+    SigT<std::pair<MySym::Nt, List<MyDefs::symbol>>,
+         std::pair<crane::obj, crane::obj>>>::
+    cons(
+        SigT<std::pair<MySym::Nt, List<MyDefs::symbol>>,
+             std::pair<crane::obj, crane::obj>>::
+            existt(std::make_pair(
+                       MySym::Nt::LST,
+                       List<MyDefs::symbol>::cons(
+                           MyDefs::symbol::t(MySym::Term::LBRACE),
+                           List<MyDefs::symbol>::cons(
+                               MyDefs::symbol::nt(MySym::Nt::ELEM),
+                               List<MyDefs::symbol>::cons(
+                                   MyDefs::symbol::nt(MySym::Nt::LST),
+                                   List<MyDefs::symbol>::cons(
+                                       MyDefs::symbol::t(MySym::Term::RBRACE),
+                                       List<MyDefs::symbol>::nil()))))),
+                   std::make_pair(
+                       crane::obj(
+                           crane_erase_fn([](const auto &) { return true; })),
+                       crane::obj(crane_erase_fn([](const auto &tup) {
+                         const auto &[_x, y0] =
+                             crane::any_cast<std::pair<crane::obj, crane::obj>>(
+                                 tup);
+                         const auto &[pr, y1] =
+                             crane::any_cast<std::pair<crane::obj, crane::obj>>(
+                                 y0);
+                         const auto &[prs, y2] =
+                             crane::any_cast<std::pair<crane::obj, crane::obj>>(
+                                 y1);
+                         const auto &[_x0, _x1] =
+                             crane::any_cast<std::pair<crane::obj, crane::obj>>(
+                                 y2);
+                         return List<crane::obj>::cons(
+                             pr, crane::any_cast<List<crane::obj>>(prs));
+                       })))),
+        List<SigT<std::pair<MySym::Nt, List<MyDefs::symbol>>,
+                  std::pair<crane::obj, crane::obj>>>::nil());
 
 #endif // INCLUDED_ERASED_LIST_CONS

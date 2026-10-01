@@ -2,13 +2,14 @@
 #define INCLUDED_HKT_INSTANCE_ARG_ORDER
 
 #include "crane_fn.h"
-#include "small_vector.h"
+#include "fn.h"
+#include "obj.h"
 #include <any>
 #include <atomic>
 #include <concepts>
-#include <functional>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -44,22 +45,18 @@ public:
 
   // MANIPULATORS
   ~Nat() {
-    crane::small_vector<std::shared_ptr<Nat>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<Nat> {
       if (auto *_alt = std::get_if<S>(&_v)) {
-        if (_alt->a0) {
-          _stack.push_back(std::move(_alt->a0));
+        if (_alt->a0 && _alt->a0.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a0);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<Nat> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -97,21 +94,26 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U> List(const List<_U> &_other) {
-    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->v_ = Nil{};
-    } else {
-      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>) {
-                          return crane_any_cast<A>(a);
-                        } else {
-                          return A(a);
-                        }
-                      }(),
-                      (l ? std::make_shared<List<A>>(*l) : nullptr)};
-    }
-  }
+  template <typename _U>
+  List(const List<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+            return Nil{};
+          } else {
+            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const _U &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                   : nullptr)};
+          }
+        }()) {}
 
   static List<A> nil() { return List<A>(Nil{}); }
 
@@ -121,22 +123,18 @@ public:
 
   // MANIPULATORS
   ~List() {
-    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
-        if (_alt->l) {
-          _stack.push_back(std::move(_alt->l));
+        if (_alt->l && _alt->l.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->l);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<List<A>> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -181,12 +179,12 @@ public:
 
 template <typename I>
 concept Fn = requires {
-  typename I::template F<std::any>;
+  typename I::template F<crane::obj>;
   {
-    I::template fm<std::any, std::any>(
-        std::declval<std::function<std::any(std::any)>>(),
-        std::declval<typename I::template F<std::any>>())
-  } -> std::convertible_to<typename I::template F<std::any>>;
+    I::template fm<crane::obj, crane::obj>(
+        std::declval<crane::fn<crane::obj(crane::obj)>>(),
+        std::declval<typename I::template F<crane::obj>>())
+  } -> std::convertible_to<typename I::template F<crane::obj>>;
 };
 
 struct HktInstanceArgOrder {
@@ -201,8 +199,7 @@ struct HktInstanceArgOrder {
     template <typename _A0> using F = std::optional<_A0>;
 
     template <typename _A0, typename _A1>
-    static std::optional<_A1> fm(std::function<_A1(_A0)> f,
-                                 std::optional<_A0> o) {
+    static std::optional<_A1> fm(crane::fn<_A1(_A0)> f, std::optional<_A0> o) {
       if (o.has_value()) {
         const _A0 &x = *o;
         return std::make_optional<_A1>(f(x));
@@ -218,7 +215,7 @@ struct HktInstanceArgOrder {
     template <typename _A0> using F = List<_A0>;
 
     template <typename _A0, typename _A1>
-    static List<_A1> fm(std::function<_A1(_A0)> a0, List<_A0> a1) {
+    static List<_A1> fm(crane::fn<_A1(_A0)> a0, List<_A0> a1) {
       return a1.template map<_A1>(std::move(a0));
     }
   };
@@ -232,14 +229,14 @@ struct HktInstanceArgOrder {
               typename _tcI1::template F<typename _tcI0::template F<T3>> x) {
     return fm<_tcI1, typename _tcI0::template F<T3>,
               typename _tcI0::template F<T4>>(
-        [=](typename _tcI0::template F<T3> _x0) mutable ->
+        [=](typename _tcI0::template F<T3> _x0) ->
         typename _tcI0::template F<T4> { return fm<_tcI0, T3, T4>(f, _x0); },
         std::move(x));
   }
 
   static inline const std::optional<List<Nat>> ex =
       compose_map<lstf, optf, Nat, Nat>(
-          [](Nat x) { return Nat::s(x); },
+          [](const Nat &x) { return Nat::s(x); },
           std::make_optional<List<Nat>>(
               List<Nat>::cons(Nat::s(Nat::o()), List<Nat>::nil())));
 };

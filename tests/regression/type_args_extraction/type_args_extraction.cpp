@@ -3,7 +3,7 @@
 uint64_t double_n(uint64_t n) {
   return [&]() -> uint64_t {
     static std::function<uint64_t(uint64_t)> __self;
-    __self = [](uint64_t n0) {
+    __self = [](uint64_t n0) -> uint64_t {
       if (n0 <= 0) {
         return UINT64_C(0);
       } else {

@@ -33,6 +33,7 @@ type t = {
   inductive_names : (string * ModPath.t) list;
   global_scope_enums : GlobRef.t list;
   collision_wrappers : (ModPath.t * string) list;
+  wrapper_bystanders : (ModPath.t * string) list;
   functor_app_sources : (ModPath.t * ModPath.t) list;
   eponymous_records : GlobRef.t list;
   concept_renames : (GlobRef.t * string) list;
@@ -257,8 +258,9 @@ let is_func_decl (_, se) =
     [None].
 
     The main module is excluded because its declarations are emitted directly at
-    top level, not inside a wrapper struct. *)
-(** [taken] says whether a name is already spoken for at file scope by
+    top level, not inside a wrapper struct.
+
+    [taken] says whether a name is already spoken for at file scope by
     something this module cannot be merged into. *)
 let classify_module ?(taken = fun _ -> false) ~main_mp (mp, sel) =
   let has_func = List.exists is_func_decl sel in
@@ -342,7 +344,7 @@ let topological_sort
        indices it depends on. *)
     let deps : (int, int list) Hashtbl.t = Hashtbl.create 16 in
     List.iteri
-      (fun i ((_mp, sel), _wn) ->
+      (fun i ((mp_i, sel), _wn) ->
         if is_main_entry i then
           ()
         else (* Collect unique dependencies for this module. *)
@@ -373,23 +375,23 @@ let topological_sort
             | None -> ()
           in
           (* Everything this module names: the references in its declarations,
-             and the modules its submodules are built from.  [Module M := F X]
-             is emitted as [using M = F<X>], which no forward declaration
-             breaks the cycle of, so [X]'s module has to come first. *)
-          let rec scan_sel sel = List.iter (fun (_l, se) -> scan_elem se) sel
-          and scan_elem = function
-            | SEdecl d -> Modutil.decl_iter_references add_dep add_dep add_dep d
-            | SEmodule m -> scan_mexpr m.ml_mod_expr
-            | SEmodtype _ -> ()
-          and scan_mexpr = function
-            | MEident mp -> add_dep_mp mp
-            | MEapply (me, arg) ->
-              scan_mexpr me;
-              scan_mexpr arg
-            | MEfunctor (_, _, body) -> scan_mexpr body
-            | MEstruct (_, sel) -> scan_sel sel
-          in
-          scan_sel sel;
+             the modules its submodules are built from, and the modules its
+             module types and signatures name.  [Module M := F X] is emitted as
+             [using M = F<X>], which no forward declaration breaks the cycle
+             of, so [X]'s module has to come first; [Module Type T := O.U] is
+             emitted as [concept T = U<M>], which likewise cannot precede [U].
+
+             The traversal is {!Modutil.struct_iter} rather than a local one,
+             because a hand-written walk answers "what does this module name"
+             only for the cases it happens to list.  This one used to return
+             nothing at all for a module type, so a file whose content is a
+             bare alias depended on nothing, sorted with the roots, and was
+             written ahead of the file it aliases. *)
+          Modutil.struct_iter
+            (Modutil.decl_iter_references add_dep add_dep add_dep)
+            (Modutil.spec_iter_references add_dep add_dep add_dep)
+            add_dep_mp
+            [(mp_i, sel)];
           let dep_list = Hashtbl.fold (fun k () acc -> k :: acc) dep_set [] in
           if dep_list <> [] then
             Hashtbl.replace deps i dep_list )
@@ -619,18 +621,6 @@ let sort_inductives_within_module reg (s : ml_structure) sel =
 
 (** {2 Main analysis entry point} *)
 
-(** Perform all structure analysis in a single call.
-
-    This is called once per unit from cpp.ml's [prepare_structure],
-    immediately after creating the Method_registry. The steps are:
-
-    1. Register enum inductives across all modules (side-effect on Table). 2.
-    Collect inductive names for collision detection. 3. Collect global-scope
-    enums for early emission. 4. Classify modules as wrapper vs. non-wrapper. 5.
-    Topologically sort modules by cross-module dependencies.
-
-    The main module is identified as the last module in the input structure
-    (following Rocq's convention that the extracted module is listed last). *)
 (** Does the child module [se] itself define an inductive whose C++ name is
     [child_name]?  If it does, the name is the child's own and no wrapper is
     needed. *)
@@ -688,9 +678,11 @@ let has_sibling_inductive
     declarations then live inside a struct named after the file-level module. *)
 let collect_collision_wrappers
     (names : (string, ModPath.t) Hashtbl.t) (modules : module_info list) :
-    (ModPath.t * string) list =
+    (ModPath.t * string) list * (ModPath.t * string) list =
   let acc = ref [] in
   let add mp name = acc := (mp, name) :: !acc in
+  let bystanders = ref [] in
+  let add_bystander mp name = bystanders := (mp, name) :: !bystanders in
   List.iter
     (fun mi ->
       let mp = mi.modpath and sel = mi.sels in
@@ -711,6 +703,19 @@ let collect_collision_wrappers
               | SEmodule _ -> is_colliding_child l se
               | _ -> false )
             sel
+        in
+        (* Collision forces the child inside the wrapper; it does not decide
+           how.  A child the wrapper absorbs declaration by declaration has no
+           struct of its own left, so its name is flattened away.  A child that
+           is a functor application is emitted as a single [using] name, and
+           that name is the whole of it -- there is nothing to absorb, and
+           flattening it would leave the alias unwritten and every path into it
+           spelled with the wrapper in place of the child. *)
+        let is_flattened_child l se =
+          match se with
+          | SEmodule {ml_mod_expr = MEstruct _ | MEident _; _} ->
+            is_colliding_child l se
+          | _ -> false
         in
         if colliding <> [] then begin
           (* The wrapper is a new struct at file scope, named after the file.
@@ -747,19 +752,45 @@ let collect_collision_wrappers
           in
           List.iter
             (fun (l, se) ->
-              add (MPdot (mp, l)) parent_name;
               match se with
               | SEmodule {ml_mod_expr = MEstruct (inner_mp, inner_sel); _} ->
+                add (MPdot (mp, l)) parent_name;
                 add inner_mp parent_name;
                 register_decl_modpaths inner_sel
               | SEmodule {ml_mod_expr = MEident alias_mp; _} ->
+                add (MPdot (mp, l)) parent_name;
                 add alias_mp parent_name
               | _ -> () )
-            colliding
+            colliding;
+          (* The wrapper is one struct, and the file's own top-level
+             declarations are emitted inside it beside the wrapped children --
+             so they are members too, and a reference to one has to say the
+             struct's name.  Registering only the children would leave the two
+             halves of a single struct spelled differently: [Helpers::length]
+             for the one that came from [Module N], a bare [map_monad] for the
+             one the file declared itself. *)
+          register_decl_modpaths sel;
+          (* The wrapper absorbs the file's other children too, but keeps their
+             own nesting: a sibling that does not collide is rendered inside the
+             wrapper as the struct it already was.  So its name survives and
+             only wants the wrapper's in front of it -- which is why these are
+             kept apart from the wrapped children above, whose own name is
+             flattened away. *)
+          List.iter
+            (fun (l, se) ->
+              match se with
+              | SEmodule m when not (is_flattened_child l se) ->
+                add_bystander (MPdot (mp, l)) parent_name;
+                ( match m.ml_mod_expr with
+                | MEstruct (inner_mp, _) -> add_bystander inner_mp parent_name
+                | MEident alias_mp -> add_bystander alias_mp parent_name
+                | _ -> () )
+              | _ -> () )
+            sel
         end
       end )
     modules;
-  List.rev !acc
+  (List.rev !acc, List.rev !bystanders)
 
 (** Collect every eponymous record: a record inductive whose name is, up to
     case, the name of the module that declares it, and which is therefore
@@ -862,6 +893,18 @@ let collect_lifted_instances (modules : module_info list) : GlobRef.t list =
           m.sels )
     modules
 
+(** Perform all structure analysis in a single call.
+
+    This is called once per unit from cpp.ml's [prepare_structure],
+    immediately after creating the Method_registry. The steps are:
+
+    1. Register enum inductives across all modules (side-effect on Table). 2.
+    Collect inductive names for collision detection. 3. Collect global-scope
+    enums for early emission. 4. Classify modules as wrapper vs. non-wrapper. 5.
+    Topologically sort modules by cross-module dependencies.
+
+    The main module is identified as the last module in the input structure
+    (following Rocq's convention that the extracted module is listed last). *)
 let analyze (reg : Method_registry.t) (s : ml_structure) : t =
   (* 1. Register enum inductives (side-effect: populates Table). *)
   register_enum_inductives s;
@@ -944,7 +987,9 @@ let analyze (reg : Method_registry.t) (s : ml_structure) : t =
      built from it. *)
   let names = Hashtbl.create 16 in
   List.iter (fun (n, mp) -> Hashtbl.replace names n mp) inductive_names;
-  let collision_wrappers = collect_collision_wrappers names sorted_modules in
+  let collision_wrappers, wrapper_bystanders =
+    collect_collision_wrappers names sorted_modules
+  in
   (* 6. Collect the eponymous records, for the same reason. *)
   let eponymous_records = collect_eponymous_records s in
   let concept_renames = collect_concept_renames s in
@@ -954,6 +999,7 @@ let analyze (reg : Method_registry.t) (s : ml_structure) : t =
     inductive_names;
     global_scope_enums;
     collision_wrappers;
+    wrapper_bystanders;
     functor_app_sources;
     eponymous_records;
     concept_renames;

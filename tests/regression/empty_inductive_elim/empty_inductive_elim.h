@@ -1,6 +1,7 @@
 #ifndef INCLUDED_EMPTY_INDUCTIVE_ELIM
 #define INCLUDED_EMPTY_INDUCTIVE_ELIM
 
+#include "obj.h"
 #include <any>
 #include <memory>
 #include <optional>
@@ -20,8 +21,8 @@ struct EmptyInductiveElim {
   }
 
   static uint64_t absurd();
-  static uint64_t g(const std::optional<std::any> &o);
-  static inline const uint64_t test = g(std::optional<std::any>());
+  static uint64_t g(const std::optional<crane::obj> &o);
+  static inline const uint64_t test = g(std::optional<crane::obj>());
 };
 
 #endif // INCLUDED_EMPTY_INDUCTIVE_ELIM

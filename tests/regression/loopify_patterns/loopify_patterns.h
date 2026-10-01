@@ -2,11 +2,13 @@
 #define INCLUDED_LOOPIFY_PATTERNS
 
 #include "crane_fn.h"
+#include "fn.h"
+#include "obj.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
-#include <functional>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -36,21 +38,28 @@ struct LoopifyPatterns {
 
     explicit list(Cons _v) : v_(std::move(_v)) {}
 
-    template <typename _U> list(const list<_U> &_other) {
-      if (std::holds_alternative<typename list<_U>::Nil>(_other.v())) {
-        this->v_ = Nil{};
-      } else {
-        const auto &[a, l] = std::get<typename list<_U>::Cons>(_other.v());
-        this->v_ = Cons{[&]() -> A {
-                          if constexpr (std::is_same_v<_U, std::any>) {
-                            return crane_any_cast<A>(a);
-                          } else {
-                            return A(a);
-                          }
-                        }(),
-                        (l ? std::make_shared<list<A>>(*l) : nullptr)};
-      }
-    }
+    template <typename _U>
+    list(const list<_U> &_other)
+        : v_([&]() -> variant_t {
+            if (std::holds_alternative<typename list<_U>::Nil>(_other.v())) {
+              return Nil{};
+            } else {
+              const auto &[a, l] =
+                  std::get<typename list<_U>::Cons>(_other.v());
+              return Cons{
+                  [&]() -> A {
+                    if constexpr (crane_convertible<A, const _U &>) {
+                      return crane_convert<A>(a);
+                    } else {
+                      throw std::logic_error(
+                          "unreachable: inactive constructor field at this "
+                          "instantiation");
+                    }
+                  }(),
+                  (l ? std::make_shared<list<A>>(crane_convert<list<A>>(*l))
+                     : nullptr)};
+            }
+          }()) {}
 
     static list<A> nil() { return list<A>(Nil{}); }
 
@@ -61,22 +70,18 @@ struct LoopifyPatterns {
 
     // MANIPULATORS
     ~list() {
-      crane::small_vector<std::shared_ptr<list<A>>> _stack = {};
-      auto _drain = [&](variant_t &_v) {
+      auto _next = [&](variant_t &_v) -> std::shared_ptr<list<A>> {
         if (auto *_alt = std::get_if<Cons>(&_v)) {
-          if (_alt->l) {
-            _stack.push_back(std::move(_alt->l));
+          if (_alt->l && _alt->l.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
+            return std::move(_alt->l);
           }
         }
+        return nullptr;
       };
-      _drain(v_mut());
-      while (!_stack.empty()) {
-        auto _cur = std::move(_stack.back());
-        _stack.pop_back();
-        if (_cur.use_count() == 1) {
-          std::atomic_thread_fence(std::memory_order_acquire);
-          _drain(_cur->v_mut());
-        }
+      std::shared_ptr<list<A>> _cur = _next(v_mut());
+      while (_cur) {
+        _cur = _next(_cur->v_mut());
       }
     }
 
@@ -105,7 +110,7 @@ struct LoopifyPatterns {
     /// _Resume_Cons: saves [a1, a0], resumes after recursive call with _result.
     struct _Resume_Cons {
       list<T1> a1;
-      std::decay_t<T1> a0;
+      T1 a0;
     };
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -148,7 +153,7 @@ struct LoopifyPatterns {
     /// _Resume_Cons: saves [a1, a0], resumes after recursive call with _result.
     struct _Resume_Cons {
       list<T1> a1;
-      std::decay_t<T1> a0;
+      T1 a0;
     };
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -198,8 +203,8 @@ struct LoopifyPatterns {
                  uint64_t a_count);
   /// split_by_sign l pos neg partition with dual accumulators.
   static std::pair<list<uint64_t>, list<uint64_t>>
-  split_by_sign_aux(const list<uint64_t> &l, uint64_t base, list<uint64_t> pos,
-                    list<uint64_t> neg);
+  split_by_sign_aux(const list<uint64_t> &l, uint64_t base,
+                    const list<uint64_t> &pos, const list<uint64_t> &neg);
   static std::pair<list<uint64_t>, list<uint64_t>>
   split_by_sign(const list<uint64_t> &l, uint64_t base);
   /// guard_accum acc l multiple when-style guards with different logic.
@@ -279,7 +284,7 @@ struct LoopifyPatterns {
   /// insert_everywhere x l insert element at all possible positions.
   template <typename T1>
   static list<list<T1>>
-  insert_everywhere(T1 x,
+  insert_everywhere(const T1 &x,
                     const list<T1> &l) { /// _Enter: captures varying parameters
                                          /// for each recursive call.
 
@@ -291,7 +296,7 @@ struct LoopifyPatterns {
     /// _result.
     struct _Resume_Cons {
       list<T1> _s0;
-      std::function<list<list<T1>>(list<list<T1>>)> map_cons_h;
+      crane::fn<list<list<T1>>(list<list<T1>>)> map_cons_h;
     };
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;

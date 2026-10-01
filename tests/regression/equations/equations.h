@@ -1,11 +1,12 @@
 #ifndef INCLUDED_EQUATIONS
 #define INCLUDED_EQUATIONS
 
+#include "fn.h"
+#include "obj.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
 #include <concepts>
-#include <functional>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -115,10 +116,10 @@ struct Equations {
 
     // MANIPULATORS
     ~gcd_graph() {
-      crane::small_vector<std::any> _stack = {};
+      crane::small_vector<crane::obj> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Gcd_graph_refinement_3>(&_v)) {
-          if (_alt->hind) {
+          if (_alt->hind && _alt->hind.use_count() == 1) {
             _stack.push_back(std::move(_alt->hind));
           }
         }
@@ -127,27 +128,27 @@ struct Equations {
       while (!_stack.empty()) {
         auto _cur = std::move(_stack.back());
         _stack.pop_back();
-        if (auto *_sp = std::any_cast<std::shared_ptr<gcd_graph>>(&_cur)) {
+        if (auto *_sp = crane::any_cast<std::shared_ptr<gcd_graph>>(&_cur)) {
           if (*_sp && (*_sp).use_count() == 1) {
             std::atomic_thread_fence(std::memory_order_acquire);
             _drain_self((*_sp)->v_mut());
           }
         } else {
           if (auto *_sp =
-                  std::any_cast<std::shared_ptr<gcd_clause_3_graph>>(&_cur)) {
+                  crane::any_cast<std::shared_ptr<gcd_clause_3_graph>>(&_cur)) {
             if (*_sp && (*_sp).use_count() == 1) {
               auto &_pv = (*_sp)->v_mut();
               if (auto *_alt =
                       std::get_if<typename gcd_clause_3_graph::
                                       Gcd_clause_3_graph_equation_1>(&_pv)) {
-                if (_alt->hind) {
+                if (_alt->hind && _alt->hind.use_count() == 1) {
                   _stack.push_back(std::move(_alt->hind));
                 }
               }
               if (auto *_alt =
                       std::get_if<typename gcd_clause_3_graph::
                                       Gcd_clause_3_graph_equation_2>(&_pv)) {
-                if (_alt->hind) {
+                if (_alt->hind && _alt->hind.use_count() == 1) {
                   _stack.push_back(std::move(_alt->hind));
                 }
               }
@@ -213,15 +214,15 @@ struct Equations {
 
     // MANIPULATORS
     ~gcd_clause_3_graph() {
-      crane::small_vector<std::any> _stack = {};
+      crane::small_vector<crane::obj> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Gcd_clause_3_graph_equation_1>(&_v)) {
-          if (_alt->hind) {
+          if (_alt->hind && _alt->hind.use_count() == 1) {
             _stack.push_back(std::move(_alt->hind));
           }
         }
         if (auto *_alt = std::get_if<Gcd_clause_3_graph_equation_2>(&_v)) {
-          if (_alt->hind) {
+          if (_alt->hind && _alt->hind.use_count() == 1) {
             _stack.push_back(std::move(_alt->hind));
           }
         }
@@ -231,19 +232,19 @@ struct Equations {
         auto _cur = std::move(_stack.back());
         _stack.pop_back();
         if (auto *_sp =
-                std::any_cast<std::shared_ptr<gcd_clause_3_graph>>(&_cur)) {
+                crane::any_cast<std::shared_ptr<gcd_clause_3_graph>>(&_cur)) {
           if (*_sp && (*_sp).use_count() == 1) {
             std::atomic_thread_fence(std::memory_order_acquire);
             _drain_self((*_sp)->v_mut());
           }
         } else {
-          if (auto *_sp = std::any_cast<std::shared_ptr<gcd_graph>>(&_cur)) {
+          if (auto *_sp = crane::any_cast<std::shared_ptr<gcd_graph>>(&_cur)) {
             if (*_sp && (*_sp).use_count() == 1) {
               auto &_pv = (*_sp)->v_mut();
               if (auto *_alt =
                       std::get_if<typename gcd_graph::Gcd_graph_refinement_3>(
                           &_pv)) {
-                if (_alt->hind) {
+                if (_alt->hind && _alt->hind.use_count() == 1) {
                   _stack.push_back(std::move(_alt->hind));
                 }
               }
@@ -264,19 +265,16 @@ struct Equations {
     const variant_t &v() const { return v_; }
   };
 
-  template <typename T1, typename T2, typename F0, typename F1, typename F2,
-            typename F3, typename F4>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F2 &, uint64_t &, uint64_t &,
-                                   gcd_clause_3_graph &, T2 &> &&
-             std::is_invocable_r_v<T2, F3 &, uint64_t &, uint64_t &,
-                                   gcd_graph &, T1 &> &&
-             std::is_invocable_r_v<T2, F4 &, uint64_t &, uint64_t &,
-                                   gcd_graph &, T1 &>
-  static T1 gcd_graph_mut(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3,
-                          std::pair<uint64_t, uint64_t> x0_, uint64_t x1_,
-                          gcd_graph x2_) {
+  template <typename T1, typename T2>
+  static T1 gcd_graph_mut(
+      std::type_identity_t<crane::fn<T1(uint64_t)>> f,
+      std::type_identity_t<crane::fn<T1(uint64_t)>> f0,
+      std::type_identity_t<
+          crane::fn<T1(uint64_t, uint64_t, gcd_clause_3_graph, T2)>>
+          f1,
+      std::type_identity_t<crane::fn<T2(uint64_t, uint64_t, gcd_graph, T1)>> f2,
+      std::type_identity_t<crane::fn<T2(uint64_t, uint64_t, gcd_graph, T1)>> f3,
+      std::pair<uint64_t, uint64_t> x0_, uint64_t x1_, gcd_graph x2_) {
     auto f4_impl = [&](auto &_self_f4, auto &_self_f5,
                        const std::pair<uint64_t, uint64_t> &, uint64_t,
                        const gcd_graph &g) -> T1 {
@@ -345,19 +343,17 @@ struct Equations {
     return f4(x0_, x1_, std::move(x2_));
   }
 
-  template <typename T1, typename T2, typename F0, typename F1, typename F2,
-            typename F3, typename F4>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F2 &, uint64_t &, uint64_t &,
-                                   gcd_clause_3_graph &, T2 &> &&
-             std::is_invocable_r_v<T2, F3 &, uint64_t &, uint64_t &,
-                                   gcd_graph &, T1 &> &&
-             std::is_invocable_r_v<T2, F4 &, uint64_t &, uint64_t &,
-                                   gcd_graph &, T1 &>
-  static T2 gcd_clause_3_graph_mut(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3,
-                                   uint64_t x0_, uint64_t x1_, bool x2_,
-                                   uint64_t x3_, gcd_clause_3_graph x4_) {
+  template <typename T1, typename T2>
+  static T2 gcd_clause_3_graph_mut(
+      std::type_identity_t<crane::fn<T1(uint64_t)>> f,
+      std::type_identity_t<crane::fn<T1(uint64_t)>> f0,
+      std::type_identity_t<
+          crane::fn<T1(uint64_t, uint64_t, gcd_clause_3_graph, T2)>>
+          f1,
+      std::type_identity_t<crane::fn<T2(uint64_t, uint64_t, gcd_graph, T1)>> f2,
+      std::type_identity_t<crane::fn<T2(uint64_t, uint64_t, gcd_graph, T1)>> f3,
+      uint64_t x0_, uint64_t x1_, bool x2_, uint64_t x3_,
+      gcd_clause_3_graph x4_) {
     auto f4_impl = [&](auto &_self_f4, auto &_self_f5,
                        const std::pair<uint64_t, uint64_t> &, uint64_t,
                        const gcd_graph &g) -> T1 {
@@ -444,57 +440,49 @@ struct Equations {
 
   static gcd_graph gcd_graph_correct(std::pair<uint64_t, uint64_t> x);
 
-  template <typename T1, typename F0, typename F1, typename F2, typename F3>
+  template <typename T1, typename F0, typename F1>
     requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F2 &, uint64_t &, uint64_t &, T1 &> &&
-             std::is_invocable_r_v<T1, F3 &, uint64_t &, uint64_t &, T1 &>
-  static T1 gcd_elim(F0 &&f, F1 &&f0, F2 &&f2, F3 &&f3,
-                     std::pair<uint64_t, uint64_t> p) {
+             std::is_invocable_r_v<T1, F1 &, uint64_t &>
+  static T1
+  gcd_elim(F0 &&f, F1 &&f0,
+           std::type_identity_t<crane::fn<T1(uint64_t, uint64_t, T1)>> f2,
+           std::type_identity_t<crane::fn<T1(uint64_t, uint64_t, T1)>> f3,
+           std::pair<uint64_t, uint64_t> p) {
     return gcd_graph_mut<T1>(
         f, f0,
-        [=](uint64_t, uint64_t, const gcd_clause_3_graph &,
-            const T1 &x) mutable {
+        [=](uint64_t, uint64_t, gcd_clause_3_graph, const T1 &x) {
           const auto &[_x2, _x3] = p;
           return x;
         },
-        [=](uint64_t n1, uint64_t n2, const gcd_graph &) mutable {
+        [=](uint64_t n1, uint64_t n2, gcd_graph, const T1 &eta0_) {
           const auto &[_x0, _x1] = p;
-          return [=](T1 _pa0) mutable { return f2(n1, n2, _pa0); };
+          return f2(n1, n2, eta0_);
         },
-        [=](uint64_t n1, uint64_t n2, const gcd_graph &) mutable {
+        [=](uint64_t n1, uint64_t n2, gcd_graph, const T1 &eta0_) {
           const auto &[_x0, _x1] = p;
-          return [=](T1 _pa0) mutable { return f3(n1, n2, _pa0); };
+          return f3(n1, n2, eta0_);
         },
         p, gcd(p), gcd_graph_correct(p));
   }
 
   template <typename F0, typename F1, typename F2, typename F3>
-    requires std::is_invocable_r_v<std::any, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<std::any, F1 &, uint64_t &> &&
-             std::is_invocable_r_v<std::any, F2 &, uint64_t &, uint64_t &,
-                                   std::any &> &&
-             std::is_invocable_r_v<std::any, F3 &, uint64_t &, uint64_t &,
-                                   std::any &>
-  static std::any
+  static crane::obj
   FunctionalElimination_gcd(F0 &&x0_, F1 &&x1_, F2 &&x2_, F3 &&x3_,
                             const std::pair<uint64_t, uint64_t> &x4_) {
     return gcd_elim(x0_, x1_, x2_, x3_, x4_);
   }
 
   struct FunctionalInduction_gcd {
-    using fun_ind_prf_ty =
-        std::function<gcd_graph(std::pair<uint64_t, uint64_t>)>;
+    using fun_ind_prf_ty = crane::fn<gcd_graph(std::pair<uint64_t, uint64_t>)>;
 
-    static std::function<gcd_graph(std::pair<uint64_t, uint64_t>)>
-    fun_ind_prf() {
+    static crane::fn<gcd_graph(std::pair<uint64_t, uint64_t>)> fun_ind_prf() {
       return gcd_graph_correct;
     }
   };
 
-  static_assert(FunctionalInduction<
-                FunctionalInduction_gcd,
-                std::function<uint64_t(std::pair<uint64_t, uint64_t>)>>);
+  static_assert(
+      FunctionalInduction<FunctionalInduction_gcd,
+                          crane::fn<uint64_t(std::pair<uint64_t, uint64_t>)>>);
 
   template <typename F2>
     requires std::is_invocable_r_v<uint64_t, F2 &, uint64_t &>
@@ -577,10 +565,10 @@ struct Equations {
 
     // MANIPULATORS
     ~collatz_steps_graph() {
-      crane::small_vector<std::any> _stack = {};
+      crane::small_vector<crane::obj> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Collatz_steps_graph_refinement_3>(&_v)) {
-          if (_alt->hind) {
+          if (_alt->hind && _alt->hind.use_count() == 1) {
             _stack.push_back(std::move(_alt->hind));
           }
         }
@@ -590,22 +578,21 @@ struct Equations {
         auto _cur = std::move(_stack.back());
         _stack.pop_back();
         if (auto *_sp =
-                std::any_cast<std::shared_ptr<collatz_steps_graph>>(&_cur)) {
+                crane::any_cast<std::shared_ptr<collatz_steps_graph>>(&_cur)) {
           if (*_sp && (*_sp).use_count() == 1) {
             std::atomic_thread_fence(std::memory_order_acquire);
             _drain_self((*_sp)->v_mut());
           }
         } else {
-          if (auto *_sp =
-                  std::any_cast<std::shared_ptr<collatz_steps_clause_3_graph>>(
-                      &_cur)) {
+          if (auto *_sp = crane::any_cast<
+                  std::shared_ptr<collatz_steps_clause_3_graph>>(&_cur)) {
             if (*_sp && (*_sp).use_count() == 1) {
               auto &_pv = (*_sp)->v_mut();
               if (auto *_alt =
                       std::get_if<typename collatz_steps_clause_3_graph::
                                       Collatz_steps_clause_3_graph_equation_1>(
                           &_pv)) {
-                if (_alt->hind) {
+                if (_alt->hind && _alt->hind.use_count() == 1) {
                   _stack.push_back(std::move(_alt->hind));
                 }
               }
@@ -613,7 +600,7 @@ struct Equations {
                       std::get_if<typename collatz_steps_clause_3_graph::
                                       Collatz_steps_clause_3_graph_equation_2>(
                           &_pv)) {
-                if (_alt->hind) {
+                if (_alt->hind && _alt->hind.use_count() == 1) {
                   _stack.push_back(std::move(_alt->hind));
                 }
               }
@@ -683,17 +670,17 @@ struct Equations {
 
     // MANIPULATORS
     ~collatz_steps_clause_3_graph() {
-      crane::small_vector<std::any> _stack = {};
+      crane::small_vector<crane::obj> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt =
                 std::get_if<Collatz_steps_clause_3_graph_equation_1>(&_v)) {
-          if (_alt->hind) {
+          if (_alt->hind && _alt->hind.use_count() == 1) {
             _stack.push_back(std::move(_alt->hind));
           }
         }
         if (auto *_alt =
                 std::get_if<Collatz_steps_clause_3_graph_equation_2>(&_v)) {
-          if (_alt->hind) {
+          if (_alt->hind && _alt->hind.use_count() == 1) {
             _stack.push_back(std::move(_alt->hind));
           }
         }
@@ -703,21 +690,21 @@ struct Equations {
         auto _cur = std::move(_stack.back());
         _stack.pop_back();
         if (auto *_sp =
-                std::any_cast<std::shared_ptr<collatz_steps_clause_3_graph>>(
+                crane::any_cast<std::shared_ptr<collatz_steps_clause_3_graph>>(
                     &_cur)) {
           if (*_sp && (*_sp).use_count() == 1) {
             std::atomic_thread_fence(std::memory_order_acquire);
             _drain_self((*_sp)->v_mut());
           }
         } else {
-          if (auto *_sp =
-                  std::any_cast<std::shared_ptr<collatz_steps_graph>>(&_cur)) {
+          if (auto *_sp = crane::any_cast<std::shared_ptr<collatz_steps_graph>>(
+                  &_cur)) {
             if (*_sp && (*_sp).use_count() == 1) {
               auto &_pv = (*_sp)->v_mut();
               if (auto *_alt =
                       std::get_if<typename collatz_steps_graph::
                                       Collatz_steps_graph_refinement_3>(&_pv)) {
-                if (_alt->hind) {
+                if (_alt->hind && _alt->hind.use_count() == 1) {
                   _stack.push_back(std::move(_alt->hind));
                 }
               }
@@ -742,16 +729,15 @@ struct Equations {
     const variant_t &v() const { return v_; }
   };
 
-  template <typename T1, typename T2, typename F2, typename F3, typename F4>
-    requires std::is_invocable_r_v<T1, F2 &, uint64_t &,
-                                   collatz_steps_clause_3_graph &, T2 &> &&
-             std::is_invocable_r_v<T2, F3 &, uint64_t &, collatz_steps_graph &,
-                                   T1 &> &&
-             std::is_invocable_r_v<T2, F4 &, uint64_t &, collatz_steps_graph &,
-                                   T1 &>
-  static T1 collatz_steps_graph_mut(const T1 &f, const T1 &f0, F2 &&f1, F3 &&f2,
-                                    F4 &&f3, uint64_t x0_, uint64_t x1_,
-                                    collatz_steps_graph x2_) {
+  template <typename T1, typename T2>
+  static T1 collatz_steps_graph_mut(
+      const T1 &f, const T1 &f0,
+      std::type_identity_t<
+          crane::fn<T1(uint64_t, collatz_steps_clause_3_graph, T2)>>
+          f1,
+      std::type_identity_t<crane::fn<T2(uint64_t, collatz_steps_graph, T1)>> f2,
+      std::type_identity_t<crane::fn<T2(uint64_t, collatz_steps_graph, T1)>> f3,
+      uint64_t x0_, uint64_t x1_, collatz_steps_graph x2_) {
     auto f4_impl = [&](auto &_self_f4, auto &_self_f5, uint64_t, uint64_t,
                        const collatz_steps_graph &c) -> T1 {
       if (std::holds_alternative<
@@ -806,17 +792,15 @@ struct Equations {
     return f4(x0_, x1_, std::move(x2_));
   }
 
-  template <typename T1, typename T2, typename F2, typename F3, typename F4>
-    requires std::is_invocable_r_v<T1, F2 &, uint64_t &,
-                                   collatz_steps_clause_3_graph &, T2 &> &&
-             std::is_invocable_r_v<T2, F3 &, uint64_t &, collatz_steps_graph &,
-                                   T1 &> &&
-             std::is_invocable_r_v<T2, F4 &, uint64_t &, collatz_steps_graph &,
-                                   T1 &>
-  static T2 collatz_steps_clause_3_graph_mut(const T1 &f, const T1 &f0, F2 &&f1,
-                                             F3 &&f2, F4 &&f3, uint64_t x0_,
-                                             bool x1_, uint64_t x2_,
-                                             collatz_steps_clause_3_graph x3_) {
+  template <typename T1, typename T2>
+  static T2 collatz_steps_clause_3_graph_mut(
+      const T1 &f, const T1 &f0,
+      std::type_identity_t<
+          crane::fn<T1(uint64_t, collatz_steps_clause_3_graph, T2)>>
+          f1,
+      std::type_identity_t<crane::fn<T2(uint64_t, collatz_steps_graph, T1)>> f2,
+      std::type_identity_t<crane::fn<T2(uint64_t, collatz_steps_graph, T1)>> f3,
+      uint64_t x0_, bool x1_, uint64_t x2_, collatz_steps_clause_3_graph x3_) {
     auto f4_impl = [&](auto &_self_f4, auto &_self_f5, uint64_t, uint64_t,
                        const collatz_steps_graph &c) -> T1 {
       if (std::holds_alternative<
@@ -888,44 +872,41 @@ struct Equations {
 
   static collatz_steps_graph collatz_steps_graph_correct(uint64_t x);
 
-  template <typename T1, typename F2, typename F3>
-    requires std::is_invocable_r_v<T1, F2 &, uint64_t &, T1 &> &&
-             std::is_invocable_r_v<T1, F3 &, uint64_t &, T1 &>
-  static T1 collatz_steps_elim(const T1 &f, const T1 &f0, F2 &&f2, F3 &&f3,
-                               uint64_t n) {
-    return collatz_steps_graph_mut(
+  template <typename T1>
+  static T1
+  collatz_steps_elim(const T1 &f, const T1 &f0,
+                     std::type_identity_t<crane::fn<T1(uint64_t, T1)>> f2,
+                     std::type_identity_t<crane::fn<T1(uint64_t, T1)>> f3,
+                     uint64_t n) {
+    return collatz_steps_graph_mut<T1, crane::obj>(
         f, f0,
-        [](uint64_t, const collatz_steps_clause_3_graph &, const T1 &x) {
-          return x;
+        [](uint64_t, collatz_steps_clause_3_graph, const T1 &x) { return x; },
+        [=](uint64_t n0, collatz_steps_graph, const T1 &eta0_) {
+          return [=](T1 _pa0) { return f2(n0, _pa0); }(eta0_);
         },
-        [=](uint64_t n0, const collatz_steps_graph &) mutable {
-          return [=](T1 _pa0) mutable { return f2(n0, _pa0); };
-        },
-        [=](uint64_t n0, const collatz_steps_graph &) mutable {
-          return [=](T1 _pa0) mutable { return f3(n0, _pa0); };
+        [=](uint64_t n0, collatz_steps_graph, const T1 &eta0_) {
+          return [=](T1 _pa0) { return f3(n0, _pa0); }(eta0_);
         },
         n, collatz_steps(n), collatz_steps_graph_correct(n));
   }
 
   template <typename F2, typename F3>
-    requires std::is_invocable_r_v<std::any, F2 &, uint64_t &, std::any &> &&
-             std::is_invocable_r_v<std::any, F3 &, uint64_t &, std::any &>
-  static std::any FunctionalElimination_collatz_steps(std::any x0_,
-                                                      std::any x1_, F2 &&x2_,
-                                                      F3 &&x3_, uint64_t x4_) {
+  static crane::obj
+  FunctionalElimination_collatz_steps(crane::obj x0_, crane::obj x1_, F2 &&x2_,
+                                      F3 &&x3_, uint64_t x4_) {
     return collatz_steps_elim(x0_, x1_, x2_, x3_, x4_);
   }
 
   struct FunctionalInduction_collatz_steps {
-    using fun_ind_prf_ty = std::function<collatz_steps_graph(uint64_t)>;
+    using fun_ind_prf_ty = crane::fn<collatz_steps_graph(uint64_t)>;
 
-    static std::function<collatz_steps_graph(uint64_t)> fun_ind_prf() {
+    static crane::fn<collatz_steps_graph(uint64_t)> fun_ind_prf() {
       return collatz_steps_graph_correct;
     }
   };
 
   static_assert(FunctionalInduction<FunctionalInduction_collatz_steps,
-                                    std::function<uint64_t(uint64_t)>>);
+                                    crane::fn<uint64_t(uint64_t)>>);
   static inline const uint64_t test_gcd =
       gcd(std::make_pair(UINT64_C(12), UINT64_C(8)));
   static inline const uint64_t test_collatz = collatz_steps(UINT64_C(6));

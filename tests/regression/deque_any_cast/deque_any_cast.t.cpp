@@ -3,13 +3,13 @@
 //
 // Test: demonstrate DequeList + type erasure incompatibility.
 //
-// The bug: cons calls wrap elements in std::any() because the carrier
+// The bug: cons calls wrap elements in crane::obj() because the carrier
 // type is erased, but mfold<nat_monoid> is monomorphized and expects
 // deque<uint64_t>. The type mismatch causes a compile error.
 // A related issue: Crane previously generated std::deque<auto>{} for
-// nil (now fixed to std::deque<std::any>{}).
+// nil (now fixed to std::deque<crane::obj>{}).
 //
-// Expected: compile error (deque<std::any> vs deque<uint64_t> mismatch)
+// Expected: compile error (deque<crane::obj> vs deque<uint64_t> mismatch)
 
 #include "deque_any_cast.h"
 #include <cassert>

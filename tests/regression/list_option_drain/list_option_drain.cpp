@@ -1,7 +1,8 @@
 #include "list_option_drain.h"
 
-ListOptionDrain::t ListOptionDrain::wrap(uint64_t k, ListOptionDrain::t acc) {
+ListOptionDrain::t ListOptionDrain::wrap(uint64_t k,
+                                         const ListOptionDrain::t &acc) {
   return t::node(k, List<std::optional<ListOptionDrain::t>>::cons(
-                        std::make_optional<ListOptionDrain::t>(std::move(acc)),
+                        std::make_optional<ListOptionDrain::t>(acc),
                         List<std::optional<ListOptionDrain::t>>::nil()));
 }

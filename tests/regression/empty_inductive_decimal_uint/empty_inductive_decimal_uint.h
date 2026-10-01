@@ -2,7 +2,6 @@
 #define INCLUDED_EMPTY_INDUCTIVE_DECIMAL_UINT
 
 #include "crane_fn.h"
-#include "small_vector.h"
 #include <atomic>
 #include <memory>
 #include <utility>
@@ -12,6 +11,18 @@ enum class Bool0;
 struct Uint;
 struct Ascii;
 struct String;
+
+struct Little {
+  static Uint succ(const Uint &d);
+};
+
+struct NilEmpty {
+  static String string_of_uint(const Uint &d);
+};
+
+struct NilZero {
+  static String string_of_uint(const Uint &d);
+};
 enum class Bool0 { TRUE_, FALSE_ };
 
 struct Nat {
@@ -45,22 +56,18 @@ struct Nat {
 
     // MANIPULATORS
     ~nat() {
-      crane::small_vector<std::shared_ptr<Nat::nat>> _stack = {};
-      auto _drain = [&](variant_t &_v) {
+      auto _next = [&](variant_t &_v) -> std::shared_ptr<Nat::nat> {
         if (auto *_alt = std::get_if<S>(&_v)) {
-          if (_alt->a0) {
-            _stack.push_back(std::move(_alt->a0));
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
+            return std::move(_alt->a0);
           }
         }
+        return nullptr;
       };
-      _drain(v_mut());
-      while (!_stack.empty()) {
-        auto _cur = std::move(_stack.back());
-        _stack.pop_back();
-        if (_cur.use_count() == 1) {
-          std::atomic_thread_fence(std::memory_order_acquire);
-          _drain(_cur->v_mut());
-        }
+      std::shared_ptr<Nat::nat> _cur = _next(v_mut());
+      while (_cur) {
+        _cur = _next(_cur->v_mut());
       }
     }
 
@@ -199,67 +206,72 @@ public:
 
   // MANIPULATORS
   ~Uint() {
-    crane::small_vector<std::shared_ptr<Uint>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<Uint> {
       if (auto *_alt = std::get_if<D0>(&_v)) {
-        if (_alt->a0) {
-          _stack.push_back(std::move(_alt->a0));
+        if (_alt->a0 && _alt->a0.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a0);
         }
       }
       if (auto *_alt = std::get_if<D1>(&_v)) {
-        if (_alt->a0) {
-          _stack.push_back(std::move(_alt->a0));
+        if (_alt->a0 && _alt->a0.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a0);
         }
       }
       if (auto *_alt = std::get_if<D2>(&_v)) {
-        if (_alt->a0) {
-          _stack.push_back(std::move(_alt->a0));
+        if (_alt->a0 && _alt->a0.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a0);
         }
       }
       if (auto *_alt = std::get_if<D3>(&_v)) {
-        if (_alt->a0) {
-          _stack.push_back(std::move(_alt->a0));
+        if (_alt->a0 && _alt->a0.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a0);
         }
       }
       if (auto *_alt = std::get_if<D4>(&_v)) {
-        if (_alt->a0) {
-          _stack.push_back(std::move(_alt->a0));
+        if (_alt->a0 && _alt->a0.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a0);
         }
       }
       if (auto *_alt = std::get_if<D5>(&_v)) {
-        if (_alt->a0) {
-          _stack.push_back(std::move(_alt->a0));
+        if (_alt->a0 && _alt->a0.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a0);
         }
       }
       if (auto *_alt = std::get_if<D6>(&_v)) {
-        if (_alt->a0) {
-          _stack.push_back(std::move(_alt->a0));
+        if (_alt->a0 && _alt->a0.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a0);
         }
       }
       if (auto *_alt = std::get_if<D7>(&_v)) {
-        if (_alt->a0) {
-          _stack.push_back(std::move(_alt->a0));
+        if (_alt->a0 && _alt->a0.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a0);
         }
       }
       if (auto *_alt = std::get_if<D8>(&_v)) {
-        if (_alt->a0) {
-          _stack.push_back(std::move(_alt->a0));
+        if (_alt->a0 && _alt->a0.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a0);
         }
       }
       if (auto *_alt = std::get_if<D9>(&_v)) {
-        if (_alt->a0) {
-          _stack.push_back(std::move(_alt->a0));
+        if (_alt->a0 && _alt->a0.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a0);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<Uint> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -327,10 +339,6 @@ public:
   Uint rev() const { return this->revapp(Uint::nil()); }
 };
 
-struct Little {
-  static Uint succ(const Uint &d);
-};
-
 struct Ascii {
   // DATA
   Bool0 a0;
@@ -384,22 +392,18 @@ public:
 
   // MANIPULATORS
   ~String() {
-    crane::small_vector<std::shared_ptr<String>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<String> {
       if (auto *_alt = std::get_if<String0>(&_v)) {
-        if (_alt->a1) {
-          _stack.push_back(std::move(_alt->a1));
+        if (_alt->a1 && _alt->a1.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a1);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<String> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -433,14 +437,6 @@ public:
     }
     return std::move(*_head);
   }
-};
-
-struct NilEmpty {
-  static String string_of_uint(const Uint &d);
-};
-
-struct NilZero {
-  static String string_of_uint(const Uint &d);
 };
 
 struct EmptyInductiveDecimalUint {

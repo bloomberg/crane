@@ -12,8 +12,7 @@ MatchCtorClosure::match_and_box(const MatchCtorClosure::tree &t) {
     const auto &[a0, a1, a2] =
         std::get<typename MatchCtorClosure::tree::Node>(t.v());
     const MatchCtorClosure::tree &a0_value = *a0;
-    return fn_box::box([=](uint64_t _x0) mutable -> uint64_t {
-      return a0_value.sum_values(_x0);
-    });
+    return fn_box::box(
+        [=](uint64_t _x0) -> uint64_t { return a0_value.sum_values(_x0); });
   }
 }

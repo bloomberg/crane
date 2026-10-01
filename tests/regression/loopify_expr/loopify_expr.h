@@ -2,11 +2,13 @@
 #define INCLUDED_LOOPIFY_EXPR
 
 #include "crane_fn.h"
+#include "obj.h"
 #include "small_vector.h"
 #include <algorithm>
 #include <any>
 #include <atomic>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -36,21 +38,26 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U> List(const List<_U> &_other) {
-    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->v_ = Nil{};
-    } else {
-      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>) {
-                          return crane_any_cast<A>(a);
-                        } else {
-                          return A(a);
-                        }
-                      }(),
-                      (l ? std::make_shared<List<A>>(*l) : nullptr)};
-    }
-  }
+  template <typename _U>
+  List(const List<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+            return Nil{};
+          } else {
+            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const _U &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                   : nullptr)};
+          }
+        }()) {}
 
   static List<A> nil() { return List<A>(Nil{}); }
 
@@ -60,22 +67,18 @@ public:
 
   // MANIPULATORS
   ~List() {
-    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
-        if (_alt->l) {
-          _stack.push_back(std::move(_alt->l));
+        if (_alt->l && _alt->l.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->l);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<List<A>> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -165,34 +168,34 @@ struct LoopifyExpr {
       crane::small_vector<std::shared_ptr<expr>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Succ>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
         }
         if (auto *_alt = std::get_if<Add>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a1) {
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
             _stack.push_back(std::move(_alt->a1));
           }
         }
         if (auto *_alt = std::get_if<Mul>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a1) {
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
             _stack.push_back(std::move(_alt->a1));
           }
         }
         if (auto *_alt = std::get_if<Cond>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a1) {
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
             _stack.push_back(std::move(_alt->a1));
           }
-          if (_alt->a2) {
+          if (_alt->a2 && _alt->a2.use_count() == 1) {
             _stack.push_back(std::move(_alt->a2));
           }
         }
@@ -1258,7 +1261,7 @@ struct LoopifyExpr {
       /// _After_Cond_1: saves [_result, a0_0, a2, a1, a0_1], dispatches next
       /// recursive call.
       struct _After_Cond_1 {
-        std::decay_t<T1> _result;
+        T1 _result;
         const expr *a0_0;
         expr a2;
         expr a1;
@@ -1275,7 +1278,7 @@ struct LoopifyExpr {
       /// _Combine_Add: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Add {
-        std::decay_t<T1> _result;
+        T1 _result;
         expr a1;
         expr a0;
       };
@@ -1283,8 +1286,8 @@ struct LoopifyExpr {
       /// _Combine_Cond: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Cond {
-        std::decay_t<T1> _result_0;
-        std::decay_t<T1> _result_1;
+        T1 _result_0;
+        T1 _result_1;
         expr a2;
         expr a1;
         expr a0;
@@ -1293,7 +1296,7 @@ struct LoopifyExpr {
       /// _Combine_Mul: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Mul {
-        std::decay_t<T1> _result;
+        T1 _result;
         expr a1;
         expr a0;
       };
@@ -1419,7 +1422,7 @@ struct LoopifyExpr {
       /// _After_Cond_1: saves [_result, a0_0, a2, a1, a0_1], dispatches next
       /// recursive call.
       struct _After_Cond_1 {
-        std::decay_t<T1> _result;
+        T1 _result;
         const expr *a0_0;
         expr a2;
         expr a1;
@@ -1436,7 +1439,7 @@ struct LoopifyExpr {
       /// _Combine_Add: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Add {
-        std::decay_t<T1> _result;
+        T1 _result;
         expr a1;
         expr a0;
       };
@@ -1444,8 +1447,8 @@ struct LoopifyExpr {
       /// _Combine_Cond: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Cond {
-        std::decay_t<T1> _result_0;
-        std::decay_t<T1> _result_1;
+        T1 _result_0;
+        T1 _result_1;
         expr a2;
         expr a1;
         expr a0;
@@ -1454,7 +1457,7 @@ struct LoopifyExpr {
       /// _Combine_Mul: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Mul {
-        std::decay_t<T1> _result;
+        T1 _result;
         expr a1;
         expr a0;
       };
@@ -1597,21 +1600,21 @@ struct LoopifyExpr {
       crane::small_vector<std::shared_ptr<simple_expr>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Plus>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a1) {
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
             _stack.push_back(std::move(_alt->a1));
           }
         }
         if (auto *_alt = std::get_if<IfPos>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a1) {
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
             _stack.push_back(std::move(_alt->a1));
           }
-          if (_alt->a2) {
+          if (_alt->a2 && _alt->a2.use_count() == 1) {
             _stack.push_back(std::move(_alt->a2));
           }
         }
@@ -1834,7 +1837,7 @@ struct LoopifyExpr {
       /// _After_IfPos_1: saves [_result, a0_0, a2, a1, a0_1], dispatches next
       /// recursive call.
       struct _After_IfPos_1 {
-        std::decay_t<T1> _result;
+        T1 _result;
         const simple_expr *a0_0;
         simple_expr a2;
         simple_expr a1;
@@ -1851,8 +1854,8 @@ struct LoopifyExpr {
       /// _Combine_IfPos: receives partial results, combines with _result from
       /// final call.
       struct _Combine_IfPos {
-        std::decay_t<T1> _result_0;
-        std::decay_t<T1> _result_1;
+        T1 _result_0;
+        T1 _result_1;
         simple_expr a2;
         simple_expr a1;
         simple_expr a0;
@@ -1861,7 +1864,7 @@ struct LoopifyExpr {
       /// _Combine_Plus: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Plus {
-        std::decay_t<T1> _result;
+        T1 _result;
         simple_expr a1;
         simple_expr a0;
       };
@@ -1954,7 +1957,7 @@ struct LoopifyExpr {
       /// _After_IfPos_1: saves [_result, a0_0, a2, a1, a0_1], dispatches next
       /// recursive call.
       struct _After_IfPos_1 {
-        std::decay_t<T1> _result;
+        T1 _result;
         const simple_expr *a0_0;
         simple_expr a2;
         simple_expr a1;
@@ -1971,8 +1974,8 @@ struct LoopifyExpr {
       /// _Combine_IfPos: receives partial results, combines with _result from
       /// final call.
       struct _Combine_IfPos {
-        std::decay_t<T1> _result_0;
-        std::decay_t<T1> _result_1;
+        T1 _result_0;
+        T1 _result_1;
         simple_expr a2;
         simple_expr a1;
         simple_expr a0;
@@ -1981,7 +1984,7 @@ struct LoopifyExpr {
       /// _Combine_Plus: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Plus {
-        std::decay_t<T1> _result;
+        T1 _result;
         simple_expr a1;
         simple_expr a0;
       };
@@ -2186,21 +2189,21 @@ struct LoopifyExpr {
       crane::small_vector<std::shared_ptr<cond_expr>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<CPlus>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a1) {
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
             _stack.push_back(std::move(_alt->a1));
           }
         }
         if (auto *_alt = std::get_if<CCond>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a1) {
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
             _stack.push_back(std::move(_alt->a1));
           }
-          if (_alt->a2) {
+          if (_alt->a2 && _alt->a2.use_count() == 1) {
             _stack.push_back(std::move(_alt->a2));
           }
         }
@@ -2421,7 +2424,7 @@ struct LoopifyExpr {
       /// _After_CCond_1: saves [_result, a0_0, a2, a1, a0_1], dispatches next
       /// recursive call.
       struct _After_CCond_1 {
-        std::decay_t<T1> _result;
+        T1 _result;
         const cond_expr *a0_0;
         cond_expr a2;
         cond_expr a1;
@@ -2438,8 +2441,8 @@ struct LoopifyExpr {
       /// _Combine_CCond: receives partial results, combines with _result from
       /// final call.
       struct _Combine_CCond {
-        std::decay_t<T1> _result_0;
-        std::decay_t<T1> _result_1;
+        T1 _result_0;
+        T1 _result_1;
         cond_expr a2;
         cond_expr a1;
         cond_expr a0;
@@ -2448,7 +2451,7 @@ struct LoopifyExpr {
       /// _Combine_CPlus: receives partial results, combines with _result from
       /// final call.
       struct _Combine_CPlus {
-        std::decay_t<T1> _result;
+        T1 _result;
         cond_expr a1;
         cond_expr a0;
       };
@@ -2540,7 +2543,7 @@ struct LoopifyExpr {
       /// _After_CCond_1: saves [_result, a0_0, a2, a1, a0_1], dispatches next
       /// recursive call.
       struct _After_CCond_1 {
-        std::decay_t<T1> _result;
+        T1 _result;
         const cond_expr *a0_0;
         cond_expr a2;
         cond_expr a1;
@@ -2557,8 +2560,8 @@ struct LoopifyExpr {
       /// _Combine_CCond: receives partial results, combines with _result from
       /// final call.
       struct _Combine_CCond {
-        std::decay_t<T1> _result_0;
-        std::decay_t<T1> _result_1;
+        T1 _result_0;
+        T1 _result_1;
         cond_expr a2;
         cond_expr a1;
         cond_expr a0;
@@ -2567,7 +2570,7 @@ struct LoopifyExpr {
       /// _Combine_CPlus: receives partial results, combines with _result from
       /// final call.
       struct _Combine_CPlus {
-        std::decay_t<T1> _result;
+        T1 _result;
         cond_expr a1;
         cond_expr a0;
       };

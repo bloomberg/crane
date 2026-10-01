@@ -57,8 +57,9 @@ EffectRecursiveList::collect_envs(const List<std::string> &names) {
 }
 
 /// 6. Read a line and prepend to existing list
-List<std::string> EffectRecursiveList::read_and_prepend(List<std::string> xs) {
+List<std::string>
+EffectRecursiveList::read_and_prepend(const List<std::string> &xs) {
   std::string line;
   std::getline(std::cin, line);
-  return List<std::string>::cons(line, std::move(xs));
+  return List<std::string>::cons(line, xs);
 }

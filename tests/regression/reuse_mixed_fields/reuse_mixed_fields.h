@@ -1,6 +1,7 @@
 #ifndef INCLUDED_REUSE_MIXED_FIELDS
 #define INCLUDED_REUSE_MIXED_FIELDS
 
+#include <atomic>
 #include <type_traits>
 #include <utility>
 #include <variant>

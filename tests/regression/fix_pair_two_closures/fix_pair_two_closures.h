@@ -1,7 +1,7 @@
 #ifndef INCLUDED_FIX_PAIR_TWO_CLOSURES
 #define INCLUDED_FIX_PAIR_TWO_CLOSURES
 
-#include <functional>
+#include "fn.h"
 #include <utility>
 
 struct FixPairTwoClosures {
@@ -10,8 +10,7 @@ struct FixPairTwoClosures {
   /// BUG: Both f and g use & capture. They capture a, b,
   /// and each other's std::function variables. All captured references
   /// dangle after make_ops returns.
-  static std::pair<std::function<uint64_t(uint64_t)>,
-                   std::function<uint64_t(uint64_t)>>
+  static std::pair<crane::fn<uint64_t(uint64_t)>, crane::fn<uint64_t(uint64_t)>>
   make_ops(uint64_t a, uint64_t b);
   /// test1: make_ops(10, 20). fst(3) = 10+3 = 13, snd(5) = 20+5 = 25.
   /// Total = 38.

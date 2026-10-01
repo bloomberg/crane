@@ -1,12 +1,29 @@
 #ifndef INCLUDED_INSTANCE_IN_RECORD
 #define INCLUDED_INSTANCE_IN_RECORD
 
-#include <functional>
+#include "crane_fn.h"
+#include "fn.h"
+#include "obj.h"
+#include <any>
+#include <stdexcept>
 
 struct InstanceInRecord {
   template <typename A> struct Monoid {
     A unit_;
-    std::function<A(A, A)> op;
+    crane::fn<A(A, A)> op;
+
+    // ACCESSORS
+    template <typename _U> operator Monoid<_U>() const {
+      return {[&]() -> _U {
+                if constexpr (crane_convertible<_U, const A &>) {
+                  return crane_convert<_U>(unit_);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }(),
+              crane_convert<crane::fn<_U(_U, _U)>>(op)};
+    }
   };
 
   static inline const Monoid<uint64_t> MNat =

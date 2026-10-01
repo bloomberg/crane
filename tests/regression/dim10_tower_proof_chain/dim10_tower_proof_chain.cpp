@@ -1,7 +1,8 @@
 #include "dim10_tower_proof_chain.h"
 
 Dim10TowerProofChainCase::nat_le
-Dim10TowerProofChainCase::nat_le_of_lt(uint64_t n, uint64_t m, std::any h_) {
+Dim10TowerProofChainCase::nat_le_of_lt(uint64_t n, uint64_t m,
+                                       Dim10TowerProofChainCase::nat_lt h_) {
   if (n <= 0) {
     if (m <= 0) {
       throw std::logic_error("unreachable: impossible dependent match branch");
@@ -15,7 +16,7 @@ Dim10TowerProofChainCase::nat_le_of_lt(uint64_t n, uint64_t m, std::any h_) {
       throw std::logic_error("absurd case");
     } else {
       uint64_t n1 = m - 1;
-      return nat_le_of_lt(n0, n1, h_);
+      return nat_le_of_lt(n0, n1, std::move(h_));
     }
   }
 }
@@ -65,7 +66,7 @@ Dim10TowerProofChainCase::layer_measure(uint64_t base_dim, uint64_t n) {
 
 Dim10TowerProofChainCase::EventuallyZero
 Dim10TowerProofChainCase::layer_measure_eventually_zero(uint64_t base_dim) {
-  return SigT<uint64_t, std::any>::existt(base_dim, std::any());
+  return SigT<uint64_t, crane::obj>::existt(base_dim, crane::obj());
 }
 
 Dim10TowerProofChainCase::GradedObj Dim10TowerProofChainCase::P_n_obj(
@@ -91,32 +92,32 @@ Dim10TowerProofChainCase::D_n_measure_eventually_zero(uint64_t x0_) {
 Dim10TowerProofChainCase::GradedGoodwillieTower
 Dim10TowerProofChainCase::make_graded_goodwillie_tower(uint64_t base_dim) {
   return GradedGoodwillieTower{
-      [=](uint64_t n) mutable { return P_n_obj(n, GradedObj{base_dim}); },
-      [=](uint64_t n) mutable { return D_n_obj(base_dim, n); }};
+      [=](uint64_t n) { return P_n_obj(n, GradedObj{base_dim}); },
+      [=](uint64_t n) { return D_n_obj(base_dim, n); }};
 }
 
-SigT<uint64_t, std::any>
+SigT<uint64_t, crane::obj>
 Dim10TowerProofChainCase::graded_goodwillie_layers_stabilize(
     uint64_t base_dim) {
   auto e = D_n_measure_eventually_zero(base_dim);
   auto &[x0, a1] = e;
-  return SigT<uint64_t, std::any>::existt(std::move(x0), std::any());
+  return SigT<uint64_t, crane::obj>::existt(std::move(x0), crane::obj());
 }
 
-SigT<uint64_t, std::any>
+SigT<uint64_t, crane::obj>
 Dim10TowerProofChainCase::graded_goodwillie_P_stabilizes(uint64_t base_dim) {
-  return SigT<uint64_t, std::any>::existt(base_dim, std::any());
+  return SigT<uint64_t, crane::obj>::existt(base_dim, crane::obj());
 }
 
 std::pair<std::pair<std::pair<Dim10TowerProofChainCase::IsIntegerValued,
                               Dim10TowerProofChainCase::EventuallyZero>,
-                    SigT<uint64_t, std::any>>,
-          SigT<uint64_t, std::any>>
+                    SigT<uint64_t, crane::obj>>,
+          SigT<uint64_t, crane::obj>>
 Dim10TowerProofChainCase::graded_complete_proof_chain(uint64_t base_dim) {
   return std::make_pair(
-      std::make_pair(
-          std::make_pair(std::any(), D_n_measure_eventually_zero(base_dim)),
-          graded_goodwillie_layers_stabilize(base_dim)),
+      std::make_pair(std::make_pair(crane::obj(crane::obj()),
+                                    D_n_measure_eventually_zero(base_dim)),
+                     graded_goodwillie_layers_stabilize(base_dim)),
       graded_goodwillie_P_stabilizes(base_dim));
 }
 

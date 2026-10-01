@@ -2,15 +2,17 @@
 #define INCLUDED_ARENA_SCOPING
 
 #include <any>
+#include <atomic>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
 #define CRANE_ARENA 1
 #include "arena.h"
 #include "crane_fn.h"
+#include "obj.h"
 #include "small_vector.h"
-#include <atomic>
 
 struct Nat;
 
@@ -44,22 +46,18 @@ public:
 
   // MANIPULATORS
   ~Nat() {
-    crane::small_vector<std::shared_ptr<Nat>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<Nat> {
       if (auto *_alt = std::get_if<S>(&_v)) {
-        if (_alt->a0) {
-          _stack.push_back(std::move(_alt->a0));
+        if (_alt->a0 && _alt->a0.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a0);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<Nat> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -120,22 +118,29 @@ public:
 
   explicit Tree(Node _v) : v_(std::move(_v)) {}
 
-  template <typename _U> Tree(const Tree<_U> &_other) {
-    if (std::holds_alternative<typename Tree<_U>::Leaf>(_other.v())) {
-      this->v_ = Leaf{};
-    } else {
-      const auto &[t1, x, t2] = std::get<typename Tree<_U>::Node>(_other.v());
-      this->v_ = Node{(t1 ? std::make_shared<Tree<A>>(*t1) : nullptr),
-                      [&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>) {
-                          return crane_any_cast<A>(x);
-                        } else {
-                          return A(x);
-                        }
-                      }(),
-                      (t2 ? std::make_shared<Tree<A>>(*t2) : nullptr)};
-    }
-  }
+  template <typename _U>
+  Tree(const Tree<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename Tree<_U>::Leaf>(_other.v())) {
+            return Leaf{};
+          } else {
+            const auto &[t1, x, t2] =
+                std::get<typename Tree<_U>::Node>(_other.v());
+            return Node{
+                (t1 ? std::make_shared<Tree<A>>(crane_convert<Tree<A>>(*t1))
+                    : nullptr),
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const _U &>) {
+                    return crane_convert<A>(x);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (t2 ? std::make_shared<Tree<A>>(crane_convert<Tree<A>>(*t2))
+                    : nullptr)};
+          }
+        }()) {}
 
   static Tree<A> leaf() { return Tree<A>(Leaf{}); }
 
@@ -150,10 +155,10 @@ public:
     crane::small_vector<std::shared_ptr<Tree<A>>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<Node>(&_v)) {
-        if (_alt->t1) {
+        if (_alt->t1 && _alt->t1.use_count() == 1) {
           _stack.push_back(std::move(_alt->t1));
         }
-        if (_alt->t2) {
+        if (_alt->t2 && _alt->t2.use_count() == 1) {
           _stack.push_back(std::move(_alt->t2));
         }
       }

@@ -1,7 +1,7 @@
 #ifndef INCLUDED_COERCIONS
 #define INCLUDED_COERCIONS
 
-#include <functional>
+#include "fn.h"
 
 struct Coercions {
   static uint64_t bool_to_nat(bool b);
@@ -26,7 +26,7 @@ struct Coercions {
       add_boolbox(UINT64_C(10), BoolBox{true});
 
   struct Transform {
-    std::function<uint64_t(uint64_t)> apply_transform;
+    crane::fn<uint64_t(uint64_t)> apply_transform;
   };
 
   static inline const Transform double_transform =

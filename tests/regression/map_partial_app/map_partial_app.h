@@ -2,11 +2,13 @@
 #define INCLUDED_MAP_PARTIAL_APP
 
 #include "crane_fn.h"
+#include "fn.h"
+#include "obj.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
-#include <functional>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -36,21 +38,26 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U> List(const List<_U> &_other) {
-    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->v_ = Nil{};
-    } else {
-      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>) {
-                          return crane_any_cast<A>(a);
-                        } else {
-                          return A(a);
-                        }
-                      }(),
-                      (l ? std::make_shared<List<A>>(*l) : nullptr)};
-    }
-  }
+  template <typename _U>
+  List(const List<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+            return Nil{};
+          } else {
+            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const _U &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                   : nullptr)};
+          }
+        }()) {}
 
   static List<A> nil() { return List<A>(Nil{}); }
 
@@ -60,22 +67,18 @@ public:
 
   // MANIPULATORS
   ~List() {
-    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
-        if (_alt->l) {
-          _stack.push_back(std::move(_alt->l));
+        if (_alt->l && _alt->l.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->l);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<List<A>> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -151,10 +154,10 @@ struct MapPartialApp {
       crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a2) {
+          if (_alt->a2 && _alt->a2.use_count() == 1) {
             _stack.push_back(std::move(_alt->a2));
           }
         }
@@ -209,7 +212,7 @@ struct MapPartialApp {
 
   static uint64_t tree_sum(const tree &t);
   /// wrap: takes tree and nat, builds Node with leaves.
-  static tree wrap(tree t, uint64_t v);
+  static tree wrap(const tree &t, uint64_t v);
   /// Sum a list of nats.
   static uint64_t sum_list(const List<uint64_t> &l);
   /// BUG HYPOTHESIS: Create a partial application (wrap t), store it,
@@ -228,8 +231,8 @@ struct MapPartialApp {
   static inline const uint64_t map_partial_bug = []() {
     return []() {
       tree t = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
-      std::function<tree(uint64_t)> f = [=](uint64_t _x0) mutable -> tree {
-        return wrap(t, _x0);
+      crane::fn<tree(uint64_t)> f = [=](uint64_t _x0) -> tree {
+        return wrap(std::move(t), _x0);
       };
       List<uint64_t> results =
           List<uint64_t>::cons(
@@ -238,7 +241,7 @@ struct MapPartialApp {
                   UINT64_C(2),
                   List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())))
               .template map<uint64_t>(
-                  [=](uint64_t v) mutable { return tree_sum(f(v)); });
+                  [=](uint64_t v) { return tree_sum(f(v)); });
       return sum_list(std::move(results));
     }();
   }();
@@ -247,10 +250,10 @@ struct MapPartialApp {
   static inline const uint64_t map_partial_pair = []() {
     return []() {
       tree t = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
-      std::function<tree(uint64_t)> f = [=](uint64_t _x0) mutable -> tree {
-        return wrap(t, _x0);
+      crane::fn<tree(uint64_t)> f = [=](uint64_t _x0) -> tree {
+        return wrap(std::move(t), _x0);
       };
-      std::pair<std::function<tree(uint64_t)>, uint64_t> p =
+      std::pair<crane::fn<tree(uint64_t)>, uint64_t> p =
           std::make_pair(f, UINT64_C(0));
       List<uint64_t> results =
           List<uint64_t>::cons(
@@ -259,7 +262,7 @@ struct MapPartialApp {
                   UINT64_C(2),
                   List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())))
               .template map<uint64_t>(
-                  [=](uint64_t v) mutable { return tree_sum(p.first(v)); });
+                  [=](uint64_t v) { return tree_sum(p.first(v)); });
       return sum_list(std::move(results));
     }();
   }();
@@ -268,24 +271,24 @@ struct MapPartialApp {
     return []() {
       tree t1 = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
       tree t2 = tree::node(tree::leaf(), UINT64_C(20), tree::leaf());
-      std::function<tree(uint64_t)> f1 = [=](uint64_t _x0) mutable -> tree {
-        return wrap(t1, _x0);
+      crane::fn<tree(uint64_t)> f1 = [=](uint64_t _x0) -> tree {
+        return wrap(std::move(t1), _x0);
       };
-      std::function<tree(uint64_t)> f2 = [=](uint64_t _x0) mutable -> tree {
-        return wrap(t2, _x0);
+      crane::fn<tree(uint64_t)> f2 = [=](uint64_t _x0) -> tree {
+        return wrap(std::move(t2), _x0);
       };
       List<uint64_t> r1 =
           List<uint64_t>::cons(
               UINT64_C(1),
               List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil()))
               .template map<uint64_t>(
-                  [=](uint64_t v) mutable { return tree_sum(f1(v)); });
+                  [=](uint64_t v) { return tree_sum(f1(v)); });
       List<uint64_t> r2 =
           List<uint64_t>::cons(
               UINT64_C(3),
               List<uint64_t>::cons(UINT64_C(4), List<uint64_t>::nil()))
               .template map<uint64_t>(
-                  [=](uint64_t v) mutable { return tree_sum(f2(v)); });
+                  [=](uint64_t v) { return tree_sum(f2(v)); });
       return (sum_list(std::move(r1)) + sum_list(std::move(r2)));
     }();
   }();

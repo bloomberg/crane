@@ -2,6 +2,7 @@
 #define INCLUDED_TC_CARRIER_OPTION_CAST
 
 #include "crane_fn.h"
+#include "obj.h"
 #include <any>
 #include <concepts>
 #include <memory>
@@ -20,7 +21,7 @@ concept Box = requires {
 };
 
 struct TcCarrierOptionCast {
-  using carrier = std::any;
+  using carrier = crane::obj;
 
   struct OptBox {
     using carrier = std::optional<uint64_t>;

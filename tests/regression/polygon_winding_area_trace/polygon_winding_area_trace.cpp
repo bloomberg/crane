@@ -2,7 +2,7 @@
 
 int64_t Z::pow_pos(int64_t z, unsigned int x0_) {
   return Pos::template iter<int64_t>(
-      [=](int64_t _x0) mutable -> int64_t {
+      [=](int64_t _x0) -> int64_t {
         return static_cast<int64_t>(static_cast<uint64_t>(z) *
                                     static_cast<uint64_t>(_x0));
       },

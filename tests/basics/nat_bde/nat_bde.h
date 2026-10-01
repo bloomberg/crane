@@ -1,7 +1,6 @@
 #ifndef INCLUDED_NAT_BDE
 #define INCLUDED_NAT_BDE
 
-#include "small_vector.h"
 #include <atomic>
 #include <bsl_concepts.h>
 #include <bsl_functional.h>
@@ -42,22 +41,18 @@ public:
   static Nat s(Nat n) { return Nat(S{bsl::make_shared<Nat>(bsl::move(n))}); }
   // MANIPULATORS
   ~Nat() {
-    crane::small_vector<bsl::shared_ptr<Nat>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> bsl::shared_ptr<Nat> {
       if (auto *_alt = bsl::get_if<S>(&_v)) {
-        if (_alt->d_n) {
-          _stack.push_back(bsl::move(_alt->d_n));
+        if (_alt->d_n && _alt->d_n.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return bsl::move(_alt->d_n);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = bsl::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    bsl::shared_ptr<Nat> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
   Nat(const Nat &) = default;

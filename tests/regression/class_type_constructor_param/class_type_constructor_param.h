@@ -1,9 +1,10 @@
 #ifndef INCLUDED_CLASS_TYPE_CONSTRUCTOR_PARAM
 #define INCLUDED_CLASS_TYPE_CONSTRUCTOR_PARAM
 
+#include "fn.h"
+#include "obj.h"
 #include <any>
 #include <concepts>
-#include <functional>
 #include <type_traits>
 #include <utility>
 
@@ -14,18 +15,19 @@
 
 template <typename I>
 concept Container = requires {
-  typename I::template F<std::any>;
+  typename I::template F<crane::obj>;
   {
-    I::template cmap<std::any, std::any>(
-        std::declval<std::function<std::any(std::any)>>(),
-        std::declval<typename I::template F<std::any>>())
-  } -> std::convertible_to<typename I::template F<std::any>>;
+    I::template cmap<crane::obj, crane::obj>(
+        std::declval<crane::fn<crane::obj(crane::obj)>>(),
+        std::declval<typename I::template F<crane::obj>>())
+  } -> std::convertible_to<typename I::template F<crane::obj>>;
   {
-    I::template cwrap<std::any>(std::declval<std::any>())
-  } -> std::convertible_to<typename I::template F<std::any>>;
+    I::template cwrap<crane::obj>(std::declval<crane::obj>())
+  } -> std::convertible_to<typename I::template F<crane::obj>>;
   {
-    I::template cout<std::any>(std::declval<typename I::template F<std::any>>())
-  } -> std::convertible_to<std::any>;
+    I::template cout<crane::obj>(
+        std::declval<typename I::template F<crane::obj>>())
+  } -> std::convertible_to<crane::obj>;
 };
 
 struct ClassTypeConstructorParam {
@@ -50,7 +52,7 @@ struct ClassTypeConstructorParam {
     template <typename _A0> using F = _A0;
 
     template <typename _A0, typename _A1>
-    static _A1 cmap(std::function<_A1(_A0)> f, _A0 a0) {
+    static _A1 cmap(crane::fn<_A1(_A0)> f, _A0 a0) {
       return f(std::move(a0));
     }
 

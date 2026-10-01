@@ -563,6 +563,20 @@ let expand_elem_args cmds =
 let parse_type_template s =
   expand_elem_args (parse_numbered_args "t" (fun i -> CCty_arg i) s)
 
+(** A custom mapping that names a template without saying where its arguments
+    go still takes them: ["Sum1"] applied to [E], [F] means ["Sum1<E, F>"],
+    exactly as a non-custom name would.  Normalising the mapping here, before
+    it is parsed, is what keeps every printer of a custom type spelling it the
+    same way -- a type spelled one way in a signature and another in a body is
+    two types. *)
+let custom_template_with_args s nargs =
+  if nargs = 0 || String.contains s '%' then s
+  else
+    s
+    ^ "<"
+    ^ String.concat ", " (List.init nargs (fun i -> Printf.sprintf "%%t%d" i))
+    ^ ">"
+
 (** Parse a custom {e term} template: {!parse_type_template} plus the [%a{i}]
     holes that splice value arguments. *)
 let parse_term_template s =
@@ -636,10 +650,17 @@ let insert_template_keyword name_pp name_str =
 (** Print a type variable by de Bruijn index, looking up in [vl]. Falls back to
     [T<n>] if index is out of range.
 
+    Out of range covers both ends: a scope shorter than the type -- a
+    declaration read before its own quantifiers are in hand -- leaves the
+    variable unnamed, and so does index [0], which is what an unnamed variable
+    carries.  Neither is an error here; the fallback spelling is.
+
     @param vl  list of type variable names (de Bruijn, 1-indexed from the right)
     @param i   1-based de Bruijn index into [vl] *)
 let print_cpp_type_var vl i =
-  try pp_tvar (List.nth vl (pred i)) with Failure _ -> str "T" ++ int i
+  match if i >= 1 then List.nth_opt vl (pred i) else None with
+  | Some name -> pp_tvar name
+  | None -> str "T" ++ int i
 
 (** Set of parameter IDs whose C++ type is [Tany] (std::any) in the
     current method being printed.  Set before printing a method body,
@@ -668,6 +689,309 @@ let any_type_aliases = Cpp_erasure.any_type_aliases
 
 let is_any_type = Cpp_erasure.is_any_shaped
 
+(** Type names introduced at file scope, recorded as they are emitted.
+
+    A definition written outside its struct ([Owner::f]) qualifies the plain
+    names in its signature with [Owner::], which is right for a member and
+    wrong for anything else.  An erased type-class field is a case of
+    "anything else": the class is at file scope, so its erased face is a
+    file-scope [using iptr = std::any;], and some unrelated struct's hoisted
+    body must resolve [iptr] to that alias rather than claim it as a member it
+    never declared.
+
+    The set is only consulted to {i withhold} the qualifier, so a name not yet
+    seen keeps the old behaviour; and a file-scope name that a struct also
+    declares as a member still resolves to the member, because the body of an
+    out-of-line definition is inside its class's scope. *)
+let file_scope_type_names : CString.Set.t ref = ref CString.Set.empty
+
+let is_file_scope_type id =
+  CString.Set.mem (Id.to_string id) !file_scope_type_names
+
+(** Record [name] as declared at file scope, if that is where we are.  Called
+    with the name the printer is about to write, not one recomputed from the
+    reference: a struct's spelling goes through several cases and a recomputed
+    name would silently fail to match the one a use site writes. *)
+let record_file_scope_name name =
+  if not (!render_ctx).rc_in_struct then
+    file_scope_type_names :=
+      CString.Set.add (Pp.string_of_ppcmds name) !file_scope_type_names
+
+(** The type name a declaration introduces, for the shapes whose spelling is
+    settled here.  A struct records itself where it is printed. *)
+let rec decl_type_name = function
+  | Dtemplate (_, _, inner) -> decl_type_name inner
+  | Dusing u -> Some (pp_global Type u.du_name)
+  | Dnspace (Some r, _) ->
+    Some (str (String.capitalize_ascii (str_global Type r)))
+  | _ -> None
+
+let record_file_scope_type d = Option.iter record_file_scope_name (decl_type_name d)
+
+(** The C++ token an {!Minicpp.obj_access} prints as. *)
+let pp_obj_access = function Adot -> "." | Aarrow -> "->"
+
+let ref_has_no_cpp_name = Ml_type_util.ref_has_no_cpp_name
+let has_no_cpp_spelling = Ml_type_util.has_no_cpp_spelling
+
+(** Report what {!has_no_cpp_spelling} saw.
+
+    Two audiences.  A [Crane Extract Skip] on a constant that a custom
+    template later needs {e by name} degrades silently: the binder becomes
+    [std::any] and the only symptom is a type error a long way downstream, so
+    that one is always warned about, naming the directive to remove.  A module
+    left out by [Crane Extract Skip Module] was left out wholesale and on
+    purpose, so it is not worth a word unless asked.
+
+    [CRANE_DBG_UNSPELLABLE] adds the full shape.  The ordinal is the
+    discriminator: firings are reported in emission order, which is the only
+    handle on {e which} site fired when several share a custom template, and
+    the alternative -- a printer-filled table of the declaration being emitted
+    -- is the thing that must not be built. *)
+let unspellable_firings = ref 0
+
+let unspellable_warned : (string, unit) Hashtbl.t = Hashtbl.create 7
+
+let report_unspellable where ty =
+  let empty_custom = ref [] and skipped_mod = ref [] in
+  ignore
+    (Minicpp.exists_cpp_type
+       (function
+         | Tglob (r, _, _) when ref_has_no_cpp_name r ->
+           let n = Pp.string_of_ppcmds (GlobRef.print r) in
+           if Ml_type_util.ref_has_no_spelling r then
+             empty_custom := n :: !empty_custom
+           else skipped_mod := n :: !skipped_mod;
+           false
+         | _ -> false )
+       ty );
+  incr unspellable_firings;
+  List.iter
+    (fun n ->
+      if not (Hashtbl.mem unspellable_warned n) then begin
+        Hashtbl.add unspellable_warned n ();
+        Feedback.msg_warning
+          (Pp.str
+             (Printf.sprintf
+                "crane: a custom template needs %s by name, but [Crane \
+                 Extract Skip] removed it, so the binder is typed std::any \
+                 and the type is lost here.  If %s is still reachable, drop \
+                 the directive that skips it."
+                n n ) )
+      end )
+    (List.rev !empty_custom);
+  if Sys.getenv_opt "CRANE_DBG_UNSPELLABLE" <> None then begin
+    let shape = function
+      | Tglob _ -> "Tglob"
+      | Tapply _ -> "Tapply"
+      | Tqualified _ -> "Tqualified"
+      | Tvar _ -> "Tvar"
+      | Tinstance _ -> "Tinstance"
+      | Tpromoted _ -> "Tpromoted"
+      | Tid _ -> "Tid"
+      | Tid_external _ -> "Tid_external"
+      | Tnondeduced _ -> "Tnondeduced"
+      | Trebind _ -> "Trebind"
+      | Thole -> "Thole"
+      | Tfwd_ref _ -> "Tfwd_ref"
+      | Texpr_type _ -> "Texpr_type"
+      | Tdecltype_auto -> "Tdecltype_auto"
+      | Ttyctor _ -> "Ttyctor"
+      | Tany -> "Tany"
+      | _ -> "other"
+    in
+    let tagged tag l = List.map (fun n -> n ^ " [" ^ tag ^ "]") l in
+    Feedback.msg_warning
+      (Pp.str
+         (Printf.sprintf
+            "crane: firing %d: %s yields std::any; outermost %s; nameless \
+             globs: %s"
+            !unspellable_firings where (shape ty)
+            (String.concat ", "
+               ( tagged "empty custom" (List.rev !empty_custom)
+               @ tagged "skipped module" (List.rev !skipped_mod) ) ) ) )
+  end
+
+(** Alias templates standing in for custom-mapped type constructors that
+    cannot be named by cutting their application back to a head.
+
+    A custom mapping is a {e spelling}, not a template name: [itree] maps to
+    [std::shared_ptr<ITree<%t1>>], whose head is [std::shared_ptr] -- a
+    template that, applied to the element, gives something else entirely.  A
+    template template argument position needs a name that applies correctly,
+    so one is introduced: [template <typename _A> using ITree_tc =
+    std::shared_ptr<ITree<_A>>;], replayed in the header prologue by
+    {!take_forward_struct_decls}.  Keyed by the alias body, so a constructor
+    reached twice is declared once. *)
+let ctor_alias_decls : (string * string) list ref = ref []
+
+(** Alias templates whose body mentions template parameters of the declaration
+    that needs them.
+
+    A namespace-scope alias cannot name a function template's own parameter, so
+    the carrier of [`{TFunctor (fun T => two T (FnBody T))}] -- whose body is
+    [two<_CraneTcArg, T1<_CraneTcArg>>] -- has nowhere to be declared as a
+    plain alias.  What can be declared there is a holder parameterised over
+    exactly those names, with the alias as a member:
+
+      template <template <typename> class _F0> struct C_h {
+        template <typename _CraneTcArg> using c = two<_CraneTcArg, _F0<_CraneTcArg>>;
+      };
+
+    and the use site writes [C_h<T1>::template c], which is the dependent alias
+    the [Tqualified] branch below already knows how to spell.  Keyed by the
+    body with the captured names replaced, so two declarations that differ only
+    in what they call their parameters share one holder. *)
+let ctor_holder_decls : (string * string) list ref = ref []
+
+(** The alias and holder names already declared in the file being written.
+
+    {!take_ctor_alias_decls} is called once per top-level element rather than
+    once per file, so that an alias lands after the definitions its body names
+    ({!Cpp.do_struct_with_decl_tracking}).  Draining empties the registry, and
+    a later element reaching the same constructor mints the same name again --
+    the same name, because it is a digest of the body.  Repeating the
+    declaration would be legal and is what this avoids: the earlier one is
+    still in scope, so the repeat says nothing.
+
+    Per file, because the two files declare independently: a use in the
+    implementation file is reached after the header has been handed over. *)
+let ctor_alias_emitted : (string, unit) Hashtbl.t = Hashtbl.create 16
+
+let reset_ctor_alias_emitted () = Hashtbl.reset ctor_alias_emitted
+
+(** Whether [text] spells [name] as a whole identifier.  An alias's name ends
+    in a digest of its body, but a holder's is numbered ([_crane_carrier_tch],
+    [_crane_carrier_tch1]), so one can be a prefix of another. *)
+let mentions_name text name =
+  let n = String.length name and m = String.length text in
+  let is_id c =
+    (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
+    || c = '_'
+  in
+  let at i =
+    String.sub text i n = name
+    && (i = 0 || not (is_id text.[i - 1]))
+    && (i + n = m || not (is_id text.[i + n]))
+  in
+  let rec go i = i + n <= m && (at i || go (i + 1)) in
+  n > 0 && go 0
+
+(** The synthesised names minted but not yet declared. *)
+let pending_ctor_alias_names () =
+  List.map snd !ctor_alias_decls @ List.map snd !ctor_holder_decls
+
+(** The module struct a synthesised name has to be declared inside: its body
+    names a type of that module as the module's own members spell it, bare,
+    and so means nothing at namespace scope.  See {!record_ctor_alias_home}. *)
+let ctor_alias_homes : (string, Names.ModPath.t) Hashtbl.t = Hashtbl.create 17
+
+(** [record_ctor_alias_home name body] notes [name]'s home when [body] -- the
+    type it abbreviates, spelled where it is minted -- names a global of the
+    module struct being rendered.  Such a global is printed bare only because
+    that struct is the innermost visible scope. *)
+let record_ctor_alias_home name body =
+  let cur = Common.top_visible_mp () in
+  let modpath_of = function
+    | GlobRef.ConstRef c -> Some (Names.Constant.modpath c)
+    | GlobRef.IndRef (kn, _) | GlobRef.ConstructRef ((kn, _), _) ->
+      Some (Names.MutInd.modpath kn)
+    | GlobRef.VarRef _ -> None
+  in
+  let in_cur =
+    exists_cpp_type
+      (function
+        | Tglob (r, _, _) -> (
+          match modpath_of r with
+          | Some mp -> Names.ModPath.equal mp cur
+          | None -> false )
+        | _ -> false )
+      body
+  in
+  if in_cur && not (Table.is_modfile cur) then
+    Hashtbl.replace ctor_alias_homes name cur
+
+(** The pending synthesised names whose home is [mp]. *)
+let pending_ctor_aliases_homed_in mp =
+  List.filter
+    (fun name ->
+      match Hashtbl.find_opt ctor_alias_homes name with
+      | Some home -> Names.ModPath.equal home mp
+      | None -> false )
+    (pending_ctor_alias_names ())
+
+(** The C++ identifiers appearing in [text], as whole tokens.  Used to tell
+    whether a rendered type body really names a template parameter, which a
+    structural walk over the type cannot: a custom mapping's replacement text
+    may leave an argument unwritten. *)
+let identifier_tokens text =
+  let is_id c =
+    (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
+    || c = '_'
+  in
+  let out = ref [] and buf = Buffer.create 16 in
+  let flush () =
+    if Buffer.length buf > 0 then (
+      out := Buffer.contents buf :: !out;
+      Buffer.clear buf )
+  in
+  String.iter (fun c -> if is_id c then Buffer.add_char buf c else flush ()) text;
+  flush ();
+  !out
+
+let ctor_holder_name_for ~base body =
+  match List.assoc_opt body !ctor_holder_decls with
+  | Some name -> name
+  | None ->
+    let taken name =
+      List.exists (fun (_, n) -> String.equal n name) !ctor_holder_decls
+    in
+    let rec fresh i =
+      let name = base ^ "_tch" ^ (if i = 0 then "" else string_of_int i) in
+      if taken name then fresh (i + 1) else name
+    in
+    let name = fresh 0 in
+    ctor_holder_decls := (body, name) :: !ctor_holder_decls;
+    name
+
+(** The type variable an alias template abstracts over, and the sentinel used
+    to find out whether one is needed at all: rendering the constructor
+    applied to it says whether the application is just a head plus this
+    argument. *)
+let ctor_alias_tvar = Minicpp.ctor_alias_tvar
+
+(** The name of the alias template for [body], as a function of [body] alone.
+
+    Not a counter.  {!ctor_alias_decls} is drained once per file, so a counter
+    allocated against it restarts in the implementation file and binds the
+    names the header already bound to different bodies -- and the use sites,
+    written from whichever file reached them, then name entries their own
+    table never declared.  Repeating a [using] with the same definition is
+    legal, which is what makes the per-file draining sound; repeating the
+    {e name} with a different definition is the error it was read as being.
+
+    A digest is what makes the two agree without either file knowing what the
+    other minted: the same body is the same name in both, so both may declare
+    it and every use site names what it meant.  The body is a rendered C++
+    type, so the digest is over text that is already canonical. *)
+let ctor_alias_name_for ~base body =
+  match List.assoc_opt body !ctor_alias_decls with
+  | Some name -> name
+  | None ->
+    let name =
+      base ^ "_tc_" ^ String.sub (Digest.to_hex (Digest.string body)) 0 16
+    in
+    ctor_alias_decls := (body, name) :: !ctor_alias_decls;
+    name
+
+(** The C++ name of the field a projection reads.
+
+    It is the projection's own label, escaped the same way the field was when
+    the record's struct was written -- a record with a field named [this] has
+    one named [this_], and a projection of it has to say so too. *)
+let projection_field_name (r : GlobRef.t) : string =
+  Common.modular_rename Term (Label.to_id (label_of_r r))
+
 (** Pretty-print a MiniCpp type as C++ source text.
 
     @param par  whether to parenthesize (for precedence in function types)
@@ -676,9 +1000,6 @@ let is_any_type = Cpp_erasure.is_any_shaped
     A {!Minicpp.Tpromoted} reaching the printer is one no resolution map
     claimed, so it is rendered as a member of the enclosing struct: the bare
     name inside a struct body, [StructName::id] outside one. *)
-(** The C++ token an {!Minicpp.obj_access} prints as. *)
-let pp_obj_access = function Adot -> "." | Aarrow -> "->"
-
 let rec pp_cpp_type ?(lead = true) par vl t =
   let rec pp_rec ?(lead = true) par t =
     (* The [typename] a dependent qualifier needs, unless the caller is placing
@@ -699,9 +1020,15 @@ let rec pp_cpp_type ?(lead = true) par vl t =
          struct.  Here it is a reference to that declaration:
 
            in struct:  using Obj = std::any;
-           in .cpp:    DepRecord::Obj my_var = ...; *)
+           in .cpp:    DepRecord::Obj my_var = ...;
+
+         The qualifier is only correct for a struct that declares the member.
+         An erased field also gets a file-scope [using] of the same name, and a
+         hoisted body whose owner is some other struct must resolve to that
+         one, not to a member that does not exist. *)
       ( match (!render_ctx).rc_struct_name with
-      | Some struct_name when not (!render_ctx).rc_in_struct ->
+      | Some struct_name
+        when (not (!render_ctx).rc_in_struct) && not (is_file_scope_type id) ->
         struct_name ++ str "::" ++ Id.print id
       | _ -> Id.print id )
     | Tvar (_, Some id) -> Id.print id
@@ -711,12 +1038,14 @@ let rec pp_cpp_type ?(lead = true) par vl t =
        out-of-struct definitions, prepend struct name. *)
     | Tid (id, []) ->
       ( match (!render_ctx).rc_struct_name with
-      | Some struct_name when not (!render_ctx).rc_in_struct ->
+      | Some struct_name
+        when (not (!render_ctx).rc_in_struct) && not (is_file_scope_type id) ->
         struct_name ++ str "::" ++ Id.print id
       | _ -> Id.print id )
     | Tid (id, args) ->
       ( match (!render_ctx).rc_struct_name with
-      | Some struct_name when not (!render_ctx).rc_in_struct ->
+      | Some struct_name
+        when (not (!render_ctx).rc_in_struct) && not (is_file_scope_type id) ->
         struct_name
         ++ str "::"
         ++ Id.print id
@@ -724,6 +1053,15 @@ let rec pp_cpp_type ?(lead = true) par vl t =
         ++ pp_list (pp_rec false) args
         ++ str ">"
       | _ -> Id.print id ++ str "<" ++ pp_list (pp_rec false) args ++ str ">" )
+    | Tnondeduced t ->
+      str "std::type_identity_t<" ++ pp_rec false t ++ str ">"
+    | Trebind (h, x) ->
+      require_header "any";
+      str Crane_rt.rebind ++ str "<" ++ pp_list (pp_rec false) [ h; x ] ++ str ">"
+    | Thole -> str ctor_alias_tvar
+    | Tfwd_ref t -> pp_rec false t ++ str "&&"
+    | Texpr_type e -> str "decltype(" ++ pp_cpp_expr ([], Id.Set.empty) [] e ++ str ")"
+    | Tdecltype_auto -> str "decltype(auto)"
     | Tid_external (id_s, args) ->
       let id_s =
         if String.equal id_s "std::vector" then begin
@@ -745,11 +1083,13 @@ let rec pp_cpp_type ?(lead = true) par vl t =
              || name = "dummy_prop"
              || name = "dummy_implicit" ->
         require_header "any";
-        str "std::any"
+        str Crane_rt.obj
       | _ ->
       match find_custom_opt r with
       | Some s when to_inline r ->
-        let cmds = parse_term_template s in
+        let cmds =
+          parse_term_template (custom_template_with_args s (List.length tys))
+        in
         pp_custom
           ~container:r
           (Pp.string_of_ppcmds (GlobRef.print r) ^ " := " ^ s)
@@ -764,29 +1104,35 @@ let rec pp_cpp_type ?(lead = true) par vl t =
           cmds
       | _ ->
         (* Non-custom cases *)
-        let type_name = pp_inductive_type_name r in
-        let name_str = Pp.string_of_ppcmds type_name in
+        let bare_str = Pp.string_of_ppcmds (pp_inductive_type_name r) in
+        let struct_qual = struct_qualifier_for r bare_str in
+        let global_qual = global_scope_qualifier_for r bare_str in
+        (* The wrapper qualifier is the last resort: the two qualifiers above
+           say where the name lives whenever they say anything, and stacking
+           this one on top of them spells the same struct twice. *)
+        let name_str =
+          if Pp.ismt struct_qual && Pp.ismt global_qual then
+            wrapper_qualified_type_name r bare_str
+          else bare_str
+        in
+        let type_name = str name_str in
         ( match tys with
         | [] ->
-          typename_prefix_for name_str
-          ++ struct_qualifier_for r name_str
-          ++ global_scope_qualifier_for r name_str
+          typename_prefix_for name_str ++ struct_qual ++ global_qual
           ++ type_name
         | l ->
           let type_name_with_template =
             insert_template_keyword type_name name_str
           in
-          typename_prefix_for name_str
-          ++ struct_qualifier_for r name_str
-          ++ global_scope_qualifier_for r name_str
+          typename_prefix_for name_str ++ struct_qual ++ global_qual
           ++ type_name_with_template
           ++ str "<"
           ++ pp_list (pp_rec false) l
           ++ str ">" ) )
     | Tfun (d, c) ->
-      require_header "functional";
-      std_angle
-        "function"
+      require_header Crane_rt.fn_header;
+      cpp_angle
+        Crane_rt.fn
         (pp_rec false c ++ pp_par true (pp_list (pp_rec false) d))
     | Tref t -> pp_rec false t ++ str "&"
     | Tptr t -> pp_rec false t ++ str "*"
@@ -819,21 +1165,8 @@ let rec pp_cpp_type ?(lead = true) par vl t =
           (* Enum types at global scope need no struct qualification. Enums
              inside structs (e.g., Comparison::cmp) need it. *)
           let qualifier =
-            match (!render_ctx).rc_struct_name with
-            | Some struct_name when not (!render_ctx).rc_in_struct ->
-              if is_global_scope_enum_cached r' then
-                mt ()
-              else
-                let full_path = Pp.string_of_ppcmds (GlobRef.print r') in
-                let struct_name_str = Pp.string_of_ppcmds struct_name in
-                let struct_name_dotted =
-                  Str.global_replace re_double_colon "." struct_name_str
-                in
-                if Common.contains_substring full_path struct_name_dotted then
-                  struct_name ++ str "::"
-                else
-                  mt ()
-            | _ -> mt ()
+            if is_global_scope_enum_cached r' then mt ()
+            else struct_qualifier_for r' type_name_str
           in
           qualifier
           ++ str (capitalize_enum_qualified type_name_str r')
@@ -870,7 +1203,19 @@ let rec pp_cpp_type ?(lead = true) par vl t =
           if needs_ns && Table.modular () then
             str (cap ^ "::" ^ cap) ++ templates
           else
-            global_scope_qualifier_for r' cap ++ str cap ++ templates
+            (* A file whose declarations were folded into a struct keeps its
+               inductives there too, so the struct is their scope -- the same
+               qualifier a call into that file already gets. *)
+            let qualified =
+              if Cpp_state.is_nested_struct_ref r' then
+                wrapper_qualify_name r' cap
+              else
+                cap
+            in
+            if qualified <> cap then
+              str qualified ++ templates
+            else
+              global_scope_qualifier_for r' cap ++ str cap ++ templates
         else
           if needs_ns then
             name ++ str "::" ++ str type_name_str ++ templates
@@ -926,8 +1271,39 @@ let rec pp_cpp_type ?(lead = true) par vl t =
                   (Id.to_string nested_id)
                   (pp_list (pp_rec false) targs) )
     | Tapply (head, args) ->
-      (* A non-dependent alias template: the head names it outright. *)
-      pp_rec false head ++ str "<" ++ pp_list (pp_rec false) args ++ str ">"
+      (* A non-dependent alias template: the head names it outright.
+
+         Unless the head has no name.  A constructor [Crane Extract Skip]
+         removed renders as nothing, and nothing followed by [<args>] is not a
+         template-id with an elided name, it is a syntax error -- and one that
+         then gets wrapped by whatever reads the result, which is how
+         [crane_event_as<<typename I::PROV>>] happened.  A removed constructor
+         is the identity on what it was applied to, so its arguments are the
+         whole of what there is to write. *)
+      ( match head with
+      | Tglob (r, _, _) when ref_has_no_cpp_name r ->
+        pp_list (pp_rec false) args
+      | _ ->
+        (* Non-dependent is what the head usually is, but not always: a
+           carrier whose body names a template parameter of the enclosing
+           declaration has no namespace-scope alias to be, so it is minted as
+           a member of a holder and comes back spelled [H<T1>::template c].
+           That is a dependent qualified name, and applying it yields a type,
+           which needs the [typename] the {!Tqualified} arm above would have
+           given it.  The head is asked for its own rendering because only the
+           rendering knows: whether a holder was needed is decided by which
+           names the body actually {e writes}, which is not a property of the
+           type's shape. *)
+        let head_pp = pp_rec false head in
+        let dependent_member =
+          let text = Pp.string_of_ppcmds head_pp in
+          let sep = "::template " in
+          let n = String.length text and m = String.length sep in
+          let rec at i = i + m <= n && (String.sub text i m = sep || at (i + 1)) in
+          at 0
+        in
+        (if dependent_member then leading_typename else mt ())
+        ++ head_pp ++ str "<" ++ pp_list (pp_rec false) args ++ str ">" )
     | Tvariant tys ->
       require_header "variant";
       std_angle "variant" (pp_list (pp_rec false) tys)
@@ -944,7 +1320,7 @@ let rec pp_cpp_type ?(lead = true) par vl t =
       (* [Topaque] is a type we could not pin down; [std::any] is the only
          spelling that accepts whatever it turns out to be. *)
       require_header "any";
-      str "std::any"
+      str Crane_rt.obj
     | Ttyctor t ->
       (* A template template argument is the bare template name.  Ask the type
          for its head rather than rendering it applied and cutting the result
@@ -958,7 +1334,201 @@ let rec pp_cpp_type ?(lead = true) par vl t =
       (* An applied type here is the eta-expansion of the constructor: its head
          is what the position wants. *)
       let t = match t with Tapply (head, _) -> head | t -> t in
+      (* A constructor applied to the sentinel is both the test and the alias
+         body: where the rendering comes out as a head plus that one argument,
+         the head is a template name and naming it is enough; where it does
+         not, there is no head to name and an alias template is introduced.
+         [itree] is [std::shared_ptr<ITree<%t1>>] and a composite Rocq carrier
+         is [std::pair<_CraneTcArg, Box<_CraneTcArg>>]; neither can be cut
+         back, and the same reading of the same rendering covers both. *)
+      (* The template parameters of the enclosing declaration that the body
+         names.  An alias whose body mentions one cannot live at namespace
+         scope, so those are what the holder abstracts over. *)
+      let captured probe =
+        let seen = ref [] in
+        let rec go t =
+          match t with
+          | Tvar (i, _) ->
+            if not (List.mem i !seen) then seen := !seen @ [i]
+          | Tglob (_, ts, _) | Tid (_, ts) | Tid_external (_, ts)
+          | Tvariant ts ->
+            List.iter go ts
+          | Tfun (dom, cod) -> List.iter go dom; go cod
+          | Tconst t | Tshared_ptr t | Tref t | Tfwd_ref t | Tptr t | Tnamespace (_, t)
+          | Tqualified (t, _) | Tdecay t | Ttyctor t | Tnondeduced t ->
+            go t
+          | Trebind (h, x) -> go h; go x
+          | Tapply (t, ts) -> go t; List.iter go ts
+          | _ -> ()
+        in
+        go probe; !seen
+      in
+      let alias_for_probe ~base probe =
+        (* A captured parameter is named {e applied} to the alias's own
+           argument -- that is what makes the body an abstraction rather than a
+           type, and it is what lets the holder declare every parameter it
+           takes as a type constructor.  A variable the body names bare is not
+           a carrier parameter; it is a type the body mentions, and mentioning
+           it at the use site writes a name from the declaration's quantifier.
+           An instance method's body is emitted without that quantifier, so
+           [_crane_carrier_tch<T1>] there names a scope the function is not in.
+           What the body has instead is the erasure it was emitted under, and
+           [std::any] is how the rest of it already spells that. *)
+        let applied_vars =
+          let seen = ref [] in
+          let rec go t =
+            match t with
+            | Tapply (Tvar (i, _), ts) ->
+              seen := i :: !seen;
+              List.iter go ts
+            | Tglob (_, ts, _) | Tid (_, ts) | Tid_external (_, ts)
+            | Tvariant ts ->
+              List.iter go ts
+            | Tfun (dom, cod) -> List.iter go dom; go cod
+            | Tconst t | Tshared_ptr t | Tref t | Tfwd_ref t | Tptr t | Tnamespace (_, t)
+            | Tqualified (t, _) | Tdecay t | Ttyctor t | Tnondeduced t ->
+              go t
+            | Trebind (h, x) -> go h; go x
+            | Tapply (t, ts) -> go t; List.iter go ts
+            | _ -> ()
+          in
+          go probe; !seen
+        in
+        (* A variable the body names bare is kept where it is a declared
+           parameter -- named, as a plain family the declaration deapplied is
+           -- and becomes a [typename] parameter of the holder. *)
+        let bare_vars =
+          let seen = ref [] in
+          ignore
+            (map_cpp_type
+               (function
+                 | Tvar (i, Some _) as t when not (List.mem i applied_vars) ->
+                   seen := i :: !seen;
+                   t
+                 | t -> t )
+               probe );
+          !seen
+        in
+        let probe =
+          map_cpp_type
+            (function
+              | Tvar (i, _)
+                when not (List.mem i applied_vars || List.mem i bare_vars) ->
+                Tany
+              | t -> t )
+            probe
+        in
+        let rendered = Pp.string_of_ppcmds (pp_rec false probe) in
+        if
+          String.equal rendered
+            (cut_at_argument_list rendered ^ "<" ^ ctor_alias_tvar ^ ">")
+        then None
+        else
+          (* Only a name the body actually {e writes} has to be abstracted
+             over.  A custom mapping's replacement text need not use every
+             argument -- [itree]'s spells only its last -- so a parameter that
+             the probe carries structurally but the rendering drops would
+             otherwise mint a holder with an unused parameter, and the alias
+             would be declared as a partial specialisation of nothing. *)
+          let names = identifier_tokens rendered in
+          let captured probe =
+            List.filter
+              (fun i ->
+                List.mem
+                  (Pp.string_of_ppcmds (print_cpp_type_var vl i))
+                  names )
+              (captured probe)
+          in
+          (* A class instance the body reads a type out of -- [typename
+             _tcI0::ptr] -- is the enclosing declaration's parameter as much
+             as a variable is, and is captured the same way. *)
+          let instances =
+            let seen = ref [] in
+            ignore
+              (map_cpp_type
+                 (function
+                   | Tinstance (id, _) as t ->
+                     if not (List.exists (Id.equal id) !seen) then
+                       seen := !seen @ [id];
+                     t
+                   | t -> t )
+                 probe );
+            !seen
+          in
+          match (captured probe, instances) with
+          | [], [] ->
+            let name = ctor_alias_name_for ~base rendered in
+            record_ctor_alias_home name probe;
+            Some name
+          | vars, instances ->
+            (* Rendered a second time with the captured names replaced by the
+               holder's own, so that two declarations differing only in what
+               they call their parameters share one holder. *)
+            let renamed =
+              List.fold_left
+                (fun acc (k, i) ->
+                  map_cpp_type
+                    (function
+                      | Tvar (j, _) when j = i ->
+                        Tid_external
+                          ( (if List.mem i bare_vars then "_P" else "_F")
+                            ^ string_of_int k,
+                            [] )
+                      | t -> t )
+                    acc )
+                probe
+                (List.mapi (fun k i -> (k, i)) vars)
+            in
+            let renamed =
+              List.fold_left
+                (fun acc (k, id) ->
+                  map_cpp_type
+                    (function
+                      | Tinstance (id', c) when Id.equal id id' ->
+                        Tinstance (Id.of_string ("_P" ^ string_of_int k), c)
+                      | t -> t )
+                    acc )
+                renamed
+                (List.mapi (fun j id -> (List.length vars + j, id)) instances)
+            in
+            let body = Pp.string_of_ppcmds (pp_rec false renamed) in
+            let name = ctor_holder_name_for ~base body in
+            record_ctor_alias_home name probe;
+            Some
+              ( name ^ "<"
+              ^ String.concat ", "
+                  (List.map
+                     (fun i -> Pp.string_of_ppcmds (print_cpp_type_var vl i))
+                     vars
+                  @ List.map Id.to_string instances )
+              ^ ">::template c" )
+      in
+      (* A custom mapping arrives applied to its real arguments, so the
+         sentinel has to be put in the carrier's place first. *)
+      let alias_for_custom r args =
+        match args with
+        | [] -> None
+        | _ ->
+          let fixed = List.filteri (fun i _ -> i < List.length args - 1) args in
+          alias_for_probe
+            ~base:(Common.pp_global_name Type r)
+            (Tglob (r, fixed @ [Thole], []))
+      in
+      (* A carrier built by the front end already has the sentinel standing
+         where its argument goes -- it is the abstraction, not an application
+         of one, and there is nothing to substitute. *)
+      ( match
+        if exists_cpp_type (fun s -> s = Thole) t
+        then alias_for_probe ~base:"_crane_carrier" t
+        else None
+      with
+      | Some name -> str name
+      | None ->
       ( match t with
+      | Tglob (r, (_ :: _ as args), _)
+        when ( match find_custom_opt r with Some _ -> true | None -> false )
+             && alias_for_custom r args <> None ->
+        str (Option.get (alias_for_custom r args))
       | Tqualified (base, id) ->
         (* A dependent alias template -- the carrier of a higher-kinded class
            parameter.  Here it names a template rather than a type, so the
@@ -976,7 +1546,7 @@ let rec pp_cpp_type ?(lead = true) par vl t =
           | _ -> str (cut_at_argument_list template) )
         | Some template -> str (cut_at_argument_list template)
         | None -> pp_rec false (Tglob (r, [], [])) )
-      | _ -> str (cut_at_argument_list (Pp.string_of_ppcmds (pp_rec false t))) )
+      | _ -> str (cut_at_argument_list (Pp.string_of_ppcmds (pp_rec false t))) ) )
     | Tauto -> str "auto"
     | Tdecltype e ->
       (* Print std::decay_t<decltype(expr)> where expr has been rewritten by
@@ -1065,7 +1635,7 @@ and deque_elem_extract_expr elem_ty src_expr =
     match elem_ty with
     | Tglob (_, [t1; t2], _) ->
       str "[&]() { const auto& _p = " ++ str (sn ()).any_cast
-      ++ str "<std::pair<std::any, std::any>>(" ++ src_expr
+      ++ str ("<std::pair<" ^ Crane_rt.obj ^ ", " ^ Crane_rt.obj ^ ">>(") ++ src_expr
       ++ str "); return std::make_pair("
       ++ extract_from_any t1 (str "_p.first") ++ str ", "
       ++ extract_from_any t2 (str "_p.second") ++ str "); }()"
@@ -1196,7 +1766,7 @@ and pp_cpp_expr env args t =
             let ty_pp = pp_cpp_type false [] ty in
             str "[&]() -> " ++ ty_pp
             ++ str " { if constexpr (std::is_same_v<" ++ ty_pp
-            ++ str ", std::any>) return " ++ Id.print id
+            ++ str (", " ^ Crane_rt.obj ^ ">) return ") ++ Id.print id
             ++ str "; else return " ++ str (sn ()).any_cast
             ++ str "<" ++ ty_pp ++ str ">("
             ++ Id.print id ++ str "); }()"
@@ -1306,7 +1876,7 @@ and pp_cpp_expr env args t =
       (* A declared parameter carries however many qualifiers the declaration
          gave it; the lambda spells its own, so they all come off first. *)
       let rec unqualified = function
-        | Tref t | Tconst t -> unqualified t
+        | Tref t | Tfwd_ref t | Tconst t -> unqualified t
         | t -> t
       in
       let declared_param i name =
@@ -1332,8 +1902,8 @@ and pp_cpp_expr env args t =
       str ("[](" ^ params ^ ") { return _x" ^ string_of_int this_pos ^ accessor)
       ++ pp_method_call_name x method_name _tys
       ++ str ("(" ^ call_args ^ "); }")
-  | CPPglob (x, [], _) when Table.is_projection x ->
-    let field_name = label_of_r x |> Names.Label.to_string in
+  | CPPglob (x, _, _) when Table.is_projection x ->
+    let field_name = projection_field_name x in
     str "[](const auto &_x) { return _x." ++ str field_name ++ str "; }"
   | CPPglob (x, tys, _) ->
     (* Determine the base name for a global reference *)
@@ -1513,22 +2083,64 @@ and pp_cpp_expr env args t =
       let args_s = pp_list (pp_cpp_expr env args) (call_args ts) in
       str s ++ ty_args_s ++ str "(" ++ args_s ++ str ")"
     else
+      (* [%ret] is the type the call yields, as translation recorded it: a
+         mapping can name a generated type -- the enum an ordering
+         becomes -- without knowing what the generator called it. *)
+      let s =
+        if Common.contains_substring s "%ret" then
+          match res.cs_yields with
+          | Ryields ty ->
+            Str.global_replace (Str.regexp_string "%ret")
+              (Pp.string_of_ppcmds (pp_cpp_type false [] ty)) s
+          | Ropaque ->
+            CErrors.user_err
+              Pp.(str "Crane: the mapping " ++ GlobRef.print n
+                  ++ str " names %ret, but the type its call yields is not known here.")
+        else s
+      in
       let cmds = parse_term_template s in
       let arg_types =
         match res.cs_params with Ptypes ts -> ts | Punknown -> []
       in
-      pp_custom
-        ~container:n
-        (Pp.string_of_ppcmds (GlobRef.print n) ^ " := " ^ s)
-        env
-        None
-        None
-        tys
-        []
-        (call_args ts)
-        arg_types
-        []
-        cmds
+      (* A mapping names the arguments it needs, which is not always all the
+         arguments a use site supplies: a constant whose meaning is a function
+         -- [case_ f g], the handler that dispatches on a sum -- is written
+         both bare and applied to an event, and one template cannot have two
+         arities.  What the template does not name, the call applies the
+         result to, which is what the Rocq term means in either case.  The
+         alternative, a template reaching for an argument that is not there,
+         is the anomaly at the head of {!pp_custom}. *)
+      let all_args = call_args ts in
+      let named =
+        List.fold_left
+          (fun acc -> function CCarg i -> max acc (i + 1) | _ -> acc)
+          0 cmds
+      in
+      let consumed, extra =
+        if named < List.length all_args then
+          (CList.firstn named all_args, CList.skipn named all_args)
+        else (all_args, [])
+      in
+      let applied =
+        pp_custom
+          ~container:n
+          (Pp.string_of_ppcmds (GlobRef.print n) ^ " := " ^ s)
+          env
+          None
+          None
+          tys
+          []
+          consumed
+          arg_types
+          []
+          cmds
+      in
+      if extra = [] then applied
+      else
+        applied
+        ++ str "("
+        ++ pp_list (pp_cpp_expr env args) extra
+        ++ str ")"
   | CPPfun_call (_, CPPglob (n, tys, _), ts)
     when lookup_method_this_pos n <> None
     ->
@@ -1568,7 +2180,7 @@ and pp_cpp_expr env args t =
       (_,  CPPlambda
         { cl_params = {rev = []};
           cl_body = [Smatch (scrut, branches, wildcard)];
-          cl_by_value = false;
+          cl_capture = Immediate;
           _ },
         {rev = []} )
     when (* Detect simple IIFE-wrapped matches that can be printed as ternary.
@@ -1654,8 +2266,14 @@ and pp_cpp_expr env args t =
       | _ -> CErrors.anomaly (Pp.str "ternary: unexpected custom_case branch structure")
     in
     str "(" ++ pp scrut ++ str " ? " ++ pp e1 ++ str " : " ++ pp e2 ++ str ")"
-  | CPPfun_call (_, CPPglob (r, [], _), {rev = [arg]}) when Table.is_projection r ->
-    let field_name = label_of_r r |> Names.Label.to_string in
+  (* A projection reads a field, and the field's name does not depend on what
+     the record was instantiated at, so the type arguments are ignored rather
+     than required to be absent.  Applied at a type -- as a projection of a
+     module obtained by functor application is -- this used to miss and fall
+     through to the ordinary qualified call, naming a function that a
+     suppressed projection never has. *)
+  | CPPfun_call (_, CPPglob (r, _, _), {rev = [arg]}) when Table.is_projection r ->
+    let field_name = projection_field_name r in
     pp_cpp_expr env args arg ++ str "." ++ str field_name
   | CPPfun_call (_, f, ts) ->
     (* For constructor calls, compute the expected C++ element type for each
@@ -1811,54 +2429,31 @@ and pp_cpp_expr env args t =
     ++ str ")"
   | CPPlambda
     { cl_params = params;
+      cl_tparams = tparams;
       cl_ret = ret_ty;
       cl_body = body;
-      cl_by_value = capture_by_value } ->
+      cl_capture = capture } ->
     let params = to_reversed params in
     let needs_capture, uses_this = lambda_needs_capture params body in
-    let body_derefs_var =
-      let found = ref false in
-      let rec scan_expr = function
-        | CPPderef (CPPvar _) ->
-          (* Dereferencing a simple variable (shared_ptr, pointer) is safe
-             for by-value capture — the pointer/smart-pointer is copied. *)
-          ()
-    | CPPderef _ -> found := true
-        | e ->
-          iter_expr_children
-            ~on_expr:scan_expr
-            ~on_stmts:(List.iter scan_stmt)
-            e
-      and scan_stmt s =
-        iter_stmt_children
-          ~on_expr:scan_expr
-          ~on_stmts:(List.iter scan_stmt)
-          s
-      in
-      List.iter scan_stmt body;
-      !found
+    (* A polymorphic function object: the erased positions of a rank-2
+       argument are the lambda's own template parameters, so the body says
+       [X] where it would otherwise have to guess. *)
+    let tparams_str =
+      match tparams with
+      | [] -> mt ()
+      | ids ->
+        str "<"
+        ++ pp_list (fun id -> str "typename " ++ Id.print id) ids
+        ++ str ">"
     in
-    let capture_by_value =
-      capture_by_value
-      && not body_derefs_var
-    in
+    (* Never [mutable]: a closure's captures are [const] in its body, which
+       is what lets every copy of a [crane::fn] share one closure. *)
     let capture_str =
-      if not needs_capture then
-        str "[]("
-      else if capture_by_value then
-        if uses_this then str "[=, this](" else str "[=]("
-      else
-        str "[&]("
-    in
-    (* [=] lambdas need 'mutable' so captured variables aren't const-qualified.
-       Without it, forwarding-reference parameters (F0&&) captured by value
-       become const inside the lambda, preventing them from binding to F0&& in
-       recursive calls. *)
-    let mutable_str =
-      if capture_by_value && needs_capture && not uses_this then
-        str " mutable"
-      else
-        mt ()
+      ( if not needs_capture then str "[]"
+        else match capture with
+          | Closure -> if uses_this then str "[=, this]" else str "[=]"
+          | Immediate -> str "[&]" )
+      ++ tparams_str ++ str "("
     in
     (* Register lambda parameters whose type is std::any in current_any_typed_params
        so that wrap_any_cast_if_needed fires for any-erased pair scrutinees accessed
@@ -1894,7 +2489,6 @@ and pp_cpp_expr env args t =
         ( capture
         ++ params_s
         ++ str ")"
-        ++ mutable_str
         ++ str " -> "
         ++ pp_cpp_type false [] ty )
       ++ str " {"
@@ -1903,7 +2497,7 @@ and pp_cpp_expr env args t =
       ++ fnl ()
       ++ str "}"
     | None ->
-      h (capture ++ params_s ++ str ")" ++ mutable_str)
+      h (capture ++ params_s ++ str ")")
       ++ str " {"
       ++ fnl ()
       ++ body_s
@@ -1964,7 +2558,7 @@ and pp_cpp_expr env args t =
     | CPPderef _ | CPPraw _ ->
       str "(" ++ pp_cpp_expr env args e ++ str ")." ++ Id.print id
     | _ -> pp_cpp_expr env args e ++ str "." ++ Id.print id )
-  | CPPget' (e, id) ->
+  | CPPget' (e, id, _) ->
     let field_name = str (Common.pp_global_name Type id) in
     ( match e with
     | CPPderef CPPthis -> str "this->" ++ field_name
@@ -2228,8 +2822,15 @@ and pp_cpp_expr env args t =
     ++ prlist_with_sep pr_comma (pp_cpp_expr env args) (f :: call_args)
     ++ str ")"
   | CPPfn_value e ->
-    require_header "functional";
-    str "std::function(" ++ pp_cpp_expr env args e ++ str ")"
+    require_header Crane_rt.fn_header;
+    str Crane_rt.fn ++ str "(" ++ pp_cpp_expr env args e ++ str ")"
+  | CPPconvert (ty, e) ->
+    str Crane_rt.convert
+    ++ str "<"
+    ++ pp_cpp_type false [] ty
+    ++ str ">("
+    ++ pp_cpp_expr env args e
+    ++ str ")"
   | CPPcontainer_cast (ty, e, suppress_boxing) ->
     let saved = !suppress_elem_boxing in
     if suppress_boxing then suppress_elem_boxing := true;
@@ -2240,6 +2841,19 @@ and pp_cpp_expr env args t =
     ++ str ">("
     ++ pp_cpp_expr env args e
     ++ str ")"
+  | CPPconvertible (t1, t2) ->
+    str "crane_convertible<"
+    ++ pp_cpp_type false [] t1
+    ++ str ", "
+    ++ pp_cpp_type false [] t2
+    ++ str ">"
+  | CPPis_constructible (t1, t2) ->
+    require_header "type_traits";
+    str "std::is_constructible_v<"
+    ++ pp_cpp_type false [] t1
+    ++ str ", "
+    ++ pp_cpp_type false [] t2
+    ++ str ">"
   | CPPis_same (t1, t2) ->
     require_header "type_traits";
     str "std::is_same_v<"
@@ -2760,7 +3374,7 @@ and is_pure_return_type = function
   | Tshared_ptr _ -> false
   | Tvoid | Tvar _ | Tany | Topaque | Tauto | Tunresolved -> false
   | Tglob (r, _, _) when is_axiom_type_ref r -> false
-  | Tconst t | Tref t | Tptr t -> is_pure_return_type t
+  | Tconst t | Tref t | Tfwd_ref t | Tptr t -> is_pure_return_type t
   | _ -> true
 
 (** Check if a C++ type is a literal type eligible for [constexpr] context.
@@ -2795,6 +3409,11 @@ and is_constexpr_type ty =
   | Tglob (_, tys, _) -> List.for_all is_constexpr_type tys
   | Tid (_, []) -> false  (* unresolved type alias — conservatively non-literal *)
   | Tid (_, tys) | Tid_external (_, tys) -> List.for_all is_constexpr_type tys
+  | Tnondeduced t -> is_constexpr_type t
+  | Trebind (h, x) -> is_constexpr_type h && is_constexpr_type x
+  | Thole -> true
+  | Tfwd_ref t -> is_constexpr_type t
+  | Texpr_type _ | Tdecltype_auto -> false
   | Tnamespace (_, t) -> is_constexpr_type t
   | Tqualified (t, _) -> is_constexpr_type t
   (* An applied associated type is whatever the instance makes it; nothing
@@ -2849,7 +3468,7 @@ and expr_is_any_returning_method = function
   | CPPaccess_call (Aarrow, CPPglob (n, _, _), _, _) -> method_returns_any n
   | CPPfun_call (_, CPPglob (n, _, _), _) when lookup_method_this_pos n <> None ->
     method_returns_any n
-  | CPPfun_call (_, CPPget' (_, n), _) -> method_returns_any n
+  | CPPfun_call (_, CPPget' (_, n, _), _) -> method_returns_any n
   | CPPerased_call _ -> true
   | _ -> false
 
@@ -3178,7 +3797,20 @@ and pp_custom ?container custom env typ t tyargs cases args arg_types vl cmds =
       ( try
           let ids, _, _ = List.nth cases i in
           let _, ty = List.nth ids j in
-          pp_cpp_type false vl ty
+          (* The generator's belief is only worth printing if this file can
+             spell it.  A type from a module [Crane Extract Skip Module] left
+             out has no declaration to name -- the binder would read
+             [IO_axioms::ioE], an identifier nothing introduces -- so the
+             honest answer is that the type is not known here, which is what
+             [std::any] says.  A template reading this placeholder can then
+             treat the two cases alike. *)
+          if has_no_cpp_spelling ty then (
+            report_unspellable
+              (Printf.sprintf "branch %d var %d of %s" i j custom)
+              ty;
+            require_header "any";
+            str Crane_rt.obj )
+          else pp_cpp_type false vl ty
         with Failure _ ->
           CErrors.anomaly
             Pp.(
@@ -3293,6 +3925,8 @@ let pp_template_type = function
          (List.init arity Fun.id)
     ++ str "> class"
   | TTfun _ -> str "typename"
+  | TTconcept (concept, _) when class_concept_held_back concept ->
+    str "typename"
   | TTconcept (concept, []) -> pp_concept_name_of_ref concept
   | TTconcept (_, _ :: _) ->
     (* Multi-parameter concept: the constraint cannot be written inline
@@ -3319,6 +3953,94 @@ let take_forward_struct_decls () =
   forward_struct_decls := [];
   l
 
+(** Take and clear the alias templates ({!ctor_alias_decls}) minted since the
+    last call, as declarations.
+
+    Separate from {!take_forward_struct_decls} because the two answer to
+    different files.  A struct forward declaration belongs in the header, and
+    the implementation file, which includes it, has no use for one.  An alias
+    is minted by whichever file writes the use that needs it, and a use in the
+    implementation file is reached while the header has already been handed
+    over -- so it has to be declared where it was minted.
+
+    Draining is sound only because {!ctor_alias_name_for} names an alias after
+    its body rather than after its position in this list: a body minted in both
+    files gets one name and two identical declarations, which is legal, while a
+    counter would give the second file the first file's names for other
+    bodies. *)
+let take_ctor_alias_decls ?(select = fun _ -> true) ~is_header () =
+  let unemitted l =
+    List.filter
+      (fun (_, name) ->
+        if Hashtbl.mem ctor_alias_emitted name then false
+        else (Hashtbl.add ctor_alias_emitted name (); true) )
+      l
+  in
+  let taken, kept = List.partition (fun (_, name) -> select name) !ctor_alias_decls in
+  ctor_alias_decls := taken;
+  let held_taken, held_kept =
+    (* A holder is named by the body of the alias that captured it, not by the
+       text that uses the alias, so it comes along with whichever aliases go. *)
+    let needed name =
+      select name
+      || List.exists (fun (body, _) -> mentions_name body name) taken
+    in
+    List.partition (fun (_, name) -> needed name) !ctor_holder_decls
+  in
+  if is_header then ctor_holder_decls := held_taken;
+  let l =
+    List.rev_map
+      (fun (body, name) ->
+        str "template <typename "
+        ++ str ctor_alias_tvar
+        ++ str "> using "
+        ++ str name
+        ++ str " = "
+        ++ str body
+        ++ str ";")
+      (unemitted !ctor_alias_decls)
+  in
+  ctor_alias_decls := kept;
+  (* A holder is a struct, and a struct may be defined once.  An alias above
+     may be minted in whichever file writes the use, because repeating a
+     [using] with the same definition is legal and a use in the implementation
+     file is reached after the header has been handed over; repeating a
+     [struct] is not, so the same reasoning gives [vellvm_bench.cpp:5]
+     redefining [vellvm_bench.h:173].  The header is the one file everything
+     sees, so every holder is declared there and the registry is not drained
+     until it has been -- which also keeps a holder's name stable across the
+     two passes, since the name is chosen fresh against this list. *)
+  let holders =
+    if not is_header then []
+    else
+    List.rev_map
+      (fun (body, name) ->
+        (* A captured parameter named applied to the alias's own argument is
+           a type constructor ([_Fk]); one named bare is a type ([_Pk]), a
+           plain family the declaration deapplied. *)
+        let names = identifier_tokens body in
+        let rec params i =
+          if i > 8 then []
+          else if List.mem ("_F" ^ string_of_int i) names then
+            (str "template <typename> class _F" ++ int i) :: params (i + 1)
+          else if List.mem ("_P" ^ string_of_int i) names then
+            (str "typename _P" ++ int i) :: params (i + 1)
+          else []
+        in
+        str "template <"
+        ++ prlist_with_sep (fun () -> str ", ") (fun p -> p) (params 0)
+        ++ str "> struct "
+        ++ str name
+        ++ str " { template <typename "
+        ++ str ctor_alias_tvar
+        ++ str "> using c = "
+        ++ str body
+        ++ str "; };" )
+      (unemitted !ctor_holder_decls)
+  in
+  if is_header then ctor_holder_decls := held_kept;
+  holders @ l
+
 (** Print a complete template parameter including name and optional default *)
 let pp_template_param (tt, id) =
   match tt with
@@ -3339,56 +4061,6 @@ let pp_template_header = function
 (** Print a template parameter for a re-declaration: same kind, but without the
     default argument, which C++ allows to appear only once per parameter. *)
 let pp_template_param_redecl (tt, id) = pp_template_type tt ++ spc () ++ Id.print id
-
-(** Names the body only ever hands to a representation-tolerant helper from
-    [crane_fn.h]: erased into storage by [crane_erase_fn], or applied through
-    [crane_call_erased].  Those helpers accept whatever shape they are given
-    and adapt it with [if constexpr], so the signature has nothing to say
-    about how such a callback is called.  Every other callback IS applied
-    directly in the body, and its constraint is a real check -- see
-    {!pp_requires_of_tparams}.
-
-    These are the names of {e value} parameters; {!erased_into_storage_tparam}
-    maps them to the template parameters a [requires] clause speaks of. *)
-let erased_into_storage_ids body =
-  let ids = ref Id.Set.empty and applied = ref Id.Set.empty in
-  let rec name = function
-    | CPPvar id -> Some id
-    | CPPmove e | CPPforward (_, e) -> name e
-    | _ -> None
-  in
-  let add set e = Option.iter (fun id -> set := Id.Set.add id !set) (name e) in
-  let rec check_expr e =
-    ( match e with
-    | CPPerase_fn (_, inner) -> add ids inner
-    | CPPtolerant_call (callee, _) -> add ids callee
-    (* Applied here, so the signature does have something to claim -- even if
-       the same callback is also handed to a helper elsewhere in the body. *)
-    | CPPfun_call (_, callee, _) -> add applied callee
-    | _ -> () );
-    iter_expr_children ~on_expr:check_expr ~on_stmts:(List.iter check_stmt) e
-  and check_stmt s =
-    iter_stmt_children ~on_expr:check_expr ~on_stmts:(List.iter check_stmt) s
-  in
-  List.iter check_stmt body;
-  Id.Set.diff !ids !applied
-
-(** [erased_into_storage_tparam ~params body id] holds when the template
-    parameter [id] types a value parameter that [body] only erases into
-    storage (see {!erased_into_storage_ids}), so no constraint may be placed
-    on it. *)
-let erased_into_storage_tparam ~params body =
-  let stored = erased_into_storage_ids body in
-  if Id.Set.is_empty stored then fun _ -> false
-  else fun id ->
-    let names = function
-      | Tvar (_, Some n) | Tid (n, _) -> Id.equal n id
-      | Tid_external (n, _) -> String.equal n (Id.to_string id)
-      | _ -> false
-    in
-    List.exists
-      (fun (pid, ty) -> Id.Set.mem pid stored && exists_cpp_type names ty)
-      params
 
 (** Build a [requires] clause from template parameters that have [TTfun]
     constraints.  Each [TTfun(dom, cod)] with parameter name [F] becomes
@@ -3417,6 +4089,9 @@ let pp_requires_of_tparams ?(body = []) ?(params = []) tparams =
            APPLIES keeps its constraint, erased argument positions included --
            there the [std::any] is exactly what it will be passed. *)
         | TTfun _ when stored id -> None
+        (* Nor has a rank-2 callback a result to claim: see
+           {!Minicpp.tt_constraint_is_vacuous}. *)
+        | TTfun (dom, cod) when Minicpp.tt_constraint_is_vacuous dom cod -> None
         | TTfun (dom, cod) ->
           require_header "type_traits";
           let pp_ref ty = pp_type ty ++ str " &" in
@@ -3429,6 +4104,7 @@ let pp_requires_of_tparams ?(body = []) ?(params = []) tparams =
                  (fun acc ty -> acc ++ str ", " ++ pp_ref ty)
                  (mt ()) dom
             ++ str ">" )
+        | TTconcept (concept, _) when class_concept_held_back concept -> None
         | TTconcept (concept, (_ :: _ as args)) ->
           (* Multi-parameter concept constraint: [C<_tcI0, T1, …>].  The
              constrained parameter [id] is the first concept argument, the
@@ -3456,38 +4132,92 @@ let pp_requires_of_tparams ?(body = []) ?(params = []) tparams =
            (fun acc c -> acc ++ fnl () ++ str "      && " ++ c)
            (mt ()) (List.tl clauses) )
 
+(** A struct's template head: its parameters, and the constraint its
+    concept-kinded parameters and its own [requires] clause make.  The
+    definition and a constrained forward declaration print it here, so a
+    re-declaration repeats the constraint token for token -- which is what
+    makes the compiler see the two as one. *)
+let struct_template_head ~pp_param env tparams cstr =
+  match tparams with
+  | [] -> mt ()
+  | _ ->
+    let args = pp_list pp_param tparams in
+    let req = pp_requires_of_tparams tparams in
+    let cstr_pp = match (req, cstr) with
+      | None, None -> mt ()
+      | Some r, None -> r ++ fnl ()
+      | None, Some c -> pp_cpp_expr env [] c ++ fnl ()
+      | Some r, Some c -> r ++ str " && " ++ pp_cpp_expr env [] c ++ fnl ()
+    in
+    h (str "template <" ++ args ++ str ">")
+    ++ cstr_pp
+
+(** Forward declarations of the constrained templates rendered at global
+    scope, by struct name, not yet placed: see {!register_forward_struct_decl}
+    and {!take_constrained_forward_decls}. *)
+let constrained_forward_struct_decls = ref ([] : (string * Pp.t) list)
+
+(** The pending constrained forward declarations [text] needs, taken out of
+    the registry: those of the structs it names without defining.  A struct
+    [text] defines is taken out without one -- everything after its definition
+    sees it -- so a template never gets a declaration in front of itself. *)
+let take_constrained_forward_decls text =
+  let defines name =
+    let at s = Str.string_match (Str.regexp_string s) in
+    let rec go i =
+      match Str.search_forward (Str.regexp_string ("struct " ^ name)) text i with
+      | j ->
+        let k = j + String.length "struct " + String.length name in
+        (at " {" text k || at " :" text k || at "{" text k) || go (j + 1)
+      | exception Not_found -> false
+    in
+    go 0
+  in
+  let settled, pending =
+    List.partition
+      (fun (name, _) -> mentions_name text name)
+      !constrained_forward_struct_decls
+  in
+  constrained_forward_struct_decls := pending;
+  List.rev_map snd (List.filter (fun (name, _) -> not (defines name)) settled)
+
+(** Forget the constrained forward declarations no chunk of the file asked
+    for. *)
+let reset_constrained_forward_decls () = constrained_forward_struct_decls := []
+
 (** Record a forward declaration for a struct about to be rendered at C++
     global scope, so {!take_forward_struct_decls} can replay it in the header
     prologue.  Nested structs are skipped -- a member is not nameable before
-    its enclosing struct anyway -- as are constrained templates, whose
-    re-declaration would have to repeat a [requires] clause -- whether written
-    on the struct or implied by a concept-kinded parameter -- that the compiler
-    does not reliably see as the same constraint. *)
-let register_forward_struct_decl ~name ~tparams ~cstr =
-  (* A concept-kinded parameter names its concept, which is declared with the
-     other concepts, after this prologue; re-declaring the template here would
-     spell a name that is not one yet. *)
+    its enclosing struct anyway.
+
+    A constrained template -- a [requires] clause on the struct, or a
+    concept-kinded parameter -- names its concept, which need not be declared
+    by that prologue, nor anywhere above the struct's first use.  Its
+    declaration waits in {!constrained_forward_struct_decls} instead, and is
+    placed in front of the first chunk of the file that names the struct
+    before defining it: a section-local instance's struct and the file
+    module's struct can each name the other, [typename StateV<_tcI0>::state]
+    in a member's signature against a call to that member in the instance's
+    body. *)
+let register_forward_struct_decl ~env ~name ~tparams ~cstr =
   let concept_kinded (tt, _) =
     match tt with
     | TTconcept _ -> true
     | _ -> false
   in
-  if
-    (not (!render_ctx).rc_in_struct)
-    && cstr = None
-    && pp_requires_of_tparams tparams = None
-    && not (List.exists concept_kinded tparams)
-  then
-    forward_struct_decls :=
-      ( ( match tparams with
-        | [] -> mt ()
-        | _ ->
-          h (str "template <" ++ pp_list pp_template_param_redecl tparams ++ str "> ")
-        )
-      ++ str "struct "
-      ++ name
-      ++ str ";" )
-      :: !forward_struct_decls
+  if not (!render_ctx).rc_in_struct then
+    let decl =
+      struct_template_head ~pp_param:pp_template_param_redecl env tparams cstr
+      ++ str "struct " ++ name ++ str ";"
+    in
+    if
+      cstr = None
+      && pp_requires_of_tparams tparams = None
+      && not (List.exists concept_kinded tparams)
+    then forward_struct_decls := decl :: !forward_struct_decls
+    else
+      constrained_forward_struct_decls :=
+        (Pp.string_of_ppcmds name, decl) :: !constrained_forward_struct_decls
 
 (** Record an opaque declaration for a scoped enum about to be rendered at C++
     global scope.  A module struct can be emitted before an enum a later module
@@ -3565,12 +4295,21 @@ let rec pp_cpp_field
         mf_params;
         mf_body;
         mf_is_const;
+        mf_ref_qual;
         mf_is_static;
         mf_is_inline;
         mf_no_pure;
         mf_is_noexcept;
+        mf_is_conversion;
       } ->
-    let const_s = if mf_is_const then str " const" else mt () in
+    let const_s =
+      (if mf_is_const then str " const" else mt ())
+      ++
+      match mf_ref_qual with
+      | Rq_any -> mt ()
+      | Rq_lvalue -> str " &"
+      | Rq_rvalue -> str " &&"
+    in
     let noexcept_s = if mf_is_noexcept then str " noexcept" else mt () in
     (* [static] belongs to the declaration alone, and an out-of-line
        definition in a header needs [inline] unless a template already
@@ -3628,15 +4367,17 @@ let rec pp_cpp_field
         (pp_owner_template owner_tps, qual ++ str "::")
       | Mm_inline | Mm_declared -> (mt (), mt ())
     in
+    (* A conversion function has no return type of its own -- its name is the
+       type it converts to -- and none of the qualifiers [fun_qualifier]
+       computes from a return type apply. *)
     let head =
       h
         ( inline_s
-        ++ qualifier
-        ++ static_s
-        ++ pp_type mf_ret_type
-        ++ str " "
-        ++ qual_s
-        ++ Id.print mf_name
+        ++ ( if mf_is_conversion then
+               qual_s ++ str "operator " ++ pp_type mf_ret_type
+             else
+               qualifier ++ static_s ++ pp_type mf_ret_type ++ str " "
+               ++ qual_s ++ Id.print mf_name )
         ++ pp_par true params_s
         ++ const_s
         ++ noexcept_s )
@@ -3726,6 +4467,24 @@ let rec pp_cpp_field
     ++ fields_s
     ++ fnl ()
     ++ str "};"
+  | Fdeferred_struct {dfs_name; dfs_selves; dfs_fields} ->
+    let tmpl = Id.to_string dfs_name ^ "_" in
+    h
+      ( str "template <"
+      ++ pp_list
+           (fun (id, ty) ->
+             str "typename " ++ Id.print id ++ str " = "
+             ++ pp_cpp_type false [] ty )
+           dfs_selves
+      ++ str "> struct " ++ str tmpl ++ str " {" )
+    ++ fnl ()
+    ++ prlist_with_sep fnl
+         (fun (id, ty) -> h (pp_cpp_type false [] ty ++ spc () ++ Id.print id ++ str ";"))
+         dfs_fields
+    ++ fnl ()
+    ++ str "};"
+    ++ fnl ()
+    ++ h (str "using " ++ Id.print dfs_name ++ str " = " ++ str tmpl ++ str "<>;")
   | Fnested_using (tparams, id, ty) ->
     if tparams = [] && is_any_type ty then
       any_type_aliases := Id.Set.add id !any_type_aliases;
@@ -3740,7 +4499,8 @@ let rec pp_cpp_field
       ++ str " = "
       ++ pp_type ty
       ++ str ";" )
-  | Fmember_decl f -> pp_cpp_field ?struct_name ~mode:Mm_declared env f
+  | Fmember_decl m ->
+    pp_cpp_field ?struct_name ~mode:Mm_declared env (field_of_member m)
   | Fdeleted_ctor ->
     let sname =
       match struct_name with
@@ -3765,6 +4525,7 @@ let rec pp_cpp_field
     ++ h (sname ++ str "(" ++ sname ++ str "&&) noexcept = default;")
     ++ fnl ()
     ++ h (sname ++ str "& operator=(" ++ sname ++ str "&&) noexcept = default;")
+
 (** Print the body of a struct: groups fields by [(visibility, section_tag)],
     emits [public:]/[private:] labels only when necessary, and inserts
     section-tag comments (e.g. [// TYPES], [// DATA]).
@@ -3894,6 +4655,54 @@ let pp_meyers_singleton env id ty expr_pp =
   ++ fnl ()
   ++ str "}"
 
+(** The templated declarations whose defaults have already been printed, and
+    the phase they were printed in.
+
+    A default argument may be given once per template parameter, and which
+    printing of a declaration is the one that gives it is not a property of
+    that printing: the same function can be declared in a struct and defined
+    after it, declared in the header and defined in the [.cpp], or written
+    out just once inline.  What the rule needs is only "has this one been
+    spelled yet", so that is what is recorded.  The phase is kept alongside so
+    that moving to another file -- or to the [.cpp], which repeats everything
+    the [.h] declared -- starts the question over rather than inheriting an
+    answer about a different translation unit. *)
+let templates_already_defaulted = ref ([] : Names.GlobRef.t list list)
+
+let templates_defaulted_phase = ref None
+
+(** Whether this printing of [decl] is the one that gives its defaults. *)
+let claim_template_defaults decl =
+  let phase = Common.get_phase () in
+  if !templates_defaulted_phase <> Some phase then begin
+    templates_defaulted_phase := Some phase;
+    templates_already_defaulted := []
+  end;
+  match phase with
+  | Common.Emit Common.Impl ->
+    (* The implementation file only ever repeats declarations the interface
+       file already made. *)
+    false
+  | _ ->
+    let rec key_of = function
+      | Dtemplate (_, _, inner) -> key_of inner
+      | Dfun f -> List.map fst (dfun_path_list f.df_path)
+      | d -> Option.cata (fun r -> [r]) [] (decl_globref d)
+    in
+    let key = key_of decl in
+    let same k =
+      List.length k = List.length key && List.for_all2 Common.globref_equal k key
+    in
+    (* A declaration with no reference cannot be recognised on its second
+       printing, so it is treated as a first one: a missing default is an
+       error at the use site, a repeated one only where there are two. *)
+    if key = [] then true
+    else if List.exists same !templates_already_defaulted then false
+    else begin
+      templates_already_defaulted := key :: !templates_already_defaulted;
+      true
+    end
+
 (** The parameters and statements of a declaration, for the traversals that
     need to see what a signature's body actually does with its parameters (see
     {!erased_into_storage_tparam}).  A declaration with no body gives empty
@@ -3903,6 +4712,38 @@ let rec decl_body = function
   | Dfun {df_shape = Ddef (params, body); _} -> (params, body)
   | Dasgn (_, _, e) -> ([], [Sreturn (Some e)])
   | _ -> ([], [])
+
+(** The name the struct wrapping an inductive at namespace scope is written
+    under.  An inductive's wrapper is named after the inductive, capitalised;
+    anything else is spelled as itself. *)
+let nspace_wrapper_name id =
+  Table.escape_reserved_struct_name
+    ( match id with
+    | GlobRef.IndRef _ -> String.capitalize_ascii (str_global Type id)
+    | _ -> string_of_ppcmds (pp_global Type id) )
+
+(** Whether the inductive [r] is written inside a wrapper that other
+    declarations were queued against -- a file module of the same name, whose
+    functions go in beside it -- and so is spelled [List::list] rather than
+    [List].  A struct written inside another is named by member lookup, which
+    no forward declaration answers. *)
+let nested_in_wrapper r =
+  Hashtbl.mem pending_wrapper_decls (nspace_wrapper_name r)
+
+(** Whether a wrapper and the struct inside it are written as one struct
+    rather than two.  A sole struct is merged into its wrapper and takes the
+    wrapper's name; a wrapper holding anything else, or one that declarations
+    were queued against, keeps both levels, and the struct inside keeps its own
+    name underneath.
+
+    Whether that struct is a template has nothing to do with it -- both merge
+    branches below handle one -- so this asks only about the wrapper.
+
+    Asked by {!pp_cpp_decl_raw} of the declaration and by the out-of-line
+    member definition of its owner, which must agree about how many names the
+    qualifier has. *)
+let nspace_merges (w : dm_wrapper) : bool =
+  w.dw_sole_child && not (nested_in_wrapper w.dw_ref)
 
 (** Pretty-print a MiniCpp declaration as C++ source. Handles templates,
     namespaces/structs, functions, assignments, enums, etc.
@@ -3917,11 +4758,6 @@ let rec pp_cpp_decl env decl =
   pp_cpp_decl_raw env
     (Cpp_pipeline.finish ~loopify:(Cpp_pipeline.should_loopify decl) decl)
 
-(** Inner declaration printer, called after loopification and after the
-    {!Cpp_erasure.settled} seam: every type here is spelled the way it will be
-    written out.
-
-    @param env  name environment for sub-expression and sub-type printers *)
 (** [pp_initialiser env ty e] prints [e] as the initialiser of something
     declared with type [ty].
 
@@ -3944,8 +4780,14 @@ and pp_initialiser env ty e =
     ++ str "\"); })()"
   | _ -> pp_cpp_expr env [] e
 
+(** Inner declaration printer, called after loopification and after the
+    {!Cpp_erasure.settled} seam: every type here is spelled the way it will be
+    written out.
+
+    @param env  name environment for sub-expression and sub-type printers *)
 and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
   let sub d = Cpp_erasure.settled_child ~parent:settled d in
+  record_file_scope_type (settled :> cpp_decl);
   match (settled :> cpp_decl) with
   | Dtemplate (temps, cstr, Dasgn (id, ty, e)) when (!render_ctx).rc_in_struct ->
     let args = pp_list pp_template_param temps in
@@ -3961,7 +4803,13 @@ and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
     ++ cstr_pp
     ++ pp_meyers_singleton env id ty expr_pp
   | Dtemplate (temps, cstr, decl) ->
-    let args = pp_list pp_template_param temps in
+    (* A default may be given once per parameter, so only the first printing
+       of this declaration gives it -- see {!claim_template_defaults}. *)
+    let pp_param =
+      if claim_template_defaults decl then pp_template_param
+      else pp_template_param_redecl
+    in
+    let args = pp_list pp_param temps in
     let params, body = decl_body decl in
     let req = pp_requires_of_tparams ~body ~params temps in
     let cstr_pp = match (req, cstr) with
@@ -3977,21 +4825,22 @@ and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
     let ds = pp_list_stmt (fun d -> pp_cpp_decl_raw env (sub d)) decls in
     h (str "namespace " ++ str "{") ++ fnl () ++ ds ++ fnl () ++ str "};"
   | Dnspace (Some id, decls) ->
-    let struct_name_str =
-      Table.escape_reserved_struct_name
-        ( match id with
-        | GlobRef.IndRef _ -> String.capitalize_ascii (str_global Type id)
-        | _ -> string_of_ppcmds (pp_global Type id) )
+    let struct_name_str = nspace_wrapper_name id in
+    (* The same question the out-of-line definition of a member asks, asked
+       through the same function so the two cannot drift apart. *)
+    let merges =
+      nspace_merges
+        { dw_ref = id;
+          dw_sole_child = (match decls with [Dstruct _] -> true | _ -> false) }
     in
-    let has_pending = Hashtbl.mem pending_wrapper_decls struct_name_str in
-    ( match (decls, has_pending) with
-    | ([Dstruct {ds_tparams; ds_constraint; _}], false) ->
-      register_forward_struct_decl
+    ( match (decls, merges) with
+    | ([Dstruct {ds_tparams; ds_constraint; _}], true) ->
+      register_forward_struct_decl ~env
         ~name:(str struct_name_str)
         ~tparams:ds_tparams
         ~cstr:ds_constraint
     | _ -> () );
-    ( match (decls, has_pending) with
+    ( match (decls, merges) with
     | ( [
           Dstruct
             {
@@ -4001,7 +4850,7 @@ and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
               _;
             };
         ],
-        false ) ->
+        true ) ->
       (* MERGE non-template: struct Nat { ... } *)
       let struct_name = str struct_name_str in
       let f_s =
@@ -4035,7 +4884,7 @@ and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
               _;
             };
         ],
-        false ) ->
+        true ) ->
       (* MERGE template: template<typename A> struct List { ... } *)
       let struct_name = str struct_name_str in
       let f_s =
@@ -4205,10 +5054,20 @@ and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
       | GlobRef.IndRef _ when is_record_cached id -> pp_global Type id
       | GlobRef.IndRef _ when Common.get_force_cross_file_qualification () ->
         str (String.capitalize_ascii (Common.pp_global_name Type id))
+      | GlobRef.IndRef _
+        when is_merged_inductive_cached id && not (is_local_inductive id) ->
+        (* An inductive written straight into an enclosing struct has no
+           namespace wrapper to be merged with, so nothing capitalised its
+           declaration -- but a reference to it, being neither local nor
+           behind an unmerged wrapper, spells the merged name.  One struct
+           cannot be declared [dval] and named [Dval]; the reference is what
+           every other file sees, so the declaration follows it. *)
+        str (String.capitalize_ascii (Common.pp_global_name Type id))
       | GlobRef.IndRef _ -> pp_global Type id
       | _ -> pp_global Type id
     in
-    register_forward_struct_decl ~name:struct_name ~tparams ~cstr;
+    register_forward_struct_decl ~env ~name:struct_name ~tparams ~cstr;
+    record_file_scope_name struct_name;
     if (!render_ctx).rc_in_struct then
       add_nested_struct_name (Pp.string_of_ppcmds struct_name) (NSref id);
     let f_s =
@@ -4219,21 +5078,7 @@ and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
           (fun c -> { c with rc_in_template = true })
           (fun () -> pp_cpp_fields_with_vis ~struct_name env fields)
     in
-    let tmpl =
-      match tparams with
-      | [] -> mt ()
-      | _ ->
-        let args = pp_list pp_template_param tparams in
-        let req = pp_requires_of_tparams tparams in
-        let cstr_pp = match (req, cstr) with
-          | None, None -> mt ()
-          | Some r, None -> r ++ fnl ()
-          | None, Some c -> pp_cpp_expr env [] c ++ fnl ()
-          | Some r, Some c -> r ++ str " && " ++ pp_cpp_expr env [] c ++ fnl ()
-        in
-        h (str "template <" ++ args ++ str ">")
-        ++ cstr_pp
-    in
+    let tmpl = struct_template_head ~pp_param:pp_template_param env tparams cstr in
     let inherit_clause =
       if sft then
         match
@@ -4329,10 +5174,27 @@ and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
       ++ str ";" )
   | Dstruct_fwd (tparams, r) ->
     h (pp_template_header tparams ++ str "struct " ++ pp_global Type r ++ str ";")
-  | Dmember_def {dm_owner; dm_tparams; dm_field} ->
+  | Dmember_def {dm_owner; dm_enclosing; dm_tparams; dm_field} ->
     (* The struct is behind us, so its own name is no longer in scope: the
-       member is written under the qualifier that names it from outside. *)
-    let sname = str (String.capitalize_ascii (str_global Type dm_owner)) in
+       member is written under the qualifier that names it from outside.
+
+       An inductive wrapped in a namespace struct is spelled [Outer::inner],
+       and its own name is not capitalised -- the capitalisation below is the
+       namespace struct's name, which is only the whole answer when the
+       inductive was promoted into it and has no struct of its own. *)
+    (* Two names, because they answer different questions: [own_name] is what
+       the struct calls itself, which is what a destructor repeats, and [sname]
+       is how the outside reaches it. *)
+    let own_name, sname =
+      match dm_enclosing with
+      | Some w when not (nspace_merges w) ->
+        let own = str_global Type dm_owner in
+        (own, nspace_wrapper_name w.dw_ref ^ "::" ^ own)
+      | _ ->
+        let own = String.capitalize_ascii (str_global Type dm_owner) in
+        (own, own)
+    in
+    let sname = str sname in
     let qual =
       match dm_tparams with
       | [] -> sname
@@ -4342,9 +5204,9 @@ and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
     with_render_ctx
       (fun c -> {c with rc_in_template = c.rc_in_template || dm_tparams <> []})
       (fun () ->
-        pp_cpp_field ~struct_name:sname
+        pp_cpp_field ~struct_name:(str own_name)
           ~mode:(Mm_defined (qual, dm_tparams))
-          env dm_field )
+          env (field_of_member dm_field) )
   | Dfields ds ->
     let struct_name =
       str (String.capitalize_ascii (str_global Type ds.ds_ref))
@@ -4356,8 +5218,7 @@ and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
           rc_in_template = c.rc_in_template || ds.ds_tparams <> [] } )
       (fun () -> pp_cpp_fields_with_vis ~struct_name env ds.ds_fields)
   | Dstatic_assert (CPPconcept_app (class_ref, subject, tys), None)
-    when (!render_ctx).rc_in_struct
-         && is_held_back_in !held_back_concepts (HCclass class_ref) ->
+    when class_concept_held_back class_ref ->
     (* The concept is declared after the struct being rendered, because its
        requirements name the struct's own types.  The assertion goes with it,
        and is qualified by the struct on the way out. *)

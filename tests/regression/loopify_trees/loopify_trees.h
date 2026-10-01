@@ -2,10 +2,12 @@
 #define INCLUDED_LOOPIFY_TREES
 
 #include "crane_fn.h"
+#include "obj.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -35,21 +37,26 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U> List(const List<_U> &_other) {
-    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->v_ = Nil{};
-    } else {
-      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>) {
-                          return crane_any_cast<A>(a);
-                        } else {
-                          return A(a);
-                        }
-                      }(),
-                      (l ? std::make_shared<List<A>>(*l) : nullptr)};
-    }
-  }
+  template <typename _U>
+  List(const List<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+            return Nil{};
+          } else {
+            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const _U &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                   : nullptr)};
+          }
+        }()) {}
 
   static List<A> nil() { return List<A>(Nil{}); }
 
@@ -59,22 +66,18 @@ public:
 
   // MANIPULATORS
   ~List() {
-    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
-        if (_alt->l) {
-          _stack.push_back(std::move(_alt->l));
+        if (_alt->l && _alt->l.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->l);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<List<A>> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -138,22 +141,30 @@ struct LoopifyTrees {
 
     explicit tree(Node _v) : v_(std::move(_v)) {}
 
-    template <typename _U> tree(const tree<_U> &_other) {
-      if (std::holds_alternative<typename tree<_U>::Leaf>(_other.v())) {
-        this->v_ = Leaf{};
-      } else {
-        const auto &[l, x, r] = std::get<typename tree<_U>::Node>(_other.v());
-        this->v_ = Node{(l ? std::make_shared<tree<A>>(*l) : nullptr),
-                        [&]() -> A {
-                          if constexpr (std::is_same_v<_U, std::any>) {
-                            return crane_any_cast<A>(x);
-                          } else {
-                            return A(x);
-                          }
-                        }(),
-                        (r ? std::make_shared<tree<A>>(*r) : nullptr)};
-      }
-    }
+    template <typename _U>
+    tree(const tree<_U> &_other)
+        : v_([&]() -> variant_t {
+            if (std::holds_alternative<typename tree<_U>::Leaf>(_other.v())) {
+              return Leaf{};
+            } else {
+              const auto &[l, x, r] =
+                  std::get<typename tree<_U>::Node>(_other.v());
+              return Node{
+                  (l ? std::make_shared<tree<A>>(crane_convert<tree<A>>(*l))
+                     : nullptr),
+                  [&]() -> A {
+                    if constexpr (crane_convertible<A, const _U &>) {
+                      return crane_convert<A>(x);
+                    } else {
+                      throw std::logic_error(
+                          "unreachable: inactive constructor field at this "
+                          "instantiation");
+                    }
+                  }(),
+                  (r ? std::make_shared<tree<A>>(crane_convert<tree<A>>(*r))
+                     : nullptr)};
+            }
+          }()) {}
 
     static tree<A> leaf() { return tree<A>(Leaf{}); }
 
@@ -167,10 +178,10 @@ struct LoopifyTrees {
       crane::small_vector<std::shared_ptr<tree<A>>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
-          if (_alt->l) {
+          if (_alt->l && _alt->l.use_count() == 1) {
             _stack.push_back(std::move(_alt->l));
           }
-          if (_alt->r) {
+          if (_alt->r && _alt->r.use_count() == 1) {
             _stack.push_back(std::move(_alt->r));
           }
         }
@@ -210,14 +221,14 @@ struct LoopifyTrees {
       /// _After_Node: saves [a0, a1], dispatches next recursive call.
       struct _After_Node {
         tree<A> *a0;
-        std::decay_t<T1> a1;
+        T1 a1;
       };
 
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
         tree<T1> _result;
-        std::decay_t<T1> a1;
+        T1 a1;
       };
 
       using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
@@ -334,14 +345,14 @@ struct LoopifyTrees {
       /// _After_Node: saves [a0, a1], dispatches next recursive call.
       struct _After_Node {
         tree<A> *a0;
-        std::decay_t<A> a1;
+        A a1;
       };
 
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
         List<A> _result;
-        std::decay_t<A> a1;
+        A a1;
       };
 
       using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
@@ -541,14 +552,14 @@ struct LoopifyTrees {
       /// _After_Node: saves [a2, a1], dispatches next recursive call.
       struct _After_Node {
         tree<A> *a2;
-        std::decay_t<A> a1;
+        A a1;
       };
 
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
         tree<A> _result;
-        std::decay_t<A> a1;
+        A a1;
       };
 
       using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
@@ -708,16 +719,16 @@ struct LoopifyTrees {
       struct _After_Node {
         tree<A> *a0_0;
         tree<A> a2;
-        std::decay_t<A> a1;
+        A a1;
         tree<A> a0_1;
       };
 
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
-        std::decay_t<T1> _result;
+        T1 _result;
         tree<A> a2;
-        std::decay_t<A> a1;
+        A a1;
         tree<A> a0;
       };
 
@@ -772,16 +783,16 @@ struct LoopifyTrees {
       struct _After_Node {
         tree<A> *a0_0;
         tree<A> a2;
-        std::decay_t<A> a1;
+        A a1;
         tree<A> a0_1;
       };
 
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
-        std::decay_t<T1> _result;
+        T1 _result;
         tree<A> a2;
-        std::decay_t<A> a1;
+        A a1;
         tree<A> a0;
       };
 
@@ -869,13 +880,13 @@ struct LoopifyTrees {
       crane::small_vector<std::shared_ptr<ternary>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<TNode>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a1) {
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
             _stack.push_back(std::move(_alt->a1));
           }
-          if (_alt->a2) {
+          if (_alt->a2 && _alt->a2.use_count() == 1) {
             _stack.push_back(std::move(_alt->a2));
           }
         }
@@ -1083,7 +1094,7 @@ struct LoopifyTrees {
       /// _After_TNode_1: saves [_result, a0_0, a3, a2, a1, a0_1], dispatches
       /// next recursive call.
       struct _After_TNode_1 {
-        std::decay_t<T1> _result;
+        T1 _result;
         const ternary *a0_0;
         uint64_t a3;
         ternary a2;
@@ -1094,8 +1105,8 @@ struct LoopifyTrees {
       /// _Combine_TNode: receives partial results, combines with _result from
       /// final call.
       struct _Combine_TNode {
-        std::decay_t<T1> _result_0;
-        std::decay_t<T1> _result_1;
+        T1 _result_0;
+        T1 _result_1;
         uint64_t a3;
         ternary a2;
         ternary a1;
@@ -1172,7 +1183,7 @@ struct LoopifyTrees {
       /// _After_TNode_1: saves [_result, a0_0, a3, a2, a1, a0_1], dispatches
       /// next recursive call.
       struct _After_TNode_1 {
-        std::decay_t<T1> _result;
+        T1 _result;
         const ternary *a0_0;
         uint64_t a3;
         ternary a2;
@@ -1183,8 +1194,8 @@ struct LoopifyTrees {
       /// _Combine_TNode: receives partial results, combines with _result from
       /// final call.
       struct _Combine_TNode {
-        std::decay_t<T1> _result_0;
-        std::decay_t<T1> _result_1;
+        T1 _result_0;
+        T1 _result_1;
         uint64_t a3;
         ternary a2;
         ternary a1;
@@ -1431,7 +1442,7 @@ struct LoopifyTrees {
   /// tree_levels t returns list of lists, one per level (breadth-first).
   static List<List<uint64_t>>
   tree_levels_fuel(uint64_t fuel, const List<tree<uint64_t>> &trees);
-  static List<List<uint64_t>> tree_levels(tree<uint64_t> t);
+  static List<List<uint64_t>> tree_levels(const tree<uint64_t> &t);
   /// count_nodes t returns tuple (node_count, sum_of_values).
   static std::pair<uint64_t, uint64_t> count_nodes(const tree<uint64_t> &t);
   /// Helper: append two lists of lists.
@@ -1548,16 +1559,16 @@ struct LoopifyTrees {
       crane::small_vector<std::shared_ptr<quadtree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Quad>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a1) {
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
             _stack.push_back(std::move(_alt->a1));
           }
-          if (_alt->a2) {
+          if (_alt->a2 && _alt->a2.use_count() == 1) {
             _stack.push_back(std::move(_alt->a2));
           }
-          if (_alt->a3) {
+          if (_alt->a3 && _alt->a3.use_count() == 1) {
             _stack.push_back(std::move(_alt->a3));
           }
         }
@@ -1784,7 +1795,7 @@ struct LoopifyTrees {
       /// _After_Quad_1: saves [_result, a1_0, a0_0, a3, a2, a1_1, a0_1],
       /// dispatches next recursive call.
       struct _After_Quad_1 {
-        std::decay_t<T1> _result;
+        T1 _result;
         const quadtree *a1_0;
         const quadtree *a0_0;
         quadtree a3;
@@ -1796,8 +1807,8 @@ struct LoopifyTrees {
       /// _After_Quad_2: saves [_result_0, _result_1, a0_0, a3, a2, a1, a0_1],
       /// dispatches next recursive call.
       struct _After_Quad_2 {
-        std::decay_t<T1> _result_0;
-        std::decay_t<T1> _result_1;
+        T1 _result_0;
+        T1 _result_1;
         const quadtree *a0_0;
         quadtree a3;
         quadtree a2;
@@ -1808,9 +1819,9 @@ struct LoopifyTrees {
       /// _Combine_Quad: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Quad {
-        std::decay_t<T1> _result_0;
-        std::decay_t<T1> _result_1;
-        std::decay_t<T1> _result_2;
+        T1 _result_0;
+        T1 _result_1;
+        T1 _result_2;
         quadtree a3;
         quadtree a2;
         quadtree a1;
@@ -1899,7 +1910,7 @@ struct LoopifyTrees {
       /// _After_Quad_1: saves [_result, a1_0, a0_0, a3, a2, a1_1, a0_1],
       /// dispatches next recursive call.
       struct _After_Quad_1 {
-        std::decay_t<T1> _result;
+        T1 _result;
         const quadtree *a1_0;
         const quadtree *a0_0;
         quadtree a3;
@@ -1911,8 +1922,8 @@ struct LoopifyTrees {
       /// _After_Quad_2: saves [_result_0, _result_1, a0_0, a3, a2, a1, a0_1],
       /// dispatches next recursive call.
       struct _After_Quad_2 {
-        std::decay_t<T1> _result_0;
-        std::decay_t<T1> _result_1;
+        T1 _result_0;
+        T1 _result_1;
         const quadtree *a0_0;
         quadtree a3;
         quadtree a2;
@@ -1923,9 +1934,9 @@ struct LoopifyTrees {
       /// _Combine_Quad: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Quad {
-        std::decay_t<T1> _result_0;
-        std::decay_t<T1> _result_1;
-        std::decay_t<T1> _result_2;
+        T1 _result_0;
+        T1 _result_1;
+        T1 _result_2;
         quadtree a3;
         quadtree a2;
         quadtree a1;
@@ -2029,10 +2040,10 @@ struct LoopifyTrees {
       crane::small_vector<std::shared_ptr<simple_tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<SNode>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a1) {
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
             _stack.push_back(std::move(_alt->a1));
           }
         }
@@ -2201,7 +2212,7 @@ struct LoopifyTrees {
       /// _Combine_SNode: receives partial results, combines with _result from
       /// final call.
       struct _Combine_SNode {
-        std::decay_t<T1> _result;
+        T1 _result;
         simple_tree a1;
         simple_tree a0;
       };
@@ -2263,7 +2274,7 @@ struct LoopifyTrees {
       /// _Combine_SNode: receives partial results, combines with _result from
       /// final call.
       struct _Combine_SNode {
-        std::decay_t<T1> _result;
+        T1 _result;
         simple_tree a1;
         simple_tree a0;
       };

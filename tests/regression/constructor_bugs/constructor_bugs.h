@@ -2,11 +2,12 @@
 #define INCLUDED_CONSTRUCTOR_BUGS
 
 #include "crane_fn.h"
-#include "small_vector.h"
+#include "obj.h"
 #include <any>
 #include <atomic>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -37,21 +38,26 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U> List(const List<_U> &_other) {
-    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->v_ = Nil{};
-    } else {
-      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>) {
-                          return crane_any_cast<A>(a);
-                        } else {
-                          return A(a);
-                        }
-                      }(),
-                      (l ? std::make_shared<List<A>>(*l) : nullptr)};
-    }
-  }
+  template <typename _U>
+  List(const List<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+            return Nil{};
+          } else {
+            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const _U &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                   : nullptr)};
+          }
+        }()) {}
 
   static List<A> nil() { return List<A>(Nil{}); }
 
@@ -61,22 +67,18 @@ public:
 
   // MANIPULATORS
   ~List() {
-    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
-        if (_alt->l) {
-          _stack.push_back(std::move(_alt->l));
+        if (_alt->l && _alt->l.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->l);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<List<A>> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -97,6 +99,17 @@ template <typename A> struct Sig {
 
   // ACCESSORS
   Sig<A> clone() const { return {x}; }
+
+  template <typename _U> operator Sig<_U>() const {
+    return {[&]() -> _U {
+      if constexpr (crane_convertible<_U, const A &>) {
+        return crane_convert<_U>(x);
+      } else {
+        throw std::logic_error(
+            "unreachable: inactive constructor field at this instantiation");
+      }
+    }()};
+  }
 
   // CREATORS
   static Sig<A> exist(A x) { return {std::move(x)}; }
@@ -156,7 +169,7 @@ struct ConstructorBugs {
   tuple_from_call(uint64_t n);
   static std::pair<std::pair<state, uint64_t>,
                    std::pair<uint64_t, List<uint64_t>>>
-  nested_tuples(state s);
+  nested_tuples(const state &s);
   static std::pair<std::pair<state, uint64_t>, List<uint64_t>>
   conditional_tuple(bool b, uint64_t n);
   static uint64_t extract_value(const state &s);
@@ -166,17 +179,17 @@ struct ConstructorBugs {
   static std::pair<uint64_t, std::pair<state, uint64_t>> pair_test(uint64_t n);
   static std::optional<std::pair<state, uint64_t>>
   match_test(const std::optional<state> &o);
-  static List<state> list_test(state s);
+  static List<state> list_test(const state &s);
   static std::pair<std::pair<std::pair<state, uint64_t>,
                              std::pair<uint64_t, List<uint64_t>>>,
                    List<uint64_t>>
-  triple_proj(state s);
-  static std::pair<state, uint64_t> inner_pair(state s);
+  triple_proj(const state &s);
+  static std::pair<state, uint64_t> inner_pair(const state &s);
   static std::pair<state, uint64_t> outer_call(uint64_t n);
   static std::pair<
       std::pair<std::pair<std::pair<state, state>, uint64_t>, uint64_t>,
       List<uint64_t>>
-  extreme_reuse(state s);
+  extreme_reuse(const state &s);
 
   struct Inner {
     uint64_t inner_val;
@@ -187,12 +200,12 @@ struct ConstructorBugs {
     uint64_t outer_data;
   };
 
-  static Outer nested_record(Inner i);
+  static Outer nested_record(const Inner &i);
   static Outer self_referential(const Outer &o);
-  static std::pair<Inner, uint64_t> pair_with_proj(Inner i);
+  static std::pair<Inner, uint64_t> pair_with_proj(const Inner &i);
   static std::pair<std::pair<Inner, uint64_t>, std::pair<uint64_t, uint64_t>>
-  nested_pairs(Inner i);
-  static std::pair<Inner, Inner> pair_duplicate(Inner i);
+  nested_pairs(const Inner &i);
+  static std::pair<Inner, Inner> pair_duplicate(const Inner &i);
   static Inner mk_inner(uint64_t n);
   static std::pair<Inner, uint64_t> pair_from_func(uint64_t n);
   static std::optional<std::pair<Inner, uint64_t>>
@@ -260,7 +273,7 @@ struct ConstructorBugs {
   }
 
   static std::pair<Inner, uint64_t> match_sum(const MySum &s);
-  static std::pair<Inner, uint64_t> with_cast(Inner i);
+  static std::pair<Inner, uint64_t> with_cast(const Inner &i);
   static std::pair<std::pair<Inner, uint64_t>, std::pair<Inner, uint64_t>>
   chain_lets(const Inner &i1);
 
@@ -270,15 +283,15 @@ struct ConstructorBugs {
 
   static std::pair<std::pair<Outer, Inner>, uint64_t>
   deep_proj(const Container &c);
-  static std::pair<List<Inner>, uint64_t> list_with_proj(Inner i);
-  static std::pair<Inner, uint64_t> tail_pair(Inner i, bool b);
+  static std::pair<List<Inner>, uint64_t> list_with_proj(const Inner &i);
+  static std::pair<Inner, uint64_t> tail_pair(const Inner &i, bool b);
   static std::pair<std::pair<Inner, Inner>, std::pair<uint64_t, uint64_t>>
-  quad_tuple(Inner i);
+  quad_tuple(const Inner &i);
   static std::pair<std::optional<Inner>, uint64_t>
   match_both_branches(const std::optional<Inner> &o);
-  static Sig<Inner> sigma_test(Inner i);
+  static Sig<Inner> sigma_test(const Inner &i);
   static uint64_t extract(const Inner &i);
-  static std::pair<Inner, uint64_t> nested_extract(Inner i);
+  static std::pair<Inner, uint64_t> nested_extract(const Inner &i);
   static std::pair<Outer, uint64_t> update_test(const Outer &o);
 
   struct State0 {
@@ -287,18 +300,18 @@ struct ConstructorBugs {
     uint64_t flag;
   };
 
-  static std::pair<State0, uint64_t> inline_pair(State0 s);
+  static std::pair<State0, uint64_t> inline_pair(const State0 &s);
   static std::pair<std::pair<State0, uint64_t>, uint64_t>
-  inline_triple(State0 s);
+  inline_triple(const State0 &s);
   static std::pair<std::pair<State0, uint64_t>, uint64_t>
-  inline_nested(State0 s);
+  inline_nested(const State0 &s);
   static State0 get_state_inline(uint64_t n);
   static std::pair<State0, uint64_t> inline_from_call(uint64_t n);
   static std::pair<std::pair<State0, uint64_t>, uint64_t>
   same_call_multi_proj(uint64_t n);
   static std::optional<std::pair<State0, uint64_t>>
   inline_match(const std::optional<State0> &o);
-  static std::pair<State0, uint64_t> inline_if(bool b, State0 s);
+  static std::pair<State0, uint64_t> inline_if(bool b, const State0 &s);
 
   struct OuterInline {
     State0 outer_state;
@@ -306,25 +319,26 @@ struct ConstructorBugs {
   };
 
   static std::pair<std::pair<OuterInline, State0>, uint64_t>
-  inline_deep(OuterInline o);
+  inline_deep(const OuterInline &o);
   static std::pair<State0, uint64_t> inline_double_proj(const OuterInline &o);
   static std::pair<std::pair<State0, uint64_t>, std::pair<uint64_t, uint64_t>>
-  inline_many(State0 s);
+  inline_many(const State0 &s);
   static std::pair<std::pair<uint64_t, State0>, uint64_t>
-  inline_pattern(State0 s);
+  inline_pattern(const State0 &s);
   static List<std::pair<State0, uint64_t>> inline_recursive(uint64_t n,
-                                                            State0 s);
+                                                            const State0 &s);
   static std::pair<std::pair<std::pair<State0, uint64_t>, uint64_t>,
                    std::pair<uint64_t, State0>>
-  inline_complex(State0 s);
+  inline_complex(const State0 &s);
   static std::pair<std::pair<State0, State0>, std::pair<uint64_t, uint64_t>>
-  inline_quad(State0 s);
-  static std::pair<State0, uint64_t> inline_both_branches(bool b, State0 s);
+  inline_quad(const State0 &s);
+  static std::pair<State0, uint64_t> inline_both_branches(bool b,
+                                                          const State0 &s);
 
   template <typename F0>
     requires std::is_invocable_r_v<uint64_t, F0 &, State0 &>
   static std::pair<std::pair<State0, uint64_t>, uint64_t>
-  apply_twice(F0 &&f, State0 s) {
+  apply_twice(F0 &&f, const State0 &s) {
     return std::make_pair(std::make_pair(s, f(s)), f(s));
   }
 
@@ -333,10 +347,10 @@ struct ConstructorBugs {
   static uint64_t get_value_inline(const State0 &s);
   static uint64_t get_data_inline(const State0 &s);
   static std::pair<std::pair<State0, uint64_t>, uint64_t>
-  inline_nested_calls(State0 s);
+  inline_nested_calls(const State0 &s);
   static std::pair<std::optional<State0>, std::optional<uint64_t>>
-  inline_option(State0 s);
-  static std::pair<List<State0>, List<uint64_t>> inline_list(State0 s);
+  inline_option(const State0 &s);
+  static std::pair<List<State0>, List<uint64_t>> inline_list(const State0 &s);
 };
 
 #endif // INCLUDED_CONSTRUCTOR_BUGS

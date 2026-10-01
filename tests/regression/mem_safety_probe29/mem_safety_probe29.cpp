@@ -1,7 +1,8 @@
 #include "mem_safety_probe29.h"
 
 /// TEST 2: Dup pattern — use inner tree twice in outer construction.
-MemSafetyProbe29::outer MemSafetyProbe29::dup_inner(MemSafetyProbe29::inner i) {
+MemSafetyProbe29::outer
+MemSafetyProbe29::dup_inner(const MemSafetyProbe29::inner &i) {
   return outer::onode(outer::onode(outer::oleaf(), i, outer::oleaf()), i,
                       outer::onode(outer::oleaf(), i, outer::oleaf()));
 }

@@ -2,10 +2,12 @@
 #define INCLUDED_SUM_DRAIN
 
 #include "crane_fn.h"
+#include "obj.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -36,27 +38,33 @@ public:
 
   explicit Sum(Inr _v) : v_(std::move(_v)) {}
 
-  template <typename _U0, typename _U1> Sum(const Sum<_U0, _U1> &_other) {
-    if (std::holds_alternative<typename Sum<_U0, _U1>::Inl>(_other.v())) {
-      const auto &[a0] = std::get<typename Sum<_U0, _U1>::Inl>(_other.v());
-      this->v_ = Inl{[&]() -> A {
-        if constexpr (std::is_same_v<_U0, std::any>) {
-          return crane_any_cast<A>(a0);
-        } else {
-          return A(a0);
-        }
-      }()};
-    } else {
-      const auto &[a0] = std::get<typename Sum<_U0, _U1>::Inr>(_other.v());
-      this->v_ = Inr{[&]() -> B {
-        if constexpr (std::is_same_v<_U1, std::any>) {
-          return crane_any_cast<B>(a0);
-        } else {
-          return B(a0);
-        }
-      }()};
-    }
-  }
+  template <typename _U0, typename _U1>
+  Sum(const Sum<_U0, _U1> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename Sum<_U0, _U1>::Inl>(_other.v())) {
+            const auto &[a0] =
+                std::get<typename Sum<_U0, _U1>::Inl>(_other.v());
+            return Inl{[&]() -> A {
+              if constexpr (crane_convertible<A, const _U0 &>) {
+                return crane_convert<A>(a0);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }()};
+          } else {
+            const auto &[a0] =
+                std::get<typename Sum<_U0, _U1>::Inr>(_other.v());
+            return Inr{[&]() -> B {
+              if constexpr (crane_convertible<B, const _U1 &>) {
+                return crane_convert<B>(a0);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }()};
+          }
+        }()) {}
 
   static Sum<A, B> inl(A a0) { return Sum<A, B>(Inl{std::move(a0)}); }
 

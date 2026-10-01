@@ -1,7 +1,7 @@
 #ifndef INCLUDED_DICT_CTOR_FIELD
 #define INCLUDED_DICT_CTOR_FIELD
 
-#include <functional>
+#include "fn.h"
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -12,7 +12,12 @@
 /// Sz a0; as a data member and passing the instance SzNat as a value.
 struct DictCtorField {
   template <typename A> struct Sz {
-    std::function<uint64_t(A)> sz;
+    crane::fn<uint64_t(A)> sz;
+
+    // ACCESSORS
+    template <typename _U> operator Sz<_U>() const {
+      return {crane_convert<crane::fn<uint64_t(_U)>>(sz)};
+    }
   };
 
   static inline const Sz<uint64_t> SzNat =

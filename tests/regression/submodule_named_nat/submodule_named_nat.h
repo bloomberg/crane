@@ -1,7 +1,6 @@
 #ifndef INCLUDED_SUBMODULE_NAMED_NAT
 #define INCLUDED_SUBMODULE_NAMED_NAT
 
-#include "small_vector.h"
 #include <atomic>
 #include <memory>
 #include <utility>
@@ -39,22 +38,18 @@ public:
 
   // MANIPULATORS
   ~Nat() {
-    crane::small_vector<std::shared_ptr<::Nat>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<::Nat> {
       if (auto *_alt = std::get_if<S>(&_v)) {
-        if (_alt->a0) {
-          _stack.push_back(std::move(_alt->a0));
+        if (_alt->a0 && _alt->a0.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a0);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<::Nat> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -79,7 +74,7 @@ struct SubmoduleNamedNat {
   /// Unlike shadow_runtime_nat, the shadowing name here is a *module*, which
   /// carries no GlobRef.t of its own.
   struct Nat {
-    static ::Nat succ(::Nat n);
+    static ::Nat succ(const ::Nat &n);
   };
 
   static ::Nat run(const ::Nat &x0_);

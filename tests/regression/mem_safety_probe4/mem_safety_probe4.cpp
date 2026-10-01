@@ -81,7 +81,7 @@ uint64_t MemSafetyProbe4::add_through(
         const auto &[a0, a1] = std::get<
             typename MemSafetyProbe4::mylist<MemSafetyProbe4::tree>::Mycons>(
             l.v());
-        std::function<uint64_t(uint64_t)> f = [&](uint64_t _x0) -> uint64_t {
+        crane::fn<uint64_t(uint64_t)> f = [&](uint64_t _x0) -> uint64_t {
           return a0.sum_values(_x0);
         };
         _stack.emplace_back(_Resume_Mycons{f(UINT64_C(0))});
@@ -107,7 +107,7 @@ uint64_t MemSafetyProbe4::double_partial(
   /// _Resume_Mycons: saves [_s0, f], resumes after recursive call with _result.
   struct _Resume_Mycons {
     uint64_t _s0;
-    std::function<uint64_t(uint64_t)> f;
+    crane::fn<uint64_t(uint64_t)> f;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Mycons>;
@@ -130,11 +130,10 @@ uint64_t MemSafetyProbe4::double_partial(
             typename MemSafetyProbe4::mylist<MemSafetyProbe4::tree>::Mycons>(
             l.v());
         const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> &a1_value = *a1;
-        std::function<uint64_t(uint64_t)> f =
-            [=](uint64_t _x0) mutable -> uint64_t {
+        crane::fn<uint64_t(uint64_t)> f = [=](uint64_t _x0) -> uint64_t {
           return a0.sum_values(_x0);
         };
-        std::function<uint64_t(uint64_t)> g = [&](uint64_t _x0) -> uint64_t {
+        crane::fn<uint64_t(uint64_t)> g = [&](uint64_t _x0) -> uint64_t {
           return a0.sum_values(_x0);
         };
         _stack.emplace_back(_Resume_Mycons{g(UINT64_C(0)), std::move(f)});
@@ -184,8 +183,7 @@ uint64_t MemSafetyProbe4::weighted_sum(
             typename MemSafetyProbe4::mylist<MemSafetyProbe4::tree>::Mycons>(
             l.v());
         const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> &a1_value = *a1;
-        std::function<uint64_t(uint64_t)> f =
-            [=](uint64_t _x0) mutable -> uint64_t {
+        crane::fn<uint64_t(uint64_t)> f = [=](uint64_t _x0) -> uint64_t {
           return a0.sum_values(_x0);
         };
         _stack.emplace_back(_Resume_Mycons{f(w)});
@@ -216,7 +214,7 @@ MemSafetyProbe4::mylist<uint64_t> MemSafetyProbe4::transform_list(
       const auto &[a0, a1] = std::get<
           typename MemSafetyProbe4::mylist<MemSafetyProbe4::tree>::Mycons>(
           _loop_l->v());
-      std::function<uint64_t(uint64_t)> f = [&](uint64_t _x0) -> uint64_t {
+      crane::fn<uint64_t(uint64_t)> f = [&](uint64_t _x0) -> uint64_t {
         return a0.sum_values(_x0);
       };
       auto _cell = std::make_shared<MemSafetyProbe4::mylist<uint64_t>>(
@@ -284,7 +282,7 @@ uint64_t MemSafetyProbe4::process_list(
 
   /// _Resume_Mycons: saves [f], resumes after recursive call with _result.
   struct _Resume_Mycons {
-    std::function<uint64_t(uint64_t)> f;
+    crane::fn<uint64_t(uint64_t)> f;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Mycons>;
@@ -307,8 +305,7 @@ uint64_t MemSafetyProbe4::process_list(
             typename MemSafetyProbe4::mylist<MemSafetyProbe4::tree>::Mycons>(
             l.v());
         const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> &a1_value = *a1;
-        std::function<uint64_t(uint64_t)> f =
-            [=](uint64_t _x0) mutable -> uint64_t {
+        crane::fn<uint64_t(uint64_t)> f = [=](uint64_t _x0) -> uint64_t {
           return a0.sum_values(_x0);
         };
         _stack.emplace_back(_Resume_Mycons{std::move(f)});
@@ -336,7 +333,7 @@ uint64_t MemSafetyProbe4::nested_apply(
       const auto &[a0, a1] = std::get<
           typename MemSafetyProbe4::mylist<MemSafetyProbe4::tree>::Mycons>(
           _loop_l->v());
-      std::function<uint64_t(uint64_t)> f = [&](uint64_t _x0) -> uint64_t {
+      crane::fn<uint64_t(uint64_t)> f = [&](uint64_t _x0) -> uint64_t {
         return a0.sum_values(_x0);
       };
       _loop_base = f(_loop_base);

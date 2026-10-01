@@ -1,6 +1,7 @@
 #ifndef INCLUDED_PATHOLOGICAL_RECORD
 #define INCLUDED_PATHOLOGICAL_RECORD
 
+#include "obj.h"
 #include <any>
 
 struct PathologicalRecord {

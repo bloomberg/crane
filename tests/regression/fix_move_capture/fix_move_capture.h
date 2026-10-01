@@ -1,7 +1,6 @@
 #ifndef INCLUDED_FIX_MOVE_CAPTURE
 #define INCLUDED_FIX_MOVE_CAPTURE
 
-#include "small_vector.h"
 #include <atomic>
 #include <memory>
 #include <type_traits>
@@ -54,22 +53,18 @@ struct FixMoveCapture {
 
     // MANIPULATORS
     ~mylist() {
-      crane::small_vector<std::shared_ptr<mylist>> _stack = {};
-      auto _drain = [&](variant_t &_v) {
+      auto _next = [&](variant_t &_v) -> std::shared_ptr<mylist> {
         if (auto *_alt = std::get_if<Mycons>(&_v)) {
-          if (_alt->a1) {
-            _stack.push_back(std::move(_alt->a1));
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
+            return std::move(_alt->a1);
           }
         }
+        return nullptr;
       };
-      _drain(v_mut());
-      while (!_stack.empty()) {
-        auto _cur = std::move(_stack.back());
-        _stack.pop_back();
-        if (_cur.use_count() == 1) {
-          std::atomic_thread_fence(std::memory_order_acquire);
-          _drain(_cur->v_mut());
-        }
+      std::shared_ptr<mylist> _cur = _next(v_mut());
+      while (_cur) {
+        _cur = _next(_cur->v_mut());
       }
     }
 
@@ -110,7 +105,7 @@ struct FixMoveCapture {
   static uint64_t sum(const mylist &l);
   /// dup_head stores l in the constructor → l escapes → owned.
   /// This means the caller passes l by value (move semantics).
-  static mylist dup_head(mylist l);
+  static mylist dup_head(const mylist &l);
   /// f l: defines a local fixpoint go that captures l by &.
   /// Then let t := dup_head l in ...:
   /// - dup_head takes l by value (owned, because l escapes in its body)

@@ -19,6 +19,6 @@ uint64_t SharedUptrEscape::conditional_share(uint64_t flag) {
 }
 
 SharedUptrEscape::wrapper
-SharedUptrEscape::wrap_tree(SharedUptrEscape::tree t) {
-  return wrapper::wrap(std::move(t));
+SharedUptrEscape::wrap_tree(const SharedUptrEscape::tree &t) {
+  return wrapper::wrap(t);
 }

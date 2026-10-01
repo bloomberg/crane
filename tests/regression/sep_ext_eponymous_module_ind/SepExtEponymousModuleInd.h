@@ -36,16 +36,22 @@ public:
 
   explicit Trie(Branch _v) : v_(std::move(_v)) {}
 
-  template <typename _U> Trie(const Trie<_U> &_other) {
-    if (std::holds_alternative<typename Trie<_U>::Leaf>(_other.v())) {
-      this->v_ = Leaf{};
-    } else {
-      const auto &[t, t0, t1] = std::get<typename Trie<_U>::Branch>(_other.v());
-      this->v_ = Branch{std::optional<A>(t),
-                        (t0 ? std::make_shared<Trie<A>>(*t0) : nullptr),
-                        (t1 ? std::make_shared<Trie<A>>(*t1) : nullptr)};
-    }
-  }
+  template <typename _U>
+  Trie(const Trie<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename Trie<_U>::Leaf>(_other.v())) {
+            return Leaf{};
+          } else {
+            const auto &[t, t0, t1] =
+                std::get<typename Trie<_U>::Branch>(_other.v());
+            return Branch{
+                std::optional<A>(t),
+                (t0 ? std::make_shared<Trie<A>>(crane_convert<Trie<A>>(*t0))
+                    : nullptr),
+                (t1 ? std::make_shared<Trie<A>>(crane_convert<Trie<A>>(*t1))
+                    : nullptr)};
+          }
+        }()) {}
 
   static Trie<A> leaf() { return Trie<A>(Leaf{}); }
 
@@ -60,10 +66,10 @@ public:
     crane::small_vector<std::shared_ptr<Trie<A>>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<Branch>(&_v)) {
-        if (_alt->t0) {
+        if (_alt->t0 && _alt->t0.use_count() == 1) {
           _stack.push_back(std::move(_alt->t0));
         }
-        if (_alt->t1) {
+        if (_alt->t1 && _alt->t1.use_count() == 1) {
           _stack.push_back(std::move(_alt->t1));
         }
       }

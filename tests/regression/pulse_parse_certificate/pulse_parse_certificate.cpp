@@ -77,7 +77,7 @@ List<PulseParseCertificateCase::PulseClass>
 PulseParseCertificateCase::classify_runs_with_base(uint64_t base,
                                                    const List<uint64_t> &rs) {
   return rs.template map<PulseParseCertificateCase::PulseClass>(
-      [=](uint64_t _x0) mutable -> PulseParseCertificateCase::PulseClass {
+      [=](uint64_t _x0) -> PulseParseCertificateCase::PulseClass {
         return classify_run_with_base(base, _x0);
       });
 }
@@ -158,7 +158,7 @@ bool PulseParseCertificateCase::pulse_parse_certificate_self_consistent(
 
 PulseParseCertificateCase::PulseCertificate
 PulseParseCertificateCase::certify_trace(const List<bool> &xs) {
-  List<uint64_t> runs = trace_to_runs(xs);
+  PulseParseCertificateCase::Runs runs = trace_to_runs(xs);
   uint64_t base = pulse_base_from_runs(runs);
   List<PulseParseCertificateCase::PulseClass> classes =
       classify_runs_with_base(base, runs);

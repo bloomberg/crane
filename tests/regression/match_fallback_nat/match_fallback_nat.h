@@ -1,6 +1,7 @@
 #ifndef INCLUDED_MATCH_FALLBACK_NAT
 #define INCLUDED_MATCH_FALLBACK_NAT
 
+#include <atomic>
 #include <type_traits>
 #include <utility>
 #include <variant>

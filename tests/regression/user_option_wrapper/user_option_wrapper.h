@@ -2,10 +2,12 @@
 #define INCLUDED_USER_OPTION_WRAPPER
 
 #include "crane_fn.h"
+#include "obj.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -33,20 +35,23 @@ struct UserOptionWrapper {
 
     explicit opt(So _v) : v_(std::move(_v)) {}
 
-    template <typename _U> opt(const opt<_U> &_other) {
-      if (std::holds_alternative<typename opt<_U>::Non>(_other.v())) {
-        this->v_ = Non{};
-      } else {
-        const auto &[a0] = std::get<typename opt<_U>::So>(_other.v());
-        this->v_ = So{[&]() -> A {
-          if constexpr (std::is_same_v<_U, std::any>) {
-            return crane_any_cast<A>(a0);
-          } else {
-            return A(a0);
-          }
-        }()};
-      }
-    }
+    template <typename _U>
+    opt(const opt<_U> &_other)
+        : v_([&]() -> variant_t {
+            if (std::holds_alternative<typename opt<_U>::Non>(_other.v())) {
+              return Non{};
+            } else {
+              const auto &[a0] = std::get<typename opt<_U>::So>(_other.v());
+              return So{[&]() -> A {
+                if constexpr (crane_convertible<A, const _U &>) {
+                  return crane_convert<A>(a0);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }()};
+            }
+          }()) {}
 
     static opt<A> non() { return opt<A>(Non{}); }
 
@@ -140,9 +145,7 @@ struct UserOptionWrapper {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    t wrap(uint64_t k) const {
-      return t::node(k, opt<t>::so(std::move(*this)));
-    }
+    t wrap(uint64_t k) const { return t::node(k, opt<t>::so(*this)); }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, uint64_t &, opt<t> &>

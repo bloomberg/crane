@@ -1,7 +1,7 @@
 #ifndef INCLUDED_POLY_ID_AT_FUNCTION_TYPE
 #define INCLUDED_POLY_ID_AT_FUNCTION_TYPE
 
-#include <functional>
+#include "fn.h"
 
 struct PolyIdAtFunctionType {
   /// A polymorphic identity instantiated at a function type collapses the

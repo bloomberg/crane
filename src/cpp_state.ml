@@ -263,6 +263,10 @@ let keywords =
          Only the spelling the header uses is reserved; the case-folded forms
          are separate names to the preprocessor. *)
       "alloca";
+      "va_start";
+      "va_end";
+      "va_copy";
+      "va_arg";
       "TRUE";
       "FALSE";
       "NULL";
@@ -451,6 +455,37 @@ let hoisted_concept_defs : Pp.t list ref = owned_list "hoisted_concept_defs"
     emitted at file scope instead. *)
 let file_scope_concepts : Pp.t list ref = owned_list "file_scope_concepts"
 
+(** The landing pads for erasure: file-scope [using X = std::any;] for a name
+    that survived into the output with no C++ spelling behind it.
+
+    They are collected rather than left in place because the text that lands on
+    them is not in one place and need not follow them.  A concept is the case
+    that forces it -- {!file_scope_concepts} moves concepts to the top of the
+    file, and a concept body spells such a name bare -- but the dependency is
+    general: an alias to [std::any] names nothing, so it is correct everywhere
+    and cheapest to put first, and then no later pass that reorders the file
+    can move something in front of it. *)
+let file_scope_erased_aliases : Pp.t list ref =
+  owned_list "file_scope_erased_aliases"
+
+(** The top-level elements that have to travel with the hoisted concepts,
+    identified by their label, and their rendered text.
+
+    Hoisting a concept to the top of the file is answered, for most of what a
+    concept spells, by the forward declarations already in front of it: a
+    [requires] body is unevaluated, so a plain mention needs the name declared
+    and not defined.  Two kinds are not answered by one.  C++ admits no
+    forward declaration for a [using] at all, and a name spelled {e qualified}
+    is a member lookup, which needs the definition.  Those elements move with
+    the concepts rather than being enumerated at the concepts' expense -- the
+    set is computed from what the concepts spell, in {!Cpp.concept_prereqs},
+    and the band keeps them in source order so that one naming another still
+    reads. *)
+let concept_prereq_labels : Names.Label.Set.t ref = owned_ref Names.Label.Set.empty
+
+let file_scope_concept_prereqs : Pp.t list ref =
+  owned_list "file_scope_concept_prereqs"
+
 (** A concept a frame is holding back until after the struct it was written
     in, identified by whatever declares it. *)
 type held_concept =
@@ -461,7 +496,7 @@ type held_concept =
 let held_concept_equal a b =
   match (a, b) with
   | HCmodtype x, HCmodtype y -> Names.ModPath.equal x y
-  | HCclass x, HCclass y -> Names.GlobRef.equal x y
+  | HCclass x, HCclass y -> globref_equal x y
   | _ -> false
 
 (** The concepts the struct now being rendered has held back: their
@@ -473,6 +508,9 @@ let held_back_concepts : held_concept list ref =
 (** Whether a concept is one the current frame is holding back. *)
 let is_held_back_in held_back c =
   List.exists (held_concept_equal c) held_back
+
+let class_concept_held_back r =
+  !render_ctx.rc_in_struct && is_held_back_in !held_back_concepts (HCclass r)
 
 (** Assertions deferred out of the struct being rendered.  Each entry is the
     concept held back, its name, and the asserted subject -- qualified as far
@@ -676,7 +714,7 @@ let default_std_names =
     make_shared = "std::make_shared";
     move = "std::move";
     forward = "std::forward";
-    any_cast = "std::any_cast";
+    any_cast = Crane_rt.obj_cast;
     logic_error = "std::logic_error";
     ns = "std";
     str_suffix = "s";
@@ -698,7 +736,7 @@ let mk_std_names prefix =
     let p = prefix in
     { shared_ptr = p ^ "shared_ptr"; make_shared = p ^ "make_shared";
       move = p ^ "move"; forward = p ^ "forward";
-      any_cast = p ^ "any_cast"; logic_error = p ^ "logic_error";
+      any_cast = Crane_rt.obj_cast; logic_error = p ^ "logic_error";
       ns = "bsl"; str_suffix = "_s";
       same_as = "same_as"; declval = p ^ "declval";
       convertible_to = "convertible_to";
@@ -763,6 +801,13 @@ let wrapper_module_table : (ModPath.t, string) Hashtbl.t =
 let collision_wrapper_table : (ModPath.t, unit) Hashtbl.t =
   owned_table "collision_wrapper_table"
 
+(** Module paths a collision wrapper absorbed without a collision of their own.
+    These keep their own nesting inside the wrapper struct, so
+    {!wrapper_qualify_name} puts the wrapper's name in front of theirs rather
+    than in place of it. *)
+let wrapper_bystander_table : (ModPath.t, unit) Hashtbl.t =
+  owned_table "wrapper_bystander_table"
+
 (** The name each type class's concept is emitted under, for the classes whose
     own name does not settle it: a concept is declared at file scope, so two
     classes called [C] in different modules are told apart by their module's
@@ -777,25 +822,32 @@ let concept_name_table : (GlobRef.t, string) Hashtbl.t =
 let global_scope_enum_table : (GlobRef.t, unit) Hashtbl.t =
   owned_table "global_scope_enum_table"
 
-(** Global-scope type alias table: tracks type aliases (ConstRef from Dtype)
-    that were rendered at global scope as [using T = ...] declarations, not
-    inside any struct.  When an imported module's type alias (e.g., [cell] from
-    [AliasSource.v]) is rendered at global scope in the header but the struct
-    qualifier logic would incorrectly add [StructName::] in the .cpp, checking
-    this table prevents the spurious qualification.
+(** The type names a wrapper struct's module contributes to C++ {i global}
+    scope rather than to the struct.
 
-    {b Lifecycle:} Populated during the rendering pass by
-    [register_global_scope_type_alias] when a [Dtype] is rendered outside
-    any struct.  Queried in [cpp_names.ml] for name qualification.
-    Cleared by [reset_cpp_state] between extraction runs. *)
-let global_scope_type_alias_table : (GlobRef.t, unit) Hashtbl.t =
-  owned_table "global_scope_type_alias_table"
+    A module forced into a wrapper struct by a name collision does not take
+    all of its declarations with it.  A type alias stays outside as
+    [using T = ...;], because C++ puts it there; a type class instance is
+    lifted out deliberately, because an instance is named from wherever its
+    class is used and a concept's template argument is a type, not a member of
+    whatever module happened to declare it.  Either way the wrapper struct
+    does not declare the name, and {!Cpp_names.struct_qualifier_for} must not
+    write [Wrapper::] in front of it in the [.cpp].
 
-let register_global_scope_type_alias r =
-  Hashtbl.replace global_scope_type_alias_table r ()
+    Asking where the name was {i emitted} is the only question that answers
+    this; where it was {i declared} in Rocq says the opposite, and says it
+    confidently.
 
-let is_global_scope_type_alias r =
-  Hashtbl.mem global_scope_type_alias_table r
+    {b Lifecycle:} populated from {!Structure_analysis}'s module layout before
+    any rendering begins -- which is what makes it safe to read from a [.cpp]
+    body printed long before the [.h] declares the name.  Queried in
+    [cpp_names.ml] for name qualification; cleared by [reset_cpp_state]. *)
+let global_scope_type_table : (GlobRef.t, unit) Hashtbl.t =
+  owned_table "global_scope_type_table"
+
+let register_global_scope_type r = Hashtbl.replace global_scope_type_table r ()
+
+let is_global_scope_type r = Hashtbl.mem global_scope_type_table r
 
 (** Pending wrapper declarations: maps a Dnspace struct name (e.g., "Nat") to
     pre-rendered forward declarations (specs) that should be injected into that
@@ -851,6 +903,18 @@ let add_nested_struct_name name owner =
   if not (List.exists (nested_struct_owner_equal owner) prev) then
     Hashtbl.replace nested_struct_names name (owner :: prev)
 
+(** Whether [r] is itself emitted as a struct nested inside another one --
+    the case where its own name does not reach a use written outside that
+    struct, so the reference needs the enclosing struct's qualifier. *)
+let is_nested_struct_ref r =
+  Hashtbl.fold
+    (fun _name owners acc ->
+      acc
+      || List.exists
+           (function NSref r' -> Common.globref_equal r r' | _ -> false)
+           owners )
+    nested_struct_names false
+
 (** Whether [r], rendered unqualified as [name], is shadowed by some nested
     struct of the same name. A reference that is itself emitted as a nested
     struct is not shadowed: it is the shadower, and naming it [::name] would
@@ -889,7 +953,17 @@ let wrapper_qualify_name (r : GlobRef.t) (name : string) : string =
     let mp = modpath_of_r r in
     ( match Hashtbl.find_opt wrapper_module_table mp with
     | Some struct_name when not (String.contains name ':') ->
-      struct_name ^ "::" ^ name
+      (* A bare name is the one a use written inside the reference's own module
+         would say, and the wrapper's name alone does not get back to it: a
+         bystander keeps its own struct, so the path runs through that struct
+         too.  Flattened children have no struct left to name, and for them the
+         wrapper's name is the whole of it. *)
+      let through_child =
+        if Hashtbl.mem wrapper_bystander_table mp then
+          Common.emitted_module_name mp ^ "::"
+        else ""
+      in
+      struct_name ^ "::" ^ through_child ^ name
     | Some struct_name when String.contains name ':' ->
       (* Name is already qualified (e.g., "N::add" from visibility stack). Only
          strip the child qualifier for collision-wrapped entries (e.g., BinNat
@@ -908,9 +982,37 @@ let wrapper_qualify_name (r : GlobRef.t) (name : string) : string =
           in
           struct_name ^ "::" ^ func_part
         | _ -> name
+      else if Hashtbl.mem wrapper_bystander_table mp then
+        (* Nested rather than flattened: the child's own qualifier stays and the
+           wrapper's name goes in front of it, unless it is already there. *)
+        let prefix = struct_name ^ "::" in
+        if String.starts_with ~prefix name then name else prefix ^ name
       else
         name
     | _ -> name )
+
+(** The name a module absorbed into a collision wrapper as a bystander is
+    spelled under, when it is named as a module rather than through one of its
+    members: the wrapper's name in front of its own, unless already there.
+
+    {!wrapper_qualify_name} answers the same question for a reference to a
+    member, and cannot answer this one -- a module is not a [GlobRef.t].  Only
+    bystanders: they are the ones the wrapper nests under their own name, so
+    that name is exactly what needs re-rooting.  A flattened child has no struct
+    to name, and an ordinary wrapper's children are spelled correctly already.
+
+    The resolution this rewrites is also what decides whether a template
+    argument needs [typename], and that decision is left alone: a bystander's
+    struct is a concrete one, never dependent. *)
+let wrapper_qualify_modname (mp : ModPath.t) (name : string) : string =
+  if not (Hashtbl.mem wrapper_bystander_table mp) then
+    name
+  else
+    match Hashtbl.find_opt wrapper_module_table mp with
+    | Some struct_name ->
+      let prefix = struct_name ^ "::" in
+      if String.starts_with ~prefix name then name else prefix ^ name
+    | None -> name
 
 (** Register a method with the method registry.
     @param func_ref the global reference of the function being registered as a method

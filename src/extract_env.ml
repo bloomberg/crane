@@ -645,6 +645,7 @@ let header_imports =
   [
     "algorithm";
     "any";
+    "atomic";   (* the acquire fence a destructor's sole-owner test pairs with *)
     "cassert";
     "concepts";
     "functional";
@@ -696,8 +697,19 @@ let include_guard_name s =
     are already included transitively via the component's own header (both
     share the same accumulator during discovery). *)
 let header fn () =
+  (* The producing binary, named by the artifact itself under [CRANE_STAMP]:
+     see {!Table.stamp_build}.  The implementation file is stamped as well as
+     the header because both are compared, and a witness on one of two files
+     leaves the other saying nothing. *)
+  let build_stamp =
+    if Table.stamp_build () then
+      str ("// crane-plugin " ^ Table.plugin_build_stamp ()) ++ fnl ()
+    else mt ()
+  in
   (* Component's own header must be first include (BDE Rule 5.5) *)
   let self_include =
+    build_stamp
+    ++
     match fn with
     | Some s ->
       let s = Filename.basename s in
@@ -735,14 +747,25 @@ let spec_header ?(unit_includes = []) si () =
       let needed = Common.get_needed_headers () in
       let extra_std =
         List.filter (fun h -> List.mem h needed)
-          ["any"; "deque"; "utility"]
+          ["any"; "atomic"; "deque"; "utility"]
       in
       header_imports_bsl @ extra_std
     else needed_std_headers ()
   in
+  (* The producing binary, named by the artifact itself under [CRANE_STAMP]:
+     see {!Table.stamp_build}.  Ahead of the include guard so it survives a
+     second inclusion being skipped, and a comment so nothing downstream reads
+     it. *)
+  let build_stamp =
+    if Table.stamp_build () then
+      str ("// crane-plugin " ^ Table.plugin_build_stamp ()) ++ fnl ()
+    else mt ()
+  in
   (* Include guard (BDE Rule 4.2.3): #ifndef INCLUDED_NAME *)
   let guard_name = Option.map include_guard_name si in
   let guard_open =
+    build_stamp
+    ++
     match guard_name with
     | Some g ->
       str ("#ifndef " ^ g) ++ fnl () ++ str ("#define " ^ g) ++ fnl2 ()
@@ -754,6 +777,7 @@ let spec_header ?(unit_includes = []) si () =
       (str "")
       (himports @ imps)
   in
+
   (* [Set Crane Arena] master switch.  Defined before the runtime headers
      (arena.h / rc.h) are pulled in below so rc.h's arena-backed control-block
      fields and its [arena.h] include are compiled in.  When the switch is off
@@ -762,6 +786,30 @@ let spec_header ?(unit_includes = []) si () =
   let h =
     if Table.arena_enabled () then
       h ++ str "#define CRANE_ARENA 1" ++ fnl ()
+    else
+      h
+  in
+  (* [crane::fn], the closure representation, counts its references
+     non-atomically under the same policy as [crane::rc].  The macro comes
+     before any runtime header, since lazy.h and crane_fn.h include fn.h
+     themselves. *)
+  let h =
+    if Table.non_atomic_rc () then
+      h ++ str "#define CRANE_NON_ATOMIC_RC 1" ++ fnl ()
+    else
+      h
+  in
+  let h =
+    if Table.demanded Crane_rt.fn_header then
+      h ++ mk_include_quoted Crane_rt.fn_header ++ fnl ()
+    else
+      h
+  in
+  (* An erased type is written [crane::obj], and every erasure demands
+     [<any>] on the way. *)
+  let h =
+    if Table.demanded "any" then
+      h ++ mk_include_quoted Crane_rt.obj_header ++ fnl ()
     else
       h
   in
@@ -1118,19 +1166,6 @@ let mark_higher_order_projections struc =
   in
   Modutil.struct_iter scan_decl (fun _ -> ()) (fun _ -> ()) struc
 
-(** Demote a record classified as a type class back to a plain struct when the
-    structure uses it as a value.
-
-    A record with a [Type]-valued field models an algebraic structure -- a
-    [Monoid] whose carrier and operations are resolved statically -- and is
-    emitted as a C++ concept, which its instances satisfy as types.  But the
-    same record can also be packed as an existential and handled as data ([list
-    dyn]): a concept cannot be a list element, and the value carries its own
-    type, so it has to be a struct with the promoted field erased.
-
-    A type argument is the signal: an instance used statically appears as a
-    definition's parameter, which becomes a template parameter, and never
-    inside another type's arguments. *)
 (** Give a functor application's inductives the kind the functor's own body
     gave them.
 
@@ -1230,6 +1265,19 @@ let align_functor_instance_kinds struc =
     struc;
   List.iter (fun (_mp, sel) -> List.iter walk_elem sel) struc
 
+(** Demote a record classified as a type class back to a plain struct when the
+    structure uses it as a value.
+
+    A record with a [Type]-valued field models an algebraic structure -- a
+    [Monoid] whose carrier and operations are resolved statically -- and is
+    emitted as a C++ concept, which its instances satisfy as types.  But the
+    same record can also be packed as an existential and handled as data ([list
+    dyn]): a concept cannot be a list element, and the value carries its own
+    type, so it has to be a struct with the promoted field erased.
+
+    A type argument is the signal: an instance used statically appears as a
+    definition's parameter, which becomes a template parameter, and never
+    inside another type's arguments. *)
 let demote_value_typeclasses struc =
   let demoted = ref Mindmap_env.empty in
   let rec scan_arg t =

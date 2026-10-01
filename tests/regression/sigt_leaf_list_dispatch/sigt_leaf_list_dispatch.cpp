@@ -11,11 +11,11 @@
 /// wrap_list expects the concrete List<uint64_t>.
 bool wrap_list(const List<uint64_t> &xs) { return xs.length() == xs.length(); }
 
-domty run(const SigT<uint64_t, std::function<std::any(std::monostate)>> &e) {
-  return e.projT2()(std::monostate{});
+domty run(const SigT<uint64_t, crane::fn<crane::obj(std::monostate)>> &e) {
+  return crane_any_cast<domty>(e.projT2()(std::monostate{}));
 }
 
 bool check(std::monostate) {
   return wrap_list(
-      List<uint64_t>(std::any_cast<List<std::any>>(run(entry_trees))));
+      List<uint64_t>(crane::any_cast<List<crane::obj>>(run(entry_trees))));
 }

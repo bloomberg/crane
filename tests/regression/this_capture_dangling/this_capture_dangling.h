@@ -2,9 +2,9 @@
 #define INCLUDED_THIS_CAPTURE_DANGLING
 
 #include "crane_fn.h"
+#include "fn.h"
 #include "small_vector.h"
 #include <atomic>
-#include <functional>
 #include <memory>
 #include <optional>
 #include <type_traits>
@@ -48,10 +48,10 @@ struct ThisCaptureDangling {
       crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a2) {
+          if (_alt->a2 && _alt->a2.use_count() == 1) {
             _stack.push_back(std::move(_alt->a2));
           }
         }
@@ -90,15 +90,15 @@ struct ThisCaptureDangling {
     /// tree's shared_ptr, we have use-after-free.
     ///
     /// Note: option is custom-extracted to std::optional.
-    std::optional<std::function<uint64_t(uint64_t)>> get_fn() const {
+    std::optional<crane::fn<uint64_t(uint64_t)>> get_fn() const {
       tree _self_val = *this;
       auto _cs = this->tree_sum();
       if (_cs <= 0) {
-        return std::optional<std::function<uint64_t(uint64_t)>>();
+        return std::optional<crane::fn<uint64_t(uint64_t)>>();
       } else {
         uint64_t _x = _cs - 1;
-        return std::make_optional<std::function<uint64_t(uint64_t)>>(
-            [=](uint64_t x) mutable { return (x + _self_val.tree_sum()); });
+        return std::make_optional<crane::fn<uint64_t(uint64_t)>>(
+            [=](uint64_t x) { return (x + _self_val.tree_sum()); });
       }
     }
 
@@ -177,7 +177,7 @@ struct ThisCaptureDangling {
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
-        std::decay_t<T1> _result;
+        T1 _result;
         tree a2;
         uint64_t a1;
         tree a0;
@@ -239,7 +239,7 @@ struct ThisCaptureDangling {
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
-        std::decay_t<T1> _result;
+        T1 _result;
         tree a2;
         uint64_t a1;
         tree a0;
@@ -312,7 +312,7 @@ struct ThisCaptureDangling {
   static inline const uint64_t test1 = []() -> uint64_t {
     auto _cs = tree::node(tree::leaf(), UINT64_C(42), tree::leaf()).get_fn();
     if (_cs.has_value()) {
-      const std::function<uint64_t(uint64_t)> &f = *_cs;
+      const crane::fn<uint64_t(uint64_t)> &f = *_cs;
       return f(UINT64_C(10));
     } else {
       return UINT64_C(999);
@@ -326,7 +326,7 @@ struct ThisCaptureDangling {
                           tree::node(tree::leaf(), UINT64_C(12), tree::leaf()))
                    .get_fn();
     if (_cs.has_value()) {
-      const std::function<uint64_t(uint64_t)> &f = *_cs;
+      const crane::fn<uint64_t(uint64_t)> &f = *_cs;
       return f(UINT64_C(5));
     } else {
       return UINT64_C(999);
@@ -336,7 +336,7 @@ struct ThisCaptureDangling {
   /// This increases memory pressure on the freed region.
   /// Expected: f noise = noise + 100 where noise = 1+2+3 = 6. So 106.
   static inline const uint64_t test3 = []() {
-    std::optional<std::function<uint64_t(uint64_t)>> opt =
+    std::optional<crane::fn<uint64_t(uint64_t)>> opt =
         tree::node(tree::leaf(), UINT64_C(100), tree::leaf()).get_fn();
     uint64_t noise =
         tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
@@ -344,7 +344,7 @@ struct ThisCaptureDangling {
                    tree::node(tree::leaf(), UINT64_C(3), tree::leaf()))
             .tree_sum();
     if (opt.has_value()) {
-      const std::function<uint64_t(uint64_t)> &f = *opt;
+      const crane::fn<uint64_t(uint64_t)> &f = *opt;
       return f(noise);
     } else {
       return UINT64_C(999);

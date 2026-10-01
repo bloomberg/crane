@@ -5,16 +5,16 @@ Nat::nat DeclOrderForwardUse::d(const Nat::nat &x0_, const Nat::nat &x1_) {
 }
 
 Prod<Nat::nat, Nat::nat> Nat::divmod(const Nat::nat &x, const Nat::nat &y,
-                                     Nat::nat q, Nat::nat u) {
+                                     const Nat::nat &q, const Nat::nat &u) {
   if (std::holds_alternative<typename Nat::nat::O>(x.v())) {
-    return Prod<Nat::nat, Nat::nat>::pair(std::move(q), std::move(u));
+    return Prod<Nat::nat, Nat::nat>::pair(q, u);
   } else {
     const auto &[a0] = std::get<typename Nat::nat::S>(x.v());
-    if (std::holds_alternative<typename Nat::nat::O>(u.v_mut())) {
-      return Nat::divmod(*a0, y, Nat::nat::s(std::move(q)), y);
+    if (std::holds_alternative<typename Nat::nat::O>(u.v())) {
+      return Nat::divmod(*a0, y, Nat::nat::s(q), y);
     } else {
-      auto &[a00] = std::get<typename Nat::nat::S>(u.v_mut());
-      return Nat::divmod(*a0, y, std::move(q), *a00);
+      const auto &[a00] = std::get<typename Nat::nat::S>(u.v());
+      return Nat::divmod(*a0, y, q, *a00);
     }
   }
 }

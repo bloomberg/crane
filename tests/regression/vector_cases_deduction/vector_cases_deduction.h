@@ -2,7 +2,7 @@
 #define INCLUDED_VECTOR_CASES_DEDUCTION
 
 #include "crane_fn.h"
-#include "small_vector.h"
+#include "obj.h"
 #include <any>
 #include <atomic>
 #include <memory>
@@ -42,22 +42,18 @@ public:
 
   // MANIPULATORS
   ~Nat() {
-    crane::small_vector<std::shared_ptr<Nat>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<Nat> {
       if (auto *_alt = std::get_if<S>(&_v)) {
-        if (_alt->a0) {
-          _stack.push_back(std::move(_alt->a0));
+        if (_alt->a0 && _alt->a0.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a0);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<Nat> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -96,21 +92,27 @@ public:
 
   explicit T(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U> T(const T<_U> &_other) {
-    if (std::holds_alternative<typename T<_U>::Nil>(_other.v())) {
-      this->v_ = Nil{};
-    } else {
-      const auto &[h, n, a2] = std::get<typename T<_U>::Cons>(_other.v());
-      this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>) {
-                          return crane_any_cast<A>(h);
-                        } else {
-                          return A(h);
-                        }
-                      }(),
-                      n, (a2 ? std::make_shared<T<A>>(*a2) : nullptr)};
-    }
-  }
+  template <typename _U>
+  T(const T<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename T<_U>::Nil>(_other.v())) {
+            return Nil{};
+          } else {
+            const auto &[h, n, a2] = std::get<typename T<_U>::Cons>(_other.v());
+            return Cons{[&]() -> A {
+                          if constexpr (crane_convertible<A, const _U &>) {
+                            return crane_convert<A>(h);
+                          } else {
+                            throw std::logic_error(
+                                "unreachable: inactive constructor field at "
+                                "this instantiation");
+                          }
+                        }(),
+                        n,
+                        (a2 ? std::make_shared<T<A>>(crane_convert<T<A>>(*a2))
+                            : nullptr)};
+          }
+        }()) {}
 
   static T<A> nil() { return T<A>(Nil{}); }
 
@@ -147,8 +149,8 @@ template <typename T1, typename T2, typename F0>
   requires std::is_invocable_r_v<T2, F0 &, T1 &, Nat &, T<T1> &>
 T2 Vector::caseS(F0 &&h, const Nat &, const T<T1> &v) {
   if (std::holds_alternative<typename T<T1>::Nil>(v.v())) {
-    return std::any_cast<T2>(
-        ([]() -> std::any { throw std::logic_error("unreachable"); })());
+    return crane_any_cast<T2>(
+        ([]() -> crane::obj { throw std::logic_error("unreachable"); })());
   } else {
     const auto &[h1, n, a2] = std::get<typename T<T1>::Cons>(v.v());
     return h(h1, n, *a2);
@@ -156,8 +158,8 @@ T2 Vector::caseS(F0 &&h, const Nat &, const T<T1> &v) {
 }
 
 template <typename T1> T1 Vector::hd(const Nat &n, T<T1> x0_) {
-  return Vector::template caseS<T1, T1>(
-      [](T1 h, const Nat &, const T<T1> &) { return h; }, n, std::move(x0_));
+  return Vector::template caseS<T1, T1>([](T1 h, Nat, T<T1>) { return h; }, n,
+                                        std::move(x0_));
 }
 
 #endif // INCLUDED_VECTOR_CASES_DEDUCTION

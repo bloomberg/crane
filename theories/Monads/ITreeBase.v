@@ -26,7 +26,13 @@ From ITree Require Export
 Export ITreeNotations.
 Open Scope itree_scope.
 
-Crane Extract Inductive sum1 => "" [ "%a0" "%a0" ].
+(* A sum of event families is a real type: a handler over [E +' F] matches on
+   which side the event came from, and the answer is not in the type.  The
+   index the families are applied at is erased, so the two parameters are the
+   event structs themselves. *)
+Crane Extract Inductive sum1 => "Sum1"
+  [ "sum1_inl(%a0)" "sum1_inr(%a0)" ]
+  From "crane_itree.h".
 Crane Extract Skip void1.
 Crane Extract Inlined Constant elim_void1 => "".
 Crane Extract Inlined Constant case_sum1 => "".
@@ -39,19 +45,36 @@ Crane Extract Skip Embeddable_itree.
 Crane Extract Skip Embeddable_forall.
 
 Crane Extract Skip ITree.map.
-Crane Extract Skip ITree.trigger.
-Crane Extract Skip ITree.iter.
+(* [iter] is not skipped: it is reached through [MonadIter], whose instance for
+   trees the mode skips, so a skipped [iter] leaves a call with no callee at
+   all -- [return <E, I, R>(...)].  The helper builds the same [Tau]-guarded
+   tree the Rocq definition denotes. *)
+Crane Extract Inlined Constant ITree.iter =>
+  "itree_iter(%a0, %a1)" From "crane_itree.h".
 Crane Extract Skip ITree.forever.
 Crane Extract Skip ITree.spin.
 Crane Extract Skip ITree.ignore.
 Crane Extract Skip ITree.cat.
-Crane Extract Skip translate.
+(* Relabelling a reified tree's events is the identity: a [Vis] stores its
+   effect as a thunk, so the event family it was written at is already gone
+   from the representation.  Skipped, [translate] left a call with no callee;
+   what it means here is the tree it was given. *)
+Crane Extract Inlined Constant translate => "%a1" From "crane_itree.h".
 Crane Extract Skip translateF.
 
-Crane Extract Skip Functor_itree.
+Crane Extract Inlined Constant Functor_itree =>
+  "Functor_itree<%t0>" From "crane_itree.h".
 Crane Extract Skip Applicative_itree.
-Crane Extract Skip Monad_itree.
-Crane Extract Skip MonadIter_itree.
+(* Not skipped, unlike its siblings: a tree's [bind] and [ret] are named by
+   their own mappings wherever they are written directly, but a generic
+   definition constrained by [Monad] has a dictionary parameter that must be
+   given a type -- [Monad_stateT<Monad_itree, S>].  The header supplies one. *)
+Crane Extract Inlined Constant Monad_itree => "Monad_itree<%t0>" From "crane_itree.h".
+(* Not skipped, for the reason [Monad_itree] is not: a definition that
+   iterates generically has a [MonadIter] dictionary parameter, and skipped
+   the instance left the argument with no value at all. *)
+Crane Extract Inlined Constant MonadIter_itree =>
+  "MonadIter_itree<%t0>" From "crane_itree.h".
 Crane Extract Inlined Constant idM => "%a0".
 
 Crane Extract Skip Cat.
@@ -67,7 +90,16 @@ Crane Extract Inlined Constant cat => "".
 Crane Extract Inlined Constant id_ => "%a0".
 Crane Extract Inlined Constant inl_ => "%a0".
 Crane Extract Inlined Constant inr_ => "%a0".
-Crane Extract Inlined Constant case_ => "".
+(* [case_ f g] reads which side of a sum an event came from.  Skipped, it left
+   a call with no callee at all; and it cannot be spelled as a dispatch
+   written out here, because the same constant is written both bare -- as the
+   handler an [interp] is given -- and applied to an event.  The helper is a
+   value, so it is both: what the template does not name, the use site
+   applies it to.  Its value arguments are the declaration's: the bifunctor
+   and the three objects come first, erased at a category over families but
+   passed all the same, so the two handlers are the fifth and sixth. *)
+Crane Extract Inlined Constant case_ =>
+  "itree_case(%a4, %a5)" From "crane_itree.h".
 Crane Extract Inlined Constant resum => "%a0".
 
 Crane Extract Inlined Constant ReSum_id => "%a0".
@@ -85,6 +117,7 @@ Crane Extract Skip Id_IFun.
 Crane Extract Skip Cat_IFun.
 Crane Extract Skip Initial_void1.
 Crane Extract Skip Case_sum1.
+Crane Extract Skip Case_sum1_Handler.
 Crane Extract Skip Inl_sum1.
 Crane Extract Skip Inr_sum1.
 

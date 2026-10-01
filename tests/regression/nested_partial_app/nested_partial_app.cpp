@@ -11,10 +11,10 @@ uint64_t NestedPartialApp::tree_sum(const NestedPartialApp::tree &t) {
 }
 
 /// 3-argument function: builds Node(t1, n, t2).
-NestedPartialApp::tree NestedPartialApp::build_node(NestedPartialApp::tree t1,
-                                                    uint64_t n,
-                                                    NestedPartialApp::tree t2) {
-  return tree::node(std::move(t1), n, std::move(t2));
+NestedPartialApp::tree
+NestedPartialApp::build_node(const NestedPartialApp::tree &t1, uint64_t n,
+                             const NestedPartialApp::tree &t2) {
+  return tree::node(t1, n, t2);
 }
 
 /// Variation: 4-argument function, triple nesting.

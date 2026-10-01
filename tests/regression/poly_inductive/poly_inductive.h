@@ -2,10 +2,12 @@
 #define INCLUDED_POLY_INDUCTIVE
 
 #include "crane_fn.h"
+#include "obj.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -17,6 +19,17 @@ struct PolyInductive {
 
     // ACCESSORS
     pbox<A> clone() const { return {a0}; }
+
+    template <typename _U> operator pbox<_U>() const {
+      return {[&]() -> _U {
+        if constexpr (crane_convertible<_U, const A &>) {
+          return crane_convert<_U>(a0);
+        } else {
+          throw std::logic_error(
+              "unreachable: inactive constructor field at this instantiation");
+        }
+      }()};
+    }
 
     // CREATORS
     static pbox<A> pbox0(A a0) { return {std::move(a0)}; }
@@ -48,6 +61,25 @@ struct PolyInductive {
 
     // ACCESSORS
     ppair<A, B> clone() const { return {a0, a1}; }
+
+    template <typename _U0, typename _U1> operator ppair<_U0, _U1>() const {
+      return {[&]() -> _U0 {
+                if constexpr (crane_convertible<_U0, const A &>) {
+                  return crane_convert<_U0>(a0);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }(),
+              [&]() -> _U1 {
+                if constexpr (crane_convertible<_U1, const B &>) {
+                  return crane_convert<_U1>(a1);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }()};
+    }
 
     // CREATORS
     static ppair<A, B> ppair0(A a0, B a1) {
@@ -101,20 +133,25 @@ struct PolyInductive {
 
     explicit pmaybe(PJust _v) : v_(std::move(_v)) {}
 
-    template <typename _U> pmaybe(const pmaybe<_U> &_other) {
-      if (std::holds_alternative<typename pmaybe<_U>::PNothing>(_other.v())) {
-        this->v_ = PNothing{};
-      } else {
-        const auto &[a0] = std::get<typename pmaybe<_U>::PJust>(_other.v());
-        this->v_ = PJust{[&]() -> A {
-          if constexpr (std::is_same_v<_U, std::any>) {
-            return crane_any_cast<A>(a0);
-          } else {
-            return A(a0);
-          }
-        }()};
-      }
-    }
+    template <typename _U>
+    pmaybe(const pmaybe<_U> &_other)
+        : v_([&]() -> variant_t {
+            if (std::holds_alternative<typename pmaybe<_U>::PNothing>(
+                    _other.v())) {
+              return PNothing{};
+            } else {
+              const auto &[a0] =
+                  std::get<typename pmaybe<_U>::PJust>(_other.v());
+              return PJust{[&]() -> A {
+                if constexpr (crane_convertible<A, const _U &>) {
+                  return crane_convert<A>(a0);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }()};
+            }
+          }()) {}
 
     static pmaybe<A> pnothing() { return pmaybe<A>(PNothing{}); }
 
@@ -194,22 +231,30 @@ struct PolyInductive {
 
     explicit ptree(PNode _v) : v_(std::move(_v)) {}
 
-    template <typename _U> ptree(const ptree<_U> &_other) {
-      if (std::holds_alternative<typename ptree<_U>::PLeaf>(_other.v())) {
-        const auto &[a0] = std::get<typename ptree<_U>::PLeaf>(_other.v());
-        this->v_ = PLeaf{[&]() -> A {
-          if constexpr (std::is_same_v<_U, std::any>) {
-            return crane_any_cast<A>(a0);
-          } else {
-            return A(a0);
-          }
-        }()};
-      } else {
-        const auto &[a0, a1] = std::get<typename ptree<_U>::PNode>(_other.v());
-        this->v_ = PNode{(a0 ? std::make_shared<ptree<A>>(*a0) : nullptr),
-                         (a1 ? std::make_shared<ptree<A>>(*a1) : nullptr)};
-      }
-    }
+    template <typename _U>
+    ptree(const ptree<_U> &_other)
+        : v_([&]() -> variant_t {
+            if (std::holds_alternative<typename ptree<_U>::PLeaf>(_other.v())) {
+              const auto &[a0] =
+                  std::get<typename ptree<_U>::PLeaf>(_other.v());
+              return PLeaf{[&]() -> A {
+                if constexpr (crane_convertible<A, const _U &>) {
+                  return crane_convert<A>(a0);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }()};
+            } else {
+              const auto &[a0, a1] =
+                  std::get<typename ptree<_U>::PNode>(_other.v());
+              return PNode{
+                  (a0 ? std::make_shared<ptree<A>>(crane_convert<ptree<A>>(*a0))
+                      : nullptr),
+                  (a1 ? std::make_shared<ptree<A>>(crane_convert<ptree<A>>(*a1))
+                      : nullptr)};
+            }
+          }()) {}
 
     static ptree<A> pleaf(A a0) { return ptree<A>(PLeaf{std::move(a0)}); }
 
@@ -223,10 +268,10 @@ struct PolyInductive {
       crane::small_vector<std::shared_ptr<ptree<A>>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<PNode>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a1) {
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
             _stack.push_back(std::move(_alt->a1));
           }
         }
@@ -324,7 +369,7 @@ struct PolyInductive {
       /// _Combine_PNode: receives partial results, combines with _result from
       /// final call.
       struct _Combine_PNode {
-        std::decay_t<T1> _result;
+        T1 _result;
         ptree<A> a1;
         ptree<A> a0;
       };
@@ -385,7 +430,7 @@ struct PolyInductive {
       /// _Combine_PNode: receives partial results, combines with _result from
       /// final call.
       struct _Combine_PNode {
-        std::decay_t<T1> _result;
+        T1 _result;
         ptree<A> a1;
         ptree<A> a0;
       };

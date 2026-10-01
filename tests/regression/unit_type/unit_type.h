@@ -1,6 +1,10 @@
 #ifndef INCLUDED_UNIT_TYPE
 #define INCLUDED_UNIT_TYPE
 
+#include "crane_fn.h"
+#include "obj.h"
+#include <any>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -18,6 +22,25 @@ struct UnitType {
 
     // ACCESSORS
     pair<A, B> clone() const { return {a0, a1}; }
+
+    template <typename _U0, typename _U1> operator pair<_U0, _U1>() const {
+      return {[&]() -> _U0 {
+                if constexpr (crane_convertible<_U0, const A &>) {
+                  return crane_convert<_U0>(a0);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }(),
+              [&]() -> _U1 {
+                if constexpr (crane_convertible<_U1, const B &>) {
+                  return crane_convert<_U1>(a1);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }()};
+    }
 
     // CREATORS
     static pair<A, B> pair0(A a0, B a1) {

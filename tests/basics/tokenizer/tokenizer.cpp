@@ -15,7 +15,7 @@ Tokenizer::next_token(std::basic_string_view<char> input,
     } else {
       if (fuel <= 0) {
         return std::make_pair(
-            std::make_optional<std::basic_string_view<char>>(std::move(s)),
+            std::make_optional<std::basic_string_view<char>>(s),
             std::string_view(nullptr, 0));
       } else {
         uint64_t fuel_ = fuel - 1;
@@ -54,13 +54,12 @@ Tokenizer::next_token(std::basic_string_view<char> input,
               return _self_aux(
                   _self_aux, fuel_, INT64_C(0),
                   ((INT64_C(1) >= 0 &&
-                    INT64_C(1) <= static_cast<int64_t>(std::move(s).length()))
-                       ? std::move(s).substr(
-                             INT64_C(1),
-                             static_cast<int64_t>(
-                                 (static_cast<uint64_t>(input.length()) -
-                                  static_cast<uint64_t>(INT64_C(1))) &
-                                 0x7FFFFFFFFFFFFFFFULL))
+                    INT64_C(1) <= static_cast<int64_t>(s.length()))
+                       ? s.substr(INT64_C(1),
+                                  static_cast<int64_t>(
+                                      (static_cast<uint64_t>(input.length()) -
+                                       static_cast<uint64_t>(INT64_C(1))) &
+                                      0x7FFFFFFFFFFFFFFFULL))
                        : std::basic_string_view<char>()));
             } else {
               return std::make_pair(
@@ -96,7 +95,7 @@ Tokenizer::next_token(std::basic_string_view<char> input,
                 static_cast<int64_t>((static_cast<uint64_t>(index) +
                                       static_cast<uint64_t>(INT64_C(1))) &
                                      0x7FFFFFFFFFFFFFFFULL),
-                std::move(s));
+                s);
           }
         }
       }

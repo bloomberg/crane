@@ -2,14 +2,17 @@
 #define INCLUDED_PRIMED_IDENTIFIER
 
 #include "crane_fn.h"
-#include "small_vector.h"
+#include "fn.h"
 #include <atomic>
-#include <functional>
 #include <memory>
 #include <utility>
 #include <variant>
 
 struct Nat;
+
+struct PrimedIdentifier {
+  static Nat use(const Nat &n);
+};
 
 struct Nat {
   // TYPES
@@ -39,22 +42,18 @@ public:
 
   // MANIPULATORS
   ~Nat() {
-    crane::small_vector<std::shared_ptr<Nat>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<Nat> {
       if (auto *_alt = std::get_if<S>(&_v)) {
-        if (_alt->a0) {
-          _stack.push_back(std::move(_alt->a0));
+        if (_alt->a0 && _alt->a0.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a0);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<Nat> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -91,17 +90,13 @@ public:
   }
 };
 
-template <typename t> using Sized = std::function<Nat(t)>;
+template <typename t> using Sized = crane::fn<Nat(t)>;
 
-template <typename T1> Nat size(Sized<T1> sized, T1 x0_) {
+template <typename T1> Nat size(std::type_identity_t<Sized<T1>> sized, T1 x0_) {
   return sized(std::move(x0_));
 }
 
-const Sized<Nat> Sized_nat_ = [](Nat n) { return Nat::s(n); };
+const Sized<Nat> Sized_nat_ = [](const Nat &n) { return Nat::s(n); };
 Nat twice_(const Nat &n);
-
-struct PrimedIdentifier {
-  static Nat use(const Nat &n);
-};
 
 #endif // INCLUDED_PRIMED_IDENTIFIER

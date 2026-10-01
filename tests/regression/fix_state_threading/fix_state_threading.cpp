@@ -1,29 +1,29 @@
 #include "fix_state_threading.h"
 
 std::pair<List<uint64_t>, uint64_t>
-FixStateThreading::reverse_count(const List<uint64_t> &l, List<uint64_t> acc) {
+FixStateThreading::reverse_count(const List<uint64_t> &l,
+                                 const List<uint64_t> &acc) {
   if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
-    return std::make_pair(std::move(acc), UINT64_C(0));
+    return std::make_pair(acc, UINT64_C(0));
   } else {
     const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-    auto [acc_, n] =
-        reverse_count(*a1, List<uint64_t>::cons(a0, std::move(acc)));
+    auto [acc_, n] = reverse_count(*a1, List<uint64_t>::cons(a0, acc));
     return std::make_pair(std::move(acc_), (n + UINT64_C(1)));
   }
 }
 
-std::pair<List<uint64_t>, List<uint64_t>> FixStateThreading::collect_odds_evens(
-    const List<uint64_t> &l, List<uint64_t> odds, List<uint64_t> evens) {
+std::pair<List<uint64_t>, List<uint64_t>>
+FixStateThreading::collect_odds_evens(const List<uint64_t> &l,
+                                      const List<uint64_t> &odds,
+                                      const List<uint64_t> &evens) {
   if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
-    return std::make_pair(std::move(odds), std::move(evens));
+    return std::make_pair(odds, evens);
   } else {
     const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
     if (Nat::even(a0)) {
-      return collect_odds_evens(*a1, std::move(odds),
-                                List<uint64_t>::cons(a0, std::move(evens)));
+      return collect_odds_evens(*a1, odds, List<uint64_t>::cons(a0, evens));
     } else {
-      return collect_odds_evens(*a1, List<uint64_t>::cons(a0, std::move(odds)),
-                                std::move(evens));
+      return collect_odds_evens(*a1, List<uint64_t>::cons(a0, odds), evens);
     }
   }
 }

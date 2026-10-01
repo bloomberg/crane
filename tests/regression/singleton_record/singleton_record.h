@@ -1,7 +1,11 @@
 #ifndef INCLUDED_SINGLETON_RECORD
 #define INCLUDED_SINGLETON_RECORD
 
-#include <functional>
+#include "crane_fn.h"
+#include "fn.h"
+#include "obj.h"
+#include <any>
+#include <stdexcept>
 
 struct SingletonRecord {
   struct wrapper {
@@ -16,6 +20,18 @@ struct SingletonRecord {
 
   template <typename A> struct box {
     A contents;
+
+    // ACCESSORS
+    template <typename _U> operator box<_U>() const {
+      return {[&]() -> _U {
+        if constexpr (crane_convertible<_U, const A &>) {
+          return crane_convert<_U>(contents);
+        } else {
+          throw std::logic_error(
+              "unreachable: inactive constructor field at this instantiation");
+        }
+      }()};
+    }
   };
 
   static inline const box<uint64_t> boxed_three = box<uint64_t>{UINT64_C(3)};
@@ -29,7 +45,7 @@ struct SingletonRecord {
   static inline const uint64_t double_unbox = nested_box.contents.contents;
 
   struct fn_wrapper {
-    std::function<uint64_t(uint64_t)> fn;
+    crane::fn<uint64_t(uint64_t)> fn;
   };
 
   static inline const fn_wrapper my_fn_wrapper =

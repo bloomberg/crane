@@ -53,11 +53,34 @@ val call_erased : string
     known once C++ instantiates the enclosing template, recovering them by
     CTAD. *)
 
+val convert : string
+(** [crane_convert<Dst>(e)] -- read a value at another instantiation of its
+    own type, by whichever route that type offers: a converting constructor
+    where it has one, and the [crane_cast_to] hook where it does not. *)
+
 (** {2 Containers} *)
 
 val small_vector : string  (** [crane::small_vector<T>] *)
 
 val lazy_ : string  (** [crane::lazy<T>] *)
+
+val fn : string
+(** [crane::fn<R(A...)>] -- a closure as a shared, immutable value: what a
+    Rocq function type is written as. *)
+
+val obj : string
+(** [crane::obj] -- an erased value, shared rather than copied: what an
+    erased type is written as. *)
+
+val obj_cast : string
+(** [crane::any_cast<T>] -- reads a [crane::obj] back at [T]. *)
+
+val obj_header : string  (** [obj.h] *)
+
+val rebind : string  (** [crane::rebind_t], a plain carrier read at an element *)
+
+val fn_header : string
+(** [fn.h], the header declaring {!fn}; demanded by the type printer. *)
 
 val counting_ptr : string
 (** [crane::counting_ptr<T>] -- the measurement-only reference-count-counting

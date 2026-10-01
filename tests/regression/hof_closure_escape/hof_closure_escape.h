@@ -1,9 +1,9 @@
 #ifndef INCLUDED_HOF_CLOSURE_ESCAPE
 #define INCLUDED_HOF_CLOSURE_ESCAPE
 
+#include "fn.h"
 #include "small_vector.h"
 #include <atomic>
-#include <functional>
 #include <memory>
 #include <optional>
 #include <type_traits>
@@ -47,10 +47,10 @@ struct HofClosureEscape {
       crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a2) {
+          if (_alt->a2 && _alt->a2.use_count() == 1) {
             _stack.push_back(std::move(_alt->a2));
           }
         }
@@ -110,26 +110,24 @@ struct HofClosureEscape {
   /// so the & lambda is created by the caller and passed through.
   template <typename F0>
     requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
-  static std::optional<std::function<uint64_t(uint64_t)>> wrap_some(F0 &&f) {
-    return std::make_optional<std::function<uint64_t(uint64_t)>>(f);
+  static std::optional<crane::fn<uint64_t(uint64_t)>> wrap_some(F0 &&f) {
+    return std::make_optional<crane::fn<uint64_t(uint64_t)>>(f);
   }
 
   /// BUG: The partial application sum_values t creates a & lambda.
   /// Even though wrap_some just passes f through to Some,
   /// the & lambda was created in hof_escape's stack frame.
   /// When hof_escape returns, captured t is destroyed.
-  static std::optional<std::function<uint64_t(uint64_t)>>
-  hof_escape(const tree &t);
+  static std::optional<crane::fn<uint64_t(uint64_t)>> hof_escape(const tree &t);
   static uint64_t
-  apply_option(const std::optional<std::function<uint64_t(uint64_t)>> &o,
+  apply_option(const std::optional<crane::fn<uint64_t(uint64_t)>> &o,
                uint64_t x);
   /// Clobber stack, then use the closure.
   static inline const uint64_t bug_hof_escape = []() {
     tree t1 = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
                          UINT64_C(20),
                          tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
-    std::optional<std::function<uint64_t(uint64_t)>> o1 =
-        hof_escape(std::move(t1));
+    std::optional<crane::fn<uint64_t(uint64_t)>> o1 = hof_escape(std::move(t1));
     return apply_option(std::move(o1), UINT64_C(0));
   }();
 };

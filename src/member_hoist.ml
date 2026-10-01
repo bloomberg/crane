@@ -4,31 +4,39 @@
 open Names
 open Minicpp
 
-(** Every global reference a member names, in its signature or its body. *)
-let field_refs (f : cpp_field) : GlobRef.Set.t =
-  let acc = ref GlobRef.Set.empty in
-  let note r = acc := GlobRef.Set.add r !acc in
+(** Whether a member names a global satisfying [p], in its signature or in
+    its body.
+
+    Asked as a predicate rather than answered with the set of everything the
+    member names: the caller only ever wants to know whether the member
+    crosses the cycle, and a walk that stops at the first hit cannot be read
+    as anything else. *)
+let field_names ?(body_only = false) (p : GlobRef.t -> bool) (f : cpp_field) :
+    bool =
+  let found = ref false in
+  let note r = if p r then found := true in
   let ty t =
-    ignore
-      (map_cpp_type
-         (fun t ->
-           ( match t with
-           | Tglob (r, _, _) | Tnamespace (r, _) -> note r
-           | _ -> () );
-           t )
-         t );
+    ignore (map_cpp_type (fun t ->
+      ( match t with
+      | Tglob (r, _, _) | Tnamespace (r, _) -> note r
+      | _ -> () );
+      t ) t);
     t
   in
   let rec ex e =
     ( match e with
     | CPPglob (r, _, _) | CPPnamespace (r, _) | CPPstructmk (r, _, _)
-    | CPPget' (_, r) -> note r
+    | CPPget' (_, r, _) -> note r
     | CPPconcept_app (r1, r2, _) -> note r1; note r2
     | _ -> () );
     map_expr ex st ty e
   and st s = map_stmt ex st ty s in
-  ignore (map_field ex st ty (f, VPublic, SNoTag));
-  !acc
+  ( if body_only then
+      match out_of_line_member f with
+      | Some m -> ignore (map_out_of_line st (fun t -> t) m)
+      | None -> ()
+    else ignore (map_field ex st ty (f, VPublic, SNoTag)) );
+  !found
 
 (** [split_struct ~group d] is [d] with the members that name a type of
     [group] left as declarations, paired with their definitions, to be written
@@ -41,17 +49,33 @@ let field_refs (f : cpp_field) : GlobRef.Set.t =
     it does not have to move, and because moving it would take its return type
     out of the struct's scope, where a nested name like [variant_t] no longer
     resolves. *)
-let rec split_struct ~(group : GlobRef.Set.t) (d : cpp_decl) :
-    cpp_decl * cpp_decl list =
+let rec split_struct
+    ?(body_only = false) ?enclosing ~(names : GlobRef.t -> bool) (d : cpp_decl)
+    : cpp_decl * cpp_decl list =
+  let split_struct ?(enclosing = enclosing) d =
+    split_struct ~body_only ?enclosing ~names d
+  in
   match d with
   | Dtemplate (tps, cstr, inner) ->
-    let inner, defs = split_struct ~group inner in
+    let inner, defs = split_struct inner in
     (Dtemplate (tps, cstr, inner), defs)
   | Dnspace (r, decls) ->
+    (* What the struct below is spelled under from outside.  Only the nearest
+       one: a member is written [Outer::inner::m], and anything further out is
+       already in scope where the definition lands. *)
+    let enclosing =
+      match r with
+      | None -> enclosing
+      | Some dw_ref ->
+        let dw_sole_child =
+          match decls with [Dstruct _] -> true | _ -> false
+        in
+        Some {dw_ref; dw_sole_child}
+    in
     let decls, defs =
       List.fold_right
         (fun d (decls, defs) ->
-          let d, ds = split_struct ~group d in
+          let d, ds = split_struct ~enclosing d in
           (d :: decls, ds @ defs) )
         decls ([], [])
     in
@@ -61,34 +85,49 @@ let rec split_struct ~(group : GlobRef.Set.t) (d : cpp_decl) :
     let fields =
       List.map
         (fun (f, vis, tag) ->
-          match f with
-          | (Fmethod _ | Fdestructor _)
-            when GlobRef.Set.exists (fun r -> GlobRef.Set.mem r group) (field_refs f) ->
+          match out_of_line_member f with
+          | Some m when field_names ~body_only names f ->
             defs :=
               Dmember_def
-                {dm_owner = ds.ds_ref; dm_tparams = ds.ds_tparams; dm_field = f}
+                { dm_owner = ds.ds_ref;
+                  dm_enclosing = enclosing;
+                  dm_tparams = ds.ds_tparams;
+                  dm_field = m }
               :: !defs;
-            (Fmember_decl f, vis, tag)
+            (Fmember_decl m, vis, tag)
           | _ -> (f, vis, tag) )
         ds.ds_fields
     in
     (Dstruct {ds with ds_fields = fields}, List.rev !defs)
   | _ -> (d, [])
 
-let split_group (decls : cpp_decl list) : cpp_decl list =
+(** [split_named ?body_only ~names decls] is [decls] with every member that
+    names a global satisfying [names] left as a declaration, its definition
+    written after all of them. *)
+let split_named ?body_only ~names (decls : ('a * cpp_decl) list) :
+    ('a * cpp_decl) list * ('a * cpp_decl) list =
+  (* A hoisted definition keeps the payload of the struct it came out of:
+     carrying it along is what stops the two lists from being re-zipped by
+     position once one of them has grown. *)
+  let structs, defs =
+    List.fold_right
+      (fun (x, d) (structs, defs) ->
+        let d, ds = split_struct ?body_only ~names d in
+        ((x, d) :: structs, List.map (fun d -> (x, d)) ds @ defs) )
+      decls ([], [])
+  in
+  (structs, defs)
+
+let split_group (decls : ('a * cpp_decl) list) : ('a * cpp_decl) list =
   let group =
     List.fold_left
-      (fun acc d ->
+      (fun acc (_, d) ->
         match decl_globref d with
         | Some r -> GlobRef.Set.add r acc
         | None -> acc )
       GlobRef.Set.empty decls
   in
   let structs, defs =
-    List.fold_right
-      (fun d (structs, defs) ->
-        let d, ds = split_struct ~group d in
-        (d :: structs, ds @ defs) )
-      decls ([], [])
+    split_named ~names:(fun r -> GlobRef.Set.mem r group) decls
   in
   structs @ defs

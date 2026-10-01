@@ -2,11 +2,13 @@
 #define INCLUDED_MEM_SAFETY_PROBE19
 
 #include "crane_fn.h"
+#include "fn.h"
+#include "obj.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
-#include <functional>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -57,10 +59,10 @@ struct MemSafetyProbe19 {
       crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a2) {
+          if (_alt->a2 && _alt->a2.use_count() == 1) {
             _stack.push_back(std::move(_alt->a2));
           }
         }
@@ -185,7 +187,7 @@ struct MemSafetyProbe19 {
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
-        std::decay_t<T1> _result;
+        T1 _result;
         tree a2;
         uint64_t a1;
         tree a0;
@@ -247,7 +249,7 @@ struct MemSafetyProbe19 {
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
-        std::decay_t<T1> _result;
+        T1 _result;
         tree a2;
         uint64_t a1;
         tree a0;
@@ -315,20 +317,25 @@ struct MemSafetyProbe19 {
 
     explicit myopt(Mysome _v) : v_(std::move(_v)) {}
 
-    template <typename _U> myopt(const myopt<_U> &_other) {
-      if (std::holds_alternative<typename myopt<_U>::Mynone>(_other.v())) {
-        this->v_ = Mynone{};
-      } else {
-        const auto &[a0] = std::get<typename myopt<_U>::Mysome>(_other.v());
-        this->v_ = Mysome{[&]() -> A {
-          if constexpr (std::is_same_v<_U, std::any>) {
-            return crane_any_cast<A>(a0);
-          } else {
-            return A(a0);
-          }
-        }()};
-      }
-    }
+    template <typename _U>
+    myopt(const myopt<_U> &_other)
+        : v_([&]() -> variant_t {
+            if (std::holds_alternative<typename myopt<_U>::Mynone>(
+                    _other.v())) {
+              return Mynone{};
+            } else {
+              const auto &[a0] =
+                  std::get<typename myopt<_U>::Mysome>(_other.v());
+              return Mysome{[&]() -> A {
+                if constexpr (crane_convertible<A, const _U &>) {
+                  return crane_convert<A>(a0);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }()};
+            }
+          }()) {}
 
     static myopt<A> mynone() { return myopt<A>(Mynone{}); }
 
@@ -421,7 +428,7 @@ struct MemSafetyProbe19 {
   /// TEST 5: Double use of returned closure.
   /// Ensures the closure is a real std::function, not inlined.
   static inline const uint64_t test_double_use = []() {
-    std::function<uint64_t(uint64_t)> f = [](uint64_t _x0) -> uint64_t {
+    crane::fn<uint64_t(uint64_t)> f = [](uint64_t _x0) -> uint64_t {
       return tree::node(tree::leaf(), UINT64_C(7), tree::leaf())
           .choose_fn(true, _x0);
     };
@@ -436,7 +443,7 @@ struct MemSafetyProbe19 {
   }
 
   static inline const uint64_t test_pass_closure = []() {
-    std::function<uint64_t(uint64_t)> f = [](uint64_t _x0) -> uint64_t {
+    crane::fn<uint64_t(uint64_t)> f = [](uint64_t _x0) -> uint64_t {
       return tree::node(tree::leaf(), UINT64_C(15), tree::leaf())
           .choose_fn(true, _x0);
     };
@@ -452,7 +459,7 @@ struct MemSafetyProbe19 {
   /// TEST 8: Closure from match, used across let-bindings.
   /// Maximum distance between closure creation and use.
   static inline const uint64_t test_delayed_use = []() {
-    std::function<uint64_t(uint64_t)> f = [](uint64_t _x0) -> uint64_t {
+    crane::fn<uint64_t(uint64_t)> f = [](uint64_t _x0) -> uint64_t {
       return choice_fn(
           tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
                      UINT64_C(2),

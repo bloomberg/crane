@@ -2,13 +2,14 @@
 #define INCLUDED_LOOPIFY_COIND_COLIST
 
 #include "crane_fn.h"
+#include "fn.h"
 #include "lazy.h"
+#include "obj.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
-#include <functional>
 #include <memory>
-#include <type_traits>
+#include <stdexcept>
 #include <utility>
 #include <variant>
 
@@ -37,21 +38,26 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U> List(const List<_U> &_other) {
-    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->v_ = Nil{};
-    } else {
-      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>) {
-                          return crane_any_cast<A>(a);
-                        } else {
-                          return A(a);
-                        }
-                      }(),
-                      (l ? std::make_shared<List<A>>(*l) : nullptr)};
-    }
-  }
+  template <typename _U>
+  List(const List<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+            return Nil{};
+          } else {
+            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const _U &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                   : nullptr)};
+          }
+        }()) {}
 
   static List<A> nil() { return List<A>(Nil{}); }
 
@@ -61,22 +67,18 @@ public:
 
   // MANIPULATORS
   ~List() {
-    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
-        if (_alt->l) {
-          _stack.push_back(std::move(_alt->l));
+        if (_alt->l && _alt->l.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->l);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<List<A>> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -96,11 +98,12 @@ struct LoopifyCoindColist {
     // TYPES
     struct Conil {};
 
-    struct Cocons {
+    template <typename _S0 = colist<A>> struct Cocons_ {
       A a0;
-      std::shared_ptr<colist<A>> a1;
+      _S0 a1;
     };
 
+    using Cocons = Cocons_<>;
     using variant_t = std::variant<Conil, Cocons>;
 
   private:
@@ -109,75 +112,161 @@ struct LoopifyCoindColist {
 
   public:
     // CREATORS
+    colist() {}
+
     explicit colist(Conil _v)
         : lazy_v_(crane::lazy<variant_t>(variant_t(std::move(_v)))) {}
 
     explicit colist(Cocons _v)
         : lazy_v_(crane::lazy<variant_t>(variant_t(std::move(_v)))) {}
 
-    explicit colist(std::function<variant_t()> _thunk)
+    template <typename _U>
+    colist(const colist<_U> &_other)
+        : lazy_v_(crane::lazy<variant_t>::converted_from(
+              _other.lazy_cell(), [=]() -> variant_t {
+                if (std::holds_alternative<typename colist<_U>::Conil>(
+                        _other.v())) {
+                  return Conil{};
+                } else {
+                  const auto &[a0, a1] =
+                      std::get<typename colist<_U>::Cocons>(_other.v());
+                  return Cocons{
+                      [&]() -> A {
+                        if constexpr (crane_convertible<A, const _U &>) {
+                          return crane_convert<A>(a0);
+                        } else {
+                          throw std::logic_error(
+                              "unreachable: inactive constructor field at this "
+                              "instantiation");
+                        }
+                      }(),
+                      crane_convert<colist<A>>(a1)};
+                }
+              })) {}
+
+    explicit colist(crane::fn<variant_t()> _thunk)
         : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
     static colist<A> conil() { return colist<A>(Conil{}); }
 
-    static colist<A> cocons(A a0, const colist<A> &a1) {
-      return colist<A>(Cocons{std::move(a0), std::make_shared<colist<A>>(a1)});
+    static colist<A> cocons(A a0, colist<A> a1) {
+      return colist<A>(Cocons{std::move(a0), std::move(a1)});
     }
 
-    static colist<A> lazy_(std::function<colist<A>()> thunk) {
-      return colist<A>(std::function<variant_t()>([=]() mutable -> variant_t {
-        colist<A> _tmp = thunk();
-        return _tmp.v();
-      }));
+    explicit colist(crane::lazy<variant_t> _cell) : lazy_v_(std::move(_cell)) {}
+
+    template <typename F> static colist<A> lazy_(F &&thunk) {
+      return colist<A>(
+          crane::lazy<variant_t>::delegate(std::forward<F>(thunk)));
     }
 
     // ACCESSORS
     const variant_t &v() const { return lazy_v_.force(); }
+
+    const crane::lazy<variant_t> &lazy_cell() const { return lazy_v_; }
   };
 
-  template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, T1 &>
-  static colist<T2> comap(F0 &&f, colist<T1> l) {
-    if (std::holds_alternative<typename colist<T1>::Conil>(l.v())) {
-      return colist<T2>::lazy_(
-          []() -> colist<T2> { return colist<T2>::conil(); });
-    } else {
-      const auto &[a0, a1] = std::get<typename colist<T1>::Cocons>(l.v());
-      return colist<T2>::lazy_([=]() mutable -> colist<T2> {
-        return colist<T2>::cocons(f(a0), comap<T1, T2>(f, *a1));
-      });
-    }
-  }
+  template <typename T1, typename T2>
+  static colist<T2>
+  comap(std::type_identity_t<crane::fn<T2(T1)>> f,
+        colist<T1> l) { /// _Enter: captures varying parameters for each
+                        /// recursive call.
 
-  template <typename T1> static colist<T1> cotake(uint64_t n, colist<T1> l) {
-    if (n <= 0) {
-      return colist<T1>::lazy_(
-          []() -> colist<T1> { return colist<T1>::conil(); });
-    } else {
-      uint64_t n_ = n - 1;
+    struct _Enter {
+      colist<T1> l;
+    };
+
+    using _Frame = std::variant<_Enter>;
+    colist<T2> _result{};
+    crane::small_vector<_Frame> _stack;
+    _stack.emplace_back(_Enter{std::move(l)});
+    /// Loopified comap: _Enter.
+    while (!_stack.empty()) {
+      _Frame _frame = std::move(_stack.back());
+      _stack.pop_back();
+      auto _f = std::move(std::get<_Enter>(_frame));
+      colist<T1> l = std::move(_f.l);
       if (std::holds_alternative<typename colist<T1>::Conil>(l.v())) {
-        return colist<T1>::lazy_(
-            []() -> colist<T1> { return colist<T1>::conil(); });
+        _result = colist<T2>::conil();
       } else {
         const auto &[a0, a1] = std::get<typename colist<T1>::Cocons>(l.v());
-        return colist<T1>::lazy_([=]() mutable -> colist<T1> {
-          return colist<T1>::cocons(a0, cotake<T1>(n_, *a1));
+        _result = colist<T2>::lazy_([=]() -> colist<T2> {
+          return colist<T2>::cocons(f(a0), comap<T1, T2>(f, a1));
         });
       }
     }
+    return _result;
   }
 
-  template <typename T1> static colist<T1> from_list(const List<T1> &l) {
-    if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
-      return colist<T1>::lazy_(
-          []() -> colist<T1> { return colist<T1>::conil(); });
-    } else {
-      const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
-      const List<T1> &a1_value = *a1;
-      return colist<T1>::lazy_([=]() mutable -> colist<T1> {
-        return colist<T1>::cocons(a0, from_list<T1>(a1_value));
-      });
+  template <typename T1>
+  static colist<T1>
+  cotake(uint64_t n,
+         colist<T1> l) { /// _Enter: captures varying parameters for each
+                         /// recursive call.
+
+    struct _Enter {
+      colist<T1> l;
+      uint64_t n;
+    };
+
+    using _Frame = std::variant<_Enter>;
+    colist<T1> _result{};
+    crane::small_vector<_Frame> _stack;
+    _stack.emplace_back(_Enter{std::move(l), n});
+    /// Loopified cotake: _Enter.
+    while (!_stack.empty()) {
+      _Frame _frame = std::move(_stack.back());
+      _stack.pop_back();
+      auto _f = std::move(std::get<_Enter>(_frame));
+      colist<T1> l = std::move(_f.l);
+      uint64_t n = _f.n;
+      if (n <= 0) {
+        _result = colist<T1>::conil();
+      } else {
+        uint64_t n_ = n - 1;
+        if (std::holds_alternative<typename colist<T1>::Conil>(l.v())) {
+          _result = colist<T1>::conil();
+        } else {
+          const auto &[a0, a1] = std::get<typename colist<T1>::Cocons>(l.v());
+          _result = colist<T1>::lazy_([=]() -> colist<T1> {
+            return colist<T1>::cocons(a0, cotake<T1>(n_, a1));
+          });
+        }
+      }
     }
+    return _result;
+  }
+
+  template <typename T1>
+  static colist<T1>
+  from_list(const List<T1> &l) { /// _Enter: captures varying parameters for
+                                 /// each recursive call.
+
+    struct _Enter {
+      const List<T1> *l;
+    };
+
+    using _Frame = std::variant<_Enter>;
+    colist<T1> _result{};
+    crane::small_vector<_Frame> _stack;
+    _stack.emplace_back(_Enter{&l});
+    /// Loopified from_list: _Enter.
+    while (!_stack.empty()) {
+      _Frame _frame = std::move(_stack.back());
+      _stack.pop_back();
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const List<T1> &l = *_f.l;
+      if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
+        _result = colist<T1>::conil();
+      } else {
+        const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
+        const List<T1> &a1_value = *a1;
+        _result = colist<T1>::lazy_([=]() -> colist<T1> {
+          return colist<T1>::cocons(a0, from_list<T1>(a1_value));
+        });
+      }
+    }
+    return _result;
   }
 
   template <typename T1> static List<T1> to_list(uint64_t fuel, colist<T1> l) {
@@ -201,7 +290,7 @@ struct LoopifyCoindColist {
               std::make_shared<List<T1>>(typename List<T1>::Cons(a0, nullptr));
           *_write = std::move(_cell);
           _write = &std::get<typename List<T1>::Cons>((*_write)->v_mut()).l;
-          _loop_l = *a1;
+          _loop_l = a1;
           _loop_fuel = f;
           continue;
         }

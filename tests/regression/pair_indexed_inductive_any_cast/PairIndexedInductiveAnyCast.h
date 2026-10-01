@@ -2,6 +2,7 @@
 #define INCLUDED_PAIRINDEXEDINDUCTIVEANYCAST
 
 #include "crane_fn.h"
+#include "obj.h"
 #include <any>
 #include <utility>
 #include <variant>
@@ -14,13 +15,13 @@ struct Pair_wrap;
 
 struct Pair_wrap {
   // DATA
-  std::any a;
+  crane::obj a;
 
   // ACCESSORS
   Pair_wrap clone() const { return {a}; }
 
   // CREATORS
-  static Pair_wrap mk_pair_wrap(std::any a) { return {std::move(a)}; }
+  static Pair_wrap mk_pair_wrap(crane::obj a) { return {std::move(a)}; }
 };
 
 struct Ops {
@@ -29,13 +30,15 @@ struct Ops {
     return crane_any_cast<std::pair<T1, Datatypes::Nat>>(a).first;
   }
 
-  template <typename T1> static Datatypes::Nat get_snd(const Pair_wrap &p) {
+  template <typename T1 = void>
+  static Datatypes::Nat get_snd(const Pair_wrap &p) {
     const auto &[a] = p;
     return crane_any_cast<std::pair<T1, Datatypes::Nat>>(a).second;
   }
 
-  template <typename T1> static Pair_wrap make(T1 a, Datatypes::Nat n) {
-    return Pair_wrap::mk_pair_wrap(std::make_pair(a, std::move(n)));
+  template <typename T1>
+  static Pair_wrap make(const T1 &a, const Datatypes::Nat &n) {
+    return Pair_wrap::mk_pair_wrap(std::make_pair(a, n));
   }
 };
 

@@ -1,7 +1,7 @@
 // A higher-kinded signature written as a Record rather than a Class.
 //
 // The record is a value dictionary: its parameter is the carrier already
-// applied at the erased element ([FnD<std::optional<std::any>>]), its field
+// applied at the erased element ([FnD<std::optional<crane::obj>>]), its field
 // is projected off the value, and the accessor converts the carrier back to
 // the element the caller means.
 

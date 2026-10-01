@@ -10,12 +10,11 @@
 #include <variant>
 
 enum class Comparison;
-enum class Comparison { EQ, LT, GT };
 
 struct Nat {
   static Comparison compare(uint64_t n, uint64_t m);
 };
-
+enum class Comparison { EQ, LT, GT };
 template <typename M>
 concept BaseType = requires { typename M::t; };
 template <typename M>
@@ -89,10 +88,10 @@ template <OrderedType K, BaseType V> struct MakeMap {
       crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a3) {
+          if (_alt->a3 && _alt->a3.use_count() == 1) {
             _stack.push_back(std::move(_alt->a3));
           }
         }

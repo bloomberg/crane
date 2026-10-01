@@ -2,7 +2,7 @@
 // Distributed under the terms of the GNU LGPL v2.1 license.
 // WIP: Crane generates "throw logic_error" for apply_entry because
 // it cannot translate the dependent projT2 application when the
-// function type is computed by a Fixpoint and erased to std::any.
+// function type is computed by a Fixpoint and erased to crane::obj.
 
 #include "SepExtAnyFunCall.h"
 
@@ -15,9 +15,9 @@ int main() {
   using A = SepExtAnyFunCall::Actions<MySym>;
   auto e = A::make_entry(
     Datatypes::List<int>::nil(),
-    [](std::any) -> bool { return true; }
+    [](crane::obj) -> bool { return true; }
   );
   // Crane stubs this with throw; correct code would call the function.
-  bool result = A::apply_entry(e, std::any{});
+  bool result = A::apply_entry(e, crane::obj{});
   return result ? 0 : 1;
 }

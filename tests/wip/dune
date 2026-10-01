@@ -78,42 +78,135 @@
   (deps cps_continuation_copy.t.exe)
   (action (run ./cps_continuation_copy.t.exe))))
 
-; --- Reductions from extracting Vellvm (https://github.com/vellvm/vellvm).
-; Each of these currently fails; see the header comment in the .v file.
+; --- Ninth round of Vellvm reductions, against Crane 79cf29afc.
 
-(subdir partial_application
+(subdir stateT_dict_arg_dropped
  (rule
-  (targets partial_application.t.exe)
-  (deps PartialApplication.vo partial_application.t.cpp (source_tree .))
+  (targets stateT_dict_arg_dropped.t.exe)
+  (deps StateTDictArgDropped.vo stateT_dict_arg_dropped.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} partial_application.t.exe partial_application.cpp partial_application.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} stateT_dict_arg_dropped.t.exe stateT_dict_arg_dropped.cpp stateT_dict_arg_dropped.t.cpp)))
  (rule
   (alias runtest)
-  (deps partial_application.t.exe)
-  (action (run ./partial_application.t.exe))))
+  (deps stateT_dict_arg_dropped.t.exe)
+  (action (run ./stateT_dict_arg_dropped.t.exe))))
 
-; --- Third round of Vellvm reductions, against Crane 697c44518.
+; --- Eleventh round of Vellvm reductions, against Crane 1e85ca2d9.
 
-(subdir hk_class_arg_numbering
+(subdir eta_handler_event_as_template
  (rule
-  (targets hk_class_arg_numbering.t.exe)
-  (deps HkClassArgNumbering.vo hk_class_arg_numbering.t.cpp (source_tree .))
+  (targets eta_handler_event_as_template.t.exe)
+  (deps EtaHandlerEventAsTemplate.vo eta_handler_event_as_template.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} hk_class_arg_numbering.t.exe hk_class_arg_numbering.cpp hk_class_arg_numbering.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} eta_handler_event_as_template.t.exe eta_handler_event_as_template.cpp eta_handler_event_as_template.t.cpp)))
  (rule
   (alias runtest)
-  (deps hk_class_arg_numbering.t.exe)
-  (action (run ./hk_class_arg_numbering.t.exe))))
+  (deps eta_handler_event_as_template.t.exe)
+  (action (run ./eta_handler_event_as_template.t.exe))))
 
-; --- Fourth round of Vellvm reductions, against Crane a54680989.
-
-(subdir undeducible_tt_return
+(subdir applied_typename_not_hk
  (rule
-  (targets undeducible_tt_return.t.exe)
-  (deps UndeducibleTtReturn.vo undeducible_tt_return.t.cpp (source_tree .))
+  (targets applied_typename_not_hk.t.exe)
+  (deps AppliedTypenameNotHk.vo applied_typename_not_hk.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} undeducible_tt_return.t.exe undeducible_tt_return.cpp undeducible_tt_return.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} applied_typename_not_hk.t.exe applied_typename_not_hk.cpp applied_typename_not_hk.t.cpp)))
  (rule
   (alias runtest)
-  (deps undeducible_tt_return.t.exe)
-  (action (run ./undeducible_tt_return.t.exe))))
+  (deps applied_typename_not_hk.t.exe)
+  (action (run ./applied_typename_not_hk.t.exe))))
+
+(subdir handler_lambda_targ_undeclared
+ (rule
+  (targets handler_lambda_targ_undeclared.t.exe)
+  (deps HandlerLambdaTargUndeclared.vo handler_lambda_targ_undeclared.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} handler_lambda_targ_undeclared.t.exe handler_lambda_targ_undeclared.cpp handler_lambda_targ_undeclared.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps handler_lambda_targ_undeclared.t.exe)
+  (action (run ./handler_lambda_targ_undeclared.t.exe))))
+
+(subdir hk_carrier_written_at_partial_app
+ (rule
+  (targets hk_carrier_written_at_partial_app.t.exe)
+  (deps HkCarrierWrittenAtPartialApp.vo hk_carrier_written_at_partial_app.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} hk_carrier_written_at_partial_app.t.exe hk_carrier_written_at_partial_app.cpp hk_carrier_written_at_partial_app.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps hk_carrier_written_at_partial_app.t.exe)
+  (action (run ./hk_carrier_written_at_partial_app.t.exe))))
+
+; --- An HK class field application cast to the concept; from the §174/§192 probe.
+
+(subdir mrec_ctx_wrapped_in_ret
+ (rule
+  (targets mrec_ctx_wrapped_in_ret.t.exe)
+  (deps MrecCtxWrappedInRet.vo mrec_ctx_wrapped_in_ret.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mrec_ctx_wrapped_in_ret.t.exe mrec_ctx_wrapped_in_ret.cpp mrec_ctx_wrapped_in_ret.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mrec_ctx_wrapped_in_ret.t.exe)
+  (action (run ./mrec_ctx_wrapped_in_ret.t.exe))))
+
+
+
+
+
+
+
+
+
+
+
+
+
+(subdir carrier_alias_promoted
+ (rule
+  (targets carrier_alias_promoted.t.exe)
+  (deps CarrierAliasPromoted.vo carrier_alias_promoted.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} carrier_alias_promoted.t.exe carrier_alias_promoted.cpp carrier_alias_promoted.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps carrier_alias_promoted.t.exe)
+  (action (run ./carrier_alias_promoted.t.exe))))
+
+
+
+(subdir carrier_holder_before_alias
+ (rule
+  (targets carrier_holder_before_alias.t.exe)
+  (deps CarrierHolderBeforeAlias.vo carrier_holder_before_alias.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} carrier_holder_before_alias.t.exe carrier_holder_before_alias.cpp carrier_holder_before_alias.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps carrier_holder_before_alias.t.exe)
+  (action (run ./carrier_holder_before_alias.t.exe))))
+
+; --- Vellvm mem-scan: a borrowed field's last read moved into a class method.
+
+; --- A class's concept printed after the struct whose template uses it.
+
+; --- Vellvm with global Set Crane Loopify: a frame-stack loop's result
+; default-constructed at a type (itree) that has no default constructor.
+
+; --- Vellvm with global Set Crane Loopify: a non-recursive instance method
+; that calls the inner instance's same-named method is loopified.
+
+; --- Vellvm with global Set Crane Loopify: mutually recursive functions with
+; different result types share one frame-stack _result.
+
+; --- Vellvm with global Set Crane Loopify: a resume frame's continuation field
+; typed as decltype of a lambda expression.
+
+; --- Vellvm with global Set Crane Loopify: polymorphic mutual traversal with
+; class and function parameters and a partially applied partner.
+
+; --- Stage A: an immediately invoked [=] lambda matching an owned capture.
+
+
+; --- A local fix captured by reference escapes through a state-monad bind.
+

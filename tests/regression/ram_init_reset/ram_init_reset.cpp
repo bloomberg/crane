@@ -6,10 +6,10 @@ RamInitReset::state RamInitReset::reset_state(const RamInitReset::state &s) {
 }
 
 std::pair<std::optional<uint64_t>, RamInitReset::state>
-RamInitReset::pop_stack(RamInitReset::state s) {
+RamInitReset::pop_stack(const RamInitReset::state &s) {
   auto &&_sv = s.state_stack;
   if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
-    return std::make_pair(std::optional<uint64_t>(), std::move(s));
+    return std::make_pair(std::optional<uint64_t>(), s);
   } else {
     const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(_sv.v());
     return std::make_pair(std::make_optional<uint64_t>(a0),

@@ -1,7 +1,11 @@
 #ifndef INCLUDED_SIG_FUN_PARAM_RESULT_CAST
 #define INCLUDED_SIG_FUN_PARAM_RESULT_CAST
 
-#include <functional>
+#include "crane_fn.h"
+#include "fn.h"
+#include "obj.h"
+#include <any>
+#include <stdexcept>
 #include <utility>
 #include <variant>
 
@@ -14,6 +18,17 @@ template <typename A> struct Sig {
   // ACCESSORS
   Sig<A> clone() const { return {x}; }
 
+  template <typename _U> operator Sig<_U>() const {
+    return {[&]() -> _U {
+      if constexpr (crane_convertible<_U, const A &>) {
+        return crane_convert<_U>(x);
+      } else {
+        throw std::logic_error(
+            "unreachable: inactive constructor field at this instantiation");
+      }
+    }()};
+  }
+
   // CREATORS
   static Sig<A> exist(A x) { return {std::move(x)}; }
 };
@@ -22,11 +37,10 @@ template <typename A> struct Sig {
 /// is the concrete Sig<std::function<uint64_t(uint64_t)>>), must be applied
 /// directly rather than through an erased-function cast.
 struct SigFunParamResultCast {
-  static uint64_t apply_sig(const Sig<std::function<uint64_t(uint64_t)>> &f,
+  static uint64_t apply_sig(const Sig<crane::fn<uint64_t(uint64_t)>> &f,
                             uint64_t n);
-  static inline const Sig<std::function<uint64_t(uint64_t)>> idf =
-      Sig<std::function<uint64_t(uint64_t)>>::exist(
-          [](uint64_t n) { return n; });
+  static inline const Sig<crane::fn<uint64_t(uint64_t)>> idf =
+      Sig<crane::fn<uint64_t(uint64_t)>>::exist([](uint64_t n) { return n; });
   static inline const uint64_t go = apply_sig(idf, UINT64_C(2));
 };
 

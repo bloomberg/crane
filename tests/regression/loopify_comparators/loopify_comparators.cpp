@@ -161,27 +161,29 @@ List<uint64_t> LoopifyComparators::merge_by(const List<uint64_t> &l1,
   return merge_by_fuel((len1 + len2), l1, l2);
 }
 
-List<uint64_t> LoopifyComparators::insert_sorted(uint64_t x, List<uint64_t> l) {
+List<uint64_t> LoopifyComparators::insert_sorted(uint64_t x,
+                                                 const List<uint64_t> &l) {
   std::shared_ptr<List<uint64_t>> _head{};
   std::shared_ptr<List<uint64_t>> *_write = &_head;
-  List<uint64_t> _loop_l = std::move(l);
+  const List<uint64_t> *_loop_l = &l;
   while (true) {
-    if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l.v_mut())) {
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
       *_write = std::make_shared<List<uint64_t>>(
           List<uint64_t>::cons(x, List<uint64_t>::nil()));
       break;
     } else {
-      auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(_loop_l.v_mut());
+      const auto &[a0, a1] =
+          std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       if (x <= a0) {
         *_write =
-            std::make_shared<List<uint64_t>>(List<uint64_t>::cons(x, _loop_l));
+            std::make_shared<List<uint64_t>>(List<uint64_t>::cons(x, *_loop_l));
         break;
       } else {
         auto _cell = std::make_shared<List<uint64_t>>(
             typename List<uint64_t>::Cons(a0, nullptr));
         *_write = std::move(_cell);
         _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
-        _loop_l = List<uint64_t>(*a1);
+        _loop_l = crane_raw(a1);
         continue;
       }
     }

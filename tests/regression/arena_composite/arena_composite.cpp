@@ -14,8 +14,8 @@ Bool0 PeanoNat::leb(const Nat &n, const Nat &m) {
   }
 }
 
-Bool0 PeanoNat::ltb(Nat n, const Nat &m) {
-  return PeanoNat::leb(Nat::s(std::move(n)), m);
+Bool0 PeanoNat::ltb(const Nat &n, const Nat &m) {
+  return PeanoNat::leb(Nat::s(n), m);
 }
 
 Nat PeanoNat::max(Nat n, Nat m) {

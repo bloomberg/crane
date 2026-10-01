@@ -16,9 +16,9 @@ uint64_t FixPartialAppEscape::count_bits(uint64_t x0_) {
         }
       }
     };
-    auto go = [=](uint64_t depth, uint64_t n) mutable -> uint64_t {
+    auto go = [=](uint64_t depth, uint64_t n) -> uint64_t {
       return go_impl(go_impl, depth, n);
     };
-    return [=](uint64_t _pa0) mutable { return go(UINT64_C(32), _pa0); };
+    return [=](uint64_t _pa0) { return go(UINT64_C(32), _pa0); };
   }()(x0_);
 }

@@ -1,6 +1,7 @@
 #ifndef INCLUDED_CANON_STRUCT
 #define INCLUDED_CANON_STRUCT
 
+#include "obj.h"
 #include <any>
 #include <concepts>
 #include <utility>
@@ -19,7 +20,7 @@ concept EqType = requires {
 };
 
 struct CanonStruct {
-  using carrier = std::any;
+  using carrier = crane::obj;
 
   struct nat_eqType {
     using carrier = uint64_t;

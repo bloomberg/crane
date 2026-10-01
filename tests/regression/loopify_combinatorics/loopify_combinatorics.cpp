@@ -484,11 +484,11 @@ List<List<uint64_t>> LoopifyCombinatorics::power_set(
 /// insert_everywhere x l inserts x at every position in l.
 List<List<uint64_t>> LoopifyCombinatorics::insert_everywhere(
     uint64_t x,
-    List<uint64_t>
-        l) { /// _Enter: captures varying parameters for each recursive call.
+    const List<uint64_t>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
-    List<uint64_t> l;
+    const List<uint64_t> *l;
   };
 
   /// _Cont_Cons: saves [a0, l], resumes after recursive call, then processes
@@ -501,27 +501,27 @@ List<List<uint64_t>> LoopifyCombinatorics::insert_everywhere(
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   List<List<uint64_t>> _result{};
   crane::small_vector<_Frame> _stack;
-  _stack.emplace_back(_Enter{std::move(l)});
+  _stack.emplace_back(_Enter{&l});
   /// Loopified insert_everywhere: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      List<uint64_t> l = std::move(_f.l);
-      if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v_mut())) {
+      const List<uint64_t> &l = *_f.l;
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = List<List<uint64_t>>::cons(
             List<uint64_t>::cons(x, List<uint64_t>::nil()),
             List<List<uint64_t>>::nil());
       } else {
-        auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v_mut());
+        const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
         _stack.emplace_back(_Cont_Cons{a0, l});
-        _stack.emplace_back(_Enter{*a1});
+        _stack.emplace_back(_Enter{crane_raw(a1)});
       }
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      List<uint64_t> l = std::move(_f.l);
+      const List<uint64_t> &l = std::move(_f.l);
       List<List<uint64_t>> rest = std::move(_result);
       auto prepend_y_impl =
           [&](auto &,

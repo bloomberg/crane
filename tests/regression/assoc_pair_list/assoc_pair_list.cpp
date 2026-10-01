@@ -1,8 +1,8 @@
 #include "assoc_pair_list.h"
 
-AssocPairList::t AssocPairList::wrap(uint64_t k, AssocPairList::t acc) {
+AssocPairList::t AssocPairList::wrap(uint64_t k, const AssocPairList::t &acc) {
   return t::node(List<std::pair<uint64_t, AssocPairList::t>>::cons(
-      std::make_pair(k, std::move(acc)),
+      std::make_pair(k, acc),
       List<std::pair<uint64_t, AssocPairList::t>>::nil()));
 }
 

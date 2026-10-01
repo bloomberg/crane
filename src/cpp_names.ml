@@ -448,6 +448,20 @@ let struct_qualifier_for r name_str =
   match (!render_ctx).rc_struct_name with
   | Some struct_name when not (!render_ctx).rc_in_struct ->
     let struct_name_str = Pp.string_of_ppcmds struct_name in
+    (* Whether [r] is declared inside this struct's module.  The kernel path
+       answers where it is known; the textual test is the fallback, and alone
+       it fires on a sibling module whose path merely contains the struct's
+       name -- a file named after its module. *)
+    let member_of_struct () =
+      match
+        Option.map
+          (fun struct_mp -> mp_relation_to ~struct_mp r)
+          (!render_ctx).rc_struct_mp
+      with
+      | Some Member -> true
+      | Some _ -> false
+      | None -> is_nested_in_struct r struct_name_str
+    in
     (* Already contains the struct prefix — nothing to add. *)
     if Common.contains_substring name_str (struct_name_str ^ "::") then
       mt ()
@@ -456,28 +470,24 @@ let struct_qualifier_for r name_str =
        itself lives inside the current struct (nested sub-module), we must
        still qualify it in the [.cpp] file. *)
     else if is_eponymous_record_global r then
-      if is_nested_in_struct r struct_name_str then
-        struct_name ++ str "::"
-      else
-        mt ()
+      if member_of_struct () then struct_name ++ str "::" else mt ()
     (* Non-local records are placed at C++ global scope (before the struct),
        so they never need the struct prefix. *)
     else if is_record_inductive r && not (is_local_inductive r) then
       mt ()
     (* Enums at global scope need no prefix; those inside the struct do. *)
     else if Table.is_enum_inductive r then
-      if Hashtbl.mem global_scope_enum_table r then
-        mt ()
-      else if is_nested_in_struct r struct_name_str then
-        struct_name ++ str "::"
-      else
-        mt ()
-    (* Type aliases (ConstRef from Dtype) that were rendered at global C++ scope
-       as [using T = ...] declarations are never members of the struct.  When a
-       module is imported from another file, its type aliases end up at global
-       scope in the header (not inside [struct StructName]), so they must not
-       be qualified with [StructName::] in the .cpp out-of-line definitions. *)
-    else if Cpp_state.is_global_scope_type_alias r then
+      if Hashtbl.mem global_scope_enum_table r then mt ()
+      else if member_of_struct () then struct_name ++ str "::"
+      else mt ()
+    (* A name the struct's module contributes to global scope rather than to
+       the struct is never a member of it: a [using T = ...] alias, which C++
+       puts outside, and a type class instance, which Crane lifts out so that
+       a concept's template argument can be written unqualified.  Both are
+       recorded by the module layout, which knows where the declaration goes;
+       the kernel module path consulted below only knows where it came from,
+       and for these two answers [Member]. *)
+    else if Cpp_state.is_global_scope_type r then
       mt ()
     (* The kernel module path settles the question outright when it is known:
        the type is a member of this struct exactly when it was declared in the
@@ -565,6 +575,44 @@ let global_scope_qualifier_for r name_str =
   | GlobRef.IndRef _ when not (is_qualified_name name_str) ->
     if Cpp_state.is_shadowed_global_name name_str r then str "::" else mt ()
   | _ -> mt ()
+
+(** The name a type is written under, from outside the struct that owns it.
+
+    A module a name collision forced into a struct keeps its declarations
+    there, so a use of one from elsewhere has to say which struct -- the same
+    answer {!Cpp_state.wrapper_qualify_name} already gives the {i term}
+    printer for a call into such a module.  Only the term printer was asking:
+    an inductive reaches the reader through {!inductive_name_info}, which
+    qualifies for its own reasons, and everything else a wrapped module
+    declares -- a type class instance above all, named as a concept's template
+    argument -- came out bare.
+
+    The exceptions are the ones {!struct_qualifier_for} already makes, and for
+    its reasons: a [using T = ...] alias and a {i lifted} instance are
+    contributed to namespace scope rather than to the struct, so the module
+    path they came from does not say where they went.
+
+    An inductive is excluded outright.  It reaches the reader through
+    {!inductive_name_info} and the [Tnamespace] machinery, which qualify it for
+    their own reasons and by their own spelling; asking here as well turns a
+    settled [List<A>] into [Datatypes::template List<A>].  A type class is
+    excluded for the reason {!concept_name_of_ref} gives: a concept may only be
+    declared at namespace scope, so it is never inside the struct to begin
+    with.
+
+    Inside the struct the qualifier must not be written at all.  The class is
+    incomplete while its own body is being printed, so [Wrapper::member] there
+    names nothing -- and the member is in scope unqualified anyway. *)
+let wrapper_qualified_type_name r name_str =
+  match r with
+  | GlobRef.IndRef _ | GlobRef.ConstructRef _ -> name_str
+  | _ when Table.is_typeclass r -> name_str
+  | _ when Cpp_state.is_global_scope_type r -> name_str
+  | _ ->
+    if (!render_ctx).rc_in_struct then
+      name_str
+    else
+      Cpp_state.wrapper_qualify_name r name_str
 
 (** Check if a global function needs :: prefix to avoid name collision. When
     generating out-of-struct definitions, we add :: to call external functions
@@ -662,13 +710,18 @@ let is_record_cached (r : GlobRef.t) : bool =
 
 (** Look up method info for a function reference. Checks both local
     method_candidates and global method_registry. Returns Some this_pos if the
-    function is a method, None otherwise. *)
+    function is a method, None otherwise.
+
+    The answer is in the numbering of the arguments a C++ call site writes,
+    not of the ML type's arrows: a candidate records the ML position, which is
+    what reading its body wants, and an erased argument -- a dictionary, a
+    [void] -- separates the two. *)
 let lookup_method_this_pos n =
   let local_result =
     List.find_map
-      (fun (r', _, _, pos) ->
+      (fun (r', _, ty, pos) ->
         if globref_equal n r' then
-          Some pos
+          Some (Method_registry.cpp_arg_pos ty pos)
         else
           None )
       !method_candidates

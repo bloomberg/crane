@@ -100,7 +100,7 @@ struct PairSelfDeepCopy {
     }
   }
 
-  static std::pair<chain, chain> dup_chain(chain c);
+  static std::pair<chain, chain> dup_chain(const chain &c);
 };
 
 #endif // INCLUDED_PAIR_SELF_DEEP_COPY

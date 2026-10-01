@@ -67,8 +67,18 @@ val gen_decl_for_pp_dual :
   ml_type ->
   (cpp_decl * env) option * (cpp_decl * env) option * variable list
 
-(** Convert a definition to a declaration by stripping the
-    body. *)
+(** Split a definition into the declaration and the definition of the same
+    function: the same signature twice, once without the body.
+
+    The body decides which callback constraints the signature may state, so
+    that is settled once, here, and written into both halves.  A caller that
+    emits both must take both from one call -- keeping its own copy of the
+    definition alongside this declaration is how the two come to state
+    different template heads and stop being one function. *)
+val decl_spec_and_def : cpp_decl -> cpp_decl * cpp_decl
+
+(** The declaration half of {!decl_spec_and_def}, for callers that emit no
+    definition to disagree with it. *)
 val decl_to_spec : cpp_decl -> cpp_decl
 
 (** {2 Inductive Type Generation} *)
@@ -117,6 +127,11 @@ val gen_ind_header_v2 :
   inductive_kind ->
   cpp_decl
 
+(** Take the application back off, in an inductive's generated struct, a
+    parameter its template head declares a plain [typename]: a family applied
+    at an index C++ erases is the family's own struct. *)
+val deapply_plain_struct_tvars : cpp_decl -> cpp_decl
+
 (** Generate methods for eponymous records. For records merged into module
     structs, this generates instance methods from functions that take the record
     as first argument.
@@ -135,22 +150,16 @@ val gen_record_methods :
 
 (** Generate a C++ struct for a type class instance. Type class instances become
     structs with static methods. Returns (struct_decl option, class_ref option,
-    type_args). The class_ref and type_args are used by cpp.ml to generate
-    static_assert verifying the instance satisfies the concept. *)
+    concept arguments). The last two are used by cpp_ind.ml to generate the
+    static_assert verifying the instance satisfies the concept; the arguments
+    come back already converted and resolved, because they are only correct in
+    the promoted-variable scope of the instance they were read in. *)
 val gen_instance_struct :
   GlobRef.t ->
   ml_ast ->
   ml_type ->
-  cpp_decl option * GlobRef.t option * ml_type list
+  cpp_decl option * GlobRef.t option * cpp_type list
 
-(** Check if a term is a type class instance (constructs a type class record).
-*)
-(** [hkt_templates r vars tys] is the C++ template parameter list for a
-    declaration [r] whose parameters [vars] are used by the types [tys] -- an
-    inductive's constructor fields, or the body of a type alias.  A parameter
-    that [tys] applies to arguments is declared [template <typename> class],
-    and its position is registered so that uses of [r] pass a bare template
-    name; see {!Table.is_hkt_ind_param}. *)
 (** [gen_type_alias r vars ot] is the [using] declaration for a type alias.
 
     [ot] is [None] for a signature entry that names a type without defining
@@ -158,7 +167,20 @@ val gen_instance_struct :
     need, expressed in the IR rather than as rendered text. *)
 val gen_type_alias : GlobRef.t -> Id.t list -> ml_type option -> Minicpp.cpp_decl
 
+(** [hkt_templates r vars tys] is the C++ template parameter list for a
+    declaration [r] whose parameters [vars] are used by the types [tys] -- an
+    inductive's constructor fields, or the body of a type alias.  A parameter
+    that [tys] applies to arguments is declared [template <typename> class],
+    and its position is registered so that uses of [r] pass a bare template
+    name; see {!Table.is_hkt_ind_param}.
+
+    [applied] is the rendered C++ type, when there is one: a parameter it
+    never applies is a plain [typename] whatever its Rocq kind was, because
+    that is what a use site spells. *)
 val hkt_templates :
+  ?applied:Minicpp.cpp_type ->
   GlobRef.t -> Id.t list -> ml_type list -> (Minicpp.template_type * Id.t) list
 
+(** Check if a term is a type class instance (constructs a type class record).
+*)
 val is_typeclass_instance : ml_ast -> ml_type -> bool

@@ -2,13 +2,14 @@
 #define INCLUDED_SIGT_LEAF_FORWARD_STRING
 
 #include "crane_fn.h"
-#include "small_vector.h"
+#include "fn.h"
+#include "obj.h"
 #include <any>
 #include <atomic>
 #include <functional>
 #include <memory>
+#include <stdexcept>
 #include <string>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -38,21 +39,26 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U> List(const List<_U> &_other) {
-    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->v_ = Nil{};
-    } else {
-      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>) {
-                          return crane_any_cast<A>(a);
-                        } else {
-                          return A(a);
-                        }
-                      }(),
-                      (l ? std::make_shared<List<A>>(*l) : nullptr)};
-    }
-  }
+  template <typename _U>
+  List(const List<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+            return Nil{};
+          } else {
+            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const _U &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                   : nullptr)};
+          }
+        }()) {}
 
   static List<A> nil() { return List<A>(Nil{}); }
 
@@ -62,22 +68,18 @@ public:
 
   // MANIPULATORS
   ~List() {
-    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
-        if (_alt->l) {
-          _stack.push_back(std::move(_alt->l));
+        if (_alt->l && _alt->l.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->l);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<List<A>> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -99,6 +101,25 @@ template <typename A, typename P> struct SigT {
 
   // ACCESSORS
   SigT<A, P> clone() const { return {x, a1}; }
+
+  template <typename _U0, typename _U1> operator SigT<_U0, _U1>() const {
+    return {[&]() -> _U0 {
+              if constexpr (crane_convertible<_U0, const A &>) {
+                return crane_convert<_U0>(x);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }(),
+            [&]() -> _U1 {
+              if constexpr (crane_convertible<_U1, const P &>) {
+                return crane_convert<_U1>(a1);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }()};
+  }
 
   // CREATORS
   static SigT<A, P> existt(A x, P a1) { return {std::move(x), std::move(a1)}; }
@@ -133,38 +154,41 @@ concept SEM = requires {
 /// concrete parameter types at C++ instantiation time and `any_cast` each
 /// boxed argument accordingly.
 template <SEM S> struct Make {
-  using dom = std::pair<std::any, std::monostate>;
+  using dom = std::pair<crane::obj, std::monostate>;
   using prod2 = std::pair<typename S::idx, List<typename S::idx>>;
-  using pred_ty = std::any;
-  using act_ty = std::any;
+  using pred_ty = crane::obj;
+  using act_ty = crane::obj;
   using psem = std::pair<pred_ty, act_ty>;
   using entry = SigT<prod2, psem>;
 
-  template <typename F1> static entry mk_entry(typename S::idx a, F1 &&eq) {
+  static entry mk_entry(typename S::idx a,
+                        crane::fn<bool(crane::obj, crane::obj)> eq) {
     return SigT<prod2, psem>::existt(
         std::make_pair(a, List<typename S::idx>::nil()),
-        std::make_pair(std::any(crane_erase_fn([=](const auto &tup) mutable {
-                         const auto &[v, _x] =
-                             std::any_cast<std::pair<std::any, std::any>>(tup);
-                         return crane_call_erased(eq, v, v);
-                       })),
-                       std::any(crane_erase_fn([=](const auto &tup) mutable {
-                         const auto &[v, _x] =
-                             std::any_cast<std::pair<std::any, std::any>>(tup);
-                         return crane_call_erased(eq, v, v);
-                       }))));
+        std::make_pair(
+            crane::obj(crane_erase_fn([=](const auto &tup) {
+              const auto &[v, _x] =
+                  crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
+              return crane_call_erased(eq, v, v);
+            })),
+            crane::obj(crane_erase_fn([=](const auto &tup) {
+              const auto &[v, _x] =
+                  crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
+              return crane_call_erased(eq, v, v);
+            }))));
   }
 
   template <typename F1>
-    requires std::is_invocable_r_v<std::any, F1 &, typename S::idx &>
   static bool run(const SigT<std::pair<typename S::idx, List<typename S::idx>>,
-                             std::pair<std::any, std::any>> &e,
+                             std::pair<crane::obj, crane::obj>> &e,
                   F1 &&arg) {
     const auto &[x0, a1] = e;
     const auto &[a, _x] = x0;
-    const auto &[f, _x0] = std::any_cast<std::pair<std::any, std::any>>(a1);
-    if (std::any_cast<bool>(std::any_cast<std::function<std::any(std::any)>>(f)(
-            std::make_pair(std::any(arg(a)), std::any(std::monostate{}))))) {
+    const auto &[f, _x0] = a1;
+    if (crane::any_cast<bool>(
+            crane::any_cast<crane::fn<crane::obj(crane::obj)>>(f)(
+                std::make_pair(crane::obj(arg(a)),
+                               crane::obj(std::monostate{}))))) {
       return true;
     } else {
       return false;
@@ -178,10 +202,10 @@ struct Inst {
 };
 
 using M = Make<Inst>;
-const M::entry my_entry =
-    M::mk_entry(std::monostate{}, [](std::string _x0, std::string _x1) -> bool {
-      return (_x0 == _x1);
-    });
+const M::entry my_entry = M::mk_entry(
+    std::monostate{},
+    crane_erase_fn<bool>(
+        [](std::string _x0, std::string _x1) -> bool { return (_x0 == _x1); }));
 Inst::sem my_arg(std::monostate _x);
 bool check(std::monostate _x);
 

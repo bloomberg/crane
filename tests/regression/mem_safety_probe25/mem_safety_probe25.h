@@ -2,12 +2,14 @@
 #define INCLUDED_MEM_SAFETY_PROBE25
 
 #include "crane_fn.h"
+#include "fn.h"
+#include "obj.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
-#include <functional>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -57,10 +59,10 @@ struct MemSafetyProbe25 {
       crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a2) {
+          if (_alt->a2 && _alt->a2.use_count() == 1) {
             _stack.push_back(std::move(_alt->a2));
           }
         }
@@ -89,12 +91,12 @@ struct MemSafetyProbe25 {
     /// TEST 8: Option wrapping a closure from match.
     /// Exercises different code path for returning closures
     /// through an inductive constructor.
-    std::optional<std::function<uint64_t(uint64_t)>>
+    std::optional<crane::fn<uint64_t(uint64_t)>>
     match_closure_opt(bool b) const {
       tree _self_val = *this;
       if (b) {
-        return std::make_optional<std::function<uint64_t(uint64_t)>>(
-            [=](uint64_t x) mutable {
+        return std::make_optional<crane::fn<uint64_t(uint64_t)>>(
+            [=](uint64_t x) -> uint64_t {
               if (std::holds_alternative<typename tree::Leaf>(_self_val.v())) {
                 return x;
               } else {
@@ -104,16 +106,15 @@ struct MemSafetyProbe25 {
               }
             });
       } else {
-        return std::optional<std::function<uint64_t(uint64_t)>>();
+        return std::optional<crane::fn<uint64_t(uint64_t)>>();
       }
     }
 
     /// TEST 7: Return closure from match that captures a tree child,
     /// then store it in a pair. Double-wrapping test.
-    std::pair<std::function<uint64_t(uint64_t)>, uint64_t>
-    match_then_pair() const {
+    std::pair<crane::fn<uint64_t(uint64_t)>, uint64_t> match_then_pair() const {
       tree _self_val = *this;
-      std::function<uint64_t(uint64_t)> f = [=](uint64_t x) mutable {
+      crane::fn<uint64_t(uint64_t)> f = [=](uint64_t x) {
         if (std::holds_alternative<typename tree::Leaf>(_self_val.v())) {
           return x;
         } else {
@@ -160,8 +161,7 @@ struct MemSafetyProbe25 {
 
     /// TEST 3: Return PAIR of closures from match.
     /// Each closure captures different match-bound children.
-    std::pair<std::function<uint64_t(uint64_t)>,
-              std::function<uint64_t(uint64_t)>>
+    std::pair<crane::fn<uint64_t(uint64_t)>, crane::fn<uint64_t(uint64_t)>>
     pair_closures() const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return std::make_pair([](uint64_t x) { return x; },
@@ -171,8 +171,8 @@ struct MemSafetyProbe25 {
         const tree &a0_value = *a0;
         const tree &a2_value = *a2;
         return std::make_pair(
-            [=](uint64_t x) mutable { return (x + a0_value.tree_sum()); },
-            [=](uint64_t x) mutable { return (x + a2_value.tree_sum()); });
+            [=](uint64_t x) { return (x + a0_value.tree_sum()); },
+            [=](uint64_t x) { return (x + a2_value.tree_sum()); });
       }
     }
 
@@ -269,7 +269,7 @@ struct MemSafetyProbe25 {
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
-        std::decay_t<T1> _result;
+        T1 _result;
         tree a2;
         uint64_t a1;
         tree a0;
@@ -331,7 +331,7 @@ struct MemSafetyProbe25 {
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
-        std::decay_t<T1> _result;
+        T1 _result;
         tree a2;
         uint64_t a1;
         tree a0;
@@ -382,12 +382,11 @@ struct MemSafetyProbe25 {
                  tree::node(tree::leaf(), UINT64_C(11), tree::leaf()))
           .match_closure(UINT64_C(100));
   static inline const uint64_t test_pair_closures = []() {
-    std::pair<std::function<uint64_t(uint64_t)>,
-              std::function<uint64_t(uint64_t)>>
-        p = tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
-                       UINT64_C(7),
-                       tree::node(tree::leaf(), UINT64_C(11), tree::leaf()))
-                .pair_closures();
+    std::pair<crane::fn<uint64_t(uint64_t)>, crane::fn<uint64_t(uint64_t)>> p =
+        tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
+                   UINT64_C(7),
+                   tree::node(tree::leaf(), UINT64_C(11), tree::leaf()))
+            .pair_closures();
     return (p.first(UINT64_C(100)) + p.second(UINT64_C(200)));
   }();
   static inline const uint64_t test_nested_match_closure =
@@ -433,22 +432,29 @@ struct MemSafetyProbe25 {
 
     explicit mylist(Mycons _v) : v_(std::move(_v)) {}
 
-    template <typename _U> mylist(const mylist<_U> &_other) {
-      if (std::holds_alternative<typename mylist<_U>::Mynil>(_other.v())) {
-        this->v_ = Mynil{};
-      } else {
-        const auto &[a0, a1] =
-            std::get<typename mylist<_U>::Mycons>(_other.v());
-        this->v_ = Mycons{[&]() -> A {
-                            if constexpr (std::is_same_v<_U, std::any>) {
-                              return crane_any_cast<A>(a0);
-                            } else {
-                              return A(a0);
-                            }
-                          }(),
-                          (a1 ? std::make_shared<mylist<A>>(*a1) : nullptr)};
-      }
-    }
+    template <typename _U>
+    mylist(const mylist<_U> &_other)
+        : v_([&]() -> variant_t {
+            if (std::holds_alternative<typename mylist<_U>::Mynil>(
+                    _other.v())) {
+              return Mynil{};
+            } else {
+              const auto &[a0, a1] =
+                  std::get<typename mylist<_U>::Mycons>(_other.v());
+              return Mycons{[&]() -> A {
+                              if constexpr (crane_convertible<A, const _U &>) {
+                                return crane_convert<A>(a0);
+                              } else {
+                                throw std::logic_error(
+                                    "unreachable: inactive constructor field "
+                                    "at this instantiation");
+                              }
+                            }(),
+                            (a1 ? std::make_shared<mylist<A>>(
+                                      crane_convert<mylist<A>>(*a1))
+                                : nullptr)};
+            }
+          }()) {}
 
     static mylist<A> mynil() { return mylist<A>(Mynil{}); }
 
@@ -459,22 +465,18 @@ struct MemSafetyProbe25 {
 
     // MANIPULATORS
     ~mylist() {
-      crane::small_vector<std::shared_ptr<mylist<A>>> _stack = {};
-      auto _drain = [&](variant_t &_v) {
+      auto _next = [&](variant_t &_v) -> std::shared_ptr<mylist<A>> {
         if (auto *_alt = std::get_if<Mycons>(&_v)) {
-          if (_alt->a1) {
-            _stack.push_back(std::move(_alt->a1));
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
+            return std::move(_alt->a1);
           }
         }
+        return nullptr;
       };
-      _drain(v_mut());
-      while (!_stack.empty()) {
-        auto _cur = std::move(_stack.back());
-        _stack.pop_back();
-        if (_cur.use_count() == 1) {
-          std::atomic_thread_fence(std::memory_order_acquire);
-          _drain(_cur->v_mut());
-        }
+      std::shared_ptr<mylist<A>> _cur = _next(v_mut());
+      while (_cur) {
+        _cur = _next(_cur->v_mut());
       }
     }
 
@@ -502,7 +504,7 @@ struct MemSafetyProbe25 {
       /// _result.
       struct _Resume_Mycons {
         mylist<A> a1;
-        std::decay_t<A> a0;
+        A a0;
       };
 
       using _Frame = std::variant<_Enter, _Resume_Mycons>;
@@ -547,7 +549,7 @@ struct MemSafetyProbe25 {
       /// _result.
       struct _Resume_Mycons {
         mylist<A> a1;
-        std::decay_t<A> a0;
+        A a0;
       };
 
       using _Frame = std::variant<_Enter, _Resume_Mycons>;
@@ -579,16 +581,16 @@ struct MemSafetyProbe25 {
     }
   };
 
-  static mylist<std::function<uint64_t(uint64_t)>> build_adders(const tree &t);
-  static uint64_t
-  apply_first(const mylist<std::function<uint64_t(uint64_t)>> &l, uint64_t x);
+  static mylist<crane::fn<uint64_t(uint64_t)>> build_adders(const tree &t);
+  static uint64_t apply_first(const mylist<crane::fn<uint64_t(uint64_t)>> &l,
+                              uint64_t x);
   static inline const uint64_t test_build_adders = []() {
-    mylist<std::function<uint64_t(uint64_t)>> adders =
+    mylist<crane::fn<uint64_t(uint64_t)>> adders =
         build_adders(tree::node(tree::leaf(), UINT64_C(42), tree::leaf()));
     return apply_first(std::move(adders), UINT64_C(100));
   }();
   static inline const uint64_t test_match_then_pair = []() {
-    std::pair<std::function<uint64_t(uint64_t)>, uint64_t> p =
+    std::pair<crane::fn<uint64_t(uint64_t)>, uint64_t> p =
         tree::node(tree::node(tree::leaf(), UINT64_C(4), tree::leaf()),
                    UINT64_C(6),
                    tree::node(tree::leaf(), UINT64_C(9), tree::leaf()))
@@ -601,7 +603,7 @@ struct MemSafetyProbe25 {
                           tree::node(tree::leaf(), UINT64_C(8), tree::leaf()))
                    .match_closure_opt(true);
     if (_cs.has_value()) {
-      const std::function<uint64_t(uint64_t)> &f = *_cs;
+      const crane::fn<uint64_t(uint64_t)> &f = *_cs;
       return f(UINT64_C(100));
     } else {
       return UINT64_C(0);

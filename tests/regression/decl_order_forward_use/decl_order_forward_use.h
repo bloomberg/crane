@@ -1,9 +1,12 @@
 #ifndef INCLUDED_DECL_ORDER_FORWARD_USE
 #define INCLUDED_DECL_ORDER_FORWARD_USE
 
-#include "small_vector.h"
+#include "crane_fn.h"
+#include "obj.h"
+#include <any>
 #include <atomic>
 #include <memory>
+#include <stdexcept>
 #include <utility>
 #include <variant>
 
@@ -16,6 +19,25 @@ template <typename A, typename B> struct Prod {
 
   // ACCESSORS
   Prod<A, B> clone() const { return {a0, a1}; }
+
+  template <typename _U0, typename _U1> operator Prod<_U0, _U1>() const {
+    return {[&]() -> _U0 {
+              if constexpr (crane_convertible<_U0, const A &>) {
+                return crane_convert<_U0>(a0);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }(),
+            [&]() -> _U1 {
+              if constexpr (crane_convertible<_U1, const B &>) {
+                return crane_convert<_U1>(a1);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }()};
+  }
 
   // CREATORS
   static Prod<A, B> pair(A a0, B a1) { return {std::move(a0), std::move(a1)}; }
@@ -57,22 +79,18 @@ struct Nat {
 
     // MANIPULATORS
     ~nat() {
-      crane::small_vector<std::shared_ptr<Nat::nat>> _stack = {};
-      auto _drain = [&](variant_t &_v) {
+      auto _next = [&](variant_t &_v) -> std::shared_ptr<Nat::nat> {
         if (auto *_alt = std::get_if<S>(&_v)) {
-          if (_alt->a0) {
-            _stack.push_back(std::move(_alt->a0));
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
+            return std::move(_alt->a0);
           }
         }
+        return nullptr;
       };
-      _drain(v_mut());
-      while (!_stack.empty()) {
-        auto _cur = std::move(_stack.back());
-        _stack.pop_back();
-        if (_cur.use_count() == 1) {
-          std::atomic_thread_fence(std::memory_order_acquire);
-          _drain(_cur->v_mut());
-        }
+      std::shared_ptr<Nat::nat> _cur = _next(v_mut());
+      while (_cur) {
+        _cur = _next(_cur->v_mut());
       }
     }
 
@@ -97,7 +115,7 @@ struct Nat {
   };
 
   static Prod<Nat::nat, Nat::nat> divmod(const Nat::nat &x, const Nat::nat &y,
-                                         Nat::nat q, Nat::nat u);
+                                         const Nat::nat &q, const Nat::nat &u);
 };
 
 struct DeclOrderForwardUse {

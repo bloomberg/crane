@@ -2,7 +2,6 @@
 #define INCLUDED_LIFTED_INSTANCE_QUALIFIED
 
 #include "crane_fn.h"
-#include "small_vector.h"
 #include <atomic>
 #include <concepts>
 #include <memory>
@@ -13,6 +12,15 @@ struct showN;
 struct Nat;
 struct Ascii;
 struct String;
+template <typename I, typename T>
+concept Show = requires {
+  { I::show(std::declval<T>()) } -> std::convertible_to<String>;
+  { I::name() } -> std::convertible_to<String>;
+};
+
+struct LiftedInstanceQualified {
+  static String use(const Nat &n);
+};
 
 struct Nat {
   // TYPES
@@ -42,22 +50,18 @@ public:
 
   // MANIPULATORS
   ~Nat() {
-    crane::small_vector<std::shared_ptr<Nat>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<Nat> {
       if (auto *_alt = std::get_if<S>(&_v)) {
-        if (_alt->a0) {
-          _stack.push_back(std::move(_alt->a0));
+        if (_alt->a0 && _alt->a0.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a0);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<Nat> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -125,22 +129,18 @@ public:
 
   // MANIPULATORS
   ~String() {
-    crane::small_vector<std::shared_ptr<String>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<String> {
       if (auto *_alt = std::get_if<String0>(&_v)) {
-        if (_alt->a1) {
-          _stack.push_back(std::move(_alt->a1));
+        if (_alt->a1 && _alt->a1.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a1);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<String> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -184,12 +184,6 @@ struct Other {
       String::emptystring());
 };
 
-template <typename I, typename T>
-concept Show = requires {
-  { I::show(std::declval<T>()) } -> std::convertible_to<String>;
-  { I::name() } -> std::convertible_to<String>;
-};
-
 struct StringUtil {
   static inline const String banner0 = String::string0(
       Ascii::ascii0(true, false, true, false, true, true, true, false),
@@ -215,9 +209,5 @@ struct showN {
 };
 
 static_assert(Show<showN, Nat>);
-
-struct LiftedInstanceQualified {
-  static String use(const Nat &n);
-};
 
 #endif // INCLUDED_LIFTED_INSTANCE_QUALIFIED

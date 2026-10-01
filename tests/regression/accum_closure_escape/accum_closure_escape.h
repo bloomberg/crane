@@ -2,11 +2,13 @@
 #define INCLUDED_ACCUM_CLOSURE_ESCAPE
 
 #include "crane_fn.h"
+#include "fn.h"
+#include "obj.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
-#include <functional>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -43,22 +45,29 @@ struct AccumClosureEscape {
 
     explicit mylist(Mycons _v) : v_(std::move(_v)) {}
 
-    template <typename _U> mylist(const mylist<_U> &_other) {
-      if (std::holds_alternative<typename mylist<_U>::Mynil>(_other.v())) {
-        this->v_ = Mynil{};
-      } else {
-        const auto &[a0, a1] =
-            std::get<typename mylist<_U>::Mycons>(_other.v());
-        this->v_ = Mycons{[&]() -> A {
-                            if constexpr (std::is_same_v<_U, std::any>) {
-                              return crane_any_cast<A>(a0);
-                            } else {
-                              return A(a0);
-                            }
-                          }(),
-                          (a1 ? std::make_shared<mylist<A>>(*a1) : nullptr)};
-      }
-    }
+    template <typename _U>
+    mylist(const mylist<_U> &_other)
+        : v_([&]() -> variant_t {
+            if (std::holds_alternative<typename mylist<_U>::Mynil>(
+                    _other.v())) {
+              return Mynil{};
+            } else {
+              const auto &[a0, a1] =
+                  std::get<typename mylist<_U>::Mycons>(_other.v());
+              return Mycons{[&]() -> A {
+                              if constexpr (crane_convertible<A, const _U &>) {
+                                return crane_convert<A>(a0);
+                              } else {
+                                throw std::logic_error(
+                                    "unreachable: inactive constructor field "
+                                    "at this instantiation");
+                              }
+                            }(),
+                            (a1 ? std::make_shared<mylist<A>>(
+                                      crane_convert<mylist<A>>(*a1))
+                                : nullptr)};
+            }
+          }()) {}
 
     static mylist<A> mynil() { return mylist<A>(Mynil{}); }
 
@@ -69,22 +78,18 @@ struct AccumClosureEscape {
 
     // MANIPULATORS
     ~mylist() {
-      crane::small_vector<std::shared_ptr<mylist<A>>> _stack = {};
-      auto _drain = [&](variant_t &_v) {
+      auto _next = [&](variant_t &_v) -> std::shared_ptr<mylist<A>> {
         if (auto *_alt = std::get_if<Mycons>(&_v)) {
-          if (_alt->a1) {
-            _stack.push_back(std::move(_alt->a1));
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
+            return std::move(_alt->a1);
           }
         }
+        return nullptr;
       };
-      _drain(v_mut());
-      while (!_stack.empty()) {
-        auto _cur = std::move(_stack.back());
-        _stack.pop_back();
-        if (_cur.use_count() == 1) {
-          std::atomic_thread_fence(std::memory_order_acquire);
-          _drain(_cur->v_mut());
-        }
+      std::shared_ptr<mylist<A>> _cur = _next(v_mut());
+      while (_cur) {
+        _cur = _next(_cur->v_mut());
       }
     }
 
@@ -135,7 +140,7 @@ struct AccumClosureEscape {
       /// _result.
       struct _Resume_Mycons {
         mylist<A> a1;
-        std::decay_t<A> a0;
+        A a0;
       };
 
       using _Frame = std::variant<_Enter, _Resume_Mycons>;
@@ -180,7 +185,7 @@ struct AccumClosureEscape {
       /// _result.
       struct _Resume_Mycons {
         mylist<A> a1;
-        std::decay_t<A> a0;
+        A a0;
       };
 
       using _Frame = std::variant<_Enter, _Resume_Mycons>;
@@ -249,10 +254,10 @@ struct AccumClosureEscape {
       crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<TNode>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a2) {
+          if (_alt->a2 && _alt->a2.use_count() == 1) {
             _stack.push_back(std::move(_alt->a2));
           }
         }
@@ -280,7 +285,7 @@ struct AccumClosureEscape {
 
     /// Build closures from TREE traversal: tree nodes become closures.
     /// Each closure captures pattern variables from tree match.
-    mylist<std::function<uint64_t(uint64_t)>> tree_to_adders() const {
+    mylist<crane::fn<uint64_t(uint64_t)>> tree_to_adders() const {
       const tree *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -290,19 +295,19 @@ struct AccumClosureEscape {
 
       /// _After_TNode: saves [_s0, _s1], dispatches next recursive call.
       struct _After_TNode {
-        std::decay_t<decltype(&std::declval<const tree &>())> _s0;
-        std::function<uint64_t(uint64_t)> _s1;
+        const tree *_s0;
+        crane::fn<uint64_t(uint64_t)> _s1;
       };
 
       /// _Combine_TNode: receives partial results, combines with _result from
       /// final call.
       struct _Combine_TNode {
-        mylist<std::function<uint64_t(uint64_t)>> _result;
-        std::function<uint64_t(uint64_t)> _s1;
+        mylist<crane::fn<uint64_t(uint64_t)>> _result;
+        crane::fn<uint64_t(uint64_t)> _s1;
       };
 
       using _Frame = std::variant<_Enter, _After_TNode, _Combine_TNode>;
-      mylist<std::function<uint64_t(uint64_t)>> _result{};
+      mylist<crane::fn<uint64_t(uint64_t)>> _result{};
       crane::small_vector<_Frame> _stack;
       _stack.emplace_back(_Enter{_self});
       /// Loopified tree_to_adders: _Enter -> _After_TNode -> _Combine_TNode.
@@ -314,13 +319,13 @@ struct AccumClosureEscape {
           const tree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::TLeaf>(_sv.v())) {
-            _result = mylist<std::function<uint64_t(uint64_t)>>::mynil();
+            _result = mylist<crane::fn<uint64_t(uint64_t)>>::mynil();
           } else {
             const auto &[a0, a1, a2] = std::get<typename tree::TNode>(_sv.v());
             const tree &a0_value = *a0;
             const tree &a2_value = *a2;
-            _stack.emplace_back(_After_TNode{
-                &a0_value, [=](uint64_t x) mutable { return (a1 + x); }});
+            _stack.emplace_back(
+                _After_TNode{&a0_value, [=](uint64_t x) { return (a1 + x); }});
             _stack.emplace_back(_Enter{&a2_value});
           }
         } else if (std::holds_alternative<_After_TNode>(_frame)) {
@@ -330,7 +335,7 @@ struct AccumClosureEscape {
           _stack.emplace_back(_Enter{_f._s0});
         } else {
           auto _f = std::move(std::get<_Combine_TNode>(_frame));
-          _result = mylist<std::function<uint64_t(uint64_t)>>::mycons(
+          _result = mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
               std::move(_f._s1),
               std::move(_result).mylist_append(std::move(_f._result)));
         }
@@ -414,7 +419,7 @@ struct AccumClosureEscape {
       /// _Combine_TNode: receives partial results, combines with _result from
       /// final call.
       struct _Combine_TNode {
-        std::decay_t<T1> _result;
+        T1 _result;
         tree a2;
         uint64_t a1;
         tree a0;
@@ -476,7 +481,7 @@ struct AccumClosureEscape {
       /// _Combine_TNode: receives partial results, combines with _result from
       /// final call.
       struct _Combine_TNode {
-        std::decay_t<T1> _result;
+        T1 _result;
         tree a2;
         uint64_t a1;
         tree a0;
@@ -521,58 +526,52 @@ struct AccumClosureEscape {
   /// SIMPLE LAMBDA VERSION: Each closure fun x => h + x captures
   /// h from the pattern match. These are simple lambdas, so they
   /// should capture by =.
-  static mylist<std::function<uint64_t(uint64_t)>>
+  static mylist<crane::fn<uint64_t(uint64_t)>>
   build_adders(const mylist<uint64_t> &l,
-               mylist<std::function<uint64_t(uint64_t)>> acc);
+               mylist<crane::fn<uint64_t(uint64_t)>> acc);
   /// Apply first closure from the list.
-  static uint64_t
-  apply_first(const mylist<std::function<uint64_t(uint64_t)>> &fns, uint64_t x);
+  static uint64_t apply_first(const mylist<crane::fn<uint64_t(uint64_t)>> &fns,
+                              uint64_t x);
   /// Apply all closures and sum.
   static uint64_t
-  apply_all_sum(const mylist<std::function<uint64_t(uint64_t)>> &fns,
-                uint64_t x);
+  apply_all_sum(const mylist<crane::fn<uint64_t(uint64_t)>> &fns, uint64_t x);
   /// test1: build_adders 10, 20, 30  = 30+_, 20+_, 10+_ (reversed)
   /// apply_first result 5 = 30 + 5 = 35
   static inline const uint64_t test1 = []() {
-    mylist<std::function<uint64_t(uint64_t)>> fns = build_adders(
+    mylist<crane::fn<uint64_t(uint64_t)>> fns = build_adders(
         mylist<uint64_t>::mycons(
             UINT64_C(10),
             mylist<uint64_t>::mycons(
                 UINT64_C(20), mylist<uint64_t>::mycons(
                                   UINT64_C(30), mylist<uint64_t>::mynil()))),
-        mylist<std::function<uint64_t(uint64_t)>>::mynil());
+        mylist<crane::fn<uint64_t(uint64_t)>>::mynil());
     return apply_first(std::move(fns), UINT64_C(5));
   }();
   /// test2: apply all closures: (30+5) + (20+5) + (10+5) = 35+25+15 = 75
   static inline const uint64_t test2 = []() {
-    mylist<std::function<uint64_t(uint64_t)>> fns = build_adders(
+    mylist<crane::fn<uint64_t(uint64_t)>> fns = build_adders(
         mylist<uint64_t>::mycons(
             UINT64_C(10),
             mylist<uint64_t>::mycons(
                 UINT64_C(20), mylist<uint64_t>::mycons(
                                   UINT64_C(30), mylist<uint64_t>::mynil()))),
-        mylist<std::function<uint64_t(uint64_t)>>::mynil());
+        mylist<crane::fn<uint64_t(uint64_t)>>::mynil());
     return apply_all_sum(std::move(fns), UINT64_C(5));
   }();
 
   /// COMPOSE CLOSURES: Each step builds a composed function.
   /// This creates closures that capture OTHER closures.
   static uint64_t compose_from_list(const mylist<uint64_t> &l,
-                                    std::function<uint64_t(uint64_t)> acc,
+                                    crane::fn<uint64_t(uint64_t)> acc,
                                     uint64_t x0_) {
-    return [=]() mutable -> std::function<uint64_t(uint64_t)> {
-      if (std::holds_alternative<typename mylist<uint64_t>::Mynil>(l.v())) {
-        return acc;
-      } else {
-        const auto &[a0, a1] =
-            std::get<typename mylist<uint64_t>::Mycons>(l.v());
-        const mylist<uint64_t> &a1_value = *a1;
-        return [=](uint64_t _x0) mutable -> uint64_t {
-          return compose_from_list(
-              a1_value, [=](uint64_t x) mutable { return acc((a0 + x)); }, _x0);
-        };
-      }
-    }()(x0_);
+    if (std::holds_alternative<typename mylist<uint64_t>::Mynil>(l.v())) {
+      return acc(x0_);
+    } else {
+      const auto &[a0, a1] = std::get<typename mylist<uint64_t>::Mycons>(l.v());
+      const mylist<uint64_t> &a1_value = *a1;
+      return compose_from_list(
+          a1_value, [=](uint64_t x) { return acc((a0 + x)); }, x0_);
+    }
   }
 
   /// test3: compose_from_list 10, 20, 30 id
@@ -600,8 +599,7 @@ struct AccumClosureEscape {
     tree t =
         tree::tnode(tree::tnode(tree::tleaf(), UINT64_C(42), tree::tleaf()),
                     UINT64_C(100), tree::tleaf());
-    mylist<std::function<uint64_t(uint64_t)>> fns =
-        std::move(t).tree_to_adders();
+    mylist<crane::fn<uint64_t(uint64_t)>> fns = std::move(t).tree_to_adders();
     return apply_first(std::move(fns), UINT64_C(0));
   }();
 };

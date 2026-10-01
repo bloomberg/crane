@@ -1,9 +1,10 @@
 #ifndef INCLUDED_MONAD_CLASS_TYPE_CONSTRUCTOR
 #define INCLUDED_MONAD_CLASS_TYPE_CONSTRUCTOR
 
+#include "fn.h"
+#include "obj.h"
 #include <any>
 #include <concepts>
-#include <functional>
 #include <memory>
 #include <optional>
 #include <type_traits>
@@ -15,16 +16,16 @@
 
 template <typename I>
 concept Mon = requires {
-  typename I::template M<std::any>;
+  typename I::template M<crane::obj>;
   {
-    I::template mret<std::any>(std::declval<std::any>())
-  } -> std::convertible_to<typename I::template M<std::any>>;
+    I::template mret<crane::obj>(std::declval<crane::obj>())
+  } -> std::convertible_to<typename I::template M<crane::obj>>;
   {
-    I::template mbind<std::any, std::any>(
-        std::declval<typename I::template M<std::any>>(),
+    I::template mbind<crane::obj, crane::obj>(
+        std::declval<typename I::template M<crane::obj>>(),
         std::declval<
-            std::function<typename I::template M<std::any>(std::any)>>())
-  } -> std::convertible_to<typename I::template M<std::any>>;
+            crane::fn<typename I::template M<crane::obj>(crane::obj)>>())
+  } -> std::convertible_to<typename I::template M<crane::obj>>;
 };
 
 struct MonadClassTypeConstructor {
@@ -51,7 +52,7 @@ struct MonadClassTypeConstructor {
 
     template <typename _A0, typename _A1>
     static std::optional<_A1> mbind(std::optional<_A0> m,
-                                    std::function<std::optional<_A1>(_A0)> f) {
+                                    crane::fn<std::optional<_A1>(_A0)> f) {
       if (m.has_value()) {
         const _A0 &a = *m;
         return f(a);

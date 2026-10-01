@@ -1,6 +1,7 @@
 #ifndef INCLUDED_INSTANCE_METHOD_IGNORES_ARG
 #define INCLUDED_INSTANCE_METHOD_IGNORES_ARG
 
+#include "obj.h"
 #include <any>
 #include <concepts>
 #include <utility>
@@ -19,13 +20,13 @@ concept C = requires {
 };
 
 struct ic {
-  static uint64_t m(std::any) { return UINT64_C(1); }
+  static uint64_t m(crane::obj) { return UINT64_C(1); }
 };
 
-static_assert(C<ic, std::any>);
+static_assert(C<ic, crane::obj>);
 
 struct InstanceMethodIgnoresArg {
-  static inline const uint64_t run = ic::m(std::any());
+  static inline const uint64_t run = ic::m(crane::obj());
 };
 
 #endif // INCLUDED_INSTANCE_METHOD_IGNORES_ARG

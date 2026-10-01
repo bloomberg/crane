@@ -15,11 +15,11 @@ List<std::optional<uint64_t>> PartialApply::wrap_all(const List<uint64_t> &l) {
       [](uint64_t x) { return std::make_optional<uint64_t>(x); });
 }
 
-List<std::function<List<uint64_t>(List<uint64_t>)>>
+List<crane::fn<List<uint64_t>(List<uint64_t>)>>
 PartialApply::prepend_each(const List<uint64_t> &l) {
-  return l.template map<std::function<List<uint64_t>(List<uint64_t>)>>(
+  return l.template map<crane::fn<List<uint64_t>(List<uint64_t>)>>(
       [](uint64_t x) {
-        return [=](List<uint64_t> x0) mutable {
+        return [=](const List<uint64_t> &x0) {
           return List<uint64_t>::cons(x, x0);
         };
       });
@@ -28,7 +28,7 @@ PartialApply::prepend_each(const List<uint64_t> &l) {
 List<PartialApply::tagged<bool>> PartialApply::tag_with(uint64_t n,
                                                         const List<bool> &l) {
   return l.template map<PartialApply::tagged<bool>>(
-      [=](bool x) mutable { return tagged<bool>::tag(n, x); });
+      [=](bool x) { return tagged<bool>::tag(n, x); });
 }
 
 List<std::pair<uint64_t, std::pair<uint64_t, uint64_t>>>

@@ -1,5 +1,6 @@
 #include "sigt_type_witness_container.h"
 
-Nat SigtTypeWitnessContainer::depth(const SigT<std::any, List<std::any>> &p) {
-  return std::any_cast<List<std::any>>(p.projT2()).length();
+Nat SigtTypeWitnessContainer::depth(
+    const SigT<crane::obj, List<crane::obj>> &p) {
+  return crane::any_cast<List<crane::obj>>(p.projT2()).length();
 }

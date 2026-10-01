@@ -71,6 +71,25 @@ type section_tag =
 
 (** {2 C++ type expressions} *)
 
+(** How a lambda holds what it names from its enclosing scope, which is a
+    claim about where it runs.
+
+    An [Immediate] lambda runs where it is written -- invoked in place, or
+    handed to a callee that calls it before returning -- and is never stored,
+    so it borrows its scope: [\[&\]].  A [Closure] may outlive its scope --
+    returned, stored in a thunk or a field, converted to a [crane::fn] -- so
+    it holds copies: [\[=\]], and never [mutable].  A closure is shared by
+    every copy of the [crane::fn] it is stored in, and its captures are
+    [const] inside its body, so no call can move out of them and leave the
+    next call a moved-from value.
+
+    The two mistakes this rules out are a stored lambda holding references
+    into a dead frame, and an in-place lambda paying for copies it never
+    needed. *)
+type capture =
+  | Immediate
+  | Closure
+
 (** C++ type representation. *)
 type cpp_type =
   | Tvar of int * Id.t option
@@ -95,8 +114,8 @@ type cpp_type =
       (** Global type reference with type and value arguments *)
   | Tfun of cpp_type list * cpp_type
       (** Function type: domain types and codomain *)
-  | Tconst of cpp_type  (** [const T] *)
-      (** Type with modifier (const, static, extern) *)
+  | Tconst of cpp_type
+      (** [const T] -- a type carrying a modifier (const, static, extern). *)
   | Tnamespace of GlobRef.t * cpp_type
       (** Type qualified by namespace reference *)
   | Tqualified of cpp_type * Id.t
@@ -137,6 +156,20 @@ type cpp_type =
       (** auto for phantom tvar positions where C++ cannot deduce the type *)
   | Tdecltype of cpp_expr  (** decltype(expr) for deduced types *)
   | Tdecay of cpp_type  (** std::decay_t<T> - strips references/cv from template params *)
+  | Tnondeduced of cpp_type
+      (** [std::type_identity_t<T>]: the type [T], in a position template
+          argument deduction does not read. *)
+  | Trebind of cpp_type * cpp_type
+      (** [crane::rebind_t<F, X>]: a type-constructor parameter declared
+          plain, standing for its carrier at the erased element, read at
+          [X]. *)
+  | Thole
+      (** The argument position in the body of a carrier abstraction
+          ({!Ttyctor}): the alias template's own parameter, [_CraneTcArg]. *)
+  | Tfwd_ref of cpp_type  (** [T&&]: a forwarding reference *)
+  | Texpr_type of cpp_expr
+      (** [decltype(e)], undecayed: what [std::forward] is instantiated at *)
+  | Tdecltype_auto  (** [decltype(auto)]: a reference-preserving return type *)
 
 (** {2 C++ statements} *)
 
@@ -270,7 +303,6 @@ and smatch_branch = {
 
 (** {2 C++ expressions} *)
 
-(** C++ expression representation. *)
 (** A precondition carried over from a Rocq annotation. Either it has a C++
     spelling and is checked at run time, or it has none and is only stated in a
     comment. There is no third state: no assertion goes out without saying what
@@ -359,6 +391,7 @@ and obj_access =
   | Adot (** [obj.member] *)
   | Aarrow (** [obj->member] *)
 
+(** C++ expression representation. *)
 and cpp_expr =
   | CPPvar of Id.t  (** Local variable reference *)
   | CPPglob of GlobRef.t * cpp_type list * custom_info option
@@ -394,7 +427,9 @@ and cpp_expr =
   | CPPstruct_id of Id.t * cpp_type list * cpp_expr list
       (** Local struct initialization by Id, e.g., Leaf{args} *)
   | CPPget of cpp_expr * Id.t  (** Member access by local identifier *)
-  | CPPget' of cpp_expr * GlobRef.t  (** Member access by global reference *)
+  | CPPget' of cpp_expr * GlobRef.t * cpp_type option
+      (** A record field read through its projection, with the field's type
+          at the record's instantiation where translation knew it *)
   | CPPstring of Pstring.t  (** String literal *)
   | CPPuint of Uint63.t  (** Unsigned 63-bit integer literal *)
   | CPPfloat of Float64.t  (** Floating-point literal *)
@@ -447,6 +482,12 @@ and cpp_expr =
   | CPPis_same of cpp_type * cpp_type
       (** [std::is_same_v<T, U>] -- a compile-time type comparison, so it can
           only be asked inside an {!Sif_constexpr}. *)
+  | CPPis_constructible of cpp_type * cpp_type
+  | CPPconvertible of cpp_type * cpp_type
+    (* crane_convertible<Dst, Src> -- whether crane_convert has a route *)
+      (** [std::is_constructible_v<T, U>] -- whether [T(u)] is well-formed for
+          a [u] of type [U].  Like {!CPPis_same}, only askable inside an
+          {!Sif_constexpr}. *)
   | CPPtype_name of cpp_type
       (** A type named where an expression is expected: the head of an
           aggregate initialisation, [typename T::Ctor{...}]. *)
@@ -482,6 +523,12 @@ and cpp_expr =
           value has in the box is only knowable once C++ instantiates the
           surrounding template, so the [crane_fn.h] helper decides.  Produced
           by {!Cpp_erasure.resolve_casts}, never by translation. *)
+  | CPPconvert of cpp_type * cpp_expr
+      (** [crane_convert<Dst>(expr)] — reads a value at another instantiation
+          of its own type.  A converting constructor does it where the type
+          has one; where it does not -- [std::pair]'s asks each component to
+          be constructible from the other's, which an erased component is not
+          -- the helper takes the value apart and puts it back together. *)
   | CPPerase_fn of cpp_type option * cpp_expr
   | CPPerased_call of cpp_expr * cpp_expr
       (** Applies a callable whose representation was erased, recovering it at
@@ -517,9 +564,12 @@ and cpp_lambda = {
   cl_params : (cpp_type * Id.t option) revd;
       (** Parameters, reversed -- see {!revd}.  Read them with
           {!lambda_params}. *)
+  cl_tparams : Id.t list;
+      (** Template parameters, when this lambda is a polymorphic function
+          object: [[]<typename X>(...)].  Empty for an ordinary lambda. *)
   cl_ret : cpp_type option;  (** Trailing return type, when one is written. *)
   cl_body : cpp_stmt list;
-  cl_by_value : bool;  (** A [\[=\]] capture rather than a [\[&\]] one. *)
+  cl_capture : capture;
 }
 
 (** Alias for constraint expressions in requires clauses. *)
@@ -555,8 +605,10 @@ and cpp_field =
   | Fdestructor of cpp_stmt list  (** Destructor body for the enclosing struct *)
   | Fnested_struct of Id.t * (cpp_field * cpp_visibility * section_tag) list
       (** Nested struct definition with visibility-annotated fields *)
+  | Fdeferred_struct of deferred_struct
+      (** A constructor struct of a coinductive; see {!deferred_struct}. *)
   | Fnested_using of (template_type * Id.t) list * Id.t * cpp_type  (** Nested using type alias declaration *)
-  | Fmember_decl of cpp_field
+  | Fmember_decl of out_of_line_member
       (** A member written without its body: the definition follows, out of
           line, in a {!Dmember_def}.  Wrapping the member rather than flagging
           it keeps the two halves one value, so they cannot drift apart. *)
@@ -567,6 +619,40 @@ and cpp_field =
           would otherwise suppress the implicit move operations — turning every
           [std::move] of the value into a refcount-bumping copy and defeating
           move semantics (and Perceus reuse). *)
+
+(** A member that can be written in two halves: declared in the struct, then
+    defined after it.
+
+    Only these two kinds can be: a data member has no body to move, a nested
+    struct or alias is not a member function, and a constructor of a mutually
+    recursive inductive is a factory whose return type names the struct
+    itself, which out of line would have to be spelled before it is known.
+    Naming the two that can is what keeps a {!Fmember_decl} from wrapping one
+    that cannot. *)
+and out_of_line_member =
+  | OLmethod of method_field
+  | OLdestructor of cpp_stmt list
+
+(** A data-only nested struct that holds values of the struct it is nested
+    in -- a coinductive's constructor alternative, [Go { ItreeF<E, R, Itree<E,
+    R>> _observe; }] inside [Itree].  The owner is incomplete inside its own
+    body, so such a struct cannot be an ordinary nested struct.  It is written
+    as a member template whose parameters default to the owner and its mutual
+    siblings, and whose fields spell those types through the parameters:
+
+    {v template <typename _S0 = Itree<E, R>> struct Go_ {
+         ItreeF<E, R, _S0> _observe;
+       };
+       using Go = Go_<>; v}
+
+    A member template is completed only when it is used, which is after the
+    owner is.  [dfs_selves] pairs each parameter with the type it stands
+    for. *)
+and deferred_struct = {
+  dfs_name : Id.t;
+  dfs_selves : (Id.t * cpp_type) list;
+  dfs_fields : (Id.t * cpp_type) list;
+}
 
 (** Constructor descriptor.
 
@@ -586,6 +672,15 @@ and ctor_field = {
 (** Method descriptor record. *)
 and method_field = {
   mf_name : Id.t;  (** Method name *)
+  mf_globref : GlobRef.t option;
+      (** The global this method was made from, where one is known.
+
+          The name alone does not identify the method: a call to
+          [Other.cmp] from inside [This.cmp] is a different function that
+          happens to share a label, and treating it as recursion turns a
+          delegation into an infinite loop.  [None] where the method has no
+          source global (factories, generated operators), which are the
+          cases nothing calls by name anyway. *)
   mf_tparams : (template_type * Id.t) list;  (** Template parameters *)
   mf_ret_type : cpp_type;  (** Return type *)
   mf_params : (Id.t * cpp_type) list;  (** Parameters *)
@@ -607,7 +702,25 @@ and method_field = {
   mf_is_noexcept : bool;
       (** When true, emit [noexcept] after the parameter list.  Set for
           move assignment operators. *)
+  mf_is_conversion : bool;
+      (** When true this is a conversion function, whose name {e is} its
+          return type: it prints as [operator <mf_ret_type>()] with no return
+          type of its own, and [mf_name] is only what the doc comment and any
+          out-of-line qualifier use. *)
+  mf_ref_qual : ref_qual;
+      (** Which receivers the method takes: see {!ref_qual}. *)
 }
+
+(** The ref-qualifier of a method, which receivers it may be called on.  A
+    method that hands out a reference into its receiver is only sound on an
+    lvalue: on a temporary the reference outlives the object.  So such a
+    method comes as a pair, [Rq_lvalue] returning the reference and
+    [Rq_rvalue] returning a copy, and no call can reach the reference through
+    a temporary. *)
+and ref_qual =
+  | Rq_any  (** No qualifier. *)
+  | Rq_lvalue  (** [&] *)
+  | Rq_rvalue  (** [&&] *)
 
 (** Custom extraction metadata for manually mapped entities.  Resolved once
     during translation. *)
@@ -624,7 +737,6 @@ and custom_info = {
 
 (** {2 Type schemas} *)
 
-(** C++ type schema: number of type variables and the type expression. *)
 (** A plain static member function: no template parameters, no [this], and
     none of the qualifiers a real method carries.  Factory functions are the
     only producer. *)
@@ -635,6 +747,20 @@ val static_fun :
   body:cpp_stmt list ->
   method_field
 
+(** What an inline custom's replacement text does with its arguments, as far
+    as the passes that inspect it need to know.  The text is classified here
+    and nowhere else. *)
+type inline_shape =
+  | Inline_identity  (** ["%a0"]: its one argument, unchanged *)
+  | Inline_pair_projection  (** reads [.first] or [.second] of its argument *)
+  | Inline_other
+
+val inline_shape_of_text : string -> inline_shape
+
+(** The shape of [ci]'s replacement text, [None] where it is not inlined. *)
+val inline_shape : custom_info -> inline_shape option
+
+(** C++ type schema: number of type variables and the type expression. *)
 type cpp_schema = int * cpp_type
 
 (** {2 Helper constructors} *)
@@ -663,6 +789,33 @@ val instance_dependent : cpp_type -> (Id.t * GlobRef.t) option
     constructor. Pass custom cases for the constructors you care about; the
     combinator handles structural recursion for the rest. *)
 
+(** Whether a type is a dummy glob ([dummy_type], [dummy_prop],
+    [dummy_implicit]) left behind by erasure; see
+    {!Ml_type_util.is_cpp_dummy_type}. *)
+val is_cpp_dummy_type : cpp_type -> bool
+
+(** Whether a type is spelled [std::any]; see {!Ml_type_util.prints_as_any}.
+    Here because an application whose head prints so is itself erased
+    ({!map_cpp_type}, {!tapply}). *)
+val prints_as_any : cpp_type -> bool
+
+(** Whether a global is a type parameterised by families, whose erased index
+    is its own and not a carrier's element; installed by [Table]. *)
+val family_parameterised : (Names.GlobRef.t -> bool) ref
+
+(** A plain type-constructor parameter [head] applied at [args], read through
+    {!Trebind} where the argument is not erased and names only variables in
+    [in_scope]; [head] itself otherwise. *)
+val rebind_plain_var : in_scope:Names.Id.t list -> cpp_type -> cpp_type list -> cpp_type
+
+(** [t] without [const], a reference, or the non-deduced context around it. *)
+val strip_param_spelling : cpp_type -> cpp_type
+
+(** [tapply head args] is [head] applied to [args], reduced where [head] is a
+    carrier abstraction (a {!Ttyctor} over a body carrying the
+    {!ctor_alias_tvar} sentinel); an erased head erases the application. *)
+val tapply : cpp_type -> cpp_type list -> cpp_type
+
 (** [map_cpp_type f ty] applies [f] to every sub-type in [ty]. Use this to build
     type transformations: pass a function that handles your custom case and
     delegates to [map_cpp_type f] for the recursive case.
@@ -671,10 +824,34 @@ val instance_dependent : cpp_type -> (Id.t * GlobRef.t) option
     @return the structurally-transformed type *)
 val map_cpp_type : (cpp_type -> cpp_type) -> cpp_type -> cpp_type
 
+(** The type variable an alias template introduced for a type constructor
+    abstracts over.
+
+    A {!Ttyctor} is normally a type applied to its argument, and the printer
+    names the constructor by dropping that argument.  A carrier that is not of
+    that shape -- a custom mapping like [itree], or a Rocq carrier that is a
+    composite, [fun T => (T * box T)] -- has no head to cut back to, so an
+    alias template is introduced for it and this is the parameter it takes.
+    Lives here because both ends need it: the printer mints the alias, and the
+    front end builds the [Ttyctor] body with this name already standing where
+    the carrier's argument goes. *)
+val ctor_alias_tvar : string
+
+(** [abstract_cpp_type ~over ty] is [ty] with every occurrence of [over]
+    replaced by the {!ctor_alias_tvar} sentinel -- the type constructor whose
+    application to [over] is [ty] -- or [None] where [over] does not occur, so
+    that there is no such constructor to name. *)
+val abstract_cpp_type : over:cpp_type -> cpp_type -> cpp_type option
+
 (** What a branch throws when the scrutinee's indices rule it out; shared by
     the coercion seam and the sweep over a finished body, which recognise such
     a branch independently. *)
 val dead_branch_message : string
+
+(** What a converting constructor throws for a field of a constructor the
+    source does not hold, when the two instantiations disagree on its type and
+    so no conversion can be written. *)
+val inactive_field_message : string
 
 (** [curry_fun_type ty] respells every multi-parameter function type inside
     [ty] as nested single-parameter ones, as required of a type standing at a
@@ -778,15 +955,21 @@ val mk_apply :
   cpp_expr list ->
   cpp_expr
 
-(** [mk_lambda params ret body ~by_value] is a lambda whose [params] are given
-    in {e source} order.  [by_value] selects a [\[=\]] capture over [\[&\]].
+(** [mk_lambda params ret body ~capture] is a lambda whose [params] are given
+    in {e source} order, holding its captures as [capture] says.
     A nullary lambda whose body only throws reduces to {!CPPabort}, carrying
-    [ret] -- or {!Tany} when [ret] is absent -- as the type it yields. *)
+    [ret] -- or {!Tany} when [ret] is absent -- as the type it yields.
+
+    [tparams] makes the lambda a polymorphic function object, written
+    [[]<typename X>(...)].  A template parameter no parameter names is
+    dropped: a lambda's template parameters are deduced from its call, so one
+    that reaches no parameter could never be instantiated. *)
 val mk_lambda :
+  ?tparams:Id.t list ->
   (cpp_type * Id.t option) list ->
   cpp_type option ->
   cpp_stmt list ->
-  by_value:bool ->
+  capture:capture ->
   cpp_expr
 
 
@@ -808,11 +991,78 @@ val map_args : (cpp_expr -> cpp_expr) -> cpp_expr revd -> cpp_expr revd
 val lambda_params :
   (cpp_type * Id.t option) revd -> (cpp_type * Id.t option) list
 
+(** The member as a field, to be written where a field is written. *)
+val field_of_member : out_of_line_member -> cpp_field
+
+(** [out_of_line_member f] is [f] as a member that can be split in two, or
+    [None] when it is a kind that cannot. *)
+val out_of_line_member : cpp_field -> out_of_line_member option
+
+(** [map_out_of_line fs ft m] applies [fs] to [m]'s statements and [ft] to its
+    types. *)
+val map_out_of_line :
+  (cpp_stmt -> cpp_stmt) -> (cpp_type -> cpp_type) ->
+  out_of_line_member -> out_of_line_member
+
+(** [named_tvar x] is the type variable named [x] -- one that numbers against
+    no declaration's parameter list, and so is spelled by name alone. *)
+val named_tvar : Names.Id.t -> cpp_type
+
+(** [tvar_spelling i] is the name of the type variable at index [i] in a
+    declaration's parameter list; [tvar_id] is the same as an [Id.t].
+    Re-exported as {!Common.tvar_name} and {!Common.tvar_id}. *)
+val tvar_spelling : int -> string
+val tvar_id : int -> Names.Id.t
+
+(** [tvar_is id ty] is whether [ty] is the type variable [id].  A tvar whose
+    head was never resolved to its parameter name answers to the generated
+    spelling of its index as well. *)
+val tvar_is : Names.Id.t -> cpp_type -> bool
+
+(** [tvar_named id ty] is whether [ty] names the type variable [id] anywhere
+    inside it. *)
+val tvar_named : Names.Id.t -> cpp_type -> bool
+
+(** [tvar_name ty] is the name [ty] goes by if it is a type variable. *)
+val tvar_name : cpp_type -> Names.Id.t option
+
+(** [tvar_names ty] is every type variable [ty] names. *)
+val tvar_names : cpp_type -> Names.Id.Set.t
+
+(** [tvar_spellings ty] is every name the type variables in [ty] answer to --
+    both the parameter name and the positional [T<i>], since an occurrence may
+    carry either.  For building a scope that {!tvar_is} will be asked about. *)
+val tvar_spellings : cpp_type -> Names.Id.Set.t
+
+(** [deduces_tparam x tys] is whether any of [tys] names the type variable
+    [x], and so lets C++ deduce it from an argument. *)
+val deduces_tparam : Names.Id.t -> cpp_type list -> bool
+
+(** A lambda without the template parameters none of its parameters deduces,
+    as {!lambda} builds it; for a pass that rewrites the parameters' types. *)
+val settle_lambda_tparams : cpp_lambda -> cpp_lambda
+
 (** [map_lambda fs ft l] maps [ft] over the parameter and return types of [l]
     and [fs] over its body.  A lambda has no immediate sub-expression of its
     own, so there is no expression function to take. *)
 val map_lambda :
   (cpp_stmt -> cpp_stmt) -> (cpp_type -> cpp_type) -> cpp_lambda -> cpp_lambda
+
+(** [erased_lambda l ~params ~ret ~body] is [l] rewritten to take [params] and
+    return [ret], with [body] doing whatever casting back the erasure of its
+    parameters now needs.
+
+    This is the one way to erase a lambda, because erasure is the one thing a
+    polymorphic function object cannot survive: it stands where a slot deduces
+    its type, and an erased slot has written its own signature down.  Its
+    template parameters are dropped and every use of them spelled
+    [std::any], so no caller has to know that rule. *)
+val erased_lambda :
+  cpp_lambda ->
+  params:(cpp_type * Names.Id.t option) revd ->
+  ret:cpp_type option ->
+  body:cpp_stmt list ->
+  cpp_expr
 
 (** [map_expr fe fs ft e] applies [fe] to sub-expressions, [fs] to
     sub-statements, [ft] to sub-types, performing one level of structural
@@ -863,6 +1113,34 @@ val iter_expr_children :
 val iter_stmt_children :
   on_expr:(cpp_expr -> unit) -> on_stmts:(cpp_stmt list -> unit) ->
   cpp_stmt -> unit
+
+(** [erased_into_storage_ids body] names the value parameters [body] only ever
+    hands to a representation-tolerant helper from [crane_fn.h] -- erased into
+    storage by [crane_erase_fn], or applied through [crane_call_erased] -- and
+    never applies directly.  A signature has nothing to claim about such a
+    callback: the helper adapts whatever it is given. *)
+val erased_into_storage_ids : cpp_stmt list -> Id.Set.t
+
+(** [erased_into_storage_tparam ~params body id] holds when the template
+    parameter [id] types a value parameter that [body] only erases into storage
+    (see {!erased_into_storage_ids}), so no constraint may be placed on it. *)
+val erased_into_storage_tparam :
+  params:(Id.t * cpp_type) list -> cpp_stmt list -> Id.t -> bool
+
+(** Whether a [TTfun] constraint states nothing the caller can be held to, and
+    so is dropped rather than printed: a rank-2 callback's result is not the
+    [std::any] the constraint would demand.  Read by the printer, which drops
+    the clause, and by the signature relaxations, which must not count a
+    dropped clause as a use of the variables it names. *)
+val tt_constraint_is_vacuous : cpp_type list -> cpp_type -> bool
+
+(** [drop_stored_callback_constraints ~params body tparams] demotes to a plain
+    [typename] every [TTfun] parameter of [tparams] that types a callback
+    [body] only erases into storage, so a declaration written without the body
+    still states the constraints the definition does. *)
+val drop_stored_callback_constraints :
+  params:(Id.t * cpp_type) list -> cpp_stmt list ->
+  (template_type * Id.t) list -> (template_type * Id.t) list
 
 (** [fold_expr_children ~on_expr ~on_stmts acc e] folds over the immediate
     children of [e], threading [acc].  Mirrors {!iter_expr_children}: [on_expr]
@@ -943,12 +1221,27 @@ and dstruct = {
 
     [dm_tparams] are the {e struct's} template parameters, not the member's:
     they are what both the [template <...>] line and the [Owner<A>::]
-    qualifier are built from, so the two cannot disagree. *)
+    qualifier are built from, so the two cannot disagree.
+
+    [dm_enclosing] is the namespace struct the owner is written inside of,
+    when there is one.  An inductive at namespace scope is wrapped in a struct
+    named after itself, so its own name is not how the outside spells it, and
+    the definition cannot recover the qualifier from [dm_owner] alone. *)
 and dmember_def = {
   dm_owner : GlobRef.t;
+  dm_enclosing : dm_wrapper option;
   dm_tparams : (template_type * Id.t) list;
-  dm_field : cpp_field;
+  dm_field : out_of_line_member;
 }
+
+(** The namespace struct an out-of-line member's owner is written inside of.
+
+    [dw_sole_child] records that the owner is the only declaration in it, which
+    is half of what decides whether the two are written as one struct -- the
+    other half is whether anything was queued to be added to the wrapper, which
+    only the printer knows.  Kept here because the shape of the wrapper is not
+    recoverable once the member has been lifted out of it. *)
+and dm_wrapper = {dw_ref : GlobRef.t; dw_sole_child : bool}
 
 (** A type alias declaration.
 
@@ -1054,3 +1347,10 @@ val map_field :
 val map_decl :
   (cpp_expr -> cpp_expr) -> (cpp_stmt -> cpp_stmt) -> (cpp_type -> cpp_type) ->
   cpp_decl -> cpp_decl
+
+(** The variables an expression, a statement or a statement list refers to
+    without binding them.  An under-approximation: a form it does not look
+    into contributes nothing. *)
+val free_vars_expr : cpp_expr -> Id.t list
+val free_vars_stmt : cpp_stmt -> Id.t list
+val free_vars_body : cpp_stmt list -> Id.t list

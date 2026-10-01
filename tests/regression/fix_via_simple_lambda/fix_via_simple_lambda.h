@@ -1,7 +1,7 @@
 #ifndef INCLUDED_FIX_VIA_SIMPLE_LAMBDA
 #define INCLUDED_FIX_VIA_SIMPLE_LAMBDA
 
-#include <functional>
+#include "fn.h"
 #include <memory>
 #include <optional>
 
@@ -19,14 +19,13 @@ struct FixViaSimpleLambda {
   /// the fixpoints don't escape directly through a constructor —
   /// they escape INDIRECTLY by being captured in a simple lambda
   /// that is then stored in Some.
-  static std::optional<std::function<uint64_t(uint64_t)>>
-  make_combined(uint64_t n);
+  static std::optional<crane::fn<uint64_t(uint64_t)>> make_combined(uint64_t n);
   /// test1: base=42, double_add(5) = 42+10 = 52,
   /// triple_add(5) = 42+15 = 57. Total = 109.
   static inline const uint64_t test1 = []() -> uint64_t {
     auto _cs = make_combined(UINT64_C(21));
     if (_cs.has_value()) {
-      const std::function<uint64_t(uint64_t)> &f = *_cs;
+      const crane::fn<uint64_t(uint64_t)> &f = *_cs;
       return f(UINT64_C(5));
     } else {
       return UINT64_C(999);
@@ -35,7 +34,7 @@ struct FixViaSimpleLambda {
   /// test2: With intervening computation to clobber the stack.
   /// base=200, double_add(0) = 200, triple_add(0) = 200. Total = 400.
   static inline const uint64_t test2 = []() {
-    std::optional<std::function<uint64_t(uint64_t)>> opt =
+    std::optional<crane::fn<uint64_t(uint64_t)>> opt =
         make_combined(UINT64_C(100));
     uint64_t noise =
         (((((((((UINT64_C(1) + UINT64_C(2)) + UINT64_C(3)) + UINT64_C(4)) +
@@ -46,7 +45,7 @@ struct FixViaSimpleLambda {
           UINT64_C(9)) +
          UINT64_C(10));
     if (opt.has_value()) {
-      const std::function<uint64_t(uint64_t)> &f = *opt;
+      const crane::fn<uint64_t(uint64_t)> &f = *opt;
       return f(UINT64_C(0));
     } else {
       return noise;
@@ -58,7 +57,7 @@ struct FixViaSimpleLambda {
   static inline const uint64_t test3 = []() -> uint64_t {
     auto _cs = make_combined(UINT64_C(5));
     if (_cs.has_value()) {
-      const std::function<uint64_t(uint64_t)> &f = *_cs;
+      const crane::fn<uint64_t(uint64_t)> &f = *_cs;
       return f(UINT64_C(20));
     } else {
       return UINT64_C(999);

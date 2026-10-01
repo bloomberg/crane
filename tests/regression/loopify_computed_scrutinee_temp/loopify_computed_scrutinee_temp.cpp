@@ -35,8 +35,8 @@ LoopifyComputedScrutineeTemp::hd(const LoopifyComputedScrutineeTemp::lst &l) {
 
 LoopifyComputedScrutineeTemp::lst
 LoopifyComputedScrutineeTemp::wrap(uint64_t m,
-                                   LoopifyComputedScrutineeTemp::lst l) {
-  return lst::cons(UINT64_C(7), lst::cons(m, std::move(l)));
+                                   const LoopifyComputedScrutineeTemp::lst &l) {
+  return lst::cons(UINT64_C(7), lst::cons(m, l));
 }
 
 uint64_t LoopifyComputedScrutineeTemp::walk(

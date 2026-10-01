@@ -1,9 +1,9 @@
 #ifndef INCLUDED_DOUBLE_INVOKE_MOVE
 #define INCLUDED_DOUBLE_INVOKE_MOVE
 
+#include "fn.h"
 #include "small_vector.h"
 #include <atomic>
-#include <functional>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -46,10 +46,10 @@ struct DoubleInvokeMove {
       crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a2) {
+          if (_alt->a2 && _alt->a2.use_count() == 1) {
             _stack.push_back(std::move(_alt->a2));
           }
         }
@@ -104,7 +104,7 @@ struct DoubleInvokeMove {
 
   /// wrap_with takes TWO args. Partial application creates a closure.
   /// Since t is stored in a constructor, wrap_with takes t as owned (by value).
-  static tree wrap_with(tree t, uint64_t v);
+  static tree wrap_with(const tree &t, uint64_t v);
   static uint64_t left_value(const tree &t);
   /// BUG HYPOTHESIS: partial application wrap_with t creates a & lambda.
   /// If t is marked dead-after (not used in continuation), std::move(t)
@@ -130,8 +130,8 @@ struct DoubleInvokeMove {
       tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
                           UINT64_C(20),
                           tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
-      std::function<tree(uint64_t)> f = [=](uint64_t _x0) mutable -> tree {
-        return wrap_with(t, _x0);
+      crane::fn<tree(uint64_t)> f = [=](uint64_t _x0) -> tree {
+        return wrap_with(std::move(t), _x0);
       };
       tree w1 = f(UINT64_C(0));
       tree w2 = f(UINT64_C(1));

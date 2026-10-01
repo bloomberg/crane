@@ -1,7 +1,8 @@
 #include "functor_comp.h"
 
-FunctorComp::Stack::t FunctorComp::Stack::push(uint64_t x, List<uint64_t> s) {
-  return List<uint64_t>::cons(x, std::move(s));
+FunctorComp::Stack::t FunctorComp::Stack::push(uint64_t x,
+                                               const List<uint64_t> &s) {
+  return List<uint64_t>::cons(x, s);
 }
 
 std::optional<std::pair<uint64_t, FunctorComp::Stack::t>>

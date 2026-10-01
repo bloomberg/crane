@@ -1,7 +1,8 @@
 #ifndef INCLUDED_ROCQ_BUG_7228
 #define INCLUDED_ROCQ_BUG_7228
 
-#include "small_vector.h"
+#include "crane_fn.h"
+#include "obj.h"
 #include <any>
 #include <atomic>
 #include <memory>
@@ -39,22 +40,18 @@ public:
 
   // MANIPULATORS
   ~Nat() {
-    crane::small_vector<std::shared_ptr<Nat>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<Nat> {
       if (auto *_alt = std::get_if<S>(&_v)) {
-        if (_alt->a0) {
-          _stack.push_back(std::move(_alt->a0));
+        if (_alt->a0 && _alt->a0.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a0);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<Nat> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -72,30 +69,30 @@ public:
 struct RocqBug7228 {
   struct data {
     // DATA
-    std::any t;
+    crane::obj t;
 
     // ACCESSORS
     data clone() const { return {t}; }
 
     // CREATORS
-    static data data0(std::any t) { return {std::move(t)}; }
+    static data data0(crane::obj t) { return {std::move(t)}; }
   };
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, std::any &>
+    requires std::is_invocable_r_v<T1, F0 &, crane::obj &>
   static T1 data_rect(F0 &&f, const data &d) {
     const auto &[t0] = d;
-    return std::any_cast<T1>(f(t0));
+    return crane_any_cast<T1>(f(t0));
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, std::any &>
+    requires std::is_invocable_r_v<T1, F0 &, crane::obj &>
   static T1 data_rec(F0 &&f, const data &d) {
     const auto &[t0] = d;
-    return std::any_cast<T1>(f(t0));
+    return crane_any_cast<T1>(f(t0));
   }
 
-  using t_of = std::any;
+  using t_of = crane::obj;
   static t_of v_of(const data &d);
   static inline const data test_data =
       data::data0(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(

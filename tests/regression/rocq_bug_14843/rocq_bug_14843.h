@@ -1,20 +1,20 @@
 #ifndef INCLUDED_ROCQ_BUG_14843
 #define INCLUDED_ROCQ_BUG_14843
 
-#include <functional>
+#include "fn.h"
 
 enum class Unit;
 enum class Unit { TT };
 
 struct RocqBug14843 {
   struct r {
-    std::function<void(Unit)> f1;
-    std::function<void(Unit)> f2;
+    crane::fn<void(Unit)> f1;
+    crane::fn<void(Unit)> f2;
   };
 
   struct r_ {
-    std::function<void(Unit)> f1_;
-    std::function<void(Unit)> f2_;
+    crane::fn<void(Unit)> f1_;
+    crane::fn<void(Unit)> f2_;
   };
 
   struct M {

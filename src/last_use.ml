@@ -37,7 +37,7 @@ let reads_stmts l = named (count_stmts IdMap.empty l)
    the first is silently a copy, and the second names something the caller
    still holds. *)
 let rec is_borrowed = function
-  | Tref _ | Tconst _ -> true
+  | Tref _ | Tfwd_ref _ | Tconst _ -> true
   | Tnamespace (_, t) -> is_borrowed t
   | _ -> false
 

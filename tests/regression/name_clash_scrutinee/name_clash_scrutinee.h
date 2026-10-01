@@ -1,6 +1,7 @@
 #ifndef INCLUDED_NAME_CLASH_SCRUTINEE
 #define INCLUDED_NAME_CLASH_SCRUTINEE
 
+#include <atomic>
 #include <type_traits>
 #include <utility>
 #include <variant>

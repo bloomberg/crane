@@ -2,12 +2,13 @@
 #define INCLUDED_SIGT_FN_ANY
 
 #include "crane_fn.h"
-#include "small_vector.h"
+#include "fn.h"
+#include "obj.h"
 #include <any>
 #include <atomic>
 #include <functional>
 #include <memory>
-#include <type_traits>
+#include <stdexcept>
 #include <utility>
 #include <variant>
 
@@ -37,21 +38,26 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U> List(const List<_U> &_other) {
-    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->v_ = Nil{};
-    } else {
-      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>) {
-                          return crane_any_cast<A>(a);
-                        } else {
-                          return A(a);
-                        }
-                      }(),
-                      (l ? std::make_shared<List<A>>(*l) : nullptr)};
-    }
-  }
+  template <typename _U>
+  List(const List<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+            return Nil{};
+          } else {
+            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const _U &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                   : nullptr)};
+          }
+        }()) {}
 
   static List<A> nil() { return List<A>(Nil{}); }
 
@@ -61,22 +67,18 @@ public:
 
   // MANIPULATORS
   ~List() {
-    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
-        if (_alt->l) {
-          _stack.push_back(std::move(_alt->l));
+        if (_alt->l && _alt->l.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->l);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<List<A>> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -99,6 +101,25 @@ template <typename A, typename P> struct SigT {
   // ACCESSORS
   SigT<A, P> clone() const { return {x, a1}; }
 
+  template <typename _U0, typename _U1> operator SigT<_U0, _U1>() const {
+    return {[&]() -> _U0 {
+              if constexpr (crane_convertible<_U0, const A &>) {
+                return crane_convert<_U0>(x);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }(),
+            [&]() -> _U1 {
+              if constexpr (crane_convertible<_U1, const P &>) {
+                return crane_convert<_U1>(a1);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }()};
+  }
+
   // CREATORS
   static SigT<A, P> existt(A x, P a1) { return {std::move(x), std::move(a1)}; }
 };
@@ -115,14 +136,14 @@ template <SEM S> struct Make {
   /// predicate_semty-analog: a value-dependent function type. The
   /// let (a, _) := p blocks reduction for a variable p, so Crane must erase
   /// pred_ty p to std::any — exactly like predicate_semty in Defs.v.
-  using pred_ty = std::any;
+  using pred_ty = crane::obj;
   /// grammar_entry-analog: a dependent pair carrying the function payload.
   using entry = SigT<prod2, pred_ty>;
 
   /// Build an entry from a concrete index and a predicate lambda.
   /// The lambda is stored at the erased type pred_ty (a, []) = std::any.
   template <typename F1> static entry mk(typename S::idx a, F1 &&f) {
-    return SigT<prod2, std::any>::existt(
+    return SigT<prod2, crane::obj>::existt(
         std::make_pair(a, List<typename S::idx>::nil()), crane_erase_fn(f));
   }
 
@@ -131,12 +152,13 @@ template <SEM S> struct Make {
   /// any_cast<std::function<...>>(f)(...) — the failing cast.
   template <typename F1>
   static bool run(const SigT<std::pair<typename S::idx, List<typename S::idx>>,
-                             std::any> &e,
+                             crane::obj> &e,
                   F1 &&arg) {
     const auto &[x0, a1] = e;
     const auto &[a, _x] = x0;
-    if (std::any_cast<bool>(std::any_cast<std::function<std::any(std::any)>>(
-            a1)(crane_call_erased(arg, a)))) {
+    if (crane::any_cast<bool>(
+            crane::any_cast<crane::fn<crane::obj(crane::obj)>>(a1)(
+                crane_call_erased(arg, a)))) {
       return true;
     } else {
       return false;
@@ -151,7 +173,8 @@ struct Inst {
 
 using M = Make<Inst>;
 const M::entry my_entry =
-    M::mk(std::monostate{}, [](uint64_t n) { return n == UINT64_C(0); });
+    M::mk(std::monostate{},
+          crane_erase_fn<bool>([](uint64_t n) { return n == UINT64_C(0); }));
 Inst::sem my_arg(std::monostate _x);
 /// In Rocq this evaluates to true ((fun n => n =? 0) 0), and the extracted
 /// C++ now returns true as well.  Kept as a function (not a value) so the C++

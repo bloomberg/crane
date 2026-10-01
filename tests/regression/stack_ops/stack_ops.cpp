@@ -1,10 +1,10 @@
 #include "stack_ops.h"
 
 std::pair<std::optional<uint64_t>, StackOps::state_basic>
-StackOps::pop_stack(StackOps::state_basic s) {
+StackOps::pop_stack(const StackOps::state_basic &s) {
   auto &&_sv = s.stack_basic;
   if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
-    return std::make_pair(std::optional<uint64_t>(), std::move(s));
+    return std::make_pair(std::optional<uint64_t>(), s);
   } else {
     const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(_sv.v());
     return std::make_pair(std::make_optional<uint64_t>(a0), state_basic{*a1});
@@ -30,10 +30,10 @@ uint64_t StackOps::option_or_zero(const std::optional<uint64_t> &o) {
 }
 
 std::pair<std::optional<uint64_t>, StackOps::state_with_acc>
-StackOps::pop_stack_acc(StackOps::state_with_acc s) {
+StackOps::pop_stack_acc(const StackOps::state_with_acc &s) {
   auto &&_sv = s.stack_with_acc;
   if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
-    return std::make_pair(std::optional<uint64_t>(), std::move(s));
+    return std::make_pair(std::optional<uint64_t>(), s);
   } else {
     const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(_sv.v());
     return std::make_pair(std::make_optional<uint64_t>(a0),

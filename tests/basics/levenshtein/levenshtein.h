@@ -2,9 +2,12 @@
 #define INCLUDED_LEVENSHTEIN
 
 #include "crane_fn.h"
+#include "obj.h"
 #include "small_vector.h"
+#include <any>
 #include <atomic>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -15,6 +18,10 @@ template <typename A, typename P> struct SigT;
 enum class Sumbool;
 struct Ascii;
 struct String;
+
+struct Bool {
+  static Sumbool bool_dec(Bool0 b1, Bool0 b2);
+};
 enum class Bool0 { TRUE_, FALSE_ };
 
 struct Nat {
@@ -45,22 +52,18 @@ public:
 
   // MANIPULATORS
   ~Nat() {
-    crane::small_vector<std::shared_ptr<Nat>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<Nat> {
       if (auto *_alt = std::get_if<S>(&_v)) {
-        if (_alt->a0) {
-          _stack.push_back(std::move(_alt->a0));
+        if (_alt->a0 && _alt->a0.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a0);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<Nat> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -103,6 +106,25 @@ template <typename A, typename P> struct SigT {
   // ACCESSORS
   SigT<A, P> clone() const { return {x, a1}; }
 
+  template <typename _U0, typename _U1> operator SigT<_U0, _U1>() const {
+    return {[&]() -> _U0 {
+              if constexpr (crane_convertible<_U0, const A &>) {
+                return crane_convert<_U0>(x);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }(),
+            [&]() -> _U1 {
+              if constexpr (crane_convertible<_U1, const P &>) {
+                return crane_convert<_U1>(a1);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }()};
+  }
+
   // CREATORS
   static SigT<A, P> existt(A x, P a1) { return {std::move(x), std::move(a1)}; }
 
@@ -112,10 +134,6 @@ template <typename A, typename P> struct SigT {
   }
 };
 enum class Sumbool { LEFT, RIGHT };
-
-struct Bool {
-  static Sumbool bool_dec(Bool0 b1, Bool0 b2);
-};
 
 struct Ascii {
   // DATA
@@ -137,90 +155,7 @@ struct Ascii {
     return {a0, a1, a2, a3, a4, a5, a6, a7};
   }
 
-  Sumbool ascii_dec(const Ascii &b) const {
-    const auto &[a0, a1, a2, a3, a4, a5, a6, a7] = *this;
-    const auto &[a00, a10, a20, a30, a40, a50, a60, a70] = b;
-    switch (Bool::bool_dec(a0, a00)) {
-    case Sumbool::LEFT: {
-      switch (Bool::bool_dec(a1, a10)) {
-      case Sumbool::LEFT: {
-        switch (Bool::bool_dec(a2, a20)) {
-        case Sumbool::LEFT: {
-          switch (Bool::bool_dec(a3, a30)) {
-          case Sumbool::LEFT: {
-            switch (Bool::bool_dec(a4, a40)) {
-            case Sumbool::LEFT: {
-              switch (Bool::bool_dec(a5, a50)) {
-              case Sumbool::LEFT: {
-                switch (Bool::bool_dec(a6, a60)) {
-                case Sumbool::LEFT: {
-                  switch (Bool::bool_dec(a7, a70)) {
-                  case Sumbool::LEFT: {
-                    return Sumbool::LEFT;
-                  }
-                  case Sumbool::RIGHT: {
-                    return Sumbool::RIGHT;
-                  }
-                  default:
-                    std::unreachable();
-                  }
-                  break;
-                }
-                case Sumbool::RIGHT: {
-                  return Sumbool::RIGHT;
-                }
-                default:
-                  std::unreachable();
-                }
-                break;
-              }
-              case Sumbool::RIGHT: {
-                return Sumbool::RIGHT;
-              }
-              default:
-                std::unreachable();
-              }
-              break;
-            }
-            case Sumbool::RIGHT: {
-              return Sumbool::RIGHT;
-            }
-            default:
-              std::unreachable();
-            }
-            break;
-          }
-          case Sumbool::RIGHT: {
-            return Sumbool::RIGHT;
-          }
-          default:
-            std::unreachable();
-          }
-          break;
-        }
-        case Sumbool::RIGHT: {
-          return Sumbool::RIGHT;
-        }
-        default:
-          std::unreachable();
-        }
-        break;
-      }
-      case Sumbool::RIGHT: {
-        return Sumbool::RIGHT;
-      }
-      default:
-        std::unreachable();
-      }
-      break;
-    }
-    case Sumbool::RIGHT: {
-      return Sumbool::RIGHT;
-    }
-    default:
-      std::unreachable();
-    }
-  }
+  Sumbool ascii_dec(const Ascii &b) const;
 };
 
 struct String {
@@ -255,22 +190,18 @@ public:
 
   // MANIPULATORS
   ~String() {
-    crane::small_vector<std::shared_ptr<String>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<String> {
       if (auto *_alt = std::get_if<String0>(&_v)) {
-        if (_alt->a1) {
-          _stack.push_back(std::move(_alt->a1));
+        if (_alt->a1 && _alt->a1.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a1);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<String> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -284,28 +215,7 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  String append(String s2) const {
-    std::shared_ptr<String> _head{};
-    std::shared_ptr<String> *_write = &_head;
-    const String *_loop_self = this;
-    String _loop_s2 = std::move(s2);
-    while (true) {
-      auto &&_sv = *_loop_self;
-      if (std::holds_alternative<typename String::EmptyString>(_sv.v())) {
-        *_write = std::make_shared<String>(std::move(_loop_s2));
-        break;
-      } else {
-        const auto &[a0, a1] = std::get<typename String::String0>(_sv.v());
-        auto _cell =
-            std::make_shared<String>(typename String::String0(a0, nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename String::String0>((*_write)->v_mut()).a1;
-        _loop_self = crane_raw(a1);
-        continue;
-      }
-    }
-    return std::move(*_head);
-  }
+  String append(String s2) const;
 
   Nat length() const {
     std::shared_ptr<Nat> _head{};
@@ -472,27 +382,24 @@ struct Levenshtein {
 
     // MANIPULATORS
     ~chain() {
-      crane::small_vector<std::shared_ptr<chain>> _stack = {};
-      auto _drain = [&](variant_t &_v) {
+      auto _next = [&](variant_t &_v) -> std::shared_ptr<chain> {
         if (auto *_alt = std::get_if<Skip>(&_v)) {
-          if (_alt->a4) {
-            _stack.push_back(std::move(_alt->a4));
+          if (_alt->a4 && _alt->a4.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
+            return std::move(_alt->a4);
           }
         }
         if (auto *_alt = std::get_if<Change>(&_v)) {
-          if (_alt->a5) {
-            _stack.push_back(std::move(_alt->a5));
+          if (_alt->a5 && _alt->a5.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
+            return std::move(_alt->a5);
           }
         }
+        return nullptr;
       };
-      _drain(v_mut());
-      while (!_stack.empty()) {
-        auto _cur = std::move(_stack.back());
-        _stack.pop_back();
-        if (_cur.use_count() == 1) {
-          std::atomic_thread_fence(std::memory_order_acquire);
-          _drain(_cur->v_mut());
-        }
+      std::shared_ptr<chain> _cur = _next(v_mut());
+      while (_cur) {
+        _cur = _next(_cur->v_mut());
       }
     }
 
@@ -506,10 +413,10 @@ struct Levenshtein {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    chain aux_eq_char(const String &, const String &, const Ascii &, String xs,
-                      Ascii y, String ys, Nat n) const {
-      return chain::skip(std::move(y), std::move(xs), std::move(ys),
-                         std::move(n), std::move(*this));
+    chain aux_eq_char(const String &, const String &, const Ascii &,
+                      const String &xs, const Ascii &y, const String &ys,
+                      const Nat &n) const {
+      return chain::skip(y, xs, ys, n, *this);
     }
 
     chain aux_update(const String &, const String &, const Ascii &x,
@@ -519,33 +426,35 @@ struct Levenshtein {
     }
 
     chain aux_delete(const String &, const String &, const Ascii &x,
-                     const String &xs, Ascii y, String ys, const Nat &n) const {
-      return this->delete_chain(
-          x, xs, String::string0(std::move(y), std::move(ys)), n);
+                     const String &xs, const Ascii &y, const String &ys,
+                     const Nat &n) const {
+      return this->delete_chain(x, xs, String::string0(y, ys), n);
     }
 
-    chain aux_insert(const String &, const String &, Ascii x, String xs,
-                     const Ascii &y, const String &ys, const Nat &n) const {
-      return this->insert_chain(y, String::string0(std::move(x), std::move(xs)),
-                                ys, n);
+    chain aux_insert(const String &, const String &, const Ascii &x,
+                     const String &xs, const Ascii &y, const String &ys,
+                     const Nat &n) const {
+      return this->insert_chain(y, String::string0(x, xs), ys, n);
     }
 
-    chain update_chain(Ascii c, Ascii c_, String s1, String s2, Nat n) const {
+    chain update_chain(const Ascii &c, const Ascii &c_, const String &s1,
+                       const String &s2, const Nat &n) const {
       return chain::change(String::string0(c, s1), String::string0(c_, s1),
                            String::string0(c_, s2), n, edit::update(c, c_, s1),
-                           chain::skip(c_, s1, s2, n, std::move(*this)));
+                           chain::skip(c_, s1, s2, n, *this));
     }
 
-    chain delete_chain(Ascii c, String s1, String s2, Nat n) const {
-      return chain::change(String::string0(c, s1), s1, std::move(s2),
-                           std::move(n), edit::deletion(c, s1),
-                           std::move(*this));
+    chain delete_chain(const Ascii &c, const String &s1, const String &s2,
+                       const Nat &n) const {
+      return chain::change(String::string0(c, s1), s1, s2, n,
+                           edit::deletion(c, s1), *this);
     }
 
-    chain insert_chain(Ascii c, String s1, String s2, Nat n) const {
+    chain insert_chain(const Ascii &c, const String &s1, const String &s2,
+                       const Nat &n) const {
       return chain::change(s1, String::string0(c, s1), String::string0(c, s2),
                            n, edit::insertion(c, s1),
-                           chain::skip(c, s1, s2, n, std::move(*this)));
+                           chain::skip(c, s1, s2, n, *this));
     }
 
     template <typename T1, typename F1, typename F2>
@@ -710,16 +619,6 @@ struct Levenshtein {
   };
 
   static chain same_chain(const String &s);
-
-  template <typename T1> static T1 _inserts_chain_F(const String s) {
-    if (std::holds_alternative<typename String::EmptyString>(s.v())) {
-      return chain::empty();
-    } else {
-      const auto &[a00, a10] = std::get<typename String::String0>(s.v());
-      return chain::skip(a00, *a10, *a10, Nat::o(), _inserts_chain_F<T1>(*a10));
-    }
-  }
-
   static chain inserts_chain(const String &s1, const String &s2);
   static chain inserts_chain_empty(const String &s);
   static chain deletes_chain(const String &s1, const String &s2);
@@ -768,5 +667,99 @@ struct Levenshtein {
   static Nat levenshtein_computed(const String &s, const String &t);
   static Nat levenshtein(const String &x0_, const String &x1_);
 };
+
+inline Sumbool Ascii::ascii_dec(const Ascii &b) const {
+  const auto &[a0, a1, a2, a3, a4, a5, a6, a7] = *this;
+  const auto &[a00, a10, a20, a30, a40, a50, a60, a70] = b;
+  switch (Bool::bool_dec(a0, a00)) {
+  case Sumbool::LEFT: {
+    switch (Bool::bool_dec(a1, a10)) {
+    case Sumbool::LEFT: {
+      switch (Bool::bool_dec(a2, a20)) {
+      case Sumbool::LEFT: {
+        switch (Bool::bool_dec(a3, a30)) {
+        case Sumbool::LEFT: {
+          switch (Bool::bool_dec(a4, a40)) {
+          case Sumbool::LEFT: {
+            switch (Bool::bool_dec(a5, a50)) {
+            case Sumbool::LEFT: {
+              switch (Bool::bool_dec(a6, a60)) {
+              case Sumbool::LEFT: {
+                switch (Bool::bool_dec(a7, a70)) {
+                case Sumbool::LEFT: {
+                  return Sumbool::LEFT;
+                }
+                case Sumbool::RIGHT: {
+                  return Sumbool::RIGHT;
+                }
+                default:
+                  std::unreachable();
+                }
+                break;
+              }
+              case Sumbool::RIGHT: {
+                return Sumbool::RIGHT;
+              }
+              default:
+                std::unreachable();
+              }
+              break;
+            }
+            case Sumbool::RIGHT: {
+              return Sumbool::RIGHT;
+            }
+            default:
+              std::unreachable();
+            }
+            break;
+          }
+          case Sumbool::RIGHT: {
+            return Sumbool::RIGHT;
+          }
+          default:
+            std::unreachable();
+          }
+          break;
+        }
+        case Sumbool::RIGHT: {
+          return Sumbool::RIGHT;
+        }
+        default:
+          std::unreachable();
+        }
+        break;
+      }
+      case Sumbool::RIGHT: {
+        return Sumbool::RIGHT;
+      }
+      default:
+        std::unreachable();
+      }
+      break;
+    }
+    case Sumbool::RIGHT: {
+      return Sumbool::RIGHT;
+    }
+    default:
+      std::unreachable();
+    }
+    break;
+  }
+  case Sumbool::RIGHT: {
+    return Sumbool::RIGHT;
+  }
+  default:
+    std::unreachable();
+  }
+}
+
+inline String String::append(String s2) const {
+  if (std::holds_alternative<typename String::EmptyString>(this->v())) {
+    return s2;
+  } else {
+    const auto &[a0, a1] = std::get<typename String::String0>(this->v());
+    return String::string0(a0, a1->append(std::move(s2)));
+  }
+}
 
 #endif // INCLUDED_LEVENSHTEIN

@@ -2,11 +2,11 @@
 #define INCLUDED_FWD_DECL_BEFORE_CONCEPT
 
 #include "crane_fn.h"
-#include "small_vector.h"
+#include "fn.h"
+#include "obj.h"
 #include <any>
 #include <atomic>
 #include <concepts>
-#include <functional>
 #include <memory>
 #include <optional>
 #include <type_traits>
@@ -15,6 +15,32 @@
 
 struct Monad_option;
 struct Nat;
+template <typename I>
+concept Functor = requires {
+  typename I::template F<crane::obj>;
+  {
+    I::template fmap<crane::obj, crane::obj>(
+        std::declval<crane::fn<crane::obj(crane::obj)>>(),
+        std::declval<typename I::template F<crane::obj>>())
+  } -> std::convertible_to<typename I::template F<crane::obj>>;
+};
+template <typename I>
+concept Monad = requires {
+  typename I::template m<crane::obj>;
+  {
+    I::template ret<crane::obj>(std::declval<crane::obj>())
+  } -> std::convertible_to<typename I::template m<crane::obj>>;
+  {
+    I::template bind<crane::obj, crane::obj>(
+        std::declval<typename I::template m<crane::obj>>(),
+        std::declval<
+            crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
+  } -> std::convertible_to<typename I::template m<crane::obj>>;
+};
+
+struct FwdDeclBeforeConcept {
+  static std::optional<bool> use(const std::optional<Nat> &o);
+};
 
 struct Nat {
   // TYPES
@@ -44,22 +70,18 @@ public:
 
   // MANIPULATORS
   ~Nat() {
-    crane::small_vector<std::shared_ptr<Nat>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<Nat> {
       if (auto *_alt = std::get_if<S>(&_v)) {
-        if (_alt->a0) {
-          _stack.push_back(std::move(_alt->a0));
+        if (_alt->a0 && _alt->a0.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a0);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<Nat> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -98,35 +120,11 @@ public:
   }
 };
 
-template <typename I>
-concept Functor = requires {
-  typename I::template F<std::any>;
-  {
-    I::template fmap<std::any, std::any>(
-        std::declval<std::function<std::any(std::any)>>(),
-        std::declval<typename I::template F<std::any>>())
-  } -> std::convertible_to<typename I::template F<std::any>>;
-};
-
 struct Functor0 {
   template <Functor _tcI0, typename T2, typename T3, typename F0>
     requires std::is_invocable_r_v<T3, F0 &, T2 &>
   static typename _tcI0::template F<T3> fmap(F0 &&x,
                                              typename _tcI0::template F<T2> x0);
-};
-
-template <typename I>
-concept Monad = requires {
-  typename I::template m<std::any>;
-  {
-    I::template ret<std::any>(std::declval<std::any>())
-  } -> std::convertible_to<typename I::template m<std::any>>;
-  {
-    I::template bind<std::any, std::any>(
-        std::declval<typename I::template m<std::any>>(),
-        std::declval<
-            std::function<typename I::template m<std::any>(std::any)>>())
-  } -> std::convertible_to<typename I::template m<std::any>>;
 };
 
 struct Monad0 {
@@ -147,7 +145,7 @@ struct Monad_option {
 
   template <typename _A0, typename _A1>
   static std::optional<_A1> bind(std::optional<_A0> c1,
-                                 std::function<std::optional<_A1>(_A0)> c2) {
+                                 crane::fn<std::optional<_A1>(_A0)> c2) {
     if (c1.has_value()) {
       const _A0 &v = *c1;
       return c2(v);
@@ -165,16 +163,11 @@ template <Monad _tcI0> struct Functor_Monad {
 
   template <typename _A0, typename _A1>
   static typename _tcI0::template m<_A1>
-  fmap(std::function<_A1(_A0)> f, typename _tcI0::template m<_A0> x) {
+  fmap(crane::fn<_A1(_A0)> f, typename _tcI0::template m<_A0> x) {
     return Monad0::template bind<_tcI0, _A0, _A1>(
-        std::move(x), [=](const auto &a) mutable {
-          return Monad0::template ret<_tcI0, _A1>(f(a));
-        });
+        std::move(x),
+        [=](const _A0 &a) { return Monad0::template ret<_tcI0, _A1>(f(a)); });
   }
-};
-
-struct FwdDeclBeforeConcept {
-  static std::optional<bool> use(const std::optional<Nat> &o);
 };
 
 template <Functor _tcI0, typename T2, typename T3, typename F0>

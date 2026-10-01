@@ -1,11 +1,13 @@
 #ifndef INCLUDED_LOOPIFY_ITREE_REIFIED
 #define INCLUDED_LOOPIFY_ITREE_REIFIED
 
+#include "fn.h"
+#include "obj.h"
 #include "small_vector.h"
+#include <any>
 #include <atomic>
 #include <crane_itree.h>
 #include <memory>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -21,11 +23,12 @@ struct LoopifyItreeReified {
   /// directly, following the standard reified ITree cofixpoint pattern.
   /// The guardedness checker unfolds this transparent definition to verify
   /// that recursive calls are under Tau/Vis constructors.
-  template <typename T1, typename F0>
-    requires std::is_invocable_r_v<std::shared_ptr<ITree<T1>>, F0 &,
-                                   std::shared_ptr<ITree<T1>> &>
-  static std::shared_ptr<ITree<T1>> pass_body(F0 &&rec,
-                                              const itreeF_t<T1> &ot) {
+  template <typename T1>
+  static std::shared_ptr<ITree<T1>> pass_body(
+      std::type_identity_t<
+          crane::fn<std::shared_ptr<ITree<T1>>(std::shared_ptr<ITree<T1>>)>>
+          rec,
+      const itreeF_t<T1> &ot) {
     if (std::holds_alternative<typename ITree<T1>::Ret>(ot)) {
       const auto &_itf = *std::get_if<typename ITree<T1>::Ret>(&ot);
       auto r = _itf.value;
@@ -33,15 +36,12 @@ struct LoopifyItreeReified {
     } else if (std::holds_alternative<typename ITree<T1>::Tau>(ot)) {
       const auto &_itf = *std::get_if<typename ITree<T1>::Tau>(&ot);
       auto t_ = _itf.next;
-      return [&]() {
-        auto t = rec(t_);
-        return ITree<decltype(t->run())>::tau(t);
-      }();
+      return itree_tau(rec(t_));
     } else {
       const auto &_itf = *std::get_if<typename ITree<T1>::Vis>(&ot);
-      auto e = _itf.effect;
+      auto e = crane_event_as<crane::obj>(_itf.effect);
       auto k = _itf.cont;
-      return itree_vis(e, [=](const auto &x) mutable { return rec(k(x)); });
+      return itree_vis(e, [=](const auto &x) { return rec(k(x)); });
     }
   }
 

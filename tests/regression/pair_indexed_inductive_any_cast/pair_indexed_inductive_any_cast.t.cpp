@@ -1,7 +1,7 @@
 // Copyright 2026 Bloomberg Finance L.P.
 // Distributed under the terms of the GNU LGPL v2.1 license.
 // Regression: accessing fst/snd of a pair field in a type-indexed inductive
-// must emit std::any_cast<T> in generated C++ (not a bare std::any return).
+// must emit crane::any_cast<T> in generated C++ (not a bare crane::obj return).
 
 #include "PairIndexedInductiveAnyCast.h"
 #include "Datatypes.h"

@@ -122,6 +122,71 @@ let rec eq_ml_type t1 t2 =
 and eq_ml_meta m1 m2 =
   Int.equal m1.id m2.id && Option.equal eq_ml_type m1.contents m2.contents
 
+(** [fill_placeholders pre args] applies a head already carrying [pre] to
+    [args].
+
+    Extraction eta-expands a type constructor passed as an argument -- what
+    stands for [M] is [M _], and for [AE +' BE] it is [sum1 AE BE _], the last
+    argument a placeholder extraction could not name -- so applying such a head
+    to a real argument does not extend the application, it fills the
+    placeholder.  Appending instead would give the constructor one argument per
+    substitution it passes through: [m<std::any, A>] for an [m] that takes one,
+    [Sum1<AE, BE, std::any, std::any>] for a [Sum1] that takes three.
+
+    The placeholders are not always trailing.  A carrier that is a type-level
+    lambda -- [fun T => holder T (box T)] -- has no MiniML spelling, and what
+    extraction leaves is the body with every occurrence of the binder written
+    as [Tunknown]: [holder[_, box[_]]].  Applying that is filling each hole,
+    not appending, which would give [holder] a third argument it does not
+    take.
+
+    That reading of a non-trailing hole belongs to a {e generated} head, whose
+    higher-kinded parameters hold the carrier already applied at the element
+    (see [Gen_decls.gen_record_cpp]).  A custom mapping takes a family at a
+    plain [typename], its index erased -- [sum1 => "Sum1"] -- so a hole
+    inside such an argument is that family's own placeholder, and filling it
+    would apply the family a second time when it is applied for real:
+    [sum1 (CE _) (FailE _) _] nested in [CE +' FailE +' ...] became
+    [Sum1<CE, FailE, X, X>].  [~generated:false] says the head is such a
+    mapping. *)
+let rec type_has_hole = function
+  | Tunknown -> true
+  | Tglob (_, l, _) | Tapp (_, l) -> List.exists type_has_hole l
+  | Tarr (a, b) -> type_has_hole a || type_has_hole b
+  | Tmeta {contents = Some t} -> type_has_hole t
+  | _ -> false
+
+let rec fill_type_hole a = function
+  | Tunknown -> a
+  | Tglob (r, l, e) -> Tglob (r, List.map (fill_type_hole a) l, e)
+  | Tapp (j, l) -> Tapp (j, List.map (fill_type_hole a) l)
+  | Tarr (x, y) -> Tarr (fill_type_hole a x, fill_type_hole a y)
+  | t -> t
+
+let rec drop_placeholders rpre n =
+  match (rpre, n) with
+  | Tunknown :: rest, n when n > 0 -> drop_placeholders rest (n - 1)
+  | _ -> rpre
+
+let writes_binder args =
+  List.exists type_has_hole
+    (drop_placeholders (List.rev args) (List.length args))
+
+let fill_placeholders ?(generated = true) pre args =
+  let kept = List.rev (drop_placeholders (List.rev pre) (List.length args)) in
+  (* The trailing run of placeholders is the eta-expansion, whichever part of
+     it these arguments reach; a hole anywhere else is a binder the lambda
+     body writes.  [stateT S m] arrives as [stateT(S, m _, _)] -- the record's
+     monad parameter is applied to the element, so the binder is written
+     twice, and dropping the trailing occurrence would leave the other
+     unfilled and the glob an argument short.  Where such a hole survives, the
+     application is a fill of every occurrence at once, and one argument is
+     all such a spelling can say where to put. *)
+  match args with
+  | [arg] when generated && writes_binder pre ->
+    List.map (fill_type_hole arg) pre
+  | _ -> kept @ args
+
 (** Apply a type to [args], contracting the application when the head is
     known.  [Tapp] is a redex: its head is a type variable, so substituting
     that variable with a concrete type constructor reduces it.
@@ -134,8 +199,25 @@ let rec apply_ml_type head args =
   | _ -> (
     match head with
     | Tvar (_, j) -> Tapp (j, args)
-    | Tapp (j, pre) -> Tapp (j, pre @ args)
-    | Tglob (r, pre, es) -> Tglob (r, pre @ args, es)
+    | Tapp (j, pre) -> Tapp (j, fill_placeholders pre args)
+    (* An inductive already applied to every parameter takes nothing more
+       by appending.  With no hole left it is a type: a family written
+       applied at its index -- [sum1 e3 (...) X] substituted for the [E2] of
+       [E2 X] -- is its own type.  With a hole in it, the application fills
+       the hole, custom or not: [option (F _)], the carrier of [fun T =>
+       option (F T)], applied to [V] is [option (F V)], not [option (F _) V]. *)
+    | Tglob ((GlobRef.IndRef (kn, _) as r), pre, es)
+      when (match Table.get_ind_num_param_vars_opt kn with
+            | Some n -> List.length pre = n
+            | None -> false)
+           && not (List.exists (function Tunknown -> true | _ -> false) pre) -> (
+      match args with
+      | [arg] when List.exists type_has_hole pre ->
+        Tglob (r, List.map (fill_type_hole arg) pre, es)
+      | _ -> head )
+    | Tglob (r, pre, es) ->
+      Tglob
+        (r, fill_placeholders ~generated:(not (Table.is_custom r)) pre args, es)
     | Tmeta {contents = Some u} -> apply_ml_type u args
     | Tmeta ({contents = None; _} as m) -> (
       (* The head is not known yet, and a pending application of a
@@ -156,6 +238,17 @@ let rec apply_ml_type head args =
         let u = new_meta () in
         pending_applications := (m.id, args, u) :: !pending_applications;
         u )
+    | Tarr _ when type_has_hole head -> (
+      (* A carrier that is a type-level lambda has no MiniML spelling, so what
+         extraction leaves is its body with the binder written as [Tunknown]
+         (see {!fill_placeholders}).  Where that body's head is an arrow there
+         is no constructor to extend, and applying it is filling the hole:
+         [Basics.Monads.stateT S m] unfolds to [S -> m (S * _)], and the
+         method's own variable belongs in that hole.  Left unfilled the
+         element position stays erased while everything around it is spelled,
+         which is the [std::any] in a [pair<T1, std::any>] whose neighbour is
+         concrete. *)
+      match args with [a] -> fill_type_hole a head | _ -> head )
     | Tunknown -> (
       (* The only heads extraction leaves unknown here are type constructors it
          could not name, and the one such constructor a class can be
@@ -775,14 +868,132 @@ let rec has_unknown = function
 
     Only annotations that mention [Tunknown] are touched, and only where the
     context supplies something better, so a term whose types survived
-    extraction intact passes through unchanged. *)
-let recover_erased_types (expected : ml_type) (a : ml_ast) : ml_ast =
+    extraction intact passes through unchanged.
+
+    [~only] narrows the recovery to the types the caller wants the declaration
+    to speak about, and, where it does speak, writes the recovered type into
+    the binder's own annotation as well as into the environment's copy of it.
+    Both halves answer the same question.  A caller that reads its parameters
+    straight off the declared signature wants the annotation left alone and
+    every recovery taken; a caller whose parameter types are about to be
+    guessed at wants the arrow to speak first, but only over the holes that
+    guess would otherwise fill -- everywhere else the body has a pass that
+    knows better than the declaration does, and an alias in particular is a
+    type in its own right whose spelling the body must keep. *)
+let recover_erased_types ?only ?(refine_only = false) (expected : ml_type)
+    (a : ml_ast) : ml_ast =
   (* [env] holds the binders' types, innermost first, as de Bruijn demands. *)
   let type_of_rel env n = try Some (List.nth env (n - 1)) with _ -> None in
+  (* [Tunknown] is not the only way an annotation says nothing.  A
+     metavariable unification never resolved is just as empty, and it is what
+     a record constructor inside an instance method carries: [mkStateT]'s
+     annotation arrives as [stateT ?1 ?2 _], three positions and not one of
+     them determined.  Asking only about [Tunknown] declines the recovery and
+     the printer then erases all three to [std::any], against a signature that
+     by now spells every one of them. *)
+  let rec uninformative = function
+    | Tmeta {contents = None} -> true
+    | Tmeta {contents = Some t} -> uninformative t
+    | Tunknown -> true
+    | Tarr (a, b) -> uninformative a || uninformative b
+    | Tglob (_, l, _) -> List.exists uninformative l
+    | _ -> false
+  in
+  (* The declaration may {e refine} an annotation, not {e respell} it.  A
+     partially-known [sigT nat (unit -> _)] and the declaration's [entry] may
+     well denote the same type, but they are different spellings of it, and
+     taking the second throws away the structure the body had already pinned
+     down -- the printer then asks a [SigT<...>] for a member named [entry].
+     An alias is a type in its own right.  So the declaration is taken only
+     where it agrees with the annotation head for head, filling the holes and
+     changing nothing else. *)
+  let rec refines ~have ~from =
+    match (have, from) with
+    | (Tunknown | Tmeta {contents = None}), _ -> true
+    | Tmeta {contents = Some h}, f -> refines ~have:h ~from:f
+    | h, Tmeta {contents = Some f} -> refines ~have:h ~from:f
+    | Tarr (a, b), Tarr (c, d) ->
+      refines ~have:a ~from:c && refines ~have:b ~from:d
+    | Tglob (r, l, _), Tglob (r', l', _) ->
+      GlobRef.CanOrd.equal r r'
+      && Int.equal (List.length l) (List.length l')
+      && List.for_all2 (fun a b -> refines ~have:a ~from:b) l l'
+    | Tapp (i, l), Tapp (j, l') ->
+      Int.equal i j
+      && Int.equal (List.length l) (List.length l')
+      && List.for_all2 (fun a b -> refines ~have:a ~from:b) l l'
+    | _ -> false
+  in
+  let accepts = match only with None -> fun _ -> true | Some p -> p in
   let better ~have ~from =
     match from with
-    | Some t when has_unknown have && not (has_unknown t) -> t
+    | Some t
+      when uninformative have
+           && (not (uninformative t))
+           && ((not refine_only) || refines ~have ~from:t)
+           && accepts t -> t
     | _ -> have
+  in
+  (* The callee's declared domains for this call, instantiated at the call's
+     own type arguments -- one offer per argument, [None] where the
+     declaration does not reach.
+
+     The two lists are aligned from the left and the shorter one runs out.
+     Both ways of running out are ordinary and neither says the declaration is
+     describing a different call: a monad whose carrier unfolds to a function
+     takes the arguments of that function too, so [bind : m A -> (A -> m B) ->
+     m B] at [m = stateT S m'] is declared with two domains and applied to
+     three; and a partial application has fewer.  Only the positions the
+     declaration actually spells are offered, which is exactly the prefix.
+     Requiring the lengths to agree instead withdrew every offer at such a
+     call -- including the ones the declaration named perfectly well. *)
+  let callee_doms r tys args =
+    match (try Some (Table.find_type r) with Not_found -> None) with
+    | None -> []
+    | Some sch ->
+      let doms, _ =
+        type_decomp (if tys = [] then sch else type_subst_list tys sch)
+      in
+      (* An erased type argument is an arrow in the declaration and nothing in
+         the application, so the two are only comparable once it is dropped.
+         [Tdummy] does not say which arrows those are: it is equally what a
+         *value* argument's type erases to, and such an argument is still
+         passed.  [bind] on a transformer over an erased carrier declares
+         [Dt -> Monad[Dt] -> Dt -> Dt -> Dt -> (nat -> Dt) -> Dt] for the same
+         three arguments the informative instance spells with one [Dt] fewer,
+         and dropping every one of them slides the continuation a position
+         left -- so the lambda is offered the monadic value's type, or nothing.
+
+         What the two do agree on is how many positions survive.  The erased
+         type arguments come from the prenex quantifiers, so they are the
+         leftmost dummies; drop only that many, from the left, and the rest
+         line up with the application. *)
+      let n_drop = List.length doms - List.length args in
+      let doms =
+        if n_drop <= 0 then doms
+        else
+          let left = ref n_drop in
+          List.filter
+            (fun d ->
+              if !left > 0 && isTdummy d then begin
+                decr left;
+                false
+              end
+              else true )
+            doms
+      in
+      if doms = [] then []
+      else
+        (* A dummy that survives the alignment is a position whose type the
+           declaration erased.  That is not an answer, and offering it as one
+           writes [Tdummy] over a binder that is still there -- which is how a
+           binder gets removed rather than typed. *)
+        List.mapi
+          (fun i _ ->
+            match List.nth_opt doms i with
+            | Some d when isTdummy d -> None
+            | o -> o )
+          args
   in
   let rec go env expected a =
     match a with
@@ -796,12 +1007,15 @@ let recover_erased_types (expected : ml_type) (a : ml_ast) : ml_ast =
         | Some (Tarr (d, c)) -> (Some d, Some c)
         | _ -> (None, None)
       in
-      (* The binder's own annotation is left alone -- the caller recovers
-         parameter types from the declared signature directly, and rewriting
-         them here would disturb how the parameters are collected.  Only the
-         environment learns the better type, so the [MLcase] heads below can
-         use it. *)
-      MLlam (i, ty, go (better ~have:ty ~from:dom :: env) cod b)
+      (* Under [~only], the binder's annotation is recovered too.  A parameter
+         whose type extraction erased is a hole that a later pass will guess
+         at, and a guess made from the class rather than from the arrow cannot
+         tell one associated type from another -- [takes_three (a :
+         allocationId) (p : prov)] came out taking two [prov]s.  The arrow
+         knows; write it down where the guess would otherwise land. *)
+      let better_ty = better ~have:ty ~from:dom in
+      let ty = if only = None then ty else better_ty in
+      MLlam (i, ty, go (better_ty :: env) cod b)
     | MLletin (i, ty, e, b) ->
       let e = go env (if has_unknown ty then None else Some ty) e in
       MLletin (i, ty, e, go (ty :: env) expected b)
@@ -820,6 +1034,13 @@ let recover_erased_types (expected : ml_type) (a : ml_ast) : ml_ast =
       MLcase (ty, go env None scrut, Array.map branch branches)
     | MLcons (ty, c, args) ->
       MLcons (better ~have:ty ~from:expected, c, List.map (go env None) args)
+    | MLapp ((MLglob (r, tys) as f), args) when callee_doms r tys args <> [] ->
+      (* A lambda passed as an argument is the case with no second witness:
+         its binder's type occurs nowhere in the enclosing declaration -- it
+         is spelled only by the callee's parameter at that position, with this
+         call's type arguments substituted in.  That is an authority of the
+         same kind as the declared type, so it is pushed down the same way. *)
+      MLapp (f, List.map2 (fun d e -> go env d e) (callee_doms r tys args) args)
     | MLapp (f, args) ->
       MLapp (go env None f, List.map (go env None) args)
     | MLmagic (m, e) -> MLmagic (m, go env expected e)
@@ -1183,16 +1404,20 @@ let rec named_lams ids a =
 
 (** {2 The same for a specific identifier (resp. anonymous, dummy)} *)
 
+(** [many_lams id a tys] wraps [a] in one lambda per entry of [tys], all bound
+    to [id].  The list is in de Bruijn order: its head becomes the innermost
+    binder, index 1 in [a]. *)
 let rec many_lams id a = function
-  | 0 -> a
-  | n -> many_lams id (MLlam (id, Taxiom, a)) (pred n)
-(* Taxiom is safe here: anonym_tmp_lams is only called from general_optimize_fix,
-   where normalize immediately beta-reduces these lambdas away before any C++
-   translation path sees them. *)
+  | [] -> a
+  | ty :: tys -> many_lams id (MLlam (id, ty, a)) tys
 
-let anonym_tmp_lams a n = many_lams (Tmp anonymous_name) a n
+let anonym_tmp_lams a tys = many_lams (Tmp anonymous_name) a tys
 
-let dummy_lams a n = many_lams Dummy a n
+(* [Taxiom] is written deliberately here and nowhere else: these binders are
+   [Dummy], so the erasure pass removes them and no C++ path ever asks what
+   they are.  A binder that survives needs a real type -- see
+   {!general_optimize_fix}. *)
+let dummy_lams a n = many_lams Dummy a (List.init n (fun _ -> Taxiom))
 
 (** {2 mixed according to a signature} *)
 
@@ -1968,6 +2193,20 @@ let normalize a =
   in
   norm a
 
+(** [apply_eta_args f args] is [f] applied to [args], with the application
+    placed where [f] produces its value rather than wrapped around [f].
+
+    Eta-expansion invents its parameters after simplification has run, so the
+    application it builds is a redex nothing has looked at.  Around a
+    conditional that redex is not merely unsimplified but untranslatable: the
+    branches of [if even n then f_even n else f_odd n] are two closures with
+    two closure types, and C++ has no common type to give the conditional --
+    even though each branch, applied, is an ordinary call.  {!simpl_app}
+    already knows where an application belongs; this is the entry point for
+    the callers that build one late. *)
+let apply_eta_args f args =
+  match args with [] -> f | _ -> simpl_app (optims ()) args f
+
 (** {1 Special treatment of fixpoint for pretty-printing purpose} *)
 
 (** Optimizes a fixpoint by reordering arguments so that [n] leading arguments
@@ -1981,7 +2220,30 @@ let general_optimize_fix f ids n args m c =
   in
   List.iteri aux args;
   let args_f = List.rev_map (fun i -> MLrel (i + m + 1)) (Array.to_list v) in
-  let new_f = anonym_tmp_lams (MLapp (MLrel (n + m + 1), args_f)) m in
+  (* The [m] binders introduced here stand for [args], one each, so a binder's
+     type is the type of the outer binder its argument names -- [aux] above has
+     already established that every argument is such an [MLrel].  Binder [d]
+     counting from the innermost is argument [m - d], because [args_f] maps
+     argument [i] to [MLrel (m - i)].
+
+     They used to be written [Taxiom] on the premise that [normalize]
+     beta-reduces them away before any C++ path sees them.  The premise holds
+     only where the recursive occurrence is {e applied}: a point-free
+     self-reference is no redex, the lambdas survive, and [Taxiom] prints as
+     the undeclared C++ type [axiom]. *)
+  let arg_ty = function
+    | MLrel j -> (
+      match List.nth_opt ids (j - 1) with Some (_, ty) -> ty | None -> Tunknown
+      )
+    | _ -> Tunknown
+  in
+  let new_tys =
+    List.init m (fun d ->
+        match List.nth_opt args (m - 1 - d) with
+        | Some arg -> arg_ty arg
+        | None -> Tunknown )
+  in
+  let new_f = anonym_tmp_lams (MLapp (MLrel (n + m + 1), args_f)) new_tys in
   let new_c = named_lams ids (normalize (MLapp (ast_subst new_f c, args))) in
   MLfix (0, [|f|], [|new_c|], false)
 

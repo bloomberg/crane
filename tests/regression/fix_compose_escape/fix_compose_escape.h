@@ -1,8 +1,7 @@
 #ifndef INCLUDED_FIX_COMPOSE_ESCAPE
 #define INCLUDED_FIX_COMPOSE_ESCAPE
 
-#include <functional>
-#include <type_traits>
+#include "fn.h"
 
 struct FixComposeEscape {
   /// A local fixpoint is composed with another function.
@@ -13,23 +12,18 @@ struct FixComposeEscape {
   /// variable that is destroyed when compose_add returns.  The =
   /// capture copies the std::function VALUE, including its dangling
   /// & references.
-  template <typename F1>
-    requires std::is_invocable_r_v<uint64_t, F1 &, uint64_t &>
-  static uint64_t compose_add(uint64_t base, F1 &&g, uint64_t x0_) {
-    return [=]() mutable {
-      auto add_impl = [=](auto &_self_add, uint64_t x) mutable -> uint64_t {
-        if (x <= 0) {
-          return base;
-        } else {
-          uint64_t x_ = x - 1;
-          return (_self_add(_self_add, x_) + 1);
-        }
-      };
-      auto add = [=](uint64_t x) mutable -> uint64_t {
-        return add_impl(add_impl, x);
-      };
-      return [=](uint64_t x) mutable { return g(add(x)); };
-    }()(x0_);
+  static uint64_t compose_add(uint64_t base, crane::fn<uint64_t(uint64_t)> g,
+                              uint64_t x0_) {
+    auto add_impl = [&](auto &_self_add, uint64_t x) -> uint64_t {
+      if (x <= 0) {
+        return base;
+      } else {
+        uint64_t x_ = x - 1;
+        return (_self_add(_self_add, x_) + 1);
+      }
+    };
+    auto add = [&](uint64_t x) -> uint64_t { return add_impl(add_impl, x); };
+    return g(add(x0_));
   }
 
   /// test1: compose_add 42 id 3 = id (42 + 3) = 45
@@ -45,7 +39,7 @@ struct FixComposeEscape {
   /// = fun x => 150 + x
   /// test3 = 150 + 7 = 157
   static inline const uint64_t test3 = []() {
-    std::function<uint64_t(uint64_t)> inner = [](uint64_t _x0) -> uint64_t {
+    crane::fn<uint64_t(uint64_t)> inner = [](uint64_t _x0) -> uint64_t {
       return compose_add(UINT64_C(50), [](uint64_t x) { return x; }, _x0);
     };
     return compose_add(UINT64_C(100), inner, UINT64_C(7));

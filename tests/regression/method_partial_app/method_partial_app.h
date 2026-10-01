@@ -2,9 +2,9 @@
 #define INCLUDED_METHOD_PARTIAL_APP
 
 #include "crane_fn.h"
+#include "fn.h"
 #include "small_vector.h"
 #include <atomic>
-#include <functional>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -47,10 +47,10 @@ struct MethodPartialApp {
       crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a2) {
+          if (_alt->a2 && _alt->a2.use_count() == 1) {
             _stack.push_back(std::move(_alt->a2));
           }
         }
@@ -155,7 +155,7 @@ struct MethodPartialApp {
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
-        std::decay_t<T1> _result;
+        T1 _result;
         tree a2;
         uint64_t a1;
         tree a0;
@@ -217,7 +217,7 @@ struct MethodPartialApp {
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
-        std::decay_t<T1> _result;
+        T1 _result;
         tree a2;
         uint64_t a1;
         tree a0;
@@ -263,8 +263,9 @@ struct MethodPartialApp {
       tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
                           UINT64_C(20),
                           tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
-      std::function<uint64_t(uint64_t)> f =
-          [=](uint64_t _x0) mutable -> uint64_t { return t.add_to_sum(_x0); };
+      crane::fn<uint64_t(uint64_t)> f = [=](uint64_t _x0) -> uint64_t {
+        return std::move(t).add_to_sum(_x0);
+      };
       return (f(UINT64_C(5)) + f(UINT64_C(10)));
     }();
   }();
@@ -272,27 +273,25 @@ struct MethodPartialApp {
   /// Partial app stored in a constructor.
   struct box {
     // DATA
-    std::function<uint64_t(uint64_t)> a0;
+    crane::fn<uint64_t(uint64_t)> a0;
 
     // ACCESSORS
     box clone() const { return {a0}; }
 
     // CREATORS
-    static box box0(std::function<uint64_t(uint64_t)> a0) {
+    static box box0(crane::fn<uint64_t(uint64_t)> a0) {
       return {std::move(a0)};
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &,
-                                     std::function<uint64_t(uint64_t)> &>
+      requires std::is_invocable_r_v<T1, F0 &, crane::fn<uint64_t(uint64_t)> &>
     T1 box_rec(F0 &&f) const {
       const auto &[a0] = *this;
       return f(a0);
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &,
-                                     std::function<uint64_t(uint64_t)> &>
+      requires std::is_invocable_r_v<T1, F0 &, crane::fn<uint64_t(uint64_t)> &>
     T1 box_rect(F0 &&f) const {
       const auto &[a0] = *this;
       return f(a0);
@@ -304,8 +303,9 @@ struct MethodPartialApp {
       tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
                           UINT64_C(20),
                           tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
-      box b = box::box0(
-          [=](uint64_t _x0) mutable -> uint64_t { return t.add_to_sum(_x0); });
+      box b = box::box0([=](uint64_t _x0) -> uint64_t {
+        return std::move(t).add_to_sum(_x0);
+      });
       auto &[a0] = b;
       return (a0(UINT64_C(5)) + a0(UINT64_C(10)));
     }();
@@ -315,10 +315,10 @@ struct MethodPartialApp {
     return []() {
       tree t1 = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
       tree t2 = tree::node(tree::leaf(), UINT64_C(20), tree::leaf());
-      std::function<uint64_t(uint64_t)> f1 = [&](uint64_t _x0) -> uint64_t {
+      crane::fn<uint64_t(uint64_t)> f1 = [&](uint64_t _x0) -> uint64_t {
         return std::move(t1).add_to_sum(_x0);
       };
-      std::function<uint64_t(uint64_t)> f2 = [&](uint64_t _x0) -> uint64_t {
+      crane::fn<uint64_t(uint64_t)> f2 = [&](uint64_t _x0) -> uint64_t {
         return std::move(t2).add_to_sum(_x0);
       };
       return (f1(UINT64_C(0)) + f2(UINT64_C(0)));

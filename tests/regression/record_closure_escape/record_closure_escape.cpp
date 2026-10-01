@@ -33,9 +33,8 @@ uint64_t RecordClosureEscape::sum_values(const RecordClosureEscape::tree &t,
 /// record constructor arguments.
 RecordClosureEscape::fn_record
 RecordClosureEscape::record_escape(RecordClosureEscape::tree t) {
-  return fn_record{
-      [=](uint64_t _x0) mutable -> uint64_t { return sum_values(t, _x0); },
-      UINT64_C(42)};
+  return fn_record{[=](uint64_t _x0) -> uint64_t { return sum_values(t, _x0); },
+                   UINT64_C(42)};
 }
 
 uint64_t

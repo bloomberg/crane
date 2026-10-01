@@ -2,12 +2,13 @@
 #define INCLUDED_CLOSURES_IN_DATA
 
 #include "crane_fn.h"
-#include "small_vector.h"
+#include "fn.h"
+#include "obj.h"
 #include <any>
 #include <atomic>
-#include <functional>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -37,21 +38,26 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U> List(const List<_U> &_other) {
-    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->v_ = Nil{};
-    } else {
-      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>) {
-                          return crane_any_cast<A>(a);
-                        } else {
-                          return A(a);
-                        }
-                      }(),
-                      (l ? std::make_shared<List<A>>(*l) : nullptr)};
-    }
-  }
+  template <typename _U>
+  List(const List<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+            return Nil{};
+          } else {
+            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const _U &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                   : nullptr)};
+          }
+        }()) {}
 
   static List<A> nil() { return List<A>(Nil{}); }
 
@@ -61,22 +67,18 @@ public:
 
   // MANIPULATORS
   ~List() {
-    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
-        if (_alt->l) {
-          _stack.push_back(std::move(_alt->l));
+        if (_alt->l && _alt->l.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->l);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<List<A>> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -134,23 +136,23 @@ public:
 
 struct ClosuresInData {
   /// A list of functions: successor, doubling, and squaring.
-  static inline const List<std::function<uint64_t(uint64_t)>> fn_list =
-      List<std::function<uint64_t(uint64_t)>>::cons(
+  static inline const List<crane::fn<uint64_t(uint64_t)>> fn_list =
+      List<crane::fn<uint64_t(uint64_t)>>::cons(
           [](uint64_t x) { return (x + 1); },
-          List<std::function<uint64_t(uint64_t)>>::cons(
+          List<crane::fn<uint64_t(uint64_t)>>::cons(
               [](uint64_t x) { return (x + x); },
-              List<std::function<uint64_t(uint64_t)>>::cons(
+              List<crane::fn<uint64_t(uint64_t)>>::cons(
                   [](uint64_t x) { return (x * x); },
-                  List<std::function<uint64_t(uint64_t)>>::nil())));
+                  List<crane::fn<uint64_t(uint64_t)>>::nil())));
   /// apply_all fns x applies every function in fns to x,
   /// returning the list of results.
   static List<uint64_t>
-  apply_all(const List<std::function<uint64_t(uint64_t)>> &fns, uint64_t x);
+  apply_all(const List<crane::fn<uint64_t(uint64_t)>> &fns, uint64_t x);
 
   /// A pair of invertible transformations: forward and backward.
   struct transform {
-    std::function<uint64_t(uint64_t)> forward;
-    std::function<uint64_t(uint64_t)> backward;
+    crane::fn<uint64_t(uint64_t)> forward;
+    crane::fn<uint64_t(uint64_t)> backward;
   };
 
   /// A transform that doubles via addition and halves via division.
@@ -161,21 +163,21 @@ struct ClosuresInData {
   static uint64_t apply_backward(const transform &t, uint64_t x);
   /// compose_all fns x folds fns left, threading x through each
   /// function in sequence.
-  static uint64_t
-  compose_all(const List<std::function<uint64_t(uint64_t)>> &fns, uint64_t x);
+  static uint64_t compose_all(const List<crane::fn<uint64_t(uint64_t)>> &fns,
+                              uint64_t x);
   /// A pipeline of transformations: increment, double, then add 10.
-  static inline const List<std::function<uint64_t(uint64_t)>> pipeline =
-      List<std::function<uint64_t(uint64_t)>>::cons(
+  static inline const List<crane::fn<uint64_t(uint64_t)>> pipeline =
+      List<crane::fn<uint64_t(uint64_t)>>::cons(
           [](uint64_t x) { return (x + UINT64_C(1)); },
-          List<std::function<uint64_t(uint64_t)>>::cons(
+          List<crane::fn<uint64_t(uint64_t)>>::cons(
               [](uint64_t x) { return (x * UINT64_C(2)); },
-              List<std::function<uint64_t(uint64_t)>>::cons(
+              List<crane::fn<uint64_t(uint64_t)>>::cons(
                   [](uint64_t x) { return (x + UINT64_C(10)); },
-                  List<std::function<uint64_t(uint64_t)>>::nil())));
+                  List<crane::fn<uint64_t(uint64_t)>>::nil())));
   /// maybe_apply mf x applies function mf to x if present,
   /// otherwise returns x unchanged.
   static uint64_t
-  maybe_apply(const std::optional<std::function<uint64_t(uint64_t)>> &mf,
+  maybe_apply(const std::optional<crane::fn<uint64_t(uint64_t)>> &mf,
               uint64_t x);
   static inline const List<uint64_t> test_apply_all =
       apply_all(fn_list, UINT64_C(5));
@@ -186,11 +188,11 @@ struct ClosuresInData {
   static inline const uint64_t test_compose =
       compose_all(pipeline, UINT64_C(3));
   static inline const uint64_t test_maybe_some =
-      maybe_apply(std::make_optional<std::function<uint64_t(uint64_t)>>(
+      maybe_apply(std::make_optional<crane::fn<uint64_t(uint64_t)>>(
                       [](uint64_t x) { return (x + 1); }),
                   UINT64_C(41));
-  static inline const uint64_t test_maybe_none = maybe_apply(
-      std::optional<std::function<uint64_t(uint64_t)>>(), UINT64_C(42));
+  static inline const uint64_t test_maybe_none =
+      maybe_apply(std::optional<crane::fn<uint64_t(uint64_t)>>(), UINT64_C(42));
 };
 
 #endif // INCLUDED_CLOSURES_IN_DATA

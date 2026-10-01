@@ -1,12 +1,14 @@
 #ifndef INCLUDED_OBJ_NIL_ERASURE_MISMATCH
 #define INCLUDED_OBJ_NIL_ERASURE_MISMATCH
 
-#include "small_vector.h"
+#include "crane_fn.h"
+#include "fn.h"
+#include "obj.h"
 #include <any>
 #include <atomic>
 #include <deque>
-#include <functional>
 #include <memory>
+#include <stdexcept>
 #include <utility>
 #include <variant>
 
@@ -15,6 +17,7 @@ struct Nat;
 template <typename A, typename B> struct Prod;
 template <typename A, typename P> struct SigT;
 enum class Sym;
+using semty = crane::obj;
 enum class Unit { TT };
 
 struct Nat {
@@ -45,22 +48,18 @@ public:
 
   // MANIPULATORS
   ~Nat() {
-    crane::small_vector<std::shared_ptr<Nat>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<Nat> {
       if (auto *_alt = std::get_if<S>(&_v)) {
-        if (_alt->a0) {
-          _stack.push_back(std::move(_alt->a0));
+        if (_alt->a0 && _alt->a0.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a0);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<Nat> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -83,6 +82,25 @@ template <typename A, typename B> struct Prod {
   // ACCESSORS
   Prod<A, B> clone() const { return {a0, a1}; }
 
+  template <typename _U0, typename _U1> operator Prod<_U0, _U1>() const {
+    return {[&]() -> _U0 {
+              if constexpr (crane_convertible<_U0, const A &>) {
+                return crane_convert<_U0>(a0);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }(),
+            [&]() -> _U1 {
+              if constexpr (crane_convertible<_U1, const B &>) {
+                return crane_convert<_U1>(a1);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }()};
+  }
+
   // CREATORS
   static Prod<A, B> pair(A a0, B a1) { return {std::move(a0), std::move(a1)}; }
 };
@@ -94,6 +112,25 @@ template <typename A, typename P> struct SigT {
 
   // ACCESSORS
   SigT<A, P> clone() const { return {x, a1}; }
+
+  template <typename _U0, typename _U1> operator SigT<_U0, _U1>() const {
+    return {[&]() -> _U0 {
+              if constexpr (crane_convertible<_U0, const A &>) {
+                return crane_convert<_U0>(x);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }(),
+            [&]() -> _U1 {
+              if constexpr (crane_convertible<_U1, const P &>) {
+                return crane_convert<_U1>(a1);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }()};
+  }
 
   // CREATORS
   static SigT<A, P> existt(A x, P a1) { return {std::move(x), std::move(a1)}; }
@@ -140,64 +177,63 @@ template <typename A, typename P> struct SigT {
 /// concrete std::deque<Prod<Nat,Nat>> type: their return type is declared
 /// concretely (list (nat*nat)), so no value-dependent erasure applies.
 enum class Sym { TOPSYM, PAIRSYM, PAIRSSYM };
-using semty = std::any;
-const std::deque<SigT<Sym, std::function<semty(Unit)>>> entries =
+const std::deque<SigT<Sym, crane::fn<semty(Unit)>>> entries =
     [](auto _a0, auto _a1) {
       _a1.push_front(_a0);
       return _a1;
-    }(SigT<Sym, std::function<std::any(Unit)>>::existt(
+    }(SigT<Sym, crane::fn<semty(Unit)>>::existt(
           Sym::PAIRSYM,
           [](Unit) {
-            return Prod<std::any, std::any>::pair(
+            return Prod<crane::obj, crane::obj>::pair(
                 Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))),
                 Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))));
           }),
       [](auto _a0, auto _a1) {
         _a1.push_front(_a0);
         return _a1;
-      }(SigT<Sym, std::function<std::any(Unit)>>::existt(
+      }(SigT<Sym, crane::fn<crane::obj(Unit)>>::existt(
             Sym::PAIRSSYM,
             [](Unit) {
               return [](auto _a0, auto _a1) {
                 _a1.push_front(_a0);
                 return _a1;
-              }(std::any(Prod<std::any, std::any>::pair(
+              }(crane::obj(Prod<crane::obj, crane::obj>::pair(
                          Nat::s(Nat::o()), Nat::s(Nat::s(Nat::o())))),
                      [](auto _a0, auto _a1) {
                        _a1.push_front(_a0);
                        return _a1;
-                     }(std::any(Prod<std::any, std::any>::pair(
+                     }(crane::obj(Prod<crane::obj, crane::obj>::pair(
                            Nat::s(Nat::s(Nat::s(Nat::o()))),
                            Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))),
-                       std::deque<std::any>{}));
+                       std::deque<crane::obj>{}));
             }),
         [](auto _a0, auto _a1) {
           _a1.push_front(_a0);
           return _a1;
-        }(SigT<Sym, std::function<std::any(Unit)>>::existt(
-              Sym::PAIRSSYM, [](Unit) { return std::deque<std::any>{}; }),
+        }(SigT<Sym, crane::fn<crane::obj(Unit)>>::existt(
+              Sym::PAIRSSYM, [](Unit) { return std::deque<crane::obj>{}; }),
           [](auto _a0, auto _a1) {
             _a1.push_front(_a0);
             return _a1;
-          }(SigT<Sym, std::function<std::any(Unit)>>::existt(
+          }(SigT<Sym, crane::fn<crane::obj(Unit)>>::existt(
                 Sym::TOPSYM,
                 [](Unit) {
                   return [](auto _a0, auto _a1) {
                     _a1.push_front(_a0);
                     return _a1;
-                  }(std::any(Prod<std::any, std::any>::pair(
+                  }(crane::obj(Prod<crane::obj, crane::obj>::pair(
                              Nat::s(Nat::s(Nat::s(
                                  Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))),
                              Nat::s(Nat::s(Nat::s(Nat::s(
                                  Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))))),
-                         std::deque<std::any>{});
+                         std::deque<crane::obj>{});
                 }),
             [](auto _a0, auto _a1) {
               _a1.push_front(_a0);
               return _a1;
-            }(SigT<Sym, std::function<std::any(Unit)>>::existt(
-                  Sym::TOPSYM, [](Unit) { return std::deque<std::any>{}; }),
-              std::deque<SigT<Sym, std::function<std::any(Unit)>>>{})))));
+            }(SigT<Sym, crane::fn<crane::obj(Unit)>>::existt(
+                  Sym::TOPSYM, [](Unit) { return std::deque<crane::obj>{}; }),
+              std::deque<SigT<Sym, crane::fn<crane::obj(Unit)>>>{})))));
 /// Directly-callable copies of the two TOPSYM-shaped actions, so the C++
 /// test driver can invoke the "cons" and "nil" cases individually and
 /// observe the mismatched erased shapes.

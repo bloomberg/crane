@@ -32,8 +32,8 @@ int main() {
   {
     bool threw = false;
     try {
-      ITree<int>::vis([]() -> std::any { return std::any{}; },
-                      std::function<std::shared_ptr<ITree<int>>(std::any)>());
+      ITree<int>::vis([]() -> crane::obj { return crane::obj{}; },
+                      std::function<std::shared_ptr<ITree<int>>(crane::obj)>());
     } catch (const std::invalid_argument &) {
       threw = true;
     }
@@ -54,11 +54,11 @@ int main() {
   {
     auto holder = std::make_shared<std::shared_ptr<ITree<void>>>();
     *holder = ITree<void>::vis(
-        [holder]() -> std::any {
+        [holder]() -> crane::obj {
           *holder = nullptr; // drop the external owner mid-run
-          return std::any{};
+          return crane::obj{};
         },
-        [](std::any) { return ITree<void>::ret(); });
+        [](crane::obj) { return ITree<void>::ret(); });
     (*holder)->run();
   }
 

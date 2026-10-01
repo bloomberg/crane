@@ -2,18 +2,19 @@
 #define INCLUDED_MONADIC_CLOSURE
 
 #include "crane_fn.h"
-#include "small_vector.h"
+#include "fn.h"
+#include "obj.h"
 #include <any>
 #include <atomic>
+#include <crane_itree.h>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
-#include <functional>
 #include <iostream>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <system_error>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -42,21 +43,26 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U> List(const List<_U> &_other) {
-    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->v_ = Nil{};
-    } else {
-      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>) {
-                          return crane_any_cast<A>(a);
-                        } else {
-                          return A(a);
-                        }
-                      }(),
-                      (l ? std::make_shared<List<A>>(*l) : nullptr)};
-    }
-  }
+  template <typename _U>
+  List(const List<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+            return Nil{};
+          } else {
+            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const _U &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                   : nullptr)};
+          }
+        }()) {}
 
   static List<A> nil() { return List<A>(Nil{}); }
 
@@ -66,22 +72,18 @@ public:
 
   // MANIPULATORS
   ~List() {
-    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
-        if (_alt->l) {
-          _stack.push_back(std::move(_alt->l));
+        if (_alt->l && _alt->l.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->l);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<List<A>> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -98,29 +100,22 @@ public:
 
 struct MonadicClosure {
   /// 1. Lambda capturing a bind result
-  template <typename T1>
-  static int64_t _capture_bind_f(const T1, const std::string line) {
-    return static_cast<int64_t>(line.length());
-  }
-
   static int64_t capture_bind();
 
   /// 2. Higher-order function taking a pure callback
-  template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, T1 &>
-  static T2 apply_after_effect(F0 &&f, const T1 &m) {
+  template <typename T1, typename T2>
+  static T2 apply_after_effect(std::type_identity_t<crane::fn<T2(T1)>> f,
+                               const T1 &m) {
     T1 x = m;
     return f(std::move(x));
   }
 
   static int64_t test_apply_after();
   /// 3. Function returning a closure from monadic context
-  static std::function<std::string(std::string)> make_greeter();
+  static crane::fn<std::string(std::string)> make_greeter();
 
   /// 4. Passing effectful result to a HOF
-  template <typename F0>
-    requires std::is_invocable_r_v<int64_t, F0 &, int64_t &>
-  static int64_t with_length(F0 &&f) {
+  static int64_t with_length(crane::fn<int64_t(int64_t)> f) {
     std::string line;
     std::getline(std::cin, line);
     return f(static_cast<int64_t>(line.length()));
@@ -131,9 +126,8 @@ struct MonadicClosure {
   static int64_t nested_capture();
 
   /// 6. Closure used in a fold-like pattern
-  template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, std::string &>
-  static uint64_t count_matching(F0 &&pred, const List<std::string> &xs) {
+  static uint64_t count_matching(crane::fn<bool(std::string)> pred,
+                                 const List<std::string> &xs) {
     if (std::holds_alternative<typename List<std::string>::Nil>(xs.v())) {
       return UINT64_C(0);
     } else {

@@ -2,11 +2,12 @@
 #define INCLUDED_TAIL_REC_ZIP
 
 #include "crane_fn.h"
+#include "obj.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
 #include <memory>
-#include <type_traits>
+#include <stdexcept>
 #include <utility>
 #include <variant>
 
@@ -20,6 +21,25 @@ template <typename A, typename B> struct Prod {
 
   // ACCESSORS
   Prod<A, B> clone() const { return {a0, a1}; }
+
+  template <typename _U0, typename _U1> operator Prod<_U0, _U1>() const {
+    return {[&]() -> _U0 {
+              if constexpr (crane_convertible<_U0, const A &>) {
+                return crane_convert<_U0>(a0);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }(),
+            [&]() -> _U1 {
+              if constexpr (crane_convertible<_U1, const B &>) {
+                return crane_convert<_U1>(a1);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }()};
+  }
 
   // CREATORS
   static Prod<A, B> pair(A a0, B a1) { return {std::move(a0), std::move(a1)}; }
@@ -48,21 +68,26 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U> List(const List<_U> &_other) {
-    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->v_ = Nil{};
-    } else {
-      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>) {
-                          return crane_any_cast<A>(a);
-                        } else {
-                          return A(a);
-                        }
-                      }(),
-                      (l ? std::make_shared<List<A>>(*l) : nullptr)};
-    }
-  }
+  template <typename _U>
+  List(const List<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+            return Nil{};
+          } else {
+            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const _U &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                   : nullptr)};
+          }
+        }()) {}
 
   static List<A> nil() { return List<A>(Nil{}); }
 
@@ -72,22 +97,18 @@ public:
 
   // MANIPULATORS
   ~List() {
-    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
-        if (_alt->l) {
-          _stack.push_back(std::move(_alt->l));
+        if (_alt->l && _alt->l.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->l);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<List<A>> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -168,23 +189,23 @@ public:
 template <typename T1, typename T2>
 List<Prod<T1, T2>> better_zip(const List<T1> &la, const List<T2> &lb) {
   auto go_impl = [](auto &_self_go, const List<T1> &la0, const List<T2> &lb0,
-                    List<Prod<T1, T2>> acc) -> List<Prod<T1, T2>> {
+                    const List<Prod<T1, T2>> &acc) -> List<Prod<T1, T2>> {
     if (std::holds_alternative<typename List<T1>::Nil>(la0.v())) {
-      return std::move(acc).rev();
+      return acc.rev();
     } else {
       const auto &[a0, a1] = std::get<typename List<T1>::Cons>(la0.v());
       if (std::holds_alternative<typename List<T2>::Nil>(lb0.v())) {
-        return std::move(acc).rev();
+        return acc.rev();
       } else {
         const auto &[a00, a10] = std::get<typename List<T2>::Cons>(lb0.v());
-        return _self_go(_self_go, *a1, *a10,
-                        List<Prod<T1, T2>>::cons(Prod<T1, T2>::pair(a0, a00),
-                                                 std::move(acc)));
+        return _self_go(
+            _self_go, *a1, *a10,
+            List<Prod<T1, T2>>::cons(Prod<T1, T2>::pair(a0, a00), acc));
       }
     }
   };
   auto go = [&](const List<T1> &la0, const List<T2> &lb0,
-                List<Prod<T1, T2>> acc) -> List<Prod<T1, T2>> {
+                const List<Prod<T1, T2>> &acc) -> List<Prod<T1, T2>> {
     return go_impl(go_impl, la0, lb0, acc);
   };
   return go(la, lb, List<Prod<T1, T2>>::nil());

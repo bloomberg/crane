@@ -45,7 +45,7 @@ EffectHigherOrder::lookup_all(const List<std::string> &names) {
 
 /// 8. Effect in let-bound function
 std::string EffectHigherOrder::process_input() {
-  std::function<std::string(std::string)> format = [](std::string s) {
+  crane::fn<std::string(std::string)> format = [](std::string s) {
     return "["s + s + "]"s;
   };
   std::string line;

@@ -29,11 +29,11 @@ module IntSet = Escape.IntSet
     a lookup of a parameter's type answers with a stale, unrelated entry (for
     a class's associated [Type], the unresolved class type variable, which
     reads as erased and provokes a spurious [any_cast]). *)
-let with_method_env_types env params f =
+let with_method_env_types ?(cpp = []) env params f =
   let saved_env_types = (!tctx).env_types in
   let saved_erased = save_erased_env () in
   reset_env_types ();
-  push_binders env params;
+  push_binders ~cpp env params;
   Fun.protect
     ~finally:(fun () ->
       tctx := { !tctx with env_types = saved_env_types };
@@ -166,7 +166,19 @@ let hkt_carrier_fixed_args arity ml_ty =
     append {!hkt_alias_param_name} entries to the type-variable list it passes
     to [convert_ml_type_to_cpp_type]. *)
 let hkt_carrier_alias base arity ml_ty =
+  let is_lambda =
+    match ml_ty with
+    | Miniml.Tglob (_, args, _) | Miniml.Tapp (_, args) -> Mlutil.writes_binder args
+    | _ -> Mlutil.type_has_hole ml_ty
+  in
   match ml_ty with
+  (* A carrier with a hole is a type-level lambda whose binder is the hole:
+     [stateT S m] reaches here as [S -> m (S * _)], and an alias of an
+     applied type, [EOUP Z := EOU (MaybePoison Z)], as [EOU (MaybePoison _)].
+     The alias applies it to its parameter. *)
+  | _ when arity = 1 && is_lambda ->
+    ( [hkt_alias_param_name 0],
+      Mlutil.fill_type_hole (Miniml.Tvar (Schematic, base + 1)) ml_ty )
   | Miniml.Tglob (r, args, es) ->
     let kept = hkt_carrier_fixed_args arity ml_ty in
     let params =
@@ -206,6 +218,28 @@ let class_promoted_concrete ?(tvar_base = 0) class_ref type_args =
     type_args
   |> List.filteri (fun i _ -> not (is_class_tparam class_ref i))
 
+(** Whether an [ip_vars] entry named [v] is really an associated type of
+    [class_ref].
+
+    A field whose type is a class is promoted while extraction still sees a
+    class there, but whether that class survives as a concept is decided
+    later, by {!Extract_env.demote_value_typeclasses}: one used in value
+    position comes out as a plain struct, and the field holding it stays an
+    ordinary value field.  Asking for it as [typename I::f] then sits beside
+    the method requirement the value side emits, and a concept wanting one
+    name both as a type and as a function is satisfied by no instance at all.
+    The declaration says whether something is a class; only the back end says
+    whether it stayed one. *)
+let promoted_var_is_associated_type class_ref v =
+  List.for_all
+    (fun (field_opt, field_ty) ->
+      match (field_opt, field_ty) with
+      | Some fr, Miniml.Tglob (r, _, _)
+        when Id.equal (Common.id_of_global Term fr) v ->
+        Table.is_typeclass r
+      | _ -> true )
+    (Table.get_record_field_bindings class_ref)
+
 (** The associated-type ("promoted") variables of a class, in [ip_vars] order,
     each paired with its arity: [0] for a plain associated type, [n] for a
     higher-kinded carrier, which is an alias template of [n] parameters. *)
@@ -214,6 +248,7 @@ let class_promoted_vars_arities class_ref =
     (fun i v -> (v, Table.get_ind_hkt_arity class_ref i))
     (Table.get_ind_ip_vars class_ref)
   |> List.filteri (fun i _ -> not (is_class_tparam class_ref i))
+  |> List.filter (fun (v, _) -> promoted_var_is_associated_type class_ref v)
 
 (** The associated-type ("promoted") variables of a class, in [ip_vars]
     order. *)
@@ -231,11 +266,19 @@ let class_fields_with_types = Table.get_record_field_bindings
     [inst_ty] is the instance those names hang off: [Tinstance (_tcI0, Mon)]
     for a function's instance argument, [Tinstance (I, Mon)] inside the class's
     own concept.  A direct associated type of [class_ref] resolves to [typename
-    I::Obj].  A promoted field that is itself a type class contributes its own
+    I::Obj].  A field that is itself a type class contributes its own
     associated types one level deeper ([typename I::base_category::Obj]) —
     extraction marks those with the same bare name, so they are otherwise
     indistinguishable from direct ones.  Direct entries win: a name is never
     resolved through a field when the class declares it itself.
+
+    The field need not be a promoted variable of [class_ref].  A class-typed
+    field is spelled [typename I::PROV] whether or not it was promoted -- that
+    is what the concept requires of [I] -- so the path exists either way, and
+    a class whose every field is an instance promotes nothing at all.
+    Requiring promotion here left [ParamsV]'s [PROV] and [PTR] contributing no
+    resolutions, so [provenance], [ptr] and the rest fell back to the
+    file-scope [using provenance = std::any;].
 
     [fields] defaults to {!class_fields_with_types}; pass it when the caller
     already holds the pairing, as it does while generating the class itself. *)
@@ -251,23 +294,384 @@ let promoted_resolutions ?fields class_ref inst_ty =
         match (field_opt, field_ty) with
         | Some field_ref, Miniml.Tglob (r, _, _) when Table.is_typeclass r ->
           let field_id = Common.id_of_global Term field_ref in
-          if is_direct field_id then
-            List.filter_map
-              (fun v ->
-                if is_direct v then None
-                else Some (v, Tqualified (Tqualified (inst_ty, field_id), v)) )
-              (class_promoted_vars r)
-          else []
+          List.filter_map
+            (fun v ->
+              if is_direct v then None
+              else Some (v, Tqualified (Tqualified (inst_ty, field_id), v)) )
+            (class_promoted_vars r)
         | _ -> [] )
       fields
   in
   List.map (fun v -> (v, Tqualified (inst_ty, v))) direct @ nested
+
+(** The resolutions a class argument supplies to the instance that was given
+    it.
+
+    [PIV : @PI ProvenanceV PointerV] owns no type of its own: [ptr] belongs to
+    [PointerV] and [prov] to [ProvenanceV].  Both are given concretely, so
+    neither becomes a template parameter and neither survives into the ML type
+    -- the class stands there alone as [PI] -- and their promoted variables
+    keep their names while losing the path that gave them meaning, falling back
+    to the file-scope [using prov = std::any;].  The variables that {e do}
+    resolve are exactly the ones whose instance survived as a parameter: one
+    declaration, and the only difference is whether the owner is still there.
+
+    [own_instances] is what a class argument is applied to when it takes
+    arguments.  At the instance's own definition these are its class
+    parameters; at a use site they are the arguments the use writes.  The two
+    share a context -- [PointerV] takes the [_tcI0] that [PIV] takes -- which
+    is why one list serves both.  An argument applied to a different number is
+    left alone: that it is applied at all says it has a context, and a context
+    this one cannot supply is not one to guess at. *)
+let rec class_arg_type ~own_instances sh =
+  match sh with
+  | Table.Carg_unknown -> None
+  | Table.Carg (r, []) -> Some (Tglob (r, [], []))
+  | Table.Carg (r, [arg]) when Table.is_projection r ->
+    (* A class field is an instance of its own class -- [@IPTR P] is an [IPtr]
+       -- but it is not applied to the record, it is selected from it.  Spelling
+       it as a template gives the undeclared [IPTR<ParamsV<natIPtr>>], and a
+       second, wrong answer for every name it owns is indistinguishable from
+       none: {!drop_ambiguous} then drops the right one with it. *)
+    Option.map
+      (fun t -> Tqualified (t, Common.id_of_global Term r))
+      (class_arg_type ~own_instances arg)
+  | Table.Carg (r, args) ->
+    (* A recorded argument spells itself; an unknown one is the context the
+       recorded type shares with [own_instances] -- [PointerV] takes the
+       [_tcI0] that [PIV] takes -- and is filled by position.  A list of a
+       different length is not one to guess at. *)
+    let ts =
+      List.mapi
+        (fun i a ->
+          match class_arg_type ~own_instances a with
+          | Some t -> Some t
+          | None ->
+            if List.length args = List.length own_instances then
+              List.nth_opt own_instances i
+            else None )
+        args
+    in
+    if List.for_all Option.has_some ts then
+      Some (Tglob (r, List.map Option.get ts, []))
+    else None
+
+let resolutions_of_shapes ~own_instances arg_shapes =
+  List.concat_map
+    (fun sh ->
+      match sh with
+      | Table.Carg_unknown -> []
+      | Table.Carg (arg_ref, _) -> (
+        match
+          ( Table.get_instance_class_shape arg_ref
+          , class_arg_type ~own_instances sh )
+        with
+        | Some (arg_class, _), Some inst_ty when Table.is_typeclass arg_class ->
+          promoted_resolutions arg_class inst_ty
+        | _ -> [] ) )
+    arg_shapes
+
+let instance_arg_resolutions ~own_instances inst_ref =
+  match Table.get_instance_class_shape inst_ref with
+  | None -> []
+  | Some (_, arg_shapes) -> resolutions_of_shapes ~own_instances arg_shapes
+
+(** The resolution a declaration's own type supplies when that type is an
+    inductive whose constructor fields name an instance -- see
+    {!Table.get_type_class_args}.  [boxed : @dval natIPtr] is what says which
+    [IPtr] the [ptr] inside [dval] belongs to, and the only thing that does:
+    the ML type keeps neither the argument nor the dependence. *)
+let ind_type_resolutions r =
+  match Table.get_instance_class_shape r with
+  | Some (head, arg_shapes) ->
+    let own_instances =
+      (* The arguments the declaration's own type writes, spelled as written:
+         [@dval (@ParamsV natIPtr)] holds [ParamsV<natIPtr>], not [ParamsV].
+         All or none, because they are read by position. *)
+      let ts = List.map (class_arg_type ~own_instances:[]) arg_shapes in
+      if List.for_all Option.has_some ts then List.map Option.get ts else []
+    in
+    resolutions_of_shapes ~own_instances
+      (* The instances the type is applied to resolve their own classes'
+         variables, not only the ones its fields name: a field whose type
+         unfolds a projection spells the class variable of the context
+         instance directly, and [@frame natIPtr] is what says which. *)
+      (arg_shapes @ Table.get_type_class_args head)
+  | None -> []
+
+(** Drop a promoted name the list answers with two different types.
+
+    Two right answers look exactly like none, and they must: a term that names
+    [natIPtr] and [boolIPtr] says nothing about which one a bare [iptr] meant,
+    and spelling either one puts [Dval<typename natIPtr::iptr>] on the value
+    built at the other.  The erased alias is the only answer that is not wrong
+    somewhere.  Every list of resolutions read from a term passes through
+    here -- a list that skipped it would reinstate the guess.
+
+    A discard destroys evidence, so under [CRANE_CHECK_IR] it says so.  Two
+    right answers are benign, but one right answer and one {e wrong} one
+    annihilate just the same, and the wrong one would have been an undeclared
+    identifier: the filter turns a compile error into a silent [std::any].  The
+    spellings are printed because which of them is nonsense is a question only
+    a reader can answer. *)
+let drop_ambiguous res =
+  let ambiguous (n, t) =
+    List.exists (fun (m, u) -> Id.equal n m && u <> t) res
+  in
+  if Sys.getenv_opt "CRANE_CHECK_IR" <> None then
+    List.iter
+      (fun (n, t) ->
+        if ambiguous (n, t) then
+          Feedback.msg_warning
+            Pp.(
+              str "promoted variable " ++ Id.print n
+              ++ str " is answered more than once; dropping "
+              ++ str (Translation.render_cpp_type_in_template t) ) )
+      res;
+  List.filter (fun e -> not (ambiguous e)) res
+
+(** The resolution a term supplies for the promoted type variables its own type
+    leaves unresolved.
+
+    A class's [Type] field is a promoted type variable, and a type mentioning
+    one says nothing about which instance it belongs to: extraction records
+    [run : EOU ptr] with [ptr] applied to no arguments at all.  Outside any
+    instance struct there is then no [promoted_var_map], so the marker falls
+    back to the file-scope alias -- which is the right answer for a use with no
+    instance in sight, and the erased one here, because the term names one.
+
+    Every concrete instance the term mentions is read, and each contributes
+    what it knows: the promoted variables of its own class, and those of the
+    class arguments it was given (see {!instance_arg_resolutions}).  A name two
+    instances answer differently is dropped rather than decided -- the term
+    mentions both and nothing here says which one the type meant. *)
+let promoted_resolutions_of_body ?r ?ty b =
+  let found = ref [] in
+  (* A recorded shape is only an instance's when its head is a class: the
+     record is taken at extraction, before the tables that would say so are
+     filled, so the question is asked here instead. *)
+  let instance_class r =
+    match Table.get_instance_class_shape r with
+    | Some (class_ref, _) when Table.is_typeclass class_ref -> Some class_ref
+    | _ -> None
+  in
+  let add inst_ref inst_ty =
+    match Table.get_instance_class_shape inst_ref with
+    | Some (class_ref, _) when Table.is_typeclass class_ref ->
+      let own_instances =
+        match inst_ty with Tglob (_, args, _) -> args | _ -> []
+      in
+      found :=
+        !found
+        @ promoted_resolutions class_ref inst_ty
+        @ instance_arg_resolutions ~own_instances inst_ref
+    | _ -> ()
+  in
+  (* An applied instance is read at its application: the head on its own says
+     the same instance at no arguments, which is a second, poorer answer to the
+     same name and would make the pair ambiguous with itself. *)
+  (* An instance applied to a lambda parameter is spelled by that parameter's
+     template name, which only the term's own environment knows; there is none
+     here, and a resolution nobody can spell is not one to offer. *)
+  let closed e =
+    let ok = ref true in
+    let rec go t =
+      (match t with MLrel _ -> ok := false | _ -> ());
+      Mlutil.ast_iter go t
+    in
+    go e;
+    !ok
+  in
+  (* An instance applied to the declaration's own parameters may have no
+     recorded shape -- one declared inside a section over the same class
+     ([MemStateV] under [Context {Pa : Params}]) -- and its class is then
+     the codomain of its own type. *)
+  let instance_class_at r =
+    match instance_class r with
+    | Some _ as c -> c
+    | None -> (
+      match Table.find_type r with
+      | ty -> (
+        match Mlutil.type_simpl (Ml_type_util.ml_codomain ty) with
+        | Miniml.Tglob (c, _, _) when Table.is_typeclass c -> Some c
+        | _ -> None )
+      | exception Not_found -> None )
+  in
+  let add_at class_ref inst_ref inst_ty =
+    match Table.get_instance_class_shape inst_ref with
+    | Some _ -> add inst_ref inst_ty
+    | None -> found := !found @ promoted_resolutions class_ref inst_ty
+  in
+  (* The declaration's own class-instance parameters -- its leading binders
+     whose type is a class -- are spelled by their template names, [_tcI0]
+     and on: an instance applied to one of them, [MemStateV Pa] under
+     [Existing Instance], is [MemStateV<_tcI0>] and resolves the fields of
+     its class as much as a closed one does.  [leading] names the leading
+     binders innermost-first, the order an [MLrel] reads them in; [None]
+     for one that is not an instance. *)
+  let leading =
+    match ty with
+    | None -> []
+    | Some ty ->
+      let binders, _ = collect_lams b in
+      let doms = Ml_type_util.ml_domains ty in
+      let tc_names = ref (Translation.collect_typeclass_param_ids ty) in
+      let outer_first =
+        List.mapi
+          (fun j _ ->
+            match List.nth_opt doms j with
+            | Some d when Table.is_typeclass_type d -> (
+              match !tc_names with
+              | n :: rest -> tc_names := rest; Some n
+              | [] -> None )
+            | _ -> None )
+          (List.rev binders)
+      in
+      List.rev outer_first
+  in
+  (* Every free variable of [e], [d] binders below the leading ones, is one
+     of the leading instance binders. *)
+  let spellable d e =
+    let ok = ref true in
+    let rec go depth t =
+      ( match t with
+      | MLrel i when i > depth ->
+        let k = i - depth - d - 1 in
+        ( match if k >= 0 then List.nth_opt leading k else None with
+        | Some (Some _) -> ()
+        | _ -> ok := false )
+      | MLrel _ -> ()
+      | _ -> () );
+      match t with
+      | MLlam (_, _, b) -> go (depth + 1) b
+      | MLletin (_, _, a, b) -> go depth a; go (depth + 1) b
+      | _ -> Mlutil.ast_iter (go depth) t
+    in
+    go 0 e;
+    !ok
+  in
+  let env_at d =
+    ( List.init d (fun _ -> Id.of_string "_") @ List.map (function Some n -> n | None -> Id.of_string "_") leading,
+      snd (empty_env ()) )
+  in
+  let rec walk_at d e =
+    match strip_magic e with
+    | MLapp (MLglob (r, _), args)
+      when instance_class_at r <> None && (not (closed (strip_magic e)))
+           && leading <> [] && spellable d (strip_magic e) ->
+      add_at (Option.get (instance_class_at r)) r
+        (ml_arg_to_template_type (env_at d) (strip_magic e));
+      (* As [walk] does: the arguments are read on, all but the instance's own
+         dictionary arguments. *)
+      List.iter
+        (fun a ->
+          match strip_magic a with
+          | MLglob (r', _) | MLapp (MLglob (r', _), _)
+            when instance_class r' <> None ->
+            ()
+          | _ -> walk_at d a )
+        args
+    | MLlam (_, _, b') -> walk_at (d + 1) b'
+    | MLletin (_, _, a, b') -> walk_at d a; walk_at (d + 1) b'
+    | MLcase (_, sc, pv) ->
+      walk_at d sc;
+      Array.iter (fun (ids, _, _, br) -> walk_at (d + List.length ids) br) pv
+    | MLfix (_, ids, funs, _) -> Array.iter (walk_at (d + Array.length ids)) funs
+    | e' -> Mlutil.ast_iter (walk_at d) e'
+  in
+  let rec walk e =
+        match strip_magic e with
+    | MLapp (MLglob (r, _), args)
+      when instance_class r <> None && closed (strip_magic e) ->
+      add r (ml_arg_to_template_type (empty_env ()) (strip_magic e));
+      (* An instance's own dictionary arguments are not independent mentions.
+         What they say is already said, in this instance's spelling, by
+         {!instance_arg_resolutions}; read separately they answer the same name
+         in their own spelling -- [natIPtr::iptr] beside [typename
+         ParamsV<natIPtr>::IPTR::iptr] -- and the pair is then dropped as
+         ambiguous, leaving the name erased. *)
+      List.iter
+        (fun a ->
+          match strip_magic a with
+          | MLglob (r', _) | MLapp (MLglob (r', _), _)
+            when instance_class r' <> None ->
+            ()
+          | _ -> walk a )
+        args
+    | MLglob (r, _) -> add r (Tglob (r, [], []))
+    | _ -> Mlutil.ast_iter walk e
+  in
+  walk b;
+  (if leading <> [] then
+     let _, inner = collect_lams b in
+     walk_at 0 inner);
+  (* What the declaration's own type applies to its class binders -- see
+     {!Table.get_context_instance_apps} -- read as the application it is, over
+     the template names those binders take. *)
+  ( match (r, ty) with
+  | Some r, Some ty ->
+    let tc_names = collect_typeclass_param_ids ty in
+    List.iter
+      (fun (inst, ords) ->
+        match
+          (instance_class_at inst, List.map (List.nth_opt tc_names) ords)
+        with
+        (* A class field of a binder is selected from it, not applied to it:
+           [@PTR Pa] is [_tcI0::PTR], which the binder already resolves. *)
+        | Some class_ref, names
+          when List.for_all Option.has_some names
+               && not (Table.is_projection inst) ->
+          let names = List.map Option.get names in
+          let n = List.length names in
+          let app =
+            MLapp (MLglob (inst, []), List.init n (fun i -> MLrel (n - i)))
+          in
+          add_at class_ref inst
+            (ml_arg_to_template_type
+               (List.rev names, snd (empty_env ()))
+               app )
+        | _ -> () )
+      (Table.get_context_instance_apps r)
+  | _ -> () );
+  drop_ambiguous !found
 
 (** Map a function's own type variables to the associated types they really
     stand for.  In [mret : forall M, Mon M -> forall A, A -> M A] the variable
     standing for [M A] is [typename _tcI0::M] — an associated type of the
     instance, not a template parameter.  Left as a free template parameter it
     would be undeducible: nothing in the signature determines it. *)
+
+(** What the declarations a term names resolve through {e their} own types.
+
+    A match over [boxed_iptr : @dval (@ParamsV natIPtr)] spells the
+    constructor's type, and that type's promoted variables are resolved by the
+    scrutinee's declaration, not by anything the match body mentions.  Read
+    last: an instance the body names directly is a nearer answer than one
+    inherited from a name it reads. *)
+let type_resolutions_of_referenced_globals b =
+  let found = ref [] in
+  let rec walk e =
+    ( match strip_magic e with
+    | MLglob (r, _) -> found := !found @ ind_type_resolutions r
+    | _ -> () );
+    Mlutil.ast_iter walk e
+  in
+  walk b;
+  drop_ambiguous !found
+
+(** Generate a declaration's type and its body against the resolution its body
+    supplies -- see {!promoted_resolutions_of_body} -- and the one its own type
+    does, see {!ind_type_resolutions}.  An enclosing instance struct answers
+    first: a variable it declares is the one this method is written in,
+    whatever else the body mentions. *)
+let with_body_resolutions r b f =
+  with_promoted_var_map
+    ( (!tctx).promoted_var_map
+    @ promoted_resolutions_of_body ~r ?ty:(try Some (Table.find_type r) with Not_found -> None) b
+    @ ind_type_resolutions r
+    @ type_resolutions_of_referenced_globals b )
+    f
+
 let hkt_tvar_resolutions_of_type ty =
   List.map
     (fun { htp_tvar; htp_instance; htp_field } ->
@@ -304,6 +708,111 @@ let apply_hkt_resolutions_decl resolutions decl =
     Minicpp.map_decl fe fs ft decl
 
 
+(** The arguments for the promoted variables [r] mentions without declaring,
+    which are template parameters of whatever [r] is generated as -- see
+    {!Table.promoted_type_params}.  They trail a concept's arguments (the
+    instance comes first, see {!gen_typeclass_cpp}) and lead a struct's (see
+    [Cpp_ind]); every use has to supply them in this order, or it names a
+    different template. *)
+let mentioned_promoted_args r =
+  List.map (fun v -> Tpromoted v) (Table.promoted_type_params r)
+
+(** [deapply_families name vars ty] takes the application off each of
+    [name]'s family parameters in [ty], spelled at [vars].  A family is a plain
+    [typename] -- [E X] is written [E] -- and so is the parameter a conversion
+    from another instantiation declares in its place, which the struct-level
+    {!deapply_plain_tvars} does not see. *)
+let deapply_families name vars =
+  let families = List.filteri (fun i _ -> Table.is_family_ind_param name i) vars in
+  map_cpp_type (function
+    | Tapply ((Tvar (_, Some v) as head), _)
+      when List.exists (Id.equal v) families ->
+      head
+    | t -> t )
+
+(** The conversion function by which a value is read at another instantiation
+    of its own type -- [Box<Nat>] reaching a slot spelled [Box<std::any>].
+
+    The variant path says this with a converting constructor.  A struct that is
+    an aggregate cannot have one: every brace initialisation the codegen writes
+    for it, and every aggregate initialisation in hand-written test code,
+    depends on its staying an aggregate, which any user-declared constructor
+    would end.  A conversion function is the same statement from the other side
+    and an aggregate may have as many as it likes.
+
+    [fields] gives each field's name together with its C++ type {e at a given
+    spelling of the type parameters}, because the two callers -- a Rocq
+    [Record] and a flat single-constructor [Inductive] -- compute that type
+    differently.  Nothing is emitted where the type has no parameters, or no
+    fields: there is no other instantiation to read it at.
+
+    [leading] are arguments the conversion keeps rather than respells: the
+    promoted variables a caller did not put in [vars] (see
+    {!mentioned_promoted_args}), which belong to the scope the type was
+    declared in and not to the instantiation being converted.
+
+    No constraint excludes [_U = T].  A conversion function to its own class
+    type is never selected, so declaring it is harmless and saying so costs a
+    [requires] clause on every generated struct. *)
+let conversion_to_other_instantiation ~leading ~name ~templates ~vars ~fields =
+  if vars = [] || fields = [] then []
+  else
+    let n_vars = List.length vars in
+    let u_var_names =
+      List.mapi
+        (fun i _ ->
+          Id.of_string (if n_vars = 1 then "_U" else "_U" ^ string_of_int i) )
+        vars
+    in
+    let u_tys = List.mapi (fun i x -> Tvar (i, Some x)) u_var_names in
+    let converted =
+      List.map
+        (fun (field_id, at) ->
+          gen_type_conversion_expr
+            (* Every inductive generated into this same scope -- the type
+               itself, its mutual siblings, and any other module-local
+               inductive -- is spelled bare here, so it must not be
+               namespace-qualified. *)
+            ~skip:(fun g ->
+              GlobRef.CanOrd.equal g name
+              || Table.same_mutual_block g name
+              || List.exists (GlobRef.CanOrd.equal g) (get_local_inductives ()) )
+            ~src_ty:(deapply_families name vars (at vars))
+            ~dst_ty:(deapply_families name u_var_names (at u_var_names))
+            (CPPvar field_id) )
+        fields
+    in
+    (* The source instantiation is the same template as the destination, so its
+       arguments have the same kinds: a [template <typename> class] parameter
+       cannot be stood in for by a plain [typename]. *)
+    let tparams =
+      List.mapi
+        (fun i u ->
+          let tt =
+            match List.nth_opt templates i with Some (tt, _) -> tt | None -> TTtypename
+          in
+          (tt, u) )
+        u_var_names
+    in
+    [ ( Fmethod
+          { mf_name = Id.of_string "operator_at_other_instantiation";
+            mf_globref = None;
+            mf_tparams = tparams;
+            mf_ret_type = Tglob (name, leading @ u_tys, []);
+            mf_params = [];
+            mf_body = [Sreturn (Some (CPPbraced converted))];
+            mf_is_const = true;
+            mf_is_static = false;
+            mf_is_inline = false;
+            mf_this_pos = 0;
+            mf_no_pure = true;
+            mf_is_noexcept = false;
+            mf_is_conversion = true;
+            mf_ref_qual = Rq_any },
+        VPublic,
+        SAccessors ) ]
+
+
 (** Generate C++ struct for a record type.
 
     Only actual type parameters ([Keep] in [ip_sign]) become C++ template
@@ -333,19 +842,20 @@ let gen_record_cpp name fields ind =
       | _ -> Tany )
     | ty -> ty
   in
-  let l =
-    List.mapi
-      (fun i (x, t) ->
-        let n =
-          match x with
-          | Some n -> n
-          | None -> GlobRef.VarRef (Id.of_string ("_field" ^ string_of_int i))
-        in
-        let ct =
-          convert_ml_type_to_cpp_type (empty_env ()) ~ns:(Refset'.singleton name)
-            all_vars
-            t
-        in
+  (* A field's type at a given spelling of the template parameters.  The
+     promoted tail is not a template parameter and keeps its own name; only
+     the [Keep] prefix is respelled, which is what the conversion function
+     below needs. *)
+  let field_cpp_ty param_names t =
+    let spelling =
+      List.mapi
+        (fun i x -> match List.nth_opt param_names i with Some u -> u | None -> x)
+        all_vars
+    in
+    let ct =
+      convert_ml_type_to_cpp_type (empty_env ()) ~ns:(Refset'.singleton name)
+        spelling t
+    in
         let ct = Minicpp.map_cpp_type replace_promoted ct in
         (* A record's parameters are plain [typename]s, so one of them cannot
            be applied: where the field type applies a higher-kinded parameter
@@ -353,26 +863,78 @@ let gen_record_cpp name fields ind =
            the erased element -- [FnD<std::optional<std::any>>] -- and the
            application is the parameter itself.  Only a class demotes such a
            parameter to an associated type it can apply. *)
-        let ct =
-          Minicpp.map_cpp_type
-            (function
-              | Tapply ((Tvar (_, Some v) as head), _)
-                when List.exists (fun x -> Id.equal x v) all_vars -> head
-              | ty -> ty )
-            ct
-        in
-        ( Fvar' (n, ct), VPublic, SNoTag ) )
+    Minicpp.map_cpp_type
+      (function
+        | Tapply ((Tvar (_, Some v) as head), _)
+          when List.exists (fun x -> Id.equal x v) spelling -> head
+        | ty -> ty )
+      ct
+  in
+  let field_name i x =
+    match x with
+    | Some n -> n
+    | None -> GlobRef.VarRef (Id.of_string ("_field" ^ string_of_int i))
+  in
+  let l =
+    List.mapi
+      (fun i (x, t) ->
+        (Fvar' (field_name i x, field_cpp_ty vars t), VPublic, SNoTag) )
       fields
   in
-  let ty_vars = List.map (fun x -> (TTtypename, x)) vars in
+  (* A record's fields are payloads like any other, so the promoted variables
+     they name are template parameters here too -- see
+     {!Table.promoted_type_params} and its use for the other inductive
+     kinds. *)
+  let ty_vars =
+    List.map (fun v -> (TTtypename, v)) (Table.promoted_type_params name)
+    @ List.map (fun x -> (TTtypename, x)) vars
+  in
+  let conversion_field =
+    conversion_to_other_instantiation ~leading:(mentioned_promoted_args name)
+      ~name ~templates:(List.map (fun x -> (TTtypename, x)) vars) ~vars
+      ~fields:
+        (List.mapi
+           (fun i (x, t) ->
+             ( Id.of_string_soft
+                 (Common.pp_global_name Type (field_name i x)),
+               fun param_names -> field_cpp_ty param_names t ) )
+           fields)
+  in
   Dstruct
     {
       ds_ref = name;
-      ds_fields = l;
+      ds_fields = l @ conversion_field;
       ds_tparams = ty_vars;
       ds_constraint = None;
       ds_needs_shared_from_this = false;
     }
+
+(** The concept constraint an instance parameter of type [ty] carries.
+
+    Three things go into the argument list, and the only reason this is a
+    function is that two call sites -- {!strip_outer_layers} for a lambda's
+    instance binder and {!promote_typeclass_params} for a declared one -- have
+    to agree on all three or the constraint does not match the concept:
+
+    - the instance itself, which the printer supplies as the first argument;
+    - the class's kept type arguments, for a multi-parameter concept;
+    - the promoted variables the class {e mentions} without declaring, which
+      {!gen_typeclass_cpp} makes template parameters of the concept.  They are
+      written as the bare names the class spells, so the pass that resolves a
+      bare promoted name against the instance owning it reaches them the way it
+      reaches every other position in the signature. *)
+let concept_constraint_of_class_type ty =
+  match ty with
+  | Miniml.Tglob (class_ref, type_args, _) ->
+    let kept =
+      if Table.get_ind_nb_tparams class_ref = 0 then []
+      else
+        List.map
+          (convert_ml_type_to_cpp_type (empty_env ()) [])
+          (Table.drop_hkt_args class_ref type_args)
+    in
+    Some (TTconcept (class_ref, kept @ mentioned_promoted_args class_ref))
+  | _ -> None
 
 (** Generate a C++ concept from a type class.
    Type class Eq(A) with method eqb : A -> A -> bool becomes:
@@ -406,13 +968,24 @@ let gen_typeclass_cpp name fields ind =
       ind.ip_vars
   in
   let param_vars = List.filteri (fun i _ -> is_tparam i) prefixed_ip_vars in
-  let promoted_vars =
-    List.filteri (fun i _ -> not (is_tparam i)) prefixed_ip_vars
-  in
+  (* Read the promoted half off {!class_promoted_vars} rather than re-deriving
+     it here: the two must agree element for element, because [type_reqs]
+     below pairs them up. *)
+  let promoted_vars = class_promoted_vars name in
   (* Only param vars become concept template parameters; promoted vars become
      typename requirements inside the requires block *)
   let ty_vars = List.map (fun x -> (TTtypename, x)) param_vars in
-  let all_params = (TTtypename, inst_id) :: ty_vars in
+  (* The promoted variables the class {e mentions} without declaring them --
+     [ptr] and [iptr], reached through a field whose type is a section
+     inductive.  They are template parameters here for the same reason they
+     are on {!gen_record_cpp}'s struct: the text spells them bare, and bare is
+     what a template parameter of that name makes correct. *)
+  let mentioned_promoted =
+    List.map (fun v -> (TTtypename, v)) (Table.promoted_type_params name)
+  in
+  let all_params =
+    ((TTtypename, inst_id) :: ty_vars) @ mentioned_promoted
+  in
   (* Build typename requirements for promoted vars: typename I::field; *)
   (* A higher-kinded carrier is an alias template, so the concept cannot ask
      for it bare: it is probed at [std::any], the same erased element type the
@@ -438,7 +1011,7 @@ let gen_typeclass_cpp name fields ind =
     | Tpromoted vname | Tvar (_, Some vname) -> (
       match List.find_opt (fun (n, _) -> Id.equal n vname) promoted_map with
       | Some (_, replacement) -> replacement
-      | None -> Tvar (0, Some vname) )
+      | None -> named_tvar vname )
     | Tfun (args, ret) ->
       Tfun
         ( List.map subst_promoted_in_cpp_type args,
@@ -451,9 +1024,13 @@ let gen_typeclass_cpp name fields ind =
       Tapply
         (subst_promoted_in_cpp_type h, List.map subst_promoted_in_cpp_type ts)
     | Tref t -> Tref (subst_promoted_in_cpp_type t)
+    | Tfwd_ref t -> Tfwd_ref (subst_promoted_in_cpp_type t)
     | Tvariant ts -> Tvariant (List.map subst_promoted_in_cpp_type ts)
     | Tid (id, ts) -> Tid (id, List.map subst_promoted_in_cpp_type ts)
     | Tid_external (id, ts) -> Tid_external (id, List.map subst_promoted_in_cpp_type ts)
+    | Tnondeduced t -> Tnondeduced (subst_promoted_in_cpp_type t)
+    | Trebind (h, x) ->
+      Trebind (subst_promoted_in_cpp_type h, subst_promoted_in_cpp_type x)
     | Tconst t -> Tconst (subst_promoted_in_cpp_type t)
     | t -> t
   in
@@ -475,6 +1052,27 @@ let gen_typeclass_cpp name fields ind =
     | Miniml.Tglob (r, _, _) -> Table.is_typeclass r
     | _ -> false
   in
+  (* This is the same question {!promoted_var_is_associated_type} asks, so the
+     two lists partition the fields and no name can reach both.  They are
+     computed in different places and could drift apart again; a concept that
+     wants one name as a type and as a function is satisfied by no instance at
+     all, and nothing downstream of it instantiates, so the failure is silent
+     everywhere except in the error count of whatever used it. *)
+  if Sys.getenv_opt "CRANE_CHECK_IR" <> None then
+    List.iter
+      (fun (field_opt, field_ty) ->
+        match field_opt with
+        | Some fr when not (is_typeclass_field_type field_ty) ->
+          let fid = Common.id_of_global Term fr in
+          if List.exists (Id.equal fid) promoted_vars then
+            CErrors.user_err
+              Pp.(
+                str "Crane: concept '"
+                ++ Id.print (Common.id_of_global Type name)
+                ++ str "' requires '" ++ Id.print fid
+                ++ str "' both as a type and as a method." )
+        | _ -> () )
+      fields;
   (* Generate a single method requirement. Returns either: - `Normal (params,
      (call, constraint))` for regular methods - `Disjunctive expr` for fields
      whose type is a bare promoted Tvar *)
@@ -655,13 +1253,6 @@ let gen_typeclass_cpp name fields ind =
   in
   Dtemplate (all_params, None, Dconcept (name, concept_body))
 
-(** Generate a C++ struct for a type class instance.
-   Type class instances become structs with static methods.
-   Example: Instance IntEq : Eq int := { eqb := Int.eqb }.
-   becomes: struct IntEq { static bool eqb(int a, int b) { ... } };
-
-   Returns: (struct_decl option, class_ref option, type_args)
-   The class_ref and type_args are used to generate static_assert in cpp.ml *)
 (** Whether a binder's recorded type says it carries nothing: extraction
     writes an erased binder's type as [Tdummy], and one it could not type at
     all as [Taxiom]. *)
@@ -694,8 +1285,16 @@ type method_binder = {
   mb_kind : binder_kind;
 }
 
+(** Generate a C++ struct for a type class instance.
+   Type class instances become structs with static methods.
+   Example: Instance IntEq : Eq int := { eqb := Int.eqb }.
+   becomes: struct IntEq { static bool eqb(int a, int b) { ... } };
+
+   Returns: (struct_decl option, class_ref option, type_args)
+   The class_ref and type_args are used to generate static_assert in cpp.ml *)
 let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
-    cpp_decl option * GlobRef.t option * ml_type list =
+    cpp_decl option * GlobRef.t option * cpp_type list =
+  let instance_ref = name in
   (* For parameterized instances, strip Tarr/MLlam layers to get to the inner
      typeclass type and constructor body. Collect template parameters along the
      way. Example: numOption has type Tarr(Tdummy, Tarr(Tglob(Numeric,[A],[]),
@@ -726,14 +1325,8 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                carry their kept type args so a [requires C<_tcI0, T1>] clause
                can be emitted at the use site instead of silently degrading to
                an unconstrained [typename] (CWE-693 / CWE-345). *)
-            if Table.get_ind_nb_tparams r = 0 then TTconcept (r, [])
-            else
-              let type_arg_cpp =
-                List.map
-                  (convert_ml_type_to_cpp_type (empty_env ()) [])
-                  (Table.drop_hkt_args r type_args)
-              in
-              TTconcept (r, type_arg_cpp)
+            Option.default TTtypename
+              (concept_constraint_of_class_type arg_ty)
           | _ -> TTtypename
         in
         strip_outer_layers
@@ -753,27 +1346,142 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
      parameterized instances like numOption : Numeric (option A), the return
      type is Tglob(Numeric, [option A], []) which contains Tvar for A. These
      need to become template typename parameters (T1, T2, etc.). *)
+  let dict_vars =
+    let rec vars acc = function
+      | Miniml.Tvar (_, i) | Miniml.Tapp (i, []) -> i :: acc
+      | Miniml.Tapp (i, tys) -> List.fold_left vars (i :: acc) tys
+      | Miniml.Tglob (_, tys, _) -> List.fold_left vars acc tys
+      | Miniml.Tarr (a, b) -> vars (vars acc a) b
+      | Miniml.Tmeta {contents = Some t} -> vars acc t
+      | _ -> acc
+    in
+    List.fold_left
+      (fun acc (_, t) -> if Table.is_typeclass_type t then vars acc t else acc)
+      [] lam_params
+  in
   let rec collect_ml_tvars acc = function
     | Miniml.Tvar (Schematic, i) ->
       if List.mem i acc then
         acc
       else
         i :: acc
+    (* A family parameter -- [Functor (box E)] -- is written applied, and is
+       one of the instance's variables all the same.  Not a carrier one of
+       its dictionaries is about: [Monad m] reaches [m] through the
+       dictionary, and the instance declares nothing for it. *)
+    | Miniml.Tapp (i, tys) ->
+      let acc =
+        if List.mem i acc || List.mem i dict_vars then acc else i :: acc
+      in
+      List.fold_left collect_ml_tvars acc tys
     | Miniml.Tarr (t1, t2) -> collect_ml_tvars (collect_ml_tvars acc t1) t2
     | Miniml.Tglob (_, tys, _) -> List.fold_left collect_ml_tvars acc tys
+    | Miniml.Tmeta {contents = Some t} -> collect_ml_tvars acc t
     | _ -> acc
   in
-  let tv_temps =
+  let instance_tvars =
     match inner_ty with
     | Tglob (_, type_args, _) ->
-      let raw = List.fold_left collect_ml_tvars [] type_args in
-      List.sort compare raw
-      |> List.mapi (fun i _ -> (TTtypename, tvar_id (i + 1)))
+      List.sort compare (List.fold_left collect_ml_tvars [] type_args)
     | _ -> []
+  in
+  let tv_temps =
+    List.mapi (fun i _ -> (TTtypename, tvar_id (i + 1))) instance_tvars
+  in
+  (* The declared parameters are dense -- the first one written is [T1] -- but
+     the variables they stand for need not be.  [Monad_stateT] binds [m] before
+     [S] and reaches [m] through its [Monad m] dictionary, so the carrier
+     [stateT S m] writes [Tvar 2] alone and the instance declares one parameter
+     for it.  A name list read positionally would then answer [T1] for [m] and
+     nothing for [S].  Names are therefore placed at the index each variable
+     actually has, with the gaps filled by a placeholder: a variable the
+     instance binds and does not declare has no C++ spelling here, and the
+     substitution that resolves it -- through the dictionary -- runs before
+     anything reads this list. *)
+  let tv_names_by_index =
+    let named = List.mapi (fun i v -> (v, tvar_id (i + 1))) instance_tvars in
+    List.init
+      (List.fold_left max 0 instance_tvars)
+      (fun k ->
+        match List.assoc_opt (k + 1) named with
+        | Some id -> id
+        | None -> Id.of_string "_" )
   in
   (* Template params: typeclass params first, then type vars (matches gen_dfun
      convention) *)
   let template_params = tc_temps @ tv_temps in
+  (* A promoted associated type named inside the instance's own field bodies is
+     the associated type of one of its class-typed parameters, and resolves
+     through that parameter -- [typename _tcI0::iptr] -- exactly as it does in
+     the signature of a function taking the same parameter ({!gen_dfun} builds
+     the same map from the same function).
+
+     Without it the bodies are generated as the module-level constructor
+     expressions they are for an unparameterised instance, where an unresolved
+     promoted variable falls back to [std::any] because a module-level alias is
+     all there is to name.  Here there is [_tcI0], and the declaration next to
+     the body already uses it, so the fallback puts the two in disagreement
+     inside one struct. *)
+  let promoted_var_resolutions =
+    List.concat_map
+      (fun (tt, inst_id) ->
+        match tt with
+        | TTconcept (class_ref, _) ->
+          promoted_resolutions class_ref (Tinstance (inst_id, class_ref))
+        | _ -> [] )
+      tc_temps
+  in
+  (* The promoted variables of this instance's class arguments, which were
+     specialised away and reach C++ through nothing else -- see
+     {!instance_arg_resolutions}.  They come second, so a variable the
+     surviving parameters already resolve keeps that resolution. *)
+  let specialised_arg_resolutions =
+    instance_arg_resolutions
+      ~own_instances:
+        (List.filter_map
+           (fun (tt, inst_id) ->
+             match tt with
+             | TTconcept (class_ref, _) -> Some (Tinstance (inst_id, class_ref))
+             | _ -> None )
+           tc_temps )
+      name
+  in
+  (* The arguments the instance's [static_assert] spells.  They are the ones
+     {!concept_constraint_of_class_type} gives every other use of the concept
+     -- the class's kept arguments, then the promoted variables it mentions --
+     and the mentioned ones are resolved against this instance rather than
+     left bare, because bare at namespace scope is the file-scope
+     [using ptr = std::any;] and not the instance standing beside it. *)
+  let resolve_mentioned t =
+    match t with
+    | Tpromoted v -> (
+      match
+        List.find_opt (fun (v', _) -> Id.equal v v') (!tctx).promoted_var_map
+      with
+      | Some (_, r) -> r
+      | None -> t )
+    | t -> t
+  in
+  let concept_args class_ref args =
+    List.map (convert_ml_type_to_cpp_type (empty_env ()) []) args
+    @ List.map resolve_mentioned (mentioned_promoted_args class_ref)
+  in
+  with_promoted_var_map
+    ( promoted_var_resolutions @ specialised_arg_resolutions
+    @ (!tctx).promoted_var_map )
+  @@ fun () ->
+  (* The instance's own head spells the same mentioned variables in its
+     parameters' constraints -- [requires PI<_tcI2, ptr>] -- and they resolve
+     through the parameters beside them the same way: [ptr] is
+     [typename _tcI1::ptr], not the file-scope [std::any]. *)
+  let template_params =
+    List.map
+      (fun (tt, id) ->
+        match tt with
+        | TTconcept (r, args) -> (TTconcept (r, List.map resolve_mentioned args), id)
+        | _ -> (tt, id) )
+      template_params
+  in
   (* Now inner_ty should be Tglob(class_ref, type_args, _) and inner_body should
      be MLcons(...) *)
   match inner_ty with
@@ -794,19 +1502,50 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
       (* For promoted dependent records, the definition type Tglob(Magma,[],[])
          has no type_args, but the MLcons type Tglob(Magma,[nat],[]) carries the
          concrete types extracted from the erased constructor args. *)
+      (* The constructor's type arguments are preferred because extraction
+         unified them against the body, which the definition's type need not
+         mention.  But a position extraction {e erased} says less, not more,
+         and the two disagree exactly there: [Instance showCarr {C : Carrier}
+         : Show carr] reaches here as [Show carr] in its declared type and
+         [Show _] in its constructor's, because a class field standing as a
+         type is a projection the constructor's unification drops.  Take the
+         better of the two at each position rather than one list whole. *)
       let type_args =
+        let erased t =
+          match resolve_tmeta t with
+          | Miniml.Tunknown | Miniml.Tdummy _ -> true
+          | _ -> false
+        in
         match cons_ty with
-        | Tglob (_, ta, _) when ta <> [] -> ta
+        | Tglob (_, ta, _) when ta <> [] ->
+          List.mapi
+            (fun i t ->
+              if not (erased t) then t
+              else
+                match List.nth_opt type_args i with
+                | Some d when not (erased d) -> d
+                | _ -> t )
+            ta
         | _ -> type_args
       in
       (* How many type variables the instance itself binds.  Not the number of
          template parameters it declares: a higher-kinded carrier ([Instance
          ... (M : Type -> Type)]) is a variable the instance's arguments name,
-         but it becomes an associated type rather than a parameter. *)
+         but it becomes an associated type rather than a parameter.
+
+         Nor is it what the carrier {e writes}.  [Monad_stateT] binds [S] and
+         [m] and its carrier [stateT S m] names only [S]: the inner monad
+         reaches the instance through the dictionary [Monad m], so it is in
+         [ty] and nowhere in [type_args].  A method body still numbers its own
+         quantifiers after it, so counting from the arguments alone leaves the
+         body's [A] one slot too high -- and the two are then read as one
+         method variable too many, which spends [_A0] on the inner monad and
+         erases [A], the variable the name was for.  The instance's own type
+         is where every variable it binds is visible. *)
       let instance_tvar_count =
         List.fold_left
           (fun n t -> max n (Mlutil.type_maxvar t))
-          (List.length tv_temps)
+          (max (List.length tv_temps) (Mlutil.type_maxvar ty))
           type_args
       in
       (* Register promoted type bindings for this instance so that call sites
@@ -838,7 +1577,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
          lam_params into the env so these references resolve correctly. *)
       let base_env = snd (push_vars' (List.rev lam_params) (empty_env ())) in
       (* Collect type var names for convert_ml_type_to_cpp_type *)
-      let type_var_names = List.map snd tv_temps in
+      let type_var_names = tv_names_by_index in
       (* Set up type variable context for fixpoint lifting. Without this,
          fixpoints inside methods get lifted with wrong names and missing
          template parameters. *)
@@ -880,13 +1619,53 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
           let field_ml_ty =
             recover_method_quantifier class_ref method_ref field_ml_ty
           in
+          (* The field numbers its own [forall A] right after the class's
+             parameters, and the instance numbers its binders from one as
+             well: [Monad_stateT]'s carrier [stateT S m] names the same
+             variable the method's [A] does, so substituting the carrier in
+             would spell [A] as the inner monad.  Move the method's variables
+             above every instance binder first -- the positions the
+             declaration binds them at anyway. *)
+          let method_tvar_base =
+            max (List.length (Table.get_ind_ip_vars class_ref))
+              instance_tvar_count
+          in
+          let n_method_tvars = method_tvar_count class_ref field_ml_ty in
+          let field_ml_ty =
+            let nclass = List.length (Table.get_ind_ip_vars class_ref) in
+            let own =
+              List.sort compare
+                (List.filter (fun i -> i > nclass)
+                   (collect_tvars [] field_ml_ty))
+            in
+            let sub =
+              List.mapi
+                (fun k i ->
+                  (i, Miniml.Tvar (Schematic, method_tvar_base + 1 + k)) )
+                own
+            in
+            if List.for_all (fun (i, t) -> t = Miniml.Tvar (Schematic, i)) sub
+            then field_ml_ty
+            else subst_tvars_type sub field_ml_ty
+          in
           (* Extraction eta-expands a type-constructor argument, so the
              carrier arrives as [option<_>] rather than the bare [option] the
-             application needs; contract it before substituting. *)
+             application needs; contract it before substituting.
+
+             Unless the carrier is written with a [Tunknown] hole.  Then it is
+             already the type-level lambda, the hole is its binder, and the
+             binder may be written more than once: [stateT S m] arrives as
+             [stateT(S, m _, _)], because the record's monad parameter is
+             itself applied to the element.  Dropping the trailing argument
+             keeps one occurrence and loses the other, and what comes out is a
+             [stateT] short a template argument.  Applying a hole is filling
+             it -- every occurrence at once -- which {!Mlutil.apply_ml_type}
+             already does, so there is nothing to contract here. *)
           let subst_args =
             List.mapi
               (fun i t ->
                 match t with
+                | _ when Mlutil.type_has_hole t -> t
                 | Miniml.Tglob (r, _ :: _, es)
                   when Table.is_hkt_param class_ref i ->
                   (* Only the eta-expanded arguments come off: a carrier that
@@ -918,8 +1697,8 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
              arrived with the substitution as further parameters: they belong
              to the value the accessor returns. *)
           let declared_arity = count_ml_value_arrows field_ml_ty in
-          let method_args_and_ret () =
-            let args, ret = get_args_and_ret [] subst_ty in
+          let split_at_declared_arity ty =
+            let args, ret = get_args_and_ret [] ty in
             let rec split n acc = function
               | t :: rest
                 when Mlutil.isTdummy t || Table.is_typeclass_type t ->
@@ -931,11 +1710,12 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
             ( kept,
               List.fold_right (fun a r -> Miniml.Tarr (a, r)) surplus ret )
           in
+          let method_args_and_ret () = split_at_declared_arity subst_ty in
+          let orig_args_and_ret () = split_at_declared_arity field_ml_ty in
           (* With the quantifier back, the method is a member template:
              [template <typename _A0> static Opt<_A0> mret(_A0)] rather than a
              signature erased to [std::any].  Its own type variables sit past
              the class's, which [type_subst_list] has just replaced. *)
-          let n_method_tvars = method_tvar_count class_ref subst_ty in
           let method_tvars, type_var_names =
             match n_method_tvars with
             | 0 -> ([], type_var_names)
@@ -961,10 +1741,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
           let field_body =
             if n_method_tvars = 0 then field_body
             else
-              let base =
-                max (List.length (Table.get_ind_ip_vars class_ref))
-                  instance_tvar_count
-              in
+              let base = method_tvar_base in
               let body_tvars =
                 let acc = ref [] in
                 ignore
@@ -980,6 +1757,14 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                 List.mapi
                   (fun k i -> (i, Miniml.Tvar (Schematic, base + 1 + k)))
                   (safe_firstn n_method_tvars body_tvars)
+                (* A body may name more variables than the field declares --
+                   an inner monad the mode erases leaves one behind.  The
+                   declaration binds what it declares and no more, so what is
+                   left over is spelled the way any type the declaration
+                   cannot name is: erased. *)
+                @ List.filteri
+                    (fun k _ -> k >= n_method_tvars)
+                    (List.map (fun i -> (i, Miniml.Tunknown)) body_tvars)
               in
               if List.for_all (fun (i, t) -> t = Miniml.Tvar (Schematic, i)) subst
               then field_body
@@ -1103,16 +1888,82 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
           (* The instance's own binders were extracted at the class's erased
              field types.  For a higher-kinded class the declared signature
              ([subst_ty]) knows better: it still names the element type. *)
-          let declared_arg_tys =
-            if method_tvars = [] then [||]
+          (* Each kept argument beside the class's own statement of it.  The
+             substituted type is what to spell; the class's is what says at
+             which arity, and the two questions have different answers as soon
+             as substitution unfolds an alias into arrows.  [bind]'s callback
+             is declared [A -> m B] -- one value arrow -- and the instance's
+             [m] is [stateT S m0], whose body is itself an arrow, so the
+             substituted parameter has two.  Flattened, that is a
+             [std::function] of two arguments against a call site that hands
+             it one.
+
+             The class's list is taken by the same split as the substituted
+             one, so the two align where they are the same length.  Where they
+             are not -- substitution can erase a parameter the class declared,
+             and the splits then consume different numbers of dummies -- no
+             pairing is attempted and the arity is left unsaid.  A neighbour's
+             arity is worse than none: it would respell a parameter that was
+             right. *)
+          let declared_arg_pairs =
+            let subst_args = fst (method_args_and_ret ()) in
+            let orig_args = fst (orig_args_and_ret ()) in
+            if List.length subst_args = List.length orig_args then
+              List.map2 (fun s o -> (s, Some o)) subst_args orig_args
+            else List.map (fun s -> (s, None)) subst_args
+          in
+          let kept_arg_pairs =
+            List.filter (fun (t, _) -> not (Mlutil.isTdummy t))
+              declared_arg_pairs
+          in
+          (* A class-typed binder keeps its slot here: it still stands as a
+             lambda in the body, and dropping it would misalign the declared
+             types against the binders they retype. *)
+          let declared_arg_tys = Array.of_list (List.map fst kept_arg_pairs) in
+          (* How much of the declaration a binder is given.
+
+             A member template's binders are retyped outright: the body was
+             extracted against the class's erased method type, where the
+             method's own [forall A] has no witness at all, so its annotations
+             are not a weaker statement of the declared type but a different
+             one.
+
+             Everywhere else the declaration only fills what the body left
+             open.  It has to be offered at all -- a field type standing as a
+             type in another class's method domain ([int_to_ptr : nat ->
+             @prov P -> EOU ptr]) reaches the body erased, while the same
+             [prov] in the codomain is spelled [typename _tcI0::prov] four
+             lines up -- and it may not be taken whole, because the body's own
+             annotation is the one its statements were generated against. *)
+          let offer_declared have want =
+            if method_tvars <> [] then want
             else
-              (* A class-typed binder keeps its slot here: it still stands as a
-                 lambda in the body, and dropping it would misalign the
-                 declared types against the binders they retype. *)
-              Array.of_list
-                (List.filter
-                   (fun t -> not (Mlutil.isTdummy t))
-                   (fst (method_args_and_ret ())) )
+              Ml_type_util.refine_erased
+                ~writable:(fun t ->
+                  not
+                    (Ml_type_util.has_unbound_tvar type_var_names
+                       (convert_ml_type_to_cpp_type base_env type_var_names t)) )
+                have want
+          in
+          let declared_arg_arities =
+            Array.of_list
+              (List.map
+                 (fun (_, o) -> Option.map count_ml_value_arrows o)
+                 kept_arg_pairs )
+          in
+          (* The parameter's C++ type at the arity its declaration was written
+             at.  {!Minicpp.recurry_to} exists for exactly this: it puts the
+             arrows substitution moved into the callable's parameter list back
+             where the signature had them. *)
+          let param_cpp_ty n ml_ty =
+            let ty = convert_ml_type_to_cpp_type base_env type_var_names ml_ty in
+            match
+              (if n < Array.length declared_arg_arities then
+                 declared_arg_arities.(n)
+               else None)
+            with
+            | Some k when k > 0 -> Minicpp.recurry_to k ty
+            | _ -> ty
           in
           (* A class-typed argument is not a value in C++: the class is a
              concept, and the instance satisfying it is a type.  Such a binder
@@ -1153,9 +2004,10 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                 rest
             | MLlam (id, ty, rest) ->
               let resolved_ty =
+                let have = subst_promoted_tvars ty in
                 if n < Array.length declared_arg_tys then
-                  declared_arg_tys.(n)
-                else subst_promoted_tvars ty
+                  offer_declared have declared_arg_tys.(n)
+                else have
               in
               extract_params
                 (n + 1)
@@ -1163,11 +2015,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                 ( {
                     mb_name = id_of_mlid id;
                     mb_ml_ty = resolved_ty;
-                    mb_cpp_ty =
-                      convert_ml_type_to_cpp_type
-                        base_env
-                        type_var_names
-                        resolved_ty;
+                    mb_cpp_ty = param_cpp_ty n resolved_ty;
                     mb_kind =
                       ( if Table.is_typeclass_type resolved_ty then
                           `Instance
@@ -1412,8 +2260,15 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                  parameter (e.g. [Sz (nat -> nat)]'s [f]) from an erased one. *)
               let stmts =
                 with_param_types (List.rev renamed_ml) @@ fun () ->
-                with_method_env_types env renamed_ml (fun () ->
-                  gen_stmts env (fun x -> Sreturn (Some x)) inner_body )
+                (* The declared parameter types, so the body reads the
+                   arities the signature was written at rather than
+                   re-deriving them from ML types substitution has since
+                   given extra arrows.  Same order as [renamed_ml]. *)
+                with_method_env_types
+                  ~cpp:(List.rev_map (fun b -> Some b.mb_cpp_ty) binders)
+                  env renamed_ml
+                  (fun () ->
+                    gen_stmts env (fun x -> Sreturn (Some x)) inner_body )
               in
               (cpp_params, method_ret_ty, stmts, tc_tparams)
           in
@@ -1421,6 +2276,12 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
             ( Fmethod
                 {
                   mf_name = method_name;
+                  (* The global the method is made from is the instance: it has
+                     none of its own, so no call in its body names it, and a
+                     call on a global that merely shares its label -- the
+                     class's [fmap] at the inner instance, inside
+                     [Functor_stateT]'s [fmap] -- is not a self-call. *)
+                  mf_globref = Some instance_ref;
                   (* Undefaulted: every caller spells the arguments out --
                      the forwarding wrapper as [_tcI0::template ret<T2>(x)],
                      the concept probe at [std::any].  A default here would
@@ -1444,6 +2305,8 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                   mf_this_pos = 0;
                   mf_no_pure = false;
                   mf_is_noexcept = false;
+                  mf_is_conversion = false;
+                  mf_ref_qual = Rq_any;
                 },
               VPublic,
               SNoTag )
@@ -1492,7 +2355,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
         | MLrel i -> (
           try
             let name = get_db_name i base_env in
-            Tvar (0, Some name)
+            named_tvar name
           with Failure _ -> Tany )
         | MLmagic (_, e) -> ml_expr_to_cpp_type e
         | MLcase (_, scrutinee, branches)
@@ -1619,7 +2482,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                     else
                       Tapply
                         ( qualified_ty,
-                          List.map (fun p -> Tvar (0, Some p)) params )
+                          List.map named_tvar params )
                   in
                   ( Fnested_using
                       ( List.map (fun p -> (TTtypename, p)) params,
@@ -1653,20 +2516,10 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
             | _ -> true )
           forwarded_usings
       in
-      (* Collect names already covered by forwarded usings. *)
-      let forwarded_names =
-        List.filter_map
-          (fun (f, _, _) ->
-            match f with
-            | Fnested_using (_, id, _) -> Some id
-            | _ -> None )
-          forwarded_usings
-      in
       (* Generate [using VarName = ConcreteType;] for each promoted
-         variable that has a known, non-self-referential concrete type
-         and is not already covered by a forwarded using.  Use
-         zip-up-to-minimum so that partially-extractable Records
-         still get declarations for the extractable promoted vars. *)
+         variable that has a known, non-self-referential concrete type.  Use
+         zip-up-to-minimum so that partially-extractable Records still get
+         declarations for the extractable promoted vars. *)
       let concrete_usings =
         let n =
           min (List.length promoted_vars) (List.length promoted_concrete_types)
@@ -1686,7 +2539,6 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
         |> List.filter_map (fun (var_name, alias_params, concrete_cpp_ty) ->
                if
                  List.exists (Id.equal var_name) tc_promoted_names
-                 || List.exists (Id.equal var_name) forwarded_names
                  || is_self_referential_promoted var_name concrete_cpp_ty
                then
                  None
@@ -1698,6 +2550,25 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                          concrete_cpp_ty ),
                      VPublic,
                      SNoTag ) )
+      in
+      (* The instance's own binding of a class field beats one forwarded from
+         a parameter under the same name: [Monad_stateT] takes a [Monad] for
+         the inner carrier, and forwarding its [m] would declare the inner
+         carrier where the instance's own, [stateT S m], belongs.  The
+         parameter's stays reachable as [_tcI0::m]. *)
+      let forwarded_usings =
+        let own =
+          List.filter_map
+            (fun (f, _, _) ->
+              match f with Fnested_using (_, id, _) -> Some id | _ -> None )
+            concrete_usings
+        in
+        List.filter
+          (fun (f, _, _) ->
+            match f with
+            | Fnested_using (_, id, _) -> not (List.exists (Id.equal id) own)
+            | _ -> true )
+          forwarded_usings
       in
       (* Exclude promoted type args from the returned list (used for
          static_assert) *)
@@ -1759,7 +2630,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
       in
       let all_usings = direct_usings @ nested_promoted_usings in
       if methods = [] && all_usings = [] then
-        (None, Some class_ref, non_promoted_type_args)
+        (None, Some class_ref, concept_args class_ref non_promoted_type_args)
       else
         let decl =
           Dstruct
@@ -1774,7 +2645,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
         ( Some
             (apply_hkt_resolutions_decl (hkt_tvar_resolutions_of_type ty) decl),
           Some class_ref,
-          non_promoted_type_args )
+          concept_args class_ref non_promoted_type_args )
     | MLglob (other, _) ->
       (* The instance is nothing but another instance's name.  C++ has a
          spelling for exactly that, and without it the name is never
@@ -1786,8 +2657,8 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                du_rhs = Some (Tglob (other, [], []));
                du_note = None } ),
         Some class_ref,
-        type_args )
-    | _ -> (None, Some class_ref, type_args) )
+        concept_args class_ref type_args )
+    | _ -> (None, Some class_ref, concept_args class_ref type_args) )
   | _ -> (None, None, [])
 
 (** Check if a term is a type class instance (constructs a type class record) *)
@@ -1818,39 +2689,65 @@ let applied_tvar_arities cty =
   arities
 
 (** Re-declare as template template parameters those entries of [temps] that
-    [cty] applies to arguments; see {!applied_tvar_arities}. *)
-let with_applied_tvars cty temps =
+    [cty] applies to arguments; see {!applied_tvar_arities}.
+
+    [ml_ty], when given, vetoes the promotion for a variable whose ML type does
+    not demand the higher kind ({!Ml_type_util.higher_kinded_ml_tvars}: applied
+    to something erasure left behind, or written where a generated constructor
+    expects a template name).  Being applied is not on its own a reason to be
+    higher-kinded -- when neither holds, the application
+    can be taken back off, which {!deapply_plain_tvars} then does -- and the
+    C++ type read here has not been through the relaxations, so it is not the
+    place to look for the occurrence that would justify the higher kind. *)
+let with_applied_tvars ?ml_ty cty temps =
   let arities = applied_tvar_arities cty in
+  let arities =
+    match ml_ty with
+    | None -> arities
+    | Some ty ->
+      let hk = Ml_type_util.higher_kinded_ml_tvars [ty] in
+      let veto = ref [] in
+      exists_cpp_type
+        (fun t ->
+          ( match t with
+          | Tapply (Tvar (i, name), _) when i > 0 && not (IntSet.mem i hk) ->
+            veto := tvar_id i :: !veto;
+            Option.iter (fun n -> veto := n :: !veto) name
+          | _ -> () );
+          false )
+        cty
+      |> ignore;
+      List.iter (Hashtbl.remove arities) !veto;
+      (* A variable handed bare to a position another constructor declares
+         [template <typename> class] is higher-kinded whether or not anything
+         applies it, and no application can be taken back off to make it not
+         be.  Added after the veto, which speaks only about applications. *)
+      List.iter
+        (fun (i, arity) -> Hashtbl.replace arities (tvar_id i) arity)
+        (Ml_type_util.hkt_arg_ml_tvar_arities [ty]);
+      arities
+  in
   if Hashtbl.length arities = 0 then temps
   else
     List.map
       (fun (tt, id) ->
         (* A phantom parameter is already spelled with a default, which a
            template template parameter cannot carry; leave it alone -- nothing
-           in the signature will apply it either. *)
+           in the signature will apply it either.
+
+           Unless something does.  A variable handed to a position another
+           constructor declares [template <typename> class] is written in the
+           signature, at that position, and the phantom pass does not see it:
+           translation spells such an argument as a bare template name, and
+           the traversal that decides what is rendered reads the application
+           it replaced.  Kept phantom, the declaration contradicts its own
+           parameter's type -- [Sub<UBE, T1>] wants a template where [T1] is
+           a [typename] -- so the arity wins over the default. *)
         match (tt, Hashtbl.find_opt arities id) with
-        | TTtypename, Some arity -> (TTtemplate arity, id)
+        | (TTtypename | TTtypename_default Tvoid), Some arity ->
+          (TTtemplate arity, id)
         | _ -> (tt, id) )
       temps
-
-(** Arity of every MiniML type variable that [tys] applies to arguments, keyed
-    by its 1-based de Bruijn index.  A Rocq parameter of kind [Type -> Type]
-    reaches MiniML as the head of a {!Miniml.Tapp}, and a plain [typename]
-    cannot be applied, so such a parameter has to be declared
-    [template <typename> class]. *)
-let applied_ml_tvar_arities tys =
-  let arities = Hashtbl.create 4 in
-  let rec scan = function
-    | Miniml.Tapp (i, args) ->
-      Hashtbl.replace arities i (List.length args);
-      List.iter scan args
-    | Miniml.Tglob (_, args, _) -> List.iter scan args
-    | Miniml.Tarr (a, b) -> scan a; scan b
-    | Miniml.Tmeta {contents = Some t} -> scan t
-    | _ -> ()
-  in
-  List.iter scan tys;
-  arities
 
 (** Template parameter list for a declaration whose parameters [vars] are used
     by the types [tys] -- an inductive's constructor fields, or the body of a
@@ -1858,20 +2755,131 @@ let applied_ml_tvar_arities tys =
     converted C++ ones because the parameter list has to be fixed before the
     types are converted.  Registers the template template positions so that
     {e uses} of [r] pass a bare template name; see {!Table.is_hkt_ind_param}. *)
-let hkt_templates r vars tys =
-  let arities = applied_ml_tvar_arities tys in
+let hkt_templates ?applied r vars tys =
+  (* Read from the rendered type where there is one: the ML body still applies
+     a variable that erasure removed, and the parameter list has to agree with
+     what the users of this name can see.  See
+     {!Ml_type_util.rendered_tvar_arities}. *)
+  let arities =
+    match applied with
+    | Some a ->
+      (* The alias's own rendering, under the same rule as an inductive's
+         payloads below: applied only at erased or variable arguments --
+         [IFun E F := forall T, E T -> F T], whose [T] erases -- is a family,
+         and a family is a plain parameter. *)
+      let arities = Ml_type_util.rendered_tvar_arities a in
+      let demanded = Hashtbl.create 4 in
+      let rec scan = function
+        | Tapply (Tvar (i, _), tys) ->
+          if
+            List.exists
+              (fun t ->
+                not (prints_as_any t || match t with Tvar _ -> true | _ -> false) )
+              tys
+          then Hashtbl.replace demanded i ();
+          List.iter scan tys
+        | Tglob (_, tys, _) | Tvariant tys -> List.iter scan tys
+        | Tfun (tys, ty) -> List.iter scan (ty :: tys)
+        | Tconst ty | Tnamespace (_, ty) | Tref ty | Tfwd_ref ty | Tshared_ptr ty -> scan ty
+        | Tapply (ty, tys) -> List.iter scan (ty :: tys)
+        | _ -> ()
+      in
+      scan a;
+      Hashtbl.filter_map_inplace
+        (fun i ar -> if Hashtbl.mem demanded i then Some ar else None)
+        arities;
+      arities
+    | None ->
+      (* An inductive's parameter applied only at variables is an event
+         family: [VisF : E X -> ...] applies it at the constructor's own
+         existential, [inl1 : E1 X -> sum1 E1 E2 X] at the type's index
+         parameter.  A family's C++ struct already has its index erased, so
+         the parameter is a plain [typename] whose argument is that struct,
+         and [E X] is written [E].  Only an application at a real type --
+         [F (Free F A)] -- asks for a template name. *)
+      let rec survives = function
+        | Miniml.Tvar _ | Miniml.Tunknown | Miniml.Tdummy _ -> false
+        | Miniml.Tmeta {contents = Some t} -> survives t
+        | Miniml.Tmeta {contents = None} -> false
+        | _ -> true
+      in
+      let demanded = Hashtbl.create 4 in
+      let rec scan = function
+        | Miniml.Tapp (i, args) ->
+          if List.exists survives args then Hashtbl.replace demanded i ();
+          List.iter scan args
+        | Miniml.Tglob (_, args, _) -> List.iter scan args
+        | Miniml.Tarr (a, b) -> scan a; scan b
+        | Miniml.Tmeta {contents = Some t} -> scan t
+        | _ -> ()
+      in
+      List.iter scan tys;
+      let arities = Ml_type_util.applied_ml_tvar_arities tys in
+      Hashtbl.filter_map_inplace
+        (fun i a -> if Hashtbl.mem demanded i then Some a else None)
+        arities;
+      arities
+  in
+  (* A parameter the rendered type never spells is phantom, whatever its Rocq
+     kind was.  An erased event family is the case in point:
+     [semantic_function := list nat -> itree E nat] writes no [E] in C++ at
+     all, so declaring [E] a [template <typename> class] would demand a
+     template of every use site for a position that holds nothing.  It is a
+     plain parameter defaulted to [void], and {!Table.is_phantom_type_param}
+     is what makes the use sites agree. *)
+  let rendered = Option.map Ml_type_util.get_rendered_tvar_indices applied in
+  let rendered_in_cpp i =
+    match rendered with None -> true | Some l -> List.mem i l
+  in
   let temps =
     List.mapi
       (fun i n ->
-        match Hashtbl.find_opt arities (i + 1) with
-        | Some arity -> (TTtemplate arity, n)
-        | None -> (TTtypename, n) )
+        if not (rendered_in_cpp (i + 1)) then (TTtypename_default Tvoid, n)
+        else
+          match Hashtbl.find_opt arities (i + 1) with
+          | Some arity -> (TTtemplate arity, n)
+          | None -> (TTtypename, n) )
       vars
+  in
+  (* A default may only stand in the trailing run of defaulted parameters:
+     [template <typename obj = void, typename c>] does not parse.  A phantom
+     followed by a required parameter stays phantom -- no use writes an
+     instantiation in it -- but has to be written, so it loses its default. *)
+  let temps =
+    let rec go = function
+      | [] -> ([], true)
+      | (tt, n) :: rest ->
+        let rest, all_defaulted = go rest in
+        ( match tt with
+        | TTtypename_default _ when not all_defaulted -> (TTtypename, n) :: rest
+        | TTtypename_default _ -> (tt, n) :: rest
+        | _ -> (tt, n) :: rest ),
+        all_defaulted
+        && (match tt with TTtypename_default _ -> true | _ -> false)
+    in
+    fst (go temps)
+  in
+  let positions_of p =
+    List.filteri (fun i _ -> p i) (List.mapi (fun i _ -> i) temps)
   in
   Table.add_hkt_ind_params r
     (List.filter_map
-       (fun (i, (tt, _)) -> match tt with TTtemplate _ -> Some i | _ -> None)
-       (List.mapi (fun i t -> (i, t)) temps) );
+       (fun i ->
+         match List.nth temps i with
+         | TTtemplate arity, _ -> Some (i, arity)
+         | _ -> None )
+       (List.mapi (fun i _ -> i) temps) );
+  Table.add_phantom_type_params r
+    (positions_of (fun i -> not (rendered_in_cpp (i + 1))));
+  (* Applied in the definition and still plain: a family position. *)
+  let applied_at_all =
+    match applied with
+    | Some a -> Ml_type_util.rendered_tvar_arities a
+    | None -> Ml_type_util.applied_ml_tvar_arities tys
+  in
+  Table.add_family_ind_params r
+    (positions_of (fun i ->
+         Hashtbl.mem applied_at_all (i + 1) && not (Hashtbl.mem arities (i + 1))));
   temps
 
 (** Build the [using] declaration for a type alias.
@@ -1894,11 +2902,41 @@ let gen_type_alias r vars ot =
         Cpp_erasure.register_axiom_type r;
         Table.add_erased_type_const r;
         require_header "any";
-        (Some (Tid_external ("std::any", [])), Some "AXIOM TO BE REALIZED")
-      | Some t -> (Some (convert_ml_type_to_cpp_type (empty_env ()) [] t), None) )
+        (Some Tany, Some "AXIOM TO BE REALIZED")
+      | Some t ->
+        (* Name the body's type variables from the alias's own list.  Left
+           anonymous they are resolved by position against the emitted
+           parameters, and the promoted ones lead (they are defaulted, and a
+           default may not precede a plain parameter) -- so [Definition Top :=
+           itree TopE], eta-expanded to supply [itree]'s missing value
+           parameter, read the value slot off the FRONT and wrote [ITree<iptr>].
+           Eta-expansion appends; positional resolution reads from the
+           beginning. *)
+        (Some (convert_ml_type_to_cpp_type (empty_env ()) vars t), None) )
+  in
+  let du_tparams_head =
+    hkt_templates ?applied:du_rhs r vars
+      (match ot with Some t -> [t] | None -> [])
   in
   let du_tparams =
-    hkt_templates r vars (match ot with Some t -> [t] | None -> [])
+    List.map (fun v -> (TTtypename, v)) (Table.promoted_type_params r)
+    @ du_tparams_head
+  in
+  (* A family parameter [hkt_templates] left plain is still written applied
+     in the rendering; the applied family is the family's own struct. *)
+  let du_rhs =
+    let plain =
+      List.filter_map
+        (fun (tt, id) -> match tt with TTtemplate _ -> None | _ -> Some id)
+        du_tparams
+    in
+    let in_scope = List.map snd du_tparams in
+    Option.map
+      (map_cpp_type (function
+        | Tapply (head, args) when List.exists (fun id -> tvar_is id head) plain ->
+          Minicpp.rebind_plain_var ~in_scope head args
+        | t -> t ))
+      du_rhs
   in
   Dusing {du_tparams; du_name = r; du_rhs; du_note}
 
@@ -1911,20 +2949,25 @@ let gen_type_alias r vars ot =
     A &>]) -- last because a default may only name parameters declared before
     it, and the callback is one of those. *)
 let relax_applied_return temps decl =
+  (* Only a template template parameter is applied here: a family is a plain
+     parameter, written applied until {!deapply_plain_tvars} takes the
+     application off, and its return type deduces as any other. *)
+  let hk =
+    List.filter_map
+      (fun (tt, id) -> match tt with TTtemplate _ -> Some id | _ -> None)
+      temps
+  in
   let applies_tvar t =
-    exists_cpp_type (function Tapply (Tvar _, _) -> true | _ -> false) t
+    exists_cpp_type
+      (function
+        | Tapply (head, _) -> List.exists (fun id -> tvar_is id head) hk
+        | _ -> false )
+      t
   in
   match decl with
   | Dfun {df_ret = cod0; df_shape = Ddef (params, _); _} when applies_tvar cod0 ->
-    (* The head of a tvar is not always resolved to its parameter name, so a
-       tvar answers to either spelling; cf. {!applied_tvar_arities}. *)
-    let is_tvar id = function
-      | Tvar (i, name) ->
-        (match name with Some n -> Id.equal n id | None -> false)
-        || (i > 0 && Id.equal (tvar_id i) id)
-      | _ -> false
-    in
-    let names id ty = exists_cpp_type (is_tvar id) ty in
+    let is_tvar = tvar_is in
+    let names = tvar_named in
     let undeducible id = not (List.exists (fun (_, ty) -> names id ty) params) in
     (* The result of the callback whose declared codomain is [id], spelled so
        that C++ can compute it from the callback's deduced type. *)
@@ -1966,6 +3009,442 @@ let relax_applied_return temps decl =
     (temps, decl)
   | _ -> (temps, decl)
 
+(** Relax a signature whose return type applies a template template parameter
+    that nothing deduces.
+
+    [case_] returns [M X] for a caller-chosen [M : Type -> Type], and [M] is
+    named by no argument: [template <typename> class T3] with the return type
+    [T3<T4>] is a parameter the call site cannot supply and the compiler
+    cannot infer.  {!relax_applied_return} answers the same question for a
+    plain [typename] by giving it a default, but a [template <typename> class]
+    parameter takes a template as its default, not a type, so there is nothing
+    to default it to.
+
+    What does pin the answer is the callback that produces it.  The handler
+    [f] passed for [E ~> M] is a function object polymorphic in [X], so
+    [std::invoke_result_t<F0 &, T1<T4> &>] is [M X] at the very instantiation
+    this call needs.  The return type is rewritten to that, [T3] is dropped,
+    and the callbacks that named it in their [requires] drop the constraint --
+    [std::is_invocable_r_v<T3<std::any>, F0 &, T1<std::any> &>] was never a
+    claim about this call anyway, since [std::any] stands in for the [X] the
+    body chooses. *)
+let relax_tt_applied_return temps decl =
+  let kind_of id =
+    List.find_map (fun (tt, i) -> if Id.equal i id then Some tt else None) temps
+  in
+  match decl with
+  | Dfun ({df_ret = Tapply (head, [ret_arg]); df_shape = Ddef (params, _); _} as f)
+    -> (
+    match tvar_name head with
+    | Some id
+      when kind_of id = Some (TTtemplate 1)
+           && not (List.exists (fun (_, ty) -> tvar_named id ty) params) ->
+      (* The callback whose codomain is this application, and the argument it
+         is applied to there -- [T3<std::any>], whose [std::any] stands for
+         the [X] that the return type instantiates at [ret_arg]. *)
+      let producer =
+        List.find_map
+          (fun (tt, fid) ->
+            match tt with
+            | TTfun (doms, Tapply (h, [carrier])) when tvar_is id h ->
+              Some (fid, doms, carrier)
+            | _ -> None )
+          temps
+      in
+      ( match producer with
+      | None -> (temps, decl)
+      | Some (fid, doms, carrier) ->
+        let at_ret_arg t =
+          map_cpp_type (fun t -> if t = carrier then ret_arg else t) t
+        in
+        let ret =
+          Tid_external
+            ( "std::invoke_result_t",
+              Tref (Tid_external (Id.to_string fid, []))
+              :: List.map (fun d -> Tref (at_ret_arg d)) doms )
+        in
+        let temps =
+          List.filter_map
+            (fun (tt, i) ->
+              match tt with
+              | _ when Id.equal i id -> None
+              | TTfun (doms, cod) when List.exists (tvar_named id) (cod :: doms)
+                -> Some (TTtypename, i)
+              | _ -> Some (tt, i) )
+            temps
+        in
+        (temps, Dfun {f with df_ret = ret}) )
+    | _ -> (temps, decl) )
+  | _ -> (temps, decl)
+
+(** Relax a signature in which a parameter's type is the only place a template
+    template parameter is applied.
+
+    [cast (e : E Y)] makes [E] a [template <typename> class] because [E Y] is
+    the type of a parameter, and then nothing can supply it: an event family
+    like [FailE], whose index Crane erases, reaches C++ as a plain struct, and
+    a caller polymorphic in an [E] of its own passes a [typename].  Nor does
+    the signature need [E] applied -- the parameter has one type, and C++
+    deduces a type from the argument it is given.  So the parameter is given a
+    template parameter of its own and [E] goes back to being a [typename],
+    which is what its call sites spell.
+
+    Only a variable applied {e nowhere else} qualifies.  Where the return type
+    or a callback's [requires] also names it, the application is a claim about
+    the shape of the instantiation -- [hk_map] returns [T1<T3>] for the very
+    [T1] its argument came in at -- and a parameter deduced on its own would
+    not carry it. *)
+let relax_applied_param temps decl =
+  let occurrences p ty =
+    let n = ref 0 in
+    ignore (exists_cpp_type (fun t -> if p t then incr n; false) ty);
+    !n
+  in
+  let applies id = function Tapply (h, _) -> tvar_is id h | _ -> false in
+  match decl with
+  | Dfun ({df_ret = ret; df_shape = Ddef (params, body); _} as f) ->
+    let param_tys = List.map snd params in
+    (* A variable applied in the parameters and named nowhere else: not by the
+       return type, not by another template parameter's constraint, and not
+       bare among the parameters either. *)
+    (* A position that takes the variable as a bare template name --
+       [Sum1<T1, T2, T4>], whose first two arguments are templates -- states
+       its kind outright: what is supplied there {e is} a template, so the
+       parameter cannot be relaxed into a [typename] deduced from an
+       argument. *)
+    let passed_as_template id =
+      List.exists
+        (exists_cpp_type (function Ttyctor t -> tvar_named id t | _ -> false))
+        (ret :: param_tys)
+    in
+    let only_applied_in_params id =
+      let total = List.fold_left (fun a t -> a + occurrences (tvar_is id) t) 0 in
+      let applied =
+        List.fold_left (fun a t -> a + occurrences (applies id) t) 0
+      in
+      applied param_tys > 0
+      && total param_tys = applied param_tys
+      && (not (passed_as_template id))
+      && (not (tvar_named id ret))
+      && not
+           (List.exists
+              (fun (tt, i) ->
+                (not (Id.equal i id))
+                &&
+                match tt with
+                | TTfun (doms, cod) -> List.exists (tvar_named id) (cod :: doms)
+                | TTtypename_default d -> tvar_named id d
+                | _ -> false )
+              temps )
+    in
+    let relaxed =
+      List.filter
+        (fun (tt, id) ->
+          match tt with
+          | TTtemplate _ -> only_applied_in_params id
+          | _ -> false )
+        temps
+    in
+    if relaxed = [] then (temps, decl)
+    else begin
+      (* One fresh parameter per application, named apart from the ones the
+         signature already has. *)
+      let taken = List.map snd temps in
+      let fresh = ref [] in
+      let next_name () =
+        let rec pick k =
+          let id = Id.of_string (Printf.sprintf "_P%d" k) in
+          if List.exists (Id.equal id) taken then pick (k + 1) else id
+        in
+        pick (List.length !fresh)
+      in
+      (* One name per distinct application, not per occurrence: two positions
+         spelled [T1<std::any>] came from the one ML type and denote the one
+         C++ type, and giving them separate deduced parameters would let a
+         call deduce them apart.  Sharing is also what lets the body be
+         rewritten: it spells the application the same way the parameter did,
+         and the name it must now use is the name that parameter took. *)
+      let seen = ref [] in
+      (* Keyed by the variable and the arguments it is applied to, not by the
+         type node: the same application is spelled with whatever [Tvar]
+         rigidity the position it was built in gave it. *)
+      let key t =
+        match t with
+        | Tapply (h, args) -> (
+          match List.find_opt (fun (_, id) -> tvar_is id h) relaxed with
+          | Some (_, id) -> Some (id, args)
+          | None -> None )
+        | _ -> None
+      in
+      let lookup t =
+        Option.bind (key t) (fun k -> List.assoc_opt k !seen)
+      in
+      let deduced t =
+        match key t with
+        | None -> None
+        | Some k -> (
+          match List.assoc_opt k !seen with
+          | Some id -> Some id
+          | None ->
+            let id = next_name () in
+            fresh := !fresh @ [(TTtypename, id)];
+            seen := (k, id) :: !seen;
+            Some id )
+      in
+      let deduce ty =
+        map_cpp_type
+          (fun t ->
+            match deduced t with Some id -> Tvar (0, Some id) | None -> t )
+          ty
+      in
+      let params = List.map (fun (n, ty) -> (n, deduce ty)) params in
+      (* The body annotates the very types the parameters do -- a pattern
+         match names the scrutinee's constructor struct -- so a relaxation
+         that renames a parameter's type has to rename the body's too, or the
+         body goes on applying a variable the signature no longer declares as
+         a template. *)
+      let body =
+        let ft =
+          map_cpp_type (fun t ->
+              match lookup t with Some id -> Tvar (0, Some id) | None -> t )
+        in
+        let rec fe e = Minicpp.map_expr fe fs ft e
+        and fs st = Minicpp.map_stmt fe fs ft st in
+        List.map fs body
+      in
+      let temps =
+        List.map
+          (fun (tt, id) ->
+            if List.exists (fun (_, i) -> Id.equal i id) relaxed then
+              (TTtypename, id)
+            else (tt, id) )
+          temps
+        @ !fresh
+      in
+      (temps, Dfun {f with df_shape = Ddef (params, body)})
+    end
+  | _ -> (temps, decl)
+
+(** Take the application back off a type variable that was left a plain
+    [typename].
+
+    A variable is declared [template <typename> class] only when the signature
+    has to name it with no argument list ({!with_applied_tvars}).  When it does
+    not, an occurrence like [T1<std::any>] is the application of a plain type
+    to a type -- which does not parse -- and the honest spelling is [T1]: the
+    index is erased, so the family applied at it is the event struct itself and
+    there is nothing for the argument list to say.  Applied at an argument the
+    declaration binds, it is [crane::rebind_t<T1, A>] ({!Minicpp.rebind_plain_var}):
+    the variable may just as well be a type constructor given at its erased
+    element, and then the argument is the element. *)
+let deapply_plain_tvars temps decl =
+  let plain =
+    List.filter_map
+      (fun (tt, id) -> match tt with TTtemplate _ -> None | _ -> Some id)
+      temps
+  in
+  let in_scope = List.map snd temps in
+  let rec ft t =
+    map_cpp_type
+      (function
+        | Tapply (head, args) when List.exists (fun id -> tvar_is id head) plain -> (
+          (* Named as it is declared: a head converted without names is
+             otherwise spelled [std::any]. *)
+          let head =
+            match head with
+            | Tvar (i, None) ->
+              Tvar (i, List.find_opt (fun id -> tvar_is id head) plain)
+            | _ -> head
+          in
+          Minicpp.rebind_plain_var ~in_scope head args )
+        (* A carrier abstraction's body is written too, through a holder;
+           [map_cpp_type] leaves it alone. *)
+        | Ttyctor body -> Ttyctor (ft body)
+        | t -> t )
+      t
+  in
+  (* A lambda whose parameter deduced a template parameter only through the
+     application just taken off no longer does. *)
+  let settle = function
+    | CPPlambda l -> CPPlambda (Minicpp.settle_lambda_tparams l)
+    | e -> e
+  in
+  (* The parameters' own types too: a callable parameter's constraint
+     ([is_invocable_r_v<T3, F1 &, T1<T2> &>]) and a default. *)
+  let temps =
+    List.map
+      (fun (tt, id) ->
+        ( ( match tt with
+          | TTfun (doms, cod) -> TTfun (List.map ft doms, ft cod)
+          | TTtypename_default t -> TTtypename_default (ft t)
+          | tt -> tt ),
+          id ) )
+      temps
+  in
+  match decl with
+  | Dfun ({df_ret = ret; df_shape = Ddef (params, body); _} as f) ->
+    let rec fe e = settle (Minicpp.map_expr fe fs ft e)
+    and fs st = Minicpp.map_stmt fe fs ft st in
+    ( temps,
+      Dfun
+        { f with
+          df_ret = ft ret;
+          df_shape =
+            Ddef (List.map (fun (n, ty) -> (n, ft ty)) params, List.map fs body)
+        } )
+  | Dfun ({df_ret = ret; df_shape = Ddecl params; _} as f) ->
+    ( temps,
+      Dfun
+        { f with
+          df_ret = ft ret;
+          df_shape = Ddecl (List.map (fun (n, ty) -> (n, ft ty)) params) } )
+  | Dasgn (n, ty, e) ->
+    let rec fe e = settle (Minicpp.map_expr fe fs ft e)
+    and fs st = Minicpp.map_stmt fe fs ft st in
+    (temps, Dasgn (n, ft ty, fe e))
+  | Dstruct _ | Dnspace _ | Dtemplate _ ->
+    (* An inductive's own fields and members, for the same reason: a family
+       parameter [hkt_templates] left plain is applied in its payloads. *)
+    let rec fe e = settle (Minicpp.map_expr fe fs ft e)
+    and fs st = Minicpp.map_stmt fe fs ft st in
+    (temps, Minicpp.map_decl fe fs ft decl)
+  | _ -> (temps, decl)
+
+(** {!deapply_plain_tvars} for a generated struct -- an inductive's, or an
+    instance's -- whose template parameters are its own. *)
+let deapply_plain_struct_tvars decl =
+  let rec tparams = function
+    | Dstruct ds -> Some ds.ds_tparams
+    | Dtemplate (temps, _, _) -> Some temps
+    | Dnspace (_, ds) -> List.find_map tparams ds
+    | _ -> None
+  in
+  match tparams decl with
+  | Some temps -> snd (deapply_plain_tvars temps decl)
+  | None -> decl
+
+(** Default every template parameter the signature that came out of the
+    relaxations no longer mentions.
+
+    A relaxation answers a template parameter the call site cannot supply by
+    spelling the position it appeared in differently -- a callback becomes an
+    [F], an application becomes a parameter of its own.  What it leaves behind
+    is the variable itself: declared, mentioned nowhere, and so neither
+    deducible nor, for a [template <typename> class], writable at all.  Given
+    a [void] default it costs the call site nothing.  It is defaulted rather
+    than dropped because a call site that spells template arguments spells
+    them by position.
+
+    A constraint counts as a mention, including a callback's.  It is not a use
+    the compiler can deduce from, but it is what states the arity and result a
+    callback must have, and a call site that spells its type arguments -- which
+    is the only way such a parameter is ever given a value -- is relying on it
+    to reject the ones that do not fit.  Defaulting the variable away would
+    take the check with it.  A clause the printer drops as vacuous is not a
+    mention, for the same reason: it is not there.
+
+    Only the signature is read, and what the reading skips it also rewrites.
+    A mention is counted in the arguments a type actually writes, so an
+    occurrence sitting where nothing is written does not save the variable --
+    and must not survive it either, or the declaration would default a
+    parameter it goes on to spell.  Those occurrences are erased to [std::any].
+
+    The body's occurrences go the same way, with one exception: the target
+    type of an [any_cast].  Everywhere else an erased spelling is a vaguer
+    spelling of the same thing, and vaguer is what the variable has become.
+    An [any_cast] target is not a spelling but a run-time equality test
+    against the type the value was stored as, so erasing an argument inside
+    one does not widen the cast, it changes which cast is performed:
+    [std::pair<std::any, nat>] read of a pair stored with concrete components
+    throws, while compiling perfectly clean.  The defaulted parameter is still
+    declared, and a call site that knows what the value was stored as writes
+    it -- which is the only way such a parameter is ever given a value, and
+    the reason it is defaulted rather than dropped. *)
+let default_unmentioned_temps temps decl =
+  (* Stricter than {!tvar_is}, which lets an unresolved head answer to its
+     index as well as to its name: a relaxation names its parameters [F1],
+     [_P0] without renumbering them, so a variable that kept index 1 would
+     otherwise answer for [T1] and no parameter would ever look unmentioned. *)
+  let is_tvar id = function
+    | Tvar (_, Some n) -> Id.equal n id
+    | Tvar (i, None) -> i > 0 && Id.equal (tvar_id i) id
+    | _ -> false
+  in
+  (* Only the arguments a type actually writes count: an argument in a
+     position nothing writes is no more deducible than one that is not there. *)
+  let prune = Ml_type_util.prune_unwritten_args in
+  let has_tvar id ty = exists_cpp_type (is_tvar id) (prune ty) in
+  let mentions id =
+    let has = has_tvar id in
+    (* A constraint on another parameter is a mention too: dropping the
+       variable out of the deduction would leave the clause naming it. *)
+    let in_temps =
+      List.exists
+        (fun (tt, _) ->
+          match tt with
+          | TTtypename_default d -> has d
+          | TTconcept (_, args) -> List.exists has args
+          | TTfun (dom, cod) ->
+            (not (Minicpp.tt_constraint_is_vacuous dom cod))
+            && (List.exists has dom || has cod)
+          | _ -> false )
+        temps
+    in
+    match decl with
+    | Dfun {df_ret; df_shape} ->
+      has df_ret || in_temps
+      || ( match df_shape with
+         | Ddef (params, _) -> List.exists (fun (_, t) -> has t) params
+         | Ddecl params -> List.exists (fun (_, t) -> has t) params )
+    | _ -> true
+  in
+  let unmentioned =
+    List.filter_map
+      (fun (tt, id) ->
+        match tt with
+        | (TTtypename | TTtemplate _) when not (mentions id) -> Some id
+        | _ -> None )
+      temps
+  in
+  if unmentioned = [] then (temps, decl)
+  else
+    let is_unmentioned t =
+      let head = match t with Ttyctor h | Tapply (h, _) -> h | h -> h in
+      List.exists (fun id -> is_tvar id head) unmentioned
+    in
+    let erase = map_cpp_type (fun t -> if is_unmentioned t then Tany else t) in
+    let erase_params l = List.map (fun (id, t) -> (id, erase t)) l in
+    let decl =
+      match decl with
+      | Dfun ({df_shape; _} as f) ->
+        let df_shape =
+          match df_shape with
+          | Ddef (params, body) ->
+            let rec fe e =
+              match e with
+              (* The cast's target is left alone; its operand is not. *)
+              | CPPany_cast (ty, e') -> CPPany_cast (ty, fe e')
+              | CPPany_cast_tolerant (ty, e') -> CPPany_cast_tolerant (ty, fe e')
+              | e -> Minicpp.map_expr fe fs erase e
+            and fs s = Minicpp.map_stmt fe fs erase s in
+            Ddef (erase_params params, List.map fs body)
+          | Ddecl params -> Ddecl (erase_params params)
+        in
+        Dfun {f with df_ret = erase f.df_ret; df_shape}
+      | d -> d
+    in
+    let temps =
+      List.map
+        (fun (tt, id) ->
+          match tt with
+          | (TTtypename | TTtemplate _) when List.exists (Id.equal id) unmentioned
+            ->
+            (TTtypename_default Tvoid, id)
+          | _ -> (tt, id) )
+        temps
+    in
+    (temps, decl)
+
 (** Build template parameter list with phantom detection.
 
     Type variables represented concretely in the generated signature (i.e.
@@ -1982,7 +3461,9 @@ let relax_applied_return temps decl =
       [typename T]) even if they don't appear in the C++ function type.
       Used for type INDEX tvars that are stripped from the C++ type but needed
       for [any_cast] in function bodies. *)
-let phantom_aware_temps ?(force_required = IntSet.empty) cty tvars =
+let phantom_aware_temps
+    ?(force_required = IntSet.empty) ?(also_declared = IntSet.empty) ?ml_ty cty
+    tvars =
   (* The leading phantoms are spelled out at every call site
      ({!Ml_type_util.explicit_tvar_prefix}), so they need no default.  A
      default there would let a call that supplies nothing silently pick
@@ -1996,18 +3477,23 @@ let phantom_aware_temps ?(force_required = IntSet.empty) cty tvars =
       temps
   in
   undefault (explicit_tvar_prefix ~force_required cty)
-  @@ with_applied_tvars cty
+  @@ with_applied_tvars ?ml_ty cty
   @@
   match cty with
   | Tfun (dom, cod) ->
     let tvars_indexed = get_tvars_indexed cty in
     let primary = primary_tvar_indices dom cod in
     let primary = IntSet.union primary force_required in
+    (* [also_declared] is every variable the ML type has, which is not every
+       variable the C++ type spells: an erased one is written nowhere in the
+       signature, yet the body and the call sites still number their arguments
+       by the ML type.  Declared as a defaulted phantom, the numbering lines up
+       and nothing is demanded of a use site that supplies nothing. *)
     let extra =
       IntSet.fold (fun i acc ->
         if List.exists (fun (j, _) -> j = i) tvars_indexed then acc
         else (i, tvar_id i) :: acc
-      ) force_required []
+      ) (IntSet.union force_required also_declared) []
     in
     let all_tvars_indexed =
       List.sort (fun (x, _) (y, _) -> Int.compare x y)
@@ -2023,10 +3509,20 @@ let phantom_aware_temps ?(force_required = IntSet.empty) cty tvars =
   | _ -> List.map (fun id -> (TTtypename, id)) tvars
 
 (** Substitute [CPPglob id] with [repl] in expressions and statements. Uses
-    generic AST visitors for structural recursion. *)
+    generic AST visitors for structural recursion.
+
+    Identity here is the {i user} name, not the canonical one {!globref_equal}
+    compares.  Every caller substitutes a declaration's own reference for a
+    self-call, and what makes an occurrence a self-call is that it is printed at
+    the name being declared -- a property of the user name, since that is the
+    one the C++ spelling comes from.  Two references can share a canonical name
+    and still be different C++ names: [Include M] inside a functor re-exports
+    [M]'s fields as constants of the including module, so the forwarder's body
+    and the forwarder itself agree canonically and differ in exactly the
+    qualifier that keeps the call from being a call to itself. *)
 let rec glob_subst_expr (id : GlobRef.t) (repl : cpp_expr) (e : cpp_expr) =
   match e with
-  | CPPglob (id', _, _) when globref_equal id id' ->
+  | CPPglob (id', _, _) when GlobRef.UserOrd.equal id id' ->
     repl
   | _ -> map_expr (glob_subst_expr id repl) (glob_subst_stmt id repl) Fun.id e
 
@@ -2100,8 +3596,14 @@ let is_unit_cpp_type = function
     A nested lambda is traversed under its own declared return type, since a
     [tt] returned from a lambda that really does return [unit] is well-typed. *)
 let dead_unit_returns_to_abort (cod : cpp_type) (body : cpp_stmt list) =
-  let is_tt = function
+  (* A [tt] can also reach the return as the head of a call, when the branch's
+     type is a function type and eta-expansion pushed the invented argument
+     inside the match: the impossible branch then returns [tt(x)].  Applying a
+     value that carries no information is no more reachable than returning
+     one, and is the same branch seen one step later. *)
+  let rec is_tt = function
     | CPPglob (r, _, _) -> Table.is_tt_constructor r
+    | CPPfun_call (_, f, _) -> is_tt f
     | _ -> false
   in
   (* [ret_ty] is [None] inside a lambda with a deduced return type: there is no
@@ -2178,24 +3680,6 @@ let sig_witness_expr name (ml_ty : ml_type) =
         (name ^ "." ^ Id.to_string (Common.lookup_ctor_field_name ~owner:r cname 0))
   | _ -> None
 
-(** Generate a C++ function definition from an ML function body.
-
-    When the body has fewer lambda binders than the ML type's domain (i.e. it
-    is under-applied), missing parameters are eta-expanded by synthesising
-    [MLrel] arguments.  [Tdummy]-typed entries in the missing list are skipped:
-    they represent erased type parameters (e.g. [A : Type] in
-    [apply : forall A, A -> A]) that have no C++ runtime representation.
-    Including them would produce a spurious [CPPabort "unreachable"] IIFE as an
-    extra argument, causing [std::function] call sites to receive the wrong
-    number of arguments.
-
-    @param n     the global reference for the function being defined
-    @param b     the ML AST body
-    @param cty   the C++ type of the function (decomposed internally into domain
-                 and codomain)
-    @param ty    the original ML type (used for domain decomposition and type
-                 inference)
-    @param temps template type parameters *)
 (** Run [f] in the itree extraction mode that [ty]'s codomain calls for,
     restoring the enclosing mode afterwards.  Reified mode preserves [itree E R]
     as [shared_ptr<ITree<R>>]; sequential mode erases it to [R].  A codomain
@@ -2238,15 +3722,8 @@ let promote_typeclass_params (params : (Id.t * ml_type) list) =
              declared. *)
           let tt =
             match ty with
-            | Miniml.Tglob (class_ref, type_args, _) ->
-              if Table.get_ind_nb_tparams class_ref = 0 then
-                TTconcept (class_ref, [])
-              else
-                TTconcept
-                  ( class_ref,
-                    List.map
-                      (fun t -> convert_ml_type_to_cpp_type (empty_env ()) [] t)
-                      (Table.drop_hkt_args class_ref type_args) )
+            | Miniml.Tglob _ as ty ->
+              Option.get (concept_constraint_of_class_type ty)
             | _ ->
               (* Unreachable: [Table.is_typeclass_type] only holds of a
                  [Tglob]. *)
@@ -2266,6 +3743,24 @@ let promote_typeclass_params (params : (Id.t * ml_type) list) =
   in
   (params, List.rev !temps)
 
+(** Generate a C++ function definition from an ML function body.
+
+    When the body has fewer lambda binders than the ML type's domain (i.e. it
+    is under-applied), missing parameters are eta-expanded by synthesising
+    [MLrel] arguments.  [Tdummy]-typed entries in the missing list are skipped:
+    they represent erased type parameters (e.g. [A : Type] in
+    [apply : forall A, A -> A]) that have no C++ runtime representation.
+    Including them would produce a spurious [CPPabort "unreachable"] IIFE as an
+    extra argument, causing [std::function] call sites to receive the wrong
+    number of arguments.
+
+    @param n     the global reference for the function being defined
+    @param b     the ML AST body
+    @param cty   the C++ type of the function (decomposed internally into domain
+                 and codomain)
+    @param ty    the original ML type (used for domain decomposition and type
+                 inference)
+    @param temps template type parameters *)
 let gen_dfun n b cty ty temps =
   let dom, cod =
     match cty with Tfun (d, c) -> (d, c) | t -> ([ Tvoid ], t)
@@ -2284,12 +3779,8 @@ let gen_dfun n b cty ty temps =
        so the C++ function literally returns void)
      - Reified mode: Tglob(itree, [E; Unit]) → Tglob(itree, [E; void])
        (printed as shared_ptr<ITree<void>> via monad template) *)
-  let unit_void =
-    (match ty with Miniml.Tarr _ -> true
-     | Miniml.Tglob (r, _, _) when Table.is_monad r -> true | _ -> false)
-    && ml_type_is_unit (ml_result_type ty)
-  in
-  let cod = apply_unit_void unit_void ((!tctx).itree_mode = Reified) cod in
+  let unit_void = ml_type_is_void_call ty in
+  let cod = apply_unit_void unit_void cod in
   (* Reversed: the lambda collection below peels the innermost arrow first. *)
   let mldom = List.rev (Ml_type_util.ml_domains ty) in
   (* Limit lambda collection to the number of type arrows. When a type alias
@@ -2402,11 +3893,25 @@ let gen_dfun n b cty ty temps =
      instead of f(a, s')). We must NOT replace unconditionally, because that
      would make parameter types in the .cpp definition differ from the .h
      declaration (which uses gen_sfun with expanded types). *)
+  (* Nor where the signature names a type alias that takes promoted
+     parameters -- [FusedS := state * ...] under [Existing Instance], declared
+     [template <typename ptr>].  Its body names class fields only the alias's
+     own parameters resolve, so the expansion the lambda's binder carries
+     spells them erased, and the alias is the only spelling that keeps them;
+     the header's [gen_sfun] reads the signature's types already. *)
+  let promoted_alias t =
+    match Mlutil.type_simpl t with
+    | Miniml.Tglob ((GlobRef.ConstRef _ as g), _, _) ->
+      Table.promoted_type_params g <> []
+    | _ -> false
+  in
   let ids =
     if List.length ids = List.length sig_types_for_ids then
       List.map2
         (fun (id, body_ty) sig_ty ->
-          if count_ml_arrows body_ty > count_ml_arrows sig_ty then
+          if count_ml_arrows body_ty > count_ml_arrows sig_ty
+             || promoted_alias sig_ty
+          then
             (id, sig_ty)
           else
             (id, body_ty) )
@@ -2518,7 +4023,40 @@ let gen_dfun n b cty ty temps =
            b);
       !m
     in
-    let renumbering = if body_max > n_type_binders then renumbering else [] in
+    (* An index past the last type binder is not proof on its own: a
+       pattern's existential -- [VisF]'s answer type, numbered after the
+       enclosing ones -- is one too.  A body numbered by position never names
+       a value binder's position, though, so one that does is already on the
+       signature's numbering. *)
+    let value_positions =
+      List.mapi (fun i dom -> (i + 1, dom))
+        (Ml_type_util.ml_domains (try Table.find_type n with Not_found -> ty))
+      |> List.filter_map (fun (i, dom) ->
+             match dom with Miniml.Tdummy Miniml.Ktype -> None | _ -> Some i)
+    in
+    let names_a_value_position =
+      let rec mentions t =
+        match t with
+        | Miniml.Tvar (_, i) -> List.mem i value_positions
+        | Miniml.Tapp (i, l) -> List.mem i value_positions || List.exists mentions l
+        | Miniml.Tglob (_, l, _) -> List.exists mentions l
+        | Miniml.Tarr (a, c) -> mentions a || mentions c
+        | Miniml.Tmeta {contents = Some t} -> mentions t
+        | _ -> false
+      in
+      let found = ref false in
+      ignore
+        (map_types_in_ast
+           (fun ty ->
+             if mentions ty then found := true;
+             ty )
+           b);
+      !found
+    in
+    let renumbering =
+      if body_max > n_type_binders && not names_a_value_position then renumbering
+      else []
+    in
     match renumbering with
     | [] -> b
     | subst -> map_types_in_ast (subst_tvars_type subst) b
@@ -2529,19 +4067,21 @@ let gen_dfun n b cty ty temps =
      which prints as [const std::function<R(Args...)>].
 
      [detect_non_forwarded_params] returns source-order indices (param 0 =
-     first Rocq parameter).  We need two index-checking helpers because the
-     parameter list [ids] is in de Bruijn order (innermost first = last source
-     param first), while [List.rev ids] is in source order:
-
-     Source order (Rocq): p0 p1 p2 indices 0, 1, 2 De Bruijn order (ids): p2 p1
-     p0 indices 0, 1, 2
-
-     So non-forwarded source index [i] maps to de Bruijn index [n_ids - 1 - i]. *)
+     first Rocq parameter).  The parameter list [ids] is in de Bruijn order
+     (innermost first), so a loop over it asks about source index
+     [List.length ids - 1 - i] -- the length of the list it is iterating,
+     which by then also holds the eta-expanded parameters. *)
   let non_fwd_param_indices = detect_non_forwarded_params n (List.length ids) b in
-  let non_fwd_set = IntSet.of_list non_fwd_param_indices in
+  (* A callable a closure holds on to is not generalised either: it arrives
+     as a [crane::fn], so every capture shares it rather than copying the
+     caller's closure. *)
+  let escaping =
+    escaping_params
+      ~suspended:(Table.is_coinductive_type (ml_return_type ty))
+      (List.length ids) b
+  in
+  let non_fwd_set = IntSet.of_list (escaping @ non_fwd_param_indices) in
   let is_non_fwd_param_source i = IntSet.mem i non_fwd_set in
-  let n_ids = List.length ids in
-  let is_non_fwd_param_db i = IntSet.mem (n_ids - 1 - i) non_fwd_set in
   let all_params = missing @ ids in
   (* Type class instance parameters become C++ template type parameters. We
      assign unique names (_tcI0, _tcI1, ...) to avoid collision with: - User
@@ -2613,6 +4153,7 @@ let gen_dfun n b cty ty temps =
             resolve_promoted_in_type cod)
     | Tconst t -> Tconst (resolve_promoted_in_type t)
     | Tref t -> Tref (resolve_promoted_in_type t)
+    | Tfwd_ref t -> Tfwd_ref (resolve_promoted_in_type t)
     | Tshared_ptr t -> Tshared_ptr (resolve_promoted_in_type t)
     | Tvariant ts -> Tvariant (List.map resolve_promoted_in_type ts)
     | Tqualified (b, id) -> Tqualified (resolve_promoted_in_type b, id)
@@ -2622,6 +4163,8 @@ let gen_dfun n b cty ty temps =
     | Tnamespace (r, t) -> Tnamespace (r, resolve_promoted_in_type t)
     | Tid (id, ts) -> Tid (id, List.map resolve_promoted_in_type ts)
     | Tid_external (id, ts) -> Tid_external (id, List.map resolve_promoted_in_type ts)
+    | Tnondeduced t -> Tnondeduced (resolve_promoted_in_type t)
+    | Trebind (h, x) -> Trebind (resolve_promoted_in_type h, resolve_promoted_in_type x)
     | Tptr t -> Tptr (resolve_promoted_in_type t)
     | _ -> ty
   in
@@ -2769,24 +4312,117 @@ let gen_dfun n b cty ty temps =
   (* Replace the parameter type of promoted (forwarded) function params with the
      template type variable [F&&]. Non-forwarded params are left untouched — they
      keep [Tconst (Tfun(dom, cod))] which prints as [const
-     std::function<R(Args...)>]. This loop iterates [ids] which is in de Bruijn
-     order, so we use [is_non_fwd_param_db] for the guard. *)
+     crane::fn<R(Args...)>]. This loop iterates [ids] in de Bruijn order. *)
   let ids =
     List.mapi
       (fun i (x, ty) ->
         match unwrap_fun_ty2 ty with
         | Some (Tfun _)
-          when (not (is_non_fwd_param_db i)) && not (is_erased_fun_param ty) ->
+          when (not (is_non_fwd_param_source (List.length ids - i - 1)))
+               && not (is_erased_fun_param ty) ->
           ( x,
-            Tref
-              (Tref (Tvar (0, Some (fun_tparam_id (List.length ids - i - 1)))))
-          )
+            Tfwd_ref (named_tvar (fun_tparam_id (List.length ids - i - 1))) )
         | _ -> (x, ty) )
+      ids
+  in
+  (* A parameter whose type is a callable behind a type alias -- a one-method
+     class demoted to [template <template <typename> class T> using C =
+     std::function<...>] -- is one no argument can be deduced through: what
+     arrives is a lambda, a lambda never has the alias's type, and deduction
+     fails before the conversion that would have succeeded is considered.
+
+     Taking it out of deduction is what lets the conversion happen.  The
+     alternative, generalising it to an [F &&] the way a bare [Tfun] parameter
+     is generalised above, would add a template parameter and so shift every
+     explicit argument list that already names this function -- and there is
+     nothing to gain by deducing a type the alias's own arguments, pinned by
+     the other parameters, already determine. *)
+  let ids =
+    (* A type constructor standing in for a template parameter: the alias is
+       applied to something of kind [Set -> Set], so the alias itself takes a
+       [template <typename> class] parameter -- the shape C++ cannot deduce. *)
+    let rec is_hk_arg a =
+      match a with
+      | Ttyctor _ -> true
+      | Tapply (Tvar _, _) -> true
+      | Tconst t | Tref t | Tfwd_ref t -> is_hk_arg t
+      | _ -> false
+    in
+    (* The alias stands for a callable.  A struct behind an alias deduces
+       perfectly well; it is only [std::function] that a lambda argument cannot
+       match. *)
+    let alias_rhs_is_fun kn =
+      match Table.lookup_typedef_unchecked kn with
+      | Some ml_ty -> (
+        match convert_ml_type_to_cpp_type env [] ml_ty with
+        | Tfun _ | Tconst (Tfun _) -> true
+        | _ -> false )
+      | None -> false
+    in
+    (* Whatever its arguments: a definitional class -- [Cat<T1, T2>], an
+       alias for [std::function<...>] -- names this function's parameters, and
+       a lambda argument cannot be matched against it.  A call site reads the
+       same parameter as no source of deduction ([deducible_tvars_of_glob]),
+       so the two agree on what has to be written. *)
+    let rec alias_hides_fun ty =
+      match ty with
+      | Tconst t | Tref t | Tfwd_ref t -> alias_hides_fun t
+      | Tapply (Tglob (GlobRef.ConstRef kn, [], _), args)
+       |Tglob (GlobRef.ConstRef kn, (_ :: _ as args), _) ->
+        (List.exists is_hk_arg args || get_tvar_indices ty <> [])
+        && alias_rhs_is_fun kn
+      | _ -> false
+    in
+    (* A callable parameter the recursion could not forward keeps its
+       [std::function] spelling, and that is not a fallback: the type erasure
+       is what makes the recursion close.  Rebuilding the callable at each step
+       gives a new closure type at each step, so an [F &&] would instantiate a
+       fresh specialisation forever.  But the spelling names this function's
+       own template parameters, and a lambda argument never has that type --
+       so the same deduction failure as the alias above, for the same reason,
+       and the same repair.  Where the type names no parameter there is
+       nothing to deduce and nothing to shield. *)
+    let rec spelled_fun_is_deduced_against ty =
+      match ty with
+      | Tconst t | Tref t | Tfwd_ref t -> spelled_fun_is_deduced_against t
+      | Tfun _ -> get_tvar_indices ty <> []
+      | _ -> false
+    in
+    (* The wrapper the ownership pass put on stays where it is; only the type
+       it wraps is taken out of deduction. *)
+    let rec at_core f ty =
+      match ty with
+      | Tconst t -> Tconst (at_core f t)
+      | Tref t -> Tref (at_core f t)
+      | Tfwd_ref t -> Tfwd_ref (at_core f t)
+      | t -> f t
+    in
+    List.map
+      (fun (x, ty) ->
+        if alias_hides_fun ty || spelled_fun_is_deduced_against ty then
+          ( x,
+            at_core
+              (fun t -> Tnondeduced t)
+              ty )
+        else (x, ty) )
       ids
   in
   (* Add type class instance template parameters - instance types come first *)
   let typeclass_temps_basic =
-    List.map (fun (tt, id, _, _) -> (tt, id)) typeclass_temps
+    (* A constraint's arguments are types like any other and get the same
+       resolution the signature does: [ToDvalueBase<_tcI0, T1, ptr, iptr>]
+       spells the two promoted variables bare, and bare is the file-scope
+       [std::any] rather than the [Params] instance standing beside it. *)
+    List.map
+      (fun (tt, id, _, _) ->
+        let tt =
+          match tt with
+          | TTconcept (r, (_ :: _ as args)) when has_type_resolutions ->
+            TTconcept (r, List.map resolve_promoted_in_type args)
+          | tt -> tt
+        in
+        (tt, id) )
+      typeclass_temps
   in
   (* Build recursive call reference with typeclass and type params only.
      Function type params (from fun_tys) are excluded because they should be
@@ -2801,7 +4437,7 @@ let gen_dfun n b cty ty temps =
     let rec mentions = function
       | Tglob (r, args, _) | Tnamespace (r, Tglob (_, args, _)) ->
         Table.is_non_uniform_inductive r || List.exists mentions args
-      | Tconst t | Tnamespace (_, t) | Tref t | Tshared_ptr t -> mentions t
+      | Tconst t | Tnamespace (_, t) | Tref t | Tfwd_ref t | Tshared_ptr t -> mentions t
       | Tfun (d, c) -> List.exists mentions d || mentions c
       | _ -> false
     in
@@ -2827,7 +4463,7 @@ let gen_dfun n b cty ty temps =
           temps
   in
   let rec_call =
-    mk_cppglob n (List.map (fun (_, id) -> Tvar (0, Some id)) rec_call_temps)
+    mk_cppglob n (List.map (fun (_, id) -> named_tvar id) rec_call_temps)
   in
   (* Combine all template params for function signature. Save the non-typeclass
      type params for Tvar index resolution below. *)
@@ -2861,21 +4497,38 @@ let gen_dfun n b cty ty temps =
       regular_temps
   in
   set_current_type_vars type_var_ids;
+  (* The head itself, at the kinds it declares: see
+     {!Translation_state.current_template_head}. *)
+  let saved_template_head = get_current_template_head () in
+  set_current_template_head (typeclass_temps_basic @ regular_temps);
   set_current_param_types all_ids;
   (* Activate promoted var resolution for body generation — types like
      [Tpromoted "Obj"] in type annotations will be resolved to
      qualified access through the typeclass instance chain. *)
   let saved_promoted_var_map = (!tctx).promoted_var_map in
-  tctx := { !tctx with promoted_var_map = promoted_var_resolutions };
+  (* Extend, never replace.  This declaration's own instance parameters answer
+     first -- a variable they declare is the one the body is written in -- but
+     what {!with_body_resolutions} read from the body and from the declarations
+     it names is the only answer a function with no instance parameter of its
+     own has.  [check : unit -> nat] whose body applies [@runS (@ParamsV
+     natIPtr)] has none, and replacing the map dropped the answer on the way
+     in, so the body spelled the file-scope erased alias in a scope that knew
+     the instance perfectly well. *)
+  tctx :=
+    { !tctx with
+      promoted_var_map = promoted_var_resolutions @ saved_promoted_var_map };
   (* Name the declaration being generated: inner fixpoints lifted out of it
      take their identity from it. *)
   let saved_decl_ref = !Table.current_decl_ref in
   Table.current_decl_ref := Some n;
-  (* Check if the return type is coinductive - if so, wrap body in lazy thunk *)
+  (* A coinductive value is suspended at its constructors (see
+     [suspend_ctor]); the body around them runs where it is called.  Only a
+     body that calls itself outside every constructor -- guarded, for Rocq,
+     only up to unfolding -- is suspended whole. *)
   let ml_ret = ml_return_type ty in
-  let is_cofix_return = Table.is_coinductive_type ml_ret in
-  (* For cofixpoints, wrap the return expression in Type::lazy_([=]() ->
-     ret_ty { ... }) *)
+  let is_cofix_return =
+    Table.is_coinductive_type ml_ret && calls_eagerly n b
+  in
   let cofix_wrap x =
     if is_cofix_return then
       let ret_cpp = cod in
@@ -2898,7 +4551,7 @@ let gen_dfun n b cty ty temps =
       let lazy_factory =
         CPPscope (mk_cppglob coind_ref type_args, Id.of_string "lazy_", [])
       in
-      let thunk = mk_lambda [] (Some ret_cpp) [Sreturn (Some x)] ~by_value:true in
+      let thunk = mk_lambda [] (Some ret_cpp) [Sreturn (Some x)] ~capture:Closure in
       Sreturn (Some (mk_call lazy_factory [thunk]))
     else if cod = Tvoid then
       (* void function: execute expression for side effects, then return.
@@ -3086,7 +4739,7 @@ let gen_dfun n b cty ty temps =
             (List.mapi (fun i x -> (i, x)) missing)) in
           List.map
             (glob_subst_stmt n rec_call)
-            (gen_body_stmts env cofix_wrap (MLapp (lifted_b, args)))
+            (gen_body_stmts env cofix_wrap (apply_eta_args lifted_b args))
       in
       let b = return_captures_by_value b in
       (* let b = List.map forward_fun_args b in *)
@@ -3105,6 +4758,7 @@ let gen_dfun n b cty ty temps =
   tctx := { !tctx with current_cpp_return_type = saved_return_type };
   Table.current_decl_ref := saved_decl_ref;
   tctx := { !tctx with promoted_var_map = saved_promoted_var_map };
+  set_current_template_head saved_template_head;
   (* {b Entry point detection for monadic [main].}
 
      When a Rocq definition named [main] has a monadic return type, it is
@@ -3193,7 +4847,19 @@ let gen_dfun n b cty ty temps =
   in
     (temps, inner, env)
   in
-  let temps, inner = relax_applied_return temps inner in
+  (* The signature relaxations: each answers one way a template parameter can
+     be left with no value at the call site, and each is a no-op on a
+     signature that does not have that shape. *)
+  let temps, inner =
+    List.fold_left
+      (fun (temps, inner) relax -> relax temps inner)
+      (temps, inner)
+      [ relax_applied_return;
+        relax_tt_applied_return;
+        relax_applied_param;
+        deapply_plain_tvars ]
+  in
+  let temps, inner = default_unmentioned_temps temps inner in
   match temps with
   | [] -> (inner, env)
   | l -> (Dtemplate (l, None, inner), env)
@@ -3258,139 +4924,73 @@ let gen_sfun n b dom cod temps =
   | [] -> (inner, env)
   | l -> (Dtemplate (l, None, inner), env)
 
-(** Build a map from erased field projection GlobRefs to their Tvar index for a
-    promoted dependent record / typeclass. Returns [(GlobRef.t * int) list]
-    where int is the 1-based Tvar index. *)
-let erased_proj_tvar_map (class_ref : GlobRef.t) : (GlobRef.t * int) list =
-  let open GlobRef in
-  match class_ref with
-  | IndRef (kn, _) | ConstructRef ((kn, _), _) ->
-    let promoted_vars = Table.get_ind_ip_vars class_ref in
-    if promoted_vars = [] then
-      []
-    else
-      let mp = MutInd.modpath kn in
-      let n_promoted = List.length promoted_vars in
-      List.mapi
-        (fun i var_id ->
-          let knp = Constant.make2 mp (Label.of_id var_id) in
-          (ConstRef knp, n_promoted - i) )
-        promoted_vars
-  | _ -> []
+(** Whether a recovered type names an associated type of the enclosing class,
+    and so is worth writing back into the binder it came from.  Anything else
+    in a body already has a pass that reads it from somewhere better than the
+    declaration -- an alias, for one, is a type in its own right and the body
+    wants the type it stands for. *)
+let rec names_promoted_type_var = function
+  | Miniml.Tglob (r, args, _) ->
+    Table.is_promoted_type_var r || List.exists names_promoted_type_var args
+  | Miniml.Tarr (a, b) -> names_promoted_type_var a || names_promoted_type_var b
+  | Miniml.Tmeta {contents = Some t} -> names_promoted_type_var t
+  | _ -> false
 
-(** Expand TC-typed carrier refs to their nested Type-valued promoted vars.
+(** Whether a recovered type says something that means the same at the hole as
+    it did in the declaration.
 
-    When a typeclass has a promoted field whose ML type is itself a typeclass
-    (e.g., [base_category : PreCategory] in [PreStableCategory]),
-    [erased_proj_tvar_map] returns a reference to the TC-typed field (e.g.,
-    [ConstRef base_category]).  Using that directly in [rewrite_ml_ast_types]
-    produces the wrong C++ type — [typename _tcI0::base_category] instead of
-    [typename _tcI0::base_category::Obj].
+    The gate above asks whether the {e offer} names a promoted type var, which
+    is too narrow: the population it misses is the one where the declaration
+    knows a perfectly ordinary type.  [memS_mon::bind] declares its
+    continuation [std::function<MemS<..,_A1>(_A0)>] and the call is
+    [bind<unit, unit>], so the answer [unit] is spelled one line above the
+    binder -- and [unit] names no promoted type var.
 
-    This function replaces TC-typed carrier refs with the Type-valued promoted
-    vars of the nested typeclass.  Expansion is recursive: if the nested TC
-    itself has TC-typed promoted vars, they are expanded further.
+    A type with no variable in it is one this pass can only get right.  It
+    mentions nothing whose meaning depends on where it is read, so it means
+    the same at the binder as it did in the declaration.  A variable does not:
+    [itreeF]'s [Vis] quantifies over the event's result as well as the tree's,
+    and a call that instantiates that existential at the caller's own third
+    variable offers a name which, read at the lambda, denotes the deduced type
+    of a function parameter.  That offer is faithful to the term and still
+    unusable, so variables stay out.
 
-    @param class_ref  The containing typeclass (e.g., [PreStableCategory])
-    @param carrier_refs  The list from [erased_proj_tvar_map] *)
-let rec expand_tc_typed_carriers
-    (class_ref : GlobRef.t)
-    (carrier_refs : (GlobRef.t * int) list)
-    : (GlobRef.t * int) list =
-  let field_type_pairs = Table.get_record_field_bindings class_ref in
-  let expanded =
-      List.concat_map (fun (ref, idx) ->
-        let ref_name = Common.pp_global_name Common.Term ref in
-        match List.find_opt (fun (fopt, _) ->
-          match fopt with
-          | Some fr -> Common.pp_global_name Common.Term fr = ref_name
-          | None -> false
-        ) field_type_pairs with
-        | Some (_, Miniml.Tglob (r, _, _)) when Table.is_typeclass r ->
-          (* TC-typed carrier — expand to the nested TC's promoted vars *)
-          let nested = erased_proj_tvar_map r in
-          if nested = [] then [(ref, idx)]
-          else expand_tc_typed_carriers r nested
-        | _ -> [(ref, idx)]
-      ) carrier_refs
-  in
-  (* Sort by ascending tvar index so the first-declared field (lowest
-     index) comes first.  [erased_proj_tvar_map] assigns index
-     [n_promoted - i], so field 0 gets index 1 (lowest).  This matters
-     because [rewrite_ml_ast_types] uses [List.hd] to pick the carrier. *)
-  List.sort (fun (_, i1) (_, i2) -> compare i1 i2) expanded
+    [Tdummy] is out for the same reason read the other way round: an erased
+    position says nothing anywhere, so an offer carrying one cannot beat the
+    guess at the same hole -- it only respells [List<T3>] as [List<std::any>].
+    Closed is the wrong word for it; the predicate wants types that are both
+    closed and informative, and [Tdummy] is the canonical uninformative one. *)
+let rec is_closed_type = function
+  | Miniml.Tglob (_, args, _) -> List.for_all is_closed_type args
+  | Miniml.Tarr (a, b) -> is_closed_type a && is_closed_type b
+  | Miniml.Tmeta {contents = Some t} -> is_closed_type t
+  | Miniml.Tstring -> true
+  | Miniml.Tdummy _ | Miniml.Tvar _ | Miniml.Tapp _
+  | Miniml.Tmeta {contents = None} | Miniml.Tunknown | Miniml.Taxiom ->
+    false
 
-(** Replace Tglob references to erased projections with a rigid type variable
-    in an ML type. *)
-let rec replace_erased_proj_refs
-    (proj_map : (GlobRef.t * int) list)
-    (t : ml_type) : ml_type =
-  let find_in_map r =
-    List.find_map
-      (fun (ref, idx) -> if GlobRef.CanOrd.equal r ref then Some idx else None)
-      proj_map
-  in
-  match t with
-  | Miniml.Tglob (r, ts, args) ->
-    ( match find_in_map r with
-    | Some idx -> Miniml.Tvar (Rigid, idx)
-    | None ->
-      let ts' = List.map (replace_erased_proj_refs proj_map) ts in
-      if ts == ts' then t else Miniml.Tglob (r, ts', args) )
-  | Miniml.Tarr (t1, t2) ->
-    let t1' = replace_erased_proj_refs proj_map t1 in
-    let t2' = replace_erased_proj_refs proj_map t2 in
-    if t1 == t1' && t2 == t2' then t else Miniml.Tarr (t1', t2')
-  | Miniml.Tunknown -> Miniml.Tvar (Rigid, 1)
-  | _ -> t
+let writable_offer ty = names_promoted_type_var ty || is_closed_type ty
 
-(** Replace Tunresolved in all type annotations within an ML AST body with the
-    GlobRef of the first promoted type var (the carrier). This allows
-    convert_ml_type_to_cpp_type to detect it as a promoted type var.
-    [carrier_refs] is a list of (GlobRef.t * int) from erased_proj_tvar_map. *)
-let rewrite_ml_ast_types
-    (carrier_refs : (GlobRef.t * int) list)
-    (ast : ml_ast) : ml_ast =
-  if carrier_refs = [] then
-    ast
-  else
-    let carrier_ref = fst (List.hd carrier_refs) in
-    let rec rty t =
-      match t with
-      | Miniml.Tunknown -> Miniml.Tglob (carrier_ref, [], [])
-      | Miniml.Tmeta ({contents = Some inner} as meta) ->
-        let inner' = rty inner in
-        if inner != inner' then meta.contents <- Some inner';
-        t
-      | Miniml.Tmeta ({contents = None} as meta) ->
-        (* Unresolved meta — resolve to carrier *)
-        meta.contents <- Some (Miniml.Tglob (carrier_ref, [], []));
-        t
-      | Miniml.Tarr (t1, t2) -> Miniml.Tarr (rty t1, rty t2)
-      | Miniml.Tglob (r, ts, a) ->
-        let ts' = List.map rty ts in
-        Miniml.Tglob (r, ts', a)
-      | _ -> t
-    in
-    Mlutil.ast_map_types rty ast
+(** Fill a body's empty type annotations from the declaration, in two passes.
 
-(** Get the erased projection map for a function's type, if it takes a promoted
-    typeclass as first argument.
+    The first pass is the narrow one and the second widens it: a hole the
+    declaration names perfectly well -- but which happens not to mention a
+    promoted type var -- would otherwise be declined by the one pass that
+    knows the answer.
 
-    A higher-kinded carrier is left out: it stands for a type constructor, so it
-    can never be the type of a value, and {!rewrite_ml_ast_types} would spell
-    its name -- a bare [M] -- wherever a body has an unknown annotation that
-    really wants the element type. *)
-let get_erased_proj_map_from_type (ty : ml_type) : (GlobRef.t * int) list =
-  match ty with
-  | Tarr (Tglob (class_ref, _, _), _) when Table.is_typeclass class_ref ->
-    List.filteri
-      (fun i _ -> not (Table.is_hkt_param class_ref i))
-      (erased_proj_tvar_map class_ref)
-  | _ -> []
+    A hole neither pass can name is left a hole.  There used to be a third
+    pass here that filled every remaining one with the enclosing class's
+    first-declared associated type, which is right only when the class
+    declares exactly one and the hole is the carrier; where it is not, the
+    guess is what the body is printed from, and it pre-empts the passes in
+    {!Translation} that can still read the answer off the term. *)
+let recover_erased_body_types ty b =
+  let b = Mlutil.recover_erased_types ~only:names_promoted_type_var ty b in
+  Mlutil.recover_erased_types ~only:writable_offer ~refine_only:true ty b
 
 (** Generate C++ declaration from ML definition (main entry point) *)
 let gen_decl__inner n b ty =
+  with_body_resolutions n b @@ fun () ->
   with_itree_mode_for ty @@ fun () ->
   with_method_ns_for_locals @@ fun () ->
   let cty = convert_ml_type_to_cpp_type (empty_env ()) [] ty in
@@ -3433,7 +5033,7 @@ let gen_decl__inner n b ty =
         if resolves_to_any_type cty then erase_fn_for_any_slot b body_expr
         else body_expr
       in
-      let inner = Dasgn (n, cty, body_expr) in
+      let inner = snd (deapply_plain_tvars temps (Dasgn (n, cty, body_expr))) in
       ( match temps with
       | [] -> (inner, empty_env (), tvars)
       | l -> (Dtemplate (l, None, inner), empty_env (), tvars) )
@@ -3443,20 +5043,8 @@ let gen_decl n b ty =
 
 (** Generate C++ declaration with pretty-printing adjustments *)
 let gen_decl_for_pp__inner n b ty =
-  let carrier_refs = get_erased_proj_map_from_type ty in
-  (* Expand TC-typed carrier refs: when a carrier ref points to a
-     typeclass-typed promoted field (e.g., base_category : PreCategory),
-     replace it with the nested TC's Type-valued promoted vars (e.g., Obj).
-     This ensures rewrite_ml_ast_types replaces Tunresolved with the actual
-     type-level field rather than the struct-level typeclass field. *)
-  let carrier_refs =
-    match ty with
-    | Miniml.Tarr (Miniml.Tglob (class_ref, _, _), _)
-      when Table.is_typeclass class_ref ->
-      expand_tc_typed_carriers class_ref carrier_refs
-    | _ -> carrier_refs
-  in
-  let b = rewrite_ml_ast_types carrier_refs b in
+  with_body_resolutions n b @@ fun () ->
+  let b = recover_erased_body_types ty b in
   let b = resolve_body_tvars b ty in
   with_method_ns_for_locals @@ fun () ->
   let cty = convert_ml_type_to_cpp_type (empty_env ()) [] ty in
@@ -3480,7 +5068,10 @@ let gen_decl_for_pp__inner n b ty =
     |> List.rev
   in
   let tvars = tvars @ extra_index_tvars in
-  let temps = phantom_aware_temps ~force_required:index_tvar_set cty tvars in
+  let temps =
+    phantom_aware_temps ~force_required:index_tvar_set
+      ~also_declared:(Ml_type_util.collect_ml_tvars ty) ~ml_ty:ty cty tvars
+  in
   let result = match cty with
   | Tfun (dom, _) ->
     let f, e = gen_dfun n b cty ty temps in
@@ -3521,12 +5112,10 @@ let gen_decl_for_pp n b ty =
     converts to C++ types, and delegates to {!gen_dfun} for the actual
     definition.  Returns [(decl, env, tvars)]. *)
 let gen_dfun_def__inner n b ty =
+  with_body_resolutions n b @@ fun () ->
   (* Simplify the ML type to resolve metavariables before converting to C++ *)
   let ty = type_simpl ty in
-  (* Rewrite Tunresolved in body types to promoted carrier refs. This allows
-     convert_ml_type_to_cpp_type to resolve them correctly. *)
-  let carrier_refs = get_erased_proj_map_from_type ty in
-  let b = rewrite_ml_ast_types carrier_refs b in
+  let b = recover_erased_body_types ty b in
   let b = resolve_body_tvars b ty in
   with_method_ns_for_locals @@ fun () ->
   let cty = convert_ml_type_to_cpp_type (empty_env ()) [] ty in
@@ -3541,7 +5130,10 @@ let gen_dfun_def__inner n b ty =
     |> List.rev
   in
   let tvars = tvars @ extra_index_tvars in
-  let temps = phantom_aware_temps ~force_required:index_tvar_set cty tvars in
+  let temps =
+    phantom_aware_temps ~force_required:index_tvar_set
+      ~also_declared:(Ml_type_util.collect_ml_tvars ty) ~ml_ty:ty cty tvars
+  in
   (* Count typeclass-typed parameters in the ML domain — these become template
      params inside gen_dfun but aren't reflected in tvars (which comes from the
      C++ type). We need tvars to be non-empty when typeclass params exist so
@@ -3574,15 +5166,10 @@ let gen_dfun_def n b ty =
 
 (** Generate C++ function specification (for header files) *)
 let gen_spec__inner n b ty =
+  with_body_resolutions n b @@ fun () ->
   let ty = type_simpl ty in
   let ml_ty = ty in  (* preserve ML type before C++ conversion *)
-  let unit_void =
-    (match ty with Miniml.Tarr _ -> true
-     | Miniml.Tglob (r, _, _) when Table.is_monad r -> true | _ -> false)
-    && ml_type_is_unit (ml_result_type ty) in
-  let is_reified = unit_void &&
-    (match extract_monad_from_codomain ty with
-     | Some mr -> is_monad_reified mr | None -> false) in
+  let unit_void = ml_type_is_void_call ty in
   with_method_ns_for_locals @@ fun () ->
   let ty = convert_ml_type_to_cpp_type (empty_env ()) [] ty in
   let tvars = get_tvars ty in
@@ -3590,7 +5177,7 @@ let gen_spec__inner n b ty =
   let result =
     match ty with
     | Tfun (dom, cod) ->
-      let cod = apply_unit_void unit_void is_reified cod in
+      let cod = apply_unit_void unit_void cod in
       gen_sfun n b dom cod temps
     | _ ->
     match b with
@@ -3620,6 +5207,18 @@ let gen_spec__inner n b ty =
       let has_magic =
         has_magic || ml_head_has_magic b
       in
+      (* A constant typed by a name -- an instance of a single-method class is
+         typed by the class -- may be initialised with a partially applied
+         body: [Instance Convert_holder : Convert hbox := fun n => tfmap f],
+         where [Convert] stands for two arrows and the body writes one.  The
+         slot it initialises is a [std::function] of the full signature, which
+         no partial application can fill, so the arrows the name stands for are
+         the arrows the body must have. *)
+      let inner_body =
+        Ml_type_util.eta_expand_to
+          (Ml_type_util.expand_ml_fun_alias ml_ty)
+          inner_body
+      in
       tctx := { !tctx with cs_counter = 0 };
       (* The constant's own type is also the expected type of its body, so an
          IIFE standing in for a let-in tail expression re-bases onto it rather
@@ -3642,7 +5241,7 @@ let gen_spec__inner n b ty =
         && (has_magic || ml_body_returns_erased_field inner_body)
       in
       let b_expr =
-        if needs_any_cast then Cpp_erasure.unbox ty b_expr
+        if needs_any_cast then unbox_value ty b_expr
         else
           (* (c) The emitted expression is itself the evidence: a projection
              out of a pair that was recovered from a box hands back a
@@ -3666,7 +5265,15 @@ let gen_spec__inner n b ty =
         if resolves_to_any_type ty then erase_fn_for_any_slot inner_body b_expr
         else b_expr
       in
-      let inner = Dasgn (n, Tconst ty, b_expr) in
+      (* A type naming a class field this scope cannot resolve would spell
+         the field's file-scope erased alias, while the initialiser -- built
+         through the instance the term names -- has the real type: [run :=
+         @int_to_ptr natIPtr (@PIV natIPtr) ...] is an [EOU<pair<Nat, bool>>],
+         not an [EOU<crane::obj>].  The initialiser says it. *)
+      let ty = if mentions_unresolved_promoted ty then Tauto else ty in
+      (* A polymorphic constant's family parameter is plain, as a
+         function's is, and written applied until deapplied. *)
+      let inner = snd (deapply_plain_tvars temps (Dasgn (n, Tconst ty, b_expr))) in
       ( match temps with
       | [] -> (inner, empty_env ())
       | l -> (Dtemplate (l, None, inner), empty_env ()) )
@@ -3682,22 +5289,16 @@ let gen_spec n b ty =
     struct bodies where the full definition is not needed. *)
 let gen_sfun_spec n b ty =
   let ty = type_simpl ty in
-  let unit_void =
-    (match ty with Miniml.Tarr _ -> true
-     | Miniml.Tglob (r, _, _) when Table.is_monad r -> true | _ -> false)
-    && ml_type_is_unit (ml_result_type ty) in
-  let is_reified = unit_void &&
-    (match extract_monad_from_codomain ty with
-     | Some mr -> is_monad_reified mr | None -> false) in
+  let unit_void = ml_type_is_void_call ty in
   let ty = convert_ml_type_to_cpp_type (empty_env ()) [] ty in
   let tvars = get_tvars ty in
   let temps = List.map (fun id -> (TTtypename, id)) tvars in
   match ty with
   | Tfun (dom, cod) ->
-    let cod = apply_unit_void unit_void is_reified cod in
+    let cod = apply_unit_void unit_void cod in
     gen_sfun n b dom cod temps
   | _ ->
-    let ty = apply_unit_void unit_void is_reified ty in
+    let ty = apply_unit_void unit_void ty in
     gen_sfun n b [Tvoid] ty temps
 
 (** Generate multiple function definitions *)
@@ -3712,22 +5313,48 @@ let gen_dfuns (ns, bs, tys) =
       [result] )
     (List.mapi (fun i name -> (i, name)) (Array.to_list ns))
 
-(** Convert a definition to a declaration by dropping its body. Recursively handles Dtemplate wrappers. Used to generate forward
-    declarations that match the full definition's signature (including concept
-    constraints). *)
-let rec decl_to_spec (d : cpp_decl) : cpp_decl =
+(** Split a definition into the declaration and the definition of the same
+    function -- the same signature twice, once without the body.
+
+    The body decides which callback constraints the signature may state, and a
+    declaration is written without it, so the decision is taken here, where the
+    body is still at hand, and written into {e both} halves.  Returning the
+    pair is what makes that true rather than intended: settling the template
+    head and handing back only the declaration leaves the caller holding a
+    definition that still states the constraint the declaration dropped, and
+    two differently-constrained templates of one name are two functions.  See
+    {!Minicpp.drop_stored_callback_constraints}, whose own contract this is.
+
+    A declaration that arrives already a declaration is its own spec and has no
+    definition to pair with. *)
+let rec decl_spec_and_def (d : cpp_decl) : cpp_decl * cpp_decl =
   match d with
   | Dfun ({df_shape = Ddef (params, body); _} as f) ->
     let no_pure =
       f.df_no_pure
       || match body with [Sreturn (Some (CPPabort _))] -> true | _ -> false
     in
-    Dfun
-      { f with
-        df_no_pure = no_pure;
-        df_shape = Ddecl (List.map (fun (id, ty) -> (Some id, ty)) params) }
-  | Dtemplate (temps, cstr, inner) -> Dtemplate (temps, cstr, decl_to_spec inner)
-  | _ -> d (* Already a declaration, return as-is *)
+    let f = {f with df_no_pure = no_pure} in
+    ( Dfun
+        {f with df_shape = Ddecl (List.map (fun (id, ty) -> (Some id, ty)) params)},
+      Dfun f )
+  | Dtemplate (temps, cstr, inner) ->
+    let temps =
+      match inner with
+      | Dfun {df_shape = Ddef (params, body); _} ->
+        drop_stored_callback_constraints ~params body temps
+      | _ -> temps
+    in
+    let spec, def = decl_spec_and_def inner in
+    (Dtemplate (temps, cstr, spec), Dtemplate (temps, cstr, def))
+  | _ -> (d, d)
+
+(** The declaration half of {!decl_spec_and_def}.
+
+    Sound only where the definition is not also emitted, or is emitted from the
+    pair: a caller that keeps its own copy of the definition alongside this
+    declaration is the mismatch {!decl_spec_and_def} exists to prevent. *)
+let decl_to_spec (d : cpp_decl) : cpp_decl = fst (decl_spec_and_def d)
 
 (** Generate function declarations for header files *)
 let gen_dfuns_header (ns, bs, tys) =
@@ -3773,13 +5400,16 @@ let gen_dfuns_dual ~is_header (ns, bs, tys) =
     (fun (i, name) ->
       let ds, env, tvars = gen_dfun_def name bs.(i) tys.(i) in
       let lifted = take_lifted_decls () in
-      let spec = (decl_to_spec ds, env) in
+      (* Both halves from the one split, so the template head they state is the
+         same head; [ds] on its own would keep a constraint the spec drops. *)
+      let ds_spec, ds_def = decl_spec_and_def ds in
+      let spec = (ds_spec, env) in
       let def =
         match (tvars, is_header) with
-        | _ :: _, true -> Some (ds, env) (* Template + header: full def in .h *)
+        | _ :: _, true -> Some (ds_def, env) (* Template + header: def in .h *)
         | _ :: _, false -> None (* Template + source: already in .h *)
         | [], true -> None (* Non-template + header: def goes in .cpp *)
-        | [], false -> Some (ds, env)
+        | [], false -> Some (ds_def, env)
         (* Non-template + source: full def in .cpp *)
       in
       [(spec, def, lifted)] )
@@ -3792,16 +5422,19 @@ let gen_decl_for_pp_dual__inner ~is_header n b ty =
   let ds_opt, env, tvars = gen_decl_for_pp n b ty in
   match (ds_opt, tvars) with
   | Some ds, _ :: _ ->
-    (* Template function: spec is decl_to_spec, def only in header *)
-    let def = if is_header then Some (ds, env) else None in
-    (Some (decl_to_spec ds, env), def, tvars)
+    (* Template function: spec is the declaration half, def only in header *)
+    let ds_spec, ds_def = decl_spec_and_def ds in
+    let def = if is_header then Some (ds_def, env) else None in
+    (Some (ds_spec, env), def, tvars)
   | Some ds, [] ->
-    (* Non-template function: spec via decl_to_spec to ensure parameter types
-       (owned vs borrowed) match exactly between declaration and definition.
-       Using gen_spec here would run independent escape analysis that may
-       produce different ownership decisions than gen_dfun used for the def. *)
-    let def = if is_header then None else Some (ds, env) in
-    (Some (decl_to_spec ds, env), def, tvars)
+    (* Non-template function: both halves from the one split, so parameter
+       types (owned vs borrowed) match exactly between declaration and
+       definition.  Using gen_spec here would run independent escape analysis
+       that may produce different ownership decisions than gen_dfun used for
+       the def. *)
+    let ds_spec, ds_def = decl_spec_and_def ds in
+    let def = if is_header then None else Some (ds_def, env) in
+    (Some (ds_spec, env), def, tvars)
   | None, _ ->
     (* Non-function type: no def needed *)
     let spec_ds, spec_env = gen_spec n b ty in
@@ -3938,7 +5571,7 @@ let replace_this_in_lambdas self_type stmts =
   let stmts_have_this stmts = List.exists stmt_has_this stmts in
   (* Check if any by-value lambda in the method body captures this. *)
   let rec lambda_captures_this_expr = function
-    | CPPlambda {cl_body = body; cl_by_value = true; _} -> stmts_have_this body
+    | CPPlambda {cl_body = body; cl_capture = Closure; _} -> stmts_have_this body
     | e ->
       let found = ref false in
       ignore (map_expr (fun e' ->
@@ -3982,7 +5615,7 @@ let replace_this_in_lambdas self_type stmts =
       map_stmt subst_expr subst_stmt id_type s
     in
     let rec walk_expr = function
-      | CPPlambda ({cl_by_value = true; _} as l) ->
+      | CPPlambda ({cl_capture = Closure; _} as l) ->
         CPPlambda (map_lambda subst_stmt Fun.id l)
       | e -> map_expr walk_expr walk_stmt id_type e
     and walk_stmt s =
@@ -4038,6 +5671,12 @@ and stmt_has_shared_from_this = function
     @param ty       ML type of the function
     @param this_pos 0-based index of the [this] argument in the parameter list *)
 let gen_single_method name vars (func_ref, body, ty, this_pos) =
+  (* Promotion moves a function into a struct; it does not change what the
+     function returns.  The mode is read off the codomain here exactly as it is
+     for a function left at top level -- otherwise an [itree] body reached as a
+     method would be desugared sequentially while the signature it is being
+     given says [shared_ptr<ITree<_>>]. *)
+  with_itree_mode_for ty @@ fun () ->
   let num_ind_vars = List.length vars in
   let func_name = Common.id_of_global Term func_ref in
 
@@ -4065,9 +5704,9 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
         (List.concat
           (List.mapi
              (fun pos t ->
-               match t with
-               | Miniml.Tvar (_, i) -> [(i, pos + 1)]
-               | _ -> [] )
+               match Table.type_var_of_arg t with
+               | Some i -> [(i, pos + 1)]
+               | None -> [] )
              tvar_args ))
     | _ ->
       List.init num_ind_vars (fun i -> (i + 1, i + 1))
@@ -4102,6 +5741,8 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
   in
   let rec remap_ml_type = function
     | Miniml.Tvar (rigid, i) -> Miniml.Tvar (rigid, remap_ml_tvar i)
+    | Miniml.Tapp (i, args) ->
+      Miniml.Tapp (remap_ml_tvar i, List.map remap_ml_type args)
     | Miniml.Tarr (t1, t2) -> Miniml.Tarr (remap_ml_type t1, remap_ml_type t2)
     | Miniml.Tglob (r, args, e) ->
       Miniml.Tglob (r, List.map remap_ml_type args, e)
@@ -4135,6 +5776,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
     | Tfun (args, ret) ->
       Tfun (List.map strip_self_ptr args, strip_self_ptr ret)
     | Tref t -> Tref (strip_self_ptr t)
+    | Tfwd_ref t -> Tfwd_ref (strip_self_ptr t)
     | Tconst t -> Tconst (strip_self_ptr t)
     | _ -> ty
   in
@@ -4191,7 +5833,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
                if isTdummy t then None else Some (MLrel (i + 1)) )
              (List.mapi (fun i x -> (i, x)) missing) )
       in
-      (missing @ ids_with_types, MLapp (lifted_b, args))
+      (missing @ ids_with_types, apply_eta_args lifted_b args)
   in
   let ids_converted, typeclass_temps =
     promote_typeclass_params
@@ -4223,7 +5865,12 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
   let param_ids_with_pos =
     List.filter
       (fun (_, ty, _) ->
-        (not (ml_type_is_void ty)) && not (Table.is_typeclass_type ty) )
+        (* An instance is either promoted to a template parameter or skipped
+           outright; either way it is not among the arguments a call passes,
+           and {!Ml_type_util.ml_type_is_instance} is where both cases are
+           recognised -- a skipped class is a [ConstRef] mapped to the empty
+           string, which [is_typeclass_type] alone does not see. *)
+        (not (ml_type_is_void ty)) && not (Ml_type_util.ml_type_is_instance ty) )
       param_ids_with_pos
   in
 
@@ -4291,15 +5938,19 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
       (fun (id, cpp_ty, i, owned) ->
         let wrapped =
           match cpp_ty with
-          | Tfun _ -> Tref (Tref (Tvar (0, Some (fun_tparam_id i))))
+          | Tfun _ -> Tfwd_ref (named_tvar (fun_tparam_id i))
           | _ -> wrap_param_by_ownership ~is_owned:owned cpp_ty
         in
         (id, wrapped) )
       params_with_idx
   in
 
-  (* For coinductive return types, wrap return in lazy thunk *)
-  let is_cofix_method = Table.is_coinductive_type ret_ty in
+  (* Suspended at its constructors, and whole only where it calls itself
+     outside all of them: see [cofix_wrap] in [gen_dfun]. *)
+  let is_cofix_method =
+    Table.is_coinductive_type ret_ty
+    && calls_eagerly func_ref (snd (collect_lams body))
+  in
   let method_k x =
     if is_cofix_method then
       let type_args =
@@ -4324,7 +5975,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
       let lazy_factory =
         CPPscope (mk_cppglob coind_ref type_args, Id.of_string "lazy_", [])
       in
-      let thunk = mk_lambda [] (Some ret_cpp) [Sreturn (Some x)] ~by_value:true in
+      let thunk = mk_lambda [] (Some ret_cpp) [Sreturn (Some x)] ~capture:Closure in
       Sreturn (Some (mk_call lazy_factory [thunk]))
     else
       Sreturn (Some x)
@@ -4470,12 +6121,74 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
   let extra_tvar_name_set =
     List.fold_left (fun s n -> Id.Set.add n s) Id.Set.empty extra_tvar_names
   in
+  (* The body counts too.  A tvar the signature never mentions is usually one
+     erasure killed outright, but a local binding can still be declared at it
+     -- the result of a trigger is an index of the event type, so it has no
+     spelling but the variable's own -- and dropping the parameter leaves the
+     body naming something that is no longer declared. *)
+  let stmt_has_tvar name stmts =
+    let found = ref false in
+    let rec on_type t =
+      if cpp_type_has_tvar name t then found := true;
+      t
+    and on_expr e = Minicpp.map_expr on_expr on_stmt on_type e
+    and on_stmt s = Minicpp.map_stmt on_expr on_stmt on_type s in
+    List.iter (fun s -> ignore (on_stmt s)) stmts;
+    !found
+  in
+  (* An extra tvar the return type is alone in mentioning is a dead letter.
+     Nothing deduces it -- the receiver carries only the inductive's own
+     parameters, and no value parameter names it -- and the body cannot honour
+     it either, since the body never names it: whatever the body builds, it
+     builds at one fixed type.  Quantifying it declares a method no call can
+     name; the honest spelling is the erased one, which is also what the index
+     of an event family reaches C++ as everywhere else. *)
+  let return_only_tvars =
+    List.filter_map
+      (fun (_tt, tname) ->
+        if
+          Id.Set.mem tname extra_tvar_name_set
+          && cpp_type_has_tvar tname ret_cpp
+          && (not (List.exists (fun (_, pty) -> cpp_type_has_tvar tname pty) params))
+          && not (stmt_has_tvar tname stmts)
+        then Some tname
+        else None )
+      template_params
+  in
+  let return_only_set =
+    List.fold_left (fun s n -> Id.Set.add n s) Id.Set.empty return_only_tvars
+  in
+  let ret_cpp, stmts =
+    if Id.Set.is_empty return_only_set then (ret_cpp, stmts)
+    else
+      let erased =
+        map_cpp_type
+          (function
+            | Tvar (_, Some n) when Id.Set.mem n return_only_set -> Tany
+            | t -> t )
+          ret_cpp
+      in
+      (* The body still builds its value at the one type it knows; the
+         signature now promises the erased one.  [crane_container_cast] is the
+         conversion between the two, and it is the identity when they agree.
+
+         A return type that erased away entirely needs nothing said: anything
+         converts to [std::any] by boxing. *)
+      let rec cast_stmt s =
+        match s with
+        | Sreturn (Some e) -> Sreturn (Some (CPPcontainer_cast (erased, e, false)))
+        | _ -> Minicpp.map_stmt (fun e -> e) cast_stmt (fun t -> t) s
+      in
+      if erased = Tany then (erased, stmts) else (erased, List.map cast_stmt stmts)
+  in
   let template_params =
     List.filter (fun (_tt, tname) ->
       if not (Id.Set.mem tname extra_tvar_name_set) then true
+      else if Id.Set.mem tname return_only_set then false
       else
         cpp_type_has_tvar tname ret_cpp
-        || List.exists (fun (_, pty) -> cpp_type_has_tvar tname pty) params)
+        || List.exists (fun (_, pty) -> cpp_type_has_tvar tname pty) params
+        || stmt_has_tvar tname stmts)
     template_params
   in
   let surviving_names =
@@ -4518,6 +6231,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
   ( Fmethod
       {
         mf_name = func_name;
+        mf_globref = Some func_ref;
         mf_tparams = template_params;
         mf_ret_type = ret_cpp;
         mf_params = params;
@@ -4527,7 +6241,9 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
         mf_is_inline = false;
         mf_this_pos = this_pos;
         mf_no_pure = no_pure;
-                  mf_is_noexcept = false;
+        mf_is_noexcept = false;
+        mf_is_conversion = false;
+        mf_ref_qual = Rq_any;
       },
     VPublic,
     SNoTag )
@@ -4767,6 +6483,7 @@ let gen_ind_header_v2
         let clone_field =
           ( Fmethod
               { mf_name = Id.of_string "clone";
+                mf_globref = None;
                 mf_tparams = [];
                 mf_ret_type = self_ty;
                 mf_params = [];
@@ -4776,8 +6493,24 @@ let gen_ind_header_v2
                 mf_is_inline = false;
                 mf_this_pos = 0;
                 mf_no_pure = true;
-                mf_is_noexcept = false; },
+                mf_is_noexcept = false;
+                mf_is_conversion = false;
+                mf_ref_qual = Rq_any; },
             VPublic, SAccessors )
+        in
+        let conversion_field =
+          (* An inductive's [vars] already begin with its promoted variables
+             (see [Cpp_ind]), so nothing is left to keep. *)
+          conversion_to_other_instantiation ~leading:[] ~name ~templates ~vars
+            ~fields:
+              (List.mapi
+                 (fun j ty ->
+                   ( List.nth field_ids j,
+                     fun var_names ->
+                       erase_if_needed
+                         (convert_ml_type_to_cpp_type (empty_env ()) var_names
+                            ty) ) )
+                 tys_list)
         in
         let factory_name =
           Id.of_string (factory_name_of_ctor ~type_name:ind_type_name_str cname_str)
@@ -4805,7 +6538,10 @@ let gen_ind_header_v2
             VPublic, SCreators )
         in
         let method_fields = List.map (gen_single_method name vars) method_candidates in
-        let all_flat_fields = flat_fields @ [clone_field; factory_field] @ method_fields in
+        let all_flat_fields =
+          flat_fields @ [clone_field] @ conversion_field @ [factory_field]
+          @ method_fields
+        in
         Dstruct
           { ds_ref = name;
             ds_fields = all_flat_fields;
@@ -4839,7 +6575,8 @@ let gen_ind_header_v2
         (* Completeness-aware element wrapping (WRAP.md). *)
         maybe_record_boxed_recursive_ind ~ind_ref:name ty;
         let cpp_ty =
-          if ml_type_has_nested_self_ref ~ind_ref:name ty then
+          if ml_type_has_nested_self_ref ~ind_ref:name ty && not is_coinductive
+          then
             let bare_cpp_ty =
               convert_ml_type_to_cpp_type
                 (empty_env ())
@@ -4872,6 +6609,41 @@ let gen_ind_header_v2
            site, not baked into the field type. *)
         cpp_ty
       in
+      (* A coinductive's constructor struct holds values of the coinductive
+         itself and of its mutual siblings, each incomplete inside its own
+         body.  Each of those types becomes a parameter of the struct, so the
+         struct is completed only once they are. *)
+      let deferred_ctor_struct cname fields =
+        let group =
+          (* Mutual siblings share their parameters. *)
+          (name, vars)
+          :: List.map (fun (pname, _, _, _) -> (pname, vars)) mutual_partners
+        in
+        let selves =
+          List.mapi
+            (fun k (r, rvars) ->
+              ( (r, List.length rvars),
+                ( Id.of_string ("_S" ^ string_of_int k),
+                  Tglob (r, List.map named_tvar rvars, []) ) ) )
+            group
+        in
+        let through_selves =
+          map_cpp_type (fun t ->
+            match t with
+            | Tglob (r, args, _) | Tnamespace (_, Tglob (r, args, _)) -> (
+              match
+                List.find_opt
+                  (fun ((r', n), _) -> globref_equal r r' && List.length args = n)
+                  selves
+              with
+              | Some (_, (id, _)) -> named_tvar id
+              | None -> t )
+            | _ -> t )
+        in
+        { dfs_name = cname;
+          dfs_selves = List.map snd selves;
+          dfs_fields = List.map (fun (f, ty) -> (f, through_selves ty)) fields }
+      in
       (* 1. Constructor alternative structs (simple, just fields, no make) *)
       let constructor_structs =
         Array.to_list
@@ -4894,13 +6666,19 @@ let gen_ind_header_v2
                in
                let fields =
                  List.mapi
-                   (fun j ty ->
-                     let cpp_ty = compute_field_cpp_ty ty in
-                     let field_name = List.nth field_ids j in
-                     (Fvar (field_name, cpp_ty), VPublic, SNoTag) )
+                   (fun j ty -> (List.nth field_ids j, compute_field_cpp_ty ty))
                    tys_list
                in
-               (Fnested_struct (cname, fields), VPublic, STypes) )
+               (* Deferred only where a field names the incomplete type. *)
+               let deferred = deferred_ctor_struct cname fields in
+               if is_coinductive && deferred.dfs_fields <> fields then
+                 (Fdeferred_struct deferred, VPublic, STypes)
+               else
+                 ( Fnested_struct
+                     ( cname,
+                       List.map (fun (f, ty) -> (Fvar (f, ty), VPublic, SNoTag)) fields ),
+                   VPublic,
+                   STypes ) )
              tys )
       in
 
@@ -4926,7 +6704,18 @@ let gen_ind_header_v2
       let variant_using =
         (Fnested_using ([], Id.of_string variant_alias_name, variant_ty), VPublic, STypes)
       in
-      let element_using = [] in
+      (* A type parameterised by families is itself one: [crane::rebind_t]
+         leaves it alone, as the family's own struct it is, rather than
+         reading its erased index as an element (see [obj.h]). *)
+      let element_using =
+        if List.exists (fun i -> Table.is_family_ind_param name i)
+             (List.init (List.length vars) Fun.id)
+        then
+          [ ( Fnested_using ([], Id.of_string "crane_family_tag", Tvoid),
+              VPublic,
+              STypes ) ]
+        else []
+      in
 
       (* 3. Private variant member: v_ for inductive, lazy_v_ for coinductive *)
       let variant_member_name =
@@ -5011,22 +6800,21 @@ let gen_ind_header_v2
              cnames )
       in
 
-      (* Default constructor for value-type inductives.  The variant
-         default-constructs to its first alternative (e.g. Nil), which lets
-         loopify declare [T _result{};] for stack-based iteration. *)
+      (* Default constructor, which lets loopify declare [T _result{};] for
+         stack-based iteration.  An inductive's variant default-constructs to
+         its first alternative (e.g. Nil); a coinductive's lazy cell to an
+         empty one -- the state a moved-from value is already in, and which
+         only a slot written before it is read, as [_result] is, may hold. *)
       let default_ctor =
-        if not is_coinductive then
-          [( Fconstructor
-              { fc_tparams = [];
-                fc_params = [];
-                fc_inits = [];
-                fc_body = [];
-                fc_explicit = false;
-                fc_noexcept = false },
-             VPublic,
-             SCreators )]
-        else
-          []
+        [( Fconstructor
+            { fc_tparams = [];
+              fc_params = [];
+              fc_inits = [];
+              fc_body = [];
+              fc_explicit = false;
+              fc_noexcept = false },
+           VPublic,
+           SCreators )]
       in
 
       (* Iterative destructor preventing stack overflow from deeply recursive
@@ -5310,7 +7098,12 @@ let gen_ind_header_v2
              and <atomic> is not included (see extract_env.ml). *)
           let unique_fence =
             if Table.non_atomic_rc () then []
-            else [Sraw "std::atomic_thread_fence(std::memory_order_acquire);"]
+            else (
+              Common.require_header "atomic";
+              [Sraw "std::atomic_thread_fence(std::memory_order_acquire);"] )
+          in
+          let is_sole p =
+            CPPbinop (Beq, CPPaccess_call (Adot, p, Id.of_string "use_count", []), CPPint 1)
           in
           (* ---------------------------------------------------------------
              Generic mediator harvester.
@@ -5652,7 +7445,10 @@ let gen_ind_header_v2
               match cls with
               | `Stmts stmts -> stmts
               | `Direct ->
-                [Sif (fe,
+                (* Only a child this node owns alone would be freed with it;
+                   any other is a decrement, done by the member's own
+                   destructor, and never touches the worklist. *)
+                [Sif (CPPbinop (Band, fe, is_sole fe),
                   [Sexpr (CPPaccess_call (Adot, 
                      CPPvar _stack_id,
                      Id.of_string "push_back",
@@ -5801,8 +7597,74 @@ let gen_ind_header_v2
                  tys)
             |> List.filter_map Fun.id
           in
-          match drain_stmts with
-          | [] -> []
+          (* Each constructor holds at most one [Self] directly, and nothing
+             else recursive: [Positive], [List], [Nat].  Destruction is a walk
+             down one chain, with no worklist: take the child if this node
+             owns it alone, let the node go, repeat.  A shared child is only
+             a decrement and ends the walk. *)
+          let linear_fields =
+            let per_ctor =
+              Array.to_list
+                (Array.mapi
+                   (fun i tys_list ->
+                     let rec_fields =
+                       List.filter_map
+                         (fun (j, ty) ->
+                           match classify_ml_self_ref ty, is_mutual_ref ty with
+                           | `None, false -> None
+                           | `Direct, false ->
+                             let cname_str =
+                               ctor_struct_name_of_ref ~fallback_idx:i cnames.(i)
+                             in
+                             Some
+                               (Some
+                                  ( ctor_struct_id_of_ref ~fallback_idx:i cnames.(i),
+                                    Common.lookup_ctor_field_name ~owner:cnames.(i)
+                                      cname_str j ))
+                           | _ -> Some None )
+                         (List.mapi (fun j ty -> (j, ty)) tys_list)
+                     in
+                     match rec_fields with
+                     | [] -> Some []
+                     | [Some f] -> Some [f]
+                     | _ -> None )
+                   tys)
+            in
+            if List.for_all Option.has_some per_ctor then
+              Some (List.concat_map Option.get per_ctor)
+            else None
+          in
+          match drain_stmts, linear_fields with
+          | [], _ -> []
+          | _, Some ((_ :: _) as fields) when not has_mutual ->
+            let ptr_ty = Tshared_ptr self_ty in
+            let next_id = Id.of_string "_next" in
+            let take (ctor_id, field_id) =
+              let fe = CPPaccess (Aarrow, CPPvar _alt_id, field_id) in
+              Sif_decl
+                ( _alt_id, Tptr Tauto,
+                  CPPstd_get_if (Tid (ctor_id, []), CPPunop (Uaddr, CPPvar _v_id)),
+                  [ Sif (CPPbinop (Band, fe, is_sole fe),
+                      unique_fence @ [Sreturn (Some (CPPmove fe))], []) ],
+                  [] )
+            in
+            let next_lambda =
+              mk_lambda
+                [(Tref variant_t_ty, Some _v_id)]
+                (Some ptr_ty)
+                (List.map take fields @ [Sreturn (Some CPPnullptr)])
+                ~capture:Immediate
+            in
+            let body =
+              [ Sasgn (next_id, Declare Tauto, next_lambda);
+                Sasgn (_cur_id, Declare ptr_ty,
+                  mk_call (CPPvar next_id) [mk_call (CPPvar (Id.of_string "v_mut")) []]);
+                Swhile (CPPvar _cur_id,
+                  [ Sasgn (_cur_id, Existing,
+                      mk_call (CPPvar next_id)
+                        [CPPaccess_call (Aarrow, CPPvar _cur_id, Id.of_string "v_mut", [])]) ]) ]
+            in
+            [(Fdestructor body, VPublic, SManipulators)]
           | _ when not has_mutual ->
             (* Self-recursive only: stack holds shared_ptr<Self> directly *)
             let stack_elem_ty = Tshared_ptr self_ty in
@@ -5814,7 +7676,7 @@ let gen_ind_header_v2
             let drain_lambda =
               mk_lambda
                 [(Tref variant_t_ty, Some _v_id)]
-                None drain_stmts ~by_value:false
+                None drain_stmts ~capture:Immediate
             in
             let body =
               [ Sasgn (_stack_id, Declare stack_ty,
@@ -5850,7 +7712,7 @@ let gen_ind_header_v2
               ]
             in
             [(Fdestructor body, VPublic, SManipulators)]
-          | _ ->
+          | _, _ ->
             (* Mutual recursion: stack holds std::any to accommodate
                shared_ptrs of different types in the mutual group *)
             let stack_ty =
@@ -5861,7 +7723,7 @@ let gen_ind_header_v2
             let drain_self_lambda =
               mk_lambda
                 [(Tref variant_t_ty, Some _v_id)]
-                None drain_stmts ~by_value:false
+                None drain_stmts ~capture:Immediate
             in
             (* Build the per-partner drain logic used inside the while loop.
                For each partner type, generates an [Sif_decl] that casts the
@@ -6016,7 +7878,9 @@ let gen_ind_header_v2
               in
               maybe_record_boxed_recursive_ind ~ind_ref:name ty;
               let storage_ty =
-                if ml_type_has_nested_self_ref ~ind_ref:name ty then
+                if ml_type_has_nested_self_ref ~ind_ref:name ty
+                   && not is_coinductive
+                then
                   (* Use bare (no-ns) type so factory param and storage are
                      consistent: shared_ptr<optional<chain>> not
                      shared_ptr<optional<shared_ptr<chain>>>. *)
@@ -6121,7 +7985,7 @@ let gen_ind_header_v2
                      so, rather than leaving a later pass to read it back off
                      the body. *)
                   mk_lambda lambda_params (Some storage_ret)
-                    [Sreturn (Some ret)] ~by_value:true
+                    [Sreturn (Some ret)] ~capture:Closure
                 | _ when storage_ty = api_ty -> CPPmove var
                 | _ ->
                   gen_type_conversion_expr
@@ -6239,47 +8103,43 @@ let gen_ind_header_v2
                 tys ) )
       in
 
-      (* For coinductive types, add lazy_ factory method. lazy_ accepts
-         std::function<T()> and adapts it to std::function<variant_t()>
-         for the lazy constructor.  Returns T (value type). *)
+      (* For coinductive types, the [lazy_] factory: the value [thunk]
+         returns, once it is asked for.  The thunk yields a whole coinductive
+         value, so the new cell delegates to that value's cell rather than
+         copying its variant out, and the callable goes into the one closure
+         block as it is: [F] is the caller's own closure type, not a
+         [crane::fn] wrapped around it. *)
       let lazy_factory =
         if is_coinductive then
-          let lazy_name = Id.of_string "lazy_" in
-          let thunk_param_ty = Tfun ([], self_ty) in
-          let params = [(Id.of_string "thunk", thunk_param_ty)] in
-          let adapter_lambda =
-            mk_lambda []
-              (Some variant_alias_ty)
-              [
-                  Sasgn
-                    ( Id.of_string "_tmp",
-                      Declare self_ty,
-                      mk_call (CPPvar (Id.of_string "thunk")) [] );
-                  Sreturn
-                    (Some
-                       (mk_call
-                          (CPPaccess
-                             (Adot, CPPvar (Id.of_string "_tmp"), Id.of_string "v"))
-                          [] ) );
-              ]
-              ~by_value:true
-          in
-          let thunk_arg =
+          let f = Id.of_string "F" in
+          let thunk = Id.of_string "thunk" in
+          let cell_ty = Tid_external (Crane_rt.lazy_, [variant_alias_ty]) in
+          let delegate =
             mk_call
-              (CPPvar
-                 (Id.of_string_soft
-                    ("std::function<" ^ variant_alias_name ^ "()>") ))
-              [adapter_lambda]
+              (CPPscope (CPPvar (Id.of_string_soft (Crane_rt.lazy_ ^ "<" ^ variant_alias_name ^ ">")),
+                         Id.of_string "delegate", []))
+              [CPPforward (named_tvar f, CPPvar thunk)]
           in
-          let ctor_expr =
-            mk_call (mk_cppglob name ty_vars) [thunk_arg]
+          let body = [Sreturn (Some (mk_call (mk_cppglob name ty_vars) [delegate]))] in
+          let m =
+            { (static_fun ~name:(Id.of_string "lazy_") ~ret:self_ty
+                 ~params:[(thunk, rval_ref (named_tvar f))] ~body)
+              with mf_tparams = [(TTtypename, f)] }
           in
-          let body = [Sreturn (Some ctor_expr)] in
-          [
-            ( Fmethod (static_fun ~name:lazy_name ~ret:self_ty ~params ~body),
+          (* The cell the factory builds a value around. *)
+          let cell_ctor =
+            let c = Id.of_string "_cell" in
+            ( Fconstructor
+                { fc_tparams = [];
+                  fc_params = [(c, cell_ty)];
+                  fc_inits = [(vmn_id, CPPmove (CPPvar c))];
+                  fc_body = [];
+                  fc_explicit = true;
+                  fc_noexcept = false },
               VPublic,
-              SCreators );
-          ]
+              SCreators )
+          in
+          [cell_ctor; (Fmethod m, VPublic, SCreators)]
         else
           []
       in
@@ -6290,9 +8150,6 @@ let gen_ind_header_v2
          fields are now ordinary refcounted smart pointers, so the normal copy
          path is already correct and O(1) per node. *)
       let value_copy_clone_methods =
-        if is_coinductive then
-          []
-        else
           let converting_ctor =
             let all_fields_empty =
               Array.for_all (fun tys_list -> tys_list = []) tys
@@ -6341,7 +8198,9 @@ let gen_ind_header_v2
                           convert_ml_type_to_cpp_type (empty_env ()) ~ns:(Refset'.singleton name) var_names ty
                         in
                         maybe_record_boxed_recursive_ind ~ind_ref:name ty;
-                        if ml_type_has_nested_self_ref ~ind_ref:name ty then
+                        if ml_type_has_nested_self_ref ~ind_ref:name ty
+                           && not is_coinductive
+                        then
                           (* Boxed-element container recursion: by value. *)
                           if (not is_coinductive)
                              && ml_type_recurses_through_boxed_container
@@ -6350,8 +8209,46 @@ let gen_ind_header_v2
                           else Tshared_ptr bare_ty
                         else storage_ty
                       in
-                      let src_fty = make_field_ty u_var_names in
-                      let dst_fty = make_field_ty vars in
+                      (* A promoted parameter -- [ptr] in [Dvalue_base<ptr,
+                         iptr>], from the instance in scope where the
+                         inductive was declared -- leads [vars], and a field
+                         of its type is spelled by its own name whatever the
+                         names given for the variables.  It is a template
+                         parameter here like any other: the variable in its
+                         position, [_U0] on the source side. *)
+                      let promoted_as var_names t =
+                        let promoted =
+                          match name with
+                          | GlobRef.IndRef (kn, _) -> Table.ind_promoted_params kn
+                          | _ -> []
+                        in
+                        let name_at id =
+                          let rec find k = function
+                            | [] -> None
+                            | p :: rest ->
+                              if Id.equal p id then List.nth_opt var_names k
+                              else find (k + 1) rest
+                          in
+                          find 0 promoted
+                        in
+                        map_cpp_type
+                          (function
+                            | (Tvar (_, Some id) | Tpromoted id) as t -> (
+                              match name_at id with
+                              | Some u -> Tvar (0, Some u)
+                              | None -> t )
+                            | t -> t )
+                          t
+                      in
+                      let src_fty =
+                        promoted_as u_var_names
+                          (deapply_families name u_var_names
+                             (make_field_ty u_var_names) )
+                      in
+                      let dst_fty =
+                        promoted_as vars
+                          (deapply_families name vars (make_field_ty vars))
+                      in
                       (field_id, src_fty, dst_fty))
                     tys_list
                 in
@@ -6377,13 +8274,11 @@ let gen_ind_header_v2
               let branches =
                 List.init n_ctors (fun i -> gen_branch i tys.(i))
               in
-              (* Build body statements for each branch *)
+              (* Each branch returns the source's alternative read at this
+                 instantiation; see [init] below. *)
               let make_branch_body cname_id field_info converted =
                 match field_info with
-                | [] ->
-                  [Sassign_expr
-                     ( CPPaccess (Aarrow, CPPthis, vmn_id),
-                       CPPstruct_id (cname_id, [], []) )]
+                | [] -> [Sreturn (Some (CPPstruct_id (cname_id, [], [])))]
                 | _ ->
                   let bindings =
                     String.concat ", "
@@ -6403,9 +8298,7 @@ let gen_ind_header_v2
                      "const auto& [" ^ bindings
                      ^ "] = std::get<" ^ source_ctor_s
                      ^ ">(" ^ "_other.v()" ^ ");");
-                   Sassign_expr
-                     ( CPPaccess (Aarrow, CPPthis, vmn_id),
-                       CPPstruct_id (cname_id, [], converted) )]
+                   Sreturn (Some (CPPstruct_id (cname_id, [], converted)))]
               in
               let body =
                 if n_ctors = 1 then
@@ -6458,6 +8351,27 @@ let gen_ind_header_v2
                 [(other_id,
                   Tref (Tconst source_ty))]
               in
+              (* The variant is initialised, not assigned: default-constructing
+                 it first needs the first alternative's fields to have a
+                 default, and a field that is a tree does not.  A coinductive
+                 value converts when it is forced, so the conversion is its
+                 thunk, holding a copy of the source. *)
+              let convert_variant ~capture =
+                mk_lambda [] (Some variant_alias_ty) body ~capture
+              in
+              let init =
+                if is_coinductive then
+                  (* Through [converted_from]: a conversion back to the type
+                     the source came from is the source's own cell. *)
+                  mk_call
+                    (CPPvar
+                       (Id.of_string_soft
+                          (Crane_rt.lazy_ ^ "<" ^ variant_alias_name
+                          ^ ">::converted_from") ))
+                    [ mk_call (CPPaccess (Adot, CPPvar other_id, Id.of_string "lazy_cell")) [];
+                      convert_variant ~capture:Closure ]
+                else mk_call (convert_variant ~capture:Immediate) []
+              in
               (* Non-explicit: erased grammar actions produce a [List<std::any>]
                  that must implicitly recover to the concrete-element list at
                  return/assignment sites (e.g. [nt_semty] = [list (string *
@@ -6468,8 +8382,8 @@ let gen_ind_header_v2
               [( Fconstructor
                    { fc_tparams = tparams;
                      fc_params = ctor_params;
-                     fc_inits = [];
-                     fc_body = body;
+                     fc_inits = [(vmn_id, init)];
+                     fc_body = [];
                      fc_explicit = false;
                      fc_noexcept = false },
                  VPublic, SCreators )]
@@ -6477,6 +8391,37 @@ let gen_ind_header_v2
           converting_ctor
       in
 
+      (* A coinductive's lazy cell, for the converting constructor of another
+         instantiation of the same template: a conversion that returns to the
+         type its source was itself converted from reuses the source's cell
+         ([crane::lazy::converted_from]) rather than wrapping it again. *)
+      let lazy_cell_accessor =
+        if not is_coinductive then []
+        else
+          [ ( Fmethod
+                {
+                  mf_name = Id.of_string "lazy_cell";
+                  mf_globref = None;
+                  mf_tparams = [];
+                  mf_ret_type =
+                    Tconst
+                      (Tref
+                         (Tid_external
+                            (Crane_rt.lazy_, [variant_alias_ty])));
+                  mf_params = [];
+                  mf_body = [Sreturn (Some (CPPvar vmn_id))];
+                  mf_is_const = true;
+                  mf_is_static = false;
+                  mf_is_inline = false;
+                  mf_this_pos = 0;
+                  mf_no_pure = false;
+                  mf_is_noexcept = false;
+                  mf_is_conversion = false;
+                  mf_ref_qual = Rq_any;
+                },
+              VPublic,
+              SAccessors ) ]
+      in
       (* Add public accessor for v_ to enable pattern matching from outside *)
       let v_accessor =
         if is_coinductive then
@@ -6485,6 +8430,7 @@ let gen_ind_header_v2
           ( Fmethod
               {
                 mf_name = Id.of_string "v";
+                mf_globref = None;
                 mf_tparams = [];
                 mf_ret_type =
                   Tconst (Tref variant_alias_ty);
@@ -6503,7 +8449,9 @@ let gen_ind_header_v2
                 mf_is_inline = false;
                 mf_this_pos = 0;
                 mf_no_pure = false;
-                  mf_is_noexcept = false;
+                mf_is_noexcept = false;
+                mf_is_conversion = false;
+                mf_ref_qual = Rq_any;
               },
             VPublic,
             SAccessors )
@@ -6511,6 +8459,7 @@ let gen_ind_header_v2
           ( Fmethod
               {
                 mf_name = Id.of_string "v";
+                mf_globref = None;
                 mf_tparams = [];
                 mf_ret_type =
                   Tconst (Tref variant_alias_ty);
@@ -6521,7 +8470,9 @@ let gen_ind_header_v2
                 mf_is_inline = false;
                 mf_this_pos = 0;
                 mf_no_pure = false;
-                  mf_is_noexcept = false;
+                mf_is_noexcept = false;
+                mf_is_conversion = false;
+                mf_ref_qual = Rq_any;
               },
             VPublic,
             SAccessors )
@@ -6538,6 +8489,7 @@ let gen_ind_header_v2
             ( Fmethod
                 {
                   mf_name = Id.of_string "v_mut";
+                  mf_globref = None;
                   mf_tparams = [];
                   mf_ret_type = Tref variant_alias_ty;
                   mf_params = [];
@@ -6548,6 +8500,8 @@ let gen_ind_header_v2
                   mf_this_pos = 0;
                   mf_no_pure = true;
                   mf_is_noexcept = false;
+                  mf_is_conversion = false;
+                  mf_ref_qual = Rq_any;
                 },
               VPublic,
               SManipulators );
@@ -6626,6 +8580,7 @@ let gen_ind_header_v2
         @ v_mut_accessor
         @ method_manipulators
         @ [v_accessor]
+        @ lazy_cell_accessor
         @ method_accessors
       in
 

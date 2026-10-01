@@ -29,14 +29,14 @@ uint64_t PairClosureEscape::sum_values(const PairClosureEscape::tree &t,
 
 /// BUG: Partial application stored in fst of a pair (std::make_pair).
 /// return_captures_by_value doesn't handle lambdas inside std::make_pair.
-std::pair<std::function<uint64_t(uint64_t)>, uint64_t>
+std::pair<crane::fn<uint64_t(uint64_t)>, uint64_t>
 PairClosureEscape::pair_escape(PairClosureEscape::tree t) {
   return std::make_pair(
-      [=](uint64_t _x0) mutable -> uint64_t { return sum_values(t, _x0); },
+      [=](uint64_t _x0) -> uint64_t { return sum_values(std::move(t), _x0); },
       UINT64_C(0));
 }
 
 uint64_t PairClosureEscape::use_pair(
-    const std::pair<std::function<uint64_t(uint64_t)>, uint64_t> &p) {
+    const std::pair<crane::fn<uint64_t(uint64_t)>, uint64_t> &p) {
   return p.first(p.second);
 }

@@ -2,7 +2,9 @@
 #define INCLUDED_NESTED_TREE_PAIR_LITERAL
 
 #include "crane_fn.h"
+#include "obj.h"
 #include <any>
+#include <atomic>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -16,7 +18,7 @@ struct NestedTreePairLiteral {
   struct tree {
     // TYPES
     struct Lf {
-      std::any a0;
+      crane::obj a0;
     };
 
     struct Nd {
@@ -37,7 +39,7 @@ struct NestedTreePairLiteral {
 
     explicit tree(Nd _v) : v_(std::move(_v)) {}
 
-    static tree lf(std::any a0) { return tree(Lf{std::move(a0)}); }
+    static tree lf(crane::obj a0) { return tree(Lf{std::move(a0)}); }
 
     static tree nd(tree a0) {
       return tree(Nd{std::make_shared<tree>(std::move(a0))});
@@ -50,40 +52,40 @@ struct NestedTreePairLiteral {
     const variant_t &v() const { return v_; }
   };
 
-  template <typename T1, typename T2, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, std::any &> &&
+  template <typename T1, typename T2 = void, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, crane::obj &> &&
              std::is_invocable_r_v<T1, F1 &, tree &, T1 &>
   static T1 tree_rect(F0 &&f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Lf>(t.v())) {
       const auto &[a0] = std::get<typename tree::Lf>(t.v());
-      return std::any_cast<T1>(f(a0));
+      return crane_any_cast<T1>(f(a0));
     } else {
       const auto &[a0] = std::get<typename tree::Nd>(t.v());
-      return std::any_cast<T1>(
+      return crane_any_cast<T1>(
           f0(*a0, tree_rect(crane_erase_fn<T1>(f), f0, *a0)));
     }
   }
 
-  template <typename T1, typename T2, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, std::any &> &&
+  template <typename T1, typename T2 = void, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, crane::obj &> &&
              std::is_invocable_r_v<T1, F1 &, tree &, T1 &>
   static T1 tree_rec(F0 &&f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Lf>(t.v())) {
       const auto &[a0] = std::get<typename tree::Lf>(t.v());
-      return std::any_cast<T1>(f(a0));
+      return crane_any_cast<T1>(f(a0));
     } else {
       const auto &[a0] = std::get<typename tree::Nd>(t.v());
-      return std::any_cast<T1>(
+      return crane_any_cast<T1>(
           f0(*a0, tree_rec(crane_erase_fn<T1>(f), f0, *a0)));
     }
   }
 
-  template <typename T1> static uint64_t size(const tree &t) {
+  template <typename T1 = void> static uint64_t size(const tree &t) {
     if (std::holds_alternative<typename tree::Lf>(t.v())) {
       return UINT64_C(1);
     } else {
       const auto &[a0] = std::get<typename tree::Nd>(t.v());
-      return (UINT64_C(2) * size<T1>(*a0));
+      return (UINT64_C(2) * size<crane::obj>(*a0));
     }
   }
 

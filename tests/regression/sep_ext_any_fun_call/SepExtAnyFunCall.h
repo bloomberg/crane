@@ -2,8 +2,9 @@
 #define INCLUDED_SEPEXTANYFUNCALL
 
 #include "crane_fn.h"
+#include "fn.h"
+#include "obj.h"
 #include <any>
-#include <functional>
 #include <utility>
 
 #include "Datatypes.h"
@@ -11,7 +12,7 @@
 
 namespace SepExtAnyFunCall {
 
-using tuple = std::any;
+using tuple = crane::obj;
 template <typename M>
 concept SymTypes = requires {
   typename M::sym;
@@ -22,20 +23,19 @@ template <SymTypes Ty> struct Actions {
   using symbols_semty = tuple;
   using entry = typename Specif::template SigT<
       typename Datatypes::template List<typename Ty::sym>,
-      std::function<bool(symbols_semty)>>;
+      crane::fn<bool(symbols_semty)>>;
 
   template <typename F1>
   static entry
-  make_entry(typename Datatypes::template List<typename Ty::sym> gamma,
+  make_entry(const typename Datatypes::template List<typename Ty::sym> &gamma,
              F1 &&f) {
     return Specif::template SigT<
         typename Datatypes::template List<typename Ty::sym>,
-        std::function<bool(std::any)>>::existt(std::move(gamma),
-                                               crane_erase_fn<bool>(f));
+        crane::fn<bool(crane::obj)>>::existt(gamma, crane_erase_fn<bool>(f));
   }
 
   static bool apply_entry(entry x0_, symbols_semty x1_) {
-    return x0_.projT2()(std::move(x1_));
+    return crane_any_cast<bool>(x0_.projT2()(std::move(x1_)));
   }
 };
 

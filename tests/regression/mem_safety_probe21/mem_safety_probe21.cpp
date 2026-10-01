@@ -56,16 +56,17 @@ uint64_t MemSafetyProbe21::tree_sum(
 /// TEST 1: Tail-recursive function where the recursive call takes
 /// a constructed tree. The loopifier must store the new tree
 /// somewhere that outlives the iteration.
-uint64_t MemSafetyProbe21::grow_and_sum(MemSafetyProbe21::tree t, uint64_t n) {
+uint64_t MemSafetyProbe21::grow_and_sum(const MemSafetyProbe21::tree &t,
+                                        uint64_t n) {
   uint64_t _loop_n = std::move(n);
-  MemSafetyProbe21::tree _loop_t = std::move(t);
+  MemSafetyProbe21::tree _loop_t = t;
   while (true) {
     if (_loop_n <= 0) {
-      return tree_sum(std::move(_loop_t));
+      return tree_sum(_loop_t);
     } else {
       uint64_t n_ = _loop_n - 1;
       uint64_t _next_n = n_;
-      _loop_t = tree::node(std::move(_loop_t), _loop_n, tree::leaf());
+      _loop_t = tree::node(_loop_t, _loop_n, tree::leaf());
       _loop_n = _next_n;
     }
   }
@@ -74,7 +75,7 @@ uint64_t MemSafetyProbe21::grow_and_sum(MemSafetyProbe21::tree t, uint64_t n) {
 /// TEST 2: Non-tail recursive with constructed tree argument.
 /// The recursive call creates a new tree AND uses the original.
 uint64_t MemSafetyProbe21::double_grow(
-    MemSafetyProbe21::tree t,
+    const MemSafetyProbe21::tree &t,
     uint64_t
         n) { /// _Enter: captures varying parameters for each recursive call.
 
@@ -91,7 +92,7 @@ uint64_t MemSafetyProbe21::double_grow(
   using _Frame = std::variant<_Enter, _Resume_n_>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
-  _stack.emplace_back(_Enter{n, std::move(t)});
+  _stack.emplace_back(_Enter{n, t});
   /// Loopified double_grow: _Enter -> _Resume_n_.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -99,14 +100,14 @@ uint64_t MemSafetyProbe21::double_grow(
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
       uint64_t n = _f.n;
-      MemSafetyProbe21::tree t = std::move(_f.t);
+      const MemSafetyProbe21::tree &t = std::move(_f.t);
       if (n <= 0) {
-        _result = tree_sum(std::move(t));
+        _result = tree_sum(t);
       } else {
         uint64_t n_ = n - 1;
         _stack.emplace_back(_Resume_n_{tree_sum(t)});
         _stack.emplace_back(
-            _Enter{n_, tree::node(std::move(t), UINT64_C(0), tree::leaf())});
+            _Enter{n_, tree::node(t, UINT64_C(0), tree::leaf())});
       }
     } else {
       auto _f = std::move(std::get<_Resume_n_>(_frame));
@@ -174,12 +175,13 @@ uint64_t MemSafetyProbe21::branch_grow(
 
 /// TEST 4: Recursive call where the tree argument is built from
 /// MULTIPLE constructor calls with the original tree embedded.
-uint64_t MemSafetyProbe21::embed_grow(MemSafetyProbe21::tree t, uint64_t n) {
+uint64_t MemSafetyProbe21::embed_grow(const MemSafetyProbe21::tree &t,
+                                      uint64_t n) {
   uint64_t _loop_n = std::move(n);
-  MemSafetyProbe21::tree _loop_t = std::move(t);
+  MemSafetyProbe21::tree _loop_t = t;
   while (true) {
     if (_loop_n <= 0) {
-      return tree_sum(std::move(_loop_t));
+      return tree_sum(_loop_t);
     } else {
       uint64_t n_ = _loop_n - 1;
       uint64_t _next_n = n_;
@@ -210,21 +212,21 @@ MemSafetyProbe21::tree MemSafetyProbe21::accum_tree(MemSafetyProbe21::tree acc,
 
 /// TEST 7: Mutually-referencing recursive call with tree
 /// construction at each level.
-uint64_t MemSafetyProbe21::weave(MemSafetyProbe21::tree t1,
-                                 MemSafetyProbe21::tree t2, uint64_t n) {
+uint64_t MemSafetyProbe21::weave(const MemSafetyProbe21::tree &t1,
+                                 const MemSafetyProbe21::tree &t2, uint64_t n) {
   uint64_t _loop_n = std::move(n);
-  MemSafetyProbe21::tree _loop_t2 = std::move(t2);
-  MemSafetyProbe21::tree _loop_t1 = std::move(t1);
+  MemSafetyProbe21::tree _loop_t2 = t2;
+  MemSafetyProbe21::tree _loop_t1 = t1;
   while (true) {
     if (_loop_n <= 0) {
-      return (tree_sum(std::move(_loop_t1)) + tree_sum(std::move(_loop_t2)));
+      return (tree_sum(_loop_t1) + tree_sum(_loop_t2));
     } else {
       uint64_t n_ = _loop_n - 1;
       uint64_t _next_n = n_;
       MemSafetyProbe21::tree _next_t2 =
-          tree::node(std::move(_loop_t1), _loop_n, tree::leaf());
+          tree::node(_loop_t1, _loop_n, tree::leaf());
       MemSafetyProbe21::tree _next_t1 =
-          tree::node(std::move(_loop_t2), _loop_n, tree::leaf());
+          tree::node(_loop_t2, _loop_n, tree::leaf());
       _loop_n = _next_n;
       _loop_t2 = std::move(_next_t2);
       _loop_t1 = std::move(_next_t1);
@@ -234,7 +236,7 @@ uint64_t MemSafetyProbe21::weave(MemSafetyProbe21::tree t1,
 
 /// TEST 8: Deep nesting with tree_sum at each level before recursion.
 uint64_t MemSafetyProbe21::sum_and_grow(
-    MemSafetyProbe21::tree t,
+    const MemSafetyProbe21::tree &t,
     uint64_t
         n) { /// _Enter: captures varying parameters for each recursive call.
 
@@ -251,7 +253,7 @@ uint64_t MemSafetyProbe21::sum_and_grow(
   using _Frame = std::variant<_Enter, _Resume_n_>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
-  _stack.emplace_back(_Enter{n, std::move(t)});
+  _stack.emplace_back(_Enter{n, t});
   /// Loopified sum_and_grow: _Enter -> _Resume_n_.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -259,15 +261,14 @@ uint64_t MemSafetyProbe21::sum_and_grow(
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
       uint64_t n = _f.n;
-      MemSafetyProbe21::tree t = std::move(_f.t);
+      const MemSafetyProbe21::tree &t = std::move(_f.t);
       if (n <= 0) {
-        _result = tree_sum(std::move(t));
+        _result = tree_sum(t);
       } else {
         uint64_t n_ = n - 1;
         uint64_t s = tree_sum(t);
         _stack.emplace_back(_Resume_n_{s});
-        _stack.emplace_back(
-            _Enter{n_, tree::node(std::move(t), s, tree::leaf())});
+        _stack.emplace_back(_Enter{n_, tree::node(t, s, tree::leaf())});
       }
     } else {
       auto _f = std::move(std::get<_Resume_n_>(_frame));

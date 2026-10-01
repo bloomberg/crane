@@ -5,14 +5,14 @@ std::pair<std::pair<int64_t, int64_t>, int64_t> testtoST1_ext() {
     std::shared_ptr<int64_t> ref;
     ref = std::make_shared<decltype(INT64_C(1))>(INT64_C(1));
     return Point<std::monostate>{
-        [=](std::monostate) mutable { return *ref; },
-        [=](int64_t move_amt) mutable {
+        [=](std::monostate) { return *ref; },
+        [=](int64_t move_amt) {
           int64_t i = *ref;
           *ref = static_cast<int64_t>(static_cast<uint64_t>(i) +
                                       static_cast<uint64_t>(move_amt));
           return std::monostate{};
         },
-        [=](std::monostate) mutable {
+        [=](std::monostate) {
           int64_t i = *ref;
           return static_cast<int64_t>(static_cast<uint64_t>(i) -
                                       static_cast<uint64_t>(INT64_C(1)));
@@ -31,14 +31,14 @@ testtoST2_ext() {
     std::shared_ptr<int64_t> ref;
     ref = std::make_shared<decltype(INT64_C(1))>(INT64_C(1));
     return Point<std::monostate>{
-        [=](std::monostate) mutable { return *ref; },
-        [=](int64_t move_amt) mutable {
+        [=](std::monostate) { return *ref; },
+        [=](int64_t move_amt) {
           int64_t i = *ref;
           *ref = static_cast<int64_t>(static_cast<uint64_t>(i) +
                                       static_cast<uint64_t>(move_amt));
           return std::monostate{};
         },
-        [=](std::monostate) mutable {
+        [=](std::monostate) {
           int64_t i = *ref;
           return static_cast<int64_t>(static_cast<uint64_t>(i) -
                                       static_cast<uint64_t>(INT64_C(1)));
@@ -48,14 +48,14 @@ testtoST2_ext() {
     std::shared_ptr<int64_t> ref;
     ref = std::make_shared<decltype(INT64_C(10))>(INT64_C(10));
     return Point<std::monostate>{
-        [=](std::monostate) mutable { return *ref; },
-        [=](int64_t move_amt) mutable {
+        [=](std::monostate) { return *ref; },
+        [=](int64_t move_amt) {
           int64_t i = *ref;
           *ref = static_cast<int64_t>(static_cast<uint64_t>(i) +
                                       static_cast<uint64_t>(move_amt));
           return std::monostate{};
         },
-        [=](std::monostate) mutable {
+        [=](std::monostate) {
           int64_t i = *ref;
           return static_cast<int64_t>(static_cast<uint64_t>(i) -
                                       static_cast<uint64_t>(INT64_C(10)));
@@ -76,8 +76,8 @@ acc_test1_ext() {
     std::shared_ptr<int64_t> bal_ref;
     bal_ref = std::make_shared<decltype(INT64_C(100))>(INT64_C(100));
     return Account<std::monostate>{
-        [=](std::monostate) mutable { return *bal_ref; },
-        [=](uint64_t amt) mutable {
+        [=](std::monostate) { return *bal_ref; },
+        [=](uint64_t amt) {
           int64_t bal = *bal_ref;
           *bal_ref = static_cast<int64_t>(
               static_cast<uint64_t>(bal) +
@@ -86,7 +86,7 @@ acc_test1_ext() {
               static_cast<uint64_t>(bal) +
               static_cast<uint64_t>(static_cast<int64_t>(amt)));
         },
-        [=](int64_t amt) mutable {
+        [=](int64_t amt) {
           int64_t bal = *bal_ref;
           if (static_cast<int64_t>(static_cast<uint64_t>(bal) -
                                    static_cast<uint64_t>(amt)) < INT64_C(0)) {
@@ -104,7 +104,7 @@ acc_test1_ext() {
   std::optional<int64_t> c = acc.withdraw(INT64_C(160));
   int64_t d = acc.getBalance(std::monostate{});
   return std::make_pair(std::make_pair(std::make_pair(a, b),
-                                       [=]() mutable -> bool {
+                                       [&]() -> bool {
                                          if (c.has_value()) {
                                            const int64_t &_x = *c;
                                            return true;
@@ -121,8 +121,8 @@ acc_test2_ext() {
     std::shared_ptr<int64_t> bal_ref;
     bal_ref = std::make_shared<decltype(INT64_C(100))>(INT64_C(100));
     return Account<std::monostate>{
-        [=](std::monostate) mutable { return *bal_ref; },
-        [=](uint64_t amt) mutable {
+        [=](std::monostate) { return *bal_ref; },
+        [=](uint64_t amt) {
           int64_t bal = *bal_ref;
           *bal_ref = static_cast<int64_t>(
               static_cast<uint64_t>(bal) +
@@ -131,7 +131,7 @@ acc_test2_ext() {
               static_cast<uint64_t>(bal) +
               static_cast<uint64_t>(static_cast<int64_t>(amt)));
         },
-        [=](int64_t amt) mutable {
+        [=](int64_t amt) {
           int64_t bal = *bal_ref;
           if (static_cast<int64_t>(static_cast<uint64_t>(bal) -
                                    static_cast<uint64_t>(amt)) < INT64_C(0)) {
@@ -148,8 +148,8 @@ acc_test2_ext() {
     std::shared_ptr<int64_t> bal_ref;
     bal_ref = std::make_shared<decltype(INT64_C(150))>(INT64_C(150));
     return Account<std::monostate>{
-        [=](std::monostate) mutable { return *bal_ref; },
-        [=](uint64_t amt) mutable {
+        [=](std::monostate) { return *bal_ref; },
+        [=](uint64_t amt) {
           int64_t bal = *bal_ref;
           *bal_ref = static_cast<int64_t>(
               static_cast<uint64_t>(bal) +
@@ -158,7 +158,7 @@ acc_test2_ext() {
               static_cast<uint64_t>(bal) +
               static_cast<uint64_t>(static_cast<int64_t>(amt)));
         },
-        [=](int64_t amt) mutable {
+        [=](int64_t amt) {
           int64_t bal = *bal_ref;
           if (static_cast<int64_t>(static_cast<uint64_t>(bal) -
                                    static_cast<uint64_t>(amt)) < INT64_C(0)) {
@@ -204,8 +204,8 @@ bankacc_test1_ext() {
       std::shared_ptr<int64_t> bal_ref;
       bal_ref = std::make_shared<decltype(INT64_C(100))>(INT64_C(100));
       return Account<std::monostate>{
-          [=](std::monostate) mutable { return *bal_ref; },
-          [=](uint64_t amt) mutable {
+          [=](std::monostate) { return *bal_ref; },
+          [=](uint64_t amt) {
             int64_t bal = *bal_ref;
             *bal_ref = static_cast<int64_t>(
                 static_cast<uint64_t>(bal) +
@@ -214,7 +214,7 @@ bankacc_test1_ext() {
                 static_cast<uint64_t>(bal) +
                 static_cast<uint64_t>(static_cast<int64_t>(amt)));
           },
-          [=](int64_t amt) mutable {
+          [=](int64_t amt) {
             int64_t bal = *bal_ref;
             if (static_cast<int64_t>(static_cast<uint64_t>(bal) -
                                      static_cast<uint64_t>(amt)) < INT64_C(0)) {
@@ -231,8 +231,8 @@ bankacc_test1_ext() {
       std::shared_ptr<int64_t> bal_ref;
       bal_ref = std::make_shared<decltype(INT64_C(150))>(INT64_C(150));
       return Account<std::monostate>{
-          [=](std::monostate) mutable { return *bal_ref; },
-          [=](uint64_t amt) mutable {
+          [=](std::monostate) { return *bal_ref; },
+          [=](uint64_t amt) {
             int64_t bal = *bal_ref;
             *bal_ref = static_cast<int64_t>(
                 static_cast<uint64_t>(bal) +
@@ -241,7 +241,7 @@ bankacc_test1_ext() {
                 static_cast<uint64_t>(bal) +
                 static_cast<uint64_t>(static_cast<int64_t>(amt)));
           },
-          [=](int64_t amt) mutable {
+          [=](int64_t amt) {
             int64_t bal = *bal_ref;
             if (static_cast<int64_t>(static_cast<uint64_t>(bal) -
                                      static_cast<uint64_t>(amt)) < INT64_C(0)) {

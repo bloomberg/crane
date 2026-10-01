@@ -2,11 +2,13 @@
 #define INCLUDED_NESTED_IND
 
 #include "crane_fn.h"
+#include "obj.h"
 #include "small_vector.h"
 #include <algorithm>
 #include <any>
 #include <atomic>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -36,21 +38,26 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U> List(const List<_U> &_other) {
-    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->v_ = Nil{};
-    } else {
-      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>) {
-                          return crane_any_cast<A>(a);
-                        } else {
-                          return A(a);
-                        }
-                      }(),
-                      (l ? std::make_shared<List<A>>(*l) : nullptr)};
-    }
-  }
+  template <typename _U>
+  List(const List<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+            return Nil{};
+          } else {
+            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const _U &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                   : nullptr)};
+          }
+        }()) {}
 
   static List<A> nil() { return List<A>(Nil{}); }
 
@@ -60,22 +67,18 @@ public:
 
   // MANIPULATORS
   ~List() {
-    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
-        if (_alt->l) {
-          _stack.push_back(std::move(_alt->l));
+        if (_alt->l && _alt->l.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->l);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<List<A>> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -137,23 +140,29 @@ struct NestedInd {
 
     explicit custom_list(Ccons _v) : v_(std::move(_v)) {}
 
-    template <typename _U> custom_list(const custom_list<_U> &_other) {
-      if (std::holds_alternative<typename custom_list<_U>::Cnil>(_other.v())) {
-        this->v_ = Cnil{};
-      } else {
-        const auto &[a0, a1] =
-            std::get<typename custom_list<_U>::Ccons>(_other.v());
-        this->v_ =
-            Ccons{[&]() -> A {
-                    if constexpr (std::is_same_v<_U, std::any>) {
-                      return crane_any_cast<A>(a0);
-                    } else {
-                      return A(a0);
-                    }
-                  }(),
-                  (a1 ? std::make_shared<custom_list<A>>(*a1) : nullptr)};
-      }
-    }
+    template <typename _U>
+    custom_list(const custom_list<_U> &_other)
+        : v_([&]() -> variant_t {
+            if (std::holds_alternative<typename custom_list<_U>::Cnil>(
+                    _other.v())) {
+              return Cnil{};
+            } else {
+              const auto &[a0, a1] =
+                  std::get<typename custom_list<_U>::Ccons>(_other.v());
+              return Ccons{[&]() -> A {
+                             if constexpr (crane_convertible<A, const _U &>) {
+                               return crane_convert<A>(a0);
+                             } else {
+                               throw std::logic_error(
+                                   "unreachable: inactive constructor field at "
+                                   "this instantiation");
+                             }
+                           }(),
+                           (a1 ? std::make_shared<custom_list<A>>(
+                                     crane_convert<custom_list<A>>(*a1))
+                               : nullptr)};
+            }
+          }()) {}
 
     static custom_list<A> cnil() { return custom_list<A>(Cnil{}); }
 
@@ -164,22 +173,18 @@ struct NestedInd {
 
     // MANIPULATORS
     ~custom_list() {
-      crane::small_vector<std::shared_ptr<custom_list<A>>> _stack = {};
-      auto _drain = [&](variant_t &_v) {
+      auto _next = [&](variant_t &_v) -> std::shared_ptr<custom_list<A>> {
         if (auto *_alt = std::get_if<Ccons>(&_v)) {
-          if (_alt->a1) {
-            _stack.push_back(std::move(_alt->a1));
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
+            return std::move(_alt->a1);
           }
         }
+        return nullptr;
       };
-      _drain(v_mut());
-      while (!_stack.empty()) {
-        auto _cur = std::move(_stack.back());
-        _stack.pop_back();
-        if (_cur.use_count() == 1) {
-          std::atomic_thread_fence(std::memory_order_acquire);
-          _drain(_cur->v_mut());
-        }
+      std::shared_ptr<custom_list<A>> _cur = _next(v_mut());
+      while (_cur) {
+        _cur = _next(_cur->v_mut());
       }
     }
 
@@ -248,7 +253,7 @@ struct NestedInd {
       /// _result.
       struct _Resume_Ccons {
         custom_list<A> a1;
-        std::decay_t<A> a0;
+        A a0;
       };
 
       using _Frame = std::variant<_Enter, _Resume_Ccons>;
@@ -293,7 +298,7 @@ struct NestedInd {
       /// _result.
       struct _Resume_Ccons {
         custom_list<A> a1;
-        std::decay_t<A> a0;
+        A a0;
       };
 
       using _Frame = std::variant<_Enter, _Resume_Ccons>;
@@ -344,18 +349,24 @@ struct NestedInd {
 
     explicit rose(Node _v) : v_(std::move(_v)) {}
 
-    template <typename _U> rose(const rose<_U> &_other) {
-      const auto &[a0, a1] = std::get<typename rose<_U>::Node>(_other.v());
-      this->v_ =
-          Node{[&]() -> A {
-                 if constexpr (std::is_same_v<_U, std::any>) {
-                   return crane_any_cast<A>(a0);
-                 } else {
-                   return A(a0);
-                 }
-               }(),
-               (a1 ? std::make_shared<custom_list<rose<A>>>(*a1) : nullptr)};
-    }
+    template <typename _U>
+    rose(const rose<_U> &_other)
+        : v_([&]() -> variant_t {
+            const auto &[a0, a1] =
+                std::get<typename rose<_U>::Node>(_other.v());
+            return Node{[&]() -> A {
+                          if constexpr (crane_convertible<A, const _U &>) {
+                            return crane_convert<A>(a0);
+                          } else {
+                            throw std::logic_error(
+                                "unreachable: inactive constructor field at "
+                                "this instantiation");
+                          }
+                        }(),
+                        (a1 ? std::make_shared<custom_list<rose<A>>>(
+                                  crane_convert<custom_list<rose<A>>>(*a1))
+                            : nullptr)};
+          }()) {}
 
     static rose<A> node(A a0, custom_list<rose<A>> a1) {
       return rose<A>(Node{std::move(a0), std::make_shared<custom_list<rose<A>>>(

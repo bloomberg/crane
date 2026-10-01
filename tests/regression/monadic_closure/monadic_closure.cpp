@@ -4,10 +4,12 @@
 int64_t MonadicClosure::capture_bind() {
   std::string line;
   std::getline(std::cin, line);
-  return static_cast<int64_t>(
-      (static_cast<uint64_t>(_capture_bind_f(UINT64_C(0), line)) +
-       static_cast<uint64_t>(_capture_bind_f(UINT64_C(1), line))) &
-      0x7FFFFFFFFFFFFFFFULL);
+  crane::fn<int64_t(uint64_t)> f = [=](uint64_t) {
+    return static_cast<int64_t>(line.length());
+  };
+  return static_cast<int64_t>((static_cast<uint64_t>(f(UINT64_C(0))) +
+                               static_cast<uint64_t>(f(UINT64_C(1)))) &
+                              0x7FFFFFFFFFFFFFFFULL);
 }
 
 int64_t MonadicClosure::test_apply_after() {
@@ -23,10 +25,10 @@ int64_t MonadicClosure::test_apply_after() {
 }
 
 /// 3. Function returning a closure from monadic context
-std::function<std::string(std::string)> MonadicClosure::make_greeter() {
+crane::fn<std::string(std::string)> MonadicClosure::make_greeter() {
   std::string prefix;
   std::getline(std::cin, prefix);
-  return [=](std::string name) mutable { return prefix + name; };
+  return [=](std::string name) { return prefix + name; };
 }
 
 int64_t MonadicClosure::test_with_length() {

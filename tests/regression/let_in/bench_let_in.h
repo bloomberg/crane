@@ -1,6 +1,10 @@
 #ifndef INCLUDED_BENCH_LET_IN
 #define INCLUDED_BENCH_LET_IN
 
+#include "crane_fn.h"
+#include "obj.h"
+#include <any>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -13,6 +17,25 @@ struct BenchLetIn {
 
     // ACCESSORS
     pair<A, B> clone() const { return {a0, a1}; }
+
+    template <typename _U0, typename _U1> operator pair<_U0, _U1>() const {
+      return {[&]() -> _U0 {
+                if constexpr (crane_convertible<_U0, const A &>) {
+                  return crane_convert<_U0>(a0);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }(),
+              [&]() -> _U1 {
+                if constexpr (crane_convertible<_U1, const B &>) {
+                  return crane_convert<_U1>(a1);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }()};
+    }
 
     // CREATORS
     static pair<A, B> pair0(A a0, B a1) {
@@ -47,6 +70,34 @@ struct BenchLetIn {
 
     // ACCESSORS
     triple<A, B, C> clone() const { return {a0, a1, a2}; }
+
+    template <typename _U0, typename _U1, typename _U2>
+    operator triple<_U0, _U1, _U2>() const {
+      return {[&]() -> _U0 {
+                if constexpr (crane_convertible<_U0, const A &>) {
+                  return crane_convert<_U0>(a0);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }(),
+              [&]() -> _U1 {
+                if constexpr (crane_convertible<_U1, const B &>) {
+                  return crane_convert<_U1>(a1);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }(),
+              [&]() -> _U2 {
+                if constexpr (crane_convertible<_U2, const C &>) {
+                  return crane_convert<_U2>(a2);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }()};
+    }
 
     // CREATORS
     static triple<A, B, C> triple0(A a0, B a1, C a2) {

@@ -4,7 +4,7 @@
 /// Crane emits the two results without casting them back from std::any, and
 /// emits a bogus body for the identity lambda passed in.
 std::pair<Nat, bool>
-HigherRankPoly::apply_id(std::function<std::any(std::any)> f) {
-  return std::make_pair(std::any_cast<Nat>(f(Nat::s(Nat::o()))),
-                        std::any_cast<bool>(f(true)));
+HigherRankPoly::apply_id(crane::fn<crane::obj(crane::obj)> f) {
+  return std::make_pair(crane::any_cast<Nat>(f(Nat::s(Nat::o()))),
+                        crane::any_cast<bool>(f(true)));
 }

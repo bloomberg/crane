@@ -64,14 +64,14 @@ void EffectMatchArg::print_conditional(bool flag) {
 /// 5. Bool match as argument to get_env
 std::optional<std::string> EffectMatchArg::get_conditional(bool flag) {
   return [&]() -> std::optional<std::string> {
-    auto *v = std::getenv([=]() mutable -> std::string {
+    auto *v = std::getenv([&]() -> std::string {
       if (flag) {
         return "KEY_A";
       } else {
         return "KEY_B";
       }
     }()
-                                               .c_str());
+                                       .c_str());
     return v ? std::optional<std::string>(v) : std::optional<std::string>();
   }();
 }
@@ -86,7 +86,7 @@ std::optional<std::string> EffectMatchArg::round_trip_match(bool flag) {
   }
   setenv(key.c_str(), "val"s.c_str(), 1);
   return [&]() -> std::optional<std::string> {
-    auto *v = std::getenv(key.c_str());
+    auto *v = std::getenv(std::move(key).c_str());
     return v ? std::optional<std::string>(v) : std::optional<std::string>();
   }();
 }

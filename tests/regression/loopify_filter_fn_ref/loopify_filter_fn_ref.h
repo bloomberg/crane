@@ -2,10 +2,12 @@
 #define INCLUDED_LOOPIFY_FILTER_FN_REF
 
 #include "crane_fn.h"
+#include "obj.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -36,23 +38,30 @@ struct LoopifyFilterFnRef {
 
     explicit tree(Node _v) : v_(std::move(_v)) {}
 
-    template <typename _U> tree(const tree<_U> &_other) {
-      if (std::holds_alternative<typename tree<_U>::Leaf>(_other.v())) {
-        this->v_ = Leaf{};
-      } else {
-        const auto &[a0, a1, a2] =
-            std::get<typename tree<_U>::Node>(_other.v());
-        this->v_ = Node{(a0 ? std::make_shared<tree<A>>(*a0) : nullptr),
-                        [&]() -> A {
-                          if constexpr (std::is_same_v<_U, std::any>) {
-                            return crane_any_cast<A>(a1);
-                          } else {
-                            return A(a1);
-                          }
-                        }(),
-                        (a2 ? std::make_shared<tree<A>>(*a2) : nullptr)};
-      }
-    }
+    template <typename _U>
+    tree(const tree<_U> &_other)
+        : v_([&]() -> variant_t {
+            if (std::holds_alternative<typename tree<_U>::Leaf>(_other.v())) {
+              return Leaf{};
+            } else {
+              const auto &[a0, a1, a2] =
+                  std::get<typename tree<_U>::Node>(_other.v());
+              return Node{
+                  (a0 ? std::make_shared<tree<A>>(crane_convert<tree<A>>(*a0))
+                      : nullptr),
+                  [&]() -> A {
+                    if constexpr (crane_convertible<A, const _U &>) {
+                      return crane_convert<A>(a1);
+                    } else {
+                      throw std::logic_error(
+                          "unreachable: inactive constructor field at this "
+                          "instantiation");
+                    }
+                  }(),
+                  (a2 ? std::make_shared<tree<A>>(crane_convert<tree<A>>(*a2))
+                      : nullptr)};
+            }
+          }()) {}
 
     static tree<A> leaf() { return tree<A>(Leaf{}); }
 
@@ -67,10 +76,10 @@ struct LoopifyFilterFnRef {
       crane::small_vector<std::shared_ptr<tree<A>>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a2) {
+          if (_alt->a2 && _alt->a2.use_count() == 1) {
             _stack.push_back(std::move(_alt->a2));
           }
         }
@@ -113,16 +122,16 @@ struct LoopifyFilterFnRef {
     struct _After_Node {
       const tree<T1> *a0_0;
       tree<T1> a2;
-      std::decay_t<T1> a1;
+      T1 a1;
       tree<T1> a0_1;
     };
 
     /// _Combine_Node: receives partial results, combines with _result from
     /// final call.
     struct _Combine_Node {
-      std::decay_t<T2> _result;
+      T2 _result;
       tree<T1> a2;
-      std::decay_t<T1> a1;
+      T1 a1;
       tree<T1> a0;
     };
 
@@ -175,16 +184,16 @@ struct LoopifyFilterFnRef {
     struct _After_Node {
       const tree<T1> *a0_0;
       tree<T1> a2;
-      std::decay_t<T1> a1;
+      T1 a1;
       tree<T1> a0_1;
     };
 
     /// _Combine_Node: receives partial results, combines with _result from
     /// final call.
     struct _Combine_Node {
-      std::decay_t<T2> _result;
+      T2 _result;
       tree<T1> a2;
-      std::decay_t<T1> a1;
+      T1 a1;
       tree<T1> a0;
     };
 
@@ -240,14 +249,14 @@ struct LoopifyFilterFnRef {
     /// _Cont_Node: saves [a1, a2], resumes after recursive call, then processes
     /// rest.
     struct _Cont_Node {
-      std::decay_t<T1> a1;
+      T1 a1;
       const tree<T1> *a2;
     };
 
     /// _Cont_Node_1: saves [a1, l_], resumes after recursive call, then
     /// processes rest.
     struct _Cont_Node_1 {
-      std::decay_t<T1> a1;
+      T1 a1;
       tree<T1> l_;
     };
 

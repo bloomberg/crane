@@ -1,7 +1,7 @@
 #include "pair_both_recursive.h"
 
-PairBothRecursive::t PairBothRecursive::wrap(PairBothRecursive::t acc) {
-  return t::br(std::make_pair(std::move(acc), t::leaf(UINT64_C(0))));
+PairBothRecursive::t PairBothRecursive::wrap(const PairBothRecursive::t &acc) {
+  return t::br(std::make_pair(acc, t::leaf(UINT64_C(0))));
 }
 
 uint64_t PairBothRecursive::size(const PairBothRecursive::t &x) {

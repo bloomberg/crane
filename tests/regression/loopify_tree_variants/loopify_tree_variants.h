@@ -48,13 +48,13 @@ struct LoopifyTreeVariants {
       crane::small_vector<std::shared_ptr<ternary>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<TNode>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a2) {
+          if (_alt->a2 && _alt->a2.use_count() == 1) {
             _stack.push_back(std::move(_alt->a2));
           }
-          if (_alt->a3) {
+          if (_alt->a3 && _alt->a3.use_count() == 1) {
             _stack.push_back(std::move(_alt->a3));
           }
         }
@@ -249,7 +249,7 @@ struct LoopifyTreeVariants {
       /// _After_TNode_1: saves [_result, a0_0, a3, a2, a1, a0_1], dispatches
       /// next recursive call.
       struct _After_TNode_1 {
-        std::decay_t<T1> _result;
+        T1 _result;
         const ternary *a0_0;
         ternary a3;
         ternary a2;
@@ -260,8 +260,8 @@ struct LoopifyTreeVariants {
       /// _Combine_TNode: receives partial results, combines with _result from
       /// final call.
       struct _Combine_TNode {
-        std::decay_t<T1> _result_0;
-        std::decay_t<T1> _result_1;
+        T1 _result_0;
+        T1 _result_1;
         ternary a3;
         ternary a2;
         uint64_t a1;
@@ -338,7 +338,7 @@ struct LoopifyTreeVariants {
       /// _After_TNode_1: saves [_result, a0_0, a3, a2, a1, a0_1], dispatches
       /// next recursive call.
       struct _After_TNode_1 {
-        std::decay_t<T1> _result;
+        T1 _result;
         const ternary *a0_0;
         ternary a3;
         ternary a2;
@@ -349,8 +349,8 @@ struct LoopifyTreeVariants {
       /// _Combine_TNode: receives partial results, combines with _result from
       /// final call.
       struct _Combine_TNode {
-        std::decay_t<T1> _result_0;
-        std::decay_t<T1> _result_1;
+        T1 _result_0;
+        T1 _result_1;
         ternary a3;
         ternary a2;
         uint64_t a1;
@@ -444,16 +444,16 @@ struct LoopifyTreeVariants {
       crane::small_vector<std::shared_ptr<quadtree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Quad>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a1) {
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
             _stack.push_back(std::move(_alt->a1));
           }
-          if (_alt->a2) {
+          if (_alt->a2 && _alt->a2.use_count() == 1) {
             _stack.push_back(std::move(_alt->a2));
           }
-          if (_alt->a3) {
+          if (_alt->a3 && _alt->a3.use_count() == 1) {
             _stack.push_back(std::move(_alt->a3));
           }
         }
@@ -592,7 +592,7 @@ struct LoopifyTreeVariants {
       /// _After_Quad_1: saves [_result, a1_0, a0_0, a3, a2, a1_1, a0_1],
       /// dispatches next recursive call.
       struct _After_Quad_1 {
-        std::decay_t<T1> _result;
+        T1 _result;
         const quadtree *a1_0;
         const quadtree *a0_0;
         quadtree a3;
@@ -604,8 +604,8 @@ struct LoopifyTreeVariants {
       /// _After_Quad_2: saves [_result_0, _result_1, a0_0, a3, a2, a1, a0_1],
       /// dispatches next recursive call.
       struct _After_Quad_2 {
-        std::decay_t<T1> _result_0;
-        std::decay_t<T1> _result_1;
+        T1 _result_0;
+        T1 _result_1;
         const quadtree *a0_0;
         quadtree a3;
         quadtree a2;
@@ -616,9 +616,9 @@ struct LoopifyTreeVariants {
       /// _Combine_Quad: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Quad {
-        std::decay_t<T1> _result_0;
-        std::decay_t<T1> _result_1;
-        std::decay_t<T1> _result_2;
+        T1 _result_0;
+        T1 _result_1;
+        T1 _result_2;
         quadtree a3;
         quadtree a2;
         quadtree a1;
@@ -707,7 +707,7 @@ struct LoopifyTreeVariants {
       /// _After_Quad_1: saves [_result, a1_0, a0_0, a3, a2, a1_1, a0_1],
       /// dispatches next recursive call.
       struct _After_Quad_1 {
-        std::decay_t<T1> _result;
+        T1 _result;
         const quadtree *a1_0;
         const quadtree *a0_0;
         quadtree a3;
@@ -719,8 +719,8 @@ struct LoopifyTreeVariants {
       /// _After_Quad_2: saves [_result_0, _result_1, a0_0, a3, a2, a1, a0_1],
       /// dispatches next recursive call.
       struct _After_Quad_2 {
-        std::decay_t<T1> _result_0;
-        std::decay_t<T1> _result_1;
+        T1 _result_0;
+        T1 _result_1;
         const quadtree *a0_0;
         quadtree a3;
         quadtree a2;
@@ -731,9 +731,9 @@ struct LoopifyTreeVariants {
       /// _Combine_Quad: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Quad {
-        std::decay_t<T1> _result_0;
-        std::decay_t<T1> _result_1;
-        std::decay_t<T1> _result_2;
+        T1 _result_0;
+        T1 _result_1;
+        T1 _result_2;
         quadtree a3;
         quadtree a2;
         quadtree a1;
@@ -833,10 +833,10 @@ struct LoopifyTreeVariants {
       crane::small_vector<std::shared_ptr<leaf_tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<LNode>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a1) {
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
             _stack.push_back(std::move(_alt->a1));
           }
         }
@@ -995,7 +995,7 @@ struct LoopifyTreeVariants {
       /// _Combine_LNode: receives partial results, combines with _result from
       /// final call.
       struct _Combine_LNode {
-        std::decay_t<T1> _result;
+        T1 _result;
         leaf_tree a1;
         leaf_tree a0;
       };
@@ -1056,7 +1056,7 @@ struct LoopifyTreeVariants {
       /// _Combine_LNode: receives partial results, combines with _result from
       /// final call.
       struct _Combine_LNode {
-        std::decay_t<T1> _result;
+        T1 _result;
         leaf_tree a1;
         leaf_tree a0;
       };

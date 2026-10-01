@@ -1,8 +1,8 @@
 #ifndef INCLUDED_SEPEXTFUNTYPEQUAL
 #define INCLUDED_SEPEXTFUNTYPEQUAL
 
+#include "fn.h"
 #include <concepts>
-#include <functional>
 
 namespace SepExtFunTypeQual {
 
@@ -11,15 +11,15 @@ concept S = requires {
   typename M::elt;
   typename M::t;
   {
-    M::for_all(std::declval<std::function<bool(typename M::elt)>>(),
+    M::for_all(std::declval<crane::fn<bool(typename M::elt)>>(),
                std::declval<typename M::t>())
   } -> std::same_as<bool>;
   {
-    M::exists_(std::declval<std::function<bool(typename M::elt)>>(),
+    M::exists_(std::declval<crane::fn<bool(typename M::elt)>>(),
                std::declval<typename M::t>())
   } -> std::same_as<bool>;
   {
-    M::filter(std::declval<std::function<bool(typename M::elt)>>(),
+    M::filter(std::declval<crane::fn<bool(typename M::elt)>>(),
               std::declval<typename M::t>())
   } -> std::same_as<typename M::t>;
 };

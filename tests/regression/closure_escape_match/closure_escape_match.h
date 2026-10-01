@@ -2,12 +2,13 @@
 #define INCLUDED_CLOSURE_ESCAPE_MATCH
 
 #include "crane_fn.h"
-#include "small_vector.h"
+#include "fn.h"
+#include "obj.h"
 #include <any>
 #include <atomic>
-#include <functional>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -36,22 +37,29 @@ struct ClosureEscapeMatch {
 
     explicit mylist(Mycons _v) : v_(std::move(_v)) {}
 
-    template <typename _U> mylist(const mylist<_U> &_other) {
-      if (std::holds_alternative<typename mylist<_U>::Mynil>(_other.v())) {
-        this->v_ = Mynil{};
-      } else {
-        const auto &[a0, a1] =
-            std::get<typename mylist<_U>::Mycons>(_other.v());
-        this->v_ = Mycons{[&]() -> A {
-                            if constexpr (std::is_same_v<_U, std::any>) {
-                              return crane_any_cast<A>(a0);
-                            } else {
-                              return A(a0);
-                            }
-                          }(),
-                          (a1 ? std::make_shared<mylist<A>>(*a1) : nullptr)};
-      }
-    }
+    template <typename _U>
+    mylist(const mylist<_U> &_other)
+        : v_([&]() -> variant_t {
+            if (std::holds_alternative<typename mylist<_U>::Mynil>(
+                    _other.v())) {
+              return Mynil{};
+            } else {
+              const auto &[a0, a1] =
+                  std::get<typename mylist<_U>::Mycons>(_other.v());
+              return Mycons{[&]() -> A {
+                              if constexpr (crane_convertible<A, const _U &>) {
+                                return crane_convert<A>(a0);
+                              } else {
+                                throw std::logic_error(
+                                    "unreachable: inactive constructor field "
+                                    "at this instantiation");
+                              }
+                            }(),
+                            (a1 ? std::make_shared<mylist<A>>(
+                                      crane_convert<mylist<A>>(*a1))
+                                : nullptr)};
+            }
+          }()) {}
 
     static mylist<A> mynil() { return mylist<A>(Mynil{}); }
 
@@ -62,22 +70,18 @@ struct ClosureEscapeMatch {
 
     // MANIPULATORS
     ~mylist() {
-      crane::small_vector<std::shared_ptr<mylist<A>>> _stack = {};
-      auto _drain = [&](variant_t &_v) {
+      auto _next = [&](variant_t &_v) -> std::shared_ptr<mylist<A>> {
         if (auto *_alt = std::get_if<Mycons>(&_v)) {
-          if (_alt->a1) {
-            _stack.push_back(std::move(_alt->a1));
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
+            return std::move(_alt->a1);
           }
         }
+        return nullptr;
       };
-      _drain(v_mut());
-      while (!_stack.empty()) {
-        auto _cur = std::move(_stack.back());
-        _stack.pop_back();
-        if (_cur.use_count() == 1) {
-          std::atomic_thread_fence(std::memory_order_acquire);
-          _drain(_cur->v_mut());
-        }
+      std::shared_ptr<mylist<A>> _cur = _next(v_mut());
+      while (_cur) {
+        _cur = _next(_cur->v_mut());
       }
     }
 
@@ -136,18 +140,17 @@ struct ClosureEscapeMatch {
   /// Return a closure wrapped in option — prevents uncurrying.
   /// The closure captures a pattern variable hd (a shared_ptr),
   /// which is an inlined _args.d_a0 inside the std::visit callback.
-  static std::optional<std::function<mylist<uint64_t>(mylist<uint64_t>)>>
+  static std::optional<crane::fn<mylist<uint64_t>(mylist<uint64_t>)>>
   make_prepender_opt(const mylist<mylist<uint64_t>> &l);
   /// Return a closure in a pair — prevents uncurrying.
   /// Captures pattern variables x and xs.
-  static std::optional<
-      std::function<std::pair<uint64_t, uint64_t>(std::monostate)>>
+  static std::optional<crane::fn<std::pair<uint64_t, uint64_t>(std::monostate)>>
   make_pair_fn_opt(const mylist<uint64_t> &l);
   /// Nested matches with closures returned in option.
-  static std::optional<std::function<uint64_t(uint64_t)>>
+  static std::optional<crane::fn<uint64_t(uint64_t)>>
   nested_closure_opt(const mylist<uint64_t> &a, const mylist<uint64_t> &b);
   /// Closure stored in a product, capturing shared_ptr pattern variable.
-  static std::pair<uint64_t, std::function<mylist<uint64_t>(mylist<uint64_t>)>>
+  static std::pair<uint64_t, crane::fn<mylist<uint64_t>(mylist<uint64_t>)>>
   closure_in_pair(const mylist<mylist<uint64_t>> &l);
 };
 

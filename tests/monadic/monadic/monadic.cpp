@@ -19,11 +19,10 @@ std::optional<uint64_t> Monadic::safe_sub(uint64_t n, uint64_t m) {
 
 std::optional<uint64_t> Monadic::div_then_sub(uint64_t a, uint64_t b,
                                               uint64_t c) {
-  return option_bind<uint64_t, uint64_t>(
-      safe_div(a, b), [=](uint64_t x) mutable {
-        return option_bind<uint64_t, uint64_t>(safe_sub(x, c),
-                                               option_return<uint64_t>);
-      });
+  return option_bind<uint64_t, uint64_t>(safe_div(a, b), [=](uint64_t x) {
+    return option_bind<uint64_t, uint64_t>(safe_sub(x, c),
+                                           option_return<uint64_t>);
+  });
 }
 
 Monadic::State<std::pair<uint64_t, uint64_t>, std::monostate>
@@ -31,9 +30,8 @@ Monadic::fib_state(uint64_t n) {
   return ListDef::seq(UINT64_C(0), n)
       .template fold_left<
           Monadic::State<std::pair<uint64_t, uint64_t>, std::monostate>>(
-          [](std::function<
-                 std::pair<std::monostate, std::pair<uint64_t, uint64_t>>(
-                     std::pair<uint64_t, uint64_t>)>
+          [](crane::fn<std::pair<std::monostate, std::pair<uint64_t, uint64_t>>(
+                 std::pair<uint64_t, uint64_t>)>
                  acc,
              uint64_t) {
             return state_bind<std::pair<uint64_t, uint64_t>, std::monostate,

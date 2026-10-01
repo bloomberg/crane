@@ -1,9 +1,8 @@
 #ifndef INCLUDED_LIFTED_LAMBDA_NESTED
 #define INCLUDED_LIFTED_LAMBDA_NESTED
 
-#include "small_vector.h"
+#include "fn.h"
 #include <atomic>
-#include <functional>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -38,22 +37,18 @@ struct LiftedLambdaNested {
 
     // MANIPULATORS
     ~t() {
-      crane::small_vector<std::shared_ptr<t>> _stack = {};
-      auto _drain = [&](variant_t &_v) {
+      auto _next = [&](variant_t &_v) -> std::shared_ptr<t> {
         if (auto *_alt = std::get_if<N>(&_v)) {
-          if (_alt->a0) {
-            _stack.push_back(std::move(_alt->a0));
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
+            return std::move(_alt->a0);
           }
         }
+        return nullptr;
       };
-      _drain(v_mut());
-      while (!_stack.empty()) {
-        auto _cur = std::move(_stack.back());
-        _stack.pop_back();
-        if (_cur.use_count() == 1) {
-          std::atomic_thread_fence(std::memory_order_acquire);
-          _drain(_cur->v_mut());
-        }
+      std::shared_ptr<t> _cur = _next(v_mut());
+      while (_cur) {
+        _cur = _next(_cur->v_mut());
       }
     }
 
@@ -91,17 +86,17 @@ struct LiftedLambdaNested {
   }
 
   static uint64_t depth(const t &x);
-
-  template <typename T1> static uint64_t _go_outer(const T1, const t x) {
-    std::function<uint64_t(T1)> inner = [=](const T1 &) mutable {
-      return depth(x);
-    };
-    return (inner(UINT64_C(0)) + depth(x));
-  }
-
   static inline const uint64_t go = []() {
-    t x = t::n(t::n(t::l()));
-    return (_go_outer(UINT64_C(0), x) + _go_outer(UINT64_C(1), x));
+    return []() {
+      t x = t::n(t::n(t::l()));
+      crane::fn<uint64_t(uint64_t)> outer = [=](uint64_t) {
+        crane::fn<uint64_t(uint64_t)> inner = [=](uint64_t) {
+          return depth(x);
+        };
+        return (inner(UINT64_C(0)) + depth(x));
+      };
+      return (outer(UINT64_C(0)) + outer(UINT64_C(1)));
+    }();
   }();
 };
 

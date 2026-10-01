@@ -89,7 +89,7 @@ struct DoubleOptionNest {
     return f(a0, *a1);
   }
 
-  static t wrap(uint64_t k, t acc);
+  static t wrap(uint64_t k, const t &acc);
   static inline const t empty =
       t::node(UINT64_C(0), std::optional<std::optional<t>>());
 

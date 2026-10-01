@@ -88,9 +88,13 @@ let rec extract_tvar_map tmpl conc =
     when List.length args1 = List.length args2 ->
     List.concat (List.map2 extract_tvar_map args1 args2)
     @ extract_tvar_map ret1 ret2
-  | Tref t1, Tref t2 -> extract_tvar_map t1 t2
+  | Tref t1, Tref t2 | Tfwd_ref t1, Tfwd_ref t2 -> extract_tvar_map t1 t2
   | Tconst t1, Tconst t2 -> extract_tvar_map t1 t2
   | Tnamespace (_, t1), Tnamespace (_, t2) -> extract_tvar_map t1 t2
+  (* A qualification is spelling, not structure: seen through on the way down.
+     A variable binds the concrete type as written (the first case), so the
+     binding keeps its qualification. *)
+  | Tnamespace (_, t1), t2 | t1, Tnamespace (_, t2) -> extract_tvar_map t1 t2
   | _ -> []
 
 (** Search an ML type for the first self-referential or mutually-recursive
@@ -168,6 +172,34 @@ let rec ml_domains t =
     actually passes. *)
 let ml_value_domains t =
   List.filter (fun d -> not (Mlutil.isTdummy d)) (ml_domains t)
+
+(** Give [b] as many binders as [ty] has value arrows.
+
+    A body that stops short of its type -- [fun n => tfmap f] where the type
+    asks for two arguments -- is a partial application, which is a term a
+    functional language writes freely and a C++ slot of a known signature
+    cannot hold.  The binders are added innermost, so the lambdas already
+    written keep their names and only the ones the body never named are
+    invented. *)
+let eta_expand_to ty b =
+  let doms = ml_value_domains ty in
+  let ids, inner = Mlutil.collect_lams b in
+  let k = List.length doms - List.length ids in
+  if k <= 0 then b
+  else
+    let missing = List.filteri (fun i _ -> i >= List.length doms - k) doms in
+    (* [collect_lams] and [named_lams] both count innermost first, and the
+       binders missing from the body are the last of the type's domains. *)
+    let extra =
+      List.mapi
+        (fun i t ->
+          ( Miniml.Id (Names.Id.of_string (Printf.sprintf "_eta%d" (k - 1 - i))),
+            t ) )
+        (List.rev missing)
+    in
+    let args = List.init k (fun i -> Miniml.MLrel (k - i)) in
+    Mlutil.named_lams (extra @ ids)
+      (Mlutil.apply_eta_args (Mlutil.ast_lift k inner) args)
 
 (** A class method's type with the quantifier a concept erased put back.
 
@@ -347,7 +379,7 @@ let rec cpp_ty_eq t1 t2 =
     && List.length ts1 = List.length ts2
     && List.for_all2 cpp_ty_eq ts1 ts2
   | Tvar (i1, _), Tvar (i2, _) -> i1 = i2
-  | Tref t1', Tref t2' -> cpp_ty_eq t1' t2'
+  | Tref t1', Tref t2' | Tfwd_ref t1', Tfwd_ref t2' -> cpp_ty_eq t1' t2'
   | Tshared_ptr t1', Tshared_ptr t2' -> cpp_ty_eq t1' t2'
   | Tfun (d1, c1), Tfun (d2, c2) ->
     List.length d1 = List.length d2
@@ -377,18 +409,7 @@ let list_ctor_struct_names (g : GlobRef.t) : string * string =
       ctor_struct_name_of_ref cons_ref )
   | _ -> ("Nil", "Cons")
 
-(** Check if a C++ type is a dummy type glob (e.g., dummy_type, dummy_prop,
-    dummy_implicit). These arise from Tdummy Ktype/Kprop/Kimplicit in the ML
-    AST, which convert_ml_type_to_cpp_type maps to Tglob(VarRef "dummy_type")
-    etc. These intermediate markers are used by the filtering pipeline
-    (gen_expr, eta_fun, gen_decl_for_pp) to detect erased parameters and drop
-    them before they reach the C++ renderer — they should never appear in the
-    final generated output. *)
-let is_cpp_dummy_type = function
-  | Minicpp.Tglob (GlobRef.VarRef id, [], _) ->
-    let name = Id.to_string id in
-    name = "dummy_type" || name = "dummy_prop" || name = "dummy_implicit"
-  | _ -> false
+let is_cpp_dummy_type = Minicpp.is_cpp_dummy_type
 
 (** The type under any module or namespace qualification.  Questions about
     what a type {i is} -- which inductive, at which instantiation -- are about
@@ -405,21 +426,15 @@ let rec unqualify_ty = function
     template" from a template applied to nothing. *)
 let rec template_args t =
   match unqualify_ty t with
-  | Minicpp.Tref t | Minicpp.Tptr t | Minicpp.Tshared_ptr t -> template_args t
+  | Minicpp.Tref t | Minicpp.Tfwd_ref t | Minicpp.Tptr t | Minicpp.Tshared_ptr t ->
+    template_args t
   | Minicpp.Tglob (_, args, _)
   | Minicpp.Tid (_, args)
   | Minicpp.Tid_external (_, args)
   | Minicpp.Tapply (_, args) -> Some args
   | _ -> None
 
-(** [prints_as_any t] — true if [t] is spelled [std::any] in the generated
-    header: either of the two erased type nodes, or a dummy glob left behind by
-    proof/type erasure.  This is a question about {e syntax}, not about
-    representation: use it to decide how to render a type, never to decide
-    whether a value may be boxed or [any_cast] out.  For that, see
-    {!is_boxed_type}. *)
-let prints_as_any t =
-  t = Minicpp.Tany || t = Minicpp.Topaque || is_cpp_dummy_type t
+let prints_as_any = Minicpp.prints_as_any
 
 (** What erasure did to a function type's {e domain}, and -- where it left the
     domain erased -- what it did to the result.  Every C++ type is exactly one
@@ -433,12 +448,21 @@ type fun_erasure =
           signature kept, or [None] when the result erased along with the
           arguments *)
 
+(** [names_erased_alias t] -- [t] names a type-level declaration whose body
+    erased, spelled through its alias [using memCType = std::any]: a
+    type-level function of a value ([memCType c]), or a class field with no
+    instance behind it. *)
+let names_erased_alias = function
+  | Minicpp.Tglob (g, _, _) -> Table.is_erased_type_const g
+  | _ -> false
+
 (** Classify a C++ type by {!fun_erasure}.  This is the one place a function
     type's domain is tested for erasure; the predicates below are named
     shorthands for its answers and cannot drift from it. *)
 let classify_fun_erasure = function
   | Minicpp.Tfun (dom, cod) ->
-    if not (List.exists prints_as_any dom) then Fe_concrete_domain
+    let erased t = prints_as_any t || names_erased_alias t in
+    if not (List.exists erased dom) then Fe_concrete_domain
     else Fe_erased_domain (if prints_as_any cod then None else Some cod)
   | _ -> Fe_not_a_function
 
@@ -592,6 +616,14 @@ let has_tany_in_type = exists_cpp_type is_tany_node
     preserve the lambda's concrete return type. *)
 let has_erased_type_in_type =
   exists_cpp_type (fun t -> is_tany_node t || is_cpp_dummy_type t)
+
+(** Whether a C++ type still holds a promoted type variable the scope could not
+    answer.  [Tpromoted] survives only where [promoted_var_binding] said
+    nothing -- a mention with no instance in sight, or one whose instance the
+    term leaves genuinely ambiguous -- so it is erased in the same sense as
+    [std::any], and a binding annotated with it is better left to deduction. *)
+let has_unresolved_promoted_in_type =
+  exists_cpp_type (function Tpromoted _ -> true | _ -> false)
 
 (** Check if a C++ type is the [dummy_prop] marker from proof erasure.
 
@@ -766,10 +798,13 @@ let rec tvar_erase_type (ty : cpp_type) : cpp_type =
   | Tconst ty -> Tconst (tvar_erase_type ty)
   | Tnamespace (r, ty) -> Tnamespace (r, tvar_erase_type ty)
   | Tref ty -> Tref (tvar_erase_type ty)
+  | Tfwd_ref ty -> Tfwd_ref (tvar_erase_type ty)
   | Tvariant tys -> Tvariant (List.map tvar_erase_type tys)
   | Tshared_ptr ty -> Tshared_ptr (tvar_erase_type ty)
   | Tid (id, tys) -> Tid (id, List.map tvar_erase_type tys)
   | Tid_external (id, tys) -> Tid_external (id, List.map tvar_erase_type tys)
+  | Tnondeduced ty -> Tnondeduced (tvar_erase_type ty)
+  | Trebind (h, x) -> Trebind (tvar_erase_type h, tvar_erase_type x)
   | Tqualified (ty, id) -> Tqualified (tvar_erase_type ty, id)
   | _ -> ty (* Tvoid, Tunresolved, Tany *)
 
@@ -795,6 +830,8 @@ let rec index_erase_type (ty : cpp_type) : cpp_type =
   | Tid (id, (_ :: _ as tys)) -> Tid (id, List.map index_erase_type tys)
   | Tid_external (id, (_ :: _ as tys)) ->
     Tid_external (id, List.map index_erase_type tys)
+  | Tnondeduced t -> Tnondeduced (index_erase_type t)
+  | Trebind (h, x) -> Trebind (index_erase_type h, index_erase_type x)
   | Tnamespace (r, inner) ->
     ( match index_erase_type inner with
     | Tany -> Tany
@@ -824,6 +861,78 @@ let rec ml_return_type = function
   | Tarr (_, rest) -> ml_return_type rest
   | t -> t
 
+(** Whether a global has no C++ spelling: whatever mapped it mapped it to the
+    empty string.  [sum1] is one -- an event family that is a sum is still
+    erased, and there is nothing to write where it would go. *)
+let ref_has_no_spelling r = Table.find_custom_opt r = Some ""
+
+(** Whether a global was skipped -- [Crane Extract Skip] records it as an
+    inline custom whose C++ text is empty.  Skipped globals are
+    infrastructure, and nothing of them survives into C++. *)
+let ref_is_skipped r = Table.is_inline_custom r && ref_has_no_spelling r
+
+(** Whether [r] has no C++ name to be written as.
+
+    Two ways that happens, and they have to be asked together because both
+    produce text no compiler will take.  A global mapped to the empty string --
+    what [Crane Extract Skip] records -- vanishes, so a type applied to it
+    renders as a bare argument list, [<typename I::PROV>].  A global from a
+    module [Crane Extract Skip Module] left out renders as the name it would
+    have had, [IO_axioms::ioE], which nothing in the file introduces. *)
+let ref_has_no_cpp_name r =
+  let rec mp_skipped mp =
+    is_skip_module mp
+    || match mp with MPdot (parent, _) -> mp_skipped parent | _ -> false
+  in
+  ref_has_no_spelling r || mp_skipped (modpath_of_r r)
+
+(** Whether [ty] mentions anywhere a global with no C++ name.
+
+    Asked of the type {e as the printer will write it}, not as it stands: an
+    application of a nameless constructor comes out as its arguments, so the
+    constructor having no name of its own costs the type nothing, and asking
+    before stripping it would condemn a type that prints perfectly well.  That
+    is not hypothetical -- it is every reified [Vis] whose event type is a
+    projection through a dictionary, and answering "no name" there gives up a
+    spelling the generator had.
+
+    Asked before writing a type into a position that has an alternative to
+    writing it. *)
+let has_no_cpp_spelling ty =
+  let as_printed =
+    Minicpp.map_cpp_type
+      (function
+        | Tapply (Tglob (r, _, _), [arg]) when ref_has_no_cpp_name r -> arg
+        | t -> t )
+      ty
+  in
+  Minicpp.exists_cpp_type
+    (function Tglob (r, _, _) -> ref_has_no_cpp_name r | _ -> false)
+    as_printed
+
+(** Whether an ML type has no C++ spelling, because its head has none. *)
+let ml_type_has_no_spelling ty =
+  match resolve_tmeta ty with
+  | Tglob (r, _, _) -> ref_has_no_spelling r
+  | _ -> false
+
+(** Whether an ML type's result is a skipped type -- a [ReSum] instance, say,
+    whose class extraction records as a [ConstRef] mapped to the empty string,
+    so {!Table.is_typeclass_type} does not recognise it.  Values of such a type
+    are infrastructure and are erased. *)
+let ml_ret_is_skipped ty =
+  match ml_return_type ty with
+  | Tglob (rr, _, _) -> ref_is_skipped rr
+  | _ -> false
+
+(** Whether a value of ML type [ty] is a typeclass instance.
+
+    The result is what decides it: an instance parameterised over types is
+    still an instance, and its type is an arrow -- [MList : forall A, Monoid
+    (list A)].  This is the one place that answer is worked out. *)
+let ml_type_is_instance ty =
+  Table.is_typeclass_type (ml_return_type ty) || ml_ret_is_skipped ty
+
 (** Extract argument types and return type from a function type. *)
 let rec get_args_and_ret acc = function
   | Tarr (t, rest) -> get_args_and_ret (t :: acc) rest
@@ -845,9 +954,10 @@ let rec strip_tarr_n n ty =
 (** Strip one level of reference or const-qualification from a C++ type.
     Normalises lambda parameter types before building [Tfun] wrappers.
     Unlike [Loopify.strip_ref_and_const_type] this is intentionally
-    non-recursive: a double-ref [Tref (Tref t)] stays as [Tref t]. *)
+    non-recursive: a forwarding reference [T&&] becomes [T&]. *)
 let strip_cpp_ref_const = function
   | Tref t | Tconst t -> t
+  | Tfwd_ref t -> Tref t
   | t -> t
 
 (** Count non-erased arguments in an ML application.
@@ -977,6 +1087,144 @@ let custom_referenced_positions_opt g =
   | Some _ as r -> r
   | None -> check_template (Table.find_custom_opt g)
 
+(** [refine_erased_by ~expected actual] takes, at every position where
+    [actual] erased and [expected] did not, the spelling [expected] gives.
+
+    A producer computes a type from its own instantiation, which knows nothing
+    of the positions the value is going to occupy; the slot the value flows
+    into has already written the type down.  Where the two disagree only in how
+    much they erased, the slot's spelling is the one both producers for that
+    slot will agree on, and the one the declaration states -- so it wins, and
+    the producer's concrete knowledge is kept everywhere else.
+
+    Only erasure is refined: a position where both are concrete keeps the
+    producer's, and a shape mismatch is left alone entirely. *)
+let rec refine_erased_by ~expected actual =
+  let erased t = prints_as_any t || is_cpp_dummy_type t in
+  if erased actual && not (erased expected) then expected
+  else
+    match (expected, actual) with
+    | Minicpp.Tglob (g, ea, _), Minicpp.Tglob (g', aa, x)
+      when globref_equal g g' && List.length ea = List.length aa ->
+      Minicpp.Tglob (g', List.map2 (fun e a -> refine_erased_by ~expected:e a) ea aa, x)
+    | Minicpp.Tfun (ed, ec), Minicpp.Tfun (ad, ac)
+      when List.length ed = List.length ad ->
+      Minicpp.Tfun
+        ( List.map2 (fun e a -> refine_erased_by ~expected:e a) ed ad,
+          refine_erased_by ~expected:ec ac )
+    | Minicpp.Tconst e, Minicpp.Tconst a -> Minicpp.Tconst (refine_erased_by ~expected:e a)
+    | Minicpp.Tref e, Minicpp.Tref a -> Minicpp.Tref (refine_erased_by ~expected:e a)
+    | Minicpp.Tfwd_ref e, Minicpp.Tfwd_ref a ->
+      Minicpp.Tfwd_ref (refine_erased_by ~expected:e a)
+    | Minicpp.Tptr e, Minicpp.Tptr a -> Minicpp.Tptr (refine_erased_by ~expected:e a)
+    | Minicpp.Tshared_ptr e, Minicpp.Tshared_ptr a ->
+      Minicpp.Tshared_ptr (refine_erased_by ~expected:e a)
+    (* A qualification is spelling: seen through on either side, kept on the
+       actual one. *)
+    | _, Minicpp.Tnamespace (ns, a) ->
+      Minicpp.Tnamespace (ns, refine_erased_by ~expected a)
+    | Minicpp.Tnamespace (_, e), _ -> refine_erased_by ~expected:e actual
+    | _ -> actual
+
+(** [written_type_args g tys] keeps only those of [g]'s type arguments that a
+    spelling of [g] actually writes.
+
+    A custom template writes the [%tN] it names and no others -- the reified
+    [ITree] carries its event family in the node rather than in the type, and
+    writes only the result -- and a Crane-generated declaration says the same
+    about a position it declared phantom.  What stands in an unwritten position
+    is not in the rendered type at all, so nothing there is deducible, erased,
+    or otherwise visible to C++. *)
+let type_arg_is_written g =
+  match custom_referenced_positions_opt g with
+  | Some referenced -> fun i -> IntSet.mem i referenced
+  | None -> fun i -> not (Table.is_phantom_type_param g i)
+
+let written_type_args g tys =
+  List.filteri (fun i _ -> type_arg_is_written g i) tys
+
+(** Replace every unwritten type argument (see {!written_type_args}) by
+    [Tvoid], so a predicate over the result reads the type as it is spelled. *)
+let prune_unwritten_args =
+  Minicpp.map_cpp_type (function
+    | Tglob (g, tys, es) ->
+      let written = type_arg_is_written g in
+      Tglob (g, List.mapi (fun i t -> if written i then t else Tvoid) tys, es)
+    | t -> t )
+
+(** Like {!has_tany_in_type}, but asking of the type as it is {e spelled}: an
+    erased argument in a position nothing writes never reaches the C++. *)
+let has_tany_written t = has_tany_in_type (prune_unwritten_args t)
+
+let rec refine_erased ~writable have want =
+  let have = resolve_tmeta have and want = resolve_tmeta want in
+  let erased = function
+    | Miniml.Tunknown | Miniml.Tdummy _ | Miniml.Tmeta {contents = None} -> true
+    | _ -> false
+  in
+  match (have, want) with
+  | Miniml.Tmeta ({contents = None} as cell), w
+    when (not (erased w)) && writable w ->
+    (* An uninstantiated [Tmeta] is not merely an erased node, it is the hole
+       extraction left for exactly this answer -- and the term shares the cell
+       with everything else that mentions the same unknown, so the annotation
+       on a match over this binder and the binder's own type are one write, not
+       two.  Filling it is what keeps the body's generation in step with the
+       signature; replacing the type around it would leave the body reading the
+       hole. *)
+    cell.Miniml.contents <- Some w;
+    w
+  | h, w when erased h -> if (not (erased w)) && writable w then w else h
+  | Miniml.Tglob (n, ha, sc), Miniml.Tglob (m, wa, _)
+    when GlobRef.CanOrd.equal n m && List.length ha = List.length wa ->
+    Miniml.Tglob (n, List.map2 (refine_erased ~writable) ha wa, sc)
+  | Miniml.Tarr (a, b), Miniml.Tarr (c, d) ->
+    Miniml.Tarr (refine_erased ~writable a c, refine_erased ~writable b d)
+  | h, _ -> h
+
+let refine_param_from_slot ~tvars ~slot bare =
+  let spelled_by_bare = Minicpp.tvar_names bare in
+  let nameable n =
+    List.exists (Id.equal n) tvars || Id.Set.mem n spelled_by_bare
+  in
+  let erased =
+    Minicpp.map_cpp_type
+      (fun t ->
+        match Minicpp.tvar_name t with
+        | Some n when not (nameable n) -> Tany
+        | _ -> t )
+      slot
+  in
+  (* Every name the parameter already has, it keeps.  The slot is the callee's
+     declaration with this call's arguments substituted in, and a substitution
+     that is not the one this call performs resolves a name to something else
+     entirely -- [void], here.  Erasing a name the parameter cannot spell is
+     the whole point; replacing one it can is a different operation. *)
+  let keeps_names =
+    Id.Set.subset spelled_by_bare (Minicpp.tvar_names erased)
+  in
+  (* Whether the slot says anything the parameter does not already say.  Two
+     things it may differ in without saying anything: which spelling of erasure
+     it uses ([Tany] node or [dummy_type] marker), and what de Bruijn index it
+     gives a type variable -- the slot's indices are the callee's, so they are
+     not the caller's to adopt even when the name is the same. *)
+  let says_something =
+    let normalise =
+      Minicpp.map_cpp_type (fun t ->
+          if is_tany_node t || is_cpp_dummy_type t then Minicpp.Tany
+          else
+            match t with
+            | Minicpp.Tvar (_, Some n) -> Minicpp.Tvar (0, Some n)
+            | t -> t )
+    in
+    normalise erased <> normalise bare
+  in
+  if
+    says_something && keeps_names && has_erased_type_in_type bare
+    && has_erased_type_in_type erased
+  then erased
+  else bare
+
 (** Collect (index, name) pairs for all Tvar occurrences, sorted by index *)
 let get_tvars_indexed t =
   let get_name i n =
@@ -1000,10 +1248,13 @@ let get_tvars_indexed t =
     | Tfun (tys, ty) -> List.fold_left aux l (ty :: tys)
     | Tconst ty -> aux l ty
     | Tnamespace (_, ty) -> aux l ty
-    | Tref ty -> aux l ty
+    | Tref ty | Tfwd_ref ty -> aux l ty
     | Tvariant tys -> List.fold_left aux l tys
     | Tshared_ptr ty -> aux l ty
     | Tapply (ty, tys) -> List.fold_left aux l (ty :: tys)
+    (* A carrier abstraction names the variables its body does -- written
+       through a holder, [_crane_carrier_tch<T1>::template c]. *)
+    | Ttyctor ty -> aux l ty
     | _ -> l
   in
   List.sort (fun (x, _) (y, _) -> Int.compare x y) (aux [] t)
@@ -1020,23 +1271,45 @@ let get_rendered_tvar_indices t =
     | Tvar (i, _) ->
       if List.mem i l then l else i :: l
     | Tglob (g, tys, _) ->
-      let tys_to_visit =
-        match custom_referenced_positions_opt g with
-        | Some referenced ->
-          List.filteri (fun i _ -> IntSet.mem i referenced) tys
-        | None -> tys
-      in
-      List.fold_left aux l tys_to_visit
+      List.fold_left aux l (written_type_args g tys)
     | Tfun (tys, ty) -> List.fold_left aux l (ty :: tys)
     | Tconst ty -> aux l ty
     | Tnamespace (_, ty) -> aux l ty
-    | Tref ty -> aux l ty
+    | Tref ty | Tfwd_ref ty -> aux l ty
     | Tvariant tys -> List.fold_left aux l tys
     | Tshared_ptr ty -> aux l ty
     | Tapply (ty, tys) -> List.fold_left aux l (ty :: tys)
     | _ -> l
   in
   aux [] t
+
+(** The arity at which the {e rendered} type applies each type variable.
+
+    Asked instead of the ML reading wherever a rendered type is available,
+    because erasure happens between the two and they then disagree without
+    either being wrong.  An event family is the case in point: [semantic_
+    function := list ptr -> itree E nat] applies [E] in ML and spells it
+    nowhere in C++, and an alias that merely {e forwards} [E] into that one
+    still has the application in its expanded ML body.  Reading the arity
+    there makes the forwarder [template <typename> class e] while the alias it
+    hands it to declared [typename e], which is the mismatch.  What the
+    rendered type does with the variable is what its users have to agree
+    with. *)
+let rendered_tvar_arities t =
+  let arities = Hashtbl.create 4 in
+  let rec aux = function
+    | Tapply (Tvar (i, _), tys) ->
+      Hashtbl.replace arities i (List.length tys);
+      List.iter aux tys
+    | Tglob (g, tys, _) -> List.iter aux (written_type_args g tys)
+    | Tfun (tys, ty) -> List.iter aux (ty :: tys)
+    | Tconst ty | Tnamespace (_, ty) | Tref ty | Tfwd_ref ty | Tshared_ptr ty -> aux ty
+    | Tvariant tys -> List.iter aux tys
+    | Tapply (ty, tys) -> List.iter aux (ty :: tys)
+    | _ -> ()
+  in
+  aux t;
+  arities
 
 (** Tvar names, sorted by index *)
 let get_tvars t = List.map snd (get_tvars_indexed t)
@@ -1114,6 +1387,293 @@ let collect_ml_type_index_tvars ml_ty =
   in
   walk ml_ty;
   !result
+
+(** Every type variable index the ML type mentions, in any position.
+
+    The C++ type is what decides which parameters a signature {e spells}, but
+    not how many it {e has}: erasure can drop a variable from the rendered type
+    while the body and the call sites still number their arguments by the ML
+    type.  A declaration that omitted such a variable would leave the body
+    naming something the head never bound. *)
+let collect_ml_tvars ml_ty =
+  let result = ref IntSet.empty in
+  let rec walk = function
+    | Miniml.Tvar (_, i) -> result := IntSet.add i !result
+    | Miniml.Tapp (i, ts) -> result := IntSet.add i !result; List.iter walk ts
+    | Miniml.Tarr (a, b) -> walk a; walk b
+    | Miniml.Tglob (_, ts, _) -> List.iter walk ts
+    | Miniml.Tmeta {contents = Some t} -> walk t
+    | _ -> ()
+  in
+  walk ml_ty;
+  !result
+
+(** Arity of every type variable that [tys] applies to arguments, keyed by its
+    1-based de Bruijn index.  A Rocq parameter of kind [Type -> Type] reaches
+    MiniML as the head of a {!Miniml.Tapp}, and a plain [typename] cannot be
+    applied: such a parameter is declared [template <typename> class], and an
+    explicit argument for it is a bare template name rather than a type. *)
+let applied_ml_tvar_arities tys =
+  let arities = Hashtbl.create 4 in
+  let rec scan = function
+    | Miniml.Tapp (i, args) ->
+      Hashtbl.replace arities i (List.length args);
+      List.iter scan args
+    | Miniml.Tglob (_, args, _) -> List.iter scan args
+    | Miniml.Tarr (a, b) -> scan a; scan b
+    | Miniml.Tmeta {contents = Some t} -> scan t
+    | _ -> ()
+  in
+  List.iter scan tys;
+  arities
+
+(** The type variables a declaration of type [ml_ty] relaxes out of its template
+    head.
+
+    {!Gen_decls.relax_applied_return} replaces a higher-kinded parameter that is
+    only ever {e applied} in the parameter list with one fresh [typename] per
+    application, deduced from the argument, and leaves the original a phantom
+    defaulted to [void]. A call must then not write a template name there,
+    because the position no longer takes one.
+
+    Asked here of the ML type rather than read back from the declaration: a
+    table gen_decls fills cannot be consulted at a call site, since emission
+    interleaves with body generation. The two agree because the condition is a
+    property of the type both are built from -- applied somewhere in the
+    domains, and spelled nowhere unapplied and nowhere in the codomain. *)
+let relaxed_applied_ml_tvars ml_ty =
+  let doms = ml_domains ml_ty
+  and ret = ml_return_type ml_ty in
+  let applied = Hashtbl.create 4
+  and bare = ref IntSet.empty in
+  let rec scan = function
+    (* A variable of kind [Type -> Type] handed over as a bare template name --
+       as the argument of an alias, [Sub UBE E] -- is written applied to the
+       alias's own placeholder. That is an occurrence the declaration has to
+       keep the parameter for, not an application it can relax. *)
+    | Miniml.Tapp (i, args)
+      when args = []
+           || List.exists
+                (fun a ->
+                  match resolve_tmeta a with
+                  | Miniml.Tunknown -> true
+                  | _ -> false )
+                args -> bare := IntSet.add i !bare
+    | Miniml.Tapp (i, args) ->
+      Hashtbl.replace applied i ();
+      List.iter scan args
+    | Miniml.Tvar (_, i) -> bare := IntSet.add i !bare
+    | Miniml.Tglob (_, args, _) -> List.iter scan args
+    | Miniml.Tarr (a, b) ->
+      scan a;
+      scan b
+    | Miniml.Tmeta {contents = Some t} -> scan t
+    | _ -> ()
+  in
+  List.iter scan doms;
+  let in_doms =
+    Hashtbl.fold (fun i () acc -> IntSet.add i acc) applied IntSet.empty
+  in
+  let in_doms = IntSet.diff in_doms !bare in
+  bare := IntSet.empty;
+  Hashtbl.reset applied;
+  scan ret;
+  let in_ret =
+    IntSet.union
+      !bare
+      (Hashtbl.fold (fun i () acc -> IntSet.add i acc) applied IntSet.empty)
+  in
+  IntSet.diff in_doms in_ret
+
+(** The type variables [tys] uses as the event family of a reified tree.
+
+    A reified monad's own spelling drops the family -- [itree E R] is
+    [std::shared_ptr<ITree<R>>] -- and the families themselves are emitted as
+    plain structs, because a [Type -> Type] inductive whose constructors sit at
+    differing indices has no C++ template to be.  So there is never a template
+    name to pass for such a variable, and declaring it
+    [template <typename> class] leaves a parameter nothing can satisfy.
+
+    The occurrence in the tree is what identifies the family; the application
+    that would otherwise demand the higher kind is elsewhere in the signature
+    ([trigger_cast' (e : E void) : itree E A] applies it in the domain and
+    names it in the codomain).  That application is taken back off by
+    {!Gen_decls.deapply_plain_tvars} once the kind is refused. *)
+let event_family_ml_tvars tys =
+  let fams = ref IntSet.empty in
+  (* A variable handed to a family position of a generated type -- the [E] of
+     [itree E A] in vanilla extraction, where [itree] is no registered monad
+     -- is a family too: the type's own header decided that position is one
+     ([Table.is_family_ind_param]). *)
+  let rec at_family_positions t =
+    match resolve_tmeta t with
+    | Miniml.Tglob (r, args, _) ->
+      List.iteri
+        (fun i a ->
+          ( if Table.is_family_ind_param r i then
+              match resolve_tmeta a with
+              | Miniml.Tvar (_, v) | Miniml.Tapp (v, _) ->
+                fams := IntSet.add v !fams
+              | _ -> () );
+          at_family_positions a )
+        args
+    | Miniml.Tapp (_, args) -> List.iter at_family_positions args
+    | Miniml.Tarr (a, b) -> at_family_positions a; at_family_positions b
+    | _ -> ()
+  in
+  List.iter at_family_positions tys;
+  (* Every variable standing in a family position is a family, however the
+     families there are combined: in [itree (D +' E) R] both [D] and [E] are,
+     and so is anything a sum nested inside it names. *)
+  let rec families a =
+    match resolve_tmeta a with
+    | Miniml.Tvar (_, v) | Miniml.Tapp (v, _) -> fams := IntSet.add v !fams
+    | Miniml.Tglob (_, args, _) -> List.iter families args
+    | _ -> ()
+  in
+  let rec scan t =
+    match t with
+    | Miniml.Tglob (r, (_ :: _ as args), _)
+      when Table.is_monad r && Table.is_monad_reified r ->
+      (* A reified monad parameterises on its result last; everything before
+         it is the event family. *)
+      List.iteri
+        (fun i a -> if i < List.length args - 1 then families a)
+        args;
+      List.iter scan args
+    | Miniml.Tglob (_, args, _) | Miniml.Tapp (_, args) -> List.iter scan args
+    | Miniml.Tarr (a, b) -> scan a; scan b
+    | Miniml.Tmeta {contents = Some t} -> scan t
+    | _ -> ()
+  in
+  List.iter scan tys;
+  !fams
+
+(** The type variables an ML signature genuinely demands be declared
+    [template <typename> class] rather than plain [typename].
+
+    MiniML never names a higher-kinded variable bare: [sum1 E F X] arrives as
+    [sum1 (E ?) (F ?) X], every occurrence already applied.  So "is it applied"
+    cannot be the question, and two things answer it instead.
+
+    - It is applied to an argument that survived erasure.  [hk_map : (A -> B)
+      -> M A -> M B] applies [M] at two different real types, and no single
+      plain [typename] stands for both.
+    - It is an argument of a {b generated} type constructor at a position
+      that constructor's own header declares [template <typename> class]
+      ({!Gen_decls.hkt_templates} records which), so whatever is written there
+      has to be a template name.
+
+    Neither holds for an event family threaded through custom mappings.
+    [sum1 => "Sum1"] and [itree => "std::shared_ptr<ITree<%t1>>"] spell their
+    own parameters, and they take a family at plain [typename] because the
+    index it is applied at is erased -- what reaches C++ is the event struct
+    itself.  Reading those occurrences as a demand for a higher kind is what
+    made [E_trigger] take a template template argument no call site could
+    supply.
+
+    This is read off the ML type on purpose.  The converted C++ type at the
+    point the kinds are chosen has not been through the signature relaxations,
+    so the occurrences that would justify the higher kind are not yet in it --
+    see the [hkt-kind-demotion-dead-end] note. *)
+
+let higher_kinded_ml_tvars tys =
+  let hk = ref IntSet.empty in
+  let families = event_family_ml_tvars tys in
+  let demand i = if not (IntSet.mem i families) then hk := IntSet.add i !hk in
+  (* A variable that occurs only as the argument of an applied variable is an
+     index -- the [T] of [E ~> F], in [E T -> F T] -- and an application at an
+     index is a family's, whose struct already has it erased.  One that also
+     occurs on its own -- the [A] of [fmap : (A -> B) -> F A -> F B] -- is a
+     real type, and applying at it asks for a template name. *)
+  let index_vars =
+    let as_arg = ref IntSet.empty and elsewhere = ref IntSet.empty in
+    let rec scan ~under_app t =
+      match resolve_tmeta t with
+      | Miniml.Tvar (_, j) ->
+        if under_app then as_arg := IntSet.add j !as_arg
+        else elsewhere := IntSet.add j !elsewhere
+      | Miniml.Tapp (_, args) -> List.iter (scan ~under_app:true) args
+      | Miniml.Tglob (_, args, _) -> List.iter (scan ~under_app:false) args
+      | Miniml.Tarr (a, b) -> scan ~under_app:false a; scan ~under_app:false b
+      | _ -> ()
+    in
+    List.iter (scan ~under_app:false) tys;
+    IntSet.diff !as_arg !elsewhere
+  in
+  let survived_erasure a =
+    match resolve_tmeta a with
+    | Miniml.Tunknown | Miniml.Tdummy _ | Miniml.Tmeta _ -> false
+    | Miniml.Tvar (_, j) -> not (IntSet.mem j index_vars)
+    | _ -> true
+  in
+  let rec scan ~generated_arg t =
+    match t with
+    | Miniml.Tapp (i, args) ->
+      (* Applied at something erasure did not take away, or written where a
+         generated constructor expects a template name. *)
+      if generated_arg || List.exists survived_erasure args
+      then demand i;
+      List.iter (scan ~generated_arg:false) args
+    | Miniml.Tglob (r, args, _) ->
+      (* Only a position the constructor's header actually declares a
+         template: [Gen_decls.hkt_templates] recorded which, and a family
+         parameter it left plain takes the family's own struct. *)
+      List.iteri
+        (fun i a ->
+          scan
+            ~generated_arg:
+              ((not (Table.is_custom r)) && Table.is_hkt_ind_param r i)
+            a )
+        args
+    | Miniml.Tarr (a, b) ->
+      scan ~generated_arg:false a;
+      scan ~generated_arg:false b
+    | Miniml.Tmeta {contents = Some t} -> scan ~generated_arg t
+    | _ -> ()
+  in
+  List.iter (scan ~generated_arg:false) tys;
+  !hk
+
+(** [hkt_arg_ml_tvar_arities tys] maps a type variable to the arity it is
+    higher-kinded at because [tys] hands it, bare, to a position another
+    constructor declares [template <typename> class].
+
+    Being applied is the usual evidence for the higher kind, and
+    {!higher_kinded_ml_tvars} and [Gen_decls.applied_tvar_arities] both look
+    for it.  It is not the only evidence.  [raiseUB (E : Type -> Type)
+    (S : Sub UBE E) (B : Type)] applies [E] nowhere -- its result is [list B],
+    and in the Vellvm original the result [itree E X] loses the event
+    parameter on the way to [ITree<X>] -- so [E] survives only as an argument
+    of [Sub].  But [Sub] is itself emitted higher-kinded, so the declaration
+    that omits the kind cannot type-check against its own parameter's type:
+    [Sub<UBE, T1>] wants a template where [T1] is a [typename].
+
+    The position's kind is not guessed here.  It was decided and recorded by
+    {!Gen_decls.hkt_templates} when the constructor's own header was emitted,
+    which is the same authority a {e use} of that constructor already consults
+    to decide it must pass a bare template name. *)
+let hkt_arg_ml_tvar_arities tys =
+  let arities = Hashtbl.create 4 in
+  let rec scan t =
+    match t with
+    | Miniml.Tglob (r, args, _) ->
+      List.iteri
+        (fun i a ->
+          match (resolve_tmeta a, Table.hkt_ind_param_arity r i) with
+          | Miniml.Tvar (_, v), Some arity -> Hashtbl.replace arities v arity
+          | Miniml.Tapp (v, args), Some _ ->
+            Hashtbl.replace arities v (List.length args)
+          | _ -> () )
+        args;
+      List.iter scan args
+    | Miniml.Tapp (_, args) -> List.iter scan args
+    | Miniml.Tarr (a, b) -> scan a; scan b
+    | Miniml.Tmeta {contents = Some t} -> scan t
+    | _ -> ()
+  in
+  List.iter scan tys;
+  Hashtbl.fold (fun k v acc -> (k, v) :: acc) arities []
 
 (** Whether a function type returns a type variable that its arguments carry
     only as the type index of an inductive with several constructors.

@@ -2,12 +2,14 @@
 #define INCLUDED_COTREE
 
 #include "crane_fn.h"
+#include "fn.h"
 #include "lazy.h"
+#include "obj.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
-#include <functional>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -37,21 +39,26 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U> List(const List<_U> &_other) {
-    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->v_ = Nil{};
-    } else {
-      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>) {
-                          return crane_any_cast<A>(a);
-                        } else {
-                          return A(a);
-                        }
-                      }(),
-                      (l ? std::make_shared<List<A>>(*l) : nullptr)};
-    }
-  }
+  template <typename _U>
+  List(const List<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+            return Nil{};
+          } else {
+            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const _U &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                   : nullptr)};
+          }
+        }()) {}
 
   static List<A> nil() { return List<A>(Nil{}); }
 
@@ -61,22 +68,18 @@ public:
 
   // MANIPULATORS
   ~List() {
-    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
-        if (_alt->l) {
-          _stack.push_back(std::move(_alt->l));
+        if (_alt->l && _alt->l.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->l);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<List<A>> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -120,11 +123,12 @@ struct Cotree {
     // TYPES
     struct Conil {};
 
-    struct Cocons {
+    template <typename _S0 = colist<A>> struct Cocons_ {
       A x;
-      std::shared_ptr<colist<A>> xs;
+      _S0 xs;
     };
 
+    using Cocons = Cocons_<>;
     using variant_t = std::variant<Conil, Cocons>;
 
   private:
@@ -133,39 +137,68 @@ struct Cotree {
 
   public:
     // CREATORS
+    colist() {}
+
     explicit colist(Conil _v)
         : lazy_v_(crane::lazy<variant_t>(variant_t(std::move(_v)))) {}
 
     explicit colist(Cocons _v)
         : lazy_v_(crane::lazy<variant_t>(variant_t(std::move(_v)))) {}
 
-    explicit colist(std::function<variant_t()> _thunk)
+    template <typename _U>
+    colist(const colist<_U> &_other)
+        : lazy_v_(crane::lazy<variant_t>::converted_from(
+              _other.lazy_cell(), [=]() -> variant_t {
+                if (std::holds_alternative<typename colist<_U>::Conil>(
+                        _other.v())) {
+                  return Conil{};
+                } else {
+                  const auto &[x, xs] =
+                      std::get<typename colist<_U>::Cocons>(_other.v());
+                  return Cocons{
+                      [&]() -> A {
+                        if constexpr (crane_convertible<A, const _U &>) {
+                          return crane_convert<A>(x);
+                        } else {
+                          throw std::logic_error(
+                              "unreachable: inactive constructor field at this "
+                              "instantiation");
+                        }
+                      }(),
+                      crane_convert<colist<A>>(xs)};
+                }
+              })) {}
+
+    explicit colist(crane::fn<variant_t()> _thunk)
         : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
     static colist<A> conil() { return colist<A>(Conil{}); }
 
-    static colist<A> cocons(A x, const colist<A> &xs) {
-      return colist<A>(Cocons{std::move(x), std::make_shared<colist<A>>(xs)});
+    static colist<A> cocons(A x, colist<A> xs) {
+      return colist<A>(Cocons{std::move(x), std::move(xs)});
     }
 
-    static colist<A> lazy_(std::function<colist<A>()> thunk) {
-      return colist<A>(std::function<variant_t()>([=]() mutable -> variant_t {
-        colist<A> _tmp = thunk();
-        return _tmp.v();
-      }));
+    explicit colist(crane::lazy<variant_t> _cell) : lazy_v_(std::move(_cell)) {}
+
+    template <typename F> static colist<A> lazy_(F &&thunk) {
+      return colist<A>(
+          crane::lazy<variant_t>::delegate(std::forward<F>(thunk)));
     }
 
     // ACCESSORS
     const variant_t &v() const { return lazy_v_.force(); }
+
+    const crane::lazy<variant_t> &lazy_cell() const { return lazy_v_; }
   };
 
   template <typename A> struct cotree {
     // TYPES
-    struct Conode {
+    template <typename _S0 = cotree<A>> struct Conode_ {
       A a;
-      std::shared_ptr<colist<cotree<A>>> f;
+      colist<_S0> f;
     };
 
+    using Conode = Conode_<>;
     using variant_t = std::variant<Conode>;
 
   private:
@@ -174,49 +207,80 @@ struct Cotree {
 
   public:
     // CREATORS
+    cotree() {}
+
     explicit cotree(Conode _v)
         : lazy_v_(crane::lazy<variant_t>(variant_t(std::move(_v)))) {}
 
-    explicit cotree(std::function<variant_t()> _thunk)
+    template <typename _U>
+    cotree(const cotree<_U> &_other)
+        : lazy_v_(crane::lazy<variant_t>::converted_from(
+              _other.lazy_cell(), [=]() -> variant_t {
+                const auto &[a, f] =
+                    std::get<typename cotree<_U>::Conode>(_other.v());
+                return Conode{
+                    [&]() -> A {
+                      if constexpr (crane_convertible<A, const _U &>) {
+                        return crane_convert<A>(a);
+                      } else {
+                        throw std::logic_error(
+                            "unreachable: inactive constructor field at this "
+                            "instantiation");
+                      }
+                    }(),
+                    crane_convert<colist<cotree<A>>>(f)};
+              })) {}
+
+    explicit cotree(crane::fn<variant_t()> _thunk)
         : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
-    static cotree<A> conode(A a, const colist<cotree<A>> &f) {
-      return cotree<A>(
-          Conode{std::move(a), std::make_shared<colist<cotree<A>>>(f)});
+    static cotree<A> conode(A a, colist<cotree<A>> f) {
+      return cotree<A>(Conode{std::move(a), std::move(f)});
     }
 
-    static cotree<A> lazy_(std::function<cotree<A>()> thunk) {
-      return cotree<A>(std::function<variant_t()>([=]() mutable -> variant_t {
-        cotree<A> _tmp = thunk();
-        return _tmp.v();
-      }));
+    explicit cotree(crane::lazy<variant_t> _cell) : lazy_v_(std::move(_cell)) {}
+
+    template <typename F> static cotree<A> lazy_(F &&thunk) {
+      return cotree<A>(
+          crane::lazy<variant_t>::delegate(std::forward<F>(thunk)));
     }
 
     // ACCESSORS
     const variant_t &v() const { return lazy_v_.force(); }
 
-    A root() const {
+    const crane::lazy<variant_t> &lazy_cell() const { return lazy_v_; }
+
+    const A &root() const & {
       const auto &[a0, a1] = std::get<typename cotree<A>::Conode>(this->v());
       return a0;
     }
 
-    colist<cotree<A>> children() const {
+    A root() const && {
       const auto &[a0, a1] = std::get<typename cotree<A>::Conode>(this->v());
-      return colist<std::shared_ptr<cotree<A>>>::lazy_(
-          [=]() mutable -> colist<cotree<A>> { return *a1; });
+      return a0;
+    }
+
+    const colist<cotree<A>> &children() const & {
+      const auto &[a0, a1] = std::get<typename cotree<A>::Conode>(this->v());
+      return a1;
+    }
+
+    colist<cotree<A>> children() const && {
+      const auto &[a0, a1] = std::get<typename cotree<A>::Conode>(this->v());
+      return a1;
     }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, A &>
     cotree<T1> comap_cotree(F0 &&g) const {
       const auto &[a0, a1] = std::get<typename cotree<A>::Conode>(this->v());
-      return cotree<T1>::lazy_([=]() mutable -> cotree<T1> {
+      return cotree<T1>::lazy_([=]() -> cotree<T1> {
         return cotree<T1>::conode(g(a0),
                                   comap<cotree<A>, cotree<T1>>(
-                                      [=](cotree<A> _x0) mutable -> cotree<T1> {
+                                      [=](cotree<A> _x0) -> cotree<T1> {
                                         return _x0.template comap_cotree<T1>(g);
                                       },
-                                      *a1));
+                                      a1));
       });
     }
   };
@@ -240,18 +304,24 @@ struct Cotree {
 
     explicit tree(Node _v) : v_(std::move(_v)) {}
 
-    template <typename _U> tree(const tree<_U> &_other) {
-      const auto &[a, children] = std::get<typename tree<_U>::Node>(_other.v());
-      this->v_ = Node{
-          [&]() -> A {
-            if constexpr (std::is_same_v<_U, std::any>) {
-              return crane_any_cast<A>(a);
-            } else {
-              return A(a);
-            }
-          }(),
-          (children ? std::make_shared<List<tree<A>>>(*children) : nullptr)};
-    }
+    template <typename _U>
+    tree(const tree<_U> &_other)
+        : v_([&]() -> variant_t {
+            const auto &[a, children] =
+                std::get<typename tree<_U>::Node>(_other.v());
+            return Node{[&]() -> A {
+                          if constexpr (crane_convertible<A, const _U &>) {
+                            return crane_convert<A>(a);
+                          } else {
+                            throw std::logic_error(
+                                "unreachable: inactive constructor field at "
+                                "this instantiation");
+                          }
+                        }(),
+                        (children ? std::make_shared<List<tree<A>>>(
+                                        crane_convert<List<tree<A>>>(*children))
+                                  : nullptr)};
+          }()) {}
 
     static tree<A> node(A a, List<tree<A>> children) {
       return tree<A>(Node{
@@ -322,32 +392,30 @@ struct Cotree {
     return a0;
   }
 
-  template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, T1 &>
-  static colist<T2> comap(F0 &&f, colist<T1> l) {
+  template <typename T1, typename T2>
+  static colist<T2> comap(std::type_identity_t<crane::fn<T2(T1)>> f,
+                          colist<T1> l) {
     if (std::holds_alternative<typename colist<T1>::Conil>(l.v())) {
-      return colist<T2>::lazy_(
-          []() -> colist<T2> { return colist<T2>::conil(); });
+      return colist<T2>::conil();
     } else {
       const auto &[a0, a1] = std::get<typename colist<T1>::Cocons>(l.v());
-      return colist<T2>::lazy_([=]() mutable -> colist<T2> {
-        return colist<T2>::cocons(f(a0), comap<T1, T2>(f, *a1));
+      return colist<T2>::lazy_([=]() -> colist<T2> {
+        return colist<T2>::cocons(f(a0), comap<T1, T2>(f, a1));
       });
     }
   }
 
-  template <typename T1> static cotree<T1> singleton_cotree(T1 a) {
-    return cotree<T1>::lazy_([=]() mutable -> cotree<T1> {
-      return cotree<T1>::conode(a, colist<cotree<T1>>::conil());
-    });
+  template <typename T1> static cotree<T1> singleton_cotree(const T1 &a) {
+    return cotree<T1>::conode(a, colist<cotree<T1>>::conil());
   }
 
-  template <typename T1, typename F0>
-    requires std::is_invocable_r_v<colist<T1>, F0 &, T1 &>
-  static cotree<T1> unfold_cotree(F0 &&next, T1 init) {
-    return cotree<T1>::lazy_([=]() mutable -> cotree<T1> {
+  template <typename T1>
+  static cotree<T1>
+  unfold_cotree(std::type_identity_t<crane::fn<colist<T1>(T1)>> next,
+                const T1 &init) {
+    return cotree<T1>::lazy_([=]() -> cotree<T1> {
       return cotree<T1>::conode(init, comap<T1, cotree<T1>>(
-                                          [=](T1 _x0) mutable -> cotree<T1> {
+                                          [=](T1 _x0) -> cotree<T1> {
                                             return unfold_cotree<T1>(next, _x0);
                                           },
                                           next(init)));
@@ -364,7 +432,7 @@ struct Cotree {
         return List<T1>::nil();
       } else {
         const auto &[a0, a1] = std::get<typename colist<T1>::Cocons>(l.v());
-        return List<T1>::cons(a0, list_of_colist<T1>(fuel_, *a1));
+        return List<T1>::cons(a0, list_of_colist<T1>(fuel_, a1));
       }
     }
   }
@@ -377,8 +445,8 @@ struct Cotree {
     } else {
       uint64_t fuel_ = fuel - 1;
       return tree<T1>::node(
-          a0, list_of_colist<cotree<T1>>(fuel, *a1).template map<tree<T1>>(
-                  [=](cotree<T1> _x0) mutable -> tree<T1> {
+          a0, list_of_colist<cotree<T1>>(fuel, a1).template map<tree<T1>>(
+                  [=](cotree<T1> _x0) -> tree<T1> {
                     return tree_of_cotree<T1>(fuel_, _x0);
                   }));
     }
@@ -402,12 +470,21 @@ struct Cotree {
     }() + 1);
   }
 
-  static inline const cotree<uint64_t> sample_cotree = cotree<uint64_t>::conode(
-      UINT64_C(1), colist<cotree<uint64_t>>::cocons(
-                       singleton_cotree<uint64_t>(UINT64_C(2)),
-                       colist<cotree<uint64_t>>::cocons(
-                           singleton_cotree<uint64_t>(UINT64_C(3)),
-                           colist<cotree<uint64_t>>::conil())));
+  static inline const cotree<uint64_t> sample_cotree =
+      cotree<uint64_t>::lazy_([]() -> cotree<uint64_t> {
+        return cotree<uint64_t>::conode(
+            UINT64_C(1),
+            colist<cotree<uint64_t>>::lazy_([]() -> colist<cotree<uint64_t>> {
+              return colist<cotree<uint64_t>>::cocons(
+                  singleton_cotree<uint64_t>(UINT64_C(2)),
+                  colist<cotree<uint64_t>>::lazy_(
+                      []() -> colist<cotree<uint64_t>> {
+                        return colist<cotree<uint64_t>>::cocons(
+                            singleton_cotree<uint64_t>(UINT64_C(3)),
+                            colist<cotree<uint64_t>>::conil());
+                      }));
+            }));
+      });
   static inline const uint64_t test_root = sample_cotree.root();
   static inline const uint64_t test_doubled_root =
       sample_cotree

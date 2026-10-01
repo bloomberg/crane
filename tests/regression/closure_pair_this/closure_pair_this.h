@@ -2,9 +2,9 @@
 #define INCLUDED_CLOSURE_PAIR_THIS
 
 #include "crane_fn.h"
+#include "fn.h"
 #include "small_vector.h"
 #include <atomic>
-#include <functional>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -47,10 +47,10 @@ struct ClosurePairThis {
       crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a2) {
+          if (_alt->a2 && _alt->a2.use_count() == 1) {
             _stack.push_back(std::move(_alt->a2));
           }
         }
@@ -82,18 +82,17 @@ struct ClosurePairThis {
     /// are evaluated and stored while this is still valid.
     /// But after get_fn_pair returns, the temporary tree may be
     /// destroyed — calling either closure is then use-after-free.
-    std::pair<std::function<uint64_t(uint64_t)>,
-              std::function<uint64_t(uint64_t)>>
+    std::pair<crane::fn<uint64_t(uint64_t)>, crane::fn<uint64_t(uint64_t)>>
     get_fn_pair(uint64_t flag) const {
       tree _self_val = *this;
       if (flag <= 0) {
         return std::make_pair(
-            [=](uint64_t x) mutable { return (x + _self_val.tree_sum()); },
-            [=](uint64_t x) mutable { return (_self_val.tree_sum() * x); });
+            [=](uint64_t x) { return (x + _self_val.tree_sum()); },
+            [=](uint64_t x) { return (_self_val.tree_sum() * x); });
       } else {
         uint64_t _x = flag - 1;
         return std::make_pair(
-            [=](uint64_t x) mutable { return (_self_val.tree_sum() + x); },
+            [=](uint64_t x) { return (_self_val.tree_sum() + x); },
             [](uint64_t x) { return x; });
       }
     }
@@ -173,7 +172,7 @@ struct ClosurePairThis {
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
-        std::decay_t<T1> _result;
+        T1 _result;
         tree a2;
         uint64_t a1;
         tree a0;
@@ -235,7 +234,7 @@ struct ClosurePairThis {
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
-        std::decay_t<T1> _result;
+        T1 _result;
         tree a2;
         uint64_t a1;
         tree a0;
@@ -303,30 +302,27 @@ struct ClosurePairThis {
   /// test1: flag=0 on tree with sum=7. fst closure adds, snd multiplies.
   /// (3 + 7) + (7 * 2) = 10 + 14 = 24.
   static inline const uint64_t test1 = []() {
-    std::pair<std::function<uint64_t(uint64_t)>,
-              std::function<uint64_t(uint64_t)>>
-        p = tree::node(tree::leaf(), UINT64_C(7), tree::leaf())
-                .get_fn_pair(UINT64_C(0));
+    std::pair<crane::fn<uint64_t(uint64_t)>, crane::fn<uint64_t(uint64_t)>> p =
+        tree::node(tree::leaf(), UINT64_C(7), tree::leaf())
+            .get_fn_pair(UINT64_C(0));
     return (p.first(UINT64_C(3)) + p.second(UINT64_C(2)));
   }();
   /// test2: flag=1. fst closure adds sum, snd is identity.
   /// (7 + 4) + 5 = 11 + 5 = 16.
   static inline const uint64_t test2 = []() {
-    std::pair<std::function<uint64_t(uint64_t)>,
-              std::function<uint64_t(uint64_t)>>
-        p = tree::node(tree::leaf(), UINT64_C(7), tree::leaf())
-                .get_fn_pair(UINT64_C(1));
+    std::pair<crane::fn<uint64_t(uint64_t)>, crane::fn<uint64_t(uint64_t)>> p =
+        tree::node(tree::leaf(), UINT64_C(7), tree::leaf())
+            .get_fn_pair(UINT64_C(1));
     return (p.first(UINT64_C(4)) + p.second(UINT64_C(5)));
   }();
   /// test3: Use both closures after allocating another tree to increase
   /// memory pressure on the freed region.
   static inline const uint64_t test3 = []() {
-    std::pair<std::function<uint64_t(uint64_t)>,
-              std::function<uint64_t(uint64_t)>>
-        p = tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
-                       UINT64_C(5),
-                       tree::node(tree::leaf(), UINT64_C(2), tree::leaf()))
-                .get_fn_pair(UINT64_C(0));
+    std::pair<crane::fn<uint64_t(uint64_t)>, crane::fn<uint64_t(uint64_t)>> p =
+        tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
+                   UINT64_C(5),
+                   tree::node(tree::leaf(), UINT64_C(2), tree::leaf()))
+            .get_fn_pair(UINT64_C(0));
     uint64_t noise =
         tree::node(tree::leaf(), UINT64_C(999), tree::leaf()).tree_sum();
     uint64_t a = p.first(noise);

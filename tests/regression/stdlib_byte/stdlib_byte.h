@@ -4,6 +4,27 @@
 #include <utility>
 
 enum class Byte;
+
+struct Byte0 {
+  static std::pair<
+      bool,
+      std::pair<
+          bool,
+          std::pair<
+              bool,
+              std::pair<
+                  bool,
+                  std::pair<bool, std::pair<bool, std::pair<bool, bool>>>>>>>
+  to_bits(Byte b0);
+};
+
+struct Bool {
+  static bool eqb(bool b1, bool b2);
+};
+
+struct Byte1 {
+  static bool eqb0(Byte a, Byte b0);
+};
 enum class Byte {
   X00,
   X01,
@@ -261,27 +282,6 @@ enum class Byte {
   XFD,
   XFE,
   XFF
-};
-
-struct Byte0 {
-  static std::pair<
-      bool,
-      std::pair<
-          bool,
-          std::pair<
-              bool,
-              std::pair<
-                  bool,
-                  std::pair<bool, std::pair<bool, std::pair<bool, bool>>>>>>>
-  to_bits(Byte b0);
-};
-
-struct Bool {
-  static bool eqb(bool b1, bool b2);
-};
-
-struct Byte1 {
-  static bool eqb0(Byte a, Byte b0);
 };
 
 /// Rocq's byte inductive extracts to a C++ enum named Byte, but the

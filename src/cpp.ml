@@ -208,10 +208,9 @@ let rec pp_spec_as_requirement modtype_mp modtype_refs = function
       | Tglob (r, args, _) ->
         ( match find_custom_opt r with
         | Some custom_str ->
-          if String.contains custom_str '%' then
-            qualify_custom_template custom_str args qualify_type
-          else
-            str custom_str
+          qualify_custom_template
+            (custom_template_with_args custom_str (List.length args))
+            args qualify_type
         | None ->
           ( match args with
           | [] -> pp_cpp_type false [] (Tglob (r, [], []))
@@ -241,10 +240,10 @@ let rec pp_spec_as_requirement modtype_mp modtype_refs = function
       | Tfun (d, c) ->
         (* Function-type argument: qualify member types inside the function
            signature.  Without this case, (elt -> bool) would fall through to
-           pp_cpp_type and render as std::function<bool(elt)> — elt is bare.
-           We need std::function<bool(typename M::elt)>. *)
-        require_header "functional";
-        str stdlib_ns ++ str "function<"
+           pp_cpp_type and render as crane::fn<bool(elt)> — elt is bare.
+           We need crane::fn<bool(typename M::elt)>. *)
+        require_header Crane_rt.fn_header;
+        str Crane_rt.fn ++ str "<"
         ++ qualify_type c
         ++ str "("
         ++ prlist_with_sep (fun () -> str ", ") qualify_type d
@@ -624,6 +623,213 @@ let dedup_lifted_decls ds =
       | None -> true )
     ds
 
+(** [d] split into the declaration to emit ahead of its callers and the
+    definition to emit in its place, where [d] defines a namespace-scope
+    function.  [None] for anything else.
+
+    {!Gen_decls.decl_spec_and_def} answers for any declaration by returning it
+    twice, which is right for a caller meaning "make this a declaration if it
+    is not one" and wrong for one asking "is there a declaration to emit here"
+    -- a struct would come back whole and be defined a second time.  So the
+    shape is asked first.
+
+    The definition comes back rather than being reused as it arrived because
+    the split may settle the template head, and the half that is emitted here
+    has to state the same head as the half emitted at the top of the file. *)
+let lifted_fun_split (d : cpp_decl) : (cpp_decl * cpp_decl) option =
+  let rec defines_fun = function
+    | Dfun {df_shape = Ddef _; _} -> true
+    | Dtemplate (_, _, inner) -> defines_fun inner
+    | _ -> false
+  in
+  if defines_fun d then Some (decl_spec_and_def d) else None
+
+(** Whether [spec] may be emitted at the top of the file, above every
+    definition in it.
+
+    A declaration needs the types in its signature {e declared}, not complete,
+    which is what lets one naming [Nat] precede [Nat]'s own definition.  Naming
+    [List::list] is a different act: it is name lookup {e into} [List], and
+    that needs [List] complete.  A forward declaration cannot supply it, so no
+    position above the structs is legal for such a signature and the honest
+    answer is to leave it where it is.
+
+    Decided by reading the rendered declaration, because the question is about
+    the text and nothing else can answer it without disagreeing.  The IR node
+    cannot: [Nat] and [List::list] are both [Tnamespace], which means "an
+    inductive's own scope", not "inside a module struct".  Nor can the tables
+    behind the printer, taken one at a time -- whether a qualifier is written
+    is settled by a chain of them (is the module a wrapper, is the type
+    nonetheless emitted at global scope, is it an eponymous record, an enum, a
+    local inductive), and any single one of them is a second opinion.  Two
+    such opinions have already been wrong here.
+
+    [std::] is the one qualifier that needs nothing complete: it names into a
+    namespace, not a struct, and the standard library is included above
+    everything.  Every other qualifier is refused, including a dependent
+    [M::t], which needs no completeness but costs only a missed hoist to
+    refuse.
+
+    This is the one place a declaration is not free.  A helper declared
+    needlessly costs a line, but a helper declared needlessly {e and}
+    qualifying into a struct would drag the whole block below that struct --
+    past the uses it exists to precede -- so what it costs is the position, for
+    every other helper in the block. *)
+let spec_names_into_a_struct (rendered : string) : bool =
+  let n = String.length rendered in
+  let is_ident c =
+    (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
+    || c = '_'
+  in
+  let rec scan i =
+    if i + 1 >= n then false
+    else if rendered.[i] = ':' && rendered.[i + 1] = ':' then
+      let stop = ref i in
+      while !stop > 0 && is_ident rendered.[!stop - 1] do decr stop done;
+      let qualifier = String.sub rendered !stop (i - !stop) in
+      if String.equal qualifier "std" then scan (i + 2) else true
+    else scan (i + 1)
+  in
+  scan 0
+
+let spec_is_hoistable (spec : cpp_decl) : bool =
+  not
+    (spec_names_into_a_struct
+       (Pp.string_of_ppcmds (pp_cpp_decl (empty_env ()) spec)) )
+
+(** Whether a module's members name only types a forward declaration can
+    stand in for.
+
+    The header opens with a forward declaration of every datatype struct, so a
+    parameter or result spelled at one is nameable from anywhere in the file.
+    Anything else a member's type can name -- a Rocq definition used as a type,
+    which reaches C++ as a [using] alias at the point it was defined -- is not.
+
+    Read off the members' ML types rather than the rendered text, because the
+    text cannot tell [tbl] the alias from [a] the parameter. *)
+let module_members_name_only_inductives sel =
+  let rec ty_ok = function
+    | Miniml.Tglob (r, args, _) ->
+      (match r with GlobRef.IndRef _ -> true | _ -> false)
+      && List.for_all ty_ok args
+    | Miniml.Tarr (a, b) -> ty_ok a && ty_ok b
+    | Miniml.Tmeta {contents = Some t} -> ty_ok t
+    | _ -> true
+  in
+  List.for_all
+    (fun (_, se) ->
+      match se with
+      | SEdecl (Dterm (_, _, t)) -> ty_ok t
+      | SEdecl (Dfix (_, _, tv)) -> Array.for_all ty_ok tv
+      (* Only a function declaration is being judged here.  Everything else a
+         module holds -- an inductive, a type alias, a submodule -- is either
+         rendered somewhere other than this struct or shows up in its text as a
+         member that is not a [static] declaration, which the other half
+         rejects; asking a question about it here only rejects modules whose
+         struct never contained it. *)
+      | _ -> true )
+    sel
+
+(** Whether a module's struct may be declared ahead of the file rather than at
+    the module's own place in the emitted order.
+
+    Its own place is the safe answer and stays the default, because a member
+    initialised inside the struct body runs there, and everything that body
+    names must be complete by then.  The one shape that is certainly free of
+    that is a struct of nothing but static function {e declarations} --
+    [static Nat pick(Nat, Nat);], defined out of line: a declaration asks its
+    parameter and result types to be declared, which the forward declarations
+    above already do, and asks nothing else of the file at all.  So the only
+    thing such a struct's position decides is whether its callers can see it,
+    and a function hoisted onto a datatype is a caller emitted with the
+    datatype, which may come first.
+
+    This half is read off the rendered struct, because that text is what the
+    compiler reads: every member must be a [static] declaration ending at its
+    semicolon -- no body, no initialiser, no alias, no data, no nested type --
+    the struct must not be a template, and no name may be qualified into
+    another struct, which is the question {!spec_is_hoistable} asks of a lifted
+    helper and for the same reason: [Other::t] needs [Other] complete, so
+    moving this in front of it would not help.  The other half, which the text
+    cannot answer, is {!module_members_name_only_inductives}. *)
+let module_struct_is_hoistable rendered =
+  match (String.index_opt rendered '{', String.rindex_opt rendered '}') with
+  | Some o, Some c when o < c ->
+    let head = String.sub rendered 0 o in
+    let body = String.sub rendered (o + 1) (c - o - 1) in
+    let members = String.split_on_char ';' body in
+    let is_static_decl m =
+      let m = String.trim m in
+      m = ""
+      || (String.length m > 7
+         && String.equal (String.sub m 0 7) "static "
+         && String.contains m '('
+         && not (String.contains m '='))
+    in
+    let is_template =
+      let n = String.length head in
+      let rec scan i =
+        i + 8 <= n
+        && (String.equal (String.sub head i 8) "template" || scan (i + 1))
+      in
+      scan 0
+    in
+    (not (String.contains body '{'))
+    && (not is_template)
+    && (not (spec_names_into_a_struct rendered))
+    && List.for_all is_static_decl members
+  | _ -> false
+
+(** The module structs this file's pass chose to declare ahead of everything,
+    newest first.  Emptied by the assembly at the end of
+    {!do_struct_with_decl_tracking}. *)
+let hoisted_module_structs : Pp.t list ref = ref []
+
+(** Report what a lifted helper met at the drain that consumed it, under
+    [CRANE_DBG_LIFTED].
+
+    Three sites drain one queue, and the first to reach a helper is the only
+    one that sees it -- so which site handled a helper, and which of that
+    site's conditions it failed, is not recoverable from the output.  A helper
+    whose declaration is missing and a helper that was never lifted print the
+    same thing, which is nothing.
+
+    The rendered declaration is printed with it, because that text is what
+    {!spec_is_hoistable} reads: a rejection is only interpretable next to the
+    qualifier that caused it. *)
+let dbg_lifted =
+  let on = lazy (Sys.getenv_opt "CRANE_DBG_LIFTED" <> None) in
+  fun ~site ?(extra = "") (d : cpp_decl) ->
+    if Lazy.force on then
+      let name =
+        match lifted_decl_key d with
+        | Some k -> Id.to_string k
+        | None -> "<not-a-lifted-helper>"
+      in
+      let split =
+        match lifted_fun_split d with
+        | Some (spec, _) ->
+          let rendered =
+            Pp.string_of_ppcmds (pp_cpp_decl (empty_env ()) spec)
+          in
+          Printf.sprintf "splits=yes hoistable=%b spec=%S"
+            (spec_is_hoistable spec) rendered
+        | None -> "splits=no"
+      in
+      Feedback.msg_notice
+        (Pp.str
+           (Printf.sprintf "[crane:lifted] %-28s site=%-12s %s%s" name site
+              split
+              (if extra = "" then "" else " " ^ extra) ) )
+
+(** The declarations of helpers lifted out of a declaration that is not a
+    wrapper module's -- an inductive's own, whose helpers {!pp_structure_elem}
+    emits directly after the struct closes, and so after the methods that call
+    them.  They are due at the top of the file like every other lifted helper's,
+    but the only thing in scope where they are produced is a [Pp.t] being
+    assembled inline, so they are left here for the file to collect. *)
+let pending_lifted_specs : Pp.t list ref = ref []
+
 (** Lifted helpers already emitted as members of the struct being rendered. *)
 let emitted_member_lifted : (Id.t, unit) Hashtbl.t = Hashtbl.create 16
 
@@ -649,7 +855,64 @@ let rec pp_structure_elem ~is_header f = function
        right before the declaration that produced it instead; helpers produced
        elsewhere keep their file-scope placement. *)
     ignore (Translation.take_lifted_decls ());
-    let body = pp_decls (f d) in
+    let rendered = f d in
+    let body = pp_decls rendered in
+    (* An erasure landing pad -- [using X = std::any;] -- travels to the very
+       top of the file, ahead of the concepts.
+
+       It is correct there because it names nothing: the right-hand side is
+       [std::any] and the parameters, if any, are its own.  It is {e needed}
+       there because the text that lands on it does not follow it.  A concept
+       body spells such a name bare, and concepts are hoisted to the top by the
+       case below, so leaving the alias where it was written puts the use in
+       front of the declaration.  Hoisting both and ordering them here is what
+       makes that pair of placements independent of each other, and of any
+       later pass that reorders the file. *)
+    let body =
+      let is_erased_alias = function
+        | _, Minicpp.Dusing {du_rhs = Some rhs; _} ->
+          Cpp_erasure.is_any_shaped rhs
+        | _ -> false
+      in
+      if
+        is_header
+        && (not (!render_ctx).rc_in_struct)
+        && rendered <> []
+        && List.for_all is_erased_alias rendered
+        && not (Pp.ismt body)
+      then (
+        file_scope_erased_aliases := !file_scope_erased_aliases @ [body];
+        mt () )
+      else
+        body
+    in
+    (* A type class rendered at file scope is a concept, and a concept has no
+       forward declaration to bridge a use that precedes it.  One such use is
+       written unconditionally: a lifted helper's spec goes ahead of every
+       section, because its callers are members of the struct it came out of,
+       and its constraint names this concept.  So the concept travels to the
+       top of the file, where the concepts of a nested module's type classes
+       already go.
+
+       Only at file scope: inside a struct the concept has already been
+       hoisted or held back by {!pp_structure_elements}, which knows which of
+       those two it is and this does not. *)
+    let body =
+      if
+        is_header
+        && (not (!render_ctx).rc_in_struct)
+        && (not (!render_ctx).rc_concepts_hoisted)
+        && (match d with
+           | Miniml.Dind (_, ind) -> (
+             match ind.ind_kind with Miniml.TypeClass _ -> true | _ -> false )
+           | _ -> false)
+        && not (Pp.ismt body)
+      then (
+        file_scope_concepts := !file_scope_concepts @ [pp_doc_comment l ++ body];
+        mt () )
+      else
+        body
+    in
     let member_lifted =
       if not is_header then mt ()
       else
@@ -665,6 +928,33 @@ let rec pp_structure_elem ~is_header f = function
         in
         List.fold_left
           (fun acc d' ->
+            (* Emitted after the struct this was lifted out of, so after the
+               methods that call it.  The definition stays where it is and the
+               declaration is left for the file to put at the top -- the same
+               repair as for a wrapper module's lifted helpers, on the path
+               that produces them one at a time into a [Pp.t]. *)
+            dbg_lifted ~site:"structure-elem"
+              ~extra:
+                (Printf.sprintf "rc_in_struct=%b" (!render_ctx).rc_in_struct)
+              d';
+            let d' =
+              match lifted_fun_split d' with
+              (* Only at namespace scope.  A struct is a complete-class
+                 context, so a method may call a member declared after it and
+                 a member has no forward reference to repair -- this pass has
+                 nothing to do there, whatever would be legal.
+
+                 Legality says the same thing the one time it is asked: a
+                 member's signature resolves against the struct, a nested [t]
+                 or a sibling type, and hoisting the declaration to file scope
+                 takes those names out of scope with it. *)
+              | Some (spec, def) when not (!render_ctx).rc_in_struct ->
+                if spec_is_hoistable spec then
+                  pending_lifted_specs :=
+                    pp_cpp_decl (empty_env ()) spec :: !pending_lifted_specs;
+                def
+              | _ -> d'
+            in
             let pp = pp_cpp_decl (empty_env ()) d' in
             if Pp.ismt pp then acc
             else if Pp.ismt acc then pp
@@ -1086,7 +1376,12 @@ let rec pp_structure_elem ~is_header f = function
                         = Some true
                       then
                         let (param_vars, _) = Table.ind_param_vars ind p in
-                        found := Some param_vars )
+                        (* The promoted variables the payloads name are
+                           parameters too -- see {!Table.ind_promoted_params}
+                           and its use in [Cpp_ind]; the head spelled here must
+                           be the one the struct is generated with. *)
+                        found :=
+                          Some (Table.ind_promoted_params kn @ param_vars) )
                     ind.ind_packets;
                   !found
                 | _ -> None )
@@ -1414,7 +1709,21 @@ let rec pp_structure_elem ~is_header f = function
       mt ()
     else
       let doc = pp_doc_comment l in
-      doc ++ mod_pp
+      let whole = doc ++ mod_pp in
+      (* A [Module] of nothing but definitions is rendered as a struct of
+         declarations, and a datatype's hoisted member may call one; see
+         {!module_struct_is_hoistable}. *)
+      if
+        is_header
+        && (not (!render_ctx).rc_in_struct)
+        && (match m.ml_mod_expr with
+           | MEstruct (_, sel) -> module_members_name_only_inductives sel
+           | _ -> false)
+        && module_struct_is_hoistable (Pp.string_of_ppcmds whole)
+      then (
+        hoisted_module_structs := whole :: !hoisted_module_structs;
+        mt () )
+      else whole
   | l, SEmodtype m ->
     if (not is_header) || (!render_ctx).rc_in_struct then
       mt ()
@@ -1476,7 +1785,7 @@ and pp_module_app ~is_header f me me' =
     match me with
     | MEident mp ->
       let r = Common.resolve_module mp in
-      (str (Common.resolved_string r), Some r)
+      (str (wrapper_qualify_modname mp (Common.resolved_string r)), Some r)
     | MEapply (g, g') -> pp_module_app ~is_header f g g'
     | _ -> (pp_module_expr ~is_header f [] me, None)
   in
@@ -1539,9 +1848,27 @@ and pp_module_expr ~is_header f params = function
               ind.ind_packets
         | _ -> () )
       sel;
+    (* A synthesised alias whose body names this module's own types, as its
+       members spell them, is declared inside the struct, in front of the
+       first member that spells it (see {!Cpp_print.record_ctor_alias_home}):
+       at namespace scope those names mean nothing. *)
+    let with_homed_aliases px =
+      match Cpp_print.pending_ctor_aliases_homed_in mp with
+      | [] -> px
+      | homed ->
+        let text = Pp.string_of_ppcmds px in
+        let select name =
+          List.mem name homed && Cpp_print.mentions_name text name
+        in
+        if not (List.exists select homed) then px
+        else
+          match Cpp_print.take_ctor_alias_decls ~select ~is_header () with
+          | [] -> px
+          | l -> prlist_with_sep fnl (fun x -> x) l ++ cut2 () ++ px
+    in
     let try_pp_structure_elem l x =
       let px = pp_structure_elem ~is_header f x in
-      if Pp.ismt px then l else px :: l
+      if Pp.ismt px then l else with_homed_aliases px :: l
     in
     let l = List.fold_left try_pp_structure_elem [] sel in
     let l = List.rev l in
@@ -1592,10 +1919,13 @@ let rec prlist_sep_nonempty sep f = function
                          used to set [rc_struct_name] in the definition pass.
     @param func_sels   The [(label, structure_elem)] pairs from the wrapper
                        that contain function declarations ([Dterm], [Dfix]).
-    @return A triple [(specs_pp, defs_pp, lifted_pp)] where [specs_pp] is the
-            header-pass declaration block, [defs_pp] the implementation-pass
-            definition block, and [lifted_pp] any top-level declarations that
-            were lifted out of local function bodies during translation. *)
+    @return A quadruple [(specs_pp, defs_pp, lifted_pp, lifted_specs_pp)] where
+            [specs_pp] is the header-pass declaration block, [defs_pp] the
+            implementation-pass definition block, [lifted_pp] any top-level
+            declarations that were lifted out of local function bodies during
+            translation, and [lifted_specs_pp] the forward declarations of the
+            functions among those, which are due before the struct rather than
+            after it. *)
 let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
   let is_method_candidate x =
     List.exists
@@ -1635,6 +1965,7 @@ let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
     | SEdecl (Dterm (r, a, t)) ->
       let spec_opt, def_opt, _tvars = gen_decl_for_pp_dual ~is_header r a t in
       let lifted = Translation.take_lifted_decls () in
+      List.iter (dbg_lifted ~site:"wrapper-dterm") lifted;
       let specs =
         match spec_opt with
         | Some s -> [s]
@@ -1714,16 +2045,48 @@ let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
           rc_struct_mp = Some wrapper_mp } )
       (fun () -> prlist_sep_nonempty cut2 render_sel_defs all_results)
   in
+  (* A lifted helper is emitted after the struct it was lifted out of, and its
+     callers are inside that struct, so by the time the definition appears the
+     name has already been used.  A wrapper struct's own members do not have
+     this problem -- {!gen_dfuns_dual} declares them all before defining any --
+     and this is the same repair for the one kind of function that path never
+     reaches, because it is not a member.  Only functions: a lifted struct is
+     already forward-declared where structs are, and a declaration of anything
+     else is either illegal or a second definition.
+
+     Both halves come out of one split so they state one template head, and the
+     definition emitted here is the split's, not the one that went in. *)
+  let lifted_split =
+    List.map
+      (fun d -> (d, lifted_fun_split d))
+      all_lifted
+  in
   let lifted_pp =
     if is_header then
       prlist_sep_nonempty
         cut2
-        (fun d -> pp_cpp_decl (empty_env ()) d)
-        all_lifted
+        (fun (d, split) ->
+          pp_cpp_decl (empty_env ())
+            (match split with Some (_, def) -> def | None -> d) )
+        lifted_split
     else
       mt ()
   in
-  (specs_pp, defs_pp, lifted_pp)
+  let lifted_specs_pp =
+    if is_header then
+      prlist_sep_nonempty
+        cut2
+        (fun d -> pp_cpp_decl (empty_env ()) d)
+        (List.filter_map
+           (fun (_, s) ->
+             match s with
+             | Some (spec, _) when spec_is_hoistable spec -> Some spec
+             | _ -> None )
+           lifted_split )
+    else
+      mt ()
+  in
+  (specs_pp, defs_pp, lifted_pp, lifted_specs_pp)
 
 (** What analysing the structure concluded, for the passes that render it. *)
 let structure_analysis : Structure_analysis.t option ref = ref None
@@ -1738,18 +2101,6 @@ let get_structure_analysis () =
   | None ->
     CErrors.anomaly (Pp.str "cpp: rendering a structure that was never analysed")
 
-(** Decide everything about the structure that does not depend on which file is
-    being written, and record it for the passes that do.
-
-    {!Structure_analysis} describes itself as running before rendering, and the
-    tables it fills are read by both the header and the implementation; it was
-    nonetheless invoked from inside the renderer, so the same conclusions were
-    reached four times per unit and the last one silently won.  Reaching them
-    once, here, is what makes discovery a pass in its own right.
-
-    The visibility stack is pushed exactly as a rendering pass would push it:
-    the analysis is a function of the structure, but the helpers it calls read
-    the stack, and this is a relocation, not a re-derivation. *)
 (** Copy a structure analysis's decisions into the tables rendering reads them
     back from.
 
@@ -1764,6 +2115,7 @@ let install_analysis
        inductive_names;
        global_scope_enums;
        collision_wrappers;
+       wrapper_bystanders;
        functor_app_sources = app_sources;
        eponymous_records;
        concept_renames;
@@ -1790,26 +2142,49 @@ let install_analysis
       Hashtbl.replace wrapper_module_table mp name;
       Hashtbl.replace collision_wrapper_table mp () )
     collision_wrappers;
+  (* Only [wrapper_module_table]: a bystander is nested inside the wrapper, not
+     flattened into it, and [collision_wrapper_table] is what says "flattened". *)
+  List.iter
+    (fun (mp, name) ->
+      Hashtbl.replace wrapper_module_table mp name;
+      Hashtbl.replace wrapper_bystander_table mp () )
+    wrapper_bystanders;
   List.iter
     (fun (mi : Structure_analysis.module_info) ->
       match mi.wrapper_name with
       | None -> ()
       | Some name ->
         Hashtbl.replace wrapper_module_table mi.modpath name;
-        (* A wrapper module's type aliases are emitted at global C++ scope, as
-           [using T = ...;] rather than members of the wrapper struct, so
-           {!Cpp_names.struct_qualifier_for} must not qualify them in the .cpp
-           file.  Which module a declaration is emitted in is layout, so it is
-           settled here rather than while emitting it. *)
+        (* Not everything a wrapper module declares ends up inside the wrapper
+           struct.  A type alias is emitted at global C++ scope as
+           [using T = ...;], and a type class instance is lifted out to
+           namespace scope by [process_sel] below, for the reason recorded
+           there.  Either way {!Cpp_names.struct_qualifier_for} must not write
+           [Wrapper::] in front of the name in the .cpp file.  Which module a
+           declaration is emitted in is layout, so it is settled here rather
+           than while emitting it. *)
         List.iter
           (fun (_l, se) ->
             match se with
-            | SEdecl (Dtype (r, _, _)) ->
-              Cpp_state.register_global_scope_type_alias r
+            | SEdecl (Dtype (r, _, _)) -> Cpp_state.register_global_scope_type r
+            | SEdecl (Dterm (r, a, t)) when is_typeclass_instance a t ->
+              Cpp_state.register_global_scope_type r
             | _ -> () )
           mi.sels )
     sorted_modules
 
+(** Decide everything about the structure that does not depend on which file is
+    being written, and record it for the passes that do.
+
+    {!Structure_analysis} describes itself as running before rendering, and the
+    tables it fills are read by both the header and the implementation; it was
+    nonetheless invoked from inside the renderer, so the same conclusions were
+    reached four times per unit and the last one silently won.  Reaching them
+    once, here, is what makes discovery a pass in its own right.
+
+    The visibility stack is pushed exactly as a rendering pass would push it:
+    the analysis is a function of the structure, but the helpers it calls read
+    the stack, and this is a relocation, not a re-derivation. *)
 let prepare_structure s =
   let initial_mps =
     List.filter_map (fun (mp, _) -> if is_modfile mp then Some mp else None) s
@@ -1844,12 +2219,200 @@ let pp_wrapper_struct name specs =
 
     A lifted declaration is emitted once: whoever emits it empties the field,
     so what is left at the end of the file is exactly what no module's turn
-    came round to claim. *)
+    came round to claim.
+
+    [wr_lifted_specs] are the forward declarations of the functions among them,
+    and go at the top of the file instead, because the callers of a lifted
+    helper are inside the struct it was lifted out of and so precede it
+    wherever its definition lands. *)
 type wrapper_render = {
   wr_name : string;
   wr_defs : Pp.t;
   mutable wr_lifted : Pp.t option;
+  wr_lifted_specs : Pp.t;
 }
+
+(** Declare, in front of [p], those synthesised aliases whose names [p] spells.
+
+    Called on each chunk of the file in the order the chunks are written, so an
+    alias is declared in front of the earliest text that uses it and nowhere
+    else: the registry keeps what nothing has asked for yet.  Rendering [p] to
+    a string is the whole test, and is skipped when there is nothing pending,
+    so a file that mints no alias pays nothing. *)
+let prefix_mentioned_aliases ~is_header p =
+  let prefix l p =
+    match l with
+    | [] -> p
+    | l when Pp.ismt p -> prlist_with_sep fnl (fun x -> x) l
+    | l -> prlist_with_sep fnl (fun x -> x) l ++ cut2 () ++ p
+  in
+  let p =
+    match Cpp_print.pending_ctor_alias_names () with
+    | [] -> p
+    | pending ->
+      let text = Pp.string_of_ppcmds p in
+      if not (List.exists (Cpp_print.mentions_name text) pending) then p
+      else
+        let select name = Cpp_print.mentions_name text name in
+        prefix (Cpp_print.take_ctor_alias_decls ~select ~is_header ()) p
+  in
+  (* A constrained template named ahead of its definition is declared in front
+     of the chunk that names it, in the same way; see
+     {!Cpp_print.register_forward_struct_decl}. *)
+  if is_header && !Cpp_print.constrained_forward_struct_decls <> [] then
+    prefix (Cpp_print.take_constrained_forward_decls (Pp.string_of_ppcmds p)) p
+  else p
+
+(** The top-level elements a hoisted concept cannot be read without.
+
+    Hoisting a file-scope concept to the top of the file is answered, for
+    almost everything it spells, by the forward declarations already in front
+    of it: a [requires] body is unevaluated, so a plain mention wants the name
+    declared and not defined.  Two kinds want more.  C++ admits no forward
+    declaration for a [using], and a name spelled {e qualified} is a member
+    lookup in a type that has to be complete.  Both are answered by moving the
+    element itself, and the question this asks is which elements those are.
+
+    It is asked of the whole file rather than at each element, because the
+    element that has to move is almost always written {e after} the class that
+    names it -- Rocq's own order guarantees only that it precedes the class,
+    and the concept has left that position.  The answer is by label, which is
+    what an element can check about itself while it renders.
+
+    An inductive is spelled qualified when it is written inside a wrapper
+    struct rather than merged with it -- [List::list], beside the functions of
+    the file module [List] -- and that is a question only the printer's table
+    answers ({!Cpp_print.nested_in_wrapper}), so this is asked once the
+    wrapper modules have queued their declarations.
+
+    Transitive, and only through the elements themselves: an alias in the set
+    spells types that then have to precede {e it}, and one of those may be
+    another alias.  A struct in the set wants more than names: its payloads
+    and the functions [wrapper_sels] merges into it are written out, so every
+    inductive they mention has to be complete there, forward-declared or not.
+    It does not descend into a module that is already in the set, because
+    moving a struct moves everything in it. *)
+let concept_prereqs ~wrapper_sels (s : ml_structure) : Names.Label.Set.t =
+  let add_type_refs acc ty =
+    let rec go acc = function
+      | Miniml.Tglob (r, args, _) ->
+        List.fold_left go (Refset'.add r acc) args
+      | Miniml.Tarr (a, b) -> go (go acc a) b
+      | Miniml.Tmeta {contents = Some t} -> go acc t
+      | _ -> acc
+    in
+    go acc ty
+  in
+  let elements =
+    List.concat_map
+      (fun (mp, ms) -> List.map (fun (l, se) -> (mp, l, se)) ms)
+      s
+  in
+  (* What the file-scope concepts spell: the field types of every type class
+     declared here. *)
+  let seed =
+    List.fold_left
+      (fun acc (_, _, se) ->
+        match se with
+        | Miniml.SEdecl (Miniml.Dind (_, ind)) -> (
+          match ind.Miniml.ind_kind with
+          | Miniml.TypeClass _ ->
+            Array.fold_left
+              (fun acc p ->
+                Array.fold_left
+                  (fun acc tys -> List.fold_left add_type_refs acc tys)
+                  acc p.Miniml.ip_types )
+              acc ind.Miniml.ind_packets
+          | _ -> acc )
+        | _ -> acc )
+      Refset'.empty elements
+  in
+  let packet_refs kn ind =
+    List.init (Array.length ind.Miniml.ind_packets) (fun i ->
+        GlobRef.IndRef (kn, i) )
+  in
+  (* What a struct's body writes out: its payloads, and the signatures of the
+     functions merged into it. *)
+  let body_refs kn ind =
+    let payloads =
+      Array.fold_left
+        (fun acc p ->
+          Array.fold_left
+            (fun acc tys -> List.fold_left add_type_refs acc tys)
+            acc p.Miniml.ip_types )
+        Refset'.empty ind.Miniml.ind_packets
+    in
+    List.fold_left
+      (fun acc r ->
+        List.fold_left
+          (fun acc (_, se) ->
+            match se with
+            | Miniml.SEdecl (Miniml.Dterm (_, _, ty)) -> add_type_refs acc ty
+            | Miniml.SEdecl (Miniml.Dfix (_, _, tys)) ->
+              Array.fold_left add_type_refs acc tys
+            | _ -> acc )
+          acc
+          (wrapper_sels (Cpp_print.nspace_wrapper_name r)) )
+      payloads (packet_refs kn ind)
+  in
+  let label_of (mp, l, se) (needed, complete) =
+    match se with
+    | Miniml.SEdecl (Miniml.Dtype (r, _, _)) ->
+      if Refset'.mem r needed then Some l else None
+    | Miniml.SEdecl (Miniml.Dind (kn, ind)) -> (
+      match ind.Miniml.ind_kind with
+      | Miniml.TypeClass _ -> None
+      | _ ->
+        if
+          List.exists
+            (fun r ->
+              Refset'.mem r complete
+              || (Refset'.mem r needed && Cpp_print.nested_in_wrapper r) )
+            (packet_refs kn ind)
+        then Some l
+        else None )
+    | Miniml.SEmodule _ ->
+      let inner = MPdot (mp, l) in
+      let rec under m =
+        ModPath.equal m inner
+        || match m with MPdot (m', _) -> under m' | _ -> false
+      in
+      if
+        Refset'.exists
+          (fun r -> under (modpath_of_r r))
+          needed
+      then Some l
+      else None
+    | _ -> None
+  in
+  let rec fixpoint ((needed, complete) as refs) labels =
+    let labels', (needed', complete') =
+      List.fold_left
+        (fun (labels, ((needed, complete) as refs)) ((_, l, se) as e) ->
+          match label_of e refs with
+          | None -> (labels, refs)
+          | Some l' ->
+            let labels = Names.Label.Set.add l' labels in
+            let refs =
+              match se with
+              | Miniml.SEdecl (Miniml.Dtype (_, _, ty)) ->
+                (add_type_refs needed ty, complete)
+              | Miniml.SEdecl (Miniml.Dind (kn, ind)) ->
+                let body = body_refs kn ind in
+                (Refset'.union body needed, Refset'.union body complete)
+              | _ -> refs
+            in
+            (labels, refs) )
+        (labels, refs) elements
+    in
+    if
+      Refset'.equal needed needed'
+      && Refset'.equal complete complete'
+      && Names.Label.Set.equal labels labels'
+    then labels'
+    else fixpoint (needed', complete') labels'
+  in
+  fixpoint (seed, Refset'.empty) Names.Label.Set.empty
 
 (** Main structure renderer with declaration tracking.
 
@@ -1873,7 +2436,63 @@ type wrapper_render = {
             implementation), including lifted declarations and deferred
             out-of-line function definitions. *)
 let do_struct_with_decl_tracking ~is_header f s =
+  (* A synthesised alias is emitted in front of the top-level element whose
+     rendering minted it, rather than collected into the file's prologue.
+
+     The prologue is only sound for a body naming top-level class templates:
+     those can be forward-declared, so the prologue's forward declarations make
+     the names readable there.  A body may name something that cannot be
+     forward-declared at all -- a member template of another struct, or another
+     alias template -- and then no prologue entry could have helped and the
+     alias has to follow the {e definition}.
+
+     The element to go in front of is the one that {e uses} the alias, which is
+     not the one that minted it: a use written into a deferred member
+     definition is minted while some earlier element is rendering but placed at
+     the end of the file, and following the mint puts the declaration hundreds
+     of lines ahead of everything the body names.  A use, by contrast, sits in
+     code that manipulates values of the types the body names, and so comes
+     after their definitions -- as a tendency and not as a guarantee: the use
+     spells the alias, not the types inside it, so nothing here forces the
+     margin to be positive.  On Vellvm it is about eleven thousand lines, and
+     on this corpus the two placements coincide exactly, nothing in it being
+     deferred.
+
+     So the alias waits in the registry until some rendered chunk spells it,
+     and is emitted in front of that chunk -- which needs no knowledge of what
+     the body names, only of where its name appears.  See
+     {!prefix_mentioned_aliases}, applied here per top-level element and again
+     to each section of the assembled file.
+
+     Only at the outermost call.  [f] recurses through module children, and a
+     nested element is rendered inside a struct, where an alias template would
+     acquire that struct's scope while its use sites spell it unqualified. *)
+  let f =
+    let depth = ref 0 in
+    fun ((l, _) as x) ->
+      incr depth;
+      let p = Fun.protect ~finally:(fun () -> decr depth) (fun () -> f x) in
+      if !depth <> 0 then
+        p
+      else
+        let p = prefix_mentioned_aliases ~is_header p in
+        (* An element the concepts cannot be read without travels with them.
+           Decided here rather than inside the element because the question is
+           about the file -- see {!concept_prereqs} -- and answered by label
+           because that is what the element knows about itself. *)
+        if Names.Label.Set.mem l !concept_prereq_labels && not (Pp.ismt p)
+        then (
+          file_scope_concept_prereqs := !file_scope_concept_prereqs @ [p];
+          mt () )
+        else
+          p
+  in
+  concept_prereq_labels := Names.Label.Set.empty;
+  file_scope_concept_prereqs := [];
+  Cpp_print.reset_ctor_alias_emitted ();
   ignore (Translation.take_lifted_decls ());
+  hoisted_module_structs := [];
+  Cpp_ind.deferred_member_defs := [];
   Hashtbl.clear emitted_member_lifted;
   Translation.clear_seen_lifted_refs ();
   init_std_names ();
@@ -1914,7 +2533,7 @@ let do_struct_with_decl_tracking ~is_header f s =
           let func_sels = List.filter is_func_decl sel in
           let old_decls = !current_structure_decls in
           current_structure_decls := sel;
-          let p_specs, p_defs, p_lifted =
+          let p_specs, p_defs, p_lifted, p_lifted_specs =
             pp_wrapper_module_dual ~is_header ~wrapper_mp:mp name func_sels
           in
           current_structure_decls := old_decls;
@@ -1927,9 +2546,20 @@ let do_struct_with_decl_tracking ~is_header f s =
               wr_name = name;
               wr_defs = p_defs;
               wr_lifted = (if Pp.ismt p_lifted then None else Some p_lifted);
+              wr_lifted_specs = p_lifted_specs;
             } )
       wrapper_names
   in
+  (* Asked only now, because whether an inductive is written inside a wrapper
+     depends on the declarations just queued against it. *)
+  if is_header then
+    concept_prereq_labels :=
+      concept_prereqs s ~wrapper_sels:(fun name ->
+          List.concat_map
+            (fun ((_, sel), wrapper_name) ->
+              if wrapper_name = Some name then List.filter is_func_decl sel
+              else [] )
+            wrapper_names );
   let joined pick =
     prlist
       (fun part ->
@@ -2002,13 +2632,26 @@ let do_struct_with_decl_tracking ~is_header f s =
             match Hashtbl.find_opt pending_wrapper_decls name with
             | Some specs ->
               Hashtbl.remove pending_wrapper_decls name;
-              pp_wrapper_struct name specs
+              let struct_pp = pp_wrapper_struct name specs in
+              if
+                module_members_name_only_inductives sel
+                && module_struct_is_hoistable (Pp.string_of_ppcmds struct_pp)
+              then (
+                hoisted_module_structs := struct_pp :: !hoisted_module_structs;
+                mt () )
+              else struct_pp
             | None -> mt ()
         in
         (* A declaration lifted out of this module -- an instance struct -- is
            due at the same point, and for the same reason: a later module's
            constant may be initialised from it. *)
         let lifted_pp = claim_lifted name in
+        (* The wrapper struct and what was lifted out of it are elements of
+           their own, assembled here rather than by [f]: an alias they spell
+           goes in front of them, not in front of the whole section they end
+           up in (see {!prefix_mentioned_aliases}). *)
+        let wrapper_pp = prefix_mentioned_aliases ~is_header wrapper_pp in
+        let lifted_pp = prefix_mentioned_aliases ~is_header lifted_pp in
         prlist_sep_nonempty cut2 (fun x -> x) [type_pp; wrapper_pp; lifted_pp]
       | None ->
         (* Which children a name collision forces inside a wrapper struct is
@@ -2017,12 +2660,17 @@ let do_struct_with_decl_tracking ~is_header f s =
         let is_colliding_child l _se =
           Hashtbl.mem collision_wrapper_table (MPdot (mp, l))
         in
+        (* Whether a wrapper formed is not the same question as which children
+           it flattens: a bystander is recorded only when one did, so a child
+           in either table says the struct is there to be written. *)
+        let is_wrapped_child l =
+          Hashtbl.mem collision_wrapper_table (MPdot (mp, l))
+          || Hashtbl.mem wrapper_bystander_table (MPdot (mp, l))
+        in
         let has_child_collision =
           List.exists
             (fun (l, se) ->
-              match se with
-              | SEmodule _ -> is_colliding_child l se
-              | _ -> false )
+              match se with SEmodule _ -> is_wrapped_child l | _ -> false )
             sel
         in
         if has_child_collision then (
@@ -2032,7 +2680,7 @@ let do_struct_with_decl_tracking ~is_header f s =
             List.find_map
               (fun (l, se) ->
                 match se with
-                | SEmodule _ when is_colliding_child l se ->
+                | SEmodule _ when is_wrapped_child l ->
                   Hashtbl.find_opt wrapper_module_table (MPdot (mp, l))
                 | _ -> None )
               sel
@@ -2041,6 +2689,25 @@ let do_struct_with_decl_tracking ~is_header f s =
                     (String.capitalize_ascii (string_of_modfile mp)))
           in
           if is_header then
+            (* A module type is a concept, and C++ has no member concepts, so
+               one written among a wrapper's children cannot stay there -- and
+               cannot simply move ahead of the wrapper either, because a
+               functor elsewhere may be constrained by it and be emitted
+               first.  It goes where the concepts of a nested module's
+               typeclasses already go, which is the top of the file.  Being
+               unwritable inside the struct used to be answered by dropping
+               it. *)
+            let modtype_sels, sel =
+              List.partition
+                (fun (_, se) -> match se with SEmodtype _ -> true | _ -> false)
+                sel
+            in
+            List.iter
+              (fun x ->
+                let pp = f x in
+                if not (Pp.ismt pp) then
+                  file_scope_concepts := !file_scope_concepts @ [pp] )
+              modtype_sels;
             let non_colliding_pp, colliding_pp =
               with_render_ctx
                 (fun c -> { c with rc_in_struct = true })
@@ -2090,16 +2757,19 @@ let do_struct_with_decl_tracking ~is_header f s =
               else
                 non_colliding_pp ++ cut2 () ++ colliding_pp
             in
-            if Pp.ismt body then
-              mt ()
-            else
-              str "struct "
-              ++ str parent_name
-              ++ str " {"
-              ++ fnl ()
-              ++ body
-              ++ fnl ()
-              ++ str "};"
+            let struct_pp =
+              if Pp.ismt body then
+                mt ()
+              else
+                str "struct "
+                ++ str parent_name
+                ++ str " {"
+                ++ fnl ()
+                ++ body
+                ++ fnl ()
+                ++ str "};"
+            in
+            struct_pp
           else
             let non_colliding_pp, colliding_pp =
               with_render_ctx
@@ -2178,7 +2848,18 @@ let do_struct_with_decl_tracking ~is_header f s =
                     order." ) )
       pending_wrapper_decls;
   Hashtbl.clear pending_wrapper_decls;
-  let pass2_lifted = Translation.take_lifted_decls () |> dedup_lifted_decls in
+  let pass2_lifted =
+    Translation.take_lifted_decls ()
+    |> dedup_lifted_decls
+    |> List.map (fun d ->
+           dbg_lifted ~site:"pass2" d;
+           (d, lifted_fun_split d) )
+  in
+  (* What to emit in the helper's own place: the split's definition where there
+     was a split, so it states the head its declaration states. *)
+  let pass2_def (d, split) =
+    match split with Some (_, def) -> def | None -> d
+  in
   let pass2_pre_pp, pass2_post_pp =
     if is_header then
       let main_module_name =
@@ -2192,8 +2873,8 @@ let do_struct_with_decl_tracking ~is_header f s =
          each helper resolves, so it is asked while they are rendered. *)
       let rendered_lifted =
         List.map
-          (fun d ->
-            let render () = pp_cpp_decl (empty_env ()) d in
+          (fun entry ->
+            let render () = pp_cpp_decl (empty_env ()) (pass2_def entry) in
             match main_module_name with
             | Some name -> watching_for_reference_to name render
             | None -> (render (), false) )
@@ -2225,6 +2906,20 @@ let do_struct_with_decl_tracking ~is_header f s =
     repeat (List.length wrapper_names) pop_visible ();
   (* Pop the initial visibility entries pushed at the top of this function. *)
   List.iter (fun _ -> pop_visible ()) initial_mps;
+  let hoisted_erased_aliases =
+    match !file_scope_erased_aliases with
+    | [] -> mt ()
+    | l ->
+      file_scope_erased_aliases := [];
+      prlist_with_sep fnl (fun x -> x) l ++ cut2 ()
+  in
+  let hoisted_concept_prereqs =
+    match !file_scope_concept_prereqs with
+    | [] -> mt ()
+    | l ->
+      file_scope_concept_prereqs := [];
+      prlist_with_sep cut2 (fun x -> x) l ++ cut2 ()
+  in
   let hoisted_concepts =
     match !file_scope_concepts with
     | [] -> mt ()
@@ -2233,22 +2928,86 @@ let do_struct_with_decl_tracking ~is_header f s =
       prlist_with_sep cut2 (fun x -> x) l ++ cut2 ()
   in
   let forward_decls =
+    let structs =
+      if is_header then Cpp_print.take_forward_struct_decls ()
+      else (ignore (Cpp_print.take_forward_struct_decls ()); [])
+    in
+    (* Aliases go in front of the text that uses them; see
+       {!prefix_mentioned_aliases}.  Only what no text asked for is left for
+       the prologue, and it is collected below, after every section has had
+       its turn. *)
+    match structs with
+    | [] -> mt ()
+    | l -> prlist_with_sep fnl (fun x -> x) l ++ cut2 ()
+  in
+  (* Declared ahead of everything that could call them, which is everything:
+     a lifted helper's definition is placed after the struct it came out of,
+     and its callers are that struct's members.  This goes after the concepts
+     because a helper's constraint may name one, and after the struct forward
+     declarations because its parameters may name a struct -- a declaration
+     needs those declared, not complete.  Redeclaring a helper that did land
+     before its uses is legal and costs a line; deciding which those are would
+     cost the property that makes this correct. *)
+  let lifted_fun_specs =
     if is_header then
-      match Cpp_print.take_forward_struct_decls () with
+      let parts =
+        List.filter_map
+          (fun w -> if Pp.ismt w.wr_lifted_specs then None else Some w.wr_lifted_specs)
+          wrapper_parts
+        @ List.filter_map
+            (fun (_, split) ->
+              match split with
+              | Some (spec, _) when spec_is_hoistable spec ->
+                Some (pp_cpp_decl (empty_env ()) spec)
+              | _ -> None )
+            pass2_lifted
+        @ (let pending = List.rev !pending_lifted_specs in
+           pending_lifted_specs := [];
+           pending)
+      in
+      match List.filter (fun x -> not (Pp.ismt x)) parts with
       | [] -> mt ()
-      | l -> prlist_with_sep fnl (fun x -> x) l ++ cut2 ()
-    else (
-      ignore (Cpp_print.take_forward_struct_decls ());
-      mt () )
+      | l -> prlist_with_sep cut2 (fun x -> x) l ++ cut2 ()
+    else
+      mt ()
+  in
+  (* Alongside the lifted helpers and for the same reason, in front of them
+     because a helper's own declaration may name one of these. *)
+  let hoisted_wrappers =
+    match List.rev !hoisted_module_structs with
+    | [] -> mt ()
+    | l ->
+      hoisted_module_structs := [];
+      prlist_with_sep cut2 (fun x -> x) l ++ cut2 ()
+  in
+  (* Last of all: a datatype's method whose body names a module's struct, which
+     is emitted after every datatype.  Nothing else in the header is later. *)
+  let deferred_members =
+    match !Cpp_ind.deferred_member_defs with
+    | [] -> mt ()
+    | ds ->
+      Cpp_ind.deferred_member_defs := [];
+      cut2 () ++ prlist_with_sep cut2 (fun x -> x) ds
   in
   let deferred_lifted = deferred_lifted () in
-  v 0
-    ( forward_decls
-    ++ hoisted_concepts
-    ++ p
-    ++ pass2_post_pp
-    ++ deferred_lifted
-    ++ deferred_defs )
+  (* In writing order, so that an alias no single element claimed -- one whose
+     only use is in a section assembled out of several -- still lands in front
+     of the first section that spells it rather than in the prologue. *)
+  let sections =
+    List.map (prefix_mentioned_aliases ~is_header)
+      [ hoisted_erased_aliases; hoisted_concept_prereqs; hoisted_concepts; hoisted_wrappers; lifted_fun_specs; p; pass2_post_pp;
+        deferred_lifted; deferred_defs; deferred_members ]
+  in
+  (* Whatever nothing spelled.  A body may still name something defined later,
+     which is the case the placement above exists for, but an alias with no use
+     in the file has no later position to be after either. *)
+  Cpp_print.reset_constrained_forward_decls ();
+  let leftover_aliases =
+    match Cpp_print.take_ctor_alias_decls ~is_header () with
+    | [] -> mt ()
+    | l -> prlist_with_sep fnl (fun x -> x) l ++ cut2 ()
+  in
+  v 0 (forward_decls ++ leftover_aliases ++ prlist (fun x -> x) sections)
   ++ fnl ()
 
 (** Main entry point: render structure to C++ implementation file. *)

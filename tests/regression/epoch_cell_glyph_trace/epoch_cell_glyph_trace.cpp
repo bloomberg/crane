@@ -446,11 +446,11 @@ std::pair<Z, Z> BinInt::pos_div_eucl(const Positive &a, const Z &b) {
   }
 }
 
-std::pair<Z, Z> BinInt::div_eucl(Z a, const Z &b) {
-  if (std::holds_alternative<typename Z::Z0>(a.v_mut())) {
+std::pair<Z, Z> BinInt::div_eucl(const Z &a, const Z &b) {
+  if (std::holds_alternative<typename Z::Z0>(a.v())) {
     return std::make_pair(Z::z0(), Z::z0());
-  } else if (std::holds_alternative<typename Z::Zpos>(a.v_mut())) {
-    auto &[a0] = std::get<typename Z::Zpos>(a.v_mut());
+  } else if (std::holds_alternative<typename Z::Zpos>(a.v())) {
+    const auto &[a0] = std::get<typename Z::Zpos>(a.v());
     if (std::holds_alternative<typename Z::Z0>(b.v())) {
       return std::make_pair(Z::z0(), a);
     } else if (std::holds_alternative<typename Z::Zpos>(b.v())) {
@@ -467,7 +467,7 @@ std::pair<Z, Z> BinInt::div_eucl(Z a, const Z &b) {
       }
     }
   } else {
-    auto &[a0] = std::get<typename Z::Zneg>(a.v_mut());
+    const auto &[a0] = std::get<typename Z::Zneg>(a.v());
     if (std::holds_alternative<typename Z::Z0>(b.v())) {
       return std::make_pair(Z::z0(), a);
     } else if (std::holds_alternative<typename Z::Zpos>(b.v())) {
@@ -691,7 +691,7 @@ EpochCellGlyphTraceCase::step_n(uint64_t n,
 }
 
 EpochCellGlyphTraceCase::MechanismState
-EpochCellGlyphTraceCase::state_at_cell(Z cell) {
+EpochCellGlyphTraceCase::state_at_cell(const Z &cell) {
   return MechanismState{cell, cell, cell, cell, cell, cell, cell};
 }
 
@@ -1032,10 +1032,9 @@ Z EpochCellGlyphTraceCase::saros_dial_at_month(const Z &start_cell,
 EpochCellGlyphTraceCase::EpochReading
 EpochCellGlyphTraceCase::build_epoch_reading(
     const Z &epoch_year, const Z &epoch_month,
-    EpochCellGlyphTraceCase::HistoricalEclipse e) {
+    const EpochCellGlyphTraceCase::HistoricalEclipse &e) {
   Z cell = saros_cell(epoch_year, epoch_month, e);
-  return EpochReading{state_at_cell(cell), std::move(e), cell,
-                      glyph_at_cell(cell)};
+  return EpochReading{state_at_cell(cell), e, cell, glyph_at_cell(cell)};
 }
 
 bool EpochCellGlyphTraceCase::reading_matches(

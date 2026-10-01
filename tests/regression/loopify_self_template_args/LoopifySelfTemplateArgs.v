@@ -8,7 +8,7 @@
 
 From Crane.Mapping Require Import Std.
 Require Import Crane.Mapping.NatIntStd.
-Require Import List Arith.
+From Stdlib Require Import List Arith.PeanoNat.
 
 Module LoopifySelfTemplateArgs.
 

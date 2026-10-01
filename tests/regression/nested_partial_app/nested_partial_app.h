@@ -1,9 +1,9 @@
 #ifndef INCLUDED_NESTED_PARTIAL_APP
 #define INCLUDED_NESTED_PARTIAL_APP
 
+#include "fn.h"
 #include "small_vector.h"
 #include <atomic>
-#include <functional>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -46,10 +46,10 @@ struct NestedPartialApp {
       crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a2) {
+          if (_alt->a2 && _alt->a2.use_count() == 1) {
             _stack.push_back(std::move(_alt->a2));
           }
         }
@@ -104,7 +104,7 @@ struct NestedPartialApp {
 
   static uint64_t tree_sum(const tree &t);
   /// 3-argument function: builds Node(t1, n, t2).
-  static tree build_node(tree t1, uint64_t n, tree t2);
+  static tree build_node(const tree &t1, uint64_t n, const tree &t2);
   /// BUG HYPOTHESIS: Partially apply build_node in stages.
   /// g = build_node t1  → closure captures t1
   /// h = g 42           → closure captures t1 and 42
@@ -120,11 +120,10 @@ struct NestedPartialApp {
   static inline const uint64_t nested_partial_bug = []() {
     return []() {
       tree t1 = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
-      std::function<tree(uint64_t, tree)> g = [=](uint64_t _x0,
-                                                  tree _x1) mutable -> tree {
-        return build_node(t1, _x0, _x1);
+      crane::fn<tree(uint64_t, tree)> g = [=](uint64_t _x0, tree _x1) -> tree {
+        return build_node(std::move(t1), _x0, _x1);
       };
-      std::function<tree(tree)> h = [=](tree _pa0) mutable {
+      crane::fn<tree(tree)> h = [=](tree _pa0) {
         return g(UINT64_C(42), _pa0);
       };
       tree r1 = h(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()));
@@ -137,14 +136,13 @@ struct NestedPartialApp {
   static inline const uint64_t nested_partial_reuse = []() {
     return []() {
       tree t1 = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
-      std::function<tree(uint64_t, tree)> g = [=](uint64_t _x0,
-                                                  tree _x1) mutable -> tree {
-        return build_node(t1, _x0, _x1);
+      crane::fn<tree(uint64_t, tree)> g = [=](uint64_t _x0, tree _x1) -> tree {
+        return build_node(std::move(t1), _x0, _x1);
       };
-      std::function<tree(tree)> h1 = [=](tree _pa0) mutable {
+      crane::fn<tree(tree)> h1 = [=](tree _pa0) {
         return g(UINT64_C(42), _pa0);
       };
-      std::function<tree(tree)> h2 = [=](tree _pa0) mutable {
+      crane::fn<tree(tree)> h2 = [=](tree _pa0) {
         return g(UINT64_C(99), _pa0);
       };
       tree r1 = h1(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()));
@@ -157,15 +155,14 @@ struct NestedPartialApp {
   static inline const uint64_t triple_partial = []() {
     return []() {
       tree t = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
-      std::function<uint64_t(uint64_t, uint64_t, tree)> f1 =
-          [=](uint64_t _x0, uint64_t _x1, tree _x2) mutable -> uint64_t {
-        return quad_fn(t, _x0, _x1, _x2);
+      crane::fn<uint64_t(uint64_t, uint64_t, tree)> f1 =
+          [=](uint64_t _x0, uint64_t _x1, tree _x2) -> uint64_t {
+        return quad_fn(std::move(t), _x0, _x1, _x2);
       };
-      std::function<uint64_t(uint64_t, tree)> f2 = [=](uint64_t _pa0,
-                                                       tree _pa1) mutable {
+      crane::fn<uint64_t(uint64_t, tree)> f2 = [=](uint64_t _pa0, tree _pa1) {
         return f1(UINT64_C(20), _pa0, _pa1);
       };
-      std::function<uint64_t(tree)> f3 = [=](tree _pa0) mutable {
+      crane::fn<uint64_t(tree)> f3 = [=](tree _pa0) {
         return f2(UINT64_C(30), _pa0);
       };
       uint64_t r1 = f3(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()));

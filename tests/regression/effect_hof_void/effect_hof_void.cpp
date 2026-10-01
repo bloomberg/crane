@@ -17,7 +17,7 @@ void EffectHofVoid::set_wrapper(std::string v, std::string k) {
 }
 
 void EffectHofVoid::concrete_set() {
-  std::function<void(std::string)> f = [](std::string _x0) {
+  crane::fn<void(std::string)> f = [](std::string _x0) {
     set_wrapper("myval", _x0);
     return;
   };

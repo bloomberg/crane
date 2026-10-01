@@ -1,8 +1,10 @@
 #ifndef INCLUDED_DIM10_TOWER_PROOF_CHAIN
 #define INCLUDED_DIM10_TOWER_PROOF_CHAIN
 
+#include "crane_fn.h"
+#include "fn.h"
+#include "obj.h"
 #include <any>
-#include <functional>
 #include <stdexcept>
 #include <utility>
 #include <variant>
@@ -17,14 +19,33 @@ template <typename A, typename P> struct SigT {
   // ACCESSORS
   SigT<A, P> clone() const { return {x, a1}; }
 
+  template <typename _U0, typename _U1> operator SigT<_U0, _U1>() const {
+    return {[&]() -> _U0 {
+              if constexpr (crane_convertible<_U0, const A &>) {
+                return crane_convert<_U0>(x);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }(),
+            [&]() -> _U1 {
+              if constexpr (crane_convertible<_U1, const P &>) {
+                return crane_convert<_U1>(a1);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }()};
+  }
+
   // CREATORS
   static SigT<A, P> existt(A x, P a1) { return {std::move(x), std::move(a1)}; }
 };
 
 struct Dim10TowerProofChainCase {
-  using nat_lt = std::any;
-  using nat_le = std::any;
-  static nat_le nat_le_of_lt(uint64_t n, uint64_t m, std::any h_);
+  using nat_lt = crane::obj;
+  using nat_le = crane::obj;
+  static nat_le nat_le_of_lt(uint64_t n, uint64_t m, nat_lt h_);
 
   struct QPos {
     uint64_t qpos_num;
@@ -33,8 +54,8 @@ struct Dim10TowerProofChainCase {
 
   static uint64_t qpos_denom(const QPos &q);
   static QPos nat_to_qpos(uint64_t n);
-  using EventuallyZero = SigT<uint64_t, std::any>;
-  using IsIntegerValued = std::any;
+  using EventuallyZero = SigT<uint64_t, crane::obj>;
+  using IsIntegerValued = crane::obj;
 
   struct GradedObj {
     uint64_t go_dim;
@@ -53,36 +74,36 @@ struct Dim10TowerProofChainCase {
   static EventuallyZero D_n_measure_eventually_zero(uint64_t x0_);
 
   struct GradedGoodwillieTower {
-    std::function<GradedObj(uint64_t)> ggt_P;
-    std::function<GradedObj(uint64_t)> ggt_D;
+    crane::fn<GradedObj(uint64_t)> ggt_P;
+    crane::fn<GradedObj(uint64_t)> ggt_D;
   };
 
   static GradedGoodwillieTower make_graded_goodwillie_tower(uint64_t base_dim);
-  static SigT<uint64_t, std::any>
+  static SigT<uint64_t, crane::obj>
   graded_goodwillie_layers_stabilize(uint64_t base_dim);
-  static SigT<uint64_t, std::any>
+  static SigT<uint64_t, crane::obj>
   graded_goodwillie_P_stabilizes(uint64_t base_dim);
   static inline const GradedGoodwillieTower dim10_tower =
       make_graded_goodwillie_tower(UINT64_C(10));
-  static inline const SigT<uint64_t, std::any> dim10_layers_stabilize = []() {
+  static inline const SigT<uint64_t, crane::obj> dim10_layers_stabilize = []() {
     auto s = graded_goodwillie_layers_stabilize(UINT64_C(10));
     auto &[x0, a1] = s;
-    return SigT<uint64_t, std::any>::existt(std::move(x0), std::any());
+    return SigT<uint64_t, crane::obj>::existt(std::move(x0), crane::obj());
   }();
-  static inline const SigT<uint64_t, std::any> dim10_P_stabilizes = []() {
+  static inline const SigT<uint64_t, crane::obj> dim10_P_stabilizes = []() {
     auto s = graded_goodwillie_P_stabilizes(UINT64_C(10));
     auto &[x0, a1] = s;
-    return SigT<uint64_t, std::any>::existt(std::move(x0), std::any());
+    return SigT<uint64_t, crane::obj>::existt(std::move(x0), crane::obj());
   }();
   static std::pair<std::pair<std::pair<IsIntegerValued, EventuallyZero>,
-                             SigT<uint64_t, std::any>>,
-                   SigT<uint64_t, std::any>>
+                             SigT<uint64_t, crane::obj>>,
+                   SigT<uint64_t, crane::obj>>
   graded_complete_proof_chain(uint64_t base_dim);
 
   struct GoodwillieProofChain {
     EventuallyZero gc_eventually_zero;
-    SigT<uint64_t, std::any> gc_layers_stabilize;
-    SigT<uint64_t, std::any> gc_P_stabilize;
+    SigT<uint64_t, crane::obj> gc_layers_stabilize;
+    SigT<uint64_t, crane::obj> gc_P_stabilize;
   };
 
   static GoodwillieProofChain make_goodwillie_proof_chain(uint64_t base_dim);
@@ -90,8 +111,8 @@ struct Dim10TowerProofChainCase {
       make_goodwillie_proof_chain(UINT64_C(10));
   static inline const std::pair<
       std::pair<std::pair<IsIntegerValued, EventuallyZero>,
-                SigT<uint64_t, std::any>>,
-      SigT<uint64_t, std::any>>
+                SigT<uint64_t, crane::obj>>,
+      SigT<uint64_t, crane::obj>>
       dim10_pair_chain = graded_complete_proof_chain(UINT64_C(10));
 
   struct Dim10Bundle {

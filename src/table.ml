@@ -52,6 +52,16 @@ let register_census name size = census_entries := (name, size) :: !census_entrie
 (** Every enrolled table's current size, in registration order. *)
 let census () = List.rev_map (fun (name, size) -> (name, size ())) !census_entries
 
+(** {2 Per-extraction cells}
+
+    Every cell this module empties between extractions enrols its reset here,
+    where it is defined, and {!reset_tables} runs them all.  It used to name
+    them in a hand-written list three thousand lines away, which a new cell
+    could be missing from -- surviving from one extraction into the next. *)
+let reset_actions : (unit -> unit) list ref = ref []
+
+let on_reset f = reset_actions := f :: !reset_actions
+
 (* Create a ref-based membership set with init/add/mem interface. *)
 let make_refset ~name () =
   let tbl = ref Refset'.empty in
@@ -59,6 +69,7 @@ let make_refset ~name () =
   let add r = tbl := Refset'.add r !tbl in
   let mem r = Refset'.mem r !tbl in
   register_census name (fun () -> Refset'.cardinal !tbl);
+  on_reset init;
   (init, add, mem)
 
 (* Create a canonical-key ref-based set (for cross-functor identity). *)
@@ -68,6 +79,7 @@ let make_refset_can ~name () =
   let add r = tbl := RefsetCan.add r !tbl in
   let mem r = RefsetCan.mem r !tbl in
   register_census name (fun () -> RefsetCan.cardinal !tbl);
+  on_reset init;
   (init, add, mem)
 
 (** {1 Utilities about [module_path] and [kernel_names] and [global_reference]}
@@ -193,6 +205,8 @@ let typedefs = ref (Cmap_env.empty : (constant_body * ml_type) Cmap_env.t)
 (** Initialize the typedef cache table. *)
 let init_typedefs () = typedefs := Cmap_env.empty
 
+let () = on_reset init_typedefs
+
 (** Cache a type definition expansion for a constant, using the constant body as
     a checksum. *)
 let add_typedef kn cb t = typedefs := Cmap_env.add kn (cb, t) !typedefs
@@ -214,6 +228,8 @@ let cst_types = ref (Cmap_env.empty : (constant_body * ml_schema) Cmap_env.t)
 (** Initialize the constant type scheme cache table. *)
 let init_cst_types () = cst_types := Cmap_env.empty
 
+let () = on_reset init_cst_types
+
 (** Cache a type scheme for a constant, using the constant body as a checksum.
 *)
 let add_cst_type kn cb s = cst_types := Cmap_env.add kn (cb, s) !cst_types
@@ -229,6 +245,8 @@ let inductives =
   ref (Mindmap_env.empty : (mutual_inductive_body * ml_ind) Mindmap_env.t)
 
 let init_inductives () = inductives := Mindmap_env.empty
+
+let () = on_reset init_inductives
 
 let add_ind kn mib ml_ind =
   inductives := Mindmap_env.add kn (mib, ml_ind) !inductives
@@ -247,6 +265,21 @@ let unsafe_lookup_ind kn = snd (Mindmap_env.find kn !inductives)
 let get_ind_nparams_opt kn =
   try Some (unsafe_lookup_ind kn).ind_nparams with Not_found -> None
 
+(** [type_var_of_arg t] -- the type variable [t] is, where [t] is one: a bare
+    [Tvar i], or a higher-kinded variable, which MiniML never writes bare but
+    applied at placeholders ([E _]) and which is still that variable. *)
+let rec type_var_of_arg = function
+  | Miniml.Tvar (_, i) -> Some i
+  | Miniml.Tapp (i, pl) ->
+    let rec is_placeholder = function
+      | Miniml.Tunknown -> true
+      | Miniml.Tmeta {contents = Some t} -> is_placeholder t
+      | _ -> false
+    in
+    if List.for_all is_placeholder pl then Some i else None
+  | Miniml.Tmeta {contents = Some t} -> type_var_of_arg t
+  | _ -> None
+
 (** [packet_is_non_uniform p] holds when the inductive packet [p] is nested:
     some constructor field mentions the very same packet at instantiated
     parameters, as in [NS : nest (A * A) -> nest A].  Such a type cannot be a
@@ -258,10 +291,7 @@ let packet_is_non_uniform p =
   let is_identity_args args =
     List.length args = nvars
     && List.for_all2
-         (fun k a ->
-           match a with
-           | Miniml.Tvar (_, j) -> j = k
-           | _ -> false )
+         (fun k a -> type_var_of_arg a = Some k)
          (List.init nvars (fun k -> k + 1))
          args
   in
@@ -307,6 +337,8 @@ let get_ind_num_param_vars_opt kn =
 let inductive_kinds = ref (Mindmap_env.empty : inductive_kind Mindmap_env.t)
 
 let init_inductive_kinds () = inductive_kinds := Mindmap_env.empty
+
+let () = on_reset init_inductive_kinds
 
 let add_inductive_kind kn k =
   inductive_kinds := Mindmap_env.add kn k !inductive_kinds
@@ -437,14 +469,11 @@ let is_coinductive_type = function
 (** Get the list of field references for a record or typeclass inductive type.
 *)
 let get_record_fields r =
-  let kn =
-    let open GlobRef in
-    match r with
-    | ConstructRef ((kn, _), _) -> kn
-    | IndRef (kn, _) -> kn
-    | _ -> assert false
-  in
-  match Mindmap_env.find_opt kn !inductive_kinds with
+  (* A reference that names no inductive at all has no fields, which is the
+     same answer already given for an inductive that is not a record.  It is
+     reachable: {!record_fields_of_type} asks this of whatever a [Tglob]
+     carries, and an ML type may perfectly well be headed by a constant. *)
+  match inductive_kind_of r with
   | Some (Record f | TypeClass f) -> List.map fst f
   | _ -> []
 
@@ -535,6 +564,8 @@ let add_ind_hkt_params r positions =
   if positions <> [] then
     hkt_params_table := Refmap'.add r positions !hkt_params_table
 
+let () = on_reset (fun () -> hkt_params_table := Refmap'.empty)
+
 (** Positions (0-based among the [Keep] type parameters) of [r]'s parameters
     that are type constructors, each with its arity.  Empty for everything
     else. *)
@@ -585,6 +616,8 @@ let type_scheme_arities = ref (Refmap'.empty : int Refmap'.t)
 let add_type_scheme_arity r n =
   if n > 0 then type_scheme_arities := Refmap'.add r n !type_scheme_arities
 
+let () = on_reset (fun () -> type_scheme_arities := Refmap'.empty)
+
 let get_type_scheme_arity r =
   try Refmap'.find r !type_scheme_arities with Not_found -> 0
 
@@ -615,10 +648,7 @@ let is_non_uniform_inductive r =
         let is_identity_args args =
           List.length args = nvars
           && List.for_all2
-               (fun k a ->
-                 match a with
-                 | Miniml.Tvar (_, j) -> j = k
-                 | _ -> false )
+               (fun k a -> type_var_of_arg a = Some k)
                (List.init nvars (fun k -> k + 1))
                args
         in
@@ -666,7 +696,8 @@ let rec is_typeclass_type_cpp = function
   | Minicpp.Tglob (r, _, _) -> is_typeclass r
   | Minicpp.Tconst t ->
     is_typeclass_type_cpp t (* Unwrap const/static/extern *)
-  | Minicpp.Tref t -> is_typeclass_type_cpp t (* Unwrap references *)
+  | Minicpp.Tref t | Minicpp.Tfwd_ref t ->
+    is_typeclass_type_cpp t (* Unwrap references *)
   | Minicpp.Tshared_ptr t -> is_typeclass_type_cpp t (* Unwrap shared_ptr *)
   | _ -> false
 
@@ -683,17 +714,67 @@ let (init_flat_inductives, add_flat_inductive, is_flat_inductive_registered) =
    the inductive's header is generated, and read back when a *use* of the
    inductive is converted: such a position must receive a bare template name
    ([holder<std::optional>]), not an instantiation. *)
-let hkt_ind_params : (GlobRef.t, int list) Hashtbl.t = Hashtbl.create 16
+let hkt_ind_params : (GlobRef.t, (int * int) list) Hashtbl.t =
+  Hashtbl.create 16
 
 let init_hkt_ind_params () = Hashtbl.reset hkt_ind_params
+
+let () = on_reset init_hkt_ind_params
 
 let () = register_census "hkt_ind_params" (fun () -> Hashtbl.length hkt_ind_params)
 
 let add_hkt_ind_params r positions =
   if positions <> [] then Hashtbl.replace hkt_ind_params r positions
 
-let is_hkt_ind_param r i =
+let hkt_ind_param_arity r i =
   match Hashtbl.find_opt hkt_ind_params r with
+  | Some s -> List.assoc_opt i s
+  | None -> None
+
+let is_hkt_ind_param r i = hkt_ind_param_arity r i <> None
+
+(* Positions (0-based) of an inductive's or alias's parameters that are applied
+   in its definition and still declared a plain [typename]: event families,
+   applied only at indices, whose argument is the family's own struct.
+   Populated by [Gen_decls.hkt_templates] alongside [hkt_ind_params]; a
+   variable handed to such a position is a family wherever it is used. *)
+let family_ind_params : (GlobRef.t, int list) Hashtbl.t = Hashtbl.create 16
+
+let init_family_ind_params () = Hashtbl.reset family_ind_params
+
+let () = on_reset init_family_ind_params
+
+let add_family_ind_params r positions =
+  if positions <> [] then Hashtbl.replace family_ind_params r positions
+
+let is_family_ind_param r i =
+  match Hashtbl.find_opt family_ind_params r with
+  | Some l -> List.mem i l
+  | None -> false
+
+let () =
+  Minicpp.family_parameterised := fun r -> Hashtbl.mem family_ind_params r
+
+(* Positions (0-based) of a type alias's parameters that its right-hand side
+   never spells: an erased event family is the case in point.  Populated by
+   [Gen_decls.hkt_templates] alongside [hkt_ind_params], and read back when a
+   *use* of the alias is converted: such a position is a plain [typename]
+   there, so no instantiation may be written in it. *)
+let phantom_type_params : (GlobRef.t, int list) Hashtbl.t = Hashtbl.create 16
+
+let init_phantom_type_params () = Hashtbl.reset phantom_type_params
+
+let () = on_reset init_phantom_type_params
+
+let () =
+  register_census "phantom_type_params" (fun () ->
+      Hashtbl.length phantom_type_params )
+
+let add_phantom_type_params r positions =
+  if positions <> [] then Hashtbl.replace phantom_type_params r positions
+
+let is_phantom_type_param r i =
+  match Hashtbl.find_opt phantom_type_params r with
   | Some s -> List.mem i s
   | None -> false
 
@@ -891,6 +972,8 @@ let sigma_assertions : (int * sigma_assertion) list Refmap'.t ref =
 (** Initialize the sigma type assertion table. *)
 let init_sigma_assertions () = sigma_assertions := Refmap'.empty
 
+let () = on_reset init_sigma_assertions
+
 (** Record a sigma type assertion for a function parameter at the given index.
 *)
 let add_sigma_assertion r idx a =
@@ -915,6 +998,8 @@ let get_sigma_assertions r =
 let recursors = ref KNset.empty
 
 let init_recursors () = recursors := KNset.empty
+
+let () = on_reset init_recursors
 
 (** Registers the [_rec] and [_rect] recursors for all packets of an inductive
     type. *)
@@ -941,6 +1026,8 @@ let is_recursor = function
 let projs = ref (GlobRef.Map.empty : (inductive * int) GlobRef.Map.t)
 
 let init_projs () = projs := GlobRef.Map.empty
+
+let () = on_reset init_projs
 
 let add_projection n kn ip =
   projs := GlobRef.Map.add (GlobRef.ConstRef kn) (ip, n) !projs
@@ -997,6 +1084,8 @@ let projection_info r = GlobRef.Map.find r !projs
 let promoted_type_vars = ref (GlobRef.Map.empty : Names.Id.t GlobRef.Map.t)
 
 let init_promoted_type_vars () = promoted_type_vars := GlobRef.Map.empty
+
+let () = on_reset init_promoted_type_vars
 
 (** Register a record field as having been promoted from a value-level field
     to a type-level parameter during concept generation.
@@ -1078,6 +1167,8 @@ let instance_promoted_types =
 let init_instance_promoted_types () =
   instance_promoted_types := GlobRef.Map.empty
 
+let () = on_reset init_instance_promoted_types
+
 let () =
   register_census "instance_promoted_types" (fun () ->
       GlobRef.Map.cardinal !instance_promoted_types )
@@ -1089,6 +1180,257 @@ let get_instance_promoted_types r =
   match GlobRef.Map.find_opt r !instance_promoted_types with
   | Some bindings -> bindings
   | None -> []
+
+(* An applied instance, as the Rocq type writes it: a head and what it is
+   applied to, recursively.  [Carg_unknown] is an argument whose head is not a
+   constant -- a context variable, typically -- which the reader fills
+   positionally from the instances it is holding.
+
+   A pair of head and arity would not do.  [@ParamsV natIPtr] and [@ParamsV IP]
+   have the same head and the same arity, and the reader has to spell one of
+   them; given only the arity it can do no better than invent an argument, and
+   the argument it invents is the head again. *)
+type class_arg = Carg of GlobRef.t * class_arg list | Carg_unknown
+
+(* The class an instance instantiates, and the instances that class is applied
+   to.  [PIV : @PI ProvenanceV PointerV] records [(PI, [Carg (ProvenanceV, []);
+   Carg (PointerV, [Carg_unknown])])].  None of this survives into the ML type,
+   where the class stands alone as [PI]; the Rocq type is the only place it is
+   visible, so it is taken there. *)
+let instance_class_shapes =
+  ref (GlobRef.Map.empty : (GlobRef.t * class_arg list) GlobRef.Map.t)
+
+let init_instance_class_shapes () =
+  instance_class_shapes := GlobRef.Map.empty
+
+let () = on_reset init_instance_class_shapes
+
+let () =
+  register_census "instance_class_shapes" (fun () ->
+      GlobRef.Map.cardinal !instance_class_shapes )
+
+let add_instance_class_shape r shape =
+  instance_class_shapes := GlobRef.Map.add r shape !instance_class_shapes
+
+let get_instance_class_shape r = GlobRef.Map.find_opt r !instance_class_shapes
+
+(* The instances a declaration's type applies to its own class binders, each
+   argument given by the binder's ordinal among them.  [get_size : forall {Pa :
+   Params}, @memM Pa (@MemStateV Pa) nat] records [(MemStateV, [0])]: the ML
+   type keeps [memM] and neither of its dictionary arguments, and a body that
+   only forwards to another declaration names no instance either. *)
+let context_instance_apps =
+  ref (GlobRef.Map.empty : (GlobRef.t * int list) list GlobRef.Map.t)
+
+let init_context_instance_apps () = context_instance_apps := GlobRef.Map.empty
+
+let () = on_reset init_context_instance_apps
+
+let add_context_instance_apps r apps =
+  context_instance_apps := GlobRef.Map.add r apps !context_instance_apps
+
+let get_context_instance_apps r =
+  Option.default [] (GlobRef.Map.find_opt r !context_instance_apps)
+
+(* The class instances an inductive's constructor field types name.
+
+   [Variant dval := DPtr (p : @ptr ProvenanceV PointerV)] depends on
+   [PointerV], and on whatever [PointerV] is applied to, through nothing the ML
+   inductive keeps: the dictionary is erased and [ptr] arrives applied to no
+   arguments.  Recorded in the same shape as {!instance_class_shapes} -- a
+   {!class_arg} -- so that one reader serves both. *)
+let ind_class_arg_shapes = ref (Refmap'.empty : class_arg list Refmap'.t)
+
+let init_ind_class_arg_shapes () = ind_class_arg_shapes := Refmap'.empty
+
+let () = on_reset init_ind_class_arg_shapes
+
+let add_ind_class_arg r shape =
+  let prev = Option.default [] (Refmap'.find_opt r !ind_class_arg_shapes) in
+  if not (List.mem shape prev) then
+    ind_class_arg_shapes := Refmap'.add r (prev @ [shape]) !ind_class_arg_shapes
+
+let get_class_args_own r =
+  Option.default [] (Refmap'.find_opt r !ind_class_arg_shapes)
+
+(* The promoted type variables an inductive's constructor payloads mention.
+
+   An inductive declared under a [Context {IP : IPtr}] may carry a field whose
+   type is a field of that context variable -- [DPtr (p : ptr)].  The
+   dictionary is erased, so the ML inductive has no parameter for it and the
+   field's type resolves to the file-scope [using ptr = std::any;]: the
+   emitted struct claims to be one type when it is one per instance.  The
+   names it mentions are what it is really parameterised by, and they are
+   listed here in order of first appearance.
+
+   Computed on demand and cached, not recorded during extraction: whether a
+   reference is a promoted variable is only settled once the class it belongs
+   to has been extracted, and an inductive may be reached before that. *)
+let promoted_type_params_cache = ref (Refmap'.empty : Id.t list Refmap'.t)
+
+let init_ind_promoted_params () = promoted_type_params_cache := Refmap'.empty
+
+let () = on_reset init_ind_promoted_params
+
+(* The right-hand side of a type-level [Definition], recorded because the same
+   questions are asked of it as of an inductive: a [Definition dbox : Type :=
+   (dval * nat)] under a [Context] depends on that context variable through its
+   body, and an alias has no constructors for a closure over payloads to
+   reach. *)
+let type_alias_bodies = ref (Refmap'.empty : Miniml.ml_type Refmap'.t)
+
+let init_type_alias_bodies () = type_alias_bodies := Refmap'.empty
+
+let () = on_reset init_type_alias_bodies
+
+let has_type_alias_body r = Refmap'.mem r !type_alias_bodies
+
+let add_type_alias_body r t =
+  type_alias_bodies := Refmap'.add r t !type_alias_bodies
+
+(* The types [r]'s own definition writes: an inductive's constructor payloads,
+   a type alias's right-hand side.  Folded with [f] over every subterm. *)
+let fold_type_body_types f r acc =
+  let roots =
+    match r with
+    | GlobRef.IndRef (kn, _) ->
+      ( try
+          let ind = unsafe_lookup_ind kn in
+          match ind.Miniml.ind_kind with
+          (* A class's fields are read like any other payload, and what keeps
+             it from being parameterised by its own contents is
+             {!declares_promoted_var} below, which is the precise statement of
+             it: a class is not parameterised by the associated types it
+             declares, and it says nothing about the ones it merely mentions.
+
+             Skipping classes outright was the imprecise version, and it lost
+             the case where the dependence arrives through a third type:
+             [Class ToDvalueBase I := { tdb : I -> dvalue_base }] names no
+             class at all, while [dvalue_base] -- a [Variant] from the same
+             section -- is parameterised by [ptr] and [iptr].  Nothing looked
+             there, so both spellings fell to the file-scope
+             [using ptr = std::any;]. *)
+          | Miniml.TypeClass _ ->
+            List.map snd (get_record_field_bindings r)
+          | _ ->
+            Array.fold_left
+              (fun acc p ->
+                Array.fold_left (fun acc l -> acc @ l) acc p.Miniml.ip_types )
+              [] ind.Miniml.ind_packets
+        with Not_found | Invalid_argument _ -> [] )
+    | GlobRef.ConstRef _ ->
+      ( match Refmap'.find_opt r !type_alias_bodies with
+      | Some t -> [t]
+      | None -> [] )
+    | _ -> []
+  in
+  let acc = ref acc in
+  let rec collect t =
+    acc := f !acc t;
+    match t with
+    | Miniml.Tglob (_, ts, _) -> List.iter collect ts
+    | Miniml.Tarr (a, b) -> collect a; collect b
+    | Miniml.Tmeta {contents = Some t} -> collect t
+    | _ -> ()
+  in
+  List.iter collect roots;
+  !acc
+
+(* The type globals [r]'s definition reaches, transitively, [r] excluded.
+   Depending on a type that depends on a promoted type variable is depending on
+   the variable, so the properties below are the closure of a one-hop test over
+   this relation: a type declared in the same [Section] arrives as a payload or
+   an alias body that names no class field itself. *)
+let rec type_globals_reached ~seen r =
+  let seen = r :: seen in
+  let known g =
+    match g with
+    | GlobRef.IndRef _ -> true
+    | GlobRef.ConstRef _ -> Refmap'.mem g !type_alias_bodies
+    | _ -> false
+  in
+  fold_type_body_types
+    (fun acc t ->
+      match t with
+      | Miniml.Tglob (g, _, _)
+        when known g
+             && (not (List.exists (GlobRef.CanOrd.equal g) seen))
+             && not (List.exists (GlobRef.CanOrd.equal g) acc) ->
+        List.fold_left
+          (fun acc k ->
+            if List.exists (GlobRef.CanOrd.equal k) acc then acc else acc @ [k]
+            )
+          (acc @ [g])
+          (type_globals_reached ~seen g)
+      | _ -> acc )
+    r []
+
+(* An inductive is keyed by its block: the closure runs over every packet. *)
+let type_key = function
+  | GlobRef.IndRef (kn, _) -> GlobRef.IndRef (kn, 0)
+  | r -> r
+
+(* Whether [g] is one of the associated types [r] itself declares.
+
+   A class is parameterised by the promoted variables it {e mentions} and not
+   by the ones it {e declares}: [Params] declaring [ptr] is what makes [ptr] a
+   variable in the first place, so [Params] taking a [ptr] parameter would be
+   circular, while [ToDvalueBase] mentioning one through a field's type is an
+   ordinary dependence. *)
+let declares_promoted_var r g =
+  List.exists
+    (fun (field_opt, _) ->
+      match field_opt with
+      | Some fr -> GlobRef.CanOrd.equal fr g
+      | None -> false )
+    (get_record_field_bindings (type_key r))
+
+(* The promoted type variables [r]'s own definition names, one hop. *)
+let own_promoted_type_params r =
+  fold_type_body_types
+    (fun acc t ->
+      match t with
+      | Miniml.Tglob (g, _, _)
+        when is_promoted_type_var g && not (declares_promoted_var r g) ->
+        ( match promoted_type_var_name g with
+        | Some v when not (List.exists (Id.equal v) acc) -> acc @ [v]
+        | _ -> acc )
+      | _ -> acc )
+    r []
+
+let promoted_type_params r =
+  let r = type_key r in
+  match Refmap'.find_opt r !promoted_type_params_cache with
+  | Some v -> v
+  | None ->
+    let v =
+      List.fold_left
+        (fun acc k ->
+          List.fold_left
+            (fun acc v ->
+              if List.exists (Id.equal v) acc then acc else acc @ [v] )
+            acc
+            (own_promoted_type_params k) )
+        (own_promoted_type_params r)
+        (type_globals_reached ~seen:[] r)
+    in
+    promoted_type_params_cache := Refmap'.add r v !promoted_type_params_cache;
+    v
+
+let ind_promoted_params kn = promoted_type_params (GlobRef.IndRef (kn, 0))
+
+(* Transitive, for the same reason {!promoted_type_params} is: a type inherits
+   the instances the types it reaches were declared against. *)
+let get_type_class_args r =
+  let r = type_key r in
+  List.fold_left
+    (fun acc k ->
+      List.fold_left
+        (fun acc sh -> if List.mem sh acc then acc else acc @ [sh])
+        acc
+        (get_class_args_own k) )
+    (get_class_args_own r)
+    (type_globals_reached ~seen:[] r)
 
 (* Table of projections used in higher-order positions (as function values).
    Projections not in this set are only accessed via record->field syntax and
@@ -1102,6 +1444,8 @@ let (init_higher_order_projections, mark_higher_order_projection,
 let phantom_tvars : (int list) Refmap'.t ref = ref Refmap'.empty
 
 let init_phantom_tvars () = phantom_tvars := Refmap'.empty
+
+let () = on_reset init_phantom_tvars
 
 let set_phantom_tvars r indices = phantom_tvars := Refmap'.add r indices !phantom_tvars
 
@@ -1128,6 +1472,8 @@ let init_axioms () =
   cofixpoints := Refset'.empty;
   throwing_values := Refset'.empty;
   symbols := Refmap'.empty
+
+let () = on_reset init_axioms
 
 let add_info_axiom r = info_axioms := Refset'.add r !info_axioms
 
@@ -1164,6 +1510,8 @@ let add_symbol_rule r l =
 let opaques = ref Refset'.empty
 
 let init_opaques () = opaques := Refset'.empty
+
+let () = on_reset init_opaques
 
 let add_opaque r = opaques := Refset'.add r !opaques
 
@@ -1229,6 +1577,23 @@ let string_of_global r =
   with Not_found -> Id.to_string (safe_basename_of_global r)
 
 let safe_pr_global r = str (string_of_global r)
+
+(** The kernel name of [r], spelled out in full.
+
+    Every other name in this module is the shortest one that reads well, which
+    is what a message to a user wants.  A diagnostic aimed at whoever is
+    debugging Crane wants the opposite: two constants that print the same are
+    the whole difficulty, and a column that cannot tell them apart sends the
+    reader looking for a second bug. *)
+let kername_of_global r =
+  let s kn = KerName.to_string kn in
+  match r with
+  | GlobRef.ConstRef c -> s (Constant.user c)
+  | GlobRef.IndRef (mind, i) ->
+    Printf.sprintf "%s,%d" (s (MutInd.user mind)) i
+  | GlobRef.ConstructRef ((mind, i), j) ->
+    Printf.sprintf "%s,%d,%d" (s (MutInd.user mind)) i j
+  | GlobRef.VarRef v -> Id.to_string v
 
 (** Like [safe_pr_global] but with full qualification, for constants only. *)
 let safe_pr_long_global r =
@@ -2435,6 +2800,8 @@ let reset_modfile () =
   modfile_ids := !blacklist_table;
   modfile_mps := MPmap.empty
 
+let () = on_reset reset_modfile
+
 (** Convert a module file to its output filename, avoiding blacklisted names via
     de-duplication. *)
 let string_of_modfile mp =
@@ -2548,6 +2915,8 @@ let mark_custom_used r =
   | _ -> ()
 
 let reset_used_custom_imports () = used_refs := Refset'.empty
+
+let () = on_reset reset_used_custom_imports
 
 let customs = Summary.ref Refmap'.empty ~name:"CraneExtrCustom"
 
@@ -2782,6 +3151,10 @@ let find_custom_drain_opt r = Refmap'.find_opt r !custom_drains
    incomplete at a container-naming site and must be boxed everywhere. Not
    persisted: recomputed within each extraction run. *)
 let boxed_recursive_inds = Summary.ref Refset'.empty ~name:"CraneExtrBoxedRec"
+
+(* Recomputed within each extraction run (see its definition); cleared so a
+   prior run's boxing decisions don't leak into the next. *)
+let () = on_reset (fun () -> boxed_recursive_inds := Refset'.empty)
 
 let () =
   register_census "boxed_recursive_inds" (fun () ->
@@ -3057,6 +3430,48 @@ let non_atomic_rc () = non_atomic_rc_requested () && not (unit_is_concurrent ())
 let count_rc () =
   Sys.getenv_opt "CRANE_COUNT_RC" = Some "1" && not (non_atomic_rc ())
 
+(* [CRANE_STAMP=1] prints, as a comment at the top of every generated file, a
+   digest of the plugin binary that produced it.  Like [CRANE_COUNT_RC] it is
+   an environment variable rather than a vernacular flag because it is a
+   property of the measurement and not of the program.
+
+   The question it answers is one no other check can.  A run that loads a stale
+   plugin produces an artifact byte-identical to one that loads the new plugin
+   and is simply unaffected by it, and certifying the [.cmxs] on disk before
+   and after separates those two only by asserting that what was on disk is
+   what was loaded.  The stamp makes the artifact witness its own producer, so
+   [cmp]-identity across two installs means "consumed and inert" rather than
+   ambiguous.
+
+   Off by default, and deliberately so: on, it would change every committed
+   test output, and a line that differs in every file is one no diff can be
+   read past.  Adding a comment is print-additive by construction --- it is not
+   a type, so no pass reads it and no decision turns on it --- which is exactly
+   the property a measuring device has to have and that a substituted type
+   cannot. *)
+let stamp_build () = Sys.getenv_opt "CRANE_STAMP" = Some "1"
+
+(* Found through findlib, which is the same resolution Rocq itself used to load
+   the plugin: asking where the package is answers with the file that was
+   actually loaded, rather than with a path we guessed.  Any failure to find or
+   read it is reported in the stamp rather than raised --- a missing witness
+   must not stop an extraction, and must not be mistaken for a present one. *)
+let plugin_digest =
+  lazy
+    ( try
+        let dir = Findlib.package_directory "rocq-crane.plugin" in
+        match
+          List.filter
+            (fun f -> Filename.check_suffix f ".cmxs")
+            (Array.to_list (Sys.readdir dir))
+        with
+        | [f] -> Digest.to_hex (Digest.file (Filename.concat dir f))
+        | [] -> "no-cmxs-found"
+        | _ :: _ -> "ambiguous-cmxs"
+      with _ -> "unavailable" )
+
+let plugin_build_stamp () = Lazy.force plugin_digest
+
 let shared_ptr_name () =
   if count_rc () then Crane_rt.counting_ptr
   else if non_atomic_rc () then Crane_rt.rc
@@ -3194,6 +3609,8 @@ let glob_tys = Summary.ref Refmap'.empty ~name:"GlobalDefTypes"
 
 let init_glob_tys () = glob_tys := Refmap'.empty
 
+let () = on_reset init_glob_tys
+
 let add_type id ty = glob_tys := Refmap'.add id ty !glob_tys
 
 let find_type id = Refmap'.find id !glob_tys
@@ -3233,6 +3650,18 @@ let get_monad_template_opt m =
   match Refmap'.find_opt m !monads with
   | Some (_, _, template) -> Some template
   | None -> None
+
+(** Whether a monad's C++ spelling is a reified tree, i.e. names [ITree].
+
+    A reified monad's event family is data, not a type constructor: the tree
+    boxes the event and the index it was applied at is erased. *)
+let is_monad_reified m =
+  match get_monad_template_opt m with
+  | None -> false
+  | Some t ->
+    let n = String.length t and k = String.length "ITree" in
+    let rec at i = i + k <= n && (String.sub t i k = "ITree" || at (i + 1)) in
+    at 0
 
 let monad_extraction : GlobRef.t * GlobRef.t * GlobRef.t * string -> obj =
   declare_object
@@ -3574,28 +4003,4 @@ let extract_skip_or_module q =
 
 (** {2 Tables synchronization} *)
 
-let reset_tables () =
-  init_typedefs ();
-  init_cst_types ();
-  init_inductives ();
-  init_inductive_kinds ();
-  init_flat_inductives ();
-  init_hkt_ind_params ();
-  init_enum_inductives ();
-  init_sigma_assertions ();
-  init_recursors ();
-  init_projs ();
-  init_promoted_type_vars ();
-  init_erased_type_consts ();
-  init_value_dep_type_schemes ();
-  init_instance_promoted_types ();
-  init_higher_order_projections ();
-  init_phantom_tvars ();
-  init_axioms ();
-  init_opaques ();
-  reset_modfile ();
-  init_glob_tys ();
-  reset_used_custom_imports ();
-  (* Recomputed within each extraction run (see its definition); clear it here
-     so a prior run's boxing decisions don't leak into the next. *)
-  boxed_recursive_inds := Refset'.empty
+let reset_tables () = List.iter (fun reset -> reset ()) (List.rev !reset_actions)

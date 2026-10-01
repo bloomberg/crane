@@ -2,14 +2,17 @@
 #define INCLUDED_STMONAD
 
 #include "crane_fn.h"
+#include "fn.h"
+#include "obj.h"
 #include "small_vector.h"
 #include <algorithm>
 #include <any>
 #include <atomic>
 #include <concepts>
-#include <functional>
+#include <crane_itree.h>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -21,6 +24,35 @@ template <typename A> struct List;
 template <typename Err> struct ExceptE;
 struct Err;
 struct STRefNat;
+template <typename I, typename T>
+concept Ix = requires {
+  {
+    I::range(std::declval<T>(), std::declval<T>())
+  } -> std::convertible_to<List<T>>;
+  {
+    I::index(std::declval<T>(), std::declval<T>(), std::declval<T>())
+  } -> std::convertible_to<std::optional<uint64_t>>;
+  {
+    I::rangeSize(std::declval<T>(), std::declval<T>())
+  } -> std::convertible_to<uint64_t>;
+  { I::toNat(std::declval<T>()) } -> std::convertible_to<uint64_t>;
+  { I::fromNat(std::declval<uint64_t>()) } -> std::convertible_to<T>;
+  { I::suc(std::declval<T>()) } -> std::convertible_to<T>;
+  { I::sub(std::declval<T>(), std::declval<T>()) } -> std::convertible_to<T>;
+  { I::max(std::declval<T>(), std::declval<T>()) } -> std::convertible_to<T>;
+  { I::zero() } -> std::convertible_to<T>;
+};
+template <typename I, typename T>
+concept STRefClass = requires {
+  { I::mkSTRef(std::declval<T>()) } -> std::convertible_to<crane::obj>;
+  { I::STRefToIx(std::declval<crane::obj>()) } -> std::convertible_to<T>;
+};
+
+struct ListDef {
+  static List<uint64_t> seq(uint64_t start, uint64_t len);
+};
+
+struct Nat {};
 
 template <typename A> struct List {
   // TYPES
@@ -45,21 +77,26 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U> List(const List<_U> &_other) {
-    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->v_ = Nil{};
-    } else {
-      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>) {
-                          return crane_any_cast<A>(a);
-                        } else {
-                          return A(a);
-                        }
-                      }(),
-                      (l ? std::make_shared<List<A>>(*l) : nullptr)};
-    }
-  }
+  template <typename _U>
+  List(const List<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+            return Nil{};
+          } else {
+            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const _U &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                   : nullptr)};
+          }
+        }()) {}
 
   static List<A> nil() { return List<A>(Nil{}); }
 
@@ -69,22 +106,18 @@ public:
 
   // MANIPULATORS
   ~List() {
-    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
-        if (_alt->l) {
-          _stack.push_back(std::move(_alt->l));
+        if (_alt->l && _alt->l.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->l);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<List<A>> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -196,34 +229,20 @@ template <typename Err> struct ExceptE {
   // ACCESSORS
   ExceptE<Err> clone() const { return {a0}; }
 
+  template <typename _U> operator ExceptE<_U>() const {
+    return {[&]() -> _U {
+      if constexpr (crane_convertible<_U, const Err &>) {
+        return crane_convert<_U>(a0);
+      } else {
+        throw std::logic_error(
+            "unreachable: inactive constructor field at this instantiation");
+      }
+    }()};
+  }
+
   // CREATORS
   static ExceptE<Err> Throw_(Err a0) { return {std::move(a0)}; }
 };
-
-template <typename I, typename T>
-concept Ix = requires {
-  {
-    I::range(std::declval<T>(), std::declval<T>())
-  } -> std::convertible_to<List<T>>;
-  {
-    I::index(std::declval<T>(), std::declval<T>(), std::declval<T>())
-  } -> std::convertible_to<std::optional<uint64_t>>;
-  {
-    I::rangeSize(std::declval<T>(), std::declval<T>())
-  } -> std::convertible_to<uint64_t>;
-  { I::toNat(std::declval<T>()) } -> std::convertible_to<uint64_t>;
-  { I::fromNat(std::declval<uint64_t>()) } -> std::convertible_to<T>;
-  { I::suc(std::declval<T>()) } -> std::convertible_to<T>;
-  { I::sub(std::declval<T>(), std::declval<T>()) } -> std::convertible_to<T>;
-  { I::max(std::declval<T>(), std::declval<T>()) } -> std::convertible_to<T>;
-  { I::zero() } -> std::convertible_to<T>;
-};
-
-struct ListDef {
-  static List<uint64_t> seq(uint64_t start, uint64_t len);
-};
-
-struct Nat {};
 
 struct Err {
   // DATA
@@ -243,12 +262,6 @@ struct STMonadExamples {
                                                  F1 &&quicksort_fun0);
 };
 
-template <typename I, typename T>
-concept STRefClass = requires {
-  { I::mkSTRef(std::declval<T>()) } -> std::convertible_to<std::any>;
-  { I::STRefToIx(std::declval<std::any>()) } -> std::convertible_to<T>;
-};
-
 struct STRefNat {
   // DATA
   uint64_t s;
@@ -259,10 +272,7 @@ struct STRefNat {
   // CREATORS
   static STRefNat mkstref(uint64_t s) { return {s}; }
 
-  uint64_t STRefToIxNat() const {
-    const auto &[s] = *this;
-    return s;
-  }
+  uint64_t STRefToIxNat() const;
 };
 
 struct STMonadTests {
@@ -305,10 +315,10 @@ struct STMonadTests {
   static_assert(Ix<nat_idx, uint64_t>);
 
   struct nat_stref {
-    static std::any mkSTRef(uint64_t x) { return STRefNat::mkstref(x); }
+    static crane::obj mkSTRef(uint64_t x) { return STRefNat::mkstref(x); }
 
-    static uint64_t STRefToIx(std::any _p_a0) {
-      STRefNat a0 = std::any_cast<STRefNat>(_p_a0);
+    static uint64_t STRefToIx(crane::obj _p_a0) {
+      STRefNat a0 = crane::any_cast<STRefNat>(_p_a0);
       return a0.STRefToIxNat();
     }
   };
@@ -446,12 +456,16 @@ STMonadExamples::quicksort_fun_functional(const List<uint64_t> &l,
   } else {
     const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
     const List<uint64_t> &a1_value = *a1;
-    return quicksort_fun0(
-               a1_value.filter([=](uint64_t x) mutable { return x < a0; }))
+    return quicksort_fun0(a1_value.filter([=](uint64_t x) { return x < a0; }))
         .app(List<uint64_t>::cons(a0, List<uint64_t>::nil())
-                 .app(quicksort_fun0(a1_value.filter(
-                     [=](uint64_t x) mutable { return a0 <= x; }))));
+                 .app(quicksort_fun0(
+                     a1_value.filter([=](uint64_t x) { return a0 <= x; }))));
   }
+}
+
+inline uint64_t STRefNat::STRefToIxNat() const {
+  const auto &[s] = *this;
+  return s;
 }
 
 #endif // INCLUDED_STMONAD

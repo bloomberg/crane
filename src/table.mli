@@ -33,6 +33,11 @@ module Refmap' : CSig.UMapS with type key = GlobRef.t
 (** Get a safe basename identifier from a global reference. *)
 val safe_basename_of_global : GlobRef.t -> Id.t
 
+(** The kernel name of a global, spelled out in full -- for debug diagnostics,
+    where two constants printing the same name is the difficulty rather than a
+    tidiness question.  User-facing messages want a short name instead. *)
+val kername_of_global : GlobRef.t -> string
+
 (** {2 Warning and Error messages} *)
 
 (** Issue warning about axioms. *)
@@ -216,6 +221,11 @@ val lookup_ind : MutInd.t -> mutual_inductive_body -> ml_ind option
 
 (** Get number of parameters for inductive if available. *)
 val get_ind_nparams_opt : MutInd.t -> int option
+
+(** The type variable a type argument is, where it is one: a bare [Tvar], or
+    a higher-kinded variable applied at nothing but placeholders ([E _]), which
+    is how MiniML writes one. *)
+val type_var_of_arg : Miniml.ml_type -> int option
 
 (** Get number of parameter variables for inductive if available. *)
 val get_ind_num_param_vars_opt : MutInd.t -> int option
@@ -432,13 +442,36 @@ val is_flat_inductive : GlobRef.t -> bool
 
 (** Record the 0-based positions of an inductive's template parameters that are
     declared [template <typename> class] because a constructor field applies
-    them; see [Gen_decls.ind_templates]. *)
-val add_hkt_ind_params : GlobRef.t -> int list -> unit
+    them, each paired with the arity it is declared at; see
+    [Gen_decls.ind_templates]. *)
+val add_hkt_ind_params : GlobRef.t -> (int * int) list -> unit
+
+(** The arity the template template parameter at 0-based position [i] is
+    declared at, or [None] where that position is not one.  A variable handed
+    to such a position is higher-kinded whether or not anything applies it. *)
+val hkt_ind_param_arity : GlobRef.t -> int -> int option
 
 (** Whether the template parameter at 0-based position [i] of this inductive is
     a template template parameter, so a use of the inductive must pass a bare
     template name rather than an instantiation. *)
 val is_hkt_ind_param : GlobRef.t -> int -> bool
+
+(** Record the 0-based positions of an inductive's or alias's parameters that
+    its definition applies and still declares a plain [typename] -- event
+    families; see [Gen_decls.hkt_templates]. *)
+val add_family_ind_params : GlobRef.t -> int list -> unit
+
+(** Whether the parameter at 0-based position [i] is such a family position:
+    a variable handed to it is a family, not a higher-kinded variable. *)
+val is_family_ind_param : GlobRef.t -> int -> bool
+
+(** [add_phantom_type_params r positions] records the 0-based positions of
+    [r]'s template parameters that its definition never spells. *)
+val add_phantom_type_params : GlobRef.t -> int list -> unit
+
+(** Whether position [i] of [r] is a parameter [r]'s definition never spells;
+    see {!add_phantom_type_params}. *)
+val is_phantom_type_param : GlobRef.t -> int -> bool
 
 (** Mark inductive as enum. *)
 val add_enum_inductive : GlobRef.t -> unit
@@ -561,6 +594,72 @@ val add_instance_promoted_types :
 (** Get instance promoted types. *)
 val get_instance_promoted_types :
   GlobRef.t -> (Names.Id.t * Miniml.ml_type) list
+
+(** An applied instance, as the Rocq type writes it: a head and what it is
+    applied to, recursively.  [Carg_unknown] is an argument whose head is not a
+    constant -- a context variable, typically -- which the reader fills
+    positionally from the instances it is holding. *)
+type class_arg = Carg of GlobRef.t * class_arg list | Carg_unknown
+
+(** [add_instance_class_shape r (class_ref, args)] records the class [r] is an
+    instance of and the instances that class is applied to, each with its own
+    arguments.
+
+    A class argument is erased from the ML type -- [PIV : @PI ProvenanceV
+    PointerV] reaches translation as an instance of [PI] and nothing more -- so
+    the promoted type variables that belong to those arguments arrive with no
+    way back to them.  The Rocq type is the only place the connection is still
+    written down. *)
+val add_instance_class_shape : GlobRef.t -> GlobRef.t * class_arg list -> unit
+
+(** The shape recorded by {!add_instance_class_shape}, if any. *)
+val get_instance_class_shape : GlobRef.t -> (GlobRef.t * class_arg list) option
+
+(** [add_context_instance_apps r apps] records the instances [r]'s Rocq type
+    applies to [r]'s own class-typed binders: each is the instance and, for
+    each argument, the ordinal of the binder among those binders.  Like
+    {!add_instance_class_shape}, it records what the ML type drops. *)
+val add_context_instance_apps : GlobRef.t -> (GlobRef.t * int list) list -> unit
+
+(** The applications recorded by {!add_context_instance_apps}, or [[]]. *)
+val get_context_instance_apps : GlobRef.t -> (GlobRef.t * int list) list
+
+(** [ind_promoted_params kn] -- the promoted type variables the constructor
+    payloads of [kn] mention, in order of first appearance.
+
+    An inductive declared under a [Context] may carry a field whose type is a
+    field of that context variable.  The dictionary is erased, so the ML
+    inductive has no parameter for it and the field falls back to the
+    file-scope alias: the emitted struct claims to be one type when it is one
+    per instance.  These names are what it is really parameterised by, and
+    they become its remaining template parameters. *)
+val ind_promoted_params : MutInd.t -> Id.t list
+
+(** {!ind_promoted_params} for any type global: an inductive, or a type-level
+    [Definition] whose body was recorded by {!add_type_alias_body}.  The
+    property is transitive -- a type that reaches such a type depends on the
+    same variables. *)
+val promoted_type_params : GlobRef.t -> Id.t list
+
+(** [add_type_alias_body r t] records the right-hand side of the type-level
+    [Definition] [r], which is otherwise nowhere the closure above can read.
+    An alias has no constructor payloads, so its body is what it reaches. *)
+val add_type_alias_body : GlobRef.t -> Miniml.ml_type -> unit
+
+(** Whether {!add_type_alias_body} has recorded a body for [r], i.e. whether
+    [r] is a type-level [Definition] rather than a term. *)
+val has_type_alias_body : GlobRef.t -> bool
+
+(** [add_ind_class_arg r arg] records that a constructor field type of
+    [r] names the applied instance [arg] -- the same shape
+    {!add_instance_class_shape} records, and read by the same rule.  The Rocq
+    constructor type is the only place an inductive's dependence on an instance
+    is written down; the ML inductive keeps no parameter for it. *)
+val add_ind_class_arg : GlobRef.t -> class_arg -> unit
+
+(** The shapes recorded by {!add_ind_class_arg}, in order of first
+    appearance. *)
+val get_type_class_args : GlobRef.t -> class_arg list
 
 (** Add info axiom. *)
 val add_info_axiom : GlobRef.t -> unit
@@ -779,6 +878,20 @@ val count_rc : unit -> bool
     [crane::counting_ptr] (count_rc.h) so the run reports its reference-count
     traffic. Measurement-only; never true in ordinary extraction. *)
 
+val stamp_build : unit -> bool
+(** Whether [CRANE_STAMP=1] is set: print a digest of the plugin binary as a
+    comment at the top of every generated file, so the artifact witnesses which
+    binary produced it instead of leaving that to a filesystem check made
+    alongside the run. Measurement-only; off by default because on, it would
+    change every committed test output. *)
+
+val plugin_build_stamp : unit -> string
+(** The digest of the loaded plugin [.cmxs], resolved through findlib so the
+    answer is the file Rocq actually loaded. Computed once. A failure to find
+    or read it yields a marker string ([unavailable], [no-cmxs-found],
+    [ambiguous-cmxs]) rather than an exception: a missing witness must not stop
+    an extraction, and must not read as a present one. *)
+
 (** Resolved smart-pointer type/factory names for string-level codegen, honoring
     [CRANE_COUNT_RC], [Crane NonAtomicRc] and the std/BDE flavor. *)
 val shared_ptr_name : unit -> string
@@ -851,11 +964,11 @@ val implicits_of_global : GlobRef.t -> Int.Set.t
 (** UGLY HACK: registration of a function defined in [extraction.ml] *)
 val type_scheme_nb_args_hook : (Environ.env -> Constr.t -> int) Hook.t
 
-(** Check if reference has custom extraction. *)
 (** [same_mutual_block r1 r2] holds when both are inductive types from the
     same mutual block, which the backend generates into one enclosing scope. *)
 val same_mutual_block : GlobRef.t -> GlobRef.t -> bool
 
+(** Check if reference has custom extraction. *)
 val is_custom : GlobRef.t -> bool
 
 (** Check if reference has inline custom extraction. *)
@@ -949,6 +1062,9 @@ val is_ret : GlobRef.t -> bool
 
 (** Get monad template string if reference is a registered monad. *)
 val get_monad_template_opt : GlobRef.t -> string option
+
+(** Whether a monad's C++ spelling names [ITree], i.e. it is reified. *)
+val is_monad_reified : GlobRef.t -> bool
 
 (** Check if reference is void type. *)
 val is_void : GlobRef.t -> bool

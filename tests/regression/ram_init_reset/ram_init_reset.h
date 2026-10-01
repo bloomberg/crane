@@ -2,12 +2,12 @@
 #define INCLUDED_RAM_INIT_RESET
 
 #include "crane_fn.h"
-#include "small_vector.h"
+#include "obj.h"
 #include <any>
 #include <atomic>
 #include <memory>
 #include <optional>
-#include <type_traits>
+#include <stdexcept>
 #include <utility>
 #include <variant>
 
@@ -36,21 +36,26 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U> List(const List<_U> &_other) {
-    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->v_ = Nil{};
-    } else {
-      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>) {
-                          return crane_any_cast<A>(a);
-                        } else {
-                          return A(a);
-                        }
-                      }(),
-                      (l ? std::make_shared<List<A>>(*l) : nullptr)};
-    }
-  }
+  template <typename _U>
+  List(const List<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+            return Nil{};
+          } else {
+            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const _U &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                   : nullptr)};
+          }
+        }()) {}
 
   static List<A> nil() { return List<A>(Nil{}); }
 
@@ -60,22 +65,18 @@ public:
 
   // MANIPULATORS
   ~List() {
-    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
-        if (_alt->l) {
-          _stack.push_back(std::move(_alt->l));
+        if (_alt->l && _alt->l.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->l);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<List<A>> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -91,18 +92,18 @@ public:
 };
 
 struct ListDef {
-  template <typename T1> static List<T1> repeat(T1 x, uint64_t n);
+  template <typename T1> static List<T1> repeat(const T1 &x, uint64_t n);
 };
 
 struct RamInitReset {
   template <typename T1>
-  static List<T1> update_nth(uint64_t n, T1 x, const List<T1> &l) {
+  static List<T1> update_nth(uint64_t n, const T1 &x, const List<T1> &l) {
     if (n <= 0) {
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         return List<T1>::nil();
       } else {
         const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
-        return List<T1>::cons(std::move(x), *a1);
+        return List<T1>::cons(x, *a1);
       }
     } else {
       uint64_t n_ = n - 1;
@@ -110,7 +111,7 @@ struct RamInitReset {
         return List<T1>::nil();
       } else {
         const auto &[a00, a10] = std::get<typename List<T1>::Cons>(l.v());
-        return List<T1>::cons(a00, update_nth<T1>(n_, std::move(x), *a10));
+        return List<T1>::cons(a00, update_nth<T1>(n_, x, *a10));
       }
     }
   }
@@ -168,11 +169,11 @@ struct RamInitReset {
             default_sel,
             ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(8))};
   static state reset_state(const state &s);
-  static std::pair<std::optional<uint64_t>, state> pop_stack(state s);
+  static std::pair<std::optional<uint64_t>, state> pop_stack(const state &s);
   static inline const uint64_t reset_pc = reset_state(init_state).state_pc;
 };
 
-template <typename T1> List<T1> ListDef::repeat(T1 x, uint64_t n) {
+template <typename T1> List<T1> ListDef::repeat(const T1 &x, uint64_t n) {
   if (n <= 0) {
     return List<T1>::nil();
   } else {

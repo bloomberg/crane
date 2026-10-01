@@ -2,8 +2,11 @@
 #define INCLUDED_SIGT_BRANCH_TYPE_MISMATCH
 
 #include "crane_fn.h"
+#include "fn.h"
+#include "obj.h"
 #include <any>
 #include <functional>
+#include <stdexcept>
 #include <utility>
 #include <variant>
 
@@ -17,6 +20,25 @@ template <typename A, typename P> struct SigT {
   // ACCESSORS
   SigT<A, P> clone() const { return {x, a1}; }
 
+  template <typename _U0, typename _U1> operator SigT<_U0, _U1>() const {
+    return {[&]() -> _U0 {
+              if constexpr (crane_convertible<_U0, const A &>) {
+                return crane_convert<_U0>(x);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }(),
+            [&]() -> _U1 {
+              if constexpr (crane_convertible<_U1, const P &>) {
+                return crane_convert<_U1>(a1);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }()};
+  }
+
   // CREATORS
   static SigT<A, P> existt(A x, P a1) { return {std::move(x), std::move(a1)}; }
 };
@@ -26,19 +48,20 @@ template <typename A, typename P> struct SigT {
 /// must be called through the canonical erased-callable adapter and its
 /// result unboxed.
 struct SigtBranchTypeMismatch {
-  static inline const SigT<bool, std::any> pack = SigT<bool, std::any>::existt(
-      false, crane_erase_fn([](const std::any &_any_n) {
-        uint64_t n = std::any_cast<uint64_t>(_any_n);
-        return (n + UINT64_C(7));
-      }));
+  static inline const SigT<bool, crane::obj> pack =
+      SigT<bool, crane::obj>::existt(
+          false, crane_erase_fn([](const crane::obj &_any_n) {
+            uint64_t n = crane::any_cast<uint64_t>(_any_n);
+            return (n + UINT64_C(7));
+          }));
   static inline const uint64_t go = []() {
     const auto &_sv0 = pack;
     const auto &[x0, a10] = _sv0;
-    if (std::any_cast<bool>(x0)) {
-      return std::any_cast<uint64_t>(a10);
+    if (crane::any_cast<bool>(x0)) {
+      return crane::any_cast<uint64_t>(a10);
     } else {
-      return std::any_cast<uint64_t>(
-          std::any_cast<std::function<std::any(std::any)>>(a10)(UINT64_C(1)));
+      return crane::any_cast<uint64_t>(
+          crane::any_cast<crane::fn<crane::obj(crane::obj)>>(a10)(UINT64_C(1)));
     }
   }();
 };

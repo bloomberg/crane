@@ -3,6 +3,8 @@
 
 #include <concepts>
 
+struct Nat {};
+
 template <typename M>
 concept TotalLeBool_ = requires {
   typename M::t;
@@ -10,8 +12,6 @@ concept TotalLeBool_ = requires {
     M::leb(std::declval<typename M::t>(), std::declval<typename M::t>())
   } -> std::same_as<bool>;
 };
-
-struct Nat {};
 
 /// A module type declared in another library is re-emitted as a concept, but
 /// its name is copied verbatim instead of being sanitised, so the apostrophe in

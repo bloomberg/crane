@@ -18,8 +18,8 @@ bool SiblingModuleSameInductive::B::get(
   return a0;
 }
 
-Nat SiblingModuleSameInductive::run(Nat n) {
-  return A::get(A::t::mk(std::move(n)));
+Nat SiblingModuleSameInductive::run(const Nat &n) {
+  return A::get(A::t::mk(n));
 }
 
 bool SiblingModuleSameInductive::run2(bool b) { return B::get(B::t::mk(b)); }

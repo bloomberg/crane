@@ -1,7 +1,7 @@
 #ifndef INCLUDED_FIX_IN_RECORD
 #define INCLUDED_FIX_IN_RECORD
 
-#include <functional>
+#include "fn.h"
 #include <utility>
 
 struct FixInRecord {
@@ -18,7 +18,7 @@ struct FixInRecord {
   /// the closure escapes through a RECORD FIELD.
   struct fn_box {
     uint64_t label;
-    std::function<uint64_t(uint64_t)> fn;
+    crane::fn<uint64_t(uint64_t)> fn;
   };
 
   static fn_box make_box(uint64_t n);

@@ -1,7 +1,9 @@
 #ifndef INCLUDED_DEQUEELEMENTCAST
 #define INCLUDED_DEQUEELEMENTCAST
 
+#include "obj.h"
 #include <any>
+#include <atomic>
 #include <cstdint>
 #include <deque>
 #include <utility>
@@ -47,34 +49,38 @@ struct DequeElementCast {
     const variant_t &v() const { return v_; }
   };
   enum class Nonterm { NT_ITEM, NT_ITEMS };
-  using sem_ty = std::any;
+  using sem_ty = crane::obj;
   using grammar_entry = Specif::SigT<Nonterm, sem_ty>;
 
   static const grammar_entry &items_value() {
     static const grammar_entry v =
-        Specif::template SigT<Nonterm, std::any>::existt(
-            Nonterm::NT_ITEMS, [](auto _a0, auto _a1) {
+        Specif::template SigT<Nonterm, crane::obj>::existt(
+            Nonterm::NT_ITEMS,
+            [](auto _a0, auto _a1) {
               _a1.push_front(_a0);
               return _a1;
-            }(std::any(Val::vnum(UINT64_C(42))), [](auto _a0, auto _a1) {
-              _a1.push_front(_a0);
-              return _a1;
-            }(std::any(Val::vstr(UINT64_C(7))), [](auto _a0, auto _a1) {
+            }(crane::obj(Val::vnum(UINT64_C(42))),
+              [](auto _a0, auto _a1) {
                 _a1.push_front(_a0);
                 return _a1;
-              }(std::any(Val::vnum(UINT64_C(3))), std::deque<std::any>{}))));
+              }(crane::obj(Val::vstr(UINT64_C(7))),
+                [](auto _a0, auto _a1) {
+                  _a1.push_front(_a0);
+                  return _a1;
+                }(crane::obj(Val::vnum(UINT64_C(3))),
+                  std::deque<crane::obj>{}))));
     return v;
   }
 
   static const grammar_entry &item_value() {
     static const grammar_entry v =
-        Specif::template SigT<Nonterm, std::any>::existt(
+        Specif::template SigT<Nonterm, crane::obj>::existt(
             Nonterm::NT_ITEM, Val::vnum(UINT64_C(99)));
     return v;
   }
 
-  static uint64_t count_items(const Specif::SigT<Nonterm, std::any> &e);
-  static uint64_t get_item_num(const Specif::SigT<Nonterm, std::any> &e);
+  static uint64_t count_items(const Specif::SigT<Nonterm, crane::obj> &e);
+  static uint64_t get_item_num(const Specif::SigT<Nonterm, crane::obj> &e);
 
   static const uint64_t &test_count() {
     static const uint64_t v = count_items(items_value());

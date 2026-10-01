@@ -2,11 +2,12 @@
 #define INCLUDED_CLOSURE_MAP_ESCAPE
 
 #include "crane_fn.h"
-#include "small_vector.h"
+#include "fn.h"
+#include "obj.h"
 #include <any>
 #include <atomic>
-#include <functional>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -35,22 +36,29 @@ struct ClosureMapEscape {
 
     explicit mylist(Mycons _v) : v_(std::move(_v)) {}
 
-    template <typename _U> mylist(const mylist<_U> &_other) {
-      if (std::holds_alternative<typename mylist<_U>::Mynil>(_other.v())) {
-        this->v_ = Mynil{};
-      } else {
-        const auto &[a0, a1] =
-            std::get<typename mylist<_U>::Mycons>(_other.v());
-        this->v_ = Mycons{[&]() -> A {
-                            if constexpr (std::is_same_v<_U, std::any>) {
-                              return crane_any_cast<A>(a0);
-                            } else {
-                              return A(a0);
-                            }
-                          }(),
-                          (a1 ? std::make_shared<mylist<A>>(*a1) : nullptr)};
-      }
-    }
+    template <typename _U>
+    mylist(const mylist<_U> &_other)
+        : v_([&]() -> variant_t {
+            if (std::holds_alternative<typename mylist<_U>::Mynil>(
+                    _other.v())) {
+              return Mynil{};
+            } else {
+              const auto &[a0, a1] =
+                  std::get<typename mylist<_U>::Mycons>(_other.v());
+              return Mycons{[&]() -> A {
+                              if constexpr (crane_convertible<A, const _U &>) {
+                                return crane_convert<A>(a0);
+                              } else {
+                                throw std::logic_error(
+                                    "unreachable: inactive constructor field "
+                                    "at this instantiation");
+                              }
+                            }(),
+                            (a1 ? std::make_shared<mylist<A>>(
+                                      crane_convert<mylist<A>>(*a1))
+                                : nullptr)};
+            }
+          }()) {}
 
     static mylist<A> mynil() { return mylist<A>(Mynil{}); }
 
@@ -61,22 +69,18 @@ struct ClosureMapEscape {
 
     // MANIPULATORS
     ~mylist() {
-      crane::small_vector<std::shared_ptr<mylist<A>>> _stack = {};
-      auto _drain = [&](variant_t &_v) {
+      auto _next = [&](variant_t &_v) -> std::shared_ptr<mylist<A>> {
         if (auto *_alt = std::get_if<Mycons>(&_v)) {
-          if (_alt->a1) {
-            _stack.push_back(std::move(_alt->a1));
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
+            return std::move(_alt->a1);
           }
         }
+        return nullptr;
       };
-      _drain(v_mut());
-      while (!_stack.empty()) {
-        auto _cur = std::move(_stack.back());
-        _stack.pop_back();
-        if (_cur.use_count() == 1) {
-          std::atomic_thread_fence(std::memory_order_acquire);
-          _drain(_cur->v_mut());
-        }
+      std::shared_ptr<mylist<A>> _cur = _next(v_mut());
+      while (_cur) {
+        _cur = _next(_cur->v_mut());
       }
     }
 
@@ -126,13 +130,12 @@ struct ClosureMapEscape {
   /// Difference from fix_escape_match: uses a USER-DEFINED list type
   /// (not stdlib option), and the fixpoints are built RECURSIVELY
   /// from list elements (not a single fixpoint).
-  static mylist<std::function<uint64_t(uint64_t)>>
+  static mylist<crane::fn<uint64_t(uint64_t)>>
   map_to_adders(const mylist<uint64_t> &l);
-  static uint64_t
-  apply_first(const mylist<std::function<uint64_t(uint64_t)>> &fns,
-              uint64_t arg);
-  static uint64_t
-  sum_apply(const mylist<std::function<uint64_t(uint64_t)>> &fns, uint64_t arg);
+  static uint64_t apply_first(const mylist<crane::fn<uint64_t(uint64_t)>> &fns,
+                              uint64_t arg);
+  static uint64_t sum_apply(const mylist<crane::fn<uint64_t(uint64_t)>> &fns,
+                            uint64_t arg);
   /// test1: map_to_adders 10, 20, 30, apply first to 5.
   /// add(5) where add(x) = x + 10. So 10 + 5 = 15.
   /// Bug: h=10 captured by &, dangling after match.
@@ -155,7 +158,7 @@ struct ClosureMapEscape {
   /// test3: Build adders, noise, then apply.
   /// (1+100) + (1+200) = 302.
   static inline const uint64_t test3 = []() {
-    mylist<std::function<uint64_t(uint64_t)>> fns =
+    mylist<crane::fn<uint64_t(uint64_t)>> fns =
         map_to_adders(mylist<uint64_t>::mycons(
             UINT64_C(100), mylist<uint64_t>::mycons(
                                UINT64_C(200), mylist<uint64_t>::mynil())));

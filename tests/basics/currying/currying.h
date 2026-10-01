@@ -1,6 +1,10 @@
 #ifndef INCLUDED_CURRYING
 #define INCLUDED_CURRYING
 
+#include "crane_fn.h"
+#include "obj.h"
+#include <any>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -17,6 +21,25 @@ struct Currying {
 
     // ACCESSORS
     pair<A, B> clone() const { return {a0, a1}; }
+
+    template <typename _U0, typename _U1> operator pair<_U0, _U1>() const {
+      return {[&]() -> _U0 {
+                if constexpr (crane_convertible<_U0, const A &>) {
+                  return crane_convert<_U0>(a0);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }(),
+              [&]() -> _U1 {
+                if constexpr (crane_convertible<_U1, const B &>) {
+                  return crane_convert<_U1>(a1);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }()};
+    }
 
     // CREATORS
     static pair<A, B> pair0(A a0, B a1) {
@@ -40,8 +63,8 @@ struct Currying {
 
   template <typename T1, typename T2, typename T3, typename F0>
     requires std::is_invocable_r_v<T3, F0 &, pair<T1, T2> &>
-  static T3 curry(F0 &&f, T1 a, T2 b) {
-    return f(pair<T1, T2>::pair0(std::move(a), std::move(b)));
+  static T3 curry(F0 &&f, const T1 &a, const T2 &b) {
+    return f(pair<T1, T2>::pair0(a, b));
   }
 
   template <typename T1, typename T2, typename T3, typename F0>

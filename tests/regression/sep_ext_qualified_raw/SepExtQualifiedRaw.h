@@ -2,10 +2,11 @@
 #define INCLUDED_SEPEXTQUALIFIEDRAW
 
 #include "crane_fn.h"
-#include "small_vector.h"
+#include "obj.h"
 #include <any>
 #include <atomic>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -40,23 +41,29 @@ template <OrderedType X> struct Make {
 
     explicit Fmap(Node _v) : v_(std::move(_v)) {}
 
-    template <typename _U> Fmap(const Fmap<_U> &_other) {
-      if (std::holds_alternative<typename Fmap<_U>::Empty>(_other.v())) {
-        this->v_ = Empty{};
-      } else {
-        const auto &[a0, a1, a2] =
-            std::get<typename Fmap<_U>::Node>(_other.v());
-        this->v_ = Node{a0,
-                        [&]() -> A {
-                          if constexpr (std::is_same_v<_U, std::any>) {
-                            return crane_any_cast<A>(a1);
-                          } else {
-                            return A(a1);
-                          }
-                        }(),
-                        (a2 ? std::make_shared<Fmap<A>>(*a2) : nullptr)};
-      }
-    }
+    template <typename _U>
+    Fmap(const Fmap<_U> &_other)
+        : v_([&]() -> variant_t {
+            if (std::holds_alternative<typename Fmap<_U>::Empty>(_other.v())) {
+              return Empty{};
+            } else {
+              const auto &[a0, a1, a2] =
+                  std::get<typename Fmap<_U>::Node>(_other.v());
+              return Node{
+                  a0,
+                  [&]() -> A {
+                    if constexpr (crane_convertible<A, const _U &>) {
+                      return crane_convert<A>(a1);
+                    } else {
+                      throw std::logic_error(
+                          "unreachable: inactive constructor field at this "
+                          "instantiation");
+                    }
+                  }(),
+                  (a2 ? std::make_shared<Fmap<A>>(crane_convert<Fmap<A>>(*a2))
+                      : nullptr)};
+            }
+          }()) {}
 
     static Fmap<A> empty() { return Fmap<A>(Empty{}); }
 
@@ -67,22 +74,18 @@ template <OrderedType X> struct Make {
 
     // MANIPULATORS
     ~Fmap() {
-      crane::small_vector<std::shared_ptr<Fmap<A>>> _stack = {};
-      auto _drain = [&](variant_t &_v) {
+      auto _next = [&](variant_t &_v) -> std::shared_ptr<Fmap<A>> {
         if (auto *_alt = std::get_if<Node>(&_v)) {
-          if (_alt->a2) {
-            _stack.push_back(std::move(_alt->a2));
+          if (_alt->a2 && _alt->a2.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
+            return std::move(_alt->a2);
           }
         }
+        return nullptr;
       };
-      _drain(v_mut());
-      while (!_stack.empty()) {
-        auto _cur = std::move(_stack.back());
-        _stack.pop_back();
-        if (_cur.use_count() == 1) {
-          std::atomic_thread_fence(std::memory_order_acquire);
-          _drain(_cur->v_mut());
-        }
+      std::shared_ptr<Fmap<A>> _cur = _next(v_mut());
+      while (_cur) {
+        _cur = _next(_cur->v_mut());
       }
     }
 

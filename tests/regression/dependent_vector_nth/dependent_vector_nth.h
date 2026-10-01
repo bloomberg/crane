@@ -2,7 +2,7 @@
 #define INCLUDED_DEPENDENT_VECTOR_NTH
 
 #include "crane_fn.h"
-#include "small_vector.h"
+#include "obj.h"
 #include <any>
 #include <atomic>
 #include <memory>
@@ -47,22 +47,18 @@ public:
 
   // MANIPULATORS
   ~T() {
-    crane::small_vector<std::shared_ptr<T>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<T> {
       if (auto *_alt = std::get_if<FS>(&_v)) {
-        if (_alt->a1) {
-          _stack.push_back(std::move(_alt->a1));
+        if (_alt->a1 && _alt->a1.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a1);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<T> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -101,21 +97,28 @@ public:
 
   explicit T0(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U> T0(const T0<_U> &_other) {
-    if (std::holds_alternative<typename T0<_U>::Nil>(_other.v())) {
-      this->v_ = Nil{};
-    } else {
-      const auto &[h, n, a2] = std::get<typename T0<_U>::Cons>(_other.v());
-      this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>) {
-                          return crane_any_cast<A>(h);
-                        } else {
-                          return A(h);
-                        }
-                      }(),
-                      n, (a2 ? std::make_shared<T0<A>>(*a2) : nullptr)};
-    }
-  }
+  template <typename _U>
+  T0(const T0<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename T0<_U>::Nil>(_other.v())) {
+            return Nil{};
+          } else {
+            const auto &[h, n, a2] =
+                std::get<typename T0<_U>::Cons>(_other.v());
+            return Cons{[&]() -> A {
+                          if constexpr (crane_convertible<A, const _U &>) {
+                            return crane_convert<A>(h);
+                          } else {
+                            throw std::logic_error(
+                                "unreachable: inactive constructor field at "
+                                "this instantiation");
+                          }
+                        }(),
+                        n,
+                        (a2 ? std::make_shared<T0<A>>(crane_convert<T0<A>>(*a2))
+                            : nullptr)};
+          }
+        }()) {}
 
   static T0<A> nil() { return T0<A>(Nil{}); }
 
@@ -158,7 +161,7 @@ struct DependentVectorNth {
 };
 
 template <typename T1> T1 Vector::nth(uint64_t, const T0<T1> &v0, const T &p) {
-  return [=]() mutable {
+  return [&]() {
     if (std::holds_alternative<typename T0<T1>::Nil>(v0.v())) {
       throw std::logic_error("absurd case");
     } else {

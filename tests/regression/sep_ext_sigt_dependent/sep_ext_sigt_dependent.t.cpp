@@ -1,4 +1,4 @@
-// Regression: sigT with dependent second component must use std::any
+// Regression: sigT with dependent second component must use crane::obj
 // for the second template parameter when the concrete type varies
 // across constructor branches.
 

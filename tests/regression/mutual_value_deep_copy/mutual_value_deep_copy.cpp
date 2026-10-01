@@ -35,7 +35,7 @@ bool MutualValueDeepCopy::reaches_end_b(const MutualValueDeepCopy::b &y) {
 }
 
 std::pair<MutualValueDeepCopy::a, MutualValueDeepCopy::a>
-MutualValueDeepCopy::dup_a(MutualValueDeepCopy::a x) {
+MutualValueDeepCopy::dup_a(const MutualValueDeepCopy::a &x) {
   return std::make_pair(x, x);
 }
 

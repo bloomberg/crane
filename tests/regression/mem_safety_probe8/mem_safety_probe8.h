@@ -55,10 +55,10 @@ struct MemSafetyProbe8 {
       crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a2) {
+          if (_alt->a2 && _alt->a2.use_count() == 1) {
             _stack.push_back(std::move(_alt->a2));
           }
         }
@@ -107,7 +107,7 @@ struct MemSafetyProbe8 {
     /// _Combine_Node: receives partial results, combines with _result from
     /// final call.
     struct _Combine_Node {
-      std::decay_t<T1> _result;
+      T1 _result;
       tree a2;
       uint64_t a1;
       tree a0;
@@ -167,7 +167,7 @@ struct MemSafetyProbe8 {
     /// _Combine_Node: receives partial results, combines with _result from
     /// final call.
     struct _Combine_Node {
-      std::decay_t<T1> _result;
+      T1 _result;
       tree a2;
       uint64_t a1;
       tree a0;

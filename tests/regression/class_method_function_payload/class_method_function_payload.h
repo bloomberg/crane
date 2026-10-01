@@ -2,13 +2,15 @@
 #define INCLUDED_CLASS_METHOD_FUNCTION_PAYLOAD
 
 #include "crane_fn.h"
+#include "fn.h"
+#include "obj.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
 #include <concepts>
-#include <functional>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -38,21 +40,26 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U> List(const List<_U> &_other) {
-    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->v_ = Nil{};
-    } else {
-      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>) {
-                          return crane_any_cast<A>(a);
-                        } else {
-                          return A(a);
-                        }
-                      }(),
-                      (l ? std::make_shared<List<A>>(*l) : nullptr)};
-    }
-  }
+  template <typename _U>
+  List(const List<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+            return Nil{};
+          } else {
+            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const _U &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                   : nullptr)};
+          }
+        }()) {}
 
   static List<A> nil() { return List<A>(Nil{}); }
 
@@ -62,22 +69,18 @@ public:
 
   // MANIPULATORS
   ~List() {
-    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
-        if (_alt->l) {
-          _stack.push_back(std::move(_alt->l));
+        if (_alt->l && _alt->l.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->l);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<List<A>> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -181,16 +184,16 @@ public:
 
 template <typename I>
 concept Monad = requires {
-  typename I::template M<std::any>;
+  typename I::template M<crane::obj>;
   {
-    I::template ret<std::any>(std::declval<std::any>())
-  } -> std::convertible_to<typename I::template M<std::any>>;
+    I::template ret<crane::obj>(std::declval<crane::obj>())
+  } -> std::convertible_to<typename I::template M<crane::obj>>;
   {
-    I::template bind<std::any, std::any>(
-        std::declval<typename I::template M<std::any>>(),
+    I::template bind<crane::obj, crane::obj>(
+        std::declval<typename I::template M<crane::obj>>(),
         std::declval<
-            std::function<typename I::template M<std::any>(std::any)>>())
-  } -> std::convertible_to<typename I::template M<std::any>>;
+            crane::fn<typename I::template M<crane::obj>(crane::obj)>>())
+  } -> std::convertible_to<typename I::template M<crane::obj>>;
 };
 
 struct ClassMethodFunctionPayload {
@@ -215,7 +218,7 @@ struct ClassMethodFunctionPayload {
 
     template <typename _A0, typename _A1>
     static std::optional<_A1> bind(std::optional<_A0> m,
-                                   std::function<std::optional<_A1>(_A0)> f) {
+                                   crane::fn<std::optional<_A1>(_A0)> f) {
       if (m.has_value()) {
         const _A0 &x = *m;
         return f(x);
@@ -235,7 +238,7 @@ struct ClassMethodFunctionPayload {
     }
 
     template <typename _A0, typename _A1>
-    static List<_A1> bind(List<_A0> m, std::function<List<_A1>(_A0)> f) {
+    static List<_A1> bind(List<_A0> m, crane::fn<List<_A1>(_A0)> f) {
       return m.template flat_map<_A1>(std::move(f));
     }
   };
@@ -243,12 +246,12 @@ struct ClassMethodFunctionPayload {
   static_assert(Monad<MList>);
 
   template <Monad _tcI0>
-  static typename _tcI0::template M<std::function<uint64_t(uint64_t)>>
+  static typename _tcI0::template M<crane::fn<uint64_t(uint64_t)>>
   adders(typename _tcI0::template M<uint64_t> x) {
-    return bind<_tcI0, uint64_t, std::function<uint64_t(uint64_t)>>(
+    return bind<_tcI0, uint64_t, crane::fn<uint64_t(uint64_t)>>(
         std::move(x), [](uint64_t n) {
-          return ret<_tcI0, std::function<uint64_t(uint64_t)>>(
-              [=](uint64_t k) mutable { return (k + n); });
+          return ret<_tcI0, crane::fn<uint64_t(uint64_t)>>(
+              [=](uint64_t k) { return (k + n); });
         });
   }
 
@@ -256,7 +259,7 @@ struct ClassMethodFunctionPayload {
       ([]() -> uint64_t {
         auto _cs = adders<MOpt>(std::make_optional<uint64_t>(UINT64_C(3)));
         if (_cs.has_value()) {
-          const std::function<uint64_t(uint64_t)> &f = *_cs;
+          const crane::fn<uint64_t(uint64_t)> &f = *_cs;
           return f(UINT64_C(1));
         } else {
           return UINT64_C(0);
@@ -266,7 +269,7 @@ struct ClassMethodFunctionPayload {
                                                    UINT64_C(2),
                                                    List<uint64_t>::nil())))
                        .template fold_left<uint64_t>(
-                           [](uint64_t a, std::function<uint64_t(uint64_t)> f) {
+                           [](uint64_t a, crane::fn<uint64_t(uint64_t)> f) {
                              return (a + f(UINT64_C(1)));
                            },
                            UINT64_C(0)));

@@ -2,7 +2,8 @@
 #define INCLUDED_ERASED_INDEX_FUN_TYPE
 
 #include "crane_fn.h"
-#include "small_vector.h"
+#include "fn.h"
+#include "obj.h"
 #include <any>
 #include <atomic>
 #include <functional>
@@ -41,22 +42,18 @@ public:
 
   // MANIPULATORS
   ~Nat() {
-    crane::small_vector<std::shared_ptr<Nat>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<Nat> {
       if (auto *_alt = std::get_if<S>(&_v)) {
-        if (_alt->a0) {
-          _stack.push_back(std::move(_alt->a0));
+        if (_alt->a0 && _alt->a0.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a0);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<Nat> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -112,37 +109,37 @@ struct ErasedIndexFunType {
     const variant_t &v() const { return v_; }
   };
 
-  template <typename T1, typename T2, typename F1>
+  template <typename T1, typename T2 = void, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, ty &, T1 &, ty &, T1 &>
   static T1 ty_rect(T1 f, F1 &&f0, const ty &t) {
     if (std::holds_alternative<typename ty::TN>(t.v())) {
       return f;
     } else {
       const auto &[a, b] = std::get<typename ty::TF>(t.v());
-      return std::any_cast<T1>(
+      return crane_any_cast<T1>(
           f0(*a, ty_rect(f, f0, *a), *b, ty_rect(f, f0, *b)));
     }
   }
 
-  template <typename T1, typename T2, typename F1>
+  template <typename T1, typename T2 = void, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, ty &, T1 &, ty &, T1 &>
   static T1 ty_rec(T1 f, F1 &&f0, const ty &t) {
     if (std::holds_alternative<typename ty::TN>(t.v())) {
       return f;
     } else {
       const auto &[a, b] = std::get<typename ty::TF>(t.v());
-      return std::any_cast<T1>(
+      return crane_any_cast<T1>(
           f0(*a, ty_rec(f, f0, *a), *b, ty_rec(f, f0, *b)));
     }
   }
 
-  template <typename T1> static std::any dflt(const ty &t) {
+  template <typename T1 = void> static crane::obj dflt(const ty &t) {
     if (std::holds_alternative<typename ty::TN>(t.v())) {
       return Nat::o();
     } else {
       const auto &[a, b0] = std::get<typename ty::TF>(t.v());
       return crane_erase_fn(
-          [=](const auto &) mutable { return dflt<T1>(*b0); });
+          [=](const auto &) { return dflt<crane::obj>(*b0); });
     }
   }
 

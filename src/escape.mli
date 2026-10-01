@@ -23,17 +23,27 @@ open Miniml
 val nb_occur_match : int -> ml_ast -> int
 
 (** [escapes k t] checks if de Bruijn index [k] escapes in [t] (value outlives
-    its scope). Escaping positions: constructor args, lambda captures, tail
-    position, fixpoint captures, partial-application captures.
+    its scope). Escaping positions: constructor args (when [cons_escapes]),
+    lambda captures, tail position, fixpoint captures, partial-application
+    captures.
 
     @param refined when [true], treats function arguments more precisely: a
                    lambda passed as an argument does not automatically force
                    its captures to escape; instead the lambda body is
                    inspected.  Defaults to [false] (conservative).
+    @param cons_escapes when [false], an occurrence as a constructor argument
+                   ([MLcons]/[MLtuple]) is treated like a function-call
+                   argument -- read once to copy into the new value's field,
+                   not an escape -- rather than forcing ownership.  Defaults
+                   to [true]: {!sub_bindings_escape}'s scan of a match
+                   branch relies on the default to keep a scrutinee owned
+                   when its sub-bindings are rebuilt into a new constructor,
+                   so only a caller deciding a parameter's own ownership
+                   (not something extracted from it) should turn it off.
     @param k de Bruijn index to check (1 = innermost binder)
     @param t the MiniML term to analyse
     @return [true] if the value bound at index [k] may outlive its scope *)
-val escapes : ?refined:bool -> int -> ml_ast -> bool
+val escapes : ?refined:bool -> ?cons_escapes:bool -> int -> ml_ast -> bool
 
 (** [partial_app_remaining head args] returns [Some remaining] when
     [MLapp(head, args)] is a partial application with [remaining] args still

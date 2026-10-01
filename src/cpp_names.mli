@@ -46,7 +46,7 @@ val globref_full_path_cache : (Names.GlobRef.t, string) Hashtbl.t
 val globref_full_path : Names.GlobRef.t -> string
 
 (** Pretty-print a module path. *)
-val pp_modname : Names.module_path -> Pp.t
+val pp_modname : Names.ModPath.t -> Pp.t
 
 (** {2 Inductive references} *)
 
@@ -122,6 +122,10 @@ val find_ancestor_qualifier_from : string -> string -> Pp.t
 val struct_qualifier_for : Names.GlobRef.t -> string -> Pp.t
 
 val global_scope_qualifier_for : Names.GlobRef.t -> string -> Pp.t
+
+(** The name a type is written under from outside the wrapper struct that owns
+    it; the name unchanged while that struct's own body is being printed. *)
+val wrapper_qualified_type_name : Names.GlobRef.t -> string -> string
 
 (** Whether the global must be referenced with a global-scope qualifier. *)
 val needs_global_qualifier : Names.GlobRef.t -> bool

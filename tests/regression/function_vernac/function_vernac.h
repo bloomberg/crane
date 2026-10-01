@@ -2,11 +2,13 @@
 #define INCLUDED_FUNCTION_VERNAC
 
 #include "crane_fn.h"
+#include "fn.h"
+#include "obj.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
-#include <functional>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -37,21 +39,26 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U> List(const List<_U> &_other) {
-    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->v_ = Nil{};
-    } else {
-      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>) {
-                          return crane_any_cast<A>(a);
-                        } else {
-                          return A(a);
-                        }
-                      }(),
-                      (l ? std::make_shared<List<A>>(*l) : nullptr)};
-    }
-  }
+  template <typename _U>
+  List(const List<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+            return Nil{};
+          } else {
+            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const _U &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                   : nullptr)};
+          }
+        }()) {}
 
   static List<A> nil() { return List<A>(Nil{}); }
 
@@ -61,22 +68,18 @@ public:
 
   // MANIPULATORS
   ~List() {
-    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
-        if (_alt->l) {
-          _stack.push_back(std::move(_alt->l));
+        if (_alt->l && _alt->l.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->l);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<List<A>> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -97,6 +100,17 @@ template <typename A> struct Sig {
 
   // ACCESSORS
   Sig<A> clone() const { return {x}; }
+
+  template <typename _U> operator Sig<_U>() const {
+    return {[&]() -> _U {
+      if constexpr (crane_convertible<_U, const A &>) {
+        return crane_convert<_U>(x);
+      } else {
+        throw std::logic_error(
+            "unreachable: inactive constructor field at this instantiation");
+      }
+    }()};
+  }
 
   // CREATORS
   static Sig<A> exist(A x) { return {std::move(x)}; }
@@ -166,22 +180,18 @@ struct FunctionVernac {
 
     // MANIPULATORS
     ~R_div2() {
-      crane::small_vector<std::shared_ptr<R_div2>> _stack = {};
-      auto _drain = [&](variant_t &_v) {
+      auto _next = [&](variant_t &_v) -> std::shared_ptr<R_div2> {
         if (auto *_alt = std::get_if<R_div2_2>(&_v)) {
-          if (_alt->_res) {
-            _stack.push_back(std::move(_alt->_res));
+          if (_alt->_res && _alt->_res.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
+            return std::move(_alt->_res);
           }
         }
+        return nullptr;
       };
-      _drain(v_mut());
-      while (!_stack.empty()) {
-        auto _cur = std::move(_stack.back());
-        _stack.pop_back();
-        if (_cur.use_count() == 1) {
-          std::atomic_thread_fence(std::memory_order_acquire);
-          _drain(_cur->v_mut());
-        }
+      std::shared_ptr<R_div2> _cur = _next(v_mut());
+      while (_cur) {
+        _cur = _next(_cur->v_mut());
       }
     }
 
@@ -321,7 +331,7 @@ struct FunctionVernac {
              std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
              std::is_invocable_r_v<T1, F2 &, uint64_t &, uint64_t &, T1 &>
   static T1 div2_rect(F0 &&f, F1 &&f0, F2 &&f1, uint64_t n) {
-    std::function<T1(uint64_t, T1)> f2 = [=](uint64_t _pa0, T1 _pa1) mutable {
+    crane::fn<T1(uint64_t, T1)> f2 = [=](uint64_t _pa0, T1 _pa1) {
       return f1(n, _pa0, _pa1);
     };
     T1 f3 = f0(n);
@@ -334,9 +344,7 @@ struct FunctionVernac {
         return f3;
       } else {
         uint64_t n1 = n0 - 1;
-        std::function<T1(T1)> f5 = [=](T1 _pa0) mutable {
-          return f2(n1, _pa0);
-        };
+        crane::fn<T1(T1)> f5 = [=](T1 _pa0) { return f2(n1, _pa0); };
         T1 hrec = div2_rect<T1>(f, f0, f1, n1);
         return f5(std::move(hrec));
       }
@@ -409,22 +417,18 @@ struct FunctionVernac {
 
     // MANIPULATORS
     ~R_list_sum() {
-      crane::small_vector<std::shared_ptr<R_list_sum>> _stack = {};
-      auto _drain = [&](variant_t &_v) {
+      auto _next = [&](variant_t &_v) -> std::shared_ptr<R_list_sum> {
         if (auto *_alt = std::get_if<R_list_sum_1>(&_v)) {
-          if (_alt->_res) {
-            _stack.push_back(std::move(_alt->_res));
+          if (_alt->_res && _alt->_res.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
+            return std::move(_alt->_res);
           }
         }
+        return nullptr;
       };
-      _drain(v_mut());
-      while (!_stack.empty()) {
-        auto _cur = std::move(_stack.back());
-        _stack.pop_back();
-        if (_cur.use_count() == 1) {
-          std::atomic_thread_fence(std::memory_order_acquire);
-          _drain(_cur->v_mut());
-        }
+      std::shared_ptr<R_list_sum> _cur = _next(v_mut());
+      while (_cur) {
+        _cur = _next(_cur->v_mut());
       }
     }
 
@@ -564,8 +568,8 @@ struct FunctionVernac {
              std::is_invocable_r_v<T1, F1 &, List<uint64_t> &, uint64_t &,
                                    List<uint64_t> &, T1 &>
   static T1 list_sum_rect(F0 &&f, F1 &&f0, const List<uint64_t> &l) {
-    std::function<T1(uint64_t, List<uint64_t>, T1)> f1 =
-        [=](uint64_t _pa0, List<uint64_t> _pa1, T1 _pa2) mutable {
+    crane::fn<T1(uint64_t, List<uint64_t>, T1)> f1 =
+        [=](uint64_t _pa0, List<uint64_t> _pa1, T1 _pa2) {
           return f0(l, _pa0, _pa1, _pa2);
         };
     T1 f2 = f(l);
@@ -574,9 +578,7 @@ struct FunctionVernac {
     } else {
       const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
       const List<uint64_t> &a1_value = *a1;
-      std::function<T1(T1)> f3 = [=](T1 _pa0) mutable {
-        return f1(a0, a1_value, _pa0);
-      };
+      crane::fn<T1(T1)> f3 = [=](T1 _pa0) { return f1(a0, a1_value, _pa0); };
       T1 hrec = list_sum_rect<T1>(f, f0, a1_value);
       return f3(std::move(hrec));
     }

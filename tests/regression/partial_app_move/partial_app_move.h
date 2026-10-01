@@ -2,9 +2,9 @@
 #define INCLUDED_PARTIAL_APP_MOVE
 
 #include "crane_fn.h"
+#include "fn.h"
 #include "small_vector.h"
 #include <atomic>
-#include <functional>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -47,10 +47,10 @@ struct PartialAppMove {
       crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a2) {
+          if (_alt->a2 && _alt->a2.use_count() == 1) {
             _stack.push_back(std::move(_alt->a2));
           }
         }
@@ -99,7 +99,7 @@ struct PartialAppMove {
     /// _Combine_Node: receives partial results, combines with _result from
     /// final call.
     struct _Combine_Node {
-      std::decay_t<T1> _result;
+      T1 _result;
       tree a2;
       uint64_t a1;
       tree a0;
@@ -159,7 +159,7 @@ struct PartialAppMove {
     /// _Combine_Node: receives partial results, combines with _result from
     /// final call.
     struct _Combine_Node {
-      std::decay_t<T1> _result;
+      T1 _result;
       tree a2;
       uint64_t a1;
       tree a0;
@@ -204,7 +204,7 @@ struct PartialAppMove {
   /// Wrap a tree inside another Node.
   /// In C++, this calls tree::node() which has rvalue ref overloads.
   /// If escape analysis adds std::move(t) here, the move is REAL.
-  static tree wrap(tree t);
+  static tree wrap(const tree &t);
   /// BUG TRIGGER: partial application creates a & lambda capturing t,
   /// then t is passed to a constructor (actually moved via rvalue ref),
   /// then the lambda accesses the moved-from t.
@@ -220,8 +220,9 @@ struct PartialAppMove {
       tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
                           UINT64_C(20),
                           tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
-      std::function<uint64_t(uint64_t)> f =
-          [=](uint64_t _x0) mutable -> uint64_t { return sum_values(t, _x0); };
+      crane::fn<uint64_t(uint64_t)> f = [=](uint64_t _x0) -> uint64_t {
+        return sum_values(t, _x0);
+      };
       tree w = tree::node(std::move(t), UINT64_C(42), tree::leaf());
       if (std::holds_alternative<typename tree::Leaf>(w.v_mut())) {
         return f(UINT64_C(0));
@@ -236,8 +237,9 @@ struct PartialAppMove {
       tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
                           UINT64_C(20),
                           tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
-      std::function<uint64_t(uint64_t)> f =
-          [=](uint64_t _x0) mutable -> uint64_t { return sum_values(t, _x0); };
+      crane::fn<uint64_t(uint64_t)> f = [=](uint64_t _x0) -> uint64_t {
+        return sum_values(t, _x0);
+      };
       tree w = wrap(std::move(t));
       if (std::holds_alternative<typename tree::Leaf>(w.v_mut())) {
         return f(UINT64_C(0));

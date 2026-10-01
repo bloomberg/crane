@@ -1,7 +1,7 @@
 #ifndef INCLUDED_TYPE_ALIAS_APPLIED_CTOR_PARAM
 #define INCLUDED_TYPE_ALIAS_APPLIED_CTOR_PARAM
 
-#include "small_vector.h"
+#include "obj.h"
 #include <any>
 #include <atomic>
 #include <memory>
@@ -39,22 +39,18 @@ public:
 
   // MANIPULATORS
   ~Nat() {
-    crane::small_vector<std::shared_ptr<Nat>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<Nat> {
       if (auto *_alt = std::get_if<S>(&_v)) {
-        if (_alt->a0) {
-          _stack.push_back(std::move(_alt->a0));
+        if (_alt->a0 && _alt->a0.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a0);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<Nat> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -83,23 +79,28 @@ struct TypeAliasAppliedCtorParam {
   ///
   /// f needs to be template <typename> class f, and the use site must pass
   /// F, not F<std::any>.
-  template <template <typename> class f, typename a> using ap = f<a>;
+  template <typename f, typename a> using ap = crane::rebind_t<f, a>;
 
-  template <template <typename> class F> struct holder {
+  template <typename F> struct holder {
     // DATA
     ap<F, Nat> a0;
 
     // ACCESSORS
     holder<F> clone() const { return {a0}; }
 
+    template <typename _U> operator holder<_U>() const {
+      return {crane_convert<ap<_U, Nat>>(a0)};
+    }
+
     // CREATORS
     static holder<F> hold(ap<F, Nat> a0) { return {std::move(a0)}; }
   };
 
-  static inline const holder<std::optional> mk =
-      holder<std::optional>::hold(std::make_optional<Nat>(Nat::s(Nat::o())));
+  static inline const holder<std::optional<crane::obj>> mk =
+      holder<std::optional<crane::obj>>::hold(
+          std::make_optional<Nat>(Nat::s(Nat::o())));
 
-  static std::optional<Nat> get(const holder<std::optional> &h);
+  static std::optional<Nat> get(const holder<std::optional<crane::obj>> &h);
 };
 
 #endif // INCLUDED_TYPE_ALIAS_APPLIED_CTOR_PARAM

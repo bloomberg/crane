@@ -1,9 +1,9 @@
 #ifndef INCLUDED_OPTION_SOME_ESCAPE
 #define INCLUDED_OPTION_SOME_ESCAPE
 
+#include "fn.h"
 #include "small_vector.h"
 #include <atomic>
-#include <functional>
 #include <memory>
 #include <optional>
 #include <type_traits>
@@ -47,10 +47,10 @@ struct OptionSomeEscape {
       crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a2) {
+          if (_alt->a2 && _alt->a2.use_count() == 1) {
             _stack.push_back(std::move(_alt->a2));
           }
         }
@@ -108,16 +108,16 @@ struct OptionSomeEscape {
   /// The & lambda captures parameter t by reference.
   /// return_captures_by_value doesn't handle lambdas inside
   /// std::make_optional. When the function returns, t is destroyed.
-  static std::optional<std::function<uint64_t(uint64_t)>> option_escape(tree t);
+  static std::optional<crane::fn<uint64_t(uint64_t)>> option_escape(tree t);
   static uint64_t
-  apply_option(const std::optional<std::function<uint64_t(uint64_t)>> &o,
+  apply_option(const std::optional<crane::fn<uint64_t(uint64_t)>> &o,
                uint64_t x);
   /// Clobber stack, then use the closure from the option.
   static inline const uint64_t bug_option_some = []() {
     tree t1 = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
                          UINT64_C(20),
                          tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
-    std::optional<std::function<uint64_t(uint64_t)>> o1 =
+    std::optional<crane::fn<uint64_t(uint64_t)>> o1 =
         option_escape(std::move(t1));
     return apply_option(std::move(o1), UINT64_C(0));
   }();

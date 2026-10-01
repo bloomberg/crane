@@ -2,10 +2,12 @@
 #define INCLUDED_HOF_TREE_LOOPIFY
 
 #include "crane_fn.h"
+#include "obj.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -35,22 +37,30 @@ struct HofTreeLoopify {
 
     explicit tree(Node _v) : v_(std::move(_v)) {}
 
-    template <typename _U> tree(const tree<_U> &_other) {
-      if (std::holds_alternative<typename tree<_U>::Leaf>(_other.v())) {
-        this->v_ = Leaf{};
-      } else {
-        const auto &[l, x, r] = std::get<typename tree<_U>::Node>(_other.v());
-        this->v_ = Node{(l ? std::make_shared<tree<A>>(*l) : nullptr),
-                        [&]() -> A {
-                          if constexpr (std::is_same_v<_U, std::any>) {
-                            return crane_any_cast<A>(x);
-                          } else {
-                            return A(x);
-                          }
-                        }(),
-                        (r ? std::make_shared<tree<A>>(*r) : nullptr)};
-      }
-    }
+    template <typename _U>
+    tree(const tree<_U> &_other)
+        : v_([&]() -> variant_t {
+            if (std::holds_alternative<typename tree<_U>::Leaf>(_other.v())) {
+              return Leaf{};
+            } else {
+              const auto &[l, x, r] =
+                  std::get<typename tree<_U>::Node>(_other.v());
+              return Node{
+                  (l ? std::make_shared<tree<A>>(crane_convert<tree<A>>(*l))
+                     : nullptr),
+                  [&]() -> A {
+                    if constexpr (crane_convertible<A, const _U &>) {
+                      return crane_convert<A>(x);
+                    } else {
+                      throw std::logic_error(
+                          "unreachable: inactive constructor field at this "
+                          "instantiation");
+                    }
+                  }(),
+                  (r ? std::make_shared<tree<A>>(crane_convert<tree<A>>(*r))
+                     : nullptr)};
+            }
+          }()) {}
 
     static tree<A> leaf() { return tree<A>(Leaf{}); }
 
@@ -64,10 +74,10 @@ struct HofTreeLoopify {
       crane::small_vector<std::shared_ptr<tree<A>>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
-          if (_alt->l) {
+          if (_alt->l && _alt->l.use_count() == 1) {
             _stack.push_back(std::move(_alt->l));
           }
-          if (_alt->r) {
+          if (_alt->r && _alt->r.use_count() == 1) {
             _stack.push_back(std::move(_alt->r));
           }
         }
@@ -110,16 +120,16 @@ struct HofTreeLoopify {
     struct _After_Node {
       const tree<T1> *a0_0;
       tree<T1> a2;
-      std::decay_t<T1> a1;
+      T1 a1;
       tree<T1> a0_1;
     };
 
     /// _Combine_Node: receives partial results, combines with _result from
     /// final call.
     struct _Combine_Node {
-      std::decay_t<T2> _result;
+      T2 _result;
       tree<T1> a2;
-      std::decay_t<T1> a1;
+      T1 a1;
       tree<T1> a0;
     };
 
@@ -172,16 +182,16 @@ struct HofTreeLoopify {
     struct _After_Node {
       const tree<T1> *a0_0;
       tree<T1> a2;
-      std::decay_t<T1> a1;
+      T1 a1;
       tree<T1> a0_1;
     };
 
     /// _Combine_Node: receives partial results, combines with _result from
     /// final call.
     struct _Combine_Node {
-      std::decay_t<T2> _result;
+      T2 _result;
       tree<T1> a2;
-      std::decay_t<T1> a1;
+      T1 a1;
       tree<T1> a0;
     };
 
@@ -234,14 +244,14 @@ struct HofTreeLoopify {
     /// _After_Node: saves [a0, a1], dispatches next recursive call.
     struct _After_Node {
       const tree<T1> *a0;
-      std::decay_t<T2> a1;
+      T2 a1;
     };
 
     /// _Combine_Node: receives partial results, combines with _result from
     /// final call.
     struct _Combine_Node {
       tree<T2> _result;
-      std::decay_t<T2> a1;
+      T2 a1;
     };
 
     using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
@@ -290,14 +300,14 @@ struct HofTreeLoopify {
     /// _After_Node: saves [a0, a1], dispatches next recursive call.
     struct _After_Node {
       const tree<T1> *a0;
-      std::decay_t<T1> a1;
+      T1 a1;
     };
 
     /// _Combine_Node: receives partial results, combines with _result from
     /// final call.
     struct _Combine_Node {
-      std::decay_t<T2> _result;
-      std::decay_t<T1> a1;
+      T2 _result;
+      T1 a1;
     };
 
     using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
@@ -348,14 +358,14 @@ struct HofTreeLoopify {
     struct _After_Node {
       const tree<T2> *a00;
       const tree<T1> *a0;
-      std::decay_t<T3> _s2;
+      T3 _s2;
     };
 
     /// _Combine_Node: receives partial results, combines with _result from
     /// final call.
     struct _Combine_Node {
       tree<T3> _result;
-      std::decay_t<T3> _s1;
+      T3 _s1;
     };
 
     using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
@@ -401,7 +411,7 @@ struct HofTreeLoopify {
   template <typename T1, typename T2, typename T3, typename F0>
     requires std::is_invocable_r_v<std::pair<T3, T2>, F0 &, T3 &, T1 &>
   static std::pair<T3, tree<T2>>
-  tree_map_accum(F0 &&f, T3 acc,
+  tree_map_accum(F0 &&f, const T3 &acc,
                  const tree<T1> &t) { /// _Enter: captures varying parameters
                                       /// for each recursive call.
 
@@ -413,7 +423,7 @@ struct HofTreeLoopify {
     /// _Cont_Node: saves [a1, a2], resumes after recursive call, then processes
     /// rest.
     struct _Cont_Node {
-      std::decay_t<T1> a1;
+      T1 a1;
       const tree<T1> *a2;
     };
 
@@ -421,7 +431,7 @@ struct HofTreeLoopify {
     /// rest.
     struct _Cont_acc2 {
       tree<T2> l_;
-      std::decay_t<T2> x_;
+      T2 x_;
     };
 
     using _Frame = std::variant<_Enter, _Cont_Node, _Cont_acc2>;
@@ -435,13 +445,13 @@ struct HofTreeLoopify {
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
         const tree<T1> &t = *_f.t;
-        auto acc = std::move(_f.acc);
+        const T3 acc = std::move(_f.acc);
         if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
-          _result = std::make_pair(std::move(acc), tree<T2>::leaf());
+          _result = std::make_pair(acc, tree<T2>::leaf());
         } else {
           const auto &[a0, a1, a2] = std::get<typename tree<T1>::Node>(t.v());
           _stack.emplace_back(_Cont_Node{a1, crane_raw(a2)});
-          _stack.emplace_back(_Enter{crane_raw(a0), std::move(acc)});
+          _stack.emplace_back(_Enter{crane_raw(a0), acc});
         }
       } else if (std::holds_alternative<_Cont_Node>(_frame)) {
         auto _f = std::move(std::get<_Cont_Node>(_frame));

@@ -1,7 +1,8 @@
 #ifndef INCLUDED_OPPOSITE_PROPERTY_TRANSFER_TRACE
 #define INCLUDED_OPPOSITE_PROPERTY_TRANSFER_TRACE
 
-#include <functional>
+#include "crane_fn.h"
+#include "fn.h"
 #include <type_traits>
 #include <utility>
 
@@ -9,10 +10,10 @@ struct OppositePropertyTransferTraceCase {
   struct PreStableCategory {
     uint64_t ps_tag;
     uint64_t ps_shift;
-    std::function<uint64_t(uint64_t)> ps_Susp;
-    std::function<uint64_t(uint64_t)> ps_Loop;
-    std::function<uint64_t(uint64_t)> ps_eta;
-    std::function<uint64_t(uint64_t)> ps_epsilon;
+    crane::fn<uint64_t(uint64_t)> ps_Susp;
+    crane::fn<uint64_t(uint64_t)> ps_Loop;
+    crane::fn<uint64_t(uint64_t)> ps_eta;
+    crane::fn<uint64_t(uint64_t)> ps_epsilon;
   };
 
   static PreStableCategory
@@ -43,7 +44,7 @@ struct OppositePropertyTransferTraceCase {
   using satisfies_triangle_1 = Triangle1Witness;
   using satisfies_triangle_2 = Triangle2Witness;
   template <typename a, typename b>
-  using EquivT = std::pair<std::function<b(a)>, std::function<a(b)>>;
+  using EquivT = std::pair<crane::fn<b(a)>, crane::fn<a(b)>>;
 
   struct LeftProperty {
     uint64_t lp_seed;
@@ -70,14 +71,14 @@ struct OppositePropertyTransferTraceCase {
 
   template <typename T1, typename T2, typename F0, typename F1>
     requires std::is_invocable_r_v<
-                 std::pair<std::function<T2(T1)>, std::function<T1(T2)>>, F0 &,
+                 std::pair<crane::fn<T2(T1)>, crane::fn<T1(T2)>>, F0 &,
                  PreStableCategory &> &&
              std::is_invocable_r_v<T1, F1 &, PreStableCategory &,
                                    LeftStableWitness &, Triangle1Witness &>
   static T2 theorem_doubling_principle_correct(
       F0 &&h_dual, F1 &&h_theorem, const PreStableCategory &pS,
       const LeftStableWitness &h_left_op, const Triangle1Witness &h_tri1_op) {
-    std::pair<std::function<T2(T1)>, std::function<T1(T2)>> e =
+    std::pair<crane::fn<T2(T1)>, crane::fn<T1(T2)>> e =
         h_dual(opposite_prestable_category(pS));
     auto [q, _x] = std::move(e);
     return q(h_theorem(opposite_prestable_category(pS), h_left_op, h_tri1_op));
@@ -85,22 +86,21 @@ struct OppositePropertyTransferTraceCase {
 
   template <typename T1, typename T2, typename F0, typename F1>
     requires std::is_invocable_r_v<
-                 std::pair<std::function<T2(T1)>, std::function<T1(T2)>>, F0 &,
-                 PreStableCategory &> &&
-             std::is_invocable_r_v<T1, F1 &, PreStableCategory &,
-                                   LeftStableWitness &, Triangle1Witness &>
+        std::pair<crane::fn<T2(T1)>, crane::fn<T1(T2)>>, F0 &,
+        PreStableCategory &>
   static T2 theorem_doubling_principle_final(F0 &&h_dual, F1 &&h_theorem,
                                              const PreStableCategory &pS,
                                              const RightStableWitness &h_right,
                                              const Triangle2Witness &h_tri2) {
     return theorem_doubling_principle_correct<T1, T2>(
-        h_dual, h_theorem, pS, right_stable_gives_opposite_left(pS, h_right),
-        [=]() mutable {
-          std::pair<std::function<Triangle2Witness(Triangle1Witness)>,
-                    std::function<Triangle1Witness(Triangle2Witness)>>
+        h_dual, crane_erase_fn<T1>(h_theorem), pS,
+        right_stable_gives_opposite_left(pS, h_right), [&]() {
+          std::pair<crane::fn<satisfies_triangle_2(satisfies_triangle_1)>,
+                    crane::fn<satisfies_triangle_1(satisfies_triangle_2)>>
               e = triangle_identity_duality(opposite_prestable_category(pS));
           auto [_x, s] = std::move(e);
-          return s(h_tri2);
+          satisfies_triangle_2 h_tri2_ = h_tri2;
+          return s(h_tri2_);
         }());
   }
 
@@ -117,7 +117,8 @@ struct OppositePropertyTransferTraceCase {
       Triangle2Witness{UINT64_C(8), UINT64_C(16)};
   static inline const RightProperty sample_right_property =
       theorem_doubling_principle_final<LeftProperty, RightProperty>(
-          dual_property_equiv, sample_left_property, sample_category,
+          dual_property_equiv,
+          crane_erase_fn<LeftProperty>(sample_left_property), sample_category,
           sample_right_stable, sample_triangle2);
   static inline const uint64_t sample_opposite_tag =
       opposite_prestable_category(sample_category).ps_tag;

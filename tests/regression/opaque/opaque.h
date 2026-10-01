@@ -1,6 +1,9 @@
 #ifndef INCLUDED_OPAQUE
 #define INCLUDED_OPAQUE
 
+#include "crane_fn.h"
+#include "obj.h"
+#include <any>
 #include <stdexcept>
 #include <utility>
 
@@ -12,6 +15,17 @@ template <typename A> struct Sig {
 
   // ACCESSORS
   Sig<A> clone() const { return {x}; }
+
+  template <typename _U> operator Sig<_U>() const {
+    return {[&]() -> _U {
+      if constexpr (crane_convertible<_U, const A &>) {
+        return crane_convert<_U>(x);
+      } else {
+        throw std::logic_error(
+            "unreachable: inactive constructor field at this instantiation");
+      }
+    }()};
+  }
 
   // CREATORS
   static Sig<A> exist(A x) { return {std::move(x)}; }

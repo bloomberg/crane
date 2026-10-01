@@ -2,12 +2,13 @@
 #define INCLUDED_GRAMMAR_TUPLE_LEAF_CTOR
 
 #include "crane_fn.h"
+#include "obj.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
 #include <memory>
+#include <stdexcept>
 #include <string>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -16,6 +17,8 @@ template <typename A, typename P> struct SigT;
 enum class Terminal;
 struct Val;
 struct Symbol;
+using predicate_semty = crane::obj;
+using action_semty = crane::obj;
 
 template <typename A> struct List {
   // TYPES
@@ -40,21 +43,26 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U> List(const List<_U> &_other) {
-    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->v_ = Nil{};
-    } else {
-      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>) {
-                          return crane_any_cast<A>(a);
-                        } else {
-                          return A(a);
-                        }
-                      }(),
-                      (l ? std::make_shared<List<A>>(*l) : nullptr)};
-    }
-  }
+  template <typename _U>
+  List(const List<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+            return Nil{};
+          } else {
+            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const _U &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                   : nullptr)};
+          }
+        }()) {}
 
   static List<A> nil() { return List<A>(Nil{}); }
 
@@ -64,22 +72,18 @@ public:
 
   // MANIPULATORS
   ~List() {
-    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
-        if (_alt->l) {
-          _stack.push_back(std::move(_alt->l));
+        if (_alt->l && _alt->l.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->l);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<List<A>> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -139,6 +143,25 @@ template <typename A, typename P> struct SigT {
 
   // ACCESSORS
   SigT<A, P> clone() const { return {x, a1}; }
+
+  template <typename _U0, typename _U1> operator SigT<_U0, _U1>() const {
+    return {[&]() -> _U0 {
+              if constexpr (crane_convertible<_U0, const A &>) {
+                return crane_convert<_U0>(x);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }(),
+            [&]() -> _U1 {
+              if constexpr (crane_convertible<_U1, const P &>) {
+                return crane_convert<_U1>(a1);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }()};
+  }
 
   // CREATORS
   static SigT<A, P> existt(A x, P a1) { return {std::move(x), std::move(a1)}; }
@@ -213,36 +236,33 @@ public:
   const variant_t &v() const { return v_; }
 };
 
-using production = std::pair<std::any, List<Symbol>>;
-using predicate_semty = std::any;
-using action_semty = std::any;
+using production = std::pair<crane::obj, List<Symbol>>;
 using production_semty = std::pair<predicate_semty, action_semty>;
 using grammar_entry = SigT<production, production_semty>;
 const List<grammar_entry> entries = List<grammar_entry>::cons(
-    SigT<std::pair<std::any, List<Symbol>>, std::pair<std::any, std::any>>::
-        existt(std::make_pair(std::any(),
-                              List<Symbol>::cons(Symbol::t(Terminal::TSTRING),
-                                                 List<Symbol>::nil())),
-               std::make_pair(
-                   std::any(crane_erase_fn([](const auto &) { return true; })),
-                   std::any(crane_erase_fn([](const auto &tup) {
-                     const auto &[s, _x] =
-                         std::any_cast<std::pair<std::any, std::any>>(tup);
-                     return Val::vstr(std::any_cast<std::string>(s));
-                   })))),
+    SigT<production, production_semty>::existt(
+        std::make_pair(crane::obj(crane::obj()),
+                       List<Symbol>::cons(Symbol::t(Terminal::TSTRING),
+                                          List<Symbol>::nil())),
+        std::make_pair(
+            crane::obj(crane_erase_fn([](const auto &) { return true; })),
+            crane::obj(crane_erase_fn([](const auto &tup) {
+              const auto &[s, _x] =
+                  crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
+              return Val::vstr(crane::any_cast<std::string>(s));
+            })))),
     List<grammar_entry>::cons(
-        SigT<std::pair<std::any, List<Symbol>>, std::pair<std::any, std::any>>::
-            existt(
-                std::make_pair(
-                    std::any(), List<Symbol>::cons(Symbol::t(Terminal::TINT),
-                                                   List<Symbol>::nil())),
-                std::make_pair(
-                    std::any(crane_erase_fn([](const auto &) { return true; })),
-                    std::any(crane_erase_fn([](const auto &tup) {
-                      const auto &[i, _x] =
-                          std::any_cast<std::pair<std::any, std::any>>(tup);
-                      return Val::vint(std::any_cast<uint64_t>(i));
-                    })))),
+        SigT<production, production_semty>::existt(
+            std::make_pair(crane::obj(crane::obj()),
+                           List<Symbol>::cons(Symbol::t(Terminal::TINT),
+                                              List<Symbol>::nil())),
+            std::make_pair(
+                crane::obj(crane_erase_fn([](const auto &) { return true; })),
+                crane::obj(crane_erase_fn([](const auto &tup) {
+                  const auto &[i, _x] =
+                      crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
+                  return Val::vint(crane::any_cast<uint64_t>(i));
+                })))),
         List<grammar_entry>::nil()));
 uint64_t num_entries(std::monostate _x);
 

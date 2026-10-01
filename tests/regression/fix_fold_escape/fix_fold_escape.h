@@ -2,11 +2,12 @@
 #define INCLUDED_FIX_FOLD_ESCAPE
 
 #include "crane_fn.h"
-#include "small_vector.h"
+#include "fn.h"
+#include "obj.h"
 #include <any>
 #include <atomic>
-#include <functional>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -36,21 +37,26 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U> List(const List<_U> &_other) {
-    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->v_ = Nil{};
-    } else {
-      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>) {
-                          return crane_any_cast<A>(a);
-                        } else {
-                          return A(a);
-                        }
-                      }(),
-                      (l ? std::make_shared<List<A>>(*l) : nullptr)};
-    }
-  }
+  template <typename _U>
+  List(const List<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+            return Nil{};
+          } else {
+            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const _U &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                   : nullptr)};
+          }
+        }()) {}
 
   static List<A> nil() { return List<A>(Nil{}); }
 
@@ -60,22 +66,18 @@ public:
 
   // MANIPULATORS
   ~List() {
-    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
-        if (_alt->l) {
-          _stack.push_back(std::move(_alt->l));
+        if (_alt->l && _alt->l.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->l);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<List<A>> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -93,11 +95,11 @@ public:
 struct FixFoldEscape {
   /// Manual fold_left to avoid stdlib extraction complications.
   template <typename F0>
-    requires std::is_invocable_r_v<
-        List<std::function<uint64_t(uint64_t)>>, F0 &,
-        List<std::function<uint64_t(uint64_t)>> &, uint64_t &>
-  static List<std::function<uint64_t(uint64_t)>>
-  fold_left(F0 &&f, List<std::function<uint64_t(uint64_t)>> acc,
+    requires std::is_invocable_r_v<List<crane::fn<uint64_t(uint64_t)>>, F0 &,
+                                   List<crane::fn<uint64_t(uint64_t)>> &,
+                                   uint64_t &>
+  static List<crane::fn<uint64_t(uint64_t)>>
+  fold_left(F0 &&f, List<crane::fn<uint64_t(uint64_t)>> acc,
             const List<uint64_t> &l) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
       return acc;
@@ -116,11 +118,11 @@ struct FixFoldEscape {
   /// The callback returns cons adder acc, storing the closure.
   /// After the callback returns, n is destroyed. Later iterations and
   /// the final result contain dangling closures.
-  static List<std::function<uint64_t(uint64_t)>>
+  static List<crane::fn<uint64_t(uint64_t)>>
   collect_adders(const List<uint64_t> &l);
-  static uint64_t apply_head(const List<std::function<uint64_t(uint64_t)>> &l,
+  static uint64_t apply_head(const List<crane::fn<uint64_t(uint64_t)>> &l,
                              uint64_t x);
-  static uint64_t sum_apply(const List<std::function<uint64_t(uint64_t)>> &l,
+  static uint64_t sum_apply(const List<crane::fn<uint64_t(uint64_t)>> &l,
                             uint64_t x);
   /// test1: collect_adders 10; 20; 30 -> adder_30; adder_20; adder_10
   /// (reversed by fold_left). apply_head picks adder_30, apply to 5 -> 35.
@@ -142,7 +144,7 @@ struct FixFoldEscape {
       UINT64_C(0));
   /// test3: With noise between collection and use.
   static inline const uint64_t test3 = []() {
-    List<std::function<uint64_t(uint64_t)>> fns =
+    List<crane::fn<uint64_t(uint64_t)>> fns =
         collect_adders(List<uint64_t>::cons(
             UINT64_C(100),
             List<uint64_t>::cons(UINT64_C(200), List<uint64_t>::nil())));

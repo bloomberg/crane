@@ -5,7 +5,7 @@ bool triples_le_max(const std::deque<rgb> &ts, uint64_t m) {
     return true;
   } else {
     const auto &t = ts.front();
-    std::decay_t<decltype(ts)> ts_(ts.begin() + 1, ts.end());
+    std::deque<rgb> ts_(ts.begin() + 1, ts.end());
     return (t.red <= m && triples_le_max(ts_, m));
   }
 }

@@ -1,9 +1,13 @@
 #ifndef INCLUDED_RECORD_MEDIATED_DRAIN
 #define INCLUDED_RECORD_MEDIATED_DRAIN
 
+#include "crane_fn.h"
+#include "obj.h"
 #include "small_vector.h"
+#include <any>
 #include <atomic>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -12,6 +16,18 @@ struct RecordMediatedDrain {
   template <typename A> struct cell {
     uint64_t hd;
     A tl;
+
+    // ACCESSORS
+    template <typename _U> operator cell<_U>() const {
+      return {hd, [&]() -> _U {
+                if constexpr (crane_convertible<_U, const A &>) {
+                  return crane_convert<_U>(tl);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }()};
+    }
   };
 
   struct t {
@@ -98,7 +114,7 @@ struct RecordMediatedDrain {
     }
   }
 
-  static t wrap(uint64_t k, t acc);
+  static t wrap(uint64_t k, const t &acc);
   static inline const t empty = t::stop();
 };
 

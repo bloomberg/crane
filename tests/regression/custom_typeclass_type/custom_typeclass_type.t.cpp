@@ -1,5 +1,5 @@
 // Regression test: typeclass Type-valued field with custom extraction.
-// With the bug, this fails to compile (std::any vs uint64_t mismatch).
+// With the bug, this fails to compile (crane::obj vs uint64_t mismatch).
 
 #include "custom_typeclass_type.h"
 

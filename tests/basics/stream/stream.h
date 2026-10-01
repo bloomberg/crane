@@ -2,13 +2,13 @@
 #define INCLUDED_STREAM
 
 #include "crane_fn.h"
+#include "fn.h"
 #include "lazy.h"
-#include "small_vector.h"
+#include "obj.h"
 #include <any>
 #include <atomic>
-#include <functional>
 #include <memory>
-#include <type_traits>
+#include <stdexcept>
 #include <utility>
 #include <variant>
 
@@ -43,22 +43,18 @@ public:
 
   // MANIPULATORS
   ~Nat() {
-    crane::small_vector<std::shared_ptr<Nat>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<Nat> {
       if (auto *_alt = std::get_if<S>(&_v)) {
-        if (_alt->a0) {
-          _stack.push_back(std::move(_alt->a0));
+        if (_alt->a0 && _alt->a0.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a0);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<Nat> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -96,21 +92,26 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U> List(const List<_U> &_other) {
-    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->v_ = Nil{};
-    } else {
-      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>) {
-                          return crane_any_cast<A>(a);
-                        } else {
-                          return A(a);
-                        }
-                      }(),
-                      (l ? std::make_shared<List<A>>(*l) : nullptr)};
-    }
-  }
+  template <typename _U>
+  List(const List<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+            return Nil{};
+          } else {
+            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const _U &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                   : nullptr)};
+          }
+        }()) {}
 
   static List<A> nil() { return List<A>(Nil{}); }
 
@@ -120,22 +121,18 @@ public:
 
   // MANIPULATORS
   ~List() {
-    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
-        if (_alt->l) {
-          _stack.push_back(std::move(_alt->l));
+        if (_alt->l && _alt->l.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->l);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<List<A>> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -152,11 +149,12 @@ public:
 
 template <typename A> struct Stream {
   // TYPES
-  struct Scons {
+  template <typename _S0 = Stream<A>> struct Scons_ {
     A x;
-    std::shared_ptr<Stream<A>> xs;
+    _S0 xs;
   };
 
+  using Scons = Scons_<>;
   using variant_t = std::variant<Scons>;
 
 private:
@@ -165,31 +163,51 @@ private:
 
 public:
   // CREATORS
+  Stream() {}
+
   explicit Stream(Scons _v)
       : lazy_v_(crane::lazy<variant_t>(variant_t(std::move(_v)))) {}
 
-  explicit Stream(std::function<variant_t()> _thunk)
+  template <typename _U>
+  Stream(const Stream<_U> &_other)
+      : lazy_v_(crane::lazy<variant_t>::converted_from(
+            _other.lazy_cell(), [=]() -> variant_t {
+              const auto &[x, xs] =
+                  std::get<typename Stream<_U>::Scons>(_other.v());
+              return Scons{[&]() -> A {
+                             if constexpr (crane_convertible<A, const _U &>) {
+                               return crane_convert<A>(x);
+                             } else {
+                               throw std::logic_error(
+                                   "unreachable: inactive constructor field at "
+                                   "this instantiation");
+                             }
+                           }(),
+                           crane_convert<Stream<A>>(xs)};
+            })) {}
+
+  explicit Stream(crane::fn<variant_t()> _thunk)
       : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
-  static Stream<A> scons(A x, const Stream<A> &xs) {
-    return Stream<A>(Scons{std::move(x), std::make_shared<Stream<A>>(xs)});
+  static Stream<A> scons(A x, Stream<A> xs) {
+    return Stream<A>(Scons{std::move(x), std::move(xs)});
   }
 
-  static Stream<A> lazy_(std::function<Stream<A>()> thunk) {
-    return Stream<A>(std::function<variant_t()>([=]() mutable -> variant_t {
-      Stream<A> _tmp = thunk();
-      return _tmp.v();
-    }));
+  explicit Stream(crane::lazy<variant_t> _cell) : lazy_v_(std::move(_cell)) {}
+
+  template <typename F> static Stream<A> lazy_(F &&thunk) {
+    return Stream<A>(crane::lazy<variant_t>::delegate(std::forward<F>(thunk)));
   }
 
   // ACCESSORS
   const variant_t &v() const { return lazy_v_.force(); }
 
+  const crane::lazy<variant_t> &lazy_cell() const { return lazy_v_; }
+
   Stream<A> interleave(Stream<A> sb) const {
     const auto &[a0, a1] = std::get<typename Stream<A>::Scons>(this->v());
-    return Stream<A>::lazy_([=]() mutable -> Stream<A> {
-      return Stream<A>::scons(a0, sb.interleave(*a1));
-    });
+    return Stream<A>::lazy_(
+        [=]() -> Stream<A> { return Stream<A>::scons(a0, sb.interleave(a1)); });
   }
 
   template <typename T1> static List<T1> take(const Nat &n, Stream<T1> s) {
@@ -198,18 +216,17 @@ public:
     } else {
       const auto &[a0] = std::get<typename Nat::S>(n.v());
       const auto &[a00, a10] = std::get<typename Stream<T1>::Scons>(s.v());
-      return List<T1>::cons(a00, take<T1>(*a0, *a10));
+      return List<T1>::cons(a00, take<T1>(*a0, a10));
     }
   }
 
-  template <typename T1> static Stream<T1> repeat(T1 x) {
-    return Stream<T1>::lazy_([=]() mutable -> Stream<T1> {
-      return Stream<T1>::scons(x, repeat<T1>(x));
-    });
+  template <typename T1> static Stream<T1> repeat(const T1 &x) {
+    return Stream<T1>::lazy_(
+        [=]() -> Stream<T1> { return Stream<T1>::scons(x, repeat<T1>(x)); });
   }
 
-  static Stream<Nat> nats_from(Nat n) {
-    return Stream<Nat>::lazy_([=]() mutable -> Stream<Nat> {
+  static Stream<Nat> nats_from(const Nat &n) {
+    return Stream<Nat>::lazy_([=]() -> Stream<Nat> {
       return Stream<Nat>::scons(n, nats_from(Nat::s(n)));
     });
   }

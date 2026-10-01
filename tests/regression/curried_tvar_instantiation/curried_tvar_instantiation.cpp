@@ -5,10 +5,9 @@
 /// std::function<std::function<Nat(Nat)>(Nat)> (curried) in the other, so the
 /// declaration and the call site disagree.
 Nat CurriedTvarInstantiation::ex(const Nat &x0_) {
-  return apply_all<std::function<Nat(Nat)>>(
-      List<std::function<std::function<Nat(Nat)>(std::function<Nat(Nat)>)>>::
-          cons([](std::function<Nat(Nat)> g) { return g; },
-               List<std::function<std::function<Nat(Nat)>(
-                   std::function<Nat(Nat)>)>>::nil()),
-      [](Nat x) { return Nat::s(x); })(x0_);
+  return apply_all<crane::fn<Nat(Nat)>>(
+      List<crane::fn<crane::fn<Nat(Nat)>(crane::fn<Nat(Nat)>)>>::cons(
+          [](crane::fn<Nat(Nat)> g) { return g; },
+          List<crane::fn<crane::fn<Nat(Nat)>(crane::fn<Nat(Nat)>)>>::nil()),
+      [](const Nat &x) { return Nat::s(x); })(x0_);
 }

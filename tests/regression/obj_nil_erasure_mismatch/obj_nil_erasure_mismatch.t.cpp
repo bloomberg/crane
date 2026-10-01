@@ -9,13 +9,13 @@
 // the heterogeneous `entries` list, the value-dependent action results of the
 // SAME Coq type `list (nat*nat)` erased to DIFFERENT C++ types: a "cons"
 // production erased to `std::deque<Prod<Nat,Nat>>` while the matching "nil"
-// production erased to `std::deque<Prod<std::any,std::any>>`.  A consumer that
+// production erased to `std::deque<Prod<crane::obj,crane::obj>>`.  A consumer that
 // any_cast<>s the value using one shape crashed with std::bad_any_cast on the
 // other.
 //
 // After the fix, every producer of an erased `list (nat*nat)` action erases to
-// the SAME canonical representation (`std::deque<std::any>`, each element a
-// std::any holding a Prod<any,any>), so a single any_cast shape works for both
+// the SAME canonical representation (`std::deque<crane::obj>`, each element a
+// crane::obj holding a Prod<any,any>), so a single any_cast shape works for both
 // the cons and nil productions of the same nonterminal.
 int main() {
   assert(entries.size() == 5);
@@ -27,13 +27,13 @@ int main() {
   assert(cons_entry.x == Sym::TOPSYM);
   assert(nil_entry.x == Sym::TOPSYM);
 
-  std::any cons_v = cons_entry.a1(Unit::TT);
-  std::any nil_v = nil_entry.a1(Unit::TT);
+  crane::obj cons_v = cons_entry.a1(Unit::TT);
+  crane::obj nil_v = nil_entry.a1(Unit::TT);
 
   // Both productions of the same nonterminal now erase to the SAME C++ type,
   // so the same any_cast shape succeeds for both -- no bad_any_cast.
-  auto cons_list = std::any_cast<std::deque<std::any>>(cons_v);
-  auto nil_list = std::any_cast<std::deque<std::any>>(nil_v);
+  auto cons_list = crane::any_cast<std::deque<crane::obj>>(cons_v);
+  auto nil_list = crane::any_cast<std::deque<crane::obj>>(nil_v);
 
   std::cout << "cons case: any_cast<deque<any>> succeeded, size="
             << cons_list.size() << std::endl;
@@ -46,9 +46,9 @@ int main() {
   // The single cons element unboxes to a Prod<any,any> pair; its components
   // unbox to Nat.  This confirms the concrete value survives the canonical
   // erasure.
-  auto pair0 = std::any_cast<Prod<std::any, std::any>>(cons_list[0]);
-  const Nat &fst = std::any_cast<const Nat &>(pair0.a0);
-  const Nat &snd = std::any_cast<const Nat &>(pair0.a1);
+  auto pair0 = crane::any_cast<Prod<crane::obj, crane::obj>>(cons_list[0]);
+  const Nat &fst = crane::any_cast<const Nat &>(pair0.a0);
+  const Nat &snd = crane::any_cast<const Nat &>(pair0.a1);
   auto nat_to_int = [](const Nat &n) {
     int acc = 0;
     const Nat *cur = &n;

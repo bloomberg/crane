@@ -5,8 +5,8 @@ SigSubset::head(const Sig<SigSubset::lst> &p) { // Precondition: match l with
   // | SigSubset.nil => False
   // | SigSubset.cons _ _ => True
   // end
-  return [=]() mutable {
-    auto &&_sv = [=]() mutable {
+  return [&]() {
+    auto &&_sv = [&]() {
       const auto &[x0] = p;
       return x0;
     }();

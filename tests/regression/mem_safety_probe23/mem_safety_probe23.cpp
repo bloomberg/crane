@@ -110,18 +110,18 @@ uint64_t MemSafetyProbe23::tree_size(
 /// t escapes because it is returned. Recursive calls on l and r (children).
 /// Loopifier must handle: owned param + pointer-safe children.
 std::pair<MemSafetyProbe23::tree, uint64_t> MemSafetyProbe23::sum_with_original(
-    MemSafetyProbe23::tree
-        t) { /// _Enter: captures varying parameters for each recursive call.
+    const MemSafetyProbe23::tree
+        &t) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
-    MemSafetyProbe23::tree t;
+    const MemSafetyProbe23::tree *t;
   };
 
   /// _Cont_Node: saves [a1, a2, t], resumes after recursive call, then
   /// processes rest.
   struct _Cont_Node {
     uint64_t a1;
-    std::shared_ptr<MemSafetyProbe23::tree> a2;
+    const MemSafetyProbe23::tree *a2;
     MemSafetyProbe23::tree t;
   };
 
@@ -136,39 +136,39 @@ std::pair<MemSafetyProbe23::tree, uint64_t> MemSafetyProbe23::sum_with_original(
   using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
   std::pair<MemSafetyProbe23::tree, uint64_t> _result{};
   crane::small_vector<_Frame> _stack;
-  _stack.emplace_back(_Enter{std::move(t)});
+  _stack.emplace_back(_Enter{&t});
   /// Loopified sum_with_original: _Enter -> _Cont_Node -> _Cont_Node_1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      MemSafetyProbe23::tree t = std::move(_f.t);
+      const MemSafetyProbe23::tree &t = *_f.t;
       if (std::holds_alternative<typename MemSafetyProbe23::tree::Leaf>(
-              t.v_mut())) {
+              t.v())) {
         _result = std::make_pair(tree::leaf(), UINT64_C(0));
       } else {
-        auto &[a0, a1, a2] =
-            std::get<typename MemSafetyProbe23::tree::Node>(t.v_mut());
-        _stack.emplace_back(_Cont_Node{a1, a2, t});
-        _stack.emplace_back(_Enter{*a0});
+        const auto &[a0, a1, a2] =
+            std::get<typename MemSafetyProbe23::tree::Node>(t.v());
+        _stack.emplace_back(_Cont_Node{a1, crane_raw(a2), t});
+        _stack.emplace_back(_Enter{crane_raw(a0)});
       }
     } else if (std::holds_alternative<_Cont_Node>(_frame)) {
       auto _f = std::move(std::get<_Cont_Node>(_frame));
       uint64_t a1 = _f.a1;
-      std::shared_ptr<MemSafetyProbe23::tree> a2 = std::move(_f.a2);
-      MemSafetyProbe23::tree t = std::move(_f.t);
+      const MemSafetyProbe23::tree &a2 = *_f.a2;
+      const MemSafetyProbe23::tree &t = std::move(_f.t);
       std::pair<MemSafetyProbe23::tree, uint64_t> pl = std::move(_result);
-      _stack.emplace_back(_Cont_Node_1{a1, std::move(pl), std::move(t)});
-      _stack.emplace_back(_Enter{*a2});
+      _stack.emplace_back(_Cont_Node_1{a1, std::move(pl), t});
+      _stack.emplace_back(_Enter{&a2});
     } else {
       auto _f = std::move(std::get<_Cont_Node_1>(_frame));
       uint64_t a1 = _f.a1;
       std::pair<MemSafetyProbe23::tree, uint64_t> pl = std::move(_f.pl);
-      MemSafetyProbe23::tree t = std::move(_f.t);
+      const MemSafetyProbe23::tree &t = std::move(_f.t);
       std::pair<MemSafetyProbe23::tree, uint64_t> pr = std::move(_result);
       _result = std::make_pair(
-          std::move(t), ((std::move(pl).second + a1) + std::move(pr).second));
+          t, ((std::move(pl).second + a1) + std::move(pr).second));
     }
   }
   return _result;
@@ -178,18 +178,18 @@ std::pair<MemSafetyProbe23::tree, uint64_t> MemSafetyProbe23::sum_with_original(
 /// Forces tree to be owned; two recursive calls on children.
 std::pair<MemSafetyProbe23::tree, MemSafetyProbe23::tree>
 MemSafetyProbe23::dup_and_double(
-    MemSafetyProbe23::tree
-        t) { /// _Enter: captures varying parameters for each recursive call.
+    const MemSafetyProbe23::tree
+        &t) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
-    MemSafetyProbe23::tree t;
+    const MemSafetyProbe23::tree *t;
   };
 
   /// _Cont_Node: saves [a1, a2, t], resumes after recursive call, then
   /// processes rest.
   struct _Cont_Node {
     uint64_t a1;
-    std::shared_ptr<MemSafetyProbe23::tree> a2;
+    const MemSafetyProbe23::tree *a2;
     MemSafetyProbe23::tree t;
   };
 
@@ -204,43 +204,43 @@ MemSafetyProbe23::dup_and_double(
   using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
   std::pair<MemSafetyProbe23::tree, MemSafetyProbe23::tree> _result{};
   crane::small_vector<_Frame> _stack;
-  _stack.emplace_back(_Enter{std::move(t)});
+  _stack.emplace_back(_Enter{&t});
   /// Loopified dup_and_double: _Enter -> _Cont_Node -> _Cont_Node_1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      MemSafetyProbe23::tree t = std::move(_f.t);
+      const MemSafetyProbe23::tree &t = *_f.t;
       if (std::holds_alternative<typename MemSafetyProbe23::tree::Leaf>(
-              t.v_mut())) {
+              t.v())) {
         _result = std::make_pair(tree::leaf(), tree::leaf());
       } else {
-        auto &[a0, a1, a2] =
-            std::get<typename MemSafetyProbe23::tree::Node>(t.v_mut());
-        _stack.emplace_back(_Cont_Node{a1, a2, t});
-        _stack.emplace_back(_Enter{*a0});
+        const auto &[a0, a1, a2] =
+            std::get<typename MemSafetyProbe23::tree::Node>(t.v());
+        _stack.emplace_back(_Cont_Node{a1, crane_raw(a2), t});
+        _stack.emplace_back(_Enter{crane_raw(a0)});
       }
     } else if (std::holds_alternative<_Cont_Node>(_frame)) {
       auto _f = std::move(std::get<_Cont_Node>(_frame));
       uint64_t a1 = _f.a1;
-      std::shared_ptr<MemSafetyProbe23::tree> a2 = std::move(_f.a2);
-      MemSafetyProbe23::tree t = std::move(_f.t);
+      const MemSafetyProbe23::tree &a2 = *_f.a2;
+      const MemSafetyProbe23::tree &t = std::move(_f.t);
       std::pair<MemSafetyProbe23::tree, MemSafetyProbe23::tree> pl =
           std::move(_result);
-      _stack.emplace_back(_Cont_Node_1{a1, std::move(pl), std::move(t)});
-      _stack.emplace_back(_Enter{*a2});
+      _stack.emplace_back(_Cont_Node_1{a1, std::move(pl), t});
+      _stack.emplace_back(_Enter{&a2});
     } else {
       auto _f = std::move(std::get<_Cont_Node_1>(_frame));
       uint64_t a1 = _f.a1;
       std::pair<MemSafetyProbe23::tree, MemSafetyProbe23::tree> pl =
           std::move(_f.pl);
-      MemSafetyProbe23::tree t = std::move(_f.t);
+      const MemSafetyProbe23::tree &t = std::move(_f.t);
       std::pair<MemSafetyProbe23::tree, MemSafetyProbe23::tree> pr =
           std::move(_result);
-      _result = std::make_pair(std::move(t), tree::node(std::move(pl).second,
-                                                        (a1 * UINT64_C(2)),
-                                                        std::move(pr).second));
+      _result =
+          std::make_pair(t, tree::node(std::move(pl).second, (a1 * UINT64_C(2)),
+                                       std::move(pr).second));
     }
   }
   return _result;
@@ -482,8 +482,9 @@ std::pair<uint64_t, uint64_t> MemSafetyProbe23::interleaved_ops(
 /// for deeply nested value types.
 uint64_t MemSafetyProbe23::flatten_tree_of_trees(
     const MemSafetyProbe23::tree &t,
-    MemSafetyProbe23::tree inner) { /// _Enter: captures varying parameters for
-                                    /// each recursive call.
+    const MemSafetyProbe23::tree
+        &inner) { /// _Enter: captures varying parameters for each recursive
+                  /// call.
 
   struct _Enter {
     MemSafetyProbe23::tree inner;
@@ -505,24 +506,24 @@ uint64_t MemSafetyProbe23::flatten_tree_of_trees(
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
-  _stack.emplace_back(_Enter{std::move(inner), &t});
+  _stack.emplace_back(_Enter{inner, &t});
   /// Loopified flatten_tree_of_trees: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      MemSafetyProbe23::tree inner = std::move(_f.inner);
+      const MemSafetyProbe23::tree &inner = std::move(_f.inner);
       const MemSafetyProbe23::tree &t = *_f.t;
       if (std::holds_alternative<typename MemSafetyProbe23::tree::Leaf>(
               t.v())) {
-        _result = tree_sum(std::move(inner));
+        _result = tree_sum(inner);
       } else {
         const auto &[a0, a1, a2] =
             std::get<typename MemSafetyProbe23::tree::Node>(t.v());
         MemSafetyProbe23::tree new_inner = tree::node(inner, a1, tree::leaf());
         _stack.emplace_back(_After_Node{std::move(new_inner), crane_raw(a0)});
-        _stack.emplace_back(_Enter{std::move(inner), crane_raw(a2)});
+        _stack.emplace_back(_Enter{inner, crane_raw(a2)});
       }
     } else if (std::holds_alternative<_After_Node>(_frame)) {
       auto _f = std::move(std::get<_After_Node>(_frame));
@@ -541,7 +542,7 @@ uint64_t MemSafetyProbe23::flatten_tree_of_trees(
 /// Forces t to NOT be pointer-safe. The After frame saves
 /// state for the child-based call.
 uint64_t MemSafetyProbe23::mixed_recurse(
-    MemSafetyProbe23::tree t,
+    const MemSafetyProbe23::tree &t,
     uint64_t
         n) { /// _Enter: captures varying parameters for each recursive call.
 
@@ -565,7 +566,7 @@ uint64_t MemSafetyProbe23::mixed_recurse(
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
-  _stack.emplace_back(_Enter{n, std::move(t)});
+  _stack.emplace_back(_Enter{n, t});
   /// Loopified mixed_recurse: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -573,17 +574,17 @@ uint64_t MemSafetyProbe23::mixed_recurse(
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
       uint64_t n = _f.n;
-      MemSafetyProbe23::tree t = std::move(_f.t);
+      const MemSafetyProbe23::tree &t = std::move(_f.t);
       if (n <= 0) {
-        _result = tree_sum(std::move(t));
+        _result = tree_sum(t);
       } else {
         uint64_t n_ = n - 1;
         if (std::holds_alternative<typename MemSafetyProbe23::tree::Leaf>(
-                t.v_mut())) {
+                t.v())) {
           _result = UINT64_C(0);
         } else {
-          auto &[a0, a1, a2] =
-              std::get<typename MemSafetyProbe23::tree::Node>(t.v_mut());
+          const auto &[a0, a1, a2] =
+              std::get<typename MemSafetyProbe23::tree::Node>(t.v());
           _stack.emplace_back(_After_Node{n_, tree::node(t, a1, tree::leaf())});
           _stack.emplace_back(_Enter{n_, *a2});
         }

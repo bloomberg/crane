@@ -39,16 +39,15 @@ std::string EffectGetlineStress::get_nth_line(uint64_t n) {
 }
 
 /// 3. Recursive function that uses get_line in a loop
-List<std::string> EffectGetlineStress::read_lines(uint64_t n,
-                                                  List<std::string> acc) {
+List<std::string>
+EffectGetlineStress::read_lines(uint64_t n, const List<std::string> &acc) {
   if (n <= 0) {
     return acc;
   } else {
     uint64_t n_ = n - 1;
     std::string line;
     std::getline(std::cin, line);
-    return read_lines(n_,
-                      List<std::string>::cons(std::move(line), std::move(acc)));
+    return read_lines(n_, List<std::string>::cons(std::move(line), acc));
   }
 }
 

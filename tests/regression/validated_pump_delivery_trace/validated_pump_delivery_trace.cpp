@@ -146,7 +146,7 @@ bool ValidatedPumpDeliveryTraceCase::history_valid(
 uint64_t ValidatedPumpDeliveryTraceCase::bilinear_iob_fraction(
     uint64_t elapsed, uint64_t dia,
     ValidatedPumpDeliveryTraceCase::InsulinType itype) {
-  uint64_t pt = peak_time(itype, dia);
+  ValidatedPumpDeliveryTraceCase::Minutes pt = peak_time(itype, dia);
   if (dia == UINT64_C(0)) {
     return UINT64_C(0);
   } else {
@@ -466,14 +466,17 @@ ValidatedPumpDeliveryTraceCase::calculate_precision_bolus(
   } else {
     eff_bg = input.pi_current_bg;
   }
-  uint64_t carb =
+  ValidatedPumpDeliveryTraceCase::Insulin_twentieth carb =
       carb_bolus_twentieths(input.pi_carbs_g.grams_val, activity_icr);
-  uint64_t carb_adj = apply_reverse_correction_twentieths(
-      carb, eff_bg, params.prec_target_bg, activity_isf);
-  uint64_t corr = correction_twentieths_full(
-      input.pi_now, std::move(eff_bg), params.prec_target_bg, activity_isf);
-  uint64_t iob = total_bilinear_iob(input.pi_now, input.pi_bolus_history,
-                                    params.prec_dia, params.prec_insulin_type);
+  ValidatedPumpDeliveryTraceCase::Insulin_twentieth carb_adj =
+      apply_reverse_correction_twentieths(std::move(carb), eff_bg,
+                                          params.prec_target_bg, activity_isf);
+  ValidatedPumpDeliveryTraceCase::Insulin_twentieth corr =
+      correction_twentieths_full(input.pi_now, std::move(eff_bg),
+                                 params.prec_target_bg, activity_isf);
+  ValidatedPumpDeliveryTraceCase::Insulin_twentieth iob =
+      total_bilinear_iob(input.pi_now, input.pi_bolus_history, params.prec_dia,
+                         params.prec_insulin_type);
   uint64_t raw = (carb_adj + corr);
   if (raw <= iob) {
     return UINT64_C(0);
@@ -563,9 +566,10 @@ ValidatedPumpDeliveryTraceCase::validated_precision_bolus(
                 if (input.pi_current_bg.mg_dL_val < BG_HYPO) {
                   return PrecisionResult::precerror(prec_error_hypo);
                 } else {
-                  uint64_t iob = total_bilinear_iob(
-                      input.pi_now, input.pi_bolus_history, params.prec_dia,
-                      params.prec_insulin_type);
+                  ValidatedPumpDeliveryTraceCase::Insulin_twentieth iob =
+                      total_bilinear_iob(input.pi_now, input.pi_bolus_history,
+                                         params.prec_dia,
+                                         params.prec_insulin_type);
                   if ((iob_dangerously_high(iob) &&
                        input.pi_carbs_g.grams_val == UINT64_C(0))) {
                     return PrecisionResult::precerror(prec_error_iob_high);
@@ -574,7 +578,7 @@ ValidatedPumpDeliveryTraceCase::validated_precision_bolus(
                         input.pi_bolus_history.template fold_left<uint64_t>(
                             [=](uint64_t acc,
                                 const ValidatedPumpDeliveryTraceCase::BolusEvent
-                                    &e) mutable {
+                                    &e) -> uint64_t {
                               if (((((input.pi_now - UINT64_C(1440)) >
                                              input.pi_now
                                          ? 0
@@ -598,8 +602,10 @@ ValidatedPumpDeliveryTraceCase::validated_precision_bolus(
                       return PrecisionResult::precerror(
                           prec_error_tdd_exceeded);
                     } else {
-                      uint64_t raw = calculate_precision_bolus(input, params);
-                      uint64_t tdd_capped;
+                      ValidatedPumpDeliveryTraceCase::Insulin_twentieth raw =
+                          calculate_precision_bolus(input, params);
+                      ValidatedPumpDeliveryTraceCase::Insulin_twentieth
+                          tdd_capped;
                       if ((raw + tdd_current) <= tdd_limit) {
                         tdd_capped = raw;
                       } else {
@@ -625,15 +631,18 @@ ValidatedPumpDeliveryTraceCase::validated_precision_bolus(
                               default_config, std::move(eff_bg), iob,
                               input.pi_carbs_g.grams_val, activity_isf,
                               tdd_capped);
-                      uint64_t suspended = apply_suspend(
-                          tdd_capped, std::move(suspend_decision));
-                      uint64_t adult_capped = cap_twentieths(suspended);
-                      uint64_t capped;
+                      ValidatedPumpDeliveryTraceCase::Insulin_twentieth
+                          suspended =
+                              apply_suspend(std::move(tdd_capped),
+                                            std::move(suspend_decision));
+                      ValidatedPumpDeliveryTraceCase::Insulin_twentieth
+                          adult_capped = cap_twentieths(std::move(suspended));
+                      ValidatedPumpDeliveryTraceCase::Insulin_twentieth capped;
                       if (std::move(input).pi_weight_kg.has_value()) {
                         const uint64_t &w = *std::move(input).pi_weight_kg;
-                        capped = cap_pediatric(adult_capped, w);
+                        capped = cap_pediatric(std::move(adult_capped), w);
                       } else {
-                        capped = adult_capped;
+                        capped = std::move(adult_capped);
                       }
                       bool was_modified = !(raw == capped);
                       return PrecisionResult::precok(capped, was_modified);

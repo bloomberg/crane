@@ -1,9 +1,9 @@
 #ifndef INCLUDED_OPTION_CLOSURE_ESCAPE
 #define INCLUDED_OPTION_CLOSURE_ESCAPE
 
+#include "fn.h"
 #include "small_vector.h"
 #include <atomic>
-#include <functional>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -46,10 +46,10 @@ struct OptionClosureEscape {
       crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a2) {
+          if (_alt->a2 && _alt->a2.use_count() == 1) {
             _stack.push_back(std::move(_alt->a2));
           }
         }
@@ -106,27 +106,26 @@ struct OptionClosureEscape {
   /// BUG: pair_escape stores a & lambda in a pair.
   /// The lambda captures parameter t by reference.
   /// When pair_escape returns, t is destroyed → dangling.
-  static std::pair<std::function<uint64_t(uint64_t)>, uint64_t>
-  pair_escape(tree t);
+  static std::pair<crane::fn<uint64_t(uint64_t)>, uint64_t> pair_escape(tree t);
   /// Call pair_escape, then call it again to clobber the stack,
   /// then use the first result's closure.
   static inline const uint64_t bug_pair_clobber = []() {
     tree t1 = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
                          UINT64_C(20),
                          tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
-    std::pair<std::function<uint64_t(uint64_t)>, uint64_t> p1 =
+    std::pair<crane::fn<uint64_t(uint64_t)>, uint64_t> p1 =
         pair_escape(std::move(t1));
     return std::move(p1).first(UINT64_C(0));
   }();
   /// BUG: match_pair — & captures _args from visit scope.
-  static std::pair<std::function<uint64_t(uint64_t)>, uint64_t>
+  static std::pair<crane::fn<uint64_t(uint64_t)>, uint64_t>
   match_pair(const tree &t);
 
   static inline const uint64_t bug_match_pair_clobber = []() {
     tree t1 = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
                          UINT64_C(20),
                          tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
-    std::pair<std::function<uint64_t(uint64_t)>, uint64_t> p1 =
+    std::pair<crane::fn<uint64_t(uint64_t)>, uint64_t> p1 =
         match_pair(std::move(t1));
     return std::move(p1).first(UINT64_C(0));
   }();

@@ -5,7 +5,7 @@
 // Regression test for the abstract-module-type nil-erasure bug: TheParser::parse
 // let-binds `sk0 = (Fr [] tt [x], [])` where the outer `[]` is a `list frame`
 // nil seen ABSTRACTLY (through module type `T`). Crane previously collapsed it to
-// std::deque<std::any>{} instead of std::deque<typename D::Defs::frame>{}, so the
+// std::deque<crane::obj>{} instead of std::deque<typename D::Defs::frame>{}, so the
 // template body failed to compile:
 //   no viable conversion from 'pair<frame, deque<any>>'
 //                          to 'pair<frame, deque<frame>>'

@@ -193,7 +193,7 @@ Crane Extract Skip mkGlobRef.
 Crane Extract Skip GlobRefToIx.
 Crane Extract Inlined Constant GlobRef => "%t1".
 Crane Extract Inlined Constant newGlobRef => "(_crane_globals[%a0] = %a1, %a0)" From "crane_globals.h".
-Crane Extract Inlined Constant readGlobRef => "std::any_cast<%t2>(_crane_globals.at(%a1))" From "crane_globals.h".
+Crane Extract Inlined Constant readGlobRef => "crane::any_cast<%t2>(_crane_globals.at(%a1))" From "crane_globals.h".
 Crane Extract Inlined Constant writeGlobRef => "_crane_globals[%a1] = %a2" From "crane_globals.h".
 
 

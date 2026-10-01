@@ -2,10 +2,11 @@
 #define INCLUDED_ROCQ_BUG_13581
 
 #include "crane_fn.h"
+#include "fn.h"
+#include "obj.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
-#include <functional>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -45,22 +46,18 @@ public:
 
   // MANIPULATORS
   ~Nat() {
-    crane::small_vector<std::shared_ptr<Nat>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<Nat> {
       if (auto *_alt = std::get_if<S>(&_v)) {
-        if (_alt->a0) {
-          _stack.push_back(std::move(_alt->a0));
+        if (_alt->a0 && _alt->a0.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a0);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<Nat> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -99,15 +96,25 @@ public:
 
 struct RocqBug13581 {
   template <typename T0> struct mixin_of {
-    std::function<T0(T0)> mixin_f;
+    crane::fn<T0(T0)> mixin_f;
+
+    // ACCESSORS
+    template <typename _U> operator mixin_of<_U>() const {
+      return {crane_convert<crane::fn<_U(_U)>>(mixin_f)};
+    }
   };
 
   static inline const mixin_of<Nat> d =
       mixin_of<Nat>{[](Nat x0) { return x0; }};
 
   template <typename T0> struct R {
-    std::function<T0(T0)> g;
+    crane::fn<T0(T0)> g;
     Nat x;
+
+    // ACCESSORS
+    template <typename _U> operator R<_U>() const {
+      return {crane_convert<crane::fn<_U(_U)>>(g), x};
+    }
   };
 
   template <typename T1>
@@ -141,14 +148,17 @@ struct RocqBug13581 {
 
     explicit I(D _v) : v_(std::move(_v)) {}
 
-    template <typename _U> I(const I<_U> &_other) {
-      if (std::holds_alternative<typename I<_U>::C>(_other.v())) {
-        this->v_ = C{};
-      } else {
-        const auto &[a0] = std::get<typename I<_U>::D>(_other.v());
-        this->v_ = D{(a0 ? std::make_shared<J<T>>(*a0) : nullptr)};
-      }
-    }
+    template <typename _U>
+    I(const I<_U> &_other)
+        : v_([&]() -> variant_t {
+            if (std::holds_alternative<typename I<_U>::C>(_other.v())) {
+              return C{};
+            } else {
+              const auto &[a0] = std::get<typename I<_U>::D>(_other.v());
+              return D{(a0 ? std::make_shared<J<T>>(crane_convert<J<T>>(*a0))
+                           : nullptr)};
+            }
+          }()) {}
 
     static I<T> c() { return I<T>(C{}); }
 
@@ -158,10 +168,10 @@ struct RocqBug13581 {
 
     // MANIPULATORS
     ~I() {
-      crane::small_vector<std::any> _stack = {};
+      crane::small_vector<crane::obj> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<D>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
         }
@@ -170,17 +180,17 @@ struct RocqBug13581 {
       while (!_stack.empty()) {
         auto _cur = std::move(_stack.back());
         _stack.pop_back();
-        if (auto *_sp = std::any_cast<std::shared_ptr<I<T>>>(&_cur)) {
+        if (auto *_sp = crane::any_cast<std::shared_ptr<I<T>>>(&_cur)) {
           if (*_sp && (*_sp).use_count() == 1) {
             std::atomic_thread_fence(std::memory_order_acquire);
             _drain_self((*_sp)->v_mut());
           }
         } else {
-          if (auto *_sp = std::any_cast<std::shared_ptr<J<T>>>(&_cur)) {
+          if (auto *_sp = crane::any_cast<std::shared_ptr<J<T>>>(&_cur)) {
             if (*_sp && (*_sp).use_count() == 1) {
               auto &_pv = (*_sp)->v_mut();
               if (auto *_alt = std::get_if<typename J<T>::E>(&_pv)) {
-                if (_alt->a0) {
+                if (_alt->a0 && _alt->a0.use_count() == 1) {
                   _stack.push_back(std::move(_alt->a0));
                 }
               }
@@ -219,10 +229,13 @@ struct RocqBug13581 {
 
     explicit J(E _v) : v_(std::move(_v)) {}
 
-    template <typename _U> J(const J<_U> &_other) {
-      const auto &[a0] = std::get<typename J<_U>::E>(_other.v());
-      this->v_ = E{(a0 ? std::make_shared<I<T>>(*a0) : nullptr)};
-    }
+    template <typename _U>
+    J(const J<_U> &_other)
+        : v_([&]() -> variant_t {
+            const auto &[a0] = std::get<typename J<_U>::E>(_other.v());
+            return E{(a0 ? std::make_shared<I<T>>(crane_convert<I<T>>(*a0))
+                         : nullptr)};
+          }()) {}
 
     static J<T> e(I<T> a0) {
       return J<T>(E{std::make_shared<I<T>>(std::move(a0))});
@@ -230,10 +243,10 @@ struct RocqBug13581 {
 
     // MANIPULATORS
     ~J() {
-      crane::small_vector<std::any> _stack = {};
+      crane::small_vector<crane::obj> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<E>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
         }
@@ -242,17 +255,17 @@ struct RocqBug13581 {
       while (!_stack.empty()) {
         auto _cur = std::move(_stack.back());
         _stack.pop_back();
-        if (auto *_sp = std::any_cast<std::shared_ptr<J<T>>>(&_cur)) {
+        if (auto *_sp = crane::any_cast<std::shared_ptr<J<T>>>(&_cur)) {
           if (*_sp && (*_sp).use_count() == 1) {
             std::atomic_thread_fence(std::memory_order_acquire);
             _drain_self((*_sp)->v_mut());
           }
         } else {
-          if (auto *_sp = std::any_cast<std::shared_ptr<I<T>>>(&_cur)) {
+          if (auto *_sp = crane::any_cast<std::shared_ptr<I<T>>>(&_cur)) {
             if (*_sp && (*_sp).use_count() == 1) {
               auto &_pv = (*_sp)->v_mut();
               if (auto *_alt = std::get_if<typename I<T>::D>(&_pv)) {
-                if (_alt->a0) {
+                if (_alt->a0 && _alt->a0.use_count() == 1) {
                   _stack.push_back(std::move(_alt->a0));
                 }
               }

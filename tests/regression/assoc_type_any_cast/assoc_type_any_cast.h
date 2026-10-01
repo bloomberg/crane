@@ -2,6 +2,7 @@
 #define INCLUDED_ASSOC_TYPE_ANY_CAST
 
 #include "crane_fn.h"
+#include "obj.h"
 #include <any>
 #include <concepts>
 #include <utility>
@@ -18,7 +19,7 @@ concept Wrap = requires {
 };
 
 struct AssocTypeAnyCast {
-  using W = std::any;
+  using W = crane::obj;
 
   struct PairWrap {
     using W = std::pair<uint64_t, uint64_t>;

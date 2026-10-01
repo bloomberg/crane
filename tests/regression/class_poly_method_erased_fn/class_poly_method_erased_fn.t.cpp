@@ -1,6 +1,6 @@
 // A typeclass method polymorphic in its own type argument
 // (`forall A, (A -> A) -> A -> A`): the instance takes the erased
-// `std::function<std::any(std::any)>`, so the projection must adapt the
+// `std::function<crane::obj(crane::obj)>`, so the projection must adapt the
 // caller's concrete closure to it.
 #include "class_poly_method_erased_fn.h"
 

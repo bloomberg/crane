@@ -57,10 +57,10 @@ struct MemSafetyProbe23 {
       crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a2) {
+          if (_alt->a2 && _alt->a2.use_count() == 1) {
             _stack.push_back(std::move(_alt->a2));
           }
         }
@@ -109,7 +109,7 @@ struct MemSafetyProbe23 {
     /// _Combine_Node: receives partial results, combines with _result from
     /// final call.
     struct _Combine_Node {
-      std::decay_t<T1> _result;
+      T1 _result;
       tree a2;
       uint64_t a1;
       tree a0;
@@ -169,7 +169,7 @@ struct MemSafetyProbe23 {
     /// _Combine_Node: receives partial results, combines with _result from
     /// final call.
     struct _Combine_Node {
-      std::decay_t<T1> _result;
+      T1 _result;
       tree a2;
       uint64_t a1;
       tree a0;
@@ -212,7 +212,7 @@ struct MemSafetyProbe23 {
   /// TEST 1: Return the ORIGINAL tree alongside recursive child processing.
   /// t escapes because it is returned. Recursive calls on l and r (children).
   /// Loopifier must handle: owned param + pointer-safe children.
-  static std::pair<tree, uint64_t> sum_with_original(tree t);
+  static std::pair<tree, uint64_t> sum_with_original(const tree &t);
   static inline const uint64_t test_sum_with_original = []() {
     std::pair<tree, uint64_t> r = sum_with_original(tree::node(
         tree::node(tree::leaf(), UINT64_C(3), tree::leaf()), UINT64_C(7),
@@ -221,7 +221,7 @@ struct MemSafetyProbe23 {
   }();
   /// TEST 2: Return a PAIR of the original tree and a transformed copy.
   /// Forces tree to be owned; two recursive calls on children.
-  static std::pair<tree, tree> dup_and_double(tree t);
+  static std::pair<tree, tree> dup_and_double(const tree &t);
   static inline const uint64_t test_dup_and_double = []() {
     std::pair<tree, tree> r = dup_and_double(tree::node(
         tree::node(tree::leaf(), UINT64_C(3), tree::leaf()), UINT64_C(5),
@@ -268,7 +268,7 @@ struct MemSafetyProbe23 {
   }();
   /// TEST 6: Nested tree type — tree of trees. Tests clone correctness
   /// for deeply nested value types.
-  static uint64_t flatten_tree_of_trees(const tree &t, tree inner);
+  static uint64_t flatten_tree_of_trees(const tree &t, const tree &inner);
   static inline const uint64_t test_flatten_tree_of_trees =
       flatten_tree_of_trees(
           tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
@@ -279,7 +279,7 @@ struct MemSafetyProbe23 {
   /// with t embedded AND another takes a child of t.
   /// Forces t to NOT be pointer-safe. The After frame saves
   /// state for the child-based call.
-  static uint64_t mixed_recurse(tree t, uint64_t n);
+  static uint64_t mixed_recurse(const tree &t, uint64_t n);
   static inline const uint64_t test_mixed_recurse = mixed_recurse(
       tree::node(tree::leaf(), UINT64_C(5), tree::leaf()), UINT64_C(1));
   /// TEST 8: Three-way split: function returns original tree AND

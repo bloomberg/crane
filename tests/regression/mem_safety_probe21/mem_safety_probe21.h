@@ -2,9 +2,9 @@
 #define INCLUDED_MEM_SAFETY_PROBE21
 
 #include "crane_fn.h"
+#include "fn.h"
 #include "small_vector.h"
 #include <atomic>
-#include <functional>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -56,10 +56,10 @@ struct MemSafetyProbe21 {
       crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a2) {
+          if (_alt->a2 && _alt->a2.use_count() == 1) {
             _stack.push_back(std::move(_alt->a2));
           }
         }
@@ -108,7 +108,7 @@ struct MemSafetyProbe21 {
     /// _Combine_Node: receives partial results, combines with _result from
     /// final call.
     struct _Combine_Node {
-      std::decay_t<T1> _result;
+      T1 _result;
       tree a2;
       uint64_t a1;
       tree a0;
@@ -168,7 +168,7 @@ struct MemSafetyProbe21 {
     /// _Combine_Node: receives partial results, combines with _result from
     /// final call.
     struct _Combine_Node {
-      std::decay_t<T1> _result;
+      T1 _result;
       tree a2;
       uint64_t a1;
       tree a0;
@@ -210,12 +210,12 @@ struct MemSafetyProbe21 {
   /// TEST 1: Tail-recursive function where the recursive call takes
   /// a constructed tree. The loopifier must store the new tree
   /// somewhere that outlives the iteration.
-  static uint64_t grow_and_sum(tree t, uint64_t n);
+  static uint64_t grow_and_sum(const tree &t, uint64_t n);
   static inline const uint64_t test_grow_and_sum =
       grow_and_sum(tree::leaf(), UINT64_C(3));
   /// TEST 2: Non-tail recursive with constructed tree argument.
   /// The recursive call creates a new tree AND uses the original.
-  static uint64_t double_grow(tree t, uint64_t n);
+  static uint64_t double_grow(const tree &t, uint64_t n);
   static inline const uint64_t test_double_grow = double_grow(
       tree::node(tree::leaf(), UINT64_C(5), tree::leaf()), UINT64_C(2));
   /// TEST 3: Two recursive calls, one with original tree, one with
@@ -225,7 +225,7 @@ struct MemSafetyProbe21 {
       tree::node(tree::leaf(), UINT64_C(10), tree::leaf()), UINT64_C(2));
   /// TEST 4: Recursive call where the tree argument is built from
   /// MULTIPLE constructor calls with the original tree embedded.
-  static uint64_t embed_grow(tree t, uint64_t n);
+  static uint64_t embed_grow(const tree &t, uint64_t n);
   static inline const uint64_t test_embed_grow =
       embed_grow(tree::leaf(), UINT64_C(2));
   /// TEST 5: Accumulator pattern with tree building.
@@ -236,11 +236,11 @@ struct MemSafetyProbe21 {
   /// TEST 6: CPS-like pattern where the continuation builds a tree.
   static uint64_t cps_sum(
       const tree &t,
-      std::function<uint64_t(uint64_t)>
+      crane::fn<uint64_t(uint64_t)>
           k) { /// _Enter: captures varying parameters for each recursive call.
 
     struct _Enter {
-      std::function<uint64_t(uint64_t)> k;
+      crane::fn<uint64_t(uint64_t)> k;
       const tree *t;
     };
 
@@ -253,7 +253,7 @@ struct MemSafetyProbe21 {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       auto _f = std::move(std::get<_Enter>(_frame));
-      std::function<uint64_t(uint64_t)> k = std::move(_f.k);
+      crane::fn<uint64_t(uint64_t)> k = std::move(_f.k);
       const tree &t = *_f.t;
       if (std::holds_alternative<typename tree::Leaf>(t.v())) {
         _result = k(UINT64_C(0));
@@ -261,9 +261,9 @@ struct MemSafetyProbe21 {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v());
         const tree &a0_value = *a0;
         const tree &a2_value = *a2;
-        _stack.emplace_back(_Enter{[=](uint64_t lsum) mutable {
+        _stack.emplace_back(_Enter{[=](uint64_t lsum) {
                                      return cps_sum(
-                                         a2_value, [=](uint64_t rsum) mutable {
+                                         a2_value, [=](uint64_t rsum) {
                                            return k(((lsum + a1) + rsum));
                                          });
                                    },
@@ -280,12 +280,12 @@ struct MemSafetyProbe21 {
               [](uint64_t n) { return n; });
   /// TEST 7: Mutually-referencing recursive call with tree
   /// construction at each level.
-  static uint64_t weave(tree t1, tree t2, uint64_t n);
+  static uint64_t weave(const tree &t1, const tree &t2, uint64_t n);
   static inline const uint64_t test_weave =
       weave(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
             tree::node(tree::leaf(), UINT64_C(2), tree::leaf()), UINT64_C(2));
   /// TEST 8: Deep nesting with tree_sum at each level before recursion.
-  static uint64_t sum_and_grow(tree t, uint64_t n);
+  static uint64_t sum_and_grow(const tree &t, uint64_t n);
   static inline const uint64_t test_sum_and_grow = sum_and_grow(
       tree::node(tree::leaf(), UINT64_C(1), tree::leaf()), UINT64_C(3));
 };

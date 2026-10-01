@@ -2,9 +2,9 @@
 #define INCLUDED_MEM_SAFETY_PROBE12
 
 #include "crane_fn.h"
+#include "fn.h"
+#include "obj.h"
 #include <any>
-#include <functional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -13,31 +13,31 @@ struct MemSafetyProbe12 {
   /// ind_nparams = 0, so all field types become std::any.
   struct wrap {
     // DATA
-    std::any a;
+    crane::obj a;
 
     // ACCESSORS
     wrap clone() const { return {a}; }
 
     // CREATORS
-    static wrap wrap0(std::any a) { return {std::move(a)}; }
+    static wrap wrap0(crane::obj a) { return {std::move(a)}; }
   };
 
-  template <typename T1, typename T2, typename F0>
+  template <typename T1, typename T2 = void, typename F0>
   static T1 wrap_rect(F0 &&f, const wrap &w) {
     const auto &[a0] = w;
-    return std::any_cast<T1>(crane_call_erased(f, std::any_cast<T2>(a0)));
+    return crane_any_cast<T1>(crane_call_erased(f, crane_any_cast<T2>(a0)));
   }
 
-  template <typename T1, typename T2, typename F0>
+  template <typename T1, typename T2 = void, typename F0>
   static T1 wrap_rec(F0 &&f, const wrap &w) {
     const auto &[a0] = w;
-    return std::any_cast<T1>(crane_call_erased(f, std::any_cast<T2>(a0)));
+    return crane_any_cast<T1>(crane_call_erased(f, crane_any_cast<T2>(a0)));
   }
 
   /// Unwrap extracts the value from wrap A.
   template <typename T1> static T1 unwrap(const wrap &w) {
     const auto &[a0] = w;
-    return std::any_cast<T1>(a0);
+    return crane_any_cast<T1>(a0);
   }
 
   /// TEST 1: Pack a NAT — should work since nat = unsigned int.
@@ -53,7 +53,7 @@ struct MemSafetyProbe12 {
   static wrap pack_fn_let(uint64_t base);
   static inline const uint64_t test_pack_fn_let = []() {
     wrap w = pack_fn_let(UINT64_C(10));
-    return unwrap<std::function<uint64_t(uint64_t)>>(std::move(w))(UINT64_C(5));
+    return unwrap<crane::fn<uint64_t(uint64_t)>>(std::move(w))(UINT64_C(5));
   }();
   /// TEST 4: Pack a DIRECT lambda (no let-binding).
   /// Wrap (nat -> nat) (fun x => x + base)
@@ -62,24 +62,19 @@ struct MemSafetyProbe12 {
   static wrap pack_fn_direct(uint64_t base);
   static inline const uint64_t test_pack_fn_direct = []() {
     wrap w = pack_fn_direct(UINT64_C(10));
-    return unwrap<std::function<uint64_t(uint64_t)>>(std::move(w))(UINT64_C(5));
+    return unwrap<crane::fn<uint64_t(uint64_t)>>(std::move(w))(UINT64_C(5));
   }();
 
   /// TEST 5: Pack a composed closure (let-bound, safe path).
-  template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
-  static wrap pack_composed(F0 &&f, uint64_t base) {
-    std::function<uint64_t(uint64_t)> g = [=](uint64_t x) mutable {
-      return (f(x) + base);
-    };
+  static wrap pack_composed(crane::fn<uint64_t(uint64_t)> f, uint64_t base) {
+    crane::fn<uint64_t(uint64_t)> g = [=](uint64_t x) { return (f(x) + base); };
     return wrap::wrap0(std::move(g));
   }
 
   static inline const uint64_t test_pack_composed = []() {
     wrap w = pack_composed([](uint64_t x) { return (x * UINT64_C(2)); },
                            UINT64_C(5));
-    return unwrap<std::function<uint64_t(uint64_t)>>(std::move(w))(
-        UINT64_C(10));
+    return unwrap<crane::fn<uint64_t(uint64_t)>>(std::move(w))(UINT64_C(10));
   }();
   /// TEST 6: Multiple wraps and unwraps.
   static inline const uint64_t test_multi_wrap = []() {

@@ -65,7 +65,7 @@ MemSafetyProbe18::fold_left_tree(const MemSafetyProbe18::mylist<uint64_t> &l,
 /// TEST 8: Nested constructor building: build a list of trees
 /// using the same tree in different positions.
 MemSafetyProbe18::mylist<MemSafetyProbe18::tree>
-MemSafetyProbe18::build_tree_list(MemSafetyProbe18::tree t, uint64_t n) {
+MemSafetyProbe18::build_tree_list(const MemSafetyProbe18::tree &t, uint64_t n) {
   std::shared_ptr<MemSafetyProbe18::mylist<MemSafetyProbe18::tree>> _head{};
   std::shared_ptr<MemSafetyProbe18::mylist<MemSafetyProbe18::tree>> *_write =
       &_head;

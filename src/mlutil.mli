@@ -25,6 +25,12 @@ val reset_meta_count : unit -> unit
 (** Create a fresh meta variable. *)
 val new_meta : 'a -> ml_type
 
+(** Apply a type to arguments, contracting the application when the head is
+    known. A head that carries placeholders -- an eta-expanded constructor, or
+    a type-level lambda whose binder extraction could not name -- has them
+    filled rather than extended. *)
+val apply_ml_type : ml_type -> ml_type list -> ml_type
+
 (** Substitute type variables using a list of types.
     @param l replacement types for [Tvar 1], [Tvar 2], ... in order
     @param t the ML type to substitute into *)
@@ -114,6 +120,22 @@ val type_mem_kn : MutInd.t -> ml_type -> bool
     @return the largest [i] such that [Tvar (Schematic, i)] occurs in [t], or
             [0] if none does.  [Rigid] nodes are not considered. *)
 val type_maxvar : ml_type -> int
+
+(** Whether a type carries a [Tunknown] hole -- the spelling extraction gives a
+    type-level lambda, whose binder is where the hole is.  See
+    {!fill_placeholders}. *)
+val type_has_hole : ml_type -> bool
+
+(** Whether the arguments of an application carry a hole past their trailing
+    run of placeholders.  That run is eta-expansion, which the next argument
+    replaces; a hole anywhere else is the binder of a type-level lambda --
+    [fun Z => EOU (MaybePoison Z)] arrives as [EOU (MaybePoison _)] -- and
+    applying it fills every occurrence. *)
+val writes_binder : ml_type list -> bool
+
+(** [fill_type_hole a t] is [t] with its [Tunknown] holes filled by [a]: the
+    type-level lambda {!type_has_hole} recognises, applied to [a]. *)
+val fill_type_hole : ml_type -> ml_type -> ml_type
 
 (** Decompose an ML type into a list of argument types and a result type.
     @return [(args, result)] where [args] are the curried parameter types
@@ -309,7 +331,12 @@ val has_unknown : ml_type -> bool
     erased to [Tunknown], using the type [a] is known to have. Only erased
     annotations are touched, and only where the context supplies something
     better. *)
-val recover_erased_types : ml_type -> ml_ast -> ml_ast
+val recover_erased_types :
+  ?only:(ml_type -> bool) ->
+  ?refine_only:bool ->
+  ml_type ->
+  ml_ast ->
+  ml_ast
 
 (** Map a function over all immediate subterms with a binding-depth counter.
     @param f   the transformation; receives the current depth and the child term
@@ -358,6 +385,12 @@ val dump_unused_vars : ml_ast -> ml_ast
 
 (** Normalize an ML term by beta-reduction and simplification. *)
 val normalize : ml_ast -> ml_ast
+
+(** [apply_eta_args f args] is [f] applied to [args], with the application
+    placed where [f] produces its value rather than wrapped around [f] -- for
+    callers that build an application after simplification has already run,
+    such as eta-expansion to a declaration's arity. *)
+val apply_eta_args : ml_ast -> ml_ast list -> ml_ast
 
 (** Optimize fixpoint expressions. *)
 val optimize_fix : ml_ast -> ml_ast

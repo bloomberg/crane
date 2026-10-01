@@ -13,21 +13,21 @@
 //
 //  1. For the [Pairs] and [Obj] nonterminals (both typed [list
 //     (string*nat)]), the "nil" production used to erase to
-//     [std::deque<std::pair<std::any,std::any>>{}] while the "cons"
-//     production erased to [std::deque<std::any>{ any(pr), ... }] -- two
+//     [std::deque<std::pair<crane::obj,crane::obj>>{}] while the "cons"
+//     production erased to [std::deque<crane::obj>{ any(pr), ... }] -- two
 //     DIFFERENT runtime container shapes for the same Coq type. A consumer
 //     (Obj's [pr :: prs] recursion, and ultimately Doc's [mkVal]) that
 //     any_cast<>s using one shape crashed with std::bad_any_cast on the
 //     other.  Every producer of an erased [list (string*nat)] action now
-//     erases to the SAME canonical representation ([std::deque<std::any>]).
+//     erases to the SAME canonical representation ([std::deque<crane::obj>]).
 //
 //  2. [Pair]'s own action builds its [(string*nat)] result one component at
 //     a time from an erased tuple scrutinee whose own component types are
 //     not statically resolvable at that construction site (the enclosing
 //     grammar machinery is generic over the nonterminal), so it stores
-//     [std::pair<std::any,std::any>] (each component still boxed as
-//     [std::any]) rather than the fully concrete [std::pair<String,
-//     uint64_t>] a naive [std::any_cast] would expect. [crane_any_cast] (see
+//     [std::pair<crane::obj,crane::obj>] (each component still boxed as
+//     [crane::obj]) rather than the fully concrete [std::pair<String,
+//     uint64_t>] a naive [crane::any_cast] would expect. [crane_any_cast] (see
 //     crane_fn.h) recovers a concrete pair from this per-component-boxed
 //     representation, so [crane_container_cast]-based consumers like Doc's
 //     [mkVal] now unbox each element correctly.
@@ -38,11 +38,11 @@
 namespace {
 
 // entries[i].a1 is `production_semty = pair<predicate_semty, action_semty>`;
-// `.second` is the boxed `action_semty = std::any` holding the
-// `std::function<std::any(std::any)>` action closure (see crane_fn.h's
+// `.second` is the boxed `action_semty = crane::obj` holding the
+// `crane::fn<crane::obj(crane::obj)>` action closure (see crane_fn.h's
 // [crane_erase_fn]).
-std::any call_action(const grammar_entry &e, std::any arg) {
-  auto act = std::any_cast<std::function<std::any(std::any)>>(e.a1.second);
+crane::obj call_action(const grammar_entry &e, crane::obj arg) {
+  auto act = crane::any_cast<crane::fn<crane::obj(crane::obj)>>(e.a1.second);
   return act(std::move(arg));
 }
 
@@ -82,60 +82,60 @@ int main() {
   assert(pair_entry.x.first == Nonterminal::PAIR);
 
   // Build Pair("b", 2): Pair's action destructures (s, (_, (n, ()))).
-  auto make_pair_tup = [](std::any s, std::any n) {
-    return std::any(std::make_pair(
+  auto make_pair_tup = [](crane::obj s, crane::obj n) {
+    return crane::obj(std::make_pair(
         std::move(s),
-        std::any(std::make_pair(std::any{},
-                                 std::any(std::make_pair(std::move(n),
-                                                          std::any{}))))));
+        crane::obj(std::make_pair(crane::obj{},
+                                 crane::obj(std::make_pair(std::move(n),
+                                                          crane::obj{}))))));
   };
-  std::any pair_b = call_action(
-      pair_entry, make_pair_tup(std::any(make_string("b")), std::any(uint64_t(2))));
+  crane::obj pair_b = call_action(
+      pair_entry, make_pair_tup(crane::obj(make_string("b")), crane::obj(uint64_t(2))));
 
-  // Pairs-nil: [] -> std::deque<std::any>{}
-  std::any pairs_nil = call_action(pairs_nil_entry, std::any{});
-  auto nil_list = std::any_cast<std::deque<std::any>>(pairs_nil);
+  // Pairs-nil: [] -> std::deque<crane::obj>{}
+  crane::obj pairs_nil = call_action(pairs_nil_entry, crane::obj{});
+  auto nil_list = crane::any_cast<std::deque<crane::obj>>(pairs_nil);
   assert(nil_list.empty());
 
   // Pairs-cons: (_, (pr, (prs, _))) -> pr :: prs, built on top of nil,
   // giving Pairs = [("b", 2)].
-  auto make_pairs_cons_tup = [](std::any pr, std::any prs) {
-    return std::any(std::make_pair(
-        std::any{},
-        std::any(std::make_pair(std::move(pr),
-                                 std::any(std::make_pair(std::move(prs),
-                                                          std::any{}))))));
+  auto make_pairs_cons_tup = [](crane::obj pr, crane::obj prs) {
+    return crane::obj(std::make_pair(
+        crane::obj{},
+        crane::obj(std::make_pair(std::move(pr),
+                                 crane::obj(std::make_pair(std::move(prs),
+                                                          crane::obj{}))))));
   };
-  std::any pairs_one =
+  crane::obj pairs_one =
       call_action(pairs_cons_entry, make_pairs_cons_tup(pair_b, pairs_nil));
-  auto pairs_one_list = std::any_cast<std::deque<std::any>>(pairs_one);
+  auto pairs_one_list = crane::any_cast<std::deque<crane::obj>>(pairs_one);
   assert(pairs_one_list.size() == 1);
 
   // Build Pair("a", 1) the same way, then Obj-cons: pr :: prs, giving
   // Obj = [("a", 1); ("b", 2)] -- a NON-EMPTY nested-pair list, the case
   // that used to throw std::bad_any_cast.
-  std::any pair_a = call_action(
-      pair_entry, make_pair_tup(std::any(make_string("a")), std::any(uint64_t(1))));
-  auto make_obj_cons_tup = [](std::any pr, std::any prs) {
-    return std::any(std::make_pair(
-        std::any{},
-        std::any(std::make_pair(
+  crane::obj pair_a = call_action(
+      pair_entry, make_pair_tup(crane::obj(make_string("a")), crane::obj(uint64_t(1))));
+  auto make_obj_cons_tup = [](crane::obj pr, crane::obj prs) {
+    return crane::obj(std::make_pair(
+        crane::obj{},
+        crane::obj(std::make_pair(
             std::move(pr),
-            std::any(std::make_pair(
-                std::move(prs), std::any(std::make_pair(std::any{}, std::any{})))))))
+            crane::obj(std::make_pair(
+                std::move(prs), crane::obj(std::make_pair(crane::obj{}, crane::obj{})))))))
         );
   };
-  std::any obj_list_any =
+  crane::obj obj_list_any =
       call_action(obj_cons_entry, make_obj_cons_tup(pair_a, pairs_one));
-  auto obj_list = std::any_cast<std::deque<std::any>>(obj_list_any);
+  auto obj_list = crane::any_cast<std::deque<crane::obj>>(obj_list_any);
   assert(obj_list.size() == 2);
 
   // Finally, Doc's action wraps Obj's result into [val]. This is the
   // consumer boundary that used to be exercised by the reported
   // std::bad_any_cast on non-empty objects.
-  auto doc_tup = std::any(std::make_pair(obj_list_any, std::any{}));
-  std::any val_any = call_action(doc_entry, doc_tup);
-  val v = std::any_cast<val>(val_any);
+  auto doc_tup = crane::obj(std::make_pair(obj_list_any, crane::obj{}));
+  crane::obj val_any = call_action(doc_entry, doc_tup);
+  val v = crane::any_cast<val>(val_any);
 
   assert(v.pairs.size() == 2);
   assert(v.pairs[0].second == 1);

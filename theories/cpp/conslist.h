@@ -24,6 +24,7 @@
 // million-element list does not recurse a million frames deep and blow the stack.
 
 #pragma once
+#include "obj.h"
 #include <cstddef>
 #include <utility>
 #include <iterator>
@@ -97,10 +98,10 @@ public:
     }
 
     // Converting constructor from a list<U> (implicit), element-by-element.
-    // Reconstructs a concrete list<T> from an element-erased list<std::any>
+    // Reconstructs a concrete list<T> from an element-erased list<crane::obj>
     // (Crane emits e.g. any_cast<list<any>>(x) where a list<T> is expected in a
     // dependent/SigT context), and generally bridges convertible element types.
-    // O(n); only hit at std::any boundaries, never the hot cons path.
+    // O(n); only hit at crane::obj boundaries, never the hot cons path.
     template <typename U,
               typename = std::enable_if_t<!std::is_same_v<U, T>>>
     list(const list<U>& other) {
@@ -119,7 +120,7 @@ public:
 
     template <typename U>
     static T convert_elem(const U& u) {
-        if constexpr (std::is_same_v<U, std::any>) return std::any_cast<T>(u);
+        if constexpr (std::is_same_v<U, crane::obj>) return crane::any_cast<T>(u);
         else return static_cast<T>(u);
     }
 
@@ -222,10 +223,10 @@ public:
 // Free-function cons whose result element type is DEDUCED FROM THE TAIL, not
 // named explicitly.  This mirrors immer's [tail.push_front(head)] and is what
 // keeps element typing consistent under Crane's erasure: in a dependent/SigT
-// context the tail is a list<std::any>, so this yields a list<std::any> (the
-// head is converted to std::any), matching how the surrounding erased code
+// context the tail is a list<crane::obj>, so this yields a list<crane::obj> (the
+// head is converted to crane::obj), matching how the surrounding erased code
 // extracts it.  Naming the element type explicitly (list<T>::cons) instead would
-// force the concrete T and mismatch the erased any_cast<list<std::any>> tail.
+// force the concrete T and mismatch the erased any_cast<list<crane::obj>> tail.
 template <typename T, typename H>
 inline list<T> cons(H&& h, list<T> t) {
     return list<T>::cons(T(std::forward<H>(h)), std::move(t));

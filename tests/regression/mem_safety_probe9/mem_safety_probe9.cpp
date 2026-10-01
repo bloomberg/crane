@@ -1,11 +1,11 @@
 #include "mem_safety_probe9.h"
 
 uint64_t MemSafetyProbe9::sum_fns(
-    const MemSafetyProbe9::mylist<std::function<uint64_t(uint64_t)>>
+    const MemSafetyProbe9::mylist<crane::fn<uint64_t(uint64_t)>>
         &l) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
-    const MemSafetyProbe9::mylist<std::function<uint64_t(uint64_t)>> *l;
+    const MemSafetyProbe9::mylist<crane::fn<uint64_t(uint64_t)>> *l;
   };
 
   /// _Resume_Mycons: saves [_s0], resumes after recursive call with _result.
@@ -23,14 +23,13 @@ uint64_t MemSafetyProbe9::sum_fns(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const MemSafetyProbe9::mylist<std::function<uint64_t(uint64_t)>> &l =
-          *_f.l;
+      const MemSafetyProbe9::mylist<crane::fn<uint64_t(uint64_t)>> &l = *_f.l;
       if (std::holds_alternative<typename MemSafetyProbe9::mylist<
-              std::function<uint64_t(uint64_t)>>::Mynil>(l.v())) {
+              crane::fn<uint64_t(uint64_t)>>::Mynil>(l.v())) {
         _result = UINT64_C(0);
       } else {
         const auto &[a0, a1] = std::get<typename MemSafetyProbe9::mylist<
-            std::function<uint64_t(uint64_t)>>::Mycons>(l.v());
+            crane::fn<uint64_t(uint64_t)>>::Mycons>(l.v());
         _stack.emplace_back(_Resume_Mycons{a0(UINT64_C(0))});
         _stack.emplace_back(_Enter{crane_raw(a1)});
       }
@@ -44,14 +43,14 @@ uint64_t MemSafetyProbe9::sum_fns(
 
 /// TEST 1: Collect closures that each capture a subtree.
 /// Both l and r are captured AND used in recursive calls.
-MemSafetyProbe9::mylist<std::function<uint64_t(uint64_t)>>
+MemSafetyProbe9::mylist<crane::fn<uint64_t(uint64_t)>>
 MemSafetyProbe9::collect_subtree_sums(
     const MemSafetyProbe9::tree &t,
-    MemSafetyProbe9::mylist<std::function<uint64_t(uint64_t)>>
+    MemSafetyProbe9::mylist<crane::fn<uint64_t(uint64_t)>>
         acc) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
-    MemSafetyProbe9::mylist<std::function<uint64_t(uint64_t)>> acc;
+    MemSafetyProbe9::mylist<crane::fn<uint64_t(uint64_t)>> acc;
     const MemSafetyProbe9::tree *t;
   };
 
@@ -61,7 +60,7 @@ MemSafetyProbe9::collect_subtree_sums(
   };
 
   using _Frame = std::variant<_Enter, _Resume_Node>;
-  MemSafetyProbe9::mylist<std::function<uint64_t(uint64_t)>> _result{};
+  MemSafetyProbe9::mylist<crane::fn<uint64_t(uint64_t)>> _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{std::move(acc), &t});
   /// Loopified collect_subtree_sums: _Enter -> _Resume_Node.
@@ -70,7 +69,7 @@ MemSafetyProbe9::collect_subtree_sums(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      MemSafetyProbe9::mylist<std::function<uint64_t(uint64_t)>> acc =
+      MemSafetyProbe9::mylist<crane::fn<uint64_t(uint64_t)>> acc =
           std::move(_f.acc);
       const MemSafetyProbe9::tree &t = *_f.t;
       if (std::holds_alternative<typename MemSafetyProbe9::tree::Leaf>(t.v())) {
@@ -80,14 +79,13 @@ MemSafetyProbe9::collect_subtree_sums(
             std::get<typename MemSafetyProbe9::tree::Node>(t.v());
         const MemSafetyProbe9::tree &a0_value = *a0;
         const MemSafetyProbe9::tree &a2_value = *a2;
+        crane::fn<uint64_t(uint64_t)> f = [=](uint64_t) {
+          return ((a0_value.tree_sum() + a1) + a2_value.tree_sum());
+        };
         _stack.emplace_back(_Resume_Node{crane_raw(a0)});
         _stack.emplace_back(
-            _Enter{mylist<std::function<uint64_t(uint64_t)>>::mycons(
-                       [=](auto _xarg0) mutable {
-                         return _collect_subtree_sums_f(_xarg0, a0_value, a1,
-                                                        a2_value);
-                       },
-                       std::move(acc)),
+            _Enter{mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
+                       std::move(f), std::move(acc)),
                    crane_raw(a2)});
       }
     } else {
@@ -100,14 +98,14 @@ MemSafetyProbe9::collect_subtree_sums(
 
 /// TEST 2: Similar but each closure captures ONLY the left subtree.
 /// The left subtree is shared between closure and recursive call.
-MemSafetyProbe9::mylist<std::function<uint64_t(uint64_t)>>
+MemSafetyProbe9::mylist<crane::fn<uint64_t(uint64_t)>>
 MemSafetyProbe9::collect_left_sums(
     const MemSafetyProbe9::tree &t,
-    MemSafetyProbe9::mylist<std::function<uint64_t(uint64_t)>>
+    MemSafetyProbe9::mylist<crane::fn<uint64_t(uint64_t)>>
         acc) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
-    MemSafetyProbe9::mylist<std::function<uint64_t(uint64_t)>> acc;
+    MemSafetyProbe9::mylist<crane::fn<uint64_t(uint64_t)>> acc;
     const MemSafetyProbe9::tree *t;
   };
 
@@ -117,7 +115,7 @@ MemSafetyProbe9::collect_left_sums(
   };
 
   using _Frame = std::variant<_Enter, _Resume_Node>;
-  MemSafetyProbe9::mylist<std::function<uint64_t(uint64_t)>> _result{};
+  MemSafetyProbe9::mylist<crane::fn<uint64_t(uint64_t)>> _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{std::move(acc), &t});
   /// Loopified collect_left_sums: _Enter -> _Resume_Node.
@@ -126,7 +124,7 @@ MemSafetyProbe9::collect_left_sums(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      MemSafetyProbe9::mylist<std::function<uint64_t(uint64_t)>> acc =
+      MemSafetyProbe9::mylist<crane::fn<uint64_t(uint64_t)>> acc =
           std::move(_f.acc);
       const MemSafetyProbe9::tree &t = *_f.t;
       if (std::holds_alternative<typename MemSafetyProbe9::tree::Leaf>(t.v())) {
@@ -136,13 +134,13 @@ MemSafetyProbe9::collect_left_sums(
             std::get<typename MemSafetyProbe9::tree::Node>(t.v());
         const MemSafetyProbe9::tree &a0_value = *a0;
         const MemSafetyProbe9::tree &a2_value = *a2;
+        crane::fn<uint64_t(uint64_t)> f = [=](uint64_t) {
+          return a0_value.tree_sum();
+        };
         _stack.emplace_back(_Resume_Node{crane_raw(a0)});
         _stack.emplace_back(
-            _Enter{mylist<std::function<uint64_t(uint64_t)>>::mycons(
-                       [=](auto _xarg0) mutable {
-                         return _collect_left_sums_f(_xarg0, a0_value);
-                       },
-                       std::move(acc)),
+            _Enter{mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
+                       std::move(f), std::move(acc)),
                    crane_raw(a2)});
       }
     } else {
@@ -155,11 +153,11 @@ MemSafetyProbe9::collect_left_sums(
 
 /// TEST 3: Build closures from list where each closure
 /// captures the tail and a computed value.
-MemSafetyProbe9::mylist<std::function<uint64_t(uint64_t)>>
+MemSafetyProbe9::mylist<crane::fn<uint64_t(uint64_t)>>
 MemSafetyProbe9::list_accum_closures(
     const MemSafetyProbe9::mylist<uint64_t> &l,
-    MemSafetyProbe9::mylist<std::function<uint64_t(uint64_t)>> acc) {
-  MemSafetyProbe9::mylist<std::function<uint64_t(uint64_t)>> _loop_acc =
+    MemSafetyProbe9::mylist<crane::fn<uint64_t(uint64_t)>> acc) {
+  MemSafetyProbe9::mylist<crane::fn<uint64_t(uint64_t)>> _loop_acc =
       std::move(acc);
   MemSafetyProbe9::mylist<uint64_t> _loop_l = l;
   while (true) {
@@ -172,11 +170,11 @@ MemSafetyProbe9::list_accum_closures(
               _loop_l.v());
       const MemSafetyProbe9::mylist<uint64_t> &a1_value = *a1;
       uint64_t tail_len = a1_value.length();
-      _loop_acc = mylist<std::function<uint64_t(uint64_t)>>::mycons(
-          [=](auto _xarg0) mutable {
-            return _list_accum_closures_f(_xarg0, a0, tail_len);
-          },
-          std::move(_loop_acc));
+      crane::fn<uint64_t(uint64_t)> f = [=](uint64_t) {
+        return (a0 * tail_len);
+      };
+      _loop_acc = mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
+          std::move(f), std::move(_loop_acc));
       _loop_l = a1_value;
     }
   }

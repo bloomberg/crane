@@ -2,12 +2,13 @@
 #define INCLUDED_HIGHER_KINDED
 
 #include "crane_fn.h"
+#include "obj.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
-#include <functional>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -15,10 +16,7 @@
 struct HigherKinded {
   template <template <typename> class T1, typename T2, typename F0, typename F1,
             typename T3 = std::invoke_result_t<F1 &, T2 &>>
-    requires std::is_invocable_r_v<T1<std::any>, F0 &,
-                                   std::function<std::any(std::any)> &,
-                                   T1<std::any> &> &&
-             std::is_invocable_r_v<T3, F1 &, T2 &>
+    requires std::is_invocable_r_v<T3, F1 &, T2 &>
   static T1<T3> hk_map(F0 &&map_f, F1 &&f, T1<T2> x) {
     return map_f(f, std::move(x));
   }
@@ -48,22 +46,29 @@ struct HigherKinded {
 
     explicit Tree(Branch _v) : v_(std::move(_v)) {}
 
-    template <typename _U> Tree(const Tree<_U> &_other) {
-      if (std::holds_alternative<typename Tree<_U>::Leaf>(_other.v())) {
-        const auto &[a0] = std::get<typename Tree<_U>::Leaf>(_other.v());
-        this->v_ = Leaf{[&]() -> A {
-          if constexpr (std::is_same_v<_U, std::any>) {
-            return crane_any_cast<A>(a0);
-          } else {
-            return A(a0);
-          }
-        }()};
-      } else {
-        const auto &[a0, a1] = std::get<typename Tree<_U>::Branch>(_other.v());
-        this->v_ = Branch{(a0 ? std::make_shared<Tree<A>>(*a0) : nullptr),
-                          (a1 ? std::make_shared<Tree<A>>(*a1) : nullptr)};
-      }
-    }
+    template <typename _U>
+    Tree(const Tree<_U> &_other)
+        : v_([&]() -> variant_t {
+            if (std::holds_alternative<typename Tree<_U>::Leaf>(_other.v())) {
+              const auto &[a0] = std::get<typename Tree<_U>::Leaf>(_other.v());
+              return Leaf{[&]() -> A {
+                if constexpr (crane_convertible<A, const _U &>) {
+                  return crane_convert<A>(a0);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }()};
+            } else {
+              const auto &[a0, a1] =
+                  std::get<typename Tree<_U>::Branch>(_other.v());
+              return Branch{
+                  (a0 ? std::make_shared<Tree<A>>(crane_convert<Tree<A>>(*a0))
+                      : nullptr),
+                  (a1 ? std::make_shared<Tree<A>>(crane_convert<Tree<A>>(*a1))
+                      : nullptr)};
+            }
+          }()) {}
 
     static Tree<A> leaf(A a0) { return Tree<A>(Leaf{std::move(a0)}); }
 
@@ -77,10 +82,10 @@ struct HigherKinded {
       crane::small_vector<std::shared_ptr<Tree<A>>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Branch>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a1) {
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
             _stack.push_back(std::move(_alt->a1));
           }
         }
@@ -166,7 +171,7 @@ struct HigherKinded {
 
   template <typename T1> static uint64_t tree_size(const Tree<T1> &t) {
     return tree_fold<T1, uint64_t>(
-        [](const T1 &) { return UINT64_C(1); },
+        [](T1) { return UINT64_C(1); },
         [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); }, t);
   }
 
@@ -190,16 +195,18 @@ struct HigherKinded {
   static inline const Tree<uint64_t> test_tree_map =
       tree_map<uint64_t, uint64_t>([](uint64_t n) { return (n * UINT64_C(2)); },
                                    test_tree);
-  static inline const std::optional<uint64_t> test_hk_option = hk_map(
-      []<typename _T1>(auto &&a0,
-                       const std::optional<_T1> &a1) -> decltype(auto) {
-        return map_option<_T1, std::invoke_result_t<decltype(a0) &, _T1 &>>(
-            std::forward<decltype(a0)>(a0), a1);
-      },
-      [](uint64_t n) { return (n + UINT64_C(1)); },
-      std::make_optional<uint64_t>(UINT64_C(5)));
-  static inline const Tree<uint64_t> test_hk_tree = hk_map(
-      []<typename _T1>(auto &&a0, const Tree<_T1> &a1) -> decltype(auto) {
+  static inline const std::optional<uint64_t> test_hk_option =
+      hk_map<std::optional, uint64_t>(
+          []<typename _T1>(auto &&a0, const std::optional<_T1> &a1)
+              -> std::optional<std::invoke_result_t<decltype(a0) &, _T1 &>> {
+            return map_option<_T1, std::invoke_result_t<decltype(a0) &, _T1 &>>(
+                std::forward<decltype(a0)>(a0), a1);
+          },
+          [](uint64_t n) { return (n + UINT64_C(1)); },
+          std::make_optional<uint64_t>(UINT64_C(5)));
+  static inline const Tree<uint64_t> test_hk_tree = hk_map<Tree, uint64_t>(
+      []<typename _T1>(auto &&a0, const Tree<_T1> &a1)
+          -> Tree<std::invoke_result_t<decltype(a0) &, _T1 &>> {
         return tree_map<_T1, std::invoke_result_t<decltype(a0) &, _T1 &>>(
             std::forward<decltype(a0)>(a0), a1);
       },

@@ -3,11 +3,9 @@
 std::optional<Nat> HktCurriedPureArity::run(const std::optional<Nat> &a,
                                             const std::optional<Nat> &b) {
   return ap<HktCurriedPureArity::ApOpt, Nat, Nat>(
-      ap<HktCurriedPureArity::ApOpt, Nat, std::function<Nat(Nat)>>(
-          pure<HktCurriedPureArity::ApOpt,
-               std::function<std::function<Nat(Nat)>(Nat)>>([](const auto &x) {
-            return [=](const auto &) mutable { return x; };
-          }),
+      ap<HktCurriedPureArity::ApOpt, Nat, crane::fn<Nat(Nat)>>(
+          pure<HktCurriedPureArity::ApOpt, crane::fn<crane::fn<Nat(Nat)>(Nat)>>(
+              [](Nat x) { return [=](Nat) { return x; }; }),
           a),
       b);
 }

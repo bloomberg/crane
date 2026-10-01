@@ -2,16 +2,18 @@
 #define INCLUDED_GLOBAL_STATE
 
 #include "crane_fn.h"
+#include "obj.h"
 #include "small_vector.h"
 #include <algorithm>
 #include <any>
 #include <atomic>
 #include <concepts>
 #include <crane_globals.h>
+#include <crane_itree.h>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <string>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -19,6 +21,35 @@ template <typename A> struct List;
 template <typename Err> struct ExceptE;
 struct Err;
 struct GlobRefNat;
+template <typename I, typename T>
+concept Ix = requires {
+  {
+    I::range(std::declval<T>(), std::declval<T>())
+  } -> std::convertible_to<List<T>>;
+  {
+    I::index(std::declval<T>(), std::declval<T>(), std::declval<T>())
+  } -> std::convertible_to<std::optional<uint64_t>>;
+  {
+    I::rangeSize(std::declval<T>(), std::declval<T>())
+  } -> std::convertible_to<uint64_t>;
+  { I::toNat(std::declval<T>()) } -> std::convertible_to<uint64_t>;
+  { I::fromNat(std::declval<uint64_t>()) } -> std::convertible_to<T>;
+  { I::suc(std::declval<T>()) } -> std::convertible_to<T>;
+  { I::sub(std::declval<T>(), std::declval<T>()) } -> std::convertible_to<T>;
+  { I::max(std::declval<T>(), std::declval<T>()) } -> std::convertible_to<T>;
+  { I::zero() } -> std::convertible_to<T>;
+};
+template <typename I, typename T>
+concept GlobRefClass = requires {
+  { I::mkGlobRef(std::declval<T>()) } -> std::convertible_to<crane::obj>;
+  { I::GlobRefToIx(std::declval<crane::obj>()) } -> std::convertible_to<T>;
+};
+
+struct ListDef {
+  static List<uint64_t> seq(uint64_t start, uint64_t len);
+};
+
+struct Nat {};
 
 template <typename A> struct List {
   // TYPES
@@ -43,21 +74,26 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U> List(const List<_U> &_other) {
-    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->v_ = Nil{};
-    } else {
-      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>) {
-                          return crane_any_cast<A>(a);
-                        } else {
-                          return A(a);
-                        }
-                      }(),
-                      (l ? std::make_shared<List<A>>(*l) : nullptr)};
-    }
-  }
+  template <typename _U>
+  List(const List<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+            return Nil{};
+          } else {
+            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const _U &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                   : nullptr)};
+          }
+        }()) {}
 
   static List<A> nil() { return List<A>(Nil{}); }
 
@@ -67,22 +103,18 @@ public:
 
   // MANIPULATORS
   ~List() {
-    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
-        if (_alt->l) {
-          _stack.push_back(std::move(_alt->l));
+        if (_alt->l && _alt->l.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->l);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<List<A>> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -104,34 +136,20 @@ template <typename Err> struct ExceptE {
   // ACCESSORS
   ExceptE<Err> clone() const { return {a0}; }
 
+  template <typename _U> operator ExceptE<_U>() const {
+    return {[&]() -> _U {
+      if constexpr (crane_convertible<_U, const Err &>) {
+        return crane_convert<_U>(a0);
+      } else {
+        throw std::logic_error(
+            "unreachable: inactive constructor field at this instantiation");
+      }
+    }()};
+  }
+
   // CREATORS
   static ExceptE<Err> Throw_(Err a0) { return {std::move(a0)}; }
 };
-
-struct ListDef {
-  static List<uint64_t> seq(uint64_t start, uint64_t len);
-};
-
-template <typename I, typename T>
-concept Ix = requires {
-  {
-    I::range(std::declval<T>(), std::declval<T>())
-  } -> std::convertible_to<List<T>>;
-  {
-    I::index(std::declval<T>(), std::declval<T>(), std::declval<T>())
-  } -> std::convertible_to<std::optional<uint64_t>>;
-  {
-    I::rangeSize(std::declval<T>(), std::declval<T>())
-  } -> std::convertible_to<uint64_t>;
-  { I::toNat(std::declval<T>()) } -> std::convertible_to<uint64_t>;
-  { I::fromNat(std::declval<uint64_t>()) } -> std::convertible_to<T>;
-  { I::suc(std::declval<T>()) } -> std::convertible_to<T>;
-  { I::sub(std::declval<T>(), std::declval<T>()) } -> std::convertible_to<T>;
-  { I::max(std::declval<T>(), std::declval<T>()) } -> std::convertible_to<T>;
-  { I::zero() } -> std::convertible_to<T>;
-};
-
-struct Nat {};
 
 struct Err {
   // DATA
@@ -156,12 +174,6 @@ struct GlobalStateExamples {
   static T1 ctr_idx();
 };
 
-template <typename I, typename T>
-concept GlobRefClass = requires {
-  { I::mkGlobRef(std::declval<T>()) } -> std::convertible_to<std::any>;
-  { I::GlobRefToIx(std::declval<std::any>()) } -> std::convertible_to<T>;
-};
-
 struct GlobRefNat {
   // DATA
   uint64_t a;
@@ -172,10 +184,7 @@ struct GlobRefNat {
   // CREATORS
   static GlobRefNat mkglobref(uint64_t a) { return {a}; }
 
-  uint64_t GlobRefToIxNat() const {
-    const auto &[a] = *this;
-    return a;
-  }
+  uint64_t GlobRefToIxNat() const;
 };
 
 struct GlobalStateTests {
@@ -218,10 +227,10 @@ struct GlobalStateTests {
   static_assert(Ix<nat_idx, uint64_t>);
 
   struct nat_stref {
-    static std::any mkGlobRef(uint64_t x) { return GlobRefNat::mkglobref(x); }
+    static crane::obj mkGlobRef(uint64_t x) { return GlobRefNat::mkglobref(x); }
 
-    static uint64_t GlobRefToIx(std::any _p_a0) {
-      GlobRefNat a0 = std::any_cast<GlobRefNat>(_p_a0);
+    static uint64_t GlobRefToIx(crane::obj _p_a0) {
+      GlobRefNat a0 = crane::any_cast<GlobRefNat>(_p_a0);
       return a0.GlobRefToIxNat();
     }
   };
@@ -234,8 +243,8 @@ struct GlobalStateTests {
     uint64_t r1 = (_crane_globals[_tcI1::zero()] = UINT64_C(5), _tcI1::zero());
     uint64_t r2 = (_crane_globals[_tcI1::suc(_tcI1::zero())] = UINT64_C(6),
                    _tcI1::suc(_tcI1::zero()));
-    uint64_t x1 = std::any_cast<uint64_t>(_crane_globals.at(r1));
-    uint64_t x2 = std::any_cast<uint64_t>(_crane_globals.at(r2));
+    uint64_t x1 = crane::any_cast<uint64_t>(_crane_globals.at(r1));
+    uint64_t x2 = crane::any_cast<uint64_t>(_crane_globals.at(r2));
     return std::make_pair(x1, x2);
   }
 
@@ -253,11 +262,11 @@ struct GlobalStateTests {
         uint64_t _loop_k = std::move(k);
         while (true) {
           if (_loop_k <= 0) {
-            return std::any_cast<uint64_t>(_crane_globals.at(x0));
+            return crane::any_cast<uint64_t>(_crane_globals.at(x0));
           } else {
             uint64_t k_ = _loop_k - 1;
-            uint64_t x_ = std::any_cast<uint64_t>(_crane_globals.at(x0));
-            uint64_t y_ = std::any_cast<uint64_t>(_crane_globals.at(y0));
+            uint64_t x_ = crane::any_cast<uint64_t>(_crane_globals.at(x0));
+            uint64_t y_ = crane::any_cast<uint64_t>(_crane_globals.at(y0));
             _crane_globals[x0] = y_;
             _crane_globals[y0] = (x_ + y_);
             _loop_k = k_;
@@ -293,6 +302,11 @@ template <typename _tcI0, typename T1>
   requires Ix<_tcI0, T1>
 T1 GlobalStateExamples::ctr_idx() {
   return _tcI0::suc(_tcI0::suc(_tcI0::zero()));
+}
+
+inline uint64_t GlobRefNat::GlobRefToIxNat() const {
+  const auto &[a] = *this;
+  return a;
 }
 
 #endif // INCLUDED_GLOBAL_STATE

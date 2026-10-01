@@ -4,7 +4,7 @@
 
 int main() {
   // This test reproduces a bug where dependent elimination over an indexed
-  // type generates std::any and std::logic_error in unreachable branches
+  // type generates crane::obj and std::logic_error in unreachable branches
   // without including <any> or <stdexcept>.
   //
   // If this compiles and runs, the bug is fixed.

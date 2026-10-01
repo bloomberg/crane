@@ -1,7 +1,8 @@
 #ifndef INCLUDED_DEP_MATCH_UNIT_FUN
 #define INCLUDED_DEP_MATCH_UNIT_FUN
 
-#include <functional>
+#include "fn.h"
+#include <atomic>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -11,7 +12,7 @@ struct DepMatchUnitFun {
   struct tg {
     // TYPES
     struct TF {
-      std::function<uint64_t(uint64_t)> a0;
+      crane::fn<uint64_t(uint64_t)> a0;
     };
 
     struct TU {};
@@ -30,7 +31,7 @@ struct DepMatchUnitFun {
 
     explicit tg(TU _v) : v_(_v) {}
 
-    static tg tf(std::function<uint64_t(uint64_t)> a0) {
+    static tg tf(crane::fn<uint64_t(uint64_t)> a0) {
       return tg(TF{std::move(a0)});
     }
 
@@ -44,8 +45,7 @@ struct DepMatchUnitFun {
   };
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &,
-                                   std::function<uint64_t(uint64_t)> &>
+    requires std::is_invocable_r_v<T1, F0 &, crane::fn<uint64_t(uint64_t)> &>
   static T1 tg_rect(F0 &&f, T1 f0, bool, const tg &t) {
     if (std::holds_alternative<typename tg::TF>(t.v())) {
       const auto &[a0] = std::get<typename tg::TF>(t.v());
@@ -56,8 +56,7 @@ struct DepMatchUnitFun {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &,
-                                   std::function<uint64_t(uint64_t)> &>
+    requires std::is_invocable_r_v<T1, F0 &, crane::fn<uint64_t(uint64_t)> &>
   static T1 tg_rec(F0 &&f, T1 f0, bool, const tg &t) {
     if (std::holds_alternative<typename tg::TF>(t.v())) {
       const auto &[a0] = std::get<typename tg::TF>(t.v());

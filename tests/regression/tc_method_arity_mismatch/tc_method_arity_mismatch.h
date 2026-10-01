@@ -20,7 +20,7 @@ struct TcMethodArityMismatch {
     static uint64_t mkf(uint64_t a, uint64_t a0) {
       return [&]() {
         uint64_t b = (a + UINT64_C(1));
-        return [=](uint64_t k) mutable { return (k + b); };
+        return [=](uint64_t k) { return (k + b); };
       }()(a0);
     }
   };

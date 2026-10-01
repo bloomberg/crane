@@ -2,10 +2,12 @@
 #define INCLUDED_MATCH_REF_AFTER_MOVE
 
 #include "crane_fn.h"
+#include "obj.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -37,22 +39,29 @@ struct MatchRefAfterMove {
 
     explicit mylist(Mycons _v) : v_(std::move(_v)) {}
 
-    template <typename _U> mylist(const mylist<_U> &_other) {
-      if (std::holds_alternative<typename mylist<_U>::Mynil>(_other.v())) {
-        this->v_ = Mynil{};
-      } else {
-        const auto &[a0, a1] =
-            std::get<typename mylist<_U>::Mycons>(_other.v());
-        this->v_ = Mycons{[&]() -> A {
-                            if constexpr (std::is_same_v<_U, std::any>) {
-                              return crane_any_cast<A>(a0);
-                            } else {
-                              return A(a0);
-                            }
-                          }(),
-                          (a1 ? std::make_shared<mylist<A>>(*a1) : nullptr)};
-      }
-    }
+    template <typename _U>
+    mylist(const mylist<_U> &_other)
+        : v_([&]() -> variant_t {
+            if (std::holds_alternative<typename mylist<_U>::Mynil>(
+                    _other.v())) {
+              return Mynil{};
+            } else {
+              const auto &[a0, a1] =
+                  std::get<typename mylist<_U>::Mycons>(_other.v());
+              return Mycons{[&]() -> A {
+                              if constexpr (crane_convertible<A, const _U &>) {
+                                return crane_convert<A>(a0);
+                              } else {
+                                throw std::logic_error(
+                                    "unreachable: inactive constructor field "
+                                    "at this instantiation");
+                              }
+                            }(),
+                            (a1 ? std::make_shared<mylist<A>>(
+                                      crane_convert<mylist<A>>(*a1))
+                                : nullptr)};
+            }
+          }()) {}
 
     static mylist<A> mynil() { return mylist<A>(Mynil{}); }
 
@@ -63,22 +72,18 @@ struct MatchRefAfterMove {
 
     // MANIPULATORS
     ~mylist() {
-      crane::small_vector<std::shared_ptr<mylist<A>>> _stack = {};
-      auto _drain = [&](variant_t &_v) {
+      auto _next = [&](variant_t &_v) -> std::shared_ptr<mylist<A>> {
         if (auto *_alt = std::get_if<Mycons>(&_v)) {
-          if (_alt->a1) {
-            _stack.push_back(std::move(_alt->a1));
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
+            return std::move(_alt->a1);
           }
         }
+        return nullptr;
       };
-      _drain(v_mut());
-      while (!_stack.empty()) {
-        auto _cur = std::move(_stack.back());
-        _stack.pop_back();
-        if (_cur.use_count() == 1) {
-          std::atomic_thread_fence(std::memory_order_acquire);
-          _drain(_cur->v_mut());
-        }
+      std::shared_ptr<mylist<A>> _cur = _next(v_mut());
+      while (_cur) {
+        _cur = _next(_cur->v_mut());
       }
     }
 
@@ -151,7 +156,7 @@ struct MatchRefAfterMove {
       /// _result.
       struct _Resume_Mycons {
         mylist<A> a1;
-        std::decay_t<A> a0;
+        A a0;
       };
 
       using _Frame = std::variant<_Enter, _Resume_Mycons>;
@@ -196,7 +201,7 @@ struct MatchRefAfterMove {
       /// _result.
       struct _Resume_Mycons {
         mylist<A> a1;
-        std::decay_t<A> a0;
+        A a0;
       };
 
       using _Frame = std::variant<_Enter, _Resume_Mycons>;
@@ -235,6 +240,25 @@ struct MatchRefAfterMove {
 
     // ACCESSORS
     mypair<A, B> clone() const { return {a0, a1}; }
+
+    template <typename _U0, typename _U1> operator mypair<_U0, _U1>() const {
+      return {[&]() -> _U0 {
+                if constexpr (crane_convertible<_U0, const A &>) {
+                  return crane_convert<_U0>(a0);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }(),
+              [&]() -> _U1 {
+                if constexpr (crane_convertible<_U1, const B &>) {
+                  return crane_convert<_U1>(a1);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }()};
+    }
 
     // CREATORS
     static mypair<A, B> mkpair(A a0, B a1) {
@@ -362,29 +386,33 @@ struct MatchRefAfterMove {
     explicit either(Right _v) : v_(std::move(_v)) {}
 
     template <typename _U0, typename _U1>
-    either(const either<_U0, _U1> &_other) {
-      if (std::holds_alternative<typename either<_U0, _U1>::Left>(_other.v())) {
-        const auto &[a0] =
-            std::get<typename either<_U0, _U1>::Left>(_other.v());
-        this->v_ = Left{[&]() -> A {
-          if constexpr (std::is_same_v<_U0, std::any>) {
-            return crane_any_cast<A>(a0);
-          } else {
-            return A(a0);
-          }
-        }()};
-      } else {
-        const auto &[a0] =
-            std::get<typename either<_U0, _U1>::Right>(_other.v());
-        this->v_ = Right{[&]() -> B {
-          if constexpr (std::is_same_v<_U1, std::any>) {
-            return crane_any_cast<B>(a0);
-          } else {
-            return B(a0);
-          }
-        }()};
-      }
-    }
+    either(const either<_U0, _U1> &_other)
+        : v_([&]() -> variant_t {
+            if (std::holds_alternative<typename either<_U0, _U1>::Left>(
+                    _other.v())) {
+              const auto &[a0] =
+                  std::get<typename either<_U0, _U1>::Left>(_other.v());
+              return Left{[&]() -> A {
+                if constexpr (crane_convertible<A, const _U0 &>) {
+                  return crane_convert<A>(a0);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }()};
+            } else {
+              const auto &[a0] =
+                  std::get<typename either<_U0, _U1>::Right>(_other.v());
+              return Right{[&]() -> B {
+                if constexpr (crane_convertible<B, const _U1 &>) {
+                  return crane_convert<B>(a0);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }()};
+            }
+          }()) {}
 
     static either<A, B> left(A a0) { return either<A, B>(Left{std::move(a0)}); }
 

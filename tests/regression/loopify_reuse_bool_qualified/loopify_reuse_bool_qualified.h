@@ -1,13 +1,14 @@
 #ifndef INCLUDED_LOOPIFY_REUSE_BOOL_QUALIFIED
 #define INCLUDED_LOOPIFY_REUSE_BOOL_QUALIFIED
 
-#include "crane_fn.h"
-#include "rc.h"
-#include "small_vector.h"
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
+#define CRANE_NON_ATOMIC_RC 1
+#include "crane_fn.h"
+#include "rc.h"
+#include "small_vector.h"
 
 /// Codegen bug: the generated C++ does not compile.
 ///
@@ -64,21 +65,17 @@ struct LoopifyReuseBoolQualified {
 
     // MANIPULATORS
     ~lst() {
-      crane::small_vector<crane::rc<lst>> _stack = {};
-      auto _drain = [&](variant_t &_v) {
+      auto _next = [&](variant_t &_v) -> crane::rc<lst> {
         if (auto *_alt = std::get_if<Cons>(&_v)) {
-          if (_alt->a1) {
-            _stack.push_back(std::move(_alt->a1));
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
+            return std::move(_alt->a1);
           }
         }
+        return nullptr;
       };
-      _drain(v_mut());
-      while (!_stack.empty()) {
-        auto _cur = std::move(_stack.back());
-        _stack.pop_back();
-        if (_cur.use_count() == 1) {
-          _drain(_cur->v_mut());
-        }
+      crane::rc<lst> _cur = _next(v_mut());
+      while (_cur) {
+        _cur = _next(_cur->v_mut());
       }
     }
 

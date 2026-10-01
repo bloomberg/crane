@@ -12,7 +12,7 @@ ClosureRecursiveBuild::fn_list ClosureRecursiveBuild::build_adders(uint64_t n) {
     return fn_list::fnil();
   } else {
     uint64_t n_ = n - 1;
-    auto adder_impl = [=](auto &_self_adder, uint64_t x) mutable -> uint64_t {
+    auto adder_impl = [=](auto &_self_adder, uint64_t x) -> uint64_t {
       if (x <= 0) {
         return n;
       } else {
@@ -20,7 +20,7 @@ ClosureRecursiveBuild::fn_list ClosureRecursiveBuild::build_adders(uint64_t n) {
         return (_self_adder(_self_adder, x_) + 1);
       }
     };
-    auto adder = [=](uint64_t x) mutable -> uint64_t {
+    auto adder = [=](uint64_t x) -> uint64_t {
       return adder_impl(adder_impl, x);
     };
     return fn_list::fcons(std::move(adder), build_adders(n_));

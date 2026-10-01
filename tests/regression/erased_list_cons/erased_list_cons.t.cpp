@@ -3,7 +3,7 @@
 //
 // Regression test for the "erased-context unresolved type variable" codegen bug:
 // a list-consing semantic action stored in an erased grammar-entry slot must not
-// emit `std::any_cast<Datatypes::List<T1>>` with an unsubstituted type variable.
+// emit `crane::any_cast<Datatypes::List<T1>>` with an unsubstituted type variable.
 // Merely compiling the generated header (whose namespace-scope `entries` global
 // instantiates the erased action) fails before the fix with
 // "use of undeclared identifier 'T1'".

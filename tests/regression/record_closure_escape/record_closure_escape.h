@@ -1,9 +1,9 @@
 #ifndef INCLUDED_RECORD_CLOSURE_ESCAPE
 #define INCLUDED_RECORD_CLOSURE_ESCAPE
 
+#include "fn.h"
 #include "small_vector.h"
 #include <atomic>
-#include <functional>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -46,10 +46,10 @@ struct RecordClosureEscape {
       crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a2) {
+          if (_alt->a2 && _alt->a2.use_count() == 1) {
             _stack.push_back(std::move(_alt->a2));
           }
         }
@@ -107,7 +107,7 @@ struct RecordClosureEscape {
   /// A record holding a closure and a value. Records are single-constructor
   /// inductives and get special treatment in Crane's translation.
   struct fn_record {
-    std::function<uint64_t(uint64_t)> fn_field;
+    crane::fn<uint64_t(uint64_t)> fn_field;
     uint64_t val_field;
   };
 

@@ -5,19 +5,19 @@ DepTypeFnAnyCast::dt DepTypeFnAnyCast::mk(uint64_t n) {
     return UINT64_C(5);
   } else {
     uint64_t _x = n - 1;
-    return List<std::any>::cons(
+    return List<crane::obj>::cons(
         UINT64_C(1),
-        List<std::any>::cons(
+        List<crane::obj>::cons(
             UINT64_C(2),
-            List<std::any>::cons(
+            List<crane::obj>::cons(
                 UINT64_C(3),
-                List<std::any>::cons(UINT64_C(4), List<std::any>::nil()))));
+                List<crane::obj>::cons(UINT64_C(4), List<crane::obj>::nil()))));
   }
 }
 
 uint64_t DepTypeFnAnyCast::run(uint64_t k) {
-  return ((std::any_cast<uint64_t>(mk(UINT64_C(0))) +
-           List<uint64_t>(std::any_cast<List<std::any>>(mk(UINT64_C(1))))
+  return ((crane::any_cast<uint64_t>(mk(UINT64_C(0))) +
+           List<uint64_t>(crane::any_cast<List<crane::obj>>(mk(UINT64_C(1))))
                .length()) +
           k);
 }

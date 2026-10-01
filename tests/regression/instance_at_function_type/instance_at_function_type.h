@@ -1,8 +1,8 @@
 #ifndef INCLUDED_INSTANCE_AT_FUNCTION_TYPE
 #define INCLUDED_INSTANCE_AT_FUNCTION_TYPE
 
+#include "fn.h"
 #include <concepts>
-#include <functional>
 #include <utility>
 
 /// A typeclass instance at a function type (`Sz (nat -> nat)`): the instance
@@ -23,12 +23,12 @@ struct InstanceAtFunctionType {
   static_assert(Sz<SzN, uint64_t>);
 
   struct SzF {
-    static uint64_t sz(std::function<uint64_t(uint64_t)> f) {
+    static uint64_t sz(crane::fn<uint64_t(uint64_t)> f) {
       return f(UINT64_C(0));
     }
   };
 
-  static_assert(Sz<SzF, std::function<uint64_t(uint64_t)>>);
+  static_assert(Sz<SzF, crane::fn<uint64_t(uint64_t)>>);
 
   template <typename _tcI0, typename _tcI1, typename T1, typename T2>
     requires Sz<_tcI0, T2> && Sz<_tcI1, T1>
@@ -37,7 +37,7 @@ struct InstanceAtFunctionType {
   }
 
   static inline const uint64_t go =
-      both<SzF, SzN, uint64_t, std::function<uint64_t(uint64_t)>>(
+      both<SzF, SzN, uint64_t, crane::fn<uint64_t(uint64_t)>>(
           UINT64_C(3), [](uint64_t n) { return (n + UINT64_C(4)); });
 };
 

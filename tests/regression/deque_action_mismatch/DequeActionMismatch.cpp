@@ -5,7 +5,7 @@
 namespace DequeActionMismatch {
 
 Specif::SigT<Tag, sem_ty>
-apply_action(const Specif::SigT<Tag, std::function<std::any(std::any)>> &a,
+apply_action(const Specif::SigT<Tag, crane::fn<crane::obj(crane::obj)>> &a,
              Specif::SigT<Tag, sem_ty> v) {
   const auto &[x0, a1] = a;
   switch (x0) {
@@ -13,7 +13,7 @@ apply_action(const Specif::SigT<Tag, std::function<std::any(std::any)>> &a,
     auto &[x2, a10] = v;
     switch (x2) {
     case Tag::TAGLIST: {
-      return Specif::template SigT<Tag, std::any>::existt(
+      return Specif::template SigT<Tag, sem_ty>::existt(
           Tag::TAGLIST, crane_call_erased(a1, a10));
     }
     case Tag::TAGNAT: {
@@ -31,7 +31,7 @@ apply_action(const Specif::SigT<Tag, std::function<std::any(std::any)>> &a,
       return v;
     }
     case Tag::TAGNAT: {
-      return Specif::template SigT<Tag, std::any>::existt(
+      return Specif::template SigT<Tag, sem_ty>::existt(
           Tag::TAGNAT, crane_call_erased(a1, a11));
     }
     default:
@@ -49,7 +49,7 @@ uint64_t get_length(const Specif::SigT<Tag, sem_ty> &v) {
   switch (x0) {
   case Tag::TAGLIST: {
     return static_cast<uint64_t>(
-        std::any_cast<std::deque<std::any>>(a1).size());
+        crane::any_cast<std::deque<crane::obj>>(a1).size());
   }
   case Tag::TAGNAT: {
     return UINT64_C(0);
@@ -63,14 +63,15 @@ uint64_t get_first(const Specif::SigT<Tag, sem_ty> &v) {
   const auto &[x, a1] = v;
   switch (x) {
   case Tag::TAGLIST: {
-    auto _cs = std::any_cast<std::deque<std::any>>(a1);
+    auto _cs = crane::any_cast<std::deque<crane::obj>>(a1);
     if (_cs.empty()) {
       return UINT64_C(0);
     } else {
       const auto &p = _cs.front();
-      std::decay_t<decltype(_cs)> _x(_cs.begin() + 1, _cs.end());
-      const auto &[x1, _x0] = std::any_cast<std::pair<std::any, std::any>>(p);
-      return std::any_cast<uint64_t>(x1);
+      std::deque<crane::obj> _x(_cs.begin() + 1, _cs.end());
+      const auto &[x1, _x0] =
+          crane::any_cast<std::pair<crane::obj, crane::obj>>(p);
+      return crane::any_cast<uint64_t>(x1);
     }
     break;
   }

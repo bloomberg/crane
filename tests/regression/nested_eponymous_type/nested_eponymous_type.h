@@ -2,7 +2,6 @@
 #define INCLUDED_NESTED_EPONYMOUS_TYPE
 
 #include "crane_fn.h"
-#include "small_vector.h"
 #include <atomic>
 #include <memory>
 #include <utility>
@@ -10,6 +9,14 @@
 
 struct Nat;
 template <typename X> struct Compare;
+
+struct Other {
+  static bool is_lt(const Nat &n);
+};
+
+struct Compare_Mod {
+  static bool is_lt0(const Nat &n);
+};
 
 struct Nat {
   // TYPES
@@ -39,22 +46,18 @@ public:
 
   // MANIPULATORS
   ~Nat() {
-    crane::small_vector<std::shared_ptr<Nat>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<Nat> {
       if (auto *_alt = std::get_if<S>(&_v)) {
-        if (_alt->a0) {
-          _stack.push_back(std::move(_alt->a0));
+        if (_alt->a0 && _alt->a0.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a0);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<Nat> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -68,7 +71,7 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  bool ltb(const Nat &m) const { return Nat::s(std::move(*this)).leb(m); }
+  bool ltb(const Nat &m) const { return Nat::s(*this).leb(m); }
 
   bool leb(const Nat &m) const {
     const Nat *_loop_self = this;
@@ -127,21 +130,7 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  bool cmp_lt(const X &, const X &) const {
-    if (std::holds_alternative<typename Compare<X>::LT>(this->v())) {
-      return true;
-    } else {
-      return false;
-    }
-  }
-};
-
-struct Other {
-  static bool is_lt(const Nat &n);
-};
-
-struct Compare_Mod {
-  static bool is_lt0(const Nat &n);
+  bool cmp_lt(const X &, const X &) const;
 };
 
 struct NestedEponymousType {
@@ -151,5 +140,13 @@ struct NestedEponymousType {
                                Other::is_lt(Nat::s(Nat::o()))));
   }
 };
+
+template <typename X> bool Compare<X>::cmp_lt(const X &, const X &) const {
+  if (std::holds_alternative<typename Compare<X>::LT>(this->v())) {
+    return true;
+  } else {
+    return false;
+  }
+}
 
 #endif // INCLUDED_NESTED_EPONYMOUS_TYPE

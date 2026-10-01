@@ -2,23 +2,24 @@
 #define INCLUDED_POLYMORPHIC_FUNCTION_FIELD_PROBE
 
 #include "crane_fn.h"
+#include "fn.h"
+#include "obj.h"
 #include <any>
-#include <functional>
 
 enum class Bool0;
 enum class Bool0 { TRUE_, FALSE_ };
 
 struct PolymorphicFunctionFieldProbe {
   struct poly {
-    std::function<std::any(std::any)> apply;
+    crane::fn<crane::obj(crane::obj)> apply;
   };
 
   template <typename T1> static T1 apply(const poly &p0, const T1 &x) {
-    return std::any_cast<T1>(p0.apply(x));
+    return crane_any_cast<T1>(p0.apply(x));
   }
 
   static inline const poly p =
-      poly{crane_erase_fn<std::any>([](const auto &x) { return x; })};
+      poly{crane_erase_fn<crane::obj>([](const auto &x) { return x; })};
   static inline const Bool0 sample_bool = apply<Bool0>(p, Bool0::TRUE_);
 };
 

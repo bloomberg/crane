@@ -74,10 +74,17 @@ let finish ~loopify decl =
   (* With the frames and temporaries in their final places, a local's last
      read is visible, and becomes a move. *)
   let decl = if Table.move_last_use () then Last_use.transform_decl decl else decl in
+  (* A coinductive's field projection hands out a reference into an lvalue
+     receiver, and a copy only to a temporary one. *)
+  let decl = Borrow_projection.transform_decl decl in
   (* Writing a type down is what decides its representation, so settle the
      [Topaque] slots before anything reads the declaration as final.  Crossing
      this seam is what gives {!Cpp_erasure.settled}, the printer's input
      type. *)
   let decl = Cpp_erasure.resolve_casts (Cpp_erasure.materialise decl) in
+  (* With the heads final, a body naming a type variable no head declares is
+     a name nothing in scope introduces; spell it [std::any] rather than emit
+     it. *)
+  let decl = Cpp_erasure.bind_free_tvars decl in
   if Sys.getenv_opt "CRANE_CHECK_IR" <> None then check_settled decl;
   decl

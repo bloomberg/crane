@@ -30,6 +30,14 @@ val ind_cpp_decls : Names.MutInd.t -> Miniml.ml_ind -> rendered
 (** Header counterpart of {!ind_cpp_decls}. *)
 val ind_header_decls : Names.MutInd.t -> Miniml.ml_ind -> rendered
 
+(** Member definitions a datatype struct at namespace scope gave up because
+    their bodies name a module's struct, which is emitted after every datatype
+    and cannot be moved in front of one it holds by value.  In emission order;
+    the header assembly writes them last and empties this.  Already rendered:
+    the environment they are spelled in is the one in force where their struct
+    was, not the one left at the end of the header. *)
+val deferred_member_defs : Pp.t list ref
+
 (** What a type class instance becomes: the struct carrying its methods, and,
     for a ground instance, the [static_assert] checking it against the class's
     concept.  Both belong at namespace scope, wherever the instance was

@@ -59,18 +59,18 @@ struct WhereClause {
       crane::small_vector<std::shared_ptr<Expr>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Plus>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a1) {
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
             _stack.push_back(std::move(_alt->a1));
           }
         }
         if (auto *_alt = std::get_if<Times>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a1) {
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
             _stack.push_back(std::move(_alt->a1));
           }
         }
@@ -278,7 +278,7 @@ struct WhereClause {
       /// _Combine_Plus: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Plus {
-        std::decay_t<T1> _result;
+        T1 _result;
         Expr a1;
         Expr a0;
       };
@@ -286,7 +286,7 @@ struct WhereClause {
       /// _Combine_Times: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Times {
-        std::decay_t<T1> _result;
+        T1 _result;
         Expr a1;
         Expr a0;
       };
@@ -369,7 +369,7 @@ struct WhereClause {
       /// _Combine_Plus: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Plus {
-        std::decay_t<T1> _result;
+        T1 _result;
         Expr a1;
         Expr a0;
       };
@@ -377,7 +377,7 @@ struct WhereClause {
       /// _Combine_Times: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Times {
-        std::decay_t<T1> _result;
+        T1 _result;
         Expr a1;
         Expr a0;
       };
@@ -495,23 +495,23 @@ struct WhereClause {
       crane::small_vector<std::shared_ptr<BExpr>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<BAnd>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a1) {
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
             _stack.push_back(std::move(_alt->a1));
           }
         }
         if (auto *_alt = std::get_if<BOr>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a1) {
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
             _stack.push_back(std::move(_alt->a1));
           }
         }
         if (auto *_alt = std::get_if<BNot>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
         }
@@ -652,7 +652,7 @@ struct WhereClause {
       /// _Combine_BAnd: receives partial results, combines with _result from
       /// final call.
       struct _Combine_BAnd {
-        std::decay_t<T1> _result;
+        T1 _result;
         BExpr a1;
         BExpr a0;
       };
@@ -660,7 +660,7 @@ struct WhereClause {
       /// _Combine_BOr: receives partial results, combines with _result from
       /// final call.
       struct _Combine_BOr {
-        std::decay_t<T1> _result;
+        T1 _result;
         BExpr a1;
         BExpr a0;
       };
@@ -756,7 +756,7 @@ struct WhereClause {
       /// _Combine_BAnd: receives partial results, combines with _result from
       /// final call.
       struct _Combine_BAnd {
-        std::decay_t<T1> _result;
+        T1 _result;
         BExpr a1;
         BExpr a0;
       };
@@ -764,7 +764,7 @@ struct WhereClause {
       /// _Combine_BOr: receives partial results, combines with _result from
       /// final call.
       struct _Combine_BOr {
-        std::decay_t<T1> _result;
+        T1 _result;
         BExpr a1;
         BExpr a0;
       };
@@ -882,18 +882,18 @@ struct WhereClause {
       crane::small_vector<std::shared_ptr<AExpr>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<APlus>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a1) {
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
             _stack.push_back(std::move(_alt->a1));
           }
         }
         if (auto *_alt = std::get_if<AIf>(&_v)) {
-          if (_alt->a1) {
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
             _stack.push_back(std::move(_alt->a1));
           }
-          if (_alt->a2) {
+          if (_alt->a2 && _alt->a2.use_count() == 1) {
             _stack.push_back(std::move(_alt->a2));
           }
         }
@@ -1009,7 +1009,7 @@ struct WhereClause {
       /// _Combine_AIf: receives partial results, combines with _result from
       /// final call.
       struct _Combine_AIf {
-        std::decay_t<T1> _result;
+        T1 _result;
         AExpr a4;
         AExpr a3;
         BExpr a2;
@@ -1018,7 +1018,7 @@ struct WhereClause {
       /// _Combine_APlus: receives partial results, combines with _result from
       /// final call.
       struct _Combine_APlus {
-        std::decay_t<T1> _result;
+        T1 _result;
         AExpr a3;
         AExpr a2;
       };
@@ -1105,7 +1105,7 @@ struct WhereClause {
       /// _Combine_AIf: receives partial results, combines with _result from
       /// final call.
       struct _Combine_AIf {
-        std::decay_t<T1> _result;
+        T1 _result;
         AExpr a4;
         AExpr a3;
         BExpr a2;
@@ -1114,7 +1114,7 @@ struct WhereClause {
       /// _Combine_APlus: receives partial results, combines with _result from
       /// final call.
       struct _Combine_APlus {
-        std::decay_t<T1> _result;
+        T1 _result;
         AExpr a3;
         AExpr a2;
       };

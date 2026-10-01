@@ -115,7 +115,7 @@ Sig<List<uint64_t>> Sort::psort(const List<uint64_t> &x0_) {
 Sig<List<uint64_t>> Sort::qsort(const List<uint64_t> &x0_) {
   return div_conq_pivot(
       Compare_dec::le_dec, Sig<List<uint64_t>>::exist(List<uint64_t>::nil()),
-      [](uint64_t a, const List<uint64_t> &, const Sig<List<uint64_t>> &x,
+      [](uint64_t a, List<uint64_t>, const Sig<List<uint64_t>> &x,
          const Sig<List<uint64_t>> &x0) {
         const auto &[x2] = x;
         const auto &[x4] = x0;

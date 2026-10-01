@@ -1,12 +1,12 @@
 // Copyright 2026 Bloomberg Finance L.P.
 // Distributed under the terms of the GNU LGPL v2.1 license.
 // WIP: Crane generates any_cast<pair<any,any>> for a pair pattern match
-// when the pair type has std::any in a nested position.  The pair is
-// concrete at runtime, so std::any_cast throws bad_any_cast.
+// when the pair type has crane::obj in a nested position.  The pair is
+// concrete at runtime, so crane::any_cast throws bad_any_cast.
 //
 // use_it is a namespace-level const bool initialized at static-init time.
 // The initializer calls any_cast<pair<any,any>>(produce) where produce
-// has type std::pair<std::optional<List<SigT<Nat,std::any>>>,bool>.
+// has type std::pair<std::optional<List<SigT<Nat,crane::obj>>>,bool>.
 // That cast throws bad_any_cast, std::terminate is called, and the
 // program exits non-zero before main() runs.
 //

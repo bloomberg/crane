@@ -1,4 +1,4 @@
-// A Fixpoint returning Type erases to std::any: a value of type ty 1 is
+// A Fixpoint returning Type erases to crane::obj: a value of type ty 1 is
 // stored as an erased callable and applied through the canonical adapter.
 #include "type_level_fixpoint_call.h"
 

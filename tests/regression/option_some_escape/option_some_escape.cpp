@@ -31,16 +31,16 @@ uint64_t OptionSomeEscape::sum_values(const OptionSomeEscape::tree &t,
 /// The & lambda captures parameter t by reference.
 /// return_captures_by_value doesn't handle lambdas inside
 /// std::make_optional. When the function returns, t is destroyed.
-std::optional<std::function<uint64_t(uint64_t)>>
+std::optional<crane::fn<uint64_t(uint64_t)>>
 OptionSomeEscape::option_escape(OptionSomeEscape::tree t) {
-  return std::make_optional<std::function<uint64_t(uint64_t)>>(
-      [=](uint64_t _x0) mutable -> uint64_t { return sum_values(t, _x0); });
+  return std::make_optional<crane::fn<uint64_t(uint64_t)>>(
+      [=](uint64_t _x0) -> uint64_t { return sum_values(std::move(t), _x0); });
 }
 
 uint64_t OptionSomeEscape::apply_option(
-    const std::optional<std::function<uint64_t(uint64_t)>> &o, uint64_t x) {
+    const std::optional<crane::fn<uint64_t(uint64_t)>> &o, uint64_t x) {
   if (o.has_value()) {
-    const std::function<uint64_t(uint64_t)> &f = *o;
+    const crane::fn<uint64_t(uint64_t)> &f = *o;
     return f(x);
   } else {
     return x;

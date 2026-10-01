@@ -1,9 +1,9 @@
 #ifndef INCLUDED_PAIR_CLOSURE_ESCAPE
 #define INCLUDED_PAIR_CLOSURE_ESCAPE
 
+#include "fn.h"
 #include "small_vector.h"
 #include <atomic>
-#include <functional>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -46,10 +46,10 @@ struct PairClosureEscape {
       crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a2) {
+          if (_alt->a2 && _alt->a2.use_count() == 1) {
             _stack.push_back(std::move(_alt->a2));
           }
         }
@@ -105,17 +105,15 @@ struct PairClosureEscape {
   static uint64_t sum_values(const tree &t, uint64_t x);
   /// BUG: Partial application stored in fst of a pair (std::make_pair).
   /// return_captures_by_value doesn't handle lambdas inside std::make_pair.
-  static std::pair<std::function<uint64_t(uint64_t)>, uint64_t>
-  pair_escape(tree t);
-
+  static std::pair<crane::fn<uint64_t(uint64_t)>, uint64_t> pair_escape(tree t);
   static uint64_t
-  use_pair(const std::pair<std::function<uint64_t(uint64_t)>, uint64_t> &p);
+  use_pair(const std::pair<crane::fn<uint64_t(uint64_t)>, uint64_t> &p);
   /// Clobber stack after pair_escape returns.
   static inline const uint64_t bug_pair_escape = []() {
     tree t1 = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
                          UINT64_C(20),
                          tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
-    std::pair<std::function<uint64_t(uint64_t)>, uint64_t> p1 =
+    std::pair<crane::fn<uint64_t(uint64_t)>, uint64_t> p1 =
         pair_escape(std::move(t1));
     return use_pair(std::move(p1));
   }();

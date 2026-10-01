@@ -14,6 +14,7 @@
 #include <new>
 #include <cassert>
 #include <memory>
+#include "pool.h"
 // The non-atomic [crane::rc] participates in the runtime scoped-arena feature
 // (arena.h) only when the [Set Crane Arena] master switch is on, in which case
 // the generated header defines CRANE_ARENA before including this file.  Under
@@ -34,8 +35,17 @@ template <typename T> class enable_rc_from_this;
 template <typename T> bool rc_unique(const rc<T>& p) noexcept;
 template <typename T, typename... Args> rc<T> make_rc_reusing_unchecked(rc<T> token, Args&&... args);
 
+// [pooled<ControlBlock<T>>] gives every instantiation its own per-type free
+// list (see pool.h), used for the plain-heap allocation make_rc performs.
+// An arena-backed block (rc<T>::make with a scope open) is placement-new'd
+// into region memory and never reaches [delete], so it never touches this
+// pool either -- the two allocation disciplines don't interact.  The base is
+// empty (no data members, only static functions), so it costs nothing in
+// [sizeof(ControlBlock<T>)] and does not move [storage]: verified against a
+// [static_assert] on [offsetof] and with rc_from_this() exercised over many
+// pool cycles under ASan before this went in.
 template <typename T>
-struct ControlBlock {
+struct ControlBlock : pool_detail::pooled<ControlBlock<T>> {
     std::size_t strong{1}; // number of owning rc
     std::size_t weak{0};   // number of weak
 

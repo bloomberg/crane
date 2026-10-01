@@ -1,12 +1,14 @@
 #ifndef INCLUDED_HKT_SINGLE_CTOR_INSTANCE_BODY
 #define INCLUDED_HKT_SINGLE_CTOR_INSTANCE_BODY
 
-#include "small_vector.h"
+#include "crane_fn.h"
+#include "fn.h"
+#include "obj.h"
 #include <any>
 #include <atomic>
 #include <concepts>
-#include <functional>
 #include <memory>
+#include <stdexcept>
 #include <utility>
 #include <variant>
 
@@ -40,22 +42,18 @@ public:
 
   // MANIPULATORS
   ~Nat() {
-    crane::small_vector<std::shared_ptr<Nat>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<Nat> {
       if (auto *_alt = std::get_if<S>(&_v)) {
-        if (_alt->a0) {
-          _stack.push_back(std::move(_alt->a0));
+        if (_alt->a0 && _alt->a0.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a0);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<Nat> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -78,18 +76,18 @@ public:
 /// error: no member named 'v' in 'box<std::any>'
 template <typename I>
 concept Ftor = requires {
-  typename I::template F<std::any>;
+  typename I::template F<crane::obj>;
   {
-    I::fmap(std::declval<std::function<std::any(std::any)>>(),
-            std::declval<typename I::template F<std::any>>())
-  } -> std::convertible_to<typename I::template F<std::any>>;
+    I::fmap(std::declval<crane::fn<crane::obj(crane::obj)>>(),
+            std::declval<typename I::template F<crane::obj>>())
+  } -> std::convertible_to<typename I::template F<crane::obj>>;
 };
 template <typename I>
 concept Pointed = requires {
-  typename I::template F<std::any>;
+  typename I::template F<crane::obj>;
   {
-    I::template pnt<std::any>(std::declval<std::any>())
-  } -> std::convertible_to<typename I::template F<std::any>>;
+    I::template pnt<crane::obj>(std::declval<crane::obj>())
+  } -> std::convertible_to<typename I::template F<crane::obj>>;
 };
 
 struct HktSingleCtorInstanceBody {
@@ -105,6 +103,17 @@ struct HktSingleCtorInstanceBody {
     // ACCESSORS
     box<A> clone() const { return {a0}; }
 
+    template <typename _U> operator box<_U>() const {
+      return {[&]() -> _U {
+        if constexpr (crane_convertible<_U, const A &>) {
+          return crane_convert<_U>(a0);
+        } else {
+          throw std::logic_error(
+              "unreachable: inactive constructor field at this instantiation");
+        }
+      }()};
+    }
+
     // CREATORS
     static box<A> mkbox(A a0) { return {std::move(a0)}; }
   };
@@ -112,10 +121,10 @@ struct HktSingleCtorInstanceBody {
   struct FB {
     template <typename _A0> using F = box<_A0>;
 
-    static box<std::any> fmap(std::function<std::any(std::any)> f,
-                              box<std::any> b) {
+    static box<crane::obj> fmap(crane::fn<crane::obj(crane::obj)> f,
+                                box<crane::obj> b) {
       const auto &[a0] = b;
-      return box<std::any>::mkbox(f(a0));
+      return box<crane::obj>::mkbox(f(a0));
     }
   };
 

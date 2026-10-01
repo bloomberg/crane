@@ -1,9 +1,9 @@
 #ifndef INCLUDED_FIX_PARTIAL_APP
 #define INCLUDED_FIX_PARTIAL_APP
 
+#include "fn.h"
 #include "small_vector.h"
 #include <atomic>
-#include <functional>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -46,10 +46,10 @@ struct FixPartialApp {
       crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a2) {
+          if (_alt->a2 && _alt->a2.use_count() == 1) {
             _stack.push_back(std::move(_alt->a2));
           }
         }
@@ -140,8 +140,9 @@ struct FixPartialApp {
       tree t = tree::node(tree::node(tree::leaf(), UINT64_C(0), tree::leaf()),
                           UINT64_C(0),
                           tree::node(tree::leaf(), UINT64_C(0), tree::leaf()));
-      std::function<uint64_t(uint64_t)> f =
-          [=](uint64_t _x0) mutable -> uint64_t { return count_nodes(t, _x0); };
+      crane::fn<uint64_t(uint64_t)> f = [=](uint64_t _x0) -> uint64_t {
+        return count_nodes(std::move(t), _x0);
+      };
       return (f(UINT64_C(0)) + f(UINT64_C(100)));
     }();
   }();
@@ -151,9 +152,10 @@ struct FixPartialApp {
       tree t = tree::node(tree::node(tree::leaf(), UINT64_C(0), tree::leaf()),
                           UINT64_C(0),
                           tree::node(tree::leaf(), UINT64_C(0), tree::leaf()));
-      std::function<uint64_t(uint64_t)> f =
-          [=](uint64_t _x0) mutable -> uint64_t { return count_nodes(t, _x0); };
-      std::pair<std::function<uint64_t(uint64_t)>, uint64_t> p =
+      crane::fn<uint64_t(uint64_t)> f = [=](uint64_t _x0) -> uint64_t {
+        return count_nodes(std::move(t), _x0);
+      };
+      std::pair<crane::fn<uint64_t(uint64_t)>, uint64_t> p =
           std::make_pair(f, UINT64_C(42));
       return (p.first(UINT64_C(0)) + p.first(UINT64_C(100)));
     }();
@@ -176,7 +178,7 @@ struct FixPartialApp {
   /// Then apply g to two different trees.
   /// If the closure for g captures the function arg by &, it could dangle.
   static inline const uint64_t map_partial_bug = []() {
-    std::function<tree(tree)> g = [](tree _x0) -> tree {
+    crane::fn<tree(tree)> g = [](tree _x0) -> tree {
       return tree_map([](uint64_t x) { return (x + UINT64_C(1)); }, _x0);
     };
     tree t1 = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());

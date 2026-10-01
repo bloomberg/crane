@@ -2,9 +2,9 @@
 #define INCLUDED_CPS_ESCAPE
 
 #include "crane_fn.h"
+#include "fn.h"
 #include "small_vector.h"
 #include <atomic>
-#include <functional>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -47,10 +47,10 @@ struct CpsEscape {
       crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a2) {
+          if (_alt->a2 && _alt->a2.use_count() == 1) {
             _stack.push_back(std::move(_alt->a2));
           }
         }
@@ -156,7 +156,7 @@ struct CpsEscape {
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
-        std::decay_t<T1> _result;
+        T1 _result;
         tree a2;
         uint64_t a1;
         tree a0;
@@ -218,7 +218,7 @@ struct CpsEscape {
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
-        std::decay_t<T1> _result;
+        T1 _result;
         tree a2;
         uint64_t a1;
         tree a0;
@@ -260,27 +260,25 @@ struct CpsEscape {
 
   struct box {
     // DATA
-    std::function<uint64_t(uint64_t)> a0;
+    crane::fn<uint64_t(uint64_t)> a0;
 
     // ACCESSORS
     box clone() const { return {a0}; }
 
     // CREATORS
-    static box box0(std::function<uint64_t(uint64_t)> a0) {
+    static box box0(crane::fn<uint64_t(uint64_t)> a0) {
       return {std::move(a0)};
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &,
-                                     std::function<uint64_t(uint64_t)> &>
+      requires std::is_invocable_r_v<T1, F0 &, crane::fn<uint64_t(uint64_t)> &>
     T1 box_rec(F0 &&f) const {
       const auto &[a0] = *this;
       return f(a0);
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &,
-                                     std::function<uint64_t(uint64_t)> &>
+      requires std::is_invocable_r_v<T1, F0 &, crane::fn<uint64_t(uint64_t)> &>
     T1 box_rect(F0 &&f) const {
       const auto &[a0] = *this;
       return f(a0);
@@ -307,8 +305,9 @@ struct CpsEscape {
       tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
                           UINT64_C(20),
                           tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
-      std::function<uint64_t(uint64_t)> adder =
-          [=](uint64_t _x0) mutable -> uint64_t { return t.make_adder(_x0); };
+      crane::fn<uint64_t(uint64_t)> adder = [=](uint64_t _x0) -> uint64_t {
+        return std::move(t).make_adder(_x0);
+      };
       box b = store_in_box(adder);
       auto &[a0] = b;
       return std::move(a0)(UINT64_C(5));
@@ -321,8 +320,9 @@ struct CpsEscape {
       tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
                           UINT64_C(20),
                           tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
-      box b = store_in_box(
-          [=](uint64_t _x0) mutable -> uint64_t { return t.make_adder(_x0); });
+      box b = store_in_box([=](uint64_t _x0) -> uint64_t {
+        return std::move(t).make_adder(_x0);
+      });
       auto &[a0] = b;
       return std::move(a0)(UINT64_C(5));
     }();
@@ -335,10 +335,12 @@ struct CpsEscape {
           tree::node(tree::leaf(), UINT64_C(10), tree::leaf()), UINT64_C(20),
           tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
       tree t2 = tree::node(tree::leaf(), UINT64_C(100), tree::leaf());
-      box b1 = store_in_box(
-          [=](uint64_t _x0) mutable -> uint64_t { return t1.make_adder(_x0); });
-      box b2 = store_in_box(
-          [=](uint64_t _x0) mutable -> uint64_t { return t2.make_adder(_x0); });
+      box b1 = store_in_box([=](uint64_t _x0) -> uint64_t {
+        return std::move(t1).make_adder(_x0);
+      });
+      box b2 = store_in_box([=](uint64_t _x0) -> uint64_t {
+        return std::move(t2).make_adder(_x0);
+      });
       auto &[a0] = b1;
       auto &[a00] = b2;
       return (std::move(a0)(UINT64_C(0)) + std::move(a00)(UINT64_C(0)));

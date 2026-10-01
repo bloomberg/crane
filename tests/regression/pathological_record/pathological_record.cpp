@@ -33,9 +33,9 @@ uint64_t PathologicalRecord::countdown(uint64_t n,
     return r.f1;
   } else {
     uint64_t n_ = n - 1;
-    std::any _x = r.f1;
+    crane::obj _x = r.f1;
     uint64_t b = r.f2;
-    std::any _x0 = r.f3;
+    crane::obj _x0 = r.f3;
     return (countdown(n_, r) + b);
   }
 }

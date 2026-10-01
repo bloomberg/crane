@@ -20,8 +20,8 @@ FnValueProjections::somes(const List<uint64_t> &l) {
 
 List<uint64_t> FnValueProjections::ids(const List<uint64_t> &l) {
   return l.template map<uint64_t>([](uint64_t _ue0) {
-    return std::any_cast<uint64_t>(Datatypes::id(std::any(_ue0)));
+    return crane::any_cast<uint64_t>(Datatypes::id(crane::obj(_ue0)));
   });
 }
 
-std::any Datatypes::id(std::any x) { return x; }
+crane::obj Datatypes::id(crane::obj x) { return x; }

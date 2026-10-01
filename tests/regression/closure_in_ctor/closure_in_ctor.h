@@ -1,7 +1,8 @@
 #ifndef INCLUDED_CLOSURE_IN_CTOR
 #define INCLUDED_CLOSURE_IN_CTOR
 
-#include <functional>
+#include "fn.h"
+#include <atomic>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -10,7 +11,7 @@ struct ClosureInCtor {
   struct box {
     // TYPES
     struct Box0 {
-      std::function<uint64_t(uint64_t)> a0;
+      crane::fn<uint64_t(uint64_t)> a0;
     };
 
     struct Empty {};
@@ -29,7 +30,7 @@ struct ClosureInCtor {
 
     explicit box(Empty _v) : v_(_v) {}
 
-    static box box0(std::function<uint64_t(uint64_t)> a0) {
+    static box box0(crane::fn<uint64_t(uint64_t)> a0) {
       return box(Box0{std::move(a0)});
     }
 
@@ -43,8 +44,7 @@ struct ClosureInCtor {
   };
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &,
-                                   std::function<uint64_t(uint64_t)> &>
+    requires std::is_invocable_r_v<T1, F0 &, crane::fn<uint64_t(uint64_t)> &>
   static T1 box_rect(F0 &&f, T1 f0, const box &b) {
     if (std::holds_alternative<typename box::Box0>(b.v())) {
       const auto &[a0] = std::get<typename box::Box0>(b.v());
@@ -55,8 +55,7 @@ struct ClosureInCtor {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &,
-                                   std::function<uint64_t(uint64_t)> &>
+    requires std::is_invocable_r_v<T1, F0 &, crane::fn<uint64_t(uint64_t)> &>
   static T1 box_rec(F0 &&f, T1 f0, const box &b) {
     if (std::holds_alternative<typename box::Box0>(b.v())) {
       const auto &[a0] = std::get<typename box::Box0>(b.v());

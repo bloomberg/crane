@@ -5,11 +5,11 @@
 // payload as a concrete template type.
 //
 // Regression: the generated extract_a<T1> S branch used to emit
-// "return a1;" where a1 is std::any but the return type is T1.
+// "return a1;" where a1 is crane::obj but the return type is T1.
 // The fix inserts any_cast<T1>(a1) so the function compiles and runs.
 //
 // test_extract(x) calls extract_a<uint64_t> with existT _ 1 x (S branch),
-// where payload_ty(S _) = A = uint64_t stored in std::any.
+// where payload_ty(S _) = A = uint64_t stored in crane::obj.
 // Expected: test_extract(x) == x.
 
 #include "any_cast_nested.h"
@@ -34,7 +34,7 @@ void aSsErT(bool condition, const char *message, int line) {
 
 int main() {
   // test_extract(x) = extract_a<uint64_t>(existT _ 1 x)
-  // S branch: payload is x:uint64_t stored in std::any; any_cast<uint64_t>(a1) = x.
+  // S branch: payload is x:uint64_t stored in crane::obj; any_cast<uint64_t>(a1) = x.
   uint64_t result = AnyCastNested::test_extract(42);
   ASSERT(result == 42);
 

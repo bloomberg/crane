@@ -2,11 +2,13 @@
 #define INCLUDED_TYPE_CONSTRUCTOR_PARAM_INDUCTIVE
 
 #include "crane_fn.h"
+#include "obj.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -36,21 +38,26 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U> List(const List<_U> &_other) {
-    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->v_ = Nil{};
-    } else {
-      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>) {
-                          return crane_any_cast<A>(a);
-                        } else {
-                          return A(a);
-                        }
-                      }(),
-                      (l ? std::make_shared<List<A>>(*l) : nullptr)};
-    }
-  }
+  template <typename _U>
+  List(const List<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+            return Nil{};
+          } else {
+            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const _U &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                   : nullptr)};
+          }
+        }()) {}
 
   static List<A> nil() { return List<A>(Nil{}); }
 
@@ -60,22 +67,18 @@ public:
 
   // MANIPULATORS
   ~List() {
-    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
-        if (_alt->l) {
-          _stack.push_back(std::move(_alt->l));
+        if (_alt->l && _alt->l.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->l);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<List<A>> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -131,18 +134,19 @@ public:
 struct TypeConstructorParamInductive {
   /// An inductive parameterised by a type {e constructor} emits a template
   /// template parameter that its instantiations do not satisfy.
-  template <template <typename> class F, typename A> struct wrapped {
+  template <typename F, typename A> struct wrapped {
     // TYPES
     struct Wrap {
-      F<A> a0;
+      crane::rebind_t<F, A> a0;
     };
 
     struct Pair2 {
-      F<A> a0;
-      F<A> a1;
+      crane::rebind_t<F, A> a0;
+      crane::rebind_t<F, A> a1;
     };
 
     using variant_t = std::variant<Wrap, Pair2>;
+    using crane_family_tag = void;
 
   private:
     // DATA
@@ -156,25 +160,51 @@ struct TypeConstructorParamInductive {
 
     explicit wrapped(Pair2 _v) : v_(std::move(_v)) {}
 
-    template <template <typename> class _U0, typename _U1>
-    wrapped(const wrapped<_U0, _U1> &_other) {
-      if (std::holds_alternative<typename wrapped<_U0, _U1>::Wrap>(
-              _other.v())) {
-        const auto &[a0] =
-            std::get<typename wrapped<_U0, _U1>::Wrap>(_other.v());
-        this->v_ = Wrap{F<A>(a0)};
-      } else {
-        const auto &[a0, a1] =
-            std::get<typename wrapped<_U0, _U1>::Pair2>(_other.v());
-        this->v_ = Pair2{F<A>(a0), F<A>(a1)};
-      }
-    }
+    template <typename _U0, typename _U1>
+    wrapped(const wrapped<_U0, _U1> &_other)
+        : v_([&]() -> variant_t {
+            if (std::holds_alternative<typename wrapped<_U0, _U1>::Wrap>(
+                    _other.v())) {
+              const auto &[a0] =
+                  std::get<typename wrapped<_U0, _U1>::Wrap>(_other.v());
+              return Wrap{[&]() -> F {
+                if constexpr (crane_convertible<F, const _U0 &>) {
+                  return crane_convert<F>(a0);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }()};
+            } else {
+              const auto &[a0, a1] =
+                  std::get<typename wrapped<_U0, _U1>::Pair2>(_other.v());
+              return Pair2{[&]() -> F {
+                             if constexpr (crane_convertible<F, const _U0 &>) {
+                               return crane_convert<F>(a0);
+                             } else {
+                               throw std::logic_error(
+                                   "unreachable: inactive constructor field at "
+                                   "this instantiation");
+                             }
+                           }(),
+                           [&]() -> F {
+                             if constexpr (crane_convertible<F, const _U0 &>) {
+                               return crane_convert<F>(a1);
+                             } else {
+                               throw std::logic_error(
+                                   "unreachable: inactive constructor field at "
+                                   "this instantiation");
+                             }
+                           }()};
+            }
+          }()) {}
 
-    static wrapped<F, A> wrap(F<A> a0) {
+    static wrapped<F, A> wrap(crane::rebind_t<F, A> a0) {
       return wrapped<F, A>(Wrap{std::move(a0)});
     }
 
-    static wrapped<F, A> pair2(F<A> a0, F<A> a1) {
+    static wrapped<F, A> pair2(crane::rebind_t<F, A> a0,
+                               crane::rebind_t<F, A> a1) {
       return wrapped<F, A>(Pair2{std::move(a0), std::move(a1)});
     }
 
@@ -185,10 +215,10 @@ struct TypeConstructorParamInductive {
     const variant_t &v() const { return v_; }
   };
 
-  template <template <typename> class T1, typename T2, typename T3, typename F0,
-            typename F1>
-    requires std::is_invocable_r_v<T3, F0 &, T1<T2> &> &&
-             std::is_invocable_r_v<T3, F1 &, T1<T2> &, T1<T2> &>
+  template <typename T1, typename T2, typename T3, typename F0, typename F1>
+    requires std::is_invocable_r_v<T3, F0 &, crane::rebind_t<T1, T2> &> &&
+             std::is_invocable_r_v<T3, F1 &, crane::rebind_t<T1, T2> &,
+                                   crane::rebind_t<T1, T2> &>
   static T3 wrapped_rect(F0 &&f, F1 &&f0, const wrapped<T1, T2> &w) {
     if (std::holds_alternative<typename wrapped<T1, T2>::Wrap>(w.v())) {
       const auto &[a0] = std::get<typename wrapped<T1, T2>::Wrap>(w.v());
@@ -199,10 +229,10 @@ struct TypeConstructorParamInductive {
     }
   }
 
-  template <template <typename> class T1, typename T2, typename T3, typename F0,
-            typename F1>
-    requires std::is_invocable_r_v<T3, F0 &, T1<T2> &> &&
-             std::is_invocable_r_v<T3, F1 &, T1<T2> &, T1<T2> &>
+  template <typename T1, typename T2, typename T3, typename F0, typename F1>
+    requires std::is_invocable_r_v<T3, F0 &, crane::rebind_t<T1, T2> &> &&
+             std::is_invocable_r_v<T3, F1 &, crane::rebind_t<T1, T2> &,
+                                   crane::rebind_t<T1, T2> &>
   static T3 wrapped_rec(F0 &&f, F1 &&f0, const wrapped<T1, T2> &w) {
     if (std::holds_alternative<typename wrapped<T1, T2>::Wrap>(w.v())) {
       const auto &[a0] = std::get<typename wrapped<T1, T2>::Wrap>(w.v());
@@ -213,22 +243,24 @@ struct TypeConstructorParamInductive {
     }
   }
 
-  static uint64_t size_list(const wrapped<List, uint64_t> &w);
-  static uint64_t size_opt(const wrapped<std::optional, uint64_t> &w);
+  static uint64_t size_list(const wrapped<List<crane::obj>, uint64_t> &w);
+  static uint64_t
+  size_opt(const wrapped<std::optional<crane::obj>, uint64_t> &w);
   static inline const uint64_t total =
-      (((size_list(wrapped<List, uint64_t>::wrap(List<uint64_t>::cons(
-             UINT64_C(1),
-             List<uint64_t>::cons(
-                 UINT64_C(2),
-                 List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))))) +
-         size_list(wrapped<List, uint64_t>::pair2(
+      (((size_list(
+             wrapped<List<crane::obj>, uint64_t>::wrap(List<uint64_t>::cons(
+                 UINT64_C(1),
+                 List<uint64_t>::cons(
+                     UINT64_C(2), List<uint64_t>::cons(
+                                      UINT64_C(3), List<uint64_t>::nil()))))) +
+         size_list(wrapped<List<crane::obj>, uint64_t>::pair2(
              List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil()),
              List<uint64_t>::cons(
                  UINT64_C(2),
                  List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))))) +
-        size_opt(wrapped<std::optional, uint64_t>::wrap(
+        size_opt(wrapped<std::optional<crane::obj>, uint64_t>::wrap(
             std::make_optional<uint64_t>(UINT64_C(1))))) +
-       size_opt(wrapped<std::optional, uint64_t>::pair2(
+       size_opt(wrapped<std::optional<crane::obj>, uint64_t>::pair2(
            std::make_optional<uint64_t>(UINT64_C(1)),
            std::optional<uint64_t>())));
 };

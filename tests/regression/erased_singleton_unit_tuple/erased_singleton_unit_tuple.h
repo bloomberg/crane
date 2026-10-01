@@ -2,16 +2,19 @@
 #define INCLUDED_ERASED_SINGLETON_UNIT_TUPLE
 
 #include "crane_fn.h"
-#include "small_vector.h"
+#include "obj.h"
 #include <any>
 #include <atomic>
 #include <memory>
-#include <type_traits>
+#include <stdexcept>
 #include <utility>
 #include <variant>
 
 template <typename A> struct List;
 enum class Sym;
+using tuple = crane::obj;
+using sym_semty = crane::obj;
+using syms_semty = tuple;
 
 template <typename A> struct List {
   // TYPES
@@ -36,21 +39,26 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U> List(const List<_U> &_other) {
-    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->v_ = Nil{};
-    } else {
-      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>) {
-                          return crane_any_cast<A>(a);
-                        } else {
-                          return A(a);
-                        }
-                      }(),
-                      (l ? std::make_shared<List<A>>(*l) : nullptr)};
-    }
-  }
+  template <typename _U>
+  List(const List<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+            return Nil{};
+          } else {
+            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const _U &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                   : nullptr)};
+          }
+        }()) {}
 
   static List<A> nil() { return List<A>(Nil{}); }
 
@@ -60,22 +68,18 @@ public:
 
   // MANIPULATORS
   ~List() {
-    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
-        if (_alt->l) {
-          _stack.push_back(std::move(_alt->l));
+        if (_alt->l && _alt->l.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->l);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<List<A>> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -89,44 +93,7 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 };
-
-/// Runtime bad_any_cast repro (now fixed). Mirrors Crane's codegen for
-/// theories/Parser/Defs.v's rev_tuple_cons_case:
-/// exact (concat_tuple (rev xs') x (f xs' vs) (v, tt)).
-/// The singleton tuple (v, tt) : symbols_semty [x] -- where symbols_semty
-/// gamma := tuple (map symbol_semty gamma) erases to std::any and v is
-/// destructured from an erased tuple (so it is std::any) -- was emitted by
-/// Crane as std::make_pair(v, std::monostate{}) i.e. a std::pair<std::any,
-/// std::monostate>: the tt : unit component was left as a raw std::monostate{}
-/// instead of being erased to std::any(std::monostate{}). So the value's
-/// dynamic type was pair<any, monostate>. But every consumer of an erased
-/// symbols_semty destructures with std::any_cast<std::pair<std::any,
-/// std::any>>(...), which requires the boxed type to be EXACTLY pair<any,any>
-/// -> std::bad_any_cast at runtime.
-///
-/// Root cause: the producer-side "box each component when the pair flows into a
-/// value-dependent erased slot" logic (flows_into_erased_slot in
-/// gen_expr_custom_cons) keys on resolves_to_any_type
-/// tctx.current_cpp_return_type.  head1's return type syms_semty [A] is a
-/// MULTI-LEVEL alias (syms_semty -> tuple -> std::any); resolves_to_any_type
-/// only followed one level (via find_type_opt, which has no entry for a
-/// type-level Definition), so it returned false and the unit component was left
-/// unboxed.  Fix (translation.ml): resolves_to_any_type now also follows the
-/// using-alias expansion recorded as a typedef (Table.lookup_typedef_unchecked)
-/// for ConstRefs, so the syms_semty -> tuple -> std::any chain resolves and
-/// both components get boxed to pair<any,any>.
-///
-/// Repro: cons_sem builds erased tuples correctly (generic over head symbol
-/// and tail list -> make_pair(any(v), rest), a proper pair<any,any>).
-/// head1 mirrors rev_tuple_cons_case's (v, tt): a singleton erased tuple
-/// from an erased head.  firstOf is a generic consumer destructuring an erased
-/// tuple as pair<any,any>.  check feeds head1's output into firstOf.
-/// (cons_sem builds the input from a runtime n so we avoid an unrelated
-/// concrete-literal-to-erased coercion artifact at static-init time.)
-using tuple = std::any;
 enum class Sym { A, B };
-using sym_semty = std::any;
-using syms_semty = tuple;
 syms_semty cons_sem(Sym _x, const List<Sym> &_x0, sym_semty v, syms_semty rest);
 syms_semty head1(const List<Sym> &_x, syms_semty vs);
 uint64_t firstOf(const List<Sym> &_x, syms_semty t);

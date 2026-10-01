@@ -122,10 +122,30 @@ type slot = {
       (** The C++ type of the slot, set from the [?expected_ty] argument of
           whichever generator is building the position.  Alone among these
           fields it does not survive into a nested position. *)
+  call_result : cpp_type option;
+      (** The type the call this slot is an argument of is expected to
+          produce, where an instance passed as a value reads back the carrier
+          argument extraction erased. *)
+  stated_ml_ty : ml_type option;
+      (** The ML type the position states, erased parts and all; read only
+          where an erased part is expected. *)
 }
 
 (** The slot properties of a position that constrains nothing. *)
 val empty_slot : slot
+
+(** [ml_arg_to_template_type env a] is the C++ type that names the instance [a]
+    stands for: the struct an instance definition generated, at the arguments
+    the term applies it to.  This is the spelling a call through the instance
+    already uses, so a type that has to agree with such a call takes it from
+    here rather than rebuilding it.  [expected], the type the call through
+    the instance returns, supplies an instance argument extraction erased. *)
+val ml_arg_to_template_type : ?expected:cpp_type -> env -> ml_ast -> cpp_type
+
+(** Whether a C++ type names a class field the current scope does not
+    resolve, so that it would print through the field's file-scope erased
+    alias. *)
+val mentions_unresolved_promoted : Minicpp.cpp_type -> bool
 
 (** Generate a C++ expression from an ML AST. *)
 val gen_expr : ?expected_ty:cpp_type -> ?slot:slot -> env -> ml_ast -> cpp_expr
@@ -134,6 +154,10 @@ val gen_expr : ?expected_ty:cpp_type -> ?slot:slot -> env -> ml_ast -> cpp_expr
     component read out of a pair that was itself recovered from a box, and so
     hands back a [std::any] however concrete its ML type looks. *)
 val recover_boxed_component : cpp_type -> cpp_expr -> cpp_expr
+
+(** [unbox_value into e] recovers [e], a value known to come out of a box, at
+    [into] -- through a closure's returns where [e] is one built here. *)
+val unbox_value : cpp_type -> cpp_expr -> cpp_expr
 
 (** Generate pattern matching as a C++ expression: an if/else-if chain over
     the scrutinee's variant, wrapped in an immediately-invoked lambda. *)
@@ -193,8 +217,13 @@ type hkt_tvar_position = {
 (** Type variables standing for a higher-kinded class parameter. *)
 val hkt_tvar_positions_of_type : ml_type -> hkt_tvar_position list
 
-(** Apply unit-to-void conversion on a C++ type, respecting reified mode. *)
-val apply_unit_void : bool -> bool -> cpp_type -> cpp_type
+(** Whether a declaration of this ML type is emitted as returning [void]: its
+    result, after the arrows and a monad's result argument, is [unit] -- and
+    the monad is not a reified one, whose trees are values. *)
+val ml_type_is_void_call : ml_type -> bool
+
+(** Apply unit-to-void conversion on a C++ type. *)
+val apply_unit_void : bool -> cpp_type -> cpp_type
 
 (** Generate the C++ expression for Rocq's [tt] (the unit constructor). *)
 val mk_tt_expr : unit -> cpp_expr
@@ -257,6 +286,15 @@ val ast_may_throw : ml_ast -> bool
     [is_self_call]. *)
 val detect_non_forwarded_params_generic :
   is_self_call:(int -> ml_ast -> bool) -> int -> ml_ast -> int list
+
+(** Whether [body] calls [r] outside every lambda and every coinductive
+    constructor, where no suspension reaches the call. *)
+val calls_eagerly : Names.GlobRef.t -> ml_ast -> bool
+
+(** The source-order indices of the first [n_params] parameters that a
+    closure in [body] may hold on to: named under a lambda not applied on the
+    spot, or anywhere when [suspended]. *)
+val escaping_params : suspended:bool -> int -> ml_ast -> int list
 
 (** Infer, for each of [n_params] parameters, whether it is "owned" (should be
     passed by value / moved) based on escape analysis of [body]. *)

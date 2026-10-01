@@ -10,9 +10,9 @@
 /// Difference from fix_escape_capture: returns TWO fixpoints that both
 /// capture the SAME variable. This tests whether both closures
 /// independently read garbage from the same dangling reference.
-std::pair<std::function<uint64_t(uint64_t)>, std::function<uint64_t(uint64_t)>>
+std::pair<crane::fn<uint64_t(uint64_t)>, crane::fn<uint64_t(uint64_t)>>
 ClosureNestedEscape::make_pair_fix(uint64_t n) {
-  auto add_impl = [=](auto &_self_add, uint64_t x) mutable -> uint64_t {
+  auto add_impl = [=](auto &_self_add, uint64_t x) -> uint64_t {
     if (x <= 0) {
       return n;
     } else {
@@ -20,10 +20,8 @@ ClosureNestedEscape::make_pair_fix(uint64_t n) {
       return (_self_add(_self_add, x_) + 1);
     }
   };
-  auto add = [=](uint64_t x) mutable -> uint64_t {
-    return add_impl(add_impl, x);
-  };
-  auto mul_impl = [=](auto &_self_mul, uint64_t x) mutable -> uint64_t {
+  auto add = [=](uint64_t x) -> uint64_t { return add_impl(add_impl, x); };
+  auto mul_impl = [=](auto &_self_mul, uint64_t x) -> uint64_t {
     if (x <= 0) {
       return UINT64_C(0);
     } else {
@@ -31,8 +29,6 @@ ClosureNestedEscape::make_pair_fix(uint64_t n) {
       return (n + _self_mul(_self_mul, x_));
     }
   };
-  auto mul = [=](uint64_t x) mutable -> uint64_t {
-    return mul_impl(mul_impl, x);
-  };
+  auto mul = [=](uint64_t x) -> uint64_t { return mul_impl(mul_impl, x); };
   return std::make_pair(add, mul);
 }

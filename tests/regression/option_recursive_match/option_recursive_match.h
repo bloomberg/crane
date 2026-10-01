@@ -2,10 +2,12 @@
 #define INCLUDED_OPTION_RECURSIVE_MATCH
 
 #include "crane_fn.h"
+#include "obj.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -41,22 +43,18 @@ public:
 
   // MANIPULATORS
   ~Nat() {
-    crane::small_vector<std::shared_ptr<Nat>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<Nat> {
       if (auto *_alt = std::get_if<S>(&_v)) {
-        if (_alt->a0) {
-          _stack.push_back(std::move(_alt->a0));
+        if (_alt->a0 && _alt->a0.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a0);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<Nat> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -93,20 +91,23 @@ public:
 
   explicit Option(None _v) : v_(_v) {}
 
-  template <typename _U> Option(const Option<_U> &_other) {
-    if (std::holds_alternative<typename Option<_U>::Some>(_other.v())) {
-      const auto &[a] = std::get<typename Option<_U>::Some>(_other.v());
-      this->v_ = Some{[&]() -> A {
-        if constexpr (std::is_same_v<_U, std::any>) {
-          return crane_any_cast<A>(a);
-        } else {
-          return A(a);
-        }
-      }()};
-    } else {
-      this->v_ = None{};
-    }
-  }
+  template <typename _U>
+  Option(const Option<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename Option<_U>::Some>(_other.v())) {
+            const auto &[a] = std::get<typename Option<_U>::Some>(_other.v());
+            return Some{[&]() -> A {
+              if constexpr (crane_convertible<A, const _U &>) {
+                return crane_convert<A>(a);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }()};
+          } else {
+            return None{};
+          }
+        }()) {}
 
   static Option<A> some(A a) { return Option<A>(Some{std::move(a)}); }
 

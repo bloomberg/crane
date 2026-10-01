@@ -15,7 +15,7 @@ SuperfluousMoves::lose_one_life(const SuperfluousMoves::game_state &gs) {
 
 /// Reduced branch reproducer without the outer option * nat wrapper.
 std::pair<bool, SuperfluousMoves::loop_state>
-SuperfluousMoves::bad_branch(SuperfluousMoves::loop_state ls) {
+SuperfluousMoves::bad_branch(const SuperfluousMoves::loop_state &ls) {
   const SuperfluousMoves::game_state &gs1 = ls.ls_game;
   bool do_tick = true;
   SuperfluousMoves::game_state gs2;
@@ -35,7 +35,7 @@ SuperfluousMoves::bad_branch(SuperfluousMoves::loop_state ls) {
     break;
   }
   case Mode::FRIGHTENED: {
-    return std::make_pair(false, std::move(ls));
+    return std::make_pair(false, ls);
   }
   default:
     std::unreachable();

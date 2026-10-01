@@ -1,9 +1,8 @@
 #ifndef INCLUDED_CLOSURE_RECURSIVE_BUILD
 #define INCLUDED_CLOSURE_RECURSIVE_BUILD
 
-#include "small_vector.h"
+#include "fn.h"
 #include <atomic>
-#include <functional>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -16,7 +15,7 @@ struct ClosureRecursiveBuild {
     struct FNil {};
 
     struct FCons {
-      std::function<uint64_t(uint64_t)> a0;
+      crane::fn<uint64_t(uint64_t)> a0;
       std::shared_ptr<fn_list> a1;
     };
 
@@ -36,29 +35,25 @@ struct ClosureRecursiveBuild {
 
     static fn_list fnil() { return fn_list(FNil{}); }
 
-    static fn_list fcons(std::function<uint64_t(uint64_t)> a0, fn_list a1) {
+    static fn_list fcons(crane::fn<uint64_t(uint64_t)> a0, fn_list a1) {
       return fn_list(
           FCons{std::move(a0), std::make_shared<fn_list>(std::move(a1))});
     }
 
     // MANIPULATORS
     ~fn_list() {
-      crane::small_vector<std::shared_ptr<fn_list>> _stack = {};
-      auto _drain = [&](variant_t &_v) {
+      auto _next = [&](variant_t &_v) -> std::shared_ptr<fn_list> {
         if (auto *_alt = std::get_if<FCons>(&_v)) {
-          if (_alt->a1) {
-            _stack.push_back(std::move(_alt->a1));
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
+            return std::move(_alt->a1);
           }
         }
+        return nullptr;
       };
-      _drain(v_mut());
-      while (!_stack.empty()) {
-        auto _cur = std::move(_stack.back());
-        _stack.pop_back();
-        if (_cur.use_count() == 1) {
-          std::atomic_thread_fence(std::memory_order_acquire);
-          _drain(_cur->v_mut());
-        }
+      std::shared_ptr<fn_list> _cur = _next(v_mut());
+      while (_cur) {
+        _cur = _next(_cur->v_mut());
       }
     }
 
@@ -74,8 +69,8 @@ struct ClosureRecursiveBuild {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<
-        T1, F1 &, std::function<uint64_t(uint64_t)> &, fn_list &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, crane::fn<uint64_t(uint64_t)> &,
+                                   fn_list &, T1 &>
   static T1 fn_list_rect(T1 f, F1 &&f0, const fn_list &f1) {
     if (std::holds_alternative<typename fn_list::FNil>(f1.v())) {
       return f;
@@ -86,8 +81,8 @@ struct ClosureRecursiveBuild {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<
-        T1, F1 &, std::function<uint64_t(uint64_t)> &, fn_list &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, crane::fn<uint64_t(uint64_t)> &,
+                                   fn_list &, T1 &>
   static T1 fn_list_rec(T1 f, F1 &&f0, const fn_list &f1) {
     if (std::holds_alternative<typename fn_list::FNil>(f1.v())) {
       return f;

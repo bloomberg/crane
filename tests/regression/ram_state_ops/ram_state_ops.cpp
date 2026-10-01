@@ -116,10 +116,10 @@ RamStateOps::ram_write_status_sys(const RamStateOps::state &s, uint64_t idx,
 }
 
 std::pair<std::optional<uint64_t>, RamStateOps::state>
-RamStateOps::pop_stack(RamStateOps::state s) {
+RamStateOps::pop_stack(const RamStateOps::state &s) {
   auto &&_sv = s.state_stack;
   if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
-    return std::make_pair(std::optional<uint64_t>(), std::move(s));
+    return std::make_pair(std::optional<uint64_t>(), s);
   } else {
     const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(_sv.v());
     return std::make_pair(std::make_optional<uint64_t>(a0),

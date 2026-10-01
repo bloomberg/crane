@@ -4,11 +4,11 @@
 #include <utility>
 
 enum class Comparison;
-enum class Comparison { EQ, LT, GT };
 
 struct Nat {
   static Comparison compare(uint64_t n, uint64_t m);
 };
+enum class Comparison { EQ, LT, GT };
 
 /// A user inductive called Comparison and the standard library's
 /// comparison (returned by Nat.compare) are emitted under the same C++

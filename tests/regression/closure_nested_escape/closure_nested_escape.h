@@ -1,7 +1,7 @@
 #ifndef INCLUDED_CLOSURE_NESTED_ESCAPE
 #define INCLUDED_CLOSURE_NESTED_ESCAPE
 
-#include <functional>
+#include "fn.h"
 #include <utility>
 
 struct ClosureNestedEscape {
@@ -15,8 +15,7 @@ struct ClosureNestedEscape {
   /// Difference from fix_escape_capture: returns TWO fixpoints that both
   /// capture the SAME variable. This tests whether both closures
   /// independently read garbage from the same dangling reference.
-  static std::pair<std::function<uint64_t(uint64_t)>,
-                   std::function<uint64_t(uint64_t)>>
+  static std::pair<crane::fn<uint64_t(uint64_t)>, crane::fn<uint64_t(uint64_t)>>
   make_pair_fix(uint64_t n);
   /// test1: make_pair_fix(5) returns (add, mul).
   /// add(3) = 5 + 3 = 8, mul(3) = 5 * 3 = 15.
@@ -29,9 +28,8 @@ struct ClosureNestedEscape {
   /// add(0) = 7, mul(4) = 7 * 4 = 28.
   /// Expected: 7 + 28 = 35.
   static inline const uint64_t test2 = []() {
-    std::pair<std::function<uint64_t(uint64_t)>,
-              std::function<uint64_t(uint64_t)>>
-        p = make_pair_fix(UINT64_C(7));
+    std::pair<crane::fn<uint64_t(uint64_t)>, crane::fn<uint64_t(uint64_t)>> p =
+        make_pair_fix(UINT64_C(7));
     return (p.first(UINT64_C(0)) + p.second(UINT64_C(4)));
   }();
   /// test3: Only use one of the two fixpoints.

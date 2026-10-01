@@ -6,7 +6,7 @@ CustomInlineBug::bug_some_proj(const CustomInlineBug::State &s) {
 }
 
 std::pair<CustomInlineBug::State, uint64_t>
-CustomInlineBug::bug_pair_proj(CustomInlineBug::State s) {
+CustomInlineBug::bug_pair_proj(const CustomInlineBug::State &s) {
   return std::make_pair(s, s.value);
 }
 
@@ -17,7 +17,7 @@ CustomInlineBug::bug_nested_option(const CustomInlineBug::State &s) {
 }
 
 std::optional<std::pair<CustomInlineBug::State, uint64_t>>
-CustomInlineBug::bug_option_pair(CustomInlineBug::State s) {
+CustomInlineBug::bug_option_pair(const CustomInlineBug::State &s) {
   return std::make_optional<std::pair<CustomInlineBug::State, uint64_t>>(
       std::make_pair(s, s.value));
 }
@@ -31,7 +31,7 @@ std::optional<uint64_t> CustomInlineBug::bug_some_of_call(uint64_t n) {
 }
 
 std::pair<CustomInlineBug::State, uint64_t>
-CustomInlineBug::pair_simple(CustomInlineBug::State s) {
+CustomInlineBug::pair_simple(const CustomInlineBug::State &s) {
   return std::make_pair(s, s.value);
 }
 
@@ -43,17 +43,17 @@ CustomInlineBug::pair_let(uint64_t n) {
 
 std::pair<std::pair<CustomInlineBug::State, uint64_t>,
           std::pair<uint64_t, uint64_t>>
-CustomInlineBug::pair_nested(CustomInlineBug::State s) {
+CustomInlineBug::pair_nested(const CustomInlineBug::State &s) {
   return std::make_pair(std::make_pair(s, s.value),
                         std::make_pair(s.value, s.data));
 }
 
 std::pair<CustomInlineBug::State, uint64_t>
-CustomInlineBug::pair_if(bool b, CustomInlineBug::State s) {
+CustomInlineBug::pair_if(bool b, const CustomInlineBug::State &s) {
   if (b) {
     return std::make_pair(s, s.value);
   } else {
-    return std::make_pair(std::move(s), UINT64_C(0));
+    return std::make_pair(s, UINT64_C(0));
   }
 }
 
@@ -69,7 +69,7 @@ CustomInlineBug::pair_match(const std::optional<CustomInlineBug::State> &o) {
 }
 
 std::pair<std::pair<CustomInlineBug::State, uint64_t>, uint64_t>
-CustomInlineBug::pair_multi_proj(CustomInlineBug::State s) {
+CustomInlineBug::pair_multi_proj(const CustomInlineBug::State &s) {
   return std::make_pair(std::make_pair(s, s.value), s.data);
 }
 
@@ -82,12 +82,12 @@ CustomInlineBug::pair_chain(const CustomInlineBug::State &s1) {
 
 std::pair<std::pair<CustomInlineBug::State, CustomInlineBug::State>,
           std::pair<uint64_t, uint64_t>>
-CustomInlineBug::pair_extreme(CustomInlineBug::State s) {
+CustomInlineBug::pair_extreme(const CustomInlineBug::State &s) {
   return std::make_pair(std::make_pair(s, s), std::make_pair(s.value, s.data));
 }
 
 std::pair<CustomInlineBug::State, uint64_t>
-CustomInlineBug::make_pair(CustomInlineBug::State s) {
+CustomInlineBug::make_pair(const CustomInlineBug::State &s) {
   return std::make_pair(s, s.value);
 }
 
@@ -97,7 +97,7 @@ CustomInlineBug::outer_pair(uint64_t n) {
 }
 
 List<std::pair<CustomInlineBug::State, uint64_t>>
-CustomInlineBug::count_pairs(uint64_t n, CustomInlineBug::State s) {
+CustomInlineBug::count_pairs(uint64_t n, const CustomInlineBug::State &s) {
   if (n <= 0) {
     return List<std::pair<CustomInlineBug::State, uint64_t>>::nil();
   } else {

@@ -76,7 +76,7 @@ ConstructorBugs::tuple_from_call(uint64_t n) {
 
 std::pair<std::pair<ConstructorBugs::state, uint64_t>,
           std::pair<uint64_t, List<uint64_t>>>
-ConstructorBugs::nested_tuples(ConstructorBugs::state s) {
+ConstructorBugs::nested_tuples(const ConstructorBugs::state &s) {
   return std::make_pair(std::make_pair(s, s.value),
                         std::make_pair(s.value, s.data));
 }
@@ -123,7 +123,7 @@ ConstructorBugs::match_test(const std::optional<ConstructorBugs::state> &o) {
 }
 
 List<ConstructorBugs::state>
-ConstructorBugs::list_test(ConstructorBugs::state s) {
+ConstructorBugs::list_test(const ConstructorBugs::state &s) {
   return List<ConstructorBugs::state>::cons(
       s, List<ConstructorBugs::state>::cons(
              s, List<ConstructorBugs::state>::cons(
@@ -133,14 +133,14 @@ ConstructorBugs::list_test(ConstructorBugs::state s) {
 std::pair<std::pair<std::pair<ConstructorBugs::state, uint64_t>,
                     std::pair<uint64_t, List<uint64_t>>>,
           List<uint64_t>>
-ConstructorBugs::triple_proj(ConstructorBugs::state s) {
+ConstructorBugs::triple_proj(const ConstructorBugs::state &s) {
   return std::make_pair(std::make_pair(std::make_pair(s, s.value),
                                        std::make_pair(s.value, s.data)),
                         s.data);
 }
 
 std::pair<ConstructorBugs::state, uint64_t>
-ConstructorBugs::inner_pair(ConstructorBugs::state s) {
+ConstructorBugs::inner_pair(const ConstructorBugs::state &s) {
   return std::make_pair(s, s.value);
 }
 
@@ -155,14 +155,14 @@ std::pair<
                   uint64_t>,
         uint64_t>,
     List<uint64_t>>
-ConstructorBugs::extreme_reuse(ConstructorBugs::state s) {
+ConstructorBugs::extreme_reuse(const ConstructorBugs::state &s) {
   return std::make_pair(
       std::make_pair(std::make_pair(std::make_pair(s, s), s.value), s.value),
       s.data);
 }
 
 ConstructorBugs::Outer
-ConstructorBugs::nested_record(ConstructorBugs::Inner i) {
+ConstructorBugs::nested_record(const ConstructorBugs::Inner &i) {
   return Outer{i, i.inner_val};
 }
 
@@ -172,19 +172,19 @@ ConstructorBugs::self_referential(const ConstructorBugs::Outer &o) {
 }
 
 std::pair<ConstructorBugs::Inner, uint64_t>
-ConstructorBugs::pair_with_proj(ConstructorBugs::Inner i) {
+ConstructorBugs::pair_with_proj(const ConstructorBugs::Inner &i) {
   return std::make_pair(i, i.inner_val);
 }
 
 std::pair<std::pair<ConstructorBugs::Inner, uint64_t>,
           std::pair<uint64_t, uint64_t>>
-ConstructorBugs::nested_pairs(ConstructorBugs::Inner i) {
+ConstructorBugs::nested_pairs(const ConstructorBugs::Inner &i) {
   return std::make_pair(std::make_pair(i, i.inner_val),
                         std::make_pair(i.inner_val, i.inner_val));
 }
 
 std::pair<ConstructorBugs::Inner, ConstructorBugs::Inner>
-ConstructorBugs::pair_duplicate(ConstructorBugs::Inner i) {
+ConstructorBugs::pair_duplicate(const ConstructorBugs::Inner &i) {
   return std::make_pair(i, i);
 }
 
@@ -222,7 +222,7 @@ ConstructorBugs::match_sum(const ConstructorBugs::MySum &s) {
 }
 
 std::pair<ConstructorBugs::Inner, uint64_t>
-ConstructorBugs::with_cast(ConstructorBugs::Inner i) {
+ConstructorBugs::with_cast(const ConstructorBugs::Inner &i) {
   return std::make_pair(i, i.inner_val);
 }
 
@@ -243,7 +243,7 @@ ConstructorBugs::deep_proj(const ConstructorBugs::Container &c) {
 }
 
 std::pair<List<ConstructorBugs::Inner>, uint64_t>
-ConstructorBugs::list_with_proj(ConstructorBugs::Inner i) {
+ConstructorBugs::list_with_proj(const ConstructorBugs::Inner &i) {
   return std::make_pair(
       List<ConstructorBugs::Inner>::cons(
           i, List<ConstructorBugs::Inner>::cons(
@@ -253,17 +253,17 @@ ConstructorBugs::list_with_proj(ConstructorBugs::Inner i) {
 }
 
 std::pair<ConstructorBugs::Inner, uint64_t>
-ConstructorBugs::tail_pair(ConstructorBugs::Inner i, bool b) {
+ConstructorBugs::tail_pair(const ConstructorBugs::Inner &i, bool b) {
   if (b) {
     return std::make_pair(i, i.inner_val);
   } else {
-    return std::make_pair(std::move(i), UINT64_C(0));
+    return std::make_pair(i, UINT64_C(0));
   }
 }
 
 std::pair<std::pair<ConstructorBugs::Inner, ConstructorBugs::Inner>,
           std::pair<uint64_t, uint64_t>>
-ConstructorBugs::quad_tuple(ConstructorBugs::Inner i) {
+ConstructorBugs::quad_tuple(const ConstructorBugs::Inner &i) {
   return std::make_pair(std::make_pair(i, i),
                         std::make_pair(i.inner_val, i.inner_val));
 }
@@ -281,8 +281,8 @@ ConstructorBugs::match_both_branches(
 }
 
 Sig<ConstructorBugs::Inner>
-ConstructorBugs::sigma_test(ConstructorBugs::Inner i) {
-  return Sig<ConstructorBugs::Inner>::exist(std::move(i));
+ConstructorBugs::sigma_test(const ConstructorBugs::Inner &i) {
+  return Sig<ConstructorBugs::Inner>::exist(i);
 }
 
 uint64_t ConstructorBugs::extract(const ConstructorBugs::Inner &i) {
@@ -290,7 +290,7 @@ uint64_t ConstructorBugs::extract(const ConstructorBugs::Inner &i) {
 }
 
 std::pair<ConstructorBugs::Inner, uint64_t>
-ConstructorBugs::nested_extract(ConstructorBugs::Inner i) {
+ConstructorBugs::nested_extract(const ConstructorBugs::Inner &i) {
   return std::make_pair(i, extract(i));
 }
 
@@ -301,17 +301,17 @@ ConstructorBugs::update_test(const ConstructorBugs::Outer &o) {
 }
 
 std::pair<ConstructorBugs::State0, uint64_t>
-ConstructorBugs::inline_pair(ConstructorBugs::State0 s) {
+ConstructorBugs::inline_pair(const ConstructorBugs::State0 &s) {
   return std::make_pair(s, s.value_inline);
 }
 
 std::pair<std::pair<ConstructorBugs::State0, uint64_t>, uint64_t>
-ConstructorBugs::inline_triple(ConstructorBugs::State0 s) {
+ConstructorBugs::inline_triple(const ConstructorBugs::State0 &s) {
   return std::make_pair(std::make_pair(s, s.value_inline), s.data_inline);
 }
 
 std::pair<std::pair<ConstructorBugs::State0, uint64_t>, uint64_t>
-ConstructorBugs::inline_nested(ConstructorBugs::State0 s) {
+ConstructorBugs::inline_nested(const ConstructorBugs::State0 &s) {
   return std::make_pair(std::make_pair(s, s.value_inline), s.data_inline);
 }
 
@@ -343,17 +343,17 @@ ConstructorBugs::inline_match(const std::optional<ConstructorBugs::State0> &o) {
 }
 
 std::pair<ConstructorBugs::State0, uint64_t>
-ConstructorBugs::inline_if(bool b, ConstructorBugs::State0 s) {
+ConstructorBugs::inline_if(bool b, const ConstructorBugs::State0 &s) {
   if (b) {
     return std::make_pair(s, s.value_inline);
   } else {
-    return std::make_pair(std::move(s), UINT64_C(0));
+    return std::make_pair(s, UINT64_C(0));
   }
 }
 
 std::pair<std::pair<ConstructorBugs::OuterInline, ConstructorBugs::State0>,
           uint64_t>
-ConstructorBugs::inline_deep(ConstructorBugs::OuterInline o) {
+ConstructorBugs::inline_deep(const ConstructorBugs::OuterInline &o) {
   return std::make_pair(std::make_pair(o, o.outer_state),
                         o.outer_state.value_inline);
 }
@@ -365,21 +365,22 @@ ConstructorBugs::inline_double_proj(const ConstructorBugs::OuterInline &o) {
 
 std::pair<std::pair<ConstructorBugs::State0, uint64_t>,
           std::pair<uint64_t, uint64_t>>
-ConstructorBugs::inline_many(ConstructorBugs::State0 s) {
+ConstructorBugs::inline_many(const ConstructorBugs::State0 &s) {
   return std::make_pair(std::make_pair(s, s.value_inline),
                         std::make_pair(s.data_inline, s.flag));
 }
 
 std::pair<std::pair<uint64_t, ConstructorBugs::State0>, uint64_t>
-ConstructorBugs::inline_pattern(ConstructorBugs::State0 s) {
+ConstructorBugs::inline_pattern(const ConstructorBugs::State0 &s) {
   uint64_t v = s.value_inline;
   uint64_t d = s.data_inline;
-  std::any _x = s.flag;
+  crane::obj _x = s.flag;
   return std::make_pair(std::make_pair(v, s), d);
 }
 
 List<std::pair<ConstructorBugs::State0, uint64_t>>
-ConstructorBugs::inline_recursive(uint64_t n, ConstructorBugs::State0 s) {
+ConstructorBugs::inline_recursive(uint64_t n,
+                                  const ConstructorBugs::State0 &s) {
   if (n <= 0) {
     return List<std::pair<ConstructorBugs::State0, uint64_t>>::nil();
   } else {
@@ -391,7 +392,7 @@ ConstructorBugs::inline_recursive(uint64_t n, ConstructorBugs::State0 s) {
 
 std::pair<std::pair<std::pair<ConstructorBugs::State0, uint64_t>, uint64_t>,
           std::pair<uint64_t, ConstructorBugs::State0>>
-ConstructorBugs::inline_complex(ConstructorBugs::State0 s) {
+ConstructorBugs::inline_complex(const ConstructorBugs::State0 &s) {
   return std::make_pair(
       std::make_pair(std::make_pair(s, s.value_inline), s.data_inline),
       std::make_pair(s.flag, s));
@@ -399,13 +400,14 @@ ConstructorBugs::inline_complex(ConstructorBugs::State0 s) {
 
 std::pair<std::pair<ConstructorBugs::State0, ConstructorBugs::State0>,
           std::pair<uint64_t, uint64_t>>
-ConstructorBugs::inline_quad(ConstructorBugs::State0 s) {
+ConstructorBugs::inline_quad(const ConstructorBugs::State0 &s) {
   return std::make_pair(std::make_pair(s, s),
                         std::make_pair(s.value_inline, s.data_inline));
 }
 
 std::pair<ConstructorBugs::State0, uint64_t>
-ConstructorBugs::inline_both_branches(bool b, ConstructorBugs::State0 s) {
+ConstructorBugs::inline_both_branches(bool b,
+                                      const ConstructorBugs::State0 &s) {
   if (b) {
     return std::make_pair(s, s.value_inline);
   } else {
@@ -428,19 +430,19 @@ uint64_t ConstructorBugs::get_data_inline(const ConstructorBugs::State0 &s) {
 }
 
 std::pair<std::pair<ConstructorBugs::State0, uint64_t>, uint64_t>
-ConstructorBugs::inline_nested_calls(ConstructorBugs::State0 s) {
+ConstructorBugs::inline_nested_calls(const ConstructorBugs::State0 &s) {
   return std::make_pair(std::make_pair(s, get_value_inline(s)),
                         get_data_inline(s));
 }
 
 std::pair<std::optional<ConstructorBugs::State0>, std::optional<uint64_t>>
-ConstructorBugs::inline_option(ConstructorBugs::State0 s) {
+ConstructorBugs::inline_option(const ConstructorBugs::State0 &s) {
   return std::make_pair(std::make_optional<ConstructorBugs::State0>(s),
                         std::make_optional<uint64_t>(s.value_inline));
 }
 
 std::pair<List<ConstructorBugs::State0>, List<uint64_t>>
-ConstructorBugs::inline_list(ConstructorBugs::State0 s) {
+ConstructorBugs::inline_list(const ConstructorBugs::State0 &s) {
   return std::make_pair(
       List<ConstructorBugs::State0>::cons(s,
                                           List<ConstructorBugs::State0>::nil()),

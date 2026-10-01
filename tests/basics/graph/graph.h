@@ -2,11 +2,12 @@
 #define INCLUDED_GRAPH
 
 #include "crane_fn.h"
-#include "small_vector.h"
+#include "obj.h"
 #include <any>
 #include <atomic>
 #include <concepts>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -18,6 +19,7 @@ template <typename A> struct Directed;
 template <typename A> struct UndirectedEdge;
 template <typename A> struct Undirected;
 struct NatEq;
+template <typename g = void, typename a = void> using edge = crane::obj;
 
 struct Nat {
   // TYPES
@@ -47,22 +49,18 @@ public:
 
   // MANIPULATORS
   ~Nat() {
-    crane::small_vector<std::shared_ptr<Nat>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<Nat> {
       if (auto *_alt = std::get_if<S>(&_v)) {
-        if (_alt->a0) {
-          _stack.push_back(std::move(_alt->a0));
+        if (_alt->a0 && _alt->a0.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a0);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<Nat> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -100,21 +98,26 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U> List(const List<_U> &_other) {
-    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->v_ = Nil{};
-    } else {
-      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>) {
-                          return crane_any_cast<A>(a);
-                        } else {
-                          return A(a);
-                        }
-                      }(),
-                      (l ? std::make_shared<List<A>>(*l) : nullptr)};
-    }
-  }
+  template <typename _U>
+  List(const List<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+            return Nil{};
+          } else {
+            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const _U &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                   : nullptr)};
+          }
+        }()) {}
 
   static List<A> nil() { return List<A>(Nil{}); }
 
@@ -124,22 +127,18 @@ public:
 
   // MANIPULATORS
   ~List() {
-    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
-        if (_alt->l) {
-          _stack.push_back(std::move(_alt->l));
+        if (_alt->l && _alt->l.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->l);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<List<A>> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -197,7 +196,7 @@ concept Eq = requires {
 /// the graph.
 template <typename I, typename A>
 concept Graph = requires {
-  typename I::template G<std::any>;
+  typename I::template G<crane::obj>;
   typename I::edge;
   { I::empty() } -> std::convertible_to<typename I::template G<A>>;
   {
@@ -215,12 +214,30 @@ concept Graph = requires {
   } -> std::convertible_to<List<typename I::edge>>;
 };
 
-template <typename g, typename a> using edge = std::any;
-
 /// An edge in a directed graph, from edge_from to edge_to.
 template <typename A> struct DirectedEdge {
   A edge_from;
   A edge_to;
+
+  // ACCESSORS
+  template <typename _U> operator DirectedEdge<_U>() const {
+    return {[&]() -> _U {
+              if constexpr (crane_convertible<_U, const A &>) {
+                return crane_convert<_U>(edge_from);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }(),
+            [&]() -> _U {
+              if constexpr (crane_convertible<_U, const A &>) {
+                return crane_convert<_U>(edge_to);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }()};
+  }
 };
 
 template <typename _tcI0, typename T1>
@@ -233,6 +250,12 @@ bool directed_originates(const T1 &a, const DirectedEdge<T1> &e) {
 template <typename A> struct Directed {
   List<A> directed_nodes;
   List<DirectedEdge<A>> directed_edges;
+
+  // ACCESSORS
+  template <typename _U> operator Directed<_U>() const {
+    return {crane_convert<List<_U>>(directed_nodes),
+            crane_convert<List<DirectedEdge<_U>>>(directed_edges)};
+  }
 };
 
 template <typename _tcI0, typename T1>
@@ -258,7 +281,7 @@ struct DirectedGraph {
   static List<T1> nodes(Directed<T1> g) { return std::move(g).directed_nodes; }
 
   static List<edge> edges(Directed<T1> g, T1 n) {
-    return g.directed_edges.filter([=](DirectedEdge<T1> _x0) mutable -> bool {
+    return g.directed_edges.filter([=](DirectedEdge<T1> _x0) -> bool {
       return directed_originates<_tcI0, T1>(n, _x0);
     });
   }
@@ -268,6 +291,26 @@ struct DirectedGraph {
 template <typename A> struct UndirectedEdge {
   A edge_first;
   A edge_second;
+
+  // ACCESSORS
+  template <typename _U> operator UndirectedEdge<_U>() const {
+    return {[&]() -> _U {
+              if constexpr (crane_convertible<_U, const A &>) {
+                return crane_convert<_U>(edge_first);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }(),
+            [&]() -> _U {
+              if constexpr (crane_convertible<_U, const A &>) {
+                return crane_convert<_U>(edge_second);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }()};
+  }
 };
 
 template <typename _tcI0, typename T1>
@@ -279,6 +322,12 @@ bool undirected_originates(const T1 &a, const UndirectedEdge<T1> &e) {
 template <typename A> struct Undirected {
   List<A> undirected_nodes;
   List<UndirectedEdge<A>> undirected_edges;
+
+  // ACCESSORS
+  template <typename _U> operator Undirected<_U>() const {
+    return {crane_convert<List<_U>>(undirected_nodes),
+            crane_convert<List<UndirectedEdge<_U>>>(undirected_edges)};
+  }
 };
 
 template <typename _tcI0, typename T1>
@@ -307,10 +356,9 @@ struct UndirectedGraph {
   }
 
   static List<edge> edges(Undirected<T1> g, T1 n) {
-    return g.undirected_edges.filter(
-        [=](UndirectedEdge<T1> _x0) mutable -> bool {
-          return undirected_originates<_tcI0, T1>(n, _x0);
-        });
+    return g.undirected_edges.filter([=](UndirectedEdge<T1> _x0) -> bool {
+      return undirected_originates<_tcI0, T1>(n, _x0);
+    });
   }
 };
 

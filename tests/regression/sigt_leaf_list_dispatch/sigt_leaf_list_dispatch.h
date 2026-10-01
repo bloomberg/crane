@@ -2,17 +2,20 @@
 #define INCLUDED_SIGT_LEAF_LIST_DISPATCH
 
 #include "crane_fn.h"
+#include "fn.h"
+#include "obj.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
-#include <functional>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
 
 template <typename A> struct List;
 template <typename A, typename P> struct SigT;
+using domty = crane::obj;
 
 template <typename A> struct List {
   // TYPES
@@ -37,21 +40,26 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U> List(const List<_U> &_other) {
-    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->v_ = Nil{};
-    } else {
-      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>) {
-                          return crane_any_cast<A>(a);
-                        } else {
-                          return A(a);
-                        }
-                      }(),
-                      (l ? std::make_shared<List<A>>(*l) : nullptr)};
-    }
-  }
+  template <typename _U>
+  List(const List<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+            return Nil{};
+          } else {
+            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const _U &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                   : nullptr)};
+          }
+        }()) {}
 
   static List<A> nil() { return List<A>(Nil{}); }
 
@@ -61,22 +69,18 @@ public:
 
   // MANIPULATORS
   ~List() {
-    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
-        if (_alt->l) {
-          _stack.push_back(std::move(_alt->l));
+        if (_alt->l && _alt->l.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->l);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<List<A>> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -137,6 +141,25 @@ template <typename A, typename P> struct SigT {
   // ACCESSORS
   SigT<A, P> clone() const { return {x, a1}; }
 
+  template <typename _U0, typename _U1> operator SigT<_U0, _U1>() const {
+    return {[&]() -> _U0 {
+              if constexpr (crane_convertible<_U0, const A &>) {
+                return crane_convert<_U0>(x);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }(),
+            [&]() -> _U1 {
+              if constexpr (crane_convertible<_U1, const P &>) {
+                return crane_convert<_U1>(a1);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }()};
+  }
+
   // CREATORS
   static SigT<A, P> existt(A x, P a1) { return {std::move(x), std::move(a1)}; }
 
@@ -156,20 +179,19 @@ template <typename A, typename P> struct SigT {
 /// only see std::any; the erased list is boxed as List<std::any>, while
 /// wrap_list expects the concrete List<uint64_t>.
 bool wrap_list(const List<uint64_t> &xs);
-using domty = std::any;
-using entry = SigT<uint64_t, std::function<domty(std::monostate)>>;
+using entry = SigT<uint64_t, crane::fn<domty(std::monostate)>>;
 
 template <typename F1>
   requires std::is_invocable_r_v<domty, F1 &, std::monostate &>
 entry mk(uint64_t p, F1 &&f) {
-  return SigT<uint64_t, std::function<std::any(std::monostate)>>::existt(p, f);
+  return SigT<uint64_t, crane::fn<crane::obj(std::monostate)>>::existt(p, f);
 }
 
-domty run(const SigT<uint64_t, std::function<std::any(std::monostate)>> &e);
+domty run(const SigT<uint64_t, crane::fn<crane::obj(std::monostate)>> &e);
 const entry entry_tree =
     mk(UINT64_C(1), [](std::monostate) { return UINT64_C(42); });
 const entry entry_trees = mk(UINT64_C(0), [](std::monostate) {
-  return List<std::any>::cons(run(entry_tree), List<std::any>::nil());
+  return List<crane::obj>::cons(run(entry_tree), List<crane::obj>::nil());
 });
 bool check(std::monostate _x);
 

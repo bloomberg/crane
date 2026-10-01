@@ -9,7 +9,7 @@
 int main() {
     // Referencing [d] forces its [contents] field initializer to compile.  With
     // the bug that initializer is [List<T1>::cons(...)] ('T1' undeclared here);
-    // once fixed it is [List<std::any>::cons(...)], matching the erased field.
+    // once fixed it is [List<crane::obj>::cons(...)], matching the erased field.
     std::uint64_t n = ListDepTypeErasure::dlen(ListDepTypeErasure::d);
     std::cout << "dlen(d) = " << n << std::endl;
     assert(n == 3);

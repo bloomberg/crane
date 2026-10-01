@@ -1,6 +1,7 @@
 #ifndef INCLUDED_BLOCK_TEMPLATE_EDGE
 #define INCLUDED_BLOCK_TEMPLATE_EDGE
 
+#include <crane_itree.h>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>

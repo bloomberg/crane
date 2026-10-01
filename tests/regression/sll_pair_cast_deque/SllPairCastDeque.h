@@ -1,6 +1,7 @@
 #ifndef INCLUDED_SLLPAIRCASTDEQUE
 #define INCLUDED_SLLPAIRCASTDEQUE
 
+#include "obj.h"
 #include <any>
 #include <deque>
 #include <memory>

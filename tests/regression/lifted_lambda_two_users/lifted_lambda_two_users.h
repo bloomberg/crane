@@ -1,7 +1,7 @@
 #ifndef INCLUDED_LIFTED_LAMBDA_TWO_USERS
 #define INCLUDED_LIFTED_LAMBDA_TWO_USERS
 
-#include "small_vector.h"
+#include "fn.h"
 #include <atomic>
 #include <memory>
 #include <type_traits>
@@ -37,22 +37,18 @@ struct LiftedLambdaTwoUsers {
 
     // MANIPULATORS
     ~t() {
-      crane::small_vector<std::shared_ptr<t>> _stack = {};
-      auto _drain = [&](variant_t &_v) {
+      auto _next = [&](variant_t &_v) -> std::shared_ptr<t> {
         if (auto *_alt = std::get_if<N>(&_v)) {
-          if (_alt->a0) {
-            _stack.push_back(std::move(_alt->a0));
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
+            return std::move(_alt->a0);
           }
         }
+        return nullptr;
       };
-      _drain(v_mut());
-      while (!_stack.empty()) {
-        auto _cur = std::move(_stack.back());
-        _stack.pop_back();
-        if (_cur.use_count() == 1) {
-          std::atomic_thread_fence(std::memory_order_acquire);
-          _drain(_cur->v_mut());
-        }
+      std::shared_ptr<t> _cur = _next(v_mut());
+      while (_cur) {
+        _cur = _next(_cur->v_mut());
       }
     }
 
@@ -90,23 +86,19 @@ struct LiftedLambdaTwoUsers {
   }
 
   static uint64_t depth(const t &x);
-
-  template <typename T1> static uint64_t _one_f(const T1, const t x) {
-    return depth(x);
-  }
-
   static inline const uint64_t one = []() {
-    t x = t::n(t::l());
-    return (_one_f(UINT64_C(0), x) + _one_f(UINT64_C(1), x));
+    return []() {
+      t x = t::n(t::l());
+      crane::fn<uint64_t(uint64_t)> f = [=](uint64_t) { return depth(x); };
+      return (f(UINT64_C(0)) + f(UINT64_C(1)));
+    }();
   }();
-
-  template <typename T1> static uint64_t _two_g(const T1, const t y) {
-    return depth(y);
-  }
-
   static inline const uint64_t two = []() {
-    t y = t::n(t::n(t::l()));
-    return (_two_g(UINT64_C(0), y) + _two_g(UINT64_C(1), y));
+    return []() {
+      t y = t::n(t::n(t::l()));
+      crane::fn<uint64_t(uint64_t)> g = [=](uint64_t) { return depth(y); };
+      return (g(UINT64_C(0)) + g(UINT64_C(1)));
+    }();
   }();
   static inline const uint64_t go = (one + two);
 };

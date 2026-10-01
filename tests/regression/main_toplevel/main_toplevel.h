@@ -1,6 +1,7 @@
 #ifndef INCLUDED_MAIN_TOPLEVEL
 #define INCLUDED_MAIN_TOPLEVEL
 
+#include <crane_itree.h>
 #include <filesystem>
 #include <fstream>
 #include <iostream>

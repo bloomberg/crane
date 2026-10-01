@@ -1,6 +1,9 @@
 #ifndef INCLUDED_SPROP
 #define INCLUDED_SPROP
 
+#include "crane_fn.h"
+#include "obj.h"
+#include <any>
 #include <stdexcept>
 #include <utility>
 
@@ -15,6 +18,18 @@ struct SPropTest {
 
   template <typename A> struct Box {
     A box_value;
+
+    // ACCESSORS
+    template <typename _U> operator Box<_U>() const {
+      return {[&]() -> _U {
+        if constexpr (crane_convertible<_U, const A &>) {
+          return crane_convert<_U>(box_value);
+        } else {
+          throw std::logic_error(
+              "unreachable: inactive constructor field at this instantiation");
+        }
+      }()};
+    }
   };
 
   static uint64_t guarded_pred(uint64_t n);

@@ -1,6 +1,7 @@
 #ifndef INCLUDED_DEQUE_ANY_CAST
 #define INCLUDED_DEQUE_ANY_CAST
 
+#include "obj.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
@@ -21,7 +22,7 @@ std::declval<typename I::m_carrier>()) } -> std::convertible_to<typename I::m_ca
 });
 
 struct DequeAnyCast {
-  using m_carrier = std::any;
+  using m_carrier = crane::obj;
 
   struct nat_monoid {
     using m_carrier = uint64_t;
@@ -62,7 +63,7 @@ struct DequeAnyCast {
           _result = _tcI0::m_id();
         } else {
           const auto &x = l.front();
-          std::decay_t<decltype(l)> rest(l.begin() + 1, l.end());
+          std::deque<typename _tcI0::m_carrier> rest(l.begin() + 1, l.end());
           _stack.emplace_back(_Resume_x{x});
           _stack.emplace_back(_Enter{rest});
         }
@@ -75,7 +76,7 @@ struct DequeAnyCast {
   }
 
   static inline const uint64_t test_fold_add =
-      std::any_cast<uint64_t>(mfold<nat_monoid>([](auto _a0, auto _a1) {
+      crane::any_cast<uint64_t>(mfold<nat_monoid>([](auto _a0, auto _a1) {
         _a1.push_front(_a0);
         return _a1;
       }(UINT64_C(1), [](auto _a0, auto _a1) {

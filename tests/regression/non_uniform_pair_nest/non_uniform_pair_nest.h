@@ -2,7 +2,9 @@
 #define INCLUDED_NON_UNIFORM_PAIR_NEST
 
 #include "crane_fn.h"
+#include "obj.h"
 #include <any>
+#include <atomic>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -12,7 +14,7 @@ struct NonUniformPairNest {
   struct nest {
     // TYPES
     struct NZ {
-      std::any a0;
+      crane::obj a0;
     };
 
     struct NS {
@@ -33,7 +35,7 @@ struct NonUniformPairNest {
 
     explicit nest(NS _v) : v_(std::move(_v)) {}
 
-    static nest nz(std::any a0) { return nest(NZ{std::move(a0)}); }
+    static nest nz(crane::obj a0) { return nest(NZ{std::move(a0)}); }
 
     static nest ns(nest a0) {
       return nest(NS{std::make_shared<nest>(std::move(a0))});
@@ -46,40 +48,40 @@ struct NonUniformPairNest {
     const variant_t &v() const { return v_; }
   };
 
-  template <typename T1, typename T2, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, std::any &> &&
+  template <typename T1, typename T2 = void, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, crane::obj &> &&
              std::is_invocable_r_v<T1, F1 &, nest &, T1 &>
   static T1 nest_rect(F0 &&f, F1 &&f0, const nest &n) {
     if (std::holds_alternative<typename nest::NZ>(n.v())) {
       const auto &[a0] = std::get<typename nest::NZ>(n.v());
-      return std::any_cast<T1>(f(a0));
+      return crane_any_cast<T1>(f(a0));
     } else {
       const auto &[a0] = std::get<typename nest::NS>(n.v());
-      return std::any_cast<T1>(
+      return crane_any_cast<T1>(
           f0(*a0, nest_rect(crane_erase_fn<T1>(f), f0, *a0)));
     }
   }
 
-  template <typename T1, typename T2, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, std::any &> &&
+  template <typename T1, typename T2 = void, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, crane::obj &> &&
              std::is_invocable_r_v<T1, F1 &, nest &, T1 &>
   static T1 nest_rec(F0 &&f, F1 &&f0, const nest &n) {
     if (std::holds_alternative<typename nest::NZ>(n.v())) {
       const auto &[a0] = std::get<typename nest::NZ>(n.v());
-      return std::any_cast<T1>(f(a0));
+      return crane_any_cast<T1>(f(a0));
     } else {
       const auto &[a0] = std::get<typename nest::NS>(n.v());
-      return std::any_cast<T1>(
+      return crane_any_cast<T1>(
           f0(*a0, nest_rec(crane_erase_fn<T1>(f), f0, *a0)));
     }
   }
 
-  template <typename T1> static uint64_t size(const nest &n) {
+  template <typename T1 = void> static uint64_t size(const nest &n) {
     if (std::holds_alternative<typename nest::NZ>(n.v())) {
       return UINT64_C(1);
     } else {
       const auto &[a0] = std::get<typename nest::NS>(n.v());
-      return (UINT64_C(2) * size<T1>(*a0));
+      return (UINT64_C(2) * size<crane::obj>(*a0));
     }
   }
 

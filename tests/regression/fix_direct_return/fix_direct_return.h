@@ -1,7 +1,7 @@
 #ifndef INCLUDED_FIX_DIRECT_RETURN
 #define INCLUDED_FIX_DIRECT_RETURN
 
-#include <functional>
+#include "fn.h"
 #include <type_traits>
 
 struct FixDirectReturn {
@@ -16,22 +16,16 @@ struct FixDirectReturn {
   template <typename F1>
     requires std::is_invocable_r_v<uint64_t, F1 &, uint64_t &>
   static uint64_t make_callback(uint64_t base, F1 &&x0_) {
-    return [=]() mutable {
-      auto add_impl = [=](auto &_self_add, uint64_t x) mutable -> uint64_t {
-        if (x <= 0) {
-          return base;
-        } else {
-          uint64_t x_ = x - 1;
-          return (_self_add(_self_add, x_) + 1);
-        }
-      };
-      auto add = [=](uint64_t x) mutable -> uint64_t {
-        return add_impl(add_impl, x);
-      };
-      return [=](std::function<uint64_t(uint64_t)> g) mutable {
-        return (g(add(UINT64_C(0))) + add(UINT64_C(1)));
-      };
-    }()(x0_);
+    auto add_impl = [&](auto &_self_add, uint64_t x) -> uint64_t {
+      if (x <= 0) {
+        return base;
+      } else {
+        uint64_t x_ = x - 1;
+        return (_self_add(_self_add, x_) + 1);
+      }
+    };
+    auto add = [&](uint64_t x) -> uint64_t { return add_impl(add_impl, x); };
+    return (x0_(add(UINT64_C(0))) + add(UINT64_C(1)));
   }
 
   /// test1: make_callback(42)(fun x => x) = id(42) + 43 = 85.
@@ -44,16 +38,15 @@ struct FixDirectReturn {
   /// make_callback.
   static inline const uint64_t test3 = []() {
     return []() {
-      std::function<uint64_t(std::function<uint64_t(uint64_t)>)> cb1 =
-          [](std::function<uint64_t(uint64_t)> _x0) -> uint64_t {
+      crane::fn<uint64_t(crane::fn<uint64_t(uint64_t)>)> cb1 =
+          [](crane::fn<uint64_t(uint64_t)> _x0) -> uint64_t {
         return make_callback(UINT64_C(5), _x0);
       };
-      std::function<uint64_t(std::function<uint64_t(uint64_t)>)> cb2 =
-          [](std::function<uint64_t(uint64_t)> _x0) -> uint64_t {
+      crane::fn<uint64_t(crane::fn<uint64_t(uint64_t)>)> cb2 =
+          [](crane::fn<uint64_t(uint64_t)> _x0) -> uint64_t {
         return make_callback(UINT64_C(100), _x0);
       };
-      return cb1(
-          [=](uint64_t) mutable { return cb2([](uint64_t x) { return x; }); });
+      return cb1([=](uint64_t) { return cb2([](uint64_t x) { return x; }); });
     }();
   }();
 };

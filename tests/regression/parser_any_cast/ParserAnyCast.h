@@ -1,6 +1,7 @@
 #ifndef INCLUDED_PARSERANYCAST
 #define INCLUDED_PARSERANYCAST
 
+#include "obj.h"
 #include <any>
 #include <utility>
 #include <variant>
@@ -16,17 +17,17 @@ namespace ParserAnyCast {
 
 struct ParserAnyCast {
   enum class Tag { A, B };
-  using sem_ty = std::any;
+  using sem_ty = crane::obj;
   using entry = Specif::SigT<Tag, sem_ty>;
 
   static const entry &entry_a() {
     static const entry v =
-        Specif::template SigT<Tag, std::any>::existt(Tag::A, UINT64_C(42));
+        Specif::template SigT<Tag, crane::obj>::existt(Tag::A, UINT64_C(42));
     return v;
   }
 
   static const entry &entry_b() {
-    static const entry v = Specif::template SigT<Tag, std::any>::existt(
+    static const entry v = Specif::template SigT<Tag, crane::obj>::existt(
         Tag::B,
         String::String::string0(
             Ascii::Ascii::ascii0(false, false, false, true, false, true, true,
@@ -49,7 +50,7 @@ struct ParserAnyCast {
 
   static Tag get_tag(entry x0_);
   static Datatypes::List<Tag>
-  process_entries(const Datatypes::List<Specif::SigT<Tag, std::any>> &es);
+  process_entries(const Datatypes::List<Specif::SigT<Tag, crane::obj>> &es);
 
   static const Datatypes::List<entry> &test_entries() {
     static const Datatypes::List<entry> v =
@@ -64,16 +65,16 @@ struct ParserAnyCast {
     return v;
   }
 
-  static uint64_t get_a_value(const Specif::SigT<Tag, std::any> &e);
+  static uint64_t get_a_value(const Specif::SigT<Tag, crane::obj> &e);
   static uint64_t
-  sum_a_entries(const Datatypes::List<Specif::SigT<Tag, std::any>> &es);
+  sum_a_entries(const Datatypes::List<Specif::SigT<Tag, crane::obj>> &es);
 
   static const uint64_t &test_sum() {
     static const uint64_t v = sum_a_entries(test_entries());
     return v;
   }
   enum class Label { NUML, STRL, UNITL };
-  using label_sem = std::any;
+  using label_sem = crane::obj;
 
   static const Label &def_label() {
     static const Label v = Label::UNITL;
@@ -89,8 +90,8 @@ struct ParserAnyCast {
 
   static const labeled_entry &make_default_entry() {
     static const labeled_entry v =
-        Specif::template SigT<Label, std::any>::existt(def_label(),
-                                                       def_literal());
+        Specif::template SigT<Label, crane::obj>::existt(def_label(),
+                                                         def_literal());
     return v;
   }
 

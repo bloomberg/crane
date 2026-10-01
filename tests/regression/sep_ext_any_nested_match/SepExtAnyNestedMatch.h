@@ -1,6 +1,7 @@
 #ifndef INCLUDED_SEPEXTANYNESTEDMATCH
 #define INCLUDED_SEPEXTANYNESTEDMATCH
 
+#include "obj.h"
 #include <any>
 #include <utility>
 
@@ -8,7 +9,7 @@
 
 namespace SepExtAnyNestedMatch {
 
-using tuple = std::any;
+using tuple = crane::obj;
 template <typename M>
 concept SymTypes = requires {
   typename M::sym;
@@ -18,12 +19,12 @@ concept SymTypes = requires {
 template <SymTypes Ty> struct Destruct {
   using symbols_semty = tuple;
 
-  static std::any
+  static crane::obj
   get_second(typename Ty::sym, typename Ty::sym,
              const typename Datatypes::template List<typename Ty::sym> &,
              symbols_semty vs) {
-    return std::any_cast<std::pair<std::any, std::any>>(
-               std::any_cast<std::pair<std::any, std::any>>(vs).second)
+    return crane::any_cast<std::pair<crane::obj, crane::obj>>(
+               crane::any_cast<std::pair<crane::obj, crane::obj>>(vs).second)
         .first;
   }
 };

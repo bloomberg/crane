@@ -2,6 +2,7 @@
 #define INCLUDED_TYPE_INDEXED_INDUCTIVE_PROBE
 
 #include "crane_fn.h"
+#include "obj.h"
 #include <any>
 #include <utility>
 #include <variant>
@@ -20,32 +21,32 @@ struct TypeIndexedInductiveProbe {
   /// error: no viable conversion from 'std::any' to 'const Bool0'
   struct wrap {
     // DATA
-    std::any a;
+    crane::obj a;
 
     // ACCESSORS
     wrap clone() const { return {a}; }
 
     // CREATORS
-    static wrap wrap0(std::any a) { return {std::move(a)}; }
+    static wrap wrap0(crane::obj a) { return {std::move(a)}; }
   };
 
-  template <typename T1, typename T2, typename F0>
+  template <typename T1, typename T2 = void, typename F0>
   static T1 wrap_rect(F0 &&f, const wrap &w0) {
     const auto &[a0] = w0;
-    return std::any_cast<T1>(crane_call_erased(f, std::any_cast<T2>(a0)));
+    return crane_any_cast<T1>(crane_call_erased(f, crane_any_cast<T2>(a0)));
   }
 
-  template <typename T1, typename T2, typename F0>
+  template <typename T1, typename T2 = void, typename F0>
   static T1 wrap_rec(F0 &&f, const wrap &w0) {
     const auto &[a0] = w0;
-    return std::any_cast<T1>(crane_call_erased(f, std::any_cast<T2>(a0)));
+    return crane_any_cast<T1>(crane_call_erased(f, crane_any_cast<T2>(a0)));
   }
 
   static inline const wrap w = wrap::wrap0(Bool0::TRUE_);
   static inline const Bool0 sample = []() {
     const auto &_sv0 = w;
     const auto &[a0] = _sv0;
-    return std::any_cast<Bool0>(a0);
+    return crane::any_cast<Bool0>(a0);
   }();
 };
 

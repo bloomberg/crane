@@ -2,10 +2,12 @@
 #define INCLUDED_DEEP_PATTERN
 
 #include "crane_fn.h"
+#include "obj.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -48,10 +50,10 @@ struct DeepPattern {
       crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a1) {
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
             _stack.push_back(std::move(_alt->a1));
           }
         }
@@ -383,7 +385,7 @@ struct DeepPattern {
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
-        std::decay_t<T1> _result;
+        T1 _result;
         tree a1;
         tree a0;
       };
@@ -443,7 +445,7 @@ struct DeepPattern {
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
-        std::decay_t<T1> _result;
+        T1 _result;
         tree a1;
         tree a0;
       };
@@ -506,21 +508,28 @@ struct DeepPattern {
 
     explicit list(Cons _v) : v_(std::move(_v)) {}
 
-    template <typename _U> list(const list<_U> &_other) {
-      if (std::holds_alternative<typename list<_U>::Nil>(_other.v())) {
-        this->v_ = Nil{};
-      } else {
-        const auto &[a0, a1] = std::get<typename list<_U>::Cons>(_other.v());
-        this->v_ = Cons{[&]() -> A {
-                          if constexpr (std::is_same_v<_U, std::any>) {
-                            return crane_any_cast<A>(a0);
-                          } else {
-                            return A(a0);
-                          }
-                        }(),
-                        (a1 ? std::make_shared<list<A>>(*a1) : nullptr)};
-      }
-    }
+    template <typename _U>
+    list(const list<_U> &_other)
+        : v_([&]() -> variant_t {
+            if (std::holds_alternative<typename list<_U>::Nil>(_other.v())) {
+              return Nil{};
+            } else {
+              const auto &[a0, a1] =
+                  std::get<typename list<_U>::Cons>(_other.v());
+              return Cons{
+                  [&]() -> A {
+                    if constexpr (crane_convertible<A, const _U &>) {
+                      return crane_convert<A>(a0);
+                    } else {
+                      throw std::logic_error(
+                          "unreachable: inactive constructor field at this "
+                          "instantiation");
+                    }
+                  }(),
+                  (a1 ? std::make_shared<list<A>>(crane_convert<list<A>>(*a1))
+                      : nullptr)};
+            }
+          }()) {}
 
     static list<A> nil() { return list<A>(Nil{}); }
 
@@ -531,22 +540,18 @@ struct DeepPattern {
 
     // MANIPULATORS
     ~list() {
-      crane::small_vector<std::shared_ptr<list<A>>> _stack = {};
-      auto _drain = [&](variant_t &_v) {
+      auto _next = [&](variant_t &_v) -> std::shared_ptr<list<A>> {
         if (auto *_alt = std::get_if<Cons>(&_v)) {
-          if (_alt->a1) {
-            _stack.push_back(std::move(_alt->a1));
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
+            return std::move(_alt->a1);
           }
         }
+        return nullptr;
       };
-      _drain(v_mut());
-      while (!_stack.empty()) {
-        auto _cur = std::move(_stack.back());
-        _stack.pop_back();
-        if (_cur.use_count() == 1) {
-          std::atomic_thread_fence(std::memory_order_acquire);
-          _drain(_cur->v_mut());
-        }
+      std::shared_ptr<list<A>> _cur = _next(v_mut());
+      while (_cur) {
+        _cur = _next(_cur->v_mut());
       }
     }
 
@@ -574,7 +579,7 @@ struct DeepPattern {
       /// _result.
       struct _Resume_Cons {
         list<A> a1;
-        std::decay_t<A> a0;
+        A a0;
       };
 
       using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -618,7 +623,7 @@ struct DeepPattern {
       /// _result.
       struct _Resume_Cons {
         list<A> a1;
-        std::decay_t<A> a0;
+        A a0;
       };
 
       using _Frame = std::variant<_Enter, _Resume_Cons>;

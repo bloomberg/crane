@@ -2,10 +2,13 @@
 #define INCLUDED_LOOPIFY_LIST_GENERATORS
 
 #include "crane_fn.h"
+#include "fn.h"
+#include "obj.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -35,21 +38,26 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U> List(const List<_U> &_other) {
-    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->v_ = Nil{};
-    } else {
-      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>) {
-                          return crane_any_cast<A>(a);
-                        } else {
-                          return A(a);
-                        }
-                      }(),
-                      (l ? std::make_shared<List<A>>(*l) : nullptr)};
-    }
-  }
+  template <typename _U>
+  List(const List<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+            return Nil{};
+          } else {
+            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const _U &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                   : nullptr)};
+          }
+        }()) {}
 
   static List<A> nil() { return List<A>(Nil{}); }
 
@@ -59,22 +67,18 @@ public:
 
   // MANIPULATORS
   ~List() {
-    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
-        if (_alt->l) {
-          _stack.push_back(std::move(_alt->l));
+        if (_alt->l && _alt->l.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->l);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<List<A>> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -211,9 +215,7 @@ struct LoopifyListGenerators {
     return build_list_aux(n, UINT64_C(0), f);
   }
 
-  template <typename F1>
-    requires std::is_invocable_r_v<uint64_t, F1 &, uint64_t &>
-  static List<uint64_t> init_list(uint64_t n, F1 &&f) {
+  static List<uint64_t> init_list(uint64_t n, crane::fn<uint64_t(uint64_t)> f) {
     if (n <= 0) {
       return List<uint64_t>::nil();
     } else {
@@ -227,11 +229,7 @@ struct LoopifyListGenerators {
           /// _Resume_i_: saves [_s0], resumes after recursive call with
           /// _result.
           struct _Resume_i_ {
-            std::decay_t<decltype(f(
-                (((n - std::declval<uint64_t &>()) > n
-                      ? 0
-                      : (n - std::declval<uint64_t &>())))))>
-                _s0;
+            uint64_t _s0;
           };
           using _Frame = std::variant<_Enter, _Resume_i_>;
           List<uint64_t> _result{};
@@ -271,9 +269,7 @@ struct LoopifyListGenerators {
   static List<uint64_t> replicate_elem(uint64_t n, uint64_t x);
   static List<uint64_t> replicate_each(uint64_t n, const List<uint64_t> &l);
 
-  template <typename F1>
-    requires std::is_invocable_r_v<uint64_t, F1 &, uint64_t &>
-  static List<uint64_t> tabulate(uint64_t n, F1 &&f) {
+  static List<uint64_t> tabulate(uint64_t n, crane::fn<uint64_t(uint64_t)> f) {
     if (n <= 0) {
       return List<uint64_t>::nil();
     } else {

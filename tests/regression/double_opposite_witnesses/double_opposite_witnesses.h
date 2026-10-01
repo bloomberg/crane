@@ -2,9 +2,11 @@
 #define INCLUDED_DOUBLE_OPPOSITE_WITNESSES
 
 #include "crane_fn.h"
+#include "fn.h"
+#include "obj.h"
 #include <any>
 #include <concepts>
-#include <functional>
+#include <stdexcept>
 #include <utility>
 #include <variant>
 
@@ -17,6 +19,25 @@ template <typename A, typename P> struct SigT {
 
   // ACCESSORS
   SigT<A, P> clone() const { return {x, a1}; }
+
+  template <typename _U0, typename _U1> operator SigT<_U0, _U1>() const {
+    return {[&]() -> _U0 {
+              if constexpr (crane_convertible<_U0, const A &>) {
+                return crane_convert<_U0>(x);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }(),
+            [&]() -> _U1 {
+              if constexpr (crane_convertible<_U1, const P &>) {
+                return crane_convert<_U1>(a1);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }()};
+  }
 
   // CREATORS
   static SigT<A, P> existt(A x, P a1) { return {std::move(x), std::move(a1)}; }
@@ -37,14 +58,14 @@ concept PreCategory = requires {
   typename I::Obj;
   {
     I::identity(std::declval<typename I::Obj>())
-  } -> std::convertible_to<std::any>;
+  } -> std::convertible_to<crane::obj>;
   {
     I::compose(std::declval<typename I::Obj>(), std::declval<typename I::Obj>(),
-               std::declval<typename I::Obj>(), std::declval<std::any>(),
-               std::declval<std::any>())
-  } -> std::convertible_to<std::any>;
+               std::declval<typename I::Obj>(), std::declval<crane::obj>(),
+               std::declval<crane::obj>())
+  } -> std::convertible_to<crane::obj>;
 };
-template <typename I>
+template <typename I, typename Obj>
 concept PreStableCategory = requires {
   typename I::base_category;
   { I::zero_object() } -> std::convertible_to<typename I::base_category::Obj>;
@@ -77,56 +98,69 @@ struct DoubleOppositeWitnessesCase {
     return UINT64_C(1);
   }
 
-  using Obj = std::any;
-  using Hom = std::any;
+  using Obj = crane::obj;
+  using Hom = crane::obj;
 
   template <PreCategory _tcI0> struct opposite_category {
     using Obj = typename _tcI0::Obj;
 
-    static std::any identity(Obj x) {
+    static crane::obj identity(typename _tcI0::Obj x) {
       return crane_erase_fn(_tcI0::identity(std::move(x)));
     }
 
-    static std::any compose(Obj x, Obj y, Obj z, std::any f, std::any g) {
+    static crane::obj compose(typename _tcI0::Obj x, typename _tcI0::Obj y,
+                              typename _tcI0::Obj z, crane::obj f,
+                              crane::obj g) {
       return crane_erase_fn(
           _tcI0::compose(std::move(z), std::move(y), std::move(x), g, f));
     }
   };
 
-  struct Functor {
-    std::function<Obj(Obj)> object_of;
-    std::function<Hom(Obj, Obj, Hom)> morphism_of;
+  template <typename Obj> struct Functor {
+    crane::fn<Obj(Obj)> object_of;
+    crane::fn<Hom(Obj, Obj, Hom)> morphism_of;
   };
 
   template <PreCategory _tcI0, PreCategory _tcI1, PreCategory _tcI2>
-  static Functor compose_functor(Functor f, Functor g) {
-    return Functor{
-        crane_erase_fn<std::any>(
-            [=](Obj x) mutable { return f.object_of(g.object_of(x)); }),
-        crane_erase_fn<Hom>([=](Obj x, Obj y, Obj f0) mutable {
+  static Functor<typename _tcI0::Obj>
+  compose_functor(Functor<typename _tcI0::Obj> f,
+                  Functor<typename _tcI0::Obj> g) {
+    return Functor<typename _tcI0::Obj>{
+        [=](const typename _tcI0::Obj &x) {
+          return f.object_of(g.object_of(x));
+        },
+        crane_erase_fn<Hom>([=](const typename _tcI0::Obj &x,
+                                const typename _tcI0::Obj &y, const auto &f0) {
           return f.morphism_of(g.object_of(x), g.object_of(y),
                                crane_erase_fn(g.morphism_of(x, y, f0)));
         })};
   }
 
-  template <PreStableCategory _tcI0> struct opposite_prestable_category {
+  template <typename _tcI0>
+    requires PreStableCategory<_tcI0, typename _tcI0::base_category::Obj>
+  struct opposite_prestable_category {
     using base_category = opposite_category<typename _tcI0::base_category>;
     using Obj = typename base_category::Obj;
 
-    static Obj zero_object() { return _tcI0::zero_object(); }
+    static typename _tcI0::base_category::Obj zero_object() {
+      return _tcI0::zero_object();
+    }
 
-    static Obj suspension(std::any x) { return _tcI0::suspension(x); }
+    static typename _tcI0::base_category::Obj
+    suspension(typename _tcI0::base_category::Obj x) {
+      return _tcI0::suspension(std::move(x));
+    }
   };
 
   struct nat_category {
     using Obj = uint64_t;
 
-    static std::any identity(uint64_t x) { return x; }
+    static crane::obj identity(uint64_t x) { return x; }
 
-    static std::any compose(uint64_t, uint64_t, uint64_t, std::any f,
-                            std::any g) {
-      return (std::any_cast<uint64_t>(std::move(f)) +
-              std::any_cast<uint64_t>(std::move(g)));
+    static crane::obj compose(uint64_t, uint64_t, uint64_t, crane::obj f,
+                              crane::obj g) {
+      return (crane::any_cast<uint64_t>(std::move(f)) +
+              crane::any_cast<uint64_t>(std::move(g)));
     }
   };
 
@@ -141,81 +175,93 @@ struct DoubleOppositeWitnessesCase {
     static Obj suspension(uint64_t x) { return (std::move(x) + 1); }
   };
 
-  static_assert(PreStableCategory<toy_prestable>);
+  static_assert(PreStableCategory<toy_prestable, Obj>);
 
-  template <PreCategory _tcI0> static Functor into_double_opposite_functor() {
-    return Functor{crane_erase_fn<std::any>([](Obj x) { return x; }),
-                   crane_erase_fn<Hom>([](Obj, Obj, Obj f) { return f; })};
+  template <PreCategory _tcI0>
+  static Functor<typename _tcI0::Obj> into_double_opposite_functor() {
+    return Functor<typename _tcI0::Obj>{
+        [](typename _tcI0::Obj x) { return x; },
+        crane_erase_fn<Hom>([](const typename _tcI0::Obj &,
+                               const typename _tcI0::Obj &,
+                               const auto &f) { return f; })};
   }
 
-  template <PreCategory _tcI0> static Functor out_of_double_opposite_functor() {
-    return Functor{crane_erase_fn<std::any>([](Obj x) { return x; }),
-                   crane_erase_fn<Hom>([](Obj, Obj, Obj f) { return f; })};
+  template <PreCategory _tcI0>
+  static Functor<typename _tcI0::Obj> out_of_double_opposite_functor() {
+    return Functor<typename _tcI0::Obj>{
+        [](typename _tcI0::Obj x) { return x; },
+        crane_erase_fn<Hom>([](const typename _tcI0::Obj &,
+                               const typename _tcI0::Obj &,
+                               const auto &f) { return f; })};
   }
 
-  template <PreStableCategory _tcI0>
-  static SigT<
-      Functor,
-      SigT<Functor,
-           std::pair<std::function<Path<typename _tcI0::base_category::Obj>(
-                         typename _tcI0::base_category::Obj)>,
-                     std::function<Path<typename _tcI0::base_category::Obj>(
-                         typename _tcI0::base_category::Obj)>>>>
+  template <typename _tcI0>
+    requires PreStableCategory<_tcI0, typename _tcI0::base_category::Obj>
+  static SigT<Functor<typename _tcI0::base_category::Obj>,
+              SigT<Functor<typename _tcI0::base_category::Obj>,
+                   std::pair<crane::fn<Path<typename _tcI0::base_category::Obj>(
+                                 typename _tcI0::base_category::Obj)>,
+                             crane::fn<Path<typename _tcI0::base_category::Obj>(
+                                 typename _tcI0::base_category::Obj)>>>>
   duality_involution() {
     return SigT<
-        Functor,
-        SigT<Functor,
-             std::pair<std::function<Path<typename _tcI0::base_category::Obj>(
+        Functor<typename _tcI0::base_category::Obj>,
+        SigT<Functor<typename _tcI0::base_category::Obj>,
+             std::pair<crane::fn<Path<typename _tcI0::base_category::Obj>(
                            typename _tcI0::base_category::Obj)>,
-                       std::function<Path<typename _tcI0::base_category::Obj>(
+                       crane::fn<Path<typename _tcI0::base_category::Obj>(
                            typename _tcI0::base_category::Obj)>>>>::
         existt(
             into_double_opposite_functor<typename _tcI0::base_category>(),
-            SigT<Functor,
-                 std::pair<
-                     std::function<Path<typename _tcI0::base_category::Obj>(
-                         typename _tcI0::base_category::Obj)>,
-                     std::function<Path<typename _tcI0::base_category::Obj>(
-                         typename _tcI0::base_category::Obj)>>>::
+            SigT<Functor<typename _tcI0::base_category::Obj>,
+                 std::pair<crane::fn<Path<typename _tcI0::base_category::Obj>(
+                               typename _tcI0::base_category::Obj)>,
+                           crane::fn<Path<typename _tcI0::base_category::Obj>(
+                               typename _tcI0::base_category::Obj)>>>::
                 existt(
                     out_of_double_opposite_functor<
                         typename _tcI0::base_category>(),
                     std::make_pair(
-                        [](const typename _tcI0::base_category::Obj &) {
+                        [](typename _tcI0::base_category::Obj) {
                           return Path<
                               typename _tcI0::base_category::Obj>::path_refl();
                         },
-                        [](const typename _tcI0::base_category::Obj &) {
+                        [](typename _tcI0::base_category::Obj) {
                           return Path<
                               typename _tcI0::base_category::Obj>::path_refl();
                         })));
   }
 
   static inline const SigT<
-      Functor,
-      SigT<Functor, std::pair<std::function<Path<uint64_t>(uint64_t)>,
-                              std::function<Path<uint64_t>(uint64_t)>>>>
-      toy_duality_involution = std::any_cast<SigT<
-          Functor,
-          SigT<Functor, std::pair<std::function<Path<uint64_t>(uint64_t)>,
-                                  std::function<Path<uint64_t>(uint64_t)>>>>>(
+      Functor<typename toy_prestable::base_category::Obj>,
+      SigT<Functor<typename toy_prestable::base_category::Obj>,
+           std::pair<crane::fn<Path<uint64_t>(uint64_t)>,
+                     crane::fn<Path<uint64_t>(uint64_t)>>>>
+      toy_duality_involution = crane::any_cast<
+          SigT<Functor<typename toy_prestable::base_category::Obj>,
+               SigT<Functor<typename toy_prestable::base_category::Obj>,
+                    std::pair<crane::fn<Path<uint64_t>(uint64_t)>,
+                              crane::fn<Path<uint64_t>(uint64_t)>>>>>(
           duality_involution<toy_prestable>());
-  static inline const Functor forward_functor = toy_duality_involution.projT1();
-  static inline const SigT<Functor,
-                           std::pair<std::function<Path<uint64_t>(uint64_t)>,
-                                     std::function<Path<uint64_t>(uint64_t)>>>
+  static inline const Functor<typename toy_prestable::base_category::Obj>
+      forward_functor = toy_duality_involution.projT1();
+  static inline const SigT<Functor<typename toy_prestable::base_category::Obj>,
+                           std::pair<crane::fn<Path<uint64_t>(uint64_t)>,
+                                     crane::fn<Path<uint64_t>(uint64_t)>>>
       backward_package = toy_duality_involution.projT2();
-  static inline const Functor backward_functor = backward_package.projT1();
-  static inline const std::pair<std::function<Path<uint64_t>(uint64_t)>,
-                                std::function<Path<uint64_t>(uint64_t)>>
+  static inline const Functor<typename opposite_prestable_category<
+      opposite_prestable_category<toy_prestable>>::base_category::Obj>
+      backward_functor = backward_package.projT1();
+  static inline const std::pair<crane::fn<Path<uint64_t>(uint64_t)>,
+                                crane::fn<Path<uint64_t>(uint64_t)>>
       identity_witnesses = backward_package.projT2();
   static inline const uint64_t forward_object_7 =
-      std::any_cast<uint64_t>(forward_functor.object_of(UINT64_C(7)));
+      crane::any_cast<uint64_t>(forward_functor.object_of(UINT64_C(7)));
   static inline const uint64_t backward_object_9 =
-      std::any_cast<uint64_t>(backward_functor.object_of(UINT64_C(9)));
-  static inline const uint64_t forward_morphism_3 = std::any_cast<uint64_t>(
+      crane::any_cast<uint64_t>(backward_functor.object_of(UINT64_C(9)));
+  static inline const uint64_t forward_morphism_3 = crane::any_cast<uint64_t>(
       forward_functor.morphism_of(UINT64_C(4), UINT64_C(7), UINT64_C(3)));
-  static inline const uint64_t roundtrip_left_11 = std::any_cast<uint64_t>(
+  static inline const uint64_t roundtrip_left_11 = crane::any_cast<uint64_t>(
       compose_functor<
           typename toy_prestable::base_category,
           typename opposite_prestable_category<
@@ -223,7 +269,7 @@ struct DoubleOppositeWitnessesCase {
           typename toy_prestable::base_category>(backward_functor,
                                                  forward_functor)
           .object_of(UINT64_C(11)));
-  static inline const uint64_t roundtrip_right_13 = std::any_cast<uint64_t>(
+  static inline const uint64_t roundtrip_right_13 = crane::any_cast<uint64_t>(
       compose_functor<
           typename opposite_prestable_category<
               opposite_prestable_category<toy_prestable>>::base_category,
@@ -232,7 +278,7 @@ struct DoubleOppositeWitnessesCase {
               opposite_prestable_category<toy_prestable>>::base_category>(
           forward_functor, backward_functor)
           .object_of(UINT64_C(13)));
-  static inline const uint64_t roundtrip_morphism_5 = std::any_cast<uint64_t>(
+  static inline const uint64_t roundtrip_morphism_5 = crane::any_cast<uint64_t>(
       compose_functor<
           typename toy_prestable::base_category,
           typename opposite_prestable_category<
@@ -241,7 +287,7 @@ struct DoubleOppositeWitnessesCase {
                                                  forward_functor)
           .morphism_of(UINT64_C(2), UINT64_C(9), UINT64_C(5)));
   static inline const uint64_t left_identity_code_11 = path_code<uint64_t>(
-      std::any_cast<uint64_t>(
+      crane::any_cast<uint64_t>(
           compose_functor<
               typename toy_prestable::base_category,
               typename opposite_prestable_category<
@@ -251,7 +297,7 @@ struct DoubleOppositeWitnessesCase {
               .object_of(UINT64_C(11))),
       UINT64_C(11), identity_witnesses.first(UINT64_C(11)));
   static inline const uint64_t right_identity_code_13 = path_code<uint64_t>(
-      std::any_cast<uint64_t>(
+      crane::any_cast<uint64_t>(
           compose_functor<
               typename opposite_prestable_category<
                   opposite_prestable_category<toy_prestable>>::base_category,
@@ -261,7 +307,7 @@ struct DoubleOppositeWitnessesCase {
               toy_duality_involution.projT1(), backward_package.projT1())
               .object_of(UINT64_C(13))),
       UINT64_C(13), identity_witnesses.second(UINT64_C(13)));
-  static inline const uint64_t suspended_zero = std::any_cast<uint64_t>(
+  static inline const uint64_t suspended_zero = crane::any_cast<uint64_t>(
       toy_prestable::suspension(toy_prestable::zero_object()));
 };
 

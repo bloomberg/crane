@@ -583,9 +583,7 @@ List<uint64_t> LoopifySearch::sieve_fuel(uint64_t fuel, List<uint64_t> l) {
         *_write = std::move(_cell);
         _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
         _loop_l = filter_impl(
-            [=](uint64_t y) mutable {
-              return !((a0 ? y % a0 : y) == UINT64_C(0));
-            },
+            [=](uint64_t y) { return !((a0 ? y % a0 : y) == UINT64_C(0)); },
             a1_value);
         _loop_fuel = f;
         continue;
@@ -691,8 +689,8 @@ List<uint64_t> LoopifySearch::remove_duplicates_fuel(uint64_t fuel,
           *_write = std::move(_cell);
           _write =
               &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
-          _loop_l = filter_impl([=](uint64_t y) mutable { return !(a0 == y); },
-                                a1_value);
+          _loop_l =
+              filter_impl([=](uint64_t y) { return !(a0 == y); }, a1_value);
           _loop_fuel = f;
           continue;
         }
@@ -753,9 +751,9 @@ List<uint64_t> LoopifySearch::quicksort_fuel(
           auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v_mut());
           const List<uint64_t> &a1_value = *a1;
           List<uint64_t> smaller =
-              filter_impl([=](uint64_t y) mutable { return y < a0; }, a1_value);
-          List<uint64_t> greater = filter_impl(
-              [=](uint64_t y) mutable { return a0 <= y; }, a1_value);
+              filter_impl([=](uint64_t y) { return y < a0; }, a1_value);
+          List<uint64_t> greater =
+              filter_impl([=](uint64_t y) { return a0 <= y; }, a1_value);
           _stack.emplace_back(
               _After_Cons{std::move(smaller), f, std::move(a0)});
           _stack.emplace_back(_Enter{std::move(greater), f});

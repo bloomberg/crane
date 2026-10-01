@@ -2,9 +2,9 @@
 #define INCLUDED_THIS_CAPTURE_RECORD
 
 #include "crane_fn.h"
+#include "fn.h"
 #include "small_vector.h"
 #include <atomic>
-#include <functional>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -54,10 +54,10 @@ struct ThisCaptureRecord {
       crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a2) {
+          if (_alt->a2 && _alt->a2.use_count() == 1) {
             _stack.push_back(std::move(_alt->a2));
           }
         }
@@ -158,7 +158,7 @@ struct ThisCaptureRecord {
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
-        std::decay_t<T1> _result;
+        T1 _result;
         tree a2;
         uint64_t a1;
         tree a0;
@@ -220,7 +220,7 @@ struct ThisCaptureRecord {
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
-        std::decay_t<T1> _result;
+        T1 _result;
         tree a2;
         uint64_t a1;
         tree a0;
@@ -288,8 +288,8 @@ struct ThisCaptureRecord {
   };
 
   struct callback_rec {
-    std::function<uint64_t(uint64_t)> cr_add;
-    std::function<uint64_t(uint64_t)> cr_mul;
+    crane::fn<uint64_t(uint64_t)> cr_add;
+    crane::fn<uint64_t(uint64_t)> cr_mul;
   };
 
   /// Methodified on tree. The extra flag argument forces Crane to

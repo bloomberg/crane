@@ -12,7 +12,7 @@
 /// Difference from fix_escape_capture: escapes through a CUSTOM
 /// INDUCTIVE constructor, not a pair.
 ClosureInCtor::box ClosureInCtor::make_box_fix(uint64_t n) {
-  auto add_impl = [=](auto &_self_add, uint64_t x) mutable -> uint64_t {
+  auto add_impl = [=](auto &_self_add, uint64_t x) -> uint64_t {
     if (x <= 0) {
       return n;
     } else {
@@ -20,8 +20,6 @@ ClosureInCtor::box ClosureInCtor::make_box_fix(uint64_t n) {
       return (_self_add(_self_add, x_) + 1);
     }
   };
-  auto add = [=](uint64_t x) mutable -> uint64_t {
-    return add_impl(add_impl, x);
-  };
+  auto add = [=](uint64_t x) -> uint64_t { return add_impl(add_impl, x); };
   return box::box0(std::move(add));
 }

@@ -2,9 +2,9 @@
 #define INCLUDED_MOVE_SAFETY
 
 #include "crane_fn.h"
+#include "fn.h"
 #include "small_vector.h"
 #include <atomic>
-#include <functional>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -47,10 +47,10 @@ struct MoveSafety {
       crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a2) {
+          if (_alt->a2 && _alt->a2.use_count() == 1) {
             _stack.push_back(std::move(_alt->a2));
           }
         }
@@ -83,7 +83,7 @@ struct MoveSafety {
     /// A function that stores its tree argument inside a constructor.
     /// This causes the parameter to be passed by value (it "escapes").
     tree wrap_tree() const {
-      return tree::node(std::move(*this), UINT64_C(0), tree::leaf());
+      return tree::node(*this, UINT64_C(0), tree::leaf());
     }
 
     uint64_t sum_values(uint64_t x) const {
@@ -131,7 +131,7 @@ struct MoveSafety {
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
-        std::decay_t<T1> _result;
+        T1 _result;
         tree a2;
         uint64_t a1;
         tree a0;
@@ -193,7 +193,7 @@ struct MoveSafety {
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
-        std::decay_t<T1> _result;
+        T1 _result;
         tree a2;
         uint64_t a1;
         tree a0;
@@ -236,13 +236,13 @@ struct MoveSafety {
   /// A wrapper for closures.
   struct fn_box {
     // DATA
-    std::function<uint64_t(uint64_t)> a0;
+    crane::fn<uint64_t(uint64_t)> a0;
 
     // ACCESSORS
     fn_box clone() const { return {a0}; }
 
     // CREATORS
-    static fn_box box(std::function<uint64_t(uint64_t)> a0) {
+    static fn_box box(crane::fn<uint64_t(uint64_t)> a0) {
       return {std::move(a0)};
     }
 
@@ -252,16 +252,14 @@ struct MoveSafety {
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &,
-                                     std::function<uint64_t(uint64_t)> &>
+      requires std::is_invocable_r_v<T1, F0 &, crane::fn<uint64_t(uint64_t)> &>
     T1 fn_box_rec(F0 &&f) const {
       const auto &[a0] = *this;
       return f(a0);
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &,
-                                     std::function<uint64_t(uint64_t)> &>
+      requires std::is_invocable_r_v<T1, F0 &, crane::fn<uint64_t(uint64_t)> &>
     T1 fn_box_rect(F0 &&f) const {
       const auto &[a0] = *this;
       return f(a0);
@@ -297,9 +295,10 @@ struct MoveSafety {
       tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
                           UINT64_C(20),
                           tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
-      std::function<uint64_t(uint64_t)> f =
-          [=](uint64_t _x0) mutable -> uint64_t { return t.sum_values(_x0); };
-      std::function<uint64_t(uint64_t)> g = [&](uint64_t _x0) -> uint64_t {
+      crane::fn<uint64_t(uint64_t)> f = [=](uint64_t _x0) -> uint64_t {
+        return t.sum_values(_x0);
+      };
+      crane::fn<uint64_t(uint64_t)> g = [&](uint64_t _x0) -> uint64_t {
         return std::move(t).sum_values(_x0);
       };
       return (f(UINT64_C(1)) + g(UINT64_C(2)));
@@ -310,8 +309,9 @@ struct MoveSafety {
       tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
                           UINT64_C(20),
                           tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
-      std::function<uint64_t(uint64_t)> f =
-          [=](uint64_t _x0) mutable -> uint64_t { return t.sum_values(_x0); };
+      crane::fn<uint64_t(uint64_t)> f = [=](uint64_t _x0) -> uint64_t {
+        return t.sum_values(_x0);
+      };
       tree t2 = std::move(t).tree_id();
       if (std::holds_alternative<typename tree::Leaf>(t2.v_mut())) {
         return f(UINT64_C(0));

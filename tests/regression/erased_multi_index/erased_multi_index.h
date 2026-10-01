@@ -2,6 +2,7 @@
 #define INCLUDED_ERASED_MULTI_INDEX
 
 #include "crane_fn.h"
+#include "obj.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
@@ -19,35 +20,39 @@ struct ErasedMultiIndex {
   /// Two type indices — both erased
   struct tagged {
     // DATA
-    std::any k;
-    std::any v_1;
+    crane::obj k;
+    crane::obj v_1;
 
     // ACCESSORS
     tagged clone() const { return {k, v_1}; }
 
     // CREATORS
-    static tagged mktagged(std::any k, std::any v_1) {
+    static tagged mktagged(crane::obj k, crane::obj v_1) {
       return {std::move(k), std::move(v_1)};
     }
 
     template <typename T2> T2 get_val() const {
       const auto &[k, v_1] = *this;
-      return std::any_cast<T2>(v_1);
+      return crane_any_cast<T2>(v_1);
     }
 
     template <typename T1> T1 get_key() const {
       const auto &[k0, v_1] = *this;
-      return std::any_cast<T1>(k0);
+      return crane_any_cast<T1>(k0);
     }
 
-    template <typename T1, typename F0> T1 tagged_rec(F0 &&f) const {
+    template <typename T2, typename T3, typename F0>
+    crane::obj tagged_rec(F0 &&f) const {
       const auto &[k0, v_1] = *this;
-      return crane_call_erased(f, k0, v_1);
+      return crane_call_erased(f, crane_any_cast<T2>(k0),
+                               crane_any_cast<T3>(v_1));
     }
 
-    template <typename T1, typename F0> T1 tagged_rect(F0 &&f) const {
+    template <typename T2, typename T3, typename F0>
+    crane::obj tagged_rect(F0 &&f) const {
       const auto &[k0, v_1] = *this;
-      return crane_call_erased(f, k0, v_1);
+      return crane_call_erased(f, crane_any_cast<T2>(k0),
+                               crane_any_cast<T3>(v_1));
     }
   };
 
@@ -62,7 +67,7 @@ struct ErasedMultiIndex {
     struct HNil {};
 
     struct HCons {
-      std::any a;
+      crane::obj a;
       std::shared_ptr<hlist> a1;
     };
 
@@ -82,28 +87,24 @@ struct ErasedMultiIndex {
 
     static hlist hnil() { return hlist(HNil{}); }
 
-    static hlist hcons(std::any a, hlist a1) {
+    static hlist hcons(crane::obj a, hlist a1) {
       return hlist(HCons{std::move(a), std::make_shared<hlist>(std::move(a1))});
     }
 
     // MANIPULATORS
     ~hlist() {
-      crane::small_vector<std::shared_ptr<hlist>> _stack = {};
-      auto _drain = [&](variant_t &_v) {
+      auto _next = [&](variant_t &_v) -> std::shared_ptr<hlist> {
         if (auto *_alt = std::get_if<HCons>(&_v)) {
-          if (_alt->a1) {
-            _stack.push_back(std::move(_alt->a1));
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
+            return std::move(_alt->a1);
           }
         }
+        return nullptr;
       };
-      _drain(v_mut());
-      while (!_stack.empty()) {
-        auto _cur = std::move(_stack.back());
-        _stack.pop_back();
-        if (_cur.use_count() == 1) {
-          std::atomic_thread_fence(std::memory_order_acquire);
-          _drain(_cur->v_mut());
-        }
+      std::shared_ptr<hlist> _cur = _next(v_mut());
+      while (_cur) {
+        _cur = _next(_cur->v_mut());
       }
     }
 
@@ -163,7 +164,7 @@ struct ErasedMultiIndex {
       /// _Enter: captures varying parameters for each recursive call.
       struct _Enter {
         const hlist *_self;
-        F1 f0;
+        std::decay_t<F1> f0;
       };
 
       /// _Resume_HCons: saves [f0, a1, a0], resumes after recursive call with
@@ -171,7 +172,7 @@ struct ErasedMultiIndex {
       struct _Resume_HCons {
         std::decay_t<F1> f0;
         hlist a1;
-        std::any a0;
+        crane::obj a0;
       };
 
       using _Frame = std::variant<_Enter, _Resume_HCons>;
@@ -210,7 +211,7 @@ struct ErasedMultiIndex {
       /// _Enter: captures varying parameters for each recursive call.
       struct _Enter {
         const hlist *_self;
-        F1 f0;
+        std::decay_t<F1> f0;
       };
 
       /// _Resume_HCons: saves [f0, a1, a0], resumes after recursive call with
@@ -218,7 +219,7 @@ struct ErasedMultiIndex {
       struct _Resume_HCons {
         std::decay_t<F1> f0;
         hlist a1;
-        std::any a0;
+        crane::obj a0;
       };
 
       using _Frame = std::variant<_Enter, _Resume_HCons>;

@@ -121,16 +121,37 @@ let is_partial_app head args =
 (** Check if de Bruijn index [k] escapes in [t].
 
     Escaping positions (value outlives its scope):
-    - Constructor argument (MLcons) → stored in data structure
     - Lambda body (MLlam) → captured by closure
     - Tail position → returned to caller (caller owns it)
     - Fixpoint body (MLfix) → captured by recursive closure
+    - Constructor argument (MLcons/MLtuple), when [cons_escapes] (the
+      default) → stored in a data structure
 
     Non-escaping positions:
     - Case scrutinee (MLcase) → destructured immediately
     - Under MLmagic → transparent wrapper
-    - Function arguments (MLapp) → callee's responsibility *)
-let escapes ?(refined = false) k t =
+    - Function arguments (MLapp) → callee's responsibility
+    - Constructor argument (MLcons/MLtuple), when [not cons_escapes] →
+      callee's responsibility too: building [(s, a)] or [Ctor s] reads [s]
+      once to copy it into the new value's field, exactly as calling a
+      function with [s] does.  The field needs a copy either way; a
+      borrowed [s] pays for it at the construction site instead of at
+      every borrowed link further up the call chain that only ever passed
+      [s] along -- [fun s => ret (s, a)] (a monad's [ret], reading [s] to
+      pair it with [a]) has the identical shape as [fun s => k (t s)] (a
+      monad's [bind], reading [s] to call [t]), and only the latter used
+      to be recognized as borrowable.
+
+      [cons_escapes] stays [true] by default -- and always for
+      {!sub_bindings_escape}'s scan of a match branch's body -- because a
+      sub-binding destructured out of an owned scrutinee and rebuilt into a
+      new constructor ([match t with Node l x r -> Node (f l) x (f r)])
+      needs the scrutinee owned so [x] can move out of it; relaxing that
+      occurrence too would silently turn the move back into a copy.  Only
+      {!infer_owned_params}'s direct query -- is this *parameter itself*,
+      not something extracted from it, merely read to build a new value --
+      asks with it turned off. *)
+let escapes ?(refined = false) ?(cons_escapes = true) k t =
   let rec check k in_tail in_fn_arg = function
     | MLrel i -> i = k && in_tail
     | MLcase (_, scrut, branches) ->
@@ -157,8 +178,8 @@ let escapes ?(refined = false) k t =
       let k' = k + Array.length ids in
       Array.exists (occurs k') bodies
     | MLcons (_, _, args) ->
-      List.exists (check k true false) args
-    | MLtuple args -> List.exists (check k true false) args
+      List.exists (check k cons_escapes false) args
+    | MLtuple args -> List.exists (check k cons_escapes false) args
     | MLmagic (_, a) -> check k in_tail false a
     | MLparray (elts, def) -> Array.exists (occurs k) elts || occurs k def
     | MLglob _
@@ -293,7 +314,7 @@ let infer_owned_params n_params body =
   let reuse_on = reuse () && non_atomic_rc () in
   List.init n_params (fun i ->
     let k = i + 1 in
-    escapes ~refined:true k body
+    escapes ~refined:true ~cons_escapes:false k body
     || (reuse_on && is_reuse_scrutinee k body))
 
 (** Like [infer_owned_params] but returns only the [sub_bindings_escape]

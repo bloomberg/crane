@@ -51,7 +51,7 @@ struct CraneMoveHunt {
   static state match_reuse(const state &s0);
 };
 
-void tick(CraneMoveHunt::state s);
+void tick(const CraneMoveHunt::state &s);
 CraneMoveHunt::state effect_frame(const CraneMoveHunt::state &s0);
 CraneMoveHunt::state effect_pair_frame(const CraneMoveHunt::state &s0);
 CraneMoveHunt::state pure_pair_frame(const CraneMoveHunt::state &s0);

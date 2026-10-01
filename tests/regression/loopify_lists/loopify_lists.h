@@ -2,12 +2,14 @@
 #define INCLUDED_LOOPIFY_LISTS
 
 #include "crane_fn.h"
+#include "fn.h"
+#include "obj.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
-#include <functional>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -38,21 +40,28 @@ struct LoopifyLists {
 
     explicit list(Cons _v) : v_(std::move(_v)) {}
 
-    template <typename _U> list(const list<_U> &_other) {
-      if (std::holds_alternative<typename list<_U>::Nil>(_other.v())) {
-        this->v_ = Nil{};
-      } else {
-        const auto &[a, l] = std::get<typename list<_U>::Cons>(_other.v());
-        this->v_ = Cons{[&]() -> A {
-                          if constexpr (std::is_same_v<_U, std::any>) {
-                            return crane_any_cast<A>(a);
-                          } else {
-                            return A(a);
-                          }
-                        }(),
-                        (l ? std::make_shared<list<A>>(*l) : nullptr)};
-      }
-    }
+    template <typename _U>
+    list(const list<_U> &_other)
+        : v_([&]() -> variant_t {
+            if (std::holds_alternative<typename list<_U>::Nil>(_other.v())) {
+              return Nil{};
+            } else {
+              const auto &[a, l] =
+                  std::get<typename list<_U>::Cons>(_other.v());
+              return Cons{
+                  [&]() -> A {
+                    if constexpr (crane_convertible<A, const _U &>) {
+                      return crane_convert<A>(a);
+                    } else {
+                      throw std::logic_error(
+                          "unreachable: inactive constructor field at this "
+                          "instantiation");
+                    }
+                  }(),
+                  (l ? std::make_shared<list<A>>(crane_convert<list<A>>(*l))
+                     : nullptr)};
+            }
+          }()) {}
 
     static list<A> nil() { return list<A>(Nil{}); }
 
@@ -63,22 +72,18 @@ struct LoopifyLists {
 
     // MANIPULATORS
     ~list() {
-      crane::small_vector<std::shared_ptr<list<A>>> _stack = {};
-      auto _drain = [&](variant_t &_v) {
+      auto _next = [&](variant_t &_v) -> std::shared_ptr<list<A>> {
         if (auto *_alt = std::get_if<Cons>(&_v)) {
-          if (_alt->l) {
-            _stack.push_back(std::move(_alt->l));
+          if (_alt->l && _alt->l.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
+            return std::move(_alt->l);
           }
         }
+        return nullptr;
       };
-      _drain(v_mut());
-      while (!_stack.empty()) {
-        auto _cur = std::move(_stack.back());
-        _stack.pop_back();
-        if (_cur.use_count() == 1) {
-          std::atomic_thread_fence(std::memory_order_acquire);
-          _drain(_cur->v_mut());
-        }
+      std::shared_ptr<list<A>> _cur = _next(v_mut());
+      while (_cur) {
+        _cur = _next(_cur->v_mut());
       }
     }
 
@@ -107,7 +112,7 @@ struct LoopifyLists {
     /// _Resume_Cons: saves [a1, a0], resumes after recursive call with _result.
     struct _Resume_Cons {
       list<T1> a1;
-      std::decay_t<T1> a0;
+      T1 a0;
     };
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -150,7 +155,7 @@ struct LoopifyLists {
     /// _Resume_Cons: saves [a1, a0], resumes after recursive call with _result.
     struct _Resume_Cons {
       list<T1> a1;
-      std::decay_t<T1> a0;
+      T1 a0;
     };
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -208,7 +213,7 @@ struct LoopifyLists {
   }
 
   /// snoc l x appends x at the end (reverse cons).
-  template <typename T1> static list<T1> snoc(const list<T1> &l, T1 x) {
+  template <typename T1> static list<T1> snoc(const list<T1> &l, const T1 &x) {
     std::shared_ptr<list<T1>> _head{};
     std::shared_ptr<list<T1>> *_write = &_head;
     const list<T1> *_loop_l = &l;
@@ -232,7 +237,7 @@ struct LoopifyLists {
 
   /// intersperse sep l inserts separator between elements.
   template <typename T1>
-  static list<T1> intersperse(T1 sep, const list<T1> &l) {
+  static list<T1> intersperse(const T1 &sep, const list<T1> &l) {
     std::shared_ptr<list<T1>> _head{};
     std::shared_ptr<list<T1>> *_write = &_head;
     const list<T1> *_loop_l = &l;
@@ -268,7 +273,7 @@ struct LoopifyLists {
   }
 
   /// replicate n x creates n copies of x.
-  template <typename T1> static list<T1> replicate(uint64_t n, T1 x) {
+  template <typename T1> static list<T1> replicate(uint64_t n, const T1 &x) {
     std::shared_ptr<list<T1>> _head{};
     std::shared_ptr<list<T1>> *_write = &_head;
     uint64_t _loop_n = std::move(n);
@@ -302,7 +307,7 @@ struct LoopifyLists {
 
     /// _Resume_m: saves [app], resumes after recursive call with _result.
     struct _Resume_m {
-      std::function<list<T1>(list<T1>, list<T1>)> app;
+      crane::fn<list<T1>(list<T1>, list<T1>)> app;
     };
 
     using _Frame = std::variant<_Enter, _Resume_m>;
@@ -326,7 +331,7 @@ struct LoopifyLists {
           /// _Resume_Cons: saves [a0], resumes after recursive call with
           /// _result.
           struct _Resume_Cons {
-            std::decay_t<T1> a0;
+            T1 a0;
           };
           using _Frame = std::variant<_Enter, _Resume_Cons>;
           list<T1> _result{};
@@ -374,9 +379,9 @@ struct LoopifyLists {
   }
 
   /// init_list n f generates f 0, f 1, ..., f (n-1).
-  template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, uint64_t &>
-  static list<T1> init_list(uint64_t n, F1 &&f) {
+  template <typename T1>
+  static list<T1> init_list(uint64_t n,
+                            std::type_identity_t<crane::fn<T1(uint64_t)>> f) {
     auto go_impl = [&](auto &, uint64_t i) -> list<T1> {
       /// _Enter: captures varying parameters for each recursive call.
       struct _Enter {
@@ -384,10 +389,7 @@ struct LoopifyLists {
       };
       /// _Resume_j: saves [_s0], resumes after recursive call with _result.
       struct _Resume_j {
-        std::decay_t<decltype(f((((n - std::declval<uint64_t &>()) > n
-                                      ? 0
-                                      : (n - std::declval<uint64_t &>())))))>
-            _s0;
+        T1 _s0;
       };
       using _Frame = std::variant<_Enter, _Resume_j>;
       list<T1> _result{};
@@ -409,7 +411,7 @@ struct LoopifyLists {
           }
         } else {
           auto _f = std::move(std::get<_Resume_j>(_frame));
-          _result = list<T1>::cons(_f._s0, std::move(_result));
+          _result = list<T1>::cons(std::move(_f._s0), std::move(_result));
         }
       }
       return _result;
@@ -422,22 +424,22 @@ struct LoopifyLists {
   static list<uint64_t> range(uint64_t start, uint64_t count0);
 
   /// tails l returns all suffixes.
-  template <typename T1> static list<list<T1>> tails(list<T1> l) {
+  template <typename T1> static list<list<T1>> tails(const list<T1> &l) {
     std::shared_ptr<list<list<T1>>> _head{};
     std::shared_ptr<list<list<T1>>> *_write = &_head;
-    list<T1> _loop_l = std::move(l);
+    const list<T1> *_loop_l = &l;
     while (true) {
-      if (std::holds_alternative<typename list<T1>::Nil>(_loop_l.v_mut())) {
+      if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
         *_write = std::make_shared<list<list<T1>>>(
             list<list<T1>>::cons(list<T1>::nil(), list<list<T1>>::nil()));
         break;
       } else {
-        auto &[a0, a1] = std::get<typename list<T1>::Cons>(_loop_l.v_mut());
+        const auto &[a0, a1] = std::get<typename list<T1>::Cons>(_loop_l->v());
         auto _cell = std::make_shared<list<list<T1>>>(
-            typename list<list<T1>>::Cons(_loop_l, nullptr));
+            typename list<list<T1>>::Cons(*_loop_l, nullptr));
         *_write = std::move(_cell);
         _write = &std::get<typename list<list<T1>>::Cons>((*_write)->v_mut()).l;
-        _loop_l = list<T1>(*a1);
+        _loop_l = crane_raw(a1);
         continue;
       }
     }
@@ -458,7 +460,7 @@ struct LoopifyLists {
     /// _result.
     struct _Resume_Cons {
       list<T1> _s0;
-      std::function<list<list<T1>>(list<list<T1>>)> map_cons;
+      crane::fn<list<list<T1>>(list<list<T1>>)> map_cons;
     };
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -535,11 +537,11 @@ struct LoopifyLists {
   /// scanl f acc l returns intermediate fold results.
   template <typename T1, typename T2, typename F0>
     requires std::is_invocable_r_v<T2, F0 &, T2 &, T1 &>
-  static list<T2> scanl(F0 &&f, T2 acc, const list<T1> &l) {
+  static list<T2> scanl(F0 &&f, const T2 &acc, const list<T1> &l) {
     std::shared_ptr<list<T2>> _head{};
     std::shared_ptr<list<T2>> *_write = &_head;
     const list<T1> *_loop_l = &l;
-    T2 _loop_acc = std::move(acc);
+    T2 _loop_acc = acc;
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
         *_write = std::make_shared<list<T2>>(
@@ -563,28 +565,28 @@ struct LoopifyLists {
   /// group_by eq l groups consecutive equal elements.
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
-  static list<list<T1>> group_by_aux(F0 &&eq, const T1 &prev, list<T1> acc,
-                                     const list<T1> &l) {
+  static list<list<T1>> group_by_aux(F0 &&eq, const T1 &prev,
+                                     const list<T1> &acc, const list<T1> &l) {
     std::shared_ptr<list<list<T1>>> _head{};
     std::shared_ptr<list<list<T1>>> *_write = &_head;
     const list<T1> *_loop_l = &l;
-    list<T1> _loop_acc = std::move(acc);
+    list<T1> _loop_acc = acc;
     T1 _loop_prev = prev;
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
         *_write = std::make_shared<list<list<T1>>>(
-            list<list<T1>>::cons(std::move(_loop_acc), list<list<T1>>::nil()));
+            list<list<T1>>::cons(_loop_acc, list<list<T1>>::nil()));
         break;
       } else {
         const auto &[a0, a1] = std::get<typename list<T1>::Cons>(_loop_l->v());
         if (eq(_loop_prev, a0)) {
           _loop_l = crane_raw(a1);
-          _loop_acc = list<T1>::cons(a0, std::move(_loop_acc));
+          _loop_acc = list<T1>::cons(a0, _loop_acc);
           _loop_prev = a0;
           continue;
         } else {
           auto _cell = std::make_shared<list<list<T1>>>(
-              typename list<list<T1>>::Cons(std::move(_loop_acc), nullptr));
+              typename list<list<T1>>::Cons(_loop_acc, nullptr));
           *_write = std::move(_cell);
           _write =
               &std::get<typename list<list<T1>>::Cons>((*_write)->v_mut()).l;
@@ -633,7 +635,7 @@ struct LoopifyLists {
           /// _Resume_Cons: saves [a0], resumes after recursive call with
           /// _result.
           struct _Resume_Cons {
-            std::decay_t<T1> a0;
+            T1 a0;
           };
           using _Frame = std::variant<_Enter, _Resume_Cons>;
           list<T1> _result{};
@@ -648,11 +650,11 @@ struct LoopifyLists {
               const list<T1> &lst = *_f.lst;
               uint64_t k = _f.k;
               if (k <= 0) {
-                _result = list<list<T1>>::nil();
+                _result = list<T1>::nil();
               } else {
                 uint64_t m = k - 1;
                 if (std::holds_alternative<typename list<T1>::Nil>(lst.v())) {
-                  _result = list<list<T1>>::nil();
+                  _result = list<T1>::nil();
                 } else {
                   const auto &[a0, a1] =
                       std::get<typename list<T1>::Cons>(lst.v());
@@ -662,8 +664,7 @@ struct LoopifyLists {
               }
             } else {
               auto _f = std::move(std::get<_Resume_Cons>(_frame));
-              _result =
-                  list<list<T1>>::cons(std::move(_f.a0), std::move(_result));
+              _result = list<T1>::cons(std::move(_f.a0), std::move(_result));
             }
           }
           return _result;
@@ -681,7 +682,7 @@ struct LoopifyLists {
               uint64_t m = _loop_k - 1;
               if (std::holds_alternative<typename list<T1>::Nil>(
                       _loop_lst.v_mut())) {
-                return list<list<T1>>::nil();
+                return list<T1>::nil();
               } else {
                 auto &[a00, a10] =
                     std::get<typename list<T1>::Cons>(_loop_lst.v_mut());
@@ -861,7 +862,7 @@ struct LoopifyLists {
   template <typename T1>
   static list<std::pair<T1, T1>>
   zip_longest_aux(uint64_t fuel, const list<T1> &l1, const list<T1> &l2,
-                  T1 default0) {
+                  const T1 &default0) {
     std::shared_ptr<list<std::pair<T1, T1>>> _head{};
     std::shared_ptr<list<std::pair<T1, T1>>> *_write = &_head;
     list<T1> _loop_l2 = l2;
@@ -1097,7 +1098,7 @@ struct LoopifyLists {
           /// _Resume_Cons: saves [a00], resumes after recursive call with
           /// _result.
           struct _Resume_Cons {
-            std::decay_t<T1> a00;
+            T1 a00;
           };
           using _Frame = std::variant<_Enter, _Resume_Cons>;
           list<T1> _result{};
@@ -1111,12 +1112,12 @@ struct LoopifyLists {
               auto _f = std::move(std::get<_Enter>(_frame));
               const list<list<T1>> &l = *_f.l;
               if (std::holds_alternative<typename list<list<T1>>::Nil>(l.v())) {
-                _result = list<list<T1>>::nil();
+                _result = list<T1>::nil();
               } else {
                 const auto &[a0, a1] =
                     std::get<typename list<list<T1>>::Cons>(l.v());
                 if (std::holds_alternative<typename list<T1>::Nil>(a0.v())) {
-                  _result = list<list<T1>>::nil();
+                  _result = list<T1>::nil();
                 } else {
                   const auto &[a00, a10] =
                       std::get<typename list<T1>::Cons>(a0.v());
@@ -1126,8 +1127,7 @@ struct LoopifyLists {
               }
             } else {
               auto _f = std::move(std::get<_Resume_Cons>(_frame));
-              _result =
-                  list<list<T1>>::cons(std::move(_f.a00), std::move(_result));
+              _result = list<T1>::cons(std::move(_f.a00), std::move(_result));
             }
           }
           return _result;
@@ -1224,7 +1224,7 @@ struct LoopifyLists {
   template <typename T1, typename T2, typename T3, typename F0>
     requires std::is_invocable_r_v<std::pair<T3, T2>, F0 &, T3 &, T1 &>
   static std::pair<T3, list<T2>>
-  map_accum_l(F0 &&f, T3 acc,
+  map_accum_l(F0 &&f, const T3 &acc,
               const list<T1> &l) { /// _Enter: captures varying parameters for
                                    /// each recursive call.
 
@@ -1236,7 +1236,7 @@ struct LoopifyLists {
     /// _Cont_acc_: saves [y], resumes after recursive call, then processes
     /// rest.
     struct _Cont_acc_ {
-      std::decay_t<T2> y;
+      T2 y;
     };
 
     using _Frame = std::variant<_Enter, _Cont_acc_>;
@@ -1250,9 +1250,9 @@ struct LoopifyLists {
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
         const list<T1> &l = *_f.l;
-        auto acc = std::move(_f.acc);
+        const T3 acc = std::move(_f.acc);
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
-          _result = std::make_pair(std::move(acc), list<T2>::nil());
+          _result = std::make_pair(acc, list<T2>::nil());
         } else {
           const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
           auto [acc_, y] = f(acc, a0);
@@ -1381,7 +1381,7 @@ struct LoopifyLists {
     /// _Resume_Cons: saves [app, a0], resumes after recursive call with
     /// _result.
     struct _Resume_Cons {
-      std::function<list<T1>(list<T1>, list<T1>)> app;
+      crane::fn<list<T1>(list<T1>, list<T1>)> app;
       list<T1> a0;
     };
 
@@ -1410,7 +1410,7 @@ struct LoopifyLists {
             /// _Resume_Cons: saves [a00], resumes after recursive call with
             /// _result.
             struct _Resume_Cons {
-              std::decay_t<T1> a00;
+              T1 a00;
             };
             using _Frame = std::variant<_Enter, _Resume_Cons>;
             list<T1> _result{};
@@ -1494,19 +1494,19 @@ struct LoopifyLists {
   /// remove_if_sum_even l removes element if sum with next is even.
   static list<uint64_t> remove_if_sum_even(const list<uint64_t> &l);
   /// split_at n l splits list at index n into (prefix, suffix).
-  static std::pair<list<uint64_t>, list<uint64_t>> split_at(uint64_t n,
-                                                            list<uint64_t> l);
+  static std::pair<list<uint64_t>, list<uint64_t>>
+  split_at(uint64_t n, const list<uint64_t> &l);
 
   /// span p l splits list at first element not satisfying p.
   template <typename F0>
     requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
   static std::pair<list<uint64_t>, list<uint64_t>>
   span(F0 &&p,
-       list<uint64_t>
+       const list<uint64_t> &
            l) { /// _Enter: captures varying parameters for each recursive call.
 
     struct _Enter {
-      list<uint64_t> l;
+      const list<uint64_t> *l;
     };
 
     /// _Cont1: saves [a0], resumes after recursive call, then processes rest.
@@ -1517,22 +1517,22 @@ struct LoopifyLists {
     using _Frame = std::variant<_Enter, _Cont1>;
     std::pair<list<uint64_t>, list<uint64_t>> _result{};
     crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{std::move(l)});
+    _stack.emplace_back(_Enter{&l});
     /// Loopified span: _Enter -> _Cont1.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        list<uint64_t> l = std::move(_f.l);
-        if (std::holds_alternative<typename list<uint64_t>::Nil>(l.v_mut())) {
+        const list<uint64_t> &l = *_f.l;
+        if (std::holds_alternative<typename list<uint64_t>::Nil>(l.v())) {
           _result =
               std::make_pair(list<uint64_t>::nil(), list<uint64_t>::nil());
         } else {
-          auto &[a0, a1] = std::get<typename list<uint64_t>::Cons>(l.v_mut());
+          const auto &[a0, a1] = std::get<typename list<uint64_t>::Cons>(l.v());
           if (p(a0)) {
             _stack.emplace_back(_Cont1{a0});
-            _stack.emplace_back(_Enter{*a1});
+            _stack.emplace_back(_Enter{crane_raw(a1)});
           } else {
             _result = std::make_pair(list<uint64_t>::nil(), l);
           }

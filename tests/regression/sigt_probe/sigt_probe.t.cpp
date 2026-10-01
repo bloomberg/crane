@@ -6,7 +6,7 @@
 int main() {
   // Regression: existT with a type-valued witness (x : A where A : Type)
   // previously leaked the concrete type into the second SigT template param,
-  // producing SigT<std::any, Bool0> vs. the declared SigT<std::any, std::any>.
+  // producing SigT<crane::obj, Bool0> vs. the declared SigT<crane::obj, crane::obj>.
   // The fix erases subsequent params when a leading param is MLdummy Ktype.
   auto result = SigTProbe::sample;
   // sample = match packed with existT _ _ _ => 0 end = 0

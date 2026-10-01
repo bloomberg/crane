@@ -95,6 +95,12 @@ val ml_domains : Miniml.ml_type -> Miniml.ml_type list
     ([Tdummy]) ones dropped -- one entry per argument a C++ call passes. *)
 val ml_value_domains : Miniml.ml_type -> Miniml.ml_type list
 
+(** [eta_expand_to ty b] gives [b] as many binders as [ty] has value arrows,
+    added innermost so the lambdas already written keep their names. A body
+    that stops short of its type is a partial application, which no C++ slot of
+    a known signature can hold. *)
+val eta_expand_to : Miniml.ml_type -> Miniml.ml_ast -> Miniml.ml_ast
+
 (** A class method's type with the leading domains a concept erased -- its own
     [forall A] binders and the class instance -- stripped back off, as read
     from the projection constant which kept them. *)
@@ -185,15 +191,15 @@ val is_cpp_dummy_type : Minicpp.cpp_type -> bool
     the type inside the qualification, not the wrapper. *)
 val unqualify_ty : Minicpp.cpp_type -> Minicpp.cpp_type
 
-(** Whether a C++ type is spelled [std::any] in the generated header.  A
-    question about syntax only — it says nothing about whether a value of the
-    type may be boxed or cast, for which see {!is_boxed_type}. *)
 (** [template_args t] is the type arguments [t] is applied to, for a [t] that
     names a template at all -- whichever node spells its head, and through the
     qualifications {!unqualify_ty} strips.  [None] means [t] names no
     template. *)
 val template_args : Minicpp.cpp_type -> Minicpp.cpp_type list option
 
+(** Whether a C++ type is spelled [std::any] in the generated header.  A
+    question about syntax only — it says nothing about whether a value of the
+    type may be boxed or cast, for which see {!is_boxed_type}. *)
 val prints_as_any : Minicpp.cpp_type -> bool
 
 (** What erasure did to a function type's domain, and -- where the domain
@@ -205,6 +211,10 @@ type fun_erasure =
   | Fe_erased_domain of Minicpp.cpp_type option
       (** at least one argument erased; the payload is the result type the
           signature kept, or [None] when the result erased too *)
+
+(** [names_erased_alias t] -- [t] names a type-level declaration whose body
+    erased, spelled through its alias [using X = std::any]. *)
+val names_erased_alias : Minicpp.cpp_type -> bool
 
 (** Classify a C++ type by {!fun_erasure}.  The single place a function type's
     domain is tested for erasure; the predicates below are named shorthands for
@@ -270,6 +280,10 @@ val has_tany_in_type : Minicpp.cpp_type -> bool
 (** Whether a C++ type contains an erased type anywhere within it. *)
 val has_erased_type_in_type : Minicpp.cpp_type -> bool
 
+(** Whether a C++ type still holds a promoted type variable this scope could
+    not answer -- erased in the same sense as [std::any]. *)
+val has_unresolved_promoted_in_type : Minicpp.cpp_type -> bool
+
 (** Whether a C++ type is a dummy Prop type. *)
 val is_cpp_dummy_prop : Minicpp.cpp_type -> bool
 
@@ -308,6 +322,28 @@ val type_is_erased : Minicpp.cpp_type -> bool
 
 (** The final return type of a MiniML type. *)
 val ml_return_type : Miniml.ml_type -> Miniml.ml_type
+
+(** Whether a global has no C++ spelling: whatever mapped it mapped it to the
+    empty string. *)
+val ref_has_no_spelling : Names.GlobRef.t -> bool
+
+(** Whether a global was skipped -- [Crane Extract Skip] records it as an
+    inline custom whose C++ text is empty. *)
+val ref_is_skipped : Names.GlobRef.t -> bool
+
+(** Whether an ML type has no C++ spelling, because its head has none. *)
+val ref_has_no_cpp_name : Names.GlobRef.t -> bool
+val has_no_cpp_spelling : Minicpp.cpp_type -> bool
+val ml_type_has_no_spelling : Miniml.ml_type -> bool
+
+(** Whether an ML type's result is a skipped type, such as a [ReSum]
+    instance. *)
+val ml_ret_is_skipped : Miniml.ml_type -> bool
+
+(** Whether a value of this ML type is a typeclass instance -- kept or
+    skipped.  An instance parameterised over types is still one, so the
+    question is put to the result. *)
+val ml_type_is_instance : Miniml.ml_type -> bool
 
 (** Split a MiniML type into its argument types and return type, given the
     already-known leading argument types. *)
@@ -409,6 +445,105 @@ val template_referenced_positions : string -> IntSet.t
     mentions, or [None] when it has no template (all positions count). *)
 val custom_referenced_positions_opt : Names.GlobRef.t -> IntSet.t option
 
+(** [refine_erased_by ~expected actual] takes, at every position where
+    [actual] erased and [expected] did not, the spelling [expected] gives: the
+    slot has already written the type down, and that is what every producer for
+    it has to agree on.  A position where both are concrete keeps [actual]'s
+    spelling, and a shape mismatch is left alone. *)
+val refine_erased_by : expected:Minicpp.cpp_type -> Minicpp.cpp_type -> Minicpp.cpp_type
+
+(** [written_type_args g tys] keeps only those of [g]'s type arguments that a
+    spelling of [g] writes: a custom template writes the [%tN] it names and no
+    others, and a generated declaration writes no phantom position.  What
+    stands in an unwritten position is not in the rendered type at all. *)
+val written_type_args :
+  Names.GlobRef.t -> Minicpp.cpp_type list -> Minicpp.cpp_type list
+
+(** Whether a spelling of [g] writes its type argument at a position; the
+    predicate {!written_type_args} filters by. *)
+val type_arg_is_written : Names.GlobRef.t -> int -> bool
+
+(** Replace every unwritten type argument (see {!written_type_args}) by
+    [Tvoid], so a predicate over the result reads the type as it is spelled. *)
+val prune_unwritten_args : Minicpp.cpp_type -> Minicpp.cpp_type
+
+(** Like {!has_tany_in_type}, but asking of the type as it is {e spelled}: an
+    erased argument in a position nothing writes never reaches the C++. *)
+val has_tany_written : Minicpp.cpp_type -> bool
+
+(** [refine_erased ~writable have want] is [have] with each of its erased
+    nodes replaced by whatever [want] states in the same position, at any
+    depth.
+
+    Erased nodes only, and that is the whole discipline: the position may fill
+    what the term left open and may never respell what it stated.  Structure
+    has to match before the descent continues -- a different head, or a
+    different arity, means the two are not talking about the same position and
+    [have] stands.
+
+    An uninstantiated [Tmeta] is filled rather than replaced: it is the hole
+    extraction left, and the term shares the cell with every other mention of
+    the same unknown, so one write reaches the annotation on a match over the
+    value as well as the value's own type.
+
+    [writable] decides whether a type [want] offers can be written where
+    [have] is going.  A type variable belonging to another scope is not, however
+    concrete [want] looks; the caller supplies that judgement because only it
+    knows which names its scope declares. *)
+val refine_erased :
+  writable:(Miniml.ml_type -> bool) ->
+  Miniml.ml_type ->
+  Miniml.ml_type ->
+  Miniml.ml_type
+
+(** [refine_param_from_slot ~tvars ~slot bare] spells a parameter from the
+    slot it flows into rather than from its own uninferred type.  Type
+    variables [slot] borrows from the callee's declaration -- the ones neither
+    [tvars] nor [bare] can name -- are the ones the caller's erasure already
+    dropped, which is why the parameter has nothing better to say; they become
+    [std::any] and the rest of the slot's spelling stands.
+
+    [bare] counts as a scope of its own, and not as a convenience.  A name the
+    parameter's own type already spells is nameable here by construction,
+    whatever [tvars] says -- and [tvars] holds the enclosing declaration's
+    quantifiers, so it does not hold one the {e lambda} invents.  A rank-2
+    carrier arrives exactly so: [bare = MemM<T2>] with [T2] bound by the lambda
+    itself.  Erasing it spells [MemM<std::any>] and takes the template head
+    with it, and the same happens to the codomain
+    ([stateT<st, itree_tc, T2>]), which is how the two halves of one lambda
+    come apart.
+
+    A name [bare] already spells, it also keeps.  The slot is the callee's
+    declaration with this call's arguments substituted in, and a substitution
+    that does not describe this call resolves a name to something else
+    entirely -- [void], at one site.  Erasing a name the parameter cannot spell
+    is the whole point; replacing one it can is a different operation, so the
+    result must still mention every name [bare] mentions.
+
+    And the slot must {e say} something, which it may fail to do while still
+    differing structurally.  Two differences that say nothing: which spelling
+    of erasure it uses ([Tany] node or [dummy_type] marker), and what de Bruijn
+    index it gives a type variable -- the slot's indices are the callee's, so
+    they are not the caller's to adopt even where the name agrees.  The
+    comparison normalises both away, and an unchanged slot is no slot at all.
+
+    Erasure bounds it at both ends, and [bare] is returned unchanged outside
+    them.  A parameter whose own type erases nowhere has nothing to gain and a
+    name to lose -- the slot would spell its [T1] as [std::any].  And the
+    result must erase somewhere too: the body was generated against the erased
+    view and unboxes at it, so a slot that erases nowhere is one the body's
+    [std::any_cast]s no longer agree with.
+
+    Both ends ask {!has_erased_type_in_type}, which is the widest of the three
+    erasure predicates and deliberately so.  The question is whether the type
+    {e is} erased, not whether the erasure is visible in the spelling
+    ({!has_tany_written} says no for [std::optional<std::any>], which writes no
+    type argument) nor whether it has reached [std::any] yet
+    ({!has_tany_in_type} says no while the position still holds a
+    [dummy_type] marker). *)
+val refine_param_from_slot :
+  tvars:Names.Id.t list -> slot:Minicpp.cpp_type -> Minicpp.cpp_type -> Minicpp.cpp_type
+
 (** [(index, name)] of every type variable in a C++ type, sorted by index. *)
 val get_tvars_indexed : Minicpp.cpp_type -> (int * Names.Id.t) list
 
@@ -420,6 +555,7 @@ val get_tvar_indices : Minicpp.cpp_type -> int list
 
 (** The type-variable indices a C++ type actually renders, skipping the
     positions a custom template drops. *)
+val rendered_tvar_arities : Minicpp.cpp_type -> (int, int) Hashtbl.t
 val get_rendered_tvar_indices : Minicpp.cpp_type -> int list
 
 (** [primary_tvar_indices dom cod] is the set of type-variable indices
@@ -432,6 +568,51 @@ val primary_tvar_indices :
     in an ML type. [convert_ml_type_to_cpp_type] strips these from the C++
     type, but function bodies may still need them for [any_cast]. *)
 val collect_ml_type_index_tvars : Miniml.ml_type -> IntSet.t
+
+(** Every type variable index the ML type mentions, in any position -- the
+    parameters a declaration has, as against the ones its C++ type spells. *)
+val collect_ml_tvars : Miniml.ml_type -> IntSet.t
+
+(** Arity of every type variable the given types apply to arguments, keyed by
+    its 1-based de Bruijn index.  Such a variable is declared
+    [template <typename> class], so it is spelled -- wherever it is declared
+    and wherever a call supplies it -- as a bare template name. *)
+val applied_ml_tvar_arities : Miniml.ml_type list -> (int, int) Hashtbl.t
+
+(** The type variables the given types demand be declared
+    [template <typename> class] rather than plain [typename].
+
+    MiniML never names a higher-kinded variable bare -- every occurrence
+    arrives already applied -- so "is it applied" is not the question.  Two
+    things are: the variable is applied to an argument that survived erasure
+    (no single plain [typename] stands for two different real arguments), or it
+    sits in an argument position of a {i generated} type constructor, whose own
+    header declares that position [template <typename> class].
+
+    Neither holds for a family threaded through custom mappings: a custom
+    mapping spells its own parameters, and the ones taking an event family take
+    it at plain [typename], because the index it is applied at is erased.  For
+    those the application can simply be taken back off. *)
+val higher_kinded_ml_tvars : Miniml.ml_type list -> IntSet.t
+
+(** The type variables a declaration of type [ml_ty] relaxes out of its
+    template head: applied somewhere in the domains, and spelled nowhere
+    unapplied and nowhere in the codomain.  {!Gen_decls.relax_applied_return}
+    turns each such application into its own deduced parameter and leaves the
+    original a phantom, so a call must not write a template name there. *)
+val relaxed_applied_ml_tvars : Miniml.ml_type -> IntSet.t
+
+(** The type variables [tys] uses as the event family of a reified tree.  Such
+    a family is emitted as a plain struct, so there is no template name a call
+    could ever pass for it, and {!higher_kinded_ml_tvars} refuses the higher
+    kind for one however it is applied elsewhere. *)
+val event_family_ml_tvars : Miniml.ml_type list -> IntSet.t
+
+(** [hkt_arg_ml_tvar_arities tys] maps a type variable's index to the arity it
+    is higher-kinded at because [tys] hands it, bare, to a position another
+    constructor declares [template <typename> class].  Application is the
+    usual evidence for the higher kind but not the only one. *)
+val hkt_arg_ml_tvar_arities : Miniml.ml_type list -> (int * int) list
 
 (** Whether a function type returns a type variable its arguments carry only as
     an inductive's type index ([eval : expr A -> A]).  Such a result cannot be

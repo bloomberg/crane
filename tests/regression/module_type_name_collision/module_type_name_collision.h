@@ -2,12 +2,13 @@
 #define INCLUDED_MODULE_TYPE_NAME_COLLISION
 
 #include "crane_fn.h"
-#include "small_vector.h"
+#include "fn.h"
+#include "obj.h"
 #include <any>
 #include <atomic>
 #include <concepts>
-#include <functional>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -15,6 +16,23 @@
 struct Nat;
 template <typename X> struct Opt;
 struct opt_monad;
+template <typename I>
+concept Monad = requires {
+  typename I::template m<crane::obj>;
+  {
+    I::template ret<crane::obj>(std::declval<crane::obj>())
+  } -> std::convertible_to<typename I::template m<crane::obj>>;
+  {
+    I::template bind<crane::obj, crane::obj>(
+        std::declval<typename I::template m<crane::obj>>(),
+        std::declval<
+            crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
+  } -> std::convertible_to<typename I::template m<crane::obj>>;
+};
+
+struct ModuleTypeNameCollision {
+  static Opt<Nat> use(const Nat &n);
+};
 
 struct Nat {
   // TYPES
@@ -44,22 +62,18 @@ public:
 
   // MANIPULATORS
   ~Nat() {
-    crane::small_vector<std::shared_ptr<Nat>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<Nat> {
       if (auto *_alt = std::get_if<S>(&_v)) {
-        if (_alt->a0) {
-          _stack.push_back(std::move(_alt->a0));
+        if (_alt->a0 && _alt->a0.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a0);
         }
       }
+      return nullptr;
     };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        std::atomic_thread_fence(std::memory_order_acquire);
-        _drain(_cur->v_mut());
-      }
+    std::shared_ptr<Nat> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
     }
   }
 
@@ -96,20 +110,6 @@ public:
   }
 };
 
-template <typename I>
-concept Monad = requires {
-  typename I::template m<std::any>;
-  {
-    I::template ret<std::any>(std::declval<std::any>())
-  } -> std::convertible_to<typename I::template m<std::any>>;
-  {
-    I::template bind<std::any, std::any>(
-        std::declval<typename I::template m<std::any>>(),
-        std::declval<
-            std::function<typename I::template m<std::any>(std::any)>>())
-  } -> std::convertible_to<typename I::template m<std::any>>;
-};
-
 struct Monad0 {
   template <Monad _tcI0, typename T2>
   static typename _tcI0::template m<T2> ret(const T2 &x);
@@ -141,20 +141,23 @@ public:
 
   explicit Opt(Some _v) : v_(std::move(_v)) {}
 
-  template <typename _U> Opt(const Opt<_U> &_other) {
-    if (std::holds_alternative<typename Opt<_U>::None>(_other.v())) {
-      this->v_ = None{};
-    } else {
-      const auto &[x] = std::get<typename Opt<_U>::Some>(_other.v());
-      this->v_ = Some{[&]() -> X {
-        if constexpr (std::is_same_v<_U, std::any>) {
-          return crane_any_cast<X>(x);
-        } else {
-          return X(x);
-        }
-      }()};
-    }
-  }
+  template <typename _U>
+  Opt(const Opt<_U> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename Opt<_U>::None>(_other.v())) {
+            return None{};
+          } else {
+            const auto &[x] = std::get<typename Opt<_U>::Some>(_other.v());
+            return Some{[&]() -> X {
+              if constexpr (crane_convertible<X, const _U &>) {
+                return crane_convert<X>(x);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }()};
+          }
+        }()) {}
 
   static Opt<X> none() { return Opt<X>(None{}); }
 
@@ -175,7 +178,7 @@ struct opt_monad {
   }
 
   template <typename _A0, typename _A1>
-  static Opt<_A1> bind(Opt<_A0> c, std::function<Opt<_A1>(_A0)> k) {
+  static Opt<_A1> bind(Opt<_A0> c, crane::fn<Opt<_A1>(_A0)> k) {
     if (std::holds_alternative<typename Opt<_A0>::None>(c.v())) {
       return Opt<_A1>::none();
     } else {
@@ -187,10 +190,6 @@ struct opt_monad {
 
 static_assert(Monad<opt_monad>);
 Opt<Nat> double0(const Nat &n);
-
-struct ModuleTypeNameCollision {
-  static Opt<Nat> use(const Nat &n);
-};
 
 template <Monad _tcI0, typename T2>
 typename _tcI0::template m<T2> Monad0::ret(const T2 &x) {

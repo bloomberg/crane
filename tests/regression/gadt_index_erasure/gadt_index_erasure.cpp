@@ -5,6 +5,6 @@
 List<uint64_t>
 GadtIndexErasure::evalAll(const List<GadtIndexErasure::expr> &l) {
   return l.template map<uint64_t>([](GadtIndexErasure::expr _ue0) {
-    return std::any_cast<uint64_t>(eval<uint64_t>(_ue0));
+    return crane::any_cast<uint64_t>(eval<uint64_t>(_ue0));
   });
 }

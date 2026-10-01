@@ -4,7 +4,8 @@
 /// declared as returning std::any, and the call site then applies the result
 /// directly: "type 'std::any' does not provide a call operator".
 Nat ErasedIndexFunType::ex(const Nat &x0_) {
-  return std::any_cast<Nat>(std::any_cast<std::function<std::any(std::any)>>(
-      dflt<std::function<Nat(Nat)>>(ty::tf(ty::tn(), ty::tn())))(
-      std::any(x0_)));
+  return crane::any_cast<Nat>(
+      crane::any_cast<crane::fn<crane::obj(crane::obj)>>(
+          dflt<crane::fn<Nat(Nat)>>(ty::tf(ty::tn(), ty::tn())))(
+          crane::obj(x0_)));
 }

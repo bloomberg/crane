@@ -9,8 +9,8 @@
 // In Rocq, `check tt` evaluates to `true` — the stored predicate is
 // `(fun n => n =? 0)` and it is applied to `0`. Before the fix, the extracted
 // C++ threw `std::bad_any_cast`, because a function value stored into a
-// `std::any` as a raw lambda closure (in `Make::mk`) was read back with
-// `any_cast<std::function<std::any(std::any)>>` (in `Make::run`). `Make::mk`
+// `crane::obj` as a raw lambda closure (in `Make::mk`) was read back with
+// `any_cast<std::function<crane::obj(crane::obj)>>` (in `Make::run`). `Make::mk`
 // now routes the callable through `crane_erase_fn`, so the representations
 // agree and `check` returns `true`.
 int main() {

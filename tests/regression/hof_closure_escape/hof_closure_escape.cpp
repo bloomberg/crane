@@ -31,16 +31,16 @@ uint64_t HofClosureEscape::sum_values(const HofClosureEscape::tree &t,
 /// Even though wrap_some just passes f through to Some,
 /// the & lambda was created in hof_escape's stack frame.
 /// When hof_escape returns, captured t is destroyed.
-std::optional<std::function<uint64_t(uint64_t)>>
+std::optional<crane::fn<uint64_t(uint64_t)>>
 HofClosureEscape::hof_escape(const HofClosureEscape::tree &t) {
   return wrap_some(
-      [=](uint64_t _x0) mutable -> uint64_t { return sum_values(t, _x0); });
+      [=](uint64_t _x0) -> uint64_t { return sum_values(t, _x0); });
 }
 
 uint64_t HofClosureEscape::apply_option(
-    const std::optional<std::function<uint64_t(uint64_t)>> &o, uint64_t x) {
+    const std::optional<crane::fn<uint64_t(uint64_t)>> &o, uint64_t x) {
   if (o.has_value()) {
-    const std::function<uint64_t(uint64_t)> &f = *o;
+    const crane::fn<uint64_t(uint64_t)> &f = *o;
     return f(x);
   } else {
     return x;

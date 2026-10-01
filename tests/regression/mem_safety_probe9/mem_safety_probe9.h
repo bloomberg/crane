@@ -2,11 +2,13 @@
 #define INCLUDED_MEM_SAFETY_PROBE9
 
 #include "crane_fn.h"
+#include "fn.h"
+#include "obj.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
-#include <functional>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -52,10 +54,10 @@ struct MemSafetyProbe9 {
       crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
-          if (_alt->a0) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
             _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt->a2) {
+          if (_alt->a2 && _alt->a2.use_count() == 1) {
             _stack.push_back(std::move(_alt->a2));
           }
         }
@@ -91,7 +93,7 @@ struct MemSafetyProbe9 {
         const tree &a0_value = *a0;
         const tree &a2_value = *a2;
         uint64_t lsum = a0_value.tree_sum();
-        std::function<uint64_t(uint64_t)> f = [=](uint64_t n) mutable {
+        crane::fn<uint64_t(uint64_t)> f = [=](uint64_t n) {
           return (a2_value.tree_sum() + n);
         };
         return (f(lsum) + f(a1));
@@ -102,12 +104,23 @@ struct MemSafetyProbe9 {
     /// independently — tests that cloning produces independent
     /// copies. Modify one subtree's computation after capture.
     uint64_t triple_capture() const {
+      tree _self_val = *this;
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return UINT64_C(0);
       } else {
         auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
-        return ((_anon_f1(UINT64_C(0), *a0) + _anon_f2(UINT64_C(0), *a2)) +
-                _anon_f3(UINT64_C(0), *this));
+        const tree &a0_value = *a0;
+        const tree &a2_value = *a2;
+        crane::fn<uint64_t(uint64_t)> f1 = [=](uint64_t) {
+          return a0_value.tree_sum();
+        };
+        crane::fn<uint64_t(uint64_t)> f2 = [=](uint64_t) {
+          return a2_value.tree_sum();
+        };
+        crane::fn<uint64_t(uint64_t)> f3 = [=](uint64_t) {
+          return _self_val.tree_sum();
+        };
+        return ((f1(UINT64_C(0)) + f2(UINT64_C(0))) + f3(UINT64_C(0)));
       }
     }
 
@@ -186,7 +199,7 @@ struct MemSafetyProbe9 {
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
-        std::decay_t<T1> _result;
+        T1 _result;
         tree a2;
         uint64_t a1;
         tree a0;
@@ -248,7 +261,7 @@ struct MemSafetyProbe9 {
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
-        std::decay_t<T1> _result;
+        T1 _result;
         tree a2;
         uint64_t a1;
         tree a0;
@@ -288,18 +301,6 @@ struct MemSafetyProbe9 {
     }
   };
 
-  template <typename T1> static uint64_t _anon_f1(const T1, const tree l) {
-    return l.tree_sum();
-  }
-
-  template <typename T1> static uint64_t _anon_f2(const T1, const tree r) {
-    return r.tree_sum();
-  }
-
-  template <typename T1> static uint64_t _anon_f3(const T1, const tree t) {
-    return t.tree_sum();
-  }
-
   template <typename A> struct mylist {
     // TYPES
     struct Mynil {};
@@ -323,22 +324,29 @@ struct MemSafetyProbe9 {
 
     explicit mylist(Mycons _v) : v_(std::move(_v)) {}
 
-    template <typename _U> mylist(const mylist<_U> &_other) {
-      if (std::holds_alternative<typename mylist<_U>::Mynil>(_other.v())) {
-        this->v_ = Mynil{};
-      } else {
-        const auto &[a0, a1] =
-            std::get<typename mylist<_U>::Mycons>(_other.v());
-        this->v_ = Mycons{[&]() -> A {
-                            if constexpr (std::is_same_v<_U, std::any>) {
-                              return crane_any_cast<A>(a0);
-                            } else {
-                              return A(a0);
-                            }
-                          }(),
-                          (a1 ? std::make_shared<mylist<A>>(*a1) : nullptr)};
-      }
-    }
+    template <typename _U>
+    mylist(const mylist<_U> &_other)
+        : v_([&]() -> variant_t {
+            if (std::holds_alternative<typename mylist<_U>::Mynil>(
+                    _other.v())) {
+              return Mynil{};
+            } else {
+              const auto &[a0, a1] =
+                  std::get<typename mylist<_U>::Mycons>(_other.v());
+              return Mycons{[&]() -> A {
+                              if constexpr (crane_convertible<A, const _U &>) {
+                                return crane_convert<A>(a0);
+                              } else {
+                                throw std::logic_error(
+                                    "unreachable: inactive constructor field "
+                                    "at this instantiation");
+                              }
+                            }(),
+                            (a1 ? std::make_shared<mylist<A>>(
+                                      crane_convert<mylist<A>>(*a1))
+                                : nullptr)};
+            }
+          }()) {}
 
     static mylist<A> mynil() { return mylist<A>(Mynil{}); }
 
@@ -349,22 +357,18 @@ struct MemSafetyProbe9 {
 
     // MANIPULATORS
     ~mylist() {
-      crane::small_vector<std::shared_ptr<mylist<A>>> _stack = {};
-      auto _drain = [&](variant_t &_v) {
+      auto _next = [&](variant_t &_v) -> std::shared_ptr<mylist<A>> {
         if (auto *_alt = std::get_if<Mycons>(&_v)) {
-          if (_alt->a1) {
-            _stack.push_back(std::move(_alt->a1));
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
+            return std::move(_alt->a1);
           }
         }
+        return nullptr;
       };
-      _drain(v_mut());
-      while (!_stack.empty()) {
-        auto _cur = std::move(_stack.back());
-        _stack.pop_back();
-        if (_cur.use_count() == 1) {
-          std::atomic_thread_fence(std::memory_order_acquire);
-          _drain(_cur->v_mut());
-        }
+      std::shared_ptr<mylist<A>> _cur = _next(v_mut());
+      while (_cur) {
+        _cur = _next(_cur->v_mut());
       }
     }
 
@@ -434,7 +438,7 @@ struct MemSafetyProbe9 {
       /// _result.
       struct _Resume_Mycons {
         mylist<A> a1;
-        std::decay_t<A> a0;
+        A a0;
       };
 
       using _Frame = std::variant<_Enter, _Resume_Mycons>;
@@ -479,7 +483,7 @@ struct MemSafetyProbe9 {
       /// _result.
       struct _Resume_Mycons {
         mylist<A> a1;
-        std::decay_t<A> a0;
+        A a0;
       };
 
       using _Frame = std::variant<_Enter, _Resume_Mycons>;
@@ -511,68 +515,47 @@ struct MemSafetyProbe9 {
     }
   };
 
-  static uint64_t sum_fns(const mylist<std::function<uint64_t(uint64_t)>> &l);
-
+  static uint64_t sum_fns(const mylist<crane::fn<uint64_t(uint64_t)>> &l);
   /// TEST 1: Collect closures that each capture a subtree.
   /// Both l and r are captured AND used in recursive calls.
-  template <typename T1>
-  static uint64_t _collect_subtree_sums_f(const T1, const tree l,
-                                          const uint64_t v, const tree r) {
-    return ((std::move(l).tree_sum() + v) + r.tree_sum());
-  }
-
-  static mylist<std::function<uint64_t(uint64_t)>>
+  static mylist<crane::fn<uint64_t(uint64_t)>>
   collect_subtree_sums(const tree &t,
-                       mylist<std::function<uint64_t(uint64_t)>> acc);
+                       mylist<crane::fn<uint64_t(uint64_t)>> acc);
   static inline const uint64_t test_collect = []() {
     tree t = tree::node(
         tree::node(tree::leaf(), UINT64_C(5), tree::leaf()), UINT64_C(10),
         tree::node(tree::leaf(), UINT64_C(15),
                    tree::node(tree::leaf(), UINT64_C(20), tree::leaf())));
-    mylist<std::function<uint64_t(uint64_t)>> fns = collect_subtree_sums(
-        std::move(t), mylist<std::function<uint64_t(uint64_t)>>::mynil());
+    mylist<crane::fn<uint64_t(uint64_t)>> fns = collect_subtree_sums(
+        std::move(t), mylist<crane::fn<uint64_t(uint64_t)>>::mynil());
     return sum_fns(std::move(fns));
   }();
-
   /// TEST 2: Similar but each closure captures ONLY the left subtree.
   /// The left subtree is shared between closure and recursive call.
-  template <typename T1>
-  static uint64_t _collect_left_sums_f(const T1, const tree l) {
-    return std::move(l).tree_sum();
-  }
-
-  static mylist<std::function<uint64_t(uint64_t)>>
-  collect_left_sums(const tree &t,
-                    mylist<std::function<uint64_t(uint64_t)>> acc);
+  static mylist<crane::fn<uint64_t(uint64_t)>>
+  collect_left_sums(const tree &t, mylist<crane::fn<uint64_t(uint64_t)>> acc);
   static inline const uint64_t test_left_sums = []() {
     tree t = tree::node(
         tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
                    UINT64_C(7), tree::leaf()),
         UINT64_C(10), tree::node(tree::leaf(), UINT64_C(15), tree::leaf()));
-    mylist<std::function<uint64_t(uint64_t)>> fns = collect_left_sums(
-        std::move(t), mylist<std::function<uint64_t(uint64_t)>>::mynil());
+    mylist<crane::fn<uint64_t(uint64_t)>> fns = collect_left_sums(
+        std::move(t), mylist<crane::fn<uint64_t(uint64_t)>>::mynil());
     return sum_fns(std::move(fns));
   }();
-
   /// TEST 3: Build closures from list where each closure
   /// captures the tail and a computed value.
-  template <typename T1>
-  static uint64_t _list_accum_closures_f(const T1, const uint64_t x,
-                                         const uint64_t tail_len) {
-    return (std::move(x) * tail_len);
-  }
-
-  static mylist<std::function<uint64_t(uint64_t)>>
+  static mylist<crane::fn<uint64_t(uint64_t)>>
   list_accum_closures(const mylist<uint64_t> &l,
-                      mylist<std::function<uint64_t(uint64_t)>> acc);
+                      mylist<crane::fn<uint64_t(uint64_t)>> acc);
   static inline const uint64_t test_list_accum = []() {
     mylist<uint64_t> l = mylist<uint64_t>::mycons(
         UINT64_C(10),
         mylist<uint64_t>::mycons(
             UINT64_C(20),
             mylist<uint64_t>::mycons(UINT64_C(30), mylist<uint64_t>::mynil())));
-    mylist<std::function<uint64_t(uint64_t)>> fns = list_accum_closures(
-        std::move(l), mylist<std::function<uint64_t(uint64_t)>>::mynil());
+    mylist<crane::fn<uint64_t(uint64_t)>> fns = list_accum_closures(
+        std::move(l), mylist<crane::fn<uint64_t(uint64_t)>>::mynil());
     return sum_fns(std::move(fns));
   }();
   static inline const uint64_t test_triple =
@@ -589,8 +572,8 @@ struct MemSafetyProbe9 {
   static tree make_balanced(uint64_t n);
   static inline const uint64_t test_stress = []() {
     tree t = make_balanced(UINT64_C(5));
-    mylist<std::function<uint64_t(uint64_t)>> fns = collect_left_sums(
-        std::move(t), mylist<std::function<uint64_t(uint64_t)>>::mynil());
+    mylist<crane::fn<uint64_t(uint64_t)>> fns = collect_left_sums(
+        std::move(t), mylist<crane::fn<uint64_t(uint64_t)>>::mynil());
     return sum_fns(std::move(fns));
   }();
 };

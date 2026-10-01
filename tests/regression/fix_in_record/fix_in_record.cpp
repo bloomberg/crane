@@ -2,7 +2,7 @@
 
 FixInRecord::fn_box FixInRecord::make_box(uint64_t n) {
   uint64_t base = (n * UINT64_C(3));
-  auto add_impl = [=](auto &_self_add, uint64_t x) mutable -> uint64_t {
+  auto add_impl = [=](auto &_self_add, uint64_t x) -> uint64_t {
     if (x <= 0) {
       return base;
     } else {
@@ -10,8 +10,6 @@ FixInRecord::fn_box FixInRecord::make_box(uint64_t n) {
       return (_self_add(_self_add, x_) + 1);
     }
   };
-  auto add = [=](uint64_t x) mutable -> uint64_t {
-    return add_impl(add_impl, x);
-  };
+  auto add = [=](uint64_t x) -> uint64_t { return add_impl(add_impl, x); };
   return fn_box{base, std::move(add)};
 }

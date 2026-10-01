@@ -2,10 +2,12 @@
 #define INCLUDED_LOOPIFY_PAIRS
 
 #include "crane_fn.h"
+#include "obj.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -35,21 +37,28 @@ struct LoopifyPairs {
 
     explicit list(Cons _v) : v_(std::move(_v)) {}
 
-    template <typename _U> list(const list<_U> &_other) {
-      if (std::holds_alternative<typename list<_U>::Nil>(_other.v())) {
-        this->v_ = Nil{};
-      } else {
-        const auto &[a, l] = std::get<typename list<_U>::Cons>(_other.v());
-        this->v_ = Cons{[&]() -> A {
-                          if constexpr (std::is_same_v<_U, std::any>) {
-                            return crane_any_cast<A>(a);
-                          } else {
-                            return A(a);
-                          }
-                        }(),
-                        (l ? std::make_shared<list<A>>(*l) : nullptr)};
-      }
-    }
+    template <typename _U>
+    list(const list<_U> &_other)
+        : v_([&]() -> variant_t {
+            if (std::holds_alternative<typename list<_U>::Nil>(_other.v())) {
+              return Nil{};
+            } else {
+              const auto &[a, l] =
+                  std::get<typename list<_U>::Cons>(_other.v());
+              return Cons{
+                  [&]() -> A {
+                    if constexpr (crane_convertible<A, const _U &>) {
+                      return crane_convert<A>(a);
+                    } else {
+                      throw std::logic_error(
+                          "unreachable: inactive constructor field at this "
+                          "instantiation");
+                    }
+                  }(),
+                  (l ? std::make_shared<list<A>>(crane_convert<list<A>>(*l))
+                     : nullptr)};
+            }
+          }()) {}
 
     static list<A> nil() { return list<A>(Nil{}); }
 
@@ -60,22 +69,18 @@ struct LoopifyPairs {
 
     // MANIPULATORS
     ~list() {
-      crane::small_vector<std::shared_ptr<list<A>>> _stack = {};
-      auto _drain = [&](variant_t &_v) {
+      auto _next = [&](variant_t &_v) -> std::shared_ptr<list<A>> {
         if (auto *_alt = std::get_if<Cons>(&_v)) {
-          if (_alt->l) {
-            _stack.push_back(std::move(_alt->l));
+          if (_alt->l && _alt->l.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
+            return std::move(_alt->l);
           }
         }
+        return nullptr;
       };
-      _drain(v_mut());
-      while (!_stack.empty()) {
-        auto _cur = std::move(_stack.back());
-        _stack.pop_back();
-        if (_cur.use_count() == 1) {
-          std::atomic_thread_fence(std::memory_order_acquire);
-          _drain(_cur->v_mut());
-        }
+      std::shared_ptr<list<A>> _cur = _next(v_mut());
+      while (_cur) {
+        _cur = _next(_cur->v_mut());
       }
     }
 
@@ -104,7 +109,7 @@ struct LoopifyPairs {
     /// _Resume_Cons: saves [a1, a0], resumes after recursive call with _result.
     struct _Resume_Cons {
       list<T1> a1;
-      std::decay_t<T1> a0;
+      T1 a0;
     };
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -147,7 +152,7 @@ struct LoopifyPairs {
     /// _Resume_Cons: saves [a1, a0], resumes after recursive call with _result.
     struct _Resume_Cons {
       list<T1> a1;
-      std::decay_t<T1> a0;
+      T1 a0;
     };
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -191,7 +196,7 @@ struct LoopifyPairs {
     /// _Cont_Cons: saves [a0], resumes after recursive call, then processes
     /// rest.
     struct _Cont_Cons {
-      std::decay_t<T1> a0;
+      T1 a0;
     };
 
     using _Frame = std::variant<_Enter, _Cont_Cons>;
@@ -325,42 +330,42 @@ struct LoopifyPairs {
   template <typename T1>
   static std::pair<list<T1>, list<T1>>
   split_at(uint64_t n,
-           list<T1> l) { /// _Enter: captures varying parameters for each
-                         /// recursive call.
+           const list<T1> &l) { /// _Enter: captures varying parameters for each
+                                /// recursive call.
 
     struct _Enter {
-      list<T1> l;
+      const list<T1> *l;
       uint64_t n;
     };
 
     /// _Cont_Cons: saves [a0], resumes after recursive call, then processes
     /// rest.
     struct _Cont_Cons {
-      std::decay_t<T1> a0;
+      T1 a0;
     };
 
     using _Frame = std::variant<_Enter, _Cont_Cons>;
     std::pair<list<T1>, list<T1>> _result{};
     crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{std::move(l), n});
+    _stack.emplace_back(_Enter{&l, n});
     /// Loopified split_at: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        list<T1> l = std::move(_f.l);
+        const list<T1> &l = *_f.l;
         uint64_t n = _f.n;
         if (n <= 0) {
-          _result = std::make_pair(list<T1>::nil(), std::move(l));
+          _result = std::make_pair(list<T1>::nil(), l);
         } else {
           uint64_t m = n - 1;
-          if (std::holds_alternative<typename list<T1>::Nil>(l.v_mut())) {
+          if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
             _result = std::make_pair(list<T1>::nil(), list<T1>::nil());
           } else {
-            auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v_mut());
-            _stack.emplace_back(_Cont_Cons{std::move(a0)});
-            _stack.emplace_back(_Enter{*a1, m});
+            const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
+            _stack.emplace_back(_Cont_Cons{a0});
+            _stack.emplace_back(_Enter{crane_raw(a1), m});
           }
         }
       } else {
@@ -368,8 +373,8 @@ struct LoopifyPairs {
         auto a0 = std::move(_f.a0);
         std::pair<list<T1>, list<T1>> _rc1 = std::move(_result);
         auto [taken, rest] = _rc1;
-        _result = std::make_pair(
-            list<T1>::cons(std::move(a0), std::move(taken)), std::move(rest));
+        _result = std::make_pair(list<T1>::cons(a0, std::move(taken)),
+                                 std::move(rest));
       }
     }
     return _result;
@@ -388,8 +393,8 @@ struct LoopifyPairs {
     /// _Cont_Cons: saves [a0, a00], resumes after recursive call, then
     /// processes rest.
     struct _Cont_Cons {
-      std::decay_t<T1> a0;
-      std::decay_t<T1> a00;
+      T1 a0;
+      T1 a00;
     };
 
     using _Frame = std::variant<_Enter, _Cont_Cons>;
@@ -445,7 +450,7 @@ struct LoopifyPairs {
 
     /// _Cont1: saves [a0], resumes after recursive call, then processes rest.
     struct _Cont1 {
-      std::decay_t<T1> a0;
+      T1 a0;
     };
 
     using _Frame = std::variant<_Enter, _Cont1>;

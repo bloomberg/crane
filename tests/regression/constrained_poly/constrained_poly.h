@@ -2,7 +2,10 @@
 #define INCLUDED_CONSTRAINED_POLY
 
 #include "crane_fn.h"
+#include "obj.h"
 #include <any>
+#include <atomic>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -13,6 +16,26 @@ struct ConstrainedPoly {
   template <typename A, typename B> struct UPair {
     A ufst;
     B usnd;
+
+    // ACCESSORS
+    template <typename _U0, typename _U1> operator UPair<_U0, _U1>() const {
+      return {[&]() -> _U0 {
+                if constexpr (crane_convertible<_U0, const A &>) {
+                  return crane_convert<_U0>(ufst);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }(),
+              [&]() -> _U1 {
+                if constexpr (crane_convertible<_U1, const B &>) {
+                  return crane_convert<_U1>(usnd);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }()};
+    }
   };
 
   template <typename T1, typename T2>
@@ -21,8 +44,8 @@ struct ConstrainedPoly {
   }
 
   template <typename T1, typename T2>
-  static UPair<T1, T2> wrap_pair(T1 a, T2 b) {
-    return UPair<T1, T2>{std::move(a), std::move(b)};
+  static UPair<T1, T2> wrap_pair(const T1 &a, const T2 &b) {
+    return UPair<T1, T2>{a, b};
   }
 
   template <typename A> struct UOption {
@@ -47,20 +70,25 @@ struct ConstrainedPoly {
 
     explicit UOption(UNone _v) : v_(_v) {}
 
-    template <typename _U> UOption(const UOption<_U> &_other) {
-      if (std::holds_alternative<typename UOption<_U>::USome>(_other.v())) {
-        const auto &[a0] = std::get<typename UOption<_U>::USome>(_other.v());
-        this->v_ = USome{[&]() -> A {
-          if constexpr (std::is_same_v<_U, std::any>) {
-            return crane_any_cast<A>(a0);
-          } else {
-            return A(a0);
-          }
-        }()};
-      } else {
-        this->v_ = UNone{};
-      }
-    }
+    template <typename _U>
+    UOption(const UOption<_U> &_other)
+        : v_([&]() -> variant_t {
+            if (std::holds_alternative<typename UOption<_U>::USome>(
+                    _other.v())) {
+              const auto &[a0] =
+                  std::get<typename UOption<_U>::USome>(_other.v());
+              return USome{[&]() -> A {
+                if constexpr (crane_convertible<A, const _U &>) {
+                  return crane_convert<A>(a0);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }()};
+            } else {
+              return UNone{};
+            }
+          }()) {}
 
     static UOption<A> usome(A a0) { return UOption<A>(USome{std::move(a0)}); }
 

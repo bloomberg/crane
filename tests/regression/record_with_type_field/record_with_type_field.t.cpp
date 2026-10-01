@@ -1,6 +1,6 @@
 // A record with a [Type] field used as data is demoted from a concept to a
 // struct with erased fields,
-//   struct alg { std::function<std::any(std::any, std::any)> op; std::any unit_; };
+//   struct alg { std::function<crane::obj(crane::obj, crane::obj)> op; crane::obj unit_; };
 // so its literal reaches those fields through the [crane_erase_fn] adapter.
 
 #include <record_with_type_field.h>

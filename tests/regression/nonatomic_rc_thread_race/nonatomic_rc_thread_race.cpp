@@ -19,8 +19,8 @@ uint64_t NonatomicRcThreadRace::len(const NonatomicRcThreadRace::lst &l) {
   }
 }
 
-uint64_t NonatomicRcThreadRace::step(NonatomicRcThreadRace::lst l) {
-  return len(lst::cons(UINT64_C(0), std::move(l)));
+uint64_t NonatomicRcThreadRace::step(const NonatomicRcThreadRace::lst &l) {
+  return len(lst::cons(UINT64_C(0), l));
 }
 
 uint64_t NonatomicRcThreadRace::churn(uint64_t n,

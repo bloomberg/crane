@@ -1,6 +1,10 @@
 #ifndef INCLUDED_TODO_ETA_EXPANSION_TAXIOM
 #define INCLUDED_TODO_ETA_EXPANSION_TAXIOM
 
+#include "crane_fn.h"
+#include "obj.h"
+#include <any>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -13,6 +17,25 @@ struct TodoEtaExpansionTaxiom {
 
     // ACCESSORS
     Pair<A, B> clone() const { return {a0, a1}; }
+
+    template <typename _U0, typename _U1> operator Pair<_U0, _U1>() const {
+      return {[&]() -> _U0 {
+                if constexpr (crane_convertible<_U0, const A &>) {
+                  return crane_convert<_U0>(a0);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }(),
+              [&]() -> _U1 {
+                if constexpr (crane_convertible<_U1, const B &>) {
+                  return crane_convert<_U1>(a1);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }()};
+    }
 
     // CREATORS
     static Pair<A, B> mkpair(A a0, B a1) {

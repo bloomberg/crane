@@ -19,10 +19,10 @@ Nat PartialLocalFix::run(Bool0 x0_) {
         }
       }
     };
-    auto loop = [=](Nat n, Bool0 b) mutable -> Nat {
+    auto loop = [=](Nat n, Bool0 b) -> Nat {
       return loop_impl(loop_impl, n, b);
     };
-    return [=](Bool0 _pa0) mutable {
+    return [=](Bool0 _pa0) {
       return loop(Nat::s(Nat::s(Nat::s(
                       Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))),
                   _pa0);

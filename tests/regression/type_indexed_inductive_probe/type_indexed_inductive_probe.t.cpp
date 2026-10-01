@@ -5,8 +5,8 @@
 
 int main() {
   // WIP: matching a type-indexed inductive at a concrete index should
-  // recover the erased std::any payload via std::any_cast<Bool0>.
-  // Currently fails to compile: the generated match returns d_a (std::any)
+  // recover the erased crane::obj payload via crane::any_cast<Bool0>.
+  // Currently fails to compile: the generated match returns d_a (crane::obj)
   // directly as Bool0 without a cast.
   auto s = TypeIndexedInductiveProbe::sample;
   std::cout << "sample = " << (s == Bool0::TRUE_ ? "true" : "false")

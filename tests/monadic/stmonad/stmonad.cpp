@@ -197,7 +197,7 @@ List<uint64_t> STMonadTests::quicksort_ST_mine(const List<uint64_t> &xs) {
         [=](std::pair<
             std::pair<std::pair<std::vector<uint64_t> *, uint64_t>, uint64_t>,
             uint64_t>
-                args) mutable {
+                args) {
           const auto &[p, r] = args;
           const auto &[p0, l] = p;
           const auto &[arr0, arr_idx] = p0;
@@ -238,8 +238,7 @@ List<uint64_t> STMonadTests::quicksort_ST_mine(const List<uint64_t> &xs) {
               uint64_t storeIndex = [&]() {
                 auto for_each_with_impl =
                     [&](auto &, const List<uint64_t> &xs0, uint64_t v,
-                        std::function<uint64_t(uint64_t, uint64_t)> f)
-                    -> uint64_t {
+                        crane::fn<uint64_t(uint64_t, uint64_t)> f) -> uint64_t {
                   uint64_t _loop_v = std::move(v);
                   const List<uint64_t> *_loop_xs0 = &xs0;
                   while (true) {
@@ -258,14 +257,13 @@ List<uint64_t> STMonadTests::quicksort_ST_mine(const List<uint64_t> &xs) {
                 };
                 auto for_each_with =
                     [&](const List<uint64_t> &xs0, uint64_t v,
-                        std::function<uint64_t(uint64_t, uint64_t)> f)
-                    -> uint64_t {
+                        crane::fn<uint64_t(uint64_t, uint64_t)> f) -> uint64_t {
                   return for_each_with_impl(for_each_with_impl, xs0, v, f);
                 };
                 return for_each_with(
                     nat_idx::range(
                         l, nat_idx::sub(r, nat_idx::suc(nat_idx::zero()))),
-                    l, [=](uint64_t storeIndex, uint64_t i) mutable {
+                    l, [=](uint64_t storeIndex, uint64_t i) {
                       uint64_t val = (*arr0)[i];
                       if (val <= pivotValue) {
                         [&]() {
@@ -335,7 +333,7 @@ std::string STMonadTests::list_to_string_helper(
   /// _Resume_Cons: saves [a0, _s1], resumes after recursive call with _result.
   struct _Resume_Cons {
     std::string a0;
-    std::decay_t<decltype(", ")> _s1;
+    std::string _s1;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;

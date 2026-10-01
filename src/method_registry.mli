@@ -115,6 +115,12 @@ val create :
     @return [Some info] with full [method_info] record, or [None] if not a method *)
 val lookup : t -> GlobRef.t -> method_info option
 
+(** [cpp_arg_pos ty pos] is [pos] -- an argument position among the arrows of
+    the ML type [ty] -- counted instead among the arguments that reach C++.
+    An erased or [void] argument is passed nothing, and a dictionary becomes a
+    template parameter, so the two numberings drift apart. *)
+val cpp_arg_pos : Miniml.ml_type -> int -> int
+
 (** Convenience: is the function a registered method? Returns
     [Some (epon_ref, this_pos)] if yes, [None] otherwise. Used primarily by the
     topological sort in [Structure_analysis] to add cross-module dependencies

@@ -656,8 +656,9 @@ LoopifyMoreTrees::tree_levels_fuel(uint64_t fuel,
   return std::move(*_head);
 }
 
-List<List<uint64_t>> LoopifyMoreTrees::tree_levels(LoopifyMoreTrees::tree t) {
-  return tree_levels_fuel(
-      UINT64_C(100), List<LoopifyMoreTrees::tree>::cons(
-                         std::move(t), List<LoopifyMoreTrees::tree>::nil()));
+List<List<uint64_t>>
+LoopifyMoreTrees::tree_levels(const LoopifyMoreTrees::tree &t) {
+  return tree_levels_fuel(UINT64_C(100),
+                          List<LoopifyMoreTrees::tree>::cons(
+                              t, List<LoopifyMoreTrees::tree>::nil()));
 }

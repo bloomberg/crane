@@ -1,5 +1,5 @@
 // An erased value used as a method receiver: [projT2 s] has C++ type
-// [std::any] and is handed to [.length()], so it has to be recovered at the
+// [crane::obj] and is handed to [.length()], so it has to be recovered at the
 // parameter's type first.
 
 #include <erased_method_receiver.h>

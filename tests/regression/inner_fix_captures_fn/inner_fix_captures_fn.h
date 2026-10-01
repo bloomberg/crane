@@ -2,6 +2,7 @@
 #define INCLUDED_INNER_FIX_CAPTURES_FN
 
 #include "crane_fn.h"
+#include "fn.h"
 #include "small_vector.h"
 #include <atomic>
 #include <memory>
@@ -41,22 +42,18 @@ struct InnerFixCapturesFn {
 
     // MANIPULATORS
     ~lst() {
-      crane::small_vector<std::shared_ptr<lst>> _stack = {};
-      auto _drain = [&](variant_t &_v) {
+      auto _next = [&](variant_t &_v) -> std::shared_ptr<lst> {
         if (auto *_alt = std::get_if<Cons>(&_v)) {
-          if (_alt->a1) {
-            _stack.push_back(std::move(_alt->a1));
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
+            return std::move(_alt->a1);
           }
         }
+        return nullptr;
       };
-      _drain(v_mut());
-      while (!_stack.empty()) {
-        auto _cur = std::move(_stack.back());
-        _stack.pop_back();
-        if (_cur.use_count() == 1) {
-          std::atomic_thread_fence(std::memory_order_acquire);
-          _drain(_cur->v_mut());
-        }
+      std::shared_ptr<lst> _cur = _next(v_mut());
+      while (_cur) {
+        _cur = _next(_cur->v_mut());
       }
     }
 
@@ -155,9 +152,7 @@ struct InnerFixCapturesFn {
     return _result;
   }
 
-  template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
-  static uint64_t walk(F0 &&f,
+  static uint64_t walk(crane::fn<uint64_t(uint64_t)> f,
                        const lst &l) { /// _Enter: captures varying parameters
                                        /// for each recursive call.
 
@@ -167,23 +162,7 @@ struct InnerFixCapturesFn {
 
     /// _Resume_Cons: saves [_s0], resumes after recursive call with _result.
     struct _Resume_Cons {
-      std::decay_t<decltype([](std::shared_ptr<lst> &a1, uint64_t &a0, F0 &f) {
-        auto inner_impl = [&](auto &_self_inner, const lst &m,
-                              uint64_t a) -> uint64_t {
-          if (std::holds_alternative<typename lst::Nil>(m.v())) {
-            return a;
-          } else {
-            const auto &[a2, a3] = std::get<typename lst::Cons>(m.v());
-            return _self_inner(_self_inner, *a3, (a + f(a2)));
-          }
-        };
-        auto inner = [&](const lst &m, uint64_t a) -> uint64_t {
-          return inner_impl(inner_impl, m, a);
-        };
-        return inner(*a1, f(a0));
-      }(std::declval<std::shared_ptr<lst> &>(), std::declval<uint64_t &>(),
-                            std::declval<F0 &>()))>
-          _s0;
+      uint64_t _s0;
     };
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;

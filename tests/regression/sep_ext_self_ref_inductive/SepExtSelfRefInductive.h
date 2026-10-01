@@ -2,10 +2,12 @@
 #define INCLUDED_SEPEXTSELFREFINDUCTIVE
 
 #include "crane_fn.h"
+#include "obj.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -41,24 +43,32 @@ template <S X> struct HashTrie {
 
     explicit Trie(Node _v) : v_(std::move(_v)) {}
 
-    template <typename _U> Trie(const Trie<_U> &_other) {
-      if (std::holds_alternative<typename Trie<_U>::Empty>(_other.v())) {
-        this->v_ = Empty{};
-      } else {
-        const auto &[k, v_1, left, right] =
-            std::get<typename Trie<_U>::Node>(_other.v());
-        this->v_ = Node{k,
-                        [&]() -> V {
-                          if constexpr (std::is_same_v<_U, std::any>) {
-                            return crane_any_cast<V>(v_1);
-                          } else {
-                            return V(v_1);
-                          }
-                        }(),
-                        (left ? std::make_shared<Trie<V>>(*left) : nullptr),
-                        (right ? std::make_shared<Trie<V>>(*right) : nullptr)};
-      }
-    }
+    template <typename _U>
+    Trie(const Trie<_U> &_other)
+        : v_([&]() -> variant_t {
+            if (std::holds_alternative<typename Trie<_U>::Empty>(_other.v())) {
+              return Empty{};
+            } else {
+              const auto &[k, v_1, left, right] =
+                  std::get<typename Trie<_U>::Node>(_other.v());
+              return Node{k,
+                          [&]() -> V {
+                            if constexpr (crane_convertible<V, const _U &>) {
+                              return crane_convert<V>(v_1);
+                            } else {
+                              throw std::logic_error(
+                                  "unreachable: inactive constructor field at "
+                                  "this instantiation");
+                            }
+                          }(),
+                          (left ? std::make_shared<Trie<V>>(
+                                      crane_convert<Trie<V>>(*left))
+                                : nullptr),
+                          (right ? std::make_shared<Trie<V>>(
+                                       crane_convert<Trie<V>>(*right))
+                                 : nullptr)};
+            }
+          }()) {}
 
     static Trie<V> empty() { return Trie<V>(Empty{}); }
 
@@ -73,10 +83,10 @@ template <S X> struct HashTrie {
       crane::small_vector<std::shared_ptr<Trie<V>>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
-          if (_alt->left) {
+          if (_alt->left && _alt->left.use_count() == 1) {
             _stack.push_back(std::move(_alt->left));
           }
-          if (_alt->right) {
+          if (_alt->right && _alt->right.use_count() == 1) {
             _stack.push_back(std::move(_alt->right));
           }
         }

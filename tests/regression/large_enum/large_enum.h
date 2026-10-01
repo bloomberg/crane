@@ -1,6 +1,7 @@
 #ifndef INCLUDED_LARGE_ENUM
 #define INCLUDED_LARGE_ENUM
 
+#include <atomic>
 #include <type_traits>
 #include <utility>
 #include <variant>
