@@ -32,10 +32,14 @@ let rebind = "crane::rebind_t"
 let counting_ptr = "crane::counting_ptr"
 let make_counting = "crane::make_counting"
 
+let raw = "crane_raw"
+
 type helper =
   | Make_rc_reusing_unchecked
   | Reuse_step
+  | Raw
 
 let name = function
   | Make_rc_reusing_unchecked -> make_rc_reusing_unchecked
+  | Raw -> raw
   | Reuse_step -> reuse_step

@@ -82,8 +82,8 @@ bool LoopifyListRelations::is_suffix_of(const List<uint64_t> &l1,
       return drop_impl(drop_impl, n, xs);
     };
     suffix = drop(diff, l2);
-    auto eq_impl = [&](auto &, const List<uint64_t> &a,
-                       const List<uint64_t> &b) -> bool {
+    auto eq_impl = [](auto &, const List<uint64_t> &a,
+                      const List<uint64_t> &b) -> bool {
       const List<uint64_t> *_loop_b = &b;
       const List<uint64_t> *_loop_a = &a;
       while (true) {

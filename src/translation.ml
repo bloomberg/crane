@@ -1282,7 +1282,6 @@ let rec gen_type_conversion_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
            than restate a part of it here.  The one question left is whether
            there is any route at all: where there is none the field belongs to
            a constructor this instantiation never holds. *)
-        Table.mark_needs_erase_fn ();
         let dst = qualify_inductives ~skip orig_dst_ty in
         mk_iife (Some dst)
           [ Sif_constexpr
@@ -5448,8 +5447,8 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
     | Some x -> Option.default [] (Rank2.type_args_at_carrier x r)
     | None -> []
   in
-  let saved_in_ctor = (!tctx).in_constructor_expr in
-  tctx := { !tctx with in_constructor_expr = true };
+  let result =
+    with_in_constructor_expr true @@ fun () ->
   (* Convert value arguments to C++ expressions.
 
      Erased proof/type arguments ([MLdummy]) produce [std::any{}] rather
@@ -6106,7 +6105,8 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
          Tglob types. Fall back to bare constructor reference. *)
       app (mk_cppglob r (type_args_at_carrier r))
   in
-  tctx := { !tctx with in_constructor_expr = saved_in_ctor };
+  result
+  in
   (* Collapse identity inline customs (%a0) for constructors, matching
      the same collapse done for function applications at gen_expr. *)
   let result =
@@ -6516,7 +6516,6 @@ and recover_carrier_result ~fun_ty ~n_args ~want expr =
      reification path's business, not a cast's. *)
   | Some (Tshared_ptr _) -> expr
   | Some want when carrier_result && not (prints_as_any want) ->
-    Table.mark_needs_erase_fn ();
     CPPcontainer_cast (want, expr, false)
   | _ -> expr
 
@@ -6706,7 +6705,6 @@ and convert_carrier_arg param_ml_ty param_cpp_ty e expr =
          && elem_is_erased
          && (not (ml_expr_is_function_value e))
          && classify_fun_erasure param_cpp_ty = Fe_not_a_function ->
-    Table.mark_needs_erase_fn ();
     CPPconvert (param_cpp_ty, expr)
   | _ -> expr
 
@@ -6738,7 +6736,6 @@ and erased_fn_instantiation = function
 (** Wrap [expr] in the [crane_erase_fn] runtime helper, flagging the header
     that the helper is needed. *)
 and wrap_crane_erase_fn ?ret_ty expr =
-  Table.mark_needs_erase_fn ();
   CPPerase_fn (ret_ty, expr)
 
 (** [field_stores_erased_fn_value ?field_cpp_ty field_types i e] — true when
@@ -8433,7 +8430,6 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                   match ty with
                   | Miniml.Tarr _ -> forward x
                   | _ when own_index && mentions_tvar ty ->
-                    Table.mark_needs_erase_fn ();
                     CPPconvert (at_own_index ty, x)
                   | _ -> forward x )
                 arg_vars non_dummy_param_tys
@@ -8752,9 +8748,9 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
        For record constructors (fds != []), we clear [promoted_var_map]
        because record structs use erased types (std::any) for promoted fields,
        so lambda parameters assigned to record fields must also use std::any. *)
-    let saved_promoted_cons = (!tctx).promoted_var_map in
-    let saved_in_ctor_cons = (!tctx).in_constructor_expr in
-    tctx := { !tctx with in_constructor_expr = true };
+    with_in_constructor_expr true @@ fun () ->
+    (* A record's arm narrows the map below; the scope puts it back. *)
+    with_promoted_var_map (!tctx).promoted_var_map @@ fun () ->
     (* When an erased argument (a value-dependent leaf boxed as [std::any],
        holding a custom list whose elements are fully erased —
        [deque<std::any>] — at runtime) flows into a constructor/record field
@@ -8784,7 +8780,6 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                && not (resolves_to_any_type elem_ty) ->
           (* [expr] came out as the erased [deque<std::any>] from the
              MLrel/MLmagic path; rebuild it as the concrete element container. *)
-          Table.mark_needs_erase_fn ();
           CPPcontainer_cast (clean_ct, expr, false)
         | _ -> expr
       end
@@ -10218,8 +10213,6 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       tctx := { !tctx with move_dead_after = saved_dead };
       result
     in
-    tctx := { !tctx with promoted_var_map = saved_promoted_cons };
-    tctx := { !tctx with in_constructor_expr = saved_in_ctor_cons };
     cons_result
   | MLcase (typ, t, pv) when is_custom_match pv ->
     let iife_ret =
@@ -10510,7 +10503,6 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                      from an [optional<Nat>] holds the {e optional}, not the
                      [Nat].  Box the elements on the way in, as the result is
                      unboxed on the way out. *)
-                  Table.mark_needs_erase_fn ();
                   CPPcontainer_cast (cpp_of_ml env' pt, e, false)
                 | Some pt -> erase_fn_arg_for_param env' pt a e
                 | None -> e )
@@ -10794,7 +10786,6 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                  box an erased handler instantiates it at.  Which, C++ decides
                  once it substitutes [T1]. *)
               | Mcoerce (from, _) when contains_tvar ty ->
-                Table.mark_needs_erase_fn ();
                 mk_iife (Some ty)
                   [ Sif_constexpr
                       ( Tt_convertible (ty, Tref (Lvalue, Tconst (cpp_of_ml env from))),
@@ -12392,7 +12383,6 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
             | _ -> false
           in
           if needs_concrete then begin
-            Table.mark_needs_erase_fn ();
             (* When the callee's OWN declared (unsubstituted) parameter type
                is still generic here (a template function like
                [nodupKeys<T1>]), its C++ declaration never boxes the element
@@ -13817,7 +13807,6 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
                [pair<any,any>], which [crane_any_cast] recovers component by
                component.  What comes out is concrete, so the accessor's
                result needs no further recovery. *)
-            Table.mark_needs_erase_fn ();
             mk_call cglob'
               [Cpp_erasure.unbox_tolerant (Tglob (g, glob_tys, [])) single_arg]
           | Some g, _ ->
@@ -13827,7 +13816,6 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
                [crane_any_cast] accepts both -- it opens a box and passes a
                pair already in hand through -- where a plain [any_cast] would
                throw on the latter. *)
-            Table.mark_needs_erase_fn () ;
             mk_call cglob'
               [ Cpp_erasure.unbox_tolerant
                   (Tglob (g, [Tany; Tany], []))
@@ -14144,7 +14132,6 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
            guarded by [Tdummy] (e.g. [f : forall A, A -> A]). *)
       let result =
         if !has_unresolved_boxed_arg && not callee_is_bare_any then begin
-          Table.mark_needs_erase_fn ();
           CPPtolerant_call (callee_expr, args)
         end
         else if callee_is_bare_any then

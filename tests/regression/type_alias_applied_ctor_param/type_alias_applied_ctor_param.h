@@ -1,6 +1,7 @@
 #ifndef INCLUDED_TYPE_ALIAS_APPLIED_CTOR_PARAM
 #define INCLUDED_TYPE_ALIAS_APPLIED_CTOR_PARAM
 
+#include "crane_fn.h"
 #include "obj.h"
 #include <any>
 #include <atomic>

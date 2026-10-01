@@ -127,7 +127,6 @@ let id_lazy         = Id.of_string "lazy_"
    [std::shared_ptr<T>] or an already-raw [T*] (arena mode), by overload
    resolution.  Used in place of a bare [.get()] call wherever the extraction
    target may be either representation. *)
-let id_crane_raw    = Id.of_string "crane_raw"
 let id_v            = Id.of_string "v"
 let id_v_mut        = Id.of_string "v_mut"
 let id_empty        = Id.of_string "empty"
@@ -303,7 +302,7 @@ let rec worthwhile_move_type = function
     false
 
 (* Global mutable state in this file and their reset granularity:
-   - mutual_fn_table : reset between extraction units (clear_mutual_table)
+   - mutual_fn_table, outcomes : reset per generated file (State.Unit)
    - ctor_ptr_fields : accumulates across the full session; never cleared because
      struct shapes don't change within a Rocq session *)
 
@@ -350,6 +349,8 @@ let register_decl = function
 
 (** Clear the mutual recursion table. Called between extraction units. *)
 let clear_mutual_table () = Hashtbl.clear mutual_fn_table
+
+let () = State.on_reset State.Unit clear_mutual_table
 
 (** Table mapping constructor struct names to their shared_ptr field indices.
     Populated from [Dstruct] definitions in {!transform_decl} and queried by
@@ -451,6 +452,8 @@ let string_of_outcome = function
 let outcomes : (string * loopify_outcome) list ref = ref []
 
 let clear_outcomes () = outcomes := []
+
+let () = State.on_reset State.Unit clear_outcomes
 
 (** How good an outcome is.  A function can be transformed more than once —
     {!transform_decl} is invoked independently from [Cpp_ind] and [Cpp_print],
@@ -743,8 +746,7 @@ let method_checker
  let recv_to_self recv =
    match receiver_storage recv with
    | CPPderef inner ->
-     Table.mark_needs_erase_fn ();
-     CPPfun_call (call_opaque, CPPvar id_crane_raw, of_reversed ([inner]))
+     CPPfun_call (call_opaque, CPPrt Crane_rt.Raw, of_reversed ([inner]))
    | _ ->
      CPPunop (Uaddr, recv)
  in
@@ -1466,8 +1468,7 @@ let tail_shadow_arg ~shadow_ids shadow_ty arg =
   | Tptr _, CPPderef (CPPvar id) when List.exists (Id.equal id) shadow_ids ->
     CPPvar id
   | Tptr _, CPPderef inner ->
-    Table.mark_needs_erase_fn ();
-    CPPfun_call (call_opaque, CPPvar id_crane_raw, of_reversed ([inner]))
+    CPPfun_call (call_opaque, CPPrt Crane_rt.Raw, of_reversed ([inner]))
   | Tptr _, CPPvar _ -> CPPunop (Uaddr, arg)
   | _ -> arg
 
@@ -1506,7 +1507,7 @@ let compute_binder_provenance params body =
     | CPPderef e | CPPmove e | CPPaccess (Adot, e, _) | CPPaccess (Aarrow, e, _)
     | CPPget (e, _) | CPPget' (e, _, _) | CPPunop (_, e) ->
       prov_of e
-    | CPPfun_call (_, CPPvar f, {rev = [e]}) when Id.equal f id_crane_raw -> prov_of e
+    | CPPfun_call (_, CPPrt Crane_rt.Raw, {rev = [e]}) -> prov_of e
     (* [x.v()] / [std::get<K>(e)]: projections that stay inside [e]'s storage. *)
     | CPPfun_call (_, CPPaccess (Adot, e, _), {rev = []})
      |CPPaccess_call (Aarrow, e, _, []) ->
@@ -4091,7 +4092,7 @@ let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
     (* The call says what it yields; nothing below can improve on that, and
        a guess that disagreed with it would be a bug. *)
     Some (strip_ref_and_const_type ty)
-  | CPPfun_call (_, CPPvar id, {rev = [ inner ]}) when Id.equal id id_crane_raw ->
+  | CPPfun_call (_, CPPrt Crane_rt.Raw, {rev = [ inner ]}) ->
     (* crane_raw(x) returns a raw pointer, whether [x] was a shared_ptr or
        already raw (arena mode).  Infer from the inner expression. *)
     Option.bind (infer_saved_type tparams env inner) as_raw_ptr
@@ -6789,8 +6790,7 @@ let adjust_frame_push_args ?(binding_env = []) ?(frame_sptr = []) frame_pointer_
       else
       let arg = match arg with CPPmove a -> a | a -> a in
       let raw_of e =
-        Table.mark_needs_erase_fn ();
-        CPPfun_call (call_opaque, CPPvar id_crane_raw, of_reversed ([e]))
+        CPPfun_call (call_opaque, CPPrt Crane_rt.Raw, of_reversed ([e]))
       in
       if is_uptr then
         (* If the argument is a local variable loaded as a const-reference from a

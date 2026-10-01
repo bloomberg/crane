@@ -190,7 +190,6 @@ let rec resolve_expr boxed e =
          would look for a further [std::any] stored inside and throw. *)
       inner
     else if tolerant ty then begin
-      Table.mark_needs_erase_fn ();
       CPPany_cast_tolerant (ty, inner)
     end
     else

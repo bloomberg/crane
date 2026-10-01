@@ -2709,7 +2709,9 @@ and pp_cpp_expr env args t =
     str "std::declval<" ++ pp_cpp_type false [] ty ++ str ">()"
   | CPPtype_name ty -> pp_cpp_type false [] ty
   (* Low-level constructs for reuse optimization *)
-  | CPPrt h -> str (Crane_rt.name h)
+  | CPPrt h ->
+    if h = Crane_rt.Raw then Table.mark_needs_erase_fn ();
+    str (Crane_rt.name h)
   | CPPlit (_, s) -> str s
   | CPPraw code ->
     str
@@ -2778,12 +2780,15 @@ and pp_cpp_expr env args t =
        {!Cpp_erasure.resolve_casts}. *)
     let caster =
       match t with
-      | CPPany_cast_tolerant _ -> Crane_rt.any_cast
+      | CPPany_cast_tolerant _ ->
+        Table.mark_needs_erase_fn ();
+        Crane_rt.any_cast
       | _ -> Crane_rt.obj_cast
     in
     str caster ++ str "<" ++ pp_cpp_type false [] ty ++ str ">(" ++ inner
     ++ str ")"
   | CPPerase_fn (ret_ty, e) ->
+    Table.mark_needs_erase_fn ();
     str Crane_rt.erase_fn
     ++ ( match ret_ty with
        | None -> mt ()
@@ -2805,6 +2810,7 @@ and pp_cpp_expr env args t =
     ++ pp_cpp_expr env args a
     ++ str ")"
   | CPPtolerant_call (f, call_args) ->
+    Table.mark_needs_erase_fn ();
     str Crane_rt.call_erased
     ++ str "("
     ++ prlist_with_sep pr_comma (pp_cpp_expr env args) (f :: call_args)
@@ -2813,6 +2819,7 @@ and pp_cpp_expr env args t =
     require_header Crane_rt.fn_header;
     str Crane_rt.fn ++ str "(" ++ pp_cpp_expr env args e ++ str ")"
   | CPPconvert (ty, e) ->
+    Table.mark_needs_erase_fn ();
     str Crane_rt.convert
     ++ str "<"
     ++ pp_cpp_type false [] ty
@@ -2820,6 +2827,7 @@ and pp_cpp_expr env args t =
     ++ pp_cpp_expr env args e
     ++ str ")"
   | CPPcontainer_cast (ty, e, suppress_boxing) ->
+    Table.mark_needs_erase_fn ();
     let saved = !suppress_elem_boxing in
     if suppress_boxing then suppress_elem_boxing := true;
     let ty_pp = pp_cpp_type false [] ty in
@@ -2960,6 +2968,7 @@ and pp_cpp_stmt env args = function
     | Pstated _ -> mt () )
   (* Reuse optimization constructs *)
   | Sif_constexpr (Tt_convertible (t1, t2), then_stmts, else_stmts) ->
+    Table.mark_needs_erase_fn ();
     str "if constexpr (" ++ str Crane_rt.convertible ++ str "<"
     ++ pp_cpp_type false [] t1
     ++ str ", "

@@ -52,11 +52,6 @@ val register_fundef :
     mutual table. *)
 val register_decl : cpp_decl -> unit
 
-(** Clear the mutual-recursion registry populated by {!register_fundef}. The
-    registry is scoped to one compilation unit, so callers reset it at each
-    unit boundary before repopulating it. *)
-val clear_mutual_table : unit -> unit
-
 (** {2 Diagnostics}
 
     Every bail-out in this pass used to return the original recursive body
@@ -93,6 +88,3 @@ val get_outcomes : unit -> (string * loopify_outcome) list
     The [unit_name] prefixes each line so a decline can be traced to the
     compilation unit that produced it. *)
 val report_outcomes : ?unit_name:string -> unit -> unit
-
-(** Discard all recorded outcomes; called at each compilation-unit boundary. *)
-val clear_outcomes : unit -> unit

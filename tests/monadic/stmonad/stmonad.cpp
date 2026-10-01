@@ -194,10 +194,10 @@ List<uint64_t> STMonadTests::quicksort_ST_mine(const List<uint64_t> &xs) {
             uint64_t>
             _arg = _stack.back();
         _stack.pop_back();
-        [=](std::pair<
+        [](std::pair<
             std::pair<std::pair<std::vector<uint64_t> *, uint64_t>, uint64_t>,
             uint64_t>
-                args) {
+               args) {
           const auto &[p, r] = args;
           const auto &[p0, l] = p;
           const auto &[arr0, arr_idx] = p0;
@@ -237,8 +237,8 @@ List<uint64_t> STMonadTests::quicksort_ST_mine(const List<uint64_t> &xs) {
               }();
               uint64_t storeIndex = [&]() {
                 auto for_each_with_impl =
-                    [&](auto &, const List<uint64_t> &xs0, uint64_t v,
-                        crane::fn<uint64_t(uint64_t, uint64_t)> f) -> uint64_t {
+                    [](auto &, const List<uint64_t> &xs0, uint64_t v,
+                       crane::fn<uint64_t(uint64_t, uint64_t)> f) -> uint64_t {
                   uint64_t _loop_v = std::move(v);
                   const List<uint64_t> *_loop_xs0 = &xs0;
                   while (true) {

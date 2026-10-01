@@ -23,6 +23,8 @@ let find name = Hashtbl.find_opt !current_table name
 (** Reset the doc comment table (called between extraction passes). *)
 let reset () = current_table := Hashtbl.create 0
 
+let () = State.on_reset State.Extraction reset
+
 (** {2 Comment parser}
 
     Scans a [.v] file for [(** ... *)] blocks, handling nested comments.

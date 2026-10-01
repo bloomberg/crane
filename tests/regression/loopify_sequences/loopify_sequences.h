@@ -272,7 +272,7 @@ struct LoopifySequences {
         break;
       } else {
         uint64_t f = _loop_fuel - 1;
-        auto all_nil_impl = [&](auto &, const List<List<T1>> &l) -> bool {
+        auto all_nil_impl = [](auto &, const List<List<T1>> &l) -> bool {
           const List<List<T1>> *_loop_l = &l;
           while (true) {
             if (std::holds_alternative<typename List<List<T1>>::Nil>(

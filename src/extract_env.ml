@@ -1403,11 +1403,9 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
     (fn, si, mo) dry struc =
   Buffer.clear buf;
   let d = descr () in
+  (* Empties every per-file cell, the mutual-recursion registry among them,
+     before this unit's dry run repopulates it. *)
   reset_renaming_tables AllButExternal;
-  (* The mutual-recursion registry is scoped to one compilation unit; clear it
-     before this unit's dry run repopulates it (see loopify.ml). *)
-  Loopify.clear_mutual_table ();
-  Loopify.clear_outcomes ();
   let unsafe_needs =
     {
       mldummy = struct_ast_search Mlutil.isMLdummy struc;

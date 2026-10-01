@@ -334,8 +334,8 @@ bool LoopifySearchOpt::binary_search_fuel(uint64_t fuel, uint64_t target,
         } else {
           uint64_t mid = (UINT64_C(2) ? len / UINT64_C(2) : 0);
           uint64_t mid_val;
-          auto nth_impl = [&](auto &, uint64_t n,
-                              const List<uint64_t> &xs) -> uint64_t {
+          auto nth_impl = [](auto &, uint64_t n,
+                             const List<uint64_t> &xs) -> uint64_t {
             const List<uint64_t> *_loop_xs = &xs;
             uint64_t _loop_n = std::move(n);
             while (true) {

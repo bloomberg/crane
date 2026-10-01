@@ -50,11 +50,7 @@ let hov _ x = x
     same set of cells from two hundred lines away, and they had already drifted
     apart; a cell that exists but is in neither list is now unrepresentable. *)
 
-(** How to empty each owned cell, innermost-defined first.  Order is immaterial:
-    the actions are independent. *)
-let owned_cells : (unit -> unit) list ref = ref []
-
-let on_reset f = owned_cells := f :: !owned_cells
+let on_reset f = State.on_reset State.Extraction f
 
 (** A hash table owned by this module, emptied between extractions.
 
@@ -1173,12 +1169,7 @@ let () =
     cannot affect the next.  Every cell created by {!owned_table},
     {!owned_list} or {!owned_ref} is emptied; the rest is state other modules
     own that only this one knows to reset. *)
-let reset_cpp_state () =
-  List.iter (fun empty -> empty ()) !owned_cells;
-  Doc_comments.reset ();
-  Common.reset_ctor_field_names ();
-  Table.reset_demands ();
-  Table.reset_main_function ()
+let reset_cpp_state () = State.reset State.Extraction
 
 (** Check if a function is a projection for the eponymous record. Such
     projections are redundant when the record fields are merged into the module

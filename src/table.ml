@@ -55,12 +55,8 @@ let census () = List.rev_map (fun (name, size) -> (name, size ())) !census_entri
 (** {2 Per-extraction cells}
 
     Every cell this module empties between extractions enrols its reset here,
-    where it is defined, and {!reset_tables} runs them all.  It used to name
-    them in a hand-written list three thousand lines away, which a new cell
-    could be missing from -- surviving from one extraction into the next. *)
-let reset_actions : (unit -> unit) list ref = ref []
-
-let on_reset f = reset_actions := f :: !reset_actions
+    where it is defined; see {!State}. *)
+let on_reset f = State.on_reset State.Extraction f
 
 (* Create a ref-based membership set with init/add/mem interface. *)
 let make_refset ~name () =
@@ -414,6 +410,8 @@ let reset_demands () =
   raised_demands := CString.Set.empty;
   demands_frozen := false
 
+let () = on_reset reset_demands
+
 (** Close collection: from here on the preamble may be written. *)
 let freeze_demands () = demands_frozen := true
 
@@ -459,6 +457,8 @@ let set_main_function name ret_type struct_name needs_run =
 let get_main_function () = !main_function_tree
 
 let reset_main_function () = main_function_tree := None
+
+let () = on_reset reset_main_function
 
 (** Check if an ML type is a coinductive type by inspecting its global
     reference. *)
@@ -3959,4 +3959,4 @@ let extract_skip_or_module q =
 
 (** {2 Tables synchronization} *)
 
-let reset_tables () = List.iter (fun reset -> reset ()) (List.rev !reset_actions)
+let reset_tables () = State.reset State.Extraction

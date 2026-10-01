@@ -113,6 +113,10 @@ val make_counting : string  (** [crane::make_counting<T>] *)
 type helper =
   | Make_rc_reusing_unchecked
   | Reuse_step
+  | Raw  (** [crane_raw(p)] -- the raw pointer a smart pointer holds. *)
+
+(** [crane_raw], in {!erasure_header}. *)
+val raw : string
 
 val name : helper -> string
 (** [name h] -- the C++ spelling of [h]. *)

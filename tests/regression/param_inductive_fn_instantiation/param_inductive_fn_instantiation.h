@@ -1,6 +1,7 @@
 #ifndef INCLUDED_PARAM_INDUCTIVE_FN_INSTANTIATION
 #define INCLUDED_PARAM_INDUCTIVE_FN_INSTANTIATION
 
+#include "crane_fn.h"
 #include "fn.h"
 #include <type_traits>
 #include <utility>

@@ -1,6 +1,7 @@
 #ifndef INCLUDED_DICT_CTOR_FIELD
 #define INCLUDED_DICT_CTOR_FIELD
 
+#include "crane_fn.h"
 #include "fn.h"
 #include <type_traits>
 #include <utility>

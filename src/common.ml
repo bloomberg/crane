@@ -460,9 +460,9 @@ let get_db_name_opt n (db, _) = if n < 1 then None else List.nth_opt db (pred n)
 (** {2 Tables of global renamings} *)
 
 (** Register/run cleanup functions for renaming tables. *)
-let register_cleanup, do_cleanup =
-  let funs = ref [] in
-  ((fun f -> funs := f :: !funs), fun () -> List.iter (fun f -> f ()) !funs)
+let register_cleanup f = State.on_reset State.Unit f
+
+let do_cleanup () = State.reset State.Unit
 
 (** Which file an emission pass is writing. *)
 type file = Impl | Intf
@@ -1786,6 +1786,8 @@ let reset_ctor_field_names () =
   Hashtbl.clear ctor_field_names;
   Hashtbl.clear ctor_bind_names;
   Hashtbl.clear ctor_name_owners
+
+let () = State.on_reset State.Extraction reset_ctor_field_names
 
 (** {3 More synthetic name generators} *)
 

@@ -1,6 +1,7 @@
 #ifndef INCLUDED_SEPEXTEPONYMOUSMODULEIND
 #define INCLUDED_SEPEXTEPONYMOUSMODULEIND
 
+#include "crane_fn.h"
 #include "small_vector.h"
 #include <atomic>
 #include <memory>
