@@ -163,7 +163,7 @@ let module_struct_name (mp : ModPath.t) : string option =
     and cannot be moved in front of one it holds by value.  Written at the very
     end of the header by the assembly in {!Cpp}, which is the only place later
     than every module struct.  In emission order. *)
-let deferred_member_defs : Pp.t list ref = ref []
+let deferred_member_defs : Cpp_state.band = Cpp_state.band "deferred_member_defs"
 
 (** Render inductive type header (.h file).
     TypeClasses become C++ concepts, Records become structs,
@@ -628,7 +628,7 @@ let ind_header_decls kn ind =
            and by the end of the header the visibility stack has been unwound
            past it. *)
         if defs <> [] then
-          deferred_member_defs := !deferred_member_defs @ [pp_decls defs];
+          Cpp_state.push deferred_member_defs (pp_decls defs);
         group
     in
     forward_decls @ group

@@ -441,6 +441,22 @@ let initial_render_ctx =
 (** Global render context state. *)
 let render_ctx = owned_ref initial_render_ctx
 
+(** A band of rendered text collected while the file is printed and written
+    out, in the order it was collected, at a fixed place in the file.  Pushed
+    in amortised constant time; {!drain} takes the contents and empties it. *)
+type band = Pp.t list ref (* newest first *)
+
+let band name : band = owned_list name
+
+let push (b : band) p = b := p :: !b
+
+let push_all (b : band) ps = List.iter (push b) ps
+
+let drain (b : band) =
+  let l = List.rev !b in
+  b := [];
+  l
+
 (** Accumulator for nested module type concepts that must be hoisted out of
     requires bodies *)
 let hoisted_concept_defs : Pp.t list ref = owned_list "hoisted_concept_defs"
@@ -449,7 +465,7 @@ let hoisted_concept_defs : Pp.t list ref = owned_list "hoisted_concept_defs"
     appear at namespace scope, so one declared in a module -- which is emitted
     as a struct -- cannot stay where it was written; it is collected here and
     emitted at file scope instead. *)
-let file_scope_concepts : Pp.t list ref = owned_list "file_scope_concepts"
+let file_scope_concepts : band = band "file_scope_concepts"
 
 (** The landing pads for erasure: file-scope [using X = std::any;] for a name
     that survived into the output with no C++ spelling behind it.
@@ -461,8 +477,7 @@ let file_scope_concepts : Pp.t list ref = owned_list "file_scope_concepts"
     general: an alias to [std::any] names nothing, so it is correct everywhere
     and cheapest to put first, and then no later pass that reorders the file
     can move something in front of it. *)
-let file_scope_erased_aliases : Pp.t list ref =
-  owned_list "file_scope_erased_aliases"
+let file_scope_erased_aliases : band = band "file_scope_erased_aliases"
 
 (** The top-level elements that have to travel with the hoisted concepts,
     identified by their label, and their rendered text.
@@ -479,8 +494,7 @@ let file_scope_erased_aliases : Pp.t list ref =
     reads. *)
 let concept_prereq_labels : Names.Label.Set.t ref = owned_ref Names.Label.Set.empty
 
-let file_scope_concept_prereqs : Pp.t list ref =
-  owned_list "file_scope_concept_prereqs"
+let file_scope_concept_prereqs : band = band "file_scope_concept_prereqs"
 
 (** A concept a frame is holding back until after the struct it was written
     in, identified by whatever declares it. *)

@@ -158,16 +158,28 @@ val render_ctx : render_ctx ref
 (** Concept definitions hoisted out of the current struct. *)
 val hoisted_concept_defs : Pp.t list ref
 
+(** A band of rendered text collected while the file is printed and written
+    out, in collection order, at a fixed place in the file; emptied between
+    extractions. *)
+type band
+
+val band : string -> band
+val push : band -> Pp.t -> unit
+val push_all : band -> Pp.t list -> unit
+
+(** The band's contents in collection order; empties it. *)
+val drain : band -> Pp.t list
+
 (** Concepts from typeclasses declared inside a module.  A concept may only
     appear at namespace scope, so one declared in a module -- emitted as a
     struct -- is collected here and emitted at file scope instead. *)
-val file_scope_concepts : Pp.t list ref
+val file_scope_concepts : band
 
 (** The landing pads for erasure: file-scope [using X = std::any;] for a name
     with no C++ spelling behind it.  Emitted before everything, including the
     concepts, because an alias to [std::any] names nothing and the text that
     lands on it does not follow it. *)
-val file_scope_erased_aliases : Pp.t list ref
+val file_scope_erased_aliases : band
 
 (** The top-level elements that travel with the hoisted concepts, by label.
 
@@ -178,7 +190,7 @@ val file_scope_erased_aliases : Pp.t list ref
 val concept_prereq_labels : Names.Label.Set.t ref
 
 (** The rendered text of {!concept_prereq_labels}, in source order. *)
-val file_scope_concept_prereqs : Pp.t list ref
+val file_scope_concept_prereqs : band
 
 (** A concept a frame is holding back until after the struct it was written
     in, identified by whatever declares it. *)

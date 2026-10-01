@@ -881,7 +881,7 @@ let rec pp_structure_elem ~is_header f = function
         && List.for_all is_erased_alias rendered
         && not (Pp.ismt body)
       then (
-        file_scope_erased_aliases := !file_scope_erased_aliases @ [body];
+        push file_scope_erased_aliases body;
         mt () )
       else
         body
@@ -908,7 +908,7 @@ let rec pp_structure_elem ~is_header f = function
            | _ -> false)
         && not (Pp.ismt body)
       then (
-        file_scope_concepts := !file_scope_concepts @ [pp_doc_comment l ++ body];
+        push file_scope_concepts (pp_doc_comment l ++ body);
         mt () )
       else
         body
@@ -1220,9 +1220,8 @@ let rec pp_structure_elem ~is_header f = function
            preceding their own struct. *)
         let typeclass_concepts =
           if old_context then (
-            file_scope_concepts :=
-              !file_scope_concepts
-              @ List.map (fun (_, c, _) -> c) typeclass_concepts;
+            push_all file_scope_concepts
+              (List.map (fun (_, c, _) -> c) typeclass_concepts);
             [] )
           else typeclass_concepts
         in
@@ -1310,10 +1309,9 @@ let rec pp_structure_elem ~is_header f = function
            just as a typeclass concept does. *)
         let modtype_concepts, modtype_concepts_after =
           if old_context then (
-            file_scope_concepts :=
-              !file_scope_concepts
-              @ List.map (fun (_, c, _) -> c)
-                  (modtype_concepts @ modtype_concepts_after);
+            push_all file_scope_concepts
+              (List.map (fun (_, c, _) -> c)
+                 (modtype_concepts @ modtype_concepts_after));
             ([], []) )
           else (modtype_concepts, modtype_concepts_after)
         in
@@ -2477,17 +2475,17 @@ let do_struct_with_decl_tracking ~is_header f s =
            because that is what the element knows about itself. *)
         if Names.Label.Set.mem l !concept_prereq_labels && not (Pp.ismt p)
         then (
-          file_scope_concept_prereqs := !file_scope_concept_prereqs @ [p];
+          push file_scope_concept_prereqs p;
           mt () )
         else
           p
   in
   concept_prereq_labels := Names.Label.Set.empty;
-  file_scope_concept_prereqs := [];
+  ignore (drain file_scope_concept_prereqs);
   Cpp_print.reset_ctor_alias_emitted ();
   ignore (Translation.take_lifted_decls ());
   hoisted_module_structs := [];
-  Cpp_ind.deferred_member_defs := [];
+  ignore (drain Cpp_ind.deferred_member_defs);
   Hashtbl.clear emitted_member_lifted;
   Translation.clear_seen_lifted_refs ();
   init_std_names ();
@@ -2700,7 +2698,7 @@ let do_struct_with_decl_tracking ~is_header f s =
               (fun x ->
                 let pp = f x in
                 if not (Pp.ismt pp) then
-                  file_scope_concepts := !file_scope_concepts @ [pp] )
+                  push file_scope_concepts pp )
               modtype_sels;
             let non_colliding_pp, colliding_pp =
               with_render_ctx
@@ -2901,25 +2899,19 @@ let do_struct_with_decl_tracking ~is_header f s =
   (* Pop the initial visibility entries pushed at the top of this function. *)
   List.iter (fun _ -> pop_visible ()) initial_mps;
   let hoisted_erased_aliases =
-    match !file_scope_erased_aliases with
+    match drain file_scope_erased_aliases with
     | [] -> mt ()
-    | l ->
-      file_scope_erased_aliases := [];
-      prlist_with_sep fnl (fun x -> x) l ++ cut2 ()
+    | l -> prlist_with_sep fnl (fun x -> x) l ++ cut2 ()
   in
   let hoisted_concept_prereqs =
-    match !file_scope_concept_prereqs with
+    match drain file_scope_concept_prereqs with
     | [] -> mt ()
-    | l ->
-      file_scope_concept_prereqs := [];
-      prlist_with_sep cut2 (fun x -> x) l ++ cut2 ()
+    | l -> prlist_with_sep cut2 (fun x -> x) l ++ cut2 ()
   in
   let hoisted_concepts =
-    match !file_scope_concepts with
+    match drain file_scope_concepts with
     | [] -> mt ()
-    | l ->
-      file_scope_concepts := [];
-      prlist_with_sep cut2 (fun x -> x) l ++ cut2 ()
+    | l -> prlist_with_sep cut2 (fun x -> x) l ++ cut2 ()
   in
   let forward_decls =
     let structs =
@@ -2977,11 +2969,9 @@ let do_struct_with_decl_tracking ~is_header f s =
   (* Last of all: a datatype's method whose body names a module's struct, which
      is emitted after every datatype.  Nothing else in the header is later. *)
   let deferred_members =
-    match !Cpp_ind.deferred_member_defs with
+    match drain Cpp_ind.deferred_member_defs with
     | [] -> mt ()
-    | ds ->
-      Cpp_ind.deferred_member_defs := [];
-      cut2 () ++ prlist_with_sep cut2 (fun x -> x) ds
+    | ds -> cut2 () ++ prlist_with_sep cut2 (fun x -> x) ds
   in
   let deferred_lifted = deferred_lifted () in
   (* In writing order, so that an alias no single element claimed -- one whose

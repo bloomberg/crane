@@ -36,7 +36,7 @@ val ind_header_decls : Names.MutInd.t -> Miniml.ml_ind -> rendered
     the header assembly writes them last and empties this.  Already rendered:
     the environment they are spelled in is the one in force where their struct
     was, not the one left at the end of the header. *)
-val deferred_member_defs : Pp.t list ref
+val deferred_member_defs : Cpp_state.band
 
 (** What a type class instance becomes: the struct carrying its methods, and,
     for a ground instance, the [static_assert] checking it against the class's
