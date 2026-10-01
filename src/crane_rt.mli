@@ -58,6 +58,14 @@ val convert : string
     own type, by whichever route that type offers: a converting constructor
     where it has one, and the [crane_cast_to] hook where it does not. *)
 
+val convertible : string
+(** [crane_convertible<Dst, Src>] -- whether {!convert} has a route. *)
+
+val container_cast : string
+(** [crane_container_cast<Dst>(e)] -- converts a type-erased container
+    elementwise. *)
+
+
 (** {2 Containers} *)
 
 val small_vector : string  (** [crane::small_vector<T>] *)
@@ -76,6 +84,14 @@ val obj_cast : string
 (** [crane::any_cast<T>] -- reads a [crane::obj] back at [T]. *)
 
 val obj_header : string  (** [obj.h] *)
+
+val lazy_header : string  (** [lazy.h] -- {!lazy_}. *)
+
+val erasure_header : string
+(** [crane_fn.h] -- the erasure and conversion helpers: {!erase_fn},
+    {!call_erased}, {!any_cast}, {!convert}, {!container_cast}. *)
+
+val itree_header : string  (** [crane_itree.h] -- reified interaction trees. *)
 
 val rebind : string  (** [crane::rebind_t], a plain carrier read at an element *)
 

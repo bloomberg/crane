@@ -695,7 +695,6 @@ type std_names = {
   make_shared : string; (* "std::make_shared" or "bsl::make_shared" *)
   move : string; (* "std::move" or "bsl::move" *)
   forward : string; (* "std::forward" or "bsl::forward" *)
-  any_cast : string; (* "std::any_cast" or "bsl::any_cast" *)
   logic_error : string; (* "std::logic_error" or "bsl::logic_error" *)
   ns : string; (* "std" or "bsl" — general prefix *)
   str_suffix : string; (* "s" or "_s" — string literal suffix *)
@@ -714,7 +713,6 @@ let default_std_names =
     make_shared = "std::make_shared";
     move = "std::move";
     forward = "std::forward";
-    any_cast = Crane_rt.obj_cast;
     logic_error = "std::logic_error";
     ns = "std";
     str_suffix = "s";
@@ -736,7 +734,7 @@ let mk_std_names prefix =
     let p = prefix in
     { shared_ptr = p ^ "shared_ptr"; make_shared = p ^ "make_shared";
       move = p ^ "move"; forward = p ^ "forward";
-      any_cast = Crane_rt.obj_cast; logic_error = p ^ "logic_error";
+      logic_error = p ^ "logic_error";
       ns = "bsl"; str_suffix = "_s";
       same_as = "same_as"; declval = p ^ "declval";
       convertible_to = "convertible_to";

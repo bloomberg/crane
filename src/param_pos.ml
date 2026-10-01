@@ -38,5 +38,5 @@ let subst_of_orig ~erased orig o =
     Some (o - dropped 0 orig)
 
 let subst_at_declared o = o
-let index p = p
+let of_receiver p = p
 let equal = Int.equal

@@ -815,7 +815,7 @@ let spec_header ?(unit_includes = []) si () =
   in
   let h =
     if Table.has_any_coinductive () then
-      h ++ mk_include_quoted "lazy.h" ++ fnl ()
+      h ++ mk_include_quoted Crane_rt.lazy_header ++ fnl ()
     else
       h
   in
@@ -824,9 +824,12 @@ let spec_header ?(unit_includes = []) si () =
      [From "crane_itree.h"] directive. *)
   let h =
     if Table.needs_itree_header ()
-       && not (List.exists (fun s -> String.equal s "crane_itree.h") (himports @ imps))
+       && not
+            (List.exists
+               (fun s -> String.equal s Crane_rt.itree_header)
+               (himports @ imps) )
     then
-      h ++ mk_include_quoted "crane_itree.h" ++ fnl ()
+      h ++ mk_include_quoted Crane_rt.itree_header ++ fnl ()
     else
       h
   in
@@ -836,9 +839,12 @@ let spec_header ?(unit_includes = []) si () =
      redefinition when several are included in one translation unit). *)
   let h =
     if Table.needs_erase_fn ()
-       && not (List.exists (fun s -> String.equal s "crane_fn.h") (himports @ imps))
+       && not
+            (List.exists
+               (fun s -> String.equal s Crane_rt.erasure_header)
+               (himports @ imps) )
     then
-      h ++ mk_include_quoted "crane_fn.h" ++ fnl ()
+      h ++ mk_include_quoted Crane_rt.erasure_header ++ fnl ()
     else
       h
   in

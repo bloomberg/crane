@@ -298,7 +298,6 @@ type std_names = {
   make_shared : string;
   move : string;
   forward : string;
-  any_cast : string;
   logic_error : string;
   ns : string;
   str_suffix : string;

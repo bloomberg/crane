@@ -601,15 +601,16 @@ and method_field = {
   mf_ret_type : cpp_type;
   mf_params : (Id.t * cpp_type) list;
   mf_body : cpp_stmt list;
-  mf_is_const : bool;
-  mf_is_static : bool;
+  mf_receiver : receiver;
   mf_is_inline : bool;
-  mf_this_pos : int;
   mf_no_pure : bool;
   mf_is_noexcept : bool;
   mf_is_conversion : bool;
-  mf_ref_qual : ref_qual;
 }
+
+and receiver =
+  | Static
+  | Instance of { this_pos : int; is_const : bool; ref_qual : ref_qual }
 
 and ref_qual =
   | Rq_any
@@ -665,14 +666,11 @@ let static_fun ~name ~ret ~params ~body =
     mf_ret_type = ret;
     mf_params = params;
     mf_body = body;
-    mf_is_const = false;
-    mf_is_static = true;
+    mf_receiver = Static;
     mf_is_inline = false;
-    mf_this_pos = 0;
     mf_no_pure = false;
     mf_is_noexcept = false;
-    mf_is_conversion = false;
-    mf_ref_qual = Rq_any }
+    mf_is_conversion = false }
 
 (** Rvalue reference type [T&&]. *)
 let rval_ref ty = Tref (Forwarding, ty)

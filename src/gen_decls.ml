@@ -801,14 +801,11 @@ let conversion_to_other_instantiation ~leading ~name ~templates ~vars ~fields =
             mf_ret_type = Tglob (name, leading @ u_tys, []);
             mf_params = [];
             mf_body = [Sreturn (Some (CPPbraced converted))];
-            mf_is_const = true;
-            mf_is_static = false;
+            mf_receiver = Instance { this_pos = 0; is_const = true; ref_qual = Rq_any };
             mf_is_inline = false;
-            mf_this_pos = 0;
             mf_no_pure = true;
             mf_is_noexcept = false;
-            mf_is_conversion = true;
-            mf_ref_qual = Rq_any },
+            mf_is_conversion = true },
         VPublic,
         SAccessors ) ]
 
@@ -2280,14 +2277,11 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                   mf_ret_type = ret_ty;
                   mf_params = cpp_params;
                   mf_body = body_stmts;
-                  mf_is_const = false;
-                  mf_is_static = true;
+                  mf_receiver = Static;
                   mf_is_inline = false;
-                  mf_this_pos = 0;
                   mf_no_pure = false;
                   mf_is_noexcept = false;
                   mf_is_conversion = false;
-                  mf_ref_qual = Rq_any;
                 },
               VPublic,
               SNoTag )
@@ -6198,14 +6192,11 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
         mf_ret_type = ret_cpp;
         mf_params = params;
         mf_body = stmts;
-        mf_is_const = true;
-        mf_is_static = false;
+        mf_receiver = Instance { this_pos = this_pos; is_const = true; ref_qual = Rq_any };
         mf_is_inline = false;
-        mf_this_pos = this_pos;
         mf_no_pure = no_pure;
         mf_is_noexcept = false;
         mf_is_conversion = false;
-        mf_ref_qual = Rq_any;
       },
     VPublic,
     SNoTag )
@@ -6450,14 +6441,11 @@ let gen_ind_header_v2
                 mf_ret_type = self_ty;
                 mf_params = [];
                 mf_body = clone_body;
-                mf_is_const = true;
-                mf_is_static = false;
+                mf_receiver = Instance { this_pos = 0; is_const = true; ref_qual = Rq_any };
                 mf_is_inline = false;
-                mf_this_pos = 0;
                 mf_no_pure = true;
                 mf_is_noexcept = false;
-                mf_is_conversion = false;
-                mf_ref_qual = Rq_any; },
+                mf_is_conversion = false },
             VPublic, SAccessors )
         in
         let conversion_field =
@@ -8371,14 +8359,11 @@ let gen_ind_header_v2
                             (Crane_rt.lazy_, [variant_alias_ty])));
                   mf_params = [];
                   mf_body = [Sreturn (Some (CPPvar vmn_id))];
-                  mf_is_const = true;
-                  mf_is_static = false;
+                  mf_receiver = Instance { this_pos = 0; is_const = true; ref_qual = Rq_any };
                   mf_is_inline = false;
-                  mf_this_pos = 0;
                   mf_no_pure = false;
                   mf_is_noexcept = false;
                   mf_is_conversion = false;
-                  mf_ref_qual = Rq_any;
                 },
               VPublic,
               SAccessors ) ]
@@ -8405,14 +8390,11 @@ let gen_ind_header_v2
                                (Adot, CPPvar vmn_id, Id.of_string "force"))
                             [] ) );
                   ];
-                mf_is_const = true;
-                mf_is_static = false;
+                mf_receiver = Instance { this_pos = 0; is_const = true; ref_qual = Rq_any };
                 mf_is_inline = false;
-                mf_this_pos = 0;
                 mf_no_pure = false;
                 mf_is_noexcept = false;
                 mf_is_conversion = false;
-                mf_ref_qual = Rq_any;
               },
             VPublic,
             SAccessors )
@@ -8426,14 +8408,11 @@ let gen_ind_header_v2
                   Tconst (Tref (Lvalue, variant_alias_ty));
                 mf_params = [];
                 mf_body = [Sreturn (Some (CPPvar vmn_id))];
-                mf_is_const = true;
-                mf_is_static = false;
+                mf_receiver = Instance { this_pos = 0; is_const = true; ref_qual = Rq_any };
                 mf_is_inline = false;
-                mf_this_pos = 0;
                 mf_no_pure = false;
                 mf_is_noexcept = false;
                 mf_is_conversion = false;
-                mf_ref_qual = Rq_any;
               },
             VPublic,
             SAccessors )
@@ -8455,14 +8434,11 @@ let gen_ind_header_v2
                   mf_ret_type = Tref (Lvalue, variant_alias_ty);
                   mf_params = [];
                   mf_body = [Sreturn (Some (CPPvar vmn_id))];
-                  mf_is_const = false;
-                  mf_is_static = false;
+                  mf_receiver = Instance { this_pos = 0; is_const = false; ref_qual = Rq_any };
                   mf_is_inline = true;
-                  mf_this_pos = 0;
                   mf_no_pure = true;
                   mf_is_noexcept = false;
                   mf_is_conversion = false;
-                  mf_ref_qual = Rq_any;
                 },
               VPublic,
               SManipulators );
@@ -8493,7 +8469,8 @@ let gen_ind_header_v2
         List.map
           (fun (fld, vis, _tag) ->
             match fld with
-            | Fmethod {mf_is_const = true; _} -> (fld, vis, SAccessors)
+            | Fmethod {mf_receiver = Instance {is_const = true; _}; _} ->
+              (fld, vis, SAccessors)
             | Fmethod _ -> (fld, vis, SManipulators)
             | _ -> (fld, vis, SNoTag) )
           method_fields

@@ -686,15 +686,8 @@ and method_field = {
   mf_ret_type : cpp_type;  (** Return type *)
   mf_params : (Id.t * cpp_type) list;  (** Parameters *)
   mf_body : cpp_stmt list;  (** Method body *)
-  mf_is_const : bool;  (** True if const method *)
-  mf_is_static : bool;  (** True if static method *)
+  mf_receiver : receiver;  (** Whether, and how, the method takes [this] *)
   mf_is_inline : bool;  (** True to emit explicit [inline] keyword *)
-  mf_this_pos : int;
-      (** Original 0-based position of the [this] argument in the extracted
-          function's parameter list. Recursive calls in the method body still
-          use the original argument order, so the loopification checker needs
-          this to extract the receiver from [CPPglob] calls correctly.
-          For most eponymous methods this is [0]. *)
   mf_no_pure : bool;
       (** When true, suppress [__attribute__((pure))] / [constexpr] for this
           method.  Set for methods whose ML return type is monadic — they
@@ -708,9 +701,23 @@ and method_field = {
           return type: it prints as [operator <mf_ret_type>()] with no return
           type of its own, and [mf_name] is only what the doc comment and any
           out-of-line qualifier use. *)
-  mf_ref_qual : ref_qual;
-      (** Which receivers the method takes: see {!ref_qual}. *)
 }
+
+(** A method's receiver.  A static method has none, so it has no position for
+    one and no qualifier to put on it. *)
+and receiver =
+  | Static
+  | Instance of {
+      this_pos : int;
+          (** Original 0-based position of the [this] argument in the
+              extracted function's parameter list.  Recursive calls in the
+              method body still use the original argument order, so the
+              loopification checker needs this to extract the receiver from
+              [CPPglob] calls correctly.  For most eponymous methods this is
+              [0]. *)
+      is_const : bool;  (** A [const] method *)
+      ref_qual : ref_qual;  (** Which receivers it takes: see {!ref_qual}. *)
+    }
 
 (** The ref-qualifier of a method, which receivers it may be called on.  A
     method that hands out a reference into its receiver is only sound on an

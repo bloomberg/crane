@@ -71,6 +71,8 @@ val subst_of_orig :
     at the declared positions.  The one sanctioned crossing. *)
 val subst_at_declared : orig pos -> subst pos
 
-val index : 'k pos -> int
+(** The declared position of a methodified callee's receiver, as the method
+    registry records it. *)
+val of_receiver : int -> orig pos
 
 val equal : 'k pos -> 'k pos -> bool

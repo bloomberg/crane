@@ -9251,7 +9251,12 @@ let transform_method ~tparams ~self_ty mf =
      struct one. *)
   let tparams = tparams @ mf.mf_tparams in
   let n_params = List.length mf.mf_params in
-  let this_pos = mf.mf_this_pos in
+  (* A static method has no receiver to strip from a call: its calls never
+     carry more arguments than it has parameters, so position [0] is never
+     read. *)
+  let this_pos =
+    match mf.mf_receiver with Instance r -> r.this_pos | Static -> 0
+  in
   (* Cofixpoint guard: same reasoning as {!transform_fundef} — if the
      method body is [lazy_]-wrapped, the entire body is deferred inside a
      closure and the method returns in O(1) stack frames.  Loopification
@@ -9265,7 +9270,6 @@ let transform_method ~tparams ~self_ty mf =
      the hoister's own raw-pointer gate. *)
   let mf =
     let n_params = List.length mf.mf_params in
-    let this_pos = mf.mf_this_pos in
     let check =
       method_checker ~n_params ~has_self_param:false ~this_pos
         ?self_ref:mf.mf_globref mf.mf_name

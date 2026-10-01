@@ -1606,7 +1606,7 @@ and extract_from_any ty src_expr =
      fail at runtime whenever [x] stores a concrete type like [Json_value]. *)
   if is_any_type ty then src_expr
   else
-    str (sn ()).any_cast ++ str "<" ++ pp_cpp_type false [] ty ++ str ">(" ++ src_expr ++ str ")"
+    str Crane_rt.obj_cast ++ str "<" ++ pp_cpp_type false [] ty ++ str ">(" ++ src_expr ++ str ")"
 
 (** Strip [shared_ptr] wrapping from all positions in a C++ type.
     Semantic values in [std::any] are always bare; NS-propagated types that
@@ -1628,7 +1628,7 @@ and deque_elem_extract_expr elem_ty src_expr =
     require_header "utility";
     match elem_ty with
     | Tglob (_, [t1; t2], _) ->
-      str "[&]() { const auto& _p = " ++ str (sn ()).any_cast
+      str "[&]() { const auto& _p = " ++ str Crane_rt.obj_cast
       ++ str ("<std::pair<" ^ Crane_rt.obj ^ ", " ^ Crane_rt.obj ^ ">>(") ++ src_expr
       ++ str "); return std::make_pair("
       ++ extract_from_any t1 (str "_p.first") ++ str ", "
@@ -1739,12 +1739,12 @@ and pp_cpp_expr env args t =
                downstream consumer that needs the concrete-element container
                converts it with [crane_container_cast] at its own site. *)
             require_header "any";
-            str (sn ()).any_cast ++ str "<"
+            str Crane_rt.obj_cast ++ str "<"
             ++ pp_cpp_type false [] list_any_ty
             ++ str ">(" ++ Id.print id ++ str ")"
           end else
           pp_cpp_type false [] resolved_ty
-          ++ str "(" ++ str (sn ()).any_cast ++ str "<"
+          ++ str "(" ++ str Crane_rt.obj_cast ++ str "<"
           ++ pp_cpp_type false [] list_any_ty
           ++ str ">(" ++ Id.print id ++ str "))"
         | None -> begin
@@ -1761,11 +1761,11 @@ and pp_cpp_expr env args t =
             str "[&]() -> " ++ ty_pp
             ++ str " { if constexpr (std::is_same_v<" ++ ty_pp
             ++ str (", " ^ Crane_rt.obj ^ ">) return ") ++ Id.print id
-            ++ str "; else return " ++ str (sn ()).any_cast
+            ++ str "; else return " ++ str Crane_rt.obj_cast
             ++ str "<" ++ ty_pp ++ str ">("
             ++ Id.print id ++ str "); }()"
           | _ ->
-            str (sn ()).any_cast ++ str "<" ++ pp_cpp_type false [] resolved_ty
+            str Crane_rt.obj_cast ++ str "<" ++ pp_cpp_type false [] resolved_ty
             ++ str ">(" ++ Id.print id ++ str ")"
         end )
       | None -> Id.print id )
@@ -2310,7 +2310,7 @@ and pp_cpp_expr env args t =
           let elem_s = pp_cpp_type false [] bare_ety in
           let list_any_ty = Tglob (list_g, [Tany], []) in
           let src_s =
-            str (sn ()).any_cast ++ str "<"
+            str Crane_rt.obj_cast ++ str "<"
             ++ pp_cpp_type false [] list_any_ty
             ++ str ">(" ++ Id.print id ++ str ")"
           in
@@ -2393,7 +2393,7 @@ and pp_cpp_expr env args t =
             match e with
             | CPPlambda _ -> e_s
             | _ ->
-              str (sn ()).any_cast
+              str Crane_rt.obj_cast
               ++ str "<"
               ++ pp_cpp_type false [] ty
               ++ str ">("
@@ -2785,7 +2785,7 @@ and pp_cpp_expr env args t =
     let caster =
       match t with
       | CPPany_cast_tolerant _ -> Crane_rt.any_cast
-      | _ -> (sn ()).any_cast
+      | _ -> Crane_rt.obj_cast
     in
     str caster ++ str "<" ++ pp_cpp_type false [] ty ++ str ">(" ++ inner
     ++ str ")"
@@ -2802,7 +2802,7 @@ and pp_cpp_expr env args t =
        can be recovered at; each application yields a [std::any] in turn. *)
     require_header "any";
     require_header "functional";
-    str (sn ()).any_cast
+    str Crane_rt.obj_cast
     ++ str "<"
     ++ pp_cpp_type false [] (Tfun ([Tany], Tany))
     ++ str ">("
@@ -2830,7 +2830,7 @@ and pp_cpp_expr env args t =
     if suppress_boxing then suppress_elem_boxing := true;
     let ty_pp = pp_cpp_type false [] ty in
     suppress_elem_boxing := saved;
-    str "crane_container_cast<"
+    str Crane_rt.container_cast ++ str "<"
     ++ ty_pp
     ++ str ">("
     ++ pp_cpp_expr env args e
@@ -2966,7 +2966,7 @@ and pp_cpp_stmt env args = function
     | Pstated _ -> mt () )
   (* Reuse optimization constructs *)
   | Sif_constexpr (Tt_convertible (t1, t2), then_stmts, else_stmts) ->
-    str "if constexpr (crane_convertible<"
+    str "if constexpr (" ++ str Crane_rt.convertible ++ str "<"
     ++ pp_cpp_type false [] t1
     ++ str ", "
     ++ pp_cpp_type false [] t2
@@ -3471,7 +3471,7 @@ and wrap_any_cast_if_needed expr expr_printed expected_ty vl =
      && is_concrete_cpp_type expected_ty in
   if fires then
     let resolved_ty = Ml_type_util.resolve_tvars_to_any expected_ty in
-    str (sn ()).any_cast
+    str Crane_rt.obj_cast
     ++ str "<"
     ++ pp_cpp_type false vl resolved_ty
     ++ str ">("
@@ -3821,7 +3821,7 @@ and pp_custom ?container custom env typ t tyargs cases args arg_types vl cmds =
             require_header "any";
             let bare_ety = bare_elem_ty elem_ty in
             let elem_s = pp_cpp_type false [] bare_ety in
-            let src_s = str (sn ()).any_cast ++ str "<"
+            let src_s = str Crane_rt.obj_cast ++ str "<"
                         ++ pp_cpp_type false [] list_any_ty
                         ++ str ">(" ++ Id.print id ++ str ")" in
             let cast_e = deque_elem_extract_expr bare_ety (str "_e") in
@@ -4269,22 +4269,24 @@ let rec pp_cpp_field
         mf_ret_type;
         mf_params;
         mf_body;
-        mf_is_const;
-        mf_ref_qual;
-        mf_is_static;
+        mf_receiver;
         mf_is_inline;
         mf_no_pure;
         mf_is_noexcept;
         mf_is_conversion;
       } ->
     let const_s =
-      (if mf_is_const then str " const" else mt ())
-      ++
-      match mf_ref_qual with
-      | Rq_any -> mt ()
-      | Rq_lvalue -> str " &"
-      | Rq_rvalue -> str " &&"
+      match mf_receiver with
+      | Static -> mt ()
+      | Instance {is_const; ref_qual; _} -> (
+        (if is_const then str " const" else mt ())
+        ++
+        match ref_qual with
+        | Rq_any -> mt ()
+        | Rq_lvalue -> str " &"
+        | Rq_rvalue -> str " &&" )
     in
+    let mf_is_static = mf_receiver = Static in
     let noexcept_s = if mf_is_noexcept then str " noexcept" else mt () in
     (* [static] belongs to the declaration alone, and an out-of-line
        definition in a header needs [inline] unless a template already

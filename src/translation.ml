@@ -11951,7 +11951,11 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
         | _ -> (ml_arg, None)
       in
       let param_expected_at params pos =
-        param_expected_cpp_ty env (Param_pos.to_list params) (Param_pos.index pos)
+        match Param_pos.nth params pos with
+        | Some ml_ty ->
+          let cpp_ty = cpp_of_ml env ml_ty in
+          if prints_as_any cpp_ty then None else Some cpp_ty
+        | None -> None
       in
       (* The concrete types come from the substituted parameter type, but its
          {e arity} must come from the unsubstituted one: substituting a
@@ -12244,7 +12248,8 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
         in
         match Cpp_names.lookup_method_this_pos id with
         | Some pos
-          when pos = Param_pos.index param_index && receiver_is_boxed -> (
+          when Param_pos.equal (Param_pos.of_receiver pos) param_index
+               && receiver_is_boxed -> (
           match param_expected_subst () with
           | Some into when not (prints_as_any into) ->
             coerce ~from:Tany ~into expr

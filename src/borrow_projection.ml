@@ -22,8 +22,10 @@ let rec reads_this e =
    match on [this], borrowed, whose body returns one of the fields it
    binds. *)
 let is_projection m =
-  (not m.mf_is_static) && m.mf_is_const && m.mf_params = []
-  && m.mf_ref_qual = Rq_any && (not m.mf_is_conversion)
+  ( match m.mf_receiver with
+  | Instance {is_const = true; ref_qual = Rq_any; _} -> true
+  | _ -> false )
+  && m.mf_params = [] && not m.mf_is_conversion
   && ( match m.mf_ret_type with
      | Tref _ | Tvoid -> false
      | _ -> true )
@@ -42,8 +44,16 @@ let is_projection m =
    receiver, and a copy for a temporary one, which dies at the end of the
    full expression that called it. *)
 let split m =
-  [ Fmethod {m with mf_ret_type = Tref (Lvalue, Tconst m.mf_ret_type); mf_ref_qual = Rq_lvalue};
-    Fmethod {m with mf_ref_qual = Rq_rvalue} ]
+  let with_ref_qual ref_qual =
+    match m.mf_receiver with
+    | Instance r -> Instance {r with ref_qual}
+    | Static -> Static
+  in
+  [ Fmethod
+      { m with
+        mf_ret_type = Tref (Lvalue, Tconst m.mf_ret_type);
+        mf_receiver = with_ref_qual Rq_lvalue };
+    Fmethod {m with mf_receiver = with_ref_qual Rq_rvalue} ]
 
 let fields fs =
   List.concat_map
