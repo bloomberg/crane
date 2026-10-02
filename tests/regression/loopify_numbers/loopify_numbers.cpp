@@ -10,16 +10,16 @@ LoopifyNumbers::factorial(uint64_t n) { /// _Enter: captures varying parameters
     uint64_t n;
   };
 
-  /// _Resume_m: saves [n], resumes after recursive call with _result.
-  struct _Resume_m {
+  /// _Cont_m: saves [n], resumes after recursive call, then processes rest.
+  struct _Cont_m {
     uint64_t n;
   };
 
-  using _Frame = std::variant<_Enter, _Resume_m>;
+  using _Frame = std::variant<_Enter, _Cont_m>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
-  /// Loopified factorial: _Enter -> _Resume_m.
+  /// Loopified factorial: _Enter -> _Cont_m.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -30,12 +30,14 @@ LoopifyNumbers::factorial(uint64_t n) { /// _Enter: captures varying parameters
         _result = UINT64_C(1);
       } else {
         uint64_t m = n - 1;
-        _stack.emplace_back(_Resume_m{n});
+        _stack.emplace_back(_Cont_m{n});
         _stack.emplace_back(_Enter{m});
       }
     } else {
-      auto _f = std::move(std::get<_Resume_m>(_frame));
-      _result = (_f.n * std::move(_result));
+      auto _f = std::move(std::get<_Cont_m>(_frame));
+      uint64_t n = _f.n;
+      uint64_t r_ = std::move(_result);
+      _result = (n * r_);
     }
   }
   return _result;
@@ -49,22 +51,21 @@ LoopifyNumbers::fib(uint64_t n) { /// _Enter: captures varying parameters for
     uint64_t n;
   };
 
-  /// _After_m: saves [n_], dispatches next recursive call.
-  struct _After_m {
-    uint64_t n_;
+  /// _Cont_m: saves [m], resumes after recursive call, then processes rest.
+  struct _Cont_m {
+    uint64_t m;
   };
 
-  /// _Combine_m: receives partial results, combines with _result from final
-  /// call.
-  struct _Combine_m {
-    uint64_t _result;
+  /// _Cont_m_1: saves [r_], resumes after recursive call, then processes rest.
+  struct _Cont_m_1 {
+    uint64_t r_;
   };
 
-  using _Frame = std::variant<_Enter, _After_m, _Combine_m>;
+  using _Frame = std::variant<_Enter, _Cont_m, _Cont_m_1>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
-  /// Loopified fib: _Enter -> _After_m -> _Combine_m.
+  /// Loopified fib: _Enter -> _Cont_m -> _Cont_m_1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -79,17 +80,21 @@ LoopifyNumbers::fib(uint64_t n) { /// _Enter: captures varying parameters for
           _result = UINT64_C(1);
         } else {
           uint64_t m = n_ - 1;
-          _stack.emplace_back(_After_m{n_});
-          _stack.emplace_back(_Enter{m});
+          _stack.emplace_back(_Cont_m{m});
+          _stack.emplace_back(_Enter{n_});
         }
       }
-    } else if (std::holds_alternative<_After_m>(_frame)) {
-      auto _f = std::move(std::get<_After_m>(_frame));
-      _stack.emplace_back(_Combine_m{std::move(_result)});
-      _stack.emplace_back(_Enter{_f.n_});
+    } else if (std::holds_alternative<_Cont_m>(_frame)) {
+      auto _f = std::move(std::get<_Cont_m>(_frame));
+      uint64_t m = _f.m;
+      uint64_t r_ = std::move(_result);
+      _stack.emplace_back(_Cont_m_1{r_});
+      _stack.emplace_back(_Enter{m});
     } else {
-      auto _f = std::move(std::get<_Combine_m>(_frame));
-      _result = (std::move(_result) + std::move(_f._result));
+      auto _f = std::move(std::get<_Cont_m_1>(_frame));
+      uint64_t r_ = _f.r_;
+      uint64_t r_0 = std::move(_result);
+      _result = (r_ + r_0);
     }
   }
   return _result;
@@ -105,33 +110,32 @@ uint64_t LoopifyNumbers::tribonacci_fuel(
     uint64_t fuel;
   };
 
-  /// _After_m: saves [m, f_0, _s2, f_1], dispatches next recursive call.
-  struct _After_m {
-    uint64_t m;
-    uint64_t f_0;
-    uint64_t _s2;
-    uint64_t f_1;
-  };
-
-  /// _After_m_1: saves [_result, _s1, f], dispatches next recursive call.
-  struct _After_m_1 {
-    uint64_t _result;
-    uint64_t _s1;
+  /// _Cont_m: saves [f, m], resumes after recursive call, then processes rest.
+  struct _Cont_m {
     uint64_t f;
+    uint64_t m;
   };
 
-  /// _Combine_m: receives partial results, combines with _result from final
-  /// call.
-  struct _Combine_m {
-    uint64_t _result_0;
-    uint64_t _result_1;
+  /// _Cont_m_1: saves [f, m, r_], resumes after recursive call, then processes
+  /// rest.
+  struct _Cont_m_1 {
+    uint64_t f;
+    uint64_t m;
+    uint64_t r_;
   };
 
-  using _Frame = std::variant<_Enter, _After_m, _After_m_1, _Combine_m>;
+  /// _Cont_m_2: saves [r_, r_0], resumes after recursive call, then processes
+  /// rest.
+  struct _Cont_m_2 {
+    uint64_t r_;
+    uint64_t r_0;
+  };
+
+  using _Frame = std::variant<_Enter, _Cont_m, _Cont_m_1, _Cont_m_2>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n, fuel});
-  /// Loopified tribonacci_fuel: _Enter -> _After_m -> _After_m_1 -> _Combine_m.
+  /// Loopified tribonacci_fuel: _Enter -> _Cont_m -> _Cont_m_1 -> _Cont_m_2.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -155,23 +159,33 @@ uint64_t LoopifyNumbers::tribonacci_fuel(
               _result = UINT64_C(1);
             } else {
               uint64_t m = n1 - 1;
-              _stack.emplace_back(_After_m{(m + 1), f, ((m + 1) + 1), f});
-              _stack.emplace_back(_Enter{m, f});
+              _stack.emplace_back(_Cont_m{f, m});
+              _stack.emplace_back(_Enter{((m + 1) + 1), f});
             }
           }
         }
       }
-    } else if (std::holds_alternative<_After_m>(_frame)) {
-      auto _f = std::move(std::get<_After_m>(_frame));
-      _stack.emplace_back(_After_m_1{std::move(_result), _f._s2, _f.f_1});
-      _stack.emplace_back(_Enter{_f.m, _f.f_0});
-    } else if (std::holds_alternative<_After_m_1>(_frame)) {
-      auto _f = std::move(std::get<_After_m_1>(_frame));
-      _stack.emplace_back(_Combine_m{_f._result, std::move(_result)});
-      _stack.emplace_back(_Enter{_f._s1, _f.f});
+    } else if (std::holds_alternative<_Cont_m>(_frame)) {
+      auto _f = std::move(std::get<_Cont_m>(_frame));
+      uint64_t f = _f.f;
+      uint64_t m = _f.m;
+      uint64_t r_ = std::move(_result);
+      _stack.emplace_back(_Cont_m_1{f, m, r_});
+      _stack.emplace_back(_Enter{(m + 1), f});
+    } else if (std::holds_alternative<_Cont_m_1>(_frame)) {
+      auto _f = std::move(std::get<_Cont_m_1>(_frame));
+      uint64_t f = _f.f;
+      uint64_t m = _f.m;
+      uint64_t r_ = _f.r_;
+      uint64_t r_0 = std::move(_result);
+      _stack.emplace_back(_Cont_m_2{r_, r_0});
+      _stack.emplace_back(_Enter{m, f});
     } else {
-      auto _f = std::move(std::get<_Combine_m>(_frame));
-      _result = (std::move(_result) + (_f._result_1 + _f._result_0));
+      auto _f = std::move(std::get<_Cont_m_2>(_frame));
+      uint64_t r_ = _f.r_;
+      uint64_t r_0 = _f.r_0;
+      uint64_t r_1 = std::move(_result);
+      _result = (r_ + (r_0 + r_1));
     }
   }
   return _result;
@@ -218,23 +232,23 @@ LoopifyNumbers::binomial(uint64_t n,
     uint64_t n;
   };
 
-  /// _After_k_: saves [k_, n_], dispatches next recursive call.
-  struct _After_k_ {
-    uint64_t k_;
+  /// _Cont_k_: saves [k, n_], resumes after recursive call, then processes
+  /// rest.
+  struct _Cont_k_ {
+    uint64_t k;
     uint64_t n_;
   };
 
-  /// _Combine_k_: receives partial results, combines with _result from final
-  /// call.
-  struct _Combine_k_ {
-    uint64_t _result;
+  /// _Cont_k__1: saves [r_], resumes after recursive call, then processes rest.
+  struct _Cont_k__1 {
+    uint64_t r_;
   };
 
-  using _Frame = std::variant<_Enter, _After_k_, _Combine_k_>;
+  using _Frame = std::variant<_Enter, _Cont_k_, _Cont_k__1>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{k, n});
-  /// Loopified binomial: _Enter -> _After_k_ -> _Combine_k_.
+  /// Loopified binomial: _Enter -> _Cont_k_ -> _Cont_k__1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -255,17 +269,22 @@ LoopifyNumbers::binomial(uint64_t n,
           _result = UINT64_C(1);
         } else {
           uint64_t k_ = k - 1;
-          _stack.emplace_back(_After_k_{k_, n_});
-          _stack.emplace_back(_Enter{k, n_});
+          _stack.emplace_back(_Cont_k_{k, n_});
+          _stack.emplace_back(_Enter{k_, n_});
         }
       }
-    } else if (std::holds_alternative<_After_k_>(_frame)) {
-      auto _f = std::move(std::get<_After_k_>(_frame));
-      _stack.emplace_back(_Combine_k_{std::move(_result)});
-      _stack.emplace_back(_Enter{_f.k_, _f.n_});
+    } else if (std::holds_alternative<_Cont_k_>(_frame)) {
+      auto _f = std::move(std::get<_Cont_k_>(_frame));
+      uint64_t k = _f.k;
+      uint64_t n_ = _f.n_;
+      uint64_t r_ = std::move(_result);
+      _stack.emplace_back(_Cont_k__1{r_});
+      _stack.emplace_back(_Enter{k, n_});
     } else {
-      auto _f = std::move(std::get<_Combine_k_>(_frame));
-      _result = (std::move(_result) + std::move(_f._result));
+      auto _f = std::move(std::get<_Cont_k__1>(_frame));
+      uint64_t r_ = _f.r_;
+      uint64_t r_0 = std::move(_result);
+      _result = (r_ + r_0);
     }
   }
   return _result;
@@ -281,23 +300,22 @@ LoopifyNumbers::pascal(uint64_t row,
     uint64_t row;
   };
 
-  /// _After_r: saves [c, r], dispatches next recursive call.
-  struct _After_r {
+  /// _Cont_r: saves [c, r], resumes after recursive call, then processes rest.
+  struct _Cont_r {
     uint64_t c;
     uint64_t r;
   };
 
-  /// _Combine_r: receives partial results, combines with _result from final
-  /// call.
-  struct _Combine_r {
-    uint64_t _result;
+  /// _Cont_r_1: saves [r_], resumes after recursive call, then processes rest.
+  struct _Cont_r_1 {
+    uint64_t r_;
   };
 
-  using _Frame = std::variant<_Enter, _After_r, _Combine_r>;
+  using _Frame = std::variant<_Enter, _Cont_r, _Cont_r_1>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{col, row});
-  /// Loopified pascal: _Enter -> _After_r -> _Combine_r.
+  /// Loopified pascal: _Enter -> _Cont_r -> _Cont_r_1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -313,17 +331,22 @@ LoopifyNumbers::pascal(uint64_t row,
           _result = UINT64_C(0);
         } else {
           uint64_t r = row - 1;
-          _stack.emplace_back(_After_r{c, r});
-          _stack.emplace_back(_Enter{(c + 1), r});
+          _stack.emplace_back(_Cont_r{c, r});
+          _stack.emplace_back(_Enter{c, r});
         }
       }
-    } else if (std::holds_alternative<_After_r>(_frame)) {
-      auto _f = std::move(std::get<_After_r>(_frame));
-      _stack.emplace_back(_Combine_r{std::move(_result)});
-      _stack.emplace_back(_Enter{_f.c, _f.r});
+    } else if (std::holds_alternative<_Cont_r>(_frame)) {
+      auto _f = std::move(std::get<_Cont_r>(_frame));
+      uint64_t c = _f.c;
+      uint64_t r = _f.r;
+      uint64_t r_ = std::move(_result);
+      _stack.emplace_back(_Cont_r_1{r_});
+      _stack.emplace_back(_Enter{(c + 1), r});
     } else {
-      auto _f = std::move(std::get<_Combine_r>(_frame));
-      _result = (std::move(_result) + std::move(_f._result));
+      auto _f = std::move(std::get<_Cont_r_1>(_frame));
+      uint64_t r_ = _f.r_;
+      uint64_t r_0 = std::move(_result);
+      _result = (r_ + r_0);
     }
   }
   return _result;
@@ -340,17 +363,18 @@ uint64_t LoopifyNumbers::ackermann_fuel(
     uint64_t fuel;
   };
 
-  /// _Resume_n_: saves [m_, f], resumes after recursive call with _result.
-  struct _Resume_n_ {
-    uint64_t m_;
+  /// _Cont_n_: saves [f, m_], resumes after recursive call, then processes
+  /// rest.
+  struct _Cont_n_ {
     uint64_t f;
+    uint64_t m_;
   };
 
-  using _Frame = std::variant<_Enter, _Resume_n_>;
+  using _Frame = std::variant<_Enter, _Cont_n_>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n, m, fuel});
-  /// Loopified ackermann_fuel: _Enter -> _Resume_n_.
+  /// Loopified ackermann_fuel: _Enter -> _Cont_n_.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -371,14 +395,17 @@ uint64_t LoopifyNumbers::ackermann_fuel(
             _stack.emplace_back(_Enter{UINT64_C(1), m_, f});
           } else {
             uint64_t n_ = n - 1;
-            _stack.emplace_back(_Resume_n_{m_, f});
+            _stack.emplace_back(_Cont_n_{f, m_});
             _stack.emplace_back(_Enter{n_, m, f});
           }
         }
       }
     } else {
-      auto _f = std::move(std::get<_Resume_n_>(_frame));
-      _stack.emplace_back(_Enter{std::move(_result), _f.m_, _f.f});
+      auto _f = std::move(std::get<_Cont_n_>(_frame));
+      uint64_t f = _f.f;
+      uint64_t m_ = _f.m_;
+      uint64_t r_ = std::move(_result);
+      _stack.emplace_back(_Enter{r_, m_, f});
     }
   }
   return _result;
@@ -457,16 +484,16 @@ uint64_t LoopifyNumbers::digitsum_fuel(
     uint64_t fuel;
   };
 
-  /// _Resume__x: saves [_s0], resumes after recursive call with _result.
-  struct _Resume__x {
-    uint64_t _s0;
+  /// _Cont__x: saves [n], resumes after recursive call, then processes rest.
+  struct _Cont__x {
+    uint64_t n;
   };
 
-  using _Frame = std::variant<_Enter, _Resume__x>;
+  using _Frame = std::variant<_Enter, _Cont__x>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n, fuel});
-  /// Loopified digitsum_fuel: _Enter -> _Resume__x.
+  /// Loopified digitsum_fuel: _Enter -> _Cont__x.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -482,14 +509,15 @@ uint64_t LoopifyNumbers::digitsum_fuel(
           _result = UINT64_C(0);
         } else {
           uint64_t _x = n - 1;
-          _stack.emplace_back(
-              _Resume__x{(UINT64_C(10) ? n % UINT64_C(10) : n)});
+          _stack.emplace_back(_Cont__x{n});
           _stack.emplace_back(_Enter{(UINT64_C(10) ? n / UINT64_C(10) : 0), f});
         }
       }
     } else {
-      auto _f = std::move(std::get<_Resume__x>(_frame));
-      _result = (_f._s0 + std::move(_result));
+      auto _f = std::move(std::get<_Cont__x>(_frame));
+      uint64_t n = _f.n;
+      uint64_t r_ = std::move(_result);
+      _result = ((UINT64_C(10) ? n % UINT64_C(10) : n) + r_);
     }
   }
   return _result;
@@ -562,16 +590,16 @@ LoopifyNumbers::sum_to(uint64_t n) { /// _Enter: captures varying parameters for
     uint64_t n;
   };
 
-  /// _Resume_m: saves [n], resumes after recursive call with _result.
-  struct _Resume_m {
+  /// _Cont_m: saves [n], resumes after recursive call, then processes rest.
+  struct _Cont_m {
     uint64_t n;
   };
 
-  using _Frame = std::variant<_Enter, _Resume_m>;
+  using _Frame = std::variant<_Enter, _Cont_m>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
-  /// Loopified sum_to: _Enter -> _Resume_m.
+  /// Loopified sum_to: _Enter -> _Cont_m.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -582,12 +610,14 @@ LoopifyNumbers::sum_to(uint64_t n) { /// _Enter: captures varying parameters for
         _result = UINT64_C(0);
       } else {
         uint64_t m = n - 1;
-        _stack.emplace_back(_Resume_m{n});
+        _stack.emplace_back(_Cont_m{n});
         _stack.emplace_back(_Enter{m});
       }
     } else {
-      auto _f = std::move(std::get<_Resume_m>(_frame));
-      _result = (_f.n + std::move(_result));
+      auto _f = std::move(std::get<_Cont_m>(_frame));
+      uint64_t n = _f.n;
+      uint64_t r_ = std::move(_result);
+      _result = (n + r_);
     }
   }
   return _result;
@@ -601,16 +631,16 @@ uint64_t LoopifyNumbers::sum_squares(
     uint64_t n;
   };
 
-  /// _Resume_m: saves [_s0], resumes after recursive call with _result.
-  struct _Resume_m {
-    uint64_t _s0;
+  /// _Cont_m: saves [n], resumes after recursive call, then processes rest.
+  struct _Cont_m {
+    uint64_t n;
   };
 
-  using _Frame = std::variant<_Enter, _Resume_m>;
+  using _Frame = std::variant<_Enter, _Cont_m>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
-  /// Loopified sum_squares: _Enter -> _Resume_m.
+  /// Loopified sum_squares: _Enter -> _Cont_m.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -621,12 +651,14 @@ uint64_t LoopifyNumbers::sum_squares(
         _result = UINT64_C(0);
       } else {
         uint64_t m = n - 1;
-        _stack.emplace_back(_Resume_m{(n * n)});
+        _stack.emplace_back(_Cont_m{n});
         _stack.emplace_back(_Enter{m});
       }
     } else {
-      auto _f = std::move(std::get<_Resume_m>(_frame));
-      _result = (_f._s0 + std::move(_result));
+      auto _f = std::move(std::get<_Cont_m>(_frame));
+      uint64_t n = _f.n;
+      uint64_t r_ = std::move(_result);
+      _result = ((n * n) + r_);
     }
   }
   return _result;
@@ -665,33 +697,32 @@ uint64_t LoopifyNumbers::staircase_fuel(
     uint64_t fuel;
   };
 
-  /// _After_m: saves [m, f_0, _s2, f_1], dispatches next recursive call.
-  struct _After_m {
-    uint64_t m;
-    uint64_t f_0;
-    uint64_t _s2;
-    uint64_t f_1;
-  };
-
-  /// _After_m_1: saves [_result, _s1, f], dispatches next recursive call.
-  struct _After_m_1 {
-    uint64_t _result;
-    uint64_t _s1;
+  /// _Cont_m: saves [f, m], resumes after recursive call, then processes rest.
+  struct _Cont_m {
     uint64_t f;
+    uint64_t m;
   };
 
-  /// _Combine_m: receives partial results, combines with _result from final
-  /// call.
-  struct _Combine_m {
-    uint64_t _result_0;
-    uint64_t _result_1;
+  /// _Cont_m_1: saves [f, m, r_], resumes after recursive call, then processes
+  /// rest.
+  struct _Cont_m_1 {
+    uint64_t f;
+    uint64_t m;
+    uint64_t r_;
   };
 
-  using _Frame = std::variant<_Enter, _After_m, _After_m_1, _Combine_m>;
+  /// _Cont_m_2: saves [r_, r_0], resumes after recursive call, then processes
+  /// rest.
+  struct _Cont_m_2 {
+    uint64_t r_;
+    uint64_t r_0;
+  };
+
+  using _Frame = std::variant<_Enter, _Cont_m, _Cont_m_1, _Cont_m_2>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n, fuel});
-  /// Loopified staircase_fuel: _Enter -> _After_m -> _After_m_1 -> _Combine_m.
+  /// Loopified staircase_fuel: _Enter -> _Cont_m -> _Cont_m_1 -> _Cont_m_2.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -715,23 +746,33 @@ uint64_t LoopifyNumbers::staircase_fuel(
               _result = UINT64_C(2);
             } else {
               uint64_t m = n1 - 1;
-              _stack.emplace_back(_After_m{(m + 1), f, ((m + 1) + 1), f});
-              _stack.emplace_back(_Enter{m, f});
+              _stack.emplace_back(_Cont_m{f, m});
+              _stack.emplace_back(_Enter{((m + 1) + 1), f});
             }
           }
         }
       }
-    } else if (std::holds_alternative<_After_m>(_frame)) {
-      auto _f = std::move(std::get<_After_m>(_frame));
-      _stack.emplace_back(_After_m_1{std::move(_result), _f._s2, _f.f_1});
-      _stack.emplace_back(_Enter{_f.m, _f.f_0});
-    } else if (std::holds_alternative<_After_m_1>(_frame)) {
-      auto _f = std::move(std::get<_After_m_1>(_frame));
-      _stack.emplace_back(_Combine_m{_f._result, std::move(_result)});
-      _stack.emplace_back(_Enter{_f._s1, _f.f});
+    } else if (std::holds_alternative<_Cont_m>(_frame)) {
+      auto _f = std::move(std::get<_Cont_m>(_frame));
+      uint64_t f = _f.f;
+      uint64_t m = _f.m;
+      uint64_t r_ = std::move(_result);
+      _stack.emplace_back(_Cont_m_1{f, m, r_});
+      _stack.emplace_back(_Enter{(m + 1), f});
+    } else if (std::holds_alternative<_Cont_m_1>(_frame)) {
+      auto _f = std::move(std::get<_Cont_m_1>(_frame));
+      uint64_t f = _f.f;
+      uint64_t m = _f.m;
+      uint64_t r_ = _f.r_;
+      uint64_t r_0 = std::move(_result);
+      _stack.emplace_back(_Cont_m_2{r_, r_0});
+      _stack.emplace_back(_Enter{m, f});
     } else {
-      auto _f = std::move(std::get<_Combine_m>(_frame));
-      _result = (std::move(_result) + (_f._result_1 + _f._result_0));
+      auto _f = std::move(std::get<_Cont_m_2>(_frame));
+      uint64_t r_ = _f.r_;
+      uint64_t r_0 = _f.r_0;
+      uint64_t r_1 = std::move(_result);
+      _result = (r_ + (r_0 + r_1));
     }
   }
   return _result;
@@ -767,16 +808,16 @@ uint64_t LoopifyNumbers::sum_while_positive(
     uint64_t n;
   };
 
-  /// _Resume_m: saves [n], resumes after recursive call with _result.
-  struct _Resume_m {
+  /// _Cont_m: saves [n], resumes after recursive call, then processes rest.
+  struct _Cont_m {
     uint64_t n;
   };
 
-  using _Frame = std::variant<_Enter, _Resume_m>;
+  using _Frame = std::variant<_Enter, _Cont_m>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
-  /// Loopified sum_while_positive: _Enter -> _Resume_m.
+  /// Loopified sum_while_positive: _Enter -> _Cont_m.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -787,12 +828,14 @@ uint64_t LoopifyNumbers::sum_while_positive(
         _result = UINT64_C(0);
       } else {
         uint64_t m = n - 1;
-        _stack.emplace_back(_Resume_m{n});
+        _stack.emplace_back(_Cont_m{n});
         _stack.emplace_back(_Enter{m});
       }
     } else {
-      auto _f = std::move(std::get<_Resume_m>(_frame));
-      _result = (_f.n + std::move(_result));
+      auto _f = std::move(std::get<_Cont_m>(_frame));
+      uint64_t n = _f.n;
+      uint64_t r_ = std::move(_result);
+      _result = (n + r_);
     }
   }
   return _result;
@@ -864,34 +907,32 @@ uint64_t LoopifyNumbers::mixed_arith_fuel(
     uint64_t fuel;
   };
 
-  /// _After_m: saves [m, f_0, n_, f_1], dispatches next recursive call.
-  struct _After_m {
-    uint64_t m;
-    uint64_t f_0;
-    uint64_t n_;
-    uint64_t f_1;
-  };
-
-  /// _After_m_1: saves [_result, n_, f], dispatches next recursive call.
-  struct _After_m_1 {
-    uint64_t _result;
-    uint64_t n_;
+  /// _Cont_m: saves [f, m], resumes after recursive call, then processes rest.
+  struct _Cont_m {
     uint64_t f;
+    uint64_t m;
   };
 
-  /// _Combine_m: receives partial results, combines with _result from final
-  /// call.
-  struct _Combine_m {
-    uint64_t _result_0;
-    uint64_t _result_1;
+  /// _Cont_m_1: saves [f, m, r_], resumes after recursive call, then processes
+  /// rest.
+  struct _Cont_m_1 {
+    uint64_t f;
+    uint64_t m;
+    uint64_t r_;
   };
 
-  using _Frame = std::variant<_Enter, _After_m, _After_m_1, _Combine_m>;
+  /// _Cont_m_2: saves [r_, r_0], resumes after recursive call, then processes
+  /// rest.
+  struct _Cont_m_2 {
+    uint64_t r_;
+    uint64_t r_0;
+  };
+
+  using _Frame = std::variant<_Enter, _Cont_m, _Cont_m_1, _Cont_m_2>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n, fuel});
-  /// Loopified mixed_arith_fuel: _Enter -> _After_m -> _After_m_1 ->
-  /// _Combine_m.
+  /// Loopified mixed_arith_fuel: _Enter -> _Cont_m -> _Cont_m_1 -> _Cont_m_2.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -915,27 +956,37 @@ uint64_t LoopifyNumbers::mixed_arith_fuel(
               _result = UINT64_C(1);
             } else {
               uint64_t m = n_ - 1;
-              _stack.emplace_back(_After_m{m, f, n_, f});
-              _stack.emplace_back(_Enter{
-                  (m == UINT64_C(0)
-                       ? UINT64_C(0)
-                       : (((m - UINT64_C(1)) > m ? 0 : (m - UINT64_C(1))))),
-                  f});
+              _stack.emplace_back(_Cont_m{f, m});
+              _stack.emplace_back(_Enter{n_, f});
             }
           }
         }
       }
-    } else if (std::holds_alternative<_After_m>(_frame)) {
-      auto _f = std::move(std::get<_After_m>(_frame));
-      _stack.emplace_back(_After_m_1{std::move(_result), _f.n_, _f.f_1});
-      _stack.emplace_back(_Enter{_f.m, _f.f_0});
-    } else if (std::holds_alternative<_After_m_1>(_frame)) {
-      auto _f = std::move(std::get<_After_m_1>(_frame));
-      _stack.emplace_back(_Combine_m{_f._result, std::move(_result)});
-      _stack.emplace_back(_Enter{_f.n_, _f.f});
+    } else if (std::holds_alternative<_Cont_m>(_frame)) {
+      auto _f = std::move(std::get<_Cont_m>(_frame));
+      uint64_t f = _f.f;
+      uint64_t m = _f.m;
+      uint64_t r_ = std::move(_result);
+      _stack.emplace_back(_Cont_m_1{f, m, r_});
+      _stack.emplace_back(_Enter{m, f});
+    } else if (std::holds_alternative<_Cont_m_1>(_frame)) {
+      auto _f = std::move(std::get<_Cont_m_1>(_frame));
+      uint64_t f = _f.f;
+      uint64_t m = _f.m;
+      uint64_t r_ = _f.r_;
+      uint64_t r_0 = std::move(_result);
+      _stack.emplace_back(_Cont_m_2{r_, r_0});
+      _stack.emplace_back(
+          _Enter{(m == UINT64_C(0)
+                      ? UINT64_C(0)
+                      : (((m - UINT64_C(1)) > m ? 0 : (m - UINT64_C(1))))),
+                 f});
     } else {
-      auto _f = std::move(std::get<_Combine_m>(_frame));
-      _result = ((std::move(_result) * _f._result_1) + _f._result_0);
+      auto _f = std::move(std::get<_Cont_m_2>(_frame));
+      uint64_t r_ = _f.r_;
+      uint64_t r_0 = _f.r_0;
+      uint64_t r_1 = std::move(_result);
+      _result = ((r_ * r_0) + r_1);
     }
   }
   return _result;
@@ -1026,14 +1077,14 @@ LoopifyNumbers::power(uint64_t b,
     uint64_t e;
   };
 
-  /// _Resume_e_: resumes after recursive call with _result.
-  struct _Resume_e_ {};
+  /// _Cont_e_: resumes after recursive call, then processes rest.
+  struct _Cont_e_ {};
 
-  using _Frame = std::variant<_Enter, _Resume_e_>;
+  using _Frame = std::variant<_Enter, _Cont_e_>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{e});
-  /// Loopified power: _Enter -> _Resume_e_.
+  /// Loopified power: _Enter -> _Cont_e_.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -1044,12 +1095,13 @@ LoopifyNumbers::power(uint64_t b,
         _result = UINT64_C(1);
       } else {
         uint64_t e_ = e - 1;
-        _stack.emplace_back(_Resume_e_{});
+        _stack.emplace_back(_Cont_e_{});
         _stack.emplace_back(_Enter{e_});
       }
     } else {
-      auto _f = std::move(std::get<_Resume_e_>(_frame));
-      _result = (b * std::move(_result));
+      auto _f = std::move(std::get<_Cont_e_>(_frame));
+      uint64_t r_ = std::move(_result);
+      _result = (b * r_);
     }
   }
   return _result;
@@ -1127,16 +1179,16 @@ uint64_t LoopifyNumbers::sum_divisors_aux(
     uint64_t k;
   };
 
-  /// _Resume1: saves [k], resumes after recursive call with _result.
-  struct _Resume1 {
+  /// _Cont1: saves [k], resumes after recursive call, then processes rest.
+  struct _Cont1 {
     uint64_t k;
   };
 
-  using _Frame = std::variant<_Enter, _Resume1>;
+  using _Frame = std::variant<_Enter, _Cont1>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{k});
-  /// Loopified sum_divisors_aux: _Enter -> _Resume1.
+  /// Loopified sum_divisors_aux: _Enter -> _Cont1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -1152,7 +1204,7 @@ uint64_t LoopifyNumbers::sum_divisors_aux(
         } else {
           uint64_t _x = k_ - 1;
           if ((k ? n % k : n) == UINT64_C(0)) {
-            _stack.emplace_back(_Resume1{k});
+            _stack.emplace_back(_Cont1{k});
             _stack.emplace_back(_Enter{k_});
           } else {
             _stack.emplace_back(_Enter{k_});
@@ -1160,8 +1212,10 @@ uint64_t LoopifyNumbers::sum_divisors_aux(
         }
       }
     } else {
-      auto _f = std::move(std::get<_Resume1>(_frame));
-      _result = (_f.k + std::move(_result));
+      auto _f = std::move(std::get<_Cont1>(_frame));
+      uint64_t k = _f.k;
+      uint64_t r_ = std::move(_result);
+      _result = (k + r_);
     }
   }
   return _result;
@@ -1186,19 +1240,75 @@ uint64_t LoopifyNumbers::sum_divisors(uint64_t n) {
 /// sum_odd_indices adds elements at odd positions (0, 2, 4...).
 /// sum_even_indices processes even positions (1, 3, 5...) by calling
 /// sum_odd_indices.
-uint64_t LoopifyNumbers::sum_odd_indices_fuel(uint64_t fuel,
-                                              const List<uint64_t> &l) {
-  if (fuel <= 0) {
-    return UINT64_C(0);
-  } else {
-    uint64_t f = fuel - 1;
-    if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
-      return UINT64_C(0);
+uint64_t LoopifyNumbers::sum_odd_indices_fuel(
+    uint64_t fuel,
+    const List<uint64_t>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    List<uint64_t> l;
+    uint64_t fuel;
+  };
+
+  /// _Enter_inl: captures varying parameters for each recursive call.
+  struct _Enter_inl {
+    List<uint64_t> _inl_l;
+    uint64_t _inl_fuel;
+  };
+
+  /// _Cont_Cons: saves [a0], resumes after recursive call, then processes rest.
+  struct _Cont_Cons {
+    uint64_t a0;
+  };
+
+  using _Frame = std::variant<_Enter, _Enter_inl, _Cont_Cons>;
+  uint64_t _result{};
+  crane::small_vector<_Frame> _stack;
+  _stack.emplace_back(_Enter{l, fuel});
+  /// Loopified sum_odd_indices_fuel: _Enter -> _Cont_Cons.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const List<uint64_t> &l = std::move(_f.l);
+      uint64_t fuel = _f.fuel;
+      if (fuel <= 0) {
+        _result = UINT64_C(0);
+      } else {
+        uint64_t f = fuel - 1;
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+          _result = UINT64_C(0);
+        } else {
+          const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+          _stack.emplace_back(_Cont_Cons{a0});
+          _stack.emplace_back(_Enter_inl{*a1, f});
+        }
+      }
+    } else if (std::holds_alternative<_Enter_inl>(_frame)) {
+      auto _f = std::move(std::get<_Enter_inl>(_frame));
+      const List<uint64_t> &_inl_l = std::move(_f._inl_l);
+      uint64_t _inl_fuel = _f._inl_fuel;
+      if (_inl_fuel <= 0) {
+        _result = UINT64_C(0);
+      } else {
+        uint64_t f = _inl_fuel - 1;
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(_inl_l.v())) {
+          _result = UINT64_C(0);
+        } else {
+          const auto &[a0, a1] =
+              std::get<typename List<uint64_t>::Cons>(_inl_l.v());
+          _stack.emplace_back(_Enter{*a1, f});
+        }
+      }
     } else {
-      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-      return (a0 + sum_even_indices_fuel(f, *a1));
+      auto _f = std::move(std::get<_Cont_Cons>(_frame));
+      uint64_t a0 = _f.a0;
+      uint64_t r_ = std::move(_result);
+      _result = (a0 + r_);
     }
   }
+  return _result;
 }
 
 uint64_t LoopifyNumbers::sum_even_indices_fuel(
@@ -1211,16 +1321,16 @@ uint64_t LoopifyNumbers::sum_even_indices_fuel(
     uint64_t fuel;
   };
 
-  /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
-  struct _Resume_Cons {
+  /// _Cont_Cons: saves [a0], resumes after recursive call, then processes rest.
+  struct _Cont_Cons {
     uint64_t a0;
   };
 
-  using _Frame = std::variant<_Enter, _Resume_Cons>;
+  using _Frame = std::variant<_Enter, _Cont_Cons>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l, fuel});
-  /// Loopified sum_even_indices_fuel: _Enter -> _Resume_Cons.
+  /// Loopified sum_even_indices_fuel: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -1248,15 +1358,17 @@ uint64_t LoopifyNumbers::sum_even_indices_fuel(
             } else {
               const auto &[a0, a1] =
                   std::get<typename List<uint64_t>::Cons>(_inl_l.v());
-              _stack.emplace_back(_Resume_Cons{a0});
+              _stack.emplace_back(_Cont_Cons{a0});
               _stack.emplace_back(_Enter{crane_raw(a1), f});
             }
           }
         }
       }
     } else {
-      auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = (_f.a0 + std::move(_result));
+      auto _f = std::move(std::get<_Cont_Cons>(_frame));
+      uint64_t a0 = _f.a0;
+      uint64_t r_ = std::move(_result);
+      _result = (a0 + r_);
     }
   }
   return _result;
@@ -1337,16 +1449,16 @@ uint64_t LoopifyNumbers::sum_divisible_by(
     uint64_t n;
   };
 
-  /// _Resume1: saves [n], resumes after recursive call with _result.
-  struct _Resume1 {
+  /// _Cont1: saves [n], resumes after recursive call, then processes rest.
+  struct _Cont1 {
     uint64_t n;
   };
 
-  using _Frame = std::variant<_Enter, _Resume1>;
+  using _Frame = std::variant<_Enter, _Cont1>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
-  /// Loopified sum_divisible_by: _Enter -> _Resume1.
+  /// Loopified sum_divisible_by: _Enter -> _Cont1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -1358,15 +1470,17 @@ uint64_t LoopifyNumbers::sum_divisible_by(
       } else {
         uint64_t m = n - 1;
         if ((k ? n % k : n) == UINT64_C(0)) {
-          _stack.emplace_back(_Resume1{n});
+          _stack.emplace_back(_Cont1{n});
           _stack.emplace_back(_Enter{m});
         } else {
           _stack.emplace_back(_Enter{m});
         }
       }
     } else {
-      auto _f = std::move(std::get<_Resume1>(_frame));
-      _result = (_f.n + std::move(_result));
+      auto _f = std::move(std::get<_Cont1>(_frame));
+      uint64_t n = _f.n;
+      uint64_t r_ = std::move(_result);
+      _result = (n + r_);
     }
   }
   return _result;

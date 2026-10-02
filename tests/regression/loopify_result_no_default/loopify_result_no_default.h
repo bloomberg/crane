@@ -370,16 +370,17 @@ struct LoopifyResultNoDefault {
       const List<T2> *l;
     };
 
-    /// _Resume_Cons: saves [_s0], resumes after recursive call with _result.
-    struct _Resume_Cons {
-      crane::fn<typename _tcI0::template m<T3>(T3)> _s0;
+    /// _Cont_Cons: saves [a0], resumes after recursive call, then processes
+    /// rest.
+    struct _Cont_Cons {
+      T2 a0;
     };
 
-    using _Frame = std::variant<_Enter, _Resume_Cons>;
+    using _Frame = std::variant<_Enter, _Cont_Cons>;
     typename _tcI0::template m<T3> _result{};
     crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
-    /// Loopified mfr: _Enter -> _Resume_Cons.
+    /// Loopified mfr: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -391,14 +392,15 @@ struct LoopifyResultNoDefault {
         } else {
           const auto &[a0, a1] = std::get<typename List<T2>::Cons>(l.v());
           const List<T2> &a1_value = *a1;
-          _stack.emplace_back(
-              _Resume_Cons{[=](const T3 &r) { return f(r, a0); }});
+          _stack.emplace_back(_Cont_Cons{a0});
           _stack.emplace_back(_Enter{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = Monad0::template bind<_tcI0, T3, T3>(std::move(_result),
-                                                       std::move(_f._s0));
+        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        auto a0 = std::move(_f.a0);
+        typename _tcI0::template m<T3> r_ = std::move(_result);
+        _result = Monad0::template bind<_tcI0, T3, T3>(
+            std::move(r_), [=](const T3 &r) { return f(r, a0); });
       }
     }
     return _result;

@@ -25,16 +25,16 @@ uint64_t DeepTailRecursionOverflow::total_of(
     const DeepTailRecursionOverflow::chain *c;
   };
 
-  /// _Resume_Link: saves [a1], resumes after recursive call with _result.
-  struct _Resume_Link {
+  /// _Cont_Link: saves [a1], resumes after recursive call, then processes rest.
+  struct _Cont_Link {
     uint64_t a1;
   };
 
-  using _Frame = std::variant<_Enter, _Resume_Link>;
+  using _Frame = std::variant<_Enter, _Cont_Link>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&c});
-  /// Loopified total_of: _Enter -> _Resume_Link.
+  /// Loopified total_of: _Enter -> _Cont_Link.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -49,12 +49,14 @@ uint64_t DeepTailRecursionOverflow::total_of(
       } else {
         const auto &[a0, a1] =
             std::get<typename DeepTailRecursionOverflow::chain::Link>(c.v());
-        _stack.emplace_back(_Resume_Link{a1});
+        _stack.emplace_back(_Cont_Link{a1});
         _stack.emplace_back(_Enter{crane_raw(a0)});
       }
     } else {
-      auto _f = std::move(std::get<_Resume_Link>(_frame));
-      _result = (_f.a1 + std::move(_result));
+      auto _f = std::move(std::get<_Cont_Link>(_frame));
+      uint64_t a1 = _f.a1;
+      uint64_t r_ = std::move(_result);
+      _result = (a1 + r_);
     }
   }
   return _result;

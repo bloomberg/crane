@@ -8,16 +8,14 @@ uint64_t LoopifyAdvancedPatterns::len_impl(
     const List<uint64_t> *l;
   };
 
-  /// _Resume_Cons: saves [_s0], resumes after recursive call with _result.
-  struct _Resume_Cons {
-    uint64_t _s0;
-  };
+  /// _Cont_Cons: resumes after recursive call, then processes rest.
+  struct _Cont_Cons {};
 
-  using _Frame = std::variant<_Enter, _Resume_Cons>;
+  using _Frame = std::variant<_Enter, _Cont_Cons>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
-  /// Loopified len_impl: _Enter -> _Resume_Cons.
+  /// Loopified len_impl: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -28,12 +26,13 @@ uint64_t LoopifyAdvancedPatterns::len_impl(
         _result = UINT64_C(0);
       } else {
         const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-        _stack.emplace_back(_Resume_Cons{UINT64_C(1)});
+        _stack.emplace_back(_Cont_Cons{});
         _stack.emplace_back(_Enter{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = (_f._s0 + std::move(_result));
+      auto _f = std::move(std::get<_Cont_Cons>(_frame));
+      uint64_t r_ = std::move(_result);
+      _result = (UINT64_C(1) + r_);
     }
   }
   return _result;
@@ -74,21 +73,19 @@ uint64_t LoopifyAdvancedPatterns::multi_guard(
     const List<uint64_t> *l;
   };
 
-  /// _Resume1: saves [a0], resumes after recursive call with _result.
-  struct _Resume1 {
+  /// _Cont1: saves [a0], resumes after recursive call, then processes rest.
+  struct _Cont1 {
     uint64_t a0;
   };
 
-  /// _Resume2: saves [_s0], resumes after recursive call with _result.
-  struct _Resume2 {
-    uint64_t _s0;
-  };
+  /// _Cont2: resumes after recursive call, then processes rest.
+  struct _Cont2 {};
 
-  using _Frame = std::variant<_Enter, _Resume1, _Resume2>;
+  using _Frame = std::variant<_Enter, _Cont1, _Cont2>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
-  /// Loopified multi_guard: _Enter -> _Resume1 -> _Resume2.
+  /// Loopified multi_guard: _Enter -> _Cont1 -> _Cont2.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -100,23 +97,26 @@ uint64_t LoopifyAdvancedPatterns::multi_guard(
       } else {
         const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
         if (UINT64_C(10) < a0) {
-          _stack.emplace_back(_Resume1{a0});
+          _stack.emplace_back(_Cont1{a0});
           _stack.emplace_back(_Enter{crane_raw(a1)});
         } else {
           if (UINT64_C(0) < a0) {
             _stack.emplace_back(_Enter{crane_raw(a1)});
           } else {
-            _stack.emplace_back(_Resume2{UINT64_C(1)});
+            _stack.emplace_back(_Cont2{});
             _stack.emplace_back(_Enter{crane_raw(a1)});
           }
         }
       }
-    } else if (std::holds_alternative<_Resume1>(_frame)) {
-      auto _f = std::move(std::get<_Resume1>(_frame));
-      _result = (_f.a0 + std::move(_result));
+    } else if (std::holds_alternative<_Cont1>(_frame)) {
+      auto _f = std::move(std::get<_Cont1>(_frame));
+      uint64_t a0 = _f.a0;
+      uint64_t r_ = std::move(_result);
+      _result = (a0 + r_);
     } else {
-      auto _f = std::move(std::get<_Resume2>(_frame));
-      _result = (_f._s0 + std::move(_result));
+      auto _f = std::move(std::get<_Cont2>(_frame));
+      uint64_t r_ = std::move(_result);
+      _result = (UINT64_C(1) + r_);
     }
   }
   return _result;
@@ -130,16 +130,20 @@ uint64_t LoopifyAdvancedPatterns::four_elem(
     const List<uint64_t> *l;
   };
 
-  /// _Resume_Cons: saves [_s0], resumes after recursive call with _result.
-  struct _Resume_Cons {
-    uint64_t _s0;
+  /// _Cont_Cons: saves [a0, a00, a01, a02], resumes after recursive call, then
+  /// processes rest.
+  struct _Cont_Cons {
+    uint64_t a0;
+    uint64_t a00;
+    uint64_t a01;
+    uint64_t a02;
   };
 
-  using _Frame = std::variant<_Enter, _Resume_Cons>;
+  using _Frame = std::variant<_Enter, _Cont_Cons>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
-  /// Loopified four_elem: _Enter -> _Resume_Cons.
+  /// Loopified four_elem: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -169,15 +173,20 @@ uint64_t LoopifyAdvancedPatterns::four_elem(
             } else {
               const auto &[a02, a12] =
                   std::get<typename List<uint64_t>::Cons>(_sv2.v());
-              _stack.emplace_back(_Resume_Cons{(((a0 + a00) + a01) + a02)});
+              _stack.emplace_back(_Cont_Cons{a0, a00, a01, a02});
               _stack.emplace_back(_Enter{crane_raw(a12)});
             }
           }
         }
       }
     } else {
-      auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = (_f._s0 + std::move(_result));
+      auto _f = std::move(std::get<_Cont_Cons>(_frame));
+      uint64_t a0 = _f.a0;
+      uint64_t a00 = _f.a00;
+      uint64_t a01 = _f.a01;
+      uint64_t a02 = _f.a02;
+      uint64_t r_ = std::move(_result);
+      _result = ((((a0 + a00) + a01) + a02) + r_);
     }
   }
   return _result;
@@ -191,16 +200,19 @@ uint64_t LoopifyAdvancedPatterns::nested_pattern(
     const List<std::pair<std::pair<uint64_t, uint64_t>, uint64_t>> *l;
   };
 
-  /// _Resume_a: saves [_s0], resumes after recursive call with _result.
-  struct _Resume_a {
-    uint64_t _s0;
+  /// _Cont_a: saves [a, b, c], resumes after recursive call, then processes
+  /// rest.
+  struct _Cont_a {
+    uint64_t a;
+    uint64_t b;
+    uint64_t c;
   };
 
-  using _Frame = std::variant<_Enter, _Resume_a>;
+  using _Frame = std::variant<_Enter, _Cont_a>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
-  /// Loopified nested_pattern: _Enter -> _Resume_a.
+  /// Loopified nested_pattern: _Enter -> _Cont_a.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -216,12 +228,16 @@ uint64_t LoopifyAdvancedPatterns::nested_pattern(
             std::pair<std::pair<uint64_t, uint64_t>, uint64_t>>::Cons>(l.v());
         const auto &[p0, c] = a0;
         const auto &[a, b] = p0;
-        _stack.emplace_back(_Resume_a{((a + b) + c)});
+        _stack.emplace_back(_Cont_a{a, b, c});
         _stack.emplace_back(_Enter{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<_Resume_a>(_frame));
-      _result = (_f._s0 + std::move(_result));
+      auto _f = std::move(std::get<_Cont_a>(_frame));
+      uint64_t a = _f.a;
+      uint64_t b = _f.b;
+      uint64_t c = _f.c;
+      uint64_t r_ = std::move(_result);
+      _result = (((a + b) + c) + r_);
     }
   }
   return _result;
@@ -316,16 +332,16 @@ uint64_t LoopifyAdvancedPatterns::sum_shapes(
     const List<LoopifyAdvancedPatterns::shape> *l;
   };
 
-  /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
-  struct _Resume_Cons {
-    uint64_t a0;
+  /// _Cont_Cons: saves [a0], resumes after recursive call, then processes rest.
+  struct _Cont_Cons {
+    LoopifyAdvancedPatterns::shape a0;
   };
 
-  using _Frame = std::variant<_Enter, _Resume_Cons>;
+  using _Frame = std::variant<_Enter, _Cont_Cons>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
-  /// Loopified sum_shapes: _Enter -> _Resume_Cons.
+  /// Loopified sum_shapes: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -339,12 +355,14 @@ uint64_t LoopifyAdvancedPatterns::sum_shapes(
         const auto &[a0, a1] =
             std::get<typename List<LoopifyAdvancedPatterns::shape>::Cons>(
                 l.v());
-        _stack.emplace_back(_Resume_Cons{extract_value(a0)});
+        _stack.emplace_back(_Cont_Cons{a0});
         _stack.emplace_back(_Enter{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = (_f.a0 + std::move(_result));
+      auto _f = std::move(std::get<_Cont_Cons>(_frame));
+      LoopifyAdvancedPatterns::shape a0 = std::move(_f.a0);
+      uint64_t r_ = std::move(_result);
+      _result = (extract_value(a0) + r_);
     }
   }
   return _result;
@@ -389,9 +407,9 @@ LoopifyAdvancedPatterns::count_by_shape(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       LoopifyAdvancedPatterns::shape a0 = std::move(_f.a0);
-      std::pair<std::pair<uint64_t, uint64_t>, uint64_t> _rc1 =
+      std::pair<std::pair<uint64_t, uint64_t>, uint64_t> r_ =
           std::move(_result);
-      auto [p, triangles] = _rc1;
+      auto [p, triangles] = std::move(r_);
       auto [circles, squares] = std::move(p);
       if (std::holds_alternative<
               typename LoopifyAdvancedPatterns::shape::Circle>(a0.v())) {

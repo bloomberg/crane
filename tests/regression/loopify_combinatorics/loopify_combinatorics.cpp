@@ -74,33 +74,33 @@ List<List<uint64_t>> LoopifyCombinatorics::perms_choices_fuel(
     uint64_t fuel;
   };
 
-  /// _After_Cons: saves [remaining_0, remaining_1, f, a0], dispatches next
-  /// recursive call.
-  struct _After_Cons {
-    List<uint64_t> remaining_0;
-    List<uint64_t> remaining_1;
+  /// _Cont_Cons: saves [a0, a1, f, orig], resumes after recursive call, then
+  /// processes rest.
+  struct _Cont_Cons {
+    uint64_t a0;
+    std::shared_ptr<List<uint64_t>> a1;
     uint64_t f;
+    List<uint64_t> orig;
+  };
+
+  /// _Cont_Cons_1: saves [a0, r_], resumes after recursive call, then processes
+  /// rest.
+  struct _Cont_Cons_1 {
+    uint64_t a0;
+    List<List<uint64_t>> r_;
+  };
+
+  /// _Cont_Nil: saves [a0], resumes after recursive call, then processes rest.
+  struct _Cont_Nil {
     uint64_t a0;
   };
 
-  /// _Combine_Cons: receives partial results, combines with _result from final
-  /// call.
-  struct _Combine_Cons {
-    List<List<uint64_t>> _result;
-    uint64_t a0;
-  };
-
-  /// _Resume_Nil: saves [_s0], resumes after recursive call with _result.
-  struct _Resume_Nil {
-    List<List<uint64_t>> _s0;
-  };
-
-  using _Frame = std::variant<_Enter, _After_Cons, _Combine_Cons, _Resume_Nil>;
+  using _Frame = std::variant<_Enter, _Cont_Cons, _Cont_Cons_1, _Cont_Nil>;
   List<List<uint64_t>> _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{orig, choices, fuel});
-  /// Loopified perms_choices_fuel: _Enter -> _After_Cons -> _Combine_Cons ->
-  /// _Resume_Nil.
+  /// Loopified perms_choices_fuel: _Enter -> _Cont_Cons -> _Cont_Cons_1 ->
+  /// _Cont_Nil.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -121,27 +121,37 @@ List<List<uint64_t>> LoopifyCombinatorics::perms_choices_fuel(
           List<uint64_t> remaining = remove(a0, orig);
           if (std::holds_alternative<typename List<uint64_t>::Nil>(
                   remaining.v_mut())) {
-            _stack.emplace_back(_Resume_Nil{map_cons(
-                a0, List<List<uint64_t>>::cons(List<uint64_t>::nil(),
-                                               List<List<uint64_t>>::nil()))});
+            _stack.emplace_back(_Cont_Nil{a0});
             _stack.emplace_back(_Enter{orig, *a1, f});
           } else {
-            _stack.emplace_back(_After_Cons{remaining, remaining, f, a0});
-            _stack.emplace_back(_Enter{orig, *a1, f});
+            _stack.emplace_back(_Cont_Cons{a0, a1, f, orig});
+            _stack.emplace_back(_Enter{remaining, remaining, f});
           }
         }
       }
-    } else if (std::holds_alternative<_After_Cons>(_frame)) {
-      auto _f = std::move(std::get<_After_Cons>(_frame));
-      _stack.emplace_back(_Combine_Cons{std::move(_result), _f.a0});
-      _stack.emplace_back(
-          _Enter{std::move(_f.remaining_0), std::move(_f.remaining_1), _f.f});
-    } else if (std::holds_alternative<_Combine_Cons>(_frame)) {
-      auto _f = std::move(std::get<_Combine_Cons>(_frame));
-      _result = map_cons(_f.a0, std::move(_result)).app(std::move(_f._result));
+    } else if (std::holds_alternative<_Cont_Cons>(_frame)) {
+      auto _f = std::move(std::get<_Cont_Cons>(_frame));
+      uint64_t a0 = _f.a0;
+      std::shared_ptr<List<uint64_t>> a1 = std::move(_f.a1);
+      uint64_t f = _f.f;
+      const List<uint64_t> &orig = std::move(_f.orig);
+      List<List<uint64_t>> r_ = std::move(_result);
+      _stack.emplace_back(_Cont_Cons_1{a0, std::move(r_)});
+      _stack.emplace_back(_Enter{orig, *a1, f});
+    } else if (std::holds_alternative<_Cont_Cons_1>(_frame)) {
+      auto _f = std::move(std::get<_Cont_Cons_1>(_frame));
+      uint64_t a0 = _f.a0;
+      List<List<uint64_t>> r_ = std::move(_f.r_);
+      List<List<uint64_t>> r_0 = std::move(_result);
+      _result = map_cons(a0, std::move(r_)).app(std::move(r_0));
     } else {
-      auto _f = std::move(std::get<_Resume_Nil>(_frame));
-      _result = std::move(_f._s0).app(std::move(_result));
+      auto _f = std::move(std::get<_Cont_Nil>(_frame));
+      uint64_t a0 = _f.a0;
+      List<List<uint64_t>> r_ = std::move(_result);
+      _result =
+          map_cons(a0, List<List<uint64_t>>::cons(List<uint64_t>::nil(),
+                                                  List<List<uint64_t>>::nil()))
+              .app(std::move(r_));
     }
   }
   return _result;
@@ -204,16 +214,16 @@ uint64_t LoopifyCombinatorics::factorial_impl(
     uint64_t n;
   };
 
-  /// _Resume_m: saves [n], resumes after recursive call with _result.
-  struct _Resume_m {
+  /// _Cont_m: saves [n], resumes after recursive call, then processes rest.
+  struct _Cont_m {
     uint64_t n;
   };
 
-  using _Frame = std::variant<_Enter, _Resume_m>;
+  using _Frame = std::variant<_Enter, _Cont_m>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
-  /// Loopified factorial_impl: _Enter -> _Resume_m.
+  /// Loopified factorial_impl: _Enter -> _Cont_m.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -224,12 +234,14 @@ uint64_t LoopifyCombinatorics::factorial_impl(
         _result = UINT64_C(1);
       } else {
         uint64_t m = n - 1;
-        _stack.emplace_back(_Resume_m{n});
+        _stack.emplace_back(_Cont_m{n});
         _stack.emplace_back(_Enter{m});
       }
     } else {
-      auto _f = std::move(std::get<_Resume_m>(_frame));
-      _result = (_f.n * std::move(_result));
+      auto _f = std::move(std::get<_Cont_m>(_frame));
+      uint64_t n = _f.n;
+      uint64_t r_ = std::move(_result);
+      _result = (n * r_);
     }
   }
   return _result;
@@ -364,16 +376,16 @@ List<std::pair<uint64_t, uint64_t>> LoopifyCombinatorics::cartesian(
     const List<uint64_t> *l2;
   };
 
-  /// _Resume_Cons: saves [_s0], resumes after recursive call with _result.
-  struct _Resume_Cons {
-    List<std::pair<uint64_t, uint64_t>> _s0;
+  /// _Cont_Cons: saves [a0], resumes after recursive call, then processes rest.
+  struct _Cont_Cons {
+    uint64_t a0;
   };
 
-  using _Frame = std::variant<_Enter, _Resume_Cons>;
+  using _Frame = std::variant<_Enter, _Cont_Cons>;
   List<std::pair<uint64_t, uint64_t>> _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l2});
-  /// Loopified cartesian: _Enter -> _Resume_Cons.
+  /// Loopified cartesian: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -384,12 +396,14 @@ List<std::pair<uint64_t, uint64_t>> LoopifyCombinatorics::cartesian(
         _result = List<std::pair<uint64_t, uint64_t>>::nil();
       } else {
         const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l2.v());
-        _stack.emplace_back(_Resume_Cons{map_pairs(a0, l1)});
+        _stack.emplace_back(_Cont_Cons{a0});
         _stack.emplace_back(_Enter{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = std::move(_f._s0).app(std::move(_result));
+      auto _f = std::move(std::get<_Cont_Cons>(_frame));
+      uint64_t a0 = _f.a0;
+      List<std::pair<uint64_t, uint64_t>> r_ = std::move(_result);
+      _result = map_pairs(a0, l1).app(std::move(r_));
     }
   }
   return _result;
@@ -584,16 +598,16 @@ bool LoopifyCombinatorics::elem(
     const List<uint64_t> *l;
   };
 
-  /// _Resume_Cons: saves [_s0], resumes after recursive call with _result.
-  struct _Resume_Cons {
-    bool _s0;
+  /// _Cont_Cons: saves [a0], resumes after recursive call, then processes rest.
+  struct _Cont_Cons {
+    uint64_t a0;
   };
 
-  using _Frame = std::variant<_Enter, _Resume_Cons>;
+  using _Frame = std::variant<_Enter, _Cont_Cons>;
   bool _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
-  /// Loopified elem: _Enter -> _Resume_Cons.
+  /// Loopified elem: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -604,12 +618,14 @@ bool LoopifyCombinatorics::elem(
         _result = false;
       } else {
         const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-        _stack.emplace_back(_Resume_Cons{x == a0});
+        _stack.emplace_back(_Cont_Cons{a0});
         _stack.emplace_back(_Enter{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = (_f._s0 || std::move(_result));
+      auto _f = std::move(std::get<_Cont_Cons>(_frame));
+      uint64_t a0 = _f.a0;
+      bool r_ = std::move(_result);
+      _result = (x == a0 || r_);
     }
   }
   return _result;

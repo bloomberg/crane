@@ -190,14 +190,14 @@ struct LoopifyNumbers {
       uint64_t n;
     };
 
-    /// _Resume__x: resumes after recursive call with _result.
-    struct _Resume__x {};
+    /// _Cont__x: resumes after recursive call, then processes rest.
+    struct _Cont__x {};
 
-    using _Frame = std::variant<_Enter, _Resume__x>;
+    using _Frame = std::variant<_Enter, _Cont__x>;
     uint64_t _result{};
     crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{n});
-    /// Loopified nest_apply: _Enter -> _Resume__x.
+    /// Loopified nest_apply: _Enter -> _Cont__x.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -212,13 +212,14 @@ struct LoopifyNumbers {
             _result = f(x);
           } else {
             uint64_t _x = n_ - 1;
-            _stack.emplace_back(_Resume__x{});
+            _stack.emplace_back(_Cont__x{});
             _stack.emplace_back(_Enter{n_});
           }
         }
       } else {
-        auto _f = std::move(std::get<_Resume__x>(_frame));
-        _result = f(std::move(_result));
+        auto _f = std::move(std::get<_Cont__x>(_frame));
+        uint64_t r_ = std::move(_result);
+        _result = f(r_);
       }
     }
     return _result;

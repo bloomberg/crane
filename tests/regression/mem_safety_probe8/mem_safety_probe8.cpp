@@ -13,25 +13,25 @@ uint64_t MemSafetyProbe8::tree_sum_ext(
     uint64_t _x;
   };
 
-  /// _After_Node: saves [a0, _s1, a1], dispatches next recursive call.
-  struct _After_Node {
-    const MemSafetyProbe8::tree *a0;
-    uint64_t _s1;
+  /// _Cont_Node: saves [a1, a2], resumes after recursive call, then processes
+  /// rest.
+  struct _Cont_Node {
     uint64_t a1;
+    const MemSafetyProbe8::tree *a2;
   };
 
-  /// _Combine_Node: receives partial results, combines with _result from final
-  /// call.
-  struct _Combine_Node {
-    uint64_t _result;
+  /// _Cont_Node_1: saves [a1, r_], resumes after recursive call, then processes
+  /// rest.
+  struct _Cont_Node_1 {
     uint64_t a1;
+    uint64_t r_;
   };
 
-  using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
+  using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&t, _x});
-  /// Loopified tree_sum_ext: _Enter -> _After_Node -> _Combine_Node.
+  /// Loopified tree_sum_ext: _Enter -> _Cont_Node -> _Cont_Node_1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -44,16 +44,22 @@ uint64_t MemSafetyProbe8::tree_sum_ext(
       } else {
         const auto &[a0, a1, a2] =
             std::get<typename MemSafetyProbe8::tree::Node>(t.v());
-        _stack.emplace_back(_After_Node{crane_raw(a0), UINT64_C(0), a1});
-        _stack.emplace_back(_Enter{crane_raw(a2), UINT64_C(0)});
+        _stack.emplace_back(_Cont_Node{a1, crane_raw(a2)});
+        _stack.emplace_back(_Enter{crane_raw(a0), UINT64_C(0)});
       }
-    } else if (std::holds_alternative<_After_Node>(_frame)) {
-      auto _f = std::move(std::get<_After_Node>(_frame));
-      _stack.emplace_back(_Combine_Node{std::move(_result), _f.a1});
-      _stack.emplace_back(_Enter{_f.a0, _f._s1});
+    } else if (std::holds_alternative<_Cont_Node>(_frame)) {
+      auto _f = std::move(std::get<_Cont_Node>(_frame));
+      uint64_t a1 = _f.a1;
+      const MemSafetyProbe8::tree &a2 = *_f.a2;
+      uint64_t r_ = std::move(_result);
+      _stack.emplace_back(_Cont_Node_1{a1, r_});
+      _stack.emplace_back(_Enter{&a2, UINT64_C(0)});
     } else {
-      auto _f = std::move(std::get<_Combine_Node>(_frame));
-      _result = ((std::move(_result) + _f.a1) + std::move(_f._result));
+      auto _f = std::move(std::get<_Cont_Node_1>(_frame));
+      uint64_t a1 = _f.a1;
+      uint64_t r_ = _f.r_;
+      uint64_t r_0 = std::move(_result);
+      _result = ((r_ + a1) + r_0);
     }
   }
   return _result;
@@ -72,26 +78,27 @@ uint64_t MemSafetyProbe8::tree_weighted(
     uint64_t _x;
   };
 
-  /// _After_Node: saves [_s0, a0, _s2, _s3], dispatches next recursive call.
-  struct _After_Node {
-    uint64_t _s0;
-    const MemSafetyProbe8::tree *a0;
-    uint64_t _s2;
-    uint64_t _s3;
+  /// _Cont_Node: saves [a1, a2, depth], resumes after recursive call, then
+  /// processes rest.
+  struct _Cont_Node {
+    uint64_t a1;
+    const MemSafetyProbe8::tree *a2;
+    uint64_t depth;
   };
 
-  /// _Combine_Node: receives partial results, combines with _result from final
-  /// call.
-  struct _Combine_Node {
-    uint64_t _result;
-    uint64_t _s1;
+  /// _Cont_Node_1: saves [a1, depth, r_], resumes after recursive call, then
+  /// processes rest.
+  struct _Cont_Node_1 {
+    uint64_t a1;
+    uint64_t depth;
+    uint64_t r_;
   };
 
-  using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
+  using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{depth, &t, _x});
-  /// Loopified tree_weighted: _Enter -> _After_Node -> _Combine_Node.
+  /// Loopified tree_weighted: _Enter -> _Cont_Node -> _Cont_Node_1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -105,18 +112,25 @@ uint64_t MemSafetyProbe8::tree_weighted(
       } else {
         const auto &[a0, a1, a2] =
             std::get<typename MemSafetyProbe8::tree::Node>(t.v());
-        _stack.emplace_back(_After_Node{(UINT64_C(1) + depth), crane_raw(a0),
-                                        UINT64_C(0), (a1 * depth)});
+        _stack.emplace_back(_Cont_Node{a1, crane_raw(a2), depth});
         _stack.emplace_back(
-            _Enter{(UINT64_C(1) + depth), crane_raw(a2), UINT64_C(0)});
+            _Enter{(UINT64_C(1) + depth), crane_raw(a0), UINT64_C(0)});
       }
-    } else if (std::holds_alternative<_After_Node>(_frame)) {
-      auto _f = std::move(std::get<_After_Node>(_frame));
-      _stack.emplace_back(_Combine_Node{std::move(_result), _f._s3});
-      _stack.emplace_back(_Enter{_f._s0, _f.a0, _f._s2});
+    } else if (std::holds_alternative<_Cont_Node>(_frame)) {
+      auto _f = std::move(std::get<_Cont_Node>(_frame));
+      uint64_t a1 = _f.a1;
+      const MemSafetyProbe8::tree &a2 = *_f.a2;
+      uint64_t depth = _f.depth;
+      uint64_t r_ = std::move(_result);
+      _stack.emplace_back(_Cont_Node_1{a1, depth, r_});
+      _stack.emplace_back(_Enter{(UINT64_C(1) + depth), &a2, UINT64_C(0)});
     } else {
-      auto _f = std::move(std::get<_Combine_Node>(_frame));
-      _result = ((std::move(_result) + _f._s1) + std::move(_f._result));
+      auto _f = std::move(std::get<_Cont_Node_1>(_frame));
+      uint64_t a1 = _f.a1;
+      uint64_t depth = _f.depth;
+      uint64_t r_ = _f.r_;
+      uint64_t r_0 = std::move(_result);
+      _result = ((r_ + (a1 * depth)) + r_0);
     }
   }
   return _result;
@@ -225,25 +239,25 @@ uint64_t MemSafetyProbe8::tree_flatten(
     uint64_t _x;
   };
 
-  /// _After_Node: saves [a0, _s1, a1], dispatches next recursive call.
-  struct _After_Node {
-    const MemSafetyProbe8::tree *a0;
-    uint64_t _s1;
+  /// _Cont_Node: saves [a1, a2], resumes after recursive call, then processes
+  /// rest.
+  struct _Cont_Node {
     uint64_t a1;
+    const MemSafetyProbe8::tree *a2;
   };
 
-  /// _Combine_Node: receives partial results, combines with _result from final
-  /// call.
-  struct _Combine_Node {
-    uint64_t _result;
+  /// _Cont_Node_1: saves [a1, r_], resumes after recursive call, then processes
+  /// rest.
+  struct _Cont_Node_1 {
     uint64_t a1;
+    uint64_t r_;
   };
 
-  using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
+  using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&t, _x});
-  /// Loopified tree_flatten: _Enter -> _After_Node -> _Combine_Node.
+  /// Loopified tree_flatten: _Enter -> _Cont_Node -> _Cont_Node_1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -256,16 +270,22 @@ uint64_t MemSafetyProbe8::tree_flatten(
       } else {
         const auto &[a0, a1, a2] =
             std::get<typename MemSafetyProbe8::tree::Node>(t.v());
-        _stack.emplace_back(_After_Node{crane_raw(a0), UINT64_C(0), a1});
-        _stack.emplace_back(_Enter{crane_raw(a2), UINT64_C(0)});
+        _stack.emplace_back(_Cont_Node{a1, crane_raw(a2)});
+        _stack.emplace_back(_Enter{crane_raw(a0), UINT64_C(0)});
       }
-    } else if (std::holds_alternative<_After_Node>(_frame)) {
-      auto _f = std::move(std::get<_After_Node>(_frame));
-      _stack.emplace_back(_Combine_Node{std::move(_result), _f.a1});
-      _stack.emplace_back(_Enter{_f.a0, _f._s1});
+    } else if (std::holds_alternative<_Cont_Node>(_frame)) {
+      auto _f = std::move(std::get<_Cont_Node>(_frame));
+      uint64_t a1 = _f.a1;
+      const MemSafetyProbe8::tree &a2 = *_f.a2;
+      uint64_t r_ = std::move(_result);
+      _stack.emplace_back(_Cont_Node_1{a1, r_});
+      _stack.emplace_back(_Enter{&a2, UINT64_C(0)});
     } else {
-      auto _f = std::move(std::get<_Combine_Node>(_frame));
-      _result = ((std::move(_result) * _f.a1) * std::move(_f._result));
+      auto _f = std::move(std::get<_Cont_Node_1>(_frame));
+      uint64_t a1 = _f.a1;
+      uint64_t r_ = _f.r_;
+      uint64_t r_0 = std::move(_result);
+      _result = ((r_ * a1) * r_0);
     }
   }
   return _result;

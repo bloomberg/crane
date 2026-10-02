@@ -12,8 +12,5 @@
     preserves meaning; nothing is taken out of a branch, a lambda body or a
     let body, which may not run. *)
 
-(** [structure s] normalizes every loopified fixpoint group in [s].  Staged
-    behind [CRANE_NORMALIZE] while the loop transform's continuation path
-    catches up with the shapes it produces (see the plan's Milestone F); off,
-    [s] is returned as it is. *)
+(** [structure s] normalizes every loopified fixpoint group in [s]. *)
 val structure : Miniml.ml_structure -> Miniml.ml_structure

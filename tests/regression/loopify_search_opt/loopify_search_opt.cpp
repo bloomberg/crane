@@ -110,27 +110,28 @@ uint64_t LoopifySearchOpt::knapsack_fuel(
     uint64_t fuel;
   };
 
-  /// _After2: saves [a1, capacity, fuel_, value], dispatches next recursive
-  /// call.
-  struct _After2 {
+  /// _Cont1: saves [a1, capacity, fuel_, value, weight], resumes after
+  /// recursive call, then processes rest.
+  struct _Cont1 {
     const List<std::pair<uint64_t, uint64_t>> *a1;
     uint64_t capacity;
     uint64_t fuel_;
     uint64_t value;
+    uint64_t weight;
   };
 
-  /// _Combine1: receives partial results, combines with _result from final
-  /// call.
-  struct _Combine1 {
-    uint64_t _result;
+  /// _Cont2: saves [r_, value], resumes after recursive call, then processes
+  /// rest.
+  struct _Cont2 {
+    uint64_t r_;
     uint64_t value;
   };
 
-  using _Frame = std::variant<_Enter, _After2, _Combine1>;
+  using _Frame = std::variant<_Enter, _Cont1, _Cont2>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&items, capacity, fuel});
-  /// Loopified knapsack_fuel: _Enter -> _After2 -> _Combine1.
+  /// Loopified knapsack_fuel: _Enter -> _Cont1 -> _Cont2.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -154,22 +155,30 @@ uint64_t LoopifySearchOpt::knapsack_fuel(
           if (capacity < weight) {
             _stack.emplace_back(_Enter{crane_raw(a1), capacity, fuel_});
           } else {
-            _stack.emplace_back(_After2{crane_raw(a1), capacity, fuel_, value});
-            _stack.emplace_back(_Enter{
-                crane_raw(a1),
-                (((capacity - weight) > capacity ? 0 : (capacity - weight))),
-                fuel_});
+            _stack.emplace_back(
+                _Cont1{crane_raw(a1), capacity, fuel_, value, weight});
+            _stack.emplace_back(_Enter{crane_raw(a1), capacity, fuel_});
           }
         }
       }
-    } else if (std::holds_alternative<_After2>(_frame)) {
-      auto _f = std::move(std::get<_After2>(_frame));
-      _stack.emplace_back(_Combine1{std::move(_result), _f.value});
-      _stack.emplace_back(_Enter{_f.a1, _f.capacity, _f.fuel_});
+    } else if (std::holds_alternative<_Cont1>(_frame)) {
+      auto _f = std::move(std::get<_Cont1>(_frame));
+      const List<std::pair<uint64_t, uint64_t>> &a1 = *_f.a1;
+      uint64_t capacity = _f.capacity;
+      uint64_t fuel_ = _f.fuel_;
+      uint64_t value = _f.value;
+      uint64_t weight = _f.weight;
+      uint64_t r_ = std::move(_result);
+      _stack.emplace_back(_Cont2{r_, value});
+      _stack.emplace_back(_Enter{
+          &a1, (((capacity - weight) > capacity ? 0 : (capacity - weight))),
+          fuel_});
     } else {
-      auto _f = std::move(std::get<_Combine1>(_frame));
-      _result =
-          std::max(std::move(_result), (_f.value + std::move(_f._result)));
+      auto _f = std::move(std::get<_Cont2>(_frame));
+      uint64_t r_ = _f.r_;
+      uint64_t value = _f.value;
+      uint64_t r_0 = std::move(_result);
+      _result = std::max(r_, (value + r_0));
     }
   }
   return _result;
@@ -192,24 +201,25 @@ bool LoopifySearchOpt::subset_sum_fuel(
     uint64_t fuel;
   };
 
-  /// _After2: saves [a1, target, fuel_], dispatches next recursive call.
-  struct _After2 {
+  /// _Cont1: saves [a0, a1, fuel_, target], resumes after recursive call, then
+  /// processes rest.
+  struct _Cont1 {
+    uint64_t a0;
     const List<uint64_t> *a1;
-    uint64_t target;
     uint64_t fuel_;
+    uint64_t target;
   };
 
-  /// _Combine1: receives partial results, combines with _result from final
-  /// call.
-  struct _Combine1 {
-    bool _result;
+  /// _Cont2: saves [r_], resumes after recursive call, then processes rest.
+  struct _Cont2 {
+    bool r_;
   };
 
-  using _Frame = std::variant<_Enter, _After2, _Combine1>;
+  using _Frame = std::variant<_Enter, _Cont1, _Cont2>;
   bool _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l, target, fuel});
-  /// Loopified subset_sum_fuel: _Enter -> _After2 -> _Combine1.
+  /// Loopified subset_sum_fuel: _Enter -> _Cont1 -> _Cont2.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -229,20 +239,26 @@ bool LoopifySearchOpt::subset_sum_fuel(
           if (target < a0) {
             _stack.emplace_back(_Enter{crane_raw(a1), target, fuel_});
           } else {
-            _stack.emplace_back(_After2{crane_raw(a1), target, fuel_});
-            _stack.emplace_back(
-                _Enter{crane_raw(a1),
-                       (((target - a0) > target ? 0 : (target - a0))), fuel_});
+            _stack.emplace_back(_Cont1{a0, crane_raw(a1), fuel_, target});
+            _stack.emplace_back(_Enter{crane_raw(a1), target, fuel_});
           }
         }
       }
-    } else if (std::holds_alternative<_After2>(_frame)) {
-      auto _f = std::move(std::get<_After2>(_frame));
-      _stack.emplace_back(_Combine1{std::move(_result)});
-      _stack.emplace_back(_Enter{_f.a1, _f.target, _f.fuel_});
+    } else if (std::holds_alternative<_Cont1>(_frame)) {
+      auto _f = std::move(std::get<_Cont1>(_frame));
+      uint64_t a0 = _f.a0;
+      const List<uint64_t> &a1 = *_f.a1;
+      uint64_t fuel_ = _f.fuel_;
+      uint64_t target = _f.target;
+      bool r_ = std::move(_result);
+      _stack.emplace_back(_Cont2{r_});
+      _stack.emplace_back(
+          _Enter{&a1, (((target - a0) > target ? 0 : (target - a0))), fuel_});
     } else {
-      auto _f = std::move(std::get<_Combine1>(_frame));
-      _result = (std::move(_result) || std::move(_f._result));
+      auto _f = std::move(std::get<_Cont2>(_frame));
+      bool r_ = _f.r_;
+      bool r_0 = std::move(_result);
+      _result = (r_ || r_0);
     }
   }
   return _result;
@@ -286,8 +302,8 @@ std::pair<uint64_t, uint64_t> LoopifySearchOpt::majority(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      std::pair<uint64_t, uint64_t> _rc1 = std::move(_result);
-      auto [cand, count] = _rc1;
+      std::pair<uint64_t, uint64_t> r_ = std::move(_result);
+      auto [cand, count] = std::move(r_);
       if (a0 == cand) {
         _result = std::make_pair(cand, (count + UINT64_C(1)));
       } else {

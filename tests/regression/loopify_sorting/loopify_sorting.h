@@ -204,8 +204,8 @@ struct LoopifySorting {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         auto a0 = std::move(_f.a0);
         auto a00 = std::move(_f.a00);
-        std::pair<List<T1>, List<T1>> _rc1 = std::move(_result);
-        auto [l1, l2] = _rc1;
+        std::pair<List<T1>, List<T1>> r_ = std::move(_result);
+        auto [l1, l2] = std::move(r_);
         _result = std::make_pair(List<T1>::cons(a0, std::move(l1)),
                                  List<T1>::cons(a00, std::move(l2)));
       }

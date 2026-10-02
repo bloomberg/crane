@@ -112,8 +112,4 @@ and module_expr = function
   | MEfunctor (mbid, mt, me) -> MEfunctor (mbid, mt, module_expr me)
   | me -> me
 
-let enabled = lazy (Sys.getenv_opt "CRANE_NORMALIZE" <> None)
-
-let structure struc =
-  if Lazy.force enabled then List.map (fun (mp, sel) -> (mp, structure_elems sel)) struc
-  else struc
+let structure struc = List.map (fun (mp, sel) -> (mp, structure_elems sel)) struc

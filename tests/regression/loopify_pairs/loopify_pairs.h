@@ -106,17 +106,18 @@ struct LoopifyPairs {
       const list<T1> *l;
     };
 
-    /// _Resume_Cons: saves [a1, a0], resumes after recursive call with _result.
-    struct _Resume_Cons {
-      list<T1> a1;
+    /// _Cont_Cons: saves [a0, a1], resumes after recursive call, then processes
+    /// rest.
+    struct _Cont_Cons {
       T1 a0;
+      std::shared_ptr<list<T1>> a1;
     };
 
-    using _Frame = std::variant<_Enter, _Resume_Cons>;
+    using _Frame = std::variant<_Enter, _Cont_Cons>;
     T2 _result{};
     crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
-    /// Loopified list_rect: _Enter -> _Resume_Cons.
+    /// Loopified list_rect: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -127,12 +128,15 @@ struct LoopifyPairs {
           _result = f;
         } else {
           const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
-          _stack.emplace_back(_Resume_Cons{*a1, a0});
+          _stack.emplace_back(_Cont_Cons{a0, a1});
           _stack.emplace_back(_Enter{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = f0(std::move(_f.a0), std::move(_f.a1), std::move(_result));
+        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        auto a0 = std::move(_f.a0);
+        std::shared_ptr<list<T1>> a1 = std::move(_f.a1);
+        T2 r_ = std::move(_result);
+        _result = f0(a0, *a1, std::move(r_));
       }
     }
     return _result;
@@ -149,17 +153,18 @@ struct LoopifyPairs {
       const list<T1> *l;
     };
 
-    /// _Resume_Cons: saves [a1, a0], resumes after recursive call with _result.
-    struct _Resume_Cons {
-      list<T1> a1;
+    /// _Cont_Cons: saves [a0, a1], resumes after recursive call, then processes
+    /// rest.
+    struct _Cont_Cons {
       T1 a0;
+      std::shared_ptr<list<T1>> a1;
     };
 
-    using _Frame = std::variant<_Enter, _Resume_Cons>;
+    using _Frame = std::variant<_Enter, _Cont_Cons>;
     T2 _result{};
     crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
-    /// Loopified list_rec: _Enter -> _Resume_Cons.
+    /// Loopified list_rec: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -170,12 +175,15 @@ struct LoopifyPairs {
           _result = f;
         } else {
           const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
-          _stack.emplace_back(_Resume_Cons{*a1, a0});
+          _stack.emplace_back(_Cont_Cons{a0, a1});
           _stack.emplace_back(_Enter{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = f0(std::move(_f.a0), std::move(_f.a1), std::move(_result));
+        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        auto a0 = std::move(_f.a0);
+        std::shared_ptr<list<T1>> a1 = std::move(_f.a1);
+        T2 r_ = std::move(_result);
+        _result = f0(a0, *a1, std::move(r_));
       }
     }
     return _result;
@@ -219,8 +227,8 @@ struct LoopifyPairs {
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         auto a0 = std::move(_f.a0);
-        std::pair<list<T1>, list<T1>> _rc1 = std::move(_result);
-        auto [yes, no] = _rc1;
+        std::pair<list<T1>, list<T1>> r_ = std::move(_result);
+        auto [yes, no] = std::move(r_);
         if (p(a0)) {
           _result =
               std::make_pair(list<T1>::cons(a0, std::move(yes)), std::move(no));
@@ -370,8 +378,8 @@ struct LoopifyPairs {
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         auto a0 = std::move(_f.a0);
-        std::pair<list<T1>, list<T1>> _rc1 = std::move(_result);
-        auto [taken, rest] = _rc1;
+        std::pair<list<T1>, list<T1>> r_ = std::move(_result);
+        auto [taken, rest] = std::move(r_);
         _result = std::make_pair(list<T1>::cons(a0, std::move(taken)),
                                  std::move(rest));
       }
@@ -426,8 +434,8 @@ struct LoopifyPairs {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         auto a0 = std::move(_f.a0);
         auto a00 = std::move(_f.a00);
-        std::pair<list<T1>, list<T1>> _rc1 = std::move(_result);
-        auto [evens, odds] = _rc1;
+        std::pair<list<T1>, list<T1>> r_ = std::move(_result);
+        auto [evens, odds] = std::move(r_);
         _result = std::make_pair(list<T1>::cons(a0, std::move(evens)),
                                  list<T1>::cons(a00, std::move(odds)));
       }
@@ -477,8 +485,8 @@ struct LoopifyPairs {
       } else {
         auto _f = std::move(std::get<_Cont1>(_frame));
         auto a0 = std::move(_f.a0);
-        std::pair<list<T1>, list<T1>> _rc1 = std::move(_result);
-        auto [ys, zs] = _rc1;
+        std::pair<list<T1>, list<T1>> r_ = std::move(_result);
+        auto [ys, zs] = std::move(r_);
         _result =
             std::make_pair(list<T1>::cons(a0, std::move(ys)), std::move(zs));
       }
@@ -540,8 +548,8 @@ struct LoopifyPairs {
       } else {
         auto _f = std::move(std::get<_Cont_acc_>(_frame));
         uint64_t y = _f.y;
-        std::pair<uint64_t, list<uint64_t>> _rc1 = std::move(_result);
-        auto [final_acc, ys] = _rc1;
+        std::pair<uint64_t, list<uint64_t>> r_ = std::move(_result);
+        auto [final_acc, ys] = std::move(r_);
         _result =
             std::make_pair(final_acc, list<uint64_t>::cons(y, std::move(ys)));
       }

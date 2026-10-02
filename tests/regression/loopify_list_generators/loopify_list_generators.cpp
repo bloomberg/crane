@@ -10,14 +10,14 @@ List<uint64_t> LoopifyListGenerators::cycle_fuel(
     uint64_t fuel;
   };
 
-  /// _Resume_Cons: resumes after recursive call with _result.
-  struct _Resume_Cons {};
+  /// _Cont_Cons: resumes after recursive call, then processes rest.
+  struct _Cont_Cons {};
 
-  using _Frame = std::variant<_Enter, _Resume_Cons>;
+  using _Frame = std::variant<_Enter, _Cont_Cons>;
   List<uint64_t> _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n, fuel});
-  /// Loopified cycle_fuel: _Enter -> _Resume_Cons.
+  /// Loopified cycle_fuel: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -36,14 +36,15 @@ List<uint64_t> LoopifyListGenerators::cycle_fuel(
           if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
             _result = List<uint64_t>::nil();
           } else {
-            _stack.emplace_back(_Resume_Cons{});
+            _stack.emplace_back(_Cont_Cons{});
             _stack.emplace_back(_Enter{n_, fuel_});
           }
         }
       }
     } else {
-      auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = l.app(std::move(_result));
+      auto _f = std::move(std::get<_Cont_Cons>(_frame));
+      List<uint64_t> r_ = std::move(_result);
+      _result = l.app(std::move(r_));
     }
   }
   return _result;
@@ -107,16 +108,17 @@ List<uint64_t> LoopifyListGenerators::replicate_each(
     const List<uint64_t> *l;
   };
 
-  /// _Resume_Cons: saves [reps], resumes after recursive call with _result.
-  struct _Resume_Cons {
+  /// _Cont_Cons: saves [reps], resumes after recursive call, then processes
+  /// rest.
+  struct _Cont_Cons {
     List<uint64_t> reps;
   };
 
-  using _Frame = std::variant<_Enter, _Resume_Cons>;
+  using _Frame = std::variant<_Enter, _Cont_Cons>;
   List<uint64_t> _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
-  /// Loopified replicate_each: _Enter -> _Resume_Cons.
+  /// Loopified replicate_each: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -128,12 +130,14 @@ List<uint64_t> LoopifyListGenerators::replicate_each(
       } else {
         const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
         List<uint64_t> reps = replicate_elem(n, a0);
-        _stack.emplace_back(_Resume_Cons{std::move(reps)});
+        _stack.emplace_back(_Cont_Cons{std::move(reps)});
         _stack.emplace_back(_Enter{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = std::move(_f.reps).app(std::move(_result));
+      auto _f = std::move(std::get<_Cont_Cons>(_frame));
+      List<uint64_t> reps = std::move(_f.reps);
+      List<uint64_t> r_ = std::move(_result);
+      _result = std::move(reps).app(std::move(r_));
     }
   }
   return _result;

@@ -8,22 +8,21 @@ GlobalStateTests::fib_fun(uint64_t n) { /// _Enter: captures varying parameters
     uint64_t n;
   };
 
-  /// _After_m: saves [m0], dispatches next recursive call.
-  struct _After_m {
-    uint64_t m0;
+  /// _Cont_m: saves [m], resumes after recursive call, then processes rest.
+  struct _Cont_m {
+    uint64_t m;
   };
 
-  /// _Combine_m: receives partial results, combines with _result from final
-  /// call.
-  struct _Combine_m {
-    uint64_t _result;
+  /// _Cont_m_1: saves [r_], resumes after recursive call, then processes rest.
+  struct _Cont_m_1 {
+    uint64_t r_;
   };
 
-  using _Frame = std::variant<_Enter, _After_m, _Combine_m>;
+  using _Frame = std::variant<_Enter, _Cont_m, _Cont_m_1>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
-  /// Loopified fib_fun: _Enter -> _After_m -> _Combine_m.
+  /// Loopified fib_fun: _Enter -> _Cont_m -> _Cont_m_1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -38,17 +37,21 @@ GlobalStateTests::fib_fun(uint64_t n) { /// _Enter: captures varying parameters
           _result = UINT64_C(1);
         } else {
           uint64_t m = m0 - 1;
-          _stack.emplace_back(_After_m{m0});
-          _stack.emplace_back(_Enter{m});
+          _stack.emplace_back(_Cont_m{m});
+          _stack.emplace_back(_Enter{m0});
         }
       }
-    } else if (std::holds_alternative<_After_m>(_frame)) {
-      auto _f = std::move(std::get<_After_m>(_frame));
-      _stack.emplace_back(_Combine_m{std::move(_result)});
-      _stack.emplace_back(_Enter{_f.m0});
+    } else if (std::holds_alternative<_Cont_m>(_frame)) {
+      auto _f = std::move(std::get<_Cont_m>(_frame));
+      uint64_t m = _f.m;
+      uint64_t r_ = std::move(_result);
+      _stack.emplace_back(_Cont_m_1{r_});
+      _stack.emplace_back(_Enter{m});
     } else {
-      auto _f = std::move(std::get<_Combine_m>(_frame));
-      _result = (std::move(_result) + std::move(_f._result));
+      auto _f = std::move(std::get<_Cont_m_1>(_frame));
+      uint64_t r_ = _f.r_;
+      uint64_t r_0 = std::move(_result);
+      _result = (r_ + r_0);
     }
   }
   return _result;

@@ -269,18 +269,18 @@ struct LoopifyFrameLambdaType {
       const List<T1> *l1;
     };
 
-    /// _Resume_Cons: saves [_s0], resumes after recursive call with _result.
-    struct _Resume_Cons {
-      crane::fn<res<std::pair<List<std::pair<T1, T2>>, List<T2>>>(
-          std::pair<List<std::pair<T1, T2>>, List<T2>>)>
-          _s0;
+    /// _Cont_Cons: saves [a0, a00], resumes after recursive call, then
+    /// processes rest.
+    struct _Cont_Cons {
+      T1 a0;
+      T2 a00;
     };
 
-    using _Frame = std::variant<_Enter, _Resume_Cons>;
+    using _Frame = std::variant<_Enter, _Cont_Cons>;
     res<std::pair<List<std::pair<T1, T2>>, List<T2>>> _result{};
     crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l2, &l1});
-    /// Loopified comb: _Enter -> _Resume_Cons.
+    /// Loopified comb: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -308,7 +308,21 @@ struct LoopifyFrameLambdaType {
           } else {
             const auto &[a00, a10] = std::get<typename List<T2>::Cons>(l2.v());
             const List<T2> &a10_value = *a10;
-            _stack.emplace_back(_Resume_Cons{
+            _stack.emplace_back(_Cont_Cons{a0, a00});
+            _stack.emplace_back(_Enter{crane_raw(a10), crane_raw(a1)});
+          }
+        }
+      } else {
+        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        auto a0 = std::move(_f.a0);
+        auto a00 = std::move(_f.a00);
+        res<std::pair<List<std::pair<T1, T2>>, List<T2>>> r_ =
+            std::move(_result);
+        _result =
+            Monad0::template bind<Monad_res,
+                                  std::pair<List<std::pair<T1, T2>>, List<T2>>,
+                                  std::pair<List<std::pair<T1, T2>>, List<T2>>>(
+                std::move(r_),
                 [=](std::pair<List<std::pair<T1, T2>>, List<T2>> x0) {
                   const auto &[l, rest] = x0;
                   return Monad0::template ret<
@@ -316,17 +330,7 @@ struct LoopifyFrameLambdaType {
                       std::make_pair(List<std::pair<T1, T2>>::cons(
                                          std::make_pair(a0, a00), l),
                                      rest));
-                }});
-            _stack.emplace_back(_Enter{crane_raw(a10), crane_raw(a1)});
-          }
-        }
-      } else {
-        auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result =
-            Monad0::template bind<Monad_res,
-                                  std::pair<List<std::pair<T1, T2>>, List<T2>>,
-                                  std::pair<List<std::pair<T1, T2>>, List<T2>>>(
-                std::move(_result), std::move(_f._s0));
+                });
       }
     }
     return _result;

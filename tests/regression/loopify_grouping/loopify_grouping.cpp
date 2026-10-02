@@ -214,9 +214,9 @@ LoopifyGrouping::partition3(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      std::pair<std::pair<List<uint64_t>, List<uint64_t>>, List<uint64_t>>
-          _rc1 = std::move(_result);
-      auto [p, greater] = _rc1;
+      std::pair<std::pair<List<uint64_t>, List<uint64_t>>, List<uint64_t>> r_ =
+          std::move(_result);
+      auto [p, greater] = std::move(r_);
       auto [less, equal] = std::move(p);
       if (a0 < pivot) {
         _result = std::make_pair(
@@ -249,16 +249,14 @@ uint64_t LoopifyGrouping::count_elem(
     const List<uint64_t> *l;
   };
 
-  /// _Resume1: saves [_s0], resumes after recursive call with _result.
-  struct _Resume1 {
-    uint64_t _s0;
-  };
+  /// _Cont1: resumes after recursive call, then processes rest.
+  struct _Cont1 {};
 
-  using _Frame = std::variant<_Enter, _Resume1>;
+  using _Frame = std::variant<_Enter, _Cont1>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
-  /// Loopified count_elem: _Enter -> _Resume1.
+  /// Loopified count_elem: _Enter -> _Cont1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -270,15 +268,16 @@ uint64_t LoopifyGrouping::count_elem(
       } else {
         const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
         if (x == a0) {
-          _stack.emplace_back(_Resume1{UINT64_C(1)});
+          _stack.emplace_back(_Cont1{});
           _stack.emplace_back(_Enter{crane_raw(a1)});
         } else {
           _stack.emplace_back(_Enter{crane_raw(a1)});
         }
       }
     } else {
-      auto _f = std::move(std::get<_Resume1>(_frame));
-      _result = (_f._s0 + std::move(_result));
+      auto _f = std::move(std::get<_Cont1>(_frame));
+      uint64_t r_ = std::move(_result);
+      _result = (UINT64_C(1) + r_);
     }
   }
   return _result;

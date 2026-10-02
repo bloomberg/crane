@@ -126,16 +126,14 @@ struct LoopifyPolymorphic {
       const List<T1> *l;
     };
 
-    /// _Resume_Cons: saves [_s0], resumes after recursive call with _result.
-    struct _Resume_Cons {
-      uint64_t _s0;
-    };
+    /// _Cont_Cons: resumes after recursive call, then processes rest.
+    struct _Cont_Cons {};
 
-    using _Frame = std::variant<_Enter, _Resume_Cons>;
+    using _Frame = std::variant<_Enter, _Cont_Cons>;
     uint64_t _result{};
     crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
-    /// Loopified poly_length: _Enter -> _Resume_Cons.
+    /// Loopified poly_length: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -146,12 +144,13 @@ struct LoopifyPolymorphic {
           _result = UINT64_C(0);
         } else {
           const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
-          _stack.emplace_back(_Resume_Cons{UINT64_C(1)});
+          _stack.emplace_back(_Cont_Cons{});
           _stack.emplace_back(_Enter{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = (_f._s0 + std::move(_result));
+        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        uint64_t r_ = std::move(_result);
+        _result = (UINT64_C(1) + r_);
       }
     }
     return _result;
@@ -166,16 +165,17 @@ struct LoopifyPolymorphic {
       const List<T1> *l;
     };
 
-    /// _Resume_Cons: saves [_s0], resumes after recursive call with _result.
-    struct _Resume_Cons {
-      List<T1> _s0;
+    /// _Cont_Cons: saves [a0], resumes after recursive call, then processes
+    /// rest.
+    struct _Cont_Cons {
+      T1 a0;
     };
 
-    using _Frame = std::variant<_Enter, _Resume_Cons>;
+    using _Frame = std::variant<_Enter, _Cont_Cons>;
     List<T1> _result{};
     crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
-    /// Loopified poly_reverse: _Enter -> _Resume_Cons.
+    /// Loopified poly_reverse: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -186,13 +186,14 @@ struct LoopifyPolymorphic {
           _result = List<T1>::nil();
         } else {
           const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
-          _stack.emplace_back(
-              _Resume_Cons{List<T1>::cons(a0, List<T1>::nil())});
+          _stack.emplace_back(_Cont_Cons{a0});
           _stack.emplace_back(_Enter{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = std::move(_result).app(std::move(_f._s0));
+        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        auto a0 = std::move(_f.a0);
+        List<T1> r_ = std::move(_result);
+        _result = std::move(r_).app(List<T1>::cons(a0, List<T1>::nil()));
       }
     }
     return _result;
@@ -437,8 +438,8 @@ struct LoopifyPolymorphic {
         auto _f = std::move(std::get<_Cont_a>(_frame));
         auto a = std::move(_f.a);
         auto b = std::move(_f.b);
-        std::pair<List<T1>, List<T2>> _rc1 = std::move(_result);
-        auto [as_, bs] = _rc1;
+        std::pair<List<T1>, List<T2>> r_ = std::move(_result);
+        auto [as_, bs] = std::move(r_);
         _result = std::make_pair(List<T1>::cons(a, std::move(as_)),
                                  List<T2>::cons(b, std::move(bs)));
       }
@@ -484,8 +485,8 @@ struct LoopifyPolymorphic {
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         auto a0 = std::move(_f.a0);
-        std::pair<List<T1>, List<T1>> _rc1 = std::move(_result);
-        auto [trues, falses] = _rc1;
+        std::pair<List<T1>, List<T1>> r_ = std::move(_result);
+        auto [trues, falses] = std::move(r_);
         if (p(a0)) {
           _result = std::make_pair(List<T1>::cons(a0, std::move(trues)),
                                    std::move(falses));

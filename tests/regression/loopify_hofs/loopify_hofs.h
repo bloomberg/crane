@@ -281,16 +281,17 @@ struct LoopifyHofs {
       const List<T1> *l;
     };
 
-    /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
-    struct _Resume_Cons {
-      List<T2> a0;
+    /// _Cont_Cons: saves [a0], resumes after recursive call, then processes
+    /// rest.
+    struct _Cont_Cons {
+      T1 a0;
     };
 
-    using _Frame = std::variant<_Enter, _Resume_Cons>;
+    using _Frame = std::variant<_Enter, _Cont_Cons>;
     List<T2> _result{};
     crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
-    /// Loopified flat_map: _Enter -> _Resume_Cons.
+    /// Loopified flat_map: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -301,12 +302,14 @@ struct LoopifyHofs {
           _result = List<T2>::nil();
         } else {
           const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
-          _stack.emplace_back(_Resume_Cons{f(a0)});
+          _stack.emplace_back(_Cont_Cons{a0});
           _stack.emplace_back(_Enter{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = std::move(_f.a0).app(std::move(_result));
+        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        auto a0 = std::move(_f.a0);
+        List<T2> r_ = std::move(_result);
+        _result = f(a0).app(std::move(r_));
       }
     }
     return _result;
@@ -323,16 +326,17 @@ struct LoopifyHofs {
       const List<T1> *l1;
     };
 
-    /// _Resume_Cons: saves [_s0], resumes after recursive call with _result.
-    struct _Resume_Cons {
-      List<std::pair<T1, T2>> _s0;
+    /// _Cont_Cons: saves [a00], resumes after recursive call, then processes
+    /// rest.
+    struct _Cont_Cons {
+      T1 a00;
     };
 
-    using _Frame = std::variant<_Enter, _Resume_Cons>;
+    using _Frame = std::variant<_Enter, _Cont_Cons>;
     List<std::pair<T1, T2>> _result{};
     crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l1});
-    /// Loopified all_pairs: _Enter -> _Resume_Cons.
+    /// Loopified all_pairs: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -385,12 +389,56 @@ struct LoopifyHofs {
           _result = List<std::pair<T1, T2>>::nil();
         } else {
           const auto &[a00, a10] = std::get<typename List<T1>::Cons>(l1.v());
-          _stack.emplace_back(_Resume_Cons{pair_with(a00, l2)});
+          _stack.emplace_back(_Cont_Cons{a00});
           _stack.emplace_back(_Enter{crane_raw(a10)});
         }
       } else {
-        auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = std::move(_f._s0).app(std::move(_result));
+        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        auto a00 = std::move(_f.a00);
+        List<std::pair<T1, T2>> r_ = std::move(_result);
+        auto pair_with_impl =
+            [&](auto &, const T1 &x,
+                const List<T2> &l) -> List<std::pair<T1, T2>> {
+          /// _Enter: captures varying parameters for each recursive call.
+          struct _Enter {
+            const List<T2> *l;
+          };
+          /// _Resume_Cons: saves [_s0], resumes after recursive call with
+          /// _result.
+          struct _Resume_Cons {
+            std::pair<T1, T2> _s0;
+          };
+          using _Frame = std::variant<_Enter, _Resume_Cons>;
+          List<std::pair<T1, T2>> _result{};
+          crane::small_vector<_Frame> _stack;
+          _stack.emplace_back(_Enter{&l});
+          /// Loopified pair_with: _Enter -> _Resume_Cons.
+          while (!_stack.empty()) {
+            _Frame _frame = std::move(_stack.back());
+            _stack.pop_back();
+            if (std::holds_alternative<_Enter>(_frame)) {
+              auto _f = std::move(std::get<_Enter>(_frame));
+              const List<T2> &l = *_f.l;
+              if (std::holds_alternative<typename List<T2>::Nil>(l.v())) {
+                _result = List<std::pair<T1, T2>>::nil();
+              } else {
+                const auto &[a0, a1] = std::get<typename List<T2>::Cons>(l.v());
+                _stack.emplace_back(_Resume_Cons{std::make_pair(x, a0)});
+                _stack.emplace_back(_Enter{crane_raw(a1)});
+              }
+            } else {
+              auto _f = std::move(std::get<_Resume_Cons>(_frame));
+              _result = List<std::pair<T1, T2>>::cons(std::move(_f._s0),
+                                                      std::move(_result));
+            }
+          }
+          return _result;
+        };
+        auto pair_with = [&](const T1 &x,
+                             const List<T2> &l) -> List<std::pair<T1, T2>> {
+          return pair_with_impl(pair_with_impl, x, l);
+        };
+        _result = pair_with(a00, l2).app(std::move(r_));
       }
     }
     return _result;
@@ -565,16 +613,17 @@ struct LoopifyHofs {
       const List<uint64_t> *l;
     };
 
-    /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
-    struct _Resume_Cons {
+    /// _Cont_Cons: saves [a0], resumes after recursive call, then processes
+    /// rest.
+    struct _Cont_Cons {
       uint64_t a0;
     };
 
-    using _Frame = std::variant<_Enter, _Resume_Cons>;
+    using _Frame = std::variant<_Enter, _Cont_Cons>;
     uint64_t _result{};
     crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
-    /// Loopified foldr1: _Enter -> _Resume_Cons.
+    /// Loopified foldr1: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -589,13 +638,15 @@ struct LoopifyHofs {
           if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
             _result = std::move(a0);
           } else {
-            _stack.emplace_back(_Resume_Cons{a0});
+            _stack.emplace_back(_Cont_Cons{a0});
             _stack.emplace_back(_Enter{crane_raw(a1)});
           }
         }
       } else {
-        auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = f(_f.a0, std::move(_result));
+        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        uint64_t a0 = _f.a0;
+        uint64_t r_ = std::move(_result);
+        _result = f(a0, r_);
       }
     }
     return _result;
@@ -715,16 +766,17 @@ struct LoopifyHofs {
       const List<uint64_t> *l;
     };
 
-    /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
-    struct _Resume_Cons {
-      List<T1> a0;
+    /// _Cont_Cons: saves [a0], resumes after recursive call, then processes
+    /// rest.
+    struct _Cont_Cons {
+      uint64_t a0;
     };
 
-    using _Frame = std::variant<_Enter, _Resume_Cons>;
+    using _Frame = std::variant<_Enter, _Cont_Cons>;
     List<T1> _result{};
     crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
-    /// Loopified mapcat: _Enter -> _Resume_Cons.
+    /// Loopified mapcat: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -735,12 +787,14 @@ struct LoopifyHofs {
           _result = List<T1>::nil();
         } else {
           const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-          _stack.emplace_back(_Resume_Cons{f(a0)});
+          _stack.emplace_back(_Cont_Cons{a0});
           _stack.emplace_back(_Enter{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = std::move(_f.a0).app(std::move(_result));
+        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        uint64_t a0 = _f.a0;
+        List<T1> r_ = std::move(_result);
+        _result = f(a0).app(std::move(r_));
       }
     }
     return _result;
@@ -810,16 +864,17 @@ struct LoopifyHofs {
       const List<uint64_t> *l;
     };
 
-    /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
-    struct _Resume_Cons {
-      bool a0;
+    /// _Cont_Cons: saves [a0], resumes after recursive call, then processes
+    /// rest.
+    struct _Cont_Cons {
+      uint64_t a0;
     };
 
-    using _Frame = std::variant<_Enter, _Resume_Cons>;
+    using _Frame = std::variant<_Enter, _Cont_Cons>;
     bool _result{};
     crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
-    /// Loopified bool_all: _Enter -> _Resume_Cons.
+    /// Loopified bool_all: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -830,12 +885,14 @@ struct LoopifyHofs {
           _result = true;
         } else {
           const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-          _stack.emplace_back(_Resume_Cons{p(a0)});
+          _stack.emplace_back(_Cont_Cons{a0});
           _stack.emplace_back(_Enter{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = (_f.a0 && std::move(_result));
+        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        uint64_t a0 = _f.a0;
+        bool r_ = std::move(_result);
+        _result = (p(a0) && r_);
       }
     }
     return _result;
@@ -1055,16 +1112,17 @@ struct LoopifyHofs {
       const List<uint64_t> *l;
     };
 
-    /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
-    struct _Resume_Cons {
+    /// _Cont_Cons: saves [a0], resumes after recursive call, then processes
+    /// rest.
+    struct _Cont_Cons {
       uint64_t a0;
     };
 
-    using _Frame = std::variant<_Enter, _Resume_Cons>;
+    using _Frame = std::variant<_Enter, _Cont_Cons>;
     uint64_t _result{};
     crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
-    /// Loopified fold_right: _Enter -> _Resume_Cons.
+    /// Loopified fold_right: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -1075,12 +1133,14 @@ struct LoopifyHofs {
           _result = acc;
         } else {
           const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-          _stack.emplace_back(_Resume_Cons{a0});
+          _stack.emplace_back(_Cont_Cons{a0});
           _stack.emplace_back(_Enter{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = f(_f.a0, std::move(_result));
+        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        uint64_t a0 = _f.a0;
+        uint64_t r_ = std::move(_result);
+        _result = f(a0, r_);
       }
     }
     return _result;
@@ -1126,8 +1186,8 @@ struct LoopifyHofs {
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
-        std::pair<List<uint64_t>, List<uint64_t>> _rc1 = std::move(_result);
-        auto [yes, no] = _rc1;
+        std::pair<List<uint64_t>, List<uint64_t>> r_ = std::move(_result);
+        auto [yes, no] = std::move(r_);
         if (p(a0)) {
           _result = std::make_pair(List<uint64_t>::cons(a0, std::move(yes)),
                                    std::move(no));
@@ -1270,8 +1330,8 @@ struct LoopifyHofs {
       } else {
         auto _f = std::move(std::get<_Cont1>(_frame));
         uint64_t a0 = _f.a0;
-        std::pair<List<uint64_t>, List<uint64_t>> _rc1 = std::move(_result);
-        auto [taken, rest] = _rc1;
+        std::pair<List<uint64_t>, List<uint64_t>> r_ = std::move(_result);
+        auto [taken, rest] = std::move(r_);
         _result = std::make_pair(List<uint64_t>::cons(a0, std::move(taken)),
                                  std::move(rest));
       }
@@ -1346,17 +1406,17 @@ struct LoopifyHofs {
       } else if (std::holds_alternative<_Cont1>(_frame)) {
         auto _f = std::move(std::get<_Cont1>(_frame));
         uint64_t a0 = _f.a0;
-        List<List<uint64_t>> _rc1 = std::move(_result);
+        List<List<uint64_t>> r_ = std::move(_result);
         if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(
-                _rc1.v())) {
+                r_.v_mut())) {
           _result = List<List<uint64_t>>::cons(
               List<uint64_t>::cons(a0, List<uint64_t>::nil()),
               List<List<uint64_t>>::nil());
         } else {
-          const auto &[a01, a11] =
-              std::get<typename List<List<uint64_t>>::Cons>(_rc1.v());
-          _result =
-              List<List<uint64_t>>::cons(List<uint64_t>::cons(a0, a01), *a11);
+          auto &[a01, a11] =
+              std::get<typename List<List<uint64_t>>::Cons>(r_.v_mut());
+          _result = List<List<uint64_t>>::cons(
+              List<uint64_t>::cons(a0, std::move(a01)), *a11);
         }
       } else {
         auto _f = std::move(std::get<_Resume2>(_frame));
@@ -1419,8 +1479,8 @@ struct LoopifyHofs {
       } else {
         auto _f = std::move(std::get<_Cont_acc_>(_frame));
         uint64_t y = _f.y;
-        std::pair<uint64_t, List<uint64_t>> _rc1 = std::move(_result);
-        auto [acc__, ys] = _rc1;
+        std::pair<uint64_t, List<uint64_t>> r_ = std::move(_result);
+        auto [acc__, ys] = std::move(r_);
         _result = std::make_pair(acc__, List<uint64_t>::cons(y, std::move(ys)));
       }
     }

@@ -45,9 +45,9 @@ LoopifyPairs::unzip(
       auto _f = std::move(std::get<_Cont_x>(_frame));
       uint64_t x = _f.x;
       uint64_t y = _f.y;
-      std::pair<LoopifyPairs::list<uint64_t>, LoopifyPairs::list<uint64_t>>
-          _rc1 = std::move(_result);
-      auto [xs, ys] = _rc1;
+      std::pair<LoopifyPairs::list<uint64_t>, LoopifyPairs::list<uint64_t>> r_ =
+          std::move(_result);
+      auto [xs, ys] = std::move(r_);
       _result = std::make_pair(list<uint64_t>::cons(x, std::move(xs)),
                                list<uint64_t>::cons(y, std::move(ys)));
     }
@@ -103,8 +103,8 @@ LoopifyPairs::partition3(
       std::pair<
           LoopifyPairs::list<uint64_t>,
           std::pair<LoopifyPairs::list<uint64_t>, LoopifyPairs::list<uint64_t>>>
-          _rc1 = std::move(_result);
-      auto [lt, p] = _rc1;
+          r_ = std::move(_result);
+      auto [lt, p] = std::move(r_);
       auto [eq, gt] = std::move(p);
       if (a0 < pivot) {
         _result = std::make_pair(list<uint64_t>::cons(a0, std::move(lt)),
@@ -170,8 +170,8 @@ std::pair<uint64_t, uint64_t> LoopifyPairs::min_max(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      std::pair<uint64_t, uint64_t> _rc1 = std::move(_result);
-      auto [mn, mx] = _rc1;
+      std::pair<uint64_t, uint64_t> r_ = std::move(_result);
+      auto [mn, mx] = std::move(r_);
       _result = std::make_pair((a0 <= mn ? a0 : mn), (mx <= a0 ? a0 : mx));
     }
   }
@@ -215,8 +215,8 @@ std::pair<uint64_t, uint64_t> LoopifyPairs::sum_and_count(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      std::pair<uint64_t, uint64_t> _rc1 = std::move(_result);
-      auto [s, c] = _rc1;
+      std::pair<uint64_t, uint64_t> r_ = std::move(_result);
+      auto [s, c] = std::move(r_);
       _result = std::make_pair((a0 + s), (c + 1));
     }
   }
@@ -261,9 +261,9 @@ std::pair<uint64_t, std::pair<uint64_t, uint64_t>> LoopifyPairs::sum_prod_count(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      std::pair<uint64_t, std::pair<uint64_t, uint64_t>> _rc1 =
+      std::pair<uint64_t, std::pair<uint64_t, uint64_t>> r_ =
           std::move(_result);
-      auto [s, p0] = _rc1;
+      auto [s, p0] = std::move(r_);
       auto [p, c] = std::move(p0);
       _result = std::make_pair((a0 + s), std::make_pair((a0 * p), (c + 1)));
     }

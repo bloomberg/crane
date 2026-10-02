@@ -47,8 +47,8 @@ bool NatKey::key_eq_dec(
       }
     } else {
       auto _f = std::move(std::get<_Cont_S>(_frame));
-      bool _rc1 = std::move(_result);
-      if (_rc1) {
+      bool r_ = std::move(_result);
+      if (r_) {
         _result = true;
       } else {
         _result = false;

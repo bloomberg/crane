@@ -8,16 +8,17 @@ uint64_t MemSafetyProbe18::sum_list(
     const MemSafetyProbe18::mylist<uint64_t> *l;
   };
 
-  /// _Resume_Mycons: saves [a0], resumes after recursive call with _result.
-  struct _Resume_Mycons {
+  /// _Cont_Mycons: saves [a0], resumes after recursive call, then processes
+  /// rest.
+  struct _Cont_Mycons {
     uint64_t a0;
   };
 
-  using _Frame = std::variant<_Enter, _Resume_Mycons>;
+  using _Frame = std::variant<_Enter, _Cont_Mycons>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
-  /// Loopified sum_list: _Enter -> _Resume_Mycons.
+  /// Loopified sum_list: _Enter -> _Cont_Mycons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -31,12 +32,14 @@ uint64_t MemSafetyProbe18::sum_list(
         const auto &[a0, a1] =
             std::get<typename MemSafetyProbe18::mylist<uint64_t>::Mycons>(
                 l.v());
-        _stack.emplace_back(_Resume_Mycons{a0});
+        _stack.emplace_back(_Cont_Mycons{a0});
         _stack.emplace_back(_Enter{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-      _result = (_f.a0 + std::move(_result));
+      auto _f = std::move(std::get<_Cont_Mycons>(_frame));
+      uint64_t a0 = _f.a0;
+      uint64_t r_ = std::move(_result);
+      _result = (a0 + r_);
     }
   }
   return _result;
@@ -101,16 +104,17 @@ uint64_t MemSafetyProbe18::sum_tree_list(
     const MemSafetyProbe18::mylist<MemSafetyProbe18::tree> *l;
   };
 
-  /// _Resume_Mycons: saves [a0], resumes after recursive call with _result.
-  struct _Resume_Mycons {
-    uint64_t a0;
+  /// _Cont_Mycons: saves [a0], resumes after recursive call, then processes
+  /// rest.
+  struct _Cont_Mycons {
+    MemSafetyProbe18::tree a0;
   };
 
-  using _Frame = std::variant<_Enter, _Resume_Mycons>;
+  using _Frame = std::variant<_Enter, _Cont_Mycons>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
-  /// Loopified sum_tree_list: _Enter -> _Resume_Mycons.
+  /// Loopified sum_tree_list: _Enter -> _Cont_Mycons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -125,12 +129,14 @@ uint64_t MemSafetyProbe18::sum_tree_list(
         const auto &[a0, a1] = std::get<
             typename MemSafetyProbe18::mylist<MemSafetyProbe18::tree>::Mycons>(
             l.v());
-        _stack.emplace_back(_Resume_Mycons{a0.tree_sum()});
+        _stack.emplace_back(_Cont_Mycons{a0});
         _stack.emplace_back(_Enter{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-      _result = (_f.a0 + std::move(_result));
+      auto _f = std::move(std::get<_Cont_Mycons>(_frame));
+      MemSafetyProbe18::tree a0 = std::move(_f.a0);
+      uint64_t r_ = std::move(_result);
+      _result = (a0.tree_sum() + r_);
     }
   }
   return _result;

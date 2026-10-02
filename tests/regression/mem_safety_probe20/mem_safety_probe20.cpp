@@ -93,16 +93,17 @@ uint64_t MemSafetyProbe20::sum_wrapped(
     const MemSafetyProbe20::mylist<MemSafetyProbe20::wrapped> *l;
   };
 
-  /// _Resume_Mycons: saves [_s0], resumes after recursive call with _result.
-  struct _Resume_Mycons {
-    uint64_t _s0;
+  /// _Cont_Mycons: saves [a0], resumes after recursive call, then processes
+  /// rest.
+  struct _Cont_Mycons {
+    MemSafetyProbe20::wrapped a0;
   };
 
-  using _Frame = std::variant<_Enter, _Resume_Mycons>;
+  using _Frame = std::variant<_Enter, _Cont_Mycons>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
-  /// Loopified sum_wrapped: _Enter -> _Resume_Mycons.
+  /// Loopified sum_wrapped: _Enter -> _Cont_Mycons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -115,12 +116,14 @@ uint64_t MemSafetyProbe20::sum_wrapped(
       } else {
         const auto &[a0, a1] = std::get<typename MemSafetyProbe20::mylist<
             MemSafetyProbe20::wrapped>::Mycons>(l.v());
-        _stack.emplace_back(_Resume_Mycons{a0.unwrap(x)});
+        _stack.emplace_back(_Cont_Mycons{a0});
         _stack.emplace_back(_Enter{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-      _result = (_f._s0 + std::move(_result));
+      auto _f = std::move(std::get<_Cont_Mycons>(_frame));
+      MemSafetyProbe20::wrapped a0 = std::move(_f.a0);
+      uint64_t r_ = std::move(_result);
+      _result = (a0.unwrap(x) + r_);
     }
   }
   return _result;

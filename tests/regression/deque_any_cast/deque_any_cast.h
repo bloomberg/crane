@@ -42,16 +42,16 @@ struct DequeAnyCast {
       std::deque<typename _tcI0::m_carrier> l;
     };
 
-    /// _Resume_x: saves [x], resumes after recursive call with _result.
-    struct _Resume_x {
+    /// _Cont_x: saves [x], resumes after recursive call, then processes rest.
+    struct _Cont_x {
       typename _tcI0::m_carrier x;
     };
 
-    using _Frame = std::variant<_Enter, _Resume_x>;
+    using _Frame = std::variant<_Enter, _Cont_x>;
     typename _tcI0::m_carrier _result{};
     crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{l});
-    /// Loopified mfold: _Enter -> _Resume_x.
+    /// Loopified mfold: _Enter -> _Cont_x.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -63,12 +63,17 @@ struct DequeAnyCast {
         } else {
           const auto &x = l.front();
           std::deque<typename _tcI0::m_carrier> rest(l.begin() + 1, l.end());
-          _stack.emplace_back(_Resume_x{x});
+          const auto &m_op0 = _tcI0::m_op;
+          crane::obj _x = _tcI0::m_id;
+          _stack.emplace_back(_Cont_x{x});
           _stack.emplace_back(_Enter{rest});
         }
       } else {
-        auto _f = std::move(std::get<_Resume_x>(_frame));
-        _result = _tcI0::m_op(std::move(_f.x), std::move(_result));
+        auto _f = std::move(std::get<_Cont_x>(_frame));
+        typename _tcI0::m_carrier x = std::move(_f.x);
+        typename _tcI0::m_carrier r_ = std::move(_result);
+        const auto &m_op0 = _tcI0::m_op;
+        _result = m_op0(x, std::move(r_));
       }
     }
     return _result;

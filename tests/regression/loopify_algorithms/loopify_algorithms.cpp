@@ -156,17 +156,17 @@ List<std::pair<uint64_t, uint64_t>> LoopifyAlgorithms::run_length_encode(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      List<std::pair<uint64_t, uint64_t>> _rc1 = std::move(_result);
+      List<std::pair<uint64_t, uint64_t>> r_ = std::move(_result);
       if (std::holds_alternative<
-              typename List<std::pair<uint64_t, uint64_t>>::Nil>(_rc1.v())) {
+              typename List<std::pair<uint64_t, uint64_t>>::Nil>(r_.v_mut())) {
         _result = List<std::pair<uint64_t, uint64_t>>::cons(
             std::make_pair(a0, UINT64_C(1)),
             List<std::pair<uint64_t, uint64_t>>::nil());
       } else {
-        const auto &[a00, a10] =
+        auto &[a00, a10] =
             std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
-                _rc1.v());
-        const auto &[y, n] = a00;
+                r_.v_mut());
+        auto [y, n] = std::move(a00);
         if (a0 == y) {
           _result = List<std::pair<uint64_t, uint64_t>>::cons(
               std::make_pair(y, (n + 1)), *a10);
@@ -591,16 +591,18 @@ uint64_t LoopifyAlgorithms::weighted_sum(
     uint64_t i;
   };
 
-  /// _Resume_Cons: saves [_s0], resumes after recursive call with _result.
-  struct _Resume_Cons {
-    uint64_t _s0;
+  /// _Cont_Cons: saves [a0, i], resumes after recursive call, then processes
+  /// rest.
+  struct _Cont_Cons {
+    uint64_t a0;
+    uint64_t i;
   };
 
-  using _Frame = std::variant<_Enter, _Resume_Cons>;
+  using _Frame = std::variant<_Enter, _Cont_Cons>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l, i});
-  /// Loopified weighted_sum: _Enter -> _Resume_Cons.
+  /// Loopified weighted_sum: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -612,12 +614,15 @@ uint64_t LoopifyAlgorithms::weighted_sum(
         _result = UINT64_C(0);
       } else {
         const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-        _stack.emplace_back(_Resume_Cons{(i * a0)});
+        _stack.emplace_back(_Cont_Cons{a0, i});
         _stack.emplace_back(_Enter{crane_raw(a1), (i + 1)});
       }
     } else {
-      auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = (_f._s0 + std::move(_result));
+      auto _f = std::move(std::get<_Cont_Cons>(_frame));
+      uint64_t a0 = _f.a0;
+      uint64_t i = _f.i;
+      uint64_t r_ = std::move(_result);
+      _result = ((i * a0) + r_);
     }
   }
   return _result;
@@ -632,17 +637,17 @@ uint64_t LoopifyAlgorithms::step_sum(
     const List<uint64_t> *l;
   };
 
-  /// _Resume_Cons: saves [contribution], resumes after recursive call with
-  /// _result.
-  struct _Resume_Cons {
+  /// _Cont_Cons: saves [contribution], resumes after recursive call, then
+  /// processes rest.
+  struct _Cont_Cons {
     uint64_t contribution;
   };
 
-  using _Frame = std::variant<_Enter, _Resume_Cons>;
+  using _Frame = std::variant<_Enter, _Cont_Cons>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
-  /// Loopified step_sum: _Enter -> _Resume_Cons.
+  /// Loopified step_sum: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -659,12 +664,14 @@ uint64_t LoopifyAlgorithms::step_sum(
         } else {
           contribution = (a0 * UINT64_C(2));
         }
-        _stack.emplace_back(_Resume_Cons{contribution});
+        _stack.emplace_back(_Cont_Cons{contribution});
         _stack.emplace_back(_Enter{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = (_f.contribution + std::move(_result));
+      auto _f = std::move(std::get<_Cont_Cons>(_frame));
+      uint64_t contribution = _f.contribution;
+      uint64_t r_ = std::move(_result);
+      _result = (contribution + r_);
     }
   }
   return _result;

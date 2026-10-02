@@ -11,14 +11,14 @@ List<uint64_t> LoopifyGenerators::cycle(
     uint64_t n;
   };
 
-  /// _Resume_m: resumes after recursive call with _result.
-  struct _Resume_m {};
+  /// _Cont_m: resumes after recursive call, then processes rest.
+  struct _Cont_m {};
 
-  using _Frame = std::variant<_Enter, _Resume_m>;
+  using _Frame = std::variant<_Enter, _Cont_m>;
   List<uint64_t> _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
-  /// Loopified cycle: _Enter -> _Resume_m.
+  /// Loopified cycle: _Enter -> _Cont_m.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -29,12 +29,13 @@ List<uint64_t> LoopifyGenerators::cycle(
         _result = List<uint64_t>::nil();
       } else {
         uint64_t m = n - 1;
-        _stack.emplace_back(_Resume_m{});
+        _stack.emplace_back(_Cont_m{});
         _stack.emplace_back(_Enter{m});
       }
     } else {
-      auto _f = std::move(std::get<_Resume_m>(_frame));
-      _result = l.app(std::move(_result));
+      auto _f = std::move(std::get<_Cont_m>(_frame));
+      List<uint64_t> r_ = std::move(_result);
+      _result = l.app(std::move(r_));
     }
   }
   return _result;
@@ -307,16 +308,16 @@ List<uint64_t> LoopifyGenerators::replicate_each(
     const List<uint64_t> *l;
   };
 
-  /// _Resume_Cons: saves [_s0], resumes after recursive call with _result.
-  struct _Resume_Cons {
-    List<uint64_t> _s0;
+  /// _Cont_Cons: saves [a0], resumes after recursive call, then processes rest.
+  struct _Cont_Cons {
+    uint64_t a0;
   };
 
-  using _Frame = std::variant<_Enter, _Resume_Cons>;
+  using _Frame = std::variant<_Enter, _Cont_Cons>;
   List<uint64_t> _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
-  /// Loopified replicate_each: _Enter -> _Resume_Cons.
+  /// Loopified replicate_each: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -327,12 +328,14 @@ List<uint64_t> LoopifyGenerators::replicate_each(
         _result = List<uint64_t>::nil();
       } else {
         const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-        _stack.emplace_back(_Resume_Cons{replicate_single(a0, n)});
+        _stack.emplace_back(_Cont_Cons{a0});
         _stack.emplace_back(_Enter{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = std::move(_f._s0).app(std::move(_result));
+      auto _f = std::move(std::get<_Cont_Cons>(_frame));
+      uint64_t a0 = _f.a0;
+      List<uint64_t> r_ = std::move(_result);
+      _result = replicate_single(a0, n).app(std::move(r_));
     }
   }
   return _result;

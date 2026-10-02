@@ -195,16 +195,16 @@ List<std::pair<uint64_t, uint64_t>> LoopifyHofs::cartesian(
     const List<uint64_t> *l1;
   };
 
-  /// _Resume_Cons: saves [_s0], resumes after recursive call with _result.
-  struct _Resume_Cons {
-    List<std::pair<uint64_t, uint64_t>> _s0;
+  /// _Cont_Cons: saves [a0], resumes after recursive call, then processes rest.
+  struct _Cont_Cons {
+    uint64_t a0;
   };
 
-  using _Frame = std::variant<_Enter, _Resume_Cons>;
+  using _Frame = std::variant<_Enter, _Cont_Cons>;
   List<std::pair<uint64_t, uint64_t>> _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l1});
-  /// Loopified cartesian: _Enter -> _Resume_Cons.
+  /// Loopified cartesian: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -215,12 +215,14 @@ List<std::pair<uint64_t, uint64_t>> LoopifyHofs::cartesian(
         _result = List<std::pair<uint64_t, uint64_t>>::nil();
       } else {
         const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l1.v());
-        _stack.emplace_back(_Resume_Cons{pair_with_all(a0, l2)});
+        _stack.emplace_back(_Cont_Cons{a0});
         _stack.emplace_back(_Enter{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = std::move(_f._s0).app(std::move(_result));
+      auto _f = std::move(std::get<_Cont_Cons>(_frame));
+      uint64_t a0 = _f.a0;
+      List<std::pair<uint64_t, uint64_t>> r_ = std::move(_result);
+      _result = pair_with_all(a0, l2).app(std::move(r_));
     }
   }
   return _result;

@@ -31,8 +31,8 @@ uint64_t LoopifyGapIfCondition::parity(
       }
     } else {
       auto _f = std::move(std::get<_Cont_m>(_frame));
-      uint64_t _rc1 = std::move(_result);
-      if (_rc1 == UINT64_C(0)) {
+      uint64_t r_ = std::move(_result);
+      if (r_ == UINT64_C(0)) {
         _result = UINT64_C(1);
       } else {
         _result = UINT64_C(0);

@@ -159,16 +159,17 @@ struct LoopifyFolds {
       const List<uint64_t> *l;
     };
 
-    /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
-    struct _Resume_Cons {
+    /// _Cont_Cons: saves [a0], resumes after recursive call, then processes
+    /// rest.
+    struct _Cont_Cons {
       uint64_t a0;
     };
 
-    using _Frame = std::variant<_Enter, _Resume_Cons>;
+    using _Frame = std::variant<_Enter, _Cont_Cons>;
     uint64_t _result{};
     crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
-    /// Loopified fold_right: _Enter -> _Resume_Cons.
+    /// Loopified fold_right: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -179,12 +180,14 @@ struct LoopifyFolds {
           _result = acc;
         } else {
           const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-          _stack.emplace_back(_Resume_Cons{a0});
+          _stack.emplace_back(_Cont_Cons{a0});
           _stack.emplace_back(_Enter{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = f(_f.a0, std::move(_result));
+        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        uint64_t a0 = _f.a0;
+        uint64_t r_ = std::move(_result);
+        _result = f(a0, r_);
       }
     }
     return _result;
@@ -255,13 +258,13 @@ struct LoopifyFolds {
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
-        List<uint64_t> _rc1 = std::move(_result);
-        if (std::holds_alternative<typename List<uint64_t>::Nil>(_rc1.v())) {
+        List<uint64_t> r_ = std::move(_result);
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(r_.v_mut())) {
           _result = List<uint64_t>::cons(acc, List<uint64_t>::nil());
         } else {
-          const auto &[a00, a10] =
-              std::get<typename List<uint64_t>::Cons>(_rc1.v());
-          _result = List<uint64_t>::cons(f(a0, a00), *a10);
+          auto &[a00, a10] =
+              std::get<typename List<uint64_t>::Cons>(r_.v_mut());
+          _result = List<uint64_t>::cons(f(a0, std::move(a00)), *a10);
         }
       }
     }
@@ -314,16 +317,17 @@ struct LoopifyFolds {
       const List<uint64_t> *l;
     };
 
-    /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
-    struct _Resume_Cons {
+    /// _Cont_Cons: saves [a0], resumes after recursive call, then processes
+    /// rest.
+    struct _Cont_Cons {
       uint64_t a0;
     };
 
-    using _Frame = std::variant<_Enter, _Resume_Cons>;
+    using _Frame = std::variant<_Enter, _Cont_Cons>;
     uint64_t _result{};
     crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
-    /// Loopified foldr1: _Enter -> _Resume_Cons.
+    /// Loopified foldr1: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -338,13 +342,15 @@ struct LoopifyFolds {
           if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
             _result = std::move(a0);
           } else {
-            _stack.emplace_back(_Resume_Cons{a0});
+            _stack.emplace_back(_Cont_Cons{a0});
             _stack.emplace_back(_Enter{crane_raw(a1)});
           }
         }
       } else {
-        auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = f(_f.a0, std::move(_result));
+        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        uint64_t a0 = _f.a0;
+        uint64_t r_ = std::move(_result);
+        _result = f(a0, r_);
       }
     }
     return _result;
@@ -392,8 +398,8 @@ struct LoopifyFolds {
       } else {
         auto _f = std::move(std::get<_Cont_acc_>(_frame));
         uint64_t y = _f.y;
-        std::pair<uint64_t, List<uint64_t>> _rc1 = std::move(_result);
-        auto [final_acc, ys] = _rc1;
+        std::pair<uint64_t, List<uint64_t>> r_ = std::move(_result);
+        auto [final_acc, ys] = std::move(r_);
         _result =
             std::make_pair(final_acc, List<uint64_t>::cons(y, std::move(ys)));
       }
