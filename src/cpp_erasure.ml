@@ -481,3 +481,4 @@ let view (d : settled) =
   | d -> Decl d
 
 let split_definition (d : settled) = Minicpp.split_definition d
+let strip_template_defaults (d : settled) = Minicpp.strip_template_defaults d

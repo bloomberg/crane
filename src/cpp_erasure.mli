@@ -111,6 +111,9 @@ val view : settled -> view
     removes types and adds none, so both halves are settled. *)
 val split_definition : settled -> (settled * settled) option
 
+(** {!Minicpp.strip_template_defaults} of a settled declaration. *)
+val strip_template_defaults : settled -> settled
+
 (** [resolve_casts decl] rewrites every {!Minicpp.CPPany_cast} in [decl] to say
     which caster the printer should emit: dropped where the cast is the
     identity, {!Minicpp.CPPany_cast_tolerant} where the shape is only knowable

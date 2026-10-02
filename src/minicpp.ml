@@ -2039,6 +2039,12 @@ let map_dstruct fe fs ft s =
     ds_fields = List.map (map_field fe fs ft) s.ds_fields;
     ds_constraint = Option.map fe s.ds_constraint }
 
+let rec strip_template_defaults = function
+  | Dtemplate (temps, cstr, inner) ->
+    let plain = function TTtypename_default _, id -> (TTtypename, id) | p -> p in
+    Dtemplate (List.map plain temps, cstr, strip_template_defaults inner)
+  | d -> d
+
 let rec split_definition = function
   | Dfun ({df_shape = Ddef (params, body); _} as f) ->
     let no_pure =

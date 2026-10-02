@@ -812,8 +812,10 @@ let function_views ~is_header ~lifted_inline funs =
         match (g.gf_entity, entity) with
         | Defined (_, file), Some e ->
           ( match (file, is_header) with
-          | Header, true | Implementation, false ->
-            [with_env (Function_entity.definition e)]
+          | Header, true -> [with_env (Function_entity.definition e)]
+          | Implementation, false ->
+            (* The header declared it. *)
+            [with_env (Function_entity.definition_after_declaration e)]
           | Implementation, true -> [with_env (Function_entity.declaration e)]
           | Header, false -> [] )
         | Declared d, _ ->

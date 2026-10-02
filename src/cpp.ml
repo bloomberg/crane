@@ -620,21 +620,6 @@ let dedup_lifted_decls ds =
       | None -> true )
     ds
 
-(** A lifted helper [d], finalized: the definition to emit in its place, and
-    the declaration to emit ahead of its callers where [d] defines a
-    function.
-
-    Both halves come from one finished definition, so the declaration emitted
-    at the top of the file states the head the definition emitted here
-    does. *)
-let lifted_fun_split (d : cpp_decl) :
-    Cpp_erasure.settled * Cpp_erasure.settled option =
-  let e = Function_entity.finalize d in
-  ( Function_entity.definition e,
-    if Function_entity.defines_function e then
-      Some (Function_entity.declaration e)
-    else None )
-
 (** Whether [spec] may be emitted at the top of the file, above every
     definition in it.
 
@@ -688,10 +673,19 @@ let spec_is_hoistable (spec : Cpp_erasure.settled) : bool =
     (spec_names_into_a_struct
        (Pp.string_of_ppcmds (pp_cpp_decl (empty_env ()) spec)) )
 
-(** A lifted helper's declaration, where it has one that may be hoisted. *)
-let hoistable_spec = function
-  | Some spec when spec_is_hoistable spec -> Some spec
-  | _ -> None
+(** A lifted helper [d], finalized: what to write in its place, and the
+    declaration to hoist ahead of its callers where [d] defines a function,
+    [may_hoist] allows it, and {!spec_is_hoistable} does.
+
+    Both come from one finished definition, so the hoisted declaration states
+    the head the definition does; the definition then leaves the template
+    defaults to the declaration. *)
+let lifted_views ?(may_hoist = true) (d : cpp_decl) =
+  let e = Function_entity.finalize d in
+  let spec = Function_entity.declaration e in
+  if Function_entity.defines_function e && may_hoist && spec_is_hoistable spec
+  then (Function_entity.definition_after_declaration e, Some spec)
+  else (Function_entity.definition e, None)
 
 (** Whether a module's members name only types a forward declaration can
     stand in for.
@@ -803,14 +797,13 @@ let dbg_lifted =
         | None -> "<not-a-lifted-helper>"
       in
       let split =
-        match snd (lifted_fun_split d) with
-        | Some spec ->
-          let rendered =
-            Pp.string_of_ppcmds (pp_cpp_decl (empty_env ()) spec)
-          in
+        let e = Function_entity.finalize d in
+        if Function_entity.defines_function e then
+          let spec = Function_entity.declaration e in
           Printf.sprintf "splits=yes hoistable=%b spec=%S"
-            (spec_is_hoistable spec) rendered
-        | None -> "splits=no"
+            (spec_is_hoistable spec)
+            (Pp.string_of_ppcmds (pp_cpp_decl (empty_env ()) spec))
+        else "splits=no"
       in
       Feedback.msg_notice
         (Pp.str
@@ -930,7 +923,6 @@ let rec pp_structure_elem ~is_header f = function
               ~extra:
                 (Printf.sprintf "rc_in_struct=%b" (!render_ctx).rc_in_struct)
               d';
-            let def, spec = lifted_fun_split d' in
             (* Only at namespace scope.  A struct is a complete-class
                context, so a method may call a member declared after it and a
                member has no forward reference to repair -- this pass has
@@ -940,11 +932,12 @@ let rec pp_structure_elem ~is_header f = function
                member's signature resolves against the struct, a nested [t] or
                a sibling type, and hoisting the declaration to file scope takes
                those names out of scope with it. *)
-            if not (!render_ctx).rc_in_struct then
-              Option.iter
-                (fun spec ->
-                  Cpp_ind.defer pending_lifted_specs [(empty_env (), spec)] )
-                (hoistable_spec spec);
+            let def, spec =
+              lifted_views ~may_hoist:(not (!render_ctx).rc_in_struct) d'
+            in
+            Option.iter
+              (fun spec -> Cpp_ind.defer pending_lifted_specs [(empty_env (), spec)])
+              spec;
             let pp = pp_cpp_decl (empty_env ()) def in
             if Pp.ismt pp then acc
             else if Pp.ismt acc then pp
@@ -1901,7 +1894,7 @@ let file_views ~is_header (gens : Gen_decls.generated_fun list list) =
     | Defined (_, file), Some e ->
       ( [with_env (Function_entity.declaration e)],
         if (file = Gen_decls.Header) = is_header then
-          [with_env (Function_entity.definition e)]
+          [with_env (Function_entity.definition_after_declaration e)]
         else [] )
     | Declared d, _ -> ([with_env (Cpp_pipeline.finish d)], [])
     | Defined _, None -> assert false
@@ -2050,7 +2043,7 @@ let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
      definition emitted here is the split's, not the one that went in.  Only
      the header writes either. *)
   let lifted_split =
-    if is_header then List.map lifted_fun_split all_lifted else []
+    if is_header then List.map lifted_views all_lifted else []
   in
   let lifted_pp =
     prlist_sep_nonempty cut2
@@ -2060,7 +2053,7 @@ let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
   let lifted_specs_pp =
     prlist_sep_nonempty cut2
       (pp_cpp_decl (empty_env ()))
-      (List.filter_map (fun (_, spec) -> hoistable_spec spec) lifted_split)
+      (List.filter_map snd lifted_split)
   in
   (specs_pp, defs_pp, lifted_pp, lifted_specs_pp)
 
@@ -2824,7 +2817,7 @@ let do_struct_with_decl_tracking ~is_header f s =
     |> dedup_lifted_decls
     |> List.filter_map (fun d ->
            dbg_lifted ~site:"pass2" d;
-           if is_header then Some (lifted_fun_split d) else None )
+           if is_header then Some (lifted_views d) else None )
   in
   let pass2_pre_pp, pass2_post_pp =
     if is_header then
@@ -2915,8 +2908,7 @@ let do_struct_with_decl_tracking ~is_header f s =
           (fun w -> if Pp.ismt w.wr_lifted_specs then None else Some w.wr_lifted_specs)
           wrapper_parts
         @ List.filter_map
-            (fun (_, spec) ->
-              Option.map (pp_cpp_decl (empty_env ())) (hoistable_spec spec) )
+            (fun (_, spec) -> Option.map (pp_cpp_decl (empty_env ())) spec)
             pass2_lifted
         @ Cpp_ind.render_deferred pending_lifted_specs
       in

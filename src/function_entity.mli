@@ -23,8 +23,14 @@ val finalize_group : Minicpp.cpp_decl list -> t list
     own declaration. *)
 val declaration : t -> Cpp_erasure.settled
 
-(** What is written where the entity is defined. *)
+(** What is written where the entity is defined, when nothing declared it
+    before. *)
 val definition : t -> Cpp_erasure.settled
+
+(** The definition written after the {!declaration} in the same file: the
+    declaration gave the template defaults, which C++ allows once per
+    parameter. *)
+val definition_after_declaration : t -> Cpp_erasure.settled
 
 (** Whether the entity is a function, with a declaration distinct from its
     definition. *)

@@ -18,4 +18,7 @@ let finalize d = of_finished (Cpp_pipeline.finish d)
 let finalize_group ds = List.map of_finished (Cpp_pipeline.finish_group ds)
 let declaration e = e.declaration
 let definition e = e.definition
+
+let definition_after_declaration e =
+  Cpp_erasure.strip_template_defaults e.definition
 let defines_function e = e.defines_function
