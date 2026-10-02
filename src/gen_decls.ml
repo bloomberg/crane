@@ -10,7 +10,6 @@ open Minicpp
 open Names
 open Mlutil
 open Table
-open Str
 open Util
 open Translation_state
 open Ml_type_util
@@ -4930,79 +4929,24 @@ let gen_decl__inner n b ty =
 let gen_decl n b ty =
   Table.with_decl_ref n (fun () -> gen_decl__inner n b ty)
 
-(** Generate C++ declaration with pretty-printing adjustments *)
-let gen_decl_for_pp__inner n b ty =
+(** What a top-level function is generated under: its body with erased types
+    recovered and type variables resolved against its ML type, its C++ type,
+    its template head, and the template parameters callers must see. *)
+type function_head = {
+  fh_body : ml_ast;
+  fh_cty : cpp_type;
+  fh_temps : (template_type * Id.t) list;
+  fh_tvars : Id.t list;
+      (** Typeclass-typed parameters first -- they become template parameters
+          inside {!gen_dfun} without appearing in the C++ type, and a caller
+          must see them to use the full template definition -- then the C++
+          type's variables and the index variables it does not mention. *)
+}
+
+(** [with_function_head n b ty k] establishes the scope a top-level function
+    [n] is generated in and hands [k] its {!function_head}. *)
+let with_function_head n b ty k =
   with_body_resolutions n b @@ fun () ->
-  let b = recover_erased_body_types ty b in
-  let b = resolve_body_tvars b ty in
-  with_method_ns_for_locals @@ fun () ->
-  let cty = convert_ml_type_to_cpp_type (empty_env ()) [] ty in
-  let tvars = get_tvars cty in
-  (* Count typeclass-typed parameters in the ML domain — these become template
-     params inside gen_dfun but aren't reflected in tvars (which comes from the
-     C++ type). We need tvars to be non-empty when typeclass params exist so
-     callers use the full Dtemplate definition. *)
-  let tc_param_ids =
-    match ty with
-    | Tarr _ -> collect_typeclass_param_ids ty
-    | _ -> []
-  in
-  let index_tvar_set = collect_ml_type_index_tvars ty in
-  let extra_index_tvars =
-    IntSet.fold (fun i acc ->
-      let id = tvar_id i in
-      if List.exists (Id.equal id) tvars then acc
-      else id :: acc
-    ) index_tvar_set []
-    |> List.rev
-  in
-  let tvars = tvars @ extra_index_tvars in
-  let temps =
-    phantom_aware_temps ~force_required:index_tvar_set
-      ~also_declared:(Ml_type_util.collect_ml_tvars ty) ~ml_ty:ty cty tvars
-  in
-  let result = match cty with
-  | Tfun (dom, _) ->
-    let f, e = gen_dfun n b cty ty temps in
-    let fun_tys =
-      List.filter_map
-        (fun (ty, i) ->
-          match ty with
-          | Tfun _ when not (Ml_type_util.is_fully_erased_fun_ty ty) ->
-            Some (fun_tparam_id i)
-          | _ -> None )
-        (List.mapi (fun i ty -> (ty, i)) dom)
-    in
-    let tvars = tc_param_ids @ tvars @ fun_tys in
-    (Some f, e, tvars)
-  | _ ->
-  match b with
-  | _ when only_throws b ->
-    (* A body that only throws: a zero-arg function, so it throws when called
-       and not at static init time. *)
-    let body_expr = gen_expr (empty_env ()) b in
-    let inner = Dfun (mk_dfun n ~ret:cty (Ddef ([], [Sreturn (Some body_expr)]))) in
-    let ds =
-      match temps with
-      | [] -> inner
-      | l -> Dtemplate (l, None, inner)
-    in
-    (Some ds, empty_env (), tc_param_ids @ tvars)
-  | _ -> (None, empty_env (), tc_param_ids @ tvars)
-  in
-  result
-
-let gen_decl_for_pp n b ty =
-  Table.with_decl_ref n (fun () -> gen_decl_for_pp__inner n b ty)
-
-(** Generate a full C++ function definition for a [Dfix] member.
-
-    Simplifies the ML type, resolves promoted carrier references in the body,
-    converts to C++ types, and delegates to {!gen_dfun} for the actual
-    definition.  Returns [(decl, env, tvars)]. *)
-let gen_dfun_def__inner n b ty =
-  with_body_resolutions n b @@ fun () ->
-  (* Simplify the ML type to resolve metavariables before converting to C++ *)
   let ty = type_simpl ty in
   let b = recover_erased_body_types ty b in
   let b = resolve_body_tvars b ty in
@@ -5023,19 +4967,21 @@ let gen_dfun_def__inner n b ty =
     phantom_aware_temps ~force_required:index_tvar_set
       ~also_declared:(Ml_type_util.collect_ml_tvars ty) ~ml_ty:ty cty tvars
   in
-  (* Count typeclass-typed parameters in the ML domain — these become template
-     params inside gen_dfun but aren't reflected in tvars (which comes from the
-     C++ type). We need tvars to be non-empty when typeclass params exist so
-     callers (gen_dfuns_header) use the full Dtemplate definition. *)
   let tc_param_ids =
     match ty with
     | Tarr _ -> collect_typeclass_param_ids ty
     | _ -> []
   in
-  match cty with
-  | Tfun (dom, _) ->
-    let f, env = gen_dfun n b cty ty temps in
-    let fun_tys =
+  k ty {fh_body = b; fh_cty = cty; fh_temps = temps; fh_tvars = tc_param_ids @ tvars}
+
+(** [gen_function n ty h] generates the function [n] under [h]: its
+    definition, the environment its names were allocated in, and the template
+    parameters callers see -- [h]'s, then one per callable parameter. *)
+let gen_function n ty h =
+  let f, env = gen_dfun n h.fh_body h.fh_cty ty h.fh_temps in
+  let callable_tparams =
+    match h.fh_cty with
+    | Tfun (dom, _) ->
       List.filter_map
         (fun (ty, i) ->
           match ty with
@@ -5043,12 +4989,37 @@ let gen_dfun_def__inner n b ty =
             Some (fun_tparam_id i)
           | _ -> None )
         (List.mapi (fun i ty -> (ty, i)) dom)
+    | _ -> []
+  in
+  (f, env, h.fh_tvars @ callable_tparams)
+
+(** Generate C++ declaration with pretty-printing adjustments: a function, a
+    constant whose body only throws (as a zero-argument function, so it
+    throws when called and not at static initialisation), or [None] for any
+    other constant. *)
+let gen_decl_for_pp__inner n b ty =
+  with_function_head n b ty @@ fun ty h ->
+  match h.fh_cty with
+  | Tfun _ ->
+    let f, env, tvars = gen_function n ty h in
+    (Some f, env, tvars)
+  | cty when only_throws h.fh_body ->
+    let body_expr = gen_expr (empty_env ()) h.fh_body in
+    let inner = Dfun (mk_dfun n ~ret:cty (Ddef ([], [Sreturn (Some body_expr)]))) in
+    let ds =
+      match h.fh_temps with
+      | [] -> inner
+      | l -> Dtemplate (l, None, inner)
     in
-    let tvars = tc_param_ids @ tvars @ fun_tys in
-    (f, env, tvars)
-  | _ ->
-    let f, env = gen_dfun n b cty ty temps in
-    (f, env, tc_param_ids @ tvars)
+    (Some ds, empty_env (), h.fh_tvars)
+  | _ -> (None, empty_env (), h.fh_tvars)
+
+let gen_decl_for_pp n b ty =
+  Table.with_decl_ref n (fun () -> gen_decl_for_pp__inner n b ty)
+
+(** Generate a full C++ function definition for a [Dfix] member.  Returns
+    [(decl, env, tvars)]. *)
+let gen_dfun_def__inner n b ty = with_function_head n b ty (gen_function n)
 
 let gen_dfun_def n b ty =
   Table.with_decl_ref n (fun () -> gen_dfun_def__inner n b ty)
@@ -5172,72 +5143,35 @@ let gen_spec__inner n b ty =
 let gen_spec n b ty =
   Table.with_decl_ref n (fun () -> gen_spec__inner n b ty)
 
-(** Generate a C++ forward declaration (spec) for a struct-level function.
+(** [map_group f (ns, bs, tys)] generates each function of a fixpoint group
+    ({!gen_dfun_def}) and maps [f] over the results, each with the helpers
+    lifted out of its body. *)
+let map_group f (ns, bs, tys) =
+  List.mapi
+    (fun i name ->
+      f (collecting_lifted (fun () -> gen_dfun_def name bs.(i) tys.(i))) )
+    (Array.to_list ns)
 
-    Produces a simpler signature than {!gen_dfun_def} — suitable for use in
-    struct bodies where the full definition is not needed. *)
-let gen_sfun_spec n b ty =
-  let ty = type_simpl ty in
-  let unit_void = ml_type_is_void_call ty in
-  let ty = convert_ml_type_to_cpp_type (empty_env ()) [] ty in
-  let tvars = get_tvars ty in
-  let temps = List.map (fun id -> (TTtypename, id)) tvars in
-  match ty with
-  | Tfun (dom, cod) ->
-    let cod = apply_unit_void unit_void cod in
-    gen_sfun n b dom cod temps
-  | _ ->
-    let ty = apply_unit_void unit_void ty in
-    gen_sfun n b [Tvoid] ty temps
+(** Generate multiple function definitions.  The lifted declarations are left
+    out: they are template functions that belong only in the header, where
+    {!gen_dfuns_header} collects them. *)
+let gen_dfuns g = map_group fst g
 
-(** Generate multiple function definitions *)
-let gen_dfuns (ns, bs, tys) =
-  List.concat_map
-    (fun (i, name) ->
-      (* The lifted declarations are left out: they are template functions
-         that belong only in the header file (.h), not the source file
-         (.cpp), and gen_dfuns_header collects them for the header. *)
-      let result, _lifted =
-        collecting_lifted (fun () -> gen_dfun_def name bs.(i) tys.(i))
-      in
-      [result] )
-    (List.mapi (fun i name -> (i, name)) (Array.to_list ns))
-
-(** Generate function declarations for header files *)
-let gen_dfuns_header (ns, bs, tys) =
-  List.concat_map
-    (fun (i, name) ->
-      let (ds, env, tvars), lifted =
-        collecting_lifted (fun () -> gen_dfun_def name bs.(i) tys.(i))
-      in
-      let lifted_results = List.map (fun d -> (d, empty_env ())) lifted in
-      (* For non-template functions, derive the spec from the definition via
-         Function_entity.declaration_of to ensure parameter types (owned vs borrowed) match
-         exactly between the forward declaration and the out-of-line definition.
-         Previously used gen_sfun_spec which ran independent escape
-         analysis and could produce different ownership decisions. *)
-      let main_result =
-        match tvars with
-        | [] -> (Function_entity.declaration_of ds, env)
-        | _ :: _ -> (ds, env)
-      in
-      lifted_results @ [main_result] )
-    (List.mapi (fun i name -> (i, name)) (Array.to_list ns))
-
-(** Generate forward declarations (specs) for a group of mutually recursive
-    functions, using the SAME signature as the full definitions. This ensures
-    the specs match the out-of-line definitions (including concept-constrained
-    template parameters). Unlike gen_dfuns_header which may use
-    gen_sfun_spec (producing simpler signatures), this always derives the
-    spec from gen_dfun_def. *)
-let gen_dfuns_spec (ns, bs, tys) =
-  List.concat_map
-    (fun (i, name) ->
-      let (ds, _env, _tvars), _lifted =
-        collecting_lifted (fun () -> gen_dfun_def name bs.(i) tys.(i))
-      in
-      [(Function_entity.declaration_of ds, empty_env ())] )
-    (List.mapi (fun i name -> (i, name)) (Array.to_list ns))
+(** Generate function declarations for header files: a template's full
+    definition, and anything else's declaration, derived from the definition
+    ({!Function_entity.declaration_of}) so that parameter types (owned or
+    borrowed) match the out-of-line definition exactly; each after the helpers
+    lifted out of it. *)
+let gen_dfuns_header g =
+  List.concat
+    (map_group
+       (fun ((ds, env, tvars), lifted) ->
+         List.map (fun d -> (d, empty_env ())) lifted
+         @ [ ( (match tvars with
+               | [] -> Function_entity.declaration_of ds
+               | _ :: _ -> ds),
+               env ) ] )
+       g )
 
 (** Where a function's definition is written: a template's in the header,
     anything else's in the implementation file. *)
@@ -5259,14 +5193,11 @@ let defined d tvars = Defined (d, definition_file_of tvars)
 
 (** Generate each function of a mutually recursive group, translating each
     body once. *)
-let gen_dfuns_dual (ns, bs, tys) =
-  List.map
-    (fun (i, name) ->
-      let (ds, env, tvars), lifted =
-        collecting_lifted (fun () -> gen_dfun_def name bs.(i) tys.(i))
-      in
+let gen_dfuns_dual g =
+  map_group
+    (fun ((ds, env, tvars), lifted) ->
       {gf_entity = defined ds tvars; gf_env = env; gf_lifted = lifted} )
-    (List.mapi (fun i name -> (i, name)) (Array.to_list ns))
+    g
 
 (** Generate a single Dterm function, translating its body once. *)
 let gen_decl_for_pp_dual__inner n b ty =
@@ -5334,44 +5265,6 @@ and replace_return_this_stmt inner_ty = function
           branches,
         Option.map (List.map (replace_return_this_stmt inner_ty)) default )
   | Sexpr e -> Sexpr (replace_return_this_expr inner_ty e)
-  | s -> s
-
-(** Replace [CPPthis] with [CPPderef CPPthis] in return positions for value-type
-    methods.  When a method returns a value type (not shared_ptr), [return this;]
-    is invalid because [this] is a pointer.  We need [return *this;] instead. *)
-let rec deref_return_this_expr = function
-  | CPPthis -> CPPderef CPPthis
-  | CPPlambda l -> CPPlambda (map_lambda deref_return_this_stmt Fun.id l)
-  | CPPfun_call (_, f, args) ->
-    CPPfun_call (call_opaque, deref_return_this_expr f,
-                 map_args deref_return_this_expr args)
-  | e -> e
-
-and deref_return_this_stmt s =
-  ( match s with
-  | _ -> () );
-  match s with
-  | Sreturn (Some e) -> Sreturn (Some (deref_return_this_expr e))
-  | Sif (cond, then_stmts, else_stmts) ->
-    Sif (cond,
-         List.map deref_return_this_stmt then_stmts,
-         List.map deref_return_this_stmt else_stmts)
-  | Scustom_case (ty, scrut, tys, brs, tag) ->
-    Scustom_case (ty, scrut, tys,
-      List.map (fun (binds, br_ty, stmts) ->
-        (binds, br_ty, List.map deref_return_this_stmt stmts)) brs,
-      tag)
-  | Sswitch (scrut, ind, brs, default) ->
-    Sswitch (scrut, ind,
-      List.map (fun (ctor, stmts) ->
-        (ctor, List.map deref_return_this_stmt stmts)) brs,
-      Option.map (List.map deref_return_this_stmt) default)
-  | Smatch (scrut, branches, default) ->
-    Smatch (scrut, List.map (fun br ->
-        { br with smb_body = List.map deref_return_this_stmt br.smb_body })
-      branches,
-      Option.map (List.map deref_return_this_stmt) default)
-  | Sexpr e -> Sexpr (deref_return_this_expr e)
   | s -> s
 
 (** Prevent dangling [this] in by-value lambda captures.

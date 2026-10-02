@@ -16,7 +16,6 @@ open Common
 open Miniml
 open Minicpp
 open Names
-open Table
 
 (** {2 Declaration Generation} *)
 
@@ -37,16 +36,10 @@ val gen_dfuns :
   GlobRef.t array * ml_ast array * ml_type array ->
   (cpp_decl * env * variable list) list
 
-(** Generate C++ headers (declarations) for a group of mutually recursive
-    functions. *)
+(** Generate the header declarations for a group of mutually recursive
+    functions: a template's full definition, anything else's declaration,
+    each after the helpers lifted out of it. *)
 val gen_dfuns_header :
-  GlobRef.t array * ml_ast array * ml_type array -> (cpp_decl * env) list
-
-(** Generate forward declarations matching the full definition signatures.
-    Unlike gen_dfuns_header which may simplify signatures for non-template
-    functions, this always derives specs from gen_dfun_def for signature
-    consistency. *)
-val gen_dfuns_spec :
   GlobRef.t array * ml_ast array * ml_type array -> (cpp_decl * env) list
 
 (** Where a function's definition is written: a template's in the header,
