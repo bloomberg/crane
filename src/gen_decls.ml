@@ -17,6 +17,11 @@ open Translation
 
 module IntSet = Escape.IntSet
 
+(** Start a top-level body's fresh-name counters at zero, so the names it
+    allocates do not depend on what was generated before it. *)
+let reset_body_counters () =
+  tctx := { !tctx with match_param_counter = 0; cs_counter = 0 }
+
 (** [with_method_env_types env params f] runs [f] with the de Bruijn type
     stack holding exactly [params] (innermost binder first, as returned by
     {!push_vars'}), restoring the ambient stack afterwards.  [env] is the
@@ -4511,8 +4516,7 @@ let gen_dfun n b cty ty temps =
         assertions
   in
   tctx := { !tctx with current_letin_depth = 0 };
-  tctx := { !tctx with match_param_counter = 0 };
-  tctx := { !tctx with cs_counter = 0 };
+  reset_body_counters ();
   (* Phase 2: Initialize owned-variable tracking for move insertion. Parameters
      at de Bruijn indices 1..n_params; owned ones get added to the set. *)
   let n_all_params = List.length all_params in
@@ -4900,7 +4904,7 @@ let gen_decl__inner n b ty =
       | [] -> (inner, empty_env (), tvars)
       | l -> (Dtemplate (l, None, inner), empty_env (), tvars) )
     | _ ->
-      tctx := { !tctx with cs_counter = 0 };
+      reset_body_counters ();
       let body_expr =
         with_cpp_return_type (Some cty) (fun () -> gen_expr (empty_env ()) b)
       in
@@ -5079,7 +5083,7 @@ let gen_spec__inner n b ty =
           (Ml_type_util.expand_ml_fun_alias ml_ty)
           inner_body
       in
-      tctx := { !tctx with cs_counter = 0 };
+      reset_body_counters ();
       (* The constant's own type is also the expected type of its body, so an
          IIFE standing in for a let-in tail expression re-bases onto it rather
          than onto nothing. *)
@@ -5747,8 +5751,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
               else acc )
             Escape.IntSet.empty
             (List.mapi (fun i o -> (i, o)) method_owned_flags) };
-  tctx := { !tctx with match_param_counter = 0 };
-  tctx := { !tctx with cs_counter = 0 };
+  reset_body_counters ();
   tctx := { !tctx with current_letin_depth = 0 };
   (* The scope covers both the inductive's type vars and the extra ones, so
      that gen_expr/eta_fun convert Tvars to the named C++ types the method
