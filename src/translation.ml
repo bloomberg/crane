@@ -3335,6 +3335,30 @@ type slot = {
           event family nothing deduces. *)
 }
 
+(** What a call to a global is, before its arguments are generated; see
+    {!plan_call}. *)
+type call_plan = {
+  cp_excess_args : ml_ast list;
+  cp_primary_args : ml_ast list;
+  cp_instance_args : ml_ast list;
+  cp_regular_args : ml_ast list;
+  cp_leading_params : int;
+  cp_expected_result : cpp_type option;
+  cp_instance_type_args : cpp_type option list;
+  cp_instance_families : (cpp_type * Id.t list * (Id.t * cpp_type) list) list;
+  cp_fn_ml_ty : ml_type;
+  cp_tys : ml_type list;
+  cp_dictionary_filled : bool;
+  cp_fn_ml_ty_subst : ml_type;
+  cp_params : Param_pos.subst Param_pos.params;
+  cp_params_orig : Param_pos.orig Param_pos.params;
+  cp_subst_index_of_orig : Param_pos.orig Param_pos.pos -> Param_pos.subst Param_pos.pos option;
+  cp_tvars : Id.t list;
+  cp_concrete_tvar_type : cpp_type option;
+  cp_instance_promoted : (Id.t * cpp_type) list;
+  cp_result_tvar_map : (Id.t list * (Id.t * cpp_type) list) Lazy.t;
+}
+
 (** The slot properties of a position that constrains nothing. *)
 let empty_slot =
   { deep_erase = false;
@@ -11370,6 +11394,1712 @@ and ml_arg_to_template_type ?expected env ml_arg =
           is_typeclass_instance_arg filter" )
 
 
+(** [plan_call ~slot ?expected_ty env id tys args] -- everything a call to
+    the global [id] needs to know before its arguments are generated: which
+    arguments are dictionaries, regular or curried past the callee's arity,
+    the type arguments the call instantiates the callee at, and the
+    callee's parameter types at that instantiation.  Read by
+    {!gen_call_args} and by the assembly in {!eta_fun}. *)
+and plan_call ~slot ?expected_ty env id tys args =
+  (* When the call has more args than the function's ML value-domain, the
+     excess args are curried applications to the result. This is common with
+     Rocq's Function vernacular _correct proof terms, where the extraction
+     produces e.g. div2_rect f f0 f1 n _res __ but div2_rect only has 4
+     value-domain params (f, f0, f1, n). The trailing _res and __ are applied
+     to the result via currying.
+
+     Split into: - primary_args: first n_value_dom args (passed to the
+     function) - excess_args: remaining non-dummy args (curried onto the
+     result) Only activates when n_args > n_value_dom; otherwise unchanged. *)
+  let args_before_split = args in
+  let args, excess_args =
+    let is_value_arg = function
+      | MLdummy _ -> false
+      | _ -> true
+    in
+    let is_value_dom t =
+      match resolve_tmeta t with
+      | Miniml.Tdummy _ -> false
+      | _ -> true
+    in
+    let rec collect_tarr_dom acc = function
+      | Miniml.Tarr (t1, t2) -> collect_tarr_dom (resolve_tmeta t1 :: acc) t2
+      | _ -> List.rev acc
+    in
+    match find_type_opt id with
+    | Some ml_ty ->
+      let all_dom = collect_tarr_dom [] ml_ty in
+      (* Count value-domain entries by filtering out ALL [Tdummy] positions
+         (both [Ktype] for erased type params and [Kprop] for erased proofs).
+         Symmetrically, filter the arg list to exclude [MLdummy] entries.
+         Comparing these two filtered counts avoids false excess detection
+         when erased params appear in [args] as [MLdummy] instead of (or in
+         addition to) being carried in [tys]. *)
+      let n_value_dom = List.length (List.filter is_value_dom all_dom) in
+      (* An erased argument at a position the declaration takes a value at
+         stays: the category classes over [obj : Type] take their objects
+         as values, and at [obj := Type -> Type] those objects are families
+         the call erases.  Dropping them would change the call's arity; the
+         declaration receives an empty box instead. *)
+      let value_args =
+        (* Two conventions meet here.  The arguments the Rocq term gave
+           have the declaration's erased domains dropped ([make_mlargs]
+           kills each [Tdummy]), so each is at a value domain, erased or
+           not.  The tail an eta-expansion invents keeps them: a dummy at
+           each erased domain, a variable at each value one
+           ([STRefToIxNat __ __ ref]).  The tail is the longest suffix
+           paired with the domains that way, provided what precedes it
+           fills the remaining value domains exactly; with none, every
+           argument is at a value domain or past the last one.  The one
+           dummy with no domain at all is the one a purely logical
+           signature is applied to. *)
+        if n_value_dom = 0 then List.filter is_value_arg args
+        else
+          let n_args = List.length args and n_dom = List.length all_dom in
+          let eta_paired k =
+            List.for_all2
+              (fun d a -> is_value_dom d = is_value_arg a)
+              (List.lastn k all_dom) (List.lastn k args)
+            && List.length
+                 (List.filter is_value_dom (List.firstn (n_dom - k) all_dom))
+               = n_args - k
+          in
+          let rec longest k =
+            if k = 0 then None else if eta_paired k then Some k else longest (k - 1)
+          in
+          match longest (min n_args n_dom) with
+          | Some k ->
+            List.firstn (n_args - k) args
+            @ List.filter is_value_arg (List.lastn k args)
+          | None -> args
+      in
+      let n_value_args = List.length value_args in
+      if n_value_args > n_value_dom then
+        let primary =
+          List.filteri (fun i _ -> i < n_value_dom) value_args
+        in
+        let excess =
+          List.filteri
+            (fun i a -> i >= n_value_dom && is_value_arg a)
+            value_args
+        in
+        (primary, excess)
+      else
+        (value_args, [])
+    | None -> (List.filter is_value_arg args, [])
+  in
+  (* A value argument that vanishes here vanishes from the emitted call, and
+     the parameter it would have filled is dropped from the declaration by
+     the same [Tdummy] reading of the callee's domain -- leaving a body that
+     names a binder nothing supplies.  Report it rather than make it a
+     question about reading the generated C++ back. *)
+  let () =
+    if Sys.getenv_opt "CRANE_DBG_DROPPED_ARGS" <> None then
+      let n_in = List.length args_before_split in
+      let n_out = List.length args + List.length excess_args in
+      if n_out < n_in then
+        Feedback.msg_warning
+          (Pp.str
+             (Printf.sprintf
+                "crane: call to %s drops %d of %d arguments (%d dummy, %d \
+                 value domains declared)"
+                (Table.kername_of_global id)
+                (n_in - n_out) n_in
+                (List.length
+                   (List.filter
+                      (function MLdummy _ -> true | _ -> false)
+                      args_before_split ))
+                (List.length args) ) )
+  in
+  (* The primary arguments while they are still ML: [args] is rebound to
+     generated C++ expressions further down, but the callee's instantiation
+     can only be read off the ML types. *)
+  let primary_ml_args = args in
+  (* Partition args into type class instances and regular args *)
+  (* An erased instance leaves the call but not the declaration: its
+     parameter is still one of the callee's, so a position counted in the
+     declaration's parameter list steps over it. *)
+  let typeclass_ml_args, n_erased_instance_args, regular_ml_args =
+    split_instance_args env args
+  in
+  (* How many of the callee's declared parameters the dictionaries occupy:
+     a regular argument's declared position starts after them. *)
+  let leading_params = List.length typeclass_ml_args + n_erased_instance_args in
+  (* Order the instance arguments the way the callee numbered its own
+     [_tcI] parameters.  [Gen_decls.gen_dfun] iterates [collect_lams]
+     output, which is reversed from source order, so a plain constrained
+     function's first instance parameter is the source-last one; an instance
+     struct is stripped left to right by [Gen_decls.gen_instance_struct] and
+     keeps source order.  Call sites have the arguments in source order. *)
+  let callee_is_instance_struct = ref_returns_typeclass id in
+  let typeclass_ml_args =
+    if callee_is_instance_struct then typeclass_ml_args
+    else List.rev typeclass_ml_args
+  in
+  let expected_result = expected_ty in
+  (* Where the position erased the result's family, the arguments may still
+     state it: [interp intr prog] as the source of an [interp_state] is
+     expected at [Itree<std::any, Nat>], and [intr : TopE ~> itree TopE]
+     says the monad is [itree TopE].  The instances' families are read off
+     this. *)
+  let expected_result =
+    let from_args () =
+      match
+        tvar_instantiation_found ~in_scope:true ~constructors:true
+          (find_type id) primary_ml_args
+      with
+      | [] -> None
+      | found ->
+        (* A carrier bound as a head partially applied ([itree TopE]) is
+           applied by appending: the hole inside its family is the family's
+           own erased index, not the argument the carrier is missing. *)
+        let rec subst t =
+          match resolve_tmeta t with
+          | Miniml.Tvar (_, i) -> (
+            match List.assoc_opt i found with Some b -> b | None -> t )
+          | Miniml.Tapp (k, args) -> (
+            let args = List.map subst args in
+            match List.assoc_opt k found with
+            | Some (Miniml.Tglob (g, fixed, l)) -> Miniml.Tglob (g, fixed @ args, l)
+            | Some b -> Mlutil.apply_ml_type b args
+            | None -> Miniml.Tapp (k, args) )
+          | Miniml.Tglob (g, args, l) -> Miniml.Tglob (g, List.map subst args, l)
+          | Miniml.Tarr (a, b) -> Miniml.Tarr (subst a, subst b)
+          | t -> t
+        in
+        let t = cpp_of_ml env (subst (ml_codomain (find_type id))) in
+        spell_in_scope t
+    in
+    match expected_result with
+    | Some e when exists_cpp_type prints_as_any e -> (
+      match from_args () with
+      | Some a -> Some (Ml_type_util.refine_erased_by ~expected:a e)
+      | None -> expected_result )
+    (* With no expected type of its own the call may not be the enclosing
+       function's result at all -- a let-bound computation over another
+       family -- so what its arguments state comes before that result. *)
+    | None -> (
+      match from_args () with
+      | Some _ as a -> a
+      | None -> (!tctx).current_cpp_return_type )
+    | _ -> expected_result
+  in
+  let typeclass_type_args =
+    List.map
+      (ml_arg_to_template_type ?expected:expected_result env)
+      typeclass_ml_args
+  in
+  (* The families the call's instances were found to have: the slots their
+     arguments are generated against erase them the same way. *)
+  let instance_families =
+    List.filter_map
+      (fun a ->
+        match strip_magic a with
+        | MLglob (r, ts) -> instance_family_binding env r ts expected_result
+        | _ -> None )
+      typeclass_ml_args
+  in
+  (* The erased arguments left here are the ones the declaration takes a
+     value at (see [value_args] above); they are generated as empty boxes
+     below rather than as the [CPPabort] an [MLdummy] is elsewhere. *)
+  (* Compute the function's ML type after type arg substitution, to detect
+     arguments that return std::any (from erased record fields like
+     Functor::object_of) but where the parameter expects a concrete type
+     (e.g., unsigned int after resolving a promoted type var). *)
+  let fn_ml_ty = find_type id in
+  (* An erased event family the position's type names: [memM_interp]'s [E],
+     given unapplied where [on_mem] takes a handler into [itree BotE].  The
+     family occurs in the callee's result only, where nothing deduces it and
+     the phantom filler would write [void]. *)
+  let tys =
+    match
+      match slot.expected_ml_ty with
+      | Some _ as t -> t
+      | None -> slot.stated_ml_ty
+    with
+    | Some result when List.exists Mlutil.isTdummy tys ->
+      let families = Ml_type_util.event_family_ml_tvars [fn_ml_ty] in
+      (* A family is a head, or one applied at the index it erases
+         ([BotE _]); [box nat] met at a bare variable is a value type, not
+         the family. *)
+      let family_shaped b =
+        match resolve_tmeta b with
+        | Miniml.Tglob (_, [], _) -> true
+        | Miniml.Tglob (_, args, _) ->
+          Ml_type_util.is_ml_erased_ty (List.nth args (List.length args - 1))
+        | _ -> false
+      in
+      (* With [~constructors]: an applied variable against an application
+         is the head, which for a family -- the only positions filled here --
+         is the answer. *)
+      let found =
+        tvar_instantiation_found ~in_scope:true ~constructors:true ~result
+          fn_ml_ty primary_ml_args
+      in
+      (* Only where nothing deduces it: a family a parameter spells is the
+         compiler's to read off the argument. *)
+      let deducible =
+        Option.default IntSet.empty (deducible_tvars_of_glob id)
+      in
+      List.mapi
+        (fun k t ->
+          match List.assoc_opt (k + 1) found with
+          | Some b
+            when Mlutil.isTdummy t && IntSet.mem (k + 1) families
+                 && (not (IntSet.mem (k + 1) deducible))
+                 && family_shaped b ->
+            b
+          | _ -> t )
+        tys
+    | _ -> tys
+  in
+
+  (* A type-level function passed where a type alias in a domain names it
+     -- the category's [C] in [Id_ obj C] -- is erased in [tys] and stated
+     by the dictionary argument.  Filled before anything is substituted, so
+     the parameter types the arguments are generated against and the
+     explicit type arguments the call writes agree. *)
+  let tys_before_dictionary_fill = tys in
+  let tys = fill_erased_tys ~only_alias_args:true id tys primary_ml_args in
+  (* The dictionary stated a position the call had erased -- [case_]'s
+     morphism type [C := Handler] at a category over families.  Its
+     arguments at that position are then built at that type rather than
+     boxed, so the call has to write it, the erased positions beside it
+     as the boxes they are. *)
+  let dictionary_filled =
+    List.exists2
+      (fun a b -> Mlutil.isTdummy (resolve_tmeta a) && not (Mlutil.isTdummy (resolve_tmeta b)))
+      tys_before_dictionary_fill tys
+  in
+  (* A partial application is eta-expanded into a lambda spelled in the
+     caller's scope, and a variable of the callee's that neither the call
+     nor its arguments instantiate is not one of the caller's: left in, it
+     prints as whichever caller variable shares its index -- [h_get]'s index
+     as the enclosing handler's [T1].  It is erased, and a position nothing
+     deduces is then written as the box it is. *)
+  let tys =
+    let n_params =
+      let rec count ty =
+        match expand_ml_fun_alias ty with
+        | Miniml.Tarr (t, rest) ->
+          (match resolve_tmeta t with
+           | Miniml.Tdummy _ -> count rest
+           | _ -> 1 + count rest)
+        | _ -> 0
+      in
+      count fn_ml_ty
+    in
+    (* Only one the lambda's result spells: a variable the codomain does not
+       mention -- a rank-2 handler's [forall X] -- is not the call's to
+       instantiate, and keeps itself.  And not in a call to the declaration
+       being generated, whose variables {e are} the caller's. *)
+    let self_call =
+      match !Table.current_decl_ref with
+      | Some r -> GlobRef.UserOrd.equal r id
+      | None -> false
+    in
+    if self_call || List.length primary_ml_args >= n_params then tys
+    else
+      let tys = complete_short_tys id tys primary_ml_args in
+      let in_cod = collect_tvars_set IntSet.empty (ml_codomain fn_ml_ty) in
+      let have = List.length tys in
+      match IntSet.max_elt_opt (IntSet.filter (fun i -> i > have) in_cod) with
+      | None -> tys
+      | Some n ->
+        (* Erased only where it would be misread: a variable whose spelling
+           no caller variable has is bound by the eta-lambda itself (see
+           [eta_tparams]), and deduced there from the parameter that names
+           it -- [memM T2] of a natural transformation. *)
+        let collides i =
+          List.exists
+            (fun v -> String.equal (Id.to_string v) (Minicpp.tvar_spelling i))
+            (!tctx).current_type_vars
+        in
+        tys
+        @ List.init (n - have) (fun k ->
+              let i = have + k + 1 in
+              if IntSet.mem i in_cod && collides i then Miniml.Tunknown
+              else Miniml.Tvar (Miniml.Schematic, i) )
+  in
+  (* The one substitution that takes the callee's declared types to this
+     call's; without it the argument generated into a [bind]'s [m A] is left
+     with no stated type at all. *)
+  let subst_ml_ty = instantiate_at_call id tys primary_ml_args in
+  let fn_ml_ty_subst = subst_ml_ty fn_ml_ty in
+  let fn_param_ml_tys =
+    Param_pos.subst_params ~expand:expand_ml_fun_alias fn_ml_ty_subst
+  in
+  (* Non-substituted parameter types: used to detect whether a callback's
+     codomain is a type variable (needs adapter wrapping) vs concrete unit
+     (C++ definition already uses void in the is_invocable_v requires clause). *)
+  let fn_param_ml_tys_orig =
+    Param_pos.orig_params ~expand:expand_ml_fun_alias fn_ml_ty
+  in
+  (* The two lists above are not indexed alike: substitution can make a
+     parameter dummy that was not one before, and from that parameter on a
+     declared position is one place further left in the substituted list.
+     A reader holding a declared position and wanting the substituted type
+     there converts it here (see {!Param_pos}). *)
+  let subst_index_of_orig =
+    Param_pos.subst_of_orig
+      ~erased:(fun t ->
+        match resolve_tmeta (subst_ml_ty t) with
+        | Miniml.Tdummy _ -> true
+        | _ -> false )
+      fn_param_ml_tys_orig
+  in
+  (* {b Concrete T1 for excess-arg calls.}  When [tys = []] and there
+     are excess args, the callee's polymorphic return type [Tvar i] can't
+     be resolved by substitution.  We compute the concrete type [T1]
+     from the enclosing function's return type and the excess args' types:
+     [T1 = excess_arg_types -> enclosing_return_type].
+
+     This value is used in two places:
+     1. Lambda arity limiting: to annotate the split outer lambda's
+        return type (needed for [is_invocable_r_v] concept checking).
+     2. Template arg recovery: as an explicit template argument at the
+        call site (C++ can't deduce [T1] from lambda args). *)
+  let tvars = get_current_type_vars () in
+  let concrete_tvar_type =
+    if tys <> [] || excess_args = [] then
+      None
+    else
+      match (!tctx).current_cpp_return_type with
+      | None -> None
+      | Some ret_ty ->
+        match find_type_opt id with
+        | None -> None
+        | Some ml_ty_orig ->
+          let ret = Ml_type_util.resolve_tmeta (ml_return_type ml_ty_orig) in
+          ( match ret with
+          | Miniml.Tvar (_, _) ->
+            (* Compute excess arg C++ types from de Bruijn lookup. *)
+            let excess_cpp_tys =
+              List.filter_map
+                (fun ml_arg ->
+                  match ml_arg with
+                  | MLrel i ->
+                    Option.map (convert_ml_type_to_cpp_type env tvars)
+                      (get_param_type_by_index i)
+                  | _ -> None )
+                excess_args
+            in
+            if List.length excess_cpp_tys = List.length excess_args then
+              Some (Tfun (excess_cpp_tys, ret_ty))
+            else
+              None
+          | _ -> None )
+  in
+  (* When the function is typeclass-parameterized and call-site args include
+     concrete instances, compute a promoted-var→concrete-type map so that
+     custom constructors (nil/cons) inside arg expressions use concrete
+     element types instead of std::any.  E.g., [mfold nat_monoid [1;2;3]]
+     resolves m_carrier → uint64_t for the list construction. *)
+  let instance_promoted_map =
+    List.concat_map (fun tc_arg ->
+      match tc_arg with
+      | MLglob (r, _) ->
+        List.filter_map (fun (var_name, ml_ty) ->
+          let cpp_ty = cpp_of_ml env ml_ty in
+          if prints_as_any cpp_ty then None
+          else Some (var_name, cpp_ty)
+        ) (Table.get_instance_promoted_types r)
+      | _ -> []
+    ) typeclass_ml_args
+  in
+  (* The callee's variables as the call's expected result instantiates
+     them: its declared codomain, named [T1]..[Tn] and with a plain family's
+     application taken off, matched against that type.  Read by the argument
+     loop below for a parameter the substitution left erased. *)
+  let result_tvar_map =
+    lazy
+      (callee_result_bindings env id
+         ~explicit:(expected_ty <> None)
+         ( match expected_ty with
+         | Some _ -> expected_ty
+         | None -> (!tctx).current_cpp_return_type ) )
+  in
+  {
+    cp_excess_args = excess_args;
+    cp_primary_args = primary_ml_args;
+    cp_instance_args = typeclass_ml_args;
+    cp_regular_args = regular_ml_args;
+    cp_leading_params = leading_params;
+    cp_expected_result = expected_result;
+    cp_instance_type_args = typeclass_type_args;
+    cp_instance_families = instance_families;
+    cp_fn_ml_ty = fn_ml_ty;
+    cp_tys = tys;
+    cp_dictionary_filled = dictionary_filled;
+    cp_fn_ml_ty_subst = fn_ml_ty_subst;
+    cp_params = fn_param_ml_tys;
+    cp_params_orig = fn_param_ml_tys_orig;
+    cp_subst_index_of_orig = subst_index_of_orig;
+    cp_tvars = tvars;
+    cp_concrete_tvar_type = concrete_tvar_type;
+    cp_instance_promoted = instance_promoted_map;
+    cp_result_tvar_map = result_tvar_map
+  }
+
+(** [gen_call_args ~slot ?expected_ty env plan] -- the C++ arguments of the
+    call [plan] describes, each generated against the parameter it is passed
+    at.  The dictionaries' promoted variables are in scope for them. *)
+and gen_call_args ~slot ?expected_ty env id plan =
+  let {
+    cp_regular_args = regular_ml_args;
+    cp_leading_params = leading_params;
+    cp_expected_result = expected_result;
+    cp_instance_families = instance_families;
+    cp_fn_ml_ty = fn_ml_ty;
+    cp_tys = tys;
+    cp_dictionary_filled = dictionary_filled;
+    cp_params = fn_param_ml_tys;
+    cp_params_orig = fn_param_ml_tys_orig;
+    cp_subst_index_of_orig = subst_index_of_orig;
+    cp_tvars = tvars;
+    cp_concrete_tvar_type = concrete_tvar_type;
+    cp_result_tvar_map = result_tvar_map;
+    _
+  } = plan in
+  List.mapi (fun i ml_arg ->
+    match strip_magic ml_arg with
+    | MLdummy _ -> (
+      (* An erased value, boxed.  At a function-typed parameter it is an
+         erased function -- [bif : obj -> obj -> obj] is [sum1] once [obj]
+         is [Type -> Type] -- which is called, so it is a callable of the
+         declared arity handing back a box. *)
+      match
+        Param_pos.nth fn_param_ml_tys_orig
+          (Param_pos.of_regular ~leading:leading_params i)
+      with
+      | Some pt when count_ml_value_arrows pt > 0 ->
+        mk_lambda
+          (List.init (count_ml_value_arrows pt) (fun _ ->
+               (Tref (Lvalue, Tconst Tauto), None) ))
+          None
+          [Sreturn (Some Cpp_erasure.empty_box)]
+          ~capture:Closure
+      | _ -> Cpp_erasure.empty_box )
+    | _ ->
+    (* The callee's parameters are indexed from its class-dictionary
+       arguments, which [regular_ml_args] does not include, so this
+       argument's parameter is at [param_index] of the unsubstituted list --
+       and, being a position of that list, has to be converted before it
+       indexes the substituted one (see [subst_index_of_orig]). *)
+    let param_index = Param_pos.of_regular ~leading:leading_params i in
+    (* Where that parameter stands in the substituted list.  The
+       conversion is a statement about the callee's ML type, and it is worth
+       making only where the ML type is what the callee's C++ signature was
+       built from.
+
+       For a callee whose C++ form is written out by hand it is not: the
+       replacement text is what says how the arguments are taken, and it
+       need not take them at the Rocq types.  [crane_itree.h] invokes
+       [itree_vis]'s continuation at [std::any] whatever its Rocq domain
+       [X] is, so the substituted domain ([std::monostate]) is the one type
+       the lambda will never be called at -- while [itree_bind]'s, two lines
+       away in the same header, is taken at exactly its Rocq domain.
+       Nothing here can tell those apart, so such a callee keeps reading the
+       position it always read: no better answer is available, and a
+       confident wrong one is worse than the familiar one. *)
+    let subst_param_index =
+      if Table.is_inline_custom id then
+        Some (Param_pos.subst_at_declared param_index)
+      else subst_index_of_orig param_index
+    in
+    (* Where substitution erased the parameter -- [IFun b c] at objects the
+       call erases -- the declaration still takes it, at the type it
+       declares, and an argument reaching it is recovered at that type. *)
+    let param_ml_ty =
+      match subst_param_index with
+      | Some i -> Param_pos.nth fn_param_ml_tys i
+      | None -> (
+        match Param_pos.nth fn_param_ml_tys_orig param_index with
+        | Some t when not (Mlutil.isTdummy t) -> Some t
+        | _ -> None )
+    in
+    (* {b Lambda arity limiting.}  When a lambda argument has more binders
+       than the callee's parameter type has top-level arrows, the extra
+       binders come from the return type being a function (instantiated
+       from a type variable).  For example, [fold_right]'s callback type
+       is [B -> A -> A]; when [A = nat -> nat], the lambda
+       [fun t acc => fun x => body] has 3 binders but the parameter has
+       only 2 arrows.  Flattening all 3 into a single C++ lambda produces
+       a 3-arg function, which doesn't match the 2-arg is_invocable_v constraint.
+
+       Fix: insert an [MLmagic] barrier after the expected number of
+       binders so that [collect_lams] in [gen_expr] stops there.  The
+       inner binders become a returned inner lambda.  We use the
+       {i non-substituted} parameter type to count arrows, because type
+       variable substitution would inflate the count (e.g. [Tvar A]
+       becoming [Tarr(nat, nat)] adds a spurious arrow).
+
+       Additionally, annotate the outer lambda with an explicit return
+       type derived from the {i substituted} parameter type's codomain.
+       Without this, the deduced return type is the inner lambda's
+       unique closure type, and [is_invocable_r_v<std::function<...>,
+       closure_type>] may evaluate to [false] in concept checking
+       (C++ lambda-to-[std::function] conversion is not recognized
+       during SFINAE in some implementations). *)
+    let ml_arg, split_ret_ty =
+      match ml_arg with
+      | MLlam _ ->
+        ( match Param_pos.nth fn_param_ml_tys_orig param_index with
+        | Some param_ty ->
+          let rec count_arrows = function
+            | Miniml.Tarr (_, rest) -> 1 + count_arrows rest
+            | _ -> 0
+          in
+          let expected = count_arrows param_ty in
+          let actual = Mlutil.nb_lams ml_arg in
+          if expected > 0 && actual > expected then
+            let outer_ids, inner_body =
+              Mlutil.collect_n_lams expected ml_arg
+            in
+            let barrier =
+              Mlutil.named_lams outer_ids (MLmagic (Mbarrier, inner_body))
+            in
+            (* Compute the return type from the substituted param type by
+               stripping [expected] top-level arrows.  The remaining type
+               is the function-typed codomain that the inner lambda
+               implements.
+
+               When the substituted codomain is still a [Tvar] (happens
+               when [tys = []] so substitution is a no-op), use the
+               [concrete_tvar_type] computed above — it holds the
+               concrete [T1] type derived from the excess args and the
+               enclosing function's return type. *)
+            let ret_ty =
+              match param_ml_ty with
+              | Some subst_pt ->
+                let rec codomain_after n = function
+                  | Miniml.Tarr (_, rest) when n > 0 ->
+                    codomain_after (n - 1) rest
+                  | ty -> ty
+                in
+                let ret_ml = codomain_after expected subst_pt in
+                ( match resolve_tmeta ret_ml with
+                | Miniml.Tvar (_, _) -> concrete_tvar_type
+                | _ ->
+                  Some (cpp_of_ml env ret_ml) )
+              | None -> None
+            in
+            (barrier, ret_ty)
+          else
+            (ml_arg, None)
+        | None -> (ml_arg, None) )
+      | _ -> (ml_arg, None)
+    in
+    let param_expected_at params pos =
+      match Param_pos.nth params pos with
+      | Some ml_ty ->
+        let cpp_ty = cpp_of_ml env ml_ty in
+        if prints_as_any cpp_ty then None else Some cpp_ty
+      | None -> None
+    in
+    (* The concrete types come from the substituted parameter type, but its
+       {e arity} must come from the unsubstituted one: substituting a
+       function type into a codomain that was a type variable flattens the
+       element's arrows into the callable's own parameter list, and a
+       template argument keeps its currying (see
+       {!template_arg_of_ml_type}).  A parameter declared as a bare type
+       variable has arity zero, so its value is curried throughout. *)
+    (* This parameter's substituted C++ type.  [param_index] counts
+       positions of the unsubstituted type, so it has to be converted before
+       it indexes the substituted list -- see [subst_index_of_orig]. *)
+    let param_expected_subst () =
+      Option.bind subst_param_index (param_expected_at fn_param_ml_tys)
+    in
+    (* Just the re-currying: [None] where the declaration's arity is already
+       the shape the substituted parameter type has, so a producer that has
+       its own better source keeps it. *)
+    let param_expected_recurried () =
+      match Param_pos.nth fn_param_ml_tys_orig param_index with
+      | Some orig ->
+        Option.bind (param_expected_subst ())
+          (recurry_to_opt (count_ml_value_arrows orig))
+      | None -> None
+    in
+    let param_expected_at_declared_arity () =
+      match param_expected_recurried () with
+      | Some _ as t -> t
+      | None -> (
+        match Param_pos.nth fn_param_ml_tys_orig param_index with
+        | Some _ -> param_expected_subst ()
+        | None -> None )
+    in
+    (* The callee declares this parameter as one of its own template
+       parameters [Tvar j], and some {e other} parameter carries that same
+       [j] in a position the instantiation erased -- so that parameter's
+       argument deduces [j] as [std::any].  This one has to arrive boxed for
+       the two deductions to agree.  Erasure of the type argument alone is
+       not enough of a reason: unless another position states it as
+       [std::any], boxing here would be the only thing making the deduction
+       disagree. *)
+    let param_tvar_erased =
+      let this = param_index in
+      let rec mentions j = function
+        | Miniml.Tvar (_, j') -> j = j'
+        | Miniml.Tglob (_, ts, _) -> List.exists (mentions j) ts
+        | Miniml.Tapp (h, ts) -> h = j || List.exists (mentions j) ts
+        | Miniml.Tarr (a, b) -> mentions j a || mentions j b
+        | Miniml.Tmeta {contents = Some t} -> mentions j t
+        | _ -> false
+      in
+      let tvar_arg_erased j =
+        match List.nth_opt tys (j - 1) with
+        | Some t ->
+          Ml_type_util.has_erased_type_in_type
+            (unfold_cpp_typedef env (cpp_of_ml env t))
+        | None -> false
+      in
+      match Param_pos.nth fn_param_ml_tys_orig this with
+      | Some (Miniml.Tvar (_, j)) when tvar_arg_erased j ->
+        List.exists
+          (fun (k, orig) ->
+            (not (Param_pos.equal k this))
+            && param_states_type_args id orig
+            && mentions j orig
+            && Ml_type_util.has_erased_type_in_type
+                 (unfold_cpp_typedef env (cpp_of_ml env (type_subst_list tys orig))))
+          (Param_pos.positioned fn_param_ml_tys_orig)
+      | _ -> false
+    in
+    let arg_expected_ty =
+      match ml_arg with
+      (* A lambda under a coercion is written against the slot all the
+         same. *)
+      | MLlam _ | MLmagic (_, MLlam _) -> param_expected_at_declared_arity ()
+      | _ ->
+      ( match
+          match Param_pos.nth fn_param_ml_tys_orig param_index with
+          | Some (Miniml.Tvar (_, _)) ->
+            param_expected_at_declared_arity ()
+          | _ -> None
+        with
+      | Some _ as t -> t
+      | None ->
+      ( match ml_arg with
+      | MLmagic (_, _) -> param_expected_subst ()
+      (* [MLglob]: a bare function name handed over as a value may need
+         re-currying.  Count the arrows in the callee's {e unsubstituted}
+         parameter type: arrows past the point where the codomain becomes a
+         type variable belong to the element type the callee is generic in,
+         not to the callable it expects. *)
+      | MLglob _ -> param_expected_at fn_param_ml_tys_orig param_index
+      (* A partial application is a callable built here rather than named,
+         and reaches the slot at the arity the callee declared the parameter
+         at, for the same reason a lambda does. *)
+      | MLapp _ -> param_expected_at_declared_arity ()
+      (* A constructed value is spelled here for the first time, so only the
+         slot can say how its type arguments are curried.  Everything else
+         about the type the constructor's own annotation knows better: it
+         carries this producer's instantiation, which the parameter type may
+         have erased.  So take the currying and nothing else. *)
+      | MLcons _ -> param_expected_recurried ()
+      (* A match in argument position becomes an immediately-invoked lambda,
+         whose branches have to agree on one return type -- and the branches
+         are where a value is spelled for the first time, so nothing inside
+         states it.  Only the slot does. *)
+      | MLcase _ -> param_expected_at_declared_arity ()
+      | _ -> None ) )
+    in
+    (* Where the substituted parameter says nothing, the result may:
+       [trigger (subevent ...)] at a tree of family [Sum1<...>] fixes
+       [trigger]'s family, which is what its parameter -- the [subevent]
+       call's result -- has to be. *)
+    let arg_expected_ty =
+      match
+        ( Lazy.force result_tvar_map,
+          Param_pos.nth fn_param_ml_tys_orig param_index )
+      with
+      | (result_names, (_ :: _ as m)), Some pt -> (
+        let d =
+          convert_ml_type_to_cpp_type env result_names (type_simpl pt)
+          |> deapply_families
+          |> map_cpp_type (function
+               | Tvar (Tv_index (_, Some v) | Tv_named v) as t -> (
+                 match List.find_opt (fun (v', _) -> Id.equal v v') m with
+                 | Some (_, t') -> t'
+                 | None -> t )
+               | t -> t )
+        in
+        match arg_expected_ty with
+        (* No slot at all: the declaration's type is the slot, where it is
+           one this scope can write. *)
+        | None | Some Tany ->
+          ( match spell_in_scope d with
+          | Some _ as t -> t
+          | None -> arg_expected_ty )
+        (* A slot erased inside: each erased part is filled from the
+           declaration where it says; what the declaration still says in
+           its own variables is no answer. *)
+        | Some slot ->
+          let scope = current_scope_type_names () in
+          let d =
+            map_cpp_type
+              (function
+                | Tvar tv as t ->
+                  let id = tvar_spelled tv in
+                  if List.exists (Id.equal id) scope then t else Tany
+                | t -> t )
+              d
+          in
+          Some (Ml_type_util.refine_erased_by ~expected:d slot) )
+      | _ -> arg_expected_ty
+    in
+    (* Only a parameter the carrier reaches: one that mentions a
+       higher-kinded variable of the callee.  [interp_state]'s tree
+       [itree E T] is at the source family [E], and filling its erased
+       family with the monad's [BotE] turned the inner [interp] into one
+       over the target family. *)
+    let param_mentions_carrier =
+      match Param_pos.nth fn_param_ml_tys_orig param_index with
+      | Some t ->
+        let hk = declared_higher_kinded_tvars fn_ml_ty in
+        not (IntSet.is_empty (IntSet.inter hk (collect_tvars_set IntSet.empty t)))
+      | None -> true
+    in
+    let arg_expected_ty =
+      if not param_mentions_carrier then arg_expected_ty
+      else
+        List.fold_left
+          (fun t b -> Option.map (refine_by_instance_family b) t)
+          arg_expected_ty instance_families
+    in
+    let arg_expected_ml_ty =
+      match param_ml_ty with
+      | Some ml_ty when not (ml_type_contains_erased ml_ty) -> Some ml_ty
+      | _ -> slot.expected_ml_ty
+    in
+    (* When the callee's declared parameter type is value-dependent and
+       resolves to [std::any] (e.g. [syms_semty xs]), a concrete pair/tuple
+       literal passed at this call site (e.g. [(n, (n, tt))] for a literal
+       [xs]) must be DEEP-erased — every component boxed into [std::any] —
+       so that the callee's generic body, which reconstructs the value via
+       [any_cast<pair<any,any>>], can recover it.  The deep-erasing
+       constructor path in [gen_expr_custom_cons] is normally driven by the
+       enclosing function's erased return type, so it is reached here by
+       treating this call argument as if it were itself in erased "return"
+       position for the duration of its generation. *)
+    (* Where the call writes the variable -- the dictionary stated it --
+       nothing deduces it, and an argument boxed to agree with a deduction
+       would only fail to convert. *)
+    let param_written_by_call = param_tvar_erased && dictionary_filled in
+    let param_resolves_to_any =
+      (param_tvar_erased && not param_written_by_call)
+      ||
+      match param_ml_ty with
+      | Some ml_ty -> ml_erases_to_box env ml_ty
+      | None -> false
+    in
+    let expr =
+      let ret =
+        if param_resolves_to_any then Some Tany
+        (* An argument is not a tail position, so the enclosing function's
+           return type does not describe it -- and what the parameter says
+           does.  Left to {!position_cpp_ty}'s fallback, a match in argument
+           position builds its branches at the type the {e call} returns.
+
+           Only where the parameter's type can be written, though: installed
+           as a return type it is written out, as the argument's own explicit
+           template arguments among other places, and a type naming a skipped
+           global renders there as a bare argument list -- [<std::any,
+           <std::any, std::any>>].  Where it cannot be written the enclosing
+           return type is not right, but it is spellable, and a parameter
+           that answers in text no compiler takes has not answered. *)
+        else
+          match arg_expected_ty with
+          | Some t when Ml_type_util.has_no_cpp_spelling t ->
+            (!tctx).current_cpp_return_type
+          | t -> t
+      in
+      with_cpp_return_type ret (fun () ->
+          gen_expr ?expected_ty:arg_expected_ty
+            ~slot:
+              { slot with
+                expected_ml_ty = arg_expected_ml_ty;
+                call_result = expected_result;
+                stated_ml_ty = param_ml_ty }
+            env ml_arg )
+    in
+    (* Annotate the outer lambda with the explicit return type computed
+       during the split, so that C++ concept checking sees the concrete
+       [std::function<...>] return type instead of the raw closure type. *)
+    let expr =
+      match split_ret_ty, expr with
+      | Some ret_ty, CPPlambda ({ cl_ret = None; _ } as l) ->
+        CPPlambda { l with cl_ret = Some ret_ty }
+      | _ -> expr
+    in
+    let expr =
+      match (param_ml_ty, expr) with
+      | Some param_ty, CPPlambda ({ cl_body = body; _ } as l) ->
+        let param_cpp_ty =
+          cpp_of_ml env param_ty
+        in
+        ( match param_cpp_ty with
+        | Tfun (_, Tshared_ptr inner) ->
+          let rec wrap_stmt = function
+            | Sreturn (Some e) ->
+              Sreturn (Some (mk_call (CPPalloc (Alloc_heap, inner)) [e]))
+            | s -> map_stmt Fun.id wrap_stmt Fun.id s
+          in
+          CPPlambda
+            { l with
+              cl_ret = Some (Tshared_ptr inner);
+              cl_body = List.map wrap_stmt body }
+        | _ -> expr )
+      | _ -> expr
+    in
+    let expr =
+      match param_ml_ty with
+      | Some param_ty -> erase_fn_arg_for_param env param_ty ml_arg expr
+      | None -> expr
+    in
+    (* A methodified callee is spelled [recv.f(rest)], and [std::any] has no
+       members: unlike every other argument, the receiver cannot arrive as a
+       box at all.  What says that it does is the declaration the receiver
+       came out of -- a method registered as returning [std::any] -- and the
+       parameter's type is what says what the box holds. *)
+    let expr =
+      let receiver_is_boxed =
+        (* The receiver's own ML type has to say it is gone -- a projection
+           out of a dependent pair is a bare type variable, and extraction
+           leaves a [Tdummy] behind. *)
+        ( match
+            Option.map (fun t -> cpp_of_ml env t)
+              (infer_ml_body_type (strip_magic ml_arg))
+          with
+        | Some t -> prints_as_any t
+        | None -> false )
+        &&
+        (* And it has to have come out of an accessor on a value that
+           carries erasure: a [SigT<std::any, std::any>] hands back a box, a
+           [SigT<List<uint64_t>, List<uint64_t>>] hands back a list.  A call
+           whose arguments are all concrete does not qualify however its ML
+           type reads -- a free template function's result is resolved by
+           the type arguments the call site states. *)
+        match strip_magic ml_arg with
+        | MLapp (g, rargs) -> (
+          match strip_magic g with
+          | MLglob _ -> app_reads_erased_value env rargs
+          | _ -> false )
+        | _ -> false
+      in
+      match Cpp_names.lookup_method_this_pos id with
+      | Some pos
+        when Param_pos.equal (Param_pos.of_receiver pos) param_index
+             && receiver_is_boxed -> (
+        match param_expected_subst () with
+        | Some into when not (prints_as_any into) ->
+          coerce ~from:Tany ~into expr
+        | _ -> expr )
+      | _ -> expr
+    in
+    let expr =
+      if param_tvar_erased && not param_written_by_call then
+        (* Say where the value is coming from where the binder's own type
+           says: an argument that is already a box is left alone. *)
+        let from =
+          match ml_arg with
+          | MLrel j -> binder_cpp_type_or_derive env j
+          | _ -> None
+        in
+        coerce ~term:ml_arg ?from ~into:Tany expr
+      else expr
+    in
+    (* Wrap void calls as values only when the expression will be used
+       as a value (not in monadic parameter handler which places it in
+       statement position inside a lambda). *)
+    let as_value () =
+      match ml_arg with
+      | a when ml_value_is_void_call a ->
+        (* Don't wrap eta-expanded lambdas (partial applications) — they
+           are function VALUES, not void call results. *)
+        ( match expr with
+        | CPPlambda _ -> expr
+        | _ -> wrap_void_call_as_value expr )
+      | _ -> expr
+    in
+    (* A bare local variable known to be boxed as [std::any]
+       ([binder_is_boxed]) — e.g. a leaf pulled out of an erased-pair
+       destructure — passed directly to a plain global function whose
+       parameter type is concrete.  Mirrors the equivalent check for
+       non-global callees (~[MLrel j when Escape.IntSet.mem ...] above). *)
+    let ml_arg_is_erased_rel =
+      match ml_arg with
+      | MLrel j | MLmagic (_, MLrel j) -> binder_is_boxed j
+      | _ -> false
+    in
+    match param_ml_ty with
+    | Some param_ty
+      when ( ml_body_returns_erased_field ml_arg || ml_arg_is_erased_rel
+           (* A component read out of a pair that was itself recovered from
+              a box is a [std::any] whatever its ML type says, and the
+              emitted expression is the evidence -- see
+              {!yields_boxed_component}. *)
+           || yields_boxed_component (as_value ()) )
+           && not (match param_ty with
+                   | Miniml.Tglob (g, _, _) -> Table.is_promoted_type_var g
+                   | _ -> false)
+           (* [param_ty] comes from the callee's own (call-site-substituted)
+              type signature, whose [Tvar] indices are not anchored to this
+              function's [tvars] scope. When conversion produces an
+              unresolved [Tvar (Tv_index (_, None))] (would print as a bogus template
+              parameter like "T3"), we cannot build a meaningful concrete
+              cast here — skip this branch and fall back to [as_value ()]
+              unchanged; a later pass (e.g. [gen_match_branch]'s field
+              substitution) supplies the correct cast at its own,
+              properly-scoped [tvars]. *)
+           && erase_unresolved_tvars (cpp_of_ml env param_ty)
+              = cpp_of_ml env param_ty ->
+      let cpp_ty = cpp_of_ml env param_ty in
+      ( match strip_ns_tglob cpp_ty with
+      | Tglob (g, [_], _) when is_list_global g && not (Table.is_custom g) ->
+        let list_any_ty =
+          match cpp_ty with
+          | Tnamespace (ns_g, _) -> Tnamespace (ns_g, Tglob (g, [Tany], []))
+          | _ -> Tglob (g, [Tany], [])
+        in
+        (* [as_value ()] may already have unboxed the erased value to the
+           canonical element-erased shape (the [MLrel] case of [gen_expr]
+           does this for a variable bound to an erased field).  Casting
+           again would re-box that concrete list into a fresh [std::any]
+           only to unbox it — mirror the custom-list branch below and reuse
+           the existing cast.  It may also have gone the whole way and
+           recovered the concrete list already ({!coerce} does this for a
+           value crossing out of a box), in which case there is nothing
+           left to convert. *)
+        ( match as_value () with
+        | CPPconverting_ctor (t, _) as recovered when cpp_ty_eq t cpp_ty ->
+          recovered
+        | CPPany_cast _ as already_cast ->
+          Cpp_erasure.converting_ctor cpp_ty [already_cast]
+        | v ->
+          Cpp_erasure.converting_ctor cpp_ty
+            [Cpp_erasure.unbox list_any_ty v] )
+      | Tglob (g, [_], _) when Ml_type_util.is_custom_list_global g ->
+        let clean_cpp_ty = clean_self_ns cpp_ty in
+        (* Custom-extracted list (e.g. [std::deque]) is boxed as [std::any]
+           with fully-erased elements at runtime ([deque<pair<any,any>>]).
+           Cast the inner value to that erased representation, matching what
+           [gen_match_branch]'s field substitution stores. *)
+        let erased_ty =
+          (* Canonical erased shape is [deque<std::any>] -- a bare [std::any]
+             per element, not a structure-preserving [deque<pair<any,any>>]
+             (see the matching invariant in [gen_expr]'s [MLrel]/[MLmagic]
+             cases).  Using the structure-preserving erasure here would
+             disagree with a sibling producer for the same Coq list type
+             that already erased to the flat shape, and — when [as_value ()]
+             is itself already an [any_cast] to the flat shape (added by
+             [gen_expr] above) — would additionally double-wrap it in a
+             second, incompatible [any_cast]. *)
+          match clean_cpp_ty with
+          | Tnamespace (ns_g, Tglob (g, [_], _)) ->
+            Tnamespace (ns_g, Tglob (g, [Tany], []))
+          | Tglob (g, [_], _) ->
+            Tglob (g, [Tany], [])
+          | _ -> clean_cpp_ty
+        in
+        let inner = match as_value () with
+          | CPPany_cast _ as already_cast -> already_cast
+          | v -> Cpp_erasure.unbox erased_ty v
+        in
+        (* When the callee is a REAL function whose parameter has a CONCRETE
+           element type — a wholesale-boxed opaque element
+           ([triples_le_max(const std::deque<rgb>&)]), OR a structural element
+           whose concrete component must be preserved for a POLYMORPHIC/template
+           callee ([nodupKeys<T1>(const std::deque<std::pair<std::string,T1>>&)],
+           whose [std::string] key cannot be erased to [std::any] or template
+           argument deduction fails) — the fully-erased [inner] neither converts
+           nor deduces against it.  Route it through [crane_container_cast],
+           which builds the concrete-element container (unboxing wholesale-boxed
+           elements at runtime; for structural elements it still compiles and
+           lets deduction succeed).
+
+           Inline-custom callees (e.g. [length]'s [.size()]) splice the
+           argument into a template and work on the erased container, and a
+           callee whose parameter element is ALREADY fully erased
+           ([deque<pair<any,any>>]) needs no conversion — both keep [inner]. *)
+        let needs_concrete =
+          (not (Table.is_inline_custom id))
+          &&
+          match strip_ns_tglob clean_cpp_ty with
+          | Tglob (_, [et], _) ->
+            et <> Ml_type_util.erase_type_to_any et
+          | _ -> false
+        in
+        if needs_concrete then begin
+          (* When the callee's OWN declared (unsubstituted) parameter type
+             is still generic here (a template function like
+             [nodupKeys<T1>]), its C++ declaration never boxes the element
+             (a bare type variable never recurses).  This call site's
+             [clean_cpp_ty] was built from the call-site-substituted
+             concrete type though, so it may judge the (now concrete,
+             possibly recursive) element as boxed — disagreeing with the
+             generic declaration and breaking template argument deduction.
+             Suppress boxing here to match the declaration. *)
+          let callee_generic_here =
+            match Param_pos.nth fn_param_ml_tys_orig param_index with
+            | Some t -> Ml_type_util.ml_type_contains_tvar t
+            | None -> false
+          in
+          CPPcontainer_cast (clean_cpp_ty, inner, callee_generic_here)
+        end
+        else inner
+      (* The value is boxed; recover it at the parameter's type.  Going
+         through {!coerce} rather than casting outright keeps the one rule
+         that a destination which is itself a name for the box -- [using sel
+         = std::any] -- is not a recovery target: [any_cast<sel>] reads a box
+         that was never doubly wrapped and throws. *)
+      | _ -> coerce ~from:Tany ~into:cpp_ty (as_value ()) )
+    (* Monadic parameter (reified mode only): the callee expects
+       [shared_ptr<ITree<R>>].  If the argument already produces a reified
+       tree, pass through as-is; otherwise wrap in [ITree<R>::ret()]. *)
+    | Some param_ty when (!tctx).itree_mode = Reified
+        && is_monadic_ml_type param_ty
+        && not (is_reified_monadic_expr ml_arg) ->
+      Table.require_itree_header ();
+      let r_ml = extract_itree_result_ml param_ty in
+      let r_cpp = cpp_of_ml env r_ml in
+
+      let itree_ty = mk_itree_type r_cpp in
+      (* [expr] is a value unless the thing it calls was void-ified, in
+         which case it is a statement and the tree carries [tt] instead.
+         Only a genuinely valueless result gets the nullary [ret()]: a
+         [unit] one has [monostate] to carry, and a tree spelled
+         [ITree<void>] would not match the [ITree<Unit>] declared for it. *)
+      let no_value = r_cpp = Tvoid || ml_type_is_void r_ml in
+      let as_statement = no_value || ml_expr_is_void_call ml_arg in
+      let ret_expr =
+        if no_value then mk_itree_ret Tvoid []
+        else if as_statement then mk_itree_ret r_cpp [mk_tt_expr ()]
+        else mk_itree_ret_for_value r_cpp r_ml expr
+      in
+      let body =
+        if as_statement then [Sexpr expr; Sreturn (Some ret_expr)]
+        else [Sreturn (Some ret_expr)]
+      in
+      mk_iife (Some itree_ty) body
+    (* Void-ified function reference passed as callback to polymorphic
+       HOF where the ORIGINAL (non-substituted) parameter codomain is a
+       type variable (not concrete unit).  The C++ definition uses a
+       template type parameter constrained with is_invocable_v, so the void
+       function needs wrapping to return std::monostate.  When the original
+       codomain IS concrete unit, the constraint uses void which already
+       accepts void-returning functions. *)
+    | Some param_ty
+      when (match ml_arg with
+            | MLglob (r, _) | MLmagic (_, MLglob (r, _)) -> is_void_ified_ref r
+            | _ -> false)
+           && (match param_ty with Miniml.Tarr _ -> true | _ -> false)
+           && ml_type_is_unit (ml_codomain param_ty)
+           && (match Param_pos.nth fn_param_ml_tys_orig param_index with
+               | Some orig_pt ->
+                 not (ml_type_is_unit (ml_codomain orig_pt))
+               | None -> false) ->
+      let dom_mls =
+        let rec collect acc = function
+          | Miniml.Tarr (t, rest) ->
+            ( match resolve_tmeta t with
+            | Miniml.Tdummy _ -> collect acc rest
+            | t -> collect (t :: acc) rest )
+          | _ -> List.rev acc
+        in
+        collect [] param_ty
+      in
+      let dom_cpps =
+        List.map
+          (fun t -> cpp_of_ml env t)
+          dom_mls
+      in
+      let params =
+        List.mapi
+          (fun j ty ->
+            (Tref (Lvalue, Tconst ty), Some (Id.of_string (Printf.sprintf "_wa%d" j))))
+          dom_cpps
+      in
+      let args =
+        List.rev_map (fun (_, id) -> CPPvar (Option.get id)) params
+      in
+      let body =
+        [ Sexpr (CPPfun_call (call_opaque, expr, of_reversed args));
+          Sreturn (Some (mk_tt_expr ())) ]
+      in
+      mk_lambda params None body ~capture:Immediate
+    | _ -> as_value ()
+  ) regular_ml_args
+
+(** [call_type_args ?expected_ty env id plan args] -- the type arguments a
+    call to [id] writes, given its generated arguments: the dictionaries'
+    first, then the regular ones that survive the erasure filters, recovered
+    from the expected result, a dictionary or an argument where the filters
+    left nothing.  Also the callee's instantiated C++ type and the
+    instantiation the type arguments were read from, which the assembly
+    needs. *)
+and call_type_args ?expected_ty env id plan args =
+  let {
+    cp_primary_args = primary_ml_args;
+    cp_regular_args = regular_ml_args;
+    cp_leading_params = leading_params;
+    cp_instance_type_args = typeclass_type_args;
+    cp_tys = tys;
+    cp_dictionary_filled = dictionary_filled;
+    cp_fn_ml_ty_subst = fn_ml_ty_subst;
+    cp_params = fn_param_ml_tys;
+    cp_params_orig = fn_param_ml_tys_orig;
+    cp_subst_index_of_orig = subst_index_of_orig;
+    cp_tvars = tvars;
+    cp_concrete_tvar_type = concrete_tvar_type;
+    cp_result_tvar_map = result_tvar_map;
+    _
+  } = plan in
+  let ty = fn_ml_ty_subst in
+  let ty = cpp_of_ml env ty in
+  (* Combine: instance types first, then regular type args. If any regular
+     type arg is Tany or a dummy type glob (from erased params), drop ALL
+     regular type args via filter_erased_type_args and let the compiler deduce
+     them. See filter_erased_type_args for why we must drop all args rather
+     than just the erased ones.
+
+     Exception: when the callee's return type depends on an erased type var,
+     C++ can't deduce it from lambda arguments (lambdas don't participate in
+     template argument deduction). In that case, recover the concrete type
+     from the enclosing function's return type. *)
+  (* A partial application writes only the type arguments the Rocq term
+     applied: [Instance Fun_Mon := { ffmap := @liftM m _ }] names the
+     carrier and leaves [liftM]'s own element variables to inference, which
+     in OCaml costs nothing and in C++ costs everything -- they occur only
+     in [typename I::m<T>] and in the return type, both non-deduced.  The
+     arguments still say what they are, so finish the list from them. *)
+  let tys = complete_short_tys id tys primary_ml_args in
+  (* The whole list is built as a function of [tys] because it may have to be
+     built twice: what a call writes is decided by the erasure filters, and
+     the recoveries below run only where they left nothing.  A pass that
+     fills one position would otherwise silently disable them. *)
+  let build_type_args tys =
+  (* The callee's variables it applies and still declares plain: a carrier
+     it writes at the erased element ([Iter M]'s [M] is [T1], standing for
+     [M<crane::obj>]). *)
+  let plain_carriers =
+    match find_type_opt id with
+    | Some ml_ty ->
+      let hk = declared_higher_kinded_tvars ml_ty in
+      (* A class's carrier -- the argument of a definitional class in a
+         domain, [TFunctor T] -- and not a family, which is applied at an
+         index its struct already leaves out. *)
+      let class_carriers =
+        List.fold_left
+          (fun acc d ->
+            match resolve_tmeta d with
+            | Miniml.Tglob ((GlobRef.ConstRef _ as g), [ a ], _)
+              when Typeclasses.is_class g -> (
+              match resolve_tmeta a with
+              | Miniml.Tapp (i, _) | Miniml.Tvar (_, i) -> IntSet.add i acc
+              | _ -> acc )
+            | _ -> acc )
+          IntSet.empty (ml_domains ml_ty)
+      in
+      Hashtbl.fold
+        (fun i _ acc ->
+          if IntSet.mem i hk || not (IntSet.mem i class_carriers) then acc
+          else IntSet.add i acc )
+        (Ml_type_util.applied_ml_tvar_arities [ml_ty])
+        IntSet.empty
+    | None -> IntSet.empty
+  in
+  (* Whether the caller applies its variable [j]: a type constructor,
+     whatever its declaration made of it -- a class carrier, a template
+     name, or a family written plain, which applied is itself again. *)
+  let caller_higher_kinded j =
+    match !Table.current_decl_ref with
+    | Some r -> (
+      match find_type_opt r with
+      | Some caller_ty ->
+        Hashtbl.mem (Ml_type_util.applied_ml_tvar_arities [caller_ty]) j
+      | None -> false )
+    | None -> false
+  in
+  (* A carrier the declaration writes plain -- [TFunctor T]'s [T], whose
+     applications [T U] and [T V] are both the one [T1] -- is bound off the
+     result whole, and the result has the element at the call's own [V].
+     The declaration's [T1] stands for the carrier at the erased element --
+     it is what the dictionary is spelled at, and the parameters and result
+     read it at their elements through [crane::rebind_t] -- so the element
+     is erased out of it. *)
+  let erase_carrier_elements i t' =
+    match find_type_opt id with
+    | Some ml_ty when IntSet.mem i plain_carriers ->
+      let rec elements acc t =
+        match resolve_tmeta t with
+        | Miniml.Tapp (k, args) ->
+          let acc = if k = i then args @ acc else acc in
+          List.fold_left elements acc args
+        | Miniml.Tglob (_, args, _) -> List.fold_left elements acc args
+        | Miniml.Tarr (a, b) -> elements (elements acc a) b
+        | _ -> acc
+      in
+      let element_args = elements [] (ml_codomain ml_ty) in
+      let element_tys =
+        List.filter_map
+          (fun a ->
+            match resolve_tmeta a with
+            | Miniml.Tvar (_, j) -> (
+              match List.nth_opt tys (j - 1) with
+              | Some ty when not (Mlutil.isTdummy (resolve_tmeta ty)) ->
+                let c = template_arg_of_ml_type env tvars ty in
+                if prints_as_any c then None else Some c
+              | _ -> None )
+            | _ -> None )
+          element_args
+      in
+      (* An element the declaration itself erased -- a method's own
+         quantifier, [option (F U)] at [U] gone -- is nowhere in what the
+         result binds, so a binding that erases nothing is some
+         application of the carrier, not the carrier: nothing here can
+         tell which part is the element. *)
+      let element_erased_by_declaration =
+        List.exists
+          (fun a ->
+            match resolve_tmeta a with
+            | Miniml.Tvar _ -> false
+            | _ -> true )
+          element_args
+      in
+      if element_tys = [] then
+        if element_erased_by_declaration
+           && not (Ml_type_util.has_tany_written t')
+        then None
+        else Some t'
+      else
+        (* Compared unqualified: the same type reaches here spelled
+           through its wrapper struct and without it. *)
+        let rec norm t =
+          map_cpp_type
+            (function
+              | Tnamespace (_, t) | Tconst t -> norm t
+              | Tany | Topaque | Tvar (Tv_index (_, None)) -> Tany
+              | Tvar (Tv_index (_, Some n) | Tv_named n)
+                when not (List.exists (Id.equal n) (!tctx).current_type_vars) ->
+                Tany
+              | t -> t )
+            t
+        in
+        let element_tys = List.map norm element_tys in
+        let t'' =
+          map_cpp_type
+            (fun t -> if List.mem (norm t) element_tys then Tany else t)
+            t'
+        in
+        Some t''
+    | _ -> Some t'
+  in
+  (* A plain carrier the call erased may still be stated by the dictionary
+     it is handed: [TFunctor_outer1]'s [h0 :
+     TFunctor<two<std::any, T1>>] is the carrier its [tfmap] call is at,
+     already at the erased element. *)
+  let carrier_from_dictionary i =
+    let unwrap = strip_param_spelling in
+    List.find_map
+      (fun (k, pt) ->
+        match resolve_tmeta pt with
+        | Miniml.Tglob ((GlobRef.ConstRef _ as g), [a], _)
+          when Typeclasses.is_class g
+               && ( match resolve_tmeta a with
+                  | Miniml.Tapp (i', _) | Miniml.Tvar (_, i') -> i' = i
+                  | _ -> false ) -> (
+          (* What the call instantiated the class at, where that is known:
+             the carrier composed and applied at the erased element. *)
+          let from_instantiation =
+            match subst_index_of_orig k with
+            | Some ks -> (
+              match Option.map resolve_tmeta (Param_pos.nth fn_param_ml_tys ks) with
+              | Some (Miniml.Tglob (g', [x], _))
+                when GlobRef.UserOrd.equal g g'
+                     && not
+                          (let rec has_class t =
+                             match resolve_tmeta t with
+                             | Miniml.Tglob (h, l, _) ->
+                               Typeclasses.is_class h || List.exists has_class l
+                             | Miniml.Tarr (a, b) -> has_class a || has_class b
+                             | Miniml.Tapp (_, l) -> List.exists has_class l
+                             | _ -> false
+                           in
+                           has_class x) ->
+                let c = template_arg_of_ml_type env tvars x in
+                (* A carrier is written at the erased element, so an
+                   instantiation that erases nothing is some application
+                   of it, not the carrier. *)
+                ( match erase_carrier_elements i c with
+                | Some c
+                  when (not (prints_as_any c))
+                       && Ml_type_util.has_tany_written c ->
+                  Some c
+                | _ -> None )
+              | _ -> None )
+            | None -> None
+          in
+          match from_instantiation with
+          | Some _ as c -> c
+          | None ->
+          match
+            Option.bind
+              (Param_pos.regular_of ~leading:leading_params k)
+              (List.nth_opt regular_ml_args)
+          with
+          | Some arg -> (
+            match strip_magic arg with
+            | MLrel j -> (
+              match Option.map unwrap (binder_cpp_type_or_derive env j) with
+              | Some (Tglob (g', [x], _)) when GlobRef.UserOrd.equal g g'
+                && not (prints_as_any x) ->
+                Some x
+              | _ -> None )
+            | _ -> None )
+          | None -> None )
+        | _ -> None )
+      (Param_pos.positioned fn_param_ml_tys_orig)
+  in
+  let regular_of tys =
+    (* A type argument standing for a higher-kinded class parameter is not a
+       template parameter of the callee (it is the instance's associated
+       type), so it must not be passed — and it is always erased, which
+       would otherwise make [filter_erased_type_args] drop the real type
+       arguments alongside it. *)
+    List.mapi (fun k t -> (k + 1, t)) tys
+    |> List.filter (fun (i, _) -> keeps_type_arg_position id i)
+    |> List.map
+         (fun (i, ty) ->
+           let t = template_arg_of_ml_type env tvars ty in
+           (* A higher-kinded variable of the caller's reaching such a
+              position is spelled as the template it is, which names no
+              type; the position takes it at the erased element. *)
+           let t =
+             match (t, resolve_tmeta ty) with
+             | (Tqualified _ | Tvar _), Miniml.Tvar (_, j)
+               when IntSet.mem i plain_carriers && caller_higher_kinded j ->
+               template_arg_of_ml_type env tvars
+                 (Miniml.Tapp (j, [Miniml.Tunknown]))
+             | _ when (prints_as_any t || under_applied_ind t)
+                      && IntSet.mem i plain_carriers -> (
+               match carrier_from_dictionary i with
+               | Some t' -> t'
+               | None -> t )
+             | _ -> t
+           in
+           (* A variable this scope does not name is erased where it sits,
+              as a binder spells it -- [std::pair<T2, Sum<std::any,
+              std::any>>] for [bind]'s [S * (I + R)] with the method's own
+              [I] and [R] gone.  Only a type that is nothing else says
+              nothing. *)
+           match t with
+           | Tvar (Tv_index (_, None)) ->
+             Terased Ek_type
+           | t when has_unnamed_tvar t -> Ml_type_util.resolve_tvars_to_any t
+           | t -> t )
+    |> fill_phantom_prefix id
+  in
+  let regular_type_args = regular_of tys in
+  (* Recover erased type args that C++ cannot deduce. Two cases: (a) tys is
+     non-empty but all entries were erased (Tdummy Ktype) →
+     filter_erased_type_args drops them all. (b) tys is empty — the Rocq
+     extraction didn't supply type args at the call site, but the callee has
+     Tdummy Ktype domain entries (erased type params).
+
+     In both cases, if the callee's ML return type is a Tvar that refers to
+     one of those erased type params, and we know the concrete return type
+     from the enclosing function context (current_cpp_return_type), we can
+     supply it as an explicit C++ template arg.
+
+     This is needed because C++ cannot deduce template type params from lambda
+     arguments — lambdas don't participate in template argument deduction. *)
+  let regular_type_args =
+    let filtered =
+      filter_erased_type_args
+        ~preserve_positions:(Table.is_inline_custom id)
+        regular_type_args
+    in
+    (* Check if the callee's return type is a Tvar pointing to an erased
+       (Tdummy Ktype) domain position, and if so, return the position index,
+       the concrete C++ type to use, and the full ML domain. *)
+    let try_recover_erased_return_type () =
+      (* [resolve_tmeta] is the one included from Ml_type_util (via the
+         module-level [include]); it is identical to the local shadow that
+         used to be defined here. *)
+      match (!tctx).current_cpp_return_type with
+      | None -> None
+      | Some ret_ty ->
+      match find_type_opt id with
+      | None -> None
+      | Some ml_ty_orig ->
+        let ret = resolve_tmeta (ml_return_type ml_ty_orig) in
+        ( match ret with
+        | Miniml.Tvar (_, i) ->
+          let all_dom = List.map resolve_tmeta (ml_domains ml_ty_orig) in
+          (* Tvar uses 1-based indexing (matching type_subst_list); convert to
+             0-based for list access. *)
+          let idx = i - 1 in
+          if idx >= 0 && idx < List.length all_dom then
+            match
+              List.nth all_dom idx
+            with
+            | Miniml.Tdummy Miniml.Ktype -> Some (idx, ret_ty, all_dom)
+            | _ -> None
+          else
+            None
+        | _ -> None )
+    in
+    (* Value args normally let C++ deduce the type params, but not when
+       the return type variable occurs in no value parameter — as for a
+       method of a higher-kinded class ([cout : forall A, F A -> A], whose
+       only parameter is the instance's associated carrier type, a
+       non-deduced context). *)
+    let tvars_of = spelled_tvars_of in
+    let deducible_tvars () = deducible_tvars_of_glob id in
+    let ret_tvar_undeducible () =
+      match (find_type_opt id, deducible_tvars ()) with
+      | Some ml_ty_orig, Some deducible -> (
+        match resolve_tmeta (ml_return_type ml_ty_orig) with
+        | Miniml.Tvar (_, i) -> not (IntSet.mem i deducible)
+        | _ -> false )
+      | _ -> false
+    in
+    (* Whether any type variable of the callee at all is beyond deduction.
+       Dropping the whole argument list rests on the compiler recovering it
+       from the values; a variable no parameter spells is one it cannot, and
+       then the list has to be written -- erased positions included, as
+       [std::any], which is what they are. *)
+    let some_tvar_undeducible () =
+      match (find_type_opt id, deducible_tvars ()) with
+      | Some ml_ty_orig, Some deducible ->
+        let all =
+          List.fold_left tvars_of IntSet.empty
+            (resolve_tmeta (ml_return_type ml_ty_orig)
+             :: List.map resolve_tmeta (ml_domains ml_ty_orig))
+        in
+        not (IntSet.subset all deducible)
+      | _ -> false
+    in
+    (* A higher-kinded argument is a type constructor, and [std::any] is not
+       a spelling of one: a list with an erased one in it cannot be written
+       out at all, so those calls keep deducing.  Higher-kinded as the
+       declaration has it ({!Ml_type_util.higher_kinded_ml_tvars}), not
+       merely applied: an event family is applied everywhere it occurs and
+       is still declared a plain [typename]. *)
+    let no_erased_hkt_arg () =
+      match find_type_opt id with
+      | None -> true
+      | Some ml_ty ->
+        let hk = declared_higher_kinded_tvars ml_ty in
+        IntSet.is_empty hk
+        ||
+        let n = IntSet.fold max (collect_tvars_set IntSet.empty ml_ty) 0 in
+        let kept =
+          kept_type_arg_positions id n
+        in
+        List.length kept <> List.length regular_type_args
+        || not
+             (List.exists2
+                (fun i t -> IntSet.mem i hk && prints_as_any t)
+                kept regular_type_args)
+    in
+    (* Writing the list out is what this call is left with once the
+       recoveries have declined, so an erased family is worth filling from
+       the value arguments first ({!fill_erased_tys}): written as
+       [std::any], it types whatever parameter the callee declares at it. *)
+    (* A position still erased after that may be stated by the type the
+       call is expected to produce: [trigger]'s event family, erased as a
+       type-level function, is the family of the tree it is assigned to.
+       The callee's declared codomain is matched against it. *)
+    let from_expected targs =
+      let names, m = Lazy.force result_tvar_map in
+      let kept =
+        kept_type_arg_positions id (List.length names)
+      in
+      if List.length kept <> List.length targs then targs
+      else
+        (* A type-level lambda extraction could only write as its head
+           ({!under_applied_ind}) is filled the same way. *)
+        List.map2
+          (fun i t ->
+            let bound () =
+              match
+                List.find_opt (fun (v, _) -> Id.equal v (List.nth names (i - 1))) m
+              with
+              | Some (v, t') -> (
+                match erase_carrier_elements i t' with
+                | Some t'' -> Some (v, t'')
+                | None -> None )
+              | None -> None
+            in
+            if prints_as_any t || under_applied_ind t then
+              match bound () with
+              | Some (_, t') -> t'
+              | None -> t
+            (* Erased only in part -- a carrier [fun T => option (exp T)]
+               written [std::optional<std::any>] -- the result fills the
+               part it knows. *)
+            else if Ml_type_util.has_tany_written t then
+              match bound () with
+              | Some (_, t') -> Ml_type_util.refine_erased_by ~expected:t' t
+              | None -> t
+            else t )
+          kept targs
+    in
+    let written_out () =
+      if some_tvar_undeducible () && no_erased_hkt_arg () then
+        filter_erased_type_args ~preserve_positions:true
+          (from_expected (regular_of (fill_erased_tys id tys primary_ml_args)))
+      else filtered
+    in
+    if filtered = [] && regular_type_args <> [] && dictionary_filled then
+      filter_erased_type_args ~preserve_positions:true regular_type_args
+    else if filtered = [] && regular_type_args <> [] then
+      (* Case (a): tys was non-empty but all got filtered. Only attempt
+         recovery when there are no non-erased value args — if there are value
+         args, C++ can deduce the template types from them (and injecting
+         explicit type args may conflict with the template signature, e.g.
+         hk_map's F0/F1 are function types). *)
+        match
+          if args = [] || ret_tvar_undeducible () then
+            try_recover_erased_return_type ()
+          else None
+        with
+      | Some (idx, ret_ty, _) ->
+        (* Replace the erased position with the concrete return type, then
+           filter out any remaining erased entries. *)
+        List.mapi (fun j t -> if j = idx then ret_ty else t) regular_type_args
+        |> List.filter (fun t -> not (prints_as_any t))
+      | None -> written_out ()
+    else if tys = [] then
+      (* Case (b): tys is empty — synthesize type args from scratch. Build one
+         entry per Tdummy Ktype domain position.
+
+         Recovery is attempted when:
+         - [args = []] — no value args, so C++ can't deduce types.
+         - [concrete_tvar_type <> None] — the callee's return type [Tvar]
+           was resolved from excess args + enclosing return type. *)
+      let should_recover =
+        args = [] || concrete_tvar_type <> None || ret_tvar_undeducible ()
+      in
+
+        match
+          if should_recover then try_recover_erased_return_type () else None
+        with
+      | Some (_idx, _ret_ty, all_dom) ->
+        (* Use [concrete_tvar_type] when available (excess args case),
+           otherwise fall back to the enclosing function's return type. *)
+        let t1 = match concrete_tvar_type with
+          | Some t -> t
+          | None -> _ret_ty
+        in
+        List.filter_map
+          (function
+            | Miniml.Tdummy Miniml.Ktype -> Some t1
+            | _ -> None )
+          all_dom
+      | None -> filtered
+    else
+      from_expected filtered
+  in
+  (* Whatever survived above is what the call writes, so it is here -- and
+     not before the erasure filters, which read the list at its Rocq length
+     -- that it has to be made to fit the callee's parameter list. *)
+  let regular_type_args = fit_to_declared_tvars id regular_type_args in
+  (* Promoted type vars ([Tpromoted name]) are no longer separate
+     template parameters — they're resolved through typeclass instance
+     access (e.g. [typename _tcI0::Obj]) by [gen_dfun]'s promoted var
+     resolution.  No additional template type arguments are needed at
+     call sites. *)
+  let promoted_type_args = [] in
+  (* Skipped infrastructure (ReSum instances, say) was classified as a
+     dictionary only to take it out of the regular arguments; it is not a
+     template argument. *)
+  List.filter_map Fun.id typeclass_type_args
+  (* Truncated last: {!hkt_spelled_type_args} rebuilds the correspondence
+     between arguments and positions by length, so a list shortened before
+     it reaches it is left unrespelled -- the carrier comes out as
+     [typename I::m] where the position wants [I::template m]. *)
+  @ drop_relaxed_tt_position id
+      (truncate_to_writable id (hkt_spelled_type_args id regular_type_args))
+  @ promoted_type_args
+  in
+  let all_type_args = build_type_args tys in
+  (* Nothing survived the erasure filters, so if the callee opens with
+     parameters its signature never mentions, deduction has nothing to work
+     from and the call has to name them. *)
+  let all_type_args =
+    if all_type_args = [] then
+      (* The call writes nothing, so every parameter is left to deduction --
+         and a type constructor is the one thing deduction can get wrong
+         rather than merely miss.  Where it cannot be read off the value
+         argument, name it; where the call names nothing else either, fall
+         back to the phantom prefix. *)
+      match
+        hkt_carrier_type_args env tvars ?result:expected_ty id tys
+      with
+      | Some targs -> targs
+      | None -> (
+        (* The result did not say what the carrier is; the dictionary the
+           call passes for the class still does. *)
+        match dict_carrier_type_args env tvars id primary_ml_args with
+        | Some targs -> targs
+        | None -> (
+          (* Neither route knew the carrier.  An argument's type may still
+             say what an erased plain type argument was, which is worth
+             writing only here: filling a position is what would have taken
+             the two routes above out of reach. *)
+          match build_type_args (fill_erased_tys id tys primary_ml_args) with
+          | [] -> phantom_prefix_args id
+          | targs -> targs ) )
+    else all_type_args
+  in
+  (* The same holds past a class dictionary: a call that writes only the
+     instance still leaves the callee's leading phantom parameters with
+     nothing to deduce them from. *)
+  let all_type_args =
+    let tc = List.filter_map Fun.id typeclass_type_args in
+    if tc <> [] && all_type_args = tc then
+      match phantom_prefix_args id with
+      | [] -> all_type_args
+      | fillers -> tc @ fillers
+    else all_type_args
+  in
+  (* Whichever route wrote the list, a plain position takes a type. *)
+  let all_type_args =
+    let n_tc = List.length typeclass_type_args in
+    if n_tc = 0 then types_at_plain_positions id all_type_args
+    else all_type_args
+  in
+  (* The written arguments that instantiate the callee's own type variables,
+     by position: the class-dictionary arguments lead the list and are no
+     variable's.  Substituting the whole list shifts every variable one
+     place per dictionary -- a family's position given the instance. *)
+  let written_tvar_args =
+    let n_tc =
+      List.length (List.filter_map Fun.id typeclass_type_args)
+    in
+    (* ... except those standing at a carrier's position: a class whose
+       parameter is higher-kinded quantifies it as one of the callee's own
+       variables ([MonadIter_stateT0]'s [M]), which the regular list does not
+       keep, and the dictionary written there is what it resolves through. *)
+    let n_carriers =
+      match find_type_opt id with
+      | Some ml_ty ->
+        let n = IntSet.fold max (collect_tvars_set IntSet.empty ml_ty) 0 in
+        List.length
+          (List.filter
+             (fun i -> not (keeps_type_arg_position id i))
+             (List.init n (fun i -> i + 1)))
+      | None -> 0
+    in
+    let skip = max 0 (n_tc - n_carriers) in
+    List.filteri (fun i _ -> i >= skip) all_type_args
+  in
+
+  (ty, tys, all_type_args, written_tvar_args)
+
 and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
 
   let rec get_eta_args dom args =
@@ -11385,1642 +13115,26 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
   let slot = {slot with eta_keep_moves = false} in
   match f with
   | MLglob (id, tys) ->
-    (* When the call has more args than the function's ML value-domain, the
-       excess args are curried applications to the result. This is common with
-       Rocq's Function vernacular _correct proof terms, where the extraction
-       produces e.g. div2_rect f f0 f1 n _res __ but div2_rect only has 4
-       value-domain params (f, f0, f1, n). The trailing _res and __ are applied
-       to the result via currying.
-
-       Split into: - primary_args: first n_value_dom args (passed to the
-       function) - excess_args: remaining non-dummy args (curried onto the
-       result) Only activates when n_args > n_value_dom; otherwise unchanged. *)
-    let args_before_split = args in
-    let args, excess_args =
-      let is_value_arg = function
-        | MLdummy _ -> false
-        | _ -> true
-      in
-      let is_value_dom t =
-        match resolve_tmeta t with
-        | Miniml.Tdummy _ -> false
-        | _ -> true
-      in
-      let rec collect_tarr_dom acc = function
-        | Miniml.Tarr (t1, t2) -> collect_tarr_dom (resolve_tmeta t1 :: acc) t2
-        | _ -> List.rev acc
-      in
-      match find_type_opt id with
-      | Some ml_ty ->
-        let all_dom = collect_tarr_dom [] ml_ty in
-        (* Count value-domain entries by filtering out ALL [Tdummy] positions
-           (both [Ktype] for erased type params and [Kprop] for erased proofs).
-           Symmetrically, filter the arg list to exclude [MLdummy] entries.
-           Comparing these two filtered counts avoids false excess detection
-           when erased params appear in [args] as [MLdummy] instead of (or in
-           addition to) being carried in [tys]. *)
-        let n_value_dom = List.length (List.filter is_value_dom all_dom) in
-        (* An erased argument at a position the declaration takes a value at
-           stays: the category classes over [obj : Type] take their objects
-           as values, and at [obj := Type -> Type] those objects are families
-           the call erases.  Dropping them would change the call's arity; the
-           declaration receives an empty box instead. *)
-        let value_args =
-          (* Two conventions meet here.  The arguments the Rocq term gave
-             have the declaration's erased domains dropped ([make_mlargs]
-             kills each [Tdummy]), so each is at a value domain, erased or
-             not.  The tail an eta-expansion invents keeps them: a dummy at
-             each erased domain, a variable at each value one
-             ([STRefToIxNat __ __ ref]).  The tail is the longest suffix
-             paired with the domains that way, provided what precedes it
-             fills the remaining value domains exactly; with none, every
-             argument is at a value domain or past the last one.  The one
-             dummy with no domain at all is the one a purely logical
-             signature is applied to. *)
-          if n_value_dom = 0 then List.filter is_value_arg args
-          else
-            let n_args = List.length args and n_dom = List.length all_dom in
-            let eta_paired k =
-              List.for_all2
-                (fun d a -> is_value_dom d = is_value_arg a)
-                (List.lastn k all_dom) (List.lastn k args)
-              && List.length
-                   (List.filter is_value_dom (List.firstn (n_dom - k) all_dom))
-                 = n_args - k
-            in
-            let rec longest k =
-              if k = 0 then None else if eta_paired k then Some k else longest (k - 1)
-            in
-            match longest (min n_args n_dom) with
-            | Some k ->
-              List.firstn (n_args - k) args
-              @ List.filter is_value_arg (List.lastn k args)
-            | None -> args
-        in
-        let n_value_args = List.length value_args in
-        if n_value_args > n_value_dom then
-          let primary =
-            List.filteri (fun i _ -> i < n_value_dom) value_args
-          in
-          let excess =
-            List.filteri
-              (fun i a -> i >= n_value_dom && is_value_arg a)
-              value_args
-          in
-          (primary, excess)
-        else
-          (value_args, [])
-      | None -> (List.filter is_value_arg args, [])
+    let plan = plan_call ~slot ?expected_ty env id tys args in
+    let {
+      cp_excess_args = excess_args;
+      cp_primary_args = primary_ml_args;
+      cp_instance_args = typeclass_ml_args;
+      cp_regular_args = regular_ml_args;
+      cp_leading_params = leading_params;
+      cp_params_orig = fn_param_ml_tys_orig;
+      cp_subst_index_of_orig = subst_index_of_orig;
+      cp_tvars = tvars;
+      cp_instance_promoted = instance_promoted_map;
+      _
+    } = plan in
+    let args =
+      with_promoted_var_map (instance_promoted_map @ (!tctx).promoted_var_map)
+        (fun () -> gen_call_args ~slot ?expected_ty env id plan)
     in
-    (* A value argument that vanishes here vanishes from the emitted call, and
-       the parameter it would have filled is dropped from the declaration by
-       the same [Tdummy] reading of the callee's domain -- leaving a body that
-       names a binder nothing supplies.  Report it rather than make it a
-       question about reading the generated C++ back. *)
-    let () =
-      if Sys.getenv_opt "CRANE_DBG_DROPPED_ARGS" <> None then
-        let n_in = List.length args_before_split in
-        let n_out = List.length args + List.length excess_args in
-        if n_out < n_in then
-          Feedback.msg_warning
-            (Pp.str
-               (Printf.sprintf
-                  "crane: call to %s drops %d of %d arguments (%d dummy, %d \
-                   value domains declared)"
-                  (Table.kername_of_global id)
-                  (n_in - n_out) n_in
-                  (List.length
-                     (List.filter
-                        (function MLdummy _ -> true | _ -> false)
-                        args_before_split ))
-                  (List.length args) ) )
+    let ty, tys, all_type_args, written_tvar_args =
+      call_type_args ?expected_ty env id plan args
     in
-    (* The primary arguments while they are still ML: [args] is rebound to
-       generated C++ expressions further down, but the callee's instantiation
-       can only be read off the ML types. *)
-    let primary_ml_args = args in
-    (* Partition args into type class instances and regular args *)
-    (* An erased instance leaves the call but not the declaration: its
-       parameter is still one of the callee's, so a position counted in the
-       declaration's parameter list steps over it. *)
-    let typeclass_ml_args, n_erased_instance_args, regular_ml_args =
-      split_instance_args env args
-    in
-    (* How many of the callee's declared parameters the dictionaries occupy:
-       a regular argument's declared position starts after them. *)
-    let leading_params = List.length typeclass_ml_args + n_erased_instance_args in
-    (* Order the instance arguments the way the callee numbered its own
-       [_tcI] parameters.  [Gen_decls.gen_dfun] iterates [collect_lams]
-       output, which is reversed from source order, so a plain constrained
-       function's first instance parameter is the source-last one; an instance
-       struct is stripped left to right by [Gen_decls.gen_instance_struct] and
-       keeps source order.  Call sites have the arguments in source order. *)
-    let callee_is_instance_struct = ref_returns_typeclass id in
-    let typeclass_ml_args =
-      if callee_is_instance_struct then typeclass_ml_args
-      else List.rev typeclass_ml_args
-    in
-    let expected_result = expected_ty in
-    (* Where the position erased the result's family, the arguments may still
-       state it: [interp intr prog] as the source of an [interp_state] is
-       expected at [Itree<std::any, Nat>], and [intr : TopE ~> itree TopE]
-       says the monad is [itree TopE].  The instances' families are read off
-       this. *)
-    let expected_result =
-      let from_args () =
-        match
-          tvar_instantiation_found ~in_scope:true ~constructors:true
-            (find_type id) primary_ml_args
-        with
-        | [] -> None
-        | found ->
-          (* A carrier bound as a head partially applied ([itree TopE]) is
-             applied by appending: the hole inside its family is the family's
-             own erased index, not the argument the carrier is missing. *)
-          let rec subst t =
-            match resolve_tmeta t with
-            | Miniml.Tvar (_, i) -> (
-              match List.assoc_opt i found with Some b -> b | None -> t )
-            | Miniml.Tapp (k, args) -> (
-              let args = List.map subst args in
-              match List.assoc_opt k found with
-              | Some (Miniml.Tglob (g, fixed, l)) -> Miniml.Tglob (g, fixed @ args, l)
-              | Some b -> Mlutil.apply_ml_type b args
-              | None -> Miniml.Tapp (k, args) )
-            | Miniml.Tglob (g, args, l) -> Miniml.Tglob (g, List.map subst args, l)
-            | Miniml.Tarr (a, b) -> Miniml.Tarr (subst a, subst b)
-            | t -> t
-          in
-          let t = cpp_of_ml env (subst (ml_codomain (find_type id))) in
-          spell_in_scope t
-      in
-      match expected_result with
-      | Some e when exists_cpp_type prints_as_any e -> (
-        match from_args () with
-        | Some a -> Some (Ml_type_util.refine_erased_by ~expected:a e)
-        | None -> expected_result )
-      (* With no expected type of its own the call may not be the enclosing
-         function's result at all -- a let-bound computation over another
-         family -- so what its arguments state comes before that result. *)
-      | None -> (
-        match from_args () with
-        | Some _ as a -> a
-        | None -> (!tctx).current_cpp_return_type )
-      | _ -> expected_result
-    in
-    let typeclass_type_args =
-      List.map
-        (ml_arg_to_template_type ?expected:expected_result env)
-        typeclass_ml_args
-    in
-    (* The families the call's instances were found to have: the slots their
-       arguments are generated against erase them the same way. *)
-    let instance_families =
-      List.filter_map
-        (fun a ->
-          match strip_magic a with
-          | MLglob (r, ts) -> instance_family_binding env r ts expected_result
-          | _ -> None )
-        typeclass_ml_args
-    in
-    (* The erased arguments left here are the ones the declaration takes a
-       value at (see [value_args] above); they are generated as empty boxes
-       below rather than as the [CPPabort] an [MLdummy] is elsewhere. *)
-    (* Compute the function's ML type after type arg substitution, to detect
-       arguments that return std::any (from erased record fields like
-       Functor::object_of) but where the parameter expects a concrete type
-       (e.g., unsigned int after resolving a promoted type var). *)
-    let fn_ml_ty = find_type id in
-    (* An erased event family the position's type names: [memM_interp]'s [E],
-       given unapplied where [on_mem] takes a handler into [itree BotE].  The
-       family occurs in the callee's result only, where nothing deduces it and
-       the phantom filler would write [void]. *)
-    let tys =
-      match
-        match slot.expected_ml_ty with
-        | Some _ as t -> t
-        | None -> slot.stated_ml_ty
-      with
-      | Some result when List.exists Mlutil.isTdummy tys ->
-        let families = Ml_type_util.event_family_ml_tvars [fn_ml_ty] in
-        (* A family is a head, or one applied at the index it erases
-           ([BotE _]); [box nat] met at a bare variable is a value type, not
-           the family. *)
-        let family_shaped b =
-          match resolve_tmeta b with
-          | Miniml.Tglob (_, [], _) -> true
-          | Miniml.Tglob (_, args, _) ->
-            Ml_type_util.is_ml_erased_ty (List.nth args (List.length args - 1))
-          | _ -> false
-        in
-        (* With [~constructors]: an applied variable against an application
-           is the head, which for a family -- the only positions filled here --
-           is the answer. *)
-        let found =
-          tvar_instantiation_found ~in_scope:true ~constructors:true ~result
-            fn_ml_ty primary_ml_args
-        in
-        (* Only where nothing deduces it: a family a parameter spells is the
-           compiler's to read off the argument. *)
-        let deducible =
-          Option.default IntSet.empty (deducible_tvars_of_glob id)
-        in
-        List.mapi
-          (fun k t ->
-            match List.assoc_opt (k + 1) found with
-            | Some b
-              when Mlutil.isTdummy t && IntSet.mem (k + 1) families
-                   && (not (IntSet.mem (k + 1) deducible))
-                   && family_shaped b ->
-              b
-            | _ -> t )
-          tys
-      | _ -> tys
-    in
-
-    (* A type-level function passed where a type alias in a domain names it
-       -- the category's [C] in [Id_ obj C] -- is erased in [tys] and stated
-       by the dictionary argument.  Filled before anything is substituted, so
-       the parameter types the arguments are generated against and the
-       explicit type arguments the call writes agree. *)
-    let tys_before_dictionary_fill = tys in
-    let tys = fill_erased_tys ~only_alias_args:true id tys primary_ml_args in
-    (* The dictionary stated a position the call had erased -- [case_]'s
-       morphism type [C := Handler] at a category over families.  Its
-       arguments at that position are then built at that type rather than
-       boxed, so the call has to write it, the erased positions beside it
-       as the boxes they are. *)
-    let dictionary_filled =
-      List.exists2
-        (fun a b -> Mlutil.isTdummy (resolve_tmeta a) && not (Mlutil.isTdummy (resolve_tmeta b)))
-        tys_before_dictionary_fill tys
-    in
-    (* A partial application is eta-expanded into a lambda spelled in the
-       caller's scope, and a variable of the callee's that neither the call
-       nor its arguments instantiate is not one of the caller's: left in, it
-       prints as whichever caller variable shares its index -- [h_get]'s index
-       as the enclosing handler's [T1].  It is erased, and a position nothing
-       deduces is then written as the box it is. *)
-    let tys =
-      let n_params =
-        let rec count ty =
-          match expand_ml_fun_alias ty with
-          | Miniml.Tarr (t, rest) ->
-            (match resolve_tmeta t with
-             | Miniml.Tdummy _ -> count rest
-             | _ -> 1 + count rest)
-          | _ -> 0
-        in
-        count fn_ml_ty
-      in
-      (* Only one the lambda's result spells: a variable the codomain does not
-         mention -- a rank-2 handler's [forall X] -- is not the call's to
-         instantiate, and keeps itself.  And not in a call to the declaration
-         being generated, whose variables {e are} the caller's. *)
-      let self_call =
-        match !Table.current_decl_ref with
-        | Some r -> GlobRef.UserOrd.equal r id
-        | None -> false
-      in
-      if self_call || List.length primary_ml_args >= n_params then tys
-      else
-        let tys = complete_short_tys id tys primary_ml_args in
-        let in_cod = collect_tvars_set IntSet.empty (ml_codomain fn_ml_ty) in
-        let have = List.length tys in
-        match IntSet.max_elt_opt (IntSet.filter (fun i -> i > have) in_cod) with
-        | None -> tys
-        | Some n ->
-          (* Erased only where it would be misread: a variable whose spelling
-             no caller variable has is bound by the eta-lambda itself (see
-             [eta_tparams]), and deduced there from the parameter that names
-             it -- [memM T2] of a natural transformation. *)
-          let collides i =
-            List.exists
-              (fun v -> String.equal (Id.to_string v) (Minicpp.tvar_spelling i))
-              (!tctx).current_type_vars
-          in
-          tys
-          @ List.init (n - have) (fun k ->
-                let i = have + k + 1 in
-                if IntSet.mem i in_cod && collides i then Miniml.Tunknown
-                else Miniml.Tvar (Miniml.Schematic, i) )
-    in
-    (* The one substitution that takes the callee's declared types to this
-       call's; without it the argument generated into a [bind]'s [m A] is left
-       with no stated type at all. *)
-    let subst_ml_ty = instantiate_at_call id tys primary_ml_args in
-    let fn_ml_ty_subst = subst_ml_ty fn_ml_ty in
-    let fn_param_ml_tys =
-      Param_pos.subst_params ~expand:expand_ml_fun_alias fn_ml_ty_subst
-    in
-    (* Non-substituted parameter types: used to detect whether a callback's
-       codomain is a type variable (needs adapter wrapping) vs concrete unit
-       (C++ definition already uses void in the is_invocable_v requires clause). *)
-    let fn_param_ml_tys_orig =
-      Param_pos.orig_params ~expand:expand_ml_fun_alias fn_ml_ty
-    in
-    (* The two lists above are not indexed alike: substitution can make a
-       parameter dummy that was not one before, and from that parameter on a
-       declared position is one place further left in the substituted list.
-       A reader holding a declared position and wanting the substituted type
-       there converts it here (see {!Param_pos}). *)
-    let subst_index_of_orig =
-      Param_pos.subst_of_orig
-        ~erased:(fun t ->
-          match resolve_tmeta (subst_ml_ty t) with
-          | Miniml.Tdummy _ -> true
-          | _ -> false )
-        fn_param_ml_tys_orig
-    in
-    (* {b Concrete T1 for excess-arg calls.}  When [tys = []] and there
-       are excess args, the callee's polymorphic return type [Tvar i] can't
-       be resolved by substitution.  We compute the concrete type [T1]
-       from the enclosing function's return type and the excess args' types:
-       [T1 = excess_arg_types -> enclosing_return_type].
-
-       This value is used in two places:
-       1. Lambda arity limiting: to annotate the split outer lambda's
-          return type (needed for [is_invocable_r_v] concept checking).
-       2. Template arg recovery: as an explicit template argument at the
-          call site (C++ can't deduce [T1] from lambda args). *)
-    let tvars = get_current_type_vars () in
-    let concrete_tvar_type =
-      if tys <> [] || excess_args = [] then
-        None
-      else
-        match (!tctx).current_cpp_return_type with
-        | None -> None
-        | Some ret_ty ->
-          match find_type_opt id with
-          | None -> None
-          | Some ml_ty_orig ->
-            let ret = Ml_type_util.resolve_tmeta (ml_return_type ml_ty_orig) in
-            ( match ret with
-            | Miniml.Tvar (_, _) ->
-              (* Compute excess arg C++ types from de Bruijn lookup. *)
-              let excess_cpp_tys =
-                List.filter_map
-                  (fun ml_arg ->
-                    match ml_arg with
-                    | MLrel i ->
-                      Option.map (convert_ml_type_to_cpp_type env tvars)
-                        (get_param_type_by_index i)
-                    | _ -> None )
-                  excess_args
-              in
-              if List.length excess_cpp_tys = List.length excess_args then
-                Some (Tfun (excess_cpp_tys, ret_ty))
-              else
-                None
-            | _ -> None )
-    in
-    (* When the function is typeclass-parameterized and call-site args include
-       concrete instances, compute a promoted-var→concrete-type map so that
-       custom constructors (nil/cons) inside arg expressions use concrete
-       element types instead of std::any.  E.g., [mfold nat_monoid [1;2;3]]
-       resolves m_carrier → uint64_t for the list construction. *)
-    let instance_promoted_map =
-      List.concat_map (fun tc_arg ->
-        match tc_arg with
-        | MLglob (r, _) ->
-          List.filter_map (fun (var_name, ml_ty) ->
-            let cpp_ty = cpp_of_ml env ml_ty in
-            if prints_as_any cpp_ty then None
-            else Some (var_name, cpp_ty)
-          ) (Table.get_instance_promoted_types r)
-        | _ -> []
-      ) typeclass_ml_args
-    in
-    let saved_promoted_map = (!tctx).promoted_var_map in
-    if instance_promoted_map <> [] then
-      tctx :=
-        { !tctx with
-          promoted_var_map = instance_promoted_map @ (!tctx).promoted_var_map };
-    (* The callee's variables as the call's expected result instantiates
-       them: its declared codomain, named [T1]..[Tn] and with a plain family's
-       application taken off, matched against that type.  Read by the argument
-       loop below for a parameter the substitution left erased. *)
-    let result_tvar_map =
-      lazy
-        (callee_result_bindings env id
-           ~explicit:(expected_ty <> None)
-           ( match expected_ty with
-           | Some _ -> expected_ty
-           | None -> (!tctx).current_cpp_return_type ) )
-    in
-    let args = List.mapi (fun i ml_arg ->
-      match strip_magic ml_arg with
-      | MLdummy _ -> (
-        (* An erased value, boxed.  At a function-typed parameter it is an
-           erased function -- [bif : obj -> obj -> obj] is [sum1] once [obj]
-           is [Type -> Type] -- which is called, so it is a callable of the
-           declared arity handing back a box. *)
-        match
-          Param_pos.nth fn_param_ml_tys_orig
-            (Param_pos.of_regular ~leading:leading_params i)
-        with
-        | Some pt when count_ml_value_arrows pt > 0 ->
-          mk_lambda
-            (List.init (count_ml_value_arrows pt) (fun _ ->
-                 (Tref (Lvalue, Tconst Tauto), None) ))
-            None
-            [Sreturn (Some Cpp_erasure.empty_box)]
-            ~capture:Closure
-        | _ -> Cpp_erasure.empty_box )
-      | _ ->
-      (* The callee's parameters are indexed from its class-dictionary
-         arguments, which [regular_ml_args] does not include, so this
-         argument's parameter is at [param_index] of the unsubstituted list --
-         and, being a position of that list, has to be converted before it
-         indexes the substituted one (see [subst_index_of_orig]). *)
-      let param_index = Param_pos.of_regular ~leading:leading_params i in
-      (* Where that parameter stands in the substituted list.  The
-         conversion is a statement about the callee's ML type, and it is worth
-         making only where the ML type is what the callee's C++ signature was
-         built from.
-
-         For a callee whose C++ form is written out by hand it is not: the
-         replacement text is what says how the arguments are taken, and it
-         need not take them at the Rocq types.  [crane_itree.h] invokes
-         [itree_vis]'s continuation at [std::any] whatever its Rocq domain
-         [X] is, so the substituted domain ([std::monostate]) is the one type
-         the lambda will never be called at -- while [itree_bind]'s, two lines
-         away in the same header, is taken at exactly its Rocq domain.
-         Nothing here can tell those apart, so such a callee keeps reading the
-         position it always read: no better answer is available, and a
-         confident wrong one is worse than the familiar one. *)
-      let subst_param_index =
-        if Table.is_inline_custom id then
-          Some (Param_pos.subst_at_declared param_index)
-        else subst_index_of_orig param_index
-      in
-      (* Where substitution erased the parameter -- [IFun b c] at objects the
-         call erases -- the declaration still takes it, at the type it
-         declares, and an argument reaching it is recovered at that type. *)
-      let param_ml_ty =
-        match subst_param_index with
-        | Some i -> Param_pos.nth fn_param_ml_tys i
-        | None -> (
-          match Param_pos.nth fn_param_ml_tys_orig param_index with
-          | Some t when not (Mlutil.isTdummy t) -> Some t
-          | _ -> None )
-      in
-      (* {b Lambda arity limiting.}  When a lambda argument has more binders
-         than the callee's parameter type has top-level arrows, the extra
-         binders come from the return type being a function (instantiated
-         from a type variable).  For example, [fold_right]'s callback type
-         is [B -> A -> A]; when [A = nat -> nat], the lambda
-         [fun t acc => fun x => body] has 3 binders but the parameter has
-         only 2 arrows.  Flattening all 3 into a single C++ lambda produces
-         a 3-arg function, which doesn't match the 2-arg is_invocable_v constraint.
-
-         Fix: insert an [MLmagic] barrier after the expected number of
-         binders so that [collect_lams] in [gen_expr] stops there.  The
-         inner binders become a returned inner lambda.  We use the
-         {i non-substituted} parameter type to count arrows, because type
-         variable substitution would inflate the count (e.g. [Tvar A]
-         becoming [Tarr(nat, nat)] adds a spurious arrow).
-
-         Additionally, annotate the outer lambda with an explicit return
-         type derived from the {i substituted} parameter type's codomain.
-         Without this, the deduced return type is the inner lambda's
-         unique closure type, and [is_invocable_r_v<std::function<...>,
-         closure_type>] may evaluate to [false] in concept checking
-         (C++ lambda-to-[std::function] conversion is not recognized
-         during SFINAE in some implementations). *)
-      let ml_arg, split_ret_ty =
-        match ml_arg with
-        | MLlam _ ->
-          ( match Param_pos.nth fn_param_ml_tys_orig param_index with
-          | Some param_ty ->
-            let rec count_arrows = function
-              | Miniml.Tarr (_, rest) -> 1 + count_arrows rest
-              | _ -> 0
-            in
-            let expected = count_arrows param_ty in
-            let actual = Mlutil.nb_lams ml_arg in
-            if expected > 0 && actual > expected then
-              let outer_ids, inner_body =
-                Mlutil.collect_n_lams expected ml_arg
-              in
-              let barrier =
-                Mlutil.named_lams outer_ids (MLmagic (Mbarrier, inner_body))
-              in
-              (* Compute the return type from the substituted param type by
-                 stripping [expected] top-level arrows.  The remaining type
-                 is the function-typed codomain that the inner lambda
-                 implements.
-
-                 When the substituted codomain is still a [Tvar] (happens
-                 when [tys = []] so substitution is a no-op), use the
-                 [concrete_tvar_type] computed above — it holds the
-                 concrete [T1] type derived from the excess args and the
-                 enclosing function's return type. *)
-              let ret_ty =
-                match param_ml_ty with
-                | Some subst_pt ->
-                  let rec codomain_after n = function
-                    | Miniml.Tarr (_, rest) when n > 0 ->
-                      codomain_after (n - 1) rest
-                    | ty -> ty
-                  in
-                  let ret_ml = codomain_after expected subst_pt in
-                  ( match resolve_tmeta ret_ml with
-                  | Miniml.Tvar (_, _) -> concrete_tvar_type
-                  | _ ->
-                    Some (cpp_of_ml env ret_ml) )
-                | None -> None
-              in
-              (barrier, ret_ty)
-            else
-              (ml_arg, None)
-          | None -> (ml_arg, None) )
-        | _ -> (ml_arg, None)
-      in
-      let param_expected_at params pos =
-        match Param_pos.nth params pos with
-        | Some ml_ty ->
-          let cpp_ty = cpp_of_ml env ml_ty in
-          if prints_as_any cpp_ty then None else Some cpp_ty
-        | None -> None
-      in
-      (* The concrete types come from the substituted parameter type, but its
-         {e arity} must come from the unsubstituted one: substituting a
-         function type into a codomain that was a type variable flattens the
-         element's arrows into the callable's own parameter list, and a
-         template argument keeps its currying (see
-         {!template_arg_of_ml_type}).  A parameter declared as a bare type
-         variable has arity zero, so its value is curried throughout. *)
-      (* This parameter's substituted C++ type.  [param_index] counts
-         positions of the unsubstituted type, so it has to be converted before
-         it indexes the substituted list -- see [subst_index_of_orig]. *)
-      let param_expected_subst () =
-        Option.bind subst_param_index (param_expected_at fn_param_ml_tys)
-      in
-      (* Just the re-currying: [None] where the declaration's arity is already
-         the shape the substituted parameter type has, so a producer that has
-         its own better source keeps it. *)
-      let param_expected_recurried () =
-        match Param_pos.nth fn_param_ml_tys_orig param_index with
-        | Some orig ->
-          Option.bind (param_expected_subst ())
-            (recurry_to_opt (count_ml_value_arrows orig))
-        | None -> None
-      in
-      let param_expected_at_declared_arity () =
-        match param_expected_recurried () with
-        | Some _ as t -> t
-        | None -> (
-          match Param_pos.nth fn_param_ml_tys_orig param_index with
-          | Some _ -> param_expected_subst ()
-          | None -> None )
-      in
-      (* The callee declares this parameter as one of its own template
-         parameters [Tvar j], and some {e other} parameter carries that same
-         [j] in a position the instantiation erased -- so that parameter's
-         argument deduces [j] as [std::any].  This one has to arrive boxed for
-         the two deductions to agree.  Erasure of the type argument alone is
-         not enough of a reason: unless another position states it as
-         [std::any], boxing here would be the only thing making the deduction
-         disagree. *)
-      let param_tvar_erased =
-        let this = param_index in
-        let rec mentions j = function
-          | Miniml.Tvar (_, j') -> j = j'
-          | Miniml.Tglob (_, ts, _) -> List.exists (mentions j) ts
-          | Miniml.Tapp (h, ts) -> h = j || List.exists (mentions j) ts
-          | Miniml.Tarr (a, b) -> mentions j a || mentions j b
-          | Miniml.Tmeta {contents = Some t} -> mentions j t
-          | _ -> false
-        in
-        let tvar_arg_erased j =
-          match List.nth_opt tys (j - 1) with
-          | Some t ->
-            Ml_type_util.has_erased_type_in_type
-              (unfold_cpp_typedef env (cpp_of_ml env t))
-          | None -> false
-        in
-        match Param_pos.nth fn_param_ml_tys_orig this with
-        | Some (Miniml.Tvar (_, j)) when tvar_arg_erased j ->
-          List.exists
-            (fun (k, orig) ->
-              (not (Param_pos.equal k this))
-              && param_states_type_args id orig
-              && mentions j orig
-              && Ml_type_util.has_erased_type_in_type
-                   (unfold_cpp_typedef env (cpp_of_ml env (type_subst_list tys orig))))
-            (Param_pos.positioned fn_param_ml_tys_orig)
-        | _ -> false
-      in
-      let arg_expected_ty =
-        match ml_arg with
-        (* A lambda under a coercion is written against the slot all the
-           same. *)
-        | MLlam _ | MLmagic (_, MLlam _) -> param_expected_at_declared_arity ()
-        | _ ->
-        ( match
-            match Param_pos.nth fn_param_ml_tys_orig param_index with
-            | Some (Miniml.Tvar (_, _)) ->
-              param_expected_at_declared_arity ()
-            | _ -> None
-          with
-        | Some _ as t -> t
-        | None ->
-        ( match ml_arg with
-        | MLmagic (_, _) -> param_expected_subst ()
-        (* [MLglob]: a bare function name handed over as a value may need
-           re-currying.  Count the arrows in the callee's {e unsubstituted}
-           parameter type: arrows past the point where the codomain becomes a
-           type variable belong to the element type the callee is generic in,
-           not to the callable it expects. *)
-        | MLglob _ -> param_expected_at fn_param_ml_tys_orig param_index
-        (* A partial application is a callable built here rather than named,
-           and reaches the slot at the arity the callee declared the parameter
-           at, for the same reason a lambda does. *)
-        | MLapp _ -> param_expected_at_declared_arity ()
-        (* A constructed value is spelled here for the first time, so only the
-           slot can say how its type arguments are curried.  Everything else
-           about the type the constructor's own annotation knows better: it
-           carries this producer's instantiation, which the parameter type may
-           have erased.  So take the currying and nothing else. *)
-        | MLcons _ -> param_expected_recurried ()
-        (* A match in argument position becomes an immediately-invoked lambda,
-           whose branches have to agree on one return type -- and the branches
-           are where a value is spelled for the first time, so nothing inside
-           states it.  Only the slot does. *)
-        | MLcase _ -> param_expected_at_declared_arity ()
-        | _ -> None ) )
-      in
-      (* Where the substituted parameter says nothing, the result may:
-         [trigger (subevent ...)] at a tree of family [Sum1<...>] fixes
-         [trigger]'s family, which is what its parameter -- the [subevent]
-         call's result -- has to be. *)
-      let arg_expected_ty =
-        match
-          ( Lazy.force result_tvar_map,
-            Param_pos.nth fn_param_ml_tys_orig param_index )
-        with
-        | (result_names, (_ :: _ as m)), Some pt -> (
-          let d =
-            convert_ml_type_to_cpp_type env result_names (type_simpl pt)
-            |> deapply_families
-            |> map_cpp_type (function
-                 | Tvar (Tv_index (_, Some v) | Tv_named v) as t -> (
-                   match List.find_opt (fun (v', _) -> Id.equal v v') m with
-                   | Some (_, t') -> t'
-                   | None -> t )
-                 | t -> t )
-          in
-          match arg_expected_ty with
-          (* No slot at all: the declaration's type is the slot, where it is
-             one this scope can write. *)
-          | None | Some Tany ->
-            ( match spell_in_scope d with
-            | Some _ as t -> t
-            | None -> arg_expected_ty )
-          (* A slot erased inside: each erased part is filled from the
-             declaration where it says; what the declaration still says in
-             its own variables is no answer. *)
-          | Some slot ->
-            let scope = current_scope_type_names () in
-            let d =
-              map_cpp_type
-                (function
-                  | Tvar tv as t ->
-                    let id = tvar_spelled tv in
-                    if List.exists (Id.equal id) scope then t else Tany
-                  | t -> t )
-                d
-            in
-            Some (Ml_type_util.refine_erased_by ~expected:d slot) )
-        | _ -> arg_expected_ty
-      in
-      (* Only a parameter the carrier reaches: one that mentions a
-         higher-kinded variable of the callee.  [interp_state]'s tree
-         [itree E T] is at the source family [E], and filling its erased
-         family with the monad's [BotE] turned the inner [interp] into one
-         over the target family. *)
-      let param_mentions_carrier =
-        match Param_pos.nth fn_param_ml_tys_orig param_index with
-        | Some t ->
-          let hk = declared_higher_kinded_tvars fn_ml_ty in
-          not (IntSet.is_empty (IntSet.inter hk (collect_tvars_set IntSet.empty t)))
-        | None -> true
-      in
-      let arg_expected_ty =
-        if not param_mentions_carrier then arg_expected_ty
-        else
-          List.fold_left
-            (fun t b -> Option.map (refine_by_instance_family b) t)
-            arg_expected_ty instance_families
-      in
-      let arg_expected_ml_ty =
-        match param_ml_ty with
-        | Some ml_ty when not (ml_type_contains_erased ml_ty) -> Some ml_ty
-        | _ -> slot.expected_ml_ty
-      in
-      (* When the callee's declared parameter type is value-dependent and
-         resolves to [std::any] (e.g. [syms_semty xs]), a concrete pair/tuple
-         literal passed at this call site (e.g. [(n, (n, tt))] for a literal
-         [xs]) must be DEEP-erased — every component boxed into [std::any] —
-         so that the callee's generic body, which reconstructs the value via
-         [any_cast<pair<any,any>>], can recover it.  The deep-erasing
-         constructor path in [gen_expr_custom_cons] is normally driven by the
-         enclosing function's erased return type, so it is reached here by
-         treating this call argument as if it were itself in erased "return"
-         position for the duration of its generation. *)
-      (* Where the call writes the variable -- the dictionary stated it --
-         nothing deduces it, and an argument boxed to agree with a deduction
-         would only fail to convert. *)
-      let param_written_by_call = param_tvar_erased && dictionary_filled in
-      let param_resolves_to_any =
-        (param_tvar_erased && not param_written_by_call)
-        ||
-        match param_ml_ty with
-        | Some ml_ty -> ml_erases_to_box env ml_ty
-        | None -> false
-      in
-      let expr =
-        let ret =
-          if param_resolves_to_any then Some Tany
-          (* An argument is not a tail position, so the enclosing function's
-             return type does not describe it -- and what the parameter says
-             does.  Left to {!position_cpp_ty}'s fallback, a match in argument
-             position builds its branches at the type the {e call} returns.
-
-             Only where the parameter's type can be written, though: installed
-             as a return type it is written out, as the argument's own explicit
-             template arguments among other places, and a type naming a skipped
-             global renders there as a bare argument list -- [<std::any,
-             <std::any, std::any>>].  Where it cannot be written the enclosing
-             return type is not right, but it is spellable, and a parameter
-             that answers in text no compiler takes has not answered. *)
-          else
-            match arg_expected_ty with
-            | Some t when Ml_type_util.has_no_cpp_spelling t ->
-              (!tctx).current_cpp_return_type
-            | t -> t
-        in
-        with_cpp_return_type ret (fun () ->
-            gen_expr ?expected_ty:arg_expected_ty
-              ~slot:
-                { slot with
-                  expected_ml_ty = arg_expected_ml_ty;
-                  call_result = expected_result;
-                  stated_ml_ty = param_ml_ty }
-              env ml_arg )
-      in
-      (* Annotate the outer lambda with the explicit return type computed
-         during the split, so that C++ concept checking sees the concrete
-         [std::function<...>] return type instead of the raw closure type. *)
-      let expr =
-        match split_ret_ty, expr with
-        | Some ret_ty, CPPlambda ({ cl_ret = None; _ } as l) ->
-          CPPlambda { l with cl_ret = Some ret_ty }
-        | _ -> expr
-      in
-      let expr =
-        match (param_ml_ty, expr) with
-        | Some param_ty, CPPlambda ({ cl_body = body; _ } as l) ->
-          let param_cpp_ty =
-            cpp_of_ml env param_ty
-          in
-          ( match param_cpp_ty with
-          | Tfun (_, Tshared_ptr inner) ->
-            let rec wrap_stmt = function
-              | Sreturn (Some e) ->
-                Sreturn (Some (mk_call (CPPalloc (Alloc_heap, inner)) [e]))
-              | s -> map_stmt Fun.id wrap_stmt Fun.id s
-            in
-            CPPlambda
-              { l with
-                cl_ret = Some (Tshared_ptr inner);
-                cl_body = List.map wrap_stmt body }
-          | _ -> expr )
-        | _ -> expr
-      in
-      let expr =
-        match param_ml_ty with
-        | Some param_ty -> erase_fn_arg_for_param env param_ty ml_arg expr
-        | None -> expr
-      in
-      (* A methodified callee is spelled [recv.f(rest)], and [std::any] has no
-         members: unlike every other argument, the receiver cannot arrive as a
-         box at all.  What says that it does is the declaration the receiver
-         came out of -- a method registered as returning [std::any] -- and the
-         parameter's type is what says what the box holds. *)
-      let expr =
-        let receiver_is_boxed =
-          (* The receiver's own ML type has to say it is gone -- a projection
-             out of a dependent pair is a bare type variable, and extraction
-             leaves a [Tdummy] behind. *)
-          ( match
-              Option.map (fun t -> cpp_of_ml env t)
-                (infer_ml_body_type (strip_magic ml_arg))
-            with
-          | Some t -> prints_as_any t
-          | None -> false )
-          &&
-          (* And it has to have come out of an accessor on a value that
-             carries erasure: a [SigT<std::any, std::any>] hands back a box, a
-             [SigT<List<uint64_t>, List<uint64_t>>] hands back a list.  A call
-             whose arguments are all concrete does not qualify however its ML
-             type reads -- a free template function's result is resolved by
-             the type arguments the call site states. *)
-          match strip_magic ml_arg with
-          | MLapp (g, rargs) -> (
-            match strip_magic g with
-            | MLglob _ -> app_reads_erased_value env rargs
-            | _ -> false )
-          | _ -> false
-        in
-        match Cpp_names.lookup_method_this_pos id with
-        | Some pos
-          when Param_pos.equal (Param_pos.of_receiver pos) param_index
-               && receiver_is_boxed -> (
-          match param_expected_subst () with
-          | Some into when not (prints_as_any into) ->
-            coerce ~from:Tany ~into expr
-          | _ -> expr )
-        | _ -> expr
-      in
-      let expr =
-        if param_tvar_erased && not param_written_by_call then
-          (* Say where the value is coming from where the binder's own type
-             says: an argument that is already a box is left alone. *)
-          let from =
-            match ml_arg with
-            | MLrel j -> binder_cpp_type_or_derive env j
-            | _ -> None
-          in
-          coerce ~term:ml_arg ?from ~into:Tany expr
-        else expr
-      in
-      (* Wrap void calls as values only when the expression will be used
-         as a value (not in monadic parameter handler which places it in
-         statement position inside a lambda). *)
-      let as_value () =
-        match ml_arg with
-        | a when ml_value_is_void_call a ->
-          (* Don't wrap eta-expanded lambdas (partial applications) — they
-             are function VALUES, not void call results. *)
-          ( match expr with
-          | CPPlambda _ -> expr
-          | _ -> wrap_void_call_as_value expr )
-        | _ -> expr
-      in
-      (* A bare local variable known to be boxed as [std::any]
-         ([binder_is_boxed]) — e.g. a leaf pulled out of an erased-pair
-         destructure — passed directly to a plain global function whose
-         parameter type is concrete.  Mirrors the equivalent check for
-         non-global callees (~[MLrel j when Escape.IntSet.mem ...] above). *)
-      let ml_arg_is_erased_rel =
-        match ml_arg with
-        | MLrel j | MLmagic (_, MLrel j) -> binder_is_boxed j
-        | _ -> false
-      in
-      match param_ml_ty with
-      | Some param_ty
-        when ( ml_body_returns_erased_field ml_arg || ml_arg_is_erased_rel
-             (* A component read out of a pair that was itself recovered from
-                a box is a [std::any] whatever its ML type says, and the
-                emitted expression is the evidence -- see
-                {!yields_boxed_component}. *)
-             || yields_boxed_component (as_value ()) )
-             && not (match param_ty with
-                     | Miniml.Tglob (g, _, _) -> Table.is_promoted_type_var g
-                     | _ -> false)
-             (* [param_ty] comes from the callee's own (call-site-substituted)
-                type signature, whose [Tvar] indices are not anchored to this
-                function's [tvars] scope. When conversion produces an
-                unresolved [Tvar (Tv_index (_, None))] (would print as a bogus template
-                parameter like "T3"), we cannot build a meaningful concrete
-                cast here — skip this branch and fall back to [as_value ()]
-                unchanged; a later pass (e.g. [gen_match_branch]'s field
-                substitution) supplies the correct cast at its own,
-                properly-scoped [tvars]. *)
-             && erase_unresolved_tvars (cpp_of_ml env param_ty)
-                = cpp_of_ml env param_ty ->
-        let cpp_ty = cpp_of_ml env param_ty in
-        ( match strip_ns_tglob cpp_ty with
-        | Tglob (g, [_], _) when is_list_global g && not (Table.is_custom g) ->
-          let list_any_ty =
-            match cpp_ty with
-            | Tnamespace (ns_g, _) -> Tnamespace (ns_g, Tglob (g, [Tany], []))
-            | _ -> Tglob (g, [Tany], [])
-          in
-          (* [as_value ()] may already have unboxed the erased value to the
-             canonical element-erased shape (the [MLrel] case of [gen_expr]
-             does this for a variable bound to an erased field).  Casting
-             again would re-box that concrete list into a fresh [std::any]
-             only to unbox it — mirror the custom-list branch below and reuse
-             the existing cast.  It may also have gone the whole way and
-             recovered the concrete list already ({!coerce} does this for a
-             value crossing out of a box), in which case there is nothing
-             left to convert. *)
-          ( match as_value () with
-          | CPPconverting_ctor (t, _) as recovered when cpp_ty_eq t cpp_ty ->
-            recovered
-          | CPPany_cast _ as already_cast ->
-            Cpp_erasure.converting_ctor cpp_ty [already_cast]
-          | v ->
-            Cpp_erasure.converting_ctor cpp_ty
-              [Cpp_erasure.unbox list_any_ty v] )
-        | Tglob (g, [_], _) when Ml_type_util.is_custom_list_global g ->
-          let clean_cpp_ty = clean_self_ns cpp_ty in
-          (* Custom-extracted list (e.g. [std::deque]) is boxed as [std::any]
-             with fully-erased elements at runtime ([deque<pair<any,any>>]).
-             Cast the inner value to that erased representation, matching what
-             [gen_match_branch]'s field substitution stores. *)
-          let erased_ty =
-            (* Canonical erased shape is [deque<std::any>] -- a bare [std::any]
-               per element, not a structure-preserving [deque<pair<any,any>>]
-               (see the matching invariant in [gen_expr]'s [MLrel]/[MLmagic]
-               cases).  Using the structure-preserving erasure here would
-               disagree with a sibling producer for the same Coq list type
-               that already erased to the flat shape, and — when [as_value ()]
-               is itself already an [any_cast] to the flat shape (added by
-               [gen_expr] above) — would additionally double-wrap it in a
-               second, incompatible [any_cast]. *)
-            match clean_cpp_ty with
-            | Tnamespace (ns_g, Tglob (g, [_], _)) ->
-              Tnamespace (ns_g, Tglob (g, [Tany], []))
-            | Tglob (g, [_], _) ->
-              Tglob (g, [Tany], [])
-            | _ -> clean_cpp_ty
-          in
-          let inner = match as_value () with
-            | CPPany_cast _ as already_cast -> already_cast
-            | v -> Cpp_erasure.unbox erased_ty v
-          in
-          (* When the callee is a REAL function whose parameter has a CONCRETE
-             element type — a wholesale-boxed opaque element
-             ([triples_le_max(const std::deque<rgb>&)]), OR a structural element
-             whose concrete component must be preserved for a POLYMORPHIC/template
-             callee ([nodupKeys<T1>(const std::deque<std::pair<std::string,T1>>&)],
-             whose [std::string] key cannot be erased to [std::any] or template
-             argument deduction fails) — the fully-erased [inner] neither converts
-             nor deduces against it.  Route it through [crane_container_cast],
-             which builds the concrete-element container (unboxing wholesale-boxed
-             elements at runtime; for structural elements it still compiles and
-             lets deduction succeed).
-
-             Inline-custom callees (e.g. [length]'s [.size()]) splice the
-             argument into a template and work on the erased container, and a
-             callee whose parameter element is ALREADY fully erased
-             ([deque<pair<any,any>>]) needs no conversion — both keep [inner]. *)
-          let needs_concrete =
-            (not (Table.is_inline_custom id))
-            &&
-            match strip_ns_tglob clean_cpp_ty with
-            | Tglob (_, [et], _) ->
-              et <> Ml_type_util.erase_type_to_any et
-            | _ -> false
-          in
-          if needs_concrete then begin
-            (* When the callee's OWN declared (unsubstituted) parameter type
-               is still generic here (a template function like
-               [nodupKeys<T1>]), its C++ declaration never boxes the element
-               (a bare type variable never recurses).  This call site's
-               [clean_cpp_ty] was built from the call-site-substituted
-               concrete type though, so it may judge the (now concrete,
-               possibly recursive) element as boxed — disagreeing with the
-               generic declaration and breaking template argument deduction.
-               Suppress boxing here to match the declaration. *)
-            let callee_generic_here =
-              match Param_pos.nth fn_param_ml_tys_orig param_index with
-              | Some t -> Ml_type_util.ml_type_contains_tvar t
-              | None -> false
-            in
-            CPPcontainer_cast (clean_cpp_ty, inner, callee_generic_here)
-          end
-          else inner
-        (* The value is boxed; recover it at the parameter's type.  Going
-           through {!coerce} rather than casting outright keeps the one rule
-           that a destination which is itself a name for the box -- [using sel
-           = std::any] -- is not a recovery target: [any_cast<sel>] reads a box
-           that was never doubly wrapped and throws. *)
-        | _ -> coerce ~from:Tany ~into:cpp_ty (as_value ()) )
-      (* Monadic parameter (reified mode only): the callee expects
-         [shared_ptr<ITree<R>>].  If the argument already produces a reified
-         tree, pass through as-is; otherwise wrap in [ITree<R>::ret()]. *)
-      | Some param_ty when (!tctx).itree_mode = Reified
-          && is_monadic_ml_type param_ty
-          && not (is_reified_monadic_expr ml_arg) ->
-        Table.require_itree_header ();
-        let r_ml = extract_itree_result_ml param_ty in
-        let r_cpp = cpp_of_ml env r_ml in
-
-        let itree_ty = mk_itree_type r_cpp in
-        (* [expr] is a value unless the thing it calls was void-ified, in
-           which case it is a statement and the tree carries [tt] instead.
-           Only a genuinely valueless result gets the nullary [ret()]: a
-           [unit] one has [monostate] to carry, and a tree spelled
-           [ITree<void>] would not match the [ITree<Unit>] declared for it. *)
-        let no_value = r_cpp = Tvoid || ml_type_is_void r_ml in
-        let as_statement = no_value || ml_expr_is_void_call ml_arg in
-        let ret_expr =
-          if no_value then mk_itree_ret Tvoid []
-          else if as_statement then mk_itree_ret r_cpp [mk_tt_expr ()]
-          else mk_itree_ret_for_value r_cpp r_ml expr
-        in
-        let body =
-          if as_statement then [Sexpr expr; Sreturn (Some ret_expr)]
-          else [Sreturn (Some ret_expr)]
-        in
-        mk_iife (Some itree_ty) body
-      (* Void-ified function reference passed as callback to polymorphic
-         HOF where the ORIGINAL (non-substituted) parameter codomain is a
-         type variable (not concrete unit).  The C++ definition uses a
-         template type parameter constrained with is_invocable_v, so the void
-         function needs wrapping to return std::monostate.  When the original
-         codomain IS concrete unit, the constraint uses void which already
-         accepts void-returning functions. *)
-      | Some param_ty
-        when (match ml_arg with
-              | MLglob (r, _) | MLmagic (_, MLglob (r, _)) -> is_void_ified_ref r
-              | _ -> false)
-             && (match param_ty with Miniml.Tarr _ -> true | _ -> false)
-             && ml_type_is_unit (ml_codomain param_ty)
-             && (match Param_pos.nth fn_param_ml_tys_orig param_index with
-                 | Some orig_pt ->
-                   not (ml_type_is_unit (ml_codomain orig_pt))
-                 | None -> false) ->
-        let dom_mls =
-          let rec collect acc = function
-            | Miniml.Tarr (t, rest) ->
-              ( match resolve_tmeta t with
-              | Miniml.Tdummy _ -> collect acc rest
-              | t -> collect (t :: acc) rest )
-            | _ -> List.rev acc
-          in
-          collect [] param_ty
-        in
-        let dom_cpps =
-          List.map
-            (fun t -> cpp_of_ml env t)
-            dom_mls
-        in
-        let params =
-          List.mapi
-            (fun j ty ->
-              (Tref (Lvalue, Tconst ty), Some (Id.of_string (Printf.sprintf "_wa%d" j))))
-            dom_cpps
-        in
-        let args =
-          List.rev_map (fun (_, id) -> CPPvar (Option.get id)) params
-        in
-        let body =
-          [ Sexpr (CPPfun_call (call_opaque, expr, of_reversed args));
-            Sreturn (Some (mk_tt_expr ())) ]
-        in
-        mk_lambda params None body ~capture:Immediate
-      | _ -> as_value ()
-    ) regular_ml_args in
-    tctx := { !tctx with promoted_var_map = saved_promoted_map };
-    let ty = fn_ml_ty_subst in
-    let ty = cpp_of_ml env ty in
-    (* Combine: instance types first, then regular type args. If any regular
-       type arg is Tany or a dummy type glob (from erased params), drop ALL
-       regular type args via filter_erased_type_args and let the compiler deduce
-       them. See filter_erased_type_args for why we must drop all args rather
-       than just the erased ones.
-
-       Exception: when the callee's return type depends on an erased type var,
-       C++ can't deduce it from lambda arguments (lambdas don't participate in
-       template argument deduction). In that case, recover the concrete type
-       from the enclosing function's return type. *)
-    (* A partial application writes only the type arguments the Rocq term
-       applied: [Instance Fun_Mon := { ffmap := @liftM m _ }] names the
-       carrier and leaves [liftM]'s own element variables to inference, which
-       in OCaml costs nothing and in C++ costs everything -- they occur only
-       in [typename I::m<T>] and in the return type, both non-deduced.  The
-       arguments still say what they are, so finish the list from them. *)
-    let tys = complete_short_tys id tys primary_ml_args in
-    (* The whole list is built as a function of [tys] because it may have to be
-       built twice: what a call writes is decided by the erasure filters, and
-       the recoveries below run only where they left nothing.  A pass that
-       fills one position would otherwise silently disable them. *)
-    let build_type_args tys =
-    (* The callee's variables it applies and still declares plain: a carrier
-       it writes at the erased element ([Iter M]'s [M] is [T1], standing for
-       [M<crane::obj>]). *)
-    let plain_carriers =
-      match find_type_opt id with
-      | Some ml_ty ->
-        let hk = declared_higher_kinded_tvars ml_ty in
-        (* A class's carrier -- the argument of a definitional class in a
-           domain, [TFunctor T] -- and not a family, which is applied at an
-           index its struct already leaves out. *)
-        let class_carriers =
-          List.fold_left
-            (fun acc d ->
-              match resolve_tmeta d with
-              | Miniml.Tglob ((GlobRef.ConstRef _ as g), [ a ], _)
-                when Typeclasses.is_class g -> (
-                match resolve_tmeta a with
-                | Miniml.Tapp (i, _) | Miniml.Tvar (_, i) -> IntSet.add i acc
-                | _ -> acc )
-              | _ -> acc )
-            IntSet.empty (ml_domains ml_ty)
-        in
-        Hashtbl.fold
-          (fun i _ acc ->
-            if IntSet.mem i hk || not (IntSet.mem i class_carriers) then acc
-            else IntSet.add i acc )
-          (Ml_type_util.applied_ml_tvar_arities [ml_ty])
-          IntSet.empty
-      | None -> IntSet.empty
-    in
-    (* Whether the caller applies its variable [j]: a type constructor,
-       whatever its declaration made of it -- a class carrier, a template
-       name, or a family written plain, which applied is itself again. *)
-    let caller_higher_kinded j =
-      match !Table.current_decl_ref with
-      | Some r -> (
-        match find_type_opt r with
-        | Some caller_ty ->
-          Hashtbl.mem (Ml_type_util.applied_ml_tvar_arities [caller_ty]) j
-        | None -> false )
-      | None -> false
-    in
-    (* A carrier the declaration writes plain -- [TFunctor T]'s [T], whose
-       applications [T U] and [T V] are both the one [T1] -- is bound off the
-       result whole, and the result has the element at the call's own [V].
-       The declaration's [T1] stands for the carrier at the erased element --
-       it is what the dictionary is spelled at, and the parameters and result
-       read it at their elements through [crane::rebind_t] -- so the element
-       is erased out of it. *)
-    let erase_carrier_elements i t' =
-      match find_type_opt id with
-      | Some ml_ty when IntSet.mem i plain_carriers ->
-        let rec elements acc t =
-          match resolve_tmeta t with
-          | Miniml.Tapp (k, args) ->
-            let acc = if k = i then args @ acc else acc in
-            List.fold_left elements acc args
-          | Miniml.Tglob (_, args, _) -> List.fold_left elements acc args
-          | Miniml.Tarr (a, b) -> elements (elements acc a) b
-          | _ -> acc
-        in
-        let element_args = elements [] (ml_codomain ml_ty) in
-        let element_tys =
-          List.filter_map
-            (fun a ->
-              match resolve_tmeta a with
-              | Miniml.Tvar (_, j) -> (
-                match List.nth_opt tys (j - 1) with
-                | Some ty when not (Mlutil.isTdummy (resolve_tmeta ty)) ->
-                  let c = template_arg_of_ml_type env tvars ty in
-                  if prints_as_any c then None else Some c
-                | _ -> None )
-              | _ -> None )
-            element_args
-        in
-        (* An element the declaration itself erased -- a method's own
-           quantifier, [option (F U)] at [U] gone -- is nowhere in what the
-           result binds, so a binding that erases nothing is some
-           application of the carrier, not the carrier: nothing here can
-           tell which part is the element. *)
-        let element_erased_by_declaration =
-          List.exists
-            (fun a ->
-              match resolve_tmeta a with
-              | Miniml.Tvar _ -> false
-              | _ -> true )
-            element_args
-        in
-        if element_tys = [] then
-          if element_erased_by_declaration
-             && not (Ml_type_util.has_tany_written t')
-          then None
-          else Some t'
-        else
-          (* Compared unqualified: the same type reaches here spelled
-             through its wrapper struct and without it. *)
-          let rec norm t =
-            map_cpp_type
-              (function
-                | Tnamespace (_, t) | Tconst t -> norm t
-                | Tany | Topaque | Tvar (Tv_index (_, None)) -> Tany
-                | Tvar (Tv_index (_, Some n) | Tv_named n)
-                  when not (List.exists (Id.equal n) (!tctx).current_type_vars) ->
-                  Tany
-                | t -> t )
-              t
-          in
-          let element_tys = List.map norm element_tys in
-          let t'' =
-            map_cpp_type
-              (fun t -> if List.mem (norm t) element_tys then Tany else t)
-              t'
-          in
-          Some t''
-      | _ -> Some t'
-    in
-    (* A plain carrier the call erased may still be stated by the dictionary
-       it is handed: [TFunctor_outer1]'s [h0 :
-       TFunctor<two<std::any, T1>>] is the carrier its [tfmap] call is at,
-       already at the erased element. *)
-    let carrier_from_dictionary i =
-      let unwrap = strip_param_spelling in
-      List.find_map
-        (fun (k, pt) ->
-          match resolve_tmeta pt with
-          | Miniml.Tglob ((GlobRef.ConstRef _ as g), [a], _)
-            when Typeclasses.is_class g
-                 && ( match resolve_tmeta a with
-                    | Miniml.Tapp (i', _) | Miniml.Tvar (_, i') -> i' = i
-                    | _ -> false ) -> (
-            (* What the call instantiated the class at, where that is known:
-               the carrier composed and applied at the erased element. *)
-            let from_instantiation =
-              match subst_index_of_orig k with
-              | Some ks -> (
-                match Option.map resolve_tmeta (Param_pos.nth fn_param_ml_tys ks) with
-                | Some (Miniml.Tglob (g', [x], _))
-                  when GlobRef.UserOrd.equal g g'
-                       && not
-                            (let rec has_class t =
-                               match resolve_tmeta t with
-                               | Miniml.Tglob (h, l, _) ->
-                                 Typeclasses.is_class h || List.exists has_class l
-                               | Miniml.Tarr (a, b) -> has_class a || has_class b
-                               | Miniml.Tapp (_, l) -> List.exists has_class l
-                               | _ -> false
-                             in
-                             has_class x) ->
-                  let c = template_arg_of_ml_type env tvars x in
-                  (* A carrier is written at the erased element, so an
-                     instantiation that erases nothing is some application
-                     of it, not the carrier. *)
-                  ( match erase_carrier_elements i c with
-                  | Some c
-                    when (not (prints_as_any c))
-                         && Ml_type_util.has_tany_written c ->
-                    Some c
-                  | _ -> None )
-                | _ -> None )
-              | None -> None
-            in
-            match from_instantiation with
-            | Some _ as c -> c
-            | None ->
-            match
-              Option.bind
-                (Param_pos.regular_of ~leading:leading_params k)
-                (List.nth_opt regular_ml_args)
-            with
-            | Some arg -> (
-              match strip_magic arg with
-              | MLrel j -> (
-                match Option.map unwrap (binder_cpp_type_or_derive env j) with
-                | Some (Tglob (g', [x], _)) when GlobRef.UserOrd.equal g g'
-                  && not (prints_as_any x) ->
-                  Some x
-                | _ -> None )
-              | _ -> None )
-            | None -> None )
-          | _ -> None )
-        (Param_pos.positioned fn_param_ml_tys_orig)
-    in
-    let regular_of tys =
-      (* A type argument standing for a higher-kinded class parameter is not a
-         template parameter of the callee (it is the instance's associated
-         type), so it must not be passed — and it is always erased, which
-         would otherwise make [filter_erased_type_args] drop the real type
-         arguments alongside it. *)
-      List.mapi (fun k t -> (k + 1, t)) tys
-      |> List.filter (fun (i, _) -> keeps_type_arg_position id i)
-      |> List.map
-           (fun (i, ty) ->
-             let t = template_arg_of_ml_type env tvars ty in
-             (* A higher-kinded variable of the caller's reaching such a
-                position is spelled as the template it is, which names no
-                type; the position takes it at the erased element. *)
-             let t =
-               match (t, resolve_tmeta ty) with
-               | (Tqualified _ | Tvar _), Miniml.Tvar (_, j)
-                 when IntSet.mem i plain_carriers && caller_higher_kinded j ->
-                 template_arg_of_ml_type env tvars
-                   (Miniml.Tapp (j, [Miniml.Tunknown]))
-               | _ when (prints_as_any t || under_applied_ind t)
-                        && IntSet.mem i plain_carriers -> (
-                 match carrier_from_dictionary i with
-                 | Some t' -> t'
-                 | None -> t )
-               | _ -> t
-             in
-             (* A variable this scope does not name is erased where it sits,
-                as a binder spells it -- [std::pair<T2, Sum<std::any,
-                std::any>>] for [bind]'s [S * (I + R)] with the method's own
-                [I] and [R] gone.  Only a type that is nothing else says
-                nothing. *)
-             match t with
-             | Tvar (Tv_index (_, None)) ->
-               Terased Ek_type
-             | t when has_unnamed_tvar t -> Ml_type_util.resolve_tvars_to_any t
-             | t -> t )
-      |> fill_phantom_prefix id
-    in
-    let regular_type_args = regular_of tys in
-    (* Recover erased type args that C++ cannot deduce. Two cases: (a) tys is
-       non-empty but all entries were erased (Tdummy Ktype) →
-       filter_erased_type_args drops them all. (b) tys is empty — the Rocq
-       extraction didn't supply type args at the call site, but the callee has
-       Tdummy Ktype domain entries (erased type params).
-
-       In both cases, if the callee's ML return type is a Tvar that refers to
-       one of those erased type params, and we know the concrete return type
-       from the enclosing function context (current_cpp_return_type), we can
-       supply it as an explicit C++ template arg.
-
-       This is needed because C++ cannot deduce template type params from lambda
-       arguments — lambdas don't participate in template argument deduction. *)
-    let regular_type_args =
-      let filtered =
-        filter_erased_type_args
-          ~preserve_positions:(Table.is_inline_custom id)
-          regular_type_args
-      in
-      (* Check if the callee's return type is a Tvar pointing to an erased
-         (Tdummy Ktype) domain position, and if so, return the position index,
-         the concrete C++ type to use, and the full ML domain. *)
-      let try_recover_erased_return_type () =
-        (* [resolve_tmeta] is the one included from Ml_type_util (via the
-           module-level [include]); it is identical to the local shadow that
-           used to be defined here. *)
-        match (!tctx).current_cpp_return_type with
-        | None -> None
-        | Some ret_ty ->
-        match find_type_opt id with
-        | None -> None
-        | Some ml_ty_orig ->
-          let ret = resolve_tmeta (ml_return_type ml_ty_orig) in
-          ( match ret with
-          | Miniml.Tvar (_, i) ->
-            let all_dom = List.map resolve_tmeta (ml_domains ml_ty_orig) in
-            (* Tvar uses 1-based indexing (matching type_subst_list); convert to
-               0-based for list access. *)
-            let idx = i - 1 in
-            if idx >= 0 && idx < List.length all_dom then
-              match
-                List.nth all_dom idx
-              with
-              | Miniml.Tdummy Miniml.Ktype -> Some (idx, ret_ty, all_dom)
-              | _ -> None
-            else
-              None
-          | _ -> None )
-      in
-      (* Value args normally let C++ deduce the type params, but not when
-         the return type variable occurs in no value parameter — as for a
-         method of a higher-kinded class ([cout : forall A, F A -> A], whose
-         only parameter is the instance's associated carrier type, a
-         non-deduced context). *)
-      let tvars_of = spelled_tvars_of in
-      let deducible_tvars () = deducible_tvars_of_glob id in
-      let ret_tvar_undeducible () =
-        match (find_type_opt id, deducible_tvars ()) with
-        | Some ml_ty_orig, Some deducible -> (
-          match resolve_tmeta (ml_return_type ml_ty_orig) with
-          | Miniml.Tvar (_, i) -> not (IntSet.mem i deducible)
-          | _ -> false )
-        | _ -> false
-      in
-      (* Whether any type variable of the callee at all is beyond deduction.
-         Dropping the whole argument list rests on the compiler recovering it
-         from the values; a variable no parameter spells is one it cannot, and
-         then the list has to be written -- erased positions included, as
-         [std::any], which is what they are. *)
-      let some_tvar_undeducible () =
-        match (find_type_opt id, deducible_tvars ()) with
-        | Some ml_ty_orig, Some deducible ->
-          let all =
-            List.fold_left tvars_of IntSet.empty
-              (resolve_tmeta (ml_return_type ml_ty_orig)
-               :: List.map resolve_tmeta (ml_domains ml_ty_orig))
-          in
-          not (IntSet.subset all deducible)
-        | _ -> false
-      in
-      (* A higher-kinded argument is a type constructor, and [std::any] is not
-         a spelling of one: a list with an erased one in it cannot be written
-         out at all, so those calls keep deducing.  Higher-kinded as the
-         declaration has it ({!Ml_type_util.higher_kinded_ml_tvars}), not
-         merely applied: an event family is applied everywhere it occurs and
-         is still declared a plain [typename]. *)
-      let no_erased_hkt_arg () =
-        match find_type_opt id with
-        | None -> true
-        | Some ml_ty ->
-          let hk = declared_higher_kinded_tvars ml_ty in
-          IntSet.is_empty hk
-          ||
-          let n = IntSet.fold max (collect_tvars_set IntSet.empty ml_ty) 0 in
-          let kept =
-            kept_type_arg_positions id n
-          in
-          List.length kept <> List.length regular_type_args
-          || not
-               (List.exists2
-                  (fun i t -> IntSet.mem i hk && prints_as_any t)
-                  kept regular_type_args)
-      in
-      (* Writing the list out is what this call is left with once the
-         recoveries have declined, so an erased family is worth filling from
-         the value arguments first ({!fill_erased_tys}): written as
-         [std::any], it types whatever parameter the callee declares at it. *)
-      (* A position still erased after that may be stated by the type the
-         call is expected to produce: [trigger]'s event family, erased as a
-         type-level function, is the family of the tree it is assigned to.
-         The callee's declared codomain is matched against it. *)
-      let from_expected targs =
-        let names, m = Lazy.force result_tvar_map in
-        let kept =
-          kept_type_arg_positions id (List.length names)
-        in
-        if List.length kept <> List.length targs then targs
-        else
-          (* A type-level lambda extraction could only write as its head
-             ({!under_applied_ind}) is filled the same way. *)
-          List.map2
-            (fun i t ->
-              let bound () =
-                match
-                  List.find_opt (fun (v, _) -> Id.equal v (List.nth names (i - 1))) m
-                with
-                | Some (v, t') -> (
-                  match erase_carrier_elements i t' with
-                  | Some t'' -> Some (v, t'')
-                  | None -> None )
-                | None -> None
-              in
-              if prints_as_any t || under_applied_ind t then
-                match bound () with
-                | Some (_, t') -> t'
-                | None -> t
-              (* Erased only in part -- a carrier [fun T => option (exp T)]
-                 written [std::optional<std::any>] -- the result fills the
-                 part it knows. *)
-              else if Ml_type_util.has_tany_written t then
-                match bound () with
-                | Some (_, t') -> Ml_type_util.refine_erased_by ~expected:t' t
-                | None -> t
-              else t )
-            kept targs
-      in
-      let written_out () =
-        if some_tvar_undeducible () && no_erased_hkt_arg () then
-          filter_erased_type_args ~preserve_positions:true
-            (from_expected (regular_of (fill_erased_tys id tys primary_ml_args)))
-        else filtered
-      in
-      if filtered = [] && regular_type_args <> [] && dictionary_filled then
-        filter_erased_type_args ~preserve_positions:true regular_type_args
-      else if filtered = [] && regular_type_args <> [] then
-        (* Case (a): tys was non-empty but all got filtered. Only attempt
-           recovery when there are no non-erased value args — if there are value
-           args, C++ can deduce the template types from them (and injecting
-           explicit type args may conflict with the template signature, e.g.
-           hk_map's F0/F1 are function types). *)
-          match
-            if args = [] || ret_tvar_undeducible () then
-              try_recover_erased_return_type ()
-            else None
-          with
-        | Some (idx, ret_ty, _) ->
-          (* Replace the erased position with the concrete return type, then
-             filter out any remaining erased entries. *)
-          List.mapi (fun j t -> if j = idx then ret_ty else t) regular_type_args
-          |> List.filter (fun t -> not (prints_as_any t))
-        | None -> written_out ()
-      else if tys = [] then
-        (* Case (b): tys is empty — synthesize type args from scratch. Build one
-           entry per Tdummy Ktype domain position.
-
-           Recovery is attempted when:
-           - [args = []] — no value args, so C++ can't deduce types.
-           - [concrete_tvar_type <> None] — the callee's return type [Tvar]
-             was resolved from excess args + enclosing return type. *)
-        let should_recover =
-          args = [] || concrete_tvar_type <> None || ret_tvar_undeducible ()
-        in
-
-          match
-            if should_recover then try_recover_erased_return_type () else None
-          with
-        | Some (_idx, _ret_ty, all_dom) ->
-          (* Use [concrete_tvar_type] when available (excess args case),
-             otherwise fall back to the enclosing function's return type. *)
-          let t1 = match concrete_tvar_type with
-            | Some t -> t
-            | None -> _ret_ty
-          in
-          List.filter_map
-            (function
-              | Miniml.Tdummy Miniml.Ktype -> Some t1
-              | _ -> None )
-            all_dom
-        | None -> filtered
-      else
-        from_expected filtered
-    in
-    (* Whatever survived above is what the call writes, so it is here -- and
-       not before the erasure filters, which read the list at its Rocq length
-       -- that it has to be made to fit the callee's parameter list. *)
-    let regular_type_args = fit_to_declared_tvars id regular_type_args in
-    (* Promoted type vars ([Tpromoted name]) are no longer separate
-       template parameters — they're resolved through typeclass instance
-       access (e.g. [typename _tcI0::Obj]) by [gen_dfun]'s promoted var
-       resolution.  No additional template type arguments are needed at
-       call sites. *)
-    let promoted_type_args = [] in
-    (* Skipped infrastructure (ReSum instances, say) was classified as a
-       dictionary only to take it out of the regular arguments; it is not a
-       template argument. *)
-    List.filter_map Fun.id typeclass_type_args
-    (* Truncated last: {!hkt_spelled_type_args} rebuilds the correspondence
-       between arguments and positions by length, so a list shortened before
-       it reaches it is left unrespelled -- the carrier comes out as
-       [typename I::m] where the position wants [I::template m]. *)
-    @ drop_relaxed_tt_position id
-        (truncate_to_writable id (hkt_spelled_type_args id regular_type_args))
-    @ promoted_type_args
-    in
-    let all_type_args = build_type_args tys in
-    (* Nothing survived the erasure filters, so if the callee opens with
-       parameters its signature never mentions, deduction has nothing to work
-       from and the call has to name them. *)
-    let all_type_args =
-      if all_type_args = [] then
-        (* The call writes nothing, so every parameter is left to deduction --
-           and a type constructor is the one thing deduction can get wrong
-           rather than merely miss.  Where it cannot be read off the value
-           argument, name it; where the call names nothing else either, fall
-           back to the phantom prefix. *)
-        match
-          hkt_carrier_type_args env tvars ?result:expected_ty id tys
-        with
-        | Some targs -> targs
-        | None -> (
-          (* The result did not say what the carrier is; the dictionary the
-             call passes for the class still does. *)
-          match dict_carrier_type_args env tvars id primary_ml_args with
-          | Some targs -> targs
-          | None -> (
-            (* Neither route knew the carrier.  An argument's type may still
-               say what an erased plain type argument was, which is worth
-               writing only here: filling a position is what would have taken
-               the two routes above out of reach. *)
-            match build_type_args (fill_erased_tys id tys primary_ml_args) with
-            | [] -> phantom_prefix_args id
-            | targs -> targs ) )
-      else all_type_args
-    in
-    (* The same holds past a class dictionary: a call that writes only the
-       instance still leaves the callee's leading phantom parameters with
-       nothing to deduce them from. *)
-    let all_type_args =
-      let tc = List.filter_map Fun.id typeclass_type_args in
-      if tc <> [] && all_type_args = tc then
-        match phantom_prefix_args id with
-        | [] -> all_type_args
-        | fillers -> tc @ fillers
-      else all_type_args
-    in
-    (* Whichever route wrote the list, a plain position takes a type. *)
-    let all_type_args =
-      let n_tc = List.length typeclass_type_args in
-      if n_tc = 0 then types_at_plain_positions id all_type_args
-      else all_type_args
-    in
-    (* The written arguments that instantiate the callee's own type variables,
-       by position: the class-dictionary arguments lead the list and are no
-       variable's.  Substituting the whole list shifts every variable one
-       place per dictionary -- a family's position given the instance. *)
-    let written_tvar_args =
-      let n_tc =
-        List.length (List.filter_map Fun.id typeclass_type_args)
-      in
-      (* ... except those standing at a carrier's position: a class whose
-         parameter is higher-kinded quantifies it as one of the callee's own
-         variables ([MonadIter_stateT0]'s [M]), which the regular list does not
-         keep, and the dictionary written there is what it resolves through. *)
-      let n_carriers =
-        match find_type_opt id with
-        | Some ml_ty ->
-          let n = IntSet.fold max (collect_tvars_set IntSet.empty ml_ty) 0 in
-          List.length
-            (List.filter
-               (fun i -> not (keeps_type_arg_position id i))
-               (List.init n (fun i -> i + 1)))
-        | None -> 0
-      in
-      let skip = max 0 (n_tc - n_carriers) in
-      List.filteri (fun i _ -> i >= skip) all_type_args
-    in
-
     let cglob = mk_cppglob ?yields:(glob_yields env id tys) id all_type_args in
     (* Check if this is a typeclass instance used as a type (for :: access).
        When all args are consumed (domain and args both empty after filtering),
