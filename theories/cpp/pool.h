@@ -7,16 +7,20 @@
 // node type, and every generated inductive's control block is a distinct
 // C++ instantiation, so this needs no runtime size-class lookup and no
 // locking -- a thread_local pointer, popped or pushed, is the whole
-// allocator.  A freed block goes back to the system allocator only past the
-// list's cap; the same shapes recur constantly in a running interpreter (the
-// same handful of continuation, node and cell types, over and over), so the
-// list is worth keeping full.
+// allocator.  A freed block never goes back to the system allocator; the
+// same shapes recur constantly in a running interpreter (the same handful
+// of continuation, node and cell types, over and over), so the list is
+// worth keeping full.
 //
 // Safe across threads without any atomics of its own: a block freed on a
 // different thread than the one that allocated it lands on that thread's
 // own list, which is merely a missed reuse, never a race -- the list a
-// thread pops from is the same one only that thread ever pushes to.  Each
-// list is capped, so a thread that only frees does not grow without bound.
+// thread pops from is the same one only that thread ever pushes to.
+//
+// The lists are not capped.  A thread that only frees what another allocates
+// grows its list without bound; a cap was tried, and the counter it needs on
+// every allocation and free, with the bursts past it going back to malloc,
+// cost Vellvm 7-13% across the board.
 #pragma once
 #include <cstddef>
 #include <new>
@@ -26,25 +30,19 @@ namespace pool_detail {
 
 template <typename Derived> struct pooled {
   static void *operator new(std::size_t n) {
-    list &l = free_list();
-    if (l.head) {
-      void *p = l.head;
-      l.head = *static_cast<void **>(p);
-      --l.length;
+    void *&head = free_head();
+    if (head) {
+      void *p = head;
+      head = *static_cast<void **>(p);
       return p;
     }
     (void)n; // always sizeof(Derived): Derived has no virtual base, no tail.
     return ::operator new(sizeof(Derived));
   }
   static void operator delete(void *p, std::size_t) noexcept {
-    list &l = free_list();
-    if (l.length == max_length) {
-      ::operator delete(p);
-      return;
-    }
-    *static_cast<void **>(p) = l.head;
-    l.head = p;
-    ++l.length;
+    void *&head = free_head();
+    *static_cast<void **>(p) = head;
+    head = p;
   }
 
   // A type aligned more strictly than [operator new] guarantees is allocated
@@ -58,17 +56,9 @@ template <typename Derived> struct pooled {
   }
 
 private:
-  // A thread that only frees what another thread allocated -- a consumer --
-  // pushes onto its own list and never pops, so the list is capped: past
-  // [max_length] a block goes back to the system allocator.
-  static constexpr std::size_t max_length = 1 << 16;
-  struct list {
-    void *head = nullptr;
-    std::size_t length = 0;
-  };
-  static list &free_list() noexcept {
-    static thread_local list l;
-    return l;
+  static void *&free_head() noexcept {
+    static thread_local void *head = nullptr;
+    return head;
   }
 };
 
