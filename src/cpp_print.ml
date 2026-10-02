@@ -1011,7 +1011,7 @@ let rec pp_cpp_type ?(lead = true) par vl t =
     let typename_prefix_for n = if lead then typename_prefix_for n else mt () in
     let leading_typename = if lead then str "typename " else mt () in
     match t with
-    | Tvar (i, None) -> print_cpp_type_var vl i
+    | Tvar (Tv_index (i, None)) -> print_cpp_type_var vl i
     | Tinstance (id, _) -> Id.print id
     | Tpromoted id ->
       (* A [Type]-valued type-class field ([m_carrier] of [Monoid], [Obj] of
@@ -1031,7 +1031,7 @@ let rec pp_cpp_type ?(lead = true) par vl t =
         when (not (!render_ctx).rc_in_struct) && not (is_file_scope_type id) ->
         struct_name ++ str "::" ++ Id.print id
       | _ -> Id.print id )
-    | Tvar (_, Some id) -> Id.print id
+    | Tvar (Tv_index (_, Some id) | Tv_named id) -> Id.print id
     (* Tid for local type references (e.g., nested structs inside modules).
        These don't need GlobRef qualification, just simple Id references. Can be
        parameterized like generic types: Leaf<int>. When generating
@@ -1342,7 +1342,7 @@ let rec pp_cpp_type ?(lead = true) par vl t =
         let seen = ref [] in
         let rec go t =
           match t with
-          | Tvar (i, _) ->
+          | Tvar (Tv_index (i, _)) ->
             if not (List.mem i !seen) then seen := !seen @ [i]
           | Tglob (_, ts, _) | Tid (_, ts) | Tid_external (_, ts)
           | Tvariant ts ->
@@ -1372,7 +1372,7 @@ let rec pp_cpp_type ?(lead = true) par vl t =
           let seen = ref [] in
           let rec go t =
             match t with
-            | Tapply (Tvar (i, _), ts) ->
+            | Tapply (Tvar (Tv_index (i, _)), ts) ->
               seen := i :: !seen;
               List.iter go ts
             | Tglob (_, ts, _) | Tid (_, ts) | Tid_external (_, ts)
@@ -1396,7 +1396,7 @@ let rec pp_cpp_type ?(lead = true) par vl t =
           ignore
             (map_cpp_type
                (function
-                 | Tvar (i, Some _) as t when not (List.mem i applied_vars) ->
+                 | Tvar (Tv_index (i, Some _)) as t when not (List.mem i applied_vars) ->
                    seen := i :: !seen;
                    t
                  | t -> t )
@@ -1406,7 +1406,7 @@ let rec pp_cpp_type ?(lead = true) par vl t =
         let probe =
           map_cpp_type
             (function
-              | Tvar (i, _)
+              | Tvar (Tv_index (i, _))
                 when not (List.mem i applied_vars || List.mem i bare_vars) ->
                 Tany
               | t -> t )
@@ -1463,7 +1463,7 @@ let rec pp_cpp_type ?(lead = true) par vl t =
                 (fun acc (k, i) ->
                   map_cpp_type
                     (function
-                      | Tvar (j, _) when j = i ->
+                      | Tvar (Tv_index (j, _)) when j = i ->
                         Tid_external
                           ( (if List.mem i bare_vars then "_P" else "_F")
                             ^ string_of_int k,

@@ -1397,10 +1397,10 @@ let borrowed_value_param_pointee = function
   | _ -> None
 
 (** Extract the underlying type variable id from a forwarding-reference type.
-    [Tref (Forwarding, Tvar (_, Some id))] → [Some id] *)
+    [Tref (Forwarding, Tvar (Tv_index (_, Some id) | Tv_named id))] → [Some id] *)
 let rec extract_fwd_ref_tvar = function
   | Tref (_, inner) -> extract_fwd_ref_tvar inner
-  | Tvar (_, Some id) -> Some id
+  | Tvar (Tv_index (_, Some id) | Tv_named id) -> Some id
   | _ -> None
 
 (** The arrow a template parameter is constrained to, when it is a callable one.

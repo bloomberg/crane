@@ -1263,8 +1263,8 @@ let rec gen_type_conversion_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
     | Tfun (src_dom, _), Tfun (dst_dom, _)
       when List.length src_dom = List.length dst_dom ->
       CPPconvert (orig_dst_ty, expr)
-    | ( (Tvar (_, Some _) | Tapply (Tvar (_, Some _), _)),
-        (Tvar (_, Some _) | Tapply (Tvar (_, Some _), _)) ) ->
+    | ( (Tvar (Tv_index (_, Some _) | Tv_named _) | Tapply (Tvar (Tv_index (_, Some _) | Tv_named _), _)),
+        (Tvar (Tv_index (_, Some _) | Tv_named _) | Tapply (Tvar (Tv_index (_, Some _) | Tv_named _), _)) ) ->
       (* Type-variable-to-type-variable conversion in converting constructors
          -- a family's field [E X] is one too, written [E] once the family is
          a plain parameter.
@@ -2948,11 +2948,11 @@ let ref_is_instance r =
     extra_tvar_map: mapping from Tvar index to Id for extra type vars *)
 let make_subst_extra_tvars num_ind_vars extra_tvar_map =
   let rec subst = function
-    | Tvar (i, None) when List.mem_assoc i extra_tvar_map ->
+    | Tvar (Tv_index (i, None)) when List.mem_assoc i extra_tvar_map ->
       named_tvar ((List.assoc i extra_tvar_map))
-    | Tvar (i, None) when i >= 1 && i <= num_ind_vars ->
+    | Tvar (Tv_index (i, None)) when i >= 1 && i <= num_ind_vars ->
       (* Inductive's type var - keep as-is for tvar_subst_stmt *)
-      Tvar (i, None)
+      Tvar (Tv_index (i, None))
     | Tfun (dom, cod) -> Tfun (List.map subst dom, subst cod)
     | Tshared_ptr t -> Tshared_ptr (subst t)
     | Tglob (r, args, e) -> Tglob (r, List.map subst args, e)
@@ -3424,9 +3424,9 @@ let apply_hkt_tyctors g temps =
       if Table.is_hkt_ind_param g i then Ttyctor (abstract_leading_arg t)
       else
         match t with
-        | Tapply ((Tvar (_, name) as head), _)
+        | Tapply ((Tvar tv as head), _)
           when Table.is_phantom_type_param g i
-               || Option.cata is_current_typename_var false name ->
+               || Option.cata is_current_typename_var false (tvar_hint tv) ->
           (* The application cannot be written, so the head alone stands for
              it -- which is all a phantom position reads anyway, and all an
              erased family has left to say.
@@ -3667,7 +3667,7 @@ let rec convert_ml_type_to_cpp_type
             && List.for_all2
                  (fun ty id ->
                    match ty with
-                   | Tvar (_, Some id') -> Id.equal id id'
+                   | Tvar (Tv_index (_, Some id') | Tv_named id') -> Id.equal id id'
                    | _ -> false)
                  converted_ts
                  tvars
@@ -3705,12 +3705,12 @@ let rec convert_ml_type_to_cpp_type
           (* External inductive: value type, namespace-qualified *)
           Tnamespace (g, core)
     | _ -> core )
-  | Miniml.Tvar (_, i) -> Tvar (i, tvar_name_at tvars i)
+  | Miniml.Tvar (_, i) -> Tvar (Tv_index (i, tvar_name_at tvars i))
   (* A higher-kinded variable applied to arguments.  The head stays a type
      variable here; [Gen_decls.apply_hkt_resolutions] rewrites it to the
      instance's associated type, leaving [Tapply] to render the application. *)
   | Tapp (i, args) ->
-    let head = Tvar (i, tvar_name_at tvars i) in
+    let head = Tvar (Tv_index (i, tvar_name_at tvars i)) in
     Tapply (head, List.map (convert_ml_type_to_cpp_type env ~ns tvars) args)
   | Tmeta {contents = Some t} -> convert_ml_type_to_cpp_type env ~ns tvars t
   | Tmeta {id = i} ->
@@ -3768,13 +3768,13 @@ let rec convert_ml_type_to_cpp_type
     @return List of C++ types, with out-of-scope Tvars marked as dummy_type *)
 
 (** [convert_ml_type_to_cpp_type] only resolves [Tvar] indices within
-    [tvars]; anything out of range comes back as [Tvar (_, None)], which
+    [tvars]; anything out of range comes back as [Tvar (Tv_index (_, None))], which
     prints as a bogus, undeclared template parameter name (e.g. "T3").
     Normalize those to [Topaque]: the variable was quantified somewhere we
     cannot see, so [std::any] is the only spelling available, but nothing here
     establishes that the value is actually boxed. *)
 and erase_unresolved_tvars = function
-  | Tvar (_, None) -> Topaque
+  | Tvar (Tv_index (_, None)) -> Topaque
   | Tglob (g, ts, es) -> Tglob (g, List.map erase_unresolved_tvars ts, es)
   | Tfun (dom, cod) ->
     Tfun (List.map erase_unresolved_tvars dom, erase_unresolved_tvars cod)
@@ -5193,7 +5193,7 @@ and build_template_params ?curry env tvars tys =
       let t = template_arg_of_ml_type ?curry env tvars ty in
       (* Check for unbound type variables *)
       match t with
-      | Tvar (_, None) when tvars <> [] ->
+      | Tvar (Tv_index (_, None)) when tvars <> [] ->
         (* Type variable has no binding, but we're in a context with typename
            params. This means the Tvar index exceeds the scope of tvars.
            Mark as dummy_type to trigger full erasure via filter_erased_type_args.
@@ -5365,7 +5365,8 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
           List.map2
             (fun t e ->
               match (resolve_tmeta t, e) with
-              | (Miniml.Tunknown | Miniml.Tmeta {contents = None}), Tvar (i, _)
+              | (Miniml.Tunknown | Miniml.Tmeta {contents = None}),
+                Tvar (Tv_index (i, _))
                 when names_only_scoped_tvars e ->
                 Miniml.Tvar (Miniml.Schematic, i)
               | _ -> t )
@@ -6015,7 +6016,7 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
                    && List.length exp_tys = List.length tys ->
               let exp_temps = build_template_params env [] exp_tys in
               let r = filter_erased_type_args exp_temps in
-              if r <> [] && not (List.exists (function Tvar (_, None) -> true | _ -> false) r)
+              if r <> [] && not (List.exists (function Tvar (Tv_index (_, None)) -> true | _ -> false) r)
               then r
               else []
             | _ -> []
@@ -8063,8 +8064,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
               else
               map_cpp_type
                 (function
-                  | Tvar (i, n) as t ->
-                    let id = match n with Some n -> n | None -> tvar_id i in
+                  | Tvar tv as t ->
+                    let id = tvar_spelled tv in
                     if List.exists (Id.equal id) scope then t else Tany
                   | t -> t )
                 cod
@@ -8374,13 +8375,13 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
               Tid_external
                 ( "std::invoke_result_t",
                   Tref (Lvalue, Texpr_type (List.hd arg_vars))
-                  :: List.map (fun j -> Tref (Lvalue, Tvar (j, Some (local_tvar j))))
+                  :: List.map (fun j -> Tref (Lvalue, Tvar (Tv_index (j, Some (local_tvar j)))))
                        deducible_tvars )
             in
             let ty_args =
               List.map
                 (fun i ->
-                  if IntSet.mem i deducible_set then Tvar (i, Some (local_tvar i))
+                  if IntSet.mem i deducible_set then Tvar (Tv_index (i, Some (local_tvar i)))
                   else invoke_result )
                 (List.sort compare (deducible_tvars @ non_deducible_tvars))
             in
@@ -8388,7 +8389,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
               Minicpp.subst_cpp_tvars
                 (fun i ->
                   if IntSet.mem i deducible_set then
-                    Some (Tvar (i, Some (local_tvar i)))
+                    Some (Tvar (Tv_index (i, Some (local_tvar i))))
                   else Some invoke_result )
                 (local_ty result_ml)
             in
@@ -8523,7 +8524,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             cpp_of_ml env (type_simpl ty)
           in
           match t with
-          | Tvar (_, None) when tvars <> [] ->
+          | Tvar (Tv_index (_, None)) when tvars <> [] ->
             Terased Ek_type
           | _ -> t )
         tys
@@ -9091,7 +9092,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                std::any after tvar_erase_type, so we should try to recover
                the concrete type from the expected type annotation. *)
             let is_effectively_erased t =
-              prints_as_any t || (match t with Tvar (_, None) -> true | _ -> false)
+              prints_as_any t || (match t with Tvar (Tv_index (_, None)) -> true | _ -> false)
             in
             if List.for_all is_effectively_erased temps && temps <> [] then
               (* Resolve any metas in the expected type before matching.
@@ -11241,7 +11242,7 @@ and refine_by_instance_family (carrier, _, m) t =
               List.mapi
                 (fun i a ->
                   match List.nth_opt cargs i with
-                  | Some (Tvar (_, Some v)) when i < n && prints_as_any a -> (
+                  | Some (Tvar (Tv_index (_, Some v) | Tv_named v)) when i < n && prints_as_any a -> (
                     match List.find_opt (fun (v', _) -> Id.equal v v') m with
                     | Some (_, b) -> b
                     | None -> a )
@@ -12064,7 +12065,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
             convert_ml_type_to_cpp_type env result_names (type_simpl pt)
             |> deapply_families
             |> map_cpp_type (function
-                 | Tvar (_, Some v) as t -> (
+                 | Tvar (Tv_index (_, Some v) | Tv_named v) as t -> (
                    match List.find_opt (fun (v', _) -> Id.equal v v') m with
                    | Some (_, t') -> t'
                    | None -> t )
@@ -12085,8 +12086,8 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
             let d =
               map_cpp_type
                 (function
-                  | Tvar (i, n) as t ->
-                    let id = match n with Some n -> n | None -> tvar_id i in
+                  | Tvar tv as t ->
+                    let id = tvar_spelled tv in
                     if List.exists (Id.equal id) scope then t else Tany
                   | t -> t )
                 d
@@ -12292,7 +12293,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
              (* [param_ty] comes from the callee's own (call-site-substituted)
                 type signature, whose [Tvar] indices are not anchored to this
                 function's [tvars] scope. When conversion produces an
-                unresolved [Tvar (_, None)] (would print as a bogus template
+                unresolved [Tvar (Tv_index (_, None))] (would print as a bogus template
                 parameter like "T3"), we cannot build a meaningful concrete
                 cast here — skip this branch and fall back to [as_value ()]
                 unchanged; a later pass (e.g. [gen_match_branch]'s field
@@ -12601,8 +12602,8 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
             map_cpp_type
               (function
                 | Tnamespace (_, t) | Tconst t -> norm t
-                | Tany | Topaque | Tvar (_, None) -> Tany
-                | Tvar (_, Some n)
+                | Tany | Topaque | Tvar (Tv_index (_, None)) -> Tany
+                | Tvar (Tv_index (_, Some n) | Tv_named n)
                   when not (List.exists (Id.equal n) (!tctx).current_type_vars) ->
                   Tany
                 | t -> t )
@@ -12716,7 +12717,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
                 [I] and [R] gone.  Only a type that is nothing else says
                 nothing. *)
              match t with
-             | Tvar (_, None) ->
+             | Tvar (Tv_index (_, None)) ->
                Terased Ek_type
              | t when has_unnamed_tvar t -> Ml_type_util.resolve_tvars_to_any t
              | t -> t )
@@ -13175,8 +13176,8 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
               let scope = get_current_type_vars () in
               let erase_own =
                 map_cpp_type (function
-                  | Tvar (i, n) as t ->
-                    let id = match n with Some n -> n | None -> tvar_id i in
+                  | Tvar tv as t ->
+                    let id = tvar_spelled tv in
                     if List.exists (Id.equal id) scope then Tany else t
                   | t -> t )
               in
@@ -13439,12 +13440,11 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
           let missing_args, cod =
             let name_free =
               map_cpp_type (function
-                | Tvar (i, None)
-                  when i > 0
-                       && not
-                            (List.exists (Id.equal (Minicpp.tvar_id i))
-                               (!tctx).current_type_vars) ->
-                  Tvar (i, Some (Minicpp.tvar_id i))
+                | Tvar (Tv_index (i, None))
+                  when not
+                         (List.exists (Id.equal (Minicpp.tvar_id i))
+                            (!tctx).current_type_vars) ->
+                  Tvar (Tv_index (i, Some (Minicpp.tvar_id i)))
                 | t -> t )
             in
             (List.map name_free missing_args, name_free cod)
@@ -15845,7 +15845,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
              given up: the instances that lead the list, and every argument up
              to the last one deduction cannot supply, stay. *)
           let is_instance_arg = function
-            | Tvar (_, Some id) -> Common.is_tc_instance_id id
+            | Tvar (Tv_index (_, Some id) | Tv_named id) -> Common.is_tc_instance_id id
             | Tglob (g, _, _) -> ref_is_instance g
             | _ -> false
           in
@@ -16155,7 +16155,7 @@ and gen_local_fix_by_ref env renamed_ids funs_with_params owned_flags_per_fun =
     match cpp_of_ml env ty with
     | Tfun (_, t) ->
       ( match t with
-      | Minicpp.Tvar (_, None) -> None
+      | Minicpp.Tvar (Tv_index (_, None)) -> None
       | _ -> Some t )
     | _ -> None
   in
@@ -16259,7 +16259,7 @@ and gen_local_fix_by_ref env renamed_ids funs_with_params owned_flags_per_fun =
 and gen_local_fix_shared_ptr env renamed_ids funs_with_params =
   let fix_func_type ty =
     match ty with
-    | Minicpp.Tfun (params, Minicpp.Tvar (_, None)) ->
+    | Minicpp.Tfun (params, Minicpp.Tvar (Tv_index (_, None))) ->
       Minicpp.Tfun (params, Minicpp.Tvoid)
     | _ -> ty
   in
@@ -16277,7 +16277,7 @@ and gen_local_fix_shared_ptr env renamed_ids funs_with_params =
     match cpp_of_ml env ty with
     | Tfun (_, t) ->
       ( match t with
-      | Minicpp.Tvar (_, None) -> None
+      | Minicpp.Tvar (Tv_index (_, None)) -> None
       | _ -> Some t )
     | _ -> None
   in
@@ -16344,7 +16344,7 @@ and gen_local_fix_ycomb env renamed_ids funs_with_params =
     match cpp_of_ml env ty with
     | Tfun (_, t) ->
       ( match t with
-      | Minicpp.Tvar (_, None) -> None
+      | Minicpp.Tvar (Tv_index (_, None)) -> None
       | _ -> Some t )
     | _ -> None
   in

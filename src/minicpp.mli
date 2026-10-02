@@ -124,10 +124,19 @@ type inline_template = {
     argument -- [Tdummy Ktype], [Kprop] and [Kimplicit] in the ML AST. *)
 type erased_kind = Ek_type | Ek_prop | Ek_implicit
 
+(** A C++ type variable. *)
+type tvar =
+  | Tv_index of int * Id.t option
+      (** The [i]th (from 1) type variable of the enclosing declaration's
+          parameter list, with its parameter's name where that is known --
+          [T<i>] otherwise. *)
+  | Tv_named of Id.t
+      (** A type variable known only by the name a template header declares
+          it under: a lambda's own [_T1], a method's [_A0]. *)
+
 (** C++ type representation. *)
 type cpp_type =
-  | Tvar of int * Id.t option
-      (** Type variable with De Bruijn index and optional name *)
+  | Tvar of tvar
   | Tinstance of Id.t * GlobRef.t
       (** A type-class instance template parameter ([_tcI0]) and the class
           constraining it.  Types qualified under it ([typename _tcI0::M]) are
@@ -1052,6 +1061,16 @@ val map_out_of_line :
 (** [named_tvar x] is the type variable named [x] -- one that numbers against
     no declaration's parameter list, and so is spelled by name alone. *)
 val named_tvar : Names.Id.t -> cpp_type
+
+(** The [i]th (from 1) type variable of the enclosing parameter list, under
+    [name] where its parameter's name is known. *)
+val tvar_at : ?name:Id.t -> int -> cpp_type
+
+(** The name a type variable is written under, where one is known. *)
+val tvar_hint : tvar -> Id.t option
+
+(** The name a type variable is written under: its parameter's, or [T<i>]. *)
+val tvar_spelled : tvar -> Id.t
 
 (** [tvar_spelling i] is the name of the type variable at index [i] in a
     declaration's parameter list; [tvar_id] is the same as an [Id.t].

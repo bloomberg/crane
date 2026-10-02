@@ -79,7 +79,7 @@ let rec expand_ml_fun_alias ty =
     @return association list of type variable bindings *)
 let rec extract_tvar_map tmpl conc =
   match (tmpl, conc) with
-  | Tvar (_, Some id), _ -> [(id, conc)]
+  | Tvar (Tv_index (_, Some id) | Tv_named id), _ -> [(id, conc)]
   | Tglob (g1, tys1, _), Tglob (g2, tys2, _)
     when globref_equal g1 g2
          && List.length tys1 = List.length tys2 ->
@@ -353,8 +353,8 @@ let contains_tvar =
     bound set. *)
 let has_unbound_tvar bound_names =
   exists_cpp_type (function
-    | Tvar (_, Some name) -> not (List.exists (Id.equal name) bound_names)
-    | Tvar (_, None) | Tauto -> true
+    | Tvar (Tv_index (_, Some name) | Tv_named name) -> not (List.exists (Id.equal name) bound_names)
+    | Tvar (Tv_index (_, None)) | Tauto -> true
     | _ -> false )
 
 (** Check if [g] is the Coq [option] inductive (rendered as
@@ -378,7 +378,8 @@ let rec cpp_ty_eq t1 t2 =
     GlobRef.CanOrd.equal g1 g2
     && List.length ts1 = List.length ts2
     && List.for_all2 cpp_ty_eq ts1 ts2
-  | Tvar (i1, _), Tvar (i2, _) -> i1 = i2
+  | Tvar (Tv_index (i1, _)), Tvar (Tv_index (i2, _)) -> i1 = i2
+  | Tvar (Tv_named x1), Tvar (Tv_named x2) -> Id.equal x1 x2
   | Tref (Lvalue, t1'), Tref (Lvalue, t2') | Tref (Forwarding, t1'), Tref (Forwarding, t2') -> cpp_ty_eq t1' t2'
   | Tshared_ptr t1', Tshared_ptr t2' -> cpp_ty_eq t1' t2'
   | Tfun (d1, c1), Tfun (d2, c2) ->
@@ -566,10 +567,10 @@ and erase_type_to_any = function
   | _ -> Tany
 
 (** [resolve_tvars_to_any ty] replaces every unresolved type variable
-    ([Tvar (_, None)]) in [ty] with [Tany], so that an [any_cast] target
+    ([Tvar (Tv_index (_, None))]) in [ty] with [Tany], so that an [any_cast] target
     renders as [std::any] rather than as a placeholder with no C++ spelling. *)
 and resolve_tvars_to_any ty =
-  map_cpp_type (function Tvar (_, None) -> Tany | t -> t) ty
+  map_cpp_type (function Tvar (Tv_index (_, None)) -> Tany | t -> t) ty
 
 (** [is_ml_erased_ty ty] — true if [ty] represents an erased position in the
     ML AST: a bare type variable, [Tunresolved], or an empty [Tmeta].  These
@@ -602,7 +603,7 @@ let is_skipped_ml_type = function
     unnamed [Tvar], which {!tvar_erase_type} turns into one. *)
 let is_tany_node = function
   | Tany | Topaque -> true
-  | Tvar (_, None) -> true
+  | Tvar (Tv_index (_, None)) -> true
   | _ -> false
 
 (** Whether a C++ type contains [std::any] anywhere.  Used to detect a
@@ -790,8 +791,8 @@ let rec subst_tvars_type subst = function
     gen_match_branch and gen_ind_header_v2. *)
 let tvar_erase_type =
   rewrite_cpp_type (function
-    | Tvar (_, None) -> Some Tany
-    | Tvar (_, Some _) as ty -> Some ty (* Named Tvars are kept *)
+    | Tvar (Tv_index (_, None)) -> Some Tany
+    | Tvar (Tv_index (_, Some _) | Tv_named _) as ty -> Some ty (* Named Tvars are kept *)
     | _ -> None )
 
 (** Erase a type argument down to its outermost applied type constructors,
@@ -829,7 +830,7 @@ let rec index_erase_type (ty : cpp_type) : cpp_type =
     (tvars=[]), where nested Tvar(_, None) would print as invalid C++ like
     List<T1>. *)
 let has_unnamed_tvar : cpp_type -> bool =
-  exists_cpp_type (function Tvar (_, None) -> true | _ -> false)
+  exists_cpp_type (function Tvar (Tv_index (_, None)) -> true | _ -> false)
 
 (** [type_is_erased ty] is {!is_tany_node} looked at through the type
     modifiers that do not change a type's representation, so that
@@ -1199,7 +1200,7 @@ let refine_param_from_slot ~tvars ~slot bare =
           if is_tany_node t || is_cpp_dummy_type t then Minicpp.Tany
           else
             match t with
-            | Minicpp.Tvar (_, Some n) -> Minicpp.Tvar (0, Some n)
+            | Minicpp.Tvar (Tv_index (_, Some n) | Tv_named n) -> Minicpp.Tvar (Tv_named n)
             | t -> t )
     in
     normalise erased <> normalise bare
@@ -1210,7 +1211,8 @@ let refine_param_from_slot ~tvars ~slot bare =
   then erased
   else bare
 
-(** Collect (index, name) pairs for all Tvar occurrences, sorted by index *)
+(** Collect (index, name) pairs for all Tvar occurrences, sorted by index; a
+    variable known only by name stands at index [0], ahead of the others. *)
 let get_tvars_indexed t =
   let get_name i n =
     match n with
@@ -1224,11 +1226,13 @@ let get_tvars_indexed t =
          and must be resolved through typeclass instance access — not as
          standalone template parameters. *)
       l
-    | Tvar (i, n) ->
+    | Tvar (Tv_index (i, n)) ->
       if List.exists (fun (x, _) -> i == x) l then
         l
       else
         (i, get_name i n) :: l
+    | Tvar (Tv_named n) ->
+      if List.exists (fun (_, m) -> Id.equal n m) l then l else (0, n) :: l
     | Tglob (_, tys, _) -> List.fold_left aux l tys
     | Tfun (tys, ty) -> List.fold_left aux l (ty :: tys)
     | Tconst ty -> aux l ty
@@ -1253,7 +1257,7 @@ let get_tvars_indexed t =
 let get_rendered_tvar_indices t =
   let rec aux l = function
     | Tpromoted _ -> l
-    | Tvar (i, _) ->
+    | Tvar (Tv_index (i, _)) ->
       if List.mem i l then l else i :: l
     | Tglob (g, tys, _) ->
       List.fold_left aux l (written_type_args g tys)
@@ -1283,7 +1287,7 @@ let get_rendered_tvar_indices t =
 let rendered_tvar_arities t =
   let arities = Hashtbl.create 4 in
   let rec aux = function
-    | Tapply (Tvar (i, _), tys) ->
+    | Tapply (Tvar (Tv_index (i, _)), tys) ->
       Hashtbl.replace arities i (List.length tys);
       List.iter aux tys
     | Tglob (g, tys, _) -> List.iter aux (written_type_args g tys)

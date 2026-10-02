@@ -69,7 +69,7 @@ let gen_ind_cpp ?(consarg_names = [||]) vars name cnames tys =
                (fun (x, _) -> mk_cppglob_local (GlobRef.VarRef x) [])
                constr
            in
-           let ty_vars = List.mapi (fun i x -> Tvar (i, Some x)) vars in
+           let ty_vars = List.map named_tvar vars in
            let make =
              Dfun
                (mk_dfun c
@@ -727,7 +727,7 @@ let mentioned_promoted_args r =
 let deapply_families name vars =
   let families = List.filteri (fun i _ -> Table.is_family_ind_param name i) vars in
   map_cpp_type (function
-    | Tapply ((Tvar (_, Some v) as head), _)
+    | Tapply ((Tvar (Tv_index (_, Some v) | Tv_named v) as head), _)
       when List.exists (Id.equal v) families ->
       head
     | t -> t )
@@ -766,7 +766,7 @@ let conversion_to_other_instantiation ~leading ~name ~templates ~vars ~fields =
           Id.of_string (if n_vars = 1 then "_U" else "_U" ^ string_of_int i) )
         vars
     in
-    let u_tys = List.mapi (fun i x -> Tvar (i, Some x)) u_var_names in
+    let u_tys = List.map named_tvar u_var_names in
     let converted =
       List.map
         (fun (field_id, at) ->
@@ -831,7 +831,7 @@ let gen_record_cpp name fields ind =
     |> List.map (fun id -> Id.to_string (Common.tparam_name id))
   in
   let replace_promoted = function
-    | (Tpromoted id | Tvar (_, Some id))
+    | (Tpromoted id | Tvar (Tv_index (_, Some id) | Tv_named id))
       when List.mem (Id.to_string id) promoted_var_names ->
       Tany
     | Tglob (g, _, _) when Table.is_promoted_type_var g ->
@@ -864,7 +864,7 @@ let gen_record_cpp name fields ind =
            parameter to an associated type it can apply. *)
     Minicpp.map_cpp_type
       (function
-        | Tapply ((Tvar (_, Some v) as head), _)
+        | Tapply ((Tvar (Tv_index (_, Some v) | Tv_named v) as head), _)
           when List.exists (fun x -> Id.equal x v) spelling -> head
         | ty -> ty )
       ct
@@ -1002,13 +1002,13 @@ let gen_typeclass_cpp name fields ind =
     promoted_resolutions ~fields name (Tinstance (inst_id, name))
   in
   (* Substitute promoted Tvars in cpp_type trees.  After conversion, a promoted
-     var appears as [Tvar (_, Some name)]; [promoted_map] says which qualified
+     var appears as [Tvar (Tv_index (_, Some name) | Tv_named name)]; [promoted_map] says which qualified
      type that bare name really denotes ([typename I::Obj], or
      [typename I::base_category::Obj] when it comes from a typeclass-typed
      promoted field).  A name with no entry is left as a plain type variable. *)
   let subst_promoted_in_cpp_type =
     rewrite_cpp_type (function
-      | Tpromoted vname | Tvar (_, Some vname) -> (
+      | Tpromoted vname | Tvar (Tv_index (_, Some vname) | Tv_named vname) -> (
         match List.find_opt (fun (n, _) -> Id.equal n vname) promoted_map with
         | Some (_, replacement) -> Some replacement
         | None -> Some (named_tvar vname) )
@@ -2432,7 +2432,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
          enclosing scope, not the template parameter's type. *)
       let is_self_referential_promoted var_name cpp_ty =
         match cpp_ty with
-        | Tpromoted id | Tvar (_, Some id) when Id.equal id var_name -> true
+        | Tpromoted id | Tvar (Tv_index (_, Some id) | Tv_named id) when Id.equal id var_name -> true
         | _ -> false
       in
       (* For each concept-constrained template parameter, forward its
@@ -2653,12 +2653,14 @@ let applied_tvar_arities cty =
   exists_cpp_type
     (fun t ->
       ( match t with
-      | Tapply (Tvar (i, name), args) ->
+      | Tapply (Tvar (Tv_named n), args) ->
+        Hashtbl.replace arities n (List.length args)
+      | Tapply (Tvar (Tv_index (i, name)), args) ->
         (* The head may or may not have been resolved to its parameter name;
            key on both spellings so the caller's list matches either way. *)
         let arity = List.length args in
         Option.iter (fun n -> Hashtbl.replace arities n arity) name;
-        if i > 0 then Hashtbl.replace arities (tvar_id i) arity
+        Hashtbl.replace arities (tvar_id i) arity
       | _ -> () );
       false )
     cty
@@ -2687,7 +2689,7 @@ let with_applied_tvars ?ml_ty cty temps =
       exists_cpp_type
         (fun t ->
           ( match t with
-          | Tapply (Tvar (i, name), _) when i > 0 && not (IntSet.mem i hk) ->
+          | Tapply (Tvar (Tv_index (i, name)), _) when not (IntSet.mem i hk) ->
             veto := tvar_id i :: !veto;
             Option.iter (fun n -> veto := n :: !veto) name
           | _ -> () );
@@ -2747,7 +2749,7 @@ let hkt_templates ?applied r vars tys =
       let arities = Ml_type_util.rendered_tvar_arities a in
       let demanded = Hashtbl.create 4 in
       let rec scan = function
-        | Tapply (Tvar (i, _), tys) ->
+        | Tapply (Tvar (Tv_index (i, _)), tys) ->
           if
             List.exists
               (fun t ->
@@ -3171,7 +3173,7 @@ let relax_applied_param temps decl =
       let deduce ty =
         map_cpp_type
           (fun t ->
-            match deduced t with Some id -> Tvar (0, Some id) | None -> t )
+            match deduced t with Some id -> Tvar (Tv_named id) | None -> t )
           ty
       in
       let params = List.map (fun (n, ty) -> (n, deduce ty)) params in
@@ -3183,7 +3185,7 @@ let relax_applied_param temps decl =
       let body =
         let ft =
           map_cpp_type (fun t ->
-              match lookup t with Some id -> Tvar (0, Some id) | None -> t )
+              match lookup t with Some id -> Tvar (Tv_named id) | None -> t )
         in
         let rec fe e = Minicpp.map_expr fe fs ft e
         and fs st = Minicpp.map_stmt fe fs ft st in
@@ -3229,8 +3231,8 @@ let deapply_plain_tvars temps decl =
              otherwise spelled [std::any]. *)
           let head =
             match head with
-            | Tvar (i, None) ->
-              Tvar (i, List.find_opt (fun id -> tvar_is id head) plain)
+            | Tvar (Tv_index (i, None)) ->
+              Tvar (Tv_index (i, List.find_opt (fun id -> tvar_is id head) plain))
             | _ -> head
           in
           Minicpp.rebind_plain_var ~in_scope head args )
@@ -3343,8 +3345,8 @@ let default_unmentioned_temps temps decl =
      [_P0] without renumbering them, so a variable that kept index 1 would
      otherwise answer for [T1] and no parameter would ever look unmentioned. *)
   let is_tvar id = function
-    | Tvar (_, Some n) -> Id.equal n id
-    | Tvar (i, None) -> i > 0 && Id.equal (tvar_id i) id
+    | Tvar (Tv_index (_, Some n) | Tv_named n) -> Id.equal n id
+    | Tvar (Tv_index (i, None)) -> Id.equal (tvar_id i) id
     | _ -> false
   in
   (* Only the arguments a type actually writes count: an argument in a
@@ -3525,8 +3527,8 @@ and var_subst_stmt (id : Id.t) (repl : cpp_expr) (s : cpp_stmt) =
 let tvar_subst_type (tvars : Id.t list) : cpp_type -> cpp_type =
   map_cpp_type (fun ty ->
     match ty with
-    | Tvar (i, None) ->
-      (try Tvar (i, Some (List.nth tvars (pred i))) with Failure _ -> ty)
+    | Tvar (Tv_index (i, None)) ->
+      (try Tvar (Tv_index (i, Some (List.nth tvars (pred i)))) with Failure _ -> ty)
     | _ -> ty )
 
 (** Substitute type variables in expressions and statements. Uses generic AST
@@ -4115,7 +4117,7 @@ let gen_dfun n b cty ty temps =
      qualified resolutions throughout a C++ type tree. *)
   let resolve_promoted_in_type =
     rewrite_cpp_type (function
-      | Tvar (i, _) when List.mem_assoc i hkt_tvar_resolutions ->
+      | Tvar (Tv_index (i, _)) when List.mem_assoc i hkt_tvar_resolutions ->
         Some (List.assoc i hkt_tvar_resolutions)
       | Tpromoted name as ty ->
         Some
@@ -6011,7 +6013,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
           None
         else
           let name = List.nth extended_vars (remapped - 1) in
-          Some (Tvar (remapped - 1, Some name)) )
+          Some (named_tvar name) )
       all_tvars
   in
   let stmts =
@@ -6045,7 +6047,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
   (* Compute self_type unconditionally — needed by both return-this and
      lambda-this passes. *)
   let self_type_args =
-    List.mapi (fun i vname -> Tvar (i, Some vname)) vars
+    List.map named_tvar vars
   in
   let self_type = Tglob (name, self_type_args, []) in
   let stmts =
@@ -6073,7 +6075,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
   (* Whether a type mentions the template parameter [name] anywhere. *)
   let cpp_type_has_tvar name =
     exists_cpp_type (function
-      | Tvar (_, Some n) -> Id.equal n name
+      | Tvar (Tv_index (_, Some n) | Tv_named n) -> Id.equal n name
       | _ -> false )
   in
   let extra_tvar_name_set =
@@ -6122,7 +6124,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
       let erased =
         map_cpp_type
           (function
-            | Tvar (_, Some n) when Id.Set.mem n return_only_set -> Tany
+            | Tvar (Tv_index (_, Some n) | Tv_named n) when Id.Set.mem n return_only_set -> Tany
             | t -> t )
           ret_cpp
       in
@@ -6170,7 +6172,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
   in
   let rec strip_phantom_any_cast_expr e =
     let e = match e with
-      | CPPany_cast (Tvar (_, Some name), inner) when Id.Set.mem name phantom_name_set ->
+      | CPPany_cast (Tvar (Tv_index (_, Some name) | Tv_named name), inner) when Id.Set.mem name phantom_name_set ->
         strip_phantom_any_cast_expr inner
       | _ -> e
     in
@@ -6332,7 +6334,7 @@ let gen_ind_header_v2
   let templates =
     hkt_templates name vars (List.concat (Array.to_list tys))
   in
-  let ty_vars = List.mapi (fun i x -> Tvar (i, Some x)) vars in
+  let ty_vars = List.map named_tvar vars in
 
   (* Handle empty inductives (no constructors) - generate uninhabitable
      struct *)
@@ -8122,7 +8124,7 @@ let gen_ind_header_v2
                   vars
               in
               let u_tys =
-                List.mapi (fun i x -> Tvar (i, Some x)) u_var_names
+                List.map named_tvar u_var_names
               in
               let source_ty = Tglob (name, u_tys, []) in
               let n_ctors = Array.length cnames in
@@ -8185,9 +8187,9 @@ let gen_ind_header_v2
                         in
                         map_cpp_type
                           (function
-                            | (Tvar (_, Some id) | Tpromoted id) as t -> (
+                            | (Tvar (Tv_index (_, Some id) | Tv_named id) | Tpromoted id) as t -> (
                               match name_at id with
-                              | Some u -> Tvar (0, Some u)
+                              | Some u -> Tvar (Tv_named u)
                               | None -> t )
                             | t -> t )
                           t

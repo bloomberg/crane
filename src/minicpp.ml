@@ -117,8 +117,10 @@ type inline_template = {
 
 type erased_kind = Ek_type | Ek_prop | Ek_implicit
 
+type tvar = Tv_index of int * Id.t option | Tv_named of Id.t
+
 type cpp_type =
-  | Tvar of int * Id.t option
+  | Tvar of tvar
   | Tinstance of Id.t * GlobRef.t
     (* A type-class instance template parameter ([_tcI0]) and the class it is
        constrained by.  Types qualified under it ([typename _tcI0::M]) are
@@ -868,7 +870,8 @@ let abstract_cpp_type ~over ty =
       false
     (* A type variable is its index; the name beside it is a spelling hint one
        side may not have been given. *)
-    | Tvar (i, _), Tvar (j, _) -> i = j
+    | Tvar (Tv_index (i, _)), Tvar (Tv_index (j, _)) -> i = j
+    | Tvar (Tv_named x), Tvar (Tv_named y) -> Id.equal x y
     | _ -> a = b
   in
   let abstracted =
@@ -982,7 +985,7 @@ let recurry_to_opt n ty =
   let recurried = recurry_to n ty in
   if recurried = ty then None else Some recurried
 
-(** [subst_cpp_tvars sub ty] replaces every [Tvar (i, _)] in [ty] by
+(** [subst_cpp_tvars sub ty] replaces every [Tvar (Tv_index (i, _))] in [ty] by
     [sub i], leaving the substituted type alone.
 
     Unlike {!map_cpp_type}, the replacement is {e not} traversed again, so a
@@ -991,7 +994,8 @@ let recurry_to_opt n ty =
 let rec subst_cpp_tvars (sub : int -> cpp_type option) (ty : cpp_type) : cpp_type =
   let go = subst_cpp_tvars sub in
   match ty with
-  | Tvar (i, _) -> ( match sub i with Some t -> t | None -> ty )
+  | Tvar (Tv_index (i, _)) -> ( match sub i with Some t -> t | None -> ty )
+  | Tvar (Tv_named _) -> ty
   | Tglob (r, tys, args) -> Tglob (r, List.map go tys, args)
   | Tid (id, tys) -> Tid (id, List.map go tys)
   | Tid_external (id, tys) -> Tid_external (id, List.map go tys)
@@ -1119,7 +1123,19 @@ let mk_apply ?yields ?params fn args =
     parameter, a typeclass carrier, a function-typed parameter's [F] -- so the
     name is the whole of it.  Written through here rather than as a literal so
     that "index 0 means unnumbered" is stated once. *)
-let named_tvar x = Tvar (0, Some x)
+let named_tvar x = Tvar (Tv_named x)
+
+(** The [i]th (from 1) type variable of the enclosing parameter list, under
+    [name] where its parameter's name is known. *)
+let tvar_at ?name i = Tvar (Tv_index (i, name))
+
+(** The name a type variable is written under, where one is known. *)
+let tvar_hint = function Tv_index (_, n) -> n | Tv_named x -> Some x
+
+(** The name a type variable is written under: its parameter's, or [T<i>]. *)
+let tvar_spelled = function
+  | Tv_index (_, Some n) | Tv_named n -> n
+  | Tv_index (i, None) -> Id.of_string ("T" ^ string_of_int i)
 
 (** The spelling of the type variable at index [i] in a declaration's
     parameter list.  The one place the convention is written down; re-exported
@@ -1132,9 +1148,10 @@ let tvar_id i = Id.of_string (tvar_spelling i)
     always resolved to its parameter name, so a tvar answers to either
     spelling; cf. {!Gen_decls.applied_tvar_arities}. *)
 let tvar_is id = function
-  | Tvar (i, name) ->
+  | Tvar (Tv_named n) -> Id.equal n id
+  | Tvar (Tv_index (i, name)) ->
     (match name with Some n -> Id.equal n id | None -> false)
-    || (i > 0 && Id.equal (tvar_id i) id)
+    || Id.equal (tvar_id i) id
   | _ -> false
 
 (** Whether [ty] names the type variable [id] anywhere. *)
@@ -1142,8 +1159,8 @@ let tvar_named id ty = exists_cpp_type (tvar_is id) ty
 
 (** The name a tvar goes by, whether or not its head was resolved. *)
 let tvar_name = function
-  | Tvar (_, Some n) -> Some n
-  | Tvar (i, None) when i > 0 -> Some (tvar_id i)
+  | Tvar (Tv_index (_, Some n) | Tv_named n) -> Some n
+  | Tvar (Tv_index (i, None)) -> Some (tvar_id i)
   | _ -> None
 
 (** Every type variable [ty] names.
@@ -1198,9 +1215,10 @@ let tvar_spellings ty =
     (exists_cpp_type
        (fun t ->
          ( match t with
-         | Tvar (i, name) ->
+         | Tvar (Tv_named n) -> acc := Id.Set.add n !acc
+         | Tvar (Tv_index (i, name)) ->
            Option.iter (fun n -> acc := Id.Set.add n !acc) name;
-           if i > 0 then acc := Id.Set.add (tvar_id i) !acc
+           acc := Id.Set.add (tvar_id i) !acc
          | _ -> () );
          false )
        ty );
@@ -1496,7 +1514,7 @@ let erased_into_storage_tparam ~params body =
   if Id.Set.is_empty stored then fun _ -> false
   else fun id ->
     let names = function
-      | Tvar (_, Some n) | Tid (n, _) -> Id.equal n id
+      | Tvar (Tv_index (_, Some n) | Tv_named n) | Tid (n, _) -> Id.equal n id
       | Tid_external (n, _) -> String.equal n (Id.to_string id)
       | _ -> false
     in
@@ -1910,7 +1928,7 @@ let drop_tparams ids l =
   match ids with
   | [] -> l
   | ids ->
-    (* Matched with {!tvar_is} rather than on [Tvar (_, Some n)]: a variable
+    (* Matched with {!tvar_is} rather than on [Tvar (Tv_index (_, Some n) | Tv_named n)]: a variable
        whose head was never resolved to its parameter name still prints as
        [T2], and erasing only the named spelling leaves the other one behind
        as a free name. *)
