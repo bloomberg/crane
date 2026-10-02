@@ -759,166 +759,15 @@ let rewrite_state_threading_moves
   let new_body = List.map (rewrite_stmt (fun _ -> None)) body in
   (new_ids, new_body)
 
-(** Render a simple C++ expression to a string for use in raw C++ fragments.
-    Returns [None] for compound expressions that cannot be reduced to a
-    simple identifier or dereference chain. *)
-let rec render_cpp_expr_simple = function
-  | CPPvar id -> Some (Id.to_string id)
-  | CPPthis -> Some "this"
-  | CPPderef e ->
-    Option.map (fun s -> "(*" ^ s ^ ")") (render_cpp_expr_simple e)
-  | CPPget (e, field) ->
-    Option.map (fun s -> s ^ "." ^ Id.to_string field)
-      (render_cpp_expr_simple e)
-  | CPPget' (e, field_ref, _) ->
-    Option.map (fun s -> s ^ "." ^ Common.pp_global_name Type field_ref)
-      (render_cpp_expr_simple e)
-  | CPPaccess (Adot, e, field) ->
-    Option.map (fun s -> s ^ "." ^ Id.to_string field)
-      (render_cpp_expr_simple e)
-  | CPPaccess_call (Adot, e, method_id, []) ->
-    Option.map (fun s -> s ^ "." ^ Id.to_string method_id ^ "()")
-      (render_cpp_expr_simple e)
-  | CPPaccess (Aarrow, e, field) ->
-    Option.map (fun s -> s ^ "->" ^ Id.to_string field)
-      (render_cpp_expr_simple e)
-  | CPPaccess_call (Aarrow, e, method_id, []) ->
-    Option.map (fun s -> s ^ "->" ^ Id.to_string method_id ^ "()")
-      (render_cpp_expr_simple e)
-  | CPPnullptr -> Some "nullptr"
-  | CPPraw s -> Some s
-  | _ -> None
-
 (** [is_access_path e] -- [e] is a chain of variable reads, dereferences,
     field selections and nullary accessors, so naming it twice in one
-    expression duplicates no work and no side effect.
-
-    This used to be [render_cpp_expr_simple e <> None].  The two questions
-    ("can I spell this as a string?" and "is this free to duplicate?") happen
-    to have the same answer over most of the AST, but they are not the same
-    question: {!CPPraw} is renderable by definition and duplicable only if the
-    snippet inside it happens to be, so a shared definition is wrong for one
-    caller or the other as soon as either grows a case. *)
+    expression duplicates no work and no side effect. *)
 let rec is_access_path = function
   | CPPvar _ | CPPthis | CPPnullptr -> true
   | CPPderef e | CPPget (e, _) | CPPget' (e, _, _) | CPPaccess (_, e, _) ->
     is_access_path e
   | CPPaccess_call (_, e, _, []) -> is_access_path e
   | _ -> false
-
-(** Substitute placeholders in a Crane template string.
-    Recognises: [%scrut], [%t{i}], [%b{i}a{j}], [%br{i}], [%a{i}].
-    [scrut]: replacement for [%scrut].
-    [types]: indexed list for [%t0], [%t1], …
-    [bindings]: 2-D array; [bindings.(i).(j)] replaces [%b{i}a{j}].
-    [branches]: indexed list for [%br0], [%br1], …
-    [args]: indexed list for [%a0], [%a1], … *)
-let subst_template tmpl ~scrut ~types ~bindings ~branches ~args =
-  let buf = Buffer.create (String.length tmpl * 2) in
-  let n = String.length tmpl in
-  let i = ref 0 in
-  let read_int_at s start =
-    let j = ref start in
-    while !j < String.length s && s.[!j] >= '0' && s.[!j] <= '9' do incr j done;
-    if !j = start then None
-    else Some (int_of_string (String.sub s start (!j - start)), !j)
-  in
-  while !i < n do
-    if tmpl.[!i] = '%' && !i + 1 < n then begin
-      let rest_start = !i + 1 in
-      let rest = String.sub tmpl rest_start (n - rest_start) in
-      let matched = ref false in
-      if not !matched && String.length rest >= 5 && String.sub rest 0 5 = "scrut" then begin
-        Buffer.add_string buf scrut;
-        i := rest_start + 5; matched := true
-      end;
-      if not !matched && rest.[0] = 'b' && String.length rest > 1 then begin
-        match read_int_at rest 1 with
-        | Some (bi, k) when k < String.length rest && rest.[k] = 'a' ->
-          (match read_int_at rest (k + 1) with
-           | Some (ai, k2) ->
-             (try Buffer.add_string buf bindings.(bi).(ai);
-                  i := rest_start + k2; matched := true
-              with Invalid_argument _ -> ())
-           | None -> ())
-        | _ -> ()
-      end;
-      if not !matched && String.length rest >= 2 && rest.[0] = 'b' && rest.[1] = 'r' then begin
-        match read_int_at rest 2 with
-        | Some (idx, k) ->
-          (try Buffer.add_string buf (List.nth branches idx);
-               i := rest_start + k; matched := true
-           with Failure _ -> ())
-        | None -> ()
-      end;
-      if not !matched && rest.[0] = 't' then begin
-        match read_int_at rest 1 with
-        | Some (idx, k) ->
-          (try Buffer.add_string buf (List.nth types idx);
-               i := rest_start + k; matched := true
-           with Failure _ -> ())
-        | None -> ()
-      end;
-      if not !matched && rest.[0] = 'a' then begin
-        match read_int_at rest 1 with
-        | Some (idx, k) ->
-          (try Buffer.add_string buf (List.nth args idx);
-               i := rest_start + k; matched := true
-           with Failure _ -> ())
-        | None -> ()
-      end;
-      if not !matched then begin Buffer.add_char buf '%'; incr i end
-    end else begin
-      Buffer.add_char buf tmpl.[!i]; incr i
-    end
-  done;
-  Buffer.contents buf
-
-(** Generate an inline C++ expression that converts [expr] from [src_ty] to
-    [dst_ty].  Used at every boundary between the storage representation
-    (where recursive fields are [shared_ptr]-wrapped) and the API
-    representation (where they are bare values).
-
-    Conversion cases:
-    - [shared_ptr<S> -> shared_ptr<T>]: null-check, dereference, make_shared
-    - [shared_ptr<T> -> T]: dereference (converting ctor if inner ≠ dst)
-    - [T -> shared_ptr<T>]: wrap in make_shared
-    - [C<shared_ptr<T>,...> -> C<T,...>]: non-recursive custom type, template-derived
-    - [Tglob(g, ts1) -> Tglob(g, ts2)]: same container, different elements
-    - Everything else (type variables, scalars): converting constructor
-
-    Type strings for the [CPPraw]-based converting constructors go through
-    {!render_cpp_type_in_template}, so that they are spelled the way the
-    printer spells the same types in the code around them.
-
-    @param skip    predicate for GlobRefs to skip during qualification
-    @param src_ty  the source C++ type
-    @param dst_ty  the destination C++ type
-    @param expr    the C++ expression to convert
-    @return a [cpp_expr] that produces a value of type [dst_ty] *)
-
-(** Replace all occurrences of ["return "] with ["var_name = "] in a raw C++
-    body string.  Safe because the only ["return "] substrings in
-    template-expanded match bodies come from our own branch generation
-    (["return " ^ ctor_s ^ ";"]) — no string literals or nested lambdas. *)
-let replace_return_with_assign s var_name =
-  let ret = "return " in
-  let rlen = String.length ret in
-  let repl = var_name ^ " = " in
-  let buf = Buffer.create (String.length s) in
-  let n = String.length s in
-  let rec go i =
-    if i >= n then ()
-    else if i + rlen <= n && String.sub s i rlen = ret then begin
-      Buffer.add_string buf repl;
-      go (i + rlen)
-    end else begin
-      Buffer.add_char buf s.[i];
-      go (i + 1)
-    end
-  in
-  go 0;
-  Buffer.contents buf
 
 (** When [expr] is a single-argument IIFE
     [CPPfun_call(CPPlambda
@@ -945,10 +794,8 @@ let lift_iife_assignment target_var (target_ty : cpp_type option) expr =
           cl_capture = Immediate },
       {rev = [arg]}) ->
     let actual_ty = match target_ty with Some t -> t | None -> ret_ty in
-    let tv_s = Id.to_string target_var in
     let lifted_body = List.map (function
       | Sreturn (Some e) -> Sasgn (target_var, Existing, e)
-      | Sraw s -> Sraw (replace_return_with_assign s tv_s)
       | s -> s
     ) body in
     Some (Sdecl_init (target_var, actual_ty)
@@ -1052,13 +899,30 @@ let recover_pattern_var_types_from_scrutinee ~ctor (typ : ml_type) ids =
       ids
   | _ -> ids
 
-let rec gen_type_conversion_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
+(** Generate an inline C++ expression that converts [expr] from [src_ty] to
+    [dst_ty].  Used at every boundary between the storage representation
+    (where recursive fields are [shared_ptr]-wrapped) and the API
+    representation (where they are bare values).
+
+    Conversion cases:
+    - [shared_ptr<S> -> shared_ptr<T>]: null-check, dereference, make_shared
+    - [shared_ptr<T> -> T]: dereference (converting ctor if inner ≠ dst)
+    - [T -> shared_ptr<T>]: wrap in make_shared
+    - [Tglob(g, ts1) -> Tglob(g, ts2)]: same container, different elements
+    - Everything else (type variables, scalars): converting constructor
+
+    @param skip    predicate for GlobRefs to skip during qualification
+    @param src_ty  the source C++ type
+    @param dst_ty  the destination C++ type
+    @param expr    the C++ expression to convert
+    @return a [cpp_expr] that produces a value of type [dst_ty] *)
+
+let gen_type_conversion_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
   (* Every type rendered here lands in a raw string inside a template body
      (a converting constructor, a [make_shared<...>] argument), so it must be
      spelled exactly as the printer spells the same type in the surrounding
      generated code -- hence the real printer rather than the eager
      approximation. *)
-  let render ty = render_cpp_type_in_template (qualify_inductives ~skip ty) in
   (* Strip a single [Tnamespace] wrapper when it matches the inner [Tglob].
      [convert_ml_type_to_cpp_type] wraps external inductives as
      [Tnamespace(g, Tglob(g,...))] for qualified rendering, but for pattern
@@ -1074,108 +938,6 @@ let rec gen_type_conversion_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
      qualification and typename keywords. *)
   let orig_dst_ty = dst_ty in
   let src_ty = strip_ns src_ty and dst_ty = strip_ns dst_ty in
-  (* String-level type conversion for template substitution contexts.
-     Fast-paths the common Tshared_ptr wrap/unwrap cases, and falls back to
-     gen_type_conversion_expr for complex conversions (rendering the result
-     to a string, or returning the original binding if unrenderable). *)
-  let convert_arg_str binding src_inner dst_inner =
-    if src_inner = dst_inner then binding
-    else
-      let src_s = strip_ns src_inner and dst_s = strip_ns dst_inner in
-      match (src_s, dst_s) with
-      | _, Tshared_ptr inner ->
-        (* T → shared_ptr<T>: wrap with make_shared *)
-        require_header "memory";
-        Table.make_shared_name () ^ "<" ^ render inner ^ ">(" ^ binding ^ ")"
-      | Tshared_ptr _, _ ->
-        (* shared_ptr<T> → T: dereference *)
-        "(*" ^ binding ^ ")"
-      | _ ->
-        (* Fallback: use recursive gen_type_conversion_expr and try to render *)
-        let conv = gen_type_conversion_expr ~skip
-          ~src_ty:src_inner ~dst_ty:dst_inner (CPPraw binding) in
-        (match render_cpp_expr_simple conv with
-         | Some s -> s
-         | None -> binding)
-  in
-  (* Apply a Table.accessor to a C++ expression, producing a field
-     access ([CPPaccess]) or pointer dereference ([CPPderef]). *)
-  let apply_accessor acc e =
-    match (acc : Table.accessor) with
-    | AccMember f -> CPPaccess (Adot, e, Id.of_string f)
-    | AccDeref -> CPPderef e
-  in
-  (* Generate a conversion expression for a non-recursive custom type whose
-     source and destination differ only in type arguments (e.g.
-     optional<shared_ptr<T>> → optional<T>).  Uses the type's registered
-     Crane Extract Inductive match and constructor templates.
-
-     For single-constructor types with recognized accessors (e.g. pair), the
-     conversion is inlined as a pure expression.  For multi-constructor types
-     (e.g. option), the template-expanded body is wrapped in an IIFE with the
-     scrutinee bound as a lambda parameter. *)
-  let gen_custom_type_conversion g src_ts dst_ts orig_dst_ty' inner_expr =
-    (* The guard in gen_type_conversion_expr guarantees g is an IndRef. *)
-    let ip = match g with GlobRef.IndRef ip -> ip
-      | _ -> CErrors.anomaly (Pp.str "gen_custom_type_conversion: expected IndRef") in
-    match Table.find_custom_match_by_ref g with
-    | None ->
-      Cpp_erasure.converting_ctor orig_dst_ty' [inner_expr]
-    | Some match_tmpl ->
-      let ctor_tmpls = Table.find_custom_ctor_templates ip in
-      let src_type_strs = List.map render src_ts in
-      let dst_type_strs = List.map render dst_ts in
-      let n_branches = List.length ctor_tmpls in
-      let n_args = List.length src_ts in
-      List.iter require_header (Table.get_ref_import_list g);
-      let try_inline () =
-        match Table.find_custom_accessors g with
-        | Some accs when List.length accs = n_args ->
-          let proj_exprs = List.map (fun acc ->
-            apply_accessor acc inner_expr
-          ) accs in
-          let conv_exprs = List.mapi (fun j proj ->
-            gen_type_conversion_expr ~skip
-              ~src_ty:(List.nth src_ts j) ~dst_ty:(List.nth dst_ts j) proj
-          ) proj_exprs in
-          let arg_strs = List.map render_cpp_expr_simple conv_exprs in
-          if List.for_all (fun x -> x <> None) arg_strs then
-            let arg_strs = List.filter_map Fun.id arg_strs in
-            let result = subst_template (List.hd ctor_tmpls)
-              ~scrut:"" ~types:dst_type_strs ~bindings:[||] ~branches:[]
-              ~args:arg_strs in
-            Some (CPPraw result)
-          else None
-        | _ -> None
-      in
-      match try_inline () with
-      | Some e -> e
-      | None ->
-        let bindings = Array.init n_branches (fun i ->
-          Array.init n_args (fun j -> Printf.sprintf "_cv%d_%d" i j)
-        ) in
-        let branches = List.mapi (fun i ctor_tmpl ->
-          let arg_strs = List.mapi (fun j _ ->
-            convert_arg_str bindings.(i).(j)
-              (List.nth src_ts j) (List.nth dst_ts j)
-          ) dst_ts in
-          let ctor_s = subst_template ctor_tmpl
-            ~scrut:"" ~types:dst_type_strs ~bindings:[||] ~branches:[]
-            ~args:arg_strs in
-          "return " ^ ctor_s ^ ";"
-        ) ctor_tmpls in
-        let scrut_id = Id.of_string "__cv" in
-        let body = subst_template match_tmpl
-          ~scrut:(Id.to_string scrut_id) ~types:src_type_strs
-          ~bindings:bindings ~branches:branches ~args:[] in
-        mk_call
-          (mk_lambda
-             [(Tconst (Tref (Lvalue, Tauto)), Some scrut_id)]
-             (Some (qualify_inductives ~skip orig_dst_ty'))
-             [Sraw body]
-             ~capture:Immediate )
-          [inner_expr]
-  in
   (* Build an expression that names [expr] twice.  An access path can simply
      be repeated; anything else is bound once as the parameter of an
      immediately-applied lambda, so that its effects happen once.
@@ -1233,20 +995,6 @@ let rec gen_type_conversion_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
       else Cpp_erasure.converting_ctor orig_dst_ty [derefed]
     | _, Tshared_ptr inner ->
       mk_call (CPPalloc (Alloc_heap, inner)) [expr]
-    | Tglob (g1, src_ts, _), Tglob (g2, dst_ts, _)
-      when GlobRef.CanOrd.equal g1 g2
-           && Table.is_custom g1
-           && not (Table.has_recursive_fields g1)
-           && src_ts <> dst_ts
-           (* Only use template-derived conversion when at least one type arg
-              pair differs in shared_ptr wrapping.  Pure Tvar→Tvar differences
-              (e.g. in template converting constructors) are handled by the
-              simpler CPPconverting_ctor fallback below. *)
-           && List.exists2 (fun s d -> s <> d
-                && (match s with Tshared_ptr _ -> true | _ ->
-                    match d with Tshared_ptr _ -> true | _ -> false))
-                src_ts dst_ts ->
-      gen_custom_type_conversion g1 src_ts dst_ts orig_dst_ty expr
     | Tglob (g1, _src_ts, _), Tglob (g2, _dst_ts, _)
       when GlobRef.CanOrd.equal g1 g2 && _src_ts <> _dst_ts
            && not (Table.is_inline_custom g1) ->
