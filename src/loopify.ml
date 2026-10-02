@@ -154,20 +154,6 @@ let rec list_drop n = function
   | _ :: xs -> list_drop (n - 1) xs
 let list_remove_at idx xs = List.filteri (fun i _ -> i <> idx) xs
 
-(** [combine_exn ~what l1 l2] is [List.combine] but raises a descriptive
-    [CErrors.anomaly] instead of a bare [Invalid_argument] when the two lists
-    differ in length. These sites pair up structurally-parallel lists (masks,
-    params/args, saved exprs/types) whose lengths are an internal invariant, so a
-    mismatch is a compiler bug worth naming rather than an opaque backtrace. *)
-let combine_exn ~what l1 l2 =
-  let n1 = List.length l1 and n2 = List.length l2 in
-  if n1 <> n2 then
-    CErrors.anomaly
-      (Pp.str
-         (Printf.sprintf "loopify: %s expects equal-length lists (%d vs %d)"
-            what n1 n2));
-  List.combine l1 l2
-
 (** [map2_exn ~what f l1 l2] is [List.map2] with the same descriptive-error
     contract as {!combine_exn}. *)
 let map2_exn ~what f l1 l2 =
@@ -1828,21 +1814,12 @@ let make_shadow_updates shadow_params args =
     tail recursion assigns [_result] and breaks, while TMC patches a write
     pointer or allocates cells with holes.
 
-    We factor out the shared traversal into a pair of generic rewriters —
-    {!generic_rewrite_lambda_return} for match-branch bodies and
-    {!generic_rewrite_stmt}/{!generic_rewrite_stmts} for top-level
-    statements — parameterised by a {!loop_rewrite_config} record that
-    captures the behavioural differences. *)
+    We factor out the shared traversal into a generic rewriter --
+    {!generic_rewrite_stmt}/{!generic_rewrite_stmts} -- parameterised by a
+    {!top_rewrite_config} record that captures the behavioural differences. *)
 
-(** Configuration for the generic inner-lambda return rewriter.
-
-    Two instantiations exist:
-    - {b Tail recursion}: [rc_on_other_return] assigns [_result] and breaks,
-      [rc_rewrite_if] emits a plain [Sif], [rc_rewrite_match_branch] is
-      [Fun.id].
-    - {b TMC}: [rc_on_other_return] dispatches on call count (base cases
-      patch the write pointer; TMC branches allocate cells), [rc_rewrite_if]
-      emits a plain [Sif], [rc_rewrite_match_branch] is [Fun.id]. *)
+(** What the tail and TMC rewrites share: how recursive calls are recognised
+    and which parameters vary. *)
 type loop_rewrite_config = {
   rc_check : call_checker;
   (** Identifies recursive calls.  Returns [Some call_site] for a direct
@@ -1855,23 +1832,6 @@ type loop_rewrite_config = {
   rc_shadow_params : (Id.t * cpp_type) list;
   (** Shadow variable bindings [(name, type)] for varying parameters.
       Used by {!make_shadow_updates} when rewriting tail calls. *)
-
-  rc_on_other_return : cpp_expr -> cpp_stmt list;
-  (** Emit code for a non-tail-call return ([rc_check] returned [None]).
-      - Tail: {!assign_result_and_stop} (return directly).
-      - TMC inner: dispatch on call count — base cases patch the write
-        pointer and break; TMC branches allocate cells with holes.
-      - TMC top: same but appends [Scontinue] after TMC branches. *)
-
-  rc_rewrite_if : cpp_expr -> cpp_stmt list -> cpp_stmt list -> cpp_stmt list;
-  (** How to rewrite an [Sif] whose branches have been recursively processed.
-      - Tail: [fun c t e -> [Sif (c, t, e)]] — plain [Sif].
-      - TMC: also a plain [Sif]. *)
-
-  rc_rewrite_match_branch : smatch_branch -> smatch_branch;
-  (** Transform a match branch before recursing into its body.
-      - Tail: {!Fun.id} — no transformation.
-      - TMC: also {!Fun.id}. *)
 }
 
 (** Top-level rewrite configuration.  Combines a {!loop_rewrite_config}
@@ -1890,8 +1850,7 @@ type top_rewrite_config = {
       Wraps in [Sblock] as needed. *)
 
   trc_rewrite_branch : smatch_branch -> smatch_branch;
-  (** Transform a match branch at the top level.  In practice the same
-      as [trc_inner.rc_rewrite_match_branch]. *)
+  (** Transform a match branch at the top level. *)
 
   trc_detect_void_tail : bool;
   (** Whether to detect the void tail-call pattern
@@ -1899,49 +1858,6 @@ type top_rewrite_config = {
       [Sreturn (Some call)].  Enabled for plain tail recursion; disabled
       for TMC. *)
 }
-
-(** Generic inner-lambda return rewriter.
-
-    Walks the structure of a single statement, descending into [Sif],
-    [Scustom_case], [Smatch] and [Sblock].
-    Returns a list of statements because the rewritten form may expand one
-    statement into several (e.g. a return becomes multiple shadow-variable
-    assignments).
-
-    For [Sreturn (Some e)]:
-    - If [rc_check e] identifies a recursive call, emits shadow-variable
-      updates via {!make_shadow_updates}.
-    - Otherwise, delegates to [rc_on_other_return]. *)
-let rec generic_rewrite_lambda_return rc = function
-  | Sreturn (Some e) ->
-    ( match rc.rc_check e with
-    | Some cs ->
-      make_shadow_updates rc.rc_shadow_params
-        (filter_by_mask rc.rc_varying cs.cs_args)
-    | None -> rc.rc_on_other_return e )
-  | Sif (cond, then_br, else_br) ->
-    let rw = generic_rewrite_lambda_return rc in
-    rc.rc_rewrite_if cond
-      (List.concat_map rw then_br) (List.concat_map rw else_br)
-  | Scustom_case (ty, scrut, tyargs, branches, err) ->
-    let rw = generic_rewrite_lambda_return rc in
-    [Scustom_case (ty, scrut, tyargs,
-       List.map
-         (fun (ps, ret_ty, body) -> (ps, ret_ty, List.concat_map rw body))
-         branches, err)]
-  | Smatch (scrut, branches, default) ->
-    let rw = generic_rewrite_lambda_return rc in
-    [Smatch (
-       scrut,
-       List.map
-         (fun br ->
-           let br' = rc.rc_rewrite_match_branch br in
-           { br' with smb_body = List.concat_map rw br'.smb_body })
-         branches,
-       Option.map (List.concat_map rw) default)]
-  | Sblock stmts ->
-    [Sblock (List.concat_map (generic_rewrite_lambda_return rc) stmts)]
-  | s -> [s]
 
 (** Generic top-level statement rewriter.
 
@@ -2019,10 +1935,7 @@ let rewrite_visit_stmts check varying shadow_params =
   let inner_rc =
     { rc_check = check;
       rc_varying = varying;
-      rc_shadow_params = shadow_params;
-      rc_on_other_return = assign_result_and_stop;
-      rc_rewrite_if = (fun c t e -> [Sif (c, t, e)]);
-      rc_rewrite_match_branch = Fun.id }
+      rc_shadow_params = shadow_params }
   in
   generic_rewrite_stmts
     { trc_inner = inner_rc;
@@ -3712,10 +3625,7 @@ let rewrite_tmc_visit_stmt ?(cursor_used = ref false) ~vt_ret check ti
   let inner_rc =
     { rc_check = check;
       rc_varying = varying;
-      rc_shadow_params = shadow_params;
-      rc_on_other_return = tmc_on_other_return ~suffix:[];
-      rc_rewrite_if = (fun c t e -> [Sif (c, t, e)]);
-      rc_rewrite_match_branch = Fun.id }
+      rc_shadow_params = shadow_params }
   in
   generic_rewrite_stmt
     { trc_inner = inner_rc;
@@ -3988,21 +3898,6 @@ let rec collect_binding_env (stmts : cpp_stmt list) : (Id.t * cpp_expr) list =
       | _ -> [])
     stmts
 
-(** Collect typed bindings from lambda params. *)
-let type_env_of_lambda_params (params : (cpp_type * Id.t option) list) :
-    (Id.t * cpp_type) list =
-  List.filter_map
-    (fun (ty, id_opt) ->
-      match id_opt with
-      | Some id -> Some (id, ty)
-      | None -> None )
-    params
-
-(** Combine lambda parameter types, body declarations, and outer env
-    into a single type environment. *)
-let build_lambda_env lparams body env =
-  type_env_of_lambda_params lparams @ collect_type_env body @ env
-
 (** Look up a variable's type in the environment. *)
 let lookup_var_type env id = List.assoc_opt id env
 
@@ -4220,52 +4115,6 @@ let collect_branch_free_vars branches =
       List.filter (fun id -> not (List.exists (Id.equal id) pat_bound)) all_vars )
     branches
   |> List.sort_uniq Id.compare
-
-(** Rewrite a Scustom_case branch's returns to assign to _result instead. *)
-let rec rewrite_returns_to_result = function
-  | Sreturn (Some e) -> assign_result e
-  | Sif (c, t, f) ->
-    [
-      Sif
-        ( c,
-          List.concat_map rewrite_returns_to_result t,
-          List.concat_map rewrite_returns_to_result f );
-    ]
-  | Scustom_case (ty, scrut, tyargs, branches, err) ->
-    [
-      Scustom_case
-        ( ty,
-          scrut,
-          tyargs,
-          List.map
-            (fun (ps, ret_ty2, body) ->
-              (ps, ret_ty2, List.concat_map rewrite_returns_to_result body) )
-            branches,
-          err );
-    ]
-  | Sswitch (scrut, ty, branches, default) ->
-    [
-      Sswitch
-        ( scrut,
-          ty,
-          List.map
-            (fun (lbl, body) ->
-              (lbl, List.concat_map rewrite_returns_to_result body) )
-            branches,
-          default );
-    ]
-  | Smatch (scrut, branches, default) ->
-    [
-      Smatch
-        ( scrut,
-          List.map
-            (fun br ->
-              { br with smb_body = List.concat_map rewrite_returns_to_result br.smb_body })
-            branches,
-          Option.map (List.concat_map rewrite_returns_to_result) default );
-    ]
-  | Sblock ss -> [Sblock (List.concat_map rewrite_returns_to_result ss)]
-  | s -> [s]
 
 (** {3 Continuation variable helpers}
 
@@ -4487,99 +4336,6 @@ let infer_saved_types tparams env exprs =
   List.map
     (fun e -> Option.default Tunresolved (infer_saved_type tparams env e))
     exprs
-
-(** Check whether any saved expression would decompose into a [shared_ptr]
-    field in a frame struct.  Such fields drive the pointer-safe frame
-    optimization: they are stored as raw [T*] extracted via [.get()], so the
-    surrounding code must use [.get()] when pushing them. *)
-let saved_exprs_contain_shared_ptr tparams env exprs =
-  infer_saved_types tparams env exprs |> List.exists contains_shared_ptr
-
-(** Return [true] when decomposing [expr] into stack frames would require
-    saving a [shared_ptr]-typed sub-expression.  This is used as a guard to
-    fall back to inline execution instead of frame-based loopification,
-    because [shared_ptr] fields in pointer-safe frames require [.get()] at
-    push sites, which may not be available when the owner is still live.
-
-    The check walks into all sub-expressions, lambda bodies, and branches. *)
-let rec expr_has_unique_owner_decomposition check tparams env expr =
-  let has_saved_unique saved = saved_exprs_contain_shared_ptr tparams env saved in
-  let self =
-    match count_calls_expr check expr with
-    | 1 ->
-      ( match decompose_single_call check expr with
-      | Some d -> has_saved_unique d.d_saved
-      | None -> false )
-    | n when n >= 2 ->
-      ( match decompose_double_call check expr with
-      | Some dd -> has_saved_unique dd.dd_saved
-      | None -> false )
-    | _ -> false
-  in
-  self
-  ||
-  (try
-    iter_expr_children
-      ~on_expr:(fun e' ->
-        if expr_has_unique_owner_decomposition check tparams env e' then raise Exit)
-      ~on_stmts:(fun body ->
-        if body_has_unique_owner_decomposition check tparams env body then raise Exit)
-      expr;
-    false
-  with Exit -> true)
-
-and stmt_has_unique_owner_decomposition check tparams env = function
-  | Sreturn (Some e) | Sexpr e | Sasgn (_, _, e) ->
-    expr_has_unique_owner_decomposition check tparams env e
-  | Sassign_expr (lhs, e) ->
-    expr_has_unique_owner_decomposition check tparams env lhs
-    || expr_has_unique_owner_decomposition check tparams env e
-  | Sif_constexpr (_, then_br, else_br) ->
-    body_has_unique_owner_decomposition check tparams env then_br
-    || body_has_unique_owner_decomposition check tparams env else_br
-  | Sif (cond, then_br, else_br) ->
-    expr_has_unique_owner_decomposition check tparams env cond
-    || body_has_unique_owner_decomposition check tparams env then_br
-    || body_has_unique_owner_decomposition check tparams env else_br
-  | Sif_decl (_, _, init, then_br, else_br) ->
-    expr_has_unique_owner_decomposition check tparams env init
-    || body_has_unique_owner_decomposition check tparams env then_br
-    || body_has_unique_owner_decomposition check tparams env else_br
-  | Sswitch (scrut, _, branches, default) ->
-    expr_has_unique_owner_decomposition check tparams env scrut
-    || List.exists
-         (fun (_, body) -> body_has_unique_owner_decomposition check tparams env body)
-         branches
-    || (match default with
-       | Some body -> body_has_unique_owner_decomposition check tparams env body
-       | None -> false)
-  | Scustom_case (_, scrut, _, branches, _) ->
-    expr_has_unique_owner_decomposition check tparams env scrut
-    || List.exists
-         (fun (_, _, body) ->
-           body_has_unique_owner_decomposition check tparams env body)
-         branches
-  | Smatch (scrut, branches, default) ->
-    expr_has_unique_owner_decomposition check tparams env scrut.sc_expr
-    || List.exists
-      (fun br ->
-        List.exists
-             (expr_has_unique_owner_decomposition check tparams env)
-             br.smb_extra_conds
-        || body_has_unique_owner_decomposition check tparams env br.smb_body)
-      branches
-    || (match default with
-       | Some body -> body_has_unique_owner_decomposition check tparams env body
-       | None -> false)
-  | Sblock body | Swhile (_, body) | Sfor_range (_, _, body) ->
-    body_has_unique_owner_decomposition check tparams env body
-  | Sblock_custom (_, _, _, _, args, _) ->
-    List.exists (expr_has_unique_owner_decomposition check tparams env) args
-  | Sreturn None | Sdecl _ | Sthrow _ | Sassert _ | Sraw _ | Scomment _
-  | Sstruct_def _ | Susing _ | Sdecl_init _ | Scontinue | Sbreak -> false
-
-and body_has_unique_owner_decomposition check tparams env body =
-  List.exists (stmt_has_unique_owner_decomposition check tparams env) body
 
 (** Build a decompose_single_call handler body: reads saved values from [_f._sN]
     and _result, reconstructs the expression. *)

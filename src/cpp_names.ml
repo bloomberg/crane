@@ -19,8 +19,6 @@
 open Pp
 open Names
 open Table
-open Miniml
-open Modutil
 open Common
 open Minicpp
 open Cpp_state

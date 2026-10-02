@@ -232,11 +232,6 @@ let rec type_scheme_nb_args env sg c =
     if is_info_scheme env sg t then n + 1 else n
   | _ -> 0
 
-let type_scheme_nb_args' env c =
-  type_scheme_nb_args env (Evd.from_env env) (EConstr.of_constr c)
-
-let _ = Hook.set type_scheme_nb_args_hook type_scheme_nb_args'
-
 (** Positions, 0-based among the [Keep] entries of [type_sign], of the
     parameters that are type CONSTRUCTORS ([F : Type -> Type]) rather than
     plain types ([A : Type]), each paired with that constructor's arity.

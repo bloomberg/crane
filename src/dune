@@ -15,7 +15,7 @@
  ; on; do not let one stand as a warning.  `-alert @all` covers deprecation,
  ; which means a Rocq release retiring an API we call breaks the build rather
  ; than logging at it.
- (flags :standard -rectypes -w -9-27+60-32-33 -warn-error +a -alert @all)
+ (flags :standard -rectypes -w -9-27+60 -warn-error +a -alert @all)
 
  (libraries
    rocq-runtime.lib

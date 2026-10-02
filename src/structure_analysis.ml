@@ -17,7 +17,6 @@ open Names
 open Table
 open Miniml
 open Common
-open Modutil
 
 (** Information about a single module in the extraction structure. *)
 type module_info = {

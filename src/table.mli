@@ -961,8 +961,6 @@ val implicits_of_global : GlobRef.t -> Int.Set.t
 
 (** {2 Custom ML extractions table} *)
 
-(** UGLY HACK: registration of a function defined in [extraction.ml] *)
-val type_scheme_nb_args_hook : (Environ.env -> Constr.t -> int) Hook.t
 
 (** [same_mutual_block r1 r2] holds when both are inductive types from the
     same mutual block, which the backend generates into one enclosing scope. *)

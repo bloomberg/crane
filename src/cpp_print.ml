@@ -21,12 +21,8 @@
 open Pp
 open Names
 open Table
-open Miniml
-open Mlutil
-open Modutil
 open Common
 open Minicpp
-open Translation
 open Cpp_state
 open Cpp_names
 

@@ -1711,14 +1711,8 @@ let factor_branches o typ br =
 (** {2 If all branches are functions, try to permute the case and the functions}
 *)
 
-(** Merges two identifier lists, preferring non-Dummy names from either side. *)
-let rec merge_ids ids ids' =
-  match (ids, ids') with
-  | [], l -> l
-  | l, [] -> l
-  | i :: ids, i' :: ids' -> (if i == Dummy then i' else i) :: merge_ids ids ids'
-
-(** Like [merge_ids] but for [(ml_ident * ml_type)] pairs. *)
+(** Merges two [(ml_ident * ml_type)] lists, preferring non-Dummy names from
+    either side. *)
 let rec merge_ids' ids ids' =
   match (ids, ids') with
   | [], l -> l

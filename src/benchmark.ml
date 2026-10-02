@@ -61,7 +61,6 @@ let benchmark_error message = CErrors.user_err Pp.(str message)
     [unit -> PrimString.string]. The result retains the global reference needed
     to recover backend-specific generated names. *)
 let validate_subject {term; label = requested_label} =
-  let open Constr in
   let open Declarations in
   let open Reductionops in
   let env = Global.env () in

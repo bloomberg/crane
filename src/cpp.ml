@@ -26,7 +26,6 @@ open Names
 open ModPath
 open Table
 open Miniml
-open Modutil
 open Common
 open Minicpp
 open Translation

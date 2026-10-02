@@ -19,19 +19,15 @@
     Every entry point answers with declarations rather than with rendered
     text; {!pp_decls} is where they are printed. *)
 
-open Pp
 open Util
 open Names
 open Table
 open Miniml
-open Modutil
 open Common
 open Minicpp
-open Translation
 open Gen_decls
 open Cpp_state
 open Cpp_names
-open Cpp_print
 
 (** Declarations as generated, each with the name environment it is printed
     in. *)

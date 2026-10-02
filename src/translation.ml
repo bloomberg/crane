@@ -10,7 +10,6 @@ open Minicpp
 open Names
 open Mlutil
 open Table
-open Str
 open Util
 (* Re-export the shared translation state so it is available unqualified here
    and still reachable as [Translation.<accessor>] by external callers (via
@@ -1353,15 +1352,6 @@ let reify_monadic_param_type ml_ty cpp_ty =
   end
   else cpp_ty
 
-(** Check whether an ML expression is a de Bruijn reference to a variable
-    whose [env_type] is monadic.  Such variables have been reified to
-    [shared_ptr<ITree<R>>] and need [->run()] to extract the value. *)
-let is_reified_monadic_var ml_expr =
-  match ml_expr with
-  | MLrel i ->
-    (match get_env_type_opt i with Some ty -> is_monadic_ml_type ty | None -> false)
-  | _ -> false
-
 (** Check whether an ML expression already produces a reified monadic value
     (a [shared_ptr<ITree<R>>]).  Extends {!is_reified_monadic_var} to also
     cover [MLapp(MLrel f, args)] where [f] is a local function whose return
@@ -1488,15 +1478,6 @@ let rec is_reified_monadic_expr ml_expr =
        | None -> false )
   | MLcons (ty, _, _) -> is_monadic_ml_type ty
   | _ -> false
-
-(** If [ml_expr] refers to a reified monadic variable, wrap [cpp_expr] in
-    a [->run()] call to execute the tree and produce the direct value.
-    Otherwise returns [cpp_expr] unchanged. *)
-let deref_reified ml_expr cpp_expr =
-  if is_reified_monadic_var ml_expr then
-    CPPaccess_call (Aarrow, cpp_expr, Id.of_string "run", [])
-  else
-    cpp_expr
 
 (** Make the lambdas a function returns closures.  A returned lambda
     outlives the frame it was written in, so it must hold copies ([\[=\]])
@@ -16349,81 +16330,6 @@ and gen_local_fix_by_ref env renamed_ids funs_with_params owned_flags_per_fun =
       funs_with_params
   in
   (impl_stmts @ wrapper_stmts, [])
-
-(** Generate local fixpoint declarations using the shared_ptr fixpoint
-    pattern for escaping fixpoints.
-
-    Used when {!fixpoint_escapes_in_stmts} returns [true], meaning the
-    fixpoint variable is captured by a closure, stored in a data structure,
-    or otherwise outlives its defining scope.  The [\[=\]] capture copies the
-    [shared_ptr] into the lambda, keeping the [std::function] alive on the
-    heap.  Recursive calls dereference the shared pointer before invoking.
-
-    Generated C++ (schematic):
-    - [auto f = make_shared<function<R(A...)>>()] allocates the shared cell.
-    - [*f = \[=\](A... args) { ... }] assigns the closure body.
-    - Inside the closure, the recursive call dereferences [f] before invoking.
-
-    @return [(decls, defs, deref_subst)] where [deref_subst] is a function
-    that rewrites [CPPvar fix_id] to [CPPderef(CPPvar fix_id)] in a
-    statement list, so that call sites in the continuation use the
-    dereferenced form.
-    @see gen_local_fix_by_ref for the non-escaping alternative.
-    @see Minicpp.Sassign_expr for the assignment node. *)
-and gen_local_fix_shared_ptr env renamed_ids funs_with_params =
-  let fix_func_type ty =
-    match ty with
-    | Minicpp.Tfun (params, Minicpp.Tvar (Tv_index (_, None))) ->
-      Minicpp.Tfun (params, Minicpp.Tvoid)
-    | _ -> ty
-  in
-  let deref_subst stmts =
-    List.fold_left
-      (fun s (fix_id, _) ->
-        List.map
-         (local_var_subst_stmt
-             fix_id
-             (CPPderef (CPPvar fix_id)))
-          s )
-      stmts renamed_ids
-  in
-  let ret_ty ty =
-    match cpp_of_ml env ty with
-    | Tfun (_, t) ->
-      ( match t with
-      | Minicpp.Tvar (Tv_index (_, None)) -> None
-      | _ -> Some t )
-    | _ -> None
-  in
-  let decls =
-    List.map
-      (fun (id, ty) ->
-        Sasgn
-          ( id,
-            Declare Tauto,
-            mk_call
-              (CPPalloc (Alloc_heap, fix_func_type (cpp_of_ml env ty)))
-              [] ) )
-      renamed_ids
-  in
-  let defs =
-    List.map2
-      (fun (id, _fty) (args, body) ->
-        Sassign_expr
-          ( CPPderef (CPPvar id),
-            CPPlambda
-              { cl_tparams = [];
-                cl_params =
-                  of_reversed
-                    (List.map
-                       (fun (id, ty) -> (cpp_of_ml env ty, Some id))
-                       args );
-                cl_ret = ret_ty _fty;
-                cl_body = deref_subst body;
-                cl_capture = Closure } ) )
-      renamed_ids funs_with_params
-  in
-  (decls, defs, deref_subst)
 
 (** Generate local fixpoint declarations using the Y-combinator pattern
     for escaping fixpoints.

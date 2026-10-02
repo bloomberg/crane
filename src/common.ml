@@ -21,7 +21,6 @@ open Namegen
 open Nameops
 open Table
 open Miniml
-open Mlutil
 
 (** {2 Generic utility functions} *)
 
@@ -217,25 +216,6 @@ let space_if = function
   | true -> str " "
   | false -> mt ()
 
-(** Test if string matches the pattern "CoqNNN" (legacy naming). *)
-let begins_with_CoqXX s =
-  let n = String.length s in
-  n >= 4
-  && s.[0] == 'C'
-  && s.[1] == 'o'
-  && s.[2] == 'q'
-  &&
-  let i = ref 3 in
-  try
-    while !i < n do
-      match s.[!i] with
-      | '_' -> i := n (*Stop*)
-      | '0' .. '9' -> incr i
-      | _ -> raise Not_found
-    done;
-    true
-  with Not_found -> false
-
 (** Identity function (historically removed quotes). *)
 let unquote s = s
 
@@ -291,23 +271,8 @@ let resolved_split r =
 
 (** {2 Uppercase/lowercase renamings} *)
 
-(** Test if string starts with lowercase. *)
-let is_lower s =
-  match s.[0] with
-  | 'a' .. 'z' | '_' -> true
-  | _ -> false
-
 (** Convert identifier to lowercase. *)
 let lowercase_id id = Id.of_string (String.uncapitalize_ascii (ascii_of_id id))
-
-(** Convert identifier to uppercase. *)
-let uppercase_id id =
-  let s = ascii_of_id id in
-  assert (not (String.is_empty s));
-  if s.[0] == '_' then
-    Id.of_string ("Coq_" ^ s)
-  else
-    Id.of_string (String.capitalize_ascii s)
 
 (** {!ascii_of_id} as an [Id.t]. *)
 let cpp_id_of_id id = Id.of_string (ascii_of_id id)
@@ -336,12 +301,6 @@ end
 
 (** Map keyed by (kind, string) pairs. *)
 module KMap = Map.Make (KOrd)
-
-(** Test if kind requires uppercase (constructors, modules). *)
-let upperkind = function
-  | Type -> false
-  | Term -> false
-  | Cons | Mod -> true
 
 (** Apply case convention to identifier based on kind (currently identity). *)
 let kindcase_id k id =

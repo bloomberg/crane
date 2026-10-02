@@ -18,14 +18,9 @@
     dependencies between the other cpp_* modules. *)
 
 open Pp
-open CErrors
 open Names
-open ModPath
 open Table
-open Miniml
-open Modutil
 open Common
-open Minicpp
 
 (** {2 Owned cells}
 

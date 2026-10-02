@@ -703,7 +703,7 @@ let rec is_typeclass_type_cpp = function
 
 (** {2 Flat inductives table} *)
 
-let (init_flat_inductives, add_flat_inductive, is_flat_inductive_registered) =
+let (_, add_flat_inductive, is_flat_inductive_registered) =
   make_refset_can ~name:"flat_inductives" ()
 
 (** {2 Higher-kinded inductive parameters} *)
@@ -794,7 +794,7 @@ let is_flat_inductive r =
 
 (** {2 Enum inductives table} *)
 
-let (init_enum_inductives, add_enum_inductive, is_enum_inductive_registered) =
+let (_, add_enum_inductive, is_enum_inductive_registered) =
   make_refset ~name:"enum_inductives" ()
 
 (** Check if an inductive packet qualifies as an enum: all constructors nullary,
@@ -1068,7 +1068,7 @@ let promoted_type_var_name r = GlobRef.Map.find_opt r !promoted_type_vars
 (** Erased type constants: dependent type families that become [std::any] in C++,
     including promoted record fields (simple [Type]-valued like [Obj]) and concrete
     type aliases (standalone definitions like [Force := list Unit]). *)
-let (init_erased_type_consts, add_erased_type_const, is_erased_type_const) =
+let (_, add_erased_type_const, is_erased_type_const) =
   make_refset ~name:"erased_type_consts" ()
 
 (** Like {!make_refset_can}, but a reference rooted at a functor parameter
@@ -1109,7 +1109,7 @@ let make_refset_can_with_functor_fallback ~name () =
     extraction time via [type_sign_vl] (more signature slots than type vars);
     see {!make_refset_can_with_functor_fallback} for why functor-parameter
     matching needs the label fallback. *)
-let (init_value_dep_type_schemes, add_value_dep_type_scheme, is_value_dep_type_scheme)
+let (_, add_value_dep_type_scheme, is_value_dep_type_scheme)
   =
   make_refset_can_with_functor_fallback ~name:"value_dep_type_schemes" ()
 
@@ -2853,11 +2853,6 @@ let reset_extraction_blacklist () = Lib.add_leaf (reset_blacklist ())
 
 (** {2 Crane Extract Constant/Inductive} *)
 
-(* Forward reference: the hook body is installed in [extraction.ml] after that
-   module is loaded.  This breaks the build-time circular dependency between
-   [table.ml] and the extraction pipeline. *)
-let use_type_scheme_nb_args, type_scheme_nb_args_hook = Hook.make ()
-
 (* Track which custom GlobRefs are actually used during extraction. *)
 let used_refs = ref Refset'.empty
 
@@ -3494,9 +3489,6 @@ let extract_constant_generic
 
 (** Registers a custom constant extraction with inline/noinline behavior. *)
 let extract_constant_inline inline r ids s =
-  (*let arity_handler env typ g = let nargs = Hook.get use_type_scheme_nb_args
-    env typ in if not (Int.equal (List.length ids) nargs) then
-    error_axiom_scheme ?loc:r.CAst.loc g nargs in*)
   extract_constant_generic
     r
     ids
