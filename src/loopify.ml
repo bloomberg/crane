@@ -275,16 +275,9 @@ let try_inline_mutual_into names body =
      registered call graph and inline the whole cycle one hop at a time. *)
   let self_refs = List.map fst names in
   let is_self r = List.exists (Common.globref_equal r) self_refs in
-  let label_of r =
-    match r with
-    | GlobRef.ConstRef c -> Label.to_id (Constant.label c)
-    | GlobRef.VarRef v -> v
-    | _ -> Id.of_string ""
-  in
-  (* Does [b] call the registered function [r] (by GlobRef or unqualified id)? *)
-  let body_calls_reg r b =
-    body_calls_any_ref [r] b || body_calls_id (label_of r) b
-  in
+  (* Does [b] call the registered function [r]?  By its global: a local of
+     the same name is not the function. *)
+  let body_calls_reg r b = body_calls_any_ref [r] b in
   (* Can [start]'s body reach one of [self_refs] through the registered call
      graph (so that inlining [start] moves this function towards
      self-recursion)?  Cycles are broken with a visited set. *)
@@ -307,7 +300,7 @@ let try_inline_mutual_into names body =
     in
     go start
   in
-  (* Check if a GlobRef or Id matches a registered function on a cycle. *)
+  (* Whether a callee is a registered function on a cycle. *)
   let find_registered_callee_by_ref r =
     if is_self r then None
     else
@@ -316,27 +309,10 @@ let try_inline_mutual_into names body =
         Some (r, rf_ret_ty, rf_params, rf_body)
       | _ -> None
   in
-  let find_registered_callee_by_id id =
-    Hashtbl.fold
-      (fun r {rf_ret_ty; rf_params; rf_body} acc ->
-        match acc with
-        | Some _ -> acc
-        | None ->
-          if is_self r then None
-          else if Id.equal id (label_of r) && reaches_self r then
-            Some (r, rf_ret_ty, rf_params, rf_body)
-          else None )
-      mutual_fn_table
-      None
-  in
   let rec find_callee_in_expr expr =
     match expr with
     | CPPfun_call (_, CPPglob (r, _, _), _) ->
       ( match find_registered_callee_by_ref r with
-      | Some _ as result -> result
-      | None -> None )
-    | CPPfun_call (_, CPPvar id, _) ->
-      ( match find_registered_callee_by_id id with
       | Some _ as result -> result
       | None -> None )
     | CPPfun_call (_, _, args) ->
@@ -1010,19 +986,12 @@ let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted check
     it is a template and instantiates only on demand. *)
 let try_inline_functional_into names body =
   let self_refs = List.map fst names in
-  let self_labels =
-    List.map (fun r -> Label.to_id (Common.label_of_r r)) self_refs
-  in
   let is_self_ref r = List.exists (Common.globref_equal r) self_refs in
-  let is_self_name n = List.exists (Id.equal n) self_labels in
-  (* Whether a call head is one of the functions being defined.  A [CPPglob]
-     carries the identity outright and is asked for it; only an unqualified
-     [CPPvar], which has no global behind it, has to fall back to the label.
-     Compare {!calls_self_glob}: the same distinction, and the same reason to
-     insist on it -- a sibling sharing a label is not recursion. *)
+  (* Whether a call head is one of the functions being defined: by its
+     global.  A local of the same name -- a recursor's own parameter [f] -- is
+     not the function. *)
   let is_self_call = function
     | CPPglob (r, _, _) -> is_self_ref r
-    | CPPvar id -> is_self_name id
     | _ -> false
   in
   (* Is [e] the eta-expansion [fun y => self(y)] of the function being defined?
@@ -1047,18 +1016,6 @@ let try_inline_functional_into names body =
     match callee with
     | CPPglob (r, _, _) when not (is_self_call callee) ->
       Hashtbl.find_opt mutual_fn_table r
-    | CPPvar id when not (is_self_call callee) ->
-      Hashtbl.fold
-        (fun r pb acc ->
-          match acc with
-          | Some _ -> acc
-          | None ->
-            if
-              (not (is_self_ref r))
-              && Id.equal id (Label.to_id (Common.label_of_r r))
-            then Some pb
-            else None )
-        mutual_fn_table None
     | _ -> None
   in
   (* Find, anywhere in [body], a call to a registered functional with an

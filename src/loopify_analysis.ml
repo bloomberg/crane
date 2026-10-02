@@ -442,9 +442,10 @@ let ref_matches fn_refs r =
     (fun (fn_r, _) -> Common.globref_equal r fn_r)
     fn_refs
 
-(** Build a call checker for top-level function definitions. Matches both
-    [CPPglob]-based calls (from Rocq extraction) and [CPPvar]-based calls (local
-    references by name).
+(** Build a call checker for top-level function definitions: a call is
+    recursive when it names one of the function's global references.  A local
+    variable that happens to share the function's name -- a class method's
+    field read in its own projection -- is not the function.
 
     @param fn_refs List of [(GlobRef.t, type_args)] pairs identifying the
                    function being loopified. Multiple refs arise when a single
@@ -457,16 +458,6 @@ let fn_checker (fn_refs : (GlobRef.t * cpp_type list) list) : call_checker =
    match e with
    | CPPfun_call (_, CPPglob (r, _, _), args) when ref_matches fn_refs r ->
      Some (mk_call_site (to_reversed args))
-   | CPPfun_call (_, CPPvar id, args) ->
-     let matches_name =
-       List.exists
-         (fun (r, _) -> Id.equal id (Label.to_id (Common.label_of_r r)))
-         fn_refs
-     in
-     if matches_name then
-       Some (mk_call_site (to_reversed args))
-     else
-       None
    | _ -> None
 
 (** Locals whose storage does not outlive one iteration of a loopified body.
