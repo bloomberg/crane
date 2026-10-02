@@ -206,7 +206,7 @@ let rec pp_spec_as_requirement modtype_mp modtype_refs = function
         ( match find_custom_opt r with
         | Some custom_str ->
           qualify_custom_template
-            (custom_template_with_args custom_str (List.length args))
+            (Foreign_template.custom_template_with_args custom_str (List.length args))
             args qualify_type
         | None ->
           ( match args with

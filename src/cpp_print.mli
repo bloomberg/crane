@@ -40,9 +40,6 @@ val cut2 : unit -> Pp.t
 
 (** {2 Custom type templates} *)
 
-(** A mapping that names a template without placing its [n] arguments takes
-    them after it: ["Sum1"] at two arguments is ["Sum1<%t0, %t1>"]. *)
-val custom_template_with_args : string -> int -> string
 
 (** [render_type_template ~hole text] fills hole [i] with [hole i], writing an
     unfillable hole back out as a placeholder. *)

@@ -25,6 +25,7 @@ open Common
 open Minicpp
 open Cpp_state
 open Cpp_names
+open Foreign_template
 
 (** Escape a byte string for emission inside a double-quoted C++ string literal.
 
@@ -333,154 +334,6 @@ let split_on_semicolons (s : string) : string list =
   let last = Buffer.contents buf in
   List.rev (if String.trim last = "" then !acc else last :: !acc)
 
-(** Custom extraction syntax placeholder types for template string substitution.
-*)
-type custom_case =
-  | CCscrut
-  | CCty
-  | CCbody of int
-  | CCty_arg of int
-  | CCelem of int
-  | CCbr_var of int * int
-  | CCbr_var_ty of int * int
-  | CCstring of string
-  | CCarg of int
-
-(** Test whether a character is an ASCII digit. *)
-let is_digit c = c >= '0' && c <= '9'
-
-(** Parses an integer starting at [i], returns [(value, next_index)] or [None]
-    if no digit is found at [i].
-
-    @param s  the string being scanned
-    @param i  starting position in [s]
-    @param n  length of [s] (upper bound for the scan) *)
-let parse_number s i n =
-  let rec aux j = if j < n && is_digit s.[j] then aux (j + 1) else j in
-  let j = aux i in
-  if j = i then
-    None
-  else
-    let num_str = String.sub s i (j - i) in
-    Some (int_of_string num_str, j)
-
-(* The following functions parse custom placeholders in extraction syntax
-   strings: - parse_custom_fixed: parses fixed placeholders like %scrut or %ty -
-   parse_numbered_args: parses placeholders like %a0, %t12 (single argument) -
-   parse_custom_numbered_binders: parses placeholders like %b0a1, %b10a20 (two
-   arguments) *)
-
-(** Parses fixed custom placeholders like [%scrut] or [%ty] in a custom
-    extraction syntax string. Returns a list of {!custom_case} chunks.
-
-    @param esc  the fixed keyword after [%] (e.g. ["scrut"] or ["ty"])
-    @param cc   the {!custom_case} token to emit when the placeholder is found
-    @param s    the raw template string to scan *)
-let parse_custom_fixed esc cc s =
-  let n = String.length s in
-  let esc_len = String.length esc in
-  let rec aux i start chunks_rev =
-    if i >= n then
-      let last_chunk = String.sub s start (n - start) in
-      List.rev (CCstring last_chunk :: chunks_rev)
-    else
-      match
-        (s.[i], i + esc_len + 1 <= n)
-      with
-      | '%', true ->
-        if esc = String.sub s (i + 1) esc_len then
-          let chunk = String.sub s start (i - start) in
-          aux
-            (i + esc_len + 1)
-            (i + esc_len + 1)
-            (cc :: CCstring chunk :: chunks_rev)
-        else
-          aux (i + 1) start chunks_rev
-      | _ -> aux (i + 1) start chunks_rev
-  in
-  aux 0 0 []
-
-(** Parses single-argument custom placeholders like [%a0], [%t12].
-
-    @param esc  the letter immediately after [%] (e.g. ["a"] or ["t"])
-    @param f    maps the parsed integer index to a {!custom_case} token
-    @param s    the raw template string to scan *)
-let parse_numbered_args esc f s =
-  let n = String.length s in
-  let esc_len = String.length esc in
-  let rec aux i start acc =
-    if i >= n then
-      List.rev
-        ( if start < n then
-            CCstring (String.sub s start (n - start)) :: acc
-          else
-            acc )
-    else if s.[i] = '%' && i + esc_len < n && String.sub s (i + 1) esc_len = esc
-    then
-      match
-        parse_number s (i + 1 + esc_len) n
-      with
-      | Some (idx, j) ->
-        let chunk = String.sub s start (i - start) in
-        aux j j (f idx :: CCstring chunk :: acc)
-      | None -> aux (i + 1) start acc
-    else
-      aux (i + 1) start acc
-  in
-  aux 0 0 []
-
-(** Parses double-argument custom placeholders like [%b0a1], [%b10a20].
-
-    @param esc1  the letter after [%] for the first index (e.g. ["b"])
-    @param esc2  the letter after the first index for the second (e.g. ["a"])
-    @param f     maps [(idx1, idx2)] to a {!custom_case} token
-    @param s     the raw template string to scan *)
-let parse_custom_numbered_binders esc1 esc2 f s =
-  let n = String.length s in
-  let len1 = String.length esc1 in
-  let len2 = String.length esc2 in
-  let rec aux i start acc =
-    if i >= n then
-      List.rev
-        ( if start < n then
-            CCstring (String.sub s start (n - start)) :: acc
-          else
-            acc )
-    else if s.[i] = '%' && i + len1 < n && String.sub s (i + 1) len1 = esc1 then
-      match
-        parse_number s (i + 1 + len1) n
-      with
-      | Some (idx1, j) when j + len2 <= n && String.sub s j len2 = esc2 ->
-        ( match parse_number s (j + len2) n with
-        | Some (idx2, k) ->
-          let chunk = String.sub s start (i - start) in
-          aux k k (f idx1 idx2 :: CCstring chunk :: acc)
-        | None -> aux (i + 1) start acc )
-      | _ -> aux (i + 1) start acc
-    else
-      aux (i + 1) start acc
-  in
-  aux 0 0 []
-
-(** Expand placeholders in a command list using a parser function.
-    For each [CCstring] chunk, apply [parser] to produce new chunks.
-    Non-string chunks are passed through unchanged.
-
-    @param parser  function that splits a raw string into {!custom_case} chunks
-    @param cmds    existing command list to expand *)
-let expand_custom_chunks parser cmds =
-  List.fold_left
-    (fun prev curr ->
-      match curr with
-      | CCstring s -> prev @ parser s
-      | _ -> prev @ [curr] )
-    []
-    cmds
-
-(** Expand single-argument numbered placeholders (e.g. [%a0], [%t1]) in a
-    command list. *)
-let expand_numbered_args esc f = expand_custom_chunks (parse_numbered_args esc f)
-
 (* Does a C++ type structurally mention an inductive that recurses through a
    boxed-element container?  If so it must be boxed as such a container's
    element, everywhere, for type-consistency. *)
@@ -502,48 +355,6 @@ let rec cpp_type_mentions_boxed_recursive t =
    be judged boxed-recursive. *)
 let suppress_elem_boxing = ref false
 
-(** Expand double-argument binder placeholders (e.g. [%b0a1]) in a command
-    list. *)
-let expand_custom_binders esc1 esc2 f = expand_custom_chunks (parse_custom_numbered_binders esc1 esc2 f)
-
-(** Expand fixed-name placeholders (e.g. [%scrut], [%ty]) in a command list. *)
-let expand_custom_fixed esc cc = expand_custom_chunks (parse_custom_fixed esc cc)
-
-(** Expand [%elem] / [%elem{i}] placeholders (completeness-aware element
-    wrapping, WRAP.md): like [%t{i}] but rendered boxed when the element type
-    recurses through a boxed-element container. Bare [%elem] means index 0. *)
-let expand_elem_args cmds =
-  let cmds = expand_numbered_args "elem" (fun i -> CCelem i) cmds in
-  expand_custom_fixed "elem" (CCelem 0) cmds
-
-(** Parse a custom {e type} template: the [%t{i}] and [%elem{i}] holes of a
-    mapping such as ["std::pair<%t0,%t1>"].  This and {!parse_term_template}
-    are the only places that know the syntax; consumers fold over the tokens
-    rather than scanning the text again. *)
-let parse_type_template s =
-  expand_elem_args (parse_numbered_args "t" (fun i -> CCty_arg i) s)
-
-(** A custom mapping that names a template without saying where its arguments
-    go still takes them: ["Sum1"] applied to [E], [F] means ["Sum1<E, F>"],
-    exactly as a non-custom name would.  Normalising the mapping here, before
-    it is parsed, is what keeps every printer of a custom type spelling it the
-    same way -- a type spelled one way in a signature and another in a body is
-    two types. *)
-let custom_template_with_args s nargs =
-  if nargs = 0 || String.contains s '%' then s
-  else
-    s
-    ^ "<"
-    ^ String.concat ", " (List.init nargs (fun i -> Printf.sprintf "%%t%d" i))
-    ^ ">"
-
-(** Parse a custom {e term} template: {!parse_type_template} plus the [%a{i}]
-    holes that splice value arguments. *)
-let parse_term_template s =
-  expand_elem_args
-    (expand_numbered_args "t" (fun i -> CCty_arg i)
-       (parse_numbered_args "a" (fun i -> CCarg i) s))
-
 (** Render a custom type template, filling hole [i] with [hole i] and copying
     the text between holes verbatim.  [hole] returns [None] for an index the
     caller cannot fill, which is written back out as a placeholder of the same
@@ -560,7 +371,7 @@ let render_type_template ~hole template =
       | _ ->
         CErrors.anomaly
           (Pp.str "render_type_template: a type template has only type holes"))
-    (parse_type_template template)
+    (type_template template)
 
 (** Substitute the element hole of a wrapper template (e.g. ["immer::box<%t0>"])
     with an already-rendered element string. *)
@@ -569,13 +380,6 @@ let subst_wrapper_t0 wrapper elem_str =
     (render_type_template
        ~hole:(fun i -> if i = 0 then Some (str elem_str) else None)
        wrapper)
-
-(** Flatten a command list that is known to contain only [CCstring] chunks
-    back into a single string. *)
-let flatten_custom_strings cmds =
-  String.concat ""
-    (List.map (function CCstring s -> s
-      | _ -> CErrors.anomaly (Pp.str "flatten_custom_strings: non-string command")) cmds)
 
 (** Get the number of template type parameters for an inductive reference,
     defaulting to 2 when unavailable. *)
@@ -1042,7 +846,7 @@ let rec pp_cpp_type ?(lead = true) par vl t =
       ( match find_custom_opt r with
       | Some s when to_inline r ->
         let cmds =
-          parse_term_template (custom_template_with_args s (List.length tys))
+          term_template (custom_template_with_args s (List.length tys))
         in
         pp_custom
           ~container:r
@@ -1495,7 +1299,7 @@ let rec pp_cpp_type ?(lead = true) par vl t =
       | Tglob (r, _ :: _, _) -> (
         match find_custom_opt r with
         | Some template when String.contains template '%' -> (
-          match parse_type_template template with
+          match type_template template with
           | CCstring lit :: _ -> str (cut_at_argument_list lit)
           | _ -> str (cut_at_argument_list template) )
         | Some template -> str (cut_at_argument_list template)
@@ -1537,7 +1341,7 @@ and pp_value_qualifier env ty =
   match ty with
   | Tglob (r, tys, []) ->
     (* No [~yields]: a type qualifier is never a block in value position. *)
-    pp_cpp_expr env [] (Translation_state.mk_cppglob r tys)
+    pp_cpp_expr env [] (CPPglob (r, tys, Some (Table.custom_info r)))
   | _ ->
   pp_cpp_type ~lead:false false [] ty
 
@@ -1640,11 +1444,8 @@ and pp_cpp_expr env args t =
        [List<uint64_t>] was meant. *)
     let ret_ty = match yields with Some ty -> ty | None -> Tauto in
     let result_str = "_r" in
-    let substituted =
-      flatten_custom_strings
-        (parse_custom_fixed "result" (CCstring result_str) custom)
-    in
-    let cmds = parse_term_template substituted in
+    let substituted = with_result result_str custom in
+    let cmds = term_template substituted in
     let body_pp =
       pp_custom
         ~container:ref_name
@@ -1728,7 +1529,7 @@ and pp_cpp_expr env args t =
     if tmpl.it_form = Block_iife then
       gen_block_iife ?yields:ci_yields x custom tys []
     else
-    let cmds = parse_type_template custom in
+    let cmds = type_template custom in
     pp_custom
       ~container:x
       (Pp.string_of_ppcmds (GlobRef.print x) ^ " := " ^ custom)
@@ -2045,7 +1846,7 @@ and pp_cpp_expr env args t =
                   ++ str " names %ret, but the type its call yields is not known here.")
         else s
       in
-      let cmds = parse_term_template s in
+      let cmds = term_template s in
       let arg_types =
         match res.cs_params with Ptypes ts -> ts | Punknown -> []
       in
@@ -3013,11 +2814,8 @@ and pp_cpp_stmt env args = function
        %result → result_var, %aN → value args, %tN → type args *)
     let result_str = Pp.string_of_ppcmds (Id.print result_var) in
     (* Substitute %result first *)
-    let flat =
-      flatten_custom_strings
-        (parse_custom_fixed "result" (CCstring result_str) tmpl)
-    in
-    let cmds = parse_term_template flat in
+    let flat = with_result result_str tmpl in
+    let cmds = term_template flat in
     (* Render: type declaration + template body as statements *)
     let decl_pp =
       pp_cpp_type false [] result_ty
@@ -3047,12 +2845,7 @@ and pp_cpp_stmt env args = function
        in gen_custom_cpp_case, which prepends an Sasgn before this node
        when the template uses %scrut more than once with a non-trivial
        scrutinee.  The printer just expands the template. *)
-    let cmds = parse_custom_fixed "scrut" CCscrut cmatch in
-    let cmds = expand_custom_fixed "ty" CCty cmds in
-    let cmds = expand_numbered_args "t" (fun i -> CCty_arg i) cmds in
-    let cmds = expand_numbered_args "br" (fun i -> CCbody i) cmds in
-    let cmds = expand_custom_binders "b" "a" (fun i j -> CCbr_var (i, j)) cmds in
-    let cmds = expand_custom_binders "b" "t" (fun i j -> CCbr_var_ty (i, j)) cmds in
+    let cmds = match_template cmatch in
     pp_custom
       ( "custom match for "
       ^ Pp.string_of_ppcmds (pp_cpp_type false [] typ)

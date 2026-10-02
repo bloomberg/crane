@@ -34,16 +34,7 @@ let get_local_inductives () = !local_inductives
     position it is the only record of the type, since there is no call node to
     carry one. *)
 let mk_cppglob ?yields (r : GlobRef.t) (tys : cpp_type list) : cpp_expr =
-  let ci =
-    {
-      ci_inline =
-        ( if Table.to_inline r then
-            Option.map Minicpp.inline_template (Table.find_custom_opt r)
-          else None );
-      ci_yields = yields;
-    }
-  in
-  CPPglob (r, tys, Some ci)
+  CPPglob (r, tys, Some (Table.custom_info ?yields r))
 
 (** Helper for local variables (VarRef) - no custom extraction applies *)
 let mk_cppglob_local (r : GlobRef.t) (tys : cpp_type list) : cpp_expr =

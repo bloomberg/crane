@@ -2932,6 +2932,12 @@ let find_custom_opt r =
     Some s
   | None -> None
 
+let custom_info ?yields r : Minicpp.custom_info =
+  { ci_inline =
+      ( if to_inline r then Option.map Minicpp.inline_template (find_custom_opt r)
+        else None );
+    ci_yields = yields }
+
 (** The C++ type names the user has declared trivially copyable with
     [Crane TriviallyCopyable], each without its arguments: the declaration on
     [prod] records ["std::pair"], not ["std::pair<%t0, %t1>"].

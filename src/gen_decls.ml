@@ -6721,46 +6721,17 @@ let gen_ind_header_v2
              (e.g. [std::move(%scrut.front())]). *)
           let expand_drain_template ~scrut ~self tmpl =
             let subst s = Common.render_template [("%scrut", scrut)] s in
-            let n = String.length tmpl in
-            let yield = "%yield(" in
-            let yl = String.length yield in
-            let stmts = ref [] in
-            let buf = Buffer.create 64 in
-            let flush_raw () =
-              if Buffer.length buf > 0 then begin
-                stmts := Sraw (subst (Buffer.contents buf)) :: !stmts;
-                Buffer.clear buf
-              end
-            in
-            let i = ref 0 in
-            while !i < n do
-              if !i + yl <= n && String.equal (String.sub tmpl !i yl) yield
-              then begin
-                let j = ref (!i + yl) in
-                let depth = ref 1 in
-                while !j < n && !depth > 0 do
-                  (match tmpl.[!j] with
-                   | '(' -> incr depth
-                   | ')' -> decr depth
-                   | _ -> ());
-                  if !depth > 0 then incr j
-                done;
-                let arg = String.sub tmpl (!i + yl) (!j - (!i + yl)) in
-                flush_raw ();
-                stmts :=
-                  Sexpr (CPPaccess_call (Adot,
-                    CPPvar _stack_id,
-                    Id.of_string "push_back",
-                    [mk_call (CPPalloc (Alloc_heap, self)) [CPPraw (subst arg)]]))
-                  :: !stmts;
-                i := !j + 1
-              end else begin
-                Buffer.add_char buf tmpl.[!i];
-                incr i
-              end
-            done;
-            flush_raw ();
-            List.rev !stmts
+            List.map
+              (function
+                | Foreign_template.Drain_text t -> Sraw (subst t)
+                | Drain_yield arg ->
+                  Sexpr
+                    (CPPaccess_call
+                       ( Adot,
+                         CPPvar _stack_id,
+                         Id.of_string "push_back",
+                         [mk_call (CPPalloc (Alloc_heap, self)) [CPPraw (subst arg)]] )) )
+              (Foreign_template.drain_template tmpl)
           in
           (* Every drain below establishes sole ownership with
              [p && p.use_count() == 1] and then mutates the pointee, moving a

@@ -984,6 +984,11 @@ val find_custom : GlobRef.t -> string
 (** Find custom extraction code if exists. *)
 val find_custom_opt : GlobRef.t -> string option
 
+(** What a reference to [r] carries about its custom mapping: the replacement
+    text where [r] is inlined, and [yields], what it evaluates to where the
+    caller knows. *)
+val custom_info : ?yields:Minicpp.cpp_type -> GlobRef.t -> Minicpp.custom_info
+
 (** True when [s] names a C++ scalar type that is trivially copyable
     (integers, floats, char variants, fixed-width aliases, [std::nullptr_t]),
     or names a type declared with {!extraction_trivially_copyable}. *)
