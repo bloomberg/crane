@@ -57,8 +57,8 @@ struct ITree : public std::enable_shared_from_this<ITree<R>> {
     struct Ret { value_type value{}; };
     struct Tau { std::shared_ptr<ITree<R>> next; };
     struct Vis {
-        std::function<crane::obj()> effect;
-        std::function<std::shared_ptr<ITree<R>>(crane::obj)> cont;
+        crane::fn<crane::obj()> effect;
+        crane::fn<std::shared_ptr<ITree<R>>(crane::obj)> cont;
     };
     using variant_t = std::variant<Ret, Tau, Vis>;
 
@@ -116,8 +116,8 @@ struct ITree : public std::enable_shared_from_this<ITree<R>> {
         return std::make_shared<ITree<R>>(Private{}, Tau{std::move(next)});
     }
     static std::shared_ptr<ITree<R>> vis(
-        std::function<crane::obj()> effect,
-        std::function<std::shared_ptr<ITree<R>>(crane::obj)> cont) {
+        crane::fn<crane::obj()> effect,
+        crane::fn<std::shared_ptr<ITree<R>>(crane::obj)> cont) {
         if (!effect || !cont)
             throw std::invalid_argument("crane: ITree::vis given a null effect or continuation");
         return std::make_shared<ITree<R>>(Private{}, Vis{std::move(effect), std::move(cont)});
@@ -213,7 +213,7 @@ auto itree_bind(std::shared_ptr<ITree<A>> m, K k)
     auto cont = v.cont;
     return node_b::vis(
         v.effect,
-        std::function<tree_b(crane::obj)>(
+        crane::fn<tree_b(crane::obj)>(
             [cont, k](crane::obj x) { return itree_bind(cont(std::move(x)), k); }));
 }
 
@@ -297,7 +297,7 @@ auto itree_iter(Step step, I i)
     using R = decltype(itree_iter_rhs(std::declval<Sum>()));
     return itree_bind(
         step(i),
-        std::function<std::shared_ptr<ITree<R>>(Sum)>(
+        crane::fn<std::shared_ptr<ITree<R>>(Sum)>(
             [step](const Sum &s) -> std::shared_ptr<ITree<R>> {
                 if (std::holds_alternative<typename Sum::Inl>(s.v())) {
                     const auto &[next] = *std::get_if<typename Sum::Inl>(&s.v());
@@ -329,12 +329,12 @@ inline constexpr auto MonadIter_itree = [](auto step, crane::obj i) {
 // conversion operator lets the use site name it instead, which the enclosing
 // signature always does.
 struct itree_trigger_t {
-    std::function<crane::obj()> effect;
+    crane::fn<crane::obj()> effect;
 
     template <typename R>
     operator std::shared_ptr<ITree<R>>() const {
         return ITree<R>::vis(effect,
-            std::function<std::shared_ptr<ITree<R>>(crane::obj)>(
+            crane::fn<std::shared_ptr<ITree<R>>(crane::obj)>(
                 [](crane::obj x) {
                     return ITree<R>::ret(crane::any_cast<R>(std::move(x)));
                 }));
@@ -368,7 +368,7 @@ std::shared_ptr<ITree<B>> crane_cast_to(crane_tag<std::shared_ptr<ITree<B>>>,
         auto cont = v.cont;
         return ITree<B>::vis(
             v.effect,
-            std::function<std::shared_ptr<ITree<B>>(crane::obj)>(
+            crane::fn<std::shared_ptr<ITree<B>>(crane::obj)>(
                 [cont](crane::obj x) {
                     return crane_cast_to(
                         crane_tag<std::shared_ptr<ITree<B>>>{},
@@ -463,9 +463,9 @@ template<typename E> E crane_event_read(crane::obj o);
 // for the thunk itself gets it back unchanged, which is what a match that
 // only passes the event along to another [Vis] wants.
 struct crane_event {
-    std::function<crane::obj()> effect;
+    crane::fn<crane::obj()> effect;
 
-    operator std::function<crane::obj()>() const { return effect; }
+    operator crane::fn<crane::obj()>() const { return effect; }
 
     template <typename E>
     operator E() const { return crane_event_read<E>(effect()); }
@@ -556,7 +556,7 @@ inline crane::obj crane_injected_response(crane::obj response) {
 // erased or it names something this file cannot spell -- and there the old
 // deferral is exactly what is wanted, so it is what comes back.
 template <typename E>
-auto crane_event_as(std::function<crane::obj()> effect) {
+auto crane_event_as(crane::fn<crane::obj()> effect) {
     if constexpr (std::is_same_v<E, crane::obj>)
         return crane_event{std::move(effect)};
     else
@@ -567,13 +567,13 @@ auto crane_event_as(std::function<crane::obj()> effect) {
 // thunk [ITree::vis] wants; one that is plain data is reified as the thunk
 // that yields it, for a handler to interpret later.
 template<typename E>
-std::function<crane::obj()> itree_reify_event(E e) {
+crane::fn<crane::obj()> itree_reify_event(E e) {
     if constexpr (is_sum1_injection<E>::value && injects_effect<E>)
         return itree_reify_event(std::move(e.a0));
     else if constexpr (is_sum1_injection<E>::value)
         return [o = erase_injected(std::move(e))]() -> crane::obj { return o; };
     else if constexpr (std::is_invocable_r_v<crane::obj, E &>)
-        return std::function<crane::obj()>(std::move(e));
+        return crane::fn<crane::obj()>(std::move(e));
     else
         return [e = std::move(e)]() -> crane::obj { return crane::obj(e); };
 }
@@ -625,14 +625,14 @@ struct crane_callable_arg<K,
 // bind has no tree type to be.  The use site always names one, as it does for
 // [itree_trigger_t], and the deferral is the same.
 struct itree_erased_bind_t {
-    std::function<crane::obj()> effect;
-    std::function<crane::obj(crane::obj)> cont;
+    crane::fn<crane::obj()> effect;
+    crane::fn<crane::obj(crane::obj)> cont;
 
     template <typename R>
     operator std::shared_ptr<ITree<R>>() const {
         auto k = cont;
         return ITree<R>::vis(effect,
-            std::function<std::shared_ptr<ITree<R>>(crane::obj)>(
+            crane::fn<std::shared_ptr<ITree<R>>(crane::obj)>(
                 [k](crane::obj x) {
                     return crane_any_cast<std::shared_ptr<ITree<R>>>(
                         k(std::move(x)));
@@ -650,7 +650,7 @@ auto itree_bind(itree_trigger_t m, K k) {
         using node_b = typename tree_b::element_type;
         return node_b::vis(
             m.effect,
-            std::function<tree_b(crane::obj)>(
+            crane::fn<tree_b(crane::obj)>(
                 [k](crane::obj x) { return k(std::move(x)); }));
     } else {
         using A = typename crane_callable_arg<K>::type;
@@ -658,7 +658,7 @@ auto itree_bind(itree_trigger_t m, K k) {
         if constexpr (std::is_same_v<tree_b, crane::obj>)
             return itree_erased_bind_t{
                 m.effect,
-                std::function<crane::obj(crane::obj)>([k](crane::obj x) {
+                crane::fn<crane::obj(crane::obj)>([k](crane::obj x) {
                     return k(crane_any_cast<A>(std::move(x)));
                 })};
         else
@@ -676,15 +676,15 @@ auto itree_vis(Effect effect, Cont cont) {
     // An injection is stored with its side; see [itree_reify_event].
     if constexpr (is_sum1_injection<std::decay_t<Effect>>::value)
         return TreeT::vis(itree_reify_event(std::move(effect)),
-            std::function<TreePtr(crane::obj)>(std::move(cont)));
+            crane::fn<TreePtr(crane::obj)>(std::move(cont)));
     else {
-        std::function<crane::obj()> eff;
+        crane::fn<crane::obj()> eff;
         if constexpr (std::is_same_v<std::decay_t<Effect>, crane::obj>)
-            eff = crane::any_cast<std::function<crane::obj()>>(effect);
+            eff = crane::any_cast<crane::fn<crane::obj()>>(effect);
         else
             eff = itree_reify_event(std::move(effect));
         return TreeT::vis(std::move(eff),
-            std::function<TreePtr(crane::obj)>(std::move(cont)));
+            crane::fn<TreePtr(crane::obj)>(std::move(cont)));
     }
 }
 
@@ -713,7 +713,7 @@ std::shared_ptr<ITree<R>> itree_translate(H h, std::shared_ptr<ITree<R>> t) {
         [h, effect]() -> crane::obj {
             return itree_reify_event(h(crane_event{effect}))();
         },
-        std::function<std::shared_ptr<ITree<R>>(crane::obj)>(
+        crane::fn<std::shared_ptr<ITree<R>>(crane::obj)>(
             [h, cont](crane::obj x) {
                 return itree_translate(h, cont(std::move(x)));
             }));
