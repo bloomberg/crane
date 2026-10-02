@@ -1421,6 +1421,7 @@ let report_body_generations fn =
 let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
     (fn, si, mo) dry struc =
   Buffer.clear buf;
+  let struc = Normalize.structure struc in
   let d = descr () in
   (* Empties every per-file cell, the mutual-recursion registry among them,
      before this unit's dry run repopulates it. *)
