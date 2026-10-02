@@ -118,10 +118,6 @@ type slot = {
   eta_keep_moves : bool;
       (** The slot holds a single-use partial application whose closure may
           capture by reference and keep its [CPPmove] wrappers. *)
-  expected_cpp_ty : cpp_type option;
-      (** The C++ type of the slot, set from the [?expected_ty] argument of
-          whichever generator is building the position.  Alone among these
-          fields it does not survive into a nested position. *)
   call_result : cpp_type option;
       (** The type the call this slot is an argument of is expected to
           produce, where an instance passed as a value reads back the carrier

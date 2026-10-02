@@ -3319,18 +3319,6 @@ type slot = {
       (** The slot holds a single-use partial application whose closure may
           capture by reference and keep its [CPPmove] wrappers.  Read once, by
           the {!eta_fun} that builds that closure. *)
-  expected_cpp_ty : cpp_type option;
-      (** The C++ type of the slot, when the position states one.  Set from the
-          [?expected_ty] argument on the way into every generator that takes
-          one, so a helper reached with the slot alone asks the same question
-          of the same answer -- rather than reading the enclosing function's
-          return type and calling it the position's type.
-
-          Unlike the other fields this one does {e not} survive into a nested
-          position: a constructor argument shares its constructor's erasure but
-          not its type, so each generator overwrites it from its own argument.
-          {!slot_cpp_ty} is what says where to fall back when a position states
-          nothing. *)
   call_result : cpp_type option;
       (** The type the call this slot is an argument of is expected to
           produce.  An instance passed as a value -- [MonadIter_itree] as
@@ -3353,7 +3341,6 @@ let empty_slot =
     expected_ml_ty = None;
     in_ctor_arg = false;
     eta_keep_moves = false;
-    expected_cpp_ty = None;
     call_result = None;
     stated_ml_ty = None }
 
@@ -5252,7 +5239,6 @@ and build_template_params ?curry env tvars tys =
 
 and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
     r ts =
-  let slot = {slot with expected_cpp_ty = expected_ty} in
   (* Extraction leaves a type argument [Tunresolved] where it could not read the
      type off the term -- the element of [Some 1] passed at a parameter of an
      inductive that applies its own higher-kinded parameter ([F nat]).  The
@@ -5364,7 +5350,7 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
   let ty =
     (* With no slot of its own, a constructor in a tail statement lands in
        the enclosing function's result ({!with_cpp_return_type}, as
-       {!slot_cpp_ty} reads it). *)
+       {!position_cpp_ty} reads it). *)
     let expected =
       match expected_ty with
       | Some _ -> expected_ty
@@ -6494,8 +6480,9 @@ and coerce ?term ?from ~into expr =
             gen_type_conversion_expr ~src_ty:f ~dst_ty:into expr
           | _ -> expr )
 
-(** [recover_boxed_result ~boxed ~slot expr] casts the result of a call back
-    into the type the position expects -- see {!slot_cpp_ty} -- when [boxed]
+(** [recover_boxed_result ~boxed ~expected expr] casts the result of a call
+    back into the type the position expects -- see {!position_cpp_ty} -- when
+    [boxed]
     says the callee hands back a [std::any] whatever its ML type claims,
     because its codomain erases or because it was itself recovered from a box
     and so goes through the canonical [std::function<std::any(std::any...)>]
@@ -6504,8 +6491,8 @@ and coerce ?term ?from ~into expr =
     [boxed] is a statement about the callee, not a guess, so the recovery is
     unconditional: unlike {!unbox_into} it casts at a template parameter too,
     which inside a template is the one name the result has. *)
-and recover_boxed_result ~boxed ~slot expr =
-  match slot_cpp_ty slot with
+and recover_boxed_result ~boxed ~expected expr =
+  match position_cpp_ty expected with
   | Some into when boxed -> coerce ~from:Tany ~into expr
   | _ -> expr
 
@@ -6533,13 +6520,14 @@ and recover_carrier_result ~fun_ty ~n_args ~want expr =
     CPPcontainer_cast (want, expr, false)
   | _ -> expr
 
-(** The C++ type a position is being generated into: what the slot states, and
-    where it states nothing, the enclosing function's return type -- which a
-    tail position lands in.  The one place that precedence is written down, so
-    that "the type this position expects" cannot mean the slot at one site and
-    the enclosing return type at another. *)
-and slot_cpp_ty (slot : slot) =
-  match slot.expected_cpp_ty with
+(** The C++ type a position is being generated into: what it states
+    ([expected], a generator's [?expected_ty]), and where it states nothing,
+    the enclosing function's return type -- which a tail position lands in.
+    The one place that precedence is written down, so that "the type this
+    position expects" cannot mean the position at one site and the enclosing
+    return type at another. *)
+and position_cpp_ty (expected : cpp_type option) =
+  match expected with
   | Some _ as t -> t
   | None -> (!tctx).current_cpp_return_type
 
@@ -7141,7 +7129,6 @@ and record_call_sig env callee_ty e =
     non-tail statement) does not take it. *)
 and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     (ml_e : ml_ast) : cpp_expr =
-  let slot = {slot with expected_cpp_ty = expected_ty} in
   match ml_e with
   | MLrel i ->
     let var_expr =
@@ -10577,7 +10564,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           | Some ft -> (not hkt_class) && ml_codomain_erases_to_any n_value_args ft
           | None -> false
         in
-        let call = recover_boxed_result ~boxed:erased_cod ~slot call in
+        let call = recover_boxed_result ~boxed:erased_cod ~expected:expected_ty call in
         recover_carrier_result
           ~fun_ty:(if is_typeclass then None else fld_ty_opt)
           ~n_args:n_value_args ~want:expected_ty call
@@ -11042,7 +11029,7 @@ and project_through_instance env x tys args inst =
      without it an operand that spells its type for the first time, a match
      whose branches have to agree on one return type, is built at whatever
      the enclosing declaration returns.  An argument is not a tail position,
-     so that is never the right answer; see {!slot_cpp_ty}.
+     so that is never the right answer; see {!position_cpp_ty}.
 
      Two substitutions, because the projection's type quantifies over the
      class's carrier as well as the method's own variables and [tys] carries
@@ -11077,9 +11064,7 @@ and project_through_instance env x tys args inst =
        (fun i a ->
          let expected = param_expected_cpp_ty env operand_ml_tys i in
          let slot =
-           {empty_slot with
-             expected_cpp_ty = expected;
-             expected_ml_ty = List.nth_opt operand_ml_tys i }
+           {empty_slot with expected_ml_ty = List.nth_opt operand_ml_tys i}
          in
          with_cpp_return_type expected (fun () ->
              gen_expr ?expected_ty:expected ~slot env a ) )
@@ -11385,7 +11370,6 @@ and ml_arg_to_template_type ?expected env ml_arg =
 
 
 and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
-  let slot = {slot with expected_cpp_ty = expected_ty} in
 
   let rec get_eta_args dom args =
     match (dom, args) with
@@ -12160,7 +12144,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
           if param_resolves_to_any then Some Tany
           (* An argument is not a tail position, so the enclosing function's
              return type does not describe it -- and what the parameter says
-             does.  Left to {!slot_cpp_ty}'s fallback, a match in argument
+             does.  Left to {!position_cpp_ty}'s fallback, a match in argument
              position builds its branches at the type the {e call} returns.
 
              Only where the parameter's type can be written, though: installed
@@ -12975,7 +12959,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
            argument, name it; where the call names nothing else either, fall
            back to the phantom prefix. *)
         match
-          hkt_carrier_type_args env tvars ?result:slot.expected_cpp_ty id tys
+          hkt_carrier_type_args env tvars ?result:expected_ty id tys
         with
         | Some targs -> targs
         | None -> (
@@ -14162,9 +14146,9 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
           (match get_env_type_opt i with Some ty -> ml_codomain_erases_to_any n ty | None -> false)
         | _ -> false
       in
-      recover_boxed_result ~boxed:erased_cod ~slot result
+      recover_boxed_result ~boxed:erased_cod ~expected:expected_ty result
       |> recover_carrier_result ~fun_ty:callee_fun_ml_ty ~n_args:n
-           ~want:(slot_cpp_ty slot)
+           ~want:(position_cpp_ty expected_ty)
 
 (** Build the qualified constructor struct type for a pattern match branch.
 
@@ -15520,7 +15504,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
   in
   (* A scrutinee is not a tail position: whatever the enclosing function
      returns says nothing about the value being matched on.  Naming the
-     match's own type here keeps {!slot_cpp_ty}'s fallback from recovering a
+     match's own type here keeps {!position_cpp_ty}'s fallback from recovering a
      boxed scrutinee at the return type -- [any_cast<step_result>] on what is
      a [bool]. *)
   let t =
@@ -16441,13 +16425,11 @@ and gen_local_fix_ycomb env renamed_ids funs_with_params =
     final expression into a statement (e.g., return, assignment). Handles
     let-bindings, pattern matching, fix expressions, and monadic operations. *)
 and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
-  (* Statements open a position of their own: the value a [return] here carries
-     goes to the enclosing function, not to the slot the caller's expression was
-     being built for.  A lambda body reached with the lambda's own
-     [std::function<...>] type would otherwise recover its result at the type of
-     the whole callable.  What a tail statement does land in is
-     {!with_cpp_return_type}, which {!slot_cpp_ty} falls back to. *)
-  let slot = {slot with expected_cpp_ty = None} in
+  (* Statements open a position of their own and state no type for it: the
+     value a [return] here carries goes to the enclosing function, not to the
+     position the caller's expression was being built for.  What a tail
+     statement lands in is {!with_cpp_return_type}, which
+     {!position_cpp_ty} falls back to. *)
   match ast with
   | MLletin (_, _, (MLfix (x, ids, funs, _) as fix_term), b) as _whole ->
     (* Special case for let-fix: the let binding name is the fix function name *)
@@ -17890,7 +17872,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         (* Void-returning function: discard the value and return. *)
         [Sreturn None]
       else
-        [k (gen_expr ?expected_ty:(slot_cpp_ty slot) env t)]
+        [k (gen_expr ?expected_ty:(position_cpp_ty None) env t)]
     end
   | MLcase (typ, t, pv) when is_custom_match pv ->
     (* Set up dead-after for owned variables at their last use, same as the
@@ -17964,7 +17946,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
               move_dead_after =
                   Escape.IntSet.union (!tctx).move_dead_after tail_dead } );
       let value =
-        gen_expr ?expected_ty:(slot_cpp_ty slot) env ast
+        gen_expr ?expected_ty:(position_cpp_ty None) env ast
       in
       (* A function value returned into an erased ([std::any]) return type --
          e.g. the [nat -> nat] branch of a dependent [if ... then nat else
@@ -18082,7 +18064,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     in
     if is_void_tail then begin
       let e =
-        gen_tail_expr ~slot ?expected_ty:(slot_cpp_ty slot) env t
+        gen_tail_expr ~slot ?expected_ty:(position_cpp_ty None) env t
       in
       tctx := { !tctx with move_dead_after = saved_dead };
       if (!tctx).current_cpp_return_type = Some Tvoid then
@@ -18102,7 +18084,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
          binding.  Probing [k] is how the void case above already asks. *)
       let k_returns = match k (CPPint 0) with Sreturn _ -> true | _ -> false in
       let e =
-        gen_tail_expr ~slot ?expected_ty:(slot_cpp_ty slot) env t
+        gen_tail_expr ~slot ?expected_ty:(position_cpp_ty None) env t
       in
       (* A pair accessor applied to an erased pair yields a [std::any] at run
          time even though its ML type is concrete.  In tail position that value
@@ -18127,7 +18109,6 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     Used by the default tail case and by reified-mode bind/ret handlers
     (which bypass monadic desugaring and treat bind/Ret as plain calls). *)
 and gen_tail_expr ?expected_ty ?(slot = empty_slot) env t =
-  let slot = {slot with expected_cpp_ty = expected_ty} in
   ( if not (!tctx).move_suppress_tail then
       let tail_dead =
         Escape.IntSet.filter
