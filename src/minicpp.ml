@@ -656,10 +656,6 @@ and unbox =
   | Unbox_list of cpp_type * cpp_type
       (** [Unbox_list (list, flat)]: the box holds the list at its erased,
           flat instantiation [flat] ([List<std::any>]); converted to [list]. *)
-  | Rebuild_deque of cpp_type * cpp_type option
-      (** [Rebuild_deque (elem, flat)]: a deque of boxed elements -- read out of
-          a box at [flat] when given -- rebuilt element by element as a deque
-          of [elem]. *)
 
 (** Custom extraction info, resolved once during translation. *)
 and custom_info = {
@@ -1363,7 +1359,6 @@ let map_expr
       | Unbox_to t -> Unbox_to (ft t)
       | Unbox_or_keep t -> Unbox_or_keep (ft t)
       | Unbox_list (l, f) -> Unbox_list (ft l, ft f)
-      | Rebuild_deque (el, f) -> Rebuild_deque (ft el, Option.map ft f)
     in
     CPPunbox (u, fe e')
   | CPPerase_fn (ty, e') -> CPPerase_fn (Option.map ft ty, fe e')

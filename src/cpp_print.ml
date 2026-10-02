@@ -427,11 +427,6 @@ let print_cpp_type_var vl i =
   | None -> str "T" ++ int i
 
 
-(** Whether a C++ type is [std::pair]. *)
-let is_prod_cpp_type = function
-  | Tglob (g, [_; _], _) -> Ml_type_util.is_prod_global g
-  | _ -> false
-
 (** Names introduced by [using X = std::any;], and the question "is this type
     spelled [std::any]" — both owned by {!Cpp_erasure}, so that the pass that
     decides how to cross an erasure boundary and the printer that renders the
@@ -743,16 +738,6 @@ let ctor_alias_name_for ~base body =
 let projection_field_name (r : GlobRef.t) : string =
   Common.modular_rename Term (Label.to_id (label_of_r r))
 
-
-(** Strip [shared_ptr] wrapping from all positions in a C++ type.
-    Semantic values in [std::any] are always bare; NS-propagated types that
-    added [shared_ptr] for struct storage must be stripped before extracting
-    elements from grammar-action [any] values. *)
-let rec bare_elem_ty : cpp_type -> cpp_type = function
-  | Tshared_ptr inner -> bare_elem_ty inner
-  | Tglob (g, ts, ns) -> Tglob (g, List.map bare_elem_ty ts, ns)
-  | Tnamespace (ns_g, inner) -> Tnamespace (ns_g, bare_elem_ty inner)
-  | other -> other
 
 (** Check if a C++ expression tree contains a string literal ([CPPstring]).
     Used to guard ternary simplification: ternary with string-literal branches
@@ -1419,46 +1404,6 @@ and pp_value_qualifier env ty =
     pp_cpp_expr env [] (CPPglob (r, tys, Some (Table.custom_info r)))
   | _ ->
   pp_cpp_type ~lead:false false [] ty
-
-(** Pretty-print a MiniCpp expression as C++ source.
-
-    @param env   pair [(vl, any_ids)] where [vl] is the list of type-variable
-                 names and [any_ids] is the set of identifiers whose C++ type
-                 is [std::any] in the current scope
-    @param args  accumulated argument expressions for partial application
-                 (in reverse order; applied via {!pp_apply_cpp})
-    @param t     the MiniCpp expression to render *)
-and extract_from_any ty src_expr =
-  (* Extract a value of type [ty] from [src_expr : any].
-     Semantic values stored in std::any are always bare (never shared_ptr-wrapped);
-     field-level shared_ptr wrapping is only in struct fields, not in grammar
-     action semantic values.  Always extract the bare type.
-
-     When the target type is [Tany] (i.e. [std::any]), the expression is
-     already the right type — emitting [std::any_cast<std::any>(x)] would
-     fail at runtime whenever [x] stores a concrete type like [Json_value]. *)
-  if is_any_type ty then src_expr
-  else
-    str Crane_rt.obj_cast ++ str "<" ++ pp_cpp_type false [] ty ++ str ">(" ++ src_expr ++ str ")"
-
-and deque_elem_extract_expr elem_ty src_expr =
-  (* Generate expression to extract elem_ty from a list element stored as any.
-     Pairs are stored as pair<any,any>; other types are stored directly.
-     Strip shared_ptr from elem_ty first: semantic values in std::any are bare. *)
-  let elem_ty = bare_elem_ty elem_ty in
-  if is_prod_cpp_type elem_ty then begin
-    require_header "any";
-    require_header "utility";
-    match elem_ty with
-    | Tglob (_, [t1; t2], _) ->
-      str "[&]() { const auto& _p = " ++ str Crane_rt.obj_cast
-      ++ str ("<std::pair<" ^ Crane_rt.obj ^ ", " ^ Crane_rt.obj ^ ">>(") ++ src_expr
-      ++ str "); return std::make_pair("
-      ++ extract_from_any t1 (str "_p.first") ++ str ", "
-      ++ extract_from_any t2 (str "_p.second") ++ str "); }()"
-    | _ -> extract_from_any elem_ty src_expr
-  end else
-    extract_from_any elem_ty src_expr
 
 (** Pretty-print a MiniCpp expression as C++ source.  The central expression
     printer of the module; dispatches on every {!Minicpp.cpp_expr} form and
@@ -2401,19 +2346,6 @@ and pp_cpp_expr env args t =
     ++ str "(" ++ str Crane_rt.obj_cast ++ str "<"
     ++ pp_cpp_type false [] flat_ty
     ++ str ">(" ++ pp_cpp_expr env args e ++ str "))"
-  | CPPunbox (Rebuild_deque (elem_ty, flat_ty), e) ->
-    require_header "any";
-    let bare_ety = bare_elem_ty elem_ty in
-    let src_s =
-      match flat_ty with
-      | Some flat_ty ->
-        str Crane_rt.obj_cast ++ str "<" ++ pp_cpp_type false [] flat_ty
-        ++ str ">(" ++ pp_cpp_expr env args e ++ str ")"
-      | None -> pp_cpp_expr env args e
-    in
-    str "[&]() { std::deque<" ++ pp_cpp_type false [] bare_ety
-    ++ str "> _r; for (const auto& _e : " ++ src_s ++ str ") _r.push_back("
-    ++ deque_elem_extract_expr bare_ety (str "_e") ++ str "); return _r; }()"
   | CPPany_cast (ty, e) | CPPany_cast_tolerant (ty, e) ->
     require_header "any";
     (* A binder holding a known type in a box is read bare inside a cast

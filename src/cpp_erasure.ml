@@ -397,14 +397,6 @@ let read_stored id ty =
     | Tqualified _ | Tglob (GlobRef.ConstRef _, _, _) -> CPPunbox (Unbox_or_keep ty, CPPvar id)
     | _ -> CPPunbox (Unbox_to resolved, CPPvar id) )
 
-(* The custom list a parameter expects, with its element, where the element is
-   known. *)
-let custom_list_elem = function
-  | Tglob (g, [elem], _) | Tnamespace (_, Tglob (g, [elem], _))
-    when Ml_type_util.is_custom_list_global g && elem <> Tany && elem <> Tauto ->
-    Some (g, elem)
-  | _ -> None
-
 let rec reads_expr r e =
   let ex = reads_expr r and st = reads_stmt r in
   match e with
@@ -422,41 +414,11 @@ let rec reads_expr r e =
   | CPPfun_call (res, (CPPglob (_, _, Some {ci_inline = Some {it_form = Templated; _}; _}) as f), ts) ->
     let expected = match res.cs_params with Ptypes ts -> ts | Punknown -> [] in
     let arg i a =
-      match (List.nth_opt expected i, a) with
-      | Some exp, CPPvar id when Id.Map.mem id r.stored && custom_list_elem exp <> None ->
-        let g, elem = Option.get (custom_list_elem exp) in
-        CPPunbox (Rebuild_deque (elem, Some (Tglob (g, [Tany], []))), a)
-      | Some exp, _ -> read_as r a (ex a) exp
-      | None, _ -> ex a
+      match List.nth_opt expected i with
+      | Some exp -> read_as r a (ex a) exp
+      | None -> ex a
     in
     CPPfun_call (res, ex f, of_reversed (List.rev (List.mapi arg (call_args ts))))
-  | CPPfun_call (res, (CPPqualified_t (Tglob (GlobRef.IndRef (kn, _), _, _), _) as f), ts) ->
-    (* A constructor whose field is a list of another inductive's values
-       takes them by value, where the stored list holds pointers. *)
-    let arg a =
-      match a with
-      | CPPvar id when Id.Map.mem id r.stored -> (
-        match Id.Map.find id r.stored with
-        | Tglob (g, [Tshared_ptr (Tglob (GlobRef.IndRef (kn', _), _, _) as inner)], _)
-          when Ml_type_util.is_custom_list_global g && not (MutInd.CanOrd.equal kn kn') ->
-          CPPunbox (Rebuild_deque (inner, Some (Tglob (g, [Tany], []))), a)
-        | _ -> ex a )
-      | _ -> ex a
-    in
-    CPPfun_call (res, ex f, map_args arg ts)
-  (* A custom list built from another holding boxed elements -- a deque has
-     no converting constructor -- is rebuilt element by element. *)
-  | CPPfun_call (_, CPPglob ((GlobRef.IndRef _ as g), elem :: _, _), {rev = [a]})
-    when Ml_type_util.is_custom_list_global g && elem <> Tany && elem <> Tauto ->
-    CPPunbox (Rebuild_deque (elem, None), ex a)
-  | CPPconverting_ctor (ty, [a]) when custom_list_elem ty <> None ->
-    CPPunbox (Rebuild_deque (snd (Option.get (custom_list_elem ty)), None), ex a)
-  (* A callable read at [std::function<std::any(std::any)>]: a lambda converts,
-     a boxed callable is unboxed first. *)
-  | CPPconverting_ctor ((Tfun ([Tany], Tany) as ty), args) ->
-    CPPconverting_ctor
-      ( ty,
-        List.map (fun a -> match a with CPPlambda _ -> ex a | _ -> CPPunbox (Unbox_to ty, ex a)) args )
   | _ -> map_expr ex st Fun.id e
 
 and reads_stmt r s =
