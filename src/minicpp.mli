@@ -778,7 +778,6 @@ and ref_qual =
 and custom_info = {
   ci_inline : inline_template option;
       (** The replacement text, where the entity is inlined *)
-  ci_is_custom : bool;  (** True if entity has custom C++ mapping *)
   ci_yields : cpp_type option;
       (** For a [%result] block template used as a value: what the block
           evaluates to, recorded where the global's ML type was still in

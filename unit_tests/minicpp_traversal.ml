@@ -42,7 +42,6 @@ let method_ () =
                   [s ()],
                   Some
                     { ci_inline = None;
-                      ci_is_custom = true;
                       ci_yields = Some (s ()) } ))) ];
     mf_receiver = Static;
     mf_is_inline = false;

@@ -641,7 +641,6 @@ and ref_qual =
 (** Custom extraction info, resolved once during translation. *)
 and custom_info = {
   ci_inline : inline_template option;
-  ci_is_custom : bool;
   (* For a [%result] block template used as a value: what the block evaluates
      to, recorded while the global's ML type was still in hand. *)
   ci_yields : cpp_type option;
