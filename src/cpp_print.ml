@@ -427,12 +427,9 @@ let print_cpp_type_var vl i =
   | None -> str "T" ++ int i
 
 
-(** Names introduced by [using X = std::any;], and the question "is this type
-    spelled [std::any]" — both owned by {!Cpp_erasure}, so that the pass that
-    decides how to cross an erasure boundary and the printer that renders the
-    result cannot disagree. *)
-let any_type_aliases = Cpp_erasure.any_type_aliases
-
+(** Whether a type is spelled [std::any] -- owned by {!Cpp_erasure}, which
+    also records the aliases to it, so that the pass that decides how to cross
+    an erasure boundary and the printer cannot disagree. *)
 let is_any_type = Cpp_erasure.is_any_shaped
 
 (** Type names introduced at file scope, recorded as they are emitted.
@@ -2605,8 +2602,6 @@ and pp_cpp_stmt env args = function
          fields
     ++ str "};"
   | Susing (name, ty) ->
-    if is_any_type ty then
-      any_type_aliases := Id.Set.add name !any_type_aliases;
     str "using " ++ Id.print name ++ str " = " ++ pp_cpp_type false [] ty ++ str ";"
   | Sdecl_init (id, ty) ->
     pp_cpp_type false [] ty ++ str " " ++ Id.print id ++ str "{};"
@@ -3663,8 +3658,6 @@ let rec pp_cpp_field
     ++ fnl ()
     ++ (str "using " ++ Id.print dfs_name ++ str " = " ++ str tmpl ++ str "<>;")
   | Fnested_using (tparams, id, ty) ->
-    if tparams = [] && is_any_type ty then
-      any_type_aliases := Id.Set.add id !any_type_aliases;
     h
       ( ( if tparams = [] then mt ()
           else
