@@ -116,15 +116,15 @@ struct ReuseUseAfterMove {
   /// Expected: length 1,2,3 = 3, so result = 3, 2, 3.
   /// Bug: null dereference inside length.
   static inline const uint64_t test1 = []() {
-    auto &&_sv0 = rewrite_head(
+    auto &&_sv = rewrite_head(
         mylist::mycons(
             UINT64_C(1),
             mylist::mycons(UINT64_C(2),
                            mylist::mycons(UINT64_C(3), mylist::mynil()))),
         true);
-    if (std::holds_alternative<typename mylist::Mycons>(_sv0.v())) {
-      const auto &[a00, a10] = std::get<typename mylist::Mycons>(_sv0.v());
-      return a00;
+    if (std::holds_alternative<typename mylist::Mycons>(_sv.v())) {
+      const auto &[a0, a1] = std::get<typename mylist::Mycons>(_sv.v());
+      return a0;
     } else {
       return UINT64_C(999);
     }
@@ -132,15 +132,15 @@ struct ReuseUseAfterMove {
   /// test2: Use sum instead of length — same bug pattern.
   static mylist rewrite_head_sum(mylist l, bool b);
   static inline const uint64_t test2 = []() {
-    auto &&_sv0 = rewrite_head_sum(
+    auto &&_sv = rewrite_head_sum(
         mylist::mycons(
             UINT64_C(10),
             mylist::mycons(UINT64_C(20),
                            mylist::mycons(UINT64_C(30), mylist::mynil()))),
         true);
-    if (std::holds_alternative<typename mylist::Mycons>(_sv0.v())) {
-      const auto &[a00, a10] = std::get<typename mylist::Mycons>(_sv0.v());
-      return a00;
+    if (std::holds_alternative<typename mylist::Mycons>(_sv.v())) {
+      const auto &[a0, a1] = std::get<typename mylist::Mycons>(_sv.v());
+      return a0;
     } else {
       return UINT64_C(999);
     }

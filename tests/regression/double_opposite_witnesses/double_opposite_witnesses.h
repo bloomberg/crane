@@ -159,8 +159,7 @@ struct DoubleOppositeWitnessesCase {
 
     static crane::obj compose(uint64_t, uint64_t, uint64_t, crane::obj f,
                               crane::obj g) {
-      return (crane::any_cast<uint64_t>(std::move(f)) +
-              crane::any_cast<uint64_t>(std::move(g)));
+      return (crane::any_cast<uint64_t>(f) + crane::any_cast<uint64_t>(g));
     }
   };
 
@@ -172,7 +171,7 @@ struct DoubleOppositeWitnessesCase {
 
     static Obj zero_object() { return UINT64_C(0); }
 
-    static Obj suspension(uint64_t x) { return (std::move(x) + 1); }
+    static Obj suspension(uint64_t x) { return (x + 1); }
   };
 
   static_assert(PreStableCategory<toy_prestable, Obj>);

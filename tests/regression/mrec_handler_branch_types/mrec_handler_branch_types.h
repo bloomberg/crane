@@ -616,8 +616,8 @@ struct MrecHandlerBranchTypes {
       if (std::holds_alternative<typename Sum<Nat, Nat>::Inl>(s.v())) {
         return false;
       } else {
-        const auto &[a00] = std::get<typename Sum<Nat, Nat>::Inr>(s.v());
-        return a00.eqb(Nat::s(Nat::s(Nat::s(Nat::o()))));
+        const auto &[a0] = std::get<typename Sum<Nat, Nat>::Inr>(s.v());
+        return a0.eqb(Nat::s(Nat::s(Nat::s(Nat::o()))));
       }
     } else {
       return false;

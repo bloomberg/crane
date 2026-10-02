@@ -160,9 +160,9 @@ struct SigmaTypes {
   static inline const uint64_t test_double_5 = use_nat_double(UINT64_C(5));
   static inline const uint64_t test_positive_3 = get_positive(UINT64_C(3));
   static inline const uint64_t test_double_pos = []() {
-    const auto &_sv0 = double_positive(UINT64_C(3));
-    const auto &[x0] = _sv0;
-    return x0;
+    const auto &_sv = double_positive(UINT64_C(3));
+    const auto &[x] = _sv;
+    return x;
   }();
   static inline const List<uint64_t> test_positives =
       positives_up_to(UINT64_C(5));

@@ -162,11 +162,11 @@ template <typename _A0, typename
 _A1>
 static EOU<_A1> bind(EOU<_A0> m, crane::fn<EOU<_A1>(_A0)> k) {
 if (std::holds_alternative<typename EOU<_A0>::Ok>(m.v())) {
-const auto& [a01] = std::get<typename EOU<_A0>::Ok>(m.v());
-return k(a01);
+const auto& [a0] = std::get<typename EOU<_A0>::Ok>(m.v());
+return k(a0);
 } else {
-const auto& [a01] = std::get<typename EOU<_A0>::Err>(m.v());
-return EOU<_A1>::err(a01);
+const auto& [a0] = std::get<typename EOU<_A0>::Err>(m.v());
+return EOU<_A1>::err(a0);
 }}
 };
 static_assert(Monad<EOU_monad>);
@@ -291,15 +291,15 @@ struct InductivePayloadFromSameSection {
 static inline const std::pair<Nat, bool> the_null = crane_any_cast<std::pair<Nat, bool>>(PointerV<natIPtr>::null());
 static inline const Dnest<typename PointerV<natIPtr>::ptr> nested = Dnest<typename PointerV<natIPtr>::ptr>::dbox(Dval<typename PointerV<natIPtr>::ptr>::dptr(the_null));
 static inline const Nat run = []() {
-auto&& _sv2 = nested;
-if (std::holds_alternative<typename Dnest<typename PointerV<natIPtr>::ptr>::DBox>(_sv2.v())) {
-const auto& [d2] = std::get<typename Dnest<typename PointerV<natIPtr>::ptr>::DBox>(_sv2.v());
-if (std::holds_alternative<typename Dval<typename PointerV<natIPtr>::ptr>::DPtr>(d2.v())) {
-const auto& [p3] = std::get<typename Dval<typename PointerV<natIPtr>::ptr>::DPtr>(d2.v());
-return PIV<natIPtr>::ptr_to_int(p3);
+auto&& _sv = nested;
+if (std::holds_alternative<typename Dnest<typename PointerV<natIPtr>::ptr>::DBox>(_sv.v())) {
+const auto& [d0] = std::get<typename Dnest<typename PointerV<natIPtr>::ptr>::DBox>(_sv.v());
+if (std::holds_alternative<typename Dval<typename PointerV<natIPtr>::ptr>::DPtr>(d0.v())) {
+const auto& [p0] = std::get<typename Dval<typename PointerV<natIPtr>::ptr>::DPtr>(d0.v());
+return PIV<natIPtr>::ptr_to_int(p0);
 } else {
-const auto& [n3] = std::get<typename Dval<typename PointerV<natIPtr>::ptr>::DNat>(d2.v());
-return n3;
+const auto& [n0] = std::get<typename Dval<typename PointerV<natIPtr>::ptr>::DNat>(d0.v());
+return n0;
 }
 } else {
 return Nat::o();

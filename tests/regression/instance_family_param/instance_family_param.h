@@ -165,9 +165,9 @@ struct InstanceFamilyParam {
       [](const Nat &x) { return Nat::s(x); },
       box<noE, Nat>::box0(Nat::s(Nat::s(Nat::o()))));
   static inline const bool is_three = []() {
-    const auto &_sv1 = b;
-    const auto &[a1] = _sv1;
-    return a1.eqb(Nat::s(Nat::s(Nat::s(Nat::o()))));
+    const auto &_sv = b;
+    const auto &[a] = _sv;
+    return a.eqb(Nat::s(Nat::s(Nat::s(Nat::o()))));
   }();
 };
 

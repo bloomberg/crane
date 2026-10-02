@@ -166,11 +166,11 @@ static EOU<_A0> ret(_A0 a) {
 return EOU<_A0>::ok(std::move(a));}
 static EOU<crane::obj> bind(EOU<crane::obj> m, crane::fn<EOU<crane::obj>(crane::obj)> k) {
 if (std::holds_alternative<typename EOU<crane::obj>::Ok>(m.v())) {
-const auto& [a01] = std::get<typename EOU<crane::obj>::Ok>(m.v());
-return k(a01);
+const auto& [a0] = std::get<typename EOU<crane::obj>::Ok>(m.v());
+return k(a0);
 } else {
-const auto& [a01] = std::get<typename EOU<crane::obj>::Err>(m.v());
-return EOU<crane::obj>::err(a01);
+const auto& [a0] = std::get<typename EOU<crane::obj>::Err>(m.v());
+return EOU<crane::obj>::err(a0);
 }}
 };
 static_assert(Monad<EOU_monad>);template <typename ptr, typename iptr,
@@ -285,16 +285,16 @@ struct ErasedInstanceArgumentInMention {
 static inline const Dval<typename ParamsV<natIPtr>::PTR::ptr, typename natIPtr::iptr, typename ParamsV<natIPtr>::ADDR> boxed_iptr = Dval<typename ParamsV<natIPtr>::PTR::ptr, typename natIPtr::iptr, typename ParamsV<natIPtr>::ADDR>::diptr(natIPtr::zero_iptr());
 static inline const Nat addr0 = crane::any_cast<Nat>(ParamsV<natIPtr>::zero_addr());
 static inline const Nat run = []() {
-auto&& _sv2 = boxed_iptr;
-if (std::holds_alternative<typename Dval<typename ParamsV<natIPtr>::PTR::ptr, typename natIPtr::iptr, typename ParamsV<natIPtr>::ADDR>::DPtr>(_sv2.v())) {
-const auto& [p2] = std::get<typename Dval<typename ParamsV<natIPtr>::PTR::ptr, typename natIPtr::iptr, typename ParamsV<natIPtr>::ADDR>::DPtr>(_sv2.v());
-return p2.first;
-} else if (std::holds_alternative<typename Dval<typename ParamsV<natIPtr>::PTR::ptr, typename natIPtr::iptr, typename ParamsV<natIPtr>::ADDR>::DIptr>(_sv2.v())) {
-const auto& [i2] = std::get<typename Dval<typename ParamsV<natIPtr>::PTR::ptr, typename natIPtr::iptr, typename ParamsV<natIPtr>::ADDR>::DIptr>(_sv2.v());
-return natIPtr::to_Z(i2);
+auto&& _sv = boxed_iptr;
+if (std::holds_alternative<typename Dval<typename ParamsV<natIPtr>::PTR::ptr, typename natIPtr::iptr, typename ParamsV<natIPtr>::ADDR>::DPtr>(_sv.v())) {
+const auto& [p0] = std::get<typename Dval<typename ParamsV<natIPtr>::PTR::ptr, typename natIPtr::iptr, typename ParamsV<natIPtr>::ADDR>::DPtr>(_sv.v());
+return p0.first;
+} else if (std::holds_alternative<typename Dval<typename ParamsV<natIPtr>::PTR::ptr, typename natIPtr::iptr, typename ParamsV<natIPtr>::ADDR>::DIptr>(_sv.v())) {
+const auto& [i0] = std::get<typename Dval<typename ParamsV<natIPtr>::PTR::ptr, typename natIPtr::iptr, typename ParamsV<natIPtr>::ADDR>::DIptr>(_sv.v());
+return natIPtr::to_Z(i0);
 } else {
-const auto& [a2] = std::get<typename Dval<typename ParamsV<natIPtr>::PTR::ptr, typename natIPtr::iptr, typename ParamsV<natIPtr>::ADDR>::DAddr>(_sv2.v());
-return a2;
+const auto& [a0] = std::get<typename Dval<typename ParamsV<natIPtr>::PTR::ptr, typename natIPtr::iptr, typename ParamsV<natIPtr>::ADDR>::DAddr>(_sv.v());
+return a0;
 }
 }();
 };

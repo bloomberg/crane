@@ -37,7 +37,7 @@ struct TodoTypeSubstPackAlias {
 
     static uint64_t seed() { return UINT64_C(3); }
 
-    static uint64_t step(uint64_t x) { return (std::move(x) + 1); }
+    static uint64_t step(uint64_t x) { return (x + 1); }
   };
 
   static_assert(Pack<nat_pack>);

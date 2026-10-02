@@ -161,11 +161,11 @@ template <typename _A0, typename
 _A1>
 static EOU<_A1> bind(EOU<_A0> m, crane::fn<EOU<_A1>(_A0)> k) {
 if (std::holds_alternative<typename EOU<_A0>::Ok>(m.v())) {
-const auto& [a01] = std::get<typename EOU<_A0>::Ok>(m.v());
-return k(a01);
+const auto& [a0] = std::get<typename EOU<_A0>::Ok>(m.v());
+return k(a0);
 } else {
-const auto& [a01] = std::get<typename EOU<_A0>::Err>(m.v());
-return EOU<_A1>::err(a01);
+const auto& [a0] = std::get<typename EOU<_A0>::Err>(m.v());
+return EOU<_A1>::err(a0);
 }}
 };
 static_assert(Monad<EOU_monad>);
@@ -252,13 +252,13 @@ struct TypeAliasOfSectionInductive {
 static inline const std::pair<Nat, bool> the_null = crane_any_cast<std::pair<Nat, bool>>(PointerV<natIPtr>::null());
 static inline const dbox<typename PointerV<natIPtr>::ptr> packed = std::make_pair(Dval<typename PointerV<natIPtr>::ptr>::dptr(the_null), Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))));
 static inline const Nat run = []() {
-auto&& _sv2 = packed.first;
-if (std::holds_alternative<typename Dval<typename PointerV<natIPtr>::ptr>::DPtr>(_sv2.v())) {
-const auto& [p2] = std::get<typename Dval<typename PointerV<natIPtr>::ptr>::DPtr>(_sv2.v());
-return PIV<natIPtr>::ptr_to_int(p2);
+auto&& _sv = packed.first;
+if (std::holds_alternative<typename Dval<typename PointerV<natIPtr>::ptr>::DPtr>(_sv.v())) {
+const auto& [p0] = std::get<typename Dval<typename PointerV<natIPtr>::ptr>::DPtr>(_sv.v());
+return PIV<natIPtr>::ptr_to_int(p0);
 } else {
-const auto& [n2] = std::get<typename Dval<typename PointerV<natIPtr>::ptr>::DNat>(_sv2.v());
-return n2;
+const auto& [n0] = std::get<typename Dval<typename PointerV<natIPtr>::ptr>::DNat>(_sv.v());
+return n0;
 }
 }();
 };

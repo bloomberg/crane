@@ -147,11 +147,11 @@ template <typename _A0, typename
 _A1>
 static EOU<_A1> bind(EOU<_A0> m, crane::fn<EOU<_A1>(_A0)> k) {
 if (std::holds_alternative<typename EOU<_A0>::Ok>(m.v())) {
-const auto& [a01] = std::get<typename EOU<_A0>::Ok>(m.v());
-return k(a01);
+const auto& [a0] = std::get<typename EOU<_A0>::Ok>(m.v());
+return k(a0);
 } else {
-const auto& [a01] = std::get<typename EOU<_A0>::Err>(m.v());
-return EOU<_A1>::err(a01);
+const auto& [a0] = std::get<typename EOU<_A0>::Err>(m.v());
+return EOU<_A1>::err(a0);
 }}
 };
 static_assert(Monad<EOU_monad>);template <IPtr

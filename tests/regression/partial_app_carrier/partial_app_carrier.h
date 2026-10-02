@@ -153,10 +153,10 @@ struct PartialAppCarrier {
       get_st<noE>()(Nat::s(Nat::s(Nat::s(Nat::o()))));
 
   static inline const bool is_three = []() {
-    const auto &_sv0 = r;
-    const auto &[a1] = _sv0;
-    const auto &[a, _x] = a1;
-    return a.eqb(Nat::s(Nat::s(Nat::s(Nat::o()))));
+    const auto &_sv = r;
+    const auto &[a] = _sv;
+    const auto &[a1, _x] = a;
+    return a1.eqb(Nat::s(Nat::s(Nat::s(Nat::o()))));
   }();
 };
 

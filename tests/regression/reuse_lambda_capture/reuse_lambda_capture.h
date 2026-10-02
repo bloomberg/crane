@@ -127,13 +127,13 @@ struct ReuseLambdaCapture {
   /// Result:   11, 23, 33  (h+1=11, 20+3=23, 30+3=33)
   /// Length = 3
   static inline const uint64_t test2 = []() {
-    auto &&_sv0 = add_length_to_each(
+    auto &&_sv = add_length_to_each(
         mylist::mycons(UINT64_C(5),
                        mylist::mycons(UINT64_C(6), mylist::mynil())),
         true);
-    if (std::holds_alternative<typename mylist::Mycons>(_sv0.v())) {
-      const auto &[a00, a10] = std::get<typename mylist::Mycons>(_sv0.v());
-      return a00;
+    if (std::holds_alternative<typename mylist::Mycons>(_sv.v())) {
+      const auto &[a0, a1] = std::get<typename mylist::Mycons>(_sv.v());
+      return a0;
     } else {
       return UINT64_C(999);
     }

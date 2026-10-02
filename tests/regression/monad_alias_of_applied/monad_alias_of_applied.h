@@ -185,8 +185,8 @@ struct MonadAliasOfApplied {
     template <typename _A0, typename _A1>
     static EOU<_A1> bind(EOU<_A0> c, crane::fn<EOU<_A1>(_A0)> k) {
       if (std::holds_alternative<typename EOU<_A0>::Raise_error>(c.v())) {
-        const auto &[n0] = std::get<typename EOU<_A0>::Raise_error>(c.v());
-        return EOU<_A1>::raise_error(n0);
+        const auto &[n] = std::get<typename EOU<_A0>::Raise_error>(c.v());
+        return EOU<_A1>::raise_error(n);
       } else {
         const auto &[x0] = std::get<typename EOU<_A0>::Raise_ret>(c.v());
         return k(x0);

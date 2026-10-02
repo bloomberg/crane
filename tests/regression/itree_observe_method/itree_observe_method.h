@@ -260,11 +260,11 @@ struct ItreeObserveMethod {
           Nat::s(Nat::s(Nat::s(Nat::o())))));
 
   static inline const bool is_three = []() {
-    auto &&_sv0 = t.observe();
+    auto &&_sv = t.observe();
     if (std::holds_alternative<
-            typename ItreeF<noE, Nat, Itree<noE, Nat>>::RetF>(_sv0.v())) {
+            typename ItreeF<noE, Nat, Itree<noE, Nat>>::RetF>(_sv.v())) {
       const auto &[r0] =
-          std::get<typename ItreeF<noE, Nat, Itree<noE, Nat>>::RetF>(_sv0.v());
+          std::get<typename ItreeF<noE, Nat, Itree<noE, Nat>>::RetF>(_sv.v());
       return r0.eqb(Nat::s(Nat::s(Nat::s(Nat::o()))));
     } else {
       return false;

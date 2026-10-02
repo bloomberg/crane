@@ -160,11 +160,11 @@ template <typename _A0, typename
 _A1>
 static EOU<_A1> bind(EOU<_A0> m, crane::fn<EOU<_A1>(_A0)> k) {
 if (std::holds_alternative<typename EOU<_A0>::Ok>(m.v())) {
-const auto& [a01] = std::get<typename EOU<_A0>::Ok>(m.v());
-return k(a01);
+const auto& [a0] = std::get<typename EOU<_A0>::Ok>(m.v());
+return k(a0);
 } else {
-const auto& [a01] = std::get<typename EOU<_A0>::Err>(m.v());
-return EOU<_A1>::err(a01);
+const auto& [a0] = std::get<typename EOU<_A0>::Err>(m.v());
+return EOU<_A1>::err(a0);
 }}
 };
 static_assert(Monad<EOU_monad>);
@@ -206,10 +206,10 @@ struct PromotedVarOfSpecialisedInstanceArgument {
 static inline const std::pair<Nat, bool> the_null = crane_any_cast<std::pair<Nat, bool>>(PointerV<natIPtr>::null());
 
 static inline const Nat run = []() {
-auto&& _sv2 = PIV<natIPtr>::int_to_ptr(Nat::s(Nat::o()), true);
-if (std::holds_alternative<typename EOU<typename PointerV<natIPtr>::ptr>::Ok>(_sv2.v())) {
-const auto& [a02] = std::get<typename EOU<typename PointerV<natIPtr>::ptr>::Ok>(_sv2.v());
-return PIV<natIPtr>::ptr_to_int(a02);
+auto&& _sv = PIV<natIPtr>::int_to_ptr(Nat::s(Nat::o()), true);
+if (std::holds_alternative<typename EOU<typename PointerV<natIPtr>::ptr>::Ok>(_sv.v())) {
+const auto& [a0] = std::get<typename EOU<typename PointerV<natIPtr>::ptr>::Ok>(_sv.v());
+return PIV<natIPtr>::ptr_to_int(a0);
 } else {
 return Nat::o();
 }

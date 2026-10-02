@@ -146,9 +146,9 @@ struct Dim10TowerProofChainCase {
     return x;
   }();
   static inline const uint64_t dim10_P_cutoff = []() {
-    const auto &_sv0 = dim10_bundle.dt_chain.gc_P_stabilize;
-    const auto &[x0, a10] = _sv0;
-    return x0;
+    const auto &_sv = dim10_bundle.dt_chain.gc_P_stabilize;
+    const auto &[x, a1] = _sv;
+    return x;
   }();
   static inline const bool dim10_layers_cutoff_matches =
       dim10_layers_cutoff == UINT64_C(10);

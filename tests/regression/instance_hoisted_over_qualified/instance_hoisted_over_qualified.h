@@ -286,7 +286,7 @@ struct EOUP_Monad {
       return Sum<Nat, _A1>::inl(a0);
     } else {
       const auto &[a0] = std::get<typename Sum<Nat, _A0>::Inr>(m.v());
-      return std::move(k)(a0);
+      return k(a0);
     }
   }
 };

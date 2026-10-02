@@ -55,13 +55,13 @@ struct SigtBranchTypeMismatch {
             return (n + UINT64_C(7));
           }));
   static inline const uint64_t go = []() {
-    const auto &_sv0 = pack;
-    const auto &[x0, a10] = _sv0;
+    const auto &_sv = pack;
+    const auto &[x0, a1] = _sv;
     if (crane::any_cast<bool>(x0)) {
-      return crane::any_cast<uint64_t>(a10);
+      return crane::any_cast<uint64_t>(a1);
     } else {
       return crane::any_cast<uint64_t>(
-          crane::any_cast<crane::fn<crane::obj(crane::obj)>>(a10)(UINT64_C(1)));
+          crane::any_cast<crane::fn<crane::obj(crane::obj)>>(a1)(UINT64_C(1)));
     }
   }();
 };

@@ -191,18 +191,18 @@ struct DecodeList {
   static inline const uint64_t t_empty =
       decode_list(List<uint64_t>::nil()).length();
   static inline const uint64_t t_odd_tail = []() {
-    auto &&_sv0 = decode_list(List<uint64_t>::cons(
+    auto &&_sv = decode_list(List<uint64_t>::cons(
         UINT64_C(0),
         List<uint64_t>::cons(
             UINT64_C(99),
             List<uint64_t>::cons(UINT64_C(42), List<uint64_t>::nil()))));
-    if (std::holds_alternative<typename List<instruction>::Nil>(_sv0.v())) {
+    if (std::holds_alternative<typename List<instruction>::Nil>(_sv.v())) {
       return UINT64_C(0);
     } else {
-      const auto &[a00, a10] =
-          std::get<typename List<instruction>::Cons>(_sv0.v());
-      if (std::holds_alternative<typename instruction::NOP>(a00.v())) {
-        auto &&_sv = *a10;
+      const auto &[a0, a1] =
+          std::get<typename List<instruction>::Cons>(_sv.v());
+      if (std::holds_alternative<typename instruction::NOP>(a0.v())) {
+        auto &&_sv = *a1;
         if (std::holds_alternative<typename List<instruction>::Nil>(_sv.v())) {
           return UINT64_C(1);
         } else {

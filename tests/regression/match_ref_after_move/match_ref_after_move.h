@@ -304,13 +304,13 @@ struct MatchRefAfterMove {
   static uint64_t mylist_sum(const mylist<uint64_t> &l);
   /// test1: head_and_tail_length 10,20,30 = (10, 2)
   static inline const uint64_t test1 = []() {
-    const auto &_sv0 = head_and_tail_length(mylist<uint64_t>::mycons(
+    const auto &_sv = head_and_tail_length(mylist<uint64_t>::mycons(
         UINT64_C(10),
         mylist<uint64_t>::mycons(
             UINT64_C(20), mylist<uint64_t>::mycons(
                               UINT64_C(30), mylist<uint64_t>::mynil()))));
-    const auto &[a00, a10] = _sv0;
-    return (a00 + a10);
+    const auto &[a0, a1] = _sv;
+    return (a0 + a1);
   }();
   /// test2: nested_match_probe 10,20,30 = 10+20+1 = 31
   static inline const uint64_t test2 =
@@ -321,21 +321,21 @@ struct MatchRefAfterMove {
                                 UINT64_C(30), mylist<uint64_t>::mynil()))));
   /// test3: match_into_pair 5,10 = (5, 6,10)
   static inline const uint64_t test3 = []() {
-    const auto &_sv1 = match_into_pair(mylist<uint64_t>::mycons(
+    const auto &_sv = match_into_pair(mylist<uint64_t>::mycons(
         UINT64_C(5),
         mylist<uint64_t>::mycons(UINT64_C(10), mylist<uint64_t>::mynil())));
-    const auto &[a01, a11] = _sv1;
-    return (a01 + mylist_sum(a11));
+    const auto &[a0, a1] = _sv;
+    return (a0 + mylist_sum(a1));
   }();
   /// test4: double_match 7,8,9 = (7, 8,9)
   static inline const uint64_t test4 = []() {
-    const auto &_sv2 = double_match(mylist<uint64_t>::mycons(
+    const auto &_sv = double_match(mylist<uint64_t>::mycons(
         UINT64_C(7),
         mylist<uint64_t>::mycons(
             UINT64_C(8),
             mylist<uint64_t>::mycons(UINT64_C(9), mylist<uint64_t>::mynil()))));
-    const auto &[a02, a12] = _sv2;
-    return (a02 + mylist_sum(a12));
+    const auto &[a0, a1] = _sv;
+    return (a0 + mylist_sum(a1));
   }();
 
   /// Pattern 5: CPS with explicit continuation that captures from match.

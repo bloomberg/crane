@@ -111,13 +111,13 @@ struct ReuseTagMismatch {
            : UINT64_C(4));
   /// test4: use the flipped value's payload.
   static inline const uint64_t test4 = []() {
-    auto &&_sv3 = id_or_flip(direction::goup(UINT64_C(10)), true);
-    if (std::holds_alternative<typename direction::GoUp>(_sv3.v())) {
-      const auto &[a03] = std::get<typename direction::GoUp>(_sv3.v());
-      return (a03 + UINT64_C(1000));
+    auto &&_sv = id_or_flip(direction::goup(UINT64_C(10)), true);
+    if (std::holds_alternative<typename direction::GoUp>(_sv.v())) {
+      const auto &[a0] = std::get<typename direction::GoUp>(_sv.v());
+      return (a0 + UINT64_C(1000));
     } else {
-      const auto &[a03] = std::get<typename direction::GoDown>(_sv3.v());
-      return a03;
+      const auto &[a0] = std::get<typename direction::GoDown>(_sv.v());
+      return a0;
     }
   }();
 };

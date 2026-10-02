@@ -182,11 +182,11 @@ template <typename _A0, typename
 _A1>
 static EOU<_A1> bind(EOU<_A0> m, crane::fn<EOU<_A1>(_A0)> k) {
 if (std::holds_alternative<typename EOU<_A0>::Ok>(m.v())) {
-const auto& [a00] = std::get<typename EOU<_A0>::Ok>(m.v());
-return k(a00);
+const auto& [a0] = std::get<typename EOU<_A0>::Ok>(m.v());
+return k(a0);
 } else {
-const auto& [a00] = std::get<typename EOU<_A0>::Err>(m.v());
-return EOU<_A1>::err(a00);
+const auto& [a0] = std::get<typename EOU<_A0>::Err>(m.v());
+return EOU<_A1>::err(a0);
 }}
 };
 static_assert(Monad<EOU_monad>);
@@ -278,13 +278,13 @@ struct RecordFieldOfSectionAlias {
 static inline const std::pair<Nat, bool> the_null = crane_any_cast<std::pair<Nat, bool>>(PointerV<natIPtr>::null());
 static inline const dbox<typename PointerV<natIPtr>::ptr> packed = std::make_pair(Dval<typename PointerV<natIPtr>::ptr>::dptr(the_null), Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))));static inline const frame<typename natIPtr::iptr, typename PointerV<natIPtr>::ptr> fr = frame<typename natIPtr::iptr, typename PointerV<natIPtr>::ptr>{the_null, packed};
 static inline const Nat run = PIV<natIPtr>::ptr_to_int(fr.fptr).add([]() {
-auto&& _sv1 = fr.vars.first;
-if (std::holds_alternative<typename Dval<typename PointerV<natIPtr>::ptr>::DPtr>(_sv1.v())) {
-const auto& [p1] = std::get<typename Dval<typename PointerV<natIPtr>::ptr>::DPtr>(_sv1.v());
-return PIV<natIPtr>::ptr_to_int(p1);
+auto&& _sv = fr.vars.first;
+if (std::holds_alternative<typename Dval<typename PointerV<natIPtr>::ptr>::DPtr>(_sv.v())) {
+const auto& [p0] = std::get<typename Dval<typename PointerV<natIPtr>::ptr>::DPtr>(_sv.v());
+return PIV<natIPtr>::ptr_to_int(p0);
 } else {
-const auto& [n1] = std::get<typename Dval<typename PointerV<natIPtr>::ptr>::DNat>(_sv1.v());
-return n1;
+const auto& [n0] = std::get<typename Dval<typename PointerV<natIPtr>::ptr>::DNat>(_sv.v());
+return n0;
 }
 }());
 };

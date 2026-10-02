@@ -38,9 +38,9 @@ struct SigCurriedPayload {
       Sig<crane::fn<uint64_t(uint64_t, uint64_t)>>::exist(
           [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); });
   static inline const uint64_t go = []() {
-    const auto &_sv0 = mk;
-    const auto &[x0] = _sv0;
-    return x0(UINT64_C(1), UINT64_C(2));
+    const auto &_sv = mk;
+    const auto &[x] = _sv;
+    return x(UINT64_C(1), UINT64_C(2));
   }();
 };
 
