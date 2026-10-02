@@ -230,7 +230,7 @@ uint64_t MemSafetyProbe7::apply_all(
       } else {
         const auto &[a0, a1] = std::get<typename MemSafetyProbe7::mylist<
             crane::fn<uint64_t(uint64_t)>>::Mycons>(l.v());
-        _stack.emplace_back(_Resume_Mycons{std::move(a0)});
+        _stack.emplace_back(_Resume_Mycons{a0});
         _stack.emplace_back(_Enter{crane_raw(a1)});
       }
     } else {

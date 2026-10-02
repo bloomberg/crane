@@ -759,8 +759,7 @@ struct MemSafetyProbe13 {
             _result = f;
           } else {
             const auto &[a0, a1, a2] = std::get<typename ftree::FNode>(_sv.v());
-            _stack.emplace_back(
-                _After_FNode{crane_raw(a0), *a2, std::move(a1), *a0});
+            _stack.emplace_back(_After_FNode{crane_raw(a0), *a2, a1, *a0});
             _stack.emplace_back(_Enter{crane_raw(a2)});
           }
         } else if (std::holds_alternative<_After_FNode>(_frame)) {
@@ -824,8 +823,7 @@ struct MemSafetyProbe13 {
             _result = f;
           } else {
             const auto &[a0, a1, a2] = std::get<typename ftree::FNode>(_sv.v());
-            _stack.emplace_back(
-                _After_FNode{crane_raw(a0), *a2, std::move(a1), *a0});
+            _stack.emplace_back(_After_FNode{crane_raw(a0), *a2, a1, *a0});
             _stack.emplace_back(_Enter{crane_raw(a2)});
           }
         } else if (std::holds_alternative<_After_FNode>(_frame)) {

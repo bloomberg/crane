@@ -120,7 +120,7 @@ struct AccumClosureCapture {
             _result = f;
           } else {
             const auto &[a0, a1] = std::get<typename fn_list::FCons>(_sv.v());
-            _stack.emplace_back(_Resume_FCons{*a1, std::move(a0)});
+            _stack.emplace_back(_Resume_FCons{*a1, a0});
             _stack.emplace_back(_Enter{crane_raw(a1)});
           }
         } else {
@@ -165,7 +165,7 @@ struct AccumClosureCapture {
             _result = f;
           } else {
             const auto &[a0, a1] = std::get<typename fn_list::FCons>(_sv.v());
-            _stack.emplace_back(_Resume_FCons{*a1, std::move(a0)});
+            _stack.emplace_back(_Resume_FCons{*a1, a0});
             _stack.emplace_back(_Enter{crane_raw(a1)});
           }
         } else {

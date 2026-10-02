@@ -234,6 +234,12 @@ and generic_inline_expr spec expr =
             cl_capture = Closure },
         of_reversed (spec.get_args expr) )
   else
+    match expr with
+    (* A call inside a closure cannot join the loop machine: the closure may
+       run after this function returns, or elsewhere.  Inlining there would
+       only hand the machine a call it cannot reach. *)
+    | CPPlambda _ -> expr
+    | _ ->
     map_expr
       (generic_inline_expr spec)
       (fun s ->

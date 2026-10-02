@@ -390,7 +390,7 @@ std::pair<MemSafetyProbe23::tree, uint64_t> MemSafetyProbe23::sum_with_acc(
       uint64_t a1 = _f.a1;
       const MemSafetyProbe23::tree &a2 = *_f.a2;
       std::pair<MemSafetyProbe23::tree, uint64_t> pl = std::move(_result);
-      _stack.emplace_back(_Cont_Node_1{a1, std::move(pl)});
+      _stack.emplace_back(_Cont_Node_1{a1, pl});
       _stack.emplace_back(_Enter{pl.second, &a2});
     } else {
       auto _f = std::move(std::get<_Cont_Node_1>(_frame));

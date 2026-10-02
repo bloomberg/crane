@@ -516,8 +516,8 @@ let frame_fields_named ?(offset = 0) names n =
 
 (** Prepare an expression for saving in a continuation frame.
     [shared_ptr] values are ref-counted and can be copied directly.
-    Non-trivially-copyable types (e.g. [std::function], value-type inductives)
-    are std::moved into the frame — the source is always dead after the push.
+    Other non-trivially-copyable lvalues (e.g. [std::function], value-type
+    inductives) are std::moved into the frame, except bare variables.
     Trivially-copyable types are copied cheaply. *)
 let move_for_frame ty expr =
   (* [std::move] is only meaningful on an lvalue.  Wrapping a prvalue -- a call
@@ -532,16 +532,12 @@ let move_for_frame ty expr =
   in
   match ty with
   | Tshared_ptr _ -> expr
-  | Tfun _ ->
-    (match expr with
-    | CPPlambda _ -> expr
-    | e when is_lvalue e -> CPPmove e
-    | _ -> expr)
   | Tconst _ -> expr
   | t when not (is_trivially_copyable_type t) ->
     (match expr with
-    (* A bare variable is left alone (the caller may still need it), and a
-       dereferenced pointer is a borrow of someone else's cell. *)
+    (* A bare variable is left alone: a later push may still read it, and
+       [optimize_frame_push_args] moves it at its last push.  A dereferenced
+       pointer is a borrow of someone else's cell. *)
     | CPPvar _ | CPPderef _ -> expr
     | e when is_lvalue e -> CPPmove e
     | _ -> expr)
@@ -3051,11 +3047,14 @@ let optimize_frame_push_args frame_field_types stmts =
         | _ -> CErrors.anomaly (Pp.str "loopify: unexpected push statement shape")
       ) pushes in
       let last_push_of = Hashtbl.create 8 in
+      (* A read nested in a later push (the re-entry frame's [f(0)]) counts:
+         moving earlier would leave that read with a moved-from value. *)
       List.iteri (fun idx (_, _, _, args) ->
-        List.iter (function
-          | CPPvar id when List.exists (Id.equal id) owned_vars ->
-            Hashtbl.replace last_push_of (Id.to_string id) idx
-          | _ -> ()
+        List.iter (fun arg ->
+          List.iter (fun id ->
+            if List.exists (Id.equal id) owned_vars then
+              Hashtbl.replace last_push_of (Id.to_string id) idx)
+            (free_vars_expr arg)
         ) args
       ) push_data;
       let should_move_in_group ~is_enter idx ty arg =
