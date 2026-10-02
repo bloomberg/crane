@@ -458,7 +458,7 @@ let ind_header_decls kn ind =
               p.ip_types
               (List.rev methods)
               ind.ind_kind
-            |> Gen_decls.deapply_plain_struct_tvars
+            |> Plan_templates.deapply_plain_struct_tvars
           in
           (* Check if this inductive is being promoted into its module struct.
              When promoted, render fields flat (no wrapping struct) since the
@@ -570,7 +570,7 @@ let instance_decls r a t =
   let ds_opt, class_ref_opt, concept_args =
     Gen_decls.gen_instance_struct r a t
   in
-  let ds_opt = Option.map Gen_decls.deapply_plain_struct_tvars ds_opt in
+  let ds_opt = Option.map Plan_templates.deapply_plain_struct_tvars ds_opt in
   let struct_decl =
     match ds_opt with
     | Some ds -> [(empty_env (), ds)]

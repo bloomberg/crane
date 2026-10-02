@@ -61,7 +61,6 @@ val gen_dfuns_dual : ml_fix_def list -> generated_fun list
 (** Generate a single Dterm function, translating its body once. *)
 val gen_decl_for_pp_dual : GlobRef.t -> ml_ast -> ml_type -> generated_fun
 
-
 (** {2 Inductive Type Generation} *)
 
 (** Generate C++ code for a record type. *)
@@ -71,7 +70,6 @@ val gen_record_cpp :
 (** Generate C++ concept for a type class. *)
 val gen_typeclass_cpp :
   GlobRef.t -> Miniml.record_field list -> ml_ind_packet -> cpp_decl
-
 
 (** Generate C++ header for an inductive type (v2 style: encapsulated struct
     with methods).
@@ -98,11 +96,6 @@ val gen_ind_header_v2 :
   (GlobRef.t * ml_ast * ml_type * int) list ->
   inductive_kind ->
   cpp_decl
-
-(** Take the application back off, in an inductive's generated struct, a
-    parameter its template head declares a plain [typename]: a family applied
-    at an index C++ erases is the family's own struct. *)
-val deapply_plain_struct_tvars : cpp_decl -> cpp_decl
 
 (** Generate methods for eponymous records. For records merged into module
     structs, this generates instance methods from functions that take the record
@@ -138,20 +131,6 @@ val gen_instance_struct :
     it; an axiom and a custom extraction each get the right-hand side they
     need, expressed in the IR rather than as rendered text. *)
 val gen_type_alias : GlobRef.t -> Id.t list -> ml_type option -> Minicpp.cpp_decl
-
-(** [hkt_templates r vars tys] is the C++ template parameter list for a
-    declaration [r] whose parameters [vars] are used by the types [tys] -- an
-    inductive's constructor fields, or the body of a type alias.  A parameter
-    that [tys] applies to arguments is declared [template <typename> class],
-    and its position is registered so that uses of [r] pass a bare template
-    name; see {!Table.is_hkt_ind_param}.
-
-    [applied] is the rendered C++ type, when there is one: a parameter it
-    never applies is a plain [typename] whatever its Rocq kind was, because
-    that is what a use site spells. *)
-val hkt_templates :
-  ?applied:Minicpp.cpp_type ->
-  GlobRef.t -> Id.t list -> ml_type list -> (Minicpp.template_type * Id.t) list
 
 (** Check if a term is a type class instance (constructs a type class record).
 *)

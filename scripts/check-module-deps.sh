@@ -9,7 +9,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-TRANSLATION="Translation Translation_state Translation_support Translation_types Translation_calls Gen_decls Cpp_ind Cpp Extract_env Structure_analysis Method_registry"
+TRANSLATION="Translation Translation_state Translation_support Translation_types Translation_calls Gen_decls Plan_templates Cpp_ind Cpp Extract_env Structure_analysis Method_registry"
 PRINTER="Cpp_print"
 FINISHING="Cpp_pipeline Loopify Loopify_analysis Loopify_tail Loopify_tmc Loopify_frame Last_use Cpp_depth Borrow_projection Cpp_erasure Function_entity"
 

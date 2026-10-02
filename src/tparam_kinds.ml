@@ -3,7 +3,7 @@
 
 (** What the template parameters of a generated inductive or alias are, by
     0-based position in its C++ template parameter list.  Recorded by
-    [Gen_decls.hkt_templates] when the declaration's header is generated, and
+    [Plan_templates.hkt_templates] when the declaration's header is generated, and
     read back wherever a use of the declaration is converted.
 
     It lives below {!Table} so that {!Minicpp} can ask it directly: rebuilding

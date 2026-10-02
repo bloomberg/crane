@@ -1539,7 +1539,7 @@ let event_family_ml_tvars tys =
       plain [typename] stands for both.
     - It is an argument of a {b generated} type constructor at a position
       that constructor's own header declares [template <typename> class]
-      ({!Gen_decls.hkt_templates} records which), so whatever is written there
+      ({!Plan_templates.hkt_templates} records which), so whatever is written there
       has to be a template name.
 
     Neither holds for an event family threaded through custom mappings.
@@ -1595,7 +1595,7 @@ let higher_kinded_ml_tvars tys =
       List.iter (scan ~generated_arg:false) args
     | Miniml.Tglob (r, args, _) ->
       (* Only a position the constructor's header actually declares a
-         template: [Gen_decls.hkt_templates] recorded which, and a family
+         template: [Plan_templates.hkt_templates] recorded which, and a family
          parameter it left plain takes the family's own struct. *)
       List.iteri
         (fun i a ->
@@ -1628,7 +1628,7 @@ let higher_kinded_ml_tvars tys =
     [Sub<UBE, T1>] wants a template where [T1] is a [typename].
 
     The position's kind is not guessed here.  It was decided and recorded by
-    {!Gen_decls.hkt_templates} when the constructor's own header was emitted,
+    {!Plan_templates.hkt_templates} when the constructor's own header was emitted,
     which is the same authority a {e use} of that constructor already consults
     to decide it must pass a bare template name. *)
 let hkt_arg_ml_tvar_arities tys =
