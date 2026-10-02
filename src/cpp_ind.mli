@@ -50,6 +50,13 @@ val clear_deferred_member_defs : unit -> unit
 val instance_decls :
   Names.GlobRef.t -> Miniml.ml_ast -> Miniml.ml_type -> generated
 
+(** [finalized funs] pairs each generated function with its entity, every
+    definition among them finished as one group
+    ({!Function_entity.finalize_group}); [None] for a declaration. *)
+val finalized :
+  Gen_decls.generated_fun list ->
+  (Gen_decls.generated_fun * Function_entity.t option) list
+
 (** The implementation-file declarations for one MiniML declaration. *)
 val impl_decls : Miniml.ml_decl -> rendered
 

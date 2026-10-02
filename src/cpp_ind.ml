@@ -14,7 +14,8 @@
 
     This module contains:
     - ind_header_decls — inductive types
-    - impl_decls / header_decls — dispatch for the .cpp and the .h
+    - generate — what a MiniML declaration becomes, whichever file is being
+      written; impl_decls / header_decls pick what the .cpp and the .h write
 
     Every entry point answers with declarations rather than with rendered
     text; {!pp_decls} is where they are printed. *)
@@ -48,66 +49,6 @@ let render_decl env d = Cpp_print.pp_cpp_decl env (Cpp_pipeline.finish d)
 (** Print the declarations an entry point answered with. *)
 let pp_decls (ds : rendered) =
   pp_list_stmt (fun (env, d) -> Cpp_print.pp_cpp_decl env d) ds
-
-(** Dispatch for .cpp file rendering. Filters out inline customs, eponymous
-    record projections, suppressed projections, method candidates, registered
-    methods, and typeclass instances.
-    @param d miniml declaration to render
-    @return the C++ declarations for the implementation file, empty when the
-            declaration is handled in headers or suppressed *)
-let gen_impl_decls = function
-  | Dtype (r, _, _) when is_any_inline_custom r -> []
-  | Dterm (r, _, _) when is_any_inline_custom r -> []
-  | Dterm (r, _, _) when is_eponymous_record_projection r ->
-    (* Skip - this is a projection for an eponymous record merged into module
-       struct *)
-    []
-  | Dterm (r, _, _) when is_suppressed_projection r -> []
-  | Dind (kn, i) -> [] (* Inductives are fully defined in headers *)
-  | Dtype (r, _, t) ->
-    if t == Taxiom then begin
-      Cpp_erasure.register_axiom_type r;
-      Table.add_erased_type_const r
-    end;
-    []
-  | Dterm (r, a, Tglob (ty, args, e)) when is_monad ty ->
-    let defs =
-      List.filter
-        (fun (_, _, l) -> l == [])
-        (gen_dfuns
-           ( Array.of_list [r],
-             Array.of_list [a],
-             Array.of_list [Miniml.Tglob (ty, args, e)] ) )
-    in
-    List.map (fun (ds, env, _) -> (env, ds)) defs
-  | Dterm (r, _, _)
-    when List.exists
-           (fun (r', _, _, _) -> globref_equal r r')
-           !method_candidates ->
-    (* Skip - this function is generated as a method on the eponymous type *)
-    []
-  | Dterm (r, _, _) when is_registered_method r <> None ->
-    (* Skip - this function is registered as a method in another module *)
-    []
-  | Dterm (r, a, t) when is_typeclass_instance a t ->
-    (* Type class instances: fully defined in header, skip in implementation *)
-    []
-  | Dterm (r, a, t) ->
-    let ds, env, tvars = gen_decl_for_pp r a t in
-    ( match (ds, tvars) with
-    | Some ds, [] -> [(env, ds)]
-    | _, _ -> [] )
-  | Dfix (rv, defs, typs) ->
-    let rv, defs, typs = filter_dfix rv defs typs in
-    if Array.length rv = 0 then
-      []
-    else
-      let defs =
-        List.filter (fun (_, _, l) -> l == []) (gen_dfuns (rv, defs, typs))
-      in
-      List.map (fun (ds, env, _) -> (env, ds)) defs
-
-let impl_decls d = finished (gen_impl_decls d)
 
 (** The struct a module's declarations are written inside of, when the module is
     written as a struct at all.
@@ -640,83 +581,145 @@ let instance_decls r a t =
   in
   struct_decl @ static_assert_decl
 
-(** Dispatch for .h file rendering. Similar to pp_decl but generates header
-    declarations instead of implementations. For template functions, generates
-    full definitions inline (required by C++). For non-template functions,
-    generates forward declarations.
-    @param d miniml declaration to render as a header entry
-    @return the C++ declarations for the header, empty when the declaration is
-            suppressed *)
-let gen_header_decls d =
-  match d with
-  | Dtype (r, _, _) when is_any_inline_custom r -> []
-  | Dterm (r, _, _) when is_any_inline_custom r -> []
-  | Dterm (r, _, _) when is_eponymous_record_projection r ->
-    (* Skip - this is a projection for an eponymous record merged into module
-       struct *)
-    []
-  | Dterm (r, _, _) when is_suppressed_projection r -> []
-  | Dind (kn, i) -> ind_header_decls kn i
-  | Dtype (_, _, Miniml.Tdummy Miniml.Ktype) ->
-    [] (* Skip erased Type aliases *)
-  | Dtype (_, _, t) when Ml_type_util.ml_type_has_no_spelling t ->
-    (* An abbreviation for a type that is not written in C++ is not written
-       either: [Definition E2 := (FailE +' FailE)%type] would otherwise give a
-       [using E2 = ;].  What names the abbreviation was for -- an event family
-       -- is erased at every use, so nothing looks for it. *)
-    []
-  | Dtype (r, l, t) -> [(empty_env (), gen_type_alias r l (Some t))]
-  | Dterm (r, a, Tglob (ty, args, e)) when is_monad ty ->
-    let defs =
-      gen_dfuns_header
-        ( Array.of_list [r],
-          Array.of_list [a],
-          Array.of_list [Miniml.Tglob (ty, args, e)] )
-    in
-    List.map (fun (ds, env) -> (env, ds)) defs
-  | Dterm (r, _, _)
-    when List.exists
-           (fun (r', _, _, _) -> globref_equal r r')
-           !method_candidates ->
-    (* Skip - this function will be generated as a method on the eponymous
-       type *)
-    []
-  | Dterm (r, _, _) when is_registered_method r <> None ->
-    (* Skip - this function is registered as a method in another module *)
-    []
-  | Dterm (r, a, t) when is_typeclass_instance a t -> instance_decls r a t
-  | Dterm (r, a, t) ->
-    let ds, env, tvars = gen_decl_for_pp r a t in
-    ( match (ds, tvars) with
-    | Some ds, [] ->
-      (* For template structs, use full definitions instead of specs *)
-      if (!render_ctx).rc_in_template then
-        let ds, env, _ = gen_decl r a t in
-        [(env, ds)]
-      else
-        (* Use the declaration view of the result from gen_decl_for_pp as a
-           forward declaration. This correctly handles axiom values, whose body is
-           dropped. *)
-        [(env, Function_entity.declaration_of ds)]
-    | Some ds, _ :: _ -> [(env, ds)]
-    | None, _ ->
-      if (!render_ctx).rc_in_template then
-        let ds, env, _ = gen_decl r a t in
-        [(env, ds)]
-      else
-        let ds, env = gen_spec r a t in
-        [(env, ds)] )
-  | Dfix (rv, defs, typs) ->
-    let rv, defs, typs = filter_dfix rv defs typs in
-    if Array.length rv = 0 then
-      []
-    else if
-      (* For template structs, generate full definitions inline, not just
-         declarations *)
-      (!render_ctx).rc_in_template
-    then
-      List.map (fun (ds, env, _) -> (env, ds)) (gen_dfuns (rv, defs, typs))
-    else
-      List.map (fun (ds, env) -> (env, ds)) (gen_dfuns_header (rv, defs, typs))
+(** What one MiniML declaration generates, before the file being written
+    picks what it writes. *)
+type generation =
+  | Functions of {
+      funs : Gen_decls.generated_fun list;
+      lifted_inline : bool;
+          (** The header writes the helpers lifted out of each function in
+              front of it.  Otherwise they stay queued, for the element's own
+              placement. *)
+    }
+  | Header_only of (unit -> generated)
+      (** Written in the header alone, and generated only for it: generating
+          an inductive's header defers member definitions as it goes. *)
+  | Nothing
 
-let header_decls d = finished (gen_header_decls d)
+(** [functions ~lifted_inline funs], with every definition filed in the
+    header inside a template struct, which has no implementation file. *)
+let functions ~lifted_inline (funs : Gen_decls.generated_fun list) =
+  let in_header (g : Gen_decls.generated_fun) =
+    match g.gf_entity with
+    | Defined (d, _) -> {g with gf_entity = Defined (d, Header)}
+    | Declared _ -> g
+  in
+  let funs =
+    if (!render_ctx).rc_in_template then List.map in_header funs else funs
+  in
+  Functions {funs; lifted_inline}
+
+(** [generate d] is what the MiniML declaration [d] generates, for whichever
+    file is being written: functions translated once, with their file
+    recorded, or declarations only the header writes.  Inline customs,
+    projections merged into a struct, and functions emitted as methods
+    generate nothing. *)
+let generate d =
+  let skipped r =
+    is_eponymous_record_projection r
+    || is_suppressed_projection r
+    || List.exists (fun (r', _, _, _) -> globref_equal r r') !method_candidates
+    || is_registered_method r <> None
+  in
+  let group (rv, defs, typs) =
+    let rv, defs, typs = filter_dfix rv defs typs in
+    if Array.length rv = 0 then Nothing
+    else
+      functions
+        ~lifted_inline:(not (!render_ctx).rc_in_template)
+        (gen_dfuns_dual (rv, defs, typs))
+  in
+  match d with
+  | (Dtype (r, _, _) | Dterm (r, _, _)) when is_any_inline_custom r -> Nothing
+  | Dterm (r, _, _) when skipped r -> Nothing
+  | Dind (kn, ind) -> Header_only (fun () -> ind_header_decls kn ind)
+  | Dtype (r, l, t) ->
+    if t == Taxiom then begin
+      Cpp_erasure.register_axiom_type r;
+      Table.add_erased_type_const r
+    end;
+    ( match t with
+    | Miniml.Tdummy Miniml.Ktype -> Nothing (* erased Type aliases *)
+    | t when Ml_type_util.ml_type_has_no_spelling t ->
+      (* An abbreviation for a type that is not written in C++ is not written
+         either: [Definition E2 := (FailE +' FailE)%type] would otherwise give
+         a [using E2 = ;].  What names the abbreviation was for -- an event
+         family -- is erased at every use, so nothing looks for it. *)
+      Nothing
+    | t -> Header_only (fun () -> [(empty_env (), gen_type_alias r l (Some t))]) )
+  | Dterm (r, a, (Tglob (ty, _, _) as t)) when is_monad ty -> group ([|r|], [|a|], [|t|])
+  | Dterm (r, a, t) when is_typeclass_instance a t ->
+    Header_only (fun () -> instance_decls r a t)
+  | Dterm (r, a, t) ->
+    (* The helpers lifted out of the body stay queued. *)
+    let entity, env =
+      match gen_decl_for_pp r a t with
+      | Some ds, env, tvars -> (Gen_decls.defined ds tvars, env)
+      | None, _, _ when (!render_ctx).rc_in_template ->
+        let ds, env, _ = gen_decl r a t in
+        (Defined (ds, Header), env)
+      | None, _, _ ->
+        (* Not a function: a declaration, and no definition anywhere. *)
+        let ds, env = gen_spec r a t in
+        (Declared ds, env)
+    in
+    functions ~lifted_inline:true
+      [{gf_entity = entity; gf_env = env; gf_lifted = []}]
+  | Dfix (rv, defs, typs) -> group (rv, defs, typs)
+
+(** [finalized funs] pairs each generated function with its entity, every
+    definition among them finished as one group
+    ({!Function_entity.finalize_group}); [None] for a declaration. *)
+let finalized (funs : Gen_decls.generated_fun list) =
+  let entities =
+    Function_entity.finalize_group
+      (List.filter_map
+         (fun (g : Gen_decls.generated_fun) ->
+           match g.gf_entity with Defined (d, _) -> Some d | Declared _ -> None )
+         funs )
+  in
+  let rec pair funs es =
+    match (funs, es) with
+    | ({Gen_decls.gf_entity = Defined _; _} as g) :: funs, e :: es ->
+      (g, Some e) :: pair funs es
+    | ({gf_entity = Declared _; _} as g) :: funs, es -> (g, None) :: pair funs es
+    | [], [] -> []
+    | _ -> assert false
+  in
+  pair funs entities
+
+(** The views of [funs] a file writes, finished: a definition in the file
+    that holds it, and in the header a declaration of a definition the
+    implementation file holds. *)
+let function_views ~is_header ~lifted_inline funs =
+  List.concat_map
+    (fun ((g : Gen_decls.generated_fun), entity) ->
+      let with_env d = (g.gf_env, d) in
+      let lifted =
+        if is_header && lifted_inline then
+          List.map (fun d -> (empty_env (), Cpp_pipeline.finish d)) g.gf_lifted
+        else []
+      in
+      let views =
+        match (g.gf_entity, entity) with
+        | Defined (_, file), Some e ->
+          ( match (file, is_header) with
+          | Header, true | Implementation, false ->
+            [with_env (Function_entity.definition e)]
+          | Implementation, true -> [with_env (Function_entity.declaration e)]
+          | Header, false -> [] )
+        | Declared d, _ ->
+          if is_header then [with_env (Cpp_pipeline.finish d)] else []
+        | Defined _, None -> assert false
+      in
+      lifted @ views )
+    (finalized funs)
+
+let decls_for ~is_header d =
+  match generate d with
+  | Functions {funs; lifted_inline} -> function_views ~is_header ~lifted_inline funs
+  | Header_only ds -> if is_header then finished (ds ()) else []
+  | Nothing -> []
+
+let impl_decls = decls_for ~is_header:false
+let header_decls = decls_for ~is_header:true

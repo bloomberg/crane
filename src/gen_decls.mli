@@ -61,6 +61,10 @@ type generated_fun = {
   gf_lifted : cpp_decl list;
 }
 
+(** [defined d tvars] is the definition [d] of a function or constant whose
+    template parameters are [tvars], filed by {!definition_file}'s rule. *)
+val defined : cpp_decl -> variable list -> generated_entity
+
 (** Generate each function of a mutually recursive group, translating each
     body once. *)
 val gen_dfuns_dual :

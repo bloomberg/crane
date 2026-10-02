@@ -1899,37 +1899,25 @@ let rec prlist_sep_nonempty sep f = function
     group ({!Function_entity.finalize_group}): a wrapper's functions may call
     one another in any order. *)
 let file_views ~is_header (gens : Gen_decls.generated_fun list list) =
-  let entities =
-    ref
-      (Function_entity.finalize_group
-         (List.concat_map
-            (List.filter_map (fun (g : Gen_decls.generated_fun) ->
-                 match g.gf_entity with
-                 | Defined (d, _) -> Some d
-                 | Declared _ -> None ) )
-            gens ) )
-  in
-  let next () =
-    match !entities with
-    | e :: rest -> entities := rest; e
-    | [] -> assert false
-  in
-  let views (g : Gen_decls.generated_fun) =
+  let views ((g : Gen_decls.generated_fun), entity) =
     let with_env d = (d, g.gf_env) in
-    match g.gf_entity with
-    | Defined (_, file) ->
-      let e = next () in
+    match (g.gf_entity, entity) with
+    | Defined (_, file), Some e ->
       ( [with_env (Function_entity.declaration e)],
         if (file = Gen_decls.Header) = is_header then
           [with_env (Function_entity.definition e)]
         else [] )
-    | Declared d -> ([with_env (Cpp_pipeline.finish d)], [])
+    | Declared d, _ -> ([with_env (Cpp_pipeline.finish d)], [])
+    | Defined _, None -> assert false
   in
-  List.map
-    (fun gs ->
-      let vs = List.map views gs in
-      (List.concat_map fst vs, List.concat_map snd vs) )
-    gens
+  let rec regroup gens views =
+    match gens with
+    | [] -> []
+    | gs :: gens ->
+      let mine, rest = List.chop (List.length gs) views in
+      (List.concat_map fst mine, List.concat_map snd mine) :: regroup gens rest
+  in
+  regroup gens (List.map views (Cpp_ind.finalized (List.concat gens)))
 
 (** Process a wrapper module in dual-pass mode (header vs implementation).
 
