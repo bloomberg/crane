@@ -1,0 +1,1295 @@
+(* Copyright 2025 Bloomberg Finance L.P. *)
+(* Distributed under the terms of the GNU LGPL v2.1 license. *)
+
+(** Tail-modulo-cons loopification for {!Loopify}: detection, the
+    destination-passing rewrite, and the Perceus reuse cursor the loop uses
+    under [Crane Reuse]. *)
+
+open Names
+open Minicpp
+open Loopify_analysis
+open Loopify_tail
+
+(** {3 Tail Modulo Cons (TMC)}
+
+    When a non-tail recursive call appears nested inside one or more constructor
+    factories (e.g., [Cons_(x, RECURSE(xs))] or
+    [Cons_(x, Cons_(x, RECURSE(xs)))]), the function can be optimized using
+    destination-passing style: allocate the constructor cells immediately with
+    [nullptr] holes, link them together, then fill the innermost hole on the
+    next iteration.  This achieves O(1) extra space instead of O(n) frame stack.
+
+    See Bour, Clément, Scherer 2021 — "Tail Modulo Cons". *)
+
+(** One constructor cell allocation in a (possibly nested) TMC chain.
+    For [cons x (cons x (stutter xs))], the outer [cons x _] and inner
+    [cons x _] are each represented by one [tmc_cell_alloc]. *)
+type tmc_cell_alloc = {
+  tca_factory : cpp_expr;
+      (** Constructor factory function, e.g., [list<T>::ctor::Cons_] *)
+  tca_type : cpp_type;
+      (** The type the factory is qualified by, e.g., [list<T>] *)
+  tca_ctor_name : string;
+      (** Constructor name without trailing underscore, e.g., ["Cons"] *)
+  tca_rec_field_idx : int;
+      (** Index of the recursive argument in the constructor args *)
+  tca_non_rec_args : (int * cpp_expr) list;
+      (** [(index, expr)] for non-recursive arguments *)
+  tca_n_args : int;
+      (** Total number of constructor arguments *)
+  tca_uptr_field_idxs : int list;
+      (** Field indices that are stored as [shared_ptr] in the struct
+          (self-referencing fields).  Used by {!build_cell_call} to
+          wrap value-type args in [make_shared] for direct struct construction. *)
+}
+
+(** Information about a single TMC-eligible branch: a return expression of the
+    form [CtorFactory(... CtorFactory(non_rec_args, RECURSE(rec_args)) ...)].
+    The cell list is outermost-first, innermost-last. *)
+type tmc_branch_info = {
+  tmc_cells : tmc_cell_alloc list;
+      (** Constructor cells, outermost first, innermost last *)
+  tmc_rec_args : cpp_expr list;
+      (** Arguments to the innermost recursive call *)
+}
+
+(** Summary of TMC analysis for a whole function.  The type is a unit-like
+    marker: [Some ()] signals that all TMC branches are eligible and use the
+    same constructor and recursive field.  The per-branch details are carried
+    directly in the [tmc_cell_alloc] records inside each [tmc_branch]. *)
+type tmc_info = unit [@@warning "-34"]
+
+(** Try to decompose an expression with exactly one recursive call into a
+    {!decomposed_call} record.  Returns [None] for tail calls or expressions
+    that cannot be split.
+
+    Result invariants:
+    - [d_saved]: expressions that must be preserved across the recursive call
+      (evaluated before the call, consumed in the rebuild step)
+    - [d_rec_args]: the arguments to the single recursive call
+    - [d_rebuild]: a function that, given [saved_vars @ \[result_var\]],
+      reconstructs the original expression with the recursive call replaced
+      by [result_var]
+
+    Handles constructor wrapping, binary operators, method calls, and
+    function calls where exactly one argument is recursive. *)
+let rec decompose_single_call check expr =
+  match check expr with
+  | Some _cs ->
+    (* The expression IS the recursive call — this is a tail call, not our
+       concern here. Return None to let the caller handle it. *)
+    None
+  | None ->
+  match expr with
+  (* Binary operator: e1 OP RECURSE or RECURSE OP e2 *)
+  | CPPbinop (op, e1, e2) ->
+    let c1 = count_calls_expr check e1 in
+    let c2 = count_calls_expr check e2 in
+    if c1 = 0 && c2 = 1 then
+      (* e1 OP RECURSE(e2) — recurse on right *)
+        match
+          decompose_single_call check e2
+        with
+      | Some d ->
+        Some
+          {
+            d with
+            d_saved = e1 :: d.d_saved;
+            d_rebuild =
+              (fun saved result ->
+                let e1' = List.hd saved in
+                let inner = d.d_rebuild (List.tl saved) result in
+                CPPbinop (op, e1', inner) );
+          }
+      | None ->
+      (* Direct: e1 OP recurse(args) *)
+      match check e2 with
+      | Some cs ->
+        Some
+          {
+            d_saved = [e1];
+            d_rec_args = cs.cs_args;
+          d_entry = cs.cs_entry;
+            d_rebuild =
+              (fun saved result -> CPPbinop (op, List.hd saved, result));
+          }
+      | None -> None
+    else if c1 = 1 && c2 = 0 then
+      (* RECURSE(e1) OP e2 — recurse on left *)
+        match
+          decompose_single_call check e1
+        with
+      | Some d ->
+        Some
+          {
+            d with
+            d_saved = d.d_saved @ [e2];
+            d_rebuild =
+              (fun saved result ->
+                let n = List.length d.d_saved in
+                let d_saved = list_take n saved in
+                let e2' = List.nth saved n in
+                let inner = d.d_rebuild d_saved result in
+                CPPbinop (op, inner, e2') );
+          }
+      | None ->
+      match check e1 with
+      | Some cs ->
+        Some
+          {
+            d_saved = [e2];
+            d_rec_args = cs.cs_args;
+          d_entry = cs.cs_entry;
+            d_rebuild =
+              (fun saved result -> CPPbinop (op, result, List.hd saved));
+          }
+      | None -> None
+    else
+      None
+  (* Function call with recursive argument *)
+  | CPPfun_call (res, f, args) when count_calls_expr check f = 0 ->
+    (* [decompose_funcall] works by position and rebuilds the call from the
+       same positions, so it takes the arguments as stored. *)
+    decompose_funcall check res f (to_reversed args)
+  (* Method call: obj.method(args) where obj has the recursive call *)
+  | CPPaccess_call (Aarrow, obj, method_id, margs)
+    when count_calls_expr check obj >= 1
+         && List.for_all (fun a -> count_calls_expr check a = 0) margs ->
+    ( match decompose_single_call check obj with
+    | Some d ->
+      let n_d = List.length d.d_saved in
+      Some
+        {
+          d with
+          d_saved = d.d_saved @ margs;
+          d_rebuild =
+            (fun saved result ->
+              let d_saved = list_take n_d saved in
+              let method_args = list_drop n_d saved in
+              CPPaccess_call
+                (Aarrow, d.d_rebuild d_saved result, method_id, method_args) );
+        }
+    | None ->
+    match check obj with
+    | Some cs ->
+      Some
+        {
+          d_saved = margs;
+          d_rec_args = cs.cs_args;
+          d_entry = cs.cs_entry;
+          d_rebuild =
+            (fun saved result ->
+              CPPaccess_call (Aarrow, result, method_id, saved) );
+        }
+    | None -> None )
+  (* Move wrapping a recursive expression *)
+  | CPPmove inner ->
+    ( match decompose_single_call check inner with
+    | Some d ->
+      Some {d with d_rebuild = (fun saved r -> CPPmove (d.d_rebuild saved r))}
+    | None -> None )
+  | _ -> None
+
+(** Decompose a function call [f(a0, a1, ..., an)] where exactly one argument
+    contains the recursive call. *)
+and decompose_funcall check res f args =
+  (* Find which argument has the recursive call *)
+  let rec_indices =
+    List.mapi (fun i a -> (i, count_calls_expr check a)) args
+    |> List.filter (fun (_, c) -> c > 0)
+  in
+  (* When [f] is a local variable ([CPPvar]), it must be saved in the
+     continuation frame — it is not guaranteed to be in scope when the
+     Resume handler fires.  Global/qualified function references are always
+     in scope and do not need saving. *)
+  let f_extra, n_f =
+    match f with
+    | CPPvar _ -> ([f], 1)
+    | _ -> ([], 0)
+  in
+  match rec_indices with
+  | [(rec_idx, 1)] ->
+    (* Exactly one argument has exactly one recursive call *)
+    let rec_arg = List.nth args rec_idx in
+    let non_rec_args =
+      List.mapi (fun i a -> (i, a)) args
+      |> List.filter (fun (i, _) -> i <> rec_idx)
+      |> List.map snd
+    in
+    ( match decompose_single_call check rec_arg with
+    | Some d ->
+      (* The recursive call is nested deeper *)
+      let n_saved_before = n_f + List.length non_rec_args in
+      Some
+        {
+          d with
+          d_saved = f_extra @ non_rec_args @ d.d_saved;
+          d_rebuild =
+            (fun saved result ->
+              let f' = if n_f > 0 then List.hd saved else f in
+              let outer_saved =
+                List.filteri (fun i _ -> i >= n_f && i < n_saved_before) saved
+              in
+              let inner_saved = list_drop n_saved_before saved in
+              let inner = d.d_rebuild inner_saved result in
+              let new_args =
+                List.init (List.length args) (fun i ->
+                  if i = rec_idx then
+                    inner
+                  else
+                    let pos = if i < rec_idx then i else i - 1 in
+                    List.nth outer_saved pos )
+              in
+              CPPfun_call (res, f', of_reversed (new_args)) );
+        }
+    | None ->
+    (* Direct: f(non_rec..., RECURSE(args), non_rec...) *)
+    match check rec_arg with
+    | Some cs ->
+      Some
+        {
+          d_saved = f_extra @ non_rec_args;
+          d_rec_args = cs.cs_args;
+          d_entry = cs.cs_entry;
+          d_rebuild =
+            (fun saved result ->
+              let f' = if n_f > 0 then List.hd saved else f in
+              let rest_saved = list_drop n_f saved in
+              let new_args =
+                List.init (List.length args) (fun i ->
+                  if i = rec_idx then
+                    result
+                  else
+                    let pos = if i < rec_idx then i else i - 1 in
+                    List.nth rest_saved pos )
+              in
+              CPPfun_call (res, f', of_reversed (new_args)) );
+        }
+    | None -> None )
+  | _ -> None
+
+(** Decompose an expression with exactly 2 recursive calls. Handles binary
+    operators [e1 + e2] and function calls [f(a0, ..., an)] where exactly 2
+    arguments contain recursive calls. Supports both direct calls and calls
+    nested inside constructors/wrappers via [decompose_single_call]. *)
+and decompose_double_call check expr =
+  (* Extract a single-call decomposition, treating direct calls as trivial. *)
+  let get_decomp e =
+    match check e with
+    | Some cs ->
+      Some
+        {
+          d_saved = [];
+          d_rec_args = cs.cs_args;
+          d_entry = cs.cs_entry;
+          d_rebuild = (fun _saved result -> result);
+        }
+    | None -> decompose_single_call check e
+  in
+  (* Try to decompose two subexpressions each with 1 recursive call. *)
+  (* Decompose two subexpressions that each contain one recursive call,
+     keeping the two rebuilt halves apart.  Returns the two call argument
+     lists, the expressions to save for the combine, and a rebuild function
+     handing back the halves as a pair.  Most callers immediately join them
+     with {!try_pair}; the one that places them at two different argument
+     positions of a call needs them separately. *)
+  let try_pair_parts e1 e2 =
+    let c1 = count_calls_expr check e1 in
+    let c2 = count_calls_expr check e2 in
+    if c1 = 1 && c2 = 1 then
+      match
+        (get_decomp e1, get_decomp e2)
+      with
+      | Some dec1, Some dec2 ->
+        let rebuild saved left right =
+          let n1 = List.length dec1.d_saved in
+          ( dec1.d_rebuild (list_take n1 saved) left,
+            dec2.d_rebuild (list_drop n1 saved) right )
+        in
+        Some
+          ( (dec1.d_rec_args, dec1.d_entry),
+            (dec2.d_rec_args, dec2.d_entry),
+            dec1.d_saved @ dec2.d_saved,
+            rebuild )
+      | _ -> None
+    else
+      None
+  in
+  let try_pair e1 e2 mk_combine =
+    match try_pair_parts e1 e2 with
+    | Some ((first_args, first_entry), (second_args, second_entry), saved, rebuild) ->
+      Some
+        {
+          dd_first_args = first_args;
+          dd_first_entry = first_entry;
+          dd_second_args = second_args;
+          dd_second_entry = second_entry;
+          dd_saved = saved;
+          dd_combine =
+            (fun saved left right ->
+              let left, right = rebuild saved left right in
+              mk_combine left right );
+        }
+    | None -> None
+  in
+  match expr with
+  | CPPbinop (op, e1, e2) ->
+    let c1 = count_calls_expr check e1 in
+    let c2 = count_calls_expr check e2 in
+    if c1 >= 1 && c2 >= 1 then
+      try_pair e1 e2 (fun left right -> CPPbinop (op, left, right))
+    else if c1 = 0 && c2 >= 2 then
+      match
+        decompose_double_call check e2
+      with
+      | Some dd ->
+        Some
+          {
+            dd with
+            dd_saved = e1 :: dd.dd_saved;
+            dd_combine =
+              (fun saved l r ->
+                let e1' = List.hd saved in
+                CPPbinop (op, e1', dd.dd_combine (List.tl saved) l r) );
+          }
+      | None -> None
+    else if c1 >= 2 && c2 = 0 then
+      match
+        decompose_double_call check e1
+      with
+      | Some dd ->
+        Some
+          {
+            dd with
+            dd_saved = dd.dd_saved @ [e2];
+            dd_combine =
+              (fun saved l r ->
+                let n = List.length saved - 1 in
+                let inner_saved = list_take n saved in
+                let e2' = List.nth saved n in
+                CPPbinop (op, dd.dd_combine inner_saved l r, e2') );
+          }
+      | None -> None
+    else
+      None
+  | CPPfun_call (res, f, args) when count_calls_expr check f = 0 ->
+    (* Positions here are positions in the call as stored; the rebuild below
+       puts them back the same way. *)
+    let args = to_reversed args in
+    let arg_calls = List.mapi (fun i a -> (i, count_calls_expr check a)) args in
+    let rec_indices = List.filter (fun (_, c) -> c > 0) arg_calls in
+    let rebuild_funcall
+        i1
+        i2
+        non_rec_indexed
+        saved_offset
+        dd_inner
+        saved
+        left
+        right =
+      (* Reconstruct f(args) with rec results at positions i1, i2 *)
+      let inner_left, inner_right =
+        dd_inner (list_take saved_offset saved) left right
+      in
+      let outer_saved = list_drop saved_offset saved in
+      let new_args =
+        List.init (List.length args) (fun i ->
+          if i = i1 then
+            inner_left
+          else if i = i2 then
+            inner_right
+          else
+            let pos =
+              List.filter (fun (j, _) -> j < i) non_rec_indexed |> List.length
+            in
+            List.nth outer_saved pos )
+      in
+      CPPfun_call (res, f, of_reversed (new_args))
+    in
+    ( match rec_indices with
+    | [(i1, c1); (i2, c2)] when c1 = 1 && c2 = 1 ->
+      let e1 = List.nth args i1 in
+      let e2 = List.nth args i2 in
+      let non_rec_indexed =
+        List.mapi (fun i _ -> (i, ())) args
+        |> List.filter (fun (i, _) -> i <> i1 && i <> i2)
+      in
+      let non_rec_args =
+        List.map (fun (i, _) -> List.nth args i) non_rec_indexed
+      in
+      ( match try_pair_parts e1 e2 with
+      | Some ((first_args, first_entry), (second_args, second_entry), saved, rebuild) ->
+        let saved_offset = List.length saved in
+        Some
+          {
+            dd_first_args = first_args;
+            dd_first_entry = first_entry;
+            dd_second_args = second_args;
+            dd_second_entry = second_entry;
+            dd_saved = saved @ non_rec_args;
+            dd_combine =
+              (fun saved left right ->
+                rebuild_funcall
+                  i1
+                  i2
+                  non_rec_indexed
+                  saved_offset
+                  rebuild
+                  saved
+                  left
+                  right );
+          }
+      | None -> None )
+    | [(i1, c)] when c = 2 ->
+      let inner = List.nth args i1 in
+      ( match decompose_double_call check inner with
+      | Some dd ->
+        let non_rec_indexed =
+          List.mapi (fun i _ -> (i, ())) args
+          |> List.filter (fun (i, _) -> i <> i1)
+        in
+        let non_rec_args =
+          List.map (fun (i, _) -> List.nth args i) non_rec_indexed
+        in
+        let saved_offset = List.length dd.dd_saved in
+        Some
+          {
+            dd with
+            dd_saved = dd.dd_saved @ non_rec_args;
+            dd_combine =
+              (fun saved l r ->
+                let inner_saved = list_take saved_offset saved in
+                let outer_saved = list_drop saved_offset saved in
+                let inner_result = dd.dd_combine inner_saved l r in
+                let new_args =
+                  List.init (List.length args) (fun i ->
+                    if i = i1 then
+                      inner_result
+                    else
+                      let pos =
+                        List.filter (fun (j, _) -> j < i) non_rec_indexed
+                        |> List.length
+                      in
+                      List.nth outer_saved pos )
+                in
+                CPPfun_call (res, f, of_reversed (new_args)) );
+          }
+      | None -> None )
+    | _ -> None )
+  | CPPmove inner ->
+    ( match decompose_double_call check inner with
+    | Some dd ->
+      Some
+        {
+          dd with
+          dd_combine = (fun saved l r -> CPPmove (dd.dd_combine saved l r));
+        }
+    | None -> None )
+  | _ -> None
+
+(** {3 TMC detection}
+
+    Analyze function bodies to detect the Tail-Modulo-Cons pattern:
+    non-tail recursive calls nested inside one or more constructor factories. *)
+
+(** Test whether an expression is a constructor factory call, i.e.,
+    [Type::cons(args)].  Returns [(ty, ctor_name, factory_name, args)]
+    where [ty] is the base type (e.g., [list<T>]), [ctor_name] is the
+    constructor struct name (e.g., ["Cons"]), [factory_name] is the factory
+    method name (e.g., ["cons"]), and [args] are the constructor arguments.
+
+    Factory calls are the only use of [CPPfun_call(CPPqualified_t(...), ...)]
+    in the MiniCpp AST.  The struct name is the capitalized factory name. *)
+let is_ctor_factory_call = function
+  | CPPfun_call (_, CPPqualified_t (ty, factory_id), args) ->
+    let factory_s = Id.to_string factory_id in
+    let n = String.length factory_s in
+    (* Strip trailing underscore (collision escape) before capitalizing *)
+    let base =
+      if n > 0 && factory_s.[n - 1] = '_' then
+        String.sub factory_s 0 (n - 1)
+      else factory_s
+    in
+    let struct_name = String.capitalize_ascii base in
+    (* A genuine TMC-wrapping data constructor always has a recursive
+       (shared_ptr) field — the hole the recursion writes into — so it is
+       recorded in [ctor_ptr_fields].  A qualified call whose "constructor" is
+       NOT registered there is not a data constructor at all (e.g. a record's
+       function-typed field applied as [M::m_op(x, rec)] on the abstract record
+       type); TMC-decomposing it would fabricate a nonexistent variant cell with
+       a [nullptr] hole.  Requiring registration rejects those. *)
+    (* Skip built-in accessors and other non-factory qualified calls *)
+    let ptr_fields =
+      match cell_owner ty with
+      | Some owner ->
+        Hashtbl.find_opt ctor_ptr_fields
+          (Common.ctor_owner_key owner, struct_name)
+      | None -> None
+    in
+    if factory_s = "v" || factory_s = "v_mut" || factory_s = "lazy_"
+       || ptr_fields = None
+    then None
+    else
+      (* The arguments come back as stored -- reversed.  Everything downstream
+         indexes them in that space; see [uptr_idxs] in [try_tmc_decompose]. *)
+      Some (ty, struct_name, factory_s, to_reversed args)
+  | _ -> None
+
+(** Try to decompose a return expression as a TMC-eligible branch.  Handles
+    both single-level ([cons x (RECURSE xs)]) and nested constructors
+    ([cons x (cons x (RECURSE xs))]).  Strips [CPPmove] wrapping before
+    checking.
+
+    {b Example.}  Given [cons x (cons y (f xs))]:
+    - Outer constructor [cons(x, HOLE)] is cell 0 (allocated first, returned to
+      the caller via [_head]).
+    - Inner constructor [cons(y, HOLE)] is cell 1 (allocated second, linked
+      into cell 0's recursive field).
+    - [f xs] is the recursive call that fills cell 1's HOLE.
+
+    Cells are returned outermost-first so the caller can chain them:
+    allocate cell 0, allocate cell 1, link cell 1 into cell 0, then loop with
+    [_last] pointing to cell 1 for the next iteration to fill.
+
+    @return [Some tmc_branch_info] with a chain of cells, outermost first *)
+let rec try_tmc_decompose check expr =
+  let expr' = match expr with CPPmove e -> e | e -> e in
+  match is_ctor_factory_call expr' with
+  | None -> None
+  | Some (cell_ty, ctor_name, factory_s, args) ->
+    let n_args = List.length args in
+    let indexed = List.mapi (fun i a -> (i, a)) args in
+    let non_rec_of idx =
+      List.filter_map
+        (fun (i, a) -> if i <> idx then Some (i, a) else None)
+        indexed
+    in
+    let make_cell idx =
+      let uptr_idxs =
+        (* [ctor_ptr_fields] records shared_ptr field positions in STRUCT-field
+           order, but [idx]/[tca_non_rec_args] here index into [args] from
+           [is_ctor_factory_call], which are stored REVERSED (as [CPPfun_call]
+           keeps them).  Map the struct-order positions into the same reversed
+           arg-space ([n_args - 1 - j]) so [build_cell_call]'s
+           [List.mem i tca_uptr_field_idxs] test aligns — otherwise a non-pointer
+           field (e.g. a [cons] element) is spuriously [make_shared]-wrapped. *)
+        match
+          match cell_owner cell_ty with
+          | Some owner ->
+            Hashtbl.find_opt ctor_ptr_fields
+              (Common.ctor_owner_key owner, ctor_name)
+          | None -> None
+        with
+        | Some idxs -> List.map (fun j -> n_args - 1 - j) idxs
+        | None -> [idx]
+      in
+      {
+      tca_factory =
+        CPPqualified_t (cell_ty, Id.of_string factory_s);
+      tca_type = cell_ty;
+      tca_ctor_name = ctor_name;
+      tca_rec_field_idx = idx;
+      tca_non_rec_args = non_rec_of idx;
+      tca_n_args = n_args;
+      tca_uptr_field_idxs = uptr_idxs;
+    } in
+    (* Find which args are direct recursive calls *)
+    let direct =
+      List.filter_map
+        (fun (i, a) ->
+          match check a with Some cs -> Some (i, cs) | None -> None)
+        indexed
+    in
+    ( match direct with
+    | [(idx, cs)] ->
+      (* Single direct recursive call — innermost cell.  Destination passing
+         needs a hole it can leave empty and point at, so the field the call
+         fills must be a [shared_ptr].  It is not always: a constructor may
+         nest one of another inductive whose corresponding field is a value
+         ([rnode (cons r nil)] fills [list rose]'s element).  There is no null
+         [rose] to write, so such a chain is not TMC-eligible and the function
+         stays plainly recursive. *)
+      let cell = make_cell idx in
+      if not (List.mem idx cell.tca_uptr_field_idxs) then None
+      else Some { tmc_cells = [cell]; tmc_rec_args = cs.cs_args }
+    | [] ->
+      (* No direct call — look for a nested constructor wrapping a call *)
+      let nested =
+        List.filter_map
+          (fun (i, a) ->
+            if count_calls_expr check a = 1 then Some (i, a) else None)
+          indexed
+      in
+      ( match nested with
+      | [(idx, nested_expr)] ->
+        ( match try_tmc_decompose check nested_expr with
+        | Some inner ->
+          Some { tmc_cells = make_cell idx :: inner.tmc_cells;
+                 tmc_rec_args = inner.tmc_rec_args }
+        | None -> None )
+      | _ -> None )
+    | _ -> None (* Multiple direct calls — not TMC *) )
+
+(** Classify an entire function body for TMC eligibility.  Walks all return
+    positions (including inside match branches) and checks that:
+    - Every return is either a tail call, a base case (0 recursive calls), or a
+      TMC-eligible constructor wrapping
+    - All TMC branches use the {e same} constructor name and recursive field
+
+    @return [Some tmc_info] if the function is TMC-eligible *)
+let try_tmc_classify check body =
+  (* Scan a single return expression, threading (branches, compatible) *)
+  let scan_return_expr (branches, compatible) e =
+    if not compatible then (branches, false)
+    else
+      match check e with
+      | Some _ -> (branches, compatible) (* tail call — compatible *)
+      | None ->
+        let n = count_calls_expr check e in
+        if n = 0 then (branches, compatible) (* base case *)
+        else if n = 1 then (
+          match try_tmc_decompose check e with
+          | Some br -> (br :: branches, compatible)
+          | None -> (branches, false) )
+        else (branches, false)
+  in
+  (* Walk all return positions in statements, scanning each for TMC
+     eligibility. *)
+  let rec scan_stmts acc stmts = List.fold_left scan_stmt acc stmts
+  and scan_stmt acc = function
+    | Sreturn (Some e) -> scan_return_expr acc e
+    | Sif (_, then_br, else_br) ->
+      scan_stmts (scan_stmts acc then_br) else_br
+    | Scustom_case (_, _, _, branches, _) ->
+      List.fold_left (fun acc (_, _, body) -> scan_stmts acc body) acc branches
+    | Sswitch (_, _, branches, _) ->
+      List.fold_left (fun acc (_, body) -> scan_stmts acc body) acc branches
+    | Smatch (scrut, branches, default) ->
+      let acc =
+        List.fold_left (fun acc br -> scan_stmts acc br.smb_body) acc branches in
+      (match default with Some ss -> scan_stmts acc ss | None -> acc)
+    | Sblock stmts -> scan_stmts acc stmts
+    | _ -> acc
+  in
+  let (tmc_branches, compatible) = scan_stmts ([], true) body in
+  if not compatible || tmc_branches = [] then None
+  else
+    let first = List.hd tmc_branches in
+    (* All branches must use the same innermost constructor and recursive
+       field — the innermost cell determines _head/_last type and patching. *)
+    let inner br = List.rev br.tmc_cells |> List.hd in
+    let first_inner = inner first in
+    let all_same =
+      List.for_all
+        (fun br ->
+          let i = inner br in
+          i.tca_ctor_name = first_inner.tca_ctor_name
+          && i.tca_rec_field_idx = first_inner.tca_rec_field_idx )
+        tmc_branches
+    in
+    if all_same then Some ()
+    else None
+
+(** {3 TMC transformation}
+
+    Converts non-tail recursive functions where the recursive call is wrapped
+    in one or more constructors (e.g., [cons x (f xs)] or
+    [cons x (cons x (f xs))]) into iterative loops that build the result
+    top-down using destination-passing style.
+
+    Instead of an O(n) frame stack, TMC uses O(1) extra space by allocating
+    constructor cells immediately with [nullptr] holes, linking nested cells
+    together, then filling the innermost hole on the next iteration.
+
+    Single-cell example ([cons x (f xs)]):
+    {[
+      auto _cell = Cons_(x, nullptr);
+      <patch _head/_last with _cell>
+      _last = _cell;
+    ]}
+
+    Nested-cell example ([cons x (cons x (f xs))]):
+    {[
+      auto _cell  = Cons_(x, nullptr);   // outer
+      auto _cell1 = Cons_(x, nullptr);   // inner
+      _cell.tail  = _cell1;              // link
+      <patch _head/_last with _cell>
+      _last = _cell1;                    // advance to innermost
+    ]} *)
+
+(** Generate [std::get<typename Type::Ctor>(ptr->v_mut()).<field> = val] —
+    the statement that patches the recursive field of a TMC cell.
+
+    The field index accounts for the reversed AST argument order
+    (see translation.ml:1776): AST index [rec_field_idx] maps to struct
+    field index [n_args - 1 - rec_field_idx].  The actual field name is
+    resolved via {!Common.lookup_ctor_field_name}, which returns the
+    descriptive Rocq binder name (e.g. [d_tl]) when one was registered
+    during inductive definition, or falls back to the positional name
+    [d_a{idx}].
+
+    {!cell_rec_field} returns that lvalue split as [(object, field)], because
+    the write-pointer update needs to take its address rather than assign to
+    it; {!patch_cell_field} is the assignment. *)
+let cell_rec_field ~cell_ty ~ctor_name ~n_args ~rec_field_idx ptr =
+  let field_idx = n_args - 1 - rec_field_idx in
+  let v_mut = CPPaccess_call (Aarrow, ptr, id_v_mut, []) in
+  ( CPPstd_get (Tqualified (cell_ty, Id.of_string ctor_name), Some v_mut),
+    cell_field_name ~cell_ty ~ctor_name field_idx )
+
+let patch_cell_field ~cell_ty ~ctor_name ~n_args ~rec_field_idx ptr val_expr =
+  let obj, field_id =
+    cell_rec_field ~cell_ty ~ctor_name ~n_args ~rec_field_idx ptr
+  in
+  Sassign_expr (CPPget (obj, field_id), val_expr)
+
+(** Generate the if/else that links a value into the TMC chain.  On the first
+    iteration, assigns to [_head]; on subsequent iterations, patches the
+    recursive field of the last allocated cell via {!patch_cell_field}.
+
+    {[
+      if (_last) \{
+        std::get<typename Type::Ctor>(_last->v_mut()).d_aN = val;
+      \} else \{
+        _head = val;
+      \}
+    ]} *)
+let patch_tmc_dest ~vt_ret _ti val_expr =
+  (* Write-pointer technique: *_write = val.
+     _write always points to where the next value should go — initially
+     &_head, then the recursive field of the most recently allocated cell.
+     No branch needed: the pointer handles both the first-element and
+     subsequent-element cases uniformly.
+     For value-type returns, base-case values need make_unique wrapping;
+     cell values (from build_cell_call) are already shared_ptr. *)
+  let val_expr =
+    match vt_ret with
+    | Some _ -> CPPmove val_expr
+    | None -> val_expr
+  in
+  [Sexpr (CPPbinop (Bassign, CPPderef (CPPvar (id_write)), val_expr))]
+
+(** Wrap a base-case value in [make_unique] for value-type returns.
+    TMC branch cells are already [shared_ptr]-wrapped from {!build_cell_call}. *)
+let wrap_base_for_vt vt_ret val_expr =
+  match vt_ret with
+  | Some ret_ty ->
+    (* The allocation's result type is [ret_ty] by construction; say so rather
+       than leaving {!infer_saved_type} to rediscover it. *)
+    CPPfun_call
+      ( call_sig ~yields:(Tshared_ptr ret_ty) ~nargs:1 (),
+        CPPalloc (Alloc_heap, ret_ty),
+        of_reversed [ val_expr ] )
+  | None -> val_expr
+
+(** Build a constructor call with [nullptr] at the recursive argument position.
+
+    When [~vt_ret] is [Some ret_ty], the factory method cannot accept [nullptr]
+    because the recursive parameter is a value type.  Instead we construct the
+    inner struct directly and wrap it:
+    [std::make_unique<list<T>>(typename list<T>::Cons\{x, nullptr\})]
+
+    @param token [Some e] routes the allocation through
+      [crane::make_rc_reusing_unchecked], recycling the cell [e] denotes
+      instead of allocating (see {!section:reuse-cursor}).  [None] allocates.
+    @param cell A single TMC cell allocation descriptor
+    @param vt_ret [Some ret_ty] for value-type returns, [None] otherwise *)
+let build_cell_call ?token ~vt_ret cell =
+  (* The cell being built is not always of the function's return type: a
+     constructor may nest one of a DIFFERENT inductive ([rnode (cons r nil)]
+     wraps the recursive [rose] in a [list rose]).  Allocate at the cell's own
+     type, which [tca_type] carries. *)
+  let mk_shared_cell = CPPalloc (Alloc_heap, cell.tca_type) in
+  (* What that allocation yields, recorded at the one place that knows it. *)
+  let shared_cell_sig =
+    call_sig ~yields:(Tshared_ptr cell.tca_type) ~nargs:1 ()
+  in
+  let expr_builds_cell_type e =
+    match is_ctor_factory_call e with
+    | Some (ty, _, _, _) -> ty = cell.tca_type
+    | None -> false
+  in
+  let args =
+    List.init cell.tca_n_args (fun i ->
+      if i = cell.tca_rec_field_idx then CPPnullptr
+      else
+        match List.assoc_opt i cell.tca_non_rec_args with
+        | Some e ->
+          let should_wrap =
+            vt_ret <> None
+            && (List.mem i cell.tca_uptr_field_idxs
+                || expr_builds_cell_type e)
+          in
+          if should_wrap then
+            (match vt_ret with
+             | Some _ -> CPPfun_call (shared_cell_sig, mk_shared_cell, of_reversed ([e]))
+             | None -> e)
+          else e
+        | None ->
+          Cpp_erasure.converting_ctor Tany [] )
+  in
+  match vt_ret with
+  | Some _ ->
+    (* Direct struct construction wrapped in make_unique:
+       std::make_unique<Type>(typename Type::Ctor{args...}) *)
+    let struct_init =
+      CPPtype_name (Tqualified (cell.tca_type, Id.of_string cell.tca_ctor_name))
+    in
+    let cell_expr = CPPfun_call (call_opaque, struct_init, of_reversed (args)) in
+    (match token with
+     | Some tok ->
+       (* T is deduced from the token's [rc<T>]; the cell value is built from
+          the constructor struct exactly as [make_rc] would build it. *)
+       CPPfun_call (call_opaque, CPPrt Crane_rt.Make_rc_reusing_unchecked,
+                    of_reversed ([cell_expr; tok]))   (* reversed: (token, cell) *)
+     | None -> CPPfun_call (shared_cell_sig, mk_shared_cell, of_reversed ([cell_expr])))
+  | None ->
+    CPPfun_call (call_opaque, cell.tca_factory, of_reversed (args))
+
+(** Turn destructive matches on any of [ids] back into borrowing ones.
+
+    Clears [smb_is_owned] (so the printer emits [const auto& [..] = std::get<C>(
+    p->v())] rather than [auto& [..]] over [v_mut()]) and drops the [std::move]
+    translation put on the field bindings.  Reverting a destructive match to a
+    borrowing one is always sound -- it only copies where it could have moved --
+    so this pass is a safety net, never a rewrite that changes meaning. *)
+let borrow_matches_on ids stmts =
+  let mentions_ptr_shadow e =
+    expr_exists
+      (function
+        | CPPvar id -> List.exists (Id.equal id) ids
+        | _ -> false)
+      e
+  in
+  let strip_moves bound =
+    let rec expr = function
+      | CPPmove (CPPvar id) when List.exists (Id.equal id) bound -> CPPvar id
+      | e -> map_expr expr stmt Fun.id e
+    and stmt s = map_stmt expr stmt Fun.id s in
+    List.map stmt
+  in
+  let rec stmt = function
+    | Smatch (scrut, branches, default) ->
+      let through_shadow = mentions_ptr_shadow scrut.sc_expr in
+      Smatch
+        ( { scrut with sc_owned = scrut.sc_owned && not through_shadow },
+          List.map
+            (fun br ->
+              if not through_shadow then
+                { br with smb_body = List.map stmt br.smb_body }
+              else
+                let bound =
+                  List.map (fun (id, _, _) -> id) br.smb_field_bindings
+                in
+                { br with
+                  smb_body = strip_moves bound (List.map stmt br.smb_body) })
+            branches,
+          Option.map (List.map stmt) default )
+    | s -> map_stmt Fun.id stmt Fun.id s
+  in
+  List.map stmt stmts
+
+(** Borrowing fix-up for the TMC loop: the scrutinee is reached through a
+    pointer shadow.  See the ownership discussion in {!transform_tmc} -- under
+    the reuse cursor the scrutinee is owned but not known to be unique, and only
+    [crane::reuse_step] may consume it. *)
+let borrow_cursor_matches shadow_params stmts =
+  borrow_matches_on
+    (List.filter_map
+       (fun (id, ty) -> match ty with Tptr _ -> Some id | _ -> None)
+       shadow_params)
+    stmts
+
+(** Borrowing fix-up for the frame-based loop: a varying parameter that the
+    caller passes owned is nevertheless re-bound inside a frame handler as
+    [const T& x = *_f.x] (a borrow of the cell the frame points at), so a
+    destructive match on it would call [v_mut()] on a const reference and fail
+    to compile.  Collect every local bound by const reference or pointer and
+    make matches on them borrow.
+
+    Gated by the caller on [Crane Reuse]: it is only reachable when reuse marks
+    a match-only scrutinee owned, and keeping it off otherwise leaves reuse-off
+    output byte-identical. *)
+let borrow_frame_bound_matches stmts =
+  let ids = ref [] in
+  let rec scan s =
+    ( match s with
+    | Sasgn (id, Declare (Tref (Lvalue, Tconst _) | Tptr _), _) ->
+      ids := id :: !ids
+    | _ -> () );
+    ignore (map_stmt Fun.id (fun s -> scan s; s) Fun.id s)
+  in
+  List.iter scan stmts;
+  if !ids = [] then stmts else borrow_matches_on !ids stmts
+
+(** Drop [std::move] from every read of a loop-invariant parameter.
+
+    An invariant parameter lives in function scope and is read by every
+    iteration of the loop, but the recursion it came from gave each activation
+    its own copy.  Translation's last-use analysis sees only the source
+    program's single syntactic occurrence, so it happily marks e.g. the base
+    case of [repeat_with_sep] as [_result = std::move(s)] -- and the resume
+    handler then reads [s] again on the next turn of the loop.  The last
+    syntactic use is not the last dynamic use once the body is a loop.
+
+    Types whose move constructor was suppressed (the iterative drain
+    destructor) hid this: the "move" was a copy, so the stale read still saw a
+    live value.  Restore cheap moves on those types and the same code
+    segfaults, so this must be fixed for the loop shape itself, not for one
+    special-member policy.
+
+    Dropping a move only ever copies where it could have moved, so the pass
+    cannot change meaning. *)
+let unmove_invariant_params invariant_params stmts =
+  if Id.Set.is_empty invariant_params then stmts
+  else
+    let rec expr = function
+      | CPPmove (CPPvar id) when Id.Set.mem id invariant_params -> CPPvar id
+      | e -> map_expr expr stmt Fun.id e
+    and stmt s = map_stmt expr stmt Fun.id s in
+    List.map stmt stmts
+
+(** {2:reuse-cursor Perceus reuse cursor}
+
+    A TMC loop walks its input by borrowed pointer and allocates a fresh output
+    cell per iteration.  When the input spine is owned and unshared, that is one
+    allocation and one free per element for cells that are structurally the same
+    shape -- the input cell is dead the moment its output counterpart is built.
+    Recycling it directly is Perceus/FBIP reuse, and turns a linear traversal
+    into a zero-allocation one.
+
+    Two things are needed that the borrowed walk does not have.  First, an
+    owning handle: a raw pointer cannot hand a cell to be recycled, so the loop
+    carries [_own], the [rc] on the cell the cursor stands on ([_own] is null on
+    the first iteration, where the cursor is on the by-value root -- not a heap
+    cell, hence nothing to recycle).  Second, a uniqueness test, since a shared
+    cell must not be touched; [_uniq] carries it, and latches false permanently
+    on the first shared cell, because a cell reachable from another holder makes
+    every deeper cell reachable too.
+
+    Both live in [crane::reuse_step] (rc.h), which returns the recycling token
+    and an owning handle on the recursive field -- taken before the cell is
+    recycled out from under it.  The emitted body is therefore straight-line
+    with no reuse branch of its own:
+
+    {[
+      const auto& [a0, a1] = std::get<Cons>(_loop_l->v());
+      auto _rs   = crane::reuse_step(_own, _uniq, a1);
+      auto _cell = crane::make_rc_reusing_unchecked(std::move(_rs.token),
+                                                    lst::Cons(f(a0), nullptr));
+      *_write = std::move(_cell);
+      _write  = &std::get<Cons>(_cell->v_mut()).a1;   // via the new cell
+      _own    = std::move(_rs.next);
+      _loop_l = _own.get();
+    ]}
+
+    Identify the cursor: the single varying parameter that the loop walks by
+    pointer and whose recursive argument is a dereference of one of the matched
+    cell's fields, i.e. exactly the spine being consumed.  Everything else --
+    accumulators, unchanged parameters, several pointer-walked parameters at
+    once -- yields [None] and the ordinary allocating path. *)
+let tmc_reuse_cursor ~vt_ret varying shadow_params br =
+  if not (Table.reuse () && Table.non_atomic_rc ()) then None
+  else if vt_ret = None then None
+  else
+    let rec_args = filter_by_mask varying br.tmc_rec_args in
+    if List.length rec_args <> List.length shadow_params then None
+    else
+      let candidates =
+        List.filter_map
+          (fun ((sid, sty), arg) ->
+            match sty, arg with
+            | Tptr _, CPPderef inner -> Some (sid, inner)
+            | _ -> None)
+          (List.combine shadow_params rec_args)
+      in
+      match candidates with [c] -> Some c | _ -> None
+
+(** Generate statements for a TMC branch with possibly nested constructor cells.
+    Allocates all cells with [nullptr] holes, links consecutive pairs via
+    {!patch_cell_field}, patches the destination with the outermost cell, and
+    sets [_last] to the innermost.
+
+    For a single cell (v1 behaviour), emits the same code as before.
+    For nested cells (e.g., [cons x (cons x (RECURSE xs))]), emits:
+    {[
+      auto _cell  = Cons_(x, nullptr);    // outer
+      auto _cell1 = Cons_(x, nullptr);    // inner
+      outer.tail = _cell1;                // link
+      <patch _head/_last with _cell>      // destination
+      _last = _cell1;                     // advance
+      <shadow updates>
+    ]} *)
+let build_tmc_branch_stmts ?(cursor_used = ref false) ~vt_ret ti br
+    varying shadow_params =
+  (* 0. Perceus reuse cursor.  See {!section:reuse-cursor}: when the loop walks
+        an owned spine by pointer, the cell it is standing on is dead as soon as
+        the iteration's output cell is built, so it can be recycled into that
+        output instead of being freed and a fresh one allocated. *)
+  let cursor = tmc_reuse_cursor ~vt_ret varying shadow_params br in
+  if cursor <> None then cursor_used := true;
+  let step_decl =
+    match cursor with
+    | Some (_, rec_field) ->
+      (* CPPfun_call holds its arguments reversed (see translation.ml:1776),
+         so [reuse_step(_own, _uniq, a1)] is written innermost-first here. *)
+      [ Sasgn (id_rstep, Declare Tauto,
+               CPPfun_call (call_opaque, CPPrt Crane_rt.Reuse_step,
+                            of_reversed ([rec_field; CPPvar id_uniq; CPPvar id_own]))) ]
+    | None -> []
+  in
+  let token =
+    Option.map
+      (fun _ ->
+        CPPmove (CPPaccess (Adot, CPPvar id_rstep, Id.of_string "token")) )
+      cursor
+  in
+  (* Generate unique cell names: _cell, _cell1, _cell2, ... *)
+  let cell_names =
+    List.mapi
+      (fun i _ ->
+        Id.of_string (if i = 0 then "_cell" else "_cell" ^ string_of_int i))
+      br.tmc_cells
+  in
+  (* 1. Allocate all cells with nullptr holes *)
+  (* Only the outermost cell may take the token: one input cell dies per
+     iteration, so a nested chain still recycles exactly one of its cells. *)
+  let cell_decls =
+    List.mapi
+      (fun i (cell_id, cell) ->
+        let token = if i = 0 then token else None in
+        Sasgn (cell_id, Declare Tauto, build_cell_call ?token ~vt_ret cell))
+      (List.combine cell_names br.tmc_cells)
+  in
+  (* 2. Link consecutive cells: outer.rec_field = inner.
+        For value-type returns, assignments use [CPPmove], so the inner cell
+        is moved into the outer.  To avoid reading a moved-from (null) pointer,
+        assignments must be performed innermost-first: link _cell1→_cell2 before
+        linking _cell→_cell1.  We build the list outer-first then reverse it. *)
+  let rec link_cells cells names =
+    match cells, names with
+    | cell :: rest_cells, outer_name :: (inner_name :: _ as rest_names) ->
+      patch_cell_field
+        ~cell_ty:cell.tca_type ~ctor_name:cell.tca_ctor_name
+        ~n_args:cell.tca_n_args ~rec_field_idx:cell.tca_rec_field_idx
+        (CPPvar outer_name)
+        (match vt_ret with
+         | Some _ -> CPPmove (CPPvar inner_name)
+         | None -> CPPvar inner_name)
+      :: link_cells rest_cells rest_names
+    | _ -> []
+  in
+  let link_stmts = List.rev (link_cells br.tmc_cells cell_names) in
+  (* 3. Patch destination with outermost cell via write pointer *)
+  let patch = patch_tmc_dest ~vt_ret ti (CPPvar (List.hd cell_names)) in
+  (* 4. Advance _write to the recursive field of the innermost cell.
+        Generates: _write = &std::get<typename Type::Ctor>(inner->v_mut()).field; *)
+  let inner_ti = List.rev br.tmc_cells |> List.hd in
+  let inner_field ptr =
+    let obj, field_id =
+      cell_rec_field ~cell_ty:inner_ti.tca_type
+        ~ctor_name:inner_ti.tca_ctor_name ~n_args:inner_ti.tca_n_args
+        ~rec_field_idx:inner_ti.tca_rec_field_idx ptr
+    in
+    CPPget (obj, field_id)
+  in
+  let update_write =
+    let target =
+      match vt_ret with
+      | Some _ ->
+        (* Value-type returns hold the chain by value inside the cells rather
+           than as separately-named locals, so walk down from [*_write] through
+           each outer cell's recursive field to reach the innermost one. *)
+        let rec ptr_to_cell current_ptr = function
+          | [] | [_] -> current_ptr
+          | cell :: rest ->
+            let obj, field_id =
+              cell_rec_field ~cell_ty:cell.tca_type
+                ~ctor_name:cell.tca_ctor_name ~n_args:cell.tca_n_args
+                ~rec_field_idx:cell.tca_rec_field_idx current_ptr
+            in
+            ptr_to_cell (CPPget (obj, field_id)) rest
+        in
+        inner_field (ptr_to_cell (CPPderef (CPPvar id_write)) br.tmc_cells)
+      | None -> inner_field (CPPvar (List.rev cell_names |> List.hd))
+    in
+    Sexpr (CPPbinop (Bassign, CPPvar id_write, CPPunop (Uaddr, target)))
+  in
+  (* 5. Shadow variable updates.  The cursor advances through [_own] instead:
+        the recursive field has been stolen into [_rs.next] (the cell it lived
+        in may since have been recycled), and [_own] is what keeps the next cell
+        alive now that the current one is gone. *)
+  let shadow_updates =
+    make_shadow_updates shadow_params (filter_by_mask varying br.tmc_rec_args)
+  in
+  let shadow_updates =
+    match cursor with
+    | None -> shadow_updates
+    | Some (cursor_id, _) ->
+      let is_cursor_update = function
+        | Sasgn (id, Existing, _) | Sexpr (CPPbinop (Bassign, CPPvar id, _)) ->
+          Id.equal id cursor_id
+        | _ -> false
+      in
+      List.filter (fun s -> not (is_cursor_update s)) shadow_updates
+      @ [ Sexpr (CPPbinop (Bassign, CPPvar id_own,
+                           CPPmove (CPPaccess (Adot, CPPvar id_rstep,
+                                               Id.of_string "next"))));
+          Sexpr (CPPbinop (Bassign, CPPvar cursor_id,
+                           CPPaccess_call (Adot, CPPvar id_own, id_get, []))) ]
+  in
+  step_decl @ cell_decls @ link_stmts @ patch @ [update_write] @ shadow_updates
+
+(** Rewrite a single statement for TMC loopification.
+
+    Constructs a TMC {!top_rewrite_config} and delegates to
+    {!generic_rewrite_stmt}.  The inner config emits a plain [Sif].  Base
+    returns patch the write pointer and break; TMC branches allocate cells
+    with holes.  Tail calls
+    at the top level append [Scontinue]; inside visitor lambdas they do not
+    (the lambda returns and the [while] loop naturally continues).
+
+    @param vt_ret  [Some ret_ty] when the return type is a value type
+    @param check   Call checker for identifying recursive calls
+    @param ti      TMC info from {!try_tmc_classify} *)
+let rewrite_tmc_visit_stmt ?(cursor_used = ref false) ~vt_ret check ti
+    varying shadow_params =
+  (* Emit code for a non-tail return in the TMC context.
+     [suffix] is appended after TMC branches: empty inside visitor lambdas,
+     [[Scontinue]] at the top level. *)
+  let tmc_on_other_return ~suffix e =
+    let n = count_calls_expr check e in
+    if n = 0 then
+      (* Base case — patch destination and stop *)
+      patch_tmc_dest ~vt_ret:None ti (wrap_base_for_vt vt_ret e)
+      @ [Sbreak]
+    else
+      (* TMC branch — allocate cell(s) with holes, patch, continue *)
+      match try_tmc_decompose check e with
+      | Some br ->
+        build_tmc_branch_stmts ~cursor_used ~vt_ret ti br varying
+          shadow_params
+        @ suffix
+      | None ->
+        (* Fallback: shouldn't happen if try_tmc_classify was correct *)
+        [Sreturn (Some e)]
+  in
+  let inner_rc =
+    { rc_check = check;
+      rc_varying = varying;
+      rc_shadow_params = shadow_params }
+  in
+  generic_rewrite_stmt
+    { trc_inner = inner_rc;
+      trc_tail_suffix = [Scontinue];
+      trc_on_other =
+        (fun e -> wrap_as_block (tmc_on_other_return ~suffix:[Scontinue] e));
+      trc_rewrite_branch = Fun.id;
+      trc_detect_void_tail = false }
+
+(** Transform a TMC-eligible function body into a [while] loop with
+    destination-passing style.
+
+    @param param_inits Optional custom initializers for shadow variables
+    @param check Call checker for identifying recursive calls
+    @param ti TMC info from {!try_tmc_classify}
+    @param params Function parameters
+    @param ret_ty Return type
+    @param body Function body
+    @return Transformed body with TMC while loop *)
+let transform_tmc ?(param_inits = []) tparams check ti params ret_ty body =
+  let vt_ret = if is_value_type_ret ret_ty then Some ret_ty else None in
+  let { ss_varying = varying; ss_varying_params = varying_params;
+        ss_shadow_params = shadow_params; ss_subs = subs } =
+    build_shadow_setup tparams check params body
+  in
+  (* For value-type returns, _head is shared_ptr<ret_ty> and _write points
+     into the shared_ptr chain.  For pointer returns, _head is the bare type. *)
+  let head_ty = match vt_ret with
+    | Some t -> Tshared_ptr t
+    | None -> ret_ty
+  in
+  let head_decl = Sdecl_init (id_head, head_ty) in
+  let write_decl =
+    Sasgn (id_write, Declare (Tptr head_ty),
+           CPPunop (Uaddr, CPPvar (id_head)))
+  in
+  (* Shadow variable declarations.
+     For pointer params with custom inits (e.g., _self = this in methods), only
+     strip references but keep const — const T* must stay const to match this.
+     For other params (typically const shared_ptr<T>&), strip both ref and const
+     so the shadow variable becomes a mutable shared_ptr<T>. *)
+  let shadow_decls =
+    List.map2
+      (fun (orig_id, ty) (shadow_id, shadow_ty) ->
+        let has_custom_init = List.mem_assoc orig_id param_inits in
+        let init_expr =
+          match List.assoc_opt orig_id param_inits with
+          | Some custom -> custom
+          | None -> tail_shadow_init orig_id shadow_ty ty
+        in
+        (* Declare the shadow at the shadow's type, not the parameter's: where
+           {!tail_shadow_type} chose something else, it chose it because the
+           parameter's own type cannot hold what the loop will put here. *)
+        let decl_ty = match shadow_ty with
+          | Tptr _ -> shadow_ty
+          | _ ->
+            if has_custom_init then strip_ref_type shadow_ty
+            else strip_ref_and_const_type shadow_ty
+        in
+        Sasgn (shadow_id, Declare decl_ty, init_expr) )
+      varying_params
+      shadow_params
+  in
+  (* Substitute param references in body *)
+  let body' = List.map (subst_stmt subs) body in
+  (* Rewrite body for TMC, then flatten unnecessary Sblock wrappers *)
+  let cursor_used = ref false in
+  let body'' =
+    List.map
+      (rewrite_tmc_visit_stmt ~cursor_used ~vt_ret check ti varying
+         shadow_params)
+      body'
+    |> strip_unnecessary_blocks
+    |> rewrite_borrowed_shadow_uses shadow_params
+  in
+  (* The reuse cursor's declarations, and the matches it reads through.
+     Escape analysis passed the scrutinee owned so that this loop would have
+     cells to recycle, which also made translation emit a destructive match
+     ([auto&] over [v_mut()], fields moved out).  That is exactly what must not
+     happen here: whether the cell may be consumed is not known until
+     [reuse_step] tests it, and on a shared spine moving its fields out would
+     corrupt the other holder.  So the matches revert to borrowing, and
+     [reuse_step] does the one steal that is licensed -- the recursive field of
+     a cell it has just proven unique. *)
+  let body'' =
+    if not !cursor_used then body''
+    else borrow_cursor_matches shadow_params body''
+  in
+  let cursor_decls =
+    if not !cursor_used then []
+    else
+      [ Sasgn (id_own, Declare head_ty, Cpp_erasure.converting_ctor head_ty []);
+        (* [Tid] is the *user-defined* type constructor, so the printer
+           namespace-qualifies it ("Mod::bool").  This is the builtin, which
+           must never be qualified. *)
+        Sasgn
+          ( id_uniq,
+            Declare (Tid_external ("bool", [])),
+            CPPbool true )
+      ]
+  in
+  (* For value-type returns, dereference _head (shared_ptr → value) *)
+  let ret_expr = match vt_ret with
+    | Some _ -> CPPmove (CPPderef (CPPvar (id_head)))
+    | None -> CPPvar (id_head)
+  in
+  let shadow_decls, body'' = drop_unread_shadows shadow_decls body'' in
+  let body'' = strip_unnecessary_blocks body'' in
+  [head_decl; write_decl]
+  @ cursor_decls
+  @ shadow_decls
+  @ [
+      Swhile (CPPbool true, body'');
+      Sreturn (Some ret_expr);
+    ]
