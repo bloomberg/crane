@@ -4,19 +4,17 @@
 (** Rendering MiniCpp as C++ source text.
 
     The declaration printer's input is a settled declaration (see
-    {!Cpp_erasure.settled}); {!pp_cpp_decl} still runs {!Cpp_pipeline.finish}
-    on the way, until the driver finishes declarations itself.  The registries
-    below are the printer's remaining state: forward declarations and
-    synthesised aliases it mints while rendering and the assembly drains. *)
+    {!Cpp_erasure.settled}): it runs no compiler pass.  The registries below
+    are the printer's remaining state: forward declarations and synthesised
+    aliases it mints while rendering and the assembly drains. *)
 
 open Names
 open Minicpp
 
 (** {2 Rendering} *)
 
-(** [pp_cpp_decl env decl] finishes [decl] ({!Cpp_pipeline.finish}) and
-    renders it. *)
-val pp_cpp_decl : Common.env -> cpp_decl -> Pp.t
+(** [pp_cpp_decl env decl] renders a settled declaration. *)
+val pp_cpp_decl : Common.env -> Cpp_erasure.settled -> Pp.t
 
 (** How a member is written: in the struct with or without its body, or out
     of line. *)

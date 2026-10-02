@@ -72,9 +72,14 @@ let ind_cpp_decls kn ind =
 (** A declaration together with the name environment it is printed in. *)
 type rendered = (Common.env * Minicpp.cpp_decl) list
 
-(** Print the declarations an entry point answered with.  Everything above
-    this line builds declarations; nothing above it renders. *)
-let pp_decls ds = pp_list_stmt (fun (env, d) -> pp_cpp_decl env d) ds
+(** [render_decl env d] finishes [d] ({!Cpp_pipeline.finish}) and prints it:
+    the one place a generated declaration crosses from the compiler's passes
+    to the printer.  Everything above this line builds declarations; nothing
+    above it renders. *)
+let render_decl env d = Cpp_print.pp_cpp_decl env (Cpp_pipeline.finish d)
+
+(** Print the declarations an entry point answered with. *)
+let pp_decls ds = pp_list_stmt (fun (env, d) -> render_decl env d) ds
 
 (** Dispatch for .cpp file rendering. Filters out inline customs, eponymous
     record projections, suppressed projections, method candidates, registered
@@ -133,7 +138,7 @@ let impl_decls = function
         List.filter (fun (_, _, l) -> l == []) (gen_dfuns (rv, defs, typs))
       in
       (* Pre-register all Dfix functions for mutual recursion detection before
-         any of them are individually loopified via pp_cpp_decl/maybe_loopify.
+         any of them are individually loopified via render_decl.
          Without this, the first function rendered can't see the second in the
          mutual table, so mutual inlining fails. *)
       List.iter

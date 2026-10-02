@@ -4635,24 +4635,11 @@ let nested_in_wrapper r =
     Whether that struct is a template has nothing to do with it -- both merge
     branches below handle one -- so this asks only about the wrapper.
 
-    Asked by {!pp_cpp_decl_raw} of the declaration and by the out-of-line
+    Asked by {!pp_cpp_decl} of the declaration and by the out-of-line
     member definition of its owner, which must agree about how many names the
     qualifier has. *)
 let nspace_merges (w : dm_wrapper) : bool =
   w.dw_sole_child && not (nested_in_wrapper w.dw_ref)
-
-(** Pretty-print a MiniCpp declaration as C++ source. Handles templates,
-    namespaces/structs, functions, assignments, enums, etc.
-
-    Runs {!Cpp_pipeline.finish} -- loopification, depth flattening and the
-    {!Cpp_erasure} seam -- before rendering; use {!pp_cpp_decl_raw} directly
-    on an already-finished declaration to skip those passes.
-
-    @param env   name environment for sub-expression and sub-type printers
-    @param decl  the MiniCpp declaration to render *)
-let rec pp_cpp_decl env decl =
-  pp_cpp_decl_raw env
-    (Cpp_pipeline.finish ~loopify:(Cpp_pipeline.should_loopify decl) decl)
 
 (** [pp_initialiser env ty e] prints [e] as the initialiser of something
     declared with type [ty].
@@ -4660,7 +4647,7 @@ let rec pp_cpp_decl env decl =
     A {!CPPabort} never returns, so the type it should be spelled with comes
     entirely from where it sits; here that is [ty].  Everywhere else the
     expression printer already knows enough. *)
-and pp_initialiser env ty e =
+let rec pp_initialiser env ty e =
   match e with
   | CPPabort (msg, _) ->
     require_header "stdexcept";
@@ -4676,17 +4663,17 @@ and pp_initialiser env ty e =
     ++ str "\"); })()"
   | _ -> pp_cpp_expr env [] e
 
-(** Inner declaration printer, called after loopification and after the
-    {!Cpp_erasure.settled} seam: every type here is spelled the way it will be
-    written out.
+(** Pretty-print a settled MiniCpp declaration as C++ source: every type here
+    is spelled the way it will be written out, and the passes that settle a
+    declaration ({!Cpp_pipeline.finish}) have already run.
 
     @param env  name environment for sub-expression and sub-type printers *)
-and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
+and pp_cpp_decl env (settled : Cpp_erasure.settled) =
   record_file_scope_type (settled :> cpp_decl);
   match Cpp_erasure.view settled with
   | Template (temps, cstr, inner) -> pp_template_decl env temps cstr inner
   | Namespace (None, decls) ->
-    let ds = pp_list_stmt (pp_cpp_decl_raw env) decls in
+    let ds = pp_list_stmt (pp_cpp_decl env) decls in
     (str "namespace " ++ str "{") ++ fnl () ++ ds ++ fnl () ++ str "};"
   | Namespace (Some id, members) -> pp_wrapper_nspace env id members
   | Decl d -> pp_leaf_decl env d
@@ -4724,7 +4711,7 @@ and pp_template_decl env temps cstr (inner : Cpp_erasure.settled) =
     in
     (str "template <" ++ args ++ str ">")
     ++ cstr_pp
-    ++ pp_cpp_decl_raw env inner
+    ++ pp_cpp_decl env inner
 
 (** A namespace-scope wrapper struct around [members], merged with its sole
     struct child where it can be. *)
@@ -4832,7 +4819,7 @@ and pp_wrapper_nspace env id (members : Cpp_erasure.settled list) =
     let ds =
       with_render_ctx
         (fun c -> { c with rc_in_struct = true })
-        (fun () -> pp_list_stmt (pp_cpp_decl_raw env) members)
+        (fun () -> pp_list_stmt (pp_cpp_decl env) members)
     in
     let pending_fwd =
       match Hashtbl.find_opt pending_wrapper_decls struct_name_str with

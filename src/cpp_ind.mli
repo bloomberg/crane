@@ -21,6 +21,10 @@
 (** A declaration together with the name environment it is printed in. *)
 type rendered = (Common.env * Minicpp.cpp_decl) list
 
+(** [render_decl env d] finishes [d] and prints it: the one place a generated
+    declaration crosses from the compiler's passes to the printer. *)
+val render_decl : Common.env -> Minicpp.cpp_decl -> Pp.t
+
 (** Print the declarations an entry point answered with. *)
 val pp_decls : rendered -> Pp.t
 

@@ -16,9 +16,7 @@
     asked for and what kind of declaration it is. *)
 val should_loopify : Minicpp.cpp_decl -> bool
 
-(** [finish ~loopify decl] runs every pass between translation and printing,
-    and hands back the printable declaration.
-
-    @param loopify whether to loopify, normally {!should_loopify} of the same
-                   declaration. *)
-val finish : loopify:bool -> Minicpp.cpp_decl -> Cpp_erasure.settled
+(** [finish decl] runs every pass between translation and printing --
+    loopifying where {!should_loopify} says so -- and hands back the printable
+    declaration. *)
+val finish : Minicpp.cpp_decl -> Cpp_erasure.settled

@@ -66,8 +66,8 @@ let check_settled (decl : Cpp_erasure.settled) =
         | Some r -> str " in " ++ Printer.pr_global r
         | None -> mt () )
 
-let finish ~loopify decl =
-  let decl = if loopify then Loopify.transform_decl decl else decl in
+let finish decl =
+  let decl = if should_loopify decl then Loopify.transform_decl decl else decl in
   (* An initialiser nested deeper than a compiler will parse becomes a run of
      bindings; everything shallower is left as it stands. *)
   let decl = Cpp_depth.flatten decl in

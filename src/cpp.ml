@@ -684,7 +684,7 @@ let spec_names_into_a_struct (rendered : string) : bool =
 let spec_is_hoistable (spec : cpp_decl) : bool =
   not
     (spec_names_into_a_struct
-       (Pp.string_of_ppcmds (pp_cpp_decl (empty_env ()) spec)) )
+       (Pp.string_of_ppcmds (render_decl (empty_env ()) spec)) )
 
 (** Whether a module's members name only types a forward declaration can
     stand in for.
@@ -799,7 +799,7 @@ let dbg_lifted =
         match lifted_fun_split d with
         | Some (spec, _) ->
           let rendered =
-            Pp.string_of_ppcmds (pp_cpp_decl (empty_env ()) spec)
+            Pp.string_of_ppcmds (render_decl (empty_env ()) spec)
           in
           Printf.sprintf "splits=yes hoistable=%b spec=%S"
             (spec_is_hoistable spec) rendered
@@ -940,11 +940,11 @@ let rec pp_structure_elem ~is_header f = function
               | Some (spec, def) when not (!render_ctx).rc_in_struct ->
                 if spec_is_hoistable spec then
                   pending_lifted_specs :=
-                    pp_cpp_decl (empty_env ()) spec :: !pending_lifted_specs;
+                    render_decl (empty_env ()) spec :: !pending_lifted_specs;
                 def
               | _ -> d'
             in
-            let pp = pp_cpp_decl (empty_env ()) d' in
+            let pp = render_decl (empty_env ()) d' in
             if Pp.ismt pp then acc
             else if Pp.ismt acc then pp
             else acc ++ cut2 () ++ pp )
@@ -1189,7 +1189,7 @@ let rec pp_structure_elem ~is_header f = function
                            watching_for_reference_to
                              (Pp.string_of_ppcmds name)
                            @@ fun () ->
-                           pp_cpp_decl
+                           render_decl
                              (empty_env ())
                              (Gen_decls.gen_typeclass_cpp
                                 ind_ref
@@ -2012,12 +2012,12 @@ let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
   let render_sel_specs (specs, _, _) =
     match specs with
     | [] -> mt ()
-    | _ -> pp_list_stmt (fun (ds, env) -> pp_cpp_decl env ds) specs
+    | _ -> pp_list_stmt (fun (ds, env) -> render_decl env ds) specs
   in
   let render_sel_defs (_, defs, _) =
     match defs with
     | [] -> mt ()
-    | _ -> pp_list_stmt (fun (ds, env) -> pp_cpp_decl env ds) defs
+    | _ -> pp_list_stmt (fun (ds, env) -> render_decl env ds) defs
   in
   let specs_pp =
     with_render_ctx
@@ -2053,7 +2053,7 @@ let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
       prlist_sep_nonempty
         cut2
         (fun (d, split) ->
-          pp_cpp_decl (empty_env ())
+          render_decl (empty_env ())
             (match split with Some (_, def) -> def | None -> d) )
         lifted_split
     else
@@ -2063,7 +2063,7 @@ let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
     if is_header then
       prlist_sep_nonempty
         cut2
-        (fun d -> pp_cpp_decl (empty_env ()) d)
+        (fun d -> render_decl (empty_env ()) d)
         (List.filter_map
            (fun (_, s) ->
              match s with
@@ -2855,7 +2855,7 @@ let do_struct_with_decl_tracking ~is_header f s =
       let rendered_lifted =
         List.map
           (fun entry ->
-            let render () = pp_cpp_decl (empty_env ()) (pass2_def entry) in
+            let render () = render_decl (empty_env ()) (pass2_def entry) in
             match main_module_name with
             | Some name -> watching_for_reference_to name render
             | None -> (render (), false) )
@@ -2933,7 +2933,7 @@ let do_struct_with_decl_tracking ~is_header f s =
             (fun (_, split) ->
               match split with
               | Some (spec, _) when spec_is_hoistable spec ->
-                Some (pp_cpp_decl (empty_env ()) spec)
+                Some (render_decl (empty_env ()) spec)
               | _ -> None )
             pass2_lifted
         @ (let pending = List.rev !pending_lifted_specs in
