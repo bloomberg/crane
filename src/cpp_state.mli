@@ -162,11 +162,6 @@ val drain : band -> Pp.t list
     struct -- is collected here and emitted at file scope instead. *)
 val file_scope_concepts : band
 
-(** The landing pads for erasure: file-scope [using X = std::any;] for a name
-    with no C++ spelling behind it.  Emitted before everything, including the
-    concepts, because an alias to [std::any] names nothing and the text that
-    lands on it does not follow it. *)
-val file_scope_erased_aliases : band
 
 (** The top-level elements that travel with the hoisted concepts, by label.
 

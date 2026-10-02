@@ -821,10 +821,10 @@ let dbg_lifted =
 (** The declarations of helpers lifted out of a declaration that is not a
     wrapper module's -- an inductive's own, whose helpers {!pp_structure_elem}
     emits directly after the struct closes, and so after the methods that call
-    them.  They are due at the top of the file like every other lifted helper's,
-    but the only thing in scope where they are produced is a [Pp.t] being
-    assembled inline, so they are left here for the file to collect. *)
-let pending_lifted_specs : Pp.t list ref = ref []
+    them.  They are due at the top of the file like every other lifted
+    helper's, so they are deferred, with their scope, for the file to
+    collect. *)
+let pending_lifted_specs = Cpp_ind.deferred "pending_lifted_specs"
 
 (** Lifted helpers already emitted as members of the struct being rendered. *)
 let emitted_member_lifted : (Id.t, unit) Hashtbl.t = Hashtbl.create 16
@@ -852,7 +852,6 @@ let rec pp_structure_elem ~is_header f = function
        elsewhere keep their file-scope placement. *)
     ignore (Translation.take_lifted_decls ());
     let rendered = f d in
-    let body = pp_decls rendered in
     (* An erasure landing pad -- [using X = std::any;] -- travels to the very
        top of the file, ahead of the concepts.
 
@@ -864,23 +863,21 @@ let rec pp_structure_elem ~is_header f = function
        front of the declaration.  Hoisting both and ordering them here is what
        makes that pair of placements independent of each other, and of any
        later pass that reorders the file. *)
+    let is_erased_alias (_, d) =
+      match (d : Cpp_erasure.settled :> cpp_decl) with
+      | Dusing {du_rhs = Some rhs; _} -> Cpp_erasure.is_any_shaped rhs
+      | _ -> false
+    in
     let body =
-      let is_erased_alias (_, d) =
-        match (d : Cpp_erasure.settled :> cpp_decl) with
-        | Dusing {du_rhs = Some rhs; _} -> Cpp_erasure.is_any_shaped rhs
-        | _ -> false
-      in
       if
         is_header
         && (not (!render_ctx).rc_in_struct)
         && rendered <> []
         && List.for_all is_erased_alias rendered
-        && not (Pp.ismt body)
       then (
-        push file_scope_erased_aliases body;
+        Cpp_ind.defer Cpp_ind.file_scope_erased_aliases rendered;
         mt () )
-      else
-        body
+      else pp_decls rendered
     in
     (* A type class rendered at file scope is a concept, and a concept has no
        forward declaration to bridge a use that precedes it.  One such use is
@@ -946,8 +943,7 @@ let rec pp_structure_elem ~is_header f = function
             if not (!render_ctx).rc_in_struct then
               Option.iter
                 (fun spec ->
-                  pending_lifted_specs :=
-                    pp_cpp_decl (empty_env ()) spec :: !pending_lifted_specs )
+                  Cpp_ind.defer pending_lifted_specs [(empty_env (), spec)] )
                 (hoistable_spec spec);
             let pp = pp_cpp_decl (empty_env ()) def in
             if Pp.ismt pp then acc
@@ -2467,7 +2463,8 @@ let do_struct_with_decl_tracking ~is_header f s =
   Cpp_print.reset_ctor_alias_emitted ();
   ignore (Translation.take_lifted_decls ());
   hoisted_module_structs := [];
-  Cpp_ind.clear_deferred_member_defs ();
+  Cpp_ind.discard Cpp_ind.deferred_member_defs;
+  Cpp_ind.discard Cpp_ind.file_scope_erased_aliases;
   Hashtbl.clear emitted_member_lifted;
   Translation.clear_seen_lifted_refs ();
   init_std_names ();
@@ -2876,7 +2873,7 @@ let do_struct_with_decl_tracking ~is_header f s =
   (* Pop the initial visibility entries pushed at the top of this function. *)
   List.iter (fun _ -> pop_visible ()) initial_mps;
   let hoisted_erased_aliases =
-    match drain file_scope_erased_aliases with
+    match Cpp_ind.render_deferred Cpp_ind.file_scope_erased_aliases with
     | [] -> mt ()
     | l -> prlist_with_sep fnl (fun x -> x) l ++ cut2 ()
   in
@@ -2921,9 +2918,7 @@ let do_struct_with_decl_tracking ~is_header f s =
             (fun (_, spec) ->
               Option.map (pp_cpp_decl (empty_env ())) (hoistable_spec spec) )
             pass2_lifted
-        @ (let pending = List.rev !pending_lifted_specs in
-           pending_lifted_specs := [];
-           pending)
+        @ Cpp_ind.render_deferred pending_lifted_specs
       in
       match List.filter (fun x -> not (Pp.ismt x)) parts with
       | [] -> mt ()
@@ -2943,7 +2938,7 @@ let do_struct_with_decl_tracking ~is_header f s =
   (* Last of all: a datatype's method whose body names a module's struct, which
      is emitted after every datatype.  Nothing else in the header is later. *)
   let deferred_members =
-    match Cpp_ind.take_deferred_member_defs () with
+    match Cpp_ind.render_deferred Cpp_ind.deferred_member_defs with
     | [] -> mt ()
     | ds -> cut2 () ++ prlist_with_sep cut2 (fun x -> x) ds
   in

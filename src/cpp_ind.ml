@@ -67,23 +67,32 @@ let module_struct_name (mp : ModPath.t) : string option =
     | MPdot (_, lbl) -> Some (String.capitalize_ascii (Label.to_string lbl))
     | MPfile _ | MPbound _ -> None )
 
+(** Finished declarations written later than they were generated, each group
+    kept with the scope it was generated in and rendered in it. *)
+type deferred = (Cpp_state.scope * rendered) list ref
+
+let deferred name : deferred = Cpp_state.owned_list name
+
+let defer (band : deferred) ds =
+  if ds <> [] then band := (Cpp_state.current_scope (), ds) :: !band
+
+let render_deferred (band : deferred) =
+  let groups = List.rev !band in
+  band := [];
+  List.map (fun (sc, ds) -> Cpp_state.in_scope sc (fun () -> pp_decls ds)) groups
+
+let discard (band : deferred) = band := []
+
 (** Member definitions a datatype struct at namespace scope gave up because
     their bodies name a module's struct, which is emitted after every datatype
-    and cannot be moved in front of one it holds by value.  Each group keeps
-    the scope it was generated in.  Newest first. *)
-let deferred_member_defs : (Cpp_state.scope * rendered) list ref =
-  Cpp_state.owned_list "deferred_member_defs"
+    and cannot be moved in front of one it holds by value. *)
+let deferred_member_defs = deferred "deferred_member_defs"
 
-let defer_member_defs defs =
-  deferred_member_defs :=
-    (Cpp_state.current_scope (), finished defs) :: !deferred_member_defs
-
-let take_deferred_member_defs () =
-  let groups = List.rev !deferred_member_defs in
-  deferred_member_defs := [];
-  List.map (fun (sc, defs) -> Cpp_state.in_scope sc (fun () -> pp_decls defs)) groups
-
-let clear_deferred_member_defs () = deferred_member_defs := []
+(** The landing pads for erasure: file-scope [using X = std::any;] for a name
+    with no C++ spelling behind it.  Written before everything, the concepts
+    included, because an alias to [std::any] names nothing and the text that
+    lands on it does not follow it. *)
+let file_scope_erased_aliases = deferred "file_scope_erased_aliases"
 
 (** Render inductive type header (.h file).
     TypeClasses become C++ concepts, Records become structs,
@@ -543,7 +552,7 @@ let ind_header_decls kn ind =
               && not (List.mem (module_struct_name mp) own_nspace_names) )
             group
         in
-        if defs <> [] then defer_member_defs defs;
+        defer deferred_member_defs (finished defs);
         group
     in
     forward_decls @ group

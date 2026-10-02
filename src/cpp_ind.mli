@@ -33,15 +33,34 @@ val render_decl : Common.env -> Minicpp.cpp_decl -> Pp.t
 (** Print the declarations an entry point answered with. *)
 val pp_decls : rendered -> Pp.t
 
+(** Finished declarations written later than they were generated, each group
+    kept with the scope it was generated in ({!Cpp_state.scope}) and rendered
+    in it. *)
+type deferred
+
+(** [deferred name] is a new, empty band, emptied between extractions and
+    reported to the table census under [name]. *)
+val deferred : string -> deferred
+
+(** [defer band ds] keeps [ds] in [band], with the current scope. *)
+val defer : deferred -> rendered -> unit
+
+(** Render [band]'s groups, in the order they were deferred and each in its
+    own scope, and empty it. *)
+val render_deferred : deferred -> Pp.t list
+
+(** Empty [band] without rendering it. *)
+val discard : deferred -> unit
+
 (** Member definitions a datatype struct at namespace scope gave up because
     their bodies name a module's struct, which is emitted after every datatype
-    and cannot be moved in front of one it holds by value: rendered, in
-    emission order and each in the scope it was generated in, by the header
-    assembly, which writes them last. *)
-val take_deferred_member_defs : unit -> Pp.t list
+    and cannot be moved in front of one it holds by value.  The header
+    assembly writes them last. *)
+val deferred_member_defs : deferred
 
-(** Discard deferred member definitions left by an earlier file. *)
-val clear_deferred_member_defs : unit -> unit
+(** File-scope [using X = std::any;] landing pads for erasure, written before
+    everything else in the header. *)
+val file_scope_erased_aliases : deferred
 
 (** What a type class instance becomes: the struct carrying its methods, and,
     for a ground instance, the [static_assert] checking it against the class's
