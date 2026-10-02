@@ -37,8 +37,6 @@ type resolved_term_name = {
 *)
 type t = {
   type_names : (GlobRef.t, resolved_type_name) Hashtbl.t;
-  eponymous_set : (GlobRef.t, unit) Hashtbl.t;
-  global_scope_enum_set : (GlobRef.t, unit) Hashtbl.t;
   ind_kinds : (GlobRef.t, cpp_ind_kind) Hashtbl.t;
 }
 
@@ -60,11 +58,11 @@ let register_term _t _r _name = ()
 
 (** Checks if a reference is an eponymous record type. Eponymous records flatten
     their single constructor into the parent namespace. *)
-let is_eponymous t r = Hashtbl.mem t.eponymous_set r
+let is_eponymous _ r = Program_facts.is_eponymous_record r
 
 (** Checks if a reference is a globally-scoped enum. Global-scope enums have
     their variants hoisted to the parent namespace. *)
-let is_global_scope_enum t r = Hashtbl.mem t.global_scope_enum_set r
+let is_global_scope_enum _ r = Program_facts.is_global_scope_enum r
 
 (** Retrieves the inductive kind classification for a type reference. Returns
     None if the reference is not an inductive type. *)
@@ -78,8 +76,6 @@ let register_ind_kind t r kind = Hashtbl.replace t.ind_kinds r kind
     from miniml packets to avoid triggering renaming side effects. Returns a
     thunk that computes the resolved name and kind. *)
 let classify_inductive
-    ~eponymous_records
-    ~global_scope_enums
     ~unmerged
     (kn : MutInd.t)
     (i : int)
@@ -88,7 +84,7 @@ let classify_inductive
   let ind_ref = GlobRef.IndRef (kn, i) in
   let p = ind.Miniml.ind_packets.(i) in
   let raw_name = Id.to_string p.Miniml.ip_typename in
-  let is_eponymous = Hashtbl.mem eponymous_records ind_ref in
+  let is_eponymous = Program_facts.is_eponymous_record ind_ref in
   let is_rec =
     match ind.Miniml.ind_kind with
     | Miniml.Record _ -> true
@@ -118,7 +114,7 @@ let classify_inductive
         | None -> true)
     && not (has_bound_ancestor parent_mp)
   in
-  let is_gse = Hashtbl.mem global_scope_enums ind_ref in
+  let is_gse = Program_facts.is_global_scope_enum ind_ref in
   let kind =
     match ind.Miniml.ind_kind with
     | Miniml.Standard | Miniml.Coinductive ->
@@ -152,13 +148,9 @@ let classify_inductive
     classifications for all inductive types without side effects. *)
 let create
     ~structure_analysis:_
-    ~global_scope_enums
-    ~eponymous_records
     ~unmerged
     s =
   let type_names = Hashtbl.create 256 in
-  let eponymous_set = Hashtbl.copy eponymous_records in
-  let global_scope_enum_set = Hashtbl.copy global_scope_enums in
   let ind_kinds = Hashtbl.create 64 in
   (* Pre-classify all inductive types using side-effect-free queries only. We do
      NOT call pp_global_name or pp_global here — those have side effects on
@@ -172,8 +164,6 @@ let create
             (fun i _p ->
               let thunk =
                 classify_inductive
-                  ~eponymous_records
-                  ~global_scope_enums
                   ~unmerged
                   kn
                   i
@@ -191,4 +181,4 @@ let create
       sel
   in
   List.iter (fun (_mp, sel) -> scan_sel sel) s;
-  {type_names; eponymous_set; global_scope_enum_set; ind_kinds}
+  {type_names; ind_kinds}

@@ -29,7 +29,6 @@ type module_info = {
 (** The result of structure analysis, containing sorted modules and metadata. *)
 type t = {
   sorted_modules : module_info list;
-  inductive_names : (string * ModPath.t) list;
   global_scope_enums : GlobRef.t list;
   collision_wrappers : (ModPath.t * string) list;
   wrapper_bystanders : (ModPath.t * string) list;
@@ -994,7 +993,6 @@ let analyze (reg : Method_registry.t) (s : ml_structure) : t =
   (* 7. Collect the alias and functor-application targets, likewise. *)
   let functor_app_sources = collect_functor_app_sources s in
   { sorted_modules;
-    inductive_names;
     global_scope_enums;
     collision_wrappers;
     wrapper_bystanders;

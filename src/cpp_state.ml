@@ -556,11 +556,6 @@ let register_template_static_accessor_ref r =
     Hashtbl.replace template_static_accessor_kns (Constant.canonical c) ()
   | _ -> ()
 
-(** Maps applied module paths to their functor source modpaths. E.g.,
-    NatWrapper's modpath -> Wrapper's modpath. Populated when processing
-    MEapply. *)
-let functor_app_sources : (ModPath.t, ModPath.t) Hashtbl.t =
-  owned_table "functor_app_sources"
 
 (** Track eponymous type info for method generation. When a module M contains an
     inductive type m (lowercase of M), functions taking shared_ptr<m> as first
@@ -773,52 +768,8 @@ let is_typeclass_instance _body ty =
   | Miniml.Tglob (class_ref, _, _) -> Table.is_typeclass class_ref
   | _ -> false
 
-(** How a module sits in the wrapper struct it is emitted in. *)
-type wrapper_role =
-  | Own  (** The wrapper is the module's own struct. *)
-  | Flattened
-      (** A child whose name collides with a global inductive, flattened into
-          its parent's struct: {!wrapper_qualify_name} strips its qualifier. *)
-  | Bystander
-      (** A child a collision wrapper absorbed without a collision of its own:
-          it keeps its own nesting, so the wrapper's name goes in front of its
-          own rather than in place of it. *)
 
-(** Module paths emitted inside a wrapper struct, with the struct's name and
-    their role in it.  When a module like Stdlib.Init.Nat is wrapped in
-    [struct Nat { ... }], this records it so that references to functions in
-    that module get properly qualified. *)
-let wrapper_table : (ModPath.t, string * wrapper_role) Hashtbl.t =
-  owned_table "wrapper_table"
 
-let wrapper_struct mp = Option.map fst (Hashtbl.find_opt wrapper_table mp)
-
-let wrapper_role mp = Option.map snd (Hashtbl.find_opt wrapper_table mp)
-
-(** Record [mp]'s wrapper struct.  [role] defaults to the one already
-    recorded, and to [Own] where there is none. *)
-let register_wrapper ?role mp name =
-  let role =
-    match (role, wrapper_role mp) with
-    | Some r, _ -> r
-    | None, Some r -> r
-    | None, None -> Own
-  in
-  Hashtbl.replace wrapper_table mp (name, role)
-
-(** The name each type class's concept is emitted under, for the classes whose
-    own name does not settle it: a concept is declared at file scope, so two
-    classes called [C] in different modules are told apart by their module's
-    name.  Decided by the structure analysis before any
-    rendering, and read by {!Cpp_names.concept_name_of_ref}. *)
-let concept_name_table : (GlobRef.t, string) Hashtbl.t =
-  owned_table "concept_name_table"
-
-(** Global-scope enum table: tracks enum inductives that were rendered at global
-    scope (not inside any struct). Used to avoid incorrect struct qualification
-    in .cpp files. *)
-let global_scope_enum_table : (GlobRef.t, unit) Hashtbl.t =
-  owned_table "global_scope_enum_table"
 
 (** The type names a wrapper struct's module contributes to C++ {i global}
     scope rather than to the struct.
@@ -840,12 +791,6 @@ let global_scope_enum_table : (GlobRef.t, unit) Hashtbl.t =
     any rendering begins -- which is what makes it safe to read from a [.cpp]
     body printed long before the [.h] declares the name.  Queried in
     [cpp_names.ml] for name qualification; cleared by [reset_cpp_state]. *)
-let global_scope_type_table : (GlobRef.t, unit) Hashtbl.t =
-  owned_table "global_scope_type_table"
-
-let register_global_scope_type r = Hashtbl.replace global_scope_type_table r ()
-
-let is_global_scope_type r = Hashtbl.mem global_scope_type_table r
 
 (** Pending wrapper declarations: maps a Dnspace struct name (e.g., "Nat") to
     pre-rendered forward declarations (specs) that should be injected into that
@@ -923,12 +868,6 @@ let is_shadowed_global_name name r =
     not (List.exists (nested_struct_owner_covers r) owners)
   | None -> false
 
-(** Maps capitalized inductive names to their ModPaths across all modules.
-    Pre-populated in do_struct_with_decl_tracking before code generation. Used
-    to detect module-inductive name collisions (e.g., N/Z appearing as both an
-    inductive from BinNums and a module from BinNat). *)
-let global_inductive_names : (string, ModPath.t) Hashtbl.t =
-  owned_table "global_inductive_names"
 
 (** Check if a GlobRef belongs to a wrapper module and return the qualified
     name. If the reference's module path matches a wrapper module, prepend the
@@ -944,12 +883,12 @@ let global_inductive_names : (string, ModPath.t) Hashtbl.t =
 let wrapper_qualify_name (r : GlobRef.t) (name : string) : string =
   match r with
   | GlobRef.VarRef _ -> name (* Lifted declarations: never qualify *)
-  | _ when Common.is_namespace_scope_ref r ->
+  | _ when Program_facts.is_namespace_scope_ref r ->
     (* Lifted out of the wrapper's struct, so the struct is not its scope. *)
     name
   | _ ->
     let mp = modpath_of_r r in
-    ( match Hashtbl.find_opt wrapper_table mp with
+    ( match Program_facts.wrapper mp with
     | Some (struct_name, role) when not (String.contains name ':') ->
       (* A bare name is the one a use written inside the reference's own module
          would say, and the wrapper's name alone does not get back to it: a
@@ -957,7 +896,7 @@ let wrapper_qualify_name (r : GlobRef.t) (name : string) : string =
          too.  Flattened children have no struct left to name, and for them the
          wrapper's name is the whole of it. *)
       let through_child =
-        if role = Bystander then Common.emitted_module_name mp ^ "::" else ""
+        if role = Program_facts.Bystander then Common.emitted_module_name mp ^ "::" else ""
       in
       struct_name ^ "::" ^ through_child ^ name
     | Some (struct_name, role) when String.contains name ':' ->
@@ -978,7 +917,7 @@ let wrapper_qualify_name (r : GlobRef.t) (name : string) : string =
           in
           struct_name ^ "::" ^ func_part
         | _ -> name
-      else if role = Bystander then
+      else if role = Program_facts.Bystander then
         (* Nested rather than flattened: the child's own qualifier stays and the
            wrapper's name goes in front of it, unless it is already there. *)
         let prefix = struct_name ^ "::" in
@@ -1001,8 +940,8 @@ let wrapper_qualify_name (r : GlobRef.t) (name : string) : string =
     argument needs [typename], and that decision is left alone: a bystander's
     struct is a concrete one, never dependent. *)
 let wrapper_qualify_modname (mp : ModPath.t) (name : string) : string =
-  match Hashtbl.find_opt wrapper_table mp with
-  | Some (struct_name, Bystander) ->
+  match Program_facts.wrapper mp with
+  | Some (struct_name, Program_facts.Bystander) ->
     let prefix = struct_name ^ "::" in
     if String.starts_with ~prefix name then name else prefix ^ name
   | _ -> name
@@ -1113,43 +1052,6 @@ let method_returns_any (func_ref : GlobRef.t) : bool =
 
     See also: pp_inductive_type_name which uses this registry for type name
     rendering. *)
-let global_eponymous_record_registry : (GlobRef.t, unit) Hashtbl.t =
-  owned_table "global_eponymous_record_registry"
-
-(** Reverse index for {!get_containing_eponymous_struct}: maps a module path to
-    the eponymous record declared in it. Kept in sync by
-    {!register_eponymous_record} so the lookup is O(1) instead of scanning the
-    whole registry on every call. There is at most one eponymous record per
-    module (a record sharing its module's name), so a single-valued index is
-    exact. Reset alongside [global_eponymous_record_registry]. *)
-let eponymous_record_by_modpath : (ModPath.t, GlobRef.t) Hashtbl.t =
-  owned_table "eponymous_record_by_modpath"
-
-(** Register a record as eponymous with its containing module. *)
-let register_eponymous_record (record_ref : GlobRef.t) =
-  Hashtbl.replace global_eponymous_record_registry record_ref ();
-  match record_ref with
-  | GlobRef.IndRef (ind, _) ->
-    Hashtbl.replace
-      eponymous_record_by_modpath
-      (Names.MutInd.modpath ind)
-      record_ref
-  | _ -> ()
-
-(** Check if a GlobRef is registered as an eponymous record. *)
-let is_eponymous_record_global (r : GlobRef.t) : bool =
-  Hashtbl.mem global_eponymous_record_registry r
-
-(** Check if a constant (function) is inside an eponymous template module.
-    Returns Some record_ref if the function is inside a module whose name
-    matches a registered eponymous record. This is used to correctly generate
-    StructName<Args>::funcName() instead of StructName::funcName<Args>(). *)
-let get_containing_eponymous_struct (r : GlobRef.t) : GlobRef.t option =
-  match r with
-  | GlobRef.ConstRef kn ->
-    (* O(1) lookup by the constant's module path against the reverse index. *)
-    Hashtbl.find_opt eponymous_record_by_modpath (Names.Constant.modpath kn)
-  | _ -> None
 
 (** Track current structure's declarations for finding methods from sibling
     modules. When processing a module like List inside tree.v, we need to also

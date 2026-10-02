@@ -58,7 +58,7 @@ let pp_global k r = str (str_global k r)
     enclosing struct and carries no qualifier -- neither at its declaration
     nor at its uses. *)
 let concept_name_of_ref r =
-  match Hashtbl.find_opt Cpp_state.concept_name_table r with
+  match Program_facts.concept_name r with
   | Some name -> name
   | None -> Common.last_component (Common.pp_global_name Type r)
 
@@ -190,7 +190,7 @@ let is_local_inductive r =
 *)
 let inductive_name_info r =
   match r with
-  | GlobRef.IndRef _ when is_eponymous_record_global r ->
+  | GlobRef.IndRef _ when Program_facts.is_eponymous_record r ->
     (str (Common.pp_type_name_capitalized r), false)
   | GlobRef.IndRef _ when Hashtbl.mem promoted_inductives r ->
     let s = str_global Type r in
@@ -318,7 +318,7 @@ let dedup_qualified_tail ?(allow_bare = false) cap =
 let pp_inductive_type_name r =
   let result =
     match r with
-    | GlobRef.IndRef _ when is_eponymous_record_global r ->
+    | GlobRef.IndRef _ when Program_facts.is_eponymous_record r ->
       let cap_name = Common.pp_type_name_capitalized r in
       if Common.get_force_cross_file_qualification () then
         let base = str_global Type r in
@@ -467,7 +467,7 @@ let struct_qualifier_for r name_str =
        so they don't get an extra wrapper prefix.  However, when the record
        itself lives inside the current struct (nested sub-module), we must
        still qualify it in the [.cpp] file. *)
-    else if is_eponymous_record_global r then
+    else if Program_facts.is_eponymous_record r then
       if member_of_struct () then struct_name ++ str "::" else mt ()
     (* Non-local records are placed at C++ global scope (before the struct),
        so they never need the struct prefix. *)
@@ -475,7 +475,7 @@ let struct_qualifier_for r name_str =
       mt ()
     (* Enums at global scope need no prefix; those inside the struct do. *)
     else if Table.is_enum_inductive r then
-      if Hashtbl.mem global_scope_enum_table r then mt ()
+      if Program_facts.is_global_scope_enum r then mt ()
       else if member_of_struct () then struct_name ++ str "::"
       else mt ()
     (* A name the struct's module contributes to global scope rather than to
@@ -485,7 +485,7 @@ let struct_qualifier_for r name_str =
        recorded by the module layout, which knows where the declaration goes;
        the kernel module path consulted below only knows where it came from,
        and for these two answers [Member]. *)
-    else if Cpp_state.is_global_scope_type r then
+    else if Program_facts.is_global_scope_type r then
       mt ()
     (* The kernel module path settles the question outright when it is known:
        the type is a member of this struct exactly when it was declared in the
@@ -605,7 +605,7 @@ let wrapper_qualified_type_name r name_str =
   match r with
   | GlobRef.IndRef _ | GlobRef.ConstructRef _ -> name_str
   | _ when Table.is_typeclass r -> name_str
-  | _ when Cpp_state.is_global_scope_type r -> name_str
+  | _ when Program_facts.is_global_scope_type r -> name_str
   | _ ->
     if (!render_ctx).rc_in_struct then
       name_str
@@ -668,12 +668,12 @@ let with_cache
 
 (** Cache-backed is_eponymous_record check — avoids hashtable lookup. *)
 let is_eponymous_record_cached : GlobRef.t -> bool =
-  with_cache Name_resolution.is_eponymous is_eponymous_record_global
+  with_cache Name_resolution.is_eponymous Program_facts.is_eponymous_record
 
 (** Cache-backed is_global_scope_enum check — avoids hashtable lookup. *)
 let is_global_scope_enum_cached : GlobRef.t -> bool =
   with_cache Name_resolution.is_global_scope_enum (fun r ->
-    Hashtbl.mem global_scope_enum_table r )
+    Program_facts.is_global_scope_enum r )
 
 (** Cache-backed is_merged_inductive check — avoids hashtable lookup. Promoted
     inductives always count as merged regardless of cache. *)

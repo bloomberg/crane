@@ -2061,61 +2061,51 @@ let get_structure_analysis () =
     handled here a compile error rather than a decision nothing acts on. *)
 let install_analysis
     ({ sorted_modules;
-       inductive_names;
        global_scope_enums;
        collision_wrappers;
        wrapper_bystanders;
-       functor_app_sources = app_sources;
+       functor_app_sources;
        eponymous_records;
        concept_renames;
-       lifted_instances } [@warning "@9"] :
+       lifted_instances;
+       _ } :
       Structure_analysis.t ) : unit =
-  Hashtbl.reset global_inductive_names;
-  List.iter
-    (fun (name, mp) -> Hashtbl.replace global_inductive_names name mp)
-    inductive_names;
-  Hashtbl.reset global_scope_enum_table;
-  List.iter
-    (fun r -> Hashtbl.replace global_scope_enum_table r ())
-    global_scope_enums;
-  List.iter
-    (fun (r, name) -> Hashtbl.replace concept_name_table r name)
-    concept_renames;
-  List.iter
-    (fun (mp, src) -> Hashtbl.replace functor_app_sources mp src)
-    app_sources;
-  List.iter register_eponymous_record eponymous_records;
-  List.iter Common.register_namespace_scope_ref lifted_instances;
-  List.iter
-    (fun (mp, name) -> register_wrapper ~role:Flattened mp name)
-    collision_wrappers;
-  (* A bystander is nested inside the wrapper, not flattened into it. *)
-  List.iter
-    (fun (mp, name) -> register_wrapper ~role:Bystander mp name)
-    wrapper_bystanders;
-  List.iter
-    (fun (mi : Structure_analysis.module_info) ->
-      match mi.wrapper_name with
-      | None -> ()
-      | Some name ->
-        register_wrapper mi.modpath name;
-        (* Not everything a wrapper module declares ends up inside the wrapper
-           struct.  A type alias is emitted at global C++ scope as
-           [using T = ...;], and a type class instance is lifted out to
-           namespace scope by [process_sel] below, for the reason recorded
-           there.  Either way {!Cpp_names.struct_qualifier_for} must not write
-           [Wrapper::] in front of the name in the .cpp file.  Which module a
-           declaration is emitted in is layout, so it is settled here rather
-           than while emitting it. *)
-        List.iter
-          (fun (_l, se) ->
-            match se with
-            | SEdecl (Dtype (r, _, _)) -> Cpp_state.register_global_scope_type r
-            | SEdecl (Dterm (r, a, t)) when is_typeclass_instance a t ->
-              Cpp_state.register_global_scope_type r
-            | _ -> () )
-          mi.sels )
-    sorted_modules
+  let wrapped =
+    List.filter_map
+      (fun (mi : Structure_analysis.module_info) ->
+        Option.map (fun name -> (mi, name)) mi.wrapper_name )
+      sorted_modules
+  in
+  Program_facts.install
+    { global_scope_enums;
+      concept_names = concept_renames;
+      functor_app_sources;
+      eponymous_records;
+      namespace_scope_refs = lifted_instances;
+      wrappers =
+        List.map (fun (mp, name) -> (mp, name, Some Program_facts.Flattened)) collision_wrappers
+        (* A bystander is nested inside the wrapper, not flattened into it. *)
+        @ List.map (fun (mp, name) -> (mp, name, Some Program_facts.Bystander)) wrapper_bystanders
+        @ List.map (fun ((mi : Structure_analysis.module_info), name) -> (mi.modpath, name, None)) wrapped;
+      (* Not everything a wrapper module declares ends up inside the wrapper
+         struct.  A type alias is emitted at global C++ scope as
+         [using T = ...;], and a type class instance is lifted out to namespace
+         scope by [process_sel] below, for the reason recorded there.  Either
+         way {!Cpp_names.struct_qualifier_for} must not write [Wrapper::] in
+         front of the name in the .cpp file.  Which module a declaration is
+         emitted in is layout, so it is settled here rather than while
+         emitting it. *)
+      global_scope_types =
+        List.concat_map
+          (fun ((mi : Structure_analysis.module_info), _) ->
+            List.filter_map
+              (fun (_l, se) ->
+                match se with
+                | SEdecl (Dtype (r, _, _)) -> Some r
+                | SEdecl (Dterm (r, a, t)) when is_typeclass_instance a t -> Some r
+                | _ -> None )
+              mi.sels )
+          wrapped }
 
 (** Decide everything about the structure that does not depend on which file is
     being written, and record it for the passes that do.
@@ -2531,8 +2521,6 @@ let do_struct_with_decl_tracking ~is_header f s =
     Some
       (Name_resolution.create
          ~structure_analysis:analysis
-         ~global_scope_enums:global_scope_enum_table
-         ~eponymous_records:global_eponymous_record_registry
          ~unmerged:unmerged_wrappers
          s );
   let old_local_inductives = get_local_inductives () in
@@ -2602,13 +2590,13 @@ let do_struct_with_decl_tracking ~is_header f s =
            layout, decided by {!Structure_analysis} before any rendering began;
            here we only read the answer back. *)
         let is_colliding_child l _se =
-          wrapper_role (MPdot (mp, l)) = Some Flattened
+          Program_facts.wrapper_role (MPdot (mp, l)) = Some Program_facts.Flattened
         in
         (* Whether a wrapper formed is not the same question as which children
            it flattens: a bystander is recorded only when one did, so a child
            in either table says the struct is there to be written. *)
         let is_wrapped_child l =
-          match wrapper_role (MPdot (mp, l)) with
+          match Program_facts.wrapper_role (MPdot (mp, l)) with
           | Some (Flattened | Bystander) -> true
           | Some Own | None -> false
         in
@@ -2626,7 +2614,7 @@ let do_struct_with_decl_tracking ~is_header f s =
               (fun (l, se) ->
                 match se with
                 | SEmodule _ when is_wrapped_child l ->
-                  wrapper_struct (MPdot (mp, l))
+                  Program_facts.wrapper_struct (MPdot (mp, l))
                 | _ -> None )
               sel
             |> Option.default

@@ -81,13 +81,6 @@ type t = {
           The sort uses Kahn's algorithm on a dependency graph built by scanning
           each module's declarations for references to other modules. If a cycle
           is detected, the original order is preserved as a fallback. *)
-  inductive_names : (string * ModPath.t) list;
-      (** [(capitalized_name, defining_modpath)] for every inductive type in the
-          structure. Used by [cpp.ml] to detect name collisions between wrapper
-          modules and inductives from other modules.
-
-          For example, if module [Nat] defines inductive [nat] and module [Tree]
-          also has a type called [Nat], the rendering needs to disambiguate. *)
   global_scope_enums : GlobRef.t list;
       (** Enum inductives that appear at global scope (top-level [SEdecl]
           entries). These are emitted as [enum class] declarations before any

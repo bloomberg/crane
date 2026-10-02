@@ -66,14 +66,10 @@ type resolved_term_name = {
     the wrapper table is populated.
     @param structure_analysis the result of {!Structure_analysis.analyze}
       with an inductive from another module
-    @param global_scope_enums set of enum inductives that appear at global scope
-    @param eponymous_records set of inductive references that are eponymous records
     @param unmerged set of capitalized names that must not be merged into a parent struct
     @return a freshly built name resolution cache *)
 val create :
   structure_analysis:Structure_analysis.t ->
-  global_scope_enums:(GlobRef.t, unit) Hashtbl.t ->
-  eponymous_records:(GlobRef.t, unit) Hashtbl.t ->
   unmerged:(string, unit) Hashtbl.t ->
   Miniml.ml_structure ->
   t

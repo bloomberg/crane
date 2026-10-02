@@ -162,7 +162,6 @@ val drain : band -> Pp.t list
     struct -- is collected here and emitted at file scope instead. *)
 val file_scope_concepts : band
 
-
 (** The top-level elements that travel with the hoisted concepts, by label.
 
     A [requires] body is unevaluated, so most of what a concept spells is
@@ -241,9 +240,6 @@ val register_template_static_accessor :
 (** {!register_template_static_accessor} for a global reference, which also
     records the constant's kername for cross-functor matching. *)
 val register_template_static_accessor_ref : Names.GlobRef.t -> unit
-
-(** Map from functor-application module paths to their source module. *)
-val functor_app_sources : (Names.ModPath.t, Names.ModPath.t) Hashtbl.t
 
 (** {2 Eponymous records} *)
 
@@ -343,56 +339,10 @@ val is_typeclass_instance : 'a -> Miniml.ml_type -> bool
 
 (** {2 Wrapper and scope tables} *)
 
-(** How a module sits in the wrapper struct it is emitted in. *)
-type wrapper_role =
-  | Own  (** The wrapper is the module's own struct. *)
-  | Flattened
-      (** A colliding child flattened into its parent's struct: its own
-          qualifier is stripped. *)
-  | Bystander
-      (** A child absorbed without a collision of its own: it keeps its own
-          nesting under the wrapper's name. *)
-
-(** Module paths emitted inside a wrapper struct, with the struct's name and
-    their role in it. *)
-val wrapper_table : (Names.ModPath.t, string * wrapper_role) Hashtbl.t
-
-val wrapper_struct : Names.ModPath.t -> string option
-val wrapper_role : Names.ModPath.t -> wrapper_role option
-
-(** Record a module's wrapper struct.  [role] defaults to the one already
-    recorded, and to [Own] where there is none. *)
-val register_wrapper : ?role:wrapper_role -> Names.ModPath.t -> string -> unit
-
 (** [wrapper_qualify_modname mp name] re-roots [name] at the wrapper struct
     holding [mp], when [mp] is a bystander that struct nests under its own name.
     The module-as-a-module counterpart of [wrapper_qualify_name]. *)
 val wrapper_qualify_modname : Names.ModPath.t -> string -> string
-
-(** The C++ concept name of each type class whose own name does not settle it,
-    because another module declares a class of the same name and a concept is
-    declared at file scope. Populated from
-    the structure analysis; cleared by
-    [reset_cpp_state]. *)
-val concept_name_table : (Names.GlobRef.t, string) Hashtbl.t
-
-(** Enum inductives rendered at global scope rather than inside a struct, used
-    to avoid spurious struct qualification in [.cpp] files. Cleared by
-    [reset_cpp_state]. *)
-val global_scope_enum_table : (Names.GlobRef.t, unit) Hashtbl.t
-
-(** The type names a wrapper struct's module puts at C++ global scope instead
-    of inside the struct: its [using T = ...] aliases, and the type class
-    instances lifted out of it. Populated from the module layout before
-    rendering by [register_global_scope_type], queried for name
-    qualification, and cleared by [reset_cpp_state]. *)
-val global_scope_type_table : (Names.GlobRef.t, unit) Hashtbl.t
-
-(** Record that the given type name is emitted at global scope. *)
-val register_global_scope_type : Names.GlobRef.t -> unit
-
-(** [true] if the reference is in [global_scope_type_table]. *)
-val is_global_scope_type : Names.GlobRef.t -> bool
 
 (** Pre-rendered forward declarations to inject into a [Dnspace] struct, keyed
     by struct name. Cleared by [reset_cpp_state]. *)
@@ -424,11 +374,6 @@ val is_nested_struct_ref : Names.GlobRef.t -> bool
 (** Whether a reference rendered unqualified under the given name is shadowed
     by a nested struct of that name. False for the shadower itself. *)
 val is_shadowed_global_name : string -> Names.GlobRef.t -> bool
-
-(** Capitalized inductive names mapped to their module paths across all modules,
-    used to detect module/inductive name collisions. Cleared by
-    [reset_cpp_state]. *)
-val global_inductive_names : (string, Names.ModPath.t) Hashtbl.t
 
 (** Qualify a C++ name with its wrapper struct when the reference's module path
     is a wrapper module. [VarRef] references (lifted declarations) are never
@@ -493,28 +438,6 @@ val method_param_cpp_types : Names.GlobRef.t -> Minicpp.cpp_type list option
 val method_returns_any : Names.GlobRef.t -> bool
 
 (** {2 Eponymous record registry} *)
-
-(** Global registry and lookups for eponymous records. *)
-val global_eponymous_record_registry : (Names.GlobRef.t, unit) Hashtbl.t
-
-(** Reverse index backing [get_containing_eponymous_struct]: the eponymous
-    record declared in each module path (at most one per module). Kept in sync
-    by [register_eponymous_record] and cleared by [reset_cpp_state]. *)
-val eponymous_record_by_modpath :
-  (Names.ModPath.t, Names.GlobRef.t) Hashtbl.t
-
-(** Register an inductive as an eponymous record, adding it to the global
-    registry and, for [IndRef]s, to the by-module-path reverse index. *)
-val register_eponymous_record : Names.GlobRef.t -> unit
-
-(** [true] if the reference is in [global_eponymous_record_registry]. *)
-val is_eponymous_record_global : Names.GlobRef.t -> bool
-
-(** For a constant, return the eponymous record of its containing module, if
-    any — used to emit [StructName<Args>::f()] rather than
-    [StructName::f<Args>()]. Always [None] for non-[ConstRef] references. *)
-val get_containing_eponymous_struct :
-  Names.GlobRef.t -> Names.GlobRef.t option
 
 (** Declarations of the structure currently being emitted. *)
 val current_structure_decls :
