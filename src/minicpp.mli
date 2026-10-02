@@ -1203,14 +1203,6 @@ val erased_into_storage_tparam :
     dropped clause as a use of the variables it names. *)
 val tt_constraint_is_vacuous : cpp_type list -> cpp_type -> bool
 
-(** [drop_stored_callback_constraints ~params body tparams] demotes to a plain
-    [typename] every [TTfun] parameter of [tparams] that types a callback
-    [body] only erases into storage, so a declaration written without the body
-    still states the constraints the definition does. *)
-val drop_stored_callback_constraints :
-  params:(Id.t * cpp_type) list -> cpp_stmt list ->
-  (template_type * Id.t) list -> (template_type * Id.t) list
-
 (** [fold_expr_children ~on_expr ~on_stmts acc e] folds over the immediate
     children of [e], threading [acc].  Mirrors {!iter_expr_children}: [on_expr]
     folds over child expressions and [on_stmts] over child statement lists

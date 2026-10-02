@@ -29,8 +29,3 @@ val definition : t -> Cpp_erasure.settled
 (** Whether the entity is a function, with a declaration distinct from its
     definition. *)
 val defines_function : t -> bool
-
-(** [d]'s declaration where [d] defines a function, and [d] itself otherwise,
-    split before finishing for a path that writes no definition from the same
-    generation.  The constraints the body would drop are dropped first. *)
-val declaration_of : Minicpp.cpp_decl -> Minicpp.cpp_decl

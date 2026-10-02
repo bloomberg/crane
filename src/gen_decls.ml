@@ -5147,36 +5147,6 @@ let gen_spec__inner n b ty =
 let gen_spec n b ty =
   Table.with_decl_ref n (fun () -> gen_spec__inner n b ty)
 
-(** [map_group f (ns, bs, tys)] generates each function of a fixpoint group
-    ({!gen_dfun_def}) and maps [f] over the results, each with the helpers
-    lifted out of its body. *)
-let map_group f (ns, bs, tys) =
-  List.mapi
-    (fun i name ->
-      f (collecting_lifted (fun () -> gen_dfun_def name bs.(i) tys.(i))) )
-    (Array.to_list ns)
-
-(** Generate multiple function definitions.  The lifted declarations are left
-    out: they are template functions that belong only in the header, where
-    {!gen_dfuns_header} collects them. *)
-let gen_dfuns g = map_group fst g
-
-(** Generate function declarations for header files: a template's full
-    definition, and anything else's declaration, derived from the definition
-    ({!Function_entity.declaration_of}) so that parameter types (owned or
-    borrowed) match the out-of-line definition exactly; each after the helpers
-    lifted out of it. *)
-let gen_dfuns_header g =
-  List.concat
-    (map_group
-       (fun ((ds, env, tvars), lifted) ->
-         List.map (fun d -> (d, empty_env ())) lifted
-         @ [ ( (match tvars with
-               | [] -> Function_entity.declaration_of ds
-               | _ :: _ -> ds),
-               env ) ] )
-       g )
-
 (** Where a function's definition is written: a template's in the header,
     anything else's in the implementation file. *)
 type definition_file = Header | Implementation
@@ -5197,11 +5167,14 @@ let defined d tvars = Defined (d, definition_file_of tvars)
 
 (** Generate each function of a mutually recursive group, translating each
     body once. *)
-let gen_dfuns_dual g =
-  map_group
-    (fun ((ds, env, tvars), lifted) ->
+let gen_dfuns_dual (ns, bs, tys) =
+  List.mapi
+    (fun i name ->
+      let (ds, env, tvars), lifted =
+        collecting_lifted (fun () -> gen_dfun_def name bs.(i) tys.(i))
+      in
       {gf_entity = defined ds tvars; gf_env = env; gf_lifted = lifted} )
-    g
+    (Array.to_list ns)
 
 (** Generate a single Dterm function, translating its body once. *)
 let gen_decl_for_pp_dual__inner n b ty =

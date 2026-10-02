@@ -1556,24 +1556,6 @@ let tt_constraint_is_vacuous dom cod =
     (fun t -> exists_cpp_type (function Tany | Topaque -> true | _ -> false) t)
     (cod :: List.filter (function Tfun _ -> true | _ -> false) dom)
 
-(** [drop_stored_callback_constraints ~params body tparams] demotes to a plain
-    [typename] every [TTfun] parameter that types a callback [body] only erases
-    into storage.
-
-    A declaration is written without the body that decides this, so the
-    decision has to be taken once, where the body is still at hand, and left in
-    the parameter list both spellings share: otherwise the out-of-line
-    definition of a function states one constraint and its in-struct
-    declaration another, and they are not the same function. *)
-let drop_stored_callback_constraints ~params body tparams =
-  let stored = erased_into_storage_tparam ~params body in
-  List.map
-    (fun (tt, id) ->
-      match tt with
-      | TTfun _ when stored id -> (TTtypename, id)
-      | _ -> (tt, id) )
-    tparams
-
 (** Fold over immediate children of a [cpp_expr].  Mirrors
     {!iter_expr_children} but threads an accumulator: [on_expr] folds over
     child expressions, [on_stmts] over child statement lists (e.g. a
@@ -1803,8 +1785,9 @@ let rec decl_body = function
     template parameters keep their [std::is_invocable_r_v] constraint, and
     demotes the rest to a plain [typename]:
     - one the body only erases into storage has no representation to claim --
-      [crane_erase_fn] adapts whatever it is handed -- see
-      {!drop_stored_callback_constraints};
+      [crane_erase_fn] adapts whatever it is handed.  The body decides this, so
+      it is decided on the definition, before its declaration is split off,
+      and both state the same head;
     - one whose constraint is vacuous claims nothing either -- see
       {!tt_constraint_is_vacuous}.
     The printer then writes every [TTfun] it is given. *)

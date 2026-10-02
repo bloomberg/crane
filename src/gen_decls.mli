@@ -31,17 +31,6 @@ val gen_decl_for_pp :
 (** Generate C++ function specification (declaration without body). *)
 val gen_spec : GlobRef.t -> ml_ast -> ml_type -> cpp_decl * env
 
-(** Generate C++ definitions for a group of mutually recursive functions. *)
-val gen_dfuns :
-  GlobRef.t array * ml_ast array * ml_type array ->
-  (cpp_decl * env * variable list) list
-
-(** Generate the header declarations for a group of mutually recursive
-    functions: a template's full definition, anything else's declaration,
-    each after the helpers lifted out of it. *)
-val gen_dfuns_header :
-  GlobRef.t array * ml_ast array * ml_type array -> (cpp_decl * env) list
-
 (** Where a function's definition is written: a template's in the header,
     anything else's in the implementation file. *)
 type definition_file = Header | Implementation
