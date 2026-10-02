@@ -569,6 +569,9 @@ and cpp_expr =
           value has in the box is only knowable once C++ instantiates the
           surrounding template, so the [crane_fn.h] helper decides.  Produced
           by {!Cpp_erasure.resolve_casts}, never by translation. *)
+  | CPPunbox of unbox * cpp_expr
+      (** Reads a value back out of the [std::any] it is stored in, as
+          {!Cpp_erasure.lower_boxed_reads} decided from the binders' types. *)
   | CPPconvert of cpp_type * cpp_expr
       (** [crane_convert<Dst>(expr)] — reads a value at another instantiation
           of its own type.  A converting constructor does it where the type
@@ -774,6 +777,20 @@ and ref_qual =
   | Rq_any  (** No qualifier. *)
   | Rq_lvalue  (** [&] *)
   | Rq_rvalue  (** [&&] *)
+
+(** How a boxed value is read back.  Each form prints as one C++ idiom. *)
+and unbox =
+  | Unbox_to of cpp_type  (** [obj_cast<T>(e)] *)
+  | Unbox_or_keep of cpp_type
+      (** [T] may itself be [std::any] once instantiated -- a member type or
+          an opaque alias -- so an [if constexpr] keeps [e] as it is when it
+          is, and casts otherwise. *)
+  | Unbox_list of cpp_type * cpp_type
+      (** [Unbox_list (list, flat)]: the box holds the list at its erased,
+          flat instantiation [flat] ([List<std::any>]); converted to [list]. *)
+  | Rebuild_deque of cpp_type * cpp_type
+      (** [Rebuild_deque (elem, flat)]: the box holds a [flat] deque of boxed
+          elements; rebuilt element by element as a deque of [elem]. *)
 
 (** Custom extraction metadata for manually mapped entities.  Resolved once
     during translation. *)

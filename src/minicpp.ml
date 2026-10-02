@@ -462,6 +462,9 @@ and cpp_expr =
   | CPPany_cast_tolerant of cpp_type * cpp_expr
     (* crane_any_cast<T>(expr) — same, but the shape in the box is only
        knowable when C++ instantiates the surrounding template *)
+  | CPPunbox of unbox * cpp_expr
+      (** Reads a value back out of the [std::any] it is stored in, as
+          {!Cpp_erasure.lower_boxed_reads} decided from the binders' types. *)
   | CPPconvert of cpp_type * cpp_expr
     (* crane_convert<Dst>(expr) — reads a value at another instantiation of
        its own type.  Not every type has a converting constructor to do it
@@ -639,6 +642,20 @@ and ref_qual =
   | Rq_any
   | Rq_lvalue
   | Rq_rvalue
+
+(** How a boxed value is read back.  Each form prints as one C++ idiom. *)
+and unbox =
+  | Unbox_to of cpp_type  (** [obj_cast<T>(e)] *)
+  | Unbox_or_keep of cpp_type
+      (** [T] may itself be [std::any] once instantiated -- a member type or
+          an opaque alias -- so an [if constexpr] keeps [e] as it is when it
+          is, and casts otherwise. *)
+  | Unbox_list of cpp_type * cpp_type
+      (** [Unbox_list (list, flat)]: the box holds the list at its erased,
+          flat instantiation [flat] ([List<std::any>]); converted to [list]. *)
+  | Rebuild_deque of cpp_type * cpp_type
+      (** [Rebuild_deque (elem, flat)]: the box holds a [flat] deque of boxed
+          elements; rebuilt element by element as a deque of [elem]. *)
 
 (** Custom extraction info, resolved once during translation. *)
 and custom_info = {
@@ -1336,6 +1353,15 @@ let map_expr
   | CPPany_cast (ty, e') -> CPPany_cast (ft ty, fe e')
   | CPPany_cast_tolerant (ty, e') -> CPPany_cast_tolerant (ft ty, fe e')
   | CPPconvert (ty, e') -> CPPconvert (ft ty, fe e')
+  | CPPunbox (u, e') ->
+    let u =
+      match u with
+      | Unbox_to t -> Unbox_to (ft t)
+      | Unbox_or_keep t -> Unbox_or_keep (ft t)
+      | Unbox_list (l, f) -> Unbox_list (ft l, ft f)
+      | Rebuild_deque (el, f) -> Rebuild_deque (ft el, ft f)
+    in
+    CPPunbox (u, fe e')
   | CPPerase_fn (ty, e') -> CPPerase_fn (Option.map ft ty, fe e')
   | CPPerased_call (f, a) -> CPPerased_call (fe f, fe a)
   | CPPtolerant_call (f, args) -> CPPtolerant_call (fe f, List.map fe args)
@@ -1435,7 +1461,7 @@ let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
   | CPPget (e', _) | CPPget' (e', _, _) | CPPaccess (_, e', _)
   | CPPscope (e', _, _)
   | CPPshared_ptr_ctor (_, e')
-  | CPPany_cast (_, e') | CPPany_cast_tolerant (_, e') | CPPconvert (_, e')
+  | CPPany_cast (_, e') | CPPany_cast_tolerant (_, e') | CPPconvert (_, e') | CPPunbox (_, e')
   | CPPcontainer_cast (_, e', _) | CPPerase_fn (_, e') | CPPfn_value e'
   | CPPunop (_, e') | CPPstd_get_if (_, e') ->
     on_expr e'
@@ -1581,7 +1607,7 @@ let fold_expr_children ~(on_expr : 'a -> cpp_expr -> 'a)
   | CPPget (e', _) | CPPget' (e', _, _) | CPPaccess (_, e', _)
   | CPPscope (e', _, _)
   | CPPshared_ptr_ctor (_, e')
-  | CPPany_cast (_, e') | CPPany_cast_tolerant (_, e') | CPPconvert (_, e')
+  | CPPany_cast (_, e') | CPPany_cast_tolerant (_, e') | CPPconvert (_, e') | CPPunbox (_, e')
   | CPPcontainer_cast (_, e', _) | CPPerase_fn (_, e') | CPPfn_value e'
   | CPPunop (_, e') | CPPstd_get_if (_, e') ->
     fe acc e'

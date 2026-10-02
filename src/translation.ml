@@ -8041,8 +8041,8 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
       (t, false, None)
   in
   (* When [fix_a_fired], pass [pair<any,any>] as the [Scustom_case] type so
-     that [wrap_any_cast_if_needed] in [cpp_print.ml] generates
-     [any_cast<pair<any,any>>] instead of using the concrete nested pair type. *)
+     that {!Cpp_erasure.lower_boxed_reads} reads the scrutinee at
+     [pair<any,any>] instead of the concrete nested pair type. *)
   let case_typ =
     if fix_a_fired then
       match pair_g_opt with
@@ -8109,8 +8109,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
          also [std::any] — they came from [.second] of a [pair<any,any>].
          Re-type them as [Tany] so that:
          (1) inner pair matches see an erased scrutinee and emit [any_cast],
-         (2) [cpp_print.ml] registers them as any-typed for
-             [wrap_any_cast_if_needed].
+         (2) {!Cpp_erasure.lower_boxed_reads} treats them as boxed.
          Non-pair leaf types (e.g. [List<any>]) are left unchanged so the
          use-site [any_cast] pass can still insert the correct cast. *)
       let ids' =

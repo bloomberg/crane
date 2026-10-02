@@ -130,6 +130,13 @@ val resolve_casts : settled -> settled
     defect but wants the opposite repair. *)
 val bind_free_tvars : settled -> settled
 
+(** [lower_boxed_reads decl] makes every read of a boxed value that the
+    context needs at a concrete type an explicit {!Minicpp.CPPunbox}: at a
+    custom template's arguments and scrutinee, and at each use of a custom
+    pair match's branch parameter when the pair was boxed.  Which binders hold
+    boxes is read off their declared types. *)
+val lower_boxed_reads : settled -> settled
+
 (** [materialise decl] replaces every {!Minicpp.Topaque} in [decl] with
     {!Minicpp.Tany}.
 

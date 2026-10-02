@@ -167,6 +167,9 @@ let finish decl =
      a name nothing in scope introduces; spell it [std::any] rather than emit
      it. *)
   let decl = settled_pass "free_tvars" Cpp_erasure.bind_free_tvars decl in
+  (* With every type final, a read of a boxed value the context needs at a
+     concrete type is written down. *)
+  let decl = settled_pass "boxed_reads" Cpp_erasure.lower_boxed_reads decl in
   if Sys.getenv_opt "CRANE_CHECK_IR" <> None then check_settled decl;
   Option.iter
     (fun name ->

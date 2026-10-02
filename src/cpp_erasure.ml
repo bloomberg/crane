@@ -326,6 +326,251 @@ let rec resolve_casts (d : settled) : settled =
     Dasgn (id, ty, resolve_expr (unbox (Ml_type_util.resolve_tvars_to_any ty) e))
   | _ -> map_decl resolve_expr resolve_stmt (fun t -> t) d
 
+(** {2 Reading boxed values}
+
+    A value in a [std::any] is read back at a known type by an explicit
+    {!Minicpp.CPPunbox}.  Which binders hold boxes is read off their declared
+    types -- a parameter, lambda parameter, match binding or custom-match
+    branch parameter typed [std::any] -- and a custom pair match on a boxed
+    scrutinee says that its branch parameters are boxed too, holding values of
+    their declared types.  Reads are then made explicit where the context
+    expects a concrete type: a custom template's argument or scrutinee, and
+    every use of a branch parameter that holds a known type in a box. *)
+
+type reads = {
+  boxed : Id.Set.t;  (** binders holding a [std::any] *)
+  stored : cpp_type Id.Map.t;
+      (** binders holding a value of this type in a box: read at it on every
+          use *)
+}
+
+let no_reads = {boxed = Id.Set.empty; stored = Id.Map.empty}
+
+let with_boxed_params r params =
+  { r with
+    boxed =
+      List.fold_left
+        (fun acc (id, ty) -> if is_any_shaped ty then Id.Set.add id acc else acc)
+        r.boxed params }
+
+(* A type a value can be cast to: not a variable, not unknown, not a constant
+   whose definition may itself be [std::any]. *)
+let rec is_concrete = function
+  | Tvar _ | Tunresolved | Tany | Topaque | Tauto -> false
+  | Tconst inner -> is_concrete inner
+  | Tglob (GlobRef.ConstRef _, _, _) -> false
+  | _ -> true
+
+(* A call that hands back a box: a method registered as returning
+   [std::any], or an erased call. *)
+let returns_box = function
+  | CPPaccess_call (Aarrow, CPPglob (n, _, _), _, _) -> Cpp_state.method_returns_any n
+  | CPPfun_call (_, CPPglob (n, _, _), _) when Cpp_names.lookup_method_this_pos n <> None ->
+    Cpp_state.method_returns_any n
+  | CPPfun_call (_, CPPget' (_, n, _), _) -> Cpp_state.method_returns_any n
+  | CPPerased_call _ -> true
+  | _ -> false
+
+let rec is_boxed_binder r = function
+  | CPPvar id -> Id.Set.mem id r.boxed && not (Id.Map.mem id r.stored)
+  | CPPmove e -> is_boxed_binder r e
+  | _ -> false
+
+(* [read_as r original e expected] -- [e], the rewritten [original], read at
+   [expected] where [original] is a box and [expected] is concrete. *)
+let read_as r original e expected =
+  if (returns_box original || is_boxed_binder r original) && is_concrete expected then
+    CPPunbox (Unbox_to (Ml_type_util.resolve_tvars_to_any expected), e)
+  else e
+
+(* A use of a binder holding a value of type [ty] in a box. *)
+let read_stored id ty =
+  let resolved = Ml_type_util.resolve_tvars_to_any ty in
+  match erased_list_shape resolved with
+  | Some (g, flat) ->
+    (* A custom list's erased shape is a deque of bare boxes; a converting
+       read would re-box it.  Another list converts from its flat form. *)
+    if Table.is_custom g then CPPunbox (Unbox_to flat, CPPvar id)
+    else CPPunbox (Unbox_list (resolved, flat), CPPvar id)
+  | None -> (
+    match ty with
+    | Tqualified _ | Tglob (GlobRef.ConstRef _, _, _) -> CPPunbox (Unbox_or_keep ty, CPPvar id)
+    | _ -> CPPunbox (Unbox_to resolved, CPPvar id) )
+
+(* The custom list a parameter expects, with its element, where the element is
+   known. *)
+let custom_list_elem = function
+  | Tglob (g, [elem], _) | Tnamespace (_, Tglob (g, [elem], _))
+    when Ml_type_util.is_custom_list_global g && elem <> Tany && elem <> Tauto ->
+    Some (g, elem)
+  | _ -> None
+
+let rec reads_expr r e =
+  let ex = reads_expr r and st = reads_stmt r in
+  match e with
+  | CPPvar id when Id.Map.mem id r.stored -> read_stored id (Id.Map.find id r.stored)
+  (* The cast already names the type; the binder is read bare inside it. *)
+  | CPPany_cast (_, CPPvar id) when Id.Map.mem id r.stored -> e
+  | CPPlambda l ->
+    let r' =
+      with_boxed_params r
+        (List.filter_map
+           (fun (ty, id) -> Option.map (fun id -> (id, ty)) id)
+           (to_reversed l.cl_params))
+    in
+    map_expr (reads_expr r') (reads_stmt r') Fun.id e
+  | CPPfun_call (res, (CPPglob (_, _, Some {ci_inline = Some {it_form = Templated; _}; _}) as f), ts) ->
+    let expected = match res.cs_params with Ptypes ts -> ts | Punknown -> [] in
+    let arg i a =
+      match (List.nth_opt expected i, a) with
+      | Some exp, CPPvar id when Id.Map.mem id r.stored && custom_list_elem exp <> None ->
+        let g, elem = Option.get (custom_list_elem exp) in
+        CPPunbox (Rebuild_deque (elem, Tglob (g, [Tany], [])), a)
+      | Some exp, _ -> read_as r a (ex a) exp
+      | None, _ -> ex a
+    in
+    CPPfun_call (res, ex f, of_reversed (List.rev (List.mapi arg (call_args ts))))
+  | CPPfun_call (res, (CPPqualified_t (Tglob (GlobRef.IndRef (kn, _), _, _), _) as f), ts) ->
+    (* A constructor whose field is a list of another inductive's values
+       takes them by value, where the stored list holds pointers. *)
+    let arg a =
+      match a with
+      | CPPvar id when Id.Map.mem id r.stored -> (
+        match Id.Map.find id r.stored with
+        | Tglob (g, [Tshared_ptr (Tglob (GlobRef.IndRef (kn', _), _, _) as inner)], _)
+          when Ml_type_util.is_custom_list_global g && not (MutInd.CanOrd.equal kn kn') ->
+          CPPunbox (Rebuild_deque (inner, Tglob (g, [Tany], [])), a)
+        | _ -> ex a )
+      | _ -> ex a
+    in
+    CPPfun_call (res, ex f, map_args arg ts)
+  | _ -> map_expr ex st Fun.id e
+
+and reads_stmt r s =
+  let ex = reads_expr r and st = reads_stmt r in
+  match s with
+  | Smatch (scrut, branches, default) ->
+    let branch b =
+      let r' =
+        with_boxed_params r (List.map (fun (id, ty, _) -> (id, ty)) b.smb_field_bindings)
+      in
+      {b with smb_body = List.map (reads_stmt r') b.smb_body}
+    in
+    Smatch
+      ( {scrut with sc_expr = ex scrut.sc_expr},
+        List.map branch branches,
+        Option.map (List.map st) default )
+  | Scustom_case (typ, scrut, tyargs, branches, cmatch) ->
+    reads_custom_case r typ scrut tyargs branches cmatch
+  | _ -> map_stmt ex st Fun.id s
+
+(* A custom match.  A pair match on a boxed scrutinee reads the pair at
+   [pair<any, any>] -- what a boxed pair holds -- so its type arguments are
+   [std::any] and its branch parameters are boxes. *)
+and reads_custom_case r typ scrut tyargs branches cmatch =
+  let tokens = Foreign_template.match_template cmatch in
+  let prod_of = function Tglob (g, _, _) when Ml_type_util.is_prod_global g -> Some g | _ -> None in
+  let scrut_boxed = match scrut with CPPvar id -> Id.Set.mem id r.boxed | _ -> false in
+  let known_prod =
+    match scrut with
+    | CPPany_cast (ty, _) when prod_of ty <> None -> prod_of ty
+    | _ -> ( match typ with Tglob (g, _ :: _, _) when Ml_type_util.is_prod_global g -> Some g | _ -> prod_of typ )
+  in
+  let preset =
+    match scrut with
+    | CPPany_cast (ty, _) -> prod_of ty <> None
+    | CPPvar _ when scrut_boxed -> (
+      match typ with Tglob (g, _ :: _, _) -> Ml_type_util.is_prod_global g | _ -> false )
+    | _ -> false
+  in
+  let has_scrut = List.mem Foreign_template.CCscrut tokens in
+  let effective, at_scrut =
+    match (scrut, typ) with
+    | CPPvar _, Tglob (g, _ :: _, _) when scrut_boxed && Ml_type_util.is_prod_global g ->
+      (Tglob (g, [Tany; Tany], []), true)
+    | CPPvar _, _ when scrut_boxed ->
+      if Common.contains_substring cmatch ".first" then
+        ((match known_prod with Some g -> Tglob (g, [Tany; Tany], []) | None -> typ), true)
+      else (typ, false)
+    | CPPany_cast (ty, _), _ when prod_of ty <> None ->
+      (Tglob (Option.get (prod_of ty), [Tany; Tany], []), true)
+    | _ -> (typ, false)
+  in
+  let overridden = preset || (has_scrut && at_scrut) in
+  (* The type arguments a template spells before its scrutinee are read
+     before the override is known, unless it was known from the start. *)
+  let ty_arg_before_scrut =
+    let rec go = function
+      | [] -> false
+      | Foreign_template.CCscrut :: _ -> false
+      | (Foreign_template.CCty_arg _ | Foreign_template.CCelem _) :: _ -> true
+      | _ :: rest -> go rest
+    in
+    go tokens
+  in
+  let tyargs =
+    if overridden && (preset || not ty_arg_before_scrut) then List.map (fun _ -> Tany) tyargs
+    else tyargs
+  in
+  let scrut' = if has_scrut then read_as r scrut (reads_expr r scrut) effective else scrut in
+  let scrut_is_cast_pair =
+    match scrut with CPPany_cast (Tglob (g, _, _), _) -> Ml_type_util.is_prod_global g | _ -> false
+  in
+  let branch (params, rty, body) =
+    let r' = with_boxed_params r params in
+    let r' =
+      if overridden || scrut_is_cast_pair then
+        List.fold_left
+          (fun r' (id, ty) ->
+            let is_pair = match ty with Tglob (g, _ :: _, _) -> Ml_type_util.is_prod_global g | _ -> false in
+            if is_any_shaped ty || is_pair then {r' with boxed = Id.Set.add id r'.boxed}
+            else
+              let erased =
+                match ty with
+                | Tglob (g, args, ns) when args <> [] ->
+                  Tglob (g, List.map Ml_type_util.erase_type_to_any args, ns)
+                | Tnamespace (g, inner) -> Tnamespace (g, Ml_type_util.erase_type_to_any inner)
+                | t -> t
+              in
+              {r' with stored = Id.Map.add id erased r'.stored} )
+          r' params
+      else r'
+    in
+    (params, rty, List.map (reads_stmt r') body)
+  in
+  Scustom_case (typ, scrut', tyargs, List.map branch branches, cmatch)
+
+let reads_method r (m : method_field) =
+  let r' = with_boxed_params {r with boxed = Id.Set.empty} m.mf_params in
+  {m with mf_body = List.map (reads_stmt r') m.mf_body}
+
+let rec reads_decl (d : settled) : settled =
+  match d with
+  | Dtemplate (tps, c, inner) -> Dtemplate (tps, c, reads_decl inner)
+  | Dnspace (r, ds) -> Dnspace (r, List.map reads_decl ds)
+  | Dfun ({df_shape = Ddef (params, body); _} as f) ->
+    let r = with_boxed_params no_reads params in
+    Dfun {f with df_shape = Ddef (params, List.map (reads_stmt r) body)}
+  | _ ->
+    let rec field (f, vis, tag) =
+      let f =
+        match f with
+        | Fmethod m -> Fmethod (reads_method no_reads m)
+        | Fmember_decl (OLmethod m) -> Fmember_decl (OLmethod (reads_method no_reads m))
+        | Fnested_struct (id, fs) -> Fnested_struct (id, List.map field fs)
+        | f -> f
+      in
+      (f, vis, tag)
+    in
+    ( match d with
+    | Dstruct ds -> Dstruct {ds with ds_fields = List.map field ds.ds_fields}
+    | Dfields ds -> Dfields {ds with ds_fields = List.map field ds.ds_fields}
+    | Dmember_def ({dm_field = OLmethod m; _} as md) ->
+      Dmember_def {md with dm_field = OLmethod (reads_method no_reads m)}
+    | d -> map_decl (reads_expr no_reads) (reads_stmt no_reads) Fun.id d )
+
+let lower_boxed_reads (d : settled) : settled = reads_decl d
+
 (** [bind_free_tvars decl] spells [std::any] every type variable a body names
     that nothing in scope declares.
 
