@@ -54,7 +54,7 @@ struct ITree : public std::enable_shared_from_this<ITree<R>> {
     using result_type = R;
     using value_type = typename itree_value<R>::type;
 
-    struct Ret { value_type value{}; };
+    struct Ret { value_type value; };
     struct Tau { std::shared_ptr<ITree<R>> next; };
     struct Vis {
         crane::fn<crane::obj()> effect;
