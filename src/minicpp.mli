@@ -788,9 +788,10 @@ and unbox =
   | Unbox_list of cpp_type * cpp_type
       (** [Unbox_list (list, flat)]: the box holds the list at its erased,
           flat instantiation [flat] ([List<std::any>]); converted to [list]. *)
-  | Rebuild_deque of cpp_type * cpp_type
-      (** [Rebuild_deque (elem, flat)]: the box holds a [flat] deque of boxed
-          elements; rebuilt element by element as a deque of [elem]. *)
+  | Rebuild_deque of cpp_type * cpp_type option
+      (** [Rebuild_deque (elem, flat)]: a deque of boxed elements -- read out of
+          a box at [flat] when given -- rebuilt element by element as a deque
+          of [elem]. *)
 
 (** Custom extraction metadata for manually mapped entities.  Resolved once
     during translation. *)

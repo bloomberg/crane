@@ -2023,81 +2023,17 @@ and pp_cpp_expr env args t =
     pp_cpp_expr env args arg ++ str "." ++ str field_name
   | CPPfun_call (_, f, ts) ->
     let args_s = pp_list (pp_cpp_expr env args) (call_args ts) in
-    let is_custom_list_funcall =
-      match f with
-      | CPPglob (GlobRef.IndRef _ as g, (_ :: _ as tys), _)
-        when Ml_type_util.is_custom_list_global g ->
-        let elem_ty = List.hd tys in
-        if elem_ty <> Tany && elem_ty <> Tauto then Some elem_ty
-        else None
-      | _ -> None
-    in
-    (match is_custom_list_funcall with
-    | Some elem_ty ->
-      require_header "any";
-      let bare_ety = bare_elem_ty elem_ty in
-      let elem_s = pp_cpp_type false [] bare_ety in
-      let cast_e = deque_elem_extract_expr bare_ety (str "_e") in
-      str "[&]() { std::deque<" ++ elem_s ++ str "> _r; for (const auto& _e : "
-      ++ args_s ++ str ") _r.push_back(" ++ cast_e ++ str "); return _r; }()"
-    | None ->
     let prefix = match f with
       | CPPglob (GlobRef.IndRef _, _, _) ->
         let name_str = string_of_ppcmds (pp_cpp_expr env args f) in
         typename_prefix_for name_str
       | _ -> mt ()
     in
-    prefix ++ pp_cpp_expr env args f ++ str "(" ++ args_s ++ str ")" )
-  (* A box is the converting constructor [std::any(e)], so it prints as one.
-     The list-conversion case below cannot arise for it: a box's type is
-     [std::any], never a custom-extracted list. *)
+    prefix ++ pp_cpp_expr env args f ++ str "(" ++ args_s ++ str ")"
+  (* A box is the converting constructor [std::any(e)], so it prints as one. *)
   | CPPbox (ty, e) -> pp_cpp_expr env args (CPPconverting_ctor (ty, [ e ]))
   | CPPconverting_ctor (ty, ts) ->
-    (* When the target type is a custom-extracted list (e.g. std::deque<T>),
-       a functional-style cast from deque<any> won't work because std::deque
-       has no converting constructor.  Emit an inline loop instead. *)
-    let is_custom_list_convert =
-      let check g elem_ty =
-        Ml_type_util.is_custom_list_global g
-        && elem_ty <> Tany && elem_ty <> Tauto
-      in
-      match ty with
-      | Tglob (g, [elem_ty], _) when check g elem_ty -> Some elem_ty
-      | Tnamespace (_, Tglob (g, [elem_ty], _)) when check g elem_ty -> Some elem_ty
-      | _ -> None
-    in
-    ( match is_custom_list_convert with
-    | Some elem_ty ->
-      require_header "any";
-      let bare_ety = bare_elem_ty elem_ty in
-      let elem_s = pp_cpp_type false [] bare_ety in
-      let src_s = pp_list (pp_cpp_expr env args) ts in
-      let cast_e = deque_elem_extract_expr bare_ety (str "_e") in
-      str "[&]() { std::deque<" ++ elem_s ++ str "> _r; for (const auto& _e : "
-      ++ src_s ++ str ") _r.push_back(" ++ cast_e ++ str "); return _r; }()"
-    | None ->
-    let args_s =
-      match ty with
-      | Tfun ([Tany], Tany) ->
-        (* std::function<std::any(std::any)> conversion: the argument is either
-           a lambda (already callable, no cast needed) or a std::any value that
-           holds a callable and must be any_cast'd before the conversion. *)
-        pp_list
-          (fun e ->
-            let e_s = pp_cpp_expr env args e in
-            match e with
-            | CPPlambda _ -> e_s
-            | _ ->
-              str Crane_rt.obj_cast
-              ++ str "<"
-              ++ pp_cpp_type false [] ty
-              ++ str ">("
-              ++ e_s
-              ++ str ")")
-          ts
-      | _ -> pp_list (pp_cpp_expr env args) ts
-    in
-    pp_cpp_type false [] ty ++ str "(" ++ args_s ++ str ")" )
+    pp_cpp_type false [] ty ++ str "(" ++ pp_list (pp_cpp_expr env args) ts ++ str ")"
   | CPPderef e ->
     let needs_parens = match e with
       | CPPvar _ | CPPthis | CPPfun_call _ | CPPaccess _
@@ -2469,8 +2405,11 @@ and pp_cpp_expr env args t =
     require_header "any";
     let bare_ety = bare_elem_ty elem_ty in
     let src_s =
-      str Crane_rt.obj_cast ++ str "<" ++ pp_cpp_type false [] flat_ty
-      ++ str ">(" ++ pp_cpp_expr env args e ++ str ")"
+      match flat_ty with
+      | Some flat_ty ->
+        str Crane_rt.obj_cast ++ str "<" ++ pp_cpp_type false [] flat_ty
+        ++ str ">(" ++ pp_cpp_expr env args e ++ str ")"
+      | None -> pp_cpp_expr env args e
     in
     str "[&]() { std::deque<" ++ pp_cpp_type false [] bare_ety
     ++ str "> _r; for (const auto& _e : " ++ src_s ++ str ") _r.push_back("
