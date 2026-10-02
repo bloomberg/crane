@@ -73,7 +73,7 @@ static void *run_main(void *arg) {
 
     using PR = JSON::JSON_Parser::ParserAndProofs::PEF::PS::P::Parse_result;
     const char *kind = nullptr;
-    const std::any *val = nullptr;
+    const crane::obj *val = nullptr;
     if (const auto *u = std::get_if<PR::Unique>(&pr.v())) {
         kind = "unique"; val = &u->a0;
     } else if (const auto *am = std::get_if<PR::Ambig>(&pr.v())) {
@@ -82,7 +82,7 @@ static void *run_main(void *arg) {
     if (kind) {
         // Emit a metadata line (matching run_json.ml / bench_common.ml) so the
         // benchmark harness can cross-check OCaml vs C++ results.
-        long nodes = count_json_nodes(std::any_cast<const JSON::Json_value &>(*val));
+        long nodes = count_json_nodes(crane::any_cast<const JSON::Json_value &>(*val));
         printf("{\"parse_result\":\"%s\",\"num_tokens\":%ld,\"parse_nodes\":%ld,\"ref_nodes\":null}\n",
                kind, num_tokens, nodes);
         fflush(stdout);

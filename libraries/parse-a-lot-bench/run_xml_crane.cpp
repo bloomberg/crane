@@ -69,7 +69,7 @@ static void *run_main(void *arg) {
 
     using PR = XML::XML_Parser::ParserAndProofs::PEF::PS::P::Parse_result;
     const char *kind = nullptr;
-    const std::any *val = nullptr;
+    const crane::obj *val = nullptr;
     if (const auto *u = std::get_if<PR::Unique>(&pr.v())) {
         kind = "unique"; val = &u->a0;
     } else if (const auto *am = std::get_if<PR::Ambig>(&pr.v())) {
@@ -77,7 +77,7 @@ static void *run_main(void *arg) {
     }
     if (kind) {
         // Fingerprint mirrors run_xml.ml: count nodes of the document root element.
-        const auto &doc = std::any_cast<const XML::Xml_document &>(*val);
+        const auto &doc = crane::any_cast<const XML::Xml_document &>(*val);
         long nodes = count_xml_nodes(doc.elt);
         printf("{\"parse_result\":\"%s\",\"num_tokens\":%ld,\"parse_nodes\":%ld,\"ref_nodes\":null}\n",
                kind, num_tokens, nodes);

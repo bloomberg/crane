@@ -2089,45 +2089,28 @@ and pp_cpp_expr env args t =
       let arg_types =
         match res.cs_params with Ptypes ts -> ts | Punknown -> []
       in
-      (* A mapping names the arguments it needs, which is not always all the
-         arguments a use site supplies: a constant whose meaning is a function
-         -- [case_ f g], the handler that dispatches on a sum -- is written
-         both bare and applied to an event, and one template cannot have two
-         arities.  What the template does not name, the call applies the
-         result to, which is what the Rocq term means in either case.  The
-         alternative, a template reaching for an argument that is not there,
-         is the anomaly at the head of {!pp_custom}. *)
+      (* A mapping names the arguments it needs, and an argument past the last
+         one it names is one it chose not to read.  An argument past the
+         constant's own parameters -- [case_ f g] applied to an event -- is
+         not this call's at all: translation applies the result to it. *)
       let all_args = call_args ts in
       let named =
         List.fold_left
           (fun acc -> function CCarg i -> max acc (i + 1) | _ -> acc)
           0 cmds
       in
-      let consumed, extra =
-        if named < List.length all_args then
-          (CList.firstn named all_args, CList.skipn named all_args)
-        else (all_args, [])
-      in
-      let applied =
-        pp_custom
-          ~container:n
-          (Pp.string_of_ppcmds (GlobRef.print n) ^ " := " ^ s)
-          env
-          None
-          None
-          tys
-          []
-          consumed
-          arg_types
-          []
-          cmds
-      in
-      if extra = [] then applied
-      else
-        applied
-        ++ str "("
-        ++ pp_list (pp_cpp_expr env args) extra
-        ++ str ")"
+      pp_custom
+        ~container:n
+        (Pp.string_of_ppcmds (GlobRef.print n) ^ " := " ^ s)
+        env
+        None
+        None
+        tys
+        []
+        (CList.firstn (min named (List.length all_args)) all_args)
+        arg_types
+        []
+        cmds
   | CPPfun_call (_, CPPglob (n, tys, _), ts)
     when lookup_method_this_pos n <> None
     ->

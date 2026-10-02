@@ -18,17 +18,17 @@ struct RunArgs { int argc; char **argv; int result; };
 
 // The CSV start symbol [Csv] has semantic type [list (list string)]. The
 // generic CoStar++ parser stores every nonterminal value type-erased, so each
-// list level is a [crane::list<std::any>]: the outer any holds the rows list,
+// list level is a [crane::list<crane::obj>]: the outer box holds the rows list,
 // each row-any holds a fields list, and each field-any holds a std::string.
-using ErasedList = crane::list<std::any>;
+using ErasedList = crane::list<crane::obj>;
 
 // Fingerprint = total number of fields (sum of record lengths), mirroring
 // run_csv.ml's count_fields.
-static long count_fields(const std::any &top) {
+static long count_fields(const crane::obj &top) {
     long n = 0;
-    auto rows = std::any_cast<ErasedList>(top);
+    auto rows = crane::any_cast<ErasedList>(top);
     for (const auto &row_any : rows) {
-        auto fields = std::any_cast<ErasedList>(row_any);
+        auto fields = crane::any_cast<ErasedList>(row_any);
         n += static_cast<long>(fields.size());
     }
     return n;
@@ -70,7 +70,7 @@ static void *run_main(void *arg) {
 
     using PR = CSV::CSV_Parser::ParserAndProofs::PEF::PS::P::Parse_result;
     const char *kind = nullptr;
-    const std::any *val = nullptr;
+    const crane::obj *val = nullptr;
     if (const auto *u = std::get_if<PR::Unique>(&pr.v())) {
         kind = "unique"; val = &u->a0;
     } else if (const auto *am = std::get_if<PR::Ambig>(&pr.v())) {
