@@ -481,7 +481,7 @@ and reads_stmt r s =
    [pair<any, any>] -- what a boxed pair holds -- so its type arguments are
    [std::any] and its branch parameters are boxes. *)
 and reads_custom_case r typ scrut tyargs branches cmatch =
-  let tokens = Foreign_template.match_template cmatch in
+  let tokens = Foreign_template.match_template cmatch.cm_template in
   let prod_of = function Tglob (g, _, _) when Ml_type_util.is_prod_global g -> Some g | _ -> None in
   let scrut_boxed = match scrut with CPPvar id -> Id.Set.mem id r.boxed | _ -> false in
   let known_prod =
@@ -502,7 +502,7 @@ and reads_custom_case r typ scrut tyargs branches cmatch =
     | CPPvar _, Tglob (g, _ :: _, _) when scrut_boxed && Ml_type_util.is_prod_global g ->
       (Tglob (g, [Tany; Tany], []), true)
     | CPPvar _, _ when scrut_boxed ->
-      if Common.contains_substring cmatch ".first" then
+      if Ml_type_util.is_prod_global cmatch.cm_inductive then
         ((match known_prod with Some g -> Tglob (g, [Tany; Tany], []) | None -> typ), true)
       else (typ, false)
     | CPPany_cast (ty, _), _ when prod_of ty <> None ->

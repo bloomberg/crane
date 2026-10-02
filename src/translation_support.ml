@@ -714,7 +714,7 @@ let rewrite_state_threading_moves
          - move binding (scrut_is_owned_pair): alias_id owns the value via
            std::move(scrut.first); track as a direct owned var so make_pair
            uses std::move(alias_id), avoiding a second move from scrut.first. *)
-      let is_move_binding = Common.contains_substring tmpl "std::move" in
+      let is_move_binding = Common.contains_substring tmpl.cm_template "std::move" in
       let new_branches =
         List.map
           (fun (params, ret_ty, body_stmts) ->

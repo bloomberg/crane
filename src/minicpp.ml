@@ -211,7 +211,7 @@ and cpp_stmt =
       * cpp_expr
       * cpp_type list
       * ((Id.t * cpp_type) list * cpp_type * cpp_stmt list) list
-      * string
+      * custom_match
   | Sthrow of string (* throw statement for unreachable/absurd cases *)
   | Sswitch of cpp_expr * GlobRef.t * (Id.t * cpp_stmt list) list * cpp_stmt list option
     (* switch on enum: scrutinee, enum type, branches, optional default body *)
@@ -642,6 +642,9 @@ and ref_qual =
   | Rq_any
   | Rq_lvalue
   | Rq_rvalue
+
+(** A custom match: the mapping's template, and the inductive it matches. *)
+and custom_match = {cm_template : string; cm_inductive : GlobRef.t}
 
 (** How a boxed value is read back.  Each form prints as one C++ idiom. *)
 and unbox =

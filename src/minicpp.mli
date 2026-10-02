@@ -248,7 +248,7 @@ and cpp_stmt =
       * cpp_expr
       * cpp_type list
       * ((Id.t * cpp_type) list * cpp_type * cpp_stmt list) list
-      * string
+      * custom_match
       (** Custom pattern match: return type, scrutinee, type args, branches
           (params, type, body), custom match string *)
   | Sthrow of string
@@ -777,6 +777,9 @@ and ref_qual =
   | Rq_any  (** No qualifier. *)
   | Rq_lvalue  (** [&] *)
   | Rq_rvalue  (** [&&] *)
+
+(** A custom match: the mapping's template, and the inductive it matches. *)
+and custom_match = {cm_template : string; cm_inductive : GlobRef.t}
 
 (** How a boxed value is read back.  Each form prints as one C++ idiom. *)
 and unbox =

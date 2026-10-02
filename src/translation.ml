@@ -7889,18 +7889,8 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
      scrutinee. *)
   let cmatch = find_custom_match pv in
   let scrut_uses =
-    let plen = 6 in
-    (* length of "%scrut" *)
-    let n = String.length cmatch in
-    let rec count i acc =
-      if i + plen > n then
-        acc
-      else if String.sub cmatch i plen = "%scrut" then
-        count (i + plen) (acc + 1)
-      else
-        count (i + 1) acc
-    in
-    count 0 0
+    List.length
+      (List.filter (( = ) Foreign_template.CCscrut) (Foreign_template.match_template cmatch))
   in
   let pair_g_opt_early = match concrete_match_type with
     | Tglob (g, _, _) when is_prod_global g -> Some g
@@ -8370,7 +8360,12 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
     | Pwild | Prel _ | Ptuple _ -> gen_cases cs
   in
   cache_prefix @
-  [Scustom_case (case_typ, scrut, temps, gen_cases (Array.to_list pv), cmatch)]
+  [ Scustom_case
+      ( case_typ,
+        scrut,
+        temps,
+        gen_cases (Array.to_list pv),
+        {cm_template = cmatch; cm_inductive = Table.indref_of_match pv} ) ]
 
 (** {2 IIFE Inlining}
 

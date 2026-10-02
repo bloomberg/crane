@@ -1994,7 +1994,7 @@ and pp_cpp_expr env args t =
     when (* Custom case with exactly 2 return-only branches and the standard
             bool-like if/else template → emit ternary.  Skip when branches
             contain string literals (const char* → std::string coercion). *)
-      String.trim cmatch = "if (%scrut) { %br0 } else { %br1 }"
+      String.trim cmatch.cm_template = "if (%scrut) { %br0 } else { %br1 }"
       && List.length branches = 2
       && List.for_all
            (fun (_, _, stmts) ->
@@ -2746,12 +2746,12 @@ and pp_cpp_stmt env args = function
        in gen_custom_cpp_case, which prepends an Sasgn before this node
        when the template uses %scrut more than once with a non-trivial
        scrutinee.  The printer just expands the template. *)
-    let cmds = match_template cmatch in
+    let cmds = match_template cmatch.cm_template in
     pp_custom
       ( "custom match for "
       ^ Pp.string_of_ppcmds (pp_cpp_type false [] typ)
       ^ " := "
-      ^ cmatch )
+      ^ cmatch.cm_template )
       env
       (Some typ)
       (Some t)

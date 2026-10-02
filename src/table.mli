@@ -1018,6 +1018,10 @@ val find_type_custom : GlobRef.t -> string list * string
 (** Check if branch array has custom match extraction. *)
 val is_custom_match : ml_branch array -> bool
 
+(** The inductive a match's first branch belongs to.
+    @raise Not_found when the branch has no constructor pattern. *)
+val indref_of_match : ml_branch array -> GlobRef.t
+
 (** Find custom match extraction code. *)
 val find_custom_match : ml_branch array -> string
 
