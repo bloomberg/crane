@@ -756,6 +756,135 @@ let ctor_alias_name_for ~base body =
 let projection_field_name (r : GlobRef.t) : string =
   Common.modular_rename Term (Label.to_id (label_of_r r))
 
+(** Check if a C++ type is concrete (can be used in any_cast). Type variables
+    and unknown types are not concrete - we can't cast to them. *)
+let rec is_concrete_cpp_type = function
+  | Tvar _ -> false
+  | Tunresolved | Tany | Topaque | Tauto -> false
+  | Tconst inner -> is_concrete_cpp_type inner
+  | Tglob (GlobRef.ConstRef _, _, _) -> false
+  | _ -> true
+
+(** Check if an expression is a variable (possibly wrapped in [CPPmove])
+    whose type is [std::any] — tracked via {!current_any_typed_params}. *)
+let rec expr_is_any_typed_param = function
+  | CPPvar id ->
+    Id.Set.mem id !current_any_typed_params
+    && not (Id.Map.mem id !concrete_typed_any_params)
+  | CPPmove e -> expr_is_any_typed_param e
+  | _ -> false
+
+(** Check if an expression is a method call whose return type is [std::any]. *)
+let expr_is_any_returning_method = function
+  | CPPaccess_call (Aarrow, CPPglob (n, _, _), _, _) -> method_returns_any n
+  | CPPfun_call (_, CPPglob (n, _, _), _) when lookup_method_this_pos n <> None ->
+    method_returns_any n
+  | CPPfun_call (_, CPPget' (_, n, _), _) -> method_returns_any n
+  | CPPerased_call _ -> true
+  | _ -> false
+
+(** Strip [shared_ptr] wrapping from all positions in a C++ type.
+    Semantic values in [std::any] are always bare; NS-propagated types that
+    added [shared_ptr] for struct storage must be stripped before extracting
+    elements from grammar-action [any] values. *)
+let rec bare_elem_ty : cpp_type -> cpp_type = function
+  | Tshared_ptr inner -> bare_elem_ty inner
+  | Tglob (g, ts, ns) -> Tglob (g, List.map bare_elem_ty ts, ns)
+  | Tnamespace (ns_g, inner) -> Tnamespace (ns_g, bare_elem_ty inner)
+  | other -> other
+
+(** Check if a C++ expression tree contains a string literal ([CPPstring]).
+    Used to guard ternary simplification: ternary with string-literal branches
+    loses the implicit [const char* → std::string] conversion that an IIFE
+    with explicit return type provides. *)
+let rec expr_contains_string e =
+  match e with
+  | CPPstring _ -> true
+  | _ ->
+    let found = ref false in
+    iter_expr_children
+      ~on_expr:(fun e -> if expr_contains_string e then found := true)
+      ~on_stmts:(fun _ -> ())
+      e;
+    !found
+
+(** Check if a C++ type is a literal type eligible for [constexpr] context.
+
+    Excludes allocation ([shared_ptr]), side effects ([void]), types unknown
+    at definition time, axiom types (whose stubs throw), and also:
+    - [Tfun]: [std::function] uses type-erased internal storage
+    - [decltype]: the expression may reference non-constexpr entities
+    - Composite types where any component is non-literal
+
+    The check is recursive for container types ([Tvariant], [Tglob], [Tid],
+    [Tnamespace], [Tqualified]) — a [std::variant<A, B>] is constexpr only
+    if both [A] and [B] are. *)
+let rec is_constexpr_type ty =
+  if is_any_type ty then false else
+  match ty with
+  | Tshared_ptr _ -> false
+  | Tvoid | Tvar _ | Tinstance _ | Tpromoted _ | Tany | Topaque | Tauto
+  | Tunresolved -> false
+  | Tfun _ -> false  (* std::function uses type erasure *)
+  | Tdecay _ -> false
+  | Tglob (r, _, _) when is_axiom_type_ref r -> false
+  | Tglob (GlobRef.IndRef _ as r, tys, _) ->
+    (* Crane-generated non-enum inductives have user-provided constructors
+       (T() {}, explicit T(Ctor _v) : d_v_(_v) {}) that are not constexpr,
+       so the types are not literal.  Only enum inductives (generated as
+       [enum class]) are literal types. *)
+    Table.is_enum_inductive r && List.for_all is_constexpr_type tys
+  | Tconst t | Tref (Lvalue, t) | Tptr t -> is_constexpr_type t
+  | Tvariant tys -> List.for_all is_constexpr_type tys
+  | Tglob (GlobRef.ConstRef _, [], _) -> false  (* defined constant with no type args — opaque alias *)
+  | Tglob (_, tys, _) -> List.for_all is_constexpr_type tys
+  | Tid (_, []) -> false  (* unresolved type alias — conservatively non-literal *)
+  | Tid (_, tys) | Tid_external (_, tys) -> List.for_all is_constexpr_type tys
+  | Tnondeduced t -> is_constexpr_type t
+  | Trebind (h, x) -> is_constexpr_type h && is_constexpr_type x
+  | Thole | Terased _ -> true
+  | Tref (Forwarding, t) -> is_constexpr_type t
+  | Texpr_type _ | Tdecltype_auto -> false
+  | Tnamespace (_, t) -> is_constexpr_type t
+  | Tqualified (t, _) -> is_constexpr_type t
+  (* An applied associated type is whatever the instance makes it; nothing
+     here can establish it is a literal type. *)
+  | Ttyctor _ | Tapply _ -> false
+
+(** Check if a function is constexpr-eligible: all param types AND return
+    type must be constexpr-eligible literal types.
+
+    @param ret_ty  the C++ return type to test
+    @param params  list of [(name, type)] pairs for all formal parameters *)
+let is_constexpr_eligible ret_ty params =
+  is_constexpr_type ret_ty
+  && List.for_all (fun (_, ty) -> is_constexpr_type ty) params
+
+(** Check if a function body consists solely of throwing an abort/axiom error.
+    Such functions must not be marked [pure] or [constexpr] because the compiler
+    may optimise away the throw. *)
+let body_is_throw = function
+  | [Sreturn (Some (CPPabort _))] -> true
+  | _ -> false
+
+(** Compute the C++ function qualifier prefix as a three-way decision:
+    - [constexpr] when the function is constexpr-eligible and [can_constexpr]
+      is [true] (i.e. the definition is visible in the header);
+    - nothing otherwise.
+
+    @param can_constexpr  whether this call site may use [constexpr]
+    @param throws         whether the body unconditionally throws
+    @param no_pure        when [true], suppress [constexpr] even if the
+                          function would otherwise qualify (used for functions
+                          that operate on [std::any] or axiom types)
+    @param ret_ty         the C++ return type
+    @param params         [(name, type)] pairs for all formal parameters *)
+let fun_qualifier ~can_constexpr ~throws ~no_pure ret_ty params =
+  if can_constexpr && not throws && not no_pure && is_constexpr_eligible ret_ty params then
+    str "constexpr "
+  else
+    mt ()
+
 (** Pretty-print a MiniCpp type as C++ source text.
 
     @param par  whether to parenthesize (for precedence in function types)
@@ -1312,21 +1441,6 @@ let rec pp_cpp_type ?(lead = true) par vl t =
   in
   (pp_rec ~lead par t)
 
-(** Check if a C++ expression tree contains a string literal ([CPPstring]).
-    Used to guard ternary simplification: ternary with string-literal branches
-    loses the implicit [const char* → std::string] conversion that an IIFE
-    with explicit return type provides. *)
-and expr_contains_string e =
-  match e with
-  | CPPstring _ -> true
-  | _ ->
-    let found = ref false in
-    iter_expr_children
-      ~on_expr:(fun e -> if expr_contains_string e then found := true)
-      ~on_stmts:(fun _ -> ())
-      e;
-    !found
-
 (** Render [ty] as the qualifier of a {e value} -- [T::member] -- rather than of
     a nested type.
 
@@ -1365,16 +1479,6 @@ and extract_from_any ty src_expr =
   if is_any_type ty then src_expr
   else
     str Crane_rt.obj_cast ++ str "<" ++ pp_cpp_type false [] ty ++ str ">(" ++ src_expr ++ str ")"
-
-(** Strip [shared_ptr] wrapping from all positions in a C++ type.
-    Semantic values in [std::any] are always bare; NS-propagated types that
-    added [shared_ptr] for struct storage must be stripped before extracting
-    elements from grammar-action [any] values. *)
-and bare_elem_ty : cpp_type -> cpp_type = function
-  | Tshared_ptr inner -> bare_elem_ty inner
-  | Tglob (g, ts, ns) -> Tglob (g, List.map bare_elem_ty ts, ns)
-  | Tnamespace (ns_g, inner) -> Tnamespace (ns_g, bare_elem_ty inner)
-  | other -> other
 
 and deque_elem_extract_expr elem_ty src_expr =
   (* Generate expression to extract elem_ty from a list element stored as any.
@@ -3082,110 +3186,6 @@ and pp_cpp_stmt env args = function
     in
     branches_pp ++ default_pp ++ fnl () ++ str "}"
 
-(** Check if a C++ type is a literal type eligible for [constexpr] context.
-
-    Excludes allocation ([shared_ptr]), side effects ([void]), types unknown
-    at definition time, axiom types (whose stubs throw), and also:
-    - [Tfun]: [std::function] uses type-erased internal storage
-    - [decltype]: the expression may reference non-constexpr entities
-    - Composite types where any component is non-literal
-
-    The check is recursive for container types ([Tvariant], [Tglob], [Tid],
-    [Tnamespace], [Tqualified]) — a [std::variant<A, B>] is constexpr only
-    if both [A] and [B] are. *)
-and is_constexpr_type ty =
-  if is_any_type ty then false else
-  match ty with
-  | Tshared_ptr _ -> false
-  | Tvoid | Tvar _ | Tinstance _ | Tpromoted _ | Tany | Topaque | Tauto
-  | Tunresolved -> false
-  | Tfun _ -> false  (* std::function uses type erasure *)
-  | Tdecay _ -> false
-  | Tglob (r, _, _) when is_axiom_type_ref r -> false
-  | Tglob (GlobRef.IndRef _ as r, tys, _) ->
-    (* Crane-generated non-enum inductives have user-provided constructors
-       (T() {}, explicit T(Ctor _v) : d_v_(_v) {}) that are not constexpr,
-       so the types are not literal.  Only enum inductives (generated as
-       [enum class]) are literal types. *)
-    Table.is_enum_inductive r && List.for_all is_constexpr_type tys
-  | Tconst t | Tref (Lvalue, t) | Tptr t -> is_constexpr_type t
-  | Tvariant tys -> List.for_all is_constexpr_type tys
-  | Tglob (GlobRef.ConstRef _, [], _) -> false  (* defined constant with no type args — opaque alias *)
-  | Tglob (_, tys, _) -> List.for_all is_constexpr_type tys
-  | Tid (_, []) -> false  (* unresolved type alias — conservatively non-literal *)
-  | Tid (_, tys) | Tid_external (_, tys) -> List.for_all is_constexpr_type tys
-  | Tnondeduced t -> is_constexpr_type t
-  | Trebind (h, x) -> is_constexpr_type h && is_constexpr_type x
-  | Thole | Terased _ -> true
-  | Tref (Forwarding, t) -> is_constexpr_type t
-  | Texpr_type _ | Tdecltype_auto -> false
-  | Tnamespace (_, t) -> is_constexpr_type t
-  | Tqualified (t, _) -> is_constexpr_type t
-  (* An applied associated type is whatever the instance makes it; nothing
-     here can establish it is a literal type. *)
-  | Ttyctor _ | Tapply _ -> false
-
-(** Check if a function is constexpr-eligible: all param types AND return
-    type must be constexpr-eligible literal types.
-
-    @param ret_ty  the C++ return type to test
-    @param params  list of [(name, type)] pairs for all formal parameters *)
-and is_constexpr_eligible ret_ty params =
-  is_constexpr_type ret_ty
-  && List.for_all (fun (_, ty) -> is_constexpr_type ty) params
-
-(** Check if a function body consists solely of throwing an abort/axiom error.
-    Such functions must not be marked [pure] or [constexpr] because the compiler
-    may optimise away the throw. *)
-and body_is_throw = function
-  | [Sreturn (Some (CPPabort _))] -> true
-  | _ -> false
-
-(** Compute the C++ function qualifier prefix as a three-way decision:
-    - [constexpr] when the function is constexpr-eligible and [can_constexpr]
-      is [true] (i.e. the definition is visible in the header);
-    - nothing otherwise.
-
-    @param can_constexpr  whether this call site may use [constexpr]
-    @param throws         whether the body unconditionally throws
-    @param no_pure        when [true], suppress [constexpr] even if the
-                          function would otherwise qualify (used for functions
-                          that operate on [std::any] or axiom types)
-    @param ret_ty         the C++ return type
-    @param params         [(name, type)] pairs for all formal parameters *)
-and fun_qualifier ~can_constexpr ~throws ~no_pure ret_ty params =
-  if can_constexpr && not throws && not no_pure && is_constexpr_eligible ret_ty params then
-    str "constexpr "
-  else
-    mt ()
-
-(** Check if a C++ type is concrete (can be used in any_cast). Type variables
-    and unknown types are not concrete - we can't cast to them. *)
-and is_concrete_cpp_type = function
-  | Tvar _ -> false
-  | Tunresolved | Tany | Topaque | Tauto -> false
-  | Tconst inner -> is_concrete_cpp_type inner
-  | Tglob (GlobRef.ConstRef _, _, _) -> false
-  | _ -> true
-
-(** Check if an expression is a method call whose return type is [std::any]. *)
-and expr_is_any_returning_method = function
-  | CPPaccess_call (Aarrow, CPPglob (n, _, _), _, _) -> method_returns_any n
-  | CPPfun_call (_, CPPglob (n, _, _), _) when lookup_method_this_pos n <> None ->
-    method_returns_any n
-  | CPPfun_call (_, CPPget' (_, n, _), _) -> method_returns_any n
-  | CPPerased_call _ -> true
-  | _ -> false
-
-(** Check if an expression is a variable (possibly wrapped in [CPPmove])
-    whose type is [std::any] — tracked via {!current_any_typed_params}. *)
-and expr_is_any_typed_param = function
-  | CPPvar id ->
-    Id.Set.mem id !current_any_typed_params
-    && not (Id.Map.mem id !concrete_typed_any_params)
-  | CPPmove e -> expr_is_any_typed_param e
-  | _ -> false
-
 (** Wrap a pretty-printed expression in [std::any_cast<T>(...)] when it
     returns [std::any] but the context expects a concrete type [T].
     Unresolved type variables in [T] are replaced with [std::any].
@@ -3615,6 +3615,7 @@ and pp_custom ?container custom env typ t tyargs cases args arg_types vl cmds =
       fold_cmds (acc ++ pp ~followed_by_dot cmd) rest
   in
   fold_cmds (mt ()) cmds
+
 
 (** Pretty-print an already-converted MiniCpp type with no parenthesization and
     no type-variable context; the common-case shorthand for {!pp_cpp_type}. *)
