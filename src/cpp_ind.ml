@@ -93,7 +93,7 @@ let impl_decls = function
   | Dind (kn, i) -> [] (* Inductives are fully defined in headers *)
   | Dtype (r, _, t) ->
     if t == Taxiom then begin
-      register_axiom_type r;
+      Cpp_erasure.register_axiom_type r;
       Table.add_erased_type_const r
     end;
     []

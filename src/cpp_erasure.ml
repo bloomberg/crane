@@ -466,6 +466,16 @@ let materialise (d : cpp_decl) : settled =
   and fs s = map_stmt fe fs ft s in
   map_decl fe fs ft d
 
-(** [settled_child ~parent d] -- see [cpp_erasure.mli].  [parent] is evidence,
-    not data: a declaration nested inside a settled one is settled. *)
-let settled_child ~parent:_ (d : cpp_decl) : settled = d
+type view =
+  | Template of (template_type * Id.t) list * cpp_constraint option * settled
+  | Namespace of GlobRef.t option * settled list
+  | Decl of cpp_decl
+
+(* The seam is hereditary -- {!materialise} rewrites a declaration together
+   with everything nested inside it -- so a settled declaration's children are
+   settled. *)
+let view (d : settled) =
+  match d with
+  | Dtemplate (temps, cstr, inner) -> Template (temps, cstr, inner)
+  | Dnspace (r, decls) -> Namespace (r, decls)
+  | d -> Decl d

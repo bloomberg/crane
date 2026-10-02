@@ -30,9 +30,6 @@ open Translation
 open Cpp_state
 open Cpp_names
 
-(** Memoized regex for matching the [::] C++ scope-resolution operator. *)
-let re_double_colon = Str.regexp_string "::"
-
 (** Escape a byte string for emission inside a double-quoted C++ string literal.
 
     A primitive Rocq [String] can contain any byte, including quotes,
@@ -59,43 +56,10 @@ let escape_cpp_string (s : string) : string =
     s;
   Buffer.contents buf
 
-(* Global mutable state in this file:
-   - axiom_type_refs: accumulates across the full extraction session; never cleared
-     because axiom classifications are global to a Rocq session. *)
-
-(** Axiom types (extracted as [std::any]) live in {!Cpp_erasure}, which owns
-    the erasure decisions.  Re-exported here because functions whose return
-    type involves one must not be marked [__attribute__((pure))]: they may
-    transitively call an axiom stub that throws [std::logic_error]. *)
-let register_axiom_type = Cpp_erasure.register_axiom_type
-
+(** Functions whose return type involves an axiom type must not be marked
+    [__attribute__((pure))]: they may transitively call an axiom stub that
+    throws [std::logic_error]. *)
 let is_axiom_type_ref = Cpp_erasure.is_axiom_type_ref
-
-(** Check if an identifier is referenced in a list of statements.
-    Used to decide whether a parameter name should be emitted or omitted
-    (idiomatic C++ convention for intentionally unused parameters).
-
-    @param target_id  the identifier to search for
-    @param body       the statement list to search through
-    @return [true] if [target_id] appears as a [CPPvar] anywhere in [body] *)
-let stmts_reference_id target_id body =
-  let exception Found in
-  let rec check_expr e =
-    (match e with CPPvar id when Id.equal id target_id -> raise Found | _ -> ());
-    iter_expr_children ~on_expr:check_expr ~on_stmts:(List.iter check_stmt) e
-  and check_stmt s =
-    match s with
-    | Scustom_case (_, scrut, _, branches, template) ->
-      (* Only count scrutinee as a reference when the template actually uses it.
-         E.g., unit match template "{ %br0 }" ignores the scrutinee, while nat
-         template "if (%scrut <= 0) { ... }" uses it. *)
-      if Common.contains_substring template "%scrut" then check_expr scrut;
-      List.iter (fun (_, _, stmts) -> List.iter check_stmt stmts) branches
-    | _ ->
-      iter_stmt_children ~on_expr:check_expr ~on_stmts:(List.iter check_stmt) s
-  in
-  try List.iter check_stmt body; false
-  with Found -> true
 
 (** [output_mentions body_s] is the test "does the printed body [body_s]
     contain this identifier, as a whole word".
@@ -3326,22 +3290,10 @@ and pp_cpp_stmt env args = function
     in
     branches_pp ++ default_pp ++ fnl () ++ str "}"
 
-(** Check if a return type is eligible for __attribute__((pure)). Types that
-    involve allocation (shared_ptr), side effects (void), or are
-    unknown at definition time (type variables, any, todo) are excluded. Axiom
-    type refs are also excluded since functions operating on axiom types may
-    transitively call axiom stubs that throw std::logic_error. *)
-and is_pure_return_type = function
-  | Tshared_ptr _ -> false
-  | Tvoid | Tvar _ | Tany | Topaque | Tauto | Tunresolved -> false
-  | Tglob (r, _, _) when is_axiom_type_ref r -> false
-  | Tconst t | Tref (_, t) | Tptr t -> is_pure_return_type t
-  | _ -> true
-
 (** Check if a C++ type is a literal type eligible for [constexpr] context.
 
-    Strictly stronger than {!is_pure_return_type}: in addition to the same
-    exclusions (allocation, side-effects, unknowns), also rejects:
+    Excludes allocation ([shared_ptr]), side effects ([void]), types unknown
+    at definition time, axiom types (whose stubs throw), and also:
     - [Tfun]: [std::function] uses type-erased internal storage
     - [decltype]: the expression may reference non-constexpr entities
     - Composite types where any component is non-literal
@@ -4730,10 +4682,19 @@ and pp_initialiser env ty e =
 
     @param env  name environment for sub-expression and sub-type printers *)
 and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
-  let sub d = Cpp_erasure.settled_child ~parent:settled d in
   record_file_scope_type (settled :> cpp_decl);
-  match (settled :> cpp_decl) with
-  | Dtemplate (temps, cstr, Dasgn (id, ty, e)) when (!render_ctx).rc_in_struct ->
+  match Cpp_erasure.view settled with
+  | Template (temps, cstr, inner) -> pp_template_decl env temps cstr inner
+  | Namespace (None, decls) ->
+    let ds = pp_list_stmt (pp_cpp_decl_raw env) decls in
+    (str "namespace " ++ str "{") ++ fnl () ++ ds ++ fnl () ++ str "};"
+  | Namespace (Some id, members) -> pp_wrapper_nspace env id members
+  | Decl d -> pp_leaf_decl env d
+
+(** A template head and the declaration it introduces. *)
+and pp_template_decl env temps cstr (inner : Cpp_erasure.settled) =
+  match (inner :> cpp_decl) with
+  | Dasgn (id, ty, e) when (!render_ctx).rc_in_struct ->
     let args = pp_list pp_template_param temps in
     let expr_pp = pp_initialiser env ty e in
     let req = pp_requires_of_tparams temps in
@@ -4746,7 +4707,7 @@ and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
     (str "template <" ++ args ++ str ">")
     ++ cstr_pp
     ++ pp_meyers_singleton env id ty expr_pp
-  | Dtemplate (temps, cstr, decl) ->
+  | decl ->
     (* A default may be given once per parameter, so only the first printing
        of this declaration gives it -- see {!claim_template_defaults}. *)
     let pp_param =
@@ -4763,128 +4724,136 @@ and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
     in
     (str "template <" ++ args ++ str ">")
     ++ cstr_pp
-    ++ pp_cpp_decl_raw env (sub decl)
-  | Dnspace (None, decls) ->
-    let ds = pp_list_stmt (fun d -> pp_cpp_decl_raw env (sub d)) decls in
-    (str "namespace " ++ str "{") ++ fnl () ++ ds ++ fnl () ++ str "};"
-  | Dnspace (Some id, decls) ->
-    let struct_name_str = nspace_wrapper_name id in
-    (* The same question the out-of-line definition of a member asks, asked
-       through the same function so the two cannot drift apart. *)
-    let merges =
-      nspace_merges
-        { dw_ref = id;
-          dw_sole_child = (match decls with [Dstruct _] -> true | _ -> false) }
+    ++ pp_cpp_decl_raw env inner
+
+(** A namespace-scope wrapper struct around [members], merged with its sole
+    struct child where it can be. *)
+and pp_wrapper_nspace env id (members : Cpp_erasure.settled list) =
+  let decls = (members :> cpp_decl list) in
+  let struct_name_str = nspace_wrapper_name id in
+  (* The same question the out-of-line definition of a member asks, asked
+     through the same function so the two cannot drift apart. *)
+  let merges =
+    nspace_merges
+      { dw_ref = id;
+        dw_sole_child = (match decls with [Dstruct _] -> true | _ -> false) }
+  in
+  ( match (decls, merges) with
+  | ([Dstruct {ds_tparams; ds_constraint; _}], true) ->
+    register_forward_struct_decl ~env
+      ~name:(str struct_name_str)
+      ~tparams:ds_tparams
+      ~cstr:ds_constraint
+  | _ -> () );
+  ( match (decls, merges) with
+  | ( [
+        Dstruct
+          {
+            ds_fields = fields;
+            ds_tparams = [];
+            ds_needs_shared_from_this = sft;
+            _;
+          };
+      ],
+      true ) ->
+    (* MERGE non-template: struct Nat { ... } *)
+    let struct_name = str struct_name_str in
+    let f_s =
+      with_render_ctx
+        (fun c -> { c with rc_in_struct = true })
+        (fun () -> pp_cpp_fields_with_vis ~struct_name env fields)
     in
-    ( match (decls, merges) with
-    | ([Dstruct {ds_tparams; ds_constraint; _}], true) ->
-      register_forward_struct_decl ~env
-        ~name:(str struct_name_str)
-        ~tparams:ds_tparams
-        ~cstr:ds_constraint
-    | _ -> () );
-    ( match (decls, merges) with
-    | ( [
-          Dstruct
-            {
-              ds_fields = fields;
-              ds_tparams = [];
-              ds_needs_shared_from_this = sft;
-              _;
-            };
-        ],
-        true ) ->
-      (* MERGE non-template: struct Nat { ... } *)
-      let struct_name = str struct_name_str in
-      let f_s =
-        with_render_ctx
-          (fun c -> { c with rc_in_struct = true })
-          (fun () -> pp_cpp_fields_with_vis ~struct_name env fields)
-      in
-      let inherit_clause =
-        if sft then
-          str " : public " ++ str (sn ()).enable_from_this ++ str "<"
-          ++ struct_name
-          ++ str ">"
-        else
-          mt ()
-      in
-      str "struct "
-      ++ struct_name
-      ++ inherit_clause
-      ++ str " {"
-      ++ fnl ()
-      ++ f_s
-      ++ fnl ()
-      ++ str "};"
-    | ( [
-          Dstruct
-            {
-              ds_fields = fields;
-              ds_tparams = temps;
-              ds_constraint = cstr;
-              ds_needs_shared_from_this = sft;
-              _;
-            };
-        ],
-        true ) ->
-      (* MERGE template: template<typename A> struct List { ... } *)
-      let struct_name = str struct_name_str in
-      let f_s =
-        with_render_ctx
-          (fun c -> { c with rc_in_struct = true; rc_in_template = true })
-          (fun () -> pp_cpp_fields_with_vis ~struct_name env fields)
-      in
-      let args = pp_list pp_template_param temps in
-      let req = pp_requires_of_tparams temps in
-      let cstr_pp = match (req, cstr) with
-        | None, None -> mt ()
-        | Some r, None -> r ++ fnl ()
-        | None, Some c -> pp_cpp_expr env [] c ++ fnl ()
-        | Some r, Some c -> r ++ str " && " ++ pp_cpp_expr env [] c ++ fnl ()
-      in
-      let inherit_clause =
-        if sft then
-          let type_args = pp_list (fun (_, id) -> Id.print id) temps in
-          str " : public std::enable_shared_from_this<"
-          ++ struct_name
-          ++ str "<"
-          ++ type_args
-          ++ str ">>"
-        else
-          mt ()
-      in
-      (str "template <" ++ args ++ str ">")
-      ++ cstr_pp
-      ++ str "struct "
-      ++ struct_name
-      ++ inherit_clause
-      ++ str " {"
-      ++ fnl ()
-      ++ f_s
-      ++ fnl ()
-      ++ str "};"
-    | _ ->
-      (* No merge: keep wrapper struct (has pending decls or multiple
-         children) *)
-      let ds =
-        with_render_ctx
-          (fun c -> { c with rc_in_struct = true })
-          (fun () -> pp_list_stmt (fun d -> pp_cpp_decl_raw env (sub d)) decls)
-      in
-      let pending_fwd =
-        match Hashtbl.find_opt pending_wrapper_decls struct_name_str with
-        | Some specs ->
-          Hashtbl.remove pending_wrapper_decls struct_name_str;
-          fnl () ++ specs
-        | None -> mt ()
-      in
-      (str "struct " ++ str struct_name_str ++ str " {")
-      ++ fnl ()
-      ++ ds
-      ++ pending_fwd
-      ++ fnl ()
-      ++ str "};" )
+    let inherit_clause =
+      if sft then
+        str " : public " ++ str (sn ()).enable_from_this ++ str "<"
+        ++ struct_name
+        ++ str ">"
+      else
+        mt ()
+    in
+    str "struct "
+    ++ struct_name
+    ++ inherit_clause
+    ++ str " {"
+    ++ fnl ()
+    ++ f_s
+    ++ fnl ()
+    ++ str "};"
+  | ( [
+        Dstruct
+          {
+            ds_fields = fields;
+            ds_tparams = temps;
+            ds_constraint = cstr;
+            ds_needs_shared_from_this = sft;
+            _;
+          };
+      ],
+      true ) ->
+    (* MERGE template: template<typename A> struct List { ... } *)
+    let struct_name = str struct_name_str in
+    let f_s =
+      with_render_ctx
+        (fun c -> { c with rc_in_struct = true; rc_in_template = true })
+        (fun () -> pp_cpp_fields_with_vis ~struct_name env fields)
+    in
+    let args = pp_list pp_template_param temps in
+    let req = pp_requires_of_tparams temps in
+    let cstr_pp = match (req, cstr) with
+      | None, None -> mt ()
+      | Some r, None -> r ++ fnl ()
+      | None, Some c -> pp_cpp_expr env [] c ++ fnl ()
+      | Some r, Some c -> r ++ str " && " ++ pp_cpp_expr env [] c ++ fnl ()
+    in
+    let inherit_clause =
+      if sft then
+        let type_args = pp_list (fun (_, id) -> Id.print id) temps in
+        str " : public std::enable_shared_from_this<"
+        ++ struct_name
+        ++ str "<"
+        ++ type_args
+        ++ str ">>"
+      else
+        mt ()
+    in
+    (str "template <" ++ args ++ str ">")
+    ++ cstr_pp
+    ++ str "struct "
+    ++ struct_name
+    ++ inherit_clause
+    ++ str " {"
+    ++ fnl ()
+    ++ f_s
+    ++ fnl ()
+    ++ str "};"
+  | _ ->
+    (* No merge: keep wrapper struct (has pending decls or multiple
+       children) *)
+    let ds =
+      with_render_ctx
+        (fun c -> { c with rc_in_struct = true })
+        (fun () -> pp_list_stmt (pp_cpp_decl_raw env) members)
+    in
+    let pending_fwd =
+      match Hashtbl.find_opt pending_wrapper_decls struct_name_str with
+      | Some specs ->
+        Hashtbl.remove pending_wrapper_decls struct_name_str;
+        fnl () ++ specs
+      | None -> mt ()
+    in
+    (str "struct " ++ str struct_name_str ++ str " {")
+    ++ fnl ()
+    ++ ds
+    ++ pending_fwd
+    ++ fnl ()
+    ++ str "};" )
+
+(** A declaration with no declaration nested inside it. *)
+and pp_leaf_decl env (d : cpp_decl) =
+  match d with
+  (* Taken apart by {!Cpp_erasure.view}, which hands out their children
+     settled. *)
+  | Dtemplate _ | Dnspace _ -> assert false
   | Dfun {df_path; df_ret = ret_ty; df_no_pure = no_pure; df_shape = shape} ->
     let ids = dfun_path_list df_path in
     (* A definition is either out-of-line in a .cpp file or inline in a
@@ -5214,22 +5183,6 @@ and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
     ++ ctors_s
     ++ fnl ()
     ++ str "};"
-
-(** {2 Pretty-printing of types. [par] is a boolean indicating whether
-    parentheses are needed or not.} *)
-
-(** Convert a MiniML type to MiniCpp and pretty-print it as C++ source.
-
-    @param par  whether to parenthesize the result (see {!pp_cpp_type})
-    @param vl   type variable names for de Bruijn index lookup
-    @param t    the MiniML type to convert and render *)
-let pp_type par vl t =
-  let cty = convert_ml_type_to_cpp_type (empty_env ()) [] t in
-  pp_cpp_type par vl cty
-
-(** {2 Pretty-printing of expressions. [par] indicates whether parentheses are
-    needed or not. [env] is the list of names for the de Bruijn variables.
-    [args] is the list of collected arguments (already pretty-printed).} *)
 
 (** The break between two declaration groups.  It is a break hint, not a
     forced newline, so the vertical box the whole file is printed in

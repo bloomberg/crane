@@ -92,12 +92,20 @@ val unbox_tolerant : cpp_type -> cpp_expr -> cpp_expr
     rather than re-checked. *)
 type settled = private Minicpp.cpp_decl
 
-(** [settled_child ~parent d] is the sub-declaration [d] of [parent], at
-    [parent]'s phase.  The seam is hereditary -- {!materialise} rewrites a
-    declaration together with everything nested inside it -- so descending
-    into a settled declaration does not cross it again.  Holding [parent] is
-    the evidence for that, which is why it is an argument. *)
-val settled_child : parent:settled -> Minicpp.cpp_decl -> settled
+(** A settled declaration taken apart one level.  The seam is hereditary --
+    {!materialise} rewrites a declaration together with everything nested
+    inside it -- so the children a view hands out are settled too, and they are
+    the only settled values it hands out: there is no way to call an unrelated
+    declaration settled. *)
+type view =
+  | Template of
+      (Minicpp.template_type * Names.Id.t) list
+      * Minicpp.cpp_constraint option
+      * settled
+  | Namespace of Names.GlobRef.t option * settled list
+  | Decl of Minicpp.cpp_decl  (** Any other declaration: none nested inside. *)
+
+val view : settled -> view
 
 (** [resolve_casts decl] rewrites every {!Minicpp.CPPany_cast} in [decl] to say
     which caster the printer should emit: dropped where the cast is the
