@@ -201,7 +201,8 @@ Dval(const Dval<_U0, _U1,
 _U2>& _other) : v_([&]() -> variant_t {
 if (std::holds_alternative<typename Dval<_U0, _U1,
 _U2>::DPtr>(_other.v())) {
-const auto& [p] = std::get<typename Dval<_U0, _U1, _U2>::DPtr>(_other.v());
+const auto& [p] = std::get<typename Dval<_U0, _U1,
+_U2>::DPtr>(_other.v());
 return DPtr{[&]() -> ptr {
 if constexpr (crane_convertible<ptr, const _U0&>) {
 return crane_convert<ptr>(p);
@@ -212,7 +213,8 @@ throw std::logic_error("unreachable: inactive constructor field at this instanti
 } else {
 if (std::holds_alternative<typename Dval<_U0, _U1,
 _U2>::DIptr>(_other.v())) {
-const auto& [i] = std::get<typename Dval<_U0, _U1, _U2>::DIptr>(_other.v());
+const auto& [i] = std::get<typename Dval<_U0, _U1,
+_U2>::DIptr>(_other.v());
 return DIptr{[&]() -> iptr {
 if constexpr (crane_convertible<iptr, const _U1&>) {
 return crane_convert<iptr>(i);
@@ -221,7 +223,8 @@ throw std::logic_error("unreachable: inactive constructor field at this instanti
 }
 }()};
 } else {
-const auto& [a] = std::get<typename Dval<_U0, _U1, _U2>::DAddr>(_other.v());
+const auto& [a] = std::get<typename Dval<_U0, _U1,
+_U2>::DAddr>(_other.v());
 return DAddr{[&]() -> ADDR {
 if constexpr (crane_convertible<ADDR, const _U2&>) {
 return crane_convert<ADDR>(a);

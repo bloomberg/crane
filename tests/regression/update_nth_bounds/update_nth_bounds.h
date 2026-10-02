@@ -223,6 +223,7 @@ struct UpdateNthBounds {
                       UINT64_C(3), List<uint64_t>::cons(
                                        UINT64_C(4), List<uint64_t>::nil())))))
           .length();
+
   static inline const uint64_t out_of_bounds_length =
       update_nth<uint64_t>(
           UINT64_C(9), UINT64_C(7),
