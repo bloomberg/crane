@@ -49,40 +49,34 @@ val gen_dfuns_header :
 val gen_dfuns_spec :
   GlobRef.t array * ml_ast array * ml_type array -> (cpp_decl * env) list
 
-(** A function as one generation produced it: its forward declaration, its
-    definition where the file being written takes one, and the helpers lifted
-    out of its body. *)
+(** Where a function's definition is written: a template's in the header,
+    anything else's in the implementation file. *)
+type definition_file = Header | Implementation
+
+(** What one generation produced, independent of the file being written: a
+    function finalized once ({!Function_entity}), a value written as it stands
+    in both files, or a declaration with no definition anywhere. *)
+type generated_entity =
+  | Defined of Function_entity.t * definition_file
+  | Value of cpp_decl * definition_file
+  | Declared of cpp_decl
+
+(** A generated function, with the environment its names were allocated in and
+    the helpers lifted out of its body. *)
 type generated_fun = {
-  gf_spec : (cpp_decl * env) option;
-  gf_def : (cpp_decl * env) option;
+  gf_entity : generated_entity;
+  gf_env : env;
   gf_lifted : cpp_decl list;
 }
 
-(** Generate both spec and def for each function of a mutually recursive
-    group, translating each body once. *)
-val gen_dfuns_dual :
-  is_header:bool ->
-  GlobRef.t array * ml_ast array * ml_type array ->
-  generated_fun list
-
-(** Generate both spec and def for a single Dterm function, translating its
+(** Generate each function of a mutually recursive group, translating each
     body once. *)
-val gen_decl_for_pp_dual :
-  is_header:bool -> GlobRef.t -> ml_ast -> ml_type -> generated_fun
+val gen_dfuns_dual :
+  GlobRef.t array * ml_ast array * ml_type array -> generated_fun list
 
-(** Split a definition into the declaration and the definition of the same
-    function: the same signature twice, once without the body.
+(** Generate a single Dterm function, translating its body once. *)
+val gen_decl_for_pp_dual : GlobRef.t -> ml_ast -> ml_type -> generated_fun
 
-    The body decides which callback constraints the signature may state, so
-    that is settled once, here, and written into both halves.  A caller that
-    emits both must take both from one call -- keeping its own copy of the
-    definition alongside this declaration is how the two come to state
-    different template heads and stop being one function. *)
-val decl_spec_and_def : cpp_decl -> cpp_decl * cpp_decl
-
-(** The declaration half of {!decl_spec_and_def}, for callers that emit no
-    definition to disagree with it. *)
-val decl_to_spec : cpp_decl -> cpp_decl
 
 (** {2 Inductive Type Generation} *)
 

@@ -625,22 +625,13 @@ let dedup_lifted_decls ds =
     definition to emit in its place, where [d] defines a namespace-scope
     function.  [None] for anything else.
 
-    {!Gen_decls.decl_spec_and_def} answers for any declaration by returning it
-    twice, which is right for a caller meaning "make this a declaration if it
-    is not one" and wrong for one asking "is there a declaration to emit here"
-    -- a struct would come back whole and be defined a second time.  So the
-    shape is asked first.
-
     The definition comes back rather than being reused as it arrived because
     the split may settle the template head, and the half that is emitted here
     has to state the same head as the half emitted at the top of the file. *)
 let lifted_fun_split (d : cpp_decl) : (cpp_decl * cpp_decl) option =
-  let rec defines_fun = function
-    | Dfun {df_shape = Ddef _; _} -> true
-    | Dtemplate (_, _, inner) -> defines_fun inner
-    | _ -> false
-  in
-  if defines_fun d then Some (decl_spec_and_def d) else None
+  Option.map
+    (fun e -> Function_entity.(declaration e, definition e))
+    (Function_entity.finalize d)
 
 (** Whether [spec] may be emitted at the top of the file, above every
     definition in it.
@@ -1895,13 +1886,26 @@ let rec prlist_sep_nonempty sep f = function
       let boundary = if starts_with_doc_comment r then fnl () else sep () in
       e ++ boundary ++ r
 
+(** The declarations and definitions a generated function contributes to the
+    file being written: its declaration always, its definition only in the
+    file that holds it. *)
+let file_views ~is_header (g : Gen_decls.generated_fun) =
+  let here file = (file = Gen_decls.Header) = is_header in
+  let with_env d = (d, g.gf_env) in
+  match g.gf_entity with
+  | Defined (e, file) ->
+    ( [with_env (Function_entity.declaration e)],
+      if here file then [with_env (Function_entity.definition e)] else [] )
+  | Value (d, file) -> ([with_env d], if here file then [with_env d] else [])
+  | Declared d -> ([with_env d], [])
+
 (** Process a wrapper module in dual-pass mode (header vs implementation).
 
     PASS 1 (is_header=true): Emit forward declarations (specs) for functions.
     PASS 2 (is_header=false): Emit full definitions (defs) for functions.
 
-    The is_header parameter controls which definitions are generated via
-    gen_dfuns_dual/gen_decl_for_pp_dual.
+    Each function is generated once, independent of the file; [is_header]
+    only picks which of its views this file writes ({!file_views}).
 
     @param is_header   When [true] produce declaration specs; when [false]
                        produce out-of-line definitions.
@@ -1956,9 +1960,10 @@ let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
     | SEdecl (Dterm (r, a, t)) when is_typeclass_instance a t ->
       ([], [], List.map snd (instance_decls r a t))
     | SEdecl (Dterm (r, a, t)) ->
-      let g = gen_decl_for_pp_dual ~is_header r a t in
+      let g = gen_decl_for_pp_dual r a t in
       List.iter (dbg_lifted ~site:"wrapper-dterm") g.gf_lifted;
-      (Stdlib.Option.to_list g.gf_spec, Stdlib.Option.to_list g.gf_def, g.gf_lifted)
+      let specs, defs = file_views ~is_header g in
+      (specs, defs, g.gf_lifted)
     | SEdecl (Dfix (rv, defs, typs)) ->
       Array.iteri
         (fun i r ->
@@ -1982,9 +1987,10 @@ let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
       if Array.length rv = 0 then
         ([], [], [])
       else
-        let results = gen_dfuns_dual ~is_header (rv, defs, typs) in
-        ( List.filter_map (fun g -> g.gf_spec) results,
-          List.filter_map (fun g -> g.gf_def) results,
+        let results = gen_dfuns_dual (rv, defs, typs) in
+        let views = List.map (file_views ~is_header) results in
+        ( List.concat_map fst views,
+          List.concat_map snd views,
           List.concat_map (fun g -> g.gf_lifted) results )
     | _ -> ([], [], [])
   in

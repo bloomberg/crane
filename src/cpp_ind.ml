@@ -720,10 +720,10 @@ let header_decls d =
         let ds, env, _ = gen_decl r a t in
         [(env, ds)]
       else
-        (* Use decl_to_spec on the result from gen_decl_for_pp to produce a
+        (* Use the declaration view of the result from gen_decl_for_pp as a
            forward declaration. This correctly handles axiom values, whose body is
            dropped. *)
-        [(env, decl_to_spec ds)]
+        [(env, Function_entity.declaration_of ds)]
     | Some ds, _ :: _ -> [(env, ds)]
     | None, _ ->
       if (!render_ctx).rc_in_template then
