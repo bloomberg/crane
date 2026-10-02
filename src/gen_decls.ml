@@ -17,10 +17,32 @@ open Translation
 
 module IntSet = Escape.IntSet
 
-(** Start a top-level body's fresh-name counters at zero, so the names it
-    allocates do not depend on what was generated before it. *)
-let reset_body_counters () =
-  tctx := { !tctx with match_param_counter = 0; cs_counter = 0 }
+(** Top-level bodies generated in each phase of the unit being extracted;
+    see {!body_generation_counts}. *)
+let body_generations : (Common.phase, int) Hashtbl.t = State.table State.Unit 3
+
+let body_generation_counts () =
+  List.map
+    (fun p -> (p, Option.default 0 (Hashtbl.find_opt body_generations p)))
+    [Discover; Emit Impl; Emit Intf]
+
+(** Begin generating a top-level body -- a function's, a constant's, a
+    method's or an instance method's: count it, and start its state afresh,
+    so that what it generates does not depend on what was generated before
+    it.  Fresh-name counters start at zero, and no parameter is tracked for
+    moves; a body with parameters sets that tracking after this. *)
+let begin_body () =
+  let phase = get_phase () in
+  Hashtbl.replace body_generations phase
+    (1 + Option.default 0 (Hashtbl.find_opt body_generations phase));
+  tctx :=
+    { !tctx with
+      match_param_counter = 0;
+      cs_counter = 0;
+      current_letin_depth = 0;
+      move_owned_vars = Escape.IntSet.empty;
+      move_n_params = 0;
+      move_dead_after = Escape.IntSet.empty }
 
 (** [with_method_env_types env params f] runs [f] with the de Bruijn type
     stack holding exactly [params] (innermost binder first, as returned by
@@ -1997,6 +2019,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
           in
           let cpp_params, ret_ty, body_stmts, tc_tparams =
             with_cpp_return_type (Some method_ret_ty) @@ fun () ->
+            begin_body ();
             if List.for_all (fun b -> b.mb_kind = `Erased) binders then
               (* No lambdas the accessor can take its parameters from -- either
                  a function reference that needs eta-expansion, or a
@@ -4515,8 +4538,7 @@ let gen_dfun n b cty ty temps =
             | Table.AssertComment comment -> Some (Sassert (Pstated comment)) )
         assertions
   in
-  tctx := { !tctx with current_letin_depth = 0 };
-  reset_body_counters ();
+  begin_body ();
   (* Phase 2: Initialize owned-variable tracking for move insertion. Parameters
      at de Bruijn indices 1..n_params; owned ones get added to the set. *)
   let n_all_params = List.length all_params in
@@ -4904,7 +4926,7 @@ let gen_decl__inner n b ty =
       | [] -> (inner, empty_env (), tvars)
       | l -> (Dtemplate (l, None, inner), empty_env (), tvars) )
     | _ ->
-      reset_body_counters ();
+      begin_body ();
       let body_expr =
         with_cpp_return_type (Some cty) (fun () -> gen_expr (empty_env ()) b)
       in
@@ -5083,7 +5105,7 @@ let gen_spec__inner n b ty =
           (Ml_type_util.expand_ml_fun_alias ml_ty)
           inner_body
       in
-      reset_body_counters ();
+      begin_body ();
       (* The constant's own type is also the expected type of its body, so an
          IIFE standing in for a let-in tail expression re-bases onto it rather
          than onto nothing. *)
@@ -5695,7 +5717,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
   let saved_dead = (!tctx).move_dead_after in
   let saved_owned = (!tctx).move_owned_vars in
   let saved_nparams = (!tctx).move_n_params in
-  tctx := { !tctx with move_dead_after = Escape.IntSet.empty };
+  begin_body ();
   (* Initialize owned-variable tracking for method parameters.
      The de Bruijn environment has parameters in reverse order:
      ids_normal_order has outermost-first, push_vars' reverses them. *)
@@ -5724,8 +5746,6 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
               else acc )
             Escape.IntSet.empty
             (List.mapi (fun i o -> (i, o)) method_owned_flags) };
-  reset_body_counters ();
-  tctx := { !tctx with current_letin_depth = 0 };
   (* The scope covers both the inductive's type vars and the extra ones, so
      that gen_expr/eta_fun convert Tvars to the named C++ types the method
      body expects (e.g. recursive calls carry type args). *)

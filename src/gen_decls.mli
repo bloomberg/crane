@@ -157,3 +157,9 @@ val hkt_templates :
 (** Check if a term is a type class instance (constructs a type class record).
 *)
 val is_typeclass_instance : ml_ast -> ml_type -> bool
+
+(** How many top-level bodies each phase of the current unit has
+    generated -- discovery, then the implementation and header emissions.
+    Every phase still translates every body; [CRANE_COUNT_GENERATION] reports
+    these counts so the repetition stays visible. *)
+val body_generation_counts : unit -> (Common.phase * int) list

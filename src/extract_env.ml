@@ -1399,6 +1399,24 @@ let demote_value_typeclasses struc =
     The default is no-op; [separate_extraction] sets it per module. *)
 let opened_filter : (ModPath.t -> bool) ref = ref (fun _ -> true)
 
+(** Under [CRANE_COUNT_GENERATION], report how many top-level bodies each
+    phase generated for the unit written to [fn]. *)
+let report_body_generations fn =
+  if Sys.getenv_opt "CRANE_COUNT_GENERATION" <> None then
+    let phase_name = function
+      | Discover -> "discovery"
+      | Emit Impl -> "implementation"
+      | Emit Intf -> "header"
+    in
+    Feedback.msg_notice
+      Pp.(
+        str "Crane: bodies generated for "
+        ++ str (Option.default "<stdout>" fn)
+        ++ str ": "
+        ++ prlist_with_sep (fun () -> str ", ")
+             (fun (p, n) -> str (phase_name p) ++ str " " ++ int n)
+             (Gen_decls.body_generation_counts ()) )
+
 (** Renders an entire ML structure to C++ header and implementation files.
     Performs dry run first for renaming, then generates and formats the output.
 *)
@@ -1464,6 +1482,7 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   let body_impl = d.pp_struct struc in
   set_phase (Emit Intf);
   let body_hstruct = d.pp_hstruct struc in
+  report_body_generations fn;
   Table.freeze_demands ();
   check_no_late_decisions census_after_discovery;
   let opened = List.filter !opened_filter (opened_libraries ()) in
