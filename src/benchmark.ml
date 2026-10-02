@@ -223,8 +223,8 @@ let artifact_stem subject_index = function
 
 (** Extract one managed source artifact and determine its callable expression.
 
-    C++ callable metadata comes from the extraction's export manifest, read
-    while Crane's renaming state was live. OCaml callable names are derived using the built-in extraction naming
+    C++ callable metadata comes from the extraction's exports, read while
+    Crane's renaming state was live. OCaml callable names are derived using the built-in extraction naming
     rules. *)
 let extract_managed_artifact
     ~opaque_access
@@ -236,29 +236,28 @@ let extract_managed_artifact
   match backend with
   | Cpp ->
     let source = Filename.concat temp_dir (stem ^ ".cpp") in
-    let manifest =
+    let exports =
       (* [source] is an internal path under a private temp directory. *)
-      Extract_env.full_extraction_manifest
+      Extract_env.full_extraction_exports
         ~validate:false
         ~opaque_access
         (Some source)
         [subject.benchmark_term]
     in
-    let callable =
-      match
+    ( match
         List.find_opt
-          (fun (r, _) -> GlobRef.UserOrd.equal r subject.benchmark_ref)
-          manifest.em_names
+          (fun (e : Extract_env.export) ->
+            GlobRef.UserOrd.equal e.ex_ref subject.benchmark_ref )
+          exports
       with
-      | Some (_, name) -> name
-      | None ->
-        benchmark_error "Crane Benchmark subject is not an extracted constant."
-    in
-    {
-      artifact_source = source;
-      artifact_callable = callable;
-      artifact_unit = manifest.em_unit;
-    }
+    | Some e ->
+      {
+        artifact_source = source;
+        artifact_callable = e.ex_name;
+        artifact_unit = e.ex_unit;
+      }
+    | None ->
+      benchmark_error "Crane Benchmark subject is not an extracted constant." )
   | OCaml ->
     let source = Filename.concat temp_dir (stem ^ ".ml") in
     Extraction_plugin.Extract_env.full_extraction

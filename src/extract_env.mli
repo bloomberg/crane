@@ -39,21 +39,18 @@ val full_extraction :
   qualid list ->
   unit
 
-(** What a completed extraction exports, read while its naming tables were
-    live: how C++ spells each requested constant from file scope, and Rocq's
-    [tt] constructor. *)
-type export_manifest = {
-  em_names : (Names.GlobRef.t * string) list;
-  em_unit : string;
-}
+(** How C++ spells an extracted constant, and Rocq's [tt], from where the
+    constant is declared -- read while the unit's naming tables were live. *)
+type export = {ex_ref : Names.GlobRef.t; ex_name : string; ex_unit : string}
 
-(** {!full_extraction}, returning what the unit exports. *)
-val full_extraction_manifest :
+(** {!full_extraction}, returning an {!export} for each requested
+    constant. *)
+val full_extraction_exports :
   ?validate:bool ->
   opaque_access:Global.indirect_accessor ->
   string option ->
   qualid list ->
-  export_manifest
+  export list
 
 (** [Separate Extraction qualids]: extract each definition to its own file.
     @param opaque_access accessor for opaque constant bodies

@@ -1704,7 +1704,7 @@ let derive_source_file filename =
 
 (** Core of recursive extraction: extracts the given references and module
     paths, optimizes, and writes to a monolithic output file. *)
-type export_manifest = {em_names : (GlobRef.t * string) list; em_unit : string}
+type export = {ex_ref : GlobRef.t; ex_name : string; ex_unit : string}
 
 (** The C++ expression for Rocq's [tt] under the active mappings and naming. *)
 let cpp_unit () =
@@ -1717,20 +1717,22 @@ let cpp_unit () =
   | _ -> CErrors.anomaly Pp.(str "Crane could not resolve Rocq's unit constructor.")
 
 (** What the unit just printed exports, read while its naming tables are live:
-    each requested constant as spelled from file scope, and [tt]. *)
-let export_manifest refs =
-  let spelled r =
+    each requested constant, and [tt], as spelled from where the constant is
+    declared. *)
+let exports refs =
+  let export r =
     let base, _ = Table.labels_of_ref r in
     push_visible base [];
-    Fun.protect ~finally:pop_visible (fun () -> (r, pp_global Term r))
+    Fun.protect ~finally:pop_visible (fun () ->
+        {ex_ref = r; ex_name = pp_global Term r; ex_unit = cpp_unit ()} )
   in
-  { em_names =
-      List.filter_map
-        (function GlobRef.ConstRef _ as r -> Some (spelled r) | _ -> None)
-        refs;
-    em_unit = cpp_unit () }
+  List.filter_map
+    (function GlobRef.ConstRef _ as r -> Some (export r) | _ -> None)
+    refs
 
-let full_extr_manifest opaque_access f (refs, mps) =
+(** A full extraction, returning [read refs], which runs while the naming
+    tables the unit was printed with are still live. *)
+let full_extr_reading opaque_access f (refs, mps) read =
   init false false;
   Fun.protect
     ~finally:reset
@@ -1781,9 +1783,10 @@ let full_extr_manifest opaque_access f (refs, mps) =
           Doc_comments.set_table (Doc_comments.parse_file source)
       | _ -> () );
       print_structure_to_file ~unit_includes filenames false struc;
-      export_manifest refs )
+      read refs )
 
-let full_extr opaque_access f refs = ignore (full_extr_manifest opaque_access f refs)
+let full_extr opaque_access f refs =
+  full_extr_reading opaque_access f refs (fun _ -> ())
 
 (** Main entry point for full library extraction. Extracts the given references
     and module paths to a single output file.
@@ -1796,9 +1799,9 @@ let full_extraction ?(validate = true) ~opaque_access f lr =
   if validate then Option.iter Table.claim_output_target f;
   full_extr opaque_access f (locate_ref lr)
 
-let full_extraction_manifest ?(validate = true) ~opaque_access f lr =
+let full_extraction_exports ?(validate = true) ~opaque_access f lr =
   if validate then Option.iter Table.claim_output_target f;
-  full_extr_manifest opaque_access f (locate_ref lr)
+  full_extr_reading opaque_access f (locate_ref lr) exports
 
 (** {2 Separate extraction is similar to recursive extraction, with the output
     decomposed in many files, one per Rocq .v file} *)
