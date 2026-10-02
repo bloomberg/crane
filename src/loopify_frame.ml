@@ -107,7 +107,7 @@ let rec collect_type_env (stmts : cpp_stmt list) : (Id.t * cpp_type) list =
           cl_ret = ret_ty_opt;
           _ }) ->
         let param_types =
-          List.map (fun (t, _) -> strip_ref_and_const_type t) (to_reversed params)
+          List.rev_map (fun (t, _) -> strip_ref_and_const_type t) (to_reversed params)
         in
         let ret_ty = match ret_ty_opt with
           | Some t when t <> Tvoid -> t
@@ -288,7 +288,7 @@ let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
   (* A record field read says what the field is. *)
   | CPPget' (_, _, Some ty) -> Some (strip_ref_and_const_type ty)
   | CPPlambda {cl_params = params; cl_ret = ret_ty_opt; cl_body = body; _} ->
-    let param_types = List.map fst (to_reversed params) in
+    let param_types = List.rev_map fst (to_reversed params) in
     let ret_ty =
       match ret_ty_opt with
       | Some ty when ty <> Tvoid -> Some ty
@@ -1449,6 +1449,11 @@ type enter_rewrite_ctx = {
   er_invariant_params : Id.Set.t;
       (** Invariant parameter ids — referenced directly from function scope,
           not stored in continuation frames *)
+  er_rematerialized : (Id.t * cpp_stmt) list;
+      (** Locals in scope bound to a value that mentions no local and calls
+          nothing -- an alias of a static member, say.  A continuation binds
+          them again rather than saving them in its frame, where a type the
+          binding left to [auto] has no spelling. *)
 }
 
 (** The entry point a call site targets. *)
@@ -1814,6 +1819,37 @@ let emit_double_call_frames ctx dd ~extra_saved ~extra_types ~make_final_handler
       (CPPstruct_id (Id.of_string call1_name, [], call1_saved_exprs_conv));
     make_stack_push (make_enter_at ctx dd.dd_first_entry dd.dd_first_args);
   ]
+
+(** [with_rematerialized ctx stmt] -- [ctx] once [stmt] has run: a binding
+    whose value mentions only template parameters, invariant parameters and
+    locals already bound again, and whose evaluation calls nothing, joins
+    {!enter_rewrite_ctx.er_rematerialized}.  A call inside a lambda's body
+    runs when the lambda does, not when it is made, so a closure qualifies:
+    rebuilding it in a continuation is cheaper than storing it, and safe where
+    storing it would keep references to locals of a scope already left. *)
+let with_rematerialized ctx stmt =
+  let rebindable v =
+    List.exists (fun (_, tp) -> Id.equal tp v) ctx.er_tparams
+    || Id.Set.mem v ctx.er_invariant_params
+    || List.mem_assoc v ctx.er_rematerialized
+  in
+  let rec calls_nothing e =
+    match e with
+    | CPPfun_call _ -> false
+    | CPPlambda _ -> true
+    | _ ->
+      let ok = ref true in
+      iter_expr_children
+        ~on_expr:(fun c -> if not (calls_nothing c) then ok := false)
+        ~on_stmts:(fun _ -> ok := false)
+        e;
+      !ok
+  in
+  match stmt with
+  | Sasgn (id, Declare _, e)
+    when List.for_all rebindable (free_vars_expr e) && calls_nothing e ->
+    {ctx with er_rematerialized = ctx.er_rematerialized @ [(id, stmt)]}
+  | _ -> ctx
 
 (** Rewrite a single return statement for the [_Enter] handler in frame-based
     non-tail recursion transformation.
@@ -2311,8 +2347,36 @@ and rewrite_enter_stmts ctx stmts =
        [saved/types] are the frame's saved values (decomposed + continuation).
        [enter] is the frame the recursive call re-enters through. *)
     let make_cont_handler ~offset ~make_assign_expr ~saved ~types ~enter =
+      (* The bindings the rest reads, with the ones they read in turn, in
+         the order they were made. *)
+      let remat =
+        let needed =
+          List.fold_right
+            (fun (cid, st) needed ->
+              if List.exists (Id.equal cid) needed then
+                needed @ (match st with Sasgn (_, _, e) -> free_vars_expr e | _ -> [])
+              else needed )
+            ctx.er_rematerialized rest_free
+        in
+        List.filter (fun (cid, _) -> List.exists (Id.equal cid) needed) ctx.er_rematerialized
+      in
+      (* A name heading a recursive call is the machine's entry, not a value
+         the continuation needs: the call becomes a frame push. *)
+      let entry_heads =
+        let heads = ref [] in
+        let rec fe e =
+          ( match e with
+          | CPPfun_call (_, CPPvar h, _) when check e <> None -> heads := h :: !heads
+          | _ -> () );
+          iter_expr_children ~on_expr:fe ~on_stmts:(List.iter fs) e
+        and fs st = iter_stmt_children ~on_expr:fe ~on_stmts:(List.iter fs) st in
+        List.iter fs rest;
+        !heads
+      in
       let cont_vars = filter_cont_vars ~exclude_id:id rest_free
-        |> List.filter (fun cid -> not (Id.Set.mem cid ctx.er_invariant_params)) in
+        |> List.filter (fun cid -> not (Id.Set.mem cid ctx.er_invariant_params))
+        |> List.filter (fun cid -> not (List.mem_assoc cid remat))
+        |> List.filter (fun cid -> not (List.exists (Id.equal cid) entry_heads)) in
       let cont_saved = List.map (fun cid -> CPPvar cid) cont_vars in
       let cont_types = infer_saved_types tparams env cont_saved in
       let call_name = make_call_frame_name "_Cont" call_counter seen ?branch_ctx () in
@@ -2322,7 +2386,7 @@ and rewrite_enter_stmts ctx stmts =
       let bindings = make_cont_bindings ~offset ~field_names:all_field_names cont_vars cont_types in
       let rest_env = make_cont_env cont_vars cont_types env in
       let rest_processed =
-        rewrite_enter_stmts { ctx with er_env = rest_env } rest
+        List.map snd remat @ rewrite_enter_stmts { ctx with er_env = rest_env } rest
       in
       (* When tgt is Existing (a bare assignment), the variable was declared
          in the _Enter handler scope and does not exist in the _Cont handler
@@ -2510,7 +2574,7 @@ and rewrite_enter_stmts ctx stmts =
           cl_ret = ret_ty_opt;
           _ }) ->
         let param_types =
-          List.map (fun (t, _) -> strip_ref_and_const_type t) (to_reversed params)
+          List.rev_map (fun (t, _) -> strip_ref_and_const_type t) (to_reversed params)
         in
         let ret_ty = match ret_ty_opt with
           | Some t when t <> Tvoid -> t
@@ -2522,7 +2586,8 @@ and rewrite_enter_stmts ctx stmts =
       | _ -> ctx.er_env
     in
     rewrite_enter_lambda_return ctx stmt
-    @ rewrite_enter_stmts { ctx with er_env = updated_env } rest
+    @ rewrite_enter_stmts
+        { (with_rematerialized ctx stmt) with er_env = updated_env } rest
 
 (** Rewrite a single non-tail recursive statement for the Enter handler.
 
@@ -3555,9 +3620,18 @@ let transform_nontail ?(fn_name : string option) ?adopted ?(outer_env = [])
                er_call_counter = call_counter; er_frames_ref = frames_ref;
                er_branch_ctx = None;
                er_seen_frame_names = Hashtbl.create 16;
-               er_invariant_params = invariant_params }
+               er_invariant_params = invariant_params;
+               er_rematerialized = [] }
   in
-  let rewritten_body = List.map (rewrite_enter_stmt ctx) body in
+  (* Each top-level statement is rewritten on its own, but a binding it makes
+     is still one a later statement's continuation may rebuild. *)
+  let rewritten_body =
+    List.rev
+      (fst
+         (List.fold_left
+            (fun (acc, ctx) st -> (rewrite_enter_stmt ctx st :: acc, with_rematerialized ctx st))
+            ([], ctx) body ))
+  in
   (* The adopted entry's handler is that body, rewritten under a context
      describing its parameters rather than this function's.  Both handlers
      share the frame accumulator and the call counter, so the resume frames
