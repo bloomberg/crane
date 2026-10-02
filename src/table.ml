@@ -752,46 +752,6 @@ let rec type_mentions_kn ?packet_idx ~descend_arr kn ty =
   | Miniml.Tmeta { contents = Some t } -> mentions t
   | _ -> false
 
-(** Check if an inductive packet qualifies as flat: single constructor, no kept
-    type parameters, not coinductive, not mutual, no self-referencing fields.
-    Mirrors the [is_flat] check in [gen_ind_header_v2]. *)
-let is_flat_inductive_packet kn ind i =
-  try
-    let p = ind.ind_packets.(i) in
-    let n_ctors = Array.length p.ip_types in
-    if n_ctors <> 1 then false
-    else
-      let is_mutual = Array.length ind.ind_packets > 1 in
-      let (_, num_param_vars) = ind_param_vars ind p in
-      let is_coinductive_ind =
-        match Mindmap_env.find_opt kn !inductive_kinds with
-        | Some Coinductive -> true
-        | _ -> false
-      in
-      let has_self_ref =
-        Array.exists
-          (List.exists (type_mentions_kn ~packet_idx:i ~descend_arr:false kn))
-          p.ip_types
-      in
-      num_param_vars = 0 && not is_mutual && not is_coinductive_ind && not has_self_ref
-  with _ -> false
-
-(** Check if [r] is a flat inductive.  First checks the flat-inductives
-    registry (populated during Pre phase / global pre-pass).  If not found
-    there — which can happen for functor-parameterized inductives whose
-    module-path kn differs across instantiation sites — falls back to
-    looking up the ML inductive in the inductives cache and running the same
-    structural check used in [gen_ind_header_v2]. *)
-let is_flat_inductive r =
-  if is_flat_inductive_registered r then true
-  else
-    match r with
-    | GlobRef.IndRef (kn, i) ->
-      ( match Mindmap_env.find_opt kn !inductives with
-      | Some (_, ind) -> is_flat_inductive_packet kn ind i
-      | None -> false )
-    | _ -> false
-
 (** {2 Enum inductives table} *)
 
 let (_, add_enum_inductive, is_enum_inductive_registered) =
@@ -2914,6 +2874,49 @@ let same_mutual_block r1 r2 =
   | _ -> false
 
 let is_custom r = Refmap'.mem r !customs
+
+(** Whether an inductive packet is generated as a flat struct -- its one
+    constructor's fields directly, with no variant: an ordinary inductive
+    (records and classes are generated otherwise), not custom, not
+    coinductive, not in a mutual block, with exactly one constructor, not an
+    enum (an unparameterised nullary constructor), and no field mentioning the
+    inductive itself.  The generator writes the struct by this. *)
+let is_flat_inductive_packet kn ind i =
+  try
+    let p = ind.ind_packets.(i) in
+    let ordinary = match ind.ind_kind with Standard -> true | _ -> false in
+    let (_, num_param_vars) = ind_param_vars ind p in
+    let is_enum =
+      Array.for_all (fun tys -> tys = []) p.ip_types && num_param_vars = 0
+    in
+    let has_self_ref =
+      Array.exists
+        (List.exists (type_mentions_kn ~packet_idx:i ~descend_arr:false kn))
+        p.ip_types
+    in
+    ordinary
+    && (not (is_custom (GlobRef.IndRef (kn, i))))
+    && Array.length ind.ind_packets = 1
+    && Array.length p.ip_types = 1
+    && (not is_enum)
+    && not has_self_ref
+  with _ -> false
+
+(** Check if [r] is a flat inductive.  First checks the flat-inductives
+    registry (populated during Pre phase / global pre-pass).  If not found
+    there — which can happen for functor-parameterized inductives whose
+    module-path kn differs across instantiation sites — falls back to
+    looking up the ML inductive in the inductives cache and running the same
+    structural check used in [gen_ind_header_v2]. *)
+let is_flat_inductive r =
+  if is_flat_inductive_registered r then true
+  else
+    match r with
+    | GlobRef.IndRef (kn, i) ->
+      ( match Mindmap_env.find_opt kn !inductives with
+      | Some (_, ind) -> is_flat_inductive_packet kn ind i
+      | None -> false )
+    | _ -> false
 
 let is_inline_custom r = is_custom r && to_inline r
 

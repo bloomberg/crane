@@ -965,25 +965,10 @@ let gen_ind_header_v2
          are value types. *)
       let self_ty = Tglob (name, ty_vars, []) in
       let ind_type_name_str = Common.pp_global_name Type name in
-      let n_ctors = Array.length cnames in
 
-      (* Flat single-constructor check: no self-references in any field type,
-         including transitive ones (e.g. custom_list<rose<A>>). *)
-      let has_simple_self_ref_for_flat =
-        Array.exists (List.exists (fun ty ->
-          let rec check = function
-            | Miniml.Tglob (r, args, _) ->
-              globref_equal r name || List.exists check args
-            | Miniml.Tmeta {contents = Some t} -> check t
-            | _ -> false
-          in check ty)) tys
-      in
-      let is_flat =
-        n_ctors = 1 && not is_coinductive && mutual_partners = []
-        && not has_simple_self_ref_for_flat
-      in
-      if is_flat then begin
-        Table.add_flat_inductive name;
+      (* Preparation registered the flat inductives
+         ({!Table.is_flat_inductive_packet}). *)
+      if Table.is_flat_inductive name then begin
         let tys_list = tys.(0) in
         let c = cnames.(0) in
         let cname_str = ctor_struct_name_of_ref ~fallback_idx:0 c in

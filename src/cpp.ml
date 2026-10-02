@@ -2134,6 +2134,21 @@ let prepare_structure s =
           ~ret_is_erased:Translation.return_type_is_erased s );
   let analysis = Structure_analysis.analyze (get_method_registry ()) s in
   install_analysis analysis;
+  (* Whether an inductive is a flat struct is a property of its declaration;
+     every reader, before or after its struct is generated, gets one answer. *)
+  Modutil.struct_iter
+    (function
+      | Dind (kn, ind) ->
+        Array.iteri
+          (fun i _ ->
+            let r = GlobRef.IndRef (kn, i) in
+            if Table.is_flat_inductive_packet kn ind i then
+              Table.add_flat_inductive r )
+          ind.ind_packets
+      | _ -> () )
+    (fun _ -> ())
+    (fun _ -> ())
+    s;
   List.iter (fun _ -> pop_visible ()) initial_mps;
   structure_analysis := Some analysis
 
