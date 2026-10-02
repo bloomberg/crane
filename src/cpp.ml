@@ -1980,9 +1980,10 @@ let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
     | SEdecl (Dterm (r, a, t)) when is_typeclass_instance a t ->
       ([], List.map snd (instance_decls r a t))
     | SEdecl (Dterm (r, a, t)) ->
-      let g = gen_decl_for_pp_dual r a t in
-      List.iter (dbg_lifted ~site:"wrapper-dterm") g.gf_lifted;
-      ([g], g.gf_lifted)
+      let gs = generated_once se (fun () -> [gen_decl_for_pp_dual r a t]) in
+      let lifted = List.concat_map (fun g -> g.gf_lifted) gs in
+      List.iter (dbg_lifted ~site:"wrapper-dterm") lifted;
+      (gs, lifted)
     | SEdecl (Dfix (rv, defs, typs)) ->
       Array.iteri
         (fun i r ->
@@ -2006,7 +2007,9 @@ let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
       if Array.length rv = 0 then
         ([], [])
       else
-        let results = gen_dfuns_dual (rv, defs, typs) in
+        let results =
+          generated_once se (fun () -> gen_dfuns_dual (rv, defs, typs))
+        in
         (results, List.concat_map (fun g -> g.gf_lifted) results)
     | _ -> ([], [])
   in

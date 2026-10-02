@@ -389,6 +389,14 @@ val take_lifted_decls : unit -> cpp_decl list
     in place. *)
 val collecting_lifted : (unit -> 'a) -> 'a * cpp_decl list
 
+(** [observing_lifted f] runs [f] and returns, with its result, the
+    declarations lifted while it ran, which stay queued. *)
+val observing_lifted : (unit -> 'a) -> 'a * cpp_decl list
+
+(** [relift ds] queues [ds] as generating them would have: each is kept
+    unless this file has already lifted a declaration of the same name. *)
+val relift : cpp_decl list -> unit
+
 (** Reset the seen-lifted-refs deduplication set. Call at the start of each
     new output file so that identical helpers in different files are NOT
     suppressed. *)

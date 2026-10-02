@@ -437,6 +437,17 @@ let collecting_lifted f =
       let v = f () in
       (v, List.rev (!tctx).output.pending_lifted_decls) )
 
+(** [observing_lifted f] runs [f] and returns, with its result, the
+    declarations lifted while it ran, which stay queued. *)
+let observing_lifted f =
+  let before = List.length (!tctx).output.pending_lifted_decls in
+  let v = f () in
+  let after = (!tctx).output.pending_lifted_decls in
+  (v, List.rev (List.filteri (fun i _ -> i < List.length after - before) after))
+
+(** [relift ds] queues [ds] as generating them would have. *)
+let relift ds = List.iter add_lifted_decl ds
+
 (** Reset the seen-lifted-refs deduplication set. Call at the start of each
     new output file so identical helpers in different files are not suppressed. *)
 let clear_seen_lifted_refs () =

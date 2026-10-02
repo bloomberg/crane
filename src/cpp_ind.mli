@@ -50,6 +50,18 @@ val clear_deferred_member_defs : unit -> unit
 val instance_decls :
   Names.GlobRef.t -> Miniml.ml_ast -> Miniml.ml_type -> generated
 
+(** [generated_once ?on_reuse node gen] is [gen ()], except that the header
+    pass reuses what the implementation pass generated from the physical
+    MiniML node [node] in the same render context and module -- emission
+    decides nothing after discovery, so the two agree -- handing it to
+    [on_reuse] to replay any effect generating it had.  [CRANE_CHECK_IR]
+    regenerates and checks. *)
+val generated_once :
+  ?on_reuse:(Gen_decls.generated_fun list -> unit) ->
+  'node ->
+  (unit -> Gen_decls.generated_fun list) ->
+  Gen_decls.generated_fun list
+
 (** [finalized funs] pairs each generated function with its entity, every
     definition among them finished as one group
     ({!Function_entity.finalize_group}); [None] for a declaration. *)

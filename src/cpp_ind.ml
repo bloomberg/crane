@@ -587,9 +587,10 @@ type generation =
   | Functions of {
       funs : Gen_decls.generated_fun list;
       lifted_inline : bool;
-          (** The header writes the helpers lifted out of each function in
-              front of it.  Otherwise they stay queued, for the element's own
-              placement. *)
+          (** Whether the header writes the helpers lifted out of each
+              function in front of it.  A constant's or function's stay
+              queued instead, for the element's own placement; a fixpoint
+              inside a template struct writes none. *)
     }
   | Header_only of (unit -> generated)
       (** Written in the header alone, and generated only for it: generating
@@ -609,6 +610,69 @@ let functions ~lifted_inline (funs : Gen_decls.generated_fun list) =
   in
   Functions {funs; lifted_inline}
 
+(** {2 Generating once}
+
+    After discovery, emission decides nothing -- {!Extract_env} checks that no
+    table grows -- so functions the implementation pass generated are what the
+    header pass would generate at the same declaration in the same context.
+    The header pass takes them from here instead of translating the bodies
+    again.  Under [CRANE_CHECK_IR] it translates them anyway and checks the
+    two agree. *)
+
+module Node_table = Hashtbl.Make (struct
+  type t = Obj.t
+
+  let equal = ( == )
+  let hash = Hashtbl.hash
+end)
+
+(** What the implementation pass generated, by the MiniML node it generated
+    it from, with the context it generated it in. *)
+let generated_in_impl :
+    (render_ctx * ModPath.t * Gen_decls.generated_fun list) list Node_table.t =
+  Node_table.create 64
+
+let () = State.on_reset State.Unit (fun () -> Node_table.reset generated_in_impl)
+
+(* [compare] rather than [=]: a NaN literal is equal to itself. *)
+let same_generation (a : Gen_decls.generated_fun) (b : Gen_decls.generated_fun) =
+  compare a.gf_entity b.gf_entity = 0
+  && List.equal Id.equal (fst a.gf_env) (fst b.gf_env)
+  && Id.Set.equal (snd a.gf_env) (snd b.gf_env)
+
+(** [generated_once ?on_reuse node gen] is [gen ()], except that the header
+    pass reuses what the implementation pass generated from the physical
+    MiniML node [node] in the same render context and module, handing it to
+    [on_reuse] to replay any effect generating it had. *)
+let generated_once ?(on_reuse = ignore) node gen =
+  let key = Obj.repr node in
+  let rc = !render_ctx and mp = top_visible_mp () in
+  let earlier = Option.default [] (Node_table.find_opt generated_in_impl key) in
+  match get_phase () with
+  | Emit Impl ->
+    let funs = gen () in
+    Node_table.replace generated_in_impl key ((rc, mp, funs) :: earlier);
+    funs
+  | Emit Intf -> (
+    match
+      List.find_map
+        (fun (rc', mp', funs) ->
+          if rc' = rc && ModPath.equal mp' mp then Some funs else None )
+        earlier
+    with
+    | Some funs ->
+      on_reuse funs;
+      if Sys.getenv_opt "CRANE_CHECK_IR" <> None then begin
+        let again, _ = Translation.collecting_lifted gen in
+        if not (List.equal same_generation funs again) then
+          CErrors.anomaly
+            Pp.(str "Crane: the header pass generated differently from the \
+                     implementation pass.")
+      end;
+      funs
+    | None -> gen () )
+  | Discover -> gen ()
+
 (** [generate d] is what the MiniML declaration [d] generates, for whichever
     file is being written: functions translated once, with their file
     recorded, or declarations only the header writes.  Inline customs,
@@ -627,7 +691,7 @@ let generate d =
     else
       functions
         ~lifted_inline:(not (!render_ctx).rc_in_template)
-        (gen_dfuns_dual (rv, defs, typs))
+        (generated_once d (fun () -> gen_dfuns_dual (rv, defs, typs)))
   in
   match d with
   | (Dtype (r, _, _) | Dterm (r, _, _)) when is_any_inline_custom r -> Nothing
@@ -651,20 +715,27 @@ let generate d =
   | Dterm (r, a, t) when is_typeclass_instance a t ->
     Header_only (fun () -> instance_decls r a t)
   | Dterm (r, a, t) ->
-    (* The helpers lifted out of the body stay queued. *)
-    let entity, env =
-      match gen_decl_for_pp r a t with
-      | Some ds, env, tvars -> (Gen_decls.defined ds tvars, env)
-      | None, _, _ when (!render_ctx).rc_in_template ->
-        let ds, env, _ = gen_decl r a t in
-        (Defined (ds, Header), env)
-      | None, _, _ ->
-        (* Not a function: a declaration, and no definition anywhere. *)
-        let ds, env = gen_spec r a t in
-        (Declared ds, env)
+    (* The helpers lifted out of the body stay queued, for the element's own
+       placement; reusing the generation queues them again. *)
+    let gen () =
+      let (gf_entity, gf_env), gf_lifted =
+        Translation.observing_lifted @@ fun () ->
+        match gen_decl_for_pp r a t with
+        | Some ds, env, tvars -> (Gen_decls.defined ds tvars, env)
+        | None, _, _ when (!render_ctx).rc_in_template ->
+          let ds, env, _ = gen_decl r a t in
+          (Defined (ds, Header), env)
+        | None, _, _ ->
+          (* Not a function: a declaration, and no definition anywhere. *)
+          let ds, env = gen_spec r a t in
+          (Declared ds, env)
+      in
+      [{Gen_decls.gf_entity; gf_env; gf_lifted}]
     in
-    functions ~lifted_inline:true
-      [{gf_entity = entity; gf_env = env; gf_lifted = []}]
+    let reuse funs =
+      Translation.relift (List.concat_map (fun g -> g.Gen_decls.gf_lifted) funs)
+    in
+    functions ~lifted_inline:false (generated_once ~on_reuse:reuse d gen)
   | Dfix (rv, defs, typs) -> group (rv, defs, typs)
 
 (** [finalized funs] pairs each generated function with its entity, every
