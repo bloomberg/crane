@@ -139,8 +139,10 @@ val empty_slot : slot
     the term applies it to.  This is the spelling a call through the instance
     already uses, so a type that has to agree with such a call takes it from
     here rather than rebuilding it.  [expected], the type the call through
-    the instance returns, supplies an instance argument extraction erased. *)
-val ml_arg_to_template_type : ?expected:cpp_type -> env -> ml_ast -> cpp_type
+    the instance returns, supplies an instance argument extraction erased.
+    [None] for skipped infrastructure, which has no struct. *)
+val ml_arg_to_template_type :
+  ?expected:cpp_type -> env -> ml_ast -> cpp_type option
 
 (** Whether a C++ type names a class field the current scope does not
     resolve, so that it would print through the field's file-scope erased

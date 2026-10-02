@@ -10558,7 +10558,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             | [], _ -> callee
             | _, CPPscope (b, id, tys) ->
               CPPscope
-                (b, id, tys @ List.map (ml_arg_to_template_type env') tc_args)
+                (b, id, tys @ List.filter_map (ml_arg_to_template_type env') tc_args)
             | _ -> callee
           in
           (* A class method is a static member function of the instance
@@ -11268,7 +11268,11 @@ and refine_by_instance_family (carrier, _, m) t =
   | _ -> t
 
 and ml_arg_to_template_type ?expected env ml_arg =
-  (* The type arguments an instance's generated struct has parameters for.
+  (* [None] for skipped infrastructure (ReSum instances, say): it is passed
+     as a dictionary, so it is told apart from the regular arguments, but it
+     has no struct and so no type to write.
+
+     The type arguments an instance's generated struct has parameters for.
 
      Its declaration mints one per parameter erasure left standing, so a type
      argument erasure removed has no position to be written at and an argument
@@ -11307,28 +11311,23 @@ and ml_arg_to_template_type ?expected env ml_arg =
   in
   match strip_magic ml_arg with
   | MLglob (r, ts) ->
-    if ref_returns_skipped r then
-      (* Skipped infrastructure (e.g. ReSum_id) — erase to void *)
-      Tvoid
+    if ref_returns_skipped r then None
     else
       (* Use the instance struct as a type - convert to Tglob *)
-      Tglob
-        ( r,
-          ( match instance_type_args_from_expected r ts with
-          | Some args -> args
-          | None -> instance_type_args r ts ),
-          [] )
+      Some
+        (Tglob
+           ( r,
+             ( match instance_type_args_from_expected r ts with
+             | Some args -> args
+             | None -> instance_type_args r ts ),
+             [] ))
   | MLrel i ->
     (* The instance is a lambda parameter - look up its name in the env and
        create a Tvar reference to the template parameter *)
     let db, _ = env in
     let name = List.nth db (pred i) in
-    named_tvar name
-  | MLapp (MLglob (r, _), _) when ref_returns_skipped r ->
-    (* Skipped infrastructure (e.g. ReSum_inl applied to args) — the inner
-       args are complex and cannot be converted to C++ template types.
-       Erase to void since these type args are never referenced. *)
-    Tvoid
+    Some (named_tvar name)
+  | MLapp (MLglob (r, _), _) when ref_returns_skipped r -> None
   | MLapp (MLglob (r, ts), inner_args) ->
     (* Parameterized instance application, e.g. numList A H. Convert to
        Tglob(r, template_args, []) where template_args are built from the
@@ -11338,45 +11337,46 @@ and ml_arg_to_template_type ?expected env ml_arg =
         (fun arg ->
           match arg with
           | MLdummy _ -> None (* Erased type param — skip *)
-          | _ -> Some (ml_arg_to_template_type env arg) )
+          | _ -> ml_arg_to_template_type env arg )
         inner_args
     in
     (* Instance parameters come first in the generated struct's template
        list ([template <typename _tcI0, typename T1>]), so the instance
        arguments must precede the type arguments here too. *)
-    Tglob (r, template_args @ instance_type_args r ts, [])
+    Some (Tglob (r, template_args @ instance_type_args r ts, []))
   | MLcase (_, scrutinee, branches)
     when Array.length branches = 1 ->
     (* Record field projection — e.g., [base_category(PS)].
        Resolve to [Tqualified(scrutinee_type, field_name)]. *)
     let (binds, _, _, br_body) = branches.(0) in
-    let base_ty = ml_arg_to_template_type env scrutinee in
-    ( match br_body with
-    | MLrel j when j >= 1 && j <= List.length binds ->
-      let idx = List.length binds - j in
-      let (field_id, _) = List.nth binds idx in
-      ( match field_id with
-      | Id name | Tmp name -> Tqualified (base_ty, name)
-      | Dummy -> Tany )
-    | _ -> Tany )
+    Option.map
+      (fun base_ty ->
+        match br_body with
+        | MLrel j when j >= 1 && j <= List.length binds -> (
+          let idx = List.length binds - j in
+          let field_id, _ = List.nth binds idx in
+          match field_id with
+          | Id name | Tmp name -> Tqualified (base_ty, name)
+          | Dummy -> Tany )
+        | _ -> Tany )
+      (ml_arg_to_template_type env scrutinee)
   | MLapp (f, args) ->
     (* Parameterized instance application with non-glob head.
        Resolve head, then add arg types. *)
-    let head_ty = ml_arg_to_template_type env f in
     let arg_tys =
       List.filter_map
         (fun arg ->
           match arg with
           | MLdummy _ -> None
-          | _ -> ( try Some (ml_arg_to_template_type env arg)
-                    with _ -> None ) )
+          | _ -> ( try ml_arg_to_template_type env arg with _ -> None ) )
         args
     in
-    ( match head_ty with
-    | Tglob (r, existing, es) ->
-      Tglob (r, existing @ arg_tys, es)
-    | _ -> head_ty )
-  | MLdummy _ -> Tany (* Should not happen at top level, but be safe *)
+    Option.map
+      (function
+        | Tglob (r, existing, es) -> Tglob (r, existing @ arg_tys, es)
+        | head_ty -> head_ty )
+      (ml_arg_to_template_type env f)
+  | MLdummy _ -> Some Tany (* Should not happen at top level, but be safe *)
   | _ ->
     CErrors.anomaly
       (Pp.str
@@ -12951,14 +12951,10 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
        resolution.  No additional template type arguments are needed at
        call sites. *)
     let promoted_type_args = [] in
-    (* Filter out Tvoid entries from typeclass_type_args — these arise from
-       skipped infrastructure (e.g. ReSum instances) that we classified as
-       typeclass args just to remove them from regular_ml_args. They should
-       not become actual template type parameters. *)
-    let typeclass_type_args =
-      List.filter (fun t -> t <> Tvoid) typeclass_type_args
-    in
-    typeclass_type_args
+    (* Skipped infrastructure (ReSum instances, say) was classified as a
+       dictionary only to take it out of the regular arguments; it is not a
+       template argument. *)
+    List.filter_map Fun.id typeclass_type_args
     (* Truncated last: {!hkt_spelled_type_args} rebuilds the correspondence
        between arguments and positions by length, so a list shortened before
        it reaches it is left unrespelled -- the carrier comes out as
@@ -13001,7 +12997,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
        instance still leaves the callee's leading phantom parameters with
        nothing to deduce them from. *)
     let all_type_args =
-      let tc = List.filter (fun t -> t <> Tvoid) typeclass_type_args in
+      let tc = List.filter_map Fun.id typeclass_type_args in
       if tc <> [] && all_type_args = tc then
         match phantom_prefix_args id with
         | [] -> all_type_args
@@ -13020,7 +13016,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
        place per dictionary -- a family's position given the instance. *)
     let written_tvar_args =
       let n_tc =
-        List.length (List.filter (fun t -> t <> Tvoid) typeclass_type_args)
+        List.length (List.filter_map Fun.id typeclass_type_args)
       in
       (* ... except those standing at a carrier's position: a class whose
          parameter is higher-kinded quantifies it as one of the callee's own
@@ -13848,7 +13844,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
       match (tc_args, gen_expr env f) with
       | [], e -> e
       | _, CPPscope (b, id, tys) ->
-        CPPscope (b, id, tys @ List.map (ml_arg_to_template_type env) tc_args)
+        CPPscope (b, id, tys @ List.filter_map (ml_arg_to_template_type env) tc_args)
       | _, e -> e
     in
     (* The callee's own function type, with an alias standing for one expanded
