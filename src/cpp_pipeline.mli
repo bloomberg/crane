@@ -18,7 +18,9 @@ val should_loopify : Minicpp.cpp_decl -> bool
 
 (** [finish decl] runs every pass between translation and printing --
     loopifying where {!should_loopify} says so -- and hands back the printable
-    declaration. *)
+    declaration.  Under [CRANE_TRACE_PASSES] ([1], or a substring of the
+    declaration's name) it reports which passes changed [decl] and its node
+    count before and after each. *)
 val finish : Minicpp.cpp_decl -> Cpp_erasure.settled
 
 (** [finish_group decls] finishes declarations that may call one another:

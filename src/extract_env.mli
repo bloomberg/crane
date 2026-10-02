@@ -17,7 +17,42 @@
     {v Rocq source  -->  MiniML  -->  MiniCpp  -->  C++ files v}
 
     Also handles dependency resolution, file I/O, and extraction-test
-    coordination. *)
+    coordination.
+
+    {2 The phases of one unit}
+
+    [print_structure_to_file] runs, in this order:
+
+    + {b Extraction} ([mono_environment], [optimize_struct]): Rocq terms to
+      the MiniML structure, simplified.
+    + {b Source analysis}, mutating tables and packets in place:
+      [mark_used_customs] (and the non-atomic reference-count check that
+      depends on it), [mark_higher_order_projections],
+      [align_functor_instance_kinds], [demote_value_typeclasses].
+    + {b Discovery} ([Common.Discover]): {!Cpp.prepare_structure} runs
+      {!Structure_analysis.analyze} and installs its layout facts, then both
+      files are rendered and the text discarded.  What survives is what the
+      renders recorded: names, method registrations, wrapper and alias
+      tables.  Every body is translated here.
+    + {b Emission} ([Common.Emit Impl], then [Emit Intf]): both files are
+      rendered for real.  Emission is meant to decide nothing; the table
+      census taken after discovery is compared after emission
+      ([check_no_late_decisions]).  The header pass reuses the functions the
+      implementation pass generated ({!Cpp_ind.generated_once}).
+    + {b Demands} are frozen ([Table.freeze_demands]) and each file is written
+      with the preamble its body demanded, then formatted.
+
+    Within a render, each MiniML declaration is generated
+    ({!Cpp_ind.generate}, {!Gen_decls}, which translate bodies through
+    {!Translation}), finished ({!Cpp_pipeline.finish}: loopify, depth
+    flattening, last-use moves, borrow projections, constraint settling,
+    erasure, free type variables), and printed ({!Cpp_print.pp_cpp_decl},
+    which accepts only a {!Cpp_erasure.settled} declaration).
+
+    Mutable state is registered with {!State} under one of two scopes:
+    [Extraction] (one command) and [Unit] (one generated file).
+    [CRANE_COUNT_GENERATION] reports how many bodies each phase translated;
+    [CRANE_TRACE_PASSES] reports what each finishing pass changed. *)
 
 open Names
 open Libnames
