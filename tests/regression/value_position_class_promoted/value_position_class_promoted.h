@@ -19,13 +19,13 @@ template <typename I> struct VLike;
 using iptr = crane::obj;
 template <typename
 I>concept Ptr = requires {
-  typename I::iptr;
-  { I::VLike_iptr() } -> std::convertible_to<VLike<typename I::iptr>>;
-} && (requires {
-  { I::one_iptr() } -> std::convertible_to<typename I::iptr>;
-} || requires {
-  { I::one_iptr } -> std::convertible_to<typename I::iptr>;
-});
+    typename I::iptr;
+    { I::VLike_iptr() } -> std::convertible_to<VLike<typename I::iptr>>;
+  } && (requires {
+    { I::one_iptr() } -> std::convertible_to<typename I::iptr>;
+  } || requires {
+    { I::one_iptr } -> std::convertible_to<typename I::iptr>;
+  });
 
 struct Nat {
   // TYPES

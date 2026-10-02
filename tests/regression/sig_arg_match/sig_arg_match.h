@@ -240,6 +240,7 @@ struct SigArgMatch {
   static Nat addp(const Sig<Nat> &p, const Sig<Nat> &q);
   static inline const List<pos> ps =
       List<pos>::cons(one, List<pos>::cons(one, List<pos>::nil()));
+
   static inline const Nat run = []() {
     return ps
         .template fold_right<Nat>(

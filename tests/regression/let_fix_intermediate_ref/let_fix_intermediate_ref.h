@@ -108,6 +108,7 @@ struct LetFixIntermediateRef {
                           List<uint64_t>::cons(UINT64_C(50),
                                                List<uint64_t>::nil())),
                       List<List<uint64_t>>::nil())))));
+
   static inline const uint64_t test_zip = zip_sum(
       List<uint64_t>::cons(
           UINT64_C(1),

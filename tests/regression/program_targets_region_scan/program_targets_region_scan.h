@@ -217,6 +217,7 @@ struct ProgramTargetsRegionScan {
   static bool target_in_layoutb(const layout &l, const instruction &i);
   static bool program_targets_okb(const List<instruction> &prog,
                                   const layout &l);
+
   static inline const uint64_t t = []() {
     layout l = layout{UINT64_C(200), UINT64_C(20)};
     List<instruction> p = List<instruction>::cons(

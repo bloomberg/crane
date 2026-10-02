@@ -275,12 +275,12 @@ public:
 
 template <typename
 I>concept Params = requires {
-  typename I::ptr;
-} && (requires {
-  { I::zero() } -> std::convertible_to<typename I::ptr>;
-} || requires {
-  { I::zero } -> std::convertible_to<typename I::ptr>;
-});
+    typename I::ptr;
+  } && (requires {
+    { I::zero() } -> std::convertible_to<typename I::ptr>;
+  } || requires {
+    { I::zero } -> std::convertible_to<typename I::ptr>;
+  });
 
 struct CarrierAliasPromoted {
   template <typename s, template <typename> class m, typename a>
@@ -329,6 +329,7 @@ struct CarrierAliasPromoted {
       r = crane::any_cast<
           Itree<memE<typename natParams::ptr>, std::pair<Nat, Nat>>>(
           get_st<natParams>(Nat::s(Nat::o()))(Nat::s(Nat::s(Nat::o()))));
+
   static inline const bool is_three = []() {
     auto &&_sv = r.observe();
     if (std::holds_alternative<

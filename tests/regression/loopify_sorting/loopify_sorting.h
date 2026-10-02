@@ -297,6 +297,7 @@ struct LoopifySorting {
   /// uniq_sorted variant that preserves order.
   static List<uint64_t> uniq_sorted_aux(uint64_t prev, bool seen,
                                         const List<uint64_t> &l);
+
   static List<uint64_t> uniq_sorted(const List<uint64_t> &l);
 };
 

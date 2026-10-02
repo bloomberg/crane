@@ -303,6 +303,7 @@ struct MemSafetyProbe27 {
   /// Multiple levels of wrapping.
   static std::pair<std::optional<crane::fn<uint64_t(uint64_t)>>, uint64_t>
   wrapped_fn(tree t, bool b);
+
   static inline const uint64_t test_wrapped_fn = []() {
     std::pair<std::optional<crane::fn<uint64_t(uint64_t)>>, uint64_t> p =
         wrapped_fn(

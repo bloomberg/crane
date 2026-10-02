@@ -29,44 +29,43 @@ struct PointerV;using iptr = crane::obj;
 using ptr = crane::obj;
 using ADDR = crane::obj;template <typename
 I>concept Monad = requires {
-  typename I::template m<crane::obj>;
-  { I::template ret<crane::obj>(std::declval<crane::obj>()) } -> std::convertible_to<typename I::template m<crane::obj>>;
-  { I::bind(std::declval<typename I::template m<crane::obj>>(),
-std::declval<crane::fn<typename I::template m<crane::obj>(crane::obj)>>()) } -> std::convertible_to<typename I::template m<crane::obj>>;
-};template <typename
+    typename I::template m<crane::obj>;
+    { I::template ret<crane::obj>(std::declval<crane::obj>()) } -> std::convertible_to<typename I::template m<crane::obj>>;
+    { I::bind(std::declval<typename I::template m<crane::obj>>(), std::declval<crane::fn<typename I::template m<crane::obj>(crane::obj)>>()) } -> std::convertible_to<typename I::template m<crane::obj>>;
+  };template <typename
 I>concept IPtr = requires {
-  typename I::iptr;
-  { I::from_Z(std::declval<Nat>()) } -> std::convertible_to<EOU<typename I::iptr>>;
-  { I::to_Z(std::declval<typename I::iptr>()) } -> std::convertible_to<Nat>;
-} && (requires {
-  { I::zero_iptr() } -> std::convertible_to<typename I::iptr>;
-} || requires {
-  { I::zero_iptr } -> std::convertible_to<typename I::iptr>;
-});template <typename
+    typename I::iptr;
+    { I::from_Z(std::declval<Nat>()) } -> std::convertible_to<EOU<typename I::iptr>>;
+    { I::to_Z(std::declval<typename I::iptr>()) } -> std::convertible_to<Nat>;
+  } && (requires {
+    { I::zero_iptr() } -> std::convertible_to<typename I::iptr>;
+  } || requires {
+    { I::zero_iptr } -> std::convertible_to<typename I::iptr>;
+  });template <typename
 I>concept Provenance = requires {
-  typename I::prov;
-} && (requires {
-  { I::nil_prov() } -> std::convertible_to<typename I::prov>;
-} || requires {
-  { I::nil_prov } -> std::convertible_to<typename I::prov>;
-});template <typename
+    typename I::prov;
+  } && (requires {
+    { I::nil_prov() } -> std::convertible_to<typename I::prov>;
+  } || requires {
+    { I::nil_prov } -> std::convertible_to<typename I::prov>;
+  });template <typename
 I>concept Pointer = requires {
-  typename I::ptr;
-} && (requires {
-  { I::null() } -> std::convertible_to<typename I::ptr>;
-} || requires {
-  { I::null } -> std::convertible_to<typename I::ptr>;
-});template <typename
+    typename I::ptr;
+  } && (requires {
+    { I::null() } -> std::convertible_to<typename I::ptr>;
+  } || requires {
+    { I::null } -> std::convertible_to<typename I::ptr>;
+  });template <typename
 I>concept Params = requires {
-  typename I::ADDR;
-  typename I::PROV;
-  typename I::PTR;
-  typename I::IPTR;
-} && (requires {
-  { I::zero_addr() } -> std::convertible_to<typename I::ADDR>;
-} || requires {
-  { I::zero_addr } -> std::convertible_to<typename I::ADDR>;
-});
+    typename I::ADDR;
+    typename I::PROV;
+    typename I::PTR;
+    typename I::IPTR;
+  } && (requires {
+    { I::zero_addr() } -> std::convertible_to<typename I::ADDR>;
+  } || requires {
+    { I::zero_addr } -> std::convertible_to<typename I::ADDR>;
+  });
 struct Nat {
   // TYPES
 struct O {
@@ -75,8 +74,7 @@ struct O {
 struct S {
 std::shared_ptr<Nat> a0;
 };
-using variant_t = std::variant<O,
-S>;
+using variant_t = std::variant<O, S>;
 private:
   // DATA
 variant_t v_;
@@ -91,8 +89,7 @@ static Nat s(Nat a0) {
 return Nat(S{std::make_shared<Nat>(std::move(a0))});}
   // MANIPULATORS
 ~Nat() {
-auto _next = [&](variant_t&
-_v) -> std::shared_ptr<Nat> {
+auto _next = [&](variant_t& _v) -> std::shared_ptr<Nat> {
 if (auto* _alt = std::get_if<S>(&_v)) {
 if (_alt->a0 && _alt->a0.use_count() == 1) {
 std::atomic_thread_fence(std::memory_order_acquire);
@@ -124,8 +121,7 @@ A a0;
 struct Err {
 Nat a0;
 };
-using variant_t = std::variant<Ok,
-Err>;
+using variant_t = std::variant<Ok, Err>;
 private:
   // DATA
 variant_t v_;
@@ -161,14 +157,14 @@ return v_;}
   // ACCESSORS
 const variant_t& v() const {
 return v_;}
-};struct EOU_monad {
+};
+struct EOU_monad {
 template <typename _A0> using m = EOU<_A0>;
 template <typename
 _A0>
 static EOU<_A0> ret(_A0 a) {
 return EOU<_A0>::ok(std::move(a));}
-static EOU<crane::obj> bind(EOU<crane::obj> m,
-crane::fn<EOU<crane::obj>(crane::obj)> k) {
+static EOU<crane::obj> bind(EOU<crane::obj> m, crane::fn<EOU<crane::obj>(crane::obj)> k) {
 if (std::holds_alternative<typename EOU<crane::obj>::Ok>(m.v())) {
 const auto& [a01] = std::get<typename EOU<crane::obj>::Ok>(m.v());
 return k(a01);
@@ -190,8 +186,7 @@ iptr i;
 struct DAddr {
 ADDR a;
 };
-using variant_t = std::variant<DPtr, DIptr,
-DAddr>;
+using variant_t = std::variant<DPtr, DIptr, DAddr>;
 private:
   // DATA
 variant_t v_;
@@ -238,9 +233,11 @@ throw std::logic_error("unreachable: inactive constructor field at this instanti
 }
 }()) {}
 static Dval<ptr, iptr, ADDR> dptr(ptr p) {
-return Dval<ptr, iptr, ADDR>(DPtr{std::move(p)});}
+return Dval<ptr, iptr,
+ADDR>(DPtr{std::move(p)});}
 static Dval<ptr, iptr, ADDR> diptr(iptr i) {
-return Dval<ptr, iptr, ADDR>(DIptr{std::move(i)});}
+return Dval<ptr, iptr,
+ADDR>(DIptr{std::move(i)});}
 static Dval<ptr, iptr, ADDR> daddr(ADDR a) {
 return Dval<ptr, iptr,
 ADDR>(DAddr{std::move(a)});}
@@ -285,32 +282,18 @@ static Nat zero_addr() {
 return Nat::o();}
 };
 struct ErasedInstanceArgumentInMention {
-static inline const Dval<typename ParamsV<natIPtr>::PTR::ptr,
-typename natIPtr::iptr,
-typename ParamsV<natIPtr>::ADDR> boxed_iptr = Dval<typename ParamsV<natIPtr>::PTR::ptr,
-typename natIPtr::iptr,
-typename ParamsV<natIPtr>::ADDR>::diptr(natIPtr::zero_iptr());
+static inline const Dval<typename ParamsV<natIPtr>::PTR::ptr, typename natIPtr::iptr, typename ParamsV<natIPtr>::ADDR> boxed_iptr = Dval<typename ParamsV<natIPtr>::PTR::ptr, typename natIPtr::iptr, typename ParamsV<natIPtr>::ADDR>::diptr(natIPtr::zero_iptr());
 static inline const Nat addr0 = crane::any_cast<Nat>(ParamsV<natIPtr>::zero_addr());
 static inline const Nat run = []() {
 auto&& _sv2 = boxed_iptr;
-if (std::holds_alternative<typename Dval<typename ParamsV<natIPtr>::PTR::ptr,
-typename natIPtr::iptr,
-typename ParamsV<natIPtr>::ADDR>::DPtr>(_sv2.v())) {
-const auto& [p2] = std::get<typename Dval<typename ParamsV<natIPtr>::PTR::ptr,
-typename natIPtr::iptr,
-typename ParamsV<natIPtr>::ADDR>::DPtr>(_sv2.v());
+if (std::holds_alternative<typename Dval<typename ParamsV<natIPtr>::PTR::ptr, typename natIPtr::iptr, typename ParamsV<natIPtr>::ADDR>::DPtr>(_sv2.v())) {
+const auto& [p2] = std::get<typename Dval<typename ParamsV<natIPtr>::PTR::ptr, typename natIPtr::iptr, typename ParamsV<natIPtr>::ADDR>::DPtr>(_sv2.v());
 return p2.first;
-} else if (std::holds_alternative<typename Dval<typename ParamsV<natIPtr>::PTR::ptr,
-typename natIPtr::iptr,
-typename ParamsV<natIPtr>::ADDR>::DIptr>(_sv2.v())) {
-const auto& [i2] = std::get<typename Dval<typename ParamsV<natIPtr>::PTR::ptr,
-typename natIPtr::iptr,
-typename ParamsV<natIPtr>::ADDR>::DIptr>(_sv2.v());
+} else if (std::holds_alternative<typename Dval<typename ParamsV<natIPtr>::PTR::ptr, typename natIPtr::iptr, typename ParamsV<natIPtr>::ADDR>::DIptr>(_sv2.v())) {
+const auto& [i2] = std::get<typename Dval<typename ParamsV<natIPtr>::PTR::ptr, typename natIPtr::iptr, typename ParamsV<natIPtr>::ADDR>::DIptr>(_sv2.v());
 return natIPtr::to_Z(i2);
 } else {
-const auto& [a2] = std::get<typename Dval<typename ParamsV<natIPtr>::PTR::ptr,
-typename natIPtr::iptr,
-typename ParamsV<natIPtr>::ADDR>::DAddr>(_sv2.v());
+const auto& [a2] = std::get<typename Dval<typename ParamsV<natIPtr>::PTR::ptr, typename natIPtr::iptr, typename ParamsV<natIPtr>::ADDR>::DAddr>(_sv2.v());
 return a2;
 }
 }();

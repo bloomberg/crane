@@ -353,6 +353,7 @@ struct MatchObserveAliasFamily {
 
   static std::optional<Nat> run(const Nat &fuel,
                                 Itree<Sum1<aE<Nat>, BE, crane::obj>, Nat> t);
+
   static inline const bool is_three = []() -> bool {
     auto _cs = []() {
       auto _lit0 = Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(

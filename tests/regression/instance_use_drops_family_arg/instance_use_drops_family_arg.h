@@ -269,6 +269,7 @@ struct InstanceUseDropsFamilyArg {
 
   static inline const box<AllE<Nat, crane::obj>, Nat> r =
       incr<Nat>(Nat::s(Nat::s(Nat::o())));
+
   static inline const bool is_three = []() {
     const auto &_sv = r;
     const auto &[a] = _sv;

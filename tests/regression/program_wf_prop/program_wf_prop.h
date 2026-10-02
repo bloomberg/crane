@@ -172,6 +172,7 @@ struct ProgramWfProp {
   static std::optional<uint64_t> jump_target(const instruction &i);
   static inline const layout sample_layout =
       layout{UINT64_C(200), UINT64_C(20)};
+
   static inline const List<instruction> sample_prog = List<instruction>::cons(
       instruction::nop(),
       List<instruction>::cons(

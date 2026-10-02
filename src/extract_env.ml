@@ -1024,6 +1024,9 @@ let print_one_decl struc mp decl =
   push_visible mp [];
   let ans = d.pp_decl decl in
   pop_visible ();
+  (* The one box the printers rely on: inside it every break is a newline,
+     which is what turns {!Cpp_print.cut2} into the blank line between two
+     declaration groups.  Everything else is clang-format's to lay out. *)
   v 0 ans
 
 (** Check that generating output decided nothing.

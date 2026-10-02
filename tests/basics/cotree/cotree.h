@@ -502,7 +502,6 @@ struct Cotree {
       tree_of_cotree<uint64_t>(UINT64_C(2), binary_tree);
   static inline const uint64_t test_approx_root =
       tree_root<uint64_t>(test_approx);
-
   static inline const uint64_t test_approx_size =
       tree_size<uint64_t>(test_approx);
 };

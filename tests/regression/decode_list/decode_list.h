@@ -223,7 +223,6 @@ struct DecodeList {
                       UINT64_C(2), List<uint64_t>::cons(
                                        UINT64_C(3), List<uint64_t>::nil())))))
           .length();
-
   static inline const uint64_t t_single_pair =
       decode_list(List<uint64_t>::cons(
                       UINT64_C(0),

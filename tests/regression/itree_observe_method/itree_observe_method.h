@@ -258,6 +258,7 @@ struct ItreeObserveMethod {
   static inline const Itree<noE, Nat> t =
       Itree<noE, Nat>::go(ItreeF<noE, Nat, Itree<noE, Nat>>::retf(
           Nat::s(Nat::s(Nat::s(Nat::o())))));
+
   static inline const bool is_three = []() {
     auto &&_sv0 = t.observe();
     if (std::holds_alternative<

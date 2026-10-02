@@ -14,12 +14,12 @@
 
 template <typename I, typename
 A>concept FunctionalInduction = requires {
-  typename I::fun_ind_prf_ty;
-} && (requires {
-  { I::fun_ind_prf() } -> std::convertible_to<typename I::fun_ind_prf_ty>;
-} || requires {
-  { I::fun_ind_prf } -> std::convertible_to<typename I::fun_ind_prf_ty>;
-});
+    typename I::fun_ind_prf_ty;
+  } && (requires {
+    { I::fun_ind_prf() } -> std::convertible_to<typename I::fun_ind_prf_ty>;
+  } || requires {
+    { I::fun_ind_prf } -> std::convertible_to<typename I::fun_ind_prf_ty>;
+  });
 
 struct Nat {
   static bool even(uint64_t n);

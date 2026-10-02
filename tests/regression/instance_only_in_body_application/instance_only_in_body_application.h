@@ -26,37 +26,37 @@ struct ProvenanceV;
 struct PointerV;using iptr = crane::obj;
 using ptr = crane::obj;template <typename
 I>concept IPtr = requires {
-  typename I::iptr;
-  { I::to_Z(std::declval<typename I::iptr>()) } -> std::convertible_to<Nat>;
-} && (requires {
-  { I::zero_iptr() } -> std::convertible_to<typename I::iptr>;
-} || requires {
-  { I::zero_iptr } -> std::convertible_to<typename I::iptr>;
-});template <typename
+    typename I::iptr;
+    { I::to_Z(std::declval<typename I::iptr>()) } -> std::convertible_to<Nat>;
+  } && (requires {
+    { I::zero_iptr() } -> std::convertible_to<typename I::iptr>;
+  } || requires {
+    { I::zero_iptr } -> std::convertible_to<typename I::iptr>;
+  });template <typename
 I>concept Provenance = requires {
-  typename I::prov;
-} && (requires {
-  { I::nil_prov() } -> std::convertible_to<typename I::prov>;
-} || requires {
-  { I::nil_prov } -> std::convertible_to<typename I::prov>;
-});template <typename
+    typename I::prov;
+  } && (requires {
+    { I::nil_prov() } -> std::convertible_to<typename I::prov>;
+  } || requires {
+    { I::nil_prov } -> std::convertible_to<typename I::prov>;
+  });template <typename
 I>concept Pointer = requires {
-  typename I::ptr;
-} && (requires {
-  { I::null() } -> std::convertible_to<typename I::ptr>;
-} || requires {
-  { I::null } -> std::convertible_to<typename I::ptr>;
-});template <typename
+    typename I::ptr;
+  } && (requires {
+    { I::null() } -> std::convertible_to<typename I::ptr>;
+  } || requires {
+    { I::null } -> std::convertible_to<typename I::ptr>;
+  });template <typename
 I>concept Params = requires {
-  typename I::ADDR;
-  typename I::PROV;
-  typename I::PTR;
-  typename I::IPTR;
-} && (requires {
-  { I::zero_addr() } -> std::convertible_to<typename I::ADDR>;
-} || requires {
-  { I::zero_addr } -> std::convertible_to<typename I::ADDR>;
-});
+    typename I::ADDR;
+    typename I::PROV;
+    typename I::PTR;
+    typename I::IPTR;
+  } && (requires {
+    { I::zero_addr() } -> std::convertible_to<typename I::ADDR>;
+  } || requires {
+    { I::zero_addr } -> std::convertible_to<typename I::ADDR>;
+  });
 struct Nat {
   // TYPES
 struct O {
@@ -65,8 +65,7 @@ struct O {
 struct S {
 std::shared_ptr<Nat> a0;
 };
-using variant_t = std::variant<O,
-S>;
+using variant_t = std::variant<O, S>;
 private:
   // DATA
 variant_t v_;
@@ -81,8 +80,7 @@ static Nat s(Nat a0) {
 return Nat(S{std::make_shared<Nat>(std::move(a0))});}
   // MANIPULATORS
 ~Nat() {
-auto _next = [&](variant_t&
-_v) -> std::shared_ptr<Nat> {
+auto _next = [&](variant_t& _v) -> std::shared_ptr<Nat> {
 if (auto* _alt = std::get_if<S>(&_v)) {
 if (_alt->a0 && _alt->a0.use_count() == 1) {
 std::atomic_thread_fence(std::memory_order_acquire);
@@ -114,8 +112,7 @@ A a0;
 struct Inr {
 B a0;
 };
-using variant_t = std::variant<Inl,
-Inr>;
+using variant_t = std::variant<Inl, Inr>;
 private:
   // DATA
 variant_t v_;
@@ -149,7 +146,8 @@ throw std::logic_error("unreachable: inactive constructor field at this instanti
 }
 }()) {}
 static Sum<A, B> inl(A a0) {
-return Sum<A, B>(Inl{std::move(a0)});}
+return Sum<A,
+B>(Inl{std::move(a0)});}
 static Sum<A, B> inr(B a0) {
 return Sum<A,
 B>(Inr{std::move(a0)});}
@@ -168,8 +166,7 @@ ptr p;
 struct DIptr {
 iptr i;
 };
-using variant_t = std::variant<DPtr,
-DIptr>;
+using variant_t = std::variant<DPtr, DIptr>;
 private:
   // DATA
 variant_t v_;
@@ -203,7 +200,8 @@ throw std::logic_error("unreachable: inactive constructor field at this instanti
 }
 }()) {}
 static Dval<ptr, iptr> dptr(ptr p) {
-return Dval<ptr, iptr>(DPtr{std::move(p)});}
+return Dval<ptr,
+iptr>(DPtr{std::move(p)});}
 static Dval<ptr, iptr> diptr(iptr i) {
 return Dval<ptr,
 iptr>(DIptr{std::move(i)});}
@@ -224,8 +222,8 @@ const auto& [i0] = std::get<typename Dval<ptr,
 iptr>::DIptr>(this->v());
 return _tcI0::IPTR::to_Z(i0);
 }}
-};template <Params _tcI0>Sum<Nat, Dval<typename _tcI0::PTR::ptr,
-typename _tcI0::IPTR::iptr>> runS(const Nat&){return Sum<Nat,
+};template <Params
+_tcI0>Sum<Nat, Dval<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>> runS(const Nat&){return Sum<Nat,
 Dval<typename _tcI0::PTR::ptr,
 typename _tcI0::IPTR::iptr>>::inr(Dval<typename _tcI0::PTR::ptr,
 typename _tcI0::IPTR::iptr>::diptr(_tcI0::IPTR::zero_iptr()));}

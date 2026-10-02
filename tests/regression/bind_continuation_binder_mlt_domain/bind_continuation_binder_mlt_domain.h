@@ -38,17 +38,17 @@ concept Monad = requires {
 /// Field order identical to bind_continuation_binder_field_order.
 template <typename
 I>concept Params = requires {
-  typename I::tag;
-  typename I::addr;
-} && (requires {
-  { I::t0() } -> std::convertible_to<typename I::tag>;
-} || requires {
-  { I::t0 } -> std::convertible_to<typename I::tag>;
-}) && (requires {
-  { I::zero() } -> std::convertible_to<typename I::addr>;
-} || requires {
-  { I::zero } -> std::convertible_to<typename I::addr>;
-});
+    typename I::tag;
+    typename I::addr;
+  } && (requires {
+    { I::t0() } -> std::convertible_to<typename I::tag>;
+  } || requires {
+    { I::t0 } -> std::convertible_to<typename I::tag>;
+  }) && (requires {
+    { I::zero() } -> std::convertible_to<typename I::addr>;
+  } || requires {
+    { I::zero } -> std::convertible_to<typename I::addr>;
+  });
 
 struct Nat {
   // TYPES

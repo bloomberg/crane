@@ -16,21 +16,21 @@ template <typename A> struct List;
 struct IPZ;
 template <typename
 I>concept IPtr = requires {
-  typename I::iptr;
-} && (requires {
-  { I::zero_iptr() } -> std::convertible_to<typename I::iptr>;
-} || requires {
-  { I::zero_iptr } -> std::convertible_to<typename I::iptr>;
-});
+    typename I::iptr;
+  } && (requires {
+    { I::zero_iptr() } -> std::convertible_to<typename I::iptr>;
+  } || requires {
+    { I::zero_iptr } -> std::convertible_to<typename I::iptr>;
+  });
 template <typename
 I>concept PTR = requires {
-  typename I::ptr;
-  { I::ptr_tag() } -> std::convertible_to<Nat>;
-} && (requires {
-  { I::null() } -> std::convertible_to<typename I::ptr>;
-} || requires {
-  { I::null } -> std::convertible_to<typename I::ptr>;
-});
+    typename I::ptr;
+    { I::ptr_tag() } -> std::convertible_to<Nat>;
+  } && (requires {
+    { I::null() } -> std::convertible_to<typename I::ptr>;
+  } || requires {
+    { I::null } -> std::convertible_to<typename I::ptr>;
+  });
 
 struct Nat {
   // TYPES
@@ -191,6 +191,7 @@ struct AssocTypeErasedAtCallSite {
   /// Both parameters have the same Rocq type, written at a named instance.
   static Nat tag_of(const std::pair<Nat, List<Nat>> &_x,
                     const std::pair<Nat, List<Nat>> &b);
+
   static Nat go(const Nat &_x);
 };
 

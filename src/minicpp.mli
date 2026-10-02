@@ -1349,6 +1349,17 @@ and dfun_shape =
     has to hang a directive on, the method itself having no Rocq name. *)
 val decl_globref : cpp_decl -> GlobRef.t option
 
+(** The parameters and statements of a declaration, for the traversals that
+    need to see what its body does with its parameters.  A declaration with no
+    body gives empty lists. *)
+val decl_body : cpp_decl -> (Id.t * cpp_type) list * cpp_stmt list
+
+(** Demote to a plain [typename] every callable template parameter in [decl]
+    whose constraint claims nothing: one the body only erases into storage,
+    and one whose constraint is vacuous.  The printer writes every [TTfun] it
+    is given. *)
+val settle_constraints : cpp_decl -> cpp_decl
+
 (** [dfun_path ?inner outer] is the qualified name [outer::inner...]. *)
 val dfun_path :
   ?inner:(GlobRef.t * cpp_type list) list ->

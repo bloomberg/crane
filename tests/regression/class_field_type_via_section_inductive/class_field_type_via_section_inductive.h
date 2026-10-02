@@ -19,17 +19,17 @@ using ptr = crane::obj;
 using iptr = crane::obj;
 template <typename
 I>concept Params = requires {
-  typename I::ptr;
-  typename I::iptr;
-} && (requires {
-  { I::nullp() } -> std::convertible_to<typename I::ptr>;
-} || requires {
-  { I::nullp } -> std::convertible_to<typename I::ptr>;
-}) && (requires {
-  { I::zeroi() } -> std::convertible_to<typename I::iptr>;
-} || requires {
-  { I::zeroi } -> std::convertible_to<typename I::iptr>;
-});
+    typename I::ptr;
+    typename I::iptr;
+  } && (requires {
+    { I::nullp() } -> std::convertible_to<typename I::ptr>;
+  } || requires {
+    { I::nullp } -> std::convertible_to<typename I::ptr>;
+  }) && (requires {
+    { I::zeroi() } -> std::convertible_to<typename I::iptr>;
+  } || requires {
+    { I::zeroi } -> std::convertible_to<typename I::iptr>;
+  });
 /// Takes only I.  Its field's type is the section inductive, so its
 /// dependence on Params is never written down.
 template <typename _Inst, typename I, typename ptr, typename iptr>

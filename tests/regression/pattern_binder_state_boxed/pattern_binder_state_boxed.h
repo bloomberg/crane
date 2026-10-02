@@ -349,20 +349,20 @@ struct ITree {
 
 template <typename
 I>concept Params = requires {
-  typename I::ptr;
-} && (requires {
-  { I::zero() } -> std::convertible_to<typename I::ptr>;
-} || requires {
-  { I::zero } -> std::convertible_to<typename I::ptr>;
-});
+    typename I::ptr;
+  } && (requires {
+    { I::zero() } -> std::convertible_to<typename I::ptr>;
+  } || requires {
+    { I::zero } -> std::convertible_to<typename I::ptr>;
+  });
 template <typename
 I>concept MemState = requires {
-  typename I::state;
-} && (requires {
-  { I::initial_state() } -> std::convertible_to<typename I::state>;
-} || requires {
-  { I::initial_state } -> std::convertible_to<typename I::state>;
-});
+    typename I::state;
+  } && (requires {
+    { I::initial_state() } -> std::convertible_to<typename I::state>;
+  } || requires {
+    { I::initial_state } -> std::convertible_to<typename I::state>;
+  });
 template <typename I>
 concept MemPrims = requires {
   typename I::mm_state;

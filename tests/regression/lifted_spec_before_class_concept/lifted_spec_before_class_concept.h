@@ -16,13 +16,13 @@ struct natParams;
 using addr = crane::obj;
 template <typename
 I>concept Params = requires {
-  typename I::addr;
-  { I::bump(std::declval<typename I::addr>()) } -> std::convertible_to<typename I::addr>;
-} && (requires {
-  { I::zero() } -> std::convertible_to<typename I::addr>;
-} || requires {
-  { I::zero } -> std::convertible_to<typename I::addr>;
-});
+    typename I::addr;
+    { I::bump(std::declval<typename I::addr>()) } -> std::convertible_to<typename I::addr>;
+  } && (requires {
+    { I::zero() } -> std::convertible_to<typename I::addr>;
+  } || requires {
+    { I::zero } -> std::convertible_to<typename I::addr>;
+  });
 
 struct Nat {
   // TYPES

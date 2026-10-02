@@ -1754,6 +1754,68 @@ let rec decl_globref = function
   | Dnspace (r, _) -> r
   | _ -> None
 
+(** The parameters and statements of a declaration, for the traversals that
+    need to see what a signature's body actually does with its parameters (see
+    {!erased_into_storage_tparam}).  A declaration with no body gives empty
+    lists. *)
+let rec decl_body = function
+  | Dtemplate (_, _, inner) -> decl_body inner
+  | Dfun {df_shape = Ddef (params, body); _} -> (params, body)
+  | Dasgn (_, _, e) -> ([], [Sreturn (Some e)])
+  | _ -> ([], [])
+
+(** [settle_constraints decl] decides, everywhere in [decl], which callable
+    template parameters keep their [std::is_invocable_r_v] constraint, and
+    demotes the rest to a plain [typename]:
+    - one the body only erases into storage has no representation to claim --
+      [crane_erase_fn] adapts whatever it is handed -- see
+      {!drop_stored_callback_constraints};
+    - one whose constraint is vacuous claims nothing either -- see
+      {!tt_constraint_is_vacuous}.
+    The printer then writes every [TTfun] it is given. *)
+let settle_constraints decl =
+  let settle ~params body temps =
+    let stored = erased_into_storage_tparam ~params body in
+    List.map
+      (fun ((tt, id) as p) ->
+        match tt with
+        | TTfun _ when stored id -> (TTtypename, id)
+        | TTfun (dom, cod) when tt_constraint_is_vacuous dom cod ->
+          (TTtypename, id)
+        | _ -> p )
+      temps
+  in
+  let settle_method m =
+    {m with mf_tparams = settle ~params:m.mf_params m.mf_body m.mf_tparams}
+  in
+  let rec field (f, vis, tag) =
+    let f =
+      match f with
+      | Fmethod m -> Fmethod (settle_method m)
+      | Fmember_decl (OLmethod m) -> Fmember_decl (OLmethod (settle_method m))
+      | Fnested_struct (id, fs) -> Fnested_struct (id, List.map field fs)
+      | f -> f
+    in
+    (f, vis, tag)
+  in
+  let struct_ ds =
+    { ds with
+      ds_tparams = settle ~params:[] [] ds.ds_tparams;
+      ds_fields = List.map field ds.ds_fields }
+  in
+  let rec go = function
+    | Dtemplate (temps, c, d) ->
+      let params, body = decl_body d in
+      Dtemplate (settle ~params body temps, c, go d)
+    | Dnspace (r, ds) -> Dnspace (r, List.map go ds)
+    | Dstruct ds -> Dstruct (struct_ ds)
+    | Dfields ds -> Dfields (struct_ ds)
+    | Dmember_def ({dm_field = OLmethod m; _} as dm) ->
+      Dmember_def {dm with dm_field = OLmethod (settle_method m)}
+    | d -> d
+  in
+  go decl
+
 (** [dfun_path ?inner outer] is the qualified name [outer::inner...]. *)
 let dfun_path ?(inner = []) outer = {dp_outer = outer; dp_inner = inner}
 

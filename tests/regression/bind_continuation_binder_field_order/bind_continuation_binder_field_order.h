@@ -38,17 +38,17 @@ concept Monad = requires {
 /// The only difference from the file next door: tag is declared first.
 template <typename
 I>concept Params = requires {
-  typename I::tag;
-  typename I::addr;
-} && (requires {
-  { I::t0() } -> std::convertible_to<typename I::tag>;
-} || requires {
-  { I::t0 } -> std::convertible_to<typename I::tag>;
-}) && (requires {
-  { I::zero() } -> std::convertible_to<typename I::addr>;
-} || requires {
-  { I::zero } -> std::convertible_to<typename I::addr>;
-});
+    typename I::tag;
+    typename I::addr;
+  } && (requires {
+    { I::t0() } -> std::convertible_to<typename I::tag>;
+  } || requires {
+    { I::t0 } -> std::convertible_to<typename I::tag>;
+  }) && (requires {
+    { I::zero() } -> std::convertible_to<typename I::addr>;
+  } || requires {
+    { I::zero } -> std::convertible_to<typename I::addr>;
+  });
 
 struct Nat {
   // TYPES

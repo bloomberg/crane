@@ -77,6 +77,9 @@ let finish ~loopify decl =
   (* A coinductive's field projection hands out a reference into an lvalue
      receiver, and a copy only to a temporary one. *)
   let decl = Borrow_projection.transform_decl decl in
+  (* Which callable parameters keep a constraint is decided here, with the
+     body that decides it in hand; the printer writes what it is given. *)
+  let decl = Minicpp.settle_constraints decl in
   (* Writing a type down is what decides its representation, so settle the
      [Topaque] slots before anything reads the declaration as final.  Crossing
      this seam is what gives {!Cpp_erasure.settled}, the printer's input

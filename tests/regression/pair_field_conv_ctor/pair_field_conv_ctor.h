@@ -337,6 +337,7 @@ public:
 
 Ann<crane::obj> TFunctor_ann(crane::fn<crane::obj(crane::obj)> f,
                              const Ann<crane::obj> &a);
+
 Ann<Dt> run(const Ann<Nat> &a);
 
 #endif // INCLUDED_PAIR_FIELD_CONV_CTOR

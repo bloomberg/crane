@@ -24,18 +24,16 @@ struct EOU_monad;
 struct natIPtr;using iptr = crane::obj;
 using prov = crane::obj;template <typename
 I>concept Monad = requires {
-  typename I::template m<crane::obj>;
-  { I::template ret<crane::obj>(std::declval<crane::obj>()) } -> std::convertible_to<typename I::template m<crane::obj>>;
-  { I::template bind<crane::obj,
-crane::obj>(std::declval<typename I::template m<crane::obj>>(),
-std::declval<crane::fn<typename I::template m<crane::obj>(crane::obj)>>()) } -> std::convertible_to<typename I::template m<crane::obj>>;
-};template <typename
+    typename I::template m<crane::obj>;
+    { I::template ret<crane::obj>(std::declval<crane::obj>()) } -> std::convertible_to<typename I::template m<crane::obj>>;
+    { I::template bind<crane::obj, crane::obj>(std::declval<typename I::template m<crane::obj>>(), std::declval<crane::fn<typename I::template m<crane::obj>(crane::obj)>>()) } -> std::convertible_to<typename I::template m<crane::obj>>;
+  };template <typename
 I>concept IPtr = requires {
-  typename I::iptr;
-  typename I::prov;
-  { I::from_Z(std::declval<Nat>()) } -> std::convertible_to<EOU<typename I::iptr>>;
-  { I::prov_nat(std::declval<typename I::prov>()) } -> std::convertible_to<Nat>;
-};
+    typename I::iptr;
+    typename I::prov;
+    { I::from_Z(std::declval<Nat>()) } -> std::convertible_to<EOU<typename I::iptr>>;
+    { I::prov_nat(std::declval<typename I::prov>()) } -> std::convertible_to<Nat>;
+  };
 /// int_to_ptr returns EOU nat, not EOU ptr.  The carrier field is kept
 /// -- the instance still builds it from iptr and prov -- but the method's
 /// result stays concrete, so that a definition typed by a class field
@@ -44,10 +42,9 @@ I>concept IPtr = requires {
 /// instance_carrier_unqualified_at_known_instance.
 template <typename I, typename
 prov>concept ITOP = requires {
-  typename I::ptr;
-  { I::int_to_ptr(std::declval<Nat>(),
-std::declval<prov>()) } -> std::convertible_to<EOU<Nat>>;
-};
+       typename I::ptr;
+       { I::int_to_ptr(std::declval<Nat>(), std::declval<prov>()) } -> std::convertible_to<EOU<Nat>>;
+     };
 struct Nat {
   // TYPES
 struct O {
@@ -56,8 +53,7 @@ struct O {
 struct S {
 std::shared_ptr<Nat> a0;
 };
-using variant_t = std::variant<O,
-S>;
+using variant_t = std::variant<O, S>;
 private:
   // DATA
 variant_t v_;
@@ -72,8 +68,7 @@ static Nat s(Nat a0) {
 return Nat(S{std::make_shared<Nat>(std::move(a0))});}
   // MANIPULATORS
 ~Nat() {
-auto _next = [&](variant_t&
-_v) -> std::shared_ptr<Nat> {
+auto _next = [&](variant_t& _v) -> std::shared_ptr<Nat> {
 if (auto* _alt = std::get_if<S>(&_v)) {
 if (_alt->a0 && _alt->a0.use_count() == 1) {
 std::atomic_thread_fence(std::memory_order_acquire);
@@ -105,8 +100,7 @@ A a0;
 struct Err {
 Nat a0;
 };
-using variant_t = std::variant<Ok,
-Err>;
+using variant_t = std::variant<Ok, Err>;
 private:
   // DATA
 variant_t v_;
@@ -142,15 +136,16 @@ return v_;}
   // ACCESSORS
 const variant_t& v() const {
 return v_;}
-};struct EOU_monad {
+};
+struct EOU_monad {
 template <typename _A0> using m = EOU<_A0>;
 template <typename
 _A0>
 static EOU<_A0> ret(_A0 a) {
 return EOU<_A0>::ok(std::move(a));}
-template <typename _A0, typename _A1>
-static EOU<_A1> bind(EOU<_A0> m,
-crane::fn<EOU<_A1>(_A0)> k) {
+template <typename _A0, typename
+_A1>
+static EOU<_A1> bind(EOU<_A0> m, crane::fn<EOU<_A1>(_A0)> k) {
 if (std::holds_alternative<typename EOU<_A0>::Ok>(m.v())) {
 const auto& [a01] = std::get<typename EOU<_A0>::Ok>(m.v());
 return k(a01);
@@ -164,8 +159,7 @@ _tcI0>struct PIV {
 using iptr = typename _tcI0::iptr;
 using prov = typename _tcI0::prov;
 using ptr = std::pair<typename _tcI0::iptr, typename _tcI0::prov>;
-static EOU<Nat> int_to_ptr(Nat i,
-typename _tcI0::prov pr) {
+static EOU<Nat> int_to_ptr(Nat i, typename _tcI0::prov pr) {
 return EOU_monad::template bind<typename _tcI0::iptr,
 Nat>(_tcI0::from_Z(std::move(i)),
 [=](typename _tcI0::iptr) {
@@ -184,8 +178,7 @@ static_assert(IPtr<natIPtr>);
 /// The match is the smallest consumer that still forces int_to_ptr to be
 /// emitted.
 struct InstanceMethodParamAtForeignClassField {
-static inline const bool run = (std::holds_alternative<typename EOU<Nat>::Ok>(PIV<natIPtr>::int_to_ptr(Nat::s(Nat::o()),
-true).v()) ? true : false);
+static inline const bool run = (std::holds_alternative<typename EOU<Nat>::Ok>(PIV<natIPtr>::int_to_ptr(Nat::s(Nat::o()), true).v()) ? true : false);
 };
 
 #endif // INCLUDED_INSTANCE_METHOD_PARAM_AT_FOREIGN_CLASS_FIELD

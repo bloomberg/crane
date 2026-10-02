@@ -274,9 +274,8 @@ struct LoopifyHofs {
   template <typename T1, typename T2, typename F0>
     requires std::is_invocable_r_v<List<T2>, F0 &, T1 &>
   static List<T2>
-  flat_map(F0 &&f,
-           const List<T1> &l) { /// _Enter: captures varying parameters for each
-                                /// recursive call.
+  flat_map(F0 &&f, const List<T1> &l) { /// _Enter: captures varying parameters
+                                        /// for each recursive call.
 
     struct _Enter {
       const List<T1> *l;

@@ -98,11 +98,9 @@ let concept_body_pp = function
     type asks for nothing.  The one spelling of a module type's concept, minus
     the [template<typename M>] line that introduces it. *)
 let pp_concept_clause name = function
-  | None -> hov 1 (str "concept " ++ name ++ str " = true;")
+  | None -> (str "concept " ++ name ++ str " = true;")
   | Some body ->
-    hov
-      1
-      ( str "concept "
+    ( str "concept "
       ++ name
       ++ str " = requires {"
       ++ fnl ()
@@ -1264,9 +1262,7 @@ let rec pp_structure_elem ~is_header f = function
                       in
                       str "template<typename M>"
                       ++ fnl ()
-                      ++ hov
-                           1
-                           ( str "concept "
+                      ++ ( str "concept "
                            ++ modtype_name
                            ++ str " = "
                            ++ base_name
@@ -1737,8 +1733,7 @@ let rec pp_structure_elem ~is_header f = function
           let refine_pp =
             prlist (fun c -> str " && " ++ c) (collect_with_refinements m)
           in
-          hov 1
-            ( str "concept "
+          ( str "concept "
             ++ name
             ++ str " = "
             ++ base_name
@@ -1877,7 +1872,7 @@ and pp_module_expr ~is_header f params = function
     if List.is_empty l then
       mt ()
     else
-      v 1 (prlist_with_doc_safe_sep cut2 l) ++ fnl ()
+      (prlist_with_doc_safe_sep cut2 l) ++ fnl ()
 
 (** Like [prlist_with_sep] but skips empty ([mt ()]) elements.
 
@@ -2991,7 +2986,7 @@ let do_struct_with_decl_tracking ~is_header f s =
     | [] -> mt ()
     | l -> prlist_with_sep fnl (fun x -> x) l ++ cut2 ()
   in
-  v 0 (forward_decls ++ leftover_aliases ++ prlist (fun x -> x) sections)
+  (forward_decls ++ leftover_aliases ++ prlist (fun x -> x) sections)
   ++ fnl ()
 
 (** Main entry point: render structure to C++ implementation file. *)

@@ -13,6 +13,7 @@
 #include <bsl_vector.h>
 
 namespace BloombergLP {}
+
 List<unsigned int> ListDef::seq(unsigned int start, unsigned int len) {
   if (len <= 0) {
     return List<unsigned int>::nil();

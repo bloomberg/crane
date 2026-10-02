@@ -145,6 +145,7 @@ struct Rank2RecordField {
 
   static inline const poly pl =
       poly{[](const List<crane::obj> &_x) { return _x.length(); }};
+
   static inline const uint64_t go =
       (sizer<uint64_t>(
            pl, List<uint64_t>::cons(

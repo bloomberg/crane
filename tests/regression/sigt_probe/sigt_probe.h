@@ -108,6 +108,7 @@ struct SigTProbe {
   /// incompatible shared_ptr template instantiations.
   static inline const SigT<crane::obj, crane::obj> packed =
       SigT<crane::obj, crane::obj>::existt(crane::obj(), Bool0::TRUE_);
+
   static inline const Nat sample = Nat::o();
 };
 

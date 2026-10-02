@@ -134,6 +134,7 @@ struct ErasedValueShares {
   static inline const SigT<crane::obj, crane::obj> packed =
       SigT<crane::obj, crane::obj>::existt(
           crane::obj(), ListDef::seq(UINT64_C(0), UINT64_C(1000)));
+
   static inline const List<SigT<crane::obj, crane::obj>> boxes =
       List<SigT<crane::obj, crane::obj>>::cons(
           packed, List<SigT<crane::obj, crane::obj>>::cons(

@@ -145,6 +145,7 @@ struct LoopifyAlgorithms {
   static List<uint64_t> take_impl(uint64_t k, const List<uint64_t> &l);
   static List<List<uint64_t>> windows_aux(uint64_t n, const List<uint64_t> &l,
                                           uint64_t fuel);
+
   static List<List<uint64_t>> windows(uint64_t n, const List<uint64_t> &l);
   /// sliding_pairs l returns consecutive pairs: 1,2,3,4 -> (1,2),(2,3),(3,4).
   static List<std::pair<uint64_t, uint64_t>>

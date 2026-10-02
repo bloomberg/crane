@@ -12,12 +12,12 @@ struct Nat;
 struct IPZ;
 template <typename
 I>concept IPtr = requires {
-  typename I::iptr;
-} && (requires {
-  { I::zero() } -> std::convertible_to<typename I::iptr>;
-} || requires {
-  { I::zero } -> std::convertible_to<typename I::iptr>;
-});
+    typename I::iptr;
+  } && (requires {
+    { I::zero() } -> std::convertible_to<typename I::iptr>;
+  } || requires {
+    { I::zero } -> std::convertible_to<typename I::iptr>;
+  });
 template <typename I>
 concept Params = requires {
   typename I::IPTR;

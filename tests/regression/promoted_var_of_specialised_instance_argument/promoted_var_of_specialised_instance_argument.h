@@ -27,40 +27,37 @@ struct natIPtr;using iptr = crane::obj;
 using prov = crane::obj;
 using ptr = crane::obj;template <typename
 I>concept Monad = requires {
-  typename I::template m<crane::obj>;
-  { I::template ret<crane::obj>(std::declval<crane::obj>()) } -> std::convertible_to<typename I::template m<crane::obj>>;
-  { I::template bind<crane::obj,
-crane::obj>(std::declval<typename I::template m<crane::obj>>(),
-std::declval<crane::fn<typename I::template m<crane::obj>(crane::obj)>>()) } -> std::convertible_to<typename I::template m<crane::obj>>;
-};template <typename
+    typename I::template m<crane::obj>;
+    { I::template ret<crane::obj>(std::declval<crane::obj>()) } -> std::convertible_to<typename I::template m<crane::obj>>;
+    { I::template bind<crane::obj, crane::obj>(std::declval<typename I::template m<crane::obj>>(), std::declval<crane::fn<typename I::template m<crane::obj>(crane::obj)>>()) } -> std::convertible_to<typename I::template m<crane::obj>>;
+  };template <typename
 I>concept IPtr = requires {
-  typename I::iptr;
-  { I::from_Z(std::declval<Nat>()) } -> std::convertible_to<EOU<typename I::iptr>>;
-  { I::to_Z(std::declval<typename I::iptr>()) } -> std::convertible_to<Nat>;
-} && (requires {
-  { I::zero_iptr() } -> std::convertible_to<typename I::iptr>;
-} || requires {
-  { I::zero_iptr } -> std::convertible_to<typename I::iptr>;
-});template <typename
+    typename I::iptr;
+    { I::from_Z(std::declval<Nat>()) } -> std::convertible_to<EOU<typename I::iptr>>;
+    { I::to_Z(std::declval<typename I::iptr>()) } -> std::convertible_to<Nat>;
+  } && (requires {
+    { I::zero_iptr() } -> std::convertible_to<typename I::iptr>;
+  } || requires {
+    { I::zero_iptr } -> std::convertible_to<typename I::iptr>;
+  });template <typename
 I>concept Provenance = requires {
-  typename I::prov;
-} && (requires {
-  { I::nil_prov() } -> std::convertible_to<typename I::prov>;
-} || requires {
-  { I::nil_prov } -> std::convertible_to<typename I::prov>;
-});template <typename
+    typename I::prov;
+  } && (requires {
+    { I::nil_prov() } -> std::convertible_to<typename I::prov>;
+  } || requires {
+    { I::nil_prov } -> std::convertible_to<typename I::prov>;
+  });template <typename
 I>concept Pointer = requires {
-  typename I::ptr;
-} && (requires {
-  { I::null() } -> std::convertible_to<typename I::ptr>;
-} || requires {
-  { I::null } -> std::convertible_to<typename I::ptr>;
-});template <typename I, typename ptr, typename
+    typename I::ptr;
+  } && (requires {
+    { I::null() } -> std::convertible_to<typename I::ptr>;
+  } || requires {
+    { I::null } -> std::convertible_to<typename I::ptr>;
+  });template <typename I, typename ptr, typename
 prov>concept PI = requires {
-  { I::ptr_to_int(std::declval<ptr>()) } -> std::convertible_to<Nat>;
-  { I::int_to_ptr(std::declval<Nat>(),
-std::declval<prov>()) } -> std::convertible_to<EOU<ptr>>;
-};
+       { I::ptr_to_int(std::declval<ptr>()) } -> std::convertible_to<Nat>;
+       { I::int_to_ptr(std::declval<Nat>(), std::declval<prov>()) } -> std::convertible_to<EOU<ptr>>;
+     };
 struct Nat {
   // TYPES
 struct O {
@@ -69,8 +66,7 @@ struct O {
 struct S {
 std::shared_ptr<Nat> a0;
 };
-using variant_t = std::variant<O,
-S>;
+using variant_t = std::variant<O, S>;
 private:
   // DATA
 variant_t v_;
@@ -85,8 +81,7 @@ static Nat s(Nat a0) {
 return Nat(S{std::make_shared<Nat>(std::move(a0))});}
   // MANIPULATORS
 ~Nat() {
-auto _next = [&](variant_t&
-_v) -> std::shared_ptr<Nat> {
+auto _next = [&](variant_t& _v) -> std::shared_ptr<Nat> {
 if (auto* _alt = std::get_if<S>(&_v)) {
 if (_alt->a0 && _alt->a0.use_count() == 1) {
 std::atomic_thread_fence(std::memory_order_acquire);
@@ -118,8 +113,7 @@ A a0;
 struct Err {
 Nat a0;
 };
-using variant_t = std::variant<Ok,
-Err>;
+using variant_t = std::variant<Ok, Err>;
 private:
   // DATA
 variant_t v_;
@@ -155,15 +149,16 @@ return v_;}
   // ACCESSORS
 const variant_t& v() const {
 return v_;}
-};struct EOU_monad {
+};
+struct EOU_monad {
 template <typename _A0> using m = EOU<_A0>;
 template <typename
 _A0>
 static EOU<_A0> ret(_A0 a) {
 return EOU<_A0>::ok(std::move(a));}
-template <typename _A0, typename _A1>
-static EOU<_A1> bind(EOU<_A0> m,
-crane::fn<EOU<_A1>(_A0)> k) {
+template <typename _A0, typename
+_A1>
+static EOU<_A1> bind(EOU<_A0> m, crane::fn<EOU<_A1>(_A0)> k) {
 if (std::holds_alternative<typename EOU<_A0>::Ok>(m.v())) {
 const auto& [a01] = std::get<typename EOU<_A0>::Ok>(m.v());
 return k(a01);
@@ -189,8 +184,7 @@ _tcI0>struct PIV {
 using iptr = typename _tcI0::iptr;
 static Nat ptr_to_int(typename PointerV<_tcI0>::ptr p) {
 return _tcI0::to_Z(p.first);}
-static EOU<typename PointerV<_tcI0>::ptr> int_to_ptr(Nat i,
-typename ProvenanceV::prov pr) {
+static EOU<typename PointerV<_tcI0>::ptr> int_to_ptr(Nat i, typename ProvenanceV::prov pr) {
 return EOU_monad::template bind<typename _tcI0::iptr,
 std::pair<typename _tcI0::iptr, bool>>(_tcI0::from_Z(std::move(i)),
 [=](const typename _tcI0::iptr&
@@ -210,9 +204,9 @@ return n;}
 static_assert(IPtr<natIPtr>);
 struct PromotedVarOfSpecialisedInstanceArgument {
 static inline const std::pair<Nat, bool> the_null = crane_any_cast<std::pair<Nat, bool>>(PointerV<natIPtr>::null());
+
 static inline const Nat run = []() {
-auto&& _sv2 = PIV<natIPtr>::int_to_ptr(Nat::s(Nat::o()),
-true);
+auto&& _sv2 = PIV<natIPtr>::int_to_ptr(Nat::s(Nat::o()), true);
 if (std::holds_alternative<typename EOU<typename PointerV<natIPtr>::ptr>::Ok>(_sv2.v())) {
 const auto& [a02] = std::get<typename EOU<typename PointerV<natIPtr>::ptr>::Ok>(_sv2.v());
 return PIV<natIPtr>::ptr_to_int(a02);

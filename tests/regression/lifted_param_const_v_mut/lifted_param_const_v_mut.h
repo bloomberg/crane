@@ -22,17 +22,17 @@ struct natParams;
 using ptr = crane::obj;
 template <typename
 I>concept Params = requires {
-  typename I::ptr;
-  typename I::iptr;
-} && (requires {
-  { I::nullp() } -> std::convertible_to<typename I::ptr>;
-} || requires {
-  { I::nullp } -> std::convertible_to<typename I::ptr>;
-}) && (requires {
-  { I::zeroi() } -> std::convertible_to<typename I::iptr>;
-} || requires {
-  { I::zeroi } -> std::convertible_to<typename I::iptr>;
-});
+    typename I::ptr;
+    typename I::iptr;
+  } && (requires {
+    { I::nullp() } -> std::convertible_to<typename I::ptr>;
+  } || requires {
+    { I::nullp } -> std::convertible_to<typename I::ptr>;
+  }) && (requires {
+    { I::zeroi() } -> std::convertible_to<typename I::iptr>;
+  } || requires {
+    { I::zeroi } -> std::convertible_to<typename I::iptr>;
+  });
 
 struct Nat {
   // TYPES

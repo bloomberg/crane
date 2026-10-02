@@ -20,13 +20,13 @@ template <typename iptr>struct Dval;
 struct natIPtr;
 struct boolIPtr;using iptr = crane::obj;template <typename
 I>concept IPtr = requires {
-  typename I::iptr;
-  { I::to_Z(std::declval<typename I::iptr>()) } -> std::convertible_to<Nat>;
-} && (requires {
-  { I::zero_iptr() } -> std::convertible_to<typename I::iptr>;
-} || requires {
-  { I::zero_iptr } -> std::convertible_to<typename I::iptr>;
-});
+    typename I::iptr;
+    { I::to_Z(std::declval<typename I::iptr>()) } -> std::convertible_to<Nat>;
+  } && (requires {
+    { I::zero_iptr() } -> std::convertible_to<typename I::iptr>;
+  } || requires {
+    { I::zero_iptr } -> std::convertible_to<typename I::iptr>;
+  });
 struct Nat {
   // TYPES
 struct O {
@@ -35,8 +35,7 @@ struct O {
 struct S {
 std::shared_ptr<Nat> a0;
 };
-using variant_t = std::variant<O,
-S>;
+using variant_t = std::variant<O, S>;
 private:
   // DATA
 variant_t v_;
@@ -51,8 +50,7 @@ static Nat s(Nat a0) {
 return Nat(S{std::make_shared<Nat>(std::move(a0))});}
   // MANIPULATORS
 ~Nat() {
-auto _next = [&](variant_t&
-_v) -> std::shared_ptr<Nat> {
+auto _next = [&](variant_t& _v) -> std::shared_ptr<Nat> {
 if (auto* _alt = std::get_if<S>(&_v)) {
 if (_alt->a0 && _alt->a0.use_count() == 1) {
 std::atomic_thread_fence(std::memory_order_acquire);
@@ -104,8 +102,7 @@ iptr i;
 struct DNat {
 Nat n;
 };
-using variant_t = std::variant<DIptr,
-DNat>;
+using variant_t = std::variant<DIptr, DNat>;
 private:
   // DATA
 variant_t v_;

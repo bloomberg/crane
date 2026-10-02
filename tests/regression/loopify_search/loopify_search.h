@@ -570,9 +570,8 @@ struct LoopifySearch {
   template <typename F0>
     requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
   static bool
-  or_search(F0 &&p,
-            const btree &t) { /// _Enter: captures varying parameters for each
-                              /// recursive call.
+  or_search(F0 &&p, const btree &t) { /// _Enter: captures varying parameters
+                                      /// for each recursive call.
 
     struct _Enter {
       const btree *t;

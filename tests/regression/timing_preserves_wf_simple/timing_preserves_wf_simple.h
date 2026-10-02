@@ -64,6 +64,7 @@ struct TimingPreservesWfSimple {
   static state execute(const state &s, Instr i);
   static inline const state sample =
       state{UINT64_C(4), UINT64_C(4), UINT64_C(100), UINT64_C(2)};
+
   static inline const bool t =
       (wf(sample) &&
        (cycles(Instr::JMS) == UINT64_C(24) &&

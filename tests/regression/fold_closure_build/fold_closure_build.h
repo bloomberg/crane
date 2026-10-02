@@ -181,6 +181,7 @@ struct FoldClosureBuild {
   /// Each closure captures the list element from the fold iteration.
   static mylist<crane::fn<uint64_t(uint64_t)>>
   collect_adders(const mylist<uint64_t> &l);
+
   static uint64_t apply_all(const mylist<crane::fn<uint64_t(uint64_t)>> &fns,
                             uint64_t x);
   /// test3: collect_adders 10,20,30

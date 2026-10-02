@@ -185,9 +185,8 @@ struct LoopifyPairs {
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<bool, F0 &, T1 &>
   static std::pair<list<T1>, list<T1>>
-  partition(F0 &&p,
-            const list<T1> &l) { /// _Enter: captures varying parameters for
-                                 /// each recursive call.
+  partition(F0 &&p, const list<T1> &l) { /// _Enter: captures varying parameters
+                                         /// for each recursive call.
 
     struct _Enter {
       const list<T1> *l;

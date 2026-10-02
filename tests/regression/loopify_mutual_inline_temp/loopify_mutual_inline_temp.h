@@ -182,6 +182,7 @@ struct LoopifyMutualInlineTemp {
                             uint64_t s);
   static uint64_t odd_step(uint64_t n, const lst &l, const lst &keep,
                            uint64_t s);
+
   static uint64_t go(uint64_t n);
 };
 

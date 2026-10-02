@@ -46,12 +46,12 @@ concept Monad = requires {
 };
 template <typename
 I>concept Params = requires {
-  typename I::ptr;
-} && (requires {
-  { I::nullp() } -> std::convertible_to<typename I::ptr>;
-} || requires {
-  { I::nullp } -> std::convertible_to<typename I::ptr>;
-});
+    typename I::ptr;
+  } && (requires {
+    { I::nullp() } -> std::convertible_to<typename I::ptr>;
+  } || requires {
+    { I::nullp } -> std::convertible_to<typename I::ptr>;
+  });
 
 struct Nat {
   // TYPES

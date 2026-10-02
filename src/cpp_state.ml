@@ -27,21 +27,6 @@ open Modutil
 open Common
 open Minicpp
 
-(** {2 Pp box shadows}
-
-    Since all output is reformatted by clang-format, the Pp box-layout algorithm
-    is wasted work. Shadow h/v/hov with identity to skip box construction while
-    keeping the same Pp.t type. *)
-
-(** Shadow horizontal box constructor with identity. *)
-let h x = x
-
-(** Shadow vertical box constructor with identity. *)
-let v _ x = x
-
-(** Shadow horizontal-or-vertical box constructor with identity. *)
-let hov _ x = x
-
 (** {2 Owned cells}
 
     Every mutable cell this module owns is created by one of the constructors
@@ -376,7 +361,7 @@ let pp_open mp =
     str ("#include \"" ^ file_of_modfile mp ^ ".h\"") ++ fnl ()
 
 (** Pretty-print a comment with OCaml-style delimiters. *)
-let pp_comment s = str "(* " ++ hov 0 s ++ str " *)"
+let pp_comment s = str "(* " ++ s ++ str " *)"
 
 (** Pretty-print an optional header comment. *)
 let pp_header_comment = function

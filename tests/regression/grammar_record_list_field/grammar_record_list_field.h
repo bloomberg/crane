@@ -172,6 +172,7 @@ const std::deque<grammar_entry> entries =
                       })))),
           std::deque<SigT<std::pair<Nonterminal, std::deque<Symbol>>,
                           std::pair<crane::obj, crane::obj>>>{})));
+
 uint64_t num_entries(std::monostate _x);
 
 #endif // INCLUDED_GRAMMAR_RECORD_LIST_FIELD

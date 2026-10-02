@@ -9,19 +9,6 @@
    Much of the surface is intentionally mutable global state (refs and
    hashtables) that is reset between extraction units via [reset_cpp_state]. *)
 
-(** {2 Layout combinators} *)
-
-(** Trivial box combinators used by the pretty-printers. *)
-val h : 'a -> 'a
-
-(** Shadows [Pp.v]: returns its second argument unchanged, skipping vertical box
-    construction (output is reformatted by clang-format anyway). *)
-val v : 'a -> 'b -> 'b
-
-(** Shadows [Pp.hov]: returns its second argument unchanged, skipping
-    horizontal-or-vertical box construction. *)
-val hov : 'a -> 'b -> 'b
-
 (** {2 Owned cells}
 
     A cell made by one of these is emptied by {!reset_cpp_state}, enrolled where

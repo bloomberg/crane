@@ -191,6 +191,7 @@ struct ErasedTypeFieldLambda {
                       List<std::pair<crane::obj,
                                      crane::fn<uint64_t(crane::obj)>>>::nil())},
           List<slot>::nil()));
+
   static inline const uint64_t run = slots.template fold_left<uint64_t>(
       [](uint64_t a, const slot &s) { return (a + weigh(s)); }, UINT64_C(0));
 };

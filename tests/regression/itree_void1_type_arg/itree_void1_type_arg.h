@@ -247,6 +247,7 @@ struct ItreeVoid1TypeArg {
 
   static inline const Itree<crane::obj, Nat> u =
       wrap<crane::obj>(Nat::s(Nat::s(Nat::s(Nat::o()))));
+
   static inline const bool is_three = []() {
     auto &&_sv = []() {
       auto &&_sv0 = u;

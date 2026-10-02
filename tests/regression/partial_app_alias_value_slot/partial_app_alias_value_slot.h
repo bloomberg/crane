@@ -17,12 +17,12 @@ struct natIPtr;
 using iptr = crane::obj;
 template <typename
 I>concept IPtr = requires {
-  typename I::iptr;
-} && (requires {
-  { I::zero_iptr() } -> std::convertible_to<typename I::iptr>;
-} || requires {
-  { I::zero_iptr } -> std::convertible_to<typename I::iptr>;
-});
+    typename I::iptr;
+  } && (requires {
+    { I::zero_iptr() } -> std::convertible_to<typename I::iptr>;
+  } || requires {
+    { I::zero_iptr } -> std::convertible_to<typename I::iptr>;
+  });
 
 struct Nat {
   // TYPES

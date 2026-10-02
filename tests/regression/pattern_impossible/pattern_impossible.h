@@ -145,6 +145,7 @@ struct PatternImpossible {
   static inline const uint64_t test1 = complex_match(Three::ONE);
   static inline const uint64_t test2 = nested_match(
       nested::node(nested::leaf(UINT64_C(5)), nested::leaf(UINT64_C(10))));
+
   static inline const uint64_t test3 = double_match(Three::ONE, Three::TWO);
 };
 

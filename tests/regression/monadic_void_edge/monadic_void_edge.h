@@ -136,6 +136,7 @@ struct MonadicVoidEdge {
   /// 13. Function that takes itree as argument and sequences
   static void sequence_effects(const std::monostate &e1,
                                const std::monostate &e2);
+
   static void test_sequence();
 };
 

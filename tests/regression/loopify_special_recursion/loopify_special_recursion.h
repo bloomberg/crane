@@ -394,6 +394,7 @@ struct LoopifySpecialRecursion {
   static uint64_t categorize_by(uint64_t k, const List<uint64_t> &l);
   static List<uint64_t> between(uint64_t lo, uint64_t hi,
                                 const List<uint64_t> &l);
+
   static List<uint64_t> merge_levels(const List<List<uint64_t>> &ll);
 };
 

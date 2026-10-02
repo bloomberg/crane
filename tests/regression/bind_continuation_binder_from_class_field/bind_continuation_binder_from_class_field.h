@@ -36,12 +36,12 @@ concept Monad = requires {
 };
 template <typename
 I>concept Params = requires {
-  typename I::addr;
-} && (requires {
-  { I::zero() } -> std::convertible_to<typename I::addr>;
-} || requires {
-  { I::zero } -> std::convertible_to<typename I::addr>;
-});
+    typename I::addr;
+  } && (requires {
+    { I::zero() } -> std::convertible_to<typename I::addr>;
+  } || requires {
+    { I::zero } -> std::convertible_to<typename I::addr>;
+  });
 
 struct Nat {
   // TYPES

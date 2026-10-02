@@ -20,13 +20,13 @@ struct FailE;
 using ptr = crane::obj;
 template <typename
 I>concept Params = requires {
-  typename I::ptr;
-  { I::width() } -> std::convertible_to<Nat>;
-} && (requires {
-  { I::zero_ptr() } -> std::convertible_to<typename I::ptr>;
-} || requires {
-  { I::zero_ptr } -> std::convertible_to<typename I::ptr>;
-});
+    typename I::ptr;
+    { I::width() } -> std::convertible_to<Nat>;
+  } && (requires {
+    { I::zero_ptr() } -> std::convertible_to<typename I::ptr>;
+  } || requires {
+    { I::zero_ptr } -> std::convertible_to<typename I::ptr>;
+  });
 
 struct Nat {
   // TYPES

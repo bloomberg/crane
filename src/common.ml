@@ -142,7 +142,7 @@ let pp_par par st = if par then str "(" ++ st ++ str ")" else st
 let pp_apply st par args =
   match args with
   | [] -> st
-  | _ -> hov 2 (pp_par par (st ++ spc () ++ prlist_with_sep spc identity args))
+  | _ -> (pp_par par (st ++ spc () ++ prlist_with_sep spc identity args))
 
 (** Apply function to arguments with C++ syntax (commas, parens).
     @param st   The head expression (function name)
@@ -151,7 +151,7 @@ let pp_apply_cpp st args =
   match args with
   | [] -> st
   | _ ->
-    hov 2 (st ++ str "(" ++ prlist_with_sep (fun _ -> str ", ") identity args)
+    (st ++ str "(" ++ prlist_with_sep (fun _ -> str ", ") identity args)
     ++ str ")"
 
 (* Stale note (no matching function in this module): "Same as [pp_apply], but
@@ -196,7 +196,7 @@ let pp_list_stmt f = function
 let pp_boxed_tuple f = function
   | [] -> mt ()
   | [x] -> f x
-  | l -> pp_par true (hov 0 (prlist_with_sep (fun () -> str "," ++ spc ()) f l))
+  | l -> pp_par true ((prlist_with_sep (fun () -> str "," ++ spc ()) f l))
 
 (** By default, in module Format, you can do horizontal placing of blocks even
     if they include newlines, as long as the number of chars in the blocks is

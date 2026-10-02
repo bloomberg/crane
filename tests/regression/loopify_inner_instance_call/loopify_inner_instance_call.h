@@ -239,11 +239,10 @@ public:
 
 struct ITree {
   template <typename T1, typename T2, typename T3>
-  static Itree<T1, T3> subst(
-      std::type_identity_t<crane::fn<Itree<T1, T3>(T2)>> k,
-      Itree<T1,
-            T2>
-          u) { /// _Enter: captures varying parameters for each recursive call.
+  static Itree<T1, T3>
+  subst(std::type_identity_t<crane::fn<Itree<T1, T3>(T2)>> k,
+        Itree<T1, T2> u) { /// _Enter: captures varying parameters for each
+                           /// recursive call.
 
     struct _Enter {
       Itree<T1, T2> u;

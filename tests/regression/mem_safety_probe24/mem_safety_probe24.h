@@ -713,6 +713,7 @@ struct MemSafetyProbe24 {
   /// Both trees are destructured simultaneously.
   static mylist<std::pair<uint64_t, uint64_t>> zip_trees(const tree &t1,
                                                          const tree &t2);
+
   static inline const uint64_t test_zip_trees = sum_list([]() {
     mylist<std::pair<uint64_t, uint64_t>> pairs = zip_trees(
         tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),

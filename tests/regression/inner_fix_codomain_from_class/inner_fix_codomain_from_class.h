@@ -22,20 +22,20 @@ using iptr = crane::obj;
 using ptr = crane::obj;
 template <typename
 I>concept IPtr = requires {
-  typename I::iptr;
-} && (requires {
-  { I::zero_iptr() } -> std::convertible_to<typename I::iptr>;
-} || requires {
-  { I::zero_iptr } -> std::convertible_to<typename I::iptr>;
-});
+    typename I::iptr;
+  } && (requires {
+    { I::zero_iptr() } -> std::convertible_to<typename I::iptr>;
+  } || requires {
+    { I::zero_iptr } -> std::convertible_to<typename I::iptr>;
+  });
 template <typename
 I>concept Ptr = requires {
-  typename I::ptr;
-} && (requires {
-  { I::zero_ptr() } -> std::convertible_to<typename I::ptr>;
-} || requires {
-  { I::zero_ptr } -> std::convertible_to<typename I::ptr>;
-});
+    typename I::ptr;
+  } && (requires {
+    { I::zero_ptr() } -> std::convertible_to<typename I::ptr>;
+  } || requires {
+    { I::zero_ptr } -> std::convertible_to<typename I::ptr>;
+  });
 /// Both fields are themselves instances, as Params is in Vellvm.
 ///
 /// {b An earlier version of this comment said IPTR "is the one Crane writes;

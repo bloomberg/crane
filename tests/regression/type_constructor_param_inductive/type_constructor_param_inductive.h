@@ -246,6 +246,7 @@ struct TypeConstructorParamInductive {
   static uint64_t size_list(const wrapped<List<crane::obj>, uint64_t> &w);
   static uint64_t
   size_opt(const wrapped<std::optional<crane::obj>, uint64_t> &w);
+
   static inline const uint64_t total =
       (((size_list(
              wrapped<List<crane::obj>, uint64_t>::wrap(List<uint64_t>::cons(

@@ -388,12 +388,12 @@ public:
 
 template <typename
 I>concept Params = requires {
-  typename I::ptr;
-} && (requires {
-  { I::zero() } -> std::convertible_to<typename I::ptr>;
-} || requires {
-  { I::zero } -> std::convertible_to<typename I::ptr>;
-});
+    typename I::ptr;
+  } && (requires {
+    { I::zero() } -> std::convertible_to<typename I::ptr>;
+  } || requires {
+    { I::zero } -> std::convertible_to<typename I::ptr>;
+  });
 
 struct RunBotHandleExistential {
   using ptr = crane::obj;
@@ -530,6 +530,7 @@ struct RunBotHandleExistential {
   static_assert(Params<natParams>);
   static std::optional<Nat> run(const Nat &fuel,
                                 Itree<crane::obj, Sum<Run_error, Nat>> t);
+
   static inline const bool is_three = []() -> bool {
     auto _cs = []() {
       auto _lit0 = Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(

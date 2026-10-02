@@ -662,12 +662,12 @@ struct Subevent {
 
 template <typename
 I>concept Params = requires {
-  typename I::ptr;
-} && (requires {
-  { I::zero() } -> std::convertible_to<typename I::ptr>;
-} || requires {
-  { I::zero } -> std::convertible_to<typename I::ptr>;
-});
+    typename I::ptr;
+  } && (requires {
+    { I::zero() } -> std::convertible_to<typename I::ptr>;
+  } || requires {
+    { I::zero } -> std::convertible_to<typename I::ptr>;
+  });
 
 struct LiftedHelperFamilyGeneralised {
   struct ubE {

@@ -299,6 +299,7 @@ struct StatetItreeReturn {
 
   static inline const Itree<noE, std::pair<Nat, Nat>> r =
       get_st<noE>(Nat::s(Nat::o()))(Nat::s(Nat::s(Nat::o())));
+
   static inline const bool is_three = []() {
     auto &&_sv = r.observe();
     if (std::holds_alternative<typename ItreeF<

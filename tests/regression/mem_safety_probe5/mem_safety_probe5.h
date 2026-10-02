@@ -522,6 +522,7 @@ struct MemSafetyProbe5 {
   static mylist<tree> make_tree_list(uint64_t n);
   static uint64_t sum_getters(const mylist<crane::fn<uint64_t(uint64_t)>> &l,
                               uint64_t x);
+
   static inline const uint64_t test_stress = []() {
     mylist<tree> trees = make_tree_list(UINT64_C(50));
     mylist<crane::fn<uint64_t(uint64_t)>> getters =

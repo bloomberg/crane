@@ -194,21 +194,21 @@ public:
 
 template <typename
 I>concept Params = requires {
-  typename I::ptr;
-} && (requires {
-  { I::zero() } -> std::convertible_to<typename I::ptr>;
-} || requires {
-  { I::zero } -> std::convertible_to<typename I::ptr>;
-});
+    typename I::ptr;
+  } && (requires {
+    { I::zero() } -> std::convertible_to<typename I::ptr>;
+  } || requires {
+    { I::zero } -> std::convertible_to<typename I::ptr>;
+  });
 template <typename
 I>concept MemState = requires {
-  typename I::state;
-  { I::size_of(std::declval<typename I::state>()) } -> std::convertible_to<Nat>;
-} && (requires {
-  { I::initial_state() } -> std::convertible_to<typename I::state>;
-} || requires {
-  { I::initial_state } -> std::convertible_to<typename I::state>;
-});
+    typename I::state;
+    { I::size_of(std::declval<typename I::state>()) } -> std::convertible_to<Nat>;
+  } && (requires {
+    { I::initial_state() } -> std::convertible_to<typename I::state>;
+  } || requires {
+    { I::initial_state } -> std::convertible_to<typename I::state>;
+  });
 
 struct SectionInstanceStateField {
   using ptr = crane::obj;

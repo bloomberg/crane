@@ -19,30 +19,30 @@ using allocationId = crane::obj;
 using ptr = crane::obj;
 template <typename
 I>concept Prov = requires {
-  typename I::provenance;
-  typename I::allocationId;
-  typename I::prov;
-} && (requires {
-  { I::no_prov() } -> std::convertible_to<typename I::prov>;
-} || requires {
-  { I::no_prov } -> std::convertible_to<typename I::prov>;
-}) && (requires {
-  { I::a_provenance() } -> std::convertible_to<typename I::provenance>;
-} || requires {
-  { I::a_provenance } -> std::convertible_to<typename I::provenance>;
-}) && (requires {
-  { I::an_allocationId() } -> std::convertible_to<typename I::allocationId>;
-} || requires {
-  { I::an_allocationId } -> std::convertible_to<typename I::allocationId>;
-});
+    typename I::provenance;
+    typename I::allocationId;
+    typename I::prov;
+  } && (requires {
+    { I::no_prov() } -> std::convertible_to<typename I::prov>;
+  } || requires {
+    { I::no_prov } -> std::convertible_to<typename I::prov>;
+  }) && (requires {
+    { I::a_provenance() } -> std::convertible_to<typename I::provenance>;
+  } || requires {
+    { I::a_provenance } -> std::convertible_to<typename I::provenance>;
+  }) && (requires {
+    { I::an_allocationId() } -> std::convertible_to<typename I::allocationId>;
+  } || requires {
+    { I::an_allocationId } -> std::convertible_to<typename I::allocationId>;
+  });
 template <typename
 I>concept Ptr = requires {
-  typename I::ptr;
-} && (requires {
-  { I::zero_ptr() } -> std::convertible_to<typename I::ptr>;
-} || requires {
-  { I::zero_ptr } -> std::convertible_to<typename I::ptr>;
-});
+    typename I::ptr;
+  } && (requires {
+    { I::zero_ptr() } -> std::convertible_to<typename I::ptr>;
+  } || requires {
+    { I::zero_ptr } -> std::convertible_to<typename I::ptr>;
+  });
 /// The fields are themselves instances: the wrong spelling in Vellvm is
 /// typename _tcI0::PROV::prov, a sibling field of an {e inner} class.
 template <typename I>

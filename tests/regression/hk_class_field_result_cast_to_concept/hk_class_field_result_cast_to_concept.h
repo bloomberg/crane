@@ -22,28 +22,28 @@ using state = crane::obj;
 template <typename x = void> using memM = crane::obj;
 template <typename
 I>concept PtrC = requires {
-  typename I::ptr;
-} && (requires {
-  { I::nullp() } -> std::convertible_to<typename I::ptr>;
-} || requires {
-  { I::nullp } -> std::convertible_to<typename I::ptr>;
-});
+    typename I::ptr;
+  } && (requires {
+    { I::nullp() } -> std::convertible_to<typename I::ptr>;
+  } || requires {
+    { I::nullp } -> std::convertible_to<typename I::ptr>;
+  });
 template <typename
 I>concept ProvC = requires {
-  typename I::provenance;
-} && (requires {
-  { I::noprov() } -> std::convertible_to<typename I::provenance>;
-} || requires {
-  { I::noprov } -> std::convertible_to<typename I::provenance>;
-});
+    typename I::provenance;
+  } && (requires {
+    { I::noprov() } -> std::convertible_to<typename I::provenance>;
+  } || requires {
+    { I::noprov } -> std::convertible_to<typename I::provenance>;
+  });
 template <typename
 I>concept StateC = requires {
-  typename I::state;
-} && (requires {
-  { I::init() } -> std::convertible_to<typename I::state>;
-} || requires {
-  { I::init } -> std::convertible_to<typename I::state>;
-});
+    typename I::state;
+  } && (requires {
+    { I::init() } -> std::convertible_to<typename I::state>;
+  } || requires {
+    { I::init } -> std::convertible_to<typename I::state>;
+  });
 template <typename I, typename ptr, typename provenance, typename state>
 concept MMP = requires {
   typename I::PTR;

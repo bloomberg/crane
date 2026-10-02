@@ -286,6 +286,7 @@ struct TailrecReorderProbe {
   static mylist<uint64_t> weave(const mylist<uint64_t> &l1,
                                 const mylist<uint64_t> &l2,
                                 const mylist<uint64_t> &acc);
+
   static inline const uint64_t test_weave = mylist_sum<uint64_t>(
       [](uint64_t x) { return x; },
       weave(mylist<uint64_t>::mycons(

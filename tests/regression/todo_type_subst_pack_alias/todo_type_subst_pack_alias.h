@@ -9,13 +9,13 @@
 
 template <typename
 I>concept Pack = requires {
-  typename I::carrier;
-  { I::step(std::declval<typename I::carrier>()) } -> std::convertible_to<typename I::carrier>;
-} && (requires {
-  { I::seed() } -> std::convertible_to<typename I::carrier>;
-} || requires {
-  { I::seed } -> std::convertible_to<typename I::carrier>;
-});
+    typename I::carrier;
+    { I::step(std::declval<typename I::carrier>()) } -> std::convertible_to<typename I::carrier>;
+  } && (requires {
+    { I::seed() } -> std::convertible_to<typename I::carrier>;
+  } || requires {
+    { I::seed } -> std::convertible_to<typename I::carrier>;
+  });
 
 struct TodoTypeSubstPackAlias {
   using carrier = crane::obj;

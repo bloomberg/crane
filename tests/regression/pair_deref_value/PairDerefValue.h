@@ -152,6 +152,7 @@ const Datatypes::List<C::production> test_prods =
                                                                         Nat>::
                                                                     nil())),
                 Datatypes::template List<C::production>::nil())));
+
 const Datatypes::List<Datatypes::List<Datatypes::Nat>> test_result =
     C::rhss_for(test_prods, Datatypes::Nat::s(Datatypes::Nat::o()));
 

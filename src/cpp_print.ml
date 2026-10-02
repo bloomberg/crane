@@ -1546,7 +1546,7 @@ let rec pp_cpp_type ?(lead = true) par vl t =
       require_header "type_traits";
       str "std::decay_t<" ++ pp_rec false t ++ str ">"
   in
-  h (pp_rec ~lead par t)
+  (pp_rec ~lead par t)
 
 (** Check if a C++ expression tree contains a string literal ([CPPstring]).
     Used to guard ternary simplification: ternary with string-literal branches
@@ -2053,7 +2053,7 @@ and pp_cpp_expr env args t =
     apply full_name
   | CPPnamespace (r, t) ->
     let name, _ = inductive_name_info r in
-    h (name ++ str "::" ++ pp_cpp_expr env args t)
+    (name ++ str "::" ++ pp_cpp_expr env args t)
   | CPPfun_call (res, CPPglob (n, tys, Some {ci_inline = Some tmpl; _}), ts) ->
     let s = tmpl.it_text in
     if tmpl.it_form = Block_iife then
@@ -2484,7 +2484,7 @@ and pp_cpp_expr env args t =
       ++ fnl ()
       ++ str "}"
     | None ->
-      h (capture ++ params_s ++ str ")")
+      (capture ++ params_s ++ str ")")
       ++ str " {"
       ++ fnl ()
       ++ body_s
@@ -4049,8 +4049,7 @@ let pp_template_param_redecl (tt, id) = pp_template_type tt ++ spc () ++ Id.prin
                     template parameter declaration
     @return [Some pp] where [pp] is the full [requires ...] clause, or [None]
             if no [TTfun] constraints are present *)
-let pp_requires_of_tparams ?(body = []) ?(params = []) tparams =
-  let stored = erased_into_storage_tparam ~params body in
+let pp_requires_of_tparams tparams =
   let invocable_r =
     if String.equal (Table.std_lib ()) "BDE" then "bsl::is_invocable_r_v"
     else "std::is_invocable_r_v"
@@ -4059,16 +4058,8 @@ let pp_requires_of_tparams ?(body = []) ?(params = []) tparams =
     List.filter_map
       (fun (tt, id) ->
         match tt with
-        (* A constraint is a claim about a representation.  A callback the
-           body erases into storage has none to claim: [crane_erase_fn]
-           adapts whatever it is handed, so asserting that it takes a
-           [std::any] would reject every honest caller.  A callback the body
-           APPLIES keeps its constraint, erased argument positions included --
-           there the [std::any] is exactly what it will be passed. *)
-        | TTfun _ when stored id -> None
-        (* Nor has a rank-2 callback a result to claim: see
-           {!Minicpp.tt_constraint_is_vacuous}. *)
-        | TTfun (dom, cod) when Minicpp.tt_constraint_is_vacuous dom cod -> None
+        (* Which callables keep a constraint was settled before printing:
+           see {!Minicpp.settle_constraints}. *)
         | TTfun (dom, cod) ->
           require_header "type_traits";
           let pp_ref ty = pp_type ty ++ str " &" in
@@ -4126,7 +4117,7 @@ let struct_template_head ~pp_param env tparams cstr =
       | None, Some c -> pp_cpp_expr env [] c ++ fnl ()
       | Some r, Some c -> r ++ str " && " ++ pp_cpp_expr env [] c ++ fnl ()
     in
-    h (str "template <" ++ args ++ str ">")
+    (str "template <" ++ args ++ str ">")
     ++ cstr_pp
 
 (** Forward declarations of the constrained templates rendered at global
@@ -4235,7 +4226,7 @@ type member_mode =
 (** The [template <...>] line a struct's parameters call for, if any. *)
 let pp_owner_template = function
   | [] -> mt ()
-  | tps -> h (str "template <" ++ pp_list pp_template_param tps ++ str ">") ++ fnl ()
+  | tps -> (str "template <" ++ pp_list pp_template_param tps ++ str ">") ++ fnl ()
 
 (** Pretty-print a single MiniCpp struct field as C++ source.
 
@@ -4254,7 +4245,7 @@ let rec pp_cpp_field
       else id_str
     in
     pp_doc_comment_for_name rocq_name
-    ++ h (pp_type ty ++ str " " ++ Id.print id ++ str ";")
+    ++ (pp_type ty ++ str " " ++ Id.print id ++ str ";")
   | Fvar' (id, ty) ->
     (* A field's name lives in its struct, not in the enclosing namespace, so
        it must not be registered as occupying one: a field named after a type
@@ -4262,7 +4253,7 @@ let rec pp_cpp_field
        that type through a duplicate wrapper.  Reads spell the field the same
        way (see [CPPget']). *)
     pp_doc_comment_for_name (Common.pp_global_name Type id)
-    ++ h (pp_type ty ++ str " " ++ str (Common.pp_global_name Type id)
+    ++ (pp_type ty ++ str " " ++ str (Common.pp_global_name Type id)
           ++ str ";")
   | Fmethod
       {
@@ -4329,7 +4320,7 @@ let rec pp_cpp_field
       | [] -> mt ()
       | _ ->
         let args = pp_list pp_template_param mf_tparams in
-        let req = pp_requires_of_tparams ~body:mf_body ~params:mf_params mf_tparams in
+        let req = pp_requires_of_tparams mf_tparams in
         str "template <" ++ args ++ str ">" ++ fnl ()
         ++ ( match req with
            | None -> mt ()
@@ -4396,7 +4387,7 @@ let rec pp_cpp_field
     let explicit_s = if fc_explicit then str "explicit " else mt () in
     let noexcept_s = if fc_noexcept then str " noexcept" else mt () in
     let head =
-      h (explicit_s ++ sname ++ pp_par true params_s ++ noexcept_s ++ init_s)
+      (explicit_s ++ sname ++ pp_par true params_s ++ noexcept_s ++ init_s)
     in
     template_s
     ++ ( match fc_body with
@@ -4412,9 +4403,9 @@ let rec pp_cpp_field
       | None -> str "UNKNOWN_STRUCT"
     in
     ( match mode with
-    | Mm_declared -> h (str "~" ++ sname ++ str "();")
+    | Mm_declared -> (str "~" ++ sname ++ str "();")
     | Mm_inline ->
-      h (str "~" ++ sname ++ str "() {")
+      (str "~" ++ sname ++ str "() {")
       ++ fnl ()
       ++ pp_list_stmt (pp_cpp_stmt env []) body
       ++ fnl ()
@@ -4441,7 +4432,7 @@ let rec pp_cpp_field
       else d
     in
     doc_s
-    ++ h (str "struct " ++ Id.print id ++ str " {")
+    ++ (str "struct " ++ Id.print id ++ str " {")
     ++ fnl ()
     ++ fields_s
     ++ fnl ()
@@ -4458,12 +4449,12 @@ let rec pp_cpp_field
       ++ str "> struct " ++ str tmpl ++ str " {" )
     ++ fnl ()
     ++ prlist_with_sep fnl
-         (fun (id, ty) -> h (pp_cpp_type false [] ty ++ spc () ++ Id.print id ++ str ";"))
+         (fun (id, ty) -> (pp_cpp_type false [] ty ++ spc () ++ Id.print id ++ str ";"))
          dfs_fields
     ++ fnl ()
     ++ str "};"
     ++ fnl ()
-    ++ h (str "using " ++ Id.print dfs_name ++ str " = " ++ str tmpl ++ str "<>;")
+    ++ (str "using " ++ Id.print dfs_name ++ str " = " ++ str tmpl ++ str "<>;")
   | Fnested_using (tparams, id, ty) ->
     if tparams = [] && is_any_type ty then
       any_type_aliases := Id.Set.add id !any_type_aliases;
@@ -4486,7 +4477,7 @@ let rec pp_cpp_field
       | Some s -> s
       | None -> str "UNKNOWN_STRUCT"
     in
-    h (sname ++ str "() = delete;")
+    (sname ++ str "() = delete;")
   | Fdefaulted_special_members ->
     let sname =
       match struct_name with
@@ -4497,13 +4488,13 @@ let rec pp_cpp_field
        deprecates the implicit copies; declaring the moves would then delete the
        implicit copies.  Re-default all four so the value keeps cheap move
        semantics (no refcount bump) while staying copyable. *)
-    h (sname ++ str "(const " ++ sname ++ str "&) = default;")
+    (sname ++ str "(const " ++ sname ++ str "&) = default;")
     ++ fnl ()
-    ++ h (sname ++ str "& operator=(const " ++ sname ++ str "&) = default;")
+    ++ (sname ++ str "& operator=(const " ++ sname ++ str "&) = default;")
     ++ fnl ()
-    ++ h (sname ++ str "(" ++ sname ++ str "&&) noexcept = default;")
+    ++ (sname ++ str "(" ++ sname ++ str "&&) noexcept = default;")
     ++ fnl ()
-    ++ h (sname ++ str "& operator=(" ++ sname ++ str "&&) noexcept = default;")
+    ++ (sname ++ str "& operator=(" ++ sname ++ str "&&) noexcept = default;")
 
 (** Print the body of a struct: groups fields by [(visibility, section_tag)],
     emits [public:]/[private:] labels only when necessary, and inserts
@@ -4682,15 +4673,6 @@ let claim_template_defaults decl =
       true
     end
 
-(** The parameters and statements of a declaration, for the traversals that
-    need to see what a signature's body actually does with its parameters (see
-    {!erased_into_storage_tparam}).  A declaration with no body gives empty
-    lists. *)
-let rec decl_body = function
-  | Dtemplate (_, _, inner) -> decl_body inner
-  | Dfun {df_shape = Ddef (params, body); _} -> (params, body)
-  | Dasgn (_, _, e) -> ([], [Sreturn (Some e)])
-  | _ -> ([], [])
 
 (** The name the struct wrapping an inductive at namespace scope is written
     under.  An inductive's wrapper is named after the inductive, capitalised;
@@ -4771,14 +4753,14 @@ and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
   | Dtemplate (temps, cstr, Dasgn (id, ty, e)) when (!render_ctx).rc_in_struct ->
     let args = pp_list pp_template_param temps in
     let expr_pp = pp_initialiser env ty e in
-    let req = pp_requires_of_tparams ~body:[Sreturn (Some e)] temps in
+    let req = pp_requires_of_tparams temps in
     let cstr_pp = match (req, cstr) with
       | None, None -> mt ()
       | Some r, None -> r ++ fnl ()
       | None, Some c -> pp_cpp_expr env [] c ++ fnl ()
       | Some r, Some c -> r ++ str " && " ++ pp_cpp_expr env [] c ++ fnl ()
     in
-    h (str "template <" ++ args ++ str ">")
+    (str "template <" ++ args ++ str ">")
     ++ cstr_pp
     ++ pp_meyers_singleton env id ty expr_pp
   | Dtemplate (temps, cstr, decl) ->
@@ -4789,20 +4771,19 @@ and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
       else pp_template_param_redecl
     in
     let args = pp_list pp_param temps in
-    let params, body = decl_body decl in
-    let req = pp_requires_of_tparams ~body ~params temps in
+    let req = pp_requires_of_tparams temps in
     let cstr_pp = match (req, cstr) with
       | None, None -> mt ()
       | Some r, None -> r ++ fnl ()
       | None, Some c -> pp_cpp_expr env [] c ++ fnl ()
       | Some r, Some c -> r ++ str " && " ++ pp_cpp_expr env [] c ++ fnl ()
     in
-    h (str "template <" ++ args ++ str ">")
+    (str "template <" ++ args ++ str ">")
     ++ cstr_pp
     ++ pp_cpp_decl_raw env (sub decl)
   | Dnspace (None, decls) ->
     let ds = pp_list_stmt (fun d -> pp_cpp_decl_raw env (sub d)) decls in
-    h (str "namespace " ++ str "{") ++ fnl () ++ ds ++ fnl () ++ str "};"
+    (str "namespace " ++ str "{") ++ fnl () ++ ds ++ fnl () ++ str "};"
   | Dnspace (Some id, decls) ->
     let struct_name_str = nspace_wrapper_name id in
     (* The same question the out-of-line definition of a member asks, asked
@@ -4890,7 +4871,7 @@ and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
         else
           mt ()
       in
-      h (str "template <" ++ args ++ str ">")
+      (str "template <" ++ args ++ str ">")
       ++ cstr_pp
       ++ str "struct "
       ++ struct_name
@@ -4915,7 +4896,7 @@ and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
           fnl () ++ specs
         | None -> mt ()
       in
-      h (str "struct " ++ str struct_name_str ++ str " {")
+      (str "struct " ++ str struct_name_str ++ str " {")
       ++ fnl ()
       ++ ds
       ++ pending_fwd
@@ -5144,15 +5125,14 @@ and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
     let note =
       match u.du_note with None -> mt () | Some s -> str (" /* " ^ s ^ " */")
     in
-    hov 2
-      ( pp_template_header u.du_tparams
+    ( pp_template_header u.du_tparams
       ++ str "using "
       ++ pp_global Type u.du_name
       ++ def
       ++ note
       ++ str ";" )
   | Dstruct_fwd (tparams, r) ->
-    h (pp_template_header tparams ++ str "struct " ++ pp_global Type r ++ str ";")
+    (pp_template_header tparams ++ str "struct " ++ pp_global Type r ++ str ";")
   | Dmember_def {dm_owner; dm_enclosing; dm_tparams; dm_field} ->
     (* The struct is behind us, so its own name is no longer in scope: the
        member is written under the qualifier that names it from outside.
@@ -5210,7 +5190,7 @@ and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
     mt ()
   | Dstatic_assert (e, so) ->
     ( match so with
-    | None -> h (str "static_assert(" ++ pp_cpp_expr env [] e ++ str ");")
+    | None -> (str "static_assert(" ++ pp_cpp_expr env [] e ++ str ");")
     | Some s ->
       h
         ( str "static_assert("
@@ -5268,8 +5248,10 @@ let pp_type par vl t =
     needed or not. [env] is the list of names for the de Bruijn variables.
     [args] is the list of collected arguments (already pretty-printed).} *)
 
-(** Insert a double line-break in the Pp output (used to visually separate
-    declaration groups in the generated C++ source). *)
+(** The break between two declaration groups.  It is a break hint, not a
+    forced newline, so the vertical box the whole file is printed in
+    ([Extract_env]) decides where it falls; clang-format keeps the blank lines
+    it leaves. *)
 let cut2 () = brk (0, -100000) ++ brk (0, 0)
 
 (* Give [Translation] access to this module's context-sensitive printer (see

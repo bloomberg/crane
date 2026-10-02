@@ -607,6 +607,7 @@ struct LoopifySequences {
   /// run_length_encode l encodes consecutive runs: 1,1,2,2,2 -> (1,2),(2,3).
   static List<std::pair<uint64_t, uint64_t>>
   run_length_encode_fuel(uint64_t fuel, const List<uint64_t> &l);
+
   static List<std::pair<uint64_t, uint64_t>>
   run_length_encode(const List<uint64_t> &l);
   /// between lo hi l filters elements in range lo, hi.

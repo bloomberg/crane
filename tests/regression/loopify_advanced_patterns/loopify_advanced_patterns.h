@@ -183,6 +183,7 @@ struct LoopifyAdvancedPatterns {
   static uint64_t sum_shapes(const List<shape> &l);
   static std::pair<std::pair<uint64_t, uint64_t>, uint64_t>
   count_by_shape(const List<shape> &l);
+
   static List<uint64_t> replace_at(uint64_t idx, uint64_t value,
                                    const List<uint64_t> &l);
 };

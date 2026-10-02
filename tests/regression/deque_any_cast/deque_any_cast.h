@@ -12,14 +12,13 @@
 
 template <typename
 I>concept Monoid = requires {
-  typename I::m_carrier;
-  { I::m_op(std::declval<typename I::m_carrier>(),
-std::declval<typename I::m_carrier>()) } -> std::convertible_to<typename I::m_carrier>;
-} && (requires {
-  { I::m_id() } -> std::convertible_to<typename I::m_carrier>;
-} || requires {
-  { I::m_id } -> std::convertible_to<typename I::m_carrier>;
-});
+    typename I::m_carrier;
+    { I::m_op(std::declval<typename I::m_carrier>(), std::declval<typename I::m_carrier>()) } -> std::convertible_to<typename I::m_carrier>;
+  } && (requires {
+    { I::m_id() } -> std::convertible_to<typename I::m_carrier>;
+  } || requires {
+    { I::m_id } -> std::convertible_to<typename I::m_carrier>;
+  });
 
 struct DequeAnyCast {
   using m_carrier = crane::obj;

@@ -115,14 +115,14 @@ public:
 /// in scope inside the instance struct.
 template <typename
 I>concept Elt = requires {
-  typename I::E;
-  { I::elist() } -> std::convertible_to<List<typename I::E>>;
-  { I::ecount(std::declval<List<typename I::E>>()) } -> std::convertible_to<uint64_t>;
-} && (requires {
-  { I::e0() } -> std::convertible_to<typename I::E>;
-} || requires {
-  { I::e0 } -> std::convertible_to<typename I::E>;
-});
+    typename I::E;
+    { I::elist() } -> std::convertible_to<List<typename I::E>>;
+    { I::ecount(std::declval<List<typename I::E>>()) } -> std::convertible_to<uint64_t>;
+  } && (requires {
+    { I::e0() } -> std::convertible_to<typename I::E>;
+  } || requires {
+    { I::e0 } -> std::convertible_to<typename I::E>;
+  });
 
 struct AssocTypeTvarLeak {
   using E = crane::obj;

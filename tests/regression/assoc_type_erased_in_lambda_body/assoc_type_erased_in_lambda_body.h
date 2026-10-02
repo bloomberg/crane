@@ -22,12 +22,12 @@ using prov = List<Nat>;
 template <typename a> using Id = a;
 template <typename
 I>concept IPtr = requires {
-  typename I::iptr;
-} && (requires {
-  { I::zero_iptr() } -> std::convertible_to<typename I::iptr>;
-} || requires {
-  { I::zero_iptr } -> std::convertible_to<typename I::iptr>;
-});
+    typename I::iptr;
+  } && (requires {
+    { I::zero_iptr() } -> std::convertible_to<typename I::iptr>;
+  } || requires {
+    { I::zero_iptr } -> std::convertible_to<typename I::iptr>;
+  });
 /// Stands in for EOU_monad: the callback is handed to a {e dictionary}
 /// method, not to a plain polymorphic function.  A plain one does not
 /// reproduce -- see the header.

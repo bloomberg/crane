@@ -233,9 +233,8 @@ struct HofTreeLoopify {
   template <typename T1, typename T2, typename F0>
     requires std::is_invocable_r_v<T2, F0 &, T1 &>
   static tree<T2>
-  tree_map(F0 &&f,
-           const tree<T1> &t) { /// _Enter: captures varying parameters for each
-                                /// recursive call.
+  tree_map(F0 &&f, const tree<T1> &t) { /// _Enter: captures varying parameters
+                                        /// for each recursive call.
 
     struct _Enter {
       const tree<T1> *t;
