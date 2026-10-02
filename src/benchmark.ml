@@ -143,30 +143,6 @@ let validate_unique_labels subjects =
   in
   loop [] subjects
 
-(** Return the exact C++ expression for Rocq's [tt] constructor under the
-    currently active extraction mappings and renaming state. *)
-let cpp_unit () =
-  match Table.resolve_tt_ctor () with
-  | Some tt when Table.is_custom tt -> Table.find_custom tt
-  | Some (GlobRef.ConstructRef ((kn, index), constructor_index)) ->
-    let unit_ref = GlobRef.IndRef (kn, index) in
-    Common.pp_global Common.Type unit_ref
-    ^ "::"
-    ^ Table.enum_ctor_name_of_ref kn index constructor_index
-  | _ ->
-    CErrors.anomaly
-      Pp.(str "Crane Benchmark could not resolve Rocq's unit constructor.")
-
-(** Return the exact qualified C++ callable and unit expression for [reference].
-
-    This function must run before Crane resets the extraction naming tables. *)
-let cpp_entrypoint reference =
-  let base, _ = Table.labels_of_ref reference in
-  Common.push_visible base [];
-  Fun.protect
-    ~finally:Common.pop_visible
-    (fun () -> (Common.pp_global Common.Term reference, cpp_unit ()))
-
 (** Split a non-empty global label path into its module prefix and final label. *)
 let split_last_label labels =
   let rec split acc = function
@@ -247,8 +223,8 @@ let artifact_stem subject_index = function
 
 (** Extract one managed source artifact and determine its callable expression.
 
-    C++ callable metadata is captured while Crane's exact renaming state remains
-    live. OCaml callable names are derived using the built-in extraction naming
+    C++ callable metadata comes from the extraction's export manifest, read
+    while Crane's renaming state was live. OCaml callable names are derived using the built-in extraction naming
     rules. *)
 let extract_managed_artifact
     ~opaque_access
@@ -260,19 +236,28 @@ let extract_managed_artifact
   match backend with
   | Cpp ->
     let source = Filename.concat temp_dir (stem ^ ".cpp") in
-    let callable, unit =
+    let manifest =
       (* [source] is an internal path under a private temp directory. *)
-      Extract_env.full_extraction_with_result
+      Extract_env.full_extraction_manifest
         ~validate:false
         ~opaque_access
         (Some source)
         [subject.benchmark_term]
-        (fun () -> cpp_entrypoint subject.benchmark_ref)
+    in
+    let callable =
+      match
+        List.find_opt
+          (fun (r, _) -> GlobRef.UserOrd.equal r subject.benchmark_ref)
+          manifest.em_names
+      with
+      | Some (_, name) -> name
+      | None ->
+        benchmark_error "Crane Benchmark subject is not an extracted constant."
     in
     {
       artifact_source = source;
       artifact_callable = callable;
-      artifact_unit = unit;
+      artifact_unit = manifest.em_unit;
     }
   | OCaml ->
     let source = Filename.concat temp_dir (stem ^ ".ml") in

@@ -39,16 +39,21 @@ val full_extraction :
   qualid list ->
   unit
 
-(** Perform a full extraction and evaluate [after_print] before the extraction
-    state is reset. This lets consumers retain metadata derived from the exact
-    names used while printing. See {!full_extraction} for [validate]. *)
-val full_extraction_with_result :
+(** What a completed extraction exports, read while its naming tables were
+    live: how C++ spells each requested constant from file scope, and Rocq's
+    [tt] constructor. *)
+type export_manifest = {
+  em_names : (Names.GlobRef.t * string) list;
+  em_unit : string;
+}
+
+(** {!full_extraction}, returning what the unit exports. *)
+val full_extraction_manifest :
   ?validate:bool ->
   opaque_access:Global.indirect_accessor ->
   string option ->
   qualid list ->
-  (unit -> 'a) ->
-  'a
+  export_manifest
 
 (** [Separate Extraction qualids]: extract each definition to its own file.
     @param opaque_access accessor for opaque constant bodies

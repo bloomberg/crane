@@ -1704,7 +1704,33 @@ let derive_source_file filename =
 
 (** Core of recursive extraction: extracts the given references and module
     paths, optimizes, and writes to a monolithic output file. *)
-let full_extr_with_result opaque_access f (refs, mps) after_print =
+type export_manifest = {em_names : (GlobRef.t * string) list; em_unit : string}
+
+(** The C++ expression for Rocq's [tt] under the active mappings and naming. *)
+let cpp_unit () =
+  match Table.resolve_tt_ctor () with
+  | Some tt when Table.is_custom tt -> Table.find_custom tt
+  | Some (GlobRef.ConstructRef ((kn, index), constructor_index)) ->
+    pp_global Type (GlobRef.IndRef (kn, index))
+    ^ "::"
+    ^ Table.enum_ctor_name_of_ref kn index constructor_index
+  | _ -> CErrors.anomaly Pp.(str "Crane could not resolve Rocq's unit constructor.")
+
+(** What the unit just printed exports, read while its naming tables are live:
+    each requested constant as spelled from file scope, and [tt]. *)
+let export_manifest refs =
+  let spelled r =
+    let base, _ = Table.labels_of_ref r in
+    push_visible base [];
+    Fun.protect ~finally:pop_visible (fun () -> (r, pp_global Term r))
+  in
+  { em_names =
+      List.filter_map
+        (function GlobRef.ConstRef _ as r -> Some (spelled r) | _ -> None)
+        refs;
+    em_unit = cpp_unit () }
+
+let full_extr_manifest opaque_access f (refs, mps) =
   init false false;
   Fun.protect
     ~finally:reset
@@ -1755,10 +1781,9 @@ let full_extr_with_result opaque_access f (refs, mps) after_print =
           Doc_comments.set_table (Doc_comments.parse_file source)
       | _ -> () );
       print_structure_to_file ~unit_includes filenames false struc;
-      after_print () )
+      export_manifest refs )
 
-let full_extr opaque_access f refs =
-  full_extr_with_result opaque_access f refs (fun () -> ())
+let full_extr opaque_access f refs = ignore (full_extr_manifest opaque_access f refs)
 
 (** Main entry point for full library extraction. Extracts the given references
     and module paths to a single output file.
@@ -1771,13 +1796,9 @@ let full_extraction ?(validate = true) ~opaque_access f lr =
   if validate then Option.iter Table.claim_output_target f;
   full_extr opaque_access f (locate_ref lr)
 
-(** Full extraction variant used by managed benchmarks.  [after_print] runs
-    while the exact C++ renaming tables used to print the artifact are still
-    available. See {!full_extraction} for [validate]. *)
-let full_extraction_with_result ?(validate = true) ~opaque_access f lr after_print
-    =
+let full_extraction_manifest ?(validate = true) ~opaque_access f lr =
   if validate then Option.iter Table.claim_output_target f;
-  full_extr_with_result opaque_access f (locate_ref lr) after_print
+  full_extr_manifest opaque_access f (locate_ref lr)
 
 (** {2 Separate extraction is similar to recursive extraction, with the output
     decomposed in many files, one per Rocq .v file} *)
