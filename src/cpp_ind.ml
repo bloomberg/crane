@@ -33,17 +33,25 @@ open Cpp_state
 open Cpp_names
 open Cpp_print
 
-(** A declaration together with the name environment it is printed in. *)
-type rendered = (Common.env * Minicpp.cpp_decl) list
+(** Declarations as generated, each with the name environment it is printed
+    in. *)
+type generated = (Common.env * Minicpp.cpp_decl) list
 
-(** [render_decl env d] finishes [d] ({!Cpp_pipeline.finish}) and prints it:
-    the one place a generated declaration crosses from the compiler's passes
-    to the printer.  Everything above this line builds declarations; nothing
-    above it renders. *)
+(** Declarations finished for the printer. *)
+type rendered = (Common.env * Cpp_erasure.settled) list
+
+(** [finished ds] finishes the declarations one MiniML declaration became, as
+    one group ({!Cpp_pipeline.finish_group}): a fixpoint's functions may call
+    one another. *)
+let finished (ds : generated) : rendered =
+  let envs, decls = List.split ds in
+  List.combine envs (Cpp_pipeline.finish_group decls)
+
 let render_decl env d = Cpp_print.pp_cpp_decl env (Cpp_pipeline.finish d)
 
 (** Print the declarations an entry point answered with. *)
-let pp_decls ds = pp_list_stmt (fun (env, d) -> render_decl env d) ds
+let pp_decls (ds : rendered) =
+  pp_list_stmt (fun (env, d) -> Cpp_print.pp_cpp_decl env d) ds
 
 (** Dispatch for .cpp file rendering. Filters out inline customs, eponymous
     record projections, suppressed projections, method candidates, registered
@@ -51,7 +59,7 @@ let pp_decls ds = pp_list_stmt (fun (env, d) -> render_decl env d) ds
     @param d miniml declaration to render
     @return the C++ declarations for the implementation file, empty when the
             declaration is handled in headers or suppressed *)
-let impl_decls = function
+let gen_impl_decls = function
   | Dtype (r, _, _) when is_any_inline_custom r -> []
   | Dterm (r, _, _) when is_any_inline_custom r -> []
   | Dterm (r, _, _) when is_eponymous_record_projection r ->
@@ -101,14 +109,9 @@ let impl_decls = function
       let defs =
         List.filter (fun (_, _, l) -> l == []) (gen_dfuns (rv, defs, typs))
       in
-      (* Pre-register all Dfix functions for mutual recursion detection before
-         any of them are individually loopified via render_decl.
-         Without this, the first function rendered can't see the second in the
-         mutual table, so mutual inlining fails. *)
-      List.iter
-        (fun (ds, _env, _) -> Loopify.register_decl ds)
-        defs;
       List.map (fun (ds, env, _) -> (env, ds)) defs
+
+let impl_decls d = finished (gen_impl_decls d)
 
 (** The struct a module's declarations are written inside of, when the module is
     written as a struct at all.
@@ -135,7 +138,8 @@ let deferred_member_defs : (Cpp_state.scope * rendered) list ref =
   Cpp_state.owned_list "deferred_member_defs"
 
 let defer_member_defs defs =
-  deferred_member_defs := (Cpp_state.current_scope (), defs) :: !deferred_member_defs
+  deferred_member_defs :=
+    (Cpp_state.current_scope (), finished defs) :: !deferred_member_defs
 
 let take_deferred_member_defs () =
   let groups = List.rev !deferred_member_defs in
@@ -647,7 +651,7 @@ let instance_decls r a t =
     @param d miniml declaration to render as a header entry
     @return the C++ declarations for the header, empty when the declaration is
             suppressed *)
-let header_decls d =
+let gen_header_decls d =
   match d with
   | Dtype (r, _, _) when is_any_inline_custom r -> []
   | Dterm (r, _, _) when is_any_inline_custom r -> []
@@ -719,3 +723,4 @@ let header_decls d =
     else
       List.map (fun (ds, env) -> (env, ds)) (gen_dfuns_header (rv, defs, typs))
 
+let header_decls d = finished (gen_header_decls d)

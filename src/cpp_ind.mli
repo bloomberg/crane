@@ -9,7 +9,7 @@
 
    - the source-file family ([impl_decls]) gives the full definitions that
      go into the generated [.cpp]; and
-   - the header family ([ind_header_decls], [header_decls])
+   - the header family ([header_decls])
      gives the declarations that go into the generated [.h].
 
    Each answer pairs a declaration with the name environment its
@@ -18,8 +18,13 @@
    Everything else in the implementation is an internal helper and is
    deliberately hidden by this interface. *)
 
-(** A declaration together with the name environment it is printed in. *)
-type rendered = (Common.env * Minicpp.cpp_decl) list
+(** Declarations as generated, each with the name environment it is printed
+    in. *)
+type generated = (Common.env * Minicpp.cpp_decl) list
+
+(** Declarations finished for the printer ({!Cpp_pipeline.finish_group} of
+    what one MiniML declaration became). *)
+type rendered = (Common.env * Cpp_erasure.settled) list
 
 (** [render_decl env d] finishes [d] and prints it: the one place a generated
     declaration crosses from the compiler's passes to the printer. *)
@@ -27,9 +32,6 @@ val render_decl : Common.env -> Minicpp.cpp_decl -> Pp.t
 
 (** Print the declarations an entry point answered with. *)
 val pp_decls : rendered -> Pp.t
-
-(** The header declarations of a mutual inductive block. *)
-val ind_header_decls : Names.MutInd.t -> Miniml.ml_ind -> rendered
 
 (** Member definitions a datatype struct at namespace scope gave up because
     their bodies name a module's struct, which is emitted after every datatype
@@ -46,7 +48,7 @@ val clear_deferred_member_defs : unit -> unit
     concept.  Both belong at namespace scope, wherever the instance was
     declared. *)
 val instance_decls :
-  Names.GlobRef.t -> Miniml.ml_ast -> Miniml.ml_type -> rendered
+  Names.GlobRef.t -> Miniml.ml_ast -> Miniml.ml_type -> generated
 
 (** The implementation-file declarations for one MiniML declaration. *)
 val impl_decls : Miniml.ml_decl -> rendered

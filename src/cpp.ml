@@ -866,9 +866,9 @@ let rec pp_structure_elem ~is_header f = function
        makes that pair of placements independent of each other, and of any
        later pass that reorders the file. *)
     let body =
-      let is_erased_alias = function
-        | _, Minicpp.Dusing {du_rhs = Some rhs; _} ->
-          Cpp_erasure.is_any_shaped rhs
+      let is_erased_alias (_, d) =
+        match (d : Cpp_erasure.settled :> cpp_decl) with
+        | Dusing {du_rhs = Some rhs; _} -> Cpp_erasure.is_any_shaped rhs
         | _ -> false
       in
       if

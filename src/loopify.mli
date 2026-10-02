@@ -24,32 +24,10 @@ val worthwhile_move_type : cpp_type -> bool
     {!Last_use}, which asks the same question of a local as loopify asks of a
     frame field. *)
 
-(** Pre-register a function definition for mutual recursion detection.
-    Call this for all functions in a mutual fixpoint group before any of
-    them are individually transformed, so that [transform_decl] can
-    detect and inline mutual calls.
-
-    @param refs   List of [(GlobRef.t, type_args)] pairs identifying the
-                  function — a single definition may be known under several
-                  global references in a mutual fixpoint group.
-    @param ret_ty Function return type, used as the return type of the lambda
-                  a non-tail inlined call is wrapped in.
-    @param params Function parameters [(id, type)] used to reconstruct the
-                  callee's signature when inlining it into a caller.
-    @param body   Function body statements, stored verbatim for inlining. *)
-val register_fundef :
-  (GlobRef.t * cpp_type list) list ->
-  cpp_type ->
-  (Id.t * cpp_type) list ->
-  cpp_stmt list ->
-  unit
-
-(** [register_decl d] registers [d] with {!register_fundef} if it is a
-    function definition, and does nothing otherwise.
-
-    Callers pre-register a whole group of declarations before rendering any of
-    them, so that the first one rendered can already see the last one in the
-    mutual table. *)
+(** [register_decl d] makes [d], if it is a function definition, known to
+    mutual-recursion inlining before it is transformed.  Called by
+    {!Cpp_pipeline.finish_group} on a whole group, so that the first member
+    transformed can already see the last. *)
 val register_decl : cpp_decl -> unit
 
 (** {2 Diagnostics}
