@@ -54,11 +54,10 @@ val gen_dfuns_spec :
 type definition_file = Header | Implementation
 
 (** What one generation produced, independent of the file being written: a
-    function finalized once ({!Function_entity}), a value written as it stands
-    in both files, or a declaration with no definition anywhere. *)
+    definition, finalized into its views by {!Function_entity}, or a
+    declaration with no definition anywhere. *)
 type generated_entity =
-  | Defined of Function_entity.t * definition_file
-  | Value of cpp_decl * definition_file
+  | Defined of cpp_decl * definition_file
   | Declared of cpp_decl
 
 (** A generated function, with the environment its names were allocated in and
@@ -80,18 +79,6 @@ val gen_decl_for_pp_dual : GlobRef.t -> ml_ast -> ml_type -> generated_fun
 
 (** {2 Inductive Type Generation} *)
 
-(** Generate C++ code for an inductive type (older style with make functions).
-    @param consarg_names  Optional constructor argument binder names from
-      {!Miniml.ml_ind_packet.ip_consarg_names}.  When provided, struct fields
-      use descriptive names (e.g. [d_left]) instead of positional [d_a0]. *)
-val gen_ind_cpp :
-  ?consarg_names:Id.t option list array ->
-  variable list ->
-  GlobRef.t ->
-  GlobRef.t array ->
-  ml_type list array ->
-  cpp_decl
-
 (** Generate C++ code for a record type. *)
 val gen_record_cpp :
   GlobRef.t -> Miniml.record_field list -> ml_ind_packet -> cpp_decl
@@ -104,7 +91,10 @@ val gen_typeclass_cpp :
 (** Generate C++ header for an inductive type (v2 style: encapsulated struct
     with methods).
     @param is_mutual       whether this is part of a mutual inductive definition
-    @param consarg_names   see {!gen_ind_cpp}
+    @param consarg_names   constructor argument binder names from
+                           {!Miniml.ml_ind_packet.ip_consarg_names}: struct
+                           fields use them (e.g. [d_left]) instead of
+                           positional names ([d_a0])
     @param vars            template type parameter names
     @param name            the inductive type reference
     @param cnames          constructor references

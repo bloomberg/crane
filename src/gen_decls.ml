@@ -40,62 +40,6 @@ let with_method_env_types ?(cpp = []) env params f =
       restore_erased_env saved_erased )
     f
 
-let gen_ind_cpp ?(consarg_names = [||]) vars name cnames tys =
-  let constrdecl =
-    Array.to_list
-      (Array.mapi
-         (fun i tys ->
-           let c = cnames.(i) in
-           let ctor_struct_name = ctor_struct_name_of_ref ~fallback_idx:i c in
-           let ctor_consarg_names =
-             if i < Array.length consarg_names then consarg_names.(i)
-             else []
-           in
-           let n_fields = List.length tys in
-           let field_ids =
-             compute_and_register_field_names ~owner:c ctor_struct_name
-               (augment_with_args_renaming c ctor_consarg_names)
-               ctor_consarg_names n_fields
-           in
-           let constr =
-             List.mapi
-               (fun i x ->
-                 ( List.nth field_ids i,
-                   convert_ml_type_to_cpp_type (empty_env ()) ~ns:(Refset'.singleton name) vars x ) )
-               tys
-           in
-           let make_args =
-             List.map
-               (fun (x, _) -> mk_cppglob_local (GlobRef.VarRef x) [])
-               constr
-           in
-           let ty_vars = List.map named_tvar vars in
-           let make =
-             Dfun
-               (mk_dfun c
-                  ~inner:[(GlobRef.VarRef (Id.of_string "make"), [])]
-                  ~ret:(Tshared_ptr (Tglob (name, ty_vars, [])))
-                 (Ddef
-                   ( List.rev constr,
-                     [
-                       Sreturn
-                         (Some
-                            (mk_call
-                               (CPPalloc
-                                  (Alloc_heap, Tglob (name, ty_vars, [])))
-                               [CPPstruct (c, ty_vars, make_args)] ) );
-                     ] ) ) )
-           in
-           (ty_vars == [], make) )
-         tys )
-    |> List.filter_map (fun (keep, make) -> if keep then Some make else None)
-  in
-  Dnspace (Some name, constrdecl)
-
-(* =========================================================================
-   Shared helpers for record and typeclass generation
-   ========================================================================= *)
-
 (** Count the actual (non-promoted) type parameters in [ip_sign].  Entries
     marked [Keep] correspond to real template parameters; the remaining
     entries are promoted Type-valued fields. *)
@@ -5300,8 +5244,7 @@ let gen_dfuns_spec (ns, bs, tys) =
 type definition_file = Header | Implementation
 
 type generated_entity =
-  | Defined of Function_entity.t * definition_file
-  | Value of cpp_decl * definition_file
+  | Defined of cpp_decl * definition_file
   | Declared of cpp_decl
 
 type generated_fun = {
@@ -5312,13 +5255,7 @@ type generated_fun = {
 
 let definition_file_of tvars = if tvars = [] then Implementation else Header
 
-(* [d] as generated: a function becomes an entity both of its views come
-   from; anything else is written as it stands. *)
-let generated_entity d tvars =
-  let file = definition_file_of tvars in
-  match Function_entity.finalize d with
-  | Some e -> Defined (e, file)
-  | None -> Value (d, file)
+let defined d tvars = Defined (d, definition_file_of tvars)
 
 (** Generate each function of a mutually recursive group, translating each
     body once. *)
@@ -5328,7 +5265,7 @@ let gen_dfuns_dual (ns, bs, tys) =
       let (ds, env, tvars), lifted =
         collecting_lifted (fun () -> gen_dfun_def name bs.(i) tys.(i))
       in
-      {gf_entity = generated_entity ds tvars; gf_env = env; gf_lifted = lifted} )
+      {gf_entity = defined ds tvars; gf_env = env; gf_lifted = lifted} )
     (List.mapi (fun i name -> (i, name)) (Array.to_list ns))
 
 (** Generate a single Dterm function, translating its body once. *)
@@ -5336,7 +5273,7 @@ let gen_decl_for_pp_dual__inner n b ty =
   let (gf_entity, gf_env), gf_lifted =
     collecting_lifted @@ fun () ->
     match gen_decl_for_pp n b ty with
-    | Some ds, env, tvars -> (generated_entity ds tvars, env)
+    | Some ds, env, tvars -> (defined ds tvars, env)
     | None, _, _ ->
       (* Not a function: a declaration, and no definition anywhere. *)
       let spec, env = gen_spec n b ty in

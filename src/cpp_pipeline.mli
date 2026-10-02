@@ -20,3 +20,8 @@ val should_loopify : Minicpp.cpp_decl -> bool
     loopifying where {!should_loopify} says so -- and hands back the printable
     declaration. *)
 val finish : Minicpp.cpp_decl -> Cpp_erasure.settled
+
+(** [finish_group decls] finishes declarations that may call one another:
+    every function among them is known to loopification before any is
+    transformed, so a mutual partner can be inlined whichever comes first. *)
+val finish_group : Minicpp.cpp_decl list -> Cpp_erasure.settled list

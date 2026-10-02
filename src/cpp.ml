@@ -621,17 +621,20 @@ let dedup_lifted_decls ds =
       | None -> true )
     ds
 
-(** [d] split into the declaration to emit ahead of its callers and the
-    definition to emit in its place, where [d] defines a namespace-scope
-    function.  [None] for anything else.
+(** A lifted helper [d], finalized: the definition to emit in its place, and
+    the declaration to emit ahead of its callers where [d] defines a
+    function.
 
-    The definition comes back rather than being reused as it arrived because
-    the split may settle the template head, and the half that is emitted here
-    has to state the same head as the half emitted at the top of the file. *)
-let lifted_fun_split (d : cpp_decl) : (cpp_decl * cpp_decl) option =
-  Option.map
-    (fun e -> Function_entity.(declaration e, definition e))
-    (Function_entity.finalize d)
+    Both halves come from one finished definition, so the declaration emitted
+    at the top of the file states the head the definition emitted here
+    does. *)
+let lifted_fun_split (d : cpp_decl) :
+    Cpp_erasure.settled * Cpp_erasure.settled option =
+  let e = Function_entity.finalize d in
+  ( Function_entity.definition e,
+    if Function_entity.defines_function e then
+      Some (Function_entity.declaration e)
+    else None )
 
 (** Whether [spec] may be emitted at the top of the file, above every
     definition in it.
@@ -681,10 +684,15 @@ let spec_names_into_a_struct (rendered : string) : bool =
   in
   scan 0
 
-let spec_is_hoistable (spec : cpp_decl) : bool =
+let spec_is_hoistable (spec : Cpp_erasure.settled) : bool =
   not
     (spec_names_into_a_struct
-       (Pp.string_of_ppcmds (render_decl (empty_env ()) spec)) )
+       (Pp.string_of_ppcmds (pp_cpp_decl (empty_env ()) spec)) )
+
+(** A lifted helper's declaration, where it has one that may be hoisted. *)
+let hoistable_spec = function
+  | Some spec when spec_is_hoistable spec -> Some spec
+  | _ -> None
 
 (** Whether a module's members name only types a forward declaration can
     stand in for.
@@ -796,10 +804,10 @@ let dbg_lifted =
         | None -> "<not-a-lifted-helper>"
       in
       let split =
-        match lifted_fun_split d with
-        | Some (spec, _) ->
+        match snd (lifted_fun_split d) with
+        | Some spec ->
           let rendered =
-            Pp.string_of_ppcmds (render_decl (empty_env ()) spec)
+            Pp.string_of_ppcmds (pp_cpp_decl (empty_env ()) spec)
           in
           Printf.sprintf "splits=yes hoistable=%b spec=%S"
             (spec_is_hoistable spec) rendered
@@ -926,25 +934,23 @@ let rec pp_structure_elem ~is_header f = function
               ~extra:
                 (Printf.sprintf "rc_in_struct=%b" (!render_ctx).rc_in_struct)
               d';
-            let d' =
-              match lifted_fun_split d' with
-              (* Only at namespace scope.  A struct is a complete-class
-                 context, so a method may call a member declared after it and
-                 a member has no forward reference to repair -- this pass has
-                 nothing to do there, whatever would be legal.
+            let def, spec = lifted_fun_split d' in
+            (* Only at namespace scope.  A struct is a complete-class
+               context, so a method may call a member declared after it and a
+               member has no forward reference to repair -- this pass has
+               nothing to do there, whatever would be legal.
 
-                 Legality says the same thing the one time it is asked: a
-                 member's signature resolves against the struct, a nested [t]
-                 or a sibling type, and hoisting the declaration to file scope
-                 takes those names out of scope with it. *)
-              | Some (spec, def) when not (!render_ctx).rc_in_struct ->
-                if spec_is_hoistable spec then
+               Legality says the same thing the one time it is asked: a
+               member's signature resolves against the struct, a nested [t] or
+               a sibling type, and hoisting the declaration to file scope takes
+               those names out of scope with it. *)
+            if not (!render_ctx).rc_in_struct then
+              Option.iter
+                (fun spec ->
                   pending_lifted_specs :=
-                    render_decl (empty_env ()) spec :: !pending_lifted_specs;
-                def
-              | _ -> d'
-            in
-            let pp = render_decl (empty_env ()) d' in
+                    pp_cpp_decl (empty_env ()) spec :: !pending_lifted_specs )
+                (hoistable_spec spec);
+            let pp = pp_cpp_decl (empty_env ()) def in
             if Pp.ismt pp then acc
             else if Pp.ismt acc then pp
             else acc ++ cut2 () ++ pp )
@@ -1886,18 +1892,45 @@ let rec prlist_sep_nonempty sep f = function
       let boundary = if starts_with_doc_comment r then fnl () else sep () in
       e ++ boundary ++ r
 
-(** The declarations and definitions a generated function contributes to the
-    file being written: its declaration always, its definition only in the
-    file that holds it. *)
-let file_views ~is_header (g : Gen_decls.generated_fun) =
-  let here file = (file = Gen_decls.Header) = is_header in
-  let with_env d = (d, g.gf_env) in
-  match g.gf_entity with
-  | Defined (e, file) ->
-    ( [with_env (Function_entity.declaration e)],
-      if here file then [with_env (Function_entity.definition e)] else [] )
-  | Value (d, file) -> ([with_env d], if here file then [with_env d] else [])
-  | Declared d -> ([with_env d], [])
+(** The declarations and definitions generated functions contribute to the
+    file being written, grouped as [gens] is: each one's declaration always,
+    its definition only in the file that holds it.
+
+    Every definition is finished before it is split, and all of them as one
+    group ({!Function_entity.finalize_group}): a wrapper's functions may call
+    one another in any order. *)
+let file_views ~is_header (gens : Gen_decls.generated_fun list list) =
+  let entities =
+    ref
+      (Function_entity.finalize_group
+         (List.concat_map
+            (List.filter_map (fun (g : Gen_decls.generated_fun) ->
+                 match g.gf_entity with
+                 | Defined (d, _) -> Some d
+                 | Declared _ -> None ) )
+            gens ) )
+  in
+  let next () =
+    match !entities with
+    | e :: rest -> entities := rest; e
+    | [] -> assert false
+  in
+  let views (g : Gen_decls.generated_fun) =
+    let with_env d = (d, g.gf_env) in
+    match g.gf_entity with
+    | Defined (_, file) ->
+      let e = next () in
+      ( [with_env (Function_entity.declaration e)],
+        if (file = Gen_decls.Header) = is_header then
+          [with_env (Function_entity.definition e)]
+        else [] )
+    | Declared d -> ([with_env (Cpp_pipeline.finish d)], [])
+  in
+  List.map
+    (fun gs ->
+      let vs = List.map views gs in
+      (List.concat_map fst vs, List.concat_map snd vs) )
+    gens
 
 (** Process a wrapper module in dual-pass mode (header vs implementation).
 
@@ -1931,11 +1964,11 @@ let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
   in
   let process_sel (_l, se) =
     match se with
-    | SEdecl (Dterm (r, _, _)) when is_any_inline_custom r -> ([], [], [])
+    | SEdecl (Dterm (r, _, _)) when is_any_inline_custom r -> ([], [])
     | SEdecl (Dterm (r, _, _)) when is_eponymous_record_projection r ->
-      ([], [], [])
-    | SEdecl (Dterm (r, _, _)) when is_suppressed_projection r -> ([], [], [])
-    | SEdecl (Dterm (r, _, _)) when is_method_candidate r -> ([], [], [])
+      ([], [])
+    | SEdecl (Dterm (r, _, _)) when is_suppressed_projection r -> ([], [])
+    | SEdecl (Dterm (r, _, _)) when is_method_candidate r -> ([], [])
     | SEdecl (Dterm (r, body, ty)) when is_registered_method r <> None ->
       ( match is_registered_method r with
       | Some (epon_ref, pos) ->
@@ -1948,9 +1981,9 @@ let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
         if not already then
           Method_registry.add_candidate reg epon_ref (r, body, ty, pos)
       | None -> () );
-      ([], [], [])
+      ([], [])
     | SEdecl (Dterm (r, _a, Tglob (ty, _args, _e))) when is_monad ty ->
-      ([], [], [])
+      ([], [])
     (* An instance is a struct, and it is named from wherever its class is
        used -- unqualified, because a concept's template argument is a type,
        not a member of whatever module happened to declare it.  So it is
@@ -1958,12 +1991,11 @@ let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
        instance declared at the extraction root is emitted.  Dropping it here
        left every use of it undeclared. *)
     | SEdecl (Dterm (r, a, t)) when is_typeclass_instance a t ->
-      ([], [], List.map snd (instance_decls r a t))
+      ([], List.map snd (instance_decls r a t))
     | SEdecl (Dterm (r, a, t)) ->
       let g = gen_decl_for_pp_dual r a t in
       List.iter (dbg_lifted ~site:"wrapper-dterm") g.gf_lifted;
-      let specs, defs = file_views ~is_header g in
-      (specs, defs, g.gf_lifted)
+      ([g], g.gf_lifted)
     | SEdecl (Dfix (rv, defs, typs)) ->
       Array.iteri
         (fun i r ->
@@ -1985,39 +2017,26 @@ let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
         rv;
       let rv, defs, typs = filter_dfix rv defs typs in
       if Array.length rv = 0 then
-        ([], [], [])
+        ([], [])
       else
         let results = gen_dfuns_dual (rv, defs, typs) in
-        let views = List.map (file_views ~is_header) results in
-        ( List.concat_map fst views,
-          List.concat_map snd views,
-          List.concat_map (fun g -> g.gf_lifted) results )
-    | _ -> ([], [], [])
+        (results, List.concat_map (fun g -> g.gf_lifted) results)
+    | _ -> ([], [])
   in
-  let all_results = List.map process_sel func_sels in
-  (* Pre-register all Dfix function definitions for mutual recursion detection.
-     When functions from a mutual fixpoint (Dfix) are rendered individually,
-     each gets loopified independently via maybe_loopify.  Without
-     pre-registration, the second function can't see the first in the mutual
-     table because the first was already rendered. *)
-  List.iter
-    (fun (_, defs, _) ->
-      List.iter
-        (fun (ds, _env) -> Loopify.register_decl ds)
-        defs )
-    all_results;
+  let generated = List.map process_sel func_sels in
+  let all_results = file_views ~is_header (List.map fst generated) in
   let all_lifted =
-    List.concat_map (fun (_, _, l) -> l) all_results
+    List.concat_map snd generated
     |> dedup_lifted_decls in
-  let render_sel_specs (specs, _, _) =
+  let render_sel_specs (specs, _) =
     match specs with
     | [] -> mt ()
-    | _ -> pp_list_stmt (fun (ds, env) -> render_decl env ds) specs
+    | _ -> pp_list_stmt (fun (ds, env) -> pp_cpp_decl env ds) specs
   in
-  let render_sel_defs (_, defs, _) =
+  let render_sel_defs (_, defs) =
     match defs with
     | [] -> mt ()
-    | _ -> pp_list_stmt (fun (ds, env) -> render_decl env ds) defs
+    | _ -> pp_list_stmt (fun (ds, env) -> pp_cpp_decl env ds) defs
   in
   let specs_pp =
     with_render_ctx
@@ -2042,36 +2061,20 @@ let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
      else is either illegal or a second definition.
 
      Both halves come out of one split so they state one template head, and the
-     definition emitted here is the split's, not the one that went in. *)
+     definition emitted here is the split's, not the one that went in.  Only
+     the header writes either. *)
   let lifted_split =
-    List.map
-      (fun d -> (d, lifted_fun_split d))
-      all_lifted
+    if is_header then List.map lifted_fun_split all_lifted else []
   in
   let lifted_pp =
-    if is_header then
-      prlist_sep_nonempty
-        cut2
-        (fun (d, split) ->
-          render_decl (empty_env ())
-            (match split with Some (_, def) -> def | None -> d) )
-        lifted_split
-    else
-      mt ()
+    prlist_sep_nonempty cut2
+      (fun (def, _) -> pp_cpp_decl (empty_env ()) def)
+      lifted_split
   in
   let lifted_specs_pp =
-    if is_header then
-      prlist_sep_nonempty
-        cut2
-        (fun d -> render_decl (empty_env ()) d)
-        (List.filter_map
-           (fun (_, s) ->
-             match s with
-             | Some (spec, _) when spec_is_hoistable spec -> Some spec
-             | _ -> None )
-           lifted_split )
-    else
-      mt ()
+    prlist_sep_nonempty cut2
+      (pp_cpp_decl (empty_env ()))
+      (List.filter_map (fun (_, spec) -> hoistable_spec spec) lifted_split)
   in
   (specs_pp, defs_pp, lifted_pp, lifted_specs_pp)
 
@@ -2832,14 +2835,9 @@ let do_struct_with_decl_tracking ~is_header f s =
   let pass2_lifted =
     Translation.take_lifted_decls ()
     |> dedup_lifted_decls
-    |> List.map (fun d ->
+    |> List.filter_map (fun d ->
            dbg_lifted ~site:"pass2" d;
-           (d, lifted_fun_split d) )
-  in
-  (* What to emit in the helper's own place: the split's definition where there
-     was a split, so it states the head its declaration states. *)
-  let pass2_def (d, split) =
-    match split with Some (_, def) -> def | None -> d
+           if is_header then Some (lifted_fun_split d) else None )
   in
   let pass2_pre_pp, pass2_post_pp =
     if is_header then
@@ -2855,7 +2853,7 @@ let do_struct_with_decl_tracking ~is_header f s =
       let rendered_lifted =
         List.map
           (fun entry ->
-            let render () = render_decl (empty_env ()) (pass2_def entry) in
+            let render () = pp_cpp_decl (empty_env ()) (fst entry) in
             match main_module_name with
             | Some name -> watching_for_reference_to name render
             | None -> (render (), false) )
@@ -2930,11 +2928,8 @@ let do_struct_with_decl_tracking ~is_header f s =
           (fun w -> if Pp.ismt w.wr_lifted_specs then None else Some w.wr_lifted_specs)
           wrapper_parts
         @ List.filter_map
-            (fun (_, split) ->
-              match split with
-              | Some (spec, _) when spec_is_hoistable spec ->
-                Some (render_decl (empty_env ()) spec)
-              | _ -> None )
+            (fun (_, spec) ->
+              Option.map (pp_cpp_decl (empty_env ())) (hoistable_spec spec) )
             pass2_lifted
         @ (let pending = List.rev !pending_lifted_specs in
            pending_lifted_specs := [];

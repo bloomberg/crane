@@ -91,3 +91,7 @@ let finish decl =
   let decl = Cpp_erasure.bind_free_tvars decl in
   if Sys.getenv_opt "CRANE_CHECK_IR" <> None then check_settled decl;
   decl
+
+let finish_group decls =
+  List.iter Loopify.register_decl decls;
+  List.map finish decls

@@ -7,8 +7,8 @@
    ([ml_decl]/[ml_spec]) into {!Minicpp.cpp_decl} values.  It has two families
    of entry points:
 
-   - the source-file family ([ind_cpp_decls], [impl_decls]) gives the full
-     definitions that go into the generated [.cpp]; and
+   - the source-file family ([impl_decls]) gives the full definitions that
+     go into the generated [.cpp]; and
    - the header family ([ind_header_decls], [header_decls])
      gives the declarations that go into the generated [.h].
 
@@ -28,10 +28,7 @@ val render_decl : Common.env -> Minicpp.cpp_decl -> Pp.t
 (** Print the declarations an entry point answered with. *)
 val pp_decls : rendered -> Pp.t
 
-(** The full C++ definition of a mutual inductive block. *)
-val ind_cpp_decls : Names.MutInd.t -> Miniml.ml_ind -> rendered
-
-(** Header counterpart of {!ind_cpp_decls}. *)
+(** The header declarations of a mutual inductive block. *)
 val ind_header_decls : Names.MutInd.t -> Miniml.ml_ind -> rendered
 
 (** Member definitions a datatype struct at namespace scope gave up because

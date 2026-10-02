@@ -3,38 +3,29 @@
 
 open Minicpp
 
-type t = {declaration : cpp_decl; definition : cpp_decl}
+type t = {
+  declaration : Cpp_erasure.settled;
+  definition : Cpp_erasure.settled;
+  defines_function : bool;
+}
 
-let rec finalize (d : cpp_decl) : t option =
-  match d with
-  | Dfun ({df_shape = Ddef (params, body); _} as f) ->
-    let no_pure =
-      f.df_no_pure
-      || match body with [Sreturn (Some (CPPabort _))] -> true | _ -> false
-    in
-    let f = {f with df_no_pure = no_pure} in
-    Some
-      { declaration =
-          Dfun
-            { f with
-              df_shape = Ddecl (List.map (fun (id, ty) -> (Some id, ty)) params) };
-        definition = Dfun f }
-  | Dtemplate (temps, cstr, inner) ->
-    Option.map
-      (fun e ->
-        let temps =
-          match inner with
-          | Dfun {df_shape = Ddef (params, body); _} ->
-            drop_stored_callback_constraints ~params body temps
-          | _ -> temps
-        in
-        { declaration = Dtemplate (temps, cstr, e.declaration);
-          definition = Dtemplate (temps, cstr, e.definition) } )
-      (finalize inner)
-  | _ -> None
+let of_finished d =
+  match Cpp_erasure.split_definition d with
+  | Some (declaration, definition) ->
+    {declaration; definition; defines_function = true}
+  | None -> {declaration = d; definition = d; defines_function = false}
 
+let finalize d = of_finished (Cpp_pipeline.finish d)
+let finalize_group ds = List.map of_finished (Cpp_pipeline.finish_group ds)
 let declaration e = e.declaration
 let definition e = e.definition
+let defines_function e = e.defines_function
 
 let declaration_of d =
-  match finalize d with Some e -> e.declaration | None -> d
+  let d =
+    match d with
+    | Dtemplate (temps, cstr, (Dfun {df_shape = Ddef (params, body); _} as inner)) ->
+      Dtemplate (drop_stored_callback_constraints ~params body temps, cstr, inner)
+    | d -> d
+  in
+  match split_definition d with Some (decl, _) -> decl | None -> d

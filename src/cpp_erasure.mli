@@ -107,6 +107,10 @@ type view =
 
 val view : settled -> view
 
+(** {!Minicpp.split_definition} of a settled definition.  Dropping a body
+    removes types and adds none, so both halves are settled. *)
+val split_definition : settled -> (settled * settled) option
+
 (** [resolve_casts decl] rewrites every {!Minicpp.CPPany_cast} in [decl] to say
     which caster the printer should emit: dropped where the cast is the
     identity, {!Minicpp.CPPany_cast_tolerant} where the shape is only knowable

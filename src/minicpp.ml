@@ -2056,6 +2056,21 @@ let map_dstruct fe fs ft s =
     ds_fields = List.map (map_field fe fs ft) s.ds_fields;
     ds_constraint = Option.map fe s.ds_constraint }
 
+let rec split_definition = function
+  | Dfun ({df_shape = Ddef (params, body); _} as f) ->
+    let no_pure =
+      f.df_no_pure
+      || match body with [Sreturn (Some (CPPabort _))] -> true | _ -> false
+    in
+    let f = {f with df_no_pure = no_pure} in
+    let decl_params = List.map (fun (id, ty) -> (Some id, ty)) params in
+    Some (Dfun {f with df_shape = Ddecl decl_params}, Dfun f)
+  | Dtemplate (temps, cstr, inner) ->
+    Option.map
+      (fun (decl, def) -> (Dtemplate (temps, cstr, decl), Dtemplate (temps, cstr, def)))
+      (split_definition inner)
+  | _ -> None
+
 (** [map_decl fe fs ft d] applies [fe] to sub-expressions, [fs] to
     sub-statements and [ft] to sub-types of a declaration.  Nested
     declarations ({!Dtemplate}, {!Dnspace}) recurse. *)

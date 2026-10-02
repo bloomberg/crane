@@ -479,3 +479,5 @@ let view (d : settled) =
   | Dtemplate (temps, cstr, inner) -> Template (temps, cstr, inner)
   | Dnspace (r, decls) -> Namespace (r, decls)
   | d -> Decl d
+
+let split_definition (d : settled) = Minicpp.split_definition d

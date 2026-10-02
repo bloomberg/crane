@@ -13,7 +13,7 @@
 (** Which C++ declarations a MiniML declaration becomes.
 
     This module contains:
-    - ind_cpp_decls / ind_header_decls — inductive types
+    - ind_header_decls — inductive types
     - impl_decls / header_decls — dispatch for the .cpp and the .h
 
     Every entry point answers with declarations rather than with rendered
@@ -32,42 +32,6 @@ open Gen_decls
 open Cpp_state
 open Cpp_names
 open Cpp_print
-
-(** Render inductive type implementation (.cpp file). Records and TypeClasses
-    have no .cpp body. Enums are skipped as well.
-    @param kn mutual inductive kernel name identifying the inductive block
-    @param ind miniml representation of the mutual inductive type block
-    @return pretty-printed C++ implementation fragment, or [mt ()] when nothing
-            needs to be emitted for this block *)
-let ind_cpp_decls kn ind =
-  let names = Array.mapi (fun i p -> GlobRef.IndRef (kn, i)) ind.ind_packets in
-  let cnames =
-    Array.mapi
-      (fun i p ->
-        Array.mapi (fun j _ -> GlobRef.ConstructRef ((kn, i), j + 1)) p.ip_types )
-      ind.ind_packets
-  in
-  match ind.ind_kind with
-  | Record fields | TypeClass fields -> []
-  | _ ->
-    let rec pp i =
-      if i >= Array.length ind.ind_packets then
-        []
-      else
-        let ip = (kn, i) in
-        let p = ind.ind_packets.(i) in
-        if is_custom (GlobRef.IndRef ip) then
-          pp (i + 1)
-        else if is_enum_cached (GlobRef.IndRef ip) then
-          pp (i + 1) (* Enums have no .cpp body *)
-        else
-          let param_vars = Common.ind_struct_tparams kn ind p in
-          ( empty_env (),
-            gen_ind_cpp ~consarg_names:p.ip_consarg_names param_vars names.(i)
-              cnames.(i) p.ip_types )
-          :: pp (i + 1)
-    in
-    pp 0
 
 (** A declaration together with the name environment it is printed in. *)
 type rendered = (Common.env * Minicpp.cpp_decl) list
