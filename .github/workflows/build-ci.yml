@@ -43,6 +43,9 @@ jobs:
             startGroup "OCaml unit tests"
               opam exec -- dune build @unit_tests/runtest
             endGroup
+            startGroup "Module dependency direction"
+              opam exec -- scripts/check-module-deps.sh
+            endGroup
 
       - name: Install clang and GMP
         run: |
