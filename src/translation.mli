@@ -230,21 +230,6 @@ val mk_tt_expr : unit -> cpp_expr
     a [skip] predicate that leaves selected inductives unwrapped. *)
 val qualify_inductives : ?skip:(GlobRef.t -> bool) -> cpp_type -> cpp_type
 
-(** Install the real type printer ([Cpp_print.pp_cpp_type]) used by
-    {!render_cpp_type_in_template}.  Called by {!Cpp_print} at load time to
-    break the dependency cycle. *)
-val set_cpp_type_printer : (?lead:bool -> cpp_type -> string) -> unit
-
-(** Render a C++ type as a string spelled exactly as the real printer spells
-    it inside a template body -- namespace-qualified, with the [typename] and
-    [template] disambiguators a dependent name needs.  The single way to put a
-    type into a raw string, so that the string agrees with printer output
-    elsewhere in the same declaration.  [~lead:false] drops the leading
-    [typename], for a string that is about to be embedded as the base of a
-    larger type: the enclosing construct emits the one [typename] the whole
-    name is allowed.
-    @raise CErrors.Anomaly before {!set_cpp_type_printer} has been called. *)
-val render_cpp_type_in_template : ?lead:bool -> cpp_type -> string
 
 (** Build guard-compare statements for a constructor whose fields alias-check
     two identical-typed pointer parameters.  A parametric guard constructor

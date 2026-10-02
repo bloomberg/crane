@@ -109,6 +109,10 @@ and scan_stmt scope s =
       ban scope cond;
       bind_other scope id )
   | Sfor_range (id, _, _) -> bind_other scope id
+  | Sbind (ids, e) ->
+    (* References into whatever [e] names. *)
+    ban scope e;
+    List.iter (bind_other scope) ids
   | Smatch (scrut, branches, _) ->
     (* The branches bind structured references into the scrutinee. *)
     ban scope scrut.sc_expr;
@@ -135,6 +139,7 @@ let declared_in stmts =
   and fs s =
     ( match s with
     | Sasgn (id, Declare _, _) | Sdecl (id, _) | Sdecl_init (id, _) -> note id
+    | Sbind (ids, _) -> List.iter note ids
     | _ -> () );
     iter_stmt_children ~on_expr:fe ~on_stmts:fl s
   in

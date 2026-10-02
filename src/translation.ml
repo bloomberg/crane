@@ -517,26 +517,11 @@ let rec qualify_inductives ?(skip = fun _ -> false) = function
     handful of types differently from the printer (in Coq form, patched back
     with three [Str.global_replace] passes), which is the whole of what a raw
     template string embedded in printer output must not do. *)
-let cpp_type_printer : (?lead:bool -> cpp_type -> string) option ref = ref None
-
-let set_cpp_type_printer f = cpp_type_printer := Some f
 
 (** Whether a reference was methodified: spelled [x.f(...)] rather than
     [f(x, ...)]. *)
 let is_methodified r = Cpp_names.lookup_method_this_pos r <> None
 
-(** Render [ty] as a string spelled exactly as the real printer would spell it
-    inside a template body.
-
-    [~lead:false] drops the leading [typename] a dependent name would get, for
-    a string that is about to be embedded as the base of a larger type: the
-    enclosing construct emits the one [typename] the whole name is allowed. *)
-let render_cpp_type_in_template ?lead ty =
-  match !cpp_type_printer with
-  | Some f -> f ?lead ty
-  | None ->
-    CErrors.anomaly
-      (Pp.str "Translation.render_cpp_type_in_template: printer not installed")
 
 let build_guard_compare_stmts n ids =
   match Table.find_guard_compare n with

@@ -659,7 +659,7 @@ let rewrite_visit_stmts check varying shadow_params =
 
 (** Returns true if the statement declares a new variable or type binding. *)
 let declares_variable = function
-  | Sdecl _ | Sdecl_init _ | Sstruct_def _ | Susing _ -> true
+  | Sdecl _ | Sdecl_init _ | Sbind _ | Sstruct_def _ | Susing _ -> true
   | Sasgn (_, Declare _, _) -> true (* typed assignment = declaration *)
   | _ -> false
 
@@ -668,6 +668,7 @@ let direct_decl_ids = function
   | Sdecl (id, _) | Sdecl_init (id, _) -> [ id ]
   | Sasgn (id, Declare _, _) -> [ id ]
   | Susing (id, _) -> [ id ]
+  | Sbind (ids, _) -> ids
   | _ -> []
 
 (** Returns true if inlining [block_stmts] before [rest] at the same scope level

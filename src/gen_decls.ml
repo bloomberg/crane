@@ -395,8 +395,7 @@ let drop_ambiguous res =
           Feedback.msg_warning
             Pp.(
               str "promoted variable " ++ Id.print n
-              ++ str " is answered more than once; dropping "
-              ++ str (Translation.render_cpp_type_in_template t) ) )
+              ++ str " is answered more than once; dropping every answer" ) )
       res;
   List.filter (fun e -> not (ambiguous e)) res
 
@@ -6711,9 +6710,6 @@ let gen_ind_header_v2
             let skip g = GlobRef.CanOrd.equal g name in
             qualify_inductives ~skip ty
           in
-          let render_q_destr ty =
-            render_cpp_type_in_template ~lead:false (q_destr ty)
-          in
           (* Expand a [Drain "..."] template for a custom container field into a
              statement list. [%scrut] -> the container field expression [scrut];
              [%yield(e)] -> a structured [push_back(make_rc<Self>(e))] onto the
@@ -6752,12 +6748,10 @@ let gen_ind_header_v2
                 let arg = String.sub tmpl (!i + yl) (!j - (!i + yl)) in
                 flush_raw ();
                 stmts :=
-                  Sexpr (CPPaccess_call (Adot, 
+                  Sexpr (CPPaccess_call (Adot,
                     CPPvar _stack_id,
                     Id.of_string "push_back",
-                    [CPPraw (
-                       Table.make_shared_name () ^ "<" ^ self ^ ">("
-                       ^ subst arg ^ ")")]))
+                    [mk_call (CPPalloc (Alloc_heap, self)) [CPPraw (subst arg)]]))
                   :: !stmts;
                 i := !j + 1
               end else begin
@@ -6877,14 +6871,10 @@ let gen_ind_header_v2
           let cpp_of_ml t =
             convert_ml_type_to_cpp_type (empty_env ()) vars t
           in
-          let render_ml t = render_q_destr (cpp_of_ml t) in
-          (* Wrap a type's {!render_q_destr} spelling as an opaque name, so it
-             reaches the printer verbatim.  The destructor is emitted inside
-             the inductive's own declaration and must agree with the struct
-             names printed there; the type printer, reached from here without
-             that context, spells some inductives differently. *)
-          let verbatim_ty ty = Tid_external (render_q_destr ty, []) in
-          let verbatim_ml t = verbatim_ty (cpp_of_ml t) in
+          (* Spelled as from outside the inductive's own scope, which is where
+             the destructor's helper types are named. *)
+          let outer_ty = q_destr in
+          let outer_ml t = outer_ty (cpp_of_ml t) in
           (* [e.m()] -- the harvester only ever calls nullary members
              ([use_count], [reset], [has_value], [v_mut]) on a value. *)
           let dot0 e m = CPPaccess_call (Adot, e, Id.of_string m, []) in
@@ -6907,7 +6897,7 @@ let gen_ind_header_v2
               CPPvar _stack_id,
               Id.of_string "push_back",
               [ mk_call
-                  (CPPalloc (Alloc_heap, verbatim_ty self_ty))
+                  (CPPalloc (Alloc_heap, outer_ty self_ty))
                   [CPPmove e] ]))
           in
           (* Substitute a mediator's actual type arguments into one of its
@@ -7016,8 +7006,7 @@ let gen_ind_header_v2
               | Some c -> c
             in
             let g_ty = Miniml.Tglob (g, args, []) in
-            let g_cpp = verbatim_ml g_ty in
-            let g_str = render_ml g_ty in
+            let g_cpp = outer_ml g_ty in
             let self_recursive =
               List.exists
                 (fun (_, ftys) -> List.exists (mentions g) ftys)
@@ -7046,7 +7035,7 @@ let gen_ind_header_v2
                          let is_ptr = field_is_ptr g fty in
                          match on_spine with
                          | Some push
-                           when is_ptr && String.equal (render_ml inst) g_str ->
+                           when is_ptr && outer_ml inst = g_cpp ->
                            push fe
                          | _ ->
                            if is_ptr then harvest_ptr (fuel - 1) inst fe
@@ -7125,7 +7114,7 @@ let gen_ind_header_v2
               and ev = Id.of_string (wl ^ "e") in
               let wl_ty =
                 Tid_external
-                  (Crane_rt.small_vector, [Tshared_ptr (verbatim_ml g_ty)])
+                  (Crane_rt.small_vector, [Tshared_ptr (outer_ml g_ty)])
               in
               let push fe =
                 [Sexpr (CPPaccess_call (Adot, 
@@ -7207,7 +7196,7 @@ let gen_ind_header_v2
                     expand_drain_template
                       ~scrut:(Id.to_string _alt_id ^ "->"
                               ^ Id.to_string field_id)
-                      ~self:(render_q_destr self_ty) tmpl
+                      ~self:(q_destr self_ty) tmpl
                   | None ->
                     let elem = Id.of_string "_elem" in
                     sole_owner fe
@@ -7216,7 +7205,7 @@ let gen_ind_header_v2
                         Sexpr (dot0 fe "reset") ]
                   end
                 else
-                  let ls = verbatim_ty (Tglob (list_g, [self_ty], [])) in
+                  let ls = outer_ty (Tglob (list_g, [self_ty], [])) in
                   let (_nil_s, cons_s) = list_ctor_struct_names list_g in
                   let cons_id = Id.of_string_soft cons_s in
                   let elem_field =
@@ -8003,25 +7992,14 @@ let gen_ind_header_v2
                 match field_info with
                 | [] -> [Sreturn (Some (CPPstruct_id (cname_id, [], [])))]
                 | _ ->
-                  let bindings =
-                    String.concat ", "
-                      (List.map
-                         (fun (id, _, _) -> Id.to_string id)
-                         field_info)
-                  in
-                  (* Render the source constructor type through the same
-                     printer the [std::holds_alternative] guard uses (via
-                     [CPPstd_holds_alternative]), so both
-                     spellings of [typename Ns::template t<_U>::Ctor] agree. *)
-                  let source_ctor_s =
-                    render_cpp_type_in_template
-                      (Tqualified (source_ty, cname_id))
-                  in
-                  [Sraw (
-                     "const auto& [" ^ bindings
-                     ^ "] = std::get<" ^ source_ctor_s
-                     ^ ">(" ^ "_other.v()" ^ ");");
-                   Sreturn (Some (CPPstruct_id (cname_id, [], converted)))]
+                  (* The alternative is named exactly as the
+                     [std::holds_alternative] guard names it. *)
+                  [ Sbind
+                      ( List.map (fun (id, _, _) -> id) field_info,
+                        CPPstd_get
+                          ( Tqualified (source_ty, cname_id),
+                            Some (CPPaccess_call (Adot, CPPvar other_id, Id.of_string "v", [])) ) );
+                    Sreturn (Some (CPPstruct_id (cname_id, [], converted))) ]
               in
               let body =
                 if n_ctors = 1 then

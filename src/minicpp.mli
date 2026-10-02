@@ -276,6 +276,8 @@ and cpp_stmt =
       (** Local struct definition: struct Name { T1 f1; T2 f2; }; *)
   | Susing of Id.t * cpp_type
       (** Local using alias: using Name = Type; *)
+  | Sbind of Id.t list * cpp_expr
+      (** Structured binding: [const auto& [ids] = e;]. *)
   | Sdecl_init of Id.t * cpp_type
       (** Value-initialized declaration: Type name{}; *)
   | Sassign_expr of cpp_expr * cpp_expr

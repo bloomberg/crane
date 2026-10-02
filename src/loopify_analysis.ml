@@ -858,7 +858,7 @@ and collect_stmt check ~in_visitor = function
     | None ->
     collect_expr check e )
   | Sreturn None -> []
-  | Sexpr e -> collect_expr check e
+  | Sexpr e | Sbind (_, e) -> collect_expr check e
   | Sasgn (_, _, e) -> collect_expr check e
   | Sassign_expr (lhs, e) -> collect_expr check lhs @ collect_expr check e
   | Sif_constexpr (_, then_br, else_br) ->

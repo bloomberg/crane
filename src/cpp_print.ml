@@ -2976,6 +2976,9 @@ and pp_cpp_stmt env args = function
     str "using " ++ Id.print name ++ str " = " ++ pp_cpp_type false [] ty ++ str ";"
   | Sdecl_init (id, ty) ->
     pp_cpp_type false [] ty ++ str " " ++ Id.print id ++ str "{};"
+  | Sbind (ids, e) ->
+    str "const auto& [" ++ prlist_with_sep (fun () -> str ", ") Id.print ids
+    ++ str "] = " ++ pp_cpp_expr env args e ++ str ";"
   | Sfor_range (id, e, body) ->
     str "for (auto& " ++ Id.print id ++ str " : "
     ++ pp_cpp_expr env args e
@@ -5123,14 +5126,3 @@ and pp_leaf_decl env (d : cpp_decl) =
     ([Extract_env]) decides where it falls; clang-format keeps the blank lines
     it leaves. *)
 let cut2 () = brk (0, -100000) ++ brk (0, 0)
-
-(* Give [Translation] access to this module's context-sensitive printer (see
-   [Translation.render_cpp_type_in_template]).  The type is rendered as if
-   inside a template body, which is where those raw strings are emitted. *)
-
-let () =
-  Translation.set_cpp_type_printer (fun ?(lead = true) ty ->
-    Pp.string_of_ppcmds
-      (with_render_ctx
-         (fun c -> { c with rc_in_template = true })
-         (fun () -> pp_cpp_type ~lead false [] ty)))

@@ -233,6 +233,8 @@ and cpp_stmt =
     (* Local struct definition: struct Name { T1 f1; T2 f2; }; *)
   | Susing of Id.t * cpp_type
     (* Local using alias: using Name = Type; *)
+  | Sbind of Id.t list * cpp_expr
+      (** Structured binding: [const auto& [ids] = e;]. *)
   | Sdecl_init of Id.t * cpp_type
     (* Value-initialized declaration: Type name{}; *)
   | Sassign_expr of cpp_expr * cpp_expr
@@ -1393,6 +1395,7 @@ let map_stmt
     Sstruct_def (id, List.map (fun (fid, ty) -> (fid, ft ty)) fields)
   | Susing (id, ty) -> Susing (id, ft ty)
   | Sdecl_init (id, ty) -> Sdecl_init (id, ft ty)
+  | Sbind (ids, e) -> Sbind (ids, fe e)
   | Sassign_expr (lhs, e) -> Sassign_expr (fe lhs, fe e)
   | Sfor_range (id, e, body) -> Sfor_range (id, fe e, List.map fs body)
   | Swhile (cond, body) -> Swhile (fe cond, List.map fs body)
@@ -1460,7 +1463,7 @@ let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
     constructor in {!cpp_stmt}. *)
 let iter_stmt_children ~on_expr ~on_stmts (s : cpp_stmt) : unit =
   match s with
-  | Sreturn (Some e) | Sexpr e -> on_expr e
+  | Sreturn (Some e) | Sexpr e | Sbind (_, e) -> on_expr e
   | Sreturn None | Sdecl _ | Sthrow _ | Sassert _ | Sraw _ | Scomment _
   | Sstruct_def _ | Susing _ | Sdecl_init _ | Scontinue | Sbreak -> ()
   | Sasgn (_, _, e) -> on_expr e
@@ -1603,7 +1606,7 @@ let fold_expr_children ~(on_expr : 'a -> cpp_expr -> 'a)
     child expressions; [on_stmts] folds over child statement lists. *)
 let fold_stmt_children ~on_expr ~on_stmts (acc : 'a) (s : cpp_stmt) : 'a =
   match s with
-  | Sreturn (Some e) | Sexpr e -> on_expr acc e
+  | Sreturn (Some e) | Sexpr e | Sbind (_, e) -> on_expr acc e
   | Sreturn None | Sdecl _ | Sthrow _ | Sassert _ | Sraw _ | Scomment _
   | Sstruct_def _ | Susing _ | Sdecl_init _ | Scontinue | Sbreak -> acc
   | Sasgn (_, _, e) -> on_expr acc e

@@ -379,6 +379,7 @@ let try_inline_mutual_into names body =
     and collect_local_ids_stmt = function
       | Sdecl (id, _) | Sdecl_init (id, _) -> [id]
       | Sasgn (id, Declare _, _) -> [id]
+      | Sbind (ids, _) -> ids
       | Smatch (scrut, branches, default) ->
         List.concat_map (fun br ->
           let var_ids = match br.smb_var with Some id -> [id] | None -> [] in
@@ -1137,6 +1138,7 @@ let try_inline_functional_into names body =
           ( match s with
           | Sdecl (id, _) | Sdecl_init (id, _) | Sasgn (id, Declare _, _) ->
             add id
+          | Sbind (ids, _) -> List.iter add ids
           | Smatch (scrut, branches, _) ->
             List.iter
               (fun br ->
