@@ -1454,14 +1454,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
      parameters' constraints -- [requires PI<_tcI2, ptr>] -- and they resolve
      through the parameters beside them the same way: [ptr] is
      [typename _tcI1::ptr], not the file-scope [std::any]. *)
-  let template_params =
-    List.map
-      (fun (tt, id) ->
-        match tt with
-        | TTconcept (r, args) -> (TTconcept (r, List.map resolve_mentioned args), id)
-        | _ -> (tt, id) )
-      template_params
-  in
+  let template_params = Minicpp.map_tparams resolve_mentioned template_params in
   (* Now inner_ty should be Tglob(class_ref, type_args, _) and inner_body should
      be MLcons(...) *)
   match inner_ty with
@@ -3250,16 +3243,7 @@ let deapply_plain_tvars temps decl =
   in
   (* The parameters' own types too: a callable parameter's constraint
      ([is_invocable_r_v<T3, F1 &, T1<T2> &>]) and a default. *)
-  let temps =
-    List.map
-      (fun (tt, id) ->
-        ( ( match tt with
-          | TTfun (doms, cod) -> TTfun (List.map ft doms, ft cod)
-          | TTtypename_default t -> TTtypename_default (ft t)
-          | tt -> tt ),
-          id ) )
-      temps
-  in
+  let temps = Minicpp.map_tparams ft temps in
   match decl with
   | Dfun ({df_ret = ret; df_shape = Ddef (params, body); _} as f) ->
     let rec fe e = settle (Minicpp.map_expr fe fs ft e)

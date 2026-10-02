@@ -1128,6 +1128,11 @@ val erased_lambda :
   body:cpp_stmt list ->
   cpp_expr
 
+(** [map_tparams ft tps] maps the types a template parameter list carries: a
+    default, a callable constraint, a concept's extra arguments. *)
+val map_tparams :
+  (cpp_type -> cpp_type) -> (template_type * Id.t) list -> (template_type * Id.t) list
+
 (** [map_expr fe fs ft e] applies [fe] to sub-expressions, [fs] to
     sub-statements, [ft] to sub-types, performing one level of structural
     descent.

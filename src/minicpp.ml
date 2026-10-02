@@ -1240,6 +1240,23 @@ let map_args f (args : cpp_expr revd) = {rev = List.map f args.rev}
 (** The parameters of a {!CPPlambda}, in source order. *)
 let lambda_params (params : 'a revd) = List.rev params.rev
 
+(** [map_tparams ft tps] maps the types a template parameter list carries: a
+    default, a callable constraint, a concept's extra arguments. *)
+let map_tparams ft =
+  List.map (fun (tt, id) ->
+      let tt =
+        match tt with
+        | TTtypename_default t -> TTtypename_default (ft t)
+        | TTfun (dom, cod) -> TTfun (List.map ft dom, ft cod)
+        | TTconcept (r, tys) -> TTconcept (r, List.map ft tys)
+        | TTtypename | TTtemplate _ -> tt
+      in
+      (tt, id))
+
+(** [map_custom_info ft ci] maps the one type an inline mapping's metadata
+    records: what a [%result] block evaluates to. *)
+let map_custom_info ft = Option.map (fun ci -> {ci with ci_yields = Option.map ft ci.ci_yields})
+
 (** [map_lambda fs ft l] maps [ft] over the parameter and return types of [l]
     and [fs] over its body.  A lambda has no immediate sub-expression of its
     own, so there is no expression function to take. *)
@@ -1261,7 +1278,7 @@ let map_expr
     (e : cpp_expr) : cpp_expr =
   match e with
   | CPPvar _ -> e
-  | CPPglob (r, tys, ci) -> CPPglob (r, List.map ft tys, ci)
+  | CPPglob (r, tys, ci) -> CPPglob (r, List.map ft tys, map_custom_info ft ci)
   | CPPnamespace (r, e') -> CPPnamespace (r, fe e')
   | CPPfun_call (res, f, args) ->
     let res =
@@ -1874,6 +1891,7 @@ let map_out_of_line fs ft = function
   | OLmethod m ->
     OLmethod
       { m with
+        mf_tparams = map_tparams ft m.mf_tparams;
         mf_ret_type = ft m.mf_ret_type;
         mf_params = List.map (fun (id, ty) -> (id, ft ty)) m.mf_params;
         mf_body = List.map fs m.mf_body }
@@ -1898,6 +1916,7 @@ let rec map_field
     | Fconstructor c ->
       Fconstructor
         { c with
+          fc_tparams = map_tparams ft c.fc_tparams;
           fc_params = params c.fc_params;
           fc_inits = List.map (fun (id, e) -> (id, fe e)) c.fc_inits;
           fc_body = List.map fs c.fc_body }
@@ -1909,7 +1928,7 @@ let rec map_field
         { d with
           dfs_selves = List.map (fun (id, ty) -> (id, ft ty)) d.dfs_selves;
           dfs_fields = List.map (fun (id, ty) -> (id, ft ty)) d.dfs_fields }
-    | Fnested_using (tps, id, ty) -> Fnested_using (tps, id, ft ty)
+    | Fnested_using (tps, id, ty) -> Fnested_using (map_tparams ft tps, id, ft ty)
     | Fmember_decl m -> Fmember_decl (map_out_of_line fs ft m)
     | Fdeleted_ctor | Fdefaulted_special_members -> f
   in
@@ -2033,6 +2052,7 @@ let erased_lambda l ~params ~ret ~body =
     with a wrapper ({!Dstruct}) or without one ({!Dfields}). *)
 let map_dstruct fe fs ft s =
   { s with
+    ds_tparams = map_tparams ft s.ds_tparams;
     ds_fields = List.map (map_field fe fs ft) s.ds_fields;
     ds_constraint = Option.map fe s.ds_constraint }
 
@@ -2046,7 +2066,7 @@ let rec map_decl
     (d : cpp_decl) : cpp_decl =
   match d with
   | Dtemplate (tps, constr, inner) ->
-    Dtemplate (tps, Option.map fe constr, map_decl fe fs ft inner)
+    Dtemplate (map_tparams ft tps, Option.map fe constr, map_decl fe fs ft inner)
   | Dnspace (r, decls) -> Dnspace (r, List.map (map_decl fe fs ft) decls)
   | Dfun f ->
     let shape' =
@@ -2069,11 +2089,17 @@ let rec map_decl
   | Dasgn (r, ty, e) -> Dasgn (r, ft ty, fe e)
   | Dconcept (r, e) -> Dconcept (r, fe e)
   | Dstatic_assert (e, msg) -> Dstatic_assert (fe e, msg)
-  | Dusing u -> Dusing {u with du_rhs = Option.map ft u.du_rhs}
-  | Dstruct_fwd _ -> d
+  | Dusing u ->
+    Dusing
+      {u with du_tparams = map_tparams ft u.du_tparams; du_rhs = Option.map ft u.du_rhs}
+  | Dstruct_fwd (tps, r) -> Dstruct_fwd (map_tparams ft tps, r)
   | Dfields s -> Dfields (map_dstruct fe fs ft s)
-  | Dmember_def m -> Dmember_def {m with dm_field = map_out_of_line fs ft m.dm_field}
-  | Denum _ -> d
+  | Dmember_def m ->
+    Dmember_def
+      { m with
+        dm_tparams = map_tparams ft m.dm_tparams;
+        dm_field = map_out_of_line fs ft m.dm_field }
+  | Denum e -> Denum {e with de_tparams = map_tparams ft e.de_tparams}
 
 (** Collect free variables from an expression.
     Mutually recursive with [free_vars_stmt] and [free_vars_body]. *)

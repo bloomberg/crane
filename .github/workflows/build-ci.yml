@@ -40,6 +40,9 @@ jobs:
             startGroup "Build project"
               opam exec -- dune build -p rocq-crane && dune install
             endGroup
+            startGroup "OCaml unit tests"
+              opam exec -- dune build @unit_tests/runtest
+            endGroup
 
       - name: Install clang and GMP
         run: |
