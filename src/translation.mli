@@ -384,6 +384,11 @@ val compute_and_register_field_names :
     lifted decls from leaking between extraction passes. *)
 val take_lifted_decls : unit -> cpp_decl list
 
+(** [collecting_lifted f] runs [f] and returns, with its result, the
+    declarations lifted while it ran, leaving the queue's earlier contents
+    in place. *)
+val collecting_lifted : (unit -> 'a) -> 'a * cpp_decl list
+
 (** Reset the seen-lifted-refs deduplication set. Call at the start of each
     new output file so that identical helpers in different files are NOT
     suppressed. *)

@@ -49,23 +49,26 @@ val gen_dfuns_header :
 val gen_dfuns_spec :
   GlobRef.t array * ml_ast array * ml_type array -> (cpp_decl * env) list
 
-(** Generate both spec and def for a group of mutually recursive functions in
-    one pass. Calls gen_dfun_def ONCE per function, then derives both spec
-    and def. Returns list of (spec, def_option, lifted_decls). *)
+(** A function as one generation produced it: its forward declaration, its
+    definition where the file being written takes one, and the helpers lifted
+    out of its body. *)
+type generated_fun = {
+  gf_spec : (cpp_decl * env) option;
+  gf_def : (cpp_decl * env) option;
+  gf_lifted : cpp_decl list;
+}
+
+(** Generate both spec and def for each function of a mutually recursive
+    group, translating each body once. *)
 val gen_dfuns_dual :
   is_header:bool ->
   GlobRef.t array * ml_ast array * ml_type array ->
-  ((cpp_decl * env) * (cpp_decl * env) option * cpp_decl list) list
+  generated_fun list
 
-(** Generate both spec and def for a single Dterm function in one pass. Calls
-    gen_decl_for_pp ONCE, then derives both spec and def. Returns (spec_opt,
-    def_opt, tvars). *)
+(** Generate both spec and def for a single Dterm function, translating its
+    body once. *)
 val gen_decl_for_pp_dual :
-  is_header:bool ->
-  GlobRef.t ->
-  ml_ast ->
-  ml_type ->
-  (cpp_decl * env) option * (cpp_decl * env) option * variable list
+  is_header:bool -> GlobRef.t -> ml_ast -> ml_type -> generated_fun
 
 (** Split a definition into the declaration and the definition of the same
     function: the same signature twice, once without the body.

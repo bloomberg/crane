@@ -1956,20 +1956,9 @@ let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
     | SEdecl (Dterm (r, a, t)) when is_typeclass_instance a t ->
       ([], [], List.map snd (instance_decls r a t))
     | SEdecl (Dterm (r, a, t)) ->
-      let spec_opt, def_opt, _tvars = gen_decl_for_pp_dual ~is_header r a t in
-      let lifted = Translation.take_lifted_decls () in
-      List.iter (dbg_lifted ~site:"wrapper-dterm") lifted;
-      let specs =
-        match spec_opt with
-        | Some s -> [s]
-        | None -> []
-      in
-      let defs =
-        match def_opt with
-        | Some d -> [d]
-        | None -> []
-      in
-      (specs, defs, lifted)
+      let g = gen_decl_for_pp_dual ~is_header r a t in
+      List.iter (dbg_lifted ~site:"wrapper-dterm") g.gf_lifted;
+      (Stdlib.Option.to_list g.gf_spec, Stdlib.Option.to_list g.gf_def, g.gf_lifted)
     | SEdecl (Dfix (rv, defs, typs)) ->
       Array.iteri
         (fun i r ->
@@ -1994,10 +1983,9 @@ let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
         ([], [], [])
       else
         let results = gen_dfuns_dual ~is_header (rv, defs, typs) in
-        let specs = List.map (fun (s, _, _) -> s) results in
-        let defs_list = List.filter_map (fun (_, d, _) -> d) results in
-        let lifted = List.concat_map (fun (_, _, l) -> l) results in
-        (specs, defs_list, lifted)
+        ( List.filter_map (fun g -> g.gf_spec) results,
+          List.filter_map (fun g -> g.gf_def) results,
+          List.concat_map (fun g -> g.gf_lifted) results )
     | _ -> ([], [], [])
   in
   let all_results = List.map process_sel func_sels in

@@ -423,6 +423,20 @@ let take_lifted_decls () =
   update_output (fun o -> { o with pending_lifted_decls = [] });
   ds
 
+(** [collecting_lifted f] runs [f] and returns, with its result, the
+    declarations lifted while it ran.  The queue's earlier contents are left
+    where they were: a generator's helpers are its output, not something a
+    later drain happens to find. *)
+let collecting_lifted f =
+  let earlier = (!tctx).output.pending_lifted_decls in
+  update_output (fun o -> {o with pending_lifted_decls = []});
+  Fun.protect
+    ~finally:(fun () ->
+      update_output (fun o -> {o with pending_lifted_decls = earlier}) )
+    (fun () ->
+      let v = f () in
+      (v, List.rev (!tctx).output.pending_lifted_decls) )
+
 (** Reset the seen-lifted-refs deduplication set. Call at the start of each
     new output file so identical helpers in different files are not suppressed. *)
 let clear_seen_lifted_refs () =

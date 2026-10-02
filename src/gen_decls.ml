@@ -5250,11 +5250,12 @@ let gen_sfun_spec n b ty =
 let gen_dfuns (ns, bs, tys) =
   List.concat_map
     (fun (i, name) ->
-      let result = gen_dfun_def name bs.(i) tys.(i) in
-      (* Discard lifted declarations here - they are template functions that
-         belong only in the header file (.h), not the source file (.cpp).
-         gen_dfuns_header will collect them for the header. *)
-      ignore (take_lifted_decls ());
+      (* The lifted declarations are left out: they are template functions
+         that belong only in the header file (.h), not the source file
+         (.cpp), and gen_dfuns_header collects them for the header. *)
+      let result, _lifted =
+        collecting_lifted (fun () -> gen_dfun_def name bs.(i) tys.(i))
+      in
       [result] )
     (List.mapi (fun i name -> (i, name)) (Array.to_list ns))
 
@@ -5305,8 +5306,9 @@ let decl_to_spec (d : cpp_decl) : cpp_decl = fst (decl_spec_and_def d)
 let gen_dfuns_header (ns, bs, tys) =
   List.concat_map
     (fun (i, name) ->
-      let ds, env, tvars = gen_dfun_def name bs.(i) tys.(i) in
-      let lifted = take_lifted_decls () in
+      let (ds, env, tvars), lifted =
+        collecting_lifted (fun () -> gen_dfun_def name bs.(i) tys.(i))
+      in
       let lifted_results = List.map (fun d -> (d, empty_env ())) lifted in
       (* For non-template functions, derive the spec from the definition via
          decl_to_spec to ensure parameter types (owned vs borrowed) match
@@ -5330,21 +5332,29 @@ let gen_dfuns_header (ns, bs, tys) =
 let gen_dfuns_spec (ns, bs, tys) =
   List.concat_map
     (fun (i, name) ->
-      let ds, _env, _tvars = gen_dfun_def name bs.(i) tys.(i) in
-      ignore (take_lifted_decls ());
+      let (ds, _env, _tvars), _lifted =
+        collecting_lifted (fun () -> gen_dfun_def name bs.(i) tys.(i))
+      in
       [(decl_to_spec ds, empty_env ())] )
     (List.mapi (fun i name -> (i, name)) (Array.to_list ns))
+
+type generated_fun = {
+  gf_spec : (cpp_decl * env) option;
+  gf_def : (cpp_decl * env) option;
+  gf_lifted : cpp_decl list;
+}
 
 (** Generate both spec and def for a group of mutually recursive functions in
     one pass. Calls gen_dfun_def ONCE per function, then derives:
     - spec: decl_to_spec of the full definition (forward declaration)
     - def: the full definition (for templates) or None (for non-templates in
-      header mode) Returns list of (spec, def_option, lifted_decls) *)
+      header mode) *)
 let gen_dfuns_dual ~is_header (ns, bs, tys) =
   List.concat_map
     (fun (i, name) ->
-      let ds, env, tvars = gen_dfun_def name bs.(i) tys.(i) in
-      let lifted = take_lifted_decls () in
+      let (ds, env, tvars), lifted =
+        collecting_lifted (fun () -> gen_dfun_def name bs.(i) tys.(i))
+      in
       (* Both halves from the one split, so the template head they state is the
          same head; [ds] on its own would keep a constraint the spec drops. *)
       let ds_spec, ds_def = decl_spec_and_def ds in
@@ -5357,33 +5367,34 @@ let gen_dfuns_dual ~is_header (ns, bs, tys) =
         | [], false -> Some (ds_def, env)
         (* Non-template + source: full def in .cpp *)
       in
-      [(spec, def, lifted)] )
+      [{gf_spec = Some spec; gf_def = def; gf_lifted = lifted}] )
     (List.mapi (fun i name -> (i, name)) (Array.to_list ns))
 
 (** Generate both spec and def for a single Dterm function in one pass. Calls
-    gen_decl_for_pp ONCE, then derives both spec and def. Returns (spec_opt,
-    def_opt, tvars) *)
+    gen_decl_for_pp ONCE, then derives both spec and def. *)
 let gen_decl_for_pp_dual__inner ~is_header n b ty =
-  let ds_opt, env, tvars = gen_decl_for_pp n b ty in
-  match (ds_opt, tvars) with
-  | Some ds, _ :: _ ->
-    (* Template function: spec is the declaration half, def only in header *)
-    let ds_spec, ds_def = decl_spec_and_def ds in
-    let def = if is_header then Some (ds_def, env) else None in
-    (Some (ds_spec, env), def, tvars)
-  | Some ds, [] ->
-    (* Non-template function: both halves from the one split, so parameter
-       types (owned vs borrowed) match exactly between declaration and
-       definition.  Using gen_spec here would run independent escape analysis
-       that may produce different ownership decisions than gen_dfun used for
-       the def. *)
-    let ds_spec, ds_def = decl_spec_and_def ds in
-    let def = if is_header then None else Some (ds_def, env) in
-    (Some (ds_spec, env), def, tvars)
-  | None, _ ->
-    (* Non-function type: no def needed *)
-    let spec_ds, spec_env = gen_spec n b ty in
-    (Some (spec_ds, spec_env), None, tvars)
+  let (gf_spec, gf_def), gf_lifted =
+    collecting_lifted @@ fun () ->
+    let ds_opt, env, tvars = gen_decl_for_pp n b ty in
+    match (ds_opt, tvars) with
+    | Some ds, _ :: _ ->
+      (* Template function: spec is the declaration half, def only in
+         header *)
+      let ds_spec, ds_def = decl_spec_and_def ds in
+      (Some (ds_spec, env), if is_header then Some (ds_def, env) else None)
+    | Some ds, [] ->
+      (* Non-template function: both halves from the one split, so parameter
+         types (owned vs borrowed) match exactly between declaration and
+         definition.  Using gen_spec here would run independent escape
+         analysis that may produce different ownership decisions than gen_dfun
+         used for the def. *)
+      let ds_spec, ds_def = decl_spec_and_def ds in
+      (Some (ds_spec, env), if is_header then None else Some (ds_def, env))
+    | None, _ ->
+      (* Non-function type: no def needed *)
+      (Some (gen_spec n b ty), None)
+  in
+  {gf_spec; gf_def; gf_lifted}
 
 let gen_decl_for_pp_dual ~is_header n b ty =
   Table.with_decl_ref n (fun () -> gen_decl_for_pp_dual__inner ~is_header n b ty)
