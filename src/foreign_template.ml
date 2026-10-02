@@ -265,3 +265,9 @@ let drain_template s =
   done;
   flush ();
   List.rev !tokens
+
+let is_pair_projection s =
+  match term_template s with
+  | [CCstring ""; CCarg 0; CCstring (".first" | ".second")]
+  | [CCarg 0; CCstring (".first" | ".second")] -> true
+  | _ -> false

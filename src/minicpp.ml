@@ -651,12 +651,7 @@ and custom_info = {
 let inline_shape_of_text s =
   if String.equal s "%a0" then Inline_identity
   else
-    let contains sub =
-      let n = String.length s and m = String.length sub in
-      let rec at i = i + m <= n && (String.sub s i m = sub || at (i + 1)) in
-      at 0
-    in
-    if contains ".first" || contains ".second" then Inline_pair_projection
+    if Foreign_template.is_pair_projection s then Inline_pair_projection
     else Inline_other
 
 let inline_template s =

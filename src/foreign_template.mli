@@ -32,6 +32,10 @@ type drain_token = Drain_text of string | Drain_yield of string
 (** The tokens of a container's [Drain "..."] template. *)
 val drain_template : string -> drain_token list
 
+(** Whether a term template is a pair projection: [%a0.first] or
+    [%a0.second]. *)
+val is_pair_projection : string -> bool
+
 (** [with_result name s] is [s] with every [%result] spelled [name]. *)
 val with_result : string -> string -> string
 
