@@ -211,6 +211,18 @@ val deferred_concept_asserts : (held_concept * Pp.t * Pp.t) list ref
     context. *)
 val with_render_ctx : (render_ctx -> render_ctx) -> (unit -> 'a) -> 'a
 
+(** Where a declaration was generated: the visibility stack and render
+    context its names are spelled against.  A declaration written somewhere
+    later than it was generated carries one, so that it reads the same as it
+    would have in place. *)
+type scope
+
+val current_scope : unit -> scope
+
+(** [in_scope sc f] runs [f] as if at [sc], restoring the current scope
+    however [f] leaves. *)
+val in_scope : scope -> (unit -> 'a) -> 'a
+
 (** {2 Template static accessors} *)
 
 (** Tracking for template static accessor labels and their kernel names. *)

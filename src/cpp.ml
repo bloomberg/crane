@@ -2474,7 +2474,7 @@ let do_struct_with_decl_tracking ~is_header f s =
   Cpp_print.reset_ctor_alias_emitted ();
   ignore (Translation.take_lifted_decls ());
   hoisted_module_structs := [];
-  ignore (drain Cpp_ind.deferred_member_defs);
+  Cpp_ind.clear_deferred_member_defs ();
   Hashtbl.clear emitted_member_lifted;
   Translation.clear_seen_lifted_refs ();
   init_std_names ();
@@ -2958,7 +2958,7 @@ let do_struct_with_decl_tracking ~is_header f s =
   (* Last of all: a datatype's method whose body names a module's struct, which
      is emitted after every datatype.  Nothing else in the header is later. *)
   let deferred_members =
-    match drain Cpp_ind.deferred_member_defs with
+    match Cpp_ind.take_deferred_member_defs () with
     | [] -> mt ()
     | ds -> cut2 () ++ prlist_with_sep cut2 (fun x -> x) ds
   in

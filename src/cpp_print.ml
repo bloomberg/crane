@@ -4622,9 +4622,11 @@ let nspace_wrapper_name id =
     declarations were queued against -- a file module of the same name, whose
     functions go in beside it -- and so is spelled [List::list] rather than
     [List].  A struct written inside another is named by member lookup, which
-    no forward declaration answers. *)
+    no forward declaration answers.  Read from {!unmerged_wrappers}, which
+    printing the wrapper does not empty, so the answer does not depend on
+    whether the wrapper has been written yet. *)
 let nested_in_wrapper r =
-  Hashtbl.mem pending_wrapper_decls (nspace_wrapper_name r)
+  Hashtbl.mem unmerged_wrappers (nspace_wrapper_name r)
 
 (** Whether a wrapper and the struct inside it are written as one struct
     rather than two.  A sole struct is merged into its wrapper and takes the

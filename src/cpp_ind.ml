@@ -165,10 +165,20 @@ let module_struct_name (mp : ModPath.t) : string option =
 
 (** Member definitions a datatype struct at namespace scope gave up because
     their bodies name a module's struct, which is emitted after every datatype
-    and cannot be moved in front of one it holds by value.  Written at the very
-    end of the header by the assembly in {!Cpp}, which is the only place later
-    than every module struct.  In emission order. *)
-let deferred_member_defs : Cpp_state.band = Cpp_state.band "deferred_member_defs"
+    and cannot be moved in front of one it holds by value.  Each group keeps
+    the scope it was generated in.  Newest first. *)
+let deferred_member_defs : (Cpp_state.scope * rendered) list ref =
+  Cpp_state.owned_list "deferred_member_defs"
+
+let defer_member_defs defs =
+  deferred_member_defs := (Cpp_state.current_scope (), defs) :: !deferred_member_defs
+
+let take_deferred_member_defs () =
+  let groups = List.rev !deferred_member_defs in
+  deferred_member_defs := [];
+  List.map (fun (sc, defs) -> Cpp_state.in_scope sc (fun () -> pp_decls defs)) groups
+
+let clear_deferred_member_defs () = deferred_member_defs := []
 
 (** Render inductive type header (.h file).
     TypeClasses become C++ concepts, Records become structs,
@@ -628,12 +638,7 @@ let ind_header_decls kn ind =
               && not (List.mem (module_struct_name mp) own_nspace_names) )
             group
         in
-        (* Rendered here rather than carried to the assembly as declarations:
-           the name environment a member definition is spelled in is this one,
-           and by the end of the header the visibility stack has been unwound
-           past it. *)
-        if defs <> [] then
-          Cpp_state.push deferred_member_defs (pp_decls defs);
+        if defs <> [] then defer_member_defs defs;
         group
     in
     forward_decls @ group

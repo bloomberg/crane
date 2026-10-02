@@ -36,11 +36,13 @@ val ind_header_decls : Names.MutInd.t -> Miniml.ml_ind -> rendered
 
 (** Member definitions a datatype struct at namespace scope gave up because
     their bodies name a module's struct, which is emitted after every datatype
-    and cannot be moved in front of one it holds by value.  In emission order;
-    the header assembly writes them last and empties this.  Already rendered:
-    the environment they are spelled in is the one in force where their struct
-    was, not the one left at the end of the header. *)
-val deferred_member_defs : Cpp_state.band
+    and cannot be moved in front of one it holds by value: rendered, in
+    emission order and each in the scope it was generated in, by the header
+    assembly, which writes them last. *)
+val take_deferred_member_defs : unit -> Pp.t list
+
+(** Discard deferred member definitions left by an earlier file. *)
+val clear_deferred_member_defs : unit -> unit
 
 (** What a type class instance becomes: the struct carrying its methods, and,
     for a ground instance, the [static_assert] checking it against the class's

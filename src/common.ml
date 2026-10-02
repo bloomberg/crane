@@ -735,7 +735,7 @@ type visible_layer = {
 
 (** Visibility stack for module rendering: tracks which module paths are in
     scope and their label-to-key content mappings. *)
-let pop_visible, push_visible, get_visible =
+let pop_visible, push_visible, get_visible, set_visible =
   let vis = ref [] in
   register_cleanup (fun () -> vis := []);
   let pop () =
@@ -747,8 +747,20 @@ let pop_visible, push_visible, get_visible =
       if get_phase () = Emit Impl && modular () && is_modfile v.mp then
         add_mpfiles_content v.mp v.content
   and push mp mps = vis := {mp; params = mps; content = KMap.empty} :: !vis
-  and get () = !vis in
-  (pop, push, get)
+  and get () = !vis
+  and set v = vis := v in
+  (pop, push, get, set)
+
+(** The visibility stack as it stands; layers are shared, not copied, so names
+    registered in them later are still seen. *)
+type visibility = visible_layer list
+
+let current_visibility = get_visible
+
+let with_visibility v f =
+  let saved = get_visible () in
+  set_visible v;
+  Fun.protect ~finally:(fun () -> set_visible saved) f
 
 (** Get module paths of all visible layers. *)
 let get_visible_mps () =

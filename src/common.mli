@@ -252,6 +252,15 @@ val push_visible : ModPath.t -> ModPath.t list -> unit
 (** Pop the innermost visible layer. *)
 val pop_visible : unit -> unit
 
+(** A snapshot of the visibility stack: the scope a name is spelled from. *)
+type visibility
+
+val current_visibility : unit -> visibility
+
+(** [with_visibility v f] runs [f] with the visibility stack at [v], restoring
+    the stack as it was however [f] leaves. *)
+val with_visibility : visibility -> (unit -> 'a) -> 'a
+
 (** A name as name resolution settled it, before it is flattened to text: the
     qualifier components that reach it, outermost first.  Callers that need to
     know how a name came out should ask here rather than inspect the printed
