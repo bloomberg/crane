@@ -738,26 +738,54 @@ let generate d =
     functions ~lifted_inline:false (generated_once ~on_reuse:reuse d gen)
   | Dfix (rv, defs, typs) -> group (rv, defs, typs)
 
+(** The entity the implementation pass finalized for each generated
+    function, by physical identity: a generation the header pass reused
+    ({!generated_once}) is finished once too. *)
+let finalized_in_impl : Function_entity.t option Node_table.t =
+  Node_table.create 64
+
+let () = State.on_reset State.Unit (fun () -> Node_table.reset finalized_in_impl)
+
 (** [finalized funs] pairs each generated function with its entity, every
     definition among them finished as one group
-    ({!Function_entity.finalize_group}); [None] for a declaration. *)
+    ({!Function_entity.finalize_group}); [None] for a declaration.  The
+    header pass takes the implementation pass's entities for functions it
+    reused, checked under [CRANE_CHECK_IR] like the generation itself. *)
 let finalized (funs : Gen_decls.generated_fun list) =
-  let entities =
-    Function_entity.finalize_group
-      (List.filter_map
-         (fun (g : Gen_decls.generated_fun) ->
-           match g.gf_entity with Defined (d, _) -> Some d | Declared _ -> None )
-         funs )
+  let finalize () =
+    let entities =
+      Function_entity.finalize_group
+        (List.filter_map
+           (fun (g : Gen_decls.generated_fun) ->
+             match g.gf_entity with Defined (d, _) -> Some d | Declared _ -> None )
+           funs )
+    in
+    let rec pair funs es =
+      match (funs, es) with
+      | ({Gen_decls.gf_entity = Defined _; _} as g) :: funs, e :: es ->
+        (g, Some e) :: pair funs es
+      | ({gf_entity = Declared _; _} as g) :: funs, es -> (g, None) :: pair funs es
+      | [], [] -> []
+      | _ -> assert false
+    in
+    pair funs entities
   in
-  let rec pair funs es =
-    match (funs, es) with
-    | ({Gen_decls.gf_entity = Defined _; _} as g) :: funs, e :: es ->
-      (g, Some e) :: pair funs es
-    | ({gf_entity = Declared _; _} as g) :: funs, es -> (g, None) :: pair funs es
-    | [], [] -> []
-    | _ -> assert false
-  in
-  pair funs entities
+  let earlier g = Node_table.find_opt finalized_in_impl (Obj.repr g) in
+  match get_phase () with
+  | Emit Impl ->
+    let paired = finalize () in
+    List.iter (fun (g, e) -> Node_table.replace finalized_in_impl (Obj.repr g) e) paired;
+    paired
+  | Emit Intf when funs <> [] && List.for_all (fun g -> earlier g <> None) funs ->
+    let paired = List.map (fun g -> (g, Option.get (earlier g))) funs in
+    if Sys.getenv_opt "CRANE_CHECK_IR" <> None
+       && compare (List.map snd paired) (List.map snd (finalize ())) <> 0
+    then
+      CErrors.anomaly
+        Pp.(str "Crane: the header pass finished differently from the \
+                 implementation pass.");
+    paired
+  | _ -> finalize ()
 
 (** The views of [funs] a file writes, finished: a definition in the file
     that holds it, and in the header a declaration of a definition the
