@@ -636,6 +636,11 @@ let isMLdummy = function
   | MLdummy _ -> true
   | _ -> false
 
+let term_defs = function
+  | Dterm (fd_ref, fd_body, fd_type) -> [{fd_ref; fd_body; fd_type}]
+  | Dfix fds -> fds
+  | Dind _ | Dtype _ -> []
+
 let sign_of_id = function
   | Dummy -> Kill Kprop
   | Id _ | Tmp _ -> Keep

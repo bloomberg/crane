@@ -445,8 +445,7 @@ let file_calls modpath decls =
   List.iter
     (fun (_l, se) ->
       match se with
-      | SEdecl (Dterm (r, _, _)) -> add r
-      | SEdecl (Dfix (rv, _, _)) -> Array.iter add rv
+      | SEdecl d -> List.iter (fun fd -> add fd.fd_ref) (Mlutil.term_defs d)
       | _ -> () )
     decls;
   fun body ->
@@ -639,34 +638,19 @@ let register_methods_for_epon
     List.iter
       (fun (_l, se) ->
         match se with
-        | SEdecl (Dterm (r, body, ty)) ->
-          if same_module r && not (refs_forward ty) && not (refs_alias ty)
-          then (
-            match find_epon_arg_pos epon_ref ty with
-            | Some (pos, ind_tvar_positions)
-              when body_safe_for_method ~this_pos:pos
-                     ~ret_has_shared_epon:(ml_return_type_has_ref epon_ref ty)
-                     body ->
-              consider r body ty pos ind_tvar_positions
-            | _ -> () )
-        | SEdecl (Dfix (rv, defs, typs)) ->
-          (* Mutual fixpoints: check each function in the fixpoint block. *)
-          Array.iteri
-            (fun i r ->
-              if
-                same_module r
-                && (not (refs_forward typs.(i)))
-                && not (refs_alias typs.(i))
+        | SEdecl d ->
+          List.iter
+            (fun {fd_ref = r; fd_body = body; fd_type = ty} ->
+              if same_module r && not (refs_forward ty) && not (refs_alias ty)
               then
-                match find_epon_arg_pos epon_ref typs.(i) with
+                match find_epon_arg_pos epon_ref ty with
                 | Some (pos, ind_tvar_positions)
                   when body_safe_for_method ~this_pos:pos
-                         ~ret_has_shared_epon:
-                           (ml_return_type_has_ref epon_ref typs.(i))
-                         defs.(i) ->
-                  consider r defs.(i) typs.(i) pos ind_tvar_positions
+                         ~ret_has_shared_epon:(ml_return_type_has_ref epon_ref ty)
+                         body ->
+                  consider r body ty pos ind_tvar_positions
                 | _ -> () )
-            rv
+            (Mlutil.term_defs d)
         | _ -> () )
       decls;
     if top_level_siblings then begin
@@ -788,9 +772,10 @@ let register_methods_for_all_inductives tbl cands ind_refs decls =
   in
   List.iter (fun (_l, se) ->
     match se with
-    | SEdecl (Dterm (r, body, ty)) -> process_func r body ty
-    | SEdecl (Dfix (rv, defs, typs)) ->
-      Array.iteri (fun i r -> process_func r defs.(i) typs.(i)) rv
+    | SEdecl d ->
+      List.iter
+        (fun fd -> process_func fd.fd_ref fd.fd_body fd.fd_type)
+        (Mlutil.term_defs d)
     | _ -> ()
   ) decls
 
@@ -1002,9 +987,10 @@ let compute_returns_any
               Hashtbl.replace ind_param_vars ind_ref
                 (Table.ind_promoted_params kn @ param_vars) )
             ind.ind_packets
-        | SEdecl (Dterm (r, _, ty)) -> Hashtbl.replace method_types r ty
-        | SEdecl (Dfix (rv, _, typs)) ->
-          Array.iteri (fun i r -> Hashtbl.replace method_types r typs.(i)) rv
+        | SEdecl ((Dterm _ | Dfix _) as d) ->
+          List.iter
+            (fun fd -> Hashtbl.replace method_types fd.fd_ref fd.fd_type)
+            (Mlutil.term_defs d)
         | SEmodule m ->
           ( match m.ml_mod_expr with
           | MEstruct (_mp, inner_sel) -> collect_from_sel inner_sel

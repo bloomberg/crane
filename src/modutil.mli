@@ -98,3 +98,7 @@ val get_decl_in_structure : GlobRef.t -> ml_structure -> ml_decl
     @return the optimized structure *)
 val optimize_struct :
   GlobRef.t list * ModPath.t list -> ml_structure -> ml_structure
+
+(** The references a declaration defines; an inductive block is represented
+    by its first packet. *)
+val declared_refs : ml_decl -> GlobRef.t list

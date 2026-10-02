@@ -199,12 +199,15 @@ type ml_schema = int * ml_type
 
 (** {2 ML declarations} *)
 
+(** One definition of a group of mutually recursive definitions. *)
+type ml_fix_def = {fd_ref : GlobRef.t; fd_body : ml_ast; fd_type : ml_type}
+
 (** ML declaration. *)
 type ml_decl =
   | Dind of MutInd.t * ml_ind
   | Dtype of GlobRef.t * Id.t list * ml_type
   | Dterm of GlobRef.t * ml_ast * ml_type
-  | Dfix of GlobRef.t array * ml_ast array * ml_type array
+  | Dfix of ml_fix_def list
 
 (** ML specification. *)
 type ml_spec =

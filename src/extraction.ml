@@ -2710,7 +2710,9 @@ let extract_fixpoint env sg vkn is_fix (fi, ti, ci) =
      means cofixpoint *)
   if not is_fix then
     Array.iter (fun kn -> add_cofixpoint (GlobRef.ConstRef kn)) vkn;
-  Dfix (Array.map (fun kn -> GlobRef.ConstRef kn) vkn, terms, types)
+  Dfix
+    (List.init n (fun i ->
+         {fd_ref = GlobRef.ConstRef vkn.(i); fd_body = terms.(i); fd_type = types.(i)} ))
 
 (** Main entry point for extracting a constant declaration, dispatching on kind
     (axiom, definition, etc.). *)
@@ -3094,7 +3096,8 @@ let extract_inductive env kn =
 let logical_decl = function
   | Dterm (_, MLdummy _, Tdummy _) -> true
   | Dtype (_, _, Tdummy _) -> true
-  | Dfix (_, av, tv) -> Array.for_all isMLdummy av && Array.for_all isTdummy tv
+  | Dfix fds ->
+    List.for_all (fun fd -> isMLdummy fd.fd_body && isTdummy fd.fd_type) fds
   | Dind (_, i) -> Array.for_all (fun ip -> ip.ip_logical) i.ind_packets
   | _ -> false
 

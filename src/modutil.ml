@@ -200,10 +200,10 @@ let decl_iter_references ?prune do_term do_cons do_type =
       do_term r;
       ast_iter a;
       type_iter t
-    | Dfix (rv, c, t) ->
-      Array.iter do_term rv;
-      Array.iter ast_iter c;
-      Array.iter type_iter t
+    | Dfix fds ->
+      List.iter (fun fd -> do_term fd.fd_ref) fds;
+      List.iter (fun fd -> ast_iter fd.fd_body) fds;
+      List.iter (fun fd -> type_iter fd.fd_type) fds
 
 (** Iterate over all references in an ML specification. *)
 let spec_iter_references do_term do_cons do_type = function
@@ -226,7 +226,7 @@ let rec ast_search f a = if f a then raise Found else ast_iter (ast_search f) a
 (** Search for an AST node in a declaration. *)
 let decl_ast_search f = function
   | Dterm (_, a, _) -> ast_search f a
-  | Dfix (_, c, _) -> Array.iter (ast_search f) c
+  | Dfix fds -> List.iter (fun fd -> ast_search f fd.fd_body) fds
   | _ -> ()
 
 (** Search for an AST node anywhere in a structure. *)
@@ -251,7 +251,7 @@ let decl_type_search f = function
       (fun {ip_types = v} -> Array.iter (List.iter (type_search f)) v)
       p
   | Dterm (_, _, u) -> type_search f u
-  | Dfix (_, _, v) -> Array.iter (type_search f) v
+  | Dfix fds -> List.iter (fun fd -> type_search f fd.fd_type) fds
   | Dtype (_, _, u) -> type_search f u
 
 (** Search for a type in a specification. *)
@@ -281,12 +281,9 @@ let rec msig_of_ms = function
     (l, Spec (Sval (r, b, t))) :: msig_of_ms ms
   | (l, SEdecl (Dtype (r, v, t))) :: ms ->
     (l, Spec (Stype (r, v, Some t))) :: msig_of_ms ms
-  | (l, SEdecl (Dfix (rv, bv, tv))) :: ms ->
-    let msig = ref (msig_of_ms ms) in
-    for i = Array.length rv - 1 downto 0 do
-      msig := (l, Spec (Sval (rv.(i), bv.(i), tv.(i)))) :: !msig
-    done;
-    !msig
+  | (l, SEdecl (Dfix fds)) :: ms ->
+    List.map (fun fd -> (l, Spec (Sval (fd.fd_ref, fd.fd_body, fd.fd_type)))) fds
+    @ msig_of_ms ms
   | (l, SEmodule m) :: ms -> (l, Smodule m.ml_mod_type) :: msig_of_ms ms
   | (l, SEmodtype m) :: ms -> (l, Smodtype m) :: msig_of_ms ms
 
@@ -344,8 +341,9 @@ let get_decl_in_structure r struc =
     occurs exactly once it is substituted; otherwise a let-in redex is created
     for clarity) and iota redexes, plus some other optimizations. *)
 
-(** Convert a Dfix group to an MLfix term for inlining. *)
-let dfix_to_mlfix rv av tv i =
+(** Convert member [i] of a Dfix group to an MLfix term for inlining. *)
+let dfix_to_mlfix fds i =
+  let rv = Array.of_list (List.map (fun fd -> fd.fd_ref) fds) in
   let rec make_subst n s =
     if n < 0 then
       s
@@ -359,8 +357,11 @@ let dfix_to_mlfix rv av tv i =
       (try MLrel (n + Refmap'.find refe s) with Not_found -> t)
     | _ -> ast_map_lift subst n t
   in
-  let ids = Array.map2 (fun r t -> (Label.to_id (label_of_r r), t)) rv tv in
-  let c = Array.map (subst 0) av in
+  let ids =
+    Array.of_list
+      (List.map (fun fd -> (Label.to_id (label_of_r fd.fd_ref), fd.fd_type)) fds)
+  in
+  let c = Array.of_list (List.map (fun fd -> subst 0 fd.fd_body) fds) in
   MLfix (i, ids, c, false)
 
 (** [optim_se] applies the [normalize] function everywhere and does the inlining
@@ -376,22 +377,27 @@ let rec optim_se top to_appear s = function
     let d =
       match dump_unused_vars (optimize_fix a) with
       | MLfix (0, _, [|c|], _) ->
-        Dfix ([|r|], [|ast_subst (MLglob (r, [])) c|], [|t|])
+        Dfix [{fd_ref = r; fd_body = ast_subst (MLglob (r, [])) c; fd_type = t}]
         (* The [] ML type args are safe: gen_expr reads template args from the
            C++ environment, not from MLglob's arg list. *)
       | a -> Dterm (r, a, t)
     in
     (l, SEdecl d) :: optim_se top to_appear s lse
-  | (l, SEdecl (Dfix (rv, av, tv))) :: lse ->
-    let av = Array.map (fun a -> normalize (ast_glob_subst !s a)) av in
+  | (l, SEdecl (Dfix fds)) :: lse ->
+    let fds =
+      List.map
+        (fun fd -> {fd with fd_body = normalize (ast_glob_subst !s fd.fd_body)})
+        fds
+    in
     (* This fake body ensures that no fixpoint will be auto-inlined. *)
     let fake_body = MLfix (0, [||], [||], false) in
-    for i = 0 to Array.length rv - 1 do
-      if inline rv.(i) fake_body then
-        s := Refmap'.add rv.(i) (dfix_to_mlfix rv av tv i) !s
-    done;
-    let av' = Array.map dump_unused_vars av in
-    (l, SEdecl (Dfix (rv, av', tv))) :: optim_se top to_appear s lse
+    List.iteri
+      (fun i fd ->
+        if inline fd.fd_ref fake_body then
+          s := Refmap'.add fd.fd_ref (dfix_to_mlfix fds i) !s )
+      fds;
+    let fds = List.map (fun fd -> {fd with fd_body = dump_unused_vars fd.fd_body}) fds in
+    (l, SEdecl (Dfix fds)) :: optim_se top to_appear s lse
   | (l, SEmodule m) :: lse ->
     let m = {m with ml_mod_expr = optim_me to_appear s m.ml_mod_expr} in
     (l, SEmodule m) :: optim_se top to_appear s lse
@@ -436,7 +442,7 @@ let declared_refs = function
   | Dind (kn, _) -> [GlobRef.IndRef (kn, 0)]
   | Dtype (r, _, _) -> [r]
   | Dterm (r, _, _) -> [r]
-  | Dfix (rv, _, _) -> Array.to_list rv
+  | Dfix fds -> List.map (fun fd -> fd.fd_ref) fds
 
 (** Computes the dependencies of a declaration, except in case of custom
     extraction. *)
@@ -476,9 +482,9 @@ let rec depcheck_se = function
       List.iter found_needed refs';
       (* Hack to avoid extracting unused part of a Dfix *)
       match d with
-      | Dfix (rv, trms, tys) when List.for_all is_custom refs' ->
-        let trms' = Array.make (Array.length rv) (MLexn "UNUSED") in
-        (l, SEdecl (Dfix (rv, trms', tys))) :: se'
+      | Dfix fds when List.for_all is_custom refs' ->
+        let unused fd = {fd with fd_body = MLexn "UNUSED"} in
+        (l, SEdecl (Dfix (List.map unused fds))) :: se'
       | _ ->
         compute_deps_decl d;
         t :: se' )

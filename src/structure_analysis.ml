@@ -478,8 +478,7 @@ let methods_by_owner (reg : Method_registry.t) (s : ml_structure) =
       List.iter
         (fun (_l, se) ->
           match se with
-          | SEdecl (Dterm (r, _, _) as d) -> add r d
-          | SEdecl (Dfix (rv, _, _) as d) -> Array.iter (fun r -> add r d) rv
+          | SEdecl d -> List.iter (fun fd -> add fd.fd_ref d) (Mlutil.term_defs d)
           | _ -> () )
         sel )
     s;
@@ -494,9 +493,8 @@ let decls_by_ref (s : ml_structure) =
       List.iter
         (fun (_l, se) ->
           match se with
-          | SEdecl (Dterm (r, _, _) as d) -> Hashtbl.replace tbl r d
-          | SEdecl (Dfix (rv, _, _) as d) ->
-            Array.iter (fun r -> Hashtbl.replace tbl r d) rv
+          | SEdecl d ->
+            List.iter (fun fd -> Hashtbl.replace tbl fd.fd_ref d) (Mlutil.term_defs d)
           | _ -> () )
         sel )
     s;
@@ -743,9 +741,10 @@ let collect_collision_wrappers
             List.iter
               (fun (_l, se') ->
                 match se' with
-                | SEdecl (Dterm (r, _, _)) -> add (modpath_of_r r) parent_name
-                | SEdecl (Dfix (rn, _, _)) ->
-                  Array.iter (fun r -> add (modpath_of_r r) parent_name) rn
+                | SEdecl d ->
+                  List.iter
+                    (fun fd -> add (modpath_of_r fd.fd_ref) parent_name)
+                    (Mlutil.term_defs d)
                 | _ -> () )
               inner_sel
           in
@@ -954,8 +953,8 @@ let analyze (reg : Method_registry.t) (s : ml_structure) : t =
                 Method_registry.is_registered_method reg r <> None
               in
               match se with
-              | SEdecl (Dterm (r, _, _)) -> methodified r
-              | SEdecl (Dfix (rv, _, _)) -> Array.for_all methodified rv
+              | SEdecl ((Dterm _ | Dfix _) as d) ->
+                List.for_all (fun fd -> methodified fd.fd_ref) (Mlutil.term_defs d)
               | _ -> true )
             sel )
   in

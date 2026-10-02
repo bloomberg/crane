@@ -1191,38 +1191,18 @@ let is_suppressed_projection r =
 
 (** Filter a Dfix group, removing entries that are inline customs, method
     candidates (local or globally registered), eponymous record projections, or
-    suppressed projections. Returns the three filtered arrays (refs, bodies,
-    types).
-    @param rv array of global references for each definition in the Dfix group
-    @param defs array of Miniml AST bodies parallel to [rv]
-    @param typs array of Miniml types parallel to [rv]
-    @return a triple [(rv', defs', typs')] containing only the entries that
-      should be rendered directly *)
-let filter_dfix rv defs typs =
+    suppressed projections: what is left is rendered directly. *)
+let filter_dfix fds =
   let is_method_candidate x =
     List.exists
       (fun (r', _, _, _) -> globref_equal x r')
       !method_candidates
   in
-  let is_global_method x = is_registered_method x <> None in
-  let filter =
-    Array.to_list
-      (Array.map
-         (fun x ->
-           (not (is_inline_custom x))
-           && (not (is_method_candidate x))
-           && (not (is_global_method x))
-           && (not (is_eponymous_record_projection x))
-           && not (is_suppressed_projection x) )
-         rv )
-  in
-  let filter_array mask arr =
-    let lst = Array.to_list arr in
-    let filtered =
-      List.filter_map
-        (fun (keep, x) -> if keep then Some x else None)
-        (List.combine mask lst)
-    in
-    Array.of_list filtered
-  in
-  (filter_array filter rv, filter_array filter defs, filter_array filter typs)
+  List.filter
+    (fun {Miniml.fd_ref = x; _} ->
+      (not (is_inline_custom x))
+      && (not (is_method_candidate x))
+      && is_registered_method x = None
+      && (not (is_eponymous_record_projection x))
+      && not (is_suppressed_projection x) )
+    fds

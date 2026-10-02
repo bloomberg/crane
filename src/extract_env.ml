@@ -1185,10 +1185,8 @@ let mark_higher_order_projections struc =
       Table.mark_higher_order_projection r
     | a -> Mlutil.ast_iter scan_ast a
   in
-  let scan_decl = function
-    | Dterm (_, a, _) -> scan_ast a
-    | Dfix (_, bodies, _) -> Array.iter scan_ast bodies
-    | _ -> ()
+  let scan_decl d =
+    List.iter (fun fd -> scan_ast fd.fd_body) (Mlutil.term_defs d)
   in
   Modutil.struct_iter scan_decl (fun _ -> ()) (fun _ -> ()) struc
 
@@ -1366,9 +1364,9 @@ let demote_value_typeclasses struc =
   in
   let scan_decl = function
     | Dind (_, ind) -> scan_ind ind
-    | Dterm (_, _, u) -> scan_term_type u
     | Dtype (_, _, u) -> scan_type u
-    | Dfix (_, _, v) -> Array.iter scan_term_type v
+    | (Dterm _ | Dfix _) as d ->
+      List.iter (fun fd -> scan_term_type fd.fd_type) (Mlutil.term_defs d)
   in
   let scan_spec = function
     | Sind (_, ind) -> scan_ind ind
@@ -1844,11 +1842,7 @@ let separate_extraction ~opaque_access lr =
   warns ();
   (* Skip modules whose declarations are all custom-extracted (they would
      produce empty files containing only boilerplate headers). *)
-  let decl_refs = function
-    | Dind (kn, _) -> [GlobRef.IndRef (kn, 0)]
-    | Dtype (r, _, _) | Dterm (r, _, _) -> [r]
-    | Dfix (rv, _, _) -> Array.to_list rv
-  in
+  let decl_refs = Modutil.declared_refs in
   let has_real_decls sel =
     List.exists
       (fun (_, se) ->
@@ -1867,8 +1861,9 @@ let separate_extraction ~opaque_access lr =
     | GlobRef.VarRef v -> Id.to_string v
   in
   let decl_names = function
-    | Dterm (r, _, _) | Dtype (r, _, _) -> [ref_label r]
-    | Dfix (rv, _, _) -> Array.to_list (Array.map ref_label rv)
+    | Dtype (r, _, _) -> [ref_label r]
+    | (Dterm _ | Dfix _) as d ->
+      List.map (fun fd -> ref_label fd.fd_ref) (Mlutil.term_defs d)
     | Dind (kn, ind) ->
       Array.to_list (Array.map (fun ip -> Id.to_string ip.ip_typename) ind.ind_packets)
   in
@@ -1944,24 +1939,15 @@ let separate_extraction ~opaque_access lr =
   let rec pre_scan_meyers_singletons ~in_template sel =
     List.iter (fun (_l, se) ->
       match se with
-      | SEdecl (Dterm (r, _body, ty)) ->
-        let is_function = match ty with Tarr _ -> true | _ -> false in
-        if in_template && not is_function then begin
-          Cpp_state.register_template_static_accessor_ref r
-        end else if not in_template && not is_function then begin
-          let lbl = Table.label_of_r r in
-          Hashtbl.replace Cpp_state.non_accessor_labels lbl ()
-        end
-      | SEdecl (Dfix (refs, _bodies, tys)) ->
-        Array.iteri (fun i r ->
-          let is_function = match tys.(i) with Tarr _ -> true | _ -> false in
-          if in_template && not is_function then begin
-            Cpp_state.register_template_static_accessor_ref r
-          end else if not in_template && not is_function then begin
-            let lbl = Table.label_of_r r in
-            Hashtbl.replace Cpp_state.non_accessor_labels lbl ()
-          end
-        ) refs
+      | SEdecl ((Dterm _ | Dfix _) as d) ->
+        List.iter
+          (fun {fd_ref = r; fd_type = ty; _} ->
+            let is_function = match ty with Tarr _ -> true | _ -> false in
+            if in_template && not is_function then
+              Cpp_state.register_template_static_accessor_ref r
+            else if not in_template && not is_function then
+              Hashtbl.replace Cpp_state.non_accessor_labels (Table.label_of_r r) () )
+          (Mlutil.term_defs d)
       | SEmodule m ->
         let has_params = match m.ml_mod_expr with
           | MEfunctor _ -> true
@@ -2079,16 +2065,13 @@ let separate_extraction ~opaque_access lr =
             Table.add_flat_inductive ind_ref
         end
       ) ind.ind_packets
-    | SEdecl (Dterm (r, _, ty)) when in_struct ->
-      if (match ty with Tarr _ -> false | _ -> true) then
-        Cpp_state.register_template_static_accessor
-          (Table.modpath_of_r r) (Table.label_of_r r)
-    | SEdecl (Dfix (refs, _, tys)) when in_struct ->
-      Array.iteri (fun i r ->
-        if (match tys.(i) with Tarr _ -> false | _ -> true) then
-          Cpp_state.register_template_static_accessor
-            (Table.modpath_of_r r) (Table.label_of_r r)
-      ) refs
+    | SEdecl ((Dterm _ | Dfix _) as d) when in_struct ->
+      List.iter
+        (fun {fd_ref = r; fd_type = ty; _} ->
+          if (match ty with Tarr _ -> false | _ -> true) then
+            Cpp_state.register_template_static_accessor
+              (Table.modpath_of_r r) (Table.label_of_r r) )
+        (Mlutil.term_defs d)
     | _ -> ()
   ) struc;
   set_phase (Emit Impl);

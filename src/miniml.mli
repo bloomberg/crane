@@ -273,16 +273,19 @@ type ml_schema = int * ml_type
 
 (** {2 ML declarations} *)
 
+(** One definition of a group of mutually recursive definitions. *)
+type ml_fix_def = {fd_ref : GlobRef.t; fd_body : ml_ast; fd_type : ml_type}
+
 (** A concrete, defined top-level ML entity. [Dind] is an inductive definition;
     [Dtype] a type abbreviation (its reference, type-variable names, and body);
     [Dterm] a single term definition (reference, body, type); and [Dfix] a
-    block of mutually recursive definitions (parallel arrays of references,
-    bodies, and types). *)
+    block of mutually recursive definitions, in definition order and never
+    empty. *)
 type ml_decl =
   | Dind of MutInd.t * ml_ind
   | Dtype of GlobRef.t * Id.t list * ml_type
   | Dterm of GlobRef.t * ml_ast * ml_type
-  | Dfix of GlobRef.t array * ml_ast array * ml_type array
+  | Dfix of ml_fix_def list
 
 (** The specification (interface view) of an ML entity, used when emitting
     signatures. [Sind] specifies an inductive; [Stype] a type name (with an

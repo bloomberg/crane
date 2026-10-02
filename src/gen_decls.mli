@@ -56,8 +56,7 @@ val defined : cpp_decl -> variable list -> generated_entity
 
 (** Generate each function of a mutually recursive group, translating each
     body once. *)
-val gen_dfuns_dual :
-  GlobRef.t array * ml_ast array * ml_type array -> generated_fun list
+val gen_dfuns_dual : ml_fix_def list -> generated_fun list
 
 (** Generate a single Dterm function, translating its body once. *)
 val gen_decl_for_pp_dual : GlobRef.t -> ml_ast -> ml_type -> generated_fun

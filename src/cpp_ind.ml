@@ -248,9 +248,10 @@ let ind_header_decls kn ind =
       List.iter
         (fun (_l, se) ->
           match se with
-          | SEdecl (Dterm (r, body, ty)) -> consider r body ty
-          | SEdecl (Dfix (rv, defs, typs)) ->
-            Array.iteri (fun i r -> consider r defs.(i) typs.(i)) rv
+          | SEdecl d ->
+            List.iter
+              (fun fd -> consider fd.fd_ref fd.fd_body fd.fd_type)
+              (Mlutil.term_defs d)
           | _ -> () )
         !current_structure_decls;
       (* A call to a method of any type is rendered on its receiver, so only
@@ -694,13 +695,13 @@ let generate d =
     || List.exists (fun (r', _, _, _) -> globref_equal r r') !method_candidates
     || is_registered_method r <> None
   in
-  let group (rv, defs, typs) =
-    let rv, defs, typs = filter_dfix rv defs typs in
-    if Array.length rv = 0 then Nothing
-    else
+  let group fds =
+    match filter_dfix fds with
+    | [] -> Nothing
+    | fds ->
       functions
         ~lifted_inline:(not (!render_ctx).rc_in_template)
-        (generated_once d (fun () -> gen_dfuns_dual (rv, defs, typs)))
+        (generated_once d (fun () -> gen_dfuns_dual fds))
   in
   match d with
   | (Dtype (r, _, _) | Dterm (r, _, _)) when is_any_inline_custom r -> Nothing
@@ -720,7 +721,8 @@ let generate d =
          family -- is erased at every use, so nothing looks for it. *)
       Nothing
     | t -> Header_only (fun () -> [(empty_env (), gen_type_alias r l (Some t))]) )
-  | Dterm (r, a, (Tglob (ty, _, _) as t)) when is_monad ty -> group ([|r|], [|a|], [|t|])
+  | Dterm (r, a, (Tglob (ty, _, _) as t)) when is_monad ty ->
+    group [{fd_ref = r; fd_body = a; fd_type = t}]
   | Dterm (r, a, t) when is_typeclass_instance a t ->
     Header_only (fun () -> instance_decls r a t)
   | Dterm (r, a, t) ->
@@ -745,7 +747,7 @@ let generate d =
       Translation.relift (List.concat_map (fun g -> g.Gen_decls.gf_lifted) funs)
     in
     functions ~lifted_inline:false (generated_once ~on_reuse:reuse d gen)
-  | Dfix (rv, defs, typs) -> group (rv, defs, typs)
+  | Dfix fds -> group fds
 
 (** The entity the implementation pass finalized for each generated
     function, by physical identity: a generation the header pass reused

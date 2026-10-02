@@ -709,8 +709,8 @@ let module_members_name_only_inductives sel =
   List.for_all
     (fun (_, se) ->
       match se with
-      | SEdecl (Dterm (_, _, t)) -> ty_ok t
-      | SEdecl (Dfix (_, _, tv)) -> Array.for_all ty_ok tv
+      | SEdecl ((Dterm _ | Dfix _) as d) ->
+        List.for_all (fun fd -> ty_ok fd.fd_type) (Mlutil.term_defs d)
       (* Only a function declaration is being judged here.  Everything else a
          module holds -- an inductive, a type alias, a submodule -- is either
          rendered somewhere other than this struct or shows up in its text as a
@@ -1129,19 +1129,14 @@ let rec pp_structure_elem ~is_header f = function
           in
           let process_decl (_l, se) =
             match se with
-            | SEdecl (Dterm (r, body, ty)) ->
-              if same_module r && not (refs_excluded ty) then
-                Option.iter
-                  (fun c -> method_candidates := c :: !method_candidates)
-                  (try_register_method epon_ref r body ty)
-            | SEdecl (Dfix (rv, defs, typs)) ->
-              Array.iteri
-                (fun i r ->
-                  if same_module r && not (refs_excluded typs.(i)) then
+            | SEdecl d ->
+              List.iter
+                (fun {fd_ref = r; fd_body = body; fd_type = ty} ->
+                  if same_module r && not (refs_excluded ty) then
                     Option.iter
                       (fun c -> method_candidates := c :: !method_candidates)
-                      (try_register_method epon_ref r defs.(i) typs.(i)))
-                rv
+                      (try_register_method epon_ref r body ty) )
+                (Mlutil.term_defs d)
             | _ -> ()
           in
           List.iter process_decl sel;
@@ -1938,6 +1933,21 @@ let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
       (fun (r', _, _, _) -> globref_equal x r')
       !method_candidates
   in
+  (* A function registered as a method of another module's type is generated
+     with that type; here it only becomes one of its candidates. *)
+  let add_registered_candidate {fd_ref = r; fd_body; fd_type} =
+    match is_registered_method r with
+    | Some (epon_ref, pos) ->
+      let reg = get_method_registry () in
+      let already =
+        List.exists
+          (fun (r', _, _, _) -> globref_equal r r')
+          (Method_registry.get_candidates reg epon_ref)
+      in
+      if not already then
+        Method_registry.add_candidate reg epon_ref (r, fd_body, fd_type, pos)
+    | None -> ()
+  in
   let process_sel (_l, se) =
     match se with
     | SEdecl (Dterm (r, _, _)) when is_any_inline_custom r -> ([], [])
@@ -1946,17 +1956,7 @@ let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
     | SEdecl (Dterm (r, _, _)) when is_suppressed_projection r -> ([], [])
     | SEdecl (Dterm (r, _, _)) when is_method_candidate r -> ([], [])
     | SEdecl (Dterm (r, body, ty)) when is_registered_method r <> None ->
-      ( match is_registered_method r with
-      | Some (epon_ref, pos) ->
-        let reg = get_method_registry () in
-        let already =
-          List.exists
-            (fun (r', _, _, _) -> globref_equal r r')
-            (Method_registry.get_candidates reg epon_ref)
-        in
-        if not already then
-          Method_registry.add_candidate reg epon_ref (r, body, ty, pos)
-      | None -> () );
+      add_registered_candidate {fd_ref = r; fd_body = body; fd_type = ty};
       ([], [])
     | SEdecl (Dterm (r, _a, Tglob (ty, _args, _e))) when is_monad ty ->
       ([], [])
@@ -1973,33 +1973,13 @@ let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
       let lifted = List.concat_map (fun g -> g.gf_lifted) gs in
       List.iter (dbg_lifted ~site:"wrapper-dterm") lifted;
       (gs, lifted)
-    | SEdecl (Dfix (rv, defs, typs)) ->
-      Array.iteri
-        (fun i r ->
-          match is_registered_method r with
-          | Some (epon_ref, pos) ->
-            let reg = get_method_registry () in
-            let already =
-              List.exists
-                (fun (r', _, _, _) ->
-                  globref_equal r r' )
-                (Method_registry.get_candidates reg epon_ref)
-            in
-            if not already then
-              Method_registry.add_candidate
-                reg
-                epon_ref
-                (r, defs.(i), typs.(i), pos)
-          | None -> () )
-        rv;
-      let rv, defs, typs = filter_dfix rv defs typs in
-      if Array.length rv = 0 then
-        ([], [])
-      else
-        let results =
-          generated_once se (fun () -> gen_dfuns_dual (rv, defs, typs))
-        in
-        (results, List.concat_map (fun g -> g.gf_lifted) results)
+    | SEdecl (Dfix fds) -> (
+      List.iter add_registered_candidate fds;
+      match filter_dfix fds with
+      | [] -> ([], [])
+      | fds ->
+        let results = generated_once se (fun () -> gen_dfuns_dual fds) in
+        (results, List.concat_map (fun g -> g.gf_lifted) results) )
     | _ -> ([], [])
   in
   let generated = List.map process_sel func_sels in
@@ -2311,9 +2291,10 @@ let concept_prereqs ~wrapper_sels (s : ml_structure) : Names.Label.Set.t =
         List.fold_left
           (fun acc (_, se) ->
             match se with
-            | Miniml.SEdecl (Miniml.Dterm (_, _, ty)) -> add_type_refs acc ty
-            | Miniml.SEdecl (Miniml.Dfix (_, _, tys)) ->
-              Array.fold_left add_type_refs acc tys
+            | Miniml.SEdecl d ->
+              List.fold_left
+                (fun acc fd -> add_type_refs acc fd.Miniml.fd_type)
+                acc (Mlutil.term_defs d)
             | _ -> acc )
           acc
           (wrapper_sels (Cpp_print.nspace_wrapper_name r)) )

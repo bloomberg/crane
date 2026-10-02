@@ -221,6 +221,10 @@ val isTdummy : ml_type -> bool
 (** Check if an ML term is MLdummy. *)
 val isMLdummy : ml_ast -> bool
 
+(** The term definitions a declaration makes: a [Dterm]'s one, a [Dfix]'s
+    group, and none for anything else. *)
+val term_defs : ml_decl -> ml_fix_def list
+
 (** Check if a sign is Kill. *)
 val isKill : sign -> bool
 
