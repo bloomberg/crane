@@ -31,8 +31,7 @@ uint64_t LoopifyAdvancedPatterns::len_impl(
       }
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
-      uint64_t r_ = std::move(_result);
-      _result = (UINT64_C(1) + r_);
+      _result = (UINT64_C(1) + std::move(_result));
     }
   }
   return _result;
@@ -111,12 +110,10 @@ uint64_t LoopifyAdvancedPatterns::multi_guard(
     } else if (std::holds_alternative<_Cont1>(_frame)) {
       auto _f = std::move(std::get<_Cont1>(_frame));
       uint64_t a0 = _f.a0;
-      uint64_t r_ = std::move(_result);
-      _result = (a0 + r_);
+      _result = (a0 + std::move(_result));
     } else {
       auto _f = std::move(std::get<_Cont2>(_frame));
-      uint64_t r_ = std::move(_result);
-      _result = (UINT64_C(1) + r_);
+      _result = (UINT64_C(1) + std::move(_result));
     }
   }
   return _result;
@@ -185,8 +182,7 @@ uint64_t LoopifyAdvancedPatterns::four_elem(
       uint64_t a00 = _f.a00;
       uint64_t a01 = _f.a01;
       uint64_t a02 = _f.a02;
-      uint64_t r_ = std::move(_result);
-      _result = ((((a0 + a00) + a01) + a02) + r_);
+      _result = ((((a0 + a00) + a01) + a02) + std::move(_result));
     }
   }
   return _result;
@@ -236,8 +232,7 @@ uint64_t LoopifyAdvancedPatterns::nested_pattern(
       uint64_t a = _f.a;
       uint64_t b = _f.b;
       uint64_t c = _f.c;
-      uint64_t r_ = std::move(_result);
-      _result = (((a + b) + c) + r_);
+      _result = (((a + b) + c) + std::move(_result));
     }
   }
   return _result;
@@ -361,8 +356,7 @@ uint64_t LoopifyAdvancedPatterns::sum_shapes(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       LoopifyAdvancedPatterns::shape a0 = std::move(_f.a0);
-      uint64_t r_ = std::move(_result);
-      _result = (extract_value(a0) + r_);
+      _result = (extract_value(a0) + std::move(_result));
     }
   }
   return _result;
@@ -407,9 +401,7 @@ LoopifyAdvancedPatterns::count_by_shape(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       LoopifyAdvancedPatterns::shape a0 = std::move(_f.a0);
-      std::pair<std::pair<uint64_t, uint64_t>, uint64_t> r_ =
-          std::move(_result);
-      auto [p, triangles] = std::move(r_);
+      auto [p, triangles] = std::move(_result);
       auto [circles, squares] = std::move(p);
       if (std::holds_alternative<
               typename LoopifyAdvancedPatterns::shape::Circle>(a0.v())) {

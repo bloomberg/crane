@@ -55,8 +55,7 @@ uint64_t DeepTailRecursionOverflow::total_of(
     } else {
       auto _f = std::move(std::get<_Cont_Link>(_frame));
       uint64_t a1 = _f.a1;
-      uint64_t r_ = std::move(_result);
-      _result = (a1 + r_);
+      _result = (a1 + std::move(_result));
     }
   }
   return _result;

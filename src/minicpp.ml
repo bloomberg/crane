@@ -644,7 +644,13 @@ and ref_qual =
   | Rq_rvalue
 
 (** A custom match: the mapping's template, and the inductive it matches. *)
-and custom_match = {cm_template : string; cm_inductive : GlobRef.t}
+and custom_match = {
+  cm_template : string;
+  cm_inductive : GlobRef.t;
+  cm_scrutinee : scrutinee_hold;
+}
+
+and scrutinee_hold = Scrut_owned | Scrut_borrowed
 
 (** How a boxed value is read back.  Each form prints as one C++ idiom. *)
 and unbox =
@@ -1273,18 +1279,19 @@ let map_custom_info ft = Option.map (fun ci -> {ci with ci_yields = Option.map f
 (** [map_lambda fs ft l] maps [ft] over the parameter and return types of [l]
     and [fs] over its body.  A lambda has no immediate sub-expression of its
     own, so there is no expression function to take. *)
-let map_lambda fs ft l =
+let map_lambda ?fl fs ft l =
+  let fl = Option.default (List.map fs) fl in
   { l with
     cl_params =
       of_reversed
         (List.map (fun (ty, id) -> (ft ty, id)) (to_reversed l.cl_params));
     cl_ret = Option.map ft l.cl_ret;
-    cl_body = List.map fs l.cl_body }
+    cl_body = fl l.cl_body }
 
 (** [map_expr fe fs ft e] applies [fe] to sub-expressions, [fs] to
     sub-statements, [ft] to sub-types, performing one level of structural
     descent. *)
-let map_expr
+let map_expr ?fl
     (fe : cpp_expr -> cpp_expr)
     (fs : cpp_stmt -> cpp_stmt)
     (ft : cpp_type -> cpp_type)
@@ -1308,7 +1315,7 @@ let map_expr
   | CPPderef e' -> CPPderef (fe e')
   | CPPmove e' -> CPPmove (fe e')
   | CPPforward (ty, e') -> CPPforward (ft ty, fe e')
-  | CPPlambda l -> CPPlambda (map_lambda fs ft l)
+  | CPPlambda l -> CPPlambda (map_lambda ?fl fs ft l)
   | CPPalloc (k, ty) -> CPPalloc (k, ft ty)
   | CPPstructmk (r, tys, args) ->
     CPPstructmk (r, List.map ft tys, List.map fe args)
@@ -1371,11 +1378,12 @@ let map_expr
 (** [map_stmt fe fs ft s] applies [fe] to sub-expressions, [fs] to
     sub-statements, [ft] to sub-types, performing one level of structural
     descent. *)
-let map_stmt
+let map_stmt ?fl
     (fe : cpp_expr -> cpp_expr)
     (fs : cpp_stmt -> cpp_stmt)
     (ft : cpp_type -> cpp_type)
     (s : cpp_stmt) : cpp_stmt =
+  let fl = Option.default (List.map fs) fl in
   match s with
   | Sreturn None -> s
   | Sreturn (Some e) -> Sreturn (Some (fe e))
@@ -1393,23 +1401,23 @@ let map_stmt
           (fun (params, ret_ty, body) ->
             ( List.map (fun (id, ty) -> (id, ft ty)) params,
               ft ret_ty,
-              List.map fs body ) )
+              fl body ) )
           branches,
         err )
   | Sthrow _ -> s
   | Sswitch (scrut, r, branches, default) ->
     Sswitch
-      (fe scrut, r, List.map (fun (id, body) -> (id, List.map fs body)) branches,
-       Option.map (List.map fs) default)
+      (fe scrut, r, List.map (fun (id, body) -> (id, fl body)) branches,
+       Option.map fl default)
   | Sassert _ -> s
   | Sif_constexpr (cond, then_br, else_br) ->
     let (Tt_convertible (d, src)) = cond in
     Sif_constexpr
-      (Tt_convertible (ft d, ft src), List.map fs then_br, List.map fs else_br)
+      (Tt_convertible (ft d, ft src), fl then_br, fl else_br)
   | Sif (cond, then_br, else_br) ->
-    Sif (fe cond, List.map fs then_br, List.map fs else_br)
+    Sif (fe cond, fl then_br, fl else_br)
   | Sif_decl (id, ty, init, then_br, else_br) ->
-    Sif_decl (id, ft ty, fe init, List.map fs then_br, List.map fs else_br)
+    Sif_decl (id, ft ty, fe init, fl then_br, fl else_br)
   | Sraw _ | Scomment _ -> s
   | Sstruct_def (id, fields) ->
     Sstruct_def (id, List.map (fun (fid, ty) -> (fid, ft ty)) fields)
@@ -1417,9 +1425,9 @@ let map_stmt
   | Sdecl_init (id, ty) -> Sdecl_init (id, ft ty)
   | Sbind (ids, e) -> Sbind (ids, fe e)
   | Sassign_expr (lhs, e) -> Sassign_expr (fe lhs, fe e)
-  | Sfor_range (id, e, body) -> Sfor_range (id, fe e, List.map fs body)
-  | Swhile (cond, body) -> Swhile (fe cond, List.map fs body)
-  | Sblock stmts -> Sblock (List.map fs stmts)
+  | Sfor_range (id, e, body) -> Sfor_range (id, fe e, fl body)
+  | Swhile (cond, body) -> Swhile (fe cond, fl body)
+  | Sblock stmts -> Sblock (fl stmts)
   | Scontinue -> s
   | Sbreak -> s
   | Sblock_custom (r, tmpl, id, ty, args, tys) ->
@@ -1434,9 +1442,9 @@ let map_stmt
               smb_field_bindings =
                 List.map (fun (id, ty, u) -> (id, ft ty, u)) br.smb_field_bindings;
               smb_extra_conds = List.map fe br.smb_extra_conds;
-              smb_body = List.map fs br.smb_body })
+              smb_body = fl br.smb_body })
           branches,
-        Option.map (List.map fs) default )
+        Option.map fl default )
 
 (** Iterate over the immediate children of a [cpp_expr], calling [on_expr]
     for child expressions and [on_stmts] for child statement lists.  Does
@@ -1892,49 +1900,53 @@ let out_of_line_member = function
   | Fdestructor body -> Some (OLdestructor body)
   | _ -> None
 
-let map_out_of_line fs ft = function
+let map_out_of_line ?fl fs ft =
+  let fl = Option.default (List.map fs) fl in
+  function
   | OLmethod m ->
     OLmethod
       { m with
         mf_tparams = map_tparams ft m.mf_tparams;
         mf_ret_type = ft m.mf_ret_type;
         mf_params = List.map (fun (id, ty) -> (id, ft ty)) m.mf_params;
-        mf_body = List.map fs m.mf_body }
-  | OLdestructor body -> OLdestructor (List.map fs body)
+        mf_body = fl m.mf_body }
+  | OLdestructor body -> OLdestructor (fl body)
 
 (** [map_field fe fs ft f] applies [fe] to sub-expressions, [fs] to
     sub-statements and [ft] to sub-types of a visibility-annotated field,
     performing one level of structural descent.  Nested structs recurse, so
     that a caller need only supply the three leaf functions. *)
-let rec map_field
+let rec map_field ?fl
     (fe : cpp_expr -> cpp_expr)
     (fs : cpp_stmt -> cpp_stmt)
     (ft : cpp_type -> cpp_type)
     ((f, vis, tag) : cpp_field * cpp_visibility * section_tag) :
     cpp_field * cpp_visibility * section_tag =
+  let ool = map_out_of_line ?fl fs ft in
+  let fl = Option.default (List.map fs) fl in
   let params ps = List.map (fun (id, ty) -> (id, ft ty)) ps in
   let f' =
     match f with
     | Fvar (id, ty) -> Fvar (id, ft ty)
     | Fvar' (r, ty) -> Fvar' (r, ft ty)
-    | Fmethod m -> field_of_member (map_out_of_line fs ft (OLmethod m))
+    | Fmethod m -> field_of_member (ool (OLmethod m))
     | Fconstructor c ->
       Fconstructor
         { c with
           fc_tparams = map_tparams ft c.fc_tparams;
           fc_params = params c.fc_params;
           fc_inits = List.map (fun (id, e) -> (id, fe e)) c.fc_inits;
-          fc_body = List.map fs c.fc_body }
-    | Fdestructor body -> field_of_member (map_out_of_line fs ft (OLdestructor body))
+          fc_body = fl c.fc_body }
+    | Fdestructor body -> field_of_member (ool (OLdestructor body))
     | Fnested_struct (id, fields) ->
-      Fnested_struct (id, List.map (map_field fe fs ft) fields)
+      Fnested_struct (id, List.map (map_field ~fl fe fs ft) fields)
     | Fdeferred_struct d ->
       Fdeferred_struct
         { d with
           dfs_selves = List.map (fun (id, ty) -> (id, ft ty)) d.dfs_selves;
           dfs_fields = List.map (fun (id, ty) -> (id, ft ty)) d.dfs_fields }
     | Fnested_using (tps, id, ty) -> Fnested_using (map_tparams ft tps, id, ft ty)
-    | Fmember_decl m -> Fmember_decl (map_out_of_line fs ft m)
+    | Fmember_decl m -> Fmember_decl (ool m)
     | Fdeleted_ctor | Fdefaulted_special_members -> f
   in
   (f', vis, tag)
@@ -2055,10 +2067,10 @@ let erased_lambda l ~params ~ret ~body =
 
 (** [map_dstruct fe fs ft s] maps a struct's members, whether it is written
     with a wrapper ({!Dstruct}) or without one ({!Dfields}). *)
-let map_dstruct fe fs ft s =
+let map_dstruct ?fl fe fs ft s =
   { s with
     ds_tparams = map_tparams ft s.ds_tparams;
-    ds_fields = List.map (map_field fe fs ft) s.ds_fields;
+    ds_fields = List.map (map_field ?fl fe fs ft) s.ds_fields;
     ds_constraint = Option.map fe s.ds_constraint }
 
 let rec strip_template_defaults = function
@@ -2085,20 +2097,22 @@ let rec split_definition = function
 (** [map_decl fe fs ft d] applies [fe] to sub-expressions, [fs] to
     sub-statements and [ft] to sub-types of a declaration.  Nested
     declarations ({!Dtemplate}, {!Dnspace}) recurse. *)
-let rec map_decl
+let rec map_decl ?fl
     (fe : cpp_expr -> cpp_expr)
     (fs : cpp_stmt -> cpp_stmt)
     (ft : cpp_type -> cpp_type)
     (d : cpp_decl) : cpp_decl =
+  let recur = map_decl ?fl fe fs ft in
+  let fl' = Option.default (List.map fs) fl in
   match d with
   | Dtemplate (tps, constr, inner) ->
-    Dtemplate (map_tparams ft tps, Option.map fe constr, map_decl fe fs ft inner)
-  | Dnspace (r, decls) -> Dnspace (r, List.map (map_decl fe fs ft) decls)
+    Dtemplate (map_tparams ft tps, Option.map fe constr, recur inner)
+  | Dnspace (r, decls) -> Dnspace (r, List.map recur decls)
   | Dfun f ->
     let shape' =
       match f.df_shape with
       | Ddef (ps, body) ->
-        Ddef (List.map (fun (id, ty) -> (id, ft ty)) ps, List.map fs body)
+        Ddef (List.map (fun (id, ty) -> (id, ft ty)) ps, fl' body)
       | Ddecl ps -> Ddecl (List.map (fun (id, ty) -> (id, ft ty)) ps)
     in
     let name (r, tys) = (r, List.map ft tys) in
@@ -2111,7 +2125,7 @@ let rec map_decl
           };
         df_ret = ft f.df_ret;
         df_shape = shape' }
-  | Dstruct s -> Dstruct (map_dstruct fe fs ft s)
+  | Dstruct s -> Dstruct (map_dstruct ?fl fe fs ft s)
   | Dasgn (r, ty, e) -> Dasgn (r, ft ty, fe e)
   | Dconcept (r, e) -> Dconcept (r, fe e)
   | Dstatic_assert (e, msg) -> Dstatic_assert (fe e, msg)
@@ -2119,13 +2133,22 @@ let rec map_decl
     Dusing
       {u with du_tparams = map_tparams ft u.du_tparams; du_rhs = Option.map ft u.du_rhs}
   | Dstruct_fwd (tps, r) -> Dstruct_fwd (map_tparams ft tps, r)
-  | Dfields s -> Dfields (map_dstruct fe fs ft s)
+  | Dfields s -> Dfields (map_dstruct ?fl fe fs ft s)
   | Dmember_def m ->
     Dmember_def
       { m with
         dm_tparams = map_tparams ft m.dm_tparams;
-        dm_field = map_out_of_line fs ft m.dm_field }
+        dm_field = map_out_of_line ?fl fs ft m.dm_field }
   | Denum e -> Denum {e with de_tparams = map_tparams ft e.de_tparams}
+
+let evaluates_children = function
+  | CPPlambda _ | CPPcond _ | CPPbinop ((Band | Bor), _, _) -> false
+  | _ -> true
+
+let rec is_reference_type = function
+  | Tref _ -> true
+  | Tconst t -> is_reference_type t
+  | _ -> false
 
 (** Collect free variables from an expression.
     Mutually recursive with [free_vars_stmt] and [free_vars_body]. *)

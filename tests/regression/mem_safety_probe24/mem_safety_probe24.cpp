@@ -38,8 +38,7 @@ uint64_t MemSafetyProbe24::sum_list(
     } else {
       auto _f = std::move(std::get<_Cont_Mycons>(_frame));
       uint64_t a0 = _f.a0;
-      uint64_t r_ = std::move(_result);
-      _result = (a0 + r_);
+      _result = (a0 + std::move(_result));
     }
   }
   return _result;
@@ -60,11 +59,11 @@ MemSafetyProbe24::mylist<uint64_t> MemSafetyProbe24::tree_to_list(
     const MemSafetyProbe24::tree *a2;
   };
 
-  /// _Cont_Node_1: saves [a1, r_], resumes after recursive call, then processes
-  /// rest.
+  /// _Cont_Node_1: saves [_tmp2, a1], resumes after recursive call, then
+  /// processes rest.
   struct _Cont_Node_1 {
+    MemSafetyProbe24::mylist<uint64_t> _tmp2;
     uint64_t a1;
-    MemSafetyProbe24::mylist<uint64_t> r_;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
@@ -91,15 +90,13 @@ MemSafetyProbe24::mylist<uint64_t> MemSafetyProbe24::tree_to_list(
       auto _f = std::move(std::get<_Cont_Node>(_frame));
       uint64_t a1 = _f.a1;
       const MemSafetyProbe24::tree &a2 = *_f.a2;
-      MemSafetyProbe24::mylist<uint64_t> r_ = std::move(_result);
-      _stack.emplace_back(_Cont_Node_1{a1, std::move(r_)});
+      _stack.emplace_back(_Cont_Node_1{std::move(_result), a1});
       _stack.emplace_back(_Enter{&a2});
     } else {
       auto _f = std::move(std::get<_Cont_Node_1>(_frame));
       uint64_t a1 = _f.a1;
-      MemSafetyProbe24::mylist<uint64_t> r_ = std::move(_f.r_);
-      MemSafetyProbe24::mylist<uint64_t> r_0 = std::move(_result);
-      _result = std::move(r_).app(mylist<uint64_t>::mycons(a1, std::move(r_0)));
+      _result = std::move(_f._tmp2).app(
+          mylist<uint64_t>::mycons(a1, std::move(_result)));
     }
   }
   return _result;
@@ -148,12 +145,12 @@ MemSafetyProbe24::zip_trees(
     const MemSafetyProbe24::tree *a20;
   };
 
-  /// _Cont_Node_1: saves [a1, a10, r_], resumes after recursive call, then
+  /// _Cont_Node_1: saves [_tmp2, a1, a10], resumes after recursive call, then
   /// processes rest.
   struct _Cont_Node_1 {
+    MemSafetyProbe24::mylist<std::pair<uint64_t, uint64_t>> _tmp2;
     uint64_t a1;
     uint64_t a10;
-    MemSafetyProbe24::mylist<std::pair<uint64_t, uint64_t>> r_;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
@@ -191,20 +188,15 @@ MemSafetyProbe24::zip_trees(
       uint64_t a10 = _f.a10;
       const MemSafetyProbe24::tree &a2 = *_f.a2;
       const MemSafetyProbe24::tree &a20 = *_f.a20;
-      MemSafetyProbe24::mylist<std::pair<uint64_t, uint64_t>> r_ =
-          std::move(_result);
-      _stack.emplace_back(_Cont_Node_1{a1, a10, std::move(r_)});
+      _stack.emplace_back(_Cont_Node_1{std::move(_result), a1, a10});
       _stack.emplace_back(_Enter{&a20, &a2});
     } else {
       auto _f = std::move(std::get<_Cont_Node_1>(_frame));
       uint64_t a1 = _f.a1;
       uint64_t a10 = _f.a10;
-      MemSafetyProbe24::mylist<std::pair<uint64_t, uint64_t>> r_ =
-          std::move(_f.r_);
-      MemSafetyProbe24::mylist<std::pair<uint64_t, uint64_t>> r_0 =
-          std::move(_result);
-      _result = std::move(r_).app(mylist<std::pair<uint64_t, uint64_t>>::mycons(
-          std::make_pair(a1, a10), std::move(r_0)));
+      _result =
+          std::move(_f._tmp2).app(mylist<std::pair<uint64_t, uint64_t>>::mycons(
+              std::make_pair(a1, a10), std::move(_result)));
     }
   }
   return _result;

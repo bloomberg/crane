@@ -15,11 +15,11 @@ uint64_t MemSafetyProbe21::tree_sum(
     const MemSafetyProbe21::tree *a2;
   };
 
-  /// _Cont_Node_1: saves [a1, r_], resumes after recursive call, then processes
-  /// rest.
+  /// _Cont_Node_1: saves [_tmp2, a1], resumes after recursive call, then
+  /// processes rest.
   struct _Cont_Node_1 {
+    uint64_t _tmp2;
     uint64_t a1;
-    uint64_t r_;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
@@ -46,15 +46,12 @@ uint64_t MemSafetyProbe21::tree_sum(
       auto _f = std::move(std::get<_Cont_Node>(_frame));
       uint64_t a1 = _f.a1;
       const MemSafetyProbe21::tree &a2 = *_f.a2;
-      uint64_t r_ = std::move(_result);
-      _stack.emplace_back(_Cont_Node_1{a1, r_});
+      _stack.emplace_back(_Cont_Node_1{std::move(_result), a1});
       _stack.emplace_back(_Enter{&a2});
     } else {
       auto _f = std::move(std::get<_Cont_Node_1>(_frame));
       uint64_t a1 = _f.a1;
-      uint64_t r_ = _f.r_;
-      uint64_t r_0 = std::move(_result);
-      _result = ((r_ + a1) + r_0);
+      _result = ((_f._tmp2 + a1) + std::move(_result));
     }
   }
   return _result;
@@ -119,8 +116,7 @@ uint64_t MemSafetyProbe21::double_grow(
     } else {
       auto _f = std::move(std::get<_Cont_n_>(_frame));
       const MemSafetyProbe21::tree &t = std::move(_f.t);
-      uint64_t r_ = std::move(_result);
-      _result = (tree_sum(t) + r_);
+      _result = (tree_sum(t) + std::move(_result));
     }
   }
   return _result;
@@ -145,9 +141,10 @@ uint64_t MemSafetyProbe21::branch_grow(
     uint64_t n_;
   };
 
-  /// _Cont_n__1: saves [r_], resumes after recursive call, then processes rest.
+  /// _Cont_n__1: saves [_tmp2], resumes after recursive call, then processes
+  /// rest.
   struct _Cont_n__1 {
-    uint64_t r_;
+    uint64_t _tmp2;
   };
 
   using _Frame = std::variant<_Enter, _Cont_n_, _Cont_n__1>;
@@ -173,15 +170,12 @@ uint64_t MemSafetyProbe21::branch_grow(
       auto _f = std::move(std::get<_Cont_n_>(_frame));
       uint64_t n = _f.n;
       uint64_t n_ = _f.n_;
-      uint64_t r_ = std::move(_result);
-      _stack.emplace_back(_Cont_n__1{r_});
+      _stack.emplace_back(_Cont_n__1{std::move(_result)});
       _stack.emplace_back(
           _Enter{n_, tree::node(tree::leaf(), n, tree::leaf())});
     } else {
       auto _f = std::move(std::get<_Cont_n__1>(_frame));
-      uint64_t r_ = _f.r_;
-      uint64_t r_0 = std::move(_result);
-      _result = (r_ + r_0);
+      _result = (_f._tmp2 + std::move(_result));
     }
   }
   return _result;
@@ -287,8 +281,7 @@ uint64_t MemSafetyProbe21::sum_and_grow(
     } else {
       auto _f = std::move(std::get<_Cont_n_>(_frame));
       uint64_t s = _f.s;
-      uint64_t r_ = std::move(_result);
-      _result = (s + r_);
+      _result = (s + std::move(_result));
     }
   }
   return _result;

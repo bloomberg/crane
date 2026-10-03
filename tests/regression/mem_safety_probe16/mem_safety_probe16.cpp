@@ -38,8 +38,7 @@ uint64_t MemSafetyProbe16::sum_list(
     } else {
       auto _f = std::move(std::get<_Cont_Mycons>(_frame));
       uint64_t a0 = _f.a0;
-      uint64_t r_ = std::move(_result);
-      _result = (a0 + r_);
+      _result = (a0 + std::move(_result));
     }
   }
   return _result;
@@ -122,8 +121,7 @@ uint64_t MemSafetyProbe16::apply_fns(
     } else {
       auto _f = std::move(std::get<_Cont_Mycons>(_frame));
       crane::fn<uint64_t(uint64_t)> a0 = std::move(_f.a0);
-      uint64_t r_ = std::move(_result);
-      _result = (a0(x) + r_);
+      _result = (a0(x) + std::move(_result));
     }
   }
   return _result;

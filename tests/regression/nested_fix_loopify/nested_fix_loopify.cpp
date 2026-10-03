@@ -38,7 +38,6 @@ uint64_t NestedFixLoopify::outer(
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
       std::shared_ptr<NestedFixLoopify::lst> a1 = std::move(_f.a1);
-      uint64_t r_ = std::move(_result);
       _result = ([&]() {
         auto inner_impl = [&](auto &, const NestedFixLoopify::lst &m,
                               uint64_t a) -> uint64_t {
@@ -61,7 +60,7 @@ uint64_t NestedFixLoopify::outer(
           return inner_impl(inner_impl, m, a);
         };
         return inner(*a1, UINT64_C(0));
-      }() + r_);
+      }() + std::move(_result));
     }
   }
   return _result;

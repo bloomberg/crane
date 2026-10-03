@@ -43,8 +43,7 @@ List<uint64_t> LoopifyListGenerators::cycle_fuel(
       }
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
-      List<uint64_t> r_ = std::move(_result);
-      _result = l.app(std::move(r_));
+      _result = l.app(std::move(_result));
     }
   }
   return _result;
@@ -136,8 +135,7 @@ List<uint64_t> LoopifyListGenerators::replicate_each(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       List<uint64_t> reps = std::move(_f.reps);
-      List<uint64_t> r_ = std::move(_result);
-      _result = std::move(reps).app(std::move(r_));
+      _result = std::move(reps).app(std::move(_result));
     }
   }
   return _result;

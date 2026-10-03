@@ -163,8 +163,7 @@ struct LoopifyListAccess {
         }
       } else {
         auto _f = std::move(std::get<_Cont1>(_frame));
-        uint64_t r_ = std::move(_result);
-        _result = (UINT64_C(1) + r_);
+        _result = (UINT64_C(1) + std::move(_result));
       }
     }
     return _result;

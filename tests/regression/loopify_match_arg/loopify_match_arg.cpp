@@ -43,8 +43,7 @@ uint64_t LoopifyMatchArg::count_dots(
       }
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
-      uint64_t r_ = std::move(_result);
-      _result = (UINT64_C(1) + r_);
+      _result = (UINT64_C(1) + std::move(_result));
     }
   }
   return _result;
@@ -85,8 +84,7 @@ uint64_t LoopifyMatchArg::my_length(
       }
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
-      uint64_t r_ = std::move(_result);
-      _result = (UINT64_C(1) + r_);
+      _result = (UINT64_C(1) + std::move(_result));
     }
   }
   return _result;

@@ -95,8 +95,7 @@ public:
       return f;
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      T1 r_ = a1->template list_rect<T1>(std::move(f), f0);
-      return f0(a0, *a1, std::move(r_));
+      return f0(a0, *a1, a1->template list_rect<T1>(std::move(f), f0));
     }
   }
 
@@ -107,8 +106,7 @@ public:
       return f;
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      T1 r_ = a1->template list_rec<T1>(std::move(f), f0);
-      return f0(a0, *a1, std::move(r_));
+      return f0(a0, *a1, a1->template list_rec<T1>(std::move(f), f0));
     }
   }
 

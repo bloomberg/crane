@@ -53,8 +53,7 @@ LoopifyGapAckermann::ack(uint64_t m,
     } else {
       auto _f = std::move(std::get<_Cont_n_>(_frame));
       uint64_t m_ = _f.m_;
-      uint64_t r_ = std::move(_result);
-      _stack.emplace_back(_Enter{r_, m_});
+      _stack.emplace_back(_Enter{std::move(_result), m_});
     }
   }
   return _result;

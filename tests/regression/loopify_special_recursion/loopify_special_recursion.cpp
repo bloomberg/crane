@@ -196,11 +196,11 @@ List<uint64_t> LoopifySpecialRecursion::collect_sorted(
     const LoopifySpecialRecursion::tree *a2;
   };
 
-  /// _Cont_Node_1: saves [a1, r_], resumes after recursive call, then processes
-  /// rest.
+  /// _Cont_Node_1: saves [_tmp2, a1], resumes after recursive call, then
+  /// processes rest.
   struct _Cont_Node_1 {
+    List<uint64_t> _tmp2;
     uint64_t a1;
-    List<uint64_t> r_;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
@@ -227,15 +227,13 @@ List<uint64_t> LoopifySpecialRecursion::collect_sorted(
       auto _f = std::move(std::get<_Cont_Node>(_frame));
       uint64_t a1 = _f.a1;
       const LoopifySpecialRecursion::tree &a2 = *_f.a2;
-      List<uint64_t> r_ = std::move(_result);
-      _stack.emplace_back(_Cont_Node_1{a1, std::move(r_)});
+      _stack.emplace_back(_Cont_Node_1{std::move(_result), a1});
       _stack.emplace_back(_Enter{&a2});
     } else {
       auto _f = std::move(std::get<_Cont_Node_1>(_frame));
       uint64_t a1 = _f.a1;
-      List<uint64_t> r_ = std::move(_f.r_);
-      List<uint64_t> r_0 = std::move(_result);
-      _result = std::move(r_).app(List<uint64_t>::cons(a1, std::move(r_0)));
+      _result =
+          std::move(_f._tmp2).app(List<uint64_t>::cons(a1, std::move(_result)));
     }
   }
   return _result;
@@ -282,8 +280,7 @@ uint64_t LoopifySpecialRecursion::sum_odd_indices_aux(
     } else {
       auto _f = std::move(std::get<_Cont1>(_frame));
       uint64_t a0 = _f.a0;
-      uint64_t r_ = std::move(_result);
-      _result = (a0 + r_);
+      _result = (a0 + std::move(_result));
     }
   }
   return _result;
@@ -341,16 +338,13 @@ uint64_t LoopifySpecialRecursion::categorize_by(
       }
     } else if (std::holds_alternative<_Cont1>(_frame)) {
       auto _f = std::move(std::get<_Cont1>(_frame));
-      uint64_t r_ = std::move(_result);
-      _result = (UINT64_C(3) + r_);
+      _result = (UINT64_C(3) + std::move(_result));
     } else if (std::holds_alternative<_Cont2>(_frame)) {
       auto _f = std::move(std::get<_Cont2>(_frame));
-      uint64_t r_ = std::move(_result);
-      _result = (UINT64_C(2) + r_);
+      _result = (UINT64_C(2) + std::move(_result));
     } else {
       auto _f = std::move(std::get<_Cont3>(_frame));
-      uint64_t r_ = std::move(_result);
-      _result = (UINT64_C(1) + r_);
+      _result = (UINT64_C(1) + std::move(_result));
     }
   }
   return _result;
@@ -425,8 +419,7 @@ List<uint64_t> LoopifySpecialRecursion::merge_levels(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       List<uint64_t> a0 = std::move(_f.a0);
-      List<uint64_t> r_ = std::move(_result);
-      _result = a0.app(std::move(r_));
+      _result = a0.app(std::move(_result));
     }
   }
   return _result;

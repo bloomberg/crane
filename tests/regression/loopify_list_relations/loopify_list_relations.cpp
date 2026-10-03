@@ -46,8 +46,7 @@ bool LoopifyListRelations::is_prefix_of(
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
       uint64_t a00 = _f.a00;
-      bool r_ = std::move(_result);
-      _result = (a0 == a00 && r_);
+      _result = (a0 == a00 && std::move(_result));
     }
   }
   return _result;
@@ -244,8 +243,7 @@ bool LoopifyListRelations::list_eq(
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
       uint64_t a00 = _f.a00;
-      bool r_ = std::move(_result);
-      _result = (a0 == a00 && r_);
+      _result = (a0 == a00 && std::move(_result));
     }
   }
   return _result;
@@ -530,8 +528,7 @@ List<uint64_t> LoopifyListRelations::union_(const List<uint64_t> &l1,
                 } else {
                   auto _f = std::move(std::get<_Cont_Cons>(_frame));
                   uint64_t a2 = _f.a2;
-                  bool r_ = std::move(_result);
-                  _result = (y == a2 || r_);
+                  _result = (y == a2 || std::move(_result));
                 }
               }
               return _result;
@@ -603,8 +600,7 @@ List<uint64_t> LoopifyListRelations::intersection(const List<uint64_t> &l1,
                 } else {
                   auto _f = std::move(std::get<_Cont_Cons>(_frame));
                   uint64_t a2 = _f.a2;
-                  bool r_ = std::move(_result);
-                  _result = (y == a2 || r_);
+                  _result = (y == a2 || std::move(_result));
                 }
               }
               return _result;

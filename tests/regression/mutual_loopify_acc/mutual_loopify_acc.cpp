@@ -103,9 +103,9 @@ uint64_t MutualLoopifyAcc::tsum(
     } else if (std::holds_alternative<_Cont_Fcons>(_frame)) {
       auto _f = std::move(std::get<_Cont_Fcons>(_frame));
       std::shared_ptr<MutualLoopifyAcc::forest> _inl_a1 = std::move(_f._inl_a1);
-      uint64_t _inl_r_ = std::move(_result);
+      uint64_t _inl__tmp1 = std::move(_result);
       const MutualLoopifyAcc::forest &_inl_f = *_inl_a1;
-      uint64_t _inl_acc = _inl_r_;
+      uint64_t _inl_acc = _inl__tmp1;
       if (std::holds_alternative<typename MutualLoopifyAcc::forest::Fnil>(
               _inl_f.v())) {
         _result = std::move(_inl_acc);
@@ -118,9 +118,9 @@ uint64_t MutualLoopifyAcc::tsum(
     } else if (std::holds_alternative<_Cont_Fcons_1>(_frame)) {
       auto _f = std::move(std::get<_Cont_Fcons_1>(_frame));
       std::shared_ptr<MutualLoopifyAcc::forest> _inl_a1 = std::move(_f._inl_a1);
-      uint64_t _inl_r_ = std::move(_result);
+      uint64_t _inl__tmp1 = std::move(_result);
       const MutualLoopifyAcc::forest &_inl_f = *_inl_a1;
-      uint64_t _inl_acc = _inl_r_;
+      uint64_t _inl_acc = _inl__tmp1;
       if (std::holds_alternative<typename MutualLoopifyAcc::forest::Fnil>(
               _inl_f.v())) {
         _result = std::move(_inl_acc);
@@ -133,9 +133,9 @@ uint64_t MutualLoopifyAcc::tsum(
     } else if (std::holds_alternative<_Cont_Fcons_2>(_frame)) {
       auto _f = std::move(std::get<_Cont_Fcons_2>(_frame));
       std::shared_ptr<MutualLoopifyAcc::forest> _inl_a1 = std::move(_f._inl_a1);
-      uint64_t _inl_r_ = std::move(_result);
+      uint64_t _inl__tmp1 = std::move(_result);
       const MutualLoopifyAcc::forest &_inl_f = *_inl_a1;
-      uint64_t _inl_acc = _inl_r_;
+      uint64_t _inl_acc = _inl__tmp1;
       if (std::holds_alternative<typename MutualLoopifyAcc::forest::Fnil>(
               _inl_f.v())) {
         _result = std::move(_inl_acc);
@@ -148,9 +148,9 @@ uint64_t MutualLoopifyAcc::tsum(
     } else if (std::holds_alternative<_Cont_Fcons_3>(_frame)) {
       auto _f = std::move(std::get<_Cont_Fcons_3>(_frame));
       std::shared_ptr<MutualLoopifyAcc::forest> _inl_a1 = std::move(_f._inl_a1);
-      uint64_t _inl_r_ = std::move(_result);
+      uint64_t _inl__tmp1 = std::move(_result);
       const MutualLoopifyAcc::forest &_inl_f = *_inl_a1;
-      uint64_t _inl_acc = _inl_r_;
+      uint64_t _inl_acc = _inl__tmp1;
       if (std::holds_alternative<typename MutualLoopifyAcc::forest::Fnil>(
               _inl_f.v())) {
         _result = std::move(_inl_acc);
@@ -163,9 +163,9 @@ uint64_t MutualLoopifyAcc::tsum(
     } else if (std::holds_alternative<_Cont_Fcons_4>(_frame)) {
       auto _f = std::move(std::get<_Cont_Fcons_4>(_frame));
       std::shared_ptr<MutualLoopifyAcc::forest> _inl_a1 = std::move(_f._inl_a1);
-      uint64_t _inl_r_ = std::move(_result);
+      uint64_t _inl__tmp1 = std::move(_result);
       const MutualLoopifyAcc::forest &_inl_f = *_inl_a1;
-      uint64_t _inl_acc = _inl_r_;
+      uint64_t _inl_acc = _inl__tmp1;
       if (std::holds_alternative<typename MutualLoopifyAcc::forest::Fnil>(
               _inl_f.v())) {
         _result = std::move(_inl_acc);
@@ -178,9 +178,9 @@ uint64_t MutualLoopifyAcc::tsum(
     } else if (std::holds_alternative<_Cont_Fcons_5>(_frame)) {
       auto _f = std::move(std::get<_Cont_Fcons_5>(_frame));
       std::shared_ptr<MutualLoopifyAcc::forest> _inl_a1 = std::move(_f._inl_a1);
-      uint64_t _inl_r_ = std::move(_result);
+      uint64_t _inl__tmp1 = std::move(_result);
       const MutualLoopifyAcc::forest &_inl_f = *_inl_a1;
-      uint64_t _inl_acc = _inl_r_;
+      uint64_t _inl_acc = _inl__tmp1;
       if (std::holds_alternative<typename MutualLoopifyAcc::forest::Fnil>(
               _inl_f.v())) {
         _result = std::move(_inl_acc);
@@ -193,9 +193,9 @@ uint64_t MutualLoopifyAcc::tsum(
     } else if (std::holds_alternative<_Cont_Fcons_6>(_frame)) {
       auto _f = std::move(std::get<_Cont_Fcons_6>(_frame));
       std::shared_ptr<MutualLoopifyAcc::forest> _inl_a1 = std::move(_f._inl_a1);
-      uint64_t _inl_r_ = std::move(_result);
+      uint64_t _inl__tmp1 = std::move(_result);
       const MutualLoopifyAcc::forest &_inl_f = *_inl_a1;
-      uint64_t _inl_acc = _inl_r_;
+      uint64_t _inl_acc = _inl__tmp1;
       if (std::holds_alternative<typename MutualLoopifyAcc::forest::Fnil>(
               _inl_f.v())) {
         _result = std::move(_inl_acc);
@@ -208,9 +208,9 @@ uint64_t MutualLoopifyAcc::tsum(
     } else if (std::holds_alternative<_Cont_Fcons_7>(_frame)) {
       auto _f = std::move(std::get<_Cont_Fcons_7>(_frame));
       std::shared_ptr<MutualLoopifyAcc::forest> _inl_a1 = std::move(_f._inl_a1);
-      uint64_t _inl_r_ = std::move(_result);
+      uint64_t _inl__tmp1 = std::move(_result);
       const MutualLoopifyAcc::forest &_inl_f = *_inl_a1;
-      uint64_t _inl_acc = _inl_r_;
+      uint64_t _inl_acc = _inl__tmp1;
       if (std::holds_alternative<typename MutualLoopifyAcc::forest::Fnil>(
               _inl_f.v())) {
         _result = std::move(_inl_acc);
@@ -223,8 +223,8 @@ uint64_t MutualLoopifyAcc::tsum(
     } else {
       auto _f = std::move(std::get<_Cont_Fcons_8>(_frame));
       std::shared_ptr<MutualLoopifyAcc::forest> _inl_a1 = std::move(_f._inl_a1);
-      uint64_t _inl_r_ = std::move(_result);
-      _result = fsum(_inl_r_, *_inl_a1);
+      uint64_t _inl__tmp1 = std::move(_result);
+      _result = fsum(_inl__tmp1, *_inl_a1);
     }
   }
   return _result;
@@ -290,8 +290,7 @@ uint64_t MutualLoopifyAcc::fsum(
     } else {
       auto _f = std::move(std::get<_Cont_Fcons>(_frame));
       const MutualLoopifyAcc::forest &a1 = *_f.a1;
-      uint64_t r_ = std::move(_result);
-      _stack.emplace_back(_Enter{&a1, r_});
+      _stack.emplace_back(_Enter{&a1, std::move(_result)});
     }
   }
   return _result;

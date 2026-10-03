@@ -235,8 +235,7 @@ struct DepElim {
           auto _f = std::move(std::get<_Cont_FS>(_frame));
           std::shared_ptr<fin> a1 = std::move(_f.a1);
           uint64_t n0 = _f.n0;
-          T1 r_ = std::move(_result);
-          _result = f0(n0, *a1, std::move(r_));
+          _result = f0(n0, *a1, std::move(_result));
         }
       }
       return _result;
@@ -286,8 +285,7 @@ struct DepElim {
           auto _f = std::move(std::get<_Cont_FS>(_frame));
           std::shared_ptr<fin> a1 = std::move(_f.a1);
           uint64_t n0 = _f.n0;
-          T1 r_ = std::move(_result);
-          _result = f0(n0, *a1, std::move(r_));
+          _result = f0(n0, *a1, std::move(_result));
         }
       }
       return _result;
@@ -485,8 +483,7 @@ struct DepElim {
           auto a1 = std::move(_f.a1);
           std::shared_ptr<vec<A>> a2 = std::move(_f.a2);
           uint64_t n0 = _f.n0;
-          T1 r_ = std::move(_result);
-          _result = f0(n0, a1, *a2, std::move(r_));
+          _result = f0(n0, a1, *a2, std::move(_result));
         }
       }
       return _result;
@@ -537,8 +534,7 @@ struct DepElim {
           auto a1 = std::move(_f.a1);
           std::shared_ptr<vec<A>> a2 = std::move(_f.a2);
           uint64_t n0 = _f.n0;
-          T1 r_ = std::move(_result);
-          _result = f0(n0, a1, *a2, std::move(r_));
+          _result = f0(n0, a1, *a2, std::move(_result));
         }
       }
       return _result;

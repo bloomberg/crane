@@ -114,8 +114,7 @@ struct LoopifyNameHygiene {
       } else {
         auto _f = std::move(std::get<_Cont_Resume_Cons_>(_frame));
         std::shared_ptr<Frame_> a0 = std::move(_f.a0);
-        T1 r_ = std::move(_result);
-        _result = f0(*a0, std::move(r_));
+        _result = f0(*a0, std::move(_result));
       }
     }
     return _result;
@@ -161,8 +160,7 @@ struct LoopifyNameHygiene {
       } else {
         auto _f = std::move(std::get<_Cont_Resume_Cons_>(_frame));
         std::shared_ptr<Frame_> a0 = std::move(_f.a0);
-        T1 r_ = std::move(_result);
-        _result = f0(*a0, std::move(r_));
+        _result = f0(*a0, std::move(_result));
       }
     }
     return _result;

@@ -23,13 +23,23 @@ let rec replace_placeholders f e =
   | Some i -> f i
   | None -> Mlutil.ast_map (replace_placeholders f) e
 
-let binder = Id (Id.of_string "_r")
-
 (* The functions whose calls are bound: a top-level fixpoint group, by
    reference, and the local fixpoints enclosing the term, each by the depth
    its bodies start at and its functions, the [j]th being [MLrel (j + 1)]
-   there. *)
-type group = {globals : GlobRef.t list; locals : (int * (Id.t * ml_type) array) list}
+   there.  [fresh] names the next temporary of the declaration. *)
+type group = {
+  globals : GlobRef.t list;
+  locals : (int * (Id.t * ml_type) array) list;
+  fresh : unit -> ml_ident;
+}
+
+(* A supply of the declaration's temporaries, numbered from 1, so no two of
+   its bindings share a name, whichever branches they sit in. *)
+let temporaries () =
+  let n = ref 0 in
+  fun () ->
+    incr n;
+    Tmp (Mlutil.temporary_id !n)
 
 (* A full application yields what its function's type ends in.  A partial
    one yields a function: there is nothing to evaluate early, and naming it
@@ -155,7 +165,7 @@ let rec scope ~group ~depth e =
     | [] -> replace_placeholders (fun j -> MLrel (k - j + 1)) (Mlutil.ast_lift k body)
     | (call, ty) :: rest ->
       let rhs = replace_placeholders (fun j -> MLrel (i - j)) (Mlutil.ast_lift (i - 1) call) in
-      MLletin (binder, ty, rhs, wrap (i + 1) rest)
+      MLletin (group.fresh (), ty, rhs, wrap (i + 1) rest)
   in
   if k = 0 then body else wrap 1 calls
 
@@ -168,19 +178,21 @@ let loopified ~methods fd =
   | Some (ind, _) -> Table.loopifies_methods_of ind
   | None -> false
 
+(* A declaration's body, normalized against the top-level functions
+   [globals] it recurses through. *)
+let body ~globals b = scope ~group:{globals; locals = []; fresh = temporaries ()} ~depth:0 b
+
 let decl ~methods = function
   | Dfix fds ->
-    let group = {globals = List.map (fun fd -> fd.fd_ref) fds; locals = []} in
+    let globals = List.map (fun fd -> fd.fd_ref) fds in
     Dfix
       (List.map
          (fun fd ->
-           if loopified ~methods fd then
-             {fd with fd_body = scope ~group ~depth:0 fd.fd_body}
-           else fd )
+           if loopified ~methods fd then {fd with fd_body = body ~globals fd.fd_body} else fd )
          fds )
-  | Dterm (r, body, ty) when Table.should_loopify r ->
+  | Dterm (r, b, ty) when Table.should_loopify r ->
     (* No recursion of its own, but a local fixpoint in it is loopified. *)
-    Dterm (r, scope ~group:{globals = []; locals = []} ~depth:0 body, ty)
+    Dterm (r, body ~globals:[] b, ty)
   | d -> d
 
 let rec structure_elems ~methods sel =

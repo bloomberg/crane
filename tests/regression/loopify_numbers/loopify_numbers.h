@@ -218,8 +218,7 @@ struct LoopifyNumbers {
         }
       } else {
         auto _f = std::move(std::get<_Cont__x>(_frame));
-        uint64_t r_ = std::move(_result);
-        _result = f(r_);
+        _result = f(std::move(_result));
       }
     }
     return _result;

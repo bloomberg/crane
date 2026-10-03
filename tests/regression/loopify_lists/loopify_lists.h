@@ -138,8 +138,7 @@ struct LoopifyLists {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         auto a0 = std::move(_f.a0);
         std::shared_ptr<list<T1>> a1 = std::move(_f.a1);
-        T2 r_ = std::move(_result);
-        _result = f0(a0, *a1, std::move(r_));
+        _result = f0(a0, *a1, std::move(_result));
       }
     }
     return _result;
@@ -185,8 +184,7 @@ struct LoopifyLists {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         auto a0 = std::move(_f.a0);
         std::shared_ptr<list<T1>> a1 = std::move(_f.a1);
-        T2 r_ = std::move(_result);
-        _result = f0(a0, *a1, std::move(r_));
+        _result = f0(a0, *a1, std::move(_result));
       }
     }
     return _result;
@@ -378,7 +376,6 @@ struct LoopifyLists {
         }
       } else {
         auto _f = std::move(std::get<_Cont_m>(_frame));
-        list<T1> r_ = std::move(_result);
         auto app_impl = [&](auto &, const list<T1> &l1,
                             list<T1> l2) -> list<T1> {
           /// _Enter: captures varying parameters for each recursive call.
@@ -421,7 +418,7 @@ struct LoopifyLists {
         auto app = [&](const list<T1> &l1, list<T1> l2) -> list<T1> {
           return app_impl(app_impl, l1, l2);
         };
-        _result = app(l, std::move(r_));
+        _result = app(l, std::move(_result));
       }
     }
     return _result;
@@ -533,7 +530,7 @@ struct LoopifyLists {
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         auto a0 = std::move(_f.a0);
-        list<list<T1>> r_ = std::move(_result);
+        list<list<T1>> _tmp1 = std::move(_result);
         _result = list<list<T1>>::cons(list<T1>::nil(), [&]() {
           auto map_cons_impl = [&](auto &,
                                    const list<list<T1>> &ys) -> list<list<T1>> {
@@ -577,7 +574,7 @@ struct LoopifyLists {
           auto map_cons = [&](const list<list<T1>> &ys) -> list<list<T1>> {
             return map_cons_impl(map_cons_impl, ys);
           };
-          return map_cons(r_);
+          return map_cons(_tmp1);
         }());
       }
     }
@@ -1101,9 +1098,7 @@ struct LoopifyLists {
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
-        std::pair<std::pair<list<uint64_t>, list<uint64_t>>, list<uint64_t>>
-            r_ = std::move(_result);
-        auto [p0, cs] = std::move(r_);
+        auto [p0, cs] = std::move(_result);
         auto [as_, bs] = std::move(p0);
         if (p(a0)) {
           _result = std::make_pair(
@@ -1312,8 +1307,7 @@ struct LoopifyLists {
       } else {
         auto _f = std::move(std::get<_Cont_acc_>(_frame));
         auto y = std::move(_f.y);
-        std::pair<T3, list<T2>> r_ = std::move(_result);
-        auto [acc__, ys] = std::move(r_);
+        auto [acc__, ys] = std::move(_result);
         _result = std::make_pair(acc__, list<T2>::cons(y, std::move(ys)));
       }
     }
@@ -1455,7 +1449,7 @@ struct LoopifyLists {
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         list<T1> a0 = std::move(_f.a0);
-        list<T1> r_ = std::move(_result);
+        list<T1> _tmp1 = std::move(_result);
         auto app_impl = [&](auto &, const list<T1> &l1,
                             list<T1> l2) -> list<T1> {
           /// _Enter: captures varying parameters for each recursive call.
@@ -1498,7 +1492,7 @@ struct LoopifyLists {
         auto app = [&](const list<T1> &l1, list<T1> l2) -> list<T1> {
           return app_impl(app_impl, l1, l2);
         };
-        _result = app(a0, std::move(r_));
+        _result = app(a0, std::move(_tmp1));
       }
     }
     return _result;
@@ -1591,8 +1585,7 @@ struct LoopifyLists {
       } else {
         auto _f = std::move(std::get<_Cont1>(_frame));
         uint64_t a0 = _f.a0;
-        std::pair<list<uint64_t>, list<uint64_t>> r_ = std::move(_result);
-        auto [a, b] = std::move(r_);
+        auto [a, b] = std::move(_result);
         _result = std::make_pair(list<uint64_t>::cons(a0, std::move(a)),
                                  std::move(b));
       }

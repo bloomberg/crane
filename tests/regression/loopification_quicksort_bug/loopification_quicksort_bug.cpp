@@ -58,8 +58,7 @@ std::string QuicksortFun::list_to_string_helper(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      std::string r_ = std::move(_result);
-      _result = std::to_string(a0) + ", "s + std::move(r_);
+      _result = std::to_string(a0) + ", "s + std::move(_result);
     }
   }
   return _result;

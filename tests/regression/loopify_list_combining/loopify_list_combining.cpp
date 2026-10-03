@@ -104,8 +104,7 @@ List<uint64_t> LoopifyListCombining::intercalate(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       List<uint64_t> a0 = std::move(_f.a0);
-      List<uint64_t> r_ = std::move(_result);
-      _result = append(a0, append(sep, std::move(r_)));
+      _result = append(a0, append(sep, std::move(_result)));
     }
   }
   return _result;
@@ -146,8 +145,7 @@ List<uint64_t> LoopifyListCombining::concat(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       List<uint64_t> a0 = std::move(_f.a0);
-      List<uint64_t> r_ = std::move(_result);
-      _result = append(a0, std::move(r_));
+      _result = append(a0, std::move(_result));
     }
   }
   return _result;
@@ -187,10 +185,9 @@ List<uint64_t> LoopifyListCombining::mapcat(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      List<uint64_t> r_ = std::move(_result);
       _result = append(List<uint64_t>::cons(
                            a0, List<uint64_t>::cons(a0, List<uint64_t>::nil())),
-                       std::move(r_));
+                       std::move(_result));
     }
   }
   return _result;
@@ -280,8 +277,7 @@ List<uint64_t> LoopifyListCombining::concat_sep(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       List<uint64_t> a0 = std::move(_f.a0);
-      List<uint64_t> r_ = std::move(_result);
-      _result = append(a0, List<uint64_t>::cons(sep, std::move(r_)));
+      _result = append(a0, List<uint64_t>::cons(sep, std::move(_result)));
     }
   }
   return _result;

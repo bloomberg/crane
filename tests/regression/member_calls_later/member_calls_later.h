@@ -144,9 +144,7 @@ inline Nat Tree::deeper() const {
     return Nat::o();
   } else {
     const auto &[a0, a1] = std::get<typename Tree::Node>(this->v());
-    Nat r_ = a0->deeper();
-    Nat r_0 = a1->deeper();
-    return Nat::s(Helper::pick(std::move(r_), std::move(r_0)));
+    return Nat::s(Helper::pick(a0->deeper(), a1->deeper()));
   }
 }
 

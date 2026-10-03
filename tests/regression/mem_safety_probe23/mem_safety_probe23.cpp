@@ -15,11 +15,11 @@ uint64_t MemSafetyProbe23::tree_sum(
     const MemSafetyProbe23::tree *a2;
   };
 
-  /// _Cont_Node_1: saves [a1, r_], resumes after recursive call, then processes
-  /// rest.
+  /// _Cont_Node_1: saves [_tmp2, a1], resumes after recursive call, then
+  /// processes rest.
   struct _Cont_Node_1 {
+    uint64_t _tmp2;
     uint64_t a1;
-    uint64_t r_;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
@@ -46,15 +46,12 @@ uint64_t MemSafetyProbe23::tree_sum(
       auto _f = std::move(std::get<_Cont_Node>(_frame));
       uint64_t a1 = _f.a1;
       const MemSafetyProbe23::tree &a2 = *_f.a2;
-      uint64_t r_ = std::move(_result);
-      _stack.emplace_back(_Cont_Node_1{a1, r_});
+      _stack.emplace_back(_Cont_Node_1{std::move(_result), a1});
       _stack.emplace_back(_Enter{&a2});
     } else {
       auto _f = std::move(std::get<_Cont_Node_1>(_frame));
       uint64_t a1 = _f.a1;
-      uint64_t r_ = _f.r_;
-      uint64_t r_0 = std::move(_result);
-      _result = ((r_ + a1) + r_0);
+      _result = ((_f._tmp2 + a1) + std::move(_result));
     }
   }
   return _result;
@@ -73,10 +70,10 @@ uint64_t MemSafetyProbe23::tree_size(
     const MemSafetyProbe23::tree *a2;
   };
 
-  /// _Cont_Node_1: saves [r_], resumes after recursive call, then processes
+  /// _Cont_Node_1: saves [_tmp2], resumes after recursive call, then processes
   /// rest.
   struct _Cont_Node_1 {
-    uint64_t r_;
+    uint64_t _tmp2;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
@@ -102,14 +99,11 @@ uint64_t MemSafetyProbe23::tree_size(
     } else if (std::holds_alternative<_Cont_Node>(_frame)) {
       auto _f = std::move(std::get<_Cont_Node>(_frame));
       const MemSafetyProbe23::tree &a2 = *_f.a2;
-      uint64_t r_ = std::move(_result);
-      _stack.emplace_back(_Cont_Node_1{r_});
+      _stack.emplace_back(_Cont_Node_1{std::move(_result)});
       _stack.emplace_back(_Enter{&a2});
     } else {
       auto _f = std::move(std::get<_Cont_Node_1>(_frame));
-      uint64_t r_ = _f.r_;
-      uint64_t r_0 = std::move(_result);
-      _result = ((UINT64_C(1) + r_) + r_0);
+      _result = ((UINT64_C(1) + _f._tmp2) + std::move(_result));
     }
   }
   return _result;
@@ -507,10 +501,10 @@ uint64_t MemSafetyProbe23::flatten_tree_of_trees(
     MemSafetyProbe23::tree inner;
   };
 
-  /// _Cont_Node_1: saves [r_], resumes after recursive call, then processes
+  /// _Cont_Node_1: saves [_tmp2], resumes after recursive call, then processes
   /// rest.
   struct _Cont_Node_1 {
-    uint64_t r_;
+    uint64_t _tmp2;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
@@ -539,14 +533,11 @@ uint64_t MemSafetyProbe23::flatten_tree_of_trees(
       auto _f = std::move(std::get<_Cont_Node>(_frame));
       const MemSafetyProbe23::tree &a2 = *_f.a2;
       const MemSafetyProbe23::tree &inner = std::move(_f.inner);
-      uint64_t r_ = std::move(_result);
-      _stack.emplace_back(_Cont_Node_1{r_});
+      _stack.emplace_back(_Cont_Node_1{std::move(_result)});
       _stack.emplace_back(_Enter{inner, &a2});
     } else {
       auto _f = std::move(std::get<_Cont_Node_1>(_frame));
-      uint64_t r_ = _f.r_;
-      uint64_t r_0 = std::move(_result);
-      _result = (r_ + r_0);
+      _result = (_f._tmp2 + std::move(_result));
     }
   }
   return _result;
@@ -573,10 +564,10 @@ uint64_t MemSafetyProbe23::mixed_recurse(
     uint64_t n_;
   };
 
-  /// _Cont_Node_1: saves [r_], resumes after recursive call, then processes
+  /// _Cont_Node_1: saves [_tmp2], resumes after recursive call, then processes
   /// rest.
   struct _Cont_Node_1 {
-    uint64_t r_;
+    uint64_t _tmp2;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
@@ -609,14 +600,11 @@ uint64_t MemSafetyProbe23::mixed_recurse(
       auto _f = std::move(std::get<_Cont_Node>(_frame));
       std::shared_ptr<MemSafetyProbe23::tree> a2 = std::move(_f.a2);
       uint64_t n_ = _f.n_;
-      uint64_t r_ = std::move(_result);
-      _stack.emplace_back(_Cont_Node_1{r_});
+      _stack.emplace_back(_Cont_Node_1{std::move(_result)});
       _stack.emplace_back(_Enter{n_, *a2});
     } else {
       auto _f = std::move(std::get<_Cont_Node_1>(_frame));
-      uint64_t r_ = _f.r_;
-      uint64_t r_0 = std::move(_result);
-      _result = (r_ + r_0);
+      _result = (_f._tmp2 + std::move(_result));
     }
   }
   return _result;

@@ -223,8 +223,7 @@ public:
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         auto a1 = std::move(_f.a1);
-        T1 r_ = std::move(_result);
-        _result = f(a1, std::move(r_));
+        _result = f(a1, std::move(_result));
       }
     }
     return _result;
@@ -267,8 +266,7 @@ public:
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         List<T1> a0 = std::move(_f.a0);
-        List<T1> r_ = std::move(_result);
-        _result = a0.app(std::move(r_));
+        _result = a0.app(std::move(_result));
       }
     }
     return _result;

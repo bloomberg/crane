@@ -26,12 +26,9 @@ let max_depth = 100
     expression's size. *)
 let chunk_depth = 32
 
-(** Whether descending into a subexpression is sound.  A lambda's body binds
-    its own names, and a conditional's branches are not both evaluated, so
-    neither can have a piece lifted out ahead of it. *)
-let descendable = function
-  | CPPlambda _ | CPPcond _ -> false
-  | _ -> true
+(** Whether descending into a subexpression is sound: a piece can be lifted
+    out ahead of it only if it is evaluated with it. *)
+let descendable = evaluates_children
 
 (** The expression's nesting, counting only what {!descendable} admits: what
     is not descended into is not restructured either, so it does not

@@ -214,9 +214,7 @@ LoopifyGrouping::partition3(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      std::pair<std::pair<List<uint64_t>, List<uint64_t>>, List<uint64_t>> r_ =
-          std::move(_result);
-      auto [p, greater] = std::move(r_);
+      auto [p, greater] = std::move(_result);
       auto [less, equal] = std::move(p);
       if (a0 < pivot) {
         _result = std::make_pair(
@@ -276,8 +274,7 @@ uint64_t LoopifyGrouping::count_elem(
       }
     } else {
       auto _f = std::move(std::get<_Cont1>(_frame));
-      uint64_t r_ = std::move(_result);
-      _result = (UINT64_C(1) + r_);
+      _result = (UINT64_C(1) + std::move(_result));
     }
   }
   return _result;

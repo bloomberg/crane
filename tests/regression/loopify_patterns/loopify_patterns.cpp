@@ -38,8 +38,7 @@ LoopifyPatterns::multi_let(uint64_t n) { /// _Enter: captures varying parameters
     } else {
       auto _f = std::move(std::get<_Cont_m>(_frame));
       uint64_t c = _f.c;
-      uint64_t r_ = std::move(_result);
-      _result = (c + r_);
+      _result = (c + std::move(_result));
     }
   }
   return _result;
@@ -118,8 +117,8 @@ LoopifyPatterns::deep_nest(uint64_t n) { /// _Enter: captures varying parameters
       }
     } else {
       auto _f = std::move(std::get<_Cont_m>(_frame));
-      uint64_t r_ = std::move(_result);
-      _result = (UINT64_C(1) + (UINT64_C(1) + (UINT64_C(1) + r_)));
+      _result =
+          (UINT64_C(1) + (UINT64_C(1) + (UINT64_C(1) + std::move(_result))));
     }
   }
   return _result;
@@ -142,9 +141,9 @@ bool LoopifyPatterns::bool_chain_fuel(
     uint64_t n;
   };
 
-  /// _Cont2: saves [r_], resumes after recursive call, then processes rest.
+  /// _Cont2: saves [_tmp2], resumes after recursive call, then processes rest.
   struct _Cont2 {
-    bool r_;
+    bool _tmp2;
   };
 
   using _Frame = std::variant<_Enter, _Cont1, _Cont2>;
@@ -183,15 +182,12 @@ bool LoopifyPatterns::bool_chain_fuel(
       auto _f = std::move(std::get<_Cont1>(_frame));
       uint64_t f = _f.f;
       uint64_t n = _f.n;
-      bool r_ = std::move(_result);
-      _stack.emplace_back(_Cont2{r_});
+      _stack.emplace_back(_Cont2{std::move(_result)});
       _stack.emplace_back(
           _Enter{(((n - UINT64_C(2)) > n ? 0 : (n - UINT64_C(2)))), f});
     } else {
       auto _f = std::move(std::get<_Cont2>(_frame));
-      bool r_ = _f.r_;
-      bool r_0 = std::move(_result);
-      _result = (r_ || r_0);
+      _result = (_f._tmp2 || std::move(_result));
     }
   }
   return _result;
@@ -215,9 +211,10 @@ bool LoopifyPatterns::chained_comp(
     uint64_t m;
   };
 
-  /// _Cont_m_1: saves [r_], resumes after recursive call, then processes rest.
+  /// _Cont_m_1: saves [_tmp2], resumes after recursive call, then processes
+  /// rest.
   struct _Cont_m_1 {
-    bool r_;
+    bool _tmp2;
   };
 
   using _Frame = std::variant<_Enter, _Cont_m, _Cont_m_1>;
@@ -246,14 +243,11 @@ bool LoopifyPatterns::chained_comp(
     } else if (std::holds_alternative<_Cont_m>(_frame)) {
       auto _f = std::move(std::get<_Cont_m>(_frame));
       uint64_t m = _f.m;
-      bool r_ = std::move(_result);
-      _stack.emplace_back(_Cont_m_1{r_});
+      _stack.emplace_back(_Cont_m_1{std::move(_result)});
       _stack.emplace_back(_Enter{m});
     } else {
       auto _f = std::move(std::get<_Cont_m_1>(_frame));
-      bool r_ = _f.r_;
-      bool r_0 = std::move(_result);
-      _result = (r_ && r_0);
+      _result = (_f._tmp2 && std::move(_result));
     }
   }
   return _result;
@@ -296,9 +290,7 @@ LoopifyPatterns::tuple_constr(
     } else {
       auto _f = std::move(std::get<_Cont_m>(_frame));
       uint64_t n = _f.n;
-      std::pair<std::pair<uint64_t, uint64_t>, uint64_t> r_ =
-          std::move(_result);
-      auto [p, c] = std::move(r_);
+      auto [p, c] = std::move(_result);
       auto [a, b] = std::move(p);
       _result = std::make_pair(std::make_pair((a + 1), (b + n)), (c + (n * n)));
     }
@@ -531,13 +523,11 @@ uint64_t LoopifyPatterns::alternating_ops(
     } else if (std::holds_alternative<_Cont1>(_frame)) {
       auto _f = std::move(std::get<_Cont1>(_frame));
       uint64_t n = _f.n;
-      uint64_t r_ = std::move(_result);
-      _result = (n + r_);
+      _result = (n + std::move(_result));
     } else {
       auto _f = std::move(std::get<_Cont2>(_frame));
       uint64_t n = _f.n;
-      uint64_t r_ = std::move(_result);
-      _result = ((n * UINT64_C(2)) + r_);
+      _result = ((n * UINT64_C(2)) + std::move(_result));
     }
   }
   return _result;
@@ -630,8 +620,7 @@ uint64_t LoopifyPatterns::nested_pattern(
       uint64_t a = _f.a;
       uint64_t b = _f.b;
       uint64_t c = _f.c;
-      uint64_t r_ = std::move(_result);
-      _result = (a + (b + (c + r_)));
+      _result = (a + (b + (c + std::move(_result))));
     }
   }
   return _result;
@@ -673,8 +662,7 @@ uint64_t LoopifyPatterns::let_nested(
     } else {
       auto _f = std::move(std::get<_Cont_m>(_frame));
       uint64_t a = _f.a;
-      uint64_t r_ = std::move(_result);
-      _result = (a + r_);
+      _result = (a + std::move(_result));
     }
   }
   return _result;
@@ -915,8 +903,7 @@ uint64_t LoopifyPatterns::quad_sum_pattern(
       uint64_t a00 = _f.a00;
       uint64_t a01 = _f.a01;
       uint64_t a02 = _f.a02;
-      uint64_t r_ = std::move(_result);
-      _result = ((a0 + a00) + ((a01 + a02) + r_));
+      _result = ((a0 + a00) + ((a01 + a02) + std::move(_result)));
     }
   }
   return _result;
@@ -1291,8 +1278,7 @@ uint64_t LoopifyPatterns::four_elem(
       uint64_t a00 = _f.a00;
       uint64_t a01 = _f.a01;
       uint64_t a02 = _f.a02;
-      uint64_t r_ = std::move(_result);
-      _result = (a0 + (a00 + (a01 + (a02 + r_))));
+      _result = (a0 + (a00 + (a01 + (a02 + std::move(_result)))));
     }
   }
   return _result;

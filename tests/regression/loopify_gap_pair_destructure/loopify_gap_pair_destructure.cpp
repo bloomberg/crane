@@ -31,8 +31,7 @@ std::pair<uint64_t, uint64_t> LoopifyGapPairDestructure::swap_pair(
       }
     } else {
       auto _f = std::move(std::get<_Cont_m>(_frame));
-      std::pair<uint64_t, uint64_t> r_ = std::move(_result);
-      auto [a, b] = std::move(r_);
+      auto [a, b] = std::move(_result);
       _result = std::make_pair(b, (a + 1));
     }
   }

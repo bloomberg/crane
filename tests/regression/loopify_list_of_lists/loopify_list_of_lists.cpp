@@ -42,8 +42,7 @@ List<uint64_t> LoopifyListOfLists::intercalate(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       List<uint64_t> a0 = std::move(_f.a0);
-      List<uint64_t> r_ = std::move(_result);
-      _result = a0.app(sep.app(std::move(r_)));
+      _result = a0.app(sep.app(std::move(_result)));
     }
   }
   return _result;
@@ -213,8 +212,7 @@ uint64_t LoopifyListOfLists::list_len(
       }
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
-      uint64_t r_ = std::move(_result);
-      _result = (UINT64_C(1) + r_);
+      _result = (UINT64_C(1) + std::move(_result));
     }
   }
   return _result;
@@ -255,8 +253,7 @@ uint64_t LoopifyListOfLists::total_length(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       List<uint64_t> a0 = std::move(_f.a0);
-      uint64_t r_ = std::move(_result);
-      _result = (list_len(a0) + r_);
+      _result = (list_len(a0) + std::move(_result));
     }
   }
   return _result;
@@ -302,8 +299,7 @@ List<uint64_t> LoopifyListOfLists::flatten(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       List<uint64_t> a0 = std::move(_f.a0);
-      List<uint64_t> r_ = std::move(_result);
-      _result = a0.app(std::move(r_));
+      _result = a0.app(std::move(_result));
     }
   }
   return _result;
@@ -344,8 +340,7 @@ uint64_t LoopifyListOfLists::count_total(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       List<uint64_t> a0 = std::move(_f.a0);
-      uint64_t r_ = std::move(_result);
-      _result = (list_len(a0) + r_);
+      _result = (list_len(a0) + std::move(_result));
     }
   }
   return _result;
@@ -479,8 +474,7 @@ uint64_t LoopifyListOfLists::max_length(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       List<uint64_t> a0 = std::move(_f.a0);
-      uint64_t r_ = std::move(_result);
-      _result = std::max(list_len(a0), r_);
+      _result = std::max(list_len(a0), std::move(_result));
     }
   }
   return _result;

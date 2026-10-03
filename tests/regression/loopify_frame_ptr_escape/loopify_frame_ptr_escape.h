@@ -132,8 +132,7 @@ struct LoopifyFramePtrEscape {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
         std::shared_ptr<lst> a1 = std::move(_f.a1);
-        T1 r_ = std::move(_result);
-        _result = f0(a0, *a1, std::move(r_));
+        _result = f0(a0, *a1, std::move(_result));
       }
     }
     return _result;
@@ -178,8 +177,7 @@ struct LoopifyFramePtrEscape {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
         std::shared_ptr<lst> a1 = std::move(_f.a1);
-        T1 r_ = std::move(_result);
-        _result = f0(a0, *a1, std::move(r_));
+        _result = f0(a0, *a1, std::move(_result));
       }
     }
     return _result;

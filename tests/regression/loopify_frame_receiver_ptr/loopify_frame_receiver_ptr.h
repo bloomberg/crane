@@ -242,8 +242,7 @@ public:
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         const String *_self = _f._self;
         String a0 = std::move(_f.a0);
-        String r_ = std::move(_result);
-        _result = a0.append(_self->append(std::move(r_)));
+        _result = a0.append(_self->append(std::move(_result)));
       }
     }
     return _result;

@@ -34,8 +34,7 @@ List<uint64_t> LoopifyGenerators::cycle(
       }
     } else {
       auto _f = std::move(std::get<_Cont_m>(_frame));
-      List<uint64_t> r_ = std::move(_result);
-      _result = l.app(std::move(r_));
+      _result = l.app(std::move(_result));
     }
   }
   return _result;
@@ -334,8 +333,7 @@ List<uint64_t> LoopifyGenerators::replicate_each(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      List<uint64_t> r_ = std::move(_result);
-      _result = replicate_single(a0, n).app(std::move(r_));
+      _result = replicate_single(a0, n).app(std::move(_result));
     }
   }
   return _result;

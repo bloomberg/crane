@@ -133,6 +133,9 @@ let finish decl =
       (fun d -> if should_loopify d then Loopify.transform_decl d else d)
       decl
   in
+  (* The temporaries Normalize named for loopification and loopification did
+     not need go back where they are read. *)
+  let decl = pass "temporaries" Cpp_temporaries.decl decl in
   (* An initialiser nested deeper than a compiler will parse becomes a run of
      bindings; everything shallower is left as it stands. *)
   let decl = pass "depth" Cpp_depth.flatten decl in

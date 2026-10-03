@@ -15,10 +15,11 @@ LoopifyMoreTrees::tree LoopifyMoreTrees::mirror(
     uint64_t a1;
   };
 
-  /// _Resume_Node: saves [a1, r_], resumes after recursive call with _result.
+  /// _Resume_Node: saves [a1, _tmp1], resumes after recursive call with
+  /// _result.
   struct _Resume_Node {
     uint64_t a1;
-    LoopifyMoreTrees::tree r_;
+    LoopifyMoreTrees::tree _tmp1;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Node, _Resume_Node>;
@@ -45,12 +46,11 @@ LoopifyMoreTrees::tree LoopifyMoreTrees::mirror(
       auto _f = std::move(std::get<_Cont_Node>(_frame));
       const LoopifyMoreTrees::tree &a0 = *_f.a0;
       uint64_t a1 = _f.a1;
-      LoopifyMoreTrees::tree r_ = std::move(_result);
-      _stack.emplace_back(_Resume_Node{a1, std::move(r_)});
+      _stack.emplace_back(_Resume_Node{a1, std::move(_result)});
       _stack.emplace_back(_Enter{&a0});
     } else {
       auto _f = std::move(std::get<_Resume_Node>(_frame));
-      _result = tree::node(std::move(_f.r_), _f.a1, std::move(_result));
+      _result = tree::node(std::move(_f._tmp1), _f.a1, std::move(_result));
     }
   }
   return _result;
@@ -73,10 +73,10 @@ bool LoopifyMoreTrees::same_shape(
     const LoopifyMoreTrees::tree *a20;
   };
 
-  /// _Cont_Node_1: saves [r_], resumes after recursive call, then processes
+  /// _Cont_Node_1: saves [_tmp2], resumes after recursive call, then processes
   /// rest.
   struct _Cont_Node_1 {
-    bool r_;
+    bool _tmp2;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
@@ -116,14 +116,11 @@ bool LoopifyMoreTrees::same_shape(
       auto _f = std::move(std::get<_Cont_Node>(_frame));
       const LoopifyMoreTrees::tree &a2 = *_f.a2;
       const LoopifyMoreTrees::tree &a20 = *_f.a20;
-      bool r_ = std::move(_result);
-      _stack.emplace_back(_Cont_Node_1{r_});
+      _stack.emplace_back(_Cont_Node_1{std::move(_result)});
       _stack.emplace_back(_Enter{&a20, &a2});
     } else {
       auto _f = std::move(std::get<_Cont_Node_1>(_frame));
-      bool r_ = _f.r_;
-      bool r_0 = std::move(_result);
-      _result = (r_ && r_0);
+      _result = (_f._tmp2 && std::move(_result));
     }
   }
   return _result;
@@ -144,11 +141,11 @@ List<uint64_t> LoopifyMoreTrees::tree_to_list(
     const LoopifyMoreTrees::tree *a2;
   };
 
-  /// _Cont_Node_1: saves [a1, r_], resumes after recursive call, then processes
-  /// rest.
+  /// _Cont_Node_1: saves [_tmp2, a1], resumes after recursive call, then
+  /// processes rest.
   struct _Cont_Node_1 {
+    List<uint64_t> _tmp2;
     uint64_t a1;
-    List<uint64_t> r_;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
@@ -175,16 +172,14 @@ List<uint64_t> LoopifyMoreTrees::tree_to_list(
       auto _f = std::move(std::get<_Cont_Node>(_frame));
       uint64_t a1 = _f.a1;
       const LoopifyMoreTrees::tree &a2 = *_f.a2;
-      List<uint64_t> r_ = std::move(_result);
-      _stack.emplace_back(_Cont_Node_1{a1, std::move(r_)});
+      _stack.emplace_back(_Cont_Node_1{std::move(_result), a1});
       _stack.emplace_back(_Enter{&a2});
     } else {
       auto _f = std::move(std::get<_Cont_Node_1>(_frame));
       uint64_t a1 = _f.a1;
-      List<uint64_t> r_ = std::move(_f.r_);
-      List<uint64_t> r_0 = std::move(_result);
-      _result = std::move(r_).app(
-          List<uint64_t>::cons(a1, List<uint64_t>::nil()).app(std::move(r_0)));
+      _result = std::move(_f._tmp2).app(
+          List<uint64_t>::cons(a1, List<uint64_t>::nil())
+              .app(std::move(_result)));
     }
   }
   return _result;
@@ -207,10 +202,10 @@ uint64_t LoopifyMoreTrees::count_nodes(
     const LoopifyMoreTrees::tree *a2;
   };
 
-  /// _Cont_Node_1: saves [r_], resumes after recursive call, then processes
+  /// _Cont_Node_1: saves [_tmp2], resumes after recursive call, then processes
   /// rest.
   struct _Cont_Node_1 {
-    uint64_t r_;
+    uint64_t _tmp2;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
@@ -236,14 +231,11 @@ uint64_t LoopifyMoreTrees::count_nodes(
     } else if (std::holds_alternative<_Cont_Node>(_frame)) {
       auto _f = std::move(std::get<_Cont_Node>(_frame));
       const LoopifyMoreTrees::tree &a2 = *_f.a2;
-      uint64_t r_ = std::move(_result);
-      _stack.emplace_back(_Cont_Node_1{r_});
+      _stack.emplace_back(_Cont_Node_1{std::move(_result)});
       _stack.emplace_back(_Enter{&a2});
     } else {
       auto _f = std::move(std::get<_Cont_Node_1>(_frame));
-      uint64_t r_ = _f.r_;
-      uint64_t r_0 = std::move(_result);
-      _result = ((UINT64_C(1) + r_) + r_0);
+      _result = ((UINT64_C(1) + _f._tmp2) + std::move(_result));
     }
   }
   return _result;
@@ -268,10 +260,11 @@ LoopifyMoreTrees::tree LoopifyMoreTrees::tree_max(
     std::shared_ptr<LoopifyMoreTrees::tree> a20;
   };
 
-  /// _Resume_Node: saves [_s0, r_], resumes after recursive call with _result.
+  /// _Resume_Node: saves [_s0, _tmp1], resumes after recursive call with
+  /// _result.
   struct _Resume_Node {
     uint64_t _s0;
-    LoopifyMoreTrees::tree r_;
+    LoopifyMoreTrees::tree _tmp1;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Node, _Resume_Node>;
@@ -308,13 +301,12 @@ LoopifyMoreTrees::tree LoopifyMoreTrees::tree_max(
       uint64_t a10 = _f.a10;
       std::shared_ptr<LoopifyMoreTrees::tree> a2 = std::move(_f.a2);
       std::shared_ptr<LoopifyMoreTrees::tree> a20 = std::move(_f.a20);
-      LoopifyMoreTrees::tree r_ = std::move(_result);
       _stack.emplace_back(
-          _Resume_Node{std::max(a1, std::move(a10)), std::move(r_)});
+          _Resume_Node{std::max(a1, std::move(a10)), std::move(_result)});
       _stack.emplace_back(_Enter{*a20, *a2});
     } else {
       auto _f = std::move(std::get<_Resume_Node>(_frame));
-      _result = tree::node(std::move(_f.r_), _f._s0, std::move(_result));
+      _result = tree::node(std::move(_f._tmp1), _f._s0, std::move(_result));
     }
   }
   return _result;
@@ -335,11 +327,11 @@ uint64_t LoopifyMoreTrees::sum_of_max_branches(
     const LoopifyMoreTrees::tree *a2;
   };
 
-  /// _Cont_Node_1: saves [a1, r_], resumes after recursive call, then processes
-  /// rest.
+  /// _Cont_Node_1: saves [_tmp2, a1], resumes after recursive call, then
+  /// processes rest.
   struct _Cont_Node_1 {
+    uint64_t _tmp2;
     uint64_t a1;
-    uint64_t r_;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
@@ -366,15 +358,12 @@ uint64_t LoopifyMoreTrees::sum_of_max_branches(
       auto _f = std::move(std::get<_Cont_Node>(_frame));
       uint64_t a1 = _f.a1;
       const LoopifyMoreTrees::tree &a2 = *_f.a2;
-      uint64_t r_ = std::move(_result);
-      _stack.emplace_back(_Cont_Node_1{a1, r_});
+      _stack.emplace_back(_Cont_Node_1{std::move(_result), a1});
       _stack.emplace_back(_Enter{&a2});
     } else {
       auto _f = std::move(std::get<_Cont_Node_1>(_frame));
       uint64_t a1 = _f.a1;
-      uint64_t r_ = _f.r_;
-      uint64_t r_0 = std::move(_result);
-      _result = (a1 + std::max(r_, r_0));
+      _result = (a1 + std::max(_f._tmp2, std::move(_result)));
     }
   }
   return _result;
@@ -471,8 +460,7 @@ LoopifyMoreTrees::tree LoopifyMoreTrees::build_bst(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      LoopifyMoreTrees::tree r_ = std::move(_result);
-      _result = insert_bst(a0, std::move(r_));
+      _result = insert_bst(a0, std::move(_result));
     }
   }
   return _result;
@@ -537,8 +525,7 @@ List<uint64_t> LoopifyMoreTrees::flatten(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       List<uint64_t> a0 = std::move(_f.a0);
-      List<uint64_t> r_ = std::move(_result);
-      _result = append_lists(a0, std::move(r_));
+      _result = append_lists(a0, std::move(_result));
     }
   }
   return _result;
@@ -648,8 +635,7 @@ List<LoopifyMoreTrees::tree> LoopifyMoreTrees::concat_map_children(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       LoopifyMoreTrees::tree a0 = std::move(_f.a0);
-      List<LoopifyMoreTrees::tree> r_ = std::move(_result);
-      _result = append_trees(tree_children(a0), std::move(r_));
+      _result = append_trees(tree_children(a0), std::move(_result));
     }
   }
   return _result;

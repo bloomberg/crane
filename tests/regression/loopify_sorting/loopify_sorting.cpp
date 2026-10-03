@@ -64,8 +64,7 @@ List<uint64_t> LoopifySorting::insertion_sort(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      List<uint64_t> r_ = std::move(_result);
-      _result = insert(a0, std::move(r_));
+      _result = insert(a0, std::move(_result));
     }
   }
   return _result;
@@ -146,9 +145,10 @@ List<uint64_t> LoopifySorting::merge_sort_fuel(
     List<uint64_t> l2;
   };
 
-  /// _Cont_l1_1: saves [r_], resumes after recursive call, then processes rest.
+  /// _Cont_l1_1: saves [_tmp2], resumes after recursive call, then processes
+  /// rest.
   struct _Cont_l1_1 {
-    List<uint64_t> r_;
+    List<uint64_t> _tmp2;
   };
 
   using _Frame = std::variant<_Enter, _Cont_l1, _Cont_l1_1>;
@@ -185,14 +185,11 @@ List<uint64_t> LoopifySorting::merge_sort_fuel(
       auto _f = std::move(std::get<_Cont_l1>(_frame));
       uint64_t f = _f.f;
       List<uint64_t> l2 = std::move(_f.l2);
-      List<uint64_t> r_ = std::move(_result);
-      _stack.emplace_back(_Cont_l1_1{std::move(r_)});
+      _stack.emplace_back(_Cont_l1_1{std::move(_result)});
       _stack.emplace_back(_Enter{std::move(l2), f});
     } else {
       auto _f = std::move(std::get<_Cont_l1_1>(_frame));
-      List<uint64_t> r_ = std::move(_f.r_);
-      List<uint64_t> r_0 = std::move(_result);
-      _result = merge(std::move(r_), std::move(r_0));
+      _result = merge(std::move(_f._tmp2), std::move(_result));
     }
   }
   return _result;
@@ -237,8 +234,7 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifySorting::partition(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      std::pair<List<uint64_t>, List<uint64_t>> r_ = std::move(_result);
-      auto [lo, hi] = std::move(r_);
+      auto [lo, hi] = std::move(_result);
       if (a0 <= pivot) {
         _result = std::make_pair(List<uint64_t>::cons(a0, std::move(lo)),
                                  std::move(hi));
@@ -269,11 +265,11 @@ List<uint64_t> LoopifySorting::quicksort_fuel(
     List<uint64_t> hi;
   };
 
-  /// _Cont_lo_1: saves [a0, r_], resumes after recursive call, then processes
-  /// rest.
+  /// _Cont_lo_1: saves [_tmp2, a0], resumes after recursive call, then
+  /// processes rest.
   struct _Cont_lo_1 {
+    List<uint64_t> _tmp2;
     uint64_t a0;
-    List<uint64_t> r_;
   };
 
   using _Frame = std::variant<_Enter, _Cont_lo, _Cont_lo_1>;
@@ -306,16 +302,13 @@ List<uint64_t> LoopifySorting::quicksort_fuel(
       uint64_t a0 = _f.a0;
       uint64_t f = _f.f;
       List<uint64_t> hi = std::move(_f.hi);
-      List<uint64_t> r_ = std::move(_result);
-      _stack.emplace_back(_Cont_lo_1{a0, std::move(r_)});
+      _stack.emplace_back(_Cont_lo_1{std::move(_result), a0});
       _stack.emplace_back(_Enter{std::move(hi), f});
     } else {
       auto _f = std::move(std::get<_Cont_lo_1>(_frame));
       uint64_t a0 = _f.a0;
-      List<uint64_t> r_ = std::move(_f.r_);
-      List<uint64_t> r_0 = std::move(_result);
-      _result = std::move(r_).app(
-          List<uint64_t>::cons(std::move(a0), std::move(r_0)));
+      _result = std::move(_f._tmp2).app(
+          List<uint64_t>::cons(std::move(a0), std::move(_result)));
     }
   }
   return _result;

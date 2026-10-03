@@ -36,8 +36,7 @@ uint64_t LoopifyNestedConstructs::multi_let(
     } else {
       auto _f = std::move(std::get<_Cont_n_>(_frame));
       uint64_t c = _f.c;
-      uint64_t r_ = std::move(_result);
-      _result = (c + r_);
+      _result = (c + std::move(_result));
     }
   }
   return _result;
@@ -157,8 +156,7 @@ uint64_t LoopifyNestedConstructs::let_nested(
     } else {
       auto _f = std::move(std::get<_Cont_n_>(_frame));
       uint64_t a = _f.a;
-      uint64_t r_ = std::move(_result);
-      _result = (a + r_);
+      _result = (a + std::move(_result));
     }
   }
   return _result;
@@ -206,8 +204,9 @@ uint64_t LoopifyNestedConstructs::mod_pattern_fuel(
     } else {
       auto _f = std::move(std::get<_Cont1>(_frame));
       uint64_t n = _f.n;
-      uint64_t r_ = std::move(_result);
-      _result = ((UINT64_C(1) + r_) ? n % (UINT64_C(1) + r_) : n);
+      _result = ((UINT64_C(1) + std::move(_result))
+                     ? n % (UINT64_C(1) + std::move(_result))
+                     : n);
     }
   }
   return _result;
@@ -253,9 +252,7 @@ LoopifyNestedConstructs::tuple_constr(
     } else {
       auto _f = std::move(std::get<_Cont_n_>(_frame));
       uint64_t n = _f.n;
-      std::pair<std::pair<uint64_t, uint64_t>, uint64_t> r_ =
-          std::move(_result);
-      auto [p, c] = std::move(r_);
+      auto [p, c] = std::move(_result);
       auto [a, b] = std::move(p);
       _result = std::make_pair(std::make_pair((a + UINT64_C(1)), (b + n)),
                                (c + (n * n)));
@@ -308,13 +305,11 @@ uint64_t LoopifyNestedConstructs::alternating_ops(
     } else if (std::holds_alternative<_Cont1>(_frame)) {
       auto _f = std::move(std::get<_Cont1>(_frame));
       uint64_t n = _f.n;
-      uint64_t r_ = std::move(_result);
-      _result = (n + r_);
+      _result = (n + std::move(_result));
     } else {
       auto _f = std::move(std::get<_Cont2>(_frame));
       uint64_t n = _f.n;
-      uint64_t r_ = std::move(_result);
-      _result = ((n * UINT64_C(2)) + r_);
+      _result = ((n * UINT64_C(2)) + std::move(_result));
     }
   }
   return _result;
@@ -337,9 +332,9 @@ bool LoopifyNestedConstructs::chained_comp_fuel(
     uint64_t n;
   };
 
-  /// _Cont2: saves [r_], resumes after recursive call, then processes rest.
+  /// _Cont2: saves [_tmp2], resumes after recursive call, then processes rest.
   struct _Cont2 {
-    bool r_;
+    bool _tmp2;
   };
 
   using _Frame = std::variant<_Enter, _Cont1, _Cont2>;
@@ -370,15 +365,12 @@ bool LoopifyNestedConstructs::chained_comp_fuel(
       auto _f = std::move(std::get<_Cont1>(_frame));
       uint64_t fuel_ = _f.fuel_;
       uint64_t n = _f.n;
-      bool r_ = std::move(_result);
-      _stack.emplace_back(_Cont2{r_});
+      _stack.emplace_back(_Cont2{std::move(_result)});
       _stack.emplace_back(
           _Enter{(((n - UINT64_C(2)) > n ? 0 : (n - UINT64_C(2)))), fuel_});
     } else {
       auto _f = std::move(std::get<_Cont2>(_frame));
-      bool r_ = _f.r_;
-      bool r_0 = std::move(_result);
-      _result = (r_ && r_0);
+      _result = (_f._tmp2 && std::move(_result));
     }
   }
   return _result;
@@ -489,8 +481,7 @@ uint64_t LoopifyNestedConstructs::nested_match(
     } else {
       auto _f = std::move(std::get<_Cont_n__>(_frame));
       uint64_t n = _f.n;
-      uint64_t r_ = std::move(_result);
-      _result = (n + r_);
+      _result = (n + std::move(_result));
     }
   }
   return _result;

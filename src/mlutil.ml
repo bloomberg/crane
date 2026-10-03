@@ -98,11 +98,21 @@ let unreserve_leading_underscore s =
     source, so a leading underscore is moved to the end: that spelling belongs
     to the names Crane invents for itself (see
     {!unreserve_leading_underscore}). *)
+let temporary_prefix = "_tmp"
+
+let temporary_id n = Id.of_string (temporary_prefix ^ string_of_int n)
+
+let is_temporary_id id = String.starts_with ~prefix:temporary_prefix (Id.to_string id)
+
 let id_of_mlid =
   let unreserve id =
     Id.of_string (unreserve_leading_underscore (Id.to_string id))
   in
-  function Dummy -> dummy_name | Id id -> unreserve id | Tmp id -> unreserve id
+  function
+  | Dummy -> dummy_name
+  | Id id -> unreserve id
+  | Tmp id when is_temporary_id id -> id
+  | Tmp id -> unreserve id
 
 let tmp_id = function
   | Id id -> Tmp id

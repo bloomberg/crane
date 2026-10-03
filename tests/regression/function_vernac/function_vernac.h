@@ -262,8 +262,7 @@ struct FunctionVernac {
           uint64_t a2 = _f.a2;
           uint64_t n0 = _f.n0;
           uint64_t p0 = _f.p0;
-          T1 r_ = std::move(_result);
-          _result = f1(n0, p0, a2, *_res, std::move(r_));
+          _result = f1(n0, p0, a2, *_res, std::move(_result));
         }
       }
       return _result;
@@ -326,8 +325,7 @@ struct FunctionVernac {
           uint64_t a2 = _f.a2;
           uint64_t n0 = _f.n0;
           uint64_t p0 = _f.p0;
-          T1 r_ = std::move(_result);
-          _result = f1(n0, p0, a2, *_res, std::move(r_));
+          _result = f1(n0, p0, a2, *_res, std::move(_result));
         }
       }
       return _result;
@@ -508,8 +506,7 @@ struct FunctionVernac {
           List<uint64_t> l0 = std::move(_f.l0);
           uint64_t x0 = _f.x0;
           List<uint64_t> xs0 = std::move(_f.xs0);
-          T1 r_ = std::move(_result);
-          _result = f0(l0, x0, xs0, a3, *_res, std::move(r_));
+          _result = f0(l0, x0, xs0, a3, *_res, std::move(_result));
         }
       }
       return _result;
@@ -573,8 +570,7 @@ struct FunctionVernac {
           List<uint64_t> l0 = std::move(_f.l0);
           uint64_t x0 = _f.x0;
           List<uint64_t> xs0 = std::move(_f.xs0);
-          T1 r_ = std::move(_result);
-          _result = f0(l0, x0, xs0, a3, *_res, std::move(r_));
+          _result = f0(l0, x0, xs0, a3, *_res, std::move(_result));
         }
       }
       return _result;

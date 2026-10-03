@@ -211,8 +211,7 @@ List<uint64_t> LoopifySequences::repeat_string(
       }
     } else {
       auto _f = std::move(std::get<_Cont_m>(_frame));
-      List<uint64_t> r_ = std::move(_result);
-      _result = s.app(std::move(r_));
+      _result = s.app(std::move(_result));
     }
   }
   return _result;
@@ -256,8 +255,7 @@ List<uint64_t> LoopifySequences::repeat_with_sep(
       }
     } else {
       auto _f = std::move(std::get<_Cont__x>(_frame));
-      List<uint64_t> r_ = std::move(_result);
-      _result = s.app(sep.app(std::move(r_)));
+      _result = s.app(sep.app(std::move(_result)));
     }
   }
   return _result;
@@ -304,8 +302,7 @@ List<uint64_t> LoopifySequences::string_chain_fuel(
       }
     } else {
       auto _f = std::move(std::get<_Cont1>(_frame));
-      List<uint64_t> r_ = std::move(_result);
-      _result = s.app(sep.app(std::move(r_).app(sep.app(end_marker))));
+      _result = s.app(sep.app(std::move(_result).app(sep.app(end_marker))));
     }
   }
   return _result;
@@ -446,8 +443,7 @@ List<uint64_t> LoopifySequences::cycle(
       }
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
-      List<uint64_t> r_ = std::move(_result);
-      _result = l.app(std::move(r_));
+      _result = l.app(std::move(_result));
     }
   }
   return _result;
@@ -801,8 +797,7 @@ bool LoopifySequences::elem(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      bool r_ = std::move(_result);
-      _result = (x == a0 || r_);
+      _result = (x == a0 || std::move(_result));
     }
   }
   return _result;
@@ -936,15 +931,15 @@ List<List<uint64_t>> LoopifySequences::group_fuel(
     } else if (std::holds_alternative<_Cont1>(_frame)) {
       auto _f = std::move(std::get<_Cont1>(_frame));
       uint64_t a0 = _f.a0;
-      List<List<uint64_t>> r_ = std::move(_result);
+      List<List<uint64_t>> _tmp1 = std::move(_result);
       if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(
-              r_.v_mut())) {
+              _tmp1.v_mut())) {
         _result = List<List<uint64_t>>::cons(
             List<uint64_t>::cons(a0, List<uint64_t>::nil()),
             List<List<uint64_t>>::nil());
       } else {
         auto &[a01, a11] =
-            std::get<typename List<List<uint64_t>>::Cons>(r_.v_mut());
+            std::get<typename List<List<uint64_t>>::Cons>(_tmp1.v_mut());
         _result = List<List<uint64_t>>::cons(
             List<uint64_t>::cons(a0, std::move(a01)), *a11);
       }
@@ -1051,16 +1046,17 @@ List<std::pair<uint64_t, uint64_t>> LoopifySequences::run_length_encode_fuel(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      List<std::pair<uint64_t, uint64_t>> r_ = std::move(_result);
+      List<std::pair<uint64_t, uint64_t>> _tmp1 = std::move(_result);
       if (std::holds_alternative<
-              typename List<std::pair<uint64_t, uint64_t>>::Nil>(r_.v_mut())) {
+              typename List<std::pair<uint64_t, uint64_t>>::Nil>(
+              _tmp1.v_mut())) {
         _result = List<std::pair<uint64_t, uint64_t>>::cons(
             std::make_pair(a0, UINT64_C(1)),
             List<std::pair<uint64_t, uint64_t>>::nil());
       } else {
         auto &[a01, a11] =
             std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
-                r_.v_mut());
+                _tmp1.v_mut());
         auto [y, n] = std::move(a01);
         if (a0 == y) {
           _result = List<std::pair<uint64_t, uint64_t>>::cons(

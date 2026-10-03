@@ -117,31 +117,31 @@ struct MemSafetyProbe17 {
         uint64_t local_weight;
       };
 
-      /// _Cont_QNode_1: saves [a3, a4, local_weight, r_], resumes after
+      /// _Cont_QNode_1: saves [_tmp4, a3, a4, local_weight], resumes after
       /// recursive call, then processes rest.
       struct _Cont_QNode_1 {
+        uint64_t _tmp4;
         std::shared_ptr<qtree> a3;
         std::shared_ptr<qtree> a4;
         uint64_t local_weight;
-        uint64_t r_;
       };
 
-      /// _Cont_QNode_2: saves [a4, local_weight, r_, r_0], resumes after
+      /// _Cont_QNode_2: saves [_tmp3, _tmp4, a4, local_weight], resumes after
       /// recursive call, then processes rest.
       struct _Cont_QNode_2 {
+        uint64_t _tmp3;
+        uint64_t _tmp4;
         std::shared_ptr<qtree> a4;
         uint64_t local_weight;
-        uint64_t r_;
-        uint64_t r_0;
       };
 
-      /// _Cont_QNode_3: saves [local_weight, r_, r_0, r_1], resumes after
-      /// recursive call, then processes rest.
+      /// _Cont_QNode_3: saves [_tmp2, _tmp3, _tmp4, local_weight], resumes
+      /// after recursive call, then processes rest.
       struct _Cont_QNode_3 {
+        uint64_t _tmp2;
+        uint64_t _tmp3;
+        uint64_t _tmp4;
         uint64_t local_weight;
-        uint64_t r_;
-        uint64_t r_0;
-        uint64_t r_1;
       };
 
       using _Frame = std::variant<_Enter, _Cont_QNode, _Cont_QNode_1,
@@ -177,37 +177,29 @@ struct MemSafetyProbe17 {
           std::shared_ptr<qtree> a3 = std::move(_f.a3);
           std::shared_ptr<qtree> a4 = std::move(_f.a4);
           uint64_t local_weight = _f.local_weight;
-          uint64_t r_ = std::move(_result);
-          _stack.emplace_back(
-              _Cont_QNode_1{std::move(a3), std::move(a4), local_weight, r_});
+          _stack.emplace_back(_Cont_QNode_1{std::move(_result), std::move(a3),
+                                            std::move(a4), local_weight});
           _stack.emplace_back(_Enter{crane_raw(a1)});
         } else if (std::holds_alternative<_Cont_QNode_1>(_frame)) {
           auto _f = std::move(std::get<_Cont_QNode_1>(_frame));
           std::shared_ptr<qtree> a3 = std::move(_f.a3);
           std::shared_ptr<qtree> a4 = std::move(_f.a4);
           uint64_t local_weight = _f.local_weight;
-          uint64_t r_ = _f.r_;
-          uint64_t r_0 = std::move(_result);
-          _stack.emplace_back(
-              _Cont_QNode_2{std::move(a4), local_weight, r_, r_0});
+          _stack.emplace_back(_Cont_QNode_2{std::move(_result), _f._tmp4,
+                                            std::move(a4), local_weight});
           _stack.emplace_back(_Enter{crane_raw(a3)});
         } else if (std::holds_alternative<_Cont_QNode_2>(_frame)) {
           auto _f = std::move(std::get<_Cont_QNode_2>(_frame));
           std::shared_ptr<qtree> a4 = std::move(_f.a4);
           uint64_t local_weight = _f.local_weight;
-          uint64_t r_ = _f.r_;
-          uint64_t r_0 = _f.r_0;
-          uint64_t r_1 = std::move(_result);
-          _stack.emplace_back(_Cont_QNode_3{local_weight, r_, r_0, r_1});
+          _stack.emplace_back(_Cont_QNode_3{std::move(_result), _f._tmp3,
+                                            _f._tmp4, local_weight});
           _stack.emplace_back(_Enter{crane_raw(a4)});
         } else {
           auto _f = std::move(std::get<_Cont_QNode_3>(_frame));
           uint64_t local_weight = _f.local_weight;
-          uint64_t r_ = _f.r_;
-          uint64_t r_0 = _f.r_0;
-          uint64_t r_1 = _f.r_1;
-          uint64_t r_2 = std::move(_result);
-          _result = ((((local_weight + r_) + r_0) + r_1) + r_2);
+          _result = ((((local_weight + _f._tmp4) + _f._tmp3) + _f._tmp2) +
+                     std::move(_result));
         }
       }
       return _result;
@@ -236,36 +228,36 @@ struct MemSafetyProbe17 {
         std::shared_ptr<qtree> a5;
       };
 
-      /// _Cont_QNode_1: saves [a20, a3, a30, a4, a40, a5, r_], resumes after
+      /// _Cont_QNode_1: saves [_tmp3, a20, a3, a30, a4, a40, a5], resumes after
       /// recursive call, then processes rest.
       struct _Cont_QNode_1 {
+        qtree _tmp3;
         uint64_t a20;
         uint64_t a3;
         std::shared_ptr<qtree> a30;
         std::shared_ptr<qtree> a4;
         std::shared_ptr<qtree> a40;
         std::shared_ptr<qtree> a5;
-        qtree r_;
       };
 
-      /// _Cont_QNode_2: saves [a20, a3, a40, a5, r_, r_0], resumes after
+      /// _Cont_QNode_2: saves [_tmp2, _tmp3, a20, a3, a40, a5], resumes after
       /// recursive call, then processes rest.
       struct _Cont_QNode_2 {
+        qtree _tmp2;
+        qtree _tmp3;
         uint64_t a20;
         uint64_t a3;
         std::shared_ptr<qtree> a40;
         std::shared_ptr<qtree> a5;
-        qtree r_;
-        qtree r_0;
       };
 
-      /// _Resume_QNode: saves [r_1, _s1, r_0, r_], resumes after recursive call
-      /// with _result.
+      /// _Resume_QNode: saves [_tmp1, _s1, _tmp2, _tmp3], resumes after
+      /// recursive call with _result.
       struct _Resume_QNode {
-        qtree r_1;
+        qtree _tmp1;
         uint64_t _s1;
-        qtree r_0;
-        qtree r_;
+        qtree _tmp2;
+        qtree _tmp3;
       };
 
       using _Frame = std::variant<_Enter, _Cont_QNode, _Cont_QNode_1,
@@ -308,10 +300,9 @@ struct MemSafetyProbe17 {
           std::shared_ptr<qtree> a4 = std::move(_f.a4);
           std::shared_ptr<qtree> a40 = std::move(_f.a40);
           std::shared_ptr<qtree> a5 = std::move(_f.a5);
-          qtree r_ = std::move(_result);
-          _stack.emplace_back(_Cont_QNode_1{a20, a3, std::move(a30),
-                                            std::move(a4), std::move(a40),
-                                            std::move(a5), std::move(r_)});
+          _stack.emplace_back(_Cont_QNode_1{std::move(_result), a20, a3,
+                                            std::move(a30), std::move(a4),
+                                            std::move(a40), std::move(a5)});
           _stack.emplace_back(_Enter{crane_raw(a2), *a10});
         } else if (std::holds_alternative<_Cont_QNode_1>(_frame)) {
           auto _f = std::move(std::get<_Cont_QNode_1>(_frame));
@@ -321,11 +312,9 @@ struct MemSafetyProbe17 {
           std::shared_ptr<qtree> a4 = std::move(_f.a4);
           std::shared_ptr<qtree> a40 = std::move(_f.a40);
           std::shared_ptr<qtree> a5 = std::move(_f.a5);
-          qtree r_ = std::move(_f.r_);
-          qtree r_0 = std::move(_result);
-          _stack.emplace_back(_Cont_QNode_2{a20, a3, std::move(a40),
-                                            std::move(a5), std::move(r_),
-                                            std::move(r_0)});
+          _stack.emplace_back(_Cont_QNode_2{std::move(_result),
+                                            std::move(_f._tmp3), a20, a3,
+                                            std::move(a40), std::move(a5)});
           _stack.emplace_back(_Enter{crane_raw(a4), *a30});
         } else if (std::holds_alternative<_Cont_QNode_2>(_frame)) {
           auto _f = std::move(std::get<_Cont_QNode_2>(_frame));
@@ -333,17 +322,15 @@ struct MemSafetyProbe17 {
           uint64_t a3 = _f.a3;
           std::shared_ptr<qtree> a40 = std::move(_f.a40);
           std::shared_ptr<qtree> a5 = std::move(_f.a5);
-          qtree r_ = std::move(_f.r_);
-          qtree r_0 = std::move(_f.r_0);
-          qtree r_1 = std::move(_result);
-          _stack.emplace_back(_Resume_QNode{std::move(r_1),
-                                            (a3 + std::move(a20)),
-                                            std::move(r_0), std::move(r_)});
+          _stack.emplace_back(
+              _Resume_QNode{std::move(_result), (a3 + std::move(a20)),
+                            std::move(_f._tmp2), std::move(_f._tmp3)});
           _stack.emplace_back(_Enter{crane_raw(a5), *a40});
         } else {
           auto _f = std::move(std::get<_Resume_QNode>(_frame));
-          _result = qtree::qnode(std::move(_f.r_), std::move(_f.r_0), _f._s1,
-                                 std::move(_f.r_1), std::move(_result));
+          _result =
+              qtree::qnode(std::move(_f._tmp3), std::move(_f._tmp2), _f._s1,
+                           std::move(_f._tmp1), std::move(_result));
         }
       }
       return _result;
@@ -367,31 +354,31 @@ struct MemSafetyProbe17 {
         std::shared_ptr<qtree> a3;
       };
 
-      /// _Cont_QNode_1: saves [a0, a1, a2, r_], resumes after recursive call,
-      /// then processes rest.
+      /// _Cont_QNode_1: saves [_tmp3, a0, a1, a2], resumes after recursive
+      /// call, then processes rest.
       struct _Cont_QNode_1 {
+        qtree _tmp3;
         std::shared_ptr<qtree> a0;
         std::shared_ptr<qtree> a1;
         uint64_t a2;
-        qtree r_;
       };
 
-      /// _Cont_QNode_2: saves [a0, a2, r_, r_0], resumes after recursive call,
-      /// then processes rest.
+      /// _Cont_QNode_2: saves [_tmp2, _tmp3, a0, a2], resumes after recursive
+      /// call, then processes rest.
       struct _Cont_QNode_2 {
+        qtree _tmp2;
+        qtree _tmp3;
         std::shared_ptr<qtree> a0;
         uint64_t a2;
-        qtree r_;
-        qtree r_0;
       };
 
-      /// _Resume_QNode: saves [r_1, a2, r_0, r_], resumes after recursive call
-      /// with _result.
+      /// _Resume_QNode: saves [_tmp1, a2, _tmp2, _tmp3], resumes after
+      /// recursive call with _result.
       struct _Resume_QNode {
-        qtree r_1;
+        qtree _tmp1;
         uint64_t a2;
-        qtree r_0;
-        qtree r_;
+        qtree _tmp2;
+        qtree _tmp3;
       };
 
       using _Frame = std::variant<_Enter, _Cont_QNode, _Cont_QNode_1,
@@ -422,34 +409,30 @@ struct MemSafetyProbe17 {
           std::shared_ptr<qtree> a1 = std::move(_f.a1);
           uint64_t a2 = _f.a2;
           std::shared_ptr<qtree> a3 = std::move(_f.a3);
-          qtree r_ = std::move(_result);
-          _stack.emplace_back(
-              _Cont_QNode_1{std::move(a0), std::move(a1), a2, std::move(r_)});
+          _stack.emplace_back(_Cont_QNode_1{std::move(_result), std::move(a0),
+                                            std::move(a1), a2});
           _stack.emplace_back(_Enter{crane_raw(a3)});
         } else if (std::holds_alternative<_Cont_QNode_1>(_frame)) {
           auto _f = std::move(std::get<_Cont_QNode_1>(_frame));
           std::shared_ptr<qtree> a0 = std::move(_f.a0);
           std::shared_ptr<qtree> a1 = std::move(_f.a1);
           uint64_t a2 = _f.a2;
-          qtree r_ = std::move(_f.r_);
-          qtree r_0 = std::move(_result);
-          _stack.emplace_back(
-              _Cont_QNode_2{std::move(a0), a2, std::move(r_), std::move(r_0)});
+          _stack.emplace_back(_Cont_QNode_2{
+              std::move(_result), std::move(_f._tmp3), std::move(a0), a2});
           _stack.emplace_back(_Enter{crane_raw(a1)});
         } else if (std::holds_alternative<_Cont_QNode_2>(_frame)) {
           auto _f = std::move(std::get<_Cont_QNode_2>(_frame));
           std::shared_ptr<qtree> a0 = std::move(_f.a0);
           uint64_t a2 = _f.a2;
-          qtree r_ = std::move(_f.r_);
-          qtree r_0 = std::move(_f.r_0);
-          qtree r_1 = std::move(_result);
-          _stack.emplace_back(
-              _Resume_QNode{std::move(r_1), a2, std::move(r_0), std::move(r_)});
+          _stack.emplace_back(_Resume_QNode{std::move(_result), a2,
+                                            std::move(_f._tmp2),
+                                            std::move(_f._tmp3)});
           _stack.emplace_back(_Enter{crane_raw(a0)});
         } else {
           auto _f = std::move(std::get<_Resume_QNode>(_frame));
-          _result = qtree::qnode(std::move(_f.r_), std::move(_f.r_0), _f.a2,
-                                 std::move(_f.r_1), std::move(_result));
+          _result =
+              qtree::qnode(std::move(_f._tmp3), std::move(_f._tmp2), _f.a2,
+                           std::move(_f._tmp1), std::move(_result));
         }
       }
       return _result;
@@ -471,28 +454,28 @@ struct MemSafetyProbe17 {
         std::shared_ptr<qtree> a4;
       };
 
-      /// _Cont_QNode_1: saves [a3, a4, r_], resumes after recursive call, then
-      /// processes rest.
+      /// _Cont_QNode_1: saves [_tmp4, a3, a4], resumes after recursive call,
+      /// then processes rest.
       struct _Cont_QNode_1 {
+        uint64_t _tmp4;
         std::shared_ptr<qtree> a3;
         std::shared_ptr<qtree> a4;
-        uint64_t r_;
       };
 
-      /// _Cont_QNode_2: saves [a4, r_, r_0], resumes after recursive call, then
-      /// processes rest.
-      struct _Cont_QNode_2 {
-        std::shared_ptr<qtree> a4;
-        uint64_t r_;
-        uint64_t r_0;
-      };
-
-      /// _Cont_QNode_3: saves [r_, r_0, r_1], resumes after recursive call,
+      /// _Cont_QNode_2: saves [_tmp3, _tmp4, a4], resumes after recursive call,
       /// then processes rest.
+      struct _Cont_QNode_2 {
+        uint64_t _tmp3;
+        uint64_t _tmp4;
+        std::shared_ptr<qtree> a4;
+      };
+
+      /// _Cont_QNode_3: saves [_tmp2, _tmp3, _tmp4], resumes after recursive
+      /// call, then processes rest.
       struct _Cont_QNode_3 {
-        uint64_t r_;
-        uint64_t r_0;
-        uint64_t r_1;
+        uint64_t _tmp2;
+        uint64_t _tmp3;
+        uint64_t _tmp4;
       };
 
       using _Frame = std::variant<_Enter, _Cont_QNode, _Cont_QNode_1,
@@ -522,32 +505,26 @@ struct MemSafetyProbe17 {
           std::shared_ptr<qtree> a1 = std::move(_f.a1);
           std::shared_ptr<qtree> a3 = std::move(_f.a3);
           std::shared_ptr<qtree> a4 = std::move(_f.a4);
-          uint64_t r_ = std::move(_result);
-          _stack.emplace_back(_Cont_QNode_1{std::move(a3), std::move(a4), r_});
+          _stack.emplace_back(
+              _Cont_QNode_1{std::move(_result), std::move(a3), std::move(a4)});
           _stack.emplace_back(_Enter{crane_raw(a1)});
         } else if (std::holds_alternative<_Cont_QNode_1>(_frame)) {
           auto _f = std::move(std::get<_Cont_QNode_1>(_frame));
           std::shared_ptr<qtree> a3 = std::move(_f.a3);
           std::shared_ptr<qtree> a4 = std::move(_f.a4);
-          uint64_t r_ = _f.r_;
-          uint64_t r_0 = std::move(_result);
-          _stack.emplace_back(_Cont_QNode_2{std::move(a4), r_, r_0});
+          _stack.emplace_back(
+              _Cont_QNode_2{std::move(_result), _f._tmp4, std::move(a4)});
           _stack.emplace_back(_Enter{crane_raw(a3)});
         } else if (std::holds_alternative<_Cont_QNode_2>(_frame)) {
           auto _f = std::move(std::get<_Cont_QNode_2>(_frame));
           std::shared_ptr<qtree> a4 = std::move(_f.a4);
-          uint64_t r_ = _f.r_;
-          uint64_t r_0 = _f.r_0;
-          uint64_t r_1 = std::move(_result);
-          _stack.emplace_back(_Cont_QNode_3{r_, r_0, r_1});
+          _stack.emplace_back(
+              _Cont_QNode_3{std::move(_result), _f._tmp3, _f._tmp4});
           _stack.emplace_back(_Enter{crane_raw(a4)});
         } else {
           auto _f = std::move(std::get<_Cont_QNode_3>(_frame));
-          uint64_t r_ = _f.r_;
-          uint64_t r_0 = _f.r_0;
-          uint64_t r_1 = _f.r_1;
-          uint64_t r_2 = std::move(_result);
-          _result = ((((UINT64_C(1) + r_) + r_0) + r_1) + r_2);
+          _result = ((((UINT64_C(1) + _f._tmp4) + _f._tmp3) + _f._tmp2) +
+                     std::move(_result));
         }
       }
       return _result;
@@ -680,31 +657,31 @@ struct MemSafetyProbe17 {
         std::shared_ptr<qtree> a4;
       };
 
-      /// _Cont_QNode_1: saves [a2, a3, a4, r_], resumes after recursive call,
-      /// then processes rest.
+      /// _Cont_QNode_1: saves [_tmp4, a2, a3, a4], resumes after recursive
+      /// call, then processes rest.
       struct _Cont_QNode_1 {
+        uint64_t _tmp4;
         uint64_t a2;
         std::shared_ptr<qtree> a3;
         std::shared_ptr<qtree> a4;
-        uint64_t r_;
       };
 
-      /// _Cont_QNode_2: saves [a2, a4, r_, r_0], resumes after recursive call,
-      /// then processes rest.
+      /// _Cont_QNode_2: saves [_tmp3, _tmp4, a2, a4], resumes after recursive
+      /// call, then processes rest.
       struct _Cont_QNode_2 {
+        uint64_t _tmp3;
+        uint64_t _tmp4;
         uint64_t a2;
         std::shared_ptr<qtree> a4;
-        uint64_t r_;
-        uint64_t r_0;
       };
 
-      /// _Cont_QNode_3: saves [a2, r_, r_0, r_1], resumes after recursive call,
-      /// then processes rest.
+      /// _Cont_QNode_3: saves [_tmp2, _tmp3, _tmp4, a2], resumes after
+      /// recursive call, then processes rest.
       struct _Cont_QNode_3 {
+        uint64_t _tmp2;
+        uint64_t _tmp3;
+        uint64_t _tmp4;
         uint64_t a2;
-        uint64_t r_;
-        uint64_t r_0;
-        uint64_t r_1;
       };
 
       using _Frame = std::variant<_Enter, _Cont_QNode, _Cont_QNode_1,
@@ -735,36 +712,29 @@ struct MemSafetyProbe17 {
           uint64_t a2 = _f.a2;
           std::shared_ptr<qtree> a3 = std::move(_f.a3);
           std::shared_ptr<qtree> a4 = std::move(_f.a4);
-          uint64_t r_ = std::move(_result);
-          _stack.emplace_back(
-              _Cont_QNode_1{a2, std::move(a3), std::move(a4), r_});
+          _stack.emplace_back(_Cont_QNode_1{std::move(_result), a2,
+                                            std::move(a3), std::move(a4)});
           _stack.emplace_back(_Enter{crane_raw(a1)});
         } else if (std::holds_alternative<_Cont_QNode_1>(_frame)) {
           auto _f = std::move(std::get<_Cont_QNode_1>(_frame));
           uint64_t a2 = _f.a2;
           std::shared_ptr<qtree> a3 = std::move(_f.a3);
           std::shared_ptr<qtree> a4 = std::move(_f.a4);
-          uint64_t r_ = _f.r_;
-          uint64_t r_0 = std::move(_result);
-          _stack.emplace_back(_Cont_QNode_2{a2, std::move(a4), r_, r_0});
+          _stack.emplace_back(
+              _Cont_QNode_2{std::move(_result), _f._tmp4, a2, std::move(a4)});
           _stack.emplace_back(_Enter{crane_raw(a3)});
         } else if (std::holds_alternative<_Cont_QNode_2>(_frame)) {
           auto _f = std::move(std::get<_Cont_QNode_2>(_frame));
           uint64_t a2 = _f.a2;
           std::shared_ptr<qtree> a4 = std::move(_f.a4);
-          uint64_t r_ = _f.r_;
-          uint64_t r_0 = _f.r_0;
-          uint64_t r_1 = std::move(_result);
-          _stack.emplace_back(_Cont_QNode_3{a2, r_, r_0, r_1});
+          _stack.emplace_back(
+              _Cont_QNode_3{std::move(_result), _f._tmp3, _f._tmp4, a2});
           _stack.emplace_back(_Enter{crane_raw(a4)});
         } else {
           auto _f = std::move(std::get<_Cont_QNode_3>(_frame));
           uint64_t a2 = _f.a2;
-          uint64_t r_ = _f.r_;
-          uint64_t r_0 = _f.r_0;
-          uint64_t r_1 = _f.r_1;
-          uint64_t r_2 = std::move(_result);
-          _result = ((((r_ + r_0) + a2) + r_1) + r_2);
+          _result =
+              ((((_f._tmp4 + _f._tmp3) + a2) + _f._tmp2) + std::move(_result));
         }
       }
       return _result;
@@ -791,40 +761,40 @@ struct MemSafetyProbe17 {
         std::shared_ptr<qtree> a4;
       };
 
-      /// _Cont_QNode_1: saves [a0, a1, a2, a3, a4, r_], resumes after recursive
-      /// call, then processes rest.
+      /// _Cont_QNode_1: saves [_tmp4, a0, a1, a2, a3, a4], resumes after
+      /// recursive call, then processes rest.
       struct _Cont_QNode_1 {
+        T1 _tmp4;
         std::shared_ptr<qtree> a0;
         std::shared_ptr<qtree> a1;
         uint64_t a2;
         std::shared_ptr<qtree> a3;
         std::shared_ptr<qtree> a4;
-        T1 r_;
       };
 
-      /// _Cont_QNode_2: saves [a0, a1, a2, a3, a4, r_, r_0], resumes after
+      /// _Cont_QNode_2: saves [_tmp3, _tmp4, a0, a1, a2, a3, a4], resumes after
       /// recursive call, then processes rest.
       struct _Cont_QNode_2 {
+        T1 _tmp3;
+        T1 _tmp4;
         std::shared_ptr<qtree> a0;
         std::shared_ptr<qtree> a1;
         uint64_t a2;
         std::shared_ptr<qtree> a3;
         std::shared_ptr<qtree> a4;
-        T1 r_;
-        T1 r_0;
       };
 
-      /// _Cont_QNode_3: saves [a0, a1, a2, a3, a4, r_, r_0, r_1], resumes after
-      /// recursive call, then processes rest.
+      /// _Cont_QNode_3: saves [_tmp2, _tmp3, _tmp4, a0, a1, a2, a3, a4],
+      /// resumes after recursive call, then processes rest.
       struct _Cont_QNode_3 {
+        T1 _tmp2;
+        T1 _tmp3;
+        T1 _tmp4;
         std::shared_ptr<qtree> a0;
         std::shared_ptr<qtree> a1;
         uint64_t a2;
         std::shared_ptr<qtree> a3;
         std::shared_ptr<qtree> a4;
-        T1 r_;
-        T1 r_0;
-        T1 r_1;
       };
 
       using _Frame = std::variant<_Enter, _Cont_QNode, _Cont_QNode_1,
@@ -856,10 +826,9 @@ struct MemSafetyProbe17 {
           uint64_t a2 = _f.a2;
           std::shared_ptr<qtree> a3 = std::move(_f.a3);
           std::shared_ptr<qtree> a4 = std::move(_f.a4);
-          T1 r_ = std::move(_result);
-          _stack.emplace_back(_Cont_QNode_1{std::move(a0), a1, a2,
-                                            std::move(a3), std::move(a4),
-                                            std::move(r_)});
+          _stack.emplace_back(_Cont_QNode_1{std::move(_result), std::move(a0),
+                                            a1, a2, std::move(a3),
+                                            std::move(a4)});
           _stack.emplace_back(_Enter{crane_raw(a1)});
         } else if (std::holds_alternative<_Cont_QNode_1>(_frame)) {
           auto _f = std::move(std::get<_Cont_QNode_1>(_frame));
@@ -868,11 +837,9 @@ struct MemSafetyProbe17 {
           uint64_t a2 = _f.a2;
           std::shared_ptr<qtree> a3 = std::move(_f.a3);
           std::shared_ptr<qtree> a4 = std::move(_f.a4);
-          auto r_ = std::move(_f.r_);
-          T1 r_0 = std::move(_result);
-          _stack.emplace_back(_Cont_QNode_2{std::move(a0), std::move(a1), a2,
-                                            a3, std::move(a4), std::move(r_),
-                                            std::move(r_0)});
+          _stack.emplace_back(_Cont_QNode_2{
+              std::move(_result), std::move(_f._tmp4), std::move(a0),
+              std::move(a1), a2, a3, std::move(a4)});
           _stack.emplace_back(_Enter{crane_raw(a3)});
         } else if (std::holds_alternative<_Cont_QNode_2>(_frame)) {
           auto _f = std::move(std::get<_Cont_QNode_2>(_frame));
@@ -881,12 +848,9 @@ struct MemSafetyProbe17 {
           uint64_t a2 = _f.a2;
           std::shared_ptr<qtree> a3 = std::move(_f.a3);
           std::shared_ptr<qtree> a4 = std::move(_f.a4);
-          auto r_ = std::move(_f.r_);
-          auto r_0 = std::move(_f.r_0);
-          T1 r_1 = std::move(_result);
-          _stack.emplace_back(_Cont_QNode_3{std::move(a0), std::move(a1), a2,
-                                            std::move(a3), a4, std::move(r_),
-                                            std::move(r_0), std::move(r_1)});
+          _stack.emplace_back(_Cont_QNode_3{
+              std::move(_result), std::move(_f._tmp3), std::move(_f._tmp4),
+              std::move(a0), std::move(a1), a2, std::move(a3), a4});
           _stack.emplace_back(_Enter{crane_raw(a4)});
         } else {
           auto _f = std::move(std::get<_Cont_QNode_3>(_frame));
@@ -895,12 +859,8 @@ struct MemSafetyProbe17 {
           uint64_t a2 = _f.a2;
           std::shared_ptr<qtree> a3 = std::move(_f.a3);
           std::shared_ptr<qtree> a4 = std::move(_f.a4);
-          auto r_ = std::move(_f.r_);
-          auto r_0 = std::move(_f.r_0);
-          auto r_1 = std::move(_f.r_1);
-          T1 r_2 = std::move(_result);
-          _result = f0(*a0, std::move(r_), *a1, std::move(r_0), a2, *a3,
-                       std::move(r_1), *a4, std::move(r_2));
+          _result = f0(*a0, std::move(_f._tmp4), *a1, std::move(_f._tmp3), a2,
+                       *a3, std::move(_f._tmp2), *a4, std::move(_result));
         }
       }
       return _result;
@@ -927,40 +887,40 @@ struct MemSafetyProbe17 {
         std::shared_ptr<qtree> a4;
       };
 
-      /// _Cont_QNode_1: saves [a0, a1, a2, a3, a4, r_], resumes after recursive
-      /// call, then processes rest.
+      /// _Cont_QNode_1: saves [_tmp4, a0, a1, a2, a3, a4], resumes after
+      /// recursive call, then processes rest.
       struct _Cont_QNode_1 {
+        T1 _tmp4;
         std::shared_ptr<qtree> a0;
         std::shared_ptr<qtree> a1;
         uint64_t a2;
         std::shared_ptr<qtree> a3;
         std::shared_ptr<qtree> a4;
-        T1 r_;
       };
 
-      /// _Cont_QNode_2: saves [a0, a1, a2, a3, a4, r_, r_0], resumes after
+      /// _Cont_QNode_2: saves [_tmp3, _tmp4, a0, a1, a2, a3, a4], resumes after
       /// recursive call, then processes rest.
       struct _Cont_QNode_2 {
+        T1 _tmp3;
+        T1 _tmp4;
         std::shared_ptr<qtree> a0;
         std::shared_ptr<qtree> a1;
         uint64_t a2;
         std::shared_ptr<qtree> a3;
         std::shared_ptr<qtree> a4;
-        T1 r_;
-        T1 r_0;
       };
 
-      /// _Cont_QNode_3: saves [a0, a1, a2, a3, a4, r_, r_0, r_1], resumes after
-      /// recursive call, then processes rest.
+      /// _Cont_QNode_3: saves [_tmp2, _tmp3, _tmp4, a0, a1, a2, a3, a4],
+      /// resumes after recursive call, then processes rest.
       struct _Cont_QNode_3 {
+        T1 _tmp2;
+        T1 _tmp3;
+        T1 _tmp4;
         std::shared_ptr<qtree> a0;
         std::shared_ptr<qtree> a1;
         uint64_t a2;
         std::shared_ptr<qtree> a3;
         std::shared_ptr<qtree> a4;
-        T1 r_;
-        T1 r_0;
-        T1 r_1;
       };
 
       using _Frame = std::variant<_Enter, _Cont_QNode, _Cont_QNode_1,
@@ -992,10 +952,9 @@ struct MemSafetyProbe17 {
           uint64_t a2 = _f.a2;
           std::shared_ptr<qtree> a3 = std::move(_f.a3);
           std::shared_ptr<qtree> a4 = std::move(_f.a4);
-          T1 r_ = std::move(_result);
-          _stack.emplace_back(_Cont_QNode_1{std::move(a0), a1, a2,
-                                            std::move(a3), std::move(a4),
-                                            std::move(r_)});
+          _stack.emplace_back(_Cont_QNode_1{std::move(_result), std::move(a0),
+                                            a1, a2, std::move(a3),
+                                            std::move(a4)});
           _stack.emplace_back(_Enter{crane_raw(a1)});
         } else if (std::holds_alternative<_Cont_QNode_1>(_frame)) {
           auto _f = std::move(std::get<_Cont_QNode_1>(_frame));
@@ -1004,11 +963,9 @@ struct MemSafetyProbe17 {
           uint64_t a2 = _f.a2;
           std::shared_ptr<qtree> a3 = std::move(_f.a3);
           std::shared_ptr<qtree> a4 = std::move(_f.a4);
-          auto r_ = std::move(_f.r_);
-          T1 r_0 = std::move(_result);
-          _stack.emplace_back(_Cont_QNode_2{std::move(a0), std::move(a1), a2,
-                                            a3, std::move(a4), std::move(r_),
-                                            std::move(r_0)});
+          _stack.emplace_back(_Cont_QNode_2{
+              std::move(_result), std::move(_f._tmp4), std::move(a0),
+              std::move(a1), a2, a3, std::move(a4)});
           _stack.emplace_back(_Enter{crane_raw(a3)});
         } else if (std::holds_alternative<_Cont_QNode_2>(_frame)) {
           auto _f = std::move(std::get<_Cont_QNode_2>(_frame));
@@ -1017,12 +974,9 @@ struct MemSafetyProbe17 {
           uint64_t a2 = _f.a2;
           std::shared_ptr<qtree> a3 = std::move(_f.a3);
           std::shared_ptr<qtree> a4 = std::move(_f.a4);
-          auto r_ = std::move(_f.r_);
-          auto r_0 = std::move(_f.r_0);
-          T1 r_1 = std::move(_result);
-          _stack.emplace_back(_Cont_QNode_3{std::move(a0), std::move(a1), a2,
-                                            std::move(a3), a4, std::move(r_),
-                                            std::move(r_0), std::move(r_1)});
+          _stack.emplace_back(_Cont_QNode_3{
+              std::move(_result), std::move(_f._tmp3), std::move(_f._tmp4),
+              std::move(a0), std::move(a1), a2, std::move(a3), a4});
           _stack.emplace_back(_Enter{crane_raw(a4)});
         } else {
           auto _f = std::move(std::get<_Cont_QNode_3>(_frame));
@@ -1031,12 +985,8 @@ struct MemSafetyProbe17 {
           uint64_t a2 = _f.a2;
           std::shared_ptr<qtree> a3 = std::move(_f.a3);
           std::shared_ptr<qtree> a4 = std::move(_f.a4);
-          auto r_ = std::move(_f.r_);
-          auto r_0 = std::move(_f.r_0);
-          auto r_1 = std::move(_f.r_1);
-          T1 r_2 = std::move(_result);
-          _result = f0(*a0, std::move(r_), *a1, std::move(r_0), a2, *a3,
-                       std::move(r_1), *a4, std::move(r_2));
+          _result = f0(*a0, std::move(_f._tmp4), *a1, std::move(_f._tmp3), a2,
+                       *a3, std::move(_f._tmp2), *a4, std::move(_result));
         }
       }
       return _result;
@@ -1225,8 +1175,7 @@ struct MemSafetyProbe17 {
           auto _f = std::move(std::get<_Cont_Mycons>(_frame));
           auto a0 = std::move(_f.a0);
           std::shared_ptr<mylist<A>> a1 = std::move(_f.a1);
-          T1 r_ = std::move(_result);
-          _result = f0(a0, *a1, std::move(r_));
+          _result = f0(a0, *a1, std::move(_result));
         }
       }
       return _result;
@@ -1273,8 +1222,7 @@ struct MemSafetyProbe17 {
           auto _f = std::move(std::get<_Cont_Mycons>(_frame));
           auto a0 = std::move(_f.a0);
           std::shared_ptr<mylist<A>> a1 = std::move(_f.a1);
-          T1 r_ = std::move(_result);
-          _result = f0(a0, *a1, std::move(r_));
+          _result = f0(a0, *a1, std::move(_result));
         }
       }
       return _result;

@@ -51,9 +51,7 @@ LoopifyNontailPair::countdown(
     } else {
       auto _f = std::move(std::get<_Cont_x>(_frame));
       uint64_t x = _f.x;
-      std::pair<std::pair<uint64_t, List<uint64_t>>, List<uint64_t>> r_ =
-          std::move(_result);
-      auto [p0, rest] = std::move(r_);
+      auto [p0, rest] = std::move(_result);
       auto [cnt, acc] = std::move(p0);
       _result = std::make_pair(
           std::make_pair((cnt + 1), List<uint64_t>::cons(x, std::move(acc))),

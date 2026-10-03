@@ -82,8 +82,7 @@ List<uint64_t> LoopifyListGeneration::cycle(
       }
     } else {
       auto _f = std::move(std::get<_Cont_n_>(_frame));
-      List<uint64_t> r_ = std::move(_result);
-      _result = l.app(std::move(r_));
+      _result = l.app(std::move(_result));
     }
   }
   return _result;
@@ -150,8 +149,7 @@ List<uint64_t> LoopifyListGeneration::replicate_list(
     } else {
       auto _f = std::move(std::get<_Cont_n>(_frame));
       List<uint64_t> rep = std::move(_f.rep);
-      List<uint64_t> r_ = std::move(_result);
-      _result = std::move(rep).app(std::move(r_));
+      _result = std::move(rep).app(std::move(_result));
     }
   }
   return _result;

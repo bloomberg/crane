@@ -308,8 +308,7 @@ struct LoopifyListGenerators {
             auto _f = std::move(std::get<_Cont_idx_>(_frame));
             crane::fn<uint64_t(uint64_t)> f = std::move(_f.f);
             uint64_t idx = _f.idx;
-            List<uint64_t> r_ = std::move(_result);
-            _result = std::move(r_).app(
+            _result = std::move(_result).app(
                 List<uint64_t>::cons(f(idx), List<uint64_t>::nil()));
           }
         }

@@ -147,13 +147,13 @@ struct ClosureCaptureMatch {
         std::shared_ptr<tree> a2;
       };
 
-      /// _Cont_Node_1: saves [a0, a1, a2, r_], resumes after recursive call,
+      /// _Cont_Node_1: saves [_tmp2, a0, a1, a2], resumes after recursive call,
       /// then processes rest.
       struct _Cont_Node_1 {
+        T1 _tmp2;
         std::shared_ptr<tree> a0;
         uint64_t a1;
         std::shared_ptr<tree> a2;
-        T1 r_;
       };
 
       using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
@@ -180,18 +180,15 @@ struct ClosureCaptureMatch {
           std::shared_ptr<tree> a0 = std::move(_f.a0);
           uint64_t a1 = _f.a1;
           std::shared_ptr<tree> a2 = std::move(_f.a2);
-          T1 r_ = std::move(_result);
           _stack.emplace_back(
-              _Cont_Node_1{std::move(a0), a1, a2, std::move(r_)});
+              _Cont_Node_1{std::move(_result), std::move(a0), a1, a2});
           _stack.emplace_back(_Enter{crane_raw(a2)});
         } else {
           auto _f = std::move(std::get<_Cont_Node_1>(_frame));
           std::shared_ptr<tree> a0 = std::move(_f.a0);
           uint64_t a1 = _f.a1;
           std::shared_ptr<tree> a2 = std::move(_f.a2);
-          auto r_ = std::move(_f.r_);
-          T1 r_0 = std::move(_result);
-          _result = f0(*a0, std::move(r_), a1, *a2, std::move(r_0));
+          _result = f0(*a0, std::move(_f._tmp2), a1, *a2, std::move(_result));
         }
       }
       return _result;
@@ -216,13 +213,13 @@ struct ClosureCaptureMatch {
         std::shared_ptr<tree> a2;
       };
 
-      /// _Cont_Node_1: saves [a0, a1, a2, r_], resumes after recursive call,
+      /// _Cont_Node_1: saves [_tmp2, a0, a1, a2], resumes after recursive call,
       /// then processes rest.
       struct _Cont_Node_1 {
+        T1 _tmp2;
         std::shared_ptr<tree> a0;
         uint64_t a1;
         std::shared_ptr<tree> a2;
-        T1 r_;
       };
 
       using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
@@ -249,18 +246,15 @@ struct ClosureCaptureMatch {
           std::shared_ptr<tree> a0 = std::move(_f.a0);
           uint64_t a1 = _f.a1;
           std::shared_ptr<tree> a2 = std::move(_f.a2);
-          T1 r_ = std::move(_result);
           _stack.emplace_back(
-              _Cont_Node_1{std::move(a0), a1, a2, std::move(r_)});
+              _Cont_Node_1{std::move(_result), std::move(a0), a1, a2});
           _stack.emplace_back(_Enter{crane_raw(a2)});
         } else {
           auto _f = std::move(std::get<_Cont_Node_1>(_frame));
           std::shared_ptr<tree> a0 = std::move(_f.a0);
           uint64_t a1 = _f.a1;
           std::shared_ptr<tree> a2 = std::move(_f.a2);
-          auto r_ = std::move(_f.r_);
-          T1 r_0 = std::move(_result);
-          _result = f0(*a0, std::move(r_), a1, *a2, std::move(r_0));
+          _result = f0(*a0, std::move(_f._tmp2), a1, *a2, std::move(_result));
         }
       }
       return _result;

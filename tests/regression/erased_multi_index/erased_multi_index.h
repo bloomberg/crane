@@ -150,8 +150,7 @@ struct ErasedMultiIndex {
           }
         } else {
           auto _f = std::move(std::get<_Cont_HCons>(_frame));
-          uint64_t r_ = std::move(_result);
-          _result = (UINT64_C(1) + r_);
+          _result = (UINT64_C(1) + std::move(_result));
         }
       }
       return _result;
@@ -202,8 +201,7 @@ struct ErasedMultiIndex {
           crane::obj a0 = std::move(_f.a0);
           std::shared_ptr<hlist> a1 = std::move(_f.a1);
           std::decay_t<F1> f0 = std::move(_f.f0);
-          T1 r_ = std::move(_result);
-          _result = f0(a0, *a1, std::move(r_));
+          _result = f0(a0, *a1, std::move(_result));
         }
       }
       return _result;
@@ -254,8 +252,7 @@ struct ErasedMultiIndex {
           crane::obj a0 = std::move(_f.a0);
           std::shared_ptr<hlist> a1 = std::move(_f.a1);
           std::decay_t<F1> f0 = std::move(_f.f0);
-          T1 r_ = std::move(_result);
-          _result = f0(a0, *a1, std::move(r_));
+          _result = f0(a0, *a1, std::move(_result));
         }
       }
       return _result;

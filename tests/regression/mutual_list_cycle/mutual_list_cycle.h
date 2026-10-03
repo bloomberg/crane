@@ -263,9 +263,8 @@ inline Nat Tree::tree_size() const {
         return Nat::o();
       } else {
         const auto &[a1, a2] = std::get<typename List<Branch>::Cons>(l.v());
-        Nat r_ = a1.branch_size();
-        Nat r_0 = _self_branches_size(_self_branches_size, *a2);
-        return std::move(r_).add(std::move(r_0));
+        return a1.branch_size().add(
+            _self_branches_size(_self_branches_size, *a2));
       }
     };
     auto branches_size = [&](const List<Branch> &l) -> Nat {

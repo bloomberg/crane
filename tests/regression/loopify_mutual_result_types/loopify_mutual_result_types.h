@@ -246,12 +246,12 @@ struct LoopifyMutualResultTypes {
       const e *b0;
     };
 
-    /// _Cont_Add_1: saves [a0, b0, r_], resumes after recursive call, then
+    /// _Cont_Add_1: saves [_tmp2, a0, b0], resumes after recursive call, then
     /// processes rest.
     struct _Cont_Add_1 {
+      T1 _tmp2;
       std::shared_ptr<e> a0;
       const e *b0;
-      T1 r_;
     };
 
     using _Frame = std::variant<_Enter, _Cont_Add, _Cont_Add_1>;
@@ -280,16 +280,14 @@ struct LoopifyMutualResultTypes {
         auto _f = std::move(std::get<_Cont_Add>(_frame));
         std::shared_ptr<e> a0 = std::move(_f.a0);
         const e &b0 = *_f.b0;
-        T1 r_ = std::move(_result);
-        _stack.emplace_back(_Cont_Add_1{std::move(a0), &b0, std::move(r_)});
+        _stack.emplace_back(
+            _Cont_Add_1{std::move(_result), std::move(a0), &b0});
         _stack.emplace_back(_Enter{&b0});
       } else {
         auto _f = std::move(std::get<_Cont_Add_1>(_frame));
         std::shared_ptr<e> a0 = std::move(_f.a0);
         const e &b0 = *_f.b0;
-        auto r_ = std::move(_f.r_);
-        T1 r_0 = std::move(_result);
-        _result = f0(*a0, std::move(r_), b0, std::move(r_0));
+        _result = f0(*a0, std::move(_f._tmp2), b0, std::move(_result));
       }
     }
     return _result;
@@ -314,12 +312,12 @@ struct LoopifyMutualResultTypes {
       const e *b0;
     };
 
-    /// _Cont_Add_1: saves [a0, b0, r_], resumes after recursive call, then
+    /// _Cont_Add_1: saves [_tmp2, a0, b0], resumes after recursive call, then
     /// processes rest.
     struct _Cont_Add_1 {
+      T1 _tmp2;
       std::shared_ptr<e> a0;
       const e *b0;
-      T1 r_;
     };
 
     using _Frame = std::variant<_Enter, _Cont_Add, _Cont_Add_1>;
@@ -348,16 +346,14 @@ struct LoopifyMutualResultTypes {
         auto _f = std::move(std::get<_Cont_Add>(_frame));
         std::shared_ptr<e> a0 = std::move(_f.a0);
         const e &b0 = *_f.b0;
-        T1 r_ = std::move(_result);
-        _stack.emplace_back(_Cont_Add_1{std::move(a0), &b0, std::move(r_)});
+        _stack.emplace_back(
+            _Cont_Add_1{std::move(_result), std::move(a0), &b0});
         _stack.emplace_back(_Enter{&b0});
       } else {
         auto _f = std::move(std::get<_Cont_Add_1>(_frame));
         std::shared_ptr<e> a0 = std::move(_f.a0);
         const e &b0 = *_f.b0;
-        auto r_ = std::move(_f.r_);
-        T1 r_0 = std::move(_result);
-        _result = f0(*a0, std::move(r_), b0, std::move(r_0));
+        _result = f0(*a0, std::move(_f._tmp2), b0, std::move(_result));
       }
     }
     return _result;
@@ -381,12 +377,12 @@ struct LoopifyMutualResultTypes {
       const md *b0;
     };
 
-    /// _Cont_MPair_1: saves [a0, b0, r_], resumes after recursive call, then
+    /// _Cont_MPair_1: saves [_tmp2, a0, b0], resumes after recursive call, then
     /// processes rest.
     struct _Cont_MPair_1 {
+      T1 _tmp2;
       std::shared_ptr<md> a0;
       const md *b0;
-      T1 r_;
     };
 
     using _Frame = std::variant<_Enter, _Cont_MPair, _Cont_MPair_1>;
@@ -414,16 +410,14 @@ struct LoopifyMutualResultTypes {
         auto _f = std::move(std::get<_Cont_MPair>(_frame));
         std::shared_ptr<md> a0 = std::move(_f.a0);
         const md &b0 = *_f.b0;
-        T1 r_ = std::move(_result);
-        _stack.emplace_back(_Cont_MPair_1{std::move(a0), &b0, std::move(r_)});
+        _stack.emplace_back(
+            _Cont_MPair_1{std::move(_result), std::move(a0), &b0});
         _stack.emplace_back(_Enter{&b0});
       } else {
         auto _f = std::move(std::get<_Cont_MPair_1>(_frame));
         std::shared_ptr<md> a0 = std::move(_f.a0);
         const md &b0 = *_f.b0;
-        auto r_ = std::move(_f.r_);
-        T1 r_0 = std::move(_result);
-        _result = f1(*a0, std::move(r_), b0, std::move(r_0));
+        _result = f1(*a0, std::move(_f._tmp2), b0, std::move(_result));
       }
     }
     return _result;
@@ -447,12 +441,12 @@ struct LoopifyMutualResultTypes {
       const md *b0;
     };
 
-    /// _Cont_MPair_1: saves [a0, b0, r_], resumes after recursive call, then
+    /// _Cont_MPair_1: saves [_tmp2, a0, b0], resumes after recursive call, then
     /// processes rest.
     struct _Cont_MPair_1 {
+      T1 _tmp2;
       std::shared_ptr<md> a0;
       const md *b0;
-      T1 r_;
     };
 
     using _Frame = std::variant<_Enter, _Cont_MPair, _Cont_MPair_1>;
@@ -480,16 +474,14 @@ struct LoopifyMutualResultTypes {
         auto _f = std::move(std::get<_Cont_MPair>(_frame));
         std::shared_ptr<md> a0 = std::move(_f.a0);
         const md &b0 = *_f.b0;
-        T1 r_ = std::move(_result);
-        _stack.emplace_back(_Cont_MPair_1{std::move(a0), &b0, std::move(r_)});
+        _stack.emplace_back(
+            _Cont_MPair_1{std::move(_result), std::move(a0), &b0});
         _stack.emplace_back(_Enter{&b0});
       } else {
         auto _f = std::move(std::get<_Cont_MPair_1>(_frame));
         std::shared_ptr<md> a0 = std::move(_f.a0);
         const md &b0 = *_f.b0;
-        auto r_ = std::move(_f.r_);
-        T1 r_0 = std::move(_result);
-        _result = f1(*a0, std::move(r_), b0, std::move(r_0));
+        _result = f1(*a0, std::move(_f._tmp2), b0, std::move(_result));
       }
     }
     return _result;

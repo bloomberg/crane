@@ -136,8 +136,7 @@ struct LoopifyPatterns {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         auto a0 = std::move(_f.a0);
         std::shared_ptr<list<T1>> a1 = std::move(_f.a1);
-        T2 r_ = std::move(_result);
-        _result = f0(a0, *a1, std::move(r_));
+        _result = f0(a0, *a1, std::move(_result));
       }
     }
     return _result;
@@ -183,8 +182,7 @@ struct LoopifyPatterns {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         auto a0 = std::move(_f.a0);
         std::shared_ptr<list<T1>> a1 = std::move(_f.a1);
-        T2 r_ = std::move(_result);
-        _result = f0(a0, *a1, std::move(r_));
+        _result = f0(a0, *a1, std::move(_result));
       }
     }
     return _result;
@@ -375,10 +373,9 @@ struct LoopifyPatterns {
         std::shared_ptr<list<T1>> a1 = std::move(_f.a1);
         crane::fn<list<list<T1>>(list<list<T1>>)> map_cons_h =
             std::move(_f.map_cons_h);
-        list<list<T1>> r_ = std::move(_result);
         _result =
             list<list<T1>>::cons(list<T1>::cons(x, list<T1>::cons(a0, *a1)),
-                                 map_cons_h(std::move(r_)));
+                                 map_cons_h(std::move(_result)));
       }
     }
     return _result;
@@ -549,9 +546,7 @@ struct LoopifyPatterns {
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
-        std::pair<std::pair<list<uint64_t>, list<uint64_t>>, list<uint64_t>>
-            r_ = std::move(_result);
-        auto [p0, cs] = std::move(r_);
+        auto [p0, cs] = std::move(_result);
         auto [as_, bs] = std::move(p0);
         if (p(a0)) {
           _result = std::make_pair(

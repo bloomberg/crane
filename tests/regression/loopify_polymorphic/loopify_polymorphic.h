@@ -149,8 +149,7 @@ struct LoopifyPolymorphic {
         }
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
-        uint64_t r_ = std::move(_result);
-        _result = (UINT64_C(1) + r_);
+        _result = (UINT64_C(1) + std::move(_result));
       }
     }
     return _result;
@@ -192,8 +191,7 @@ struct LoopifyPolymorphic {
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         auto a0 = std::move(_f.a0);
-        List<T1> r_ = std::move(_result);
-        _result = std::move(r_).app(List<T1>::cons(a0, List<T1>::nil()));
+        _result = std::move(_result).app(List<T1>::cons(a0, List<T1>::nil()));
       }
     }
     return _result;
@@ -438,8 +436,7 @@ struct LoopifyPolymorphic {
         auto _f = std::move(std::get<_Cont_a>(_frame));
         auto a = std::move(_f.a);
         auto b = std::move(_f.b);
-        std::pair<List<T1>, List<T2>> r_ = std::move(_result);
-        auto [as_, bs] = std::move(r_);
+        auto [as_, bs] = std::move(_result);
         _result = std::make_pair(List<T1>::cons(a, std::move(as_)),
                                  List<T2>::cons(b, std::move(bs)));
       }
@@ -485,8 +482,7 @@ struct LoopifyPolymorphic {
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         auto a0 = std::move(_f.a0);
-        std::pair<List<T1>, List<T1>> r_ = std::move(_result);
-        auto [trues, falses] = std::move(r_);
+        auto [trues, falses] = std::move(_result);
         if (p(a0)) {
           _result = std::make_pair(List<T1>::cons(a0, std::move(trues)),
                                    std::move(falses));

@@ -127,8 +127,7 @@ public:
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         auto a0 = std::move(_f.a0);
-        List<A> r_ = std::move(_result);
-        _result = std::move(r_).app(List<A>::cons(a0, List<A>::nil()));
+        _result = std::move(_result).app(List<A>::cons(a0, List<A>::nil()));
       }
     }
     return _result;

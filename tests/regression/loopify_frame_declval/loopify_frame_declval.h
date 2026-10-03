@@ -133,10 +133,9 @@ public:
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         auto a0 = std::move(_f.a0);
-        List<std::pair<A, T1>> r_ = std::move(_result);
         _result = l_.template map<std::pair<A, T1>>([=](const T1 &y) {
                       return std::make_pair(a0, y);
-                    }).app(std::move(r_));
+                    }).app(std::move(_result));
       }
     }
     return _result;

@@ -23,9 +23,9 @@ LoopifyMutualResultTypes::e LoopifyMutualResultTypes::dbl_e(
     std::shared_ptr<LoopifyMutualResultTypes::e> b0;
   };
 
-  /// _Resume_Add: saves [r_], resumes after recursive call with _result.
+  /// _Resume_Add: saves [_tmp1], resumes after recursive call with _result.
   struct _Resume_Add {
-    LoopifyMutualResultTypes::e r_;
+    LoopifyMutualResultTypes::e _tmp1;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Add, _Resume_Add>;
@@ -69,20 +69,19 @@ LoopifyMutualResultTypes::e LoopifyMutualResultTypes::dbl_e(
             const auto &[_inl_a0, _inl_b0] =
                 std::get<typename LoopifyMutualResultTypes::md::MPair>(
                     _inl_m.v());
-            LoopifyMutualResultTypes::md _inl_r_ = dbl_md(*_inl_a0);
-            return md::mpair(std::move(_inl_r_), dbl_md(*_inl_b0));
+            LoopifyMutualResultTypes::md _inl__tmp1 = dbl_md(*_inl_a0);
+            return md::mpair(std::move(_inl__tmp1), dbl_md(*_inl_b0));
           }
         }(*m0));
       }
     } else if (std::holds_alternative<_Cont_Add>(_frame)) {
       auto _f = std::move(std::get<_Cont_Add>(_frame));
       std::shared_ptr<LoopifyMutualResultTypes::e> b0 = std::move(_f.b0);
-      LoopifyMutualResultTypes::e r_ = std::move(_result);
-      _stack.emplace_back(_Resume_Add{std::move(r_)});
+      _stack.emplace_back(_Resume_Add{std::move(_result)});
       _stack.emplace_back(_Enter{*b0});
     } else {
       auto _f = std::move(std::get<_Resume_Add>(_frame));
-      _result = e::add(std::move(_f.r_), std::move(_result));
+      _result = e::add(std::move(_f._tmp1), std::move(_result));
     }
   }
   return _result;
@@ -102,9 +101,9 @@ LoopifyMutualResultTypes::md LoopifyMutualResultTypes::dbl_md(
     std::shared_ptr<LoopifyMutualResultTypes::md> b0;
   };
 
-  /// _Resume_MPair: saves [r_], resumes after recursive call with _result.
+  /// _Resume_MPair: saves [_tmp1], resumes after recursive call with _result.
   struct _Resume_MPair {
-    LoopifyMutualResultTypes::md r_;
+    LoopifyMutualResultTypes::md _tmp1;
   };
 
   using _Frame = std::variant<_Enter, _Cont_MPair, _Resume_MPair>;
@@ -138,8 +137,8 @@ LoopifyMutualResultTypes::md LoopifyMutualResultTypes::dbl_md(
                          _inl_x.v())) {
             const auto &[_inl_a0, _inl_b0] =
                 std::get<typename LoopifyMutualResultTypes::e::Add>(_inl_x.v());
-            LoopifyMutualResultTypes::e _inl_r_ = dbl_e(*_inl_a0);
-            return e::add(std::move(_inl_r_), dbl_e(*_inl_b0));
+            LoopifyMutualResultTypes::e _inl__tmp1 = dbl_e(*_inl_a0);
+            return e::add(std::move(_inl__tmp1), dbl_e(*_inl_b0));
           } else {
             const auto &[_inl_m0] =
                 std::get<typename LoopifyMutualResultTypes::e::Meta>(
@@ -156,12 +155,11 @@ LoopifyMutualResultTypes::md LoopifyMutualResultTypes::dbl_md(
     } else if (std::holds_alternative<_Cont_MPair>(_frame)) {
       auto _f = std::move(std::get<_Cont_MPair>(_frame));
       std::shared_ptr<LoopifyMutualResultTypes::md> b0 = std::move(_f.b0);
-      LoopifyMutualResultTypes::md r_ = std::move(_result);
-      _stack.emplace_back(_Resume_MPair{std::move(r_)});
+      _stack.emplace_back(_Resume_MPair{std::move(_result)});
       _stack.emplace_back(_Enter{*b0});
     } else {
       auto _f = std::move(std::get<_Resume_MPair>(_frame));
-      _result = md::mpair(std::move(_f.r_), std::move(_result));
+      _result = md::mpair(std::move(_f._tmp1), std::move(_result));
     }
   }
   return _result;
@@ -185,10 +183,10 @@ uint64_t LoopifyMutualResultTypes::sum_e(
     const LoopifyMutualResultTypes::e *b0;
   };
 
-  /// _Cont_Add_1: saves [r_], resumes after recursive call, then processes
+  /// _Cont_Add_1: saves [_tmp2], resumes after recursive call, then processes
   /// rest.
   struct _Cont_Add_1 {
-    uint64_t r_;
+    uint64_t _tmp2;
   };
 
   /// _Cont_MPair: saves [_inl_b0], resumes after recursive call, then processes
@@ -197,10 +195,10 @@ uint64_t LoopifyMutualResultTypes::sum_e(
     std::shared_ptr<LoopifyMutualResultTypes::md> _inl_b0;
   };
 
-  /// _Cont_MPair_1: saves [_inl_r_], resumes after recursive call, then
+  /// _Cont_MPair_1: saves [_inl__tmp2], resumes after recursive call, then
   /// processes rest.
   struct _Cont_MPair_1 {
-    uint64_t _inl_r_;
+    uint64_t _inl__tmp2;
   };
 
   using _Frame = std::variant<_Enter, _Enter_inl, _Cont_Add, _Cont_Add_1,
@@ -264,33 +262,30 @@ uint64_t LoopifyMutualResultTypes::sum_e(
       } else {
         const auto &[_inl_a0, _inl_b0] =
             std::get<typename LoopifyMutualResultTypes::md::MPair>(_inl_m.v());
-        uint64_t _inl_r_ = sum_md(*_inl_a0);
-        uint64_t _inl_r_0 = sum_md(*_inl_b0);
-        _result = (_inl_r_ + _inl_r_0);
+        uint64_t _inl__tmp2 = sum_md(*_inl_a0);
+        uint64_t _inl__tmp1 = sum_md(*_inl_b0);
+        _result = (_inl__tmp2 + _inl__tmp1);
       }
     } else if (std::holds_alternative<_Cont_Add>(_frame)) {
       auto _f = std::move(std::get<_Cont_Add>(_frame));
       const LoopifyMutualResultTypes::e &b0 = *_f.b0;
-      uint64_t r_ = std::move(_result);
-      _stack.emplace_back(_Cont_Add_1{r_});
+      _stack.emplace_back(_Cont_Add_1{std::move(_result)});
       _stack.emplace_back(_Enter{&b0});
     } else if (std::holds_alternative<_Cont_Add_1>(_frame)) {
       auto _f = std::move(std::get<_Cont_Add_1>(_frame));
-      uint64_t r_ = _f.r_;
-      uint64_t r_0 = std::move(_result);
-      _result = (r_ + r_0);
+      _result = (_f._tmp2 + std::move(_result));
     } else if (std::holds_alternative<_Cont_MPair>(_frame)) {
       auto _f = std::move(std::get<_Cont_MPair>(_frame));
       std::shared_ptr<LoopifyMutualResultTypes::md> _inl_b0 =
           std::move(_f._inl_b0);
-      uint64_t _inl_r_ = std::move(_result);
-      _stack.emplace_back(_Cont_MPair_1{_inl_r_});
+      uint64_t _inl__tmp2 = std::move(_result);
+      _stack.emplace_back(_Cont_MPair_1{_inl__tmp2});
       _stack.emplace_back(_Enter_inl{*_inl_b0});
     } else {
       auto _f = std::move(std::get<_Cont_MPair_1>(_frame));
-      uint64_t _inl_r_ = _f._inl_r_;
-      uint64_t _inl_r_0 = std::move(_result);
-      _result = (_inl_r_ + _inl_r_0);
+      uint64_t _inl__tmp2 = _f._inl__tmp2;
+      uint64_t _inl__tmp1 = std::move(_result);
+      _result = (_inl__tmp2 + _inl__tmp1);
     }
   }
   return _result;
@@ -315,10 +310,10 @@ uint64_t LoopifyMutualResultTypes::sum_md(
     std::shared_ptr<LoopifyMutualResultTypes::e> _inl_b0;
   };
 
-  /// _Cont_Add_1: saves [_inl_r_], resumes after recursive call, then processes
-  /// rest.
+  /// _Cont_Add_1: saves [_inl__tmp2], resumes after recursive call, then
+  /// processes rest.
   struct _Cont_Add_1 {
-    uint64_t _inl_r_;
+    uint64_t _inl__tmp2;
   };
 
   /// _Cont_MPair: saves [b0], resumes after recursive call, then processes
@@ -327,10 +322,10 @@ uint64_t LoopifyMutualResultTypes::sum_md(
     const LoopifyMutualResultTypes::md *b0;
   };
 
-  /// _Cont_MPair_1: saves [r_], resumes after recursive call, then processes
+  /// _Cont_MPair_1: saves [_tmp2], resumes after recursive call, then processes
   /// rest.
   struct _Cont_MPair_1 {
-    uint64_t r_;
+    uint64_t _tmp2;
   };
 
   using _Frame = std::variant<_Enter, _Enter_inl, _Cont_Add, _Cont_Add_1,
@@ -388,9 +383,9 @@ uint64_t LoopifyMutualResultTypes::sum_md(
                      typename LoopifyMutualResultTypes::e::Add>(_inl_x.v())) {
         const auto &[_inl_a0, _inl_b0] =
             std::get<typename LoopifyMutualResultTypes::e::Add>(_inl_x.v());
-        uint64_t _inl_r_ = sum_e(*_inl_a0);
-        uint64_t _inl_r_0 = sum_e(*_inl_b0);
-        _result = (_inl_r_ + _inl_r_0);
+        uint64_t _inl__tmp2 = sum_e(*_inl_a0);
+        uint64_t _inl__tmp1 = sum_e(*_inl_b0);
+        _result = (_inl__tmp2 + _inl__tmp1);
       } else {
         const auto &[_inl_m0] =
             std::get<typename LoopifyMutualResultTypes::e::Meta>(_inl_x.v());
@@ -400,25 +395,22 @@ uint64_t LoopifyMutualResultTypes::sum_md(
       auto _f = std::move(std::get<_Cont_Add>(_frame));
       std::shared_ptr<LoopifyMutualResultTypes::e> _inl_b0 =
           std::move(_f._inl_b0);
-      uint64_t _inl_r_ = std::move(_result);
-      _stack.emplace_back(_Cont_Add_1{_inl_r_});
+      uint64_t _inl__tmp2 = std::move(_result);
+      _stack.emplace_back(_Cont_Add_1{_inl__tmp2});
       _stack.emplace_back(_Enter_inl{*_inl_b0});
     } else if (std::holds_alternative<_Cont_Add_1>(_frame)) {
       auto _f = std::move(std::get<_Cont_Add_1>(_frame));
-      uint64_t _inl_r_ = _f._inl_r_;
-      uint64_t _inl_r_0 = std::move(_result);
-      _result = (_inl_r_ + _inl_r_0);
+      uint64_t _inl__tmp2 = _f._inl__tmp2;
+      uint64_t _inl__tmp1 = std::move(_result);
+      _result = (_inl__tmp2 + _inl__tmp1);
     } else if (std::holds_alternative<_Cont_MPair>(_frame)) {
       auto _f = std::move(std::get<_Cont_MPair>(_frame));
       const LoopifyMutualResultTypes::md &b0 = *_f.b0;
-      uint64_t r_ = std::move(_result);
-      _stack.emplace_back(_Cont_MPair_1{r_});
+      _stack.emplace_back(_Cont_MPair_1{std::move(_result)});
       _stack.emplace_back(_Enter{&b0});
     } else {
       auto _f = std::move(std::get<_Cont_MPair_1>(_frame));
-      uint64_t r_ = _f.r_;
-      uint64_t r_0 = std::move(_result);
-      _result = (r_ + r_0);
+      _result = (_f._tmp2 + std::move(_result));
     }
   }
   return _result;

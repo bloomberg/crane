@@ -267,7 +267,17 @@ val id_of_name : Name.t -> Id.t
     identifier). *)
 val unreserve_leading_underscore : string -> string
 
-(** Extract the Id.t from an ml_ident. *)
+(** The [n]th temporary of a declaration: the binder {!Normalize} gives a
+    call it takes out of an expression.  The name is in the space Crane
+    reserves for itself, which no Rocq binder reaches (see
+    {!unreserve_leading_underscore}), so the name alone says what the binding
+    is, at every stage down to the printer. *)
+val temporary_id : int -> Id.t
+
+(** Whether [id] is a {!temporary_id}. *)
+val is_temporary_id : Id.t -> bool
+
+(** Extract the Id.t from an ml_ident.  A temporary keeps its reserved name. *)
 val id_of_mlid : ml_ident -> Id.t
 
 (** Generate a temporary identifier from an ml_ident. *)

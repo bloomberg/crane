@@ -221,8 +221,7 @@ List<std::pair<uint64_t, uint64_t>> LoopifyHofs::cartesian(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      List<std::pair<uint64_t, uint64_t>> r_ = std::move(_result);
-      _result = pair_with_all(a0, l2).app(std::move(r_));
+      _result = pair_with_all(a0, l2).app(std::move(_result));
     }
   }
   return _result;

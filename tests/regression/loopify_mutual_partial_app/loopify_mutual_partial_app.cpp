@@ -30,10 +30,10 @@ uint64_t LoopifyMutualPartialApp::sum_e(
     const LoopifyMutualPartialApp::e<uint64_t> *b0;
   };
 
-  /// _Cont_Add_1: saves [r_], resumes after recursive call, then processes
+  /// _Cont_Add_1: saves [_tmp2], resumes after recursive call, then processes
   /// rest.
   struct _Cont_Add_1 {
-    uint64_t r_;
+    uint64_t _tmp2;
   };
 
   /// _Cont_MConst: saves [_inl_u0], resumes after recursive call, then
@@ -54,10 +54,10 @@ uint64_t LoopifyMutualPartialApp::sum_e(
     std::shared_ptr<LoopifyMutualPartialApp::md<uint64_t>> _inl_b0;
   };
 
-  /// _Cont_MPair_1: saves [_inl_r_], resumes after recursive call, then
+  /// _Cont_MPair_1: saves [_inl__tmp4], resumes after recursive call, then
   /// processes rest.
   struct _Cont_MPair_1 {
-    uint64_t _inl_r_;
+    uint64_t _inl__tmp4;
   };
 
   using _Frame =
@@ -121,8 +121,7 @@ uint64_t LoopifyMutualPartialApp::sum_e(
           _result = _inl_l0_value.template fold_left<uint64_t>(
               [](uint64_t acc,
                  const LoopifyMutualPartialApp::md<uint64_t> &m0) {
-                uint64_t _inl_r_ = sum_md(m0);
-                return (acc + _inl_r_);
+                return (acc + sum_md(m0));
               },
               UINT64_C(0));
         } else {
@@ -159,51 +158,47 @@ uint64_t LoopifyMutualPartialApp::sum_e(
             *_inl_l0;
         _result = _inl_l0_value.template fold_left<uint64_t>(
             [](uint64_t acc, const LoopifyMutualPartialApp::md<uint64_t> &m0) {
-              uint64_t _inl_r_ = sum_md(m0);
-              return (acc + _inl_r_);
+              return (acc + sum_md(m0));
             },
             UINT64_C(0));
       } else {
         const auto &[_inl_a0, _inl_b0] =
             std::get<typename LoopifyMutualPartialApp::md<uint64_t>::MPair>(
                 _inl_m.v());
-        uint64_t _inl_r_ = sum_md(*_inl_a0);
-        uint64_t _inl_r_0 = sum_md(*_inl_b0);
-        _result = (_inl_r_ + _inl_r_0);
+        uint64_t _inl__tmp4 = sum_md(*_inl_a0);
+        uint64_t _inl__tmp3 = sum_md(*_inl_b0);
+        _result = (_inl__tmp4 + _inl__tmp3);
       }
     } else if (std::holds_alternative<_Cont_Add>(_frame)) {
       auto _f = std::move(std::get<_Cont_Add>(_frame));
       const LoopifyMutualPartialApp::e<uint64_t> &b0 = *_f.b0;
-      uint64_t r_ = std::move(_result);
-      _stack.emplace_back(_Cont_Add_1{r_});
+      _stack.emplace_back(_Cont_Add_1{std::move(_result)});
       _stack.emplace_back(_Enter{&b0});
     } else if (std::holds_alternative<_Cont_Add_1>(_frame)) {
       auto _f = std::move(std::get<_Cont_Add_1>(_frame));
-      uint64_t r_ = _f.r_;
-      uint64_t r_0 = std::move(_result);
-      _result = (r_ + r_0);
+      _result = (_f._tmp2 + std::move(_result));
     } else if (std::holds_alternative<_Cont_MConst>(_frame)) {
       auto _f = std::move(std::get<_Cont_MConst>(_frame));
       uint64_t _inl_u0 = _f._inl_u0;
-      uint64_t _inl_r_ = std::move(_result);
-      _result = (_inl_u0 + _inl_r_);
+      uint64_t _inl__tmp1 = std::move(_result);
+      _result = (_inl_u0 + _inl__tmp1);
     } else if (std::holds_alternative<_Cont_MConst_1>(_frame)) {
       auto _f = std::move(std::get<_Cont_MConst_1>(_frame));
       uint64_t _inl_u0 = _f._inl_u0;
-      uint64_t _inl_r_ = std::move(_result);
-      _result = (_inl_u0 + _inl_r_);
+      uint64_t _inl__tmp1 = std::move(_result);
+      _result = (_inl_u0 + _inl__tmp1);
     } else if (std::holds_alternative<_Cont_MPair>(_frame)) {
       auto _f = std::move(std::get<_Cont_MPair>(_frame));
       std::shared_ptr<LoopifyMutualPartialApp::md<uint64_t>> _inl_b0 =
           std::move(_f._inl_b0);
-      uint64_t _inl_r_ = std::move(_result);
-      _stack.emplace_back(_Cont_MPair_1{_inl_r_});
+      uint64_t _inl__tmp4 = std::move(_result);
+      _stack.emplace_back(_Cont_MPair_1{_inl__tmp4});
       _stack.emplace_back(_Enter_inl{*_inl_b0});
     } else {
       auto _f = std::move(std::get<_Cont_MPair_1>(_frame));
-      uint64_t _inl_r_ = _f._inl_r_;
-      uint64_t _inl_r_0 = std::move(_result);
-      _result = (_inl_r_ + _inl_r_0);
+      uint64_t _inl__tmp4 = _f._inl__tmp4;
+      uint64_t _inl__tmp3 = std::move(_result);
+      _result = (_inl__tmp4 + _inl__tmp3);
     }
   }
   return _result;
@@ -234,10 +229,10 @@ uint64_t LoopifyMutualPartialApp::sum_md(
     std::shared_ptr<LoopifyMutualPartialApp::md<uint64_t>> b0;
   };
 
-  /// _Cont_MPair_1: saves [r_], resumes after recursive call, then processes
+  /// _Cont_MPair_1: saves [_tmp4], resumes after recursive call, then processes
   /// rest.
   struct _Cont_MPair_1 {
-    uint64_t r_;
+    uint64_t _tmp4;
   };
 
   using _Frame = std::variant<_Enter, _Enter_inl, _Cont_MConst, _Cont_MPair,
@@ -272,8 +267,7 @@ uint64_t LoopifyMutualPartialApp::sum_md(
         const List<LoopifyMutualPartialApp::md<uint64_t>> &l0_value = *l0;
         _result = l0_value.template fold_left<uint64_t>(
             [](uint64_t acc, const LoopifyMutualPartialApp::md<uint64_t> &m0) {
-              uint64_t r_ = sum_md(m0);
-              return (acc + r_);
+              return (acc + sum_md(m0));
             },
             UINT64_C(0));
       } else {
@@ -306,9 +300,9 @@ uint64_t LoopifyMutualPartialApp::sum_md(
         const auto &[_inl_a0, _inl_b0] =
             std::get<typename LoopifyMutualPartialApp::e<uint64_t>::Add>(
                 _inl_x.v());
-        uint64_t _inl_r_ = sum_e(*_inl_a0);
-        uint64_t _inl_r_0 = sum_e(*_inl_b0);
-        _result = (_inl_r_ + _inl_r_0);
+        uint64_t _inl__tmp2 = sum_e(*_inl_a0);
+        uint64_t _inl__tmp1 = sum_e(*_inl_b0);
+        _result = (_inl__tmp2 + _inl__tmp1);
       } else {
         const auto &[_inl_m0] =
             std::get<typename LoopifyMutualPartialApp::e<uint64_t>::Meta>(
@@ -318,20 +312,16 @@ uint64_t LoopifyMutualPartialApp::sum_md(
     } else if (std::holds_alternative<_Cont_MConst>(_frame)) {
       auto _f = std::move(std::get<_Cont_MConst>(_frame));
       uint64_t u0 = _f.u0;
-      uint64_t r_ = std::move(_result);
-      _result = (u0 + r_);
+      _result = (u0 + std::move(_result));
     } else if (std::holds_alternative<_Cont_MPair>(_frame)) {
       auto _f = std::move(std::get<_Cont_MPair>(_frame));
       std::shared_ptr<LoopifyMutualPartialApp::md<uint64_t>> b0 =
           std::move(_f.b0);
-      uint64_t r_ = std::move(_result);
-      _stack.emplace_back(_Cont_MPair_1{r_});
+      _stack.emplace_back(_Cont_MPair_1{std::move(_result)});
       _stack.emplace_back(_Enter{*b0});
     } else {
       auto _f = std::move(std::get<_Cont_MPair_1>(_frame));
-      uint64_t r_ = _f.r_;
-      uint64_t r_0 = std::move(_result);
-      _result = (r_ + r_0);
+      _result = (_f._tmp4 + std::move(_result));
     }
   }
   return _result;

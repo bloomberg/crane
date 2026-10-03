@@ -231,8 +231,7 @@ struct NestedInd {
           }
         } else {
           auto _f = std::move(std::get<_Cont_Ccons>(_frame));
-          uint64_t r_ = std::move(_result);
-          _result = (UINT64_C(1) + r_);
+          _result = (UINT64_C(1) + std::move(_result));
         }
       }
       return _result;
@@ -279,8 +278,7 @@ struct NestedInd {
           auto _f = std::move(std::get<_Cont_Ccons>(_frame));
           auto a0 = std::move(_f.a0);
           std::shared_ptr<custom_list<A>> a1 = std::move(_f.a1);
-          T1 r_ = std::move(_result);
-          _result = f0(a0, *a1, std::move(r_));
+          _result = f0(a0, *a1, std::move(_result));
         }
       }
       return _result;
@@ -327,8 +325,7 @@ struct NestedInd {
           auto _f = std::move(std::get<_Cont_Ccons>(_frame));
           auto a0 = std::move(_f.a0);
           std::shared_ptr<custom_list<A>> a1 = std::move(_f.a1);
-          T1 r_ = std::move(_result);
-          _result = f0(a0, *a1, std::move(r_));
+          _result = f0(a0, *a1, std::move(_result));
         }
       }
       return _result;
@@ -603,8 +600,7 @@ struct NestedInd {
               return List<expr>::nil();
             } else {
               const auto &[a1, a2] = std::get<typename List<expr>::Cons>(l.v());
-              expr r_ = a1.lit_map(f);
-              return List<expr>::cons(std::move(r_), _self_aux(_self_aux, *a2));
+              return List<expr>::cons(a1.lit_map(f), _self_aux(_self_aux, *a2));
             }
           };
           auto aux = [&](const List<expr> &l) -> List<expr> {
@@ -619,8 +615,7 @@ struct NestedInd {
               return List<expr>::nil();
             } else {
               const auto &[a1, a2] = std::get<typename List<expr>::Cons>(l.v());
-              expr r_ = a1.lit_map(f);
-              return List<expr>::cons(std::move(r_), _self_aux(_self_aux, *a2));
+              return List<expr>::cons(a1.lit_map(f), _self_aux(_self_aux, *a2));
             }
           };
           auto aux = [&](const List<expr> &l) -> List<expr> {
@@ -663,9 +658,7 @@ struct NestedInd {
             } else {
               const auto &[a00, a10] =
                   std::get<typename List<expr>::Cons>(l.v());
-              List<uint64_t> r_ = a00.literals();
-              List<uint64_t> r_0 = _self_aux(_self_aux, *a10);
-              return std::move(r_).app(std::move(r_0));
+              return a00.literals().app(_self_aux(_self_aux, *a10));
             }
           };
           auto aux = [&](const List<expr> &l) -> List<uint64_t> {
@@ -681,9 +674,7 @@ struct NestedInd {
             } else {
               const auto &[a00, a10] =
                   std::get<typename List<expr>::Cons>(l.v());
-              List<uint64_t> r_ = a00.literals();
-              List<uint64_t> r_0 = _self_aux(_self_aux, *a10);
-              return std::move(r_).app(std::move(r_0));
+              return a00.literals().app(_self_aux(_self_aux, *a10));
             }
           };
           auto aux = [&](const List<expr> &l) -> List<uint64_t> {
@@ -723,9 +714,7 @@ struct NestedInd {
               return UINT64_C(0);
             } else {
               const auto &[a1, a2] = std::get<typename List<expr>::Cons>(l.v());
-              uint64_t r_ = a1.expr_depth();
-              uint64_t r_0 = _self_aux(_self_aux, *a2);
-              return std::max(r_, r_0);
+              return std::max(a1.expr_depth(), _self_aux(_self_aux, *a2));
             }
           };
           auto aux = [&](const List<expr> &l) -> uint64_t {
@@ -739,9 +728,7 @@ struct NestedInd {
               return UINT64_C(0);
             } else {
               const auto &[a1, a2] = std::get<typename List<expr>::Cons>(l.v());
-              uint64_t r_ = a1.expr_depth();
-              uint64_t r_0 = _self_aux(_self_aux, *a2);
-              return std::max(r_, r_0);
+              return std::max(a1.expr_depth(), _self_aux(_self_aux, *a2));
             }
           };
           auto aux = [&](const List<expr> &l) -> uint64_t {
@@ -781,9 +768,7 @@ struct NestedInd {
               return UINT64_C(0);
             } else {
               const auto &[a1, a2] = std::get<typename List<expr>::Cons>(l.v());
-              uint64_t r_ = a1.expr_size();
-              uint64_t r_0 = _self_aux(_self_aux, *a2);
-              return (r_ + r_0);
+              return (a1.expr_size() + _self_aux(_self_aux, *a2));
             }
           };
           auto aux = [&](const List<expr> &l) -> uint64_t {
@@ -797,9 +782,7 @@ struct NestedInd {
               return UINT64_C(0);
             } else {
               const auto &[a1, a2] = std::get<typename List<expr>::Cons>(l.v());
-              uint64_t r_ = a1.expr_size();
-              uint64_t r_0 = _self_aux(_self_aux, *a2);
-              return (r_ + r_0);
+              return (a1.expr_size() + _self_aux(_self_aux, *a2));
             }
           };
           auto aux = [&](const List<expr> &l) -> uint64_t {
@@ -842,9 +825,7 @@ struct NestedInd {
             } else {
               const auto &[a00, a10] =
                   std::get<typename List<expr>::Cons>(l.v());
-              uint64_t r_ = a00.eval();
-              uint64_t r_0 = _self_sum_all(_self_sum_all, *a10);
-              return (r_ + r_0);
+              return (a00.eval() + _self_sum_all(_self_sum_all, *a10));
             }
           };
           auto sum_all = [&](const List<expr> &l) -> uint64_t {
@@ -860,9 +841,7 @@ struct NestedInd {
             } else {
               const auto &[a00, a10] =
                   std::get<typename List<expr>::Cons>(l.v());
-              uint64_t r_ = a00.eval();
-              uint64_t r_0 = _self_prod_all(_self_prod_all, *a10);
-              return (r_ * r_0);
+              return (a00.eval() * _self_prod_all(_self_prod_all, *a10));
             }
           };
           auto prod_all = [&](const List<expr> &l) -> uint64_t {

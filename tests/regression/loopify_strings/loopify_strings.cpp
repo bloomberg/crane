@@ -94,8 +94,7 @@ List<uint64_t> LoopifyStrings::repeat_string(
       }
     } else {
       auto _f = std::move(std::get<_Cont_n_>(_frame));
-      List<uint64_t> r_ = std::move(_result);
-      _result = append(s, std::move(r_));
+      _result = append(s, std::move(_result));
     }
   }
   return _result;
@@ -138,8 +137,7 @@ List<uint64_t> LoopifyStrings::repeat_with_sep(
       }
     } else {
       auto _f = std::move(std::get<_Cont__x>(_frame));
-      List<uint64_t> r_ = std::move(_result);
-      _result = append(s, append(sep, std::move(r_)));
+      _result = append(s, append(sep, std::move(_result)));
     }
   }
   return _result;
@@ -185,8 +183,7 @@ List<uint64_t> LoopifyStrings::string_chain_fuel(
       }
     } else {
       auto _f = std::move(std::get<_Cont1>(_frame));
-      List<uint64_t> r_ = std::move(_result);
-      _result = append(s, append(sep, append(std::move(r_), end_marker)));
+      _result = append(s, append(sep, append(std::move(_result), end_marker)));
     }
   }
   return _result;
@@ -232,8 +229,7 @@ List<uint64_t> LoopifyStrings::reverse(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      List<uint64_t> r_ = std::move(_result);
-      _result = append(std::move(r_),
+      _result = append(std::move(_result),
                        List<uint64_t>::cons(a0, List<uint64_t>::nil()));
     }
   }
@@ -290,8 +286,7 @@ bool LoopifyStrings::list_eq(
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
       uint64_t a00 = _f.a00;
-      bool r_ = std::move(_result);
-      _result = (a0 == a00 && r_);
+      _result = (a0 == a00 && std::move(_result));
     }
   }
   return _result;
@@ -381,8 +376,7 @@ List<uint64_t> LoopifyStrings::intercalate(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       List<uint64_t> a0 = std::move(_f.a0);
-      List<uint64_t> r_ = std::move(_result);
-      _result = append(a0, append(sep, std::move(r_)));
+      _result = append(a0, append(sep, std::move(_result)));
     }
   }
   return _result;

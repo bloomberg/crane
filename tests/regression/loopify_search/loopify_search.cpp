@@ -25,13 +25,13 @@ uint64_t LoopifySearch::knapsack_fuel(
     uint64_t weight;
   };
 
-  /// _Cont2: saves [a1, capacity, f, r_, value, weight], resumes after
+  /// _Cont2: saves [_tmp3, a1, capacity, f, value, weight], resumes after
   /// recursive call, then processes rest.
   struct _Cont2 {
+    uint64_t _tmp3;
     const List<std::pair<uint64_t, uint64_t>> *a1;
     uint64_t capacity;
     uint64_t f;
-    uint64_t r_;
     uint64_t value;
     uint64_t weight;
   };
@@ -82,8 +82,8 @@ uint64_t LoopifySearch::knapsack_fuel(
       uint64_t f = _f.f;
       uint64_t value = _f.value;
       uint64_t weight = _f.weight;
-      uint64_t r_ = std::move(_result);
-      _stack.emplace_back(_Cont2{&a1, capacity, f, r_, value, weight});
+      _stack.emplace_back(
+          _Cont2{std::move(_result), &a1, capacity, f, value, weight});
       _stack.emplace_back(_Enter{
           &a1, (((capacity - weight) > capacity ? 0 : (capacity - weight))),
           f});
@@ -92,11 +92,11 @@ uint64_t LoopifySearch::knapsack_fuel(
       const List<std::pair<uint64_t, uint64_t>> &a1 = *_f.a1;
       uint64_t capacity = _f.capacity;
       uint64_t f = _f.f;
-      uint64_t r_ = _f.r_;
       uint64_t value = _f.value;
       uint64_t weight = _f.weight;
-      uint64_t r_0 = std::move(_result);
-      if (r_ <= (value + r_0)) {
+      uint64_t _tmp3 = _f._tmp3;
+      uint64_t _tmp2 = std::move(_result);
+      if (_tmp3 <= (value + _tmp2)) {
         _stack.emplace_back(_Cont3{value});
         _stack.emplace_back(_Enter{
             &a1, (((capacity - weight) > capacity ? 0 : (capacity - weight))),
@@ -107,8 +107,7 @@ uint64_t LoopifySearch::knapsack_fuel(
     } else {
       auto _f = std::move(std::get<_Cont3>(_frame));
       uint64_t value = _f.value;
-      uint64_t r_1 = std::move(_result);
-      _result = (value + r_1);
+      _result = (value + std::move(_result));
     }
   }
   return _result;
@@ -157,8 +156,7 @@ std::pair<uint64_t, uint64_t> LoopifySearch::majority(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      std::pair<uint64_t, uint64_t> r_ = std::move(_result);
-      auto [cand, count] = std::move(r_);
+      auto [cand, count] = std::move(_result);
       if (a0 == cand) {
         _result = std::make_pair(cand, (count + 1));
       } else {
@@ -724,11 +722,11 @@ List<uint64_t> LoopifySearch::quicksort_fuel(
     List<uint64_t> greater;
   };
 
-  /// _Cont_Cons_1: saves [a0, r_], resumes after recursive call, then processes
-  /// rest.
+  /// _Cont_Cons_1: saves [_tmp2, a0], resumes after recursive call, then
+  /// processes rest.
   struct _Cont_Cons_1 {
+    List<uint64_t> _tmp2;
     uint64_t a0;
-    List<uint64_t> r_;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Cons, _Cont_Cons_1>;
@@ -765,16 +763,13 @@ List<uint64_t> LoopifySearch::quicksort_fuel(
       uint64_t a0 = _f.a0;
       uint64_t f = _f.f;
       List<uint64_t> greater = std::move(_f.greater);
-      List<uint64_t> r_ = std::move(_result);
-      _stack.emplace_back(_Cont_Cons_1{a0, std::move(r_)});
+      _stack.emplace_back(_Cont_Cons_1{std::move(_result), a0});
       _stack.emplace_back(_Enter{std::move(greater), f});
     } else {
       auto _f = std::move(std::get<_Cont_Cons_1>(_frame));
       uint64_t a0 = _f.a0;
-      List<uint64_t> r_ = std::move(_f.r_);
-      List<uint64_t> r_0 = std::move(_result);
-      _result = std::move(r_).app(
-          List<uint64_t>::cons(std::move(a0), std::move(r_0)));
+      _result = std::move(_f._tmp2).app(
+          List<uint64_t>::cons(std::move(a0), std::move(_result)));
     }
   }
   return _result;
@@ -831,8 +826,7 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifySearch::split_list(
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
       uint64_t a00 = _f.a00;
-      std::pair<List<uint64_t>, List<uint64_t>> r_ = std::move(_result);
-      auto [a, b] = std::move(r_);
+      auto [a, b] = std::move(_result);
       _result = std::make_pair(List<uint64_t>::cons(a0, std::move(a)),
                                List<uint64_t>::cons(a00, std::move(b)));
     }
@@ -919,9 +913,10 @@ List<uint64_t> LoopifySearch::merge_sort_fuel(
     uint64_t f;
   };
 
-  /// _Cont_a_1: saves [r_], resumes after recursive call, then processes rest.
+  /// _Cont_a_1: saves [_tmp2], resumes after recursive call, then processes
+  /// rest.
   struct _Cont_a_1 {
-    List<uint64_t> r_;
+    List<uint64_t> _tmp2;
   };
 
   using _Frame = std::variant<_Enter, _Cont_a, _Cont_a_1>;
@@ -958,14 +953,11 @@ List<uint64_t> LoopifySearch::merge_sort_fuel(
       auto _f = std::move(std::get<_Cont_a>(_frame));
       List<uint64_t> b = std::move(_f.b);
       uint64_t f = _f.f;
-      List<uint64_t> r_ = std::move(_result);
-      _stack.emplace_back(_Cont_a_1{std::move(r_)});
+      _stack.emplace_back(_Cont_a_1{std::move(_result)});
       _stack.emplace_back(_Enter{std::move(b), f});
     } else {
       auto _f = std::move(std::get<_Cont_a_1>(_frame));
-      List<uint64_t> r_ = std::move(_f.r_);
-      List<uint64_t> r_0 = std::move(_result);
-      _result = merge_sorted(std::move(r_), std::move(r_0));
+      _result = merge_sorted(std::move(_f._tmp2), std::move(_result));
     }
   }
   return _result;
@@ -1055,11 +1047,11 @@ List<List<uint64_t>> LoopifySearch::perms_choices_fuel(
     List<uint64_t> orig;
   };
 
-  /// _Cont_Cons_1: saves [a0, r_], resumes after recursive call, then processes
-  /// rest.
+  /// _Cont_Cons_1: saves [_tmp3, a0], resumes after recursive call, then
+  /// processes rest.
   struct _Cont_Cons_1 {
+    List<List<uint64_t>> _tmp3;
     uint64_t a0;
-    List<List<uint64_t>> r_;
   };
 
   /// _Cont_Nil: saves [a0], resumes after recursive call, then processes rest.
@@ -1107,23 +1099,19 @@ List<List<uint64_t>> LoopifySearch::perms_choices_fuel(
       std::shared_ptr<List<uint64_t>> a1 = std::move(_f.a1);
       uint64_t f = _f.f;
       const List<uint64_t> &orig = std::move(_f.orig);
-      List<List<uint64_t>> r_ = std::move(_result);
-      _stack.emplace_back(_Cont_Cons_1{a0, std::move(r_)});
+      _stack.emplace_back(_Cont_Cons_1{std::move(_result), a0});
       _stack.emplace_back(_Enter{orig, *a1, f});
     } else if (std::holds_alternative<_Cont_Cons_1>(_frame)) {
       auto _f = std::move(std::get<_Cont_Cons_1>(_frame));
       uint64_t a0 = _f.a0;
-      List<List<uint64_t>> r_ = std::move(_f.r_);
-      List<List<uint64_t>> r_0 = std::move(_result);
-      _result = map_cons(a0, std::move(r_)).app(std::move(r_0));
+      _result = map_cons(a0, std::move(_f._tmp3)).app(std::move(_result));
     } else {
       auto _f = std::move(std::get<_Cont_Nil>(_frame));
       uint64_t a0 = _f.a0;
-      List<List<uint64_t>> r_ = std::move(_result);
       _result =
           map_cons(a0, List<List<uint64_t>>::cons(List<uint64_t>::nil(),
                                                   List<List<uint64_t>>::nil()))
-              .app(std::move(r_));
+              .app(std::move(_result));
     }
   }
   return _result;

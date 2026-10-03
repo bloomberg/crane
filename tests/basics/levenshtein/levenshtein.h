@@ -531,8 +531,7 @@ struct Levenshtein {
           String s0 = std::move(_f.s0);
           String t0 = std::move(_f.t0);
           String u0 = std::move(_f.u0);
-          T1 r_ = std::move(_result);
-          _result = f1(s0, t0, u0, n0, a4, *a5, std::move(r_));
+          _result = f1(s0, t0, u0, n0, a4, *a5, std::move(_result));
         } else {
           auto _f = std::move(std::get<_Cont_Skip>(_frame));
           Ascii a0 = std::move(_f.a0);
@@ -540,8 +539,7 @@ struct Levenshtein {
           Nat n0 = std::move(_f.n0);
           String s0 = std::move(_f.s0);
           String t0 = std::move(_f.t0);
-          T1 r_ = std::move(_result);
-          _result = f0(a0, s0, t0, n0, *a4, std::move(r_));
+          _result = f0(a0, s0, t0, n0, *a4, std::move(_result));
         }
       }
       return _result;
@@ -621,8 +619,7 @@ struct Levenshtein {
           String s0 = std::move(_f.s0);
           String t0 = std::move(_f.t0);
           String u0 = std::move(_f.u0);
-          T1 r_ = std::move(_result);
-          _result = f1(s0, t0, u0, n0, a4, *a5, std::move(r_));
+          _result = f1(s0, t0, u0, n0, a4, *a5, std::move(_result));
         } else {
           auto _f = std::move(std::get<_Cont_Skip>(_frame));
           Ascii a0 = std::move(_f.a0);
@@ -630,8 +627,7 @@ struct Levenshtein {
           Nat n0 = std::move(_f.n0);
           String s0 = std::move(_f.s0);
           String t0 = std::move(_f.t0);
-          T1 r_ = std::move(_result);
-          _result = f0(a0, s0, t0, n0, *a4, std::move(r_));
+          _result = f0(a0, s0, t0, n0, *a4, std::move(_result));
         }
       }
       return _result;

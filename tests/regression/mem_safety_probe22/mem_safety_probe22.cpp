@@ -15,11 +15,11 @@ uint64_t MemSafetyProbe22::tree_sum(
     const MemSafetyProbe22::tree *a2;
   };
 
-  /// _Cont_Node_1: saves [a1, r_], resumes after recursive call, then processes
-  /// rest.
+  /// _Cont_Node_1: saves [_tmp2, a1], resumes after recursive call, then
+  /// processes rest.
   struct _Cont_Node_1 {
+    uint64_t _tmp2;
     uint64_t a1;
-    uint64_t r_;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
@@ -46,15 +46,12 @@ uint64_t MemSafetyProbe22::tree_sum(
       auto _f = std::move(std::get<_Cont_Node>(_frame));
       uint64_t a1 = _f.a1;
       const MemSafetyProbe22::tree &a2 = *_f.a2;
-      uint64_t r_ = std::move(_result);
-      _stack.emplace_back(_Cont_Node_1{a1, r_});
+      _stack.emplace_back(_Cont_Node_1{std::move(_result), a1});
       _stack.emplace_back(_Enter{&a2});
     } else {
       auto _f = std::move(std::get<_Cont_Node_1>(_frame));
       uint64_t a1 = _f.a1;
-      uint64_t r_ = _f.r_;
-      uint64_t r_0 = std::move(_result);
-      _result = ((r_ + a1) + r_0);
+      _result = ((_f._tmp2 + a1) + std::move(_result));
     }
   }
   return _result;
@@ -140,10 +137,11 @@ MemSafetyProbe22::tree MemSafetyProbe22::double_tree(
     const MemSafetyProbe22::tree *a2;
   };
 
-  /// _Resume_Node: saves [_s0, r_], resumes after recursive call with _result.
+  /// _Resume_Node: saves [_s0, _tmp1], resumes after recursive call with
+  /// _result.
   struct _Resume_Node {
     uint64_t _s0;
-    MemSafetyProbe22::tree r_;
+    MemSafetyProbe22::tree _tmp1;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Node, _Resume_Node>;
@@ -170,12 +168,11 @@ MemSafetyProbe22::tree MemSafetyProbe22::double_tree(
       auto _f = std::move(std::get<_Cont_Node>(_frame));
       uint64_t a1 = _f.a1;
       const MemSafetyProbe22::tree &a2 = *_f.a2;
-      MemSafetyProbe22::tree r_ = std::move(_result);
-      _stack.emplace_back(_Resume_Node{(a1 * UINT64_C(2)), std::move(r_)});
+      _stack.emplace_back(_Resume_Node{(a1 * UINT64_C(2)), std::move(_result)});
       _stack.emplace_back(_Enter{&a2});
     } else {
       auto _f = std::move(std::get<_Resume_Node>(_frame));
-      _result = tree::node(std::move(_f.r_), _f._s0, std::move(_result));
+      _result = tree::node(std::move(_f._tmp1), _f._s0, std::move(_result));
     }
   }
   return _result;
@@ -200,11 +197,11 @@ uint64_t MemSafetyProbe22::weighted_sum(
     uint64_t w;
   };
 
-  /// _Cont_Node_1: saves [a1, r_, w], resumes after recursive call, then
+  /// _Cont_Node_1: saves [_tmp2, a1, w], resumes after recursive call, then
   /// processes rest.
   struct _Cont_Node_1 {
+    uint64_t _tmp2;
     uint64_t a1;
-    uint64_t r_;
     uint64_t w;
   };
 
@@ -234,16 +231,13 @@ uint64_t MemSafetyProbe22::weighted_sum(
       uint64_t a1 = _f.a1;
       const MemSafetyProbe22::tree &a2 = *_f.a2;
       uint64_t w = _f.w;
-      uint64_t r_ = std::move(_result);
-      _stack.emplace_back(_Cont_Node_1{a1, r_, w});
+      _stack.emplace_back(_Cont_Node_1{std::move(_result), a1, w});
       _stack.emplace_back(_Enter{(w + UINT64_C(1)), &a2});
     } else {
       auto _f = std::move(std::get<_Cont_Node_1>(_frame));
       uint64_t a1 = _f.a1;
-      uint64_t r_ = _f.r_;
       uint64_t w = _f.w;
-      uint64_t r_0 = std::move(_result);
-      _result = ((r_ + (a1 * w)) + r_0);
+      _result = ((_f._tmp2 + (a1 * w)) + std::move(_result));
     }
   }
   return _result;
@@ -268,10 +262,10 @@ uint64_t MemSafetyProbe22::split_sum(
     uint64_t n_;
   };
 
-  /// _Cont_Node_1: saves [r_], resumes after recursive call, then processes
+  /// _Cont_Node_1: saves [_tmp2], resumes after recursive call, then processes
   /// rest.
   struct _Cont_Node_1 {
-    uint64_t r_;
+    uint64_t _tmp2;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
@@ -306,15 +300,12 @@ uint64_t MemSafetyProbe22::split_sum(
       uint64_t a1 = _f.a1;
       std::shared_ptr<MemSafetyProbe22::tree> a2 = std::move(_f.a2);
       uint64_t n_ = _f.n_;
-      uint64_t r_ = std::move(_result);
-      _stack.emplace_back(_Cont_Node_1{r_});
+      _stack.emplace_back(_Cont_Node_1{std::move(_result)});
       _stack.emplace_back(
           _Enter{n_, tree::node(tree::leaf(), (a1 + UINT64_C(1)), *a2)});
     } else {
       auto _f = std::move(std::get<_Cont_Node_1>(_frame));
-      uint64_t r_ = _f.r_;
-      uint64_t r_0 = std::move(_result);
-      _result = (r_ + r_0);
+      _result = (_f._tmp2 + std::move(_result));
     }
   }
   return _result;
@@ -336,10 +327,11 @@ MemSafetyProbe22::tree MemSafetyProbe22::mirror(
     uint64_t a1;
   };
 
-  /// _Resume_Node: saves [a1, r_], resumes after recursive call with _result.
+  /// _Resume_Node: saves [a1, _tmp1], resumes after recursive call with
+  /// _result.
   struct _Resume_Node {
     uint64_t a1;
-    MemSafetyProbe22::tree r_;
+    MemSafetyProbe22::tree _tmp1;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Node, _Resume_Node>;
@@ -366,12 +358,11 @@ MemSafetyProbe22::tree MemSafetyProbe22::mirror(
       auto _f = std::move(std::get<_Cont_Node>(_frame));
       const MemSafetyProbe22::tree &a0 = *_f.a0;
       uint64_t a1 = _f.a1;
-      MemSafetyProbe22::tree r_ = std::move(_result);
-      _stack.emplace_back(_Resume_Node{a1, std::move(r_)});
+      _stack.emplace_back(_Resume_Node{a1, std::move(_result)});
       _stack.emplace_back(_Enter{&a0});
     } else {
       auto _f = std::move(std::get<_Resume_Node>(_frame));
-      _result = tree::node(std::move(_f.r_), _f.a1, std::move(_result));
+      _result = tree::node(std::move(_f._tmp1), _f.a1, std::move(_result));
     }
   }
   return _result;
@@ -471,10 +462,11 @@ MemSafetyProbe22::tree MemSafetyProbe22::label_depth(
     uint64_t d;
   };
 
-  /// _Resume_Node: saves [_s0, r_], resumes after recursive call with _result.
+  /// _Resume_Node: saves [_s0, _tmp1], resumes after recursive call with
+  /// _result.
   struct _Resume_Node {
     uint64_t _s0;
-    MemSafetyProbe22::tree r_;
+    MemSafetyProbe22::tree _tmp1;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Node, _Resume_Node>;
@@ -503,12 +495,11 @@ MemSafetyProbe22::tree MemSafetyProbe22::label_depth(
       uint64_t a1 = _f.a1;
       const MemSafetyProbe22::tree &a2 = *_f.a2;
       uint64_t d = _f.d;
-      MemSafetyProbe22::tree r_ = std::move(_result);
-      _stack.emplace_back(_Resume_Node{(a1 + d), std::move(r_)});
+      _stack.emplace_back(_Resume_Node{(a1 + d), std::move(_result)});
       _stack.emplace_back(_Enter{(d + UINT64_C(1)), &a2});
     } else {
       auto _f = std::move(std::get<_Resume_Node>(_frame));
-      _result = tree::node(std::move(_f.r_), _f._s0, std::move(_result));
+      _result = tree::node(std::move(_f._tmp1), _f._s0, std::move(_result));
     }
   }
   return _result;

@@ -351,8 +351,7 @@ struct LoopifySearch {
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
-        List<List<uint64_t>> r_ = std::move(_result);
-        _result = f(a0).app(std::move(r_));
+        _result = f(a0).app(std::move(_result));
       }
     }
     return _result;
@@ -469,12 +468,12 @@ struct LoopifySearch {
       const btree *a1;
     };
 
-    /// _Cont_BNode_1: saves [a0, a1, r_], resumes after recursive call, then
+    /// _Cont_BNode_1: saves [_tmp2, a0, a1], resumes after recursive call, then
     /// processes rest.
     struct _Cont_BNode_1 {
+      T1 _tmp2;
       std::shared_ptr<btree> a0;
       const btree *a1;
-      T1 r_;
     };
 
     using _Frame = std::variant<_Enter, _Cont_BNode, _Cont_BNode_1>;
@@ -500,16 +499,14 @@ struct LoopifySearch {
         auto _f = std::move(std::get<_Cont_BNode>(_frame));
         std::shared_ptr<btree> a0 = std::move(_f.a0);
         const btree &a1 = *_f.a1;
-        T1 r_ = std::move(_result);
-        _stack.emplace_back(_Cont_BNode_1{std::move(a0), &a1, std::move(r_)});
+        _stack.emplace_back(
+            _Cont_BNode_1{std::move(_result), std::move(a0), &a1});
         _stack.emplace_back(_Enter{&a1});
       } else {
         auto _f = std::move(std::get<_Cont_BNode_1>(_frame));
         std::shared_ptr<btree> a0 = std::move(_f.a0);
         const btree &a1 = *_f.a1;
-        auto r_ = std::move(_f.r_);
-        T1 r_0 = std::move(_result);
-        _result = f0(*a0, std::move(r_), a1, std::move(r_0));
+        _result = f0(*a0, std::move(_f._tmp2), a1, std::move(_result));
       }
     }
     return _result;
@@ -533,12 +530,12 @@ struct LoopifySearch {
       const btree *a1;
     };
 
-    /// _Cont_BNode_1: saves [a0, a1, r_], resumes after recursive call, then
+    /// _Cont_BNode_1: saves [_tmp2, a0, a1], resumes after recursive call, then
     /// processes rest.
     struct _Cont_BNode_1 {
+      T1 _tmp2;
       std::shared_ptr<btree> a0;
       const btree *a1;
-      T1 r_;
     };
 
     using _Frame = std::variant<_Enter, _Cont_BNode, _Cont_BNode_1>;
@@ -564,16 +561,14 @@ struct LoopifySearch {
         auto _f = std::move(std::get<_Cont_BNode>(_frame));
         std::shared_ptr<btree> a0 = std::move(_f.a0);
         const btree &a1 = *_f.a1;
-        T1 r_ = std::move(_result);
-        _stack.emplace_back(_Cont_BNode_1{std::move(a0), &a1, std::move(r_)});
+        _stack.emplace_back(
+            _Cont_BNode_1{std::move(_result), std::move(a0), &a1});
         _stack.emplace_back(_Enter{&a1});
       } else {
         auto _f = std::move(std::get<_Cont_BNode_1>(_frame));
         std::shared_ptr<btree> a0 = std::move(_f.a0);
         const btree &a1 = *_f.a1;
-        auto r_ = std::move(_f.r_);
-        T1 r_0 = std::move(_result);
-        _result = f0(*a0, std::move(r_), a1, std::move(r_0));
+        _result = f0(*a0, std::move(_f._tmp2), a1, std::move(_result));
       }
     }
     return _result;
@@ -596,10 +591,10 @@ struct LoopifySearch {
       const btree *a1;
     };
 
-    /// _Cont_BNode_1: saves [r_], resumes after recursive call, then processes
-    /// rest.
+    /// _Cont_BNode_1: saves [_tmp2], resumes after recursive call, then
+    /// processes rest.
     struct _Cont_BNode_1 {
-      bool r_;
+      bool _tmp2;
     };
 
     using _Frame = std::variant<_Enter, _Cont_BNode, _Cont_BNode_1>;
@@ -624,14 +619,11 @@ struct LoopifySearch {
       } else if (std::holds_alternative<_Cont_BNode>(_frame)) {
         auto _f = std::move(std::get<_Cont_BNode>(_frame));
         const btree &a1 = *_f.a1;
-        bool r_ = std::move(_result);
-        _stack.emplace_back(_Cont_BNode_1{r_});
+        _stack.emplace_back(_Cont_BNode_1{std::move(_result)});
         _stack.emplace_back(_Enter{&a1});
       } else {
         auto _f = std::move(std::get<_Cont_BNode_1>(_frame));
-        bool r_ = _f.r_;
-        bool r_0 = std::move(_result);
-        _result = (r_ || r_0);
+        _result = (_f._tmp2 || std::move(_result));
       }
     }
     return _result;

@@ -316,13 +316,11 @@ struct LoopifyFrameLambdaType {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         auto a0 = std::move(_f.a0);
         auto a00 = std::move(_f.a00);
-        res<std::pair<List<std::pair<T1, T2>>, List<T2>>> r_ =
-            std::move(_result);
         _result =
             Monad0::template bind<Monad_res,
                                   std::pair<List<std::pair<T1, T2>>, List<T2>>,
                                   std::pair<List<std::pair<T1, T2>>, List<T2>>>(
-                std::move(r_),
+                std::move(_result),
                 [=](std::pair<List<std::pair<T1, T2>>, List<T2>> x0) {
                   const auto &[l, rest] = x0;
                   return Monad0::template ret<

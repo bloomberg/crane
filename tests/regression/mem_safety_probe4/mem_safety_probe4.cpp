@@ -43,8 +43,7 @@ uint64_t MemSafetyProbe4::sum_through(
     } else {
       auto _f = std::move(std::get<_Cont_Mycons>(_frame));
       MemSafetyProbe4::tree a0 = std::move(_f.a0);
-      uint64_t r_ = std::move(_result);
-      _result = a0.sum_values(r_);
+      _result = a0.sum_values(std::move(_result));
     }
   }
   return _result;
@@ -94,8 +93,7 @@ uint64_t MemSafetyProbe4::add_through(
     } else {
       auto _f = std::move(std::get<_Cont_Mycons>(_frame));
       crane::fn<uint64_t(uint64_t)> f = std::move(_f.f);
-      uint64_t r_ = std::move(_result);
-      _result = (r_ + f(UINT64_C(0)));
+      _result = (std::move(_result) + f(UINT64_C(0)));
     }
   }
   return _result;
@@ -150,8 +148,7 @@ uint64_t MemSafetyProbe4::double_partial(
       auto _f = std::move(std::get<_Cont_Mycons>(_frame));
       crane::fn<uint64_t(uint64_t)> f = std::move(_f.f);
       crane::fn<uint64_t(uint64_t)> g = std::move(_f.g);
-      uint64_t r_ = std::move(_result);
-      _result = (f(r_) + g(UINT64_C(0)));
+      _result = (f(std::move(_result)) + g(UINT64_C(0)));
     }
   }
   return _result;
@@ -205,8 +202,7 @@ uint64_t MemSafetyProbe4::weighted_sum(
       auto _f = std::move(std::get<_Cont_Mycons>(_frame));
       crane::fn<uint64_t(uint64_t)> f = std::move(_f.f);
       uint64_t w = _f.w;
-      uint64_t r_ = std::move(_result);
-      _result = (f(w) + r_);
+      _result = (f(w) + std::move(_result));
     }
   }
   return _result;
@@ -283,8 +279,7 @@ uint64_t MemSafetyProbe4::mysum(
     } else {
       auto _f = std::move(std::get<_Cont_Mycons>(_frame));
       uint64_t a0 = _f.a0;
-      uint64_t r_ = std::move(_result);
-      _result = (a0 + r_);
+      _result = (a0 + std::move(_result));
     }
   }
   return _result;
@@ -333,8 +328,7 @@ uint64_t MemSafetyProbe4::process_list(
     } else {
       auto _f = std::move(std::get<_Cont_Mycons>(_frame));
       crane::fn<uint64_t(uint64_t)> f = std::move(_f.f);
-      uint64_t r_ = std::move(_result);
-      _result = apply_to(std::move(f), r_);
+      _result = apply_to(std::move(f), std::move(_result));
     }
   }
   return _result;

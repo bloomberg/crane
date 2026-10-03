@@ -26,10 +26,10 @@ uint64_t LoopifyStructures::sum_nested_list_fuel(
     uint64_t f;
   };
 
-  /// _Cont_NList_1: saves [r_], resumes after recursive call, then processes
+  /// _Cont_NList_1: saves [_tmp3], resumes after recursive call, then processes
   /// rest.
   struct _Cont_NList_1 {
-    uint64_t r_;
+    uint64_t _tmp3;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Elem, _Cont_NList, _Cont_NList_1>;
@@ -72,20 +72,16 @@ uint64_t LoopifyStructures::sum_nested_list_fuel(
     } else if (std::holds_alternative<_Cont_Elem>(_frame)) {
       auto _f = std::move(std::get<_Cont_Elem>(_frame));
       uint64_t a00 = _f.a00;
-      uint64_t r_ = std::move(_result);
-      _result = (a00 + r_);
+      _result = (a00 + std::move(_result));
     } else if (std::holds_alternative<_Cont_NList>(_frame)) {
       auto _f = std::move(std::get<_Cont_NList>(_frame));
       const List<LoopifyStructures::nested> &a1 = *_f.a1;
       uint64_t f = _f.f;
-      uint64_t r_ = std::move(_result);
-      _stack.emplace_back(_Cont_NList_1{r_});
+      _stack.emplace_back(_Cont_NList_1{std::move(_result)});
       _stack.emplace_back(_Enter{&a1, f});
     } else {
       auto _f = std::move(std::get<_Cont_NList_1>(_frame));
-      uint64_t r_ = _f.r_;
-      uint64_t r_0 = std::move(_result);
-      _result = (r_ + r_0);
+      _result = (_f._tmp3 + std::move(_result));
     }
   }
   return _result;
@@ -200,10 +196,10 @@ List<uint64_t> LoopifyStructures::flatten_nested_list_fuel(
     uint64_t f;
   };
 
-  /// _Cont_NList_1: saves [r_], resumes after recursive call, then processes
+  /// _Cont_NList_1: saves [_tmp2], resumes after recursive call, then processes
   /// rest.
   struct _Cont_NList_1 {
-    List<uint64_t> r_;
+    List<uint64_t> _tmp2;
   };
 
   /// _Resume_Elem: saves [a00], resumes after recursive call with _result.
@@ -252,14 +248,11 @@ List<uint64_t> LoopifyStructures::flatten_nested_list_fuel(
       auto _f = std::move(std::get<_Cont_NList>(_frame));
       const List<LoopifyStructures::nested> &a1 = *_f.a1;
       uint64_t f = _f.f;
-      List<uint64_t> r_ = std::move(_result);
-      _stack.emplace_back(_Cont_NList_1{std::move(r_)});
+      _stack.emplace_back(_Cont_NList_1{std::move(_result)});
       _stack.emplace_back(_Enter{&a1, f});
     } else if (std::holds_alternative<_Cont_NList_1>(_frame)) {
       auto _f = std::move(std::get<_Cont_NList_1>(_frame));
-      List<uint64_t> r_ = std::move(_f.r_);
-      List<uint64_t> r_0 = std::move(_result);
-      _result = std::move(r_).app(std::move(r_0));
+      _result = std::move(_f._tmp2).app(std::move(_result));
     } else {
       auto _f = std::move(std::get<_Resume_Elem>(_frame));
       _result = List<uint64_t>::cons(_f.a00, std::move(_result));

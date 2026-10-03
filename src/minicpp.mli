@@ -778,8 +778,22 @@ and ref_qual =
   | Rq_lvalue  (** [&] *)
   | Rq_rvalue  (** [&&] *)
 
-(** A custom match: the mapping's template, and the inductive it matches. *)
-and custom_match = {cm_template : string; cm_inductive : GlobRef.t}
+(** A custom match: the mapping's template, the inductive it matches, and
+    how the template holds its scrutinee. *)
+and custom_match = {
+  cm_template : string;
+  cm_inductive : GlobRef.t;
+  cm_scrutinee : scrutinee_hold;
+}
+
+(** How a custom match's template holds its scrutinee. *)
+and scrutinee_hold =
+  | Scrut_owned
+      (** By value ([auto [a, b] = %scrut]): any expression may stand there,
+          a temporary included. *)
+  | Scrut_borrowed
+      (** It may keep references into the scrutinee, so the scrutinee must
+          outlive the match. *)
 
 (** How a boxed value is read back.  Each form prints as one C++ idiom. *)
 and unbox =
@@ -1073,6 +1087,7 @@ val out_of_line_member : cpp_field -> out_of_line_member option
 (** [map_out_of_line fs ft m] applies [fs] to [m]'s statements and [ft] to its
     types. *)
 val map_out_of_line :
+  ?fl:(cpp_stmt list -> cpp_stmt list) ->
   (cpp_stmt -> cpp_stmt) -> (cpp_type -> cpp_type) ->
   out_of_line_member -> out_of_line_member
 
@@ -1128,6 +1143,7 @@ val settle_lambda_tparams : cpp_lambda -> cpp_lambda
     and [fs] over its body.  A lambda has no immediate sub-expression of its
     own, so there is no expression function to take. *)
 val map_lambda :
+  ?fl:(cpp_stmt list -> cpp_stmt list) ->
   (cpp_stmt -> cpp_stmt) -> (cpp_type -> cpp_type) -> cpp_lambda -> cpp_lambda
 
 (** [erased_lambda l ~params ~ret ~body] is [l] rewritten to take [params] and
@@ -1157,8 +1173,12 @@ val map_tparams :
     @param fe transformation for immediate child expressions
     @param fs transformation for immediate child statements
     @param ft transformation for immediate child types
+    @param fl transformation for each immediate child statement list, in
+      place of mapping [fs] over it: a pass whose unit is a run of
+      statements
     @return the structurally-transformed expression *)
 val map_expr :
+  ?fl:(cpp_stmt list -> cpp_stmt list) ->
   (cpp_expr -> cpp_expr) ->
   (cpp_stmt -> cpp_stmt) ->
   (cpp_type -> cpp_type) ->
@@ -1171,8 +1191,10 @@ val map_expr :
     @param fe transformation for immediate child expressions
     @param fs transformation for immediate child statements
     @param ft transformation for immediate child types
+    @param fl as for {!map_expr}
     @return the structurally-transformed statement *)
 val map_stmt :
+  ?fl:(cpp_stmt list -> cpp_stmt list) ->
   (cpp_expr -> cpp_expr) ->
   (cpp_stmt -> cpp_stmt) ->
   (cpp_type -> cpp_type) ->
@@ -1423,6 +1445,7 @@ val mk_dfun :
     sub-statements and [ft] to sub-types of a visibility-annotated field,
     performing one level of structural descent.  Nested structs recurse. *)
 val map_field :
+  ?fl:(cpp_stmt list -> cpp_stmt list) ->
   (cpp_expr -> cpp_expr) -> (cpp_stmt -> cpp_stmt) -> (cpp_type -> cpp_type) ->
   cpp_field * cpp_visibility * section_tag ->
   cpp_field * cpp_visibility * section_tag
@@ -1447,8 +1470,19 @@ val split_definition : cpp_decl -> (cpp_decl * cpp_decl) option
     This is the rung that lets a whole-declaration pass be written as its three
     leaf functions rather than as a fresh traversal of all nine constructors. *)
 val map_decl :
+  ?fl:(cpp_stmt list -> cpp_stmt list) ->
   (cpp_expr -> cpp_expr) -> (cpp_stmt -> cpp_stmt) -> (cpp_type -> cpp_type) ->
   cpp_decl -> cpp_decl
+
+(** Whether evaluating [e] evaluates every immediate child of it, there and
+    then.  Not a lambda (its body runs later, if at all), a conditional, or a
+    short-circuit [&&] / [||] (one side may not run): nothing may be moved
+    into or out of those children without changing when, or whether, it is
+    evaluated. *)
+val evaluates_children : cpp_expr -> bool
+
+(** Whether a declaration of type [ty] binds a reference rather than a value. *)
+val is_reference_type : cpp_type -> bool
 
 (** The variables an expression, a statement or a statement list refers to
     without binding them.  An under-approximation: a form it does not look

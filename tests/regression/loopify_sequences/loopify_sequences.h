@@ -202,8 +202,7 @@ struct LoopifySequences {
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         List<T1> a0 = std::move(_f.a0);
-        List<T1> r_ = std::move(_result);
-        _result = a0.app(sep.app(std::move(r_)));
+        _result = a0.app(sep.app(std::move(_result)));
       }
     }
     return _result;
@@ -603,8 +602,7 @@ struct LoopifySequences {
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
-        bool r_ = std::move(_result);
-        _result = (p(a0) && r_);
+        _result = (p(a0) && std::move(_result));
       }
     }
     return _result;

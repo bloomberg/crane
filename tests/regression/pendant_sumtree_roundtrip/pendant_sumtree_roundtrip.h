@@ -142,8 +142,7 @@ public:
       } else {
         auto _f = std::move(std::get<_Cont_Cons0>(_frame));
         auto a0 = std::move(_f.a0);
-        bool r_ = std::move(_result);
-        _result = (f(a0) && r_);
+        _result = (f(a0) && std::move(_result));
       }
     }
     return _result;
@@ -187,8 +186,7 @@ public:
       } else {
         auto _f = std::move(std::get<_Cont_Cons0>(_frame));
         auto a1 = std::move(_f.a1);
-        T1 r_ = std::move(_result);
-        _result = f(a1, std::move(r_));
+        _result = f(a1, std::move(_result));
       }
     }
     return _result;
@@ -231,8 +229,7 @@ public:
       } else {
         auto _f = std::move(std::get<_Cont_Cons0>(_frame));
         List<T1> a0 = std::move(_f.a0);
-        List<T1> r_ = std::move(_result);
-        _result = a0.app(std::move(r_));
+        _result = a0.app(std::move(_result));
       }
     }
     return _result;
@@ -894,8 +891,8 @@ inline Sig<uint64_t> T::to_nat(uint64_t) const {
     return Sig<uint64_t>::exist(UINT64_C(0));
   } else {
     const auto &[n1, a1] = std::get<typename T::FS>(this->v());
-    Sig<uint64_t> r_ = a1->to_nat(n1);
-    auto &[x0] = r_;
+    Sig<uint64_t> _tmp1 = a1->to_nat(n1);
+    auto &[x0] = _tmp1;
     return Sig<uint64_t>::exist((std::move(x0) + 1));
   }
 }

@@ -631,8 +631,7 @@ uint64_t ComprehensivePatterns::count_down(
       }
     } else {
       auto _f = std::move(std::get<_Cont_m>(_frame));
-      uint64_t r_ = std::move(_result);
-      _result = (r_ + r.nc_b);
+      _result = (std::move(_result) + r.nc_b);
     }
   }
   return _result;
@@ -721,8 +720,7 @@ uint64_t ComprehensivePatterns::sum_proj(
       }
     } else {
       auto _f = std::move(std::get<_Cont_m>(_frame));
-      uint64_t r_ = std::move(_result);
-      _result = (r.nc_a + r_);
+      _result = (r.nc_a + std::move(_result));
     }
   }
   return _result;
@@ -970,8 +968,7 @@ uint64_t ComprehensivePatterns::sum_values(
       }
     } else {
       auto _f = std::move(std::get<_Cont_m>(_frame));
-      uint64_t r_ = std::move(_result);
-      _result = (s.stmt_value + r_);
+      _result = (s.stmt_value + std::move(_result));
     }
   }
   return _result;
@@ -1038,8 +1035,7 @@ uint64_t ComprehensivePatterns::sum_with_state(
       }
     } else {
       auto _f = std::move(std::get<_Cont_m>(_frame));
-      uint64_t r_ = std::move(_result);
-      _result = (r.cf_val + r_);
+      _result = (r.cf_val + std::move(_result));
     }
   }
   return _result;
@@ -1099,12 +1095,10 @@ uint64_t ComprehensivePatterns::even_count(
       }
     } else if (std::holds_alternative<_Cont_m>(_frame)) {
       auto _f = std::move(std::get<_Cont_m>(_frame));
-      uint64_t r_ = std::move(_result);
-      _result = (UINT64_C(1) + r_);
+      _result = (UINT64_C(1) + std::move(_result));
     } else {
       auto _f = std::move(std::get<_Cont_m_1>(_frame));
-      uint64_t r_ = std::move(_result);
-      _result = (UINT64_C(1) + r_);
+      _result = (UINT64_C(1) + std::move(_result));
     }
   }
   return _result;
@@ -1164,12 +1158,10 @@ uint64_t ComprehensivePatterns::odd_count(
       }
     } else if (std::holds_alternative<_Cont_m>(_frame)) {
       auto _f = std::move(std::get<_Cont_m>(_frame));
-      uint64_t r_ = std::move(_result);
-      _result = (UINT64_C(1) + r_);
+      _result = (UINT64_C(1) + std::move(_result));
     } else {
       auto _f = std::move(std::get<_Cont_m_1>(_frame));
-      uint64_t r_ = std::move(_result);
-      _result = (UINT64_C(1) + r_);
+      _result = (UINT64_C(1) + std::move(_result));
     }
   }
   return _result;
@@ -1207,8 +1199,7 @@ uint64_t ComprehensivePatterns::accum_with_state(
       }
     } else {
       auto _f = std::move(std::get<_Cont_m>(_frame));
-      uint64_t r_ = std::move(_result);
-      _result = (s.lb_value + r_);
+      _result = (s.lb_value + std::move(_result));
     }
   }
   return _result;

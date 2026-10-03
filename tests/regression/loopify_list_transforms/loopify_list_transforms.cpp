@@ -41,16 +41,17 @@ List<std::pair<uint64_t, uint64_t>> LoopifyListTransforms::run_length_encode(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      List<std::pair<uint64_t, uint64_t>> r_ = std::move(_result);
+      List<std::pair<uint64_t, uint64_t>> _tmp1 = std::move(_result);
       if (std::holds_alternative<
-              typename List<std::pair<uint64_t, uint64_t>>::Nil>(r_.v_mut())) {
+              typename List<std::pair<uint64_t, uint64_t>>::Nil>(
+              _tmp1.v_mut())) {
         _result = List<std::pair<uint64_t, uint64_t>>::cons(
             std::make_pair(a0, UINT64_C(1)),
             List<std::pair<uint64_t, uint64_t>>::nil());
       } else {
         auto &[a01, a11] =
             std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
-                r_.v_mut());
+                _tmp1.v_mut());
         auto [y, n] = std::move(a01);
         if (a0 == y) {
           _result = List<std::pair<uint64_t, uint64_t>>::cons(
@@ -429,8 +430,7 @@ uint64_t LoopifyListTransforms::step_sum(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t contribution = _f.contribution;
-      uint64_t r_ = std::move(_result);
-      _result = (contribution + r_);
+      _result = (contribution + std::move(_result));
     }
   }
   return _result;

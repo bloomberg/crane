@@ -31,8 +31,7 @@ uint64_t LoopifyListWindows::len(
       }
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
-      uint64_t r_ = std::move(_result);
-      _result = (UINT64_C(1) + r_);
+      _result = (UINT64_C(1) + std::move(_result));
     }
   }
   return _result;
@@ -126,8 +125,7 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifyListWindows::span_eq(
     } else {
       auto _f = std::move(std::get<_Cont1>(_frame));
       uint64_t a0 = _f.a0;
-      std::pair<List<uint64_t>, List<uint64_t>> r_ = std::move(_result);
-      auto [s, r] = std::move(r_);
+      auto [s, r] = std::move(_result);
       _result =
           std::make_pair(List<uint64_t>::cons(a0, std::move(s)), std::move(r));
     }
@@ -252,9 +250,8 @@ List<List<uint64_t>> LoopifyListWindows::inits(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      List<List<uint64_t>> r_ = std::move(_result);
-      _result = List<List<uint64_t>>::cons(List<uint64_t>::nil(),
-                                           map_cons_helper(a0, std::move(r_)));
+      _result = List<List<uint64_t>>::cons(
+          List<uint64_t>::nil(), map_cons_helper(a0, std::move(_result)));
     }
   }
   return _result;

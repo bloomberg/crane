@@ -398,9 +398,8 @@ struct LoopifyResultNoDefault {
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         auto a0 = std::move(_f.a0);
-        typename _tcI0::template m<T3> r_ = std::move(_result);
         _result = Monad0::template bind<_tcI0, T3, T3>(
-            std::move(r_), [=](const T3 &r) { return f(r, a0); });
+            std::move(_result), [=](const T3 &r) { return f(r, a0); });
       }
     }
     return _result;

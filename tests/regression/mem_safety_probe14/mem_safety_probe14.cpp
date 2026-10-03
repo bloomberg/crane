@@ -37,8 +37,7 @@ uint64_t MemSafetyProbe14::sum_fns(
     } else {
       auto _f = std::move(std::get<_Cont_Mycons>(_frame));
       crane::fn<uint64_t(uint64_t)> a0 = std::move(_f.a0);
-      uint64_t r_ = std::move(_result);
-      _result = (a0(UINT64_C(0)) + r_);
+      _result = (a0(UINT64_C(0)) + std::move(_result));
     }
   }
   return _result;
@@ -81,12 +80,12 @@ MemSafetyProbe14::tree_level_fns(
     std::shared_ptr<MemSafetyProbe14::tree> a2;
   };
 
-  /// _Cont_Node_1: saves [a1, depth, r_, a0, a2], resumes after recursive call,
-  /// then processes rest.
+  /// _Cont_Node_1: saves [_tmp2, a1, depth, a0, a2], resumes after recursive
+  /// call, then processes rest.
   struct _Cont_Node_1 {
+    MemSafetyProbe14::mylist<crane::fn<uint64_t(uint64_t)>> _tmp2;
     uint64_t a1;
     uint64_t depth;
-    MemSafetyProbe14::mylist<crane::fn<uint64_t(uint64_t)>> r_;
     std::shared_ptr<MemSafetyProbe14::tree> a0;
     std::shared_ptr<MemSafetyProbe14::tree> a2;
   };
@@ -120,23 +119,17 @@ MemSafetyProbe14::tree_level_fns(
       uint64_t depth = _f.depth;
       std::shared_ptr<MemSafetyProbe14::tree> a0 = std::move(_f.a0);
       std::shared_ptr<MemSafetyProbe14::tree> a2 = std::move(_f.a2);
-      MemSafetyProbe14::mylist<crane::fn<uint64_t(uint64_t)>> r_ =
-          std::move(_result);
       const MemSafetyProbe14::tree &a0_value = *a0;
       const MemSafetyProbe14::tree &a2_value = *a2;
       _stack.emplace_back(
-          _Cont_Node_1{a1, depth, std::move(r_), std::move(a0), a2});
+          _Cont_Node_1{std::move(_result), a1, depth, std::move(a0), a2});
       _stack.emplace_back(_Enter{(UINT64_C(1) + depth), crane_raw(a2)});
     } else {
       auto _f = std::move(std::get<_Cont_Node_1>(_frame));
       uint64_t a1 = _f.a1;
       uint64_t depth = _f.depth;
-      MemSafetyProbe14::mylist<crane::fn<uint64_t(uint64_t)>> r_ =
-          std::move(_f.r_);
       std::shared_ptr<MemSafetyProbe14::tree> a0 = std::move(_f.a0);
       std::shared_ptr<MemSafetyProbe14::tree> a2 = std::move(_f.a2);
-      MemSafetyProbe14::mylist<crane::fn<uint64_t(uint64_t)>> r_0 =
-          std::move(_result);
       const MemSafetyProbe14::tree &a0_value = *a0;
       const MemSafetyProbe14::tree &a2_value = *a2;
       _result = mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
@@ -145,7 +138,7 @@ MemSafetyProbe14::tree_level_fns(
               [=](uint64_t n) {
                 return ((a0_value.tree_sum() + a2_value.tree_sum()) + n);
               },
-              std::move(r_).mylist_append(std::move(r_0))));
+              std::move(_f._tmp2).mylist_append(std::move(_result))));
     }
   }
   return _result;
@@ -193,11 +186,11 @@ MemSafetyProbe14::collect_closures(
     std::shared_ptr<MemSafetyProbe14::tree> a2;
   };
 
-  /// _Cont_Node_1: saves [a1, r_], resumes after recursive call, then processes
-  /// rest.
+  /// _Cont_Node_1: saves [_tmp2, a1], resumes after recursive call, then
+  /// processes rest.
   struct _Cont_Node_1 {
+    MemSafetyProbe14::mylist<crane::fn<uint64_t(uint64_t)>> _tmp2;
     uint64_t a1;
-    MemSafetyProbe14::mylist<crane::fn<uint64_t(uint64_t)>> r_;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
@@ -226,21 +219,15 @@ MemSafetyProbe14::collect_closures(
       auto _f = std::move(std::get<_Cont_Node>(_frame));
       uint64_t a1 = _f.a1;
       std::shared_ptr<MemSafetyProbe14::tree> a2 = std::move(_f.a2);
-      MemSafetyProbe14::mylist<crane::fn<uint64_t(uint64_t)>> r_ =
-          std::move(_result);
       const MemSafetyProbe14::tree &a2_value = *a2;
-      _stack.emplace_back(_Cont_Node_1{a1, std::move(r_)});
+      _stack.emplace_back(_Cont_Node_1{std::move(_result), a1});
       _stack.emplace_back(_Enter{crane_raw(a2)});
     } else {
       auto _f = std::move(std::get<_Cont_Node_1>(_frame));
       uint64_t a1 = _f.a1;
-      MemSafetyProbe14::mylist<crane::fn<uint64_t(uint64_t)>> r_ =
-          std::move(_f.r_);
-      MemSafetyProbe14::mylist<crane::fn<uint64_t(uint64_t)>> r_0 =
-          std::move(_result);
       _result = mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
           [=](uint64_t n) { return (a1 + n); },
-          std::move(r_).mylist_append(std::move(r_0)));
+          std::move(_f._tmp2).mylist_append(std::move(_result)));
     }
   }
   return _result;

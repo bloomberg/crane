@@ -62,9 +62,10 @@ STMonadTests::fib_fun(uint64_t n) { /// _Enter: captures varying parameters for
     uint64_t m;
   };
 
-  /// _Cont_m_1: saves [r_], resumes after recursive call, then processes rest.
+  /// _Cont_m_1: saves [_tmp2], resumes after recursive call, then processes
+  /// rest.
   struct _Cont_m_1 {
-    uint64_t r_;
+    uint64_t _tmp2;
   };
 
   using _Frame = std::variant<_Enter, _Cont_m, _Cont_m_1>;
@@ -93,14 +94,11 @@ STMonadTests::fib_fun(uint64_t n) { /// _Enter: captures varying parameters for
     } else if (std::holds_alternative<_Cont_m>(_frame)) {
       auto _f = std::move(std::get<_Cont_m>(_frame));
       uint64_t m = _f.m;
-      uint64_t r_ = std::move(_result);
-      _stack.emplace_back(_Cont_m_1{r_});
+      _stack.emplace_back(_Cont_m_1{std::move(_result)});
       _stack.emplace_back(_Enter{m});
     } else {
       auto _f = std::move(std::get<_Cont_m_1>(_frame));
-      uint64_t r_ = _f.r_;
-      uint64_t r_0 = std::move(_result);
-      _result = (r_ + r_0);
+      _result = (_f._tmp2 + std::move(_result));
     }
   }
   return _result;
@@ -359,8 +357,7 @@ std::string STMonadTests::list_to_string_helper(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      std::string r_ = std::move(_result);
-      _result = std::to_string(a0) + ", "s + std::move(r_);
+      _result = std::to_string(a0) + ", "s + std::move(_result);
     }
   }
   return _result;
@@ -402,8 +399,7 @@ STMonadTests::rep_list_nat(List<uint64_t> l,
       }
     } else {
       auto _f = std::move(std::get<_Cont_x>(_frame));
-      List<uint64_t> r_ = std::move(_result);
-      _result = l.app(std::move(r_));
+      _result = l.app(std::move(_result));
     }
   }
   return _result;

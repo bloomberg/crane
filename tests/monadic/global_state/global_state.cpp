@@ -13,9 +13,10 @@ GlobalStateTests::fib_fun(uint64_t n) { /// _Enter: captures varying parameters
     uint64_t m;
   };
 
-  /// _Cont_m_1: saves [r_], resumes after recursive call, then processes rest.
+  /// _Cont_m_1: saves [_tmp2], resumes after recursive call, then processes
+  /// rest.
   struct _Cont_m_1 {
-    uint64_t r_;
+    uint64_t _tmp2;
   };
 
   using _Frame = std::variant<_Enter, _Cont_m, _Cont_m_1>;
@@ -44,14 +45,11 @@ GlobalStateTests::fib_fun(uint64_t n) { /// _Enter: captures varying parameters
     } else if (std::holds_alternative<_Cont_m>(_frame)) {
       auto _f = std::move(std::get<_Cont_m>(_frame));
       uint64_t m = _f.m;
-      uint64_t r_ = std::move(_result);
-      _stack.emplace_back(_Cont_m_1{r_});
+      _stack.emplace_back(_Cont_m_1{std::move(_result)});
       _stack.emplace_back(_Enter{m});
     } else {
       auto _f = std::move(std::get<_Cont_m_1>(_frame));
-      uint64_t r_ = _f.r_;
-      uint64_t r_0 = std::move(_result);
-      _result = (r_ + r_0);
+      _result = (_f._tmp2 + std::move(_result));
     }
   }
   return _result;

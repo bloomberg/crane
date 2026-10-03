@@ -39,8 +39,7 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifyListPairing::unzip(
       auto _f = std::move(std::get<_Cont_a>(_frame));
       uint64_t a = _f.a;
       uint64_t b = _f.b;
-      std::pair<List<uint64_t>, List<uint64_t>> r_ = std::move(_result);
-      auto [xs, ys] = std::move(r_);
+      auto [xs, ys] = std::move(_result);
       _result = std::make_pair(List<uint64_t>::cons(a, std::move(xs)),
                                List<uint64_t>::cons(b, std::move(ys)));
     }
@@ -82,8 +81,7 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifyListPairing::swizzle(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      std::pair<List<uint64_t>, List<uint64_t>> r_ = std::move(_result);
-      auto [odds, evens] = std::move(r_);
+      auto [odds, evens] = std::move(_result);
       _result = std::make_pair(List<uint64_t>::cons(a0, std::move(evens)),
                                std::move(odds));
     }
@@ -125,8 +123,7 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifyListPairing::partition(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      std::pair<List<uint64_t>, List<uint64_t>> r_ = std::move(_result);
-      auto [yes, no] = std::move(r_);
+      auto [yes, no] = std::move(_result);
       if ((UINT64_C(2) ? a0 % UINT64_C(2) : a0) == UINT64_C(0)) {
         _result = std::make_pair(List<uint64_t>::cons(a0, std::move(yes)),
                                  std::move(no));
@@ -296,8 +293,7 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifyListPairing::split_even_odd(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      std::pair<List<uint64_t>, List<uint64_t>> r_ = std::move(_result);
-      auto [evens, odds] = std::move(r_);
+      auto [evens, odds] = std::move(_result);
       if ((UINT64_C(2) ? a0 % UINT64_C(2) : a0) == UINT64_C(0)) {
         _result = std::make_pair(List<uint64_t>::cons(a0, std::move(evens)),
                                  std::move(odds));

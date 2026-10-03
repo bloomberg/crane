@@ -37,8 +37,7 @@ uint64_t MemSafetyProbe9::sum_fns(
     } else {
       auto _f = std::move(std::get<_Cont_Mycons>(_frame));
       crane::fn<uint64_t(uint64_t)> a0 = std::move(_f.a0);
-      uint64_t r_ = std::move(_result);
-      _result = (a0(UINT64_C(0)) + r_);
+      _result = (a0(UINT64_C(0)) + std::move(_result));
     }
   }
   return _result;
@@ -94,10 +93,8 @@ MemSafetyProbe9::collect_subtree_sums(
     } else {
       auto _f = std::move(std::get<_Cont_Node>(_frame));
       std::shared_ptr<MemSafetyProbe9::tree> a0 = std::move(_f.a0);
-      MemSafetyProbe9::mylist<crane::fn<uint64_t(uint64_t)>> r_ =
-          std::move(_result);
       const MemSafetyProbe9::tree &a0_value = *a0;
-      _stack.emplace_back(_Enter{std::move(r_), crane_raw(a0)});
+      _stack.emplace_back(_Enter{std::move(_result), crane_raw(a0)});
     }
   }
   return _result;
@@ -153,10 +150,8 @@ MemSafetyProbe9::collect_left_sums(
     } else {
       auto _f = std::move(std::get<_Cont_Node>(_frame));
       std::shared_ptr<MemSafetyProbe9::tree> a0 = std::move(_f.a0);
-      MemSafetyProbe9::mylist<crane::fn<uint64_t(uint64_t)>> r_ =
-          std::move(_result);
       const MemSafetyProbe9::tree &a0_value = *a0;
-      _stack.emplace_back(_Enter{std::move(r_), crane_raw(a0)});
+      _stack.emplace_back(_Enter{std::move(_result), crane_raw(a0)});
     }
   }
   return _result;
@@ -207,10 +202,10 @@ MemSafetyProbe9::tree MemSafetyProbe9::make_balanced(
     uint64_t n_;
   };
 
-  /// _Resume_n_: saves [n, r_], resumes after recursive call with _result.
+  /// _Resume_n_: saves [n, _tmp1], resumes after recursive call with _result.
   struct _Resume_n_ {
     uint64_t n;
-    MemSafetyProbe9::tree r_;
+    MemSafetyProbe9::tree _tmp1;
   };
 
   using _Frame = std::variant<_Enter, _Cont_n_, _Resume_n_>;
@@ -235,12 +230,11 @@ MemSafetyProbe9::tree MemSafetyProbe9::make_balanced(
       auto _f = std::move(std::get<_Cont_n_>(_frame));
       uint64_t n = _f.n;
       uint64_t n_ = _f.n_;
-      MemSafetyProbe9::tree r_ = std::move(_result);
-      _stack.emplace_back(_Resume_n_{n, std::move(r_)});
+      _stack.emplace_back(_Resume_n_{n, std::move(_result)});
       _stack.emplace_back(_Enter{n_});
     } else {
       auto _f = std::move(std::get<_Resume_n_>(_frame));
-      _result = tree::node(std::move(_f.r_), _f.n, std::move(_result));
+      _result = tree::node(std::move(_f._tmp1), _f.n, std::move(_result));
     }
   }
   return _result;

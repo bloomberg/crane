@@ -1314,18 +1314,13 @@ let with_rematerialized ctx stmt =
         e;
       !ok
   in
-  let rec is_reference = function
-    | Tref _ -> true
-    | Tconst t -> is_reference t
-    | _ -> false
-  in
   match stmt with
   (* A reference names someone else's value: saving it would copy the value
      and leave a pointer taken from it dangling with the frame.  The
      continuation rebuilds it from its source, which is saved instead. *)
   | Sasgn (id, Declare ty, e)
     when calls_nothing e
-         && (is_reference ty || List.for_all rebindable (free_vars_expr e)) ->
+         && (is_reference_type ty || List.for_all rebindable (free_vars_expr e)) ->
     {ctx with er_rematerialized = ctx.er_rematerialized @ [(id, stmt)]}
   | _ -> ctx
 
@@ -1545,22 +1540,35 @@ and rewrite_enter_stmts ctx stmts =
         let bound = match tgt with Declare ty when ty <> Tauto -> [(id, ty)] | _ -> [] in
         bound @ make_cont_env cont_vars cont_types env
       in
-      let rest_processed =
-        List.map snd remat @ rewrite_enter_stmts { ctx with er_env = rest_env } rest
+      let rest_processed = rewrite_enter_stmts { ctx with er_env = rest_env } rest in
+      (* The handler restores what it saved and rebuilds what it did not,
+         then binds the call's result.  The temporaries among the restores
+         come last, next to the result: what reads them follows, so
+         {!Cpp_temporaries} can put each back where it is read. *)
+      let remat_stmts = List.map snd remat in
+      let early, late =
+        let read_by_remat = List.concat_map free_vars_stmt remat_stmts in
+        List.partition
+          (function
+            | Sasgn (v, _, _) ->
+              (not (Mlutil.is_temporary_id v)) || List.exists (Id.equal v) read_by_remat
+            | _ -> true )
+          bindings
       in
       (* When tgt is Existing (a bare assignment), the variable was declared
          in the _Enter handler scope and does not exist in the _Cont handler
          scope.  Promote to [auto] so the handler declares it. *)
       let handler_ty = match tgt with Existing -> Declare Tauto | t -> t in
       let handler =
+        early @ remat_stmts @ late
+        @
         match assign_expr with
         | CPPvar v when Common.is_scrutinee_cache_id id ->
           (* assign_expr is a plain variable (e.g. _result) and id is a
              scrutinee cache variable (_cs, _cs1, ...) — skip the
              redundant alias [auto _cs = v;] and substitute v for id. *)
-          bindings @ subst_var_stmts id v rest_processed
-        | _ ->
-          bindings @ [Sasgn (id, handler_ty, assign_expr)] @ rest_processed
+          subst_var_stmts id v rest_processed
+        | _ -> Sasgn (id, handler_ty, assign_expr) :: rest_processed
       in
       let all_saved = saved @ cont_saved in
       let all_types = types @ cont_types in

@@ -38,8 +38,7 @@ uint64_t MemSafetyProbe15::sum_list(
     } else {
       auto _f = std::move(std::get<_Cont_Mycons>(_frame));
       uint64_t a0 = _f.a0;
-      uint64_t r_ = std::move(_result);
-      _result = (a0 + r_);
+      _result = (a0 + std::move(_result));
     }
   }
   return _result;
@@ -64,11 +63,11 @@ MemSafetyProbe15::mylist<uint64_t> MemSafetyProbe15::flatten(
     const MemSafetyProbe15::tree *a2;
   };
 
-  /// _Cont_Node_1: saves [a1, r_], resumes after recursive call, then processes
-  /// rest.
+  /// _Cont_Node_1: saves [_tmp2, a1], resumes after recursive call, then
+  /// processes rest.
   struct _Cont_Node_1 {
+    MemSafetyProbe15::mylist<uint64_t> _tmp2;
     uint64_t a1;
-    MemSafetyProbe15::mylist<uint64_t> r_;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
@@ -95,16 +94,13 @@ MemSafetyProbe15::mylist<uint64_t> MemSafetyProbe15::flatten(
       auto _f = std::move(std::get<_Cont_Node>(_frame));
       uint64_t a1 = _f.a1;
       const MemSafetyProbe15::tree &a2 = *_f.a2;
-      MemSafetyProbe15::mylist<uint64_t> r_ = std::move(_result);
-      _stack.emplace_back(_Cont_Node_1{a1, std::move(r_)});
+      _stack.emplace_back(_Cont_Node_1{std::move(_result), a1});
       _stack.emplace_back(_Enter{&a2});
     } else {
       auto _f = std::move(std::get<_Cont_Node_1>(_frame));
       uint64_t a1 = _f.a1;
-      MemSafetyProbe15::mylist<uint64_t> r_ = std::move(_f.r_);
-      MemSafetyProbe15::mylist<uint64_t> r_0 = std::move(_result);
-      _result =
-          std::move(r_).myapp(mylist<uint64_t>::mycons(a1, std::move(r_0)));
+      _result = std::move(_f._tmp2).myapp(
+          mylist<uint64_t>::mycons(a1, std::move(_result)));
     }
   }
   return _result;
@@ -128,13 +124,13 @@ MemSafetyProbe15::mylist<uint64_t> MemSafetyProbe15::subtree_sums(
     const MemSafetyProbe15::tree *a2;
   };
 
-  /// _Cont_Node_1: saves [a0, a1, a2, r_], resumes after recursive call, then
-  /// processes rest.
+  /// _Cont_Node_1: saves [_tmp2, a0, a1, a2], resumes after recursive call,
+  /// then processes rest.
   struct _Cont_Node_1 {
+    MemSafetyProbe15::mylist<uint64_t> _tmp2;
     std::shared_ptr<MemSafetyProbe15::tree> a0;
     uint64_t a1;
     const MemSafetyProbe15::tree *a2;
-    MemSafetyProbe15::mylist<uint64_t> r_;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
@@ -162,19 +158,17 @@ MemSafetyProbe15::mylist<uint64_t> MemSafetyProbe15::subtree_sums(
       std::shared_ptr<MemSafetyProbe15::tree> a0 = std::move(_f.a0);
       uint64_t a1 = _f.a1;
       const MemSafetyProbe15::tree &a2 = *_f.a2;
-      MemSafetyProbe15::mylist<uint64_t> r_ = std::move(_result);
-      _stack.emplace_back(_Cont_Node_1{std::move(a0), a1, &a2, std::move(r_)});
+      _stack.emplace_back(
+          _Cont_Node_1{std::move(_result), std::move(a0), a1, &a2});
       _stack.emplace_back(_Enter{&a2});
     } else {
       auto _f = std::move(std::get<_Cont_Node_1>(_frame));
       std::shared_ptr<MemSafetyProbe15::tree> a0 = std::move(_f.a0);
       uint64_t a1 = _f.a1;
       const MemSafetyProbe15::tree &a2 = *_f.a2;
-      MemSafetyProbe15::mylist<uint64_t> r_ = std::move(_f.r_);
-      MemSafetyProbe15::mylist<uint64_t> r_0 = std::move(_result);
-      _result =
-          mylist<uint64_t>::mycons(((a0->tree_sum() + a1) + a2.tree_sum()),
-                                   std::move(r_).myapp(std::move(r_0)));
+      _result = mylist<uint64_t>::mycons(
+          ((a0->tree_sum() + a1) + a2.tree_sum()),
+          std::move(_f._tmp2).myapp(std::move(_result)));
     }
   }
   return _result;
@@ -223,10 +217,10 @@ MemSafetyProbe15::tree MemSafetyProbe15::make_tree(
     uint64_t n_;
   };
 
-  /// _Resume_n_: saves [n, r_], resumes after recursive call with _result.
+  /// _Resume_n_: saves [n, _tmp1], resumes after recursive call with _result.
   struct _Resume_n_ {
     uint64_t n;
-    MemSafetyProbe15::tree r_;
+    MemSafetyProbe15::tree _tmp1;
   };
 
   using _Frame = std::variant<_Enter, _Cont_n_, _Resume_n_>;
@@ -251,12 +245,11 @@ MemSafetyProbe15::tree MemSafetyProbe15::make_tree(
       auto _f = std::move(std::get<_Cont_n_>(_frame));
       uint64_t n = _f.n;
       uint64_t n_ = _f.n_;
-      MemSafetyProbe15::tree r_ = std::move(_result);
-      _stack.emplace_back(_Resume_n_{n, std::move(r_)});
+      _stack.emplace_back(_Resume_n_{n, std::move(_result)});
       _stack.emplace_back(_Enter{n_});
     } else {
       auto _f = std::move(std::get<_Resume_n_>(_frame));
-      _result = tree::node(std::move(_f.r_), _f.n, std::move(_result));
+      _result = tree::node(std::move(_f._tmp1), _f.n, std::move(_result));
     }
   }
   return _result;

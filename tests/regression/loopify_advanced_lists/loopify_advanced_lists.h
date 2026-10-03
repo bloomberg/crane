@@ -163,8 +163,7 @@ struct LoopifyAdvancedLists {
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
-        List<uint64_t> r_ = std::move(_result);
-        _result = f(a0).app(std::move(r_));
+        _result = f(a0).app(std::move(_result));
       }
     }
     return _result;
@@ -208,8 +207,7 @@ struct LoopifyAdvancedLists {
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
-        bool r_ = std::move(_result);
-        _result = (p(a0) && r_);
+        _result = (p(a0) && std::move(_result));
       }
     }
     return _result;
@@ -253,8 +251,7 @@ struct LoopifyAdvancedLists {
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
-        bool r_ = std::move(_result);
-        _result = (p(a0) || r_);
+        _result = (p(a0) || std::move(_result));
       }
     }
     return _result;

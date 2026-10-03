@@ -103,8 +103,7 @@ struct MethodifiedMemberNameClash {
         } else {
           auto _f = std::move(std::get<_Cont_O2>(_frame));
           std::shared_ptr<other> a0 = std::move(_f.a0);
-          T1 r_ = std::move(_result);
-          _result = f0(*a0, std::move(r_));
+          _result = f0(*a0, std::move(_result));
         }
       }
       return _result;
@@ -148,8 +147,7 @@ struct MethodifiedMemberNameClash {
         } else {
           auto _f = std::move(std::get<_Cont_O2>(_frame));
           std::shared_ptr<other> a0 = std::move(_f.a0);
-          T1 r_ = std::move(_result);
-          _result = f0(*a0, std::move(r_));
+          _result = f0(*a0, std::move(_result));
         }
       }
       return _result;
@@ -257,8 +255,7 @@ struct MethodifiedMemberNameClash {
         } else {
           auto _f = std::move(std::get<_Cont_WW>(_frame));
           std::shared_ptr<wrap> a0 = std::move(_f.a0);
-          T1 r_ = std::move(_result);
-          _result = f0(*a0, std::move(r_));
+          _result = f0(*a0, std::move(_result));
         }
       }
       return _result;
@@ -304,8 +301,7 @@ struct MethodifiedMemberNameClash {
         } else {
           auto _f = std::move(std::get<_Cont_WW>(_frame));
           std::shared_ptr<wrap> a0 = std::move(_f.a0);
-          T1 r_ = std::move(_result);
-          _result = f0(*a0, std::move(r_));
+          _result = f0(*a0, std::move(_result));
         }
       }
       return _result;

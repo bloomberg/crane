@@ -186,8 +186,7 @@ struct LoopifyFolds {
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
-        uint64_t r_ = std::move(_result);
-        _result = f(a0, r_);
+        _result = f(a0, std::move(_result));
       }
     }
     return _result;
@@ -258,12 +257,13 @@ struct LoopifyFolds {
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
-        List<uint64_t> r_ = std::move(_result);
-        if (std::holds_alternative<typename List<uint64_t>::Nil>(r_.v_mut())) {
+        List<uint64_t> _tmp1 = std::move(_result);
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(
+                _tmp1.v_mut())) {
           _result = List<uint64_t>::cons(acc, List<uint64_t>::nil());
         } else {
           auto &[a00, a10] =
-              std::get<typename List<uint64_t>::Cons>(r_.v_mut());
+              std::get<typename List<uint64_t>::Cons>(_tmp1.v_mut());
           _result = List<uint64_t>::cons(f(a0, std::move(a00)), *a10);
         }
       }
@@ -349,8 +349,7 @@ struct LoopifyFolds {
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
-        uint64_t r_ = std::move(_result);
-        _result = f(a0, r_);
+        _result = f(a0, std::move(_result));
       }
     }
     return _result;
@@ -398,8 +397,7 @@ struct LoopifyFolds {
       } else {
         auto _f = std::move(std::get<_Cont_acc_>(_frame));
         uint64_t y = _f.y;
-        std::pair<uint64_t, List<uint64_t>> r_ = std::move(_result);
-        auto [final_acc, ys] = std::move(r_);
+        auto [final_acc, ys] = std::move(_result);
         _result =
             std::make_pair(final_acc, List<uint64_t>::cons(y, std::move(ys)));
       }

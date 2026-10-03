@@ -198,11 +198,11 @@ struct LoopifyTreePaths {
         std::shared_ptr<tree> a2;
       };
 
-      /// _Cont_Node_1: saves [a1, r_], resumes after recursive call, then
+      /// _Cont_Node_1: saves [_tmp2, a1], resumes after recursive call, then
       /// processes rest.
       struct _Cont_Node_1 {
+        List<uint64_t> _tmp2;
         uint64_t a1;
-        List<uint64_t> r_;
       };
 
       using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
@@ -228,15 +228,13 @@ struct LoopifyTreePaths {
           auto _f = std::move(std::get<_Cont_Node>(_frame));
           uint64_t a1 = _f.a1;
           std::shared_ptr<tree> a2 = std::move(_f.a2);
-          List<uint64_t> r_ = std::move(_result);
-          _stack.emplace_back(_Cont_Node_1{a1, std::move(r_)});
+          _stack.emplace_back(_Cont_Node_1{std::move(_result), a1});
           _stack.emplace_back(_Enter{crane_raw(a2)});
         } else {
           auto _f = std::move(std::get<_Cont_Node_1>(_frame));
           uint64_t a1 = _f.a1;
-          List<uint64_t> r_ = std::move(_f.r_);
-          List<uint64_t> r_0 = std::move(_result);
-          _result = List<uint64_t>::cons(a1, std::move(r_).app(std::move(r_0)));
+          _result = List<uint64_t>::cons(
+              a1, std::move(_f._tmp2).app(std::move(_result)));
         }
       }
       return _result;
@@ -257,11 +255,11 @@ struct LoopifyTreePaths {
         std::shared_ptr<tree> a2;
       };
 
-      /// _Cont_Node_1: saves [a1, r_], resumes after recursive call, then
+      /// _Cont_Node_1: saves [_tmp2, a1], resumes after recursive call, then
       /// processes rest.
       struct _Cont_Node_1 {
+        uint64_t _tmp2;
         uint64_t a1;
-        uint64_t r_;
       };
 
       using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
@@ -287,15 +285,12 @@ struct LoopifyTreePaths {
           auto _f = std::move(std::get<_Cont_Node>(_frame));
           uint64_t a1 = _f.a1;
           std::shared_ptr<tree> a2 = std::move(_f.a2);
-          uint64_t r_ = std::move(_result);
-          _stack.emplace_back(_Cont_Node_1{a1, r_});
+          _stack.emplace_back(_Cont_Node_1{std::move(_result), a1});
           _stack.emplace_back(_Enter{crane_raw(a2)});
         } else {
           auto _f = std::move(std::get<_Cont_Node_1>(_frame));
           uint64_t a1 = _f.a1;
-          uint64_t r_ = _f.r_;
-          uint64_t r_0 = std::move(_result);
-          _result = (a1 + std::max(r_, r_0));
+          _result = (a1 + std::max(_f._tmp2, std::move(_result)));
         }
       }
       return _result;
@@ -353,9 +348,9 @@ struct LoopifyTreePaths {
         } else if (std::holds_alternative<_Cont2>(_frame)) {
           auto _f = std::move(std::get<_Cont2>(_frame));
           uint64_t a1 = _f.a1;
-          std::optional<List<uint64_t>> r_0 = std::move(_result);
-          if (r_0.has_value()) {
-            const List<uint64_t> &path = *r_0;
+          std::optional<List<uint64_t>> _tmp1 = std::move(_result);
+          if (_tmp1.has_value()) {
+            const List<uint64_t> &path = *_tmp1;
             _result = std::make_optional<List<uint64_t>>(
                 List<uint64_t>::cons(a1, path));
           } else {
@@ -366,9 +361,9 @@ struct LoopifyTreePaths {
           uint64_t a1 = _f.a1;
           std::shared_ptr<tree> a2 = std::move(_f.a2);
           uint64_t new_acc = _f.new_acc;
-          std::optional<List<uint64_t>> r_ = std::move(_result);
-          if (r_.has_value()) {
-            const List<uint64_t> &path = *r_;
+          std::optional<List<uint64_t>> _tmp2 = std::move(_result);
+          if (_tmp2.has_value()) {
+            const List<uint64_t> &path = *_tmp2;
             _result = std::make_optional<List<uint64_t>>(
                 List<uint64_t>::cons(a1, path));
           } else {
@@ -400,10 +395,10 @@ struct LoopifyTreePaths {
         uint64_t new_acc;
       };
 
-      /// _Cont_Node_1: saves [r_], resumes after recursive call, then processes
-      /// rest.
+      /// _Cont_Node_1: saves [_tmp2], resumes after recursive call, then
+      /// processes rest.
       struct _Cont_Node_1 {
-        uint64_t r_;
+        uint64_t _tmp2;
       };
 
       using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
@@ -435,14 +430,11 @@ struct LoopifyTreePaths {
           auto _f = std::move(std::get<_Cont_Node>(_frame));
           std::shared_ptr<tree> a2 = std::move(_f.a2);
           uint64_t new_acc = _f.new_acc;
-          uint64_t r_ = std::move(_result);
-          _stack.emplace_back(_Cont_Node_1{r_});
+          _stack.emplace_back(_Cont_Node_1{std::move(_result)});
           _stack.emplace_back(_Enter{crane_raw(a2), new_acc});
         } else {
           auto _f = std::move(std::get<_Cont_Node_1>(_frame));
-          uint64_t r_ = _f.r_;
-          uint64_t r_0 = std::move(_result);
-          _result = (r_ + r_0);
+          _result = (_f._tmp2 + std::move(_result));
         }
       }
       return _result;
@@ -463,11 +455,11 @@ struct LoopifyTreePaths {
         std::shared_ptr<tree> a2;
       };
 
-      /// _Cont_Node_1: saves [a1, r_], resumes after recursive call, then
+      /// _Cont_Node_1: saves [_tmp2, a1], resumes after recursive call, then
       /// processes rest.
       struct _Cont_Node_1 {
+        List<List<uint64_t>> _tmp2;
         uint64_t a1;
-        List<List<uint64_t>> r_;
       };
 
       using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
@@ -494,16 +486,13 @@ struct LoopifyTreePaths {
           auto _f = std::move(std::get<_Cont_Node>(_frame));
           uint64_t a1 = _f.a1;
           std::shared_ptr<tree> a2 = std::move(_f.a2);
-          List<List<uint64_t>> r_ = std::move(_result);
-          _stack.emplace_back(_Cont_Node_1{a1, std::move(r_)});
+          _stack.emplace_back(_Cont_Node_1{std::move(_result), a1});
           _stack.emplace_back(_Enter{crane_raw(a2)});
         } else {
           auto _f = std::move(std::get<_Cont_Node_1>(_frame));
           uint64_t a1 = _f.a1;
-          List<List<uint64_t>> r_ = std::move(_f.r_);
-          List<List<uint64_t>> r_0 = std::move(_result);
-          _result =
-              map_cons(a1, std::move(r_)).app(map_cons(a1, std::move(r_0)));
+          _result = map_cons(a1, std::move(_f._tmp2))
+                        .app(map_cons(a1, std::move(_result)));
         }
       }
       return _result;
@@ -528,13 +517,13 @@ struct LoopifyTreePaths {
         std::shared_ptr<tree> a2;
       };
 
-      /// _Cont_Node_1: saves [a0, a1, a2, r_], resumes after recursive call,
+      /// _Cont_Node_1: saves [_tmp2, a0, a1, a2], resumes after recursive call,
       /// then processes rest.
       struct _Cont_Node_1 {
+        T1 _tmp2;
         std::shared_ptr<tree> a0;
         uint64_t a1;
         std::shared_ptr<tree> a2;
-        T1 r_;
       };
 
       using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
@@ -561,18 +550,15 @@ struct LoopifyTreePaths {
           std::shared_ptr<tree> a0 = std::move(_f.a0);
           uint64_t a1 = _f.a1;
           std::shared_ptr<tree> a2 = std::move(_f.a2);
-          T1 r_ = std::move(_result);
           _stack.emplace_back(
-              _Cont_Node_1{std::move(a0), a1, a2, std::move(r_)});
+              _Cont_Node_1{std::move(_result), std::move(a0), a1, a2});
           _stack.emplace_back(_Enter{crane_raw(a2)});
         } else {
           auto _f = std::move(std::get<_Cont_Node_1>(_frame));
           std::shared_ptr<tree> a0 = std::move(_f.a0);
           uint64_t a1 = _f.a1;
           std::shared_ptr<tree> a2 = std::move(_f.a2);
-          auto r_ = std::move(_f.r_);
-          T1 r_0 = std::move(_result);
-          _result = f0(*a0, std::move(r_), a1, *a2, std::move(r_0));
+          _result = f0(*a0, std::move(_f._tmp2), a1, *a2, std::move(_result));
         }
       }
       return _result;
@@ -597,13 +583,13 @@ struct LoopifyTreePaths {
         std::shared_ptr<tree> a2;
       };
 
-      /// _Cont_Node_1: saves [a0, a1, a2, r_], resumes after recursive call,
+      /// _Cont_Node_1: saves [_tmp2, a0, a1, a2], resumes after recursive call,
       /// then processes rest.
       struct _Cont_Node_1 {
+        T1 _tmp2;
         std::shared_ptr<tree> a0;
         uint64_t a1;
         std::shared_ptr<tree> a2;
-        T1 r_;
       };
 
       using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
@@ -630,18 +616,15 @@ struct LoopifyTreePaths {
           std::shared_ptr<tree> a0 = std::move(_f.a0);
           uint64_t a1 = _f.a1;
           std::shared_ptr<tree> a2 = std::move(_f.a2);
-          T1 r_ = std::move(_result);
           _stack.emplace_back(
-              _Cont_Node_1{std::move(a0), a1, a2, std::move(r_)});
+              _Cont_Node_1{std::move(_result), std::move(a0), a1, a2});
           _stack.emplace_back(_Enter{crane_raw(a2)});
         } else {
           auto _f = std::move(std::get<_Cont_Node_1>(_frame));
           std::shared_ptr<tree> a0 = std::move(_f.a0);
           uint64_t a1 = _f.a1;
           std::shared_ptr<tree> a2 = std::move(_f.a2);
-          auto r_ = std::move(_f.r_);
-          T1 r_0 = std::move(_result);
-          _result = f0(*a0, std::move(r_), a1, *a2, std::move(r_0));
+          _result = f0(*a0, std::move(_f._tmp2), a1, *a2, std::move(_result));
         }
       }
       return _result;
@@ -733,10 +716,10 @@ struct LoopifyTreePaths {
         std::shared_ptr<bool_tree> a1;
       };
 
-      /// _Cont_BNode_1: saves [r_], resumes after recursive call, then
+      /// _Cont_BNode_1: saves [_tmp2], resumes after recursive call, then
       /// processes rest.
       struct _Cont_BNode_1 {
-        bool r_;
+        bool _tmp2;
       };
 
       using _Frame = std::variant<_Enter, _Cont_BNode, _Cont_BNode_1>;
@@ -762,14 +745,11 @@ struct LoopifyTreePaths {
         } else if (std::holds_alternative<_Cont_BNode>(_frame)) {
           auto _f = std::move(std::get<_Cont_BNode>(_frame));
           std::shared_ptr<bool_tree> a1 = std::move(_f.a1);
-          bool r_ = std::move(_result);
-          _stack.emplace_back(_Cont_BNode_1{r_});
+          _stack.emplace_back(_Cont_BNode_1{std::move(_result)});
           _stack.emplace_back(_Enter{crane_raw(a1)});
         } else {
           auto _f = std::move(std::get<_Cont_BNode_1>(_frame));
-          bool r_ = _f.r_;
-          bool r_0 = std::move(_result);
-          _result = (r_ && r_0);
+          _result = (_f._tmp2 && std::move(_result));
         }
       }
       return _result;
@@ -791,10 +771,10 @@ struct LoopifyTreePaths {
         std::shared_ptr<bool_tree> a1;
       };
 
-      /// _Cont_BNode_1: saves [r_], resumes after recursive call, then
+      /// _Cont_BNode_1: saves [_tmp2], resumes after recursive call, then
       /// processes rest.
       struct _Cont_BNode_1 {
-        bool r_;
+        bool _tmp2;
       };
 
       using _Frame = std::variant<_Enter, _Cont_BNode, _Cont_BNode_1>;
@@ -820,14 +800,11 @@ struct LoopifyTreePaths {
         } else if (std::holds_alternative<_Cont_BNode>(_frame)) {
           auto _f = std::move(std::get<_Cont_BNode>(_frame));
           std::shared_ptr<bool_tree> a1 = std::move(_f.a1);
-          bool r_ = std::move(_result);
-          _stack.emplace_back(_Cont_BNode_1{r_});
+          _stack.emplace_back(_Cont_BNode_1{std::move(_result)});
           _stack.emplace_back(_Enter{crane_raw(a1)});
         } else {
           auto _f = std::move(std::get<_Cont_BNode_1>(_frame));
-          bool r_ = _f.r_;
-          bool r_0 = std::move(_result);
-          _result = (r_ || r_0);
+          _result = (_f._tmp2 || std::move(_result));
         }
       }
       return _result;
@@ -852,12 +829,12 @@ struct LoopifyTreePaths {
         std::shared_ptr<bool_tree> a1;
       };
 
-      /// _Cont_BNode_1: saves [a0, a1, r_], resumes after recursive call, then
-      /// processes rest.
+      /// _Cont_BNode_1: saves [_tmp2, a0, a1], resumes after recursive call,
+      /// then processes rest.
       struct _Cont_BNode_1 {
+        T1 _tmp2;
         std::shared_ptr<bool_tree> a0;
         std::shared_ptr<bool_tree> a1;
-        T1 r_;
       };
 
       using _Frame = std::variant<_Enter, _Cont_BNode, _Cont_BNode_1>;
@@ -884,16 +861,14 @@ struct LoopifyTreePaths {
           auto _f = std::move(std::get<_Cont_BNode>(_frame));
           std::shared_ptr<bool_tree> a0 = std::move(_f.a0);
           std::shared_ptr<bool_tree> a1 = std::move(_f.a1);
-          T1 r_ = std::move(_result);
-          _stack.emplace_back(_Cont_BNode_1{std::move(a0), a1, std::move(r_)});
+          _stack.emplace_back(
+              _Cont_BNode_1{std::move(_result), std::move(a0), a1});
           _stack.emplace_back(_Enter{crane_raw(a1)});
         } else {
           auto _f = std::move(std::get<_Cont_BNode_1>(_frame));
           std::shared_ptr<bool_tree> a0 = std::move(_f.a0);
           std::shared_ptr<bool_tree> a1 = std::move(_f.a1);
-          auto r_ = std::move(_f.r_);
-          T1 r_0 = std::move(_result);
-          _result = f0(*a0, std::move(r_), *a1, std::move(r_0));
+          _result = f0(*a0, std::move(_f._tmp2), *a1, std::move(_result));
         }
       }
       return _result;
@@ -918,12 +893,12 @@ struct LoopifyTreePaths {
         std::shared_ptr<bool_tree> a1;
       };
 
-      /// _Cont_BNode_1: saves [a0, a1, r_], resumes after recursive call, then
-      /// processes rest.
+      /// _Cont_BNode_1: saves [_tmp2, a0, a1], resumes after recursive call,
+      /// then processes rest.
       struct _Cont_BNode_1 {
+        T1 _tmp2;
         std::shared_ptr<bool_tree> a0;
         std::shared_ptr<bool_tree> a1;
-        T1 r_;
       };
 
       using _Frame = std::variant<_Enter, _Cont_BNode, _Cont_BNode_1>;
@@ -950,16 +925,14 @@ struct LoopifyTreePaths {
           auto _f = std::move(std::get<_Cont_BNode>(_frame));
           std::shared_ptr<bool_tree> a0 = std::move(_f.a0);
           std::shared_ptr<bool_tree> a1 = std::move(_f.a1);
-          T1 r_ = std::move(_result);
-          _stack.emplace_back(_Cont_BNode_1{std::move(a0), a1, std::move(r_)});
+          _stack.emplace_back(
+              _Cont_BNode_1{std::move(_result), std::move(a0), a1});
           _stack.emplace_back(_Enter{crane_raw(a1)});
         } else {
           auto _f = std::move(std::get<_Cont_BNode_1>(_frame));
           std::shared_ptr<bool_tree> a0 = std::move(_f.a0);
           std::shared_ptr<bool_tree> a1 = std::move(_f.a1);
-          auto r_ = std::move(_f.r_);
-          T1 r_0 = std::move(_result);
-          _result = f0(*a0, std::move(r_), *a1, std::move(r_0));
+          _result = f0(*a0, std::move(_f._tmp2), *a1, std::move(_result));
         }
       }
       return _result;

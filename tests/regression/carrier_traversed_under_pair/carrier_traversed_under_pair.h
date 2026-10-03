@@ -302,9 +302,10 @@ public:
       std::shared_ptr<Exp<t>> a1;
     };
 
-    /// _Resume_E_node: saves [r_], resumes after recursive call with _result.
+    /// _Resume_E_node: saves [_tmp1], resumes after recursive call with
+    /// _result.
     struct _Resume_E_node {
-      Exp<T1> r_;
+      Exp<T1> _tmp1;
     };
 
     using _Frame = std::variant<_Enter, _Cont_E_node, _Resume_E_node>;
@@ -330,12 +331,11 @@ public:
       } else if (std::holds_alternative<_Cont_E_node>(_frame)) {
         auto _f = std::move(std::get<_Cont_E_node>(_frame));
         std::shared_ptr<Exp<t>> a1 = std::move(_f.a1);
-        Exp<T1> r_ = std::move(_result);
-        _stack.emplace_back(_Resume_E_node{std::move(r_)});
+        _stack.emplace_back(_Resume_E_node{std::move(_result)});
         _stack.emplace_back(_Enter{crane_raw(a1)});
       } else {
         auto _f = std::move(std::get<_Resume_E_node>(_frame));
-        _result = Exp<T1>::e_node(std::move(_f.r_), std::move(_result));
+        _result = Exp<T1>::e_node(std::move(_f._tmp1), std::move(_result));
       }
     }
     return _result;

@@ -95,8 +95,7 @@ public:
         }
       } else {
         auto _f = std::move(std::get<_Cont_S>(_frame));
-        Nat r_ = std::move(_result);
-        _result = m.add(std::move(r_));
+        _result = m.add(std::move(_result));
       }
     }
     return _result;

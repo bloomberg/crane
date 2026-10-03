@@ -141,11 +141,11 @@ struct MemSafetyProbe18 {
         std::shared_ptr<tree> a2;
       };
 
-      /// _Cont_Node_1: saves [a1, r_], resumes after recursive call, then
+      /// _Cont_Node_1: saves [_tmp2, a1], resumes after recursive call, then
       /// processes rest.
       struct _Cont_Node_1 {
+        uint64_t _tmp2;
         uint64_t a1;
-        uint64_t r_;
       };
 
       using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
@@ -171,15 +171,12 @@ struct MemSafetyProbe18 {
           auto _f = std::move(std::get<_Cont_Node>(_frame));
           uint64_t a1 = _f.a1;
           std::shared_ptr<tree> a2 = std::move(_f.a2);
-          uint64_t r_ = std::move(_result);
-          _stack.emplace_back(_Cont_Node_1{a1, r_});
+          _stack.emplace_back(_Cont_Node_1{std::move(_result), a1});
           _stack.emplace_back(_Enter{crane_raw(a2)});
         } else {
           auto _f = std::move(std::get<_Cont_Node_1>(_frame));
           uint64_t a1 = _f.a1;
-          uint64_t r_ = _f.r_;
-          uint64_t r_0 = std::move(_result);
-          _result = ((r_ + a1) + r_0);
+          _result = ((_f._tmp2 + a1) + std::move(_result));
         }
       }
       return _result;
@@ -204,13 +201,13 @@ struct MemSafetyProbe18 {
         std::shared_ptr<tree> a2;
       };
 
-      /// _Cont_Node_1: saves [a0, a1, a2, r_], resumes after recursive call,
+      /// _Cont_Node_1: saves [_tmp2, a0, a1, a2], resumes after recursive call,
       /// then processes rest.
       struct _Cont_Node_1 {
+        T1 _tmp2;
         std::shared_ptr<tree> a0;
         uint64_t a1;
         std::shared_ptr<tree> a2;
-        T1 r_;
       };
 
       using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
@@ -237,18 +234,15 @@ struct MemSafetyProbe18 {
           std::shared_ptr<tree> a0 = std::move(_f.a0);
           uint64_t a1 = _f.a1;
           std::shared_ptr<tree> a2 = std::move(_f.a2);
-          T1 r_ = std::move(_result);
           _stack.emplace_back(
-              _Cont_Node_1{std::move(a0), a1, a2, std::move(r_)});
+              _Cont_Node_1{std::move(_result), std::move(a0), a1, a2});
           _stack.emplace_back(_Enter{crane_raw(a2)});
         } else {
           auto _f = std::move(std::get<_Cont_Node_1>(_frame));
           std::shared_ptr<tree> a0 = std::move(_f.a0);
           uint64_t a1 = _f.a1;
           std::shared_ptr<tree> a2 = std::move(_f.a2);
-          auto r_ = std::move(_f.r_);
-          T1 r_0 = std::move(_result);
-          _result = f0(*a0, std::move(r_), a1, *a2, std::move(r_0));
+          _result = f0(*a0, std::move(_f._tmp2), a1, *a2, std::move(_result));
         }
       }
       return _result;
@@ -273,13 +267,13 @@ struct MemSafetyProbe18 {
         std::shared_ptr<tree> a2;
       };
 
-      /// _Cont_Node_1: saves [a0, a1, a2, r_], resumes after recursive call,
+      /// _Cont_Node_1: saves [_tmp2, a0, a1, a2], resumes after recursive call,
       /// then processes rest.
       struct _Cont_Node_1 {
+        T1 _tmp2;
         std::shared_ptr<tree> a0;
         uint64_t a1;
         std::shared_ptr<tree> a2;
-        T1 r_;
       };
 
       using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
@@ -306,18 +300,15 @@ struct MemSafetyProbe18 {
           std::shared_ptr<tree> a0 = std::move(_f.a0);
           uint64_t a1 = _f.a1;
           std::shared_ptr<tree> a2 = std::move(_f.a2);
-          T1 r_ = std::move(_result);
           _stack.emplace_back(
-              _Cont_Node_1{std::move(a0), a1, a2, std::move(r_)});
+              _Cont_Node_1{std::move(_result), std::move(a0), a1, a2});
           _stack.emplace_back(_Enter{crane_raw(a2)});
         } else {
           auto _f = std::move(std::get<_Cont_Node_1>(_frame));
           std::shared_ptr<tree> a0 = std::move(_f.a0);
           uint64_t a1 = _f.a1;
           std::shared_ptr<tree> a2 = std::move(_f.a2);
-          auto r_ = std::move(_f.r_);
-          T1 r_0 = std::move(_result);
-          _result = f0(*a0, std::move(r_), a1, *a2, std::move(r_0));
+          _result = f0(*a0, std::move(_f._tmp2), a1, *a2, std::move(_result));
         }
       }
       return _result;
@@ -494,8 +485,7 @@ struct MemSafetyProbe18 {
           auto _f = std::move(std::get<_Cont_Mycons>(_frame));
           auto a0 = std::move(_f.a0);
           std::shared_ptr<mylist<A>> a1 = std::move(_f.a1);
-          T1 r_ = std::move(_result);
-          _result = f0(a0, *a1, std::move(r_));
+          _result = f0(a0, *a1, std::move(_result));
         }
       }
       return _result;
@@ -542,8 +532,7 @@ struct MemSafetyProbe18 {
           auto _f = std::move(std::get<_Cont_Mycons>(_frame));
           auto a0 = std::move(_f.a0);
           std::shared_ptr<mylist<A>> a1 = std::move(_f.a1);
-          T1 r_ = std::move(_result);
-          _result = f0(a0, *a1, std::move(r_));
+          _result = f0(a0, *a1, std::move(_result));
         }
       }
       return _result;
@@ -632,8 +621,7 @@ struct MemSafetyProbe18 {
       } else {
         auto _f = std::move(std::get<_Cont_Mycons>(_frame));
         mylist<T1> a0 = std::move(_f.a0);
-        mylist<T1> r_ = std::move(_result);
-        _result = a0.myapp(std::move(r_));
+        _result = a0.myapp(std::move(_result));
       }
     }
     return _result;

@@ -83,11 +83,11 @@ List<List<uint64_t>> LoopifyCombinatorics::perms_choices_fuel(
     List<uint64_t> orig;
   };
 
-  /// _Cont_Cons_1: saves [a0, r_], resumes after recursive call, then processes
-  /// rest.
+  /// _Cont_Cons_1: saves [_tmp3, a0], resumes after recursive call, then
+  /// processes rest.
   struct _Cont_Cons_1 {
+    List<List<uint64_t>> _tmp3;
     uint64_t a0;
-    List<List<uint64_t>> r_;
   };
 
   /// _Cont_Nil: saves [a0], resumes after recursive call, then processes rest.
@@ -135,23 +135,19 @@ List<List<uint64_t>> LoopifyCombinatorics::perms_choices_fuel(
       std::shared_ptr<List<uint64_t>> a1 = std::move(_f.a1);
       uint64_t f = _f.f;
       const List<uint64_t> &orig = std::move(_f.orig);
-      List<List<uint64_t>> r_ = std::move(_result);
-      _stack.emplace_back(_Cont_Cons_1{a0, std::move(r_)});
+      _stack.emplace_back(_Cont_Cons_1{std::move(_result), a0});
       _stack.emplace_back(_Enter{orig, *a1, f});
     } else if (std::holds_alternative<_Cont_Cons_1>(_frame)) {
       auto _f = std::move(std::get<_Cont_Cons_1>(_frame));
       uint64_t a0 = _f.a0;
-      List<List<uint64_t>> r_ = std::move(_f.r_);
-      List<List<uint64_t>> r_0 = std::move(_result);
-      _result = map_cons(a0, std::move(r_)).app(std::move(r_0));
+      _result = map_cons(a0, std::move(_f._tmp3)).app(std::move(_result));
     } else {
       auto _f = std::move(std::get<_Cont_Nil>(_frame));
       uint64_t a0 = _f.a0;
-      List<List<uint64_t>> r_ = std::move(_result);
       _result =
           map_cons(a0, List<List<uint64_t>>::cons(List<uint64_t>::nil(),
                                                   List<List<uint64_t>>::nil()))
-              .app(std::move(r_));
+              .app(std::move(_result));
     }
   }
   return _result;
@@ -240,8 +236,7 @@ uint64_t LoopifyCombinatorics::factorial_impl(
     } else {
       auto _f = std::move(std::get<_Cont_m>(_frame));
       uint64_t n = _f.n;
-      uint64_t r_ = std::move(_result);
-      _result = (n * r_);
+      _result = (n * std::move(_result));
     }
   }
   return _result;
@@ -402,8 +397,7 @@ List<std::pair<uint64_t, uint64_t>> LoopifyCombinatorics::cartesian(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      List<std::pair<uint64_t, uint64_t>> r_ = std::move(_result);
-      _result = map_pairs(a0, l1).app(std::move(r_));
+      _result = map_pairs(a0, l1).app(std::move(_result));
     }
   }
   return _result;
@@ -624,8 +618,7 @@ bool LoopifyCombinatorics::elem(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      bool r_ = std::move(_result);
-      _result = (x == a0 || r_);
+      _result = (x == a0 || std::move(_result));
     }
   }
   return _result;

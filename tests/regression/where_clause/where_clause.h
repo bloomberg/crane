@@ -110,10 +110,10 @@ struct WhereClause {
         std::shared_ptr<Expr> a1;
       };
 
-      /// _Cont_Plus_1: saves [r_], resumes after recursive call, then processes
-      /// rest.
+      /// _Cont_Plus_1: saves [_tmp2], resumes after recursive call, then
+      /// processes rest.
       struct _Cont_Plus_1 {
-        uint64_t r_;
+        uint64_t _tmp2;
       };
 
       /// _Cont_Times: saves [a1], resumes after recursive call, then processes
@@ -122,10 +122,10 @@ struct WhereClause {
         std::shared_ptr<Expr> a1;
       };
 
-      /// _Cont_Times_1: saves [r_], resumes after recursive call, then
+      /// _Cont_Times_1: saves [_tmp4], resumes after recursive call, then
       /// processes rest.
       struct _Cont_Times_1 {
-        uint64_t r_;
+        uint64_t _tmp4;
       };
 
       using _Frame = std::variant<_Enter, _Cont_Plus, _Cont_Plus_1, _Cont_Times,
@@ -156,25 +156,19 @@ struct WhereClause {
         } else if (std::holds_alternative<_Cont_Plus>(_frame)) {
           auto _f = std::move(std::get<_Cont_Plus>(_frame));
           std::shared_ptr<Expr> a1 = std::move(_f.a1);
-          uint64_t r_ = std::move(_result);
-          _stack.emplace_back(_Cont_Plus_1{r_});
+          _stack.emplace_back(_Cont_Plus_1{std::move(_result)});
           _stack.emplace_back(_Enter{crane_raw(a1)});
         } else if (std::holds_alternative<_Cont_Plus_1>(_frame)) {
           auto _f = std::move(std::get<_Cont_Plus_1>(_frame));
-          uint64_t r_ = _f.r_;
-          uint64_t r_0 = std::move(_result);
-          _result = ((UINT64_C(1) + r_) + r_0);
+          _result = ((UINT64_C(1) + _f._tmp2) + std::move(_result));
         } else if (std::holds_alternative<_Cont_Times>(_frame)) {
           auto _f = std::move(std::get<_Cont_Times>(_frame));
           std::shared_ptr<Expr> a1 = std::move(_f.a1);
-          uint64_t r_ = std::move(_result);
-          _stack.emplace_back(_Cont_Times_1{r_});
+          _stack.emplace_back(_Cont_Times_1{std::move(_result)});
           _stack.emplace_back(_Enter{crane_raw(a1)});
         } else {
           auto _f = std::move(std::get<_Cont_Times_1>(_frame));
-          uint64_t r_ = _f.r_;
-          uint64_t r_0 = std::move(_result);
-          _result = ((UINT64_C(1) + r_) + r_0);
+          _result = ((UINT64_C(1) + _f._tmp4) + std::move(_result));
         }
       }
       return _result;
@@ -194,10 +188,10 @@ struct WhereClause {
         std::shared_ptr<Expr> a1;
       };
 
-      /// _Cont_Plus_1: saves [r_], resumes after recursive call, then processes
-      /// rest.
+      /// _Cont_Plus_1: saves [_tmp2], resumes after recursive call, then
+      /// processes rest.
       struct _Cont_Plus_1 {
-        uint64_t r_;
+        uint64_t _tmp2;
       };
 
       /// _Cont_Times: saves [a1], resumes after recursive call, then processes
@@ -206,10 +200,10 @@ struct WhereClause {
         std::shared_ptr<Expr> a1;
       };
 
-      /// _Cont_Times_1: saves [r_], resumes after recursive call, then
+      /// _Cont_Times_1: saves [_tmp4], resumes after recursive call, then
       /// processes rest.
       struct _Cont_Times_1 {
-        uint64_t r_;
+        uint64_t _tmp4;
       };
 
       using _Frame = std::variant<_Enter, _Cont_Plus, _Cont_Plus_1, _Cont_Times,
@@ -241,25 +235,19 @@ struct WhereClause {
         } else if (std::holds_alternative<_Cont_Plus>(_frame)) {
           auto _f = std::move(std::get<_Cont_Plus>(_frame));
           std::shared_ptr<Expr> a1 = std::move(_f.a1);
-          uint64_t r_ = std::move(_result);
-          _stack.emplace_back(_Cont_Plus_1{r_});
+          _stack.emplace_back(_Cont_Plus_1{std::move(_result)});
           _stack.emplace_back(_Enter{crane_raw(a1)});
         } else if (std::holds_alternative<_Cont_Plus_1>(_frame)) {
           auto _f = std::move(std::get<_Cont_Plus_1>(_frame));
-          uint64_t r_ = _f.r_;
-          uint64_t r_0 = std::move(_result);
-          _result = (r_ + r_0);
+          _result = (_f._tmp2 + std::move(_result));
         } else if (std::holds_alternative<_Cont_Times>(_frame)) {
           auto _f = std::move(std::get<_Cont_Times>(_frame));
           std::shared_ptr<Expr> a1 = std::move(_f.a1);
-          uint64_t r_ = std::move(_result);
-          _stack.emplace_back(_Cont_Times_1{r_});
+          _stack.emplace_back(_Cont_Times_1{std::move(_result)});
           _stack.emplace_back(_Enter{crane_raw(a1)});
         } else {
           auto _f = std::move(std::get<_Cont_Times_1>(_frame));
-          uint64_t r_ = _f.r_;
-          uint64_t r_0 = std::move(_result);
-          _result = (r_ * r_0);
+          _result = (_f._tmp4 * std::move(_result));
         }
       }
       return _result;
@@ -284,12 +272,12 @@ struct WhereClause {
         std::shared_ptr<Expr> a1;
       };
 
-      /// _Cont_Plus_1: saves [a0, a1, r_], resumes after recursive call, then
-      /// processes rest.
+      /// _Cont_Plus_1: saves [_tmp2, a0, a1], resumes after recursive call,
+      /// then processes rest.
       struct _Cont_Plus_1 {
+        T1 _tmp2;
         std::shared_ptr<Expr> a0;
         std::shared_ptr<Expr> a1;
-        T1 r_;
       };
 
       /// _Cont_Times: saves [a0, a1], resumes after recursive call, then
@@ -299,12 +287,12 @@ struct WhereClause {
         std::shared_ptr<Expr> a1;
       };
 
-      /// _Cont_Times_1: saves [a0, a1, r_], resumes after recursive call, then
-      /// processes rest.
+      /// _Cont_Times_1: saves [_tmp4, a0, a1], resumes after recursive call,
+      /// then processes rest.
       struct _Cont_Times_1 {
+        T1 _tmp4;
         std::shared_ptr<Expr> a0;
         std::shared_ptr<Expr> a1;
-        T1 r_;
       };
 
       using _Frame = std::variant<_Enter, _Cont_Plus, _Cont_Plus_1, _Cont_Times,
@@ -337,30 +325,26 @@ struct WhereClause {
           auto _f = std::move(std::get<_Cont_Plus>(_frame));
           std::shared_ptr<Expr> a0 = std::move(_f.a0);
           std::shared_ptr<Expr> a1 = std::move(_f.a1);
-          T1 r_ = std::move(_result);
-          _stack.emplace_back(_Cont_Plus_1{std::move(a0), a1, std::move(r_)});
+          _stack.emplace_back(
+              _Cont_Plus_1{std::move(_result), std::move(a0), a1});
           _stack.emplace_back(_Enter{crane_raw(a1)});
         } else if (std::holds_alternative<_Cont_Plus_1>(_frame)) {
           auto _f = std::move(std::get<_Cont_Plus_1>(_frame));
           std::shared_ptr<Expr> a0 = std::move(_f.a0);
           std::shared_ptr<Expr> a1 = std::move(_f.a1);
-          auto r_ = std::move(_f.r_);
-          T1 r_0 = std::move(_result);
-          _result = f0(*a0, std::move(r_), *a1, std::move(r_0));
+          _result = f0(*a0, std::move(_f._tmp2), *a1, std::move(_result));
         } else if (std::holds_alternative<_Cont_Times>(_frame)) {
           auto _f = std::move(std::get<_Cont_Times>(_frame));
           std::shared_ptr<Expr> a0 = std::move(_f.a0);
           std::shared_ptr<Expr> a1 = std::move(_f.a1);
-          T1 r_ = std::move(_result);
-          _stack.emplace_back(_Cont_Times_1{std::move(a0), a1, std::move(r_)});
+          _stack.emplace_back(
+              _Cont_Times_1{std::move(_result), std::move(a0), a1});
           _stack.emplace_back(_Enter{crane_raw(a1)});
         } else {
           auto _f = std::move(std::get<_Cont_Times_1>(_frame));
           std::shared_ptr<Expr> a0 = std::move(_f.a0);
           std::shared_ptr<Expr> a1 = std::move(_f.a1);
-          auto r_ = std::move(_f.r_);
-          T1 r_0 = std::move(_result);
-          _result = f1(*a0, std::move(r_), *a1, std::move(r_0));
+          _result = f1(*a0, std::move(_f._tmp4), *a1, std::move(_result));
         }
       }
       return _result;
@@ -385,12 +369,12 @@ struct WhereClause {
         std::shared_ptr<Expr> a1;
       };
 
-      /// _Cont_Plus_1: saves [a0, a1, r_], resumes after recursive call, then
-      /// processes rest.
+      /// _Cont_Plus_1: saves [_tmp2, a0, a1], resumes after recursive call,
+      /// then processes rest.
       struct _Cont_Plus_1 {
+        T1 _tmp2;
         std::shared_ptr<Expr> a0;
         std::shared_ptr<Expr> a1;
-        T1 r_;
       };
 
       /// _Cont_Times: saves [a0, a1], resumes after recursive call, then
@@ -400,12 +384,12 @@ struct WhereClause {
         std::shared_ptr<Expr> a1;
       };
 
-      /// _Cont_Times_1: saves [a0, a1, r_], resumes after recursive call, then
-      /// processes rest.
+      /// _Cont_Times_1: saves [_tmp4, a0, a1], resumes after recursive call,
+      /// then processes rest.
       struct _Cont_Times_1 {
+        T1 _tmp4;
         std::shared_ptr<Expr> a0;
         std::shared_ptr<Expr> a1;
-        T1 r_;
       };
 
       using _Frame = std::variant<_Enter, _Cont_Plus, _Cont_Plus_1, _Cont_Times,
@@ -438,30 +422,26 @@ struct WhereClause {
           auto _f = std::move(std::get<_Cont_Plus>(_frame));
           std::shared_ptr<Expr> a0 = std::move(_f.a0);
           std::shared_ptr<Expr> a1 = std::move(_f.a1);
-          T1 r_ = std::move(_result);
-          _stack.emplace_back(_Cont_Plus_1{std::move(a0), a1, std::move(r_)});
+          _stack.emplace_back(
+              _Cont_Plus_1{std::move(_result), std::move(a0), a1});
           _stack.emplace_back(_Enter{crane_raw(a1)});
         } else if (std::holds_alternative<_Cont_Plus_1>(_frame)) {
           auto _f = std::move(std::get<_Cont_Plus_1>(_frame));
           std::shared_ptr<Expr> a0 = std::move(_f.a0);
           std::shared_ptr<Expr> a1 = std::move(_f.a1);
-          auto r_ = std::move(_f.r_);
-          T1 r_0 = std::move(_result);
-          _result = f0(*a0, std::move(r_), *a1, std::move(r_0));
+          _result = f0(*a0, std::move(_f._tmp2), *a1, std::move(_result));
         } else if (std::holds_alternative<_Cont_Times>(_frame)) {
           auto _f = std::move(std::get<_Cont_Times>(_frame));
           std::shared_ptr<Expr> a0 = std::move(_f.a0);
           std::shared_ptr<Expr> a1 = std::move(_f.a1);
-          T1 r_ = std::move(_result);
-          _stack.emplace_back(_Cont_Times_1{std::move(a0), a1, std::move(r_)});
+          _stack.emplace_back(
+              _Cont_Times_1{std::move(_result), std::move(a0), a1});
           _stack.emplace_back(_Enter{crane_raw(a1)});
         } else {
           auto _f = std::move(std::get<_Cont_Times_1>(_frame));
           std::shared_ptr<Expr> a0 = std::move(_f.a0);
           std::shared_ptr<Expr> a1 = std::move(_f.a1);
-          auto r_ = std::move(_f.r_);
-          T1 r_0 = std::move(_result);
-          _result = f1(*a0, std::move(r_), *a1, std::move(r_0));
+          _result = f1(*a0, std::move(_f._tmp4), *a1, std::move(_result));
         }
       }
       return _result;
@@ -587,10 +567,10 @@ struct WhereClause {
         std::shared_ptr<BExpr> a1;
       };
 
-      /// _Cont_BAnd_1: saves [r_], resumes after recursive call, then processes
-      /// rest.
+      /// _Cont_BAnd_1: saves [_tmp2], resumes after recursive call, then
+      /// processes rest.
       struct _Cont_BAnd_1 {
-        bool r_;
+        bool _tmp2;
       };
 
       /// _Cont_BNot: resumes after recursive call, then processes rest.
@@ -602,10 +582,10 @@ struct WhereClause {
         std::shared_ptr<BExpr> a1;
       };
 
-      /// _Cont_BOr_1: saves [r_], resumes after recursive call, then processes
-      /// rest.
+      /// _Cont_BOr_1: saves [_tmp4], resumes after recursive call, then
+      /// processes rest.
       struct _Cont_BOr_1 {
-        bool r_;
+        bool _tmp4;
       };
 
       using _Frame = std::variant<_Enter, _Cont_BAnd, _Cont_BAnd_1, _Cont_BNot,
@@ -642,29 +622,22 @@ struct WhereClause {
         } else if (std::holds_alternative<_Cont_BAnd>(_frame)) {
           auto _f = std::move(std::get<_Cont_BAnd>(_frame));
           std::shared_ptr<BExpr> a1 = std::move(_f.a1);
-          bool r_ = std::move(_result);
-          _stack.emplace_back(_Cont_BAnd_1{r_});
+          _stack.emplace_back(_Cont_BAnd_1{std::move(_result)});
           _stack.emplace_back(_Enter{crane_raw(a1)});
         } else if (std::holds_alternative<_Cont_BAnd_1>(_frame)) {
           auto _f = std::move(std::get<_Cont_BAnd_1>(_frame));
-          bool r_ = _f.r_;
-          bool r_0 = std::move(_result);
-          _result = (r_ && r_0);
+          _result = (_f._tmp2 && std::move(_result));
         } else if (std::holds_alternative<_Cont_BNot>(_frame)) {
           auto _f = std::move(std::get<_Cont_BNot>(_frame));
-          bool r_ = std::move(_result);
-          _result = !(r_);
+          _result = !(std::move(_result));
         } else if (std::holds_alternative<_Cont_BOr>(_frame)) {
           auto _f = std::move(std::get<_Cont_BOr>(_frame));
           std::shared_ptr<BExpr> a1 = std::move(_f.a1);
-          bool r_ = std::move(_result);
-          _stack.emplace_back(_Cont_BOr_1{r_});
+          _stack.emplace_back(_Cont_BOr_1{std::move(_result)});
           _stack.emplace_back(_Enter{crane_raw(a1)});
         } else {
           auto _f = std::move(std::get<_Cont_BOr_1>(_frame));
-          bool r_ = _f.r_;
-          bool r_0 = std::move(_result);
-          _result = (r_ || r_0);
+          _result = (_f._tmp4 || std::move(_result));
         }
       }
       return _result;
@@ -689,12 +662,12 @@ struct WhereClause {
         std::shared_ptr<BExpr> a1;
       };
 
-      /// _Cont_BAnd_1: saves [a0, a1, r_], resumes after recursive call, then
-      /// processes rest.
+      /// _Cont_BAnd_1: saves [_tmp2, a0, a1], resumes after recursive call,
+      /// then processes rest.
       struct _Cont_BAnd_1 {
+        T1 _tmp2;
         std::shared_ptr<BExpr> a0;
         std::shared_ptr<BExpr> a1;
-        T1 r_;
       };
 
       /// _Cont_BNot: saves [a0], resumes after recursive call, then processes
@@ -710,12 +683,12 @@ struct WhereClause {
         std::shared_ptr<BExpr> a1;
       };
 
-      /// _Cont_BOr_1: saves [a0, a1, r_], resumes after recursive call, then
+      /// _Cont_BOr_1: saves [_tmp4, a0, a1], resumes after recursive call, then
       /// processes rest.
       struct _Cont_BOr_1 {
+        T1 _tmp4;
         std::shared_ptr<BExpr> a0;
         std::shared_ptr<BExpr> a1;
-        T1 r_;
       };
 
       using _Frame = std::variant<_Enter, _Cont_BAnd, _Cont_BAnd_1, _Cont_BNot,
@@ -753,35 +726,30 @@ struct WhereClause {
           auto _f = std::move(std::get<_Cont_BAnd>(_frame));
           std::shared_ptr<BExpr> a0 = std::move(_f.a0);
           std::shared_ptr<BExpr> a1 = std::move(_f.a1);
-          T1 r_ = std::move(_result);
-          _stack.emplace_back(_Cont_BAnd_1{std::move(a0), a1, std::move(r_)});
+          _stack.emplace_back(
+              _Cont_BAnd_1{std::move(_result), std::move(a0), a1});
           _stack.emplace_back(_Enter{crane_raw(a1)});
         } else if (std::holds_alternative<_Cont_BAnd_1>(_frame)) {
           auto _f = std::move(std::get<_Cont_BAnd_1>(_frame));
           std::shared_ptr<BExpr> a0 = std::move(_f.a0);
           std::shared_ptr<BExpr> a1 = std::move(_f.a1);
-          auto r_ = std::move(_f.r_);
-          T1 r_0 = std::move(_result);
-          _result = f1(*a0, std::move(r_), *a1, std::move(r_0));
+          _result = f1(*a0, std::move(_f._tmp2), *a1, std::move(_result));
         } else if (std::holds_alternative<_Cont_BNot>(_frame)) {
           auto _f = std::move(std::get<_Cont_BNot>(_frame));
           std::shared_ptr<BExpr> a0 = std::move(_f.a0);
-          T1 r_ = std::move(_result);
-          _result = f3(*a0, std::move(r_));
+          _result = f3(*a0, std::move(_result));
         } else if (std::holds_alternative<_Cont_BOr>(_frame)) {
           auto _f = std::move(std::get<_Cont_BOr>(_frame));
           std::shared_ptr<BExpr> a0 = std::move(_f.a0);
           std::shared_ptr<BExpr> a1 = std::move(_f.a1);
-          T1 r_ = std::move(_result);
-          _stack.emplace_back(_Cont_BOr_1{std::move(a0), a1, std::move(r_)});
+          _stack.emplace_back(
+              _Cont_BOr_1{std::move(_result), std::move(a0), a1});
           _stack.emplace_back(_Enter{crane_raw(a1)});
         } else {
           auto _f = std::move(std::get<_Cont_BOr_1>(_frame));
           std::shared_ptr<BExpr> a0 = std::move(_f.a0);
           std::shared_ptr<BExpr> a1 = std::move(_f.a1);
-          auto r_ = std::move(_f.r_);
-          T1 r_0 = std::move(_result);
-          _result = f2(*a0, std::move(r_), *a1, std::move(r_0));
+          _result = f2(*a0, std::move(_f._tmp4), *a1, std::move(_result));
         }
       }
       return _result;
@@ -806,12 +774,12 @@ struct WhereClause {
         std::shared_ptr<BExpr> a1;
       };
 
-      /// _Cont_BAnd_1: saves [a0, a1, r_], resumes after recursive call, then
-      /// processes rest.
+      /// _Cont_BAnd_1: saves [_tmp2, a0, a1], resumes after recursive call,
+      /// then processes rest.
       struct _Cont_BAnd_1 {
+        T1 _tmp2;
         std::shared_ptr<BExpr> a0;
         std::shared_ptr<BExpr> a1;
-        T1 r_;
       };
 
       /// _Cont_BNot: saves [a0], resumes after recursive call, then processes
@@ -827,12 +795,12 @@ struct WhereClause {
         std::shared_ptr<BExpr> a1;
       };
 
-      /// _Cont_BOr_1: saves [a0, a1, r_], resumes after recursive call, then
+      /// _Cont_BOr_1: saves [_tmp4, a0, a1], resumes after recursive call, then
       /// processes rest.
       struct _Cont_BOr_1 {
+        T1 _tmp4;
         std::shared_ptr<BExpr> a0;
         std::shared_ptr<BExpr> a1;
-        T1 r_;
       };
 
       using _Frame = std::variant<_Enter, _Cont_BAnd, _Cont_BAnd_1, _Cont_BNot,
@@ -870,35 +838,30 @@ struct WhereClause {
           auto _f = std::move(std::get<_Cont_BAnd>(_frame));
           std::shared_ptr<BExpr> a0 = std::move(_f.a0);
           std::shared_ptr<BExpr> a1 = std::move(_f.a1);
-          T1 r_ = std::move(_result);
-          _stack.emplace_back(_Cont_BAnd_1{std::move(a0), a1, std::move(r_)});
+          _stack.emplace_back(
+              _Cont_BAnd_1{std::move(_result), std::move(a0), a1});
           _stack.emplace_back(_Enter{crane_raw(a1)});
         } else if (std::holds_alternative<_Cont_BAnd_1>(_frame)) {
           auto _f = std::move(std::get<_Cont_BAnd_1>(_frame));
           std::shared_ptr<BExpr> a0 = std::move(_f.a0);
           std::shared_ptr<BExpr> a1 = std::move(_f.a1);
-          auto r_ = std::move(_f.r_);
-          T1 r_0 = std::move(_result);
-          _result = f1(*a0, std::move(r_), *a1, std::move(r_0));
+          _result = f1(*a0, std::move(_f._tmp2), *a1, std::move(_result));
         } else if (std::holds_alternative<_Cont_BNot>(_frame)) {
           auto _f = std::move(std::get<_Cont_BNot>(_frame));
           std::shared_ptr<BExpr> a0 = std::move(_f.a0);
-          T1 r_ = std::move(_result);
-          _result = f3(*a0, std::move(r_));
+          _result = f3(*a0, std::move(_result));
         } else if (std::holds_alternative<_Cont_BOr>(_frame)) {
           auto _f = std::move(std::get<_Cont_BOr>(_frame));
           std::shared_ptr<BExpr> a0 = std::move(_f.a0);
           std::shared_ptr<BExpr> a1 = std::move(_f.a1);
-          T1 r_ = std::move(_result);
-          _stack.emplace_back(_Cont_BOr_1{std::move(a0), a1, std::move(r_)});
+          _stack.emplace_back(
+              _Cont_BOr_1{std::move(_result), std::move(a0), a1});
           _stack.emplace_back(_Enter{crane_raw(a1)});
         } else {
           auto _f = std::move(std::get<_Cont_BOr_1>(_frame));
           std::shared_ptr<BExpr> a0 = std::move(_f.a0);
           std::shared_ptr<BExpr> a1 = std::move(_f.a1);
-          auto r_ = std::move(_f.r_);
-          T1 r_0 = std::move(_result);
-          _result = f2(*a0, std::move(r_), *a1, std::move(r_0));
+          _result = f2(*a0, std::move(_f._tmp4), *a1, std::move(_result));
         }
       }
       return _result;
@@ -1006,10 +969,10 @@ struct WhereClause {
         std::shared_ptr<AExpr> a1;
       };
 
-      /// _Cont_APlus_1: saves [r_], resumes after recursive call, then
+      /// _Cont_APlus_1: saves [_tmp2], resumes after recursive call, then
       /// processes rest.
       struct _Cont_APlus_1 {
-        uint64_t r_;
+        uint64_t _tmp2;
       };
 
       using _Frame = std::variant<_Enter, _Cont_APlus, _Cont_APlus_1>;
@@ -1042,14 +1005,11 @@ struct WhereClause {
         } else if (std::holds_alternative<_Cont_APlus>(_frame)) {
           auto _f = std::move(std::get<_Cont_APlus>(_frame));
           std::shared_ptr<AExpr> a1 = std::move(_f.a1);
-          uint64_t r_ = std::move(_result);
-          _stack.emplace_back(_Cont_APlus_1{r_});
+          _stack.emplace_back(_Cont_APlus_1{std::move(_result)});
           _stack.emplace_back(_Enter{crane_raw(a1)});
         } else {
           auto _f = std::move(std::get<_Cont_APlus_1>(_frame));
-          uint64_t r_ = _f.r_;
-          uint64_t r_0 = std::move(_result);
-          _result = (r_ + r_0);
+          _result = (_f._tmp2 + std::move(_result));
         }
       }
       return _result;
@@ -1076,13 +1036,13 @@ struct WhereClause {
         std::shared_ptr<AExpr> a4;
       };
 
-      /// _Cont_AIf_1: saves [a2, a3, a4, r_], resumes after recursive call,
+      /// _Cont_AIf_1: saves [_tmp4, a2, a3, a4], resumes after recursive call,
       /// then processes rest.
       struct _Cont_AIf_1 {
+        T1 _tmp4;
         BExpr a2;
         std::shared_ptr<AExpr> a3;
         std::shared_ptr<AExpr> a4;
-        T1 r_;
       };
 
       /// _Cont_APlus: saves [a2, a3], resumes after recursive call, then
@@ -1092,12 +1052,12 @@ struct WhereClause {
         std::shared_ptr<AExpr> a3;
       };
 
-      /// _Cont_APlus_1: saves [a2, a3, r_], resumes after recursive call, then
-      /// processes rest.
+      /// _Cont_APlus_1: saves [_tmp2, a2, a3], resumes after recursive call,
+      /// then processes rest.
       struct _Cont_APlus_1 {
+        T1 _tmp2;
         std::shared_ptr<AExpr> a2;
         std::shared_ptr<AExpr> a3;
-        T1 r_;
       };
 
       using _Frame = std::variant<_Enter, _Cont_AIf, _Cont_AIf_1, _Cont_APlus,
@@ -1131,32 +1091,27 @@ struct WhereClause {
           BExpr a2 = std::move(_f.a2);
           std::shared_ptr<AExpr> a3 = std::move(_f.a3);
           std::shared_ptr<AExpr> a4 = std::move(_f.a4);
-          T1 r_ = std::move(_result);
-          _stack.emplace_back(
-              _Cont_AIf_1{std::move(a2), std::move(a3), a4, std::move(r_)});
+          _stack.emplace_back(_Cont_AIf_1{std::move(_result), std::move(a2),
+                                          std::move(a3), a4});
           _stack.emplace_back(_Enter{crane_raw(a4)});
         } else if (std::holds_alternative<_Cont_AIf_1>(_frame)) {
           auto _f = std::move(std::get<_Cont_AIf_1>(_frame));
           BExpr a2 = std::move(_f.a2);
           std::shared_ptr<AExpr> a3 = std::move(_f.a3);
           std::shared_ptr<AExpr> a4 = std::move(_f.a4);
-          auto r_ = std::move(_f.r_);
-          T1 r_0 = std::move(_result);
-          _result = f1(a2, *a3, std::move(r_), *a4, std::move(r_0));
+          _result = f1(a2, *a3, std::move(_f._tmp4), *a4, std::move(_result));
         } else if (std::holds_alternative<_Cont_APlus>(_frame)) {
           auto _f = std::move(std::get<_Cont_APlus>(_frame));
           std::shared_ptr<AExpr> a2 = std::move(_f.a2);
           std::shared_ptr<AExpr> a3 = std::move(_f.a3);
-          T1 r_ = std::move(_result);
-          _stack.emplace_back(_Cont_APlus_1{std::move(a2), a3, std::move(r_)});
+          _stack.emplace_back(
+              _Cont_APlus_1{std::move(_result), std::move(a2), a3});
           _stack.emplace_back(_Enter{crane_raw(a3)});
         } else {
           auto _f = std::move(std::get<_Cont_APlus_1>(_frame));
           std::shared_ptr<AExpr> a2 = std::move(_f.a2);
           std::shared_ptr<AExpr> a3 = std::move(_f.a3);
-          auto r_ = std::move(_f.r_);
-          T1 r_0 = std::move(_result);
-          _result = f0(*a2, std::move(r_), *a3, std::move(r_0));
+          _result = f0(*a2, std::move(_f._tmp2), *a3, std::move(_result));
         }
       }
       return _result;
@@ -1183,13 +1138,13 @@ struct WhereClause {
         std::shared_ptr<AExpr> a4;
       };
 
-      /// _Cont_AIf_1: saves [a2, a3, a4, r_], resumes after recursive call,
+      /// _Cont_AIf_1: saves [_tmp4, a2, a3, a4], resumes after recursive call,
       /// then processes rest.
       struct _Cont_AIf_1 {
+        T1 _tmp4;
         BExpr a2;
         std::shared_ptr<AExpr> a3;
         std::shared_ptr<AExpr> a4;
-        T1 r_;
       };
 
       /// _Cont_APlus: saves [a2, a3], resumes after recursive call, then
@@ -1199,12 +1154,12 @@ struct WhereClause {
         std::shared_ptr<AExpr> a3;
       };
 
-      /// _Cont_APlus_1: saves [a2, a3, r_], resumes after recursive call, then
-      /// processes rest.
+      /// _Cont_APlus_1: saves [_tmp2, a2, a3], resumes after recursive call,
+      /// then processes rest.
       struct _Cont_APlus_1 {
+        T1 _tmp2;
         std::shared_ptr<AExpr> a2;
         std::shared_ptr<AExpr> a3;
-        T1 r_;
       };
 
       using _Frame = std::variant<_Enter, _Cont_AIf, _Cont_AIf_1, _Cont_APlus,
@@ -1238,32 +1193,27 @@ struct WhereClause {
           BExpr a2 = std::move(_f.a2);
           std::shared_ptr<AExpr> a3 = std::move(_f.a3);
           std::shared_ptr<AExpr> a4 = std::move(_f.a4);
-          T1 r_ = std::move(_result);
-          _stack.emplace_back(
-              _Cont_AIf_1{std::move(a2), std::move(a3), a4, std::move(r_)});
+          _stack.emplace_back(_Cont_AIf_1{std::move(_result), std::move(a2),
+                                          std::move(a3), a4});
           _stack.emplace_back(_Enter{crane_raw(a4)});
         } else if (std::holds_alternative<_Cont_AIf_1>(_frame)) {
           auto _f = std::move(std::get<_Cont_AIf_1>(_frame));
           BExpr a2 = std::move(_f.a2);
           std::shared_ptr<AExpr> a3 = std::move(_f.a3);
           std::shared_ptr<AExpr> a4 = std::move(_f.a4);
-          auto r_ = std::move(_f.r_);
-          T1 r_0 = std::move(_result);
-          _result = f1(a2, *a3, std::move(r_), *a4, std::move(r_0));
+          _result = f1(a2, *a3, std::move(_f._tmp4), *a4, std::move(_result));
         } else if (std::holds_alternative<_Cont_APlus>(_frame)) {
           auto _f = std::move(std::get<_Cont_APlus>(_frame));
           std::shared_ptr<AExpr> a2 = std::move(_f.a2);
           std::shared_ptr<AExpr> a3 = std::move(_f.a3);
-          T1 r_ = std::move(_result);
-          _stack.emplace_back(_Cont_APlus_1{std::move(a2), a3, std::move(r_)});
+          _stack.emplace_back(
+              _Cont_APlus_1{std::move(_result), std::move(a2), a3});
           _stack.emplace_back(_Enter{crane_raw(a3)});
         } else {
           auto _f = std::move(std::get<_Cont_APlus_1>(_frame));
           std::shared_ptr<AExpr> a2 = std::move(_f.a2);
           std::shared_ptr<AExpr> a3 = std::move(_f.a3);
-          auto r_ = std::move(_f.r_);
-          T1 r_0 = std::move(_result);
-          _result = f0(*a2, std::move(r_), *a3, std::move(r_0));
+          _result = f0(*a2, std::move(_f._tmp2), *a3, std::move(_result));
         }
       }
       return _result;

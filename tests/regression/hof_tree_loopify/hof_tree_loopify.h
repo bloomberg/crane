@@ -124,13 +124,13 @@ struct HofTreeLoopify {
       const tree<T1> *a2;
     };
 
-    /// _Cont_Node_1: saves [a0, a1, a2, r_], resumes after recursive call, then
-    /// processes rest.
+    /// _Cont_Node_1: saves [_tmp2, a0, a1, a2], resumes after recursive call,
+    /// then processes rest.
     struct _Cont_Node_1 {
+      T2 _tmp2;
       std::shared_ptr<tree<T1>> a0;
       T1 a1;
       const tree<T1> *a2;
-      T2 r_;
     };
 
     using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
@@ -156,18 +156,15 @@ struct HofTreeLoopify {
         std::shared_ptr<tree<T1>> a0 = std::move(_f.a0);
         auto a1 = std::move(_f.a1);
         const tree<T1> &a2 = *_f.a2;
-        T2 r_ = std::move(_result);
         _stack.emplace_back(
-            _Cont_Node_1{std::move(a0), a1, &a2, std::move(r_)});
+            _Cont_Node_1{std::move(_result), std::move(a0), a1, &a2});
         _stack.emplace_back(_Enter{&a2});
       } else {
         auto _f = std::move(std::get<_Cont_Node_1>(_frame));
         std::shared_ptr<tree<T1>> a0 = std::move(_f.a0);
         auto a1 = std::move(_f.a1);
         const tree<T1> &a2 = *_f.a2;
-        auto r_ = std::move(_f.r_);
-        T2 r_0 = std::move(_result);
-        _result = f0(*a0, std::move(r_), a1, a2, std::move(r_0));
+        _result = f0(*a0, std::move(_f._tmp2), a1, a2, std::move(_result));
       }
     }
     return _result;
@@ -193,13 +190,13 @@ struct HofTreeLoopify {
       const tree<T1> *a2;
     };
 
-    /// _Cont_Node_1: saves [a0, a1, a2, r_], resumes after recursive call, then
-    /// processes rest.
+    /// _Cont_Node_1: saves [_tmp2, a0, a1, a2], resumes after recursive call,
+    /// then processes rest.
     struct _Cont_Node_1 {
+      T2 _tmp2;
       std::shared_ptr<tree<T1>> a0;
       T1 a1;
       const tree<T1> *a2;
-      T2 r_;
     };
 
     using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
@@ -225,18 +222,15 @@ struct HofTreeLoopify {
         std::shared_ptr<tree<T1>> a0 = std::move(_f.a0);
         auto a1 = std::move(_f.a1);
         const tree<T1> &a2 = *_f.a2;
-        T2 r_ = std::move(_result);
         _stack.emplace_back(
-            _Cont_Node_1{std::move(a0), a1, &a2, std::move(r_)});
+            _Cont_Node_1{std::move(_result), std::move(a0), a1, &a2});
         _stack.emplace_back(_Enter{&a2});
       } else {
         auto _f = std::move(std::get<_Cont_Node_1>(_frame));
         std::shared_ptr<tree<T1>> a0 = std::move(_f.a0);
         auto a1 = std::move(_f.a1);
         const tree<T1> &a2 = *_f.a2;
-        auto r_ = std::move(_f.r_);
-        T2 r_0 = std::move(_result);
-        _result = f0(*a0, std::move(r_), a1, a2, std::move(r_0));
+        _result = f0(*a0, std::move(_f._tmp2), a1, a2, std::move(_result));
       }
     }
     return _result;
@@ -261,10 +255,11 @@ struct HofTreeLoopify {
       const tree<T1> *a2;
     };
 
-    /// _Resume_Node: saves [a1, r_], resumes after recursive call with _result.
+    /// _Resume_Node: saves [a1, _tmp1], resumes after recursive call with
+    /// _result.
     struct _Resume_Node {
       T2 a1;
-      tree<T2> r_;
+      tree<T2> _tmp1;
     };
 
     using _Frame = std::variant<_Enter, _Cont_Node, _Resume_Node>;
@@ -289,12 +284,11 @@ struct HofTreeLoopify {
         auto _f = std::move(std::get<_Cont_Node>(_frame));
         auto a1 = std::move(_f.a1);
         const tree<T1> &a2 = *_f.a2;
-        tree<T2> r_ = std::move(_result);
-        _stack.emplace_back(_Resume_Node{f(a1), std::move(r_)});
+        _stack.emplace_back(_Resume_Node{f(a1), std::move(_result)});
         _stack.emplace_back(_Enter{&a2});
       } else {
         auto _f = std::move(std::get<_Resume_Node>(_frame));
-        _result = tree<T2>::node(std::move(_f.r_), std::move(_f.a1),
+        _result = tree<T2>::node(std::move(_f._tmp1), std::move(_f.a1),
                                  std::move(_result));
       }
     }
@@ -319,11 +313,11 @@ struct HofTreeLoopify {
       const tree<T1> *a2;
     };
 
-    /// _Cont_Node_1: saves [a1, r_], resumes after recursive call, then
+    /// _Cont_Node_1: saves [_tmp2, a1], resumes after recursive call, then
     /// processes rest.
     struct _Cont_Node_1 {
+      T2 _tmp2;
       T1 a1;
-      T2 r_;
     };
 
     using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
@@ -348,15 +342,12 @@ struct HofTreeLoopify {
         auto _f = std::move(std::get<_Cont_Node>(_frame));
         auto a1 = std::move(_f.a1);
         const tree<T1> &a2 = *_f.a2;
-        T2 r_ = std::move(_result);
-        _stack.emplace_back(_Cont_Node_1{a1, std::move(r_)});
+        _stack.emplace_back(_Cont_Node_1{std::move(_result), a1});
         _stack.emplace_back(_Enter{&a2});
       } else {
         auto _f = std::move(std::get<_Cont_Node_1>(_frame));
         auto a1 = std::move(_f.a1);
-        auto r_ = std::move(_f.r_);
-        T2 r_0 = std::move(_result);
-        _result = f(std::move(r_), a1, std::move(r_0));
+        _result = f(std::move(_f._tmp2), a1, std::move(_result));
       }
     }
     return _result;
@@ -383,11 +374,11 @@ struct HofTreeLoopify {
       const tree<T2> *a20;
     };
 
-    /// _Resume_Node: saves [_s0, r_], resumes after recursive call with
+    /// _Resume_Node: saves [_s0, _tmp1], resumes after recursive call with
     /// _result.
     struct _Resume_Node {
       T3 _s0;
-      tree<T3> r_;
+      tree<T3> _tmp1;
     };
 
     using _Frame = std::variant<_Enter, _Cont_Node, _Resume_Node>;
@@ -422,12 +413,11 @@ struct HofTreeLoopify {
         auto a10 = std::move(_f.a10);
         const tree<T1> &a2 = *_f.a2;
         const tree<T2> &a20 = *_f.a20;
-        tree<T3> r_ = std::move(_result);
-        _stack.emplace_back(_Resume_Node{f(a1, a10), std::move(r_)});
+        _stack.emplace_back(_Resume_Node{f(a1, a10), std::move(_result)});
         _stack.emplace_back(_Enter{&a20, &a2});
       } else {
         auto _f = std::move(std::get<_Resume_Node>(_frame));
-        _result = tree<T3>::node(std::move(_f.r_), std::move(_f._s0),
+        _result = tree<T3>::node(std::move(_f._tmp1), std::move(_f._s0),
                                  std::move(_result));
       }
     }
@@ -483,8 +473,7 @@ struct HofTreeLoopify {
         auto _f = std::move(std::get<_Cont_Node>(_frame));
         auto a1 = std::move(_f.a1);
         const tree<T1> &a2 = *_f.a2;
-        std::pair<T3, tree<T2>> r_ = std::move(_result);
-        auto [acc1, l_] = std::move(r_);
+        auto [acc1, l_] = std::move(_result);
         auto [acc2, x_] = f(acc1, a1);
         _stack.emplace_back(_Cont_acc2{l_, x_});
         _stack.emplace_back(_Enter{&a2, acc2});
@@ -492,10 +481,9 @@ struct HofTreeLoopify {
         auto _f = std::move(std::get<_Cont_acc2>(_frame));
         tree<T2> l_ = std::move(_f.l_);
         auto x_ = std::move(_f.x_);
-        std::pair<T3, tree<T2>> r_0 = std::move(_result);
-        auto [acc3, r_1] = std::move(r_0);
+        auto [acc3, r_] = std::move(_result);
         _result = std::make_pair(
-            acc3, tree<T2>::node(std::move(l_), x_, std::move(r_1)));
+            acc3, tree<T2>::node(std::move(l_), x_, std::move(r_)));
       }
     }
     return _result;

@@ -114,8 +114,7 @@ struct DeepTailRecursionOverflow {
         auto _f = std::move(std::get<_Cont_Link>(_frame));
         std::shared_ptr<chain> a0 = std::move(_f.a0);
         uint64_t a1 = _f.a1;
-        T1 r_ = std::move(_result);
-        _result = f0(*a0, std::move(r_), a1);
+        _result = f0(*a0, std::move(_result), a1);
       }
     }
     return _result;
@@ -162,8 +161,7 @@ struct DeepTailRecursionOverflow {
         auto _f = std::move(std::get<_Cont_Link>(_frame));
         std::shared_ptr<chain> a0 = std::move(_f.a0);
         uint64_t a1 = _f.a1;
-        T1 r_ = std::move(_result);
-        _result = f0(*a0, std::move(r_), a1);
+        _result = f0(*a0, std::move(_result), a1);
       }
     }
     return _result;

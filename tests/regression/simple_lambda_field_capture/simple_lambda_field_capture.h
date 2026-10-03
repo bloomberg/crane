@@ -123,8 +123,7 @@ struct SimpleLambdaFieldCapture {
         } else {
           auto _f = std::move(std::get<_Cont_Mycons>(_frame));
           uint64_t a0 = _f.a0;
-          uint64_t r_ = std::move(_result);
-          _result = (a0 + r_);
+          _result = (a0 + std::move(_result));
         }
       }
       return _result;
@@ -170,8 +169,7 @@ struct SimpleLambdaFieldCapture {
           auto _f = std::move(std::get<_Cont_Mycons>(_frame));
           uint64_t a0 = _f.a0;
           std::shared_ptr<mylist> a1 = std::move(_f.a1);
-          T1 r_ = std::move(_result);
-          _result = f0(a0, *a1, std::move(r_));
+          _result = f0(a0, *a1, std::move(_result));
         }
       }
       return _result;
@@ -217,8 +215,7 @@ struct SimpleLambdaFieldCapture {
           auto _f = std::move(std::get<_Cont_Mycons>(_frame));
           uint64_t a0 = _f.a0;
           std::shared_ptr<mylist> a1 = std::move(_f.a1);
-          T1 r_ = std::move(_result);
-          _result = f0(a0, *a1, std::move(r_));
+          _result = f0(a0, *a1, std::move(_result));
         }
       }
       return _result;

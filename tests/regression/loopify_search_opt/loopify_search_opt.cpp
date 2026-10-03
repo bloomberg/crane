@@ -120,10 +120,10 @@ uint64_t LoopifySearchOpt::knapsack_fuel(
     uint64_t weight;
   };
 
-  /// _Cont2: saves [r_, value], resumes after recursive call, then processes
+  /// _Cont2: saves [_tmp2, value], resumes after recursive call, then processes
   /// rest.
   struct _Cont2 {
-    uint64_t r_;
+    uint64_t _tmp2;
     uint64_t value;
   };
 
@@ -168,17 +168,14 @@ uint64_t LoopifySearchOpt::knapsack_fuel(
       uint64_t fuel_ = _f.fuel_;
       uint64_t value = _f.value;
       uint64_t weight = _f.weight;
-      uint64_t r_ = std::move(_result);
-      _stack.emplace_back(_Cont2{r_, value});
+      _stack.emplace_back(_Cont2{std::move(_result), value});
       _stack.emplace_back(_Enter{
           &a1, (((capacity - weight) > capacity ? 0 : (capacity - weight))),
           fuel_});
     } else {
       auto _f = std::move(std::get<_Cont2>(_frame));
-      uint64_t r_ = _f.r_;
       uint64_t value = _f.value;
-      uint64_t r_0 = std::move(_result);
-      _result = std::max(r_, (value + r_0));
+      _result = std::max(_f._tmp2, (value + std::move(_result)));
     }
   }
   return _result;
@@ -210,9 +207,9 @@ bool LoopifySearchOpt::subset_sum_fuel(
     uint64_t target;
   };
 
-  /// _Cont2: saves [r_], resumes after recursive call, then processes rest.
+  /// _Cont2: saves [_tmp2], resumes after recursive call, then processes rest.
   struct _Cont2 {
-    bool r_;
+    bool _tmp2;
   };
 
   using _Frame = std::variant<_Enter, _Cont1, _Cont2>;
@@ -250,15 +247,12 @@ bool LoopifySearchOpt::subset_sum_fuel(
       const List<uint64_t> &a1 = *_f.a1;
       uint64_t fuel_ = _f.fuel_;
       uint64_t target = _f.target;
-      bool r_ = std::move(_result);
-      _stack.emplace_back(_Cont2{r_});
+      _stack.emplace_back(_Cont2{std::move(_result)});
       _stack.emplace_back(
           _Enter{&a1, (((target - a0) > target ? 0 : (target - a0))), fuel_});
     } else {
       auto _f = std::move(std::get<_Cont2>(_frame));
-      bool r_ = _f.r_;
-      bool r_0 = std::move(_result);
-      _result = (r_ || r_0);
+      _result = (_f._tmp2 || std::move(_result));
     }
   }
   return _result;
@@ -302,8 +296,7 @@ std::pair<uint64_t, uint64_t> LoopifySearchOpt::majority(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      std::pair<uint64_t, uint64_t> r_ = std::move(_result);
-      auto [cand, count] = std::move(r_);
+      auto [cand, count] = std::move(_result);
       if (a0 == cand) {
         _result = std::make_pair(cand, (count + UINT64_C(1)));
       } else {

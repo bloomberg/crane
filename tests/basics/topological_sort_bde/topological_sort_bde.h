@@ -219,8 +219,7 @@ public:
       } else {
         auto _f = std::move(bsl::get<_Cont_Cons>(_frame));
         auto d_a0 = bsl::move(_f.d_a0);
-        T1 r_ = bsl::move(_result);
-        _result = f(d_a0, bsl::move(r_));
+        _result = f(d_a0, bsl::move(_result));
       }
     }
     return _result;
@@ -259,8 +258,7 @@ public:
       } else {
         auto _f = std::move(bsl::get<_Cont_Cons>(_frame));
         List<T1> d_a0 = bsl::move(_f.d_a0);
-        List<T1> r_ = bsl::move(_result);
-        _result = d_a0.app(bsl::move(r_));
+        _result = d_a0.app(bsl::move(_result));
       }
     }
     return _result;
