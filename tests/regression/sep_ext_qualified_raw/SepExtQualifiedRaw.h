@@ -108,8 +108,7 @@ template <OrderedType X> struct Make {
       return f;
     } else {
       const auto &[a0, a1, a2] = std::get<typename Fmap<T1>::Node>(f1.v());
-      T2 r_ = fmap_rect<T1, T2>(std::move(f), f0, *a2);
-      return f0(a0, a1, *a2, std::move(r_));
+      return f0(a0, a1, *a2, fmap_rect<T1, T2>(std::move(f), f0, *a2));
     }
   }
 
@@ -121,8 +120,7 @@ template <OrderedType X> struct Make {
       return f;
     } else {
       const auto &[a0, a1, a2] = std::get<typename Fmap<T1>::Node>(f1.v());
-      T2 r_ = fmap_rec<T1, T2>(std::move(f), f0, *a2);
-      return f0(a0, a1, *a2, std::move(r_));
+      return f0(a0, a1, *a2, fmap_rec<T1, T2>(std::move(f), f0, *a2));
     }
   }
 

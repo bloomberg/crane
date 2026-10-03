@@ -1,7 +1,6 @@
 #ifndef INCLUDED_SEPEXTCROSSFILESTRING
 #define INCLUDED_SEPEXTCROSSFILESTRING
 
-#include <utility>
 #include <variant>
 
 #include "Ascii.h"

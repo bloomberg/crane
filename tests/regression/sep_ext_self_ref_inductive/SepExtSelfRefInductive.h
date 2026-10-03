@@ -122,9 +122,8 @@ template <S X> struct HashTrie {
     } else {
       const auto &[k0, v_1, left0, right0] =
           std::get<typename Trie<T1>::Node>(t0.v());
-      T2 r_ = Trie_rect<T1, T2>(f, f0, *left0);
-      T2 r_0 = Trie_rect<T1, T2>(std::move(f), f0, *right0);
-      return f0(k0, v_1, *left0, std::move(r_), *right0, std::move(r_0));
+      return f0(k0, v_1, *left0, Trie_rect<T1, T2>(f, f0, *left0), *right0,
+                Trie_rect<T1, T2>(f, f0, *right0));
     }
   }
 
@@ -137,9 +136,8 @@ template <S X> struct HashTrie {
     } else {
       const auto &[k0, v_1, left0, right0] =
           std::get<typename Trie<T1>::Node>(t0.v());
-      T2 r_ = Trie_rec<T1, T2>(f, f0, *left0);
-      T2 r_0 = Trie_rec<T1, T2>(std::move(f), f0, *right0);
-      return f0(k0, v_1, *left0, std::move(r_), *right0, std::move(r_0));
+      return f0(k0, v_1, *left0, Trie_rec<T1, T2>(f, f0, *left0), *right0,
+                Trie_rec<T1, T2>(f, f0, *right0));
     }
   }
 

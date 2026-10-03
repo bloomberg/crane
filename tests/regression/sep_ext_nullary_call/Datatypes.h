@@ -133,8 +133,7 @@ public:
         }
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
-        uint64_t r_ = std::move(_result);
-        _result = (r_ + 1);
+        _result = (std::move(_result) + 1);
       }
     }
     return _result;
