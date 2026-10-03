@@ -987,13 +987,18 @@ let gen_ind_header_v2
             | _ -> cpp_ty
           else cpp_ty
         in
+        (* A field's value type, and the type the struct stores it at:
+           boxed under [Crane BoxedFields] when it holds an inductive. *)
+        let value_ty var_names ty =
+          erase_if_needed (convert_ml_type_to_cpp_type (empty_env ()) var_names ty)
+        in
+        let stored_ty var_names ty =
+          let t = value_ty var_names ty in
+          if boxes_field ty then Tshared_ptr t else t
+        in
         let flat_fields =
           List.mapi (fun j ty ->
-            let cpp_ty =
-              erase_if_needed
-                (convert_ml_type_to_cpp_type (empty_env ()) vars ty) in
-            let field_id = List.nth field_ids j in
-            (Fvar (field_id, cpp_ty), VPublic, SData)
+            (Fvar (List.nth field_ids j, stored_ty vars ty), VPublic, SData)
           ) tys_list
         in
         let field_exprs = List.map (fun fid -> CPPvar fid) field_ids in
@@ -1019,31 +1024,22 @@ let gen_ind_header_v2
           conversion_to_other_instantiation ~leading:[] ~name ~templates ~vars
             ~fields:
               (List.mapi
-                 (fun j ty ->
-                   ( List.nth field_ids j,
-                     fun var_names ->
-                       erase_if_needed
-                         (convert_ml_type_to_cpp_type (empty_env ()) var_names
-                            ty) ) )
+                 (fun j ty -> (List.nth field_ids j, fun var_names -> stored_ty var_names ty))
                  tys_list)
         in
         let factory_name =
           Id.of_string (factory_name_of_ctor ~type_name:ind_type_name_str cname_str)
         in
         let factory_params =
-          List.mapi (fun j ty ->
-            let cpp_ty =
-              erase_if_needed
-                (convert_ml_type_to_cpp_type (empty_env ()) vars ty) in
-            let fid = List.nth field_ids j in
-            (fid, cpp_ty)
-          ) tys_list
+          List.mapi (fun j ty -> (List.nth field_ids j, value_ty vars ty)) tys_list
         in
         let factory_args =
-          List.map (fun (param_name, cpp_ty) ->
-            if is_trivially_copyable_type cpp_ty then CPPvar param_name
+          List.map2 (fun (param_name, cpp_ty) ty ->
+            if boxes_field ty then
+              mk_call (CPPalloc (Alloc_heap, cpp_ty)) [CPPmove (CPPvar param_name)]
+            else if is_trivially_copyable_type cpp_ty then CPPvar param_name
             else CPPmove (CPPvar param_name)
-          ) factory_params
+          ) factory_params tys_list
         in
         let factory_body = [Sreturn (Some (CPPbraced factory_args))] in
         let factory_field =
@@ -1067,15 +1063,19 @@ let gen_ind_header_v2
 
       let _ = ind_type_name_str in (* suppress unused warning if non-flat path also needs it *)
 
-      (* Compute a field's final C++ type, including the arena-mode
-         pointerization of recursive fields.  Used for the per-constructor
-         nested struct field declarations below. (The old arena deep-copy
-         constructor that also consumed this was removed in the scoped-arena
-         redesign; see the note near [value_copy_clone_methods].) *)
-      let compute_field_cpp_ty ty =
+      (* The type a constructor struct stores field [ty] at, under the
+         variable names [var_names]: recursive occurrences and, under
+         [Crane BoxedFields], held inductives behind the smart pointer.  Every
+         reading of a field's storage -- the struct, its factories, its
+         conversion to another instantiation -- comes from here.  Scoped-arena
+         redesign: recursive fields are always the ordinary smart pointer
+         ([Tshared_ptr], rendered as std::shared_ptr / crane::rc); arena-ness
+         is decided per-object at the factory call site, not baked into the
+         field type. *)
+      let field_storage_ty var_names ty =
         let cpp_ty =
           convert_ml_type_to_cpp_type (empty_env ()) ~ns:(Refset'.singleton name)
-            vars
+            var_names
             ty
         in
         (* Wrap fields that contain a nested self-reference in
@@ -1089,40 +1089,30 @@ let gen_ind_header_v2
            element-wise conversion needed. *)
         (* Completeness-aware element wrapping (WRAP.md). *)
         maybe_record_boxed_recursive_ind ~ind_ref:name ty;
-        let cpp_ty =
-          if ml_type_has_nested_self_ref ~ind_ref:name ty && not is_coinductive
-          then
-            let bare_cpp_ty =
-              convert_ml_type_to_cpp_type
-                (empty_env ())
-                vars
-                ty
-            in
-            (* If the field recurses THROUGH a boxed-element
-               container, the element box already breaks the
-               completeness cycle, so the outer shared_ptr/arena
-               pointer is redundant: store the container by value. *)
-            if (not is_coinductive)
-               && ml_type_recurses_through_boxed_container
-                    ~ind_ref:name ty
-            then bare_cpp_ty
-            else Tshared_ptr bare_cpp_ty
-          else cpp_ty
-        in
-        let cpp_ty =
-          if vars = [] then
-            match cpp_ty with
-            | Tshared_ptr _ ->
-              tvar_erase_type cpp_ty
-            | _ when has_unnamed_tvar cpp_ty -> Tany
-            | _ -> cpp_ty
-          else cpp_ty
-        in
-        (* Scoped-arena redesign: recursive fields are always the ordinary
-           smart pointer ([Tshared_ptr], rendered as std::shared_ptr /
-           crane::rc); arena-ness is decided per-object at the factory call
-           site, not baked into the field type. *)
-        cpp_ty
+        let bare_cpp_ty = convert_ml_type_to_cpp_type (empty_env ()) var_names ty in
+        if ml_type_has_nested_self_ref ~ind_ref:name ty && not is_coinductive then
+          (* If the field recurses THROUGH a boxed-element container, the
+             element box already breaks the completeness cycle, so the outer
+             shared_ptr/arena pointer is redundant: store the container by
+             value. *)
+          if ml_type_recurses_through_boxed_container ~ind_ref:name ty then bare_cpp_ty
+          else Tshared_ptr bare_cpp_ty
+        else
+          match cpp_ty with
+          | Tshared_ptr _ -> cpp_ty
+          | _ when (not is_coinductive) && boxes_field ty -> Tshared_ptr bare_cpp_ty
+          | _ -> cpp_ty
+      in
+      (* A field's storage type at the inductive's own variables, erased
+         where the inductive has none. *)
+      let compute_field_cpp_ty ty =
+        let cpp_ty = field_storage_ty vars ty in
+        if vars = [] then
+          match cpp_ty with
+          | Tshared_ptr _ -> tvar_erase_type cpp_ty
+          | _ when has_unnamed_tvar cpp_ty -> Tany
+          | _ -> cpp_ty
+        else cpp_ty
       in
       (* A coinductive's constructor struct holds values of the coinductive
          itself and of its mutual siblings, each incomplete inside its own
@@ -2344,41 +2334,13 @@ let gen_ind_header_v2
         let cpp_tys =
           List.mapi
             (fun j ty ->
-              let storage_ty =
-                convert_ml_type_to_cpp_type (empty_env ()) ~ns:(Refset'.singleton name)
-                  vars
-                  ty
-              in
+              (* The field as the struct declares it. *)
+              let storage_ty = compute_field_cpp_ty ty in
               let api_ty =
                 convert_ml_type_to_cpp_type
                   (empty_env ())
                   vars
                   ty
-              in
-              maybe_record_boxed_recursive_ind ~ind_ref:name ty;
-              let storage_ty =
-                if ml_type_has_nested_self_ref ~ind_ref:name ty
-                   && not is_coinductive
-                then
-                  (* Use bare (no-ns) type so factory param and storage are
-                     consistent: shared_ptr<optional<chain>> not
-                     shared_ptr<optional<shared_ptr<chain>>>. *)
-                  (* Boxed-element container recursion: store by value (the box
-                     is the indirection); no outer shared_ptr/arena pointer. *)
-                  if (not is_coinductive)
-                     && ml_type_recurses_through_boxed_container ~ind_ref:name ty
-                  then api_ty
-                  else Tshared_ptr api_ty
-                else storage_ty
-              in
-              let storage_ty =
-                if vars = [] then
-                  match storage_ty with
-                  | Tshared_ptr _ ->
-                    tvar_erase_type storage_ty
-                  | _ when has_unnamed_tvar storage_ty -> Tany
-                  | _ -> storage_ty
-                else storage_ty
               in
               let api_ty =
                 if vars = [] then
@@ -2669,26 +2631,7 @@ let gen_ind_header_v2
                       let field_id =
                         lookup_ctor_field_name ~owner:c ctor_struct_name j
                       in
-                      let make_field_ty var_names =
-                        let bare_ty =
-                          convert_ml_type_to_cpp_type (empty_env ())
-                            var_names ty
-                        in
-                        let storage_ty =
-                          convert_ml_type_to_cpp_type (empty_env ()) ~ns:(Refset'.singleton name) var_names ty
-                        in
-                        maybe_record_boxed_recursive_ind ~ind_ref:name ty;
-                        if ml_type_has_nested_self_ref ~ind_ref:name ty
-                           && not is_coinductive
-                        then
-                          (* Boxed-element container recursion: by value. *)
-                          if (not is_coinductive)
-                             && ml_type_recurses_through_boxed_container
-                                  ~ind_ref:name ty
-                          then bare_ty
-                          else Tshared_ptr bare_ty
-                        else storage_ty
-                      in
+                      let make_field_ty var_names = field_storage_ty var_names ty in
                       (* A promoted parameter -- [ptr] in [Dvalue_base<ptr,
                          iptr>], from the instance in scope where the
                          inductive was declared -- leads [vars], and a field

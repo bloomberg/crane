@@ -7002,12 +7002,21 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
           end
           | _ -> true
         in
+        (* [Crane BoxedFields]: a field the struct boxes because of its own
+           type (see [Ml_type_util.boxes_field]) is read like a recursive
+           one. *)
+        let is_boxed_at_def i =
+          match List.nth_opt non_erased_def_site_field_tys i with
+          | Some ty -> boxes_field ty
+          | None -> false
+        in
         let is_sptr_self_ref =
-          ( field_is_self_or_mutual_ref_at_def i
-            || field_has_nested_self_ref_at_def i )
+          ( ( field_is_self_or_mutual_ref_at_def i
+              || field_has_nested_self_ref_at_def i )
+            && not (field_recurses_through_boxed_at_def i)
+            && is_uniform_self_ref_at_def i
+            || is_boxed_at_def i )
           && not (Table.is_coinductive ind_ref)
-          && not (field_recurses_through_boxed_at_def i)
-          && is_uniform_self_ref_at_def i
         in
         let field_cpp_ty =
           if is_sptr_self_ref then

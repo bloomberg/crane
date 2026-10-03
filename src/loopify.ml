@@ -1849,16 +1849,20 @@ let rec transform_decl ?(tparams = []) = function
             (fun (f, _, _) -> match f with Fvar (_, ty) -> Some ty | _ -> None)
             sub_fields
         in
-        let uptr_idxs =
+        let ptr_fields =
           List.mapi
             (fun i ty ->
-              match ty with Tshared_ptr _ -> Some i | _ -> None)
+              match ty with
+              | Tshared_ptr (Tglob (r, _, _)) when Common.globref_equal r ds.ds_ref ->
+                Some (Recursive i)
+              | Tshared_ptr _ -> Some (Boxed i)
+              | _ -> None)
             var_fields
           |> List.filter_map Fun.id
         in
-        if uptr_idxs <> [] then
+        if ptr_fields <> [] then
           Hashtbl.replace ctor_ptr_fields
-            (Common.ctor_owner_key ds.ds_ref, ctor_name) uptr_idxs;
+            (Common.ctor_owner_key ds.ds_ref, ctor_name) ptr_fields;
         List.iter collect_uptr_fields sub_fields
       | _ -> ()
     in

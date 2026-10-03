@@ -458,6 +458,17 @@
   (deps add_one.t.exe)
   (action (run ./add_one.t.exe))))
 
+(subdir boxed_fields
+ (rule
+  (targets boxed_fields.t.exe)
+  (deps BoxedFields.vo boxed_fields.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} boxed_fields.t.exe boxed_fields.cpp boxed_fields.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps boxed_fields.t.exe)
+  (action (run ./boxed_fields.t.exe))))
+
 (subdir fast_variant
  (rule
   (targets fast_variant.t.exe)

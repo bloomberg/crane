@@ -2267,6 +2267,17 @@ let {Goptions.get = fast_variant_requested} =
 
 let fast_variant () = fast_variant_requested () && not (String.equal (std_lib ()) "BDE")
 
+(* --- Boxed fields ----------------------------------------------------- *)
+
+(* [Set Crane BoxedFields] stores a constructor field whose type is an
+   inductive behind the smart pointer recursive fields already use, so
+   copying, moving or destroying the outer value stops at the field instead
+   of walking the value nested in it.  OCaml's own representation: a field
+   holding another inductive is a pointer.  Opt-in, because the field's
+   type, as a structured binding sees it, is then the pointer. *)
+let {Goptions.get = boxed_fields} =
+  declare_bool_option_and_ref ~key:["Crane"; "BoxedFields"] ~value:false ()
+
 (* --- Last-use moves --------------------------------------------------- *)
 
 (* [Last_use] rewrites a local's final read as [std::move], removing a

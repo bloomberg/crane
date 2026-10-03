@@ -362,6 +362,13 @@ val count_real_ml_args : Miniml.ml_ast list -> int
 
 (** {2 Value-type and copyability classification} *)
 
+(** Under [Crane BoxedFields], whether a constructor field declared at ML
+    type [ty] is stored behind the recursive-field smart pointer: an
+    inductive, custom-mapped or not, that is not coinductive (its value is a
+    lazy cell already) and whose copy is not free.  A field typed by a
+    parameter is not: its type is not known where the field is declared. *)
+val boxes_field : Miniml.ml_type -> bool
+
 (** Whether a C++ type is an inductive value type. *)
 val is_inductive_value_type : Minicpp.cpp_type -> bool
 

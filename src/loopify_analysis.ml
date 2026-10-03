@@ -266,8 +266,16 @@ let () = State.on_reset State.Unit clear_mutual_table
     capitalized constructor name (e.g., ["App"], ["Cons"]); the owner is part
     of it because a constructor name alone does not identify a struct -- two
     inductives may each have a [Cons], with different fields.  The value is a
-    list of 0-based field indices. *)
-let ctor_ptr_fields : (string * string, int list) Hashtbl.t = Hashtbl.create 32
+    list of the constructor's pointer fields, by 0-based index. *)
+
+(** A constructor field stored behind the smart pointer: a recursive one, which
+    holds the inductive itself, or one [Crane BoxedFields] boxed for holding
+    some other inductive. *)
+type ptr_field = Recursive of int | Boxed of int
+
+let ptr_field_index = function Recursive i | Boxed i -> i
+
+let ctor_ptr_fields : (string * string, ptr_field list) Hashtbl.t = Hashtbl.create 32
 
 (** The inductive a TMC cell belongs to, read off the cell's own type.  A
     factory call is always qualified by that type ([Type<...>::cons]), which

@@ -981,6 +981,23 @@ let rec is_trivially_copyable_type = function
   | Tnamespace (g, _) -> is_enum_inductive g || Table.is_custom_scalar_ref g
   | _ -> false
 
+(** Whether copying a value of ML type [ty] is free: {!is_trivially_copyable_type}
+    read off the ML type. *)
+let rec ml_is_trivially_copyable ty =
+  match resolve_tmeta ty with
+  | Miniml.Tglob (g, args, _) ->
+    is_enum_inductive g || Table.is_custom_scalar_ref g
+    || Table.is_trivially_copyable_ref g && List.for_all ml_is_trivially_copyable args
+  | _ -> false
+
+let boxes_field ty =
+  Table.boxed_fields ()
+  &&
+  match resolve_tmeta ty with
+  | Miniml.Tglob ((GlobRef.IndRef _ as g), _, _) ->
+    (not (Table.is_coinductive g)) && not (ml_is_trivially_copyable ty)
+  | _ -> false
+
 (** Check if an ML type maps to a non-trivially-copyable C++ value type.
     These are custom-extracted inductives (e.g., prod → std::pair) that are
     NOT shared_ptr-wrapped but still benefit from move semantics.

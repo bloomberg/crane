@@ -37,10 +37,10 @@ type tmc_cell_alloc = {
       (** [(index, expr)] for non-recursive arguments *)
   tca_n_args : int;
       (** Total number of constructor arguments *)
-  tca_uptr_field_idxs : int list;
-      (** Field indices that are stored as [shared_ptr] in the struct
-          (self-referencing fields).  Used by {!build_cell_call} to
-          wrap value-type args in [make_shared] for direct struct construction. *)
+  tca_ptr_fields : ptr_field list;
+      (** The fields stored as [shared_ptr] in the struct, indexed like the
+          arguments.  Used by {!build_cell_call} to wrap value-type args in
+          [make_shared] for direct struct construction. *)
 }
 
 (** Information about a single TMC-eligible branch: a return expression of the
@@ -142,9 +142,9 @@ let rec try_tmc_decompose check expr =
            order, but [idx]/[tca_non_rec_args] here index into [args] from
            [is_ctor_factory_call], which are stored REVERSED (as [CPPfun_call]
            keeps them).  Map the struct-order positions into the same reversed
-           arg-space ([n_args - 1 - j]) so [build_cell_call]'s
-           [List.mem i tca_uptr_field_idxs] test aligns — otherwise a non-pointer
-           field (e.g. a [cons] element) is spuriously [make_shared]-wrapped. *)
+           arg-space ([n_args - 1 - j]) so [build_cell_call]'s lookup of an
+           argument's field aligns — otherwise a non-pointer field (e.g. a
+           [cons] element) is spuriously [make_shared]-wrapped. *)
         match
           match cell_owner cell_ty with
           | Some owner ->
@@ -152,8 +152,13 @@ let rec try_tmc_decompose check expr =
               (Common.ctor_owner_key owner, ctor_name)
           | None -> None
         with
-        | Some idxs -> List.map (fun j -> n_args - 1 - j) idxs
-        | None -> [idx]
+        | Some fields ->
+          List.map
+            (function
+              | Recursive j -> Recursive (n_args - 1 - j)
+              | Boxed j -> Boxed (n_args - 1 - j))
+            fields
+        | None -> [Recursive idx]
       in
       {
       tca_factory =
@@ -163,7 +168,7 @@ let rec try_tmc_decompose check expr =
       tca_rec_field_idx = idx;
       tca_non_rec_args = non_rec_of idx;
       tca_n_args = n_args;
-      tca_uptr_field_idxs = uptr_idxs;
+      tca_ptr_fields = uptr_idxs;
     } in
     (* Find which args are direct recursive calls *)
     let direct =
@@ -182,7 +187,7 @@ let rec try_tmc_decompose check expr =
          [rose] to write, so such a chain is not TMC-eligible and the function
          stays plainly recursive. *)
       let cell = make_cell idx in
-      if not (List.mem idx cell.tca_uptr_field_idxs) then None
+      if not (List.exists (fun f -> ptr_field_index f = idx) cell.tca_ptr_fields) then None
       else Some { tmc_cells = [cell]; tmc_rec_args = cs.cs_args }
     | [] ->
       (* No direct call — look for a nested constructor wrapping a call *)
@@ -386,17 +391,22 @@ let build_cell_call ?token ~vt_ret cell =
       if i = cell.tca_rec_field_idx then CPPnullptr
       else
         match List.assoc_opt i cell.tca_non_rec_args with
-        | Some e ->
-          let should_wrap =
-            vt_ret <> None
-            && (List.mem i cell.tca_uptr_field_idxs
-                || expr_builds_cell_type e)
-          in
-          if should_wrap then
-            (match vt_ret with
-             | Some _ -> CPPfun_call (shared_cell_sig, mk_shared_cell, of_reversed ([e]))
-             | None -> e)
-          else e
+        | Some e when vt_ret <> None -> (
+          match List.find_opt (fun f -> ptr_field_index f = i) cell.tca_ptr_fields with
+          | Some (Boxed _) ->
+            (* A boxed field holds some other inductive: allocate at the
+               argument's own type. *)
+            let boxed = Tdecay (Texpr_type e) in
+            CPPfun_call
+              ( call_sig ~yields:(Tshared_ptr boxed) ~nargs:1 (),
+                CPPalloc (Alloc_heap, boxed),
+                of_reversed [e] )
+          | Some (Recursive _) ->
+            CPPfun_call (shared_cell_sig, mk_shared_cell, of_reversed ([e]))
+          | None when expr_builds_cell_type e ->
+            CPPfun_call (shared_cell_sig, mk_shared_cell, of_reversed ([e]))
+          | None -> e )
+        | Some e -> e
         | None ->
           Cpp_erasure.converting_ctor Tany [] )
   in
