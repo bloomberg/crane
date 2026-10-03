@@ -1841,9 +1841,18 @@ let with_rematerialized ctx stmt =
         e;
       !ok
   in
+  let rec is_reference = function
+    | Tref _ -> true
+    | Tconst t -> is_reference t
+    | _ -> false
+  in
   match stmt with
-  | Sasgn (id, Declare _, e)
-    when List.for_all rebindable (free_vars_expr e) && calls_nothing e ->
+  (* A reference names someone else's value: saving it would copy the value
+     and leave a pointer taken from it dangling with the frame.  The
+     continuation rebuilds it from its source, which is saved instead. *)
+  | Sasgn (id, Declare ty, e)
+    when calls_nothing e
+         && (is_reference ty || List.for_all rebindable (free_vars_expr e)) ->
     {ctx with er_rematerialized = ctx.er_rematerialized @ [(id, stmt)]}
   | _ -> ctx
 
@@ -2369,7 +2378,19 @@ and rewrite_enter_stmts ctx stmts =
         List.iter fs rest;
         !heads
       in
-      let cont_vars = filter_cont_vars ~exclude_id:id rest_free
+      (* What the rest reads, with what its rebuilt bindings read in place
+         of those bindings. *)
+      let remat_free =
+        List.concat_map
+          (fun (_, st) -> match st with Sasgn (_, _, e) -> free_vars_expr e | _ -> [])
+          remat
+        |> List.filter (fun v -> not (List.exists (fun (_, tp) -> Id.equal tp v) tparams))
+      in
+      let cont_vars =
+        filter_cont_vars ~exclude_id:id
+          (List.fold_left
+             (fun acc v -> if List.exists (Id.equal v) acc then acc else acc @ [v])
+             rest_free remat_free)
         |> List.filter (fun cid -> not (Id.Set.mem cid ctx.er_invariant_params))
         |> List.filter (fun cid -> not (List.mem_assoc cid remat))
         |> List.filter (fun cid -> not (List.exists (Id.equal cid) entry_heads)) in

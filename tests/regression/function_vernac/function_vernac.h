@@ -220,20 +220,20 @@ struct FunctionVernac {
         uint64_t _x0;
       };
 
-      /// _Resume_R_div2_2: saves [_res, a2, p0, n0], resumes after recursive
-      /// call with _result.
-      struct _Resume_R_div2_2 {
-        R_div2 _res;
+      /// _Cont_R_div2_2: saves [_res, a2, n0, p0], resumes after recursive
+      /// call, then processes rest.
+      struct _Cont_R_div2_2 {
+        std::shared_ptr<R_div2> _res;
         uint64_t a2;
-        uint64_t p0;
         uint64_t n0;
+        uint64_t p0;
       };
 
-      using _Frame = std::variant<_Enter, _Resume_R_div2_2>;
+      using _Frame = std::variant<_Enter, _Cont_R_div2_2>;
       T1 _result{};
       crane::small_vector<_Frame> _stack;
       _stack.emplace_back(_Enter{_self, _x, _x0});
-      /// Loopified R_div2_rec: _Enter -> _Resume_R_div2_2.
+      /// Loopified R_div2_rec: _Enter -> _Cont_R_div2_2.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -253,13 +253,17 @@ struct FunctionVernac {
           } else {
             const auto &[n0, p0, a2, _res] =
                 std::get<typename R_div2::R_div2_2>(_sv.v());
-            _stack.emplace_back(_Resume_R_div2_2{*_res, a2, p0, n0});
+            _stack.emplace_back(_Cont_R_div2_2{_res, a2, n0, p0});
             _stack.emplace_back(_Enter{crane_raw(_res), p0, a2});
           }
         } else {
-          auto _f = std::move(std::get<_Resume_R_div2_2>(_frame));
-          _result =
-              f1(_f.n0, _f.p0, _f.a2, std::move(_f._res), std::move(_result));
+          auto _f = std::move(std::get<_Cont_R_div2_2>(_frame));
+          std::shared_ptr<R_div2> _res = std::move(_f._res);
+          uint64_t a2 = _f.a2;
+          uint64_t n0 = _f.n0;
+          uint64_t p0 = _f.p0;
+          T1 r_ = std::move(_result);
+          _result = f1(n0, p0, a2, *_res, std::move(r_));
         }
       }
       return _result;
@@ -280,20 +284,20 @@ struct FunctionVernac {
         uint64_t _x0;
       };
 
-      /// _Resume_R_div2_2: saves [_res, a2, p0, n0], resumes after recursive
-      /// call with _result.
-      struct _Resume_R_div2_2 {
-        R_div2 _res;
+      /// _Cont_R_div2_2: saves [_res, a2, n0, p0], resumes after recursive
+      /// call, then processes rest.
+      struct _Cont_R_div2_2 {
+        std::shared_ptr<R_div2> _res;
         uint64_t a2;
-        uint64_t p0;
         uint64_t n0;
+        uint64_t p0;
       };
 
-      using _Frame = std::variant<_Enter, _Resume_R_div2_2>;
+      using _Frame = std::variant<_Enter, _Cont_R_div2_2>;
       T1 _result{};
       crane::small_vector<_Frame> _stack;
       _stack.emplace_back(_Enter{_self, _x, _x0});
-      /// Loopified R_div2_rect: _Enter -> _Resume_R_div2_2.
+      /// Loopified R_div2_rect: _Enter -> _Cont_R_div2_2.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -313,13 +317,17 @@ struct FunctionVernac {
           } else {
             const auto &[n0, p0, a2, _res] =
                 std::get<typename R_div2::R_div2_2>(_sv.v());
-            _stack.emplace_back(_Resume_R_div2_2{*_res, a2, p0, n0});
+            _stack.emplace_back(_Cont_R_div2_2{_res, a2, n0, p0});
             _stack.emplace_back(_Enter{crane_raw(_res), p0, a2});
           }
         } else {
-          auto _f = std::move(std::get<_Resume_R_div2_2>(_frame));
-          _result =
-              f1(_f.n0, _f.p0, _f.a2, std::move(_f._res), std::move(_result));
+          auto _f = std::move(std::get<_Cont_R_div2_2>(_frame));
+          std::shared_ptr<R_div2> _res = std::move(_f._res);
+          uint64_t a2 = _f.a2;
+          uint64_t n0 = _f.n0;
+          uint64_t p0 = _f.p0;
+          T1 r_ = std::move(_result);
+          _result = f1(n0, p0, a2, *_res, std::move(r_));
         }
       }
       return _result;
@@ -458,21 +466,21 @@ struct FunctionVernac {
         uint64_t _x0;
       };
 
-      /// _Resume_R_list_sum_1: saves [_res, a3, xs0, x0, l0], resumes after
-      /// recursive call with _result.
-      struct _Resume_R_list_sum_1 {
-        R_list_sum _res;
+      /// _Cont_R_list_sum_1: saves [_res, a3, l0, x0, xs0], resumes after
+      /// recursive call, then processes rest.
+      struct _Cont_R_list_sum_1 {
+        std::shared_ptr<R_list_sum> _res;
         uint64_t a3;
-        List<uint64_t> xs0;
-        uint64_t x0;
         List<uint64_t> l0;
+        uint64_t x0;
+        List<uint64_t> xs0;
       };
 
-      using _Frame = std::variant<_Enter, _Resume_R_list_sum_1>;
+      using _Frame = std::variant<_Enter, _Cont_R_list_sum_1>;
       T1 _result{};
       crane::small_vector<_Frame> _stack;
       _stack.emplace_back(_Enter{_self, _x, _x0});
-      /// Loopified R_list_sum_rec: _Enter -> _Resume_R_list_sum_1.
+      /// Loopified R_list_sum_rec: _Enter -> _Cont_R_list_sum_1.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -490,13 +498,18 @@ struct FunctionVernac {
           } else {
             const auto &[l0, x0, xs0, a3, _res] =
                 std::get<typename R_list_sum::R_list_sum_1>(_sv.v());
-            _stack.emplace_back(_Resume_R_list_sum_1{*_res, a3, xs0, x0, l0});
+            _stack.emplace_back(_Cont_R_list_sum_1{_res, a3, l0, x0, xs0});
             _stack.emplace_back(_Enter{crane_raw(_res), xs0, a3});
           }
         } else {
-          auto _f = std::move(std::get<_Resume_R_list_sum_1>(_frame));
-          _result = f0(std::move(_f.l0), _f.x0, std::move(_f.xs0), _f.a3,
-                       std::move(_f._res), std::move(_result));
+          auto _f = std::move(std::get<_Cont_R_list_sum_1>(_frame));
+          std::shared_ptr<R_list_sum> _res = std::move(_f._res);
+          uint64_t a3 = _f.a3;
+          List<uint64_t> l0 = std::move(_f.l0);
+          uint64_t x0 = _f.x0;
+          List<uint64_t> xs0 = std::move(_f.xs0);
+          T1 r_ = std::move(_result);
+          _result = f0(l0, x0, xs0, a3, *_res, std::move(r_));
         }
       }
       return _result;
@@ -518,21 +531,21 @@ struct FunctionVernac {
         uint64_t _x0;
       };
 
-      /// _Resume_R_list_sum_1: saves [_res, a3, xs0, x0, l0], resumes after
-      /// recursive call with _result.
-      struct _Resume_R_list_sum_1 {
-        R_list_sum _res;
+      /// _Cont_R_list_sum_1: saves [_res, a3, l0, x0, xs0], resumes after
+      /// recursive call, then processes rest.
+      struct _Cont_R_list_sum_1 {
+        std::shared_ptr<R_list_sum> _res;
         uint64_t a3;
-        List<uint64_t> xs0;
-        uint64_t x0;
         List<uint64_t> l0;
+        uint64_t x0;
+        List<uint64_t> xs0;
       };
 
-      using _Frame = std::variant<_Enter, _Resume_R_list_sum_1>;
+      using _Frame = std::variant<_Enter, _Cont_R_list_sum_1>;
       T1 _result{};
       crane::small_vector<_Frame> _stack;
       _stack.emplace_back(_Enter{_self, _x, _x0});
-      /// Loopified R_list_sum_rect: _Enter -> _Resume_R_list_sum_1.
+      /// Loopified R_list_sum_rect: _Enter -> _Cont_R_list_sum_1.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -550,13 +563,18 @@ struct FunctionVernac {
           } else {
             const auto &[l0, x0, xs0, a3, _res] =
                 std::get<typename R_list_sum::R_list_sum_1>(_sv.v());
-            _stack.emplace_back(_Resume_R_list_sum_1{*_res, a3, xs0, x0, l0});
+            _stack.emplace_back(_Cont_R_list_sum_1{_res, a3, l0, x0, xs0});
             _stack.emplace_back(_Enter{crane_raw(_res), xs0, a3});
           }
         } else {
-          auto _f = std::move(std::get<_Resume_R_list_sum_1>(_frame));
-          _result = f0(std::move(_f.l0), _f.x0, std::move(_f.xs0), _f.a3,
-                       std::move(_f._res), std::move(_result));
+          auto _f = std::move(std::get<_Cont_R_list_sum_1>(_frame));
+          std::shared_ptr<R_list_sum> _res = std::move(_f._res);
+          uint64_t a3 = _f.a3;
+          List<uint64_t> l0 = std::move(_f.l0);
+          uint64_t x0 = _f.x0;
+          List<uint64_t> xs0 = std::move(_f.xs0);
+          T1 r_ = std::move(_result);
+          _result = f0(l0, x0, xs0, a3, *_res, std::move(r_));
         }
       }
       return _result;

@@ -2107,6 +2107,8 @@ let should_loopify ?default r =
   else
     match default with Some d -> d | None -> loopify ()
 
+let loopifies_methods_of r = should_loopify ~default:(not (is_coinductive r)) r
+
 let add_loopify_entries b l =
   let f b = if b then Refset'.add else Refset'.remove in
   let y, n = !loopify_table in

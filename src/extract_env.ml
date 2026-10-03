@@ -1415,13 +1415,18 @@ let report_body_generations fn =
              (fun (p, n) -> str (phase_name p) ++ str " " ++ int n)
              (Gen_decls.body_generation_counts ()) )
 
+(** [Modutil.optimize_struct], then {!Normalize}: every consumer of the
+    structure -- the method registry built before printing as much as the
+    printer -- sees the same normalized bodies. *)
+let optimize_struct to_appear struc =
+  Normalize.structure (Modutil.optimize_struct to_appear struc)
+
 (** Renders an entire ML structure to C++ header and implementation files.
     Performs dry run first for renaming, then generates and formats the output.
 *)
 let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
     (fn, si, mo) dry struc =
   Buffer.clear buf;
-  let struc = Normalize.structure struc in
   let d = descr () in
   (* Empties every per-file cell, the mutual-recursion registry among them,
      before this unit's dry run repopulates it. *)

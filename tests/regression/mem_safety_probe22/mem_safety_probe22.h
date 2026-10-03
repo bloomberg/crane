@@ -346,24 +346,24 @@ struct MemSafetyProbe22 {
       const tree *t;
     };
 
-    /// _After_Node: saves [a0, a1], dispatches next recursive call.
-    struct _After_Node {
-      const tree *a0;
+    /// _Cont_Node: saves [a1, a2], resumes after recursive call, then processes
+    /// rest.
+    struct _Cont_Node {
       uint64_t a1;
+      const tree *a2;
     };
 
-    /// _Combine_Node: receives partial results, combines with _result from
-    /// final call.
-    struct _Combine_Node {
-      tree _result;
+    /// _Resume_Node: saves [a1, r_], resumes after recursive call with _result.
+    struct _Resume_Node {
       uint64_t a1;
+      tree r_;
     };
 
-    using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
+    using _Frame = std::variant<_Enter, _Cont_Node, _Resume_Node>;
     tree _result{};
     crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&t});
-    /// Loopified tree_map: _Enter -> _After_Node -> _Combine_Node.
+    /// Loopified tree_map: _Enter -> _Cont_Node -> _Resume_Node.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -374,16 +374,19 @@ struct MemSafetyProbe22 {
           _result = tree::leaf();
         } else {
           const auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v());
-          _stack.emplace_back(_After_Node{crane_raw(a0), f(a1)});
-          _stack.emplace_back(_Enter{crane_raw(a2)});
+          _stack.emplace_back(_Cont_Node{a1, crane_raw(a2)});
+          _stack.emplace_back(_Enter{crane_raw(a0)});
         }
-      } else if (std::holds_alternative<_After_Node>(_frame)) {
-        auto _f = std::move(std::get<_After_Node>(_frame));
-        _stack.emplace_back(_Combine_Node{std::move(_result), _f.a1});
-        _stack.emplace_back(_Enter{_f.a0});
+      } else if (std::holds_alternative<_Cont_Node>(_frame)) {
+        auto _f = std::move(std::get<_Cont_Node>(_frame));
+        uint64_t a1 = _f.a1;
+        const tree &a2 = *_f.a2;
+        tree r_ = std::move(_result);
+        _stack.emplace_back(_Resume_Node{f(a1), std::move(r_)});
+        _stack.emplace_back(_Enter{&a2});
       } else {
-        auto _f = std::move(std::get<_Combine_Node>(_frame));
-        _result = tree::node(std::move(_result), _f.a1, std::move(_f._result));
+        auto _f = std::move(std::get<_Resume_Node>(_frame));
+        _result = tree::node(std::move(_f.r_), _f.a1, std::move(_result));
       }
     }
     return _result;

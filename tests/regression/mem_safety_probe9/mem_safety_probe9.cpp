@@ -57,10 +57,9 @@ MemSafetyProbe9::collect_subtree_sums(
     const MemSafetyProbe9::tree *t;
   };
 
-  /// _Cont_Node: saves [a0_value], resumes after recursive call, then processes
-  /// rest.
+  /// _Cont_Node: saves [a0], resumes after recursive call, then processes rest.
   struct _Cont_Node {
-    const MemSafetyProbe9::tree *a0_value;
+    std::shared_ptr<MemSafetyProbe9::tree> a0;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Node>;
@@ -86,7 +85,7 @@ MemSafetyProbe9::collect_subtree_sums(
         crane::fn<uint64_t(uint64_t)> f = [=](uint64_t) {
           return ((a0_value.tree_sum() + a1) + a2_value.tree_sum());
         };
-        _stack.emplace_back(_Cont_Node{crane_raw(a0)});
+        _stack.emplace_back(_Cont_Node{a0});
         _stack.emplace_back(
             _Enter{mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
                        std::move(f), std::move(acc)),
@@ -94,10 +93,11 @@ MemSafetyProbe9::collect_subtree_sums(
       }
     } else {
       auto _f = std::move(std::get<_Cont_Node>(_frame));
-      const MemSafetyProbe9::tree &a0_value = *_f.a0_value;
+      std::shared_ptr<MemSafetyProbe9::tree> a0 = std::move(_f.a0);
       MemSafetyProbe9::mylist<crane::fn<uint64_t(uint64_t)>> r_ =
           std::move(_result);
-      _stack.emplace_back(_Enter{std::move(r_), &a0_value});
+      const MemSafetyProbe9::tree &a0_value = *a0;
+      _stack.emplace_back(_Enter{std::move(r_), crane_raw(a0)});
     }
   }
   return _result;
@@ -116,10 +116,9 @@ MemSafetyProbe9::collect_left_sums(
     const MemSafetyProbe9::tree *t;
   };
 
-  /// _Cont_Node: saves [a0_value], resumes after recursive call, then processes
-  /// rest.
+  /// _Cont_Node: saves [a0], resumes after recursive call, then processes rest.
   struct _Cont_Node {
-    const MemSafetyProbe9::tree *a0_value;
+    std::shared_ptr<MemSafetyProbe9::tree> a0;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Node>;
@@ -145,7 +144,7 @@ MemSafetyProbe9::collect_left_sums(
         crane::fn<uint64_t(uint64_t)> f = [=](uint64_t) {
           return a0_value.tree_sum();
         };
-        _stack.emplace_back(_Cont_Node{crane_raw(a0)});
+        _stack.emplace_back(_Cont_Node{a0});
         _stack.emplace_back(
             _Enter{mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
                        std::move(f), std::move(acc)),
@@ -153,10 +152,11 @@ MemSafetyProbe9::collect_left_sums(
       }
     } else {
       auto _f = std::move(std::get<_Cont_Node>(_frame));
-      const MemSafetyProbe9::tree &a0_value = *_f.a0_value;
+      std::shared_ptr<MemSafetyProbe9::tree> a0 = std::move(_f.a0);
       MemSafetyProbe9::mylist<crane::fn<uint64_t(uint64_t)>> r_ =
           std::move(_result);
-      _stack.emplace_back(_Enter{std::move(r_), &a0_value});
+      const MemSafetyProbe9::tree &a0_value = *a0;
+      _stack.emplace_back(_Enter{std::move(r_), crane_raw(a0)});
     }
   }
   return _result;
@@ -200,24 +200,24 @@ MemSafetyProbe9::tree MemSafetyProbe9::make_balanced(
     uint64_t n;
   };
 
-  /// _After_n_: saves [n_, n], dispatches next recursive call.
-  struct _After_n_ {
+  /// _Cont_n_: saves [n, n_], resumes after recursive call, then processes
+  /// rest.
+  struct _Cont_n_ {
+    uint64_t n;
     uint64_t n_;
-    uint64_t n;
   };
 
-  /// _Combine_n_: receives partial results, combines with _result from final
-  /// call.
-  struct _Combine_n_ {
-    MemSafetyProbe9::tree _result;
+  /// _Resume_n_: saves [n, r_], resumes after recursive call with _result.
+  struct _Resume_n_ {
     uint64_t n;
+    MemSafetyProbe9::tree r_;
   };
 
-  using _Frame = std::variant<_Enter, _After_n_, _Combine_n_>;
+  using _Frame = std::variant<_Enter, _Cont_n_, _Resume_n_>;
   MemSafetyProbe9::tree _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
-  /// Loopified make_balanced: _Enter -> _After_n_ -> _Combine_n_.
+  /// Loopified make_balanced: _Enter -> _Cont_n_ -> _Resume_n_.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -228,16 +228,19 @@ MemSafetyProbe9::tree MemSafetyProbe9::make_balanced(
         _result = tree::leaf();
       } else {
         uint64_t n_ = n - 1;
-        _stack.emplace_back(_After_n_{n_, n});
+        _stack.emplace_back(_Cont_n_{n, n_});
         _stack.emplace_back(_Enter{n_});
       }
-    } else if (std::holds_alternative<_After_n_>(_frame)) {
-      auto _f = std::move(std::get<_After_n_>(_frame));
-      _stack.emplace_back(_Combine_n_{std::move(_result), _f.n});
-      _stack.emplace_back(_Enter{_f.n_});
+    } else if (std::holds_alternative<_Cont_n_>(_frame)) {
+      auto _f = std::move(std::get<_Cont_n_>(_frame));
+      uint64_t n = _f.n;
+      uint64_t n_ = _f.n_;
+      MemSafetyProbe9::tree r_ = std::move(_result);
+      _stack.emplace_back(_Resume_n_{n, std::move(r_)});
+      _stack.emplace_back(_Enter{n_});
     } else {
-      auto _f = std::move(std::get<_Combine_n_>(_frame));
-      _result = tree::node(std::move(_result), _f.n, std::move(_f._result));
+      auto _f = std::move(std::get<_Resume_n_>(_frame));
+      _result = tree::node(std::move(_f.r_), _f.n, std::move(_result));
     }
   }
   return _result;

@@ -207,18 +207,18 @@ public:
       const List<String> *ls;
     };
 
-    /// _Resume_Cons: saves [a0, _self], resumes after recursive call with
-    /// _result.
-    struct _Resume_Cons {
+    /// _Cont_Cons: saves [_self, a0], resumes after recursive call, then
+    /// processes rest.
+    struct _Cont_Cons {
+      const String *_self;
       String a0;
-      String _self;
     };
 
-    using _Frame = std::variant<_Enter, _Resume_Cons>;
+    using _Frame = std::variant<_Enter, _Cont_Cons>;
     String _result{};
     crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{_self, &ls});
-    /// Loopified concat: _Enter -> _Resume_Cons.
+    /// Loopified concat: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -234,14 +234,16 @@ public:
           if (std::holds_alternative<typename List<String>::Nil>(_sv.v())) {
             _result = std::move(a0);
           } else {
-            _stack.emplace_back(_Resume_Cons{a0, *_self});
+            _stack.emplace_back(_Cont_Cons{_self, a0});
             _stack.emplace_back(_Enter{crane_raw(_self), crane_raw(a1)});
           }
         }
       } else {
-        auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = std::move(_f.a0).append(
-            std::move(_f._self).append(std::move(_result)));
+        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        const String *_self = _f._self;
+        String a0 = std::move(_f.a0);
+        String r_ = std::move(_result);
+        _result = a0.append(_self->append(std::move(r_)));
       }
     }
     return _result;

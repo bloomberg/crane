@@ -773,24 +773,24 @@ struct LoopifyMutualPartialApp {
       Endo<uint64_t> h;
     };
 
-    /// _After_Add: saves [a0, f, h], dispatches next recursive call.
-    struct _After_Add {
-      e<T1> a0;
+    /// _Cont_Add: saves [b0, f, h], resumes after recursive call, then
+    /// processes rest.
+    struct _Cont_Add {
+      std::shared_ptr<e<T1>> b0;
       std::decay_t<F1> f;
       Endo<uint64_t> h;
     };
 
-    /// _Combine_Add: receives partial results, combines with _result from final
-    /// call.
-    struct _Combine_Add {
-      e<T2> _result;
+    /// _Resume_Add: saves [r_], resumes after recursive call with _result.
+    struct _Resume_Add {
+      e<T2> r_;
     };
 
-    using _Frame = std::variant<_Enter, _After_Add, _Combine_Add>;
+    using _Frame = std::variant<_Enter, _Cont_Add, _Resume_Add>;
     e<T2> _result{};
     crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{x, std::move(f), std::move(h)});
-    /// Loopified ft_e: _Enter -> _After_Add -> _Combine_Add.
+    /// Loopified ft_e: _Enter -> _Cont_Add -> _Resume_Add.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -807,8 +807,8 @@ struct LoopifyMutualPartialApp {
           _result = e<T2>::tag(f(u0));
         } else if (std::holds_alternative<typename e<T1>::Add>(x.v())) {
           const auto &[a0, b0] = std::get<typename e<T1>::Add>(x.v());
-          _stack.emplace_back(_After_Add{*a0, f, h});
-          _stack.emplace_back(_Enter{*b0, std::move(f), std::move(h)});
+          _stack.emplace_back(_Cont_Add{b0, f, h});
+          _stack.emplace_back(_Enter{*a0, std::move(f), std::move(h)});
         } else {
           const auto &[m0] = std::get<typename e<T1>::Meta>(x.v());
           _result = e<T2>::meta([](Endo<uint64_t> _inl_h, auto &&_inl_f,
@@ -826,26 +826,30 @@ struct LoopifyMutualPartialApp {
               const auto &[_inl_l0] =
                   std::get<typename md<T1>::MNode>(_inl_m.v());
               const List<md<T1>> &_inl_l0_value = *_inl_l0;
-              crane::fn<md<T2>(md<T1>)> _inl_r_ = [=](md<T1> _x0) -> md<T2> {
-                return ft_md<T1, T2>(_inl_h, _inl_f, _x0);
-              };
-              return md<T2>::mnode(_inl_l0_value.template map<md<T2>>(_inl_r_));
+              return md<T2>::mnode(
+                  _inl_l0_value.template map<md<T2>>([=](md<T1> _x0) -> md<T2> {
+                    return ft_md<T1, T2>(_inl_h, _inl_f, _x0);
+                  }));
             } else {
               const auto &[_inl_a0, _inl_b0] =
                   std::get<typename md<T1>::MPair>(_inl_m.v());
-              return md<T2>::mpair(ft_md<T1, T2>(_inl_h, _inl_f, *_inl_a0),
+              md<T2> _inl_r_ = ft_md<T1, T2>(_inl_h, _inl_f, *_inl_a0);
+              return md<T2>::mpair(std::move(_inl_r_),
                                    ft_md<T1, T2>(_inl_h, _inl_f, *_inl_b0));
             }
           }(std::move(h), std::move(f), *m0));
         }
-      } else if (std::holds_alternative<_After_Add>(_frame)) {
-        auto _f = std::move(std::get<_After_Add>(_frame));
-        _stack.emplace_back(_Combine_Add{std::move(_result)});
-        _stack.emplace_back(
-            _Enter{std::move(_f.a0), std::move(_f.f), std::move(_f.h)});
+      } else if (std::holds_alternative<_Cont_Add>(_frame)) {
+        auto _f = std::move(std::get<_Cont_Add>(_frame));
+        std::shared_ptr<e<T1>> b0 = std::move(_f.b0);
+        std::decay_t<F1> f = std::move(_f.f);
+        Endo<uint64_t> h = std::move(_f.h);
+        e<T2> r_ = std::move(_result);
+        _stack.emplace_back(_Resume_Add{std::move(r_)});
+        _stack.emplace_back(_Enter{*b0, std::move(f), std::move(h)});
       } else {
-        auto _f = std::move(std::get<_Combine_Add>(_frame));
-        _result = e<T2>::add(std::move(_result), std::move(_f._result));
+        auto _f = std::move(std::get<_Resume_Add>(_frame));
+        _result = e<T2>::add(std::move(_f.r_), std::move(_result));
       }
     }
     return _result;
@@ -863,24 +867,24 @@ struct LoopifyMutualPartialApp {
       Endo<uint64_t> h;
     };
 
-    /// _After_MPair: saves [a0, f, h], dispatches next recursive call.
-    struct _After_MPair {
-      md<T1> a0;
+    /// _Cont_MPair: saves [b0, f, h], resumes after recursive call, then
+    /// processes rest.
+    struct _Cont_MPair {
+      std::shared_ptr<md<T1>> b0;
       std::decay_t<F1> f;
       Endo<uint64_t> h;
     };
 
-    /// _Combine_MPair: receives partial results, combines with _result from
-    /// final call.
-    struct _Combine_MPair {
-      md<T2> _result;
+    /// _Resume_MPair: saves [r_], resumes after recursive call with _result.
+    struct _Resume_MPair {
+      md<T2> r_;
     };
 
-    using _Frame = std::variant<_Enter, _After_MPair, _Combine_MPair>;
+    using _Frame = std::variant<_Enter, _Cont_MPair, _Resume_MPair>;
     md<T2> _result{};
     crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{m, f, std::move(h)});
-    /// Loopified ft_md: _Enter -> _After_MPair -> _Combine_MPair.
+    /// Loopified ft_md: _Enter -> _Cont_MPair -> _Resume_MPair.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -910,7 +914,8 @@ struct LoopifyMutualPartialApp {
                                _inl_x.v())) {
                   const auto &[_inl_a0, _inl_b0] =
                       std::get<typename e<T1>::Add>(_inl_x.v());
-                  return e<T2>::add(ft_e<T1, T2>(_inl_h, _inl_f, *_inl_a0),
+                  e<T2> _inl_r_ = ft_e<T1, T2>(_inl_h, _inl_f, *_inl_a0);
+                  return e<T2>::add(std::move(_inl_r_),
                                     ft_e<T1, T2>(_inl_h, _inl_f, *_inl_b0));
                 } else {
                   const auto &[_inl_m0] =
@@ -921,23 +926,24 @@ struct LoopifyMutualPartialApp {
         } else if (std::holds_alternative<typename md<T1>::MNode>(m.v())) {
           const auto &[l0] = std::get<typename md<T1>::MNode>(m.v());
           const List<md<T1>> &l0_value = *l0;
-          crane::fn<md<T2>(md<T1>)> r_ = [=](md<T1> _x0) -> md<T2> {
-            return ft_md<T1, T2>(h, f, _x0);
-          };
-          _result = md<T2>::mnode(l0_value.template map<md<T2>>(std::move(r_)));
+          _result = md<T2>::mnode(l0_value.template map<md<T2>>(
+              [=](md<T1> _x0) -> md<T2> { return ft_md<T1, T2>(h, f, _x0); }));
         } else {
           const auto &[a0, b0] = std::get<typename md<T1>::MPair>(m.v());
-          _stack.emplace_back(_After_MPair{*a0, f, h});
-          _stack.emplace_back(_Enter{*b0, f, h});
+          _stack.emplace_back(_Cont_MPair{b0, f, h});
+          _stack.emplace_back(_Enter{*a0, f, h});
         }
-      } else if (std::holds_alternative<_After_MPair>(_frame)) {
-        auto _f = std::move(std::get<_After_MPair>(_frame));
-        _stack.emplace_back(_Combine_MPair{std::move(_result)});
-        _stack.emplace_back(
-            _Enter{std::move(_f.a0), std::move(_f.f), std::move(_f.h)});
+      } else if (std::holds_alternative<_Cont_MPair>(_frame)) {
+        auto _f = std::move(std::get<_Cont_MPair>(_frame));
+        std::shared_ptr<md<T1>> b0 = std::move(_f.b0);
+        std::decay_t<F1> f = std::move(_f.f);
+        Endo<uint64_t> h = std::move(_f.h);
+        md<T2> r_ = std::move(_result);
+        _stack.emplace_back(_Resume_MPair{std::move(r_)});
+        _stack.emplace_back(_Enter{*b0, std::move(f), std::move(h)});
       } else {
-        auto _f = std::move(std::get<_Combine_MPair>(_frame));
-        _result = md<T2>::mpair(std::move(_result), std::move(_f._result));
+        auto _f = std::move(std::get<_Resume_MPair>(_frame));
+        _result = md<T2>::mpair(std::move(_f.r_), std::move(_result));
       }
     }
     return _result;

@@ -164,28 +164,27 @@ MemSafetyProbe17::qtree MemSafetyProbe17::make_qtree(
     uint64_t n;
   };
 
-  /// _After_n_: saves [n_, _s1, n, _s3], dispatches next recursive call.
-  struct _After_n_ {
+  /// _Cont_n_: saves [n, n_], resumes after recursive call, then processes
+  /// rest.
+  struct _Cont_n_ {
+    uint64_t n;
     uint64_t n_;
-    MemSafetyProbe17::qtree _s1;
-    uint64_t n;
-    MemSafetyProbe17::qtree _s3;
   };
 
-  /// _Combine_n_: receives partial results, combines with _result from final
-  /// call.
-  struct _Combine_n_ {
-    MemSafetyProbe17::qtree _result;
-    MemSafetyProbe17::qtree _s1;
+  /// _Resume_n_: saves [_s0, n, _s2, r_], resumes after recursive call with
+  /// _result.
+  struct _Resume_n_ {
+    MemSafetyProbe17::qtree _s0;
     uint64_t n;
-    MemSafetyProbe17::qtree _s3;
+    MemSafetyProbe17::qtree _s2;
+    MemSafetyProbe17::qtree r_;
   };
 
-  using _Frame = std::variant<_Enter, _After_n_, _Combine_n_>;
+  using _Frame = std::variant<_Enter, _Cont_n_, _Resume_n_>;
   MemSafetyProbe17::qtree _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
-  /// Loopified make_qtree: _Enter -> _After_n_ -> _Combine_n_.
+  /// Loopified make_qtree: _Enter -> _Cont_n_ -> _Resume_n_.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -196,18 +195,21 @@ MemSafetyProbe17::qtree MemSafetyProbe17::make_qtree(
         _result = qtree::qleaf();
       } else {
         uint64_t n_ = n - 1;
-        _stack.emplace_back(_After_n_{n_, qtree::qleaf(), n, qtree::qleaf()});
+        _stack.emplace_back(_Cont_n_{n, n_});
         _stack.emplace_back(_Enter{n_});
       }
-    } else if (std::holds_alternative<_After_n_>(_frame)) {
-      auto _f = std::move(std::get<_After_n_>(_frame));
-      _stack.emplace_back(_Combine_n_{std::move(_result), std::move(_f._s1),
-                                      _f.n, std::move(_f._s3)});
-      _stack.emplace_back(_Enter{_f.n_});
+    } else if (std::holds_alternative<_Cont_n_>(_frame)) {
+      auto _f = std::move(std::get<_Cont_n_>(_frame));
+      uint64_t n = _f.n;
+      uint64_t n_ = _f.n_;
+      MemSafetyProbe17::qtree r_ = std::move(_result);
+      _stack.emplace_back(
+          _Resume_n_{qtree::qleaf(), n, qtree::qleaf(), std::move(r_)});
+      _stack.emplace_back(_Enter{n_});
     } else {
-      auto _f = std::move(std::get<_Combine_n_>(_frame));
-      _result = qtree::qnode(std::move(_result), std::move(_f._s3), _f.n,
-                             std::move(_f._result), std::move(_f._s1));
+      auto _f = std::move(std::get<_Resume_n_>(_frame));
+      _result = qtree::qnode(std::move(_f.r_), std::move(_f._s2), _f.n,
+                             std::move(_result), std::move(_f._s0));
     }
   }
   return _result;

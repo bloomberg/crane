@@ -106,25 +106,27 @@ struct MemSafetyProbe15 {
         tree t2;
       };
 
-      /// _After_Node: saves [a0, a00, _s2], dispatches next recursive call.
-      struct _After_Node {
-        tree *a0;
-        tree a00;
-        uint64_t _s2;
+      /// _Cont_Node: saves [a1, a10, a2, a20], resumes after recursive call,
+      /// then processes rest.
+      struct _Cont_Node {
+        uint64_t a1;
+        uint64_t a10;
+        std::shared_ptr<tree> a2;
+        std::shared_ptr<tree> a20;
       };
 
-      /// _Combine_Node: receives partial results, combines with _result from
-      /// final call.
-      struct _Combine_Node {
-        tree _result;
-        uint64_t _s1;
+      /// _Resume_Node: saves [_s0, r_], resumes after recursive call with
+      /// _result.
+      struct _Resume_Node {
+        uint64_t _s0;
+        tree r_;
       };
 
-      using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
+      using _Frame = std::variant<_Enter, _Cont_Node, _Resume_Node>;
       tree _result{};
       crane::small_vector<_Frame> _stack;
       _stack.emplace_back(_Enter{_self, std::move(t2)});
-      /// Loopified zip_trees: _Enter -> _After_Node -> _Combine_Node.
+      /// Loopified zip_trees: _Enter -> _Cont_Node -> _Resume_Node.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -141,19 +143,23 @@ struct MemSafetyProbe15 {
               _result = *_self;
             } else {
               auto &[a00, a10, a20] = std::get<typename tree::Node>(t2.v_mut());
-              _stack.emplace_back(
-                  _After_Node{crane_raw(a0), *a00, (a1 + std::move(a10))});
-              _stack.emplace_back(_Enter{crane_raw(a2), *a20});
+              _stack.emplace_back(_Cont_Node{a1, a10, a2, a20});
+              _stack.emplace_back(_Enter{crane_raw(a0), *a00});
             }
           }
-        } else if (std::holds_alternative<_After_Node>(_frame)) {
-          auto _f = std::move(std::get<_After_Node>(_frame));
-          _stack.emplace_back(_Combine_Node{std::move(_result), _f._s2});
-          _stack.emplace_back(_Enter{_f.a0, std::move(_f.a00)});
+        } else if (std::holds_alternative<_Cont_Node>(_frame)) {
+          auto _f = std::move(std::get<_Cont_Node>(_frame));
+          uint64_t a1 = _f.a1;
+          uint64_t a10 = _f.a10;
+          std::shared_ptr<tree> a2 = std::move(_f.a2);
+          std::shared_ptr<tree> a20 = std::move(_f.a20);
+          tree r_ = std::move(_result);
+          _stack.emplace_back(
+              _Resume_Node{(a1 + std::move(a10)), std::move(r_)});
+          _stack.emplace_back(_Enter{crane_raw(a2), *a20});
         } else {
-          auto _f = std::move(std::get<_Combine_Node>(_frame));
-          _result =
-              tree::node(std::move(_result), _f._s1, std::move(_f._result));
+          auto _f = std::move(std::get<_Resume_Node>(_frame));
+          _result = tree::node(std::move(_f.r_), _f._s0, std::move(_result));
         }
       }
       return _result;
@@ -168,24 +174,25 @@ struct MemSafetyProbe15 {
         const tree *_self;
       };
 
-      /// _After_Node: saves [a2, a1], dispatches next recursive call.
-      struct _After_Node {
-        tree *a2;
+      /// _Cont_Node: saves [a0, a1], resumes after recursive call, then
+      /// processes rest.
+      struct _Cont_Node {
+        std::shared_ptr<tree> a0;
         uint64_t a1;
       };
 
-      /// _Combine_Node: receives partial results, combines with _result from
-      /// final call.
-      struct _Combine_Node {
-        tree _result;
+      /// _Resume_Node: saves [a1, r_], resumes after recursive call with
+      /// _result.
+      struct _Resume_Node {
         uint64_t a1;
+        tree r_;
       };
 
-      using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
+      using _Frame = std::variant<_Enter, _Cont_Node, _Resume_Node>;
       tree _result{};
       crane::small_vector<_Frame> _stack;
       _stack.emplace_back(_Enter{_self});
-      /// Loopified mirror: _Enter -> _After_Node -> _Combine_Node.
+      /// Loopified mirror: _Enter -> _Cont_Node -> _Resume_Node.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -197,17 +204,19 @@ struct MemSafetyProbe15 {
             _result = tree::leaf();
           } else {
             const auto &[a0, a1, a2] = std::get<typename tree::Node>(_sv.v());
-            _stack.emplace_back(_After_Node{crane_raw(a2), a1});
-            _stack.emplace_back(_Enter{crane_raw(a0)});
+            _stack.emplace_back(_Cont_Node{a0, a1});
+            _stack.emplace_back(_Enter{crane_raw(a2)});
           }
-        } else if (std::holds_alternative<_After_Node>(_frame)) {
-          auto _f = std::move(std::get<_After_Node>(_frame));
-          _stack.emplace_back(_Combine_Node{std::move(_result), _f.a1});
-          _stack.emplace_back(_Enter{_f.a2});
+        } else if (std::holds_alternative<_Cont_Node>(_frame)) {
+          auto _f = std::move(std::get<_Cont_Node>(_frame));
+          std::shared_ptr<tree> a0 = std::move(_f.a0);
+          uint64_t a1 = _f.a1;
+          tree r_ = std::move(_result);
+          _stack.emplace_back(_Resume_Node{a1, std::move(r_)});
+          _stack.emplace_back(_Enter{crane_raw(a0)});
         } else {
-          auto _f = std::move(std::get<_Combine_Node>(_frame));
-          _result =
-              tree::node(std::move(_result), _f.a1, std::move(_f._result));
+          auto _f = std::move(std::get<_Resume_Node>(_frame));
+          _result = tree::node(std::move(_f.r_), _f.a1, std::move(_result));
         }
       }
       return _result;

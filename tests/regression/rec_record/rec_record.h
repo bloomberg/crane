@@ -142,18 +142,18 @@ struct RecRecord {
         const rlist<A> *_self;
       };
 
-      /// _Resume_Rcons: saves [a1, a0], resumes after recursive call with
-      /// _result.
-      struct _Resume_Rcons {
-        rlist<A> a1;
+      /// _Cont_Rcons: saves [a0, a1], resumes after recursive call, then
+      /// processes rest.
+      struct _Cont_Rcons {
         A a0;
+        std::shared_ptr<rlist<A>> a1;
       };
 
-      using _Frame = std::variant<_Enter, _Resume_Rcons>;
+      using _Frame = std::variant<_Enter, _Cont_Rcons>;
       T1 _result{};
       crane::small_vector<_Frame> _stack;
       _stack.emplace_back(_Enter{_self});
-      /// Loopified rlist_rec: _Enter -> _Resume_Rcons.
+      /// Loopified rlist_rec: _Enter -> _Cont_Rcons.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -165,12 +165,15 @@ struct RecRecord {
             _result = f;
           } else {
             const auto &[a0, a1] = std::get<typename rlist<A>::Rcons>(_sv.v());
-            _stack.emplace_back(_Resume_Rcons{*a1, a0});
+            _stack.emplace_back(_Cont_Rcons{a0, a1});
             _stack.emplace_back(_Enter{crane_raw(a1)});
           }
         } else {
-          auto _f = std::move(std::get<_Resume_Rcons>(_frame));
-          _result = f0(std::move(_f.a0), std::move(_f.a1), std::move(_result));
+          auto _f = std::move(std::get<_Cont_Rcons>(_frame));
+          auto a0 = std::move(_f.a0);
+          std::shared_ptr<rlist<A>> a1 = std::move(_f.a1);
+          T1 r_ = std::move(_result);
+          _result = f0(a0, *a1, std::move(r_));
         }
       }
       return _result;
@@ -186,18 +189,18 @@ struct RecRecord {
         const rlist<A> *_self;
       };
 
-      /// _Resume_Rcons: saves [a1, a0], resumes after recursive call with
-      /// _result.
-      struct _Resume_Rcons {
-        rlist<A> a1;
+      /// _Cont_Rcons: saves [a0, a1], resumes after recursive call, then
+      /// processes rest.
+      struct _Cont_Rcons {
         A a0;
+        std::shared_ptr<rlist<A>> a1;
       };
 
-      using _Frame = std::variant<_Enter, _Resume_Rcons>;
+      using _Frame = std::variant<_Enter, _Cont_Rcons>;
       T1 _result{};
       crane::small_vector<_Frame> _stack;
       _stack.emplace_back(_Enter{_self});
-      /// Loopified rlist_rect: _Enter -> _Resume_Rcons.
+      /// Loopified rlist_rect: _Enter -> _Cont_Rcons.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -209,12 +212,15 @@ struct RecRecord {
             _result = f;
           } else {
             const auto &[a0, a1] = std::get<typename rlist<A>::Rcons>(_sv.v());
-            _stack.emplace_back(_Resume_Rcons{*a1, a0});
+            _stack.emplace_back(_Cont_Rcons{a0, a1});
             _stack.emplace_back(_Enter{crane_raw(a1)});
           }
         } else {
-          auto _f = std::move(std::get<_Resume_Rcons>(_frame));
-          _result = f0(std::move(_f.a0), std::move(_f.a1), std::move(_result));
+          auto _f = std::move(std::get<_Cont_Rcons>(_frame));
+          auto a0 = std::move(_f.a0);
+          std::shared_ptr<rlist<A>> a1 = std::move(_f.a1);
+          T1 r_ = std::move(_result);
+          _result = f0(a0, *a1, std::move(r_));
         }
       }
       return _result;

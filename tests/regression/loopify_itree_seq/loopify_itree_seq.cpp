@@ -80,8 +80,7 @@ List<uint64_t> LoopifyItreeSeq::countdown_list(
     } else {
       auto _f = std::move(std::get<_Cont_n_>(_frame));
       uint64_t n = _f.n;
-      auto r_ = std::move(_result);
-      List<uint64_t> rest = std::move(r_);
+      List<uint64_t> rest = std::move(_result);
       _result = List<uint64_t>::cons(n, std::move(rest));
     }
   }

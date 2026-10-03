@@ -108,17 +108,14 @@ struct MatchRefAfterMove {
         const mylist<A> *_self;
       };
 
-      /// _Resume_Mycons: saves [_s0], resumes after recursive call with
-      /// _result.
-      struct _Resume_Mycons {
-        uint64_t _s0;
-      };
+      /// _Cont_Mycons: resumes after recursive call, then processes rest.
+      struct _Cont_Mycons {};
 
-      using _Frame = std::variant<_Enter, _Resume_Mycons>;
+      using _Frame = std::variant<_Enter, _Cont_Mycons>;
       uint64_t _result{};
       crane::small_vector<_Frame> _stack;
       _stack.emplace_back(_Enter{_self});
-      /// Loopified mylist_length: _Enter -> _Resume_Mycons.
+      /// Loopified mylist_length: _Enter -> _Cont_Mycons.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -131,12 +128,13 @@ struct MatchRefAfterMove {
           } else {
             const auto &[a0, a1] =
                 std::get<typename mylist<A>::Mycons>(_sv.v());
-            _stack.emplace_back(_Resume_Mycons{UINT64_C(1)});
+            _stack.emplace_back(_Cont_Mycons{});
             _stack.emplace_back(_Enter{crane_raw(a1)});
           }
         } else {
-          auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-          _result = (_f._s0 + std::move(_result));
+          auto _f = std::move(std::get<_Cont_Mycons>(_frame));
+          uint64_t r_ = std::move(_result);
+          _result = (UINT64_C(1) + r_);
         }
       }
       return _result;
@@ -152,18 +150,18 @@ struct MatchRefAfterMove {
         const mylist<A> *_self;
       };
 
-      /// _Resume_Mycons: saves [a1, a0], resumes after recursive call with
-      /// _result.
-      struct _Resume_Mycons {
-        mylist<A> a1;
+      /// _Cont_Mycons: saves [a0, a1], resumes after recursive call, then
+      /// processes rest.
+      struct _Cont_Mycons {
         A a0;
+        std::shared_ptr<mylist<A>> a1;
       };
 
-      using _Frame = std::variant<_Enter, _Resume_Mycons>;
+      using _Frame = std::variant<_Enter, _Cont_Mycons>;
       T1 _result{};
       crane::small_vector<_Frame> _stack;
       _stack.emplace_back(_Enter{_self});
-      /// Loopified mylist_rec: _Enter -> _Resume_Mycons.
+      /// Loopified mylist_rec: _Enter -> _Cont_Mycons.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -176,12 +174,15 @@ struct MatchRefAfterMove {
           } else {
             const auto &[a0, a1] =
                 std::get<typename mylist<A>::Mycons>(_sv.v());
-            _stack.emplace_back(_Resume_Mycons{*a1, a0});
+            _stack.emplace_back(_Cont_Mycons{a0, a1});
             _stack.emplace_back(_Enter{crane_raw(a1)});
           }
         } else {
-          auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-          _result = f0(std::move(_f.a0), std::move(_f.a1), std::move(_result));
+          auto _f = std::move(std::get<_Cont_Mycons>(_frame));
+          auto a0 = std::move(_f.a0);
+          std::shared_ptr<mylist<A>> a1 = std::move(_f.a1);
+          T1 r_ = std::move(_result);
+          _result = f0(a0, *a1, std::move(r_));
         }
       }
       return _result;
@@ -197,18 +198,18 @@ struct MatchRefAfterMove {
         const mylist<A> *_self;
       };
 
-      /// _Resume_Mycons: saves [a1, a0], resumes after recursive call with
-      /// _result.
-      struct _Resume_Mycons {
-        mylist<A> a1;
+      /// _Cont_Mycons: saves [a0, a1], resumes after recursive call, then
+      /// processes rest.
+      struct _Cont_Mycons {
         A a0;
+        std::shared_ptr<mylist<A>> a1;
       };
 
-      using _Frame = std::variant<_Enter, _Resume_Mycons>;
+      using _Frame = std::variant<_Enter, _Cont_Mycons>;
       T1 _result{};
       crane::small_vector<_Frame> _stack;
       _stack.emplace_back(_Enter{_self});
-      /// Loopified mylist_rect: _Enter -> _Resume_Mycons.
+      /// Loopified mylist_rect: _Enter -> _Cont_Mycons.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -221,12 +222,15 @@ struct MatchRefAfterMove {
           } else {
             const auto &[a0, a1] =
                 std::get<typename mylist<A>::Mycons>(_sv.v());
-            _stack.emplace_back(_Resume_Mycons{*a1, a0});
+            _stack.emplace_back(_Cont_Mycons{a0, a1});
             _stack.emplace_back(_Enter{crane_raw(a1)});
           }
         } else {
-          auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-          _result = f0(std::move(_f.a0), std::move(_f.a1), std::move(_result));
+          auto _f = std::move(std::get<_Cont_Mycons>(_frame));
+          auto a0 = std::move(_f.a0);
+          std::shared_ptr<mylist<A>> a1 = std::move(_f.a1);
+          T1 r_ = std::move(_result);
+          _result = f0(a0, *a1, std::move(r_));
         }
       }
       return _result;

@@ -191,7 +191,8 @@ Nat Bag::bag<A>::countIf(F0 &&p) const {
   } else {
     const auto &[a0, a1] = std::get<typename Bag::bag<A>::Add>(this->v());
     if (p(a0)) {
-      return Tally::bump(a1->countIf(p));
+      Nat r_ = a1->countIf(p);
+      return Tally::bump(std::move(r_));
     } else {
       return a1->countIf(p);
     }

@@ -144,10 +144,9 @@ MemSafetyProbe5::collect_left_vals(
     MemSafetyProbe5::tree t;
   };
 
-  /// _Cont_Node: saves [a0_value], resumes after recursive call, then processes
-  /// rest.
+  /// _Cont_Node: saves [a0], resumes after recursive call, then processes rest.
   struct _Cont_Node {
-    MemSafetyProbe5::tree a0_value;
+    std::shared_ptr<MemSafetyProbe5::tree> a0;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Node>;
@@ -171,7 +170,7 @@ MemSafetyProbe5::collect_left_vals(
             std::get<typename MemSafetyProbe5::tree::Node>(t.v_mut());
         const MemSafetyProbe5::tree &a0_value = *a0;
         const MemSafetyProbe5::tree &a2_value = *a2;
-        _stack.emplace_back(_Cont_Node{a0_value});
+        _stack.emplace_back(_Cont_Node{a0});
         _stack.emplace_back(_Enter{
             mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
                 [=](uint64_t _x0) -> uint64_t { return t.get_left_val(_x0); },
@@ -180,9 +179,10 @@ MemSafetyProbe5::collect_left_vals(
       }
     } else {
       auto _f = std::move(std::get<_Cont_Node>(_frame));
-      const MemSafetyProbe5::tree &a0_value = std::move(_f.a0_value);
+      std::shared_ptr<MemSafetyProbe5::tree> a0 = std::move(_f.a0);
       MemSafetyProbe5::mylist<crane::fn<uint64_t(uint64_t)>> r_ =
           std::move(_result);
+      const MemSafetyProbe5::tree &a0_value = *a0;
       _stack.emplace_back(_Enter{std::move(r_), a0_value});
     }
   }

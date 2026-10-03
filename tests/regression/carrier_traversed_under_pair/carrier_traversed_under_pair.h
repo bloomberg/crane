@@ -296,22 +296,22 @@ public:
       const Exp<t> *_self;
     };
 
-    /// _After_E_node: saves [a0], dispatches next recursive call.
-    struct _After_E_node {
-      Exp<t> *a0;
+    /// _Cont_E_node: saves [a1], resumes after recursive call, then processes
+    /// rest.
+    struct _Cont_E_node {
+      std::shared_ptr<Exp<t>> a1;
     };
 
-    /// _Combine_E_node: receives partial results, combines with _result from
-    /// final call.
-    struct _Combine_E_node {
-      Exp<T1> _result;
+    /// _Resume_E_node: saves [r_], resumes after recursive call with _result.
+    struct _Resume_E_node {
+      Exp<T1> r_;
     };
 
-    using _Frame = std::variant<_Enter, _After_E_node, _Combine_E_node>;
+    using _Frame = std::variant<_Enter, _Cont_E_node, _Resume_E_node>;
     Exp<T1> _result{};
     crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{_self});
-    /// Loopified exp_map: _Enter -> _After_E_node -> _Combine_E_node.
+    /// Loopified exp_map: _Enter -> _Cont_E_node -> _Resume_E_node.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -324,16 +324,18 @@ public:
           _result = Exp<T1>::e_leaf(f(a0));
         } else {
           const auto &[a0, a1] = std::get<typename Exp<t>::E_node>(_sv.v());
-          _stack.emplace_back(_After_E_node{crane_raw(a0)});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
+          _stack.emplace_back(_Cont_E_node{a1});
+          _stack.emplace_back(_Enter{crane_raw(a0)});
         }
-      } else if (std::holds_alternative<_After_E_node>(_frame)) {
-        auto _f = std::move(std::get<_After_E_node>(_frame));
-        _stack.emplace_back(_Combine_E_node{std::move(_result)});
-        _stack.emplace_back(_Enter{_f.a0});
+      } else if (std::holds_alternative<_Cont_E_node>(_frame)) {
+        auto _f = std::move(std::get<_Cont_E_node>(_frame));
+        std::shared_ptr<Exp<t>> a1 = std::move(_f.a1);
+        Exp<T1> r_ = std::move(_result);
+        _stack.emplace_back(_Resume_E_node{std::move(r_)});
+        _stack.emplace_back(_Enter{crane_raw(a1)});
       } else {
-        auto _f = std::move(std::get<_Combine_E_node>(_frame));
-        _result = Exp<T1>::e_node(std::move(_result), std::move(_f._result));
+        auto _f = std::move(std::get<_Resume_E_node>(_frame));
+        _result = Exp<T1>::e_node(std::move(_f.r_), std::move(_result));
       }
     }
     return _result;

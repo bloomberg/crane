@@ -114,16 +114,17 @@ public:
       const List<A> *_self;
     };
 
-    /// _Resume_Cons0: saves [a0], resumes after recursive call with _result.
-    struct _Resume_Cons0 {
-      bool a0;
+    /// _Cont_Cons0: saves [a0], resumes after recursive call, then processes
+    /// rest.
+    struct _Cont_Cons0 {
+      A a0;
     };
 
-    using _Frame = std::variant<_Enter, _Resume_Cons0>;
+    using _Frame = std::variant<_Enter, _Cont_Cons0>;
     bool _result{};
     crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{_self});
-    /// Loopified forallb: _Enter -> _Resume_Cons0.
+    /// Loopified forallb: _Enter -> _Cont_Cons0.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -135,12 +136,14 @@ public:
           _result = true;
         } else {
           const auto &[a0, a1] = std::get<typename List<A>::Cons0>(_sv.v());
-          _stack.emplace_back(_Resume_Cons0{f(a0)});
+          _stack.emplace_back(_Cont_Cons0{a0});
           _stack.emplace_back(_Enter{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<_Resume_Cons0>(_frame));
-        _result = (_f.a0 && std::move(_result));
+        auto _f = std::move(std::get<_Cont_Cons0>(_frame));
+        auto a0 = std::move(_f.a0);
+        bool r_ = std::move(_result);
+        _result = (f(a0) && r_);
       }
     }
     return _result;
@@ -156,16 +159,17 @@ public:
       const List<A> *_self;
     };
 
-    /// _Resume_Cons0: saves [a1], resumes after recursive call with _result.
-    struct _Resume_Cons0 {
+    /// _Cont_Cons0: saves [a1], resumes after recursive call, then processes
+    /// rest.
+    struct _Cont_Cons0 {
       A a1;
     };
 
-    using _Frame = std::variant<_Enter, _Resume_Cons0>;
+    using _Frame = std::variant<_Enter, _Cont_Cons0>;
     T1 _result{};
     crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{_self});
-    /// Loopified fold_right: _Enter -> _Resume_Cons0.
+    /// Loopified fold_right: _Enter -> _Cont_Cons0.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -177,12 +181,14 @@ public:
           _result = a0;
         } else {
           const auto &[a1, a2] = std::get<typename List<A>::Cons0>(_sv.v());
-          _stack.emplace_back(_Resume_Cons0{a1});
+          _stack.emplace_back(_Cont_Cons0{a1});
           _stack.emplace_back(_Enter{crane_raw(a2)});
         }
       } else {
-        auto _f = std::move(std::get<_Resume_Cons0>(_frame));
-        _result = f(std::move(_f.a1), std::move(_result));
+        auto _f = std::move(std::get<_Cont_Cons0>(_frame));
+        auto a1 = std::move(_f.a1);
+        T1 r_ = std::move(_result);
+        _result = f(a1, std::move(r_));
       }
     }
     return _result;
@@ -196,16 +202,17 @@ public:
       const List<A> *_self;
     };
 
-    /// _Resume_Cons0: saves [a0], resumes after recursive call with _result.
-    struct _Resume_Cons0 {
+    /// _Cont_Cons0: saves [a0], resumes after recursive call, then processes
+    /// rest.
+    struct _Cont_Cons0 {
       List<T1> a0;
     };
 
-    using _Frame = std::variant<_Enter, _Resume_Cons0>;
+    using _Frame = std::variant<_Enter, _Cont_Cons0>;
     List<T1> _result{};
     crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{_self});
-    /// Loopified concat: _Enter -> _Resume_Cons0.
+    /// Loopified concat: _Enter -> _Cont_Cons0.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -218,12 +225,14 @@ public:
         } else {
           const auto &[a0, a1] =
               std::get<typename List<List<T1>>::Cons0>(_sv.v());
-          _stack.emplace_back(_Resume_Cons0{a0});
+          _stack.emplace_back(_Cont_Cons0{a0});
           _stack.emplace_back(_Enter{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<_Resume_Cons0>(_frame));
-        _result = std::move(_f.a0).app(std::move(_result));
+        auto _f = std::move(std::get<_Cont_Cons0>(_frame));
+        List<T1> a0 = std::move(_f.a0);
+        List<T1> r_ = std::move(_result);
+        _result = a0.app(std::move(r_));
       }
     }
     return _result;
@@ -885,9 +894,9 @@ inline Sig<uint64_t> T::to_nat(uint64_t) const {
     return Sig<uint64_t>::exist(UINT64_C(0));
   } else {
     const auto &[n1, a1] = std::get<typename T::FS>(this->v());
-    const auto &_sv0 = a1->to_nat(n1);
-    const auto &[x0] = _sv0;
-    return Sig<uint64_t>::exist((x0 + 1));
+    Sig<uint64_t> r_ = a1->to_nat(n1);
+    auto &[x0] = r_;
+    return Sig<uint64_t>::exist((std::move(x0) + 1));
   }
 }
 

@@ -803,6 +803,13 @@ val loopify_strict : unit -> bool
     an override, such as the methods generated on an inductive. *)
 val should_loopify : ?default:bool -> GlobRef.t -> bool
 
+(** Whether the methods generated on inductive [r] are loopified.  They are
+    structural recursion over [r], one C++ frame per cell, and the user has
+    no name to hang [Crane Loopify] on, so they are by default -- except on a
+    coinductive, whose recursion sits under a lazy thunk and never builds a
+    deep C++ stack. *)
+val loopifies_methods_of : GlobRef.t -> bool
+
 (** Declaration currently being translated; consulted by {!reuse_loopify_ok}. *)
 val current_decl_ref : GlobRef.t option ref
 

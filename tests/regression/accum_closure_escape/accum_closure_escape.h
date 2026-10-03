@@ -136,18 +136,18 @@ struct AccumClosureEscape {
         const mylist<A> *_self;
       };
 
-      /// _Resume_Mycons: saves [a1, a0], resumes after recursive call with
-      /// _result.
-      struct _Resume_Mycons {
-        mylist<A> a1;
+      /// _Cont_Mycons: saves [a0, a1], resumes after recursive call, then
+      /// processes rest.
+      struct _Cont_Mycons {
         A a0;
+        std::shared_ptr<mylist<A>> a1;
       };
 
-      using _Frame = std::variant<_Enter, _Resume_Mycons>;
+      using _Frame = std::variant<_Enter, _Cont_Mycons>;
       T1 _result{};
       crane::small_vector<_Frame> _stack;
       _stack.emplace_back(_Enter{_self});
-      /// Loopified mylist_rec: _Enter -> _Resume_Mycons.
+      /// Loopified mylist_rec: _Enter -> _Cont_Mycons.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -160,12 +160,15 @@ struct AccumClosureEscape {
           } else {
             const auto &[a0, a1] =
                 std::get<typename mylist<A>::Mycons>(_sv.v());
-            _stack.emplace_back(_Resume_Mycons{*a1, a0});
+            _stack.emplace_back(_Cont_Mycons{a0, a1});
             _stack.emplace_back(_Enter{crane_raw(a1)});
           }
         } else {
-          auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-          _result = f0(std::move(_f.a0), std::move(_f.a1), std::move(_result));
+          auto _f = std::move(std::get<_Cont_Mycons>(_frame));
+          auto a0 = std::move(_f.a0);
+          std::shared_ptr<mylist<A>> a1 = std::move(_f.a1);
+          T1 r_ = std::move(_result);
+          _result = f0(a0, *a1, std::move(r_));
         }
       }
       return _result;
@@ -181,18 +184,18 @@ struct AccumClosureEscape {
         const mylist<A> *_self;
       };
 
-      /// _Resume_Mycons: saves [a1, a0], resumes after recursive call with
-      /// _result.
-      struct _Resume_Mycons {
-        mylist<A> a1;
+      /// _Cont_Mycons: saves [a0, a1], resumes after recursive call, then
+      /// processes rest.
+      struct _Cont_Mycons {
         A a0;
+        std::shared_ptr<mylist<A>> a1;
       };
 
-      using _Frame = std::variant<_Enter, _Resume_Mycons>;
+      using _Frame = std::variant<_Enter, _Cont_Mycons>;
       T1 _result{};
       crane::small_vector<_Frame> _stack;
       _stack.emplace_back(_Enter{_self});
-      /// Loopified mylist_rect: _Enter -> _Resume_Mycons.
+      /// Loopified mylist_rect: _Enter -> _Cont_Mycons.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -205,12 +208,15 @@ struct AccumClosureEscape {
           } else {
             const auto &[a0, a1] =
                 std::get<typename mylist<A>::Mycons>(_sv.v());
-            _stack.emplace_back(_Resume_Mycons{*a1, a0});
+            _stack.emplace_back(_Cont_Mycons{a0, a1});
             _stack.emplace_back(_Enter{crane_raw(a1)});
           }
         } else {
-          auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-          _result = f0(std::move(_f.a0), std::move(_f.a1), std::move(_result));
+          auto _f = std::move(std::get<_Cont_Mycons>(_frame));
+          auto a0 = std::move(_f.a0);
+          std::shared_ptr<mylist<A>> a1 = std::move(_f.a1);
+          T1 r_ = std::move(_result);
+          _result = f0(a0, *a1, std::move(r_));
         }
       }
       return _result;
@@ -293,24 +299,25 @@ struct AccumClosureEscape {
         const tree *_self;
       };
 
-      /// _After_TNode: saves [_s0, _s1], dispatches next recursive call.
-      struct _After_TNode {
-        const tree *_s0;
-        crane::fn<uint64_t(uint64_t)> _s1;
+      /// _Cont_TNode: saves [a1, a2], resumes after recursive call, then
+      /// processes rest.
+      struct _Cont_TNode {
+        uint64_t a1;
+        std::shared_ptr<tree> a2;
       };
 
-      /// _Combine_TNode: receives partial results, combines with _result from
-      /// final call.
-      struct _Combine_TNode {
-        mylist<crane::fn<uint64_t(uint64_t)>> _result;
-        crane::fn<uint64_t(uint64_t)> _s1;
+      /// _Cont_TNode_1: saves [a1, r_], resumes after recursive call, then
+      /// processes rest.
+      struct _Cont_TNode_1 {
+        uint64_t a1;
+        mylist<crane::fn<uint64_t(uint64_t)>> r_;
       };
 
-      using _Frame = std::variant<_Enter, _After_TNode, _Combine_TNode>;
+      using _Frame = std::variant<_Enter, _Cont_TNode, _Cont_TNode_1>;
       mylist<crane::fn<uint64_t(uint64_t)>> _result{};
       crane::small_vector<_Frame> _stack;
       _stack.emplace_back(_Enter{_self});
-      /// Loopified tree_to_adders: _Enter -> _After_TNode -> _Combine_TNode.
+      /// Loopified tree_to_adders: _Enter -> _Cont_TNode -> _Cont_TNode_1.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -324,20 +331,25 @@ struct AccumClosureEscape {
             const auto &[a0, a1, a2] = std::get<typename tree::TNode>(_sv.v());
             const tree &a0_value = *a0;
             const tree &a2_value = *a2;
-            _stack.emplace_back(
-                _After_TNode{&a0_value, [=](uint64_t x) { return (a1 + x); }});
-            _stack.emplace_back(_Enter{&a2_value});
+            _stack.emplace_back(_Cont_TNode{a1, a2});
+            _stack.emplace_back(_Enter{&a0_value});
           }
-        } else if (std::holds_alternative<_After_TNode>(_frame)) {
-          auto _f = std::move(std::get<_After_TNode>(_frame));
-          _stack.emplace_back(
-              _Combine_TNode{std::move(_result), std::move(_f._s1)});
-          _stack.emplace_back(_Enter{_f._s0});
+        } else if (std::holds_alternative<_Cont_TNode>(_frame)) {
+          auto _f = std::move(std::get<_Cont_TNode>(_frame));
+          uint64_t a1 = _f.a1;
+          std::shared_ptr<tree> a2 = std::move(_f.a2);
+          mylist<crane::fn<uint64_t(uint64_t)>> r_ = std::move(_result);
+          const tree &a2_value = *a2;
+          _stack.emplace_back(_Cont_TNode_1{a1, std::move(r_)});
+          _stack.emplace_back(_Enter{&a2_value});
         } else {
-          auto _f = std::move(std::get<_Combine_TNode>(_frame));
+          auto _f = std::move(std::get<_Cont_TNode_1>(_frame));
+          uint64_t a1 = _f.a1;
+          mylist<crane::fn<uint64_t(uint64_t)>> r_ = std::move(_f.r_);
+          mylist<crane::fn<uint64_t(uint64_t)>> r_0 = std::move(_result);
           _result = mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
-              std::move(_f._s1),
-              std::move(_result).mylist_append(std::move(_f._result)));
+              [=](uint64_t x) { return (a1 + x); },
+              std::move(r_).mylist_append(std::move(r_0)));
         }
       }
       return _result;
@@ -351,24 +363,25 @@ struct AccumClosureEscape {
         const tree *_self;
       };
 
-      /// _After_TNode: saves [a0, a1], dispatches next recursive call.
-      struct _After_TNode {
-        tree *a0;
+      /// _Cont_TNode: saves [a1, a2], resumes after recursive call, then
+      /// processes rest.
+      struct _Cont_TNode {
         uint64_t a1;
+        std::shared_ptr<tree> a2;
       };
 
-      /// _Combine_TNode: receives partial results, combines with _result from
-      /// final call.
-      struct _Combine_TNode {
-        mylist<uint64_t> _result;
+      /// _Cont_TNode_1: saves [a1, r_], resumes after recursive call, then
+      /// processes rest.
+      struct _Cont_TNode_1 {
         uint64_t a1;
+        mylist<uint64_t> r_;
       };
 
-      using _Frame = std::variant<_Enter, _After_TNode, _Combine_TNode>;
+      using _Frame = std::variant<_Enter, _Cont_TNode, _Cont_TNode_1>;
       mylist<uint64_t> _result{};
       crane::small_vector<_Frame> _stack;
       _stack.emplace_back(_Enter{_self});
-      /// Loopified tree_to_list: _Enter -> _After_TNode -> _Combine_TNode.
+      /// Loopified tree_to_list: _Enter -> _Cont_TNode -> _Cont_TNode_1.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -380,17 +393,23 @@ struct AccumClosureEscape {
             _result = mylist<uint64_t>::mynil();
           } else {
             const auto &[a0, a1, a2] = std::get<typename tree::TNode>(_sv.v());
-            _stack.emplace_back(_After_TNode{crane_raw(a0), a1});
-            _stack.emplace_back(_Enter{crane_raw(a2)});
+            _stack.emplace_back(_Cont_TNode{a1, a2});
+            _stack.emplace_back(_Enter{crane_raw(a0)});
           }
-        } else if (std::holds_alternative<_After_TNode>(_frame)) {
-          auto _f = std::move(std::get<_After_TNode>(_frame));
-          _stack.emplace_back(_Combine_TNode{std::move(_result), _f.a1});
-          _stack.emplace_back(_Enter{_f.a0});
+        } else if (std::holds_alternative<_Cont_TNode>(_frame)) {
+          auto _f = std::move(std::get<_Cont_TNode>(_frame));
+          uint64_t a1 = _f.a1;
+          std::shared_ptr<tree> a2 = std::move(_f.a2);
+          mylist<uint64_t> r_ = std::move(_result);
+          _stack.emplace_back(_Cont_TNode_1{a1, std::move(r_)});
+          _stack.emplace_back(_Enter{crane_raw(a2)});
         } else {
-          auto _f = std::move(std::get<_Combine_TNode>(_frame));
+          auto _f = std::move(std::get<_Cont_TNode_1>(_frame));
+          uint64_t a1 = _f.a1;
+          mylist<uint64_t> r_ = std::move(_f.r_);
+          mylist<uint64_t> r_0 = std::move(_result);
           _result = mylist<uint64_t>::mycons(
-              _f.a1, std::move(_result).mylist_append(std::move(_f._result)));
+              a1, std::move(r_).mylist_append(std::move(r_0)));
         }
       }
       return _result;
@@ -407,29 +426,28 @@ struct AccumClosureEscape {
         const tree *_self;
       };
 
-      /// _After_TNode: saves [a0_0, a2, a1, a0_1], dispatches next recursive
-      /// call.
-      struct _After_TNode {
-        tree *a0_0;
-        tree a2;
+      /// _Cont_TNode: saves [a0, a1, a2], resumes after recursive call, then
+      /// processes rest.
+      struct _Cont_TNode {
+        std::shared_ptr<tree> a0;
         uint64_t a1;
-        tree a0_1;
+        std::shared_ptr<tree> a2;
       };
 
-      /// _Combine_TNode: receives partial results, combines with _result from
-      /// final call.
-      struct _Combine_TNode {
-        T1 _result;
-        tree a2;
+      /// _Cont_TNode_1: saves [a0, a1, a2, r_], resumes after recursive call,
+      /// then processes rest.
+      struct _Cont_TNode_1 {
+        std::shared_ptr<tree> a0;
         uint64_t a1;
-        tree a0;
+        std::shared_ptr<tree> a2;
+        T1 r_;
       };
 
-      using _Frame = std::variant<_Enter, _After_TNode, _Combine_TNode>;
+      using _Frame = std::variant<_Enter, _Cont_TNode, _Cont_TNode_1>;
       T1 _result{};
       crane::small_vector<_Frame> _stack;
       _stack.emplace_back(_Enter{_self});
-      /// Loopified tree_rec: _Enter -> _After_TNode -> _Combine_TNode.
+      /// Loopified tree_rec: _Enter -> _Cont_TNode -> _Cont_TNode_1.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -441,18 +459,26 @@ struct AccumClosureEscape {
             _result = f;
           } else {
             const auto &[a0, a1, a2] = std::get<typename tree::TNode>(_sv.v());
-            _stack.emplace_back(_After_TNode{crane_raw(a0), *a2, a1, *a0});
-            _stack.emplace_back(_Enter{crane_raw(a2)});
+            _stack.emplace_back(_Cont_TNode{a0, a1, a2});
+            _stack.emplace_back(_Enter{crane_raw(a0)});
           }
-        } else if (std::holds_alternative<_After_TNode>(_frame)) {
-          auto _f = std::move(std::get<_After_TNode>(_frame));
-          _stack.emplace_back(_Combine_TNode{
-              std::move(_result), std::move(_f.a2), _f.a1, std::move(_f.a0_1)});
-          _stack.emplace_back(_Enter{_f.a0_0});
+        } else if (std::holds_alternative<_Cont_TNode>(_frame)) {
+          auto _f = std::move(std::get<_Cont_TNode>(_frame));
+          std::shared_ptr<tree> a0 = std::move(_f.a0);
+          uint64_t a1 = _f.a1;
+          std::shared_ptr<tree> a2 = std::move(_f.a2);
+          T1 r_ = std::move(_result);
+          _stack.emplace_back(
+              _Cont_TNode_1{std::move(a0), a1, a2, std::move(r_)});
+          _stack.emplace_back(_Enter{crane_raw(a2)});
         } else {
-          auto _f = std::move(std::get<_Combine_TNode>(_frame));
-          _result = f0(std::move(_f.a0), std::move(_result), _f.a1,
-                       std::move(_f.a2), std::move(_f._result));
+          auto _f = std::move(std::get<_Cont_TNode_1>(_frame));
+          std::shared_ptr<tree> a0 = std::move(_f.a0);
+          uint64_t a1 = _f.a1;
+          std::shared_ptr<tree> a2 = std::move(_f.a2);
+          auto r_ = std::move(_f.r_);
+          T1 r_0 = std::move(_result);
+          _result = f0(*a0, std::move(r_), a1, *a2, std::move(r_0));
         }
       }
       return _result;
@@ -469,29 +495,28 @@ struct AccumClosureEscape {
         const tree *_self;
       };
 
-      /// _After_TNode: saves [a0_0, a2, a1, a0_1], dispatches next recursive
-      /// call.
-      struct _After_TNode {
-        tree *a0_0;
-        tree a2;
+      /// _Cont_TNode: saves [a0, a1, a2], resumes after recursive call, then
+      /// processes rest.
+      struct _Cont_TNode {
+        std::shared_ptr<tree> a0;
         uint64_t a1;
-        tree a0_1;
+        std::shared_ptr<tree> a2;
       };
 
-      /// _Combine_TNode: receives partial results, combines with _result from
-      /// final call.
-      struct _Combine_TNode {
-        T1 _result;
-        tree a2;
+      /// _Cont_TNode_1: saves [a0, a1, a2, r_], resumes after recursive call,
+      /// then processes rest.
+      struct _Cont_TNode_1 {
+        std::shared_ptr<tree> a0;
         uint64_t a1;
-        tree a0;
+        std::shared_ptr<tree> a2;
+        T1 r_;
       };
 
-      using _Frame = std::variant<_Enter, _After_TNode, _Combine_TNode>;
+      using _Frame = std::variant<_Enter, _Cont_TNode, _Cont_TNode_1>;
       T1 _result{};
       crane::small_vector<_Frame> _stack;
       _stack.emplace_back(_Enter{_self});
-      /// Loopified tree_rect: _Enter -> _After_TNode -> _Combine_TNode.
+      /// Loopified tree_rect: _Enter -> _Cont_TNode -> _Cont_TNode_1.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -503,18 +528,26 @@ struct AccumClosureEscape {
             _result = f;
           } else {
             const auto &[a0, a1, a2] = std::get<typename tree::TNode>(_sv.v());
-            _stack.emplace_back(_After_TNode{crane_raw(a0), *a2, a1, *a0});
-            _stack.emplace_back(_Enter{crane_raw(a2)});
+            _stack.emplace_back(_Cont_TNode{a0, a1, a2});
+            _stack.emplace_back(_Enter{crane_raw(a0)});
           }
-        } else if (std::holds_alternative<_After_TNode>(_frame)) {
-          auto _f = std::move(std::get<_After_TNode>(_frame));
-          _stack.emplace_back(_Combine_TNode{
-              std::move(_result), std::move(_f.a2), _f.a1, std::move(_f.a0_1)});
-          _stack.emplace_back(_Enter{_f.a0_0});
+        } else if (std::holds_alternative<_Cont_TNode>(_frame)) {
+          auto _f = std::move(std::get<_Cont_TNode>(_frame));
+          std::shared_ptr<tree> a0 = std::move(_f.a0);
+          uint64_t a1 = _f.a1;
+          std::shared_ptr<tree> a2 = std::move(_f.a2);
+          T1 r_ = std::move(_result);
+          _stack.emplace_back(
+              _Cont_TNode_1{std::move(a0), a1, a2, std::move(r_)});
+          _stack.emplace_back(_Enter{crane_raw(a2)});
         } else {
-          auto _f = std::move(std::get<_Combine_TNode>(_frame));
-          _result = f0(std::move(_f.a0), std::move(_result), _f.a1,
-                       std::move(_f.a2), std::move(_f._result));
+          auto _f = std::move(std::get<_Cont_TNode_1>(_frame));
+          std::shared_ptr<tree> a0 = std::move(_f.a0);
+          uint64_t a1 = _f.a1;
+          std::shared_ptr<tree> a2 = std::move(_f.a2);
+          auto r_ = std::move(_f.r_);
+          T1 r_0 = std::move(_result);
+          _result = f0(*a0, std::move(r_), a1, *a2, std::move(r_0));
         }
       }
       return _result;

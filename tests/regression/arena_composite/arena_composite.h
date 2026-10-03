@@ -174,24 +174,23 @@ struct Comp {
         const expr *_self;
       };
 
-      /// _After_Add: saves [a0, _s1], dispatches next recursive call.
-      struct _After_Add {
-        expr *a0;
-        Nat _s1;
+      /// _Cont_Add: saves [a1], resumes after recursive call, then processes
+      /// rest.
+      struct _Cont_Add {
+        std::shared_ptr<expr> a1;
       };
 
-      /// _Combine_Add: receives partial results, combines with _result from
-      /// final call.
-      struct _Combine_Add {
-        Nat _result;
-        Nat _s1;
+      /// _Cont_Add_1: saves [r_], resumes after recursive call, then processes
+      /// rest.
+      struct _Cont_Add_1 {
+        Nat r_;
       };
 
-      using _Frame = std::variant<_Enter, _After_Add, _Combine_Add>;
+      using _Frame = std::variant<_Enter, _Cont_Add, _Cont_Add_1>;
       Nat _result{};
       crane::small_vector<_Frame> _stack;
       _stack.emplace_back(_Enter{_self});
-      /// Loopified esize: _Enter -> _After_Add -> _Combine_Add.
+      /// Loopified esize: _Enter -> _Cont_Add -> _Cont_Add_1.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -203,19 +202,20 @@ struct Comp {
             _result = Nat::s(Nat::o());
           } else {
             const auto &[a0, a1] = std::get<typename expr::Add>(_sv.v());
-            _stack.emplace_back(_After_Add{crane_raw(a0), Nat::s(Nat::o())});
-            _stack.emplace_back(_Enter{crane_raw(a1)});
+            _stack.emplace_back(_Cont_Add{a1});
+            _stack.emplace_back(_Enter{crane_raw(a0)});
           }
-        } else if (std::holds_alternative<_After_Add>(_frame)) {
-          auto _f = std::move(std::get<_After_Add>(_frame));
-          _stack.emplace_back(
-              _Combine_Add{std::move(_result), std::move(_f._s1)});
-          _stack.emplace_back(_Enter{_f.a0});
+        } else if (std::holds_alternative<_Cont_Add>(_frame)) {
+          auto _f = std::move(std::get<_Cont_Add>(_frame));
+          std::shared_ptr<expr> a1 = std::move(_f.a1);
+          Nat r_ = std::move(_result);
+          _stack.emplace_back(_Cont_Add_1{std::move(r_)});
+          _stack.emplace_back(_Enter{crane_raw(a1)});
         } else {
-          auto _f = std::move(std::get<_Combine_Add>(_frame));
-          _result = std::move(_f._s1)
-                        .add(std::move(_result))
-                        .add(std::move(_f._result));
+          auto _f = std::move(std::get<_Cont_Add_1>(_frame));
+          Nat r_ = std::move(_f.r_);
+          Nat r_0 = std::move(_result);
+          _result = Nat::s(Nat::o()).add(std::move(r_)).add(std::move(r_0));
         }
       }
       return _result;
@@ -229,22 +229,23 @@ struct Comp {
         const expr *_self;
       };
 
-      /// _After_Add: saves [a0], dispatches next recursive call.
-      struct _After_Add {
-        expr *a0;
+      /// _Cont_Add: saves [a1], resumes after recursive call, then processes
+      /// rest.
+      struct _Cont_Add {
+        std::shared_ptr<expr> a1;
       };
 
-      /// _Combine_Add: receives partial results, combines with _result from
-      /// final call.
-      struct _Combine_Add {
-        Nat _result;
+      /// _Cont_Add_1: saves [r_], resumes after recursive call, then processes
+      /// rest.
+      struct _Cont_Add_1 {
+        Nat r_;
       };
 
-      using _Frame = std::variant<_Enter, _After_Add, _Combine_Add>;
+      using _Frame = std::variant<_Enter, _Cont_Add, _Cont_Add_1>;
       Nat _result{};
       crane::small_vector<_Frame> _stack;
       _stack.emplace_back(_Enter{_self});
-      /// Loopified eval: _Enter -> _After_Add -> _Combine_Add.
+      /// Loopified eval: _Enter -> _Cont_Add -> _Cont_Add_1.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -257,16 +258,20 @@ struct Comp {
             _result = std::move(a0);
           } else {
             const auto &[a0, a1] = std::get<typename expr::Add>(_sv.v());
-            _stack.emplace_back(_After_Add{crane_raw(a0)});
-            _stack.emplace_back(_Enter{crane_raw(a1)});
+            _stack.emplace_back(_Cont_Add{a1});
+            _stack.emplace_back(_Enter{crane_raw(a0)});
           }
-        } else if (std::holds_alternative<_After_Add>(_frame)) {
-          auto _f = std::move(std::get<_After_Add>(_frame));
-          _stack.emplace_back(_Combine_Add{std::move(_result)});
-          _stack.emplace_back(_Enter{_f.a0});
+        } else if (std::holds_alternative<_Cont_Add>(_frame)) {
+          auto _f = std::move(std::get<_Cont_Add>(_frame));
+          std::shared_ptr<expr> a1 = std::move(_f.a1);
+          Nat r_ = std::move(_result);
+          _stack.emplace_back(_Cont_Add_1{std::move(r_)});
+          _stack.emplace_back(_Enter{crane_raw(a1)});
         } else {
-          auto _f = std::move(std::get<_Combine_Add>(_frame));
-          _result = std::move(_result).add(std::move(_f._result));
+          auto _f = std::move(std::get<_Cont_Add_1>(_frame));
+          Nat r_ = std::move(_f.r_);
+          Nat r_0 = std::move(_result);
+          _result = std::move(r_).add(std::move(r_0));
         }
       }
       return _result;
@@ -283,26 +288,26 @@ struct Comp {
         const expr *_self;
       };
 
-      /// _After_Add: saves [a0_0, a1, a0_1], dispatches next recursive call.
-      struct _After_Add {
-        expr *a0_0;
-        expr a1;
-        expr a0_1;
+      /// _Cont_Add: saves [a0, a1], resumes after recursive call, then
+      /// processes rest.
+      struct _Cont_Add {
+        std::shared_ptr<expr> a0;
+        std::shared_ptr<expr> a1;
       };
 
-      /// _Combine_Add: receives partial results, combines with _result from
-      /// final call.
-      struct _Combine_Add {
-        T1 _result;
-        expr a1;
-        expr a0;
+      /// _Cont_Add_1: saves [a0, a1, r_], resumes after recursive call, then
+      /// processes rest.
+      struct _Cont_Add_1 {
+        std::shared_ptr<expr> a0;
+        std::shared_ptr<expr> a1;
+        T1 r_;
       };
 
-      using _Frame = std::variant<_Enter, _After_Add, _Combine_Add>;
+      using _Frame = std::variant<_Enter, _Cont_Add, _Cont_Add_1>;
       T1 _result{};
       crane::small_vector<_Frame> _stack;
       _stack.emplace_back(_Enter{_self});
-      /// Loopified expr_rec: _Enter -> _After_Add -> _Combine_Add.
+      /// Loopified expr_rec: _Enter -> _Cont_Add -> _Cont_Add_1.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -315,18 +320,23 @@ struct Comp {
             _result = f(a0);
           } else {
             const auto &[a0, a1] = std::get<typename expr::Add>(_sv.v());
-            _stack.emplace_back(_After_Add{crane_raw(a0), *a1, *a0});
-            _stack.emplace_back(_Enter{crane_raw(a1)});
+            _stack.emplace_back(_Cont_Add{a0, a1});
+            _stack.emplace_back(_Enter{crane_raw(a0)});
           }
-        } else if (std::holds_alternative<_After_Add>(_frame)) {
-          auto _f = std::move(std::get<_After_Add>(_frame));
-          _stack.emplace_back(_Combine_Add{std::move(_result), std::move(_f.a1),
-                                           std::move(_f.a0_1)});
-          _stack.emplace_back(_Enter{_f.a0_0});
+        } else if (std::holds_alternative<_Cont_Add>(_frame)) {
+          auto _f = std::move(std::get<_Cont_Add>(_frame));
+          std::shared_ptr<expr> a0 = std::move(_f.a0);
+          std::shared_ptr<expr> a1 = std::move(_f.a1);
+          T1 r_ = std::move(_result);
+          _stack.emplace_back(_Cont_Add_1{std::move(a0), a1, std::move(r_)});
+          _stack.emplace_back(_Enter{crane_raw(a1)});
         } else {
-          auto _f = std::move(std::get<_Combine_Add>(_frame));
-          _result = f0(std::move(_f.a0), std::move(_result), std::move(_f.a1),
-                       std::move(_f._result));
+          auto _f = std::move(std::get<_Cont_Add_1>(_frame));
+          std::shared_ptr<expr> a0 = std::move(_f.a0);
+          std::shared_ptr<expr> a1 = std::move(_f.a1);
+          auto r_ = std::move(_f.r_);
+          T1 r_0 = std::move(_result);
+          _result = f0(*a0, std::move(r_), *a1, std::move(r_0));
         }
       }
       return _result;
@@ -343,26 +353,26 @@ struct Comp {
         const expr *_self;
       };
 
-      /// _After_Add: saves [a0_0, a1, a0_1], dispatches next recursive call.
-      struct _After_Add {
-        expr *a0_0;
-        expr a1;
-        expr a0_1;
+      /// _Cont_Add: saves [a0, a1], resumes after recursive call, then
+      /// processes rest.
+      struct _Cont_Add {
+        std::shared_ptr<expr> a0;
+        std::shared_ptr<expr> a1;
       };
 
-      /// _Combine_Add: receives partial results, combines with _result from
-      /// final call.
-      struct _Combine_Add {
-        T1 _result;
-        expr a1;
-        expr a0;
+      /// _Cont_Add_1: saves [a0, a1, r_], resumes after recursive call, then
+      /// processes rest.
+      struct _Cont_Add_1 {
+        std::shared_ptr<expr> a0;
+        std::shared_ptr<expr> a1;
+        T1 r_;
       };
 
-      using _Frame = std::variant<_Enter, _After_Add, _Combine_Add>;
+      using _Frame = std::variant<_Enter, _Cont_Add, _Cont_Add_1>;
       T1 _result{};
       crane::small_vector<_Frame> _stack;
       _stack.emplace_back(_Enter{_self});
-      /// Loopified expr_rect: _Enter -> _After_Add -> _Combine_Add.
+      /// Loopified expr_rect: _Enter -> _Cont_Add -> _Cont_Add_1.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -375,18 +385,23 @@ struct Comp {
             _result = f(a0);
           } else {
             const auto &[a0, a1] = std::get<typename expr::Add>(_sv.v());
-            _stack.emplace_back(_After_Add{crane_raw(a0), *a1, *a0});
-            _stack.emplace_back(_Enter{crane_raw(a1)});
+            _stack.emplace_back(_Cont_Add{a0, a1});
+            _stack.emplace_back(_Enter{crane_raw(a0)});
           }
-        } else if (std::holds_alternative<_After_Add>(_frame)) {
-          auto _f = std::move(std::get<_After_Add>(_frame));
-          _stack.emplace_back(_Combine_Add{std::move(_result), std::move(_f.a1),
-                                           std::move(_f.a0_1)});
-          _stack.emplace_back(_Enter{_f.a0_0});
+        } else if (std::holds_alternative<_Cont_Add>(_frame)) {
+          auto _f = std::move(std::get<_Cont_Add>(_frame));
+          std::shared_ptr<expr> a0 = std::move(_f.a0);
+          std::shared_ptr<expr> a1 = std::move(_f.a1);
+          T1 r_ = std::move(_result);
+          _stack.emplace_back(_Cont_Add_1{std::move(a0), a1, std::move(r_)});
+          _stack.emplace_back(_Enter{crane_raw(a1)});
         } else {
-          auto _f = std::move(std::get<_Combine_Add>(_frame));
-          _result = f0(std::move(_f.a0), std::move(_result), std::move(_f.a1),
-                       std::move(_f._result));
+          auto _f = std::move(std::get<_Cont_Add_1>(_frame));
+          std::shared_ptr<expr> a0 = std::move(_f.a0);
+          std::shared_ptr<expr> a1 = std::move(_f.a1);
+          auto r_ = std::move(_f.r_);
+          T1 r_0 = std::move(_result);
+          _result = f0(*a0, std::move(r_), *a1, std::move(r_0));
         }
       }
       return _result;
@@ -470,24 +485,23 @@ struct Comp {
         const avl *_self;
       };
 
-      /// _After_Node: saves [a0, _s1], dispatches next recursive call.
-      struct _After_Node {
-        avl *a0;
-        Nat _s1;
+      /// _Cont_Node: saves [a3], resumes after recursive call, then processes
+      /// rest.
+      struct _Cont_Node {
+        std::shared_ptr<avl> a3;
       };
 
-      /// _Combine_Node: receives partial results, combines with _result from
-      /// final call.
-      struct _Combine_Node {
-        Nat _result;
-        Nat _s1;
+      /// _Cont_Node_1: saves [r_], resumes after recursive call, then processes
+      /// rest.
+      struct _Cont_Node_1 {
+        Nat r_;
       };
 
-      using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
+      using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
       Nat _result{};
       crane::small_vector<_Frame> _stack;
       _stack.emplace_back(_Enter{_self});
-      /// Loopified size: _Enter -> _After_Node -> _Combine_Node.
+      /// Loopified size: _Enter -> _Cont_Node -> _Cont_Node_1.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -500,19 +514,20 @@ struct Comp {
           } else {
             const auto &[a0, a1, a2, a3, a4] =
                 std::get<typename avl::Node>(_sv.v());
-            _stack.emplace_back(_After_Node{crane_raw(a0), Nat::s(Nat::o())});
-            _stack.emplace_back(_Enter{crane_raw(a3)});
+            _stack.emplace_back(_Cont_Node{a3});
+            _stack.emplace_back(_Enter{crane_raw(a0)});
           }
-        } else if (std::holds_alternative<_After_Node>(_frame)) {
-          auto _f = std::move(std::get<_After_Node>(_frame));
-          _stack.emplace_back(
-              _Combine_Node{std::move(_result), std::move(_f._s1)});
-          _stack.emplace_back(_Enter{_f.a0});
+        } else if (std::holds_alternative<_Cont_Node>(_frame)) {
+          auto _f = std::move(std::get<_Cont_Node>(_frame));
+          std::shared_ptr<avl> a3 = std::move(_f.a3);
+          Nat r_ = std::move(_result);
+          _stack.emplace_back(_Cont_Node_1{std::move(r_)});
+          _stack.emplace_back(_Enter{crane_raw(a3)});
         } else {
-          auto _f = std::move(std::get<_Combine_Node>(_frame));
-          _result = std::move(_f._s1)
-                        .add(std::move(_result))
-                        .add(std::move(_f._result));
+          auto _f = std::move(std::get<_Cont_Node_1>(_frame));
+          Nat r_ = std::move(_f.r_);
+          Nat r_0 = std::move(_result);
+          _result = Nat::s(Nat::o()).add(std::move(r_)).add(std::move(r_0));
         }
       }
       return _result;
@@ -561,27 +576,27 @@ struct Comp {
         const avl *_self;
       };
 
-      /// _Resume_Node: saves [a3, a2, a1], resumes after recursive call with
-      /// _result.
-      struct _Resume_Node {
-        avl a3;
-        expr a2;
+      /// _Cont_Node: saves [a1, a2, a3], resumes after recursive call, then
+      /// processes rest.
+      struct _Cont_Node {
         Nat a1;
+        expr a2;
+        std::shared_ptr<avl> a3;
       };
 
-      /// _Resume_Node_1: saves [a2, a1, a0], resumes after recursive call with
-      /// _result.
-      struct _Resume_Node_1 {
-        expr a2;
+      /// _Cont_Node_1: saves [a0, a1, a2], resumes after recursive call, then
+      /// processes rest.
+      struct _Cont_Node_1 {
+        std::shared_ptr<avl> a0;
         Nat a1;
-        avl a0;
+        expr a2;
       };
 
-      using _Frame = std::variant<_Enter, _Resume_Node, _Resume_Node_1>;
+      using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
       avl _result{};
       crane::small_vector<_Frame> _stack;
       _stack.emplace_back(_Enter{_self});
-      /// Loopified insert: _Enter -> _Resume_Node -> _Resume_Node_1.
+      /// Loopified insert: _Enter -> _Cont_Node -> _Cont_Node_1.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -596,14 +611,14 @@ struct Comp {
                 std::get<typename avl::Node>(_sv.v());
             switch (PeanoNat::ltb(k, a1)) {
             case Bool0::TRUE_: {
-              _stack.emplace_back(_Resume_Node{*a3, a2, a1});
+              _stack.emplace_back(_Cont_Node{a1, a2, a3});
               _stack.emplace_back(_Enter{crane_raw(a0)});
               break;
             }
             case Bool0::FALSE_: {
               switch (PeanoNat::ltb(a1, k)) {
               case Bool0::TRUE_: {
-                _stack.emplace_back(_Resume_Node_1{a2, a1, *a0});
+                _stack.emplace_back(_Cont_Node_1{a0, a1, a2});
                 _stack.emplace_back(_Enter{crane_raw(a3)});
                 break;
               }
@@ -620,14 +635,20 @@ struct Comp {
               std::unreachable();
             }
           }
-        } else if (std::holds_alternative<_Resume_Node>(_frame)) {
-          auto _f = std::move(std::get<_Resume_Node>(_frame));
-          _result = std::move(_result).balance(
-              std::move(_f.a1), std::move(_f.a2), std::move(_f.a3));
+        } else if (std::holds_alternative<_Cont_Node>(_frame)) {
+          auto _f = std::move(std::get<_Cont_Node>(_frame));
+          Nat a1 = std::move(_f.a1);
+          expr a2 = std::move(_f.a2);
+          std::shared_ptr<avl> a3 = std::move(_f.a3);
+          avl r_ = std::move(_result);
+          _result = std::move(r_).balance(a1, a2, *a3);
         } else {
-          auto _f = std::move(std::get<_Resume_Node_1>(_frame));
-          _result = std::move(_f.a0).balance(std::move(_f.a1), std::move(_f.a2),
-                                             std::move(_result));
+          auto _f = std::move(std::get<_Cont_Node_1>(_frame));
+          std::shared_ptr<avl> a0 = std::move(_f.a0);
+          Nat a1 = std::move(_f.a1);
+          expr a2 = std::move(_f.a2);
+          avl r_ = std::move(_result);
+          _result = a0->balance(a1, a2, std::move(r_));
         }
       }
       return _result;
@@ -704,33 +725,32 @@ struct Comp {
         const avl *_self;
       };
 
-      /// _After_Node: saves [a2_0, a6, a5, a4, a3, a2_1], dispatches next
-      /// recursive call.
-      struct _After_Node {
-        avl *a2_0;
-        Nat a6;
-        avl a5;
-        expr a4;
+      /// _Cont_Node: saves [a2, a3, a4, a5, a6], resumes after recursive call,
+      /// then processes rest.
+      struct _Cont_Node {
+        std::shared_ptr<avl> a2;
         Nat a3;
-        avl a2_1;
+        expr a4;
+        std::shared_ptr<avl> a5;
+        Nat a6;
       };
 
-      /// _Combine_Node: receives partial results, combines with _result from
-      /// final call.
-      struct _Combine_Node {
-        T1 _result;
-        Nat a6;
-        avl a5;
-        expr a4;
+      /// _Cont_Node_1: saves [a2, a3, a4, a5, a6, r_], resumes after recursive
+      /// call, then processes rest.
+      struct _Cont_Node_1 {
+        std::shared_ptr<avl> a2;
         Nat a3;
-        avl a2;
+        expr a4;
+        std::shared_ptr<avl> a5;
+        Nat a6;
+        T1 r_;
       };
 
-      using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
+      using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
       T1 _result{};
       crane::small_vector<_Frame> _stack;
       _stack.emplace_back(_Enter{_self});
-      /// Loopified avl_rec: _Enter -> _After_Node -> _Combine_Node.
+      /// Loopified avl_rec: _Enter -> _Cont_Node -> _Cont_Node_1.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -743,21 +763,31 @@ struct Comp {
           } else {
             const auto &[a2, a3, a4, a5, a6] =
                 std::get<typename avl::Node>(_sv.v());
-            _stack.emplace_back(
-                _After_Node{crane_raw(a2), a6, *a5, a4, a3, *a2});
-            _stack.emplace_back(_Enter{crane_raw(a5)});
+            _stack.emplace_back(_Cont_Node{a2, a3, a4, a5, a6});
+            _stack.emplace_back(_Enter{crane_raw(a2)});
           }
-        } else if (std::holds_alternative<_After_Node>(_frame)) {
-          auto _f = std::move(std::get<_After_Node>(_frame));
-          _stack.emplace_back(_Combine_Node{
-              std::move(_result), std::move(_f.a6), std::move(_f.a5),
-              std::move(_f.a4), std::move(_f.a3), std::move(_f.a2_1)});
-          _stack.emplace_back(_Enter{_f.a2_0});
+        } else if (std::holds_alternative<_Cont_Node>(_frame)) {
+          auto _f = std::move(std::get<_Cont_Node>(_frame));
+          std::shared_ptr<avl> a2 = std::move(_f.a2);
+          Nat a3 = std::move(_f.a3);
+          expr a4 = std::move(_f.a4);
+          std::shared_ptr<avl> a5 = std::move(_f.a5);
+          Nat a6 = std::move(_f.a6);
+          T1 r_ = std::move(_result);
+          _stack.emplace_back(_Cont_Node_1{std::move(a2), std::move(a3),
+                                           std::move(a4), a5, std::move(a6),
+                                           std::move(r_)});
+          _stack.emplace_back(_Enter{crane_raw(a5)});
         } else {
-          auto _f = std::move(std::get<_Combine_Node>(_frame));
-          _result = f0(std::move(_f.a2), std::move(_result), std::move(_f.a3),
-                       std::move(_f.a4), std::move(_f.a5),
-                       std::move(_f._result), std::move(_f.a6));
+          auto _f = std::move(std::get<_Cont_Node_1>(_frame));
+          std::shared_ptr<avl> a2 = std::move(_f.a2);
+          Nat a3 = std::move(_f.a3);
+          expr a4 = std::move(_f.a4);
+          std::shared_ptr<avl> a5 = std::move(_f.a5);
+          Nat a6 = std::move(_f.a6);
+          auto r_ = std::move(_f.r_);
+          T1 r_0 = std::move(_result);
+          _result = f0(*a2, std::move(r_), a3, a4, *a5, std::move(r_0), a6);
         }
       }
       return _result;
@@ -774,33 +804,32 @@ struct Comp {
         const avl *_self;
       };
 
-      /// _After_Node: saves [a2_0, a6, a5, a4, a3, a2_1], dispatches next
-      /// recursive call.
-      struct _After_Node {
-        avl *a2_0;
-        Nat a6;
-        avl a5;
-        expr a4;
+      /// _Cont_Node: saves [a2, a3, a4, a5, a6], resumes after recursive call,
+      /// then processes rest.
+      struct _Cont_Node {
+        std::shared_ptr<avl> a2;
         Nat a3;
-        avl a2_1;
+        expr a4;
+        std::shared_ptr<avl> a5;
+        Nat a6;
       };
 
-      /// _Combine_Node: receives partial results, combines with _result from
-      /// final call.
-      struct _Combine_Node {
-        T1 _result;
-        Nat a6;
-        avl a5;
-        expr a4;
+      /// _Cont_Node_1: saves [a2, a3, a4, a5, a6, r_], resumes after recursive
+      /// call, then processes rest.
+      struct _Cont_Node_1 {
+        std::shared_ptr<avl> a2;
         Nat a3;
-        avl a2;
+        expr a4;
+        std::shared_ptr<avl> a5;
+        Nat a6;
+        T1 r_;
       };
 
-      using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
+      using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
       T1 _result{};
       crane::small_vector<_Frame> _stack;
       _stack.emplace_back(_Enter{_self});
-      /// Loopified avl_rect: _Enter -> _After_Node -> _Combine_Node.
+      /// Loopified avl_rect: _Enter -> _Cont_Node -> _Cont_Node_1.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -813,21 +842,31 @@ struct Comp {
           } else {
             const auto &[a2, a3, a4, a5, a6] =
                 std::get<typename avl::Node>(_sv.v());
-            _stack.emplace_back(
-                _After_Node{crane_raw(a2), a6, *a5, a4, a3, *a2});
-            _stack.emplace_back(_Enter{crane_raw(a5)});
+            _stack.emplace_back(_Cont_Node{a2, a3, a4, a5, a6});
+            _stack.emplace_back(_Enter{crane_raw(a2)});
           }
-        } else if (std::holds_alternative<_After_Node>(_frame)) {
-          auto _f = std::move(std::get<_After_Node>(_frame));
-          _stack.emplace_back(_Combine_Node{
-              std::move(_result), std::move(_f.a6), std::move(_f.a5),
-              std::move(_f.a4), std::move(_f.a3), std::move(_f.a2_1)});
-          _stack.emplace_back(_Enter{_f.a2_0});
+        } else if (std::holds_alternative<_Cont_Node>(_frame)) {
+          auto _f = std::move(std::get<_Cont_Node>(_frame));
+          std::shared_ptr<avl> a2 = std::move(_f.a2);
+          Nat a3 = std::move(_f.a3);
+          expr a4 = std::move(_f.a4);
+          std::shared_ptr<avl> a5 = std::move(_f.a5);
+          Nat a6 = std::move(_f.a6);
+          T1 r_ = std::move(_result);
+          _stack.emplace_back(_Cont_Node_1{std::move(a2), std::move(a3),
+                                           std::move(a4), a5, std::move(a6),
+                                           std::move(r_)});
+          _stack.emplace_back(_Enter{crane_raw(a5)});
         } else {
-          auto _f = std::move(std::get<_Combine_Node>(_frame));
-          _result = f0(std::move(_f.a2), std::move(_result), std::move(_f.a3),
-                       std::move(_f.a4), std::move(_f.a5),
-                       std::move(_f._result), std::move(_f.a6));
+          auto _f = std::move(std::get<_Cont_Node_1>(_frame));
+          std::shared_ptr<avl> a2 = std::move(_f.a2);
+          Nat a3 = std::move(_f.a3);
+          expr a4 = std::move(_f.a4);
+          std::shared_ptr<avl> a5 = std::move(_f.a5);
+          Nat a6 = std::move(_f.a6);
+          auto r_ = std::move(_f.r_);
+          T1 r_0 = std::move(_result);
+          _result = f0(*a2, std::move(r_), a3, a4, *a5, std::move(r_0), a6);
         }
       }
       return _result;
