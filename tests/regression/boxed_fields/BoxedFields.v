@@ -2,10 +2,12 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** [Set Crane BoxedFields]: a constructor field whose type is an inductive is
-    stored behind the recursive-field smart pointer.  Covers an inductive held
-    by another, a list of them (built by tail modulo cons), custom-mapped
-    option and pair fields, a recursive type holding a non-recursive one, and
-    loopified traversals that read the boxed fields. *)
+    stored behind the recursive-field smart pointer, and one typed by a
+    parameter as [crane::field<T>], boxed where copying [T] is not cheap.
+    Covers an inductive held by another, a list of them (built by tail modulo
+    cons), custom-mapped option and pair fields, a recursive type holding a
+    non-recursive one, loopified traversals that read the boxed fields, and a
+    parameter field instantiated both ways. *)
 
 From Stdlib Require Import List.
 Import ListNotations.
@@ -61,6 +63,18 @@ Definition sample : scene :=
 
 Definition sample_total : nat := total sample.
 Definition moved_total : nat := total (move_all 10 sample).
+
+(** Fields typed by a parameter: boxed or not per instantiation. *)
+Inductive tagged (A : Type) : Type := Tag : nat -> A -> tagged A.
+Arguments Tag {A}.
+
+Definition untag {A} (t : tagged A) : A := match t with Tag _ a => a end.
+Definition tag_of {A} (t : tagged A) : nat := match t with Tag n _ => n end.
+
+Definition heavy : tagged scene := Tag 1 sample.
+Definition light : tagged nat := Tag 2 40.
+Definition heavy_total : nat := tag_of heavy + total (untag heavy).
+Definition light_total : nat := tag_of light + untag light.
 
 End BoxedFields.
 

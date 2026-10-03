@@ -14,7 +14,8 @@ BoxedFields::shift(uint64_t d, const List<BoxedFields::point> &ps) {
     } else {
       const auto &[a0, a1] =
           std::get<typename List<BoxedFields::point>::Cons>(_loop_ps->v());
-      const auto &[a00, a10] = a0;
+      const auto &_sv0 = crane::unbox(a0);
+      const auto &[a00, a10] = _sv0;
       auto _cell = std::make_shared<List<BoxedFields::point>>(
           typename List<BoxedFields::point>::Cons(point::pt((a00 + d), a10),
                                                   nullptr));

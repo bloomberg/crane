@@ -83,6 +83,8 @@ template <typename T>
 class rc {
 public:
     using element_type = T;
+    // A copy is a refcount bump (see field.h).
+    using crane_cheap_copy = void;
 
     rc() noexcept = default; // null rc
 

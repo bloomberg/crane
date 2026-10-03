@@ -59,6 +59,11 @@ inline constexpr type_tag tag_of{typeid(T), held_inline<T>};
 } // namespace obj_detail
 
 class obj {
+public:
+  // A copy is a refcount bump, or a word's copy (see field.h).
+  using crane_cheap_copy = void;
+
+private:
   const obj_detail::type_tag *tag_ = nullptr;
   union {
     const shared_block *box_;

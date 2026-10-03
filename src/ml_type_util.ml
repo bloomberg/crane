@@ -998,6 +998,10 @@ let boxes_field ty =
     (not (Table.is_coinductive g)) && not (ml_is_trivially_copyable ty)
   | _ -> false
 
+let boxes_param_field ty =
+  Table.boxed_fields ()
+  && match resolve_tmeta ty with Miniml.Tvar _ -> true | _ -> false
+
 (** Check if an ML type maps to a non-trivially-copyable C++ value type.
     These are custom-extracted inductives (e.g., prod → std::pair) that are
     NOT shared_ptr-wrapped but still benefit from move semantics.

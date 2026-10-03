@@ -29,6 +29,8 @@ let itree_header = "crane_itree.h"
 let rebind = "crane::rebind_t"
 let variant = "crane::variant"
 let variant_header = "crane_variant.h"
+let field = "crane::field"
+let field_header = "field.h"
 
 (* [CRANE_COUNT_RC]: the measurement-only counting shared pointer (count_rc.h). *)
 let counting_ptr = "crane::counting_ptr"
@@ -40,8 +42,10 @@ type helper =
   | Make_rc_reusing_unchecked
   | Reuse_step
   | Raw
+  | Unbox_field
 
 let name = function
   | Make_rc_reusing_unchecked -> make_rc_reusing_unchecked
   | Raw -> raw
+  | Unbox_field -> "crane::unbox"
   | Reuse_step -> reuse_step

@@ -38,6 +38,7 @@
 #include <variant>
 
 #include "crane_fn.h"  // crane_any_cast
+#include "field.h"     // crane::unbox
 
 // A response, with the side an injected effect was stored under taken off;
 // see [sum1_erased].
@@ -289,7 +290,7 @@ template<typename Sum>
 auto itree_iter_rhs(const Sum &s) {
     using std::get_if;
     const auto &[r] = *get_if<typename Sum::Inr>(&s.v());
-    return r;
+    return crane::unbox(r);
 }
 
 template<typename Step, typename I>
@@ -305,7 +306,8 @@ auto itree_iter(Step step, I i)
                 using std::get_if;
                 using std::holds_alternative;
                 if (holds_alternative<typename Sum::Inl>(s.v())) {
-                    const auto &[next] = *get_if<typename Sum::Inl>(&s.v());
+                    const auto &[next_field] = *get_if<typename Sum::Inl>(&s.v());
+                    const auto &next = crane::unbox(next_field);
                     return ITree<R>::delay(
                         [step, next]() { return itree_iter(step, next); });
                 }

@@ -26,6 +26,13 @@ include Translation_support
 include Translation_types
 include Translation_calls
 
+(* How a match branch reads a field of the constructor it matched: as the
+   structured binding has it; through the pointer the field is stored behind
+   (a recursive field, or under [Crane BoxedFields] one holding an inductive);
+   or through [crane::unbox] (a type-parameter field under [Crane
+   BoxedFields], boxed or not per instantiation). *)
+type field_read = Read_as_bound | Read_through_pointer | Read_unboxed
+
 (** Generate local fixpoint declarations using the Y-combinator pattern
     for escaping fixpoints.
 
@@ -6870,11 +6877,19 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
     | Some ty -> ml_recurses_through_boxed ty
     | None -> false
   in
+  (* [Crane BoxedFields]: a field boxed for its own type (see
+     [Ml_type_util.boxes_field]), and one typed by a parameter. *)
+  let def_site_field i p =
+    match List.nth_opt non_erased_def_site_field_tys i with Some ty -> p ty | None -> false
+  in
+  let is_boxed_at_def i = def_site_field i boxes_field in
+  let is_param_boxed_at_def i = def_site_field i boxes_param_field in
   let field_is_uptr i =
     not (Table.is_coinductive ind_ref)
-    && not (field_recurses_through_boxed_at_def i)
-    && (field_is_self_or_mutual_ref_at_def i
-        || field_has_nested_self_ref_at_def i)
+    && ( not (field_recurses_through_boxed_at_def i)
+         && (field_is_self_or_mutual_ref_at_def i
+             || field_has_nested_self_ref_at_def i)
+       || is_boxed_at_def i || is_param_boxed_at_def i )
   in
   (* Converse of [exclude_scrutinee]: the structured bindings alias subobjects
      of the owned scrutinee, so moving a field out hollows out part of [o].  If
@@ -6953,6 +6968,34 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
           gen_stmts env_for_body (fun x -> Sreturn (Some x)) body ))
   in
   let tvars = get_current_type_vars () in
+(* A non-self-referential field in a type-indexed inductive (no template
+     params) whose def-site type contains an unnamed Tvar is stored as
+     [std::any] in the struct.  At the match site we recover the ML-known
+     type with [std::any_cast<bare_ty>].  This handles every access pattern
+     uniformly — fst, snd, or any other function — because the cast is
+     applied at the binding site, not at individual use sites. *)
+  let scrut_template_args_lazy = lazy (
+    let scrut_cpp_ty = cpp_of_ml env typ in
+    extract_template_args scrut_cpp_ty
+  ) in
+  let field_is_wholesale_erased =
+    let num_pv = Table.get_ctor_num_param_vars cname in
+    fun i ->
+      not (field_is_self_or_mutual_ref_at_def i)
+      && not (field_has_nested_self_ref_at_def i)
+      && (match List.nth_opt non_erased_def_site_field_tys i with
+          | Some def_ty when num_pv = 0 ->
+            let cpp_ty =
+              convert_ml_type_to_cpp_type (empty_env ()) ~ns:(Refset'.singleton ind_ref) [] def_ty
+            in
+            has_unnamed_tvar cpp_ty
+          | Some (Miniml.Tvar (_, k)) ->
+            let scrut_targs = Lazy.force scrut_template_args_lazy in
+            (match List.nth_opt scrut_targs (k - 1) with
+             | Some t -> resolves_to_any_type t
+             | None -> false)
+          | _ -> false)
+  in
   let field_bindings =
     List.mapi
       (fun i (_var_name, ml_ty) ->
@@ -7002,14 +7045,7 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
           end
           | _ -> true
         in
-        (* [Crane BoxedFields]: a field the struct boxes because of its own
-           type (see [Ml_type_util.boxes_field]) is read like a recursive
-           one. *)
-        let is_boxed_at_def i =
-          match List.nth_opt non_erased_def_site_field_tys i with
-          | Some ty -> boxes_field ty
-          | None -> false
-        in
+        (* A field boxed for its own type is read like a recursive one. *)
         let is_sptr_self_ref =
           ( ( field_is_self_or_mutual_ref_at_def i
               || field_has_nested_self_ref_at_def i )
@@ -7017,6 +7053,14 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
             && is_uniform_self_ref_at_def i
             || is_boxed_at_def i )
           && not (Table.is_coinductive ind_ref)
+        in
+        (* The struct holds a [crane::field] for a type-parameter field
+           unless it erased the field outright. *)
+        let is_param_boxed =
+          (not is_sptr_self_ref) && is_param_boxed_at_def i
+          && (not (Table.is_coinductive ind_ref))
+          && (not (field_is_wholesale_erased i))
+          && bare_field_cpp_ty <> Tany
         in
         let field_cpp_ty =
           if is_sptr_self_ref then
@@ -7028,6 +7072,13 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
                there is no element-wise converter from List<shared_ptr<T>> to
                List<T>, so we must keep elements as bare values. *)
             Tshared_ptr bare_field_cpp_ty
+          else if is_param_boxed then
+            (* The struct stores [crane::field<T>], but the binding is
+               [auto] and every read of it goes through [crane::unbox]: as
+               the passes after this see it, it is the [T] it holds.  Whether
+               that [T] is erased is decided later, and they have to see it
+               to cast it. *)
+            bare_field_cpp_ty
           else if field_recurses_through_boxed_at_def i then
             (* Boxed-element container field: stored by value as
                flex_vector<box<self>> (matches the struct field decl); the box
@@ -7049,7 +7100,12 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
             else storage_field_cpp_ty
         in
         let used = dummies_arr.(i) in
-        (binding_name, field_cpp_ty, is_sptr_self_ref, used))
+        let read =
+          if is_sptr_self_ref then Read_through_pointer
+          else if is_param_boxed then Read_unboxed
+          else Read_as_bound
+        in
+        (binding_name, field_cpp_ty, read, used))
       rev_ids
   in
   let field_bindings_arr = Array.of_list field_bindings in
@@ -7121,35 +7177,7 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
   let branch_needs_sptr_preextract =
     branch_has_lambda || return_type_is_coinductive
   in
-  (* A non-self-referential field in a type-indexed inductive (no template
-     params) whose def-site type contains an unnamed Tvar is stored as
-     [std::any] in the struct.  At the match site we recover the ML-known
-     type with [std::any_cast<bare_ty>].  This handles every access pattern
-     uniformly — fst, snd, or any other function — because the cast is
-     applied at the binding site, not at individual use sites. *)
-  let scrut_template_args_lazy = lazy (
-    let scrut_cpp_ty = cpp_of_ml env typ in
-    extract_template_args scrut_cpp_ty
-  ) in
-  let field_is_wholesale_erased =
-    let num_pv = Table.get_ctor_num_param_vars cname in
-    fun i ->
-      not (field_is_self_or_mutual_ref_at_def i)
-      && not (field_has_nested_self_ref_at_def i)
-      && (match List.nth_opt non_erased_def_site_field_tys i with
-          | Some def_ty when num_pv = 0 ->
-            let cpp_ty =
-              convert_ml_type_to_cpp_type (empty_env ()) ~ns:(Refset'.singleton ind_ref) [] def_ty
-            in
-            has_unnamed_tvar cpp_ty
-          | Some (Miniml.Tvar (_, k)) ->
-            let scrut_targs = Lazy.force scrut_template_args_lazy in
-            (match List.nth_opt scrut_targs (k - 1) with
-             | Some t -> resolves_to_any_type t
-             | None -> false)
-          | _ -> false)
-  in
-  (* Substitute pattern variable references with the structured-binding
+    (* Substitute pattern variable references with the structured-binding
      names.  For non-coinductive self-ref fields (stored as shared_ptr),
      the structured binding gives [const shared_ptr<T>& d_field]; we
      dereference it so the body sees a value reference [const T&] instead.
@@ -7158,7 +7186,7 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
     List.fold_left
       (fun stmts (i, (var_name, _ml_ty)) ->
         if dummies_arr.(i) then
-          let (binding_name, field_ty, is_uptr, _) = field_bindings_arr.(i) in
+          let (binding_name, field_ty, read, _) = field_bindings_arr.(i) in
           let bare_ty = cpp_of_ml env _ml_ty in
           (* Pre-extract fields stored as shared_ptr when the branch body
              contains a lambda (or the return type is coinductive), so the
@@ -7167,9 +7195,11 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
              all formerly-unique_ptr fields have is_uptr set, and shared_ptr
              (coinductive or generic container fields) is copyable and can
              be captured directly. *)
-          let is_uptr_field = is_uptr in
+          let is_uptr_field = read = Read_through_pointer in
           let subst_expr =
-            if is_uptr_field && branch_needs_sptr_preextract then
+            if read = Read_unboxed then
+              mk_call (CPPrt Crane_rt.Unbox_field) [CPPvar binding_name]
+            else if is_uptr_field && branch_needs_sptr_preextract then
               CPPvar (Id.of_string (Id.to_string binding_name ^ "_value"))
             else if is_uptr_field then
               (* field_ty = Tshared_ptr storage_inner.  Deref the outer
@@ -7224,10 +7254,10 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
     List.filter_map
       (fun (i, (_var_name, ml_ty)) ->
         if dummies_arr.(i) then
-          let (binding_name, field_ty, is_uptr, _) =
+          let (binding_name, field_ty, read, _) =
             field_bindings_arr.(i)
           in
-          let is_uptr_field = is_uptr in
+          let is_uptr_field = read = Read_through_pointer in
           if is_uptr_field && branch_needs_sptr_preextract then
             let bare_ty =
               cpp_of_ml env ml_ty
@@ -7268,7 +7298,7 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
     smb_var = (if has_used_fields then Some sname else None);
     smb_field_bindings =
       (if has_used_fields then
-         List.map (fun (n, ty, _is_uptr, used) -> (n, ty, used)) field_bindings
+         List.map (fun (n, ty, _read, used) -> (n, ty, used)) field_bindings
        else []);
     smb_extra_conds = [];
     smb_body = body_stmts }

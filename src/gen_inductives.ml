@@ -1101,6 +1101,9 @@ let gen_ind_header_v2
           match cpp_ty with
           | Tshared_ptr _ -> cpp_ty
           | _ when (not is_coinductive) && boxes_field ty -> Tshared_ptr bare_cpp_ty
+          | _ when (not is_coinductive) && boxes_param_field ty && bare_cpp_ty <> Tany ->
+            Table.mark_demand Crane_rt.field_header;
+            Tid_external (Crane_rt.field, [bare_cpp_ty])
           | _ -> cpp_ty
       in
       (* A field's storage type at the inductive's own variables, erased
@@ -1220,6 +1223,14 @@ let gen_ind_header_v2
               VPublic,
               STypes ) ]
         else []
+      in
+      (* A coinductive value is a lazy cell, as cheap to copy as a pointer:
+         a [crane::field] of it is not boxed (see field.h). *)
+      let element_using =
+        if is_coinductive && Table.boxed_fields () then
+          element_using
+          @ [(Fnested_using ([], Id.of_string "crane_cheap_copy", Tvoid), VPublic, STypes)]
+        else element_using
       in
 
       (* 3. Private variant member: v_ for inductive, lazy_v_ for coinductive *)
@@ -1784,12 +1795,21 @@ let gen_ind_header_v2
                      (fun k fty ->
                        let inst = subst_targs args fty in
                        if not (contains_self inst) then []
+                       (* [Crane BoxedFields]: a type-parameter field holding
+                          [Self] is a [crane::field_box], a shared block, and a
+                          shared block freed while another is being freed is
+                          queued rather than freed in place (shared_block.h):
+                          its destruction cannot recurse, so there is nothing
+                          to drain. *)
+                       else if boxes_param_field fty then []
                        else
                          let fe =
                            access
                              (Common.lookup_ctor_field_name ~owner:g cname_str k)
                          in
-                         let is_ptr = field_is_ptr g fty in
+                         (* A field boxed for its own type is a pointer like a
+                            recursive one. *)
+                         let is_ptr = field_is_ptr g fty || boxes_field fty in
                          match on_spine with
                          | Some push
                            when is_ptr && outer_ml inst = g_cpp ->
@@ -2678,6 +2698,20 @@ let gen_ind_header_v2
                 let converted =
                   List.map
                     (fun (field_id, src_fty, dst_fty) ->
+                      (* A [crane::field] converts as what it holds: read it
+                         unboxed, and the struct's constructor boxes the
+                         result again where that pays. *)
+                      let src_expr, src_fty, dst_fty =
+                        let unboxed = function
+                          | Tid_external (f, [t]) when String.equal f Crane_rt.field -> Some t
+                          | _ -> None
+                        in
+                        match (unboxed src_fty, unboxed dst_fty) with
+                        | Some s, Some d ->
+                          ( mk_call (CPPrt Crane_rt.Unbox_field) [CPPvar field_id],
+                            s, d )
+                        | _ -> (CPPvar field_id, src_fty, dst_fty)
+                      in
                       gen_type_conversion_expr
                         (* Every inductive generated into this same scope --
                            the type itself, its mutual siblings, and any other
@@ -2689,7 +2723,7 @@ let gen_ind_header_v2
                           || List.exists (GlobRef.CanOrd.equal g)
                                (get_local_inductives ()))
                         ~src_ty:src_fty ~dst_ty:dst_fty
-                        (CPPvar field_id))
+                        src_expr)
                     field_info
                 in
                 (source_ctor_ty, cname_id, field_info, converted)

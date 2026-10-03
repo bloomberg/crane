@@ -99,6 +99,12 @@ val variant : string  (** [crane::variant], the tagged union of [Crane FastVaria
 
 val variant_header : string  (** [crane_variant.h] -- {!variant}. *)
 
+val field : string
+(** [crane::field<T>], how [Crane BoxedFields] stores a parameter-typed
+    constructor field: [T], or [T] boxed where copying it is not cheap. *)
+
+val field_header : string  (** [field.h] -- {!field} and [crane::unbox]. *)
+
 val fn_header : string
 (** [fn.h], the header declaring {!fn}; demanded by the type printer. *)
 
@@ -118,6 +124,7 @@ type helper =
   | Make_rc_reusing_unchecked
   | Reuse_step
   | Raw  (** [crane_raw(p)] -- the raw pointer a smart pointer holds. *)
+  | Unbox_field  (** [crane::unbox(f)] -- a {!field} read as [const T&]. *)
 
 (** [crane_raw], in {!erasure_header}. *)
 val raw : string

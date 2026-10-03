@@ -38,6 +38,11 @@ inline void release(const base *b) noexcept {
 template <typename T> class lazy {
   template <typename> friend class lazy;
 
+public:
+  // A copy is a refcount bump (see field.h).
+  using crane_cheap_copy = void;
+
+private:
   using base = lazy_detail::base;
 
   // Defined below: its state holds a [lazy], complete only there.

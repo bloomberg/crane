@@ -139,6 +139,11 @@ template <class R, class... A> class fn<R(A...)> {
   using block = fn_detail::block<R, A...>;
   const block *p_ = nullptr;
 
+public:
+  // A copy is a refcount bump (see field.h).
+  using crane_cheap_copy = void;
+
+private:
   void retain() const noexcept {
     if (p_) {
       p_->retain();

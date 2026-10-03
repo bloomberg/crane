@@ -751,6 +751,8 @@ let rec is_access_path = function
   | CPPderef e | CPPget (e, _) | CPPget' (e, _, _) | CPPaccess (_, e, _) ->
     is_access_path e
   | CPPaccess_call (_, e, _, []) -> is_access_path e
+  (* Reading a [crane::field] is a read of the path, as dereferencing is. *)
+  | CPPfun_call (_, CPPrt Crane_rt.Unbox_field, {rev = [e]}) -> is_access_path e
   | _ -> false
 
 (** When [expr] is a single-argument IIFE

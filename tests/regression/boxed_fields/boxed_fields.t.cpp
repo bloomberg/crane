@@ -42,6 +42,12 @@ int main() {
   ASSERT(sh2.get() == sh.get());
   ASSERT(copy.total() == 36);
 
+  // A parameter field: boxed when it holds a scene, held inline as a number.
+  ASSERT(BF::heavy_total == 37);
+  ASSERT(BF::light_total == 42);
+  static_assert(!crane::copy_is_cheap<BF::scene>::value);
+  static_assert(crane::copy_is_cheap<uint64_t>::value);
+
   if (testStatus == 0) {
     std::cout << "All boxed_fields tests passed!" << std::endl;
   }

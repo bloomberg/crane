@@ -2280,7 +2280,10 @@ and pp_cpp_expr env args t =
   | CPPtype_name ty -> pp_cpp_type false [] ty
   (* Low-level constructs for reuse optimization *)
   | CPPrt h ->
-    if h = Crane_rt.Raw then Table.mark_needs_erase_fn ();
+    (match h with
+     | Crane_rt.Raw -> Table.mark_needs_erase_fn ()
+     | Crane_rt.Unbox_field -> require_header Crane_rt.field_header
+     | Crane_rt.Make_rc_reusing_unchecked | Crane_rt.Reuse_step -> ());
     str (Crane_rt.name h)
   | CPPlit (_, s) -> str s
   | CPPraw code ->

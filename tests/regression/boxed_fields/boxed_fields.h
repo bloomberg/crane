@@ -2,6 +2,7 @@
 #define INCLUDED_BOXED_FIELDS
 
 #include "crane_fn.h"
+#include "field.h"
 #include "obj.h"
 #include "small_vector.h"
 #include <any>
@@ -20,7 +21,7 @@ template <typename A> struct List {
   struct Nil {};
 
   struct Cons {
-    A a;
+    crane::field<A> a;
     std::shared_ptr<List<A>> l;
   };
 
@@ -48,7 +49,7 @@ public:
             return Cons{
                 [&]() -> A {
                   if constexpr (crane_convertible<A, const _U &>) {
-                    return crane_convert<A>(a);
+                    return crane_convert<A>(crane::unbox(a));
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
                                            "field at this instantiation");
@@ -62,7 +63,8 @@ public:
   static List<A> nil() { return List<A>(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+    return List<A>(Cons{crane::field<A>(std::move(a)),
+                        std::make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
@@ -104,7 +106,7 @@ public:
       } else {
         const auto &[a1, a2] = std::get<typename List<A>::Cons>(_sv.v());
         _loop_self = crane_raw(a2);
-        _loop_a0 = f(std::move(_loop_a0), a1);
+        _loop_a0 = f(std::move(_loop_a0), crane::unbox(a1));
       }
     }
   }
@@ -158,6 +160,7 @@ struct BoxedFields {
       std::shared_ptr<List<point>> a0;
     };
 
+    /// Fields typed by a parameter: boxed or not per instantiation.
     struct Tagged {
       std::shared_ptr<std::optional<point>> a0;
       std::shared_ptr<std::pair<uint64_t, point>> a1;
@@ -187,6 +190,7 @@ struct BoxedFields {
       return shape(Poly{std::make_shared<List<point>>(std::move(a0))});
     }
 
+    /// Fields typed by a parameter: boxed or not per instantiation.
     static shape tagged(std::optional<point> a0,
                         std::pair<uint64_t, point> a1) {
       return shape(
@@ -524,6 +528,62 @@ struct BoxedFields {
   static inline const uint64_t sample_total = sample.total();
   static inline const uint64_t moved_total =
       sample.move_all(UINT64_C(10)).total();
+
+  /// Fields typed by a parameter: boxed or not per instantiation.
+  template <typename A> struct tagged {
+    // DATA
+    uint64_t a0;
+    A a1;
+
+    // ACCESSORS
+    tagged<A> clone() const { return {a0, a1}; }
+
+    template <typename _U> operator tagged<_U>() const {
+      return {a0, [&]() -> _U {
+                if constexpr (crane_convertible<_U, const A &>) {
+                  return crane_convert<_U>(a1);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }()};
+    }
+
+    // CREATORS
+    static tagged<A> tag(uint64_t a0, A a1) { return {a0, std::move(a1)}; }
+
+    uint64_t tag_of() const {
+      const auto &[a0, a1] = *this;
+      return a0;
+    }
+
+    A untag() const {
+      const auto &[a0, a1] = *this;
+      return crane::unbox(a1);
+    }
+
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, A &>
+    T1 tagged_rec(F0 &&f) const {
+      const auto &[a0, a1] = *this;
+      return f(a0, crane::unbox(a1));
+    }
+
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, A &>
+    T1 tagged_rect(F0 &&f) const {
+      const auto &[a0, a1] = *this;
+      return f(a0, crane::unbox(a1));
+    }
+  };
+
+  static inline const tagged<scene> heavy =
+      tagged<scene>::tag(UINT64_C(1), sample);
+  static inline const tagged<uint64_t> light =
+      tagged<uint64_t>::tag(UINT64_C(2), UINT64_C(40));
+  static inline const uint64_t heavy_total =
+      (heavy.tag_of() + heavy.untag().total());
+  static inline const uint64_t light_total = (light.tag_of() + light.untag());
 };
 
 #endif // INCLUDED_BOXED_FIELDS
