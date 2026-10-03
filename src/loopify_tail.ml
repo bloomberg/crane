@@ -1129,19 +1129,6 @@ let transform_tail ?(param_inits = []) tparams check params ret_ty body =
     [fib(p) + fib(m)], into the two call argument lists and a combining
     operation. *)
 
-type double_decomp = {
-  dd_first_args : cpp_expr list;
-  dd_first_entry : int;
-      (** Machine entry point the first call re-enters -- see
-          {!decomposed.d_entry}. *)
-  dd_second_args : cpp_expr list;
-  dd_second_entry : int;  (** Machine entry point the second call re-enters. *)
-  dd_saved : cpp_expr list;
-      (** Non-recursive expressions to save for combine *)
-  dd_combine : cpp_expr list -> cpp_expr -> cpp_expr -> cpp_expr;
-      (** [dd_combine saved_vars left_result right_result] *)
-}
-
 (** {3 Expression decomposition}
 
     Analyze a return expression to find how the recursive call result is used.

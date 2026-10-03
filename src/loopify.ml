@@ -47,10 +47,9 @@
        - {!transform_tail} for tail recursion → while loop with shadow vars
        - {!transform_nontail} for non-tail → frame-based stack
 
-    3. {b Decomposition}: Break down complex expressions with recursive calls:
-       - {!decompose_single_call} for 1 recursive call
-       - {!decompose_double_call} for 2 recursive calls
-       - {!decompose_all_calls} for N recursive calls
+    3. {b Decomposition}: {!Normalize} binds recursive calls in evaluation
+       order before translation, so an expression holds at most one, taken
+       apart by {!decompose_single_call}
 
     4. {b Frame Generation}: Create typed frame structs ([_Enter], [_ResumeN],
        etc.) and a dispatch loop that tests the popped frame with
