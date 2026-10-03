@@ -22,6 +22,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "pool.h"
 #include "shared_block.h"
 
 namespace crane {
@@ -39,9 +40,10 @@ template <class T> struct copy_is_cheap<std::shared_ptr<T>> : std::true_type {};
 
 CRANE_RC_POLICY_BEGIN
 
-// One shared, immutable cell holding a T.
+// One shared, immutable cell holding a T, from the per-type free list every
+// other small runtime block uses (pool.h).
 template <class T> class field_box {
-  struct cell : shared_block {
+  struct cell : shared_block, pool_detail::pooled<cell> {
     T value;
     template <class... A>
     explicit cell(A &&...a) : shared_block{{}, &drop}, value(std::forward<A>(a)...) {}
