@@ -382,7 +382,8 @@ public:
     } else {
       const auto &[a0, a1, a2] = std::get<typename Tree<A>::Node>(this->v());
       List<A> r_ = a0->flatten();
-      return std::move(r_).app(List<A>::cons(a1, a2->flatten()));
+      List<A> r_0 = a2->flatten();
+      return std::move(r_).app(List<A>::cons(a1, std::move(r_0)));
     }
   }
 

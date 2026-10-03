@@ -2401,7 +2401,12 @@ and rewrite_enter_stmts ctx stmts =
       let all_field_names = derive_field_names all_saved in
       let assign_expr = make_assign_expr all_field_names in
       let bindings = make_cont_bindings ~offset ~field_names:all_field_names cont_vars cont_types in
-      let rest_env = make_cont_env cont_vars cont_types env in
+      (* The rest sees the result binding too: a later frame saving it needs
+         its type, and the body it came from may only say [auto]. *)
+      let rest_env =
+        let bound = match tgt with Declare ty when ty <> Tauto -> [(id, ty)] | _ -> [] in
+        bound @ make_cont_env cont_vars cont_types env
+      in
       let rest_processed =
         List.map snd remat @ rewrite_enter_stmts { ctx with er_env = rest_env } rest
       in

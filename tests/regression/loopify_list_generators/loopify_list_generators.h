@@ -279,16 +279,17 @@ struct LoopifyListGenerators {
         struct _Enter {
           uint64_t idx;
         };
-        /// _Resume_idx_: saves [_s0], resumes after recursive call with
-        /// _result.
-        struct _Resume_idx_ {
-          List<uint64_t> _s0;
+        /// _Cont_idx_: saves [f, idx], resumes after recursive call, then
+        /// processes rest.
+        struct _Cont_idx_ {
+          crane::fn<uint64_t(uint64_t)> f;
+          uint64_t idx;
         };
-        using _Frame = std::variant<_Enter, _Resume_idx_>;
+        using _Frame = std::variant<_Enter, _Cont_idx_>;
         List<uint64_t> _result{};
         crane::small_vector<_Frame> _stack;
         _stack.emplace_back(_Enter{idx});
-        /// Loopified aux: _Enter -> _Resume_idx_.
+        /// Loopified aux: _Enter -> _Cont_idx_.
         while (!_stack.empty()) {
           _Frame _frame = std::move(_stack.back());
           _stack.pop_back();
@@ -300,13 +301,16 @@ struct LoopifyListGenerators {
                   List<uint64_t>::cons(f(UINT64_C(0)), List<uint64_t>::nil());
             } else {
               uint64_t idx_ = idx - 1;
-              _stack.emplace_back(_Resume_idx_{
-                  List<uint64_t>::cons(f(idx), List<uint64_t>::nil())});
+              _stack.emplace_back(_Cont_idx_{f, idx});
               _stack.emplace_back(_Enter{idx_});
             }
           } else {
-            auto _f = std::move(std::get<_Resume_idx_>(_frame));
-            _result = std::move(_result).app(std::move(_f._s0));
+            auto _f = std::move(std::get<_Cont_idx_>(_frame));
+            crane::fn<uint64_t(uint64_t)> f = std::move(_f.f);
+            uint64_t idx = _f.idx;
+            List<uint64_t> r_ = std::move(_result);
+            _result = std::move(r_).app(
+                List<uint64_t>::cons(f(idx), List<uint64_t>::nil()));
           }
         }
         return _result;

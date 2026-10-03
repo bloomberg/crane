@@ -622,7 +622,8 @@ struct MemSafetyProbe3 {
           return t.sum_values(UINT64_C(0));
         } else {
           uint64_t n_ = n - 1;
-          return (t.sum_values(UINT64_C(1)) + _self_helper(_self_helper, n_));
+          uint64_t r_ = _self_helper(_self_helper, n_);
+          return (t.sum_values(UINT64_C(1)) + r_);
         }
       };
       auto helper = [&](uint64_t n) -> uint64_t {

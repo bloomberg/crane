@@ -568,37 +568,27 @@ List<uint64_t> MemSafetyProbe28::zip_collect(
     const MemSafetyProbe28::tree *t1;
   };
 
-  /// _Resume_Leaf: saves [_s0, a0], resumes after recursive call with _result.
-  struct _Resume_Leaf {
-    MemSafetyProbe28::tree _s0;
+  /// _Cont_Leaf: saves [a0, a1], resumes after recursive call, then processes
+  /// rest.
+  struct _Cont_Leaf {
     const MemSafetyProbe28::tree *a0;
-  };
-
-  /// _Resume_Leaf_1: saves [a1], resumes after recursive call with _result.
-  struct _Resume_Leaf_1 {
     uint64_t a1;
   };
 
-  /// _Resume_Node: saves [a00, a0], resumes after recursive call with _result.
-  struct _Resume_Node {
-    MemSafetyProbe28::tree a00;
+  /// _Cont_Node: saves [a0, a00, a1, a10], resumes after recursive call, then
+  /// processes rest.
+  struct _Cont_Node {
     const MemSafetyProbe28::tree *a0;
-  };
-
-  /// _Resume_Node_1: saves [a1, a10], resumes after recursive call with
-  /// _result.
-  struct _Resume_Node_1 {
+    std::shared_ptr<MemSafetyProbe28::tree> a00;
     uint64_t a1;
     uint64_t a10;
   };
 
-  using _Frame = std::variant<_Enter, _Resume_Leaf, _Resume_Leaf_1,
-                              _Resume_Node, _Resume_Node_1>;
+  using _Frame = std::variant<_Enter, _Cont_Leaf, _Cont_Node>;
   List<uint64_t> _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{std::move(acc), t2, &t1});
-  /// Loopified zip_collect: _Enter -> _Resume_Leaf -> _Resume_Leaf_1 ->
-  /// _Resume_Node -> _Resume_Node_1.
+  /// Loopified zip_collect: _Enter -> _Cont_Leaf -> _Cont_Node.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -615,31 +605,33 @@ List<uint64_t> MemSafetyProbe28::zip_collect(
             std::get<typename MemSafetyProbe28::tree::Node>(t1.v());
         if (std::holds_alternative<typename MemSafetyProbe28::tree::Leaf>(
                 t2.v())) {
-          _stack.emplace_back(_Resume_Leaf{tree::leaf(), crane_raw(a0)});
-          _stack.emplace_back(_Resume_Leaf_1{a1});
+          _stack.emplace_back(_Cont_Leaf{crane_raw(a0), a1});
           _stack.emplace_back(
               _Enter{std::move(acc), tree::leaf(), crane_raw(a2)});
         } else {
           const auto &[a00, a10, a20] =
               std::get<typename MemSafetyProbe28::tree::Node>(t2.v());
-          _stack.emplace_back(_Resume_Node{*a00, crane_raw(a0)});
-          _stack.emplace_back(_Resume_Node_1{a1, a10});
+          _stack.emplace_back(_Cont_Node{crane_raw(a0), a00, a1, a10});
           _stack.emplace_back(_Enter{std::move(acc), *a20, crane_raw(a2)});
         }
       }
-    } else if (std::holds_alternative<_Resume_Leaf>(_frame)) {
-      auto _f = std::move(std::get<_Resume_Leaf>(_frame));
-      _stack.emplace_back(_Enter{std::move(_result), std::move(_f._s0), _f.a0});
-    } else if (std::holds_alternative<_Resume_Leaf_1>(_frame)) {
-      auto _f = std::move(std::get<_Resume_Leaf_1>(_frame));
-      _result = List<uint64_t>::cons(_f.a1, std::move(_result));
-    } else if (std::holds_alternative<_Resume_Node>(_frame)) {
-      auto _f = std::move(std::get<_Resume_Node>(_frame));
-      _stack.emplace_back(_Enter{std::move(_result), std::move(_f.a00), _f.a0});
+    } else if (std::holds_alternative<_Cont_Leaf>(_frame)) {
+      auto _f = std::move(std::get<_Cont_Leaf>(_frame));
+      const MemSafetyProbe28::tree &a0 = *_f.a0;
+      uint64_t a1 = _f.a1;
+      List<uint64_t> r_ = std::move(_result);
+      _stack.emplace_back(
+          _Enter{List<uint64_t>::cons(a1, std::move(r_)), tree::leaf(), &a0});
     } else {
-      auto _f = std::move(std::get<_Resume_Node_1>(_frame));
-      _result = List<uint64_t>::cons(
-          _f.a1, List<uint64_t>::cons(_f.a10, std::move(_result)));
+      auto _f = std::move(std::get<_Cont_Node>(_frame));
+      const MemSafetyProbe28::tree &a0 = *_f.a0;
+      std::shared_ptr<MemSafetyProbe28::tree> a00 = std::move(_f.a00);
+      uint64_t a1 = _f.a1;
+      uint64_t a10 = _f.a10;
+      List<uint64_t> r_ = std::move(_result);
+      _stack.emplace_back(_Enter{
+          List<uint64_t>::cons(a1, List<uint64_t>::cons(a10, std::move(r_))),
+          *a00, &a0});
     }
   }
   return _result;

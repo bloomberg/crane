@@ -13,15 +13,15 @@ uint64_t LoopifyGapNestedFix::rose_sum(
     List<LoopifyGapNestedFix::rose> l;
   };
 
-  /// _After_Cons: saves [a2], dispatches next recursive call.
-  struct _After_Cons {
-    LoopifyGapNestedFix::rose a2;
+  /// _Cont_Cons: saves [a3], resumes after recursive call, then processes rest.
+  struct _Cont_Cons {
+    std::shared_ptr<List<LoopifyGapNestedFix::rose>> a3;
   };
 
-  /// _Combine_Cons: receives partial results, combines with _result from final
-  /// call.
-  struct _Combine_Cons {
-    uint64_t _result;
+  /// _Cont_Cons_1: saves [r_], resumes after recursive call, then processes
+  /// rest.
+  struct _Cont_Cons_1 {
+    uint64_t r_;
   };
 
   /// _Resume_Rose0: saves [a0], resumes after recursive call with _result.
@@ -29,13 +29,12 @@ uint64_t LoopifyGapNestedFix::rose_sum(
     uint64_t a0;
   };
 
-  using _Frame = std::variant<_Enter, _Enter_sum_list, _After_Cons,
-                              _Combine_Cons, _Resume_Rose0>;
+  using _Frame = std::variant<_Enter, _Enter_sum_list, _Cont_Cons, _Cont_Cons_1,
+                              _Resume_Rose0>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{r});
-  /// Loopified rose_sum: _Enter -> _After_Cons -> _Combine_Cons ->
-  /// _Resume_Rose0.
+  /// Loopified rose_sum: _Enter -> _Cont_Cons -> _Cont_Cons_1 -> _Resume_Rose0.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -55,16 +54,20 @@ uint64_t LoopifyGapNestedFix::rose_sum(
       } else {
         const auto &[a2, a3] =
             std::get<typename List<LoopifyGapNestedFix::rose>::Cons>(l.v());
-        _stack.emplace_back(_After_Cons{a2});
-        _stack.emplace_back(_Enter_sum_list{*a3});
+        _stack.emplace_back(_Cont_Cons{a3});
+        _stack.emplace_back(_Enter{a2});
       }
-    } else if (std::holds_alternative<_After_Cons>(_frame)) {
-      auto _f = std::move(std::get<_After_Cons>(_frame));
-      _stack.emplace_back(_Combine_Cons{std::move(_result)});
-      _stack.emplace_back(_Enter{std::move(_f.a2)});
-    } else if (std::holds_alternative<_Combine_Cons>(_frame)) {
-      auto _f = std::move(std::get<_Combine_Cons>(_frame));
-      _result = (std::move(_result) + std::move(_f._result));
+    } else if (std::holds_alternative<_Cont_Cons>(_frame)) {
+      auto _f = std::move(std::get<_Cont_Cons>(_frame));
+      std::shared_ptr<List<LoopifyGapNestedFix::rose>> a3 = std::move(_f.a3);
+      uint64_t r_ = std::move(_result);
+      _stack.emplace_back(_Cont_Cons_1{r_});
+      _stack.emplace_back(_Enter_sum_list{*a3});
+    } else if (std::holds_alternative<_Cont_Cons_1>(_frame)) {
+      auto _f = std::move(std::get<_Cont_Cons_1>(_frame));
+      uint64_t r_ = _f.r_;
+      uint64_t r_0 = std::move(_result);
+      _result = (r_ + r_0);
     } else {
       auto _f = std::move(std::get<_Resume_Rose0>(_frame));
       _result = (_f.a0 + std::move(_result));

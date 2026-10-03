@@ -279,7 +279,9 @@ struct NestedInductiveNoDrain {
             return UINT64_C(0);
           } else {
             const auto &[a2, a3] = std::get<typename lst<tree>::Cons>(m.v());
-            return (a2.tsum() + _self_go0(_self_go0, *a3));
+            uint64_t r_ = a2.tsum();
+            uint64_t r_0 = _self_go0(_self_go0, *a3);
+            return (r_ + r_0);
           }
         };
         auto go0 = [&](const lst<tree> &m) -> uint64_t {

@@ -355,18 +355,18 @@ struct LoopifyTrees {
         std::shared_ptr<tree<A>> a2;
       };
 
-      /// _Resume_Node: saves [r_, a1], resumes after recursive call with
-      /// _result.
-      struct _Resume_Node {
-        List<A> r_;
+      /// _Cont_Node_1: saves [a1, r_], resumes after recursive call, then
+      /// processes rest.
+      struct _Cont_Node_1 {
         A a1;
+        List<A> r_;
       };
 
-      using _Frame = std::variant<_Enter, _Cont_Node, _Resume_Node>;
+      using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
       List<A> _result{};
       crane::small_vector<_Frame> _stack;
       _stack.emplace_back(_Enter{_self});
-      /// Loopified tree_to_list: _Enter -> _Cont_Node -> _Resume_Node.
+      /// Loopified tree_to_list: _Enter -> _Cont_Node -> _Cont_Node_1.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -387,12 +387,14 @@ struct LoopifyTrees {
           auto a1 = std::move(_f.a1);
           std::shared_ptr<tree<A>> a2 = std::move(_f.a2);
           List<A> r_ = std::move(_result);
-          _stack.emplace_back(_Resume_Node{std::move(r_), a1});
+          _stack.emplace_back(_Cont_Node_1{a1, std::move(r_)});
           _stack.emplace_back(_Enter{crane_raw(a2)});
         } else {
-          auto _f = std::move(std::get<_Resume_Node>(_frame));
-          _result = std::move(_f.r_).app(
-              List<A>::cons(std::move(_f.a1), std::move(_result)));
+          auto _f = std::move(std::get<_Cont_Node_1>(_frame));
+          auto a1 = std::move(_f.a1);
+          List<A> r_ = std::move(_f.r_);
+          List<A> r_0 = std::move(_result);
+          _result = std::move(r_).app(List<A>::cons(a1, std::move(r_0)));
         }
       }
       return _result;
@@ -1442,25 +1444,24 @@ struct LoopifyTrees {
       uint64_t fuel;
     };
 
-    /// _After_RNode: saves [a10, g, a00], dispatches next recursive call.
-    struct _After_RNode {
-      const List<rose> *a10;
+    /// _Cont_RNode: saves [a00, a1, g], resumes after recursive call, then
+    /// processes rest.
+    struct _Cont_RNode {
+      uint64_t a00;
+      const List<rose> *a1;
       uint64_t g;
-      uint64_t a00;
     };
 
-    /// _Combine_RNode: receives partial results, combines with _result from
-    /// final call.
-    struct _Combine_RNode {
-      List<rose> _result;
-      uint64_t a00;
+    /// _Resume_RNode: saves [_s0], resumes after recursive call with _result.
+    struct _Resume_RNode {
+      rose _s0;
     };
 
-    using _Frame = std::variant<_Enter, _After_RNode, _Combine_RNode>;
+    using _Frame = std::variant<_Enter, _Cont_RNode, _Resume_RNode>;
     List<rose> _result{};
     crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&cs, fuel});
-    /// Loopified map_rose_list_fuel: _Enter -> _After_RNode -> _Combine_RNode.
+    /// Loopified map_rose_list_fuel: _Enter -> _Cont_RNode -> _Resume_RNode.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -1477,18 +1478,21 @@ struct LoopifyTrees {
           } else {
             const auto &[a0, a1] = std::get<typename List<rose>::Cons>(cs.v());
             const auto &[a00, a10] = std::get<typename rose::RNode>(a0.v());
-            _stack.emplace_back(_After_RNode{crane_raw(a10), g, f(a00)});
-            _stack.emplace_back(_Enter{crane_raw(a1), g});
+            _stack.emplace_back(_Cont_RNode{a00, crane_raw(a1), g});
+            _stack.emplace_back(_Enter{crane_raw(a10), g});
           }
         }
-      } else if (std::holds_alternative<_After_RNode>(_frame)) {
-        auto _f = std::move(std::get<_After_RNode>(_frame));
-        _stack.emplace_back(_Combine_RNode{std::move(_result), _f.a00});
-        _stack.emplace_back(_Enter{_f.a10, _f.g});
+      } else if (std::holds_alternative<_Cont_RNode>(_frame)) {
+        auto _f = std::move(std::get<_Cont_RNode>(_frame));
+        uint64_t a00 = _f.a00;
+        const List<rose> &a1 = *_f.a1;
+        uint64_t g = _f.g;
+        List<rose> r_ = std::move(_result);
+        _stack.emplace_back(_Resume_RNode{rose::rnode(f(a00), std::move(r_))});
+        _stack.emplace_back(_Enter{&a1, g});
       } else {
-        auto _f = std::move(std::get<_Combine_RNode>(_frame));
-        _result = List<rose>::cons(rose::rnode(_f.a00, std::move(_result)),
-                                   std::move(_f._result));
+        auto _f = std::move(std::get<_Resume_RNode>(_frame));
+        _result = List<rose>::cons(std::move(_f._s0), std::move(_result));
       }
     }
     return _result;

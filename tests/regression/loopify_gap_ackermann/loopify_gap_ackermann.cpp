@@ -16,16 +16,16 @@ LoopifyGapAckermann::ack(uint64_t m,
     uint64_t m;
   };
 
-  /// _Resume_n_: saves [m_], resumes after recursive call with _result.
-  struct _Resume_n_ {
+  /// _Cont_n_: saves [m_], resumes after recursive call, then processes rest.
+  struct _Cont_n_ {
     uint64_t m_;
   };
 
-  using _Frame = std::variant<_Enter, _Enter_ack_n, _Resume_n_>;
+  using _Frame = std::variant<_Enter, _Enter_ack_n, _Cont_n_>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{x0_, m});
-  /// Loopified ack: _Enter -> _Resume_n_.
+  /// Loopified ack: _Enter -> _Cont_n_.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -46,13 +46,15 @@ LoopifyGapAckermann::ack(uint64_t m,
           _stack.emplace_back(_Enter{UINT64_C(1), m_});
         } else {
           uint64_t n_ = n - 1;
-          _stack.emplace_back(_Resume_n_{m_});
+          _stack.emplace_back(_Cont_n_{m_});
           _stack.emplace_back(_Enter_ack_n{n_, m});
         }
       }
     } else {
-      auto _f = std::move(std::get<_Resume_n_>(_frame));
-      _stack.emplace_back(_Enter{std::move(_result), _f.m_});
+      auto _f = std::move(std::get<_Cont_n_>(_frame));
+      uint64_t m_ = _f.m_;
+      uint64_t r_ = std::move(_result);
+      _stack.emplace_back(_Enter{r_, m_});
     }
   }
   return _result;

@@ -25,14 +25,44 @@ let rec replace_placeholders f e =
 
 let binder = Id (Id.of_string "_r")
 
-(* [scope ~group_call e] -- [e] with every call [group_call] recognises that
-   sits at a strictly evaluated, non-tail position bound to a variable first,
-   in evaluation order.  A constructor's last direct recursive argument is
-   left in place: building a cell around a recursive call is what tail
-   modulo cons rewrites.  Branches, lambda bodies, let bodies, a bind's
-   arguments and a coinductive constructor's are scopes of their own, and
-   nothing under a coercion is touched. *)
-let rec scope ~group_call e =
+(* The functions whose calls are bound: a top-level fixpoint group, by
+   reference, and the local fixpoints enclosing the term, each by the depth
+   its bodies start at and its functions, the [j]th being [MLrel (j + 1)]
+   there. *)
+type group = {globals : GlobRef.t list; locals : (int * (Id.t * ml_type) array) list}
+
+(* A full application yields what its function's type ends in.  A partial
+   one yields a function: there is nothing to evaluate early, and naming it
+   would turn a direct argument into a closure. *)
+let full_result = function Some (Tarr _) -> None | ty -> ty
+
+(* The type a call at binder depth [depth] to one of [group]'s functions
+   yields, if it is one and is applied fully. *)
+let group_call group ~depth = function
+  | MLapp ((MLglob (r, _) as f), args) when List.exists (GlobRef.UserOrd.equal r) group.globals ->
+    full_result (Translation_types.ml_app_result_type f args)
+  | MLapp (MLrel k, args) ->
+    let value_args = List.filter (function MLdummy _ -> false | _ -> true) args in
+    List.find_map
+      (fun (root, ids) ->
+        let j = k - (depth - root) - 1 in
+        if j >= 0 && j < Array.length ids then Some (snd ids.(j)) else None )
+      group.locals
+    |> Option.cata
+         (fun ty -> full_result (Ml_type_util.ml_codomain_after (List.length value_args) ty))
+         None
+  | _ -> None
+
+(* [scope ~group ~depth e] -- [e], at binder depth [depth], with every call
+   to [group] that sits at a strictly evaluated, non-tail position bound to
+   a variable first, in evaluation order.  A constructor's last direct
+   recursive argument is left in place: building a cell around a recursive
+   call is what tail modulo cons rewrites.  Branches, lambda bodies, let
+   bodies, a bind's arguments and a coinductive constructor's are scopes of
+   their own, and nothing under a coercion is touched. *)
+let rec scope ~group ~depth e =
+  let group_call = group_call group ~depth in
+  let inner ?(group = group) binders = scope ~group ~depth:(depth + binders) in
   let taken = ref [] in
   let count = ref 0 in
   let take call ty =
@@ -45,32 +75,41 @@ let rec scope ~group_call e =
     | MLapp ((MLglob (r, _) as f), args) when Table.is_bind r ->
       (* Monadic sequencing: the action runs where the bind puts it, and a
          recursive call that is the whole action is a tail call there. *)
-      MLapp (f, List.map (scope ~group_call) args)
+      MLapp (f, List.map (inner 0) args)
     | MLapp (f, args) -> (
-      let e' = MLapp (f, List.map (strict ~tail:false) args) in
+      let e' = MLapp (strict ~tail:false f, List.map (strict ~tail:false) args) in
       match group_call e' with
       | Some ty when not tail -> take e' ty
       | _ -> e' )
     | MLcons (ty, (GlobRef.ConstructRef (ind, _) as r), args)
       when Table.is_coinductive (GlobRef.IndRef ind) ->
       (* A coinductive constructor suspends its arguments. *)
-      MLcons (ty, r, List.map (scope ~group_call) args)
-    | MLcons (ty, r, args) when not (Table.is_custom r) ->
-      (* Tail modulo cons fills one hole per cell, so only the last direct
-         recursive argument stays; any before it are bound. *)
+      MLcons (ty, r, List.map (inner 0) args)
+    | MLcons (ty, r, args) when tail && not (Table.is_custom r) ->
+      (* Tail modulo cons fills one hole: the last argument that is a
+         recursive call, or a constructor in turn holding one, stays; any
+         call before it is bound.  A constructor anywhere but the result is
+         an ordinary value, and every call in it is bound. *)
+      let rec holds_call a =
+        group_call a <> None
+        || match a with MLcons (_, _, args) -> List.exists holds_call args | _ -> false
+      in
       let last_rec =
         List.fold_left
-          (fun (i, last) a -> (i + 1, if group_call a <> None then Some i else last))
+          (fun (i, last) a -> (i + 1, if holds_call a then Some i else last))
           (0, None) args
         |> snd
       in
       let arg i a =
         match a with
         | MLapp (f, args) when Some i = last_rec ->
-          MLapp (f, List.map (strict ~tail:false) args)
+          MLapp (strict ~tail:false f, List.map (strict ~tail:false) args)
+        | MLcons _ when Some i = last_rec -> strict ~tail:true a
         | _ -> strict ~tail:false a
       in
       MLcons (ty, r, List.mapi arg args)
+    | MLcons (ty, r, args) when not (Table.is_custom r) ->
+      MLcons (ty, r, List.map (strict ~tail:false) args)
     | MLcons (ty, r, args) ->
       (* A constructor mapped to custom code: only its replacement text says
          whether a direct argument stays in tail position ([%a0]) or not
@@ -87,12 +126,25 @@ let rec scope ~group_call e =
       MLcase
         ( ty,
           strict ~tail:false scrut,
-          Array.map (fun (ids, rty, p, body) -> (ids, rty, p, scope ~group_call body)) branches )
+          Array.map
+            (fun (ids, rty, p, body) -> (ids, rty, p, inner (List.length ids) body))
+            branches )
     | MLletin (id, ty, rhs, body) ->
       (* A right-hand side that is the call is already bound. *)
-      MLletin (id, ty, strict ~tail:true rhs, scope ~group_call body)
-    | MLlam (id, ty, body) -> MLlam (id, ty, scope ~group_call body)
-    | MLfix (i, ids, bodies, cofix) -> MLfix (i, ids, Array.map (scope ~group_call) bodies, cofix)
+      let rhs =
+        match rhs with
+        | MLapp (f, args) when group_call rhs <> None ->
+          MLapp (strict ~tail:false f, List.map (strict ~tail:false) args)
+        | _ -> strict ~tail:false rhs
+      in
+      MLletin (id, ty, rhs, inner 1 body)
+    | MLlam (id, ty, body) -> MLlam (id, ty, inner 1 body)
+    | MLfix (i, ids, bodies, cofix) ->
+      let n = Array.length ids in
+      let group =
+        if cofix then group else {group with locals = (depth + n, ids) :: group.locals}
+      in
+      MLfix (i, ids, Array.map (inner ~group n) bodies, cofix)
     | _ -> e
   in
   let body = strict ~tail:true e in
@@ -107,17 +159,6 @@ let rec scope ~group_call e =
   in
   if k = 0 then body else wrap 1 calls
 
-(* A call to one of [group]'s functions, applied fully, with the type it
-   yields.  A partial application yields a function: there is nothing to
-   evaluate early, and naming it would turn a direct argument into a
-   closure. *)
-let group_call group = function
-  | MLapp ((MLglob (r, _) as f), args) when List.exists (GlobRef.UserOrd.equal r) group -> (
-    match Translation_types.ml_app_result_type f args with
-    | Some (Tarr _) -> None
-    | ty -> ty )
-  | _ -> None
-
 (* Whether [fd] is loopified: by its own name, or as a method of an
    inductive whose methods are (see {!Table.loopifies_methods_of}). *)
 let loopified ~methods fd =
@@ -129,14 +170,17 @@ let loopified ~methods fd =
 
 let decl ~methods = function
   | Dfix fds ->
-    let group = List.map (fun fd -> fd.fd_ref) fds in
+    let group = {globals = List.map (fun fd -> fd.fd_ref) fds; locals = []} in
     Dfix
       (List.map
          (fun fd ->
            if loopified ~methods fd then
-             {fd with fd_body = scope ~group_call:(group_call group) fd.fd_body}
+             {fd with fd_body = scope ~group ~depth:0 fd.fd_body}
            else fd )
          fds )
+  | Dterm (r, body, ty) when Table.should_loopify r ->
+    (* No recursion of its own, but a local fixpoint in it is loopified. *)
+    Dterm (r, scope ~group:{globals = []; locals = []} ~depth:0 body, ty)
   | d -> d
 
 let rec structure_elems ~methods sel =
