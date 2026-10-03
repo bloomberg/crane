@@ -850,6 +850,10 @@ val reset_extraction_reuse : unit -> unit
     open).  True for every type except those opted out via [Crane NoArena]. *)
 val should_use_arena_at_runtime : GlobRef.t -> bool
 
+(** Whether [Set Crane FastVariant] is in effect: inductives' alternatives in
+    [crane::variant] rather than [std::variant].  Never in the BDE flavor. *)
+val fast_variant : unit -> bool
+
 (** Whether non-atomic reference counting ([crane::rc]) is in effect for this
     unit, swapping [std::shared_ptr]/[std::make_shared] for
     [crane::rc]/[crane::make_rc].  This is the resolved answer, not the raw

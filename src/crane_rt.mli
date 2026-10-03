@@ -95,6 +95,10 @@ val itree_header : string  (** [crane_itree.h] -- reified interaction trees. *)
 
 val rebind : string  (** [crane::rebind_t], a plain carrier read at an element *)
 
+val variant : string  (** [crane::variant], the tagged union of [Crane FastVariant] *)
+
+val variant_header : string  (** [crane_variant.h] -- {!variant}. *)
+
 val fn_header : string
 (** [fn.h], the header declaring {!fn}; demanded by the type printer. *)
 

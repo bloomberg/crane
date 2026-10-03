@@ -278,12 +278,9 @@ let spell_double (x : float) : string =
   else if x = Float.neg_infinity then "-__builtin_inf()"
   else Printf.sprintf "%h" x
 
-(** Print a qualified standard-library angle-bracket type: [std::label<s>].
-
-    @param label  the identifier after [std::] (e.g. ["variant"], ["function"])
-    @param s      the pre-rendered type argument list *)
-let std_angle label s =
-  str (sn ()).ns ++ str "::" ++ str label ++ str "<" ++ s ++ str ">"
+(** Demand the header declaring the tagged union an inductive's alternatives
+    are stored in, and its accessors. *)
+let require_variant () = require_header (sn ()).variant_header
 
 (** Print an unqualified angle-bracket type: [label<s>].
 
@@ -1135,8 +1132,8 @@ let rec pp_cpp_type ?(lead = true) par vl t =
         (if dependent_member then leading_typename else mt ())
         ++ head_pp ++ str "<" ++ pp_list (pp_rec false) args ++ str ">" )
     | Tvariant tys ->
-      require_header "variant";
-      std_angle "variant" (pp_list (pp_rec false) tys)
+      require_variant ();
+      cpp_angle (sn ()).variant (pp_list (pp_rec false) tys)
     | Tshared_ptr t ->
       require_header "memory";
       cpp_angle (sn ()).shared_ptr (pp_rec false t)
@@ -1888,7 +1885,7 @@ and pp_cpp_expr env args t =
              | [Sreturn (Some _)] -> true
              | _ -> false )
       | _ -> false ) ->
-    require_header "variant";
+    require_variant ();
     let pp = pp_cpp_expr env args in
     let cond_pp, then_e, else_e =
       match branches, wildcard with
@@ -2261,15 +2258,15 @@ and pp_cpp_expr env args t =
   | CPPbraced es ->
     str "{" ++ pp_list (pp_cpp_expr env args) es ++ str "}"
   | CPPstd_get (ty, None) ->
-    require_header "variant";
+    require_variant ();
     str ((sn ()).get ^ "<") ++ pp_cpp_type false [] ty ++ str ">"
   | CPPstd_get (ty, Some e) ->
-    require_header "variant";
+    require_variant ();
     str ((sn ()).get ^ "<") ++ pp_cpp_type false [] ty ++ str ">("
     ++ pp_cpp_expr env args e
     ++ str ")"
   | CPPstd_holds_alternative ty ->
-    require_header "variant";
+    require_variant ();
     str ((sn ()).holds_alternative ^ "<") ++ pp_cpp_type false [] ty ++ str ">"
   | CPPdeclval ty ->
     require_header "utility";
@@ -2411,7 +2408,7 @@ and pp_cpp_expr env args t =
     ++ pp_cpp_expr env args e
     ++ str ")"
   | CPPstd_get_if (ty, e) ->
-    require_header "variant";
+    require_variant ();
     str ((sn ()).get_if ^ "<") ++ pp_cpp_type false [] ty ++ str ">("
     ++ pp_cpp_expr env args e ++ str ")"
 
@@ -2689,7 +2686,7 @@ and pp_cpp_stmt env args = function
       []
       cmds
   | Smatch (scrut, branches, default) ->
-    require_header "variant";
+    require_variant ();
     (* Print an if/else-if chain using [std::holds_alternative] for
        discrimination, then structured bindings via [std::get]:
 

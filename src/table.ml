@@ -2253,6 +2253,20 @@ let reset_extraction_reuse () = Lib.add_leaf (reset_reuse ())
 let {Goptions.get = non_atomic_rc_requested} =
   declare_bool_option_and_ref ~key:["Crane"; "NonAtomicRc"] ~value:false ()
 
+(* --- Tagged unions ---------------------------------------------------- *)
+
+(* [Set Crane FastVariant] stores an inductive's alternatives in
+   [crane::variant] (crane_variant.h) rather than [std::variant]: the same
+   interface, with copies, moves and destructions as inline switches instead
+   of libc++'s dispatch tables.  Opt-in, because an extracted type's [v()]
+   then answers to [crane::holds_alternative]/[crane::get]/[crane::get_if],
+   and code matching on it with the [std::] functions has to follow.  The BDE
+   flavor keeps [bsl::variant]. *)
+let {Goptions.get = fast_variant_requested} =
+  declare_bool_option_and_ref ~key:["Crane"; "FastVariant"] ~value:false ()
+
+let fast_variant () = fast_variant_requested () && not (String.equal (std_lib ()) "BDE")
+
 (* --- Last-use moves --------------------------------------------------- *)
 
 (* [Last_use] rewrites a local's final read as [std::move], removing a

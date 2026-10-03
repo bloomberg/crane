@@ -353,15 +353,19 @@ struct taken {
 // straight-line; the branch lives here.
 //
 // Precondition: [node] currently holds alternative [Ctor].
+//
+// [get] is found by argument-dependent lookup, so the node's alternatives may
+// be a [std::variant] or a [crane::variant] (Crane FastVariant).
 template <typename Ctor, typename T>
 taken<Ctor, T> take_for_reuse(T& node, rc<T>& own, bool& uniq) {
+    using std::get;
     if (uniq && (!own || rc_unique(own)))
-        return { Ctor(std::move(std::get<Ctor>(node.v_mut()))), std::move(own) };
+        return { Ctor(std::move(get<Ctor>(node.v_mut()))), std::move(own) };
     uniq = false;
     // [own] is left alone: it may be the handle keeping [node] alive (uniq can
     // already be false from a shallower cell), and the caller overwrites it
     // with the next cell immediately after this returns.
-    return { Ctor(std::get<Ctor>(node.v())), rc<T>() };
+    return { Ctor(get<Ctor>(node.v())), rc<T>() };
 }
 
 // The same decision, for a loop that keeps the read-only structured binding it

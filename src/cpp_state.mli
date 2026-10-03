@@ -309,6 +309,8 @@ type std_names = {
   holds_alternative : string;
   get_if : string;
   get : string;
+  variant : string;  (** the tagged union inductives store alternatives in *)
+  variant_header : string;  (** the header declaring {!variant} *)
   enable_from_this : string;
 }
 

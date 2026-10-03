@@ -458,6 +458,17 @@
   (deps add_one.t.exe)
   (action (run ./add_one.t.exe))))
 
+(subdir fast_variant
+ (rule
+  (targets fast_variant.t.exe)
+  (deps FastVariant.vo fast_variant.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fast_variant.t.exe fast_variant.cpp fast_variant.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps fast_variant.t.exe)
+  (action (run ./fast_variant.t.exe))))
+
 (subdir record_apply
  (rule
   (targets record_apply.t.exe)

@@ -687,6 +687,8 @@ type std_names = {
   holds_alternative : string; (* "std::holds_alternative" or "bsl::holds_alternative" *)
   get_if : string; (* "std::get_if" or "bsl::get_if" *)
   get : string; (* "std::get" or "bsl::get" *)
+  variant : string; (* "std::variant", "bsl::variant" or "crane::variant" *)
+  variant_header : string; (* the header [variant] is declared in *)
   enable_from_this : string; (* enable_shared_from_this base, or crane::enable_rc_from_this *)
 }
 
@@ -705,6 +707,8 @@ let default_std_names =
     holds_alternative = "std::holds_alternative";
     get_if = "std::get_if";
     get = "std::get";
+    variant = "std::variant";
+    variant_header = "variant";
     enable_from_this = "std::enable_shared_from_this";
   }
 
@@ -723,6 +727,7 @@ let mk_std_names prefix =
       convertible_to = "convertible_to";
       holds_alternative = p ^ "holds_alternative";
       get_if = p ^ "get_if"; get = p ^ "get";
+      variant = p ^ "variant"; variant_header = "variant";
       enable_from_this = p ^ "enable_shared_from_this" }
   | _ -> default_std_names
 
@@ -735,6 +740,18 @@ let init_std_names () =
   (* [Crane NonAtomicRc]: swap the recursive-field smart pointer to the
      single-threaded, non-atomic [crane::rc] (with a matching from-this base).
      Namespace-neutral, so it overrides both the std and BDE flavors. *)
+  (* [Crane FastVariant]: alternatives in [crane::variant], and the matching
+     accessors. *)
+  let base =
+    if Table.fast_variant () then
+      { base with
+        variant = Crane_rt.variant;
+        variant_header = Crane_rt.variant_header;
+        holds_alternative = "crane::holds_alternative";
+        get_if = "crane::get_if";
+        get = "crane::get" }
+    else base
+  in
   std_names :=
     (* [CRANE_COUNT_RC]: measurement build -- every shared pointer becomes the
        counting one.  [enable_from_this] stays as it is: [shared_from_this ()]

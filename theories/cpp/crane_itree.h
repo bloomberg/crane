@@ -282,10 +282,13 @@ auto itree_tau(std::shared_ptr<ITree<R>> next) {
 // The sum is whatever Crane generated for `I + R` in the caller's file, so it
 // is read through the shape every Crane variant has -- `v()`, a nested `Inl`
 // and `Inr` -- and its payloads through structured bindings, which do not
-// depend on the field's name.
+// depend on the field's name.  The accessors are found by argument-dependent
+// lookup: the Sum's alternatives may be a std::variant or a crane::variant
+// (Crane FastVariant).
 template<typename Sum>
 auto itree_iter_rhs(const Sum &s) {
-    const auto &[r] = *std::get_if<typename Sum::Inr>(&s.v());
+    using std::get_if;
+    const auto &[r] = *get_if<typename Sum::Inr>(&s.v());
     return r;
 }
 
@@ -299,8 +302,10 @@ auto itree_iter(Step step, I i)
         step(i),
         crane::fn<std::shared_ptr<ITree<R>>(Sum)>(
             [step](const Sum &s) -> std::shared_ptr<ITree<R>> {
-                if (std::holds_alternative<typename Sum::Inl>(s.v())) {
-                    const auto &[next] = *std::get_if<typename Sum::Inl>(&s.v());
+                using std::get_if;
+                using std::holds_alternative;
+                if (holds_alternative<typename Sum::Inl>(s.v())) {
+                    const auto &[next] = *get_if<typename Sum::Inl>(&s.v());
                     return ITree<R>::delay(
                         [step, next]() { return itree_iter(step, next); });
                 }

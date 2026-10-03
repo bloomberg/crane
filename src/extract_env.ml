@@ -805,6 +805,12 @@ let spec_header ?(unit_includes = []) si () =
     else
       h
   in
+  let h =
+    if Table.demanded Crane_rt.variant_header then
+      h ++ mk_include_quoted Crane_rt.variant_header ++ fnl ()
+    else
+      h
+  in
   (* An erased type is written [crane::obj], and every erasure demands
      [<any>] on the way. *)
   let h =

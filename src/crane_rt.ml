@@ -27,6 +27,8 @@ let lazy_header = "lazy.h"
 let erasure_header = "crane_fn.h"
 let itree_header = "crane_itree.h"
 let rebind = "crane::rebind_t"
+let variant = "crane::variant"
+let variant_header = "crane_variant.h"
 
 (* [CRANE_COUNT_RC]: the measurement-only counting shared pointer (count_rc.h). *)
 let counting_ptr = "crane::counting_ptr"
