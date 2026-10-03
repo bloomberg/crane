@@ -113,10 +113,8 @@ uint64_t LoopifyConditionalRecursion::nested_cond(
     const List<uint64_t> *l;
   };
 
-  /// _Cont1: saves [_s0], resumes after recursive call, then processes rest.
-  struct _Cont1 {
-    bool _s0;
-  };
+  /// _Cont1: resumes after recursive call, then processes rest.
+  struct _Cont1 {};
 
   using _Frame = std::variant<_Enter, _Cont1>;
   uint64_t _result{};
@@ -143,7 +141,7 @@ uint64_t LoopifyConditionalRecursion::nested_cond(
             }
           } else {
             if (a0 <= threshold) {
-              _stack.emplace_back(_Cont1{false});
+              _stack.emplace_back(_Cont1{});
               _stack.emplace_back(_Enter{crane_raw(a1)});
             } else {
               sub = std::make_pair(UINT64_C(0), true);
@@ -163,7 +161,7 @@ uint64_t LoopifyConditionalRecursion::nested_cond(
       }
     } else {
       auto _f = std::move(std::get<_Cont1>(_frame));
-      auto sub = std::make_pair(std::move(_result), _f._s0);
+      std::pair<uint64_t, bool> sub = std::make_pair(std::move(_result), false);
       _result =
           (sub.first + (std::move(sub).second ? UINT64_C(1) : UINT64_C(0)));
     }

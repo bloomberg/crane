@@ -23,16 +23,17 @@ LoopifyMutualResultTypes::e LoopifyMutualResultTypes::dbl_e(
     std::shared_ptr<LoopifyMutualResultTypes::e> b0;
   };
 
-  /// _Resume_Add: saves [_tmp1], resumes after recursive call with _result.
-  struct _Resume_Add {
-    LoopifyMutualResultTypes::e _tmp1;
+  /// _Cont_Add_1: saves [_tmp2], resumes after recursive call, then processes
+  /// rest.
+  struct _Cont_Add_1 {
+    LoopifyMutualResultTypes::e _tmp2;
   };
 
-  using _Frame = std::variant<_Enter, _Cont_Add, _Resume_Add>;
+  using _Frame = std::variant<_Enter, _Cont_Add, _Cont_Add_1>;
   LoopifyMutualResultTypes::e _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{x});
-  /// Loopified dbl_e: _Enter -> _Cont_Add -> _Resume_Add.
+  /// Loopified dbl_e: _Enter -> _Cont_Add -> _Cont_Add_1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -64,24 +65,26 @@ LoopifyMutualResultTypes::e LoopifyMutualResultTypes::dbl_e(
             const auto &[_inl_x0] =
                 std::get<typename LoopifyMutualResultTypes::md::MConst>(
                     _inl_m.v());
-            return md::mconst(dbl_e(*_inl_x0));
+            LoopifyMutualResultTypes::e _inl__tmp1 = dbl_e(*_inl_x0);
+            return md::mconst(std::move(_inl__tmp1));
           } else {
             const auto &[_inl_a0, _inl_b0] =
                 std::get<typename LoopifyMutualResultTypes::md::MPair>(
                     _inl_m.v());
-            LoopifyMutualResultTypes::md _inl__tmp1 = dbl_md(*_inl_a0);
-            return md::mpair(std::move(_inl__tmp1), dbl_md(*_inl_b0));
+            LoopifyMutualResultTypes::md _inl__tmp3 = dbl_md(*_inl_a0);
+            LoopifyMutualResultTypes::md _inl__tmp2 = dbl_md(*_inl_b0);
+            return md::mpair(std::move(_inl__tmp3), std::move(_inl__tmp2));
           }
         }(*m0));
       }
     } else if (std::holds_alternative<_Cont_Add>(_frame)) {
       auto _f = std::move(std::get<_Cont_Add>(_frame));
       std::shared_ptr<LoopifyMutualResultTypes::e> b0 = std::move(_f.b0);
-      _stack.emplace_back(_Resume_Add{std::move(_result)});
+      _stack.emplace_back(_Cont_Add_1{std::move(_result)});
       _stack.emplace_back(_Enter{*b0});
     } else {
-      auto _f = std::move(std::get<_Resume_Add>(_frame));
-      _result = e::add(std::move(_f._tmp1), std::move(_result));
+      auto _f = std::move(std::get<_Cont_Add_1>(_frame));
+      _result = e::add(std::move(_f._tmp2), std::move(_result));
     }
   }
   return _result;
@@ -101,16 +104,17 @@ LoopifyMutualResultTypes::md LoopifyMutualResultTypes::dbl_md(
     std::shared_ptr<LoopifyMutualResultTypes::md> b0;
   };
 
-  /// _Resume_MPair: saves [_tmp1], resumes after recursive call with _result.
-  struct _Resume_MPair {
-    LoopifyMutualResultTypes::md _tmp1;
+  /// _Cont_MPair_1: saves [_tmp3], resumes after recursive call, then processes
+  /// rest.
+  struct _Cont_MPair_1 {
+    LoopifyMutualResultTypes::md _tmp3;
   };
 
-  using _Frame = std::variant<_Enter, _Cont_MPair, _Resume_MPair>;
+  using _Frame = std::variant<_Enter, _Cont_MPair, _Cont_MPair_1>;
   LoopifyMutualResultTypes::md _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{m});
-  /// Loopified dbl_md: _Enter -> _Cont_MPair -> _Resume_MPair.
+  /// Loopified dbl_md: _Enter -> _Cont_MPair -> _Cont_MPair_1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -137,13 +141,15 @@ LoopifyMutualResultTypes::md LoopifyMutualResultTypes::dbl_md(
                          _inl_x.v())) {
             const auto &[_inl_a0, _inl_b0] =
                 std::get<typename LoopifyMutualResultTypes::e::Add>(_inl_x.v());
-            LoopifyMutualResultTypes::e _inl__tmp1 = dbl_e(*_inl_a0);
-            return e::add(std::move(_inl__tmp1), dbl_e(*_inl_b0));
+            LoopifyMutualResultTypes::e _inl__tmp2 = dbl_e(*_inl_a0);
+            LoopifyMutualResultTypes::e _inl__tmp1 = dbl_e(*_inl_b0);
+            return e::add(std::move(_inl__tmp2), std::move(_inl__tmp1));
           } else {
             const auto &[_inl_m0] =
                 std::get<typename LoopifyMutualResultTypes::e::Meta>(
                     _inl_x.v());
-            return e::meta(dbl_md(*_inl_m0));
+            LoopifyMutualResultTypes::md _inl__tmp3 = dbl_md(*_inl_m0);
+            return e::meta(std::move(_inl__tmp3));
           }
         }(*x0));
       } else {
@@ -155,11 +161,11 @@ LoopifyMutualResultTypes::md LoopifyMutualResultTypes::dbl_md(
     } else if (std::holds_alternative<_Cont_MPair>(_frame)) {
       auto _f = std::move(std::get<_Cont_MPair>(_frame));
       std::shared_ptr<LoopifyMutualResultTypes::md> b0 = std::move(_f.b0);
-      _stack.emplace_back(_Resume_MPair{std::move(_result)});
+      _stack.emplace_back(_Cont_MPair_1{std::move(_result)});
       _stack.emplace_back(_Enter{*b0});
     } else {
-      auto _f = std::move(std::get<_Resume_MPair>(_frame));
-      _result = md::mpair(std::move(_f._tmp1), std::move(_result));
+      auto _f = std::move(std::get<_Cont_MPair_1>(_frame));
+      _result = md::mpair(std::move(_f._tmp3), std::move(_result));
     }
   }
   return _result;

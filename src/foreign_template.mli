@@ -32,6 +32,11 @@ type drain_token = Drain_text of string | Drain_yield of string
 (** The tokens of a container's [Drain "..."] template. *)
 val drain_template : string -> drain_token list
 
+(** [Some i] when a term template is its value argument [i] and nothing
+    else ([%a0]): the mapped term is that argument, in whatever position the
+    term itself stands. *)
+val passes_through : string -> int option
+
 (** Whether a term template is a pair projection: [%a0.first] or
     [%a0.second]. *)
 val is_pair_projection : string -> bool

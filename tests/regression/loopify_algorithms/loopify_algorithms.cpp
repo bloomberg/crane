@@ -9,14 +9,14 @@ uint64_t LoopifyAlgorithms::len_impl(
     const List<uint64_t> *l;
   };
 
-  /// _Resume_Cons: resumes after recursive call with _result.
-  struct _Resume_Cons {};
+  /// _Cont_Cons: resumes after recursive call, then processes rest.
+  struct _Cont_Cons {};
 
-  using _Frame = std::variant<_Enter, _Resume_Cons>;
+  using _Frame = std::variant<_Enter, _Cont_Cons>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
-  /// Loopified len_impl: _Enter -> _Resume_Cons.
+  /// Loopified len_impl: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -27,11 +27,11 @@ uint64_t LoopifyAlgorithms::len_impl(
         _result = UINT64_C(0);
       } else {
         const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-        _stack.emplace_back(_Resume_Cons{});
+        _stack.emplace_back(_Cont_Cons{});
         _stack.emplace_back(_Enter{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<_Resume_Cons>(_frame));
+      auto _f = std::move(std::get<_Cont_Cons>(_frame));
       _result = (std::move(_result) + 1);
     }
   }
@@ -64,15 +64,16 @@ List<uint64_t> LoopifyAlgorithms::sieve_fuel(uint64_t fuel, List<uint64_t> l) {
           struct _Enter {
             const List<uint64_t> *rest;
           };
-          /// _Resume1: saves [a00], resumes after recursive call with _result.
-          struct _Resume1 {
+          /// _Cont1: saves [a00], resumes after recursive call, then processes
+          /// rest.
+          struct _Cont1 {
             uint64_t a00;
           };
-          using _Frame = std::variant<_Enter, _Resume1>;
+          using _Frame = std::variant<_Enter, _Cont1>;
           List<uint64_t> _result{};
           crane::small_vector<_Frame> _stack;
           _stack.emplace_back(_Enter{&rest});
-          /// Loopified filter_multiples: _Enter -> _Resume1.
+          /// Loopified filter_multiples: _Enter -> _Cont1.
           while (!_stack.empty()) {
             _Frame _frame = std::move(_stack.back());
             _stack.pop_back();
@@ -88,13 +89,14 @@ List<uint64_t> LoopifyAlgorithms::sieve_fuel(uint64_t fuel, List<uint64_t> l) {
                 if ((p ? a00 % p : a00) == UINT64_C(0)) {
                   _stack.emplace_back(_Enter{crane_raw(a10)});
                 } else {
-                  _stack.emplace_back(_Resume1{a00});
+                  _stack.emplace_back(_Cont1{a00});
                   _stack.emplace_back(_Enter{crane_raw(a10)});
                 }
               }
             } else {
-              auto _f = std::move(std::get<_Resume1>(_frame));
-              _result = List<uint64_t>::cons(_f.a00, std::move(_result));
+              auto _f = std::move(std::get<_Cont1>(_frame));
+              uint64_t a00 = _f.a00;
+              _result = List<uint64_t>::cons(a00, std::move(_result));
             }
           }
           return _result;
@@ -104,7 +106,7 @@ List<uint64_t> LoopifyAlgorithms::sieve_fuel(uint64_t fuel, List<uint64_t> l) {
           return filter_multiples_impl(filter_multiples_impl, p, rest);
         };
         auto _cell = std::make_shared<List<uint64_t>>(
-            typename List<uint64_t>::Cons(a0, nullptr));
+            typename List<uint64_t>::Cons(std::move(a0), nullptr));
         *_write = std::move(_cell);
         _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
         _loop_l = filter_multiples(a0, *a1);
@@ -304,15 +306,16 @@ List<uint64_t> LoopifyAlgorithms::nub_aux(const List<uint64_t> &l,
           struct _Enter {
             const List<uint64_t> *rest;
           };
-          /// _Resume1: saves [a00], resumes after recursive call with _result.
-          struct _Resume1 {
+          /// _Cont1: saves [a00], resumes after recursive call, then processes
+          /// rest.
+          struct _Cont1 {
             uint64_t a00;
           };
-          using _Frame = std::variant<_Enter, _Resume1>;
+          using _Frame = std::variant<_Enter, _Cont1>;
           List<uint64_t> _result{};
           crane::small_vector<_Frame> _stack;
           _stack.emplace_back(_Enter{&rest});
-          /// Loopified filter_out: _Enter -> _Resume1.
+          /// Loopified filter_out: _Enter -> _Cont1.
           while (!_stack.empty()) {
             _Frame _frame = std::move(_stack.back());
             _stack.pop_back();
@@ -328,13 +331,14 @@ List<uint64_t> LoopifyAlgorithms::nub_aux(const List<uint64_t> &l,
                 if (val == a00) {
                   _stack.emplace_back(_Enter{crane_raw(a10)});
                 } else {
-                  _stack.emplace_back(_Resume1{a00});
+                  _stack.emplace_back(_Cont1{a00});
                   _stack.emplace_back(_Enter{crane_raw(a10)});
                 }
               }
             } else {
-              auto _f = std::move(std::get<_Resume1>(_frame));
-              _result = List<uint64_t>::cons(_f.a00, std::move(_result));
+              auto _f = std::move(std::get<_Cont1>(_frame));
+              uint64_t a00 = _f.a00;
+              _result = List<uint64_t>::cons(a00, std::move(_result));
             }
           }
           return _result;

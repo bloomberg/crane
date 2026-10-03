@@ -1048,6 +1048,29 @@ and has_recursive_branch_dependency check stmts =
       | _ -> false)
     stmts
 
+(** [expose_tail_calls check body] is [body] with each returned conditional or
+    short-circuit expression whose conditionally evaluated operand holds a
+    recursive call written as the [if] it stands for: [return c ? a : b] as
+    [if (c) return a; else return b;], [return a || b] as
+    [if (a) return true; else return b;], [return a && b] as
+    [if (a) return b; else return false;].  A call there is a tail call, and
+    in statement form the transforms see it as one rather than as a call
+    nested in an expression.  Lambdas are left to their own transform. *)
+let rec expose_tail_calls check stmts = List.map (expose_stmt check) stmts
+
+and expose_stmt check = function
+  | Sreturn (Some e) -> expose_return check e
+  | s -> map_stmt ~fl:(expose_tail_calls check) Fun.id (expose_stmt check) Fun.id s
+
+and expose_return check e =
+  let holds e = count_calls_expr check e > 0 in
+  let return e = expose_return check e in
+  match e with
+  | CPPcond (c, a, b) when holds a || holds b -> Sif (c, [return a], [return b])
+  | CPPbinop (Bor, a, b) when holds b -> Sif (a, [Sreturn (Some (CPPbool true))], [return b])
+  | CPPbinop (Band, a, b) when holds b -> Sif (a, [return b], [Sreturn (Some (CPPbool false))])
+  | _ -> Sreturn (Some e)
+
 (** Classify a function body's recursion pattern. Collects all recursive call
     sites and checks whether they are all in tail position, some non-tail, or
     none at all.

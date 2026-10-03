@@ -18,16 +18,14 @@ TmcNestedCtorWrap::rose TmcNestedCtorWrap::spine(
     const Nat *n;
   };
 
-  /// _Resume_S: saves [_s0], resumes after recursive call with _result.
-  struct _Resume_S {
-    List<TmcNestedCtorWrap::rose> _s0;
-  };
+  /// _Cont_S: resumes after recursive call, then processes rest.
+  struct _Cont_S {};
 
-  using _Frame = std::variant<_Enter, _Resume_S>;
+  using _Frame = std::variant<_Enter, _Cont_S>;
   TmcNestedCtorWrap::rose _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&n});
-  /// Loopified spine: _Enter -> _Resume_S.
+  /// Loopified spine: _Enter -> _Cont_S.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -38,13 +36,13 @@ TmcNestedCtorWrap::rose TmcNestedCtorWrap::spine(
         _result = rose::rnode(List<TmcNestedCtorWrap::rose>::nil());
       } else {
         const auto &[a0] = std::get<typename Nat::S>(n.v());
-        _stack.emplace_back(_Resume_S{List<TmcNestedCtorWrap::rose>::nil()});
+        _stack.emplace_back(_Cont_S{});
         _stack.emplace_back(_Enter{crane_raw(a0)});
       }
     } else {
-      auto _f = std::move(std::get<_Resume_S>(_frame));
+      auto _f = std::move(std::get<_Cont_S>(_frame));
       _result = rose::rnode(List<TmcNestedCtorWrap::rose>::cons(
-          std::move(_result), std::move(_f._s0)));
+          std::move(_result), List<TmcNestedCtorWrap::rose>::nil()));
     }
   }
   return _result;

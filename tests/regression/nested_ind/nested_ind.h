@@ -594,34 +594,42 @@ struct NestedInd {
           _result = expr::lit(f(a0));
         } else if (std::holds_alternative<typename expr::Add>(_sv.v())) {
           const auto &[a0] = std::get<typename expr::Add>(_sv.v());
+          List<expr> _tmp3;
           auto aux_impl = [&](auto &_self_aux,
                               const List<expr> &l) -> List<expr> {
             if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
               return List<expr>::nil();
             } else {
-              const auto &[a1, a2] = std::get<typename List<expr>::Cons>(l.v());
-              return List<expr>::cons(a1.lit_map(f), _self_aux(_self_aux, *a2));
+              const auto &[a00, a10] =
+                  std::get<typename List<expr>::Cons>(l.v());
+              return List<expr>::cons(a00.lit_map(f),
+                                      _self_aux(_self_aux, *a10));
             }
           };
           auto aux = [&](const List<expr> &l) -> List<expr> {
             return aux_impl(aux_impl, l);
           };
-          _result = expr::add(aux(*a0));
+          _tmp3 = aux(*a0);
+          _result = expr::add(std::move(_tmp3));
         } else {
           const auto &[a0] = std::get<typename expr::Mul>(_sv.v());
+          List<expr> _tmp6;
           auto aux_impl = [&](auto &_self_aux,
                               const List<expr> &l) -> List<expr> {
             if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
               return List<expr>::nil();
             } else {
-              const auto &[a1, a2] = std::get<typename List<expr>::Cons>(l.v());
-              return List<expr>::cons(a1.lit_map(f), _self_aux(_self_aux, *a2));
+              const auto &[a00, a10] =
+                  std::get<typename List<expr>::Cons>(l.v());
+              return List<expr>::cons(a00.lit_map(f),
+                                      _self_aux(_self_aux, *a10));
             }
           };
           auto aux = [&](const List<expr> &l) -> List<expr> {
             return aux_impl(aux_impl, l);
           };
-          _result = expr::mul(aux(*a0));
+          _tmp6 = aux(*a0);
+          _result = expr::mul(std::move(_tmp6));
         }
       }
       return _result;
@@ -709,32 +717,38 @@ struct NestedInd {
           _result = UINT64_C(0);
         } else if (std::holds_alternative<typename expr::Add>(_sv.v())) {
           const auto &[a0] = std::get<typename expr::Add>(_sv.v());
+          uint64_t _tmp3;
           auto aux_impl = [](auto &_self_aux, const List<expr> &l) -> uint64_t {
             if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
               return UINT64_C(0);
             } else {
-              const auto &[a1, a2] = std::get<typename List<expr>::Cons>(l.v());
-              return std::max(a1.expr_depth(), _self_aux(_self_aux, *a2));
+              const auto &[a00, a10] =
+                  std::get<typename List<expr>::Cons>(l.v());
+              return std::max(a00.expr_depth(), _self_aux(_self_aux, *a10));
             }
           };
           auto aux = [&](const List<expr> &l) -> uint64_t {
             return aux_impl(aux_impl, l);
           };
-          _result = (aux(*a0) + 1);
+          _tmp3 = aux(*a0);
+          _result = (_tmp3 + 1);
         } else {
           const auto &[a0] = std::get<typename expr::Mul>(_sv.v());
+          uint64_t _tmp6;
           auto aux_impl = [](auto &_self_aux, const List<expr> &l) -> uint64_t {
             if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
               return UINT64_C(0);
             } else {
-              const auto &[a1, a2] = std::get<typename List<expr>::Cons>(l.v());
-              return std::max(a1.expr_depth(), _self_aux(_self_aux, *a2));
+              const auto &[a00, a10] =
+                  std::get<typename List<expr>::Cons>(l.v());
+              return std::max(a00.expr_depth(), _self_aux(_self_aux, *a10));
             }
           };
           auto aux = [&](const List<expr> &l) -> uint64_t {
             return aux_impl(aux_impl, l);
           };
-          _result = (aux(*a0) + 1);
+          _tmp6 = aux(*a0);
+          _result = (_tmp6 + 1);
         }
       }
       return _result;
@@ -763,32 +777,38 @@ struct NestedInd {
           _result = UINT64_C(1);
         } else if (std::holds_alternative<typename expr::Add>(_sv.v())) {
           const auto &[a0] = std::get<typename expr::Add>(_sv.v());
+          uint64_t _tmp3;
           auto aux_impl = [](auto &_self_aux, const List<expr> &l) -> uint64_t {
             if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
               return UINT64_C(0);
             } else {
-              const auto &[a1, a2] = std::get<typename List<expr>::Cons>(l.v());
-              return (a1.expr_size() + _self_aux(_self_aux, *a2));
+              const auto &[a00, a10] =
+                  std::get<typename List<expr>::Cons>(l.v());
+              return (a00.expr_size() + _self_aux(_self_aux, *a10));
             }
           };
           auto aux = [&](const List<expr> &l) -> uint64_t {
             return aux_impl(aux_impl, l);
           };
-          _result = (aux(*a0) + 1);
+          _tmp3 = aux(*a0);
+          _result = (_tmp3 + 1);
         } else {
           const auto &[a0] = std::get<typename expr::Mul>(_sv.v());
+          uint64_t _tmp6;
           auto aux_impl = [](auto &_self_aux, const List<expr> &l) -> uint64_t {
             if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
               return UINT64_C(0);
             } else {
-              const auto &[a1, a2] = std::get<typename List<expr>::Cons>(l.v());
-              return (a1.expr_size() + _self_aux(_self_aux, *a2));
+              const auto &[a00, a10] =
+                  std::get<typename List<expr>::Cons>(l.v());
+              return (a00.expr_size() + _self_aux(_self_aux, *a10));
             }
           };
           auto aux = [&](const List<expr> &l) -> uint64_t {
             return aux_impl(aux_impl, l);
           };
-          _result = (aux(*a0) + 1);
+          _tmp6 = aux(*a0);
+          _result = (_tmp6 + 1);
         }
       }
       return _result;

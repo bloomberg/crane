@@ -253,15 +253,18 @@ struct LoopifyGenerators {
       struct _Enter {
         uint64_t i;
       };
-      /// _Resume_j: saves [_s0], resumes after recursive call with _result.
-      struct _Resume_j {
-        uint64_t _s0;
+      /// _Cont_j: saves [f, i, n], resumes after recursive call, then processes
+      /// rest.
+      struct _Cont_j {
+        crane::fn<uint64_t(uint64_t)> f;
+        uint64_t i;
+        uint64_t n;
       };
-      using _Frame = std::variant<_Enter, _Resume_j>;
+      using _Frame = std::variant<_Enter, _Cont_j>;
       List<uint64_t> _result{};
       crane::small_vector<_Frame> _stack;
       _stack.emplace_back(_Enter{i});
-      /// Loopified go: _Enter -> _Resume_j.
+      /// Loopified go: _Enter -> _Cont_j.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -272,12 +275,16 @@ struct LoopifyGenerators {
             _result = List<uint64_t>::nil();
           } else {
             uint64_t j = i - 1;
-            _stack.emplace_back(_Resume_j{f((((n - i) > n ? 0 : (n - i))))});
+            _stack.emplace_back(_Cont_j{f, i, n});
             _stack.emplace_back(_Enter{j});
           }
         } else {
-          auto _f = std::move(std::get<_Resume_j>(_frame));
-          _result = List<uint64_t>::cons(_f._s0, std::move(_result));
+          auto _f = std::move(std::get<_Cont_j>(_frame));
+          crane::fn<uint64_t(uint64_t)> f = std::move(_f.f);
+          uint64_t i = _f.i;
+          uint64_t n = _f.n;
+          _result = List<uint64_t>::cons(f((((n - i) > n ? 0 : (n - i)))),
+                                         std::move(_result));
         }
       }
       return _result;

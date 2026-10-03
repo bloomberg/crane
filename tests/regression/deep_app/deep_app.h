@@ -258,14 +258,14 @@ struct DeepApp {
       const mylist<T1> *l;
     };
 
-    /// _Resume_Mycons: resumes after recursive call with _result.
-    struct _Resume_Mycons {};
+    /// _Cont_Mycons: resumes after recursive call, then processes rest.
+    struct _Cont_Mycons {};
 
-    using _Frame = std::variant<_Enter, _Resume_Mycons>;
+    using _Frame = std::variant<_Enter, _Cont_Mycons>;
     uint64_t _result{};
     crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
-    /// Loopified length: _Enter -> _Resume_Mycons.
+    /// Loopified length: _Enter -> _Cont_Mycons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -276,11 +276,11 @@ struct DeepApp {
           _result = UINT64_C(0);
         } else {
           const auto &[a0, a1] = std::get<typename mylist<T1>::Mycons>(l.v());
-          _stack.emplace_back(_Resume_Mycons{});
+          _stack.emplace_back(_Cont_Mycons{});
           _stack.emplace_back(_Enter{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<_Resume_Mycons>(_frame));
+        auto _f = std::move(std::get<_Cont_Mycons>(_frame));
         _result = (std::move(_result) + 1);
       }
     }

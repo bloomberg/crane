@@ -551,14 +551,14 @@ uint64_t LoopifyLists::len_list(
     const LoopifyLists::list<uint64_t> *l;
   };
 
-  /// _Resume_Cons: resumes after recursive call with _result.
-  struct _Resume_Cons {};
+  /// _Cont_Cons: resumes after recursive call, then processes rest.
+  struct _Cont_Cons {};
 
-  using _Frame = std::variant<_Enter, _Resume_Cons>;
+  using _Frame = std::variant<_Enter, _Cont_Cons>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
-  /// Loopified len_list: _Enter -> _Resume_Cons.
+  /// Loopified len_list: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -571,11 +571,11 @@ uint64_t LoopifyLists::len_list(
       } else {
         const auto &[a0, a1] =
             std::get<typename LoopifyLists::list<uint64_t>::Cons>(l.v());
-        _stack.emplace_back(_Resume_Cons{});
+        _stack.emplace_back(_Cont_Cons{});
         _stack.emplace_back(_Enter{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<_Resume_Cons>(_frame));
+      auto _f = std::move(std::get<_Cont_Cons>(_frame));
       _result = (std::move(_result) + 1);
     }
   }
@@ -1164,16 +1164,16 @@ LoopifyLists::list<LoopifyLists::list<uint64_t>> LoopifyLists::group_fuel(
     uint64_t a0;
   };
 
-  /// _Resume2: saves [_s0], resumes after recursive call with _result.
-  struct _Resume2 {
-    LoopifyLists::list<uint64_t> _s0;
+  /// _Cont2: saves [a0], resumes after recursive call, then processes rest.
+  struct _Cont2 {
+    uint64_t a0;
   };
 
-  using _Frame = std::variant<_Enter, _Cont1, _Resume2>;
+  using _Frame = std::variant<_Enter, _Cont1, _Cont2>;
   LoopifyLists::list<LoopifyLists::list<uint64_t>> _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l, fuel});
-  /// Loopified group_fuel: _Enter -> _Cont1 -> _Resume2.
+  /// Loopified group_fuel: _Enter -> _Cont1 -> _Cont2.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -1204,8 +1204,7 @@ LoopifyLists::list<LoopifyLists::list<uint64_t>> LoopifyLists::group_fuel(
               _stack.emplace_back(_Cont1{a0});
               _stack.emplace_back(_Enter{crane_raw(a1), f});
             } else {
-              _stack.emplace_back(
-                  _Resume2{list<uint64_t>::cons(a0, list<uint64_t>::nil())});
+              _stack.emplace_back(_Cont2{a0});
               _stack.emplace_back(_Enter{crane_raw(a1), f});
             }
           }
@@ -1230,9 +1229,10 @@ LoopifyLists::list<LoopifyLists::list<uint64_t>> LoopifyLists::group_fuel(
             list<uint64_t>::cons(a0, std::move(a01)), *a11);
       }
     } else {
-      auto _f = std::move(std::get<_Resume2>(_frame));
-      _result = list<LoopifyLists::list<uint64_t>>::cons(std::move(_f._s0),
-                                                         std::move(_result));
+      auto _f = std::move(std::get<_Cont2>(_frame));
+      uint64_t a0 = _f.a0;
+      _result = list<LoopifyLists::list<uint64_t>>::cons(
+          list<uint64_t>::cons(a0, list<uint64_t>::nil()), std::move(_result));
     }
   }
   return _result;
@@ -1650,14 +1650,14 @@ uint64_t LoopifyLists::count(
     const LoopifyLists::list<uint64_t> *l;
   };
 
-  /// _Resume1: resumes after recursive call with _result.
-  struct _Resume1 {};
+  /// _Cont1: resumes after recursive call, then processes rest.
+  struct _Cont1 {};
 
-  using _Frame = std::variant<_Enter, _Resume1>;
+  using _Frame = std::variant<_Enter, _Cont1>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
-  /// Loopified count: _Enter -> _Resume1.
+  /// Loopified count: _Enter -> _Cont1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -1671,14 +1671,14 @@ uint64_t LoopifyLists::count(
         const auto &[a0, a1] =
             std::get<typename LoopifyLists::list<uint64_t>::Cons>(l.v());
         if (x == a0) {
-          _stack.emplace_back(_Resume1{});
+          _stack.emplace_back(_Cont1{});
           _stack.emplace_back(_Enter{crane_raw(a1)});
         } else {
           _stack.emplace_back(_Enter{crane_raw(a1)});
         }
       }
     } else {
-      auto _f = std::move(std::get<_Resume1>(_frame));
+      auto _f = std::move(std::get<_Cont1>(_frame));
       _result = (std::move(_result) + 1);
     }
   }

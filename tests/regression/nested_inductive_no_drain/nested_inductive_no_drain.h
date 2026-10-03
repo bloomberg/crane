@@ -272,18 +272,20 @@ struct NestedInductiveNoDrain {
         const tree *_self = _f._self;
         auto &&_sv = *_self;
         const auto &[a0, a1] = std::get<typename tree::Node>(_sv.v());
+        uint64_t _tmp3;
         auto go0_impl = [](auto &_self_go0, const lst<tree> &m) -> uint64_t {
           if (std::holds_alternative<typename lst<tree>::Nil>(m.v())) {
             return UINT64_C(0);
           } else {
-            const auto &[a2, a3] = std::get<typename lst<tree>::Cons>(m.v());
-            return (a2.tsum() + _self_go0(_self_go0, *a3));
+            const auto &[a00, a10] = std::get<typename lst<tree>::Cons>(m.v());
+            return (a00.tsum() + _self_go0(_self_go0, *a10));
           }
         };
         auto go0 = [&](const lst<tree> &m) -> uint64_t {
           return go0_impl(go0_impl, m);
         };
-        _result = (a0 + go0(*a1));
+        _tmp3 = go0(*a1);
+        _result = (a0 + _tmp3);
       }
       return _result;
     }

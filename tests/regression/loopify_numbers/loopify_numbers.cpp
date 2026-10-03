@@ -411,17 +411,17 @@ uint64_t LoopifyNumbers::collatz_length_fuel(
     uint64_t fuel;
   };
 
-  /// _Resume1: resumes after recursive call with _result.
-  struct _Resume1 {};
+  /// _Cont1: resumes after recursive call, then processes rest.
+  struct _Cont1 {};
 
-  /// _Resume2: resumes after recursive call with _result.
-  struct _Resume2 {};
+  /// _Cont2: resumes after recursive call, then processes rest.
+  struct _Cont2 {};
 
-  using _Frame = std::variant<_Enter, _Resume1, _Resume2>;
+  using _Frame = std::variant<_Enter, _Cont1, _Cont2>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n, fuel});
-  /// Loopified collatz_length_fuel: _Enter -> _Resume1 -> _Resume2.
+  /// Loopified collatz_length_fuel: _Enter -> _Cont1 -> _Cont2.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -437,19 +437,19 @@ uint64_t LoopifyNumbers::collatz_length_fuel(
           _result = UINT64_C(0);
         } else {
           if ((UINT64_C(2) ? n % UINT64_C(2) : n) == UINT64_C(0)) {
-            _stack.emplace_back(_Resume1{});
+            _stack.emplace_back(_Cont1{});
             _stack.emplace_back(_Enter{(UINT64_C(2) ? n / UINT64_C(2) : 0), f});
           } else {
-            _stack.emplace_back(_Resume2{});
+            _stack.emplace_back(_Cont2{});
             _stack.emplace_back(_Enter{((UINT64_C(3) * n) + UINT64_C(1)), f});
           }
         }
       }
-    } else if (std::holds_alternative<_Resume1>(_frame)) {
-      auto _f = std::move(std::get<_Resume1>(_frame));
+    } else if (std::holds_alternative<_Cont1>(_frame)) {
+      auto _f = std::move(std::get<_Cont1>(_frame));
       _result = (std::move(_result) + 1);
     } else {
-      auto _f = std::move(std::get<_Resume2>(_frame));
+      auto _f = std::move(std::get<_Cont2>(_frame));
       _result = (std::move(_result) + 1);
     }
   }
@@ -829,14 +829,14 @@ uint64_t LoopifyNumbers::count_down_by_fuel(
     uint64_t fuel;
   };
 
-  /// _Resume1: resumes after recursive call with _result.
-  struct _Resume1 {};
+  /// _Cont1: resumes after recursive call, then processes rest.
+  struct _Cont1 {};
 
-  using _Frame = std::variant<_Enter, _Resume1>;
+  using _Frame = std::variant<_Enter, _Cont1>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n, fuel});
-  /// Loopified count_down_by_fuel: _Enter -> _Resume1.
+  /// Loopified count_down_by_fuel: _Enter -> _Cont1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -855,13 +855,13 @@ uint64_t LoopifyNumbers::count_down_by_fuel(
           if (n < k) {
             _result = UINT64_C(1);
           } else {
-            _stack.emplace_back(_Resume1{});
+            _stack.emplace_back(_Cont1{});
             _stack.emplace_back(_Enter{(((n - k) > n ? 0 : (n - k))), f});
           }
         }
       }
     } else {
-      auto _f = std::move(std::get<_Resume1>(_frame));
+      auto _f = std::move(std::get<_Cont1>(_frame));
       _result = (std::move(_result) + 1);
     }
   }

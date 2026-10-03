@@ -47,9 +47,10 @@
        - {!transform_tail} for tail recursion → while loop with shadow vars
        - {!transform_nontail} for non-tail → frame-based stack
 
-    3. {b Decomposition}: {!Normalize} binds recursive calls in evaluation
-       order before translation, so an expression holds at most one, taken
-       apart by {!decompose_single_call}
+    3. {b Normalized input}: {!Normalize} binds every non-tail recursive call
+       in evaluation order before translation, so the transforms meet each
+       one as a statement; tail modulo cons reads the body with those
+       bindings put back ({!Cpp_temporaries.own_stmts})
 
     4. {b Frame Generation}: Create typed frame structs ([_Enter], [_ResumeN],
        etc.) and a dispatch loop that tests the popped frame with
@@ -524,6 +525,7 @@ let loopify_inner_lambdas ~tparams ?(outer_env = []) body =
   let try_loopify_lambda id lparams ret_ty_opt lbody cap =
     let lparams = to_reversed lparams in
     let check = lambda_checker id in
+    let lbody = expose_tail_calls check lbody in
     match classify check lbody with
     | No_recursion -> None
     | (Tail_recursion | Nontail_recursion) as kind ->
@@ -577,6 +579,7 @@ let loopify_inner_lambdas ~tparams ?(outer_env = []) body =
     | None -> None
     | Some self_id -> (
       let check = self_checker self_id in
+      let lbody = expose_tail_calls check lbody in
       match classify check lbody with
       | No_recursion -> None
       | (Tail_recursion | Nontail_recursion) as kind ->
@@ -947,7 +950,11 @@ let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted check
      is a limitation, not a bug, so record a decline and keep the original
      body. *)
   try
-  match try_tmc_classify check body with
+  (* Tail modulo cons reads constructor cells around calls, which
+     {!Normalize} took out into temporaries; it reads the body with them put
+     back.  Everything else reads the normalized body. *)
+  let restored = Cpp_temporaries.own_stmts body in
+  match try_tmc_classify check restored with
   | Some ti ->
     (* TMC only rewrites calls that sit directly under a constructor.  A body
        can mix shapes -- one branch conses onto the recursive result while
@@ -956,7 +963,7 @@ let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted check
        real C++ self-call.  That is exactly the stack growth this pass exists to
        remove, so check the postcondition and fall back to the frame transform,
        which handles the scrutinising shape via a continuation frame. *)
-    let tmc = transform_tmc ~param_inits tparams check ti params ret_ty body in
+    let tmc = transform_tmc ~param_inits tparams check ti params ret_ty restored in
     if classify check tmc = No_recursion then
       {nt_body = tmc; nt_outcome = Lp_tmc; nt_used_param_inits = true}
     else frame ()
@@ -1377,6 +1384,7 @@ let transform_fundef_exn ~tparams (f : dfun) params body =
   (* Hoist recursive calls out of if-conditions/scrutinees so a value-typed
      condition-dependent recursion can loopify instead of bailing. *)
   let body = hoist_rec_conditions check params ret_ty body in
+  let body = expose_tail_calls check body in
   (* Cofixpoint guard: if this function body ends with a [lazy_] return,
      it is a cofixpoint returning a standard coinductive type.  The entire
      body (including recursive calls) is captured inside a [=] lambda and

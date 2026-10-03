@@ -118,16 +118,16 @@ List<uint64_t> down_inline(uint64_t n) { /// _Enter: captures varying parameters
     uint64_t n;
   };
 
-  /// _Resume1: saves [n_], resumes after recursive call with _result.
-  struct _Resume1 {
+  /// _Cont1: saves [n_], resumes after recursive call, then processes rest.
+  struct _Cont1 {
     uint64_t n_;
   };
 
-  using _Frame = std::variant<_Enter, _Resume1>;
+  using _Frame = std::variant<_Enter, _Cont1>;
   List<uint64_t> _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
-  /// Loopified down_inline: _Enter -> _Resume1.
+  /// Loopified down_inline: _Enter -> _Cont1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -138,16 +138,21 @@ List<uint64_t> down_inline(uint64_t n) { /// _Enter: captures varying parameters
         _result = List<uint64_t>::nil();
       } else {
         uint64_t n_ = n - 1;
+        List<uint64_t> _tmp1;
         if (n_ == UINT64_C(0)) {
-          _result = List<uint64_t>::cons(n_, List<uint64_t>::nil());
+          _tmp1 = List<uint64_t>::nil();
+          {
+            _result = List<uint64_t>::cons(n_, std::move(_tmp1));
+          }
         } else {
-          _stack.emplace_back(_Resume1{n_});
+          _stack.emplace_back(_Cont1{n_});
           _stack.emplace_back(_Enter{n_});
         }
       }
     } else {
-      auto _f = std::move(std::get<_Resume1>(_frame));
-      _result = List<uint64_t>::cons(_f.n_, std::move(_result));
+      auto _f = std::move(std::get<_Cont1>(_frame));
+      uint64_t n_ = _f.n_;
+      _result = List<uint64_t>::cons(n_, std::move(_result));
     }
   }
   return _result;

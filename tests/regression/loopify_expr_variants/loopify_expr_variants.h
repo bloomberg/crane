@@ -2203,24 +2203,25 @@ struct LoopifyExprVariants {
         std::shared_ptr<list_expr> a1;
       };
 
-      /// _Cont_LAppend_1: saves [_tmp2], resumes after recursive call, then
+      /// _Cont_LAppend_1: saves [_tmp3], resumes after recursive call, then
       /// processes rest.
       struct _Cont_LAppend_1 {
-        List<uint64_t> _tmp2;
+        List<uint64_t> _tmp3;
       };
 
-      /// _Resume_LCons: saves [a0], resumes after recursive call with _result.
-      struct _Resume_LCons {
+      /// _Cont_LCons: saves [a0], resumes after recursive call, then processes
+      /// rest.
+      struct _Cont_LCons {
         uint64_t a0;
       };
 
       using _Frame =
-          std::variant<_Enter, _Cont_LAppend, _Cont_LAppend_1, _Resume_LCons>;
+          std::variant<_Enter, _Cont_LAppend, _Cont_LAppend_1, _Cont_LCons>;
       List<uint64_t> _result{};
       crane::small_vector<_Frame> _stack;
       _stack.emplace_back(_Enter{_self});
       /// Loopified eval_list: _Enter -> _Cont_LAppend -> _Cont_LAppend_1 ->
-      /// _Resume_LCons.
+      /// _Cont_LCons.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -2233,7 +2234,7 @@ struct LoopifyExprVariants {
           } else if (std::holds_alternative<typename list_expr::LCons>(
                          _sv.v())) {
             const auto &[a0, a1] = std::get<typename list_expr::LCons>(_sv.v());
-            _stack.emplace_back(_Resume_LCons{a0});
+            _stack.emplace_back(_Cont_LCons{a0});
             _stack.emplace_back(_Enter{crane_raw(a1)});
           } else if (std::holds_alternative<typename list_expr::LAppend>(
                          _sv.v())) {
@@ -2253,10 +2254,11 @@ struct LoopifyExprVariants {
           _stack.emplace_back(_Enter{crane_raw(a1)});
         } else if (std::holds_alternative<_Cont_LAppend_1>(_frame)) {
           auto _f = std::move(std::get<_Cont_LAppend_1>(_frame));
-          _result = std::move(_f._tmp2).app(std::move(_result));
+          _result = std::move(_f._tmp3).app(std::move(_result));
         } else {
-          auto _f = std::move(std::get<_Resume_LCons>(_frame));
-          _result = List<uint64_t>::cons(_f.a0, std::move(_result));
+          auto _f = std::move(std::get<_Cont_LCons>(_frame));
+          uint64_t a0 = _f.a0;
+          _result = List<uint64_t>::cons(a0, std::move(_result));
         }
       }
       return _result;

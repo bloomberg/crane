@@ -23,27 +23,27 @@ MemSafetyProbe29::tree3 MemSafetyProbe29::build_tree3(
     uint64_t n_;
   };
 
-  /// _Cont_n__1: saves [_tmp2, n, n_], resumes after recursive call, then
+  /// _Cont_n__1: saves [_tmp3, n, n_], resumes after recursive call, then
   /// processes rest.
   struct _Cont_n__1 {
-    MemSafetyProbe29::tree3 _tmp2;
+    MemSafetyProbe29::tree3 _tmp3;
     uint64_t n;
     uint64_t n_;
   };
 
-  /// _Resume_n_: saves [n, _tmp1, _tmp2], resumes after recursive call with
-  /// _result.
-  struct _Resume_n_ {
-    uint64_t n;
-    MemSafetyProbe29::tree3 _tmp1;
+  /// _Cont_n__2: saves [_tmp2, _tmp3, n], resumes after recursive call, then
+  /// processes rest.
+  struct _Cont_n__2 {
     MemSafetyProbe29::tree3 _tmp2;
+    MemSafetyProbe29::tree3 _tmp3;
+    uint64_t n;
   };
 
-  using _Frame = std::variant<_Enter, _Cont_n_, _Cont_n__1, _Resume_n_>;
+  using _Frame = std::variant<_Enter, _Cont_n_, _Cont_n__1, _Cont_n__2>;
   MemSafetyProbe29::tree3 _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
-  /// Loopified build_tree3: _Enter -> _Cont_n_ -> _Cont_n__1 -> _Resume_n_.
+  /// Loopified build_tree3: _Enter -> _Cont_n_ -> _Cont_n__1 -> _Cont_n__2.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -68,12 +68,13 @@ MemSafetyProbe29::tree3 MemSafetyProbe29::build_tree3(
       uint64_t n = _f.n;
       uint64_t n_ = _f.n_;
       _stack.emplace_back(
-          _Resume_n_{n, std::move(_result), std::move(_f._tmp2)});
+          _Cont_n__2{std::move(_result), std::move(_f._tmp3), n});
       _stack.emplace_back(_Enter{n_});
     } else {
-      auto _f = std::move(std::get<_Resume_n_>(_frame));
-      _result = tree3::t3node(std::move(_f._tmp2), std::move(_f._tmp1),
-                              std::move(_result), _f.n);
+      auto _f = std::move(std::get<_Cont_n__2>(_frame));
+      uint64_t n = _f.n;
+      _result = tree3::t3node(std::move(_f._tmp3), std::move(_f._tmp2),
+                              std::move(_result), n);
     }
   }
   return _result;

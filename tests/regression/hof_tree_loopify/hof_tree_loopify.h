@@ -255,18 +255,18 @@ struct HofTreeLoopify {
       const tree<T1> *a2;
     };
 
-    /// _Resume_Node: saves [a1, _tmp1], resumes after recursive call with
-    /// _result.
-    struct _Resume_Node {
-      T2 a1;
-      tree<T2> _tmp1;
+    /// _Cont_Node_1: saves [_tmp2, a1], resumes after recursive call, then
+    /// processes rest.
+    struct _Cont_Node_1 {
+      tree<T2> _tmp2;
+      T1 a1;
     };
 
-    using _Frame = std::variant<_Enter, _Cont_Node, _Resume_Node>;
+    using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
     tree<T2> _result{};
     crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&t});
-    /// Loopified tree_map: _Enter -> _Cont_Node -> _Resume_Node.
+    /// Loopified tree_map: _Enter -> _Cont_Node -> _Cont_Node_1.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -284,12 +284,13 @@ struct HofTreeLoopify {
         auto _f = std::move(std::get<_Cont_Node>(_frame));
         auto a1 = std::move(_f.a1);
         const tree<T1> &a2 = *_f.a2;
-        _stack.emplace_back(_Resume_Node{f(a1), std::move(_result)});
+        _stack.emplace_back(_Cont_Node_1{std::move(_result), a1});
         _stack.emplace_back(_Enter{&a2});
       } else {
-        auto _f = std::move(std::get<_Resume_Node>(_frame));
-        _result = tree<T2>::node(std::move(_f._tmp1), std::move(_f.a1),
-                                 std::move(_result));
+        auto _f = std::move(std::get<_Cont_Node_1>(_frame));
+        auto a1 = std::move(_f.a1);
+        _result =
+            tree<T2>::node(std::move(_f._tmp2), f(a1), std::move(_result));
       }
     }
     return _result;
@@ -374,18 +375,19 @@ struct HofTreeLoopify {
       const tree<T2> *a20;
     };
 
-    /// _Resume_Node: saves [_s0, _tmp1], resumes after recursive call with
-    /// _result.
-    struct _Resume_Node {
-      T3 _s0;
-      tree<T3> _tmp1;
+    /// _Cont_Node_1: saves [_tmp2, a1, a10], resumes after recursive call, then
+    /// processes rest.
+    struct _Cont_Node_1 {
+      tree<T3> _tmp2;
+      T1 a1;
+      T2 a10;
     };
 
-    using _Frame = std::variant<_Enter, _Cont_Node, _Resume_Node>;
+    using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
     tree<T3> _result{};
     crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&t2, &t1});
-    /// Loopified tree_zip_with: _Enter -> _Cont_Node -> _Resume_Node.
+    /// Loopified tree_zip_with: _Enter -> _Cont_Node -> _Cont_Node_1.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -413,12 +415,14 @@ struct HofTreeLoopify {
         auto a10 = std::move(_f.a10);
         const tree<T1> &a2 = *_f.a2;
         const tree<T2> &a20 = *_f.a20;
-        _stack.emplace_back(_Resume_Node{f(a1, a10), std::move(_result)});
+        _stack.emplace_back(_Cont_Node_1{std::move(_result), a1, a10});
         _stack.emplace_back(_Enter{&a20, &a2});
       } else {
-        auto _f = std::move(std::get<_Resume_Node>(_frame));
-        _result = tree<T3>::node(std::move(_f._tmp1), std::move(_f._s0),
-                                 std::move(_result));
+        auto _f = std::move(std::get<_Cont_Node_1>(_frame));
+        auto a1 = std::move(_f.a1);
+        auto a10 = std::move(_f.a10);
+        _result =
+            tree<T3>::node(std::move(_f._tmp2), f(a1, a10), std::move(_result));
       }
     }
     return _result;

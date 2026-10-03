@@ -441,16 +441,16 @@ uint64_t LoopifyPatterns::mod_pattern(
     uint64_t n;
   };
 
-  /// _Resume_m: saves [n_], resumes after recursive call with _result.
-  struct _Resume_m {
+  /// _Cont_m: saves [n_], resumes after recursive call, then processes rest.
+  struct _Cont_m {
     uint64_t n_;
   };
 
-  using _Frame = std::variant<_Enter, _Resume_m>;
+  using _Frame = std::variant<_Enter, _Cont_m>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
-  /// Loopified mod_pattern: _Enter -> _Resume_m.
+  /// Loopified mod_pattern: _Enter -> _Cont_m.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -465,14 +465,14 @@ uint64_t LoopifyPatterns::mod_pattern(
           _result = UINT64_C(1);
         } else {
           uint64_t m = n_ - 1;
-          _stack.emplace_back(_Resume_m{n_});
+          _stack.emplace_back(_Cont_m{n_});
           _stack.emplace_back(_Enter{m});
         }
       }
     } else {
-      auto _f = std::move(std::get<_Resume_m>(_frame));
-      _result =
-          ((std::move(_result) + 1) ? _f.n_ % (std::move(_result) + 1) : _f.n_);
+      auto _f = std::move(std::get<_Cont_m>(_frame));
+      uint64_t n_ = _f.n_;
+      _result = ((std::move(_result) + 1) ? n_ % (std::move(_result) + 1) : n_);
     }
   }
   return _result;
@@ -677,14 +677,14 @@ uint64_t LoopifyPatterns::list_len(
     const LoopifyPatterns::list<uint64_t> *l;
   };
 
-  /// _Resume_Cons: resumes after recursive call with _result.
-  struct _Resume_Cons {};
+  /// _Cont_Cons: resumes after recursive call, then processes rest.
+  struct _Cont_Cons {};
 
-  using _Frame = std::variant<_Enter, _Resume_Cons>;
+  using _Frame = std::variant<_Enter, _Cont_Cons>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
-  /// Loopified list_len: _Enter -> _Resume_Cons.
+  /// Loopified list_len: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -697,11 +697,11 @@ uint64_t LoopifyPatterns::list_len(
       } else {
         const auto &[a0, a1] =
             std::get<typename LoopifyPatterns::list<uint64_t>::Cons>(l.v());
-        _stack.emplace_back(_Resume_Cons{});
+        _stack.emplace_back(_Cont_Cons{});
         _stack.emplace_back(_Enter{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<_Resume_Cons>(_frame));
+      auto _f = std::move(std::get<_Cont_Cons>(_frame));
       _result = (std::move(_result) + 1);
     }
   }

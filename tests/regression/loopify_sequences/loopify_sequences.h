@@ -99,14 +99,14 @@ public:
       const List<A> *_self;
     };
 
-    /// _Resume_Cons: resumes after recursive call with _result.
-    struct _Resume_Cons {};
+    /// _Cont_Cons: resumes after recursive call, then processes rest.
+    struct _Cont_Cons {};
 
-    using _Frame = std::variant<_Enter, _Resume_Cons>;
+    using _Frame = std::variant<_Enter, _Cont_Cons>;
     uint64_t _result{};
     crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{_self});
-    /// Loopified length: _Enter -> _Resume_Cons.
+    /// Loopified length: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -118,11 +118,11 @@ public:
           _result = UINT64_C(0);
         } else {
           const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-          _stack.emplace_back(_Resume_Cons{});
+          _stack.emplace_back(_Cont_Cons{});
           _stack.emplace_back(_Enter{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<_Resume_Cons>(_frame));
+        auto _f = std::move(std::get<_Cont_Cons>(_frame));
         _result = (std::move(_result) + 1);
       }
     }
@@ -219,17 +219,17 @@ struct LoopifySequences {
         struct _Enter {
           const List<T1> *rest;
         };
-        /// _Resume_Cons: saves [sep, a00], resumes after recursive call with
-        /// _result.
-        struct _Resume_Cons {
-          T1 sep;
+        /// _Cont_Cons: saves [a00, sep], resumes after recursive call, then
+        /// processes rest.
+        struct _Cont_Cons {
           T1 a00;
+          T1 sep;
         };
-        using _Frame = std::variant<_Enter, _Resume_Cons>;
+        using _Frame = std::variant<_Enter, _Cont_Cons>;
         List<T1> _result{};
         crane::small_vector<_Frame> _stack;
         _stack.emplace_back(_Enter{&rest});
-        /// Loopified go: _Enter -> _Resume_Cons.
+        /// Loopified go: _Enter -> _Cont_Cons.
         while (!_stack.empty()) {
           _Frame _frame = std::move(_stack.back());
           _stack.pop_back();
@@ -241,14 +241,15 @@ struct LoopifySequences {
             } else {
               const auto &[a00, a10] =
                   std::get<typename List<T1>::Cons>(rest.v());
-              _stack.emplace_back(_Resume_Cons{sep, a00});
+              _stack.emplace_back(_Cont_Cons{a00, sep});
               _stack.emplace_back(_Enter{crane_raw(a10)});
             }
           } else {
-            auto _f = std::move(std::get<_Resume_Cons>(_frame));
-            _result = List<T1>::cons(
-                std::move(_f.sep),
-                List<T1>::cons(std::move(_f.a00), std::move(_result)));
+            auto _f = std::move(std::get<_Cont_Cons>(_frame));
+            auto a00 = std::move(_f.a00);
+            auto sep = std::move(_f.sep);
+            _result =
+                List<T1>::cons(sep, List<T1>::cons(a00, std::move(_result)));
           }
         }
         return _result;
@@ -303,16 +304,16 @@ struct LoopifySequences {
             struct _Enter {
               const List<List<T1>> *l;
             };
-            /// _Resume_Cons: saves [a01], resumes after recursive call with
-            /// _result.
-            struct _Resume_Cons {
+            /// _Cont_Cons: saves [a01], resumes after recursive call, then
+            /// processes rest.
+            struct _Cont_Cons {
               T1 a01;
             };
-            using _Frame = std::variant<_Enter, _Resume_Cons>;
+            using _Frame = std::variant<_Enter, _Cont_Cons>;
             List<T1> _result{};
             crane::small_vector<_Frame> _stack;
             _stack.emplace_back(_Enter{&l});
-            /// Loopified heads: _Enter -> _Resume_Cons.
+            /// Loopified heads: _Enter -> _Cont_Cons.
             while (!_stack.empty()) {
               _Frame _frame = std::move(_stack.back());
               _stack.pop_back();
@@ -330,13 +331,14 @@ struct LoopifySequences {
                   } else {
                     const auto &[a01, a11] =
                         std::get<typename List<T1>::Cons>(a00.v());
-                    _stack.emplace_back(_Resume_Cons{a01});
+                    _stack.emplace_back(_Cont_Cons{a01});
                     _stack.emplace_back(_Enter{crane_raw(a10)});
                   }
                 }
               } else {
-                auto _f = std::move(std::get<_Resume_Cons>(_frame));
-                _result = List<T1>::cons(std::move(_f.a01), std::move(_result));
+                auto _f = std::move(std::get<_Cont_Cons>(_frame));
+                auto a01 = std::move(_f.a01);
+                _result = List<T1>::cons(a01, std::move(_result));
               }
             }
             return _result;
@@ -350,16 +352,16 @@ struct LoopifySequences {
             struct _Enter {
               const List<List<T1>> *l;
             };
-            /// _Resume_Cons: saves [a12], resumes after recursive call with
-            /// _result.
-            struct _Resume_Cons {
-              List<T1> a12;
+            /// _Cont_Cons: saves [a12], resumes after recursive call, then
+            /// processes rest.
+            struct _Cont_Cons {
+              std::shared_ptr<List<T1>> a12;
             };
-            using _Frame = std::variant<_Enter, _Resume_Cons>;
+            using _Frame = std::variant<_Enter, _Cont_Cons>;
             List<List<T1>> _result{};
             crane::small_vector<_Frame> _stack;
             _stack.emplace_back(_Enter{&l});
-            /// Loopified tails: _Enter -> _Resume_Cons.
+            /// Loopified tails: _Enter -> _Cont_Cons.
             while (!_stack.empty()) {
               _Frame _frame = std::move(_stack.back());
               _stack.pop_back();
@@ -377,14 +379,14 @@ struct LoopifySequences {
                   } else {
                     const auto &[a02, a12] =
                         std::get<typename List<T1>::Cons>(a01.v());
-                    _stack.emplace_back(_Resume_Cons{*a12});
+                    _stack.emplace_back(_Cont_Cons{a12});
                     _stack.emplace_back(_Enter{crane_raw(a11)});
                   }
                 }
               } else {
-                auto _f = std::move(std::get<_Resume_Cons>(_frame));
-                _result =
-                    List<List<T1>>::cons(std::move(_f.a12), std::move(_result));
+                auto _f = std::move(std::get<_Cont_Cons>(_frame));
+                std::shared_ptr<List<T1>> a12 = std::move(_f.a12);
+                _result = List<List<T1>>::cons(*a12, std::move(_result));
               }
             }
             return _result;

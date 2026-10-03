@@ -292,13 +292,13 @@ public:
     struct _Enter {
       const List<t_A> *_self;
     };
-    /// _Resume_Cons: resumes after recursive call with _result.
-    struct _Resume_Cons {};
-    using _Frame = bsl::variant<_Enter, _Resume_Cons>;
+    /// _Cont_Cons: resumes after recursive call, then processes rest.
+    struct _Cont_Cons {};
+    using _Frame = bsl::variant<_Enter, _Cont_Cons>;
     unsigned int _result{};
     crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{_self});
-    /// Loopified length: _Enter -> _Resume_Cons.
+    /// Loopified length: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {
       _Frame _frame = bsl::move(_stack.back());
       _stack.pop_back();
@@ -311,11 +311,11 @@ public:
         } else {
           const auto &[d_a0, d_a1] =
               bsl::get<typename List<t_A>::Cons>(_sv.v());
-          _stack.emplace_back(_Resume_Cons{});
+          _stack.emplace_back(_Cont_Cons{});
           _stack.emplace_back(_Enter{crane_raw(d_a1)});
         }
       } else {
-        auto _f = std::move(bsl::get<_Resume_Cons>(_frame));
+        auto _f = std::move(bsl::get<_Cont_Cons>(_frame));
         _result = (bsl::move(_result) + 1);
       }
     }

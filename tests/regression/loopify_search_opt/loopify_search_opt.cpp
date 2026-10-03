@@ -383,16 +383,16 @@ bool LoopifySearchOpt::binary_search_fuel(uint64_t fuel, uint64_t target,
               const List<uint64_t> *xs;
               uint64_t n;
             };
-            /// _Resume_Cons: saves [a03], resumes after recursive call with
-            /// _result.
-            struct _Resume_Cons {
+            /// _Cont_Cons: saves [a03], resumes after recursive call, then
+            /// processes rest.
+            struct _Cont_Cons {
               uint64_t a03;
             };
-            using _Frame = std::variant<_Enter, _Resume_Cons>;
+            using _Frame = std::variant<_Enter, _Cont_Cons>;
             List<uint64_t> _result{};
             crane::small_vector<_Frame> _stack;
             _stack.emplace_back(_Enter{&xs, n});
-            /// Loopified take: _Enter -> _Resume_Cons.
+            /// Loopified take: _Enter -> _Cont_Cons.
             while (!_stack.empty()) {
               _Frame _frame = std::move(_stack.back());
               _stack.pop_back();
@@ -410,13 +410,14 @@ bool LoopifySearchOpt::binary_search_fuel(uint64_t fuel, uint64_t target,
                   } else {
                     const auto &[a03, a13] =
                         std::get<typename List<uint64_t>::Cons>(xs.v());
-                    _stack.emplace_back(_Resume_Cons{a03});
+                    _stack.emplace_back(_Cont_Cons{a03});
                     _stack.emplace_back(_Enter{crane_raw(a13), n_});
                   }
                 }
               } else {
-                auto _f = std::move(std::get<_Resume_Cons>(_frame));
-                _result = List<uint64_t>::cons(_f.a03, std::move(_result));
+                auto _f = std::move(std::get<_Cont_Cons>(_frame));
+                uint64_t a03 = _f.a03;
+                _result = List<uint64_t>::cons(a03, std::move(_result));
               }
             }
             return _result;

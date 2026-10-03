@@ -1112,49 +1112,6 @@ let transform_tail ?(param_inits = []) tparams check params ret_ty body =
 
 (* {2 Non-tail recursion transformation}
 
-   For non-tail recursive functions, we use an explicit stack of std::function
-   continuations stored in a vector.
+   Non-tail recursion uses a frame-based stack with [_Enter] and continuation
+   variants and a dispatch loop; see {!transform_nontail}. *)
 
-   Single non-tail: each recursive branch pushes a continuation that captures
-   the pre-computed values, then updates the loop parameter to the recursive
-   argument. After the loop, the continuations are applied in reverse order to
-   build the final result.
-
-   Double non-tail: uses a frame-based stack with Enter/Call variants
-   and a while loop. See {!transform_nontail}. *)
-
-(** {3 Double-call decomposition for multi-recursive functions}
-
-    Decompose expressions with exactly 2 recursive calls, like
-    [fib(p) + fib(m)], into the two call argument lists and a combining
-    operation. *)
-
-(** {3 Expression decomposition}
-
-    Analyze a return expression to find how the recursive call result is used.
-    We decompose [return wrapper(args..., RECURSE(rec_args))] into:
-    - [saved_exprs]: expressions to evaluate before recursing (stored in frame)
-    - [rec_args]: arguments to the recursive call
-    - [rebuild]: how to reconstruct the result from saved values and recursive
-      result *)
-
-(** Represents a decomposed non-tail recursive return expression. The recursive
-    call's result is combined with saved values via [rebuild]. *)
-type decomposed = {
-  d_saved : cpp_expr list;
-      (** Expressions to evaluate and save before recursing.  Their types are
-          not recorded here: they are recovered from the expressions by
-          {!infer_saved_types} once the frame is generated, in the
-          environment that holds there. *)
-  d_rec_args : cpp_expr list;  (** Arguments to pass to the recursive call *)
-  d_entry : int;
-      (** Which machine entry the call re-enters, as an index into
-          {!enter_rewrite_ctx.er_entries}.  A machine with an adopted local
-          fixpoint has more than one, and they differ in both frame struct and
-          parameter list, so the frame this decomposition pushes cannot be
-          assumed to be entry 0's. *)
-  d_rebuild : cpp_expr list -> cpp_expr -> cpp_expr;
-      (** [d_rebuild saved_vars result] reconstructs the final expression.
-          [saved_vars] are CPPvar references to the saved values; [result] is
-          the recursive call's result. *)
-}

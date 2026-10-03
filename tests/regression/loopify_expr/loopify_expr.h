@@ -270,11 +270,18 @@ struct LoopifyExpr {
         std::shared_ptr<expr> a2;
       };
 
-      /// _Cont_Cond_3: saves [_tmp14, a2], resumes after recursive call, then
+      /// _Cont_Cond_3: saves [_tmp16, a2], resumes after recursive call, then
       /// processes rest.
       struct _Cont_Cond_3 {
-        expr _tmp14;
+        expr _tmp16;
         std::shared_ptr<expr> a2;
+      };
+
+      /// _Cont_Cond_4: saves [_tmp15, _tmp16], resumes after recursive call,
+      /// then processes rest.
+      struct _Cont_Cond_4 {
+        expr _tmp15;
+        expr _tmp16;
       };
 
       /// _Cont_Mul: saves [s1], resumes after recursive call, then processes
@@ -295,15 +302,18 @@ struct LoopifyExpr {
         expr s1;
       };
 
-      /// _Cont_Succ: saves [s1], resumes after recursive call, then processes
-      /// rest.
-      struct _Cont_Succ {
-        expr s1;
-      };
+      /// _Cont_Succ: resumes after recursive call, then processes rest.
+      struct _Cont_Succ {};
 
       /// _Cont_Succ_1: saves [s1], resumes after recursive call, then processes
       /// rest.
       struct _Cont_Succ_1 {
+        expr s1;
+      };
+
+      /// _Cont_Succ_2: saves [s1], resumes after recursive call, then processes
+      /// rest.
+      struct _Cont_Succ_2 {
         expr s1;
       };
 
@@ -319,28 +329,18 @@ struct LoopifyExpr {
         expr s1;
       };
 
-      /// _Resume_Cond: saves [_tmp13, _tmp14], resumes after recursive call
-      /// with _result.
-      struct _Resume_Cond {
-        expr _tmp13;
-        expr _tmp14;
-      };
-
-      /// _Resume_Succ: resumes after recursive call with _result.
-      struct _Resume_Succ {};
-
       using _Frame =
           std::variant<_Enter, _Cont_Add, _Cont_Add_1, _Cont_Add_2, _Cont_Cond,
-                       _Cont_Cond_1, _Cont_Cond_2, _Cont_Cond_3, _Cont_Mul,
-                       _Cont_Mul_1, _Cont_Mul_2, _Cont_Succ, _Cont_Succ_1,
-                       _Cont__x, _Cont_n0, _Resume_Cond, _Resume_Succ>;
+                       _Cont_Cond_1, _Cont_Cond_2, _Cont_Cond_3, _Cont_Cond_4,
+                       _Cont_Mul, _Cont_Mul_1, _Cont_Mul_2, _Cont_Succ,
+                       _Cont_Succ_1, _Cont_Succ_2, _Cont__x, _Cont_n0>;
       expr _result{};
       crane::small_vector<_Frame> _stack;
       _stack.emplace_back(_Enter{_self});
       /// Loopified simplify: _Enter -> _Cont_Add -> _Cont_Add_1 -> _Cont_Add_2
       /// -> _Cont_Cond -> _Cont_Cond_1 -> _Cont_Cond_2 -> _Cont_Cond_3 ->
-      /// _Cont_Mul -> _Cont_Mul_1 -> _Cont_Mul_2 -> _Cont_Succ -> _Cont_Succ_1
-      /// -> _Cont__x -> _Cont_n0 -> _Resume_Cond -> _Resume_Succ.
+      /// _Cont_Cond_4 -> _Cont_Mul -> _Cont_Mul_1 -> _Cont_Mul_2 -> _Cont_Succ
+      /// -> _Cont_Succ_1 -> _Cont_Succ_2 -> _Cont__x -> _Cont_n0.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -353,7 +353,7 @@ struct LoopifyExpr {
             _result = expr::val(a0);
           } else if (std::holds_alternative<typename expr::Succ>(_sv.v())) {
             const auto &[a0] = std::get<typename expr::Succ>(_sv.v());
-            _stack.emplace_back(_Resume_Succ{});
+            _stack.emplace_back(_Cont_Succ{});
             _stack.emplace_back(_Enter{crane_raw(a0)});
           } else if (std::holds_alternative<typename expr::Add>(_sv.v())) {
             const auto &[a0, a1] = std::get<typename expr::Add>(_sv.v());
@@ -371,9 +371,9 @@ struct LoopifyExpr {
         } else if (std::holds_alternative<_Cont_Add>(_frame)) {
           auto _f = std::move(std::get<_Cont_Add>(_frame));
           std::shared_ptr<expr> a1 = std::move(_f.a1);
-          expr _tmp6 = std::move(_result);
-          if (std::holds_alternative<typename expr::Val>(_tmp6.v_mut())) {
-            auto &[a00] = std::get<typename expr::Val>(_tmp6.v_mut());
+          expr _tmp7 = std::move(_result);
+          if (std::holds_alternative<typename expr::Val>(_tmp7.v_mut())) {
+            auto &[a00] = std::get<typename expr::Val>(_tmp7.v_mut());
             if (a00 <= 0) {
               _stack.emplace_back(_Enter{crane_raw(a1)});
             } else {
@@ -383,168 +383,32 @@ struct LoopifyExpr {
               _stack.emplace_back(_Enter{crane_raw(a1)});
             }
           } else if (std::holds_alternative<typename expr::Succ>(
-                         _tmp6.v_mut())) {
-            auto &[a00] = std::get<typename expr::Succ>(_tmp6.v_mut());
+                         _tmp7.v_mut())) {
+            auto &[a00] = std::get<typename expr::Succ>(_tmp7.v_mut());
             expr s1 = expr::succ(*a00);
-            _stack.emplace_back(_Cont_Succ{std::move(s1)});
+            _stack.emplace_back(_Cont_Succ_1{std::move(s1)});
             _stack.emplace_back(_Enter{crane_raw(a1)});
           } else if (std::holds_alternative<typename expr::Add>(
-                         _tmp6.v_mut())) {
-            auto &[a00, a10] = std::get<typename expr::Add>(_tmp6.v_mut());
+                         _tmp7.v_mut())) {
+            auto &[a00, a10] = std::get<typename expr::Add>(_tmp7.v_mut());
             expr s1 = expr::add(*a00, *a10);
             _stack.emplace_back(_Cont_Add_1{std::move(s1)});
             _stack.emplace_back(_Enter{crane_raw(a1)});
           } else if (std::holds_alternative<typename expr::Mul>(
-                         _tmp6.v_mut())) {
-            auto &[a00, a10] = std::get<typename expr::Mul>(_tmp6.v_mut());
+                         _tmp7.v_mut())) {
+            auto &[a00, a10] = std::get<typename expr::Mul>(_tmp7.v_mut());
             expr s1 = expr::mul(*a00, *a10);
             _stack.emplace_back(_Cont_Mul{std::move(s1)});
             _stack.emplace_back(_Enter{crane_raw(a1)});
           } else {
             auto &[a00, a10, a20] =
-                std::get<typename expr::Cond>(_tmp6.v_mut());
+                std::get<typename expr::Cond>(_tmp7.v_mut());
             expr s1 = expr::cond(*a00, *a10, *a20);
             _stack.emplace_back(_Cont_Cond{std::move(s1)});
             _stack.emplace_back(_Enter{crane_raw(a1)});
           }
         } else if (std::holds_alternative<_Cont_Add_1>(_frame)) {
           auto _f = std::move(std::get<_Cont_Add_1>(_frame));
-          expr s1 = std::move(_f.s1);
-          expr _tmp3 = std::move(_result);
-          if (std::holds_alternative<typename expr::Val>(_tmp3.v_mut())) {
-            auto &[a01] = std::get<typename expr::Val>(_tmp3.v_mut());
-            if (a01 <= 0) {
-              _result = std::move(s1);
-            } else {
-              uint64_t n0 = a01 - 1;
-              _result = expr::add(std::move(s1), expr::val((n0 + 1)));
-            }
-          } else if (std::holds_alternative<typename expr::Succ>(
-                         _tmp3.v_mut())) {
-            auto &[a01] = std::get<typename expr::Succ>(_tmp3.v_mut());
-            _result = expr::add(std::move(s1), expr::succ(*a01));
-          } else if (std::holds_alternative<typename expr::Add>(
-                         _tmp3.v_mut())) {
-            auto &[a01, a11] = std::get<typename expr::Add>(_tmp3.v_mut());
-            _result = expr::add(std::move(s1), expr::add(*a01, *a11));
-          } else if (std::holds_alternative<typename expr::Mul>(
-                         _tmp3.v_mut())) {
-            auto &[a01, a11] = std::get<typename expr::Mul>(_tmp3.v_mut());
-            _result = expr::add(std::move(s1), expr::mul(*a01, *a11));
-          } else {
-            auto &[a01, a11, a21] =
-                std::get<typename expr::Cond>(_tmp3.v_mut());
-            _result = expr::add(std::move(s1), expr::cond(*a01, *a11, *a21));
-          }
-        } else if (std::holds_alternative<_Cont_Add_2>(_frame)) {
-          auto _f = std::move(std::get<_Cont_Add_2>(_frame));
-          expr s1 = std::move(_f.s1);
-          expr _tmp9 = std::move(_result);
-          if (std::holds_alternative<typename expr::Val>(_tmp9.v_mut())) {
-            auto &[a01] = std::get<typename expr::Val>(_tmp9.v_mut());
-            if (a01 <= 0) {
-              _result = expr::val(UINT64_C(0));
-            } else {
-              uint64_t _x = a01 - 1;
-              if (a01 == UINT64_C(1)) {
-                _result = std::move(s1);
-              } else {
-                _result = expr::mul(std::move(s1), expr::val(std::move(a01)));
-              }
-            }
-          } else if (std::holds_alternative<typename expr::Succ>(
-                         _tmp9.v_mut())) {
-            auto &[a01] = std::get<typename expr::Succ>(_tmp9.v_mut());
-            _result = expr::mul(std::move(s1), expr::succ(*a01));
-          } else if (std::holds_alternative<typename expr::Add>(
-                         _tmp9.v_mut())) {
-            auto &[a01, a11] = std::get<typename expr::Add>(_tmp9.v_mut());
-            _result = expr::mul(std::move(s1), expr::add(*a01, *a11));
-          } else if (std::holds_alternative<typename expr::Mul>(
-                         _tmp9.v_mut())) {
-            auto &[a01, a11] = std::get<typename expr::Mul>(_tmp9.v_mut());
-            _result = expr::mul(std::move(s1), expr::mul(*a01, *a11));
-          } else {
-            auto &[a01, a11, a21] =
-                std::get<typename expr::Cond>(_tmp9.v_mut());
-            _result = expr::mul(std::move(s1), expr::cond(*a01, *a11, *a21));
-          }
-        } else if (std::holds_alternative<_Cont_Cond>(_frame)) {
-          auto _f = std::move(std::get<_Cont_Cond>(_frame));
-          expr s1 = std::move(_f.s1);
-          expr _tmp5 = std::move(_result);
-          if (std::holds_alternative<typename expr::Val>(_tmp5.v_mut())) {
-            auto &[a01] = std::get<typename expr::Val>(_tmp5.v_mut());
-            if (a01 <= 0) {
-              _result = std::move(s1);
-            } else {
-              uint64_t n0 = a01 - 1;
-              _result = expr::add(std::move(s1), expr::val((n0 + 1)));
-            }
-          } else if (std::holds_alternative<typename expr::Succ>(
-                         _tmp5.v_mut())) {
-            auto &[a01] = std::get<typename expr::Succ>(_tmp5.v_mut());
-            _result = expr::add(std::move(s1), expr::succ(*a01));
-          } else if (std::holds_alternative<typename expr::Add>(
-                         _tmp5.v_mut())) {
-            auto &[a01, a11] = std::get<typename expr::Add>(_tmp5.v_mut());
-            _result = expr::add(std::move(s1), expr::add(*a01, *a11));
-          } else if (std::holds_alternative<typename expr::Mul>(
-                         _tmp5.v_mut())) {
-            auto &[a01, a11] = std::get<typename expr::Mul>(_tmp5.v_mut());
-            _result = expr::add(std::move(s1), expr::mul(*a01, *a11));
-          } else {
-            auto &[a01, a11, a21] =
-                std::get<typename expr::Cond>(_tmp5.v_mut());
-            _result = expr::add(std::move(s1), expr::cond(*a01, *a11, *a21));
-          }
-        } else if (std::holds_alternative<_Cont_Cond_1>(_frame)) {
-          auto _f = std::move(std::get<_Cont_Cond_1>(_frame));
-          expr s1 = std::move(_f.s1);
-          expr _tmp11 = std::move(_result);
-          if (std::holds_alternative<typename expr::Val>(_tmp11.v_mut())) {
-            auto &[a01] = std::get<typename expr::Val>(_tmp11.v_mut());
-            if (a01 <= 0) {
-              _result = expr::val(UINT64_C(0));
-            } else {
-              uint64_t _x = a01 - 1;
-              if (a01 == UINT64_C(1)) {
-                _result = std::move(s1);
-              } else {
-                _result = expr::mul(std::move(s1), expr::val(std::move(a01)));
-              }
-            }
-          } else if (std::holds_alternative<typename expr::Succ>(
-                         _tmp11.v_mut())) {
-            auto &[a01] = std::get<typename expr::Succ>(_tmp11.v_mut());
-            _result = expr::mul(std::move(s1), expr::succ(*a01));
-          } else if (std::holds_alternative<typename expr::Add>(
-                         _tmp11.v_mut())) {
-            auto &[a01, a11] = std::get<typename expr::Add>(_tmp11.v_mut());
-            _result = expr::mul(std::move(s1), expr::add(*a01, *a11));
-          } else if (std::holds_alternative<typename expr::Mul>(
-                         _tmp11.v_mut())) {
-            auto &[a01, a11] = std::get<typename expr::Mul>(_tmp11.v_mut());
-            _result = expr::mul(std::move(s1), expr::mul(*a01, *a11));
-          } else {
-            auto &[a01, a11, a21] =
-                std::get<typename expr::Cond>(_tmp11.v_mut());
-            _result = expr::mul(std::move(s1), expr::cond(*a01, *a11, *a21));
-          }
-        } else if (std::holds_alternative<_Cont_Cond_2>(_frame)) {
-          auto _f = std::move(std::get<_Cont_Cond_2>(_frame));
-          std::shared_ptr<expr> a1 = std::move(_f.a1);
-          std::shared_ptr<expr> a2 = std::move(_f.a2);
-          _stack.emplace_back(_Cont_Cond_3{std::move(_result), std::move(a2)});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
-        } else if (std::holds_alternative<_Cont_Cond_3>(_frame)) {
-          auto _f = std::move(std::get<_Cont_Cond_3>(_frame));
-          std::shared_ptr<expr> a2 = std::move(_f.a2);
-          _stack.emplace_back(
-              _Resume_Cond{std::move(_result), std::move(_f._tmp14)});
-          _stack.emplace_back(_Enter{crane_raw(a2)});
-        } else if (std::holds_alternative<_Cont_Mul>(_frame)) {
-          auto _f = std::move(std::get<_Cont_Mul>(_frame));
           expr s1 = std::move(_f.s1);
           expr _tmp4 = std::move(_result);
           if (std::holds_alternative<typename expr::Val>(_tmp4.v_mut())) {
@@ -572,46 +436,8 @@ struct LoopifyExpr {
                 std::get<typename expr::Cond>(_tmp4.v_mut());
             _result = expr::add(std::move(s1), expr::cond(*a01, *a11, *a21));
           }
-        } else if (std::holds_alternative<_Cont_Mul_1>(_frame)) {
-          auto _f = std::move(std::get<_Cont_Mul_1>(_frame));
-          std::shared_ptr<expr> a1 = std::move(_f.a1);
-          expr _tmp12 = std::move(_result);
-          if (std::holds_alternative<typename expr::Val>(_tmp12.v_mut())) {
-            auto &[a00] = std::get<typename expr::Val>(_tmp12.v_mut());
-            if (a00 <= 0) {
-              _result = expr::val(UINT64_C(0));
-            } else {
-              uint64_t _x = a00 - 1;
-              _stack.emplace_back(_Cont__x{a00});
-              _stack.emplace_back(_Enter{crane_raw(a1)});
-            }
-          } else if (std::holds_alternative<typename expr::Succ>(
-                         _tmp12.v_mut())) {
-            auto &[a00] = std::get<typename expr::Succ>(_tmp12.v_mut());
-            expr s1 = expr::succ(*a00);
-            _stack.emplace_back(_Cont_Succ_1{std::move(s1)});
-            _stack.emplace_back(_Enter{crane_raw(a1)});
-          } else if (std::holds_alternative<typename expr::Add>(
-                         _tmp12.v_mut())) {
-            auto &[a00, a10] = std::get<typename expr::Add>(_tmp12.v_mut());
-            expr s1 = expr::add(*a00, *a10);
-            _stack.emplace_back(_Cont_Add_2{std::move(s1)});
-            _stack.emplace_back(_Enter{crane_raw(a1)});
-          } else if (std::holds_alternative<typename expr::Mul>(
-                         _tmp12.v_mut())) {
-            auto &[a00, a10] = std::get<typename expr::Mul>(_tmp12.v_mut());
-            expr s1 = expr::mul(*a00, *a10);
-            _stack.emplace_back(_Cont_Mul_2{std::move(s1)});
-            _stack.emplace_back(_Enter{crane_raw(a1)});
-          } else {
-            auto &[a00, a10, a20] =
-                std::get<typename expr::Cond>(_tmp12.v_mut());
-            expr s1 = expr::cond(*a00, *a10, *a20);
-            _stack.emplace_back(_Cont_Cond_1{std::move(s1)});
-            _stack.emplace_back(_Enter{crane_raw(a1)});
-          }
-        } else if (std::holds_alternative<_Cont_Mul_2>(_frame)) {
-          auto _f = std::move(std::get<_Cont_Mul_2>(_frame));
+        } else if (std::holds_alternative<_Cont_Add_2>(_frame)) {
+          auto _f = std::move(std::get<_Cont_Add_2>(_frame));
           expr s1 = std::move(_f.s1);
           expr _tmp10 = std::move(_result);
           if (std::holds_alternative<typename expr::Val>(_tmp10.v_mut())) {
@@ -643,8 +469,305 @@ struct LoopifyExpr {
                 std::get<typename expr::Cond>(_tmp10.v_mut());
             _result = expr::mul(std::move(s1), expr::cond(*a01, *a11, *a21));
           }
+        } else if (std::holds_alternative<_Cont_Cond>(_frame)) {
+          auto _f = std::move(std::get<_Cont_Cond>(_frame));
+          expr s1 = std::move(_f.s1);
+          expr _tmp6 = std::move(_result);
+          if (std::holds_alternative<typename expr::Val>(_tmp6.v_mut())) {
+            auto &[a01] = std::get<typename expr::Val>(_tmp6.v_mut());
+            if (a01 <= 0) {
+              _result = std::move(s1);
+            } else {
+              uint64_t n0 = a01 - 1;
+              _result = expr::add(std::move(s1), expr::val((n0 + 1)));
+            }
+          } else if (std::holds_alternative<typename expr::Succ>(
+                         _tmp6.v_mut())) {
+            auto &[a01] = std::get<typename expr::Succ>(_tmp6.v_mut());
+            _result = expr::add(std::move(s1), expr::succ(*a01));
+          } else if (std::holds_alternative<typename expr::Add>(
+                         _tmp6.v_mut())) {
+            auto &[a01, a11] = std::get<typename expr::Add>(_tmp6.v_mut());
+            _result = expr::add(std::move(s1), expr::add(*a01, *a11));
+          } else if (std::holds_alternative<typename expr::Mul>(
+                         _tmp6.v_mut())) {
+            auto &[a01, a11] = std::get<typename expr::Mul>(_tmp6.v_mut());
+            _result = expr::add(std::move(s1), expr::mul(*a01, *a11));
+          } else {
+            auto &[a01, a11, a21] =
+                std::get<typename expr::Cond>(_tmp6.v_mut());
+            _result = expr::add(std::move(s1), expr::cond(*a01, *a11, *a21));
+          }
+        } else if (std::holds_alternative<_Cont_Cond_1>(_frame)) {
+          auto _f = std::move(std::get<_Cont_Cond_1>(_frame));
+          expr s1 = std::move(_f.s1);
+          expr _tmp12 = std::move(_result);
+          if (std::holds_alternative<typename expr::Val>(_tmp12.v_mut())) {
+            auto &[a01] = std::get<typename expr::Val>(_tmp12.v_mut());
+            if (a01 <= 0) {
+              _result = expr::val(UINT64_C(0));
+            } else {
+              uint64_t _x = a01 - 1;
+              if (a01 == UINT64_C(1)) {
+                _result = std::move(s1);
+              } else {
+                _result = expr::mul(std::move(s1), expr::val(std::move(a01)));
+              }
+            }
+          } else if (std::holds_alternative<typename expr::Succ>(
+                         _tmp12.v_mut())) {
+            auto &[a01] = std::get<typename expr::Succ>(_tmp12.v_mut());
+            _result = expr::mul(std::move(s1), expr::succ(*a01));
+          } else if (std::holds_alternative<typename expr::Add>(
+                         _tmp12.v_mut())) {
+            auto &[a01, a11] = std::get<typename expr::Add>(_tmp12.v_mut());
+            _result = expr::mul(std::move(s1), expr::add(*a01, *a11));
+          } else if (std::holds_alternative<typename expr::Mul>(
+                         _tmp12.v_mut())) {
+            auto &[a01, a11] = std::get<typename expr::Mul>(_tmp12.v_mut());
+            _result = expr::mul(std::move(s1), expr::mul(*a01, *a11));
+          } else {
+            auto &[a01, a11, a21] =
+                std::get<typename expr::Cond>(_tmp12.v_mut());
+            _result = expr::mul(std::move(s1), expr::cond(*a01, *a11, *a21));
+          }
+        } else if (std::holds_alternative<_Cont_Cond_2>(_frame)) {
+          auto _f = std::move(std::get<_Cont_Cond_2>(_frame));
+          std::shared_ptr<expr> a1 = std::move(_f.a1);
+          std::shared_ptr<expr> a2 = std::move(_f.a2);
+          _stack.emplace_back(_Cont_Cond_3{std::move(_result), std::move(a2)});
+          _stack.emplace_back(_Enter{crane_raw(a1)});
+        } else if (std::holds_alternative<_Cont_Cond_3>(_frame)) {
+          auto _f = std::move(std::get<_Cont_Cond_3>(_frame));
+          std::shared_ptr<expr> a2 = std::move(_f.a2);
+          _stack.emplace_back(
+              _Cont_Cond_4{std::move(_result), std::move(_f._tmp16)});
+          _stack.emplace_back(_Enter{crane_raw(a2)});
+        } else if (std::holds_alternative<_Cont_Cond_4>(_frame)) {
+          auto _f = std::move(std::get<_Cont_Cond_4>(_frame));
+          _result = expr::cond(std::move(_f._tmp16), std::move(_f._tmp15),
+                               std::move(_result));
+        } else if (std::holds_alternative<_Cont_Mul>(_frame)) {
+          auto _f = std::move(std::get<_Cont_Mul>(_frame));
+          expr s1 = std::move(_f.s1);
+          expr _tmp5 = std::move(_result);
+          if (std::holds_alternative<typename expr::Val>(_tmp5.v_mut())) {
+            auto &[a01] = std::get<typename expr::Val>(_tmp5.v_mut());
+            if (a01 <= 0) {
+              _result = std::move(s1);
+            } else {
+              uint64_t n0 = a01 - 1;
+              _result = expr::add(std::move(s1), expr::val((n0 + 1)));
+            }
+          } else if (std::holds_alternative<typename expr::Succ>(
+                         _tmp5.v_mut())) {
+            auto &[a01] = std::get<typename expr::Succ>(_tmp5.v_mut());
+            _result = expr::add(std::move(s1), expr::succ(*a01));
+          } else if (std::holds_alternative<typename expr::Add>(
+                         _tmp5.v_mut())) {
+            auto &[a01, a11] = std::get<typename expr::Add>(_tmp5.v_mut());
+            _result = expr::add(std::move(s1), expr::add(*a01, *a11));
+          } else if (std::holds_alternative<typename expr::Mul>(
+                         _tmp5.v_mut())) {
+            auto &[a01, a11] = std::get<typename expr::Mul>(_tmp5.v_mut());
+            _result = expr::add(std::move(s1), expr::mul(*a01, *a11));
+          } else {
+            auto &[a01, a11, a21] =
+                std::get<typename expr::Cond>(_tmp5.v_mut());
+            _result = expr::add(std::move(s1), expr::cond(*a01, *a11, *a21));
+          }
+        } else if (std::holds_alternative<_Cont_Mul_1>(_frame)) {
+          auto _f = std::move(std::get<_Cont_Mul_1>(_frame));
+          std::shared_ptr<expr> a1 = std::move(_f.a1);
+          expr _tmp13 = std::move(_result);
+          if (std::holds_alternative<typename expr::Val>(_tmp13.v_mut())) {
+            auto &[a00] = std::get<typename expr::Val>(_tmp13.v_mut());
+            if (a00 <= 0) {
+              _result = expr::val(UINT64_C(0));
+            } else {
+              uint64_t _x = a00 - 1;
+              _stack.emplace_back(_Cont__x{a00});
+              _stack.emplace_back(_Enter{crane_raw(a1)});
+            }
+          } else if (std::holds_alternative<typename expr::Succ>(
+                         _tmp13.v_mut())) {
+            auto &[a00] = std::get<typename expr::Succ>(_tmp13.v_mut());
+            expr s1 = expr::succ(*a00);
+            _stack.emplace_back(_Cont_Succ_2{std::move(s1)});
+            _stack.emplace_back(_Enter{crane_raw(a1)});
+          } else if (std::holds_alternative<typename expr::Add>(
+                         _tmp13.v_mut())) {
+            auto &[a00, a10] = std::get<typename expr::Add>(_tmp13.v_mut());
+            expr s1 = expr::add(*a00, *a10);
+            _stack.emplace_back(_Cont_Add_2{std::move(s1)});
+            _stack.emplace_back(_Enter{crane_raw(a1)});
+          } else if (std::holds_alternative<typename expr::Mul>(
+                         _tmp13.v_mut())) {
+            auto &[a00, a10] = std::get<typename expr::Mul>(_tmp13.v_mut());
+            expr s1 = expr::mul(*a00, *a10);
+            _stack.emplace_back(_Cont_Mul_2{std::move(s1)});
+            _stack.emplace_back(_Enter{crane_raw(a1)});
+          } else {
+            auto &[a00, a10, a20] =
+                std::get<typename expr::Cond>(_tmp13.v_mut());
+            expr s1 = expr::cond(*a00, *a10, *a20);
+            _stack.emplace_back(_Cont_Cond_1{std::move(s1)});
+            _stack.emplace_back(_Enter{crane_raw(a1)});
+          }
+        } else if (std::holds_alternative<_Cont_Mul_2>(_frame)) {
+          auto _f = std::move(std::get<_Cont_Mul_2>(_frame));
+          expr s1 = std::move(_f.s1);
+          expr _tmp11 = std::move(_result);
+          if (std::holds_alternative<typename expr::Val>(_tmp11.v_mut())) {
+            auto &[a01] = std::get<typename expr::Val>(_tmp11.v_mut());
+            if (a01 <= 0) {
+              _result = expr::val(UINT64_C(0));
+            } else {
+              uint64_t _x = a01 - 1;
+              if (a01 == UINT64_C(1)) {
+                _result = std::move(s1);
+              } else {
+                _result = expr::mul(std::move(s1), expr::val(std::move(a01)));
+              }
+            }
+          } else if (std::holds_alternative<typename expr::Succ>(
+                         _tmp11.v_mut())) {
+            auto &[a01] = std::get<typename expr::Succ>(_tmp11.v_mut());
+            _result = expr::mul(std::move(s1), expr::succ(*a01));
+          } else if (std::holds_alternative<typename expr::Add>(
+                         _tmp11.v_mut())) {
+            auto &[a01, a11] = std::get<typename expr::Add>(_tmp11.v_mut());
+            _result = expr::mul(std::move(s1), expr::add(*a01, *a11));
+          } else if (std::holds_alternative<typename expr::Mul>(
+                         _tmp11.v_mut())) {
+            auto &[a01, a11] = std::get<typename expr::Mul>(_tmp11.v_mut());
+            _result = expr::mul(std::move(s1), expr::mul(*a01, *a11));
+          } else {
+            auto &[a01, a11, a21] =
+                std::get<typename expr::Cond>(_tmp11.v_mut());
+            _result = expr::mul(std::move(s1), expr::cond(*a01, *a11, *a21));
+          }
         } else if (std::holds_alternative<_Cont_Succ>(_frame)) {
           auto _f = std::move(std::get<_Cont_Succ>(_frame));
+          _result = expr::succ(std::move(_result));
+        } else if (std::holds_alternative<_Cont_Succ_1>(_frame)) {
+          auto _f = std::move(std::get<_Cont_Succ_1>(_frame));
+          expr s1 = std::move(_f.s1);
+          expr _tmp3 = std::move(_result);
+          if (std::holds_alternative<typename expr::Val>(_tmp3.v_mut())) {
+            auto &[a01] = std::get<typename expr::Val>(_tmp3.v_mut());
+            if (a01 <= 0) {
+              _result = std::move(s1);
+            } else {
+              uint64_t n0 = a01 - 1;
+              _result = expr::add(std::move(s1), expr::val((n0 + 1)));
+            }
+          } else if (std::holds_alternative<typename expr::Succ>(
+                         _tmp3.v_mut())) {
+            auto &[a01] = std::get<typename expr::Succ>(_tmp3.v_mut());
+            _result = expr::add(std::move(s1), expr::succ(*a01));
+          } else if (std::holds_alternative<typename expr::Add>(
+                         _tmp3.v_mut())) {
+            auto &[a01, a11] = std::get<typename expr::Add>(_tmp3.v_mut());
+            _result = expr::add(std::move(s1), expr::add(*a01, *a11));
+          } else if (std::holds_alternative<typename expr::Mul>(
+                         _tmp3.v_mut())) {
+            auto &[a01, a11] = std::get<typename expr::Mul>(_tmp3.v_mut());
+            _result = expr::add(std::move(s1), expr::mul(*a01, *a11));
+          } else {
+            auto &[a01, a11, a21] =
+                std::get<typename expr::Cond>(_tmp3.v_mut());
+            _result = expr::add(std::move(s1), expr::cond(*a01, *a11, *a21));
+          }
+        } else if (std::holds_alternative<_Cont_Succ_2>(_frame)) {
+          auto _f = std::move(std::get<_Cont_Succ_2>(_frame));
+          expr s1 = std::move(_f.s1);
+          expr _tmp9 = std::move(_result);
+          if (std::holds_alternative<typename expr::Val>(_tmp9.v_mut())) {
+            auto &[a01] = std::get<typename expr::Val>(_tmp9.v_mut());
+            if (a01 <= 0) {
+              _result = expr::val(UINT64_C(0));
+            } else {
+              uint64_t _x = a01 - 1;
+              if (a01 == UINT64_C(1)) {
+                _result = std::move(s1);
+              } else {
+                _result = expr::mul(std::move(s1), expr::val(std::move(a01)));
+              }
+            }
+          } else if (std::holds_alternative<typename expr::Succ>(
+                         _tmp9.v_mut())) {
+            auto &[a01] = std::get<typename expr::Succ>(_tmp9.v_mut());
+            _result = expr::mul(std::move(s1), expr::succ(*a01));
+          } else if (std::holds_alternative<typename expr::Add>(
+                         _tmp9.v_mut())) {
+            auto &[a01, a11] = std::get<typename expr::Add>(_tmp9.v_mut());
+            _result = expr::mul(std::move(s1), expr::add(*a01, *a11));
+          } else if (std::holds_alternative<typename expr::Mul>(
+                         _tmp9.v_mut())) {
+            auto &[a01, a11] = std::get<typename expr::Mul>(_tmp9.v_mut());
+            _result = expr::mul(std::move(s1), expr::mul(*a01, *a11));
+          } else {
+            auto &[a01, a11, a21] =
+                std::get<typename expr::Cond>(_tmp9.v_mut());
+            _result = expr::mul(std::move(s1), expr::cond(*a01, *a11, *a21));
+          }
+        } else if (std::holds_alternative<_Cont__x>(_frame)) {
+          auto _f = std::move(std::get<_Cont__x>(_frame));
+          uint64_t a00 = _f.a00;
+          expr _tmp8 = std::move(_result);
+          if (std::holds_alternative<typename expr::Val>(_tmp8.v_mut())) {
+            auto &[a01] = std::get<typename expr::Val>(_tmp8.v_mut());
+            if (a01 <= 0) {
+              _result = expr::val(UINT64_C(0));
+            } else {
+              uint64_t n1 = a01 - 1;
+              expr s2 = expr::val((n1 + 1));
+              if (a00 == UINT64_C(1)) {
+                _result = std::move(s2);
+              } else {
+                _result = expr::mul(expr::val(std::move(a00)), std::move(s2));
+              }
+            }
+          } else if (std::holds_alternative<typename expr::Succ>(
+                         _tmp8.v_mut())) {
+            auto &[a01] = std::get<typename expr::Succ>(_tmp8.v_mut());
+            expr s2 = expr::succ(*a01);
+            if (a00 == UINT64_C(1)) {
+              _result = std::move(s2);
+            } else {
+              _result = expr::mul(expr::val(std::move(a00)), std::move(s2));
+            }
+          } else if (std::holds_alternative<typename expr::Add>(
+                         _tmp8.v_mut())) {
+            auto &[a01, a11] = std::get<typename expr::Add>(_tmp8.v_mut());
+            expr s2 = expr::add(*a01, *a11);
+            if (a00 == UINT64_C(1)) {
+              _result = std::move(s2);
+            } else {
+              _result = expr::mul(expr::val(std::move(a00)), std::move(s2));
+            }
+          } else if (std::holds_alternative<typename expr::Mul>(
+                         _tmp8.v_mut())) {
+            auto &[a01, a11] = std::get<typename expr::Mul>(_tmp8.v_mut());
+            expr s2 = expr::mul(*a01, *a11);
+            if (a00 == UINT64_C(1)) {
+              _result = std::move(s2);
+            } else {
+              _result = expr::mul(expr::val(std::move(a00)), std::move(s2));
+            }
+          } else {
+            auto &[a01, a11, a21] =
+                std::get<typename expr::Cond>(_tmp8.v_mut());
+            expr s2 = expr::cond(*a01, *a11, *a21);
+            if (a00 == UINT64_C(1)) {
+              _result = std::move(s2);
+            } else {
+              _result = expr::mul(expr::val(std::move(a00)), std::move(s2));
+            }
+          }
+        } else {
+          auto _f = std::move(std::get<_Cont_n0>(_frame));
           expr s1 = std::move(_f.s1);
           expr _tmp2 = std::move(_result);
           if (std::holds_alternative<typename expr::Val>(_tmp2.v_mut())) {
@@ -652,8 +775,8 @@ struct LoopifyExpr {
             if (a01 <= 0) {
               _result = std::move(s1);
             } else {
-              uint64_t n0 = a01 - 1;
-              _result = expr::add(std::move(s1), expr::val((n0 + 1)));
+              uint64_t n2 = a01 - 1;
+              _result = expr::add(std::move(s1), expr::val((n2 + 1)));
             }
           } else if (std::holds_alternative<typename expr::Succ>(
                          _tmp2.v_mut())) {
@@ -672,129 +795,6 @@ struct LoopifyExpr {
                 std::get<typename expr::Cond>(_tmp2.v_mut());
             _result = expr::add(std::move(s1), expr::cond(*a01, *a11, *a21));
           }
-        } else if (std::holds_alternative<_Cont_Succ_1>(_frame)) {
-          auto _f = std::move(std::get<_Cont_Succ_1>(_frame));
-          expr s1 = std::move(_f.s1);
-          expr _tmp8 = std::move(_result);
-          if (std::holds_alternative<typename expr::Val>(_tmp8.v_mut())) {
-            auto &[a01] = std::get<typename expr::Val>(_tmp8.v_mut());
-            if (a01 <= 0) {
-              _result = expr::val(UINT64_C(0));
-            } else {
-              uint64_t _x = a01 - 1;
-              if (a01 == UINT64_C(1)) {
-                _result = std::move(s1);
-              } else {
-                _result = expr::mul(std::move(s1), expr::val(std::move(a01)));
-              }
-            }
-          } else if (std::holds_alternative<typename expr::Succ>(
-                         _tmp8.v_mut())) {
-            auto &[a01] = std::get<typename expr::Succ>(_tmp8.v_mut());
-            _result = expr::mul(std::move(s1), expr::succ(*a01));
-          } else if (std::holds_alternative<typename expr::Add>(
-                         _tmp8.v_mut())) {
-            auto &[a01, a11] = std::get<typename expr::Add>(_tmp8.v_mut());
-            _result = expr::mul(std::move(s1), expr::add(*a01, *a11));
-          } else if (std::holds_alternative<typename expr::Mul>(
-                         _tmp8.v_mut())) {
-            auto &[a01, a11] = std::get<typename expr::Mul>(_tmp8.v_mut());
-            _result = expr::mul(std::move(s1), expr::mul(*a01, *a11));
-          } else {
-            auto &[a01, a11, a21] =
-                std::get<typename expr::Cond>(_tmp8.v_mut());
-            _result = expr::mul(std::move(s1), expr::cond(*a01, *a11, *a21));
-          }
-        } else if (std::holds_alternative<_Cont__x>(_frame)) {
-          auto _f = std::move(std::get<_Cont__x>(_frame));
-          uint64_t a00 = _f.a00;
-          expr _tmp7 = std::move(_result);
-          if (std::holds_alternative<typename expr::Val>(_tmp7.v_mut())) {
-            auto &[a01] = std::get<typename expr::Val>(_tmp7.v_mut());
-            if (a01 <= 0) {
-              _result = expr::val(UINT64_C(0));
-            } else {
-              uint64_t n1 = a01 - 1;
-              expr s2 = expr::val((n1 + 1));
-              if (a00 == UINT64_C(1)) {
-                _result = std::move(s2);
-              } else {
-                _result = expr::mul(expr::val(std::move(a00)), std::move(s2));
-              }
-            }
-          } else if (std::holds_alternative<typename expr::Succ>(
-                         _tmp7.v_mut())) {
-            auto &[a01] = std::get<typename expr::Succ>(_tmp7.v_mut());
-            expr s2 = expr::succ(*a01);
-            if (a00 == UINT64_C(1)) {
-              _result = std::move(s2);
-            } else {
-              _result = expr::mul(expr::val(std::move(a00)), std::move(s2));
-            }
-          } else if (std::holds_alternative<typename expr::Add>(
-                         _tmp7.v_mut())) {
-            auto &[a01, a11] = std::get<typename expr::Add>(_tmp7.v_mut());
-            expr s2 = expr::add(*a01, *a11);
-            if (a00 == UINT64_C(1)) {
-              _result = std::move(s2);
-            } else {
-              _result = expr::mul(expr::val(std::move(a00)), std::move(s2));
-            }
-          } else if (std::holds_alternative<typename expr::Mul>(
-                         _tmp7.v_mut())) {
-            auto &[a01, a11] = std::get<typename expr::Mul>(_tmp7.v_mut());
-            expr s2 = expr::mul(*a01, *a11);
-            if (a00 == UINT64_C(1)) {
-              _result = std::move(s2);
-            } else {
-              _result = expr::mul(expr::val(std::move(a00)), std::move(s2));
-            }
-          } else {
-            auto &[a01, a11, a21] =
-                std::get<typename expr::Cond>(_tmp7.v_mut());
-            expr s2 = expr::cond(*a01, *a11, *a21);
-            if (a00 == UINT64_C(1)) {
-              _result = std::move(s2);
-            } else {
-              _result = expr::mul(expr::val(std::move(a00)), std::move(s2));
-            }
-          }
-        } else if (std::holds_alternative<_Cont_n0>(_frame)) {
-          auto _f = std::move(std::get<_Cont_n0>(_frame));
-          expr s1 = std::move(_f.s1);
-          expr _tmp1 = std::move(_result);
-          if (std::holds_alternative<typename expr::Val>(_tmp1.v_mut())) {
-            auto &[a01] = std::get<typename expr::Val>(_tmp1.v_mut());
-            if (a01 <= 0) {
-              _result = std::move(s1);
-            } else {
-              uint64_t n2 = a01 - 1;
-              _result = expr::add(std::move(s1), expr::val((n2 + 1)));
-            }
-          } else if (std::holds_alternative<typename expr::Succ>(
-                         _tmp1.v_mut())) {
-            auto &[a01] = std::get<typename expr::Succ>(_tmp1.v_mut());
-            _result = expr::add(std::move(s1), expr::succ(*a01));
-          } else if (std::holds_alternative<typename expr::Add>(
-                         _tmp1.v_mut())) {
-            auto &[a01, a11] = std::get<typename expr::Add>(_tmp1.v_mut());
-            _result = expr::add(std::move(s1), expr::add(*a01, *a11));
-          } else if (std::holds_alternative<typename expr::Mul>(
-                         _tmp1.v_mut())) {
-            auto &[a01, a11] = std::get<typename expr::Mul>(_tmp1.v_mut());
-            _result = expr::add(std::move(s1), expr::mul(*a01, *a11));
-          } else {
-            auto &[a01, a11, a21] =
-                std::get<typename expr::Cond>(_tmp1.v_mut());
-            _result = expr::add(std::move(s1), expr::cond(*a01, *a11, *a21));
-          }
-        } else if (std::holds_alternative<_Resume_Cond>(_frame)) {
-          auto _f = std::move(std::get<_Resume_Cond>(_frame));
-          _result = expr::cond(std::move(_f._tmp14), std::move(_f._tmp13),
-                               std::move(_result));
-        } else {
-          auto _f = std::move(std::get<_Resume_Succ>(_frame));
-          _result = expr::succ(std::move(_result));
         }
       }
       return _result;
@@ -815,10 +815,10 @@ struct LoopifyExpr {
         std::shared_ptr<expr> a1;
       };
 
-      /// _Cont_Add_1: saves [_tmp2], resumes after recursive call, then
+      /// _Cont_Add_1: saves [_tmp3], resumes after recursive call, then
       /// processes rest.
       struct _Cont_Add_1 {
-        uint64_t _tmp2;
+        uint64_t _tmp3;
       };
 
       /// _Cont_Cond: saves [a1, a2], resumes after recursive call, then
@@ -828,18 +828,18 @@ struct LoopifyExpr {
         std::shared_ptr<expr> a2;
       };
 
-      /// _Cont_Cond_1: saves [_tmp7, a2], resumes after recursive call, then
+      /// _Cont_Cond_1: saves [_tmp8, a2], resumes after recursive call, then
       /// processes rest.
       struct _Cont_Cond_1 {
-        uint64_t _tmp7;
+        uint64_t _tmp8;
         std::shared_ptr<expr> a2;
       };
 
-      /// _Cont_Cond_2: saves [_tmp6, _tmp7], resumes after recursive call, then
+      /// _Cont_Cond_2: saves [_tmp7, _tmp8], resumes after recursive call, then
       /// processes rest.
       struct _Cont_Cond_2 {
-        uint64_t _tmp6;
         uint64_t _tmp7;
+        uint64_t _tmp8;
       };
 
       /// _Cont_Mul: saves [a1], resumes after recursive call, then processes
@@ -848,24 +848,24 @@ struct LoopifyExpr {
         std::shared_ptr<expr> a1;
       };
 
-      /// _Cont_Mul_1: saves [_tmp4], resumes after recursive call, then
+      /// _Cont_Mul_1: saves [_tmp5], resumes after recursive call, then
       /// processes rest.
       struct _Cont_Mul_1 {
-        uint64_t _tmp4;
+        uint64_t _tmp5;
       };
 
-      /// _Resume_Succ: resumes after recursive call with _result.
-      struct _Resume_Succ {};
+      /// _Cont_Succ: resumes after recursive call, then processes rest.
+      struct _Cont_Succ {};
 
       using _Frame =
           std::variant<_Enter, _Cont_Add, _Cont_Add_1, _Cont_Cond, _Cont_Cond_1,
-                       _Cont_Cond_2, _Cont_Mul, _Cont_Mul_1, _Resume_Succ>;
+                       _Cont_Cond_2, _Cont_Mul, _Cont_Mul_1, _Cont_Succ>;
       uint64_t _result{};
       crane::small_vector<_Frame> _stack;
       _stack.emplace_back(_Enter{_self});
       /// Loopified size: _Enter -> _Cont_Add -> _Cont_Add_1 -> _Cont_Cond ->
       /// _Cont_Cond_1 -> _Cont_Cond_2 -> _Cont_Mul -> _Cont_Mul_1 ->
-      /// _Resume_Succ.
+      /// _Cont_Succ.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -877,7 +877,7 @@ struct LoopifyExpr {
             _result = UINT64_C(1);
           } else if (std::holds_alternative<typename expr::Succ>(_sv.v())) {
             const auto &[a0] = std::get<typename expr::Succ>(_sv.v());
-            _stack.emplace_back(_Resume_Succ{});
+            _stack.emplace_back(_Cont_Succ{});
             _stack.emplace_back(_Enter{crane_raw(a0)});
           } else if (std::holds_alternative<typename expr::Add>(_sv.v())) {
             const auto &[a0, a1] = std::get<typename expr::Add>(_sv.v());
@@ -899,7 +899,7 @@ struct LoopifyExpr {
           _stack.emplace_back(_Enter{crane_raw(a1)});
         } else if (std::holds_alternative<_Cont_Add_1>(_frame)) {
           auto _f = std::move(std::get<_Cont_Add_1>(_frame));
-          _result = ((_f._tmp2 + std::move(_result)) + 1);
+          _result = ((_f._tmp3 + std::move(_result)) + 1);
         } else if (std::holds_alternative<_Cont_Cond>(_frame)) {
           auto _f = std::move(std::get<_Cont_Cond>(_frame));
           std::shared_ptr<expr> a1 = std::move(_f.a1);
@@ -909,11 +909,11 @@ struct LoopifyExpr {
         } else if (std::holds_alternative<_Cont_Cond_1>(_frame)) {
           auto _f = std::move(std::get<_Cont_Cond_1>(_frame));
           std::shared_ptr<expr> a2 = std::move(_f.a2);
-          _stack.emplace_back(_Cont_Cond_2{std::move(_result), _f._tmp7});
+          _stack.emplace_back(_Cont_Cond_2{std::move(_result), _f._tmp8});
           _stack.emplace_back(_Enter{crane_raw(a2)});
         } else if (std::holds_alternative<_Cont_Cond_2>(_frame)) {
           auto _f = std::move(std::get<_Cont_Cond_2>(_frame));
-          _result = ((_f._tmp7 + (_f._tmp6 + std::move(_result))) + 1);
+          _result = ((_f._tmp8 + (_f._tmp7 + std::move(_result))) + 1);
         } else if (std::holds_alternative<_Cont_Mul>(_frame)) {
           auto _f = std::move(std::get<_Cont_Mul>(_frame));
           std::shared_ptr<expr> a1 = std::move(_f.a1);
@@ -921,9 +921,9 @@ struct LoopifyExpr {
           _stack.emplace_back(_Enter{crane_raw(a1)});
         } else if (std::holds_alternative<_Cont_Mul_1>(_frame)) {
           auto _f = std::move(std::get<_Cont_Mul_1>(_frame));
-          _result = ((_f._tmp4 + std::move(_result)) + 1);
+          _result = ((_f._tmp5 + std::move(_result)) + 1);
         } else {
-          auto _f = std::move(std::get<_Resume_Succ>(_frame));
+          auto _f = std::move(std::get<_Cont_Succ>(_frame));
           _result = (std::move(_result) + 1);
         }
       }
@@ -1067,10 +1067,10 @@ struct LoopifyExpr {
         std::shared_ptr<expr> a1;
       };
 
-      /// _Cont_Add_1: saves [_tmp2], resumes after recursive call, then
+      /// _Cont_Add_1: saves [_tmp3], resumes after recursive call, then
       /// processes rest.
       struct _Cont_Add_1 {
-        uint64_t _tmp2;
+        uint64_t _tmp3;
       };
 
       /// _Cont_Cond: saves [a1, a2], resumes after recursive call, then
@@ -1080,18 +1080,18 @@ struct LoopifyExpr {
         std::shared_ptr<expr> a2;
       };
 
-      /// _Cont_Cond_1: saves [_tmp7, a2], resumes after recursive call, then
+      /// _Cont_Cond_1: saves [_tmp8, a2], resumes after recursive call, then
       /// processes rest.
       struct _Cont_Cond_1 {
-        uint64_t _tmp7;
+        uint64_t _tmp8;
         std::shared_ptr<expr> a2;
       };
 
-      /// _Cont_Cond_2: saves [_tmp6, _tmp7], resumes after recursive call, then
+      /// _Cont_Cond_2: saves [_tmp7, _tmp8], resumes after recursive call, then
       /// processes rest.
       struct _Cont_Cond_2 {
-        uint64_t _tmp6;
         uint64_t _tmp7;
+        uint64_t _tmp8;
       };
 
       /// _Cont_Mul: saves [a1], resumes after recursive call, then processes
@@ -1100,24 +1100,24 @@ struct LoopifyExpr {
         std::shared_ptr<expr> a1;
       };
 
-      /// _Cont_Mul_1: saves [_tmp4], resumes after recursive call, then
+      /// _Cont_Mul_1: saves [_tmp5], resumes after recursive call, then
       /// processes rest.
       struct _Cont_Mul_1 {
-        uint64_t _tmp4;
+        uint64_t _tmp5;
       };
 
-      /// _Resume_Succ: resumes after recursive call with _result.
-      struct _Resume_Succ {};
+      /// _Cont_Succ: resumes after recursive call, then processes rest.
+      struct _Cont_Succ {};
 
       using _Frame =
           std::variant<_Enter, _Cont_Add, _Cont_Add_1, _Cont_Cond, _Cont_Cond_1,
-                       _Cont_Cond_2, _Cont_Mul, _Cont_Mul_1, _Resume_Succ>;
+                       _Cont_Cond_2, _Cont_Mul, _Cont_Mul_1, _Cont_Succ>;
       uint64_t _result{};
       crane::small_vector<_Frame> _stack;
       _stack.emplace_back(_Enter{_self});
       /// Loopified depth: _Enter -> _Cont_Add -> _Cont_Add_1 -> _Cont_Cond ->
       /// _Cont_Cond_1 -> _Cont_Cond_2 -> _Cont_Mul -> _Cont_Mul_1 ->
-      /// _Resume_Succ.
+      /// _Cont_Succ.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -1129,7 +1129,7 @@ struct LoopifyExpr {
             _result = UINT64_C(0);
           } else if (std::holds_alternative<typename expr::Succ>(_sv.v())) {
             const auto &[a0] = std::get<typename expr::Succ>(_sv.v());
-            _stack.emplace_back(_Resume_Succ{});
+            _stack.emplace_back(_Cont_Succ{});
             _stack.emplace_back(_Enter{crane_raw(a0)});
           } else if (std::holds_alternative<typename expr::Add>(_sv.v())) {
             const auto &[a0, a1] = std::get<typename expr::Add>(_sv.v());
@@ -1151,7 +1151,7 @@ struct LoopifyExpr {
           _stack.emplace_back(_Enter{crane_raw(a1)});
         } else if (std::holds_alternative<_Cont_Add_1>(_frame)) {
           auto _f = std::move(std::get<_Cont_Add_1>(_frame));
-          _result = (std::max(_f._tmp2, std::move(_result)) + 1);
+          _result = (std::max(_f._tmp3, std::move(_result)) + 1);
         } else if (std::holds_alternative<_Cont_Cond>(_frame)) {
           auto _f = std::move(std::get<_Cont_Cond>(_frame));
           std::shared_ptr<expr> a1 = std::move(_f.a1);
@@ -1161,12 +1161,12 @@ struct LoopifyExpr {
         } else if (std::holds_alternative<_Cont_Cond_1>(_frame)) {
           auto _f = std::move(std::get<_Cont_Cond_1>(_frame));
           std::shared_ptr<expr> a2 = std::move(_f.a2);
-          _stack.emplace_back(_Cont_Cond_2{std::move(_result), _f._tmp7});
+          _stack.emplace_back(_Cont_Cond_2{std::move(_result), _f._tmp8});
           _stack.emplace_back(_Enter{crane_raw(a2)});
         } else if (std::holds_alternative<_Cont_Cond_2>(_frame)) {
           auto _f = std::move(std::get<_Cont_Cond_2>(_frame));
           _result =
-              (std::max(_f._tmp7, std::max(_f._tmp6, std::move(_result))) + 1);
+              (std::max(_f._tmp8, std::max(_f._tmp7, std::move(_result))) + 1);
         } else if (std::holds_alternative<_Cont_Mul>(_frame)) {
           auto _f = std::move(std::get<_Cont_Mul>(_frame));
           std::shared_ptr<expr> a1 = std::move(_f.a1);
@@ -1174,9 +1174,9 @@ struct LoopifyExpr {
           _stack.emplace_back(_Enter{crane_raw(a1)});
         } else if (std::holds_alternative<_Cont_Mul_1>(_frame)) {
           auto _f = std::move(std::get<_Cont_Mul_1>(_frame));
-          _result = (std::max(_f._tmp4, std::move(_result)) + 1);
+          _result = (std::max(_f._tmp5, std::move(_result)) + 1);
         } else {
-          auto _f = std::move(std::get<_Resume_Succ>(_frame));
+          auto _f = std::move(std::get<_Cont_Succ>(_frame));
           _result = (std::move(_result) + 1);
         }
       }
@@ -1198,10 +1198,10 @@ struct LoopifyExpr {
         std::shared_ptr<expr> a1;
       };
 
-      /// _Cont_Add_1: saves [_tmp2], resumes after recursive call, then
+      /// _Cont_Add_1: saves [_tmp3], resumes after recursive call, then
       /// processes rest.
       struct _Cont_Add_1 {
-        uint64_t _tmp2;
+        uint64_t _tmp3;
       };
 
       /// _Cont_Cond: saves [a1, a2], resumes after recursive call, then
@@ -1217,22 +1217,22 @@ struct LoopifyExpr {
         std::shared_ptr<expr> a1;
       };
 
-      /// _Cont_Mul_1: saves [_tmp4], resumes after recursive call, then
+      /// _Cont_Mul_1: saves [_tmp5], resumes after recursive call, then
       /// processes rest.
       struct _Cont_Mul_1 {
-        uint64_t _tmp4;
+        uint64_t _tmp5;
       };
 
-      /// _Resume_Succ: resumes after recursive call with _result.
-      struct _Resume_Succ {};
+      /// _Cont_Succ: resumes after recursive call, then processes rest.
+      struct _Cont_Succ {};
 
       using _Frame = std::variant<_Enter, _Cont_Add, _Cont_Add_1, _Cont_Cond,
-                                  _Cont_Mul, _Cont_Mul_1, _Resume_Succ>;
+                                  _Cont_Mul, _Cont_Mul_1, _Cont_Succ>;
       uint64_t _result{};
       crane::small_vector<_Frame> _stack;
       _stack.emplace_back(_Enter{_self});
       /// Loopified eval: _Enter -> _Cont_Add -> _Cont_Add_1 -> _Cont_Cond ->
-      /// _Cont_Mul -> _Cont_Mul_1 -> _Resume_Succ.
+      /// _Cont_Mul -> _Cont_Mul_1 -> _Cont_Succ.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -1245,7 +1245,7 @@ struct LoopifyExpr {
             _result = std::move(a0);
           } else if (std::holds_alternative<typename expr::Succ>(_sv.v())) {
             const auto &[a0] = std::get<typename expr::Succ>(_sv.v());
-            _stack.emplace_back(_Resume_Succ{});
+            _stack.emplace_back(_Cont_Succ{});
             _stack.emplace_back(_Enter{crane_raw(a0)});
           } else if (std::holds_alternative<typename expr::Add>(_sv.v())) {
             const auto &[a0, a1] = std::get<typename expr::Add>(_sv.v());
@@ -1267,13 +1267,13 @@ struct LoopifyExpr {
           _stack.emplace_back(_Enter{crane_raw(a1)});
         } else if (std::holds_alternative<_Cont_Add_1>(_frame)) {
           auto _f = std::move(std::get<_Cont_Add_1>(_frame));
-          _result = (_f._tmp2 + std::move(_result));
+          _result = (_f._tmp3 + std::move(_result));
         } else if (std::holds_alternative<_Cont_Cond>(_frame)) {
           auto _f = std::move(std::get<_Cont_Cond>(_frame));
           std::shared_ptr<expr> a1 = std::move(_f.a1);
           std::shared_ptr<expr> a2 = std::move(_f.a2);
-          uint64_t _tmp5 = std::move(_result);
-          if (UINT64_C(0) < _tmp5) {
+          uint64_t _tmp6 = std::move(_result);
+          if (UINT64_C(0) < _tmp6) {
             _stack.emplace_back(_Enter{crane_raw(a1)});
           } else {
             _stack.emplace_back(_Enter{crane_raw(a2)});
@@ -1285,9 +1285,9 @@ struct LoopifyExpr {
           _stack.emplace_back(_Enter{crane_raw(a1)});
         } else if (std::holds_alternative<_Cont_Mul_1>(_frame)) {
           auto _f = std::move(std::get<_Cont_Mul_1>(_frame));
-          _result = (_f._tmp4 * std::move(_result));
+          _result = (_f._tmp5 * std::move(_result));
         } else {
-          auto _f = std::move(std::get<_Resume_Succ>(_frame));
+          auto _f = std::move(std::get<_Cont_Succ>(_frame));
           _result = (std::move(_result) + 1);
         }
       }

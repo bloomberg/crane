@@ -160,14 +160,14 @@ struct DepElim {
         uint64_t _x;
       };
 
-      /// _Resume_FS: resumes after recursive call with _result.
-      struct _Resume_FS {};
+      /// _Cont_FS: resumes after recursive call, then processes rest.
+      struct _Cont_FS {};
 
-      using _Frame = std::variant<_Enter, _Resume_FS>;
+      using _Frame = std::variant<_Enter, _Cont_FS>;
       uint64_t _result{};
       crane::small_vector<_Frame> _stack;
       _stack.emplace_back(_Enter{_self, _x});
-      /// Loopified fin_to_nat: _Enter -> _Resume_FS.
+      /// Loopified fin_to_nat: _Enter -> _Cont_FS.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -180,11 +180,11 @@ struct DepElim {
             _result = UINT64_C(0);
           } else {
             const auto &[n, a1] = std::get<typename fin::FS>(_sv.v());
-            _stack.emplace_back(_Resume_FS{});
+            _stack.emplace_back(_Cont_FS{});
             _stack.emplace_back(_Enter{crane_raw(a1), n});
           }
         } else {
-          auto _f = std::move(std::get<_Resume_FS>(_frame));
+          auto _f = std::move(std::get<_Cont_FS>(_frame));
           _result = (std::move(_result) + 1);
         }
       }

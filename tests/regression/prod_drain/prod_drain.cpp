@@ -23,14 +23,14 @@ uint64_t ProdDrain::depth(
     ProdDrain::t x;
   };
 
-  /// _Resume_u: resumes after recursive call with _result.
-  struct _Resume_u {};
+  /// _Cont_u: resumes after recursive call, then processes rest.
+  struct _Cont_u {};
 
-  using _Frame = std::variant<_Enter, _Resume_u>;
+  using _Frame = std::variant<_Enter, _Cont_u>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{x});
-  /// Loopified depth: _Enter -> _Resume_u.
+  /// Loopified depth: _Enter -> _Cont_u.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -42,11 +42,11 @@ uint64_t ProdDrain::depth(
       } else {
         const auto &[a0] = std::get<typename ProdDrain::t::N>(x.v());
         const auto &[u, _x] = (*a0);
-        _stack.emplace_back(_Resume_u{});
+        _stack.emplace_back(_Cont_u{});
         _stack.emplace_back(_Enter{u});
       }
     } else {
-      auto _f = std::move(std::get<_Resume_u>(_frame));
+      auto _f = std::move(std::get<_Cont_u>(_frame));
       _result = (std::move(_result) + 1);
     }
   }

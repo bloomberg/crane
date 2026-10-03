@@ -8,6 +8,7 @@
 #include <atomic>
 #include <memory>
 #include <stdexcept>
+#include <type_traits>
 #include <utility>
 #include <variant>
 

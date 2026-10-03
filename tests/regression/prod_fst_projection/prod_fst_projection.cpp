@@ -24,14 +24,14 @@ uint64_t ProdFstProjection::depth(
     ProdFstProjection::t x;
   };
 
-  /// _Resume_N: resumes after recursive call with _result.
-  struct _Resume_N {};
+  /// _Cont_N: resumes after recursive call, then processes rest.
+  struct _Cont_N {};
 
-  using _Frame = std::variant<_Enter, _Resume_N>;
+  using _Frame = std::variant<_Enter, _Cont_N>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{x});
-  /// Loopified depth: _Enter -> _Resume_N.
+  /// Loopified depth: _Enter -> _Cont_N.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -42,11 +42,11 @@ uint64_t ProdFstProjection::depth(
         _result = UINT64_C(0);
       } else {
         const auto &[a0] = std::get<typename ProdFstProjection::t::N>(x.v());
-        _stack.emplace_back(_Resume_N{});
+        _stack.emplace_back(_Cont_N{});
         _stack.emplace_back(_Enter{(*a0).first});
       }
     } else {
-      auto _f = std::move(std::get<_Resume_N>(_frame));
+      auto _f = std::move(std::get<_Cont_N>(_frame));
       _result = (std::move(_result) + 1);
     }
   }

@@ -266,6 +266,13 @@ let drain_template s =
   flush ();
   List.rev !tokens
 
+let passes_through s =
+  match
+    List.filter (function CCstring t -> String.trim t <> "" | _ -> true) (term_template s)
+  with
+  | [CCarg i] -> Some i
+  | _ -> None
+
 let is_pair_projection s =
   match term_template s with
   | [CCstring ""; CCarg 0; CCstring (".first" | ".second")]

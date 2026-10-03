@@ -13,14 +13,14 @@ uint64_t LoopifyItreeReified::count_taus(
     uint64_t fuel;
   };
 
-  /// _Resume_t_: resumes after recursive call with _result.
-  struct _Resume_t_ {};
+  /// _Cont_t_: resumes after recursive call, then processes rest.
+  struct _Cont_t_ {};
 
-  using _Frame = std::variant<_Enter, _Resume_t_>;
+  using _Frame = std::variant<_Enter, _Cont_t_>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{t, fuel});
-  /// Loopified count_taus: _Enter -> _Resume_t_.
+  /// Loopified count_taus: _Enter -> _Cont_t_.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -40,7 +40,7 @@ uint64_t LoopifyItreeReified::count_taus(
         } else if (std::holds_alternative<typename ITree<uint64_t>::Tau>(_cs)) {
           const auto &_itf = *std::get_if<typename ITree<uint64_t>::Tau>(&_cs);
           auto t_ = _itf.next;
-          _stack.emplace_back(_Resume_t_{});
+          _stack.emplace_back(_Cont_t_{});
           _stack.emplace_back(_Enter{t_, fuel_});
         } else {
           const auto &_itf = *std::get_if<typename ITree<uint64_t>::Vis>(&_cs);
@@ -50,7 +50,7 @@ uint64_t LoopifyItreeReified::count_taus(
         }
       }
     } else {
-      auto _f = std::move(std::get<_Resume_t_>(_frame));
+      auto _f = std::move(std::get<_Cont_t_>(_frame));
       _result = (std::move(_result) + 1);
     }
   }

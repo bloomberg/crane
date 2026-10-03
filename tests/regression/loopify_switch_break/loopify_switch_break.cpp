@@ -118,20 +118,20 @@ uint64_t LoopifySwitchBreak::count_tag(
     const List<std::pair<LoopifySwitchBreak::Tag, uint64_t>> *ops;
   };
 
-  /// _Resume_t_: resumes after recursive call with _result.
-  struct _Resume_t_ {};
+  /// _Cont_t_: resumes after recursive call, then processes rest.
+  struct _Cont_t_ {};
 
-  /// _Resume_t__1: resumes after recursive call with _result.
-  struct _Resume_t__1 {};
+  /// _Cont_t__1: resumes after recursive call, then processes rest.
+  struct _Cont_t__1 {};
 
-  /// _Resume_t__2: resumes after recursive call with _result.
-  struct _Resume_t__2 {};
+  /// _Cont_t__2: resumes after recursive call, then processes rest.
+  struct _Cont_t__2 {};
 
-  using _Frame = std::variant<_Enter, _Resume_t_, _Resume_t__1, _Resume_t__2>;
+  using _Frame = std::variant<_Enter, _Cont_t_, _Cont_t__1, _Cont_t__2>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&ops});
-  /// Loopified count_tag: _Enter -> _Resume_t_ -> _Resume_t__1 -> _Resume_t__2.
+  /// Loopified count_tag: _Enter -> _Cont_t_ -> _Cont_t__1 -> _Cont_t__2.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -151,7 +151,7 @@ uint64_t LoopifySwitchBreak::count_tag(
         case Tag::ADD: {
           switch (t_) {
           case Tag::ADD: {
-            _stack.emplace_back(_Resume_t_{});
+            _stack.emplace_back(_Cont_t_{});
             _stack.emplace_back(_Enter{crane_raw(a1)});
             break;
           }
@@ -164,7 +164,7 @@ uint64_t LoopifySwitchBreak::count_tag(
         case Tag::MUL: {
           switch (t_) {
           case Tag::MUL: {
-            _stack.emplace_back(_Resume_t__1{});
+            _stack.emplace_back(_Cont_t__1{});
             _stack.emplace_back(_Enter{crane_raw(a1)});
             break;
           }
@@ -177,7 +177,7 @@ uint64_t LoopifySwitchBreak::count_tag(
         case Tag::KEEP: {
           switch (t_) {
           case Tag::KEEP: {
-            _stack.emplace_back(_Resume_t__2{});
+            _stack.emplace_back(_Cont_t__2{});
             _stack.emplace_back(_Enter{crane_raw(a1)});
             break;
           }
@@ -191,14 +191,14 @@ uint64_t LoopifySwitchBreak::count_tag(
           std::unreachable();
         }
       }
-    } else if (std::holds_alternative<_Resume_t_>(_frame)) {
-      auto _f = std::move(std::get<_Resume_t_>(_frame));
+    } else if (std::holds_alternative<_Cont_t_>(_frame)) {
+      auto _f = std::move(std::get<_Cont_t_>(_frame));
       _result = (std::move(_result) + 1);
-    } else if (std::holds_alternative<_Resume_t__1>(_frame)) {
-      auto _f = std::move(std::get<_Resume_t__1>(_frame));
+    } else if (std::holds_alternative<_Cont_t__1>(_frame)) {
+      auto _f = std::move(std::get<_Cont_t__1>(_frame));
       _result = (std::move(_result) + 1);
     } else {
-      auto _f = std::move(std::get<_Resume_t__2>(_frame));
+      auto _f = std::move(std::get<_Cont_t__2>(_frame));
       _result = (std::move(_result) + 1);
     }
   }

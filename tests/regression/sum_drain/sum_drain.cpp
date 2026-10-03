@@ -22,14 +22,14 @@ uint64_t SumDrain::depth(
     SumDrain::t x;
   };
 
-  /// _Resume_Inr: resumes after recursive call with _result.
-  struct _Resume_Inr {};
+  /// _Cont_Inr: resumes after recursive call, then processes rest.
+  struct _Cont_Inr {};
 
-  using _Frame = std::variant<_Enter, _Resume_Inr>;
+  using _Frame = std::variant<_Enter, _Cont_Inr>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{x});
-  /// Loopified depth: _Enter -> _Resume_Inr.
+  /// Loopified depth: _Enter -> _Cont_Inr.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -44,11 +44,11 @@ uint64_t SumDrain::depth(
       } else {
         const auto &[a00] =
             std::get<typename Sum<uint64_t, SumDrain::t>::Inr>(_sv0.v());
-        _stack.emplace_back(_Resume_Inr{});
+        _stack.emplace_back(_Cont_Inr{});
         _stack.emplace_back(_Enter{a00});
       }
     } else {
-      auto _f = std::move(std::get<_Resume_Inr>(_frame));
+      auto _f = std::move(std::get<_Cont_Inr>(_frame));
       _result = (std::move(_result) + 1);
     }
   }

@@ -13,14 +13,14 @@ uint64_t LoopifyNameHygiene::depth(
     const LoopifyNameHygiene::Frame_ *f;
   };
 
-  /// _Resume_Resume_Cons_: resumes after recursive call with _result.
-  struct _Resume_Resume_Cons_ {};
+  /// _Cont_Resume_Cons_: resumes after recursive call with _result.
+  struct _Cont_Resume_Cons_ {};
 
-  using _Frame = std::variant<_Enter, _Resume_Resume_Cons_>;
+  using _Frame = std::variant<_Enter, _Cont_Resume_Cons_>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&f});
-  /// Loopified depth: _Enter -> _Resume_Resume_Cons_.
+  /// Loopified depth: _Enter -> _Cont_Resume_Cons_.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -35,11 +35,11 @@ uint64_t LoopifyNameHygiene::depth(
       } else {
         const auto &[a0] =
             std::get<typename LoopifyNameHygiene::Frame_::Resume_Cons_>(f.v());
-        _stack.emplace_back(_Resume_Resume_Cons_{});
+        _stack.emplace_back(_Cont_Resume_Cons_{});
         _stack.emplace_back(_Enter{crane_raw(a0)});
       }
     } else {
-      auto _f = std::move(std::get<_Resume_Resume_Cons_>(_frame));
+      auto _f = std::move(std::get<_Cont_Resume_Cons_>(_frame));
       _result = (std::move(_result) + 1);
     }
   }
@@ -54,14 +54,14 @@ LoopifyNameHygiene::mk(uint64_t n) { /// _Enter: captures varying parameters for
     uint64_t n;
   };
 
-  /// _Resume_k: resumes after recursive call with _result.
-  struct _Resume_k {};
+  /// _Cont_k: resumes after recursive call, then processes rest.
+  struct _Cont_k {};
 
-  using _Frame = std::variant<_Enter, _Resume_k>;
+  using _Frame = std::variant<_Enter, _Cont_k>;
   LoopifyNameHygiene::Frame_ _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
-  /// Loopified mk: _Enter -> _Resume_k.
+  /// Loopified mk: _Enter -> _Cont_k.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -72,11 +72,11 @@ LoopifyNameHygiene::mk(uint64_t n) { /// _Enter: captures varying parameters for
         _result = Frame_::enter_(UINT64_C(1));
       } else {
         uint64_t k = n - 1;
-        _stack.emplace_back(_Resume_k{});
+        _stack.emplace_back(_Cont_k{});
         _stack.emplace_back(_Enter{k});
       }
     } else {
-      auto _f = std::move(std::get<_Resume_k>(_frame));
+      auto _f = std::move(std::get<_Cont_k>(_frame));
       _result = Frame_::resume_cons_(std::move(_result));
     }
   }
@@ -91,14 +91,14 @@ LoopifyNameHygiene::locals(uint64_t n) { /// _Enter: captures varying parameters
     uint64_t n;
   };
 
-  /// _Resume_k: resumes after recursive call with _result.
-  struct _Resume_k {};
+  /// _Cont_k: resumes after recursive call, then processes rest.
+  struct _Cont_k {};
 
-  using _Frame = std::variant<_Enter, _Resume_k>;
+  using _Frame = std::variant<_Enter, _Cont_k>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
-  /// Loopified locals: _Enter -> _Resume_k.
+  /// Loopified locals: _Enter -> _Cont_k.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -109,11 +109,11 @@ LoopifyNameHygiene::locals(uint64_t n) { /// _Enter: captures varying parameters
         _result = ((stack_ + result_) + self_);
       } else {
         uint64_t k = n - 1;
-        _stack.emplace_back(_Resume_k{});
+        _stack.emplace_back(_Cont_k{});
         _stack.emplace_back(_Enter{k});
       }
     } else {
-      auto _f = std::move(std::get<_Resume_k>(_frame));
+      auto _f = std::move(std::get<_Cont_k>(_frame));
       _result = (std::move(_result) + 1);
     }
   }

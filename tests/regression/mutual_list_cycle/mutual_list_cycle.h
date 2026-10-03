@@ -256,22 +256,22 @@ inline Tree Tree::leaf(List<Branch> a0) {
 
 inline Nat Tree::tree_size() const {
   const auto &[a0] = std::get<typename Tree::Leaf>(this->v());
-  return Nat::s([&]() {
-    auto branches_size_impl = [](auto &_self_branches_size,
-                                 const List<Branch> &l) -> Nat {
-      if (std::holds_alternative<typename List<Branch>::Nil>(l.v())) {
-        return Nat::o();
-      } else {
-        const auto &[a1, a2] = std::get<typename List<Branch>::Cons>(l.v());
-        return a1.branch_size().add(
-            _self_branches_size(_self_branches_size, *a2));
-      }
-    };
-    auto branches_size = [&](const List<Branch> &l) -> Nat {
-      return branches_size_impl(branches_size_impl, l);
-    };
-    return branches_size(*a0);
-  }());
+  Nat _tmp3;
+  auto branches_size_impl = [](auto &_self_branches_size,
+                               const List<Branch> &l) -> Nat {
+    if (std::holds_alternative<typename List<Branch>::Nil>(l.v())) {
+      return Nat::o();
+    } else {
+      const auto &[a00, a10] = std::get<typename List<Branch>::Cons>(l.v());
+      return a00.branch_size().add(
+          _self_branches_size(_self_branches_size, *a10));
+    }
+  };
+  auto branches_size = [&](const List<Branch> &l) -> Nat {
+    return branches_size_impl(branches_size_impl, l);
+  };
+  _tmp3 = branches_size(*a0);
+  return Nat::s(std::move(_tmp3));
 }
 
 inline Branch Branch::branch0(Nat a0, Tree a1) {

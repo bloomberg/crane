@@ -302,17 +302,17 @@ public:
       std::shared_ptr<Exp<t>> a1;
     };
 
-    /// _Resume_E_node: saves [_tmp1], resumes after recursive call with
-    /// _result.
-    struct _Resume_E_node {
-      Exp<T1> _tmp1;
+    /// _Cont_E_node_1: saves [_tmp2], resumes after recursive call, then
+    /// processes rest.
+    struct _Cont_E_node_1 {
+      Exp<T1> _tmp2;
     };
 
-    using _Frame = std::variant<_Enter, _Cont_E_node, _Resume_E_node>;
+    using _Frame = std::variant<_Enter, _Cont_E_node, _Cont_E_node_1>;
     Exp<T1> _result{};
     crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{_self});
-    /// Loopified exp_map: _Enter -> _Cont_E_node -> _Resume_E_node.
+    /// Loopified exp_map: _Enter -> _Cont_E_node -> _Cont_E_node_1.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -331,11 +331,11 @@ public:
       } else if (std::holds_alternative<_Cont_E_node>(_frame)) {
         auto _f = std::move(std::get<_Cont_E_node>(_frame));
         std::shared_ptr<Exp<t>> a1 = std::move(_f.a1);
-        _stack.emplace_back(_Resume_E_node{std::move(_result)});
+        _stack.emplace_back(_Cont_E_node_1{std::move(_result)});
         _stack.emplace_back(_Enter{crane_raw(a1)});
       } else {
-        auto _f = std::move(std::get<_Resume_E_node>(_frame));
-        _result = Exp<T1>::e_node(std::move(_f._tmp1), std::move(_result));
+        auto _f = std::move(std::get<_Cont_E_node_1>(_frame));
+        _result = Exp<T1>::e_node(std::move(_f._tmp2), std::move(_result));
       }
     }
     return _result;

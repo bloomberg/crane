@@ -92,22 +92,36 @@ let rec inline_into x v = function
   | s :: rest -> Option.map (fun s -> s :: rest) (subst_stmt x v s)
   | [] -> None
 
-(* A statement list with its temporaries put back, the last first: by the
-   time a temporary is considered, every temporary between it and its use
-   has already gone back into that use. *)
-let rec stmts = function
-  | [] -> []
-  | s :: rest -> (
-    let rest = stmts rest in
-    let s = stmt s in
-    match s with
-    | Sasgn (x, Declare _, v) when Mlutil.is_temporary_id x && count_stmts x 0 rest = 1 ->
-      Option.default (s :: rest) (inline_into x v rest)
-    | _ -> s :: rest )
+(* The mappers putting temporaries back in a statement list and in an
+   expression, the last first: by the time a temporary is considered, every
+   temporary between it and its use has already gone back into that use.
+   [lambdas] says whether lambda bodies are included. *)
+let restorer ~lambdas =
+  let rec block = function
+    | [] -> []
+    | s :: rest -> (
+      let rest = block rest in
+      let s = stmt s in
+      match s with
+      | Sasgn (x, Declare _, v) when Mlutil.is_temporary_id x && count_stmts x 0 rest = 1 ->
+        Option.default (s :: rest) (inline_into x v rest)
+      | _ -> s :: rest )
+  and stmt s = map_stmt ~fl:block expr stmt Fun.id s
+  and expr e =
+    match e with
+    | CPPlambda _ when not lambdas -> e
+    | _ -> map_expr ~fl:block expr stmt Fun.id e
+  in
+  (block, stmt, expr)
 
-and stmt s = map_stmt ~fl:stmts expr stmt Fun.id s
-
-and expr e = map_expr ~fl:stmts expr stmt Fun.id e
+(** [own_stmts body] is [body] with the temporaries of its own statements put
+    back, those of any lambda in it left: the view a transform of [body]
+    alone reads, each lambda being transformed on its own. *)
+let own_stmts body =
+  let block, _, _ = restorer ~lambdas:false in
+  block body
 
 (** [decl d] is [d] with its temporaries put back. *)
-let decl d = map_decl ~fl:stmts expr stmt Fun.id d
+let decl d =
+  let block, stmt, expr = restorer ~lambdas:true in
+  map_decl ~fl:block expr stmt Fun.id d
