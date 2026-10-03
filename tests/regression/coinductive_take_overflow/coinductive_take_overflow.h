@@ -159,7 +159,8 @@ struct CoinductiveTakeOverflow {
         : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
     static stream<A> cons(A a0, stream<A> a1) {
-      return stream<A>(Cons{std::move(a0), std::move(a1)});
+      return stream<A>(crane::lazy<variant_t>(
+          std::in_place, std::in_place_index<0>, std::move(a0), std::move(a1)));
     }
 
     explicit stream(crane::lazy<variant_t> _cell) : lazy_v_(std::move(_cell)) {}

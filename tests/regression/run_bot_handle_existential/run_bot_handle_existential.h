@@ -291,7 +291,8 @@ public:
       : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
   static Itree<E, R> go(ItreeF<E, R, Itree<E, R>> _observe) {
-    return Itree<E, R>(Go{std::move(_observe)});
+    return Itree<E, R>(crane::lazy<variant_t>(
+        std::in_place, std::in_place_index<0>, std::move(_observe)));
   }
 
   explicit Itree(crane::lazy<variant_t> _cell) : lazy_v_(std::move(_cell)) {}

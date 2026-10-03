@@ -147,10 +147,14 @@ struct LoopifyCoindColist {
     explicit colist(crane::fn<variant_t()> _thunk)
         : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
-    static colist<A> conil() { return colist<A>(Conil{}); }
+    static colist<A> conil() {
+      return colist<A>(
+          crane::lazy<variant_t>(std::in_place, std::in_place_index<0>));
+    }
 
     static colist<A> cocons(A a0, colist<A> a1) {
-      return colist<A>(Cocons{std::move(a0), std::move(a1)});
+      return colist<A>(crane::lazy<variant_t>(
+          std::in_place, std::in_place_index<1>, std::move(a0), std::move(a1)));
     }
 
     explicit colist(crane::lazy<variant_t> _cell) : lazy_v_(std::move(_cell)) {}

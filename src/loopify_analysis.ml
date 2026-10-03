@@ -766,7 +766,7 @@ let rec collect_expr (check : call_checker) expr =
    |CPPconvertible_to _
    |CPPabort _
    |CPPenum_val _
-   |CPPnullptr
+   |CPPnullptr | CPPin_place | CPPin_place_index _
    |CPPstd_get (_, None)
    |CPPstd_holds_alternative _
    |CPPdeclval _

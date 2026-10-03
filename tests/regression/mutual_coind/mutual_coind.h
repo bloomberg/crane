@@ -140,7 +140,8 @@ struct MutualCoind {
         : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
     static streamA<A> consa(A a0, streamB<A> a1) {
-      return streamA<A>(ConsA{std::move(a0), std::move(a1)});
+      return streamA<A>(crane::lazy<variant_t>(
+          std::in_place, std::in_place_index<0>, std::move(a0), std::move(a1)));
     }
 
     explicit streamA(crane::lazy<variant_t> _cell)
@@ -201,7 +202,8 @@ struct MutualCoind {
         : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
     static streamB<A> consb(A a0, streamA<A> a1) {
-      return streamB<A>(ConsB{std::move(a0), std::move(a1)});
+      return streamB<A>(crane::lazy<variant_t>(
+          std::in_place, std::in_place_index<0>, std::move(a0), std::move(a1)));
     }
 
     explicit streamB(crane::lazy<variant_t> _cell)

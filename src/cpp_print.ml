@@ -2255,6 +2255,12 @@ and pp_cpp_expr env args t =
     ++ str "::"
     ++ Id.print ctor
   | CPPnullptr -> str "nullptr"
+  | CPPin_place ->
+    require_header "utility";
+    str ((sn ()).ns ^ "::in_place")
+  | CPPin_place_index i ->
+    require_header "utility";
+    str ((sn ()).ns ^ "::in_place_index<" ^ string_of_int i ^ ">")
   | CPPbraced es ->
     str "{" ++ pp_list (pp_cpp_expr env args) es ++ str "}"
   | CPPstd_get (ty, None) ->

@@ -524,6 +524,9 @@ and cpp_expr =
   | CPPenum_val of GlobRef.t * Id.t
       (** Enum class value: EnumType::Constructor *)
   | CPPnullptr  (** nullptr literal *)
+  | CPPin_place  (** [std::in_place]: build the held value from the arguments *)
+  | CPPin_place_index of int
+      (** [std::in_place_index<i>]: build alternative [i] from the arguments *)
   | CPPbraced of cpp_expr list  (** Braced initializer: {a, b, ...} *)
   | CPPstd_get of cpp_type * cpp_expr option
       (** [std::get<T>(expr)], or [std::get<T>] alone when the operand is

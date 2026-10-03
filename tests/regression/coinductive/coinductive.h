@@ -32,7 +32,8 @@ struct Coinductive {
         : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
     static stream cons(uint64_t a0, stream a1) {
-      return stream(Cons{a0, std::move(a1)});
+      return stream(crane::lazy<variant_t>(
+          std::in_place, std::in_place_index<0>, a0, std::move(a1)));
     }
 
     explicit stream(crane::lazy<variant_t> _cell) : lazy_v_(std::move(_cell)) {}
@@ -96,10 +97,14 @@ struct Coinductive {
     explicit tree(crane::fn<variant_t()> _thunk)
         : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
-    static tree leaf(uint64_t a0) { return tree(Leaf{a0}); }
+    static tree leaf(uint64_t a0) {
+      return tree(
+          crane::lazy<variant_t>(std::in_place, std::in_place_index<0>, a0));
+    }
 
     static tree node(uint64_t a0, tree a1, tree a2) {
-      return tree(Node{a0, std::move(a1), std::move(a2)});
+      return tree(crane::lazy<variant_t>(std::in_place, std::in_place_index<1>,
+                                         a0, std::move(a1), std::move(a2)));
     }
 
     explicit tree(crane::lazy<variant_t> _cell) : lazy_v_(std::move(_cell)) {}

@@ -32,7 +32,8 @@ struct RuntimeBlockInvariants {
         : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
     static stream scons(uint64_t a0, stream a1) {
-      return stream(SCons{a0, std::move(a1)});
+      return stream(crane::lazy<variant_t>(
+          std::in_place, std::in_place_index<0>, a0, std::move(a1)));
     }
 
     explicit stream(crane::lazy<variant_t> _cell) : lazy_v_(std::move(_cell)) {}

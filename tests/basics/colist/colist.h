@@ -201,10 +201,14 @@ public:
   explicit Colist(crane::fn<variant_t()> _thunk)
       : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
-  static Colist<A> conil() { return Colist<A>(Conil{}); }
+  static Colist<A> conil() {
+    return Colist<A>(
+        crane::lazy<variant_t>(std::in_place, std::in_place_index<0>));
+  }
 
   static Colist<A> cocons(A x, Colist<A> xs) {
-    return Colist<A>(Cocons{std::move(x), std::move(xs)});
+    return Colist<A>(crane::lazy<variant_t>(
+        std::in_place, std::in_place_index<1>, std::move(x), std::move(xs)));
   }
 
   explicit Colist(crane::lazy<variant_t> _cell) : lazy_v_(std::move(_cell)) {}

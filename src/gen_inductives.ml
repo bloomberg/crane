@@ -1255,6 +1255,12 @@ let gen_ind_header_v2
           SData )
       in
 
+      (* A coinductive's cell type, [crane::lazy<variant_t>], as the callee of
+         its constructor. *)
+      let lazy_cell =
+        CPPvar (Id.of_string_soft (Crane_rt.lazy_ ^ "<" ^ variant_alias_name ^ ">"))
+      in
+
       (* 4. Public explicit constructors for each alternative.
          Public so that std::make_shared / std::make_unique can construct
          instances directly (single allocation). *)
@@ -1270,10 +1276,7 @@ let gen_ind_header_v2
                  (* For coinductive:
                     d_lazyV_(crane::lazy<variant_t>(variant_t(std::move(_v)))) *)
                  let init_expr =
-                   mk_call
-                     (CPPvar
-                        (Id.of_string_soft
-                           (Crane_rt.lazy_ ^ "<" ^ variant_alias_name ^ ">") ))
+                   mk_call lazy_cell
                      [ mk_call (CPPvar variant_alias_id)
                          [CPPmove (CPPvar param_name)] ]
                  in
@@ -2327,7 +2330,7 @@ let gen_ind_header_v2
          [const shared_ptr<T>&]. *)
       let ind_type_name = Common.pp_global_name Type name in
 
-      let mk_factory_methods ret_ty wrap_expr i tys_list =
+      let mk_factory_methods ret_ty build i tys_list =
         let c = cnames.(i) in
         let cname = ctor_struct_name_of_ref ~fallback_idx:i c in
         let fname =
@@ -2491,10 +2494,7 @@ let gen_ind_header_v2
                   ~src_ty:api_ty ~dst_ty:storage_ty var )
             cpp_tys
         in
-        let ctor_struct =
-          CPPstruct_id (Id.of_string cname, [], ctor_args)
-        in
-        let body = [Sreturn (Some (wrap_expr ctor_struct))] in
+        let body = [Sreturn (Some (build i cname ctor_args))] in
         let primary =
           ( Fmethod
               (static_fun ~name:factory_name ~ret:ret_ty ~params ~body),
@@ -2546,10 +2546,7 @@ let gen_ind_header_v2
                     | other -> other )
                   ctor_args
               in
-              let reuse_struct =
-                CPPstruct_id (Id.of_string cname, [], reuse_ctor_args)
-              in
-              let reuse_body = [Sreturn (Some (wrap_expr reuse_struct))] in
+              let reuse_body = [Sreturn (Some (build i cname reuse_ctor_args))] in
               [ ( Fmethod
                     (static_fun
                        ~name:(Id.of_string (fname ^ "__reuse"))
@@ -2565,9 +2562,12 @@ let gen_ind_header_v2
           (Array.to_list
              (Array.mapi
                 (mk_factory_methods self_ty
-                   (* Wrap constructor struct in parent type constructor:
-                      O{} → Nat(O{}) — needed because constructors are
-                      explicit. Use CPPglob with the inductive ref so
+                   (* Build alternative [i] from the factory's arguments, in
+                      the parent type's explicit constructor: O{} → Nat(O{}).
+                      A coinductive's alternative is built inside its new
+                      lazy cell, from the arguments themselves: no move
+                      through the alternative, the variant and the cell on
+                      the way in.  Use CPPglob with the inductive ref so
                       the printer emits the correct name (handles both
                       top-level and module-nested inductives).  The type
                       arguments must be spelled out: when the inductive is
@@ -2575,7 +2575,12 @@ let gen_ind_header_v2
                       through the wrapper ([List::list]) is no longer the
                       injected-class-name, so class template argument
                       deduction is not available. *)
-                   (fun s -> mk_call (mk_cppglob name ty_vars) [s]) )
+                   (fun i cname args ->
+                     let self = mk_cppglob name ty_vars in
+                     if is_coinductive then
+                       mk_call self
+                         [mk_call lazy_cell (CPPin_place :: CPPin_place_index i :: args)]
+                     else mk_call self [CPPstruct_id (Id.of_string cname, [], args)] ) )
                 tys ) )
       in
 
@@ -2592,8 +2597,7 @@ let gen_ind_header_v2
           let cell_ty = Tid_external (Crane_rt.lazy_, [variant_alias_ty]) in
           let delegate =
             mk_call
-              (CPPscope (CPPvar (Id.of_string_soft (Crane_rt.lazy_ ^ "<" ^ variant_alias_name ^ ">")),
-                         Id.of_string "delegate", []))
+              (CPPscope (lazy_cell, Id.of_string "delegate", []))
               [CPPforward (named_tvar f, CPPvar thunk)]
           in
           let body = [Sreturn (Some (mk_call (mk_cppglob name ty_vars) [delegate]))] in

@@ -190,7 +190,8 @@ public:
       : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
   static Stream<A> scons(A x, Stream<A> xs) {
-    return Stream<A>(Scons{std::move(x), std::move(xs)});
+    return Stream<A>(crane::lazy<variant_t>(
+        std::in_place, std::in_place_index<0>, std::move(x), std::move(xs)));
   }
 
   explicit Stream(crane::lazy<variant_t> _cell) : lazy_v_(std::move(_cell)) {}

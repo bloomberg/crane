@@ -37,7 +37,8 @@ struct GeneratedLazyFieldNameClash {
         : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
     static d_lazyV_ cons(bool a0, d_lazyV_ a1) {
-      return d_lazyV_(Cons{a0, std::move(a1)});
+      return d_lazyV_(crane::lazy<variant_t>(
+          std::in_place, std::in_place_index<0>, a0, std::move(a1)));
     }
 
     explicit d_lazyV_(crane::lazy<variant_t> _cell)

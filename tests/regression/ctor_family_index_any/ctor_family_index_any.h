@@ -224,7 +224,8 @@ struct CtorFamilyIndexAny {
         : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
     static tree<E, R> go(treeF<E, R, tree<E, R>> observe) {
-      return tree<E, R>(Go{std::move(observe)});
+      return tree<E, R>(crane::lazy<variant_t>(
+          std::in_place, std::in_place_index<0>, std::move(observe)));
     }
 
     explicit tree(crane::lazy<variant_t> _cell) : lazy_v_(std::move(_cell)) {}

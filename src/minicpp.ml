@@ -430,6 +430,8 @@ and cpp_expr =
   | CPPenum_val of
       GlobRef.t * Id.t (* enum class value: EnumType::Constructor *)
   | CPPnullptr (* nullptr *)
+  | CPPin_place
+  | CPPin_place_index of int
   | CPPbraced of cpp_expr list (* braced initializer: {a, b, ...} *)
   | CPPstd_get of cpp_type * cpp_expr option
     (* std::get<T>(expr), std::get<typename T::Ctor>(expr), or bare *)
@@ -1344,7 +1346,7 @@ let map_expr ?fl
   | CPPconvertible_to ty -> CPPconvertible_to (ft ty)
   | CPPabort (msg, ty) -> CPPabort (msg, ft ty)
   | CPPenum_val _ -> e
-  | CPPnullptr -> e
+  | CPPnullptr | CPPin_place | CPPin_place_index _ -> e
   | CPPbraced args -> CPPbraced (List.map fe args)
   | CPPstd_get (ty, e_opt) -> CPPstd_get (ft ty, Option.map fe e_opt)
   | CPPstd_holds_alternative ty -> CPPstd_holds_alternative (ft ty)
@@ -1454,7 +1456,8 @@ let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
   match e with
   | CPPvar _ | CPPglob _ | CPPalloc _
   | CPPstring _ | CPPuint _ | CPPfloat _ | CPPconvertible_to _
-  | CPPabort _ | CPPenum_val _ | CPPnullptr | CPPstd_holds_alternative _
+  | CPPabort _ | CPPenum_val _ | CPPnullptr | CPPin_place | CPPin_place_index _
+  | CPPstd_holds_alternative _
   | CPPdeclval _ | CPPtype_name _ | CPPqualified_t _ | CPPlit _
    |CPPraw _ | CPPrt _
   | CPPbool _ | CPPint _
@@ -1599,7 +1602,8 @@ let fold_expr_children ~(on_expr : 'a -> cpp_expr -> 'a)
   match e with
   | CPPvar _ | CPPglob _ | CPPalloc _
   | CPPstring _ | CPPuint _ | CPPfloat _ | CPPconvertible_to _
-  | CPPabort _ | CPPenum_val _ | CPPnullptr | CPPstd_holds_alternative _
+  | CPPabort _ | CPPenum_val _ | CPPnullptr | CPPin_place | CPPin_place_index _
+  | CPPstd_holds_alternative _
   | CPPdeclval _ | CPPtype_name _ | CPPqualified_t _ | CPPlit _
    |CPPraw _ | CPPrt _
   | CPPbool _ | CPPint _

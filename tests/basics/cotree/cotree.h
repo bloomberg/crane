@@ -172,10 +172,14 @@ struct Cotree {
     explicit colist(crane::fn<variant_t()> _thunk)
         : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
-    static colist<A> conil() { return colist<A>(Conil{}); }
+    static colist<A> conil() {
+      return colist<A>(
+          crane::lazy<variant_t>(std::in_place, std::in_place_index<0>));
+    }
 
     static colist<A> cocons(A x, colist<A> xs) {
-      return colist<A>(Cocons{std::move(x), std::move(xs)});
+      return colist<A>(crane::lazy<variant_t>(
+          std::in_place, std::in_place_index<1>, std::move(x), std::move(xs)));
     }
 
     explicit colist(crane::lazy<variant_t> _cell) : lazy_v_(std::move(_cell)) {}
@@ -235,7 +239,8 @@ struct Cotree {
         : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
     static cotree<A> conode(A a, colist<cotree<A>> f) {
-      return cotree<A>(Conode{std::move(a), std::move(f)});
+      return cotree<A>(crane::lazy<variant_t>(
+          std::in_place, std::in_place_index<0>, std::move(a), std::move(f)));
     }
 
     explicit cotree(crane::lazy<variant_t> _cell) : lazy_v_(std::move(_cell)) {}

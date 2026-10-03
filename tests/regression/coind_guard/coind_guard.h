@@ -136,7 +136,8 @@ struct CoindGuard {
         : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
     static Stream<A> cons(A a0, Stream<A> a1) {
-      return Stream<A>(Cons{std::move(a0), std::move(a1)});
+      return Stream<A>(crane::lazy<variant_t>(
+          std::in_place, std::in_place_index<0>, std::move(a0), std::move(a1)));
     }
 
     explicit Stream(crane::lazy<variant_t> _cell) : lazy_v_(std::move(_cell)) {}

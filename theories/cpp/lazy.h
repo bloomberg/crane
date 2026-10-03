@@ -59,6 +59,11 @@ public:
   explicit lazy(T value)
       : p_(new node(std::in_place_index<2>, std::move(value))) {}
 
+  // The value built in the node from [a]: no move of it on the way in.
+  template <typename... A>
+  explicit lazy(std::in_place_t, A &&...a)
+      : p_(new node(std::in_place_index<2>, std::forward<A>(a)...)) {}
+
   explicit lazy(fn<T()> thunk)
       : p_(new node(std::in_place_index<0>, std::move(thunk))) {}
 

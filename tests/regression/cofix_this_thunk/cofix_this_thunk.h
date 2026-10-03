@@ -137,7 +137,8 @@ public:
       : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
   static Sseq<A> scons(A shead, Sseq<A> stail) {
-    return Sseq<A>(SCons{std::move(shead), std::move(stail)});
+    return Sseq<A>(crane::lazy<variant_t>(std::in_place, std::in_place_index<0>,
+                                          std::move(shead), std::move(stail)));
   }
 
   explicit Sseq(crane::lazy<variant_t> _cell) : lazy_v_(std::move(_cell)) {}
