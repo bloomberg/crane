@@ -33,7 +33,8 @@ struct ClassInstanceAtFunctionType {
     requires Weigh<_tcI0, T1> && Weigh<_tcI1, T2>
   struct WeighPair {
     static uint64_t weigh(std::pair<T1, T2> p) {
-      return (_tcI0::weigh(p.first) + _tcI1::weigh(p.second));
+      return (_tcI0::weigh(std::move(p).first) +
+              _tcI1::weigh(std::move(p).second));
     }
   };
 

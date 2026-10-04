@@ -25,5 +25,5 @@ FixPairTwoClosures::make_ops(uint64_t a, uint64_t b) {
     }
   };
   auto g = [=](uint64_t x) -> uint64_t { return g_impl(g_impl, x); };
-  return std::make_pair(f, g);
+  return std::make_pair(std::move(f), std::move(g));
 }

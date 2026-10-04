@@ -207,7 +207,8 @@ struct map_alist {
 
   static List<std::pair<Nat, Nat>> add(Nat k, Nat v,
                                        List<std::pair<Nat, Nat>> m) {
-    return List<std::pair<Nat, Nat>>::cons(std::make_pair(k, v), std::move(m));
+    return List<std::pair<Nat, Nat>>::cons(
+        std::make_pair(std::move(k), std::move(v)), std::move(m));
   }
 };
 

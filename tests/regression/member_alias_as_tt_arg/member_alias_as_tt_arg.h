@@ -88,7 +88,7 @@ struct Monad_option {
   template <typename CraneA0> using m = std::optional<CraneA0>;
 
   static std::optional<crane::obj> ret(crane::obj x) {
-    return std::make_optional<crane::obj>(crane::obj(x));
+    return std::make_optional<crane::obj>(crane::obj(std::move(x)));
   }
 
   static std::optional<crane::obj>

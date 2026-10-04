@@ -11,7 +11,7 @@ FoldSequenceStateTraceCase::line_through(const std::pair<Real, Real> &p1,
     Real a = (y1 - y2);
     Real b = (x2 - x1);
     Real c = ((x1 * y2) - (x2 * y1));
-    return Line{a, b, c};
+    return Line{std::move(a), std::move(b), std::move(c)};
   }
 }
 
@@ -27,13 +27,13 @@ FoldSequenceStateTraceCase::perp_bisector(const std::pair<Real, Real> &p1,
       Real a = Real::from_z(INT64_C(0));
       Real b = (Real::from_z(INT64_C(2)) * (y2 - y1));
       Real c = ((((x1 * x1) + (y1 * y1)) - (x2 * x2)) - (y2 * y2));
-      return Line{a, b, c};
+      return Line{std::move(a), std::move(b), std::move(c)};
     }
   } else {
     Real a = (Real::from_z(INT64_C(2)) * (x2 - x1));
     Real b = (Real::from_z(INT64_C(2)) * (y2 - y1));
     Real c = ((((x1 * x1) + (y1 * y1)) - (x2 * x2)) - (y2 * y2));
-    return Line{a, b, c};
+    return Line{std::move(a), std::move(b), std::move(c)};
   }
 }
 
@@ -41,7 +41,7 @@ FoldSequenceStateTraceCase::Line FoldSequenceStateTraceCase::perp_through(
     const std::pair<Real, Real> &p, const FoldSequenceStateTraceCase::Line &l) {
   const auto &[x, y] = p;
   Real c = ((l.A * y) - (l.B * x));
-  return Line{l.B, (-l.A), c};
+  return Line{l.B, (-l.A), std::move(c)};
 }
 
 FoldSequenceStateTraceCase::Fold

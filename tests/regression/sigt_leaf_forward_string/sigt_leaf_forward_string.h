@@ -165,7 +165,7 @@ template <SEM S> struct Make {
   static entry mk_entry(typename S::idx a,
                         crane::fn<bool(crane::obj, crane::obj)> eq) {
     return SigT<prod2, psem>::existt(
-        std::make_pair(a, List<typename S::idx>::nil()),
+        std::make_pair(std::move(a), List<typename S::idx>::nil()),
         std::make_pair(
             crane::obj(crane_erase_fn([=](const auto &tup) {
               const auto &[v, _x] =

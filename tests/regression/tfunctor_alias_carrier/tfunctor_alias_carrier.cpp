@@ -22,8 +22,8 @@ TfunctorAliasCarrier::texp<crane::obj> TfunctorAliasCarrier::TFunctor_texp(
   const auto &[t, e] = pat;
   return std::make_pair(
       crane::obj(crane_call_erased(f, t)),
-      tfmap<TfunctorAliasCarrier::exp<crane::obj>, crane::obj, crane::obj>(h, f,
-                                                                           e));
+      tfmap<TfunctorAliasCarrier::exp<crane::obj>, crane::obj, crane::obj>(
+          std::move(h), f, e));
 }
 
 TfunctorAliasCarrier::cmpxchg<crane::obj>

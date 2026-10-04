@@ -126,7 +126,7 @@ struct EffectHigherOrder {
       std::getline(std::cin, _r);
       return _r;
     }();
-    return f(_bind_result);
+    return f(std::move(_bind_result));
   }
 
   /// 4. Nested bind in callback

@@ -51,7 +51,7 @@ std::pair<std::string, int64_t> EffectNestedIo::timed_read() {
 std::string EffectNestedIo::read_and_store(std::string key) {
   std::string line;
   std::getline(std::cin, line);
-  setenv(key.c_str(), line.c_str(), 1);
+  setenv(std::move(key).c_str(), line.c_str(), 1);
   return line;
 }
 

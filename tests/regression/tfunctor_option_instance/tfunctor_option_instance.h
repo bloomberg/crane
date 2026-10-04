@@ -109,7 +109,8 @@ struct TfunctorOptionInstance {
                                            const std::optional<T1> &ot) {
     if (ot.has_value()) {
       const auto &t = *ot;
-      return std::make_optional<T1>(tfmap<T1, crane::obj, crane::obj>(h, f, t));
+      return std::make_optional<T1>(
+          tfmap<T1, crane::obj, crane::obj>(std::move(h), f, t));
     } else {
       return std::optional<T1>();
     }

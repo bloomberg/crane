@@ -273,8 +273,27 @@ let passes_through s =
   | [CCarg i] -> Some i
   | _ -> None
 
-let is_pair_projection s =
+let pair_projection_field s =
   match term_template s with
-  | [CCstring ""; CCarg 0; CCstring (".first" | ".second")]
-  | [CCarg 0; CCstring (".first" | ".second")] -> true
-  | _ -> false
+  | [CCstring ""; CCarg 0; CCstring ((".first" | ".second") as f)]
+  | [CCarg 0; CCstring ((".first" | ".second") as f)] ->
+    Some (String.sub f 1 (String.length f - 1))
+  | _ -> None
+
+let is_pair_projection s = Option.has_some (pair_projection_field s)
+
+let arg_mentions s =
+  let tokens = term_template s in
+  let holes = List.filter_map (function CCarg j -> Some j | _ -> None) tokens in
+  let last = List.fold_left max (-1) holes in
+  fun i ->
+    if i > last then 1
+    else List.length (List.filter (Int.equal i) holes)
+
+let mentions_each_arg_once s =
+  let rec go seen = function
+    | [] -> true
+    | CCarg i :: rest -> (not (List.mem i seen)) && go (i :: seen) rest
+    | _ :: rest -> go seen rest
+  in
+  go [] (term_template s)

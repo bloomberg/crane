@@ -244,8 +244,8 @@ struct GlobalStateTests {
     uint64_t r1 = (_crane_globals[_tcI1::zero()] = UINT64_C(5), _tcI1::zero());
     uint64_t r2 = (_crane_globals[_tcI1::suc(_tcI1::zero())] = UINT64_C(6),
                    _tcI1::suc(_tcI1::zero()));
-    uint64_t x1 = crane::any_cast<uint64_t>(_crane_globals.at(r1));
-    uint64_t x2 = crane::any_cast<uint64_t>(_crane_globals.at(r2));
+    uint64_t x1 = crane::any_cast<uint64_t>(_crane_globals.at(std::move(r1)));
+    uint64_t x2 = crane::any_cast<uint64_t>(_crane_globals.at(std::move(r2)));
     return std::make_pair(x1, x2);
   }
 
@@ -277,7 +277,7 @@ struct GlobalStateTests {
       auto fib_loop = [&](uint64_t k, uint64_t x0, uint64_t y0) -> uint64_t {
         return fib_loop_impl(fib_loop_impl, k, x0, y0);
       };
-      return fib_loop(n, x, y);
+      return fib_loop(n, std::move(x), std::move(y));
     }
   }
 

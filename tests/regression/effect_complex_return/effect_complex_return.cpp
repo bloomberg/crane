@@ -22,7 +22,7 @@ std::optional<std::string> EffectComplexReturn::maybe_read(bool do_read) {
 
 /// 3. Void effect followed by value effect
 std::string EffectComplexReturn::print_then_read(std::string prompt) {
-  std::cout << prompt << '\n';
+  std::cout << std::move(prompt) << '\n';
   return []() -> std::string {
     std::string _r;
     std::getline(std::cin, _r);
@@ -38,7 +38,7 @@ EffectComplexReturn::mixed_effects(std::string name) {
           std::chrono::system_clock::now().time_since_epoch())
           .count());
   std::optional<std::string> mv = [&]() -> std::optional<std::string> {
-    auto *v = std::getenv(name.c_str());
+    auto *v = std::getenv(std::move(name).c_str());
     return v ? std::optional<std::string>(v) : std::optional<std::string>();
   }();
   if (mv.has_value()) {
@@ -104,7 +104,8 @@ std::string EffectComplexReturn::env_or_prompt(std::string name) {
     const std::string &v = *mv;
     return v;
   } else {
-    std::cout << std::string("Enter ") + name + std::string(":") << '\n';
+    std::cout << std::string("Enter ") + std::move(name) + std::string(":")
+              << '\n';
     return []() -> std::string {
       std::string _r;
       std::getline(std::cin, _r);

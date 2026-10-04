@@ -64,13 +64,13 @@ uint64_t GlobalStateTests::counter() {
 
 uint64_t GlobalStateTests::counter_next_mine(uint64_t ctr) {
   uint64_t a = crane::any_cast<uint64_t>(_crane_globals.at(ctr));
-  _crane_globals[ctr] = (a + UINT64_C(1));
+  _crane_globals[std::move(ctr)] = (a + UINT64_C(1));
   return a;
 }
 
 std::string GlobalStateTests::gensym(uint64_t counter0, std::string prefix) {
-  uint64_t v = counter_next_mine(counter0);
-  return prefix + std::to_string(v);
+  uint64_t v = counter_next_mine(std::move(counter0));
+  return std::move(prefix) + std::to_string(v);
 }
 
 List<uint64_t> ListDef::seq(uint64_t start, uint64_t len) {

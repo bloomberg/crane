@@ -183,12 +183,17 @@ and is_trivially_copyable_named s ts =
 
 (** Returns [true] for types that are expensive to copy and benefit from
     [std::move]: [shared_ptr], value-type inductives, type variables, and
-    types parameterized by such types. *)
+    types parameterized by such types.  A mapped type is one of them unless
+    it is known to copy for free -- a scalar, or a type declared
+    [Crane TriviallyCopyable] -- since its replacement text says nothing about
+    what a copy costs: [Big] may be a class that owns a buffer. *)
 let rec worthwhile_move_type = function
   | Tglob (r, tparams, _) -> not (Table.is_enum_inductive r)
                          && not (Table.is_coinductive r)
                          && (not (Table.is_custom r)
-                             || List.exists worthwhile_move_type tparams)
+                             || List.exists worthwhile_move_type tparams
+                             || not (Table.is_custom_scalar_ref r
+                                     || Table.is_trivially_copyable_ref r))
   | Tshared_ptr _ | Tfun _ | Terased _ -> true
   | Tvariant ts -> List.exists worthwhile_move_type ts
   | Tid (_, ts) | Tid_external (_, ts) ->

@@ -286,7 +286,7 @@ struct Denot {
             }
           }
         },
-        t);
+        std::move(t));
   }
 };
 

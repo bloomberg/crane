@@ -104,7 +104,8 @@ struct FixSharedPtrField {
         auto compute = [=](uint64_t x) -> uint64_t {
           return compute_impl(compute_impl, x);
         };
-        return std::make_optional<crane::fn<uint64_t(uint64_t)>>(compute);
+        return std::make_optional<crane::fn<uint64_t(uint64_t)>>(
+            std::move(compute));
       }
     }
 

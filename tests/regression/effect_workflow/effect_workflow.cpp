@@ -7,7 +7,8 @@ std::string EffectWorkflow::full_workflow(std::string prefix) {
           std::chrono::steady_clock::now().time_since_epoch())
           .count());
   std::string tmp = [&]() -> std::string {
-    std::string _n = std::filesystem::path(prefix).filename().string();
+    std::string _n =
+        std::filesystem::path(std::move(prefix)).filename().string();
     if (_n.empty() || _n == "." || _n == "..")
       _n = "tmp";
     std::filesystem::path _base = std::filesystem::temp_directory_path();
@@ -77,7 +78,7 @@ uint64_t EffectWorkflow::repeat_log(uint64_t n, std::string msg) {
             std::chrono::steady_clock::now().time_since_epoch())
             .count());
     std::cout << msg << '\n';
-    uint64_t r = repeat_log(n_, msg);
+    uint64_t r = repeat_log(n_, std::move(msg));
     return (r + 1);
   }
 }
@@ -97,7 +98,7 @@ std::string EffectWorkflow::env_or_create(std::string name, std::string path) {
       std::filesystem::create_directories(std::filesystem::path(path), _ec);
       return !_ec;
     }();
-    setenv(name.c_str(), path.c_str(), 1);
+    setenv(std::move(name).c_str(), path.c_str(), 1);
     return path;
   }
 }

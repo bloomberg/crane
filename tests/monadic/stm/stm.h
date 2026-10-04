@@ -131,7 +131,7 @@ struct stmtest {
   template <typename T1>
   static T1 readOrRetry(stm::TVar<T1> tv,
                         std::type_identity_t<crane::fn<bool(T1)>> ok) {
-    T1 x = stm::readTVar(tv);
+    T1 x = stm::readTVar(std::move(tv));
     if (ok(x)) {
       return x;
     } else {
@@ -158,7 +158,7 @@ template <typename T1>
 void STMDefs::modifyTVar(stm::TVar<T1> a,
                          std::type_identity_t<crane::fn<T1(T1)>> f) {
   T1 val = stm::readTVar(a);
-  stm::writeTVar(a, f(val));
+  stm::writeTVar(std::move(a), f(std::move(val)));
   return;
 }
 

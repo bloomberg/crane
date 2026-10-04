@@ -43,7 +43,7 @@ uint64_t RecursiveMonadic::repeat_action(uint64_t n, std::string msg) {
   } else {
     uint64_t n_ = n - 1;
     std::cout << msg << '\n';
-    uint64_t r = repeat_action(n_, msg);
+    uint64_t r = repeat_action(n_, std::move(msg));
     return (r + 1);
   }
 }

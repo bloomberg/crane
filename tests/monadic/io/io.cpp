@@ -3,12 +3,12 @@
 void iotest::test1(std::string) { return; }
 
 void iotest::test2(std::string s) {
-  std::cout << s;
+  std::cout << std::move(s);
   return;
 }
 
 void iotest::test3(std::string s) {
-  std::cout << s << '\n';
+  std::cout << std::move(s) << '\n';
   return;
 }
 
@@ -31,6 +31,6 @@ void iotest::test5() {
     return std::string(std::istreambuf_iterator<char>(file),
                        std::istreambuf_iterator<char>());
   }();
-  std::cout << s << '\n';
+  std::cout << std::move(s) << '\n';
   return;
 }

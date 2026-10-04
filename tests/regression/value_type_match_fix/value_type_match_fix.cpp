@@ -23,7 +23,7 @@ ValueTypeMatchFix::make_adder_from_triple(const ValueTypeMatchFix::triple &t) {
     }
   };
   auto go = [=](uint64_t x) -> uint64_t { return go_impl(go_impl, x); };
-  return std::make_optional<crane::fn<uint64_t(uint64_t)>>(go);
+  return std::make_optional<crane::fn<uint64_t(uint64_t)>>(std::move(go));
 }
 
 /// Direct capture of pattern fields (no intermediate let binding).
@@ -39,5 +39,5 @@ ValueTypeMatchFix::make_field_adder(const ValueTypeMatchFix::triple &t) {
     }
   };
   auto go = [=](uint64_t x) -> uint64_t { return go_impl(go_impl, x); };
-  return std::make_optional<crane::fn<uint64_t(uint64_t)>>(go);
+  return std::make_optional<crane::fn<uint64_t(uint64_t)>>(std::move(go));
 }

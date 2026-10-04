@@ -204,7 +204,7 @@ return std::make_pair(_tcI0::zero_iptr(), ProvenanceV::nil_prov());}
 _tcI0>struct PIV {
 using iptr = typename _tcI0::iptr;
 static Nat ptr_to_int(typename PointerV<_tcI0>::ptr p) {
-return _tcI0::to_Z(p.first);}
+return _tcI0::to_Z(std::move(p).first);}
 static EOU<typename PointerV<_tcI0>::ptr> int_to_ptr(Nat i, typename ProvenanceV::prov pr) {
 return EOU_monad::template bind<typename _tcI0::iptr,
 std::pair<typename _tcI0::iptr, bool>>(_tcI0::from_Z(std::move(i)),

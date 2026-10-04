@@ -354,7 +354,7 @@ struct ToString {
       const auto &[d_a0, d_a1] = bsl::get<typename List<T1>::Cons>(l.v());
       auto &&_sv = *d_a1;
       if (bsl::holds_alternative<typename List<T1>::Nil>(_sv.v())) {
-        return sep + p(d_a0);
+        return bsl::move(sep) + p(d_a0);
       } else {
         return sep + p(d_a0) + intersperse<T1>(p, sep, *d_a1);
       }

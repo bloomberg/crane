@@ -3,7 +3,8 @@
 bool Dir::make_dir(std::string path) {
   return [&]() -> bool {
     std::error_code _ec;
-    std::filesystem::create_directories(std::filesystem::path(path), _ec);
+    std::filesystem::create_directories(std::filesystem::path(std::move(path)),
+                                        _ec);
     return !_ec;
   }();
 }
@@ -11,7 +12,7 @@ bool Dir::make_dir(std::string path) {
 bool Dir::remove_dir(std::string path) {
   return [&]() -> bool {
     std::error_code _ec;
-    std::filesystem::remove_all(std::filesystem::path(path), _ec);
+    std::filesystem::remove_all(std::filesystem::path(std::move(path)), _ec);
     return !_ec;
   }();
 }
@@ -29,7 +30,8 @@ List<std::string> Dir::list_dir(std::string path) {
     auto result = List<std::string>::nil();
     std::error_code _ec;
     std::size_t _count = 0;
-    std::filesystem::directory_iterator _it(std::filesystem::path(path), _ec),
+    std::filesystem::directory_iterator _it(
+        std::filesystem::path(std::move(path)), _ec),
         _end;
     for (; !_ec && _it != _end && _count < 65536;
          _it.increment(_ec), ++_count) {

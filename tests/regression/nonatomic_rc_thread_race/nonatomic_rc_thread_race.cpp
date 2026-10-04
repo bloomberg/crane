@@ -54,8 +54,8 @@ void NonatomicRcThreadRace::worker(uint64_t n) {
 void NonatomicRcThreadRace::test() {
   std::thread t1 = std::thread(worker, UINT64_C(200));
   std::thread t2 = std::thread(worker, UINT64_C(200));
-  t1.join();
-  t2.join();
+  std::move(t1).join();
+  std::move(t2).join();
   return;
 }
 

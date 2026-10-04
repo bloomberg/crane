@@ -3,7 +3,7 @@
 /// 1. Bool match as value argument to set_env
 void EffectMatchArg::set_bool_value(bool flag, std::string key) {
   setenv(
-      key.c_str(),
+      std::move(key).c_str(),
       [&]() -> std::string {
         if (flag) {
           return "yes";
@@ -27,7 +27,7 @@ void EffectMatchArg::set_bool_key(bool flag, std::string value) {
         }
       }()
                    .c_str(),
-      value.c_str(), 1);
+      std::move(value).c_str(), 1);
   return;
 }
 
@@ -35,7 +35,7 @@ void EffectMatchArg::set_bool_key(bool flag, std::string value) {
 void EffectMatchArg::set_option_value(std::string key,
                                       const std::optional<std::string> &r) {
   setenv(
-      key.c_str(),
+      std::move(key).c_str(),
       [&]() -> std::string {
         if (r.has_value()) {
           const std::string &v = *r;

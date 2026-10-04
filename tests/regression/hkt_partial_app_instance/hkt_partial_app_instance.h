@@ -93,7 +93,7 @@ struct HktPartialAppInstance {
     template <typename CraneA0, typename CraneA1>
     static std::pair<T1, CraneA1> fm(crane::fn<CraneA1(CraneA0)> f,
                                      std::pair<T1, CraneA0> p) {
-      return std::make_pair(p.first, f(p.second));
+      return std::make_pair(std::move(p).first, f(std::move(p).second));
     }
   };
 

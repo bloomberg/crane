@@ -6306,7 +6306,9 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
     let primary_result =
       match primary_result with
       | CPPfun_call (_, (CPPglob (n, glob_tys, Some ci) as cglob'), {rev = [single_arg]})
-        when inline_shape ci = Some Inline_pair_projection ->
+        when (match inline_shape ci with
+              | Some (Inline_pair_projection _) -> true
+              | _ -> false) ->
         let arg_ml_erased =
           (* A variable is erased when its ML type is, or when the C++ type
              it converts to is [std::any] -- a value-dependent type such as
@@ -6332,7 +6334,10 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
                  its product arg was coerced, result is also std::any *)
               let is_pair_accessor =
                 match Table.find_custom_opt r with
-                | Some s -> inline_shape_of_text s = Inline_pair_projection
+                | Some s -> (
+                  match inline_shape_of_text s with
+                  | Inline_pair_projection _ -> true
+                  | _ -> false )
                 | None -> false
               in
               if is_pair_accessor then

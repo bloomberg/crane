@@ -30,8 +30,8 @@ std::pair<uint64_t, uint64_t> ParallelTest::fast(uint64_t m, uint64_t n) {
   std::pair<uint64_t, uint64_t> p = std::make_pair(m, n);
   std::future<uint64_t> t1 = std::async(std::launch::async, ack, p);
   std::future<uint64_t> t2 = std::async(std::launch::async, ack, p);
-  uint64_t r1 = t1.get();
-  uint64_t r2 = t2.get();
+  uint64_t r1 = std::move(t1).get();
+  uint64_t r2 = std::move(t2).get();
   return std::make_pair(r1, r2);
 }
 

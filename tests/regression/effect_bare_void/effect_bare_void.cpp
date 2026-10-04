@@ -2,26 +2,26 @@
 
 /// 1. Bare print_endline as function body (no bind, no Ret)
 void EffectBareVoid::just_print(std::string msg) {
-  std::cout << msg << '\n';
+  std::cout << std::move(msg) << '\n';
   return;
 }
 
 /// 2. Bare set_env as function body
 void EffectBareVoid::just_set(std::string k, std::string v) {
-  setenv(k.c_str(), v.c_str(), 1);
+  setenv(std::move(k).c_str(), std::move(v).c_str(), 1);
   return;
 }
 
 /// 3. Print then Ret tt (normal pattern for comparison)
 void EffectBareVoid::print_then_ret(std::string msg) {
-  std::cout << msg << '\n';
+  std::cout << std::move(msg) << '\n';
   return;
 }
 
 /// 4. Void effect in conditional — both branches are bare effects
 void EffectBareVoid::cond_print(bool flag, std::string msg) {
   if (flag) {
-    std::cout << msg << '\n';
+    std::cout << std::move(msg) << '\n';
     return;
   } else {
     return;
@@ -30,8 +30,8 @@ void EffectBareVoid::cond_print(bool flag, std::string msg) {
 
 /// 5. Set env then print (chained void effects)
 void EffectBareVoid::set_then_print(std::string k, std::string v) {
-  setenv(k.c_str(), v.c_str(), 1);
-  std::cout << v << '\n';
+  setenv(std::move(k).c_str(), v.c_str(), 1);
+  std::cout << std::move(v) << '\n';
   return;
 }
 
@@ -47,7 +47,7 @@ std::string EffectBareVoid::just_read() {
 /// 7. Bare get_env (value-returning, returns option)
 std::optional<std::string> EffectBareVoid::just_get_env(std::string name) {
   return [&]() -> std::optional<std::string> {
-    auto *v = std::getenv(name.c_str());
+    auto *v = std::getenv(std::move(name).c_str());
     return v ? std::optional<std::string>(v) : std::optional<std::string>();
   }();
 }

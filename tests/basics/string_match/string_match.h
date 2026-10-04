@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <string>
+#include <utility>
 
 struct StringMatch {
   static inline const std::string str_empty = "";

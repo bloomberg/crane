@@ -21,7 +21,7 @@ std::string EffectRecursiveList::fold_effect(const List<std::string> &xs,
   } else {
     const auto &[a0, a1] = std::get<typename List<std::string>::Cons>(xs.v());
     std::cout << a0 << '\n';
-    return fold_effect(*a1, acc + std::string(" ") + a0);
+    return fold_effect(*a1, std::move(acc) + std::string(" ") + a0);
   }
 }
 
@@ -34,7 +34,7 @@ uint64_t EffectRecursiveList::store_lines(std::string prefix, uint64_t n) {
     std::string line;
     std::getline(std::cin, line);
     setenv(prefix.c_str(), line.c_str(), 1);
-    uint64_t rest = store_lines(prefix, n_);
+    uint64_t rest = store_lines(std::move(prefix), n_);
     return (rest + 1);
   }
 }
@@ -52,7 +52,8 @@ EffectRecursiveList::collect_envs(const List<std::string> &names) {
       return v ? std::optional<std::string>(v) : std::optional<std::string>();
     }();
     List<std::optional<std::string>> vals = collect_envs(*a1);
-    return List<std::optional<std::string>>::cons(val, std::move(vals));
+    return List<std::optional<std::string>>::cons(std::move(val),
+                                                  std::move(vals));
   }
 }
 

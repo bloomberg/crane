@@ -31,14 +31,14 @@ struct EffectHofVoid {
 
   /// 3. Apply a value callback
   template <typename F0> static std::string apply_value(F0 &&f, std::string x) {
-    return f(x);
+    return f(std::move(x));
   }
 
   /// 4. Apply callback conditionally
   template <typename F1>
   static void apply_if(bool flag, F1 &&f, std::string x) {
     if (flag) {
-      f(x);
+      f(std::move(x));
       return;
     } else {
       return;
@@ -51,7 +51,7 @@ struct EffectHofVoid {
   static void chain_void(F0 &&f, crane::fn<void(std::string)> g,
                          std::string x) {
     f(x);
-    g(x);
+    g(std::move(x));
     return;
   }
 
@@ -63,7 +63,7 @@ struct EffectHofVoid {
     } else {
       uint64_t n_ = n - 1;
       f(x);
-      uint64_t rest = apply_n(std::move(f), x, n_);
+      uint64_t rest = apply_n(std::move(f), std::move(x), n_);
       return (rest + 1);
     }
   }

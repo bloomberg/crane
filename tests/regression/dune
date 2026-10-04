@@ -11633,3 +11633,14 @@
   (alias runtest)
   (deps callable_constraint_categories.t.exe)
   (action (run ./callable_constraint_categories.t.exe))))
+
+(subdir last_use_places
+ (rule
+  (targets last_use_places.t.exe)
+  (deps LastUsePlaces.vo last_use_places.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} last_use_places.t.exe last_use_places.cpp last_use_places.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps last_use_places.t.exe)
+  (action (run ./last_use_places.t.exe))))

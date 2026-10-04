@@ -20,7 +20,7 @@ FixEscapeMatch::make_fn_from_head(const List<uint64_t> &l) {
       }
     };
     auto add = [=](uint64_t x) -> uint64_t { return add_impl(add_impl, x); };
-    return std::make_optional<crane::fn<uint64_t(uint64_t)>>(add);
+    return std::make_optional<crane::fn<uint64_t(uint64_t)>>(std::move(add));
   }
 }
 
@@ -48,7 +48,8 @@ FixEscapeMatch::make_fn_from_pair(const List<uint64_t> &l) {
       auto combine = [=](uint64_t x) -> uint64_t {
         return combine_impl(combine_impl, x);
       };
-      return std::make_optional<crane::fn<uint64_t(uint64_t)>>(combine);
+      return std::make_optional<crane::fn<uint64_t(uint64_t)>>(
+          std::move(combine));
     }
   }
 }

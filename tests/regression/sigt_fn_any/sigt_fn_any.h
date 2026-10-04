@@ -146,7 +146,8 @@ template <SEM S> struct Make {
   /// The lambda is stored at the erased type pred_ty (a, []) = std::any.
   template <typename F1> static entry mk(typename S::idx a, F1 &&f) {
     return SigT<prod2, crane::obj>::existt(
-        std::make_pair(a, List<typename S::idx>::nil()), crane_erase_fn(f));
+        std::make_pair(std::move(a), List<typename S::idx>::nil()),
+        crane_erase_fn(f));
   }
 
   /// Look up + apply: destructure the entry and apply the stored predicate.

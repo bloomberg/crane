@@ -24,8 +24,9 @@ syms_semty concat_tuple_rec_case(Sym, const std::deque<Sym> &xs_,
                                  const std::deque<Sym> &ys, syms_semty vs,
                                  syms_semty vs_, F6 &&f) {
   const auto &[s, t] = crane::any_cast<std::pair<crane::obj, crane::obj>>(vs);
-  return std::make_pair(crane::obj(crane::any_cast<sym_semty>(s)),
-                        crane::obj(crane_call_erased(f, xs_, ys, t, vs_)));
+  return std::make_pair(
+      crane::obj(crane::any_cast<sym_semty>(s)),
+      crane::obj(crane_call_erased(f, xs_, ys, t, std::move(vs_))));
 }
 
 syms_semty concat_tuple(const std::deque<Sym> &xs, const std::deque<Sym> &ys,

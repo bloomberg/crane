@@ -122,7 +122,7 @@ struct MemSafetyProbe25 {
           return ((x + a0->tree_sum()) + a1);
         }
       };
-      return std::make_pair(f, std::move(*this).tree_sum());
+      return std::make_pair(std::move(f), std::move(*this).tree_sum());
     }
 
     /// TEST 5: Deep match — closure captures grandchild of tree.

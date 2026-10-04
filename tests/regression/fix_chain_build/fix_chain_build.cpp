@@ -25,6 +25,6 @@ FixChainBuild::build_chain(uint64_t n) {
       }
     };
     auto step = [=](uint64_t x) -> uint64_t { return step_impl(step_impl, x); };
-    return std::make_pair(std::move(n), step);
+    return std::make_pair(std::move(n), std::move(step));
   }
 }

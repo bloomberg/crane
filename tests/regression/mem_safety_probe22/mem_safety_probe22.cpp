@@ -114,8 +114,9 @@ std::pair<MemSafetyProbe22::tree, uint64_t> MemSafetyProbe22::sum_and_rebuild(
       uint64_t a1 = _f.a1;
       std::pair<MemSafetyProbe22::tree, uint64_t> pl = std::move(_f.pl);
       std::pair<MemSafetyProbe22::tree, uint64_t> pr = std::move(_result);
-      _result = std::make_pair(tree::node(pl.first, a1, pr.first),
-                               ((pl.second + a1) + pr.second));
+      _result = std::make_pair(
+          tree::node(std::move(pl).first, a1, std::move(pr).first),
+          ((std::move(pl).second + a1) + std::move(pr).second));
     }
   }
   return _result;

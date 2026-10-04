@@ -114,7 +114,7 @@ template <typename K, typename V> struct CHT {
   }
   bsl::optional<V> stm_get(const K &k) const {
     stm::TVar<List<bsl::pair<K, V>>> b = this->bucket_of(k);
-    List<bsl::pair<K, V>> xs = stm::readTVar(b);
+    List<bsl::pair<K, V>> xs = stm::readTVar(bsl::move(b));
     return CHT<int, int>::template assoc_lookup<K, V>(this->cht_eqb, k,
                                                       bsl::move(xs));
   }
@@ -124,7 +124,7 @@ template <typename K, typename V> struct CHT {
     List<bsl::pair<K, V>> xs_ =
         CHT<int, int>::template assoc_insert_or_replace<K, V>(this->cht_eqb, k,
                                                               v, bsl::move(xs));
-    stm::writeTVar(b, xs_);
+    stm::writeTVar(bsl::move(b), bsl::move(xs_));
     return std::monostate{};
   }
   bsl::optional<V> stm_delete(const K &k) const {
@@ -137,9 +137,9 @@ template <typename K, typename V> struct CHT {
     if (_cs.has_value()) {
       V _x = *_cs;
       stm::writeTVar(bsl::move(b), p.second);
-      return p.first;
+      return bsl::move(p).first;
     } else {
-      return p.first;
+      return bsl::move(p).first;
     }
   }
   template <typename F1>
@@ -153,7 +153,7 @@ template <typename K, typename V> struct CHT {
     List<bsl::pair<K, V>> xs_ =
         CHT<int, int>::template assoc_insert_or_replace<K, V>(this->cht_eqb, k,
                                                               v, bsl::move(xs));
-    stm::writeTVar(b, xs_);
+    stm::writeTVar(bsl::move(b), bsl::move(xs_));
     return v;
   }
   V stm_get_or(const K &k, const V &dflt) const {
@@ -236,8 +236,9 @@ template <typename K, typename V> struct CHT {
       } else {
         bsl::pair<bsl::optional<T2>, List<bsl::pair<T1, T2>>> q =
             CHT<int, int>::template assoc_remove<T1, T2>(eqb, k, *d_a1);
-        return bsl::make_pair(q.first, List<bsl::pair<T1, T2>>::cons(
-                                           bsl::make_pair(k_, v_), q.second));
+        return bsl::make_pair(bsl::move(q).first,
+                              List<bsl::pair<T1, T2>>::cons(
+                                  bsl::make_pair(k_, v_), bsl::move(q).second));
       }
     }
   }
@@ -277,10 +278,12 @@ template <typename K, typename V> struct CHT {
           [&] { return stm::newTVar(List<bsl::pair<T1, T2>>::nil()); });
       bsl::vector<stm::TVar<List<bsl::pair<T1, T2>>>> v = {};
       v.push_back(fb);
-      return CHT<T1, T2>{bsl::move(eqb), bsl::move(hash), v, 1, fb};
+      return CHT<T1, T2>{bsl::move(eqb), bsl::move(hash), bsl::move(v), 1,
+                         bsl::move(fb)};
     } else {
       stm::TVar<List<bsl::pair<T1, T2>>> b = bs.at(0);
-      return CHT<T1, T2>{bsl::move(eqb), bsl::move(hash), bs, n, bsl::move(b)};
+      return CHT<T1, T2>{bsl::move(eqb), bsl::move(hash), bsl::move(bs), n,
+                         bsl::move(b)};
     }
   }
 };

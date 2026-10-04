@@ -88,7 +88,7 @@ struct FailE {
 
 template <typename T1 = void, typename T2 = void, typename T3, typename CraneP0>
 std::shared_ptr<ITree<T3>> cast(CraneP0 e) {
-  return itree_trigger(e);
+  return itree_trigger(std::move(e));
 }
 
 template <typename T1 = void, typename T2>

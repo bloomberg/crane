@@ -8,6 +8,7 @@
 #include <iostream>
 #include <string>
 #include <system_error>
+#include <utility>
 
 struct BindEtaReduced {
   /// Bug case 1: bind with a callback as continuation.
@@ -19,7 +20,7 @@ struct BindEtaReduced {
       std::getline(std::cin, _r);
       return _r;
     }();
-    return f(_bind_result);
+    return f(std::move(_bind_result));
   }
 
   /// Bug case 2: same with a pure callback.
@@ -36,7 +37,7 @@ struct BindEtaReduced {
       std::getline(std::cin, _r);
       return _r;
     }();
-    return f(_bind_result);
+    return f(std::move(_bind_result));
   }
 };
 

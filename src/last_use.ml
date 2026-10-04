@@ -10,26 +10,45 @@ module IdMap = Id.Map
 
 (** {1 Reading a term} *)
 
-let bump counts id =
-  IdMap.add id (1 + (try IdMap.find id counts with Not_found -> 0)) counts
+(** What one read of a variable reads: all of it, or one member -- a field of
+    a struct value, or a member of a pair read through its projection
+    mapping.  Two reads of different members of one local are independent,
+    which is what lets each of them move. *)
+type place = Whole | Field of string
+
+(* The variable and member a member read reads. *)
+let member_read = function
+  | CPPaccess (Adot, CPPvar x, f) | CPPget (CPPvar x, f) -> Some (x, Id.to_string f)
+  | CPPfun_call
+      ( _,
+        CPPglob
+          (_, _, Some {ci_inline = Some {it_shape = Inline_pair_projection f; _}; _}),
+        {rev = [CPPvar x]} ) ->
+    Some (x, f)
+  | _ -> None
+
+let note occ id p = IdMap.add id (p :: (try IdMap.find id occ with Not_found -> [])) occ
 
 (* [fold_expr_children] and [fold_stmt_children] descend one level, so these
-   three are the whole traversal: a variable is counted wherever it is named,
+   three are the whole traversal: a variable is noted wherever it is named,
    a lambda body and a branch body included. *)
-let rec count_expr counts e =
-  let counts = match e with CPPvar id -> bump counts id | _ -> counts in
-  fold_expr_children ~on_expr:count_expr ~on_stmts:count_stmts counts e
+let rec occ_expr occ e =
+  match member_read e with
+  | Some (x, f) -> note occ x (Field f)
+  | None ->
+    let occ = match e with CPPvar id -> note occ id Whole | _ -> occ in
+    fold_expr_children ~on_expr:occ_expr ~on_stmts:occ_stmts occ e
 
-and count_stmts counts l = List.fold_left count_stmt counts l
+and occ_stmts occ l = List.fold_left occ_stmt occ l
 
-and count_stmt counts s =
-  fold_stmt_children ~on_expr:count_expr ~on_stmts:count_stmts counts s
+and occ_stmt occ s =
+  fold_stmt_children ~on_expr:occ_expr ~on_stmts:occ_stmts occ s
 
-let named counts =
-  IdMap.fold (fun id _ acc -> IdSet.add id acc) counts IdSet.empty
+let named occ =
+  IdMap.fold (fun id _ acc -> IdSet.add id acc) occ IdSet.empty
 
-let reads_expr e = named (count_expr IdMap.empty e)
-let reads_stmts l = named (count_stmts IdMap.empty l)
+let reads_expr e = named (occ_expr IdMap.empty e)
+let reads_stmts l = named (occ_stmts IdMap.empty l)
 
 (** {1 Which variables may be moved from at all} *)
 
@@ -83,10 +102,6 @@ let rec scan_expr scope e =
     ban scope e;
     List.iter (fun (_, id) -> bind_other_opt scope id) (lambda_params l.cl_params)
   | CPPunop (Uaddr, a) -> ban scope a
-  | CPPfun_call (_, CPPglob (_, _, Some {ci_inline = Some _; _}), args) ->
-    (* An inline custom is a template string, and a template string may
-       mention the same argument twice. *)
-    List.iter (ban scope) (to_reversed args)
   | _ -> () );
   iter_expr_children ~on_expr:(scan_expr scope) ~on_stmts:(scan_stmts scope) e
 
@@ -148,31 +163,60 @@ let declared_in stmts =
 
 (** {1 The backward walk} *)
 
+(** How a term's reads of a variable that is dead after it give up its value:
+    its one read moves all of it, or each of its reads moves a different
+    member. *)
+type transfer = Move_whole | Move_fields
+
 (** The reads of [term] that may become moves, given that [live] is read
-    afterwards.  A variable read twice in the same term is not one of them:
+    afterwards.  A variable read twice in the same term is not one of them --
     C++ leaves the order of a call's arguments unspecified, so the other read
-    may happen second. *)
-let movable_reads scope live counts =
+    may happen second -- unless every read is of a different member, which a
+    move of another member leaves alone. *)
+let transfers scope live occ =
   IdMap.fold
-    (fun id n acc ->
+    (fun id places acc ->
       if
-        n = 1
-        && IdSet.mem id scope.cands
+        IdSet.mem id scope.cands
         && (not (IdSet.mem id scope.banned))
         && not (IdSet.mem id live)
       then
-        IdSet.add id acc
+        let fields =
+          List.filter_map (function Field f -> Some f | Whole -> None) places
+        in
+        match places with
+        | [Whole] -> IdMap.add id Move_whole acc
+        | _
+          when List.length fields = List.length places
+               && List.length (List.sort_uniq String.compare fields)
+                  = List.length fields ->
+          IdMap.add id Move_fields acc
+        | _ -> acc
       else
         acc )
-    counts
-    IdSet.empty
+    occ
+    IdMap.empty
 
 let rec move_reads moved e =
+  let transfer x = IdMap.find_opt x moved in
   match e with
   (* Already a move: an earlier pass got there first, and [std::move] twice
      over reads no better than once. *)
   | CPPmove (CPPvar _) -> e
-  | CPPvar id when IdSet.mem id moved -> CPPmove e
+  | _ when (match member_read e with
+            | Some (x, _) -> transfer x = Some Move_fields
+            | None -> false) ->
+    ( match e with
+    | CPPaccess (a, (CPPvar _ as v), f) -> CPPaccess (a, CPPmove v, f)
+    | CPPget ((CPPvar _ as v), f) -> CPPget (CPPmove v, f)
+    | CPPfun_call (s, g, {rev = [(CPPvar _ as v)]}) ->
+      CPPfun_call (s, g, of_reversed [CPPmove v])
+    | _ -> e )
+  | CPPvar id when transfer id = Some Move_whole -> CPPmove e
+  (* A template that may splice an argument twice would evaluate a move
+     written into it twice. *)
+  | CPPfun_call (_, CPPglob (_, _, Some {ci_inline = Some {it_linear = false; _}; _}), _) ->
+    e
   | CPPfun_call (s, callee, args) ->
     (* The callee is how the function is reached, not a value handed to it.
        Moving it buys nothing -- [std::move(f)(x)] still calls [f] -- and
@@ -217,10 +261,10 @@ and walk_alts scope live bodies =
 
 (** An expression evaluated at this point, with [live] read after it. *)
 and walk_expr scope live e =
-  let counts = count_expr IdMap.empty e in
-  let moved = movable_reads scope live counts in
-  ( (if IdSet.is_empty moved then e else move_reads moved e),
-    IdSet.union live (named counts) )
+  let occ = occ_expr IdMap.empty e in
+  let moved = transfers scope live occ in
+  ( (if IdMap.is_empty moved then e else move_reads moved e),
+    IdSet.union live (named occ) )
 
 (** A loop body runs again, so everything the loop reads is live at the end of
     every iteration -- except what the body itself declares, which is a fresh
@@ -281,8 +325,8 @@ and walk_stmt scope live s =
        is not a place where a conditional read may become a move. *)
     let before =
       List.fold_left
-        (fun acc b -> List.fold_left count_expr acc b.smb_extra_conds)
-        (count_expr IdMap.empty scrut.sc_expr)
+        (fun acc b -> List.fold_left occ_expr acc b.smb_extra_conds)
+        (occ_expr IdMap.empty scrut.sc_expr)
         branches
     in
     (Smatch (scrut, branches, els), IdSet.union live (named before))
@@ -299,14 +343,14 @@ and walk_stmt scope live s =
     (* C++ moves a returned local or by-value parameter on its own, and
        writing the move here would suppress the copy elision that is better
        still. *)
-    (s, IdSet.union live (named (count_stmt IdMap.empty s)))
+    (s, IdSet.union live (named (occ_stmt IdMap.empty s)))
   | _ ->
     (* Everything left holds expressions and no statements, so its reads all
        happen here, in an order C++ does not promise. *)
-    let counts = count_stmt IdMap.empty s in
-    let moved = movable_reads scope live counts in
-    ( (if IdSet.is_empty moved then s else move_reads_stmt moved s),
-      IdSet.union live (named counts) )
+    let occ = occ_stmt IdMap.empty s in
+    let moved = transfers scope live occ in
+    ( (if IdMap.is_empty moved then s else move_reads_stmt moved s),
+      IdSet.union live (named occ) )
 
 and two_alts scope live t e =
   let t, lt = walk scope live t in

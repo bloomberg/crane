@@ -99,7 +99,8 @@ type ref_kind = Lvalue | Forwarding
     and nowhere else. *)
 type inline_shape =
   | Inline_identity  (** ["%a0"]: its one argument, unchanged *)
-  | Inline_pair_projection  (** reads [.first] or [.second] of its argument *)
+  | Inline_pair_projection of string
+      (** reads the named member, [first] or [second], of its argument *)
   | Inline_other
 
 (** How an inline mapping's text is printed. *)
@@ -118,6 +119,9 @@ type inline_template = {
   it_text : string;
   it_form : inline_form;
   it_shape : inline_shape;
+  it_linear : bool;
+      (** Each value argument is spliced at most once, so evaluated at most
+          once: an argument may be written as a move. *)
 }
 
 (** What a {!Terased} position erased: a type, a proof, or an implicit

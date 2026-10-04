@@ -12,7 +12,7 @@ std::string EffectHofVoid::concrete_use() {
 
 /// 8. Use set_env as a concrete callback via wrapper
 void EffectHofVoid::set_wrapper(std::string v, std::string k) {
-  setenv(k.c_str(), v.c_str(), 1);
+  setenv(std::move(k).c_str(), std::move(v).c_str(), 1);
   return;
 }
 

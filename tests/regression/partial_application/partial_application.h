@@ -152,7 +152,8 @@ template <typename T1, typename T2, typename F1>
 std::pair<T2, Box<T2>> ft_pair(TFunctor<Box<crane::obj>> h, F1 &&f,
                                const std::pair<T1, Box<T1>> &p) {
   const auto &[u, b] = p;
-  return std::make_pair(f(u), tfmap<Box<crane::obj>, T1, T2>(h, f, b));
+  return std::make_pair(f(u),
+                        tfmap<Box<crane::obj>, T1, T2>(std::move(h), f, b));
 }
 
 std::pair<crane::obj, Box<crane::obj>>

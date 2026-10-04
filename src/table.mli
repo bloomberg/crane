@@ -987,6 +987,9 @@ val is_custom : GlobRef.t -> bool
 (** Check if reference has inline custom extraction. *)
 val is_inline_custom : GlobRef.t -> bool
 
+(** The replacement text of the inline custom [r], without marking it used. *)
+val inline_custom_text : GlobRef.t -> string option
+
 (** Check if reference has foreign custom extraction. *)
 val is_foreign_custom : GlobRef.t -> bool
 

@@ -1,7 +1,7 @@
 #include "erased_singleton_unit_tuple.h"
 
 syms_semty cons_sem(Sym, const List<Sym> &, sym_semty v, syms_semty rest) {
-  return std::make_pair(crane::obj(v), crane::obj(rest));
+  return std::make_pair(crane::obj(std::move(v)), crane::obj(std::move(rest)));
 }
 
 syms_semty head1(const List<Sym> &, syms_semty vs) {

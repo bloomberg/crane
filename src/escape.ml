@@ -24,7 +24,9 @@ open Table
 (** {2 Utility: occurrence counting} *)
 
 (** Count occurrences of de Bruijn index [k] in [t]. For case expressions, use
-    max over branches (conservative estimate). *)
+    max over branches (conservative estimate).  An argument of an inline custom
+    counts as many times as its template splices it: [sum_twice(%a0, %a0)]
+    evaluates its argument twice, so a variable passed to it is read twice. *)
 let nb_occur_match =
   let rec nb k = function
     | MLrel i -> if i = k then 1 else 0
@@ -40,6 +42,16 @@ let nb_occur_match =
       let k' = k + Array.length ids in
       Array.fold_left (fun total body -> total + nb k' body) 0 bodies
     | MLlam (_, _, body) -> nb (k + 1) body
+    | MLapp ((MLglob (r, _) as head), args) when Table.is_inline_custom r ->
+      let mentions =
+        match Table.inline_custom_text r with
+        | Some s -> Foreign_template.arg_mentions s
+        | None -> fun _ -> 1
+      in
+      fst
+        (List.fold_left
+           (fun (total, i) arg -> (total + (mentions i * nb k arg), i + 1))
+           (nb k head, 0) args)
     | MLapp (head, args) ->
       List.fold_left (fun total arg -> total + nb k arg) (nb k head) args
     | MLcons (_, _, args) | MLtuple args ->

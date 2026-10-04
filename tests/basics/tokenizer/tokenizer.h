@@ -181,7 +181,7 @@ struct ToString {
       const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
       auto &&_sv = *a1;
       if (std::holds_alternative<typename List<T1>::Nil>(_sv.v())) {
-        return sep + p(a0);
+        return std::move(sep) + p(a0);
       } else {
         return sep + p(a0) + intersperse<T1>(p, sep, *a1);
       }

@@ -36,8 +36,8 @@ std::pair<uint64_t, uint64_t> LoopifyConditionalRecursion::cached_sum(
           const uint64_t &v = *cache;
           sub = std::make_pair(v, UINT64_C(0));
           {
-            _result =
-                std::make_pair((a0 + sub.first), (sub.second + UINT64_C(1)));
+            _result = std::make_pair((a0 + std::move(sub).first),
+                                     (std::move(sub).second + UINT64_C(1)));
           }
         } else {
           _stack.emplace_back(CraneCont1{a0});
@@ -49,7 +49,8 @@ std::pair<uint64_t, uint64_t> LoopifyConditionalRecursion::cached_sum(
       auto _f = std::move(std::get<CraneCont1>(_frame));
       uint64_t a0 = _f.a0;
       auto sub = std::move(_result);
-      _result = std::make_pair((a0 + sub.first), (sub.second + UINT64_C(1)));
+      _result = std::make_pair((a0 + std::move(sub).first),
+                               (std::move(sub).second + UINT64_C(1)));
     }
   }
   return _result;
@@ -89,7 +90,8 @@ LoopifyConditionalRecursion::find_or_recurse(
         if (a0 == target) {
           sub = std::make_pair(a0, *a1);
           {
-            _result = std::make_pair((sub.first + UINT64_C(1)), sub.second);
+            _result = std::make_pair((std::move(sub).first + UINT64_C(1)),
+                                     std::move(sub).second);
           }
         } else {
           _stack.emplace_back(CraneCont1{});
@@ -99,7 +101,8 @@ LoopifyConditionalRecursion::find_or_recurse(
     } else {
       auto _f = std::move(std::get<CraneCont1>(_frame));
       auto sub = std::move(_result);
-      _result = std::make_pair((sub.first + UINT64_C(1)), sub.second);
+      _result = std::make_pair((std::move(sub).first + UINT64_C(1)),
+                               std::move(sub).second);
     }
   }
   return _result;
@@ -298,8 +301,8 @@ std::pair<uint64_t, uint64_t> LoopifyConditionalRecursion::accum_with_cache(
           const uint64_t &v = *cached;
           sub = std::make_pair(v, UINT64_C(0));
           {
-            _result =
-                std::make_pair((sub.first + a0), (sub.second + UINT64_C(1)));
+            _result = std::make_pair((std::move(sub).first + a0),
+                                     (std::move(sub).second + UINT64_C(1)));
           }
         } else {
           _stack.emplace_back(CraneCont1{a0});
@@ -310,7 +313,8 @@ std::pair<uint64_t, uint64_t> LoopifyConditionalRecursion::accum_with_cache(
       auto _f = std::move(std::get<CraneCont1>(_frame));
       uint64_t a0 = _f.a0;
       auto sub = std::move(_result);
-      _result = std::make_pair((sub.first + a0), (sub.second + UINT64_C(1)));
+      _result = std::make_pair((std::move(sub).first + a0),
+                               (std::move(sub).second + UINT64_C(1)));
     }
   }
   return _result;

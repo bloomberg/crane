@@ -203,7 +203,7 @@ struct Mon_option {
   template <typename CraneA0> using m = std::optional<CraneA0>;
 
   template <typename CraneA0> static std::optional<CraneA0> mret(CraneA0 a) {
-    return std::make_optional<CraneA0>(a);
+    return std::make_optional<CraneA0>(std::move(a));
   }
 
   template <typename CraneA0, typename CraneA1>

@@ -206,7 +206,7 @@ struct Monad_option {
   template <typename CraneA0> using m = std::optional<CraneA0>;
 
   template <typename CraneA0> static std::optional<CraneA0> ret(CraneA0 x) {
-    return std::make_optional<CraneA0>(x);
+    return std::make_optional<CraneA0>(std::move(x));
   }
 
   template <typename CraneA0, typename CraneA1>

@@ -122,7 +122,7 @@ public:
 
 template <typename T1, typename T2>
 std::shared_ptr<ITree<T2>> trigger_cast_(crane::rebind_t<T1, Vd> e) {
-  return itree_bind(itree_trigger(e),
+  return itree_bind(itree_trigger(std::move(e)),
                     [](const Vd &_x) { return _x.vd_elim(); });
 }
 

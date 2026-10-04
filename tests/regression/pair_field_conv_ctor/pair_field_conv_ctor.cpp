@@ -4,7 +4,8 @@ Ann<crane::obj> TFunctor_ann(crane::fn<crane::obj(crane::obj)> f,
                              const Ann<crane::obj> &a) {
   if (std::holds_alternative<typename Ann<crane::obj>::ANN_metadata>(a.v())) {
     const auto &[a0] = std::get<typename Ann<crane::obj>::ANN_metadata>(a.v());
-    return Ann<crane::obj>::ann_metadata(a0.template map<crane::obj>(f));
+    return Ann<crane::obj>::ann_metadata(
+        a0.template map<crane::obj>(std::move(f)));
   } else {
     const auto &[a0] = std::get<typename Ann<crane::obj>::ANN_prefix>(a.v());
     const auto &[t, e] = a0;

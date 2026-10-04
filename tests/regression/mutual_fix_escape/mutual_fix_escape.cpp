@@ -49,7 +49,7 @@ MutualFixEscape::make_even_odd(uint64_t) {
   auto odd0 = [=](uint64_t n) -> bool {
     return odd0_impl(even0_impl, odd0_impl, n);
   };
-  return std::make_pair(even, odd0);
+  return std::make_pair(std::move(even), std::move(odd0));
 }
 
 /// A mutual fixpoint that captures a parameter base.
@@ -107,5 +107,5 @@ MutualFixEscape::make_count_pair(uint64_t base) {
   auto count_odd0 = [=](uint64_t n) -> uint64_t {
     return count_odd0_impl(count_even0_impl, count_odd0_impl, n);
   };
-  return std::make_pair(count_even, count_odd0);
+  return std::make_pair(std::move(count_even), std::move(count_odd0));
 }

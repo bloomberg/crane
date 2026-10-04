@@ -6,7 +6,8 @@ std::optional<std::string> EffectDirPath::first_file(std::string path) {
     auto result = List<std::string>::nil();
     std::error_code _ec;
     std::size_t _count = 0;
-    std::filesystem::directory_iterator _it(std::filesystem::path(path), _ec),
+    std::filesystem::directory_iterator _it(
+        std::filesystem::path(std::move(path)), _ec),
         _end;
     for (; !_ec && _it != _end && _count < 65536;
          _it.increment(_ec), ++_count) {
@@ -41,7 +42,7 @@ std::optional<std::string> EffectDirPath::check_and_list(std::string path) {
     return std::filesystem::is_directory(std::filesystem::path(path), _ec);
   }();
   if (isdir) {
-    return first_file(path);
+    return first_file(std::move(path));
   } else {
     return std::optional<std::string>();
   }
@@ -51,7 +52,8 @@ std::optional<std::string> EffectDirPath::check_and_list(std::string path) {
 void EffectDirPath::show_absolute(std::string path) {
   std::string abs = [&]() -> std::string {
     std::error_code _ec;
-    auto _r = std::filesystem::absolute(std::filesystem::path(path), _ec);
+    auto _r =
+        std::filesystem::absolute(std::filesystem::path(std::move(path)), _ec);
     return _ec ? std::string{} : _r.string();
   }();
   std::cout << std::move(abs) << '\n';
@@ -66,7 +68,8 @@ std::string EffectDirPath::classify_path(std::string path) {
   }();
   bool isfile = [&]() -> bool {
     std::error_code _ec;
-    return std::filesystem::is_regular_file(std::filesystem::path(path), _ec);
+    return std::filesystem::is_regular_file(
+        std::filesystem::path(std::move(path)), _ec);
   }();
   if (isdir) {
     return "directory";
@@ -83,7 +86,8 @@ std::string EffectDirPath::classify_path(std::string path) {
 std::string EffectDirPath::create_and_report(std::string path) {
   bool ok = [&]() -> bool {
     std::error_code _ec;
-    std::filesystem::create_directories(std::filesystem::path(path), _ec);
+    std::filesystem::create_directories(std::filesystem::path(std::move(path)),
+                                        _ec);
     return !_ec;
   }();
   if (ok) {
@@ -124,7 +128,7 @@ uint64_t EffectDirPath::count_entries(const List<std::string> &dirs,
 void EffectDirPath::cleanup(std::string path) {
   bool _x = [&]() -> bool {
     std::error_code _ec;
-    std::filesystem::remove_all(std::filesystem::path(path), _ec);
+    std::filesystem::remove_all(std::filesystem::path(std::move(path)), _ec);
     return !_ec;
   }();
   std::cout << std::string("cleaned up") << '\n';

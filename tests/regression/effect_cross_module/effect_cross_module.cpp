@@ -2,7 +2,7 @@
 
 /// Inner module defines a helper that returns a value
 void EffectCrossModule::Inner::greet(std::string name) {
-  std::cout << std::string("Hello, ") + name << '\n';
+  std::cout << std::string("Hello, ") + std::move(name) << '\n';
   return;
 }
 

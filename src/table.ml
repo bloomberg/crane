@@ -2912,6 +2912,11 @@ let is_flat_inductive r =
 
 let is_inline_custom r = is_custom r && to_inline r
 
+(** The replacement text of the inline custom [r], without marking [r] used:
+    reading a template to reason about it is not using it. *)
+let inline_custom_text r =
+  if to_inline r then Option.map snd (Refmap'.find_opt r !customs) else None
+
 let is_foreign_custom r = is_custom r && to_foreign r
 
 let find_callback r = Refmap'.find r !callback_map

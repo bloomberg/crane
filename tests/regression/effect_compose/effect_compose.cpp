@@ -3,7 +3,8 @@
 /// Spawn a future that doubles a number, retrieve the result.
 uint64_t EffectCompose::par_double(uint64_t n) {
   crane::fn<uint64_t(uint64_t)> double0 = [](uint64_t x) { return (x + x); };
-  std::future<uint64_t> t = std::async(std::launch::async, double0, n);
+  std::future<uint64_t> t =
+      std::async(std::launch::async, std::move(double0), n);
   return std::move(t).get();
 }
 
@@ -11,9 +12,10 @@ uint64_t EffectCompose::par_double(uint64_t n) {
 uint64_t EffectCompose::par_add(uint64_t a, uint64_t b) {
   crane::fn<uint64_t(uint64_t)> double0 = [](uint64_t x) { return (x + x); };
   std::future<uint64_t> t1 = std::async(std::launch::async, double0, a);
-  std::future<uint64_t> t2 = std::async(std::launch::async, double0, b);
-  uint64_t r1 = t1.get();
-  uint64_t r2 = t2.get();
+  std::future<uint64_t> t2 =
+      std::async(std::launch::async, std::move(double0), b);
+  uint64_t r1 = std::move(t1).get();
+  uint64_t r2 = std::move(t2).get();
   return (r1 + r2);
 }
 
@@ -23,8 +25,8 @@ uint64_t EffectCompose::par_compute_and_greet(uint64_t n) {
     return (x + UINT64_C(1));
   };
   std::cout << std::string("computing...") << '\n';
-  std::future<uint64_t> t = std::async(std::launch::async, succ, n);
-  uint64_t result = t.get();
+  std::future<uint64_t> t = std::async(std::launch::async, std::move(succ), n);
+  uint64_t result = std::move(t).get();
   std::cout << std::string("done") << '\n';
   return result;
 }

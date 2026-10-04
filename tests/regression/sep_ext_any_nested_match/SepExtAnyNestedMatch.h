@@ -23,7 +23,8 @@ template <SymTypes Ty> struct Destruct {
              const typename Datatypes::template List<typename Ty::sym> &,
              symbols_semty vs) {
     return crane::any_cast<std::pair<crane::obj, crane::obj>>(
-               crane::any_cast<std::pair<crane::obj, crane::obj>>(vs).second)
+               crane::any_cast<std::pair<crane::obj, crane::obj>>(std::move(vs))
+                   .second)
         .first;
   }
 };

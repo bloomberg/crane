@@ -41,6 +41,20 @@ val passes_through : string -> int option
     [%a0.second]. *)
 val is_pair_projection : string -> bool
 
+(** The member of a pair the template [s] projects its one argument onto
+    ([first] for ["%a0.first"]), when it is a pair projection. *)
+val pair_projection_field : string -> string option
+
+(** How many times the template [s] splices its [i]-th value argument.  An
+    argument past the last one it splices is applied to what it expands to,
+    as a call's argument, and so is evaluated once -- every argument of a
+    template that splices none, which is a callee. *)
+val arg_mentions : string -> int -> int
+
+(** Whether the template [s] splices each of its value arguments at most
+    once, so that the C++ it expands to evaluates each exactly once. *)
+val mentions_each_arg_once : string -> bool
+
 (** [with_result name s] is [s] with every [%result] spelled [name]. *)
 val with_result : string -> string -> string
 

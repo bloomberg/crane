@@ -5,7 +5,8 @@ Functorish_option(crane::fn<crane::obj(crane::obj)> f,
                   const std::optional<crane::obj> &o) {
   if (o.has_value()) {
     const auto &a = *o;
-    return std::make_optional<crane::obj>(crane::obj(crane_call_erased(f, a)));
+    return std::make_optional<crane::obj>(
+        crane::obj(crane_call_erased(std::move(f), a)));
   } else {
     return std::optional<crane::obj>();
   }

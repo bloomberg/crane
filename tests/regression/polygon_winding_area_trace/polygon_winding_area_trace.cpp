@@ -10,7 +10,7 @@ int64_t Z::pow_pos(int64_t z, unsigned int x0_) {
 }
 
 Real PolygonWindingAreaTraceCase::hav(Real theta) {
-  return r_sqr(r_sin((theta / Real::from_z(INT64_C(2)))));
+  return r_sqr(r_sin((std::move(theta) / Real::from_z(INT64_C(2)))));
 }
 
 Real PolygonWindingAreaTraceCase::distance(
@@ -24,7 +24,7 @@ Real PolygonWindingAreaTraceCase::distance(
 }
 
 Real PolygonWindingAreaTraceCase::lon_diff(Real lon1, Real lon2) {
-  Real raw = (lon2 - lon1);
+  Real raw = (std::move(lon2) - std::move(lon1));
   if ((Real::pi() < raw)) {
     return (std::move(raw) - (Real::from_z(INT64_C(2)) * Real::pi()));
   } else {
@@ -75,13 +75,13 @@ Real PolygonWindingAreaTraceCase::spherical_polygon_area(
 }
 
 Real PolygonWindingAreaTraceCase::distance_to_central_angle(Real d) {
-  return (d / R_earth);
+  return (std::move(d) / R_earth);
 }
 
 Real PolygonWindingAreaTraceCase::spherical_cosine_arg(Real ca, Real cb,
                                                        Real cab) {
-  Real num = (r_cos(cab) - (r_cos(ca) * r_cos(cb)));
-  Real denom = (r_sin(ca) * r_sin(cb));
+  Real num = (r_cos(std::move(cab)) - (r_cos(ca) * r_cos(cb)));
+  Real denom = (r_sin(std::move(ca)) * r_sin(std::move(cb)));
   return r_max(
       Real::from_z(INT64_C(-1)),
       r_min(Real::from_z(INT64_C(1)),
@@ -94,9 +94,9 @@ Real PolygonWindingAreaTraceCase::spherical_cosine_arg(Real ca, Real cb,
 
 Real PolygonWindingAreaTraceCase::law_of_cosines_arg(Real da, Real db,
                                                      Real dab) {
-  Real ca = distance_to_central_angle(da);
-  Real cb = distance_to_central_angle(db);
-  Real cab = distance_to_central_angle(dab);
+  Real ca = distance_to_central_angle(std::move(da));
+  Real cb = distance_to_central_angle(std::move(db));
+  Real cab = distance_to_central_angle(std::move(dab));
   return spherical_cosine_arg(std::move(ca), std::move(cb), std::move(cab));
 }
 

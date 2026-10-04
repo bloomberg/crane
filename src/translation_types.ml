@@ -272,7 +272,7 @@ let reads_recovered_pair = function
     threaded from producer to consumer. *)
 let yields_boxed_component = function
   | CPPfun_call (_, CPPglob (_, _, Some ci), {rev = [arg]}) when reads_recovered_pair arg ->
-    inline_shape ci = Some Inline_pair_projection
+    (match inline_shape ci with Some (Inline_pair_projection _) -> true | _ -> false)
   (* The accessor is not always a custom-inline call: a projection out of a
      [std::pair] is a plain member read, and that is the same evidence. *)
   | CPPaccess (Adot, arg, _) -> reads_recovered_pair arg

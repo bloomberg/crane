@@ -34,15 +34,15 @@ template <typename K, typename V> struct SkipList {
   template <typename F0, typename F1>
   std::optional<V> lookup(F0 &&ltK, F1 &&eqK, const K &k) const {
     SkipPath<K, V> path = this->findPath(ltK, k);
-    std::shared_ptr<SkipNode<K, V>> pred0 = path.get(UINT64_C(0));
+    std::shared_ptr<SkipNode<K, V>> pred0 = std::move(path).get(UINT64_C(0));
     std::optional<std::shared_ptr<SkipNode<K, V>>> nextOpt =
         ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
-            pred0->forward[UINT64_C(0)]));
+            std::move(pred0)->forward[UINT64_C(0)]));
     if (nextOpt.has_value()) {
       const std::shared_ptr<SkipNode<K, V>> &node = *nextOpt;
       if (eqK(node->key, k)) {
         V v = stm::readTVar<V>(node->value);
-        return std::make_optional<V>(v);
+        return std::make_optional<V>(std::move(v));
       } else {
         return std::optional<V>();
       }
@@ -61,7 +61,7 @@ template <typename K, typename V> struct SkipList {
     std::shared_ptr<SkipNode<K, V>> pred0 = path.get(UINT64_C(0));
     std::optional<std::shared_ptr<SkipNode<K, V>>> nextOpt =
         ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
-            pred0->forward[UINT64_C(0)]));
+            std::move(pred0)->forward[UINT64_C(0)]));
     if (nextOpt.has_value()) {
       const std::shared_ptr<SkipNode<K, V>> &existing = *nextOpt;
       if (eqK(existing->key, k)) {
@@ -99,7 +99,7 @@ template <typename K, typename V> struct SkipList {
     std::shared_ptr<SkipNode<K, V>> pred0 = path.get(UINT64_C(0));
     std::optional<std::shared_ptr<SkipNode<K, V>>> nextOpt =
         ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
-            pred0->forward[UINT64_C(0)]));
+            std::move(pred0)->forward[UINT64_C(0)]));
     if (nextOpt.has_value()) {
       const std::shared_ptr<SkipNode<K, V>> &node = *nextOpt;
       if (eqK(node->key, k)) {
@@ -123,7 +123,8 @@ template <typename K, typename V> struct SkipList {
     if (firstOpt.has_value()) {
       const std::shared_ptr<SkipNode<K, V>> &node = *firstOpt;
       V v = stm::readTVar<V>(node->value);
-      return std::make_optional<std::pair<K, V>>(std::make_pair(node->key, v));
+      return std::make_optional<std::pair<K, V>>(
+          std::make_pair(node->key, std::move(v)));
     } else {
       return std::optional<std::pair<K, V>>();
     }
@@ -198,7 +199,8 @@ template <typename K, typename V> struct SkipList {
       SkipList<int, int>::template unlinkFirstFromHead<K, V>(this->slHead, node,
                                                              node->level);
       V v = stm::readTVar<V>(node->value);
-      return std::make_optional<std::pair<K, V>>(std::make_pair(node->key, v));
+      return std::make_optional<std::pair<K, V>>(
+          std::make_pair(node->key, std::move(v)));
     } else {
       return std::optional<std::pair<K, V>>();
     }
@@ -221,7 +223,7 @@ template <typename K, typename V> struct SkipList {
     std::shared_ptr<SkipNode<K, V>> pred0 = path.get(UINT64_C(0));
     std::optional<std::shared_ptr<SkipNode<K, V>>> nextOpt =
         ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
-            pred0->forward[UINT64_C(0)]));
+            std::move(pred0)->forward[UINT64_C(0)]));
     if (nextOpt.has_value()) {
       const std::shared_ptr<SkipNode<K, V>> &existing = *nextOpt;
       if (eqK(existing->key, k)) {
@@ -263,7 +265,7 @@ template <typename K, typename V> struct SkipList {
     std::shared_ptr<SkipNode<K, V>> pred0 = path.get(UINT64_C(0));
     std::optional<std::shared_ptr<SkipNode<K, V>>> nextOpt =
         ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
-            pred0->forward[UINT64_C(0)]));
+            std::move(pred0)->forward[UINT64_C(0)]));
     if (nextOpt.has_value()) {
       const std::shared_ptr<SkipNode<K, V>> &existing = *nextOpt;
       if (eqK(existing->key, k)) {
@@ -304,10 +306,10 @@ template <typename K, typename V> struct SkipList {
   std::optional<std::shared_ptr<SkipNode<K, V>>> find(F0 &&ltK, F1 &&eqK,
                                                       const K &k) const {
     SkipPath<K, V> path = this->findPath(ltK, k);
-    std::shared_ptr<SkipNode<K, V>> pred0 = path.get(UINT64_C(0));
+    std::shared_ptr<SkipNode<K, V>> pred0 = std::move(path).get(UINT64_C(0));
     std::optional<std::shared_ptr<SkipNode<K, V>>> nextOpt =
         ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
-            pred0->forward[UINT64_C(0)]));
+            std::move(pred0)->forward[UINT64_C(0)]));
     if (nextOpt.has_value()) {
       const std::shared_ptr<SkipNode<K, V>> &node = *nextOpt;
       if (eqK(node->key, k)) {
@@ -343,10 +345,10 @@ template <typename K, typename V> struct SkipList {
   std::optional<std::shared_ptr<SkipNode<K, V>>>
   findLowerBound(F0 &&ltK, const K &k) const {
     SkipPath<K, V> path = this->findPath(ltK, k);
-    std::shared_ptr<SkipNode<K, V>> pred0 = path.get(UINT64_C(0));
+    std::shared_ptr<SkipNode<K, V>> pred0 = std::move(path).get(UINT64_C(0));
     std::optional<std::shared_ptr<SkipNode<K, V>>> nextOpt =
         ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
-            pred0->forward[UINT64_C(0)]));
+            std::move(pred0)->forward[UINT64_C(0)]));
     if (nextOpt.has_value()) {
       const std::shared_ptr<SkipNode<K, V>> &node = *nextOpt;
       return std::make_optional<std::shared_ptr<SkipNode<K, V>>>(node);
@@ -359,10 +361,10 @@ template <typename K, typename V> struct SkipList {
   std::optional<std::shared_ptr<SkipNode<K, V>>>
   findUpperBound(F0 &&ltK, F1 &&eqK, const K &k) const {
     SkipPath<K, V> path = this->findPath(ltK, k);
-    std::shared_ptr<SkipNode<K, V>> pred0 = path.get(UINT64_C(0));
+    std::shared_ptr<SkipNode<K, V>> pred0 = std::move(path).get(UINT64_C(0));
     std::optional<std::shared_ptr<SkipNode<K, V>>> nextOpt =
         ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
-            pred0->forward[UINT64_C(0)]));
+            std::move(pred0)->forward[UINT64_C(0)]));
     if (nextOpt.has_value()) {
       const std::shared_ptr<SkipNode<K, V>> &node = *nextOpt;
       if (eqK(node->key, k)) {
@@ -379,19 +381,19 @@ template <typename K, typename V> struct SkipList {
   template <typename F0, typename F1>
   bool removePair(F0 &&ltK, F1 &&eqK,
                   std::shared_ptr<SkipNode<K, V>> pair) const {
-    K k = pair->key;
+    K k = std::move(pair)->key;
     SkipPath<K, V> path = this->findPath(ltK, k);
     uint64_t curLvl = stm::readTVar(this->slLevel);
     std::shared_ptr<SkipNode<K, V>> pred0 = path.get(UINT64_C(0));
     std::optional<std::shared_ptr<SkipNode<K, V>>> nextOpt =
         ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
-            pred0->forward[UINT64_C(0)]));
+            std::move(pred0)->forward[UINT64_C(0)]));
     if (nextOpt.has_value()) {
       const std::shared_ptr<SkipNode<K, V>> &node = *nextOpt;
       if (eqK(node->key, k)) {
         SkipList<int, int>::template extendPath<K, V>(
             path, this->slHead, (node->level + 1), curLvl);
-        SkipList<int, int>::template unlinkNode<K, V>(path, node);
+        SkipList<int, int>::template unlinkNode<K, V>(std::move(path), node);
         return true;
       } else {
         return false;
@@ -422,7 +424,7 @@ template <typename K, typename V> struct SkipList {
     std::shared_ptr<SkipNode<K, V>> pred0 = path.get(UINT64_C(0));
     std::optional<std::shared_ptr<SkipNode<K, V>>> nextOpt =
         ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
-            pred0->forward[UINT64_C(0)]));
+            std::move(pred0)->forward[UINT64_C(0)]));
     if (nextOpt.has_value()) {
       const std::shared_ptr<SkipNode<K, V>> &existing = *nextOpt;
       if (eqK(existing->key, key0)) {
@@ -441,7 +443,7 @@ template <typename K, typename V> struct SkipList {
             return;
           }
         }();
-        return std::make_pair(newN, isNewFront);
+        return std::make_pair(std::move(newN), isNewFront);
       }
     } else {
       std::shared_ptr<SkipNode<K, V>> newN =
@@ -456,7 +458,7 @@ template <typename K, typename V> struct SkipList {
           return;
         }
       }();
-      return std::make_pair(newN, isNewFront);
+      return std::make_pair(std::move(newN), isNewFront);
     }
   }
 
@@ -482,7 +484,7 @@ template <typename K, typename V> struct SkipList {
     std::shared_ptr<SkipNode<K, V>> pred0 = path.get(UINT64_C(0));
     std::optional<std::shared_ptr<SkipNode<K, V>>> nextOpt =
         ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
-            pred0->forward[UINT64_C(0)]));
+            std::move(pred0)->forward[UINT64_C(0)]));
     if (nextOpt.has_value()) {
       const std::shared_ptr<SkipNode<K, V>> &existing = *nextOpt;
       if (eqK(existing->key, key0)) {
@@ -504,9 +506,9 @@ template <typename K, typename V> struct SkipList {
           }
         }();
         return std::make_pair(
-            std::make_pair(
-                SkipList<int, int>::e_SUCCESS,
-                std::make_optional<std::shared_ptr<SkipNode<K, V>>>(newN)),
+            std::make_pair(SkipList<int, int>::e_SUCCESS,
+                           std::make_optional<std::shared_ptr<SkipNode<K, V>>>(
+                               std::move(newN))),
             isNewFront);
       }
     } else {
@@ -523,9 +525,9 @@ template <typename K, typename V> struct SkipList {
         }
       }();
       return std::make_pair(
-          std::make_pair(
-              SkipList<int, int>::e_SUCCESS,
-              std::make_optional<std::shared_ptr<SkipNode<K, V>>>(newN)),
+          std::make_pair(SkipList<int, int>::e_SUCCESS,
+                         std::make_optional<std::shared_ptr<SkipNode<K, V>>>(
+                             std::move(newN))),
           isNewFront);
     }
   }
@@ -534,10 +536,10 @@ template <typename K, typename V> struct SkipList {
   std::pair<uint64_t, std::optional<std::shared_ptr<SkipNode<K, V>>>>
   bde_find(F0 &&ltK, F1 &&eqK, const K &key0) const {
     SkipPath<K, V> path = this->findPath(ltK, key0);
-    std::shared_ptr<SkipNode<K, V>> pred0 = path.get(UINT64_C(0));
+    std::shared_ptr<SkipNode<K, V>> pred0 = std::move(path).get(UINT64_C(0));
     std::optional<std::shared_ptr<SkipNode<K, V>>> nextOpt =
         ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
-            pred0->forward[UINT64_C(0)]));
+            std::move(pred0)->forward[UINT64_C(0)]));
     if (nextOpt.has_value()) {
       const std::shared_ptr<SkipNode<K, V>> &node = *nextOpt;
       if (eqK(node->key, key0)) {
@@ -741,11 +743,11 @@ template <typename K, typename V> struct SkipList {
     std::optional<std::shared_ptr<SkipNode<T1, T2>>> oldNext = ptr_to_opt(
         stm::readTVar<std::shared_ptr<SkipNode<T1, T2>>>(pred->forward[level]));
     stm::writeTVar<std::shared_ptr<SkipNode<T1, T2>>>(
-        pred->forward[level],
+        std::move(pred)->forward[level],
         opt_to_ptr(
             std::make_optional<std::shared_ptr<SkipNode<T1, T2>>>(newNode)));
     stm::writeTVar<std::shared_ptr<SkipNode<T1, T2>>>(
-        newNode->forward[level], opt_to_ptr(std::move(oldNext)));
+        std::move(newNode)->forward[level], opt_to_ptr(std::move(oldNext)));
     return;
   }
 
@@ -811,7 +813,7 @@ template <typename K, typename V> struct SkipList {
                        std::shared_ptr<SkipNode<T1, T2>> newNode) {
     uint64_t lvl = newNode->level;
     SkipList<int, int>::template linkNode_aux<T1, T2>(
-        std::move(path), std::move(head), newNode, lvl);
+        std::move(path), std::move(head), std::move(newNode), lvl);
     return;
   }
 
@@ -821,9 +823,9 @@ template <typename K, typename V> struct SkipList {
                             uint64_t level) {
     std::optional<std::shared_ptr<SkipNode<T1, T2>>> targetNext =
         ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<T1, T2>>>(
-            target->forward[level]));
+            std::move(target)->forward[level]));
     stm::writeTVar<std::shared_ptr<SkipNode<T1, T2>>>(
-        pred->forward[level], opt_to_ptr(std::move(targetNext)));
+        std::move(pred)->forward[level], opt_to_ptr(std::move(targetNext)));
     return;
   }
 
@@ -850,8 +852,8 @@ template <typename K, typename V> struct SkipList {
   static void unlinkNode(SkipPath<T1, T2> path,
                          std::shared_ptr<SkipNode<T1, T2>> target) {
     uint64_t lvl = target->level;
-    SkipList<int, int>::template unlinkNode_aux<T1, T2>(std::move(path), target,
-                                                        lvl);
+    SkipList<int, int>::template unlinkNode_aux<T1, T2>(std::move(path),
+                                                        std::move(target), lvl);
     return;
   }
 
@@ -948,7 +950,7 @@ template <typename K, typename V> struct SkipList {
           ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<T1, T2>>>(
               node->forward[_loop_lvl]));
       stm::writeTVar<std::shared_ptr<SkipNode<T1, T2>>>(
-          head->forward[_loop_lvl], opt_to_ptr(nodeNext));
+          head->forward[_loop_lvl], opt_to_ptr(std::move(nodeNext)));
       if (_loop_lvl <= 0) {
         return;
       } else {
@@ -969,7 +971,7 @@ template <typename K, typename V> struct SkipList {
           ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<T1, T2>>>(
               node->forward[_loop_lvl]));
       stm::writeTVar<std::shared_ptr<SkipNode<T1, T2>>>(
-          head->forward[_loop_lvl], opt_to_ptr(nodeNext));
+          head->forward[_loop_lvl], opt_to_ptr(std::move(nodeNext)));
       if (_loop_lvl <= 0) {
         return;
       } else {
@@ -1011,7 +1013,7 @@ template <typename K, typename V> struct SkipList {
   static std::optional<std::shared_ptr<SkipNode<T1, T2>>>
   next(std::shared_ptr<SkipNode<T1, T2>> pair) {
     return ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<T1, T2>>>(
-        pair->forward[UINT64_C(0)]));
+        std::move(pair)->forward[UINT64_C(0)]));
   }
 
   template <typename T1, typename T2>
@@ -1048,12 +1050,12 @@ template <typename K, typename V> struct SkipList {
 
   template <typename T1, typename T2>
   static T1 key(std::shared_ptr<SkipNode<T1, T2>> pair) {
-    return pair->key;
+    return std::move(pair)->key;
   }
 
   template <typename T1, typename T2>
   static T2 data(std::shared_ptr<SkipNode<T1, T2>> pair) {
-    return stm::readTVar<T2>(pair->value);
+    return stm::readTVar<T2>(std::move(pair)->value);
   }
 
   static inline const uint64_t e_SUCCESS = UINT64_C(0);
@@ -1084,7 +1086,8 @@ template <typename K, typename V> struct SkipList {
         (((16u - UINT64_C(1)) > 16u ? 0 : (16u - UINT64_C(1)))));
     stm::TVar<uint64_t> lvlTV = stm::newTVar(UINT64_C(0));
     stm::TVar<uint64_t> lenTV = stm::newTVar(UINT64_C(0));
-    return SkipList<T1, T2>{std::move(headNode), 16u, lvlTV, lenTV};
+    return SkipList<T1, T2>{std::move(headNode), 16u, std::move(lvlTV),
+                            std::move(lenTV)};
   }
 
   template <typename T1, typename T2>

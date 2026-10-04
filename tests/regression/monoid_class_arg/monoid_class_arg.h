@@ -230,8 +230,9 @@ struct MonoidClassArg {
     }
 
     static std::pair<T1, T2> op(std::pair<T1, T2> p, std::pair<T1, T2> q) {
-      return std::make_pair(_tcI0::op(p.first, q.first),
-                            _tcI1::op(p.second, q.second));
+      return std::make_pair(
+          _tcI0::op(std::move(p).first, std::move(q).first),
+          _tcI1::op(std::move(p).second, std::move(q).second));
     }
   };
 

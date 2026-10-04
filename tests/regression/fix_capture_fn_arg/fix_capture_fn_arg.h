@@ -26,7 +26,7 @@ struct FixCaptureFnArg {
       }
     };
     auto go = [=](uint64_t x) -> uint64_t { return go_impl(go_impl, x); };
-    return std::make_pair(f(base), go);
+    return std::make_pair(f(base), std::move(go));
   }
 
   /// test1: make_transform(x=>x*2, 5) = (10, go).

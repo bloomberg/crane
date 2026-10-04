@@ -2,7 +2,8 @@
 
 std::string TempFile::make_temp_file(std::string prefix) {
   return [&]() -> std::string {
-    std::string _n = std::filesystem::path(prefix).filename().string();
+    std::string _n =
+        std::filesystem::path(std::move(prefix)).filename().string();
     if (_n.empty() || _n == "." || _n == "..")
       _n = "tmp";
     std::filesystem::path _base = std::filesystem::temp_directory_path();
@@ -28,7 +29,8 @@ std::string TempFile::make_temp_file(std::string prefix) {
 
 std::string TempFile::make_temp_dir(std::string prefix) {
   return [&]() -> std::string {
-    std::string _n = std::filesystem::path(prefix).filename().string();
+    std::string _n =
+        std::filesystem::path(std::move(prefix)).filename().string();
     if (_n.empty() || _n == "." || _n == "..")
       _n = "tmp";
     std::filesystem::path _dir = std::filesystem::temp_directory_path();

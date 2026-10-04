@@ -29,8 +29,8 @@ void threadtest::fun2(uint64_t n) {
 void threadtest::test(uint64_t m, uint64_t n) {
   std::thread t1 = std::thread(fun1, m);
   std::thread t2 = std::thread(fun2, n);
-  t1.join();
-  t2.join();
+  std::move(t1).join();
+  std::move(t2).join();
   return;
 }
 

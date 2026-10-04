@@ -28,7 +28,7 @@ int64_t EffectBindAction::conditional_effect(bool flag) {
 std::string EffectBindAction::maybe_override(std::string name,
                                              std::string default0) {
   std::optional<std::string> r = [&]() -> std::optional<std::string> {
-    auto *v = std::getenv(name.c_str());
+    auto *v = std::getenv(std::move(name).c_str());
     return v ? std::optional<std::string>(v) : std::optional<std::string>();
   }();
   return [&]() -> std::string {

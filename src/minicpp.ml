@@ -104,7 +104,7 @@ type ref_kind = Lvalue | Forwarding
     unchanged, project a component out of a pair, or anything else. *)
 type inline_shape =
   | Inline_identity
-  | Inline_pair_projection
+  | Inline_pair_projection of string
   | Inline_other
 
 type inline_form = Block_iife | Bare_callee | Templated
@@ -113,6 +113,9 @@ type inline_template = {
   it_text : string;
   it_form : inline_form;
   it_shape : inline_shape;
+  it_linear : bool;
+      (* Each value argument is spliced at most once, so evaluated at most
+         once: an argument may be written as a move. *)
 }
 
 type erased_kind = Ek_type | Ek_prop | Ek_implicit
@@ -699,8 +702,9 @@ and custom_info = {
 let inline_shape_of_text s =
   if String.equal s "%a0" then Inline_identity
   else
-    if Foreign_template.is_pair_projection s then Inline_pair_projection
-    else Inline_other
+    match Foreign_template.pair_projection_field s with
+    | Some f -> Inline_pair_projection f
+    | None -> Inline_other
 
 let inline_template s =
   let contains sub =
@@ -713,7 +717,8 @@ let inline_template s =
       ( if contains "%result" then Block_iife
         else if String.contains s '%' then Templated
         else Bare_callee );
-    it_shape = inline_shape_of_text s }
+    it_shape = inline_shape_of_text s;
+    it_linear = Foreign_template.mentions_each_arg_once s }
 
 let inline_shape ci = Option.map (fun t -> t.it_shape) ci.ci_inline
 

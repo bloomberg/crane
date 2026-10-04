@@ -88,12 +88,12 @@ struct AE {
 
 template <typename T1, typename T2 = void>
 std::shared_ptr<ITree<crane::obj>> E_trigger(T1 e) {
-  return itree_trigger(e);
+  return itree_trigger(std::move(e));
 }
 
 template <typename T1 = void, typename T2>
 std::shared_ptr<ITree<crane::obj>> F_trigger(T2 e) {
-  return itree_trigger(e);
+  return itree_trigger(std::move(e));
 }
 
 template <typename T1 = void, typename T2 = void>

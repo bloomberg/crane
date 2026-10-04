@@ -131,7 +131,7 @@ MemSafetyProbe13::tree_vals_and_fns(
       _result = std::make_pair(
           mylist<uint64_t>::mycons(a1, std::move(lvals).app(std::move(rvals))),
           mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
-              f, std::move(lfns).app(std::move(rfns))));
+              std::move(f), std::move(lfns).app(std::move(rfns))));
     }
   }
   return _result;

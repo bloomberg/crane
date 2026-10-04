@@ -684,8 +684,8 @@ template <OrderedType X> struct Coq_Raw {
               List<std::pair<typename X::t, T1>> l) {
     if (o.has_value()) {
       const T1 &e = *o;
-      return List<std::pair<typename X::t, T1>>::cons(std::make_pair(k, e),
-                                                      std::move(l));
+      return List<std::pair<typename X::t, T1>>::cons(
+          std::make_pair(std::move(k), e), std::move(l));
     } else {
       return l;
     }
@@ -1293,12 +1293,13 @@ template <Int I, OrderedType X> struct Raw {
   remove_min(const tree<T1> &l, typename X::t x, const T1 &d,
              const tree<T1> &r) {
     if (std::holds_alternative<typename tree<T1>::Leaf>(l.v())) {
-      return std::make_pair(r, std::make_pair(x, d));
+      return std::make_pair(r, std::make_pair(std::move(x), d));
     } else {
       const auto &[a0, a1, a2, a3, a4] =
           std::get<typename tree<T1>::Node>(l.v());
       auto [l_, m] = remove_min<T1>(*a0, a1, a2, *a3);
-      return std::make_pair(bal<T1>(std::move(l_), x, d, r), std::move(m));
+      return std::make_pair(bal<T1>(std::move(l_), std::move(x), d, r),
+                            std::move(m));
     }
   }
 

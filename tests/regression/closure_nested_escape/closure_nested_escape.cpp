@@ -30,5 +30,5 @@ ClosureNestedEscape::make_pair_fix(uint64_t n) {
     }
   };
   auto mul = [=](uint64_t x) -> uint64_t { return mul_impl(mul_impl, x); };
-  return std::make_pair(add, mul);
+  return std::make_pair(std::move(add), std::move(mul));
 }
