@@ -4,7 +4,6 @@
 #include <atomic>
 #include <cstdint>
 #include <memory>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -68,7 +67,6 @@ struct ReuseSelfCycle {
   };
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, mylist &, T1 &>
   static T1 mylist_rect(F0 &&f, T1 f0, const mylist &m) {
     if (std::holds_alternative<typename mylist::Mycons>(m.v())) {
       const auto &[a0, a1] = std::get<typename mylist::Mycons>(m.v());
@@ -79,7 +77,6 @@ struct ReuseSelfCycle {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, mylist &, T1 &>
   static T1 mylist_rec(F0 &&f, T1 f0, const mylist &m) {
     if (std::holds_alternative<typename mylist::Mycons>(m.v())) {
       const auto &[a0, a1] = std::get<typename mylist::Mycons>(m.v());

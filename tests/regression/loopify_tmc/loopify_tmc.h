@@ -99,7 +99,6 @@ struct LoopifyTmc {
   };
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
   static T2
   list_rect(T2 f, F1 &&f0,
             const list<T1> &l) { /// CraneEnter: captures varying parameters for
@@ -145,7 +144,6 @@ struct LoopifyTmc {
   }
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
   static T2
   list_rec(T2 f, F1 &&f0,
            const list<T1> &l) { /// CraneEnter: captures varying parameters for
@@ -215,7 +213,7 @@ struct LoopifyTmc {
 
   /// map f l applies f to every element. TMC with element transform.
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, T1 &>
+    requires std::is_invocable_r_v<T2, F0 &, const T1 &>
   static list<T2> map(F0 &&f, const list<T1> &l) {
     std::shared_ptr<list<T2>> _head{};
     std::shared_ptr<list<T2>> *_write = &_head;
@@ -239,7 +237,6 @@ struct LoopifyTmc {
 
   /// filter f l keeps elements satisfying f. Mixed tail + TMC branches.
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, T1 &>
   static list<T1> filter(F0 &&f, const list<T1> &l) {
     std::shared_ptr<list<T1>> _head{};
     std::shared_ptr<list<T1>> *_write = &_head;
@@ -316,7 +313,7 @@ struct LoopifyTmc {
 
   /// zip_with f l1 l2 combines two lists element-wise. Two varying params.
   template <typename T1, typename T2, typename T3, typename F0>
-    requires std::is_invocable_r_v<T3, F0 &, T1 &, T2 &>
+    requires std::is_invocable_r_v<T3, F0 &, const T1 &, const T2 &>
   static list<T3> zip_with(F0 &&f, const list<T1> &l1, const list<T2> &l2) {
     std::shared_ptr<list<T3>> _head{};
     std::shared_ptr<list<T3>> *_write = &_head;

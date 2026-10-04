@@ -72,10 +72,8 @@ struct OppositePropertyTransferTraceCase {
 
   template <typename T1, typename T2, typename F0, typename F1>
     requires std::is_invocable_r_v<
-                 std::pair<crane::fn<T2(T1)>, crane::fn<T1(T2)>>, F0 &,
-                 PreStableCategory &> &&
-             std::is_invocable_r_v<T1, F1 &, PreStableCategory &,
-                                   LeftStableWitness &, Triangle1Witness &>
+        std::pair<crane::fn<T2(T1)>, crane::fn<T1(T2)>>, F0 &,
+        PreStableCategory>
   static T2 theorem_doubling_principle_correct(
       F0 &&h_dual, F1 &&h_theorem, const PreStableCategory &pS,
       const LeftStableWitness &h_left_op, const Triangle1Witness &h_tri1_op) {
@@ -86,9 +84,6 @@ struct OppositePropertyTransferTraceCase {
   }
 
   template <typename T1, typename T2, typename F0, typename F1>
-    requires std::is_invocable_r_v<
-        std::pair<crane::fn<T2(T1)>, crane::fn<T1(T2)>>, F0 &,
-        PreStableCategory &>
   static T2 theorem_doubling_principle_final(F0 &&h_dual, F1 &&h_theorem,
                                              const PreStableCategory &pS,
                                              const RightStableWitness &h_right,

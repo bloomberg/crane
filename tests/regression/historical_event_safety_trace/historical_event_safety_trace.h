@@ -177,7 +177,7 @@ struct HistoricalEventSafetyTraceCase {
 
   template <typename F0, typename F1, typename F2>
     requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<uint64_t, F1 &, State &, uint64_t &> &&
+             std::is_invocable_r_v<uint64_t, F1 &, const State &, uint64_t &> &&
              std::is_invocable_r_v<uint64_t, F2 &, uint64_t &>
   static State step_hist(F0 &&inflow, F1 &&ctrl, F2 &&stage_fn,
                          const PlantConfig &pconf, const State &s, uint64_t t) {
@@ -194,9 +194,6 @@ struct HistoricalEventSafetyTraceCase {
   }
 
   template <typename F0, typename F1, typename F2>
-    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<uint64_t, F1 &, State &, uint64_t &> &&
-             std::is_invocable_r_v<uint64_t, F2 &, uint64_t &>
   static std::pair<std::pair<State, uint64_t>, uint64_t>
   simulate_with_max(F0 &&inflow, F1 &&ctrl, F2 &&stage_fn,
                     const PlantConfig &pconf, uint64_t horizon, const State &s,
@@ -213,8 +210,6 @@ struct HistoricalEventSafetyTraceCase {
   }
 
   template <typename F3, typename F4>
-    requires std::is_invocable_r_v<uint64_t, F3 &, State &, uint64_t &> &&
-             std::is_invocable_r_v<uint64_t, F4 &, uint64_t &>
   static TestResult
   run_historical_test(const PlantConfig &pconf, List<InflowRecord> event,
                       uint64_t default_inflow, F3 &&ctrl, F4 &&stage_fn,

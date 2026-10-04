@@ -257,9 +257,7 @@ struct WhereClause {
     }
 
     template <typename T1, typename F0, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, Expr &, T1 &, Expr &, T1 &> &&
-               std::is_invocable_r_v<T1, F2 &, Expr &, T1 &, Expr &, T1 &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 Expr_rec(F0 &&f, F1 &&f0, F2 &&f1) const {
       const Expr *_self = this;
 
@@ -355,9 +353,7 @@ struct WhereClause {
     }
 
     template <typename T1, typename F0, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, Expr &, T1 &, Expr &, T1 &> &&
-               std::is_invocable_r_v<T1, F2 &, Expr &, T1 &, Expr &, T1 &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 Expr_rect(F0 &&f, F1 &&f0, F2 &&f1) const {
       const Expr *_self = this;
 
@@ -650,9 +646,6 @@ struct WhereClause {
     }
 
     template <typename T1, typename F2, typename F3, typename F4>
-      requires std::is_invocable_r_v<T1, F2 &, BExpr &, T1 &, BExpr &, T1 &> &&
-               std::is_invocable_r_v<T1, F3 &, BExpr &, T1 &, BExpr &, T1 &> &&
-               std::is_invocable_r_v<T1, F4 &, BExpr &, T1 &>
     T1 BExpr_rec(T1 f, T1 f0, F2 &&f1, F3 &&f2, F4 &&f3) const {
       const BExpr *_self = this;
 
@@ -763,9 +756,6 @@ struct WhereClause {
     }
 
     template <typename T1, typename F2, typename F3, typename F4>
-      requires std::is_invocable_r_v<T1, F2 &, BExpr &, T1 &, BExpr &, T1 &> &&
-               std::is_invocable_r_v<T1, F3 &, BExpr &, T1 &, BExpr &, T1 &> &&
-               std::is_invocable_r_v<T1, F4 &, BExpr &, T1 &>
     T1 BExpr_rect(T1 f, T1 f0, F2 &&f1, F3 &&f2, F4 &&f3) const {
       const BExpr *_self = this;
 
@@ -1025,10 +1015,7 @@ struct WhereClause {
     }
 
     template <typename T1, typename F0, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, AExpr &, T1 &, AExpr &, T1 &> &&
-               std::is_invocable_r_v<T1, F2 &, BExpr &, AExpr &, T1 &, AExpr &,
-                                     T1 &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 AExpr_rec(F0 &&f, F1 &&f0, F2 &&f1) const {
       const AExpr *_self = this;
 
@@ -1128,10 +1115,7 @@ struct WhereClause {
     }
 
     template <typename T1, typename F0, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, AExpr &, T1 &, AExpr &, T1 &> &&
-               std::is_invocable_r_v<T1, F2 &, BExpr &, AExpr &, T1 &, AExpr &,
-                                     T1 &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 AExpr_rect(F0 &&f, F1 &&f0, F2 &&f1) const {
       const AExpr *_self = this;
 

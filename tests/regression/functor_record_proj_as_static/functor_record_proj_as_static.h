@@ -196,7 +196,7 @@ public:
   const variant_t &v() const { return v_; }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, A &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, A &, T1 &&>
   T1 fold_right(F0 &&f, T1 a0) const {
     const List<A> *_self = this;
 
@@ -605,7 +605,6 @@ template <OrderedType X> struct Coq_Raw {
   }
 
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, typename X::t &, T1 &, T2 &>
   static T2 fold(F0 &&f, const List<std::pair<typename X::t, T1>> &m, T2 acc) {
     if (std::holds_alternative<
             typename List<std::pair<typename X::t, T1>>::Nil>(m.v())) {
@@ -619,7 +618,6 @@ template <OrderedType X> struct Coq_Raw {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static bool equal(F0 &&cmp, const List<std::pair<typename X::t, T1>> &m,
                     const List<std::pair<typename X::t, T1>> &m_) {
     if (std::holds_alternative<
@@ -653,7 +651,6 @@ template <OrderedType X> struct Coq_Raw {
   }
 
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, T1 &>
   static t<T2> map(F0 &&f, const List<std::pair<typename X::t, T1>> &m) {
     if (std::holds_alternative<
             typename List<std::pair<typename X::t, T1>>::Nil>(m.v())) {
@@ -668,7 +665,6 @@ template <OrderedType X> struct Coq_Raw {
   }
 
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, typename X::t &, T1 &>
   static t<T2> mapi(F0 &&f, const List<std::pair<typename X::t, T1>> &m) {
     if (std::holds_alternative<
             typename List<std::pair<typename X::t, T1>>::Nil>(m.v())) {
@@ -696,8 +692,6 @@ template <OrderedType X> struct Coq_Raw {
   }
 
   template <typename T1, typename T2, typename T3, typename F0>
-    requires std::is_invocable_r_v<std::optional<T3>, F0 &, std::optional<T1> &,
-                                   std::optional<T2> &>
   static t<T3> map2_l(F0 &&f, const List<std::pair<typename X::t, T1>> &m) {
     if (std::holds_alternative<
             typename List<std::pair<typename X::t, T1>>::Nil>(m.v())) {
@@ -713,8 +707,6 @@ template <OrderedType X> struct Coq_Raw {
   }
 
   template <typename T1, typename T2, typename T3, typename F0>
-    requires std::is_invocable_r_v<std::optional<T3>, F0 &, std::optional<T1> &,
-                                   std::optional<T2> &>
   static t<T3> map2_r(F0 &&f, const List<std::pair<typename X::t, T2>> &m_) {
     if (std::holds_alternative<
             typename List<std::pair<typename X::t, T2>>::Nil>(m_.v())) {
@@ -902,8 +894,6 @@ template <OrderedType X> struct Coq_Raw {
   }
 
   template <typename T1, typename T2, typename T3, typename F0>
-    requires std::is_invocable_r_v<std::optional<T3>, F0 &, std::optional<T1> &,
-                                   std::optional<T2> &>
   static std::optional<T3> at_least_one_then_f(F0 &&f,
                                                const std::optional<T1> &o,
                                                const std::optional<T2> &o_) {
@@ -1117,8 +1107,6 @@ template <Int I, OrderedType X> struct Raw {
   };
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, tree<T1> &, T2 &, typename X::t &,
-                                   T1 &, tree<T1> &, T2 &, typename I::t &>
   static T2 tree_rect(T2 f, F1 &&f0, const tree<T1> &t0) {
     if (std::holds_alternative<typename tree<T1>::Leaf>(t0.v())) {
       return f;
@@ -1131,8 +1119,6 @@ template <Int I, OrderedType X> struct Raw {
   }
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, tree<T1> &, T2 &, typename X::t &,
-                                   T1 &, tree<T1> &, T2 &, typename I::t &>
   static T2 tree_rec(T2 f, F1 &&f0, const tree<T1> &t0) {
     if (std::holds_alternative<typename tree<T1>::Leaf>(t0.v())) {
       return f;
@@ -1465,7 +1451,8 @@ template <Int I, OrderedType X> struct Raw {
   }
 
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, typename X::t &, T1 &, T2 &>
+    requires std::is_invocable_r_v<T2, F0 &, const typename X::t &, const T1 &,
+                                   T2>
   static T2 fold(F0 &&f, const tree<T1> &m, T2 a) {
     if (std::holds_alternative<typename tree<T1>::Leaf>(m.v())) {
       return a;
@@ -1567,8 +1554,6 @@ template <Int I, OrderedType X> struct Raw {
   };
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, typename X::t &, T1 &, tree<T1> &,
-                                   enumeration<T1> &, T2 &>
   static T2 enumeration_rect(T2 f, F1 &&f0, const enumeration<T1> &e) {
     if (std::holds_alternative<typename enumeration<T1>::End>(e.v())) {
       return f;
@@ -1581,8 +1566,6 @@ template <Int I, OrderedType X> struct Raw {
   }
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, typename X::t &, T1 &, tree<T1> &,
-                                   enumeration<T1> &, T2 &>
   static T2 enumeration_rec(T2 f, F1 &&f0, const enumeration<T1> &e) {
     if (std::holds_alternative<typename enumeration<T1>::End>(e.v())) {
       return f;
@@ -1606,8 +1589,6 @@ template <Int I, OrderedType X> struct Raw {
   }
 
   template <typename T1, typename F0, typename F3>
-    requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &> &&
-             std::is_invocable_r_v<bool, F3 &, enumeration<T1> &>
   static bool equal_more(F0 &&cmp, typename X::t x1, const T1 &d1, F3 &&cont,
                          const enumeration<T1> &e2) {
     if (std::holds_alternative<typename enumeration<T1>::End>(e2.v())) {
@@ -1630,7 +1611,6 @@ template <Int I, OrderedType X> struct Raw {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static bool
   equal_cont(F0 &&cmp, const tree<T1> &m1,
              std::type_identity_t<crane::fn<bool(enumeration<T1>)>> cont,
@@ -1665,14 +1645,13 @@ template <Int I, OrderedType X> struct Raw {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static bool equal(F0 &&cmp, const tree<T1> &m1, const tree<T1> &m2) {
     return equal_cont<T1>(cmp, m1, equal_end<T1>,
                           cons<T1>(m2, enumeration<T1>::end()));
   }
 
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, T1 &>
+    requires std::is_invocable_r_v<T2, F0 &, const T1 &>
   static tree<T2> map(F0 &&f, const tree<T1> &m) {
     if (std::holds_alternative<typename tree<T1>::Leaf>(m.v())) {
       return tree<T2>::leaf();
@@ -1685,7 +1664,7 @@ template <Int I, OrderedType X> struct Raw {
   }
 
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, typename X::t &, T1 &>
+    requires std::is_invocable_r_v<T2, F0 &, const typename X::t &, const T1 &>
   static tree<T2> mapi(F0 &&f, const tree<T1> &m) {
     if (std::holds_alternative<typename tree<T1>::Leaf>(m.v())) {
       return tree<T2>::leaf();
@@ -1698,8 +1677,6 @@ template <Int I, OrderedType X> struct Raw {
   }
 
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<std::optional<T2>, F0 &, typename X::t &,
-                                   T1 &>
   static tree<T2> map_option(F0 &&f, const tree<T1> &m) {
     if (std::holds_alternative<typename tree<T1>::Leaf>(m.v())) {
       return tree<T2>::leaf();
@@ -1720,10 +1697,6 @@ template <Int I, OrderedType X> struct Raw {
 
   template <typename T1, typename T2, typename T3, typename F0, typename F1,
             typename F2>
-    requires std::is_invocable_r_v<std::optional<T3>, F0 &, typename X::t &,
-                                   T1 &, std::optional<T2> &> &&
-             std::is_invocable_r_v<tree<T3>, F1 &, tree<T1> &> &&
-             std::is_invocable_r_v<tree<T3>, F2 &, tree<T2> &>
   static tree<T3> map2_opt(F0 &&f, F1 &&mapl, F2 &&mapr, const tree<T1> &m1,
                            const tree<T2> &m2) {
     if (std::holds_alternative<typename tree<T1>::Leaf>(m1.v())) {
@@ -1785,7 +1758,6 @@ template <Int I, OrderedType X> struct Raw {
     using L = Coq_Raw<X>;
 
     template <typename T1, typename T2, typename F0>
-      requires std::is_invocable_r_v<T2, F0 &, typename X::t &, T1 &, T2 &>
     static T2 fold_(F0 &&f, tree<T1> s, T2 x0_) {
       return L::template fold<T1, T2>(f, elements<T1>(std::move(s)),
                                       std::move(x0_));
@@ -1850,20 +1822,16 @@ template <Int I, OrderedType X> struct IntMake {
   }
 
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, T1 &>
   static t<T2> map(F0 &&f, const bst<T1> &m) {
     return bst<T2>{Raw::template map<T1, T2>(f, m.this_)};
   }
 
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, typename X::t &, T1 &>
   static t<T2> mapi(F0 &&f, const bst<T1> &m) {
     return bst<T2>{Raw::template mapi<T1, T2>(f, m.this_)};
   }
 
   template <typename T1, typename T2, typename T3, typename F0>
-    requires std::is_invocable_r_v<std::optional<T3>, F0 &, std::optional<T1> &,
-                                   std::optional<T2> &>
   static t<T3> map2(F0 &&f, const bst<T1> &m, const bst<T2> &m_) {
     return bst<T3>{Raw::template map2<T1, T2, T3>(f, m.this_, m_.this_)};
   }
@@ -1878,13 +1846,11 @@ template <Int I, OrderedType X> struct IntMake {
   }
 
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, typename X::t &, T1 &, T2 &>
   static T2 fold(F0 &&f, const bst<T1> &m, const T2 &i) {
     return Raw::template fold<T1, T2>(f, m.this_, i);
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static bool equal(F0 &&cmp, const bst<T1> &m, const bst<T1> &m_) {
     return Raw::template equal<T1>(cmp, m.this_, m_.this_);
   }

@@ -69,7 +69,8 @@ public:
 /// variable name, which is not in scope there.
 struct PolyFnAsArgTvarLeak {
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, T1> &&
+             std::is_invocable_r_v<T1, F0 &, const T1 &>
   static T1 twice(F0 &&f, const T1 &x) {
     return f(f(x));
   }

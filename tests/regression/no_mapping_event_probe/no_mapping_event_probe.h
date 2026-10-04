@@ -135,8 +135,9 @@ struct NoMappingEventProbe {
   };
 
   template <typename T1, typename T2 = void, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, uint64_t &, uint64_t &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &,
+                                   const uint64_t &> &&
+             std::is_invocable_r_v<T1, F1 &, const uint64_t &, const uint64_t &>
   static T1 reproE_rect(F0 &&f, F1 &&f0, const reproE &r) {
     if (std::holds_alternative<typename reproE::Hidden>(r.v())) {
       const auto &[a0, a1] = std::get<typename reproE::Hidden>(r.v());
@@ -148,8 +149,9 @@ struct NoMappingEventProbe {
   }
 
   template <typename T1, typename T2 = void, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, uint64_t &, uint64_t &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &,
+                                   const uint64_t &> &&
+             std::is_invocable_r_v<T1, F1 &, const uint64_t &, const uint64_t &>
   static T1 reproE_rec(F0 &&f, F1 &&f0, const reproE &r) {
     if (std::holds_alternative<typename reproE::Hidden>(r.v())) {
       const auto &[a0, a1] = std::get<typename reproE::Hidden>(r.v());

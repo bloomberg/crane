@@ -223,7 +223,7 @@ public:
   const crane::lazy<variant_t> &lazy_cell() const { return lazy_v_; }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, A &>
+    requires std::is_invocable_r_v<T1, const F0 &, const A &>
   Colist<T1> comap(F0 &&f) const {
     if (std::holds_alternative<typename Colist<A>::Conil>(this->v())) {
       return Colist<T1>::conil();

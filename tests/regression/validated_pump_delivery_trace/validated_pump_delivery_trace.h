@@ -140,7 +140,7 @@ public:
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, T1 &, A &>
+    requires std::is_invocable_r_v<T1, F0 &, T1 &&, const A &>
   T1 fold_left(F0 &&f, T1 a0) const {
     const List<A> *_loop_self = this;
     T1 _loop_a0 = std::move(a0);
@@ -369,7 +369,7 @@ struct ValidatedPumpDeliveryTraceCase {
     }
 
     template <typename T1, typename F2>
-      requires std::is_invocable_r_v<T1, F2 &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F2 &, const uint64_t &>
     T1 FaultStatus_rec(T1 f, T1 f0, F2 &&f1, T1 f2, T1 f3) const {
       if (std::holds_alternative<typename FaultStatus::Fault_None>(this->v())) {
         return f;
@@ -390,7 +390,7 @@ struct ValidatedPumpDeliveryTraceCase {
     }
 
     template <typename T1, typename F2>
-      requires std::is_invocable_r_v<T1, F2 &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F2 &, const uint64_t &>
     T1 FaultStatus_rect(T1 f, T1 f0, F2 &&f1, T1 f2, T1 f3) const {
       if (std::holds_alternative<typename FaultStatus::Fault_None>(this->v())) {
         return f;
@@ -528,7 +528,7 @@ struct ValidatedPumpDeliveryTraceCase {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, uint64_t &>
+    requires std::is_invocable_r_v<T1, F1 &, const uint64_t &>
   static T1 SuspendDecision_rect(T1 f, F1 &&f0, T1 f1,
                                  const SuspendDecision &s) {
     if (std::holds_alternative<typename SuspendDecision::Suspend_None>(s.v())) {
@@ -544,7 +544,7 @@ struct ValidatedPumpDeliveryTraceCase {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, uint64_t &>
+    requires std::is_invocable_r_v<T1, F1 &, const uint64_t &>
   static T1 SuspendDecision_rec(T1 f, F1 &&f0, T1 f1,
                                 const SuspendDecision &s) {
     if (std::holds_alternative<typename SuspendDecision::Suspend_None>(s.v())) {
@@ -668,8 +668,8 @@ struct ValidatedPumpDeliveryTraceCase {
   };
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, bool &> &&
-             std::is_invocable_r_v<T1, F1 &, uint64_t &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &, const bool &> &&
+             std::is_invocable_r_v<T1, F1 &, const uint64_t &>
   static T1 PrecisionResult_rect(F0 &&f, F1 &&f0, const PrecisionResult &p) {
     if (std::holds_alternative<typename PrecisionResult::PrecOK>(p.v())) {
       const auto &[a0, a1] = std::get<typename PrecisionResult::PrecOK>(p.v());
@@ -681,8 +681,8 @@ struct ValidatedPumpDeliveryTraceCase {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, bool &> &&
-             std::is_invocable_r_v<T1, F1 &, uint64_t &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &, const bool &> &&
+             std::is_invocable_r_v<T1, F1 &, const uint64_t &>
   static T1 PrecisionResult_rec(F0 &&f, F1 &&f0, const PrecisionResult &p) {
     if (std::holds_alternative<typename PrecisionResult::PrecOK>(p.v())) {
       const auto &[a0, a1] = std::get<typename PrecisionResult::PrecOK>(p.v());

@@ -183,7 +183,7 @@ struct UniversePoly {
   };
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &>
+    requires std::is_invocable_r_v<T2, F1 &, const T1 &>
   static T2 poption_rect(T2 f, F1 &&f0, const poption<T1> &p) {
     if (std::holds_alternative<typename poption<T1>::Pnone>(p.v())) {
       return f;
@@ -194,7 +194,7 @@ struct UniversePoly {
   }
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &>
+    requires std::is_invocable_r_v<T2, F1 &, const T1 &>
   static T2 poption_rec(T2 f, F1 &&f0, const poption<T1> &p) {
     if (std::holds_alternative<typename poption<T1>::Pnone>(p.v())) {
       return f;
@@ -205,7 +205,7 @@ struct UniversePoly {
   }
 
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, T1 &>
+    requires std::is_invocable_r_v<T2, F0 &, const T1 &>
   static poption<T2> poption_map(F0 &&f, const poption<T1> &o) {
     if (std::holds_alternative<typename poption<T1>::Pnone>(o.v())) {
       return poption<T2>::pnone();
@@ -216,7 +216,7 @@ struct UniversePoly {
   }
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<poption<T2>, F1 &, T1 &>
+    requires std::is_invocable_r_v<poption<T2>, F1 &, const T1 &>
   static poption<T2> poption_bind(const poption<T1> &o, F1 &&f) {
     if (std::holds_alternative<typename poption<T1>::Pnone>(o.v())) {
       return poption<T2>::pnone();

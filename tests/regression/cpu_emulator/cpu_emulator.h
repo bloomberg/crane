@@ -418,21 +418,24 @@ struct CpuEmulator {
             typename F5, typename F6, typename F20, typename F21, typename F22,
             typename F23, typename F24, typename F25, typename F26,
             typename F27, typename F28>
-    requires std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F2 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F3 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F4 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F5 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F6 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F20 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F21 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F22 &, uint64_t &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F23 &, uint64_t &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F24 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F25 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F26 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F27 &, uint64_t &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F28 &, uint64_t &>
+    requires std::is_invocable_r_v<T1, F1 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F2 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F3 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F4 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F5 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F6 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F20 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F21 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F22 &, const uint64_t &,
+                                   const uint64_t &> &&
+             std::is_invocable_r_v<T1, F23 &, const uint64_t &,
+                                   const uint64_t &> &&
+             std::is_invocable_r_v<T1, F24 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F25 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F26 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F27 &, const uint64_t &,
+                                   const uint64_t &> &&
+             std::is_invocable_r_v<T1, F28 &, const uint64_t &>
   static T1 instr_rect(T1 f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
                        F6 &&f5, T1 f6, T1 f7, T1 f8, T1 f9, T1 f10, T1 f11,
                        T1 f12, T1 f13, T1 f14, T1 f15, T1 f16, T1 f17, T1 f18,
@@ -519,21 +522,24 @@ struct CpuEmulator {
             typename F5, typename F6, typename F20, typename F21, typename F22,
             typename F23, typename F24, typename F25, typename F26,
             typename F27, typename F28>
-    requires std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F2 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F3 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F4 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F5 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F6 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F20 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F21 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F22 &, uint64_t &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F23 &, uint64_t &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F24 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F25 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F26 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F27 &, uint64_t &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F28 &, uint64_t &>
+    requires std::is_invocable_r_v<T1, F1 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F2 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F3 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F4 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F5 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F6 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F20 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F21 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F22 &, const uint64_t &,
+                                   const uint64_t &> &&
+             std::is_invocable_r_v<T1, F23 &, const uint64_t &,
+                                   const uint64_t &> &&
+             std::is_invocable_r_v<T1, F24 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F25 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F26 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F27 &, const uint64_t &,
+                                   const uint64_t &> &&
+             std::is_invocable_r_v<T1, F28 &, const uint64_t &>
   static T1 instr_rec(T1 f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
                       F6 &&f5, T1 f6, T1 f7, T1 f8, T1 f9, T1 f10, T1 f11,
                       T1 f12, T1 f13, T1 f14, T1 f15, T1 f16, T1 f17, T1 f18,

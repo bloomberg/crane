@@ -159,7 +159,7 @@ struct LoopifyHofs {
   /// foldl1 f l folds from left with no initial value. Returns 0 for empty
   /// list.
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, T1 &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, T1 &&, const T1 &>
   static T1 foldl1_aux(F0 &&f, T1 acc, const List<T1> &l) {
     const List<T1> *_loop_l = &l;
     T1 _loop_acc = std::move(acc);
@@ -175,7 +175,6 @@ struct LoopifyHofs {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, T1 &, T1 &>
   static T1 foldl1(F0 &&f, T1 default0, const List<T1> &l) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
@@ -187,7 +186,6 @@ struct LoopifyHofs {
 
   /// forall_ p l checks if all elements satisfy predicate p.
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, T1 &>
   static bool forall_(F0 &&p, const List<T1> &l) {
     const List<T1> *_loop_l = &l;
     while (true) {
@@ -206,7 +204,6 @@ struct LoopifyHofs {
 
   /// exists_fn p l checks if any element satisfies predicate p.
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, T1 &>
   static bool exists_fn(F0 &&p, const List<T1> &l) {
     const List<T1> *_loop_l = &l;
     while (true) {
@@ -225,7 +222,6 @@ struct LoopifyHofs {
 
   /// drop_while p l drops elements while predicate holds.
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, T1 &>
   static List<T1> drop_while(F0 &&p, const List<T1> &l) {
     const List<T1> *_loop_l = &l;
     while (true) {
@@ -244,7 +240,6 @@ struct LoopifyHofs {
 
   /// take_while p l takes elements while predicate holds.
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, T1 &>
   static List<T1> take_while(F0 &&p, const List<T1> &l) {
     std::shared_ptr<List<T1>> _head{};
     std::shared_ptr<List<T1>> *_write = &_head;
@@ -447,7 +442,6 @@ struct LoopifyHofs {
 
   /// find_indices p l finds all indices where p is true.
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
   static List<uint64_t> find_indices_aux(F0 &&p, const List<uint64_t> &l,
                                          uint64_t i) {
     std::shared_ptr<List<uint64_t>> _head{};
@@ -481,14 +475,12 @@ struct LoopifyHofs {
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
   static List<uint64_t> find_indices(F0 &&p, const List<uint64_t> &l) {
     return find_indices_aux(p, l, UINT64_C(0));
   }
 
   /// delete_by eq x l deletes first element equal to x.
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, uint64_t &, uint64_t &>
   static List<uint64_t> delete_by(F0 &&eq, uint64_t x,
                                   const List<uint64_t> &l) {
     std::shared_ptr<List<uint64_t>> _head{};
@@ -526,7 +518,7 @@ struct LoopifyHofs {
 
   /// scanl f acc l scan from left with accumulator.
   template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &, uint64_t &>
+    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &, const uint64_t &>
   static List<uint64_t> scanl(F0 &&f, uint64_t acc, const List<uint64_t> &l) {
     std::shared_ptr<List<uint64_t>> _head{};
     std::shared_ptr<List<uint64_t>> *_write = &_head;
@@ -554,7 +546,6 @@ struct LoopifyHofs {
 
   /// scanl1 f l like scanl but no initial value, uses first element.
   template <typename F1>
-    requires std::is_invocable_r_v<uint64_t, F1 &, uint64_t &, uint64_t &>
   static List<uint64_t> scanl1_fuel(uint64_t fuel, F1 &&f, List<uint64_t> l) {
     std::shared_ptr<List<uint64_t>> _head{};
     std::shared_ptr<List<uint64_t>> *_write = &_head;
@@ -597,14 +588,13 @@ struct LoopifyHofs {
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &, uint64_t &>
   static List<uint64_t> scanl1(F0 &&f, const List<uint64_t> &l) {
     return scanl1_fuel(l.length(), f, l);
   }
 
   /// foldr1 f l fold right with no initial value.
   template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &, uint64_t &>
+    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &, uint64_t &&>
   static uint64_t
   foldr1(F0 &&f,
          const List<uint64_t> &l) { /// CraneEnter: captures varying parameters
@@ -898,7 +888,6 @@ struct LoopifyHofs {
 
   /// merge_by cmp l1 l2 merges two lists using comparison function.
   template <typename F1>
-    requires std::is_invocable_r_v<uint64_t, F1 &, uint64_t &, uint64_t &>
   static List<uint64_t> merge_by_fuel(uint64_t fuel, F1 &&cmp,
                                       List<uint64_t> l1, List<uint64_t> l2) {
     std::shared_ptr<List<uint64_t>> _head{};
@@ -955,7 +944,6 @@ struct LoopifyHofs {
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &, uint64_t &>
   static List<uint64_t> merge_by(F0 &&cmp, const List<uint64_t> &l1,
                                  const List<uint64_t> &l2) {
     return merge_by_fuel((l1.length() + l2.length()), cmp, l1, l2);
@@ -963,7 +951,8 @@ struct LoopifyHofs {
 
   /// max_by f l finds element with maximum f value.
   template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
+    requires std::is_invocable_r_v<uint64_t, F0 &, const uint64_t &> &&
+             std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
   static uint64_t
   max_by(F0 &&f,
          const List<uint64_t> &l) { /// CraneEnter: captures varying parameters
@@ -1019,7 +1008,6 @@ struct LoopifyHofs {
 
   /// iterate f n x generates x, f(x), f(f(x)), ... of length n.
   template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
   static List<uint64_t> iterate(F0 &&f, uint64_t n, uint64_t x) {
     std::shared_ptr<List<uint64_t>> _head{};
     std::shared_ptr<List<uint64_t>> *_write = &_head;
@@ -1045,7 +1033,6 @@ struct LoopifyHofs {
 
   /// maximum_by cmp l finds maximum element by comparison function.
   template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &, uint64_t &>
   static uint64_t
   maximum_by(F0 &&cmp,
              const List<uint64_t> &l) { /// CraneEnter: captures varying
@@ -1100,7 +1087,7 @@ struct LoopifyHofs {
 
   /// fold_right f l acc folds from the right.
   template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &, uint64_t &>
+    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &, uint64_t &&>
   static uint64_t
   fold_right(F0 &&f, const List<uint64_t> &l,
              uint64_t acc) { /// CraneEnter: captures varying parameters for
@@ -1145,7 +1132,6 @@ struct LoopifyHofs {
 
   /// partition p l partitions list into (satisfies p, doesn't satisfy p).
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
   static std::pair<List<uint64_t>, List<uint64_t>>
   partition(F0 &&p,
             const List<uint64_t> &l) { /// CraneEnter: captures varying
@@ -1211,9 +1197,7 @@ struct LoopifyHofs {
 
   /// any p l checks if any element satisfies predicate (same as exists_fn but
   /// different name).
-  template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
-  static bool any(F0 &&p, const List<uint64_t> &l) {
+  template <typename F0> static bool any(F0 &&p, const List<uint64_t> &l) {
     const List<uint64_t> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
@@ -1232,9 +1216,7 @@ struct LoopifyHofs {
 
   /// all p l checks if all elements satisfy predicate (same as forall_ but
   /// different name).
-  template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
-  static bool all(F0 &&p, const List<uint64_t> &l) {
+  template <typename F0> static bool all(F0 &&p, const List<uint64_t> &l) {
     const List<uint64_t> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
@@ -1253,7 +1235,6 @@ struct LoopifyHofs {
 
   /// filter_not p l filters elements that don't satisfy predicate.
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
   static List<uint64_t> filter_not(F0 &&p, const List<uint64_t> &l) {
     std::shared_ptr<List<uint64_t>> _head{};
     std::shared_ptr<List<uint64_t>> *_write = &_head;
@@ -1284,7 +1265,6 @@ struct LoopifyHofs {
 
   /// span_split p l splits at first element that doesn't satisfy p.
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
   static std::pair<List<uint64_t>, List<uint64_t>>
   span_split(F0 &&p,
              const List<uint64_t> &l) { /// CraneEnter: captures varying
@@ -1337,7 +1317,6 @@ struct LoopifyHofs {
 
   /// group_by_eq eq l groups consecutive elements by equality function.
   template <typename F1>
-    requires std::is_invocable_r_v<bool, F1 &, uint64_t &, uint64_t &>
   static List<List<uint64_t>> group_by_eq_fuel(
       uint64_t fuel, F1 &&eq,
       const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
@@ -1427,7 +1406,6 @@ struct LoopifyHofs {
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, uint64_t &, uint64_t &>
   static List<List<uint64_t>> group_by_eq(F0 &&eq, const List<uint64_t> &l) {
     return group_by_eq_fuel(l.length(), eq, l);
   }
@@ -1437,8 +1415,6 @@ struct LoopifyHofs {
 
   /// map_accum_l f acc l maps with accumulator threading.
   template <typename F0>
-    requires std::is_invocable_r_v<std::pair<uint64_t, uint64_t>, F0 &,
-                                   uint64_t &, uint64_t &>
   static std::pair<uint64_t, List<uint64_t>>
   map_accum_l(F0 &&f, uint64_t acc,
               const List<uint64_t> &l) { /// CraneEnter: captures varying

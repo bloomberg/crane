@@ -8,7 +8,6 @@
 #include <cstdint>
 #include <memory>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -178,14 +177,12 @@ struct RecursiveRecordIncompleteType {
   };
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, List<cell> &>
   static T1 cell_rect(F0 &&f, const cell &c) {
     const auto &[key1, kids1] = std::get<typename cell::MkCell>(c.v());
     return f(key1, *kids1);
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, List<cell> &>
   static T1 cell_rec(F0 &&f, const cell &c) {
     const auto &[key1, kids1] = std::get<typename cell::MkCell>(c.v());
     return f(key1, *kids1);

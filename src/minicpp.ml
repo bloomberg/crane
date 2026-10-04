@@ -538,11 +538,34 @@ and template_type =
          parameter of kind [Type -> Type] is applied to arguments in the
          signature it appears in, and a plain [typename] cannot be applied. *)
   | TTfun of (cpp_type list * cpp_type)
+      (* A callable parameter as its declaration types it, before the body
+         that calls it is finished: what {!settle_constraints} starts from. *)
+  | TTinvocable of invocation list * cpp_type
+      (* A callable parameter as the finished body calls it: one entry per
+         distinct way it is invoked, and the type each result must convert
+         to.  {!settle_constraints} derives it from the body; it, not
+         [TTfun], is what the printer states as a constraint. *)
   | TTconcept of GlobRef.t * cpp_type list
       (* Concept-constrained parameter.  The [cpp_type list] holds the concept's
          extra (kept) type arguments beyond the constrained parameter itself:
          [] for a unary concept such as ['Eq T' -> Eq _tcI0], and the kept args
          for a multi-parameter concept such as ['C<I,T>' -> C<_tcI0, T1>]. *)
+
+(** One way a body invokes a callable parameter: the category the callable
+    itself is used with, and each argument's, at the type the parameter's
+    signature gives it -- the operands [std::is_invocable_r_v] is asked
+    about. *)
+and invocation = {
+  inv_callable : value_category;
+  inv_args : (value_category * cpp_type) list;
+}
+
+(** The value category, and constness, an operand is passed with. *)
+and value_category =
+  | Mutable_lvalue  (** [T &] *)
+  | Const_lvalue  (** [const T &] *)
+  | Xvalue  (** [T &&]: a [std::move] *)
+  | Prvalue  (** [T]: a temporary *)
 
 (** Struct/class field declarations. *)
 and cpp_field =
@@ -1269,6 +1292,14 @@ let map_tparams ft =
         match tt with
         | TTtypename_default t -> TTtypename_default (ft t)
         | TTfun (dom, cod) -> TTfun (List.map ft dom, ft cod)
+        | TTinvocable (invs, cod) ->
+          TTinvocable
+            ( List.map
+                (fun inv ->
+                  { inv with
+                    inv_args = List.map (fun (c, t) -> (c, ft t)) inv.inv_args })
+                invs,
+              ft cod )
         | TTconcept (r, tys) -> TTconcept (r, List.map ft tys)
         | TTtypename | TTtemplate _ -> tt
       in
@@ -1815,6 +1846,149 @@ let rec decl_body = function
   | Dasgn (_, _, e) -> ([], [Sreturn (Some e)])
   | _ -> ([], [])
 
+(** The invocations a body performs of the callable parameter of template
+    type [tparam], whose signature types its arguments [dom] -- or [None]
+    when a call cannot be read exactly, in which case no constraint is better
+    than one that names the wrong operands.
+
+    An argument's category is read off its syntax and the declaration of the
+    name it reads: a variable is an lvalue, [const] when its declaration
+    says so (a [const] reference, a structured binding, a borrowed match's
+    fields); a [std::move] is an xvalue; a call, a construction, a literal is
+    a prvalue.  The callable itself is an lvalue, [const] once a by-copy
+    lambda has captured it.  Anything else -- a dereference, a mapping's
+    binding, a call under [if constexpr], whose requirement would hold only
+    on its branch -- makes the reading inexact. *)
+let invocations ~params body tparam dom =
+  let exception Inexact in
+  let callable ty =
+    let rec strip = function Tref (_, t) | Tconst t -> strip t | t -> t in
+    tvar_is tparam (strip ty)
+  in
+  let callables =
+    List.filter_map (fun (x, ty) -> if callable ty then Some x else None) params
+  in
+  let is_callable x = List.exists (Id.equal x) callables in
+  let declared = function
+    | Tconst _ | Tref (Lvalue, Tconst _) -> Some Const_lvalue
+    | _ -> Some Mutable_lvalue
+  in
+  let bind env x c = Id.Map.add x c env in
+  let constify = Id.Map.map (Option.map (function
+      | Mutable_lvalue -> Const_lvalue | c -> c))
+  in
+  let rec category env = function
+    | CPPvar x -> (try Id.Map.find x env with Not_found -> None)
+    | CPPmove _ -> Some Xvalue
+    | CPPaccess (Adot, (CPPvar _ as o), _) | CPPget ((CPPvar _ as o), _) ->
+      category env o
+    | CPPfun_call _ | CPPstruct _ | CPPstructmk _ | CPPstruct_id _
+    | CPPlambda _ | CPPuint _ | CPPint _ | CPPbool _ | CPPfloat _
+    | CPPbinop _ | CPPconverting_ctor _ | CPPenum_val _ | CPPnullptr ->
+      Some Prvalue
+    | _ -> None
+  in
+  let found = ref [] in
+  let record inv = if not (List.mem inv !found) then found := inv :: !found in
+  let rec mentions_expr e =
+    (match e with CPPvar x when is_callable x -> raise_notrace Exit | _ -> ());
+    iter_expr_children ~on_expr:mentions_expr ~on_stmts:(List.iter mentions_stmt) e
+  and mentions_stmt s =
+    iter_stmt_children ~on_expr:mentions_expr ~on_stmts:(List.iter mentions_stmt) s
+  in
+  let mentions_any f = try f (); false with Exit -> true in
+  let rec expr env e =
+    ( match e with
+    | CPPfun_call (_, CPPvar f, args) when is_callable f ->
+      let callee =
+        match Id.Map.find_opt f env with
+        | Some (Some c) -> c
+        | _ -> raise_notrace Inexact
+      in
+      let args = lambda_params args in
+      if List.length args <> List.length dom then raise_notrace Inexact;
+      let operand a t =
+        match category env a with
+        | Some c -> (c, t)
+        | None -> raise_notrace Inexact
+      in
+      record {inv_callable = callee; inv_args = List.map2 operand args dom}
+    | _ -> () );
+    match e with
+    | CPPlambda l ->
+      let env = match l.cl_capture with Closure -> constify env | Immediate -> env in
+      let env =
+        List.fold_left
+          (fun env (ty, x) ->
+            match x with Some x -> bind env x (declared ty) | None -> env)
+          env (lambda_params l.cl_params)
+      in
+      ignore (stmts env l.cl_body)
+    | CPPfun_call (_, CPPvar f, args) when is_callable f ->
+      List.iter (expr env) (lambda_params args)
+    | _ ->
+      iter_expr_children ~on_expr:(expr env)
+        ~on_stmts:(fun b -> ignore (stmts env b)) e
+  and stmts env = function
+    | [] -> env
+    | s :: rest -> stmts (stmt env s) rest
+  and block env b = ignore (stmts env b)
+  and stmt env s =
+    match s with
+    | Sreturn eo -> Option.iter (expr env) eo; env
+    | Sexpr e -> expr env e; env
+    | Sdecl (x, ty) | Sdecl_init (x, ty) -> bind env x (declared ty)
+    | Sasgn (x, Declare ty, e) -> expr env e; bind env x (declared ty)
+    | Sasgn (_, Existing, e) -> expr env e; env
+    | Sassign_expr (l, r) -> expr env l; expr env r; env
+    | Sbind (xs, e) ->
+      expr env e;
+      List.fold_left (fun env x -> bind env x (Some Const_lvalue)) env xs
+    | Sif (c, a, b) -> expr env c; block env a; block env b; env
+    | Sif_decl (x, ty, e, a, b) ->
+      expr env e;
+      let env' = bind env x (declared ty) in
+      block env' a; block env' b; env
+    | Swhile (c, b) -> expr env c; block env b; env
+    | Sblock b -> block env b; env
+    | Sswitch (e, _, branches, default) ->
+      expr env e;
+      List.iter (fun (_, b) -> block env b) branches;
+      Option.iter (block env) default;
+      env
+    | Smatch (sc, branches, default) ->
+      expr env sc.sc_expr;
+      let field = if sc.sc_owned then Mutable_lvalue else Const_lvalue in
+      List.iter
+        (fun br ->
+          let env =
+            List.fold_left
+              (fun env (x, _, _) -> bind env x (Some field))
+              env br.smb_field_bindings
+          in
+          let env =
+            match br.smb_var with Some x -> bind env x (Some field) | None -> env
+          in
+          List.iter (expr env) br.smb_extra_conds;
+          block env br.smb_body)
+        branches;
+      Option.iter (block env) default;
+      env
+    | Sthrow _ | Sraw _ | Scomment _ | Scontinue | Sbreak | Sstruct_def _
+    | Susing _ -> env
+    | _ ->
+      if mentions_any (fun () -> mentions_stmt s) then raise_notrace Inexact;
+      env
+  in
+  let env =
+    List.fold_left
+      (fun env (x, ty) -> bind env x (declared ty))
+      Id.Map.empty params
+  in
+  match ignore (stmts env body) with
+  | () -> Some (List.rev !found)
+  | exception Inexact -> None
+
 (** [settle_constraints decl] decides, everywhere in [decl], which callable
     template parameters keep their [std::is_invocable_r_v] constraint, and
     demotes the rest to a plain [typename]:
@@ -1823,8 +1997,10 @@ let rec decl_body = function
       it is decided on the definition, before its declaration is split off,
       and both state the same head;
     - one whose constraint is vacuous claims nothing either -- see
-      {!tt_constraint_is_vacuous}.
-    The printer then writes every [TTfun] it is given. *)
+      {!tt_constraint_is_vacuous};
+    - every other states the body's own calls ({!invocations}), or nothing
+      when they cannot be read exactly.
+    No [TTfun] survives: the printer states only a [TTinvocable]. *)
 let settle_constraints decl =
   let settle ~params body temps =
     let stored = erased_into_storage_tparam ~params body in
@@ -1834,25 +2010,37 @@ let settle_constraints decl =
         | TTfun _ when stored id -> (TTtypename, id)
         | TTfun (dom, cod) when tt_constraint_is_vacuous dom cod ->
           (TTtypename, id)
+        | TTfun (dom, cod) -> (
+          match invocations ~params body id dom with
+          | Some (_ :: _ as invs) -> (TTinvocable (invs, cod), id)
+          | Some [] | None -> (TTtypename, id) )
         | _ -> p )
       temps
   in
+  (* A position with no body to read states no call. *)
+  let bodiless = settle ~params:[] [] in
   let settle_method m =
     {m with mf_tparams = settle ~params:m.mf_params m.mf_body m.mf_tparams}
+  in
+  let settle_ctor c =
+    let inits = List.map (fun (_, e) -> Sexpr e) c.fc_inits in
+    {c with fc_tparams = settle ~params:c.fc_params (inits @ c.fc_body) c.fc_tparams}
   in
   let rec field (f, vis, tag) =
     let f =
       match f with
       | Fmethod m -> Fmethod (settle_method m)
       | Fmember_decl (OLmethod m) -> Fmember_decl (OLmethod (settle_method m))
+      | Fconstructor c -> Fconstructor (settle_ctor c)
       | Fnested_struct (id, fs) -> Fnested_struct (id, List.map field fs)
+      | Fnested_using (temps, id, ty) -> Fnested_using (bodiless temps, id, ty)
       | f -> f
     in
     (f, vis, tag)
   in
   let struct_ ds =
     { ds with
-      ds_tparams = settle ~params:[] [] ds.ds_tparams;
+      ds_tparams = bodiless ds.ds_tparams;
       ds_fields = List.map field ds.ds_fields }
   in
   let rec go = function
@@ -1862,8 +2050,15 @@ let settle_constraints decl =
     | Dnspace (r, ds) -> Dnspace (r, List.map go ds)
     | Dstruct ds -> Dstruct (struct_ ds)
     | Dfields ds -> Dfields (struct_ ds)
-    | Dmember_def ({dm_field = OLmethod m; _} as dm) ->
-      Dmember_def {dm with dm_field = OLmethod (settle_method m)}
+    | Dstruct_fwd (temps, r) -> Dstruct_fwd (bodiless temps, r)
+    | Denum e -> Denum {e with de_tparams = bodiless e.de_tparams}
+    | Dmember_def dm ->
+      let dm_field =
+        match dm.dm_field with
+        | OLmethod m -> OLmethod (settle_method m)
+        | OLdestructor _ as d -> d
+      in
+      Dmember_def {dm with dm_tparams = bodiless dm.dm_tparams; dm_field}
     | d -> d
   in
   go decl

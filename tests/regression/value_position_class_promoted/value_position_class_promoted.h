@@ -8,7 +8,6 @@
 #include <concepts>
 #include <memory>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -204,9 +203,7 @@ template <typename I> struct VLike {
 };
 
 /// These two put VLike in value position, which demotes it to a struct.
-template <typename T1, typename F1>
-  requires std::is_invocable_r_v<T1, F1 &, T1 &, T1 &>
-VLike<T1> mk_vlike(const T1 &z, F1 &&f) {
+template <typename T1, typename F1> VLike<T1> mk_vlike(const T1 &z, F1 &&f) {
   return VLike<T1>{z, f};
 }
 

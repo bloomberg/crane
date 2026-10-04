@@ -10,7 +10,6 @@
 #include <memory>
 #include <optional>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -209,7 +208,6 @@ public:
 
 struct Functor0 {
   template <Functor _tcI0, typename T2, typename T3, typename F0>
-    requires std::is_invocable_r_v<T3, F0 &, T2 &>
   static typename _tcI0::template F<T3> fmap(F0 &&x,
                                              typename _tcI0::template F<T2> x0);
 };
@@ -233,7 +231,6 @@ using Case = crane::fn<c(obj, obj, obj, c, c)>;
 
 struct CategoryOps {
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, T1 &, T1 &>
   static T2 case_(F0 &&_x, std::type_identity_t<Case<T1, T2>> case0,
                   const T1 &x0_, const T1 &x1_, const T1 &x2_, const T2 &x3_,
                   T2 x4_);
@@ -715,7 +712,6 @@ struct ItreeCaseHandler {
 };
 
 template <Functor _tcI0, typename T2, typename T3, typename F0>
-  requires std::is_invocable_r_v<T3, F0 &, T2 &>
 typename _tcI0::template F<T3>
 Functor0::fmap(F0 &&x, typename _tcI0::template F<T2> x0) {
   return _tcI0::template fmap<T2, T3>(x, std::move(x0));
@@ -734,7 +730,6 @@ T1<T2> Basics::iter(std::type_identity_t<MonadIter<T1>> monadIter, F1 &&x,
 }
 
 template <typename T1, typename T2, typename F0>
-  requires std::is_invocable_r_v<T1, F0 &, T1 &, T1 &>
 T2 CategoryOps::case_(F0 &&, std::type_identity_t<Case<T1, T2>> case0,
                       const T1 &x0_, const T1 &x1_, const T1 &x2_,
                       const T2 &x3_, T2 x4_) {

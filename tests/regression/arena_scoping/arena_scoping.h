@@ -4,7 +4,6 @@
 #include <atomic>
 #include <memory>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #define CRANE_ARENA 1
@@ -183,10 +182,7 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, Tree<A> &, T1 &, A &, Tree<A> &,
-                                   T1 &>
-  T1 tree_rect(T1 f, F1 &&f0) const {
+  template <typename T1, typename F1> T1 tree_rect(T1 f, F1 &&f0) const {
     if (std::holds_alternative<typename Tree<A>::Leaf>(this->v())) {
       return f;
     } else {
@@ -196,10 +192,7 @@ public:
     }
   }
 
-  template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, Tree<A> &, T1 &, A &, Tree<A> &,
-                                   T1 &>
-  T1 tree_rec(T1 f, F1 &&f0) const {
+  template <typename T1, typename F1> T1 tree_rec(T1 f, F1 &&f0) const {
     if (std::holds_alternative<typename Tree<A>::Leaf>(this->v())) {
       return f;
     } else {

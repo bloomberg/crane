@@ -112,8 +112,7 @@ struct PatternImpossible {
   };
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, nested &, T1 &, nested &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
   static T1 nested_rect(F0 &&f, F1 &&f0, const nested &n) {
     if (std::holds_alternative<typename nested::Leaf>(n.v())) {
       const auto &[a0] = std::get<typename nested::Leaf>(n.v());
@@ -126,8 +125,7 @@ struct PatternImpossible {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, nested &, T1 &, nested &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
   static T1 nested_rec(F0 &&f, F1 &&f0, const nested &n) {
     if (std::holds_alternative<typename nested::Leaf>(n.v())) {
       const auto &[a0] = std::get<typename nested::Leaf>(n.v());

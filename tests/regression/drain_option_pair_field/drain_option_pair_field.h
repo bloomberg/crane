@@ -6,7 +6,6 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -76,18 +75,12 @@ struct DrainOptionPairField {
     const variant_t &v() const { return v_; }
   };
 
-  template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &,
-                                   std::optional<std::pair<t, uint64_t>> &>
-  static T1 t_rect(F0 &&f, const t &t0) {
+  template <typename T1, typename F0> static T1 t_rect(F0 &&f, const t &t0) {
     const auto &[a0] = std::get<typename t::C>(t0.v());
     return f(*a0);
   }
 
-  template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &,
-                                   std::optional<std::pair<t, uint64_t>> &>
-  static T1 t_rec(F0 &&f, const t &t0) {
+  template <typename T1, typename F0> static T1 t_rec(F0 &&f, const t &t0) {
     const auto &[a0] = std::get<typename t::C>(t0.v());
     return f(*a0);
   }

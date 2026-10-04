@@ -139,10 +139,7 @@ struct CpsEscape {
       return _result;
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
-                                     T1 &>
-    T1 tree_rec(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 tree_rec(T1 f, F1 &&f0) const {
       const tree *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
@@ -206,10 +203,7 @@ struct CpsEscape {
       return _result;
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
-                                     T1 &>
-    T1 tree_rect(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 tree_rect(T1 f, F1 &&f0) const {
       const tree *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
@@ -287,14 +281,16 @@ struct CpsEscape {
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, crane::fn<uint64_t(uint64_t)> &>
+      requires std::is_invocable_r_v<T1, F0 &,
+                                     const crane::fn<uint64_t(uint64_t)> &>
     T1 box_rec(F0 &&f) const {
       const auto &[a0] = *this;
       return f(a0);
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, crane::fn<uint64_t(uint64_t)> &>
+      requires std::is_invocable_r_v<T1, F0 &,
+                                     const crane::fn<uint64_t(uint64_t)> &>
     T1 box_rect(F0 &&f) const {
       const auto &[a0] = *this;
       return f(a0);
@@ -303,9 +299,7 @@ struct CpsEscape {
 
   /// Store the continuation in a Box. The function receives the closure
   /// as an argument and wraps it - the closure flows THROUGH a parameter.
-  template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
-  static box store_in_box(F0 &&f) {
+  template <typename F0> static box store_in_box(F0 &&f) {
     return box::box0(f);
   }
 

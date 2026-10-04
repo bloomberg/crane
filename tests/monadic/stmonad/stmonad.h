@@ -130,9 +130,7 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, A &>
-  List<A> filter(F0 &&f) const {
+  template <typename F0> List<A> filter(F0 &&f) const {
     std::shared_ptr<List<A>> _head{};
     std::shared_ptr<List<A>> *_write = &_head;
     const List<A> *_loop_self = this;
@@ -256,7 +254,7 @@ struct Err {
 
 struct STMonadExamples {
   template <typename F1>
-    requires std::is_invocable_r_v<List<uint64_t>, F1 &, List<uint64_t> &>
+    requires std::is_invocable_r_v<List<uint64_t>, F1 &, List<uint64_t>>
   static List<uint64_t> quicksort_fun_functional(const List<uint64_t> &l,
                                                  F1 &&quicksort_fun0);
 };
@@ -446,7 +444,7 @@ struct STMonadTests {
 };
 
 template <typename F1>
-  requires std::is_invocable_r_v<List<uint64_t>, F1 &, List<uint64_t> &>
+  requires std::is_invocable_r_v<List<uint64_t>, F1 &, List<uint64_t>>
 List<uint64_t>
 STMonadExamples::quicksort_fun_functional(const List<uint64_t> &l,
                                           F1 &&quicksort_fun0) {

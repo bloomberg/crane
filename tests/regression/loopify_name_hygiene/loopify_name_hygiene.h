@@ -76,8 +76,7 @@ struct LoopifyNameHygiene {
   };
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, Frame_ &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
   static T1
   Frame_rect_(F0 &&f, F1 &&f0,
               const Frame_ &f_) { /// CraneEnter: captures varying parameters
@@ -122,8 +121,7 @@ struct LoopifyNameHygiene {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, Frame_ &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
   static T1
   Frame_rec_(F0 &&f, F1 &&f0,
              const Frame_ &f_) { /// CraneEnter: captures varying parameters for

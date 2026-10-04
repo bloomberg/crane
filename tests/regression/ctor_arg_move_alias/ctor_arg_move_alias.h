@@ -145,9 +145,7 @@ struct CtorArgMoveAlias {
       return _result;
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, uint64_t &, inner &, T1 &>
-    T1 inner_rec(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 inner_rec(T1 f, F1 &&f0) const {
       const inner *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
@@ -191,9 +189,7 @@ struct CtorArgMoveAlias {
       return _result;
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, uint64_t &, inner &, T1 &>
-    T1 inner_rect(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 inner_rect(T1 f, F1 &&f0) const {
       const inner *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
@@ -320,9 +316,7 @@ struct CtorArgMoveAlias {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, A &, mylist<A> &, T1 &>
-    T1 mylist_rec(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 mylist_rec(T1 f, F1 &&f0) const {
       const mylist<A> *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
@@ -367,9 +361,7 @@ struct CtorArgMoveAlias {
       return _result;
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, A &, mylist<A> &, T1 &>
-    T1 mylist_rect(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 mylist_rect(T1 f, F1 &&f0) const {
       const mylist<A> *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
@@ -454,8 +446,8 @@ struct CtorArgMoveAlias {
   };
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, inner &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, mylist<inner> &>
+    requires std::is_invocable_r_v<T1, F0 &, const inner &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F1 &, const mylist<inner> &>
   static T1 pack_rect(F0 &&f, F1 &&f0, const pack &p) {
     if (std::holds_alternative<typename pack::Pack0>(p.v())) {
       const auto &[a0, a1] = std::get<typename pack::Pack0>(p.v());
@@ -467,8 +459,8 @@ struct CtorArgMoveAlias {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, inner &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, mylist<inner> &>
+    requires std::is_invocable_r_v<T1, F0 &, const inner &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F1 &, const mylist<inner> &>
   static T1 pack_rec(F0 &&f, F1 &&f0, const pack &p) {
     if (std::holds_alternative<typename pack::Pack0>(p.v())) {
       const auto &[a0, a1] = std::get<typename pack::Pack0>(p.v());

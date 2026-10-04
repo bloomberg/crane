@@ -8,7 +8,6 @@
 #include <memory>
 #include <optional>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -256,7 +255,6 @@ public:
 
 struct Datatypes {
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, T1 &>
   static std::optional<T2> option_map(F0 &&f, const std::optional<T1> &o);
 };
 
@@ -475,7 +473,6 @@ struct LiftedParamConstVMut {
 };
 
 template <typename T1, typename T2, typename F0>
-  requires std::is_invocable_r_v<T2, F0 &, T1 &>
 std::optional<T2> Datatypes::option_map(F0 &&f, const std::optional<T1> &o) {
   if (o.has_value()) {
     const T1 &a = *o;

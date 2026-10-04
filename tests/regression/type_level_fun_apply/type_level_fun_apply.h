@@ -8,7 +8,6 @@
 #include <atomic>
 #include <functional>
 #include <memory>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -135,7 +134,6 @@ struct TypeLevelFunApply {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, ty &, T1 &, ty &, T1 &>
   static T1 ty_rect(T1 f, F1 &&f0, const ty &t) {
     if (std::holds_alternative<typename ty::TNat>(t.v())) {
       return f;
@@ -146,7 +144,6 @@ struct TypeLevelFunApply {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, ty &, T1 &, ty &, T1 &>
   static T1 ty_rec(T1 f, F1 &&f0, const ty &t) {
     if (std::holds_alternative<typename ty::TNat>(t.v())) {
       return f;

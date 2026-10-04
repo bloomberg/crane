@@ -8,7 +8,6 @@
 #include <concepts>
 #include <memory>
 #include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -98,7 +97,6 @@ struct Monad0 {
   template <Monad _tcI0, typename T2>
   static typename _tcI0::template m<T2> ret(const T2 &x);
   template <Monad _tcI0, typename T2, typename T3, typename F1>
-    requires std::is_invocable_r_v<typename _tcI0::template m<T3>, F1 &, T2 &>
   static typename _tcI0::template m<T3> bind(typename _tcI0::template m<T2> x,
                                              F1 &&x0);
   template <Monad _tcI0, typename T2, typename T3>
@@ -151,7 +149,6 @@ crane::rebind_t<T1, T2> iter(std::type_identity_t<Iter<T1>> iter0, F1 &&x,
 }
 
 template <Functor _tcI0, Monad _tcI1, typename T2, typename F1>
-  requires std::is_invocable_r_v<typename _tcI0::template F<T2>, F1 &, T2 &>
 typename _tcI0::template F<T2>
 run(Iter<typename _tcI0::template F<crane::obj>> x0_, F1 &&x1_, const T2 &x2_) {
   return iter<typename _tcI0::template F<crane::obj>, T2>(std::move(x0_), x1_,
@@ -169,7 +166,6 @@ typename _tcI0::template m<T2> Monad0::ret(const T2 &x) {
 }
 
 template <Monad _tcI0, typename T2, typename T3, typename F1>
-  requires std::is_invocable_r_v<typename _tcI0::template m<T3>, F1 &, T2 &>
 typename _tcI0::template m<T3> Monad0::bind(typename _tcI0::template m<T2> x,
                                             F1 &&x0) {
   return _tcI0::template bind<T2, T3>(std::move(x), x0);

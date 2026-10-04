@@ -7,7 +7,6 @@
 #include <cstdint>
 #include <functional>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -53,7 +52,6 @@ struct ErasedUnitResult {
       SigT<crane::obj, crane::obj>::existt(crane::obj(), crane_erase_fn(touch));
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<void, F0 &, T1 &>
   static void run_twice(F0 &&f, const T1 &x) {
     {
       f(x);

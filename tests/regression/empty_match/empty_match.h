@@ -97,8 +97,8 @@ struct EmptyMatch {
   };
 
   template <typename T1, typename T2, typename T3, typename F0, typename F1>
-    requires std::is_invocable_r_v<T3, F0 &, T1 &> &&
-             std::is_invocable_r_v<T3, F1 &, T2 &>
+    requires std::is_invocable_r_v<T3, F0 &, const T1 &> &&
+             std::is_invocable_r_v<T3, F1 &, const T2 &>
   static T3 either_rect(F0 &&f, F1 &&f0, const either<T1, T2> &e) {
     if (std::holds_alternative<typename either<T1, T2>::Left>(e.v())) {
       const auto &[a0] = std::get<typename either<T1, T2>::Left>(e.v());
@@ -110,8 +110,8 @@ struct EmptyMatch {
   }
 
   template <typename T1, typename T2, typename T3, typename F0, typename F1>
-    requires std::is_invocable_r_v<T3, F0 &, T1 &> &&
-             std::is_invocable_r_v<T3, F1 &, T2 &>
+    requires std::is_invocable_r_v<T3, F0 &, const T1 &> &&
+             std::is_invocable_r_v<T3, F1 &, const T2 &>
   static T3 either_rec(F0 &&f, F1 &&f0, const either<T1, T2> &e) {
     if (std::holds_alternative<typename either<T1, T2>::Left>(e.v())) {
       const auto &[a0] = std::get<typename either<T1, T2>::Left>(e.v());

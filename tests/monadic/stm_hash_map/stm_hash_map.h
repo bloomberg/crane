@@ -119,7 +119,8 @@ template <typename K, typename V> struct CHT {
   std::optional<V> stm_get(const K &k) const {
     stm::TVar<List<std::pair<K, V>>> b = this->bucket_of(k);
     List<std::pair<K, V>> xs = stm::readTVar(b);
-    return CHT<int, int>::template assoc_lookup<K, V>(this->cht_eqb, k, xs);
+    return CHT<int, int>::template assoc_lookup<K, V>(this->cht_eqb, k,
+                                                      std::move(xs));
   }
 
   std::monostate stm_put(const K &k, const V &v) const {
@@ -149,7 +150,7 @@ template <typename K, typename V> struct CHT {
   }
 
   template <typename F1>
-    requires std::is_invocable_r_v<V, F1 &, std::optional<V> &>
+    requires std::is_invocable_r_v<V, F1 &, std::optional<V> &&>
   V stm_update(const K &k, F1 &&f) const {
     stm::TVar<List<std::pair<K, V>>> b = this->bucket_of(k);
     List<std::pair<K, V>> xs = stm::readTVar(b);
@@ -190,9 +191,7 @@ template <typename K, typename V> struct CHT {
     return stm::atomically([&] { return this->stm_delete(k); });
   }
 
-  template <typename F1>
-    requires std::is_invocable_r_v<V, F1 &, std::optional<V> &>
-  V hash_update(const K &k, F1 &&f) const {
+  template <typename F1> V hash_update(const K &k, F1 &&f) const {
     return stm::atomically([&] { return this->stm_update(k, f); });
   }
 
@@ -201,7 +200,6 @@ template <typename K, typename V> struct CHT {
   }
 
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static std::optional<T2> assoc_lookup(F0 &&eqb, const T1 &k,
                                         const List<std::pair<T1, T2>> &xs) {
     if (std::holds_alternative<typename List<std::pair<T1, T2>>::Nil>(xs.v())) {
@@ -219,7 +217,6 @@ template <typename K, typename V> struct CHT {
   }
 
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static List<std::pair<T1, T2>>
   assoc_insert_or_replace(F0 &&eqb, const T1 &k, const T2 &v,
                           const List<std::pair<T1, T2>> &xs) {
@@ -242,7 +239,6 @@ template <typename K, typename V> struct CHT {
   }
 
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static std::pair<std::optional<T2>, List<std::pair<T1, T2>>>
   assoc_remove(F0 &&eqb, const T1 &k, const List<std::pair<T1, T2>> &xs) {
     if (std::holds_alternative<typename List<std::pair<T1, T2>>::Nil>(xs.v())) {

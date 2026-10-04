@@ -140,9 +140,7 @@ struct MatchRefAfterMove {
       return _result;
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, A &, mylist<A> &, T1 &>
-    T1 mylist_rec(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 mylist_rec(T1 f, F1 &&f0) const {
       const mylist<A> *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
@@ -187,9 +185,7 @@ struct MatchRefAfterMove {
       return _result;
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, A &, mylist<A> &, T1 &>
-    T1 mylist_rect(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 mylist_rect(T1 f, F1 &&f0) const {
       const mylist<A> *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
@@ -269,14 +265,14 @@ struct MatchRefAfterMove {
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, A &, B &>
+      requires std::is_invocable_r_v<T1, F0 &, const A &, const B &>
     T1 mypair_rec(F0 &&f) const {
       const auto &[a0, a1] = *this;
       return f(a0, a1);
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, A &, B &>
+      requires std::is_invocable_r_v<T1, F0 &, const A &, const B &>
     T1 mypair_rect(F0 &&f) const {
       const auto &[a0, a1] = *this;
       return f(a0, a1);
@@ -344,7 +340,6 @@ struct MatchRefAfterMove {
   /// Pattern 5: CPS with explicit continuation that captures from match.
   /// The continuation is a SIMPLE lambda, not a fixpoint.
   template <typename F1>
-    requires std::is_invocable_r_v<uint64_t, F1 &, uint64_t &, uint64_t &>
   static uint64_t match_with_cont(const mylist<uint64_t> &l, F1 &&k) {
     if (std::holds_alternative<typename mylist<uint64_t>::Mynil>(l.v())) {
       return k(UINT64_C(0), UINT64_C(0));
@@ -431,8 +426,8 @@ struct MatchRefAfterMove {
     const variant_t &v() const { return v_; }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, A &> &&
-               std::is_invocable_r_v<T1, F1 &, B &>
+      requires std::is_invocable_r_v<T1, F0 &, const A &> &&
+               std::is_invocable_r_v<T1, F1 &, const B &>
     T1 either_rec(F0 &&f, F1 &&f0) const {
       if (std::holds_alternative<typename either<A, B>::Left>(this->v())) {
         const auto &[a0] = std::get<typename either<A, B>::Left>(this->v());
@@ -444,8 +439,8 @@ struct MatchRefAfterMove {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, A &> &&
-               std::is_invocable_r_v<T1, F1 &, B &>
+      requires std::is_invocable_r_v<T1, F0 &, const A &> &&
+               std::is_invocable_r_v<T1, F1 &, const B &>
     T1 either_rect(F0 &&f, F1 &&f0) const {
       if (std::holds_alternative<typename either<A, B>::Left>(this->v())) {
         const auto &[a0] = std::get<typename either<A, B>::Left>(this->v());

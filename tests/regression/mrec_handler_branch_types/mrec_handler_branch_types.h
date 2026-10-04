@@ -10,7 +10,6 @@
 #include <memory>
 #include <optional>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -196,7 +195,6 @@ public:
 
 struct Functor0 {
   template <Functor _tcI0, typename T2, typename T3, typename F0>
-    requires std::is_invocable_r_v<T3, F0 &, T2 &>
   static typename _tcI0::template F<T3> fmap(F0 &&x,
                                              typename _tcI0::template F<T2> x0);
 };
@@ -636,7 +634,6 @@ struct MrecHandlerBranchTypes {
 };
 
 template <Functor _tcI0, typename T2, typename T3, typename F0>
-  requires std::is_invocable_r_v<T3, F0 &, T2 &>
 typename _tcI0::template F<T3>
 Functor0::fmap(F0 &&x, typename _tcI0::template F<T2> x0) {
   return _tcI0::template fmap<T2, T3>(x, std::move(x0));

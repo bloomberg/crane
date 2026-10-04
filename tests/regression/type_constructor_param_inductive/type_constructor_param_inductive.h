@@ -220,9 +220,9 @@ struct TypeConstructorParamInductive {
   };
 
   template <typename T1, typename T2, typename T3, typename F0, typename F1>
-    requires std::is_invocable_r_v<T3, F0 &, crane::rebind_t<T1, T2> &> &&
-             std::is_invocable_r_v<T3, F1 &, crane::rebind_t<T1, T2> &,
-                                   crane::rebind_t<T1, T2> &>
+    requires std::is_invocable_r_v<T3, F0 &, const crane::rebind_t<T1, T2> &> &&
+             std::is_invocable_r_v<T3, F1 &, const crane::rebind_t<T1, T2> &,
+                                   const crane::rebind_t<T1, T2> &>
   static T3 wrapped_rect(F0 &&f, F1 &&f0, const wrapped<T1, T2> &w) {
     if (std::holds_alternative<typename wrapped<T1, T2>::Wrap>(w.v())) {
       const auto &[a0] = std::get<typename wrapped<T1, T2>::Wrap>(w.v());
@@ -234,9 +234,9 @@ struct TypeConstructorParamInductive {
   }
 
   template <typename T1, typename T2, typename T3, typename F0, typename F1>
-    requires std::is_invocable_r_v<T3, F0 &, crane::rebind_t<T1, T2> &> &&
-             std::is_invocable_r_v<T3, F1 &, crane::rebind_t<T1, T2> &,
-                                   crane::rebind_t<T1, T2> &>
+    requires std::is_invocable_r_v<T3, F0 &, const crane::rebind_t<T1, T2> &> &&
+             std::is_invocable_r_v<T3, F1 &, const crane::rebind_t<T1, T2> &,
+                                   const crane::rebind_t<T1, T2> &>
   static T3 wrapped_rec(F0 &&f, F1 &&f0, const wrapped<T1, T2> &w) {
     if (std::holds_alternative<typename wrapped<T1, T2>::Wrap>(w.v())) {
       const auto &[a0] = std::get<typename wrapped<T1, T2>::Wrap>(w.v());

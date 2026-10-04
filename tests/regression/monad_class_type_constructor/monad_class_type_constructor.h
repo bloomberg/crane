@@ -7,7 +7,6 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
-#include <type_traits>
 #include <utility>
 
 /// A monad typeclass over a type constructor (`Mon (M : Type -> Type)`), with a
@@ -35,7 +34,6 @@ struct MonadClassTypeConstructor {
   }
 
   template <Mon _tcI0, typename T2, typename T3, typename F1>
-    requires std::is_invocable_r_v<typename _tcI0::template M<T3>, F1 &, T2 &>
   static typename _tcI0::template M<T3> mbind(typename _tcI0::template M<T2> x,
                                               F1 &&x0) {
     return _tcI0::template mbind<T2, T3>(std::move(x), x0);

@@ -6,7 +6,6 @@
 #include <atomic>
 #include <memory>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -153,9 +152,7 @@ struct Bag {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    template <typename F0>
-      requires std::is_invocable_r_v<bool, F0 &, A &>
-    Nat countIf(F0 &&p) const;
+    template <typename F0> Nat countIf(F0 &&p) const;
   };
 
   static inline const Nat depth_limit =
@@ -183,7 +180,6 @@ Bag::bag<Nat> round(const Bag::bag<Nat> &x0_);
 
 template <typename A>
 template <typename F0>
-  requires std::is_invocable_r_v<bool, F0 &, A &>
 Nat Bag::bag<A>::countIf(F0 &&p) const {
   if (std::holds_alternative<typename Bag::bag<A>::Empty>(this->v())) {
     return Nat::o();

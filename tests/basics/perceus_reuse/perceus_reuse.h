@@ -72,7 +72,6 @@ struct R {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, uint64_t &, lst &, T1 &>
   static T1 lst_rect(T1 f, F1 &&f0, const lst &l) {
     if (std::holds_alternative<typename lst::Nil>(l.v())) {
       return f;
@@ -83,7 +82,6 @@ struct R {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, uint64_t &, lst &, T1 &>
   static T1 lst_rec(T1 f, F1 &&f0, const lst &l) {
     if (std::holds_alternative<typename lst::Nil>(l.v())) {
       return f;
@@ -94,7 +92,8 @@ struct R {
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
+    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &> &&
+             std::is_invocable_r_v<uint64_t, F0 &, uint64_t &&>
   static lst map1(F0 &&f, lst l) {
     if (l.v().index() == 1) {
       if (std::get<typename lst::Cons>(l.v_mut()).a1.use_count() == 1) {

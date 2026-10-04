@@ -158,28 +158,26 @@ struct MutualRecord {
   };
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, List<employee> &>
   static T1 department_rect(F0 &&f, const department &d) {
     const auto &[a0, a1] = std::get<typename department::Mk_department>(d.v());
     return f(a0, *a1);
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, List<employee> &>
   static T1 department_rec(F0 &&f, const department &d) {
     const auto &[a0, a1] = std::get<typename department::Mk_department>(d.v());
     return f(a0, *a1);
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &, const uint64_t &>
   static T1 employee_rect(F0 &&f, const employee &e) {
     const auto &[a0, a1] = std::get<typename employee::Mk_employee>(e.v());
     return f(a0, a1);
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &, const uint64_t &>
   static T1 employee_rec(F0 &&f, const employee &e) {
     const auto &[a0, a1] = std::get<typename employee::Mk_employee>(e.v());
     return f(a0, a1);

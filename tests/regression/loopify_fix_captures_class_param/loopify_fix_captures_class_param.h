@@ -295,8 +295,7 @@ struct LoopifyFixCapturesClassParam {
   };
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, Nat &> &&
-             std::is_invocable_r_v<T1, F1 &, List<tree> &>
+    requires std::is_invocable_r_v<T1, F0 &, const Nat &>
   static T1 tree_rect(F0 &&f0, F1 &&f1, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       const auto &[n0] = std::get<typename tree::Leaf>(t.v());
@@ -308,8 +307,7 @@ struct LoopifyFixCapturesClassParam {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, Nat &> &&
-             std::is_invocable_r_v<T1, F1 &, List<tree> &>
+    requires std::is_invocable_r_v<T1, F0 &, const Nat &>
   static T1 tree_rec(F0 &&f0, F1 &&f1, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       const auto &[n0] = std::get<typename tree::Leaf>(t.v());

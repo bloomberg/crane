@@ -8,7 +8,6 @@
 #include <cstdint>
 #include <memory>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -108,8 +107,6 @@ struct LoopifyFilterFnRef {
   };
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, tree<T1> &, T2 &, T1 &, tree<T1> &,
-                                   T2 &>
   static T2
   tree_rect(T2 f, F1 &&f0,
             const tree<T1> &t) { /// CraneEnter: captures varying parameters for
@@ -175,8 +172,6 @@ struct LoopifyFilterFnRef {
   }
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, tree<T1> &, T2 &, T1 &, tree<T1> &,
-                                   T2 &>
   static T2
   tree_rec(T2 f, F1 &&f0,
            const tree<T1> &t) { /// CraneEnter: captures varying parameters for
@@ -247,7 +242,6 @@ struct LoopifyFilterFnRef {
   /// the template parameter F0 deduces to a reference type, and the
   /// generated frame struct field F0 f becomes ill-formed with std::move.
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, T1 &>
   static tree<T1>
   filter(F0 &&f, const tree<T1> &t) { /// CraneEnter: captures varying
                                       /// parameters for each recursive call.

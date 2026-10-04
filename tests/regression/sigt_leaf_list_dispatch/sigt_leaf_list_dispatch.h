@@ -9,7 +9,6 @@
 #include <cstdint>
 #include <memory>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -183,9 +182,7 @@ template <typename A, typename P> struct SigT {
 bool wrap_list(const List<uint64_t> &xs);
 using entry = SigT<uint64_t, crane::fn<domty(std::monostate)>>;
 
-template <typename F1>
-  requires std::is_invocable_r_v<domty, F1 &, std::monostate &>
-entry mk(uint64_t p, F1 &&f) {
+template <typename F1> entry mk(uint64_t p, F1 &&f) {
   return SigT<uint64_t, crane::fn<crane::obj(std::monostate)>>::existt(p, f);
 }
 

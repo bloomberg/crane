@@ -293,9 +293,10 @@ struct Levenshtein {
     const variant_t &v() const { return v_; }
 
     template <typename T1, typename F0, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F0 &, Ascii &, String &> &&
-               std::is_invocable_r_v<T1, F1 &, Ascii &, String &> &&
-               std::is_invocable_r_v<T1, F2 &, Ascii &, Ascii &, String &>
+      requires std::is_invocable_r_v<T1, F0 &, const Ascii &, const String &> &&
+               std::is_invocable_r_v<T1, F1 &, const Ascii &, const String &> &&
+               std::is_invocable_r_v<T1, F2 &, const Ascii &, const Ascii &,
+                                     const String &>
     T1 edit_rec(F0 &&f, F1 &&f0, F2 &&f1, const String &,
                 const String &) const {
       if (std::holds_alternative<typename edit::Insertion>(this->v())) {
@@ -311,9 +312,10 @@ struct Levenshtein {
     }
 
     template <typename T1, typename F0, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F0 &, Ascii &, String &> &&
-               std::is_invocable_r_v<T1, F1 &, Ascii &, String &> &&
-               std::is_invocable_r_v<T1, F2 &, Ascii &, Ascii &, String &>
+      requires std::is_invocable_r_v<T1, F0 &, const Ascii &, const String &> &&
+               std::is_invocable_r_v<T1, F1 &, const Ascii &, const String &> &&
+               std::is_invocable_r_v<T1, F2 &, const Ascii &, const Ascii &,
+                                     const String &>
     T1 edit_rect(F0 &&f, F1 &&f0, F2 &&f1, const String &,
                  const String &) const {
       if (std::holds_alternative<typename edit::Insertion>(this->v())) {
@@ -458,10 +460,6 @@ struct Levenshtein {
     }
 
     template <typename T1, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F1 &, Ascii &, String &, String &,
-                                     Nat &, chain &, T1 &> &&
-               std::is_invocable_r_v<T1, F2 &, String &, String &, String &,
-                                     Nat &, edit &, chain &, T1 &>
     T1 chain_rec(T1 f, F1 &&f0, F2 &&f1, const String &_x, const String &_x0,
                  const Nat &_x1) const {
       const chain *_self = this;
@@ -547,10 +545,6 @@ struct Levenshtein {
     }
 
     template <typename T1, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F1 &, Ascii &, String &, String &,
-                                     Nat &, chain &, T1 &> &&
-               std::is_invocable_r_v<T1, F2 &, String &, String &, String &,
-                                     Nat &, edit &, chain &, T1 &>
     T1 chain_rect(T1 f, F1 &&f0, F2 &&f1, const String &_x, const String &_x0,
                   const Nat &_x1) const {
       const chain *_self = this;

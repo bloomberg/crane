@@ -97,8 +97,8 @@ struct FixFoldEscape {
   /// Manual fold_left to avoid stdlib extraction complications.
   template <typename F0>
     requires std::is_invocable_r_v<List<crane::fn<uint64_t(uint64_t)>>, F0 &,
-                                   List<crane::fn<uint64_t(uint64_t)>> &,
-                                   uint64_t &>
+                                   List<crane::fn<uint64_t(uint64_t)>> &&,
+                                   const uint64_t &>
   static List<crane::fn<uint64_t(uint64_t)>>
   fold_left(F0 &&f, List<crane::fn<uint64_t(uint64_t)>> acc,
             const List<uint64_t> &l) {

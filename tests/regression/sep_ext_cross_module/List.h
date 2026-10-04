@@ -10,7 +10,7 @@
 namespace List {
 
 template <typename T1, typename T2, typename F0>
-  requires std::is_invocable_r_v<T1, F0 &, T1 &, T2 &>
+  requires std::is_invocable_r_v<T1, F0 &, T1 &&, const T2 &>
 T1 fold_left(F0 &&f, const Datatypes::List<T2> &l, T1 a0) {
   if (std::holds_alternative<typename Datatypes::List<T2>::Nil>(l.v())) {
     return a0;

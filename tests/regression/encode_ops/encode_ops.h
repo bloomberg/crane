@@ -274,9 +274,10 @@ struct EncodeOps {
     }
 
     template <typename T1, typename F3, typename F4, typename F5>
-      requires std::is_invocable_r_v<T1, F3 &, uint64_t &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F4 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F5 &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F3 &, const uint64_t &,
+                                     const uint64_t &> &&
+               std::is_invocable_r_v<T1, F4 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F5 &, const uint64_t &>
     T1 instruction1_rec(T1 f, T1 f0, T1 f1, F3 &&f2, F4 &&f3, F5 &&f4, T1 f5,
                         T1 f6, T1 f7, T1 f8, T1 f9) const {
       if (std::holds_alternative<typename instruction1::CLB>(this->v())) {
@@ -317,9 +318,10 @@ struct EncodeOps {
     }
 
     template <typename T1, typename F3, typename F4, typename F5>
-      requires std::is_invocable_r_v<T1, F3 &, uint64_t &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F4 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F5 &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F3 &, const uint64_t &,
+                                     const uint64_t &> &&
+               std::is_invocable_r_v<T1, F4 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F5 &, const uint64_t &>
     T1 instruction1_rect(T1 f, T1 f0, T1 f1, F3 &&f2, F4 &&f3, F5 &&f4, T1 f5,
                          T1 f6, T1 f7, T1 f8, T1 f9) const {
       if (std::holds_alternative<typename instruction1::CLB>(this->v())) {
@@ -418,7 +420,7 @@ struct EncodeOps {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F1 &, const uint64_t &>
     T1 instruction2_rec(T1 f, F1 &&f0) const {
       if (std::holds_alternative<typename instruction2::NOP2>(this->v())) {
         return f;
@@ -429,7 +431,7 @@ struct EncodeOps {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F1 &, const uint64_t &>
     T1 instruction2_rect(T1 f, F1 &&f0) const {
       if (std::holds_alternative<typename instruction2::NOP2>(this->v())) {
         return f;
@@ -495,7 +497,7 @@ struct EncodeOps {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F1 &, const uint64_t &>
     T1 instruction3_rec(T1 f, F1 &&f0) const {
       if (std::holds_alternative<typename instruction3::NOP3>(this->v())) {
         return f;
@@ -506,7 +508,7 @@ struct EncodeOps {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F1 &, const uint64_t &>
     T1 instruction3_rect(T1 f, F1 &&f0) const {
       if (std::holds_alternative<typename instruction3::NOP3>(this->v())) {
         return f;

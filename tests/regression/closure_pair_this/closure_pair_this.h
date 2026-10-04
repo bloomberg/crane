@@ -155,10 +155,7 @@ struct ClosurePairThis {
       return _result;
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
-                                     T1 &>
-    T1 tree_rec(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 tree_rec(T1 f, F1 &&f0) const {
       const tree *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
@@ -222,10 +219,7 @@ struct ClosurePairThis {
       return _result;
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
-                                     T1 &>
-    T1 tree_rect(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 tree_rect(T1 f, F1 &&f0) const {
       const tree *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
@@ -302,14 +296,14 @@ struct ClosurePairThis {
   };
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, tree &>
+    requires std::is_invocable_r_v<T1, F0 &, const tree &>
   static T1 wrapper_rect(F0 &&f, const wrapper &w) {
     const auto &[a0] = w;
     return f(a0);
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, tree &>
+    requires std::is_invocable_r_v<T1, F0 &, const tree &>
   static T1 wrapper_rec(F0 &&f, const wrapper &w) {
     const auto &[a0] = w;
     return f(a0);

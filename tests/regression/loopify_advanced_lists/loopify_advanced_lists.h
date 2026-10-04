@@ -259,7 +259,6 @@ struct LoopifyAdvancedLists {
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
   static std::optional<uint64_t> find_first(F0 &&p, const List<uint64_t> &l) {
     const List<uint64_t> *_loop_l = &l;
     while (true) {

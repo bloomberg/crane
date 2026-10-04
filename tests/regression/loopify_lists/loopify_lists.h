@@ -100,7 +100,6 @@ struct LoopifyLists {
   };
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
   static T2
   list_rect(T2 f, F1 &&f0,
             const list<T1> &l) { /// CraneEnter: captures varying parameters for
@@ -146,7 +145,6 @@ struct LoopifyLists {
   }
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
   static T2
   list_rec(T2 f, F1 &&f0,
            const list<T1> &l) { /// CraneEnter: captures varying parameters for
@@ -596,7 +594,7 @@ struct LoopifyLists {
 
   /// scanl f acc l returns intermediate fold results.
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, T2 &, T1 &>
+    requires std::is_invocable_r_v<T2, F0 &, T2 &, const T1 &>
   static list<T2> scanl(F0 &&f, const T2 &acc, const list<T1> &l) {
     std::shared_ptr<list<T2>> _head{};
     std::shared_ptr<list<T2>> *_write = &_head;
@@ -624,7 +622,6 @@ struct LoopifyLists {
 
   /// group_by eq l groups consecutive equal elements.
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static list<list<T1>> group_by_aux(F0 &&eq, const T1 &prev,
                                      const list<T1> &acc, const list<T1> &l) {
     std::shared_ptr<list<list<T1>>> _head{};
@@ -661,7 +658,6 @@ struct LoopifyLists {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static list<list<T1>> group_by(F0 &&eq, const list<T1> &l) {
     if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
       return list<list<T1>>::nil();
@@ -834,7 +830,6 @@ struct LoopifyLists {
 
   /// count_matching p l counts elements satisfying predicate.
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
   static uint64_t count_matching(
       F0 &&p, const list<uint64_t> &l) { /// CraneEnter: captures varying
                                          /// parameters for each recursive call.
@@ -887,7 +882,7 @@ struct LoopifyLists {
 
   /// zip_with f l1 l2 zips two lists with a function.
   template <typename T1, typename T2, typename T3, typename F0>
-    requires std::is_invocable_r_v<T3, F0 &, T1 &, T2 &>
+    requires std::is_invocable_r_v<T3, F0 &, const T1 &, const T2 &>
   static list<T3> zip_with(F0 &&f, const list<T1> &l1, const list<T2> &l2) {
     std::shared_ptr<list<T3>> _head{};
     std::shared_ptr<list<T3>> *_write = &_head;
@@ -1070,8 +1065,6 @@ struct LoopifyLists {
 
   /// partition3 p q l partitions into 3 groups based on 2 predicates.
   template <typename F0, typename F1>
-    requires std::is_invocable_r_v<bool, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<bool, F1 &, uint64_t &>
   static std::pair<std::pair<list<uint64_t>, list<uint64_t>>, list<uint64_t>>
   partition3(F0 &&p, F1 &&q,
              const list<uint64_t> &l) { /// CraneEnter: captures varying
@@ -1281,7 +1274,6 @@ struct LoopifyLists {
 
   /// map_accum_l f acc l maps with accumulator from left.
   template <typename T1, typename T2, typename T3, typename F0>
-    requires std::is_invocable_r_v<std::pair<T3, T2>, F0 &, T3 &, T1 &>
   static std::pair<T3, list<T2>>
   map_accum_l(F0 &&f, const T3 &acc,
               const list<T1> &l) { /// CraneEnter: captures varying parameters
@@ -1348,7 +1340,6 @@ struct LoopifyLists {
 
   /// delete_by eq x l deletes first element equal to x by custom equality.
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, uint64_t &, uint64_t &>
   static list<uint64_t> delete_by(F0 &&eq, uint64_t x,
                                   const list<uint64_t> &l) {
     std::shared_ptr<list<uint64_t>> _head{};
@@ -1380,7 +1371,6 @@ struct LoopifyLists {
 
   /// find_indices p l returns list of indices where predicate holds.
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
   static list<uint64_t> find_indices_aux(F0 &&p, const list<uint64_t> &l,
                                          uint64_t i) {
     std::shared_ptr<list<uint64_t>> _head{};
@@ -1414,7 +1404,6 @@ struct LoopifyLists {
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
   static list<uint64_t> find_indices(F0 &&p, const list<uint64_t> &l) {
     return find_indices_aux(p, l, UINT64_C(0));
   }
@@ -1559,7 +1548,6 @@ struct LoopifyLists {
 
   /// span p l splits list at first element not satisfying p.
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
   static std::pair<list<uint64_t>, list<uint64_t>>
   span(F0 &&p,
        const list<uint64_t> &l) { /// CraneEnter: captures varying parameters

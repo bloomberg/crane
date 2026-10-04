@@ -9,7 +9,6 @@
 #include <cstdint>
 #include <memory>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -146,7 +145,6 @@ struct ListDef {
 
 struct Pos {
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, T1 &>
   static T1 iter(F0 &&f, const T1 &x, unsigned int n) {
     if (n == 1u) {
       return f(x);

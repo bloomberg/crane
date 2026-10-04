@@ -62,9 +62,7 @@ public:
   inline variant_t &v_mut() { return d_v_; }
   // ACCESSORS
   const variant_t &v() const { return d_v_; }
-  template <typename T1, typename F1>
-    requires bsl::is_invocable_r_v<T1, F1 &, Nat &, T1 &>
-  T1 nat_rect(T1 f, F1 &&f0) const {
+  template <typename T1, typename F1> T1 nat_rect(T1 f, F1 &&f0) const {
     if (bsl::holds_alternative<typename Nat::O>(this->v())) {
       return f;
     } else {
@@ -72,9 +70,7 @@ public:
       return f0(*d_n, d_n->template nat_rect<T1>(bsl::move(f), f0));
     }
   }
-  template <typename T1, typename F1>
-    requires bsl::is_invocable_r_v<T1, F1 &, Nat &, T1 &>
-  T1 nat_rec(T1 f, F1 &&f0) const {
+  template <typename T1, typename F1> T1 nat_rec(T1 f, F1 &&f0) const {
     if (bsl::holds_alternative<typename Nat::O>(this->v())) {
       return f;
     } else {

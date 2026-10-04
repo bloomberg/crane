@@ -149,7 +149,7 @@ public:
   const variant_t &v() const { return v_; }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, A &>
+    requires std::is_invocable_r_v<T1, F0 &, const A &>
   List<T1> map(F0 &&f) const {
     std::shared_ptr<List<T1>> _head{};
     std::shared_ptr<List<T1>> *_write = &_head;
@@ -189,7 +189,6 @@ concept Fn = requires {
 
 struct HktInstanceArgOrder {
   template <Fn _tcI0, typename T2, typename T3, typename F0>
-    requires std::is_invocable_r_v<T3, F0 &, T2 &>
   static typename _tcI0::template F<T3> fm(F0 &&x,
                                            typename _tcI0::template F<T2> x0) {
     return _tcI0::template fm<T2, T3>(x, std::move(x0));
@@ -224,7 +223,6 @@ struct HktInstanceArgOrder {
   static_assert(Fn<lstf>);
 
   template <Fn _tcI0, Fn _tcI1, typename T3, typename T4, typename F0>
-    requires std::is_invocable_r_v<T4, F0 &, T3 &>
   static typename _tcI1::template F<typename _tcI0::template F<T4>>
   compose_map(F0 &&f,
               typename _tcI1::template F<typename _tcI0::template F<T3>> x) {

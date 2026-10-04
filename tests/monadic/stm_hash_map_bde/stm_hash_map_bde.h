@@ -115,7 +115,8 @@ template <typename K, typename V> struct CHT {
   bsl::optional<V> stm_get(const K &k) const {
     stm::TVar<List<bsl::pair<K, V>>> b = this->bucket_of(k);
     List<bsl::pair<K, V>> xs = stm::readTVar(b);
-    return CHT<int, int>::template assoc_lookup<K, V>(this->cht_eqb, k, xs);
+    return CHT<int, int>::template assoc_lookup<K, V>(this->cht_eqb, k,
+                                                      bsl::move(xs));
   }
   std::monostate stm_put(const K &k, const V &v) const {
     stm::TVar<List<bsl::pair<K, V>>> b = this->bucket_of(k);
@@ -142,7 +143,7 @@ template <typename K, typename V> struct CHT {
     }
   }
   template <typename F1>
-    requires bsl::is_invocable_r_v<V, F1 &, bsl::optional<V> &>
+    requires bsl::is_invocable_r_v<V, F1 &, bsl::optional<V> &&>
   V stm_update(const K &k, F1 &&f) const {
     stm::TVar<List<bsl::pair<K, V>>> b = this->bucket_of(k);
     List<bsl::pair<K, V>> xs = stm::readTVar(b);
@@ -178,16 +179,13 @@ template <typename K, typename V> struct CHT {
   bsl::optional<V> hash_delete(const K &k) const {
     return stm::atomically([&] { return this->stm_delete(k); });
   }
-  template <typename F1>
-    requires bsl::is_invocable_r_v<V, F1 &, bsl::optional<V> &>
-  V hash_update(const K &k, F1 &&f) const {
+  template <typename F1> V hash_update(const K &k, F1 &&f) const {
     return stm::atomically([&] { return this->stm_update(k, f); });
   }
   V get_or(const K &k, const V &dflt) const {
     return stm::atomically([&] { return this->stm_get_or(k, dflt); });
   }
   template <typename T1, typename T2, typename F0>
-    requires bsl::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static bsl::optional<T2> assoc_lookup(F0 &&eqb, const T1 &k,
                                         const List<bsl::pair<T1, T2>> &xs) {
     if (bsl::holds_alternative<typename List<bsl::pair<T1, T2>>::Nil>(xs.v())) {
@@ -204,7 +202,6 @@ template <typename K, typename V> struct CHT {
     }
   }
   template <typename T1, typename T2, typename F0>
-    requires bsl::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static List<bsl::pair<T1, T2>>
   assoc_insert_or_replace(F0 &&eqb, const T1 &k, const T2 &v,
                           const List<bsl::pair<T1, T2>> &xs) {
@@ -226,7 +223,6 @@ template <typename K, typename V> struct CHT {
     }
   }
   template <typename T1, typename T2, typename F0>
-    requires bsl::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static bsl::pair<bsl::optional<T2>, List<bsl::pair<T1, T2>>>
   assoc_remove(F0 &&eqb, const T1 &k, const List<bsl::pair<T1, T2>> &xs) {
     if (bsl::holds_alternative<typename List<bsl::pair<T1, T2>>::Nil>(xs.v())) {

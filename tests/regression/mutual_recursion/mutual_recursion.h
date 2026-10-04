@@ -102,10 +102,7 @@ struct MutualRecursion {
   };
 
   template <typename T1, typename F0, typename F1, typename F2>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, uint64_t &, expr &, T1 &, expr &,
-                                   T1 &> &&
-             std::is_invocable_r_v<T1, F2 &, uint64_t &, expr &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
   static T1 expr_rect(F0 &&f, F1 &&f0, F2 &&f4, const expr &e) {
     if (std::holds_alternative<typename expr::Val>(e.v())) {
       const auto &[a0] = std::get<typename expr::Val>(e.v());
@@ -121,10 +118,7 @@ struct MutualRecursion {
   }
 
   template <typename T1, typename F0, typename F1, typename F2>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, uint64_t &, expr &, T1 &, expr &,
-                                   T1 &> &&
-             std::is_invocable_r_v<T1, F2 &, uint64_t &, expr &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
   static T1 expr_rec(F0 &&f, F1 &&f0, F2 &&f4, const expr &e) {
     if (std::holds_alternative<typename expr::Val>(e.v())) {
       const auto &[a0] = std::get<typename expr::Val>(e.v());

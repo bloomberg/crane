@@ -96,7 +96,7 @@ public:
   const variant_t &v() const { return v_; }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, A &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, A &, T1 &&>
   T1 fold_right(F0 &&f, T1 a0) const {
     const List<A> *_self = this;
 
@@ -377,10 +377,7 @@ struct FastVariant {
       return _result;
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
-                                     T1 &>
-    T1 tree_rec(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 tree_rec(T1 f, F1 &&f0) const {
       const tree *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
@@ -444,10 +441,7 @@ struct FastVariant {
       return _result;
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
-                                     T1 &>
-    T1 tree_rect(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 tree_rect(T1 f, F1 &&f0) const {
       const tree *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
@@ -568,8 +562,9 @@ struct FastVariant {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, uint64_t &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, const uint64_t &,
+                                     const uint64_t &>
     T1 shape_rec(F0 &&f, F1 &&f0, T1 f1) const {
       if (crane::holds_alternative<typename shape::Circle>(this->v())) {
         const auto &[a0] = crane::get<typename shape::Circle>(this->v());
@@ -583,8 +578,9 @@ struct FastVariant {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, uint64_t &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, const uint64_t &,
+                                     const uint64_t &>
     T1 shape_rect(F0 &&f, F1 &&f0, T1 f1) const {
       if (crane::holds_alternative<typename shape::Circle>(this->v())) {
         const auto &[a0] = crane::get<typename shape::Circle>(this->v());

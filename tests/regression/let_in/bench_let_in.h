@@ -44,14 +44,14 @@ struct BenchLetIn {
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, A &, B &>
+      requires std::is_invocable_r_v<T1, F0 &, const A &, const B &>
     T1 pair_rec(F0 &&f) const {
       const auto &[a0, a1] = *this;
       return f(a0, a1);
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, A &, B &>
+      requires std::is_invocable_r_v<T1, F0 &, const A &, const B &>
     T1 pair_rect(F0 &&f) const {
       const auto &[a0, a1] = *this;
       return f(a0, a1);
@@ -106,14 +106,14 @@ struct BenchLetIn {
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, A &, B &, C &>
+      requires std::is_invocable_r_v<T1, F0 &, const A &, const B &, const C &>
     T1 triple_rec(F0 &&f) const {
       const auto &[a0, a1, a2] = *this;
       return f(a0, a1, a2);
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, A &, B &, C &>
+      requires std::is_invocable_r_v<T1, F0 &, const A &, const B &, const C &>
     T1 triple_rect(F0 &&f) const {
       const auto &[a0, a1, a2] = *this;
       return f(a0, a1, a2);

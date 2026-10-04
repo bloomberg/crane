@@ -150,7 +150,7 @@ public:
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, A &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, A &, T1 &&>
   T1 fold_right(F0 &&f, T1 a0) const {
     const List<A> *_self = this;
 
@@ -237,7 +237,7 @@ public:
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, A &>
+    requires std::is_invocable_r_v<T1, F0 &, const A &>
   List<T1> map(F0 &&f) const {
     std::shared_ptr<List<T1>> _head{};
     std::shared_ptr<List<T1>> *_write = &_head;
@@ -324,7 +324,6 @@ public:
 
 struct Datatypes {
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, T1 &>
   static std::optional<T2> option_map(F0 &&f, const std::optional<T1> &o);
 };
 
@@ -729,9 +728,7 @@ struct PendantSumtreeRoundtripCase {
   };
 
   template <typename T1, typename F1, typename F2>
-    requires std::is_invocable_r_v<T1, F1 &, CertifiedPendant &> &&
-             std::is_invocable_r_v<T1, F2 &, CertifiedPendant &,
-                                   List<SumTree> &>
+    requires std::is_invocable_r_v<T1, F1 &, const CertifiedPendant &>
   static T1 SumTree_rect(uint64_t, F1 &&f, F2 &&f0, const SumTree &s) {
     if (std::holds_alternative<typename SumTree::SumLeaf>(s.v())) {
       const auto &[a0] = std::get<typename SumTree::SumLeaf>(s.v());
@@ -743,9 +740,7 @@ struct PendantSumtreeRoundtripCase {
   }
 
   template <typename T1, typename F1, typename F2>
-    requires std::is_invocable_r_v<T1, F1 &, CertifiedPendant &> &&
-             std::is_invocable_r_v<T1, F2 &, CertifiedPendant &,
-                                   List<SumTree> &>
+    requires std::is_invocable_r_v<T1, F1 &, const CertifiedPendant &>
   static T1 SumTree_rec(uint64_t, F1 &&f, F2 &&f0, const SumTree &s) {
     if (std::holds_alternative<typename SumTree::SumLeaf>(s.v())) {
       const auto &[a0] = std::get<typename SumTree::SumLeaf>(s.v());
@@ -860,7 +855,6 @@ struct PendantSumtreeRoundtripCase {
 };
 
 template <typename T1, typename T2, typename F0>
-  requires std::is_invocable_r_v<T2, F0 &, T1 &>
 std::optional<T2> Datatypes::option_map(F0 &&f, const std::optional<T1> &o) {
   if (o.has_value()) {
     const T1 &a = *o;

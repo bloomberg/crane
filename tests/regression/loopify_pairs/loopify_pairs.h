@@ -8,7 +8,6 @@
 #include <cstdint>
 #include <memory>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -97,7 +96,6 @@ struct LoopifyPairs {
   };
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
   static T2
   list_rect(T2 f, F1 &&f0,
             const list<T1> &l) { /// CraneEnter: captures varying parameters for
@@ -143,7 +141,6 @@ struct LoopifyPairs {
   }
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
   static T2
   list_rec(T2 f, F1 &&f0,
            const list<T1> &l) { /// CraneEnter: captures varying parameters for
@@ -190,7 +187,6 @@ struct LoopifyPairs {
 
   /// partition p l splits into (satisfies p, doesn't satisfy p).
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, T1 &>
   static std::pair<list<T1>, list<T1>>
   partition(F0 &&p, const list<T1> &l) { /// CraneEnter: captures varying
                                          /// parameters for each recursive call.
@@ -441,7 +437,6 @@ struct LoopifyPairs {
 
   /// span p l splits at first element not satisfying p.
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, T1 &>
   static std::pair<list<T1>, list<T1>>
   span(F0 &&p, const list<T1> &l) { /// CraneEnter: captures varying parameters
                                     /// for each recursive call.
@@ -502,8 +497,6 @@ struct LoopifyPairs {
 
   /// mapAccumL f acc l map with accumulator threading.
   template <typename F0>
-    requires std::is_invocable_r_v<std::pair<uint64_t, uint64_t>, F0 &,
-                                   uint64_t &, uint64_t &>
   static std::pair<uint64_t, list<uint64_t>>
   mapAccumL(F0 &&f, uint64_t acc,
             const list<uint64_t> &l) { /// CraneEnter: captures varying

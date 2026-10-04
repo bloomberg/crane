@@ -124,7 +124,6 @@ struct LoopifyGenerators {
 
   /// iterate f n x applies f repeatedly n times: iterate (+1) 3 5 -> 5,6,7.
   template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
   static List<uint64_t> iterate(F0 &&f, uint64_t n, uint64_t x) {
     std::shared_ptr<List<uint64_t>> _head{};
     std::shared_ptr<List<uint64_t>> *_write = &_head;
@@ -150,7 +149,8 @@ struct LoopifyGenerators {
 
   /// zip_with f l1 l2 zips with a combining function.
   template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &, uint64_t &>
+    requires std::is_invocable_r_v<uint64_t, F0 &, const uint64_t &,
+                                   const uint64_t &>
   static List<uint64_t> zip_with(F0 &&f, const List<uint64_t> &l1,
                                  const List<uint64_t> &l2) {
     std::shared_ptr<List<uint64_t>> _head{};
@@ -203,8 +203,6 @@ struct LoopifyGenerators {
 
   /// unfold f n init unfolds a list from seed value.
   template <typename F1>
-    requires std::is_invocable_r_v<std::pair<uint64_t, uint64_t>, F1 &,
-                                   uint64_t &>
   static List<uint64_t> unfold_fuel(uint64_t fuel, F1 &&f, uint64_t n,
                                     uint64_t seed) {
     std::shared_ptr<List<uint64_t>> _head{};
@@ -240,8 +238,6 @@ struct LoopifyGenerators {
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<std::pair<uint64_t, uint64_t>, F0 &,
-                                   uint64_t &>
   static List<uint64_t> unfold(F0 &&f, uint64_t n, uint64_t seed) {
     return unfold_fuel(UINT64_C(100), f, n, seed);
   }

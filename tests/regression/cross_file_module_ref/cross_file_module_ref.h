@@ -5,7 +5,6 @@
 #include <atomic>
 #include <concepts>
 #include <memory>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -110,9 +109,7 @@ concept S = requires {
 };
 
 template <S X> struct F {
-  template <typename F0>
-    requires std::is_invocable_r_v<typename X::t, F0 &, typename X::t &>
-  static typename X::t twice(F0 &&f) {
+  template <typename F0> static typename X::t twice(F0 &&f) {
     return f(f(X::zero));
   }
 };

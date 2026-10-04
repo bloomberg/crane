@@ -19,14 +19,14 @@ struct ImplicitArgs {
   }
 
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, T1 &>
+    requires std::is_invocable_r_v<T2, F0 &, T1 &&>
   static T2 apply(F0 &&f, T1 x0_) {
     return f(std::move(x0_));
   }
 
   template <typename T1, typename T2, typename T3, typename F0, typename F1>
-    requires std::is_invocable_r_v<T3, F0 &, T2 &> &&
-             std::is_invocable_r_v<T2, F1 &, T1 &>
+    requires std::is_invocable_r_v<T3, F0 &, T2> &&
+             std::is_invocable_r_v<T2, F1 &, const T1 &>
   static T3 compose(F0 &&g, F1 &&f, const T1 &x) {
     return g(f(x));
   }
@@ -115,7 +115,6 @@ struct ImplicitArgs {
   };
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &, mylist<T1> &, T2 &>
   static T2 mylist_rect(T2 f, F1 &&f0, const mylist<T1> &m) {
     if (std::holds_alternative<typename mylist<T1>::Mynil>(m.v())) {
       return f;
@@ -126,7 +125,6 @@ struct ImplicitArgs {
   }
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &, mylist<T1> &, T2 &>
   static T2 mylist_rec(T2 f, F1 &&f0, const mylist<T1> &m) {
     if (std::holds_alternative<typename mylist<T1>::Mynil>(m.v())) {
       return f;

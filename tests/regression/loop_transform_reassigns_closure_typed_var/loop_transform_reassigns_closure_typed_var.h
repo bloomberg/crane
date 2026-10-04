@@ -7,7 +7,6 @@
 #include <atomic>
 #include <memory>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -170,9 +169,7 @@ public:
 
   /// The callable takes a membership proof, so the recursive call cannot pass
   /// it through unchanged.
-  template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, A &>
-  Lst<T1> map_In(F0 &&f) const {
+  template <typename T1, typename F0> Lst<T1> map_In(F0 &&f) const {
     std::shared_ptr<Lst<T1>> _head{};
     std::shared_ptr<Lst<T1>> *_write = &_head;
     const Lst<A> *_loop_self = this;

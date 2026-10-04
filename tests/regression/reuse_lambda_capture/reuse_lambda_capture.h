@@ -71,7 +71,6 @@ struct ReuseLambdaCapture {
   };
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, mylist &, T1 &>
   static T1 mylist_rect(F0 &&f, T1 f0, const mylist &m) {
     if (std::holds_alternative<typename mylist::Mycons>(m.v())) {
       const auto &[a0, a1] = std::get<typename mylist::Mycons>(m.v());
@@ -82,7 +81,6 @@ struct ReuseLambdaCapture {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, mylist &, T1 &>
   static T1 mylist_rec(F0 &&f, T1 f0, const mylist &m) {
     if (std::holds_alternative<typename mylist::Mycons>(m.v())) {
       const auto &[a0, a1] = std::get<typename mylist::Mycons>(m.v());
@@ -95,7 +93,7 @@ struct ReuseLambdaCapture {
   static uint64_t length(const mylist &l);
 
   template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
+    requires std::is_invocable_r_v<uint64_t, F0 &, const uint64_t &>
   static mylist map(F0 &&f, const mylist &l) {
     if (std::holds_alternative<typename mylist::Mycons>(l.v())) {
       const auto &[a0, a1] = std::get<typename mylist::Mycons>(l.v());

@@ -130,9 +130,7 @@ struct SimpleLambdaFieldCapture {
       return _result;
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, uint64_t &, mylist &, T1 &>
-    T1 mylist_rec(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 mylist_rec(T1 f, F1 &&f0) const {
       const mylist *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
@@ -176,9 +174,7 @@ struct SimpleLambdaFieldCapture {
       return _result;
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, uint64_t &, mylist &, T1 &>
-    T1 mylist_rect(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 mylist_rect(T1 f, F1 &&f0) const {
       const mylist *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
@@ -235,14 +231,14 @@ struct SimpleLambdaFieldCapture {
     static tag mktag(uint64_t a0) { return {a0}; }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 tag_rec(F0 &&f) const {
       const auto &[a0] = *this;
       return f(a0);
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 tag_rect(F0 &&f) const {
       const auto &[a0] = *this;
       return f(a0);

@@ -138,7 +138,7 @@ template <typename T> struct Box {
 };
 
 template <typename T1, typename T2, typename F0>
-  requires std::is_invocable_r_v<T2, F0 &, T1 &>
+  requires std::is_invocable_r_v<T2, F0 &, const T1 &>
 Box<T2> ft_box(F0 &&f, const Box<T1> &b) {
   const auto &[tag, t0] = b;
   return Box<T2>::mk(endo<Nat>(Endo_id<Nat>, tag), f(t0));
@@ -149,7 +149,6 @@ Box<crane::obj> TFunctor_box(Endo<Nat> _x,
                              const Box<crane::obj> &x1_);
 
 template <typename T1, typename T2, typename F1>
-  requires std::is_invocable_r_v<T2, F1 &, T1 &>
 std::pair<T2, Box<T2>> ft_pair(TFunctor<Box<crane::obj>> h, F1 &&f,
                                const std::pair<T1, Box<T1>> &p) {
   const auto &[u, b] = p;

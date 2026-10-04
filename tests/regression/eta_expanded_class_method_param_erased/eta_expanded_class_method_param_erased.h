@@ -156,7 +156,7 @@ public:
   const variant_t &v() const { return v_; }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, A &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, A &, T1 &&>
   T1 fold_right(F0 &&f, T1 a0) const {
     const List<A> *_self = this;
 
@@ -217,7 +217,7 @@ List<std::pair<Nat, Nat>> build_saturated(const List<std::pair<Nat, Nat>> &l);
 
 template <typename F0>
   requires std::is_invocable_r_v<List<std::pair<Nat, Nat>>, F0 &,
-                                 List<std::pair<Nat, Nat>> &>
+                                 List<std::pair<Nat, Nat>> &&>
 List<std::pair<Nat, Nat>> apply_it(F0 &&f, List<std::pair<Nat, Nat>> x0_) {
   return f(std::move(x0_));
 }

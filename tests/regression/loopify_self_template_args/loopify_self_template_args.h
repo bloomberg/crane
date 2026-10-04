@@ -8,7 +8,6 @@
 #include <cstdint>
 #include <memory>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -145,7 +144,6 @@ struct List {
   };
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static List::list<T1> remove(F0 &&eq_dec0, const T1 &x,
                                const List::list<T1> &l);
 };
@@ -159,7 +157,6 @@ struct LoopifySelfTemplateArgs {
 };
 
 template <typename T1, typename F0>
-  requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
 List::list<T1> List::remove(F0 &&eq_dec0, const T1 &x,
                             const List::list<T1> &l) {
   if (std::holds_alternative<typename List::list<T1>::Nil>(l.v())) {

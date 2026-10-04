@@ -4,7 +4,6 @@
 #include <atomic>
 #include <memory>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -133,7 +132,6 @@ struct DependentMatchBranchTypes {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, Nat &, Nat &, vec &, T1 &>
   static T1 vec_rect(T1 f, F1 &&f0, const Nat &, const vec &v) {
     if (std::holds_alternative<typename vec::Vnil>(v.v())) {
       return f;
@@ -144,7 +142,6 @@ struct DependentMatchBranchTypes {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, Nat &, Nat &, vec &, T1 &>
   static T1 vec_rec(T1 f, F1 &&f0, const Nat &, const vec &v) {
     if (std::holds_alternative<typename vec::Vnil>(v.v())) {
       return f;

@@ -8,7 +8,6 @@
 #include <cstdint>
 #include <memory>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -93,9 +92,7 @@ struct NestedInductiveNoDrain {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, A &, lst<A> &, T1 &>
-    T1 lst_rec(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 lst_rec(T1 f, F1 &&f0) const {
       const lst<A> *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
@@ -139,9 +136,7 @@ struct NestedInductiveNoDrain {
       return _result;
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, A &, lst<A> &, T1 &>
-    T1 lst_rect(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 lst_rect(T1 f, F1 &&f0) const {
       const lst<A> *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
@@ -308,16 +303,12 @@ struct NestedInductiveNoDrain {
       }
     }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, lst<tree> &>
-    T1 tree_rec(F0 &&f) const {
+    template <typename T1, typename F0> T1 tree_rec(F0 &&f) const {
       const auto &[a0, a1] = std::get<typename tree::Node>(this->v());
       return f(a0, *a1);
     }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, lst<tree> &>
-    T1 tree_rect(F0 &&f) const {
+    template <typename T1, typename F0> T1 tree_rect(F0 &&f) const {
       const auto &[a0, a1] = std::get<typename tree::Node>(this->v());
       return f(a0, *a1);
     }

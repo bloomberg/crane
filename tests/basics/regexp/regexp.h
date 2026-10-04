@@ -218,10 +218,7 @@ struct Matcher {
   };
 
   template <typename T1, typename F1, typename F3, typename F4, typename F6>
-    requires std::is_invocable_r_v<T1, F1 &, int64_t &> &&
-             std::is_invocable_r_v<T1, F3 &, regexp &, T1 &, regexp &, T1 &> &&
-             std::is_invocable_r_v<T1, F4 &, regexp &, T1 &, regexp &, T1 &> &&
-             std::is_invocable_r_v<T1, F6 &, regexp &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, const int64_t &>
   static T1 regexp_rect(T1 f, F1 &&f0, T1 f1, F3 &&f2, F4 &&f3, T1 f4, F6 &&f5,
                         const regexp &r) {
     if (std::holds_alternative<typename regexp::Any>(r.v())) {
@@ -249,10 +246,7 @@ struct Matcher {
   }
 
   template <typename T1, typename F1, typename F3, typename F4, typename F6>
-    requires std::is_invocable_r_v<T1, F1 &, int64_t &> &&
-             std::is_invocable_r_v<T1, F3 &, regexp &, T1 &, regexp &, T1 &> &&
-             std::is_invocable_r_v<T1, F4 &, regexp &, T1 &, regexp &, T1 &> &&
-             std::is_invocable_r_v<T1, F6 &, regexp &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, const int64_t &>
   static T1 regexp_rec(T1 f, F1 &&f0, T1 f1, F3 &&f2, F4 &&f3, T1 f4, F6 &&f5,
                        const regexp &r) {
     if (std::holds_alternative<typename regexp::Any>(r.v())) {

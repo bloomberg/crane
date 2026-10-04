@@ -96,7 +96,7 @@ public:
   const variant_t &v() const { return v_; }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, T1 &, A &>
+    requires std::is_invocable_r_v<T1, F0 &, T1 &&, A>
   T1 fold_left(F0 &&f, T1 a0) const {
     const List<A> *_loop_self = this;
     T1 _loop_a0 = std::move(a0);
@@ -136,14 +136,16 @@ struct BoxedFields {
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &,
+                                     const uint64_t &>
     T1 point_rec(F0 &&f) const {
       const auto &[a0, a1] = *this;
       return f(a0, a1);
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &,
+                                     const uint64_t &>
     T1 point_rect(F0 &&f) const {
       const auto &[a0, a1] = *this;
       return f(a0, a1);
@@ -233,10 +235,6 @@ struct BoxedFields {
   };
 
   template <typename T1, typename F0, typename F1, typename F2>
-    requires std::is_invocable_r_v<T1, F0 &, point &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, List<point> &> &&
-             std::is_invocable_r_v<T1, F2 &, std::optional<point> &,
-                                   std::pair<uint64_t, point> &>
   static T1 shape_rect(F0 &&f, F1 &&f0, F2 &&f1, const shape &s) {
     if (std::holds_alternative<typename shape::Circle>(s.v())) {
       const auto &[a0, a1] = std::get<typename shape::Circle>(s.v());
@@ -251,10 +249,6 @@ struct BoxedFields {
   }
 
   template <typename T1, typename F0, typename F1, typename F2>
-    requires std::is_invocable_r_v<T1, F0 &, point &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, List<point> &> &&
-             std::is_invocable_r_v<T1, F2 &, std::optional<point> &,
-                                   std::pair<uint64_t, point> &>
   static T1 shape_rec(F0 &&f, F1 &&f0, F2 &&f1, const shape &s) {
     if (std::holds_alternative<typename shape::Circle>(s.v())) {
       const auto &[a0, a1] = std::get<typename shape::Circle>(s.v());
@@ -418,9 +412,7 @@ struct BoxedFields {
       return _result;
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, shape &, scene &, T1 &>
-    T1 scene_rec(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 scene_rec(T1 f, F1 &&f0) const {
       const scene *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
@@ -464,9 +456,7 @@ struct BoxedFields {
       return _result;
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, shape &, scene &, T1 &>
-    T1 scene_rect(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 scene_rect(T1 f, F1 &&f0) const {
       const scene *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
@@ -564,14 +554,14 @@ struct BoxedFields {
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, A &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &, A>
     T1 tagged_rec(F0 &&f) const {
       const auto &[a0, a1] = *this;
       return f(a0, crane::unbox(a1));
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, A &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &, A>
     T1 tagged_rect(F0 &&f) const {
       const auto &[a0, a1] = *this;
       return f(a0, crane::unbox(a1));

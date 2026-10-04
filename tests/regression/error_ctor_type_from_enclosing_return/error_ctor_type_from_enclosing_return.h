@@ -128,7 +128,7 @@ public:
   const variant_t &v() const { return v_; }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<EOU<T1>, F0 &, A &>
+    requires std::is_invocable_r_v<EOU<T1>, F0 &, const A &>
   EOU<T1> bind0(F0 &&k) const {
     if (std::holds_alternative<typename EOU<A>::Ok>(this->v())) {
       const auto &[a0] = std::get<typename EOU<A>::Ok>(this->v());

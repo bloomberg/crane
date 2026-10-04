@@ -9,7 +9,6 @@
 #include <memory>
 #include <optional>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -133,9 +132,7 @@ struct RecRecord {
       return _result;
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, A &, rlist<A> &, T1 &>
-    T1 rlist_rec(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 rlist_rec(T1 f, F1 &&f0) const {
       const rlist<A> *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
@@ -179,9 +176,7 @@ struct RecRecord {
       return _result;
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, A &, rlist<A> &, T1 &>
-    T1 rlist_rect(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 rlist_rect(T1 f, F1 &&f0) const {
       const rlist<A> *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
@@ -308,19 +303,13 @@ struct RecRecord {
       return rn_value1;
     }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &,
-                                     std::optional<RNode> &>
-    T1 RNode_rec(F0 &&f) const {
+    template <typename T1, typename F0> T1 RNode_rec(F0 &&f) const {
       const auto &[rn_value1, rn_next1] =
           std::get<typename RNode::MkRNode>(this->v());
       return f(rn_value1, *rn_next1);
     }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &,
-                                     std::optional<RNode> &>
-    T1 RNode_rect(F0 &&f) const {
+    template <typename T1, typename F0> T1 RNode_rect(F0 &&f) const {
       const auto &[rn_value1, rn_next1] =
           std::get<typename RNode::MkRNode>(this->v());
       return f(rn_value1, *rn_next1);

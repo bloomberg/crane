@@ -51,8 +51,9 @@ struct ReuseMixedFields {
   };
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, uint64_t &, uint64_t &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &,
+                                   const uint64_t &> &&
+             std::is_invocable_r_v<T1, F1 &, const uint64_t &, const uint64_t &>
   static T1 payload_rect(F0 &&f, F1 &&f0, const payload &p) {
     if (std::holds_alternative<typename payload::AsNat>(p.v())) {
       const auto &[a0, a1] = std::get<typename payload::AsNat>(p.v());
@@ -64,8 +65,9 @@ struct ReuseMixedFields {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, uint64_t &, uint64_t &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &,
+                                   const uint64_t &> &&
+             std::is_invocable_r_v<T1, F1 &, const uint64_t &, const uint64_t &>
   static T1 payload_rec(F0 &&f, F1 &&f0, const payload &p) {
     if (std::holds_alternative<typename payload::AsNat>(p.v())) {
       const auto &[a0, a1] = std::get<typename payload::AsNat>(p.v());

@@ -387,11 +387,7 @@ struct LoopifyExprVariants {
     }
 
     template <typename T1, typename F0, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, cond_expr &, T1 &, cond_expr &,
-                                     T1 &> &&
-               std::is_invocable_r_v<T1, F2 &, cond_expr &, T1 &, cond_expr &,
-                                     T1 &, cond_expr &, T1 &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 cond_expr_rec(F0 &&f, F1 &&f0, F2 &&f1) const {
       const cond_expr *_self = this;
 
@@ -513,11 +509,7 @@ struct LoopifyExprVariants {
     }
 
     template <typename T1, typename F0, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, cond_expr &, T1 &, cond_expr &,
-                                     T1 &> &&
-               std::is_invocable_r_v<T1, F2 &, cond_expr &, T1 &, cond_expr &,
-                                     T1 &, cond_expr &, T1 &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 cond_expr_rect(F0 &&f, F1 &&f0, F2 &&f1) const {
       const cond_expr *_self = this;
 
@@ -968,13 +960,7 @@ struct LoopifyExprVariants {
     }
 
     template <typename T1, typename F0, typename F1, typename F2, typename F3>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, arith_expr &, T1 &, arith_expr &,
-                                     T1 &> &&
-               std::is_invocable_r_v<T1, F2 &, arith_expr &, T1 &, arith_expr &,
-                                     T1 &> &&
-               std::is_invocable_r_v<T1, F3 &, arith_expr &, T1 &, arith_expr &,
-                                     T1 &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 arith_expr_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2) const {
       const arith_expr *_self = this;
 
@@ -1105,13 +1091,7 @@ struct LoopifyExprVariants {
     }
 
     template <typename T1, typename F0, typename F1, typename F2, typename F3>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, arith_expr &, T1 &, arith_expr &,
-                                     T1 &> &&
-               std::is_invocable_r_v<T1, F2 &, arith_expr &, T1 &, arith_expr &,
-                                     T1 &> &&
-               std::is_invocable_r_v<T1, F3 &, arith_expr &, T1 &, arith_expr &,
-                                     T1 &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 arith_expr_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2) const {
       const arith_expr *_self = this;
 
@@ -1825,11 +1805,6 @@ struct LoopifyExprVariants {
     }
 
     template <typename T1, typename F2, typename F3, typename F4>
-      requires std::is_invocable_r_v<T1, F2 &, bool_expr &, T1 &, bool_expr &,
-                                     T1 &> &&
-               std::is_invocable_r_v<T1, F3 &, bool_expr &, T1 &, bool_expr &,
-                                     T1 &> &&
-               std::is_invocable_r_v<T1, F4 &, bool_expr &, T1 &>
     T1 bool_expr_rec(T1 f, T1 f0, F2 &&f1, F3 &&f2, F4 &&f3) const {
       const bool_expr *_self = this;
 
@@ -1943,11 +1918,6 @@ struct LoopifyExprVariants {
     }
 
     template <typename T1, typename F2, typename F3, typename F4>
-      requires std::is_invocable_r_v<T1, F2 &, bool_expr &, T1 &, bool_expr &,
-                                     T1 &> &&
-               std::is_invocable_r_v<T1, F3 &, bool_expr &, T1 &, bool_expr &,
-                                     T1 &> &&
-               std::is_invocable_r_v<T1, F4 &, bool_expr &, T1 &>
     T1 bool_expr_rect(T1 f, T1 f0, F2 &&f1, F3 &&f2, F4 &&f3) const {
       const bool_expr *_self = this;
 
@@ -2294,10 +2264,8 @@ struct LoopifyExprVariants {
     }
 
     template <typename T1, typename F1, typename F2, typename F3>
-      requires std::is_invocable_r_v<T1, F1 &, uint64_t &, list_expr &, T1 &> &&
-               std::is_invocable_r_v<T1, F2 &, list_expr &, T1 &, list_expr &,
-                                     T1 &> &&
-               std::is_invocable_r_v<T1, F3 &, uint64_t &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F3 &, const uint64_t &,
+                                     const uint64_t &>
     T1 list_expr_rec(T1 f, F1 &&f0, F2 &&f1, F3 &&f2) const {
       const list_expr *_self = this;
 
@@ -2383,10 +2351,8 @@ struct LoopifyExprVariants {
     }
 
     template <typename T1, typename F1, typename F2, typename F3>
-      requires std::is_invocable_r_v<T1, F1 &, uint64_t &, list_expr &, T1 &> &&
-               std::is_invocable_r_v<T1, F2 &, list_expr &, T1 &, list_expr &,
-                                     T1 &> &&
-               std::is_invocable_r_v<T1, F3 &, uint64_t &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F3 &, const uint64_t &,
+                                     const uint64_t &>
     T1 list_expr_rect(T1 f, F1 &&f0, F2 &&f1, F3 &&f2) const {
       const list_expr *_self = this;
 

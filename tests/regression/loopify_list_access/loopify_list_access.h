@@ -8,7 +8,6 @@
 #include <cstdint>
 #include <memory>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -105,9 +104,7 @@ struct LoopifyListAccess {
   static List<uint64_t>
   lookup_all(uint64_t key, const List<std::pair<uint64_t, uint64_t>> &l);
 
-  template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
-  static uint64_t find(F0 &&p, const List<uint64_t> &l) {
+  template <typename F0> static uint64_t find(F0 &&p, const List<uint64_t> &l) {
     const List<uint64_t> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
@@ -127,7 +124,6 @@ struct LoopifyListAccess {
   static uint64_t count(uint64_t x, const List<uint64_t> &l);
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
   static uint64_t count_matching(
       F0 &&p, const List<uint64_t> &l) { /// CraneEnter: captures varying
                                          /// parameters for each recursive call.

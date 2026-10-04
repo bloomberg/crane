@@ -103,7 +103,6 @@ public:
 struct VoidCallback {
   /// 1. Pure HOF with void callback — the callback returns unit
   template <typename F0>
-    requires std::is_invocable_r_v<void, F0 &, uint64_t &>
   static void for_each(F0 &&f, const List<uint64_t> &xs) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(xs.v())) {
       return;
@@ -143,7 +142,6 @@ struct VoidCallback {
 
   /// 4. Callback that ignores argument and returns nat
   template <typename F0>
-    requires std::is_invocable_r_v<void, F0 &, uint64_t &>
   static uint64_t ignore_and_count(F0 &&f, const List<uint64_t> &xs) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(xs.v())) {
       return UINT64_C(0);
@@ -176,7 +174,7 @@ struct VoidCallback {
 
   /// 6. Void function as argument to polymorphic function
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, T1 &>
+    requires std::is_invocable_r_v<T2, F0 &, T1 &&>
   static T2 apply_to(F0 &&f, T1 x0_) {
     return f(std::move(x0_));
   }

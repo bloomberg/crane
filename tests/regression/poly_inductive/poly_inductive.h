@@ -40,14 +40,14 @@ struct PolyInductive {
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, A &>
+      requires std::is_invocable_r_v<T1, F0 &, const A &>
     T1 pbox_rec(F0 &&f) const {
       const auto &[a0] = *this;
       return f(a0);
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, A &>
+      requires std::is_invocable_r_v<T1, F0 &, const A &>
     T1 pbox_rect(F0 &&f) const {
       const auto &[a0] = *this;
       return f(a0);
@@ -98,14 +98,14 @@ struct PolyInductive {
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, A &, B &>
+      requires std::is_invocable_r_v<T1, F0 &, const A &, const B &>
     T1 ppair_rec(F0 &&f) const {
       const auto &[a0, a1] = *this;
       return f(a0, a1);
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, A &, B &>
+      requires std::is_invocable_r_v<T1, F0 &, const A &, const B &>
     T1 ppair_rect(F0 &&f) const {
       const auto &[a0, a1] = *this;
       return f(a0, a1);
@@ -174,7 +174,7 @@ struct PolyInductive {
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, A &>
+      requires std::is_invocable_r_v<T1, F0 &, const A &>
     pmaybe<T1> pmaybe_map(F0 &&f) const {
       if (std::holds_alternative<typename pmaybe<A>::PNothing>(this->v())) {
         return pmaybe<T1>::pnothing();
@@ -185,7 +185,7 @@ struct PolyInductive {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, A &>
+      requires std::is_invocable_r_v<T1, F1 &, const A &>
     T1 pmaybe_rec(T1 f, F1 &&f0) const {
       if (std::holds_alternative<typename pmaybe<A>::PNothing>(this->v())) {
         return f;
@@ -196,7 +196,7 @@ struct PolyInductive {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, A &>
+      requires std::is_invocable_r_v<T1, F1 &, const A &>
     T1 pmaybe_rect(T1 f, F1 &&f0) const {
       if (std::holds_alternative<typename pmaybe<A>::PNothing>(this->v())) {
         return f;
@@ -354,9 +354,7 @@ struct PolyInductive {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, A &> &&
-               std::is_invocable_r_v<T1, F1 &, ptree<A> &, T1 &, ptree<A> &,
-                                     T1 &>
+      requires std::is_invocable_r_v<T1, F0 &, const A &>
     T1 ptree_rec(F0 &&f, F1 &&f0) const {
       const ptree<A> *_self = this;
 
@@ -420,9 +418,7 @@ struct PolyInductive {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, A &> &&
-               std::is_invocable_r_v<T1, F1 &, ptree<A> &, T1 &, ptree<A> &,
-                                     T1 &>
+      requires std::is_invocable_r_v<T1, F0 &, const A &>
     T1 ptree_rect(F0 &&f, F1 &&f0) const {
       const ptree<A> *_self = this;
 

@@ -97,7 +97,6 @@ struct LoopifyOption {
   };
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
   static T2
   list_rect(T2 f, F1 &&f0,
             const list<T1> &l) { /// CraneEnter: captures varying parameters for
@@ -143,7 +142,6 @@ struct LoopifyOption {
   }
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
   static T2
   list_rec(T2 f, F1 &&f0,
            const list<T1> &l) { /// CraneEnter: captures varying parameters for
@@ -190,7 +188,6 @@ struct LoopifyOption {
 
   /// find_opt p l returns the first element satisfying p, or None.
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, T1 &>
   static std::optional<T1> find_opt(F0 &&p, const list<T1> &l) {
     const list<T1> *_loop_l = &l;
     while (true) {
@@ -252,7 +249,7 @@ struct LoopifyOption {
 
   /// map_opt f l applies f and keeps only Some results.
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<std::optional<T2>, F0 &, T1 &>
+    requires std::is_invocable_r_v<std::optional<T2>, F0 &, const T1 &>
   static list<T2> map_opt(F0 &&f, const list<T1> &l) {
     std::shared_ptr<list<T2>> _head{};
     std::shared_ptr<list<T2>> *_write = &_head;
@@ -283,7 +280,6 @@ struct LoopifyOption {
 
   /// find_index p l returns the index of the first match, or None.
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, T1 &>
   static std::optional<uint64_t> find_index_aux(F0 &&p, const list<T1> &l,
                                                 uint64_t i) {
     uint64_t _loop_i = std::move(i);
@@ -304,7 +300,6 @@ struct LoopifyOption {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, T1 &>
   static std::optional<uint64_t> find_index(F0 &&p, const list<T1> &l) {
     return find_index_aux<T1>(p, l, UINT64_C(0));
   }

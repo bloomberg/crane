@@ -6,7 +6,6 @@
 #include <atomic>
 #include <memory>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -130,7 +129,6 @@ public:
 
 struct Vector {
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, T1 &, Nat &, T<T1> &>
   static T2 caseS(F0 &&h, const Nat &_x, const T<T1> &v);
   template <typename T1> static T1 hd(const Nat &n, T<T1> x0_);
 };
@@ -146,7 +144,6 @@ struct VectorCasesDeduction {
 };
 
 template <typename T1, typename T2, typename F0>
-  requires std::is_invocable_r_v<T2, F0 &, T1 &, Nat &, T<T1> &>
 T2 Vector::caseS(F0 &&h, const Nat &, const T<T1> &v) {
   if (std::holds_alternative<typename T<T1>::Nil>(v.v())) {
     return crane_any_cast<T2>(

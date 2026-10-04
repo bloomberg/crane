@@ -25,14 +25,16 @@ struct GeneratedMemberNameCollision {
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &,
+                                     const uint64_t &>
     T1 boxed_rec(F0 &&f) const {
       const auto &[clone_0, v_mut_1] = *this;
       return f(clone_0, v_mut_1);
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &,
+                                     const uint64_t &>
     T1 boxed_rect(F0 &&f) const {
       const auto &[clone_0, v_mut_1] = *this;
       return f(clone_0, v_mut_1);
@@ -55,14 +57,14 @@ struct GeneratedMemberNameCollision {
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 clone_rec(F0 &&f) const {
       const auto &[a0] = *this;
       return f(a0);
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 clone_rect(F0 &&f) const {
       const auto &[a0] = *this;
       return f(a0);

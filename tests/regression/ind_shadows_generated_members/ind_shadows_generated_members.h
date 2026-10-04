@@ -72,8 +72,7 @@ struct IndShadowsGeneratedMembers {
   };
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, variant_t0 &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
   static T1 variant_t_rect(F0 &&f, F1 &&f0, const variant_t0 &v) {
     if (std::holds_alternative<typename variant_t0::V_mut>(v.v())) {
       const auto &[a0] = std::get<typename variant_t0::V_mut>(v.v());
@@ -85,8 +84,7 @@ struct IndShadowsGeneratedMembers {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, variant_t0 &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
   static T1 variant_t_rec(F0 &&f, F1 &&f0, const variant_t0 &v) {
     if (std::holds_alternative<typename variant_t0::V_mut>(v.v())) {
       const auto &[a0] = std::get<typename variant_t0::V_mut>(v.v());

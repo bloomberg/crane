@@ -7,7 +7,6 @@
 #include <atomic>
 #include <cstdint>
 #include <memory>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -99,10 +98,7 @@ struct ListClosureEscape {
       }
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
-                                     T1 &>
-    T1 tree_rec(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 tree_rec(T1 f, F1 &&f0) const {
       const tree *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
@@ -166,10 +162,7 @@ struct ListClosureEscape {
       return _result;
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
-                                     T1 &>
-    T1 tree_rect(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 tree_rect(T1 f, F1 &&f0) const {
       const tree *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
@@ -301,10 +294,7 @@ struct ListClosureEscape {
       }
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, crane::fn<uint64_t(uint64_t)> &,
-                                     fn_list &, T1 &>
-    T1 fn_list_rec(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 fn_list_rec(T1 f, F1 &&f0) const {
       const fn_list *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
@@ -348,10 +338,7 @@ struct ListClosureEscape {
       return _result;
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, crane::fn<uint64_t(uint64_t)> &,
-                                     fn_list &, T1 &>
-    T1 fn_list_rect(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 fn_list_rect(T1 f, F1 &&f0) const {
       const fn_list *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.

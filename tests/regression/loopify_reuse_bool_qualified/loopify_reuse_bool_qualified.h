@@ -3,7 +3,6 @@
 
 #include <cstdint>
 #include <memory>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #define CRANE_NON_ATOMIC_RC 1
@@ -92,7 +91,6 @@ struct LoopifyReuseBoolQualified {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, uint64_t &, lst &, T1 &>
   static T1 lst_rect(T1 f, F1 &&f0,
                      const lst &l) { /// CraneEnter: captures varying parameters
                                      /// for each recursive call.
@@ -137,7 +135,6 @@ struct LoopifyReuseBoolQualified {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, uint64_t &, lst &, T1 &>
   static T1 lst_rec(T1 f, F1 &&f0,
                     const lst &l) { /// CraneEnter: captures varying parameters
                                     /// for each recursive call.

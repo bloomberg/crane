@@ -78,8 +78,7 @@ struct DequeDeepTreeStackoverflow {
   };
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, std::deque<rose> &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
   static T1 rose_rect(F0 &&f, F1 &&f0, const rose &r) {
     if (std::holds_alternative<typename rose::RLeaf>(r.v())) {
       const auto &[a0] = std::get<typename rose::RLeaf>(r.v());
@@ -91,8 +90,7 @@ struct DequeDeepTreeStackoverflow {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, std::deque<rose> &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
   static T1 rose_rec(F0 &&f, F1 &&f0, const rose &r) {
     if (std::holds_alternative<typename rose::RLeaf>(r.v())) {
       const auto &[a0] = std::get<typename rose::RLeaf>(r.v());

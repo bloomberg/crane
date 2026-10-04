@@ -110,14 +110,16 @@ struct TwoLevelMediation {
     static w<A> mkw(uint64_t a0, List<A> a1) { return {a0, std::move(a1)}; }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, List<A> &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &,
+                                     const List<A> &>
     T1 w_rec(F0 &&f) const {
       const auto &[a0, a1] = *this;
       return f(a0, a1);
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, List<A> &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &,
+                                     const List<A> &>
     T1 w_rect(F0 &&f) const {
       const auto &[a0, a1] = *this;
       return f(a0, a1);
@@ -202,16 +204,12 @@ struct TwoLevelMediation {
       return t::node(w<t>::mkw(k, List<t>::cons(*this, List<t>::nil())));
     }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, w<t> &>
-    T1 t_rec(F0 &&f) const {
+    template <typename T1, typename F0> T1 t_rec(F0 &&f) const {
       const auto &[a0] = std::get<typename t::Node>(this->v());
       return f(*a0);
     }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, w<t> &>
-    T1 t_rect(F0 &&f) const {
+    template <typename T1, typename F0> T1 t_rect(F0 &&f) const {
       const auto &[a0] = std::get<typename t::Node>(this->v());
       return f(*a0);
     }

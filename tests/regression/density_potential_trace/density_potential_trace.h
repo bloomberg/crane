@@ -7,23 +7,19 @@
 
 struct DensityPotentialTraceCase {
   template <typename F0, typename F1>
-    requires std::is_invocable_r_v<Real, F0 &, Real &> &&
+    requires std::is_invocable_r_v<Real, F0 &, Real> &&
              std::is_invocable_r_v<Real, F1 &, Real &>
   static Real lapse(F0 &&f, F1 &&mu, Real x) {
     return f(mu(x));
   }
 
   template <typename F0, typename F1>
-    requires std::is_invocable_r_v<Real, F0 &, Real &> &&
-             std::is_invocable_r_v<Real, F1 &, Real &>
   static Real proper_time_static(F0 &&f, F1 &&mu, Real x, Real t) {
     return (lapse(f, mu, x) * t);
   }
 
   template <typename F0, typename F1, typename F2, typename F3>
-    requires std::is_invocable_r_v<Real, F0 &, Real &> &&
-             std::is_invocable_r_v<Real, F1 &, Real &> &&
-             std::is_invocable_r_v<Real, F2 &, Real &> &&
+    requires std::is_invocable_r_v<Real, F2 &, Real &> &&
              std::is_invocable_r_v<Real, F3 &, Real &>
   static Real proper_time_density_path(F0 &&f, F1 &&mu, F2 &&gamma, F3 &&v,
                                        Real t) {
@@ -37,9 +33,7 @@ struct DensityPotentialTraceCase {
     return r_inv((n(x) * n(x)));
   }
 
-  template <typename F0>
-    requires std::is_invocable_r_v<Real, F0 &, Real &>
-  static Real V_eff_massive(F0 &&n, Real m, Real x) {
+  template <typename F0> static Real V_eff_massive(F0 &&n, Real m, Real x) {
     return (r_pow(m, UINT64_C(2)) * V_eff(n, x));
   }
 

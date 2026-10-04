@@ -248,8 +248,8 @@ struct ConstructorBugs {
   };
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, Inner &> &&
-             std::is_invocable_r_v<T1, F1 &, uint64_t &>
+    requires std::is_invocable_r_v<T1, F0 &, const Inner &> &&
+             std::is_invocable_r_v<T1, F1 &, const uint64_t &>
   static T1 MySum_rect(F0 &&f, F1 &&f0, const MySum &m) {
     if (std::holds_alternative<typename MySum::Left>(m.v())) {
       const auto &[a0] = std::get<typename MySum::Left>(m.v());
@@ -261,8 +261,8 @@ struct ConstructorBugs {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, Inner &> &&
-             std::is_invocable_r_v<T1, F1 &, uint64_t &>
+    requires std::is_invocable_r_v<T1, F0 &, const Inner &> &&
+             std::is_invocable_r_v<T1, F1 &, const uint64_t &>
   static T1 MySum_rec(F0 &&f, F1 &&f0, const MySum &m) {
     if (std::holds_alternative<typename MySum::Left>(m.v())) {
       const auto &[a0] = std::get<typename MySum::Left>(m.v());
@@ -337,7 +337,7 @@ struct ConstructorBugs {
                                                           const State0 &s);
 
   template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, State0 &>
+    requires std::is_invocable_r_v<uint64_t, F0 &, const State0 &>
   static std::pair<std::pair<State0, uint64_t>, uint64_t>
   apply_twice(F0 &&f, const State0 &s) {
     return std::make_pair(std::make_pair(s, f(s)), f(s));

@@ -107,8 +107,6 @@ struct DeepMap {
   };
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, tree<T1> &, T2 &, T1 &, tree<T1> &,
-                                   T2 &>
   static T2
   tree_rect(T2 f, F1 &&f0,
             const tree<T1> &t) { /// CraneEnter: captures varying parameters for
@@ -174,8 +172,6 @@ struct DeepMap {
   }
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, tree<T1> &, T2 &, T1 &, tree<T1> &,
-                                   T2 &>
   static T2
   tree_rec(T2 f, F1 &&f0,
            const tree<T1> &t) { /// CraneEnter: captures varying parameters for

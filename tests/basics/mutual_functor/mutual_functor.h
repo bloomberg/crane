@@ -185,8 +185,7 @@ template <Elem E> struct MutualTree {
   };
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, uint64_t &, forest &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
   static T1 tree_rect(F0 &&f, F1 &&f0, const tree &t0) {
     if (std::holds_alternative<typename tree::Leaf>(t0.v())) {
       const auto &[a0] = std::get<typename tree::Leaf>(t0.v());
@@ -198,8 +197,7 @@ template <Elem E> struct MutualTree {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, uint64_t &, forest &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
   static T1 tree_rec(F0 &&f, F1 &&f0, const tree &t0) {
     if (std::holds_alternative<typename tree::Leaf>(t0.v())) {
       const auto &[a0] = std::get<typename tree::Leaf>(t0.v());
@@ -211,7 +209,6 @@ template <Elem E> struct MutualTree {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, forest &, T1 &>
   static T1 forest_rect(T1 f, F1 &&f0, const forest &f1) {
     if (std::holds_alternative<typename forest::FNil>(f1.v())) {
       return f;
@@ -222,7 +219,6 @@ template <Elem E> struct MutualTree {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, forest &, T1 &>
   static T1 forest_rec(T1 f, F1 &&f0, const forest &f1) {
     if (std::holds_alternative<typename forest::FNil>(f1.v())) {
       return f;

@@ -224,7 +224,6 @@ struct MonadClassNestedBind {
   }
 
   template <Monad _tcI0, typename T2, typename T3, typename F1>
-    requires std::is_invocable_r_v<typename _tcI0::template M<T3>, F1 &, T2 &>
   static typename _tcI0::template M<T3> bind(typename _tcI0::template M<T2> x,
                                              F1 &&x0) {
     return _tcI0::template bind<T2, T3>(std::move(x), x0);

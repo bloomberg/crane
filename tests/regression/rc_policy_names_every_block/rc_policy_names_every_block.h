@@ -93,7 +93,8 @@ struct RcPolicyNamesEveryBlock {
   static uint64_t hd(stream s);
 
   template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
+    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t> &&
+             std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
   static uint64_t twice(F0 &&f, uint64_t x) {
     return f(f(x));
   }

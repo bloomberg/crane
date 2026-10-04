@@ -190,8 +190,8 @@ template <SYM Ty> struct DefsFn {
   };
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, typename Ty::terminal &> &&
-             std::is_invocable_r_v<T1, F1 &, typename Ty::nonterminal &>
+    requires std::is_invocable_r_v<T1, F0 &, const typename Ty::terminal &> &&
+             std::is_invocable_r_v<T1, F1 &, const typename Ty::nonterminal &>
   static T1 symbol_rect(F0 &&f, F1 &&f0, const symbol &s) {
     if (std::holds_alternative<typename symbol::T>(s.v())) {
       const auto &[a0] = std::get<typename symbol::T>(s.v());
@@ -203,8 +203,8 @@ template <SYM Ty> struct DefsFn {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, typename Ty::terminal &> &&
-             std::is_invocable_r_v<T1, F1 &, typename Ty::nonterminal &>
+    requires std::is_invocable_r_v<T1, F0 &, const typename Ty::terminal &> &&
+             std::is_invocable_r_v<T1, F1 &, const typename Ty::nonterminal &>
   static T1 symbol_rec(F0 &&f, F1 &&f0, const symbol &s) {
     if (std::holds_alternative<typename symbol::T>(s.v())) {
       const auto &[a0] = std::get<typename symbol::T>(s.v());

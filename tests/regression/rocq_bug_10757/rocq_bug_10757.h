@@ -5,7 +5,6 @@
 #include "fn.h"
 #include "obj.h"
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -68,8 +67,6 @@ struct RocqBug10757 {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<Bool0, F0 &, T1 &, T1 &> &&
-             std::is_invocable_r_v<T1, F1 &, T1 &>
   static Sig<T1> iterate(F0 &&beq, F1 &&f, const T1 &x) {
     return iterate_func(beq, f, Sig<T1>::exist(x));
   }

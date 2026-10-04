@@ -86,14 +86,14 @@ struct PhantomTypeArgNeverEmitted {
   };
 
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, Nat &>
+    requires std::is_invocable_r_v<T2, F0 &, const Nat &>
   static T2 phantom_rect(F0 &&f, const phantom<T1> &p) {
     const auto &[a0] = p;
     return f(a0);
   }
 
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, Nat &>
+    requires std::is_invocable_r_v<T2, F0 &, const Nat &>
   static T2 phantom_rec(F0 &&f, const phantom<T1> &p) {
     const auto &[a0] = p;
     return f(a0);

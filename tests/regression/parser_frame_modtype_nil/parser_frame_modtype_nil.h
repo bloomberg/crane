@@ -37,18 +37,18 @@ template <SymbolTypes Ty> struct DefsFn {
   };
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, std::deque<typename Ty::symbol> &,
-                                   symbols_semty &,
-                                   std::deque<typename Ty::symbol> &>
+    requires std::is_invocable_r_v<
+        T1, F0 &, const std::deque<typename Ty::symbol> &,
+        const symbols_semty &, const std::deque<typename Ty::symbol> &>
   static T1 frame_rect(F0 &&f, const frame &f0) {
     const auto &[pre0, sem0, suf0] = f0;
     return f(pre0, sem0, suf0);
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, std::deque<typename Ty::symbol> &,
-                                   symbols_semty &,
-                                   std::deque<typename Ty::symbol> &>
+    requires std::is_invocable_r_v<
+        T1, F0 &, const std::deque<typename Ty::symbol> &,
+        const symbols_semty &, const std::deque<typename Ty::symbol> &>
   static T1 frame_rec(F0 &&f, const frame &f0) {
     const auto &[pre0, sem0, suf0] = f0;
     return f(pre0, sem0, suf0);

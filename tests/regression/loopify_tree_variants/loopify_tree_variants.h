@@ -231,10 +231,7 @@ struct LoopifyTreeVariants {
       return _result;
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, ternary &, T1 &, uint64_t &,
-                                     ternary &, T1 &, ternary &, T1 &>
-    T1 ternary_rec(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 ternary_rec(T1 f, F1 &&f0) const {
       const ternary *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
@@ -326,10 +323,7 @@ struct LoopifyTreeVariants {
       return _result;
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, ternary &, T1 &, uint64_t &,
-                                     ternary &, T1 &, ternary &, T1 &>
-    T1 ternary_rect(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 ternary_rect(T1 f, F1 &&f0) const {
       const ternary *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
@@ -592,9 +586,7 @@ struct LoopifyTreeVariants {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, quadtree &, T1 &, quadtree &,
-                                     T1 &, quadtree &, T1 &, quadtree &, T1 &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 quadtree_rec(F0 &&f, F1 &&f0) const {
       const quadtree *_self = this;
 
@@ -713,9 +705,7 @@ struct LoopifyTreeVariants {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, quadtree &, T1 &, quadtree &,
-                                     T1 &, quadtree &, T1 &, quadtree &, T1 &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 quadtree_rect(F0 &&f, F1 &&f0) const {
       const quadtree *_self = this;
 
@@ -1018,9 +1008,7 @@ struct LoopifyTreeVariants {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, leaf_tree &, T1 &, leaf_tree &,
-                                     T1 &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 leaf_tree_rec(F0 &&f, F1 &&f0) const {
       const leaf_tree *_self = this;
 
@@ -1084,9 +1072,7 @@ struct LoopifyTreeVariants {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, leaf_tree &, T1 &, leaf_tree &,
-                                     T1 &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 leaf_tree_rect(F0 &&f, F1 &&f0) const {
       const leaf_tree *_self = this;
 

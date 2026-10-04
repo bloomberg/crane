@@ -161,7 +161,6 @@ struct LoopifyListGenerators {
   static List<uint64_t> cycle(uint64_t n, const List<uint64_t> &l);
 
   template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
   static List<uint64_t> iterate(F0 &&f, uint64_t n, uint64_t x) {
     std::shared_ptr<List<uint64_t>> _head{};
     std::shared_ptr<List<uint64_t>> *_write = &_head;
@@ -186,7 +185,6 @@ struct LoopifyListGenerators {
   }
 
   template <typename F2>
-    requires std::is_invocable_r_v<uint64_t, F2 &, uint64_t &>
   static List<uint64_t> build_list_aux(uint64_t n, uint64_t idx, F2 &&f) {
     std::shared_ptr<List<uint64_t>> _head{};
     std::shared_ptr<List<uint64_t>> *_write = &_head;
@@ -210,9 +208,7 @@ struct LoopifyListGenerators {
     return std::move(*_head);
   }
 
-  template <typename F1>
-    requires std::is_invocable_r_v<uint64_t, F1 &, uint64_t &>
-  static List<uint64_t> build_list(uint64_t n, F1 &&f) {
+  template <typename F1> static List<uint64_t> build_list(uint64_t n, F1 &&f) {
     return build_list_aux(n, UINT64_C(0), f);
   }
 
@@ -328,7 +324,8 @@ struct LoopifyListGenerators {
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &, uint64_t &>
+    requires std::is_invocable_r_v<uint64_t, F0 &, const uint64_t &,
+                                   const uint64_t &>
   static List<uint64_t> zip_with(F0 &&f, const List<uint64_t> &l1,
                                  const List<uint64_t> &l2) {
     std::shared_ptr<List<uint64_t>> _head{};

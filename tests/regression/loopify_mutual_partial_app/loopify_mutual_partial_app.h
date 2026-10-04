@@ -94,7 +94,7 @@ public:
   const variant_t &v() const { return v_; }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, T1 &, A &>
+    requires std::is_invocable_r_v<T1, F0 &, T1 &&, const A &>
   T1 fold_left(F0 &&f, T1 a0) const {
     const List<A> *_loop_self = this;
     T1 _loop_a0 = std::move(a0);
@@ -111,7 +111,7 @@ public:
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, A &>
+    requires std::is_invocable_r_v<T1, F0 &, const A &>
   List<T1> map(F0 &&f) const {
     std::shared_ptr<List<T1>> _head{};
     std::shared_ptr<List<T1>> *_write = &_head;
@@ -482,10 +482,8 @@ struct LoopifyMutualPartialApp {
 
   template <typename T1, typename T2, typename F0, typename F1, typename F2,
             typename F3>
-    requires std::is_invocable_r_v<T2, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T2, F1 &, T1 &> &&
-             std::is_invocable_r_v<T2, F2 &, e<T1> &, T2 &, e<T1> &, T2 &> &&
-             std::is_invocable_r_v<T2, F3 &, md<T1> &>
+    requires std::is_invocable_r_v<T2, F0 &, const uint64_t &> &&
+             std::is_invocable_r_v<T2, F1 &, const T1 &>
   static T2 e_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2,
                    const e<T1> &e0) { /// CraneEnter: captures varying
                                       /// parameters for each recursive call.
@@ -553,10 +551,8 @@ struct LoopifyMutualPartialApp {
 
   template <typename T1, typename T2, typename F0, typename F1, typename F2,
             typename F3>
-    requires std::is_invocable_r_v<T2, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T2, F1 &, T1 &> &&
-             std::is_invocable_r_v<T2, F2 &, e<T1> &, T2 &, e<T1> &, T2 &> &&
-             std::is_invocable_r_v<T2, F3 &, md<T1> &>
+    requires std::is_invocable_r_v<T2, F0 &, const uint64_t &> &&
+             std::is_invocable_r_v<T2, F1 &, const T1 &>
   static T2 e_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2,
                   const e<T1> &e0) { /// CraneEnter: captures varying parameters
                                      /// for each recursive call.
@@ -623,9 +619,6 @@ struct LoopifyMutualPartialApp {
   }
 
   template <typename T1, typename T2, typename F1, typename F2, typename F3>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &, e<T1> &> &&
-             std::is_invocable_r_v<T2, F2 &, List<md<T1>> &> &&
-             std::is_invocable_r_v<T2, F3 &, md<T1> &, T2 &, md<T1> &, T2 &>
   static T2 md_rect(T2 f, F1 &&f0, F2 &&f1, F3 &&f2,
                     const md<T1> &m) { /// CraneEnter: captures varying
                                        /// parameters for each recursive call.
@@ -692,9 +685,6 @@ struct LoopifyMutualPartialApp {
   }
 
   template <typename T1, typename T2, typename F1, typename F2, typename F3>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &, e<T1> &> &&
-             std::is_invocable_r_v<T2, F2 &, List<md<T1>> &> &&
-             std::is_invocable_r_v<T2, F3 &, md<T1> &, T2 &, md<T1> &, T2 &>
   static T2 md_rec(T2 f, F1 &&f0, F2 &&f1, F3 &&f2,
                    const md<T1> &m) { /// CraneEnter: captures varying
                                       /// parameters for each recursive call.
@@ -761,7 +751,7 @@ struct LoopifyMutualPartialApp {
   }
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &>
+    requires std::is_invocable_r_v<T2, F1 &, const T1 &>
   static e<T2> ft_e(Endo<uint64_t> h, F1 &&f,
                     const e<T1> &x) { /// CraneEnter: captures varying
                                       /// parameters for each recursive call.
@@ -855,7 +845,7 @@ struct LoopifyMutualPartialApp {
   }
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &>
+    requires std::is_invocable_r_v<T2, F1 &, const T1 &>
   static md<T2> ft_md(Endo<uint64_t> h, F1 &&f,
                       const md<T1> &m) { /// CraneEnter: captures varying
                                          /// parameters for each recursive call.

@@ -7,7 +7,6 @@
 #include <atomic>
 #include <memory>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -115,8 +114,6 @@ template <S X> struct HashTrie {
   };
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, typename X::t &, T1 &, Trie<T1> &,
-                                   T2 &, Trie<T1> &, T2 &>
   static T2 Trie_rect(T2 f, F1 &&f0, const Trie<T1> &t0) {
     if (std::holds_alternative<typename Trie<T1>::Empty>(t0.v())) {
       return f;
@@ -129,8 +126,6 @@ template <S X> struct HashTrie {
   }
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, typename X::t &, T1 &, Trie<T1> &,
-                                   T2 &, Trie<T1> &, T2 &>
   static T2 Trie_rec(T2 f, F1 &&f0, const Trie<T1> &t0) {
     if (std::holds_alternative<typename Trie<T1>::Empty>(t0.v())) {
       return f;

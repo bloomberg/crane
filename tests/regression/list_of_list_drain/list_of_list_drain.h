@@ -8,7 +8,6 @@
 #include <cstdint>
 #include <memory>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -93,9 +92,7 @@ struct ListOfListDrain {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, A &, lst<A> &, T1 &>
-    T1 lst_rec(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 lst_rec(T1 f, F1 &&f0) const {
       const lst<A> *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
@@ -139,9 +136,7 @@ struct ListOfListDrain {
       return _result;
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, A &, lst<A> &, T1 &>
-    T1 lst_rect(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 lst_rect(T1 f, F1 &&f0) const {
       const lst<A> *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
@@ -305,16 +300,12 @@ struct ListOfListDrain {
     }
   };
 
-  template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, lst<lst<t>> &>
-  static T1 t_rect(F0 &&f, const t &t0) {
+  template <typename T1, typename F0> static T1 t_rect(F0 &&f, const t &t0) {
     const auto &[a0, a1] = std::get<typename t::Node>(t0.v());
     return f(a0, *a1);
   }
 
-  template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, lst<lst<t>> &>
-  static T1 t_rec(F0 &&f, const t &t0) {
+  template <typename T1, typename F0> static T1 t_rec(F0 &&f, const t &t0) {
     const auto &[a0, a1] = std::get<typename t::Node>(t0.v());
     return f(a0, *a1);
   }

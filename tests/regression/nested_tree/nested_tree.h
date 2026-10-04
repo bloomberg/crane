@@ -7,7 +7,6 @@
 #include <atomic>
 #include <memory>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -208,7 +207,6 @@ struct NestedTree {
   };
 
   template <typename T1, typename T2 = void, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, crane::obj &, tree &, T1 &>
   static T1 tree_rect(const T1 &f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
@@ -220,7 +218,6 @@ struct NestedTree {
   }
 
   template <typename T1, typename T2 = void, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, crane::obj &, tree &, T1 &>
   static T1 tree_rec(const T1 &f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
@@ -248,7 +245,6 @@ struct NestedTree {
               tree::leaf())));
 
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<List<T2>, F0 &, T1 &>
   static List<T2> lift(F0 &&f, const std::pair<T1, T1> &p) {
     const auto &[x, y] = p;
     return f(x).app(f(y));

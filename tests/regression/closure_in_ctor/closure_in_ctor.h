@@ -45,7 +45,8 @@ struct ClosureInCtor {
   };
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, crane::fn<uint64_t(uint64_t)> &>
+    requires std::is_invocable_r_v<T1, F0 &,
+                                   const crane::fn<uint64_t(uint64_t)> &>
   static T1 box_rect(F0 &&f, T1 f0, const box &b) {
     if (std::holds_alternative<typename box::Box0>(b.v())) {
       const auto &[a0] = std::get<typename box::Box0>(b.v());
@@ -56,7 +57,8 @@ struct ClosureInCtor {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, crane::fn<uint64_t(uint64_t)> &>
+    requires std::is_invocable_r_v<T1, F0 &,
+                                   const crane::fn<uint64_t(uint64_t)> &>
   static T1 box_rec(F0 &&f, T1 f0, const box &b) {
     if (std::holds_alternative<typename box::Box0>(b.v())) {
       const auto &[a0] = std::get<typename box::Box0>(b.v());

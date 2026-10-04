@@ -15,7 +15,7 @@ struct FixDirectReturn {
   /// the COPY of add (a std::function) inside the outer lambda
   /// still holds & references to the destroyed stack variables.
   template <typename F1>
-    requires std::is_invocable_r_v<uint64_t, F1 &, uint64_t &>
+    requires std::is_invocable_r_v<uint64_t, F1 &, uint64_t>
   static uint64_t make_callback(uint64_t base, F1 &&x0_) {
     auto add_impl = [&](auto &_self_add, uint64_t x) -> uint64_t {
       if (x <= 0) {

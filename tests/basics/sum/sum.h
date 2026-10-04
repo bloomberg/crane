@@ -78,7 +78,7 @@ struct Sum {
     const variant_t &v() const { return v_; }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, B &>
+      requires std::is_invocable_r_v<T1, F0 &, const B &>
     either<A, T1> map_right(F0 &&f) const {
       if (std::holds_alternative<typename either<A, B>::Left>(this->v())) {
         const auto &[a0] = std::get<typename either<A, B>::Left>(this->v());
@@ -90,7 +90,7 @@ struct Sum {
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, A &>
+      requires std::is_invocable_r_v<T1, F0 &, const A &>
     either<T1, B> map_left(F0 &&f) const {
       if (std::holds_alternative<typename either<A, B>::Left>(this->v())) {
         const auto &[a0] = std::get<typename either<A, B>::Left>(this->v());
@@ -110,8 +110,8 @@ struct Sum {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, A &> &&
-               std::is_invocable_r_v<T1, F1 &, B &>
+      requires std::is_invocable_r_v<T1, F0 &, const A &> &&
+               std::is_invocable_r_v<T1, F1 &, const B &>
     T1 either_rec(F0 &&f, F1 &&f0) const {
       if (std::holds_alternative<typename either<A, B>::Left>(this->v())) {
         const auto &[a0] = std::get<typename either<A, B>::Left>(this->v());
@@ -123,8 +123,8 @@ struct Sum {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, A &> &&
-               std::is_invocable_r_v<T1, F1 &, B &>
+      requires std::is_invocable_r_v<T1, F0 &, const A &> &&
+               std::is_invocable_r_v<T1, F1 &, const B &>
     T1 either_rect(F0 &&f, F1 &&f0) const {
       if (std::holds_alternative<typename either<A, B>::Left>(this->v())) {
         const auto &[a0] = std::get<typename either<A, B>::Left>(this->v());
@@ -239,9 +239,9 @@ struct Sum {
     const variant_t &v() const { return v_; }
 
     template <typename T1, typename F0, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F0 &, A &> &&
-               std::is_invocable_r_v<T1, F1 &, B &> &&
-               std::is_invocable_r_v<T1, F2 &, C &>
+      requires std::is_invocable_r_v<T1, F0 &, const A &> &&
+               std::is_invocable_r_v<T1, F1 &, const B &> &&
+               std::is_invocable_r_v<T1, F2 &, const C &>
     T1 triple_rec(F0 &&f, F1 &&f0, F2 &&f1) const {
       if (std::holds_alternative<typename triple<A, B, C>::First>(this->v())) {
         const auto &[a0] = std::get<typename triple<A, B, C>::First>(this->v());
@@ -258,9 +258,9 @@ struct Sum {
     }
 
     template <typename T1, typename F0, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F0 &, A &> &&
-               std::is_invocable_r_v<T1, F1 &, B &> &&
-               std::is_invocable_r_v<T1, F2 &, C &>
+      requires std::is_invocable_r_v<T1, F0 &, const A &> &&
+               std::is_invocable_r_v<T1, F1 &, const B &> &&
+               std::is_invocable_r_v<T1, F2 &, const C &>
     T1 triple_rect(F0 &&f, F1 &&f0, F2 &&f1) const {
       if (std::holds_alternative<typename triple<A, B, C>::First>(this->v())) {
         const auto &[a0] = std::get<typename triple<A, B, C>::First>(this->v());

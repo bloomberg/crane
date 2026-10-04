@@ -137,7 +137,7 @@ struct Vector {
   template <typename T1>
   static T1 nth(uint64_t _x, const T0<T1> &v0, const T &p);
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, T2 &, T1 &>
+    requires std::is_invocable_r_v<T2, F0 &, T2 &&, const T1 &>
   static T2 fold_left(F0 &&f, T2 b, uint64_t _x, const T0<T1> &v0);
 };
 
@@ -178,7 +178,7 @@ template <typename T1> T1 Vector::nth(uint64_t, const T0<T1> &v0, const T &p) {
 }
 
 template <typename T1, typename T2, typename F0>
-  requires std::is_invocable_r_v<T2, F0 &, T2 &, T1 &>
+  requires std::is_invocable_r_v<T2, F0 &, T2 &&, const T1 &>
 T2 Vector::fold_left(F0 &&f, T2 b, uint64_t, const T0<T1> &v0) {
   if (std::holds_alternative<typename T0<T1>::Nil>(v0.v())) {
     return b;

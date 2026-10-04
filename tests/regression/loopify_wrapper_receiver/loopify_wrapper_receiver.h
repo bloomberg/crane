@@ -35,14 +35,14 @@ struct LoopifyWrapperReceiver {
     static box<A> b(A a0) { return {std::move(a0)}; }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, A &>
+      requires std::is_invocable_r_v<T1, F0 &, const A &>
     T1 box_rec(F0 &&f) const {
       const auto &[a0] = *this;
       return f(a0);
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, A &>
+      requires std::is_invocable_r_v<T1, F0 &, const A &>
     T1 box_rect(F0 &&f) const {
       const auto &[a0] = *this;
       return f(a0);
@@ -126,9 +126,7 @@ struct LoopifyWrapperReceiver {
       }
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, box<t> &>
-    T1 t_rec(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 t_rec(T1 f, F1 &&f0) const {
       if (std::holds_alternative<typename t::L>(this->v())) {
         return f;
       } else {
@@ -137,9 +135,7 @@ struct LoopifyWrapperReceiver {
       }
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, box<t> &>
-    T1 t_rect(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 t_rect(T1 f, F1 &&f0) const {
       if (std::holds_alternative<typename t::L>(this->v())) {
         return f;
       } else {

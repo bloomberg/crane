@@ -76,8 +76,7 @@ struct PairBothRecursive {
   };
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, std::pair<t, t> &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
   static T1 t_rect(F0 &&f, F1 &&f0, const t &t0) {
     if (std::holds_alternative<typename t::Leaf>(t0.v())) {
       const auto &[a0] = std::get<typename t::Leaf>(t0.v());
@@ -89,8 +88,7 @@ struct PairBothRecursive {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, std::pair<t, t> &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
   static T1 t_rec(F0 &&f, F1 &&f0, const t &t0) {
     if (std::holds_alternative<typename t::Leaf>(t0.v())) {
       const auto &[a0] = std::get<typename t::Leaf>(t0.v());

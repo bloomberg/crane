@@ -9,7 +9,6 @@
 #include <memory>
 #include <optional>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -182,7 +181,6 @@ typename _tcI0::template m<T2> mret(const T2 &x) {
 }
 
 template <Mon _tcI0, typename T2, typename T3, typename F1>
-  requires std::is_invocable_r_v<typename _tcI0::template m<T3>, F1 &, T2 &>
 typename _tcI0::template m<T3> mbind(typename _tcI0::template m<T2> x,
                                      F1 &&x0) {
   return _tcI0::template mbind<T2, T3>(std::move(x), x0);
@@ -196,7 +194,6 @@ typename _tcI0::template m<T3> liftM(std::type_identity_t<crane::fn<T3(T2)>> f,
 }
 
 template <Fun _tcI0, typename T2, typename T3, typename F0>
-  requires std::is_invocable_r_v<T3, F0 &, T2 &>
 typename _tcI0::template F<T3> ffmap(F0 &&x,
                                      typename _tcI0::template F<T2> x0) {
   return _tcI0::template ffmap<T2, T3>(x, std::move(x0));

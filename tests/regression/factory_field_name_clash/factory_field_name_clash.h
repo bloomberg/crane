@@ -22,14 +22,14 @@ struct FactoryFieldNameClash {
   };
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
   static T1 a_rect(F0 &&f, const a &a0) {
     const auto &[a1] = a0;
     return f(a1);
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
   static T1 a_rec(F0 &&f, const a &a0) {
     const auto &[a1] = a0;
     return f(a1);

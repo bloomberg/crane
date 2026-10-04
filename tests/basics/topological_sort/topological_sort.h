@@ -136,9 +136,7 @@ public:
     return std::move(*_head);
   }
 
-  template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, A &>
-  std::optional<A> find(F0 &&f) const {
+  template <typename F0> std::optional<A> find(F0 &&f) const {
     const List<A> *_loop_self = this;
     while (true) {
       auto &&_sv = *_loop_self;
@@ -155,9 +153,7 @@ public:
     }
   }
 
-  template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, A &>
-  List<A> filter(F0 &&f) const {
+  template <typename F0> List<A> filter(F0 &&f) const {
     std::shared_ptr<List<A>> _head{};
     std::shared_ptr<List<A>> *_write = &_head;
     const List<A> *_loop_self = this;
@@ -185,7 +181,7 @@ public:
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, A &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, A &, T1 &&>
   T1 fold_right(F0 &&f, T1 a0) const {
     const List<A> *_self = this;
 
@@ -272,7 +268,7 @@ public:
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, A &>
+    requires std::is_invocable_r_v<T1, F0 &, const A &>
   List<T1> map(F0 &&f) const {
     std::shared_ptr<List<T1>> _head{};
     std::shared_ptr<List<T1>> *_write = &_head;
@@ -359,8 +355,6 @@ public:
 
 struct ToString {
   template <typename T1, typename T2, typename F0, typename F1>
-    requires std::is_invocable_r_v<std::string, F0 &, T1 &> &&
-             std::is_invocable_r_v<std::string, F1 &, T2 &>
   static std::string pair_to_string(F0 &&p1, F1 &&p2,
                                     const std::pair<T1, T2> &x) {
     const auto &[a, b] = x;
@@ -369,7 +363,7 @@ struct ToString {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<std::string, F0 &, T1 &>
+    requires std::is_invocable_r_v<std::string, F0 &, const T1 &>
   static std::string intersperse(F0 &&p, std::string sep, const List<T1> &l) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return "";
@@ -385,7 +379,7 @@ struct ToString {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<std::string, F0 &, T1 &>
+    requires std::is_invocable_r_v<std::string, F0 &, const T1 &>
   static std::string list_to_string(F0 &&p, const List<T1> &l) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return "[]";
@@ -518,7 +512,6 @@ struct TopologicalSort {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static T1 cycle_entry_aux(F0 &&eqb_node,
                             const List<std::pair<T1, List<T1>>> &graph0,
                             const List<T1> &seens, T1 elem, uint64_t counter) {
@@ -542,7 +535,6 @@ struct TopologicalSort {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static std::optional<T1>
   cycle_entry(F0 &&eqb_node, const List<std::pair<T1, List<T1>>> &graph0) {
     if (std::holds_alternative<typename List<std::pair<T1, List<T1>>>::Nil>(
@@ -558,7 +550,6 @@ struct TopologicalSort {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static List<T1>
   cycle_extract_aux(F0 &&eqb_node, const List<std::pair<T1, List<T1>>> &graph0,
                     uint64_t counter, const T1 &elem, List<T1> cycl) {
@@ -580,7 +571,6 @@ struct TopologicalSort {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static List<T1> cycle_extract(F0 &&eqb_node,
                                 const List<std::pair<T1, List<T1>>> &graph0) {
     auto _cs = cycle_entry<T1>(eqb_node, graph0);
@@ -647,7 +637,6 @@ struct TopologicalSort {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static List<List<T1>> topological_sort(F0 &&eqb_node,
                                          const List<std::pair<T1, T1>> &g) {
     List<std::pair<T1, List<T1>>> g_ = make_graph<T1>(eqb_node, g);
@@ -655,7 +644,6 @@ struct TopologicalSort {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static order<T1>
   topological_sort_graph(F0 &&eqb_node,
                          const List<std::pair<T1, List<T1>>> &graph0) {
@@ -663,7 +651,6 @@ struct TopologicalSort {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static List<std::pair<T1, uint64_t>>
   topological_rank_list(F0 &&eqb_node,
                         const List<std::pair<T1, List<T1>>> &graph0) {

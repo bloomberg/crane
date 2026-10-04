@@ -156,9 +156,7 @@ struct ErasedMultiIndex {
       return _result;
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, crane::obj &, hlist &, T1 &>
-    T1 hlist_rec(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 hlist_rec(T1 f, F1 &&f0) const {
       const hlist *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
@@ -207,9 +205,7 @@ struct ErasedMultiIndex {
       return _result;
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, crane::obj &, hlist &, T1 &>
-    T1 hlist_rect(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 hlist_rect(T1 f, F1 &&f0) const {
       const hlist *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.

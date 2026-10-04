@@ -119,7 +119,6 @@ struct ReuseMapTypeChange {
   };
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &, lst<T1> &, T2 &>
   static T2 lst_rect(T2 f, F1 &&f0, const lst<T1> &l) {
     if (std::holds_alternative<typename lst<T1>::Nil>(l.v())) {
       return f;
@@ -130,7 +129,6 @@ struct ReuseMapTypeChange {
   }
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &, lst<T1> &, T2 &>
   static T2 lst_rec(T2 f, F1 &&f0, const lst<T1> &l) {
     if (std::holds_alternative<typename lst<T1>::Nil>(l.v())) {
       return f;
@@ -144,7 +142,7 @@ struct ReuseMapTypeChange {
   static uint64_t suml(const lst<uint64_t> &l);
 
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, T1 &>
+    requires std::is_invocable_r_v<T2, F0 &, T1 &&>
   static lst<T2> mapl(F0 &&f, lst<T1> l) {
     if (std::holds_alternative<typename lst<T1>::Nil>(l.v_mut())) {
       return lst<T2>::nil();

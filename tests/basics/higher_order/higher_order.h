@@ -96,7 +96,6 @@ struct HigherOrder {
   };
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
   static T2 list_rect(T2 f, F1 &&f0, const list<T1> &l) {
     if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
       return f;
@@ -107,7 +106,6 @@ struct HigherOrder {
   }
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
   static T2 list_rec(T2 f, F1 &&f0, const list<T1> &l) {
     if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
       return f;
@@ -119,7 +117,7 @@ struct HigherOrder {
 
   /// map f l applies f to each element of l, producing a new list.
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, T1 &>
+    requires std::is_invocable_r_v<T2, F0 &, const T1 &>
   static list<T2> map(F0 &&f, const list<T1> &l) {
     if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
       return list<T2>::nil();
@@ -132,7 +130,7 @@ struct HigherOrder {
   /// foldr f z l folds l from the right using f with initial
   /// accumulator z.
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, T1 &, T2 &>
+    requires std::is_invocable_r_v<T2, F0 &, const T1 &, T2>
   static T2 foldr(F0 &&f, T2 z, const list<T1> &l) {
     if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
       return z;
@@ -145,7 +143,7 @@ struct HigherOrder {
   /// foldl f z l folds l from the left using f with initial
   /// accumulator z. This is tail-recursive.
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, T2 &, T1 &>
+    requires std::is_invocable_r_v<T2, F0 &, T2 &&, const T1 &>
   static T2 foldl(F0 &&f, T2 z, const list<T1> &l) {
     if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
       return z;
@@ -157,15 +155,14 @@ struct HigherOrder {
 
   /// compose g f returns the composition of g after f.
   template <typename T1, typename T2, typename T3, typename F0, typename F1>
-    requires std::is_invocable_r_v<T3, F0 &, T2 &> &&
-             std::is_invocable_r_v<T2, F1 &, T1 &>
+    requires std::is_invocable_r_v<T3, F0 &, T2> &&
+             std::is_invocable_r_v<T2, F1 &, const T1 &>
   static T3 compose(F0 &&g, F1 &&f, const T1 &x) {
     return g(f(x));
   }
 
   /// iterate n f x applies f to x a total of n times.
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, T1 &>
   static T1 iterate(uint64_t n, F1 &&f, T1 x) {
     if (n <= 0) {
       return x;
@@ -180,14 +177,15 @@ struct HigherOrder {
 
   /// twice f returns a function that applies f two times.
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, T1> &&
+             std::is_invocable_r_v<T1, F0 &, const T1 &>
   static T1 twice(F0 &&f, const T1 &x) {
     return f(f(x));
   }
 
   /// pipe x f applies f to x, simulating a pipeline operator.
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &>
+    requires std::is_invocable_r_v<T2, F1 &, const T1 &>
   static T2 pipe(const T1 &x, F1 &&f) {
     return f(x);
   }

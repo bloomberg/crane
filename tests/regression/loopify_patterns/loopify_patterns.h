@@ -98,7 +98,6 @@ struct LoopifyPatterns {
   };
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
   static T2
   list_rect(T2 f, F1 &&f0,
             const list<T1> &l) { /// CraneEnter: captures varying parameters for
@@ -144,7 +143,6 @@ struct LoopifyPatterns {
   }
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
   static T2
   list_rec(T2 f, F1 &&f0,
            const list<T1> &l) { /// CraneEnter: captures varying parameters for
@@ -225,7 +223,8 @@ struct LoopifyPatterns {
 
   /// max_by f l recursive max with function application.
   template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
+    requires std::is_invocable_r_v<uint64_t, F0 &, const uint64_t &> &&
+             std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
   static uint64_t
   max_by(F0 &&f,
          const list<uint64_t> &l) { /// CraneEnter: captures varying parameters
@@ -390,7 +389,6 @@ struct LoopifyPatterns {
 
   /// merge_by cmp l1 l2 merge with custom comparator.
   template <typename F1>
-    requires std::is_invocable_r_v<uint64_t, F1 &, uint64_t &, uint64_t &>
   static list<uint64_t> merge_by_fuel(uint64_t fuel, F1 &&cmp,
                                       list<uint64_t> l1, list<uint64_t> l2) {
     std::shared_ptr<list<uint64_t>> _head{};
@@ -447,7 +445,6 @@ struct LoopifyPatterns {
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &, uint64_t &>
   static list<uint64_t> merge_by(F0 &&cmp, const list<uint64_t> &l1,
                                  const list<uint64_t> &l2) {
     return merge_by_fuel((list_len(l1) + list_len(l2)), cmp, l1, l2);
@@ -477,7 +474,6 @@ struct LoopifyPatterns {
 
   /// take_until p l takes elements until predicate is true.
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
   static list<uint64_t> take_until(F0 &&p, const list<uint64_t> &l) {
     std::shared_ptr<list<uint64_t>> _head{};
     std::shared_ptr<list<uint64_t>> *_write = &_head;
@@ -508,8 +504,6 @@ struct LoopifyPatterns {
 
   /// partition_by p q l partitions into 3 categories based on two predicates.
   template <typename F0, typename F1>
-    requires std::is_invocable_r_v<bool, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<bool, F1 &, uint64_t &>
   static std::pair<std::pair<list<uint64_t>, list<uint64_t>>, list<uint64_t>>
   partition_by(
       F0 &&p, F1 &&q,
@@ -579,8 +573,6 @@ struct LoopifyPatterns {
 
   /// filter_map_indexed p f l filters and maps with index.
   template <typename F0, typename F1>
-    requires std::is_invocable_r_v<bool, F0 &, uint64_t &, uint64_t &> &&
-             std::is_invocable_r_v<uint64_t, F1 &, uint64_t &>
   static list<uint64_t> filter_map_indexed_aux(F0 &&p, F1 &&f,
                                                const list<uint64_t> &l,
                                                uint64_t idx) {
@@ -615,8 +607,6 @@ struct LoopifyPatterns {
   }
 
   template <typename F0, typename F1>
-    requires std::is_invocable_r_v<bool, F0 &, uint64_t &, uint64_t &> &&
-             std::is_invocable_r_v<uint64_t, F1 &, uint64_t &>
   static list<uint64_t> filter_map_indexed(F0 &&p, F1 &&f,
                                            const list<uint64_t> &l) {
     return filter_map_indexed_aux(p, f, l, UINT64_C(0));

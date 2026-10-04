@@ -110,7 +110,7 @@ struct InductiveInModule {
       };
 
       template <typename T1, typename T2, typename F1>
-        requires std::is_invocable_r_v<T2, F1 &, T1 &>
+        requires std::is_invocable_r_v<T2, F1 &, const T1 &>
       static T2 option_rect(T2 f, F1 &&f0, const option<T1> &o) {
         if (std::holds_alternative<typename option<T1>::None>(o.v())) {
           return f;
@@ -121,7 +121,7 @@ struct InductiveInModule {
       }
 
       template <typename T1, typename T2, typename F1>
-        requires std::is_invocable_r_v<T2, F1 &, T1 &>
+        requires std::is_invocable_r_v<T2, F1 &, const T1 &>
       static T2 option_rec(T2 f, F1 &&f0, const option<T1> &o) {
         if (std::holds_alternative<typename option<T1>::None>(o.v())) {
           return f;

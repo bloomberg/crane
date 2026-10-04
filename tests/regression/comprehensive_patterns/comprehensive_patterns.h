@@ -251,8 +251,8 @@ struct ComprehensivePatterns {
     const variant_t &v() const { return v_; }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, S &> &&
-               std::is_invocable_r_v<T1, F1 &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F0 &, const S &> &&
+               std::is_invocable_r_v<T1, F1 &, const uint64_t &>
     T1 Either_rec(F0 &&f, F1 &&f0) const {
       if (std::holds_alternative<typename Either::Left_S>(this->v())) {
         const auto &[s0] = std::get<typename Either::Left_S>(this->v());
@@ -264,8 +264,8 @@ struct ComprehensivePatterns {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, S &> &&
-               std::is_invocable_r_v<T1, F1 &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F0 &, const S &> &&
+               std::is_invocable_r_v<T1, F1 &, const uint64_t &>
     T1 Either_rect(F0 &&f, F1 &&f0) const {
       if (std::holds_alternative<typename Either::Left_S>(this->v())) {
         const auto &[s0] = std::get<typename Either::Left_S>(this->v());
@@ -384,7 +384,7 @@ struct ComprehensivePatterns {
   static uint64_t sum_proj(uint64_t n, const NC &r);
 
   template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, NC &>
+    requires std::is_invocable_r_v<uint64_t, F0 &, NC &&>
   static uint64_t apply(F0 &&f, NC x0_) {
     return f(std::move(x0_));
   }
@@ -685,9 +685,7 @@ struct ComprehensivePatterns {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, Tree &, T1 &, uint64_t &, Tree &,
-                                     T1 &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 Tree_rec(F0 &&f, F1 &&f0) const {
       const Tree *_self = this;
 
@@ -754,9 +752,7 @@ struct ComprehensivePatterns {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, Tree &, T1 &, uint64_t &, Tree &,
-                                     T1 &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 Tree_rect(F0 &&f, F1 &&f0) const {
       const Tree *_self = this;
 
@@ -872,7 +868,7 @@ struct ComprehensivePatterns {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, StateRO &>
+      requires std::is_invocable_r_v<T1, F1 &, const StateRO &>
     T1 Container_rec(T1 f, F1 &&f0) const {
       if (std::holds_alternative<typename Container::Empty>(this->v())) {
         return f;
@@ -883,7 +879,7 @@ struct ComprehensivePatterns {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, StateRO &>
+      requires std::is_invocable_r_v<T1, F1 &, const StateRO &>
     T1 Container_rect(T1 f, F1 &&f0) const {
       if (std::holds_alternative<typename Container::Empty>(this->v())) {
         return f;

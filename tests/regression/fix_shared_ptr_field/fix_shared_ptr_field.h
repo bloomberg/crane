@@ -188,9 +188,7 @@ struct FixSharedPtrField {
       return _result;
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, uint64_t &, mylist &, T1 &>
-    T1 mylist_rec(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 mylist_rec(T1 f, F1 &&f0) const {
       const mylist *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
@@ -234,9 +232,7 @@ struct FixSharedPtrField {
       return _result;
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, uint64_t &, mylist &, T1 &>
-    T1 mylist_rect(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 mylist_rect(T1 f, F1 &&f0) const {
       const mylist *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
@@ -294,14 +290,14 @@ struct FixSharedPtrField {
   };
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, mylist &>
+    requires std::is_invocable_r_v<T1, F0 &, const mylist &>
   static T1 wrapper_rect(F0 &&f, const wrapper &w) {
     const auto &[a0] = w;
     return f(a0);
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, mylist &>
+    requires std::is_invocable_r_v<T1, F0 &, const mylist &>
   static T1 wrapper_rec(F0 &&f, const wrapper &w) {
     const auto &[a0] = w;
     return f(a0);

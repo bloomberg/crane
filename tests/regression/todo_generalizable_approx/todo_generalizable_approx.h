@@ -6,7 +6,8 @@
 
 struct TodoGeneralizableApprox {
   template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
+    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t> &&
+             std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
   static uint64_t apply_twice(F0 &&f, uint64_t x) {
     return f(f(x));
   }

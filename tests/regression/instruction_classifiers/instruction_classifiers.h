@@ -293,13 +293,13 @@ struct InstructionClassifiers {
 
     template <typename T1, typename F0, typename F1, typename F2, typename F3,
               typename F4, typename F5, typename F6>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F2 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F3 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F4 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F5 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F6 &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F2 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F3 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F4 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F5 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F6 &, const uint64_t &>
     T1 instr_acc_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
                      F6 &&f5, T1 f6, T1 f7, T1 f8, T1 f9, T1 f10, T1 f11,
                      T1 f12, T1 f13, T1 f14, T1 f15, T1 f16, T1 f17, T1 f18,
@@ -368,13 +368,13 @@ struct InstructionClassifiers {
 
     template <typename T1, typename F0, typename F1, typename F2, typename F3,
               typename F4, typename F5, typename F6>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F2 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F3 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F4 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F5 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F6 &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F2 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F3 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F4 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F5 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F6 &, const uint64_t &>
     T1 instr_acc_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
                       F6 &&f5, T1 f6, T1 f7, T1 f8, T1 f9, T1 f10, T1 f11,
                       T1 f12, T1 f13, T1 f14, T1 f15, T1 f16, T1 f17, T1 f18,
@@ -538,7 +538,7 @@ struct InstructionClassifiers {
     }
 
     template <typename T1, typename F7>
-      requires std::is_invocable_r_v<T1, F7 &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F7 &, const uint64_t &>
     T1 instr_ram_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5,
                      F7 &&f6) const {
       if (std::holds_alternative<typename instr_ram::WRM>(this->v())) {
@@ -563,7 +563,7 @@ struct InstructionClassifiers {
     }
 
     template <typename T1, typename F7>
-      requires std::is_invocable_r_v<T1, F7 &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F7 &, const uint64_t &>
     T1 instr_ram_rect(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5,
                       F7 &&f6) const {
       if (std::holds_alternative<typename instr_ram::WRM>(this->v())) {
@@ -695,12 +695,14 @@ struct InstructionClassifiers {
 
     template <typename T1, typename F0, typename F1, typename F2, typename F3,
               typename F4, typename F6>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F2 &, uint64_t &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F3 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F4 &, uint64_t &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F6 &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F2 &, const uint64_t &,
+                                     const uint64_t &> &&
+               std::is_invocable_r_v<T1, F3 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F4 &, const uint64_t &,
+                                     const uint64_t &> &&
+               std::is_invocable_r_v<T1, F6 &, const uint64_t &>
     T1 instr_regs_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, T1 f4,
                       F6 &&f5) const {
       if (std::holds_alternative<typename instr_regs::XCH_regs>(this->v())) {
@@ -730,12 +732,14 @@ struct InstructionClassifiers {
 
     template <typename T1, typename F0, typename F1, typename F2, typename F3,
               typename F4, typename F6>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F2 &, uint64_t &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F3 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F4 &, uint64_t &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F6 &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F2 &, const uint64_t &,
+                                     const uint64_t &> &&
+               std::is_invocable_r_v<T1, F3 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F4 &, const uint64_t &,
+                                     const uint64_t &> &&
+               std::is_invocable_r_v<T1, F6 &, const uint64_t &>
     T1 instr_regs_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, T1 f4,
                        F6 &&f5) const {
       if (std::holds_alternative<typename instr_regs::XCH_regs>(this->v())) {
@@ -878,13 +882,15 @@ struct InstructionClassifiers {
 
     template <typename T1, typename F0, typename F1, typename F2, typename F3,
               typename F4, typename F5, typename F6>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F2 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F3 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F4 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F5 &, uint64_t &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F6 &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &,
+                                     const uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F2 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F3 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F4 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F5 &, const uint64_t &,
+                                     const uint64_t &> &&
+               std::is_invocable_r_v<T1, F6 &, const uint64_t &>
     T1 instr_jump_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
                       F6 &&f5, T1 f6) const {
       if (std::holds_alternative<typename instr_jump::JCN>(this->v())) {
@@ -919,13 +925,15 @@ struct InstructionClassifiers {
 
     template <typename T1, typename F0, typename F1, typename F2, typename F3,
               typename F4, typename F5, typename F6>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F2 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F3 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F4 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F5 &, uint64_t &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F6 &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &,
+                                     const uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F2 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F3 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F4 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F5 &, const uint64_t &,
+                                     const uint64_t &> &&
+               std::is_invocable_r_v<T1, F6 &, const uint64_t &>
     T1 instr_jump_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
                        F6 &&f5, T1 f6) const {
       if (std::holds_alternative<typename instr_jump::JCN>(this->v())) {

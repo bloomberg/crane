@@ -228,9 +228,7 @@ struct LoopifyMutualResultTypes {
   };
 
   template <typename T1, typename F0, typename F1, typename F2>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, e &, T1 &, e &, T1 &> &&
-             std::is_invocable_r_v<T1, F2 &, md &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
   static T1 e_rect(F0 &&f, F1 &&f0, F2 &&f1,
                    const e &e0) { /// CraneEnter: captures varying parameters
                                   /// for each recursive call.
@@ -294,9 +292,7 @@ struct LoopifyMutualResultTypes {
   }
 
   template <typename T1, typename F0, typename F1, typename F2>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, e &, T1 &, e &, T1 &> &&
-             std::is_invocable_r_v<T1, F2 &, md &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
   static T1 e_rec(F0 &&f, F1 &&f0, F2 &&f1,
                   const e &e0) { /// CraneEnter: captures varying parameters for
                                  /// each recursive call.
@@ -360,8 +356,6 @@ struct LoopifyMutualResultTypes {
   }
 
   template <typename T1, typename F1, typename F2>
-    requires std::is_invocable_r_v<T1, F1 &, e &> &&
-             std::is_invocable_r_v<T1, F2 &, md &, T1 &, md &, T1 &>
   static T1 md_rect(T1 f, F1 &&f0, F2 &&f1,
                     const md &m) { /// CraneEnter: captures varying parameters
                                    /// for each recursive call.
@@ -425,8 +419,6 @@ struct LoopifyMutualResultTypes {
   }
 
   template <typename T1, typename F1, typename F2>
-    requires std::is_invocable_r_v<T1, F1 &, e &> &&
-             std::is_invocable_r_v<T1, F2 &, md &, T1 &, md &, T1 &>
   static T1 md_rec(T1 f, F1 &&f0, F2 &&f1,
                    const md &m) { /// CraneEnter: captures varying parameters
                                   /// for each recursive call.

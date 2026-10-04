@@ -5,13 +5,11 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
-#include <type_traits>
 #include <utility>
 
 struct FixHigherOrder {
   /// A wrapper function that takes a function and stores it in Some.
   template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
   static std::optional<crane::fn<uint64_t(uint64_t)>> wrap_fn(F0 &&f) {
     return std::make_optional<crane::fn<uint64_t(uint64_t)>>(f);
   }
@@ -52,7 +50,6 @@ struct FixHigherOrder {
 
   /// Two layers of wrapping: fixpoint passed through two functions.
   template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
   static std::optional<std::optional<crane::fn<uint64_t(uint64_t)>>>
   double_wrap(F0 &&f) {
     return std::make_optional<std::optional<crane::fn<uint64_t(uint64_t)>>>(

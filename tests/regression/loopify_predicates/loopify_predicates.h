@@ -96,7 +96,6 @@ public:
 
 struct LoopifyPredicates {
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
   static List<uint64_t> take_while(F0 &&p, const List<uint64_t> &l) {
     std::shared_ptr<List<uint64_t>> _head{};
     std::shared_ptr<List<uint64_t>> *_write = &_head;
@@ -126,7 +125,6 @@ struct LoopifyPredicates {
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
   static List<uint64_t> drop_while(F0 &&p, List<uint64_t> l) {
     List<uint64_t> _loop_l = std::move(l);
     while (true) {
@@ -146,7 +144,6 @@ struct LoopifyPredicates {
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
   static std::pair<List<uint64_t>, List<uint64_t>>
   span(F0 &&p,
        const List<uint64_t> &l) { /// CraneEnter: captures varying parameters
@@ -197,7 +194,6 @@ struct LoopifyPredicates {
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
   static std::pair<List<uint64_t>, List<uint64_t>>
   break_at(F0 &&p,
            const List<uint64_t> &l) { /// CraneEnter: captures varying
@@ -248,7 +244,6 @@ struct LoopifyPredicates {
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
   static List<uint64_t> filter(F0 &&p, const List<uint64_t> &l) {
     std::shared_ptr<List<uint64_t>> _head{};
     std::shared_ptr<List<uint64_t>> *_write = &_head;
@@ -278,7 +273,6 @@ struct LoopifyPredicates {
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
   static List<uint64_t> reject(F0 &&p, const List<uint64_t> &l) {
     std::shared_ptr<List<uint64_t>> _head{};
     std::shared_ptr<List<uint64_t>> *_write = &_head;
@@ -396,7 +390,6 @@ struct LoopifyPredicates {
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
   static std::optional<uint64_t> find_index_aux(F0 &&p, const List<uint64_t> &l,
                                                 uint64_t idx) {
     uint64_t _loop_idx = std::move(idx);
@@ -418,13 +411,11 @@ struct LoopifyPredicates {
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
   static std::optional<uint64_t> find_index(F0 &&p, const List<uint64_t> &l) {
     return find_index_aux(p, l, UINT64_C(0));
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
   static List<uint64_t> find_indices_aux(F0 &&p, const List<uint64_t> &l,
                                          uint64_t idx) {
     std::shared_ptr<List<uint64_t>> _head{};
@@ -458,13 +449,11 @@ struct LoopifyPredicates {
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
   static List<uint64_t> find_indices(F0 &&p, const List<uint64_t> &l) {
     return find_indices_aux(p, l, UINT64_C(0));
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, uint64_t &, uint64_t &>
   static List<uint64_t> delete_by(F0 &&eq, uint64_t x,
                                   const List<uint64_t> &l) {
     std::shared_ptr<List<uint64_t>> _head{};

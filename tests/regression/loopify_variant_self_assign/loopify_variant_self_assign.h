@@ -103,8 +103,7 @@ struct LoopifyVariantSelfAssign {
   };
 
   template <typename T1, typename F1, typename F2>
-    requires std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F2 &, uint64_t &, lst &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, const uint64_t &>
   static T1 lst_rect(T1 f, F1 &&f0, F2 &&f1,
                      const lst &l) { /// CraneEnter: captures varying parameters
                                      /// for each recursive call.
@@ -152,8 +151,7 @@ struct LoopifyVariantSelfAssign {
   }
 
   template <typename T1, typename F1, typename F2>
-    requires std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F2 &, uint64_t &, lst &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, const uint64_t &>
   static T1 lst_rec(T1 f, F1 &&f0, F2 &&f1,
                     const lst &l) { /// CraneEnter: captures varying parameters
                                     /// for each recursive call.

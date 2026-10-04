@@ -147,7 +147,7 @@ public:
   const variant_t &v() const { return v_; }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, A &>
+    requires std::is_invocable_r_v<T1, F0 &, const A &>
   List<T1> map(F0 &&f) const {
     std::shared_ptr<List<T1>> _head{};
     std::shared_ptr<List<T1>> *_write = &_head;
@@ -176,8 +176,8 @@ public:
 /// argument with one argument.
 struct MapOverPartialApp {
   template <typename T1, typename T2, typename T3, typename F0, typename F1>
-    requires std::is_invocable_r_v<T3, F0 &, T2 &> &&
-             std::is_invocable_r_v<T2, F1 &, T1 &>
+    requires std::is_invocable_r_v<T3, F0 &, T2> &&
+             std::is_invocable_r_v<T2, F1 &, const T1 &>
   static T3 comp(F0 &&f, F1 &&g, const T1 &x) {
     return f(g(x));
   }

@@ -67,9 +67,7 @@ struct MethodifiedTmcNoLoopify {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, uint64_t &, lst &, T1 &>
-    T1 lst_rec(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 lst_rec(T1 f, F1 &&f0) const {
       const lst *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
@@ -113,9 +111,7 @@ struct MethodifiedTmcNoLoopify {
       return _result;
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, uint64_t &, lst &, T1 &>
-    T1 lst_rect(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 lst_rect(T1 f, F1 &&f0) const {
       const lst *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
@@ -295,8 +291,7 @@ struct MethodifiedTmcNoLoopify {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, lst &> &&
-               std::is_invocable_r_v<T1, F1 &, wrap &, T1 &>
+      requires std::is_invocable_r_v<T1, F0 &, const lst &>
     T1 wrap_rec(F0 &&f, F1 &&f0) const {
       const wrap *_self = this;
 
@@ -341,8 +336,7 @@ struct MethodifiedTmcNoLoopify {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, lst &> &&
-               std::is_invocable_r_v<T1, F1 &, wrap &, T1 &>
+      requires std::is_invocable_r_v<T1, F0 &, const lst &>
     T1 wrap_rect(F0 &&f, F1 &&f0) const {
       const wrap *_self = this;
 

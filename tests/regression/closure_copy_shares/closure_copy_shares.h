@@ -103,7 +103,7 @@ struct ClosureCopyShares {
 
   /// Captures two closures.
   template <typename F0, typename F1>
-    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &> &&
+    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t> &&
              std::is_invocable_r_v<uint64_t, F1 &, uint64_t &>
   static uint64_t compose(F0 &&f, F1 &&g, uint64_t x) {
     return f(g(x));

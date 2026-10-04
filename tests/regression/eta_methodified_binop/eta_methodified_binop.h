@@ -174,7 +174,7 @@ public:
 
 struct EtaMethodifiedBinop {
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<Bool0, F0 &, T1 &, T1 &>
+    requires std::is_invocable_r_v<Bool0, F0 &, const T1 &, const T1 &>
   static Nat count(F0 &&eqb0, const T1 &x, const List<T1> &l) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return Nat::o();

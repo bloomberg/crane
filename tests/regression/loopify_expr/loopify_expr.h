@@ -1311,12 +1311,7 @@ struct LoopifyExpr {
 
     template <typename T1, typename F0, typename F1, typename F2, typename F3,
               typename F4>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, expr &, T1 &> &&
-               std::is_invocable_r_v<T1, F2 &, expr &, T1 &, expr &, T1 &> &&
-               std::is_invocable_r_v<T1, F3 &, expr &, T1 &, expr &, T1 &> &&
-               std::is_invocable_r_v<T1, F4 &, expr &, T1 &, expr &, T1 &,
-                                     expr &, T1 &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 expr_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3) const {
       const expr *_self = this;
 
@@ -1484,12 +1479,7 @@ struct LoopifyExpr {
 
     template <typename T1, typename F0, typename F1, typename F2, typename F3,
               typename F4>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, expr &, T1 &> &&
-               std::is_invocable_r_v<T1, F2 &, expr &, T1 &, expr &, T1 &> &&
-               std::is_invocable_r_v<T1, F3 &, expr &, T1 &, expr &, T1 &> &&
-               std::is_invocable_r_v<T1, F4 &, expr &, T1 &, expr &, T1 &,
-                                     expr &, T1 &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 expr_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3) const {
       const expr *_self = this;
 
@@ -1930,11 +1920,7 @@ struct LoopifyExpr {
     }
 
     template <typename T1, typename F0, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, simple_expr &, T1 &,
-                                     simple_expr &, T1 &> &&
-               std::is_invocable_r_v<T1, F2 &, simple_expr &, T1 &,
-                                     simple_expr &, T1 &, simple_expr &, T1 &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 simple_expr_rec(F0 &&f, F1 &&f0, F2 &&f1) const {
       const simple_expr *_self = this;
 
@@ -2058,11 +2044,7 @@ struct LoopifyExpr {
     }
 
     template <typename T1, typename F0, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, simple_expr &, T1 &,
-                                     simple_expr &, T1 &> &&
-               std::is_invocable_r_v<T1, F2 &, simple_expr &, T1 &,
-                                     simple_expr &, T1 &, simple_expr &, T1 &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 simple_expr_rect(F0 &&f, F1 &&f0, F2 &&f1) const {
       const simple_expr *_self = this;
 
@@ -2230,9 +2212,9 @@ struct LoopifyExpr {
     const variant_t &v() const { return v_; }
 
     template <typename T1, typename F0, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F2 &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F2 &, const uint64_t &>
     T1 shape_rec(F0 &&f, F1 &&f0, F2 &&f1) const {
       if (std::holds_alternative<typename shape::Circle>(this->v())) {
         const auto &[a0] = std::get<typename shape::Circle>(this->v());
@@ -2247,9 +2229,9 @@ struct LoopifyExpr {
     }
 
     template <typename T1, typename F0, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F2 &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F2 &, const uint64_t &>
     T1 shape_rect(F0 &&f, F1 &&f0, F2 &&f1) const {
       if (std::holds_alternative<typename shape::Circle>(this->v())) {
         const auto &[a0] = std::get<typename shape::Circle>(this->v());
@@ -2544,11 +2526,7 @@ struct LoopifyExpr {
     }
 
     template <typename T1, typename F0, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, cond_expr &, T1 &, cond_expr &,
-                                     T1 &> &&
-               std::is_invocable_r_v<T1, F2 &, cond_expr &, T1 &, cond_expr &,
-                                     T1 &, cond_expr &, T1 &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 cond_expr_rec(F0 &&f, F1 &&f0, F2 &&f1) const {
       const cond_expr *_self = this;
 
@@ -2671,11 +2649,7 @@ struct LoopifyExpr {
     }
 
     template <typename T1, typename F0, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, cond_expr &, T1 &, cond_expr &,
-                                     T1 &> &&
-               std::is_invocable_r_v<T1, F2 &, cond_expr &, T1 &, cond_expr &,
-                                     T1 &, cond_expr &, T1 &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 cond_expr_rect(F0 &&f, F1 &&f0, F2 &&f1) const {
       const cond_expr *_self = this;
 

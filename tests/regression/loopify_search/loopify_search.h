@@ -175,7 +175,6 @@ struct LoopifySearch {
   /// maximum_by cmp l finds maximum element by custom comparator.
   /// cmp x y returns: 0 if x=y, 1 if x>y, 2 if x<y
   template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &, uint64_t &>
   static uint64_t
   maximum_by(F0 &&cmp,
              const List<uint64_t> &l) { /// CraneEnter: captures varying
@@ -256,7 +255,6 @@ struct LoopifySearch {
 
   /// Helper: filter predicate.
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
   static List<uint64_t> filter_impl(F0 &&p, const List<uint64_t> &l) {
     std::shared_ptr<List<uint64_t>> _head{};
     std::shared_ptr<List<uint64_t>> *_write = &_head;
@@ -452,8 +450,7 @@ struct LoopifySearch {
   };
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, btree &, T1 &, btree &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
   static T1 btree_rect(F0 &&f, F1 &&f0,
                        const btree &b) { /// CraneEnter: captures varying
                                          /// parameters for each recursive call.
@@ -516,8 +513,7 @@ struct LoopifySearch {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, btree &, T1 &, btree &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
   static T1 btree_rec(F0 &&f, F1 &&f0,
                       const btree &b) { /// CraneEnter: captures varying
                                         /// parameters for each recursive call.
@@ -580,7 +576,7 @@ struct LoopifySearch {
 
   /// or_search p t searches tree with || recursion.
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
+    requires std::is_invocable_r_v<bool, F0 &, const uint64_t &>
   static bool
   or_search(F0 &&p, const btree &t) { /// CraneEnter: captures varying
                                       /// parameters for each recursive call.
@@ -636,7 +632,6 @@ struct LoopifySearch {
 
   /// find_indices p l finds all indices where predicate holds.
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
   static List<uint64_t> find_indices_aux(F0 &&p, const List<uint64_t> &l,
                                          uint64_t idx) {
     std::shared_ptr<List<uint64_t>> _head{};
@@ -670,7 +665,6 @@ struct LoopifySearch {
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
   static List<uint64_t> find_indices(F0 &&p, const List<uint64_t> &l) {
     return find_indices_aux(p, l, UINT64_C(0));
   }

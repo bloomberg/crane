@@ -11622,3 +11622,14 @@
   (alias runtest)
   (deps defaulted_move_noexcept.t.exe)
   (action (run ./defaulted_move_noexcept.t.exe))))
+
+(subdir callable_constraint_categories
+ (rule
+  (targets callable_constraint_categories.t.exe)
+  (deps CallableConstraintCategories.vo callable_constraint_categories.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} callable_constraint_categories.t.exe callable_constraint_categories.cpp callable_constraint_categories.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps callable_constraint_categories.t.exe)
+  (action (run ./callable_constraint_categories.t.exe))))

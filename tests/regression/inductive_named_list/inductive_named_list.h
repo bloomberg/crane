@@ -8,7 +8,6 @@
 #include <cstdint>
 #include <memory>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -190,7 +189,6 @@ struct InductiveNamedList {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, uint64_t &, List_ &, T1 &>
   static T1 List_rect(T1 f, F1 &&f0, const List_ &l) {
     if (std::holds_alternative<typename List_::LNil>(l.v())) {
       return f;
@@ -201,7 +199,6 @@ struct InductiveNamedList {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, uint64_t &, List_ &, T1 &>
   static T1 List_rec(T1 f, F1 &&f0, const List_ &l) {
     if (std::holds_alternative<typename List_::LNil>(l.v())) {
       return f;

@@ -4,7 +4,6 @@
 #include <atomic>
 #include <cstdint>
 #include <memory>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -69,7 +68,6 @@ struct NameClashNestedDeep {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, uint64_t &, mylist &, T1 &>
   static T1 mylist_rect(T1 f, F1 &&f0, const mylist &m) {
     if (std::holds_alternative<typename mylist::MyNil>(m.v())) {
       return f;
@@ -80,7 +78,6 @@ struct NameClashNestedDeep {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, uint64_t &, mylist &, T1 &>
   static T1 mylist_rec(T1 f, F1 &&f0, const mylist &m) {
     if (std::holds_alternative<typename mylist::MyNil>(m.v())) {
       return f;

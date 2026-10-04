@@ -8,7 +8,6 @@
 #include <concepts>
 #include <cstdint>
 #include <memory>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -28,8 +27,6 @@ struct Nat {
 
 struct Equations {
   template <typename F3>
-    requires std::is_invocable_r_v<uint64_t, F3 &,
-                                   std::pair<uint64_t, uint64_t> &>
   static uint64_t gcd_clause_3(uint64_t n, uint64_t n0, bool refine,
                                F3 &&gcd0) {
     if (refine) {
@@ -44,8 +41,6 @@ struct Equations {
   }
 
   template <typename F1>
-    requires std::is_invocable_r_v<uint64_t, F1 &,
-                                   std::pair<uint64_t, uint64_t> &>
   static uint64_t gcd_functional(std::pair<uint64_t, uint64_t> p, F1 &&gcd0) {
     auto [n, n0] = std::move(p);
     if (n <= 0) {
@@ -424,14 +419,6 @@ struct Equations {
 
   template <typename T1, typename T2, typename F0, typename F1, typename F2,
             typename F3, typename F4>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F2 &, uint64_t &, uint64_t &,
-                                   gcd_clause_3_graph &, T2 &> &&
-             std::is_invocable_r_v<T2, F3 &, uint64_t &, uint64_t &,
-                                   gcd_graph &, T1 &> &&
-             std::is_invocable_r_v<T2, F4 &, uint64_t &, uint64_t &,
-                                   gcd_graph &, T1 &>
   static T1 gcd_graph_rect(F0 &&x0_, F1 &&x1_, F2 &&x2_, F3 &&x3_, F4 &&x4_,
                            const std::pair<uint64_t, uint64_t> &x5_,
                            uint64_t x6_, const gcd_graph &x7_) {
@@ -441,8 +428,6 @@ struct Equations {
   static gcd_graph gcd_graph_correct(std::pair<uint64_t, uint64_t> x);
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, uint64_t &>
   static T1
   gcd_elim(F0 &&f, F1 &&f0,
            std::type_identity_t<crane::fn<T1(uint64_t, uint64_t, T1)>> f2,
@@ -485,7 +470,6 @@ struct Equations {
                           crane::fn<uint64_t(std::pair<uint64_t, uint64_t>)>>);
 
   template <typename F2>
-    requires std::is_invocable_r_v<uint64_t, F2 &, uint64_t &>
   static uint64_t collatz_steps_clause_3(uint64_t n, bool refine,
                                          F2 &&collatz_steps0) {
     if (refine) {
@@ -496,7 +480,6 @@ struct Equations {
   }
 
   template <typename F1>
-    requires std::is_invocable_r_v<uint64_t, F1 &, uint64_t &>
   static uint64_t collatz_steps_functional(uint64_t n, F1 &&collatz_steps0) {
     if (n <= 0) {
       return UINT64_C(0);
@@ -855,12 +838,6 @@ struct Equations {
   }
 
   template <typename T1, typename T2, typename F2, typename F3, typename F4>
-    requires std::is_invocable_r_v<T1, F2 &, uint64_t &,
-                                   collatz_steps_clause_3_graph &, T2 &> &&
-             std::is_invocable_r_v<T2, F3 &, uint64_t &, collatz_steps_graph &,
-                                   T1 &> &&
-             std::is_invocable_r_v<T2, F4 &, uint64_t &, collatz_steps_graph &,
-                                   T1 &>
   static T1 collatz_steps_graph_rect(const T1 &x0_, const T1 &x1_, F2 &&x2_,
                                      F3 &&x3_, F4 &&x4_, uint64_t x5_,
                                      uint64_t x6_,

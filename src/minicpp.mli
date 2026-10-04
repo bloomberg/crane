@@ -639,6 +639,13 @@ and template_type =
           parameter of kind [Type -> Type] is applied to arguments in the
           signature it appears in, and a plain [typename] cannot be applied. *)
   | TTfun of (cpp_type list * cpp_type)
+      (* A callable parameter as its declaration types it, before the body
+         that calls it is finished: what {!settle_constraints} starts from. *)
+  | TTinvocable of invocation list * cpp_type
+      (* A callable parameter as the finished body calls it: one entry per
+         distinct way it is invoked, and the type each result must convert
+         to.  {!settle_constraints} derives it from the body; it, not
+         [TTfun], is what the printer states as a constraint. *)
       (** Function type parameter for higher-order templates *)
   | TTconcept of GlobRef.t * cpp_type list
       (** Concept-constrained parameter.  The [cpp_type list] carries the
@@ -647,6 +654,22 @@ and template_type =
           ([C<_tcI0, T1>]). *)
 
 (** {2 Struct fields} *)
+
+(** One way a body invokes a callable parameter: the category the callable
+    itself is used with, and each argument's, at the type the parameter's
+    signature gives it -- the operands [std::is_invocable_r_v] is asked
+    about. *)
+and invocation = {
+  inv_callable : value_category;
+  inv_args : (value_category * cpp_type) list;
+}
+
+(** The value category, and constness, an operand is passed with. *)
+and value_category =
+  | Mutable_lvalue  (** [T &] *)
+  | Const_lvalue  (** [const T &] *)
+  | Xvalue  (** [T &&]: a [std::move] *)
+  | Prvalue  (** [T]: a temporary *)
 
 (** Struct/class field declarations. *)
 and cpp_field =

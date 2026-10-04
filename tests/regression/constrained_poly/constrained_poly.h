@@ -103,7 +103,7 @@ struct ConstrainedPoly {
   };
 
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, T1 &>
+    requires std::is_invocable_r_v<T2, F0 &, const T1 &>
   static T2 UOption_rect(F0 &&f, T2 f0, const UOption<T1> &u) {
     if (std::holds_alternative<typename UOption<T1>::USome>(u.v())) {
       const auto &[a0] = std::get<typename UOption<T1>::USome>(u.v());
@@ -114,7 +114,7 @@ struct ConstrainedPoly {
   }
 
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, T1 &>
+    requires std::is_invocable_r_v<T2, F0 &, const T1 &>
   static T2 UOption_rec(F0 &&f, T2 f0, const UOption<T1> &u) {
     if (std::holds_alternative<typename UOption<T1>::USome>(u.v())) {
       const auto &[a0] = std::get<typename UOption<T1>::USome>(u.v());
@@ -125,7 +125,7 @@ struct ConstrainedPoly {
   }
 
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, T1 &>
+    requires std::is_invocable_r_v<T2, F0 &, const T1 &>
   static UOption<T2> uoption_map(F0 &&f, const UOption<T1> &o) {
     if (std::holds_alternative<typename UOption<T1>::USome>(o.v())) {
       const auto &[a0] = std::get<typename UOption<T1>::USome>(o.v());

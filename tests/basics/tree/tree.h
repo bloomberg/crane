@@ -314,10 +314,7 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, Tree<A> &, T1 &, A &, Tree<A> &,
-                                   T1 &>
-  T1 tree_rect(T1 f, F1 &&f0) const {
+  template <typename T1, typename F1> T1 tree_rect(T1 f, F1 &&f0) const {
     if (std::holds_alternative<typename Tree<A>::Leaf>(this->v())) {
       return f;
     } else {
@@ -327,10 +324,7 @@ public:
     }
   }
 
-  template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, Tree<A> &, T1 &, A &, Tree<A> &,
-                                   T1 &>
-  T1 tree_rec(T1 f, F1 &&f0) const {
+  template <typename T1, typename F1> T1 tree_rec(T1 f, F1 &&f0) const {
     if (std::holds_alternative<typename Tree<A>::Leaf>(this->v())) {
       return f;
     } else {
@@ -392,7 +386,7 @@ public:
   /// Merge two trees t1 and t2 element-wise using combine.
   /// Subtrees beyond the shape of the other tree are truncated.
   template <typename F0>
-    requires std::is_invocable_r_v<A, F0 &, A &, A &>
+    requires std::is_invocable_r_v<A, F0 &, const A &, const A &>
   Tree<A> merge(F0 &&combine, const Tree<A> &t2) const {
     if (std::holds_alternative<typename Tree<A>::Leaf>(this->v())) {
       if (std::holds_alternative<typename Tree<A>::Leaf>(t2.v())) {

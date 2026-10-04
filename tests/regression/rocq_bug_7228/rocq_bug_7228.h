@@ -78,14 +78,14 @@ struct RocqBug7228 {
   };
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, crane::obj &>
+    requires std::is_invocable_r_v<T1, F0 &, const crane::obj &>
   static T1 data_rect(F0 &&f, const data &d) {
     const auto &[t0] = d;
     return crane_any_cast<T1>(f(t0));
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, crane::obj &>
+    requires std::is_invocable_r_v<T1, F0 &, const crane::obj &>
   static T1 data_rec(F0 &&f, const data &d) {
     const auto &[t0] = d;
     return crane_any_cast<T1>(f(t0));

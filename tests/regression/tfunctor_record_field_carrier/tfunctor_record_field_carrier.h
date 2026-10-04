@@ -151,7 +151,7 @@ public:
   const variant_t &v() const { return v_; }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, A &>
+    requires std::is_invocable_r_v<T1, F0 &, const A &>
   List<T1> map(F0 &&f) const {
     std::shared_ptr<List<T1>> _head{};
     std::shared_ptr<List<T1>> *_write = &_head;
@@ -301,7 +301,7 @@ public:
   const variant_t &v() const { return v_; }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, t &>
+    requires std::is_invocable_r_v<T1, F0 &, const t &>
   Exp<T1> exp_map(F0 &&f) const {
     const Exp<t> *_self = this;
 
@@ -416,7 +416,6 @@ glob<crane::obj> TFunctor_glob(crane::fn<crane::obj(crane::obj)> f,
 /// The composed carrier at a top-level argument: this one is already correct,
 /// and is kept as the control that says the emitter can do it.
 template <typename F0>
-  requires std::is_invocable_r_v<Nat, F0 &, Nat &>
 std::optional<Exp<Nat>> use_option(F0 &&f, const std::optional<Exp<Nat>> &o) {
   return tfmap<std::optional<Exp<crane::obj>>, Nat, Nat>(
       []() {
@@ -433,9 +432,7 @@ std::optional<Exp<Nat>> use_option(F0 &&f, const std::optional<Exp<Nat>> &o) {
 }
 
 /// The same carrier through a record field.
-template <typename F0>
-  requires std::is_invocable_r_v<Nat, F0 &, Nat &>
-glob<Nat> use_glob(F0 &&f, const glob<Nat> &g) {
+template <typename F0> glob<Nat> use_glob(F0 &&f, const glob<Nat> &g) {
   return tfmap<glob<crane::obj>, Nat, Nat>(
       [](auto &&_ec0, glob<crane::obj> _ec1) {
         return TFunctor_glob(_ec0, _ec1);

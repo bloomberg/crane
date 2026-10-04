@@ -3142,6 +3142,15 @@ and pp_custom ?container custom env typ t tyargs cases args _arg_types vl cmds =
     no type-variable context; the common-case shorthand for {!pp_cpp_type}. *)
 let pp_type t = pp_cpp_type false [] t
 
+(* A callable parameter whose constraint was never settled from its body
+   ({!Minicpp.settle_constraints}) is printed unconstrained -- a constraint
+   guessed from its declared type could name the wrong operands -- and is an
+   error under [CRANE_CHECK_IR], since some path skipped the pipeline. *)
+let unsettled_callable () =
+  if Sys.getenv_opt "CRANE_CHECK_IR" <> None then
+    CErrors.anomaly
+      (Pp.str "Crane: a callable template parameter reached the printer unsettled.")
+
 (** Print a template parameter type keyword (typename or concept constraint). *)
 let pp_template_type = function
   | TTtypename -> str "typename"
@@ -3151,7 +3160,10 @@ let pp_template_type = function
     ++ prlist_with_sep (fun () -> str ", ") (fun _ -> str "typename")
          (List.init arity Fun.id)
     ++ str "> class"
-  | TTfun _ -> str "typename"
+  | TTfun _ ->
+    unsettled_callable ();
+    str "typename"
+  | TTinvocable _ -> str "typename"
   | TTconcept (concept, _) when class_concept_held_back concept ->
     str "typename"
   | TTconcept (concept, []) -> pp_concept_name_of_ref concept
@@ -3309,20 +3321,31 @@ let pp_requires_of_tparams tparams =
     List.filter_map
       (fun (tt, id) ->
         match tt with
-        (* Which callables keep a constraint was settled before printing:
-           see {!Minicpp.settle_constraints}. *)
-        | TTfun (dom, cod) ->
+        (* What a callable must accept was settled from the body before
+           printing: see {!Minicpp.settle_constraints}. *)
+        | TTinvocable (invs, cod) ->
           require_header "type_traits";
-          let pp_ref ty = pp_type ty ++ str " &" in
-          Some
-            ( str invocable_r ++ str "<"
+          let operand cat ty =
+            match cat with
+            | Mutable_lvalue -> ty ++ str " &"
+            | Const_lvalue -> str "const " ++ ty ++ str " &"
+            | Xvalue -> ty ++ str " &&"
+            | Prvalue -> ty
+          in
+          let clause inv =
+            str invocable_r ++ str "<"
             ++ pp_type cod
             ++ str ", "
-            ++ Id.print id ++ str " &"
+            ++ operand inv.inv_callable (Id.print id)
             ++ List.fold_left
-                 (fun acc ty -> acc ++ str ", " ++ pp_ref ty)
-                 (mt ()) dom
-            ++ str ">" )
+                 (fun acc (cat, ty) -> acc ++ str ", " ++ operand cat (pp_type ty))
+                 (mt ()) inv.inv_args
+            ++ str ">"
+          in
+          Some (prlist_with_sep (fun () -> str " && ") clause invs)
+        | TTfun _ ->
+          unsettled_callable ();
+          None
         | TTconcept (concept, _) when class_concept_held_back concept -> None
         | TTconcept (concept, (_ :: _ as args)) ->
           (* Multi-parameter concept constraint: [C<_tcI0, T1, …>].  The

@@ -151,7 +151,7 @@ public:
   const variant_t &v() const { return v_; }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, A &>
+    requires std::is_invocable_r_v<T1, F0 &, const A &>
   List<T1> map(F0 &&f) const {
     std::shared_ptr<List<T1>> _head{};
     std::shared_ptr<List<T1>> *_write = &_head;
@@ -284,7 +284,7 @@ public:
   const variant_t &v() const { return v_; }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, t &>
+    requires std::is_invocable_r_v<T1, F0 &, const t &>
   Exp<T1> exp_map(F0 &&f) const {
     const Exp<t> *_self = this;
 
@@ -416,9 +416,7 @@ modu<crane::obj> TFunctor_modu(TFunctor<Exp<crane::obj>> h, Endo<Nat> h0,
                                crane::fn<crane::obj(crane::obj)> f,
                                const modu<crane::obj> &m);
 
-template <typename F0>
-  requires std::is_invocable_r_v<bool, F0 &, Nat &>
-modu<bool> use_modu(F0 &&f, const modu<Nat> &m) {
+template <typename F0> modu<bool> use_modu(F0 &&f, const modu<Nat> &m) {
   return tfmap<modu<crane::obj>, Nat, bool>(
       []() {
         return [](crane::fn<crane::obj(crane::obj)> _x0,

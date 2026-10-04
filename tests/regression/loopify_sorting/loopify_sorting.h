@@ -8,7 +8,6 @@
 #include <cstdint>
 #include <memory>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -228,7 +227,6 @@ struct LoopifySorting {
 
   /// merge_by cmp merges with custom comparator.
   template <typename F1>
-    requires std::is_invocable_r_v<bool, F1 &, uint64_t &, uint64_t &>
   static List<uint64_t> merge_by_fuel(uint64_t fuel, F1 &&cmp,
                                       List<uint64_t> l1, List<uint64_t> l2) {
     std::shared_ptr<List<uint64_t>> _head{};
@@ -285,7 +283,6 @@ struct LoopifySorting {
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, uint64_t &, uint64_t &>
   static List<uint64_t> merge_by(F0 &&cmp, const List<uint64_t> &l1,
                                  const List<uint64_t> &l2) {
     return merge_by_fuel((len_impl<uint64_t>(l1) + len_impl<uint64_t>(l2)), cmp,

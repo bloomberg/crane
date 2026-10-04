@@ -8,7 +8,6 @@
 #include <cstdint>
 #include <memory>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -104,7 +103,6 @@ struct LoopifyNumericSequences {
   static uint64_t staircase(uint64_t n);
 
   template <typename F1>
-    requires std::is_invocable_r_v<uint64_t, F1 &, uint64_t &>
   static uint64_t church(uint64_t n, F1 &&f, uint64_t x) {
     uint64_t _loop_x = std::move(x);
     uint64_t _loop_n = std::move(n);

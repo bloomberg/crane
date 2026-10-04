@@ -46,7 +46,7 @@ struct GeneratedVariantAliasNameClash {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, bool &>
+    requires std::is_invocable_r_v<T1, F1 &, const bool &>
   static T1 variant_t_rect(T1 f, F1 &&f0, const variant_t0 &v) {
     if (std::holds_alternative<typename variant_t0::Empty>(v.v())) {
       return f;
@@ -57,7 +57,7 @@ struct GeneratedVariantAliasNameClash {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, bool &>
+    requires std::is_invocable_r_v<T1, F1 &, const bool &>
   static T1 variant_t_rec(T1 f, F1 &&f0, const variant_t0 &v) {
     if (std::holds_alternative<typename variant_t0::Empty>(v.v())) {
       return f;

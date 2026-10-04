@@ -8,7 +8,6 @@
 #include <cstdint>
 #include <memory>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -169,14 +168,12 @@ struct RoseSharedSuffixDrain {
   };
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, List<rose> &>
   static T1 rose_rect(F0 &&f, const rose &r) {
     const auto &[a0, a1] = std::get<typename rose::Node>(r.v());
     return f(a0, *a1);
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, List<rose> &>
   static T1 rose_rec(F0 &&f, const rose &r) {
     const auto &[a0, a1] = std::get<typename rose::Node>(r.v());
     return f(a0, *a1);

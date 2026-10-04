@@ -185,8 +185,8 @@ struct DisassembleOps {
   };
 
   template <typename T1, typename F2, typename F3>
-    requires std::is_invocable_r_v<T1, F2 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F3 &, uint64_t &>
+    requires std::is_invocable_r_v<T1, F2 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F3 &, const uint64_t &>
   static T1 instruction_rect(T1 f, T1 f0, F2 &&f1, F3 &&f2,
                              const instruction &i) {
     if (std::holds_alternative<typename instruction::NOP>(i.v())) {
@@ -203,8 +203,8 @@ struct DisassembleOps {
   }
 
   template <typename T1, typename F2, typename F3>
-    requires std::is_invocable_r_v<T1, F2 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F3 &, uint64_t &>
+    requires std::is_invocable_r_v<T1, F2 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F3 &, const uint64_t &>
   static T1 instruction_rec(T1 f, T1 f0, F2 &&f1, F3 &&f2,
                             const instruction &i) {
     if (std::holds_alternative<typename instruction::NOP>(i.v())) {

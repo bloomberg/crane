@@ -210,7 +210,8 @@ struct InstructionCycles {
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &,
+                                     const uint64_t &>
     T1 instruction1_rec(F0 &&f, T1 f0) const {
       if (std::holds_alternative<typename instruction1::JCN1>(this->v())) {
         const auto &[a0, a1] = std::get<typename instruction1::JCN1>(this->v());
@@ -221,7 +222,8 @@ struct InstructionCycles {
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &,
+                                     const uint64_t &>
     T1 instruction1_rect(F0 &&f, T1 f0) const {
       if (std::holds_alternative<typename instruction1::JCN1>(this->v())) {
         const auto &[a0, a1] = std::get<typename instruction1::JCN1>(this->v());
@@ -269,7 +271,7 @@ struct InstructionCycles {
     const variant_t &v() const { return v_; }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 instruction2_rec(F0 &&f, T1 f0) const {
       if (std::holds_alternative<typename instruction2::JMS2>(this->v())) {
         const auto &[a0] = std::get<typename instruction2::JMS2>(this->v());
@@ -280,7 +282,7 @@ struct InstructionCycles {
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 instruction2_rect(F0 &&f, T1 f0) const {
       if (std::holds_alternative<typename instruction2::JMS2>(this->v())) {
         const auto &[a0] = std::get<typename instruction2::JMS2>(this->v());
@@ -590,8 +592,8 @@ struct InstructionCycles {
     }
 
     template <typename T1, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F2 &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F1 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F2 &, const uint64_t &>
     T1 instruction5_rec(T1 f, F1 &&f0, F2 &&f1) const {
       if (std::holds_alternative<typename instruction5::NOP5>(this->v())) {
         return f;
@@ -606,8 +608,8 @@ struct InstructionCycles {
     }
 
     template <typename T1, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F2 &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F1 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F2 &, const uint64_t &>
     T1 instruction5_rect(T1 f, F1 &&f0, F2 &&f1) const {
       if (std::holds_alternative<typename instruction5::NOP5>(this->v())) {
         return f;

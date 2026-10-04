@@ -149,7 +149,7 @@ public:
   const variant_t &v() const { return v_; }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, A &>
+    requires std::is_invocable_r_v<T1, F0 &, const A &>
   List<T1> map(F0 &&f) const {
     std::shared_ptr<List<T1>> _head{};
     std::shared_ptr<List<T1>> *_write = &_head;
@@ -291,7 +291,7 @@ public:
   const variant_t &v() const { return v_; }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, t &>
+    requires std::is_invocable_r_v<T1, F0 &, const t &>
   Exp<T1> exp_map(F0 &&f) const {
     const Exp<t> *_self = this;
 
@@ -364,7 +364,6 @@ crane::rebind_t<T1, T3> tfmap(std::type_identity_t<TFunctor<T1>> tFunctor,
 template <typename t> using boxed = std::pair<Nat, Exp<t>>;
 
 template <typename T1, typename T2, typename F0>
-  requires std::is_invocable_r_v<T2, F0 &, T1 &>
 boxed<T2> bump(F0 &&f, std::pair<Nat, Exp<T1>> p) {
   auto [n, e] = std::move(p);
   return std::make_pair(std::move(n),
@@ -380,7 +379,6 @@ TFunctor_boxedlist(crane::fn<crane::obj(crane::obj)> f,
                    const List<std::pair<Nat, Exp<crane::obj>>> &l);
 
 template <typename F0>
-  requires std::is_invocable_r_v<bool, F0 &, Nat &>
 List<boxed<bool>> use_boxedlist(F0 &&f,
                                 const List<std::pair<Nat, Exp<Nat>>> &l) {
   return tfmap<List<boxed<crane::obj>>, Nat, bool>(

@@ -405,14 +405,14 @@ struct RocqBug14174 {
       }
 
       template <typename T1, typename F0>
-        requires std::is_invocable_r_v<T1, F0 &, A &>
+        requires std::is_invocable_r_v<T1, F0 &, const A &>
       T1 sig_rec(F0 &&f) const {
         const auto &[x0] = *this;
         return f(x0);
       }
 
       template <typename T1, typename F0>
-        requires std::is_invocable_r_v<T1, F0 &, A &>
+        requires std::is_invocable_r_v<T1, F0 &, const A &>
       T1 sig_rect(F0 &&f) const {
         const auto &[x0] = *this;
         return f(x0);
@@ -479,14 +479,14 @@ struct RocqBug14174 {
       }
 
       template <typename T1, typename F0>
-        requires std::is_invocable_r_v<T1, F0 &, A &>
+        requires std::is_invocable_r_v<T1, F0 &, const A &>
       T1 sig2_rec(F0 &&f) const {
         const auto &[x0] = *this;
         return f(x0);
       }
 
       template <typename T1, typename F0>
-        requires std::is_invocable_r_v<T1, F0 &, A &>
+        requires std::is_invocable_r_v<T1, F0 &, const A &>
       T1 sig2_rect(F0 &&f) const {
         const auto &[x0] = *this;
         return f(x0);
@@ -571,14 +571,14 @@ struct RocqBug14174 {
       }
 
       template <typename T1, typename F0>
-        requires std::is_invocable_r_v<T1, F0 &, A &, P &>
+        requires std::is_invocable_r_v<T1, F0 &, const A &, const P &>
       T1 sigT_rec(F0 &&f) const {
         const auto &[x0, a1] = *this;
         return f(x0, a1);
       }
 
       template <typename T1, typename F0>
-        requires std::is_invocable_r_v<T1, F0 &, A &, P &>
+        requires std::is_invocable_r_v<T1, F0 &, const A &, const P &>
       T1 sigT_rect(F0 &&f) const {
         const auto &[x0, a1] = *this;
         return f(x0, a1);
@@ -680,14 +680,16 @@ struct RocqBug14174 {
       }
 
       template <typename T1, typename F0>
-        requires std::is_invocable_r_v<T1, F0 &, A &, P &, Q &>
+        requires std::is_invocable_r_v<T1, F0 &, const A &, const P &,
+                                       const Q &>
       T1 sigT2_rec(F0 &&f) const {
         const auto &[x0, a1, a2] = *this;
         return f(x0, a1, a2);
       }
 
       template <typename T1, typename F0>
-        requires std::is_invocable_r_v<T1, F0 &, A &, P &, Q &>
+        requires std::is_invocable_r_v<T1, F0 &, const A &, const P &,
+                                       const Q &>
       T1 sigT2_rect(F0 &&f) const {
         const auto &[x0, a1, a2] = *this;
         return f(x0, a1, a2);
@@ -831,7 +833,7 @@ struct RocqBug14174 {
       const variant_t &v() const { return v_; }
 
       template <typename T1, typename F0>
-        requires std::is_invocable_r_v<T1, F0 &, A &>
+        requires std::is_invocable_r_v<T1, F0 &, const A &>
       T1 sumor_rec(F0 &&f, const T1 &f0) const {
         if (std::holds_alternative<typename sumor<A>::Inleft>(this->v())) {
           const auto &[a0] = std::get<typename sumor<A>::Inleft>(this->v());
@@ -842,7 +844,7 @@ struct RocqBug14174 {
       }
 
       template <typename T1, typename F0>
-        requires std::is_invocable_r_v<T1, F0 &, A &>
+        requires std::is_invocable_r_v<T1, F0 &, const A &>
       T1 sumor_rect(F0 &&f, const T1 &f0) const {
         if (std::holds_alternative<typename sumor<A>::Inleft>(this->v())) {
           const auto &[a0] = std::get<typename sumor<A>::Inleft>(this->v());

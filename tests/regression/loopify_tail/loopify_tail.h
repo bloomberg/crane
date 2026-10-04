@@ -96,7 +96,6 @@ struct LoopifyTail {
   };
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
   static T2
   list_rect(T2 f, F1 &&f0,
             const list<T1> &l) { /// CraneEnter: captures varying parameters for
@@ -142,7 +141,6 @@ struct LoopifyTail {
   }
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
   static T2
   list_rec(T2 f, F1 &&f0,
            const list<T1> &l) { /// CraneEnter: captures varying parameters for
@@ -229,7 +227,7 @@ struct LoopifyTail {
 
   /// Tail-recursive: fold_left
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, T2 &, T1 &>
+    requires std::is_invocable_r_v<T2, F0 &, T2 &&, const T1 &>
   static T2 fold_left(F0 &&f, T2 acc, const list<T1> &l) {
     const list<T1> *_loop_l = &l;
     T2 _loop_acc = std::move(acc);

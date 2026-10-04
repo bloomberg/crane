@@ -37,14 +37,14 @@ struct WrapperNestedRecursionNoDrain {
     static box<A> box0(A a0) { return {std::move(a0)}; }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, A &>
+      requires std::is_invocable_r_v<T1, F0 &, const A &>
     T1 box_rec(F0 &&f) const {
       const auto &[a0] = *this;
       return f(a0);
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, A &>
+      requires std::is_invocable_r_v<T1, F0 &, const A &>
     T1 box_rect(F0 &&f) const {
       const auto &[a0] = *this;
       return f(a0);
@@ -126,8 +126,7 @@ struct WrapperNestedRecursionNoDrain {
     const variant_t &v() const { return v_; }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, box<rose> &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 rose_rec(F0 &&f, F1 &&f0) const {
       if (std::holds_alternative<typename rose::RLeaf>(this->v())) {
         const auto &[a0] = std::get<typename rose::RLeaf>(this->v());
@@ -139,8 +138,7 @@ struct WrapperNestedRecursionNoDrain {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, box<rose> &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 rose_rect(F0 &&f, F1 &&f0) const {
       if (std::holds_alternative<typename rose::RLeaf>(this->v())) {
         const auto &[a0] = std::get<typename rose::RLeaf>(this->v());

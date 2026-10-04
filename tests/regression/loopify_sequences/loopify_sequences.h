@@ -427,7 +427,6 @@ struct LoopifySequences {
 
   /// iterate f n x generates x, f x, f (f x), ... of length n.
   template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
   static List<uint64_t> iterate(F0 &&f, uint64_t n, uint64_t x) {
     std::shared_ptr<List<uint64_t>> _head{};
     std::shared_ptr<List<uint64_t>> *_write = &_head;
@@ -501,7 +500,6 @@ struct LoopifySequences {
 
   /// take_while p l takes elements while predicate holds.
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
   static List<uint64_t> take_while(F0 &&p, const List<uint64_t> &l) {
     std::shared_ptr<List<uint64_t>> _head{};
     std::shared_ptr<List<uint64_t>> *_write = &_head;
@@ -532,7 +530,6 @@ struct LoopifySequences {
 
   /// drop_while p l drops elements while predicate holds.
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
   static List<uint64_t> drop_while(F0 &&p, const List<uint64_t> &l) {
     const List<uint64_t> *_loop_l = &l;
     while (true) {

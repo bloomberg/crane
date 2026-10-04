@@ -1554,19 +1554,34 @@ let rec pp_structure_elem ~is_header f = function
                     ty_vars
                     non_projection_candidates
                 in
-                let methods_with_refs =
-                  List.combine non_projection_candidates method_fields
-                in
                 let methods_pp =
                   if method_fields = [] then
                     mt ()
                   else
+                    (* The record's methods are members of the module struct
+                       it was merged into, and pass through every stage a
+                       member does -- loopification, moves, the constraints
+                       their bodies settle -- before they are printed. *)
+                    let finished =
+                      Cpp_pipeline.finish
+                        (Dfields
+                           { ds_ref = epon_ref;
+                             ds_fields = method_fields;
+                             ds_tparams =
+                               List.map (fun v -> (TTtypename, v)) ty_vars;
+                             ds_constraint = None;
+                             ds_needs_shared_from_this = false } )
+                    in
+                    let fields =
+                      match (finished :> cpp_decl) with
+                      | Dfields ds -> ds.ds_fields
+                      | _ -> method_fields
+                    in
                     setting method_candidates this_method_candidates (fun () ->
                         prlist_with_sep
                           fnl
-                          (fun ((_r, _, _, _), (fld, _vis, _tag)) ->
-                            pp_cpp_field (empty_env ()) fld )
-                          methods_with_refs
+                          (fun (fld, _vis, _tag) -> pp_cpp_field (empty_env ()) fld)
+                          fields
                         ++ fnl () )
                 in
                 (template_str, fields_pp, methods_pp)

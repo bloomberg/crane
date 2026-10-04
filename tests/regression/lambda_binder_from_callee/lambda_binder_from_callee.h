@@ -89,8 +89,7 @@ public:
 
 struct LambdaBinderFromCallee {
   template <Params _tcI0, typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &,
-                                   typename _tcI0::PROV::allocationId &>
+    requires std::is_invocable_r_v<T1, F0 &, typename _tcI0::PROV::allocationId>
   static T1 with_aid(F0 &&f) {
     return f(_tcI0::PROV::mk_aid(Nat::o()));
   }

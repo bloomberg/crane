@@ -111,9 +111,7 @@ struct UnitVoidEdge {
     return;
   }
 
-  template <typename F0>
-    requires std::is_invocable_r_v<void, F0 &, uint64_t &>
-  static uint64_t map_to_unit(F0 &&, uint64_t) {
+  template <typename F0> static uint64_t map_to_unit(F0 &&, uint64_t) {
     return UINT64_C(42);
   }
 
@@ -181,8 +179,6 @@ struct UnitVoidEdge {
   }();
 
   template <typename F0, typename F1>
-    requires std::is_invocable_r_v<void, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<void, F1 &, bool &>
   static void multi_void_callbacks(F0 &&, F1 &&, uint64_t, bool) {
     return;
   }

@@ -166,7 +166,7 @@ struct DepMatchUnitList {
   };
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, List<uint64_t> &>
+    requires std::is_invocable_r_v<T1, F0 &, const List<uint64_t> &>
   static T1 tg_rect(F0 &&f, T1 f0, bool, const tg &t) {
     if (std::holds_alternative<typename tg::TL>(t.v())) {
       const auto &[a0] = std::get<typename tg::TL>(t.v());
@@ -177,7 +177,7 @@ struct DepMatchUnitList {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, List<uint64_t> &>
+    requires std::is_invocable_r_v<T1, F0 &, const List<uint64_t> &>
   static T1 tg_rec(F0 &&f, T1 f0, bool, const tg &t) {
     if (std::holds_alternative<typename tg::TL>(t.v())) {
       const auto &[a0] = std::get<typename tg::TL>(t.v());

@@ -240,7 +240,6 @@ struct NestedInd {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, A &, custom_list<A> &, T1 &>
     T1 custom_list_rec(T1 f, F1 &&f0) const {
       const custom_list<A> *_self = this;
 
@@ -287,7 +286,6 @@ struct NestedInd {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, A &, custom_list<A> &, T1 &>
     T1 custom_list_rect(T1 f, F1 &&f0) const {
       const custom_list<A> *_self = this;
 
@@ -432,16 +430,12 @@ struct NestedInd {
       return a0;
     }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, A &, custom_list<rose<A>> &>
-    T1 rose_rec(F0 &&f) const {
+    template <typename T1, typename F0> T1 rose_rec(F0 &&f) const {
       const auto &[a0, a1] = std::get<typename rose<A>::Node>(this->v());
       return f(a0, *a1);
     }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, A &, custom_list<rose<A>> &>
-    T1 rose_rect(F0 &&f) const {
+    template <typename T1, typename F0> T1 rose_rect(F0 &&f) const {
       const auto &[a0, a1] = std::get<typename rose<A>::Node>(this->v());
       return f(a0, *a1);
     }
@@ -571,7 +565,7 @@ struct NestedInd {
     const variant_t &v() const { return v_; }
 
     template <typename F0>
-      requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
+      requires std::is_invocable_r_v<uint64_t, F0 &, const uint64_t &>
     expr lit_map(F0 &&f) const {
       const expr *_self = this;
 
@@ -876,9 +870,7 @@ struct NestedInd {
     }
 
     template <typename T1, typename F0, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, List<expr> &> &&
-               std::is_invocable_r_v<T1, F2 &, List<expr> &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 expr_rec(F0 &&f, F1 &&f0, F2 &&f1) const {
       if (std::holds_alternative<typename expr::Lit>(this->v())) {
         const auto &[a0] = std::get<typename expr::Lit>(this->v());
@@ -893,9 +885,7 @@ struct NestedInd {
     }
 
     template <typename T1, typename F0, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, List<expr> &> &&
-               std::is_invocable_r_v<T1, F2 &, List<expr> &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 expr_rect(F0 &&f, F1 &&f0, F2 &&f1) const {
       if (std::holds_alternative<typename expr::Lit>(this->v())) {
         const auto &[a0] = std::get<typename expr::Lit>(this->v());

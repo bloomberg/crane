@@ -133,7 +133,7 @@ public:
 
 struct LoopifyFolds {
   template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &, uint64_t &>
+    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &, const uint64_t &>
   static uint64_t fold_left(F0 &&f, uint64_t acc, const List<uint64_t> &l) {
     const List<uint64_t> *_loop_l = &l;
     uint64_t _loop_acc = std::move(acc);
@@ -150,7 +150,7 @@ struct LoopifyFolds {
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &, uint64_t &>
+    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &, uint64_t &&>
   static uint64_t
   fold_right(F0 &&f, const List<uint64_t> &l,
              uint64_t acc) { /// CraneEnter: captures varying parameters for
@@ -194,7 +194,7 @@ struct LoopifyFolds {
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &, uint64_t &>
+    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &, const uint64_t &>
   static List<uint64_t> scanl(F0 &&f, uint64_t acc, const List<uint64_t> &l) {
     std::shared_ptr<List<uint64_t>> _head{};
     std::shared_ptr<List<uint64_t>> *_write = &_head;
@@ -221,7 +221,7 @@ struct LoopifyFolds {
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &, uint64_t &>
+    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &, uint64_t &&>
   static List<uint64_t>
   scanr(F0 &&f, uint64_t acc,
         const List<uint64_t> &l) { /// CraneEnter: captures varying parameters
@@ -273,7 +273,6 @@ struct LoopifyFolds {
   }
 
   template <typename F1>
-    requires std::is_invocable_r_v<uint64_t, F1 &, uint64_t &, uint64_t &>
   static uint64_t foldl1_fuel(uint64_t fuel, F1 &&f, const List<uint64_t> &l) {
     List<uint64_t> _loop_l = l;
     uint64_t _loop_fuel = std::move(fuel);
@@ -302,13 +301,12 @@ struct LoopifyFolds {
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &, uint64_t &>
   static uint64_t foldl1(F0 &&f, const List<uint64_t> &l) {
     return foldl1_fuel(l.length(), f, l);
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &, uint64_t &>
+    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &, uint64_t &&>
   static uint64_t
   foldr1(F0 &&f,
          const List<uint64_t> &l) { /// CraneEnter: captures varying parameters
@@ -357,8 +355,6 @@ struct LoopifyFolds {
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<std::pair<uint64_t, uint64_t>, F0 &,
-                                   uint64_t &, uint64_t &>
   static std::pair<uint64_t, List<uint64_t>>
   map_accum(F0 &&f, uint64_t acc,
             const List<uint64_t> &l) { /// CraneEnter: captures varying
@@ -407,7 +403,6 @@ struct LoopifyFolds {
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
   static List<uint64_t> iterate_accum(F0 &&f, uint64_t n, uint64_t x) {
     std::shared_ptr<List<uint64_t>> _head{};
     std::shared_ptr<List<uint64_t>> *_write = &_head;
@@ -432,8 +427,6 @@ struct LoopifyFolds {
   }
 
   template <typename F1>
-    requires std::is_invocable_r_v<std::pair<uint64_t, uint64_t>, F1 &,
-                                   uint64_t &>
   static List<uint64_t> unfold_fuel(uint64_t fuel, F1 &&f, uint64_t seed) {
     std::shared_ptr<List<uint64_t>> _head{};
     std::shared_ptr<List<uint64_t>> *_write = &_head;
@@ -459,8 +452,6 @@ struct LoopifyFolds {
   }
 
   template <typename F1>
-    requires std::is_invocable_r_v<std::pair<uint64_t, uint64_t>, F1 &,
-                                   uint64_t &>
   static List<uint64_t> unfold(uint64_t x0_, F1 &&x1_, uint64_t x2_) {
     return unfold_fuel(x0_, x1_, x2_);
   }

@@ -642,11 +642,6 @@ struct LargeMutual {
   };
 
   template <typename T1, typename F0, typename F1, typename F2, typename F3>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, expr &> &&
-             std::is_invocable_r_v<T1, F1 &, stmt &, T1 &, stmt &, T1 &> &&
-             std::is_invocable_r_v<T1, F2 &, bexpr &, stmt &, T1 &, stmt &,
-                                   T1 &> &&
-             std::is_invocable_r_v<T1, F3 &, bexpr &, stmt &, T1 &>
   static T1 stmt_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, T1 f3, const stmt &s) {
     if (std::holds_alternative<typename stmt::SAssign>(s.v())) {
       const auto &[a0, a1] = std::get<typename stmt::SAssign>(s.v());
@@ -668,11 +663,6 @@ struct LargeMutual {
   }
 
   template <typename T1, typename F0, typename F1, typename F2, typename F3>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, expr &> &&
-             std::is_invocable_r_v<T1, F1 &, stmt &, T1 &, stmt &, T1 &> &&
-             std::is_invocable_r_v<T1, F2 &, bexpr &, stmt &, T1 &, stmt &,
-                                   T1 &> &&
-             std::is_invocable_r_v<T1, F3 &, bexpr &, stmt &, T1 &>
   static T1 stmt_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, T1 f3, const stmt &s) {
     if (std::holds_alternative<typename stmt::SAssign>(s.v())) {
       const auto &[a0, a1] = std::get<typename stmt::SAssign>(s.v());
@@ -695,12 +685,8 @@ struct LargeMutual {
 
   template <typename T1, typename F0, typename F1, typename F2, typename F3,
             typename F4>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F2 &, expr &, T1 &, expr &, T1 &> &&
-             std::is_invocable_r_v<T1, F3 &, expr &, T1 &, expr &, T1 &> &&
-             std::is_invocable_r_v<T1, F4 &, bexpr &, expr &, T1 &, expr &,
-                                   T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F1 &, const uint64_t &>
   static T1 expr_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3,
                       const expr &e) {
     if (std::holds_alternative<typename expr::ENum>(e.v())) {
@@ -726,12 +712,8 @@ struct LargeMutual {
 
   template <typename T1, typename F0, typename F1, typename F2, typename F3,
             typename F4>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F2 &, expr &, T1 &, expr &, T1 &> &&
-             std::is_invocable_r_v<T1, F3 &, expr &, T1 &, expr &, T1 &> &&
-             std::is_invocable_r_v<T1, F4 &, bexpr &, expr &, T1 &, expr &,
-                                   T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F1 &, const uint64_t &>
   static T1 expr_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3,
                      const expr &e) {
     if (std::holds_alternative<typename expr::ENum>(e.v())) {
@@ -757,11 +739,6 @@ struct LargeMutual {
 
   template <typename T1, typename F2, typename F3, typename F4, typename F5,
             typename F6>
-    requires std::is_invocable_r_v<T1, F2 &, expr &, expr &> &&
-             std::is_invocable_r_v<T1, F3 &, expr &, expr &> &&
-             std::is_invocable_r_v<T1, F4 &, bexpr &, T1 &, bexpr &, T1 &> &&
-             std::is_invocable_r_v<T1, F5 &, bexpr &, T1 &, bexpr &, T1 &> &&
-             std::is_invocable_r_v<T1, F6 &, bexpr &, T1 &>
   static T1 bexpr_rect(T1 f, T1 f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4, F6 &&f5,
                        const bexpr &b) {
     if (std::holds_alternative<typename bexpr::BTrue>(b.v())) {
@@ -791,11 +768,6 @@ struct LargeMutual {
 
   template <typename T1, typename F2, typename F3, typename F4, typename F5,
             typename F6>
-    requires std::is_invocable_r_v<T1, F2 &, expr &, expr &> &&
-             std::is_invocable_r_v<T1, F3 &, expr &, expr &> &&
-             std::is_invocable_r_v<T1, F4 &, bexpr &, T1 &, bexpr &, T1 &> &&
-             std::is_invocable_r_v<T1, F5 &, bexpr &, T1 &, bexpr &, T1 &> &&
-             std::is_invocable_r_v<T1, F6 &, bexpr &, T1 &>
   static T1 bexpr_rec(T1 f, T1 f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4, F6 &&f5,
                       const bexpr &b) {
     if (std::holds_alternative<typename bexpr::BTrue>(b.v())) {

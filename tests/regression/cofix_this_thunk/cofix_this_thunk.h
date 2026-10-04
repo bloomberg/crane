@@ -167,14 +167,12 @@ public:
   /// This will be methodified on sseq because first arg is sseq A
   /// and the module is eponymous.
   template <typename F0>
-    requires std::is_invocable_r_v<A, F0 &, A &>
+    requires std::is_invocable_r_v<A, F0 &, A>
   A double_head(F0 &&f) const {
     return f(this->shead());
   }
 
-  template <typename F0>
-    requires std::is_invocable_r_v<A, F0 &, A &>
-  Sseq<A> smap(F0 &&f) const {
+  template <typename F0> Sseq<A> smap(F0 &&f) const {
     Sseq<A> _self_val = *this;
     return Sseq<A>::lazy_([=]() -> Sseq<A> {
       return Sseq<A>::scons(_self_val.double_head(f),
@@ -183,7 +181,7 @@ public:
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<A, F0 &, A &>
+    requires std::is_invocable_r_v<A, const F0 &, A>
   Sseq<A> smap_direct(F0 &&f) const {
     Sseq<A> _self_val = *this;
     return Sseq<A>::lazy_([=]() -> Sseq<A> {

@@ -98,7 +98,7 @@ public:
   const variant_t &v() const { return v_; }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, T1 &, A &>
+    requires std::is_invocable_r_v<T1, F0 &, T1 &&, const A &>
   T1 fold_left(F0 &&f, T1 a0) const {
     const List<A> *_loop_self = this;
     T1 _loop_a0 = std::move(a0);
@@ -121,7 +121,6 @@ struct Monadic {
   }
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<std::optional<T2>, F1 &, T1 &>
   static std::optional<T2> option_bind(const std::optional<T1> &ma, F1 &&f) {
     if (ma.has_value()) {
       const T1 &a = *ma;

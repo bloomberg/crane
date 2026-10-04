@@ -178,7 +178,6 @@ struct InstanceUseDropsFamilyArg {
   }
 
   template <Monad _tcI0, typename T2, typename T3, typename F1>
-    requires std::is_invocable_r_v<typename _tcI0::template M<T3>, F1 &, T2 &>
   static typename _tcI0::template M<T3> bind(typename _tcI0::template M<T2> x,
                                              F1 &&x0) {
     return _tcI0::template bind<T2, T3>(std::move(x), x0);
@@ -208,14 +207,14 @@ struct InstanceUseDropsFamilyArg {
   };
 
   template <typename T1, typename T2, typename T3, typename F0>
-    requires std::is_invocable_r_v<T3, F0 &, T2 &>
+    requires std::is_invocable_r_v<T3, F0 &, const T2 &>
   static T3 box_rect(F0 &&f, const box<T1, T2> &b) {
     const auto &[a0] = b;
     return f(a0);
   }
 
   template <typename T1, typename T2, typename T3, typename F0>
-    requires std::is_invocable_r_v<T3, F0 &, T2 &>
+    requires std::is_invocable_r_v<T3, F0 &, const T2 &>
   static T3 box_rec(F0 &&f, const box<T1, T2> &b) {
     const auto &[a0] = b;
     return f(a0);

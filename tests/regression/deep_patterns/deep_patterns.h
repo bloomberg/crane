@@ -247,8 +247,7 @@ struct DeepPatterns {
   };
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, inner &> &&
-             std::is_invocable_r_v<T1, F1 &, uint64_t &>
+    requires std::is_invocable_r_v<T1, F1 &, const uint64_t &>
   static T1 outer_rect(F0 &&f, F1 &&f0, const outer &o) {
     if (std::holds_alternative<typename outer::OLeft>(o.v())) {
       const auto &[a0] = std::get<typename outer::OLeft>(o.v());
@@ -260,8 +259,7 @@ struct DeepPatterns {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, inner &> &&
-             std::is_invocable_r_v<T1, F1 &, uint64_t &>
+    requires std::is_invocable_r_v<T1, F1 &, const uint64_t &>
   static T1 outer_rec(F0 &&f, F1 &&f0, const outer &o) {
     if (std::holds_alternative<typename outer::OLeft>(o.v())) {
       const auto &[a0] = std::get<typename outer::OLeft>(o.v());
@@ -273,8 +271,8 @@ struct DeepPatterns {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, bool &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F1 &, const bool &>
   static T1 inner_rect(F0 &&f, F1 &&f0, const inner &i) {
     if (std::holds_alternative<typename inner::ILeft>(i.v())) {
       const auto &[a0] = std::get<typename inner::ILeft>(i.v());
@@ -286,8 +284,8 @@ struct DeepPatterns {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, bool &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F1 &, const bool &>
   static T1 inner_rec(F0 &&f, F1 &&f0, const inner &i) {
     if (std::holds_alternative<typename inner::ILeft>(i.v())) {
       const auto &[a0] = std::get<typename inner::ILeft>(i.v());
@@ -337,14 +335,14 @@ struct DeepPatterns {
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, A &, B &>
+      requires std::is_invocable_r_v<T1, F0 &, const A &, const B &>
     T1 pair_rec(F0 &&f) const {
       const auto &[a0, a1] = *this;
       return f(a0, a1);
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, A &, B &>
+      requires std::is_invocable_r_v<T1, F0 &, const A &, const B &>
     T1 pair_rect(F0 &&f) const {
       const auto &[a0, a1] = *this;
       return f(a0, a1);
@@ -433,9 +431,7 @@ struct DeepPatterns {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, A &, mylist<A> &, T1 &>
-    T1 mylist_rec(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 mylist_rec(T1 f, F1 &&f0) const {
       const mylist<A> *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
@@ -479,9 +475,7 @@ struct DeepPatterns {
       return _result;
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, A &, mylist<A> &, T1 &>
-    T1 mylist_rect(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 mylist_rect(T1 f, F1 &&f0) const {
       const mylist<A> *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.

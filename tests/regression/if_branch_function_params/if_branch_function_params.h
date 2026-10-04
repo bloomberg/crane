@@ -96,8 +96,8 @@ public:
 /// binders do not.
 struct IfBranchFunctionParams {
   template <typename F1, typename F2>
-    requires std::is_invocable_r_v<Nat, F1 &, Nat &> &&
-             std::is_invocable_r_v<Nat, F2 &, Nat &>
+    requires std::is_invocable_r_v<Nat, F1 &, Nat &&> &&
+             std::is_invocable_r_v<Nat, F2 &, Nat &&>
   static Nat h(Bool0 b, F1 &&f, F2 &&g, Nat x0_) {
     switch (b) {
     case Bool0::TRUE_: {

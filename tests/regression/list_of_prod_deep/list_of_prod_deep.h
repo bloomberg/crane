@@ -8,7 +8,6 @@
 #include <cstdint>
 #include <memory>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -94,9 +93,7 @@ struct ListOfProdDeep {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, A &, lst<A> &, T1 &>
-    T1 lst_rec(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 lst_rec(T1 f, F1 &&f0) const {
       const lst<A> *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
@@ -140,9 +137,7 @@ struct ListOfProdDeep {
       return _result;
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, A &, lst<A> &, T1 &>
-    T1 lst_rect(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 lst_rect(T1 f, F1 &&f0) const {
       const lst<A> *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
@@ -271,16 +266,12 @@ struct ListOfProdDeep {
           std::make_pair(*this, k), lst<std::pair<t, uint64_t>>::lnil()));
     }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, lst<std::pair<t, uint64_t>> &>
-    T1 t_rec(F0 &&f) const {
+    template <typename T1, typename F0> T1 t_rec(F0 &&f) const {
       const auto &[a0] = std::get<typename t::Node>(this->v());
       return f(*a0);
     }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, lst<std::pair<t, uint64_t>> &>
-    T1 t_rect(F0 &&f) const {
+    template <typename T1, typename F0> T1 t_rect(F0 &&f) const {
       const auto &[a0] = std::get<typename t::Node>(this->v());
       return f(*a0);
     }

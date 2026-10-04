@@ -213,8 +213,8 @@ struct Monad_option {
 static_assert(Monad<Monad_option>);
 
 template <Monad _tcI0, typename T2, typename T3, typename F0>
-  requires std::is_invocable_r_v<typename _tcI0::template m<T3>, F0 &, T3 &,
-                                 T2 &>
+  requires std::is_invocable_r_v<typename _tcI0::template m<T3>, const F0 &,
+                                 const T3 &, const T2 &>
 typename _tcI0::template m<T3> monad_fold_right(F0 &&f, const List<T2> &l,
                                                 const T3 &b) {
   if (std::holds_alternative<typename List<T2>::Nil>(l.v())) {

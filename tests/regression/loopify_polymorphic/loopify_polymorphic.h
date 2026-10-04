@@ -309,7 +309,6 @@ struct LoopifyPolymorphic {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, T1 &>
   static List<T1> poly_filter(F0 &&p, const List<T1> &l) {
     std::shared_ptr<List<T1>> _head{};
     std::shared_ptr<List<T1>> *_write = &_head;
@@ -337,7 +336,7 @@ struct LoopifyPolymorphic {
   }
 
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, T1 &>
+    requires std::is_invocable_r_v<T2, F0 &, const T1 &>
   static List<T2> poly_map(F0 &&f, const List<T1> &l) {
     std::shared_ptr<List<T2>> _head{};
     std::shared_ptr<List<T2>> *_write = &_head;
@@ -447,7 +446,6 @@ struct LoopifyPolymorphic {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, T1 &>
   static std::pair<List<T1>, List<T1>>
   poly_partition(F0 &&p,
                  const List<T1> &l) { /// CraneEnter: captures varying
@@ -498,7 +496,6 @@ struct LoopifyPolymorphic {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static bool poly_member(F0 &&eq, const T1 &x, const List<T1> &l) {
     const List<T1> *_loop_l = &l;
     while (true) {
@@ -550,19 +547,16 @@ struct LoopifyPolymorphic {
   static bool is_even(uint64_t x);
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
   static List<uint64_t> nat_filter(F0 &&x0_, const List<uint64_t> &x1_) {
     return poly_filter<uint64_t>(x0_, x1_);
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
   static List<uint64_t> nat_map(F0 &&x0_, const List<uint64_t> &x1_) {
     return poly_map<uint64_t, uint64_t>(x0_, x1_);
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
   static std::pair<List<uint64_t>, List<uint64_t>>
   nat_partition(F0 &&x0_, const List<uint64_t> &x1_) {
     return poly_partition<uint64_t>(x0_, x1_);

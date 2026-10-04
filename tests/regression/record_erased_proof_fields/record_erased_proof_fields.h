@@ -92,7 +92,7 @@ public:
   const variant_t &v() const { return v_; }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, T1 &, A &>
+    requires std::is_invocable_r_v<T1, F0 &, T1 &&, const A &>
   T1 fold_left(F0 &&f, T1 a0) const {
     const List<A> *_loop_self = this;
     T1 _loop_a0 = std::move(a0);
@@ -212,8 +212,8 @@ struct RecordErasedProofFieldsCase {
   };
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, ItemKind &> &&
-             std::is_invocable_r_v<T1, F1 &, ItemKind &>
+    requires std::is_invocable_r_v<T1, F0 &, const ItemKind &> &&
+             std::is_invocable_r_v<T1, F1 &, const ItemKind &>
   static T1 StoredTag_rect(F0 &&f, F1 &&f0, const StoredTag &s) {
     if (std::holds_alternative<typename StoredTag::TagPrimary>(s.v())) {
       const auto &[a0] = std::get<typename StoredTag::TagPrimary>(s.v());
@@ -225,8 +225,8 @@ struct RecordErasedProofFieldsCase {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, ItemKind &> &&
-             std::is_invocable_r_v<T1, F1 &, ItemKind &>
+    requires std::is_invocable_r_v<T1, F0 &, const ItemKind &> &&
+             std::is_invocable_r_v<T1, F1 &, const ItemKind &>
   static T1 StoredTag_rec(F0 &&f, F1 &&f0, const StoredTag &s) {
     if (std::holds_alternative<typename StoredTag::TagPrimary>(s.v())) {
       const auto &[a0] = std::get<typename StoredTag::TagPrimary>(s.v());

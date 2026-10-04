@@ -66,9 +66,7 @@ struct MethodifiedMemberNameClash {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, other &, T1 &>
-    T1 other_rec(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 other_rec(T1 f, F1 &&f0) const {
       const other *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
@@ -110,9 +108,7 @@ struct MethodifiedMemberNameClash {
       return _result;
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, other &, T1 &>
-    T1 other_rect(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 other_rect(T1 f, F1 &&f0) const {
       const other *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
@@ -217,8 +213,7 @@ struct MethodifiedMemberNameClash {
     uint64_t v0() const { return UINT64_C(0); }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, other &> &&
-               std::is_invocable_r_v<T1, F1 &, wrap &, T1 &>
+      requires std::is_invocable_r_v<T1, F0 &, const other &>
     T1 wrap_rec(F0 &&f, F1 &&f0) const {
       const wrap *_self = this;
 
@@ -263,8 +258,7 @@ struct MethodifiedMemberNameClash {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, other &> &&
-               std::is_invocable_r_v<T1, F1 &, wrap &, T1 &>
+      requires std::is_invocable_r_v<T1, F0 &, const other &>
     T1 wrap_rect(F0 &&f, F1 &&f0) const {
       const wrap *_self = this;
 

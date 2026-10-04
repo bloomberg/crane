@@ -97,14 +97,14 @@ struct RocqBug4844 {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, Sum<ST, ST> &>
+    requires std::is_invocable_r_v<T1, F1 &, const Sum<ST, ST> &>
   static T1 box_rect(SomeType, F1 &&f, const box &b) {
     const auto &[a0] = b;
     return f(a0);
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, Sum<ST, ST> &>
+    requires std::is_invocable_r_v<T1, F1 &, const Sum<ST, ST> &>
   static T1 box_rec(SomeType, F1 &&f, const box &b) {
     const auto &[a0] = b;
     return f(a0);

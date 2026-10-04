@@ -145,7 +145,7 @@ struct TailCallSameNameOtherModule {
       const variant_t &v() const { return v_; }
 
       template <typename T1, typename F1>
-        requires std::is_invocable_r_v<T1, F1 &, Nat &>
+        requires std::is_invocable_r_v<T1, F1 &, const Nat &>
       T1 t1_rect(T1 f, F1 &&f0) const {
         if (std::holds_alternative<typename t1::Z1>(this->v())) {
           return f;
@@ -156,7 +156,7 @@ struct TailCallSameNameOtherModule {
       }
 
       template <typename T1, typename F1>
-        requires std::is_invocable_r_v<T1, F1 &, Nat &>
+        requires std::is_invocable_r_v<T1, F1 &, const Nat &>
       T1 t1_rec(T1 f, F1 &&f0) const {
         if (std::holds_alternative<typename t1::Z1>(this->v())) {
           return f;
@@ -216,7 +216,7 @@ struct TailCallSameNameOtherModule {
       const variant_t &v() const { return v_; }
 
       template <typename T1, typename F1>
-        requires std::is_invocable_r_v<T1, F1 &, Nat &>
+        requires std::is_invocable_r_v<T1, F1 &, const Nat &>
       T1 t2_rect(T1 f, F1 &&f0) const {
         if (std::holds_alternative<typename t2::Z2>(this->v())) {
           return f;
@@ -227,7 +227,7 @@ struct TailCallSameNameOtherModule {
       }
 
       template <typename T1, typename F1>
-        requires std::is_invocable_r_v<T1, F1 &, Nat &>
+        requires std::is_invocable_r_v<T1, F1 &, const Nat &>
       T1 t2_rec(T1 f, F1 &&f0) const {
         if (std::holds_alternative<typename t2::Z2>(this->v())) {
           return f;

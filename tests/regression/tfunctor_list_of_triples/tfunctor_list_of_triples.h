@@ -193,7 +193,7 @@ public:
   const variant_t &v() const { return v_; }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, A &>
+    requires std::is_invocable_r_v<T1, F0 &, const A &>
   List<T1> map(F0 &&f) const {
     std::shared_ptr<List<T1>> _head{};
     std::shared_ptr<List<T1>> *_write = &_head;
@@ -262,14 +262,14 @@ struct TfunctorListOfTriples {
     static phi<T> phi0(T t) { return {std::move(t)}; }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, T &>
+      requires std::is_invocable_r_v<T1, F0 &, const T &>
     T1 phi_rec(F0 &&f) const {
       const auto &[t0] = *this;
       return f(t0);
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, T &>
+      requires std::is_invocable_r_v<T1, F0 &, const T &>
     T1 phi_rect(F0 &&f) const {
       const auto &[t0] = *this;
       return f(t0);
@@ -298,14 +298,14 @@ struct TfunctorListOfTriples {
     static metadata<T> md(T t) { return {std::move(t)}; }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, T &>
+      requires std::is_invocable_r_v<T1, F0 &, const T &>
     T1 metadata_rec(F0 &&f) const {
       const auto &[t0] = *this;
       return f(t0);
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, T &>
+      requires std::is_invocable_r_v<T1, F0 &, const T &>
     T1 metadata_rect(F0 &&f) const {
       const auto &[t0] = *this;
       return f(t0);

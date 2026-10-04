@@ -222,8 +222,6 @@ struct LoopifySpecialRecursion {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
-                                   T1 &>
   static T1 tree_rect(T1 f, F1 &&f0,
                       const tree &t) { /// CraneEnter: captures varying
                                        /// parameters for each recursive call.
@@ -288,8 +286,6 @@ struct LoopifySpecialRecursion {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
-                                   T1 &>
   static T1 tree_rec(T1 f, F1 &&f0,
                      const tree &t) { /// CraneEnter: captures varying
                                       /// parameters for each recursive call.
@@ -362,7 +358,7 @@ struct LoopifySpecialRecursion {
   static List<uint64_t> reverse_insert(uint64_t x, const List<uint64_t> &l);
 
   template <typename F1>
-    requires std::is_invocable_r_v<uint64_t, F1 &, uint64_t &>
+    requires std::is_invocable_r_v<uint64_t, F1 &, uint64_t &&>
   static uint64_t
   nest_apply(uint64_t n, F1 &&f,
              uint64_t x) { /// CraneEnter: captures varying parameters for each

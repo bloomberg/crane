@@ -275,8 +275,7 @@ struct Comp {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, Nat &> &&
-               std::is_invocable_r_v<T1, F1 &, expr &, T1 &, expr &, T1 &>
+      requires std::is_invocable_r_v<T1, F0 &, const Nat &>
     T1 expr_rec(F0 &&f, F1 &&f0) const {
       const expr *_self = this;
 
@@ -339,8 +338,7 @@ struct Comp {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, Nat &> &&
-               std::is_invocable_r_v<T1, F1 &, expr &, T1 &, expr &, T1 &>
+      requires std::is_invocable_r_v<T1, F0 &, const Nat &>
     T1 expr_rect(F0 &&f, F1 &&f0) const {
       const expr *_self = this;
 
@@ -707,10 +705,7 @@ struct Comp {
       }
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, avl &, T1 &, Nat &, expr &,
-                                     avl &, T1 &, Nat &>
-    T1 avl_rec(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 avl_rec(T1 f, F1 &&f0) const {
       const avl *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
@@ -785,10 +780,7 @@ struct Comp {
       return _result;
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, avl &, T1 &, Nat &, expr &,
-                                     avl &, T1 &, Nat &>
-    T1 avl_rect(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 avl_rect(T1 f, F1 &&f0) const {
       const avl *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.

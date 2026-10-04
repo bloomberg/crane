@@ -227,8 +227,7 @@ struct LoopifyStructures {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, List<nested> &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 nested_rec(F0 &&f, F1 &&f0) const {
       if (std::holds_alternative<typename nested::Elem>(this->v())) {
         const auto &[a0] = std::get<typename nested::Elem>(this->v());
@@ -240,8 +239,7 @@ struct LoopifyStructures {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, List<nested> &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 nested_rect(F0 &&f, F1 &&f0) const {
       if (std::holds_alternative<typename nested::Elem>(this->v())) {
         const auto &[a0] = std::get<typename nested::Elem>(this->v());
@@ -341,7 +339,7 @@ struct LoopifyStructures {
 
     /// quad_map f t applies function to all leaves.
     template <typename F0>
-      requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
+      requires std::is_invocable_r_v<uint64_t, F0 &, const uint64_t &>
     quadtree quad_map(F0 &&f) const {
       const quadtree *_self = this;
 
@@ -646,9 +644,7 @@ struct LoopifyStructures {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, quadtree &, T1 &, quadtree &,
-                                     T1 &, quadtree &, T1 &, quadtree &, T1 &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 quadtree_rec(F0 &&f, F1 &&f0) const {
       const quadtree *_self = this;
 
@@ -767,9 +763,7 @@ struct LoopifyStructures {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, quadtree &, T1 &, quadtree &,
-                                     T1 &, quadtree &, T1 &, quadtree &, T1 &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 quadtree_rect(F0 &&f, F1 &&f0) const {
       const quadtree *_self = this;
 
@@ -890,7 +884,6 @@ struct LoopifyStructures {
 
   /// find_opt p l finds first element satisfying predicate, returns option.
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
   static std::optional<uint64_t> find_opt(F0 &&p, const List<uint64_t> &l) {
     const List<uint64_t> *_loop_l = &l;
     while (true) {
@@ -910,7 +903,8 @@ struct LoopifyStructures {
 
   /// map_opt f l maps option-returning function and filters out Nones.
   template <typename F0>
-    requires std::is_invocable_r_v<std::optional<uint64_t>, F0 &, uint64_t &>
+    requires std::is_invocable_r_v<std::optional<uint64_t>, F0 &,
+                                   const uint64_t &>
   static List<uint64_t> map_opt(F0 &&f, const List<uint64_t> &l) {
     std::shared_ptr<List<uint64_t>> _head{};
     std::shared_ptr<List<uint64_t>> *_write = &_head;
@@ -943,8 +937,6 @@ struct LoopifyStructures {
 
   /// filter_map p f l filters and maps in one pass.
   template <typename F0, typename F1>
-    requires std::is_invocable_r_v<bool, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<uint64_t, F1 &, uint64_t &>
   static List<uint64_t> filter_map(F0 &&p, F1 &&f, const List<uint64_t> &l) {
     std::shared_ptr<List<uint64_t>> _head{};
     std::shared_ptr<List<uint64_t>> *_write = &_head;
@@ -1129,9 +1121,7 @@ struct LoopifyStructures {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, uint64_t &, ltree &, T1 &,
-                                     ltree &, T1 &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 ltree_rec(F0 &&f, F1 &&f0) const {
       const ltree *_self = this;
 
@@ -1199,9 +1189,7 @@ struct LoopifyStructures {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, uint64_t &, ltree &, T1 &,
-                                     ltree &, T1 &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 ltree_rect(F0 &&f, F1 &&f0) const {
       const ltree *_self = this;
 

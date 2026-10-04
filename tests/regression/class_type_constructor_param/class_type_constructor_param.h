@@ -5,7 +5,6 @@
 #include "obj.h"
 #include <concepts>
 #include <cstdint>
-#include <type_traits>
 #include <utility>
 
 /// A typeclass parameterised by a type constructor (`Container (F : Type ->
@@ -32,7 +31,6 @@ concept Container = requires {
 
 struct ClassTypeConstructorParam {
   template <Container _tcI0, typename T2, typename T3, typename F0>
-    requires std::is_invocable_r_v<T3, F0 &, T2 &>
   static typename _tcI0::template F<T3>
   cmap(F0 &&x, typename _tcI0::template F<T2> x0) {
     return _tcI0::template cmap<T2, T3>(x, std::move(x0));

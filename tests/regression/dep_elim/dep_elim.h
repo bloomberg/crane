@@ -193,8 +193,7 @@ struct DepElim {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, uint64_t &, fin &, T1 &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 fin_rec(F0 &&f, F1 &&f0, uint64_t _x) const {
       const fin *_self = this;
 
@@ -243,8 +242,7 @@ struct DepElim {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, uint64_t &, fin &, T1 &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 fin_rect(F0 &&f, F1 &&f0, uint64_t _x) const {
       const fin *_self = this;
 
@@ -395,7 +393,7 @@ struct DepElim {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, A &>
+      requires std::is_invocable_r_v<T1, F1 &, const A &>
     vec<T1> vec_map(uint64_t, F1 &&f) const {
       std::shared_ptr<vec<T1>> _head{};
       std::shared_ptr<vec<T1>> *_write = &_head;
@@ -441,7 +439,6 @@ struct DepElim {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, uint64_t &, A &, vec<A> &, T1 &>
     T1 vec_rec(T1 f, F1 &&f0, uint64_t _x) const {
       const vec<A> *_self = this;
 
@@ -492,7 +489,6 @@ struct DepElim {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, uint64_t &, A &, vec<A> &, T1 &>
     T1 vec_rect(T1 f, F1 &&f0, uint64_t _x) const {
       const vec<A> *_self = this;
 
@@ -585,7 +581,7 @@ struct DepElim {
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 avail_rec(F0 &&f, T1 f0, bool) const {
       if (std::holds_alternative<typename avail::Present>(this->v())) {
         const auto &[a0] = std::get<typename avail::Present>(this->v());
@@ -596,7 +592,7 @@ struct DepElim {
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 avail_rect(F0 &&f, T1 f0, bool) const {
       if (std::holds_alternative<typename avail::Present>(this->v())) {
         const auto &[a0] = std::get<typename avail::Present>(this->v());

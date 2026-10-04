@@ -26,14 +26,16 @@ struct NameClashCtorField {
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &,
+                                     const uint64_t &>
     T1 clash1_rec(F0 &&f) const {
       const auto &[d_a2, d_a3] = *this;
       return f(d_a2, d_a3);
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &,
+                                     const uint64_t &>
     T1 clash1_rect(F0 &&f) const {
       const auto &[d_a2, d_a3] = *this;
       return f(d_a2, d_a3);
@@ -86,8 +88,8 @@ struct NameClashCtorField {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, const uint64_t &>
     T1 clash2_rec(F0 &&f, F1 &&f0) const {
       if (std::holds_alternative<typename clash2::C2a>(this->v())) {
         const auto &[v_0] = std::get<typename clash2::C2a>(this->v());
@@ -99,8 +101,8 @@ struct NameClashCtorField {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, const uint64_t &>
     T1 clash2_rect(F0 &&f, F1 &&f0) const {
       if (std::holds_alternative<typename clash2::C2a>(this->v())) {
         const auto &[v_0] = std::get<typename clash2::C2a>(this->v());
@@ -130,14 +132,16 @@ struct NameClashCtorField {
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &,
+                                     const uint64_t &>
     T1 pair_ind_rec(F0 &&f) const {
       const auto &[a0, a1] = *this;
       return f(a0, a1);
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &,
+                                     const uint64_t &>
     T1 pair_ind_rect(F0 &&f) const {
       const auto &[a0, a1] = *this;
       return f(a0, a1);
@@ -189,7 +193,7 @@ struct NameClashCtorField {
   };
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, pair_ind &>
+    requires std::is_invocable_r_v<T1, F0 &, const pair_ind &>
   static T1 box_rect(F0 &&f, T1 f0, const box &b) {
     if (std::holds_alternative<typename box::Box0>(b.v())) {
       const auto &[a0] = std::get<typename box::Box0>(b.v());
@@ -200,7 +204,7 @@ struct NameClashCtorField {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, pair_ind &>
+    requires std::is_invocable_r_v<T1, F0 &, const pair_ind &>
   static T1 box_rec(F0 &&f, T1 f0, const box &b) {
     if (std::holds_alternative<typename box::Box0>(b.v())) {
       const auto &[a0] = std::get<typename box::Box0>(b.v());

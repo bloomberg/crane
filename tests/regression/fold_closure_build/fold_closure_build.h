@@ -112,7 +112,6 @@ struct FoldClosureBuild {
   };
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &, mylist<T1> &, T2 &>
   static T2 mylist_rect(T2 f, F1 &&f0, const mylist<T1> &m) {
     if (std::holds_alternative<typename mylist<T1>::Mynil>(m.v())) {
       return f;
@@ -123,7 +122,6 @@ struct FoldClosureBuild {
   }
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &, mylist<T1> &, T2 &>
   static T2 mylist_rec(T2 f, F1 &&f0, const mylist<T1> &m) {
     if (std::holds_alternative<typename mylist<T1>::Mynil>(m.v())) {
       return f;
@@ -135,7 +133,7 @@ struct FoldClosureBuild {
 
   /// Simple fold_left.
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, T1 &, T2 &>
+    requires std::is_invocable_r_v<T1, F0 &, T1 &&, const T2 &>
   static T1 fold_left(F0 &&f, T1 acc, const mylist<T2> &l) {
     if (std::holds_alternative<typename mylist<T2>::Mynil>(l.v())) {
       return acc;

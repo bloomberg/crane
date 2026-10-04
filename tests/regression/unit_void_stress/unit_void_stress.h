@@ -125,7 +125,7 @@ struct UnitVoidStress {
   static uint64_t void_in_one_branch(bool b, uint64_t n);
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<void, F0 &, T1 &>
+    requires std::is_invocable_r_v<void, F0 &, const T1 &>
   static List<std::monostate> map_void(F0 &&f, const List<T1> &l) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return List<std::monostate>::nil();

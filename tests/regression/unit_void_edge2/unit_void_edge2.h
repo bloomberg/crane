@@ -38,9 +38,7 @@ struct UnitVoidEdge2 {
     return take_unit(x);
   }();
 
-  template <typename F0>
-    requires std::is_invocable_r_v<void, F0 &, uint64_t &>
-  static uint64_t call_and_discard(F0 &&, uint64_t n) {
+  template <typename F0> static uint64_t call_and_discard(F0 &&, uint64_t n) {
     return n;
   }
 
@@ -53,7 +51,7 @@ struct UnitVoidEdge2 {
   }
 
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, T1 &>
+    requires std::is_invocable_r_v<T2, F0 &, T1 &&>
   static T2 apply(F0 &&f, T1 x0_) {
     return f(std::move(x0_));
   }
@@ -99,14 +97,14 @@ struct UnitVoidEdge2 {
   };
 
   template <typename T1, typename T2, typename T3, typename F0>
-    requires std::is_invocable_r_v<T3, F0 &, T1 &, T2 &>
+    requires std::is_invocable_r_v<T3, F0 &, const T1 &, const T2 &>
   static T3 pair_rect(F0 &&f, const pair<T1, T2> &p) {
     const auto &[a0, a1] = p;
     return f(a0, a1);
   }
 
   template <typename T1, typename T2, typename T3, typename F0>
-    requires std::is_invocable_r_v<T3, F0 &, T1 &, T2 &>
+    requires std::is_invocable_r_v<T3, F0 &, const T1 &, const T2 &>
   static T3 pair_rec(F0 &&f, const pair<T1, T2> &p) {
     const auto &[a0, a1] = p;
     return f(a0, a1);

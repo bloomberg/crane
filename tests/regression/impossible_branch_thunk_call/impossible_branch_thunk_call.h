@@ -172,8 +172,8 @@ struct ImpossibleBranchThunkCall {
   };
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, List<uint64_t> &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F1 &, const List<uint64_t> &>
   static T1 tagged_rect(F0 &&f, F1 &&f0, bool, const tagged &t) {
     if (std::holds_alternative<typename tagged::TN>(t.v())) {
       const auto &[a0] = std::get<typename tagged::TN>(t.v());
@@ -185,8 +185,8 @@ struct ImpossibleBranchThunkCall {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, List<uint64_t> &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F1 &, const List<uint64_t> &>
   static T1 tagged_rec(F0 &&f, F1 &&f0, bool, const tagged &t) {
     if (std::holds_alternative<typename tagged::TN>(t.v())) {
       const auto &[a0] = std::get<typename tagged::TN>(t.v());

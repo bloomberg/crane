@@ -8,7 +8,6 @@
 #include <cstdint>
 #include <memory>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -134,9 +133,7 @@ struct CtorArgMoveAliasRec {
       return _result;
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, uint64_t &, inner &, T1 &>
-    T1 inner_rec(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 inner_rec(T1 f, F1 &&f0) const {
       const inner *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
@@ -180,9 +177,7 @@ struct CtorArgMoveAliasRec {
       return _result;
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, uint64_t &, inner &, T1 &>
-    T1 inner_rect(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 inner_rect(T1 f, F1 &&f0) const {
       const inner *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
@@ -309,9 +304,7 @@ struct CtorArgMoveAliasRec {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, A &, mylist<A> &, T1 &>
-    T1 mylist_rec(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 mylist_rec(T1 f, F1 &&f0) const {
       const mylist<A> *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
@@ -356,9 +349,7 @@ struct CtorArgMoveAliasRec {
       return _result;
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, A &, mylist<A> &, T1 &>
-    T1 mylist_rect(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 mylist_rect(T1 f, F1 &&f0) const {
       const mylist<A> *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.

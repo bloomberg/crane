@@ -8,7 +8,6 @@
 #include <cstdint>
 #include <memory>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -159,7 +158,6 @@ struct LoopifyNumbers {
   /// church n f x applies function f to x exactly n times.
   /// Tests recursive higher-order function application.
   template <typename F1>
-    requires std::is_invocable_r_v<uint64_t, F1 &, uint64_t &>
   static uint64_t church(uint64_t n, F1 &&f, uint64_t x) {
     uint64_t _loop_x = std::move(x);
     uint64_t _loop_n = std::move(n);
@@ -181,7 +179,6 @@ struct LoopifyNumbers {
   /// nest_apply n f x nests function application: f(f(...f(x))).
   /// Similar to church but emphasizes nested call structure.
   template <typename F1>
-    requires std::is_invocable_r_v<uint64_t, F1 &, uint64_t &>
   static uint64_t
   nest_apply(uint64_t n, F1 &&f,
              uint64_t x) { /// CraneEnter: captures varying parameters for each

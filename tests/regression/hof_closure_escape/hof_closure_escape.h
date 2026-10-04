@@ -7,7 +7,6 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -79,8 +78,6 @@ struct HofClosureEscape {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
-                                   T1 &>
   static T1 tree_rect(T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
@@ -92,8 +89,6 @@ struct HofClosureEscape {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
-                                   T1 &>
   static T1 tree_rec(T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
@@ -110,7 +105,6 @@ struct HofClosureEscape {
   /// The partial application happens at the CALL SITE of wrap_some,
   /// so the & lambda is created by the caller and passed through.
   template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
   static std::optional<crane::fn<uint64_t(uint64_t)>> wrap_some(F0 &&f) {
     return std::make_optional<crane::fn<uint64_t(uint64_t)>>(f);
   }

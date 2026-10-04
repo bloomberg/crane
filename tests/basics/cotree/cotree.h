@@ -95,7 +95,7 @@ public:
   const variant_t &v() const { return v_; }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, A &>
+    requires std::is_invocable_r_v<T1, F0 &, const A &>
   List<T1> map(F0 &&f) const {
     std::shared_ptr<List<T1>> _head{};
     std::shared_ptr<List<T1>> *_write = &_head;
@@ -277,7 +277,7 @@ struct Cotree {
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, A &>
+      requires std::is_invocable_r_v<T1, const F0 &, const A &>
     cotree<T1> comap_cotree(F0 &&g) const {
       const auto &[a0, a1] = std::get<typename cotree<A>::Conode>(this->v());
       return cotree<T1>::lazy_([=]() -> cotree<T1> {
@@ -380,14 +380,12 @@ struct Cotree {
   };
 
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, T1 &, List<tree<T1>> &>
   static T2 tree_rect(F0 &&f, const tree<T1> &t) {
     const auto &[a0, a1] = std::get<typename tree<T1>::Node>(t.v());
     return f(a0, *a1);
   }
 
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, T1 &, List<tree<T1>> &>
   static T2 tree_rec(F0 &&f, const tree<T1> &t) {
     const auto &[a0, a1] = std::get<typename tree<T1>::Node>(t.v());
     return f(a0, *a1);

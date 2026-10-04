@@ -53,8 +53,7 @@ struct NestedTreePairLiteral {
   };
 
   template <typename T1, typename T2 = void, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, crane::obj &> &&
-             std::is_invocable_r_v<T1, F1 &, tree &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, const crane::obj &>
   static T1 tree_rect(F0 &&f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Lf>(t.v())) {
       const auto &[a0] = std::get<typename tree::Lf>(t.v());
@@ -67,8 +66,7 @@ struct NestedTreePairLiteral {
   }
 
   template <typename T1, typename T2 = void, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, crane::obj &> &&
-             std::is_invocable_r_v<T1, F1 &, tree &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, const crane::obj &>
   static T1 tree_rec(F0 &&f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Lf>(t.v())) {
       const auto &[a0] = std::get<typename tree::Lf>(t.v());

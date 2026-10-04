@@ -151,7 +151,7 @@ public:
   const variant_t &v() const { return v_; }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, A &>
+    requires std::is_invocable_r_v<T1, F0 &, const A &>
   List<T1> map(F0 &&f) const {
     std::shared_ptr<List<T1>> _head{};
     std::shared_ptr<List<T1>> *_write = &_head;
@@ -289,7 +289,7 @@ public:
   const variant_t &v() const { return v_; }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, t &>
+    requires std::is_invocable_r_v<T1, F0 &, const t &>
   Exp<T1> exp_map(F0 &&f) const {
     const Exp<t> *_self = this;
 
@@ -374,9 +374,7 @@ template <typename t> struct blk {
 blk<crane::obj> TFunctor_blk(crane::fn<crane::obj(crane::obj)> f,
                              const blk<crane::obj> &b);
 
-template <typename F0>
-  requires std::is_invocable_r_v<bool, F0 &, Nat &>
-blk<bool> use_blk(F0 &&f, const blk<Nat> &b) {
+template <typename F0> blk<bool> use_blk(F0 &&f, const blk<Nat> &b) {
   return tfmap<blk<crane::obj>, Nat, bool>(
       [](auto &&_ec0, blk<crane::obj> _ec1) {
         return TFunctor_blk(_ec0, _ec1);

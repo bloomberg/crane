@@ -8,7 +8,6 @@
 #include <concepts>
 #include <memory>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -180,8 +179,6 @@ static_assert(Params<natParams>);
 /// Built and returned, so the class is data here and the struct is
 /// constructed in an expression position.
 template <Params _tcI0, typename T1, typename F0>
-  requires std::is_invocable_r_v<
-      Dvalue_base<typename _tcI0::ptr, typename _tcI0::iptr>, F0 &, T1 &>
 ToDvalueBase<typename _tcI0::ptr, typename _tcI0::iptr, T1> mk_to_base(F0 &&f) {
   return ToDvalueBase<typename _tcI0::ptr, typename _tcI0::iptr, T1>{f};
 }

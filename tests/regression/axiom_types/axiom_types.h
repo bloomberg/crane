@@ -66,7 +66,7 @@ struct AxiomTypes {
   };
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
   static T1 AxiomInductive_rect(F0 &&f, F1 &&f0, const AxiomInductive &a) {
     if (std::holds_alternative<typename AxiomInductive::AxConstr1>(a.v())) {
       const auto &[a0] = std::get<typename AxiomInductive::AxConstr1>(a.v());
@@ -78,7 +78,7 @@ struct AxiomTypes {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
   static T1 AxiomInductive_rec(F0 &&f, F1 &&f0, const AxiomInductive &a) {
     if (std::holds_alternative<typename AxiomInductive::AxConstr1>(a.v())) {
       const auto &[a0] = std::get<typename AxiomInductive::AxConstr1>(a.v());
@@ -174,9 +174,7 @@ struct AxiomTypes {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, A &, list<A> &, T1 &>
-    T1 list_rec(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 list_rec(T1 f, F1 &&f0) const {
       const list<A> *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
@@ -220,9 +218,7 @@ struct AxiomTypes {
       return _result;
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, A &, list<A> &, T1 &>
-    T1 list_rect(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 list_rect(T1 f, F1 &&f0) const {
       const list<A> *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.

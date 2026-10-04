@@ -7,7 +7,6 @@
 #include "small_vector.h"
 #include <atomic>
 #include <memory>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -286,7 +285,6 @@ struct RocqBug13581 {
   };
 
   template <typename T1, typename T2, typename F3>
-    requires std::is_invocable_r_v<T2, F3 &, J<T1> &>
   static T2 I_rect(const T1 &, const T1 &, T2 f, F3 &&f0, const Nat &,
                    const I<T1> &i) {
     if (std::holds_alternative<typename I<T1>::C>(i.v())) {
@@ -298,7 +296,6 @@ struct RocqBug13581 {
   }
 
   template <typename T1, typename T2, typename F3>
-    requires std::is_invocable_r_v<T2, F3 &, J<T1> &>
   static T2 I_rec(const T1 &, const T1 &, T2 f, F3 &&f0, const Nat &,
                   const I<T1> &i) {
     if (std::holds_alternative<typename I<T1>::C>(i.v())) {
@@ -310,14 +307,12 @@ struct RocqBug13581 {
   }
 
   template <typename T1, typename T2, typename F2>
-    requires std::is_invocable_r_v<T2, F2 &, I<T1> &>
   static T2 J_rect(const T1 &, const T1 &, F2 &&f, Bool0, const J<T1> &j) {
     const auto &[a0] = std::get<typename J<T1>::E>(j.v());
     return f(*a0);
   }
 
   template <typename T1, typename T2, typename F2>
-    requires std::is_invocable_r_v<T2, F2 &, I<T1> &>
   static T2 J_rec(const T1 &, const T1 &, F2 &&f, Bool0, const J<T1> &j) {
     const auto &[a0] = std::get<typename J<T1>::E>(j.v());
     return f(*a0);

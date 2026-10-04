@@ -195,10 +195,7 @@ struct MemSafetyProbe29 {
       return _result;
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, inner &, T1 &, uint64_t &,
-                                     inner &, T1 &>
-    T1 inner_rec(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 inner_rec(T1 f, F1 &&f0) const {
       const inner *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
@@ -263,10 +260,7 @@ struct MemSafetyProbe29 {
       return _result;
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, inner &, T1 &, uint64_t &,
-                                     inner &, T1 &>
-    T1 inner_rect(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 inner_rect(T1 f, F1 &&f0) const {
       const inner *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
@@ -522,10 +516,7 @@ struct MemSafetyProbe29 {
       return _result;
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, outer &, T1 &, inner &, outer &,
-                                     T1 &>
-    T1 outer_rec(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 outer_rec(T1 f, F1 &&f0) const {
       const outer *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
@@ -590,10 +581,7 @@ struct MemSafetyProbe29 {
       return _result;
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, outer &, T1 &, inner &, outer &,
-                                     T1 &>
-    T1 outer_rect(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 outer_rect(T1 f, F1 &&f0) const {
       const outer *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
@@ -1023,10 +1011,7 @@ struct MemSafetyProbe29 {
     }
 
     template <typename T1, typename F0, typename F1, typename F2, typename F3>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, expr &, T1 &> &&
-               std::is_invocable_r_v<T1, F2 &, expr &, T1 &, expr &, T1 &> &&
-               std::is_invocable_r_v<T1, F3 &, expr &, T1 &, expr &, T1 &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 expr_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2) const {
       const expr *_self = this;
 
@@ -1136,10 +1121,7 @@ struct MemSafetyProbe29 {
     }
 
     template <typename T1, typename F0, typename F1, typename F2, typename F3>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, expr &, T1 &> &&
-               std::is_invocable_r_v<T1, F2 &, expr &, T1 &, expr &, T1 &> &&
-               std::is_invocable_r_v<T1, F3 &, expr &, T1 &, expr &, T1 &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 expr_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2) const {
       const expr *_self = this;
 
@@ -1398,10 +1380,7 @@ struct MemSafetyProbe29 {
       return _result;
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, tree3 &, T1 &, tree3 &, T1 &,
-                                     tree3 &, T1 &, uint64_t &>
-    T1 tree3_rec(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 tree3_rec(T1 f, F1 &&f0) const {
       const tree3 *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
@@ -1493,10 +1472,7 @@ struct MemSafetyProbe29 {
       return _result;
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, tree3 &, T1 &, tree3 &, T1 &,
-                                     tree3 &, T1 &, uint64_t &>
-    T1 tree3_rect(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 tree3_rect(T1 f, F1 &&f0) const {
       const tree3 *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.

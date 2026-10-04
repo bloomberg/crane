@@ -94,7 +94,7 @@ public:
   const variant_t &v() const { return v_; }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, T1 &, A &>
+    requires std::is_invocable_r_v<T1, F0 &, T1 &&, const A &>
   T1 fold_left(F0 &&f, T1 a0) const {
     const List<A> *_loop_self = this;
     T1 _loop_a0 = std::move(a0);
@@ -111,7 +111,7 @@ public:
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, A &>
+    requires std::is_invocable_r_v<T1, F0 &, const A &>
   List<T1> map(F0 &&f) const {
     std::shared_ptr<List<T1>> _head{};
     std::shared_ptr<List<T1>> *_write = &_head;
@@ -166,14 +166,14 @@ struct PartialApply {
   };
 
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, uint64_t &, T1 &>
+    requires std::is_invocable_r_v<T2, F0 &, const uint64_t &, const T1 &>
   static T2 tagged_rect(F0 &&f, const tagged<T1> &t) {
     const auto &[a0, a1] = t;
     return f(a0, a1);
   }
 
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, uint64_t &, T1 &>
+    requires std::is_invocable_r_v<T2, F0 &, const uint64_t &, const T1 &>
   static T2 tagged_rec(F0 &&f, const tagged<T1> &t) {
     const auto &[a0, a1] = t;
     return f(a0, a1);

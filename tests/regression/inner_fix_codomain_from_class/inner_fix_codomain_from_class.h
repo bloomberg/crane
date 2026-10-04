@@ -9,7 +9,6 @@
 #include <memory>
 #include <optional>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -210,7 +209,6 @@ typename _tcI0::template M<T2> mret(const T2 &x) {
 }
 
 template <MyMonad _tcI0, typename T2, typename T3, typename F1>
-  requires std::is_invocable_r_v<typename _tcI0::template M<T3>, F1 &, T2 &>
 typename _tcI0::template M<T3> mbind(typename _tcI0::template M<T2> x,
                                      F1 &&x0) {
   return _tcI0::template mbind<T2, T3>(std::move(x), x0);

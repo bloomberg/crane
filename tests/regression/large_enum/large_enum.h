@@ -215,8 +215,8 @@ struct LargeEnum {
   };
 
   template <typename T1, typename F0, typename F10>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F10 &, uint64_t &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F10 &, const uint64_t &>
   static T1 tok_rect(F0 &&f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5, T1 f6,
                      T1 f7, T1 f8, F10 &&f9, T1 f10, const tok &t) {
     if (std::holds_alternative<typename tok::TNum>(t.v())) {
@@ -249,8 +249,8 @@ struct LargeEnum {
   }
 
   template <typename T1, typename F0, typename F10>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F10 &, uint64_t &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F10 &, const uint64_t &>
   static T1 tok_rec(F0 &&f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5, T1 f6,
                     T1 f7, T1 f8, F10 &&f9, T1 f10, const tok &t) {
     if (std::holds_alternative<typename tok::TNum>(t.v())) {

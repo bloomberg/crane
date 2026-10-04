@@ -35,7 +35,6 @@ template <typename K, typename V> struct SkipList {
   stm::TVar<unsigned int> slLevel;
   stm::TVar<unsigned int> slLength;
   template <typename F0>
-    requires bsl::is_invocable_r_v<bool, F0 &, K &, K &>
   SkipPath<K, V> findPath(F0 &&ltK, const K &target) const {
     unsigned int lvl = stm::readTVar(this->slLevel);
     SkipPath<K, V> path = SkipPath<K, V>{};
@@ -43,8 +42,6 @@ template <typename K, typename V> struct SkipList {
         ltK, this->slHead, target, lvl, bsl::move(path));
   }
   template <typename F0, typename F1>
-    requires bsl::is_invocable_r_v<bool, F0 &, K &, K &> &&
-             bsl::is_invocable_r_v<bool, F1 &, K &, K &>
   bsl::optional<V> lookup(F0 &&ltK, F1 &&eqK, const K &k) const {
     SkipPath<K, V> path = this->findPath(ltK, k);
     bsl::shared_ptr<SkipNode<K, V>> pred0 = path.get(0u);
@@ -63,8 +60,6 @@ template <typename K, typename V> struct SkipList {
     }
   }
   template <typename F0, typename F1>
-    requires bsl::is_invocable_r_v<bool, F0 &, K &, K &> &&
-             bsl::is_invocable_r_v<bool, F1 &, K &, K &>
   std::monostate insert(F0 &&ltK, F1 &&eqK, const K &k, const V &v,
                         unsigned int newLevel) const {
     SkipPath<K, V> path = this->findPath(ltK, k);
@@ -82,8 +77,8 @@ template <typename K, typename V> struct SkipList {
       } else {
         bsl::shared_ptr<SkipNode<K, V>> newN =
             SkipNode<K, V>::create(k, v, newLevel);
-        SkipList<int, int>::template linkNode<K, V>(bsl::move(path),
-                                                    this->slHead, newN);
+        SkipList<int, int>::template linkNode<K, V>(
+            bsl::move(path), this->slHead, bsl::move(newN));
         if (curLvl < newLevel) {
           stm::writeTVar(this->slLevel, newLevel);
           return std::monostate{};
@@ -95,7 +90,7 @@ template <typename K, typename V> struct SkipList {
       bsl::shared_ptr<SkipNode<K, V>> newN =
           SkipNode<K, V>::create(k, v, newLevel);
       SkipList<int, int>::template linkNode<K, V>(bsl::move(path), this->slHead,
-                                                  newN);
+                                                  bsl::move(newN));
       if (curLvl < newLevel) {
         stm::writeTVar(this->slLevel, newLevel);
         return std::monostate{};
@@ -105,8 +100,6 @@ template <typename K, typename V> struct SkipList {
     }
   }
   template <typename F0, typename F1>
-    requires bsl::is_invocable_r_v<bool, F0 &, K &, K &> &&
-             bsl::is_invocable_r_v<bool, F1 &, K &, K &>
   std::monostate remove(F0 &&ltK, F1 &&eqK, const K &k) const {
     SkipPath<K, V> path = this->findPath(ltK, k);
     bsl::shared_ptr<SkipNode<K, V>> pred0 = path.get(0u);
@@ -140,16 +133,12 @@ template <typename K, typename V> struct SkipList {
     }
   }
   template <typename F0, typename F1>
-    requires bsl::is_invocable_r_v<bool, F0 &, K &, K &> &&
-             bsl::is_invocable_r_v<bool, F1 &, K &, K &>
   bool memberFast(F0 &&ltK, F1 &&eqK, const K &k) const {
     unsigned int lvl = stm::readTVar(this->slLevel);
     return SkipList<int, int>::template findKey_aux<K, V>(ltK, eqK,
                                                           this->slHead, k, lvl);
   }
   template <typename F0, typename F1>
-    requires bsl::is_invocable_r_v<bool, F0 &, K &, K &> &&
-             bsl::is_invocable_r_v<bool, F1 &, K &, K &>
   bool member(F0 &&ltK, F1 &&eqK, const K &k) const {
     unsigned int lvl = stm::readTVar(this->slLevel);
     return SkipList<int, int>::template findKey_aux<K, V>(ltK, eqK,
@@ -176,8 +165,6 @@ template <typename K, typename V> struct SkipList {
         10000u, bsl::move(firstOpt), 0u);
   }
   template <typename F0, typename F1>
-    requires bsl::is_invocable_r_v<bool, F0 &, K &, K &> &&
-             bsl::is_invocable_r_v<bool, F1 &, K &, K &>
   bool exists_(F0 &&ltK, F1 &&eqK, const K &k) const {
     unsigned int lvl = stm::readTVar(this->slLevel);
     return SkipList<int, int>::template findKey_aux<K, V>(ltK, eqK,
@@ -219,8 +206,6 @@ template <typename K, typename V> struct SkipList {
     return count;
   }
   template <typename F0, typename F1>
-    requires bsl::is_invocable_r_v<bool, F0 &, K &, K &> &&
-             bsl::is_invocable_r_v<bool, F1 &, K &, K &>
   std::monostate add(F0 &&ltK, F1 &&eqK, const K &k, const V &v,
                      unsigned int newLevel) const {
     SkipPath<K, V> path = this->findPath(ltK, k);
@@ -238,8 +223,8 @@ template <typename K, typename V> struct SkipList {
       } else {
         bsl::shared_ptr<SkipNode<K, V>> newN =
             SkipNode<K, V>::create(k, v, newLevel);
-        SkipList<int, int>::template linkNode<K, V>(bsl::move(path),
-                                                    this->slHead, newN);
+        SkipList<int, int>::template linkNode<K, V>(
+            bsl::move(path), this->slHead, bsl::move(newN));
         if (curLvl < newLevel) {
           stm::writeTVar(this->slLevel, newLevel);
           return std::monostate{};
@@ -251,7 +236,7 @@ template <typename K, typename V> struct SkipList {
       bsl::shared_ptr<SkipNode<K, V>> newN =
           SkipNode<K, V>::create(k, v, newLevel);
       SkipList<int, int>::template linkNode<K, V>(bsl::move(path), this->slHead,
-                                                  newN);
+                                                  bsl::move(newN));
       if (curLvl < newLevel) {
         stm::writeTVar(this->slLevel, newLevel);
         return std::monostate{};
@@ -261,8 +246,6 @@ template <typename K, typename V> struct SkipList {
     }
   }
   template <typename F0, typename F1>
-    requires bsl::is_invocable_r_v<bool, F0 &, K &, K &> &&
-             bsl::is_invocable_r_v<bool, F1 &, K &, K &>
   bool addUnique(F0 &&ltK, F1 &&eqK, const K &k, const V &v,
                  unsigned int newLevel) const {
     SkipPath<K, V> path = this->findPath(ltK, k);
@@ -279,8 +262,8 @@ template <typename K, typename V> struct SkipList {
       } else {
         bsl::shared_ptr<SkipNode<K, V>> newN =
             SkipNode<K, V>::create(k, v, newLevel);
-        SkipList<int, int>::template linkNode<K, V>(bsl::move(path),
-                                                    this->slHead, newN);
+        SkipList<int, int>::template linkNode<K, V>(
+            bsl::move(path), this->slHead, bsl::move(newN));
         [&]() -> void {
           if (curLvl < newLevel) {
             stm::writeTVar(this->slLevel, newLevel);
@@ -295,7 +278,7 @@ template <typename K, typename V> struct SkipList {
       bsl::shared_ptr<SkipNode<K, V>> newN =
           SkipNode<K, V>::create(k, v, newLevel);
       SkipList<int, int>::template linkNode<K, V>(bsl::move(path), this->slHead,
-                                                  newN);
+                                                  bsl::move(newN));
       [&]() -> void {
         if (curLvl < newLevel) {
           stm::writeTVar(this->slLevel, newLevel);
@@ -308,8 +291,6 @@ template <typename K, typename V> struct SkipList {
     }
   }
   template <typename F0, typename F1>
-    requires bsl::is_invocable_r_v<bool, F0 &, K &, K &> &&
-             bsl::is_invocable_r_v<bool, F1 &, K &, K &>
   bsl::optional<bsl::shared_ptr<SkipNode<K, V>>> find(F0 &&ltK, F1 &&eqK,
                                                       const K &k) const {
     SkipPath<K, V> path = this->findPath(ltK, k);
@@ -328,7 +309,6 @@ template <typename K, typename V> struct SkipList {
     }
   }
   template <typename F0>
-    requires bsl::is_invocable_r_v<bool, F0 &, K &, K &>
   bsl::optional<bsl::shared_ptr<SkipNode<K, V>>>
   previous(F0 &&eqK, bsl::shared_ptr<SkipNode<K, V>> pair) const {
     bsl::optional<bsl::shared_ptr<SkipNode<K, V>>> firstOpt =
@@ -347,7 +327,6 @@ template <typename K, typename V> struct SkipList {
     }
   }
   template <typename F0>
-    requires bsl::is_invocable_r_v<bool, F0 &, K &, K &>
   bsl::optional<bsl::shared_ptr<SkipNode<K, V>>>
   findLowerBound(F0 &&ltK, const K &k) const {
     SkipPath<K, V> path = this->findPath(ltK, k);
@@ -362,8 +341,6 @@ template <typename K, typename V> struct SkipList {
     }
   }
   template <typename F0, typename F1>
-    requires bsl::is_invocable_r_v<bool, F0 &, K &, K &> &&
-             bsl::is_invocable_r_v<bool, F1 &, K &, K &>
   bsl::optional<bsl::shared_ptr<SkipNode<K, V>>>
   findUpperBound(F0 &&ltK, F1 &&eqK, const K &k) const {
     SkipPath<K, V> path = this->findPath(ltK, k);
@@ -383,8 +360,6 @@ template <typename K, typename V> struct SkipList {
     }
   }
   template <typename F0, typename F1>
-    requires bsl::is_invocable_r_v<bool, F0 &, K &, K &> &&
-             bsl::is_invocable_r_v<bool, F1 &, K &, K &>
   bool removePair(F0 &&ltK, F1 &&eqK,
                   bsl::shared_ptr<SkipNode<K, V>> pair) const {
     K k = pair->key;
@@ -408,8 +383,6 @@ template <typename K, typename V> struct SkipList {
     }
   }
   template <typename F0, typename F1>
-    requires bsl::is_invocable_r_v<bool, F0 &, K &, K &> &&
-             bsl::is_invocable_r_v<bool, F1 &, K &, K &>
   bsl::pair<bsl::shared_ptr<SkipNode<K, V>>, bool>
   bde_add(F0 &&ltK, F1 &&eqK, const K &key0, const V &data0,
           unsigned int level) const {
@@ -467,8 +440,6 @@ template <typename K, typename V> struct SkipList {
     }
   }
   template <typename F0, typename F1>
-    requires bsl::is_invocable_r_v<bool, F0 &, K &, K &> &&
-             bsl::is_invocable_r_v<bool, F1 &, K &, K &>
   bsl::pair<
       bsl::pair<unsigned int, bsl::optional<bsl::shared_ptr<SkipNode<K, V>>>>,
       bool>
@@ -538,8 +509,6 @@ template <typename K, typename V> struct SkipList {
     }
   }
   template <typename F0, typename F1>
-    requires bsl::is_invocable_r_v<bool, F0 &, K &, K &> &&
-             bsl::is_invocable_r_v<bool, F1 &, K &, K &>
   bsl::pair<unsigned int, bsl::optional<bsl::shared_ptr<SkipNode<K, V>>>>
   bde_find(F0 &&ltK, F1 &&eqK, const K &key0) const {
     SkipPath<K, V> path = this->findPath(ltK, key0);
@@ -607,11 +576,9 @@ template <typename K, typename V> struct SkipList {
     }
   }
   template <typename F0, typename F1>
-    requires bsl::is_invocable_r_v<bool, F0 &, K &, K &> &&
-             bsl::is_invocable_r_v<bool, F1 &, K &, K &>
   unsigned int bde_remove(F0 &&ltK, F1 &&eqK,
                           bsl::shared_ptr<SkipNode<K, V>> pair) const {
-    bool result = this->removePair(ltK, eqK, pair);
+    bool result = this->removePair(ltK, eqK, bsl::move(pair));
     if (result) {
       return SkipList<int, int>::e_SUCCESS;
     } else {
@@ -620,8 +587,6 @@ template <typename K, typename V> struct SkipList {
   }
   unsigned int bde_removeAll() const { return this->removeAll(); }
   template <typename F0, typename F1>
-    requires bsl::is_invocable_r_v<bool, F0 &, K &, K &> &&
-             bsl::is_invocable_r_v<bool, F1 &, K &, K &>
   bool bde_exists(F0 &&ltK, F1 &&eqK, const K &key0) const {
     unsigned int lvl = stm::readTVar(this->slLevel);
     return SkipList<int, int>::template findKey_aux<K, V>(
@@ -630,11 +595,10 @@ template <typename K, typename V> struct SkipList {
   bool bde_isEmpty() const { return this->isEmpty(); }
   unsigned int bde_length() const { return this->length(); }
   template <typename F0>
-    requires bsl::is_invocable_r_v<bool, F0 &, K &, K &>
   bsl::pair<unsigned int, bsl::optional<bsl::shared_ptr<SkipNode<K, V>>>>
   bde_previous(F0 &&eqK, bsl::shared_ptr<SkipNode<K, V>> pair) const {
     bsl::optional<bsl::shared_ptr<SkipNode<K, V>>> prevOpt =
-        this->previous(eqK, pair);
+        this->previous(eqK, bsl::move(pair));
     if (prevOpt.has_value()) {
       bsl::shared_ptr<SkipNode<K, V>> node = *prevOpt;
       return bsl::make_pair(
@@ -646,7 +610,6 @@ template <typename K, typename V> struct SkipList {
     }
   }
   template <typename F0>
-    requires bsl::is_invocable_r_v<bool, F0 &, K &, K &>
   bsl::pair<unsigned int, bsl::optional<bsl::shared_ptr<SkipNode<K, V>>>>
   bde_findLowerBound(F0 &&ltK, const K &key0) const {
     bsl::optional<bsl::shared_ptr<SkipNode<K, V>>> result =
@@ -662,8 +625,6 @@ template <typename K, typename V> struct SkipList {
     }
   }
   template <typename F0, typename F1>
-    requires bsl::is_invocable_r_v<bool, F0 &, K &, K &> &&
-             bsl::is_invocable_r_v<bool, F1 &, K &, K &>
   bsl::pair<unsigned int, bsl::optional<bsl::shared_ptr<SkipNode<K, V>>>>
   bde_findUpperBound(F0 &&ltK, F1 &&eqK, const K &key0) const {
     bsl::optional<bsl::shared_ptr<SkipNode<K, V>>> result =
@@ -708,7 +669,6 @@ template <typename K, typename V> struct SkipList {
     }
   }
   template <typename T1, typename T2, typename F0>
-    requires bsl::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static bsl::shared_ptr<SkipNode<T1, T2>>
   findPred(F0 &&ltK, bsl::shared_ptr<SkipNode<T1, T2>> curr, const T1 &target,
            unsigned int level) {

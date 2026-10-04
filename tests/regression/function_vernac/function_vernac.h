@@ -118,9 +118,7 @@ template <typename A> struct Sig {
 };
 
 struct FunctionVernac {
-  template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
-  static uint64_t div2_F(F0 &&div3, uint64_t n) {
+  template <typename F0> static uint64_t div2_F(F0 &&div3, uint64_t n) {
     if (n <= 0) {
       return UINT64_C(0);
     } else {
@@ -207,10 +205,8 @@ struct FunctionVernac {
     const variant_t &v() const { return v_; }
 
     template <typename T1, typename F0, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F2 &, uint64_t &, uint64_t &,
-                                     uint64_t &, R_div2 &, T1 &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, const uint64_t &>
     T1 R_div2_rec(F0 &&f, F1 &&f0, F2 &&f1, uint64_t _x, uint64_t _x0) const {
       const R_div2 *_self = this;
 
@@ -270,10 +266,8 @@ struct FunctionVernac {
     }
 
     template <typename T1, typename F0, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F2 &, uint64_t &, uint64_t &,
-                                     uint64_t &, R_div2 &, T1 &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, const uint64_t &>
     T1 R_div2_rect(F0 &&f, F1 &&f0, F2 &&f1, uint64_t _x, uint64_t _x0) const {
       const R_div2 *_self = this;
 
@@ -334,9 +328,6 @@ struct FunctionVernac {
   };
 
   template <typename T1, typename F0, typename F1, typename F2>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F2 &, uint64_t &, uint64_t &, T1 &>
   static T1 div2_rect(F0 &&f, F1 &&f0, F2 &&f1, uint64_t n) {
     crane::fn<T1(uint64_t, T1)> f2 = [=](uint64_t _pa0, T1 _pa1) {
       return f1(n, _pa0, _pa1);
@@ -359,9 +350,6 @@ struct FunctionVernac {
   }
 
   template <typename T1, typename F0, typename F1, typename F2>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F2 &, uint64_t &, uint64_t &, T1 &>
   static T1 div2_rec(F0 &&x0_, F1 &&x1_, F2 &&x2_, uint64_t x3_) {
     return div2_rect<T1>(x0_, x1_, x2_, x3_);
   }
@@ -369,7 +357,6 @@ struct FunctionVernac {
   static R_div2 R_div2_correct(uint64_t n, uint64_t res_);
 
   template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, List<uint64_t> &>
   static uint64_t list_sum_F(F0 &&list_sum0, const List<uint64_t> &l) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
       return UINT64_C(0);
@@ -450,10 +437,7 @@ struct FunctionVernac {
     const variant_t &v() const { return v_; }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, List<uint64_t> &> &&
-               std::is_invocable_r_v<T1, F1 &, List<uint64_t> &, uint64_t &,
-                                     List<uint64_t> &, uint64_t &, R_list_sum &,
-                                     T1 &>
+      requires std::is_invocable_r_v<T1, F0 &, const List<uint64_t> &>
     T1 R_list_sum_rec(F0 &&f, F1 &&f0, const List<uint64_t> &_x,
                       uint64_t _x0) const {
       const R_list_sum *_self = this;
@@ -514,10 +498,7 @@ struct FunctionVernac {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, List<uint64_t> &> &&
-               std::is_invocable_r_v<T1, F1 &, List<uint64_t> &, uint64_t &,
-                                     List<uint64_t> &, uint64_t &, R_list_sum &,
-                                     T1 &>
+      requires std::is_invocable_r_v<T1, F0 &, const List<uint64_t> &>
     T1 R_list_sum_rect(F0 &&f, F1 &&f0, const List<uint64_t> &_x,
                        uint64_t _x0) const {
       const R_list_sum *_self = this;
@@ -579,9 +560,9 @@ struct FunctionVernac {
   };
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, List<uint64_t> &> &&
-             std::is_invocable_r_v<T1, F1 &, List<uint64_t> &, uint64_t &,
-                                   List<uint64_t> &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, const List<uint64_t> &> &&
+             std::is_invocable_r_v<T1, const F1 &, const List<uint64_t> &,
+                                   uint64_t &, List<uint64_t> &, T1 &>
   static T1 list_sum_rect(F0 &&f, F1 &&f0, const List<uint64_t> &l) {
     crane::fn<T1(uint64_t, List<uint64_t>, T1)> f1 =
         [=](uint64_t _pa0, List<uint64_t> _pa1, T1 _pa2) {
@@ -600,9 +581,6 @@ struct FunctionVernac {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, List<uint64_t> &> &&
-             std::is_invocable_r_v<T1, F1 &, List<uint64_t> &, uint64_t &,
-                                   List<uint64_t> &, T1 &>
   static T1 list_sum_rec(F0 &&x0_, F1 &&x1_, const List<uint64_t> &x2_) {
     return list_sum_rect<T1>(x0_, x1_, x2_);
   }

@@ -134,9 +134,7 @@ public:
     }
     return bsl::move(*_head);
   }
-  template <typename F0>
-    requires bsl::is_invocable_r_v<bool, F0 &, t_A &>
-  bsl::optional<t_A> find(F0 &&f) const {
+  template <typename F0> bsl::optional<t_A> find(F0 &&f) const {
     const List<t_A> *_loop_self = this;
     while (true) {
       auto &&_sv = *_loop_self;
@@ -152,9 +150,7 @@ public:
       }
     }
   }
-  template <typename F0>
-    requires bsl::is_invocable_r_v<bool, F0 &, t_A &>
-  List<t_A> filter(F0 &&f) const {
+  template <typename F0> List<t_A> filter(F0 &&f) const {
     bsl::shared_ptr<List<t_A>> _head{};
     bsl::shared_ptr<List<t_A>> *_write = &_head;
     const List<t_A> *_loop_self = this;
@@ -181,7 +177,7 @@ public:
     return bsl::move(*_head);
   }
   template <typename T1, typename F0>
-    requires bsl::is_invocable_r_v<T1, F0 &, t_A &, T1 &>
+    requires bsl::is_invocable_r_v<T1, F0 &, t_A &, T1 &&>
   T1 fold_right(F0 &&f, T1 a0) const {
     const List<t_A> *_self = this;
     /// CraneEnter: captures varying parameters for each recursive call.
@@ -261,7 +257,7 @@ public:
     return _result;
   }
   template <typename T1, typename F0>
-    requires bsl::is_invocable_r_v<T1, F0 &, t_A &>
+    requires bsl::is_invocable_r_v<T1, F0 &, const t_A &>
   List<T1> map(F0 &&f) const {
     bsl::shared_ptr<List<T1>> _head{};
     bsl::shared_ptr<List<T1>> *_write = &_head;
@@ -343,8 +339,6 @@ public:
 };
 struct ToString {
   template <typename T1, typename T2, typename F0, typename F1>
-    requires bsl::is_invocable_r_v<bsl::string, F0 &, T1 &> &&
-             bsl::is_invocable_r_v<bsl::string, F1 &, T2 &>
   static bsl::string pair_to_string(F0 &&p1, F1 &&p2,
                                     const bsl::pair<T1, T2> &x) {
     auto [a, b] = x;
@@ -352,7 +346,7 @@ struct ToString {
            bsl::string(")");
   }
   template <typename T1, typename F0>
-    requires bsl::is_invocable_r_v<bsl::string, F0 &, T1 &>
+    requires bsl::is_invocable_r_v<bsl::string, F0 &, const T1 &>
   static bsl::string intersperse(F0 &&p, bsl::string sep, const List<T1> &l) {
     if (bsl::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return "";
@@ -367,7 +361,7 @@ struct ToString {
     }
   }
   template <typename T1, typename F0>
-    requires bsl::is_invocable_r_v<bsl::string, F0 &, T1 &>
+    requires bsl::is_invocable_r_v<bsl::string, F0 &, const T1 &>
   static bsl::string list_to_string(F0 &&p, const List<T1> &l) {
     if (bsl::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return "[]";
@@ -493,7 +487,6 @@ struct TopologicalSort {
     }
   }
   template <typename T1, typename F0>
-    requires bsl::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static T1
   cycle_entry_aux(F0 &&eqb_node, const List<bsl::pair<T1, List<T1>>> &graph0,
                   const List<T1> &seens, T1 elem, unsigned int counter) {
@@ -517,7 +510,6 @@ struct TopologicalSort {
     }
   }
   template <typename T1, typename F0>
-    requires bsl::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static bsl::optional<T1>
   cycle_entry(F0 &&eqb_node, const List<bsl::pair<T1, List<T1>>> &graph0) {
     if (bsl::holds_alternative<typename List<bsl::pair<T1, List<T1>>>::Nil>(
@@ -532,7 +524,6 @@ struct TopologicalSort {
     }
   }
   template <typename T1, typename F0>
-    requires bsl::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static List<T1>
   cycle_extract_aux(F0 &&eqb_node, const List<bsl::pair<T1, List<T1>>> &graph0,
                     unsigned int counter, const T1 &elem, List<T1> cycl) {
@@ -553,7 +544,6 @@ struct TopologicalSort {
     }
   }
   template <typename T1, typename F0>
-    requires bsl::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static List<T1> cycle_extract(F0 &&eqb_node,
                                 const List<bsl::pair<T1, List<T1>>> &graph0) {
     auto _cs = cycle_entry<T1>(eqb_node, graph0);
@@ -617,21 +607,18 @@ struct TopologicalSort {
     }
   }
   template <typename T1, typename F0>
-    requires bsl::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static List<List<T1>> topological_sort(F0 &&eqb_node,
                                          const List<bsl::pair<T1, T1>> &g) {
     List<bsl::pair<T1, List<T1>>> g_ = make_graph<T1>(eqb_node, g);
     return topological_sort_aux<T1>(eqb_node, g_, g_.length());
   }
   template <typename T1, typename F0>
-    requires bsl::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static order<T1>
   topological_sort_graph(F0 &&eqb_node,
                          const List<bsl::pair<T1, List<T1>>> &graph0) {
     return topological_sort_aux<T1>(eqb_node, graph0, graph0.length());
   }
   template <typename T1, typename F0>
-    requires bsl::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static List<bsl::pair<T1, unsigned int>>
   topological_rank_list(F0 &&eqb_node,
                         const List<bsl::pair<T1, List<T1>>> &graph0) {

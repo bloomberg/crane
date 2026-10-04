@@ -97,7 +97,6 @@ struct DeepApp {
   };
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &, mylist<T1> &, T2 &>
   static T2
   mylist_rect(T2 f, F1 &&f0,
               const mylist<T1> &m) { /// CraneEnter: captures varying parameters
@@ -143,7 +142,6 @@ struct DeepApp {
   }
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &, mylist<T1> &, T2 &>
   static T2
   mylist_rec(T2 f, F1 &&f0,
              const mylist<T1> &m) { /// CraneEnter: captures varying parameters
@@ -220,7 +218,7 @@ struct DeepApp {
 
   /// Recursive map — same issue.
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, T1 &>
+    requires std::is_invocable_r_v<T2, F0 &, const T1 &>
   static mylist<T2> map(F0 &&f, const mylist<T1> &l) {
     std::shared_ptr<mylist<T2>> _head{};
     std::shared_ptr<mylist<T2>> *_write = &_head;

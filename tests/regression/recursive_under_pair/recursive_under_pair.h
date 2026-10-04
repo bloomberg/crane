@@ -5,7 +5,6 @@
 #include <atomic>
 #include <cstdint>
 #include <memory>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -76,7 +75,6 @@ struct RecursiveUnderPair {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, std::pair<uint64_t, c> &>
   static T1 c_rect(T1 f, F1 &&f0, const c &c0) {
     if (std::holds_alternative<typename c::Stop>(c0.v())) {
       return f;
@@ -87,7 +85,6 @@ struct RecursiveUnderPair {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, std::pair<uint64_t, c> &>
   static T1 c_rec(T1 f, F1 &&f0, const c &c0) {
     if (std::holds_alternative<typename c::Stop>(c0.v())) {
       return f;

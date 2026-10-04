@@ -15,7 +15,7 @@
 struct EffectHofVoid {
   /// 1. Apply a void callback
   template <typename F0>
-    requires std::is_invocable_r_v<void, F0 &, std::string &>
+    requires std::is_invocable_r_v<void, F0 &, std::string &&>
   static void apply_void(F0 &&f, std::string x0_) {
     f(std::move(x0_));
     return;
@@ -36,7 +36,6 @@ struct EffectHofVoid {
 
   /// 4. Apply callback conditionally
   template <typename F1>
-    requires std::is_invocable_r_v<void, F1 &, std::string &>
   static void apply_if(bool flag, F1 &&f, std::string x) {
     if (flag) {
       f(x);

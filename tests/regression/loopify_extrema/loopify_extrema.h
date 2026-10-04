@@ -100,7 +100,8 @@ struct LoopifyExtrema {
   static std::pair<uint64_t, uint64_t> minmax(const List<uint64_t> &l);
 
   template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
+    requires std::is_invocable_r_v<uint64_t, F0 &, const uint64_t &> &&
+             std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
   static uint64_t
   max_by(F0 &&f,
          const List<uint64_t> &l) { /// CraneEnter: captures varying parameters
@@ -155,7 +156,8 @@ struct LoopifyExtrema {
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
+    requires std::is_invocable_r_v<uint64_t, F0 &, const uint64_t &> &&
+             std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
   static uint64_t
   min_by(F0 &&f,
          const List<uint64_t> &l) { /// CraneEnter: captures varying parameters
@@ -327,7 +329,6 @@ struct LoopifyExtrema {
   static bool is_sorted(const List<uint64_t> &l);
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, uint64_t &, uint64_t &>
   static bool adjacent_all(F0 &&p, const List<uint64_t> &l) {
     const List<uint64_t> *_loop_l = &l;
     while (true) {

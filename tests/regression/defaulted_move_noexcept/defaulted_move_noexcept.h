@@ -6,7 +6,6 @@
 #include <atomic>
 #include <memory>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -151,7 +150,6 @@ struct DefaultedMoveNoexcept {
   };
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &, seq<T1> &, T2 &>
   static T2 seq_rect(T2 f, F1 &&f0, const seq<T1> &s) {
     if (std::holds_alternative<typename seq<T1>::Nil>(s.v())) {
       return f;
@@ -162,7 +160,6 @@ struct DefaultedMoveNoexcept {
   }
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &, seq<T1> &, T2 &>
   static T2 seq_rec(T2 f, F1 &&f0, const seq<T1> &s) {
     if (std::holds_alternative<typename seq<T1>::Nil>(s.v())) {
       return f;
