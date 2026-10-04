@@ -14,8 +14,9 @@ template <S X> struct FreeFn {
   static typename Datatypes::template List<typename Datatypes::Nat>
   map_lengths(const typename Datatypes::template List<
               typename Datatypes::template List<T1>> &xss) {
-    return xss.template map<typename Datatypes::Nat>(
-        [](const auto &_x) { return _x.length(); });
+    return ListDef::template map<typename Datatypes::template List<T1>,
+                                 typename Datatypes::Nat>(
+        [](const auto &_x) { return _x.length(); }, xss);
   }
 };
 

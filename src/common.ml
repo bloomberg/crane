@@ -515,6 +515,16 @@ let add_mp_sibling, get_mp_siblings =
     {!detect_sibling_module_inductive_collisions}. *)
 let struct_module_paths : (ModPath.t, unit) Hashtbl.t = Hashtbl.create 17
 
+(** The namespaces files are emitted under, where one differs from the file's
+    name: a namespace may not share its name with a declaration directly
+    inside it ([concept Foo] in [Foo.v]).  Every file's is decided before any
+    file is rendered, because a reference from another file must spell the
+    namespace exactly as its declaration does; the file keeps its name. *)
+let file_namespace_renames : (ModPath.t, string) Hashtbl.t =
+  State.table State.Extraction 17
+
+let rename_file_namespace mp ns = Hashtbl.replace file_namespace_renames mp ns
+
 let () = register_cleanup (fun () -> Hashtbl.clear struct_module_paths)
 
 (** Whether [mp] is emitted as a C++ struct, and so is a scope a name can be
@@ -1016,7 +1026,9 @@ let rec mp_renaming_fun full_mp =
      | vis ->
        let current_mpfile = (List.last vis).mp in
        if not (ModPath.equal full_mp current_mpfile) then mpfiles_add full_mp);
-    [string_of_modfile full_mp]
+    [ ( match Hashtbl.find_opt file_namespace_renames full_mp with
+      | Some ns -> ns
+      | None -> string_of_modfile full_mp ) ]
 
 (** ... and its version using a cache *)
 

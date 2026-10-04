@@ -501,7 +501,8 @@ let deferred_top_level :
     declarations.
 
     A function is eligible if: 1. It is in the same module as the eponymous type
-    (or in a wrapper module, or [~cross_module:true] is set). 2. Its body passes
+    (or in a wrapper module, or [~cross_module:true] is set), and, when every
+    file is its own output, in the same file. 2. Its body passes
     [body_safe_for_method]. 3. Its type has the eponymous type as an argument
     (found by [find_epon_arg_pos]).
 
@@ -552,10 +553,19 @@ let register_methods_for_epon
           | [] -> false )
         | _ -> false )
     in
+    (* Where every file is its own output, a method is emitted with its type,
+       so a function from another file would carry that file's dependencies
+       into the type's header: [ZArith_dec.Z_le_dec], a "wrapper" of [Z] by
+       its name, calls [BinInt], which itself includes [BinNums]. *)
+    let same_file r =
+      (not (Table.modular ()))
+      || ModPath.equal (base_mp (modpath_of_r r)) (base_mp epon_modpath)
+    in
     let same_module r =
-      cross_module
-      || from_wrapper_module r
-      || ModPath.equal (modpath_of_r r) epon_modpath
+      same_file r
+      && ( cross_module
+         || from_wrapper_module r
+         || ModPath.equal (modpath_of_r r) epon_modpath )
     in
     (* Collect inductives defined AFTER the eponymous type. Methods referencing
        these would cause forward reference errors in C++. *)

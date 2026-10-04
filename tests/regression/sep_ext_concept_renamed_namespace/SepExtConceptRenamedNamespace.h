@@ -6,7 +6,7 @@
 
 namespace SepExtConceptRenamedNamespace {
 
-template <Foo::Foo _tcI0> Datatypes::Nat use_it() { return _tcI0::foo_val(); }
+template <Foo_::Foo _tcI0> Datatypes::Nat use_it() { return _tcI0::foo_val(); }
 
 } // namespace SepExtConceptRenamedNamespace
 

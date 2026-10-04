@@ -11556,3 +11556,36 @@
   (alias runtest)
   (deps sep_ext_concept_unqualified.t.exe)
   (action (run ./sep_ext_concept_unqualified.t.exe))))
+
+(subdir sep_ext_concept_renamed_namespace
+ (rule
+  (targets sep_ext_concept_renamed_namespace.t.exe)
+  (deps Foo.vo SepExtConceptRenamedNamespace.vo sep_ext_concept_renamed_namespace.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_concept_renamed_namespace.t.exe Foo.cpp SepExtConceptRenamedNamespace.cpp sep_ext_concept_renamed_namespace.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_concept_renamed_namespace.t.exe)
+  (action (run ./sep_ext_concept_renamed_namespace.t.exe))))
+
+(subdir sep_ext_eponymous_file_record
+ (rule
+  (targets sep_ext_eponymous_file_record.t.exe)
+  (deps CFG.vo SepExtEponymousFileRecord.vo sep_ext_eponymous_file_record.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_eponymous_file_record.t.exe CFG.cpp SepExtEponymousFileRecord.cpp sep_ext_eponymous_file_record.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_eponymous_file_record.t.exe)
+  (action (run ./sep_ext_eponymous_file_record.t.exe))))
+
+(subdir sep_ext_cross_file_method
+ (rule
+  (targets sep_ext_cross_file_method.t.exe)
+  (deps Num.vo NumOps.vo NumDec.vo SepExtCrossFileMethod.vo sep_ext_cross_file_method.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_cross_file_method.t.exe Num.cpp NumOps.cpp NumDec.cpp SepExtCrossFileMethod.cpp sep_ext_cross_file_method.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_cross_file_method.t.exe)
+  (action (run ./sep_ext_cross_file_method.t.exe))))

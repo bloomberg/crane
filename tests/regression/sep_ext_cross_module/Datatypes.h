@@ -7,7 +7,6 @@
 #include <atomic>
 #include <memory>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -91,23 +90,6 @@ public:
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
-
-  template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, T1 &, A &>
-  T1 fold_left(F0 &&f, T1 a0) const {
-    const List<A> *_loop_self = this;
-    T1 _loop_a0 = std::move(a0);
-    while (true) {
-      auto &&_sv = *_loop_self;
-      if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
-        return _loop_a0;
-      } else {
-        const auto &[a1, a2] = std::get<typename List<A>::Cons>(_sv.v());
-        _loop_self = crane_raw(a2);
-        _loop_a0 = f(std::move(_loop_a0), a1);
-      }
-    }
-  }
 };
 
 } // namespace Datatypes

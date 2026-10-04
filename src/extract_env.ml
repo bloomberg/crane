@@ -2048,14 +2048,21 @@ let separate_extraction ~opaque_access lr =
     ) sel
   in
   List.iter (fun (_, sel) -> pre_scan_meyers_singletons ~in_template:false sel) struc;
+  let file_namespace mp sel =
+    let base = ns_of_modfile mp in
+    if ns_collides_with_decl base sel then base ^ "_" else base
+  in
+  List.iter
+    (fun (mp, sel) ->
+      if is_modfile mp && has_real_decls sel then
+        let ns = file_namespace mp sel in
+        if not (String.equal ns (ns_of_modfile mp)) then
+          Common.rename_file_namespace mp ns )
+    struc;
   let print = function
     | ((MPfile _dir as mp), sel) as e ->
       if has_real_decls sel then begin
-        let ns =
-          let base = ns_of_modfile mp in
-          if ns_collides_with_decl base sel then base ^ "_"
-          else base
-        in
+        let ns = file_namespace mp sel in
         (* Only include modules that are topologically earlier (i.e., come
            before the current module in the extracted structure).  Including a
            later module would create a circular C++ #include cycle. *)

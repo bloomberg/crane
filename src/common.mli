@@ -199,6 +199,11 @@ val pp_global_with_key : kind -> KerName.t -> GlobRef.t -> string
     renaming tables. *)
 val pp_global : kind -> GlobRef.t -> string
 
+(** Emit the file [mp] under the namespace [ns] rather than its own name, in
+    its declaration and in every reference to it.  Must be decided before any
+    file is rendered. *)
+val rename_file_namespace : ModPath.t -> string -> unit
+
 (** The name of the file defining a reference, when a reference to it from the
     current scope must name it; for a name hoisted to its file's namespace. *)
 val file_qualifier : kind -> GlobRef.t -> string option

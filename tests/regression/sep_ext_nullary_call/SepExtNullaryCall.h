@@ -58,14 +58,12 @@ template <Cfg C> struct Worker {
   }
 
   static const uint64_t &default_head() {
-    static const uint64_t v =
-        [] {
-          if constexpr (requires { C::default_list(); })
-            return C::default_list();
-          else
-            return C::default_list;
-        }()
-            .hd(UINT64_C(0));
+    static const uint64_t v = List::template hd<uint64_t>(UINT64_C(0), [] {
+      if constexpr (requires { C::default_list(); })
+        return C::default_list();
+      else
+        return C::default_list;
+    }());
     return v;
   }
 };

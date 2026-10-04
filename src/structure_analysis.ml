@@ -799,21 +799,27 @@ let collect_collision_wrappers
 let collect_eponymous_records (s : ml_structure) : GlobRef.t list =
   List.rev
     (fold_structure
-       ~root:(fun mp -> String.lowercase_ascii (string_of_modfile mp))
+       ~root:(fun mp ->
+         (* Under separate extraction a file is a namespace, which has no
+            body to merge a record into -- and needs none, since
+            [namespace CFG { struct CFG; }] is legal as it stands. *)
+         if Common.get_force_cross_file_qualification () then None
+         else Some (String.lowercase_ascii (string_of_modfile mp)) )
          (* The name that matters is the one the module struct is emitted
             under, suffix included: a module renamed out of the way of its
             inductive is no longer eponymous with it, and the merge that
             renaming was there to prevent must not happen after all. *)
        ~enter:(fun _ mp ->
-         String.lowercase_ascii (Common.emitted_module_name mp) )
+         Some (String.lowercase_ascii (Common.emitted_module_name mp)) )
        (fun module_name _mp _l se acc ->
          List.fold_left
            (fun acc (ind_ref, _i, ind) ->
              match ind.ind_kind with
              | Record _
-               when String.equal
-                      (String.lowercase_ascii
-                         (Common.pp_global_name Type ind_ref) )
+               when Option.equal String.equal
+                      (Some
+                         (String.lowercase_ascii
+                            (Common.pp_global_name Type ind_ref) ) )
                       module_name ->
                ind_ref :: acc
              | _ -> acc )

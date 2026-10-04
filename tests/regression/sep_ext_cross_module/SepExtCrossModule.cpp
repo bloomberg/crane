@@ -6,8 +6,8 @@
 namespace SepExtCrossModule {
 
 uint64_t sum_list(const Datatypes::List<uint64_t> &l) {
-  return l.template fold_left<uint64_t>(
-      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
+  return List::template fold_left<uint64_t, uint64_t>(
+      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); }, l,
       UINT64_C(0));
 }
 

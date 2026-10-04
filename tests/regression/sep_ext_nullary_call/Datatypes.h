@@ -92,15 +92,6 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  A hd(A default0) const {
-    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return default0;
-    } else {
-      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      return a0;
-    }
-  }
-
   uint64_t length() const {
     const List<A> *_self = this;
 

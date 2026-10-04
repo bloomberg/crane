@@ -15,7 +15,8 @@ ParserAnyCast::Tag ParserAnyCast::get_tag(ParserAnyCast::entry x0_) {
 
 Datatypes::List<ParserAnyCast::Tag> ParserAnyCast::process_entries(
     const Datatypes::List<Specif::SigT<ParserAnyCast::Tag, crane::obj>> &es) {
-  return es.template map<ParserAnyCast::Tag>(get_tag);
+  return ListDef::template map<ParserAnyCast::entry, ParserAnyCast::Tag>(
+      get_tag, es);
 }
 
 uint64_t ParserAnyCast::get_a_value(
@@ -35,11 +36,11 @@ uint64_t ParserAnyCast::get_a_value(
 
 uint64_t ParserAnyCast::sum_a_entries(
     const Datatypes::List<Specif::SigT<ParserAnyCast::Tag, crane::obj>> &es) {
-  return es.template fold_left<uint64_t>(
+  return List::template fold_left<uint64_t, ParserAnyCast::entry>(
       [](uint64_t acc, ParserAnyCast::entry e) {
         return (acc + get_a_value(e));
       },
-      UINT64_C(0));
+      es, UINT64_C(0));
 }
 
 ParserAnyCast::Label
