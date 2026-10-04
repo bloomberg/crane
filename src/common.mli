@@ -199,6 +199,10 @@ val pp_global_with_key : kind -> KerName.t -> GlobRef.t -> string
     renaming tables. *)
 val pp_global : kind -> GlobRef.t -> string
 
+(** The name of the file defining a reference, when a reference to it from the
+    current scope must name it; for a name hoisted to its file's namespace. *)
+val file_qualifier : kind -> GlobRef.t -> string option
+
 (** Print just the short name of a reference (for declarations). *)
 val pp_global_name : kind -> GlobRef.t -> string
 

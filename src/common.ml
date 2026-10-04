@@ -1307,6 +1307,18 @@ let pp_ocaml_local k prefix mp rls olab =
        wrapper module; Crane has no need of that. *)
     plain rls
 
+(** Whether a reference into the file [base], whose path within the file is
+    [rls'], must name the file. *)
+let extern_needs_file k base rls' =
+  (not (modular ())) (* Pseudo qualification with "" *)
+  || List.is_empty rls' (* Case of a file A.v used as a module later *)
+  || !force_cross_file_qualification
+     (* Separate extraction: nothing is in scope across files *)
+  || (not (mpfiles_mem base)) (* Module not referenced *)
+  || mpfiles_clash base (fstlev_ks k rls') (* Conflict in opened files *)
+  || visible_clash base (fstlev_ks k rls')
+(* Local conflict *)
+
 (** Print an externally-defined reference. [pp_ocaml_extern] : [mp] isn't local,
     it is defined in another [MPfile].
     @param k    Kind of the reference
@@ -1318,16 +1330,7 @@ let pp_ocaml_extern k base rls =
   match rls with
   | [] -> CErrors.anomaly (Pp.str "pp_ocaml_extern: empty renaming list")
   | base_s :: rls' ->
-    if
-      (not (modular ())) (* Pseudo qualification with "" *)
-      || List.is_empty rls' (* Case of a file A.v used as a module later *)
-      || !force_cross_file_qualification
-         (* Separate extraction: nothing is in scope across files *)
-      || (not (mpfiles_mem base)) (* Module not referenced *)
-      || mpfiles_clash base (fstlev_ks k rls') (* Conflict in opened files *)
-      || visible_clash base (fstlev_ks k rls')
-      (* Local conflict *)
-    then
+    if extern_needs_file k base rls' then
       (* We need to fully qualify. Last clash situation is unsupported *)
         match
           visible_clash_dbg base (Mod, base_s)
@@ -1409,6 +1412,23 @@ let pp_global_with_key k key r =
     @param k The kind of the global reference
     @param r The global reference to print *)
 let pp_global k r = pp_global_with_key k (repr_of_r r) r
+
+(** The file part of {!pp_global}'s answer: the name of the file defining
+    [r] when a reference to it from here must name it, as {!pp_cpp_gen}
+    decides.  For a name hoisted out of its module's structs to the file's
+    namespace, which keeps the file and drops the rest. *)
+let file_qualifier k r =
+  let mp, _ = KerName.repr (repr_of_r r) in
+  match common_prefix_from_list mp (get_visible_mps ()) with
+  | Some _ -> None
+  | None -> (
+    let base = base_mp mp in
+    if is_mp_bound base || is_non_output_module base then None
+    else
+      match List.rev (ref_renaming (k, r)) with
+      | base_s :: rls' when extern_needs_file k base rls' ->
+        Some (unquote base_s)
+      | _ -> None )
 
 (** Print just the short name of a reference (for declarations). Main name
     printing function for declaring a reference.

@@ -11545,3 +11545,14 @@
   (alias runtest)
   (deps translate_applies_handler.t.exe)
   (action (run ./translate_applies_handler.t.exe))))
+
+(subdir sep_ext_concept_unqualified
+ (rule
+  (targets sep_ext_concept_unqualified.t.exe)
+  (deps ParamsDef.vo SepExtConceptUnqualified.vo sep_ext_concept_unqualified.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_concept_unqualified.t.exe ParamsDef.cpp SepExtConceptUnqualified.cpp sep_ext_concept_unqualified.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_concept_unqualified.t.exe)
+  (action (run ./sep_ext_concept_unqualified.t.exe))))

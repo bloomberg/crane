@@ -55,12 +55,18 @@ let pp_global k r = str (str_global k r)
 
 (** The name a typeclass concept is declared and referenced under.  A concept
     may only appear at namespace scope, so it is hoisted out of every
-    enclosing struct and carries no qualifier -- neither at its declaration
-    nor at its uses. *)
+    enclosing struct and carries no struct qualifier -- neither at its
+    declaration nor at its uses.  A use in another file still names the file's
+    namespace. *)
 let concept_name_of_ref r =
-  match Program_facts.concept_name r with
-  | Some name -> name
-  | None -> Common.last_component (Common.pp_global_name Type r)
+  let name =
+    match Program_facts.concept_name r with
+    | Some name -> name
+    | None -> Common.last_component (Common.pp_global_name Type r)
+  in
+  match Common.file_qualifier Type r with
+  | Some file -> file ^ "::" ^ name
+  | None -> name
 
 (** {!concept_name_of_ref} as a [Pp.t]. *)
 let pp_concept_name_of_ref r = str (concept_name_of_ref r)
