@@ -36,9 +36,17 @@ jobs:
             startGroup "Print opam config"
               opam config list; opam repo list; opam list
             endGroup
+          # A custom script replaces the action's default one, so it has to
+          # ask for the dependency installation itself.  One command per
+          # line: the script runs under `set -e`, which ignores a failure on
+          # the left of `&&` -- a build that never found coqc used to pass.
           custom_script: |
+            {{before_install}}
+            {{install}}
+            {{after_install}}
             startGroup "Build project"
-              opam exec -- dune build -p rocq-crane && dune install
+              opam exec -- dune build -p rocq-crane
+              opam exec -- dune install
             endGroup
             startGroup "OCaml unit tests"
               opam exec -- dune build @unit_tests/runtest
