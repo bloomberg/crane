@@ -47,9 +47,29 @@ let executable_available executable =
       |> List.exists (fun directory ->
            executable_file (Filename.concat directory executable) )
 
+(** Wait for [pid], killing it once [seconds] have passed.  The poll interval
+    grows from a millisecond, so a quick child costs about what a blocking
+    wait does. *)
+let wait_at_most seconds pid =
+  let deadline = Unix.gettimeofday () +. seconds in
+  let rec poll interval =
+    match Unix.waitpid [Unix.WNOHANG] pid with
+    | 0, _ when Unix.gettimeofday () >= deadline ->
+      (try Unix.kill pid Sys.sigkill with Unix.Unix_error _ -> ());
+      CUnix.waitpid_non_intr pid
+    | 0, _ ->
+      Unix.sleepf interval;
+      poll (Float.min 0.05 (interval *. 2.))
+    | _, status -> status
+    | exception Unix.Unix_error (Unix.EINTR, _, _) -> poll interval
+  in
+  poll 0.001
+
 (** Execute a program directly, with optional file redirection, and wait for
-    its termination. Open redirection descriptors are always closed. *)
-let run ?stdin_file ?stdout_file ?stderr_file program args =
+    its termination -- or, given [timeout], for at most that many seconds,
+    after which it is killed and reported as signalled. Open redirection
+    descriptors are always closed. *)
+let run ?stdin_file ?stdout_file ?stderr_file ?timeout program args =
   let open_output filename =
     Unix.openfile
       filename
@@ -74,7 +94,9 @@ let run ?stdin_file ?stdout_file ?stderr_file program args =
       let stderr_fd = match stderr_fd with Some fd -> fd | None -> Unix.stderr in
       let argv = Array.of_list (program :: args) in
       let pid = Unix.create_process program argv stdin_fd stdout_fd stderr_fd in
-      CUnix.waitpid_non_intr pid )
+      match timeout with
+      | None -> CUnix.waitpid_non_intr pid
+      | Some seconds -> wait_at_most seconds pid )
 
 (** Execute a program while capturing stdout and stderr in separate temporary
     files. The temporary files are deleted after their contents are read. *)
@@ -97,7 +119,7 @@ let capture program args =
     stderr. The child never sees a shell: [input] is staged through a temporary
     file wired directly to the child's stdin descriptor. All temporary files are
     removed even when execution raises. *)
-let filter program args input =
+let filter ?timeout program args input =
   let stdin_file = Filename.temp_file "crane_process_stdin" ".in" in
   let stdout_file = Filename.temp_file "crane_process_stdout" ".log" in
   let stderr_file = Filename.temp_file "crane_process_stderr" ".log" in
@@ -111,7 +133,9 @@ let filter program args input =
       Fun.protect
         ~finally:(fun () -> close_out_noerr oc)
         (fun () -> output_string oc input);
-      let status = run ~stdin_file ~stdout_file ~stderr_file program args in
+      let status =
+        run ~stdin_file ~stdout_file ~stderr_file ?timeout program args
+      in
       {
         status;
         stdout = read_file stdout_file;

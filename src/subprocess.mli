@@ -27,13 +27,15 @@ val executable_available : string -> bool
     [program] directly and waits for it to terminate. [stdin_file] is opened
     read-only; redirection output files are truncated or created with
     permissions [0o600]. Unspecified streams remain inherited from the parent
-    process.
+    process. Given [timeout], a child still running after that many seconds
+    is killed, and its status is [WSIGNALED Sys.sigkill].
 
     @return the child's raw {!Unix.process_status} *)
 val run :
   ?stdin_file:string ->
   ?stdout_file:string ->
   ?stderr_file:string ->
+  ?timeout:float ->
   string ->
   string list ->
   Unix.process_status
@@ -50,7 +52,7 @@ val capture : string -> string list -> captured_output
     Temporary files are removed even when execution raises.
 
     @return the child's status and captured streams *)
-val filter : string -> string list -> string -> captured_output
+val filter : ?timeout:float -> string -> string list -> string -> captured_output
 
 (** [exit_code status] converts [status] to a conventional integer exit code.
     Normal exits retain their code; signals and stopped states use [128 + n]. *)

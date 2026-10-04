@@ -1118,6 +1118,28 @@ let bde_format_available () = executable_available "bde-format"
 
 let clang_format_available () = executable_available "clang-format"
 
+(** How long the formatter may take on [text] before Crane keeps it as
+    written.  Crane's output formats at about 2 ms a line, but clang-format's
+    line breaking can blow up on a long, fully qualified, template-heavy
+    expression -- a 4700-line separately extracted Vellvm header ran for
+    minutes and grew past 10 GB -- so a file taking ten times the usual rate
+    is abandoned. *)
+let format_budget text =
+  let lines = ref 0 in
+  String.iter (fun c -> if c = '\n' then incr lines) text;
+  30. +. (0.02 *. float_of_int !lines)
+
+(** Whether the formatter was killed for running past {!format_budget}, in
+    which case [what] is reported as left unformatted. *)
+let format_timed_out what = function
+  | Unix.WSIGNALED s when s = Sys.sigkill ->
+    Feedback.msg_warning
+      Pp.(
+        str "the formatter ran out of time on" ++ spc () ++ str what ++ str ";"
+        ++ spc () ++ str "leaving it unformatted" );
+    true
+  | _ -> false
+
 (** Formats a buffer using clang-format or bde-format. Returns the formatted
     string, or the original buffer contents if formatting fails. *)
 let format_buffer_to_string (buf : Buffer.t) : string =
@@ -1142,10 +1164,15 @@ let format_buffer_to_string (buf : Buffer.t) : string =
       Buffer.contents buf )
     else
       let raw_output = Buffer.contents buf in
-      match Subprocess.filter formatter formatter_args raw_output with
-      | exception _ -> Buffer.contents buf
+      match
+        Subprocess.filter ~timeout:(format_budget raw_output) formatter
+          formatter_args raw_output
+      with
+      | exception _ -> raw_output
       | {status = Unix.WEXITED 0; stdout; _} -> stdout
-      | _ -> Buffer.contents buf
+      | {status; _} ->
+        ignore (format_timed_out "the generated code" status);
+        raw_output
 
 (** Runs [clang-format -i] (or [bde-format]) on [filename] in place. No-op
     if the formatter is unavailable or style is set to ["None"]. *)
@@ -1174,7 +1201,12 @@ let format_file_inplace (filename : string) : unit =
     if skip_format then
       ()
     else
-      ignore (Subprocess.run formatter formatter_args)
+      let timeout =
+        format_budget (In_channel.with_open_bin filename In_channel.input_all)
+      in
+      ignore
+        (format_timed_out filename
+           (Subprocess.run ~timeout formatter formatter_args) )
 
 (** Scans the ML structure and marks all custom-extracted GlobRefs as "used"
     so their associated [From "header.h"] imports are included. Must run before
