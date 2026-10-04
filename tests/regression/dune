@@ -11589,3 +11589,25 @@
   (alias runtest)
   (deps sep_ext_cross_file_method.t.exe)
   (action (run ./sep_ext_cross_file_method.t.exe))))
+
+(subdir sep_ext_promoted_alias_import
+ (rule
+  (targets sep_ext_promoted_alias_import.t.exe)
+  (deps ProvDef.vo ParamsDef.vo SepExtPromotedAliasImport.vo sep_ext_promoted_alias_import.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_promoted_alias_import.t.exe ProvDef.cpp ParamsDef.cpp SepExtPromotedAliasImport.cpp sep_ext_promoted_alias_import.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_promoted_alias_import.t.exe)
+  (action (run ./sep_ext_promoted_alias_import.t.exe))))
+
+(subdir sep_ext_mutual_template_order
+ (rule
+  (targets sep_ext_mutual_template_order.t.exe)
+  (deps Ty.vo Tr.vo SepExtMutualTemplateOrder.vo sep_ext_mutual_template_order.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_mutual_template_order.t.exe Ty.cpp Tr.cpp SepExtMutualTemplateOrder.cpp sep_ext_mutual_template_order.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_mutual_template_order.t.exe)
+  (action (run ./sep_ext_mutual_template_order.t.exe))))

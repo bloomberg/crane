@@ -574,6 +574,9 @@ val is_promoted_type_var : GlobRef.t -> bool
 (** Get promoted type variable name if exists. *)
 val promoted_type_var_name : GlobRef.t -> Names.Id.t option
 
+(** The field a promoted type variable of this name stands for. *)
+val promoted_type_var_field : Names.Id.t -> GlobRef.t option
+
 (** Register an erased type constant (non-promoted type-valued record field). *)
 val add_erased_type_const : GlobRef.t -> unit
 

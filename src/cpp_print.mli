@@ -60,6 +60,10 @@ val nested_in_wrapper : GlobRef.t -> bool
 (** Take the struct forward declarations accumulated since the last call. *)
 val take_forward_struct_decls : unit -> Pp.t list
 
+(** The using-declarations this rendering pass needs for promoted type
+    variables whose file-scope alias another file declares, emptying the set. *)
+val take_promoted_alias_imports : unit -> string list
+
 (** Record a forward declaration for a struct about to be rendered at global
     scope.  A constrained template's waits in
     {!constrained_forward_struct_decls} until a chunk needs it. *)

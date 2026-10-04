@@ -802,7 +802,34 @@ let finalized (funs : Gen_decls.generated_fun list) =
     that holds it, and in the header a declaration of a definition the
     implementation file holds. *)
 let function_views ~is_header ~lifted_inline funs =
-  List.concat_map
+  let paired = finalized funs in
+  (* Functions of one group the header defines may call one another, and at
+     namespace scope a call is looked up where it is written: a struct sees
+     its later members, a namespace does not, and an explicit template
+     argument list -- [fmap<T1, T2>(f, fs)] -- rules out finding the callee
+     by argument-dependent lookup at instantiation.  So the group is declared
+     before its first definition. *)
+  let in_header (g : Gen_decls.generated_fun) =
+    match g.gf_entity with Defined (_, Header) -> true | _ -> false
+  in
+  let forward =
+    is_header
+    && (not (!render_ctx).rc_in_struct)
+    && List.length (List.filter (fun (g, _) -> in_header g) paired) > 1
+  in
+  let declarations =
+    if not forward then []
+    else
+      List.filter_map
+        (fun ((g : Gen_decls.generated_fun), entity) ->
+          match entity with
+          | Some e when in_header g ->
+            Some (g.gf_env, Function_entity.declaration e)
+          | _ -> None )
+        paired
+  in
+  declarations
+  @ List.concat_map
     (fun ((g : Gen_decls.generated_fun), entity) ->
       let with_env d = (g.gf_env, d) in
       let lifted =
@@ -814,7 +841,10 @@ let function_views ~is_header ~lifted_inline funs =
         match (g.gf_entity, entity) with
         | Defined (_, file), Some e ->
           ( match (file, is_header) with
-          | Header, true -> [with_env (Function_entity.definition e)]
+          | Header, true ->
+            [ with_env
+                ( if forward then Function_entity.definition_after_declaration e
+                  else Function_entity.definition e ) ]
           | Implementation, false ->
             (* The header declared it. *)
             [with_env (Function_entity.definition_after_declaration e)]
@@ -825,7 +855,7 @@ let function_views ~is_header ~lifted_inline funs =
         | Defined _, None -> assert false
       in
       lifted @ views )
-    (finalized funs)
+    paired
 
 let decls_for ~is_header d =
   match generate d with

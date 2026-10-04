@@ -2850,7 +2850,8 @@ let do_struct_with_decl_tracking ~is_header f s =
   (* Pop the initial visibility entries pushed at the top of this function. *)
   List.iter (fun _ -> pop_visible ()) initial_mps;
   let hoisted_erased_aliases =
-    match Cpp_ind.render_deferred Cpp_ind.file_scope_erased_aliases with
+    let imports = List.map str (Cpp_print.take_promoted_alias_imports ()) in
+    match imports @ Cpp_ind.render_deferred Cpp_ind.file_scope_erased_aliases with
     | [] -> mt ()
     | l -> prlist_with_sep fnl (fun x -> x) l ++ cut2 ()
   in

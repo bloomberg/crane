@@ -1019,6 +1019,14 @@ let is_promoted_type_var r = GlobRef.Map.mem r !promoted_type_vars
 (** Retrieve the name of a promoted type variable if it exists. *)
 let promoted_type_var_name r = GlobRef.Map.find_opt r !promoted_type_vars
 
+(** The field a promoted type variable is named after, given the name.  A
+    name shared by two classes' fields is one file-scope alias in C++ already,
+    so the first is as good an answer as any. *)
+let promoted_type_var_field name =
+  GlobRef.Map.fold
+    (fun r v acc -> if acc = None && Id.equal v name then Some r else acc)
+    !promoted_type_vars None
+
 (* Table of erased type constants — non-promoted type-valued record fields
    like [Hom : Obj -> Obj -> Type] in [PreCategory].  These are dependent
    type families whose C++ representation is [std::any] because the extraction

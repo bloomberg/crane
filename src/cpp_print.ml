@@ -468,6 +468,28 @@ let rec decl_type_name = function
 
 let record_file_scope_type d = Option.iter record_file_scope_name (decl_type_name d)
 
+(** The using-declarations a file needs for promoted type variables it spells
+    bare (the fallback of {!pp_cpp_type}'s [Tpromoted] case) whose file-scope
+    alias another file declares.  Under separate extraction that alias sits in
+    its class's namespace, which a bare name in this one does not reach; the
+    [using] gives the name the lookup it has in a single-file extraction, a
+    struct's own member still first.  Taken by each rendering pass. *)
+let promoted_alias_imports : string list ref = State.cell State.Unit []
+
+let take_promoted_alias_imports () =
+  let l = List.rev !promoted_alias_imports in
+  promoted_alias_imports := [];
+  l
+
+let note_bare_promoted id =
+  if Common.get_force_cross_file_qualification () then
+    match Table.promoted_type_var_field id with
+    | Some g when Option.has_some (Common.file_qualifier Type g) ->
+      let decl = "using " ^ Common.pp_global Type g ^ ";" in
+      if not (List.mem decl !promoted_alias_imports) then
+        promoted_alias_imports := decl :: !promoted_alias_imports
+    | _ -> ()
+
 (** The C++ token an {!Minicpp.obj_access} prints as. *)
 let pp_obj_access = function Adot -> "." | Aarrow -> "->"
 
@@ -863,7 +885,9 @@ let rec pp_cpp_type ?(lead = true) par vl t =
       | Some struct_name
         when (not (!render_ctx).rc_in_struct) && not (is_file_scope_type id) ->
         struct_name ++ str "::" ++ Id.print id
-      | _ -> Id.print id )
+      | _ ->
+        note_bare_promoted id;
+        Id.print id )
     | Tvar (Tv_index (_, Some id) | Tv_named id) -> Id.print id
     (* Tid for local type references (e.g., nested structs inside modules).
        These don't need GlobRef qualification, just simple Id references. Can be
