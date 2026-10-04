@@ -66,3 +66,13 @@ tests/monadic/skiplist_bde/BDE_TEST_ADAPTATION.md
 *.exe
 /theories/cpp/crane-stm/build
 /theories/cpp_bde/crane-stm/build
+
+# tests/ holds the four suites and nothing else; generated output that
+# lands directly in tests/<name>/ is a misconfigured rule, not a test.
+/tests/*
+!/tests/basics/
+!/tests/monadic/
+!/tests/regression/
+!/tests/wip/
+!/tests/dune
+!/tests/loopify-coverage.golden

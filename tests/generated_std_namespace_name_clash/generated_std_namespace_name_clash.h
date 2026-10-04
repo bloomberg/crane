@@ -1,8 +1,0 @@
-#ifndef INCLUDED_GENERATED_STD_NAMESPACE_NAME_CLASH
-#define INCLUDED_GENERATED_STD_NAMESPACE_NAME_CLASH
-
-struct std_ {
-  static inline const bool sample = true;
-};
-
-#endif // INCLUDED_GENERATED_STD_NAMESPACE_NAME_CLASH
