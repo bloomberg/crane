@@ -1,6 +1,7 @@
 #ifndef INCLUDED_SET_CUR_BANK_MODULO
 #define INCLUDED_SET_CUR_BANK_MODULO
 
+#include <cstdint>
 #include <utility>
 
 struct SetCurBankModulo {

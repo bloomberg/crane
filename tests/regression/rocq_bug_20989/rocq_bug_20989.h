@@ -2,6 +2,7 @@
 #define INCLUDED_ROCQ_BUG_20989
 
 #include <concepts>
+#include <cstdint>
 
 template <typename M>
 concept S = requires {

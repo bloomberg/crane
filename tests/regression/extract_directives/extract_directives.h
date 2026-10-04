@@ -1,6 +1,7 @@
 #ifndef INCLUDED_EXTRACT_DIRECTIVES
 #define INCLUDED_EXTRACT_DIRECTIVES
 
+#include <cstdint>
 #include <stdexcept>
 
 struct ExtractDirectives {

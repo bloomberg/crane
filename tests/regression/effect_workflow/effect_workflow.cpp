@@ -34,7 +34,7 @@ std::string EffectWorkflow::full_workflow(std::string prefix) {
     std::filesystem::create_directories(std::filesystem::path(tmp), _ec);
     return !_ec;
   }();
-  setenv("LAST_TEMP"s.c_str(), tmp.c_str(), 1);
+  setenv(std::string("LAST_TEMP").c_str(), tmp.c_str(), 1);
   std::cout << tmp << '\n';
   int64_t _x3 = static_cast<int64_t>(
       std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -51,7 +51,7 @@ std::string EffectWorkflow::conditional_create(std::string path) {
     return !_ec;
   }();
   if (ok) {
-    std::cout << "created"s << '\n';
+    std::cout << std::string("created") << '\n';
     return path;
   } else {
     return "exists";
@@ -62,7 +62,7 @@ std::string EffectWorkflow::conditional_create(std::string path) {
 void EffectWorkflow::read_and_set() {
   std::string line;
   std::getline(std::cin, line);
-  setenv("USER_INPUT"s.c_str(), std::move(line).c_str(), 1);
+  setenv(std::string("USER_INPUT").c_str(), std::move(line).c_str(), 1);
   return;
 }
 

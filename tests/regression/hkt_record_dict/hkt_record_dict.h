@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <memory>
 #include <optional>
@@ -58,8 +57,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -76,10 +75,9 @@ struct HktRecordDict {
     crane::fn<F(crane::fn<crane::obj(crane::obj)>, F)> fmd;
 
     // ACCESSORS
-    template <typename _U> operator FnD<_U>() const {
-      return {
-          crane_convert<crane::fn<_U(crane::fn<crane::obj(crane::obj)>, _U)>>(
-              fmd)};
+    template <typename CraneU> operator FnD<CraneU>() const {
+      return {crane_convert<
+          crane::fn<CraneU(crane::fn<crane::obj(crane::obj)>, CraneU)>>(fmd)};
     }
   };
 
@@ -92,16 +90,18 @@ struct HktRecordDict {
   }
 
   static inline const FnD<std::optional<crane::obj>> optd =
-      FnD<std::optional<crane::obj>>{[]<typename _X>(const crane::fn<_X(_X)> &f,
-                                                     const std::optional<_X> &o)
-                                         -> std::optional<crane::obj> {
-        if (o.has_value()) {
-          const auto &x = *o;
-          return std::make_optional<_X>(_X(crane_call_erased(f, x)));
-        } else {
-          return std::optional<_X>();
-        }
-      }};
+      FnD<std::optional<crane::obj>>{
+          []<typename CraneX>(
+              const crane::fn<CraneX(CraneX)> &f,
+              const std::optional<CraneX> &o) -> std::optional<crane::obj> {
+            if (o.has_value()) {
+              const auto &x = *o;
+              return std::make_optional<CraneX>(
+                  CraneX(crane_call_erased(f, x)));
+            } else {
+              return std::optional<CraneX>();
+            }
+          }};
   static inline const std::optional<Nat> ex = fmd<std::optional>(
       optd, [](const Nat &x) { return Nat::s(x); },
       std::make_optional<Nat>(Nat::s(Nat::o())));

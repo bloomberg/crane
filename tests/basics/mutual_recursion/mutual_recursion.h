@@ -4,8 +4,8 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -42,13 +42,15 @@ struct MutualRecursion {
 
     explicit tree(Node _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    tree(const tree<_U> &_other)
+    template <typename CraneU>
+    tree(const tree<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename tree<_U>::Leaf>(_other.v())) {
-              const auto &[a0] = std::get<typename tree<_U>::Leaf>(_other.v());
+            if (std::holds_alternative<typename tree<CraneU>::Leaf>(
+                    _other.v())) {
+              const auto &[a0] =
+                  std::get<typename tree<CraneU>::Leaf>(_other.v());
               return Leaf{[&]() -> A {
-                if constexpr (crane_convertible<A, const _U &>) {
+                if constexpr (crane_convertible<A, const CraneU &>) {
                   return crane_convert<A>(a0);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
@@ -56,7 +58,8 @@ struct MutualRecursion {
                 }
               }()};
             } else {
-              const auto &[a0] = std::get<typename tree<_U>::Node>(_other.v());
+              const auto &[a0] =
+                  std::get<typename tree<CraneU>::Node>(_other.v());
               return Node{(a0 ? std::make_shared<forest<A>>(
                                     crane_convert<forest<A>>(*a0))
                               : nullptr)};
@@ -108,8 +111,8 @@ struct MutualRecursion {
 
     tree(const tree &) = default;
     tree &operator=(const tree &) = default;
-    tree(tree &&) noexcept = default;
-    tree &operator=(tree &&) noexcept = default;
+    tree(tree &&) = default;
+    tree &operator=(tree &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -140,15 +143,15 @@ struct MutualRecursion {
 
     explicit forest(Trees _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    forest(const forest<_U> &_other)
+    template <typename CraneU>
+    forest(const forest<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename forest<_U>::Empty>(
+            if (std::holds_alternative<typename forest<CraneU>::Empty>(
                     _other.v())) {
               return Empty{};
             } else {
               const auto &[a0, a1] =
-                  std::get<typename forest<_U>::Trees>(_other.v());
+                  std::get<typename forest<CraneU>::Trees>(_other.v());
               return Trees{
                   (a0 ? std::make_shared<tree<A>>(crane_convert<tree<A>>(*a0))
                       : nullptr),
@@ -204,8 +207,8 @@ struct MutualRecursion {
 
     forest(const forest &) = default;
     forest &operator=(const forest &) = default;
-    forest(forest &&) noexcept = default;
-    forest &operator=(forest &&) noexcept = default;
+    forest(forest &&) = default;
+    forest &operator=(forest &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 

@@ -1,7 +1,6 @@
 #ifndef INCLUDED_ITREE_BIND_BINDER_AT_NAMED_DECL
 #define INCLUDED_ITREE_BIND_BINDER_AT_NAMED_DECL
 
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <memory>
@@ -98,8 +97,8 @@ _cur = _next(_cur->v_mut());
 }
 Nat(const Nat&) = default;
 Nat& operator=(const Nat&) = default;
-Nat(Nat&&) noexcept = default;
-Nat& operator=(Nat&&) noexcept = default;
+Nat(Nat&&) = default;
+Nat& operator=(Nat&&) = default;
 inline variant_t& v_mut() {
 return v_;}
   // ACCESSORS
@@ -123,25 +122,25 @@ public:
 Sum() {}
 explicit Sum(Inl _v) : v_(std::move(_v)) {}
 explicit Sum(Inr _v) : v_(std::move(_v)) {}
-template <typename _U0, typename _U1>
-Sum(const Sum<_U0,
-_U1>& _other) : v_([&]() -> variant_t {
-if (std::holds_alternative<typename Sum<_U0,
-_U1>::Inl>(_other.v())) {
-const auto& [a0] = std::get<typename Sum<_U0,
-_U1>::Inl>(_other.v());
+template <typename CraneU0, typename CraneU1>
+Sum(const Sum<CraneU0,
+CraneU1>& _other) : v_([&]() -> variant_t {
+if (std::holds_alternative<typename Sum<CraneU0,
+CraneU1>::Inl>(_other.v())) {
+const auto& [a0] = std::get<typename Sum<CraneU0,
+CraneU1>::Inl>(_other.v());
 return Inl{[&]() -> A {
-if constexpr (crane_convertible<A, const _U0&>) {
+if constexpr (crane_convertible<A, const CraneU0&>) {
 return crane_convert<A>(a0);
 } else {
 throw std::logic_error("unreachable: inactive constructor field at this instantiation");
 }
 }()};
 } else {
-const auto& [a0] = std::get<typename Sum<_U0,
-_U1>::Inr>(_other.v());
+const auto& [a0] = std::get<typename Sum<CraneU0,
+CraneU1>::Inr>(_other.v());
 return Inr{[&]() -> B {
-if constexpr (crane_convertible<B, const _U1&>) {
+if constexpr (crane_convertible<B, const CraneU1&>) {
 return crane_convert<B>(a0);
 } else {
 throw std::logic_error("unreachable: inactive constructor field at this instantiation");
@@ -189,25 +188,25 @@ public:
 Dval() {}
 explicit Dval(DPtr _v) : v_(std::move(_v)) {}
 explicit Dval(DIptr _v) : v_(std::move(_v)) {}
-template <typename _U0, typename _U1>
-Dval(const Dval<_U0,
-_U1>& _other) : v_([&]() -> variant_t {
-if (std::holds_alternative<typename Dval<_U0,
-_U1>::DPtr>(_other.v())) {
-const auto& [p] = std::get<typename Dval<_U0,
-_U1>::DPtr>(_other.v());
+template <typename CraneU0, typename CraneU1>
+Dval(const Dval<CraneU0,
+CraneU1>& _other) : v_([&]() -> variant_t {
+if (std::holds_alternative<typename Dval<CraneU0,
+CraneU1>::DPtr>(_other.v())) {
+const auto& [p] = std::get<typename Dval<CraneU0,
+CraneU1>::DPtr>(_other.v());
 return DPtr{[&]() -> ptr {
-if constexpr (crane_convertible<ptr, const _U0&>) {
+if constexpr (crane_convertible<ptr, const CraneU0&>) {
 return crane_convert<ptr>(p);
 } else {
 throw std::logic_error("unreachable: inactive constructor field at this instantiation");
 }
 }()};
 } else {
-const auto& [i] = std::get<typename Dval<_U0,
-_U1>::DIptr>(_other.v());
+const auto& [i] = std::get<typename Dval<CraneU0,
+CraneU1>::DIptr>(_other.v());
 return DIptr{[&]() -> iptr {
-if constexpr (crane_convertible<iptr, const _U1&>) {
+if constexpr (crane_convertible<iptr, const CraneU1&>) {
 return crane_convert<iptr>(i);
 } else {
 throw std::logic_error("unreachable: inactive constructor field at this instantiation");

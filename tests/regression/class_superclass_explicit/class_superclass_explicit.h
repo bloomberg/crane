@@ -2,6 +2,7 @@
 #define INCLUDED_CLASS_SUPERCLASS_EXPLICIT
 
 #include <concepts>
+#include <cstdint>
 #include <utility>
 
 template <typename I, typename A>

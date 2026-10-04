@@ -3,8 +3,8 @@
 
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <concepts>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <type_traits>
@@ -44,20 +44,21 @@ struct MonadClassTypeConstructor {
   template <typename a> using Opt = std::optional<a>;
 
   struct MOpt {
-    template <typename _A0> using M = std::optional<_A0>;
+    template <typename CraneA0> using M = std::optional<CraneA0>;
 
-    template <typename _A0> static std::optional<_A0> mret(_A0 a) {
-      return std::make_optional<_A0>(a);
+    template <typename CraneA0> static std::optional<CraneA0> mret(CraneA0 a) {
+      return std::make_optional<CraneA0>(a);
     }
 
-    template <typename _A0, typename _A1>
-    static std::optional<_A1> mbind(std::optional<_A0> m,
-                                    crane::fn<std::optional<_A1>(_A0)> f) {
+    template <typename CraneA0, typename CraneA1>
+    static std::optional<CraneA1>
+    mbind(std::optional<CraneA0> m,
+          crane::fn<std::optional<CraneA1>(CraneA0)> f) {
       if (m.has_value()) {
-        const _A0 &a = *m;
+        const CraneA0 &a = *m;
         return f(a);
       } else {
-        return std::optional<_A1>();
+        return std::optional<CraneA1>();
       }
     }
   };

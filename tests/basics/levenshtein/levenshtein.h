@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
 #include <memory>
 #include <stdexcept>
@@ -69,8 +68,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -106,18 +105,19 @@ template <typename A, typename P> struct SigT {
   // ACCESSORS
   SigT<A, P> clone() const { return {x, a1}; }
 
-  template <typename _U0, typename _U1> operator SigT<_U0, _U1>() const {
-    return {[&]() -> _U0 {
-              if constexpr (crane_convertible<_U0, const A &>) {
-                return crane_convert<_U0>(x);
+  template <typename CraneU0, typename CraneU1>
+  operator SigT<CraneU0, CraneU1>() const {
+    return {[&]() -> CraneU0 {
+              if constexpr (crane_convertible<CraneU0, const A &>) {
+                return crane_convert<CraneU0>(x);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
               }
             }(),
-            [&]() -> _U1 {
-              if constexpr (crane_convertible<_U1, const P &>) {
-                return crane_convert<_U1>(a1);
+            [&]() -> CraneU1 {
+              if constexpr (crane_convertible<CraneU1, const P &>) {
+                return crane_convert<CraneU1>(a1);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
@@ -207,8 +207,8 @@ public:
 
   String(const String &) = default;
   String &operator=(const String &) = default;
-  String(String &&) noexcept = default;
-  String &operator=(String &&) noexcept = default;
+  String(String &&) = default;
+  String &operator=(String &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -405,8 +405,8 @@ struct Levenshtein {
 
     chain(const chain &) = default;
     chain &operator=(const chain &) = default;
-    chain(chain &&) noexcept = default;
-    chain &operator=(chain &&) noexcept = default;
+    chain(chain &&) = default;
+    chain &operator=(chain &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -466,17 +466,17 @@ struct Levenshtein {
                  const Nat &_x1) const {
       const chain *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const chain *_self;
         String _x;
         String _x0;
         Nat _x1;
       };
 
-      /// _Cont_Change: saves [a4, a5, n0, s0, t0, u0], resumes after recursive
-      /// call, then processes rest.
-      struct _Cont_Change {
+      /// CraneCont_Change: saves [a4, a5, n0, s0, t0, u0], resumes after
+      /// recursive call, then processes rest.
+      struct CraneCont_Change {
         edit a4;
         std::shared_ptr<chain> a5;
         Nat n0;
@@ -485,9 +485,9 @@ struct Levenshtein {
         String u0;
       };
 
-      /// _Cont_Skip: saves [a0, a4, n0, s0, t0], resumes after recursive call,
-      /// then processes rest.
-      struct _Cont_Skip {
+      /// CraneCont_Skip: saves [a0, a4, n0, s0, t0], resumes after recursive
+      /// call, then processes rest.
+      struct CraneCont_Skip {
         Ascii a0;
         std::shared_ptr<chain> a4;
         Nat n0;
@@ -495,16 +495,17 @@ struct Levenshtein {
         String t0;
       };
 
-      using _Frame = std::variant<_Enter, _Cont_Change, _Cont_Skip>;
+      using CraneFrame =
+          std::variant<CraneEnter, CraneCont_Change, CraneCont_Skip>;
       T1 _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self, _x, _x0, _x1});
-      /// Loopified chain_rec: _Enter -> _Cont_Change -> _Cont_Skip.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self, _x, _x0, _x1});
+      /// Loopified chain_rec: CraneEnter -> CraneCont_Change -> CraneCont_Skip.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const chain *_self = _f._self;
           const String &_x = std::move(_f._x);
           const String &_x0 = std::move(_f._x0);
@@ -515,16 +516,16 @@ struct Levenshtein {
           } else if (std::holds_alternative<typename chain::Skip>(_sv.v())) {
             const auto &[a0, s0, t0, n0, a4] =
                 std::get<typename chain::Skip>(_sv.v());
-            _stack.emplace_back(_Cont_Skip{a0, a4, n0, s0, t0});
-            _stack.emplace_back(_Enter{crane_raw(a4), s0, t0, n0});
+            _stack.emplace_back(CraneCont_Skip{a0, a4, n0, s0, t0});
+            _stack.emplace_back(CraneEnter{crane_raw(a4), s0, t0, n0});
           } else {
             const auto &[s0, t0, u0, n0, a4, a5] =
                 std::get<typename chain::Change>(_sv.v());
-            _stack.emplace_back(_Cont_Change{a4, a5, n0, s0, t0, u0});
-            _stack.emplace_back(_Enter{crane_raw(a5), t0, u0, n0});
+            _stack.emplace_back(CraneCont_Change{a4, a5, n0, s0, t0, u0});
+            _stack.emplace_back(CraneEnter{crane_raw(a5), t0, u0, n0});
           }
-        } else if (std::holds_alternative<_Cont_Change>(_frame)) {
-          auto _f = std::move(std::get<_Cont_Change>(_frame));
+        } else if (std::holds_alternative<CraneCont_Change>(_frame)) {
+          auto _f = std::move(std::get<CraneCont_Change>(_frame));
           edit a4 = std::move(_f.a4);
           std::shared_ptr<chain> a5 = std::move(_f.a5);
           Nat n0 = std::move(_f.n0);
@@ -533,7 +534,7 @@ struct Levenshtein {
           String u0 = std::move(_f.u0);
           _result = f1(s0, t0, u0, n0, a4, *a5, std::move(_result));
         } else {
-          auto _f = std::move(std::get<_Cont_Skip>(_frame));
+          auto _f = std::move(std::get<CraneCont_Skip>(_frame));
           Ascii a0 = std::move(_f.a0);
           std::shared_ptr<chain> a4 = std::move(_f.a4);
           Nat n0 = std::move(_f.n0);
@@ -554,17 +555,17 @@ struct Levenshtein {
                   const Nat &_x1) const {
       const chain *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const chain *_self;
         String _x;
         String _x0;
         Nat _x1;
       };
 
-      /// _Cont_Change: saves [a4, a5, n0, s0, t0, u0], resumes after recursive
-      /// call, then processes rest.
-      struct _Cont_Change {
+      /// CraneCont_Change: saves [a4, a5, n0, s0, t0, u0], resumes after
+      /// recursive call, then processes rest.
+      struct CraneCont_Change {
         edit a4;
         std::shared_ptr<chain> a5;
         Nat n0;
@@ -573,9 +574,9 @@ struct Levenshtein {
         String u0;
       };
 
-      /// _Cont_Skip: saves [a0, a4, n0, s0, t0], resumes after recursive call,
-      /// then processes rest.
-      struct _Cont_Skip {
+      /// CraneCont_Skip: saves [a0, a4, n0, s0, t0], resumes after recursive
+      /// call, then processes rest.
+      struct CraneCont_Skip {
         Ascii a0;
         std::shared_ptr<chain> a4;
         Nat n0;
@@ -583,16 +584,18 @@ struct Levenshtein {
         String t0;
       };
 
-      using _Frame = std::variant<_Enter, _Cont_Change, _Cont_Skip>;
+      using CraneFrame =
+          std::variant<CraneEnter, CraneCont_Change, CraneCont_Skip>;
       T1 _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self, _x, _x0, _x1});
-      /// Loopified chain_rect: _Enter -> _Cont_Change -> _Cont_Skip.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self, _x, _x0, _x1});
+      /// Loopified chain_rect: CraneEnter -> CraneCont_Change ->
+      /// CraneCont_Skip.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const chain *_self = _f._self;
           const String &_x = std::move(_f._x);
           const String &_x0 = std::move(_f._x0);
@@ -603,16 +606,16 @@ struct Levenshtein {
           } else if (std::holds_alternative<typename chain::Skip>(_sv.v())) {
             const auto &[a0, s0, t0, n0, a4] =
                 std::get<typename chain::Skip>(_sv.v());
-            _stack.emplace_back(_Cont_Skip{a0, a4, n0, s0, t0});
-            _stack.emplace_back(_Enter{crane_raw(a4), s0, t0, n0});
+            _stack.emplace_back(CraneCont_Skip{a0, a4, n0, s0, t0});
+            _stack.emplace_back(CraneEnter{crane_raw(a4), s0, t0, n0});
           } else {
             const auto &[s0, t0, u0, n0, a4, a5] =
                 std::get<typename chain::Change>(_sv.v());
-            _stack.emplace_back(_Cont_Change{a4, a5, n0, s0, t0, u0});
-            _stack.emplace_back(_Enter{crane_raw(a5), t0, u0, n0});
+            _stack.emplace_back(CraneCont_Change{a4, a5, n0, s0, t0, u0});
+            _stack.emplace_back(CraneEnter{crane_raw(a5), t0, u0, n0});
           }
-        } else if (std::holds_alternative<_Cont_Change>(_frame)) {
-          auto _f = std::move(std::get<_Cont_Change>(_frame));
+        } else if (std::holds_alternative<CraneCont_Change>(_frame)) {
+          auto _f = std::move(std::get<CraneCont_Change>(_frame));
           edit a4 = std::move(_f.a4);
           std::shared_ptr<chain> a5 = std::move(_f.a5);
           Nat n0 = std::move(_f.n0);
@@ -621,7 +624,7 @@ struct Levenshtein {
           String u0 = std::move(_f.u0);
           _result = f1(s0, t0, u0, n0, a4, *a5, std::move(_result));
         } else {
-          auto _f = std::move(std::get<_Cont_Skip>(_frame));
+          auto _f = std::move(std::get<CraneCont_Skip>(_frame));
           Ascii a0 = std::move(_f.a0);
           std::shared_ptr<chain> a4 = std::move(_f.a4);
           Nat n0 = std::move(_f.n0);

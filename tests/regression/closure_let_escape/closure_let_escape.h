@@ -2,6 +2,7 @@
 #define INCLUDED_CLOSURE_LET_ESCAPE
 
 #include "fn.h"
+#include <cstdint>
 #include <memory>
 #include <optional>
 

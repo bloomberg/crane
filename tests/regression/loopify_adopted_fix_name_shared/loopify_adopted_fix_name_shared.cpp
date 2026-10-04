@@ -13,23 +13,23 @@
 /// lambda, and dvalue_extract_array_bytes).
 std::optional<Nat> LoopifyAdoptedFixNameShared::f(
     const LoopifyAdoptedFixNameShared::tree &t,
-    const Nat
-        &i) { /// _Enter: captures varying parameters for each recursive call.
+    const Nat &i) { /// CraneEnter: captures varying parameters for each
+                    /// recursive call.
 
-  struct _Enter {
+  struct CraneEnter {
     Nat i;
     LoopifyAdoptedFixNameShared::tree t;
   };
 
-  using _Frame = std::variant<_Enter>;
+  using CraneFrame = std::variant<CraneEnter>;
   std::optional<Nat> _result{};
-  crane::small_vector<_Frame> _stack;
-  _stack.emplace_back(_Enter{i, t});
-  /// Loopified f: _Enter.
+  crane::small_vector<CraneFrame> _stack;
+  _stack.emplace_back(CraneEnter{i, t});
+  /// Loopified f: CraneEnter.
   while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
+    CraneFrame _frame = std::move(_stack.back());
     _stack.pop_back();
-    auto _f = std::move(std::get<_Enter>(_frame));
+    auto _f = std::move(std::get<CraneEnter>(_frame));
     const Nat &i = std::move(_f.i);
     const LoopifyAdoptedFixNameShared::tree &t = std::move(_f.t);
     crane::fn<std::optional<Nat>(std::optional<Nat>,

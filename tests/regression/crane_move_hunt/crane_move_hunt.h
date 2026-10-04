@@ -1,6 +1,7 @@
 #ifndef INCLUDED_CRANE_MOVE_HUNT
 #define INCLUDED_CRANE_MOVE_HUNT
 
+#include <cstdint>
 #include <toy_helpers.h>
 #include <utility>
 #include <variant>

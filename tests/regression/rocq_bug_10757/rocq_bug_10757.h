@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -21,10 +20,10 @@ template <typename A> struct Sig {
   // ACCESSORS
   Sig<A> clone() const { return {x}; }
 
-  template <typename _U> operator Sig<_U>() const {
-    return {[&]() -> _U {
-      if constexpr (crane_convertible<_U, const A &>) {
-        return crane_convert<_U>(x);
+  template <typename CraneU> operator Sig<CraneU>() const {
+    return {[&]() -> CraneU {
+      if constexpr (crane_convertible<CraneU, const A &>) {
+        return crane_convert<CraneU>(x);
       } else {
         throw std::logic_error(
             "unreachable: inactive constructor field at this instantiation");

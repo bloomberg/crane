@@ -1,6 +1,7 @@
 #ifndef INCLUDED_NAME_CLASH_BINDING_REUSE
 #define INCLUDED_NAME_CLASH_BINDING_REUSE
 
+#include <cstdint>
 #include <type_traits>
 #include <variant>
 

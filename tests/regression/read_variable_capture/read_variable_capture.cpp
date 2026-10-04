@@ -3,9 +3,9 @@
 /// Works: literal argument — no capture needed
 std::string ReadVariableCapture::read_literal() {
   return [&]() -> std::string {
-    std::ifstream file("file.txt"s);
+    std::ifstream file(std::string("file.txt"));
     if (!file) {
-      std::cerr << "Failed to open file " << "file.txt"s << '\n';
+      std::cerr << "Failed to open file " << std::string("file.txt") << '\n';
       return std::string{};
     }
     return std::string(std::istreambuf_iterator<char>(file),

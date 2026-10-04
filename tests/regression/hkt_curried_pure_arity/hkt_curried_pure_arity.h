@@ -3,7 +3,6 @@
 
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <memory>
@@ -58,8 +57,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -104,25 +103,25 @@ struct HktCurriedPureArity {
   }
 
   struct ApOpt {
-    template <typename _A0> using F = std::optional<_A0>;
+    template <typename CraneA0> using F = std::optional<CraneA0>;
 
-    template <typename _A0> static std::optional<_A0> pure(_A0 x) {
-      return std::make_optional<_A0>(x);
+    template <typename CraneA0> static std::optional<CraneA0> pure(CraneA0 x) {
+      return std::make_optional<CraneA0>(x);
     }
 
-    template <typename _A0, typename _A1>
-    static std::optional<_A1> ap(std::optional<crane::fn<_A1(_A0)>> f,
-                                 std::optional<_A0> o) {
+    template <typename CraneA0, typename CraneA1>
+    static std::optional<CraneA1>
+    ap(std::optional<crane::fn<CraneA1(CraneA0)>> f, std::optional<CraneA0> o) {
       if (f.has_value()) {
-        const crane::fn<_A1(_A0)> &g = *f;
+        const crane::fn<CraneA1(CraneA0)> &g = *f;
         if (o.has_value()) {
-          const _A0 &x = *o;
-          return std::make_optional<_A1>(g(x));
+          const CraneA0 &x = *o;
+          return std::make_optional<CraneA1>(g(x));
         } else {
-          return std::optional<_A1>();
+          return std::optional<CraneA1>();
         }
       } else {
-        return std::optional<_A1>();
+        return std::optional<CraneA1>();
       }
     }
   };

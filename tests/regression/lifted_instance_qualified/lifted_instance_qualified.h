@@ -67,8 +67,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -146,8 +146,8 @@ public:
 
   String(const String &) = default;
   String &operator=(const String &) = default;
-  String(String &&) noexcept = default;
-  String &operator=(String &&) noexcept = default;
+  String(String &&) = default;
+  String &operator=(String &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 

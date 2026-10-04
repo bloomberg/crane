@@ -2,7 +2,6 @@
 #define INCLUDED_TEMPLATE_PARAM_REDEF
 
 #include "obj.h"
-#include <any>
 #include <variant>
 
 enum class Unit;

@@ -1,6 +1,8 @@
 #ifndef INCLUDED_ERASED_RECORD
 #define INCLUDED_ERASED_RECORD
 
+#include <cstdint>
+
 struct ErasedRecord {
   struct ManyProps {
     uint64_t field0;

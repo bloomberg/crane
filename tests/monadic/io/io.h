@@ -9,8 +9,6 @@
 #include <system_error>
 #include <variant>
 
-using namespace std::string_literals;
-
 struct iotest {
   static void test1(std::string _x);
   static void test2(std::string s);

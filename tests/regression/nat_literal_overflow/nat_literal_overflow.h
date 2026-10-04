@@ -1,6 +1,8 @@
 #ifndef INCLUDED_NAT_LITERAL_OVERFLOW
 #define INCLUDED_NAT_LITERAL_OVERFLOW
 
+#include <cstdint>
+
 struct NatLiteralOverflow {
   /// nat maps onto uint64_t, so a literal is only extractable if it fits.
   /// The largest one that does still comes through exactly.

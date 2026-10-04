@@ -2,6 +2,7 @@
 #define INCLUDED_DEPENDENT_TYPENAME
 
 #include <concepts>
+#include <cstdint>
 
 template <typename M>
 concept HasType = requires {

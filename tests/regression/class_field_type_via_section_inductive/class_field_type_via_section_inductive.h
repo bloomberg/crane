@@ -3,7 +3,6 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <memory>
@@ -32,10 +31,10 @@ I>concept Params = requires {
   });
 /// Takes only I.  Its field's type is the section inductive, so its
 /// dependence on Params is never written down.
-template <typename _Inst, typename I, typename ptr, typename iptr>
+template <typename CraneInst, typename I, typename ptr, typename iptr>
 concept ToDvalueBase = requires {
   {
-    _Inst::tdb(std::declval<I>())
+    CraneInst::tdb(std::declval<I>())
   } -> std::convertible_to<Dvalue_base<ptr, iptr>>;
 };
 
@@ -84,8 +83,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -119,16 +118,17 @@ public:
 
   explicit Dvalue_base(DVALUE_Iptr _v) : v_(std::move(_v)) {}
 
-  template <typename _U0, typename _U1>
-  Dvalue_base(const Dvalue_base<_U0, _U1> &_other)
+  template <typename CraneU0, typename CraneU1>
+  Dvalue_base(const Dvalue_base<CraneU0, CraneU1> &_other)
       : v_([&]() -> variant_t {
           if (std::holds_alternative<
-                  typename Dvalue_base<_U0, _U1>::DVALUE_Pointer>(_other.v())) {
-            const auto &[a0] =
-                std::get<typename Dvalue_base<_U0, _U1>::DVALUE_Pointer>(
-                    _other.v());
+                  typename Dvalue_base<CraneU0, CraneU1>::DVALUE_Pointer>(
+                  _other.v())) {
+            const auto &[a0] = std::get<
+                typename Dvalue_base<CraneU0, CraneU1>::DVALUE_Pointer>(
+                _other.v());
             return DVALUE_Pointer{[&]() -> ptr {
-              if constexpr (crane_convertible<ptr, const _U0 &>) {
+              if constexpr (crane_convertible<ptr, const CraneU0 &>) {
                 return crane_convert<ptr>(a0);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -137,10 +137,10 @@ public:
             }()};
           } else {
             const auto &[a0] =
-                std::get<typename Dvalue_base<_U0, _U1>::DVALUE_Iptr>(
+                std::get<typename Dvalue_base<CraneU0, CraneU1>::DVALUE_Iptr>(
                     _other.v());
             return DVALUE_Iptr{[&]() -> iptr {
-              if constexpr (crane_convertible<iptr, const _U1 &>) {
+              if constexpr (crane_convertible<iptr, const CraneU1 &>) {
                 return crane_convert<iptr>(a0);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "

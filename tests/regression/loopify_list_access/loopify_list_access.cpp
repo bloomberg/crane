@@ -135,40 +135,40 @@ LoopifyListAccess::lookup_all(uint64_t key,
 
 uint64_t LoopifyListAccess::count(
     uint64_t x,
-    const List<uint64_t>
-        &l) { /// _Enter: captures varying parameters for each recursive call.
+    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
+                               /// each recursive call.
 
-  struct _Enter {
+  struct CraneEnter {
     const List<uint64_t> *l;
   };
 
-  /// _Cont1: resumes after recursive call, then processes rest.
-  struct _Cont1 {};
+  /// CraneCont1: resumes after recursive call, then processes rest.
+  struct CraneCont1 {};
 
-  using _Frame = std::variant<_Enter, _Cont1>;
+  using CraneFrame = std::variant<CraneEnter, CraneCont1>;
   uint64_t _result{};
-  crane::small_vector<_Frame> _stack;
-  _stack.emplace_back(_Enter{&l});
-  /// Loopified count: _Enter -> _Cont1.
+  crane::small_vector<CraneFrame> _stack;
+  _stack.emplace_back(CraneEnter{&l});
+  /// Loopified count: CraneEnter -> CraneCont1.
   while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
+    CraneFrame _frame = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
+    if (std::holds_alternative<CraneEnter>(_frame)) {
+      auto _f = std::move(std::get<CraneEnter>(_frame));
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = UINT64_C(0);
       } else {
         const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
         if (x == a0) {
-          _stack.emplace_back(_Cont1{});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
+          _stack.emplace_back(CraneCont1{});
+          _stack.emplace_back(CraneEnter{crane_raw(a1)});
         } else {
-          _stack.emplace_back(_Enter{crane_raw(a1)});
+          _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }
       }
     } else {
-      auto _f = std::move(std::get<_Cont1>(_frame));
+      auto _f = std::move(std::get<CraneCont1>(_frame));
       _result = (UINT64_C(1) + std::move(_result));
     }
   }

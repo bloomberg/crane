@@ -1,6 +1,7 @@
 #ifndef INCLUDED_TIMING_PRESERVES_WF_SIMPLE
 #define INCLUDED_TIMING_PRESERVES_WF_SIMPLE
 
+#include <cstdint>
 #include <utility>
 
 struct TimingPreservesWfSimple {

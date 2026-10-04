@@ -3,9 +3,9 @@
 
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
 #include <concepts>
+#include <cstdint>
 #include <deque>
 #include <utility>
 #include <variant>
@@ -34,29 +34,31 @@ struct DequeAnyCast {
   static_assert(Monoid<nat_monoid>);
 
   template <Monoid _tcI0>
-  static typename _tcI0::m_carrier mfold(
-      const std::deque<typename _tcI0::m_carrier>
-          &l) { /// _Enter: captures varying parameters for each recursive call.
+  static typename _tcI0::m_carrier
+  mfold(const std::deque<typename _tcI0::m_carrier>
+            &l) { /// CraneEnter: captures varying parameters for each recursive
+                  /// call.
 
-    struct _Enter {
+    struct CraneEnter {
       std::deque<typename _tcI0::m_carrier> l;
     };
 
-    /// _Cont_x: saves [x], resumes after recursive call, then processes rest.
-    struct _Cont_x {
+    /// CraneCont_x: saves [x], resumes after recursive call, then processes
+    /// rest.
+    struct CraneCont_x {
       typename _tcI0::m_carrier x;
     };
 
-    using _Frame = std::variant<_Enter, _Cont_x>;
+    using CraneFrame = std::variant<CraneEnter, CraneCont_x>;
     typename _tcI0::m_carrier _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{l});
-    /// Loopified mfold: _Enter -> _Cont_x.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{l});
+    /// Loopified mfold: CraneEnter -> CraneCont_x.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const std::deque<typename _tcI0::m_carrier> &l = std::move(_f.l);
         if (l.empty()) {
           _result = _tcI0::m_id();
@@ -65,11 +67,11 @@ struct DequeAnyCast {
           std::deque<typename _tcI0::m_carrier> rest(l.begin() + 1, l.end());
           const auto &m_op0 = _tcI0::m_op;
           crane::obj _x = _tcI0::m_id;
-          _stack.emplace_back(_Cont_x{x});
-          _stack.emplace_back(_Enter{rest});
+          _stack.emplace_back(CraneCont_x{x});
+          _stack.emplace_back(CraneEnter{rest});
         }
       } else {
-        auto _f = std::move(std::get<_Cont_x>(_frame));
+        auto _f = std::move(std::get<CraneCont_x>(_frame));
         typename _tcI0::m_carrier x = std::move(_f.x);
         const auto &m_op0 = _tcI0::m_op;
         _result = m_op0(x, std::move(_result));

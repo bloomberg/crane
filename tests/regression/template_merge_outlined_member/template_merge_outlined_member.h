@@ -3,7 +3,6 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <memory>
 #include <stdexcept>
@@ -58,8 +57,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -93,13 +92,13 @@ public:
 
   explicit Box(Bnil _v) : v_(_v) {}
 
-  template <typename _U>
-  Box(const Box<_U> &_other)
+  template <typename CraneU>
+  Box(const Box<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Box<_U>::Bx>(_other.v())) {
-            const auto &[a0] = std::get<typename Box<_U>::Bx>(_other.v());
+          if (std::holds_alternative<typename Box<CraneU>::Bx>(_other.v())) {
+            const auto &[a0] = std::get<typename Box<CraneU>::Bx>(_other.v());
             return Bx{[&]() -> A {
-              if constexpr (crane_convertible<A, const _U &>) {
+              if constexpr (crane_convertible<A, const CraneU &>) {
                 return crane_convert<A>(a0);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "

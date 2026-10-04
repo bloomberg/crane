@@ -1,6 +1,7 @@
 #ifndef INCLUDED_NAME_MATCHES_MODULE
 #define INCLUDED_NAME_MATCHES_MODULE
 
+#include <cstdint>
 #include <type_traits>
 #include <variant>
 

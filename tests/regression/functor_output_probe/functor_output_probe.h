@@ -2,6 +2,7 @@
 #define INCLUDED_FUNCTOR_OUTPUT_PROBE
 
 #include <concepts>
+#include <cstdint>
 
 template <typename M>
 concept S = requires {

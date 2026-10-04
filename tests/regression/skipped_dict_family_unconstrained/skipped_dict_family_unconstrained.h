@@ -2,7 +2,6 @@
 #define INCLUDED_SKIPPED_DICT_FAMILY_UNCONSTRAINED
 
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <crane_itree.h>
 #include <memory>
@@ -59,8 +58,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 

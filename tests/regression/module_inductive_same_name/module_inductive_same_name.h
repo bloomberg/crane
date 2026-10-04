@@ -1,6 +1,7 @@
 #ifndef INCLUDED_MODULE_INDUCTIVE_SAME_NAME
 #define INCLUDED_MODULE_INDUCTIVE_SAME_NAME
 
+#include <cstdint>
 #include <utility>
 
 struct ModuleInductiveSameName {

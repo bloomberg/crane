@@ -2,6 +2,7 @@
 #define INCLUDED_FIX_ESCAPE_CAPTURE
 
 #include "fn.h"
+#include <cstdint>
 #include <utility>
 
 struct FixEscapeCapture {

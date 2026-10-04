@@ -2,8 +2,8 @@
 #define INCLUDED_SUM_SIDE_SURVIVES_VIS
 
 #include "obj.h"
-#include <any>
 #include <crane_itree.h>
+#include <cstdint>
 #include <variant>
 
 enum class AE;

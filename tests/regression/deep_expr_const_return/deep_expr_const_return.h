@@ -1,6 +1,7 @@
 #ifndef INCLUDED_DEEP_EXPR_CONST_RETURN
 #define INCLUDED_DEEP_EXPR_CONST_RETURN
 
+#include <cstdint>
 #include <utility>
 
 /// An expression nested past the depth limit is rewritten into a sequence of

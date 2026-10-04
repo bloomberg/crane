@@ -3,7 +3,6 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <memory>
@@ -40,17 +39,17 @@ struct Coll {
 
     explicit bag(Cons _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    bag(const bag<_U> &_other)
+    template <typename CraneU>
+    bag(const bag<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename bag<_U>::Nil>(_other.v())) {
+            if (std::holds_alternative<typename bag<CraneU>::Nil>(_other.v())) {
               return Nil{};
             } else {
               const auto &[a0, a1] =
-                  std::get<typename bag<_U>::Cons>(_other.v());
+                  std::get<typename bag<CraneU>::Cons>(_other.v());
               return Cons{
                   [&]() -> A {
-                    if constexpr (crane_convertible<A, const _U &>) {
+                    if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a0);
                     } else {
                       throw std::logic_error(
@@ -89,8 +88,8 @@ struct Coll {
 
     bag(const bag &) = default;
     bag &operator=(const bag &) = default;
-    bag(bag &&) noexcept = default;
-    bag &operator=(bag &&) noexcept = default;
+    bag(bag &&) = default;
+    bag &operator=(bag &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -153,8 +152,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 

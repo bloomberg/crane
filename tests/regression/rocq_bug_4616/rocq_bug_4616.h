@@ -3,7 +3,6 @@
 
 #include "fn.h"
 #include "obj.h"
-#include <any>
 
 struct RocqBug4616 {
   enum class Foo_ { FOO };

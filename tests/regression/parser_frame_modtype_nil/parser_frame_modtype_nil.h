@@ -2,7 +2,6 @@
 #define INCLUDED_PARSER_FRAME_MODTYPE_NIL
 
 #include "obj.h"
-#include <any>
 #include <cstdint>
 #include <deque>
 #include <type_traits>

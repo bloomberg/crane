@@ -2,7 +2,6 @@
 #define INCLUDED_SEPEXTSIGTANY
 
 #include "obj.h"
-#include <any>
 #include <variant>
 
 #include "Specif.h"

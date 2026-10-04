@@ -5,11 +5,10 @@ box<crane::obj> TFunctor_box(crane::fn<crane::obj(crane::obj)> f,
   return box<crane::obj>{f(b.b_payload)};
 }
 
-template <typename _CraneTcArg>
-using _crane_carrier_tc_904911fedcfba566 =
-    holder<_CraneTcArg, box<_CraneTcArg>>;
+template <typename CraneTcArg>
+using crane_carrier_tc_c3f54f3304e568f5 = holder<CraneTcArg, box<CraneTcArg>>;
 
 holder<bool, box<bool>> run(const holder<Nat, box<Nat>> &m) {
-  return convert<_crane_carrier_tc_904911fedcfba566>(
+  return convert<crane_carrier_tc_c3f54f3304e568f5>(
       Convert_holder, Nat::s(Nat::s(Nat::s(Nat::o()))), m);
 }

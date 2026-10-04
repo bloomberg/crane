@@ -1,29 +1,30 @@
 #include "mem_safety_probe24.h"
 
-uint64_t MemSafetyProbe24::sum_list(
-    const MemSafetyProbe24::mylist<uint64_t>
-        &l) { /// _Enter: captures varying parameters for each recursive call.
+uint64_t
+MemSafetyProbe24::sum_list(const MemSafetyProbe24::mylist<uint64_t>
+                               &l) { /// CraneEnter: captures varying parameters
+                                     /// for each recursive call.
 
-  struct _Enter {
+  struct CraneEnter {
     const MemSafetyProbe24::mylist<uint64_t> *l;
   };
 
-  /// _Cont_Mycons: saves [a0], resumes after recursive call, then processes
+  /// CraneCont_Mycons: saves [a0], resumes after recursive call, then processes
   /// rest.
-  struct _Cont_Mycons {
+  struct CraneCont_Mycons {
     uint64_t a0;
   };
 
-  using _Frame = std::variant<_Enter, _Cont_Mycons>;
+  using CraneFrame = std::variant<CraneEnter, CraneCont_Mycons>;
   uint64_t _result{};
-  crane::small_vector<_Frame> _stack;
-  _stack.emplace_back(_Enter{&l});
-  /// Loopified sum_list: _Enter -> _Cont_Mycons.
+  crane::small_vector<CraneFrame> _stack;
+  _stack.emplace_back(CraneEnter{&l});
+  /// Loopified sum_list: CraneEnter -> CraneCont_Mycons.
   while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
+    CraneFrame _frame = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
+    if (std::holds_alternative<CraneEnter>(_frame)) {
+      auto _f = std::move(std::get<CraneEnter>(_frame));
       const MemSafetyProbe24::mylist<uint64_t> &l = *_f.l;
       if (std::holds_alternative<
               typename MemSafetyProbe24::mylist<uint64_t>::Mynil>(l.v())) {
@@ -32,11 +33,11 @@ uint64_t MemSafetyProbe24::sum_list(
         const auto &[a0, a1] =
             std::get<typename MemSafetyProbe24::mylist<uint64_t>::Mycons>(
                 l.v());
-        _stack.emplace_back(_Cont_Mycons{a0});
-        _stack.emplace_back(_Enter{crane_raw(a1)});
+        _stack.emplace_back(CraneCont_Mycons{a0});
+        _stack.emplace_back(CraneEnter{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<_Cont_Mycons>(_frame));
+      auto _f = std::move(std::get<CraneCont_Mycons>(_frame));
       uint64_t a0 = _f.a0;
       _result = (a0 + std::move(_result));
     }
@@ -45,37 +46,37 @@ uint64_t MemSafetyProbe24::sum_list(
 }
 
 MemSafetyProbe24::mylist<uint64_t> MemSafetyProbe24::tree_to_list(
-    const MemSafetyProbe24::tree
-        &t) { /// _Enter: captures varying parameters for each recursive call.
+    const MemSafetyProbe24::tree &t) { /// CraneEnter: captures varying
+                                       /// parameters for each recursive call.
 
-  struct _Enter {
+  struct CraneEnter {
     const MemSafetyProbe24::tree *t;
   };
 
-  /// _Cont_Node: saves [a1, a2], resumes after recursive call, then processes
-  /// rest.
-  struct _Cont_Node {
+  /// CraneCont_Node: saves [a1, a2], resumes after recursive call, then
+  /// processes rest.
+  struct CraneCont_Node {
     uint64_t a1;
     const MemSafetyProbe24::tree *a2;
   };
 
-  /// _Cont_Node_1: saves [_tmp2, a1], resumes after recursive call, then
+  /// CraneCont_Node_1: saves [_tmp2, a1], resumes after recursive call, then
   /// processes rest.
-  struct _Cont_Node_1 {
+  struct CraneCont_Node_1 {
     MemSafetyProbe24::mylist<uint64_t> _tmp2;
     uint64_t a1;
   };
 
-  using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
+  using CraneFrame = std::variant<CraneEnter, CraneCont_Node, CraneCont_Node_1>;
   MemSafetyProbe24::mylist<uint64_t> _result{};
-  crane::small_vector<_Frame> _stack;
-  _stack.emplace_back(_Enter{&t});
-  /// Loopified tree_to_list: _Enter -> _Cont_Node -> _Cont_Node_1.
+  crane::small_vector<CraneFrame> _stack;
+  _stack.emplace_back(CraneEnter{&t});
+  /// Loopified tree_to_list: CraneEnter -> CraneCont_Node -> CraneCont_Node_1.
   while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
+    CraneFrame _frame = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
+    if (std::holds_alternative<CraneEnter>(_frame)) {
+      auto _f = std::move(std::get<CraneEnter>(_frame));
       const MemSafetyProbe24::tree &t = *_f.t;
       if (std::holds_alternative<typename MemSafetyProbe24::tree::Leaf>(
               t.v())) {
@@ -83,17 +84,17 @@ MemSafetyProbe24::mylist<uint64_t> MemSafetyProbe24::tree_to_list(
       } else {
         const auto &[a0, a1, a2] =
             std::get<typename MemSafetyProbe24::tree::Node>(t.v());
-        _stack.emplace_back(_Cont_Node{a1, crane_raw(a2)});
-        _stack.emplace_back(_Enter{crane_raw(a0)});
+        _stack.emplace_back(CraneCont_Node{a1, crane_raw(a2)});
+        _stack.emplace_back(CraneEnter{crane_raw(a0)});
       }
-    } else if (std::holds_alternative<_Cont_Node>(_frame)) {
-      auto _f = std::move(std::get<_Cont_Node>(_frame));
+    } else if (std::holds_alternative<CraneCont_Node>(_frame)) {
+      auto _f = std::move(std::get<CraneCont_Node>(_frame));
       uint64_t a1 = _f.a1;
       const MemSafetyProbe24::tree &a2 = *_f.a2;
-      _stack.emplace_back(_Cont_Node_1{std::move(_result), a1});
-      _stack.emplace_back(_Enter{&a2});
+      _stack.emplace_back(CraneCont_Node_1{std::move(_result), a1});
+      _stack.emplace_back(CraneEnter{&a2});
     } else {
-      auto _f = std::move(std::get<_Cont_Node_1>(_frame));
+      auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
       uint64_t a1 = _f.a1;
       _result = std::move(_f._tmp2).app(
           mylist<uint64_t>::mycons(a1, std::move(_result)));
@@ -128,41 +129,41 @@ MemSafetyProbe24::list_to_tree(const MemSafetyProbe24::mylist<uint64_t> &l,
 MemSafetyProbe24::mylist<std::pair<uint64_t, uint64_t>>
 MemSafetyProbe24::zip_trees(
     const MemSafetyProbe24::tree &t1,
-    const MemSafetyProbe24::tree
-        &t2) { /// _Enter: captures varying parameters for each recursive call.
+    const MemSafetyProbe24::tree &t2) { /// CraneEnter: captures varying
+                                        /// parameters for each recursive call.
 
-  struct _Enter {
+  struct CraneEnter {
     const MemSafetyProbe24::tree *t2;
     const MemSafetyProbe24::tree *t1;
   };
 
-  /// _Cont_Node: saves [a1, a10, a2, a20], resumes after recursive call, then
-  /// processes rest.
-  struct _Cont_Node {
+  /// CraneCont_Node: saves [a1, a10, a2, a20], resumes after recursive call,
+  /// then processes rest.
+  struct CraneCont_Node {
     uint64_t a1;
     uint64_t a10;
     const MemSafetyProbe24::tree *a2;
     const MemSafetyProbe24::tree *a20;
   };
 
-  /// _Cont_Node_1: saves [_tmp2, a1, a10], resumes after recursive call, then
-  /// processes rest.
-  struct _Cont_Node_1 {
+  /// CraneCont_Node_1: saves [_tmp2, a1, a10], resumes after recursive call,
+  /// then processes rest.
+  struct CraneCont_Node_1 {
     MemSafetyProbe24::mylist<std::pair<uint64_t, uint64_t>> _tmp2;
     uint64_t a1;
     uint64_t a10;
   };
 
-  using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
+  using CraneFrame = std::variant<CraneEnter, CraneCont_Node, CraneCont_Node_1>;
   MemSafetyProbe24::mylist<std::pair<uint64_t, uint64_t>> _result{};
-  crane::small_vector<_Frame> _stack;
-  _stack.emplace_back(_Enter{&t2, &t1});
-  /// Loopified zip_trees: _Enter -> _Cont_Node -> _Cont_Node_1.
+  crane::small_vector<CraneFrame> _stack;
+  _stack.emplace_back(CraneEnter{&t2, &t1});
+  /// Loopified zip_trees: CraneEnter -> CraneCont_Node -> CraneCont_Node_1.
   while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
+    CraneFrame _frame = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
+    if (std::holds_alternative<CraneEnter>(_frame)) {
+      auto _f = std::move(std::get<CraneEnter>(_frame));
       const MemSafetyProbe24::tree &t2 = *_f.t2;
       const MemSafetyProbe24::tree &t1 = *_f.t1;
       if (std::holds_alternative<typename MemSafetyProbe24::tree::Leaf>(
@@ -178,20 +179,20 @@ MemSafetyProbe24::zip_trees(
           const auto &[a00, a10, a20] =
               std::get<typename MemSafetyProbe24::tree::Node>(t2.v());
           _stack.emplace_back(
-              _Cont_Node{a1, a10, crane_raw(a2), crane_raw(a20)});
-          _stack.emplace_back(_Enter{crane_raw(a00), crane_raw(a0)});
+              CraneCont_Node{a1, a10, crane_raw(a2), crane_raw(a20)});
+          _stack.emplace_back(CraneEnter{crane_raw(a00), crane_raw(a0)});
         }
       }
-    } else if (std::holds_alternative<_Cont_Node>(_frame)) {
-      auto _f = std::move(std::get<_Cont_Node>(_frame));
+    } else if (std::holds_alternative<CraneCont_Node>(_frame)) {
+      auto _f = std::move(std::get<CraneCont_Node>(_frame));
       uint64_t a1 = _f.a1;
       uint64_t a10 = _f.a10;
       const MemSafetyProbe24::tree &a2 = *_f.a2;
       const MemSafetyProbe24::tree &a20 = *_f.a20;
-      _stack.emplace_back(_Cont_Node_1{std::move(_result), a1, a10});
-      _stack.emplace_back(_Enter{&a20, &a2});
+      _stack.emplace_back(CraneCont_Node_1{std::move(_result), a1, a10});
+      _stack.emplace_back(CraneEnter{&a20, &a2});
     } else {
-      auto _f = std::move(std::get<_Cont_Node_1>(_frame));
+      auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
       uint64_t a1 = _f.a1;
       uint64_t a10 = _f.a10;
       _result =

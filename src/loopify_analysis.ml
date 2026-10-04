@@ -15,13 +15,13 @@ open Minicpp
     [Id.of_string] allocations across ~95 call sites. *)
 
 let id_result       = Id.of_string "_result"
-let id_enter        = Id.of_string "_Enter"
+let id_enter        = Generated_name.id "Enter"
 let id_f            = Id.of_string "_f"
 let id_stack        = Id.of_string "_stack"
 let id_head         = Id.of_string "_head"
 let id_write        = Id.of_string "_write"
 let id_frame        = Id.of_string "_frame"
-let id_Frame        = Id.of_string "_Frame"
+let id_Frame        = Generated_name.id "Frame"
 let id_self         = Id.of_string "_self"
 
 (** The move-analysis key for a read of the frame field [_f.x].  Reads of a
@@ -300,7 +300,7 @@ type call_site = {
           into the machine's entry table. A function loopified on its own has
           exactly one entry, so this is [0]; it becomes meaningful once an
           enclosing function and a fixpoint local to it share a single stack,
-          where a call selects which [_Enter]-style frame to push and hence
+          where a call selects which [CraneEnter]-style frame to push and hence
           which parameter analysis applies. *)
   cs_recv : cpp_expr option;
       (** For a method call, the receiver expression {e as written}, before
@@ -473,7 +473,7 @@ let fn_checker (fn_refs : (GlobRef.t * cpp_type list) list) : call_checker =
     A match whose scrutinee is a value temporary -- typically the [_cs] cache
     of a scrutinee that is a function call, as in [auto _cs = _self->next();]
     -- binds names into an object that dies with the branch that created it.
-    Parking the address of such a binder in an [_Enter] frame leaves the frame
+    Parking the address of such a binder in an [CraneEnter] frame leaves the frame
     pointing at freed memory once the branch is left, so a recursive call on
     one of these receivers must not be linearised.
 
@@ -594,7 +594,7 @@ let self_checker self_id : call_checker =
 let rec receiver_storage = function CPPmove e -> receiver_storage e | e -> e
 
 (** Whether a recursive call's receiver is a value temporary, whose address
-    would dangle once parked in an [_Enter] frame.  A receiver that names
+    would dangle once parked in an [CraneEnter] frame.  A receiver that names
     existing storage -- a variable, [this], or a smart pointer it dereferences
     -- is not. *)
 let receiver_is_value = function
@@ -643,7 +643,7 @@ let method_checker
     ~(this_pos : int)
     ?(self_ref : GlobRef.t option)
     (method_name : Id.t) : call_checker =
- (* Convert a receiver expression to a raw pointer for the _Enter struct.
+ (* Convert a receiver expression to a raw pointer for the CraneEnter struct.
     CPPderef(shared_ptr): use shared_ptr.get() to extract the raw pointer.
     CPPvar: take the address (&var) to get a pointer.
     Other: take the address. *)
@@ -975,7 +975,7 @@ let rec count_calls_stmts (check : call_checker) stmts =
     If a recursive call is used to compute a branch condition or scrutinee, the
     current rewrite may need to keep an owned cloned subtree alive while
     evaluating the selected continuation.  Popping the continuation frame before
-    pushing [_Enter] can leave a dangling raw pointer from a shared_ptr that
+    pushing [CraneEnter] can leave a dangling raw pointer from a shared_ptr that
     was std::moved.  Until the explicit stack has an owning-enter frame, leave
     these functions recursive. *)
 let rec expr_has_recursive_branch_dependency check expr =

@@ -3,6 +3,7 @@
 
 #include "small_vector.h"
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <type_traits>
@@ -66,8 +67,8 @@ struct DrainOptionPairField {
 
     t(const t &) = default;
     t &operator=(const t &) = default;
-    t(t &&) noexcept = default;
-    t &operator=(t &&) noexcept = default;
+    t(t &&) = default;
+    t &operator=(t &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 

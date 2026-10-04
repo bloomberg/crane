@@ -83,8 +83,8 @@ public:
 
   Positive(const Positive &) = default;
   Positive &operator=(const Positive &) = default;
-  Positive(Positive &&) noexcept = default;
-  Positive &operator=(Positive &&) noexcept = default;
+  Positive(Positive &&) = default;
+  Positive &operator=(Positive &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -251,8 +251,8 @@ struct ConceptAfterUse {
 
     ty(const ty &) = default;
     ty &operator=(const ty &) = default;
-    ty(ty &&) noexcept = default;
-    ty &operator=(ty &&) noexcept = default;
+    ty(ty &&) = default;
+    ty &operator=(ty &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 

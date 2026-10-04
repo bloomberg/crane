@@ -4,8 +4,8 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -38,14 +38,15 @@ public:
 
   explicit Sum(Inr _v) : v_(std::move(_v)) {}
 
-  template <typename _U0, typename _U1>
-  Sum(const Sum<_U0, _U1> &_other)
+  template <typename CraneU0, typename CraneU1>
+  Sum(const Sum<CraneU0, CraneU1> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Sum<_U0, _U1>::Inl>(_other.v())) {
+          if (std::holds_alternative<typename Sum<CraneU0, CraneU1>::Inl>(
+                  _other.v())) {
             const auto &[a0] =
-                std::get<typename Sum<_U0, _U1>::Inl>(_other.v());
+                std::get<typename Sum<CraneU0, CraneU1>::Inl>(_other.v());
             return Inl{[&]() -> A {
-              if constexpr (crane_convertible<A, const _U0 &>) {
+              if constexpr (crane_convertible<A, const CraneU0 &>) {
                 return crane_convert<A>(a0);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -54,9 +55,9 @@ public:
             }()};
           } else {
             const auto &[a0] =
-                std::get<typename Sum<_U0, _U1>::Inr>(_other.v());
+                std::get<typename Sum<CraneU0, CraneU1>::Inr>(_other.v());
             return Inr{[&]() -> B {
-              if constexpr (crane_convertible<B, const _U1 &>) {
+              if constexpr (crane_convertible<B, const CraneU1 &>) {
                 return crane_convert<B>(a0);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -128,8 +129,8 @@ struct SumDrain {
 
     t(const t &) = default;
     t &operator=(const t &) = default;
-    t(t &&) noexcept = default;
-    t &operator=(t &&) noexcept = default;
+    t(t &&) = default;
+    t &operator=(t &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 

@@ -2,6 +2,7 @@
 #define INCLUDED_FUNCTOR_LOCAL_CLASS_TEMPLATE_KW
 
 #include <concepts>
+#include <cstdint>
 
 template <typename M>
 concept S = requires {

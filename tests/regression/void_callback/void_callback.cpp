@@ -5,7 +5,7 @@ void VoidCallback::print_nat(uint64_t) { return; }
 void VoidCallback::test_for_each_m() {
   for_each_m(
       [](uint64_t) {
-        std::cout << "item"s << '\n';
+        std::cout << std::string("item") << '\n';
         return std::monostate{};
       },
       List<uint64_t>::cons(

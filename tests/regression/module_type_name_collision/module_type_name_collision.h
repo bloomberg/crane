@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <memory>
@@ -79,8 +78,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -141,15 +140,15 @@ public:
 
   explicit Opt(Some _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  Opt(const Opt<_U> &_other)
+  template <typename CraneU>
+  Opt(const Opt<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Opt<_U>::None>(_other.v())) {
+          if (std::holds_alternative<typename Opt<CraneU>::None>(_other.v())) {
             return None{};
           } else {
-            const auto &[x] = std::get<typename Opt<_U>::Some>(_other.v());
+            const auto &[x] = std::get<typename Opt<CraneU>::Some>(_other.v());
             return Some{[&]() -> X {
-              if constexpr (crane_convertible<X, const _U &>) {
+              if constexpr (crane_convertible<X, const CraneU &>) {
                 return crane_convert<X>(x);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -171,18 +170,18 @@ public:
 };
 
 struct opt_monad {
-  template <typename _A0> using m = Opt<_A0>;
+  template <typename CraneA0> using m = Opt<CraneA0>;
 
-  template <typename _A0> static Opt<_A0> ret(_A0 x) {
-    return Opt<_A0>::some(std::move(x));
+  template <typename CraneA0> static Opt<CraneA0> ret(CraneA0 x) {
+    return Opt<CraneA0>::some(std::move(x));
   }
 
-  template <typename _A0, typename _A1>
-  static Opt<_A1> bind(Opt<_A0> c, crane::fn<Opt<_A1>(_A0)> k) {
-    if (std::holds_alternative<typename Opt<_A0>::None>(c.v())) {
-      return Opt<_A1>::none();
+  template <typename CraneA0, typename CraneA1>
+  static Opt<CraneA1> bind(Opt<CraneA0> c, crane::fn<Opt<CraneA1>(CraneA0)> k) {
+    if (std::holds_alternative<typename Opt<CraneA0>::None>(c.v())) {
+      return Opt<CraneA1>::none();
     } else {
-      const auto &[x0] = std::get<typename Opt<_A0>::Some>(c.v());
+      const auto &[x0] = std::get<typename Opt<CraneA0>::Some>(c.v());
       return k(x0);
     }
   }

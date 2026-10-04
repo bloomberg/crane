@@ -62,6 +62,9 @@ jobs:
           sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-19 100
           clang++ --version
 
+      - name: Generated headers compile standalone
+        run: scripts/check-headers-standalone.sh
+
       - name: Run C++ tests
         run: |
           # Find and run all test executables except those in wip or requiring BDE

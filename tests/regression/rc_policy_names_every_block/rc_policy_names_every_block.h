@@ -1,7 +1,7 @@
 #ifndef INCLUDED_RC_POLICY_NAMES_EVERY_BLOCK
 #define INCLUDED_RC_POLICY_NAMES_EVERY_BLOCK
 
-#include <any>
+#include <cstdint>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -23,18 +23,19 @@ template <typename A, typename P> struct SigT {
   // ACCESSORS
   SigT<A, P> clone() const { return {x, a1}; }
 
-  template <typename _U0, typename _U1> operator SigT<_U0, _U1>() const {
-    return {[&]() -> _U0 {
-              if constexpr (crane_convertible<_U0, const A &>) {
-                return crane_convert<_U0>(x);
+  template <typename CraneU0, typename CraneU1>
+  operator SigT<CraneU0, CraneU1>() const {
+    return {[&]() -> CraneU0 {
+              if constexpr (crane_convertible<CraneU0, const A &>) {
+                return crane_convert<CraneU0>(x);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
               }
             }(),
-            [&]() -> _U1 {
-              if constexpr (crane_convertible<_U1, const P &>) {
-                return crane_convert<_U1>(a1);
+            [&]() -> CraneU1 {
+              if constexpr (crane_convertible<CraneU1, const P &>) {
+                return crane_convert<CraneU1>(a1);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
@@ -49,9 +50,9 @@ template <typename A, typename P> struct SigT {
 struct RcPolicyNamesEveryBlock {
   struct stream {
     // TYPES
-    template <typename _S0 = stream> struct SCons_ {
+    template <typename CraneS0 = stream> struct SCons_ {
       uint64_t a0;
-      _S0 a1;
+      CraneS0 a1;
     };
 
     using SCons = SCons_<>;

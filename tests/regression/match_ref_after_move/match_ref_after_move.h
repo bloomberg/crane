@@ -4,8 +4,8 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -39,27 +39,28 @@ struct MatchRefAfterMove {
 
     explicit mylist(Mycons _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    mylist(const mylist<_U> &_other)
+    template <typename CraneU>
+    mylist(const mylist<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename mylist<_U>::Mynil>(
+            if (std::holds_alternative<typename mylist<CraneU>::Mynil>(
                     _other.v())) {
               return Mynil{};
             } else {
               const auto &[a0, a1] =
-                  std::get<typename mylist<_U>::Mycons>(_other.v());
-              return Mycons{[&]() -> A {
-                              if constexpr (crane_convertible<A, const _U &>) {
-                                return crane_convert<A>(a0);
-                              } else {
-                                throw std::logic_error(
-                                    "unreachable: inactive constructor field "
-                                    "at this instantiation");
-                              }
-                            }(),
-                            (a1 ? std::make_shared<mylist<A>>(
-                                      crane_convert<mylist<A>>(*a1))
-                                : nullptr)};
+                  std::get<typename mylist<CraneU>::Mycons>(_other.v());
+              return Mycons{
+                  [&]() -> A {
+                    if constexpr (crane_convertible<A, const CraneU &>) {
+                      return crane_convert<A>(a0);
+                    } else {
+                      throw std::logic_error(
+                          "unreachable: inactive constructor field at this "
+                          "instantiation");
+                    }
+                  }(),
+                  (a1 ? std::make_shared<mylist<A>>(
+                            crane_convert<mylist<A>>(*a1))
+                      : nullptr)};
             }
           }()) {}
 
@@ -89,8 +90,8 @@ struct MatchRefAfterMove {
 
     mylist(const mylist &) = default;
     mylist &operator=(const mylist &) = default;
-    mylist(mylist &&) noexcept = default;
-    mylist &operator=(mylist &&) noexcept = default;
+    mylist(mylist &&) = default;
+    mylist &operator=(mylist &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -103,24 +104,24 @@ struct MatchRefAfterMove {
     uint64_t mylist_length() const {
       const mylist<A> *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const mylist<A> *_self;
       };
 
-      /// _Cont_Mycons: resumes after recursive call, then processes rest.
-      struct _Cont_Mycons {};
+      /// CraneCont_Mycons: resumes after recursive call, then processes rest.
+      struct CraneCont_Mycons {};
 
-      using _Frame = std::variant<_Enter, _Cont_Mycons>;
+      using CraneFrame = std::variant<CraneEnter, CraneCont_Mycons>;
       uint64_t _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified mylist_length: _Enter -> _Cont_Mycons.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified mylist_length: CraneEnter -> CraneCont_Mycons.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const mylist<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
@@ -128,11 +129,11 @@ struct MatchRefAfterMove {
           } else {
             const auto &[a0, a1] =
                 std::get<typename mylist<A>::Mycons>(_sv.v());
-            _stack.emplace_back(_Cont_Mycons{});
-            _stack.emplace_back(_Enter{crane_raw(a1)});
+            _stack.emplace_back(CraneCont_Mycons{});
+            _stack.emplace_back(CraneEnter{crane_raw(a1)});
           }
         } else {
-          auto _f = std::move(std::get<_Cont_Mycons>(_frame));
+          auto _f = std::move(std::get<CraneCont_Mycons>(_frame));
           _result = (UINT64_C(1) + std::move(_result));
         }
       }
@@ -144,28 +145,28 @@ struct MatchRefAfterMove {
     T1 mylist_rec(T1 f, F1 &&f0) const {
       const mylist<A> *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const mylist<A> *_self;
       };
 
-      /// _Cont_Mycons: saves [a0, a1], resumes after recursive call, then
+      /// CraneCont_Mycons: saves [a0, a1], resumes after recursive call, then
       /// processes rest.
-      struct _Cont_Mycons {
+      struct CraneCont_Mycons {
         A a0;
         std::shared_ptr<mylist<A>> a1;
       };
 
-      using _Frame = std::variant<_Enter, _Cont_Mycons>;
+      using CraneFrame = std::variant<CraneEnter, CraneCont_Mycons>;
       T1 _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified mylist_rec: _Enter -> _Cont_Mycons.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified mylist_rec: CraneEnter -> CraneCont_Mycons.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const mylist<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
@@ -173,11 +174,11 @@ struct MatchRefAfterMove {
           } else {
             const auto &[a0, a1] =
                 std::get<typename mylist<A>::Mycons>(_sv.v());
-            _stack.emplace_back(_Cont_Mycons{a0, a1});
-            _stack.emplace_back(_Enter{crane_raw(a1)});
+            _stack.emplace_back(CraneCont_Mycons{a0, a1});
+            _stack.emplace_back(CraneEnter{crane_raw(a1)});
           }
         } else {
-          auto _f = std::move(std::get<_Cont_Mycons>(_frame));
+          auto _f = std::move(std::get<CraneCont_Mycons>(_frame));
           auto a0 = std::move(_f.a0);
           std::shared_ptr<mylist<A>> a1 = std::move(_f.a1);
           _result = f0(a0, *a1, std::move(_result));
@@ -191,28 +192,28 @@ struct MatchRefAfterMove {
     T1 mylist_rect(T1 f, F1 &&f0) const {
       const mylist<A> *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const mylist<A> *_self;
       };
 
-      /// _Cont_Mycons: saves [a0, a1], resumes after recursive call, then
+      /// CraneCont_Mycons: saves [a0, a1], resumes after recursive call, then
       /// processes rest.
-      struct _Cont_Mycons {
+      struct CraneCont_Mycons {
         A a0;
         std::shared_ptr<mylist<A>> a1;
       };
 
-      using _Frame = std::variant<_Enter, _Cont_Mycons>;
+      using CraneFrame = std::variant<CraneEnter, CraneCont_Mycons>;
       T1 _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified mylist_rect: _Enter -> _Cont_Mycons.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified mylist_rect: CraneEnter -> CraneCont_Mycons.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const mylist<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
@@ -220,11 +221,11 @@ struct MatchRefAfterMove {
           } else {
             const auto &[a0, a1] =
                 std::get<typename mylist<A>::Mycons>(_sv.v());
-            _stack.emplace_back(_Cont_Mycons{a0, a1});
-            _stack.emplace_back(_Enter{crane_raw(a1)});
+            _stack.emplace_back(CraneCont_Mycons{a0, a1});
+            _stack.emplace_back(CraneEnter{crane_raw(a1)});
           }
         } else {
-          auto _f = std::move(std::get<_Cont_Mycons>(_frame));
+          auto _f = std::move(std::get<CraneCont_Mycons>(_frame));
           auto a0 = std::move(_f.a0);
           std::shared_ptr<mylist<A>> a1 = std::move(_f.a1);
           _result = f0(a0, *a1, std::move(_result));
@@ -242,18 +243,19 @@ struct MatchRefAfterMove {
     // ACCESSORS
     mypair<A, B> clone() const { return {a0, a1}; }
 
-    template <typename _U0, typename _U1> operator mypair<_U0, _U1>() const {
-      return {[&]() -> _U0 {
-                if constexpr (crane_convertible<_U0, const A &>) {
-                  return crane_convert<_U0>(a0);
+    template <typename CraneU0, typename CraneU1>
+    operator mypair<CraneU0, CraneU1>() const {
+      return {[&]() -> CraneU0 {
+                if constexpr (crane_convertible<CraneU0, const A &>) {
+                  return crane_convert<CraneU0>(a0);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
                                          "field at this instantiation");
                 }
               }(),
-              [&]() -> _U1 {
-                if constexpr (crane_convertible<_U1, const B &>) {
-                  return crane_convert<_U1>(a1);
+              [&]() -> CraneU1 {
+                if constexpr (crane_convertible<CraneU1, const B &>) {
+                  return crane_convert<CraneU1>(a1);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
                                          "field at this instantiation");
@@ -386,15 +388,15 @@ struct MatchRefAfterMove {
 
     explicit either(Right _v) : v_(std::move(_v)) {}
 
-    template <typename _U0, typename _U1>
-    either(const either<_U0, _U1> &_other)
+    template <typename CraneU0, typename CraneU1>
+    either(const either<CraneU0, CraneU1> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename either<_U0, _U1>::Left>(
+            if (std::holds_alternative<typename either<CraneU0, CraneU1>::Left>(
                     _other.v())) {
               const auto &[a0] =
-                  std::get<typename either<_U0, _U1>::Left>(_other.v());
+                  std::get<typename either<CraneU0, CraneU1>::Left>(_other.v());
               return Left{[&]() -> A {
-                if constexpr (crane_convertible<A, const _U0 &>) {
+                if constexpr (crane_convertible<A, const CraneU0 &>) {
                   return crane_convert<A>(a0);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
@@ -403,9 +405,10 @@ struct MatchRefAfterMove {
               }()};
             } else {
               const auto &[a0] =
-                  std::get<typename either<_U0, _U1>::Right>(_other.v());
+                  std::get<typename either<CraneU0, CraneU1>::Right>(
+                      _other.v());
               return Right{[&]() -> B {
-                if constexpr (crane_convertible<B, const _U1 &>) {
+                if constexpr (crane_convertible<B, const CraneU1 &>) {
                   return crane_convert<B>(a0);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "

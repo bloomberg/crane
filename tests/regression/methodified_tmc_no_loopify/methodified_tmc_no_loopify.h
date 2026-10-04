@@ -4,6 +4,7 @@
 #include "crane_fn.h"
 #include "small_vector.h"
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -58,8 +59,8 @@ struct MethodifiedTmcNoLoopify {
 
     lst(const lst &) = default;
     lst &operator=(const lst &) = default;
-    lst(lst &&) noexcept = default;
-    lst &operator=(lst &&) noexcept = default;
+    lst(lst &&) = default;
+    lst &operator=(lst &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -71,39 +72,39 @@ struct MethodifiedTmcNoLoopify {
     T1 lst_rec(T1 f, F1 &&f0) const {
       const lst *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const lst *_self;
       };
 
-      /// _Cont_Cons: saves [a0, a1], resumes after recursive call, then
+      /// CraneCont_Cons: saves [a0, a1], resumes after recursive call, then
       /// processes rest.
-      struct _Cont_Cons {
+      struct CraneCont_Cons {
         uint64_t a0;
         std::shared_ptr<lst> a1;
       };
 
-      using _Frame = std::variant<_Enter, _Cont_Cons>;
+      using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
       T1 _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified lst_rec: _Enter -> _Cont_Cons.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified lst_rec: CraneEnter -> CraneCont_Cons.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const lst *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename lst::Nil>(_sv.v())) {
             _result = f;
           } else {
             const auto &[a0, a1] = std::get<typename lst::Cons>(_sv.v());
-            _stack.emplace_back(_Cont_Cons{a0, a1});
-            _stack.emplace_back(_Enter{crane_raw(a1)});
+            _stack.emplace_back(CraneCont_Cons{a0, a1});
+            _stack.emplace_back(CraneEnter{crane_raw(a1)});
           }
         } else {
-          auto _f = std::move(std::get<_Cont_Cons>(_frame));
+          auto _f = std::move(std::get<CraneCont_Cons>(_frame));
           uint64_t a0 = _f.a0;
           std::shared_ptr<lst> a1 = std::move(_f.a1);
           _result = f0(a0, *a1, std::move(_result));
@@ -117,39 +118,39 @@ struct MethodifiedTmcNoLoopify {
     T1 lst_rect(T1 f, F1 &&f0) const {
       const lst *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const lst *_self;
       };
 
-      /// _Cont_Cons: saves [a0, a1], resumes after recursive call, then
+      /// CraneCont_Cons: saves [a0, a1], resumes after recursive call, then
       /// processes rest.
-      struct _Cont_Cons {
+      struct CraneCont_Cons {
         uint64_t a0;
         std::shared_ptr<lst> a1;
       };
 
-      using _Frame = std::variant<_Enter, _Cont_Cons>;
+      using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
       T1 _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified lst_rect: _Enter -> _Cont_Cons.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified lst_rect: CraneEnter -> CraneCont_Cons.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const lst *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename lst::Nil>(_sv.v())) {
             _result = f;
           } else {
             const auto &[a0, a1] = std::get<typename lst::Cons>(_sv.v());
-            _stack.emplace_back(_Cont_Cons{a0, a1});
-            _stack.emplace_back(_Enter{crane_raw(a1)});
+            _stack.emplace_back(CraneCont_Cons{a0, a1});
+            _stack.emplace_back(CraneEnter{crane_raw(a1)});
           }
         } else {
-          auto _f = std::move(std::get<_Cont_Cons>(_frame));
+          auto _f = std::move(std::get<CraneCont_Cons>(_frame));
           uint64_t a0 = _f.a0;
           std::shared_ptr<lst> a1 = std::move(_f.a1);
           _result = f0(a0, *a1, std::move(_result));
@@ -208,8 +209,8 @@ struct MethodifiedTmcNoLoopify {
 
     wrap(const wrap &) = default;
     wrap &operator=(const wrap &) = default;
-    wrap(wrap &&) noexcept = default;
-    wrap &operator=(wrap &&) noexcept = default;
+    wrap(wrap &&) = default;
+    wrap &operator=(wrap &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -219,35 +220,35 @@ struct MethodifiedTmcNoLoopify {
     uint64_t wdepth() const {
       const wrap *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const wrap *_self;
       };
 
-      /// _Cont_WW: resumes after recursive call, then processes rest.
-      struct _Cont_WW {};
+      /// CraneCont_WW: resumes after recursive call, then processes rest.
+      struct CraneCont_WW {};
 
-      using _Frame = std::variant<_Enter, _Cont_WW>;
+      using CraneFrame = std::variant<CraneEnter, CraneCont_WW>;
       uint64_t _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified wdepth: _Enter -> _Cont_WW.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified wdepth: CraneEnter -> CraneCont_WW.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const wrap *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename wrap::W>(_sv.v())) {
             _result = UINT64_C(0);
           } else {
             const auto &[a0] = std::get<typename wrap::WW>(_sv.v());
-            _stack.emplace_back(_Cont_WW{});
-            _stack.emplace_back(_Enter{crane_raw(a0)});
+            _stack.emplace_back(CraneCont_WW{});
+            _stack.emplace_back(CraneEnter{crane_raw(a0)});
           }
         } else {
-          auto _f = std::move(std::get<_Cont_WW>(_frame));
+          auto _f = std::move(std::get<CraneCont_WW>(_frame));
           _result = (std::move(_result) + 1);
         }
       }
@@ -257,36 +258,36 @@ struct MethodifiedTmcNoLoopify {
     wrap wraps(uint64_t n) const {
       const wrap *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const wrap *_self;
         uint64_t n;
       };
 
-      /// _Cont_k: resumes after recursive call, then processes rest.
-      struct _Cont_k {};
+      /// CraneCont_k: resumes after recursive call, then processes rest.
+      struct CraneCont_k {};
 
-      using _Frame = std::variant<_Enter, _Cont_k>;
+      using CraneFrame = std::variant<CraneEnter, CraneCont_k>;
       wrap _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self, n});
-      /// Loopified wraps: _Enter -> _Cont_k.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self, n});
+      /// Loopified wraps: CraneEnter -> CraneCont_k.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const wrap *_self = _f._self;
           uint64_t n = _f.n;
           if (n <= 0) {
             _result = std::move(*_self);
           } else {
             uint64_t k = n - 1;
-            _stack.emplace_back(_Cont_k{});
-            _stack.emplace_back(_Enter{crane_raw(_self), k});
+            _stack.emplace_back(CraneCont_k{});
+            _stack.emplace_back(CraneEnter{crane_raw(_self), k});
           }
         } else {
-          auto _f = std::move(std::get<_Cont_k>(_frame));
+          auto _f = std::move(std::get<CraneCont_k>(_frame));
           _result = wrap::ww(std::move(_result));
         }
       }
@@ -299,27 +300,27 @@ struct MethodifiedTmcNoLoopify {
     T1 wrap_rec(F0 &&f, F1 &&f0) const {
       const wrap *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const wrap *_self;
       };
 
-      /// _Cont_WW: saves [a0], resumes after recursive call, then processes
+      /// CraneCont_WW: saves [a0], resumes after recursive call, then processes
       /// rest.
-      struct _Cont_WW {
+      struct CraneCont_WW {
         std::shared_ptr<wrap> a0;
       };
 
-      using _Frame = std::variant<_Enter, _Cont_WW>;
+      using CraneFrame = std::variant<CraneEnter, CraneCont_WW>;
       T1 _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified wrap_rec: _Enter -> _Cont_WW.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified wrap_rec: CraneEnter -> CraneCont_WW.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const wrap *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename wrap::W>(_sv.v())) {
@@ -327,11 +328,11 @@ struct MethodifiedTmcNoLoopify {
             _result = f(a0);
           } else {
             const auto &[a0] = std::get<typename wrap::WW>(_sv.v());
-            _stack.emplace_back(_Cont_WW{a0});
-            _stack.emplace_back(_Enter{crane_raw(a0)});
+            _stack.emplace_back(CraneCont_WW{a0});
+            _stack.emplace_back(CraneEnter{crane_raw(a0)});
           }
         } else {
-          auto _f = std::move(std::get<_Cont_WW>(_frame));
+          auto _f = std::move(std::get<CraneCont_WW>(_frame));
           std::shared_ptr<wrap> a0 = std::move(_f.a0);
           _result = f0(*a0, std::move(_result));
         }
@@ -345,27 +346,27 @@ struct MethodifiedTmcNoLoopify {
     T1 wrap_rect(F0 &&f, F1 &&f0) const {
       const wrap *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const wrap *_self;
       };
 
-      /// _Cont_WW: saves [a0], resumes after recursive call, then processes
+      /// CraneCont_WW: saves [a0], resumes after recursive call, then processes
       /// rest.
-      struct _Cont_WW {
+      struct CraneCont_WW {
         std::shared_ptr<wrap> a0;
       };
 
-      using _Frame = std::variant<_Enter, _Cont_WW>;
+      using CraneFrame = std::variant<CraneEnter, CraneCont_WW>;
       T1 _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified wrap_rect: _Enter -> _Cont_WW.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified wrap_rect: CraneEnter -> CraneCont_WW.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const wrap *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename wrap::W>(_sv.v())) {
@@ -373,11 +374,11 @@ struct MethodifiedTmcNoLoopify {
             _result = f(a0);
           } else {
             const auto &[a0] = std::get<typename wrap::WW>(_sv.v());
-            _stack.emplace_back(_Cont_WW{a0});
-            _stack.emplace_back(_Enter{crane_raw(a0)});
+            _stack.emplace_back(CraneCont_WW{a0});
+            _stack.emplace_back(CraneEnter{crane_raw(a0)});
           }
         } else {
-          auto _f = std::move(std::get<_Cont_WW>(_frame));
+          auto _f = std::move(std::get<CraneCont_WW>(_frame));
           std::shared_ptr<wrap> a0 = std::move(_f.a0);
           _result = f0(*a0, std::move(_result));
         }

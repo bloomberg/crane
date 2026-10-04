@@ -3,8 +3,8 @@
 
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -210,8 +210,8 @@ struct LargeMutual {
 
     stmt(const stmt &) = default;
     stmt &operator=(const stmt &) = default;
-    stmt(stmt &&) noexcept = default;
-    stmt &operator=(stmt &&) noexcept = default;
+    stmt(stmt &&) = default;
+    stmt &operator=(stmt &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -413,8 +413,8 @@ struct LargeMutual {
 
     expr(const expr &) = default;
     expr &operator=(const expr &) = default;
-    expr(expr &&) noexcept = default;
-    expr &operator=(expr &&) noexcept = default;
+    expr(expr &&) = default;
+    expr &operator=(expr &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -632,8 +632,8 @@ struct LargeMutual {
 
     bexpr(const bexpr &) = default;
     bexpr &operator=(const bexpr &) = default;
-    bexpr(bexpr &&) noexcept = default;
-    bexpr &operator=(bexpr &&) noexcept = default;
+    bexpr(bexpr &&) = default;
+    bexpr &operator=(bexpr &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 

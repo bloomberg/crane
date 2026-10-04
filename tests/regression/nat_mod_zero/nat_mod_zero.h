@@ -1,6 +1,7 @@
 #ifndef INCLUDED_NAT_MOD_ZERO
 #define INCLUDED_NAT_MOD_ZERO
 
+#include <cstdint>
 #include <utility>
 
 struct NatModZero {

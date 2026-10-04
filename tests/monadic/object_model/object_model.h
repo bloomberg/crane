@@ -5,7 +5,6 @@
 #include "fn.h"
 #include "obj.h"
 #include <algorithm>
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <crane_itree.h>
@@ -81,16 +80,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -127,8 +127,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -143,10 +143,10 @@ template <typename Err> struct ExceptE {
   // ACCESSORS
   ExceptE<Err> clone() const { return {a0}; }
 
-  template <typename _U> operator ExceptE<_U>() const {
-    return {[&]() -> _U {
-      if constexpr (crane_convertible<_U, const Err &>) {
-        return crane_convert<_U>(a0);
+  template <typename CraneU> operator ExceptE<CraneU>() const {
+    return {[&]() -> CraneU {
+      if constexpr (crane_convertible<CraneU, const Err &>) {
+        return crane_convert<CraneU>(a0);
       } else {
         throw std::logic_error(
             "unreachable: inactive constructor field at this instantiation");
@@ -237,7 +237,7 @@ template <typename S> struct Point {
   crane::fn<int64_t(std::monostate)> offsetX;
 
   // ACCESSORS
-  template <typename _U> operator Point<_U>() const {
+  template <typename CraneU> operator Point<CraneU>() const {
     return {crane_convert<crane::fn<int64_t(std::monostate)>>(getX), moveD,
             crane_convert<crane::fn<int64_t(std::monostate)>>(offsetX)};
   }
@@ -249,7 +249,7 @@ template <typename S> struct Account {
   crane::fn<std::optional<int64_t>(int64_t)> withdraw;
 
   // ACCESSORS
-  template <typename _U> operator Account<_U>() const {
+  template <typename CraneU> operator Account<CraneU>() const {
     return {
         crane_convert<crane::fn<int64_t(std::monostate)>>(getBalance),
         crane_convert<crane::fn<int64_t(uint64_t)>>(deposit),
@@ -262,9 +262,9 @@ template <typename S> struct BankAccountCollection {
   Account<S> saving;
 
   // ACCESSORS
-  template <typename _U> operator BankAccountCollection<_U>() const {
-    return {crane_convert<Account<_U>>(checking),
-            crane_convert<Account<_U>>(saving)};
+  template <typename CraneU> operator BankAccountCollection<CraneU>() const {
+    return {crane_convert<Account<CraneU>>(checking),
+            crane_convert<Account<CraneU>>(saving)};
   }
 };
 

@@ -5,7 +5,6 @@
 #include "fn.h"
 #include "lazy.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <memory>
 #include <stdexcept>
@@ -60,8 +59,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -92,16 +91,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -138,8 +138,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -149,9 +149,9 @@ public:
 
 template <typename A> struct Stream {
   // TYPES
-  template <typename _S0 = Stream<A>> struct Scons_ {
+  template <typename CraneS0 = Stream<A>> struct Scons_ {
     A x;
-    _S0 xs;
+    CraneS0 xs;
   };
 
   using Scons = Scons_<>;
@@ -168,22 +168,23 @@ public:
   explicit Stream(Scons _v)
       : lazy_v_(crane::lazy<variant_t>(variant_t(std::move(_v)))) {}
 
-  template <typename _U>
-  Stream(const Stream<_U> &_other)
+  template <typename CraneU>
+  Stream(const Stream<CraneU> &_other)
       : lazy_v_(crane::lazy<variant_t>::converted_from(
             _other.lazy_cell(), [=]() -> variant_t {
               const auto &[x, xs] =
-                  std::get<typename Stream<_U>::Scons>(_other.v());
-              return Scons{[&]() -> A {
-                             if constexpr (crane_convertible<A, const _U &>) {
-                               return crane_convert<A>(x);
-                             } else {
-                               throw std::logic_error(
-                                   "unreachable: inactive constructor field at "
-                                   "this instantiation");
-                             }
-                           }(),
-                           crane_convert<Stream<A>>(xs)};
+                  std::get<typename Stream<CraneU>::Scons>(_other.v());
+              return Scons{
+                  [&]() -> A {
+                    if constexpr (crane_convertible<A, const CraneU &>) {
+                      return crane_convert<A>(x);
+                    } else {
+                      throw std::logic_error(
+                          "unreachable: inactive constructor field at this "
+                          "instantiation");
+                    }
+                  }(),
+                  crane_convert<Stream<A>>(xs)};
             })) {}
 
   explicit Stream(crane::fn<variant_t()> _thunk)

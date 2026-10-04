@@ -1,5 +1,9 @@
 #include <recursive_monadic.h>
 
+#include <string>
+
+using namespace std::string_literals;
+
 int main() {
   // Test 1: countdown
   auto r1 = RecursiveMonadic::countdown(3);

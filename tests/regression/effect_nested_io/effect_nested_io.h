@@ -12,8 +12,6 @@
 #include <utility>
 #include <variant>
 
-using namespace std::string_literals;
-
 struct EffectNestedIo {
   /// 1. Block template result used inside constructor (Some)
   static std::optional<std::string> read_optional();

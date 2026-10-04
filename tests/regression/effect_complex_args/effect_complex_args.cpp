@@ -44,7 +44,7 @@ std::optional<std::string> EffectComplexArgs::round_trip(std::string prefix,
 /// 6. Nested concatenation as argument
 void EffectComplexArgs::deep_concat(std::string a, std::string b,
                                     std::string c) {
-  setenv((a + b + c).c_str(), "value"s.c_str(), 1);
+  setenv((a + b + c).c_str(), std::string("value").c_str(), 1);
   return;
 }
 
@@ -56,7 +56,7 @@ void EffectComplexArgs::chain_with_concat(std::string name) {
   }();
   if (r.has_value()) {
     const std::string &v = *r;
-    setenv(("COPY_"s + name).c_str(), v.c_str(), 1);
+    setenv((std::string("COPY_") + name).c_str(), v.c_str(), 1);
     return;
   } else {
     return;

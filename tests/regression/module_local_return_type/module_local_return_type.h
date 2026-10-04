@@ -1,6 +1,7 @@
 #ifndef INCLUDED_MODULE_LOCAL_RETURN_TYPE
 #define INCLUDED_MODULE_LOCAL_RETURN_TYPE
 
+#include <cstdint>
 #include <type_traits>
 #include <variant>
 

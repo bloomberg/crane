@@ -3,7 +3,6 @@
 
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <crane_itree.h>
 #include <memory>
@@ -59,8 +58,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -86,26 +85,26 @@ struct FailE {
 };
 
 using st = Nat;
-template <typename _CraneTcArg>
-using itree_tc_296b3b7af4bd1a71 = std::shared_ptr<ITree<_CraneTcArg>>;
+template <typename CraneTcArg>
+using itree_tc_609e8855cd7ad294 = std::shared_ptr<ITree<CraneTcArg>>;
 
 struct M {
   template <typename T1, typename T2>
-  static Monads::template stateT<st, itree_tc_296b3b7af4bd1a71, T2> base(AE) {
+  static Monads::template stateT<st, itree_tc_609e8855cd7ad294, T2> base(AE) {
     return [](const Nat &s) { return itree_ret(std::make_pair(s, s)); };
   }
 
   template <typename T1, typename T2>
-  static Monads::template stateT<st, itree_tc_296b3b7af4bd1a71, T2>
+  static Monads::template stateT<st, itree_tc_609e8855cd7ad294, T2>
   run(std::type_identity_t<crane::fn<Monads::template stateT<
-          st, itree_tc_296b3b7af4bd1a71, crane::obj>(AE)>>
+          st, itree_tc_609e8855cd7ad294, crane::obj>(AE)>>
           h,
       AE e) {
     return [=](const Nat &s) { return h(e)(s); };
   }
 
   template <typename T1, typename T2>
-  static Monads::template stateT<st, itree_tc_296b3b7af4bd1a71, T2>
+  static Monads::template stateT<st, itree_tc_609e8855cd7ad294, T2>
   fused(AE e) {
     return run<T1, T2>(
         [](const AE &a0) -> decltype(auto) {

@@ -8,8 +8,6 @@
 #include <string>
 #include <system_error>
 
-using namespace std::string_literals;
-
 struct BlockTemplateSemicolon {
   /// String argument with semicolons in expression position (monad right
   /// identity) Tests gen_block_iife semicolon splitting

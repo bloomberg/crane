@@ -5,7 +5,6 @@
 #include "fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
 #include <memory>
 #include <stdexcept>
@@ -63,8 +62,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -95,16 +94,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -141,8 +141,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -225,13 +225,15 @@ public:
 
   explicit Exp(E_node _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  Exp(const Exp<_U> &_other)
+  template <typename CraneU>
+  Exp(const Exp<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Exp<_U>::E_leaf>(_other.v())) {
-            const auto &[a0] = std::get<typename Exp<_U>::E_leaf>(_other.v());
+          if (std::holds_alternative<typename Exp<CraneU>::E_leaf>(
+                  _other.v())) {
+            const auto &[a0] =
+                std::get<typename Exp<CraneU>::E_leaf>(_other.v());
             return E_leaf{[&]() -> t {
-              if constexpr (crane_convertible<t, const _U &>) {
+              if constexpr (crane_convertible<t, const CraneU &>) {
                 return crane_convert<t>(a0);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -240,7 +242,7 @@ public:
             }()};
           } else {
             const auto &[a0, a1] =
-                std::get<typename Exp<_U>::E_node>(_other.v());
+                std::get<typename Exp<CraneU>::E_node>(_other.v());
             return E_node{
                 (a0 ? std::make_shared<Exp<t>>(crane_convert<Exp<t>>(*a0))
                     : nullptr),
@@ -282,8 +284,8 @@ public:
 
   Exp(const Exp &) = default;
   Exp &operator=(const Exp &) = default;
-  Exp(Exp &&) noexcept = default;
-  Exp &operator=(Exp &&) noexcept = default;
+  Exp(Exp &&) = default;
+  Exp &operator=(Exp &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -295,33 +297,34 @@ public:
   Exp<T1> exp_map(F0 &&f) const {
     const Exp<t> *_self = this;
 
-    /// _Enter: captures varying parameters for each recursive call.
-    struct _Enter {
+    /// CraneEnter: captures varying parameters for each recursive call.
+    struct CraneEnter {
       const Exp<t> *_self;
     };
 
-    /// _Cont_E_node: saves [a1], resumes after recursive call, then processes
-    /// rest.
-    struct _Cont_E_node {
+    /// CraneCont_E_node: saves [a1], resumes after recursive call, then
+    /// processes rest.
+    struct CraneCont_E_node {
       std::shared_ptr<Exp<t>> a1;
     };
 
-    /// _Cont_E_node_1: saves [_tmp2], resumes after recursive call, then
+    /// CraneCont_E_node_1: saves [_tmp2], resumes after recursive call, then
     /// processes rest.
-    struct _Cont_E_node_1 {
+    struct CraneCont_E_node_1 {
       Exp<T1> _tmp2;
     };
 
-    using _Frame = std::variant<_Enter, _Cont_E_node, _Cont_E_node_1>;
+    using CraneFrame =
+        std::variant<CraneEnter, CraneCont_E_node, CraneCont_E_node_1>;
     Exp<T1> _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{_self});
-    /// Loopified exp_map: _Enter -> _Cont_E_node -> _Cont_E_node_1.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{_self});
+    /// Loopified exp_map: CraneEnter -> CraneCont_E_node -> CraneCont_E_node_1.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const Exp<t> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename Exp<t>::E_leaf>(_sv.v())) {
@@ -329,16 +332,16 @@ public:
           _result = Exp<T1>::e_leaf(f(a0));
         } else {
           const auto &[a0, a1] = std::get<typename Exp<t>::E_node>(_sv.v());
-          _stack.emplace_back(_Cont_E_node{a1});
-          _stack.emplace_back(_Enter{crane_raw(a0)});
+          _stack.emplace_back(CraneCont_E_node{a1});
+          _stack.emplace_back(CraneEnter{crane_raw(a0)});
         }
-      } else if (std::holds_alternative<_Cont_E_node>(_frame)) {
-        auto _f = std::move(std::get<_Cont_E_node>(_frame));
+      } else if (std::holds_alternative<CraneCont_E_node>(_frame)) {
+        auto _f = std::move(std::get<CraneCont_E_node>(_frame));
         std::shared_ptr<Exp<t>> a1 = std::move(_f.a1);
-        _stack.emplace_back(_Cont_E_node_1{std::move(_result)});
-        _stack.emplace_back(_Enter{crane_raw(a1)});
+        _stack.emplace_back(CraneCont_E_node_1{std::move(_result)});
+        _stack.emplace_back(CraneEnter{crane_raw(a1)});
       } else {
-        auto _f = std::move(std::get<_Cont_E_node_1>(_frame));
+        auto _f = std::move(std::get<CraneCont_E_node_1>(_frame));
         _result = Exp<T1>::e_node(std::move(_f._tmp2), std::move(_result));
       }
     }
@@ -390,15 +393,17 @@ public:
 
   explicit Instr(I_call _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  Instr(const Instr<_U> &_other)
+  template <typename CraneU>
+  Instr(const Instr<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Instr<_U>::I_op>(_other.v())) {
-            const auto &[a0] = std::get<typename Instr<_U>::I_op>(_other.v());
+          if (std::holds_alternative<typename Instr<CraneU>::I_op>(
+                  _other.v())) {
+            const auto &[a0] =
+                std::get<typename Instr<CraneU>::I_op>(_other.v());
             return I_op{crane_convert<Exp<t>>(a0)};
           } else {
             const auto &[a0, a1] =
-                std::get<typename Instr<_U>::I_call>(_other.v());
+                std::get<typename Instr<CraneU>::I_call>(_other.v());
             return I_call{crane_convert<texp<t>>(a0),
                           crane_convert<List<std::pair<texp<t>, Nat>>>(a1)};
           }

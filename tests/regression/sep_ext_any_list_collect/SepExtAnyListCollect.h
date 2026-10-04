@@ -2,7 +2,6 @@
 #define INCLUDED_SEPEXTANYLISTCOLLECT
 
 #include "obj.h"
-#include <any>
 #include <utility>
 #include <variant>
 

@@ -2,7 +2,6 @@
 #define INCLUDED_LIFTED_SPEC_BEFORE_CLASS_CONCEPT
 
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <memory>
@@ -69,8 +68,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -87,7 +86,7 @@ template <typename A> struct Tagged {
   // ACCESSORS
   Tagged<A> clone() const { return {a0}; }
 
-  template <typename _U> operator Tagged<_U>() const { return {a0}; }
+  template <typename CraneU> operator Tagged<CraneU>() const { return {a0}; }
 
   // CREATORS
   static Tagged<A> tag(Nat a0) { return {std::move(a0)}; }
@@ -100,13 +99,14 @@ template <typename addr> struct Box {
   // ACCESSORS
   Box<addr> clone() const { return {a0}; }
 
-  template <typename _U> operator Box<_U>() const { return {a0}; }
+  template <typename CraneU> operator Box<CraneU>() const { return {a0}; }
 
   // CREATORS
   static Box<addr> box0(addr a0) { return {std::move(a0)}; }
 };
 
-template <Params _tcI0, typename T1> Tagged<crane::obj> _walk_mk(const T1) {
+template <Params _tcI0, typename T1>
+Tagged<crane::obj> walk_crane_mk(const T1) {
   return Tagged<Box<typename _tcI0::addr>>::tag(Nat::s(Nat::o()));
 }
 
@@ -114,9 +114,9 @@ template <Params _tcI0>
 Tagged<Box<typename _tcI0::addr>> walk(const Nat &n,
                                        const typename _tcI0::addr &a) {
   if (std::holds_alternative<typename Nat::O>(n.v())) {
-    return _walk_mk<_tcI0>(a);
+    return walk_crane_mk<_tcI0>(a);
   } else {
-    return _walk_mk<_tcI0>(_tcI0::bump(a));
+    return walk_crane_mk<_tcI0>(_tcI0::bump(a));
   }
 }
 

@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <memory>
 #include <stdexcept>
@@ -71,8 +70,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -102,13 +101,15 @@ public:
 
   explicit Option(None _v) : v_(_v) {}
 
-  template <typename _U>
-  Option(const Option<_U> &_other)
+  template <typename CraneU>
+  Option(const Option<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Option<_U>::Some>(_other.v())) {
-            const auto &[a] = std::get<typename Option<_U>::Some>(_other.v());
+          if (std::holds_alternative<typename Option<CraneU>::Some>(
+                  _other.v())) {
+            const auto &[a] =
+                std::get<typename Option<CraneU>::Some>(_other.v());
             return Some{[&]() -> A {
-              if constexpr (crane_convertible<A, const _U &>) {
+              if constexpr (crane_convertible<A, const CraneU &>) {
                 return crane_convert<A>(a);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -139,18 +140,19 @@ template <typename A, typename B> struct Prod {
   // ACCESSORS
   Prod<A, B> clone() const { return {a0, a1}; }
 
-  template <typename _U0, typename _U1> operator Prod<_U0, _U1>() const {
-    return {[&]() -> _U0 {
-              if constexpr (crane_convertible<_U0, const A &>) {
-                return crane_convert<_U0>(a0);
+  template <typename CraneU0, typename CraneU1>
+  operator Prod<CraneU0, CraneU1>() const {
+    return {[&]() -> CraneU0 {
+              if constexpr (crane_convertible<CraneU0, const A &>) {
+                return crane_convert<CraneU0>(a0);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
               }
             }(),
-            [&]() -> _U1 {
-              if constexpr (crane_convertible<_U1, const B &>) {
-                return crane_convert<_U1>(a1);
+            [&]() -> CraneU1 {
+              if constexpr (crane_convertible<CraneU1, const B &>) {
+                return crane_convert<CraneU1>(a1);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
@@ -179,10 +181,10 @@ template <typename A> struct Sig {
   // ACCESSORS
   Sig<A> clone() const { return {x}; }
 
-  template <typename _U> operator Sig<_U>() const {
-    return {[&]() -> _U {
-      if constexpr (crane_convertible<_U, const A &>) {
-        return crane_convert<_U>(x);
+  template <typename CraneU> operator Sig<CraneU>() const {
+    return {[&]() -> CraneU {
+      if constexpr (crane_convertible<CraneU, const A &>) {
+        return crane_convert<CraneU>(x);
       } else {
         throw std::logic_error(
             "unreachable: inactive constructor field at this instantiation");
@@ -201,10 +203,10 @@ template <typename A> struct Sig2 {
   // ACCESSORS
   Sig2<A> clone() const { return {x}; }
 
-  template <typename _U> operator Sig2<_U>() const {
-    return {[&]() -> _U {
-      if constexpr (crane_convertible<_U, const A &>) {
-        return crane_convert<_U>(x);
+  template <typename CraneU> operator Sig2<CraneU>() const {
+    return {[&]() -> CraneU {
+      if constexpr (crane_convertible<CraneU, const A &>) {
+        return crane_convert<CraneU>(x);
       } else {
         throw std::logic_error(
             "unreachable: inactive constructor field at this instantiation");
@@ -224,18 +226,19 @@ template <typename A, typename P> struct SigT {
   // ACCESSORS
   SigT<A, P> clone() const { return {x, a1}; }
 
-  template <typename _U0, typename _U1> operator SigT<_U0, _U1>() const {
-    return {[&]() -> _U0 {
-              if constexpr (crane_convertible<_U0, const A &>) {
-                return crane_convert<_U0>(x);
+  template <typename CraneU0, typename CraneU1>
+  operator SigT<CraneU0, CraneU1>() const {
+    return {[&]() -> CraneU0 {
+              if constexpr (crane_convertible<CraneU0, const A &>) {
+                return crane_convert<CraneU0>(x);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
               }
             }(),
-            [&]() -> _U1 {
-              if constexpr (crane_convertible<_U1, const P &>) {
-                return crane_convert<_U1>(a1);
+            [&]() -> CraneU1 {
+              if constexpr (crane_convertible<CraneU1, const P &>) {
+                return crane_convert<CraneU1>(a1);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
@@ -256,27 +259,27 @@ template <typename A, typename P, typename Q> struct SigT2 {
   // ACCESSORS
   SigT2<A, P, Q> clone() const { return {x, a1, a2}; }
 
-  template <typename _U0, typename _U1, typename _U2>
-  operator SigT2<_U0, _U1, _U2>() const {
-    return {[&]() -> _U0 {
-              if constexpr (crane_convertible<_U0, const A &>) {
-                return crane_convert<_U0>(x);
+  template <typename CraneU0, typename CraneU1, typename CraneU2>
+  operator SigT2<CraneU0, CraneU1, CraneU2>() const {
+    return {[&]() -> CraneU0 {
+              if constexpr (crane_convertible<CraneU0, const A &>) {
+                return crane_convert<CraneU0>(x);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
               }
             }(),
-            [&]() -> _U1 {
-              if constexpr (crane_convertible<_U1, const P &>) {
-                return crane_convert<_U1>(a1);
+            [&]() -> CraneU1 {
+              if constexpr (crane_convertible<CraneU1, const P &>) {
+                return crane_convert<CraneU1>(a1);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
               }
             }(),
-            [&]() -> _U2 {
-              if constexpr (crane_convertible<_U2, const Q &>) {
-                return crane_convert<_U2>(a2);
+            [&]() -> CraneU2 {
+              if constexpr (crane_convertible<CraneU2, const Q &>) {
+                return crane_convert<CraneU2>(a2);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
@@ -313,13 +316,15 @@ public:
 
   explicit Sumor(Inright _v) : v_(_v) {}
 
-  template <typename _U>
-  Sumor(const Sumor<_U> &_other)
+  template <typename CraneU>
+  Sumor(const Sumor<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Sumor<_U>::Inleft>(_other.v())) {
-            const auto &[a0] = std::get<typename Sumor<_U>::Inleft>(_other.v());
+          if (std::holds_alternative<typename Sumor<CraneU>::Inleft>(
+                  _other.v())) {
+            const auto &[a0] =
+                std::get<typename Sumor<CraneU>::Inleft>(_other.v());
             return Inleft{[&]() -> A {
-              if constexpr (crane_convertible<A, const _U &>) {
+              if constexpr (crane_convertible<A, const CraneU &>) {
                 return crane_convert<A>(a0);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -351,10 +356,10 @@ struct RocqBug14174 {
       // ACCESSORS
       sig<A> clone() const { return {x}; }
 
-      template <typename _U> operator sig<_U>() const {
-        return {[&]() -> _U {
-          if constexpr (crane_convertible<_U, const A &>) {
-            return crane_convert<_U>(x);
+      template <typename CraneU> operator sig<CraneU>() const {
+        return {[&]() -> CraneU {
+          if constexpr (crane_convertible<CraneU, const A &>) {
+            return crane_convert<CraneU>(x);
           } else {
             throw std::logic_error("unreachable: inactive constructor field at "
                                    "this instantiation");
@@ -421,10 +426,10 @@ struct RocqBug14174 {
       // ACCESSORS
       sig2<A> clone() const { return {x}; }
 
-      template <typename _U> operator sig2<_U>() const {
-        return {[&]() -> _U {
-          if constexpr (crane_convertible<_U, const A &>) {
-            return crane_convert<_U>(x);
+      template <typename CraneU> operator sig2<CraneU>() const {
+        return {[&]() -> CraneU {
+          if constexpr (crane_convertible<CraneU, const A &>) {
+            return crane_convert<CraneU>(x);
           } else {
             throw std::logic_error("unreachable: inactive constructor field at "
                                    "this instantiation");
@@ -496,18 +501,19 @@ struct RocqBug14174 {
       // ACCESSORS
       sigT<A, P> clone() const { return {x, a1}; }
 
-      template <typename _U0, typename _U1> operator sigT<_U0, _U1>() const {
-        return {[&]() -> _U0 {
-                  if constexpr (crane_convertible<_U0, const A &>) {
-                    return crane_convert<_U0>(x);
+      template <typename CraneU0, typename CraneU1>
+      operator sigT<CraneU0, CraneU1>() const {
+        return {[&]() -> CraneU0 {
+                  if constexpr (crane_convertible<CraneU0, const A &>) {
+                    return crane_convert<CraneU0>(x);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
                                            "field at this instantiation");
                   }
                 }(),
-                [&]() -> _U1 {
-                  if constexpr (crane_convertible<_U1, const P &>) {
-                    return crane_convert<_U1>(a1);
+                [&]() -> CraneU1 {
+                  if constexpr (crane_convertible<CraneU1, const P &>) {
+                    return crane_convert<CraneU1>(a1);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
                                            "field at this instantiation");
@@ -588,27 +594,27 @@ struct RocqBug14174 {
       // ACCESSORS
       sigT2<A, P, Q> clone() const { return {x, a1, a2}; }
 
-      template <typename _U0, typename _U1, typename _U2>
-      operator sigT2<_U0, _U1, _U2>() const {
-        return {[&]() -> _U0 {
-                  if constexpr (crane_convertible<_U0, const A &>) {
-                    return crane_convert<_U0>(x);
+      template <typename CraneU0, typename CraneU1, typename CraneU2>
+      operator sigT2<CraneU0, CraneU1, CraneU2>() const {
+        return {[&]() -> CraneU0 {
+                  if constexpr (crane_convertible<CraneU0, const A &>) {
+                    return crane_convert<CraneU0>(x);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
                                            "field at this instantiation");
                   }
                 }(),
-                [&]() -> _U1 {
-                  if constexpr (crane_convertible<_U1, const P &>) {
-                    return crane_convert<_U1>(a1);
+                [&]() -> CraneU1 {
+                  if constexpr (crane_convertible<CraneU1, const P &>) {
+                    return crane_convert<CraneU1>(a1);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
                                            "field at this instantiation");
                   }
                 }(),
-                [&]() -> _U2 {
-                  if constexpr (crane_convertible<_U2, const Q &>) {
-                    return crane_convert<_U2>(a2);
+                [&]() -> CraneU2 {
+                  if constexpr (crane_convertible<CraneU2, const Q &>) {
+                    return crane_convert<CraneU2>(a2);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
                                            "field at this instantiation");
@@ -794,15 +800,15 @@ struct RocqBug14174 {
 
       explicit sumor(Inright _v) : v_(_v) {}
 
-      template <typename _U>
-      sumor(const sumor<_U> &_other)
+      template <typename CraneU>
+      sumor(const sumor<CraneU> &_other)
           : v_([&]() -> variant_t {
-              if (std::holds_alternative<typename sumor<_U>::Inleft>(
+              if (std::holds_alternative<typename sumor<CraneU>::Inleft>(
                       _other.v())) {
                 const auto &[a0] =
-                    std::get<typename sumor<_U>::Inleft>(_other.v());
+                    std::get<typename sumor<CraneU>::Inleft>(_other.v());
                 return Inleft{[&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a0);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "

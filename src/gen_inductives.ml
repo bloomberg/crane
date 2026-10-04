@@ -940,7 +940,7 @@ let gen_ind_header_v2
              (fun c ->
                match c with
                | GlobRef.ConstructRef ((kn, i), cidx) ->
-                 Id.of_string (Table.enum_ctor_name_of_ref kn i cidx)
+                 Id.of_string (Common.enum_ctor_name_of_ref kn i cidx)
                | _ -> ctor_fallback_id 0 )
              cnames )
       in
@@ -1102,7 +1102,7 @@ let gen_ind_header_v2
           | Tshared_ptr _ -> cpp_ty
           | _ when (not is_coinductive) && boxes_field ty -> Tshared_ptr bare_cpp_ty
           | _ when (not is_coinductive) && boxes_param_field ty && bare_cpp_ty <> Tany ->
-            Table.mark_demand Crane_rt.field_header;
+            Table.demand_header (Table.Runtime Crane_rt.field_header);
             Tid_external (Crane_rt.field, [bare_cpp_ty])
           | _ -> cpp_ty
       in
@@ -1131,7 +1131,7 @@ let gen_ind_header_v2
           List.mapi
             (fun k (r, rvars) ->
               ( (r, List.length rvars),
-                ( Id.of_string ("_S" ^ string_of_int k),
+                ( Generated_name.indexed "S" k,
                   Tglob (r, List.map named_tvar rvars, []) ) ) )
             group
         in
@@ -2531,7 +2531,7 @@ let gen_ind_header_v2
               let reuse_body = [Sreturn (Some (build i cname reuse_ctor_args))] in
               [ ( Fmethod
                     (static_fun
-                       ~name:(Id.of_string (fname ^ "__reuse"))
+                       ~name:(Generated_name.companion (Id.of_string fname) "reuse")
                        ~ret:ret_ty ~params:reuse_params ~body:reuse_body),
                   VPublic,
                   SCreators ) ]
@@ -2624,12 +2624,7 @@ let gen_ind_header_v2
             else
               let n_vars = List.length vars in
               let u_var_names =
-                List.mapi
-                  (fun i _ ->
-                    Id.of_string
-                      (if n_vars = 1 then "_U"
-                       else "_U" ^ string_of_int i))
-                  vars
+                List.mapi (fun i _ -> Generated_name.member "U" ~of_:n_vars i) vars
               in
               let u_tys =
                 List.map named_tvar u_var_names

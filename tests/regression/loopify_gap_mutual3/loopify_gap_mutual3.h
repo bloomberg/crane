@@ -1,6 +1,7 @@
 #ifndef INCLUDED_LOOPIFY_GAP_MUTUAL3
 #define INCLUDED_LOOPIFY_GAP_MUTUAL3
 
+#include <cstdint>
 #include <utility>
 
 struct LoopifyGapMutual3 {

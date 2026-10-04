@@ -2,6 +2,7 @@
 #define INCLUDED_FIX_CURRIED_ESCAPE
 
 #include "fn.h"
+#include <cstdint>
 #include <memory>
 #include <optional>
 

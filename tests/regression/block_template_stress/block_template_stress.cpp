@@ -18,7 +18,7 @@ std::string BlockTemplateStress::conditional_read(bool do_read) {
   if (do_read) {
     std::string s;
     std::getline(std::cin, s);
-    return s + "!"s;
+    return s + std::string("!");
   } else {
     return "skipped";
   }
@@ -36,18 +36,18 @@ std::string BlockTemplateStress::branch_read(uint64_t choice) {
   if (choice <= 0) {
     std::string a;
     std::getline(std::cin, a);
-    return "zero: "s + a;
+    return std::string("zero: ") + a;
   } else {
     uint64_t n = choice - 1;
     if (n <= 0) {
       std::string b;
       std::getline(std::cin, b);
-      return "one: "s + b;
+      return std::string("one: ") + b;
     } else {
       uint64_t _x = n - 1;
       std::string c;
       std::getline(std::cin, c);
-      return "other: "s + c;
+      return std::string("other: ") + c;
     }
   }
 }
@@ -67,7 +67,7 @@ void BlockTemplateStress::block_result_as_arg() {
   std::cin >> _x;
   std::string s;
   std::getline(std::cin, s);
-  std::cout << s + " read"s << '\n';
+  std::cout << s + std::string(" read") << '\n';
   return;
 }
 
@@ -94,12 +94,12 @@ BlockTemplateStress::read_files(const List<std::string> &paths) {
 
 /// 10. Block template interleaved with void calls
 std::string BlockTemplateStress::interleaved_void() {
-  std::cout << "Enter name:"s << '\n';
+  std::cout << std::string("Enter name:") << '\n';
   std::string name;
   std::getline(std::cin, name);
-  std::cout << "Hello, "s + name << '\n';
-  std::cout << "Enter age:"s << '\n';
+  std::cout << std::string("Hello, ") + name << '\n';
+  std::cout << std::string("Enter age:") << '\n';
   std::string age;
   std::getline(std::cin, age);
-  return name + " is "s + age;
+  return name + std::string(" is ") + age;
 }

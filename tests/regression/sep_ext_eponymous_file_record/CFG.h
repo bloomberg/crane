@@ -3,7 +3,6 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <stdexcept>
 #include <utility>
 
@@ -18,16 +17,16 @@ template <typename T> struct cfg {
   typename Datatypes::template List<T> rest;
 
   // ACCESSORS
-  template <typename _U> operator cfg<_U>() const {
-    return {[&]() -> _U {
-              if constexpr (crane_convertible<_U, const T &>) {
-                return crane_convert<_U>(init);
+  template <typename CraneU> operator cfg<CraneU>() const {
+    return {[&]() -> CraneU {
+              if constexpr (crane_convertible<CraneU, const T &>) {
+                return crane_convert<CraneU>(init);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
               }
             }(),
-            crane_convert<typename Datatypes::template List<_U>>(rest)};
+            crane_convert<typename Datatypes::template List<CraneU>>(rest)};
   }
 };
 

@@ -1,6 +1,7 @@
 #ifndef INCLUDED_COMPARISON
 #define INCLUDED_COMPARISON
 
+#include <cstdint>
 #include <utility>
 
 struct Comparison {

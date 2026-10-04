@@ -7,7 +7,7 @@ int64_t EffectDeepCompose::timed_env_op(std::string name, std::string value) {
           std::chrono::steady_clock::now().time_since_epoch())
           .count());
   setenv(name.c_str(), value.c_str(), 1);
-  std::cout << "env set"s << '\n';
+  std::cout << std::string("env set") << '\n';
   int64_t t2 = static_cast<int64_t>(
       std::chrono::duration_cast<std::chrono::milliseconds>(
           std::chrono::steady_clock::now().time_since_epoch())
@@ -19,15 +19,15 @@ int64_t EffectDeepCompose::timed_env_op(std::string name, std::string value) {
 
 /// 2. Function using only console from inside bigE
 void EffectDeepCompose::just_greet() {
-  std::cout << "hello from bigE"s << '\n';
+  std::cout << std::string("hello from bigE") << '\n';
   return;
 }
 
 /// 3. Function using env + console but not clock
 void EffectDeepCompose::env_with_log(std::string name, std::string value) {
-  std::cout << "setting env..."s << '\n';
+  std::cout << std::string("setting env...") << '\n';
   setenv(name.c_str(), value.c_str(), 1);
-  std::cout << "done"s << '\n';
+  std::cout << std::string("done") << '\n';
   return;
 }
 
@@ -42,7 +42,7 @@ void EffectDeepCompose::show_env(std::string name) {
     std::cout << v << '\n';
     return;
   } else {
-    std::cout << "not set"s << '\n';
+    std::cout << std::string("not set") << '\n';
     return;
   }
 }
@@ -69,7 +69,7 @@ void EffectDeepCompose::repeat_n(uint64_t n) {
         std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::steady_clock::now().time_since_epoch())
             .count());
-    std::cout << "tick"s << '\n';
+    std::cout << std::string("tick") << '\n';
     repeat_n(n_);
     return;
   }

@@ -1,6 +1,7 @@
 #ifndef INCLUDED_UNSOUND_AXIOMS
 #define INCLUDED_UNSOUND_AXIOMS
 
+#include <cstdint>
 #include <stdexcept>
 #include <variant>
 

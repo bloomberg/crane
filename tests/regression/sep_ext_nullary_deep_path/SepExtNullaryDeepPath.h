@@ -2,6 +2,7 @@
 #define INCLUDED_SEPEXTNULLARYDEEPPATH
 
 #include <concepts>
+#include <cstdint>
 
 namespace SepExtNullaryDeepPath {
 

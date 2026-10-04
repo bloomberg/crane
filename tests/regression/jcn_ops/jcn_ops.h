@@ -1,6 +1,7 @@
 #ifndef INCLUDED_JCN_OPS
 #define INCLUDED_JCN_OPS
 
+#include <cstdint>
 #include <utility>
 
 struct JcnOps {

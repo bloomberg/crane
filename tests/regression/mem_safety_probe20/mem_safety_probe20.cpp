@@ -86,29 +86,29 @@ MemSafetyProbe20::wrap_list(MemSafetyProbe20::tree t, bool b) {
 
 uint64_t MemSafetyProbe20::sum_wrapped(
     const MemSafetyProbe20::mylist<MemSafetyProbe20::wrapped> &l,
-    uint64_t
-        x) { /// _Enter: captures varying parameters for each recursive call.
+    uint64_t x) { /// CraneEnter: captures varying parameters for each recursive
+                  /// call.
 
-  struct _Enter {
+  struct CraneEnter {
     const MemSafetyProbe20::mylist<MemSafetyProbe20::wrapped> *l;
   };
 
-  /// _Cont_Mycons: saves [a0], resumes after recursive call, then processes
+  /// CraneCont_Mycons: saves [a0], resumes after recursive call, then processes
   /// rest.
-  struct _Cont_Mycons {
+  struct CraneCont_Mycons {
     MemSafetyProbe20::wrapped a0;
   };
 
-  using _Frame = std::variant<_Enter, _Cont_Mycons>;
+  using CraneFrame = std::variant<CraneEnter, CraneCont_Mycons>;
   uint64_t _result{};
-  crane::small_vector<_Frame> _stack;
-  _stack.emplace_back(_Enter{&l});
-  /// Loopified sum_wrapped: _Enter -> _Cont_Mycons.
+  crane::small_vector<CraneFrame> _stack;
+  _stack.emplace_back(CraneEnter{&l});
+  /// Loopified sum_wrapped: CraneEnter -> CraneCont_Mycons.
   while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
+    CraneFrame _frame = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
+    if (std::holds_alternative<CraneEnter>(_frame)) {
+      auto _f = std::move(std::get<CraneEnter>(_frame));
       const MemSafetyProbe20::mylist<MemSafetyProbe20::wrapped> &l = *_f.l;
       if (std::holds_alternative<typename MemSafetyProbe20::mylist<
               MemSafetyProbe20::wrapped>::Mynil>(l.v())) {
@@ -116,11 +116,11 @@ uint64_t MemSafetyProbe20::sum_wrapped(
       } else {
         const auto &[a0, a1] = std::get<typename MemSafetyProbe20::mylist<
             MemSafetyProbe20::wrapped>::Mycons>(l.v());
-        _stack.emplace_back(_Cont_Mycons{a0});
-        _stack.emplace_back(_Enter{crane_raw(a1)});
+        _stack.emplace_back(CraneCont_Mycons{a0});
+        _stack.emplace_back(CraneEnter{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<_Cont_Mycons>(_frame));
+      auto _f = std::move(std::get<CraneCont_Mycons>(_frame));
       MemSafetyProbe20::wrapped a0 = std::move(_f.a0);
       _result = (a0.unwrap(x) + std::move(_result));
     }

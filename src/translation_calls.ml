@@ -678,7 +678,7 @@ let callee_result_bindings env id ~explicit expected =
   | Some exp, Some ml_ty ->
     let n = IntSet.fold max (collect_tvars_set IntSet.empty ml_ty) 0 in
     let names =
-      List.init n (fun i -> Id.of_string ("_R" ^ string_of_int (i + 1)))
+      List.init n (fun i -> Generated_name.indexed "R" (i + 1))
     in
     let cod =
       match convert_ml_type_to_cpp_type env names (type_simpl ml_ty) with
@@ -724,7 +724,7 @@ let instance_family_binding env r ts expected =
        ([itree (E _) R]). *)
     let names =
       List.init (IntSet.fold max (collect_tvars_set IntSet.empty inst_ty) 0) (fun i ->
-          Id.of_string ("_I" ^ string_of_int (i + 1)) )
+          Generated_name.indexed "I" (i + 1) )
     in
     (* An instance of a definitional class is the function the class
        abbreviates -- [MonadIter_itree : forall E R I, (I -> itree E (I + R))

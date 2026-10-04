@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <memory>
 #include <stdexcept>
@@ -67,8 +66,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -99,16 +98,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -145,8 +145,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -212,13 +212,13 @@ public:
 
   explicit Exp0(Lit _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  Exp0(const Exp0<_U> &_other)
+  template <typename CraneU>
+  Exp0(const Exp0<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Exp0<_U>::Var>(_other.v())) {
-            const auto &[t] = std::get<typename Exp0<_U>::Var>(_other.v());
+          if (std::holds_alternative<typename Exp0<CraneU>::Var>(_other.v())) {
+            const auto &[t] = std::get<typename Exp0<CraneU>::Var>(_other.v());
             return Var{[&]() -> T {
-              if constexpr (crane_convertible<T, const _U &>) {
+              if constexpr (crane_convertible<T, const CraneU &>) {
                 return crane_convert<T>(t);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -226,7 +226,7 @@ public:
               }
             }()};
           } else {
-            const auto &[n] = std::get<typename Exp0<_U>::Lit>(_other.v());
+            const auto &[n] = std::get<typename Exp0<CraneU>::Lit>(_other.v());
             return Lit{n};
           }
         }()) {}
@@ -262,8 +262,8 @@ template <typename T> struct Phi {
   // ACCESSORS
   Phi<T> clone() const { return {es}; }
 
-  template <typename _U> operator Phi<_U>() const {
-    return {crane_convert<List<std::pair<Nat, Exp0<_U>>>>(es)};
+  template <typename CraneU> operator Phi<CraneU>() const {
+    return {crane_convert<List<std::pair<Nat, Exp0<CraneU>>>>(es)};
   }
 
   // CREATORS

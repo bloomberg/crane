@@ -1,6 +1,7 @@
 #ifndef INCLUDED_GENERATED_MEMBER_NAME_COLLISION
 #define INCLUDED_GENERATED_MEMBER_NAME_COLLISION
 
+#include <cstdint>
 #include <type_traits>
 #include <variant>
 

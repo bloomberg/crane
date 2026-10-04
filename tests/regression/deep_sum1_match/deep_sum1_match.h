@@ -3,7 +3,6 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <memory>
 #include <optional>
@@ -59,8 +58,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -117,15 +116,16 @@ public:
 
   explicit Sum1(Inr1 _v) : v_(std::move(_v)) {}
 
-  template <typename _U0, typename _U1, typename _U2>
-  Sum1(const Sum1<_U0, _U1, _U2> &_other)
+  template <typename CraneU0, typename CraneU1, typename CraneU2>
+  Sum1(const Sum1<CraneU0, CraneU1, CraneU2> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Sum1<_U0, _U1, _U2>::Inl1>(
-                  _other.v())) {
+          if (std::holds_alternative<
+                  typename Sum1<CraneU0, CraneU1, CraneU2>::Inl1>(_other.v())) {
             const auto &[a0] =
-                std::get<typename Sum1<_U0, _U1, _U2>::Inl1>(_other.v());
+                std::get<typename Sum1<CraneU0, CraneU1, CraneU2>::Inl1>(
+                    _other.v());
             return Inl1{[&]() -> E1 {
-              if constexpr (crane_convertible<E1, const _U0 &>) {
+              if constexpr (crane_convertible<E1, const CraneU0 &>) {
                 return crane_convert<E1>(a0);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -134,9 +134,10 @@ public:
             }()};
           } else {
             const auto &[a0] =
-                std::get<typename Sum1<_U0, _U1, _U2>::Inr1>(_other.v());
+                std::get<typename Sum1<CraneU0, CraneU1, CraneU2>::Inr1>(
+                    _other.v());
             return Inr1{[&]() -> E2 {
-              if constexpr (crane_convertible<E2, const _U1 &>) {
+              if constexpr (crane_convertible<E2, const CraneU1 &>) {
                 return crane_convert<E2>(a0);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "

@@ -10,8 +10,6 @@
 #include <utility>
 #include <variant>
 
-using namespace std::string_literals;
-
 struct EffectMatchArg {
   /// 1. Bool match as value argument to set_env
   static void set_bool_value(bool flag, std::string key);

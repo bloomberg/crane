@@ -4,9 +4,9 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -51,16 +51,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -97,8 +98,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -178,10 +179,10 @@ struct LocalFixEscapesByRef {
     // ACCESSORS
     res<A> clone() const { return {s, a}; }
 
-    template <typename _U> operator res<_U>() const {
-      return {s, [&]() -> _U {
-                if constexpr (crane_convertible<_U, const A &>) {
-                  return crane_convert<_U>(a);
+    template <typename CraneU> operator res<CraneU>() const {
+      return {s, [&]() -> CraneU {
+                if constexpr (crane_convertible<CraneU, const A &>) {
+                  return crane_convert<CraneU>(a);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
                                          "field at this instantiation");
@@ -211,21 +212,22 @@ struct LocalFixEscapesByRef {
     crane::fn<res<A>(uint64_t)> runst;
 
     // ACCESSORS
-    template <typename _U> operator st<_U>() const {
-      return {crane_convert<crane::fn<res<_U>(uint64_t)>>(runst)};
+    template <typename CraneU> operator st<CraneU>() const {
+      return {crane_convert<crane::fn<res<CraneU>(uint64_t)>>(runst)};
     }
   };
 
   struct Monad_st {
-    template <typename _A0> using m = st<_A0>;
+    template <typename CraneA0> using m = st<CraneA0>;
 
-    template <typename _A0> static st<_A0> ret(_A0 x) {
-      return st<_A0>{[=](uint64_t s) { return res<crane::obj>::res0(s, x); }};
+    template <typename CraneA0> static st<CraneA0> ret(CraneA0 x) {
+      return st<CraneA0>{
+          [=](uint64_t s) { return res<crane::obj>::res0(s, x); }};
     }
 
-    template <typename _A0, typename _A1>
-    static st<_A1> bind(st<_A0> m, crane::fn<st<_A1>(_A0)> k) {
-      return st<_A1>{[=](uint64_t s) {
+    template <typename CraneA0, typename CraneA1>
+    static st<CraneA1> bind(st<CraneA0> m, crane::fn<st<CraneA1>(CraneA0)> k) {
+      return st<CraneA1>{[=](uint64_t s) {
         const auto &_sv = m.runst(s);
         const auto &[s0, a0] = _sv;
         return k(a0).runst(s0);

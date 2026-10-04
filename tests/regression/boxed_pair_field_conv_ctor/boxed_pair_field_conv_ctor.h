@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
 #include <memory>
 #include <stdexcept>
@@ -60,8 +59,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -132,13 +131,13 @@ public:
 
   explicit Exp0(ENEG _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  Exp0(const Exp0<_U> &_other)
+  template <typename CraneU>
+  Exp0(const Exp0<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Exp0<_U>::EV>(_other.v())) {
-            const auto &[a0] = std::get<typename Exp0<_U>::EV>(_other.v());
+          if (std::holds_alternative<typename Exp0<CraneU>::EV>(_other.v())) {
+            const auto &[a0] = std::get<typename Exp0<CraneU>::EV>(_other.v());
             return EV{[&]() -> T {
-              if constexpr (crane_convertible<T, const _U &>) {
+              if constexpr (crane_convertible<T, const CraneU &>) {
                 return crane_convert<T>(a0);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -146,13 +145,16 @@ public:
               }
             }()};
           } else {
-            if (std::holds_alternative<typename Exp0<_U>::ESELF>(_other.v())) {
-              const auto &[a0] = std::get<typename Exp0<_U>::ESELF>(_other.v());
+            if (std::holds_alternative<typename Exp0<CraneU>::ESELF>(
+                    _other.v())) {
+              const auto &[a0] =
+                  std::get<typename Exp0<CraneU>::ESELF>(_other.v());
               return ESELF{
                   (a0 ? std::make_shared<Exp0<T>>(crane_convert<Exp0<T>>(*a0))
                       : nullptr)};
             } else {
-              const auto &[a0] = std::get<typename Exp0<_U>::ENEG>(_other.v());
+              const auto &[a0] =
+                  std::get<typename Exp0<CraneU>::ENEG>(_other.v());
               return ENEG{(a0 ? std::make_shared<std::pair<T, Exp0<T>>>(
                                     crane_convert<std::pair<T, Exp0<T>>>(*a0))
                               : nullptr)};
@@ -202,8 +204,8 @@ public:
 
   Exp0(const Exp0 &) = default;
   Exp0 &operator=(const Exp0 &) = default;
-  Exp0(Exp0 &&) noexcept = default;
-  Exp0 &operator=(Exp0 &&) noexcept = default;
+  Exp0(Exp0 &&) = default;
+  Exp0 &operator=(Exp0 &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 

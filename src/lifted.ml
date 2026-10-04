@@ -36,16 +36,19 @@ let by_key : t KeyMap.t ref = ref KeyMap.empty
 
 let by_name : (Id.t, t) Hashtbl.t = Hashtbl.create 16
 
-(** The spelling a helper would like, before uniqueness is imposed. The
-    enclosing declaration's name is the disambiguator that keeps two helpers
-    bound to the same binder in different declarations apart. *)
+(** The spelling a helper would like, before uniqueness is imposed: the
+    {!Generated_name.companion} of the enclosing declaration, whose name is
+    the disambiguator that keeps two helpers bound to the same binder in
+    different declarations apart.  A helper may land at namespace scope, where
+    a leading underscore is reserved. *)
 let preferred_name ~origin ~binder =
   let outer =
     match origin with
     | Some r -> Common.pp_global_name Common.Term r
     | None -> "anon"
   in
-  "_" ^ outer ^ "_" ^ Id.to_string binder
+  Id.to_string
+    (Generated_name.companion (Id.of_string outer) (Id.to_string binder))
 
 (** [unique_name base] is [base], or [base] with the least counter appended
     that is not already some other helper's spelling. *)

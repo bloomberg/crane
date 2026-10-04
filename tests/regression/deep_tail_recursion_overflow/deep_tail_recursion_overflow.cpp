@@ -19,27 +19,29 @@ DeepTailRecursionOverflow::build(uint64_t n,
 
 uint64_t DeepTailRecursionOverflow::total_of(
     const DeepTailRecursionOverflow::chain
-        &c) { /// _Enter: captures varying parameters for each recursive call.
+        &c) { /// CraneEnter: captures varying parameters for each recursive
+              /// call.
 
-  struct _Enter {
+  struct CraneEnter {
     const DeepTailRecursionOverflow::chain *c;
   };
 
-  /// _Cont_Link: saves [a1], resumes after recursive call, then processes rest.
-  struct _Cont_Link {
+  /// CraneCont_Link: saves [a1], resumes after recursive call, then processes
+  /// rest.
+  struct CraneCont_Link {
     uint64_t a1;
   };
 
-  using _Frame = std::variant<_Enter, _Cont_Link>;
+  using CraneFrame = std::variant<CraneEnter, CraneCont_Link>;
   uint64_t _result{};
-  crane::small_vector<_Frame> _stack;
-  _stack.emplace_back(_Enter{&c});
-  /// Loopified total_of: _Enter -> _Cont_Link.
+  crane::small_vector<CraneFrame> _stack;
+  _stack.emplace_back(CraneEnter{&c});
+  /// Loopified total_of: CraneEnter -> CraneCont_Link.
   while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
+    CraneFrame _frame = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
+    if (std::holds_alternative<CraneEnter>(_frame)) {
+      auto _f = std::move(std::get<CraneEnter>(_frame));
       const DeepTailRecursionOverflow::chain &c = *_f.c;
       if (std::holds_alternative<
               typename DeepTailRecursionOverflow::chain::End_>(c.v())) {
@@ -49,11 +51,11 @@ uint64_t DeepTailRecursionOverflow::total_of(
       } else {
         const auto &[a0, a1] =
             std::get<typename DeepTailRecursionOverflow::chain::Link>(c.v());
-        _stack.emplace_back(_Cont_Link{a1});
-        _stack.emplace_back(_Enter{crane_raw(a0)});
+        _stack.emplace_back(CraneCont_Link{a1});
+        _stack.emplace_back(CraneEnter{crane_raw(a0)});
       }
     } else {
-      auto _f = std::move(std::get<_Cont_Link>(_frame));
+      auto _f = std::move(std::get<CraneCont_Link>(_frame));
       uint64_t a1 = _f.a1;
       _result = (a1 + std::move(_result));
     }

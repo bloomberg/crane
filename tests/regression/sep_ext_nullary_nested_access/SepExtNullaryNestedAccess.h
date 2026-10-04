@@ -2,6 +2,7 @@
 #define INCLUDED_SEPEXTNULLARYNESTEDACCESS
 
 #include <concepts>
+#include <cstdint>
 
 namespace SepExtNullaryNestedAccess {
 

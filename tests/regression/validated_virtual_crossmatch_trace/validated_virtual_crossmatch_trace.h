@@ -5,8 +5,8 @@
 #include "obj.h"
 #include "small_vector.h"
 #include <algorithm>
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -47,16 +47,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -93,8 +94,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -106,38 +107,38 @@ public:
   bool existsb(F0 &&f) const {
     const List<A> *_self = this;
 
-    /// _Enter: captures varying parameters for each recursive call.
-    struct _Enter {
+    /// CraneEnter: captures varying parameters for each recursive call.
+    struct CraneEnter {
       const List<A> *_self;
     };
 
-    /// _Cont_Cons: saves [a0], resumes after recursive call, then processes
+    /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
     /// rest.
-    struct _Cont_Cons {
+    struct CraneCont_Cons {
       A a0;
     };
 
-    using _Frame = std::variant<_Enter, _Cont_Cons>;
+    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
     bool _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{_self});
-    /// Loopified existsb: _Enter -> _Cont_Cons.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{_self});
+    /// Loopified existsb: CraneEnter -> CraneCont_Cons.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = false;
         } else {
           const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-          _stack.emplace_back(_Cont_Cons{a0});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
+          _stack.emplace_back(CraneCont_Cons{a0});
+          _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
         auto a0 = std::move(_f.a0);
         _result = (f(a0) || std::move(_result));
       }
@@ -167,38 +168,38 @@ public:
   List<T1> flat_map(F0 &&f) const {
     const List<A> *_self = this;
 
-    /// _Enter: captures varying parameters for each recursive call.
-    struct _Enter {
+    /// CraneEnter: captures varying parameters for each recursive call.
+    struct CraneEnter {
       const List<A> *_self;
     };
 
-    /// _Cont_Cons: saves [a0], resumes after recursive call, then processes
+    /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
     /// rest.
-    struct _Cont_Cons {
+    struct CraneCont_Cons {
       A a0;
     };
 
-    using _Frame = std::variant<_Enter, _Cont_Cons>;
+    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
     List<T1> _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{_self});
-    /// Loopified flat_map: _Enter -> _Cont_Cons.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{_self});
+    /// Loopified flat_map: CraneEnter -> CraneCont_Cons.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = List<T1>::nil();
         } else {
           const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-          _stack.emplace_back(_Cont_Cons{a0});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
+          _stack.emplace_back(CraneCont_Cons{a0});
+          _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
         auto a0 = std::move(_f.a0);
         _result = f(a0).app(std::move(_result));
       }
@@ -209,35 +210,35 @@ public:
   uint64_t length() const {
     const List<A> *_self = this;
 
-    /// _Enter: captures varying parameters for each recursive call.
-    struct _Enter {
+    /// CraneEnter: captures varying parameters for each recursive call.
+    struct CraneEnter {
       const List<A> *_self;
     };
 
-    /// _Cont_Cons: resumes after recursive call, then processes rest.
-    struct _Cont_Cons {};
+    /// CraneCont_Cons: resumes after recursive call, then processes rest.
+    struct CraneCont_Cons {};
 
-    using _Frame = std::variant<_Enter, _Cont_Cons>;
+    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
     uint64_t _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{_self});
-    /// Loopified length: _Enter -> _Cont_Cons.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{_self});
+    /// Loopified length: CraneEnter -> CraneCont_Cons.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = UINT64_C(0);
         } else {
           const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-          _stack.emplace_back(_Cont_Cons{});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
+          _stack.emplace_back(CraneCont_Cons{});
+          _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
         _result = (std::move(_result) + 1);
       }
     }

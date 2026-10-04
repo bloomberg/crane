@@ -12,8 +12,6 @@
 #include <utility>
 #include <variant>
 
-using namespace std::string_literals;
-
 struct EffectBindAction {
   /// 1. Bool match inside bind action: one branch block template
   static std::string conditional_read(bool use_stdin);

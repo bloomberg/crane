@@ -130,10 +130,10 @@ let kn_of_ind =
     @param i  zero-based field index, used as a fallback suffix when no named
               field ref exists
     @return a [Pp.t] for the field name, either from its [GlobRef] or as
-            [<type>__<i>] *)
+            [<type>_field<i>] *)
 let pp_one_field r i = function
   | Some r' -> pp_global_with_key Term (kn_of_ind (get_ind r)) r'
-  | None -> pp_global Type (get_ind r) ++ str "__" ++ int i
+  | None -> pp_global Type (get_ind r) ++ str "_field" ++ int i
 
 (** Pretty-print the [i]-th record field.
     @param r      the inductive reference owning the record

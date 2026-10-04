@@ -29,7 +29,8 @@ From Crane Require Export Mapping.Std.
 Crane Extract Inductive nat =>
   "uint64_t"
   [ "0" "(%a0 + 1)" ]
-  "if (%scrut <= 0) { %br0 } else { uint64_t %b1a0 = %scrut - 1; %br1 }".
+  "if (%scrut <= 0) { %br0 } else { uint64_t %b1a0 = %scrut - 1; %br1 }"
+  From "cstdint".
 
 Crane Extract Numeral nat => "UINT64_C(%n)".
 

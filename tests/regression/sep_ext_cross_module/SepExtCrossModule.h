@@ -1,6 +1,8 @@
 #ifndef INCLUDED_SEPEXTCROSSMODULE
 #define INCLUDED_SEPEXTCROSSMODULE
 
+#include <cstdint>
+
 #include "Datatypes.h"
 #include "List.h"
 

@@ -2,6 +2,7 @@
 #define INCLUDED_REUSE_TAG_MISMATCH
 
 #include <atomic>
+#include <cstdint>
 #include <type_traits>
 #include <utility>
 #include <variant>

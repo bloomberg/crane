@@ -2,6 +2,7 @@
 #define INCLUDED_SECTIONS_MODULES
 
 #include <concepts>
+#include <cstdint>
 #include <utility>
 
 template <typename M>

@@ -2,6 +2,7 @@
 #define INCLUDED_TODO_WITH_MODULE_CONSTRAINT
 
 #include <concepts>
+#include <cstdint>
 
 template <typename M>
 concept INNER = requires {

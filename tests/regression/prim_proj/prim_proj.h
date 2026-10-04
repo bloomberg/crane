@@ -1,6 +1,8 @@
 #ifndef INCLUDED_PRIM_PROJ
 #define INCLUDED_PRIM_PROJ
 
+#include <cstdint>
+
 struct PrimProj {
   struct point {
     uint64_t px;

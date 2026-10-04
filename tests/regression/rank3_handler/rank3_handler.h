@@ -3,7 +3,6 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <memory>
 #include <stdexcept>
@@ -61,8 +60,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -92,13 +91,15 @@ public:
 
   explicit Option(None _v) : v_(_v) {}
 
-  template <typename _U>
-  Option(const Option<_U> &_other)
+  template <typename CraneU>
+  Option(const Option<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Option<_U>::Some>(_other.v())) {
-            const auto &[a] = std::get<typename Option<_U>::Some>(_other.v());
+          if (std::holds_alternative<typename Option<CraneU>::Some>(
+                  _other.v())) {
+            const auto &[a] =
+                std::get<typename Option<CraneU>::Some>(_other.v());
             return Some{[&]() -> A {
-              if constexpr (crane_convertible<A, const _U &>) {
+              if constexpr (crane_convertible<A, const CraneU &>) {
                 return crane_convert<A>(a);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -136,10 +137,10 @@ template <typename X> struct ReqA {
   // ACCESSORS
   ReqA<X> clone() const { return {a0}; }
 
-  template <typename _U> operator ReqA<_U>() const {
-    return {[&]() -> _U {
-      if constexpr (crane_convertible<_U, const X &>) {
-        return crane_convert<_U>(a0);
+  template <typename CraneU> operator ReqA<CraneU>() const {
+    return {[&]() -> CraneU {
+      if constexpr (crane_convertible<CraneU, const X &>) {
+        return crane_convert<CraneU>(a0);
       } else {
         throw std::logic_error(
             "unreachable: inactive constructor field at this instantiation");
@@ -181,9 +182,9 @@ template <typename F0> Option<Nat> useTwice(F0 &&f) {
 
 /// Rank 3: its own argument takes a handler.
 template <typename F0> Option<Nat> runWith(F0 &&k) {
-  return k([]<typename _X>(const ReqA<_X> &a) {
+  return k([]<typename CraneX>(const ReqA<CraneX> &a) {
     const auto &[a0] = a;
-    return Option<_X>::some(a0);
+    return Option<CraneX>::some(a0);
   });
 }
 
@@ -191,9 +192,9 @@ template <typename F0> Option<Nat> runWith(F0 &&k) {
 /// supplies is the same polymorphic function object, and only the consumer's
 /// result differs.
 template <typename F0> Option<Bool0> runWith2(F0 &&k) {
-  return k([]<typename _X>(const ReqA<_X> &a) {
+  return k([]<typename CraneX>(const ReqA<CraneX> &a) {
     const auto &[a0] = a;
-    return Option<_X>::some(a0);
+    return Option<CraneX>::some(a0);
   });
 }
 

@@ -4,9 +4,9 @@
 #include "fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
 #include <concepts>
+#include <cstdint>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -160,8 +160,8 @@ struct Equations {
 
     gcd_graph(const gcd_graph &) = default;
     gcd_graph &operator=(const gcd_graph &) = default;
-    gcd_graph(gcd_graph &&) noexcept = default;
-    gcd_graph &operator=(gcd_graph &&) noexcept = default;
+    gcd_graph(gcd_graph &&) = default;
+    gcd_graph &operator=(gcd_graph &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -256,8 +256,8 @@ struct Equations {
 
     gcd_clause_3_graph(const gcd_clause_3_graph &) = default;
     gcd_clause_3_graph &operator=(const gcd_clause_3_graph &) = default;
-    gcd_clause_3_graph(gcd_clause_3_graph &&) noexcept = default;
-    gcd_clause_3_graph &operator=(gcd_clause_3_graph &&) noexcept = default;
+    gcd_clause_3_graph(gcd_clause_3_graph &&) = default;
+    gcd_clause_3_graph &operator=(gcd_clause_3_graph &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -612,8 +612,8 @@ struct Equations {
 
     collatz_steps_graph(const collatz_steps_graph &) = default;
     collatz_steps_graph &operator=(const collatz_steps_graph &) = default;
-    collatz_steps_graph(collatz_steps_graph &&) noexcept = default;
-    collatz_steps_graph &operator=(collatz_steps_graph &&) noexcept = default;
+    collatz_steps_graph(collatz_steps_graph &&) = default;
+    collatz_steps_graph &operator=(collatz_steps_graph &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -718,10 +718,9 @@ struct Equations {
         default;
     collatz_steps_clause_3_graph &
     operator=(const collatz_steps_clause_3_graph &) = default;
-    collatz_steps_clause_3_graph(collatz_steps_clause_3_graph &&) noexcept =
-        default;
+    collatz_steps_clause_3_graph(collatz_steps_clause_3_graph &&) = default;
     collatz_steps_clause_3_graph &
-    operator=(collatz_steps_clause_3_graph &&) noexcept = default;
+    operator=(collatz_steps_clause_3_graph &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 

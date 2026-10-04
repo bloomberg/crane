@@ -4,8 +4,8 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -35,15 +35,15 @@ struct UserOptionWrapper {
 
     explicit opt(So _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    opt(const opt<_U> &_other)
+    template <typename CraneU>
+    opt(const opt<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename opt<_U>::Non>(_other.v())) {
+            if (std::holds_alternative<typename opt<CraneU>::Non>(_other.v())) {
               return Non{};
             } else {
-              const auto &[a0] = std::get<typename opt<_U>::So>(_other.v());
+              const auto &[a0] = std::get<typename opt<CraneU>::So>(_other.v());
               return So{[&]() -> A {
-                if constexpr (crane_convertible<A, const _U &>) {
+                if constexpr (crane_convertible<A, const CraneU &>) {
                   return crane_convert<A>(a0);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
@@ -137,8 +137,8 @@ struct UserOptionWrapper {
 
     t(const t &) = default;
     t &operator=(const t &) = default;
-    t(t &&) noexcept = default;
-    t &operator=(t &&) noexcept = default;
+    t(t &&) = default;
+    t &operator=(t &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 

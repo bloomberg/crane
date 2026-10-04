@@ -10,8 +10,6 @@
 #include <utility>
 #include <variant>
 
-using namespace std::string_literals;
-
 struct UnitMonostateErase {
   /// --- Example 1: sequenced if returning unit ---
   ///

@@ -2,6 +2,7 @@
 #define INCLUDED_FIX_CAPTURE_FN_ARG
 
 #include "fn.h"
+#include <cstdint>
 #include <utility>
 
 struct FixCaptureFnArg {

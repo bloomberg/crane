@@ -3,7 +3,6 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <memory>
 #include <stdexcept>
@@ -59,8 +58,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -92,15 +91,16 @@ public:
 
   explicit T(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  T(const T<_U> &_other)
+  template <typename CraneU>
+  T(const T<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename T<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename T<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[h, n, a2] = std::get<typename T<_U>::Cons>(_other.v());
+            const auto &[h, n, a2] =
+                std::get<typename T<CraneU>::Cons>(_other.v());
             return Cons{[&]() -> A {
-                          if constexpr (crane_convertible<A, const _U &>) {
+                          if constexpr (crane_convertible<A, const CraneU &>) {
                             return crane_convert<A>(h);
                           } else {
                             throw std::logic_error(

@@ -2,7 +2,6 @@
 #define INCLUDED_DEPENDENT_RETURN_UNIT_PROBE
 
 #include "obj.h"
-#include <any>
 #include <utility>
 
 enum class Unit;

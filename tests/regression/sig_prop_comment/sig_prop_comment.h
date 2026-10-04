@@ -3,8 +3,8 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -20,10 +20,10 @@ template <typename A> struct Sig {
   // ACCESSORS
   Sig<A> clone() const { return {x}; }
 
-  template <typename _U> operator Sig<_U>() const {
-    return {[&]() -> _U {
-      if constexpr (crane_convertible<_U, const A &>) {
-        return crane_convert<_U>(x);
+  template <typename CraneU> operator Sig<CraneU>() const {
+    return {[&]() -> CraneU {
+      if constexpr (crane_convertible<CraneU, const A &>) {
+        return crane_convert<CraneU>(x);
       } else {
         throw std::logic_error(
             "unreachable: inactive constructor field at this instantiation");
@@ -84,8 +84,8 @@ struct SigSubset {
 
     lst(const lst &) = default;
     lst &operator=(const lst &) = default;
-    lst(lst &&) noexcept = default;
-    lst &operator=(lst &&) noexcept = default;
+    lst(lst &&) = default;
+    lst &operator=(lst &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 

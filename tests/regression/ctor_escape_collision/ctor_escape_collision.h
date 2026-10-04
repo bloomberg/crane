@@ -1,10 +1,11 @@
 #ifndef INCLUDED_CTOR_ESCAPE_COLLISION
 #define INCLUDED_CTOR_ESCAPE_COLLISION
 
+#include <cstdint>
 #include <utility>
 
 struct CtorEscapeCollision {
-  enum class Item { D_, D_0, D__, D__0, D__1, D__2 };
+  enum class Item { D_, D_0, D_P, D_P0, D_P1, D_P2 };
 
   template <typename T1>
   static T1 item_rect(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, Item i) {
@@ -15,16 +16,16 @@ struct CtorEscapeCollision {
     case Item::D_0: {
       return f0;
     }
-    case Item::D__: {
+    case Item::D_P: {
       return f1;
     }
-    case Item::D__0: {
+    case Item::D_P0: {
       return f2;
     }
-    case Item::D__1: {
+    case Item::D_P1: {
       return f3;
     }
-    case Item::D__2: {
+    case Item::D_P2: {
       return f4;
     }
     default:
@@ -41,16 +42,16 @@ struct CtorEscapeCollision {
     case Item::D_0: {
       return f0;
     }
-    case Item::D__: {
+    case Item::D_P: {
       return f1;
     }
-    case Item::D__0: {
+    case Item::D_P0: {
       return f2;
     }
-    case Item::D__1: {
+    case Item::D_P1: {
       return f3;
     }
-    case Item::D__2: {
+    case Item::D_P2: {
       return f4;
     }
     default:
@@ -60,10 +61,10 @@ struct CtorEscapeCollision {
 
   static uint64_t tag(Item x);
   static inline const uint64_t t =
-      (((((tag(Item::D_) + tag(Item::D_0)) + tag(Item::D__)) +
-         tag(Item::D__0)) +
-        tag(Item::D__1)) +
-       tag(Item::D__2));
+      (((((tag(Item::D_) + tag(Item::D_0)) + tag(Item::D_P)) +
+         tag(Item::D_P0)) +
+        tag(Item::D_P1)) +
+       tag(Item::D_P2));
 };
 
 #endif // INCLUDED_CTOR_ESCAPE_COLLISION

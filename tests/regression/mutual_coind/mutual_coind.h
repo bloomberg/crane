@@ -5,8 +5,8 @@
 #include "fn.h"
 #include "lazy.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <utility>
@@ -37,16 +37,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -83,8 +84,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -98,10 +99,10 @@ struct MutualCoind {
 
   template <typename A> struct streamA {
     // TYPES
-    template <typename _S0 = streamA<A>, typename _S1 = streamB<A>>
+    template <typename CraneS0 = streamA<A>, typename CraneS1 = streamB<A>>
     struct ConsA_ {
       A a0;
-      _S1 a1;
+      CraneS1 a1;
     };
 
     using ConsA = ConsA_<>;
@@ -118,22 +119,23 @@ struct MutualCoind {
     explicit streamA(ConsA _v)
         : lazy_v_(crane::lazy<variant_t>(variant_t(std::move(_v)))) {}
 
-    template <typename _U>
-    streamA(const streamA<_U> &_other)
+    template <typename CraneU>
+    streamA(const streamA<CraneU> &_other)
         : lazy_v_(crane::lazy<variant_t>::converted_from(
               _other.lazy_cell(), [=]() -> variant_t {
                 const auto &[a0, a1] =
-                    std::get<typename streamA<_U>::ConsA>(_other.v());
-                return ConsA{[&]() -> A {
-                               if constexpr (crane_convertible<A, const _U &>) {
-                                 return crane_convert<A>(a0);
-                               } else {
-                                 throw std::logic_error(
-                                     "unreachable: inactive constructor field "
-                                     "at this instantiation");
-                               }
-                             }(),
-                             crane_convert<streamB<A>>(a1)};
+                    std::get<typename streamA<CraneU>::ConsA>(_other.v());
+                return ConsA{
+                    [&]() -> A {
+                      if constexpr (crane_convertible<A, const CraneU &>) {
+                        return crane_convert<A>(a0);
+                      } else {
+                        throw std::logic_error(
+                            "unreachable: inactive constructor field at this "
+                            "instantiation");
+                      }
+                    }(),
+                    crane_convert<streamB<A>>(a1)};
               })) {}
 
     explicit streamA(crane::fn<variant_t()> _thunk)
@@ -160,10 +162,10 @@ struct MutualCoind {
 
   template <typename A> struct streamB {
     // TYPES
-    template <typename _S0 = streamB<A>, typename _S1 = streamA<A>>
+    template <typename CraneS0 = streamB<A>, typename CraneS1 = streamA<A>>
     struct ConsB_ {
       A a0;
-      _S1 a1;
+      CraneS1 a1;
     };
 
     using ConsB = ConsB_<>;
@@ -180,22 +182,23 @@ struct MutualCoind {
     explicit streamB(ConsB _v)
         : lazy_v_(crane::lazy<variant_t>(variant_t(std::move(_v)))) {}
 
-    template <typename _U>
-    streamB(const streamB<_U> &_other)
+    template <typename CraneU>
+    streamB(const streamB<CraneU> &_other)
         : lazy_v_(crane::lazy<variant_t>::converted_from(
               _other.lazy_cell(), [=]() -> variant_t {
                 const auto &[a0, a1] =
-                    std::get<typename streamB<_U>::ConsB>(_other.v());
-                return ConsB{[&]() -> A {
-                               if constexpr (crane_convertible<A, const _U &>) {
-                                 return crane_convert<A>(a0);
-                               } else {
-                                 throw std::logic_error(
-                                     "unreachable: inactive constructor field "
-                                     "at this instantiation");
-                               }
-                             }(),
-                             crane_convert<streamA<A>>(a1)};
+                    std::get<typename streamB<CraneU>::ConsB>(_other.v());
+                return ConsB{
+                    [&]() -> A {
+                      if constexpr (crane_convertible<A, const CraneU &>) {
+                        return crane_convert<A>(a0);
+                      } else {
+                        throw std::logic_error(
+                            "unreachable: inactive constructor field at this "
+                            "instantiation");
+                      }
+                    }(),
+                    crane_convert<streamA<A>>(a1)};
               })) {}
 
     explicit streamB(crane::fn<variant_t()> _thunk)

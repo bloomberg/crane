@@ -3,7 +3,6 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <crane_itree.h>
@@ -70,8 +69,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -103,14 +102,15 @@ public:
 
   explicit Sum(Inr _v) : v_(std::move(_v)) {}
 
-  template <typename _U0, typename _U1>
-  Sum(const Sum<_U0, _U1> &_other)
+  template <typename CraneU0, typename CraneU1>
+  Sum(const Sum<CraneU0, CraneU1> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Sum<_U0, _U1>::Inl>(_other.v())) {
+          if (std::holds_alternative<typename Sum<CraneU0, CraneU1>::Inl>(
+                  _other.v())) {
             const auto &[a0] =
-                std::get<typename Sum<_U0, _U1>::Inl>(_other.v());
+                std::get<typename Sum<CraneU0, CraneU1>::Inl>(_other.v());
             return Inl{[&]() -> A {
-              if constexpr (crane_convertible<A, const _U0 &>) {
+              if constexpr (crane_convertible<A, const CraneU0 &>) {
                 return crane_convert<A>(a0);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -119,9 +119,9 @@ public:
             }()};
           } else {
             const auto &[a0] =
-                std::get<typename Sum<_U0, _U1>::Inr>(_other.v());
+                std::get<typename Sum<CraneU0, CraneU1>::Inr>(_other.v());
             return Inr{[&]() -> B {
-              if constexpr (crane_convertible<B, const _U1 &>) {
+              if constexpr (crane_convertible<B, const CraneU1 &>) {
                 return crane_convert<B>(a0);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -165,13 +165,15 @@ struct Denot {
 
     explicit dvalue(DU _v) : v_(_v) {}
 
-    template <typename _U>
-    dvalue(const dvalue<_U> &_other)
+    template <typename CraneU>
+    dvalue(const dvalue<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename dvalue<_U>::DP>(_other.v())) {
-              const auto &[a0] = std::get<typename dvalue<_U>::DP>(_other.v());
+            if (std::holds_alternative<typename dvalue<CraneU>::DP>(
+                    _other.v())) {
+              const auto &[a0] =
+                  std::get<typename dvalue<CraneU>::DP>(_other.v());
               return DP{[&]() -> ptr {
-                if constexpr (crane_convertible<ptr, const _U &>) {
+                if constexpr (crane_convertible<ptr, const CraneU &>) {
                   return crane_convert<ptr>(a0);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
@@ -203,7 +205,7 @@ struct Denot {
     // ACCESSORS
     FailE<ptr> clone() const { return {a0}; }
 
-    template <typename _U> operator FailE<_U>() const { return {a0}; }
+    template <typename CraneU> operator FailE<CraneU>() const { return {a0}; }
 
     // CREATORS
     static FailE<ptr> fail(dvalue<ptr> a0) { return {std::move(a0)}; }

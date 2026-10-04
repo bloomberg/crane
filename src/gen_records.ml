@@ -157,7 +157,7 @@ let gen_typeclass_cpp name fields ind =
                             then Id.to_string (Common.tparam_name x)
                             else "") ind.ip_vars
     in
-    if List.mem "I" param_names then Id.of_string "_Inst"
+    if List.mem "I" param_names then Generated_name.id "Inst"
     else Id.of_string "I"
   in
   (* Split ip_vars into param vars (real type params) and promoted vars

@@ -2,6 +2,7 @@
 #define INCLUDED_CROSS_UNIT_DUPLICATE_SYMBOL
 
 #include <cross_unit_duplicate_symbol_lib.h>
+#include <cstdint>
 
 struct Use {
   static inline const Lib::lst two =

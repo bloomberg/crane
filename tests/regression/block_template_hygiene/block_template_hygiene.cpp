@@ -7,7 +7,7 @@ std::string BlockTemplateHygiene::same_name_twice() {
   std::getline(std::cin, _x);
   std::string s;
   std::getline(std::cin, s);
-  return s + " (second)"s;
+  return s + std::string(" (second)");
 }
 
 /// Test 2: Three consecutive get_line calls, all named s.
@@ -19,7 +19,7 @@ std::string BlockTemplateHygiene::same_name_thrice() {
   std::getline(std::cin, _x0);
   std::string s;
   std::getline(std::cin, s);
-  return s + " (third)"s;
+  return s + std::string(" (third)");
 }
 
 /// Test 3: get_line with bind name s — the exact variable name that the old
@@ -31,7 +31,7 @@ std::string BlockTemplateHygiene::same_name_thrice() {
 std::string BlockTemplateHygiene::shadow_internal_name() {
   std::string s;
   std::getline(std::cin, s);
-  return s + "!"s;
+  return s + std::string("!");
 }
 
 /// Test 4: Multiple different block templates in the same scope.
@@ -54,10 +54,10 @@ std::string BlockTemplateHygiene::interleaved_templates() {
 std::string BlockTemplateHygiene::block_with_args() {
   std::string s;
   {
-    std::ifstream _f("data.txt"s);
+    std::ifstream _f(std::string("data.txt"));
     std::getline(_f, s);
   };
-  return s + " read"s;
+  return s + std::string(" read");
 }
 
 /// Test 6: Multiple block templates with %a0, same binder name.
@@ -65,15 +65,15 @@ std::string BlockTemplateHygiene::block_with_args() {
 std::string BlockTemplateHygiene::block_with_args_same_name() {
   std::string _x;
   {
-    std::ifstream _f("a.txt"s);
+    std::ifstream _f(std::string("a.txt"));
     std::getline(_f, _x);
   };
   std::string s;
   {
-    std::ifstream _f("b.txt"s);
+    std::ifstream _f(std::string("b.txt"));
     std::getline(_f, s);
   };
-  return s + " done"s;
+  return s + std::string(" done");
 }
 
 /// Test 7: Block template result used as an argument to another call.
@@ -82,7 +82,7 @@ std::string BlockTemplateHygiene::block_with_args_same_name() {
 void BlockTemplateHygiene::result_in_expr() {
   std::string name;
   std::getline(std::cin, name);
-  std::cout << "Hello, "s + name << '\n';
+  std::cout << std::string("Hello, ") + name << '\n';
   return;
 }
 
@@ -94,7 +94,7 @@ std::string BlockTemplateHygiene::let_after_block() {
   std::getline(std::cin, first);
   std::string last;
   std::getline(std::cin, last);
-  std::string full = std::move(first) + " "s + std::move(last);
+  std::string full = std::move(first) + std::string(" ") + std::move(last);
   return full;
 }
 
@@ -104,7 +104,7 @@ std::string BlockTemplateHygiene::let_after_block() {
 std::string BlockTemplateHygiene::bind_named_result() {
   std::string result;
   std::getline(std::cin, result);
-  return result + "!"s;
+  return result + std::string("!");
 }
 
 /// Test 10: get_line bound to the name _r — the internal IIFE
@@ -113,7 +113,7 @@ std::string BlockTemplateHygiene::bind_named_result() {
 std::string BlockTemplateHygiene::bind_named_underscore_r() {
   std::string r_;
   std::getline(std::cin, r_);
-  return r_ + "!"s;
+  return r_ + std::string("!");
 }
 
 /// Test 11: Block template in pure expression position (not in bind).

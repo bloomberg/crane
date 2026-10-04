@@ -4,8 +4,8 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -18,10 +18,10 @@ struct RecordMediatedDrain {
     A tl;
 
     // ACCESSORS
-    template <typename _U> operator cell<_U>() const {
-      return {hd, [&]() -> _U {
-                if constexpr (crane_convertible<_U, const A &>) {
-                  return crane_convert<_U>(tl);
+    template <typename CraneU> operator cell<CraneU>() const {
+      return {hd, [&]() -> CraneU {
+                if constexpr (crane_convertible<CraneU, const A &>) {
+                  return crane_convert<CraneU>(tl);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
                                          "field at this instantiation");
@@ -83,8 +83,8 @@ struct RecordMediatedDrain {
 
     t(const t &) = default;
     t &operator=(const t &) = default;
-    t(t &&) noexcept = default;
-    t &operator=(t &&) noexcept = default;
+    t(t &&) = default;
+    t &operator=(t &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 

@@ -2,6 +2,7 @@
 #define INCLUDED_REUSE_USE_AFTER_MOVE
 
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -61,8 +62,8 @@ struct ReuseUseAfterMove {
 
     mylist(const mylist &) = default;
     mylist &operator=(const mylist &) = default;
-    mylist(mylist &&) noexcept = default;
-    mylist &operator=(mylist &&) noexcept = default;
+    mylist(mylist &&) = default;
+    mylist &operator=(mylist &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 

@@ -3,7 +3,6 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <memory>
 #include <optional>
@@ -57,8 +56,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -89,8 +88,8 @@ struct TypeAliasAppliedCtorParam {
     // ACCESSORS
     holder<F> clone() const { return {a0}; }
 
-    template <typename _U> operator holder<_U>() const {
-      return {crane_convert<ap<_U, Nat>>(a0)};
+    template <typename CraneU> operator holder<CraneU>() const {
+      return {crane_convert<ap<CraneU, Nat>>(a0)};
     }
 
     // CREATORS

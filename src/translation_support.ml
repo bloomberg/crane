@@ -34,7 +34,7 @@ let factory_name_of_ctor ?(type_name = "") ctor_struct_name =
     || lc = String.lowercase_ascii type_name
     || Id.Set.mem (Id.of_string lc) Common.inductive_generated_members
   in
-  if collides then ctor_struct_name ^ "_"
+  if collides then Generated_name.separate_underscores (ctor_struct_name ^ "_")
   else lc
 
 (** The type a never-returning expression is spelled with, given whatever type
@@ -346,7 +346,7 @@ let mk_tt_expr () =
       match tt_ref with
       | GlobRef.ConstructRef ((kn, i), cidx) ->
         ( GlobRef.IndRef (kn, i),
-          Id.of_string (Table.enum_ctor_name_of_ref kn i cidx) )
+          Id.of_string (Common.enum_ctor_name_of_ref kn i cidx) )
       | _ ->
         CErrors.anomaly (Pp.str "mk_tt_expr: tt is not a ConstructRef")
     in
@@ -551,7 +551,7 @@ let build_guard_compare_stmts n ids =
         match ctor_ref with
         | GlobRef.ConstructRef ((kn, i), cidx)
           when Table.is_enum_inductive (GlobRef.IndRef (kn, i)) ->
-          let ctor_name = Id.of_string (Table.enum_ctor_name_of_ref kn i cidx) in
+          let ctor_name = Id.of_string (Common.enum_ctor_name_of_ref kn i cidx) in
           CPPenum_val (GlobRef.IndRef (kn, i), ctor_name)
         | GlobRef.ConstructRef ((kn, i), _cidx) ->
           (* Parametric constructor (e.g. [OrderedType.EQ : eq x y -> Compare
@@ -931,7 +931,7 @@ let gen_type_conversion_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
   let naming_expr ~lambda_ty ~body =
     if is_access_path expr then body expr
     else
-      let x = Id.of_string "__x" in
+      let x = Id.of_string "_named" in
       mk_call
         (mk_lambda
            [(rval_ref Tauto, Some x)]
@@ -1005,7 +1005,7 @@ let gen_type_conversion_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
          [U] may be [std::any], and [pair<K,V>] has no constructor from one --
          nor from [pair<any,any>], which is how a pair's components are boxed
          one at a time.  Dispatch at compile time instead. *)
-      require_header "any";
+      require_obj_header ();
       if not (is_access_path expr) then
         Cpp_erasure.converting_ctor orig_dst_ty [expr]
       else begin

@@ -1,6 +1,7 @@
 #ifndef INCLUDED_MODULE_ALIAS_FACTORY_NAME
 #define INCLUDED_MODULE_ALIAS_FACTORY_NAME
 
+#include <cstdint>
 #include <type_traits>
 #include <variant>
 

@@ -30,15 +30,9 @@ open Loopify_analysis
       return _result;
     ]} *)
 
-(** Create a shadow variable name for tail-recursion loop variables.
-    Prefixes [id] with [_loop_], avoiding C++'s reserved double-underscore. *)
-let shadow_name (id : Id.t) : Id.t =
-  let s = Id.to_string id in
-  (* Avoid double underscores (reserved in C++): _loop_ + _self → _loop_self *)
-  if String.length s > 0 && s.[0] = '_' then
-    Id.of_string ("_loop" ^ s)
-  else
-    Id.of_string ("_loop_" ^ s)
+(** Create a shadow variable name for tail-recursion loop variables:
+    [_loop_x], or [_loop_self] for [_self]. *)
+let shadow_name (id : Id.t) : Id.t = Generated_name.prefixed "_loop" id
 
 (** Strip reference and const modifiers from a type, converting it to a value
     type suitable for local variable declarations. [const shared_ptr<T> &]
@@ -470,11 +464,7 @@ let make_shadow_updates shadow_params args =
         else
           s
       in
-      (* Avoid double underscores (reserved in C++) *)
-      if String.length base > 0 && base.[0] = '_' then
-        Id.of_string ("_next" ^ base)
-      else
-        Id.of_string ("_next_" ^ base)
+      Generated_name.prefixed "_next" (Id.of_string base)
     in
     (* Phase 1: emit temp declarations for hazardous variables, and direct
        assignments for non-hazardous ones. *)
@@ -1112,6 +1102,6 @@ let transform_tail ?(param_inits = []) tparams check params ret_ty body =
 
 (* {2 Non-tail recursion transformation}
 
-   Non-tail recursion uses a frame-based stack with [_Enter] and continuation
+   Non-tail recursion uses a frame-based stack with [CraneEnter] and continuation
    variants and a dispatch loop; see {!transform_nontail}. *)
 

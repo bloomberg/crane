@@ -3,6 +3,7 @@
 
 #include "crane_fn.h"
 #include "fn.h"
+#include <cstdint>
 #include <type_traits>
 #include <utility>
 

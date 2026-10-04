@@ -1,6 +1,7 @@
 #ifndef INCLUDED_JMS_BBL_ROUNDTRIP
 #define INCLUDED_JMS_BBL_ROUNDTRIP
 
+#include <cstdint>
 #include <utility>
 
 struct JmsBblRoundtrip {

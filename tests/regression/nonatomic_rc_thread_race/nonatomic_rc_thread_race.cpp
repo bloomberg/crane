@@ -40,7 +40,7 @@ void NonatomicRcThreadRace::worker(uint64_t n) {
     uint64_t k = n - 1;
     []() -> void {
       if (churn(UINT64_C(2000), shared) == UINT64_C(0)) {
-        std::cout << "unreachable"s << '\n';
+        std::cout << std::string("unreachable") << '\n';
         return;
       } else {
         return;

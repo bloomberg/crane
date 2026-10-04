@@ -1,6 +1,7 @@
 #ifndef INCLUDED_LAMBDA
 #define INCLUDED_LAMBDA
 
+#include <cstdint>
 #include <type_traits>
 
 struct Lambda {

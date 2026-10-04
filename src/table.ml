@@ -384,20 +384,41 @@ let raised_demands = ref CString.Set.empty
 
 let demands_frozen = ref false
 
-(** [mark_demand d] records that the file being generated needs [d]. *)
-let mark_demand (d : string) =
-  if not (CString.Set.mem d !raised_demands) then begin
+(* Add [d] to [set], which the preamble reads: an addition after the
+   preamble was written is one the file is missing. *)
+let raise_into set (d : string) =
+  if not (CString.Set.mem d !set) then begin
     if !demands_frozen && Sys.getenv_opt "CRANE_CHECK_IR" <> None then
       CErrors.user_err
         Pp.(
           str "Crane: demand '" ++ str d
           ++ str "' raised after the preamble was written.  The dry run did \
                   not reach the code that raised it." );
-    raised_demands := CString.Set.add d !raised_demands
+    set := CString.Set.add d !set
   end
 
+(** [mark_demand d] records that the file being generated needs [d]. *)
+let mark_demand (d : string) = raise_into raised_demands d
+
+(** A header a generated file includes: a standard one, written [<h>], or one
+    of Crane's runtime headers, written ["h"].  The two are demanded alike and
+    included differently, so the kind travels with the name. *)
+type header = Standard of string | Runtime of string
+
+(* The standard headers demanded, every one of which the preamble includes:
+   a fixed list to filter them through would silently drop the ones it does
+   not mention, which is how [<cstdint>] went missing. *)
+let standard_headers = ref CString.Set.empty
+
+let demand_header = function
+  | Standard h -> raise_into standard_headers h
+  | Runtime h -> mark_demand h
+
+let required_standard_headers () = CString.Set.elements !standard_headers
+
 let () =
-  register_census "demands" (fun () -> CString.Set.cardinal !raised_demands)
+  register_census "demands" (fun () ->
+      CString.Set.cardinal !raised_demands + CString.Set.cardinal !standard_headers)
 
 (** Whether [d] has been demanded for the file being generated. *)
 let demanded (d : string) = CString.Set.mem d !raised_demands
@@ -408,6 +429,7 @@ let demanded_list () = CString.Set.elements !raised_demands
 (** Start collecting demands afresh, for a new output file. *)
 let reset_demands () =
   raised_demands := CString.Set.empty;
+  standard_headers := CString.Set.empty;
   demands_frozen := false
 
 let () = on_reset reset_demands
@@ -418,9 +440,7 @@ let freeze_demands () = demands_frozen := true
 (* The named demands.  Standard-library headers are demanded by their own
    names, from [Common.require_header]; these are the rest. *)
 
-let mark_needs_string_literals () = mark_demand "string_literals"
 
-let needs_string_literals () = demanded "string_literals"
 
 (* The [crane_erase_fn] runtime helper adapts a concrete callable to the erased
    [std::function<std::any(std::any...)>] representation. *)
@@ -817,62 +837,11 @@ let has_dependent_params r =
 let {Goptions.get = std_lib} =
   declare_string_option_and_ref ~key:["Crane"; "StdLib"] ~value:"std" ()
 
-(** Compute the C++ enum constructor name for constructor [j] (1-based) of
-    inductive [(kn, i)].  Handles non-ASCII escaping, prime-to-underscore
-    conversion, and intra-enum collision avoidance identically to
-    {!Common.enum_ctor_names_of_packet}. *)
-let enum_ctor_name_of_ref kn i j =
-  let ascii_of_id id =
-    let s = Id.to_string id in
-    let b = Bytes.create (String.length s) in
-    for i = 0 to String.length s - 1 do
-      let c = Char.code s.[i] in
-      Bytes.set b i (if c < 128 then s.[i] else '_')
-    done;
-    Bytes.to_string b
-  in
-  let ctor_name s =
-    let upper = String.uppercase_ascii s in
-    if std_lib () = "BDE" then "e_" ^ upper
-    else if List.mem upper
-              [ "TRUE"; "FALSE"; "NULL"; "EOF"; "DOMAIN"; "OVERFLOW";
-                "UNDERFLOW"; "HUGE_VAL"; "ERANGE"; "STDIN"; "STDOUT"; "STDERR" ]
-    then upper ^ "_"
-    else upper
-  in
-  try
-    let ind = unsafe_lookup_ind kn in
-    let packet = ind.ind_packets.(i) in
-    let consnames = packet.ip_consnames in
-    let escaped =
-      Array.map
-        (fun id ->
-          let s = ascii_of_id id in
-          let s = String.map (fun c -> if c = '\'' then '_' else c) s in
-          ctor_name s)
-        consnames
-    in
-    let seen = Hashtbl.create (Array.length escaped) in
-    let result =
-      Array.map
-        (fun name ->
-          let final =
-            if Hashtbl.mem seen name then
-              let rec find_unique k =
-                let candidate = name ^ string_of_int k in
-                if Hashtbl.mem seen candidate then find_unique (k + 1)
-                else candidate
-              in
-              find_unique 0
-            else name
-          in
-          Hashtbl.replace seen final true;
-          final)
-        escaped
-    in
-    result.(j - 1)
-  with Not_found | Invalid_argument _ ->
-    ctor_name ("ctor" ^ string_of_int j)
+(** The constructor names of packet [i] of the extracted inductive [kn], in
+    declaration order, if it has been extracted. *)
+let ind_consnames kn i =
+  try Some (unsafe_lookup_ind kn).ind_packets.(i).ip_consnames
+  with Not_found | Invalid_argument _ -> None
 
 (** {2 Sigma assertion table} *)
 
@@ -1680,18 +1649,6 @@ let check_inside_section () =
       ( str "You can't do that within a section."
       ++ fnl ()
       ++ str "Close it and try again." )
-
-let warn_extraction_reserved_identifier =
-  CWarnings.create
-    ~name:"crane-extraction-reserved-identifier"
-    ~category:CWarnings.CoreCategories.extraction
-    (fun s ->
-    strbrk
-      ( "The identifier "
-      ^ s
-      ^ " contains __ which is reserved for the extraction" ) )
-
-let warning_id s = warn_extraction_reserved_identifier s
 
 let error_constant ?loc r =
   err ?loc (safe_pr_global r ++ str " is not a constant.")

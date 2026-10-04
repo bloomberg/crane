@@ -1,6 +1,8 @@
 #ifndef INCLUDED_PROP_ERASURE
 #define INCLUDED_PROP_ERASURE
 
+#include <cstdint>
+
 struct PropErasure {
   static uint64_t with_proof_arg(uint64_t n);
   static inline const uint64_t use_proof = with_proof_arg(UINT64_C(5));

@@ -2,6 +2,7 @@
 #define INCLUDED_MODULE_PARAM_CLASS_INSTANCE
 
 #include <concepts>
+#include <cstdint>
 #include <utility>
 
 /// A module-type Parameter whose type is a typeclass instance produces an

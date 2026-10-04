@@ -1,6 +1,7 @@
 #ifndef INCLUDED_REGION_MEMBERSHIP_BOUNDS
 #define INCLUDED_REGION_MEMBERSHIP_BOUNDS
 
+#include <cstdint>
 #include <utility>
 
 struct RegionMembershipBounds {

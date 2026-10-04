@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
 #include <memory>
 #include <stdexcept>
@@ -43,30 +42,32 @@ template <S X> struct HashTrie {
 
     explicit Trie(Node _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    Trie(const Trie<_U> &_other)
+    template <typename CraneU>
+    Trie(const Trie<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename Trie<_U>::Empty>(_other.v())) {
+            if (std::holds_alternative<typename Trie<CraneU>::Empty>(
+                    _other.v())) {
               return Empty{};
             } else {
               const auto &[k, v_1, left, right] =
-                  std::get<typename Trie<_U>::Node>(_other.v());
-              return Node{k,
-                          [&]() -> V {
-                            if constexpr (crane_convertible<V, const _U &>) {
-                              return crane_convert<V>(v_1);
-                            } else {
-                              throw std::logic_error(
-                                  "unreachable: inactive constructor field at "
-                                  "this instantiation");
-                            }
-                          }(),
-                          (left ? std::make_shared<Trie<V>>(
-                                      crane_convert<Trie<V>>(*left))
-                                : nullptr),
-                          (right ? std::make_shared<Trie<V>>(
-                                       crane_convert<Trie<V>>(*right))
-                                 : nullptr)};
+                  std::get<typename Trie<CraneU>::Node>(_other.v());
+              return Node{
+                  k,
+                  [&]() -> V {
+                    if constexpr (crane_convertible<V, const CraneU &>) {
+                      return crane_convert<V>(v_1);
+                    } else {
+                      throw std::logic_error(
+                          "unreachable: inactive constructor field at this "
+                          "instantiation");
+                    }
+                  }(),
+                  (left ? std::make_shared<Trie<V>>(
+                              crane_convert<Trie<V>>(*left))
+                        : nullptr),
+                  (right ? std::make_shared<Trie<V>>(
+                               crane_convert<Trie<V>>(*right))
+                         : nullptr)};
             }
           }()) {}
 
@@ -104,8 +105,8 @@ template <S X> struct HashTrie {
 
     Trie(const Trie &) = default;
     Trie &operator=(const Trie &) = default;
-    Trie(Trie &&) noexcept = default;
-    Trie &operator=(Trie &&) noexcept = default;
+    Trie(Trie &&) = default;
+    Trie &operator=(Trie &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 

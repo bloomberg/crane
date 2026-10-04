@@ -302,7 +302,7 @@ type std_names = {
   forward : string;
   logic_error : string;
   ns : string;
-  str_suffix : string;
+  string : string;  (** the string class a spliced literal is constructed as *)
   same_as : string;
   declval : string;
   convertible_to : string;
@@ -310,7 +310,7 @@ type std_names = {
   get_if : string;
   get : string;
   variant : string;  (** the tagged union inductives store alternatives in *)
-  variant_header : string;  (** the header declaring {!variant} *)
+  variant_header : Table.header;  (** the header declaring {!variant} *)
   enable_from_this : string;
 }
 

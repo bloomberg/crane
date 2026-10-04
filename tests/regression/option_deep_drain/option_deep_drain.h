@@ -3,6 +3,7 @@
 
 #include "small_vector.h"
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <type_traits>
@@ -62,8 +63,8 @@ struct OptionDeepDrain {
 
     chain(const chain &) = default;
     chain &operator=(const chain &) = default;
-    chain(chain &&) noexcept = default;
-    chain &operator=(chain &&) noexcept = default;
+    chain(chain &&) = default;
+    chain &operator=(chain &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 

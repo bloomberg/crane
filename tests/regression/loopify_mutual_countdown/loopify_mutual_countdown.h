@@ -1,6 +1,7 @@
 #ifndef INCLUDED_LOOPIFY_MUTUAL_COUNTDOWN
 #define INCLUDED_LOOPIFY_MUTUAL_COUNTDOWN
 
+#include <cstdint>
 #include <utility>
 
 struct LoopifyMutualCountdown {

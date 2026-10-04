@@ -3,7 +3,7 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
+#include <cstdint>
 #include <utility>
 
 /// A record field whose type is a `Type`-valued `Fixpoint` applied to a

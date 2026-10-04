@@ -3,7 +3,6 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <memory>
 #include <stdexcept>
@@ -41,18 +40,19 @@ template <OrderedType X> struct Make {
 
     explicit Fmap(Node _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    Fmap(const Fmap<_U> &_other)
+    template <typename CraneU>
+    Fmap(const Fmap<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename Fmap<_U>::Empty>(_other.v())) {
+            if (std::holds_alternative<typename Fmap<CraneU>::Empty>(
+                    _other.v())) {
               return Empty{};
             } else {
               const auto &[a0, a1, a2] =
-                  std::get<typename Fmap<_U>::Node>(_other.v());
+                  std::get<typename Fmap<CraneU>::Node>(_other.v());
               return Node{
                   a0,
                   [&]() -> A {
-                    if constexpr (crane_convertible<A, const _U &>) {
+                    if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a1);
                     } else {
                       throw std::logic_error(
@@ -91,8 +91,8 @@ template <OrderedType X> struct Make {
 
     Fmap(const Fmap &) = default;
     Fmap &operator=(const Fmap &) = default;
-    Fmap(Fmap &&) noexcept = default;
-    Fmap &operator=(Fmap &&) noexcept = default;
+    Fmap(Fmap &&) = default;
+    Fmap &operator=(Fmap &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 

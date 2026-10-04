@@ -2,6 +2,7 @@
 #define INCLUDED_IND_SHADOWS_GENERATED_MEMBERS
 
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -38,7 +39,7 @@ struct IndShadowsGeneratedMembers {
 
     static variant_t0 V_mut_(uint64_t a0) { return variant_t0(V_mut{a0}); }
 
-    static variant_t0 V__(variant_t0 a0) {
+    static variant_t0 V_p(variant_t0 a0) {
       return variant_t0(V_{std::make_shared<variant_t0>(std::move(a0))});
     }
 
@@ -61,8 +62,8 @@ struct IndShadowsGeneratedMembers {
 
     variant_t0(const variant_t0 &) = default;
     variant_t0 &operator=(const variant_t0 &) = default;
-    variant_t0(variant_t0 &&) noexcept = default;
-    variant_t0 &operator=(variant_t0 &&) noexcept = default;
+    variant_t0(variant_t0 &&) = default;
+    variant_t0 &operator=(variant_t0 &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -98,7 +99,7 @@ struct IndShadowsGeneratedMembers {
 
   static uint64_t depth(const variant_t0 &x);
   static inline const uint64_t run =
-      depth(variant_t0::V__(variant_t0::V__(variant_t0::V_mut_(UINT64_C(2)))));
+      depth(variant_t0::V_p(variant_t0::V_p(variant_t0::V_mut_(UINT64_C(2)))));
 };
 
 #endif // INCLUDED_IND_SHADOWS_GENERATED_MEMBERS

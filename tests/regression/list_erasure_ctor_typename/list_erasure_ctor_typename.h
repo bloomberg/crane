@@ -4,8 +4,8 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -36,18 +36,19 @@ struct List {
 
     explicit list(Cons _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    list(const typename List::template list<_U> &_other)
+    template <typename CraneU>
+    list(const typename List::template list<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename List::template list<_U>::Nil>(
-                    _other.v())) {
+            if (std::holds_alternative<
+                    typename List::template list<CraneU>::Nil>(_other.v())) {
               return Nil{};
             } else {
               const auto &[a, l] =
-                  std::get<typename List::template list<_U>::Cons>(_other.v());
+                  std::get<typename List::template list<CraneU>::Cons>(
+                      _other.v());
               return Cons{
                   [&]() -> A {
-                    if constexpr (crane_convertible<A, const _U &>) {
+                    if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a);
                     } else {
                       throw std::logic_error(
@@ -91,8 +92,8 @@ struct List {
 
     list(const list &) = default;
     list &operator=(const list &) = default;
-    list(list &&) noexcept = default;
-    list &operator=(list &&) noexcept = default;
+    list(list &&) = default;
+    list &operator=(list &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 

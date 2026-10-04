@@ -5,8 +5,8 @@
 #include "fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -38,16 +38,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -84,8 +85,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -249,37 +250,37 @@ struct LoopifyGenerators {
   /// different naming).
   static List<uint64_t> tabulate(uint64_t n, crane::fn<uint64_t(uint64_t)> f) {
     auto go_impl = [&](auto &, uint64_t i) -> List<uint64_t> {
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         uint64_t i;
       };
-      /// _Cont_j: saves [f, i, n], resumes after recursive call, then processes
-      /// rest.
-      struct _Cont_j {
+      /// CraneCont_j: saves [f, i, n], resumes after recursive call, then
+      /// processes rest.
+      struct CraneCont_j {
         crane::fn<uint64_t(uint64_t)> f;
         uint64_t i;
         uint64_t n;
       };
-      using _Frame = std::variant<_Enter, _Cont_j>;
+      using CraneFrame = std::variant<CraneEnter, CraneCont_j>;
       List<uint64_t> _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{i});
-      /// Loopified go: _Enter -> _Cont_j.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{i});
+      /// Loopified go: CraneEnter -> CraneCont_j.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           uint64_t i = _f.i;
           if (i <= 0) {
             _result = List<uint64_t>::nil();
           } else {
             uint64_t j = i - 1;
-            _stack.emplace_back(_Cont_j{f, i, n});
-            _stack.emplace_back(_Enter{j});
+            _stack.emplace_back(CraneCont_j{f, i, n});
+            _stack.emplace_back(CraneEnter{j});
           }
         } else {
-          auto _f = std::move(std::get<_Cont_j>(_frame));
+          auto _f = std::move(std::get<CraneCont_j>(_frame));
           crane::fn<uint64_t(uint64_t)> f = std::move(_f.f);
           uint64_t i = _f.i;
           uint64_t n = _f.n;

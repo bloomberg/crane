@@ -3,6 +3,7 @@
 
 #include "crane_fn.h"
 #include "fn.h"
+#include <cstdint>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -19,8 +20,8 @@ struct ParamInductiveFnInstantiation {
     // ACCESSORS
     endo<A> clone() const { return {a0}; }
 
-    template <typename _U> operator endo<_U>() const {
-      return {crane_convert<crane::fn<_U(_U)>>(a0)};
+    template <typename CraneU> operator endo<CraneU>() const {
+      return {crane_convert<crane::fn<CraneU(CraneU)>>(a0)};
     }
 
     // CREATORS

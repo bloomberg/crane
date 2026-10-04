@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <memory>
@@ -62,8 +61,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -158,16 +157,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -204,8 +204,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -285,8 +285,8 @@ struct LoopifyFixCapturesClassParam {
 
     tree(const tree &) = default;
     tree &operator=(const tree &) = default;
-    tree(tree &&) noexcept = default;
-    tree &operator=(tree &&) noexcept = default;
+    tree(tree &&) = default;
+    tree &operator=(tree &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -322,31 +322,30 @@ struct LoopifyFixCapturesClassParam {
 
   template <Sized _tcI0>
   static std::optional<Nat>
-  f(const tree &t,
-    const Nat
-        &i) { /// _Enter: captures varying parameters for each recursive call.
+  f(const tree &t, const Nat &i) { /// CraneEnter: captures varying parameters
+                                   /// for each recursive call.
 
-    struct _Enter {
+    struct CraneEnter {
       Nat i;
       tree t;
     };
 
-    /// _Enter_loop: captures varying parameters for each recursive call.
-    struct _Enter_loop {
+    /// CraneEnter_loop: captures varying parameters for each recursive call.
+    struct CraneEnter_loop {
       Nat k;
       List<tree> ts;
     };
 
-    using _Frame = std::variant<_Enter, _Enter_loop>;
+    using CraneFrame = std::variant<CraneEnter, CraneEnter_loop>;
     std::optional<Nat> _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{i, t});
-    /// Loopified f: _Enter.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{i, t});
+    /// Loopified f: CraneEnter.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const Nat &i = std::move(_f.i);
         const tree &t = std::move(_f.t);
         if (std::holds_alternative<typename tree::Leaf>(t.v())) {
@@ -354,10 +353,10 @@ struct LoopifyFixCapturesClassParam {
           _result = std::make_optional<Nat>(n0.add(i));
         } else {
           const auto &[ts0] = std::get<typename tree::Node>(t.v());
-          _stack.emplace_back(_Enter_loop{i, *ts0});
+          _stack.emplace_back(CraneEnter_loop{i, *ts0});
         }
       } else {
-        auto _f = std::move(std::get<_Enter_loop>(_frame));
+        auto _f = std::move(std::get<CraneEnter_loop>(_frame));
         const Nat &k = std::move(_f.k);
         const List<tree> &ts = std::move(_f.ts);
         if (std::holds_alternative<typename List<tree>::Nil>(ts.v())) {
@@ -365,10 +364,10 @@ struct LoopifyFixCapturesClassParam {
         } else {
           const auto &[a0, a1] = std::get<typename List<tree>::Cons>(ts.v());
           if (k.ltb(_tcI0::size(Nat::s(Nat::s(Nat::o()))))) {
-            _stack.emplace_back(_Enter{k, a0});
+            _stack.emplace_back(CraneEnter{k, a0});
           } else {
-            _stack.emplace_back(
-                _Enter_loop{k.sub(_tcI0::size(Nat::s(Nat::s(Nat::o())))), *a1});
+            _stack.emplace_back(CraneEnter_loop{
+                k.sub(_tcI0::size(Nat::s(Nat::s(Nat::o())))), *a1});
           }
         }
       }

@@ -9,8 +9,6 @@
 #include <system_error>
 #include <variant>
 
-using namespace std::string_literals;
-
 struct Greeter {
   static void greet();
 };

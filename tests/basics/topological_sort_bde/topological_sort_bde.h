@@ -5,7 +5,6 @@
 #include "fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
 #include <bsl_concepts.h>
 #include <bsl_functional.h>
@@ -21,8 +20,6 @@
 #include <utility>
 
 using namespace BloombergLP;
-using namespace bsl::string_literals;
-
 template <class From, class To>
 concept convertible_to = bsl::is_convertible<From, To>::value;
 
@@ -51,26 +48,26 @@ public:
   List() {}
   explicit List(Nil _v) : d_v_(_v) {}
   explicit List(Cons _v) : d_v_(bsl::move(_v)) {}
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : d_v_([&]() -> variant_t {
-          if (bsl::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (bsl::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
             const auto &[d_a, d_l] =
-                bsl::get<typename List<_U>::Cons>(_other.v());
-            return Cons{[&]() -> t_A {
-                          if constexpr (crane_convertible<t_A, const _U &>) {
-                            return crane_convert<t_A>(d_a);
-                          } else {
-                            throw bsl::logic_error(
-                                "unreachable: inactive constructor field at "
-                                "this instantiation");
-                          }
-                        }(),
-                        (d_l ? bsl::make_shared<List<t_A>>(
-                                   crane_convert<List<t_A>>(*d_l))
-                             : nullptr)};
+                bsl::get<typename List<CraneU>::Cons>(_other.v());
+            return Cons{
+                [&]() -> t_A {
+                  if constexpr (crane_convertible<t_A, const CraneU &>) {
+                    return crane_convert<t_A>(d_a);
+                  } else {
+                    throw bsl::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (d_l ? bsl::make_shared<List<t_A>>(
+                           crane_convert<List<t_A>>(*d_l))
+                     : nullptr)};
           }
         }()) {}
   static List<t_A> nil() { return List<t_A>(Nil{}); }
@@ -96,8 +93,8 @@ public:
   }
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
   inline variant_t &v_mut() { return d_v_; }
   // ACCESSORS
   const variant_t &v() const { return d_v_; }
@@ -187,25 +184,25 @@ public:
     requires bsl::is_invocable_r_v<T1, F0 &, t_A &, T1 &>
   T1 fold_right(F0 &&f, T1 a0) const {
     const List<t_A> *_self = this;
-    /// _Enter: captures varying parameters for each recursive call.
-    struct _Enter {
+    /// CraneEnter: captures varying parameters for each recursive call.
+    struct CraneEnter {
       const List<t_A> *_self;
     };
-    /// _Cont_Cons: saves [d_a0], resumes after recursive call, then processes
-    /// rest.
-    struct _Cont_Cons {
+    /// CraneCont_Cons: saves [d_a0], resumes after recursive call, then
+    /// processes rest.
+    struct CraneCont_Cons {
       t_A d_a0;
     };
-    using _Frame = bsl::variant<_Enter, _Cont_Cons>;
+    using CraneFrame = bsl::variant<CraneEnter, CraneCont_Cons>;
     T1 _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{_self});
-    /// Loopified fold_right: _Enter -> _Cont_Cons.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{_self});
+    /// Loopified fold_right: CraneEnter -> CraneCont_Cons.
     while (!_stack.empty()) {
-      _Frame _frame = bsl::move(_stack.back());
+      CraneFrame _frame = bsl::move(_stack.back());
       _stack.pop_back();
-      if (bsl::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(bsl::get<_Enter>(_frame));
+      if (bsl::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(bsl::get<CraneEnter>(_frame));
         const List<t_A> *_self = _f._self;
         auto &&_sv = *_self;
         if (bsl::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
@@ -213,11 +210,11 @@ public:
         } else {
           const auto &[d_a0, d_a1] =
               bsl::get<typename List<t_A>::Cons>(_sv.v());
-          _stack.emplace_back(_Cont_Cons{d_a0});
-          _stack.emplace_back(_Enter{crane_raw(d_a1)});
+          _stack.emplace_back(CraneCont_Cons{d_a0});
+          _stack.emplace_back(CraneEnter{crane_raw(d_a1)});
         }
       } else {
-        auto _f = std::move(bsl::get<_Cont_Cons>(_frame));
+        auto _f = std::move(bsl::get<CraneCont_Cons>(_frame));
         auto d_a0 = bsl::move(_f.d_a0);
         _result = f(d_a0, bsl::move(_result));
       }
@@ -226,25 +223,25 @@ public:
   }
   template <typename T1> List<T1> concat() const {
     const List<t_A> *_self = this;
-    /// _Enter: captures varying parameters for each recursive call.
-    struct _Enter {
+    /// CraneEnter: captures varying parameters for each recursive call.
+    struct CraneEnter {
       const List<t_A> *_self;
     };
-    /// _Cont_Cons: saves [d_a0], resumes after recursive call, then processes
-    /// rest.
-    struct _Cont_Cons {
+    /// CraneCont_Cons: saves [d_a0], resumes after recursive call, then
+    /// processes rest.
+    struct CraneCont_Cons {
       List<T1> d_a0;
     };
-    using _Frame = bsl::variant<_Enter, _Cont_Cons>;
+    using CraneFrame = bsl::variant<CraneEnter, CraneCont_Cons>;
     List<T1> _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{_self});
-    /// Loopified concat: _Enter -> _Cont_Cons.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{_self});
+    /// Loopified concat: CraneEnter -> CraneCont_Cons.
     while (!_stack.empty()) {
-      _Frame _frame = bsl::move(_stack.back());
+      CraneFrame _frame = bsl::move(_stack.back());
       _stack.pop_back();
-      if (bsl::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(bsl::get<_Enter>(_frame));
+      if (bsl::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(bsl::get<CraneEnter>(_frame));
         const List<t_A> *_self = _f._self;
         auto &&_sv = *_self;
         if (bsl::holds_alternative<typename List<List<T1>>::Nil>(_sv.v())) {
@@ -252,11 +249,11 @@ public:
         } else {
           const auto &[d_a0, d_a1] =
               bsl::get<typename List<List<T1>>::Cons>(_sv.v());
-          _stack.emplace_back(_Cont_Cons{d_a0});
-          _stack.emplace_back(_Enter{crane_raw(d_a1)});
+          _stack.emplace_back(CraneCont_Cons{d_a0});
+          _stack.emplace_back(CraneEnter{crane_raw(d_a1)});
         }
       } else {
-        auto _f = std::move(bsl::get<_Cont_Cons>(_frame));
+        auto _f = std::move(bsl::get<CraneCont_Cons>(_frame));
         List<T1> d_a0 = bsl::move(_f.d_a0);
         _result = d_a0.app(bsl::move(_result));
       }
@@ -288,22 +285,22 @@ public:
   }
   unsigned int length() const {
     const List<t_A> *_self = this;
-    /// _Enter: captures varying parameters for each recursive call.
-    struct _Enter {
+    /// CraneEnter: captures varying parameters for each recursive call.
+    struct CraneEnter {
       const List<t_A> *_self;
     };
-    /// _Cont_Cons: resumes after recursive call, then processes rest.
-    struct _Cont_Cons {};
-    using _Frame = bsl::variant<_Enter, _Cont_Cons>;
+    /// CraneCont_Cons: resumes after recursive call, then processes rest.
+    struct CraneCont_Cons {};
+    using CraneFrame = bsl::variant<CraneEnter, CraneCont_Cons>;
     unsigned int _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{_self});
-    /// Loopified length: _Enter -> _Cont_Cons.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{_self});
+    /// Loopified length: CraneEnter -> CraneCont_Cons.
     while (!_stack.empty()) {
-      _Frame _frame = bsl::move(_stack.back());
+      CraneFrame _frame = bsl::move(_stack.back());
       _stack.pop_back();
-      if (bsl::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(bsl::get<_Enter>(_frame));
+      if (bsl::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(bsl::get<CraneEnter>(_frame));
         const List<t_A> *_self = _f._self;
         auto &&_sv = *_self;
         if (bsl::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
@@ -311,11 +308,11 @@ public:
         } else {
           const auto &[d_a0, d_a1] =
               bsl::get<typename List<t_A>::Cons>(_sv.v());
-          _stack.emplace_back(_Cont_Cons{});
-          _stack.emplace_back(_Enter{crane_raw(d_a1)});
+          _stack.emplace_back(CraneCont_Cons{});
+          _stack.emplace_back(CraneEnter{crane_raw(d_a1)});
         }
       } else {
-        auto _f = std::move(bsl::get<_Cont_Cons>(_frame));
+        auto _f = std::move(bsl::get<CraneCont_Cons>(_frame));
         _result = (bsl::move(_result) + 1);
       }
     }
@@ -351,7 +348,8 @@ struct ToString {
   static bsl::string pair_to_string(F0 &&p1, F1 &&p2,
                                     const bsl::pair<T1, T2> &x) {
     auto [a, b] = x;
-    return "("_s + p1(a) + ", "_s + p2(b) + ")"_s;
+    return bsl::string("(") + p1(a) + bsl::string(", ") + p2(b) +
+           bsl::string(")");
   }
   template <typename T1, typename F0>
     requires bsl::is_invocable_r_v<bsl::string, F0 &, T1 &>
@@ -377,9 +375,10 @@ struct ToString {
       const auto &[d_a0, d_a1] = bsl::get<typename List<T1>::Cons>(l.v());
       auto &&_sv = *d_a1;
       if (bsl::holds_alternative<typename List<T1>::Nil>(_sv.v())) {
-        return "["_s + p(d_a0) + "]"_s;
+        return bsl::string("[") + p(d_a0) + bsl::string("]");
       } else {
-        return "["_s + p(d_a0) + intersperse<T1>(p, "; ", *d_a1) + "]"_s;
+        return bsl::string("[") + p(d_a0) + intersperse<T1>(p, "; ", *d_a1) +
+               bsl::string("]");
       }
     }
   }

@@ -56,8 +56,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -79,7 +79,7 @@ struct PhantomTypeArgNeverEmitted {
     // ACCESSORS
     phantom<A> clone() const { return {a0}; }
 
-    template <typename _U> operator phantom<_U>() const { return {a0}; }
+    template <typename CraneU> operator phantom<CraneU>() const { return {a0}; }
 
     // CREATORS
     static phantom<A> ph(Nat a0) { return {std::move(a0)}; }

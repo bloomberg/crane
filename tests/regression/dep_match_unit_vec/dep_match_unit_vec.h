@@ -3,8 +3,8 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -36,18 +36,19 @@ struct DepMatchUnitVec {
 
     explicit vec(Vcons _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    vec(const vec<_U> &_other)
+    template <typename CraneU>
+    vec(const vec<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename vec<_U>::Vnil>(_other.v())) {
+            if (std::holds_alternative<typename vec<CraneU>::Vnil>(
+                    _other.v())) {
               return Vnil{};
             } else {
               const auto &[n, a1, a2] =
-                  std::get<typename vec<_U>::Vcons>(_other.v());
+                  std::get<typename vec<CraneU>::Vcons>(_other.v());
               return Vcons{
                   n,
                   [&]() -> A {
-                    if constexpr (crane_convertible<A, const _U &>) {
+                    if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a1);
                     } else {
                       throw std::logic_error(
@@ -86,8 +87,8 @@ struct DepMatchUnitVec {
 
     vec(const vec &) = default;
     vec &operator=(const vec &) = default;
-    vec(vec &&) noexcept = default;
-    vec &operator=(vec &&) noexcept = default;
+    vec(vec &&) = default;
+    vec &operator=(vec &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 

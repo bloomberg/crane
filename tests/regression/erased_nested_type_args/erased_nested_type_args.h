@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <memory>
@@ -28,12 +27,12 @@ concept Monad = requires {
                 crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
   } -> std::convertible_to<typename I::template m<crane::obj>>;
 };
-template <typename _Inst, typename I>
+template <typename CraneInst, typename I>
 concept Ops = requires {
   {
-    _Inst::madd(std::declval<I>(), std::declval<I>())
+    CraneInst::madd(std::declval<I>(), std::declval<I>())
   } -> std::convertible_to<EOU<I>>;
-  { _Inst::mzero() } -> std::convertible_to<I>;
+  { CraneInst::mzero() } -> std::convertible_to<I>;
 };
 
 struct ErasedNestedTypeArgs {
@@ -85,8 +84,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -145,18 +144,19 @@ public:
 
   explicit EOU(Raise_ret _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  EOU(const EOU<_U> &_other)
+  template <typename CraneU>
+  EOU(const EOU<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename EOU<_U>::Raise_error>(
+          if (std::holds_alternative<typename EOU<CraneU>::Raise_error>(
                   _other.v())) {
             const auto &[s] =
-                std::get<typename EOU<_U>::Raise_error>(_other.v());
+                std::get<typename EOU<CraneU>::Raise_error>(_other.v());
             return Raise_error{s};
           } else {
-            const auto &[x] = std::get<typename EOU<_U>::Raise_ret>(_other.v());
+            const auto &[x] =
+                std::get<typename EOU<CraneU>::Raise_ret>(_other.v());
             return Raise_ret{[&]() -> X {
-              if constexpr (crane_convertible<X, const _U &>) {
+              if constexpr (crane_convertible<X, const CraneU &>) {
                 return crane_convert<X>(x);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -178,10 +178,10 @@ public:
 };
 
 struct EOU_monad {
-  template <typename _A0> using m = EOU<_A0>;
+  template <typename CraneA0> using m = EOU<CraneA0>;
 
-  template <typename _A0> static EOU<_A0> ret(_A0 x) {
-    return EOU<_A0>::raise_ret(std::move(x));
+  template <typename CraneA0> static EOU<CraneA0> ret(CraneA0 x) {
+    return EOU<CraneA0>::raise_ret(std::move(x));
   }
 
   static EOU<crane::obj> bind(EOU<crane::obj> c,

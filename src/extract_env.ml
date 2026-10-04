@@ -640,32 +640,6 @@ let descr () =
 
 let default_id = Id.of_string "Main"
 
-(** Standard C++ headers to include in generated implementation files. *)
-let header_imports =
-  [
-    "algorithm";
-    "any";
-    "atomic";   (* the acquire fence a destructor's sole-owner test pairs with *)
-    "cassert";
-    "concepts";
-    "functional";
-    "iostream";
-    "memory";
-    "optional";
-    "stdexcept";
-    "string";
-    "type_traits";
-    "utility";
-    "variant";
-    "vector";   (* needed by loopify's explicit stack: std::vector<_Frame> *)
-  ]
-
-(** Return only the standard headers that were actually referenced during
-    rendering.  Falls back to the full list for BDE mode (different naming). *)
-let needed_std_headers () =
-  let needed = Common.get_needed_headers () in
-  List.filter (fun h -> List.mem h needed) header_imports
-
 (** BDE-flavored standard headers using [bsl_*] naming. *)
 let header_imports_bsl =
   [
@@ -736,21 +710,21 @@ let header fn () =
   else
     self_include ++ fnl2 ()
 
-(** Generates the header file preamble: include guard, includes, BDE concept
-    boilerplate (if applicable), and string literals directive. *)
+(** Generates the header file preamble: include guard, includes, and BDE
+    concept boilerplate (if applicable). *)
 let spec_header ?(unit_includes = []) si () =
   (* Headers of the units that already emitted libraries this one depends on
      come first: they are the reason those declarations are absent below. *)
   let imps = List.map (fun u -> u ^ ".h") unit_includes @ get_custom_imports () in
   let himports =
     if is_bde () then
-      let needed = Common.get_needed_headers () in
+      let needed = Table.required_standard_headers () in
       let extra_std =
         List.filter (fun h -> List.mem h needed)
           ["any"; "atomic"; "deque"; "utility"]
       in
       header_imports_bsl @ extra_std
-    else needed_std_headers ()
+    else Table.required_standard_headers ()
   in
   (* The producing binary, named by the artifact itself under [CRANE_STAMP]:
      see {!Table.stamp_build}.  Ahead of the include guard so it survives a
@@ -817,10 +791,8 @@ let spec_header ?(unit_includes = []) si () =
     else
       h
   in
-  (* An erased type is written [crane::obj], and every erasure demands
-     [<any>] on the way. *)
   let h =
-    if Table.demanded "any" then
+    if Table.demanded Crane_rt.obj_header then
       h ++ mk_include_quoted Crane_rt.obj_header ++ fnl ()
     else
       h
@@ -941,21 +913,11 @@ let spec_header ?(unit_includes = []) si () =
     else
       ""
   in
-  let string_lit_directive =
-    if Table.needs_string_literals () then
-      if is_bde () then
-        fnl () ++ str "using namespace bsl::string_literals;" ++ fnl ()
-      else
-        fnl () ++ str "using namespace std::string_literals;" ++ fnl ()
-    else
-      mt ()
-  in
   if is_bde () then
     guard_open
     ++ h
     ++ fnl2 ()
     ++ str "using namespace BloombergLP;"
-    ++ string_lit_directive
     ++ fnl ()
     ++ str fun_concept
     ++ fnl2 ()
@@ -963,7 +925,6 @@ let spec_header ?(unit_includes = []) si () =
     guard_open
     ++ h
     ++ fnl2 ()
-    ++ string_lit_directive
     ++ str fun_concept
     ++ fnl2 ()
 
@@ -1492,26 +1453,9 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   mark_higher_order_projections struc;
   align_functor_instance_kinds struc;
   demote_value_typeclasses struc;
-  (* Detect whether any custom inline function is applied to a string literal.
-     This determines whether we need 'using namespace std::string_literals;'. *)
-  let has_custom_string_arg =
-    Modutil.struct_ast_search
-      (function
-        | MLapp (MLglob (r, _), args) ->
-          Table.is_custom r
-          && Table.to_inline r
-          && List.exists
-               (function
-                 | MLstring _ -> true
-                 | _ -> false )
-               args
-        | _ -> false )
-      struc
-  in
   (* Start this file's demands from nothing, so that one file's needs don't
      leak into a later file of a separate extraction. *)
   Table.reset_demands ();
-  if has_custom_string_arg then Table.mark_needs_string_literals ();
   (* In separate extraction, force fully qualified cross-module references
      (e.g. Datatypes::List instead of bare List). *)
   ( match namespace with
@@ -1761,7 +1705,7 @@ let cpp_unit () =
   | Some (GlobRef.ConstructRef ((kn, index), constructor_index)) ->
     pp_global Type (GlobRef.IndRef (kn, index))
     ^ "::"
-    ^ Table.enum_ctor_name_of_ref kn index constructor_index
+    ^ Common.enum_ctor_name_of_ref kn index constructor_index
   | _ -> CErrors.anomaly Pp.(str "Crane could not resolve Rocq's unit constructor.")
 
 (** What the unit just printed exports, read while its naming tables are live:

@@ -2,7 +2,7 @@
 
 /// ------------------------------------------------------------------
 void ITreeEffects::greet() {
-  std::cout << "What is your name?"s << '\n';
+  std::cout << std::string("What is your name?") << '\n';
   std::string name;
   std::getline(std::cin, name);
   std::cout << name << '\n';

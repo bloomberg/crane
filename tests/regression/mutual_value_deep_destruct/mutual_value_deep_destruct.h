@@ -3,7 +3,6 @@
 
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
 #include <memory>
 #include <type_traits>
@@ -84,8 +83,8 @@ struct MutualValueDeepDestruct {
 
     a(const a &) = default;
     a &operator=(const a &) = default;
-    a(a &&) noexcept = default;
-    a &operator=(a &&) noexcept = default;
+    a(a &&) = default;
+    a &operator=(a &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -151,8 +150,8 @@ struct MutualValueDeepDestruct {
 
     b(const b &) = default;
     b &operator=(const b &) = default;
-    b(b &&) noexcept = default;
-    b &operator=(b &&) noexcept = default;
+    b(b &&) = default;
+    b &operator=(b &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 

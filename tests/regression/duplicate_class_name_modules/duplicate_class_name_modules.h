@@ -2,6 +2,7 @@
 #define INCLUDED_DUPLICATE_CLASS_NAME_MODULES
 
 #include <concepts>
+#include <cstdint>
 #include <utility>
 
 /// Two modules each declare a class called C.  A class is emitted as a

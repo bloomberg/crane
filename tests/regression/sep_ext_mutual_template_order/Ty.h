@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
 #include <memory>
 #include <stdexcept>
@@ -37,13 +36,14 @@ public:
 
   explicit Tree(Node _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  Tree(const Tree<_U> &_other)
+  template <typename CraneU>
+  Tree(const Tree<CraneU> &_other)
       : v_([&]() -> variant_t {
-          const auto &[a0, a1] = std::get<typename Tree<_U>::Node>(_other.v());
+          const auto &[a0, a1] =
+              std::get<typename Tree<CraneU>::Node>(_other.v());
           return Node{
               [&]() -> A {
-                if constexpr (crane_convertible<A, const _U &>) {
+                if constexpr (crane_convertible<A, const CraneU &>) {
                   return crane_convert<A>(a0);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
@@ -59,8 +59,8 @@ public:
   ~Tree();
   Tree(const Tree &) = default;
   Tree &operator=(const Tree &) = default;
-  Tree(Tree &&) noexcept = default;
-  Tree &operator=(Tree &&) noexcept = default;
+  Tree(Tree &&) = default;
+  Tree &operator=(Tree &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -91,14 +91,15 @@ public:
 
   explicit Forest(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  Forest(const Forest<_U> &_other)
+  template <typename CraneU>
+  Forest(const Forest<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Forest<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename Forest<CraneU>::Nil>(
+                  _other.v())) {
             return Nil{};
           } else {
             const auto &[a0, a1] =
-                std::get<typename Forest<_U>::Cons>(_other.v());
+                std::get<typename Forest<CraneU>::Cons>(_other.v());
             return Cons{
                 (a0 ? std::make_shared<Tree<A>>(crane_convert<Tree<A>>(*a0))
                     : nullptr),
@@ -113,8 +114,8 @@ public:
   ~Forest();
   Forest(const Forest &) = default;
   Forest &operator=(const Forest &) = default;
-  Forest(Forest &&) noexcept = default;
-  Forest &operator=(Forest &&) noexcept = default;
+  Forest(Forest &&) = default;
+  Forest &operator=(Forest &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 

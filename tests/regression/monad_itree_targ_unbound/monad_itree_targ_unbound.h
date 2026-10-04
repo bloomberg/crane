@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <crane_itree.h>
@@ -84,8 +83,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -144,23 +143,23 @@ struct Monads {
   using stateT = crane::fn<m<std::pair<s, a>>(s)>;
 
   template <Monad _tcI0, typename T1> struct Monad_stateT {
-    template <typename _A0>
-    using m = crane::fn<typename _tcI0::template m<std::pair<T1, _A0>>(T1)>;
+    template <typename CraneA0>
+    using m = crane::fn<typename _tcI0::template m<std::pair<T1, CraneA0>>(T1)>;
 
-    template <typename _A0>
-    static crane::fn<typename _tcI0::template m<std::pair<T1, _A0>>(T1)>
-    ret(_A0 a) {
+    template <typename CraneA0>
+    static crane::fn<typename _tcI0::template m<std::pair<T1, CraneA0>>(T1)>
+    ret(CraneA0 a) {
       return [=](const T1 &s) { return itree_ret(std::make_pair(s, a)); };
     }
 
-    template <typename _A0, typename _A1>
-    static crane::fn<typename _tcI0::template m<std::pair<T1, _A1>>(T1)>
-    bind(crane::fn<typename _tcI0::template m<std::pair<T1, _A0>>(T1)> t,
-         crane::fn<
-             crane::fn<typename _tcI0::template m<std::pair<T1, _A1>>(T1)>(_A0)>
+    template <typename CraneA0, typename CraneA1>
+    static crane::fn<typename _tcI0::template m<std::pair<T1, CraneA1>>(T1)>
+    bind(crane::fn<typename _tcI0::template m<std::pair<T1, CraneA0>>(T1)> t,
+         crane::fn<crane::fn<
+             typename _tcI0::template m<std::pair<T1, CraneA1>>(T1)>(CraneA0)>
              k) {
       return [=](const T1 &s) {
-        return itree_bind(t(s), [=](const std::pair<T1, _A0> &sa) {
+        return itree_bind(t(s), [=](const std::pair<T1, CraneA0> &sa) {
           return k(sa.second)(sa.first);
         });
       };
@@ -180,19 +179,19 @@ struct FailE {
 };
 enum class Ev { EV0 };
 using env = Nat;
-template <typename _CraneTcArg>
-using itree_tc_296b3b7af4bd1a71 = std::shared_ptr<ITree<_CraneTcArg>>;
+template <typename CraneTcArg>
+using itree_tc_609e8855cd7ad294 = std::shared_ptr<ITree<CraneTcArg>>;
 
 template <Params _tcI0, typename T1>
-Monads::template stateT<env, itree_tc_296b3b7af4bd1a71, Nat> step(Nat n) {
+Monads::template stateT<env, itree_tc_609e8855cd7ad294, Nat> step(Nat n) {
   return [=](const Nat &s) {
     return itree_ret(std::make_pair(s, n.add(_tcI0::width())));
   };
 }
 
 template <typename T1, typename T2>
-Monads::template stateT<env, itree_tc_296b3b7af4bd1a71, T2> handle(Ev) {
-  return [](const Nat &s) -> itree_tc_296b3b7af4bd1a71<std::pair<env, T2>> {
+Monads::template stateT<env, itree_tc_609e8855cd7ad294, T2> handle(Ev) {
+  return [](const Nat &s) -> itree_tc_609e8855cd7ad294<std::pair<env, T2>> {
     if (s.eqb(Nat::o())) {
       return itree_vis(
           FailE::Throw_(std::monostate{}),
@@ -206,7 +205,7 @@ Monads::template stateT<env, itree_tc_296b3b7af4bd1a71, T2> handle(Ev) {
 }
 
 template <Params _tcI0, typename T1, typename T2>
-Monads::template stateT<env, itree_tc_296b3b7af4bd1a71, T2> twice(Ev e) {
+Monads::template stateT<env, itree_tc_609e8855cd7ad294, T2> twice(Ev e) {
   return Monads::template Monad_stateT<Monad_itree<T1>, env>::template bind<
       T2, T2>(handle<T1, T2>(e), [](const T2 &res) {
     return Monads::template Monad_stateT<Monad_itree<T1>, env>::template bind<

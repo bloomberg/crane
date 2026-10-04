@@ -2,7 +2,6 @@
 #define INCLUDED_SUBEVENT_INSTANCE_DROPPED
 
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <crane_itree.h>
 #include <memory>
@@ -67,8 +66,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -87,8 +86,8 @@ struct FailE {
   static FailE fail(Nat a0) { return {std::move(a0)}; }
 };
 
-template <typename T1 = void, typename T2 = void, typename T3, typename _P0>
-std::shared_ptr<ITree<T3>> cast(_P0 e) {
+template <typename T1 = void, typename T2 = void, typename T3, typename CraneP0>
+std::shared_ptr<ITree<T3>> cast(CraneP0 e) {
   return itree_trigger(e);
 }
 

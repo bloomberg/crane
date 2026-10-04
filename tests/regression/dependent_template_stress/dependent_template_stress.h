@@ -1,6 +1,8 @@
 #ifndef INCLUDED_DEPENDENT_TEMPLATE_STRESS
 #define INCLUDED_DEPENDENT_TEMPLATE_STRESS
 
+#include <cstdint>
+
 template <typename M>
 concept Container = requires {
   typename M::template t<void>;

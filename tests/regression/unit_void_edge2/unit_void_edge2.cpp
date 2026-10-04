@@ -40,23 +40,23 @@ uint64_t UnitVoidEdge2::let_use_in_if(uint64_t n, bool flag) {
 }
 
 void UnitVoidEdge2::mono_bind_return() {
-  std::cout << "hello"s;
+  std::cout << std::string("hello");
   return;
 }
 
 void UnitVoidEdge2::mono_bind_rebind() {
-  std::cout << "hi"s;
+  std::cout << std::string("hi");
   return;
 }
 
 void UnitVoidEdge2::mono_chain() {
-  std::cout << "a"s;
-  std::cout << "b"s;
+  std::cout << std::string("a");
+  std::cout << std::string("b");
   return;
 }
 
 uint64_t UnitVoidEdge2::mono_bind_match() {
-  std::cout << "test"s;
+  std::cout << std::string("test");
   std::monostate x = std::monostate{};
   {
     return UINT64_C(42);
@@ -64,7 +64,7 @@ uint64_t UnitVoidEdge2::mono_bind_match() {
 }
 
 uint64_t UnitVoidEdge2::mono_bind_opaque() {
-  std::cout << "setup"s;
+  std::cout << std::string("setup");
   return UINT64_C(99);
 }
 

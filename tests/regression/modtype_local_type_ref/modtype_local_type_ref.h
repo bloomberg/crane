@@ -2,6 +2,7 @@
 #define INCLUDED_MODTYPE_LOCAL_TYPE_REF
 
 #include <concepts>
+#include <cstdint>
 #include <utility>
 
 struct ModtypeLocalTypeRef {

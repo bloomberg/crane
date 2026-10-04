@@ -1,6 +1,7 @@
 #ifndef INCLUDED_ENUM_SWITCH_QUALIFIED
 #define INCLUDED_ENUM_SWITCH_QUALIFIED
 
+#include <cstdint>
 #include <utility>
 
 struct EnumSwitchQualified {

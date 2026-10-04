@@ -14,9 +14,9 @@ struct GeneratedLazyFieldNameClash {
   /// method signatures, so the generated C++ does not compile.
   struct d_lazyV_ {
     // TYPES
-    template <typename _S0 = d_lazyV_> struct Cons_ {
+    template <typename CraneS0 = d_lazyV_> struct Cons_ {
       bool a0;
-      _S0 a1;
+      CraneS0 a1;
     };
 
     using Cons = Cons_<>;

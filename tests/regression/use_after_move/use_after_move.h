@@ -1,6 +1,7 @@
 #ifndef INCLUDED_USE_AFTER_MOVE
 #define INCLUDED_USE_AFTER_MOVE
 
+#include <cstdint>
 #include <utility>
 
 struct UseAfterMove {

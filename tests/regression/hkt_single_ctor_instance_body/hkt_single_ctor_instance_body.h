@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <memory>
@@ -59,8 +58,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -103,10 +102,10 @@ struct HktSingleCtorInstanceBody {
     // ACCESSORS
     box<A> clone() const { return {a0}; }
 
-    template <typename _U> operator box<_U>() const {
-      return {[&]() -> _U {
-        if constexpr (crane_convertible<_U, const A &>) {
-          return crane_convert<_U>(a0);
+    template <typename CraneU> operator box<CraneU>() const {
+      return {[&]() -> CraneU {
+        if constexpr (crane_convertible<CraneU, const A &>) {
+          return crane_convert<CraneU>(a0);
         } else {
           throw std::logic_error(
               "unreachable: inactive constructor field at this instantiation");
@@ -119,7 +118,7 @@ struct HktSingleCtorInstanceBody {
   };
 
   struct FB {
-    template <typename _A0> using F = box<_A0>;
+    template <typename CraneA0> using F = box<CraneA0>;
 
     static box<crane::obj> fmap(crane::fn<crane::obj(crane::obj)> f,
                                 box<crane::obj> b) {
@@ -131,10 +130,10 @@ struct HktSingleCtorInstanceBody {
   static_assert(Ftor<FB>);
 
   struct PB {
-    template <typename _A0> using F = box<_A0>;
+    template <typename CraneA0> using F = box<CraneA0>;
 
-    template <typename _A0> static box<_A0> pnt(_A0 x) {
-      return box<_A0>::mkbox(std::move(x));
+    template <typename CraneA0> static box<CraneA0> pnt(CraneA0 x) {
+      return box<CraneA0>::mkbox(std::move(x));
     }
   };
 

@@ -1,6 +1,7 @@
 #ifndef INCLUDED_USER_INDUCTIVE_SHADOWS_STDLIB
 #define INCLUDED_USER_INDUCTIVE_SHADOWS_STDLIB
 
+#include <cstdint>
 #include <utility>
 
 enum class Comparison;

@@ -73,8 +73,8 @@ struct Nat {
 
     nat(const nat &) = default;
     nat &operator=(const nat &) = default;
-    nat(nat &&) noexcept = default;
-    nat &operator=(nat &&) noexcept = default;
+    nat(nat &&) = default;
+    nat &operator=(nat &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -277,8 +277,8 @@ public:
 
   Uint(const Uint &) = default;
   Uint &operator=(const Uint &) = default;
-  Uint(Uint &&) noexcept = default;
-  Uint &operator=(Uint &&) noexcept = default;
+  Uint(Uint &&) = default;
+  Uint &operator=(Uint &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -409,8 +409,8 @@ public:
 
   String(const String &) = default;
   String &operator=(const String &) = default;
-  String(String &&) noexcept = default;
-  String &operator=(String &&) noexcept = default;
+  String(String &&) = default;
+  String &operator=(String &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 

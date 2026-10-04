@@ -1,4 +1,4 @@
-.PHONY: build install clean test test-quick test-verbose test-sequential test-raw test-one test-one-verbose test-folder test-folder-verbose test-list theories plugin all extract format
+.PHONY: build install clean test test-quick test-verbose test-sequential test-raw test-one test-one-verbose test-folder test-folder-verbose test-list check-headers theories plugin all extract format
 
 # Default target: build plugin and theories only (not tests)
 build: plugin theories
@@ -186,6 +186,10 @@ test-list:
 		fi; \
 	done | sort
 
+# Compile every generated header on its own, as a consumer would include it
+check-headers:
+	@scripts/check-headers-standalone.sh
+
 # Format source code
 format:
 	@echo "Formatting C++ test files..."
@@ -233,6 +237,7 @@ help:
 	@echo "  make test-folder FOLDER=x       - Run all tests in a folder (e.g., FOLDER=wip)"
 	@echo "  make test-folder-verbose FOLDER - Run folder tests with error details"
 	@echo "  make test-list                  - List all available tests"
+	@echo "  make check-headers        - Compile each generated header standalone"
 	@echo "  make all                  - Build everything including test executables"
 	@echo "  make install              - Install the plugin"
 	@echo "  make format               - Format C++ test files and OCaml source"

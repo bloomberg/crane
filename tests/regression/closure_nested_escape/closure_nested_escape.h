@@ -2,6 +2,7 @@
 #define INCLUDED_CLOSURE_NESTED_ESCAPE
 
 #include "fn.h"
+#include <cstdint>
 #include <utility>
 
 struct ClosureNestedEscape {

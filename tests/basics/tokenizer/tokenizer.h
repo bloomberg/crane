@@ -5,7 +5,6 @@
 #include "fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
 #include <cstdint>
 #include <memory>
@@ -17,8 +16,6 @@
 #include <utility>
 #include <variant>
 #include <vector>
-
-using namespace std::string_literals;
 
 template <typename A> struct List;
 
@@ -45,16 +42,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -91,8 +89,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -102,38 +100,38 @@ public:
   List<A> rev() const {
     const List<A> *_self = this;
 
-    /// _Enter: captures varying parameters for each recursive call.
-    struct _Enter {
+    /// CraneEnter: captures varying parameters for each recursive call.
+    struct CraneEnter {
       const List<A> *_self;
     };
 
-    /// _Cont_Cons: saves [a0], resumes after recursive call, then processes
+    /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
     /// rest.
-    struct _Cont_Cons {
+    struct CraneCont_Cons {
       A a0;
     };
 
-    using _Frame = std::variant<_Enter, _Cont_Cons>;
+    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
     List<A> _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{_self});
-    /// Loopified rev: _Enter -> _Cont_Cons.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{_self});
+    /// Loopified rev: CraneEnter -> CraneCont_Cons.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = List<A>::nil();
         } else {
           const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-          _stack.emplace_back(_Cont_Cons{a0});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
+          _stack.emplace_back(CraneCont_Cons{a0});
+          _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
         auto a0 = std::move(_f.a0);
         _result = std::move(_result).app(List<A>::cons(a0, List<A>::nil()));
       }
@@ -172,7 +170,8 @@ struct ToString {
   static std::string pair_to_string(F0 &&p1, F1 &&p2,
                                     const std::pair<T1, T2> &x) {
     const auto &[a, b] = x;
-    return "("s + p1(a) + ", "s + p2(b) + ")"s;
+    return std::string("(") + p1(a) + std::string(", ") + p2(b) +
+           std::string(")");
   }
 
   template <typename T1, typename F0>
@@ -200,9 +199,10 @@ struct ToString {
       const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
       auto &&_sv = *a1;
       if (std::holds_alternative<typename List<T1>::Nil>(_sv.v())) {
-        return "["s + p(a0) + "]"s;
+        return std::string("[") + p(a0) + std::string("]");
       } else {
-        return "["s + p(a0) + intersperse<T1>(p, "; ", *a1) + "]"s;
+        return std::string("[") + p(a0) + intersperse<T1>(p, "; ", *a1) +
+               std::string("]");
       }
     }
   }

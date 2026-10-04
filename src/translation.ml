@@ -2351,7 +2351,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           in
           (* The lambda's own type binders, named so the callee's variables
              do not read as the enclosing declaration's. *)
-          let local_tvar i = Id.of_string ("_T" ^ string_of_int i) in
+          let local_tvar i = Generated_name.indexed "T" i in
           let local_tvars =
             List.init (List.fold_left max 0 all_tvars) (fun k -> local_tvar (k + 1))
           in
@@ -2718,7 +2718,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       match r with
       | GlobRef.ConstructRef ((kn, i), cidx) ->
         ( GlobRef.IndRef (kn, i),
-          Id.of_string (Table.enum_ctor_name_of_ref kn i cidx) )
+          Id.of_string (Common.enum_ctor_name_of_ref kn i cidx) )
       | _ ->
         CErrors.anomaly
           (Pp.str "gen_expr: enum constructor expected ConstructRef")
@@ -3208,7 +3208,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             let args = args @ [CPPmove tok] in
             CPPfun_call
               ( ctor_sig args,
-                CPPqualified_t (type_expr, Id.of_string (fname ^ "__reuse")),
+                CPPqualified_t
+                  (type_expr, Generated_name.companion (Id.of_string fname) "reuse"),
                 of_reversed args )
           | _ ->
             let call =
@@ -7475,7 +7476,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
         let ctor_name =
           match r with
           | GlobRef.ConstructRef ((kn, i), cidx) ->
-            Id.of_string (Table.enum_ctor_name_of_ref kn i cidx)
+            Id.of_string (Common.enum_ctor_name_of_ref kn i cidx)
           | _ -> Id.of_string (Common.enum_ctor_name_of_id
                    (Table.safe_basename_of_global r))
         in

@@ -3,6 +3,7 @@
 
 #include "small_vector.h"
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -68,8 +69,8 @@ struct VisitMatchBug {
 
     Tree(const Tree &) = default;
     Tree &operator=(const Tree &) = default;
-    Tree(Tree &&) noexcept = default;
-    Tree &operator=(Tree &&) noexcept = default;
+    Tree(Tree &&) = default;
+    Tree &operator=(Tree &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 

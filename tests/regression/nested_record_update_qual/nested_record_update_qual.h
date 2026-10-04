@@ -1,6 +1,8 @@
 #ifndef INCLUDED_NESTED_RECORD_UPDATE_QUAL
 #define INCLUDED_NESTED_RECORD_UPDATE_QUAL
 
+#include <cstdint>
+
 struct NestedRecordUpdateQual {
   struct Shadow {
     uint64_t value;

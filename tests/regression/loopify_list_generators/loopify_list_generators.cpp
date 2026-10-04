@@ -2,27 +2,27 @@
 
 List<uint64_t> LoopifyListGenerators::cycle_fuel(
     uint64_t fuel, uint64_t n,
-    const List<uint64_t>
-        &l) { /// _Enter: captures varying parameters for each recursive call.
+    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
+                               /// each recursive call.
 
-  struct _Enter {
+  struct CraneEnter {
     uint64_t n;
     uint64_t fuel;
   };
 
-  /// _Cont_Cons: resumes after recursive call, then processes rest.
-  struct _Cont_Cons {};
+  /// CraneCont_Cons: resumes after recursive call, then processes rest.
+  struct CraneCont_Cons {};
 
-  using _Frame = std::variant<_Enter, _Cont_Cons>;
+  using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
   List<uint64_t> _result{};
-  crane::small_vector<_Frame> _stack;
-  _stack.emplace_back(_Enter{n, fuel});
-  /// Loopified cycle_fuel: _Enter -> _Cont_Cons.
+  crane::small_vector<CraneFrame> _stack;
+  _stack.emplace_back(CraneEnter{n, fuel});
+  /// Loopified cycle_fuel: CraneEnter -> CraneCont_Cons.
   while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
+    CraneFrame _frame = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
+    if (std::holds_alternative<CraneEnter>(_frame)) {
+      auto _f = std::move(std::get<CraneEnter>(_frame));
       uint64_t n = _f.n;
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
@@ -36,13 +36,13 @@ List<uint64_t> LoopifyListGenerators::cycle_fuel(
           if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
             _result = List<uint64_t>::nil();
           } else {
-            _stack.emplace_back(_Cont_Cons{});
-            _stack.emplace_back(_Enter{n_, fuel_});
+            _stack.emplace_back(CraneCont_Cons{});
+            _stack.emplace_back(CraneEnter{n_, fuel_});
           }
         }
       }
     } else {
-      auto _f = std::move(std::get<_Cont_Cons>(_frame));
+      auto _f = std::move(std::get<CraneCont_Cons>(_frame));
       _result = l.app(std::move(_result));
     }
   }
@@ -100,40 +100,40 @@ List<uint64_t> LoopifyListGenerators::replicate_elem(uint64_t n, uint64_t x) {
 
 List<uint64_t> LoopifyListGenerators::replicate_each(
     uint64_t n,
-    const List<uint64_t>
-        &l) { /// _Enter: captures varying parameters for each recursive call.
+    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
+                               /// each recursive call.
 
-  struct _Enter {
+  struct CraneEnter {
     const List<uint64_t> *l;
   };
 
-  /// _Cont_Cons: saves [reps], resumes after recursive call, then processes
+  /// CraneCont_Cons: saves [reps], resumes after recursive call, then processes
   /// rest.
-  struct _Cont_Cons {
+  struct CraneCont_Cons {
     List<uint64_t> reps;
   };
 
-  using _Frame = std::variant<_Enter, _Cont_Cons>;
+  using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
   List<uint64_t> _result{};
-  crane::small_vector<_Frame> _stack;
-  _stack.emplace_back(_Enter{&l});
-  /// Loopified replicate_each: _Enter -> _Cont_Cons.
+  crane::small_vector<CraneFrame> _stack;
+  _stack.emplace_back(CraneEnter{&l});
+  /// Loopified replicate_each: CraneEnter -> CraneCont_Cons.
   while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
+    CraneFrame _frame = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
+    if (std::holds_alternative<CraneEnter>(_frame)) {
+      auto _f = std::move(std::get<CraneEnter>(_frame));
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = List<uint64_t>::nil();
       } else {
         const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
         List<uint64_t> reps = replicate_elem(n, a0);
-        _stack.emplace_back(_Cont_Cons{std::move(reps)});
-        _stack.emplace_back(_Enter{crane_raw(a1)});
+        _stack.emplace_back(CraneCont_Cons{std::move(reps)});
+        _stack.emplace_back(CraneEnter{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<_Cont_Cons>(_frame));
+      auto _f = std::move(std::get<CraneCont_Cons>(_frame));
       List<uint64_t> reps = std::move(_f.reps);
       _result = std::move(reps).app(std::move(_result));
     }

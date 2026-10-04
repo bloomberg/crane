@@ -2,6 +2,7 @@
 #define INCLUDED_NESTED_MODULE_TYPE_CONCEPT
 
 #include <concepts>
+#include <cstdint>
 
 template <typename M>
 concept S = requires {

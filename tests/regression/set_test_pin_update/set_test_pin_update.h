@@ -1,6 +1,7 @@
 #ifndef INCLUDED_SET_TEST_PIN_UPDATE
 #define INCLUDED_SET_TEST_PIN_UPDATE
 
+#include <cstdint>
 #include <utility>
 
 struct SetTestPinUpdate {

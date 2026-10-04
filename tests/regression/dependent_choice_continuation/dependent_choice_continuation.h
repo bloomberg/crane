@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <stdexcept>
 #include <utility>
@@ -66,13 +65,15 @@ struct DependentChoiceContinuation {
 
     explicit MemS(Mchoose _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    MemS(const MemS<_U> &_other)
+    template <typename CraneU>
+    MemS(const MemS<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename MemS<_U>::MRet>(_other.v())) {
-              const auto &[a] = std::get<typename MemS<_U>::MRet>(_other.v());
+            if (std::holds_alternative<typename MemS<CraneU>::MRet>(
+                    _other.v())) {
+              const auto &[a] =
+                  std::get<typename MemS<CraneU>::MRet>(_other.v());
               return MRet{[&]() -> A {
-                if constexpr (crane_convertible<A, const _U &>) {
+                if constexpr (crane_convertible<A, const CraneU &>) {
                   return crane_convert<A>(a);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
@@ -81,7 +82,7 @@ struct DependentChoiceContinuation {
               }()};
             } else {
               const auto &[c, k] =
-                  std::get<typename MemS<_U>::Mchoose>(_other.v());
+                  std::get<typename MemS<CraneU>::Mchoose>(_other.v());
               return Mchoose{c, crane_convert<crane::fn<MemS<A>(memCType)>>(k)};
             }
           }()) {}

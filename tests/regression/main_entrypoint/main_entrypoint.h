@@ -9,8 +9,6 @@
 #include <system_error>
 #include <variant>
 
-using namespace std::string_literals;
-
 struct MainEntrypoint {
   static void main();
 };

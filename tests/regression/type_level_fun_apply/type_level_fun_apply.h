@@ -5,7 +5,6 @@
 #include "fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
 #include <functional>
 #include <memory>
@@ -60,8 +59,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -126,8 +125,8 @@ struct TypeLevelFunApply {
 
     ty(const ty &) = default;
     ty &operator=(const ty &) = default;
-    ty(ty &&) noexcept = default;
-    ty &operator=(ty &&) noexcept = default;
+    ty(ty &&) = default;
+    ty &operator=(ty &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 

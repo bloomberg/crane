@@ -50,34 +50,34 @@ STMonadTests::array_simp_list() {
 }
 
 uint64_t
-STMonadTests::fib_fun(uint64_t n) { /// _Enter: captures varying parameters for
-                                    /// each recursive call.
+STMonadTests::fib_fun(uint64_t n) { /// CraneEnter: captures varying parameters
+                                    /// for each recursive call.
 
-  struct _Enter {
+  struct CraneEnter {
     uint64_t n;
   };
 
-  /// _Cont_m: saves [m], resumes after recursive call, then processes rest.
-  struct _Cont_m {
+  /// CraneCont_m: saves [m], resumes after recursive call, then processes rest.
+  struct CraneCont_m {
     uint64_t m;
   };
 
-  /// _Cont_m_1: saves [_tmp2], resumes after recursive call, then processes
+  /// CraneCont_m_1: saves [_tmp2], resumes after recursive call, then processes
   /// rest.
-  struct _Cont_m_1 {
+  struct CraneCont_m_1 {
     uint64_t _tmp2;
   };
 
-  using _Frame = std::variant<_Enter, _Cont_m, _Cont_m_1>;
+  using CraneFrame = std::variant<CraneEnter, CraneCont_m, CraneCont_m_1>;
   uint64_t _result{};
-  crane::small_vector<_Frame> _stack;
-  _stack.emplace_back(_Enter{n});
-  /// Loopified fib_fun: _Enter -> _Cont_m -> _Cont_m_1.
+  crane::small_vector<CraneFrame> _stack;
+  _stack.emplace_back(CraneEnter{n});
+  /// Loopified fib_fun: CraneEnter -> CraneCont_m -> CraneCont_m_1.
   while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
+    CraneFrame _frame = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
+    if (std::holds_alternative<CraneEnter>(_frame)) {
+      auto _f = std::move(std::get<CraneEnter>(_frame));
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = UINT64_C(0);
@@ -87,17 +87,17 @@ STMonadTests::fib_fun(uint64_t n) { /// _Enter: captures varying parameters for
           _result = UINT64_C(1);
         } else {
           uint64_t m = m0 - 1;
-          _stack.emplace_back(_Cont_m{m});
-          _stack.emplace_back(_Enter{m0});
+          _stack.emplace_back(CraneCont_m{m});
+          _stack.emplace_back(CraneEnter{m0});
         }
       }
-    } else if (std::holds_alternative<_Cont_m>(_frame)) {
-      auto _f = std::move(std::get<_Cont_m>(_frame));
+    } else if (std::holds_alternative<CraneCont_m>(_frame)) {
+      auto _f = std::move(std::get<CraneCont_m>(_frame));
       uint64_t m = _f.m;
-      _stack.emplace_back(_Cont_m_1{std::move(_result)});
-      _stack.emplace_back(_Enter{m});
+      _stack.emplace_back(CraneCont_m_1{std::move(_result)});
+      _stack.emplace_back(CraneEnter{m});
     } else {
-      auto _f = std::move(std::get<_Cont_m_1>(_frame));
+      auto _f = std::move(std::get<CraneCont_m_1>(_frame));
       _result = (_f._tmp2 + std::move(_result));
     }
   }
@@ -132,22 +132,22 @@ uint64_t STMonadTests::nth(uint64_t n, const List<uint64_t> &l,
 }
 
 List<uint64_t> STMonadTests::quicksort_fun(
-    const List<uint64_t>
-        &x) { /// _Enter: captures varying parameters for each recursive call.
+    const List<uint64_t> &x) { /// CraneEnter: captures varying parameters for
+                               /// each recursive call.
 
-  struct _Enter {
+  struct CraneEnter {
     List<uint64_t> x;
   };
 
-  using _Frame = std::variant<_Enter>;
+  using CraneFrame = std::variant<CraneEnter>;
   List<uint64_t> _result{};
-  crane::small_vector<_Frame> _stack;
-  _stack.emplace_back(_Enter{x});
-  /// Loopified quicksort_fun: _Enter.
+  crane::small_vector<CraneFrame> _stack;
+  _stack.emplace_back(CraneEnter{x});
+  /// Loopified quicksort_fun: CraneEnter.
   while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
+    CraneFrame _frame = std::move(_stack.back());
     _stack.pop_back();
-    auto _f = std::move(std::get<_Enter>(_frame));
+    auto _f = std::move(std::get<CraneEnter>(_frame));
     const List<uint64_t> &x = std::move(_f.x);
     _result = STMonadExamples::quicksort_fun_functional(
         x, [](const List<uint64_t> &y) { return quicksort_fun(y); });
@@ -324,81 +324,82 @@ List<uint64_t> STMonadTests::quicksort_ST_mine(const List<uint64_t> &xs) {
 }
 
 std::string STMonadTests::list_to_string_helper(
-    const List<uint64_t>
-        &l) { /// _Enter: captures varying parameters for each recursive call.
+    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
+                               /// each recursive call.
 
-  struct _Enter {
+  struct CraneEnter {
     const List<uint64_t> *l;
   };
 
-  /// _Cont_Cons: saves [a0], resumes after recursive call, then processes rest.
-  struct _Cont_Cons {
+  /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
+  /// rest.
+  struct CraneCont_Cons {
     uint64_t a0;
   };
 
-  using _Frame = std::variant<_Enter, _Cont_Cons>;
+  using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
   std::string _result{};
-  crane::small_vector<_Frame> _stack;
-  _stack.emplace_back(_Enter{&l});
-  /// Loopified list_to_string_helper: _Enter -> _Cont_Cons.
+  crane::small_vector<CraneFrame> _stack;
+  _stack.emplace_back(CraneEnter{&l});
+  /// Loopified list_to_string_helper: CraneEnter -> CraneCont_Cons.
   while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
+    CraneFrame _frame = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
+    if (std::holds_alternative<CraneEnter>(_frame)) {
+      auto _f = std::move(std::get<CraneEnter>(_frame));
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = "";
       } else {
         const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-        _stack.emplace_back(_Cont_Cons{a0});
-        _stack.emplace_back(_Enter{crane_raw(a1)});
+        _stack.emplace_back(CraneCont_Cons{a0});
+        _stack.emplace_back(CraneEnter{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<_Cont_Cons>(_frame));
+      auto _f = std::move(std::get<CraneCont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      _result = std::to_string(a0) + ", "s + std::move(_result);
+      _result = std::to_string(a0) + std::string(", ") + std::move(_result);
     }
   }
   return _result;
 }
 
 std::string STMonadTests::list_to_string(const List<uint64_t> &l) {
-  return "[ "s + list_to_string_helper(l) + " ]"s;
+  return std::string("[ ") + list_to_string_helper(l) + std::string(" ]");
 }
 
 List<uint64_t>
 STMonadTests::rep_list_nat(List<uint64_t> l,
-                           uint64_t n) { /// _Enter: captures varying parameters
-                                         /// for each recursive call.
+                           uint64_t n) { /// CraneEnter: captures varying
+                                         /// parameters for each recursive call.
 
-  struct _Enter {
+  struct CraneEnter {
     uint64_t n;
   };
 
-  /// _Cont_x: resumes after recursive call, then processes rest.
-  struct _Cont_x {};
+  /// CraneCont_x: resumes after recursive call, then processes rest.
+  struct CraneCont_x {};
 
-  using _Frame = std::variant<_Enter, _Cont_x>;
+  using CraneFrame = std::variant<CraneEnter, CraneCont_x>;
   List<uint64_t> _result{};
-  crane::small_vector<_Frame> _stack;
-  _stack.emplace_back(_Enter{n});
-  /// Loopified rep_list_nat: _Enter -> _Cont_x.
+  crane::small_vector<CraneFrame> _stack;
+  _stack.emplace_back(CraneEnter{n});
+  /// Loopified rep_list_nat: CraneEnter -> CraneCont_x.
   while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
+    CraneFrame _frame = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
+    if (std::holds_alternative<CraneEnter>(_frame)) {
+      auto _f = std::move(std::get<CraneEnter>(_frame));
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = l;
       } else {
         uint64_t x = n - 1;
-        _stack.emplace_back(_Cont_x{});
-        _stack.emplace_back(_Enter{x});
+        _stack.emplace_back(CraneCont_x{});
+        _stack.emplace_back(CraneEnter{x});
       }
     } else {
-      auto _f = std::move(std::get<_Cont_x>(_frame));
+      auto _f = std::move(std::get<CraneCont_x>(_frame));
       _result = l.app(std::move(_result));
     }
   }

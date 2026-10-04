@@ -2,6 +2,7 @@
 #define INCLUDED_FIX_COMPOSE_ESCAPE
 
 #include "fn.h"
+#include <cstdint>
 
 struct FixComposeEscape {
   /// A local fixpoint is composed with another function.

@@ -1,6 +1,8 @@
 #ifndef INCLUDED_BOOL_OPS
 #define INCLUDED_BOOL_OPS
 
+#include <cstdint>
+
 struct BoolOps {
   static inline const bool bool_true = true;
   static inline const bool bool_false = false;

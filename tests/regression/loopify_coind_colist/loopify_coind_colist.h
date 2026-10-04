@@ -6,8 +6,8 @@
 #include "lazy.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <utility>
@@ -38,16 +38,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -84,8 +85,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -98,9 +99,9 @@ struct LoopifyCoindColist {
     // TYPES
     struct Conil {};
 
-    template <typename _S0 = colist<A>> struct Cocons_ {
+    template <typename CraneS0 = colist<A>> struct Cocons_ {
       A a0;
-      _S0 a1;
+      CraneS0 a1;
     };
 
     using Cocons = Cocons_<>;
@@ -120,19 +121,19 @@ struct LoopifyCoindColist {
     explicit colist(Cocons _v)
         : lazy_v_(crane::lazy<variant_t>(variant_t(std::move(_v)))) {}
 
-    template <typename _U>
-    colist(const colist<_U> &_other)
+    template <typename CraneU>
+    colist(const colist<CraneU> &_other)
         : lazy_v_(crane::lazy<variant_t>::converted_from(
               _other.lazy_cell(), [=]() -> variant_t {
-                if (std::holds_alternative<typename colist<_U>::Conil>(
+                if (std::holds_alternative<typename colist<CraneU>::Conil>(
                         _other.v())) {
                   return Conil{};
                 } else {
                   const auto &[a0, a1] =
-                      std::get<typename colist<_U>::Cocons>(_other.v());
+                      std::get<typename colist<CraneU>::Cocons>(_other.v());
                   return Cocons{
                       [&]() -> A {
-                        if constexpr (crane_convertible<A, const _U &>) {
+                        if constexpr (crane_convertible<A, const CraneU &>) {
                           return crane_convert<A>(a0);
                         } else {
                           throw std::logic_error(
@@ -173,22 +174,22 @@ struct LoopifyCoindColist {
   template <typename T1, typename T2>
   static colist<T2>
   comap(std::type_identity_t<crane::fn<T2(T1)>> f,
-        colist<T1> l) { /// _Enter: captures varying parameters for each
+        colist<T1> l) { /// CraneEnter: captures varying parameters for each
                         /// recursive call.
 
-    struct _Enter {
+    struct CraneEnter {
       colist<T1> l;
     };
 
-    using _Frame = std::variant<_Enter>;
+    using CraneFrame = std::variant<CraneEnter>;
     colist<T2> _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{std::move(l)});
-    /// Loopified comap: _Enter.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{std::move(l)});
+    /// Loopified comap: CraneEnter.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      auto _f = std::move(std::get<_Enter>(_frame));
+      auto _f = std::move(std::get<CraneEnter>(_frame));
       colist<T1> l = std::move(_f.l);
       if (std::holds_alternative<typename colist<T1>::Conil>(l.v())) {
         _result = colist<T2>::conil();
@@ -204,23 +205,23 @@ struct LoopifyCoindColist {
 
   template <typename T1>
   static colist<T1>
-  cotake(uint64_t n, colist<T1> l) { /// _Enter: captures varying parameters for
-                                     /// each recursive call.
+  cotake(uint64_t n, colist<T1> l) { /// CraneEnter: captures varying parameters
+                                     /// for each recursive call.
 
-    struct _Enter {
+    struct CraneEnter {
       colist<T1> l;
       uint64_t n;
     };
 
-    using _Frame = std::variant<_Enter>;
+    using CraneFrame = std::variant<CraneEnter>;
     colist<T1> _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{std::move(l), n});
-    /// Loopified cotake: _Enter.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{std::move(l), n});
+    /// Loopified cotake: CraneEnter.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      auto _f = std::move(std::get<_Enter>(_frame));
+      auto _f = std::move(std::get<CraneEnter>(_frame));
       colist<T1> l = std::move(_f.l);
       uint64_t n = _f.n;
       if (n <= 0) {
@@ -242,22 +243,22 @@ struct LoopifyCoindColist {
 
   template <typename T1>
   static colist<T1>
-  from_list(const List<T1> &l) { /// _Enter: captures varying parameters for
+  from_list(const List<T1> &l) { /// CraneEnter: captures varying parameters for
                                  /// each recursive call.
 
-    struct _Enter {
+    struct CraneEnter {
       const List<T1> *l;
     };
 
-    using _Frame = std::variant<_Enter>;
+    using CraneFrame = std::variant<CraneEnter>;
     colist<T1> _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{&l});
-    /// Loopified from_list: _Enter.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{&l});
+    /// Loopified from_list: CraneEnter.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      auto _f = std::move(std::get<_Enter>(_frame));
+      auto _f = std::move(std::get<CraneEnter>(_frame));
       const List<T1> &l = *_f.l;
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         _result = colist<T1>::conil();

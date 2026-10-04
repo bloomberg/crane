@@ -3,8 +3,8 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -64,8 +64,8 @@ public:
 
   T(const T &) = default;
   T &operator=(const T &) = default;
-  T(T &&) noexcept = default;
-  T &operator=(T &&) noexcept = default;
+  T(T &&) = default;
+  T &operator=(T &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -97,16 +97,16 @@ public:
 
   explicit T0(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  T0(const T0<_U> &_other)
+  template <typename CraneU>
+  T0(const T0<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename T0<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename T0<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
             const auto &[h, n, a2] =
-                std::get<typename T0<_U>::Cons>(_other.v());
+                std::get<typename T0<CraneU>::Cons>(_other.v());
             return Cons{[&]() -> A {
-                          if constexpr (crane_convertible<A, const _U &>) {
+                          if constexpr (crane_convertible<A, const CraneU &>) {
                             return crane_convert<A>(h);
                           } else {
                             throw std::logic_error(

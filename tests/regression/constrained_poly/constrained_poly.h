@@ -3,8 +3,8 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -18,18 +18,19 @@ struct ConstrainedPoly {
     B usnd;
 
     // ACCESSORS
-    template <typename _U0, typename _U1> operator UPair<_U0, _U1>() const {
-      return {[&]() -> _U0 {
-                if constexpr (crane_convertible<_U0, const A &>) {
-                  return crane_convert<_U0>(ufst);
+    template <typename CraneU0, typename CraneU1>
+    operator UPair<CraneU0, CraneU1>() const {
+      return {[&]() -> CraneU0 {
+                if constexpr (crane_convertible<CraneU0, const A &>) {
+                  return crane_convert<CraneU0>(ufst);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
                                          "field at this instantiation");
                 }
               }(),
-              [&]() -> _U1 {
-                if constexpr (crane_convertible<_U1, const B &>) {
-                  return crane_convert<_U1>(usnd);
+              [&]() -> CraneU1 {
+                if constexpr (crane_convertible<CraneU1, const B &>) {
+                  return crane_convert<CraneU1>(usnd);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
                                          "field at this instantiation");
@@ -70,15 +71,15 @@ struct ConstrainedPoly {
 
     explicit UOption(UNone _v) : v_(_v) {}
 
-    template <typename _U>
-    UOption(const UOption<_U> &_other)
+    template <typename CraneU>
+    UOption(const UOption<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename UOption<_U>::USome>(
+            if (std::holds_alternative<typename UOption<CraneU>::USome>(
                     _other.v())) {
               const auto &[a0] =
-                  std::get<typename UOption<_U>::USome>(_other.v());
+                  std::get<typename UOption<CraneU>::USome>(_other.v());
               return USome{[&]() -> A {
-                if constexpr (crane_convertible<A, const _U &>) {
+                if constexpr (crane_convertible<A, const CraneU &>) {
                   return crane_convert<A>(a0);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "

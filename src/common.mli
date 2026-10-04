@@ -499,6 +499,10 @@ val enum_ctor_name_of_id : Id.t -> string
     Deterministic: same packet always produces the same names. *)
 val enum_ctor_names_of_packet : Id.t array -> string array
 
+(** The C++ enum constructor name for constructor [j] (1-based) of packet [i]
+    of the inductive [kn], by looking up its siblings. *)
+val enum_ctor_name_of_ref : MutInd.t -> int -> int -> string
+
 (** The last [::]-separated component of a qualified name, e.g. [Nat::add]
     becomes [add]. *)
 val last_component : string -> string
@@ -509,9 +513,9 @@ val capitalize_last_component : string -> string
 
 (** {2 Needed C++ Headers} *)
 
-(** Record that a C++ header is needed by the current extraction output. *)
+(** Record that a standard C++ header is needed by the current extraction
+    output. *)
 val require_header : string -> unit
 
-(** Return every {!Table} demand raised so far, sorted. Callers filter it
-    against the headers they know how to emit. *)
-val get_needed_headers : unit -> string list
+(** Record that the current output erases a value, and so needs obj.h. *)
+val require_obj_header : unit -> unit

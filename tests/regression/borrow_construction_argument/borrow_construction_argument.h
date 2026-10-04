@@ -3,8 +3,8 @@
 
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <concepts>
+#include <cstdint>
 #include <utility>
 
 template <typename I>
@@ -43,10 +43,11 @@ struct BorrowConstructionArgument {
   template <typename a> using stateT = crane::fn<std::pair<big, a>(big)>;
 
   struct Monad_stateT {
-    template <typename _A0> using m = crane::fn<std::pair<big, _A0>(big)>;
+    template <typename CraneA0>
+    using m = crane::fn<std::pair<big, CraneA0>(big)>;
 
-    template <typename _A0>
-    static crane::fn<std::pair<big, _A0>(big)> ret(_A0 a) {
+    template <typename CraneA0>
+    static crane::fn<std::pair<big, CraneA0>(big)> ret(CraneA0 a) {
       return [=](const big &s) { return std::make_pair(s, a); };
     }
 

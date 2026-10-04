@@ -2,6 +2,7 @@
 #define INCLUDED_TC_METHOD_ARITY_MISMATCH
 
 #include <concepts>
+#include <cstdint>
 #include <utility>
 
 /// A class method of type A -> nat -> nat whose instance is written as a

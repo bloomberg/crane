@@ -3,6 +3,7 @@
 
 #include "crane_fn.h"
 #include "fn.h"
+#include <cstdint>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -16,8 +17,8 @@ struct DictCtorField {
     crane::fn<uint64_t(A)> sz;
 
     // ACCESSORS
-    template <typename _U> operator Sz<_U>() const {
-      return {crane_convert<crane::fn<uint64_t(_U)>>(sz)};
+    template <typename CraneU> operator Sz<CraneU>() const {
+      return {crane_convert<crane::fn<uint64_t(CraneU)>>(sz)};
     }
   };
 

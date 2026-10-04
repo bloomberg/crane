@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <memory>
 #include <stdexcept>
@@ -60,8 +59,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -114,16 +113,17 @@ public:
 
   explicit Lst(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  Lst(const Lst<_U> &_other)
+  template <typename CraneU>
+  Lst(const Lst<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Lst<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename Lst<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[x, xs] = std::get<typename Lst<_U>::Cons>(_other.v());
+            const auto &[x, xs] =
+                std::get<typename Lst<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(x);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -160,8 +160,8 @@ public:
 
   Lst(const Lst &) = default;
   Lst &operator=(const Lst &) = default;
-  Lst(Lst &&) noexcept = default;
-  Lst &operator=(Lst &&) noexcept = default;
+  Lst(Lst &&) = default;
+  Lst &operator=(Lst &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 

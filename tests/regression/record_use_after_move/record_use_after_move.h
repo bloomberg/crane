@@ -1,6 +1,7 @@
 #ifndef INCLUDED_RECORD_USE_AFTER_MOVE
 #define INCLUDED_RECORD_USE_AFTER_MOVE
 
+#include <cstdint>
 #include <utility>
 
 struct RecordUseAfterMove {

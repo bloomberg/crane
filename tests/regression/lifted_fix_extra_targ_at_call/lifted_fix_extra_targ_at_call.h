@@ -5,7 +5,6 @@
 #include "fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <memory>
@@ -98,8 +97,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -152,16 +151,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -198,8 +198,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -228,32 +228,33 @@ struct Monad0 {
 };
 
 template <Monad _tcI0> struct Functor_Monad {
-  template <typename _A0> using m = typename _tcI0::template m<_A0>;
-  template <typename _A0> using F = typename _tcI0::template m<_A0>;
+  template <typename CraneA0> using m = typename _tcI0::template m<CraneA0>;
+  template <typename CraneA0> using F = typename _tcI0::template m<CraneA0>;
 
-  template <typename _A0, typename _A1>
-  static typename _tcI0::template m<_A1>
-  fmap(crane::fn<_A1(_A0)> a0, typename _tcI0::template m<_A0> a1) {
-    return Monad0::template liftM<_tcI0, _A0, _A1>(std::move(a0),
-                                                   std::move(a1));
+  template <typename CraneA0, typename CraneA1>
+  static typename _tcI0::template m<CraneA1>
+  fmap(crane::fn<CraneA1(CraneA0)> a0, typename _tcI0::template m<CraneA0> a1) {
+    return Monad0::template liftM<_tcI0, CraneA0, CraneA1>(std::move(a0),
+                                                           std::move(a1));
   }
 };
 
 struct Monad_option {
-  template <typename _A0> using m = std::optional<_A0>;
+  template <typename CraneA0> using m = std::optional<CraneA0>;
 
-  template <typename _A0> static std::optional<_A0> ret(_A0 x) {
-    return std::make_optional<_A0>(x);
+  template <typename CraneA0> static std::optional<CraneA0> ret(CraneA0 x) {
+    return std::make_optional<CraneA0>(x);
   }
 
-  template <typename _A0, typename _A1>
-  static std::optional<_A1> bind(std::optional<_A0> c1,
-                                 crane::fn<std::optional<_A1>(_A0)> c2) {
+  template <typename CraneA0, typename CraneA1>
+  static std::optional<CraneA1>
+  bind(std::optional<CraneA0> c1,
+       crane::fn<std::optional<CraneA1>(CraneA0)> c2) {
     if (c1.has_value()) {
-      const _A0 &v = *c1;
+      const CraneA0 &v = *c1;
       return c2(v);
     } else {
-      return std::optional<_A1>();
+      return std::optional<CraneA1>();
     }
   }
 };
@@ -323,8 +324,8 @@ public:
 
   Dtyp(const Dtyp &) = default;
   Dtyp &operator=(const Dtyp &) = default;
-  Dtyp(Dtyp &&) noexcept = default;
-  Dtyp &operator=(Dtyp &&) noexcept = default;
+  Dtyp(Dtyp &&) = default;
+  Dtyp &operator=(Dtyp &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -356,13 +357,15 @@ public:
 
   explicit Dvalue(DVS _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  Dvalue(const Dvalue<_U> &_other)
+  template <typename CraneU>
+  Dvalue(const Dvalue<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Dvalue<_U>::DV0>(_other.v())) {
-            const auto &[a0] = std::get<typename Dvalue<_U>::DV0>(_other.v());
+          if (std::holds_alternative<typename Dvalue<CraneU>::DV0>(
+                  _other.v())) {
+            const auto &[a0] =
+                std::get<typename Dvalue<CraneU>::DV0>(_other.v());
             return DV0{[&]() -> ptr {
-              if constexpr (crane_convertible<ptr, const _U &>) {
+              if constexpr (crane_convertible<ptr, const CraneU &>) {
                 return crane_convert<ptr>(a0);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -370,7 +373,8 @@ public:
               }
             }()};
           } else {
-            const auto &[a0] = std::get<typename Dvalue<_U>::DVS>(_other.v());
+            const auto &[a0] =
+                std::get<typename Dvalue<CraneU>::DVS>(_other.v());
             return DVS{(a0 ? std::make_shared<List<Dvalue<ptr>>>(
                                  crane_convert<List<Dvalue<ptr>>>(*a0))
                            : nullptr)};

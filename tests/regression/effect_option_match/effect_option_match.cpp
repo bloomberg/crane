@@ -25,7 +25,7 @@ std::string EffectOptionMatch::show_or_ask(std::string name) {
     const std::string &v = *mv;
     return v;
   } else {
-    std::cout << "Not set, enter value:"s << '\n';
+    std::cout << std::string("Not set, enter value:") << '\n';
     return []() -> std::string {
       std::string _r;
       std::getline(std::cin, _r);

@@ -57,8 +57,8 @@ struct Nat {
 
     nat(const nat &) = default;
     nat &operator=(const nat &) = default;
-    nat(nat &&) noexcept = default;
-    nat &operator=(nat &&) noexcept = default;
+    nat(nat &&) = default;
+    nat &operator=(nat &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 

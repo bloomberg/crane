@@ -47,7 +47,7 @@ struct GeneratedStorageFieldNameClash {
 
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, bool &>
-  static T1 d_v__rect(T1 f, F1 &&f0, const d_v_ &d) {
+  static T1 d_v_prect(T1 f, F1 &&f0, const d_v_ &d) {
     if (std::holds_alternative<typename d_v_::Empty>(d.v())) {
       return f;
     } else {
@@ -58,7 +58,7 @@ struct GeneratedStorageFieldNameClash {
 
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, bool &>
-  static T1 d_v__rec(T1 f, F1 &&f0, const d_v_ &d) {
+  static T1 d_v_prec(T1 f, F1 &&f0, const d_v_ &d) {
     if (std::holds_alternative<typename d_v_::Empty>(d.v())) {
       return f;
     } else {

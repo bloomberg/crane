@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <crane_itree.h>
@@ -74,8 +73,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -87,37 +86,42 @@ template <typename S, typename m, typename t> struct stateT {
   crane::fn<m(S)> runStateT;
 
   // ACCESSORS
-  template <typename _U0, typename _U1, typename _U2>
-  operator stateT<_U0, _U1, _U2>() const {
-    return {crane_convert<crane::fn<_U1(_U0)>>(runStateT)};
+  template <typename CraneU0, typename CraneU1, typename CraneU2>
+  operator stateT<CraneU0, CraneU1, CraneU2>() const {
+    return {crane_convert<crane::fn<CraneU1(CraneU0)>>(runStateT)};
   }
 };
 
 template <Monad _tcI0, typename T1> struct Monad_stateT {
-  template <typename _A0>
-  using m = stateT<T1, typename _tcI0::template m<_A0>, _A0>;
+  template <typename CraneA0>
+  using m = stateT<T1, typename _tcI0::template m<CraneA0>, CraneA0>;
 
-  template <typename _A0>
-  static stateT<T1, typename _tcI0::template m<_A0>, _A0> ret(_A0 x) {
-    return stateT<T1, typename _tcI0::template m<_A0>, _A0>{
+  template <typename CraneA0>
+  static stateT<T1, typename _tcI0::template m<CraneA0>, CraneA0>
+  ret(CraneA0 x) {
+    return stateT<T1, typename _tcI0::template m<CraneA0>, CraneA0>{
         [=](const T1 &s) { return itree_ret(std::make_pair(x, s)); }};
   }
 
-  template <typename _A0, typename _A1>
-  static stateT<T1, typename _tcI0::template m<_A1>, _A1>
-  bind(stateT<T1, typename _tcI0::template m<_A0>, _A0> c1,
-       crane::fn<stateT<T1, typename _tcI0::template m<_A1>, _A1>(_A0)> c2) {
-    return stateT<T1, typename _tcI0::template m<_A1>, _A1>{[=](const T1 &s) {
-      return itree_bind(
-          crane_container_cast<typename _tcI0::template m<std::pair<_A0, T1>>>(
-              c1.runStateT(s)),
-          [=](const std::pair<_A0, T1> &vs) {
-            const auto &[v, s0] = vs;
-            return crane_container_cast<
-                typename _tcI0::template m<std::pair<_A1, T1>>>(
-                c2(v).runStateT(s0));
-          });
-    }};
+  template <typename CraneA0, typename CraneA1>
+  static stateT<T1, typename _tcI0::template m<CraneA1>, CraneA1>
+  bind(stateT<T1, typename _tcI0::template m<CraneA0>, CraneA0> c1,
+       crane::fn<
+           stateT<T1, typename _tcI0::template m<CraneA1>, CraneA1>(CraneA0)>
+           c2) {
+    return stateT<T1, typename _tcI0::template m<CraneA1>, CraneA1>{
+        [=](const T1 &s) {
+          return itree_bind(
+              crane_container_cast<
+                  typename _tcI0::template m<std::pair<CraneA0, T1>>>(
+                  c1.runStateT(s)),
+              [=](const std::pair<CraneA0, T1> &vs) {
+                const auto &[v, s0] = vs;
+                return crane_container_cast<
+                    typename _tcI0::template m<std::pair<CraneA1, T1>>>(
+                    c2(v).runStateT(s0));
+              });
+        }};
   }
 };
 

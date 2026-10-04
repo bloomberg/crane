@@ -1,6 +1,7 @@
 #ifndef INCLUDED_STEPS_COUNTER_UNROLL
 #define INCLUDED_STEPS_COUNTER_UNROLL
 
+#include <cstdint>
 #include <utility>
 
 struct StepsCounterUnroll {

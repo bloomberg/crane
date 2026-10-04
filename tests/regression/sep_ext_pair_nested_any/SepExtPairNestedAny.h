@@ -2,7 +2,6 @@
 #define INCLUDED_SEPEXTPAIRNESTEDANY
 
 #include "obj.h"
-#include <any>
 #include <memory>
 #include <optional>
 #include <utility>

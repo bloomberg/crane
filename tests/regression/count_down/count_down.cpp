@@ -8,7 +8,7 @@ void CountDown::count_down(uint64_t n) {
       return;
     } else {
       uint64_t n_ = _loop_n - 1;
-      std::cout << "tick"s << '\n';
+      std::cout << std::string("tick") << '\n';
       _loop_n = n_;
     }
   }
@@ -23,8 +23,8 @@ void CountDown::two_prints(uint64_t n) {
       return;
     } else {
       uint64_t n_ = _loop_n - 1;
-      std::cout << "step "s + std::to_string(_loop_n) << '\n';
-      std::cout << "---"s << '\n';
+      std::cout << std::string("step ") + std::to_string(_loop_n) << '\n';
+      std::cout << std::string("---") << '\n';
       _loop_n = n_;
     }
   }
@@ -41,7 +41,7 @@ void CountDown::echo_loop(uint64_t n) {
       uint64_t n_ = _loop_n - 1;
       std::string line;
       std::getline(std::cin, line);
-      std::cout << "echo: "s + line << '\n';
+      std::cout << std::string("echo: ") + line << '\n';
       _loop_n = n_;
     }
   }
@@ -53,11 +53,11 @@ void CountDown::announce(uint64_t n) {
   uint64_t _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
-      std::cout << "done"s << '\n';
+      std::cout << std::string("done") << '\n';
       return;
     } else {
       uint64_t n_ = _loop_n - 1;
-      std::cout << "counting "s + std::to_string(_loop_n) << '\n';
+      std::cout << std::string("counting ") + std::to_string(_loop_n) << '\n';
       _loop_n = n_;
     }
   }
@@ -108,7 +108,7 @@ void CountDown::co_count_down() {
     if (string_eq(std::move(line), "stop")) {
       return;
     } else {
-      std::cout << "tick"s << '\n';
+      std::cout << std::string("tick") << '\n';
     }
   }
   return;
@@ -121,8 +121,8 @@ void CountDown::co_two_prints() {
     if (string_eq(line, "stop")) {
       return;
     } else {
-      std::cout << "got: "s + line << '\n';
-      std::cout << "---"s << '\n';
+      std::cout << std::string("got: ") + line << '\n';
+      std::cout << std::string("---") << '\n';
     }
   }
   return;
@@ -135,7 +135,7 @@ void CountDown::co_echo_loop() {
     if (string_eq(line, "quit")) {
       return;
     } else {
-      std::cout << "echo: "s + line << '\n';
+      std::cout << std::string("echo: ") + line << '\n';
     }
   }
   return;
@@ -147,10 +147,10 @@ void CountDown::co_announce(uint64_t round) {
     std::string line;
     std::getline(std::cin, line);
     if (string_eq(std::move(line), "stop")) {
-      std::cout << "done"s << '\n';
+      std::cout << std::string("done") << '\n';
       return;
     } else {
-      std::cout << "round "s + std::to_string(_loop_round) << '\n';
+      std::cout << std::string("round ") + std::to_string(_loop_round) << '\n';
       _loop_round = (_loop_round + 1);
     }
   }

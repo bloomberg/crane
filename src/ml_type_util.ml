@@ -1263,7 +1263,7 @@ let get_tvars_indexed t =
     | Tshared_ptr ty -> aux l ty
     | Tapply (ty, tys) -> List.fold_left aux l (ty :: tys)
     (* A carrier abstraction names the variables its body does -- written
-       through a holder, [_crane_carrier_tch<T1>::template c]. *)
+       through a holder, [crane_carrier_tch<T1>::template c]. *)
     | Ttyctor ty -> aux l ty
     | _ -> l
   in

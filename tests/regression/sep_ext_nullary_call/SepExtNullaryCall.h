@@ -2,6 +2,7 @@
 #define INCLUDED_SEPEXTNULLARYCALL
 
 #include <concepts>
+#include <cstdint>
 
 #include "Datatypes.h"
 #include "List.h"

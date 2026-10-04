@@ -1,6 +1,7 @@
 #ifndef INCLUDED_IDENT_NAMED_UINT64
 #define INCLUDED_IDENT_NAMED_UINT64
 
+#include <cstdint>
 #include <type_traits>
 #include <variant>
 

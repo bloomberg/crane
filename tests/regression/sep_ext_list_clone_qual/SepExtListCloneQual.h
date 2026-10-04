@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
 #include <memory>
 #include <stdexcept>
@@ -40,17 +39,18 @@ public:
 
   explicit Forest(Node _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  Forest(const Forest<_U> &_other)
+  template <typename CraneU>
+  Forest(const Forest<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Forest<_U>::Leaf>(_other.v())) {
+          if (std::holds_alternative<typename Forest<CraneU>::Leaf>(
+                  _other.v())) {
             return Leaf{};
           } else {
             const auto &[a0, a1] =
-                std::get<typename Forest<_U>::Node>(_other.v());
+                std::get<typename Forest<CraneU>::Node>(_other.v());
             return Node{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a0);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -114,8 +114,8 @@ public:
 
   Forest(const Forest &) = default;
   Forest &operator=(const Forest &) = default;
-  Forest(Forest &&) noexcept = default;
-  Forest &operator=(Forest &&) noexcept = default;
+  Forest(Forest &&) = default;
+  Forest &operator=(Forest &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 

@@ -19,7 +19,7 @@ std::pair<std::string, int64_t> EffectNestedIo::read_pair() {
 std::string EffectNestedIo::read_and_greet() {
   std::string name;
   std::getline(std::cin, name);
-  std::string greeting = "Hello, "s + std::move(name);
+  std::string greeting = std::string("Hello, ") + std::move(name);
   return greeting;
 }
 
@@ -59,10 +59,10 @@ std::string EffectNestedIo::read_and_store(std::string key) {
 std::pair<std::string, std::string> EffectNestedIo::multi_read_store() {
   std::string k;
   std::getline(std::cin, k);
-  setenv("KEY"s.c_str(), k.c_str(), 1);
+  setenv(std::string("KEY").c_str(), k.c_str(), 1);
   std::string v;
   std::getline(std::cin, v);
-  setenv("VALUE"s.c_str(), v.c_str(), 1);
+  setenv(std::string("VALUE").c_str(), v.c_str(), 1);
   return std::make_pair(k, v);
 }
 

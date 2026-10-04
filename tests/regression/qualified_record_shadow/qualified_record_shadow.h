@@ -1,6 +1,8 @@
 #ifndef INCLUDED_QUALIFIED_RECORD_SHADOW
 #define INCLUDED_QUALIFIED_RECORD_SHADOW
 
+#include <cstdint>
+
 struct QualifiedRecordShadow {
   struct Shadow {
     uint64_t value;

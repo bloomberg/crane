@@ -1,6 +1,8 @@
 #ifndef INCLUDED_ACK
 #define INCLUDED_ACK
 
+#include <cstdint>
+
 struct Ack {
   static uint64_t ack(uint64_t m, uint64_t n);
 };

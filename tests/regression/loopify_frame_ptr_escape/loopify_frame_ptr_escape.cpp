@@ -36,32 +36,34 @@ uint64_t LoopifyFramePtrEscape::hd(const LoopifyFramePtrEscape::lst &l) {
   }
 }
 
-uint64_t LoopifyFramePtrEscape::walk(
-    uint64_t n, const LoopifyFramePtrEscape::lst &l,
-    const LoopifyFramePtrEscape::lst
-        &acc) { /// _Enter: captures varying parameters for each recursive call.
+uint64_t
+LoopifyFramePtrEscape::walk(uint64_t n, const LoopifyFramePtrEscape::lst &l,
+                            const LoopifyFramePtrEscape::lst
+                                &acc) { /// CraneEnter: captures varying
+                                        /// parameters for each recursive call.
 
-  struct _Enter {
+  struct CraneEnter {
     LoopifyFramePtrEscape::lst acc;
     LoopifyFramePtrEscape::lst l;
     uint64_t n;
   };
 
-  /// _Cont_Cons: saves [a0], resumes after recursive call, then processes rest.
-  struct _Cont_Cons {
+  /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
+  /// rest.
+  struct CraneCont_Cons {
     uint64_t a0;
   };
 
-  using _Frame = std::variant<_Enter, _Cont_Cons>;
+  using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
   uint64_t _result{};
-  crane::small_vector<_Frame> _stack;
-  _stack.emplace_back(_Enter{acc, l, n});
-  /// Loopified walk: _Enter -> _Cont_Cons.
+  crane::small_vector<CraneFrame> _stack;
+  _stack.emplace_back(CraneEnter{acc, l, n});
+  /// Loopified walk: CraneEnter -> CraneCont_Cons.
   while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
+    CraneFrame _frame = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
+    if (std::holds_alternative<CraneEnter>(_frame)) {
+      auto _f = std::move(std::get<CraneEnter>(_frame));
       const LoopifyFramePtrEscape::lst &acc = std::move(_f.acc);
       const LoopifyFramePtrEscape::lst &l = std::move(_f.l);
       uint64_t n = _f.n;
@@ -75,13 +77,13 @@ uint64_t LoopifyFramePtrEscape::walk(
         } else {
           const auto &[a0, a1] =
               std::get<typename LoopifyFramePtrEscape::lst::Cons>(l.v());
-          _stack.emplace_back(_Cont_Cons{a0});
+          _stack.emplace_back(CraneCont_Cons{a0});
           _stack.emplace_back(
-              _Enter{*a1, lst::cons((m + 1), lst::cons(m, lst::nil())), m});
+              CraneEnter{*a1, lst::cons((m + 1), lst::cons(m, lst::nil())), m});
         }
       }
     } else {
-      auto _f = std::move(std::get<_Cont_Cons>(_frame));
+      auto _f = std::move(std::get<CraneCont_Cons>(_frame));
       uint64_t a0 = _f.a0;
       _result = (a0 + std::move(_result));
     }

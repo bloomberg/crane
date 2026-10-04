@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
 #include <crane_itree.h>
 #include <cstdint>
@@ -18,8 +17,6 @@
 #include <system_error>
 #include <utility>
 #include <variant>
-
-using namespace std::string_literals;
 
 enum class Color;
 template <typename A> struct Tree;
@@ -51,19 +48,19 @@ public:
 
   explicit Tree(Node _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  Tree(const Tree<_U> &_other)
+  template <typename CraneU>
+  Tree(const Tree<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Tree<_U>::Leaf>(_other.v())) {
+          if (std::holds_alternative<typename Tree<CraneU>::Leaf>(_other.v())) {
             return Leaf{};
           } else {
             const auto &[a0, a1, a2] =
-                std::get<typename Tree<_U>::Node>(_other.v());
+                std::get<typename Tree<CraneU>::Node>(_other.v());
             return Node{
                 (a0 ? std::make_shared<Tree<A>>(crane_convert<Tree<A>>(*a0))
                     : nullptr),
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a1);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -108,8 +105,8 @@ public:
 
   Tree(const Tree &) = default;
   Tree &operator=(const Tree &) = default;
-  Tree(Tree &&) noexcept = default;
-  Tree &operator=(Tree &&) noexcept = default;
+  Tree(Tree &&) = default;
+  Tree &operator=(Tree &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 

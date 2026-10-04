@@ -3,6 +3,7 @@
 
 #include "fn.h"
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -59,8 +60,8 @@ struct ClosureRecursiveBuild {
 
     fn_list(const fn_list &) = default;
     fn_list &operator=(const fn_list &) = default;
-    fn_list(fn_list &&) noexcept = default;
-    fn_list &operator=(fn_list &&) noexcept = default;
+    fn_list(fn_list &&) = default;
+    fn_list &operator=(fn_list &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 

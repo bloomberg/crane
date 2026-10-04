@@ -444,7 +444,7 @@ let relax_applied_param temps decl =
       let fresh = ref [] in
       let next_name () =
         let rec pick k =
-          let id = Id.of_string (Printf.sprintf "_P%d" k) in
+          let id = Generated_name.indexed "P" k in
           if List.exists (Id.equal id) taken then pick (k + 1) else id
         in
         pick (List.length !fresh)

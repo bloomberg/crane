@@ -1,6 +1,7 @@
 #ifndef INCLUDED_ANON_FIXPOINT
 #define INCLUDED_ANON_FIXPOINT
 
+#include <cstdint>
 #include <utility>
 
 struct AnonFixpoint {

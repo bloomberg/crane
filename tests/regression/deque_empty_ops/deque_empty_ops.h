@@ -1,6 +1,7 @@
 #ifndef INCLUDED_DEQUE_EMPTY_OPS
 #define INCLUDED_DEQUE_EMPTY_OPS
 
+#include <cstdint>
 #include <deque>
 #include <type_traits>
 #include <utility>

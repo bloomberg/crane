@@ -1,6 +1,8 @@
 #ifndef INCLUDED_RECORD_DEFAULTS
 #define INCLUDED_RECORD_DEFAULTS
 
+#include <cstdint>
+
 struct RecordDefaults {
   struct Config {
     uint64_t cfg_width;

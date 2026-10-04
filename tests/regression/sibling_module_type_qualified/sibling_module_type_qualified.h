@@ -1,6 +1,7 @@
 #ifndef INCLUDED_SIBLING_MODULE_TYPE_QUALIFIED
 #define INCLUDED_SIBLING_MODULE_TYPE_QUALIFIED
 
+#include <cstdint>
 #include <variant>
 
 /// A type defined in a sibling module is spelled relative to the extraction

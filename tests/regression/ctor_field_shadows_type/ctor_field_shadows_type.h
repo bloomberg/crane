@@ -1,6 +1,7 @@
 #ifndef INCLUDED_CTOR_FIELD_SHADOWS_TYPE
 #define INCLUDED_CTOR_FIELD_SHADOWS_TYPE
 
+#include <cstdint>
 #include <type_traits>
 #include <variant>
 

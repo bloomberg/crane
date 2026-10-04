@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <memory>
@@ -75,8 +74,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -131,16 +130,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -177,8 +177,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -268,15 +268,15 @@ struct PromotedFieldCtorTargInLambda {
 
     explicit memS(Mget _v) : v_(std::move(_v)) {}
 
-    template <typename _U0, typename _U1>
-    memS(const memS<_U0, _U1> &_other)
+    template <typename CraneU0, typename CraneU1>
+    memS(const memS<CraneU0, CraneU1> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename memS<_U0, _U1>::Mret>(
+            if (std::holds_alternative<typename memS<CraneU0, CraneU1>::Mret>(
                     _other.v())) {
               const auto &[a0] =
-                  std::get<typename memS<_U0, _U1>::Mret>(_other.v());
+                  std::get<typename memS<CraneU0, CraneU1>::Mret>(_other.v());
               return Mret{[&]() -> X {
-                if constexpr (crane_convertible<X, const _U1 &>) {
+                if constexpr (crane_convertible<X, const CraneU1 &>) {
                   return crane_convert<X>(a0);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
@@ -284,14 +284,14 @@ struct PromotedFieldCtorTargInLambda {
                 }
               }()};
             } else {
-              if (std::holds_alternative<typename memS<_U0, _U1>::Mub>(
+              if (std::holds_alternative<typename memS<CraneU0, CraneU1>::Mub>(
                       _other.v())) {
                 const auto &[a0] =
-                    std::get<typename memS<_U0, _U1>::Mub>(_other.v());
+                    std::get<typename memS<CraneU0, CraneU1>::Mub>(_other.v());
                 return Mub{a0};
               } else {
                 const auto &[a0] =
-                    std::get<typename memS<_U0, _U1>::Mget>(_other.v());
+                    std::get<typename memS<CraneU0, CraneU1>::Mget>(_other.v());
                 return Mget{crane_convert<crane::fn<memS<S, X>(S)>>(a0)};
               }
             }
@@ -374,16 +374,16 @@ struct PromotedFieldCtorTargInLambda {
   }
 
   template <typename T1> struct memS_mon {
-    template <typename _A0> using m = memS<T1, _A0>;
+    template <typename CraneA0> using m = memS<T1, CraneA0>;
 
-    template <typename _A0> static memS<T1, _A0> ret(_A0 x) {
-      return memS<T1, _A0>::mret(std::move(x));
+    template <typename CraneA0> static memS<T1, CraneA0> ret(CraneA0 x) {
+      return memS<T1, CraneA0>::mret(std::move(x));
     }
 
-    template <typename _A0, typename _A1>
-    static memS<T1, _A1> bind(memS<T1, _A0> a0,
-                              crane::fn<memS<T1, _A1>(_A0)> a1) {
-      return memS_bind<T1, _A0, _A1>(std::move(a0), std::move(a1));
+    template <typename CraneA0, typename CraneA1>
+    static memS<T1, CraneA1> bind(memS<T1, CraneA0> a0,
+                                  crane::fn<memS<T1, CraneA1>(CraneA0)> a1) {
+      return memS_bind<T1, CraneA0, CraneA1>(std::move(a0), std::move(a1));
     }
   };
 

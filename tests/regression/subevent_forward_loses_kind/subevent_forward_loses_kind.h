@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <memory>
 #include <stdexcept>
@@ -62,8 +61,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -94,16 +93,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -140,8 +140,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -177,7 +177,7 @@ template <typename A> struct UBE {
   // ACCESSORS
   UBE<A> clone() const { return {a0}; }
 
-  template <typename _U> operator UBE<_U>() const { return {a0}; }
+  template <typename CraneU> operator UBE<CraneU>() const { return {a0}; }
 
   // CREATORS
   static UBE<A> throwub(Unit a0) { return {a0}; }
@@ -192,8 +192,8 @@ crane::rebind_t<T2, T3> inj(std::type_identity_t<Sub<T1, T2>> sub,
       sub(crane_convert<T1>(std::move(x))));
 }
 
-template <typename T1 = void, typename T2, typename _P0>
-List<T2> trigger_cast(_P0) {
+template <typename T1 = void, typename T2, typename CraneP0>
+List<T2> trigger_cast(CraneP0) {
   return List<T2>::nil();
 }
 

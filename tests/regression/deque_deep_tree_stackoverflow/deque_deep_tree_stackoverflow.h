@@ -3,6 +3,7 @@
 
 #include "small_vector.h"
 #include <atomic>
+#include <cstdint>
 #include <deque>
 #include <memory>
 #include <type_traits>
@@ -67,8 +68,8 @@ struct DequeDeepTreeStackoverflow {
 
     rose(const rose &) = default;
     rose &operator=(const rose &) = default;
-    rose(rose &&) noexcept = default;
-    rose &operator=(rose &&) noexcept = default;
+    rose(rose &&) = default;
+    rose &operator=(rose &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 

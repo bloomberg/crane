@@ -1,7 +1,7 @@
 #include "main_entrypoint.h"
 
 void MainEntrypoint::main() {
-  std::cout << "hello from main"s << '\n';
+  std::cout << std::string("hello from main") << '\n';
   return;
 }
 

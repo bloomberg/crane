@@ -59,8 +59,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -128,8 +128,8 @@ public:
 
   Tree(const Tree &) = default;
   Tree &operator=(const Tree &) = default;
-  Tree(Tree &&) noexcept = default;
-  Tree &operator=(Tree &&) noexcept = default;
+  Tree(Tree &&) = default;
+  Tree &operator=(Tree &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 

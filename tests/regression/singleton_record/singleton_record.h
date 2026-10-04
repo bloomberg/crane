@@ -4,7 +4,7 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
+#include <cstdint>
 #include <stdexcept>
 
 struct SingletonRecord {
@@ -22,10 +22,10 @@ struct SingletonRecord {
     A contents;
 
     // ACCESSORS
-    template <typename _U> operator box<_U>() const {
-      return {[&]() -> _U {
-        if constexpr (crane_convertible<_U, const A &>) {
-          return crane_convert<_U>(contents);
+    template <typename CraneU> operator box<CraneU>() const {
+      return {[&]() -> CraneU {
+        if constexpr (crane_convertible<CraneU, const A &>) {
+          return crane_convert<CraneU>(contents);
         } else {
           throw std::logic_error(
               "unreachable: inactive constructor field at this instantiation");

@@ -3,7 +3,6 @@
 
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <memory>
@@ -58,8 +57,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -91,10 +90,11 @@ struct HktPartialAppInstance {
   }
 
   template <typename T1> struct pf {
-    template <typename _A0> using F = std::pair<T1, _A0>;
+    template <typename CraneA0> using F = std::pair<T1, CraneA0>;
 
-    template <typename _A0, typename _A1>
-    static std::pair<T1, _A1> fm(crane::fn<_A1(_A0)> f, std::pair<T1, _A0> p) {
+    template <typename CraneA0, typename CraneA1>
+    static std::pair<T1, CraneA1> fm(crane::fn<CraneA1(CraneA0)> f,
+                                     std::pair<T1, CraneA0> p) {
       return std::make_pair(p.first, f(p.second));
     }
   };

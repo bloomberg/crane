@@ -14,9 +14,9 @@ struct crane_ {
   /// name.
   struct stream {
     // TYPES
-    template <typename _S0 = stream> struct Cons_ {
+    template <typename CraneS0 = stream> struct Cons_ {
       bool a0;
-      _S0 a1;
+      CraneS0 a1;
     };
 
     using Cons = Cons_<>;

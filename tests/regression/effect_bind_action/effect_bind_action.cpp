@@ -106,7 +106,7 @@ std::string EffectBindAction::let_match_then_effect(uint64_t n) {
 uint64_t EffectBindAction::discard_conditional(bool flag) {
   [&]() -> void {
     if (flag) {
-      std::cout << "flagged"s << '\n';
+      std::cout << std::string("flagged") << '\n';
       return;
     } else {
       return;

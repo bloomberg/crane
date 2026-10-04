@@ -2,7 +2,6 @@
 #define INCLUDED_PARAMSDEF
 
 #include "obj.h"
-#include <any>
 #include <concepts>
 
 namespace ParamsDef {

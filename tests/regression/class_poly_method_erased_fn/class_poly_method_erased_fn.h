@@ -4,8 +4,8 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <concepts>
+#include <cstdint>
 #include <utility>
 
 /// A typeclass method polymorphic in its own type argument

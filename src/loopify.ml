@@ -27,13 +27,13 @@
     {3 Non-Tail Recursion (Single Call)}
     [f x = if base(x) then result else combine(x, f(next(x)))]
 
-    Uses explicit stack with [_Enter] and [_Call] frames. The [_Enter] frame
+    Uses explicit stack with [CraneEnter] and [_Call] frames. The [CraneEnter] frame
     initiates computation; [_Call] frames save continuation context.
 
     {3 Multi-Recursion (2+ Calls per Branch)}
     [fib n = if n < 2 then 1 else fib(n-1) + fib(n-2)]
 
-    Uses chained [_Call] frames or [_Enter/_After/_Combine] pattern to handle
+    Uses chained [_Call] frames or [CraneEnter/_After/_Combine] pattern to handle
     multiple recursive calls in the same expression.
 
     {2 Architecture}
@@ -52,7 +52,7 @@
        one as a statement; tail modulo cons reads the body with those
        bindings put back ({!Cpp_temporaries.own_stmts})
 
-    4. {b Frame Generation}: Create typed frame structs ([_Enter], [_ResumeN],
+    4. {b Frame Generation}: Create typed frame structs ([CraneEnter], [_ResumeN],
        etc.) and a dispatch loop that tests the popped frame with
        [std::holds_alternative] in an if/else-if chain
 
@@ -73,7 +73,7 @@
     lambda.  Such a body is not loopified on its own: two machines cannot share
     a stack, so each would unwind through the other and the C++ would still
     recurse.  Instead it is {e adopted} as a second entry point of the
-    enclosing machine -- its own [_Enter_<name>] frame carrying its parameters
+    enclosing machine -- its own [CraneEnter_<name>] frame carrying its parameters
     and the variables it captures, dispatched from the same loop over the same
     [std::variant] stack.  See {!adopted} for how the two shapes are made
     alike, {!find_in_flow} for which statements are searched, and
@@ -379,14 +379,14 @@ let try_inline_mutual_into names body =
        collision with the outer function's bindings. *)
     let param_rename_map =
       List.map
-        (fun (pid, _ty) -> (pid, Id.of_string ("_inl_" ^ Id.to_string pid)))
+        (fun (pid, _ty) -> (pid, Generated_name.prefixed "_inl" pid))
         callee_params
     in
     let local_ids = collect_local_ids callee_body in
     let local_rename_map =
       List.filter_map (fun id ->
         if List.mem_assoc id param_rename_map then None
-        else Some (id, Id.of_string ("_inl_" ^ Id.to_string id)))
+        else Some (id, Generated_name.prefixed "_inl" id))
         local_ids
     in
     let rename_map = param_rename_map @ local_rename_map in
@@ -984,7 +984,7 @@ let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted check
 
     Loopify cannot linearise this on its own: the actual recursion is hidden
     behind an opaque helper and an argument lambda it does not control, so the
-    frame transform degenerates into a single [_Enter] loop that just re-runs
+    frame transform degenerates into a single [CraneEnter] loop that just re-runs
     the body.  We repair it {e before} loopification by inlining the
     functional's body into [f], rewriting every call to the [rec] parameter
     into a direct self-call to [f].  The result is ordinary self-recursion
@@ -1124,7 +1124,7 @@ let try_inline_functional_into names body =
         List.iter cb_stmt g_body;
         let rename_map =
           List.map
-            (fun id -> (id, Id.of_string ("_inl_" ^ Id.to_string id)))
+            (fun id -> (id, Generated_name.prefixed "_inl" id))
             !bound
         in
         let rename_var id =
@@ -1217,7 +1217,7 @@ let hoist_rec_conditions (check : call_checker)
     (params : (Id.t * cpp_type) list) (ret_ty : cpp_type)
     (stmts : cpp_stmt list) : cpp_stmt list =
   (* The hazard [has_recursive_branch_dependency] guards against is a raw
-     pointer stored in the [_Enter] frame that dangles once the smart pointer
+     pointer stored in the [CraneEnter] frame that dangles once the smart pointer
      it was derived from is moved from.  So the gate is precisely that no
      parameter is a raw pointer: every other parameter shape — scalars, and
      smart pointers or values, which own their referent — stays alive in the
@@ -1485,7 +1485,7 @@ let transform_fundef ~tparams (f : dfun) params body =
     + For tail recursion: initializes the shadow variable directly from [this]
       (no separate [_self = this] line needed).
     + For nontail recursion: prepends [_self = this] initialization before the
-      loop, since the [_Enter] frame references [_self] by name.
+      loop, since the [CraneEnter] frame references [_self] by name.
 
     @param tparams        Type parameters
     @param self_ty        C++ type for the struct pointer (e.g.,
@@ -1552,7 +1552,7 @@ let transform_method ~tparams ~self_ty mf =
       in
       (* Check whether any recursive call has a value-type receiver — a
          temporary such as [Trie::leaf()], whose address would dangle once
-         stored in the _Enter frame.  Receivers that name existing storage
+         stored in the CraneEnter frame.  Receivers that name existing storage
          ([CPPvar], [CPPthis]) or dereference a smart pointer ([CPPderef]) are
          fine, since the frame holds a pointer into memory that outlives it.
 

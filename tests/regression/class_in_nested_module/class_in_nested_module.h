@@ -2,6 +2,7 @@
 #define INCLUDED_CLASS_IN_NESTED_MODULE
 
 #include <concepts>
+#include <cstdint>
 #include <utility>
 
 template <typename I, typename A>

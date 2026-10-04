@@ -6,8 +6,8 @@
 #include "lazy.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -39,16 +39,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -85,8 +86,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -118,9 +119,9 @@ struct CoinductiveTakeOverflow {
   /// have to stay told apart by their owning inductive.
   template <typename A> struct stream {
     // TYPES
-    template <typename _S0 = stream<A>> struct Cons_ {
+    template <typename CraneS0 = stream<A>> struct Cons_ {
       A a0;
-      _S0 a1;
+      CraneS0 a1;
     };
 
     using Cons = Cons_<>;
@@ -137,22 +138,23 @@ struct CoinductiveTakeOverflow {
     explicit stream(Cons _v)
         : lazy_v_(crane::lazy<variant_t>(variant_t(std::move(_v)))) {}
 
-    template <typename _U>
-    stream(const stream<_U> &_other)
+    template <typename CraneU>
+    stream(const stream<CraneU> &_other)
         : lazy_v_(crane::lazy<variant_t>::converted_from(
               _other.lazy_cell(), [=]() -> variant_t {
                 const auto &[a0, a1] =
-                    std::get<typename stream<_U>::Cons>(_other.v());
-                return Cons{[&]() -> A {
-                              if constexpr (crane_convertible<A, const _U &>) {
-                                return crane_convert<A>(a0);
-                              } else {
-                                throw std::logic_error(
-                                    "unreachable: inactive constructor field "
-                                    "at this instantiation");
-                              }
-                            }(),
-                            crane_convert<stream<A>>(a1)};
+                    std::get<typename stream<CraneU>::Cons>(_other.v());
+                return Cons{
+                    [&]() -> A {
+                      if constexpr (crane_convertible<A, const CraneU &>) {
+                        return crane_convert<A>(a0);
+                      } else {
+                        throw std::logic_error(
+                            "unreachable: inactive constructor field at this "
+                            "instantiation");
+                      }
+                    }(),
+                    crane_convert<stream<A>>(a1)};
               })) {}
 
     explicit stream(crane::fn<variant_t()> _thunk)
@@ -180,22 +182,22 @@ struct CoinductiveTakeOverflow {
 
   template <typename T1, typename T2>
   static stream<T2> smap(std::type_identity_t<crane::fn<T2(T1)>> f,
-                         stream<T1> s) { /// _Enter: captures varying parameters
-                                         /// for each recursive call.
+                         stream<T1> s) { /// CraneEnter: captures varying
+                                         /// parameters for each recursive call.
 
-    struct _Enter {
+    struct CraneEnter {
       stream<T1> s;
     };
 
-    using _Frame = std::variant<_Enter>;
+    using CraneFrame = std::variant<CraneEnter>;
     stream<T2> _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{std::move(s)});
-    /// Loopified smap: _Enter.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{std::move(s)});
+    /// Loopified smap: CraneEnter.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      auto _f = std::move(std::get<_Enter>(_frame));
+      auto _f = std::move(std::get<CraneEnter>(_frame));
       stream<T1> s = std::move(_f.s);
       const auto &[a0, a1] = std::get<typename stream<T1>::Cons>(s.v());
       _result = stream<T2>::lazy_([=]() -> stream<T2> {

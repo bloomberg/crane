@@ -2,6 +2,7 @@
 #define INCLUDED_NAME_CLASH_RETURN_THIS
 
 #include <atomic>
+#include <cstdint>
 #include <type_traits>
 #include <utility>
 #include <variant>

@@ -3,13 +3,12 @@
 
 #include "fn.h"
 #include <crane_itree.h>
+#include <cstdint>
 #include <future>
 #include <iostream>
 #include <string>
 #include <utility>
 #include <variant>
-
-using namespace std::string_literals;
 
 struct EffectCompose {
   /// Spawn a future that doubles a number, retrieve the result.

@@ -3,6 +3,7 @@
 
 #include "small_vector.h"
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -65,8 +66,8 @@ struct RecursiveUnderPair {
 
     c(const c &) = default;
     c &operator=(const c &) = default;
-    c(c &&) noexcept = default;
-    c &operator=(c &&) noexcept = default;
+    c(c &&) = default;
+    c &operator=(c &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 

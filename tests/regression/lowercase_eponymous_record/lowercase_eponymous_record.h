@@ -1,6 +1,8 @@
 #ifndef INCLUDED_LOWERCASE_EPONYMOUS_RECORD
 #define INCLUDED_LOWERCASE_EPONYMOUS_RECORD
 
+#include <cstdint>
+
 struct LowercaseEponymousRecord {
   struct state {
     uint64_t x;

@@ -4,8 +4,8 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -116,17 +116,18 @@ struct AxiomTypes {
 
     explicit list(Cons _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    list(const list<_U> &_other)
+    template <typename CraneU>
+    list(const list<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename list<_U>::Nil>(_other.v())) {
+            if (std::holds_alternative<typename list<CraneU>::Nil>(
+                    _other.v())) {
               return Nil{};
             } else {
               const auto &[a0, a1] =
-                  std::get<typename list<_U>::Cons>(_other.v());
+                  std::get<typename list<CraneU>::Cons>(_other.v());
               return Cons{
                   [&]() -> A {
-                    if constexpr (crane_convertible<A, const _U &>) {
+                    if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a0);
                     } else {
                       throw std::logic_error(
@@ -165,8 +166,8 @@ struct AxiomTypes {
 
     list(const list &) = default;
     list &operator=(const list &) = default;
-    list(list &&) noexcept = default;
-    list &operator=(list &&) noexcept = default;
+    list(list &&) = default;
+    list &operator=(list &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -178,39 +179,39 @@ struct AxiomTypes {
     T1 list_rec(T1 f, F1 &&f0) const {
       const list<A> *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const list<A> *_self;
       };
 
-      /// _Cont_Cons: saves [a0, a1], resumes after recursive call, then
+      /// CraneCont_Cons: saves [a0, a1], resumes after recursive call, then
       /// processes rest.
-      struct _Cont_Cons {
+      struct CraneCont_Cons {
         A a0;
         std::shared_ptr<list<A>> a1;
       };
 
-      using _Frame = std::variant<_Enter, _Cont_Cons>;
+      using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
       T1 _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified list_rec: _Enter -> _Cont_Cons.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified list_rec: CraneEnter -> CraneCont_Cons.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const list<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename list<A>::Nil>(_sv.v())) {
             _result = f;
           } else {
             const auto &[a0, a1] = std::get<typename list<A>::Cons>(_sv.v());
-            _stack.emplace_back(_Cont_Cons{a0, a1});
-            _stack.emplace_back(_Enter{crane_raw(a1)});
+            _stack.emplace_back(CraneCont_Cons{a0, a1});
+            _stack.emplace_back(CraneEnter{crane_raw(a1)});
           }
         } else {
-          auto _f = std::move(std::get<_Cont_Cons>(_frame));
+          auto _f = std::move(std::get<CraneCont_Cons>(_frame));
           auto a0 = std::move(_f.a0);
           std::shared_ptr<list<A>> a1 = std::move(_f.a1);
           _result = f0(a0, *a1, std::move(_result));
@@ -224,39 +225,39 @@ struct AxiomTypes {
     T1 list_rect(T1 f, F1 &&f0) const {
       const list<A> *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const list<A> *_self;
       };
 
-      /// _Cont_Cons: saves [a0, a1], resumes after recursive call, then
+      /// CraneCont_Cons: saves [a0, a1], resumes after recursive call, then
       /// processes rest.
-      struct _Cont_Cons {
+      struct CraneCont_Cons {
         A a0;
         std::shared_ptr<list<A>> a1;
       };
 
-      using _Frame = std::variant<_Enter, _Cont_Cons>;
+      using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
       T1 _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified list_rect: _Enter -> _Cont_Cons.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified list_rect: CraneEnter -> CraneCont_Cons.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const list<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename list<A>::Nil>(_sv.v())) {
             _result = f;
           } else {
             const auto &[a0, a1] = std::get<typename list<A>::Cons>(_sv.v());
-            _stack.emplace_back(_Cont_Cons{a0, a1});
-            _stack.emplace_back(_Enter{crane_raw(a1)});
+            _stack.emplace_back(CraneCont_Cons{a0, a1});
+            _stack.emplace_back(CraneEnter{crane_raw(a1)});
           }
         } else {
-          auto _f = std::move(std::get<_Cont_Cons>(_frame));
+          auto _f = std::move(std::get<CraneCont_Cons>(_frame));
           auto a0 = std::move(_f.a0);
           std::shared_ptr<list<A>> a1 = std::move(_f.a1);
           _result = f0(a0, *a1, std::move(_result));

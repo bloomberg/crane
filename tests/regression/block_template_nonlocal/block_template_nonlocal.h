@@ -1,6 +1,7 @@
 #ifndef INCLUDED_BLOCK_TEMPLATE_NONLOCAL
 #define INCLUDED_BLOCK_TEMPLATE_NONLOCAL
 
+#include <cstdint>
 #include <iostream>
 
 struct BlockTemplateNonlocal {

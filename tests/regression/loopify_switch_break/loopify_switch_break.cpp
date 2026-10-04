@@ -112,31 +112,34 @@ List<uint64_t> LoopifySwitchBreak::collect_ops(
 uint64_t LoopifySwitchBreak::count_tag(
     LoopifySwitchBreak::Tag t,
     const List<std::pair<LoopifySwitchBreak::Tag, uint64_t>>
-        &ops) { /// _Enter: captures varying parameters for each recursive call.
+        &ops) { /// CraneEnter: captures varying parameters for each recursive
+                /// call.
 
-  struct _Enter {
+  struct CraneEnter {
     const List<std::pair<LoopifySwitchBreak::Tag, uint64_t>> *ops;
   };
 
-  /// _Cont_t_: resumes after recursive call, then processes rest.
-  struct _Cont_t_ {};
+  /// CraneCont_t_: resumes after recursive call, then processes rest.
+  struct CraneCont_t_ {};
 
-  /// _Cont_t__1: resumes after recursive call, then processes rest.
-  struct _Cont_t__1 {};
+  /// CraneCont_t__1: resumes after recursive call, then processes rest.
+  struct CraneCont_t__1 {};
 
-  /// _Cont_t__2: resumes after recursive call, then processes rest.
-  struct _Cont_t__2 {};
+  /// CraneCont_t__2: resumes after recursive call, then processes rest.
+  struct CraneCont_t__2 {};
 
-  using _Frame = std::variant<_Enter, _Cont_t_, _Cont_t__1, _Cont_t__2>;
+  using CraneFrame =
+      std::variant<CraneEnter, CraneCont_t_, CraneCont_t__1, CraneCont_t__2>;
   uint64_t _result{};
-  crane::small_vector<_Frame> _stack;
-  _stack.emplace_back(_Enter{&ops});
-  /// Loopified count_tag: _Enter -> _Cont_t_ -> _Cont_t__1 -> _Cont_t__2.
+  crane::small_vector<CraneFrame> _stack;
+  _stack.emplace_back(CraneEnter{&ops});
+  /// Loopified count_tag: CraneEnter -> CraneCont_t_ -> CraneCont_t__1 ->
+  /// CraneCont_t__2.
   while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
+    CraneFrame _frame = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
+    if (std::holds_alternative<CraneEnter>(_frame)) {
+      auto _f = std::move(std::get<CraneEnter>(_frame));
       const List<std::pair<LoopifySwitchBreak::Tag, uint64_t>> &ops = *_f.ops;
       if (std::holds_alternative<
               typename List<std::pair<LoopifySwitchBreak::Tag, uint64_t>>::Nil>(
@@ -151,12 +154,12 @@ uint64_t LoopifySwitchBreak::count_tag(
         case Tag::ADD: {
           switch (t_) {
           case Tag::ADD: {
-            _stack.emplace_back(_Cont_t_{});
-            _stack.emplace_back(_Enter{crane_raw(a1)});
+            _stack.emplace_back(CraneCont_t_{});
+            _stack.emplace_back(CraneEnter{crane_raw(a1)});
             break;
           }
           default: {
-            _stack.emplace_back(_Enter{crane_raw(a1)});
+            _stack.emplace_back(CraneEnter{crane_raw(a1)});
           }
           }
           break;
@@ -164,12 +167,12 @@ uint64_t LoopifySwitchBreak::count_tag(
         case Tag::MUL: {
           switch (t_) {
           case Tag::MUL: {
-            _stack.emplace_back(_Cont_t__1{});
-            _stack.emplace_back(_Enter{crane_raw(a1)});
+            _stack.emplace_back(CraneCont_t__1{});
+            _stack.emplace_back(CraneEnter{crane_raw(a1)});
             break;
           }
           default: {
-            _stack.emplace_back(_Enter{crane_raw(a1)});
+            _stack.emplace_back(CraneEnter{crane_raw(a1)});
           }
           }
           break;
@@ -177,12 +180,12 @@ uint64_t LoopifySwitchBreak::count_tag(
         case Tag::KEEP: {
           switch (t_) {
           case Tag::KEEP: {
-            _stack.emplace_back(_Cont_t__2{});
-            _stack.emplace_back(_Enter{crane_raw(a1)});
+            _stack.emplace_back(CraneCont_t__2{});
+            _stack.emplace_back(CraneEnter{crane_raw(a1)});
             break;
           }
           default: {
-            _stack.emplace_back(_Enter{crane_raw(a1)});
+            _stack.emplace_back(CraneEnter{crane_raw(a1)});
           }
           }
           break;
@@ -191,14 +194,14 @@ uint64_t LoopifySwitchBreak::count_tag(
           std::unreachable();
         }
       }
-    } else if (std::holds_alternative<_Cont_t_>(_frame)) {
-      auto _f = std::move(std::get<_Cont_t_>(_frame));
+    } else if (std::holds_alternative<CraneCont_t_>(_frame)) {
+      auto _f = std::move(std::get<CraneCont_t_>(_frame));
       _result = (std::move(_result) + 1);
-    } else if (std::holds_alternative<_Cont_t__1>(_frame)) {
-      auto _f = std::move(std::get<_Cont_t__1>(_frame));
+    } else if (std::holds_alternative<CraneCont_t__1>(_frame)) {
+      auto _f = std::move(std::get<CraneCont_t__1>(_frame));
       _result = (std::move(_result) + 1);
     } else {
-      auto _f = std::move(std::get<_Cont_t__2>(_frame));
+      auto _f = std::move(std::get<CraneCont_t__2>(_frame));
       _result = (std::move(_result) + 1);
     }
   }

@@ -2,6 +2,7 @@
 #define INCLUDED_BLOCK_TEMPLATE_TYPES
 
 #include <crane_itree.h>
+#include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <iostream>

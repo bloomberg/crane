@@ -239,7 +239,7 @@ let rec pp_spec_as_requirement modtype_mp modtype_refs = function
            signature.  Without this case, (elt -> bool) would fall through to
            pp_cpp_type and render as crane::fn<bool(elt)> — elt is bare.
            We need crane::fn<bool(typename M::elt)>. *)
-        require_header Crane_rt.fn_header;
+        Table.demand_header (Table.Runtime Crane_rt.fn_header);
         str Crane_rt.fn ++ str "<"
         ++ qualify_type c
         ++ str "("

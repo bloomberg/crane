@@ -1,6 +1,8 @@
 #ifndef INCLUDED_MODULE_NAMED_LIKE_GENERATED_TYPE
 #define INCLUDED_MODULE_NAMED_LIKE_GENERATED_TYPE
 
+#include <cstdint>
+
 /// A module whose name is the one Crane picks for a generated type — Nat for
 /// Rocq's nat, Bool0 for bool — is emitted as a struct nested inside
 /// that type, giving "member 'ModuleNamedLikeGeneratedType' has the same name

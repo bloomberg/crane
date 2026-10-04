@@ -1,6 +1,7 @@
 #ifndef INCLUDED_CASE_INSENSITIVE_COLLISION
 #define INCLUDED_CASE_INSENSITIVE_COLLISION
 
+#include <cstdint>
 #include <utility>
 
 /// Crane capitalises an inductive's name to form its C++ type, so the

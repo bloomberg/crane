@@ -1,6 +1,7 @@
 #ifndef INCLUDED_SEPARATEEXTRACTION
 #define INCLUDED_SEPARATEEXTRACTION
 
+#include <cstdint>
 #include <utility>
 
 namespace SeparateExtraction {

@@ -2,6 +2,7 @@
 #define INCLUDED_IMPORTED_MODULE_TYPE_PRIME
 
 #include <concepts>
+#include <cstdint>
 
 struct Nat {};
 

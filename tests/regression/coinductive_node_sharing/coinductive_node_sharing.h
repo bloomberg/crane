@@ -5,8 +5,8 @@
 #include "fn.h"
 #include "lazy.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <stdexcept>
 #include <utility>
 #include <variant>
@@ -39,14 +39,15 @@ public:
 
   explicit Sum(Inr _v) : v_(std::move(_v)) {}
 
-  template <typename _U0, typename _U1>
-  Sum(const Sum<_U0, _U1> &_other)
+  template <typename CraneU0, typename CraneU1>
+  Sum(const Sum<CraneU0, CraneU1> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Sum<_U0, _U1>::Inl>(_other.v())) {
+          if (std::holds_alternative<typename Sum<CraneU0, CraneU1>::Inl>(
+                  _other.v())) {
             const auto &[a0] =
-                std::get<typename Sum<_U0, _U1>::Inl>(_other.v());
+                std::get<typename Sum<CraneU0, CraneU1>::Inl>(_other.v());
             return Inl{[&]() -> A {
-              if constexpr (crane_convertible<A, const _U0 &>) {
+              if constexpr (crane_convertible<A, const CraneU0 &>) {
                 return crane_convert<A>(a0);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -55,9 +56,9 @@ public:
             }()};
           } else {
             const auto &[a0] =
-                std::get<typename Sum<_U0, _U1>::Inr>(_other.v());
+                std::get<typename Sum<CraneU0, CraneU1>::Inr>(_other.v());
             return Inr{[&]() -> B {
-              if constexpr (crane_convertible<B, const _U1 &>) {
+              if constexpr (crane_convertible<B, const CraneU1 &>) {
                 return crane_convert<B>(a0);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -110,15 +111,17 @@ public:
 
   explicit ItreeF(VisF _v) : v_(std::move(_v)) {}
 
-  template <typename _U0, typename _U1, typename _U2>
-  ItreeF(const ItreeF<_U0, _U1, _U2> &_other)
+  template <typename CraneU0, typename CraneU1, typename CraneU2>
+  ItreeF(const ItreeF<CraneU0, CraneU1, CraneU2> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename ItreeF<_U0, _U1, _U2>::RetF>(
+          if (std::holds_alternative<
+                  typename ItreeF<CraneU0, CraneU1, CraneU2>::RetF>(
                   _other.v())) {
             const auto &[r] =
-                std::get<typename ItreeF<_U0, _U1, _U2>::RetF>(_other.v());
+                std::get<typename ItreeF<CraneU0, CraneU1, CraneU2>::RetF>(
+                    _other.v());
             return RetF{[&]() -> R {
-              if constexpr (crane_convertible<R, const _U1 &>) {
+              if constexpr (crane_convertible<R, const CraneU1 &>) {
                 return crane_convert<R>(r);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -126,12 +129,14 @@ public:
               }
             }()};
           } else {
-            if (std::holds_alternative<typename ItreeF<_U0, _U1, _U2>::TauF>(
+            if (std::holds_alternative<
+                    typename ItreeF<CraneU0, CraneU1, CraneU2>::TauF>(
                     _other.v())) {
               const auto &[t] =
-                  std::get<typename ItreeF<_U0, _U1, _U2>::TauF>(_other.v());
+                  std::get<typename ItreeF<CraneU0, CraneU1, CraneU2>::TauF>(
+                      _other.v());
               return TauF{[&]() -> itree {
-                if constexpr (crane_convertible<itree, const _U2 &>) {
+                if constexpr (crane_convertible<itree, const CraneU2 &>) {
                   return crane_convert<itree>(t);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
@@ -140,17 +145,19 @@ public:
               }()};
             } else {
               const auto &[x, e] =
-                  std::get<typename ItreeF<_U0, _U1, _U2>::VisF>(_other.v());
-              return VisF{[&]() -> E {
-                            if constexpr (crane_convertible<E, const _U0 &>) {
-                              return crane_convert<E>(x);
-                            } else {
-                              throw std::logic_error(
-                                  "unreachable: inactive constructor field at "
-                                  "this instantiation");
-                            }
-                          }(),
-                          crane_convert<crane::fn<itree(crane::obj)>>(e)};
+                  std::get<typename ItreeF<CraneU0, CraneU1, CraneU2>::VisF>(
+                      _other.v());
+              return VisF{
+                  [&]() -> E {
+                    if constexpr (crane_convertible<E, const CraneU0 &>) {
+                      return crane_convert<E>(x);
+                    } else {
+                      throw std::logic_error(
+                          "unreachable: inactive constructor field at this "
+                          "instantiation");
+                    }
+                  }(),
+                  crane_convert<crane::fn<itree(crane::obj)>>(e)};
             }
           }
         }()) {}
@@ -176,8 +183,8 @@ public:
 
 template <typename E, typename R> struct Itree {
   // TYPES
-  template <typename _S0 = Itree<E, R>> struct Go_ {
-    ItreeF<E, R, _S0> _observe;
+  template <typename CraneS0 = Itree<E, R>> struct Go_ {
+    ItreeF<E, R, CraneS0> _observe;
   };
 
   using Go = Go_<>;
@@ -195,12 +202,12 @@ public:
   explicit Itree(Go _v)
       : lazy_v_(crane::lazy<variant_t>(variant_t(std::move(_v)))) {}
 
-  template <typename _U0, typename _U1>
-  Itree(const Itree<_U0, _U1> &_other)
+  template <typename CraneU0, typename CraneU1>
+  Itree(const Itree<CraneU0, CraneU1> &_other)
       : lazy_v_(crane::lazy<variant_t>::converted_from(
             _other.lazy_cell(), [=]() -> variant_t {
               const auto &[_observe] =
-                  std::get<typename Itree<_U0, _U1>::Go>(_other.v());
+                  std::get<typename Itree<CraneU0, CraneU1>::Go>(_other.v());
               return Go{crane_convert<ItreeF<E, R, Itree<E, R>>>(_observe)};
             })) {}
 

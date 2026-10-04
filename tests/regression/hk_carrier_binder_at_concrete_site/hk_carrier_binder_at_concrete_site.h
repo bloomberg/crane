@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <memory>
 #include <stdexcept>
@@ -60,8 +59,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -105,10 +104,10 @@ template <typename T> struct box {
   T b_payload;
 
   // ACCESSORS
-  template <typename _U> operator box<_U>() const {
-    return {[&]() -> _U {
-      if constexpr (crane_convertible<_U, const T &>) {
-        return crane_convert<_U>(b_payload);
+  template <typename CraneU> operator box<CraneU>() const {
+    return {[&]() -> CraneU {
+      if constexpr (crane_convertible<CraneU, const T &>) {
+        return crane_convert<CraneU>(b_payload);
       } else {
         throw std::logic_error(
             "unreachable: inactive constructor field at this instantiation");
@@ -125,18 +124,19 @@ template <typename T, typename Body> struct holder {
   Body h_body;
 
   // ACCESSORS
-  template <typename _U0, typename _U1> operator holder<_U0, _U1>() const {
-    return {[&]() -> _U0 {
-              if constexpr (crane_convertible<_U0, const T &>) {
-                return crane_convert<_U0>(h_head);
+  template <typename CraneU0, typename CraneU1>
+  operator holder<CraneU0, CraneU1>() const {
+    return {[&]() -> CraneU0 {
+              if constexpr (crane_convertible<CraneU0, const T &>) {
+                return crane_convert<CraneU0>(h_head);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
               }
             }(),
-            [&]() -> _U1 {
-              if constexpr (crane_convertible<_U1, const Body &>) {
-                return crane_convert<_U1>(h_body);
+            [&]() -> CraneU1 {
+              if constexpr (crane_convertible<CraneU1, const Body &>) {
+                return crane_convert<CraneU1>(h_body);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
@@ -161,10 +161,9 @@ T1<bool> convert(std::type_identity_t<Convert<T1>> convert0, const Nat &x0_,
   return crane_container_cast<T1<bool>>(convert0(x0_, std::move(x1_)));
 }
 
-template <typename _CraneTcArg>
-using _crane_carrier_tc_904911fedcfba566 =
-    holder<_CraneTcArg, box<_CraneTcArg>>;
-const Convert<_crane_carrier_tc_904911fedcfba566> Convert_holder =
+template <typename CraneTcArg>
+using crane_carrier_tc_c3f54f3304e568f5 = holder<CraneTcArg, box<CraneTcArg>>;
+const Convert<crane_carrier_tc_c3f54f3304e568f5> Convert_holder =
     [](Nat n, const holder<Nat, box<Nat>> &eta0_) {
       return tfmap<holder<crane::obj, box<crane::obj>>, Nat, bool>(
           []() {

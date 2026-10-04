@@ -2,8 +2,8 @@
 #define INCLUDED_CANON_STRUCT
 
 #include "obj.h"
-#include <any>
 #include <concepts>
+#include <cstdint>
 #include <utility>
 
 struct Bool {

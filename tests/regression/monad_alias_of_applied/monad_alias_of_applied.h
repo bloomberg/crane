@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <memory>
@@ -73,8 +72,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -140,19 +139,19 @@ struct MonadAliasOfApplied {
 
     explicit EOU(Raise_ret _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    EOU(const EOU<_U> &_other)
+    template <typename CraneU>
+    EOU(const EOU<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename EOU<_U>::Raise_error>(
+            if (std::holds_alternative<typename EOU<CraneU>::Raise_error>(
                     _other.v())) {
               const auto &[n] =
-                  std::get<typename EOU<_U>::Raise_error>(_other.v());
+                  std::get<typename EOU<CraneU>::Raise_error>(_other.v());
               return Raise_error{n};
             } else {
               const auto &[x] =
-                  std::get<typename EOU<_U>::Raise_ret>(_other.v());
+                  std::get<typename EOU<CraneU>::Raise_ret>(_other.v());
               return Raise_ret{[&]() -> X {
-                if constexpr (crane_convertible<X, const _U &>) {
+                if constexpr (crane_convertible<X, const CraneU &>) {
                   return crane_convert<X>(x);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
@@ -176,19 +175,20 @@ struct MonadAliasOfApplied {
   };
 
   struct EOU_monad {
-    template <typename _A0> using m = EOU<_A0>;
+    template <typename CraneA0> using m = EOU<CraneA0>;
 
-    template <typename _A0> static EOU<_A0> ret(_A0 x) {
-      return EOU<_A0>::raise_ret(std::move(x));
+    template <typename CraneA0> static EOU<CraneA0> ret(CraneA0 x) {
+      return EOU<CraneA0>::raise_ret(std::move(x));
     }
 
-    template <typename _A0, typename _A1>
-    static EOU<_A1> bind(EOU<_A0> c, crane::fn<EOU<_A1>(_A0)> k) {
-      if (std::holds_alternative<typename EOU<_A0>::Raise_error>(c.v())) {
-        const auto &[n] = std::get<typename EOU<_A0>::Raise_error>(c.v());
-        return EOU<_A1>::raise_error(n);
+    template <typename CraneA0, typename CraneA1>
+    static EOU<CraneA1> bind(EOU<CraneA0> c,
+                             crane::fn<EOU<CraneA1>(CraneA0)> k) {
+      if (std::holds_alternative<typename EOU<CraneA0>::Raise_error>(c.v())) {
+        const auto &[n] = std::get<typename EOU<CraneA0>::Raise_error>(c.v());
+        return EOU<CraneA1>::raise_error(n);
       } else {
-        const auto &[x0] = std::get<typename EOU<_A0>::Raise_ret>(c.v());
+        const auto &[x0] = std::get<typename EOU<CraneA0>::Raise_ret>(c.v());
         return k(x0);
       }
     }
@@ -218,17 +218,17 @@ struct MonadAliasOfApplied {
 
     explicit MaybePoison(NoPois _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    MaybePoison(const MaybePoison<_U> &_other)
+    template <typename CraneU>
+    MaybePoison(const MaybePoison<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename MaybePoison<_U>::Pois>(
+            if (std::holds_alternative<typename MaybePoison<CraneU>::Pois>(
                     _other.v())) {
               return Pois{};
             } else {
               const auto &[a] =
-                  std::get<typename MaybePoison<_U>::NoPois>(_other.v());
+                  std::get<typename MaybePoison<CraneU>::NoPois>(_other.v());
               return NoPois{[&]() -> A {
-                if constexpr (crane_convertible<A, const _U &>) {
+                if constexpr (crane_convertible<A, const CraneU &>) {
                   return crane_convert<A>(a);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
@@ -254,27 +254,29 @@ struct MonadAliasOfApplied {
   template <typename z> using EOUP = EOU<MaybePoison<z>>;
 
   struct EOUP_Monad {
-    template <typename _A0> using m = EOU<MaybePoison<_A0>>;
+    template <typename CraneA0> using m = EOU<MaybePoison<CraneA0>>;
 
-    template <typename _A0> static EOU<MaybePoison<_A0>> ret(_A0 a) {
-      return Monad0::template ret<EOU_monad, MaybePoison<_A0>>(
-          MaybePoison<_A0>::nopois(std::move(a)));
+    template <typename CraneA0>
+    static EOU<MaybePoison<CraneA0>> ret(CraneA0 a) {
+      return Monad0::template ret<EOU_monad, MaybePoison<CraneA0>>(
+          MaybePoison<CraneA0>::nopois(std::move(a)));
     }
 
-    template <typename _A0, typename _A1>
-    static EOU<MaybePoison<_A1>> bind(EOU<MaybePoison<_A0>> c,
-                                      crane::fn<EOU<MaybePoison<_A1>>(_A0)> k) {
-      return Monad0::template bind<EOU_monad, MaybePoison<_A0>,
-                                   MaybePoison<_A1>>(
+    template <typename CraneA0, typename CraneA1>
+    static EOU<MaybePoison<CraneA1>>
+    bind(EOU<MaybePoison<CraneA0>> c,
+         crane::fn<EOU<MaybePoison<CraneA1>>(CraneA0)> k) {
+      return Monad0::template bind<EOU_monad, MaybePoison<CraneA0>,
+                                   MaybePoison<CraneA1>>(
           std::move(c),
-          [=](const MaybePoison<_A0> &pov) -> EOU<MaybePoison<_A1>> {
-            if (std::holds_alternative<typename MaybePoison<_A0>::Pois>(
+          [=](const MaybePoison<CraneA0> &pov) -> EOU<MaybePoison<CraneA1>> {
+            if (std::holds_alternative<typename MaybePoison<CraneA0>::Pois>(
                     pov.v())) {
-              return Monad0::template ret<EOU_monad, MaybePoison<_A1>>(
-                  MaybePoison<_A1>::pois());
+              return Monad0::template ret<EOU_monad, MaybePoison<CraneA1>>(
+                  MaybePoison<CraneA1>::pois());
             } else {
               const auto &[a0] =
-                  std::get<typename MaybePoison<_A0>::NoPois>(pov.v());
+                  std::get<typename MaybePoison<CraneA0>::NoPois>(pov.v());
               return k(a0);
             }
           });

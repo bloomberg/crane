@@ -4,6 +4,7 @@
 #include "fn.h"
 #include "small_vector.h"
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <type_traits>
@@ -68,8 +69,8 @@ struct HofClosureEscape {
 
     tree(const tree &) = default;
     tree &operator=(const tree &) = default;
-    tree(tree &&) noexcept = default;
-    tree &operator=(tree &&) noexcept = default;
+    tree(tree &&) = default;
+    tree &operator=(tree &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 

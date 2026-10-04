@@ -4,6 +4,7 @@
 #include "small_vector.h"
 #include <atomic>
 #include <concepts>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <utility>
@@ -109,8 +110,8 @@ template <OrderedType K, BaseType V> struct MakeMap {
 
     tree(const tree &) = default;
     tree &operator=(const tree &) = default;
-    tree(tree &&) noexcept = default;
-    tree &operator=(tree &&) noexcept = default;
+    tree(tree &&) = default;
+    tree &operator=(tree &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 

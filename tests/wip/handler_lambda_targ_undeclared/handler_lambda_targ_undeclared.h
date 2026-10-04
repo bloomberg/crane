@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <crane_itree.h>
@@ -64,8 +63,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -102,11 +101,11 @@ struct Monads {
 enum class LocalE { LGET };
 using lenv = Nat;
 using Big = std::pair<Nat, Nat>;
-template <typename _CraneTcArg>
-using itree_tc_296b3b7af4bd1a71 = std::shared_ptr<ITree<_CraneTcArg>>;
+template <typename CraneTcArg>
+using itree_tc_609e8855cd7ad294 = std::shared_ptr<ITree<CraneTcArg>>;
 
 template <Params _tcI0, typename T1, typename T2>
-Monads::template stateT<lenv, itree_tc_296b3b7af4bd1a71, T2>
+Monads::template stateT<lenv, itree_tc_609e8855cd7ad294, T2>
 handle_local_debug(LocalE) {
   return [=](const Nat &s) {
     return itree_ret(std::make_pair(s, s.add(_tcI0::width())));
@@ -114,15 +113,15 @@ handle_local_debug(LocalE) {
 }
 
 template <typename T1, typename T2, typename F0>
-Monads::template stateT<lenv, itree_tc_296b3b7af4bd1a71, T2>
+Monads::template stateT<lenv, itree_tc_609e8855cd7ad294, T2>
 handle_local_stack(F0 &&h, LocalE e) {
   return h(e);
 }
 
 template <typename T1, typename T2>
-Monads::template stateT<Big, itree_tc_296b3b7af4bd1a71, T2>
+Monads::template stateT<Big, itree_tc_609e8855cd7ad294, T2>
 on_ls(std::type_identity_t<
-      Monads::template stateT<lenv, itree_tc_296b3b7af4bd1a71, T2>>
+      Monads::template stateT<lenv, itree_tc_609e8855cd7ad294, T2>>
           c) {
   return [=](const std::pair<Nat, Nat> &b) {
     std::pair<lenv, T2> sa = c(b.first);
@@ -132,12 +131,12 @@ on_ls(std::type_identity_t<
 }
 
 template <Params _tcI0, typename T1>
-Monads::template stateT<Big, itree_tc_296b3b7af4bd1a71, T1>
+Monads::template stateT<Big, itree_tc_609e8855cd7ad294, T1>
 fused_local(LocalE e) {
   return on_ls<LocalE, T1>(handle_local_stack<LocalE, T1>(
       []() {
         return [](LocalE _x0) -> Monads::template stateT<
-                                  lenv, itree_tc_296b3b7af4bd1a71, crane::obj> {
+                                  lenv, itree_tc_609e8855cd7ad294, crane::obj> {
           return handle_local_debug<_tcI0, LocalE, crane::obj>(_x0);
         };
       }(),

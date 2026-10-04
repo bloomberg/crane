@@ -77,9 +77,9 @@ InterpChainPerf::prog(const Nat &n) {
       std::make_pair(Nat::o(), Nat::o()));
 }
 
-template <typename _CraneTcArg>
-using _crane_carrier_tc_cd717f5291a145ed =
-    Itree<InterpChainPerf::BotE<crane::obj>, _CraneTcArg>;
+template <typename CraneTcArg>
+using crane_carrier_tc_556dca13c30ca6b8 =
+    Itree<InterpChainPerf::BotE<crane::obj>, CraneTcArg>;
 
 Itree<InterpChainPerf::BotE<crane::obj>, std::pair<Nat, Nat>>
 InterpChainPerf::run_n(const Nat &n) {
@@ -92,7 +92,7 @@ InterpChainPerf::run_n(const Nat &n) {
             _ec0, _ec1);
       },
       [](const auto &a0)
-          -> Monads::template stateT<Nat, _crane_carrier_tc_cd717f5291a145ed,
+          -> Monads::template stateT<Nat, crane_carrier_tc_556dca13c30ca6b8,
                                      crane::obj> {
         return h<crane::obj>(
             crane_convert<InterpChainPerf::TopE<crane::obj>>(a0));

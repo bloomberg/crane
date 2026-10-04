@@ -22,9 +22,9 @@ uint64_t EffectCompose::par_compute_and_greet(uint64_t n) {
   crane::fn<uint64_t(uint64_t)> succ = [](uint64_t x) {
     return (x + UINT64_C(1));
   };
-  std::cout << "computing..."s << '\n';
+  std::cout << std::string("computing...") << '\n';
   std::future<uint64_t> t = std::async(std::launch::async, succ, n);
   uint64_t result = t.get();
-  std::cout << "done"s << '\n';
+  std::cout << std::string("done") << '\n';
   return result;
 }

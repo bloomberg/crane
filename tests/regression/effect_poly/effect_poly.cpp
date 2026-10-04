@@ -29,7 +29,7 @@ void EffectPoly::when_(bool b, std::monostate action) {
 
 void EffectPoly::test_when() {
   when_(true, []() {
-    std::cout << "guarded"s << '\n';
+    std::cout << std::string("guarded") << '\n';
     return std::monostate{};
   }());
   return;
@@ -49,7 +49,7 @@ void EffectPoly::unless(bool b, std::monostate action) {
 
 void EffectPoly::test_unless() {
   unless(false, []() {
-    std::cout << "unguarded"s << '\n';
+    std::cout << std::string("unguarded") << '\n';
     return std::monostate{};
   }());
   return;
@@ -71,12 +71,12 @@ void EffectPoly::sequence_void(const List<std::monostate> &actions) {
 void EffectPoly::test_sequence_void() {
   sequence_void(List<std::monostate>::cons(
       []() {
-        std::cout << "a"s << '\n';
+        std::cout << std::string("a") << '\n';
         return std::monostate{};
       }(),
       List<std::monostate>::cons(
           []() {
-            std::cout << "b"s << '\n';
+            std::cout << std::string("b") << '\n';
             return std::monostate{};
           }(),
           List<std::monostate>::nil())));
@@ -84,7 +84,7 @@ void EffectPoly::test_sequence_void() {
 }
 
 uint64_t EffectPoly::sum_with_logging(uint64_t acc, uint64_t n) {
-  std::cout << "adding"s << '\n';
+  std::cout << std::string("adding") << '\n';
   return (acc + n);
 }
 
@@ -109,7 +109,7 @@ std::pair<std::string, std::string> EffectPoly::read_two_lines() {
 
 /// 8. Chaining monadic functions with different return types
 int64_t EffectPoly::chain_types() {
-  std::cout << "enter a number:"s << '\n';
+  std::cout << std::string("enter a number:") << '\n';
   std::string line;
   std::getline(std::cin, line);
   int64_t len = static_cast<int64_t>(std::move(line).length());

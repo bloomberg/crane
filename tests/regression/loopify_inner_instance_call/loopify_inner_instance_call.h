@@ -6,9 +6,9 @@
 #include "lazy.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
 #include <concepts>
+#include <cstdint>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -62,17 +62,18 @@ struct Monads {
   using stateT = crane::fn<m<std::pair<s, a>>(s)>;
 
   template <Functor _tcI0, typename T1> struct Functor_stateT {
-    template <typename _A0>
-    using F = crane::fn<typename _tcI0::template F<std::pair<T1, _A0>>(T1)>;
+    template <typename CraneA0>
+    using F = crane::fn<typename _tcI0::template F<std::pair<T1, CraneA0>>(T1)>;
 
-    template <typename _A0, typename _A1>
-    static crane::fn<typename _tcI0::template F<std::pair<T1, _A1>>(T1)>
-    fmap(crane::fn<_A1(_A0)> f,
-         crane::fn<typename _tcI0::template F<std::pair<T1, _A0>>(T1)> run) {
+    template <typename CraneA0, typename CraneA1>
+    static crane::fn<typename _tcI0::template F<std::pair<T1, CraneA1>>(T1)>
+    fmap(
+        crane::fn<CraneA1(CraneA0)> f,
+        crane::fn<typename _tcI0::template F<std::pair<T1, CraneA0>>(T1)> run) {
       return [=](const T1 &s) {
-        return Functor0::template fmap<_tcI0, std::pair<T1, _A0>,
-                                       std::pair<T1, _A1>>(
-            [=](const std::pair<T1, _A0> &sa) {
+        return Functor0::template fmap<_tcI0, std::pair<T1, CraneA0>,
+                                       std::pair<T1, CraneA1>>(
+            [=](const std::pair<T1, CraneA0> &sa) {
               return std::make_pair(sa.first, f(sa.second));
             },
             run(s));
@@ -113,15 +114,17 @@ public:
 
   explicit ItreeF(VisF _v) : v_(std::move(_v)) {}
 
-  template <typename _U0, typename _U1, typename _U2>
-  ItreeF(const ItreeF<_U0, _U1, _U2> &_other)
+  template <typename CraneU0, typename CraneU1, typename CraneU2>
+  ItreeF(const ItreeF<CraneU0, CraneU1, CraneU2> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename ItreeF<_U0, _U1, _U2>::RetF>(
+          if (std::holds_alternative<
+                  typename ItreeF<CraneU0, CraneU1, CraneU2>::RetF>(
                   _other.v())) {
             const auto &[r] =
-                std::get<typename ItreeF<_U0, _U1, _U2>::RetF>(_other.v());
+                std::get<typename ItreeF<CraneU0, CraneU1, CraneU2>::RetF>(
+                    _other.v());
             return RetF{[&]() -> R {
-              if constexpr (crane_convertible<R, const _U1 &>) {
+              if constexpr (crane_convertible<R, const CraneU1 &>) {
                 return crane_convert<R>(r);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -129,12 +132,14 @@ public:
               }
             }()};
           } else {
-            if (std::holds_alternative<typename ItreeF<_U0, _U1, _U2>::TauF>(
+            if (std::holds_alternative<
+                    typename ItreeF<CraneU0, CraneU1, CraneU2>::TauF>(
                     _other.v())) {
               const auto &[t] =
-                  std::get<typename ItreeF<_U0, _U1, _U2>::TauF>(_other.v());
+                  std::get<typename ItreeF<CraneU0, CraneU1, CraneU2>::TauF>(
+                      _other.v());
               return TauF{[&]() -> itree {
-                if constexpr (crane_convertible<itree, const _U2 &>) {
+                if constexpr (crane_convertible<itree, const CraneU2 &>) {
                   return crane_convert<itree>(t);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
@@ -143,17 +148,19 @@ public:
               }()};
             } else {
               const auto &[x, e] =
-                  std::get<typename ItreeF<_U0, _U1, _U2>::VisF>(_other.v());
-              return VisF{[&]() -> E {
-                            if constexpr (crane_convertible<E, const _U0 &>) {
-                              return crane_convert<E>(x);
-                            } else {
-                              throw std::logic_error(
-                                  "unreachable: inactive constructor field at "
-                                  "this instantiation");
-                            }
-                          }(),
-                          crane_convert<crane::fn<itree(crane::obj)>>(e)};
+                  std::get<typename ItreeF<CraneU0, CraneU1, CraneU2>::VisF>(
+                      _other.v());
+              return VisF{
+                  [&]() -> E {
+                    if constexpr (crane_convertible<E, const CraneU0 &>) {
+                      return crane_convert<E>(x);
+                    } else {
+                      throw std::logic_error(
+                          "unreachable: inactive constructor field at this "
+                          "instantiation");
+                    }
+                  }(),
+                  crane_convert<crane::fn<itree(crane::obj)>>(e)};
             }
           }
         }()) {}
@@ -179,8 +186,8 @@ public:
 
 template <typename E, typename R> struct Itree {
   // TYPES
-  template <typename _S0 = Itree<E, R>> struct Go_ {
-    ItreeF<E, R, _S0> _observe;
+  template <typename CraneS0 = Itree<E, R>> struct Go_ {
+    ItreeF<E, R, CraneS0> _observe;
   };
 
   using Go = Go_<>;
@@ -198,12 +205,12 @@ public:
   explicit Itree(Go _v)
       : lazy_v_(crane::lazy<variant_t>(variant_t(std::move(_v)))) {}
 
-  template <typename _U0, typename _U1>
-  Itree(const Itree<_U0, _U1> &_other)
+  template <typename CraneU0, typename CraneU1>
+  Itree(const Itree<CraneU0, CraneU1> &_other)
       : lazy_v_(crane::lazy<variant_t>::converted_from(
             _other.lazy_cell(), [=]() -> variant_t {
               const auto &[_observe] =
-                  std::get<typename Itree<_U0, _U1>::Go>(_other.v());
+                  std::get<typename Itree<CraneU0, CraneU1>::Go>(_other.v());
               return Go{crane_convert<ItreeF<E, R, Itree<E, R>>>(_observe)};
             })) {}
 
@@ -242,22 +249,22 @@ struct ITree {
   template <typename T1, typename T2, typename T3>
   static Itree<T1, T3>
   subst(std::type_identity_t<crane::fn<Itree<T1, T3>(T2)>> k,
-        Itree<T1, T2> u) { /// _Enter: captures varying parameters for each
+        Itree<T1, T2> u) { /// CraneEnter: captures varying parameters for each
                            /// recursive call.
 
-    struct _Enter {
+    struct CraneEnter {
       Itree<T1, T2> u;
     };
 
-    using _Frame = std::variant<_Enter>;
+    using CraneFrame = std::variant<CraneEnter>;
     Itree<T1, T3> _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{std::move(u)});
-    /// Loopified subst: _Enter.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{std::move(u)});
+    /// Loopified subst: CraneEnter.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      auto _f = std::move(std::get<_Enter>(_frame));
+      auto _f = std::move(std::get<CraneEnter>(_frame));
       Itree<T1, T2> u = std::move(_f.u);
       auto &&_sv = u.observe();
       if (std::holds_alternative<typename ItreeF<T1, T2, Itree<T1, T2>>::RetF>(
@@ -306,27 +313,28 @@ struct ITree {
 };
 
 template <typename T1> struct Functor_itree {
-  template <typename _A0> using F = Itree<T1, _A0>;
+  template <typename CraneA0> using F = Itree<T1, CraneA0>;
 
-  template <typename _A0, typename _A1>
-  static Itree<T1, _A1> fmap(crane::fn<_A1(_A0)> a0, Itree<T1, _A0> a1) {
-    return ITree::template map<T1, _A0, _A1>(std::move(a0), a1);
+  template <typename CraneA0, typename CraneA1>
+  static Itree<T1, CraneA1> fmap(crane::fn<CraneA1(CraneA0)> a0,
+                                 Itree<T1, CraneA0> a1) {
+    return ITree::template map<T1, CraneA0, CraneA1>(std::move(a0), a1);
   }
 };
 
 template <typename T1> struct Monad_itree {
-  template <typename _A0> using m = Itree<T1, _A0>;
+  template <typename CraneA0> using m = Itree<T1, CraneA0>;
 
-  template <typename _A0> static Itree<T1, _A0> ret(_A0 x) {
-    return Itree<T1, _A0>::go(
+  template <typename CraneA0> static Itree<T1, CraneA0> ret(CraneA0 x) {
+    return Itree<T1, CraneA0>::go(
         ItreeF<crane::obj, crane::obj, Itree<crane::obj, crane::obj>>::retf(
             std::move(x)));
   }
 
-  template <typename _A0, typename _A1>
-  static Itree<T1, _A1> bind(Itree<T1, _A0> a0,
-                             crane::fn<Itree<T1, _A1>(_A0)> a1) {
-    return ITree::template bind<T1, _A0, _A1>(a0, std::move(a1));
+  template <typename CraneA0, typename CraneA1>
+  static Itree<T1, CraneA1> bind(Itree<T1, CraneA0> a0,
+                                 crane::fn<Itree<T1, CraneA1>(CraneA0)> a1) {
+    return ITree::template bind<T1, CraneA0, CraneA1>(a0, std::move(a1));
   }
 };
 
@@ -344,10 +352,10 @@ template <typename T1> struct Monad_itree {
 /// treated as recursion would be a wrong program, not just a slow one.
 struct LoopifyInnerInstanceCall {
   enum class Ev { ASK };
-  template <typename _CraneTcArg>
-  using _crane_carrier_tc_3bf6e73d433814e6 = Itree<Ev, _CraneTcArg>;
+  template <typename CraneTcArg>
+  using crane_carrier_tc_21402bc4025dedf3 = Itree<Ev, CraneTcArg>;
   static inline const Monads::template stateT<
-      uint64_t, _crane_carrier_tc_3bf6e73d433814e6, uint64_t>
+      uint64_t, crane_carrier_tc_21402bc4025dedf3, uint64_t>
       st = [](uint64_t s) {
         return Monad0::template ret<Monad_itree<Ev>,
                                     std::pair<uint64_t, uint64_t>>(

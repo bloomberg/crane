@@ -2,6 +2,7 @@
 #define INCLUDED_NESTED_CLASS_CONCEPT_SCOPE
 
 #include <concepts>
+#include <cstdint>
 #include <utility>
 
 template <typename I, typename A>

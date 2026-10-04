@@ -1,6 +1,7 @@
 #ifndef INCLUDED_SETOID_RW
 #define INCLUDED_SETOID_RW
 
+#include <cstdint>
 #include <utility>
 
 struct SetoidRw {

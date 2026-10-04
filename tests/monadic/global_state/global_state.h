@@ -5,11 +5,11 @@
 #include "obj.h"
 #include "small_vector.h"
 #include <algorithm>
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <crane_globals.h>
 #include <crane_itree.h>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -74,16 +74,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -120,8 +121,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -136,10 +137,10 @@ template <typename Err> struct ExceptE {
   // ACCESSORS
   ExceptE<Err> clone() const { return {a0}; }
 
-  template <typename _U> operator ExceptE<_U>() const {
-    return {[&]() -> _U {
-      if constexpr (crane_convertible<_U, const Err &>) {
-        return crane_convert<_U>(a0);
+  template <typename CraneU> operator ExceptE<CraneU>() const {
+    return {[&]() -> CraneU {
+      if constexpr (crane_convertible<CraneU, const Err &>) {
+        return crane_convert<CraneU>(a0);
       } else {
         throw std::logic_error(
             "unreachable: inactive constructor field at this instantiation");

@@ -3,6 +3,7 @@
 
 #include "small_vector.h"
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -91,8 +92,8 @@ struct MutualRecursion {
 
     expr(const expr &) = default;
     expr &operator=(const expr &) = default;
-    expr(expr &&) noexcept = default;
-    expr &operator=(expr &&) noexcept = default;
+    expr(expr &&) = default;
+    expr &operator=(expr &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 

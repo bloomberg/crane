@@ -876,7 +876,7 @@ let rec rewrite_cpp_type (f : cpp_type -> cpp_type option) (ty : cpp_type) :
     | Tvoid | Tunresolved | Tany | Topaque | Tauto | Thole | Terased _ ->
       ty )
 
-let ctor_alias_tvar = "_CraneTcArg"
+let ctor_alias_tvar = Generated_name.role "TcArg"
 
 let abstract_cpp_type ~over ty =
   let sentinel = Thole in

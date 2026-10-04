@@ -2,6 +2,7 @@
 #define INCLUDED_STATE_MONAD_TYPE_SYNONYM
 
 #include "fn.h"
+#include <cstdint>
 #include <utility>
 
 /// A state-monad type synonym (st A := nat -> (A * nat)) makes a definition

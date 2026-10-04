@@ -1,26 +1,26 @@
 #include "inner_fix_captures_ind.h"
 
 uint64_t InnerFixCapturesInd::len(
-    const InnerFixCapturesInd::lst
-        &l) { /// _Enter: captures varying parameters for each recursive call.
+    const InnerFixCapturesInd::lst &l) { /// CraneEnter: captures varying
+                                         /// parameters for each recursive call.
 
-  struct _Enter {
+  struct CraneEnter {
     const InnerFixCapturesInd::lst *l;
   };
 
-  /// _Cont_Cons: resumes after recursive call, then processes rest.
-  struct _Cont_Cons {};
+  /// CraneCont_Cons: resumes after recursive call, then processes rest.
+  struct CraneCont_Cons {};
 
-  using _Frame = std::variant<_Enter, _Cont_Cons>;
+  using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
   uint64_t _result{};
-  crane::small_vector<_Frame> _stack;
-  _stack.emplace_back(_Enter{&l});
-  /// Loopified len: _Enter -> _Cont_Cons.
+  crane::small_vector<CraneFrame> _stack;
+  _stack.emplace_back(CraneEnter{&l});
+  /// Loopified len: CraneEnter -> CraneCont_Cons.
   while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
+    CraneFrame _frame = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
+    if (std::holds_alternative<CraneEnter>(_frame)) {
+      auto _f = std::move(std::get<CraneEnter>(_frame));
       const InnerFixCapturesInd::lst &l = *_f.l;
       if (std::holds_alternative<typename InnerFixCapturesInd::lst::Nil>(
               l.v())) {
@@ -28,11 +28,11 @@ uint64_t InnerFixCapturesInd::len(
       } else {
         const auto &[a0, a1] =
             std::get<typename InnerFixCapturesInd::lst::Cons>(l.v());
-        _stack.emplace_back(_Cont_Cons{});
-        _stack.emplace_back(_Enter{crane_raw(a1)});
+        _stack.emplace_back(CraneCont_Cons{});
+        _stack.emplace_back(CraneEnter{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<_Cont_Cons>(_frame));
+      auto _f = std::move(std::get<CraneCont_Cons>(_frame));
       _result = (std::move(_result) + 1);
     }
   }
@@ -40,28 +40,29 @@ uint64_t InnerFixCapturesInd::len(
 }
 
 uint64_t InnerFixCapturesInd::outer(
-    const InnerFixCapturesInd::lst
-        &l) { /// _Enter: captures varying parameters for each recursive call.
+    const InnerFixCapturesInd::lst &l) { /// CraneEnter: captures varying
+                                         /// parameters for each recursive call.
 
-  struct _Enter {
+  struct CraneEnter {
     const InnerFixCapturesInd::lst *l;
   };
 
-  /// _Cont_Cons: saves [a1], resumes after recursive call, then processes rest.
-  struct _Cont_Cons {
+  /// CraneCont_Cons: saves [a1], resumes after recursive call, then processes
+  /// rest.
+  struct CraneCont_Cons {
     std::shared_ptr<InnerFixCapturesInd::lst> a1;
   };
 
-  using _Frame = std::variant<_Enter, _Cont_Cons>;
+  using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
   uint64_t _result{};
-  crane::small_vector<_Frame> _stack;
-  _stack.emplace_back(_Enter{&l});
-  /// Loopified outer: _Enter -> _Cont_Cons.
+  crane::small_vector<CraneFrame> _stack;
+  _stack.emplace_back(CraneEnter{&l});
+  /// Loopified outer: CraneEnter -> CraneCont_Cons.
   while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
+    CraneFrame _frame = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
+    if (std::holds_alternative<CraneEnter>(_frame)) {
+      auto _f = std::move(std::get<CraneEnter>(_frame));
       const InnerFixCapturesInd::lst &l = *_f.l;
       if (std::holds_alternative<typename InnerFixCapturesInd::lst::Nil>(
               l.v())) {
@@ -69,11 +70,11 @@ uint64_t InnerFixCapturesInd::outer(
       } else {
         const auto &[a0, a1] =
             std::get<typename InnerFixCapturesInd::lst::Cons>(l.v());
-        _stack.emplace_back(_Cont_Cons{a1});
-        _stack.emplace_back(_Enter{crane_raw(a1)});
+        _stack.emplace_back(CraneCont_Cons{a1});
+        _stack.emplace_back(CraneEnter{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<_Cont_Cons>(_frame));
+      auto _f = std::move(std::get<CraneCont_Cons>(_frame));
       std::shared_ptr<InnerFixCapturesInd::lst> a1 = std::move(_f.a1);
       _result = ([&]() {
         auto inner_impl = [&](auto &, const InnerFixCapturesInd::lst &m,

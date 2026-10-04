@@ -2,6 +2,7 @@
 #define INCLUDED_OPTION
 
 #include "fn.h"
+#include <cstdint>
 #include <memory>
 #include <optional>
 

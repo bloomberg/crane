@@ -2,6 +2,7 @@
 #define INCLUDED_TODO_TYPECLASS_REQUIRES
 
 #include <concepts>
+#include <cstdint>
 #include <utility>
 
 template <typename I, typename A>

@@ -2,6 +2,7 @@
 #define INCLUDED_SEPEXTNULLARYMODULEALIAS
 
 #include <concepts>
+#include <cstdint>
 
 namespace SepExtNullaryModuleAlias {
 

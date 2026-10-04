@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <deque>
 #include <memory>
@@ -65,8 +64,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -82,18 +81,19 @@ template <typename A, typename B> struct Prod {
   // ACCESSORS
   Prod<A, B> clone() const { return {a0, a1}; }
 
-  template <typename _U0, typename _U1> operator Prod<_U0, _U1>() const {
-    return {[&]() -> _U0 {
-              if constexpr (crane_convertible<_U0, const A &>) {
-                return crane_convert<_U0>(a0);
+  template <typename CraneU0, typename CraneU1>
+  operator Prod<CraneU0, CraneU1>() const {
+    return {[&]() -> CraneU0 {
+              if constexpr (crane_convertible<CraneU0, const A &>) {
+                return crane_convert<CraneU0>(a0);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
               }
             }(),
-            [&]() -> _U1 {
-              if constexpr (crane_convertible<_U1, const B &>) {
-                return crane_convert<_U1>(a1);
+            [&]() -> CraneU1 {
+              if constexpr (crane_convertible<CraneU1, const B &>) {
+                return crane_convert<CraneU1>(a1);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
@@ -113,18 +113,19 @@ template <typename A, typename P> struct SigT {
   // ACCESSORS
   SigT<A, P> clone() const { return {x, a1}; }
 
-  template <typename _U0, typename _U1> operator SigT<_U0, _U1>() const {
-    return {[&]() -> _U0 {
-              if constexpr (crane_convertible<_U0, const A &>) {
-                return crane_convert<_U0>(x);
+  template <typename CraneU0, typename CraneU1>
+  operator SigT<CraneU0, CraneU1>() const {
+    return {[&]() -> CraneU0 {
+              if constexpr (crane_convertible<CraneU0, const A &>) {
+                return crane_convert<CraneU0>(x);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
               }
             }(),
-            [&]() -> _U1 {
-              if constexpr (crane_convertible<_U1, const P &>) {
-                return crane_convert<_U1>(a1);
+            [&]() -> CraneU1 {
+              if constexpr (crane_convertible<CraneU1, const P &>) {
+                return crane_convert<CraneU1>(a1);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");

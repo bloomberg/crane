@@ -2,6 +2,7 @@
 #define INCLUDED_FIX_VIA_SIMPLE_LAMBDA
 
 #include "fn.h"
+#include <cstdint>
 #include <memory>
 #include <optional>
 

@@ -1,6 +1,8 @@
 #ifndef INCLUDED_WRAPPER_COLLISION_POS
 #define INCLUDED_WRAPPER_COLLISION_POS
 
+#include <cstdint>
+
 struct WrapperCollisionPos {
   struct Left {
     struct Pos {

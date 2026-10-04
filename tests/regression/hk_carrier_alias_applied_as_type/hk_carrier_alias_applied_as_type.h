@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <memory>
 #include <stdexcept>
@@ -66,8 +65,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -98,16 +97,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -144,8 +144,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -203,18 +203,19 @@ template <typename T, typename Body> struct two {
   Body t_body;
 
   // ACCESSORS
-  template <typename _U0, typename _U1> operator two<_U0, _U1>() const {
-    return {[&]() -> _U0 {
-              if constexpr (crane_convertible<_U0, const T &>) {
-                return crane_convert<_U0>(t_head);
+  template <typename CraneU0, typename CraneU1>
+  operator two<CraneU0, CraneU1>() const {
+    return {[&]() -> CraneU0 {
+              if constexpr (crane_convertible<CraneU0, const T &>) {
+                return crane_convert<CraneU0>(t_head);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
               }
             }(),
-            [&]() -> _U1 {
-              if constexpr (crane_convertible<_U1, const Body &>) {
-                return crane_convert<_U1>(t_body);
+            [&]() -> CraneU1 {
+              if constexpr (crane_convertible<CraneU1, const Body &>) {
+                return crane_convert<CraneU1>(t_body);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
@@ -234,8 +235,9 @@ template <typename T, typename Body> struct modul {
   List<two<T, Body>> m_items;
 
   // ACCESSORS
-  template <typename _U0, typename _U1> operator modul<_U0, _U1>() const {
-    return {crane_convert<List<two<_U0, _U1>>>(m_items)};
+  template <typename CraneU0, typename CraneU1>
+  operator modul<CraneU0, CraneU1>() const {
+    return {crane_convert<List<two<CraneU0, CraneU1>>>(m_items)};
   }
 };
 

@@ -2,6 +2,7 @@
 #define INCLUDED_MUTUAL_FIX_ESCAPE
 
 #include "fn.h"
+#include <cstdint>
 #include <utility>
 
 struct MutualFixEscape {

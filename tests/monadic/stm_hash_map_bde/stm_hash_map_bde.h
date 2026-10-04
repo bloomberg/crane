@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <bdls_filesystemutil.h>
 #include <bsl_concepts.h>
@@ -51,26 +50,26 @@ public:
   List() {}
   explicit List(Nil _v) : d_v_(_v) {}
   explicit List(Cons _v) : d_v_(bsl::move(_v)) {}
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : d_v_([&]() -> variant_t {
-          if (bsl::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (bsl::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
             const auto &[d_a, d_l] =
-                bsl::get<typename List<_U>::Cons>(_other.v());
-            return Cons{[&]() -> t_A {
-                          if constexpr (crane_convertible<t_A, const _U &>) {
-                            return crane_convert<t_A>(d_a);
-                          } else {
-                            throw bsl::logic_error(
-                                "unreachable: inactive constructor field at "
-                                "this instantiation");
-                          }
-                        }(),
-                        (d_l ? bsl::make_shared<List<t_A>>(
-                                   crane_convert<List<t_A>>(*d_l))
-                             : nullptr)};
+                bsl::get<typename List<CraneU>::Cons>(_other.v());
+            return Cons{
+                [&]() -> t_A {
+                  if constexpr (crane_convertible<t_A, const CraneU &>) {
+                    return crane_convert<t_A>(d_a);
+                  } else {
+                    throw bsl::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (d_l ? bsl::make_shared<List<t_A>>(
+                           crane_convert<List<t_A>>(*d_l))
+                     : nullptr)};
           }
         }()) {}
   static List<t_A> nil() { return List<t_A>(Nil{}); }
@@ -96,8 +95,8 @@ public:
   }
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
   inline variant_t &v_mut() { return d_v_; }
   // ACCESSORS
   const variant_t &v() const { return d_v_; }

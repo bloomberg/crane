@@ -82,7 +82,7 @@ let is_class_tparam class_ref i =
 
 (** Name of the [i]-th element-type parameter an instance's carrier alias
     template binds. *)
-let hkt_alias_param_name i = Id.of_string (Printf.sprintf "_A%d" i)
+let hkt_alias_param_name i = Generated_name.indexed "A" i
 
 (** [recover_method_quantifier class_ref field_ref erased] is the type of a
     class field with its own [forall A] intact.
@@ -729,10 +729,7 @@ let conversion_to_other_instantiation ~leading ~name ~templates ~vars ~fields =
   else
     let n_vars = List.length vars in
     let u_var_names =
-      List.mapi
-        (fun i _ ->
-          Id.of_string (if n_vars = 1 then "_U" else "_U" ^ string_of_int i) )
-        vars
+      List.mapi (fun i _ -> Generated_name.member "U" ~of_:n_vars i) vars
     in
     let u_tys = List.map named_tvar u_var_names in
     let converted =

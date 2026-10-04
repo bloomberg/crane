@@ -4,8 +4,8 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -37,16 +37,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -83,8 +84,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -143,8 +144,8 @@ struct DepElim {
 
     fin(const fin &) = default;
     fin &operator=(const fin &) = default;
-    fin(fin &&) noexcept = default;
-    fin &operator=(fin &&) noexcept = default;
+    fin(fin &&) = default;
+    fin &operator=(fin &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -154,25 +155,25 @@ struct DepElim {
     uint64_t fin_to_nat(uint64_t _x) const {
       const fin *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const fin *_self;
         uint64_t _x;
       };
 
-      /// _Cont_FS: resumes after recursive call, then processes rest.
-      struct _Cont_FS {};
+      /// CraneCont_FS: resumes after recursive call, then processes rest.
+      struct CraneCont_FS {};
 
-      using _Frame = std::variant<_Enter, _Cont_FS>;
+      using CraneFrame = std::variant<CraneEnter, CraneCont_FS>;
       uint64_t _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self, _x});
-      /// Loopified fin_to_nat: _Enter -> _Cont_FS.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self, _x});
+      /// Loopified fin_to_nat: CraneEnter -> CraneCont_FS.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const fin *_self = _f._self;
           uint64_t _x = _f._x;
           auto &&_sv = *_self;
@@ -180,11 +181,11 @@ struct DepElim {
             _result = UINT64_C(0);
           } else {
             const auto &[n, a1] = std::get<typename fin::FS>(_sv.v());
-            _stack.emplace_back(_Cont_FS{});
-            _stack.emplace_back(_Enter{crane_raw(a1), n});
+            _stack.emplace_back(CraneCont_FS{});
+            _stack.emplace_back(CraneEnter{crane_raw(a1), n});
           }
         } else {
-          auto _f = std::move(std::get<_Cont_FS>(_frame));
+          auto _f = std::move(std::get<CraneCont_FS>(_frame));
           _result = (std::move(_result) + 1);
         }
       }
@@ -197,29 +198,29 @@ struct DepElim {
     T1 fin_rec(F0 &&f, F1 &&f0, uint64_t _x) const {
       const fin *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const fin *_self;
         uint64_t _x;
       };
 
-      /// _Cont_FS: saves [a1, n0], resumes after recursive call, then processes
-      /// rest.
-      struct _Cont_FS {
+      /// CraneCont_FS: saves [a1, n0], resumes after recursive call, then
+      /// processes rest.
+      struct CraneCont_FS {
         std::shared_ptr<fin> a1;
         uint64_t n0;
       };
 
-      using _Frame = std::variant<_Enter, _Cont_FS>;
+      using CraneFrame = std::variant<CraneEnter, CraneCont_FS>;
       T1 _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self, _x});
-      /// Loopified fin_rec: _Enter -> _Cont_FS.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self, _x});
+      /// Loopified fin_rec: CraneEnter -> CraneCont_FS.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const fin *_self = _f._self;
           uint64_t _x = _f._x;
           auto &&_sv = *_self;
@@ -228,11 +229,11 @@ struct DepElim {
             _result = f(n0);
           } else {
             const auto &[n0, a1] = std::get<typename fin::FS>(_sv.v());
-            _stack.emplace_back(_Cont_FS{a1, n0});
-            _stack.emplace_back(_Enter{crane_raw(a1), n0});
+            _stack.emplace_back(CraneCont_FS{a1, n0});
+            _stack.emplace_back(CraneEnter{crane_raw(a1), n0});
           }
         } else {
-          auto _f = std::move(std::get<_Cont_FS>(_frame));
+          auto _f = std::move(std::get<CraneCont_FS>(_frame));
           std::shared_ptr<fin> a1 = std::move(_f.a1);
           uint64_t n0 = _f.n0;
           _result = f0(n0, *a1, std::move(_result));
@@ -247,29 +248,29 @@ struct DepElim {
     T1 fin_rect(F0 &&f, F1 &&f0, uint64_t _x) const {
       const fin *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const fin *_self;
         uint64_t _x;
       };
 
-      /// _Cont_FS: saves [a1, n0], resumes after recursive call, then processes
-      /// rest.
-      struct _Cont_FS {
+      /// CraneCont_FS: saves [a1, n0], resumes after recursive call, then
+      /// processes rest.
+      struct CraneCont_FS {
         std::shared_ptr<fin> a1;
         uint64_t n0;
       };
 
-      using _Frame = std::variant<_Enter, _Cont_FS>;
+      using CraneFrame = std::variant<CraneEnter, CraneCont_FS>;
       T1 _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self, _x});
-      /// Loopified fin_rect: _Enter -> _Cont_FS.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self, _x});
+      /// Loopified fin_rect: CraneEnter -> CraneCont_FS.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const fin *_self = _f._self;
           uint64_t _x = _f._x;
           auto &&_sv = *_self;
@@ -278,11 +279,11 @@ struct DepElim {
             _result = f(n0);
           } else {
             const auto &[n0, a1] = std::get<typename fin::FS>(_sv.v());
-            _stack.emplace_back(_Cont_FS{a1, n0});
-            _stack.emplace_back(_Enter{crane_raw(a1), n0});
+            _stack.emplace_back(CraneCont_FS{a1, n0});
+            _stack.emplace_back(CraneEnter{crane_raw(a1), n0});
           }
         } else {
-          auto _f = std::move(std::get<_Cont_FS>(_frame));
+          auto _f = std::move(std::get<CraneCont_FS>(_frame));
           std::shared_ptr<fin> a1 = std::move(_f.a1);
           uint64_t n0 = _f.n0;
           _result = f0(n0, *a1, std::move(_result));
@@ -316,18 +317,19 @@ struct DepElim {
 
     explicit vec(Vcons _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    vec(const vec<_U> &_other)
+    template <typename CraneU>
+    vec(const vec<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename vec<_U>::Vnil>(_other.v())) {
+            if (std::holds_alternative<typename vec<CraneU>::Vnil>(
+                    _other.v())) {
               return Vnil{};
             } else {
               const auto &[n, a1, a2] =
-                  std::get<typename vec<_U>::Vcons>(_other.v());
+                  std::get<typename vec<CraneU>::Vcons>(_other.v());
               return Vcons{
                   n,
                   [&]() -> A {
-                    if constexpr (crane_convertible<A, const _U &>) {
+                    if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a1);
                     } else {
                       throw std::logic_error(
@@ -366,8 +368,8 @@ struct DepElim {
 
     vec(const vec &) = default;
     vec &operator=(const vec &) = default;
-    vec(vec &&) noexcept = default;
-    vec &operator=(vec &&) noexcept = default;
+    vec(vec &&) = default;
+    vec &operator=(vec &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -443,30 +445,30 @@ struct DepElim {
     T1 vec_rec(T1 f, F1 &&f0, uint64_t _x) const {
       const vec<A> *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const vec<A> *_self;
         uint64_t _x;
       };
 
-      /// _Cont_Vcons: saves [a1, a2, n0], resumes after recursive call, then
-      /// processes rest.
-      struct _Cont_Vcons {
+      /// CraneCont_Vcons: saves [a1, a2, n0], resumes after recursive call,
+      /// then processes rest.
+      struct CraneCont_Vcons {
         A a1;
         std::shared_ptr<vec<A>> a2;
         uint64_t n0;
       };
 
-      using _Frame = std::variant<_Enter, _Cont_Vcons>;
+      using CraneFrame = std::variant<CraneEnter, CraneCont_Vcons>;
       T1 _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self, _x});
-      /// Loopified vec_rec: _Enter -> _Cont_Vcons.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self, _x});
+      /// Loopified vec_rec: CraneEnter -> CraneCont_Vcons.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const vec<A> *_self = _f._self;
           uint64_t _x = _f._x;
           auto &&_sv = *_self;
@@ -475,11 +477,11 @@ struct DepElim {
           } else {
             const auto &[n0, a1, a2] =
                 std::get<typename vec<A>::Vcons>(_sv.v());
-            _stack.emplace_back(_Cont_Vcons{a1, a2, n0});
-            _stack.emplace_back(_Enter{crane_raw(a2), n0});
+            _stack.emplace_back(CraneCont_Vcons{a1, a2, n0});
+            _stack.emplace_back(CraneEnter{crane_raw(a2), n0});
           }
         } else {
-          auto _f = std::move(std::get<_Cont_Vcons>(_frame));
+          auto _f = std::move(std::get<CraneCont_Vcons>(_frame));
           auto a1 = std::move(_f.a1);
           std::shared_ptr<vec<A>> a2 = std::move(_f.a2);
           uint64_t n0 = _f.n0;
@@ -494,30 +496,30 @@ struct DepElim {
     T1 vec_rect(T1 f, F1 &&f0, uint64_t _x) const {
       const vec<A> *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const vec<A> *_self;
         uint64_t _x;
       };
 
-      /// _Cont_Vcons: saves [a1, a2, n0], resumes after recursive call, then
-      /// processes rest.
-      struct _Cont_Vcons {
+      /// CraneCont_Vcons: saves [a1, a2, n0], resumes after recursive call,
+      /// then processes rest.
+      struct CraneCont_Vcons {
         A a1;
         std::shared_ptr<vec<A>> a2;
         uint64_t n0;
       };
 
-      using _Frame = std::variant<_Enter, _Cont_Vcons>;
+      using CraneFrame = std::variant<CraneEnter, CraneCont_Vcons>;
       T1 _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self, _x});
-      /// Loopified vec_rect: _Enter -> _Cont_Vcons.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self, _x});
+      /// Loopified vec_rect: CraneEnter -> CraneCont_Vcons.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const vec<A> *_self = _f._self;
           uint64_t _x = _f._x;
           auto &&_sv = *_self;
@@ -526,11 +528,11 @@ struct DepElim {
           } else {
             const auto &[n0, a1, a2] =
                 std::get<typename vec<A>::Vcons>(_sv.v());
-            _stack.emplace_back(_Cont_Vcons{a1, a2, n0});
-            _stack.emplace_back(_Enter{crane_raw(a2), n0});
+            _stack.emplace_back(CraneCont_Vcons{a1, a2, n0});
+            _stack.emplace_back(CraneEnter{crane_raw(a2), n0});
           }
         } else {
-          auto _f = std::move(std::get<_Cont_Vcons>(_frame));
+          auto _f = std::move(std::get<CraneCont_Vcons>(_frame));
           auto a1 = std::move(_f.a1);
           std::shared_ptr<vec<A>> a2 = std::move(_f.a2);
           uint64_t n0 = _f.n0;

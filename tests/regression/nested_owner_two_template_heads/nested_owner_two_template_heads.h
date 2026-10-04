@@ -3,7 +3,6 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <memory>
 #include <stdexcept>
@@ -58,8 +57,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -91,18 +90,18 @@ struct Bag {
 
     explicit bag(Add _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    bag(const typename Bag::template bag<_U> &_other)
+    template <typename CraneU>
+    bag(const typename Bag::template bag<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename Bag::template bag<_U>::Empty>(
-                    _other.v())) {
+            if (std::holds_alternative<
+                    typename Bag::template bag<CraneU>::Empty>(_other.v())) {
               return Empty{};
             } else {
               const auto &[a0, a1] =
-                  std::get<typename Bag::template bag<_U>::Add>(_other.v());
+                  std::get<typename Bag::template bag<CraneU>::Add>(_other.v());
               return Add{
                   [&]() -> A {
-                    if constexpr (crane_convertible<A, const _U &>) {
+                    if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a0);
                     } else {
                       throw std::logic_error(
@@ -146,8 +145,8 @@ struct Bag {
 
     bag(const bag &) = default;
     bag &operator=(const bag &) = default;
-    bag(bag &&) noexcept = default;
-    bag &operator=(bag &&) noexcept = default;
+    bag(bag &&) = default;
+    bag &operator=(bag &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 

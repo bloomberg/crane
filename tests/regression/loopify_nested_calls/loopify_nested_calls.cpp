@@ -4,38 +4,39 @@
 /// call.  The generated continuation frame is pushed with a variable
 /// (here) that is only declared and computed later, inside the
 /// continuation branch: C++ compile error.
-uint64_t sum_signum(uint64_t n) { /// _Enter: captures varying parameters for
-                                  /// each recursive call.
+uint64_t sum_signum(uint64_t n) { /// CraneEnter: captures varying parameters
+                                  /// for each recursive call.
 
-  struct _Enter {
+  struct CraneEnter {
     uint64_t n;
   };
 
-  /// _Cont_n_: saves [n_], resumes after recursive call, then processes rest.
-  struct _Cont_n_ {
+  /// CraneCont_n_: saves [n_], resumes after recursive call, then processes
+  /// rest.
+  struct CraneCont_n_ {
     uint64_t n_;
   };
 
-  using _Frame = std::variant<_Enter, _Cont_n_>;
+  using CraneFrame = std::variant<CraneEnter, CraneCont_n_>;
   uint64_t _result{};
-  crane::small_vector<_Frame> _stack;
-  _stack.emplace_back(_Enter{n});
-  /// Loopified sum_signum: _Enter -> _Cont_n_.
+  crane::small_vector<CraneFrame> _stack;
+  _stack.emplace_back(CraneEnter{n});
+  /// Loopified sum_signum: CraneEnter -> CraneCont_n_.
   while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
+    CraneFrame _frame = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
+    if (std::holds_alternative<CraneEnter>(_frame)) {
+      auto _f = std::move(std::get<CraneEnter>(_frame));
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = UINT64_C(0);
       } else {
         uint64_t n_ = n - 1;
-        _stack.emplace_back(_Cont_n_{n_});
-        _stack.emplace_back(_Enter{n_});
+        _stack.emplace_back(CraneCont_n_{n_});
+        _stack.emplace_back(CraneEnter{n_});
       }
     } else {
-      auto _f = std::move(std::get<_Cont_n_>(_frame));
+      auto _f = std::move(std::get<CraneCont_n_>(_frame));
       uint64_t n_ = _f.n_;
       uint64_t rest = std::move(_result);
       uint64_t here;
@@ -57,28 +58,28 @@ uint64_t sum_signum(uint64_t n) { /// _Enter: captures varying parameters for
 ///
 /// down_let n computes n-1; n-2; ...; 0: for example,
 /// down_let 3 = [2; 1; 0].
-List<uint64_t> down_let(uint64_t n) { /// _Enter: captures varying parameters
-                                      /// for each recursive call.
+List<uint64_t> down_let(uint64_t n) { /// CraneEnter: captures varying
+                                      /// parameters for each recursive call.
 
-  struct _Enter {
+  struct CraneEnter {
     uint64_t n;
   };
 
-  /// _Cont1: saves [n_], resumes after recursive call, then processes rest.
-  struct _Cont1 {
+  /// CraneCont1: saves [n_], resumes after recursive call, then processes rest.
+  struct CraneCont1 {
     uint64_t n_;
   };
 
-  using _Frame = std::variant<_Enter, _Cont1>;
+  using CraneFrame = std::variant<CraneEnter, CraneCont1>;
   List<uint64_t> _result{};
-  crane::small_vector<_Frame> _stack;
-  _stack.emplace_back(_Enter{n});
-  /// Loopified down_let: _Enter -> _Cont1.
+  crane::small_vector<CraneFrame> _stack;
+  _stack.emplace_back(CraneEnter{n});
+  /// Loopified down_let: CraneEnter -> CraneCont1.
   while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
+    CraneFrame _frame = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
+    if (std::holds_alternative<CraneEnter>(_frame)) {
+      auto _f = std::move(std::get<CraneEnter>(_frame));
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = List<uint64_t>::nil();
@@ -91,12 +92,12 @@ List<uint64_t> down_let(uint64_t n) { /// _Enter: captures varying parameters
             _result = List<uint64_t>::cons(n_, std::move(rest));
           }
         } else {
-          _stack.emplace_back(_Cont1{n_});
-          _stack.emplace_back(_Enter{n_});
+          _stack.emplace_back(CraneCont1{n_});
+          _stack.emplace_back(CraneEnter{n_});
         }
       }
     } else {
-      auto _f = std::move(std::get<_Cont1>(_frame));
+      auto _f = std::move(std::get<CraneCont1>(_frame));
       uint64_t n_ = _f.n_;
       auto rest = std::move(_result);
       _result = List<uint64_t>::cons(n_, std::move(rest));
@@ -111,28 +112,28 @@ List<uint64_t> down_let(uint64_t n) { /// _Enter: captures varying parameters
 /// down_inline 3 equals [2; 1; 0] in Rocq, yet extracts to code that
 /// returns .  Plain cons n' (down_inline n') with the recursive call
 /// directly in argument position is handled correctly.
-List<uint64_t> down_inline(uint64_t n) { /// _Enter: captures varying parameters
-                                         /// for each recursive call.
+List<uint64_t> down_inline(uint64_t n) { /// CraneEnter: captures varying
+                                         /// parameters for each recursive call.
 
-  struct _Enter {
+  struct CraneEnter {
     uint64_t n;
   };
 
-  /// _Cont1: saves [n_], resumes after recursive call, then processes rest.
-  struct _Cont1 {
+  /// CraneCont1: saves [n_], resumes after recursive call, then processes rest.
+  struct CraneCont1 {
     uint64_t n_;
   };
 
-  using _Frame = std::variant<_Enter, _Cont1>;
+  using CraneFrame = std::variant<CraneEnter, CraneCont1>;
   List<uint64_t> _result{};
-  crane::small_vector<_Frame> _stack;
-  _stack.emplace_back(_Enter{n});
-  /// Loopified down_inline: _Enter -> _Cont1.
+  crane::small_vector<CraneFrame> _stack;
+  _stack.emplace_back(CraneEnter{n});
+  /// Loopified down_inline: CraneEnter -> CraneCont1.
   while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
+    CraneFrame _frame = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
+    if (std::holds_alternative<CraneEnter>(_frame)) {
+      auto _f = std::move(std::get<CraneEnter>(_frame));
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = List<uint64_t>::nil();
@@ -145,12 +146,12 @@ List<uint64_t> down_inline(uint64_t n) { /// _Enter: captures varying parameters
             _result = List<uint64_t>::cons(n_, std::move(_tmp1));
           }
         } else {
-          _stack.emplace_back(_Cont1{n_});
-          _stack.emplace_back(_Enter{n_});
+          _stack.emplace_back(CraneCont1{n_});
+          _stack.emplace_back(CraneEnter{n_});
         }
       }
     } else {
-      auto _f = std::move(std::get<_Cont1>(_frame));
+      auto _f = std::move(std::get<CraneCont1>(_frame));
       uint64_t n_ = _f.n_;
       _result = List<uint64_t>::cons(n_, std::move(_result));
     }

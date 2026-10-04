@@ -4,8 +4,8 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -36,17 +36,18 @@ struct ListOfProdDeep {
 
     explicit lst(Lcons _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    lst(const lst<_U> &_other)
+    template <typename CraneU>
+    lst(const lst<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename lst<_U>::Lnil>(_other.v())) {
+            if (std::holds_alternative<typename lst<CraneU>::Lnil>(
+                    _other.v())) {
               return Lnil{};
             } else {
               const auto &[a0, a1] =
-                  std::get<typename lst<_U>::Lcons>(_other.v());
+                  std::get<typename lst<CraneU>::Lcons>(_other.v());
               return Lcons{
                   [&]() -> A {
-                    if constexpr (crane_convertible<A, const _U &>) {
+                    if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a0);
                     } else {
                       throw std::logic_error(
@@ -85,8 +86,8 @@ struct ListOfProdDeep {
 
     lst(const lst &) = default;
     lst &operator=(const lst &) = default;
-    lst(lst &&) noexcept = default;
-    lst &operator=(lst &&) noexcept = default;
+    lst(lst &&) = default;
+    lst &operator=(lst &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -98,39 +99,39 @@ struct ListOfProdDeep {
     T1 lst_rec(T1 f, F1 &&f0) const {
       const lst<A> *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const lst<A> *_self;
       };
 
-      /// _Cont_Lcons: saves [a0, a1], resumes after recursive call, then
+      /// CraneCont_Lcons: saves [a0, a1], resumes after recursive call, then
       /// processes rest.
-      struct _Cont_Lcons {
+      struct CraneCont_Lcons {
         A a0;
         std::shared_ptr<lst<A>> a1;
       };
 
-      using _Frame = std::variant<_Enter, _Cont_Lcons>;
+      using CraneFrame = std::variant<CraneEnter, CraneCont_Lcons>;
       T1 _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified lst_rec: _Enter -> _Cont_Lcons.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified lst_rec: CraneEnter -> CraneCont_Lcons.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const lst<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename lst<A>::Lnil>(_sv.v())) {
             _result = f;
           } else {
             const auto &[a0, a1] = std::get<typename lst<A>::Lcons>(_sv.v());
-            _stack.emplace_back(_Cont_Lcons{a0, a1});
-            _stack.emplace_back(_Enter{crane_raw(a1)});
+            _stack.emplace_back(CraneCont_Lcons{a0, a1});
+            _stack.emplace_back(CraneEnter{crane_raw(a1)});
           }
         } else {
-          auto _f = std::move(std::get<_Cont_Lcons>(_frame));
+          auto _f = std::move(std::get<CraneCont_Lcons>(_frame));
           auto a0 = std::move(_f.a0);
           std::shared_ptr<lst<A>> a1 = std::move(_f.a1);
           _result = f0(a0, *a1, std::move(_result));
@@ -144,39 +145,39 @@ struct ListOfProdDeep {
     T1 lst_rect(T1 f, F1 &&f0) const {
       const lst<A> *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const lst<A> *_self;
       };
 
-      /// _Cont_Lcons: saves [a0, a1], resumes after recursive call, then
+      /// CraneCont_Lcons: saves [a0, a1], resumes after recursive call, then
       /// processes rest.
-      struct _Cont_Lcons {
+      struct CraneCont_Lcons {
         A a0;
         std::shared_ptr<lst<A>> a1;
       };
 
-      using _Frame = std::variant<_Enter, _Cont_Lcons>;
+      using CraneFrame = std::variant<CraneEnter, CraneCont_Lcons>;
       T1 _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified lst_rect: _Enter -> _Cont_Lcons.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified lst_rect: CraneEnter -> CraneCont_Lcons.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const lst<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename lst<A>::Lnil>(_sv.v())) {
             _result = f;
           } else {
             const auto &[a0, a1] = std::get<typename lst<A>::Lcons>(_sv.v());
-            _stack.emplace_back(_Cont_Lcons{a0, a1});
-            _stack.emplace_back(_Enter{crane_raw(a1)});
+            _stack.emplace_back(CraneCont_Lcons{a0, a1});
+            _stack.emplace_back(CraneEnter{crane_raw(a1)});
           }
         } else {
-          auto _f = std::move(std::get<_Cont_Lcons>(_frame));
+          auto _f = std::move(std::get<CraneCont_Lcons>(_frame));
           auto a0 = std::move(_f.a0);
           std::shared_ptr<lst<A>> a1 = std::move(_f.a1);
           _result = f0(a0, *a1, std::move(_result));
@@ -257,8 +258,8 @@ struct ListOfProdDeep {
 
     t(const t &) = default;
     t &operator=(const t &) = default;
-    t(t &&) noexcept = default;
-    t &operator=(t &&) noexcept = default;
+    t(t &&) = default;
+    t &operator=(t &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 

@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <crane_itree.h>
@@ -65,8 +64,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -110,10 +109,10 @@ template <typename T> struct MemM {
   // ACCESSORS
   MemM<T> clone() const { return {a0}; }
 
-  template <typename _U> operator MemM<_U>() const {
-    return {[&]() -> _U {
-      if constexpr (crane_convertible<_U, const T &>) {
-        return crane_convert<_U>(a0);
+  template <typename CraneU> operator MemM<CraneU>() const {
+    return {[&]() -> CraneU {
+      if constexpr (crane_convertible<CraneU, const T &>) {
+        return crane_convert<CraneU>(a0);
       } else {
         throw std::logic_error(
             "unreachable: inactive constructor field at this instantiation");
@@ -125,11 +124,11 @@ template <typename T> struct MemM {
   static MemM<T> memret(T a0) { return {std::move(a0)}; }
 };
 
-template <typename _CraneTcArg>
-using itree_tc_296b3b7af4bd1a71 = std::shared_ptr<ITree<_CraneTcArg>>;
+template <typename CraneTcArg>
+using itree_tc_609e8855cd7ad294 = std::shared_ptr<ITree<CraneTcArg>>;
 
 template <Params _tcI0, typename T1, typename T2>
-Monads::template stateT<st, itree_tc_296b3b7af4bd1a71, T2> base(MemM<T2> m) {
+Monads::template stateT<st, itree_tc_609e8855cd7ad294, T2> base(MemM<T2> m) {
   return [=](const Nat &s) {
     const auto &[a0] = m;
     return itree_ret(std::make_pair(s.add(_tcI0::width()), a0));
@@ -137,19 +136,19 @@ Monads::template stateT<st, itree_tc_296b3b7af4bd1a71, T2> base(MemM<T2> m) {
 }
 
 template <typename T1, typename T2, typename F0>
-Monads::template stateT<st, itree_tc_296b3b7af4bd1a71, T2>
+Monads::template stateT<st, itree_tc_609e8855cd7ad294, T2>
 run(F0 &&h, const MemM<T2> &m) {
   return h(m);
 }
 
 template <Params _tcI0, typename T1>
-Monads::template stateT<st, itree_tc_296b3b7af4bd1a71, T1>
+Monads::template stateT<st, itree_tc_609e8855cd7ad294, T1>
 fused(const MemM<T1> &m) {
   return run<void, T1>(
       []() {
         return
             []<typename T2>(MemM<T2> _x0)
-                -> Monads::template stateT<st, itree_tc_296b3b7af4bd1a71, T2> {
+                -> Monads::template stateT<st, itree_tc_609e8855cd7ad294, T2> {
               return base<_tcI0, void>(_x0);
             };
       }(),

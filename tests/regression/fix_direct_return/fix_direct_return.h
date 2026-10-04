@@ -2,6 +2,7 @@
 #define INCLUDED_FIX_DIRECT_RETURN
 
 #include "fn.h"
+#include <cstdint>
 #include <type_traits>
 
 struct FixDirectReturn {

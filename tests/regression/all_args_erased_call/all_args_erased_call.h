@@ -1,6 +1,8 @@
 #ifndef INCLUDED_ALL_ARGS_ERASED_CALL
 #define INCLUDED_ALL_ARGS_ERASED_CALL
 
+#include <cstdint>
+
 struct AllArgsErasedCall {
   /// A definition whose only argument is a proof takes no C++ parameters, so
   /// it is emitted as a data member rather than a nullary function.  Its use

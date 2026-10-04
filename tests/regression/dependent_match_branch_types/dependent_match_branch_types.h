@@ -57,8 +57,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -123,8 +123,8 @@ struct DependentMatchBranchTypes {
 
     vec(const vec &) = default;
     vec &operator=(const vec &) = default;
-    vec(vec &&) noexcept = default;
-    vec &operator=(vec &&) noexcept = default;
+    vec(vec &&) = default;
+    vec &operator=(vec &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 

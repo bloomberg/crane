@@ -1,7 +1,6 @@
 #ifndef INCLUDED_CLASS_FIELD_ALIAS_AT_CALL_ARGUMENT
 #define INCLUDED_CLASS_FIELD_ALIAS_AT_CALL_ARGUMENT
 
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <memory>
@@ -97,8 +96,8 @@ _cur = _next(_cur->v_mut());
 }
 Nat(const Nat&) = default;
 Nat& operator=(const Nat&) = default;
-Nat(Nat&&) noexcept = default;
-Nat& operator=(Nat&&) noexcept = default;
+Nat(Nat&&) = default;
+Nat& operator=(Nat&&) = default;
 inline variant_t& v_mut() {
 return v_;}
   // ACCESSORS
@@ -123,19 +122,19 @@ EOU() {}
 explicit EOU(Ok _v) : v_(std::move(_v)) {}
 explicit EOU(Err _v) : v_(std::move(_v)) {}
 template <typename
-_U>
-EOU(const EOU<_U>& _other) : v_([&]() -> variant_t {
-if (std::holds_alternative<typename EOU<_U>::Ok>(_other.v())) {
-const auto& [a0] = std::get<typename EOU<_U>::Ok>(_other.v());
+CraneU>
+EOU(const EOU<CraneU>& _other) : v_([&]() -> variant_t {
+if (std::holds_alternative<typename EOU<CraneU>::Ok>(_other.v())) {
+const auto& [a0] = std::get<typename EOU<CraneU>::Ok>(_other.v());
 return Ok{[&]() -> A {
-if constexpr (crane_convertible<A, const _U&>) {
+if constexpr (crane_convertible<A, const CraneU&>) {
 return crane_convert<A>(a0);
 } else {
 throw std::logic_error("unreachable: inactive constructor field at this instantiation");
 }
 }()};
 } else {
-const auto& [a0] = std::get<typename EOU<_U>::Err>(_other.v());
+const auto& [a0] = std::get<typename EOU<CraneU>::Err>(_other.v());
 return Err{a0};
 }
 }()) {}
@@ -151,20 +150,20 @@ const variant_t& v() const {
 return v_;}
 };
 struct EOU_monad {
-template <typename _A0> using m = EOU<_A0>;
+template <typename CraneA0> using m = EOU<CraneA0>;
 template <typename
-_A0>
-static EOU<_A0> ret(_A0 a) {
-return EOU<_A0>::ok(std::move(a));}
-template <typename _A0, typename
-_A1>
-static EOU<_A1> bind(EOU<_A0> m, crane::fn<EOU<_A1>(_A0)> k) {
-if (std::holds_alternative<typename EOU<_A0>::Ok>(m.v())) {
-const auto& [a0] = std::get<typename EOU<_A0>::Ok>(m.v());
+CraneA0>
+static EOU<CraneA0> ret(CraneA0 a) {
+return EOU<CraneA0>::ok(std::move(a));}
+template <typename CraneA0, typename
+CraneA1>
+static EOU<CraneA1> bind(EOU<CraneA0> m, crane::fn<EOU<CraneA1>(CraneA0)> k) {
+if (std::holds_alternative<typename EOU<CraneA0>::Ok>(m.v())) {
+const auto& [a0] = std::get<typename EOU<CraneA0>::Ok>(m.v());
 return k(a0);
 } else {
-const auto& [a0] = std::get<typename EOU<_A0>::Err>(m.v());
-return EOU<_A1>::err(a0);
+const auto& [a0] = std::get<typename EOU<CraneA0>::Err>(m.v());
+return EOU<CraneA1>::err(a0);
 }}
 };
 static_assert(Monad<EOU_monad>);

@@ -1,6 +1,8 @@
 #ifndef INCLUDED_ROCQ_BUG_4710
 #define INCLUDED_ROCQ_BUG_4710
 
+#include <cstdint>
+
 struct RocqBug4710 {
   struct Foo_ {
     uint64_t foo;

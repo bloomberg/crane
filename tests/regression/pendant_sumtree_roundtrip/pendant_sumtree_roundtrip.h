@@ -5,8 +5,8 @@
 #include "obj.h"
 #include "small_vector.h"
 #include <algorithm>
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -49,16 +49,17 @@ public:
 
   explicit List(Cons0 _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil0>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil0>(_other.v())) {
             return Nil0{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons0>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons0>(_other.v());
             return Cons0{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -96,8 +97,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -109,38 +110,38 @@ public:
   bool forallb(F0 &&f) const {
     const List<A> *_self = this;
 
-    /// _Enter: captures varying parameters for each recursive call.
-    struct _Enter {
+    /// CraneEnter: captures varying parameters for each recursive call.
+    struct CraneEnter {
       const List<A> *_self;
     };
 
-    /// _Cont_Cons0: saves [a0], resumes after recursive call, then processes
-    /// rest.
-    struct _Cont_Cons0 {
+    /// CraneCont_Cons0: saves [a0], resumes after recursive call, then
+    /// processes rest.
+    struct CraneCont_Cons0 {
       A a0;
     };
 
-    using _Frame = std::variant<_Enter, _Cont_Cons0>;
+    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons0>;
     bool _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{_self});
-    /// Loopified forallb: _Enter -> _Cont_Cons0.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{_self});
+    /// Loopified forallb: CraneEnter -> CraneCont_Cons0.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil0>(_sv.v())) {
           _result = true;
         } else {
           const auto &[a0, a1] = std::get<typename List<A>::Cons0>(_sv.v());
-          _stack.emplace_back(_Cont_Cons0{a0});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
+          _stack.emplace_back(CraneCont_Cons0{a0});
+          _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<_Cont_Cons0>(_frame));
+        auto _f = std::move(std::get<CraneCont_Cons0>(_frame));
         auto a0 = std::move(_f.a0);
         _result = (f(a0) && std::move(_result));
       }
@@ -153,38 +154,38 @@ public:
   T1 fold_right(F0 &&f, T1 a0) const {
     const List<A> *_self = this;
 
-    /// _Enter: captures varying parameters for each recursive call.
-    struct _Enter {
+    /// CraneEnter: captures varying parameters for each recursive call.
+    struct CraneEnter {
       const List<A> *_self;
     };
 
-    /// _Cont_Cons0: saves [a1], resumes after recursive call, then processes
-    /// rest.
-    struct _Cont_Cons0 {
+    /// CraneCont_Cons0: saves [a1], resumes after recursive call, then
+    /// processes rest.
+    struct CraneCont_Cons0 {
       A a1;
     };
 
-    using _Frame = std::variant<_Enter, _Cont_Cons0>;
+    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons0>;
     T1 _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{_self});
-    /// Loopified fold_right: _Enter -> _Cont_Cons0.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{_self});
+    /// Loopified fold_right: CraneEnter -> CraneCont_Cons0.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil0>(_sv.v())) {
           _result = a0;
         } else {
           const auto &[a1, a2] = std::get<typename List<A>::Cons0>(_sv.v());
-          _stack.emplace_back(_Cont_Cons0{a1});
-          _stack.emplace_back(_Enter{crane_raw(a2)});
+          _stack.emplace_back(CraneCont_Cons0{a1});
+          _stack.emplace_back(CraneEnter{crane_raw(a2)});
         }
       } else {
-        auto _f = std::move(std::get<_Cont_Cons0>(_frame));
+        auto _f = std::move(std::get<CraneCont_Cons0>(_frame));
         auto a1 = std::move(_f.a1);
         _result = f(a1, std::move(_result));
       }
@@ -195,27 +196,27 @@ public:
   template <typename T1> List<T1> concat() const {
     const List<A> *_self = this;
 
-    /// _Enter: captures varying parameters for each recursive call.
-    struct _Enter {
+    /// CraneEnter: captures varying parameters for each recursive call.
+    struct CraneEnter {
       const List<A> *_self;
     };
 
-    /// _Cont_Cons0: saves [a0], resumes after recursive call, then processes
-    /// rest.
-    struct _Cont_Cons0 {
+    /// CraneCont_Cons0: saves [a0], resumes after recursive call, then
+    /// processes rest.
+    struct CraneCont_Cons0 {
       List<T1> a0;
     };
 
-    using _Frame = std::variant<_Enter, _Cont_Cons0>;
+    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons0>;
     List<T1> _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{_self});
-    /// Loopified concat: _Enter -> _Cont_Cons0.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{_self});
+    /// Loopified concat: CraneEnter -> CraneCont_Cons0.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<List<T1>>::Nil0>(_sv.v())) {
@@ -223,11 +224,11 @@ public:
         } else {
           const auto &[a0, a1] =
               std::get<typename List<List<T1>>::Cons0>(_sv.v());
-          _stack.emplace_back(_Cont_Cons0{a0});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
+          _stack.emplace_back(CraneCont_Cons0{a0});
+          _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<_Cont_Cons0>(_frame));
+        auto _f = std::move(std::get<CraneCont_Cons0>(_frame));
         List<T1> a0 = std::move(_f.a0);
         _result = a0.app(std::move(_result));
       }
@@ -262,35 +263,35 @@ public:
   uint64_t length() const {
     const List<A> *_self = this;
 
-    /// _Enter: captures varying parameters for each recursive call.
-    struct _Enter {
+    /// CraneEnter: captures varying parameters for each recursive call.
+    struct CraneEnter {
       const List<A> *_self;
     };
 
-    /// _Cont_Cons0: resumes after recursive call, then processes rest.
-    struct _Cont_Cons0 {};
+    /// CraneCont_Cons0: resumes after recursive call, then processes rest.
+    struct CraneCont_Cons0 {};
 
-    using _Frame = std::variant<_Enter, _Cont_Cons0>;
+    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons0>;
     uint64_t _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{_self});
-    /// Loopified length: _Enter -> _Cont_Cons0.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{_self});
+    /// Loopified length: CraneEnter -> CraneCont_Cons0.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil0>(_sv.v())) {
           _result = UINT64_C(0);
         } else {
           const auto &[a0, a1] = std::get<typename List<A>::Cons0>(_sv.v());
-          _stack.emplace_back(_Cont_Cons0{});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
+          _stack.emplace_back(CraneCont_Cons0{});
+          _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<_Cont_Cons0>(_frame));
+        auto _f = std::move(std::get<CraneCont_Cons0>(_frame));
         _result = (std::move(_result) + 1);
       }
     }
@@ -334,10 +335,10 @@ template <typename A> struct Sig {
   // ACCESSORS
   Sig<A> clone() const { return {x}; }
 
-  template <typename _U> operator Sig<_U>() const {
-    return {[&]() -> _U {
-      if constexpr (crane_convertible<_U, const A &>) {
-        return crane_convert<_U>(x);
+  template <typename CraneU> operator Sig<CraneU>() const {
+    return {[&]() -> CraneU {
+      if constexpr (crane_convertible<CraneU, const A &>) {
+        return crane_convert<CraneU>(x);
       } else {
         throw std::logic_error(
             "unreachable: inactive constructor field at this instantiation");
@@ -357,18 +358,19 @@ template <typename A, typename P> struct SigT {
   // ACCESSORS
   SigT<A, P> clone() const { return {x, a1}; }
 
-  template <typename _U0, typename _U1> operator SigT<_U0, _U1>() const {
-    return {[&]() -> _U0 {
-              if constexpr (crane_convertible<_U0, const A &>) {
-                return crane_convert<_U0>(x);
+  template <typename CraneU0, typename CraneU1>
+  operator SigT<CraneU0, CraneU1>() const {
+    return {[&]() -> CraneU0 {
+              if constexpr (crane_convertible<CraneU0, const A &>) {
+                return crane_convert<CraneU0>(x);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
               }
             }(),
-            [&]() -> _U1 {
-              if constexpr (crane_convertible<_U1, const P &>) {
-                return crane_convert<_U1>(a1);
+            [&]() -> CraneU1 {
+              if constexpr (crane_convertible<CraneU1, const P &>) {
+                return crane_convert<CraneU1>(a1);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
@@ -404,16 +406,16 @@ public:
 
   explicit T0(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  T0(const T0<_U> &_other)
+  template <typename CraneU>
+  T0(const T0<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename T0<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename T0<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
             const auto &[h, n, a2] =
-                std::get<typename T0<_U>::Cons>(_other.v());
+                std::get<typename T0<CraneU>::Cons>(_other.v());
             return Cons{[&]() -> A {
-                          if constexpr (crane_convertible<A, const _U &>) {
+                          if constexpr (crane_convertible<A, const CraneU &>) {
                             return crane_convert<A>(h);
                           } else {
                             throw std::logic_error(
@@ -494,8 +496,8 @@ public:
 
   T(const T &) = default;
   T &operator=(const T &) = default;
-  T(T &&) noexcept = default;
-  T &operator=(T &&) noexcept = default;
+  T(T &&) = default;
+  T &operator=(T &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -717,8 +719,8 @@ struct PendantSumtreeRoundtripCase {
 
     SumTree(const SumTree &) = default;
     SumTree &operator=(const SumTree &) = default;
-    SumTree(SumTree &&) noexcept = default;
-    SumTree &operator=(SumTree &&) noexcept = default;
+    SumTree(SumTree &&) = default;
+    SumTree &operator=(SumTree &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 

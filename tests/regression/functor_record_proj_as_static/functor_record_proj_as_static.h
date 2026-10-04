@@ -5,7 +5,6 @@
 #include "fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <memory>
@@ -87,8 +86,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -141,16 +140,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -187,8 +187,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -200,38 +200,38 @@ public:
   T1 fold_right(F0 &&f, T1 a0) const {
     const List<A> *_self = this;
 
-    /// _Enter: captures varying parameters for each recursive call.
-    struct _Enter {
+    /// CraneEnter: captures varying parameters for each recursive call.
+    struct CraneEnter {
       const List<A> *_self;
     };
 
-    /// _Cont_Cons: saves [a1], resumes after recursive call, then processes
+    /// CraneCont_Cons: saves [a1], resumes after recursive call, then processes
     /// rest.
-    struct _Cont_Cons {
+    struct CraneCont_Cons {
       A a1;
     };
 
-    using _Frame = std::variant<_Enter, _Cont_Cons>;
+    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
     T1 _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{_self});
-    /// Loopified fold_right: _Enter -> _Cont_Cons.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{_self});
+    /// Loopified fold_right: CraneEnter -> CraneCont_Cons.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = a0;
         } else {
           const auto &[a1, a2] = std::get<typename List<A>::Cons>(_sv.v());
-          _stack.emplace_back(_Cont_Cons{a1});
-          _stack.emplace_back(_Enter{crane_raw(a2)});
+          _stack.emplace_back(CraneCont_Cons{a1});
+          _stack.emplace_back(CraneEnter{crane_raw(a2)});
         }
       } else {
-        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
         auto a1 = std::move(_f.a1);
         _result = f(a1, std::move(_result));
       }
@@ -329,8 +329,8 @@ public:
 
   Positive(const Positive &) = default;
   Positive &operator=(const Positive &) = default;
-  Positive(Positive &&) noexcept = default;
-  Positive &operator=(Positive &&) noexcept = default;
+  Positive(Positive &&) = default;
+  Positive &operator=(Positive &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -1041,31 +1041,33 @@ template <Int I, OrderedType X> struct Raw {
 
     explicit tree(Node _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    tree(const tree<_U> &_other)
+    template <typename CraneU>
+    tree(const tree<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename tree<_U>::Leaf>(_other.v())) {
+            if (std::holds_alternative<typename tree<CraneU>::Leaf>(
+                    _other.v())) {
               return Leaf{};
             } else {
               const auto &[a0, a1, a2, a3, a4] =
-                  std::get<typename tree<_U>::Node>(_other.v());
-              return Node{(a0 ? std::make_shared<tree<elt>>(
-                                    crane_convert<tree<elt>>(*a0))
-                              : nullptr),
-                          a1,
-                          [&]() -> elt {
-                            if constexpr (crane_convertible<elt, const _U &>) {
-                              return crane_convert<elt>(a2);
-                            } else {
-                              throw std::logic_error(
-                                  "unreachable: inactive constructor field at "
-                                  "this instantiation");
-                            }
-                          }(),
-                          (a3 ? std::make_shared<tree<elt>>(
-                                    crane_convert<tree<elt>>(*a3))
-                              : nullptr),
-                          a4};
+                  std::get<typename tree<CraneU>::Node>(_other.v());
+              return Node{
+                  (a0 ? std::make_shared<tree<elt>>(
+                            crane_convert<tree<elt>>(*a0))
+                      : nullptr),
+                  a1,
+                  [&]() -> elt {
+                    if constexpr (crane_convertible<elt, const CraneU &>) {
+                      return crane_convert<elt>(a2);
+                    } else {
+                      throw std::logic_error(
+                          "unreachable: inactive constructor field at this "
+                          "instantiation");
+                    }
+                  }(),
+                  (a3 ? std::make_shared<tree<elt>>(
+                            crane_convert<tree<elt>>(*a3))
+                      : nullptr),
+                  a4};
             }
           }()) {}
 
@@ -1105,8 +1107,8 @@ template <Int I, OrderedType X> struct Raw {
 
     tree(const tree &) = default;
     tree &operator=(const tree &) = default;
-    tree(tree &&) noexcept = default;
-    tree &operator=(tree &&) noexcept = default;
+    tree(tree &&) = default;
+    tree &operator=(tree &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -1391,9 +1393,9 @@ template <Int I, OrderedType X> struct Raw {
     tree<elt> t_right;
 
     // ACCESSORS
-    template <typename _U> operator triple<_U>() const {
-      return {crane_convert<tree<_U>>(t_left), std::optional<_U>(t_opt),
-              crane_convert<tree<_U>>(t_right)};
+    template <typename CraneU> operator triple<CraneU>() const {
+      return {crane_convert<tree<CraneU>>(t_left), std::optional<CraneU>(t_opt),
+              crane_convert<tree<CraneU>>(t_right)};
     }
   };
 
@@ -1500,29 +1502,30 @@ template <Int I, OrderedType X> struct Raw {
 
     explicit enumeration(More _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    enumeration(const enumeration<_U> &_other)
+    template <typename CraneU>
+    enumeration(const enumeration<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename enumeration<_U>::End>(
+            if (std::holds_alternative<typename enumeration<CraneU>::End>(
                     _other.v())) {
               return End{};
             } else {
               const auto &[a0, a1, a2, a3] =
-                  std::get<typename enumeration<_U>::More>(_other.v());
-              return More{a0,
-                          [&]() -> elt {
-                            if constexpr (crane_convertible<elt, const _U &>) {
-                              return crane_convert<elt>(a1);
-                            } else {
-                              throw std::logic_error(
-                                  "unreachable: inactive constructor field at "
-                                  "this instantiation");
-                            }
-                          }(),
-                          crane_convert<tree<elt>>(a2),
-                          (a3 ? std::make_shared<enumeration<elt>>(
-                                    crane_convert<enumeration<elt>>(*a3))
-                              : nullptr)};
+                  std::get<typename enumeration<CraneU>::More>(_other.v());
+              return More{
+                  a0,
+                  [&]() -> elt {
+                    if constexpr (crane_convertible<elt, const CraneU &>) {
+                      return crane_convert<elt>(a1);
+                    } else {
+                      throw std::logic_error(
+                          "unreachable: inactive constructor field at this "
+                          "instantiation");
+                    }
+                  }(),
+                  crane_convert<tree<elt>>(a2),
+                  (a3 ? std::make_shared<enumeration<elt>>(
+                            crane_convert<enumeration<elt>>(*a3))
+                      : nullptr)};
             }
           }()) {}
 
@@ -1554,8 +1557,8 @@ template <Int I, OrderedType X> struct Raw {
 
     enumeration(const enumeration &) = default;
     enumeration &operator=(const enumeration &) = default;
-    enumeration(enumeration &&) noexcept = default;
-    enumeration &operator=(enumeration &&) noexcept = default;
+    enumeration(enumeration &&) = default;
+    enumeration &operator=(enumeration &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -1810,8 +1813,8 @@ template <Int I, OrderedType X> struct IntMake {
     typename Raw::template tree<elt> this_;
 
     // ACCESSORS
-    template <typename _U> operator bst<_U>() const {
-      return {crane_convert<typename Raw::template tree<_U>>(this_)};
+    template <typename CraneU> operator bst<CraneU>() const {
+      return {crane_convert<typename Raw::template tree<CraneU>>(this_)};
     }
   };
 

@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <memory>
@@ -61,8 +60,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -118,14 +117,15 @@ public:
 
   explicit Sum(Inr _v) : v_(std::move(_v)) {}
 
-  template <typename _U0, typename _U1>
-  Sum(const Sum<_U0, _U1> &_other)
+  template <typename CraneU0, typename CraneU1>
+  Sum(const Sum<CraneU0, CraneU1> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Sum<_U0, _U1>::Inl>(_other.v())) {
+          if (std::holds_alternative<typename Sum<CraneU0, CraneU1>::Inl>(
+                  _other.v())) {
             const auto &[a0] =
-                std::get<typename Sum<_U0, _U1>::Inl>(_other.v());
+                std::get<typename Sum<CraneU0, CraneU1>::Inl>(_other.v());
             return Inl{[&]() -> A {
-              if constexpr (crane_convertible<A, const _U0 &>) {
+              if constexpr (crane_convertible<A, const CraneU0 &>) {
                 return crane_convert<A>(a0);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -134,9 +134,9 @@ public:
             }()};
           } else {
             const auto &[a0] =
-                std::get<typename Sum<_U0, _U1>::Inr>(_other.v());
+                std::get<typename Sum<CraneU0, CraneU1>::Inr>(_other.v());
             return Inr{[&]() -> B {
-              if constexpr (crane_convertible<B, const _U1 &>) {
+              if constexpr (crane_convertible<B, const CraneU1 &>) {
                 return crane_convert<B>(a0);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -191,10 +191,11 @@ struct InstanceUseDropsFamilyArg {
     // ACCESSORS
     box<E, A> clone() const { return {a}; }
 
-    template <typename _U0, typename _U1> operator box<_U0, _U1>() const {
-      return {[&]() -> _U1 {
-        if constexpr (crane_convertible<_U1, const A &>) {
-          return crane_convert<_U1>(a);
+    template <typename CraneU0, typename CraneU1>
+    operator box<CraneU0, CraneU1>() const {
+      return {[&]() -> CraneU1 {
+        if constexpr (crane_convertible<CraneU1, const A &>) {
+          return crane_convert<CraneU1>(a);
         } else {
           throw std::logic_error(
               "unreachable: inactive constructor field at this instantiation");
@@ -221,14 +222,15 @@ struct InstanceUseDropsFamilyArg {
   }
 
   template <typename T1> struct Monad_box {
-    template <typename _A0> using M = box<T1, _A0>;
+    template <typename CraneA0> using M = box<T1, CraneA0>;
 
-    template <typename _A0> static box<T1, _A0> ret(_A0 a) {
-      return box<T1, _A0>::box0(std::move(a));
+    template <typename CraneA0> static box<T1, CraneA0> ret(CraneA0 a) {
+      return box<T1, CraneA0>::box0(std::move(a));
     }
 
-    template <typename _A0, typename _A1>
-    static box<T1, _A1> bind(box<T1, _A0> m, crane::fn<box<T1, _A1>(_A0)> k) {
+    template <typename CraneA0, typename CraneA1>
+    static box<T1, CraneA1> bind(box<T1, CraneA0> m,
+                                 crane::fn<box<T1, CraneA1>(CraneA0)> k) {
       const auto &[a0] = m;
       return k(a0);
     }
@@ -241,10 +243,10 @@ struct InstanceUseDropsFamilyArg {
     // ACCESSORS
     aE<P> clone() const { return {a0}; }
 
-    template <typename _U> operator aE<_U>() const {
-      return {[&]() -> _U {
-        if constexpr (crane_convertible<_U, const P &>) {
-          return crane_convert<_U>(a0);
+    template <typename CraneU> operator aE<CraneU>() const {
+      return {[&]() -> CraneU {
+        if constexpr (crane_convertible<CraneU, const P &>) {
+          return crane_convert<CraneU>(a0);
         } else {
           throw std::logic_error(
               "unreachable: inactive constructor field at this instantiation");

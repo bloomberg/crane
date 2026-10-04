@@ -5,8 +5,8 @@
 #include "fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <utility>
@@ -37,16 +37,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -83,8 +84,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -94,35 +95,35 @@ public:
   uint64_t length() const {
     const List<A> *_self = this;
 
-    /// _Enter: captures varying parameters for each recursive call.
-    struct _Enter {
+    /// CraneEnter: captures varying parameters for each recursive call.
+    struct CraneEnter {
       const List<A> *_self;
     };
 
-    /// _Cont_Cons: resumes after recursive call, then processes rest.
-    struct _Cont_Cons {};
+    /// CraneCont_Cons: resumes after recursive call, then processes rest.
+    struct CraneCont_Cons {};
 
-    using _Frame = std::variant<_Enter, _Cont_Cons>;
+    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
     uint64_t _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{_self});
-    /// Loopified length: _Enter -> _Cont_Cons.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{_self});
+    /// Loopified length: CraneEnter -> CraneCont_Cons.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = UINT64_C(0);
         } else {
           const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-          _stack.emplace_back(_Cont_Cons{});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
+          _stack.emplace_back(CraneCont_Cons{});
+          _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
         _result = (std::move(_result) + 1);
       }
     }
@@ -135,18 +136,20 @@ public:
 /// site was translated first.  The other two uses then have no matching
 /// overload.
 struct LetPolymorphicFun {
-  template <typename T1> static uint64_t _run_f(const T1 x, const List<T1> l) {
+  template <typename T1>
+  static uint64_t run_crane_f(const T1 x, const List<T1> l) {
     return List<T1>::cons(x, l).length();
   }
 
   static inline const uint64_t run = []() {
-    return ((_run_f(UINT64_C(1),
-                    List<uint64_t>::cons(
-                        UINT64_C(2), List<uint64_t>::cons(
-                                         UINT64_C(3), List<uint64_t>::nil()))) +
-             _run_f(true, List<bool>::nil())) +
-            _run_f(crane::fn([](uint64_t x) { return (x + 1); }),
-                   List<crane::fn<uint64_t(uint64_t)>>::nil()));
+    return ((run_crane_f(UINT64_C(1),
+                         List<uint64_t>::cons(
+                             UINT64_C(2),
+                             List<uint64_t>::cons(UINT64_C(3),
+                                                  List<uint64_t>::nil()))) +
+             run_crane_f(true, List<bool>::nil())) +
+            run_crane_f(crane::fn([](uint64_t x) { return (x + 1); }),
+                        List<crane::fn<uint64_t(uint64_t)>>::nil()));
   }();
 };
 

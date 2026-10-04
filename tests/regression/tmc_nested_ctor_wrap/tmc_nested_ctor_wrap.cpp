@@ -10,37 +10,37 @@ Nat TmcNestedCtorWrap::rsize(const TmcNestedCtorWrap::rose &r) {
       Nat::o()));
 }
 
-TmcNestedCtorWrap::rose TmcNestedCtorWrap::spine(
-    const Nat
-        &n) { /// _Enter: captures varying parameters for each recursive call.
+TmcNestedCtorWrap::rose
+TmcNestedCtorWrap::spine(const Nat &n) { /// CraneEnter: captures varying
+                                         /// parameters for each recursive call.
 
-  struct _Enter {
+  struct CraneEnter {
     const Nat *n;
   };
 
-  /// _Cont_S: resumes after recursive call, then processes rest.
-  struct _Cont_S {};
+  /// CraneCont_S: resumes after recursive call, then processes rest.
+  struct CraneCont_S {};
 
-  using _Frame = std::variant<_Enter, _Cont_S>;
+  using CraneFrame = std::variant<CraneEnter, CraneCont_S>;
   TmcNestedCtorWrap::rose _result{};
-  crane::small_vector<_Frame> _stack;
-  _stack.emplace_back(_Enter{&n});
-  /// Loopified spine: _Enter -> _Cont_S.
+  crane::small_vector<CraneFrame> _stack;
+  _stack.emplace_back(CraneEnter{&n});
+  /// Loopified spine: CraneEnter -> CraneCont_S.
   while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
+    CraneFrame _frame = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
+    if (std::holds_alternative<CraneEnter>(_frame)) {
+      auto _f = std::move(std::get<CraneEnter>(_frame));
       const Nat &n = *_f.n;
       if (std::holds_alternative<typename Nat::O>(n.v())) {
         _result = rose::rnode(List<TmcNestedCtorWrap::rose>::nil());
       } else {
         const auto &[a0] = std::get<typename Nat::S>(n.v());
-        _stack.emplace_back(_Cont_S{});
-        _stack.emplace_back(_Enter{crane_raw(a0)});
+        _stack.emplace_back(CraneCont_S{});
+        _stack.emplace_back(CraneEnter{crane_raw(a0)});
       }
     } else {
-      auto _f = std::move(std::get<_Cont_S>(_frame));
+      auto _f = std::move(std::get<CraneCont_S>(_frame));
       _result = rose::rnode(List<TmcNestedCtorWrap::rose>::cons(
           std::move(_result), List<TmcNestedCtorWrap::rose>::nil()));
     }

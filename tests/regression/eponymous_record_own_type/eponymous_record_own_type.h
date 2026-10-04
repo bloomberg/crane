@@ -1,6 +1,8 @@
 #ifndef INCLUDED_EPONYMOUS_RECORD_OWN_TYPE
 #define INCLUDED_EPONYMOUS_RECORD_OWN_TYPE
 
+#include <cstdint>
+
 struct EponymousRecordOwnType_Mod {
   struct EponymousRecordOwnType {
     uint64_t field;

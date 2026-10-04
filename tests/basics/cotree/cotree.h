@@ -6,8 +6,8 @@
 #include "lazy.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -39,16 +39,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -85,8 +86,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -123,9 +124,9 @@ struct Cotree {
     // TYPES
     struct Conil {};
 
-    template <typename _S0 = colist<A>> struct Cocons_ {
+    template <typename CraneS0 = colist<A>> struct Cocons_ {
       A x;
-      _S0 xs;
+      CraneS0 xs;
     };
 
     using Cocons = Cocons_<>;
@@ -145,19 +146,19 @@ struct Cotree {
     explicit colist(Cocons _v)
         : lazy_v_(crane::lazy<variant_t>(variant_t(std::move(_v)))) {}
 
-    template <typename _U>
-    colist(const colist<_U> &_other)
+    template <typename CraneU>
+    colist(const colist<CraneU> &_other)
         : lazy_v_(crane::lazy<variant_t>::converted_from(
               _other.lazy_cell(), [=]() -> variant_t {
-                if (std::holds_alternative<typename colist<_U>::Conil>(
+                if (std::holds_alternative<typename colist<CraneU>::Conil>(
                         _other.v())) {
                   return Conil{};
                 } else {
                   const auto &[x, xs] =
-                      std::get<typename colist<_U>::Cocons>(_other.v());
+                      std::get<typename colist<CraneU>::Cocons>(_other.v());
                   return Cocons{
                       [&]() -> A {
-                        if constexpr (crane_convertible<A, const _U &>) {
+                        if constexpr (crane_convertible<A, const CraneU &>) {
                           return crane_convert<A>(x);
                         } else {
                           throw std::logic_error(
@@ -197,9 +198,9 @@ struct Cotree {
 
   template <typename A> struct cotree {
     // TYPES
-    template <typename _S0 = cotree<A>> struct Conode_ {
+    template <typename CraneS0 = cotree<A>> struct Conode_ {
       A a;
-      colist<_S0> f;
+      colist<CraneS0> f;
     };
 
     using Conode = Conode_<>;
@@ -216,15 +217,15 @@ struct Cotree {
     explicit cotree(Conode _v)
         : lazy_v_(crane::lazy<variant_t>(variant_t(std::move(_v)))) {}
 
-    template <typename _U>
-    cotree(const cotree<_U> &_other)
+    template <typename CraneU>
+    cotree(const cotree<CraneU> &_other)
         : lazy_v_(crane::lazy<variant_t>::converted_from(
               _other.lazy_cell(), [=]() -> variant_t {
                 const auto &[a, f] =
-                    std::get<typename cotree<_U>::Conode>(_other.v());
+                    std::get<typename cotree<CraneU>::Conode>(_other.v());
                 return Conode{
                     [&]() -> A {
-                      if constexpr (crane_convertible<A, const _U &>) {
+                      if constexpr (crane_convertible<A, const CraneU &>) {
                         return crane_convert<A>(a);
                       } else {
                         throw std::logic_error(
@@ -309,13 +310,13 @@ struct Cotree {
 
     explicit tree(Node _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    tree(const tree<_U> &_other)
+    template <typename CraneU>
+    tree(const tree<CraneU> &_other)
         : v_([&]() -> variant_t {
             const auto &[a, children] =
-                std::get<typename tree<_U>::Node>(_other.v());
+                std::get<typename tree<CraneU>::Node>(_other.v());
             return Node{[&]() -> A {
-                          if constexpr (crane_convertible<A, const _U &>) {
+                          if constexpr (crane_convertible<A, const CraneU &>) {
                             return crane_convert<A>(a);
                           } else {
                             throw std::logic_error(
@@ -369,8 +370,8 @@ struct Cotree {
 
     tree(const tree &) = default;
     tree &operator=(const tree &) = default;
-    tree(tree &&) noexcept = default;
-    tree &operator=(tree &&) noexcept = default;
+    tree(tree &&) = default;
+    tree &operator=(tree &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 

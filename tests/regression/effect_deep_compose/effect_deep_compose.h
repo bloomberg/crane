@@ -11,8 +11,6 @@
 #include <string>
 #include <variant>
 
-using namespace std::string_literals;
-
 struct EffectDeepCompose {
   /// 1. Function using all three effects
   static int64_t timed_env_op(std::string name, std::string value);

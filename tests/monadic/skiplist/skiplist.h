@@ -3,6 +3,7 @@
 
 #include "fn.h"
 #include <crane_itree.h>
+#include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <iostream>

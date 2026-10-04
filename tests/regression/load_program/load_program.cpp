@@ -24,8 +24,8 @@ LoadProgram::state LoadProgram::load_program(LoadProgram::state s,
   } else {
     const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(bytes.v());
     LoadProgram::state s_ = set_prom_params(std::move(s), base, a0, true);
-    LoadProgram::state s__ = execute_wpm(std::move(s_));
-    return load_program(std::move(s__), (base + UINT64_C(1)), *a1);
+    LoadProgram::state s_p = execute_wpm(std::move(s_));
+    return load_program(std::move(s_p), (base + UINT64_C(1)), *a1);
   }
 }
 

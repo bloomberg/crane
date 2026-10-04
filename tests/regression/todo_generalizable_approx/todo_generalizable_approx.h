@@ -1,6 +1,7 @@
 #ifndef INCLUDED_TODO_GENERALIZABLE_APPROX
 #define INCLUDED_TODO_GENERALIZABLE_APPROX
 
+#include <cstdint>
 #include <type_traits>
 
 struct TodoGeneralizableApprox {

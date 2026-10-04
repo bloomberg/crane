@@ -3,6 +3,7 @@
 
 #include "small_vector.h"
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -101,8 +102,8 @@ struct PatternImpossible {
 
     nested(const nested &) = default;
     nested &operator=(const nested &) = default;
-    nested(nested &&) noexcept = default;
-    nested &operator=(nested &&) noexcept = default;
+    nested(nested &&) = default;
+    nested &operator=(nested &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 

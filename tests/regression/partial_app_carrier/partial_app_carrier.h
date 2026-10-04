@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <memory>
 #include <stdexcept>
@@ -59,8 +58,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -103,10 +102,11 @@ struct PartialAppCarrier {
     // ACCESSORS
     box<E, A> clone() const { return {a}; }
 
-    template <typename _U0, typename _U1> operator box<_U0, _U1>() const {
-      return {[&]() -> _U1 {
-        if constexpr (crane_convertible<_U1, const A &>) {
-          return crane_convert<_U1>(a);
+    template <typename CraneU0, typename CraneU1>
+    operator box<CraneU0, CraneU1>() const {
+      return {[&]() -> CraneU1 {
+        if constexpr (crane_convertible<CraneU1, const A &>) {
+          return crane_convert<CraneU1>(a);
         } else {
           throw std::logic_error(
               "unreachable: inactive constructor field at this instantiation");
@@ -136,13 +136,13 @@ struct PartialAppCarrier {
     noE() = delete;
   };
 
-  template <typename _P0> struct _crane_carrier_tch {
-    template <typename _CraneTcArg> using c = box<_P0, _CraneTcArg>;
+  template <typename CraneP0> struct crane_carrier_tch {
+    template <typename CraneTcArg> using c = box<CraneP0, CraneTcArg>;
   };
 
   template <typename T1>
-  static const stateT<Nat, _crane_carrier_tch<T1>::template c, Nat> &get_st() {
-    static const stateT<Nat, _crane_carrier_tch<T1>::template c, Nat> v =
+  static const stateT<Nat, crane_carrier_tch<T1>::template c, Nat> &get_st() {
+    static const stateT<Nat, crane_carrier_tch<T1>::template c, Nat> v =
         [](const Nat &s) {
           return box<T1, std::pair<Nat, Nat>>::box0(std::make_pair(s, s));
         };

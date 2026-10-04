@@ -260,8 +260,8 @@ val dummy_name : Id.t
 (** Convert a Name.t to an Id.t, using anonymous_name for anonymous names. *)
 val id_of_name : Name.t -> Id.t
 
-(** Move a name out of the space Crane reserves for the names it invents
-    itself ([_Frame], [_stack], ...) by carrying its leading underscores to
+(** Move a name out of the space Crane reserves for the locals it invents
+    itself ([_stack], [_result], ...) by carrying its leading underscores to
     the end.  Unchanged when there are none, when the name is all underscores,
     or when a digit would be left in front ([_0] stays [_0]; [0_] is not an
     identifier). *)

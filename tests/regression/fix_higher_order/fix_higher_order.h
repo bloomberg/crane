@@ -2,6 +2,7 @@
 #define INCLUDED_FIX_HIGHER_ORDER
 
 #include "fn.h"
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <type_traits>

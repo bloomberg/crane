@@ -35,29 +35,31 @@ LoopifyReuseBoolQualified::build(uint64_t n,
   }
 }
 
-uint64_t LoopifyReuseBoolQualified::sum(
-    const LoopifyReuseBoolQualified::lst
-        &l) { /// _Enter: captures varying parameters for each recursive call.
+uint64_t
+LoopifyReuseBoolQualified::sum(const LoopifyReuseBoolQualified::lst
+                                   &l) { /// CraneEnter: captures varying
+                                         /// parameters for each recursive call.
 
-  struct _Enter {
+  struct CraneEnter {
     const LoopifyReuseBoolQualified::lst *l;
   };
 
-  /// _Cont_Cons: saves [a0], resumes after recursive call, then processes rest.
-  struct _Cont_Cons {
+  /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
+  /// rest.
+  struct CraneCont_Cons {
     uint64_t a0;
   };
 
-  using _Frame = std::variant<_Enter, _Cont_Cons>;
+  using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
   uint64_t _result{};
-  crane::small_vector<_Frame> _stack;
-  _stack.emplace_back(_Enter{&l});
-  /// Loopified sum: _Enter -> _Cont_Cons.
+  crane::small_vector<CraneFrame> _stack;
+  _stack.emplace_back(CraneEnter{&l});
+  /// Loopified sum: CraneEnter -> CraneCont_Cons.
   while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
+    CraneFrame _frame = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
+    if (std::holds_alternative<CraneEnter>(_frame)) {
+      auto _f = std::move(std::get<CraneEnter>(_frame));
       const LoopifyReuseBoolQualified::lst &l = *_f.l;
       if (std::holds_alternative<typename LoopifyReuseBoolQualified::lst::Nil>(
               l.v())) {
@@ -65,11 +67,11 @@ uint64_t LoopifyReuseBoolQualified::sum(
       } else {
         const auto &[a0, a1] =
             std::get<typename LoopifyReuseBoolQualified::lst::Cons>(l.v());
-        _stack.emplace_back(_Cont_Cons{a0});
-        _stack.emplace_back(_Enter{crane_raw(a1)});
+        _stack.emplace_back(CraneCont_Cons{a0});
+        _stack.emplace_back(CraneEnter{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<_Cont_Cons>(_frame));
+      auto _f = std::move(std::get<CraneCont_Cons>(_frame));
       uint64_t a0 = _f.a0;
       _result = (a0 + std::move(_result));
     }

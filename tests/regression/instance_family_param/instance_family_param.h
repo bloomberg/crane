@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <memory>
@@ -60,8 +59,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -118,10 +117,11 @@ struct InstanceFamilyParam {
     // ACCESSORS
     box<E, A> clone() const { return {a}; }
 
-    template <typename _U0, typename _U1> operator box<_U0, _U1>() const {
-      return {[&]() -> _U1 {
-        if constexpr (crane_convertible<_U1, const A &>) {
-          return crane_convert<_U1>(a);
+    template <typename CraneU0, typename CraneU1>
+    operator box<CraneU0, CraneU1>() const {
+      return {[&]() -> CraneU1 {
+        if constexpr (crane_convertible<CraneU1, const A &>) {
+          return crane_convert<CraneU1>(a);
         } else {
           throw std::logic_error(
               "unreachable: inactive constructor field at this instantiation");
@@ -148,12 +148,13 @@ struct InstanceFamilyParam {
   }
 
   template <typename T1> struct Functor_box {
-    template <typename _A0> using F = box<T1, _A0>;
+    template <typename CraneA0> using F = box<T1, CraneA0>;
 
-    template <typename _A0, typename _A1>
-    static box<T1, _A1> fmap(crane::fn<_A1(_A0)> f, box<T1, _A0> b0) {
+    template <typename CraneA0, typename CraneA1>
+    static box<T1, CraneA1> fmap(crane::fn<CraneA1(CraneA0)> f,
+                                 box<T1, CraneA0> b0) {
       const auto &[a0] = b0;
-      return box<T1, _A1>::box0(f(a0));
+      return box<T1, CraneA1>::box0(f(a0));
     }
   };
 

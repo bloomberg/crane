@@ -3,8 +3,8 @@
 
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <concepts>
+#include <cstdint>
 #include <type_traits>
 #include <utility>
 
@@ -49,16 +49,16 @@ struct ClassTypeConstructorParam {
   }
 
   struct IdC {
-    template <typename _A0> using F = _A0;
+    template <typename CraneA0> using F = CraneA0;
 
-    template <typename _A0, typename _A1>
-    static _A1 cmap(crane::fn<_A1(_A0)> f, _A0 a0) {
+    template <typename CraneA0, typename CraneA1>
+    static CraneA1 cmap(crane::fn<CraneA1(CraneA0)> f, CraneA0 a0) {
       return f(std::move(a0));
     }
 
-    template <typename _A0> static _A0 cwrap(_A0 x) { return x; }
+    template <typename CraneA0> static CraneA0 cwrap(CraneA0 x) { return x; }
 
-    template <typename _A0> static _A0 cout(_A0 x) { return x; }
+    template <typename CraneA0> static CraneA0 cout(CraneA0 x) { return x; }
   };
 
   static_assert(Container<IdC>);

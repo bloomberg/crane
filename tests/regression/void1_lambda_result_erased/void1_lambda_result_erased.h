@@ -5,7 +5,6 @@
 #include "fn.h"
 #include "lazy.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <memory>
 #include <optional>
@@ -61,8 +60,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -118,14 +117,15 @@ public:
 
   explicit Sum(Inr _v) : v_(std::move(_v)) {}
 
-  template <typename _U0, typename _U1>
-  Sum(const Sum<_U0, _U1> &_other)
+  template <typename CraneU0, typename CraneU1>
+  Sum(const Sum<CraneU0, CraneU1> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Sum<_U0, _U1>::Inl>(_other.v())) {
+          if (std::holds_alternative<typename Sum<CraneU0, CraneU1>::Inl>(
+                  _other.v())) {
             const auto &[a0] =
-                std::get<typename Sum<_U0, _U1>::Inl>(_other.v());
+                std::get<typename Sum<CraneU0, CraneU1>::Inl>(_other.v());
             return Inl{[&]() -> A {
-              if constexpr (crane_convertible<A, const _U0 &>) {
+              if constexpr (crane_convertible<A, const CraneU0 &>) {
                 return crane_convert<A>(a0);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -134,9 +134,9 @@ public:
             }()};
           } else {
             const auto &[a0] =
-                std::get<typename Sum<_U0, _U1>::Inr>(_other.v());
+                std::get<typename Sum<CraneU0, CraneU1>::Inr>(_other.v());
             return Inr{[&]() -> B {
-              if constexpr (crane_convertible<B, const _U1 &>) {
+              if constexpr (crane_convertible<B, const CraneU1 &>) {
                 return crane_convert<B>(a0);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -190,15 +190,17 @@ struct Void1LambdaResultErased {
 
     explicit treeF(VisF _v) : v_(std::move(_v)) {}
 
-    template <typename _U0, typename _U1, typename _U2>
-    treeF(const treeF<_U0, _U1, _U2> &_other)
+    template <typename CraneU0, typename CraneU1, typename CraneU2>
+    treeF(const treeF<CraneU0, CraneU1, CraneU2> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename treeF<_U0, _U1, _U2>::RetF>(
+            if (std::holds_alternative<
+                    typename treeF<CraneU0, CraneU1, CraneU2>::RetF>(
                     _other.v())) {
               const auto &[r] =
-                  std::get<typename treeF<_U0, _U1, _U2>::RetF>(_other.v());
+                  std::get<typename treeF<CraneU0, CraneU1, CraneU2>::RetF>(
+                      _other.v());
               return RetF{[&]() -> R {
-                if constexpr (crane_convertible<R, const _U1 &>) {
+                if constexpr (crane_convertible<R, const CraneU1 &>) {
                   return crane_convert<R>(r);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
@@ -206,12 +208,14 @@ struct Void1LambdaResultErased {
                 }
               }()};
             } else {
-              if (std::holds_alternative<typename treeF<_U0, _U1, _U2>::TauF>(
+              if (std::holds_alternative<
+                      typename treeF<CraneU0, CraneU1, CraneU2>::TauF>(
                       _other.v())) {
                 const auto &[t] =
-                    std::get<typename treeF<_U0, _U1, _U2>::TauF>(_other.v());
+                    std::get<typename treeF<CraneU0, CraneU1, CraneU2>::TauF>(
+                        _other.v());
                 return TauF{[&]() -> T {
-                  if constexpr (crane_convertible<T, const _U2 &>) {
+                  if constexpr (crane_convertible<T, const CraneU2 &>) {
                     return crane_convert<T>(t);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -220,17 +224,19 @@ struct Void1LambdaResultErased {
                 }()};
               } else {
                 const auto &[x, e] =
-                    std::get<typename treeF<_U0, _U1, _U2>::VisF>(_other.v());
-                return VisF{[&]() -> E {
-                              if constexpr (crane_convertible<E, const _U0 &>) {
-                                return crane_convert<E>(x);
-                              } else {
-                                throw std::logic_error(
-                                    "unreachable: inactive constructor field "
-                                    "at this instantiation");
-                              }
-                            }(),
-                            crane_convert<crane::fn<T(crane::obj)>>(e)};
+                    std::get<typename treeF<CraneU0, CraneU1, CraneU2>::VisF>(
+                        _other.v());
+                return VisF{
+                    [&]() -> E {
+                      if constexpr (crane_convertible<E, const CraneU0 &>) {
+                        return crane_convert<E>(x);
+                      } else {
+                        throw std::logic_error(
+                            "unreachable: inactive constructor field at this "
+                            "instantiation");
+                      }
+                    }(),
+                    crane_convert<crane::fn<T(crane::obj)>>(e)};
               }
             }
           }()) {}
@@ -256,8 +262,8 @@ struct Void1LambdaResultErased {
 
   template <typename E, typename R> struct tree {
     // TYPES
-    template <typename _S0 = tree<E, R>> struct Go_ {
-      treeF<E, R, _S0> observe;
+    template <typename CraneS0 = tree<E, R>> struct Go_ {
+      treeF<E, R, CraneS0> observe;
     };
 
     using Go = Go_<>;
@@ -275,12 +281,12 @@ struct Void1LambdaResultErased {
     explicit tree(Go _v)
         : lazy_v_(crane::lazy<variant_t>(variant_t(std::move(_v)))) {}
 
-    template <typename _U0, typename _U1>
-    tree(const tree<_U0, _U1> &_other)
+    template <typename CraneU0, typename CraneU1>
+    tree(const tree<CraneU0, CraneU1> &_other)
         : lazy_v_(crane::lazy<variant_t>::converted_from(
               _other.lazy_cell(), [=]() -> variant_t {
                 const auto &[observe] =
-                    std::get<typename tree<_U0, _U1>::Go>(_other.v());
+                    std::get<typename tree<CraneU0, CraneU1>::Go>(_other.v());
                 return Go{crane_convert<treeF<E, R, tree<E, R>>>(observe)};
               })) {}
 

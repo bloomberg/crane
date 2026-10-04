@@ -4,8 +4,8 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -110,8 +110,8 @@ struct ErasedMultiIndex {
 
     hlist(const hlist &) = default;
     hlist &operator=(const hlist &) = default;
-    hlist(hlist &&) noexcept = default;
-    hlist &operator=(hlist &&) noexcept = default;
+    hlist(hlist &&) = default;
+    hlist &operator=(hlist &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -121,35 +121,35 @@ struct ErasedMultiIndex {
     uint64_t hlist_length() const {
       const hlist *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const hlist *_self;
       };
 
-      /// _Cont_HCons: resumes after recursive call, then processes rest.
-      struct _Cont_HCons {};
+      /// CraneCont_HCons: resumes after recursive call, then processes rest.
+      struct CraneCont_HCons {};
 
-      using _Frame = std::variant<_Enter, _Cont_HCons>;
+      using CraneFrame = std::variant<CraneEnter, CraneCont_HCons>;
       uint64_t _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified hlist_length: _Enter -> _Cont_HCons.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified hlist_length: CraneEnter -> CraneCont_HCons.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const hlist *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename hlist::HNil>(_sv.v())) {
             _result = UINT64_C(0);
           } else {
             const auto &[a, a1] = std::get<typename hlist::HCons>(_sv.v());
-            _stack.emplace_back(_Cont_HCons{});
-            _stack.emplace_back(_Enter{crane_raw(a1)});
+            _stack.emplace_back(CraneCont_HCons{});
+            _stack.emplace_back(CraneEnter{crane_raw(a1)});
           }
         } else {
-          auto _f = std::move(std::get<_Cont_HCons>(_frame));
+          auto _f = std::move(std::get<CraneCont_HCons>(_frame));
           _result = (UINT64_C(1) + std::move(_result));
         }
       }
@@ -161,30 +161,30 @@ struct ErasedMultiIndex {
     T1 hlist_rec(T1 f, F1 &&f0) const {
       const hlist *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const hlist *_self;
         std::decay_t<F1> f0;
       };
 
-      /// _Cont_HCons: saves [a0, a1, f0], resumes after recursive call, then
-      /// processes rest.
-      struct _Cont_HCons {
+      /// CraneCont_HCons: saves [a0, a1, f0], resumes after recursive call,
+      /// then processes rest.
+      struct CraneCont_HCons {
         crane::obj a0;
         std::shared_ptr<hlist> a1;
         std::decay_t<F1> f0;
       };
 
-      using _Frame = std::variant<_Enter, _Cont_HCons>;
+      using CraneFrame = std::variant<CraneEnter, CraneCont_HCons>;
       T1 _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self, std::move(f0)});
-      /// Loopified hlist_rec: _Enter -> _Cont_HCons.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self, std::move(f0)});
+      /// Loopified hlist_rec: CraneEnter -> CraneCont_HCons.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const hlist *_self = _f._self;
           auto f0 = std::move(_f.f0);
           auto &&_sv = *_self;
@@ -192,12 +192,12 @@ struct ErasedMultiIndex {
             _result = f;
           } else {
             const auto &[a0, a1] = std::get<typename hlist::HCons>(_sv.v());
-            _stack.emplace_back(_Cont_HCons{a0, a1, f0});
+            _stack.emplace_back(CraneCont_HCons{a0, a1, f0});
             _stack.emplace_back(
-                _Enter{crane_raw(a1), crane_erase_fn<T1>(std::move(f0))});
+                CraneEnter{crane_raw(a1), crane_erase_fn<T1>(std::move(f0))});
           }
         } else {
-          auto _f = std::move(std::get<_Cont_HCons>(_frame));
+          auto _f = std::move(std::get<CraneCont_HCons>(_frame));
           crane::obj a0 = std::move(_f.a0);
           std::shared_ptr<hlist> a1 = std::move(_f.a1);
           std::decay_t<F1> f0 = std::move(_f.f0);
@@ -212,30 +212,30 @@ struct ErasedMultiIndex {
     T1 hlist_rect(T1 f, F1 &&f0) const {
       const hlist *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const hlist *_self;
         std::decay_t<F1> f0;
       };
 
-      /// _Cont_HCons: saves [a0, a1, f0], resumes after recursive call, then
-      /// processes rest.
-      struct _Cont_HCons {
+      /// CraneCont_HCons: saves [a0, a1, f0], resumes after recursive call,
+      /// then processes rest.
+      struct CraneCont_HCons {
         crane::obj a0;
         std::shared_ptr<hlist> a1;
         std::decay_t<F1> f0;
       };
 
-      using _Frame = std::variant<_Enter, _Cont_HCons>;
+      using CraneFrame = std::variant<CraneEnter, CraneCont_HCons>;
       T1 _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self, std::move(f0)});
-      /// Loopified hlist_rect: _Enter -> _Cont_HCons.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self, std::move(f0)});
+      /// Loopified hlist_rect: CraneEnter -> CraneCont_HCons.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const hlist *_self = _f._self;
           auto f0 = std::move(_f.f0);
           auto &&_sv = *_self;
@@ -243,12 +243,12 @@ struct ErasedMultiIndex {
             _result = f;
           } else {
             const auto &[a0, a1] = std::get<typename hlist::HCons>(_sv.v());
-            _stack.emplace_back(_Cont_HCons{a0, a1, f0});
+            _stack.emplace_back(CraneCont_HCons{a0, a1, f0});
             _stack.emplace_back(
-                _Enter{crane_raw(a1), crane_erase_fn<T1>(std::move(f0))});
+                CraneEnter{crane_raw(a1), crane_erase_fn<T1>(std::move(f0))});
           }
         } else {
-          auto _f = std::move(std::get<_Cont_HCons>(_frame));
+          auto _f = std::move(std::get<CraneCont_HCons>(_frame));
           crane::obj a0 = std::move(_f.a0);
           std::shared_ptr<hlist> a1 = std::move(_f.a1);
           std::decay_t<F1> f0 = std::move(_f.f0);

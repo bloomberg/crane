@@ -680,7 +680,7 @@ type std_names = {
   forward : string; (* "std::forward" or "bsl::forward" *)
   logic_error : string; (* "std::logic_error" or "bsl::logic_error" *)
   ns : string; (* "std" or "bsl" — general prefix *)
-  str_suffix : string; (* "s" or "_s" — string literal suffix *)
+  string : string; (* "std::string" or "bsl::string" *)
   same_as : string; (* "std::same_as" or "same_as" *)
   declval : string; (* "std::declval" or "bsl::declval" *)
   convertible_to : string; (* "std::convertible_to" or "convertible_to" *)
@@ -688,7 +688,7 @@ type std_names = {
   get_if : string; (* "std::get_if" or "bsl::get_if" *)
   get : string; (* "std::get" or "bsl::get" *)
   variant : string; (* "std::variant", "bsl::variant" or "crane::variant" *)
-  variant_header : string; (* the header [variant] is declared in *)
+  variant_header : Table.header; (* the header [variant] is declared in *)
   enable_from_this : string; (* enable_shared_from_this base, or crane::enable_rc_from_this *)
 }
 
@@ -700,7 +700,7 @@ let default_std_names =
     forward = "std::forward";
     logic_error = "std::logic_error";
     ns = "std";
-    str_suffix = "s";
+    string = "std::string";
     same_as = "std::same_as";
     declval = "std::declval";
     convertible_to = "std::convertible_to";
@@ -708,7 +708,7 @@ let default_std_names =
     get_if = "std::get_if";
     get = "std::get";
     variant = "std::variant";
-    variant_header = "variant";
+    variant_header = Table.Standard "variant";
     enable_from_this = "std::enable_shared_from_this";
   }
 
@@ -722,12 +722,12 @@ let mk_std_names prefix =
     { shared_ptr = p ^ "shared_ptr"; make_shared = p ^ "make_shared";
       move = p ^ "move"; forward = p ^ "forward";
       logic_error = p ^ "logic_error";
-      ns = "bsl"; str_suffix = "_s";
+      ns = "bsl"; string = p ^ "string";
       same_as = "same_as"; declval = p ^ "declval";
       convertible_to = "convertible_to";
       holds_alternative = p ^ "holds_alternative";
       get_if = p ^ "get_if"; get = p ^ "get";
-      variant = p ^ "variant"; variant_header = "variant";
+      variant = p ^ "variant"; variant_header = Table.Standard "variant";
       enable_from_this = p ^ "enable_shared_from_this" }
   | _ -> default_std_names
 
@@ -746,7 +746,7 @@ let init_std_names () =
     if Table.fast_variant () then
       { base with
         variant = Crane_rt.variant;
-        variant_header = Crane_rt.variant_header;
+        variant_header = Table.Runtime Crane_rt.variant_header;
         holds_alternative = "crane::holds_alternative";
         get_if = "crane::get_if";
         get = "crane::get" }

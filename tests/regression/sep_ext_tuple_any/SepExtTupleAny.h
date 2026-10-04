@@ -2,7 +2,6 @@
 #define INCLUDED_SEPEXTTUPLEANY
 
 #include "obj.h"
-#include <any>
 #include <utility>
 
 #include "Datatypes.h"

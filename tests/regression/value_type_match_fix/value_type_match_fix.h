@@ -2,6 +2,7 @@
 #define INCLUDED_VALUE_TYPE_MATCH_FIX
 
 #include "fn.h"
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <type_traits>

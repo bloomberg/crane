@@ -27,13 +27,14 @@ Export IO_axioms.
 (* In reified mode, iprint_endline is used as an effect value inside Vis nodes.
    It must produce a std::function<std::any()> thunk. *)
 Crane Extract Inlined Constant iprint_endline =>
-  "[&]() -> std::any { std::cout << %a0 << '\n'; return std::any{}; }".
+  "[&]() -> std::any { std::cout << %a0 << '\n'; return std::any{}; }"
+  From "any" "iostream".
 
 Definition print_endline (s : string) : itree ioE unit :=
   ITree.trigger (iprint_endline s).
 
 Crane Extract Inlined Constant print_endline =>
-  "std::cout << %a0 << '\n'".
+  "std::cout << %a0 << '\n'" From "iostream".
 
 Module ITreeReified.
 

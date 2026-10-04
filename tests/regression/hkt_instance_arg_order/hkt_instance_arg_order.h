@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <memory>
@@ -62,8 +61,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -94,16 +93,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -140,8 +140,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -196,15 +196,16 @@ struct HktInstanceArgOrder {
   }
 
   struct optf {
-    template <typename _A0> using F = std::optional<_A0>;
+    template <typename CraneA0> using F = std::optional<CraneA0>;
 
-    template <typename _A0, typename _A1>
-    static std::optional<_A1> fm(crane::fn<_A1(_A0)> f, std::optional<_A0> o) {
+    template <typename CraneA0, typename CraneA1>
+    static std::optional<CraneA1> fm(crane::fn<CraneA1(CraneA0)> f,
+                                     std::optional<CraneA0> o) {
       if (o.has_value()) {
-        const _A0 &x = *o;
-        return std::make_optional<_A1>(f(x));
+        const CraneA0 &x = *o;
+        return std::make_optional<CraneA1>(f(x));
       } else {
-        return std::optional<_A1>();
+        return std::optional<CraneA1>();
       }
     }
   };
@@ -212,11 +213,11 @@ struct HktInstanceArgOrder {
   static_assert(Fn<optf>);
 
   struct lstf {
-    template <typename _A0> using F = List<_A0>;
+    template <typename CraneA0> using F = List<CraneA0>;
 
-    template <typename _A0, typename _A1>
-    static List<_A1> fm(crane::fn<_A1(_A0)> a0, List<_A0> a1) {
-      return a1.template map<_A1>(std::move(a0));
+    template <typename CraneA0, typename CraneA1>
+    static List<CraneA1> fm(crane::fn<CraneA1(CraneA0)> a0, List<CraneA0> a1) {
+      return a1.template map<CraneA1>(std::move(a0));
     }
   };
 

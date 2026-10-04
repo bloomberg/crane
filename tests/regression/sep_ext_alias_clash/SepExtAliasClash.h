@@ -1,6 +1,7 @@
 #ifndef INCLUDED_SEPEXTALIASCLASH
 #define INCLUDED_SEPEXTALIASCLASH
 
+#include <cstdint>
 #include <utility>
 
 namespace SepExtAliasClash {

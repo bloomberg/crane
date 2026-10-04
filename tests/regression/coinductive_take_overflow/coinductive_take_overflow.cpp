@@ -1,22 +1,22 @@
 #include "coinductive_take_overflow.h"
 
 CoinductiveTakeOverflow::stream<uint64_t> CoinductiveTakeOverflow::from(
-    uint64_t
-        n) { /// _Enter: captures varying parameters for each recursive call.
+    uint64_t n) { /// CraneEnter: captures varying parameters for each recursive
+                  /// call.
 
-  struct _Enter {
+  struct CraneEnter {
     uint64_t n;
   };
 
-  using _Frame = std::variant<_Enter>;
+  using CraneFrame = std::variant<CraneEnter>;
   CoinductiveTakeOverflow::stream<uint64_t> _result{};
-  crane::small_vector<_Frame> _stack;
-  _stack.emplace_back(_Enter{n});
-  /// Loopified from: _Enter.
+  crane::small_vector<CraneFrame> _stack;
+  _stack.emplace_back(CraneEnter{n});
+  /// Loopified from: CraneEnter.
   while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
+    CraneFrame _frame = std::move(_stack.back());
     _stack.pop_back();
-    auto _f = std::move(std::get<_Enter>(_frame));
+    auto _f = std::move(std::get<CraneEnter>(_frame));
     uint64_t n = _f.n;
     _result = stream<uint64_t>::lazy_(
         [=]() -> CoinductiveTakeOverflow::stream<uint64_t> {

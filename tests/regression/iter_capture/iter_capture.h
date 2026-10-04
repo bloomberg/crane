@@ -1,6 +1,7 @@
 #ifndef INCLUDED_ITER_CAPTURE
 #define INCLUDED_ITER_CAPTURE
 
+#include <cstdint>
 #include <type_traits>
 #include <utility>
 

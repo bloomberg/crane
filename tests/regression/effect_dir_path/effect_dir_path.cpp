@@ -30,7 +30,7 @@ void EffectDirPath::save_cwd() {
     auto _p = std::filesystem::current_path(_ec);
     return _ec ? std::string{} : _p.string();
   }();
-  setenv("CWD"s.c_str(), std::move(cwd).c_str(), 1);
+  setenv(std::string("CWD").c_str(), std::move(cwd).c_str(), 1);
   return;
 }
 
@@ -87,10 +87,10 @@ std::string EffectDirPath::create_and_report(std::string path) {
     return !_ec;
   }();
   if (ok) {
-    std::cout << "Created"s << '\n';
+    std::cout << std::string("Created") << '\n';
     return "created";
   } else {
-    std::cout << "Already exists"s << '\n';
+    std::cout << std::string("Already exists") << '\n';
     return "exists";
   }
 }
@@ -127,6 +127,6 @@ void EffectDirPath::cleanup(std::string path) {
     std::filesystem::remove_all(std::filesystem::path(path), _ec);
     return !_ec;
   }();
-  std::cout << "cleaned up"s << '\n';
+  std::cout << std::string("cleaned up") << '\n';
   return;
 }

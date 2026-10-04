@@ -3,8 +3,8 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -36,17 +36,18 @@ struct HigherOrder {
 
     explicit list(Cons _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    list(const list<_U> &_other)
+    template <typename CraneU>
+    list(const list<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename list<_U>::Nil>(_other.v())) {
+            if (std::holds_alternative<typename list<CraneU>::Nil>(
+                    _other.v())) {
               return Nil{};
             } else {
               const auto &[a0, a1] =
-                  std::get<typename list<_U>::Cons>(_other.v());
+                  std::get<typename list<CraneU>::Cons>(_other.v());
               return Cons{
                   [&]() -> A {
-                    if constexpr (crane_convertible<A, const _U &>) {
+                    if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a0);
                     } else {
                       throw std::logic_error(
@@ -85,8 +86,8 @@ struct HigherOrder {
 
     list(const list &) = default;
     list &operator=(const list &) = default;
-    list(list &&) noexcept = default;
-    list &operator=(list &&) noexcept = default;
+    list(list &&) = default;
+    list &operator=(list &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 

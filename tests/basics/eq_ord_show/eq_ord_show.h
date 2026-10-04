@@ -2,10 +2,9 @@
 #define INCLUDED_EQ_ORD_SHOW
 
 #include <concepts>
+#include <cstdint>
 #include <string>
 #include <utility>
-
-using namespace std::string_literals;
 
 struct NatEq;
 struct NatOrd;
@@ -115,12 +114,12 @@ template <typename _tcI0, typename _tcI1, typename _tcI2, typename T1>
   requires Show<_tcI0, T1> && Ord<_tcI1, T1> && Eq<_tcI2, T1>
 std::string show_comparison(const T1 &x, const T1 &y) {
   if (_tcI1::lt(x, y)) {
-    return _tcI0::show(x) + " < "s + _tcI0::show(y);
+    return _tcI0::show(x) + std::string(" < ") + _tcI0::show(y);
   } else {
     if (_tcI2::eqb(x, y)) {
-      return _tcI0::show(x) + " = "s + _tcI0::show(y);
+      return _tcI0::show(x) + std::string(" = ") + _tcI0::show(y);
     } else {
-      return _tcI0::show(x) + " > "s + _tcI0::show(y);
+      return _tcI0::show(x) + std::string(" > ") + _tcI0::show(y);
     }
   }
 }

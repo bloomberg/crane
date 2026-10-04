@@ -14,27 +14,27 @@ SumDrain::t SumDrain::build(uint64_t n, SumDrain::t acc) {
   }
 }
 
-uint64_t SumDrain::depth(
-    const SumDrain::t
-        &x) { /// _Enter: captures varying parameters for each recursive call.
+uint64_t
+SumDrain::depth(const SumDrain::t &x) { /// CraneEnter: captures varying
+                                        /// parameters for each recursive call.
 
-  struct _Enter {
+  struct CraneEnter {
     SumDrain::t x;
   };
 
-  /// _Cont_Inr: resumes after recursive call, then processes rest.
-  struct _Cont_Inr {};
+  /// CraneCont_Inr: resumes after recursive call, then processes rest.
+  struct CraneCont_Inr {};
 
-  using _Frame = std::variant<_Enter, _Cont_Inr>;
+  using CraneFrame = std::variant<CraneEnter, CraneCont_Inr>;
   uint64_t _result{};
-  crane::small_vector<_Frame> _stack;
-  _stack.emplace_back(_Enter{x});
-  /// Loopified depth: _Enter -> _Cont_Inr.
+  crane::small_vector<CraneFrame> _stack;
+  _stack.emplace_back(CraneEnter{x});
+  /// Loopified depth: CraneEnter -> CraneCont_Inr.
   while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
+    CraneFrame _frame = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
+    if (std::holds_alternative<CraneEnter>(_frame)) {
+      auto _f = std::move(std::get<CraneEnter>(_frame));
       const SumDrain::t &x = std::move(_f.x);
       const auto &[a0] = std::get<typename SumDrain::t::N>(x.v());
       auto &&_sv0 = *a0;
@@ -44,11 +44,11 @@ uint64_t SumDrain::depth(
       } else {
         const auto &[a00] =
             std::get<typename Sum<uint64_t, SumDrain::t>::Inr>(_sv0.v());
-        _stack.emplace_back(_Cont_Inr{});
-        _stack.emplace_back(_Enter{a00});
+        _stack.emplace_back(CraneCont_Inr{});
+        _stack.emplace_back(CraneEnter{a00});
       }
     } else {
-      auto _f = std::move(std::get<_Cont_Inr>(_frame));
+      auto _f = std::move(std::get<CraneCont_Inr>(_frame));
       _result = (std::move(_result) + 1);
     }
   }

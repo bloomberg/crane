@@ -1,6 +1,8 @@
 #ifndef INCLUDED_SELECT_TYPE_ALIAS_CLASH
 #define INCLUDED_SELECT_TYPE_ALIAS_CLASH
 
+#include <cstdint>
+
 ///
 /// Bug: a Rocq name that is also a global C library name is not escaped.
 ///

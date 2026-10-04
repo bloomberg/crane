@@ -11611,3 +11611,14 @@
   (alias runtest)
   (deps sep_ext_mutual_template_order.t.exe)
   (action (run ./sep_ext_mutual_template_order.t.exe))))
+
+(subdir defaulted_move_noexcept
+ (rule
+  (targets defaulted_move_noexcept.t.exe)
+  (deps DefaultedMoveNoexcept.vo defaulted_move_noexcept.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} defaulted_move_noexcept.t.exe defaulted_move_noexcept.cpp defaulted_move_noexcept.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps defaulted_move_noexcept.t.exe)
+  (action (run ./defaulted_move_noexcept.t.exe))))

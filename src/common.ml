@@ -105,20 +105,18 @@ and prepend_to_all sep = function
     out of this namespace. *)
 let crane_local_prefix = "_crane_"
 
-(** The C++ spelling of a Rocq identifier: ASCII, warning on double
-    underscores.  An identifier that would land in the {!crane_local_prefix}
+(** The C++ spelling of a Rocq identifier: ASCII, with no two underscores
+    side by side.  An identifier that would land in the {!crane_local_prefix}
     namespace is moved out of it, and a prime -- which Rocq allows in a name
-    and C++ reads as an open character literal -- becomes an underscore.
+    and C++ reads as an open character literal -- becomes an underscore, or a
+    [p] where that would double one ({!Generated_name.separate_underscores}).
 
     This is the one place a Rocq name turns into a C++ one, so it is the only
     place that has to know which characters C++ will accept. *)
 let ascii_of_id id =
-  let s = Id.to_string id in
-  for i = 0 to String.length s - 2 do
-    if s.[i] == '_' && s.[i + 1] == '_' then warning_id s
-  done;
-  let s = Unicode.ascii_of_ident s in
+  let s = Unicode.ascii_of_ident (Id.to_string id) in
   let s = String.map (fun c -> if c = '\'' then '_' else c) s in
+  let s = Generated_name.separate_underscores s in
   if String.starts_with ~prefix:crane_local_prefix s then "u" ^ s else s
 
 (** Test if a module path is a bound module parameter. *)
@@ -1836,7 +1834,7 @@ let enum_ctor_name s =
 
 (** Compute the C++ enum constructor name for a single constructor [Id.t].
     Does not perform collision avoidance; use {!enum_ctor_names_of_packet} when
-    the full sibling set is available, or {!Table.enum_ctor_name_of_ref} when
+    the full sibling set is available, or {!Common.enum_ctor_name_of_ref} when
     looking up by position. *)
 let enum_ctor_name_of_id id =
   enum_ctor_name (ascii_of_id id)
@@ -1871,6 +1869,16 @@ let enum_ctor_names_of_packet (consnames : Id.t array) : string array =
       final)
     escaped
 
+(** The C++ enum constructor name for constructor [j] (1-based) of packet [i]
+    of the inductive [kn]: {!enum_ctor_names_of_packet} of its siblings, so it
+    is deterministic whichever kernel name -- canonical or functor-applied --
+    reaches it. *)
+let enum_ctor_name_of_ref kn i j =
+  match Table.ind_consnames kn i with
+  | Some consnames when j >= 1 && j <= Array.length consnames ->
+    (enum_ctor_names_of_packet consnames).(j - 1)
+  | _ -> enum_ctor_name ("ctor" ^ string_of_int j)
+
 (** Split a qualified name at its last [::], as [(qualifier_including_colons,
     last_component)].  The qualifier is empty when the name is unqualified. *)
 let split_last_component s =
@@ -1890,12 +1898,13 @@ let capitalize_last_component s =
 
 (* ---- Needed C++ headers ---- *)
 
-(* A standard header is a {!Table} demand named after itself, so that it is
-   collected, frozen and cleared along with every other thing the preamble has
-   to provide.  These two wrappers exist only to keep the call sites reading as
-   what they are. *)
+(* A standard header is a {!Table} demand, collected, frozen and cleared along
+   with every other thing the preamble has to provide. *)
 
-let require_header h = Table.mark_demand h
+let require_header h = Table.demand_header (Table.Standard h)
 
-let get_needed_headers () = Table.demanded_list ()
+(* An erased value is a [crane::obj], and everything that reads or builds one
+   -- [crane_any_cast], [crane::rebind_t] -- is declared in obj.h. *)
+let require_obj_header () =
+  Table.demand_header (Table.Runtime Crane_rt.obj_header)
 

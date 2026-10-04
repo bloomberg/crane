@@ -1,6 +1,7 @@
 #ifndef INCLUDED_FACTORY_FIELD_NAME_CLASH
 #define INCLUDED_FACTORY_FIELD_NAME_CLASH
 
+#include <cstdint>
 #include <type_traits>
 #include <variant>
 

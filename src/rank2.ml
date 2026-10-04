@@ -4,7 +4,7 @@
 open Names
 open Minicpp
 
-let carrier_name = Id.of_string "_X"
+let carrier_name = Generated_name.id "X"
 
 let quantifies_erased_type ty =
   let rec go ty =

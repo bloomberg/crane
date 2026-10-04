@@ -2,6 +2,7 @@
 #define INCLUDED_FIX_PAIR_TWO_CLOSURES
 
 #include "fn.h"
+#include <cstdint>
 #include <utility>
 
 struct FixPairTwoClosures {

@@ -5,7 +5,7 @@ std::string PString::nat_to_string(const Nat &n) {
     return "O";
   } else {
     const auto &[a0] = std::get<typename Nat::S>(n.v());
-    return "S"s + nat_to_string(*a0);
+    return std::string("S") + nat_to_string(*a0);
   }
 }
 

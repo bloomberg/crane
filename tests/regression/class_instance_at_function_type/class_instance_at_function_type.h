@@ -3,6 +3,7 @@
 
 #include "fn.h"
 #include <concepts>
+#include <cstdint>
 #include <utility>
 
 /// A typeclass instance at a function type splices the member's own

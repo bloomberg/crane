@@ -2,7 +2,7 @@
 #define INCLUDED_EMPTY_INDUCTIVE_ELIM
 
 #include "obj.h"
-#include <any>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <stdexcept>

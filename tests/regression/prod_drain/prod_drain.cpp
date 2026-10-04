@@ -16,37 +16,37 @@ ProdDrain::t ProdDrain::build(uint64_t n, ProdDrain::t acc) {
 }
 
 uint64_t ProdDrain::depth(
-    const ProdDrain::t
-        &x) { /// _Enter: captures varying parameters for each recursive call.
+    const ProdDrain::t &x) { /// CraneEnter: captures varying parameters for
+                             /// each recursive call.
 
-  struct _Enter {
+  struct CraneEnter {
     ProdDrain::t x;
   };
 
-  /// _Cont_u: resumes after recursive call, then processes rest.
-  struct _Cont_u {};
+  /// CraneCont_u: resumes after recursive call, then processes rest.
+  struct CraneCont_u {};
 
-  using _Frame = std::variant<_Enter, _Cont_u>;
+  using CraneFrame = std::variant<CraneEnter, CraneCont_u>;
   uint64_t _result{};
-  crane::small_vector<_Frame> _stack;
-  _stack.emplace_back(_Enter{x});
-  /// Loopified depth: _Enter -> _Cont_u.
+  crane::small_vector<CraneFrame> _stack;
+  _stack.emplace_back(CraneEnter{x});
+  /// Loopified depth: CraneEnter -> CraneCont_u.
   while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
+    CraneFrame _frame = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
+    if (std::holds_alternative<CraneEnter>(_frame)) {
+      auto _f = std::move(std::get<CraneEnter>(_frame));
       const ProdDrain::t &x = std::move(_f.x);
       if (std::holds_alternative<typename ProdDrain::t::L>(x.v())) {
         _result = UINT64_C(0);
       } else {
         const auto &[a0] = std::get<typename ProdDrain::t::N>(x.v());
         const auto &[u, _x] = (*a0);
-        _stack.emplace_back(_Cont_u{});
-        _stack.emplace_back(_Enter{u});
+        _stack.emplace_back(CraneCont_u{});
+        _stack.emplace_back(CraneEnter{u});
       }
     } else {
-      auto _f = std::move(std::get<_Cont_u>(_frame));
+      auto _f = std::move(std::get<CraneCont_u>(_frame));
       _result = (std::move(_result) + 1);
     }
   }

@@ -1,6 +1,8 @@
 #ifndef INCLUDED_DUPLICATE_OUTPUT_TARGET
 #define INCLUDED_DUPLICATE_OUTPUT_TARGET
 
+#include <cstdint>
+
 struct First {
   static inline const uint64_t one = UINT64_C(1);
 };

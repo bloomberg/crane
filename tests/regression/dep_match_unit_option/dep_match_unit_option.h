@@ -2,6 +2,7 @@
 #define INCLUDED_DEP_MATCH_UNIT_OPTION
 
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <stdexcept>

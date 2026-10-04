@@ -84,7 +84,7 @@ std::optional<std::string> EffectMatchArg::round_trip_match(bool flag) {
   } else {
     key = "Y";
   }
-  setenv(key.c_str(), "val"s.c_str(), 1);
+  setenv(key.c_str(), std::string("val").c_str(), 1);
   return [&]() -> std::optional<std::string> {
     auto *v = std::getenv(std::move(key).c_str());
     return v ? std::optional<std::string>(v) : std::optional<std::string>();

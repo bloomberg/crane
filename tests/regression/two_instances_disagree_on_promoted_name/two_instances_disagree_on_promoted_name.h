@@ -1,7 +1,6 @@
 #ifndef INCLUDED_TWO_INSTANCES_DISAGREE_ON_PROMOTED_NAME
 #define INCLUDED_TWO_INSTANCES_DISAGREE_ON_PROMOTED_NAME
 
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <memory>
@@ -66,8 +65,8 @@ _cur = _next(_cur->v_mut());
 }
 Nat(const Nat&) = default;
 Nat& operator=(const Nat&) = default;
-Nat(Nat&&) noexcept = default;
-Nat& operator=(Nat&&) noexcept = default;
+Nat(Nat&&) = default;
+Nat& operator=(Nat&&) = default;
 inline variant_t& v_mut() {
 return v_;}
   // ACCESSORS
@@ -112,19 +111,19 @@ Dval() {}
 explicit Dval(DIptr _v) : v_(std::move(_v)) {}
 explicit Dval(DNat _v) : v_(std::move(_v)) {}
 template <typename
-_U>
-Dval(const Dval<_U>& _other) : v_([&]() -> variant_t {
-if (std::holds_alternative<typename Dval<_U>::DIptr>(_other.v())) {
-const auto& [i] = std::get<typename Dval<_U>::DIptr>(_other.v());
+CraneU>
+Dval(const Dval<CraneU>& _other) : v_([&]() -> variant_t {
+if (std::holds_alternative<typename Dval<CraneU>::DIptr>(_other.v())) {
+const auto& [i] = std::get<typename Dval<CraneU>::DIptr>(_other.v());
 return DIptr{[&]() -> iptr {
-if constexpr (crane_convertible<iptr, const _U&>) {
+if constexpr (crane_convertible<iptr, const CraneU&>) {
 return crane_convert<iptr>(i);
 } else {
 throw std::logic_error("unreachable: inactive constructor field at this instantiation");
 }
 }()};
 } else {
-const auto& [n] = std::get<typename Dval<_U>::DNat>(_other.v());
+const auto& [n] = std::get<typename Dval<CraneU>::DNat>(_other.v());
 return DNat{n};
 }
 }()) {}

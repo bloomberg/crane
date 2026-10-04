@@ -11,8 +11,6 @@
 #include <utility>
 #include <variant>
 
-using namespace std::string_literals;
-
 struct EffectOptionString {
   /// 1. Pure let binding with option match — Some returns variable,
   /// None returns string literal

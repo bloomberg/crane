@@ -5,6 +5,7 @@
 #include "fn.h"
 #include "small_vector.h"
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <type_traits>
@@ -76,8 +77,8 @@ struct FixSharedPtrField {
 
     mylist(const mylist &) = default;
     mylist &operator=(const mylist &) = default;
-    mylist(mylist &&) noexcept = default;
-    mylist &operator=(mylist &&) noexcept = default;
+    mylist(mylist &&) = default;
+    mylist &operator=(mylist &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -110,35 +111,35 @@ struct FixSharedPtrField {
     uint64_t mylist_length() const {
       const mylist *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const mylist *_self;
       };
 
-      /// _Cont_Mycons: resumes after recursive call, then processes rest.
-      struct _Cont_Mycons {};
+      /// CraneCont_Mycons: resumes after recursive call, then processes rest.
+      struct CraneCont_Mycons {};
 
-      using _Frame = std::variant<_Enter, _Cont_Mycons>;
+      using CraneFrame = std::variant<CraneEnter, CraneCont_Mycons>;
       uint64_t _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified mylist_length: _Enter -> _Cont_Mycons.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified mylist_length: CraneEnter -> CraneCont_Mycons.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const mylist *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename mylist::Mynil>(_sv.v())) {
             _result = UINT64_C(0);
           } else {
             const auto &[a0, a1] = std::get<typename mylist::Mycons>(_sv.v());
-            _stack.emplace_back(_Cont_Mycons{});
-            _stack.emplace_back(_Enter{crane_raw(a1)});
+            _stack.emplace_back(CraneCont_Mycons{});
+            _stack.emplace_back(CraneEnter{crane_raw(a1)});
           }
         } else {
-          auto _f = std::move(std::get<_Cont_Mycons>(_frame));
+          auto _f = std::move(std::get<CraneCont_Mycons>(_frame));
           _result = (UINT64_C(1) + std::move(_result));
         }
       }
@@ -148,38 +149,38 @@ struct FixSharedPtrField {
     uint64_t mylist_sum() const {
       const mylist *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const mylist *_self;
       };
 
-      /// _Cont_Mycons: saves [a0], resumes after recursive call, then processes
-      /// rest.
-      struct _Cont_Mycons {
+      /// CraneCont_Mycons: saves [a0], resumes after recursive call, then
+      /// processes rest.
+      struct CraneCont_Mycons {
         uint64_t a0;
       };
 
-      using _Frame = std::variant<_Enter, _Cont_Mycons>;
+      using CraneFrame = std::variant<CraneEnter, CraneCont_Mycons>;
       uint64_t _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified mylist_sum: _Enter -> _Cont_Mycons.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified mylist_sum: CraneEnter -> CraneCont_Mycons.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const mylist *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename mylist::Mynil>(_sv.v())) {
             _result = UINT64_C(0);
           } else {
             const auto &[a0, a1] = std::get<typename mylist::Mycons>(_sv.v());
-            _stack.emplace_back(_Cont_Mycons{a0});
-            _stack.emplace_back(_Enter{crane_raw(a1)});
+            _stack.emplace_back(CraneCont_Mycons{a0});
+            _stack.emplace_back(CraneEnter{crane_raw(a1)});
           }
         } else {
-          auto _f = std::move(std::get<_Cont_Mycons>(_frame));
+          auto _f = std::move(std::get<CraneCont_Mycons>(_frame));
           uint64_t a0 = _f.a0;
           _result = (a0 + std::move(_result));
         }
@@ -192,39 +193,39 @@ struct FixSharedPtrField {
     T1 mylist_rec(T1 f, F1 &&f0) const {
       const mylist *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const mylist *_self;
       };
 
-      /// _Cont_Mycons: saves [a0, a1], resumes after recursive call, then
+      /// CraneCont_Mycons: saves [a0, a1], resumes after recursive call, then
       /// processes rest.
-      struct _Cont_Mycons {
+      struct CraneCont_Mycons {
         uint64_t a0;
         std::shared_ptr<mylist> a1;
       };
 
-      using _Frame = std::variant<_Enter, _Cont_Mycons>;
+      using CraneFrame = std::variant<CraneEnter, CraneCont_Mycons>;
       T1 _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified mylist_rec: _Enter -> _Cont_Mycons.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified mylist_rec: CraneEnter -> CraneCont_Mycons.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const mylist *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename mylist::Mynil>(_sv.v())) {
             _result = f;
           } else {
             const auto &[a0, a1] = std::get<typename mylist::Mycons>(_sv.v());
-            _stack.emplace_back(_Cont_Mycons{a0, a1});
-            _stack.emplace_back(_Enter{crane_raw(a1)});
+            _stack.emplace_back(CraneCont_Mycons{a0, a1});
+            _stack.emplace_back(CraneEnter{crane_raw(a1)});
           }
         } else {
-          auto _f = std::move(std::get<_Cont_Mycons>(_frame));
+          auto _f = std::move(std::get<CraneCont_Mycons>(_frame));
           uint64_t a0 = _f.a0;
           std::shared_ptr<mylist> a1 = std::move(_f.a1);
           _result = f0(a0, *a1, std::move(_result));
@@ -238,39 +239,39 @@ struct FixSharedPtrField {
     T1 mylist_rect(T1 f, F1 &&f0) const {
       const mylist *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const mylist *_self;
       };
 
-      /// _Cont_Mycons: saves [a0, a1], resumes after recursive call, then
+      /// CraneCont_Mycons: saves [a0, a1], resumes after recursive call, then
       /// processes rest.
-      struct _Cont_Mycons {
+      struct CraneCont_Mycons {
         uint64_t a0;
         std::shared_ptr<mylist> a1;
       };
 
-      using _Frame = std::variant<_Enter, _Cont_Mycons>;
+      using CraneFrame = std::variant<CraneEnter, CraneCont_Mycons>;
       T1 _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified mylist_rect: _Enter -> _Cont_Mycons.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified mylist_rect: CraneEnter -> CraneCont_Mycons.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const mylist *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename mylist::Mynil>(_sv.v())) {
             _result = f;
           } else {
             const auto &[a0, a1] = std::get<typename mylist::Mycons>(_sv.v());
-            _stack.emplace_back(_Cont_Mycons{a0, a1});
-            _stack.emplace_back(_Enter{crane_raw(a1)});
+            _stack.emplace_back(CraneCont_Mycons{a0, a1});
+            _stack.emplace_back(CraneEnter{crane_raw(a1)});
           }
         } else {
-          auto _f = std::move(std::get<_Cont_Mycons>(_frame));
+          auto _f = std::move(std::get<CraneCont_Mycons>(_frame));
           uint64_t a0 = _f.a0;
           std::shared_ptr<mylist> a1 = std::move(_f.a1);
           _result = f0(a0, *a1, std::move(_result));

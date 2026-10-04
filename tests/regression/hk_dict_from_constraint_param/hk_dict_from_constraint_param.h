@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <memory>
 #include <stdexcept>
@@ -66,8 +65,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -98,16 +97,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -144,8 +144,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -202,10 +202,10 @@ template <typename T> struct box {
   T b_payload;
 
   // ACCESSORS
-  template <typename _U> operator box<_U>() const {
-    return {[&]() -> _U {
-      if constexpr (crane_convertible<_U, const T &>) {
-        return crane_convert<_U>(b_payload);
+  template <typename CraneU> operator box<CraneU>() const {
+    return {[&]() -> CraneU {
+      if constexpr (crane_convertible<CraneU, const T &>) {
+        return crane_convert<CraneU>(b_payload);
       } else {
         throw std::logic_error(
             "unreachable: inactive constructor field at this instantiation");
@@ -222,10 +222,11 @@ template <typename T, typename Body> struct holder {
   Body h_body;
 
   // ACCESSORS
-  template <typename _U0, typename _U1> operator holder<_U0, _U1>() const {
-    return {crane_convert<List<box<_U0>>>(h_boxes), [&]() -> _U1 {
-              if constexpr (crane_convertible<_U1, const Body &>) {
-                return crane_convert<_U1>(h_body);
+  template <typename CraneU0, typename CraneU1>
+  operator holder<CraneU0, CraneU1>() const {
+    return {crane_convert<List<box<CraneU0>>>(h_boxes), [&]() -> CraneU1 {
+              if constexpr (crane_convertible<CraneU1, const Body &>) {
+                return crane_convert<CraneU1>(h_body);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");

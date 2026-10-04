@@ -2,6 +2,7 @@
 #define INCLUDED_TODO_ERASED_INSTANCE_PARAM
 
 #include <concepts>
+#include <cstdint>
 
 template <typename I, typename A>
 concept Default = requires {

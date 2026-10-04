@@ -3,8 +3,8 @@
 
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -80,8 +80,8 @@ struct MutualIndexed {
 
     EvenTree(const EvenTree &) = default;
     EvenTree &operator=(const EvenTree &) = default;
-    EvenTree(EvenTree &&) noexcept = default;
-    EvenTree &operator=(EvenTree &&) noexcept = default;
+    EvenTree(EvenTree &&) = default;
+    EvenTree &operator=(EvenTree &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -149,8 +149,8 @@ struct MutualIndexed {
 
     OddTree(const OddTree &) = default;
     OddTree &operator=(const OddTree &) = default;
-    OddTree(OddTree &&) noexcept = default;
-    OddTree &operator=(OddTree &&) noexcept = default;
+    OddTree(OddTree &&) = default;
+    OddTree &operator=(OddTree &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 

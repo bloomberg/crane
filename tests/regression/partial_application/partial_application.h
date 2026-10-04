@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <memory>
 #include <stdexcept>
@@ -64,8 +63,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -123,10 +122,10 @@ template <typename T> struct Box {
   // ACCESSORS
   Box<T> clone() const { return {tag, t}; }
 
-  template <typename _U> operator Box<_U>() const {
-    return {tag, [&]() -> _U {
-              if constexpr (crane_convertible<_U, const T &>) {
-                return crane_convert<_U>(t);
+  template <typename CraneU> operator Box<CraneU>() const {
+    return {tag, [&]() -> CraneU {
+              if constexpr (crane_convertible<CraneU, const T &>) {
+                return crane_convert<CraneU>(t);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");

@@ -29,30 +29,30 @@ MemSafetyProbe2::mylist<uint64_t> MemSafetyProbe2::map_apply(
   return std::move(*_head);
 }
 
-uint64_t MemSafetyProbe2::mysum(
-    const MemSafetyProbe2::mylist<uint64_t>
-        &l) { /// _Enter: captures varying parameters for each recursive call.
+uint64_t MemSafetyProbe2::mysum(const MemSafetyProbe2::mylist<uint64_t> &
+                                    l) { /// CraneEnter: captures varying
+                                         /// parameters for each recursive call.
 
-  struct _Enter {
+  struct CraneEnter {
     const MemSafetyProbe2::mylist<uint64_t> *l;
   };
 
-  /// _Cont_Mycons: saves [a0], resumes after recursive call, then processes
+  /// CraneCont_Mycons: saves [a0], resumes after recursive call, then processes
   /// rest.
-  struct _Cont_Mycons {
+  struct CraneCont_Mycons {
     uint64_t a0;
   };
 
-  using _Frame = std::variant<_Enter, _Cont_Mycons>;
+  using CraneFrame = std::variant<CraneEnter, CraneCont_Mycons>;
   uint64_t _result{};
-  crane::small_vector<_Frame> _stack;
-  _stack.emplace_back(_Enter{&l});
-  /// Loopified mysum: _Enter -> _Cont_Mycons.
+  crane::small_vector<CraneFrame> _stack;
+  _stack.emplace_back(CraneEnter{&l});
+  /// Loopified mysum: CraneEnter -> CraneCont_Mycons.
   while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
+    CraneFrame _frame = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
+    if (std::holds_alternative<CraneEnter>(_frame)) {
+      auto _f = std::move(std::get<CraneEnter>(_frame));
       const MemSafetyProbe2::mylist<uint64_t> &l = *_f.l;
       if (std::holds_alternative<
               typename MemSafetyProbe2::mylist<uint64_t>::Mynil>(l.v())) {
@@ -60,11 +60,11 @@ uint64_t MemSafetyProbe2::mysum(
       } else {
         const auto &[a0, a1] =
             std::get<typename MemSafetyProbe2::mylist<uint64_t>::Mycons>(l.v());
-        _stack.emplace_back(_Cont_Mycons{a0});
-        _stack.emplace_back(_Enter{crane_raw(a1)});
+        _stack.emplace_back(CraneCont_Mycons{a0});
+        _stack.emplace_back(CraneEnter{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<_Cont_Mycons>(_frame));
+      auto _f = std::move(std::get<CraneCont_Mycons>(_frame));
       uint64_t a0 = _f.a0;
       _result = (a0 + std::move(_result));
     }
@@ -106,29 +106,29 @@ MemSafetyProbe2::tree MemSafetyProbe2::fold_tree_build(
 
 uint64_t MemSafetyProbe2::apply_all(
     const MemSafetyProbe2::mylist<crane::fn<uint64_t(uint64_t)>> &fs,
-    uint64_t
-        x) { /// _Enter: captures varying parameters for each recursive call.
+    uint64_t x) { /// CraneEnter: captures varying parameters for each recursive
+                  /// call.
 
-  struct _Enter {
+  struct CraneEnter {
     const MemSafetyProbe2::mylist<crane::fn<uint64_t(uint64_t)>> *fs;
   };
 
-  /// _Cont_Mycons: saves [a0], resumes after recursive call, then processes
+  /// CraneCont_Mycons: saves [a0], resumes after recursive call, then processes
   /// rest.
-  struct _Cont_Mycons {
+  struct CraneCont_Mycons {
     crane::fn<uint64_t(uint64_t)> a0;
   };
 
-  using _Frame = std::variant<_Enter, _Cont_Mycons>;
+  using CraneFrame = std::variant<CraneEnter, CraneCont_Mycons>;
   uint64_t _result{};
-  crane::small_vector<_Frame> _stack;
-  _stack.emplace_back(_Enter{&fs});
-  /// Loopified apply_all: _Enter -> _Cont_Mycons.
+  crane::small_vector<CraneFrame> _stack;
+  _stack.emplace_back(CraneEnter{&fs});
+  /// Loopified apply_all: CraneEnter -> CraneCont_Mycons.
   while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
+    CraneFrame _frame = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
+    if (std::holds_alternative<CraneEnter>(_frame)) {
+      auto _f = std::move(std::get<CraneEnter>(_frame));
       const MemSafetyProbe2::mylist<crane::fn<uint64_t(uint64_t)>> &fs = *_f.fs;
       if (std::holds_alternative<typename MemSafetyProbe2::mylist<
               crane::fn<uint64_t(uint64_t)>>::Mynil>(fs.v())) {
@@ -136,11 +136,11 @@ uint64_t MemSafetyProbe2::apply_all(
       } else {
         const auto &[a0, a1] = std::get<typename MemSafetyProbe2::mylist<
             crane::fn<uint64_t(uint64_t)>>::Mycons>(fs.v());
-        _stack.emplace_back(_Cont_Mycons{a0});
-        _stack.emplace_back(_Enter{crane_raw(a1)});
+        _stack.emplace_back(CraneCont_Mycons{a0});
+        _stack.emplace_back(CraneEnter{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<_Cont_Mycons>(_frame));
+      auto _f = std::move(std::get<CraneCont_Mycons>(_frame));
       crane::fn<uint64_t(uint64_t)> a0 = std::move(_f.a0);
       _result = (a0(x) + std::move(_result));
     }

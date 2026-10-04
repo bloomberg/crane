@@ -5,11 +5,10 @@
 #include "obj.h"
 #include <any>
 #include <crane_itree.h>
+#include <iostream>
 #include <memory>
 #include <string>
 #include <variant>
-
-using namespace std::string_literals;
 
 struct ITreeReified {
   /// Pass-through: takes a reified itree and returns it unchanged.
@@ -39,7 +38,7 @@ struct ITreeReified {
       const auto &_itf = *std::get_if<typename ITree<T2>::Tau>(&ot);
       auto t_ = _itf.next;
       return itree_vis(sum1_inl([&]() -> std::any {
-                         std::cout << "[tau]"s << '\n';
+                         std::cout << std::string("[tau]") << '\n';
                          return std::any{};
                        }),
                        [=](const auto &) { return itree_tau(rec(t_)); });
@@ -48,7 +47,7 @@ struct ITreeReified {
       auto e = crane_event_as<crane::obj>(_itf.effect);
       auto k = _itf.cont;
       return itree_vis(sum1_inl([&]() -> std::any {
-                         std::cout << "[vis]"s << '\n';
+                         std::cout << std::string("[vis]") << '\n';
                          return std::any{};
                        }),
                        [=](const auto &) {

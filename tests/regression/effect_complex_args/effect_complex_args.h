@@ -10,8 +10,6 @@
 #include <utility>
 #include <variant>
 
-using namespace std::string_literals;
-
 struct EffectComplexArgs {
   /// 1. set_env with concatenated key — complex expr as first arg
   static void set_prefixed(std::string prefix, std::string suffix,

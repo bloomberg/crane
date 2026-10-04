@@ -60,8 +60,8 @@ struct Exprs {
 
     Expr(const Expr &) = default;
     Expr &operator=(const Expr &) = default;
-    Expr(Expr &&) noexcept = default;
-    Expr &operator=(Expr &&) noexcept = default;
+    Expr(Expr &&) = default;
+    Expr &operator=(Expr &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 

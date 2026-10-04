@@ -2,6 +2,7 @@
 #define INCLUDED_TODO_TYPE_APP_INSTANCE_ALIAS
 
 #include <concepts>
+#include <cstdint>
 
 template <typename I, typename A>
 concept Boxed = requires {

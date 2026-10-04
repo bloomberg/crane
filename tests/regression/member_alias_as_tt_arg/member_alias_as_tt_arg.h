@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <memory>
@@ -76,8 +75,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -86,7 +85,7 @@ public:
 };
 
 struct Monad_option {
-  template <typename _A0> using m = std::optional<_A0>;
+  template <typename CraneA0> using m = std::optional<CraneA0>;
 
   static std::optional<crane::obj> ret(crane::obj x) {
     return std::make_optional<crane::obj>(crane::obj(x));

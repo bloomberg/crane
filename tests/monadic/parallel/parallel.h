@@ -1,6 +1,7 @@
 #ifndef INCLUDED_PARALLEL
 #define INCLUDED_PARALLEL
 
+#include <cstdint>
 #include <future>
 #include <utility>
 

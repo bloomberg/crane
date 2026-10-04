@@ -2,15 +2,15 @@
 #define INCLUDED_CUSTOM_TYPECLASS_TYPE
 
 #include "obj.h"
-#include <any>
 #include <concepts>
+#include <cstdint>
 #include <utility>
 
 struct RefNat;
 struct nat_ref;
-template <typename _Inst, typename I>
+template <typename CraneInst, typename I>
 concept RefClass = requires {
-  { _Inst::mkRef(std::declval<I>()) } -> std::convertible_to<crane::obj>;
+  { CraneInst::mkRef(std::declval<I>()) } -> std::convertible_to<crane::obj>;
 };
 
 struct RefNat {

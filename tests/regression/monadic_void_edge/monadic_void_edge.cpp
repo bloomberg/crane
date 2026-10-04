@@ -2,21 +2,21 @@
 
 /// 1. Bind where LHS is void and RHS returns a value
 uint64_t MonadicVoidEdge::bind_void_then_value() {
-  std::cout << "hello"s << '\n';
+  std::cout << std::string("hello") << '\n';
   return UINT64_C(42);
 }
 
 /// 2. Bind where both sides are void
 void MonadicVoidEdge::bind_void_void() {
-  std::cout << "a"s << '\n';
-  std::cout << "b"s << '\n';
+  std::cout << std::string("a") << '\n';
+  std::cout << std::string("b") << '\n';
   return;
 }
 
 /// 3. Let-binding the result of a monadic void call
 uint64_t MonadicVoidEdge::let_bind_monadic_void() {
   []() {
-    std::cout << "side effect"s << '\n';
+    std::cout << std::string("side effect") << '\n';
     return std::monostate{};
   }();
   return UINT64_C(99);
@@ -37,7 +37,7 @@ uint64_t MonadicVoidEdge::match_after_bind() {
 
 /// 6. Void function called in a non-tail bind position
 std::string MonadicVoidEdge::void_nontail() {
-  std::cout << "prefix"s << '\n';
+  std::cout << std::string("prefix") << '\n';
   std::string name;
   std::getline(std::cin, name);
   std::cout << name << '\n';
@@ -46,17 +46,17 @@ std::string MonadicVoidEdge::void_nontail() {
 
 /// 7. Nested binds returning unit at every level
 void MonadicVoidEdge::deeply_nested_void() {
-  std::cout << "1"s << '\n';
-  std::cout << "2"s << '\n';
-  std::cout << "3"s << '\n';
-  std::cout << "4"s << '\n';
+  std::cout << std::string("1") << '\n';
+  std::cout << std::string("2") << '\n';
+  std::cout << std::string("3") << '\n';
+  std::cout << std::string("4") << '\n';
   return;
 }
 
 void MonadicVoidEdge::test_apply_effect() {
   apply_effect(
       [](uint64_t) {
-        std::cout << "applied"s << '\n';
+        std::cout << std::string("applied") << '\n';
         return std::monostate{};
       },
       UINT64_C(5));
@@ -66,7 +66,7 @@ void MonadicVoidEdge::test_apply_effect() {
 /// 9. Monadic function returning option unit
 std::optional<std::monostate> MonadicVoidEdge::maybe_print(bool b) {
   if (b) {
-    std::cout << "yes"s << '\n';
+    std::cout << std::string("yes") << '\n';
     return std::make_optional<std::monostate>(std::monostate{});
   } else {
     return std::optional<std::monostate>();
@@ -90,11 +90,11 @@ List<std::monostate> MonadicVoidEdge::unit_in_list() {
 
 /// 12. Mixed: some binds void, some value, interleaved
 uint64_t MonadicVoidEdge::mixed_binds() {
-  std::cout << "start"s << '\n';
+  std::cout << std::string("start") << '\n';
   uint64_t a = UINT64_C(10);
-  std::cout << "middle"s << '\n';
+  std::cout << std::string("middle") << '\n';
   uint64_t b = UINT64_C(20);
-  std::cout << "end"s << '\n';
+  std::cout << std::string("end") << '\n';
   return (a + b);
 }
 
@@ -108,11 +108,11 @@ void MonadicVoidEdge::sequence_effects(const std::monostate &e1,
 void MonadicVoidEdge::test_sequence() {
   sequence_effects(
       []() {
-        std::cout << "first"s << '\n';
+        std::cout << std::string("first") << '\n';
         return std::monostate{};
       }(),
       []() {
-        std::cout << "second"s << '\n';
+        std::cout << std::string("second") << '\n';
         return std::monostate{};
       }());
   return;

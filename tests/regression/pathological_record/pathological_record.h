@@ -2,7 +2,7 @@
 #define INCLUDED_PATHOLOGICAL_RECORD
 
 #include "obj.h"
-#include <any>
+#include <cstdint>
 
 struct PathologicalRecord {
   struct Rec {

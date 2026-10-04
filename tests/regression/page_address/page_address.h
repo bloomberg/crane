@@ -1,6 +1,7 @@
 #ifndef INCLUDED_PAGE_ADDRESS
 #define INCLUDED_PAGE_ADDRESS
 
+#include <cstdint>
 #include <utility>
 
 struct PageAddress {

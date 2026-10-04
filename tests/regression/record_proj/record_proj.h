@@ -1,6 +1,7 @@
 #ifndef INCLUDED_RECORD_PROJ
 #define INCLUDED_RECORD_PROJ
 
+#include <cstdint>
 #include <type_traits>
 
 struct RecordProj {

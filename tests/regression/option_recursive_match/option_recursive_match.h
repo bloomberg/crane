@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
 #include <memory>
 #include <stdexcept>
@@ -60,8 +59,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -91,13 +90,15 @@ public:
 
   explicit Option(None _v) : v_(_v) {}
 
-  template <typename _U>
-  Option(const Option<_U> &_other)
+  template <typename CraneU>
+  Option(const Option<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Option<_U>::Some>(_other.v())) {
-            const auto &[a] = std::get<typename Option<_U>::Some>(_other.v());
+          if (std::holds_alternative<typename Option<CraneU>::Some>(
+                  _other.v())) {
+            const auto &[a] =
+                std::get<typename Option<CraneU>::Some>(_other.v());
             return Some{[&]() -> A {
-              if constexpr (crane_convertible<A, const _U &>) {
+              if constexpr (crane_convertible<A, const CraneU &>) {
                 return crane_convert<A>(a);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -173,8 +174,8 @@ struct OptionRecursiveMatch {
 
     chain(const chain &) = default;
     chain &operator=(const chain &) = default;
-    chain(chain &&) noexcept = default;
-    chain &operator=(chain &&) noexcept = default;
+    chain(chain &&) = default;
+    chain &operator=(chain &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 

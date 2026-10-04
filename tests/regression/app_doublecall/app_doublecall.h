@@ -1,6 +1,7 @@
 #ifndef INCLUDED_APP_DOUBLECALL
 #define INCLUDED_APP_DOUBLECALL
 
+#include <cstdint>
 #include <deque>
 
 struct AppDoublecall {

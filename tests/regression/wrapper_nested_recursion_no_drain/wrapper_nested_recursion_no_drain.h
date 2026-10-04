@@ -4,8 +4,8 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -22,10 +22,10 @@ struct WrapperNestedRecursionNoDrain {
     // ACCESSORS
     box<A> clone() const { return {a0}; }
 
-    template <typename _U> operator box<_U>() const {
-      return {[&]() -> _U {
-        if constexpr (crane_convertible<_U, const A &>) {
-          return crane_convert<_U>(a0);
+    template <typename CraneU> operator box<CraneU>() const {
+      return {[&]() -> CraneU {
+        if constexpr (crane_convertible<CraneU, const A &>) {
+          return crane_convert<CraneU>(a0);
         } else {
           throw std::logic_error(
               "unreachable: inactive constructor field at this instantiation");
@@ -117,8 +117,8 @@ struct WrapperNestedRecursionNoDrain {
 
     rose(const rose &) = default;
     rose &operator=(const rose &) = default;
-    rose(rose &&) noexcept = default;
-    rose &operator=(rose &&) noexcept = default;
+    rose(rose &&) = default;
+    rose &operator=(rose &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 

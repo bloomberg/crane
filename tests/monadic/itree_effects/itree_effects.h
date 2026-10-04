@@ -2,6 +2,7 @@
 #define INCLUDED_ITREE_EFFECTS
 
 #include <crane_itree.h>
+#include <cstdint>
 #include <cstdlib>
 #include <ctime>
 #include <iostream>
@@ -9,8 +10,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-
-using namespace std::string_literals;
 
 /// ------------------------------------------------------------------
 struct ITreeEffects {

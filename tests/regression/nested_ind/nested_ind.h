@@ -5,8 +5,8 @@
 #include "obj.h"
 #include "small_vector.h"
 #include <algorithm>
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -38,16 +38,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -84,8 +85,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -140,27 +141,28 @@ struct NestedInd {
 
     explicit custom_list(Ccons _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    custom_list(const custom_list<_U> &_other)
+    template <typename CraneU>
+    custom_list(const custom_list<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename custom_list<_U>::Cnil>(
+            if (std::holds_alternative<typename custom_list<CraneU>::Cnil>(
                     _other.v())) {
               return Cnil{};
             } else {
               const auto &[a0, a1] =
-                  std::get<typename custom_list<_U>::Ccons>(_other.v());
-              return Ccons{[&]() -> A {
-                             if constexpr (crane_convertible<A, const _U &>) {
-                               return crane_convert<A>(a0);
-                             } else {
-                               throw std::logic_error(
-                                   "unreachable: inactive constructor field at "
-                                   "this instantiation");
-                             }
-                           }(),
-                           (a1 ? std::make_shared<custom_list<A>>(
-                                     crane_convert<custom_list<A>>(*a1))
-                               : nullptr)};
+                  std::get<typename custom_list<CraneU>::Ccons>(_other.v());
+              return Ccons{
+                  [&]() -> A {
+                    if constexpr (crane_convertible<A, const CraneU &>) {
+                      return crane_convert<A>(a0);
+                    } else {
+                      throw std::logic_error(
+                          "unreachable: inactive constructor field at this "
+                          "instantiation");
+                    }
+                  }(),
+                  (a1 ? std::make_shared<custom_list<A>>(
+                            crane_convert<custom_list<A>>(*a1))
+                      : nullptr)};
             }
           }()) {}
 
@@ -190,8 +192,8 @@ struct NestedInd {
 
     custom_list(const custom_list &) = default;
     custom_list &operator=(const custom_list &) = default;
-    custom_list(custom_list &&) noexcept = default;
-    custom_list &operator=(custom_list &&) noexcept = default;
+    custom_list(custom_list &&) = default;
+    custom_list &operator=(custom_list &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -201,24 +203,24 @@ struct NestedInd {
     uint64_t custom_list_length() const {
       const custom_list<A> *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const custom_list<A> *_self;
       };
 
-      /// _Cont_Ccons: resumes after recursive call, then processes rest.
-      struct _Cont_Ccons {};
+      /// CraneCont_Ccons: resumes after recursive call, then processes rest.
+      struct CraneCont_Ccons {};
 
-      using _Frame = std::variant<_Enter, _Cont_Ccons>;
+      using CraneFrame = std::variant<CraneEnter, CraneCont_Ccons>;
       uint64_t _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified custom_list_length: _Enter -> _Cont_Ccons.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified custom_list_length: CraneEnter -> CraneCont_Ccons.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const custom_list<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename custom_list<A>::Cnil>(_sv.v())) {
@@ -226,11 +228,11 @@ struct NestedInd {
           } else {
             const auto &[a0, a1] =
                 std::get<typename custom_list<A>::Ccons>(_sv.v());
-            _stack.emplace_back(_Cont_Ccons{});
-            _stack.emplace_back(_Enter{crane_raw(a1)});
+            _stack.emplace_back(CraneCont_Ccons{});
+            _stack.emplace_back(CraneEnter{crane_raw(a1)});
           }
         } else {
-          auto _f = std::move(std::get<_Cont_Ccons>(_frame));
+          auto _f = std::move(std::get<CraneCont_Ccons>(_frame));
           _result = (UINT64_C(1) + std::move(_result));
         }
       }
@@ -242,28 +244,28 @@ struct NestedInd {
     T1 custom_list_rec(T1 f, F1 &&f0) const {
       const custom_list<A> *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const custom_list<A> *_self;
       };
 
-      /// _Cont_Ccons: saves [a0, a1], resumes after recursive call, then
+      /// CraneCont_Ccons: saves [a0, a1], resumes after recursive call, then
       /// processes rest.
-      struct _Cont_Ccons {
+      struct CraneCont_Ccons {
         A a0;
         std::shared_ptr<custom_list<A>> a1;
       };
 
-      using _Frame = std::variant<_Enter, _Cont_Ccons>;
+      using CraneFrame = std::variant<CraneEnter, CraneCont_Ccons>;
       T1 _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified custom_list_rec: _Enter -> _Cont_Ccons.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified custom_list_rec: CraneEnter -> CraneCont_Ccons.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const custom_list<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename custom_list<A>::Cnil>(_sv.v())) {
@@ -271,11 +273,11 @@ struct NestedInd {
           } else {
             const auto &[a0, a1] =
                 std::get<typename custom_list<A>::Ccons>(_sv.v());
-            _stack.emplace_back(_Cont_Ccons{a0, a1});
-            _stack.emplace_back(_Enter{crane_raw(a1)});
+            _stack.emplace_back(CraneCont_Ccons{a0, a1});
+            _stack.emplace_back(CraneEnter{crane_raw(a1)});
           }
         } else {
-          auto _f = std::move(std::get<_Cont_Ccons>(_frame));
+          auto _f = std::move(std::get<CraneCont_Ccons>(_frame));
           auto a0 = std::move(_f.a0);
           std::shared_ptr<custom_list<A>> a1 = std::move(_f.a1);
           _result = f0(a0, *a1, std::move(_result));
@@ -289,28 +291,28 @@ struct NestedInd {
     T1 custom_list_rect(T1 f, F1 &&f0) const {
       const custom_list<A> *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const custom_list<A> *_self;
       };
 
-      /// _Cont_Ccons: saves [a0, a1], resumes after recursive call, then
+      /// CraneCont_Ccons: saves [a0, a1], resumes after recursive call, then
       /// processes rest.
-      struct _Cont_Ccons {
+      struct CraneCont_Ccons {
         A a0;
         std::shared_ptr<custom_list<A>> a1;
       };
 
-      using _Frame = std::variant<_Enter, _Cont_Ccons>;
+      using CraneFrame = std::variant<CraneEnter, CraneCont_Ccons>;
       T1 _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified custom_list_rect: _Enter -> _Cont_Ccons.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified custom_list_rect: CraneEnter -> CraneCont_Ccons.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const custom_list<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename custom_list<A>::Cnil>(_sv.v())) {
@@ -318,11 +320,11 @@ struct NestedInd {
           } else {
             const auto &[a0, a1] =
                 std::get<typename custom_list<A>::Ccons>(_sv.v());
-            _stack.emplace_back(_Cont_Ccons{a0, a1});
-            _stack.emplace_back(_Enter{crane_raw(a1)});
+            _stack.emplace_back(CraneCont_Ccons{a0, a1});
+            _stack.emplace_back(CraneEnter{crane_raw(a1)});
           }
         } else {
-          auto _f = std::move(std::get<_Cont_Ccons>(_frame));
+          auto _f = std::move(std::get<CraneCont_Ccons>(_frame));
           auto a0 = std::move(_f.a0);
           std::shared_ptr<custom_list<A>> a1 = std::move(_f.a1);
           _result = f0(a0, *a1, std::move(_result));
@@ -351,13 +353,13 @@ struct NestedInd {
 
     explicit rose(Node _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    rose(const rose<_U> &_other)
+    template <typename CraneU>
+    rose(const rose<CraneU> &_other)
         : v_([&]() -> variant_t {
             const auto &[a0, a1] =
-                std::get<typename rose<_U>::Node>(_other.v());
+                std::get<typename rose<CraneU>::Node>(_other.v());
             return Node{[&]() -> A {
-                          if constexpr (crane_convertible<A, const _U &>) {
+                          if constexpr (crane_convertible<A, const CraneU &>) {
                             return crane_convert<A>(a0);
                           } else {
                             throw std::logic_error(
@@ -412,8 +414,8 @@ struct NestedInd {
 
     rose(const rose &) = default;
     rose &operator=(const rose &) = default;
-    rose(rose &&) noexcept = default;
-    rose &operator=(rose &&) noexcept = default;
+    rose(rose &&) = default;
+    rose &operator=(rose &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -560,8 +562,8 @@ struct NestedInd {
 
     expr(const expr &) = default;
     expr &operator=(const expr &) = default;
-    expr(expr &&) noexcept = default;
-    expr &operator=(expr &&) noexcept = default;
+    expr(expr &&) = default;
+    expr &operator=(expr &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -573,20 +575,20 @@ struct NestedInd {
     expr lit_map(F0 &&f) const {
       const expr *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const expr *_self;
       };
 
-      using _Frame = std::variant<_Enter>;
+      using CraneFrame = std::variant<CraneEnter>;
       expr _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified lit_map: _Enter.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified lit_map: CraneEnter.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        auto _f = std::move(std::get<_Enter>(_frame));
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const expr *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename expr::Lit>(_sv.v())) {
@@ -638,20 +640,20 @@ struct NestedInd {
     List<uint64_t> literals() const {
       const expr *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const expr *_self;
       };
 
-      using _Frame = std::variant<_Enter>;
+      using CraneFrame = std::variant<CraneEnter>;
       List<uint64_t> _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified literals: _Enter.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified literals: CraneEnter.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        auto _f = std::move(std::get<_Enter>(_frame));
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const expr *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename expr::Lit>(_sv.v())) {
@@ -697,20 +699,20 @@ struct NestedInd {
     uint64_t expr_depth() const {
       const expr *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const expr *_self;
       };
 
-      using _Frame = std::variant<_Enter>;
+      using CraneFrame = std::variant<CraneEnter>;
       uint64_t _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified expr_depth: _Enter.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified expr_depth: CraneEnter.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        auto _f = std::move(std::get<_Enter>(_frame));
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const expr *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename expr::Lit>(_sv.v())) {
@@ -757,20 +759,20 @@ struct NestedInd {
     uint64_t expr_size() const {
       const expr *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const expr *_self;
       };
 
-      using _Frame = std::variant<_Enter>;
+      using CraneFrame = std::variant<CraneEnter>;
       uint64_t _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified expr_size: _Enter.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified expr_size: CraneEnter.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        auto _f = std::move(std::get<_Enter>(_frame));
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const expr *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename expr::Lit>(_sv.v())) {
@@ -817,20 +819,20 @@ struct NestedInd {
     uint64_t eval() const {
       const expr *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const expr *_self;
       };
 
-      using _Frame = std::variant<_Enter>;
+      using CraneFrame = std::variant<CraneEnter>;
       uint64_t _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified eval: _Enter.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified eval: CraneEnter.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        auto _f = std::move(std::get<_Enter>(_frame));
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const expr *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename expr::Lit>(_sv.v())) {

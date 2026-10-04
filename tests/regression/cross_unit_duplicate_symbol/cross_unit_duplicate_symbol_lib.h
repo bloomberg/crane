@@ -2,6 +2,7 @@
 #define INCLUDED_CROSS_UNIT_DUPLICATE_SYMBOL_LIB
 
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -56,8 +57,8 @@ struct Lib {
 
     lst(const lst &) = default;
     lst &operator=(const lst &) = default;
-    lst(lst &&) noexcept = default;
-    lst &operator=(lst &&) noexcept = default;
+    lst(lst &&) = default;
+    lst &operator=(lst &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 

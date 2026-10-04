@@ -2,6 +2,7 @@
 #define INCLUDED_NAT_ITER_FUNCTION_ACC
 
 #include "fn.h"
+#include <cstdint>
 #include <type_traits>
 #include <utility>
 

@@ -2,6 +2,7 @@
 #define INCLUDED_TODO_WITH_TYPE_CONSTRAINT
 
 #include <concepts>
+#include <cstdint>
 
 template <typename M>
 concept BASE = requires {

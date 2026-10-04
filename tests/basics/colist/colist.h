@@ -5,7 +5,6 @@
 #include "fn.h"
 #include "lazy.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <memory>
 #include <stdexcept>
@@ -61,8 +60,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -93,16 +92,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -139,8 +139,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -152,9 +152,9 @@ template <typename A> struct Colist {
   // TYPES
   struct Conil {};
 
-  template <typename _S0 = Colist<A>> struct Cocons_ {
+  template <typename CraneS0 = Colist<A>> struct Cocons_ {
     A x;
-    _S0 xs;
+    CraneS0 xs;
   };
 
   using Cocons = Cocons_<>;
@@ -174,19 +174,19 @@ public:
   explicit Colist(Cocons _v)
       : lazy_v_(crane::lazy<variant_t>(variant_t(std::move(_v)))) {}
 
-  template <typename _U>
-  Colist(const Colist<_U> &_other)
+  template <typename CraneU>
+  Colist(const Colist<CraneU> &_other)
       : lazy_v_(crane::lazy<variant_t>::converted_from(
             _other.lazy_cell(), [=]() -> variant_t {
-              if (std::holds_alternative<typename Colist<_U>::Conil>(
+              if (std::holds_alternative<typename Colist<CraneU>::Conil>(
                       _other.v())) {
                 return Conil{};
               } else {
                 const auto &[x, xs] =
-                    std::get<typename Colist<_U>::Cocons>(_other.v());
+                    std::get<typename Colist<CraneU>::Cocons>(_other.v());
                 return Cocons{
                     [&]() -> A {
-                      if constexpr (crane_convertible<A, const _U &>) {
+                      if constexpr (crane_convertible<A, const CraneU &>) {
                         return crane_convert<A>(x);
                       } else {
                         throw std::logic_error(

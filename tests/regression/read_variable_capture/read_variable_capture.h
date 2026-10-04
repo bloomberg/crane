@@ -8,8 +8,6 @@
 #include <string>
 #include <system_error>
 
-using namespace std::string_literals;
-
 struct ReadVariableCapture {
   /// Works: literal argument — no capture needed
   static std::string read_literal();

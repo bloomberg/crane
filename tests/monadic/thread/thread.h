@@ -13,8 +13,6 @@ static_assert(crane::rc_is_atomic,
               "this unit spawns threads, but a header included before it chose "
               "CRANE_NON_ATOMIC_RC");
 
-using namespace std::string_literals;
-
 struct threadtest {
   static void fun1(uint64_t n);
   static void fun2(uint64_t n);

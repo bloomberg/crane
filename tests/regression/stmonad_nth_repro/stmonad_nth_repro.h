@@ -2,17 +2,17 @@
 #define INCLUDED_STMONAD_NTH_REPRO
 
 #include "obj.h"
-#include <any>
 #include <concepts>
+#include <cstdint>
 #include <utility>
 #include <variant>
 
 struct RefNat;
 struct nat_ref;
 template <typename I> struct MyEvent;
-template <typename _Inst, typename I>
+template <typename CraneInst, typename I>
 concept RefClass = requires {
-  { _Inst::refToIx(std::declval<crane::obj>()) } -> std::convertible_to<I>;
+  { CraneInst::refToIx(std::declval<crane::obj>()) } -> std::convertible_to<I>;
 };
 
 struct RefNat {
@@ -47,7 +47,7 @@ template <typename I> struct MyEvent {
   // ACCESSORS
   MyEvent<I> clone() const { return {v_0}; }
 
-  template <typename _U> operator MyEvent<_U>() const { return {v_0}; }
+  template <typename CraneU> operator MyEvent<CraneU>() const { return {v_0}; }
 
   // CREATORS
   static MyEvent<I> newref(uint64_t v_0) { return {v_0}; }

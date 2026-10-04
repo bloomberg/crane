@@ -1,6 +1,7 @@
 #ifndef INCLUDED_OPCODE_OPERAND_DECODE
 #define INCLUDED_OPCODE_OPERAND_DECODE
 
+#include <cstdint>
 #include <utility>
 
 struct OpcodeOperandDecode {

@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <memory>
@@ -87,8 +86,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -137,20 +136,21 @@ struct Monad0 {
 };
 
 struct Monad_option {
-  template <typename _A0> using m = std::optional<_A0>;
+  template <typename CraneA0> using m = std::optional<CraneA0>;
 
-  template <typename _A0> static std::optional<_A0> ret(_A0 x) {
-    return std::make_optional<_A0>(x);
+  template <typename CraneA0> static std::optional<CraneA0> ret(CraneA0 x) {
+    return std::make_optional<CraneA0>(x);
   }
 
-  template <typename _A0, typename _A1>
-  static std::optional<_A1> bind(std::optional<_A0> c1,
-                                 crane::fn<std::optional<_A1>(_A0)> c2) {
+  template <typename CraneA0, typename CraneA1>
+  static std::optional<CraneA1>
+  bind(std::optional<CraneA0> c1,
+       crane::fn<std::optional<CraneA1>(CraneA0)> c2) {
     if (c1.has_value()) {
-      const _A0 &v = *c1;
+      const CraneA0 &v = *c1;
       return c2(v);
     } else {
-      return std::optional<_A1>();
+      return std::optional<CraneA1>();
     }
   }
 };
@@ -158,15 +158,16 @@ struct Monad_option {
 static_assert(Monad<Monad_option>);
 
 template <Monad _tcI0> struct Functor_Monad {
-  template <typename _A0> using m = typename _tcI0::template m<_A0>;
-  template <typename _A0> using F = typename _tcI0::template m<_A0>;
+  template <typename CraneA0> using m = typename _tcI0::template m<CraneA0>;
+  template <typename CraneA0> using F = typename _tcI0::template m<CraneA0>;
 
-  template <typename _A0, typename _A1>
-  static typename _tcI0::template m<_A1>
-  fmap(crane::fn<_A1(_A0)> f, typename _tcI0::template m<_A0> x) {
-    return Monad0::template bind<_tcI0, _A0, _A1>(
-        std::move(x),
-        [=](const _A0 &a) { return Monad0::template ret<_tcI0, _A1>(f(a)); });
+  template <typename CraneA0, typename CraneA1>
+  static typename _tcI0::template m<CraneA1>
+  fmap(crane::fn<CraneA1(CraneA0)> f, typename _tcI0::template m<CraneA0> x) {
+    return Monad0::template bind<_tcI0, CraneA0, CraneA1>(
+        std::move(x), [=](const CraneA0 &a) {
+          return Monad0::template ret<_tcI0, CraneA1>(f(a));
+        });
   }
 };
 

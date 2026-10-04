@@ -1,34 +1,34 @@
 #include "global_state.h"
 
 uint64_t
-GlobalStateTests::fib_fun(uint64_t n) { /// _Enter: captures varying parameters
-                                        /// for each recursive call.
+GlobalStateTests::fib_fun(uint64_t n) { /// CraneEnter: captures varying
+                                        /// parameters for each recursive call.
 
-  struct _Enter {
+  struct CraneEnter {
     uint64_t n;
   };
 
-  /// _Cont_m: saves [m], resumes after recursive call, then processes rest.
-  struct _Cont_m {
+  /// CraneCont_m: saves [m], resumes after recursive call, then processes rest.
+  struct CraneCont_m {
     uint64_t m;
   };
 
-  /// _Cont_m_1: saves [_tmp2], resumes after recursive call, then processes
+  /// CraneCont_m_1: saves [_tmp2], resumes after recursive call, then processes
   /// rest.
-  struct _Cont_m_1 {
+  struct CraneCont_m_1 {
     uint64_t _tmp2;
   };
 
-  using _Frame = std::variant<_Enter, _Cont_m, _Cont_m_1>;
+  using CraneFrame = std::variant<CraneEnter, CraneCont_m, CraneCont_m_1>;
   uint64_t _result{};
-  crane::small_vector<_Frame> _stack;
-  _stack.emplace_back(_Enter{n});
-  /// Loopified fib_fun: _Enter -> _Cont_m -> _Cont_m_1.
+  crane::small_vector<CraneFrame> _stack;
+  _stack.emplace_back(CraneEnter{n});
+  /// Loopified fib_fun: CraneEnter -> CraneCont_m -> CraneCont_m_1.
   while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
+    CraneFrame _frame = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
+    if (std::holds_alternative<CraneEnter>(_frame)) {
+      auto _f = std::move(std::get<CraneEnter>(_frame));
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = UINT64_C(0);
@@ -38,17 +38,17 @@ GlobalStateTests::fib_fun(uint64_t n) { /// _Enter: captures varying parameters
           _result = UINT64_C(1);
         } else {
           uint64_t m = m0 - 1;
-          _stack.emplace_back(_Cont_m{m});
-          _stack.emplace_back(_Enter{m0});
+          _stack.emplace_back(CraneCont_m{m});
+          _stack.emplace_back(CraneEnter{m0});
         }
       }
-    } else if (std::holds_alternative<_Cont_m>(_frame)) {
-      auto _f = std::move(std::get<_Cont_m>(_frame));
+    } else if (std::holds_alternative<CraneCont_m>(_frame)) {
+      auto _f = std::move(std::get<CraneCont_m>(_frame));
       uint64_t m = _f.m;
-      _stack.emplace_back(_Cont_m_1{std::move(_result)});
-      _stack.emplace_back(_Enter{m});
+      _stack.emplace_back(CraneCont_m_1{std::move(_result)});
+      _stack.emplace_back(CraneEnter{m});
     } else {
-      auto _f = std::move(std::get<_Cont_m_1>(_frame));
+      auto _f = std::move(std::get<CraneCont_m_1>(_frame));
       _result = (_f._tmp2 + std::move(_result));
     }
   }

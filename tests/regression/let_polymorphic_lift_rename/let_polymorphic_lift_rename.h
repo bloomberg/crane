@@ -56,8 +56,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -93,7 +93,7 @@ public:
 /// instantiations is irrelevant — what matters is that the binder is used more
 /// than once.
 struct LetPolymorphicLiftRename {
-  template <typename T1> static T1 _body_id2(const T1 x) { return x; }
+  template <typename T1> static T1 body_crane_id2(const T1 x) { return x; }
 
   static Nat body(const Nat &n);
   static inline const Nat run = body(Nat::s(Nat::o()));

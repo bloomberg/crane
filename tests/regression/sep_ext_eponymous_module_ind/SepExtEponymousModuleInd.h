@@ -37,14 +37,14 @@ public:
 
   explicit Trie(Branch _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  Trie(const Trie<_U> &_other)
+  template <typename CraneU>
+  Trie(const Trie<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Trie<_U>::Leaf>(_other.v())) {
+          if (std::holds_alternative<typename Trie<CraneU>::Leaf>(_other.v())) {
             return Leaf{};
           } else {
             const auto &[t, t0, t1] =
-                std::get<typename Trie<_U>::Branch>(_other.v());
+                std::get<typename Trie<CraneU>::Branch>(_other.v());
             return Branch{
                 std::optional<A>(t),
                 (t0 ? std::make_shared<Trie<A>>(crane_convert<Trie<A>>(*t0))
@@ -88,8 +88,8 @@ public:
 
   Trie(const Trie &) = default;
   Trie &operator=(const Trie &) = default;
-  Trie(Trie &&) noexcept = default;
-  Trie &operator=(Trie &&) noexcept = default;
+  Trie(Trie &&) = default;
+  Trie &operator=(Trie &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 

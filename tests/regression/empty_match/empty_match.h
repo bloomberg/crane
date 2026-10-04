@@ -3,8 +3,8 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -53,15 +53,15 @@ struct EmptyMatch {
 
     explicit either(Right _v) : v_(std::move(_v)) {}
 
-    template <typename _U0, typename _U1>
-    either(const either<_U0, _U1> &_other)
+    template <typename CraneU0, typename CraneU1>
+    either(const either<CraneU0, CraneU1> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename either<_U0, _U1>::Left>(
+            if (std::holds_alternative<typename either<CraneU0, CraneU1>::Left>(
                     _other.v())) {
               const auto &[a0] =
-                  std::get<typename either<_U0, _U1>::Left>(_other.v());
+                  std::get<typename either<CraneU0, CraneU1>::Left>(_other.v());
               return Left{[&]() -> A {
-                if constexpr (crane_convertible<A, const _U0 &>) {
+                if constexpr (crane_convertible<A, const CraneU0 &>) {
                   return crane_convert<A>(a0);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
@@ -70,9 +70,10 @@ struct EmptyMatch {
               }()};
             } else {
               const auto &[a0] =
-                  std::get<typename either<_U0, _U1>::Right>(_other.v());
+                  std::get<typename either<CraneU0, CraneU1>::Right>(
+                      _other.v());
               return Right{[&]() -> B {
-                if constexpr (crane_convertible<B, const _U1 &>) {
+                if constexpr (crane_convertible<B, const CraneU1 &>) {
                   return crane_convert<B>(a0);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "

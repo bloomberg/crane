@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <memory>
@@ -61,8 +60,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -92,13 +91,15 @@ public:
 
   explicit Option(None _v) : v_(_v) {}
 
-  template <typename _U>
-  Option(const Option<_U> &_other)
+  template <typename CraneU>
+  Option(const Option<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Option<_U>::Some>(_other.v())) {
-            const auto &[a] = std::get<typename Option<_U>::Some>(_other.v());
+          if (std::holds_alternative<typename Option<CraneU>::Some>(
+                  _other.v())) {
+            const auto &[a] =
+                std::get<typename Option<CraneU>::Some>(_other.v());
             return Some{[&]() -> A {
-              if constexpr (crane_convertible<A, const _U &>) {
+              if constexpr (crane_convertible<A, const CraneU &>) {
                 return crane_convert<A>(a);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -149,19 +150,20 @@ struct HktInstanceAnyMismatch {
   }
 
   struct optMon {
-    template <typename _A0> using M = Option<_A0>;
+    template <typename CraneA0> using M = Option<CraneA0>;
 
-    template <typename _A0> static Option<_A0> ret(_A0 a) {
-      return Option<_A0>::some(std::move(a));
+    template <typename CraneA0> static Option<CraneA0> ret(CraneA0 a) {
+      return Option<CraneA0>::some(std::move(a));
     }
 
-    template <typename _A0, typename _A1>
-    static Option<_A1> bind(Option<_A0> m, crane::fn<Option<_A1>(_A0)> f) {
-      if (std::holds_alternative<typename Option<_A0>::Some>(m.v())) {
-        const auto &[a0] = std::get<typename Option<_A0>::Some>(m.v());
+    template <typename CraneA0, typename CraneA1>
+    static Option<CraneA1> bind(Option<CraneA0> m,
+                                crane::fn<Option<CraneA1>(CraneA0)> f) {
+      if (std::holds_alternative<typename Option<CraneA0>::Some>(m.v())) {
+        const auto &[a0] = std::get<typename Option<CraneA0>::Some>(m.v());
         return f(a0);
       } else {
-        return Option<_A1>::none();
+        return Option<CraneA1>::none();
       }
     }
   };

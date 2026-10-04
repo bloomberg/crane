@@ -67,7 +67,7 @@ std::string EffectOptionString::nested_option(std::string n1, std::string n2) {
     }();
     if (r2.has_value()) {
       const std::string &v2 = *r2;
-      return v1 + "/"s + v2;
+      return v1 + std::string("/") + v2;
     } else {
       return v1;
     }

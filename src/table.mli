@@ -55,8 +55,6 @@ val warning_opaques : bool -> unit
 val warning_ambiguous_name :
   ?loc:Loc.t -> qualid * ModPath.t * GlobRef.t -> unit
 
-(** Issue warning about identifier. *)
-val warning_id : string -> unit
 
 (** Report error for axiom scheme.
     @param loc optional source location
@@ -278,9 +276,19 @@ val register_census : string -> (unit -> int) -> unit
     the discarded first pass; see the comparison in [extract_env.ml]. *)
 val census : unit -> (string * int) list
 
-(** [mark_demand d] records that the file being generated needs [d]. Standard
-    headers are demanded by their own names via [Common.require_header]. *)
+(** [mark_demand d] records that the file being generated needs [d]. *)
 val mark_demand : string -> unit
+
+(** A header a generated file includes: a standard one, written [<h>], or one
+    of Crane's runtime headers, written ["h"]. *)
+type header = Standard of string | Runtime of string
+
+(** Record that the file being generated includes this header. *)
+val demand_header : header -> unit
+
+(** Every standard header demanded so far, sorted.  The preamble includes all
+    of them. *)
+val required_standard_headers : unit -> string list
 
 (** Whether [d] has been demanded for the file being generated. *)
 val demanded : string -> bool
@@ -295,12 +303,6 @@ val reset_demands : unit -> unit
     afterwards is reported under [CRANE_CHECK_IR], since the preamble that has
     already gone out is missing it. *)
 val freeze_demands : unit -> unit
-
-(** Mark that string literals are needed. *)
-val mark_needs_string_literals : unit -> unit
-
-(** Check if string literals are needed. *)
-val needs_string_literals : unit -> bool
 
 (** Mark that the [crane_erase_fn] runtime helper must be emitted. *)
 val mark_needs_erase_fn : unit -> unit
@@ -500,14 +502,9 @@ val is_enum_inductive_packet : Miniml.ml_ind -> int -> bool
     Mirrors the [is_flat] check in [gen_ind_header_v2]. *)
 val is_flat_inductive_packet : Names.MutInd.t -> Miniml.ml_ind -> int -> bool
 
-(** Compute the C++ enum constructor name for constructor [j] of inductive
-    [(kn, i)] by looking up the extraction packet. Deterministic regardless
-    of the KerName used (canonical or functor-applied).
-    @param kn the mutual inductive kernel name
-    @param i  0-based packet index within the mutual inductive
-    @param j  1-based constructor index within the packet
-    @return the C++ enum enumerator name (e.g. [e_ZERO]) *)
-val enum_ctor_name_of_ref : MutInd.t -> int -> int -> string
+(** The constructor names of packet [i] of the extracted inductive [kn], in
+    declaration order, if it has been extracted. *)
+val ind_consnames : MutInd.t -> int -> Id.t array option
 
 (** Sigma type assertion. *)
 type sigma_assertion =

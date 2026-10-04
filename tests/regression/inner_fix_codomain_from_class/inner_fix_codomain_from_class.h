@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <memory>
@@ -117,8 +116,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -149,16 +148,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -195,8 +195,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -238,15 +238,17 @@ public:
 
   explicit EOU(Eou_ret _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  EOU(const EOU<_U> &_other)
+  template <typename CraneU>
+  EOU(const EOU<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename EOU<_U>::Eou_err>(_other.v())) {
+          if (std::holds_alternative<typename EOU<CraneU>::Eou_err>(
+                  _other.v())) {
             return Eou_err{};
           } else {
-            const auto &[a0] = std::get<typename EOU<_U>::Eou_ret>(_other.v());
+            const auto &[a0] =
+                std::get<typename EOU<CraneU>::Eou_ret>(_other.v());
             return Eou_ret{[&]() -> X {
-              if constexpr (crane_convertible<X, const _U &>) {
+              if constexpr (crane_convertible<X, const CraneU &>) {
                 return crane_convert<X>(a0);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -268,18 +270,19 @@ public:
 };
 
 struct EOU_monad {
-  template <typename _A0> using M = EOU<_A0>;
+  template <typename CraneA0> using M = EOU<CraneA0>;
 
-  template <typename _A0> static EOU<_A0> mret(_A0 x) {
-    return EOU<_A0>::eou_ret(std::move(x));
+  template <typename CraneA0> static EOU<CraneA0> mret(CraneA0 x) {
+    return EOU<CraneA0>::eou_ret(std::move(x));
   }
 
-  template <typename _A0, typename _A1>
-  static EOU<_A1> mbind(EOU<_A0> c, crane::fn<EOU<_A1>(_A0)> k) {
-    if (std::holds_alternative<typename EOU<_A0>::Eou_err>(c.v())) {
-      return EOU<_A1>::eou_err();
+  template <typename CraneA0, typename CraneA1>
+  static EOU<CraneA1> mbind(EOU<CraneA0> c,
+                            crane::fn<EOU<CraneA1>(CraneA0)> k) {
+    if (std::holds_alternative<typename EOU<CraneA0>::Eou_err>(c.v())) {
+      return EOU<CraneA1>::eou_err();
     } else {
-      const auto &[a0] = std::get<typename EOU<_A0>::Eou_ret>(c.v());
+      const auto &[a0] = std::get<typename EOU<CraneA0>::Eou_ret>(c.v());
       return k(a0);
     }
   }

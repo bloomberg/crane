@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <memory>
@@ -80,8 +79,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -135,14 +134,15 @@ public:
 
   explicit Sum(Inr _v) : v_(std::move(_v)) {}
 
-  template <typename _U0, typename _U1>
-  Sum(const Sum<_U0, _U1> &_other)
+  template <typename CraneU0, typename CraneU1>
+  Sum(const Sum<CraneU0, CraneU1> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Sum<_U0, _U1>::Inl>(_other.v())) {
+          if (std::holds_alternative<typename Sum<CraneU0, CraneU1>::Inl>(
+                  _other.v())) {
             const auto &[a0] =
-                std::get<typename Sum<_U0, _U1>::Inl>(_other.v());
+                std::get<typename Sum<CraneU0, CraneU1>::Inl>(_other.v());
             return Inl{[&]() -> A {
-              if constexpr (crane_convertible<A, const _U0 &>) {
+              if constexpr (crane_convertible<A, const CraneU0 &>) {
                 return crane_convert<A>(a0);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -151,9 +151,9 @@ public:
             }()};
           } else {
             const auto &[a0] =
-                std::get<typename Sum<_U0, _U1>::Inr>(_other.v());
+                std::get<typename Sum<CraneU0, CraneU1>::Inr>(_other.v());
             return Inr{[&]() -> B {
-              if constexpr (crane_convertible<B, const _U1 &>) {
+              if constexpr (crane_convertible<B, const CraneU1 &>) {
                 return crane_convert<B>(a0);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -197,16 +197,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -243,8 +244,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -273,19 +274,20 @@ struct MemoryBytes {
 };
 
 struct EOUP_Monad {
-  template <typename _A0> using m = Sum<Nat, _A0>;
+  template <typename CraneA0> using m = Sum<Nat, CraneA0>;
 
-  template <typename _A0> static Sum<Nat, _A0> ret(_A0 a) {
-    return Sum<Nat, _A0>::inr(std::move(a));
+  template <typename CraneA0> static Sum<Nat, CraneA0> ret(CraneA0 a) {
+    return Sum<Nat, CraneA0>::inr(std::move(a));
   }
 
-  template <typename _A0, typename _A1>
-  static Sum<Nat, _A1> bind(Sum<Nat, _A0> m, crane::fn<Sum<Nat, _A1>(_A0)> k) {
-    if (std::holds_alternative<typename Sum<Nat, _A0>::Inl>(m.v())) {
-      const auto &[a0] = std::get<typename Sum<Nat, _A0>::Inl>(m.v());
-      return Sum<Nat, _A1>::inl(a0);
+  template <typename CraneA0, typename CraneA1>
+  static Sum<Nat, CraneA1> bind(Sum<Nat, CraneA0> m,
+                                crane::fn<Sum<Nat, CraneA1>(CraneA0)> k) {
+    if (std::holds_alternative<typename Sum<Nat, CraneA0>::Inl>(m.v())) {
+      const auto &[a0] = std::get<typename Sum<Nat, CraneA0>::Inl>(m.v());
+      return Sum<Nat, CraneA1>::inl(a0);
     } else {
-      const auto &[a0] = std::get<typename Sum<Nat, _A0>::Inr>(m.v());
+      const auto &[a0] = std::get<typename Sum<Nat, CraneA0>::Inr>(m.v());
       return k(a0);
     }
   }

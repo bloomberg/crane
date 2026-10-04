@@ -2,8 +2,8 @@
 #define INCLUDED_INSTANCE_METHOD_IGNORES_ARG
 
 #include "obj.h"
-#include <any>
 #include <concepts>
+#include <cstdint>
 #include <utility>
 
 struct ic;

@@ -1,6 +1,7 @@
 #ifndef INCLUDED_MODULO_WRAP
 #define INCLUDED_MODULO_WRAP
 
+#include <cstdint>
 #include <utility>
 
 struct Nat {

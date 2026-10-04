@@ -2,6 +2,7 @@
 #define INCLUDED_SUPERCLASS_ONLY_CONCEPT
 
 #include <concepts>
+#include <cstdint>
 #include <utility>
 
 /// A class whose fields are all superclass instances has no methods of its

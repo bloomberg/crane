@@ -2,7 +2,7 @@
 #define INCLUDED_ROCQ_BUG_4709
 
 #include "obj.h"
-#include <any>
+#include <cstdint>
 
 struct RocqBug4709 {
   enum class T { FOO };

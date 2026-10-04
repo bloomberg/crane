@@ -2,6 +2,7 @@
 #define INCLUDED_SEPEXTNULLARYMODPARAM
 
 #include <concepts>
+#include <cstdint>
 #include <utility>
 
 namespace SepExtNullaryModparam {

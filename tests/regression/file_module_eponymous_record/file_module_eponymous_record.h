@@ -1,6 +1,8 @@
 #ifndef INCLUDED_FILE_MODULE_EPONYMOUS_RECORD
 #define INCLUDED_FILE_MODULE_EPONYMOUS_RECORD
 
+#include <cstdint>
+
 struct catalog;
 
 struct Catalog0 {

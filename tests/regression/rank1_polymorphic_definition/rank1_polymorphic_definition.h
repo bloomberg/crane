@@ -4,7 +4,7 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
+#include <cstdint>
 
 struct Rank1PolymorphicDefinition {
   /// A top-level definition whose type is forall A, ... erases its whole

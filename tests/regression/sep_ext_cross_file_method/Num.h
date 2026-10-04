@@ -57,8 +57,8 @@ public:
 
   Num(const Num &) = default;
   Num &operator=(const Num &) = default;
-  Num(Num &&) noexcept = default;
-  Num &operator=(Num &&) noexcept = default;
+  Num(Num &&) = default;
+  Num &operator=(Num &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 

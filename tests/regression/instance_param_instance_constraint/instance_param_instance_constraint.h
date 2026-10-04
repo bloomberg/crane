@@ -2,6 +2,7 @@
 #define INCLUDED_INSTANCE_PARAM_INSTANCE_CONSTRAINT
 
 #include <concepts>
+#include <cstdint>
 #include <memory>
 #include <optional>
 

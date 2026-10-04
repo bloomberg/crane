@@ -280,7 +280,7 @@ let spell_double (x : float) : string =
 
 (** Demand the header declaring the tagged union an inductive's alternatives
     are stored in, and its accessors. *)
-let require_variant () = require_header (sn ()).variant_header
+let require_variant () = Table.demand_header (sn ()).variant_header
 
 (** Print an unqualified angle-bracket type: [label<s>].
 
@@ -623,8 +623,8 @@ let ctor_alias_emitted : (string, unit) Hashtbl.t = Hashtbl.create 16
 let reset_ctor_alias_emitted () = Hashtbl.reset ctor_alias_emitted
 
 (** Whether [text] spells [name] as a whole identifier.  An alias's name ends
-    in a digest of its body, but a holder's is numbered ([_crane_carrier_tch],
-    [_crane_carrier_tch1]), so one can be a prefix of another. *)
+    in a digest of its body, but a holder's is numbered ([crane_carrier_tch],
+    [crane_carrier_tch1]), so one can be a prefix of another. *)
 let mentions_name text name =
   let n = String.length name and m = String.length text in
   let is_id c =
@@ -913,7 +913,7 @@ let rec pp_cpp_type ?(lead = true) par vl t =
     | Tnondeduced t ->
       str "std::type_identity_t<" ++ pp_rec false t ++ str ">"
     | Trebind (h, x) ->
-      require_header "any";
+      require_obj_header ();
       str Crane_rt.rebind ++ str "<" ++ pp_list (pp_rec false) [ h; x ] ++ str ">"
     | Thole -> str ctor_alias_tvar
     | Tref (Forwarding, t) -> pp_rec false t ++ str "&&"
@@ -933,7 +933,7 @@ let rec pp_cpp_type ?(lead = true) par vl t =
        survive -- a template argument of [SigT<nat, dummy_prop>] -- it is
        rendered as the erased type. *)
     | Terased _ ->
-      require_header "any";
+      require_obj_header ();
       str Crane_rt.obj
     | Tglob (r, tys, args) ->
       ( match find_custom_opt r with
@@ -981,7 +981,7 @@ let rec pp_cpp_type ?(lead = true) par vl t =
           ++ pp_list (pp_rec false) l
           ++ str ">" ) )
     | Tfun (d, c) ->
-      require_header Crane_rt.fn_header;
+      Table.demand_header (Table.Runtime Crane_rt.fn_header);
       cpp_angle
         Crane_rt.fn
         (pp_rec false c ++ pp_par true (pp_list (pp_rec false) d))
@@ -1170,7 +1170,7 @@ let rec pp_cpp_type ?(lead = true) par vl t =
     | Tany | Topaque ->
       (* [Topaque] is a type we could not pin down; [std::any] is the only
          spelling that accepts whatever it turns out to be. *)
-      require_header "any";
+      require_obj_header ();
       str Crane_rt.obj
     | Ttyctor t ->
       (* A template template argument is the bare template name.  Ask the type
@@ -1222,7 +1222,7 @@ let rec pp_cpp_type ?(lead = true) par vl t =
            a carrier parameter; it is a type the body mentions, and mentioning
            it at the use site writes a name from the declaration's quantifier.
            An instance method's body is emitted without that quantifier, so
-           [_crane_carrier_tch<T1>] there names a scope the function is not in.
+           [crane_carrier_tch<T1>] there names a scope the function is not in.
            What the body has instead is the erasure it was emitted under, and
            [std::any] is how the rest of it already spells that. *)
         let applied_vars =
@@ -1322,8 +1322,10 @@ let rec pp_cpp_type ?(lead = true) par vl t =
                     (function
                       | Tvar (Tv_index (j, _)) when j = i ->
                         Tid_external
-                          ( (if List.mem i bare_vars then "_P" else "_F")
-                            ^ string_of_int k,
+                          ( Id.to_string
+                              (Generated_name.indexed
+                                 (if List.mem i bare_vars then "P" else "F")
+                                 k),
                             [] )
                       | t -> t )
                     acc )
@@ -1336,7 +1338,7 @@ let rec pp_cpp_type ?(lead = true) par vl t =
                   map_cpp_type
                     (function
                       | Tinstance (id', c) when Id.equal id id' ->
-                        Tinstance (Id.of_string ("_P" ^ string_of_int k), c)
+                        Tinstance (Generated_name.indexed "P" k, c)
                       | t -> t )
                     acc )
                 renamed
@@ -1370,7 +1372,7 @@ let rec pp_cpp_type ?(lead = true) par vl t =
          of one, and there is nothing to substitute. *)
       ( match
         if exists_cpp_type (fun s -> s = Thole) t
-        then alias_for_probe ~base:"_crane_carrier" t
+        then alias_for_probe ~base:"crane_carrier" t
         else None
       with
       | Some name -> str name
@@ -2306,7 +2308,7 @@ and pp_cpp_expr env args t =
   | CPPrt h ->
     (match h with
      | Crane_rt.Raw -> Table.mark_needs_erase_fn ()
-     | Crane_rt.Unbox_field -> require_header Crane_rt.field_header
+     | Crane_rt.Unbox_field -> Table.demand_header (Table.Runtime Crane_rt.field_header)
      | Crane_rt.Make_rc_reusing_unchecked | Crane_rt.Reuse_step -> ());
     str (Crane_rt.name h)
   | CPPlit (_, s) -> str s
@@ -2357,7 +2359,7 @@ and pp_cpp_expr env args t =
     in
     str (spell_unop op) ++ operand
   | CPPunbox (Unbox_to ty, e) ->
-    require_header "any";
+    require_obj_header ();
     str Crane_rt.obj_cast ++ str "<" ++ pp_cpp_type false [] ty ++ str ">("
     ++ pp_cpp_expr env args e ++ str ")"
   | CPPunbox (Unbox_or_keep ty, e) ->
@@ -2374,7 +2376,7 @@ and pp_cpp_expr env args t =
     ++ pp_cpp_type false [] flat_ty
     ++ str ">(" ++ pp_cpp_expr env args e ++ str "))"
   | CPPany_cast (ty, e) | CPPany_cast_tolerant (ty, e) ->
-    require_header "any";
+    require_obj_header ();
     (* A binder holding a known type in a box is read bare inside a cast
        that already names its type; {!Cpp_erasure.lower_boxed_reads} leaves
        it so. *)
@@ -2402,7 +2404,7 @@ and pp_cpp_expr env args t =
   | CPPerased_call (f, a) ->
     (* The one signature a callable is erased into storage at, so the one it
        can be recovered at; each application yields a [std::any] in turn. *)
-    require_header "any";
+    require_obj_header ();
     require_header "functional";
     str Crane_rt.obj_cast
     ++ str "<"
@@ -2419,7 +2421,7 @@ and pp_cpp_expr env args t =
     ++ prlist_with_sep pr_comma (pp_cpp_expr env args) (f :: call_args)
     ++ str ")"
   | CPPfn_value e ->
-    require_header Crane_rt.fn_header;
+    Table.demand_header (Table.Runtime Crane_rt.fn_header);
     str Crane_rt.fn ++ str "(" ++ pp_cpp_expr env args e ++ str ")"
   | CPPconvert (ty, e) ->
     Table.mark_needs_erase_fn ();
@@ -2962,6 +2964,14 @@ and pp_cpp_stmt env args = function
     @param arg_types  expected types for each arg (for any-cast wrapping)
     @param vl      type variable names in scope
     @param cmds    parsed placeholder token list to substitute *)
+(* A string literal spliced into a mapping's C++ template, as the string object
+   the template's operations expect ([std::string("(") + p(a)]).  Spelled as a
+   construction rather than with the [s] literal suffix, which would need a
+   [using namespace] in every header that splices one. *)
+and string_object printed =
+  require_header "string";
+  str (sn ()).string ++ str "(" ++ printed ++ str ")"
+
 and pp_custom ?container custom env typ t tyargs cases args _arg_types vl cmds =
   (* Every read of a boxed value the template needs at a concrete type was
      made explicit by {!Cpp_erasure.lower_boxed_reads}; this prints. *)
@@ -2973,7 +2983,7 @@ and pp_custom ?container custom env typ t tyargs cases args _arg_types vl cmds =
       | Some t_expr ->
         let t_printed = pp_cpp_expr env [] t_expr in
         ( match t_expr with
-        | CPPstring _ -> t_printed ++ str (sn ()).str_suffix
+        | CPPstring _ -> string_object t_printed
         (* A custom match template splices [%scrut] in as text and appends
            to it, so a scrutinee carrying a prefix operator would bind
            looser than whatever follows.  A recursive occurrence nested
@@ -3072,7 +3082,7 @@ and pp_custom ?container custom env typ t tyargs cases args _arg_types vl cmds =
             report_unspellable
               (Printf.sprintf "branch %d var %d of %s" i j custom)
               ty;
-            require_header "any";
+            require_obj_header ();
             str Crane_rt.obj )
           else pp_cpp_type false vl ty
         with Failure _ ->
@@ -3086,7 +3096,7 @@ and pp_custom ?container custom env typ t tyargs cases args _arg_types vl cmds =
       let arg = pp_cpp_expr env [] arg_expr in
       let arg =
         match arg_expr with
-        | CPPstring _ -> arg ++ str (sn ()).str_suffix
+        | CPPstring _ -> string_object arg
         | _ -> arg
       in
       (* Parenthesize compound expressions that would bind incorrectly
@@ -3233,14 +3243,16 @@ let take_ctor_alias_decls ?(select = fun _ -> true) ~is_header () =
     List.rev_map
       (fun (body, name) ->
         (* A captured parameter named applied to the alias's own argument is
-           a type constructor ([_Fk]); one named bare is a type ([_Pk]), a
-           plain family the declaration deapplied. *)
+           a type constructor ([CraneFk]); one named bare is a type
+           ([CranePk]), a plain family the declaration deapplied. *)
         let names = identifier_tokens body in
         let rec params i =
-          if List.mem ("_F" ^ string_of_int i) names then
-            (str "template <typename> class _F" ++ int i) :: params (i + 1)
-          else if List.mem ("_P" ^ string_of_int i) names then
-            (str "typename _P" ++ int i) :: params (i + 1)
+          let f = Id.to_string (Generated_name.indexed "F" i)
+          and p = Id.to_string (Generated_name.indexed "P" i) in
+          if List.mem f names then
+            (str "template <typename> class " ++ str f) :: params (i + 1)
+          else if List.mem p names then
+            (str "typename " ++ str p) :: params (i + 1)
           else []
         in
         str "template <"
@@ -3717,14 +3729,17 @@ let rec pp_cpp_field
     (* A user-declared destructor suppresses the implicit move ctor/assign and
        deprecates the implicit copies; declaring the moves would then delete the
        implicit copies.  Re-default all four so the value keeps cheap move
-       semantics (no refcount bump) while staying copyable. *)
+       semantics (no refcount bump) while staying copyable.  No exception
+       specification: a defaulted move is noexcept exactly when its members'
+       moves are, and a payload of a generic type may throw -- spelling
+       [noexcept] would turn that throw into [std::terminate]. *)
     (sname ++ str "(const " ++ sname ++ str "&) = default;")
     ++ fnl ()
     ++ (sname ++ str "& operator=(const " ++ sname ++ str "&) = default;")
     ++ fnl ()
-    ++ (sname ++ str "(" ++ sname ++ str "&&) noexcept = default;")
+    ++ (sname ++ str "(" ++ sname ++ str "&&) = default;")
     ++ fnl ()
-    ++ (sname ++ str "& operator=(" ++ sname ++ str "&&) noexcept = default;")
+    ++ (sname ++ str "& operator=(" ++ sname ++ str "&&) = default;")
 
 (** Print the body of a struct: groups fields by [(visibility, section_tag)],
     emits [public:]/[private:] labels only when necessary, and inserts

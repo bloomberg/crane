@@ -1,6 +1,7 @@
 #ifndef INCLUDED_PERCEUS_REUSE
 #define INCLUDED_PERCEUS_REUSE
 
+#include <cstdint>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -38,7 +39,7 @@ struct R {
       return lst(Cons{a0, crane::make_rc<lst>(std::move(a1))});
     }
 
-    static lst cons__reuse(crane::rc<lst> _tok, uint64_t a0, lst a1) {
+    static lst cons_crane_reuse(crane::rc<lst> _tok, uint64_t a0, lst a1) {
       return lst(Cons{
           a0, crane::make_rc_reusing<lst>(std::move(_tok), std::move(a1))});
     }
@@ -61,8 +62,8 @@ struct R {
 
     lst(const lst &) = default;
     lst &operator=(const lst &) = default;
-    lst(lst &&) noexcept = default;
-    lst &operator=(lst &&) noexcept = default;
+    lst(lst &&) = default;
+    lst &operator=(lst &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -99,7 +100,7 @@ struct R {
       if (std::get<typename lst::Cons>(l.v_mut()).a1.use_count() == 1) {
         uint64_t x = std::move(std::get<typename lst::Cons>(l.v_mut()).a0);
         lst xs = std::move(*std::get<typename lst::Cons>(l.v_mut()).a1);
-        return lst::cons__reuse(
+        return lst::cons_crane_reuse(
             std::move(std::get<typename lst::Cons>(l.v_mut()).a1), f(x),
             map1(f, std::move(xs)));
       } else {

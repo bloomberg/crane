@@ -2,6 +2,7 @@
 #define INCLUDED_INSTANCE_ALIAS
 
 #include <concepts>
+#include <cstdint>
 #include <utility>
 
 /// A constant whose type is a class applied to arguments is treated purely as

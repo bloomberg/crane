@@ -1,6 +1,7 @@
 #ifndef INCLUDED_SEPEXTPROJECTIONLAMBDA
 #define INCLUDED_SEPEXTPROJECTIONLAMBDA
 
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <variant>

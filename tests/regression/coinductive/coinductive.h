@@ -3,15 +3,16 @@
 
 #include "fn.h"
 #include "lazy.h"
+#include <cstdint>
 #include <utility>
 #include <variant>
 
 struct Coinductive {
   struct stream {
     // TYPES
-    template <typename _S0 = stream> struct Cons_ {
+    template <typename CraneS0 = stream> struct Cons_ {
       uint64_t a0;
-      _S0 a1;
+      CraneS0 a1;
     };
 
     using Cons = Cons_<>;
@@ -71,10 +72,10 @@ struct Coinductive {
       uint64_t a0;
     };
 
-    template <typename _S0 = tree> struct Node_ {
+    template <typename CraneS0 = tree> struct Node_ {
       uint64_t a0;
-      _S0 a1;
-      _S0 a2;
+      CraneS0 a1;
+      CraneS0 a2;
     };
 
     using Node = Node_<>;

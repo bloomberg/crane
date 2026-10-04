@@ -1,6 +1,8 @@
 #ifndef INCLUDED_SECTIONS
 #define INCLUDED_SECTIONS
 
+#include <cstdint>
+
 struct Sections {
   static uint64_t add_n(uint64_t x0_, uint64_t x1_);
   static uint64_t mul_n(uint64_t x0_, uint64_t x1_);

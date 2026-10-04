@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <memory>
 #include <optional>
@@ -60,8 +59,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -163,13 +162,13 @@ struct TfunctorRecordOptionField {
 
     explicit exp(Neg _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    exp(const exp<_U> &_other)
+    template <typename CraneU>
+    exp(const exp<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename exp<_U>::Lit>(_other.v())) {
-              const auto &[t] = std::get<typename exp<_U>::Lit>(_other.v());
+            if (std::holds_alternative<typename exp<CraneU>::Lit>(_other.v())) {
+              const auto &[t] = std::get<typename exp<CraneU>::Lit>(_other.v());
               return Lit{[&]() -> T {
-                if constexpr (crane_convertible<T, const _U &>) {
+                if constexpr (crane_convertible<T, const CraneU &>) {
                   return crane_convert<T>(t);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
@@ -177,7 +176,7 @@ struct TfunctorRecordOptionField {
                 }
               }()};
             } else {
-              const auto &[e] = std::get<typename exp<_U>::Neg>(_other.v());
+              const auto &[e] = std::get<typename exp<CraneU>::Neg>(_other.v());
               return Neg{
                   (e ? std::make_shared<exp<T>>(crane_convert<exp<T>>(*e))
                      : nullptr)};
@@ -209,8 +208,8 @@ struct TfunctorRecordOptionField {
 
     exp(const exp &) = default;
     exp &operator=(const exp &) = default;
-    exp(exp &&) noexcept = default;
-    exp &operator=(exp &&) noexcept = default;
+    exp(exp &&) = default;
+    exp &operator=(exp &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -249,16 +248,16 @@ struct TfunctorRecordOptionField {
     std::optional<exp<T>> g_exp;
 
     // ACCESSORS
-    template <typename _U> operator global<_U>() const {
-      return {[&]() -> _U {
-                if constexpr (crane_convertible<_U, const T &>) {
-                  return crane_convert<_U>(g_typ);
+    template <typename CraneU> operator global<CraneU>() const {
+      return {[&]() -> CraneU {
+                if constexpr (crane_convertible<CraneU, const T &>) {
+                  return crane_convert<CraneU>(g_typ);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
                                          "field at this instantiation");
                 }
               }(),
-              std::optional<exp<_U>>(g_exp)};
+              std::optional<exp<CraneU>>(g_exp)};
     }
   };
 

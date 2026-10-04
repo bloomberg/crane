@@ -4,15 +4,15 @@
 std::string MatchMonadic::color_name(Color c) {
   switch (c) {
   case Color::RED: {
-    std::cout << "red"s << '\n';
+    std::cout << std::string("red") << '\n';
     return "red";
   }
   case Color::GREEN: {
-    std::cout << "green"s << '\n';
+    std::cout << std::string("green") << '\n';
     return "green";
   }
   case Color::BLUE: {
-    std::cout << "blue"s << '\n';
+    std::cout << std::string("blue") << '\n';
     return "blue";
   }
   default:
@@ -25,7 +25,7 @@ std::string MatchMonadic::conditional_read(bool b) {
   if (b) {
     std::string line;
     std::getline(std::cin, line);
-    return "got: "s + line;
+    return std::string("got: ") + line;
   } else {
     return "skipped";
   }
@@ -57,10 +57,10 @@ std::string MatchMonadic::nested_match(uint64_t n, bool b) {
 uint64_t MatchMonadic::handle_option(const std::optional<uint64_t> &o) {
   if (o.has_value()) {
     const uint64_t &n = *o;
-    std::cout << "found"s << '\n';
+    std::cout << std::string("found") << '\n';
     return n;
   } else {
-    std::cout << "missing"s << '\n';
+    std::cout << std::string("missing") << '\n';
     return UINT64_C(0);
   }
 }
@@ -71,7 +71,7 @@ uint64_t MatchMonadic::tree_sum(const Tree<uint64_t> &t) {
     return UINT64_C(0);
   } else {
     const auto &[a0, a1, a2] = std::get<typename Tree<uint64_t>::Node>(t.v());
-    std::cout << "visiting"s << '\n';
+    std::cout << std::string("visiting") << '\n';
     uint64_t sl = tree_sum(*a0);
     uint64_t sr = tree_sum(*a2);
     return ((sl + a1) + sr);
@@ -98,7 +98,7 @@ int64_t MatchMonadic::bind_then_match() {
   std::getline(std::cin, line);
   int64_t len = static_cast<int64_t>(std::move(line).length());
   if (len == INT64_C(0)) {
-    std::cout << "empty"s << '\n';
+    std::cout << std::string("empty") << '\n';
     return INT64_C(0);
   } else {
     return len;

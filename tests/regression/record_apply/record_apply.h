@@ -2,6 +2,7 @@
 #define INCLUDED_RECORD_APPLY
 
 #include "fn.h"
+#include <cstdint>
 
 struct RecordApply {
   struct R {

@@ -2,6 +2,7 @@
 #define INCLUDED_NAME_CLASH_IIFE_THIS
 
 #include <atomic>
+#include <cstdint>
 #include <type_traits>
 #include <utility>
 #include <variant>
