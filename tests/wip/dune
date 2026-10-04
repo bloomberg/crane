@@ -221,3 +221,14 @@
   (alias runtest)
   (deps case_handler_concrete_result.t.exe)
   (action (run ./case_handler_concrete_result.t.exe))))
+
+(subdir sep_ext_concept_renamed_namespace
+ (rule
+  (targets sep_ext_concept_renamed_namespace.t.exe)
+  (deps Foo.vo SepExtConceptRenamedNamespace.vo sep_ext_concept_renamed_namespace.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_concept_renamed_namespace.t.exe Foo.cpp SepExtConceptRenamedNamespace.cpp sep_ext_concept_renamed_namespace.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_concept_renamed_namespace.t.exe)
+  (action (run ./sep_ext_concept_renamed_namespace.t.exe))))
