@@ -29,8 +29,9 @@
 //     run in reverse on arena drop.  Memory stays leak-free either way.
 //
 // Threading:
-//   The active arena and its keeper are thread-local: a scope installed on one
-//   thread does not affect allocation on another.  A single `crane::arena` is
+//   The active arena (held by the thread's heap, pool.h) and its keeper are
+//   thread-local: a scope installed on one thread does not affect allocation
+//   on another.  A single `crane::arena` is
 //   not itself thread-safe, which matches Crane's clone-at-boundary concurrency
 //   model.  Not thread-safe by design.
 
@@ -45,6 +46,7 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
+#include "pool.h"
 
 namespace crane {
 
@@ -110,8 +112,7 @@ private:
 
 inline arena*& current_arena_ptr() noexcept
 {
-    static thread_local arena* p = nullptr;
-    return p;
+    return pool_detail::this_thread_heap().open_arena;
 }
 
 // Process-wide flag: has any [arena_scope] / [arena_use_scope] ever been

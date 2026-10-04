@@ -35,8 +35,8 @@ template <typename T> class enable_rc_from_this;
 template <typename T> bool rc_unique(const rc<T>& p) noexcept;
 template <typename T, typename... Args> rc<T> make_rc_reusing_unchecked(rc<T> token, Args&&... args);
 
-// [pooled<ControlBlock<T>>] gives every instantiation its own per-type free
-// list (see pool.h), used for the plain-heap allocation make_rc performs.
+// [pooled<ControlBlock<T>>] allocates every instantiation from the thread's
+// heap (see pool.h), used for the plain-heap allocation make_rc performs.
 // An arena-backed block (rc<T>::make with a scope open) is placement-new'd
 // into region memory and never reaches [delete], so it never touches this
 // pool either -- the two allocation disciplines don't interact.  The base is

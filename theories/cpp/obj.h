@@ -38,13 +38,13 @@ inline constexpr bool held_inline = std::is_trivially_copyable_v<T> &&
                                     sizeof(T) <= sizeof(void *) &&
                                     alignof(T) <= alignof(void *);
 
-template <class T> struct box : shared_block {
+template <class T> struct box : shared_block, pool_detail::pooled<box<T>> {
   T value;
   template <class... A>
   explicit box(A &&...a)
       : shared_block{{}, &drop}, value(std::forward<A>(a)...) {}
-  static void drop(const void *b) noexcept {
-    delete static_cast<const box *>(static_cast<const shared_block *>(b));
+  static void drop(const void *b, pool_detail::thread_heap &h) noexcept {
+    box::dispose(static_cast<const box *>(static_cast<const shared_block *>(b)), h);
   }
 };
 

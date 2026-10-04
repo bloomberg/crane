@@ -40,15 +40,15 @@ template <class T> struct copy_is_cheap<std::shared_ptr<T>> : std::true_type {};
 
 CRANE_RC_POLICY_BEGIN
 
-// One shared, immutable cell holding a T, from the per-type free list every
-// other small runtime block uses (pool.h).
+// One shared, immutable cell holding a T, from the thread's heap every other
+// small runtime block uses (pool.h).
 template <class T> class field_box {
   struct cell : shared_block, pool_detail::pooled<cell> {
     T value;
     template <class... A>
     explicit cell(A &&...a) : shared_block{{}, &drop}, value(std::forward<A>(a)...) {}
-    static void drop(const void *b) noexcept {
-      delete static_cast<const cell *>(static_cast<const shared_block *>(b));
+    static void drop(const void *b, pool_detail::thread_heap &h) noexcept {
+      cell::dispose(static_cast<const cell *>(static_cast<const shared_block *>(b)), h);
     }
   };
   const cell *p_;

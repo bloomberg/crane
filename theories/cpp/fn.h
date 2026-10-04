@@ -105,9 +105,9 @@ struct holder : block<R, A...>,
       // A parameter that wants a mutable argument gets its own copy.
       return invoke_as<R>(f, A(a)...);
   }
-  static void drop(const void *b) noexcept {
+  static void drop(const void *b, pool_detail::thread_heap &h) noexcept {
     CRANE_FN_STAT(freed);
-    delete static_cast<const holder *>(static_cast<const shared_block *>(b));
+    holder::dispose(static_cast<const holder *>(static_cast<const shared_block *>(b)), h);
   }
 };
 

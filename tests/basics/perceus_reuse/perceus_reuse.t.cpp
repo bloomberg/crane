@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <cstdio>
 #include <new>
+#include <set>
 #include "perceus_reuse.h"
 
 static long g_allocs = 0;
@@ -96,6 +97,27 @@ static bool spine_is(const Node& n, long len, long base) {
   return std::holds_alternative<Node::Nil>(p->v());
 }
 
+// The cells of [n]'s spine.  A recycled cell keeps its address, which is
+// what the helpers' tests count: a fresh cell may come from the thread's free
+// lists rather than [operator new], so an allocation count cannot tell the two
+// apart, but it never has the address of a cell that is still alive.
+static std::set<const Node*> cells(const Node& n) {
+  std::set<const Node*> s;
+  for (auto* c = std::get_if<Node::Cons>(&n.v()); c;
+       c = std::get_if<Node::Cons>(&c->a1->v()))
+    s.insert(c->a1.get());
+  return s;
+}
+
+// How many of [out]'s cells are not among [in].
+static long fresh(const crane::rc<Node>& out, const std::set<const Node*>& in) {
+  std::set<const Node*> s = cells(*out);
+  s.insert(out.get());
+  long n = 0;
+  for (const Node* c : s) n += !in.count(c);
+  return n;
+}
+
 }  // namespace helpers_test
 
 static R::lst build(int n) {   // Cons(n-1, ... Cons(0, Nil))
@@ -133,19 +155,19 @@ int main() {
     const long M = 1000;
 
     Node src = mk(M);
-    long a0 = g_allocs;
+    auto in = cells(src);
     crane::rc<Node> out = map_inc(std::move(src));
-    long during = g_allocs - a0;
-    std::printf("take_for_reuse unique spine: %ld allocations for M=%ld\n", during, M);
+    long during = fresh(out, in);
+    std::printf("take_for_reuse unique spine: %ld fresh cells for M=%ld\n", during, M);
     ASSERT(spine_is(*out, M, 2));
     ASSERT(during <= 3);          // only _head's first cell + the Nil terminator
 
     Node shared = mk(M);
     crane::rc<Node> pin = std::get<Node::Cons>(shared.v()).a1;   // alias the tail
-    a0 = g_allocs;
+    in = cells(shared);
     crane::rc<Node> out2 = map_inc(shared);
-    long during2 = g_allocs - a0;
-    std::printf("take_for_reuse shared spine: %ld allocations for M=%ld\n", during2, M);
+    long during2 = fresh(out2, in);
+    std::printf("take_for_reuse shared spine: %ld fresh cells for M=%ld\n", during2, M);
     ASSERT(spine_is(shared, M, 1));   // original must be bit-for-bit intact
     ASSERT(spine_is(*out2, M, 2));
     ASSERT(during2 >= M);             // shared path allocates fresh cells
@@ -153,17 +175,17 @@ int main() {
     // reuse_step: same three cases, plus a spine that is unique up to a pinned
     // deep tail -- the head must recycle and the latch must hold from the pin on.
     Node u = mk(M);
-    a0 = g_allocs;
+    in = cells(u);
     crane::rc<Node> o1 = map_inc_step(std::move(u));
-    long d1 = g_allocs - a0;
+    long d1 = fresh(o1, in);
     ASSERT(spine_is(*o1, M, 2));
     ASSERT(d1 <= 3);
 
     Node sh = mk(M);
     crane::rc<Node> pin2 = std::get<Node::Cons>(sh.v()).a1;
-    a0 = g_allocs;
+    in = cells(sh);
     crane::rc<Node> o2 = map_inc_step(sh);
-    long d2 = g_allocs - a0;
+    long d2 = fresh(o2, in);
     ASSERT(spine_is(sh, M, 1));
     ASSERT(spine_is(*o2, M, 2));
     ASSERT(d2 >= M);
@@ -172,10 +194,10 @@ int main() {
     const Node* w = &mid;
     for (long i = 0; i < M / 2; ++i) w = std::get<Node::Cons>(w->v()).a1.get();
     crane::rc<Node> deep = std::get<Node::Cons>(w->v()).a1;   // pin a deep tail
-    a0 = g_allocs;
+    in = cells(mid);
     crane::rc<Node> o3 = map_inc_step(std::move(mid));
-    long d3 = g_allocs - a0;
-    std::printf("reuse_step mid-pinned: %ld allocations for M=%ld\n", d3, M);
+    long d3 = fresh(o3, in);
+    std::printf("reuse_step mid-pinned: %ld fresh cells for M=%ld\n", d3, M);
     ASSERT(spine_is(*deep, M / 2 - 1, M / 2 + 2));  // pinned tail untouched
     ASSERT(spine_is(*o3, M, 2));
     ASSERT(d3 > 3 && d3 <= M / 2 + 2);              // head recycled, tail copied

@@ -22,6 +22,7 @@
 #pragma once
 #include <cstddef>
 #include <new>
+#include "pool.h"
 #ifndef CRANE_NON_ATOMIC_RC
 #include <atomic>
 #endif
@@ -65,62 +66,32 @@ struct count {
 // held.  A block's destructor releases what it captured, which may free
 // another block, and so on down a chain as long as the program's longest
 // continuation or tree: freed recursively, that is one C++ frame per link.
-// Instead a free that happens while another is running is queued, and the
-// outermost one drains the queue.
-struct pending_free {
-  const void *block;
-  void (*destroy)(const void *) noexcept;
-};
-//
-// The queue has no destructor: a value in a static is freed after the
-// thread's own thread_local objects are gone, so the queue must still work
-// then.  Its buffer lives as long as the thread.
-struct free_queue {
-  bool draining = false;
-  pending_free *items = nullptr;
-  std::size_t size = 0, cap = 0;
-  void push(pending_free f) {
-    if (size == cap) {
-      std::size_t ncap = cap ? cap * 2 : 64;
-      auto *n = static_cast<pending_free *>(
-          ::operator new(ncap * sizeof(pending_free)));
-      for (std::size_t i = 0; i < size; ++i)
-        n[i] = items[i];
-      ::operator delete(items);
-      items = n;
-      cap = ncap;
-    }
-    items[size++] = f;
-  }
-};
-inline free_queue &frees() noexcept {
-  static constinit thread_local free_queue q;
-  return q;
-}
+// Instead a free that happens while another is running is queued on the
+// thread's heap (pool.h), and the outermost one drains the queue.
 inline void free_block(const void *block,
-                       void (*destroy)(const void *) noexcept) noexcept {
-  free_queue &q = frees();
-  if (q.draining) {
-    q.push({block, destroy});
+                       pool_detail::destroy_fn destroy) noexcept {
+  pool_detail::thread_heap &h = pool_detail::this_thread_heap();
+  if (h.draining) {
+    h.push({block, destroy});
     return;
   }
-  q.draining = true;
-  destroy(block);
-  while (q.size != 0) {
-    pending_free f = q.items[--q.size];
-    f.destroy(f.block);
+  h.draining = true;
+  destroy(block, h);
+  while (h.size != 0) {
+    pool_detail::pending_free f = h.items[--h.size];
+    f.destroy(f.block, h);
   }
-  q.draining = false;
+  h.draining = false;
 }
 
 } // namespace block_detail
 
 // What a shared block starts with.  [destroy] is a function pointer rather
 // than a virtual destructor so the header is two words and what the block
-// holds follows it directly.
+// holds follows it directly; it is handed the heap the block goes back to.
 struct shared_block {
   mutable block_detail::count rc;
-  void (*const destroy)(const void *) noexcept;
+  const pool_detail::destroy_fn destroy;
 
   void retain() const noexcept { rc.inc(); }
   // Drops one reference; the last one frees the block.

@@ -202,8 +202,8 @@ struct lazy<T>::node : base, pool_detail::pooled<typename lazy<T>::node> {
   explicit node(A &&...a)
       : base{{}, &drop}, state(std::forward<A>(a)...) {}
   ~node() { lazy_detail::release(origin); }
-  static void drop(const void *b) noexcept {
-    delete static_cast<const node *>(static_cast<const base *>(b));
+  static void drop(const void *b, pool_detail::thread_heap &h) noexcept {
+    node::dispose(static_cast<const node *>(static_cast<const base *>(b)), h);
   }
 };
 
