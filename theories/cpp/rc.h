@@ -151,33 +151,36 @@ private:
 
     void inc_strong() noexcept { if (ctrl_) { ++ctrl_->strong; } }
 
+    // Dropping a reference is a decrement and a test, inlined into every
+    // destructor that holds one; destroying the value is kept out of line, so
+    // those destructors stay small whatever the value's own destructor is.
     void release() noexcept {
         if (!ctrl_) return;
         assert(ctrl_->strong > 0);
-        if (--ctrl_->strong == 0) {
-#ifdef CRANE_ARENA
-            if (ctrl_->arena_backed) {
-                // Region-owned block: never [delete] it.  Move the keeper out
-                // *before* running ~T and dropping it, so that if dropping the
-                // last keeper frees the arena (and with it this very control
-                // block), no freed memory is touched afterward.  ~T runs while
-                // [keeper] still holds the region alive, so T's own fields
-                // (child rc's into the same region) are released safely.
-                std::shared_ptr<arena> keeper = std::move(ctrl_->arena_keeper);
-                ctrl_->ptr()->~T();
-                ctrl_ = nullptr;
-                return; // [keeper] drops here, possibly freeing the region.
-            }
-#endif
-            // Destroy T in-place
-            ctrl_->ptr()->~T();
-            if (ctrl_->weak == 0) {
-                delete ctrl_;
-                ctrl_ = nullptr;
-                return;
-            }
-        }
+        if (--ctrl_->strong == 0)
+            destroy_last();
         ctrl_ = nullptr;
+    }
+
+    // The last reference is gone: destroy the value, and free the block
+    // unless a weak reference still observes it.
+    [[gnu::noinline]] void destroy_last() noexcept {
+        ControlBlock<T>* c = ctrl_;
+#ifdef CRANE_ARENA
+        if (c->arena_backed) {
+            // Region-owned block: never [delete] it.  Move the keeper out
+            // *before* running ~T and dropping it, so that if dropping the
+            // last keeper frees the arena (and with it this very control
+            // block), no freed memory is touched afterward.  ~T runs while
+            // [keeper] still holds the region alive, so T's own fields
+            // (child rc's into the same region) are released safely.
+            std::shared_ptr<arena> keeper = std::move(c->arena_keeper);
+            c->ptr()->~T();
+            return; // [keeper] drops here, possibly freeing the region.
+        }
+#endif
+        c->ptr()->~T();
+        if (c->weak == 0) delete c;
     }
 
     ControlBlock<T>* ctrl_{nullptr};

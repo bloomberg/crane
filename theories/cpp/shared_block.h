@@ -68,8 +68,8 @@ struct count {
 // continuation or tree: freed recursively, that is one C++ frame per link.
 // Instead a free that happens while another is running is queued on the
 // thread's heap (pool.h), and the outermost one drains the queue.
-inline void free_block(const void *block,
-                       pool_detail::destroy_fn destroy) noexcept {
+[[gnu::noinline]] inline void
+free_block(const void *block, pool_detail::destroy_fn destroy) noexcept {
   pool_detail::thread_heap &h = pool_detail::this_thread_heap();
   if (h.draining) {
     h.push({block, destroy});
@@ -94,7 +94,8 @@ struct shared_block {
   const pool_detail::destroy_fn destroy;
 
   void retain() const noexcept { rc.inc(); }
-  // Drops one reference; the last one frees the block.
+  // Drops one reference; the last one frees the block, out of line, so the
+  // decrement and test are all that is inlined where a reference dies.
   void release() const noexcept {
     if (rc.dec())
       block_detail::free_block(this, destroy);
