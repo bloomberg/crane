@@ -73,7 +73,7 @@ struct AccumClosureCapture {
 
     uint64_t apply_all(uint64_t init) const {
       const fn_list *_loop_self = this;
-      uint64_t _loop_init = std::move(init);
+      uint64_t _loop_init = init;
       while (true) {
         auto &&_sv = *_loop_self;
         if (std::holds_alternative<typename fn_list::FNil>(_sv.v())) {

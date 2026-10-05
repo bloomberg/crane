@@ -7,10 +7,10 @@ uint64_t StepFetchDecodeExec::fetch_byte(const StepFetchDecodeExec::state &s,
 
 StepFetchDecodeExec::instruction StepFetchDecodeExec::decode(uint64_t b1,
                                                              uint64_t b2) {
-  if ((UINT64_C(2) ? b1 % UINT64_C(2) : b1) == UINT64_C(0)) {
+  if ((b1 % UINT64_C(2)) == UINT64_C(0)) {
     return instruction::nop();
   } else {
-    return instruction::add_acc((UINT64_C(16) ? b2 % UINT64_C(16) : b2));
+    return instruction::add_acc((b2 % UINT64_C(16)));
   }
 }
 
@@ -24,8 +24,7 @@ StepFetchDecodeExec::execute(const StepFetchDecodeExec::state &s,
     const auto &[a0] =
         std::get<typename StepFetchDecodeExec::instruction::ADD_ACC>(i.v());
     auto &&_once1 = (s.acc + a0);
-    return state{(UINT64_C(16) ? _once1 % UINT64_C(16) : _once1),
-                 (s.pc + UINT64_C(2)), s.rom};
+    return state{(_once1 % UINT64_C(16)), (s.pc + UINT64_C(2)), s.rom};
   }
 }
 

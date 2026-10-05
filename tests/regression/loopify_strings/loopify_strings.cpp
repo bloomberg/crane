@@ -397,7 +397,7 @@ List<uint64_t> LoopifyStrings::intercalate(
 List<uint64_t> LoopifyStrings::replicate(uint64_t n, uint64_t x) {
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
       auto _value = List<uint64_t>::nil();
@@ -425,8 +425,8 @@ LoopifyStrings::run_length_aux(uint64_t current, uint64_t count,
   std::optional<List<std::pair<uint64_t, uint64_t>>> _root{};
   std::shared_ptr<List<std::pair<uint64_t, uint64_t>>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_count = std::move(count);
-  uint64_t _loop_current = std::move(current);
+  uint64_t _loop_count = count;
+  uint64_t _loop_current = current;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
       if (_loop_count == UINT64_C(0)) {

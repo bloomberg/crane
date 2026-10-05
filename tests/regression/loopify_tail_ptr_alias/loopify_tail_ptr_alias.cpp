@@ -41,10 +41,10 @@ uint64_t LoopifyTailPtrAlias::hd(const LoopifyTailPtrAlias::lst &l) {
 uint64_t LoopifyTailPtrAlias::rot(uint64_t n, const LoopifyTailPtrAlias::lst &l,
                                   const LoopifyTailPtrAlias::lst &acc,
                                   uint64_t s) {
-  uint64_t _loop_s = std::move(s);
+  uint64_t _loop_s = s;
   LoopifyTailPtrAlias::lst _loop_acc = acc;
   LoopifyTailPtrAlias::lst _loop_l = l;
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
       return _loop_s;

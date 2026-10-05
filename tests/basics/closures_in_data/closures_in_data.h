@@ -162,7 +162,7 @@ struct ClosuresInData {
   /// A transform that doubles via addition and halves via division.
   static inline const transform double_transform =
       transform{[](uint64_t x) { return (x + x); },
-                [](uint64_t x) { return (UINT64_C(2) ? x / UINT64_C(2) : 0); }};
+                [](uint64_t x) { return (x / UINT64_C(2)); }};
   static uint64_t apply_forward(const transform &t, uint64_t x);
   static uint64_t apply_backward(const transform &t, uint64_t x);
   /// compose_all fns x folds fns left, threading x through each

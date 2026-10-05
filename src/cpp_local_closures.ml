@@ -30,24 +30,6 @@ let rec has_return stmts =
 
 let mentions x stmts = List.exists (Id.equal x) (free_vars_body stmts)
 
-(* Whether evaluating [e] can do nothing but produce its value: a variable, a
-   literal, a constructor applied to such things.  A mapped constant is not
-   one -- its replacement text may do anything. *)
-let rec pure e =
-  match e with
-  | CPPvar _ | CPPint _ | CPPuint _ | CPPbool _ | CPPfloat _ | CPPstring _
-  | CPPenum_val _ | CPPnullptr
-  | CPPglob (GlobRef.ConstructRef _, _, _) ->
-    true
-  | CPPstruct (_, _, args) | CPPstructmk (_, _, args) | CPPstruct_id (_, _, args)
-  | CPPbraced args ->
-    List.for_all pure args
-  | CPPfun_call (_, CPPglob (GlobRef.ConstructRef _, _, _), args) ->
-    List.for_all pure (call_args args)
-  | CPPbinop (_, a, b) -> pure a && pure b
-  | CPPunop (op, a) -> op <> Uaddr && pure a
-  | _ -> false
-
 (* A lambda's parameters, an unnamed one named [_argI] -- its argument is
    still evaluated, then never read -- when it has no template parameters. *)
 let named_params (l : cpp_lambda) =
@@ -101,7 +83,7 @@ let expand fresh (l : cpp_lambda) args =
       List.concat
         (List.map2
            (fun ((p, ty), unnamed) a ->
-             if unnamed && pure a then [] else [Sasgn (f p, Declare ty, a)])
+             if unnamed && pure_expr a then [] else [Sasgn (f p, Declare ty, a)])
            (List.combine params unnamed)
            args)
     in
@@ -231,17 +213,6 @@ let inline_iife_initializers fresh stmts =
     dropped.  Only straight-line bodies, under {!budget}, expanded at every
     call or at none. *)
 
-let assigned_vars stmts =
-  let acc = ref IdSet.empty in
-  let rec fs s =
-    ( match s with
-    | Sasgn (id, Existing, _) | Sassign_expr (CPPvar id, _) -> acc := IdSet.add id !acc
-    | _ -> () );
-    iter_stmt_children ~on_expr:fe ~on_stmts:(List.iter fs) s
-  and fe e = iter_expr_children ~on_expr:fe ~on_stmts:(List.iter fs) e in
-  List.iter fs stmts;
-  !acc
-
 let specialize_local_records fresh stmts =
   let rec go = function
     | [] -> []
@@ -311,7 +282,7 @@ let specialize_local_records fresh stmts =
           | Some params, [Sreturn (Some e)]
             when List.length params = List.length args && not (contains_lambda e) ->
             let reads x = occurrences x e in
-            if List.for_all2 (fun (x, _) a -> pure a || reads x = 1) params args then
+            if List.for_all2 (fun (x, _) a -> pure_expr a || reads x = 1) params args then
               Some (substitute (List.combine (List.map fst params) args) e)
             else None
           | _ -> None
@@ -343,7 +314,7 @@ let specialize_local_records fresh stmts =
             | _ -> [in_stmt s]
           in
           match s with
-          | Sexpr e -> whole e (fun r -> if pure r then [] else [Sexpr r])
+          | Sexpr e -> whole e (fun r -> if pure_expr r then [] else [Sexpr r])
           | Sasgn (v, tgt, e) -> whole e (fun r -> [Sasgn (v, tgt, r)])
           | _ -> [in_stmt s]
         in
@@ -372,20 +343,18 @@ let specialize_local_records fresh stmts =
 type cell_use = Read | Write of cpp_expr
 
 let cell_use x e =
-  match e with
-  | CPPfun_call (_, CPPglob (r, _, _), args) -> (
-    let args = call_args args in
+  match Cpp_declared.applied e with
+  | Some (m, args) -> (
     let is_cell i =
       match List.nth_opt args i with
       | Some (CPPvar y | CPPmove (CPPvar y)) -> Id.equal x y
       | _ -> false
     in
-    match Mapping_semantics.find r with
-    | Some (Ref_read i) when is_cell i -> Some Read
-    | Some (Ref_write (i, j)) when is_cell i ->
-      Option.map (fun v -> Write v) (List.nth_opt args j)
+    match m with
+    | Ref_read i when is_cell i -> Some Read
+    | Ref_write (i, j) when is_cell i -> Option.map (fun v -> Write v) (List.nth_opt args j)
     | _ -> None )
-  | _ -> None
+  | None -> None
 
 let scalarize_local_cells stmts =
   let rec go = function

@@ -16,8 +16,7 @@ uint64_t RamStateOps::get_stat(const RamStateOps::ram_reg &rg, uint64_t i) {
 RamStateOps::ram_reg
 RamStateOps::upd_main_in_reg(const RamStateOps::ram_reg &rg, uint64_t i,
                              uint64_t v) {
-  return ram_reg{update_nth<uint64_t>(i, (UINT64_C(16) ? v % UINT64_C(16) : v),
-                                      rg.reg_main),
+  return ram_reg{update_nth<uint64_t>(i, (v % UINT64_C(16)), rg.reg_main),
                  rg.reg_status};
 }
 
@@ -25,8 +24,7 @@ RamStateOps::ram_reg
 RamStateOps::upd_stat_in_reg(const RamStateOps::ram_reg &rg, uint64_t i,
                              uint64_t v) {
   return ram_reg{rg.reg_main,
-                 update_nth<uint64_t>(i, (UINT64_C(16) ? v % UINT64_C(16) : v),
-                                      rg.reg_status)};
+                 update_nth<uint64_t>(i, (v % UINT64_C(16)), rg.reg_status)};
 }
 
 RamStateOps::ram_reg RamStateOps::get_regRAM(const RamStateOps::ram_chip &ch,
@@ -44,7 +42,7 @@ RamStateOps::upd_reg_in_chip(const RamStateOps::ram_chip &ch, uint64_t r,
 
 RamStateOps::ram_chip
 RamStateOps::upd_port_in_chip(const RamStateOps::ram_chip &ch, uint64_t v) {
-  return ram_chip{ch.chip_regs, (UINT64_C(16) ? v % UINT64_C(16) : v)};
+  return ram_chip{ch.chip_regs, (v % UINT64_C(16))};
 }
 
 RamStateOps::ram_chip RamStateOps::get_chip(const RamStateOps::ram_bank &bk,

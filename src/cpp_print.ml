@@ -260,6 +260,9 @@ let spell_binop = function
   | Bneq -> "!="
   | Band -> "&&"
   | Bor -> "||"
+  | Bsub -> "-"
+  | Bdiv -> "/"
+  | Bmod -> "%"
   | Bassign -> "="
 
 (** The C++ source spelling of a unary prefix operator. *)
@@ -2313,7 +2316,10 @@ and pp_cpp_expr env args t =
      | Crane_rt.Unbox_field -> Table.demand_header (Table.Runtime Crane_rt.field_header)
      | Crane_rt.Make_rc_reusing_unchecked | Crane_rt.Reuse_step -> ());
     str (Crane_rt.name h)
-  | CPPlit (_, s) -> str s
+  | CPPnumeral (r, n) -> (
+    match Table.get_numeral_info r with
+    | Some info -> str (Common.render_template [("%n", Z.to_string n)] info.Table.num_fmt)
+    | None -> CErrors.anomaly Pp.(str "a numeral of a type with no numeral format") )
   | CPPraw code ->
     str
       (Str.global_replace
@@ -2331,11 +2337,14 @@ and pp_cpp_expr env args t =
         str "(" ++ pp_cpp_expr env args child ++ str ")"
       | _ -> pp_cpp_expr env args child
     in
-    paren_child lhs
-    ++ str " "
-    ++ str (spell_binop op)
-    ++ str " "
-    ++ paren_child rhs
+    let body =
+      paren_child lhs ++ str " " ++ str (spell_binop op) ++ str " " ++ paren_child rhs
+    in
+    (* An arithmetic operation is spliced into mapping text as an operand,
+       where only parentheses keep it one. *)
+    ( match op with
+    | Bsub | Bdiv | Bmod -> str "(" ++ body ++ str ")"
+    | Beq | Bneq | Band | Bor | Bassign -> body )
   | CPPcond (cond, then_expr, else_expr) ->
     (* Wrap the whole ternary in parentheses like the other ternary sites, so a
        conditional used as a subexpression cannot bind incorrectly against a
@@ -4301,7 +4310,7 @@ and pp_leaf_decl env (d : cpp_decl) =
          constructor of such a type ([true]) is that type's literal. *)
       let literal =
         (match e with
-         | CPPlit _ | CPPuint _ | CPPint _ | CPPbool _ | CPPenum_val _ -> true
+         | CPPnumeral _ | CPPuint _ | CPPint _ | CPPbool _ | CPPenum_val _ -> true
          | CPPglob ((GlobRef.ConstructRef _ as r), [], _) -> Table.is_custom r
          | _ -> false)
         && is_constexpr_type ty

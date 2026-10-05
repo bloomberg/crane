@@ -3212,11 +3212,7 @@ Byte0::to_bits(Byte b0) {
 
 bool Bool::eqb(bool b1, bool b2) {
   if (b1) {
-    if (b2) {
-      return true;
-    } else {
-      return false;
-    }
+    return b2;
   } else {
     if (b2) {
       return false;

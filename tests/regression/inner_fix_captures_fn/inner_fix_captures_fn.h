@@ -199,7 +199,7 @@ struct InnerFixCapturesFn {
         std::shared_ptr<lst> a1 = std::move(_f.a1);
         _result = ([&]() {
           auto inner = [&](const lst &m, uint64_t a) -> uint64_t {
-            uint64_t _loop_a = std::move(a);
+            uint64_t _loop_a = a;
             const lst *_loop_m = &m;
             while (true) {
               if (std::holds_alternative<typename lst::Nil>(_loop_m->v())) {

@@ -62,7 +62,7 @@ uint64_t MemSafetyProbe21::tree_sum(
 /// somewhere that outlives the iteration.
 uint64_t MemSafetyProbe21::grow_and_sum(const MemSafetyProbe21::tree &t,
                                         uint64_t n) {
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   MemSafetyProbe21::tree _loop_t = t;
   while (true) {
     if (_loop_n <= 0) {
@@ -186,7 +186,7 @@ uint64_t MemSafetyProbe21::branch_grow(
 /// MULTIPLE constructor calls with the original tree embedded.
 uint64_t MemSafetyProbe21::embed_grow(const MemSafetyProbe21::tree &t,
                                       uint64_t n) {
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   MemSafetyProbe21::tree _loop_t = t;
   while (true) {
     if (_loop_n <= 0) {
@@ -205,7 +205,7 @@ uint64_t MemSafetyProbe21::embed_grow(const MemSafetyProbe21::tree &t,
 /// TEST 5: Accumulator pattern with tree building.
 MemSafetyProbe21::tree MemSafetyProbe21::accum_tree(MemSafetyProbe21::tree acc,
                                                     uint64_t n) {
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   MemSafetyProbe21::tree _loop_acc = std::move(acc);
   while (true) {
     if (_loop_n <= 0) {
@@ -223,7 +223,7 @@ MemSafetyProbe21::tree MemSafetyProbe21::accum_tree(MemSafetyProbe21::tree acc,
 /// construction at each level.
 uint64_t MemSafetyProbe21::weave(const MemSafetyProbe21::tree &t1,
                                  const MemSafetyProbe21::tree &t2, uint64_t n) {
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   MemSafetyProbe21::tree _loop_t2 = t2;
   MemSafetyProbe21::tree _loop_t1 = t1;
   while (true) {

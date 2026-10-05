@@ -125,7 +125,7 @@ struct LoopifyPolymorphic {
     {
       const List<T1> &_lc1_l0 = l;
       uint64_t _lc1_acc = UINT64_C(0);
-      uint64_t _lc1_loop_acc = std::move(_lc1_acc);
+      uint64_t _lc1_loop_acc = _lc1_acc;
       const List<T1> *_lc1_loop_l0 = &_lc1_l0;
       while (true) {
         if (std::holds_alternative<typename List<T1>::Nil>(_lc1_loop_l0->v())) {
@@ -230,7 +230,7 @@ struct LoopifyPolymorphic {
     std::optional<List<T1>> _root{};
     std::shared_ptr<List<T1>> *_write = nullptr;
     const List<T1> *_loop_l = &l;
-    uint64_t _loop_n = std::move(n);
+    uint64_t _loop_n = n;
     while (true) {
       if (_loop_n <= 0) {
         auto _value = List<T1>::nil();
@@ -264,7 +264,7 @@ struct LoopifyPolymorphic {
 
   template <typename T1> static List<T1> poly_drop(uint64_t n, List<T1> l) {
     List<T1> _loop_l = std::move(l);
-    uint64_t _loop_n = std::move(n);
+    uint64_t _loop_n = n;
     while (true) {
       if (_loop_n <= 0) {
         return _loop_l;
@@ -284,7 +284,7 @@ struct LoopifyPolymorphic {
   template <typename T1>
   static std::optional<T1> poly_nth(uint64_t n, const List<T1> &l) {
     const List<T1> *_loop_l = &l;
-    uint64_t _loop_n = std::move(n);
+    uint64_t _loop_n = n;
     while (true) {
       if (std::holds_alternative<typename List<T1>::Nil>(_loop_l->v())) {
         return std::optional<T1>();
@@ -294,8 +294,7 @@ struct LoopifyPolymorphic {
           return std::make_optional<T1>(a0);
         } else {
           _loop_l = crane_raw(a1);
-          _loop_n = ((
-              (_loop_n - UINT64_C(1)) > _loop_n ? 0 : (_loop_n - UINT64_C(1))));
+          _loop_n = (_loop_n - UINT64_C(1));
         }
       }
     }
@@ -522,7 +521,7 @@ struct LoopifyPolymorphic {
   static List<T1> poly_replicate(uint64_t n, const T1 &x) {
     std::optional<List<T1>> _root{};
     std::shared_ptr<List<T1>> *_write = nullptr;
-    uint64_t _loop_n = std::move(n);
+    uint64_t _loop_n = n;
     while (true) {
       if (_loop_n <= 0) {
         auto _value = List<T1>::nil();

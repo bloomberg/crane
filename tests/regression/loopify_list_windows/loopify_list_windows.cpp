@@ -4,7 +4,7 @@ uint64_t LoopifyListWindows::len(const List<uint64_t> &l) {
   {
     const List<uint64_t> &_lc1_l0 = l;
     uint64_t _lc1_acc = UINT64_C(0);
-    uint64_t _lc1_loop_acc = std::move(_lc1_acc);
+    uint64_t _lc1_loop_acc = _lc1_acc;
     const List<uint64_t> *_lc1_loop_l0 = &_lc1_l0;
     while (true) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(
@@ -53,7 +53,7 @@ LoopifyListWindows::map_cons_helper(uint64_t x,
 
 List<uint64_t> LoopifyListWindows::drop(uint64_t m, List<uint64_t> xs) {
   List<uint64_t> _loop_xs = std::move(xs);
-  uint64_t _loop_m = std::move(m);
+  uint64_t _loop_m = m;
   while (true) {
     if (_loop_m <= 0) {
       return _loop_xs;
@@ -297,7 +297,7 @@ List<uint64_t> LoopifyListWindows::take(uint64_t n, const List<uint64_t> &l) {
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
       auto _value = List<uint64_t>::nil();
@@ -335,7 +335,7 @@ List<List<uint64_t>> LoopifyListWindows::windows_fuel(uint64_t fuel, uint64_t n,
   std::optional<List<List<uint64_t>>> _root{};
   std::shared_ptr<List<List<uint64_t>>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_fuel = std::move(fuel);
+  uint64_t _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
       auto _value = List<List<uint64_t>>::nil();
@@ -389,7 +389,7 @@ List<List<uint64_t>> LoopifyListWindows::chunks_fuel(uint64_t fuel, uint64_t n,
   std::optional<List<List<uint64_t>>> _root{};
   std::shared_ptr<List<List<uint64_t>>> *_write = nullptr;
   List<uint64_t> _loop_l = l;
-  uint64_t _loop_fuel = std::move(fuel);
+  uint64_t _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
       auto _value = List<List<uint64_t>>::nil();
@@ -435,7 +435,7 @@ List<List<uint64_t>> LoopifyListWindows::group_fuel(uint64_t fuel,
   std::optional<List<List<uint64_t>>> _root{};
   std::shared_ptr<List<List<uint64_t>>> *_write = nullptr;
   List<uint64_t> _loop_l = l;
-  uint64_t _loop_fuel = std::move(fuel);
+  uint64_t _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
       auto _value = List<List<uint64_t>>::nil();

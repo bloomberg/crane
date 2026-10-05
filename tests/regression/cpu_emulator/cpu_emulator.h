@@ -94,7 +94,7 @@ public:
 
   List<A> skipn(uint64_t n) const {
     const List<A> *_loop_self = this;
-    uint64_t _loop_n = std::move(n);
+    uint64_t _loop_n = n;
     while (true) {
       if (_loop_n <= 0) {
         return std::move(*_loop_self);
@@ -116,7 +116,7 @@ public:
     std::optional<List<A>> _root{};
     std::shared_ptr<List<A>> *_write = nullptr;
     const List<A> *_loop_self = this;
-    uint64_t _loop_n = std::move(n);
+    uint64_t _loop_n = n;
     while (true) {
       if (_loop_n <= 0) {
         auto _value = List<A>::nil();

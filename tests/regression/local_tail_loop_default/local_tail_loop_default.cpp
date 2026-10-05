@@ -7,8 +7,8 @@ uint64_t LocalTailLoopDefault::sum_to(uint64_t n) {
   {
     uint64_t _lc1_k = n;
     uint64_t _lc1_acc = UINT64_C(0);
-    uint64_t _lc1_loop_acc = std::move(_lc1_acc);
-    uint64_t _lc1_loop_k = std::move(_lc1_k);
+    uint64_t _lc1_loop_acc = _lc1_acc;
+    uint64_t _lc1_loop_k = _lc1_k;
     while (true) {
       if (_lc1_loop_k <= 0) {
         return _lc1_loop_acc;

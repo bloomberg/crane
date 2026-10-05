@@ -36,8 +36,8 @@ FastVariant::from(uint64_t n) { /// CraneEnter: captures varying parameters for
 List<uint64_t> FastVariant::take(uint64_t n, FastVariant::stream s) {
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
-  FastVariant::stream _loop_s = std::move(s);
-  uint64_t _loop_n = std::move(n);
+  FastVariant::stream _loop_s = s;
+  uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
       auto _value = List<uint64_t>::nil();

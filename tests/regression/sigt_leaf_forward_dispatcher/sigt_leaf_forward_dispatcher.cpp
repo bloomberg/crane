@@ -61,23 +61,15 @@ bool run(const SigT<std::pair<uint64_t, List<uint64_t>>,
   const auto &[x0, a1] = e;
   const auto &[n, _x] = x0;
   const auto &[f, _x0] = a1;
-  if (crane::any_cast<bool>(
-          crane::any_cast<crane::fn<crane::obj(crane::obj)>>(f)(garg(n)))) {
-    return true;
-  } else {
-    return false;
-  }
+  return crane::any_cast<bool>(
+      crane::any_cast<crane::fn<crane::obj(crane::obj)>>(f)(garg(n)));
 }
 
 bool check(std::monostate) { return run(my_entry); }
 
 bool Bool::eqb(bool b1, bool b2) {
   if (b1) {
-    if (b2) {
-      return true;
-    } else {
-      return false;
-    }
+    return b2;
   } else {
     if (b2) {
       return false;

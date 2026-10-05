@@ -248,7 +248,7 @@ template <typename K, typename V> struct CHT {
     bsl::vector<stm::TVar<List<bsl::pair<T1, T2>>>> buckets = {};
     {
       unsigned int _lc1_n = static_cast<unsigned int>(num);
-      unsigned int _lc1_loop_n = bsl::move(_lc1_n);
+      unsigned int _lc1_loop_n = _lc1_n;
       while (true) {
         if (_lc1_loop_n <= 0) {
           return buckets;

@@ -264,7 +264,7 @@ template <typename K, typename V> struct CHT {
     std::vector<stm::TVar<List<std::pair<T1, T2>>>> buckets = {};
     {
       uint64_t _lc1_n = static_cast<unsigned int>(num);
-      uint64_t _lc1_loop_n = std::move(_lc1_n);
+      uint64_t _lc1_loop_n = _lc1_n;
       (_lc1_loop_n <= buckets.max_size() ? buckets.reserve(_lc1_loop_n)
                                          : void());
       while (true) {

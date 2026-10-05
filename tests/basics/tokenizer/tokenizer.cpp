@@ -10,8 +10,8 @@ Tokenizer::next_token(std::basic_string_view<char> input,
     int64_t _lc1_index = INT64_C(0);
     std::basic_string_view<char> _lc1_s = input;
     std::basic_string_view<char> _lc1_loop_s = std::move(_lc1_s);
-    int64_t _lc1_loop_index = std::move(_lc1_index);
-    uint64_t _lc1_loop_fuel = std::move(_lc1_fuel);
+    int64_t _lc1_loop_index = _lc1_index;
+    uint64_t _lc1_loop_fuel = _lc1_fuel;
     while (true) {
       if (_lc1_loop_s.length() == INT64_C(0)) {
         return std::make_pair(std::optional<std::basic_string_view<char>>(),

@@ -136,13 +136,11 @@ LoopifyClassics::ack_fuel(uint64_t fuel, uint64_t m,
           _result = (n + UINT64_C(1));
         } else {
           if (n == UINT64_C(0)) {
-            _stack.emplace_back(CraneEnter{
-                UINT64_C(1), (((m - UINT64_C(1)) > m ? 0 : (m - UINT64_C(1)))),
-                fuel_});
+            _stack.emplace_back(
+                CraneEnter{UINT64_C(1), (m - UINT64_C(1)), fuel_});
           } else {
             _stack.emplace_back(CraneCont1{fuel_, m});
-            _stack.emplace_back(CraneEnter{
-                (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), m, fuel_});
+            _stack.emplace_back(CraneEnter{(n - UINT64_C(1)), m, fuel_});
           }
         }
       }
@@ -306,9 +304,9 @@ uint64_t LoopifyClassics::pascal(uint64_t row, uint64_t col) {
 }
 
 uint64_t LoopifyClassics::gcd_fuel(uint64_t fuel, uint64_t a, uint64_t b) {
-  uint64_t _loop_b = std::move(b);
-  uint64_t _loop_a = std::move(a);
-  uint64_t _loop_fuel = std::move(fuel);
+  uint64_t _loop_b = b;
+  uint64_t _loop_a = a;
+  uint64_t _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
       return _loop_a;

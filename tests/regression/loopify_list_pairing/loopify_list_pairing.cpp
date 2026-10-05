@@ -128,7 +128,7 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifyListPairing::partition(
       auto _f = std::move(std::get<CraneCont_Cons>(_frame));
       uint64_t a0 = _f.a0;
       auto [yes, no] = std::move(_result);
-      if ((UINT64_C(2) ? a0 % UINT64_C(2) : a0) == UINT64_C(0)) {
+      if ((a0 % UINT64_C(2)) == UINT64_C(0)) {
         _result = std::make_pair(List<uint64_t>::cons(a0, std::move(yes)),
                                  std::move(no));
       } else {
@@ -148,7 +148,7 @@ LoopifyListPairing::zip_longest_fuel(uint64_t fuel, const List<uint64_t> &l1,
   std::shared_ptr<List<std::pair<uint64_t, uint64_t>>> *_write = nullptr;
   List<uint64_t> _loop_l2 = l2;
   List<uint64_t> _loop_l1 = l1;
-  uint64_t _loop_fuel = std::move(fuel);
+  uint64_t _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
       auto _value = List<std::pair<uint64_t, uint64_t>>::nil();
@@ -321,7 +321,7 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifyListPairing::split_even_odd(
       auto _f = std::move(std::get<CraneCont_Cons>(_frame));
       uint64_t a0 = _f.a0;
       auto [evens, odds] = std::move(_result);
-      if ((UINT64_C(2) ? a0 % UINT64_C(2) : a0) == UINT64_C(0)) {
+      if ((a0 % UINT64_C(2)) == UINT64_C(0)) {
         _result = std::make_pair(List<uint64_t>::cons(a0, std::move(evens)),
                                  std::move(odds));
       } else {

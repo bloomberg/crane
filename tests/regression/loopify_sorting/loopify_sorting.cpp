@@ -82,7 +82,7 @@ List<uint64_t> LoopifySorting::merge_fuel(uint64_t fuel, List<uint64_t> l1,
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   List<uint64_t> _loop_l2 = std::move(l2);
   List<uint64_t> _loop_l1 = std::move(l1);
-  uint64_t _loop_fuel = std::move(fuel);
+  uint64_t _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
       auto _value = List<uint64_t>::nil();
@@ -335,7 +335,7 @@ List<uint64_t> LoopifySorting::quicksort(const List<uint64_t> &l) {
 
 bool LoopifySorting::is_sorted_aux(uint64_t prev, const List<uint64_t> &l) {
   const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_prev = std::move(prev);
+  uint64_t _loop_prev = prev;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
       return true;
@@ -410,8 +410,8 @@ List<uint64_t> LoopifySorting::uniq_sorted_aux(uint64_t prev, bool seen,
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
-  bool _loop_seen = std::move(seen);
-  uint64_t _loop_prev = std::move(prev);
+  bool _loop_seen = seen;
+  uint64_t _loop_prev = prev;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
       auto _value = List<uint64_t>::nil();

@@ -4,7 +4,7 @@ uint64_t LetFixNoStdfun::sum_list(const List<uint64_t> &l) {
   {
     const List<uint64_t> &_lc1_xs = l;
     uint64_t _lc1_acc = UINT64_C(0);
-    uint64_t _lc1_loop_acc = std::move(_lc1_acc);
+    uint64_t _lc1_loop_acc = _lc1_acc;
     const List<uint64_t> *_lc1_loop_xs = &_lc1_xs;
     while (true) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(
@@ -27,7 +27,7 @@ uint64_t LetFixNoStdfun::flat_map_sum(const List<List<uint64_t>> &xss) {
     const auto &[a0, a1] =
         std::get<typename List<List<uint64_t>>::Cons>(xss.v());
     auto inner_sum = [](const List<uint64_t> &ys, uint64_t acc) -> uint64_t {
-      uint64_t _loop_acc = std::move(acc);
+      uint64_t _loop_acc = acc;
       const List<uint64_t> *_loop_ys = &ys;
       while (true) {
         if (std::holds_alternative<typename List<uint64_t>::Nil>(

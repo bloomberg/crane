@@ -107,7 +107,7 @@ STMonadTests::fib_fun(uint64_t n) { /// CraneEnter: captures varying parameters
 uint64_t STMonadTests::nth(uint64_t n, const List<uint64_t> &l,
                            uint64_t default0) {
   const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
@@ -208,31 +208,22 @@ List<uint64_t> STMonadTests::quicksort_ST_mine(const List<uint64_t> &xs) {
               auto &&_once2 = nat_idx::toNat(l);
               uint64_t pivotValue = (*arr0)[nat_idx::fromNat(
                   (nat_idx::toNat(l) +
-                   (UINT64_C(2)
-                        ? (((_once1 - _once2) > _once1 ? 0
-                                                       : (_once1 - _once2))) /
-                              UINT64_C(2)
-                        : 0)))];
+                   ((((_once1 - _once2) > _once1 ? 0 : (_once1 - _once2))) /
+                    UINT64_C(2))))];
               [&]() {
                 auto &&_once3 = nat_idx::toNat(r);
                 auto &&_once4 = nat_idx::toNat(l);
                 uint64_t leftVal = (*arr0)[nat_idx::fromNat(
                     (nat_idx::toNat(l) +
-                     (UINT64_C(2)
-                          ? (((_once3 - _once4) > _once3 ? 0
-                                                         : (_once3 - _once4))) /
-                                UINT64_C(2)
-                          : 0)))];
+                     ((((_once3 - _once4) > _once3 ? 0 : (_once3 - _once4))) /
+                      UINT64_C(2))))];
                 uint64_t rightVal = (*arr0)[r];
                 auto &&_once5 = nat_idx::toNat(r);
                 auto &&_once6 = nat_idx::toNat(l);
                 (*arr0)[nat_idx::fromNat(
                     (nat_idx::toNat(l) +
-                     (UINT64_C(2)
-                          ? (((_once5 - _once6) > _once5 ? 0
-                                                         : (_once5 - _once6))) /
-                                UINT64_C(2)
-                          : 0)))] = rightVal;
+                     ((((_once5 - _once6) > _once5 ? 0 : (_once5 - _once6))) /
+                      UINT64_C(2))))] = rightVal;
                 (*arr0)[r] = leftVal;
                 return std::monostate{};
               }();
@@ -240,7 +231,7 @@ List<uint64_t> STMonadTests::quicksort_ST_mine(const List<uint64_t> &xs) {
                 auto for_each_with =
                     [](const List<uint64_t> &xs0, uint64_t v,
                        crane::fn<uint64_t(uint64_t, uint64_t)> f) -> uint64_t {
-                  uint64_t _loop_v = std::move(v);
+                  uint64_t _loop_v = v;
                   const List<uint64_t> *_loop_xs0 = &xs0;
                   while (true) {
                     if (std::holds_alternative<typename List<uint64_t>::Nil>(
@@ -413,8 +404,8 @@ std::string STMonadTests::test_quicksort_fun(std::monostate) {
 List<uint64_t> ListDef::seq(uint64_t start, uint64_t len) {
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
-  uint64_t _loop_len = std::move(len);
-  uint64_t _loop_start = std::move(start);
+  uint64_t _loop_len = len;
+  uint64_t _loop_start = start;
   while (true) {
     if (_loop_len <= 0) {
       auto _value = List<uint64_t>::nil();

@@ -3,7 +3,7 @@
 ProdFstProjection::t ProdFstProjection::build(uint64_t n,
                                               ProdFstProjection::t acc) {
   ProdFstProjection::t _loop_acc = std::move(acc);
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
       return _loop_acc;

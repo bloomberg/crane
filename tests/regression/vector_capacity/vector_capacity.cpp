@@ -8,7 +8,7 @@ std::vector<uint64_t> VectorCapacity::fill(uint64_t n) {
   std::vector<uint64_t> v = {};
   {
     uint64_t _lc1_k = n;
-    uint64_t _lc1_loop_k = std::move(_lc1_k);
+    uint64_t _lc1_loop_k = _lc1_k;
     (_lc1_loop_k <= v.max_size() ? v.reserve(_lc1_loop_k) : void());
     while (true) {
       if (_lc1_loop_k <= 0) {
@@ -27,7 +27,7 @@ std::vector<uint64_t> VectorCapacity::fill_even(uint64_t n) {
   std::vector<uint64_t> v = {};
   {
     uint64_t _lc1_k = n;
-    uint64_t _lc1_loop_k = std::move(_lc1_k);
+    uint64_t _lc1_loop_k = _lc1_k;
     while (true) {
       if (_lc1_loop_k <= 0) {
         return v;
@@ -52,7 +52,7 @@ std::vector<uint64_t> VectorCapacity::fill_twice(uint64_t n) {
   std::vector<uint64_t> v = {};
   {
     uint64_t _lc1_k = n;
-    uint64_t _lc1_loop_k = std::move(_lc1_k);
+    uint64_t _lc1_loop_k = _lc1_k;
     while (true) {
       if (_lc1_loop_k <= 0) {
         return v;
@@ -71,7 +71,7 @@ std::vector<uint64_t> VectorCapacity::fill_until_five(uint64_t n) {
   std::vector<uint64_t> v = {};
   {
     uint64_t _lc1_k = n;
-    uint64_t _lc1_loop_k = std::move(_lc1_k);
+    uint64_t _lc1_loop_k = _lc1_k;
     while (true) {
       if (_lc1_loop_k <= 0) {
         return v;

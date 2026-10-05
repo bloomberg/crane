@@ -170,8 +170,8 @@ struct LoopifyCoindStream {
   template <typename T1> static List<T1> take(uint64_t n, stream<T1> s) {
     std::optional<List<T1>> _root{};
     std::shared_ptr<List<T1>> *_write = nullptr;
-    stream<T1> _loop_s = std::move(s);
-    uint64_t _loop_n = std::move(n);
+    stream<T1> _loop_s = s;
+    uint64_t _loop_n = n;
     while (true) {
       if (_loop_n <= 0) {
         auto _value = List<T1>::nil();

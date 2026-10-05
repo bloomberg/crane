@@ -7,8 +7,8 @@ LoopifyLists::list<uint64_t> LoopifyLists::range(uint64_t start,
                                                  uint64_t count0) {
   std::optional<LoopifyLists::list<uint64_t>> _root{};
   std::shared_ptr<LoopifyLists::list<uint64_t>> *_write = nullptr;
-  uint64_t _loop_count0 = std::move(count0);
-  uint64_t _loop_start = std::move(start);
+  uint64_t _loop_count0 = count0;
+  uint64_t _loop_start = start;
   while (true) {
     if (_loop_count0 <= 0) {
       auto _value = list<uint64_t>::nil();
@@ -41,7 +41,7 @@ uint64_t LoopifyLists::step_sum(const LoopifyLists::list<uint64_t> &l) {
   {
     const LoopifyLists::list<uint64_t> &_lc1_l0 = l;
     uint64_t _lc1_acc = UINT64_C(0);
-    uint64_t _lc1_loop_acc = std::move(_lc1_acc);
+    uint64_t _lc1_loop_acc = _lc1_acc;
     const LoopifyLists::list<uint64_t> *_lc1_loop_l0 = &_lc1_l0;
     while (true) {
       if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
@@ -52,7 +52,7 @@ uint64_t LoopifyLists::step_sum(const LoopifyLists::list<uint64_t> &l) {
             std::get<typename LoopifyLists::list<uint64_t>::Cons>(
                 _lc1_loop_l0->v());
         uint64_t contribution;
-        if ((UINT64_C(2) ? a0 % UINT64_C(2) : a0) == UINT64_C(0)) {
+        if ((a0 % UINT64_C(2)) == UINT64_C(0)) {
           contribution = a0;
         } else {
           contribution = (a0 * UINT64_C(2));
@@ -70,7 +70,7 @@ uint64_t LoopifyLists::sum_abs(const LoopifyLists::list<uint64_t> &l,
   {
     const LoopifyLists::list<uint64_t> &_lc1_l0 = l;
     uint64_t _lc1_acc = UINT64_C(0);
-    uint64_t _lc1_loop_acc = std::move(_lc1_acc);
+    uint64_t _lc1_loop_acc = _lc1_acc;
     const LoopifyLists::list<uint64_t> *_lc1_loop_l0 = &_lc1_l0;
     while (true) {
       if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
@@ -82,9 +82,9 @@ uint64_t LoopifyLists::sum_abs(const LoopifyLists::list<uint64_t> &l,
                 _lc1_loop_l0->v());
         uint64_t abs_val;
         if (base <= a0) {
-          abs_val = (((a0 - base) > a0 ? 0 : (a0 - base)));
+          abs_val = (a0 - base);
         } else {
-          abs_val = (((base - a0) > base ? 0 : (base - a0)));
+          abs_val = (base - a0);
         }
         _lc1_loop_acc = (_lc1_loop_acc + abs_val);
         _lc1_loop_l0 = crane_raw(a1);
@@ -214,7 +214,7 @@ uint64_t LoopifyLists::categorize(uint64_t k,
   {
     const LoopifyLists::list<uint64_t> &_lc1_l0 = l;
     uint64_t _lc1_acc = UINT64_C(0);
-    uint64_t _lc1_loop_acc = std::move(_lc1_acc);
+    uint64_t _lc1_loop_acc = _lc1_acc;
     const LoopifyLists::list<uint64_t> *_lc1_loop_l0 = &_lc1_l0;
     while (true) {
       if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
@@ -394,7 +394,7 @@ LoopifyLists::prefix_sums(uint64_t acc, const LoopifyLists::list<uint64_t> &l) {
   std::optional<LoopifyLists::list<uint64_t>> _root{};
   std::shared_ptr<LoopifyLists::list<uint64_t>> *_write = nullptr;
   const LoopifyLists::list<uint64_t> *_loop_l = &l;
-  uint64_t _loop_acc = std::move(acc);
+  uint64_t _loop_acc = acc;
   while (true) {
     if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
             _loop_l->v())) {
@@ -479,7 +479,7 @@ LoopifyLists::take_n(uint64_t n, const LoopifyLists::list<uint64_t> &l) {
   std::optional<LoopifyLists::list<uint64_t>> _root{};
   std::shared_ptr<LoopifyLists::list<uint64_t>> *_write = nullptr;
   const LoopifyLists::list<uint64_t> *_loop_l = &l;
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
       auto _value = list<uint64_t>::nil();
@@ -565,7 +565,7 @@ LoopifyLists::windows_aux(uint64_t fuel, uint64_t n,
   std::shared_ptr<LoopifyLists::list<LoopifyLists::list<uint64_t>>> *_write =
       nullptr;
   const LoopifyLists::list<uint64_t> *_loop_l = &l;
-  uint64_t _loop_fuel = std::move(fuel);
+  uint64_t _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
       auto _value = list<LoopifyLists::list<uint64_t>>::nil();
@@ -772,7 +772,7 @@ uint64_t LoopifyLists::sum_list(const LoopifyLists::list<uint64_t> &l) {
   {
     const LoopifyLists::list<uint64_t> &_lc1_l0 = l;
     uint64_t _lc1_acc = UINT64_C(0);
-    uint64_t _lc1_loop_acc = std::move(_lc1_acc);
+    uint64_t _lc1_loop_acc = _lc1_acc;
     const LoopifyLists::list<uint64_t> *_lc1_loop_l0 = &_lc1_l0;
     while (true) {
       if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
@@ -797,7 +797,7 @@ LoopifyLists::list<uint64_t> LoopifyLists::flatten_nested_fuel(
   std::optional<LoopifyLists::list<uint64_t>> _root{};
   std::shared_ptr<LoopifyLists::list<uint64_t>> *_write = nullptr;
   LoopifyLists::list<LoopifyLists::list<uint64_t>> _loop_l = l;
-  uint64_t _loop_fuel = std::move(fuel);
+  uint64_t _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
       auto _value = list<uint64_t>::nil();
@@ -1051,7 +1051,7 @@ LoopifyLists::swizzle(const LoopifyLists::list<uint64_t>
 uint64_t LoopifyLists::index_of_aux(uint64_t x,
                                     const LoopifyLists::list<uint64_t> &l,
                                     uint64_t i) {
-  uint64_t _loop_i = std::move(i);
+  uint64_t _loop_i = i;
   const LoopifyLists::list<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
@@ -1424,8 +1424,7 @@ LoopifyLists::remove_if_sum_even(const LoopifyLists::list<uint64_t> &l) {
       } else {
         const auto &[a00, a10] =
             std::get<typename LoopifyLists::list<uint64_t>::Cons>(_sv0.v());
-        if ((UINT64_C(2) ? (a0 + a00) % UINT64_C(2) : (a0 + a00)) ==
-            UINT64_C(0)) {
+        if (((a0 + a00) % UINT64_C(2)) == UINT64_C(0)) {
           _loop_l = crane_raw(a1);
           continue;
         } else {
@@ -1487,9 +1486,7 @@ LoopifyLists::split_at(uint64_t n,
           _result = std::make_pair(list<uint64_t>::nil(), l);
         } else {
           _stack.emplace_back(CraneCont1{a0});
-          _stack.emplace_back(
-              CraneEnter{crane_raw(a1),
-                         (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))))});
+          _stack.emplace_back(CraneEnter{crane_raw(a1), (n - UINT64_C(1))});
         }
       }
     } else {
@@ -1560,7 +1557,7 @@ LoopifyLists::unzip(const LoopifyLists::list<std::pair<uint64_t, uint64_t>>
 uint64_t LoopifyLists::nth(uint64_t n, const LoopifyLists::list<uint64_t> &l,
                            uint64_t default0) {
   const LoopifyLists::list<uint64_t> *_loop_l = &l;
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   while (true) {
     if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
             _loop_l->v())) {
@@ -1572,8 +1569,7 @@ uint64_t LoopifyLists::nth(uint64_t n, const LoopifyLists::list<uint64_t> &l,
         return a0;
       } else {
         _loop_l = crane_raw(a1);
-        _loop_n =
-            (((_loop_n - UINT64_C(1)) > _loop_n ? 0 : (_loop_n - UINT64_C(1))));
+        _loop_n = (_loop_n - UINT64_C(1));
       }
     }
   }
@@ -1605,7 +1601,7 @@ uint64_t LoopifyLists::last(const LoopifyLists::list<uint64_t> &l,
 LoopifyLists::list<uint64_t>
 LoopifyLists::drop(uint64_t n, LoopifyLists::list<uint64_t> l) {
   LoopifyLists::list<uint64_t> _loop_l = std::move(l);
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   while (true) {
     if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
             _loop_l.v_mut())) {
@@ -1617,8 +1613,7 @@ LoopifyLists::drop(uint64_t n, LoopifyLists::list<uint64_t> l) {
         return _loop_l;
       } else {
         _loop_l = LoopifyLists::list<uint64_t>(*a1);
-        _loop_n =
-            (((_loop_n - UINT64_C(1)) > _loop_n ? 0 : (_loop_n - UINT64_C(1))));
+        _loop_n = (_loop_n - UINT64_C(1));
       }
     }
   }
@@ -1824,8 +1819,8 @@ LoopifyLists::list<uint64_t>
 LoopifyLists::rotate_left_fuel(uint64_t fuel, uint64_t n,
                                LoopifyLists::list<uint64_t> l) {
   LoopifyLists::list<uint64_t> _loop_l = std::move(l);
-  uint64_t _loop_n = std::move(n);
-  uint64_t _loop_fuel = std::move(fuel);
+  uint64_t _loop_n = n;
+  uint64_t _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
       return _loop_l;
@@ -1968,8 +1963,7 @@ LoopifyLists::majority(const LoopifyLists::list<uint64_t>
         if (cnt == UINT64_C(0)) {
           _result = std::make_pair(a0, UINT64_C(1));
         } else {
-          _result = std::make_pair(
-              cand, (((cnt - UINT64_C(1)) > cnt ? 0 : (cnt - UINT64_C(1)))));
+          _result = std::make_pair(cand, (cnt - UINT64_C(1)));
         }
       }
     }
@@ -2105,7 +2099,7 @@ LoopifyLists::sum_and_count(const LoopifyLists::list<uint64_t>
 std::optional<uint64_t>
 LoopifyLists::elem_at(uint64_t n, const LoopifyLists::list<uint64_t> &l) {
   const LoopifyLists::list<uint64_t> *_loop_l = &l;
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   while (true) {
     if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
             _loop_l->v())) {
@@ -2117,8 +2111,7 @@ LoopifyLists::elem_at(uint64_t n, const LoopifyLists::list<uint64_t> &l) {
         return std::make_optional<uint64_t>(a0);
       } else {
         _loop_l = crane_raw(a1);
-        _loop_n =
-            (((_loop_n - UINT64_C(1)) > _loop_n ? 0 : (_loop_n - UINT64_C(1))));
+        _loop_n = (_loop_n - UINT64_C(1));
       }
     }
   }

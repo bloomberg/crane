@@ -226,7 +226,7 @@ struct LoopifyOption {
   template <typename T1>
   static std::optional<T1> nth_opt(uint64_t n, const list<T1> &l) {
     const list<T1> *_loop_l = &l;
-    uint64_t _loop_n = std::move(n);
+    uint64_t _loop_n = n;
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
         return std::optional<T1>();
@@ -236,8 +236,7 @@ struct LoopifyOption {
           return std::make_optional<T1>(a0);
         } else {
           _loop_l = crane_raw(a1);
-          _loop_n = ((
-              (_loop_n - UINT64_C(1)) > _loop_n ? 0 : (_loop_n - UINT64_C(1))));
+          _loop_n = (_loop_n - UINT64_C(1));
         }
       }
     }
@@ -286,7 +285,7 @@ struct LoopifyOption {
   template <typename T1, typename F0>
   static std::optional<uint64_t> find_index_aux(F0 &&p, const list<T1> &l,
                                                 uint64_t i) {
-    uint64_t _loop_i = std::move(i);
+    uint64_t _loop_i = i;
     const list<T1> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {

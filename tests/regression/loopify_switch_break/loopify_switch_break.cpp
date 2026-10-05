@@ -11,7 +11,7 @@
 uint64_t LoopifySwitchBreak::eval_ops(
     const List<std::pair<LoopifySwitchBreak::Tag, uint64_t>> &ops,
     uint64_t acc) {
-  uint64_t _loop_acc = std::move(acc);
+  uint64_t _loop_acc = acc;
   const List<std::pair<LoopifySwitchBreak::Tag, uint64_t>> *_loop_ops = &ops;
   while (true) {
     if (std::holds_alternative<
@@ -54,7 +54,7 @@ List<uint64_t> LoopifySwitchBreak::collect_ops(
     uint64_t acc) {
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
-  uint64_t _loop_acc = std::move(acc);
+  uint64_t _loop_acc = acc;
   const List<std::pair<LoopifySwitchBreak::Tag, uint64_t>> *_loop_ops = &ops;
   while (true) {
     if (std::holds_alternative<

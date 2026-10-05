@@ -224,7 +224,7 @@ LoopifySearch::longest_increasing_subseq(const List<uint64_t> &l) {
 /// Helper for binary search: get nth element.
 uint64_t LoopifySearch::nth_impl(uint64_t n, const List<uint64_t> &l) {
   const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
@@ -253,7 +253,7 @@ List<uint64_t> LoopifySearch::take_impl(uint64_t k, const List<uint64_t> &l) {
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_k = std::move(k);
+  uint64_t _loop_k = k;
   while (true) {
     if (_loop_k <= 0) {
       auto _value = List<uint64_t>::nil();
@@ -289,7 +289,7 @@ List<uint64_t> LoopifySearch::take_impl(uint64_t k, const List<uint64_t> &l) {
 /// Helper for binary search: drop first k elements.
 List<uint64_t> LoopifySearch::drop_impl(uint64_t k, List<uint64_t> l) {
   List<uint64_t> _loop_l = std::move(l);
-  uint64_t _loop_k = std::move(k);
+  uint64_t _loop_k = k;
   while (true) {
     if (_loop_k <= 0) {
       return _loop_l;
@@ -313,7 +313,7 @@ List<uint64_t> LoopifySearch::drop_impl(uint64_t k, List<uint64_t> l) {
 bool LoopifySearch::binary_search_fuel(uint64_t fuel, uint64_t target,
                                        const List<uint64_t> &l) {
   List<uint64_t> _loop_l = l;
-  uint64_t _loop_fuel = std::move(fuel);
+  uint64_t _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
       return false;
@@ -324,7 +324,7 @@ bool LoopifySearch::binary_search_fuel(uint64_t fuel, uint64_t target,
         return false;
       } else {
         uint64_t _x = n - 1;
-        uint64_t mid = (UINT64_C(2) ? n / UINT64_C(2) : 0);
+        uint64_t mid = (n / UINT64_C(2));
         uint64_t mid_val = nth_impl(mid, _loop_l);
         if (target == mid_val) {
           return true;
@@ -438,10 +438,9 @@ uint64_t LoopifySearch::collatz_fuel(
         if (n == UINT64_C(1)) {
           _result = UINT64_C(0);
         } else {
-          if ((UINT64_C(2) ? n % UINT64_C(2) : n) == UINT64_C(0)) {
+          if ((n % UINT64_C(2)) == UINT64_C(0)) {
             _stack.emplace_back(CraneCont1{});
-            _stack.emplace_back(
-                CraneEnter{(UINT64_C(2) ? n / UINT64_C(2) : 0), f});
+            _stack.emplace_back(CraneEnter{(n / UINT64_C(2)), f});
           } else {
             _stack.emplace_back(CraneCont2{});
             _stack.emplace_back(
@@ -564,8 +563,7 @@ bool LoopifySearch::subset_sum_fuel(
         _result = true;
       } else {
         if (a0 <= target) {
-          _stack.emplace_back(CraneEnter{
-              &a1, (((target - a0) > target ? 0 : (target - a0))), f});
+          _stack.emplace_back(CraneEnter{&a1, (target - a0), f});
         } else {
           _result = false;
         }
@@ -584,7 +582,7 @@ List<uint64_t> LoopifySearch::sieve_fuel(uint64_t fuel, List<uint64_t> l) {
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   List<uint64_t> _loop_l = std::move(l);
-  uint64_t _loop_fuel = std::move(fuel);
+  uint64_t _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
       auto _value = std::move(_loop_l);
@@ -648,7 +646,7 @@ List<uint64_t> LoopifySearch::nub_fuel(uint64_t fuel, List<uint64_t> l) {
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   List<uint64_t> _loop_l = std::move(l);
-  uint64_t _loop_fuel = std::move(fuel);
+  uint64_t _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
       auto _value = std::move(_loop_l);
@@ -698,7 +696,7 @@ List<uint64_t> LoopifySearch::remove_duplicates_fuel(uint64_t fuel,
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   List<uint64_t> _loop_l = std::move(l);
-  uint64_t _loop_fuel = std::move(fuel);
+  uint64_t _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
       auto _value = std::move(_loop_l);
@@ -883,7 +881,7 @@ List<uint64_t> LoopifySearch::merge_sorted_fuel(uint64_t fuel,
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   List<uint64_t> _loop_l2 = std::move(l2);
   List<uint64_t> _loop_l1 = std::move(l1);
-  uint64_t _loop_fuel = std::move(fuel);
+  uint64_t _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
       auto _value = std::move(_loop_l1).app(std::move(_loop_l2));
@@ -1198,7 +1196,7 @@ List<List<uint64_t>> LoopifySearch::permutations(const List<uint64_t> &l) {
 std::optional<uint64_t>
 LoopifySearch::linear_search_aux(uint64_t x, const List<uint64_t> &l,
                                  uint64_t idx) {
-  uint64_t _loop_idx = std::move(idx);
+  uint64_t _loop_idx = idx;
   const List<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
@@ -1227,7 +1225,7 @@ List<uint64_t> LoopifySearch::all_indices_aux(uint64_t x,
                                               uint64_t idx) {
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
-  uint64_t _loop_idx = std::move(idx);
+  uint64_t _loop_idx = idx;
   const List<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {

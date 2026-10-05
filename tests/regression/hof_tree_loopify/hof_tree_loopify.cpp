@@ -3,7 +3,7 @@
 HofTreeLoopify::tree<uint64_t> HofTreeLoopify::depth_tree(uint64_t n) {
   std::optional<HofTreeLoopify::tree<uint64_t>> _root{};
   std::shared_ptr<HofTreeLoopify::tree<uint64_t>> *_write = nullptr;
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
       auto _value = tree<uint64_t>::leaf();

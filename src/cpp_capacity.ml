@@ -8,13 +8,7 @@ open Names
 open Minicpp
 module MS = Mapping_semantics
 
-(* The declared meaning of the mapping [e] applies, and its arguments. *)
-let applied e =
-  match e with
-  | CPPfun_call (_, CPPglob (r, _, _), args) ->
-    Option.map (fun m -> (m, call_args args)) (MS.find r)
-  | CPPglob (r, _, _) -> Option.map (fun m -> (m, [])) (MS.find r)
-  | _ -> None
+let applied = Cpp_declared.applied
 
 let mentions v stmts = List.exists (Id.equal v) (free_vars_body stmts)
 

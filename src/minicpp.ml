@@ -321,6 +321,9 @@ and cpp_binop =
   | Bneq  (* != *)
   | Band  (* && *)
   | Bor  (* || *)
+  | Bsub
+  | Bdiv
+  | Bmod
   | Bassign
     (* = in expression position (a for-loop step, a comma expression).  A
        statement-position assignment is an [Sassign_expr]. *)
@@ -446,8 +449,8 @@ and cpp_expr =
   | CPPtype_name of cpp_type
     (* typename T::Nested, usable where a dependent nested struct name is
        required as an expression/type-name token. *)
-  | CPPlit of cpp_type * string
-    (* A literal rendered verbatim, at the type it has. *)
+  | CPPnumeral of GlobRef.t * Z.t
+    (* The numeral of an inductive with a numeral format. *)
   | CPPraw of string
   | CPPrt of Crane_rt.helper
     (* Raw C++ expression, printed verbatim. Used for low-level operations
@@ -1388,8 +1391,7 @@ let map_expr ?fl
   | CPPstd_holds_alternative ty -> CPPstd_holds_alternative (ft ty)
   | CPPdeclval ty -> CPPdeclval (ft ty)
   | CPPtype_name ty -> CPPtype_name (ft ty)
-  | CPPlit (ty, s) -> CPPlit (ft ty, s)
-  | CPPraw _ | CPPrt _ -> e
+  | CPPnumeral _ | CPPraw _ | CPPrt _ -> e
   | CPPbinop (op, e1, e2) -> CPPbinop (op, fe e1, fe e2)
   | CPPcond (c, t, f) -> CPPcond (fe c, fe t, fe f)
   | CPPbool _ -> e
@@ -1494,7 +1496,7 @@ let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
   | CPPstring _ | CPPuint _ | CPPfloat _ | CPPconvertible_to _
   | CPPabort _ | CPPenum_val _ | CPPnullptr | CPPin_place | CPPin_place_index _
   | CPPstd_holds_alternative _
-  | CPPdeclval _ | CPPtype_name _ | CPPqualified_t _ | CPPlit _
+  | CPPdeclval _ | CPPtype_name _ | CPPqualified_t _ | CPPnumeral _
    |CPPraw _ | CPPrt _
   | CPPbool _ | CPPint _
   | CPPconcept_app _ | CPPthis | CPPshared_from_this _ -> ()
@@ -1640,7 +1642,7 @@ let fold_expr_children ~(on_expr : 'a -> cpp_expr -> 'a)
   | CPPstring _ | CPPuint _ | CPPfloat _ | CPPconvertible_to _
   | CPPabort _ | CPPenum_val _ | CPPnullptr | CPPin_place | CPPin_place_index _
   | CPPstd_holds_alternative _
-  | CPPdeclval _ | CPPtype_name _ | CPPqualified_t _ | CPPlit _
+  | CPPdeclval _ | CPPtype_name _ | CPPqualified_t _ | CPPnumeral _
    |CPPraw _ | CPPrt _
   | CPPbool _ | CPPint _
   | CPPconcept_app _ | CPPthis | CPPshared_from_this _ -> acc
@@ -2378,7 +2380,13 @@ let rec free_vars_expr = function
     let bound = List.filter_map (fun (_, id_opt) -> id_opt) (to_reversed params) in
     let body_fv = free_vars_body body in
     List.filter (fun v -> not (List.exists (Id.equal v) bound)) body_fv
-  | _ -> []
+  (* Every other expression binds nothing: what is free in it is what is
+     free in its children. *)
+  | e ->
+    fold_expr_children
+      ~on_expr:(fun acc e -> acc @ free_vars_expr e)
+      ~on_stmts:(fun acc b -> acc @ free_vars_body b)
+      [] e
 
 (** Collect free variables from a single statement. Statement-level companion
     of {!free_vars_expr}; recurses into branches and sub-expressions. *)
@@ -2460,6 +2468,39 @@ and free_vars_body (stmts : cpp_stmt list) : Id.t list =
       filtered @ go (newly_defined @ defined) rest
   in
   go [] stmts
+
+let rec pure_expr e =
+  match e with
+  | CPPvar _ | CPPint _ | CPPuint _ | CPPbool _ | CPPfloat _ | CPPstring _
+  | CPPenum_val _ | CPPnullptr | CPPnumeral _
+  | CPPglob (GlobRef.ConstructRef _, _, _) ->
+    true
+  | CPPstruct (_, _, args) | CPPstructmk (_, _, args) | CPPstruct_id (_, _, args)
+  | CPPbraced args ->
+    List.for_all pure_expr args
+  | CPPfun_call (_, CPPglob (GlobRef.ConstructRef _, _, _), args) ->
+    List.for_all pure_expr (call_args args)
+  | CPPbinop (op, a, b) -> op <> Bassign && pure_expr a && pure_expr b
+  | CPPunop (op, a) -> op <> Uaddr && pure_expr a
+  | _ -> false
+
+let assigned_vars stmts =
+  let acc = ref Id.Set.empty in
+  let rec fs s =
+    ( match s with
+    | Sasgn (id, Existing, _) | Sassign_expr (CPPvar id, _)
+    | Sexpr (CPPbinop (Bassign, CPPvar id, _)) ->
+      acc := Id.Set.add id !acc
+    | _ -> () );
+    iter_stmt_children ~on_expr:fe ~on_stmts:(List.iter fs) s
+  and fe e =
+    ( match e with
+    | CPPbinop (Bassign, CPPvar id, _) -> acc := Id.Set.add id !acc
+    | _ -> () );
+    iter_expr_children ~on_expr:fe ~on_stmts:(List.iter fs) e
+  in
+  List.iter fs stmts;
+  !acc
 
 (** [rename_ids f stmts] applies [f] to every identifier [stmts] declare or
     read: a variable, every kind of declaration, a match's and a mapping's

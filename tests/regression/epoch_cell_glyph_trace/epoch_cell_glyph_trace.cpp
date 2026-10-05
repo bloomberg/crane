@@ -619,13 +619,9 @@ bool EpochCellGlyphTraceCase::eclipse_possible_at_dial(const Z &dial_pos) {
                                     Positive::xi(Positive::xh())))))) {
         return true;
       } else {
-        if (BinInt::eqb(dial_pos,
-                        Z::zpos(Positive::xi(Positive::xo(
-                            Positive::xo(Positive::xo(Positive::xh()))))))) {
-          return true;
-        } else {
-          return false;
-        }
+        return BinInt::eqb(dial_pos,
+                           Z::zpos(Positive::xi(Positive::xo(
+                               Positive::xo(Positive::xo(Positive::xh()))))));
       }
     }
   }
@@ -931,7 +927,7 @@ uint64_t EpochCellGlyphTraceCase::count_total_lunar(
   {
     const List<EpochCellGlyphTraceCase::HistoricalEclipse> &_lc1_l = es;
     uint64_t _lc1_acc = UINT64_C(0);
-    uint64_t _lc1_loop_acc = std::move(_lc1_acc);
+    uint64_t _lc1_loop_acc = _lc1_acc;
     const List<EpochCellGlyphTraceCase::HistoricalEclipse> *_lc1_loop_l =
         &_lc1_l;
     while (true) {
@@ -965,7 +961,7 @@ uint64_t EpochCellGlyphTraceCase::count_visible_total_lunar(
   {
     const List<EpochCellGlyphTraceCase::HistoricalEclipse> &_lc1_l = es;
     uint64_t _lc1_acc = UINT64_C(0);
-    uint64_t _lc1_loop_acc = std::move(_lc1_acc);
+    uint64_t _lc1_loop_acc = _lc1_acc;
     const List<EpochCellGlyphTraceCase::HistoricalEclipse> *_lc1_loop_l =
         &_lc1_l;
     while (true) {

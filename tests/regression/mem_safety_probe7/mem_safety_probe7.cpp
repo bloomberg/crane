@@ -4,7 +4,7 @@ uint64_t MemSafetyProbe7::sum_list(const MemSafetyProbe7::mylist<uint64_t> &l) {
   {
     const MemSafetyProbe7::mylist<uint64_t> &_lc1_l0 = l;
     uint64_t _lc1_acc = UINT64_C(0);
-    uint64_t _lc1_loop_acc = std::move(_lc1_acc);
+    uint64_t _lc1_loop_acc = _lc1_acc;
     const MemSafetyProbe7::mylist<uint64_t> *_lc1_loop_l0 = &_lc1_l0;
     while (true) {
       if (std::holds_alternative<
@@ -242,7 +242,7 @@ uint64_t MemSafetyProbe7::apply_all(
 MemSafetyProbe7::mylist<uint64_t> MemSafetyProbe7::make_nat_list(uint64_t n) {
   std::optional<MemSafetyProbe7::mylist<uint64_t>> _root{};
   std::shared_ptr<MemSafetyProbe7::mylist<uint64_t>> *_write = nullptr;
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
       auto _value = mylist<uint64_t>::mynil();

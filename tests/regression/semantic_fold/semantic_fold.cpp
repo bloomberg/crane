@@ -19,7 +19,7 @@ uint64_t SemanticFold::sum(const SemanticFold::list &l) {
   {
     const SemanticFold::list &_lc1_l0 = l;
     uint64_t _lc1_acc = UINT64_C(0);
-    uint64_t _lc1_loop_acc = std::move(_lc1_acc);
+    uint64_t _lc1_loop_acc = _lc1_acc;
     const SemanticFold::list *_lc1_loop_l0 = &_lc1_l0;
     while (true) {
       if (std::holds_alternative<typename SemanticFold::list::Nil>(
@@ -39,7 +39,7 @@ uint64_t SemanticFold::sum_scaled(uint64_t k, const SemanticFold::list &l) {
   {
     const SemanticFold::list &_lc1_l0 = l;
     uint64_t _lc1_acc = UINT64_C(0);
-    uint64_t _lc1_loop_acc = std::move(_lc1_acc);
+    uint64_t _lc1_loop_acc = _lc1_acc;
     const SemanticFold::list *_lc1_loop_l0 = &_lc1_l0;
     while (true) {
       if (std::holds_alternative<typename SemanticFold::list::Nil>(

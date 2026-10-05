@@ -2,7 +2,6 @@
 #define INCLUDED_SIGNATURE_PARITY_FIX
 
 #include <cstdint>
-#include <utility>
 
 struct SignatureParityFix {
   static uint64_t f(uint64_t seed);

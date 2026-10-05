@@ -270,7 +270,7 @@ struct FunctorComp {
         typename C::t _lc1_c0 = std::move(c);
         typename C::t _lc1_loop_c0 = std::move(_lc1_c0);
         List<uint64_t> _lc1_loop_acc = _lc1_acc;
-        uint64_t _lc1_loop_fuel = std::move(_lc1_fuel);
+        uint64_t _lc1_loop_fuel = _lc1_fuel;
         while (true) {
           if (_lc1_loop_fuel <= 0) {
             return _lc1_loop_acc.rev();

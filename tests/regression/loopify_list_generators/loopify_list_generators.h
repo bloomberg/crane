@@ -167,8 +167,8 @@ struct LoopifyListGenerators {
   static List<uint64_t> iterate(F0 &&f, uint64_t n, uint64_t x) {
     std::optional<List<uint64_t>> _root{};
     std::shared_ptr<List<uint64_t>> *_write = nullptr;
-    uint64_t _loop_x = std::move(x);
-    uint64_t _loop_n = std::move(n);
+    uint64_t _loop_x = x;
+    uint64_t _loop_n = n;
     while (true) {
       if (_loop_n <= 0) {
         auto _value = List<uint64_t>::nil();
@@ -196,8 +196,8 @@ struct LoopifyListGenerators {
   static List<uint64_t> build_list_aux(uint64_t n, uint64_t idx, F2 &&f) {
     std::optional<List<uint64_t>> _root{};
     std::shared_ptr<List<uint64_t>> *_write = nullptr;
-    uint64_t _loop_idx = std::move(idx);
-    uint64_t _loop_n = std::move(n);
+    uint64_t _loop_idx = idx;
+    uint64_t _loop_n = n;
     while (true) {
       if (_loop_n <= 0) {
         auto _value = List<uint64_t>::nil();

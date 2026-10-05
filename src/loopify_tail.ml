@@ -55,14 +55,16 @@ let rec strip_ref_and_const_type = function
   | Tconst t -> strip_ref_and_const_type t
   | t -> t
 
-(** Return [true] when a parameter type can be safely moved into a shadow
-    variable.  References cannot be moved from; const values would trigger
-    a pessimizing-move warning since the move constructor receives [const T&&]
-    and falls back to copy anyway. *)
+(** Return [true] when a parameter is worth moving into a shadow variable.
+    References cannot be moved from; const values would trigger a
+    pessimizing-move warning since the move constructor receives [const T&&]
+    and falls back to copy anyway; and a move of a type that copies for free
+    -- a scalar -- transfers nothing.  An [auto] parameter may be anything,
+    and is moved as {!Last_use} moves one. *)
 let is_moveable_param_type = function
-  | Tref _ -> false
-  | Tconst _ -> false
-  | _ -> true
+  | Tref _ | Tconst _ -> false
+  | Tauto -> true
+  | ty -> worthwhile_move_type ty
 
 (** Extract the pointee type from a "borrowed value-type" parameter.
 

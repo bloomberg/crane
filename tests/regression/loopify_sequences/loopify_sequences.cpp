@@ -4,8 +4,8 @@
 uint64_t LoopifySequences::alternate_sum(uint64_t sign, uint64_t acc,
                                          const List<uint64_t> &l) {
   const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_acc = std::move(acc);
-  uint64_t _loop_sign = std::move(sign);
+  uint64_t _loop_acc = acc;
+  uint64_t _loop_sign = sign;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
       return _loop_acc;
@@ -71,10 +71,9 @@ List<uint64_t> LoopifySequences::collatz_list_fuel(
           _result = List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil());
         } else {
           List<uint64_t> _tmp1;
-          if ((UINT64_C(2) ? n % UINT64_C(2) : n) == UINT64_C(0)) {
+          if ((n % UINT64_C(2)) == UINT64_C(0)) {
             _stack.emplace_back(CraneCont1{n});
-            _stack.emplace_back(
-                CraneEnter{(UINT64_C(2) ? n / UINT64_C(2) : 0), f});
+            _stack.emplace_back(CraneEnter{(n / UINT64_C(2)), f});
           } else {
             _stack.emplace_back(CraneCont2{n});
             _stack.emplace_back(
@@ -105,7 +104,7 @@ List<uint64_t> LoopifySequences::run_sum_aux(uint64_t acc,
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_acc = std::move(acc);
+  uint64_t _loop_acc = acc;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
       auto _value = List<uint64_t>::nil();
@@ -138,8 +137,8 @@ List<uint64_t> LoopifySequences::run_sum(const List<uint64_t> &l) {
 List<uint64_t> LoopifySequences::rotate_left_fuel(uint64_t fuel, uint64_t n,
                                                   List<uint64_t> l) {
   List<uint64_t> _loop_l = std::move(l);
-  uint64_t _loop_n = std::move(n);
-  uint64_t _loop_fuel = std::move(fuel);
+  uint64_t _loop_n = n;
+  uint64_t _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
       return _loop_l;
@@ -173,7 +172,7 @@ List<uint64_t> LoopifySequences::rotate_left(uint64_t n,
 /// sum_acc acc l sum with accumulator.
 uint64_t LoopifySequences::sum_acc(uint64_t acc, const List<uint64_t> &l) {
   const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_acc = std::move(acc);
+  uint64_t _loop_acc = acc;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
       return _loop_acc;
@@ -393,7 +392,7 @@ List<uint64_t> LoopifySequences::replace_at(uint64_t idx, uint64_t value,
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_idx = std::move(idx);
+  uint64_t _loop_idx = idx;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
       auto _value = List<uint64_t>::nil();
@@ -417,9 +416,7 @@ List<uint64_t> LoopifySequences::replace_at(uint64_t idx, uint64_t value,
                     : _root.emplace(std::move(_cell)));
         _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
         _loop_l = crane_raw(a1);
-        _loop_idx = (((_loop_idx - UINT64_C(1)) > _loop_idx
-                          ? 0
-                          : (_loop_idx - UINT64_C(1))));
+        _loop_idx = (_loop_idx - UINT64_C(1));
         continue;
       }
     }
@@ -549,7 +546,7 @@ List<uint64_t> LoopifySequences::init_list(const List<uint64_t> &l) {
 bool LoopifySequences::is_palindrome_fuel(uint64_t fuel,
                                           const List<uint64_t> &s) {
   List<uint64_t> _loop_s = s;
-  uint64_t _loop_fuel = std::move(fuel);
+  uint64_t _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
       return true;
@@ -673,8 +670,8 @@ LoopifySequences::run_length_groups_aux(uint64_t prev, uint64_t count,
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_count = std::move(count);
-  uint64_t _loop_prev = std::move(prev);
+  uint64_t _loop_count = count;
+  uint64_t _loop_prev = prev;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
       if (_loop_count == UINT64_C(0)) {
@@ -882,7 +879,7 @@ List<uint64_t> LoopifySequences::nub_fuel(uint64_t fuel,
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   List<uint64_t> _loop_l = l;
-  uint64_t _loop_fuel = std::move(fuel);
+  uint64_t _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
       auto _value = List<uint64_t>::nil();
@@ -1032,8 +1029,7 @@ List<uint64_t> LoopifySequences::remove_if_sum_even(const List<uint64_t> &l) {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       uint64_t next = head_or(UINT64_C(0), *a1);
-      if ((UINT64_C(2) ? (a0 + next) % UINT64_C(2) : (a0 + next)) ==
-          UINT64_C(0)) {
+      if (((a0 + next) % UINT64_C(2)) == UINT64_C(0)) {
         _loop_l = crane_raw(a1);
         continue;
       } else {

@@ -445,7 +445,7 @@ struct LoopifyHofs {
                                          uint64_t i) {
     std::optional<List<uint64_t>> _root{};
     std::shared_ptr<List<uint64_t>> *_write = nullptr;
-    uint64_t _loop_i = std::move(i);
+    uint64_t _loop_i = i;
     const List<uint64_t> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
@@ -533,7 +533,7 @@ struct LoopifyHofs {
     std::optional<List<uint64_t>> _root{};
     std::shared_ptr<List<uint64_t>> *_write = nullptr;
     const List<uint64_t> *_loop_l = &l;
-    uint64_t _loop_acc = std::move(acc);
+    uint64_t _loop_acc = acc;
     while (true) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
         auto _value = List<uint64_t>::cons(_loop_acc, List<uint64_t>::nil());
@@ -564,7 +564,7 @@ struct LoopifyHofs {
     std::optional<List<uint64_t>> _root{};
     std::shared_ptr<List<uint64_t>> *_write = nullptr;
     List<uint64_t> _loop_l = std::move(l);
-    uint64_t _loop_fuel = std::move(fuel);
+    uint64_t _loop_fuel = fuel;
     while (true) {
       if (_loop_fuel <= 0) {
         auto _value = std::move(_loop_l);
@@ -918,7 +918,7 @@ struct LoopifyHofs {
     std::shared_ptr<List<uint64_t>> *_write = nullptr;
     List<uint64_t> _loop_l2 = std::move(l2);
     List<uint64_t> _loop_l1 = std::move(l1);
-    uint64_t _loop_fuel = std::move(fuel);
+    uint64_t _loop_fuel = fuel;
     while (true) {
       if (_loop_fuel <= 0) {
         auto _value = std::move(_loop_l1);
@@ -1046,8 +1046,8 @@ struct LoopifyHofs {
   static List<uint64_t> iterate(F0 &&f, uint64_t n, uint64_t x) {
     std::optional<List<uint64_t>> _root{};
     std::shared_ptr<List<uint64_t>> *_write = nullptr;
-    uint64_t _loop_x = std::move(x);
-    uint64_t _loop_n = std::move(n);
+    uint64_t _loop_x = x;
+    uint64_t _loop_n = n;
     while (true) {
       if (_loop_n <= 0) {
         auto _value = List<uint64_t>::nil();

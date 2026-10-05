@@ -7,7 +7,7 @@
 LoopifyTmc::list<uint64_t> LoopifyTmc::range(uint64_t lo, uint64_t hi) {
   std::optional<LoopifyTmc::list<uint64_t>> _root{};
   std::shared_ptr<LoopifyTmc::list<uint64_t>> *_write = nullptr;
-  uint64_t _loop_hi = std::move(hi);
+  uint64_t _loop_hi = hi;
   while (true) {
     if (_loop_hi <= 0) {
       auto _value = list<uint64_t>::nil();
@@ -46,7 +46,7 @@ LoopifyTmc::prefix_sums(uint64_t acc, const LoopifyTmc::list<uint64_t> &l) {
   std::optional<LoopifyTmc::list<uint64_t>> _root{};
   std::shared_ptr<LoopifyTmc::list<uint64_t>> *_write = nullptr;
   const LoopifyTmc::list<uint64_t> *_loop_l = &l;
-  uint64_t _loop_acc = std::move(acc);
+  uint64_t _loop_acc = acc;
   while (true) {
     if (std::holds_alternative<typename LoopifyTmc::list<uint64_t>::Nil>(
             _loop_l->v())) {

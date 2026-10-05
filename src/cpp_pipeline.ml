@@ -148,6 +148,8 @@ let finish decl =
   (* A vector filled by a counted loop is given its final capacity up front,
      with the loops in their final shape. *)
   let decl = pass "capacity" Cpp_capacity.transform_decl decl in
+  (* Small local simplifications, before ownership reads the uses. *)
+  let decl = pass "simplify" Cpp_simplify.transform_decl decl in
   (* An initialiser nested deeper than a compiler will parse becomes a run of
      bindings; everything shallower is left as it stands. *)
   let decl = pass "depth" Cpp_depth.flatten decl in

@@ -138,8 +138,7 @@ LoopifySpecialRecursion::remove_if_sum_even(const List<uint64_t> &l) {
           return a00;
         }
       }();
-      if ((UINT64_C(2) ? (a0 + next_val) % UINT64_C(2) : (a0 + next_val)) ==
-          UINT64_C(0)) {
+      if (((a0 + next_val) % UINT64_C(2)) == UINT64_C(0)) {
         _loop_l = crane_raw(a1);
         continue;
       } else {
@@ -283,7 +282,7 @@ uint64_t LoopifySpecialRecursion::sum_odd_indices_aux(
         _result = UINT64_C(0);
       } else {
         const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-        if ((UINT64_C(2) ? idx % UINT64_C(2) : idx) == UINT64_C(1)) {
+        if ((idx % UINT64_C(2)) == UINT64_C(1)) {
           _stack.emplace_back(CraneCont1{a0});
           _stack.emplace_back(CraneEnter{(idx + UINT64_C(1)), crane_raw(a1)});
         } else {

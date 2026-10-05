@@ -389,7 +389,7 @@ uint64_t CoalitionBidHonorTraceCase::unit_tech_bv(
     const CoalitionBidHonorTraceCase::Unit &u) {
   uint64_t base = unit_base_bv(u);
   if (u.unit_is_clan) {
-    return (base + (UINT64_C(2) ? base / UINT64_C(2) : 0));
+    return (base + (base / UINT64_C(2)));
   } else {
     return base;
   }
@@ -398,9 +398,7 @@ uint64_t CoalitionBidHonorTraceCase::unit_tech_bv(
 uint64_t CoalitionBidHonorTraceCase::unit_battle_value(
     const CoalitionBidHonorTraceCase::Unit &u) {
   uint64_t tech_bv = unit_tech_bv(u);
-  return (UINT64_C(4)
-              ? (tech_bv * skill_bv_multiplier_num(unit_skill(u))) / UINT64_C(4)
-              : 0);
+  return ((tech_bv * skill_bv_multiplier_num(unit_skill(u))) / UINT64_C(4));
 }
 
 uint64_t CoalitionBidHonorTraceCase::unit_effective_combat_rating(

@@ -643,7 +643,7 @@ struct LoopifySearch {
                                          uint64_t idx) {
     std::optional<List<uint64_t>> _root{};
     std::shared_ptr<List<uint64_t>> *_write = nullptr;
-    uint64_t _loop_idx = std::move(idx);
+    uint64_t _loop_idx = idx;
     const List<uint64_t> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {

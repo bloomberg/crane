@@ -2,8 +2,8 @@
 
 OpcodeOperandDecode::Instruction OpcodeOperandDecode::decode(uint64_t b1,
                                                              uint64_t) {
-  uint64_t opcode = (UINT64_C(16) ? b1 / UINT64_C(16) : 0);
-  uint64_t operand = (UINT64_C(16) ? b1 % UINT64_C(16) : b1);
+  uint64_t opcode = (b1 / UINT64_C(16));
+  uint64_t operand = (b1 % UINT64_C(16));
   if (opcode <= 0) {
     return Instruction::NOP_;
   } else {

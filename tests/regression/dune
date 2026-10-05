@@ -11721,3 +11721,14 @@
   (alias runtest)
   (deps vector_capacity.t.exe)
   (action (run ./vector_capacity.t.exe))))
+
+(subdir branch_facts
+ (rule
+  (targets branch_facts.t.exe)
+  (deps BranchFacts.vo branch_facts.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} branch_facts.t.exe branch_facts.cpp branch_facts.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps branch_facts.t.exe)
+  (action (run ./branch_facts.t.exe))))

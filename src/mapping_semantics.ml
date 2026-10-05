@@ -8,6 +8,7 @@ type width = W8 | W16 | W32 | W64
 type unsigned_op = Add | Mul | Sub_truncated | Div | Mod | Eqb | Ltb | Leb | Max | Min
 
 type t =
+  | Boolean
   | Unsigned_nat of width
   | Unsigned of unsigned_op * width
   | Ref_new of int
@@ -58,6 +59,7 @@ let position s =
 
 let parse words =
   match List.filter (( <> ) "") (String.split_on_char ' ' words) with
+  | ["boolean"] -> Boolean
   | ["unsigned_nat"; w] -> Unsigned_nat (parse_width w)
   | ["unsigned"; op; w] -> Unsigned (parse_op op, parse_width w)
   | ["ref"; "new"; v] -> Ref_new (position v)
@@ -69,32 +71,35 @@ let parse words =
   | _ ->
     error
       ("cannot read \"" ^ words
-     ^ "\"; expected \"unsigned_nat W\", \"unsigned OP W\", \"ref new V\", \
+     ^ "\"; expected \"boolean\", \"unsigned_nat W\", \"unsigned OP W\", \"ref new V\", \
         \"ref read C\", \"ref write C V\", \"vector new\", \"vector push C V\" \
         or \"vector reserve C N\"")
 
-(* An [Unsigned_nat] type is [O | S n]: two constructors, the first constant
-   and the second taking one argument -- the order the passes that read the
-   declaration rely on. *)
-let check_nat_shape r =
+(* The constructors' argument counts must be [arities], in order -- the
+   order the passes that read the declaration rely on: [true] then [false],
+   [O] then [S n]. *)
+let check_shape what arities shape r =
   match r with
   | GlobRef.IndRef ind ->
     let _, oib = Inductive.lookup_mind_specif (Global.env ()) ind in
-    if oib.Declarations.mind_consnrealargs <> [| 0; 1 |] then
-      error "an unsigned_nat type has two constructors, O and then S n"
-  | _ -> error "unsigned_nat names an inductive type"
+    if oib.Declarations.mind_consnrealargs <> arities then
+      error ("a " ^ what ^ " type has two constructors, " ^ shape)
+  | _ -> error (what ^ " names an inductive type")
 
 let declare q words =
   let r = Smartlocate.global_with_alias q in
   let s = parse words in
   ( match s with
-  | Unsigned_nat _ -> check_nat_shape r
+  | Boolean -> check_shape "boolean" [| 0; 0 |] "true and then false" r
+  | Unsigned_nat _ -> check_shape "unsigned_nat" [| 0; 1 |] "O and then S n" r
   | Unsigned _ | Ref_new _ | Ref_read _ | Ref_write _ | Vec_new | Vec_push _
   | Vec_reserve _ -> (
     match r with
     | GlobRef.ConstRef _ -> ()
     | _ -> error "an operation names a constant" ) );
   Lib.add_leaf (semantics_object (r, s))
+
+let is_boolean ind = find (GlobRef.IndRef ind) = Some Boolean
 
 let nat_width ind =
   match find (GlobRef.IndRef ind) with Some (Unsigned_nat w) -> Some w | _ -> None

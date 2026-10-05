@@ -138,7 +138,7 @@ MemSafetyProbe10::build_tree_fns(const MemSafetyProbe10::tree &t,
       _root{};
   std::shared_ptr<MemSafetyProbe10::mylist<crane::fn<uint64_t(uint64_t)>>>
       *_write = nullptr;
-  uint64_t _loop_depth = std::move(depth);
+  uint64_t _loop_depth = depth;
   MemSafetyProbe10::tree _loop_t = t;
   while (true) {
     if (_loop_depth <= 0) {

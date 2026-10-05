@@ -7,13 +7,13 @@ uint64_t JinUsesPairForJump::get_reg(const JinUsesPairForJump::state &s,
 
 uint64_t JinUsesPairForJump::get_reg_pair(const JinUsesPairForJump::state &s,
                                           uint64_t r) {
-  auto &&_once1 = (UINT64_C(2) ? r % UINT64_C(2) : r);
+  auto &&_once1 = (r % UINT64_C(2));
   uint64_t base = (((r - _once1) > r ? 0 : (r - _once1)));
   return ((get_reg(s, base) * UINT64_C(16)) + get_reg(s, (base + UINT64_C(1))));
 }
 
 uint64_t JinUsesPairForJump::page_of(uint64_t addr) {
-  return (UINT64_C(256) ? addr / UINT64_C(256) : 0);
+  return (addr / UINT64_C(256));
 }
 
 JinUsesPairForJump::state
@@ -21,6 +21,6 @@ JinUsesPairForJump::execute_jin(const JinUsesPairForJump::state &s,
                                 uint64_t r) {
   uint64_t next_page = page_of((s.pc + UINT64_C(1)));
   uint64_t pair_val = get_reg_pair(s, r);
-  return state{s.regs, ((next_page * UINT64_C(256)) +
-                        (UINT64_C(256) ? pair_val % UINT64_C(256) : pair_val))};
+  return state{s.regs,
+               ((next_page * UINT64_C(256)) + (pair_val % UINT64_C(256)))};
 }

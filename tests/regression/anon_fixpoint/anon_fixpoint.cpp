@@ -4,8 +4,8 @@ uint64_t AnonFixpoint::sum_to(uint64_t n) {
   {
     uint64_t _lc1_m = n;
     uint64_t _lc1_acc = UINT64_C(0);
-    uint64_t _lc1_loop_acc = std::move(_lc1_acc);
-    uint64_t _lc1_loop_m = std::move(_lc1_m);
+    uint64_t _lc1_loop_acc = _lc1_acc;
+    uint64_t _lc1_loop_m = _lc1_m;
     while (true) {
       if (_lc1_loop_m <= 0) {
         return _lc1_loop_acc;
@@ -53,9 +53,9 @@ uint64_t AnonFixpoint::gcd(uint64_t a, uint64_t b) {
     uint64_t _lc1_fuel = (a + b);
     uint64_t _lc1_x = a;
     uint64_t _lc1_y = b;
-    uint64_t _lc1_loop_y = std::move(_lc1_y);
-    uint64_t _lc1_loop_x = std::move(_lc1_x);
-    uint64_t _lc1_loop_fuel = std::move(_lc1_fuel);
+    uint64_t _lc1_loop_y = _lc1_y;
+    uint64_t _lc1_loop_x = _lc1_x;
+    uint64_t _lc1_loop_fuel = _lc1_fuel;
     while (true) {
       if (_lc1_loop_fuel <= 0) {
         return _lc1_loop_x;

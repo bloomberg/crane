@@ -4,7 +4,7 @@
 DeepApp::mylist<uint64_t> DeepApp::build(uint64_t n,
                                          DeepApp::mylist<uint64_t> acc) {
   DeepApp::mylist<uint64_t> _loop_acc = std::move(acc);
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
       return _loop_acc;

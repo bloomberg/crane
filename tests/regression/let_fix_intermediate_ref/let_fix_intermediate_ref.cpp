@@ -4,7 +4,7 @@ uint64_t LetFixIntermediateRef::sum_heads(const List<List<uint64_t>> &ll) {
   {
     const List<List<uint64_t>> &_lc1_xss = ll;
     uint64_t _lc1_acc = UINT64_C(0);
-    uint64_t _lc1_loop_acc = std::move(_lc1_acc);
+    uint64_t _lc1_loop_acc = _lc1_acc;
     const List<List<uint64_t>> *_lc1_loop_xss = &_lc1_xss;
     while (true) {
       if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(

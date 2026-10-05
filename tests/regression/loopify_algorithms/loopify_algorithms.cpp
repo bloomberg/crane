@@ -43,7 +43,7 @@ List<uint64_t> LoopifyAlgorithms::sieve_fuel(uint64_t fuel, List<uint64_t> l) {
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   List<uint64_t> _loop_l = std::move(l);
-  uint64_t _loop_fuel = std::move(fuel);
+  uint64_t _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
       auto _value = std::move(_loop_l);
@@ -194,7 +194,7 @@ List<uint64_t> LoopifyAlgorithms::prefix_sums(uint64_t acc,
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_acc = std::move(acc);
+  uint64_t _loop_acc = acc;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
       auto _value = List<uint64_t>::cons(_loop_acc, List<uint64_t>::nil());
@@ -261,8 +261,8 @@ List<uint64_t> LoopifyAlgorithms::differences(const List<uint64_t> &l) {
 List<uint64_t> LoopifyAlgorithms::rotate_left_fuel(uint64_t fuel, uint64_t n,
                                                    List<uint64_t> l) {
   List<uint64_t> _loop_l = std::move(l);
-  uint64_t _loop_n = std::move(n);
-  uint64_t _loop_fuel = std::move(fuel);
+  uint64_t _loop_n = n;
+  uint64_t _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
       return _loop_l;
@@ -298,7 +298,7 @@ List<uint64_t> LoopifyAlgorithms::nub_aux(const List<uint64_t> &l,
                                           uint64_t fuel) {
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
-  uint64_t _loop_fuel = std::move(fuel);
+  uint64_t _loop_fuel = fuel;
   List<uint64_t> _loop_l = l;
   while (true) {
     if (_loop_fuel <= 0) {
@@ -438,7 +438,7 @@ List<uint64_t> LoopifyAlgorithms::take_impl(uint64_t k,
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_k = std::move(k);
+  uint64_t _loop_k = k;
   while (true) {
     if (_loop_k <= 0) {
       auto _value = List<uint64_t>::nil();
@@ -476,7 +476,7 @@ List<List<uint64_t>> LoopifyAlgorithms::windows_aux(uint64_t n,
                                                     uint64_t fuel) {
   std::optional<List<List<uint64_t>>> _root{};
   std::shared_ptr<List<List<uint64_t>>> *_write = nullptr;
-  uint64_t _loop_fuel = std::move(fuel);
+  uint64_t _loop_fuel = fuel;
   const List<uint64_t> *_loop_l = &l;
   while (true) {
     if (_loop_fuel <= 0) {
@@ -677,7 +677,7 @@ uint64_t LoopifyAlgorithms::step_sum(const List<uint64_t> &l) {
   {
     const List<uint64_t> &_lc1_l0 = l;
     uint64_t _lc1_acc = UINT64_C(0);
-    uint64_t _lc1_loop_acc = std::move(_lc1_acc);
+    uint64_t _lc1_loop_acc = _lc1_acc;
     const List<uint64_t> *_lc1_loop_l0 = &_lc1_l0;
     while (true) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(
@@ -687,7 +687,7 @@ uint64_t LoopifyAlgorithms::step_sum(const List<uint64_t> &l) {
         const auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_lc1_loop_l0->v());
         uint64_t contribution;
-        if ((UINT64_C(2) ? a0 % UINT64_C(2) : a0) == UINT64_C(0)) {
+        if ((a0 % UINT64_C(2)) == UINT64_C(0)) {
           contribution = a0;
         } else {
           contribution = (a0 * UINT64_C(2));

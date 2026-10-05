@@ -3,8 +3,8 @@
 TmcValueRoot::lst TmcValueRoot::range(uint64_t start, uint64_t count) {
   std::optional<TmcValueRoot::lst> _root{};
   std::shared_ptr<TmcValueRoot::lst> *_write = nullptr;
-  uint64_t _loop_count = std::move(count);
-  uint64_t _loop_start = std::move(start);
+  uint64_t _loop_count = count;
+  uint64_t _loop_start = start;
   while (true) {
     if (_loop_count <= 0) {
       auto _value = lst::nil();

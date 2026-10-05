@@ -3,7 +3,7 @@
 List<uint64_t> LoopifyListGeneration::replicate(uint64_t n, uint64_t x) {
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
       auto _value = List<uint64_t>::nil();
@@ -97,8 +97,8 @@ List<uint64_t> LoopifyListGeneration::cycle(
 List<uint64_t> LoopifyListGeneration::iterate(uint64_t n, uint64_t x) {
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
-  uint64_t _loop_x = std::move(x);
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_x = x;
+  uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
       auto _value = List<uint64_t>::nil();
@@ -171,7 +171,7 @@ List<uint64_t> LoopifyListGeneration::repeat_with_sep(uint64_t sep, uint64_t n,
                                                       uint64_t x) {
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
       auto _value = List<uint64_t>::nil();
@@ -210,8 +210,8 @@ List<uint64_t> LoopifyListGeneration::repeat_with_sep(uint64_t sep, uint64_t n,
 List<uint64_t> LoopifyListGeneration::range(uint64_t start, uint64_t len) {
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
-  uint64_t _loop_len = std::move(len);
-  uint64_t _loop_start = std::move(start);
+  uint64_t _loop_len = len;
+  uint64_t _loop_start = start;
   while (true) {
     if (_loop_len <= 0) {
       auto _value = List<uint64_t>::nil();

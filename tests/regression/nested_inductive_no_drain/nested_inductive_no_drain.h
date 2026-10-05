@@ -288,7 +288,7 @@ struct NestedInductiveNoDrain {
     tree spine(uint64_t n) const {
       tree _self_store;
       const tree *_loop_self = this;
-      uint64_t _loop_n = std::move(n);
+      uint64_t _loop_n = n;
       while (true) {
         if (_loop_n <= 0) {
           return std::move(*_loop_self);

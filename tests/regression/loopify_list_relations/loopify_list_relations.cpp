@@ -59,11 +59,11 @@ bool LoopifyListRelations::is_suffix_of(const List<uint64_t> &l1,
   if (len2 < len1) {
     return false;
   } else {
-    uint64_t diff = (((len2 - len1) > len2 ? 0 : (len2 - len1)));
+    uint64_t diff = (len2 - len1);
     List<uint64_t> suffix;
     auto drop = [](uint64_t n, List<uint64_t> xs) -> List<uint64_t> {
       List<uint64_t> _loop_xs = std::move(xs);
-      uint64_t _loop_n = std::move(n);
+      uint64_t _loop_n = n;
       while (true) {
         if (_loop_n <= 0) {
           return _loop_xs;
@@ -151,7 +151,7 @@ LoopifyListRelations::find_sublists_aux(const List<uint64_t> &needle,
                                         uint64_t idx) {
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
-  uint64_t _loop_idx = std::move(idx);
+  uint64_t _loop_idx = idx;
   const List<uint64_t> *_loop_haystack = &haystack;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(
@@ -449,7 +449,7 @@ List<uint64_t> LoopifyListRelations::merge_fuel(uint64_t fuel,
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   List<uint64_t> _loop_l2 = std::move(l2);
   List<uint64_t> _loop_l1 = std::move(l1);
-  uint64_t _loop_fuel = std::move(fuel);
+  uint64_t _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
       auto _value = List<uint64_t>::nil();

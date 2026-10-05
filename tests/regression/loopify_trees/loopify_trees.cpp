@@ -280,7 +280,7 @@ LoopifyTrees::count_paths(const LoopifyTrees::tree<uint64_t> &t,
             _result = UINT64_C(0);
           }
         } else {
-          uint64_t remaining = (((n - a1) > n ? 0 : (n - a1)));
+          uint64_t remaining = (n - a1);
           _stack.emplace_back(CraneCont3{crane_raw(a2), remaining});
           _stack.emplace_back(CraneEnter{remaining, crane_raw(a0)});
         }
@@ -767,7 +767,7 @@ List<List<uint64_t>> LoopifyTrees::tree_levels_fuel(
   std::optional<List<List<uint64_t>>> _root{};
   std::shared_ptr<List<List<uint64_t>>> *_write = nullptr;
   List<LoopifyTrees::tree<uint64_t>> _loop_trees = trees;
-  uint64_t _loop_fuel = std::move(fuel);
+  uint64_t _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
       auto _value = List<List<uint64_t>>::nil();

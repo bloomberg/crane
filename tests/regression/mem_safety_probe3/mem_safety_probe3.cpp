@@ -5,7 +5,7 @@
 MemSafetyProbe3::tree MemSafetyProbe3::build_deep(uint64_t n) {
   std::optional<MemSafetyProbe3::tree> _root{};
   std::shared_ptr<MemSafetyProbe3::tree> *_write = nullptr;
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
       auto _value = tree::leaf();

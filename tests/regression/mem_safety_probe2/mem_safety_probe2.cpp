@@ -39,7 +39,7 @@ uint64_t MemSafetyProbe2::mysum(const MemSafetyProbe2::mylist<uint64_t> &l) {
   {
     const MemSafetyProbe2::mylist<uint64_t> &_lc1_l0 = l;
     uint64_t _lc1_acc = UINT64_C(0);
-    uint64_t _lc1_loop_acc = std::move(_lc1_acc);
+    uint64_t _lc1_loop_acc = _lc1_acc;
     const MemSafetyProbe2::mylist<uint64_t> *_lc1_loop_l0 = &_lc1_l0;
     while (true) {
       if (std::holds_alternative<
@@ -63,7 +63,7 @@ MemSafetyProbe2::tree MemSafetyProbe2::fold_tree_build(
     uint64_t acc) {
   std::optional<MemSafetyProbe2::tree> _root{};
   std::shared_ptr<MemSafetyProbe2::tree> *_write = nullptr;
-  uint64_t _loop_acc = std::move(acc);
+  uint64_t _loop_acc = acc;
   const MemSafetyProbe2::mylist<crane::fn<uint64_t(uint64_t)>> *_loop_fs = &fs;
   while (true) {
     if (std::holds_alternative<typename MemSafetyProbe2::mylist<

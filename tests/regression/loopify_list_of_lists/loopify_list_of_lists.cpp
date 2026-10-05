@@ -144,7 +144,7 @@ LoopifyListOfLists::transpose_fuel(uint64_t fuel,
   std::optional<List<List<uint64_t>>> _root{};
   std::shared_ptr<List<List<uint64_t>>> *_write = nullptr;
   List<List<uint64_t>> _loop_ll = ll;
-  uint64_t _loop_fuel = std::move(fuel);
+  uint64_t _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
       auto _value = List<List<uint64_t>>::nil();
@@ -203,7 +203,7 @@ uint64_t LoopifyListOfLists::list_len(const List<uint64_t> &l) {
   {
     const List<uint64_t> &_lc1_l0 = l;
     uint64_t _lc1_acc = UINT64_C(0);
-    uint64_t _lc1_loop_acc = std::move(_lc1_acc);
+    uint64_t _lc1_loop_acc = _lc1_acc;
     const List<uint64_t> *_lc1_loop_l0 = &_lc1_l0;
     while (true) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(

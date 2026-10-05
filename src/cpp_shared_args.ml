@@ -11,7 +11,7 @@ open Minicpp
 let rec free_to_repeat e =
   match e with
   | CPPvar _ | CPPint _ | CPPuint _ | CPPbool _ | CPPfloat _ | CPPstring _
-  | CPPenum_val _ | CPPnullptr | CPPlit _ ->
+  | CPPenum_val _ | CPPnullptr | CPPnumeral _ ->
     true
   | CPPderef e | CPPget' (e, _, _) | CPPaccess (_, e, _) -> free_to_repeat e
   | _ -> false

@@ -277,8 +277,8 @@ struct LoopifyCoindColist {
   template <typename T1> static List<T1> to_list(uint64_t fuel, colist<T1> l) {
     std::optional<List<T1>> _root{};
     std::shared_ptr<List<T1>> *_write = nullptr;
-    colist<T1> _loop_l = std::move(l);
-    uint64_t _loop_fuel = std::move(fuel);
+    colist<T1> _loop_l = l;
+    uint64_t _loop_fuel = fuel;
     while (true) {
       if (_loop_fuel <= 0) {
         auto _value = List<T1>::nil();

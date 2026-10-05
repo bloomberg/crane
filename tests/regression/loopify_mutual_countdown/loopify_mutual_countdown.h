@@ -2,7 +2,6 @@
 #define INCLUDED_LOOPIFY_MUTUAL_COUNTDOWN
 
 #include <cstdint>
-#include <utility>
 
 struct LoopifyMutualCountdown {
   /// Loopification handles many self-recursive functions, but this probes a

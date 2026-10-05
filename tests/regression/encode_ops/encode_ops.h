@@ -238,22 +238,20 @@ struct EncodeOps {
       } else if (std::holds_alternative<typename instruction1::FIM>(
                      this->v())) {
         const auto &[a0, a1] = std::get<typename instruction1::FIM>(this->v());
-        auto &&_once1 = (UINT64_C(2) ? a0 % UINT64_C(2) : a0);
+        auto &&_once1 = (a0 % UINT64_C(2));
         return std::make_pair(
             (UINT64_C(32) + (((a0 - _once1) > a0 ? 0 : (a0 - _once1)))),
-            (UINT64_C(256) ? a1 % UINT64_C(256) : a1));
+            (a1 % UINT64_C(256)));
       } else if (std::holds_alternative<typename instruction1::JUN>(
                      this->v())) {
         const auto &[a0] = std::get<typename instruction1::JUN>(this->v());
-        return std::make_pair(
-            (UINT64_C(64) + (UINT64_C(256) ? a0 / UINT64_C(256) : 0)),
-            (UINT64_C(256) ? a0 % UINT64_C(256) : a0));
+        return std::make_pair((UINT64_C(64) + (a0 / UINT64_C(256))),
+                              (a0 % UINT64_C(256)));
       } else if (std::holds_alternative<typename instruction1::LDM1>(
                      this->v())) {
         const auto &[a0] = std::get<typename instruction1::LDM1>(this->v());
-        return std::make_pair(
-            (UINT64_C(208) + (UINT64_C(16) ? a0 % UINT64_C(16) : a0)),
-            UINT64_C(0));
+        return std::make_pair((UINT64_C(208) + (a0 % UINT64_C(16))),
+                              UINT64_C(0));
       } else if (std::holds_alternative<typename instruction1::NOP1>(
                      this->v())) {
         return std::make_pair(UINT64_C(0), UINT64_C(0));
@@ -412,8 +410,7 @@ struct EncodeOps {
         return std::make_pair(UINT64_C(0), UINT64_C(0));
       } else {
         const auto &[a0] = std::get<typename instruction2::LDM2>(this->v());
-        return std::make_pair(UINT64_C(13),
-                              (UINT64_C(16) ? a0 % UINT64_C(16) : a0));
+        return std::make_pair(UINT64_C(13), (a0 % UINT64_C(16)));
       }
     }
 
@@ -480,9 +477,8 @@ struct EncodeOps {
         return std::make_pair(UINT64_C(0), UINT64_C(0));
       } else {
         const auto &[a0] = std::get<typename instruction3::LDM3>(this->v());
-        return std::make_pair(((UINT64_C(13) * UINT64_C(16)) +
-                               (UINT64_C(16) ? a0 % UINT64_C(16) : a0)),
-                              UINT64_C(0));
+        return std::make_pair(
+            ((UINT64_C(13) * UINT64_C(16)) + (a0 % UINT64_C(16))), UINT64_C(0));
       }
     }
 

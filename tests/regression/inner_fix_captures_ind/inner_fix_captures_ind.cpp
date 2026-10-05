@@ -79,7 +79,7 @@ uint64_t InnerFixCapturesInd::outer(
       _result = ([&]() {
         auto inner = [&](const InnerFixCapturesInd::lst &m,
                          uint64_t a) -> uint64_t {
-          uint64_t _loop_a = std::move(a);
+          uint64_t _loop_a = a;
           const InnerFixCapturesInd::lst *_loop_m = &m;
           while (true) {
             if (std::holds_alternative<typename InnerFixCapturesInd::lst::Nil>(
@@ -104,7 +104,7 @@ uint64_t InnerFixCapturesInd::outer(
 InnerFixCapturesInd::lst InnerFixCapturesInd::mk(uint64_t n) {
   std::optional<InnerFixCapturesInd::lst> _root{};
   std::shared_ptr<InnerFixCapturesInd::lst> *_write = nullptr;
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
       auto _value = lst::nil();

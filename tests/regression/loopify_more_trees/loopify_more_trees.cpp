@@ -675,7 +675,7 @@ LoopifyMoreTrees::tree_levels_fuel(uint64_t fuel,
   std::optional<List<List<uint64_t>>> _root{};
   std::shared_ptr<List<List<uint64_t>>> *_write = nullptr;
   List<LoopifyMoreTrees::tree> _loop_level = level;
-  uint64_t _loop_fuel = std::move(fuel);
+  uint64_t _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
       auto _value = List<List<uint64_t>>::nil();

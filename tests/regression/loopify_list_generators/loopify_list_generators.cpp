@@ -57,8 +57,8 @@ List<uint64_t> LoopifyListGenerators::cycle(uint64_t n,
 List<uint64_t> LoopifyListGenerators::range(uint64_t start, uint64_t count) {
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
-  uint64_t _loop_count = std::move(count);
-  uint64_t _loop_start = std::move(start);
+  uint64_t _loop_count = count;
+  uint64_t _loop_start = start;
   while (true) {
     if (_loop_count <= 0) {
       auto _value = List<uint64_t>::nil();
@@ -84,7 +84,7 @@ List<uint64_t> LoopifyListGenerators::range(uint64_t start, uint64_t count) {
 List<uint64_t> LoopifyListGenerators::replicate_elem(uint64_t n, uint64_t x) {
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
       auto _value = List<uint64_t>::nil();
@@ -154,7 +154,7 @@ LoopifyListGenerators::enumerate_aux(uint64_t idx, const List<uint64_t> &l) {
   std::optional<List<std::pair<uint64_t, uint64_t>>> _root{};
   std::shared_ptr<List<std::pair<uint64_t, uint64_t>>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_idx = std::move(idx);
+  uint64_t _loop_idx = idx;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
       auto _value = List<std::pair<uint64_t, uint64_t>>::nil();

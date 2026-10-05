@@ -4,7 +4,7 @@ List<uint64_t> LoopifyScans::scanl(uint64_t acc, const List<uint64_t> &l) {
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_acc = std::move(acc);
+  uint64_t _loop_acc = acc;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
       auto _value = List<uint64_t>::cons(_loop_acc, List<uint64_t>::nil());
@@ -32,7 +32,7 @@ List<uint64_t> LoopifyScans::scanl_mult(uint64_t acc, const List<uint64_t> &l) {
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_acc = std::move(acc);
+  uint64_t _loop_acc = acc;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
       auto _value = List<uint64_t>::cons(_loop_acc, List<uint64_t>::nil());
@@ -61,7 +61,7 @@ List<uint64_t> LoopifyScans::running_max(uint64_t current,
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_current = std::move(current);
+  uint64_t _loop_current = current;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
       auto _value = List<uint64_t>::cons(_loop_current, List<uint64_t>::nil());
@@ -96,7 +96,7 @@ List<uint64_t> LoopifyScans::running_min(uint64_t current,
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_current = std::move(current);
+  uint64_t _loop_current = current;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
       auto _value = List<uint64_t>::cons(_loop_current, List<uint64_t>::nil());
@@ -131,7 +131,7 @@ List<uint64_t> LoopifyScans::pairwise_diff(uint64_t prev,
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_prev = std::move(prev);
+  uint64_t _loop_prev = prev;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
       auto _value = List<uint64_t>::nil();
@@ -143,15 +143,14 @@ List<uint64_t> LoopifyScans::pairwise_diff(uint64_t prev,
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       uint64_t diff;
       if (a0 < _loop_prev) {
-        uint64_t sub =
-            (((_loop_prev - a0) > _loop_prev ? 0 : (_loop_prev - a0)));
+        uint64_t sub = (_loop_prev - a0);
         if (_loop_prev < sub) {
           diff = UINT64_C(0);
         } else {
           diff = sub;
         }
       } else {
-        uint64_t sub = (((a0 - _loop_prev) > a0 ? 0 : (a0 - _loop_prev)));
+        uint64_t sub = (a0 - _loop_prev);
         if (a0 < sub) {
           diff = UINT64_C(0);
         } else {
@@ -177,7 +176,7 @@ List<uint64_t> LoopifyScans::accumulate_if_even(uint64_t acc,
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_acc = std::move(acc);
+  uint64_t _loop_acc = acc;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
       auto _value = List<uint64_t>::cons(_loop_acc, List<uint64_t>::nil());
@@ -187,7 +186,7 @@ List<uint64_t> LoopifyScans::accumulate_if_even(uint64_t acc,
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
-      if ((UINT64_C(2) ? a0 % UINT64_C(2) : a0) == UINT64_C(0)) {
+      if ((a0 % UINT64_C(2)) == UINT64_C(0)) {
         auto _cell = typename List<uint64_t>::Cons(_loop_acc, nullptr);
         List<uint64_t> &_node =
             (_write ? *(*_write =

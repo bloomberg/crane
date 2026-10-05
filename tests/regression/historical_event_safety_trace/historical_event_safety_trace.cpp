@@ -65,7 +65,7 @@ uint64_t HistoricalEventSafetyTraceCase::stage_from_table(
 }
 
 uint64_t HistoricalEventSafetyTraceCase::hist_witness_stage(uint64_t out) {
-  return (UINT64_C(2) ? out / UINT64_C(2) : 0);
+  return (out / UINT64_C(2));
 }
 
 uint64_t HistoricalEventSafetyTraceCase::hist_witness_ctrl(

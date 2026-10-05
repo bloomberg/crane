@@ -134,7 +134,7 @@ uint64_t MemSafetyProbe8::tree_weighted(
 MemSafetyProbe8::tree MemSafetyProbe8::make_left_spine(uint64_t n) {
   std::optional<MemSafetyProbe8::tree> _root{};
   std::shared_ptr<MemSafetyProbe8::tree> *_write = nullptr;
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
       auto _value = tree::leaf();

@@ -790,7 +790,7 @@ let rec collect_expr (check : call_checker) expr =
    |CPPstd_holds_alternative _
    |CPPdeclval _
    |CPPtype_name _
-   |CPPlit _
+   |CPPnumeral _
    |CPPraw _
    |CPPrt _
    |CPPbool _

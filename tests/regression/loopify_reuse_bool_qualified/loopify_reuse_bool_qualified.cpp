@@ -22,7 +22,7 @@ LoopifyReuseBoolQualified::lst
 LoopifyReuseBoolQualified::build(uint64_t n,
                                  LoopifyReuseBoolQualified::lst acc) {
   LoopifyReuseBoolQualified::lst _loop_acc = std::move(acc);
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
       return _loop_acc;
@@ -40,7 +40,7 @@ LoopifyReuseBoolQualified::sum(const LoopifyReuseBoolQualified::lst &l) {
   {
     const LoopifyReuseBoolQualified::lst &_lc1_l0 = l;
     uint64_t _lc1_acc = UINT64_C(0);
-    uint64_t _lc1_loop_acc = std::move(_lc1_acc);
+    uint64_t _lc1_loop_acc = _lc1_acc;
     const LoopifyReuseBoolQualified::lst *_lc1_loop_l0 = &_lc1_l0;
     while (true) {
       if (std::holds_alternative<typename LoopifyReuseBoolQualified::lst::Nil>(

@@ -166,12 +166,8 @@ template <SEM S> struct Make {
     const auto &[x0, a1] = e;
     const auto &[a, _x] = x0;
     const auto &[f, _x0] = a1;
-    if (crane::any_cast<bool>(
-            crane::any_cast<crane::fn<crane::obj(crane::obj)>>(f)(arg(a)))) {
-      return true;
-    } else {
-      return false;
-    }
+    return crane::any_cast<bool>(
+        crane::any_cast<crane::fn<crane::obj(crane::obj)>>(f)(arg(a)));
   }
 };
 

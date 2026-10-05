@@ -344,7 +344,7 @@ struct STMonadTests {
       auto fib_loop = [](uint64_t k, std::shared_ptr<uint64_t> x0,
                          std::shared_ptr<uint64_t> y0, uint64_t,
                          uint64_t) -> uint64_t {
-        uint64_t _loop_k = std::move(k);
+        uint64_t _loop_k = k;
         while (true) {
           if (_loop_k <= 0) {
             return *x0;

@@ -6,7 +6,7 @@ uint64_t LoopifyDecltype::count_true(const List<bool> &xs) {
   {
     const List<bool> &_lc1_l = xs;
     uint64_t _lc1_acc = UINT64_C(0);
-    uint64_t _lc1_loop_acc = std::move(_lc1_acc);
+    uint64_t _lc1_loop_acc = _lc1_acc;
     const List<bool> *_lc1_loop_l = &_lc1_l;
     while (true) {
       if (std::holds_alternative<typename List<bool>::Nil>(_lc1_loop_l->v())) {
@@ -25,7 +25,7 @@ uint64_t LoopifyDecltype::sum_flagged(const List<LoopifyDecltype::item> &xs) {
   {
     const List<LoopifyDecltype::item> &_lc1_l = xs;
     uint64_t _lc1_acc = UINT64_C(0);
-    uint64_t _lc1_loop_acc = std::move(_lc1_acc);
+    uint64_t _lc1_loop_acc = _lc1_acc;
     const List<LoopifyDecltype::item> *_lc1_loop_l = &_lc1_l;
     while (true) {
       if (std::holds_alternative<typename List<LoopifyDecltype::item>::Nil>(

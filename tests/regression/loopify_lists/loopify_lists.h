@@ -287,7 +287,7 @@ struct LoopifyLists {
   template <typename T1> static list<T1> replicate(uint64_t n, const T1 &x) {
     std::optional<list<T1>> _root{};
     std::shared_ptr<list<T1>> *_write = nullptr;
-    uint64_t _loop_n = std::move(n);
+    uint64_t _loop_n = n;
     while (true) {
       if (_loop_n <= 0) {
         auto _value = list<T1>::nil();
@@ -682,7 +682,7 @@ struct LoopifyLists {
                                       uint64_t fuel) {
     std::optional<list<list<T1>>> _root{};
     std::shared_ptr<list<list<T1>>> *_write = nullptr;
-    uint64_t _loop_fuel = std::move(fuel);
+    uint64_t _loop_fuel = fuel;
     list<T1> _loop_l = l;
     while (true) {
       if (_loop_fuel <= 0) {
@@ -739,7 +739,7 @@ struct LoopifyLists {
         };
         auto drop0 = [](uint64_t k, list<T1> lst) -> list<T1> {
           list<T1> _loop_lst = std::move(lst);
-          uint64_t _loop_k = std::move(k);
+          uint64_t _loop_k = k;
           while (true) {
             if (_loop_k <= 0) {
               return _loop_lst;
@@ -937,7 +937,7 @@ struct LoopifyLists {
     std::shared_ptr<list<std::pair<T1, T1>>> *_write = nullptr;
     list<T1> _loop_l2 = l2;
     list<T1> _loop_l1 = l1;
-    uint64_t _loop_fuel = std::move(fuel);
+    uint64_t _loop_fuel = fuel;
     while (true) {
       if (_loop_fuel <= 0) {
         auto _value = list<std::pair<T1, T1>>::nil();
@@ -1162,7 +1162,7 @@ struct LoopifyLists {
     std::optional<list<list<T1>>> _root{};
     std::shared_ptr<list<list<T1>>> *_write = nullptr;
     list<list<T1>> _loop_m = m;
-    uint64_t _loop_fuel = std::move(fuel);
+    uint64_t _loop_fuel = fuel;
     while (true) {
       if (_loop_fuel <= 0) {
         auto _value = list<list<T1>>::nil();
@@ -1416,7 +1416,7 @@ struct LoopifyLists {
                                          uint64_t i) {
     std::optional<list<uint64_t>> _root{};
     std::shared_ptr<list<uint64_t>> *_write = nullptr;
-    uint64_t _loop_i = std::move(i);
+    uint64_t _loop_i = i;
     const list<uint64_t> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename list<uint64_t>::Nil>(_loop_l->v())) {

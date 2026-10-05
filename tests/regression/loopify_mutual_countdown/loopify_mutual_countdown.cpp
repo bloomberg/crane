@@ -7,7 +7,7 @@
 /// recursive C++ calls instead of a loop, so a deep countdown overflows the C++
 /// stack.
 bool LoopifyMutualCountdown::even_countdown(uint64_t n) {
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
       return true;
@@ -25,7 +25,7 @@ bool LoopifyMutualCountdown::even_countdown(uint64_t n) {
 }
 
 bool LoopifyMutualCountdown::odd_countdown(uint64_t n) {
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
       return false;

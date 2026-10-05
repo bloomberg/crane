@@ -1,7 +1,7 @@
 #include "loopify_gap_mutual3.h"
 
 uint64_t LoopifyGapMutual3::rot_a(uint64_t n) {
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
       return UINT64_C(0);
@@ -25,7 +25,7 @@ uint64_t LoopifyGapMutual3::rot_a(uint64_t n) {
 }
 
 uint64_t LoopifyGapMutual3::rot_b(uint64_t n) {
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
       return UINT64_C(1);
@@ -49,7 +49,7 @@ uint64_t LoopifyGapMutual3::rot_b(uint64_t n) {
 }
 
 uint64_t LoopifyGapMutual3::rot_c(uint64_t n) {
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
       return UINT64_C(2);

@@ -380,6 +380,13 @@ and cpp_binop =
   | Bneq  (** [!=] *)
   | Band  (** [&&] *)
   | Bor  (** [||] *)
+  | Bsub
+      (** [-], [/] and [%] on an unsigned integer type of at least [int]'s
+          width, where no promotion intervenes: the language's own
+          arithmetic, written where a declared meaning shows a mapping's
+          guard cannot fire ({!Cpp_simplify}). *)
+  | Bdiv
+  | Bmod
   | Bassign
       (** [=] in expression position -- a for-loop step, a comma expression.
           An assignment in statement position is an {!Sassign_expr}. *)
@@ -544,21 +551,22 @@ and cpp_expr =
   | CPPtype_name of cpp_type
       (** A type named where an expression is expected: the head of an
           aggregate initialisation, [typename T::Ctor{...}]. *)
-  | CPPlit of cpp_type * string
-      (** A literal rendered verbatim, at the type it has.
+  | CPPnumeral of GlobRef.t * Z.t
+      (** The numeral [n] of an inductive with a [Crane Extract Numeral]
+          format: its type is the inductive, and its spelling the format
+          applied to [n] ([UINT64_C(1)]), written by the printer.
 
           Distinct from {!CPPraw}, which is an arbitrary snippet whose type
-          nothing knows: a literal is precisely the case where the producer
-          does know -- a numeral mapping renders [UINT64_C(1)] through a
-          format string it holds alongside the C++ type the numeral inductive
-          extracts to.  Spelling the value but dropping the type left
+          nothing knows: here both the type and the value are known, and a
+          pass may ask either -- whether a divisor is nonzero, say -- without
+          reading C++ text.  Spelling the value but dropping the type left
           consumers to guess, and {!Loopify} guessed
           [std::decay_t<decltype(UINT64_C(1))>]. *)
   | CPPraw of string
       (** Raw C++ expression code, from a user-supplied extraction template or
           a snippet Crane assembles as text.  A reference to the Crane runtime
           is a {!CPPrt}, not one of these.  A literal belongs in a
-          {!CPPlit}. *)
+          {!CPPnumeral}. *)
   | CPPrt of Crane_rt.helper
       (** A Crane runtime helper, named rather than spelled. *)
   | CPPbinop of cpp_binop * cpp_expr * cpp_expr
@@ -1520,6 +1528,14 @@ val is_reference_type : cpp_type -> bool
 val free_vars_expr : cpp_expr -> Id.t list
 val free_vars_stmt : cpp_stmt -> Id.t list
 val free_vars_body : cpp_stmt list -> Id.t list
+
+(** Whether evaluating [e] can do nothing but produce its value: a variable,
+    a literal, a constructor or an operator applied to such things.  A mapped
+    constant is not one -- its replacement text may do anything. *)
+val pure_expr : cpp_expr -> bool
+
+(** The variables [stmts] assign to after their declaration, at any depth. *)
+val assigned_vars : cpp_stmt list -> Id.Set.t
 
 (** [rename_ids f stmts] applies [f] to every identifier [stmts] declare or
     read -- variables, declarations of every kind, match and mapping binders,

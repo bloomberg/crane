@@ -97,7 +97,7 @@ ComprehensivePatterns::make_list(uint64_t n,
   std::optional<List<std::pair<ComprehensivePatterns::S, uint64_t>>> _root{};
   std::shared_ptr<List<std::pair<ComprehensivePatterns::S, uint64_t>>> *_write =
       nullptr;
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
       auto _value = List<std::pair<ComprehensivePatterns::S, uint64_t>>::nil();
@@ -306,7 +306,7 @@ ComprehensivePatterns::repeat_r2(uint64_t n,
   std::shared_ptr<
       List<std::pair<ComprehensivePatterns::R2, ComprehensivePatterns::R1>>>
       *_write = nullptr;
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
       auto _value = List<std::pair<ComprehensivePatterns::R2,
@@ -475,7 +475,7 @@ ComprehensivePatterns::repeat_pair(uint64_t n,
   std::optional<List<std::pair<ComprehensivePatterns::R, uint64_t>>> _root{};
   std::shared_ptr<List<std::pair<ComprehensivePatterns::R, uint64_t>>> *_write =
       nullptr;
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
       auto _value = List<std::pair<ComprehensivePatterns::R, uint64_t>>::nil();
@@ -706,8 +706,8 @@ uint64_t ComprehensivePatterns::sum_proj(uint64_t n,
   {
     uint64_t _lc1_l = n;
     uint64_t _lc1_acc = UINT64_C(0);
-    uint64_t _lc1_loop_acc = std::move(_lc1_acc);
-    uint64_t _lc1_loop_l = std::move(_lc1_l);
+    uint64_t _lc1_loop_acc = _lc1_acc;
+    uint64_t _lc1_loop_l = _lc1_l;
     while (true) {
       if (_lc1_loop_l <= 0) {
         return _lc1_loop_acc;
@@ -935,8 +935,8 @@ uint64_t ComprehensivePatterns::sum_values(uint64_t n,
   {
     uint64_t _lc1_l = n;
     uint64_t _lc1_acc = UINT64_C(0);
-    uint64_t _lc1_loop_acc = std::move(_lc1_acc);
-    uint64_t _lc1_loop_l = std::move(_lc1_l);
+    uint64_t _lc1_loop_acc = _lc1_acc;
+    uint64_t _lc1_loop_l = _lc1_l;
     while (true) {
       if (_lc1_loop_l <= 0) {
         return _lc1_loop_acc;

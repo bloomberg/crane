@@ -56,7 +56,7 @@ uint64_t LoopifyMatchArg::my_length(const List<LoopifyMatchArg::Cell> &xs) {
   {
     const List<LoopifyMatchArg::Cell> &_lc1_l = xs;
     uint64_t _lc1_acc = UINT64_C(0);
-    uint64_t _lc1_loop_acc = std::move(_lc1_acc);
+    uint64_t _lc1_loop_acc = _lc1_acc;
     const List<LoopifyMatchArg::Cell> *_lc1_loop_l = &_lc1_l;
     while (true) {
       if (std::holds_alternative<typename List<LoopifyMatchArg::Cell>::Nil>(

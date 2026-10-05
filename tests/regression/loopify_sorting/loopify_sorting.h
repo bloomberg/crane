@@ -237,7 +237,7 @@ struct LoopifySorting {
     std::shared_ptr<List<uint64_t>> *_write = nullptr;
     List<uint64_t> _loop_l2 = std::move(l2);
     List<uint64_t> _loop_l1 = std::move(l1);
-    uint64_t _loop_fuel = std::move(fuel);
+    uint64_t _loop_fuel = fuel;
     while (true) {
       if (_loop_fuel <= 0) {
         auto _value = List<uint64_t>::nil();

@@ -150,7 +150,7 @@ MemSafetyProbe14::tree_level_fns(
 MemSafetyProbe14::tree MemSafetyProbe14::make_balanced(uint64_t n) {
   std::optional<MemSafetyProbe14::tree> _root{};
   std::shared_ptr<MemSafetyProbe14::tree> *_write = nullptr;
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
       auto _value = tree::leaf();

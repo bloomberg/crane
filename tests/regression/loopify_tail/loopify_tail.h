@@ -204,7 +204,7 @@ struct LoopifyTail {
   template <typename T1>
   static uint64_t length_acc(uint64_t acc, const list<T1> &l) {
     const list<T1> *_loop_l = &l;
-    uint64_t _loop_acc = std::move(acc);
+    uint64_t _loop_acc = acc;
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
         return _loop_acc;

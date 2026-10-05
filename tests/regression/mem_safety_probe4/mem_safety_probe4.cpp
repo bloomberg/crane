@@ -254,7 +254,7 @@ uint64_t MemSafetyProbe4::mysum(const MemSafetyProbe4::mylist<uint64_t> &l) {
   {
     const MemSafetyProbe4::mylist<uint64_t> &_lc1_l0 = l;
     uint64_t _lc1_acc = UINT64_C(0);
-    uint64_t _lc1_loop_acc = std::move(_lc1_acc);
+    uint64_t _lc1_loop_acc = _lc1_acc;
     const MemSafetyProbe4::mylist<uint64_t> *_lc1_loop_l0 = &_lc1_l0;
     while (true) {
       if (std::holds_alternative<
@@ -325,7 +325,7 @@ uint64_t MemSafetyProbe4::process_list(
 /// TEST 7: Nested recursion with closure capture across calls.
 uint64_t MemSafetyProbe4::nested_apply(
     const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> &l, uint64_t base) {
-  uint64_t _loop_base = std::move(base);
+  uint64_t _loop_base = base;
   const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<

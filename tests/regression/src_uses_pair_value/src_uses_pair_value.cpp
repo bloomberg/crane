@@ -7,7 +7,7 @@ uint64_t SrcUsesPairValue::get_reg(const SrcUsesPairValue::state &s,
 
 uint64_t SrcUsesPairValue::get_reg_pair(const SrcUsesPairValue::state &s,
                                         uint64_t r) {
-  auto &&_once1 = (UINT64_C(2) ? r % UINT64_C(2) : r);
+  auto &&_once1 = (r % UINT64_C(2));
   uint64_t base = (((r - _once1) > r ? 0 : (r - _once1)));
   return ((get_reg(s, base) * UINT64_C(16)) + get_reg(s, (base + UINT64_C(1))));
 }
@@ -15,8 +15,7 @@ uint64_t SrcUsesPairValue::get_reg_pair(const SrcUsesPairValue::state &s,
 SrcUsesPairValue::state
 SrcUsesPairValue::execute_src(const SrcUsesPairValue::state &s, uint64_t r) {
   uint64_t pair_val = get_reg_pair(s, r);
-  uint64_t hi = (UINT64_C(16) ? pair_val / UINT64_C(16) : 0);
-  return state{s.regs, hi, (UINT64_C(4) ? hi / UINT64_C(4) : 0),
-               (UINT64_C(4) ? hi % UINT64_C(4) : hi),
-               (UINT64_C(16) ? pair_val % UINT64_C(16) : pair_val)};
+  uint64_t hi = (pair_val / UINT64_C(16));
+  return state{s.regs, hi, (hi / UINT64_C(4)), (hi % UINT64_C(4)),
+               (pair_val % UINT64_C(16))};
 }

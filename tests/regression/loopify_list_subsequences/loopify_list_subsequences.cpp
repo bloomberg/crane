@@ -199,7 +199,7 @@ uint64_t LoopifyListSubsequences::last_elem(const List<uint64_t> &l) {
 uint64_t LoopifyListSubsequences::nth_elem(uint64_t n,
                                            const List<uint64_t> &l) {
   const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
       return UINT64_C(0);
@@ -210,8 +210,7 @@ uint64_t LoopifyListSubsequences::nth_elem(uint64_t n,
         return a0;
       } else {
         _loop_l = crane_raw(a1);
-        _loop_n =
-            (((_loop_n - UINT64_C(1)) > _loop_n ? 0 : (_loop_n - UINT64_C(1))));
+        _loop_n = (_loop_n - UINT64_C(1));
       }
     }
   }

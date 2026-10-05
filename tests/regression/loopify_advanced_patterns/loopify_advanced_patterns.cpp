@@ -4,7 +4,7 @@ uint64_t LoopifyAdvancedPatterns::len_impl(const List<uint64_t> &l) {
   {
     const List<uint64_t> &_lc1_l0 = l;
     uint64_t _lc1_acc = UINT64_C(0);
-    uint64_t _lc1_loop_acc = std::move(_lc1_acc);
+    uint64_t _lc1_loop_acc = _lc1_acc;
     const List<uint64_t> *_lc1_loop_l0 = &_lc1_l0;
     while (true) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(
@@ -229,7 +229,7 @@ uint64_t LoopifyAdvancedPatterns::nested_pattern(
 uint64_t LoopifyAdvancedPatterns::guard_accum(uint64_t acc,
                                               const List<uint64_t> &l) {
   const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_acc = std::move(acc);
+  uint64_t _loop_acc = acc;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
       return _loop_acc;
@@ -261,7 +261,7 @@ List<uint64_t> LoopifyAdvancedPatterns::cons_computed(uint64_t n,
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
       auto _value = List<uint64_t>::nil();
@@ -421,7 +421,7 @@ List<uint64_t> LoopifyAdvancedPatterns::replace_at(uint64_t idx, uint64_t value,
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_idx = std::move(idx);
+  uint64_t _loop_idx = idx;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
       auto _value = List<uint64_t>::nil();
@@ -445,9 +445,7 @@ List<uint64_t> LoopifyAdvancedPatterns::replace_at(uint64_t idx, uint64_t value,
                     : _root.emplace(std::move(_cell)));
         _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
         _loop_l = crane_raw(a1);
-        _loop_idx = (((_loop_idx - UINT64_C(1)) > _loop_idx
-                          ? 0
-                          : (_loop_idx - UINT64_C(1))));
+        _loop_idx = (_loop_idx - UINT64_C(1));
         continue;
       }
     }

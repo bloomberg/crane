@@ -2,7 +2,7 @@
 
 uint64_t LoopifyListAccess::nth(uint64_t n, const List<uint64_t> &l) {
   const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
       return UINT64_C(0);
@@ -13,8 +13,7 @@ uint64_t LoopifyListAccess::nth(uint64_t n, const List<uint64_t> &l) {
         return a0;
       } else {
         _loop_l = crane_raw(a1);
-        _loop_n =
-            (((_loop_n - UINT64_C(1)) > _loop_n ? 0 : (_loop_n - UINT64_C(1))));
+        _loop_n = (_loop_n - UINT64_C(1));
       }
     }
   }
@@ -40,7 +39,7 @@ uint64_t LoopifyListAccess::last(const List<uint64_t> &l) {
 
 uint64_t LoopifyListAccess::index_of_aux(uint64_t x, const List<uint64_t> &l,
                                          uint64_t idx) {
-  uint64_t _loop_idx = std::move(idx);
+  uint64_t _loop_idx = idx;
   const List<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
@@ -182,7 +181,7 @@ uint64_t LoopifyListAccess::count(
 bool LoopifyListAccess::elem_at_eq(uint64_t idx, uint64_t val,
                                    const List<uint64_t> &l) {
   const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_idx = std::move(idx);
+  uint64_t _loop_idx = idx;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
       return false;
@@ -193,9 +192,7 @@ bool LoopifyListAccess::elem_at_eq(uint64_t idx, uint64_t val,
         return a0 == val;
       } else {
         _loop_l = crane_raw(a1);
-        _loop_idx = (((_loop_idx - UINT64_C(1)) > _loop_idx
-                          ? 0
-                          : (_loop_idx - UINT64_C(1))));
+        _loop_idx = (_loop_idx - UINT64_C(1));
       }
     }
   }
@@ -204,7 +201,7 @@ bool LoopifyListAccess::elem_at_eq(uint64_t idx, uint64_t val,
 uint64_t LoopifyListAccess::nth_default(uint64_t n, uint64_t default0,
                                         const List<uint64_t> &l) {
   const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
       return default0;
@@ -215,8 +212,7 @@ uint64_t LoopifyListAccess::nth_default(uint64_t n, uint64_t default0,
         return a0;
       } else {
         _loop_l = crane_raw(a1);
-        _loop_n =
-            (((_loop_n - UINT64_C(1)) > _loop_n ? 0 : (_loop_n - UINT64_C(1))));
+        _loop_n = (_loop_n - UINT64_C(1));
       }
     }
   }

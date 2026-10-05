@@ -41,7 +41,7 @@ uint64_t NestedFixLoopify::outer(
       _result = ([&]() {
         auto inner = [&](const NestedFixLoopify::lst &m,
                          uint64_t a) -> uint64_t {
-          uint64_t _loop_a = std::move(a);
+          uint64_t _loop_a = a;
           const NestedFixLoopify::lst *_loop_m = &m;
           while (true) {
             if (std::holds_alternative<typename NestedFixLoopify::lst::Nil>(
@@ -65,7 +65,7 @@ uint64_t NestedFixLoopify::outer(
 NestedFixLoopify::lst NestedFixLoopify::mk(uint64_t n) {
   std::optional<NestedFixLoopify::lst> _root{};
   std::shared_ptr<NestedFixLoopify::lst> *_write = nullptr;
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
       auto _value = lst::nil();

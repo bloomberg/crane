@@ -1,8 +1,6 @@
 #include "isz_ops.h"
 
-uint64_t IszOps::nibble_of_nat(uint64_t n) {
-  return (UINT64_C(16) ? n % UINT64_C(16) : n);
-}
+uint64_t IszOps::nibble_of_nat(uint64_t n) { return (n % UINT64_C(16)); }
 
 uint64_t IszOps::get_reg(const IszOps::state &s, uint64_t r) {
   return ListDef::template nth<uint64_t>(r, s.regs, UINT64_C(0));

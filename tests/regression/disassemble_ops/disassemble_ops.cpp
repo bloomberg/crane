@@ -1,10 +1,10 @@
 #include "disassemble_ops.h"
 
 DisassembleOps::instruction DisassembleOps::decode1(uint64_t b1, uint64_t b2) {
-  if ((UINT64_C(2) ? b1 % UINT64_C(2) : b1) == UINT64_C(0)) {
+  if ((b1 % UINT64_C(2)) == UINT64_C(0)) {
     return instruction::nop2();
   } else {
-    return instruction::ldm2((UINT64_C(16) ? b2 % UINT64_C(16) : b2));
+    return instruction::ldm2((b2 % UINT64_C(16)));
   }
 }
 
@@ -46,7 +46,7 @@ DisassembleOps::instruction DisassembleOps::decode2(uint64_t b1, uint64_t b2) {
   if (b1 == UINT64_C(0)) {
     return instruction::nop();
   } else {
-    return instruction::ldm((UINT64_C(16) ? b2 % UINT64_C(16) : b2));
+    return instruction::ldm((b2 % UINT64_C(16)));
   }
 }
 
@@ -74,7 +74,7 @@ DisassembleOps::instruction DisassembleOps::decode3(uint64_t b1, uint64_t b2) {
   if (b1 == UINT64_C(0)) {
     return instruction::nop();
   } else {
-    return instruction::ldm((UINT64_C(16) ? b2 % UINT64_C(16) : b2));
+    return instruction::ldm((b2 % UINT64_C(16)));
   }
 }
 
@@ -102,7 +102,7 @@ DisassembleOps::instruction DisassembleOps::decode4(uint64_t b1, uint64_t b2) {
   if (b1 == UINT64_C(0)) {
     return instruction::nop();
   } else {
-    return instruction::ldm((UINT64_C(16) ? b2 % UINT64_C(16) : b2));
+    return instruction::ldm((b2 % UINT64_C(16)));
   }
 }
 

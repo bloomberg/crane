@@ -658,7 +658,7 @@ template <typename K, typename V> struct SkipList {
               bsl::shared_ptr<SkipNode<T1, T2>> curr, const T1 &target,
               unsigned int level) {
     bsl::shared_ptr<SkipNode<T1, T2>> _loop_curr = bsl::move(curr);
-    unsigned int _loop_fuel = bsl::move(fuel);
+    unsigned int _loop_fuel = fuel;
     while (true) {
       if (_loop_fuel <= 0) {
         return _loop_curr;
@@ -692,7 +692,7 @@ template <typename K, typename V> struct SkipList {
   static SkipPath<T1, T2>
   findPath_aux(F0 &&ltK, bsl::shared_ptr<SkipNode<T1, T2>> curr,
                const T1 &target, unsigned int level, SkipPath<T1, T2> path) {
-    unsigned int _loop_level = bsl::move(level);
+    unsigned int _loop_level = level;
     bsl::shared_ptr<SkipNode<T1, T2>> _loop_curr = bsl::move(curr);
     while (true) {
       bsl::shared_ptr<SkipNode<T1, T2>> pred =
@@ -726,7 +726,7 @@ template <typename K, typename V> struct SkipList {
   static void
   linkNode_aux(SkipPath<T1, T2> path, bsl::shared_ptr<SkipNode<T1, T2>>,
                bsl::shared_ptr<SkipNode<T1, T2>> newNode, unsigned int level) {
-    unsigned int _loop_level = bsl::move(level);
+    unsigned int _loop_level = level;
     while (true) {
       bsl::shared_ptr<SkipNode<T1, T2>> pred = path.get(_loop_level);
       SkipList<int, int>::template linkAtLevel<T1, T2>(bsl::move(pred), newNode,
@@ -744,7 +744,7 @@ template <typename K, typename V> struct SkipList {
   static void extendPath_aux(SkipPath<T1, T2> path,
                              bsl::shared_ptr<SkipNode<T1, T2>> head,
                              unsigned int level, unsigned int maxLevel) {
-    unsigned int _loop_level = bsl::move(level);
+    unsigned int _loop_level = level;
     while (true) {
       if (_loop_level <= 0) {
         path.set(0u, head);
@@ -798,7 +798,7 @@ template <typename K, typename V> struct SkipList {
   static void unlinkNode_aux(SkipPath<T1, T2> path,
                              bsl::shared_ptr<SkipNode<T1, T2>> target,
                              unsigned int level) {
-    unsigned int _loop_level = bsl::move(level);
+    unsigned int _loop_level = level;
     while (true) {
       bsl::shared_ptr<SkipNode<T1, T2>> pred = path.get(_loop_level);
       SkipList<int, int>::template unlinkAtLevel<T1, T2>(bsl::move(pred),
@@ -824,7 +824,7 @@ template <typename K, typename V> struct SkipList {
   static bool findKey_aux(F0 &&ltK, F1 &&eqK,
                           bsl::shared_ptr<SkipNode<T1, T2>> curr,
                           const T1 &target, unsigned int level) {
-    unsigned int _loop_level = bsl::move(level);
+    unsigned int _loop_level = level;
     bsl::shared_ptr<SkipNode<T1, T2>> _loop_curr = bsl::move(curr);
     while (true) {
       bsl::shared_ptr<SkipNode<T1, T2>> pred =
@@ -852,9 +852,9 @@ template <typename K, typename V> struct SkipList {
   length_aux(unsigned int fuel,
              const bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>> &node,
              unsigned int acc) {
-    unsigned int _loop_acc = bsl::move(acc);
+    unsigned int _loop_acc = acc;
     bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>> _loop_node = node;
-    unsigned int _loop_fuel = bsl::move(fuel);
+    unsigned int _loop_fuel = fuel;
     while (true) {
       if (_loop_fuel <= 0) {
         return _loop_acc;
@@ -877,7 +877,7 @@ template <typename K, typename V> struct SkipList {
   static bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>>
   findLast_aux(unsigned int fuel, bsl::shared_ptr<SkipNode<T1, T2>> curr) {
     bsl::shared_ptr<SkipNode<T1, T2>> _loop_curr = bsl::move(curr);
-    unsigned int _loop_fuel = bsl::move(fuel);
+    unsigned int _loop_fuel = fuel;
     while (true) {
       if (_loop_fuel <= 0) {
         return bsl::make_optional<bsl::shared_ptr<SkipNode<T1, T2>>>(
@@ -902,7 +902,7 @@ template <typename K, typename V> struct SkipList {
   static void unlinkFirstFromHead(bsl::shared_ptr<SkipNode<T1, T2>> head,
                                   bsl::shared_ptr<SkipNode<T1, T2>> node,
                                   unsigned int lvl) {
-    unsigned int _loop_lvl = bsl::move(lvl);
+    unsigned int _loop_lvl = lvl;
     while (true) {
       bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>> nodeNext =
           ptr_to_opt(stm::readTVar<bsl::shared_ptr<SkipNode<T1, T2>>>(
@@ -922,7 +922,7 @@ template <typename K, typename V> struct SkipList {
   static void unlinkNodeAtAllLevels(bsl::shared_ptr<SkipNode<T1, T2>> head,
                                     bsl::shared_ptr<SkipNode<T1, T2>> node,
                                     unsigned int lvl) {
-    unsigned int _loop_lvl = bsl::move(lvl);
+    unsigned int _loop_lvl = lvl;
     while (true) {
       bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>> nodeNext =
           ptr_to_opt(stm::readTVar<bsl::shared_ptr<SkipNode<T1, T2>>>(
@@ -942,8 +942,8 @@ template <typename K, typename V> struct SkipList {
   static unsigned int removeAll_aux(unsigned int fuel,
                                     bsl::shared_ptr<SkipNode<T1, T2>> head,
                                     unsigned int acc) {
-    unsigned int _loop_acc = bsl::move(acc);
-    unsigned int _loop_fuel = bsl::move(fuel);
+    unsigned int _loop_acc = acc;
+    unsigned int _loop_fuel = fuel;
     while (true) {
       if (_loop_fuel <= 0) {
         return _loop_acc;
@@ -976,7 +976,7 @@ template <typename K, typename V> struct SkipList {
                bsl::shared_ptr<SkipNode<T1, T2>> curr,
                bsl::shared_ptr<SkipNode<T1, T2>>, const T1 &target) {
     bsl::shared_ptr<SkipNode<T1, T2>> _loop_curr = bsl::move(curr);
-    unsigned int _loop_fuel = bsl::move(fuel);
+    unsigned int _loop_fuel = fuel;
     while (true) {
       if (_loop_fuel <= 0) {
         return bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>>();

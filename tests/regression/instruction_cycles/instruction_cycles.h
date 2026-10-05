@@ -182,12 +182,12 @@ struct InstructionCycles {
     uint64_t cycles_jcn(const state1 &s) const {
       if (std::holds_alternative<typename instruction1::JCN1>(this->v())) {
         const auto &[a0, a1] = std::get<typename instruction1::JCN1>(this->v());
-        uint64_t c1 = (UINT64_C(8) ? a0 / UINT64_C(8) : 0);
-        auto &&_once1 = (UINT64_C(4) ? a0 / UINT64_C(4) : 0);
-        uint64_t c2 = (UINT64_C(2) ? _once1 % UINT64_C(2) : _once1);
-        auto &&_once2 = (UINT64_C(2) ? a0 / UINT64_C(2) : 0);
-        uint64_t c3 = (UINT64_C(2) ? _once2 % UINT64_C(2) : _once2);
-        uint64_t c4 = (UINT64_C(2) ? a0 % UINT64_C(2) : a0);
+        uint64_t c1 = (a0 / UINT64_C(8));
+        auto &&_once1 = (a0 / UINT64_C(4));
+        uint64_t c2 = (_once1 % UINT64_C(2));
+        auto &&_once2 = (a0 / UINT64_C(2));
+        uint64_t c3 = (_once2 % UINT64_C(2));
+        uint64_t c4 = (a0 % UINT64_C(2));
         bool base_cond = ((s.acc1 == UINT64_C(0) && c2 == UINT64_C(1)) ||
                           ((s.carry1 && c3 == UINT64_C(1)) ||
                            (!(s.test_pin1) && c4 == UINT64_C(1))));
@@ -561,8 +561,7 @@ struct InstructionCycles {
     state5 execute5(state5 s) const {
       if (std::holds_alternative<typename instruction5::INC5>(this->v())) {
         auto &&_once1 = (s.acc5 + UINT64_C(1));
-        return state5{(UINT64_C(16) ? _once1 % UINT64_C(16) : _once1), s.carry5,
-                      s.test5};
+        return state5{(_once1 % UINT64_C(16)), s.carry5, s.test5};
       } else {
         return s;
       }
@@ -571,13 +570,11 @@ struct InstructionCycles {
     uint64_t cycles_sum(const state5 &s) const {
       if (std::holds_alternative<typename instruction5::JCN5>(this->v())) {
         const auto &[a0] = std::get<typename instruction5::JCN5>(this->v());
-        if ((UINT64_C(8) ? a0 / UINT64_C(8) : 0) == UINT64_C(1)) {
+        if ((a0 / UINT64_C(8)) == UINT64_C(1)) {
           return UINT64_C(16);
         } else {
           if ((s.acc5 == UINT64_C(0) &&
-               (UINT64_C(2)
-                    ? (UINT64_C(4) ? a0 / UINT64_C(4) : 0) % UINT64_C(2)
-                    : (UINT64_C(4) ? a0 / UINT64_C(4) : 0)) == UINT64_C(1))) {
+               ((a0 / UINT64_C(4)) % UINT64_C(2)) == UINT64_C(1))) {
             return UINT64_C(16);
           } else {
             return UINT64_C(8);

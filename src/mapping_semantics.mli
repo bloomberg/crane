@@ -30,6 +30,9 @@ type unsigned_op =
   | Min
 
 type t =
+  | Boolean
+      (** An inductive [true | false], in that order, stored as a C++ [bool];
+          its match takes the first branch where the scrutinee holds. *)
   | Unsigned_nat of width
       (** An inductive [O | S n] stored as an unsigned integer of [width]
           bits: [O] is [0] and [S] adds one, wrapping. *)
@@ -60,6 +63,9 @@ val unique_declaration : (t -> bool) -> Names.GlobRef.t option
     ["unsigned add 64"], ["ref write 1 2"], ["vector push 0 1"] -- check it
     fits what [r] is, and record it. *)
 val declare : Libnames.qualid -> string -> unit
+
+(** Whether the inductive is declared {!Boolean}. *)
+val is_boolean : Names.inductive -> bool
 
 (** The width the inductive is declared an unsigned integer at
     ({!Unsigned_nat}). *)

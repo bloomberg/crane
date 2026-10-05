@@ -2447,7 +2447,7 @@ struct LoopifyExprVariants {
 template <typename T1> List<T1> ListDef::repeat(const T1 &x, uint64_t n) {
   std::optional<List<T1>> _root{};
   std::shared_ptr<List<T1>> *_write = nullptr;
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
       auto _value = List<T1>::nil();

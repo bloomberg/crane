@@ -105,8 +105,8 @@ struct LoopifyNumericSequences {
 
   template <typename F1>
   static uint64_t church(uint64_t n, F1 &&f, uint64_t x) {
-    uint64_t _loop_x = std::move(x);
-    uint64_t _loop_n = std::move(n);
+    uint64_t _loop_x = x;
+    uint64_t _loop_n = n;
     while (true) {
       if (_loop_n <= 0) {
         return _loop_x;

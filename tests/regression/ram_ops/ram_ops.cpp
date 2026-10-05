@@ -20,8 +20,8 @@ RamOps::ram_reg_main RamOps::get_reg_main(const RamOps::ram_chip_main &ch,
 
 RamOps::ram_reg_main RamOps::upd_main_in_reg(const RamOps::ram_reg_main &rg,
                                              uint64_t i, uint64_t v) {
-  return ram_reg_main{update_nth_main<uint64_t>(
-      i, (UINT64_C(16) ? v % UINT64_C(16) : v), rg.reg_main)};
+  return ram_reg_main{
+      update_nth_main<uint64_t>(i, (v % UINT64_C(16)), rg.reg_main)};
 }
 
 RamOps::ram_chip_main
@@ -75,7 +75,7 @@ RamOps::chip_port RamOps::get_chip_port(const RamOps::bank_port &bk,
 
 RamOps::chip_port RamOps::upd_port_in_chip(const RamOps::chip_port &,
                                            uint64_t v) {
-  return chip_port{(UINT64_C(16) ? v % UINT64_C(16) : v)};
+  return chip_port{(v % UINT64_C(16))};
 }
 
 RamOps::bank_port RamOps::upd_chip_in_bank_port(const RamOps::bank_port &bk,
@@ -126,8 +126,8 @@ RamOps::ram_reg_status RamOps::get_reg_status(const RamOps::ram_chip_status &ch,
 RamOps::ram_reg_status
 RamOps::upd_status_in_reg(const RamOps::ram_reg_status &rg, uint64_t i,
                           uint64_t v) {
-  return ram_reg_status{update_nth_status<uint64_t>(
-      i, (UINT64_C(16) ? v % UINT64_C(16) : v), rg.reg_status)};
+  return ram_reg_status{
+      update_nth_status<uint64_t>(i, (v % UINT64_C(16)), rg.reg_status)};
 }
 
 RamOps::ram_chip_status

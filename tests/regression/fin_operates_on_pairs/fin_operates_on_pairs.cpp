@@ -8,14 +8,12 @@ uint64_t FinOperatesOnPairs::get_reg(const FinOperatesOnPairs::state &s,
 FinOperatesOnPairs::state
 FinOperatesOnPairs::set_reg(const FinOperatesOnPairs::state &s, uint64_t r,
                             uint64_t v) {
-  return state{
-      update_nth<uint64_t>(r, (UINT64_C(16) ? v % UINT64_C(16) : v), s.regs),
-      s.rom};
+  return state{update_nth<uint64_t>(r, (v % UINT64_C(16)), s.regs), s.rom};
 }
 
 uint64_t FinOperatesOnPairs::get_reg_pair(const FinOperatesOnPairs::state &s,
                                           uint64_t r) {
-  auto &&_once1 = (UINT64_C(2) ? r % UINT64_C(2) : r);
+  auto &&_once1 = (r % UINT64_C(2));
   uint64_t base = (((r - _once1) > r ? 0 : (r - _once1)));
   return ((get_reg(s, base) * UINT64_C(16)) + get_reg(s, (base + UINT64_C(1))));
 }
@@ -23,10 +21,10 @@ uint64_t FinOperatesOnPairs::get_reg_pair(const FinOperatesOnPairs::state &s,
 FinOperatesOnPairs::state
 FinOperatesOnPairs::set_reg_pair(const FinOperatesOnPairs::state &s, uint64_t r,
                                  uint64_t v) {
-  auto &&_once1 = (UINT64_C(2) ? r % UINT64_C(2) : r);
+  auto &&_once1 = (r % UINT64_C(2));
   uint64_t base = (((r - _once1) > r ? 0 : (r - _once1)));
-  uint64_t hi = (UINT64_C(16) ? v / UINT64_C(16) : 0);
-  uint64_t lo = (UINT64_C(16) ? v % UINT64_C(16) : v);
+  uint64_t hi = (v / UINT64_C(16));
+  uint64_t lo = (v % UINT64_C(16));
   FinOperatesOnPairs::state s1 = set_reg(s, base, hi);
   return set_reg(std::move(s1), (base + UINT64_C(1)), lo);
 }

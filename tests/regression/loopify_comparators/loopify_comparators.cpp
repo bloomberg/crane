@@ -109,7 +109,7 @@ List<uint64_t> LoopifyComparators::merge_by_fuel(uint64_t fuel,
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   List<uint64_t> _loop_l2 = std::move(l2);
   List<uint64_t> _loop_l1 = std::move(l1);
-  uint64_t _loop_fuel = std::move(fuel);
+  uint64_t _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
       auto _value = List<uint64_t>::nil();
@@ -252,7 +252,7 @@ List<uint64_t> LoopifyComparators::insertion_sort(
 bool LoopifyComparators::is_sorted_fuel(uint64_t fuel,
                                         const List<uint64_t> &l) {
   List<uint64_t> _loop_l = l;
-  uint64_t _loop_fuel = std::move(fuel);
+  uint64_t _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
       return true;

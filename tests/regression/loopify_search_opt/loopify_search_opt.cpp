@@ -49,7 +49,7 @@ List<uint64_t> LoopifySearchOpt::longest_run_fuel(uint64_t fuel,
   const List<uint64_t> *_loop_l = &l;
   List<uint64_t> _loop_best = std::move(best);
   List<uint64_t> _loop_current = std::move(current);
-  uint64_t _loop_fuel = std::move(fuel);
+  uint64_t _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
       return _loop_best;
@@ -323,7 +323,7 @@ std::pair<uint64_t, uint64_t> LoopifySearchOpt::majority(
 bool LoopifySearchOpt::binary_search_fuel(uint64_t fuel, uint64_t target,
                                           const List<uint64_t> &l) {
   List<uint64_t> _loop_l = l;
-  uint64_t _loop_fuel = std::move(fuel);
+  uint64_t _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
       return false;
@@ -348,11 +348,11 @@ bool LoopifySearchOpt::binary_search_fuel(uint64_t fuel, uint64_t target,
             }
           }
         } else {
-          uint64_t mid = (UINT64_C(2) ? len / UINT64_C(2) : 0);
+          uint64_t mid = (len / UINT64_C(2));
           uint64_t mid_val;
           auto nth = [](uint64_t n, const List<uint64_t> &xs) -> uint64_t {
             const List<uint64_t> *_loop_xs = &xs;
-            uint64_t _loop_n = std::move(n);
+            uint64_t _loop_n = n;
             while (true) {
               if (_loop_n <= 0) {
                 if (std::holds_alternative<typename List<uint64_t>::Nil>(
@@ -429,7 +429,7 @@ bool LoopifySearchOpt::binary_search_fuel(uint64_t fuel, uint64_t target,
           List<uint64_t> right;
           auto drop = [](uint64_t n, List<uint64_t> xs) -> List<uint64_t> {
             List<uint64_t> _loop_xs = std::move(xs);
-            uint64_t _loop_n = std::move(n);
+            uint64_t _loop_n = n;
             while (true) {
               if (_loop_n <= 0) {
                 return _loop_xs;

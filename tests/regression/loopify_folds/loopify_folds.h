@@ -137,7 +137,7 @@ struct LoopifyFolds {
     requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &, const uint64_t &>
   static uint64_t fold_left(F0 &&f, uint64_t acc, const List<uint64_t> &l) {
     const List<uint64_t> *_loop_l = &l;
-    uint64_t _loop_acc = std::move(acc);
+    uint64_t _loop_acc = acc;
     while (true) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
         return _loop_acc;
@@ -200,7 +200,7 @@ struct LoopifyFolds {
     std::optional<List<uint64_t>> _root{};
     std::shared_ptr<List<uint64_t>> *_write = nullptr;
     const List<uint64_t> *_loop_l = &l;
-    uint64_t _loop_acc = std::move(acc);
+    uint64_t _loop_acc = acc;
     while (true) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
         auto _value = List<uint64_t>::cons(_loop_acc, List<uint64_t>::nil());
@@ -280,7 +280,7 @@ struct LoopifyFolds {
   template <typename F1>
   static uint64_t foldl1_fuel(uint64_t fuel, F1 &&f, const List<uint64_t> &l) {
     List<uint64_t> _loop_l = l;
-    uint64_t _loop_fuel = std::move(fuel);
+    uint64_t _loop_fuel = fuel;
     while (true) {
       if (_loop_fuel <= 0) {
         return UINT64_C(0);
@@ -411,8 +411,8 @@ struct LoopifyFolds {
   static List<uint64_t> iterate_accum(F0 &&f, uint64_t n, uint64_t x) {
     std::optional<List<uint64_t>> _root{};
     std::shared_ptr<List<uint64_t>> *_write = nullptr;
-    uint64_t _loop_x = std::move(x);
-    uint64_t _loop_n = std::move(n);
+    uint64_t _loop_x = x;
+    uint64_t _loop_n = n;
     while (true) {
       if (_loop_n <= 0) {
         auto _value = List<uint64_t>::nil();
@@ -440,8 +440,8 @@ struct LoopifyFolds {
   static List<uint64_t> unfold_fuel(uint64_t fuel, F1 &&f, uint64_t seed) {
     std::optional<List<uint64_t>> _root{};
     std::shared_ptr<List<uint64_t>> *_write = nullptr;
-    uint64_t _loop_seed = std::move(seed);
-    uint64_t _loop_fuel = std::move(fuel);
+    uint64_t _loop_seed = seed;
+    uint64_t _loop_fuel = fuel;
     while (true) {
       if (_loop_fuel <= 0) {
         auto _value = List<uint64_t>::nil();

@@ -185,7 +185,7 @@ let ty_bool = Tid_external ("bool", [])
     hand their operand's type back. *)
 let binop_yields_bool = function
   | Beq | Bneq | Band | Bor -> true
-  | Bassign -> false
+  | Bsub | Bdiv | Bmod | Bassign -> false
 
 (** The raw-pointer type an owning or raw pointer decays to.  Both
     [crane_raw(x)] and [x.get()] answer this way.  [None] for anything that is
@@ -243,7 +243,7 @@ let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
     ( match infer_saved_type tparams env lhs with
     | Some _ as ty -> ty
     | None -> infer_saved_type tparams env rhs )
-  | CPPlit (ty, _) -> Some (strip_ref_and_const_type ty)
+  | CPPnumeral (r, _) -> Some (Tglob (r, [], []))
   (* A primitive string literal is a [std::string], as its ML type [Tstring]
      converts. *)
   | CPPstring _ -> Some (Tid_external ("std::string", []))

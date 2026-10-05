@@ -303,7 +303,7 @@ struct LoopifyTmc {
   template <typename T1> static list<T1> replicate(uint64_t n, const T1 &x) {
     std::optional<list<T1>> _root{};
     std::shared_ptr<list<T1>> *_write = nullptr;
-    uint64_t _loop_n = std::move(n);
+    uint64_t _loop_n = n;
     while (true) {
       if (_loop_n <= 0) {
         auto _value = list<T1>::nil();

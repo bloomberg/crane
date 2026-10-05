@@ -270,7 +270,7 @@ struct LoopifySequences {
     std::optional<List<List<T1>>> _root{};
     std::shared_ptr<List<List<T1>>> *_write = nullptr;
     List<List<T1>> _loop_ll = ll;
-    uint64_t _loop_fuel = std::move(fuel);
+    uint64_t _loop_fuel = fuel;
     while (true) {
       if (_loop_fuel <= 0) {
         auto _value = List<List<T1>>::nil();
@@ -428,8 +428,8 @@ struct LoopifySequences {
   static List<uint64_t> iterate(F0 &&f, uint64_t n, uint64_t x) {
     std::optional<List<uint64_t>> _root{};
     std::shared_ptr<List<uint64_t>> *_write = nullptr;
-    uint64_t _loop_x = std::move(x);
-    uint64_t _loop_n = std::move(n);
+    uint64_t _loop_x = x;
+    uint64_t _loop_n = n;
     while (true) {
       if (_loop_n <= 0) {
         auto _value = List<uint64_t>::nil();

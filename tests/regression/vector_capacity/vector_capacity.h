@@ -2,7 +2,6 @@
 #define INCLUDED_VECTOR_CAPACITY
 
 #include <cstdint>
-#include <utility>
 #include <variant>
 #include <vector>
 

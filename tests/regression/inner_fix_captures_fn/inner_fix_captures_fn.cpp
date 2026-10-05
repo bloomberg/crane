@@ -3,7 +3,7 @@
 InnerFixCapturesFn::lst InnerFixCapturesFn::mk(uint64_t n) {
   std::optional<InnerFixCapturesFn::lst> _root{};
   std::shared_ptr<InnerFixCapturesFn::lst> *_write = nullptr;
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
       auto _value = lst::nil();

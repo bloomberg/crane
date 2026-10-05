@@ -100,11 +100,7 @@ PromOps::state11 PromOps::execute_wpm11(PromOps::state11 s) {
 
 bool Bool::eqb(bool b1, bool b2) {
   if (b1) {
-    if (b2) {
-      return true;
-    } else {
-      return false;
-    }
+    return b2;
   } else {
     if (b2) {
       return false;

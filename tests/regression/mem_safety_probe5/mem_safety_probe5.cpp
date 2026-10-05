@@ -198,7 +198,7 @@ MemSafetyProbe5::make_tree_list(uint64_t n) {
   std::optional<MemSafetyProbe5::mylist<MemSafetyProbe5::tree>> _root{};
   std::shared_ptr<MemSafetyProbe5::mylist<MemSafetyProbe5::tree>> *_write =
       nullptr;
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
       auto _value = mylist<MemSafetyProbe5::tree>::mynil();

@@ -392,7 +392,7 @@ struct LoopifyPatterns {
     std::shared_ptr<list<uint64_t>> *_write = nullptr;
     list<uint64_t> _loop_l2 = std::move(l2);
     list<uint64_t> _loop_l1 = std::move(l1);
-    uint64_t _loop_fuel = std::move(fuel);
+    uint64_t _loop_fuel = fuel;
     while (true) {
       if (_loop_fuel <= 0) {
         auto _value = std::move(_loop_l1);
@@ -593,7 +593,7 @@ struct LoopifyPatterns {
                                                uint64_t idx) {
     std::optional<list<uint64_t>> _root{};
     std::shared_ptr<list<uint64_t>> *_write = nullptr;
-    uint64_t _loop_idx = std::move(idx);
+    uint64_t _loop_idx = idx;
     const list<uint64_t> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename list<uint64_t>::Nil>(_loop_l->v())) {
