@@ -2275,6 +2275,9 @@ let {Goptions.get = move_last_use} =
 let {Goptions.get = arena_enabled} =
   declare_bool_option_and_ref ~key:["Crane"; "Arena"] ~value:false ()
 
+let {Goptions.get = unit_namespace} =
+  declare_bool_option_and_ref ~key:["Crane"; "Unit"; "Namespace"] ~value:false ()
+
 (* Suffix of a dotted kernel-name-string path: the last [n] '.'-separated
    components. Used as a fallback match key for functor-internal
    registrations below (both arena and, further down, guard-compare). *)

@@ -1435,11 +1435,26 @@ let optimize_struct to_appear struc =
   |> Ml_reduce.structure
   |> Normalize.structure
 
+(** Where a file's declarations live. *)
+type file_scope =
+  | Global
+  | Unit_namespace of string
+      (** In a namespace of their own ([Set Crane Unit Namespace]), every
+          reference staying within it. *)
+  | Module_namespace of string
+      (** Separate extraction: a namespace per module file, and every
+          reference across files qualified. *)
+
+let scope_namespace = function
+  | Global -> None
+  | Unit_namespace ns | Module_namespace ns -> Some ns
+
 (** Renders an entire ML structure to C++ header and implementation files.
     Performs dry run first for renaming, then generates and formats the output.
 *)
-let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
+let print_structure_to_file ?(scope = Global) ?(unit_includes = [])
     (fn, si, mo) dry struc =
+  let namespace = scope_namespace scope in
   Buffer.clear buf;
   let d = descr () in
   (* Empties every per-file cell, the mutual-recursion registry among them,
@@ -1467,9 +1482,9 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   Table.reset_demands ();
   (* In separate extraction, force fully qualified cross-module references
      (e.g. Datatypes::List instead of bare List). *)
-  ( match namespace with
-  | Some _ -> Common.set_force_cross_file_qualification ()
-  | None -> () );
+  ( match scope with
+  | Module_namespace _ -> Common.set_force_cross_file_qualification ()
+  | Global | Unit_namespace _ -> () );
   discover d struc;
   let census_after_discovery = Table.census () in
   (* Both bodies are rendered before either file is opened.  A preamble has to
@@ -1514,10 +1529,12 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
          erased) it just calls [_main()] directly. *)
       ( match Table.get_main_function () with
       | Some (main_name, _ret_ml_ty, struct_qual, needs_run) ->
+        (* [main] is global: it reaches into the file's namespace. *)
         let qualified_name =
-          match struct_qual with
-          | Some sn -> Id.print sn ++ str "::" ++ Id.print main_name
-          | None -> Id.print main_name
+          (match namespace with Some ns -> str (ns ^ "::") | None -> mt ())
+          ++ ( match struct_qual with
+             | Some sn -> Id.print sn ++ str "::" ++ Id.print main_name
+             | None -> Id.print main_name )
         in
         let call =
           if needs_run then
@@ -1783,7 +1800,25 @@ let full_extr_reading opaque_access f (refs, mps) read =
         if source <> "" then
           Doc_comments.set_table (Doc_comments.parse_file source)
       | _ -> () );
-      print_structure_to_file ~unit_includes filenames false struc;
+      let scope =
+        match (Table.unit_namespace (), filenames) with
+        | true, (Some fn, _, _) ->
+          if unit_includes <> [] then
+            CErrors.user_err
+              Pp.(
+                str "Crane Unit Namespace: this unit uses modules another unit \
+                     extracted, whose types live in that unit's namespace; \
+                     extract them in this unit, or unset the option.");
+          let ns = Filename.remove_extension (Filename.basename fn) in
+          let ident_char c = c = '_' || ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || ('0' <= c && c <= '9') in
+          if ns = "" || ('0' <= ns.[0] && ns.[0] <= '9') || not (String.for_all ident_char ns) then
+            CErrors.user_err
+              Pp.(str "Crane Unit Namespace: the output name " ++ quote (str ns)
+                  ++ str " is not a C++ identifier, so it cannot name the unit's namespace.");
+          Unit_namespace ns
+        | _ -> Global
+      in
+      print_structure_to_file ~scope ~unit_includes filenames false struc;
       read refs )
 
 let full_extr opaque_access f refs =
@@ -2029,7 +2064,7 @@ let separate_extraction ~opaque_access lr =
             match Hashtbl.find_opt topo_index mp' with
             | Some j -> j < current_idx
             | None -> true);
-        print_structure_to_file ~namespace:(Some ns) (module_filename mp) false [e];
+        print_structure_to_file ~scope:(Module_namespace ns) (module_filename mp) false [e];
         opened_filter := (fun _ -> true)
       end
     | (MPdot _ | MPbound _), _ -> assert false

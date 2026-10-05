@@ -883,6 +883,13 @@ val check_non_atomic_rc_request : unit -> unit
     swaps the factory, never the pointer representation. *)
 val arena_enabled : unit -> bool
 
+(** [Set Crane Unit Namespace]: each monolithic extraction is written into a
+    namespace named after its output file, so independently extracted units
+    -- each with its own definition of a shared Rocq type -- compose in one
+    program.  Their types are then distinct C++ types, which is the point: a
+    unit that must exchange values with another shares the module instead. *)
+val unit_namespace : unit -> bool
+
 val move_last_use : unit -> bool
 (** [Crane MoveLastUse], on by default: whether {!Last_use} rewrites a local's
     final read as [std::move].  Unset it to rule the pass out when diagnosing a
