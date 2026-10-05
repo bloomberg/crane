@@ -191,9 +191,15 @@ struct InstanceUseDropsFamilyArg {
     box<E, A> clone() const { return {a}; }
 
     template <typename CraneU0, typename CraneU1>
-      requires crane_convertible<CraneU1, const A &>
     operator box<CraneU0, CraneU1>() const {
-      return {crane_convert<CraneU1>(a)};
+      return {[&]() -> CraneU1 {
+        if constexpr (crane_convertible<CraneU1, const A &>) {
+          return crane_convert<CraneU1>(a);
+        } else {
+          throw std::logic_error(
+              "unreachable: inactive constructor field at this instantiation");
+        }
+      }()};
     }
 
     // CREATORS
@@ -234,10 +240,15 @@ struct InstanceUseDropsFamilyArg {
     // ACCESSORS
     aE<P> clone() const { return {a0}; }
 
-    template <typename CraneU>
-      requires crane_convertible<CraneU, const P &>
-    operator aE<CraneU>() const {
-      return {crane_convert<CraneU>(a0)};
+    template <typename CraneU> operator aE<CraneU>() const {
+      return {[&]() -> CraneU {
+        if constexpr (crane_convertible<CraneU, const P &>) {
+          return crane_convert<CraneU>(a0);
+        } else {
+          throw std::logic_error(
+              "unreachable: inactive constructor field at this instantiation");
+        }
+      }()};
     }
 
     // CREATORS

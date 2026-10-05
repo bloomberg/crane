@@ -169,40 +169,24 @@ struct TfunctorRecordOptionField {
 
     template <typename CraneU>
     exp(const exp<CraneU> &_other)
-        : v_(crane_convert_spine(
-              _other, std::shared_ptr<exp<T>>(nullptr),
-              [](const exp<CraneU> &_cell) -> const exp<CraneU> * {
-                if (std::holds_alternative<typename exp<CraneU>::Neg>(
-                        _cell.v())) {
-                  return std::get<typename exp<CraneU>::Neg>(_cell.v()).e.get();
+        : v_([&]() -> variant_t {
+            if (std::holds_alternative<typename exp<CraneU>::Lit>(_other.v())) {
+              const auto &[t] = std::get<typename exp<CraneU>::Lit>(_other.v());
+              return Lit{[&]() -> T {
+                if constexpr (crane_convertible<T, const CraneU &>) {
+                  return crane_convert<T>(t);
                 } else {
-                  return nullptr;
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
                 }
-              },
-              [&](const exp<CraneU> &_other,
-                  std::shared_ptr<exp<T>> _below) -> variant_t {
-                if (std::holds_alternative<typename exp<CraneU>::Lit>(
-                        _other.v())) {
-                  const auto &[t] =
-                      std::get<typename exp<CraneU>::Lit>(_other.v());
-                  return Lit{[&]() -> T {
-                    if constexpr (crane_convertible<T, const CraneU &>) {
-                      return crane_convert<T>(t);
-                    } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
-                    }
-                  }()};
-                } else {
-                  const auto &[e] =
-                      std::get<typename exp<CraneU>::Neg>(_other.v());
-                  return Neg{std::move(_below)};
-                }
-              },
-              [](auto &&_alt) {
-                return std::make_shared<exp<T>>(std::move(_alt));
-              })) {}
+              }()};
+            } else {
+              const auto &[e] = std::get<typename exp<CraneU>::Neg>(_other.v());
+              return Neg{
+                  (e ? std::make_shared<exp<T>>(crane_convert<exp<T>>(*e))
+                     : nullptr)};
+            }
+          }()) {}
 
     static exp<T> lit(T t) { return exp<T>(Lit{std::move(t)}); }
 
@@ -260,10 +244,16 @@ struct TfunctorRecordOptionField {
     std::optional<exp<T>> g_exp;
 
     // ACCESSORS
-    template <typename CraneU>
-      requires crane_convertible<CraneU, const T &>
-    operator global<CraneU>() const {
-      return {crane_convert<CraneU>(g_typ), std::optional<exp<CraneU>>(g_exp)};
+    template <typename CraneU> operator global<CraneU>() const {
+      return {[&]() -> CraneU {
+                if constexpr (crane_convertible<CraneU, const T &>) {
+                  return crane_convert<CraneU>(g_typ);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }(),
+              std::optional<exp<CraneU>>(g_exp)};
     }
   };
 

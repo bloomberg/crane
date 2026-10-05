@@ -903,43 +903,7 @@ let recover_pattern_var_types_from_scrutinee ~ctor (typ : ml_type) ids =
     @param expr    the C++ expression to convert
     @return a [cpp_expr] that produces a value of type [dst_ty] *)
 
-(** Whether a field's conversion route can only be known at instantiation:
-    both sides are type variables -- a family's field [E X] too, written [E]
-    once the family is a plain parameter. *)
-let route_deferred src_ty dst_ty =
-  let tvar = function
-    | Tvar (Tv_index (_, Some _) | Tv_named _)
-    | Tapply (Tvar (Tv_index (_, Some _) | Tv_named _), _) ->
-      true
-    | _ -> false
-  in
-  tvar src_ty && tvar dst_ty
-
-(* [Tnamespace (g, Tglob (g, ...))], the qualified rendering of an external
-   inductive, as the bare [Tglob] that structural comparison wants. *)
-let strip_own_namespace = function
-  | Tnamespace (g, (Tglob (g2, _, _) as core)) when GlobRef.CanOrd.equal g g2 -> core
-  | t -> t
-
-(** The requirement a deferred route puts on a conversion: that
-    [crane_convert] reaches [dst_ty] from a [const src_ty &]. *)
-let route_requirement ?(skip = fun _ -> false) ~src_ty ~dst_ty () =
-  if route_deferred (strip_own_namespace src_ty) (strip_own_namespace dst_ty) then
-    Some (Tt_convertible (qualify_inductives ~skip dst_ty, Tref (Lvalue, Tconst (strip_own_namespace src_ty))))
-  else None
-
-(** How a field whose route is deferred is converted. *)
-type field_route =
-  | Guarded
-      (** The field belongs to one constructor among several: where an
-          instantiation has no route, the source never holds that
-          constructor, and the branch throws. *)
-  | Required
-      (** The field is always present: its route is a requirement of the
-          conversion itself ({!route_requirement}), and is taken
-          unconditionally. *)
-
-let gen_type_conversion_expr ?(skip = fun _ -> false) ?(route = Guarded) ~src_ty ~dst_ty expr =
+let gen_type_conversion_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
   (* Every type rendered here lands in a raw string inside a template body
      (a converting constructor, a [make_shared<...>] argument), so it must be
      spelled exactly as the printer spells the same type in the surrounding
@@ -949,7 +913,10 @@ let gen_type_conversion_expr ?(skip = fun _ -> false) ?(route = Guarded) ~src_ty
      [convert_ml_type_to_cpp_type] wraps external inductives as
      [Tnamespace(g, Tglob(g,...))] for qualified rendering, but for pattern
      matching we want the bare [Tglob(g,...)] form. *)
-  let strip_ns = strip_own_namespace in
+  let strip_ns = function
+    | Tnamespace (g, (Tglob (g2, _, _) as core)) when GlobRef.CanOrd.equal g g2 -> core
+    | t -> t
+  in
   (* Save the original dst_ty (with its Tnamespace wrapper, if any) before
      stripping.  The stripped form is used for structural comparison; the
      original is used for rendering converting constructors via
@@ -1029,10 +996,8 @@ let gen_type_conversion_expr ?(skip = fun _ -> false) ?(route = Guarded) ~src_ty
     | Tfun (src_dom, _), Tfun (dst_dom, _)
       when List.length src_dom = List.length dst_dom ->
       CPPconvert (orig_dst_ty, expr)
-    | _ when route_deferred src_ty dst_ty && route = Required ->
-      require_obj_header ();
-      CPPconvert (qualify_inductives ~skip orig_dst_ty, expr)
-    | _ when route_deferred src_ty dst_ty ->
+    | ( (Tvar (Tv_index (_, Some _) | Tv_named _) | Tapply (Tvar (Tv_index (_, Some _) | Tv_named _), _)),
+        (Tvar (Tv_index (_, Some _) | Tv_named _) | Tapply (Tvar (Tv_index (_, Some _) | Tv_named _), _)) ) ->
       (* Type-variable-to-type-variable conversion in converting constructors
          -- a family's field [E X] is one too, written [E] once the family is
          a plain parameter.
@@ -1053,7 +1018,7 @@ let gen_type_conversion_expr ?(skip = fun _ -> false) ?(route = Guarded) ~src_ty
         let dst = qualify_inductives ~skip orig_dst_ty in
         mk_iife (Some dst)
           [ Sif_constexpr
-              ( Option.get (route_requirement ~skip ~src_ty ~dst_ty:orig_dst_ty ()),
+              ( Tt_convertible (dst, Tref (Lvalue, Tconst src_ty)),
                 [Sreturn (Some (CPPconvert (dst, expr)))],
                 (* [U] is neither a box nor anything else [A] can be read
                    from.  A converting constructor converts every field of

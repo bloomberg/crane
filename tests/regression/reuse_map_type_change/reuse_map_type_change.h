@@ -59,41 +59,26 @@ struct ReuseMapTypeChange {
 
     template <typename CraneU>
     lst(const lst<CraneU> &_other)
-        : v_(crane_convert_spine(
-              _other, crane::rc<lst<A>>(nullptr),
-              [](const lst<CraneU> &_cell) -> const lst<CraneU> * {
-                if (std::holds_alternative<typename lst<CraneU>::Cons>(
-                        _cell.v())) {
-                  return std::get<typename lst<CraneU>::Cons>(_cell.v())
-                      .a1.get();
-                } else {
-                  return nullptr;
-                }
-              },
-              [&](const lst<CraneU> &_other,
-                  crane::rc<lst<A>> _below) -> variant_t {
-                if (std::holds_alternative<typename lst<CraneU>::Nil>(
-                        _other.v())) {
-                  return Nil{};
-                } else {
-                  const auto &[a0, a1] =
-                      std::get<typename lst<CraneU>::Cons>(_other.v());
-                  return Cons{
-                      [&]() -> A {
-                        if constexpr (crane_convertible<A, const CraneU &>) {
-                          return crane_convert<A>(a0);
-                        } else {
-                          throw std::logic_error(
-                              "unreachable: inactive constructor field at this "
-                              "instantiation");
-                        }
-                      }(),
-                      std::move(_below)};
-                }
-              },
-              [](auto &&_alt) {
-                return crane::make_rc<lst<A>>(std::move(_alt));
-              })) {}
+        : v_([&]() -> variant_t {
+            if (std::holds_alternative<typename lst<CraneU>::Nil>(_other.v())) {
+              return Nil{};
+            } else {
+              const auto &[a0, a1] =
+                  std::get<typename lst<CraneU>::Cons>(_other.v());
+              return Cons{
+                  [&]() -> A {
+                    if constexpr (crane_convertible<A, const CraneU &>) {
+                      return crane_convert<A>(a0);
+                    } else {
+                      throw std::logic_error(
+                          "unreachable: inactive constructor field at this "
+                          "instantiation");
+                    }
+                  }(),
+                  (a1 ? crane::make_rc<lst<A>>(crane_convert<lst<A>>(*a1))
+                      : nullptr)};
+            }
+          }()) {}
 
     static lst<A> nil() { return lst<A>(Nil{}); }
 

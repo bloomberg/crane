@@ -23,10 +23,15 @@ struct SPropTest {
     A box_value;
 
     // ACCESSORS
-    template <typename CraneU>
-      requires crane_convertible<CraneU, const A &>
-    operator Box<CraneU>() const {
-      return {crane_convert<CraneU>(box_value)};
+    template <typename CraneU> operator Box<CraneU>() const {
+      return {[&]() -> CraneU {
+        if constexpr (crane_convertible<CraneU, const A &>) {
+          return crane_convert<CraneU>(box_value);
+        } else {
+          throw std::logic_error(
+              "unreachable: inactive constructor field at this instantiation");
+        }
+      }()};
     }
   };
 

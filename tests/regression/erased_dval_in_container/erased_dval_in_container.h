@@ -146,16 +146,7 @@ explicit List(Nil _v) : v_(_v) {}
 explicit List(Cons _v) : v_(std::move(_v)) {}
 template <typename
 CraneU>
-List(const List<CraneU>& _other) : v_(crane_convert_spine(_other,
-std::shared_ptr<List<A>>(nullptr),
-[](const List<CraneU>& _cell) -> const List<CraneU>* {
-if (std::holds_alternative<typename List<CraneU>::Cons>(_cell.v())) {
-return std::get<typename List<CraneU>::Cons>(_cell.v()).l.get();
-} else {
-return nullptr;
-}
-},
-[&](const List<CraneU>& _other, std::shared_ptr<List<A>> _below) -> variant_t {
+List(const List<CraneU>& _other) : v_([&]() -> variant_t {
 if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
 return Nil{};
 } else {
@@ -166,12 +157,10 @@ return crane_convert<A>(a);
 } else {
 throw std::logic_error("unreachable: inactive constructor field at this instantiation");
 }
-}(), std::move(_below)};
+}(),
+(l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l)) : nullptr)};
 }
-}, [](auto&&
-_alt) {
-return std::make_shared<List<A>>(std::move(_alt));
-})) {}
+}()) {}
 static List<A> nil() {
 return List<A>(Nil{});}
 static List<A> cons(A a, List<A> l) {

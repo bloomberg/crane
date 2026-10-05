@@ -41,41 +41,27 @@ struct LoopifyPatterns {
 
     template <typename CraneU>
     list(const list<CraneU> &_other)
-        : v_(crane_convert_spine(
-              _other, std::shared_ptr<list<A>>(nullptr),
-              [](const list<CraneU> &_cell) -> const list<CraneU> * {
-                if (std::holds_alternative<typename list<CraneU>::Cons>(
-                        _cell.v())) {
-                  return std::get<typename list<CraneU>::Cons>(_cell.v())
-                      .l.get();
-                } else {
-                  return nullptr;
-                }
-              },
-              [&](const list<CraneU> &_other,
-                  std::shared_ptr<list<A>> _below) -> variant_t {
-                if (std::holds_alternative<typename list<CraneU>::Nil>(
-                        _other.v())) {
-                  return Nil{};
-                } else {
-                  const auto &[a, l] =
-                      std::get<typename list<CraneU>::Cons>(_other.v());
-                  return Cons{
-                      [&]() -> A {
-                        if constexpr (crane_convertible<A, const CraneU &>) {
-                          return crane_convert<A>(a);
-                        } else {
-                          throw std::logic_error(
-                              "unreachable: inactive constructor field at this "
-                              "instantiation");
-                        }
-                      }(),
-                      std::move(_below)};
-                }
-              },
-              [](auto &&_alt) {
-                return std::make_shared<list<A>>(std::move(_alt));
-              })) {}
+        : v_([&]() -> variant_t {
+            if (std::holds_alternative<typename list<CraneU>::Nil>(
+                    _other.v())) {
+              return Nil{};
+            } else {
+              const auto &[a, l] =
+                  std::get<typename list<CraneU>::Cons>(_other.v());
+              return Cons{
+                  [&]() -> A {
+                    if constexpr (crane_convertible<A, const CraneU &>) {
+                      return crane_convert<A>(a);
+                    } else {
+                      throw std::logic_error(
+                          "unreachable: inactive constructor field at this "
+                          "instantiation");
+                    }
+                  }(),
+                  (l ? std::make_shared<list<A>>(crane_convert<list<A>>(*l))
+                     : nullptr)};
+            }
+          }()) {}
 
     static list<A> nil() { return list<A>(Nil{}); }
 

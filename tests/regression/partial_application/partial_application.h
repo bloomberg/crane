@@ -6,6 +6,7 @@
 #include "obj.h"
 #include <atomic>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -121,10 +122,15 @@ template <typename T> struct Box {
   // ACCESSORS
   Box<T> clone() const { return {tag, t}; }
 
-  template <typename CraneU>
-    requires crane_convertible<CraneU, const T &>
-  operator Box<CraneU>() const {
-    return {tag, crane_convert<CraneU>(t)};
+  template <typename CraneU> operator Box<CraneU>() const {
+    return {tag, [&]() -> CraneU {
+              if constexpr (crane_convertible<CraneU, const T &>) {
+                return crane_convert<CraneU>(t);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }()};
   }
 
   // CREATORS

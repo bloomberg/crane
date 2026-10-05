@@ -94,41 +94,26 @@ struct DefaultedMoveNoexcept {
 
     template <typename CraneU>
     seq(const seq<CraneU> &_other)
-        : v_(crane_convert_spine(
-              _other, std::shared_ptr<seq<A>>(nullptr),
-              [](const seq<CraneU> &_cell) -> const seq<CraneU> * {
-                if (std::holds_alternative<typename seq<CraneU>::Cons>(
-                        _cell.v())) {
-                  return std::get<typename seq<CraneU>::Cons>(_cell.v())
-                      .s.get();
-                } else {
-                  return nullptr;
-                }
-              },
-              [&](const seq<CraneU> &_other,
-                  std::shared_ptr<seq<A>> _below) -> variant_t {
-                if (std::holds_alternative<typename seq<CraneU>::Nil>(
-                        _other.v())) {
-                  return Nil{};
-                } else {
-                  const auto &[a, s] =
-                      std::get<typename seq<CraneU>::Cons>(_other.v());
-                  return Cons{
-                      [&]() -> A {
-                        if constexpr (crane_convertible<A, const CraneU &>) {
-                          return crane_convert<A>(a);
-                        } else {
-                          throw std::logic_error(
-                              "unreachable: inactive constructor field at this "
-                              "instantiation");
-                        }
-                      }(),
-                      std::move(_below)};
-                }
-              },
-              [](auto &&_alt) {
-                return std::make_shared<seq<A>>(std::move(_alt));
-              })) {}
+        : v_([&]() -> variant_t {
+            if (std::holds_alternative<typename seq<CraneU>::Nil>(_other.v())) {
+              return Nil{};
+            } else {
+              const auto &[a, s] =
+                  std::get<typename seq<CraneU>::Cons>(_other.v());
+              return Cons{
+                  [&]() -> A {
+                    if constexpr (crane_convertible<A, const CraneU &>) {
+                      return crane_convert<A>(a);
+                    } else {
+                      throw std::logic_error(
+                          "unreachable: inactive constructor field at this "
+                          "instantiation");
+                    }
+                  }(),
+                  (s ? std::make_shared<seq<A>>(crane_convert<seq<A>>(*s))
+                     : nullptr)};
+            }
+          }()) {}
 
     static seq<A> nil() { return seq<A>(Nil{}); }
 

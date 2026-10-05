@@ -496,25 +496,3 @@ crane::fn<R(A...)> crane_cast_to(crane_tag<crane::fn<R(A...)>>,
     return crane_convert<R>(src(std::forward<A>(a)...));
   };
 }
-
-// A value read at another instantiation of its own type, when each of its
-// constructors holds at most one cell of the type itself -- a spine, as a
-// list is.  Converting cell by cell takes a native frame per cell, so a long
-// spine overflows the stack where every other operation on it is a loop.
-// Instead the spine is walked once to find its cells ([child] gives a cell's
-// own cell, or null), and they are converted from the bottom up: [cell]
-// converts one cell's alternative given the converted cell below it, and
-// [make] allocates that alternative as a node.  [below] is what the deepest
-// cell holds -- a null pointer, whose type names the node type.
-template <class Src, class Ptr, class Child, class Cell, class Make>
-auto crane_convert_spine(const Src &root, Ptr below, Child child, Cell cell,
-                         Make make) {
-  std::vector<const Src *> spine;
-  for (const Src *s = child(root); s != nullptr; s = child(*s))
-    spine.push_back(s);
-  while (!spine.empty()) {
-    below = std::visit(make, cell(*spine.back(), std::move(below)));
-    spine.pop_back();
-  }
-  return cell(root, std::move(below));
-}

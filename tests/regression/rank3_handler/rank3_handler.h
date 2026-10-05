@@ -137,10 +137,15 @@ template <typename X> struct ReqA {
   // ACCESSORS
   ReqA<X> clone() const { return {a0}; }
 
-  template <typename CraneU>
-    requires crane_convertible<CraneU, const X &>
-  operator ReqA<CraneU>() const {
-    return {crane_convert<CraneU>(a0)};
+  template <typename CraneU> operator ReqA<CraneU>() const {
+    return {[&]() -> CraneU {
+      if constexpr (crane_convertible<CraneU, const X &>) {
+        return crane_convert<CraneU>(a0);
+      } else {
+        throw std::logic_error(
+            "unreachable: inactive constructor field at this instantiation");
+      }
+    }()};
   }
 
   // CREATORS

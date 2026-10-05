@@ -38,40 +38,25 @@ public:
 
   template <typename CraneU>
   List(const List<CraneU> &_other)
-      : v_(crane_convert_spine(
-            _other, std::shared_ptr<List<A>>(nullptr),
-            [](const List<CraneU> &_cell) -> const List<CraneU> * {
-              if (std::holds_alternative<typename List<CraneU>::Cons>(
-                      _cell.v())) {
-                return std::get<typename List<CraneU>::Cons>(_cell.v()).l.get();
-              } else {
-                return nullptr;
-              }
-            },
-            [&](const List<CraneU> &_other,
-                std::shared_ptr<List<A>> _below) -> variant_t {
-              if (std::holds_alternative<typename List<CraneU>::Nil>(
-                      _other.v())) {
-                return Nil{};
-              } else {
-                const auto &[a, l] =
-                    std::get<typename List<CraneU>::Cons>(_other.v());
-                return Cons{
-                    [&]() -> A {
-                      if constexpr (crane_convertible<A, const CraneU &>) {
-                        return crane_convert<A>(a);
-                      } else {
-                        throw std::logic_error(
-                            "unreachable: inactive constructor field at this "
-                            "instantiation");
-                      }
-                    }(),
-                    std::move(_below)};
-              }
-            },
-            [](auto &&_alt) {
-              return std::make_shared<List<A>>(std::move(_alt));
-            })) {}
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
+            return Nil{};
+          } else {
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                   : nullptr)};
+          }
+        }()) {}
 
   static List<A> nil() { return List<A>(Nil{}); }
 
@@ -119,10 +104,23 @@ struct UniversePoly {
 
     // ACCESSORS
     template <typename CraneU0, typename CraneU1>
-      requires crane_convertible<CraneU0, const A &> &&
-               crane_convertible<CraneU1, const B &>
     operator ppair<CraneU0, CraneU1>() const {
-      return {crane_convert<CraneU0>(pfst), crane_convert<CraneU1>(psnd)};
+      return {[&]() -> CraneU0 {
+                if constexpr (crane_convertible<CraneU0, const A &>) {
+                  return crane_convert<CraneU0>(pfst);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }(),
+              [&]() -> CraneU1 {
+                if constexpr (crane_convertible<CraneU1, const B &>) {
+                  return crane_convert<CraneU1>(psnd);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }()};
     }
   };
 

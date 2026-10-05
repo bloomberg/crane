@@ -39,41 +39,26 @@ struct CallableConstraintCategories {
 
     template <typename CraneU>
     lst(const lst<CraneU> &_other)
-        : v_(crane_convert_spine(
-              _other, std::shared_ptr<lst<A>>(nullptr),
-              [](const lst<CraneU> &_cell) -> const lst<CraneU> * {
-                if (std::holds_alternative<typename lst<CraneU>::Cons>(
-                        _cell.v())) {
-                  return std::get<typename lst<CraneU>::Cons>(_cell.v())
-                      .l.get();
-                } else {
-                  return nullptr;
-                }
-              },
-              [&](const lst<CraneU> &_other,
-                  std::shared_ptr<lst<A>> _below) -> variant_t {
-                if (std::holds_alternative<typename lst<CraneU>::Nil>(
-                        _other.v())) {
-                  return Nil{};
-                } else {
-                  const auto &[a, l] =
-                      std::get<typename lst<CraneU>::Cons>(_other.v());
-                  return Cons{
-                      [&]() -> A {
-                        if constexpr (crane_convertible<A, const CraneU &>) {
-                          return crane_convert<A>(a);
-                        } else {
-                          throw std::logic_error(
-                              "unreachable: inactive constructor field at this "
-                              "instantiation");
-                        }
-                      }(),
-                      std::move(_below)};
-                }
-              },
-              [](auto &&_alt) {
-                return std::make_shared<lst<A>>(std::move(_alt));
-              })) {}
+        : v_([&]() -> variant_t {
+            if (std::holds_alternative<typename lst<CraneU>::Nil>(_other.v())) {
+              return Nil{};
+            } else {
+              const auto &[a, l] =
+                  std::get<typename lst<CraneU>::Cons>(_other.v());
+              return Cons{
+                  [&]() -> A {
+                    if constexpr (crane_convertible<A, const CraneU &>) {
+                      return crane_convert<A>(a);
+                    } else {
+                      throw std::logic_error(
+                          "unreachable: inactive constructor field at this "
+                          "instantiation");
+                    }
+                  }(),
+                  (l ? std::make_shared<lst<A>>(crane_convert<lst<A>>(*l))
+                     : nullptr)};
+            }
+          }()) {}
 
     static lst<A> nil() { return lst<A>(Nil{}); }
 

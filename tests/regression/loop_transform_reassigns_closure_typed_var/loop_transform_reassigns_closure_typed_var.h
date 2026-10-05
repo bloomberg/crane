@@ -119,40 +119,25 @@ public:
 
   template <typename CraneU>
   Lst(const Lst<CraneU> &_other)
-      : v_(crane_convert_spine(
-            _other, std::shared_ptr<Lst<A>>(nullptr),
-            [](const Lst<CraneU> &_cell) -> const Lst<CraneU> * {
-              if (std::holds_alternative<typename Lst<CraneU>::Cons>(
-                      _cell.v())) {
-                return std::get<typename Lst<CraneU>::Cons>(_cell.v()).xs.get();
-              } else {
-                return nullptr;
-              }
-            },
-            [&](const Lst<CraneU> &_other,
-                std::shared_ptr<Lst<A>> _below) -> variant_t {
-              if (std::holds_alternative<typename Lst<CraneU>::Nil>(
-                      _other.v())) {
-                return Nil{};
-              } else {
-                const auto &[x, xs] =
-                    std::get<typename Lst<CraneU>::Cons>(_other.v());
-                return Cons{
-                    [&]() -> A {
-                      if constexpr (crane_convertible<A, const CraneU &>) {
-                        return crane_convert<A>(x);
-                      } else {
-                        throw std::logic_error(
-                            "unreachable: inactive constructor field at this "
-                            "instantiation");
-                      }
-                    }(),
-                    std::move(_below)};
-              }
-            },
-            [](auto &&_alt) {
-              return std::make_shared<Lst<A>>(std::move(_alt));
-            })) {}
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename Lst<CraneU>::Nil>(_other.v())) {
+            return Nil{};
+          } else {
+            const auto &[x, xs] =
+                std::get<typename Lst<CraneU>::Cons>(_other.v());
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
+                    return crane_convert<A>(x);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (xs ? std::make_shared<Lst<A>>(crane_convert<Lst<A>>(*xs))
+                    : nullptr)};
+          }
+        }()) {}
 
   static Lst<A> nil() { return Lst<A>(Nil{}); }
 

@@ -4,6 +4,7 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include <cstdint>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -19,12 +20,31 @@ struct TodoIotaComplexPattern {
     Triple<A, B, C> clone() const { return {a0, a1, a2}; }
 
     template <typename CraneU0, typename CraneU1, typename CraneU2>
-      requires crane_convertible<CraneU0, const A &> &&
-               crane_convertible<CraneU1, const B &> &&
-               crane_convertible<CraneU2, const C &>
     operator Triple<CraneU0, CraneU1, CraneU2>() const {
-      return {crane_convert<CraneU0>(a0), crane_convert<CraneU1>(a1),
-              crane_convert<CraneU2>(a2)};
+      return {[&]() -> CraneU0 {
+                if constexpr (crane_convertible<CraneU0, const A &>) {
+                  return crane_convert<CraneU0>(a0);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }(),
+              [&]() -> CraneU1 {
+                if constexpr (crane_convertible<CraneU1, const B &>) {
+                  return crane_convert<CraneU1>(a1);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }(),
+              [&]() -> CraneU2 {
+                if constexpr (crane_convertible<CraneU2, const C &>) {
+                  return crane_convert<CraneU2>(a2);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }()};
     }
 
     // CREATORS

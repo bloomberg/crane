@@ -7,6 +7,7 @@
 #include <atomic>
 #include <deque>
 #include <memory>
+#include <stdexcept>
 #include <utility>
 #include <variant>
 
@@ -81,10 +82,23 @@ template <typename A, typename B> struct Prod {
   Prod<A, B> clone() const { return {a0, a1}; }
 
   template <typename CraneU0, typename CraneU1>
-    requires crane_convertible<CraneU0, const A &> &&
-             crane_convertible<CraneU1, const B &>
   operator Prod<CraneU0, CraneU1>() const {
-    return {crane_convert<CraneU0>(a0), crane_convert<CraneU1>(a1)};
+    return {[&]() -> CraneU0 {
+              if constexpr (crane_convertible<CraneU0, const A &>) {
+                return crane_convert<CraneU0>(a0);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }(),
+            [&]() -> CraneU1 {
+              if constexpr (crane_convertible<CraneU1, const B &>) {
+                return crane_convert<CraneU1>(a1);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }()};
   }
 
   // CREATORS
@@ -100,10 +114,23 @@ template <typename A, typename P> struct SigT {
   SigT<A, P> clone() const { return {x, a1}; }
 
   template <typename CraneU0, typename CraneU1>
-    requires crane_convertible<CraneU0, const A &> &&
-             crane_convertible<CraneU1, const P &>
   operator SigT<CraneU0, CraneU1>() const {
-    return {crane_convert<CraneU0>(x), crane_convert<CraneU1>(a1)};
+    return {[&]() -> CraneU0 {
+              if constexpr (crane_convertible<CraneU0, const A &>) {
+                return crane_convert<CraneU0>(x);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }(),
+            [&]() -> CraneU1 {
+              if constexpr (crane_convertible<CraneU1, const P &>) {
+                return crane_convert<CraneU1>(a1);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }()};
   }
 
   // CREATORS

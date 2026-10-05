@@ -40,41 +40,26 @@ public:
 
   template <typename CraneU>
   MyList(const MyList<CraneU> &_other)
-      : v_(crane_convert_spine(
-            _other, std::shared_ptr<MyList<A>>(nullptr),
-            [](const MyList<CraneU> &_cell) -> const MyList<CraneU> * {
-              if (std::holds_alternative<typename MyList<CraneU>::Mycons>(
-                      _cell.v())) {
-                return std::get<typename MyList<CraneU>::Mycons>(_cell.v())
-                    .a1.get();
-              } else {
-                return nullptr;
-              }
-            },
-            [&](const MyList<CraneU> &_other,
-                std::shared_ptr<MyList<A>> _below) -> variant_t {
-              if (std::holds_alternative<typename MyList<CraneU>::Mynil>(
-                      _other.v())) {
-                return Mynil{};
-              } else {
-                const auto &[a0, a1] =
-                    std::get<typename MyList<CraneU>::Mycons>(_other.v());
-                return Mycons{
-                    [&]() -> A {
-                      if constexpr (crane_convertible<A, const CraneU &>) {
-                        return crane_convert<A>(a0);
-                      } else {
-                        throw std::logic_error(
-                            "unreachable: inactive constructor field at this "
-                            "instantiation");
-                      }
-                    }(),
-                    std::move(_below)};
-              }
-            },
-            [](auto &&_alt) {
-              return std::make_shared<MyList<A>>(std::move(_alt));
-            })) {}
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename MyList<CraneU>::Mynil>(
+                  _other.v())) {
+            return Mynil{};
+          } else {
+            const auto &[a0, a1] =
+                std::get<typename MyList<CraneU>::Mycons>(_other.v());
+            return Mycons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
+                    return crane_convert<A>(a0);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (a1 ? std::make_shared<MyList<A>>(crane_convert<MyList<A>>(*a1))
+                    : nullptr)};
+          }
+        }()) {}
 
   static MyList<A> mynil() { return MyList<A>(Mynil{}); }
 

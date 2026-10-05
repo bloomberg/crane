@@ -1030,7 +1030,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                   mf_is_inline = false;
                   mf_no_pure = false;
                   mf_is_noexcept = false;
-                  mf_kind = Ordinary;
+                  mf_is_conversion = false;
                 },
               VPublic,
               SNoTag )

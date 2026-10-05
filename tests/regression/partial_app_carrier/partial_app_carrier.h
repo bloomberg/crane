@@ -6,6 +6,7 @@
 #include "obj.h"
 #include <atomic>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -102,9 +103,15 @@ struct PartialAppCarrier {
     box<E, A> clone() const { return {a}; }
 
     template <typename CraneU0, typename CraneU1>
-      requires crane_convertible<CraneU1, const A &>
     operator box<CraneU0, CraneU1>() const {
-      return {crane_convert<CraneU1>(a)};
+      return {[&]() -> CraneU1 {
+        if constexpr (crane_convertible<CraneU1, const A &>) {
+          return crane_convert<CraneU1>(a);
+        } else {
+          throw std::logic_error(
+              "unreachable: inactive constructor field at this instantiation");
+        }
+      }()};
     }
 
     // CREATORS

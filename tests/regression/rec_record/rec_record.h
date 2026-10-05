@@ -38,41 +38,27 @@ struct RecRecord {
 
     template <typename CraneU>
     rlist(const rlist<CraneU> &_other)
-        : v_(crane_convert_spine(
-              _other, std::shared_ptr<rlist<A>>(nullptr),
-              [](const rlist<CraneU> &_cell) -> const rlist<CraneU> * {
-                if (std::holds_alternative<typename rlist<CraneU>::Rcons>(
-                        _cell.v())) {
-                  return std::get<typename rlist<CraneU>::Rcons>(_cell.v())
-                      .a1.get();
-                } else {
-                  return nullptr;
-                }
-              },
-              [&](const rlist<CraneU> &_other,
-                  std::shared_ptr<rlist<A>> _below) -> variant_t {
-                if (std::holds_alternative<typename rlist<CraneU>::Rnil>(
-                        _other.v())) {
-                  return Rnil{};
-                } else {
-                  const auto &[a0, a1] =
-                      std::get<typename rlist<CraneU>::Rcons>(_other.v());
-                  return Rcons{
-                      [&]() -> A {
-                        if constexpr (crane_convertible<A, const CraneU &>) {
-                          return crane_convert<A>(a0);
-                        } else {
-                          throw std::logic_error(
-                              "unreachable: inactive constructor field at this "
-                              "instantiation");
-                        }
-                      }(),
-                      std::move(_below)};
-                }
-              },
-              [](auto &&_alt) {
-                return std::make_shared<rlist<A>>(std::move(_alt));
-              })) {}
+        : v_([&]() -> variant_t {
+            if (std::holds_alternative<typename rlist<CraneU>::Rnil>(
+                    _other.v())) {
+              return Rnil{};
+            } else {
+              const auto &[a0, a1] =
+                  std::get<typename rlist<CraneU>::Rcons>(_other.v());
+              return Rcons{
+                  [&]() -> A {
+                    if constexpr (crane_convertible<A, const CraneU &>) {
+                      return crane_convert<A>(a0);
+                    } else {
+                      throw std::logic_error(
+                          "unreachable: inactive constructor field at this "
+                          "instantiation");
+                    }
+                  }(),
+                  (a1 ? std::make_shared<rlist<A>>(crane_convert<rlist<A>>(*a1))
+                      : nullptr)};
+            }
+          }()) {}
 
     static rlist<A> rnil() { return rlist<A>(Rnil{}); }
 

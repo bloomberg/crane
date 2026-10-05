@@ -121,10 +121,6 @@ val make_counting : string  (** [crane::make_counting<T>] *)
     spelling, so a call into the runtime cannot be built out of a string that
     no runtime header defines. *)
 type helper =
-  | Convert_spine
-      (** [crane_convert_spine(root, below, child, cell, make)] -- a spine
-          read at another instantiation without recursion, in
-          {!erasure_header}. *)
   | Make_rc_reusing_unchecked
   | Reuse_step
   | Raw  (** [crane_raw(p)] -- the raw pointer a smart pointer holds. *)

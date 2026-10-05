@@ -710,34 +710,22 @@ let conversion_to_other_instantiation ~leading ~name ~templates ~vars ~fields =
       List.mapi (fun i _ -> Generated_name.member "U" ~of_:n_vars i) vars
     in
     let u_tys = List.map named_tvar u_var_names in
-    (* Every inductive generated into this same scope -- the type itself,
-       its mutual siblings, and any other module-local inductive -- is
-       spelled bare here, so it must not be namespace-qualified. *)
-    let skip g =
-      GlobRef.CanOrd.equal g name
-      || Table.same_mutual_block g name
-      || List.exists (GlobRef.CanOrd.equal g) (get_local_inductives ())
-    in
-    let types =
-      List.map
-        (fun (field_id, at) ->
-          ( field_id,
-            deapply_families name vars (at vars),
-            deapply_families name u_var_names (at u_var_names) ))
-        fields
-    in
-    (* One constructor holds every field, so every field's route is needed:
-       the conversion exists exactly where each one does. *)
     let converted =
       List.map
-        (fun (field_id, src_ty, dst_ty) ->
-          gen_type_conversion_expr ~skip ~route:Required ~src_ty ~dst_ty (CPPvar field_id))
-        types
-    in
-    let requirements =
-      List.filter_map
-        (fun (_, src_ty, dst_ty) -> route_requirement ~skip ~src_ty ~dst_ty ())
-        types
+        (fun (field_id, at) ->
+          gen_type_conversion_expr
+            (* Every inductive generated into this same scope -- the type
+               itself, its mutual siblings, and any other module-local
+               inductive -- is spelled bare here, so it must not be
+               namespace-qualified. *)
+            ~skip:(fun g ->
+              GlobRef.CanOrd.equal g name
+              || Table.same_mutual_block g name
+              || List.exists (GlobRef.CanOrd.equal g) (get_local_inductives ()) )
+            ~src_ty:(deapply_families name vars (at vars))
+            ~dst_ty:(deapply_families name u_var_names (at u_var_names))
+            (CPPvar field_id) )
+        fields
     in
     (* The source instantiation is the same template as the destination, so its
        arguments have the same kinds: a [template <typename> class] parameter
@@ -762,6 +750,6 @@ let conversion_to_other_instantiation ~leading ~name ~templates ~vars ~fields =
             mf_is_inline = false;
             mf_no_pure = true;
             mf_is_noexcept = false;
-            mf_kind = Conversion requirements },
+            mf_is_conversion = true },
         VPublic,
         SAccessors ) ]

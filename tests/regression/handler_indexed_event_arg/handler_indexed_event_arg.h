@@ -9,6 +9,7 @@
 #include <crane_itree.h>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <utility>
 #include <variant>
 
@@ -113,10 +114,15 @@ template <typename T> struct MemM {
   // ACCESSORS
   MemM<T> clone() const { return {a0}; }
 
-  template <typename CraneU>
-    requires crane_convertible<CraneU, const T &>
-  operator MemM<CraneU>() const {
-    return {crane_convert<CraneU>(a0)};
+  template <typename CraneU> operator MemM<CraneU>() const {
+    return {[&]() -> CraneU {
+      if constexpr (crane_convertible<CraneU, const T &>) {
+        return crane_convert<CraneU>(a0);
+      } else {
+        throw std::logic_error(
+            "unreachable: inactive constructor field at this instantiation");
+      }
+    }()};
   }
 
   // CREATORS

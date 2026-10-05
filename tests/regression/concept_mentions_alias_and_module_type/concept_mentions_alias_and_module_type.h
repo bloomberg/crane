@@ -41,41 +41,26 @@ struct Coll {
 
     template <typename CraneU>
     bag(const bag<CraneU> &_other)
-        : v_(crane_convert_spine(
-              _other, std::shared_ptr<bag<A>>(nullptr),
-              [](const bag<CraneU> &_cell) -> const bag<CraneU> * {
-                if (std::holds_alternative<typename bag<CraneU>::Cons>(
-                        _cell.v())) {
-                  return std::get<typename bag<CraneU>::Cons>(_cell.v())
-                      .a1.get();
-                } else {
-                  return nullptr;
-                }
-              },
-              [&](const bag<CraneU> &_other,
-                  std::shared_ptr<bag<A>> _below) -> variant_t {
-                if (std::holds_alternative<typename bag<CraneU>::Nil>(
-                        _other.v())) {
-                  return Nil{};
-                } else {
-                  const auto &[a0, a1] =
-                      std::get<typename bag<CraneU>::Cons>(_other.v());
-                  return Cons{
-                      [&]() -> A {
-                        if constexpr (crane_convertible<A, const CraneU &>) {
-                          return crane_convert<A>(a0);
-                        } else {
-                          throw std::logic_error(
-                              "unreachable: inactive constructor field at this "
-                              "instantiation");
-                        }
-                      }(),
-                      std::move(_below)};
-                }
-              },
-              [](auto &&_alt) {
-                return std::make_shared<bag<A>>(std::move(_alt));
-              })) {}
+        : v_([&]() -> variant_t {
+            if (std::holds_alternative<typename bag<CraneU>::Nil>(_other.v())) {
+              return Nil{};
+            } else {
+              const auto &[a0, a1] =
+                  std::get<typename bag<CraneU>::Cons>(_other.v());
+              return Cons{
+                  [&]() -> A {
+                    if constexpr (crane_convertible<A, const CraneU &>) {
+                      return crane_convert<A>(a0);
+                    } else {
+                      throw std::logic_error(
+                          "unreachable: inactive constructor field at this "
+                          "instantiation");
+                    }
+                  }(),
+                  (a1 ? std::make_shared<bag<A>>(crane_convert<bag<A>>(*a1))
+                      : nullptr)};
+            }
+          }()) {}
 
     static bag<A> nil() { return bag<A>(Nil{}); }
 

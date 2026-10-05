@@ -201,11 +201,16 @@ template <typename I> struct Arith {
   I mzero;
 
   // ACCESSORS
-  template <typename CraneU>
-    requires crane_convertible<CraneU, const I &>
-  operator Arith<CraneU>() const {
+  template <typename CraneU> operator Arith<CraneU>() const {
     return {crane_convert<crane::fn<EOU<CraneU>(CraneU, CraneU)>>(madd),
-            crane_convert<CraneU>(mzero)};
+            [&]() -> CraneU {
+              if constexpr (crane_convertible<CraneU, const I &>) {
+                return crane_convert<CraneU>(mzero);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }()};
   }
 };
 

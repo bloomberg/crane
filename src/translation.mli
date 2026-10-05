@@ -249,14 +249,8 @@ val rewrite_state_threading_moves :
 (** Generate a C++ expression converting [expr] from [src_ty] to [dst_ty],
     inserting [make_shared]/dereference/etc. as needed. *)
 val gen_type_conversion_expr :
-  ?skip:(GlobRef.t -> bool) -> ?route:Translation_support.field_route ->
-  src_ty:cpp_type -> dst_ty:cpp_type -> cpp_expr -> cpp_expr
-
-(** What a conversion must require of a field whose route C++ decides only
-    at instantiation; [None] for a field whose route is not deferred. *)
-val route_requirement :
-  ?skip:(GlobRef.t -> bool) -> src_ty:cpp_type -> dst_ty:cpp_type -> unit ->
-  type_test option
+  ?skip:(GlobRef.t -> bool) -> src_ty:cpp_type -> dst_ty:cpp_type ->
+  cpp_expr -> cpp_expr
 
 (** Reify a parameter's ML type into its monadic-aware C++ form (e.g.
     voidifying [Unit] results inside [ITree] callbacks). *)

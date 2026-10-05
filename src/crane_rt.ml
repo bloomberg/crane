@@ -39,14 +39,12 @@ let make_counting = "crane::make_counting"
 let raw = "crane_raw"
 
 type helper =
-  | Convert_spine
   | Make_rc_reusing_unchecked
   | Reuse_step
   | Raw
   | Unbox_field
 
 let name = function
-  | Convert_spine -> "crane_convert_spine"
   | Make_rc_reusing_unchecked -> make_rc_reusing_unchecked
   | Raw -> raw
   | Unbox_field -> "crane::unbox"

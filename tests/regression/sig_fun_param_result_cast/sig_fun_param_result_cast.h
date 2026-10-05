@@ -5,6 +5,7 @@
 #include "fn.h"
 #include "obj.h"
 #include <cstdint>
+#include <stdexcept>
 #include <utility>
 #include <variant>
 
@@ -17,10 +18,15 @@ template <typename A> struct Sig {
   // ACCESSORS
   Sig<A> clone() const { return {x}; }
 
-  template <typename CraneU>
-    requires crane_convertible<CraneU, const A &>
-  operator Sig<CraneU>() const {
-    return {crane_convert<CraneU>(x)};
+  template <typename CraneU> operator Sig<CraneU>() const {
+    return {[&]() -> CraneU {
+      if constexpr (crane_convertible<CraneU, const A &>) {
+        return crane_convert<CraneU>(x);
+      } else {
+        throw std::logic_error(
+            "unreachable: inactive constructor field at this instantiation");
+      }
+    }()};
   }
 
   // CREATORS

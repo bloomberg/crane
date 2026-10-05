@@ -5,6 +5,7 @@
 #include "fn.h"
 #include "obj.h"
 #include <cstdint>
+#include <stdexcept>
 
 struct InstanceInRecord {
   template <typename A> struct Monoid {
@@ -12,10 +13,15 @@ struct InstanceInRecord {
     crane::fn<A(A, A)> op;
 
     // ACCESSORS
-    template <typename CraneU>
-      requires crane_convertible<CraneU, const A &>
-    operator Monoid<CraneU>() const {
-      return {crane_convert<CraneU>(unit_),
+    template <typename CraneU> operator Monoid<CraneU>() const {
+      return {[&]() -> CraneU {
+                if constexpr (crane_convertible<CraneU, const A &>) {
+                  return crane_convert<CraneU>(unit_);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }(),
               crane_convert<crane::fn<CraneU(CraneU, CraneU)>>(op)};
     }
   };

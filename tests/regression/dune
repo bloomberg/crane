@@ -11733,13 +11733,3 @@
   (deps branch_facts.t.exe)
   (action (run ./branch_facts.t.exe))))
 
-(subdir product_conversion
- (rule
-  (targets product_conversion.t.exe)
-  (deps ProductConversion.vo product_conversion.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} product_conversion.t.exe product_conversion.cpp product_conversion.t.cpp)))
- (rule
-  (alias runtest)
-  (deps product_conversion.t.exe)
-  (action (run ./product_conversion.t.exe))))

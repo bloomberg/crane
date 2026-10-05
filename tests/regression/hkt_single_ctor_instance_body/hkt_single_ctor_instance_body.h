@@ -7,6 +7,7 @@
 #include <atomic>
 #include <concepts>
 #include <memory>
+#include <stdexcept>
 #include <utility>
 #include <variant>
 
@@ -101,10 +102,15 @@ struct HktSingleCtorInstanceBody {
     // ACCESSORS
     box<A> clone() const { return {a0}; }
 
-    template <typename CraneU>
-      requires crane_convertible<CraneU, const A &>
-    operator box<CraneU>() const {
-      return {crane_convert<CraneU>(a0)};
+    template <typename CraneU> operator box<CraneU>() const {
+      return {[&]() -> CraneU {
+        if constexpr (crane_convertible<CraneU, const A &>) {
+          return crane_convert<CraneU>(a0);
+        } else {
+          throw std::logic_error(
+              "unreachable: inactive constructor field at this instantiation");
+        }
+      }()};
     }
 
     // CREATORS
