@@ -164,20 +164,22 @@ public:
 template <typename T1, typename T2, typename F0>
   requires std::is_invocable_r_v<T2, F0 &, const T1 &>
 List<T2> better_map(F0 &&f, const List<T1> &l) {
-  auto go = [&](const List<T1> &l0, const List<T2> &acc) -> List<T2> {
-    List<T2> _loop_acc = acc;
-    const List<T1> *_loop_l0 = &l0;
+  {
+    const List<T1> &_lc1_l0 = l;
+    const List<T2> &_lc1_acc = List<T2>::nil();
+    List<T2> _lc1_loop_acc = _lc1_acc;
+    const List<T1> *_lc1_loop_l0 = &_lc1_l0;
     while (true) {
-      if (std::holds_alternative<typename List<T1>::Nil>(_loop_l0->v())) {
-        return _loop_acc.rev();
+      if (std::holds_alternative<typename List<T1>::Nil>(_lc1_loop_l0->v())) {
+        return _lc1_loop_acc.rev();
       } else {
-        const auto &[a0, a1] = std::get<typename List<T1>::Cons>(_loop_l0->v());
-        _loop_acc = List<T2>::cons(f(a0), std::move(_loop_acc));
-        _loop_l0 = crane_raw(a1);
+        const auto &[a0, a1] =
+            std::get<typename List<T1>::Cons>(_lc1_loop_l0->v());
+        _lc1_loop_acc = List<T2>::cons(f(a0), std::move(_lc1_loop_acc));
+        _lc1_loop_l0 = crane_raw(a1);
       }
     }
-  };
-  return go(l, List<T2>::nil());
+  }
 }
 
 #endif // INCLUDED_TAIL_REC_MAP

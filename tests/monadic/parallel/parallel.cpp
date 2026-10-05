@@ -20,10 +20,11 @@ uint64_t ParallelTest::ack(const std::pair<uint64_t, uint64_t> &p) {
     };
     return ack_m(n);
   };
-  auto f = [&](uint64_t m, uint64_t n) -> uint64_t {
-    return f_impl(f_impl, m, n);
-  };
-  return f(p.first, p.second);
+  {
+    uint64_t _lc1_m = p.first;
+    uint64_t _lc1_n = p.second;
+    return f_impl(f_impl, _lc1_m, _lc1_n);
+  }
 }
 
 std::pair<uint64_t, uint64_t> ParallelTest::fast(uint64_t m, uint64_t n) {

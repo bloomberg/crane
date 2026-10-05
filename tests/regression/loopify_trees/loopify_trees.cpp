@@ -1262,62 +1262,67 @@ LoopifyTrees::tree_min_max(const LoopifyTrees::tree<uint64_t>
 
 /// all_paths_sum t sums all root-to-leaf path sums.
 uint64_t LoopifyTrees::all_paths_sum(const LoopifyTrees::tree<uint64_t> &t) {
-  auto sum_with_acc =
-      [&](uint64_t acc, const LoopifyTrees::tree<uint64_t> &tree0) -> uint64_t {
+  {
+    uint64_t _lc1_acc = UINT64_C(0);
+    const LoopifyTrees::tree<uint64_t> &_lc1_tree0 = t;
+
     /// CraneEnter: captures varying parameters for each recursive call.
     struct CraneEnter {
       const LoopifyTrees::tree<uint64_t> *tree0;
       uint64_t acc;
     };
+
     /// CraneCont_Node: saves [a2, new_acc], resumes after recursive call, then
     /// processes rest.
     struct CraneCont_Node {
       const LoopifyTrees::tree<uint64_t> *a2;
       uint64_t new_acc;
     };
+
     /// CraneCont_Node_1: saves [_tmp2], resumes after recursive call, then
     /// processes rest.
     struct CraneCont_Node_1 {
       uint64_t _tmp2;
     };
+
     using CraneFrame =
         std::variant<CraneEnter, CraneCont_Node, CraneCont_Node_1>;
-    uint64_t _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{&tree0, acc});
+    uint64_t _lc1_result{};
+    crane::small_vector<CraneFrame> _lc1_stack;
+    _lc1_stack.emplace_back(CraneEnter{&_lc1_tree0, _lc1_acc});
     /// Loopified sum_with_acc: CraneEnter -> CraneCont_Node ->
     /// CraneCont_Node_1.
-    while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
-      _stack.pop_back();
+    while (!_lc1_stack.empty()) {
+      CraneFrame _frame = std::move(_lc1_stack.back());
+      _lc1_stack.pop_back();
       if (std::holds_alternative<CraneEnter>(_frame)) {
         auto _f = std::move(std::get<CraneEnter>(_frame));
-        const LoopifyTrees::tree<uint64_t> &tree0 = *_f.tree0;
-        uint64_t acc = _f.acc;
+        const LoopifyTrees::tree<uint64_t> &_lc1_tree0 = *_f.tree0;
+        uint64_t _lc1_acc = _f.acc;
         if (std::holds_alternative<typename LoopifyTrees::tree<uint64_t>::Leaf>(
-                tree0.v())) {
-          _result = std::move(acc);
+                _lc1_tree0.v())) {
+          _lc1_result = std::move(_lc1_acc);
         } else {
           const auto &[a0, a1, a2] =
-              std::get<typename LoopifyTrees::tree<uint64_t>::Node>(tree0.v());
-          uint64_t new_acc = (acc + a1);
-          _stack.emplace_back(CraneCont_Node{crane_raw(a2), new_acc});
-          _stack.emplace_back(CraneEnter{crane_raw(a0), new_acc});
+              std::get<typename LoopifyTrees::tree<uint64_t>::Node>(
+                  _lc1_tree0.v());
+          uint64_t new_acc = (_lc1_acc + a1);
+          _lc1_stack.emplace_back(CraneCont_Node{crane_raw(a2), new_acc});
+          _lc1_stack.emplace_back(CraneEnter{crane_raw(a0), new_acc});
         }
       } else if (std::holds_alternative<CraneCont_Node>(_frame)) {
         auto _f = std::move(std::get<CraneCont_Node>(_frame));
         const LoopifyTrees::tree<uint64_t> &a2 = *_f.a2;
         uint64_t new_acc = _f.new_acc;
-        _stack.emplace_back(CraneCont_Node_1{std::move(_result)});
-        _stack.emplace_back(CraneEnter{&a2, new_acc});
+        _lc1_stack.emplace_back(CraneCont_Node_1{std::move(_lc1_result)});
+        _lc1_stack.emplace_back(CraneEnter{&a2, new_acc});
       } else {
         auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
-        _result = (_f._tmp2 + std::move(_result));
+        _lc1_result = (_f._tmp2 + std::move(_lc1_result));
       }
     }
-    return _result;
-  };
-  return sum_with_acc(UINT64_C(0), t);
+    return _lc1_result;
+  }
 }
 
 /// tree_contains x t checks if value exists in tree.

@@ -993,13 +993,13 @@ bool LoopifyNumbers::is_even_fuel(uint64_t fuel, uint64_t n) {
         if (_inl_fuel <= 0) {
           return false;
         } else {
-          uint64_t f = _inl_fuel - 1;
+          uint64_t _inl_f = _inl_fuel - 1;
           if (_inl_n == UINT64_C(0)) {
             return false;
           } else {
             _loop_n = ((
                 (_inl_n - UINT64_C(1)) > _inl_n ? 0 : (_inl_n - UINT64_C(1))));
-            _loop_fuel = f;
+            _loop_fuel = _inl_f;
           }
         }
       }
@@ -1024,13 +1024,13 @@ bool LoopifyNumbers::is_odd_fuel(uint64_t fuel, uint64_t n) {
         if (_inl_fuel <= 0) {
           return true;
         } else {
-          uint64_t f = _inl_fuel - 1;
+          uint64_t _inl_f = _inl_fuel - 1;
           if (_inl_n == UINT64_C(0)) {
             return true;
           } else {
             _loop_n = ((
                 (_inl_n - UINT64_C(1)) > _inl_n ? 0 : (_inl_n - UINT64_C(1))));
-            _loop_fuel = f;
+            _loop_fuel = _inl_f;
           }
         }
       }
@@ -1271,13 +1271,13 @@ uint64_t LoopifyNumbers::sum_odd_indices_fuel(
       if (_inl_fuel <= 0) {
         _result = UINT64_C(0);
       } else {
-        uint64_t f = _inl_fuel - 1;
+        uint64_t _inl_f = _inl_fuel - 1;
         if (std::holds_alternative<typename List<uint64_t>::Nil>(_inl_l.v())) {
           _result = UINT64_C(0);
         } else {
-          const auto &[a0, a1] =
+          const auto &[_inl_a0, _inl_a1] =
               std::get<typename List<uint64_t>::Cons>(_inl_l.v());
-          _stack.emplace_back(CraneEnter{*a1, f});
+          _stack.emplace_back(CraneEnter{*_inl_a1, _inl_f});
         }
       }
     } else {
@@ -1299,10 +1299,10 @@ uint64_t LoopifyNumbers::sum_even_indices_fuel(
     uint64_t fuel;
   };
 
-  /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
-  /// rest.
+  /// CraneCont_Cons: saves [_inl_a0], resumes after recursive call, then
+  /// processes rest.
   struct CraneCont_Cons {
-    uint64_t a0;
+    uint64_t _inl_a0;
   };
 
   using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
@@ -1330,23 +1330,24 @@ uint64_t LoopifyNumbers::sum_even_indices_fuel(
           if (_inl_fuel <= 0) {
             _result = UINT64_C(0);
           } else {
-            uint64_t f = _inl_fuel - 1;
+            uint64_t _inl_f = _inl_fuel - 1;
             if (std::holds_alternative<typename List<uint64_t>::Nil>(
                     _inl_l.v())) {
               _result = UINT64_C(0);
             } else {
-              const auto &[a0, a1] =
+              const auto &[_inl_a0, _inl_a1] =
                   std::get<typename List<uint64_t>::Cons>(_inl_l.v());
-              _stack.emplace_back(CraneCont_Cons{a0});
-              _stack.emplace_back(CraneEnter{crane_raw(a1), f});
+              _stack.emplace_back(CraneCont_Cons{_inl_a0});
+              _stack.emplace_back(CraneEnter{crane_raw(_inl_a1), _inl_f});
             }
           }
         }
       }
     } else {
       auto _f = std::move(std::get<CraneCont_Cons>(_frame));
-      uint64_t a0 = _f.a0;
-      _result = (a0 + std::move(_result));
+      uint64_t _inl_a0 = _f._inl_a0;
+      uint64_t _inl_tmp1 = std::move(_result);
+      _result = (_inl_a0 + _inl_tmp1);
     }
   }
   return _result;

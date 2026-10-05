@@ -10,36 +10,38 @@
 /// body before translation sees it, whichever way the recursion is written.
 /// It covers the arity-two de-lift path, which nothing else did.
 bool DeliftedBinaryFixpoint::same(const Positive &a, const Positive &b) {
-  auto go = [](const Positive &p, const Positive &x) -> bool {
-    const Positive *_loop_x = &x;
-    const Positive *_loop_p = &p;
+  {
+    const Positive &_lc1_p = Positive::xo(a);
+    const Positive &_lc1_x = Positive::xo(b);
+    const Positive *_lc1_loop_x = &_lc1_x;
+    const Positive *_lc1_loop_p = &_lc1_p;
     while (true) {
-      if (std::holds_alternative<typename Positive::XI>(_loop_p->v())) {
-        const auto &[a0] = std::get<typename Positive::XI>(_loop_p->v());
-        if (std::holds_alternative<typename Positive::XI>(_loop_x->v())) {
-          const auto &[a00] = std::get<typename Positive::XI>(_loop_x->v());
-          _loop_x = crane_raw(a00);
-          _loop_p = crane_raw(a0);
+      if (std::holds_alternative<typename Positive::XI>(_lc1_loop_p->v())) {
+        const auto &[a0] = std::get<typename Positive::XI>(_lc1_loop_p->v());
+        if (std::holds_alternative<typename Positive::XI>(_lc1_loop_x->v())) {
+          const auto &[a00] = std::get<typename Positive::XI>(_lc1_loop_x->v());
+          _lc1_loop_x = crane_raw(a00);
+          _lc1_loop_p = crane_raw(a0);
         } else {
           return false;
         }
-      } else if (std::holds_alternative<typename Positive::XO>(_loop_p->v())) {
-        const auto &[a0] = std::get<typename Positive::XO>(_loop_p->v());
-        if (std::holds_alternative<typename Positive::XO>(_loop_x->v())) {
-          const auto &[a00] = std::get<typename Positive::XO>(_loop_x->v());
-          _loop_x = crane_raw(a00);
-          _loop_p = crane_raw(a0);
+      } else if (std::holds_alternative<typename Positive::XO>(
+                     _lc1_loop_p->v())) {
+        const auto &[a0] = std::get<typename Positive::XO>(_lc1_loop_p->v());
+        if (std::holds_alternative<typename Positive::XO>(_lc1_loop_x->v())) {
+          const auto &[a00] = std::get<typename Positive::XO>(_lc1_loop_x->v());
+          _lc1_loop_x = crane_raw(a00);
+          _lc1_loop_p = crane_raw(a0);
         } else {
           return false;
         }
       } else {
-        if (std::holds_alternative<typename Positive::XH>(_loop_x->v())) {
+        if (std::holds_alternative<typename Positive::XH>(_lc1_loop_x->v())) {
           return true;
         } else {
           return false;
         }
       }
     }
-  };
-  return go(Positive::xo(a), Positive::xo(b));
+  }
 }

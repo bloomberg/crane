@@ -93,21 +93,22 @@ public:
 
 struct LetFixMoveAcc {
   template <typename T1> static List<T1> reverse_list(const List<T1> &l) {
-    auto go = [](const List<T1> &xs, List<T1> acc) -> List<T1> {
-      List<T1> _loop_acc = std::move(acc);
-      const List<T1> *_loop_xs = &xs;
+    {
+      const List<T1> &_lc1_xs = l;
+      List<T1> _lc1_acc = List<T1>::nil();
+      List<T1> _lc1_loop_acc = std::move(_lc1_acc);
+      const List<T1> *_lc1_loop_xs = &_lc1_xs;
       while (true) {
-        if (std::holds_alternative<typename List<T1>::Nil>(_loop_xs->v())) {
-          return _loop_acc;
+        if (std::holds_alternative<typename List<T1>::Nil>(_lc1_loop_xs->v())) {
+          return _lc1_loop_acc;
         } else {
           const auto &[a0, a1] =
-              std::get<typename List<T1>::Cons>(_loop_xs->v());
-          _loop_acc = List<T1>::cons(a0, std::move(_loop_acc));
-          _loop_xs = crane_raw(a1);
+              std::get<typename List<T1>::Cons>(_lc1_loop_xs->v());
+          _lc1_loop_acc = List<T1>::cons(a0, std::move(_lc1_loop_acc));
+          _lc1_loop_xs = crane_raw(a1);
         }
       }
-    };
-    return go(l, List<T1>::nil());
+    }
   }
 
   template <typename T1> static List<T1> snoc(const List<T1> &l, const T1 &x) {

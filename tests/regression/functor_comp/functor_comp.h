@@ -264,30 +264,31 @@ struct FunctorComp {
     }
 
     static List<uint64_t> to_list(typename C::t c) {
-      auto go = [](uint64_t fuel, const List<uint64_t> &acc,
-                   typename C::t c0) -> List<uint64_t> {
-        typename C::t _loop_c0 = std::move(c0);
-        List<uint64_t> _loop_acc = acc;
-        uint64_t _loop_fuel = std::move(fuel);
+      {
+        uint64_t _lc1_fuel = C::size(c);
+        const List<uint64_t> &_lc1_acc = List<uint64_t>::nil();
+        typename C::t _lc1_c0 = std::move(c);
+        typename C::t _lc1_loop_c0 = std::move(_lc1_c0);
+        List<uint64_t> _lc1_loop_acc = _lc1_acc;
+        uint64_t _lc1_loop_fuel = std::move(_lc1_fuel);
         while (true) {
-          if (_loop_fuel <= 0) {
-            return _loop_acc.rev();
+          if (_lc1_loop_fuel <= 0) {
+            return _lc1_loop_acc.rev();
           } else {
-            uint64_t f = _loop_fuel - 1;
-            auto _cs = C::pop(_loop_c0);
+            uint64_t f = _lc1_loop_fuel - 1;
+            auto _cs = C::pop(_lc1_loop_c0);
             if (_cs.has_value()) {
               const std::pair<uint64_t, typename C::t> &p = *_cs;
               const auto &[x, c_] = p;
-              _loop_c0 = c_;
-              _loop_acc = List<uint64_t>::cons(x, _loop_acc);
-              _loop_fuel = f;
+              _lc1_loop_c0 = c_;
+              _lc1_loop_acc = List<uint64_t>::cons(x, _lc1_loop_acc);
+              _lc1_loop_fuel = f;
             } else {
-              return _loop_acc.rev();
+              return _lc1_loop_acc.rev();
             }
           }
         }
-      };
-      return go(C::size(c), List<uint64_t>::nil(), c);
+      }
     }
   };
 

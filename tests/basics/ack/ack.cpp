@@ -14,8 +14,8 @@ uint64_t Ack::ack(uint64_t m, uint64_t n) {
       }
     }
   };
-  auto ack_m = [&](uint64_t n0) -> uint64_t {
-    return ack_m_impl(ack_m_impl, n0);
-  };
-  return ack_m(n);
+  {
+    uint64_t _lc1_n0 = n;
+    return ack_m_impl(ack_m_impl, _lc1_n0);
+  }
 }

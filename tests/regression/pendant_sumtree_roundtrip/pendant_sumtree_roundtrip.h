@@ -881,11 +881,13 @@ template <typename T1> List<T1> Vector::to_list(uint64_t n, const T0<T1> &v) {
           h, _self_fold_right_fix(_self_fold_right_fix, n1, *a2, std::move(b)));
     }
   };
-  auto fold_right_fix = [&](uint64_t _x, const T0<T1> &v0,
-                            List<T1> b) -> List<T1> {
-    return fold_right_fix_impl(fold_right_fix_impl, _x, v0, b);
-  };
-  return fold_right_fix(n, v, List<T1>::nil0());
+  {
+    uint64_t _lc1_x = n;
+    const T0<T1> &_lc1_v0 = v;
+    List<T1> _lc1_b = List<T1>::nil0();
+    return fold_right_fix_impl(fold_right_fix_impl, _lc1_x, _lc1_v0,
+                               std::move(_lc1_b));
+  }
 }
 
 inline Sig<uint64_t> T::to_nat(uint64_t) const {

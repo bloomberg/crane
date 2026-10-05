@@ -289,55 +289,60 @@ uint64_t MemSafetyProbe8::tree_flatten(
 /// TEST 6: Pass tree as a higher-order function argument
 /// to prevent methodification completely.
 uint64_t MemSafetyProbe8::tree_size_via_fold(const MemSafetyProbe8::tree &t) {
-  auto go = [&](uint64_t _x, const MemSafetyProbe8::tree &t0) -> uint64_t {
+  {
+    uint64_t _lc1_x = UINT64_C(0);
+    const MemSafetyProbe8::tree &_lc1_t0 = t;
+
     /// CraneEnter: captures varying parameters for each recursive call.
     struct CraneEnter {
       const MemSafetyProbe8::tree *t0;
       uint64_t _x;
     };
+
     /// CraneCont_Node: saves [a2], resumes after recursive call, then processes
     /// rest.
     struct CraneCont_Node {
       const MemSafetyProbe8::tree *a2;
     };
+
     /// CraneCont_Node_1: saves [_tmp2], resumes after recursive call, then
     /// processes rest.
     struct CraneCont_Node_1 {
       uint64_t _tmp2;
     };
+
     using CraneFrame =
         std::variant<CraneEnter, CraneCont_Node, CraneCont_Node_1>;
-    uint64_t _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{&t0, _x});
+    uint64_t _lc1_result{};
+    crane::small_vector<CraneFrame> _lc1_stack;
+    _lc1_stack.emplace_back(CraneEnter{&_lc1_t0, _lc1_x});
     /// Loopified go: CraneEnter -> CraneCont_Node -> CraneCont_Node_1.
-    while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
-      _stack.pop_back();
+    while (!_lc1_stack.empty()) {
+      CraneFrame _frame = std::move(_lc1_stack.back());
+      _lc1_stack.pop_back();
       if (std::holds_alternative<CraneEnter>(_frame)) {
         auto _f = std::move(std::get<CraneEnter>(_frame));
-        const MemSafetyProbe8::tree &t0 = *_f.t0;
-        uint64_t _x = _f._x;
+        const MemSafetyProbe8::tree &_lc1_t0 = *_f.t0;
+        uint64_t _lc1_x = _f._x;
         if (std::holds_alternative<typename MemSafetyProbe8::tree::Leaf>(
-                t0.v())) {
-          _result = UINT64_C(0);
+                _lc1_t0.v())) {
+          _lc1_result = UINT64_C(0);
         } else {
           const auto &[a0, a1, a2] =
-              std::get<typename MemSafetyProbe8::tree::Node>(t0.v());
-          _stack.emplace_back(CraneCont_Node{crane_raw(a2)});
-          _stack.emplace_back(CraneEnter{crane_raw(a0), UINT64_C(0)});
+              std::get<typename MemSafetyProbe8::tree::Node>(_lc1_t0.v());
+          _lc1_stack.emplace_back(CraneCont_Node{crane_raw(a2)});
+          _lc1_stack.emplace_back(CraneEnter{crane_raw(a0), UINT64_C(0)});
         }
       } else if (std::holds_alternative<CraneCont_Node>(_frame)) {
         auto _f = std::move(std::get<CraneCont_Node>(_frame));
         const MemSafetyProbe8::tree &a2 = *_f.a2;
-        _stack.emplace_back(CraneCont_Node_1{std::move(_result)});
-        _stack.emplace_back(CraneEnter{&a2, UINT64_C(0)});
+        _lc1_stack.emplace_back(CraneCont_Node_1{std::move(_lc1_result)});
+        _lc1_stack.emplace_back(CraneEnter{&a2, UINT64_C(0)});
       } else {
         auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
-        _result = ((UINT64_C(1) + _f._tmp2) + std::move(_result));
+        _lc1_result = ((UINT64_C(1) + _f._tmp2) + std::move(_lc1_result));
       }
     }
-    return _result;
-  };
-  return go(UINT64_C(0), t);
+    return _lc1_result;
+  }
 }

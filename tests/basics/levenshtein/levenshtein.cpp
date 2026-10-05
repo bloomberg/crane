@@ -118,11 +118,10 @@ SigT<Nat, Levenshtein::chain> Levenshtein::levenshtein_chain(const String &s,
       }
     }
   };
-  auto levenshtein_chain1 =
-      [&](const String &t) -> SigT<Nat, Levenshtein::chain> {
-    return levenshtein_chain1_impl(levenshtein_chain1_impl, t);
-  };
-  return levenshtein_chain1(std::move(x0_));
+  {
+    const String &_lc1_t = x0_;
+    return levenshtein_chain1_impl(levenshtein_chain1_impl, _lc1_t);
+  }
 }
 
 Nat Levenshtein::levenshtein_computed(const String &s, const String &t) {

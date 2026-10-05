@@ -123,9 +123,10 @@ LoopifyMutualPartialApp::sum_e(const LoopifyMutualPartialApp::e<uint64_t>
           const List<LoopifyMutualPartialApp::md<uint64_t>> &_inl_l0_value =
               *_inl_l0;
           _result = _inl_l0_value.template fold_left<uint64_t>(
-              [](uint64_t acc,
-                 const LoopifyMutualPartialApp::md<uint64_t> &m0) {
-                return (acc + sum_md(m0));
+              [](uint64_t _inl_acc,
+                 const LoopifyMutualPartialApp::md<uint64_t> &_inl_m0) {
+                uint64_t _inl_tmp2 = sum_md(_inl_m0);
+                return (_inl_acc + _inl_tmp2);
               },
               UINT64_C(0));
         } else {
@@ -161,8 +162,10 @@ LoopifyMutualPartialApp::sum_e(const LoopifyMutualPartialApp::e<uint64_t>
         const List<LoopifyMutualPartialApp::md<uint64_t>> &_inl_l0_value =
             *_inl_l0;
         _result = _inl_l0_value.template fold_left<uint64_t>(
-            [](uint64_t acc, const LoopifyMutualPartialApp::md<uint64_t> &m0) {
-              return (acc + sum_md(m0));
+            [](uint64_t _inl_acc,
+               const LoopifyMutualPartialApp::md<uint64_t> &_inl_m0) {
+              uint64_t _inl_tmp2 = sum_md(_inl_m0);
+              return (_inl_acc + _inl_tmp2);
             },
             UINT64_C(0));
       } else {

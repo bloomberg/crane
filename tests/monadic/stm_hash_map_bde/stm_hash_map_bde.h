@@ -246,22 +246,21 @@ template <typename K, typename V> struct CHT {
   static bsl::vector<stm::TVar<List<bsl::pair<T1, T2>>>>
   mk_buckets(int64_t num) {
     bsl::vector<stm::TVar<List<bsl::pair<T1, T2>>>> buckets = {};
-    auto f =
-        [&](unsigned int n) -> bsl::vector<stm::TVar<List<bsl::pair<T1, T2>>>> {
-      unsigned int _loop_n = bsl::move(n);
+    {
+      unsigned int _lc1_n = static_cast<unsigned int>(num);
+      unsigned int _lc1_loop_n = bsl::move(_lc1_n);
       while (true) {
-        if (_loop_n <= 0) {
+        if (_lc1_loop_n <= 0) {
           return buckets;
         } else {
-          unsigned int n_ = _loop_n - 1;
+          unsigned int n_ = _lc1_loop_n - 1;
           stm::TVar<List<bsl::pair<T1, T2>>> b = stm::atomically(
               [&] { return stm::newTVar(List<bsl::pair<T1, T2>>::nil()); });
-          buckets.push_back(b);
-          _loop_n = n_;
+          buckets.push_back(bsl::move(b));
+          _lc1_loop_n = n_;
         }
       }
-    };
-    return f(static_cast<unsigned int>(num));
+    }
   }
   template <typename T1, typename T2, typename F0, typename F1>
   static CHT<T1, T2> new_hash(F0 &&eqb, F1 &&hash, int64_t requested) {

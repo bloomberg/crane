@@ -91,20 +91,22 @@ public:
 };
 
 template <typename T1> List<T1> better_rev(const List<T1> &l) {
-  auto go = [](const List<T1> &l0, List<T1> acc) -> List<T1> {
-    List<T1> _loop_acc = std::move(acc);
-    const List<T1> *_loop_l0 = &l0;
+  {
+    const List<T1> &_lc1_l0 = l;
+    List<T1> _lc1_acc = List<T1>::nil();
+    List<T1> _lc1_loop_acc = std::move(_lc1_acc);
+    const List<T1> *_lc1_loop_l0 = &_lc1_l0;
     while (true) {
-      if (std::holds_alternative<typename List<T1>::Nil>(_loop_l0->v())) {
-        return _loop_acc;
+      if (std::holds_alternative<typename List<T1>::Nil>(_lc1_loop_l0->v())) {
+        return _lc1_loop_acc;
       } else {
-        const auto &[a0, a1] = std::get<typename List<T1>::Cons>(_loop_l0->v());
-        _loop_acc = List<T1>::cons(a0, std::move(_loop_acc));
-        _loop_l0 = crane_raw(a1);
+        const auto &[a0, a1] =
+            std::get<typename List<T1>::Cons>(_lc1_loop_l0->v());
+        _lc1_loop_acc = List<T1>::cons(a0, std::move(_lc1_loop_acc));
+        _lc1_loop_l0 = crane_raw(a1);
       }
     }
-  };
-  return go(l, List<T1>::nil());
+  }
 }
 
 #endif // INCLUDED_TAIL_REC_REV

@@ -267,11 +267,14 @@ struct LoopifyGenerators {
   /// tabulate n f generates f 0, f 1, ..., f (n-1) (same as init_list but
   /// different naming).
   template <typename F1> static List<uint64_t> tabulate(uint64_t n, F1 &&f) {
-    auto go = [&](uint64_t i) -> List<uint64_t> {
+    {
+      uint64_t _lc1_i = n;
+
       /// CraneEnter: captures varying parameters for each recursive call.
       struct CraneEnter {
         uint64_t i;
       };
+
       /// CraneCont_j: saves [f, i, n], resumes after recursive call, then
       /// processes rest.
       struct CraneCont_j {
@@ -279,36 +282,37 @@ struct LoopifyGenerators {
         uint64_t i;
         uint64_t n;
       };
+
       using CraneFrame = std::variant<CraneEnter, CraneCont_j>;
-      List<uint64_t> _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{i});
+      List<uint64_t> _lc1_result{};
+      crane::small_vector<CraneFrame> _lc1_stack;
+      _lc1_stack.emplace_back(CraneEnter{_lc1_i});
       /// Loopified go: CraneEnter -> CraneCont_j.
-      while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
+      while (!_lc1_stack.empty()) {
+        CraneFrame _frame = std::move(_lc1_stack.back());
+        _lc1_stack.pop_back();
         if (std::holds_alternative<CraneEnter>(_frame)) {
           auto _f = std::move(std::get<CraneEnter>(_frame));
-          uint64_t i = _f.i;
-          if (i <= 0) {
-            _result = List<uint64_t>::nil();
+          uint64_t _lc1_i = _f.i;
+          if (_lc1_i <= 0) {
+            _lc1_result = List<uint64_t>::nil();
           } else {
-            uint64_t j = i - 1;
-            _stack.emplace_back(CraneCont_j{f, i, n});
-            _stack.emplace_back(CraneEnter{j});
+            uint64_t j = _lc1_i - 1;
+            _lc1_stack.emplace_back(CraneCont_j{std::move(f), _lc1_i, n});
+            _lc1_stack.emplace_back(CraneEnter{j});
           }
         } else {
           auto _f = std::move(std::get<CraneCont_j>(_frame));
           std::decay_t<F1> f = std::move(_f.f);
-          uint64_t i = _f.i;
+          uint64_t _lc1_i = _f.i;
           uint64_t n = _f.n;
-          _result = List<uint64_t>::cons(f((((n - i) > n ? 0 : (n - i)))),
-                                         std::move(_result));
+          _lc1_result =
+              List<uint64_t>::cons(f((((n - _lc1_i) > n ? 0 : (n - _lc1_i)))),
+                                   std::move(_lc1_result));
         }
       }
-      return _result;
-    };
-    return go(n);
+      return _lc1_result;
+    }
   }
 
   /// Helper: replicate single element n times.

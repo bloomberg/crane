@@ -95,21 +95,22 @@ struct LetFix {
   static uint64_t local_sum(const List<uint64_t> &l);
 
   template <typename T1> static List<T1> local_rev(const List<T1> &l) {
-    auto go = [](List<T1> acc, const List<T1> &xs) -> List<T1> {
-      const List<T1> *_loop_xs = &xs;
-      List<T1> _loop_acc = std::move(acc);
+    {
+      List<T1> _lc1_acc = List<T1>::nil();
+      const List<T1> &_lc1_xs = l;
+      const List<T1> *_lc1_loop_xs = &_lc1_xs;
+      List<T1> _lc1_loop_acc = std::move(_lc1_acc);
       while (true) {
-        if (std::holds_alternative<typename List<T1>::Nil>(_loop_xs->v())) {
-          return _loop_acc;
+        if (std::holds_alternative<typename List<T1>::Nil>(_lc1_loop_xs->v())) {
+          return _lc1_loop_acc;
         } else {
           const auto &[a0, a1] =
-              std::get<typename List<T1>::Cons>(_loop_xs->v());
-          _loop_xs = crane_raw(a1);
-          _loop_acc = List<T1>::cons(a0, std::move(_loop_acc));
+              std::get<typename List<T1>::Cons>(_lc1_loop_xs->v());
+          _lc1_loop_xs = crane_raw(a1);
+          _lc1_loop_acc = List<T1>::cons(a0, std::move(_lc1_loop_acc));
         }
       }
-    };
-    return go(List<T1>::nil(), l);
+    }
   }
 
   static List<uint64_t> local_flatten(const List<List<uint64_t>> &xss);

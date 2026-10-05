@@ -2448,3 +2448,88 @@ and free_vars_body (stmts : cpp_stmt list) : Id.t list =
   in
   go [] stmts
 
+(** [rename_ids f stmts] applies [f] to every identifier [stmts] declare or
+    read: a variable, every kind of declaration, a match's and a mapping's
+    binders, a lambda's parameters.  Applied to all of them alike it renames
+    consistently, so a body comes out alpha-equivalent as long as [f]'s
+    fresh names are fresh. *)
+let rec rename_ids f stmts = List.map (rename_stmt_ids f) stmts
+
+and rename_expr_ids f e =
+  match e with
+  | CPPvar id -> CPPvar (f id)
+  | CPPlambda l ->
+    CPPlambda
+      { l with
+        cl_params =
+          of_reversed
+            (List.map (fun (ty, x) -> (ty, Option.map f x)) (to_reversed l.cl_params));
+        cl_body = rename_ids f l.cl_body }
+  | _ -> map_expr (rename_expr_ids f) (rename_stmt_ids f) Fun.id e
+
+and rename_stmt_ids f s =
+  let fe = rename_expr_ids f and fl = rename_ids f in
+  match s with
+  | Sasgn (id, tgt, e) -> Sasgn (f id, tgt, fe e)
+  | Sdecl (id, ty) -> Sdecl (f id, ty)
+  | Sdecl_init (id, ty) -> Sdecl_init (f id, ty)
+  | Sbind (ids, e) -> Sbind (List.map f ids, fe e)
+  | Sif_decl (id, ty, e, a, b) -> Sif_decl (f id, ty, fe e, fl a, fl b)
+  | Sfor_range (id, e, b) -> Sfor_range (f id, fe e, fl b)
+  | Sblock_custom (r, tmpl, id, ty, args, tys) ->
+    Sblock_custom (r, tmpl, f id, ty, List.map fe args, tys)
+  | Smatch (scrut, branches, default) ->
+    Smatch
+      ( {scrut with sc_expr = fe scrut.sc_expr},
+        List.map
+          (fun br ->
+            { br with
+              smb_var = Option.map f br.smb_var;
+              smb_field_bindings =
+                List.map (fun (id, ty, u) -> (f id, ty, u)) br.smb_field_bindings;
+              smb_extra_conds = List.map fe br.smb_extra_conds;
+              smb_body = fl br.smb_body })
+          branches,
+        Option.map fl default )
+  | Scustom_case (ty, scrut, tys, branches, m) ->
+    Scustom_case
+      ( ty,
+        fe scrut,
+        tys,
+        List.map
+          (fun (ps, rty, b) -> (List.map (fun (id, t) -> (f id, t)) ps, rty, fl b))
+          branches,
+        m )
+  | _ -> map_stmt fe (rename_stmt_ids f) Fun.id s
+
+(** The identifiers [stmts] declare, at any depth -- the names a body would
+    carry into any scope it is spliced into. *)
+let declared_ids stmts =
+  let acc = ref [] in
+  let note id = if not (List.exists (Id.equal id) !acc) then acc := id :: !acc in
+  let rec fs s =
+    ( match s with
+    | Sasgn (id, Declare _, _) | Sdecl (id, _) | Sdecl_init (id, _)
+    | Sif_decl (id, _, _, _, _) | Sfor_range (id, _, _) ->
+      note id
+    | Sbind (ids, _) -> List.iter note ids
+    | Sblock_custom (_, _, id, _, _, _) -> note id
+    | Smatch (_, branches, _) ->
+      List.iter
+        (fun br ->
+          Option.iter note br.smb_var;
+          List.iter (fun (id, _, _) -> note id) br.smb_field_bindings)
+        branches
+    | Scustom_case (_, _, _, branches, _) ->
+      List.iter (fun (ps, _, _) -> List.iter (fun (id, _) -> note id) ps) branches
+    | _ -> () );
+    iter_stmt_children ~on_expr:fe ~on_stmts:(List.iter fs) s
+  and fe e =
+    ( match e with
+    | CPPlambda l -> List.iter (fun (_, x) -> Option.iter note x) (to_reversed l.cl_params)
+    | _ -> () );
+    iter_expr_children ~on_expr:fe ~on_stmts:(List.iter fs) e
+  in
+  List.iter fs stmts;
+  List.rev !acc
+

@@ -1,21 +1,23 @@
 #include "let_fix.h"
 
 uint64_t LetFix::local_sum(const List<uint64_t> &l) {
-  auto go = [](uint64_t acc, const List<uint64_t> &xs) -> uint64_t {
-    const List<uint64_t> *_loop_xs = &xs;
-    uint64_t _loop_acc = std::move(acc);
+  {
+    uint64_t _lc1_acc = UINT64_C(0);
+    const List<uint64_t> &_lc1_xs = l;
+    const List<uint64_t> *_lc1_loop_xs = &_lc1_xs;
+    uint64_t _lc1_loop_acc = std::move(_lc1_acc);
     while (true) {
-      if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_xs->v())) {
-        return _loop_acc;
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(
+              _lc1_loop_xs->v())) {
+        return _lc1_loop_acc;
       } else {
         const auto &[a0, a1] =
-            std::get<typename List<uint64_t>::Cons>(_loop_xs->v());
-        _loop_xs = crane_raw(a1);
-        _loop_acc = (_loop_acc + a0);
+            std::get<typename List<uint64_t>::Cons>(_lc1_loop_xs->v());
+        _lc1_loop_xs = crane_raw(a1);
+        _lc1_loop_acc = (_lc1_loop_acc + a0);
       }
     }
-  };
-  return go(UINT64_C(0), l);
+  }
 }
 
 List<uint64_t> LetFix::local_flatten(const List<List<uint64_t>> &xss) {

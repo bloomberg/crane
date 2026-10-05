@@ -135,6 +135,9 @@ let finish decl =
         else Loopify.transform_local_tail_loops d)
       decl
   in
+  (* Closures made and used in one place become the code they stand for,
+     before ownership is decided, so what they captured is seen as local. *)
+  let decl = pass "local_closures" Cpp_local_closures.transform_decl decl in
   (* The temporaries Normalize named for loopification and loopification did
      not need go back where they are read. *)
   let decl = pass "temporaries" Cpp_temporaries.decl decl in

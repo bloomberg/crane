@@ -1520,3 +1520,11 @@ val is_reference_type : cpp_type -> bool
 val free_vars_expr : cpp_expr -> Id.t list
 val free_vars_stmt : cpp_stmt -> Id.t list
 val free_vars_body : cpp_stmt list -> Id.t list
+
+(** [rename_ids f stmts] applies [f] to every identifier [stmts] declare or
+    read -- variables, declarations of every kind, match and mapping binders,
+    lambda parameters -- so that a consistent [f] renames alpha-equivalently. *)
+val rename_ids : (Id.t -> Id.t) -> cpp_stmt list -> cpp_stmt list
+
+(** The identifiers [stmts] declare, at any depth, in order of appearance. *)
+val declared_ids : cpp_stmt list -> Id.t list

@@ -150,10 +150,10 @@ struct Typeclasses {
           return (_tcI0::to_nat(a1) + _self_sum(_self_sum, *a2));
         }
       };
-      auto sum = [&](const List<T1> &l) -> uint64_t {
-        return sum_impl(sum_impl, l);
-      };
-      return sum(std::move(a0));
+      {
+        const List<T1> &_lc1_l = a0;
+        return sum_impl(sum_impl, _lc1_l);
+      }
     }
   };
 

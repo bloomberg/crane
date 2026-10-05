@@ -43,10 +43,10 @@ List<uint64_t> MergesortFuel::merge(List<uint64_t> l1,
       }
     }
   };
-  auto merge_aux = [&](List<uint64_t> l3) -> List<uint64_t> {
-    return merge_aux_impl(merge_aux_impl, l3);
-  };
-  return merge_aux(l2);
+  {
+    List<uint64_t> _lc1_l3 = l2;
+    return merge_aux_impl(merge_aux_impl, std::move(_lc1_l3));
+  }
 }
 
 /// * Fuel-based merge sort

@@ -820,9 +820,9 @@ struct LoopifyMutualPartialApp {
               const auto &[_inl_l0] =
                   std::get<typename md<T1>::MNode>(_inl_m.v());
               const List<md<T1>> &_inl_l0_value = *_inl_l0;
-              return md<T2>::mnode(
-                  _inl_l0_value.template map<md<T2>>([=](md<T1> _x0) -> md<T2> {
-                    return ft_md<T1, T2>(_inl_h, _inl_f, _x0);
+              return md<T2>::mnode(_inl_l0_value.template map<md<T2>>(
+                  [=](md<T1> _inl_x0) -> md<T2> {
+                    return ft_md<T1, T2>(_inl_h, _inl_f, _inl_x0);
                   }));
             } else {
               const auto &[_inl_a0, _inl_b0] =

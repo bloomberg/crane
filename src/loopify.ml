@@ -354,27 +354,6 @@ let try_inline_mutual_into names body =
      body.  Applied repeatedly by the loop below until this function only calls
      itself (or no cycle partner remains). *)
   let inline_one (callee_ref, callee_ret_ty, callee_params, callee_body) body =
-    (* Collect all locally-declared IDs from a statement list, including
-       structured binding names from Smatch branches. *)
-    let rec collect_local_ids stmts =
-      List.concat_map collect_local_ids_stmt stmts
-    and collect_local_ids_stmt = function
-      | Sdecl (id, _) | Sdecl_init (id, _) -> [id]
-      | Sasgn (id, Declare _, _) -> [id]
-      | Sbind (ids, _) -> ids
-      | Smatch (scrut, branches, default) ->
-        List.concat_map (fun br ->
-          let var_ids = match br.smb_var with Some id -> [id] | None -> [] in
-          let field_ids = List.map (fun (id, _, _) -> id) br.smb_field_bindings in
-          var_ids @ field_ids @ collect_local_ids br.smb_body
-        ) branches
-        @ (match default with Some ss -> collect_local_ids ss | None -> [])
-      | Sif (_, then_br, else_br) ->
-        collect_local_ids then_br @ collect_local_ids else_br
-      | Sblock ss -> collect_local_ids ss
-      | Swhile (_, ss) -> collect_local_ids ss
-      | _ -> []
-    in
     (* Generate fresh names for parameters AND all local variables to avoid
        collision with the outer function's bindings. *)
     let param_rename_map =
@@ -382,7 +361,7 @@ let try_inline_mutual_into names body =
         (fun (pid, _ty) -> (pid, Generated_name.prefixed "_inl" pid))
         callee_params
     in
-    let local_ids = collect_local_ids callee_body in
+    let local_ids = declared_ids callee_body in
     let local_rename_map =
       List.filter_map (fun id ->
         if List.mem_assoc id param_rename_map then None
@@ -407,35 +386,12 @@ let try_inline_mutual_into names body =
           (List.assoc pid rename_map, ty))
         callee_params
     in
-    (* Rename variables in the callee body *)
     let rename_var id =
       match List.assoc_opt id rename_map with
       | Some fresh -> fresh
       | None -> id
     in
-    let rec rename_expr = function
-      | CPPvar id -> CPPvar (rename_var id)
-      | e -> map_expr rename_expr rename_stmt Fun.id e
-    and rename_stmt s =
-      match s with
-      | Sasgn (id, ty, e) -> Sasgn (rename_var id, ty, rename_expr e)
-      | Sdecl (id, ty) -> Sdecl (rename_var id, ty)
-      | Smatch (scrut, branches, default) ->
-        Smatch (
-          { scrut with sc_expr = rename_expr scrut.sc_expr },
-          List.map (fun br ->
-            { smb_ctor_type = br.smb_ctor_type;
-              smb_var = Option.map rename_var br.smb_var;
-              smb_field_bindings =
-                List.map (fun (id, ty, u) -> (rename_var id, ty, u))
-                  br.smb_field_bindings;
-              smb_extra_conds = List.map rename_expr br.smb_extra_conds;
-              smb_body = List.map rename_stmt br.smb_body })
-            branches,
-          Option.map (List.map rename_stmt) default)
-      | _ -> map_stmt rename_expr rename_stmt Fun.id s
-    in
-    let fresh_body = List.map rename_stmt callee_body in
+    let fresh_body = rename_ids rename_var callee_body in
     (* Inline: replace calls to callee_ref with fresh_body *)
     let callee_label =
       match callee_ref with

@@ -11677,3 +11677,14 @@
   (alias runtest)
   (deps local_tail_loop_default.t.exe)
   (action (run ./local_tail_loop_default.t.exe))))
+
+(subdir local_record_closures
+ (rule
+  (targets local_record_closures.t.exe)
+  (deps LocalRecordClosures.vo local_record_closures.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} local_record_closures.t.exe local_record_closures.cpp local_record_closures.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps local_record_closures.t.exe)
+  (action (run ./local_record_closures.t.exe))))

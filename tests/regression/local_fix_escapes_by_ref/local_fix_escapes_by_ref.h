@@ -254,10 +254,11 @@ struct LocalFixEscapesByRef {
             });
       }
     };
-    auto loop = [=](List<crane::obj> acc, List<T1> l0) -> st<List<T2>> {
-      return loop_impl(loop_impl, acc, l0);
-    };
-    return loop(List<crane::obj>::nil(), l);
+    {
+      List<crane::obj> _lc1_acc = List<crane::obj>::nil();
+      List<T1> _lc1_l0 = l;
+      return loop_impl(loop_impl, std::move(_lc1_acc), std::move(_lc1_l0));
+    }
   }
 
   /// Each step doubles the element and counts one state tick.
