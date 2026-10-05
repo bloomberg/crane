@@ -1262,9 +1262,8 @@ LoopifyTrees::tree_min_max(const LoopifyTrees::tree<uint64_t>
 
 /// all_paths_sum t sums all root-to-leaf path sums.
 uint64_t LoopifyTrees::all_paths_sum(const LoopifyTrees::tree<uint64_t> &t) {
-  auto sum_with_acc_impl =
-      [&](auto &, uint64_t acc,
-          const LoopifyTrees::tree<uint64_t> &tree0) -> uint64_t {
+  auto sum_with_acc =
+      [&](uint64_t acc, const LoopifyTrees::tree<uint64_t> &tree0) -> uint64_t {
     /// CraneEnter: captures varying parameters for each recursive call.
     struct CraneEnter {
       const LoopifyTrees::tree<uint64_t> *tree0;
@@ -1317,10 +1316,6 @@ uint64_t LoopifyTrees::all_paths_sum(const LoopifyTrees::tree<uint64_t> &t) {
       }
     }
     return _result;
-  };
-  auto sum_with_acc =
-      [&](uint64_t acc, const LoopifyTrees::tree<uint64_t> &tree0) -> uint64_t {
-    return sum_with_acc_impl(sum_with_acc_impl, acc, tree0);
   };
   return sum_with_acc(UINT64_C(0), t);
 }

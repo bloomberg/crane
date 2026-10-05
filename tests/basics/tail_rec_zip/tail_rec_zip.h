@@ -195,25 +195,29 @@ public:
 
 template <typename T1, typename T2>
 List<Prod<T1, T2>> better_zip(const List<T1> &la, const List<T2> &lb) {
-  auto go_impl = [](auto &_self_go, const List<T1> &la0, const List<T2> &lb0,
-                    const List<Prod<T1, T2>> &acc) -> List<Prod<T1, T2>> {
-    if (std::holds_alternative<typename List<T1>::Nil>(la0.v())) {
-      return acc.rev();
-    } else {
-      const auto &[a0, a1] = std::get<typename List<T1>::Cons>(la0.v());
-      if (std::holds_alternative<typename List<T2>::Nil>(lb0.v())) {
-        return acc.rev();
+  auto go = [](const List<T1> &la0, const List<T2> &lb0,
+               const List<Prod<T1, T2>> &acc) -> List<Prod<T1, T2>> {
+    List<Prod<T1, T2>> _loop_acc = acc;
+    const List<T2> *_loop_lb0 = &lb0;
+    const List<T1> *_loop_la0 = &la0;
+    while (true) {
+      if (std::holds_alternative<typename List<T1>::Nil>(_loop_la0->v())) {
+        return _loop_acc.rev();
       } else {
-        const auto &[a00, a10] = std::get<typename List<T2>::Cons>(lb0.v());
-        return _self_go(
-            _self_go, *a1, *a10,
-            List<Prod<T1, T2>>::cons(Prod<T1, T2>::pair(a0, a00), acc));
+        const auto &[a0, a1] =
+            std::get<typename List<T1>::Cons>(_loop_la0->v());
+        if (std::holds_alternative<typename List<T2>::Nil>(_loop_lb0->v())) {
+          return _loop_acc.rev();
+        } else {
+          const auto &[a00, a10] =
+              std::get<typename List<T2>::Cons>(_loop_lb0->v());
+          _loop_acc = List<Prod<T1, T2>>::cons(Prod<T1, T2>::pair(a0, a00),
+                                               std::move(_loop_acc));
+          _loop_lb0 = crane_raw(a10);
+          _loop_la0 = crane_raw(a1);
+        }
       }
     }
-  };
-  auto go = [&](const List<T1> &la0, const List<T2> &lb0,
-                const List<Prod<T1, T2>> &acc) -> List<Prod<T1, T2>> {
-    return go_impl(go_impl, la0, lb0, acc);
   };
   return go(la, lb, List<Prod<T1, T2>>::nil());
 }

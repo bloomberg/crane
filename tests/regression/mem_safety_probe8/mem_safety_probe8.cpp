@@ -289,8 +289,7 @@ uint64_t MemSafetyProbe8::tree_flatten(
 /// TEST 6: Pass tree as a higher-order function argument
 /// to prevent methodification completely.
 uint64_t MemSafetyProbe8::tree_size_via_fold(const MemSafetyProbe8::tree &t) {
-  auto go_impl = [&](auto &, uint64_t _x,
-                     const MemSafetyProbe8::tree &t0) -> uint64_t {
+  auto go = [&](uint64_t _x, const MemSafetyProbe8::tree &t0) -> uint64_t {
     /// CraneEnter: captures varying parameters for each recursive call.
     struct CraneEnter {
       const MemSafetyProbe8::tree *t0;
@@ -339,9 +338,6 @@ uint64_t MemSafetyProbe8::tree_size_via_fold(const MemSafetyProbe8::tree &t) {
       }
     }
     return _result;
-  };
-  auto go = [&](uint64_t _x, const MemSafetyProbe8::tree &t0) -> uint64_t {
-    return go_impl(go_impl, _x, t0);
   };
   return go(UINT64_C(0), t);
 }

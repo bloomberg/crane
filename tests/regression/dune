@@ -11666,3 +11666,14 @@
   (alias runtest)
   (deps callback_stays_concrete.t.exe)
   (action (run ./callback_stays_concrete.t.exe))))
+
+(subdir local_tail_loop_default
+ (rule
+  (targets local_tail_loop_default.t.exe)
+  (deps LocalTailLoopDefault.vo local_tail_loop_default.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} local_tail_loop_default.t.exe local_tail_loop_default.cpp local_tail_loop_default.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps local_tail_loop_default.t.exe)
+  (action (run ./local_tail_loop_default.t.exe))))

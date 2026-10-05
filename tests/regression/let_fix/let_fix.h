@@ -95,17 +95,19 @@ struct LetFix {
   static uint64_t local_sum(const List<uint64_t> &l);
 
   template <typename T1> static List<T1> local_rev(const List<T1> &l) {
-    auto go_impl = [](auto &_self_go, List<T1> acc,
-                      const List<T1> &xs) -> List<T1> {
-      if (std::holds_alternative<typename List<T1>::Nil>(xs.v())) {
-        return acc;
-      } else {
-        const auto &[a0, a1] = std::get<typename List<T1>::Cons>(xs.v());
-        return _self_go(_self_go, List<T1>::cons(a0, std::move(acc)), *a1);
+    auto go = [](List<T1> acc, const List<T1> &xs) -> List<T1> {
+      const List<T1> *_loop_xs = &xs;
+      List<T1> _loop_acc = std::move(acc);
+      while (true) {
+        if (std::holds_alternative<typename List<T1>::Nil>(_loop_xs->v())) {
+          return _loop_acc;
+        } else {
+          const auto &[a0, a1] =
+              std::get<typename List<T1>::Cons>(_loop_xs->v());
+          _loop_xs = crane_raw(a1);
+          _loop_acc = List<T1>::cons(a0, std::move(_loop_acc));
+        }
       }
-    };
-    auto go = [&](List<T1> acc, const List<T1> &xs) -> List<T1> {
-      return go_impl(go_impl, acc, xs);
     };
     return go(List<T1>::nil(), l);
   }

@@ -401,52 +401,50 @@ struct TopologicalSort {
   static List<T1>
   get_elems(std::type_identity_t<crane::fn<bool(T1, T1)>> eqb_node,
             const List<bsl::pair<T1, T1>> &l) {
-    auto get_elems_aux_impl = [&](auto &_self_get_elems_aux,
-                                  const List<bsl::pair<T1, T1>> &l0,
-                                  List<T1> h) -> List<T1> {
-      if (bsl::holds_alternative<typename List<bsl::pair<T1, T1>>::Nil>(
-              l0.v())) {
-        return h;
-      } else {
-        const auto &[d_a0, d_a1] =
-            bsl::get<typename List<bsl::pair<T1, T1>>::Cons>(l0.v());
-        const List<bsl::pair<T1, T1>> &d_a1_value = *d_a1;
-        auto [e1, e2] = d_a0;
-        bsl::optional<T1> f1 =
-            h.find([=](const T1 &x) { return eqb_node(e1, x); });
-        bsl::optional<T1> f2 =
-            h.find([=](const T1 &x) { return eqb_node(e2, x); });
-        if (f1.has_value()) {
-          T1 _x = *f1;
-          if (f2.has_value()) {
-            T1 _x0 = *f2;
-            return _self_get_elems_aux(_self_get_elems_aux, d_a1_value,
-                                       bsl::move(h));
-          } else {
-            return _self_get_elems_aux(_self_get_elems_aux, d_a1_value,
-                                       List<T1>::cons(e2, bsl::move(h)));
-          }
+    auto get_elems_aux = [&](const List<bsl::pair<T1, T1>> &l0,
+                             List<T1> h) -> List<T1> {
+      List<T1> _loop_h = bsl::move(h);
+      List<bsl::pair<T1, T1>> _loop_l0 = l0;
+      while (true) {
+        if (bsl::holds_alternative<typename List<bsl::pair<T1, T1>>::Nil>(
+                _loop_l0.v())) {
+          return _loop_h;
         } else {
-          if (f2.has_value()) {
-            T1 _x = *f2;
-            return _self_get_elems_aux(_self_get_elems_aux, d_a1_value,
-                                       List<T1>::cons(e1, bsl::move(h)));
-          } else {
-            if (eqb_node(e1, e2)) {
-              return _self_get_elems_aux(_self_get_elems_aux, d_a1_value,
-                                         List<T1>::cons(e1, bsl::move(h)));
+          const auto &[d_a0, d_a1] =
+              bsl::get<typename List<bsl::pair<T1, T1>>::Cons>(_loop_l0.v());
+          const List<bsl::pair<T1, T1>> &d_a1_value = *d_a1;
+          auto [e1, e2] = d_a0;
+          bsl::optional<T1> f1 =
+              _loop_h.find([=](const T1 &x) { return eqb_node(e1, x); });
+          bsl::optional<T1> f2 =
+              _loop_h.find([=](const T1 &x) { return eqb_node(e2, x); });
+          if (f1.has_value()) {
+            T1 _x = *f1;
+            if (f2.has_value()) {
+              T1 _x0 = *f2;
+              _loop_l0 = d_a1_value;
             } else {
-              return _self_get_elems_aux(
-                  _self_get_elems_aux, d_a1_value,
-                  List<T1>::cons(e1, List<T1>::cons(e2, bsl::move(h))));
+              _loop_h = List<T1>::cons(e2, bsl::move(_loop_h));
+              _loop_l0 = d_a1_value;
+            }
+          } else {
+            if (f2.has_value()) {
+              T1 _x = *f2;
+              _loop_h = List<T1>::cons(e1, bsl::move(_loop_h));
+              _loop_l0 = d_a1_value;
+            } else {
+              if (eqb_node(e1, e2)) {
+                _loop_h = List<T1>::cons(e1, bsl::move(_loop_h));
+                _loop_l0 = d_a1_value;
+              } else {
+                _loop_h =
+                    List<T1>::cons(e1, List<T1>::cons(e2, bsl::move(_loop_h)));
+                _loop_l0 = d_a1_value;
+              }
             }
           }
         }
       }
-    };
-    auto get_elems_aux = [&](const List<bsl::pair<T1, T1>> &l0,
-                             List<T1> h) -> List<T1> {
-      return get_elems_aux_impl(get_elems_aux_impl, l0, h);
     };
     return get_elems_aux(l, List<T1>::nil());
   }

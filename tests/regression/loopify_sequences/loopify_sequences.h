@@ -219,7 +219,7 @@ struct LoopifySequences {
       return List<T1>::nil();
     } else {
       const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
-      auto go_impl = [&](auto &, const List<T1> &rest) -> List<T1> {
+      auto go = [&](const List<T1> &rest) -> List<T1> {
         /// CraneEnter: captures varying parameters for each recursive call.
         struct CraneEnter {
           const List<T1> *rest;
@@ -259,9 +259,6 @@ struct LoopifySequences {
         }
         return _result;
       };
-      auto go = [&](const List<T1> &rest) -> List<T1> {
-        return go_impl(go_impl, rest);
-      };
       return List<T1>::cons(a0, go(*a1));
     }
   }
@@ -283,7 +280,7 @@ struct LoopifySequences {
         break;
       } else {
         uint64_t f = _loop_fuel - 1;
-        auto all_nil_impl = [](auto &, const List<List<T1>> &l) -> bool {
+        auto all_nil = [](const List<List<T1>> &l) -> bool {
           const List<List<T1>> *_loop_l = &l;
           while (true) {
             if (std::holds_alternative<typename List<List<T1>>::Nil>(
@@ -300,9 +297,6 @@ struct LoopifySequences {
             }
           }
         };
-        auto all_nil = [&](const List<List<T1>> &l) -> bool {
-          return all_nil_impl(all_nil_impl, l);
-        };
         if (all_nil(_loop_ll)) {
           auto _value = List<List<T1>>::nil();
           (_write ? *(*_write =
@@ -310,7 +304,7 @@ struct LoopifySequences {
                   : _root.emplace(std::move(_value)));
           break;
         } else {
-          auto heads_impl = [&](auto &, const List<List<T1>> &l) -> List<T1> {
+          auto heads = [&](const List<List<T1>> &l) -> List<T1> {
             /// CraneEnter: captures varying parameters for each recursive call.
             struct CraneEnter {
               const List<List<T1>> *l;
@@ -354,11 +348,7 @@ struct LoopifySequences {
             }
             return _result;
           };
-          auto heads = [&](const List<List<T1>> &l) -> List<T1> {
-            return heads_impl(heads_impl, l);
-          };
-          auto tails_impl = [&](auto &,
-                                const List<List<T1>> &l) -> List<List<T1>> {
+          auto tails = [&](const List<List<T1>> &l) -> List<List<T1>> {
             /// CraneEnter: captures varying parameters for each recursive call.
             struct CraneEnter {
               const List<List<T1>> *l;
@@ -401,9 +391,6 @@ struct LoopifySequences {
               }
             }
             return _result;
-          };
-          auto tails = [&](const List<List<T1>> &l) -> List<List<T1>> {
-            return tails_impl(tails_impl, l);
           };
           auto _cell = typename List<List<T1>>::Cons(heads(_loop_ll), nullptr);
           List<List<T1>> &_node =

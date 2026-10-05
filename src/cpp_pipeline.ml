@@ -130,7 +130,9 @@ let finish decl =
   in
   let decl =
     pass "loopify"
-      (fun d -> if should_loopify d then Loopify.transform_decl d else d)
+      (fun d ->
+        if should_loopify d then Loopify.transform_decl d
+        else Loopify.transform_local_tail_loops d)
       decl
   in
   (* The temporaries Normalize named for loopification and loopification did

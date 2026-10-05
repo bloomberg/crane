@@ -1,17 +1,19 @@
 #include "let_fix.h"
 
 uint64_t LetFix::local_sum(const List<uint64_t> &l) {
-  auto go_impl = [](auto &_self_go, uint64_t acc,
-                    const List<uint64_t> &xs) -> uint64_t {
-    if (std::holds_alternative<typename List<uint64_t>::Nil>(xs.v())) {
-      return acc;
-    } else {
-      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(xs.v());
-      return _self_go(_self_go, (acc + a0), *a1);
+  auto go = [](uint64_t acc, const List<uint64_t> &xs) -> uint64_t {
+    const List<uint64_t> *_loop_xs = &xs;
+    uint64_t _loop_acc = std::move(acc);
+    while (true) {
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_xs->v())) {
+        return _loop_acc;
+      } else {
+        const auto &[a0, a1] =
+            std::get<typename List<uint64_t>::Cons>(_loop_xs->v());
+        _loop_xs = crane_raw(a1);
+        _loop_acc = (_loop_acc + a0);
+      }
     }
-  };
-  auto go = [&](uint64_t acc, const List<uint64_t> &xs) -> uint64_t {
-    return go_impl(go_impl, acc, xs);
   };
   return go(UINT64_C(0), l);
 }

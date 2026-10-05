@@ -1,17 +1,19 @@
 #include "let_fix_ycomb_byref.h"
 
 uint64_t LetFixYcombByref::sum_list(const List<uint64_t> &l) {
-  auto go_impl = [](auto &_self_go, const List<uint64_t> &xs,
-                    uint64_t acc) -> uint64_t {
-    if (std::holds_alternative<typename List<uint64_t>::Nil>(xs.v())) {
-      return acc;
-    } else {
-      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(xs.v());
-      return _self_go(_self_go, *a1, (acc + a0));
+  auto go = [](const List<uint64_t> &xs, uint64_t acc) -> uint64_t {
+    uint64_t _loop_acc = std::move(acc);
+    const List<uint64_t> *_loop_xs = &xs;
+    while (true) {
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_xs->v())) {
+        return _loop_acc;
+      } else {
+        const auto &[a0, a1] =
+            std::get<typename List<uint64_t>::Cons>(_loop_xs->v());
+        _loop_acc = (_loop_acc + a0);
+        _loop_xs = crane_raw(a1);
+      }
     }
-  };
-  auto go = [&](const List<uint64_t> &xs, uint64_t acc) -> uint64_t {
-    return go_impl(go_impl, xs, acc);
   };
   return go(l, UINT64_C(0));
 }

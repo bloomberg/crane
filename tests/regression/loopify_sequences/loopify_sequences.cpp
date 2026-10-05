@@ -618,9 +618,8 @@ List<List<uint64_t>> LoopifySequences::string_subsequences(
       auto _f = std::move(std::get<CraneCont_Cons>(_frame));
       uint64_t a0 = _f.a0;
       List<List<uint64_t>> sub_rest = std::move(_result);
-      auto map_prepend_c_impl =
-          [&](auto &,
-              const List<List<uint64_t>> &lsts) -> List<List<uint64_t>> {
+      auto map_prepend_c =
+          [&](const List<List<uint64_t>> &lsts) -> List<List<uint64_t>> {
         /// CraneEnter: captures varying parameters for each recursive call.
         struct CraneEnter {
           const List<List<uint64_t>> *lsts;
@@ -660,10 +659,6 @@ List<List<uint64_t>> LoopifySequences::string_subsequences(
           }
         }
         return _result;
-      };
-      auto map_prepend_c =
-          [&](const List<List<uint64_t>> &lsts) -> List<List<uint64_t>> {
-        return map_prepend_c_impl(map_prepend_c_impl, lsts);
       };
       _result = sub_rest.app(map_prepend_c(sub_rest));
     }

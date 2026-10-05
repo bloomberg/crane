@@ -112,9 +112,8 @@ List<List<uint64_t>> LoopifyHofs::subsequences(
       auto _f = std::move(std::get<CraneCont_Cons>(_frame));
       uint64_t a0 = _f.a0;
       List<List<uint64_t>> rest = std::move(_result);
-      auto map_cons_x_impl =
-          [&](auto &,
-              const List<List<uint64_t>> &lsts) -> List<List<uint64_t>> {
+      auto map_cons_x =
+          [&](const List<List<uint64_t>> &lsts) -> List<List<uint64_t>> {
         /// CraneEnter: captures varying parameters for each recursive call.
         struct CraneEnter {
           const List<List<uint64_t>> *lsts;
@@ -154,10 +153,6 @@ List<List<uint64_t>> LoopifyHofs::subsequences(
           }
         }
         return _result;
-      };
-      auto map_cons_x =
-          [&](const List<List<uint64_t>> &lsts) -> List<List<uint64_t>> {
-        return map_cons_x_impl(map_cons_x_impl, lsts);
       };
       _result = rest.app(map_cons_x(rest));
     }
@@ -369,9 +364,8 @@ List<List<uint64_t>> LoopifyHofs::power_set(
       auto _f = std::move(std::get<CraneCont_Cons>(_frame));
       uint64_t a0 = _f.a0;
       List<List<uint64_t>> sub = std::move(_result);
-      auto map_cons_x_impl =
-          [&](auto &,
-              const List<List<uint64_t>> &lsts) -> List<List<uint64_t>> {
+      auto map_cons_x =
+          [&](const List<List<uint64_t>> &lsts) -> List<List<uint64_t>> {
         /// CraneEnter: captures varying parameters for each recursive call.
         struct CraneEnter {
           const List<List<uint64_t>> *lsts;
@@ -411,10 +405,6 @@ List<List<uint64_t>> LoopifyHofs::power_set(
           }
         }
         return _result;
-      };
-      auto map_cons_x =
-          [&](const List<List<uint64_t>> &lsts) -> List<List<uint64_t>> {
-        return map_cons_x_impl(map_cons_x_impl, lsts);
       };
       _result = sub.app(map_cons_x(sub));
     }

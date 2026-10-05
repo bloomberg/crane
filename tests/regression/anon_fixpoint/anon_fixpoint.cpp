@@ -1,16 +1,19 @@
 #include "anon_fixpoint.h"
 
 uint64_t AnonFixpoint::sum_to(uint64_t n) {
-  auto go_impl = [](auto &_self_go, uint64_t m, uint64_t acc) -> uint64_t {
-    if (m <= 0) {
-      return acc;
-    } else {
-      uint64_t p = m - 1;
-      return _self_go(_self_go, p, (m + acc));
+  auto go = [](uint64_t m, uint64_t acc) -> uint64_t {
+    uint64_t _loop_acc = std::move(acc);
+    uint64_t _loop_m = std::move(m);
+    while (true) {
+      if (_loop_m <= 0) {
+        return _loop_acc;
+      } else {
+        uint64_t p = _loop_m - 1;
+        uint64_t _next_m = p;
+        _loop_acc = (_loop_m + _loop_acc);
+        _loop_m = _next_m;
+      }
     }
-  };
-  auto go = [&](uint64_t m, uint64_t acc) -> uint64_t {
-    return go_impl(go_impl, m, acc);
   };
   return go(n, UINT64_C(0));
 }
@@ -45,22 +48,27 @@ uint64_t AnonFixpoint::double_sum(uint64_t m) {
 }
 
 uint64_t AnonFixpoint::gcd(uint64_t a, uint64_t b) {
-  auto go_impl = [](auto &_self_go, uint64_t fuel, uint64_t x,
-                    uint64_t y) -> uint64_t {
-    if (fuel <= 0) {
-      return x;
-    } else {
-      uint64_t f = fuel - 1;
-      if (y <= 0) {
-        return x;
+  auto go = [](uint64_t fuel, uint64_t x, uint64_t y) -> uint64_t {
+    uint64_t _loop_y = std::move(y);
+    uint64_t _loop_x = std::move(x);
+    uint64_t _loop_fuel = std::move(fuel);
+    while (true) {
+      if (_loop_fuel <= 0) {
+        return _loop_x;
       } else {
-        uint64_t _x = y - 1;
-        return _self_go(_self_go, f, y, (y ? x % y : x));
+        uint64_t f = _loop_fuel - 1;
+        if (_loop_y <= 0) {
+          return _loop_x;
+        } else {
+          uint64_t _x = _loop_y - 1;
+          uint64_t _next_y = (_loop_y ? _loop_x % _loop_y : _loop_x);
+          uint64_t _next_x = _loop_y;
+          _loop_fuel = f;
+          _loop_y = _next_y;
+          _loop_x = _next_x;
+        }
       }
     }
-  };
-  auto go = [&](uint64_t fuel, uint64_t x, uint64_t y) -> uint64_t {
-    return go_impl(go_impl, fuel, x, y);
   };
   return go((a + b), a, b);
 }

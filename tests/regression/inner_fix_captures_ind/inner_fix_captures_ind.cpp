@@ -77,8 +77,8 @@ uint64_t InnerFixCapturesInd::outer(
       auto _f = std::move(std::get<CraneCont_Cons>(_frame));
       std::shared_ptr<InnerFixCapturesInd::lst> a1 = std::move(_f.a1);
       _result = ([&]() {
-        auto inner_impl = [&](auto &, const InnerFixCapturesInd::lst &m,
-                              uint64_t a) -> uint64_t {
+        auto inner = [&](const InnerFixCapturesInd::lst &m,
+                         uint64_t a) -> uint64_t {
           uint64_t _loop_a = std::move(a);
           const InnerFixCapturesInd::lst *_loop_m = &m;
           while (true) {
@@ -93,10 +93,6 @@ uint64_t InnerFixCapturesInd::outer(
               _loop_m = crane_raw(a3);
             }
           }
-        };
-        auto inner = [&](const InnerFixCapturesInd::lst &m,
-                         uint64_t a) -> uint64_t {
-          return inner_impl(inner_impl, m, a);
         };
         return inner(*a1, UINT64_C(0));
       }() + std::move(_result));

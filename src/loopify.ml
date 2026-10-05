@@ -519,7 +519,7 @@ let lambda_checker (lambda_name : Id.t) : call_checker =
     @param tparams  Type parameters of the enclosing function
     @param body     The statement list to scan and transform
     @return The statement list with all self-recursive inner lambdas loopified *)
-let loopify_inner_lambdas ~tparams ?(outer_env = []) body =
+let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
   (* What the enclosing scope binds, which a local fixpoint captures. *)
   let outer_env = collect_type_env body @ outer_env in
   let try_loopify_lambda id lparams ret_ty_opt lbody cap =
@@ -528,6 +528,7 @@ let loopify_inner_lambdas ~tparams ?(outer_env = []) body =
     let lbody = expose_tail_calls check lbody in
     match classify check lbody with
     | No_recursion -> None
+    | Nontail_recursion when tail_only -> None
     | (Tail_recursion | Nontail_recursion) as kind ->
       let params =
         List.filter_map
@@ -582,6 +583,7 @@ let loopify_inner_lambdas ~tparams ?(outer_env = []) body =
       let lbody = expose_tail_calls check lbody in
       match classify check lbody with
       | No_recursion -> None
+      | Nontail_recursion when tail_only -> None
       | (Tail_recursion | Nontail_recursion) as kind ->
         (* Loop params = all params except the trailing self-param. *)
         let loop_lparams =
@@ -742,15 +744,45 @@ let loopify_inner_lambdas ~tparams ?(outer_env = []) body =
       :: rest
       when Option.has_some (ycomb_self_id (to_reversed lparams)) ->
       ( match try_loopify_ycomb (to_reversed lparams) ret_ty_opt lbody with
-      | Some (lparams', lbody') ->
-        Sasgn
-          (id, tgt, CPPlambda
-            { cl_params = of_reversed lparams';
-            cl_tparams = [];
-              cl_ret = ret_ty_opt;
-              cl_body = lbody';
-              cl_capture = cap })
-        :: process_stmts rest
+      | Some (lparams', lbody') -> (
+        (* The loop no longer recurses, so the self-parameter and the wrapper
+           that supplied it are scaffolding: the wrapper [go] becomes the loop
+           itself, an ordinary lambda.  Only when the next statement is that
+           wrapper -- [return go_impl(go_impl, args...)] over its own
+           parameters -- and nothing after it names [go_impl]. *)
+        let self = ycomb_self_id (to_reversed lparams) in
+        let is_wrapper (w : cpp_lambda) =
+          match w.cl_body with
+          | [Sreturn (Some (CPPfun_call (_, CPPvar f, args)))] when Id.equal f id ->
+            let own = List.map (fun (_, x) -> Option.map (fun x -> CPPvar x) x) (lambda_params w.cl_params) in
+            List.map (fun a -> Some a) (call_args args)
+            = Some (CPPvar id) :: own
+          | _ -> false
+        in
+        match rest with
+        | Sasgn (wid, (Declare Tauto as wtgt), CPPlambda w) :: rest'
+          when is_wrapper w && not (List.exists (Id.equal id) (free_vars_body rest')) ->
+          Sasgn
+            ( wid,
+              wtgt,
+              CPPlambda
+                { cl_params =
+                    of_reversed
+                      (List.filter (fun (_, x) -> x <> self) lparams');
+                  cl_tparams = [];
+                  cl_ret = ret_ty_opt;
+                  cl_body = lbody';
+                  cl_capture = cap } )
+          :: process_stmts rest'
+        | _ ->
+          Sasgn
+            (id, tgt, CPPlambda
+              { cl_params = of_reversed lparams';
+              cl_tparams = [];
+                cl_ret = ret_ty_opt;
+                cl_body = lbody';
+                cl_capture = cap })
+          :: process_stmts rest )
       | None ->
         let lbody' = process_stmts lbody in
         Sasgn (id, tgt, CPPlambda
@@ -1816,6 +1848,32 @@ let try_inline_mutual_fields fields =
         | _ -> (f, vis, tag) )
       fields
 
+
+(** [transform_local_tail_loops decl] turns the tail-recursive local
+    fixpoints in [decl]'s bodies into loops, and leaves everything else as it
+    was.  A tail loop needs no frame and changes no evaluation order, so it is
+    the part of loopification every declaration gets, whatever
+    {!Cpp_pipeline.should_loopify} says about the rest. *)
+let rec transform_local_tail_loops ?(tparams = []) decl =
+  let body ps b = loopify_inner_lambdas ~tail_only:true ~tparams ~outer_env:ps b in
+  let rec field (f, vis, tag) =
+    let f =
+      match f with
+      | Fmethod m -> Fmethod {m with mf_body = body m.mf_params m.mf_body}
+      | Fnested_struct (id, fs) -> Fnested_struct (id, List.map field fs)
+      | f -> f
+    in
+    (f, vis, tag)
+  in
+  match decl with
+  | Dtemplate (tparams, c, inner) ->
+    Dtemplate (tparams, c, transform_local_tail_loops ~tparams inner)
+  | Dfun ({df_shape = Ddef (ps, b); _} as f) ->
+    Dfun {f with df_shape = Ddef (ps, body ps b)}
+  | Dstruct ds -> Dstruct {ds with ds_fields = List.map field ds.ds_fields}
+  | Dfields ds -> Dfields {ds with ds_fields = List.map field ds.ds_fields}
+  | Dnspace (r, ds) -> Dnspace (r, List.map (transform_local_tail_loops ~tparams) ds)
+  | d -> d
 
 (** Top-level entry point: transform a declaration and all its nested
     declarations (templates, structs, namespaces). Dispatches to

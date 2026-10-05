@@ -1,6 +1,7 @@
 #ifndef INCLUDED_DELIFTED_BINARY_FIXPOINT
 #define INCLUDED_DELIFTED_BINARY_FIXPOINT
 
+#include "crane_fn.h"
 #include <atomic>
 #include <memory>
 #include <utility>

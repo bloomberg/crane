@@ -62,9 +62,8 @@ List<uint64_t> LoopifyAlgorithms::sieve_fuel(uint64_t fuel, List<uint64_t> l) {
       } else {
         auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l.v_mut());
-        auto filter_multiples_impl =
-            [&](auto &, uint64_t p,
-                const List<uint64_t> &rest) -> List<uint64_t> {
+        auto filter_multiples =
+            [&](uint64_t p, const List<uint64_t> &rest) -> List<uint64_t> {
           /// CraneEnter: captures varying parameters for each recursive call.
           struct CraneEnter {
             const List<uint64_t> *rest;
@@ -105,10 +104,6 @@ List<uint64_t> LoopifyAlgorithms::sieve_fuel(uint64_t fuel, List<uint64_t> l) {
             }
           }
           return _result;
-        };
-        auto filter_multiples =
-            [&](uint64_t p, const List<uint64_t> &rest) -> List<uint64_t> {
-          return filter_multiples_impl(filter_multiples_impl, p, rest);
         };
         auto _cell = typename List<uint64_t>::Cons(std::move(a0), nullptr);
         List<uint64_t> &_node =
@@ -322,9 +317,8 @@ List<uint64_t> LoopifyAlgorithms::nub_aux(const List<uint64_t> &l,
       } else {
         const auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l.v());
-        auto filter_out_impl =
-            [&](auto &, uint64_t val,
-                const List<uint64_t> &rest) -> List<uint64_t> {
+        auto filter_out = [&](uint64_t val,
+                              const List<uint64_t> &rest) -> List<uint64_t> {
           /// CraneEnter: captures varying parameters for each recursive call.
           struct CraneEnter {
             const List<uint64_t> *rest;
@@ -365,10 +359,6 @@ List<uint64_t> LoopifyAlgorithms::nub_aux(const List<uint64_t> &l,
             }
           }
           return _result;
-        };
-        auto filter_out = [&](uint64_t val,
-                              const List<uint64_t> &rest) -> List<uint64_t> {
-          return filter_out_impl(filter_out_impl, val, rest);
         };
         auto _cell = typename List<uint64_t>::Cons(a0, nullptr);
         List<uint64_t> &_node =

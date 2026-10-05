@@ -323,8 +323,7 @@ struct LoopifyPatterns {
                                          list<list<T1>>::nil());
         } else {
           const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
-          auto map_cons_h_impl =
-              [&](auto &, const list<list<T1>> &lsts) -> list<list<T1>> {
+          auto map_cons_h = [&](const list<list<T1>> &lsts) -> list<list<T1>> {
             /// CraneEnter: captures varying parameters for each recursive call.
             struct CraneEnter {
               const list<list<T1>> *lsts;
@@ -364,9 +363,6 @@ struct LoopifyPatterns {
               }
             }
             return _result;
-          };
-          auto map_cons_h = [&](const list<list<T1>> &lsts) -> list<list<T1>> {
-            return map_cons_h_impl(map_cons_h_impl, lsts);
           };
           _stack.emplace_back(CraneCont_Cons{a0, a1, std::move(map_cons_h)});
           _stack.emplace_back(CraneEnter{crane_raw(a1)});

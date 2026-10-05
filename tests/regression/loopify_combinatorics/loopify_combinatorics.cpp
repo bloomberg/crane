@@ -297,8 +297,8 @@ List<List<uint64_t>> LoopifyCombinatorics::subsequences(
       auto _f = std::move(std::get<CraneCont_Cons>(_frame));
       uint64_t a0 = _f.a0;
       List<List<uint64_t>> rest = std::move(_result);
-      auto map_prepend_impl =
-          [&](auto &, const List<List<uint64_t>> &lst) -> List<List<uint64_t>> {
+      auto map_prepend =
+          [&](const List<List<uint64_t>> &lst) -> List<List<uint64_t>> {
         /// CraneEnter: captures varying parameters for each recursive call.
         struct CraneEnter {
           const List<List<uint64_t>> *lst;
@@ -338,10 +338,6 @@ List<List<uint64_t>> LoopifyCombinatorics::subsequences(
           }
         }
         return _result;
-      };
-      auto map_prepend =
-          [&](const List<List<uint64_t>> &lst) -> List<List<uint64_t>> {
-        return map_prepend_impl(map_prepend_impl, lst);
       };
       _result = rest.app(map_prepend(rest));
     }
@@ -464,8 +460,8 @@ List<List<uint64_t>> LoopifyCombinatorics::power_set(
       auto _f = std::move(std::get<CraneCont_Cons>(_frame));
       uint64_t a0 = _f.a0;
       List<List<uint64_t>> rest = std::move(_result);
-      auto map_add_x_impl =
-          [&](auto &, const List<List<uint64_t>> &lst) -> List<List<uint64_t>> {
+      auto map_add_x =
+          [&](const List<List<uint64_t>> &lst) -> List<List<uint64_t>> {
         /// CraneEnter: captures varying parameters for each recursive call.
         struct CraneEnter {
           const List<List<uint64_t>> *lst;
@@ -505,10 +501,6 @@ List<List<uint64_t>> LoopifyCombinatorics::power_set(
           }
         }
         return _result;
-      };
-      auto map_add_x =
-          [&](const List<List<uint64_t>> &lst) -> List<List<uint64_t>> {
-        return map_add_x_impl(map_add_x_impl, lst);
       };
       _result = rest.app(map_add_x(rest));
     }
@@ -558,9 +550,8 @@ List<List<uint64_t>> LoopifyCombinatorics::insert_everywhere(
       uint64_t a0 = _f.a0;
       const List<uint64_t> &l = std::move(_f.l);
       List<List<uint64_t>> rest = std::move(_result);
-      auto prepend_y_impl =
-          [&](auto &,
-              const List<List<uint64_t>> &lsts) -> List<List<uint64_t>> {
+      auto prepend_y =
+          [&](const List<List<uint64_t>> &lsts) -> List<List<uint64_t>> {
         /// CraneEnter: captures varying parameters for each recursive call.
         struct CraneEnter {
           const List<List<uint64_t>> *lsts;
@@ -600,10 +591,6 @@ List<List<uint64_t>> LoopifyCombinatorics::insert_everywhere(
           }
         }
         return _result;
-      };
-      auto prepend_y =
-          [&](const List<List<uint64_t>> &lsts) -> List<List<uint64_t>> {
-        return prepend_y_impl(prepend_y_impl, lsts);
       };
       _result = List<List<uint64_t>>::cons(List<uint64_t>::cons(x, l),
                                            prepend_y(std::move(rest)));

@@ -350,8 +350,7 @@ bool LoopifySearchOpt::binary_search_fuel(uint64_t fuel, uint64_t target,
         } else {
           uint64_t mid = (UINT64_C(2) ? len / UINT64_C(2) : 0);
           uint64_t mid_val;
-          auto nth_impl = [](auto &, uint64_t n,
-                             const List<uint64_t> &xs) -> uint64_t {
+          auto nth = [](uint64_t n, const List<uint64_t> &xs) -> uint64_t {
             const List<uint64_t> *_loop_xs = &xs;
             uint64_t _loop_n = std::move(n);
             while (true) {
@@ -378,13 +377,10 @@ bool LoopifySearchOpt::binary_search_fuel(uint64_t fuel, uint64_t target,
               }
             }
           };
-          auto nth = [&](uint64_t n, const List<uint64_t> &xs) -> uint64_t {
-            return nth_impl(nth_impl, n, xs);
-          };
           mid_val = nth(mid, _loop_l);
           List<uint64_t> left;
-          auto take_impl = [&](auto &, uint64_t n,
-                               const List<uint64_t> &xs) -> List<uint64_t> {
+          auto take = [&](uint64_t n,
+                          const List<uint64_t> &xs) -> List<uint64_t> {
             /// CraneEnter: captures varying parameters for each recursive call.
             struct CraneEnter {
               const List<uint64_t> *xs;
@@ -429,14 +425,9 @@ bool LoopifySearchOpt::binary_search_fuel(uint64_t fuel, uint64_t target,
             }
             return _result;
           };
-          auto take = [&](uint64_t n,
-                          const List<uint64_t> &xs) -> List<uint64_t> {
-            return take_impl(take_impl, n, xs);
-          };
           left = take(mid, _loop_l);
           List<uint64_t> right;
-          auto drop_impl = [](auto &, uint64_t n,
-                              List<uint64_t> xs) -> List<uint64_t> {
+          auto drop = [](uint64_t n, List<uint64_t> xs) -> List<uint64_t> {
             List<uint64_t> _loop_xs = std::move(xs);
             uint64_t _loop_n = std::move(n);
             while (true) {
@@ -455,9 +446,6 @@ bool LoopifySearchOpt::binary_search_fuel(uint64_t fuel, uint64_t target,
                 }
               }
             }
-          };
-          auto drop = [&](uint64_t n, List<uint64_t> xs) -> List<uint64_t> {
-            return drop_impl(drop_impl, n, xs);
           };
           right = drop((mid + UINT64_C(1)), _loop_l);
           if (target < mid_val) {

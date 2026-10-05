@@ -1,6 +1,7 @@
 #ifndef INCLUDED_SEPEXTANYLISTCOLLECT
 #define INCLUDED_SEPEXTANYLISTCOLLECT
 
+#include "crane_fn.h"
 #include "obj.h"
 #include <utility>
 #include <variant>
@@ -23,22 +24,24 @@ template <SymTypes Ty> struct ListCollect {
   collect(typename Ty::sym,
           const typename Datatypes::template List<typename Ty::sym> &,
           const typename Datatypes::Nat &n, symbols_semty default0) {
-    auto go_impl = [&](auto &_self_go, const typename Datatypes::Nat &n0,
-                       typename Datatypes::template List<symbols_semty> acc) ->
-        typename Datatypes::template List<symbols_semty> {
-          if (std::holds_alternative<typename Datatypes::Nat::O>(n0.v())) {
-            return acc;
-          } else {
-            const auto &[a0] = std::get<typename Datatypes::Nat::S>(n0.v());
-            return _self_go(_self_go, *a0,
-                            Datatypes::template List<symbols_semty>::cons(
-                                default0, std::move(acc)));
-          }
-        };
     auto go = [&](const typename Datatypes::Nat &n0,
                   typename Datatypes::template List<symbols_semty> acc) ->
         typename Datatypes::template List<symbols_semty> {
-          return go_impl(go_impl, n0, acc);
+          typename Datatypes::template List<symbols_semty> _loop_acc =
+              std::move(acc);
+          const typename Datatypes::Nat *_loop_n0 = &n0;
+          while (true) {
+            if (std::holds_alternative<typename Datatypes::Nat::O>(
+                    _loop_n0->v())) {
+              return _loop_acc;
+            } else {
+              const auto &[a0] =
+                  std::get<typename Datatypes::Nat::S>(_loop_n0->v());
+              _loop_acc = Datatypes::template List<symbols_semty>::cons(
+                  default0, std::move(_loop_acc));
+              _loop_n0 = crane_raw(a0);
+            }
+          }
         };
     return go(n, Datatypes::template List<symbols_semty>::nil());
   }

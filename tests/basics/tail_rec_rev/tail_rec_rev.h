@@ -91,17 +91,18 @@ public:
 };
 
 template <typename T1> List<T1> better_rev(const List<T1> &l) {
-  auto go_impl = [](auto &_self_go, const List<T1> &l0,
-                    List<T1> acc) -> List<T1> {
-    if (std::holds_alternative<typename List<T1>::Nil>(l0.v())) {
-      return acc;
-    } else {
-      const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l0.v());
-      return _self_go(_self_go, *a1, List<T1>::cons(a0, std::move(acc)));
+  auto go = [](const List<T1> &l0, List<T1> acc) -> List<T1> {
+    List<T1> _loop_acc = std::move(acc);
+    const List<T1> *_loop_l0 = &l0;
+    while (true) {
+      if (std::holds_alternative<typename List<T1>::Nil>(_loop_l0->v())) {
+        return _loop_acc;
+      } else {
+        const auto &[a0, a1] = std::get<typename List<T1>::Cons>(_loop_l0->v());
+        _loop_acc = List<T1>::cons(a0, std::move(_loop_acc));
+        _loop_l0 = crane_raw(a1);
+      }
     }
-  };
-  auto go = [&](const List<T1> &l0, List<T1> acc) -> List<T1> {
-    return go_impl(go_impl, l0, acc);
   };
   return go(l, List<T1>::nil());
 }

@@ -267,7 +267,7 @@ struct LoopifyGenerators {
   /// tabulate n f generates f 0, f 1, ..., f (n-1) (same as init_list but
   /// different naming).
   template <typename F1> static List<uint64_t> tabulate(uint64_t n, F1 &&f) {
-    auto go_impl = [&](auto &, uint64_t i) -> List<uint64_t> {
+    auto go = [&](uint64_t i) -> List<uint64_t> {
       /// CraneEnter: captures varying parameters for each recursive call.
       struct CraneEnter {
         uint64_t i;
@@ -308,7 +308,6 @@ struct LoopifyGenerators {
       }
       return _result;
     };
-    auto go = [&](uint64_t i) -> List<uint64_t> { return go_impl(go_impl, i); };
     return go(n);
   }
 

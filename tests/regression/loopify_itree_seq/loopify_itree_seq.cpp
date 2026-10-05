@@ -4,7 +4,7 @@
 /// erased so this becomes a plain tail-recursive C++ function. Loopify should
 /// convert it to a while loop.
 uint64_t LoopifyItreeSeq::count_down(uint64_t n) {
-  auto go_impl = [](auto &, uint64_t k, uint64_t acc) -> uint64_t {
+  auto go = [](uint64_t k, uint64_t acc) -> uint64_t {
     uint64_t _loop_acc = std::move(acc);
     uint64_t _loop_k = std::move(k);
     while (true) {
@@ -17,15 +17,12 @@ uint64_t LoopifyItreeSeq::count_down(uint64_t n) {
       }
     }
   };
-  auto go = [&](uint64_t k, uint64_t acc) -> uint64_t {
-    return go_impl(go_impl, k, acc);
-  };
   return go(n, UINT64_C(0));
 }
 
 /// Sum 1..n via tail recursion with accumulator.
 uint64_t LoopifyItreeSeq::sum_to(uint64_t n) {
-  auto go_impl = [](auto &, uint64_t k, uint64_t acc) -> uint64_t {
+  auto go = [](uint64_t k, uint64_t acc) -> uint64_t {
     uint64_t _loop_acc = std::move(acc);
     uint64_t _loop_k = std::move(k);
     while (true) {
@@ -38,9 +35,6 @@ uint64_t LoopifyItreeSeq::sum_to(uint64_t n) {
         _loop_k = _next_k;
       }
     }
-  };
-  auto go = [&](uint64_t k, uint64_t acc) -> uint64_t {
-    return go_impl(go_impl, k, acc);
   };
   return go(n, UINT64_C(0));
 }

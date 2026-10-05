@@ -237,8 +237,8 @@ List<uint64_t> STMonadTests::quicksort_ST_mine(const List<uint64_t> &xs) {
                 return std::monostate{};
               }();
               uint64_t storeIndex = [&]() {
-                auto for_each_with_impl =
-                    [](auto &, const List<uint64_t> &xs0, uint64_t v,
+                auto for_each_with =
+                    [](const List<uint64_t> &xs0, uint64_t v,
                        crane::fn<uint64_t(uint64_t, uint64_t)> f) -> uint64_t {
                   uint64_t _loop_v = std::move(v);
                   const List<uint64_t> *_loop_xs0 = &xs0;
@@ -255,11 +255,6 @@ List<uint64_t> STMonadTests::quicksort_ST_mine(const List<uint64_t> &xs) {
                       _loop_xs0 = crane_raw(a3);
                     }
                   }
-                };
-                auto for_each_with =
-                    [&](const List<uint64_t> &xs0, uint64_t v,
-                        crane::fn<uint64_t(uint64_t, uint64_t)> f) -> uint64_t {
-                  return for_each_with_impl(for_each_with_impl, xs0, v, f);
                 };
                 return for_each_with(
                     nat_idx::range(

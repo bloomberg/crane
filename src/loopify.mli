@@ -17,6 +17,12 @@ open Minicpp
 val transform_decl :
   ?tparams:(template_type * Id.t) list -> cpp_decl -> cpp_decl
 
+(** Turn only the tail-recursive local fixpoints in a declaration's bodies
+    into loops: the part of loopification that needs no frame and changes no
+    evaluation order, applied whatever the loopification policy says. *)
+val transform_local_tail_loops :
+  ?tparams:(template_type * Id.t) list -> cpp_decl -> cpp_decl
+
 val worthwhile_move_type : cpp_type -> bool
 (** Whether a value of this type is expensive enough to copy that writing
     [std::move] around it earns its keep: a reference count to bump, an

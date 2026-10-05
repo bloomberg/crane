@@ -1,17 +1,12 @@
-#ifndef INCLUDED_CALLBACK_STAYS_CONCRETE
-#define INCLUDED_CALLBACK_STAYS_CONCRETE
+#ifndef INCLUDED_LOCAL_TAIL_LOOP_DEFAULT
+#define INCLUDED_LOCAL_TAIL_LOOP_DEFAULT
 
 #include "crane_fn.h"
 #include "obj.h"
 #include <atomic>
-#include <crane_itree.h>
 #include <cstdint>
-#include <filesystem>
-#include <fstream>
-#include <iostream>
 #include <memory>
 #include <stdexcept>
-#include <system_error>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -97,27 +92,19 @@ public:
   const variant_t &v() const { return v_; }
 };
 
-struct CallbackStaysConcrete {
-  /// A callback the body only calls -- through a local fixpoint entered where
-  /// it is written, or under a bind that is desugared into statements -- keeps
-  /// its own type, and is passed by reference rather than erased into a
-  /// crane::fn.
-  template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, const uint64_t &>
-  static uint64_t sum_map_acc(F0 &&f, const List<uint64_t> &l, uint64_t acc) {
-    if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
-      return acc;
-    } else {
-      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-      return sum_map_acc(f, *a1, (acc + f(a0)));
-    }
-  }
+struct LocalTailLoopDefault {
+  /// A tail-recursive local fixpoint becomes a loop without Crane Loopify:
+  /// its call depth is bounded however long the input, and it is an ordinary
+  /// lambda rather than a self-applying one.
+  static uint64_t sum_to(uint64_t n);
 
+  /// The accumulator is an owned loop variable, rebuilt on every step.
   template <typename F0>
     requires std::is_invocable_r_v<uint64_t, F0 &, const uint64_t &>
-  static uint64_t better_sum(F0 &&f, const List<uint64_t> &l) {
-    auto go = [&](const List<uint64_t> &l0, uint64_t acc) -> uint64_t {
-      uint64_t _loop_acc = std::move(acc);
+  static List<uint64_t> rev_map(F0 &&f, const List<uint64_t> &l) {
+    auto go = [&](const List<uint64_t> &l0,
+                  List<uint64_t> acc) -> List<uint64_t> {
+      List<uint64_t> _loop_acc = std::move(acc);
       const List<uint64_t> *_loop_l0 = &l0;
       while (true) {
         if (std::holds_alternative<typename List<uint64_t>::Nil>(
@@ -126,20 +113,13 @@ struct CallbackStaysConcrete {
         } else {
           const auto &[a0, a1] =
               std::get<typename List<uint64_t>::Cons>(_loop_l0->v());
-          _loop_acc = (_loop_acc + f(a0));
+          _loop_acc = List<uint64_t>::cons(f(a0), std::move(_loop_acc));
           _loop_l0 = crane_raw(a1);
         }
       }
     };
-    return go(l, UINT64_C(0));
-  }
-
-  template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
-  static uint64_t apply_io(F0 &&f, uint64_t n) {
-    uint64_t x = n;
-    return f(x);
+    return go(l, List<uint64_t>::nil());
   }
 };
 
-#endif // INCLUDED_CALLBACK_STAYS_CONCRETE
+#endif // INCLUDED_LOCAL_TAIL_LOOP_DEFAULT

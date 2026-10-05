@@ -37,9 +37,8 @@ std::optional<Nat> LoopifyAdoptedFixNameShared::f(
         struct_bytes = [](std::optional<Nat> pad,
                           const List<LoopifyAdoptedFixNameShared::tree> &x,
                           const Nat &x0) {
-          auto loop_impl =
-              [&](auto &, const List<LoopifyAdoptedFixNameShared::tree> &ts,
-                  const Nat &k) -> std::optional<Nat> {
+          auto loop = [&](const List<LoopifyAdoptedFixNameShared::tree> &ts,
+                          const Nat &k) -> std::optional<Nat> {
             Nat _loop_k = k;
             const List<LoopifyAdoptedFixNameShared::tree> *_loop_ts = &ts;
             while (true) {
@@ -65,15 +64,10 @@ std::optional<Nat> LoopifyAdoptedFixNameShared::f(
               }
             }
           };
-          auto loop = [&](const List<LoopifyAdoptedFixNameShared::tree> &ts,
-                          const Nat &k) -> std::optional<Nat> {
-            return loop_impl(loop_impl, ts, k);
-          };
           return loop(x, x0);
         };
-    auto loop_impl = [](auto &,
-                        const List<LoopifyAdoptedFixNameShared::tree> &ts,
-                        const Nat &k) -> std::optional<Nat> {
+    auto loop = [](const List<LoopifyAdoptedFixNameShared::tree> &ts,
+                   const Nat &k) -> std::optional<Nat> {
       Nat _loop_k = k;
       const List<LoopifyAdoptedFixNameShared::tree> *_loop_ts = &ts;
       while (true) {
@@ -93,10 +87,6 @@ std::optional<Nat> LoopifyAdoptedFixNameShared::f(
           }
         }
       }
-    };
-    auto loop = [&](const List<LoopifyAdoptedFixNameShared::tree> &ts,
-                    const Nat &k) -> std::optional<Nat> {
-      return loop_impl(loop_impl, ts, k);
     };
     if (std::holds_alternative<
             typename LoopifyAdoptedFixNameShared::tree::Leaf>(t.v())) {

@@ -246,22 +246,20 @@ template <typename K, typename V> struct CHT {
   static bsl::vector<stm::TVar<List<bsl::pair<T1, T2>>>>
   mk_buckets(int64_t num) {
     bsl::vector<stm::TVar<List<bsl::pair<T1, T2>>>> buckets = {};
-    auto f_impl =
-        [&](auto &_self_f,
-            unsigned int n) -> bsl::vector<stm::TVar<List<bsl::pair<T1, T2>>>> {
-      if (n <= 0) {
-        return buckets;
-      } else {
-        unsigned int n_ = n - 1;
-        stm::TVar<List<bsl::pair<T1, T2>>> b = stm::atomically(
-            [&] { return stm::newTVar(List<bsl::pair<T1, T2>>::nil()); });
-        buckets.push_back(b);
-        return _self_f(_self_f, n_);
-      }
-    };
     auto f =
         [&](unsigned int n) -> bsl::vector<stm::TVar<List<bsl::pair<T1, T2>>>> {
-      return f_impl(f_impl, n);
+      unsigned int _loop_n = bsl::move(n);
+      while (true) {
+        if (_loop_n <= 0) {
+          return buckets;
+        } else {
+          unsigned int n_ = _loop_n - 1;
+          stm::TVar<List<bsl::pair<T1, T2>>> b = stm::atomically(
+              [&] { return stm::newTVar(List<bsl::pair<T1, T2>>::nil()); });
+          buckets.push_back(b);
+          _loop_n = n_;
+        }
+      }
     };
     return f(static_cast<unsigned int>(num));
   }

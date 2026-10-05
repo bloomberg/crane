@@ -198,7 +198,7 @@ struct InnerFixCapturesFn {
         uint64_t a0 = _f.a0;
         std::shared_ptr<lst> a1 = std::move(_f.a1);
         _result = ([&]() {
-          auto inner_impl = [&](auto &, const lst &m, uint64_t a) -> uint64_t {
+          auto inner = [&](const lst &m, uint64_t a) -> uint64_t {
             uint64_t _loop_a = std::move(a);
             const lst *_loop_m = &m;
             while (true) {
@@ -211,9 +211,6 @@ struct InnerFixCapturesFn {
                 _loop_m = crane_raw(a3);
               }
             }
-          };
-          auto inner = [&](const lst &m, uint64_t a) -> uint64_t {
-            return inner_impl(inner_impl, m, a);
           };
           return inner(*a1, f(a0));
         }() + std::move(_result));

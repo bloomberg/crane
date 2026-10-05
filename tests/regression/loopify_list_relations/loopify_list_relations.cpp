@@ -61,8 +61,7 @@ bool LoopifyListRelations::is_suffix_of(const List<uint64_t> &l1,
   } else {
     uint64_t diff = (((len2 - len1) > len2 ? 0 : (len2 - len1)));
     List<uint64_t> suffix;
-    auto drop_impl = [](auto &, uint64_t n,
-                        List<uint64_t> xs) -> List<uint64_t> {
+    auto drop = [](uint64_t n, List<uint64_t> xs) -> List<uint64_t> {
       List<uint64_t> _loop_xs = std::move(xs);
       uint64_t _loop_n = std::move(n);
       while (true) {
@@ -82,12 +81,8 @@ bool LoopifyListRelations::is_suffix_of(const List<uint64_t> &l1,
         }
       }
     };
-    auto drop = [&](uint64_t n, List<uint64_t> xs) -> List<uint64_t> {
-      return drop_impl(drop_impl, n, xs);
-    };
     suffix = drop(diff, l2);
-    auto eq_impl = [](auto &, const List<uint64_t> &a,
-                      const List<uint64_t> &b) -> bool {
+    auto eq = [](const List<uint64_t> &a, const List<uint64_t> &b) -> bool {
       const List<uint64_t> *_loop_b = &b;
       const List<uint64_t> *_loop_a = &a;
       while (true) {
@@ -117,9 +112,6 @@ bool LoopifyListRelations::is_suffix_of(const List<uint64_t> &l1,
           }
         }
       }
-    };
-    auto eq = [&](const List<uint64_t> &a, const List<uint64_t> &b) -> bool {
-      return eq_impl(eq_impl, a, b);
     };
     return eq(l1, std::move(suffix));
   }
@@ -537,8 +529,7 @@ List<uint64_t> LoopifyListRelations::union_(const List<uint64_t> &l1,
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l1->v());
       if ([&]() {
-            auto member_impl = [&](auto &, uint64_t y,
-                                   const List<uint64_t> &ys) -> bool {
+            auto member = [&](uint64_t y, const List<uint64_t> &ys) -> bool {
               /// CraneEnter: captures varying parameters for each recursive
               /// call.
               struct CraneEnter {
@@ -576,9 +567,6 @@ List<uint64_t> LoopifyListRelations::union_(const List<uint64_t> &l1,
                 }
               }
               return _result;
-            };
-            auto member = [&](uint64_t y, const List<uint64_t> &ys) -> bool {
-              return member_impl(member_impl, y, ys);
             };
             return member(a0, _loop_l2);
           }()) {
@@ -614,8 +602,7 @@ List<uint64_t> LoopifyListRelations::intersection(const List<uint64_t> &l1,
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l1->v());
       if ([&]() {
-            auto member_impl = [&](auto &, uint64_t y,
-                                   const List<uint64_t> &ys) -> bool {
+            auto member = [&](uint64_t y, const List<uint64_t> &ys) -> bool {
               /// CraneEnter: captures varying parameters for each recursive
               /// call.
               struct CraneEnter {
@@ -653,9 +640,6 @@ List<uint64_t> LoopifyListRelations::intersection(const List<uint64_t> &l1,
                 }
               }
               return _result;
-            };
-            auto member = [&](uint64_t y, const List<uint64_t> &ys) -> bool {
-              return member_impl(member_impl, y, ys);
             };
             return member(a0, l2);
           }()) {

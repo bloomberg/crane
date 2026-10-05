@@ -5,106 +5,108 @@ std::pair<std::optional<std::basic_string_view<char>>,
 Tokenizer::next_token(std::basic_string_view<char> input,
                       std::basic_string_view<char> soft,
                       std::basic_string_view<char> hard) {
-  auto aux_impl = [&](auto &_self_aux, uint64_t fuel, int64_t index,
-                      std::basic_string_view<char> s)
+  auto aux = [&](uint64_t fuel, int64_t index, std::basic_string_view<char> s)
       -> std::pair<std::optional<std::basic_string_view<char>>,
                    std::basic_string_view<char>> {
-    if (s.length() == INT64_C(0)) {
-      return std::make_pair(std::optional<std::basic_string_view<char>>(),
-                            std::string_view(nullptr, 0));
-    } else {
-      if (fuel <= 0) {
-        return std::make_pair(
-            std::make_optional<std::basic_string_view<char>>(s),
-            std::string_view(nullptr, 0));
+    std::basic_string_view<char> _loop_s = std::move(s);
+    int64_t _loop_index = std::move(index);
+    uint64_t _loop_fuel = std::move(fuel);
+    while (true) {
+      if (_loop_s.length() == INT64_C(0)) {
+        return std::make_pair(std::optional<std::basic_string_view<char>>(),
+                              std::string_view(nullptr, 0));
       } else {
-        uint64_t fuel_ = fuel - 1;
-        char c = ((index >= 0 && index < static_cast<int64_t>(s.length()))
-                      ? s[index]
-                      : static_cast<char>(0));
-        if (hard.contains(c)) {
+        if (_loop_fuel <= 0) {
           return std::make_pair(
-              std::make_optional<std::basic_string_view<char>>(
-                  ((INT64_C(0) >= 0 &&
-                    INT64_C(0) <= static_cast<int64_t>(s.length()))
-                       ? s.substr(INT64_C(0), index)
-                       : std::basic_string_view<char>())),
-              ((static_cast<int64_t>((static_cast<uint64_t>(index) +
-                                      static_cast<uint64_t>(INT64_C(1))) &
-                                     0x7FFFFFFFFFFFFFFFULL) >= 0 &&
-                static_cast<int64_t>((static_cast<uint64_t>(index) +
-                                      static_cast<uint64_t>(INT64_C(1))) &
-                                     0x7FFFFFFFFFFFFFFFULL) <=
-                    static_cast<int64_t>(s.length()))
-                   ? s.substr(static_cast<int64_t>(
-                                  (static_cast<uint64_t>(index) +
-                                   static_cast<uint64_t>(INT64_C(1))) &
-                                  0x7FFFFFFFFFFFFFFFULL),
-                              static_cast<int64_t>(
-                                  (static_cast<uint64_t>(input.length()) -
-                                   static_cast<uint64_t>(static_cast<int64_t>(
-                                       (static_cast<uint64_t>(index) +
-                                        static_cast<uint64_t>(INT64_C(1))) &
-                                       0x7FFFFFFFFFFFFFFFULL))) &
-                                  0x7FFFFFFFFFFFFFFFULL))
-                   : std::basic_string_view<char>()));
+              std::make_optional<std::basic_string_view<char>>(_loop_s),
+              std::string_view(nullptr, 0));
         } else {
-          if (soft.contains(c)) {
-            if (index == INT64_C(0)) {
-              return _self_aux(
-                  _self_aux, fuel_, INT64_C(0),
-                  ((INT64_C(1) >= 0 &&
-                    INT64_C(1) <= static_cast<int64_t>(s.length()))
-                       ? s.substr(INT64_C(1),
-                                  static_cast<int64_t>(
-                                      (static_cast<uint64_t>(input.length()) -
-                                       static_cast<uint64_t>(INT64_C(1))) &
-                                      0x7FFFFFFFFFFFFFFFULL))
-                       : std::basic_string_view<char>()));
-            } else {
-              return std::make_pair(
-                  std::make_optional<std::basic_string_view<char>>(
-                      ((INT64_C(0) >= 0 &&
-                        INT64_C(0) <= static_cast<int64_t>(s.length()))
-                           ? s.substr(INT64_C(0), index)
-                           : std::basic_string_view<char>())),
-                  ((static_cast<int64_t>((static_cast<uint64_t>(index) +
-                                          static_cast<uint64_t>(INT64_C(1))) &
-                                         0x7FFFFFFFFFFFFFFFULL) >= 0 &&
-                    static_cast<int64_t>((static_cast<uint64_t>(index) +
-                                          static_cast<uint64_t>(INT64_C(1))) &
-                                         0x7FFFFFFFFFFFFFFFULL) <=
-                        static_cast<int64_t>(s.length()))
-                       ? s.substr(
-                             static_cast<int64_t>(
-                                 (static_cast<uint64_t>(index) +
-                                  static_cast<uint64_t>(INT64_C(1))) &
-                                 0x7FFFFFFFFFFFFFFFULL),
-                             static_cast<int64_t>(
-                                 (static_cast<uint64_t>(input.length()) -
-                                  static_cast<uint64_t>(static_cast<int64_t>(
-                                      (static_cast<uint64_t>(index) +
-                                       static_cast<uint64_t>(INT64_C(1))) &
-                                      0x7FFFFFFFFFFFFFFFULL))) &
-                                 0x7FFFFFFFFFFFFFFFULL))
-                       : std::basic_string_view<char>()));
-            }
+          uint64_t fuel_ = _loop_fuel - 1;
+          char c = ((_loop_index >= 0 &&
+                     _loop_index < static_cast<int64_t>(_loop_s.length()))
+                        ? _loop_s[_loop_index]
+                        : static_cast<char>(0));
+          if (hard.contains(c)) {
+            return std::make_pair(
+                std::make_optional<std::basic_string_view<char>>(
+                    ((INT64_C(0) >= 0 &&
+                      INT64_C(0) <= static_cast<int64_t>(_loop_s.length()))
+                         ? _loop_s.substr(INT64_C(0), _loop_index)
+                         : std::basic_string_view<char>())),
+                ((static_cast<int64_t>((static_cast<uint64_t>(_loop_index) +
+                                        static_cast<uint64_t>(INT64_C(1))) &
+                                       0x7FFFFFFFFFFFFFFFULL) >= 0 &&
+                  static_cast<int64_t>((static_cast<uint64_t>(_loop_index) +
+                                        static_cast<uint64_t>(INT64_C(1))) &
+                                       0x7FFFFFFFFFFFFFFFULL) <=
+                      static_cast<int64_t>(_loop_s.length()))
+                     ? _loop_s.substr(
+                           static_cast<int64_t>(
+                               (static_cast<uint64_t>(_loop_index) +
+                                static_cast<uint64_t>(INT64_C(1))) &
+                               0x7FFFFFFFFFFFFFFFULL),
+                           static_cast<int64_t>(
+                               (static_cast<uint64_t>(input.length()) -
+                                static_cast<uint64_t>(static_cast<int64_t>(
+                                    (static_cast<uint64_t>(_loop_index) +
+                                     static_cast<uint64_t>(INT64_C(1))) &
+                                    0x7FFFFFFFFFFFFFFFULL))) &
+                               0x7FFFFFFFFFFFFFFFULL))
+                     : std::basic_string_view<char>()));
           } else {
-            return _self_aux(
-                _self_aux, fuel_,
-                static_cast<int64_t>((static_cast<uint64_t>(index) +
-                                      static_cast<uint64_t>(INT64_C(1))) &
-                                     0x7FFFFFFFFFFFFFFFULL),
-                s);
+            if (soft.contains(c)) {
+              if (_loop_index == INT64_C(0)) {
+                _loop_s =
+                    ((INT64_C(1) >= 0 &&
+                      INT64_C(1) <= static_cast<int64_t>(_loop_s.length()))
+                         ? _loop_s.substr(
+                               INT64_C(1),
+                               static_cast<int64_t>(
+                                   (static_cast<uint64_t>(input.length()) -
+                                    static_cast<uint64_t>(INT64_C(1))) &
+                                   0x7FFFFFFFFFFFFFFFULL))
+                         : std::basic_string_view<char>());
+                _loop_index = INT64_C(0);
+                _loop_fuel = fuel_;
+              } else {
+                return std::make_pair(
+                    std::make_optional<std::basic_string_view<char>>(
+                        ((INT64_C(0) >= 0 &&
+                          INT64_C(0) <= static_cast<int64_t>(_loop_s.length()))
+                             ? _loop_s.substr(INT64_C(0), _loop_index)
+                             : std::basic_string_view<char>())),
+                    ((static_cast<int64_t>((static_cast<uint64_t>(_loop_index) +
+                                            static_cast<uint64_t>(INT64_C(1))) &
+                                           0x7FFFFFFFFFFFFFFFULL) >= 0 &&
+                      static_cast<int64_t>((static_cast<uint64_t>(_loop_index) +
+                                            static_cast<uint64_t>(INT64_C(1))) &
+                                           0x7FFFFFFFFFFFFFFFULL) <=
+                          static_cast<int64_t>(_loop_s.length()))
+                         ? _loop_s.substr(
+                               static_cast<int64_t>(
+                                   (static_cast<uint64_t>(_loop_index) +
+                                    static_cast<uint64_t>(INT64_C(1))) &
+                                   0x7FFFFFFFFFFFFFFFULL),
+                               static_cast<int64_t>(
+                                   (static_cast<uint64_t>(input.length()) -
+                                    static_cast<uint64_t>(static_cast<int64_t>(
+                                        (static_cast<uint64_t>(_loop_index) +
+                                         static_cast<uint64_t>(INT64_C(1))) &
+                                        0x7FFFFFFFFFFFFFFFULL))) &
+                                   0x7FFFFFFFFFFFFFFFULL))
+                         : std::basic_string_view<char>()));
+              }
+            } else {
+              _loop_index =
+                  static_cast<int64_t>((static_cast<uint64_t>(_loop_index) +
+                                        static_cast<uint64_t>(INT64_C(1))) &
+                                       0x7FFFFFFFFFFFFFFFULL);
+              _loop_fuel = fuel_;
+            }
           }
         }
       }
     }
-  };
-  auto aux = [&](uint64_t fuel, int64_t index, std::basic_string_view<char> s)
-      -> std::pair<std::optional<std::basic_string_view<char>>,
-                   std::basic_string_view<char>> {
-    return aux_impl(aux_impl, fuel, index, s);
   };
   return aux(static_cast<uint64_t>(input.length()), INT64_C(0), input);
 }

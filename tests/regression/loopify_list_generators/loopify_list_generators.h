@@ -231,7 +231,7 @@ struct LoopifyListGenerators {
     } else {
       uint64_t n_ = n - 1;
       return List<uint64_t>::cons(f(UINT64_C(0)), [&]() {
-        auto go_impl = [&](auto &, uint64_t i) -> List<uint64_t> {
+        auto go = [&](uint64_t i) -> List<uint64_t> {
           /// CraneEnter: captures varying parameters for each recursive call.
           struct CraneEnter {
             uint64_t i;
@@ -272,9 +272,6 @@ struct LoopifyListGenerators {
           }
           return _result;
         };
-        auto go = [&](uint64_t i) -> List<uint64_t> {
-          return go_impl(go_impl, i);
-        };
         return go(n_);
       }());
     }
@@ -289,7 +286,7 @@ struct LoopifyListGenerators {
       return List<uint64_t>::nil();
     } else {
       uint64_t n_ = n - 1;
-      auto aux_impl = [&](auto &, uint64_t idx) -> List<uint64_t> {
+      auto aux = [&](uint64_t idx) -> List<uint64_t> {
         /// CraneEnter: captures varying parameters for each recursive call.
         struct CraneEnter {
           uint64_t idx;
@@ -328,9 +325,6 @@ struct LoopifyListGenerators {
           }
         }
         return _result;
-      };
-      auto aux = [&](uint64_t idx) -> List<uint64_t> {
-        return aux_impl(aux_impl, idx);
       };
       return aux(n_);
     }

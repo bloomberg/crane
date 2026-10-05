@@ -347,9 +347,8 @@ struct LoopifyHofs {
       if (std::holds_alternative<CraneEnter>(_frame)) {
         auto _f = std::move(std::get<CraneEnter>(_frame));
         const List<T1> &l1 = *_f.l1;
-        auto pair_with_impl =
-            [&](auto &, const T1 &x,
-                const List<T2> &l) -> List<std::pair<T1, T2>> {
+        auto pair_with = [&](const T1 &x,
+                             const List<T2> &l) -> List<std::pair<T1, T2>> {
           /// CraneEnter: captures varying parameters for each recursive call.
           struct CraneEnter {
             const List<T2> *l;
@@ -385,10 +384,6 @@ struct LoopifyHofs {
             }
           }
           return _result;
-        };
-        auto pair_with = [&](const T1 &x,
-                             const List<T2> &l) -> List<std::pair<T1, T2>> {
-          return pair_with_impl(pair_with_impl, x, l);
         };
         if (std::holds_alternative<typename List<T1>::Nil>(l1.v())) {
           _result = List<std::pair<T1, T2>>::nil();
@@ -400,9 +395,8 @@ struct LoopifyHofs {
       } else {
         auto _f = std::move(std::get<CraneCont_Cons>(_frame));
         auto a00 = std::move(_f.a00);
-        auto pair_with_impl =
-            [&](auto &, const T1 &x,
-                const List<T2> &l) -> List<std::pair<T1, T2>> {
+        auto pair_with = [&](const T1 &x,
+                             const List<T2> &l) -> List<std::pair<T1, T2>> {
           /// CraneEnter: captures varying parameters for each recursive call.
           struct CraneEnter {
             const List<T2> *l;
@@ -438,10 +432,6 @@ struct LoopifyHofs {
             }
           }
           return _result;
-        };
-        auto pair_with = [&](const T1 &x,
-                             const List<T2> &l) -> List<std::pair<T1, T2>> {
-          return pair_with_impl(pair_with_impl, x, l);
         };
         _result = pair_with(a00, l2).app(std::move(_result));
       }

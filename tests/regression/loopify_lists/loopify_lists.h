@@ -333,8 +333,7 @@ struct LoopifyLists {
       if (std::holds_alternative<CraneEnter>(_frame)) {
         auto _f = std::move(std::get<CraneEnter>(_frame));
         uint64_t n = _f.n;
-        auto app_impl = [&](auto &, const list<T1> &l1,
-                            list<T1> l2) -> list<T1> {
+        auto app = [&](const list<T1> &l1, list<T1> l2) -> list<T1> {
           /// CraneEnter: captures varying parameters for each recursive call.
           struct CraneEnter {
             list<T1> l2;
@@ -372,9 +371,6 @@ struct LoopifyLists {
             }
           }
           return _result;
-        };
-        auto app = [&](const list<T1> &l1, list<T1> l2) -> list<T1> {
-          return app_impl(app_impl, l1, l2);
         };
         if (n <= 0) {
           _result = list<T1>::nil();
@@ -385,8 +381,7 @@ struct LoopifyLists {
         }
       } else {
         auto _f = std::move(std::get<CraneCont_m>(_frame));
-        auto app_impl = [&](auto &, const list<T1> &l1,
-                            list<T1> l2) -> list<T1> {
+        auto app = [&](const list<T1> &l1, list<T1> l2) -> list<T1> {
           /// CraneEnter: captures varying parameters for each recursive call.
           struct CraneEnter {
             list<T1> l2;
@@ -425,9 +420,6 @@ struct LoopifyLists {
           }
           return _result;
         };
-        auto app = [&](const list<T1> &l1, list<T1> l2) -> list<T1> {
-          return app_impl(app_impl, l1, l2);
-        };
         _result = app(l, std::move(_result));
       }
     }
@@ -437,7 +429,7 @@ struct LoopifyLists {
   /// init_list n f generates f 0, f 1, ..., f (n-1).
   template <typename T1, typename F1>
   static list<T1> init_list(uint64_t n, F1 &&f) {
-    auto go_impl = [&](auto &, uint64_t i) -> list<T1> {
+    auto go = [&](uint64_t i) -> list<T1> {
       /// CraneEnter: captures varying parameters for each recursive call.
       struct CraneEnter {
         uint64_t i;
@@ -478,7 +470,6 @@ struct LoopifyLists {
       }
       return _result;
     };
-    auto go = [&](uint64_t i) -> list<T1> { return go_impl(go_impl, i); };
     return go(n);
   }
 
@@ -553,8 +544,7 @@ struct LoopifyLists {
         auto a0 = std::move(_f.a0);
         list<list<T1>> _tmp2 = std::move(_result);
         _result = list<list<T1>>::cons(list<T1>::nil(), [&]() {
-          auto map_cons_impl = [&](auto &,
-                                   const list<list<T1>> &ys) -> list<list<T1>> {
+          auto map_cons = [&](const list<list<T1>> &ys) -> list<list<T1>> {
             /// CraneEnter: captures varying parameters for each recursive call.
             struct CraneEnter {
               const list<list<T1>> *ys;
@@ -594,9 +584,6 @@ struct LoopifyLists {
               }
             }
             return _result;
-          };
-          auto map_cons = [&](const list<list<T1>> &ys) -> list<list<T1>> {
-            return map_cons_impl(map_cons_impl, ys);
           };
           return map_cons(_tmp2);
         }());
@@ -702,8 +689,7 @@ struct LoopifyLists {
         break;
       } else {
         uint64_t f = _loop_fuel - 1;
-        auto take_impl = [&](auto &, uint64_t k,
-                             const list<T1> &lst) -> list<T1> {
+        auto take = [&](uint64_t k, const list<T1> &lst) -> list<T1> {
           /// CraneEnter: captures varying parameters for each recursive call.
           struct CraneEnter {
             const list<T1> *lst;
@@ -747,10 +733,7 @@ struct LoopifyLists {
           }
           return _result;
         };
-        auto take = [&](uint64_t k, const list<T1> &lst) -> list<T1> {
-          return take_impl(take_impl, k, lst);
-        };
-        auto drop0_impl = [](auto &, uint64_t k, list<T1> lst) -> list<T1> {
+        auto drop0 = [](uint64_t k, list<T1> lst) -> list<T1> {
           list<T1> _loop_lst = std::move(lst);
           uint64_t _loop_k = std::move(k);
           while (true) {
@@ -769,9 +752,6 @@ struct LoopifyLists {
               }
             }
           }
-        };
-        auto drop0 = [&](uint64_t k, list<T1> lst) -> list<T1> {
-          return drop0_impl(drop0_impl, k, lst);
         };
         if (std::holds_alternative<typename list<T1>::Nil>(_loop_l.v())) {
           auto _value = list<list<T1>>::nil();
@@ -807,7 +787,7 @@ struct LoopifyLists {
 
   template <typename T1>
   static list<list<T1>> chunks_of(uint64_t n, const list<T1> &l) {
-    auto length_impl = [&](auto &, const list<T1> &l0) -> uint64_t {
+    auto length = [&](const list<T1> &l0) -> uint64_t {
       /// CraneEnter: captures varying parameters for each recursive call.
       struct CraneEnter {
         const list<T1> *l0;
@@ -838,9 +818,6 @@ struct LoopifyLists {
         }
       }
       return _result;
-    };
-    auto length = [&](const list<T1> &l0) -> uint64_t {
-      return length_impl(length_impl, l0);
     };
     return chunks_of_aux<T1>(n, l, (length(l) + 1));
   }
@@ -1033,7 +1010,7 @@ struct LoopifyLists {
   template <typename T1>
   static list<std::pair<T1, T1>>
   zip_longest(const list<T1> &l1, const list<T1> &l2, const T1 &default0) {
-    auto length_impl = [&](auto &, const list<T1> &l) -> uint64_t {
+    auto length = [&](const list<T1> &l) -> uint64_t {
       /// CraneEnter: captures varying parameters for each recursive call.
       struct CraneEnter {
         const list<T1> *l;
@@ -1064,9 +1041,6 @@ struct LoopifyLists {
         }
       }
       return _result;
-    };
-    auto length = [&](const list<T1> &l) -> uint64_t {
-      return length_impl(length_impl, l);
     };
     uint64_t len = (length(l1) + length(l2));
     return zip_longest_aux<T1>((len + 1), l1, l2, default0);
@@ -1194,7 +1168,7 @@ struct LoopifyLists {
         break;
       } else {
         uint64_t f = _loop_fuel - 1;
-        auto map_head_impl = [&](auto &, const list<list<T1>> &l) -> list<T1> {
+        auto map_head = [&](const list<list<T1>> &l) -> list<T1> {
           /// CraneEnter: captures varying parameters for each recursive call.
           struct CraneEnter {
             const list<list<T1>> *l;
@@ -1237,11 +1211,7 @@ struct LoopifyLists {
           }
           return _result;
         };
-        auto map_head = [&](const list<list<T1>> &l) -> list<T1> {
-          return map_head_impl(map_head_impl, l);
-        };
-        auto map_tail_impl = [&](auto &,
-                                 const list<list<T1>> &l) -> list<list<T1>> {
+        auto map_tail = [&](const list<list<T1>> &l) -> list<list<T1>> {
           /// CraneEnter: captures varying parameters for each recursive call.
           struct CraneEnter {
             const list<list<T1>> *l;
@@ -1283,9 +1253,6 @@ struct LoopifyLists {
             }
           }
           return _result;
-        };
-        auto map_tail = [&](const list<list<T1>> &l) -> list<list<T1>> {
-          return map_tail_impl(map_tail_impl, l);
         };
         if (std::holds_alternative<typename list<list<T1>>::Nil>(_loop_m.v())) {
           auto _value = list<list<T1>>::nil();
@@ -1527,8 +1494,7 @@ struct LoopifyLists {
         auto _f = std::move(std::get<CraneCont_Cons>(_frame));
         list<T1> a0 = std::move(_f.a0);
         list<T1> _tmp2 = std::move(_result);
-        auto app_impl = [&](auto &, const list<T1> &l1,
-                            list<T1> l2) -> list<T1> {
+        auto app = [&](const list<T1> &l1, list<T1> l2) -> list<T1> {
           /// CraneEnter: captures varying parameters for each recursive call.
           struct CraneEnter {
             list<T1> l2;
@@ -1566,9 +1532,6 @@ struct LoopifyLists {
             }
           }
           return _result;
-        };
-        auto app = [&](const list<T1> &l1, list<T1> l2) -> list<T1> {
-          return app_impl(app_impl, l1, l2);
         };
         _result = app(a0, std::move(_tmp2));
       }
