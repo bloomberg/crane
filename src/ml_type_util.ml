@@ -214,6 +214,38 @@ let rec strip_erased_method_prefix = function
     strip_erased_method_prefix rest
   | t -> t
 
+(** [method_tvar_count class_ref ty] is the arity of the member template an
+    instance method of type [ty] emits: the type variables the method
+    quantifies on its own, past the class's parameters.
+
+    The instance's definition and the concept's requirement must agree on this
+    number -- the definition binds that many [_A]s, and the requirement has to
+    supply that many arguments -- so both read it from here. *)
+let method_tvar_count class_ref ty =
+  max 0 (Mlutil.type_maxvar ty - List.length (Table.get_ind_ip_vars class_ref))
+
+(** [recover_method_quantifier class_ref field_ref erased] is the type of a
+    class field with its own [forall A] intact.
+
+    A class's [ip_types] entry has already erased the quantifier; the
+    projection constant has not.  An instance method takes it back as a
+    member template: a higher-kinded class's every method, whose carrier is an
+    alias template applied to the element type, and a type class's method
+    parametric in a type of its own -- [mapf : forall A, (A -> A) -> A -> A] --
+    which is then typed at the caller's [A] instead of boxing through
+    [std::any].  Anything else -- a plain record's field, a method with no
+    type variable of its own -- comes back as [erased]. *)
+let recover_method_quantifier class_ref field_ref erased =
+  match Table.find_type field_ref with
+  | exception Not_found -> erased
+  | projection ->
+    let recovered = strip_erased_method_prefix projection in
+    if Table.get_ind_hkt_params class_ref <> [] then recovered
+    else if
+      Table.is_typeclass class_ref && method_tvar_count class_ref recovered > 0
+    then recovered
+    else erased
+
 (** [ml_drop_arrows n t] is what is left of [t] after [n] of its arrows have
     been applied. Erased ([Tdummy]) domains do not count, matching the value
     arrows a C++ call consumes. Fewer than [n] arrows leaves [Tunresolved], which

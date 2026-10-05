@@ -4369,25 +4369,27 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
          (see [ml_codomain_erases_to_any]), wrap the result with
          [std::any_cast<T>] to recover the caller's concrete return type. *)
       | Some fld ->
-        (* A higher-kinded class's instances keep the method's own quantifier:
-           each method is a member template, not a signature erased at
-           [std::any].  So neither its arguments nor its result are erased
-           here. *)
-        let hkt_class =
-          match typ with
-          | Miniml.Tglob (r, _, _) -> Table.get_ind_hkt_params r <> []
+        let declared =
+          try Some (List.nth non_erased_field_types (n - i)) with _ -> None
+        in
+        (* An instance keeps a method's own quantifier -- a higher-kinded
+           class's every method, and any method parametric in a type of its
+           own ([mapf : forall A, (A -> A) -> A -> A]): the method is a member
+           template, not a signature erased at [std::any], so neither its
+           arguments nor its result are erased here.  The count is the one the
+           instance and the concept read ({!Ml_type_util.method_tvar_count}). *)
+        let member_template =
+          match typ, declared with
+          | Miniml.Tglob (r, _, _), _ when Table.get_ind_hkt_params r <> [] -> true
+          | Miniml.Tglob (r, _, _), Some d ->
+            method_tvar_count r (recover_method_quantifier r fld d) > 0
           | _ -> false
         in
         let fld_ty_opt =
-          let declared =
-            try Some (List.nth non_erased_field_types (n - i)) with _ -> None
-          in
-          if not hkt_class then declared
+          if not member_template then declared
           else
             (* The class's [ip_types] entry has already erased the method's own
-               [forall A]; the projection constant has not, and an instance of
-               a higher-kinded class needs it back (see the instance side in
-               [Gen_decls]). *)
+               [forall A]; the projection constant has not. *)
             try Some (strip_erased_method_prefix (Table.find_type fld))
             with Not_found -> declared
         in
@@ -4442,7 +4444,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
              instance. *)
           let rec at_instance_args ty =
             match resolve_tmeta ty with
-            | _ when hkt_class -> ty
+            | _ when member_template -> ty
             | Miniml.Tvar (_, j) when j > n_class_params || erased_class_param j
               ->
               Miniml.Tunknown
@@ -4485,7 +4487,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
              and pairing them would shift every position.  A higher-kinded
              class passes its erased type arguments as template arguments
              rather than values, so it keeps dropping them outright. *)
-          if hkt_class || List.length doms <> List.length args then dropped
+          if member_template || List.length doms <> List.length args then dropped
           else
             List.filteri
               (fun i a -> not (is_erased a) || not (isTdummy (List.nth doms i)))
@@ -4537,7 +4539,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           restore_env_types saved_env_types;
           restore_erased_env saved_erased;
           let callee =
-            if not hkt_class then make_field_access (gen_expr env t) fld
+            if not member_template then make_field_access (gen_expr env t) fld
             else
               (* The instance's method is a member template (its own [forall A]
                  survives), and its type parameters are not always deducible --
@@ -4589,7 +4591,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
         let n_value_args = List.length value_args in
         let erased_cod =
           match fld_ty_opt with
-          | Some ft -> (not hkt_class) && ml_codomain_erases_to_any n_value_args ft
+          | Some ft -> (not member_template) && ml_codomain_erases_to_any n_value_args ft
           | None -> false
         in
         let call = recover_boxed_result ~boxed:erased_cod ~expected:expected_ty call in

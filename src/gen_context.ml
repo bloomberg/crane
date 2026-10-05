@@ -84,31 +84,9 @@ let is_class_tparam class_ref i =
     template binds. *)
 let hkt_alias_param_name i = Generated_name.indexed "A" i
 
-(** [recover_method_quantifier class_ref field_ref erased] is the type of a
-    class field with its own [forall A] intact.
+let recover_method_quantifier = Ml_type_util.recover_method_quantifier
 
-    A class's [ip_types] entry has already erased the quantifier; the
-    projection constant has not.  An instance of a higher-kinded class needs
-    it back, because its carrier is an alias template and the element type is
-    what the template is applied to.  For a class that is not higher-kinded
-    there is nothing to recover, so [erased] is returned unchanged. *)
-let recover_method_quantifier class_ref field_ref erased =
-  if Table.get_ind_hkt_params class_ref = [] then erased
-  else
-    try Ml_type_util.strip_erased_method_prefix (Table.find_type field_ref)
-    with Not_found -> erased
-
-(** [method_tvar_count class_ref ty] is the arity of the member template an
-    instance method of type [ty] emits: the type variables the method
-    quantifies on its own, past the class's parameters.
-
-    The instance's definition and the concept's requirement must agree on this
-    number -- the definition binds that many [_A]s, and the requirement has to
-    supply that many arguments -- so both read it from here. *)
-let method_tvar_count class_ref ty =
-  if Table.get_ind_hkt_params class_ref = [] then 0
-  else
-    max 0 (Mlutil.type_maxvar ty - List.length (Table.get_ind_ip_vars class_ref))
+let method_tvar_count = Ml_type_util.method_tvar_count
 
 (** The arguments a higher-kinded carrier has already fixed: [Fn (prod X)]
     fixes the pair's first component, while the eta-expanded [option _] fixes

@@ -106,6 +106,19 @@ val eta_expand_to : Miniml.ml_type -> Miniml.ml_ast -> Miniml.ml_ast
     from the projection constant which kept them. *)
 val strip_erased_method_prefix : Miniml.ml_type -> Miniml.ml_type
 
+(** [recover_method_quantifier class_ref field_ref erased] is the type of a
+    class field with its own [forall A] intact -- the projection constant's
+    type with the class's erased prefix stripped -- or [erased] when the
+    projection's type is not known. *)
+val recover_method_quantifier :
+  Names.GlobRef.t -> Names.GlobRef.t -> Miniml.ml_type -> Miniml.ml_type
+
+(** [method_tvar_count class_ref ty] is the arity of the member template an
+    instance method of type [ty] emits: the type variables the method
+    quantifies on its own, past the class's parameters.  The instance, the
+    concept's requirement and a call agree on it by reading it here. *)
+val method_tvar_count : Names.GlobRef.t -> Miniml.ml_type -> int
+
 (** [ml_drop_arrows n t] is what is left of [t] once [n] of its value-carrying
     arrows have been applied; [Tunresolved] if it has fewer than [n]. *)
 val ml_drop_arrows : int -> Miniml.ml_type -> Miniml.ml_type
