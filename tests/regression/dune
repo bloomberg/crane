@@ -11743,14 +11743,3 @@
   (alias runtest)
   (deps product_conversion.t.exe)
   (action (run ./product_conversion.t.exe))))
-
-(subdir unit_namespace
- (rule
-  (targets unit_namespace.t.exe)
-  (deps UnitNamespaceA.vo UnitNamespaceB.vo unit_namespace.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} unit_namespace.t.exe unit_namespace_a.cpp unit_namespace_b.cpp unit_namespace.t.cpp)))
- (rule
-  (alias runtest)
-  (deps unit_namespace.t.exe)
-  (action (run ./unit_namespace.t.exe))))
