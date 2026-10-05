@@ -283,22 +283,7 @@ struct MonadAliasOfApplied {
 
   static_assert(Monad<EOUP_Monad>);
   static EOUP<Nat> extract(bool b, const Nat &n);
-  static inline const bool is_three = []() {
-    auto &&_sv = extract(true, Nat::s(Nat::s(Nat::o())));
-    if (std::holds_alternative<typename EOU<MaybePoison<Nat>>::Raise_error>(
-            _sv.v())) {
-      return false;
-    } else {
-      const auto &[x0] =
-          std::get<typename EOU<MaybePoison<Nat>>::Raise_ret>(_sv.v());
-      if (std::holds_alternative<typename MaybePoison<Nat>::Pois>(x0.v())) {
-        return false;
-      } else {
-        const auto &[a0] = std::get<typename MaybePoison<Nat>::NoPois>(x0.v());
-        return a0.eqb(Nat::s(Nat::s(Nat::s(Nat::o()))));
-      }
-    }
-  }();
+  static constexpr bool is_three = true;
 };
 
 template <Monad _tcI0, typename T2>

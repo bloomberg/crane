@@ -99,21 +99,7 @@ struct ListDef {
 struct RegionPatchWrite {
   static List<uint64_t> update_region(const List<uint64_t> &rom, uint64_t base,
                                       const List<uint64_t> &bytes);
-  static inline const uint64_t t = ListDef::template nth<uint64_t>(
-      UINT64_C(2),
-      update_region(
-          List<uint64_t>::cons(
-              UINT64_C(0),
-              List<uint64_t>::cons(
-                  UINT64_C(0),
-                  List<uint64_t>::cons(
-                      UINT64_C(0), List<uint64_t>::cons(
-                                       UINT64_C(0), List<uint64_t>::nil())))),
-          UINT64_C(1),
-          List<uint64_t>::cons(
-              UINT64_C(7),
-              List<uint64_t>::cons(UINT64_C(8), List<uint64_t>::nil()))),
-      UINT64_C(0));
+  static constexpr uint64_t t = UINT64_C(8);
 };
 
 template <typename T1>

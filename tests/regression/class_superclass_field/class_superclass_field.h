@@ -17,7 +17,7 @@ concept Ord = requires {
 
 struct ClassSuperclassField {
   struct eqnat {
-    static bool eqb(uint64_t a0, uint64_t a1) { return a0 == a1; }
+    constexpr static bool eqb(uint64_t a0, uint64_t a1) { return a0 == a1; }
   };
 
   static_assert(Eqb<eqnat, uint64_t>);
@@ -25,7 +25,7 @@ struct ClassSuperclassField {
   struct ordnat {
     using ord_eq = eqnat;
 
-    static bool le(uint64_t a0, uint64_t a1) { return a0 <= a1; }
+    constexpr static bool le(uint64_t a0, uint64_t a1) { return a0 <= a1; }
   };
 
   static_assert(Ord<ordnat, uint64_t>);
@@ -44,8 +44,7 @@ struct ClassSuperclassField {
     }
   }
 
-  static inline const uint64_t go =
-      cmp<ordnat, uint64_t>(UINT64_C(1), UINT64_C(2));
+  static constexpr uint64_t go = UINT64_C(1);
 };
 
 #endif // INCLUDED_CLASS_SUPERCLASS_FIELD

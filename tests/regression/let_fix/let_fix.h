@@ -125,15 +125,7 @@ struct LetFix {
     }
   }
 
-  static inline const uint64_t test_sum = local_sum(List<uint64_t>::cons(
-      UINT64_C(1),
-      List<uint64_t>::cons(
-          UINT64_C(2),
-          List<uint64_t>::cons(
-              UINT64_C(3),
-              List<uint64_t>::cons(
-                  UINT64_C(4),
-                  List<uint64_t>::cons(UINT64_C(5), List<uint64_t>::nil()))))));
+  static constexpr uint64_t test_sum = UINT64_C(15);
   static inline const List<uint64_t> test_rev =
       local_rev<uint64_t>(List<uint64_t>::cons(
           UINT64_C(1),
@@ -155,32 +147,9 @@ struct LetFix {
                           List<uint64_t>::cons(UINT64_C(6),
                                                List<uint64_t>::nil()))),
                   List<List<uint64_t>>::nil()))));
-  static inline const bool test_mem_found = local_mem(
-      UINT64_C(3),
-      List<uint64_t>::cons(
-          UINT64_C(1),
-          List<uint64_t>::cons(
-              UINT64_C(2),
-              List<uint64_t>::cons(
-                  UINT64_C(3),
-                  List<uint64_t>::cons(UINT64_C(4), List<uint64_t>::nil())))));
-  static inline const bool test_mem_missing = local_mem(
-      UINT64_C(9),
-      List<uint64_t>::cons(
-          UINT64_C(1),
-          List<uint64_t>::cons(
-              UINT64_C(2),
-              List<uint64_t>::cons(
-                  UINT64_C(3),
-                  List<uint64_t>::cons(UINT64_C(4), List<uint64_t>::nil())))));
-  static inline const uint64_t test_length =
-      local_length<uint64_t>(List<uint64_t>::cons(
-          UINT64_C(10),
-          List<uint64_t>::cons(
-              UINT64_C(20),
-              List<uint64_t>::cons(
-                  UINT64_C(30),
-                  List<uint64_t>::cons(UINT64_C(40), List<uint64_t>::nil())))));
+  static constexpr bool test_mem_found = true;
+  static constexpr bool test_mem_missing = false;
+  static constexpr uint64_t test_length = UINT64_C(4);
 };
 
 #endif // INCLUDED_LET_FIX

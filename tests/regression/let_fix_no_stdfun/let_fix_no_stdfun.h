@@ -95,30 +95,8 @@ struct LetFixNoStdfun {
   static uint64_t sum_list(const List<uint64_t> &l);
   static uint64_t flat_map_sum(const List<List<uint64_t>> &xss);
   static List<uint64_t> flatten(const List<List<uint64_t>> &xss);
-  static inline const uint64_t test_sum = sum_list(List<uint64_t>::cons(
-      UINT64_C(1),
-      List<uint64_t>::cons(
-          UINT64_C(2),
-          List<uint64_t>::cons(
-              UINT64_C(3),
-              List<uint64_t>::cons(
-                  UINT64_C(4),
-                  List<uint64_t>::cons(UINT64_C(5), List<uint64_t>::nil()))))));
-  static inline const uint64_t test_flat_map_sum =
-      flat_map_sum(List<List<uint64_t>>::cons(
-          List<uint64_t>::cons(
-              UINT64_C(1),
-              List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())),
-          List<List<uint64_t>>::cons(
-              List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()),
-              List<List<uint64_t>>::cons(
-                  List<uint64_t>::cons(
-                      UINT64_C(4),
-                      List<uint64_t>::cons(
-                          UINT64_C(5),
-                          List<uint64_t>::cons(UINT64_C(6),
-                                               List<uint64_t>::nil()))),
-                  List<List<uint64_t>>::nil()))));
+  static constexpr uint64_t test_sum = UINT64_C(15);
+  static constexpr uint64_t test_flat_map_sum = UINT64_C(21);
   static inline const List<uint64_t> test_flatten =
       flatten(List<List<uint64_t>>::cons(
           List<uint64_t>::cons(

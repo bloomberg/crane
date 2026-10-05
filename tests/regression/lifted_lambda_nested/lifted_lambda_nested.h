@@ -1,7 +1,6 @@
 #ifndef INCLUDED_LIFTED_LAMBDA_NESTED
 #define INCLUDED_LIFTED_LAMBDA_NESTED
 
-#include "fn.h"
 #include <atomic>
 #include <cstdint>
 #include <memory>
@@ -84,18 +83,7 @@ struct LiftedLambdaNested {
   }
 
   static uint64_t depth(const t &x);
-  static inline const uint64_t go = []() {
-    return []() {
-      t x = t::n(t::n(t::l()));
-      crane::fn<uint64_t(uint64_t)> outer = [=](uint64_t) {
-        crane::fn<uint64_t(uint64_t)> inner = [=](uint64_t) {
-          return depth(x);
-        };
-        return (inner(UINT64_C(0)) + depth(x));
-      };
-      return (outer(UINT64_C(0)) + outer(UINT64_C(1)));
-    }();
-  }();
+  static constexpr uint64_t go = UINT64_C(8);
 };
 
 #endif // INCLUDED_LIFTED_LAMBDA_NESTED

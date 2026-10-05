@@ -228,8 +228,7 @@ struct RamWrite {
   static List<ram_bank> ram_write_main_sys(const state &s, uint64_t v);
   static List<ram_bank> ram_write_status_sys(const state &s, uint64_t idx,
                                              uint64_t v);
-  static inline const uint64_t write_bank_count =
-      ram_write_main_sys(init_state, UINT64_C(12)).length();
+  static constexpr uint64_t write_bank_count = UINT64_C(4);
 };
 
 template <typename T1> List<T1> ListDef::repeat(const T1 &x, uint64_t n) {

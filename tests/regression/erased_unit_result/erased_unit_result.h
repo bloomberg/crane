@@ -63,10 +63,7 @@ struct ErasedUnitResult {
   static bool
   through_sig(const SigT<crane::obj, std::pair<crane::obj, crane::obj>> &p);
 
-  static inline const bool check =
-      through_sig(SigT<crane::obj, std::pair<crane::obj, crane::obj>>::existt(
-          crane::obj(), std::make_pair(crane::obj(crane_erase_fn(touch)),
-                                       crane::obj(UINT64_C(3)))));
+  static constexpr bool check = true;
 };
 
 #endif // INCLUDED_ERASED_UNIT_RESULT

@@ -118,13 +118,7 @@ struct HofClosureEscape {
   apply_option(const std::optional<crane::fn<uint64_t(uint64_t)>> &o,
                uint64_t x);
   /// Clobber stack, then use the closure.
-  static inline const uint64_t bug_hof_escape = []() {
-    tree t1 = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
-                         UINT64_C(20),
-                         tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
-    std::optional<crane::fn<uint64_t(uint64_t)>> o1 = hof_escape(std::move(t1));
-    return apply_option(std::move(o1), UINT64_C(0));
-  }();
+  static constexpr uint64_t bug_hof_escape = UINT64_C(60);
 };
 
 #endif // INCLUDED_HOF_CLOSURE_ESCAPE

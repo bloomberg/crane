@@ -222,27 +222,8 @@ struct UpdateNthBounds {
     }
   }
 
-  static inline const uint64_t in_bounds_length =
-      update_nth<uint64_t>(
-          UINT64_C(2), UINT64_C(9),
-          List<uint64_t>::cons(
-              UINT64_C(1),
-              List<uint64_t>::cons(
-                  UINT64_C(2),
-                  List<uint64_t>::cons(
-                      UINT64_C(3), List<uint64_t>::cons(
-                                       UINT64_C(4), List<uint64_t>::nil())))))
-          .length();
-
-  static inline const uint64_t out_of_bounds_length =
-      update_nth<uint64_t>(
-          UINT64_C(9), UINT64_C(7),
-          List<uint64_t>::cons(
-              UINT64_C(1),
-              List<uint64_t>::cons(
-                  UINT64_C(2),
-                  List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))))
-          .length();
+  static constexpr uint64_t in_bounds_length = UINT64_C(4);
+  static constexpr uint64_t out_of_bounds_length = UINT64_C(3);
 };
 
 #endif // INCLUDED_UPDATE_NTH_BOUNDS

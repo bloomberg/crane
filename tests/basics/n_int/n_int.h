@@ -20,9 +20,9 @@ struct NIntTest {
   static unsigned int succ_test(unsigned int x0_);
   static unsigned int pred_test(unsigned int x0_);
   static unsigned int double_test(unsigned int x0_);
-  static inline const unsigned int zero_val = 0u;
-  static inline const unsigned int five_val = 5u;
-  static inline const unsigned int big_val = 1000u;
+  static constexpr unsigned int zero_val = 0u;
+  static constexpr unsigned int five_val = 5u;
+  static constexpr unsigned int big_val = 1000u;
   static bool is_zero(unsigned int n);
   static unsigned int pos_add(unsigned int x0_, unsigned int x1_);
   static unsigned int pos_succ(unsigned int x0_);

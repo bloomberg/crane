@@ -170,8 +170,9 @@ template <typename T1> T1 Vector::nth(uint64_t, const T0<T1> &v0, const T &p) {
         return h;
       } else {
         const auto &[n1, a10] = std::get<typename T::FS>(p.v());
-        return Vector::template nth<T1>(((n1 + 1) ? (n1 + 1) - 1 : (n1 + 1)),
-                                        *a2, *a10);
+        auto &&_once1 = (n1 + 1);
+        return Vector::template nth<T1>((_once1 ? _once1 - 1 : _once1), *a2,
+                                        *a10);
       }
     }
   }();

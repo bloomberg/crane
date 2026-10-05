@@ -32,7 +32,7 @@ struct RecordCaseBody {
   };
 
   static uint64_t nested_record_match(const RecRec &rr);
-  static inline const uint64_t global_const = UINT64_C(42);
+  static constexpr uint64_t global_const = UINT64_C(42);
   static uint64_t global_in_body(const Rec &r);
   static uint64_t guarded_body(const Rec &r);
   static Rec constructor_body(const Rec &r);
@@ -141,12 +141,9 @@ struct RecordCaseBody {
 
   static uint64_t sum_list(const list<uint64_t> &l);
   static uint64_t list_in_body(const Rec &r);
-  static inline const uint64_t test1 =
-      case_in_body(Rec{UINT64_C(1), UINT64_C(2), UINT64_C(3)});
-  static inline const uint64_t test2 =
-      fix_in_body(Rec{UINT64_C(4), UINT64_C(5), UINT64_C(6)});
-  static inline const uint64_t test3 =
-      let_in_body(Rec{UINT64_C(0), UINT64_C(1), UINT64_C(2)});
+  static constexpr uint64_t test1 = UINT64_C(5);
+  static constexpr uint64_t test2 = UINT64_C(120);
+  static constexpr uint64_t test3 = UINT64_C(6);
 };
 
 #endif // INCLUDED_RECORD_CASE_BODY

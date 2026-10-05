@@ -150,10 +150,7 @@ struct List {
 
 struct LoopifySelfTemplateArgs {
   static List::list<uint64_t> rm(const List::list<uint64_t> &l);
-  static inline const uint64_t test =
-      rm(List::template list<uint64_t>::cons(
-             UINT64_C(1), List::template list<uint64_t>::nil()))
-          .length();
+  static constexpr uint64_t test = UINT64_C(1);
 };
 
 template <typename T1, typename F0>

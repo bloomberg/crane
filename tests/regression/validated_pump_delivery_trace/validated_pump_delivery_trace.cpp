@@ -79,10 +79,9 @@ uint64_t ValidatedPumpDeliveryTraceCase::div_ceil(uint64_t a, uint64_t b) {
   if (b == UINT64_C(0)) {
     return UINT64_C(0);
   } else {
+    auto &&_once1 = (a + b);
     return (
-        b ? ((((a + b) - UINT64_C(1)) > (a + b) ? 0
-                                                : ((a + b) - UINT64_C(1)))) /
-                b
+        b ? (((_once1 - UINT64_C(1)) > _once1 ? 0 : (_once1 - UINT64_C(1)))) / b
           : 0);
   }
 }
@@ -157,20 +156,19 @@ uint64_t ValidatedPumpDeliveryTraceCase::bilinear_iob_fraction(
         return UINT64_C(0);
       } else {
         if (elapsed <= pt) {
-          return (((UINT64_C(100) - (pt ? (elapsed * UINT64_C(25)) / pt : 0)) >
-                           UINT64_C(100)
+          auto &&_once1 = (pt ? (elapsed * UINT64_C(25)) / pt : 0);
+          return (((UINT64_C(100) - _once1) > UINT64_C(100)
                        ? 0
-                       : (UINT64_C(100) -
-                          (pt ? (elapsed * UINT64_C(25)) / pt : 0))));
+                       : (UINT64_C(100) - _once1)));
         } else {
           if (dia <= pt) {
             return UINT64_C(0);
           } else {
-            return ((((dia - pt) > dia ? 0 : (dia - pt)))
-                        ? ((((dia - elapsed) > dia ? 0 : (dia - elapsed))) *
-                           UINT64_C(75)) /
-                              (((dia - pt) > dia ? 0 : (dia - pt)))
-                        : 0);
+            auto &&_once2 = (((dia - pt) > dia ? 0 : (dia - pt)));
+            return (_once2 ? ((((dia - elapsed) > dia ? 0 : (dia - elapsed))) *
+                              UINT64_C(75)) /
+                                 _once2
+                           : 0);
           }
         }
       }
@@ -218,14 +216,10 @@ ValidatedPumpDeliveryTraceCase::apply_sensor_margin(
     ValidatedPumpDeliveryTraceCase::Mg_dL bg,
     const ValidatedPumpDeliveryTraceCase::Mg_dL &target) {
   if (target.mg_dL_val <= bg.mg_dL_val) {
-    return Mg_dL{(
-        ((bg.mg_dL_val -
-          (UINT64_C(100) ? (bg.mg_dL_val * UINT64_C(15)) / UINT64_C(100) : 0)) >
-                 bg.mg_dL_val
-             ? 0
-             : (bg.mg_dL_val -
-                (UINT64_C(100) ? (bg.mg_dL_val * UINT64_C(15)) / UINT64_C(100)
-                               : 0))))};
+    auto &&_once1 =
+        (UINT64_C(100) ? (bg.mg_dL_val * UINT64_C(15)) / UINT64_C(100) : 0);
+    return Mg_dL{((
+        (bg.mg_dL_val - _once1) > bg.mg_dL_val ? 0 : (bg.mg_dL_val - _once1)))};
   } else {
     return bg;
   }

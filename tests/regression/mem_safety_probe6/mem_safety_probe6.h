@@ -158,42 +158,20 @@ struct MemSafetyProbe6 {
     }
 
     uint64_t length() const {
-      const mylist<A> *_self = this;
-
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
-        const mylist<A> *_self;
-      };
-
-      /// CraneCont_Mycons: resumes after recursive call, then processes rest.
-      struct CraneCont_Mycons {};
-
-      using CraneFrame = std::variant<CraneEnter, CraneCont_Mycons>;
-      uint64_t _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified length: CraneEnter -> CraneCont_Mycons.
-      while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
-          const mylist<A> *_self = _f._self;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
-            _result = UINT64_C(0);
-          } else {
-            const auto &[a0, a1] =
-                std::get<typename mylist<A>::Mycons>(_sv.v());
-            _stack.emplace_back(CraneCont_Mycons{});
-            _stack.emplace_back(CraneEnter{crane_raw(a1)});
-          }
+      auto go_impl = [](auto &_self_go, const mylist<A> &l0,
+                        uint64_t acc) -> uint64_t {
+        if (std::holds_alternative<typename mylist<A>::Mynil>(l0.v())) {
+          return acc;
         } else {
-          auto _f = std::move(std::get<CraneCont_Mycons>(_frame));
-          _result = (UINT64_C(1) + std::move(_result));
+          const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(l0.v());
+          return _self_go(_self_go, *a1, (acc + UINT64_C(1)));
         }
+      };
+      {
+        const mylist<A> &_lc1_l0 = *this;
+        uint64_t _lc1_acc = UINT64_C(0);
+        return go_impl(go_impl, _lc1_l0, _lc1_acc);
       }
-      return _result;
     }
 
     template <typename T1, typename F1> T1 mylist_rec(T1 f, F1 &&f0) const {
@@ -287,27 +265,8 @@ struct MemSafetyProbe6 {
     }
   };
 
-  static inline const uint64_t test_tail_adder = []() {
-    mylist<uint64_t> l = mylist<uint64_t>::mycons(
-        UINT64_C(1),
-        mylist<uint64_t>::mycons(
-            UINT64_C(2),
-            mylist<uint64_t>::mycons(UINT64_C(3), mylist<uint64_t>::mynil())));
-    return std::move(l).tail_adder(UINT64_C(0), UINT64_C(100));
-  }();
-  static inline const uint64_t test_head_and_tail = []() {
-    return []() {
-      mylist<uint64_t> l = mylist<uint64_t>::mycons(
-          UINT64_C(10),
-          mylist<uint64_t>::mycons(UINT64_C(20), mylist<uint64_t>::mynil()));
-      crane::fn<mylist<uint64_t>(uint64_t)> f =
-          [&](uint64_t _x0) -> mylist<uint64_t> {
-        return std::move(l).head_and_tail(UINT64_C(0), UINT64_C(0), _x0);
-      };
-      mylist<uint64_t> l2 = f(UINT64_C(99));
-      return std::move(l2).length();
-    }();
-  }();
+  static constexpr uint64_t test_tail_adder = UINT64_C(102);
+  static constexpr uint64_t test_head_and_tail = UINT64_C(2);
 
   /// f reconstructs the list 10, 20. length 10,20 = 2
   struct tree {
@@ -587,56 +546,18 @@ struct MemSafetyProbe6 {
     }
   }
 
-  static inline const uint64_t test_tail_mapper = []() {
-    return []() {
-      mylist<uint64_t> l = mylist<uint64_t>::mycons(
-          UINT64_C(1),
-          mylist<uint64_t>::mycons(
-              UINT64_C(2), mylist<uint64_t>::mycons(
-                               UINT64_C(3), mylist<uint64_t>::mynil())));
-      crane::fn<mylist<uint64_t>(crane::fn<uint64_t(uint64_t)>)> f =
-          [&](crane::fn<uint64_t(uint64_t)> _x0) -> mylist<uint64_t> {
-        return tail_mapper(UINT64_C(0), std::move(l), _x0);
-      };
-      mylist<uint64_t> l2 = f([](uint64_t n) { return (n * UINT64_C(10)); });
-      return std::move(l2).length();
-    }();
-  }();
-  static inline const uint64_t test_both_subtrees = []() {
-    return []() {
-      tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
-                          UINT64_C(20),
-                          tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
-      crane::fn<tree(bool)> sel = [=](bool _x0) -> tree {
-        return std::move(t).both_subtrees(UINT64_C(0), _x0);
-      };
-      return (sel(true).tree_sum() + sel(false).tree_sum());
-    }();
-  }();
+  static constexpr uint64_t test_tail_mapper = UINT64_C(3);
+  static constexpr uint64_t test_both_subtrees = UINT64_C(40);
   /// TEST 5: Chain of closures each pre-computing from the tail.
   static mylist<crane::fn<uint64_t(uint64_t)>>
   build_chain(const mylist<uint64_t> &l);
   static uint64_t apply_chain(const mylist<crane::fn<uint64_t(uint64_t)>> &fns,
                               uint64_t x);
-  static inline const uint64_t test_chain = []() {
-    mylist<uint64_t> l = mylist<uint64_t>::mycons(
-        UINT64_C(10),
-        mylist<uint64_t>::mycons(
-            UINT64_C(20),
-            mylist<uint64_t>::mycons(UINT64_C(30), mylist<uint64_t>::mynil())));
-    mylist<crane::fn<uint64_t(uint64_t)>> fns = build_chain(std::move(l));
-    return apply_chain(std::move(fns), UINT64_C(0));
-  }();
+  static constexpr uint64_t test_chain = UINT64_C(63);
   /// TEST 6: Closure captures tail, then tail is used again
   /// after the closure is created — tests double use.
   static uint64_t capture_and_reuse(uint64_t _x, const mylist<uint64_t> &l);
-  static inline const uint64_t test_capture_reuse = capture_and_reuse(
-      UINT64_C(0),
-      mylist<uint64_t>::mycons(
-          UINT64_C(5),
-          mylist<uint64_t>::mycons(
-              UINT64_C(1), mylist<uint64_t>::mycons(
-                               UINT64_C(2), mylist<uint64_t>::mynil()))));
+  static constexpr uint64_t test_capture_reuse = UINT64_C(9);
 };
 
 #endif // INCLUDED_MEM_SAFETY_PROBE6

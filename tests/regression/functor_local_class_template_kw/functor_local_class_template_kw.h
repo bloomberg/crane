@@ -31,7 +31,7 @@ template <S X> struct F {
 
 struct N {
   using t = uint64_t;
-  static inline const uint64_t z = UINT64_C(0);
+  static constexpr uint64_t z = UINT64_C(0);
 };
 
 using FN = F<N>;

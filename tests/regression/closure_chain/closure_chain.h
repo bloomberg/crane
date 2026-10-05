@@ -1,7 +1,6 @@
 #ifndef INCLUDED_CLOSURE_CHAIN
 #define INCLUDED_CLOSURE_CHAIN
 
-#include "fn.h"
 #include "small_vector.h"
 #include <atomic>
 #include <cstdint>
@@ -111,32 +110,15 @@ struct ClosureChain {
   /// If f is captured by &, it dies when make_chain returns.
   static uint64_t make_chain(uint64_t n, const tree &t, uint64_t x0_);
   /// Test: make_chain 0 t 5 = tree_sum(t) + 5 = 10 + 5 = 15
-  static inline const uint64_t chain_0 = []() {
-    tree t = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
-    return make_chain(UINT64_C(0), std::move(t), UINT64_C(5));
-  }();
+  static constexpr uint64_t chain_0 = UINT64_C(15);
   /// Test: make_chain 1 t 5 = (make_chain 0 t) (5 + 1) = 10 + 6 = 16
-  static inline const uint64_t chain_1 = []() {
-    tree t = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
-    return make_chain(UINT64_C(1), std::move(t), UINT64_C(5));
-  }();
+  static constexpr uint64_t chain_1 = UINT64_C(16);
   /// Test: make_chain 3 t 0 = (make_chain 0 t) 3 = 10 + 3 = 13
-  static inline const uint64_t chain_3 = []() {
-    tree t = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
-    return make_chain(UINT64_C(3), std::move(t), UINT64_C(0));
-  }();
+  static constexpr uint64_t chain_3 = UINT64_C(13);
   /// Store the chain result and call it twice.
   /// If make_chain returns a chain with dangling references,
   /// the second call through clobbered stack would give wrong result.
-  static inline const uint64_t chain_double_call = []() {
-    return []() {
-      tree t = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
-      crane::fn<uint64_t(uint64_t)> f = [=](uint64_t _x0) -> uint64_t {
-        return make_chain(UINT64_C(2), std::move(t), _x0);
-      };
-      return (f(UINT64_C(0)) + f(UINT64_C(100)));
-    }();
-  }();
+  static constexpr uint64_t chain_double_call = UINT64_C(124);
 };
 
 #endif // INCLUDED_CLOSURE_CHAIN

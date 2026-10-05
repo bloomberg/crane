@@ -163,7 +163,7 @@ struct AssocTypeOptionLeak {
 
   static_assert(Opt<OL>);
 
-  template <Opt _tcI0> static uint64_t go(uint64_t n) {
+  template <Opt _tcI0> constexpr static uint64_t go(uint64_t n) {
     auto _cs = _tcI0::some_(n);
     if (_cs.has_value()) {
       const typename _tcI0::O &o = *_cs;

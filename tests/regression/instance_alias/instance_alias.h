@@ -19,15 +19,15 @@ concept Monoid = requires {
 
 struct InstanceAlias {
   struct MNat {
-    static uint64_t zero() { return UINT64_C(0); }
+    constexpr static uint64_t zero() { return UINT64_C(0); }
 
-    static uint64_t op(uint64_t a0, uint64_t a1) { return (a0 + a1); }
+    constexpr static uint64_t op(uint64_t a0, uint64_t a1) { return (a0 + a1); }
   };
 
   static_assert(Monoid<MNat, uint64_t>);
   using dict = MNat;
   static_assert(Monoid<dict, uint64_t>);
-  static inline const uint64_t test = dict::op(UINT64_C(3), UINT64_C(4));
+  static constexpr uint64_t test = UINT64_C(7);
 };
 
 #endif // INCLUDED_INSTANCE_ALIAS

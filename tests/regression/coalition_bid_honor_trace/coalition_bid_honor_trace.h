@@ -1749,58 +1749,31 @@ struct CoalitionBidHonorTraceCase {
   static inline const HonorLedger sample_break_bid_honor_ledger =
       apply_action_honor(state_after_initial_bid,
                          ProtocolAction::actbreakbid(Side::ATTACKER));
-  static inline const bool sample_challenger_may_issue =
-      may_issue_batchall(malthus);
+  static constexpr bool sample_challenger_may_issue = true;
   static inline const bool sample_coalition_bid_is_valid =
       valid_coalition_member_bid_b(attacker_coalition,
                                    sample_coalition_member_bid);
   static inline const bool sample_coalition_contains_bear =
       coalition_contains_clan(attacker_coalition, Clan::CLANGHOSTBEAR);
-  static inline const bool sample_updated_tonnage_reduced =
-      coalition_tonnage(updated_attacker_coalition) <
-      coalition_tonnage(attacker_coalition);
-  static inline const bool sample_attacker_ready_after_pass = is_ready(
-      set_ready(ReadyStatus::NEITHERREADY, Side::ATTACKER), Side::ATTACKER);
+  static constexpr bool sample_updated_tonnage_reduced = true;
+  static constexpr bool sample_attacker_ready_after_pass = true;
   static inline const bool sample_attacker_not_ready_after_clear = !(is_ready(
       clear_ready(ReadyStatus::BOTHREADY, Side::ATTACKER), Side::ATTACKER));
-  static inline const bool sample_phase_is_bidding =
-      phase_after_initial_bid.is_bidding();
-  static inline const bool sample_agreed_terminal = phase_agreed.is_terminal();
-  static inline const uint64_t sample_phase_depth_before_close =
-      phase_after_initial_bid.phase_depth();
-  static inline const uint64_t sample_phase_depth_after_close =
-      phase_agreed.phase_depth();
-  static inline const bool sample_bidding_measure_reduced =
-      phase_after_coalition_bid.get_bidding_measure() <
-      phase_after_initial_bid.get_bidding_measure();
+  static constexpr bool sample_phase_is_bidding = true;
+  static constexpr bool sample_agreed_terminal = true;
+  static constexpr uint64_t sample_phase_depth_before_close = UINT64_C(1);
+  static constexpr uint64_t sample_phase_depth_after_close = UINT64_C(0);
+  static constexpr bool sample_bidding_measure_reduced = true;
   static inline const Honor sample_challenge_honor =
       ledger_lookup(sample_challenge_honor_ledger, malthus.cmd_id);
   static inline const Honor sample_break_bid_honor =
       ledger_lookup(sample_break_bid_honor_ledger, malthus.cmd_id);
-  static inline const bool sample_challenge_honor_is_one =
-      BinInt::eqb(sample_challenge_honor, Z::zpos(Positive::xh()));
-  static inline const bool sample_break_bid_honor_is_minus_ten = BinInt::eqb(
-      sample_break_bid_honor,
-      Z::zneg(Positive::xo(Positive::xi(Positive::xo(Positive::xh())))));
-  static inline const uint64_t sample_break_bid_actor_id = []() -> uint64_t {
-    auto _cs = phase_after_initial_bid.action_actor_in_phase(
-        ProtocolAction::actbreakbid(Side::ATTACKER));
-    if (_cs.has_value()) {
-      const Commander &cmd = *_cs;
-      return cmd.cmd_id;
-    } else {
-      return UINT64_C(0);
-    }
-  }();
-  static inline const uint64_t sample_attacker_bid_count =
-      bid_metrics(sample_attacker_bid).fm_count;
-  static inline const uint64_t sample_updated_bid_count =
-      bid_metrics(updated_attacker_bid).fm_count;
-  static inline const uint64_t sample_state_force_count =
-      coalition_state_force(
-          std::make_optional<List<CoalitionMember>>(attacker_coalition),
-          List<Unit>::nil())
-          .length();
+  static constexpr bool sample_challenge_honor_is_one = true;
+  static constexpr bool sample_break_bid_honor_is_minus_ten = true;
+  static constexpr uint64_t sample_break_bid_actor_id = UINT64_C(1);
+  static constexpr uint64_t sample_attacker_bid_count = UINT64_C(6);
+  static constexpr uint64_t sample_updated_bid_count = UINT64_C(5);
+  static constexpr uint64_t sample_state_force_count = UINT64_C(6);
 };
 
 template <typename T1>

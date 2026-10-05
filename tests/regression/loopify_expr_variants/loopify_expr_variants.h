@@ -957,7 +957,8 @@ struct LoopifyExprVariants {
         } else {
           auto _f = std::move(std::get<CraneCont_n>(_frame));
           uint64_t n = _f.n;
-          _result = ((n + 1) ? std::move(_result) / (n + 1) : 0);
+          auto &&_once1 = (n + 1);
+          _result = (_once1 ? std::move(_result) / _once1 : 0);
         }
       }
       return _result;

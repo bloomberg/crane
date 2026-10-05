@@ -48,7 +48,8 @@ struct DependentTypename {
       return v;
     }
 
-    static typename C::template t<uint64_t> use_singleton(uint64_t x0_) {
+    constexpr static typename C::template t<uint64_t>
+    use_singleton(uint64_t x0_) {
       return C::template singleton<uint64_t>(x0_);
     }
   };

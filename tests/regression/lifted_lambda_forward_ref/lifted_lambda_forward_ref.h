@@ -1,7 +1,6 @@
 #ifndef INCLUDED_LIFTED_LAMBDA_FORWARD_REF
 #define INCLUDED_LIFTED_LAMBDA_FORWARD_REF
 
-#include "fn.h"
 #include <atomic>
 #include <cstdint>
 #include <memory>
@@ -84,13 +83,7 @@ struct LiftedLambdaForwardRef {
   }
 
   static uint64_t later(const t &x);
-  static inline const uint64_t go = []() {
-    return []() {
-      t x = t::n(t::l());
-      crane::fn<uint64_t(uint64_t)> f = [=](uint64_t) { return later(x); };
-      return (f(UINT64_C(0)) + f(UINT64_C(1)));
-    }();
-  }();
+  static constexpr uint64_t go = UINT64_C(4);
 };
 
 #endif // INCLUDED_LIFTED_LAMBDA_FORWARD_REF

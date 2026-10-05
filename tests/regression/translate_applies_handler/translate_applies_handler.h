@@ -20,7 +20,7 @@ struct TranslateAppliesHandler {
   static std::shared_ptr<ITree<uint64_t>> relabelled();
   static std::shared_ptr<ITree<uint64_t>> injected();
 
-  template <typename T1 = void> static uint64_t which_b(BE e) {
+  template <typename T1 = void> constexpr static uint64_t which_b(BE e) {
     switch (e) {
     case BE::B0: {
       return UINT64_C(0);

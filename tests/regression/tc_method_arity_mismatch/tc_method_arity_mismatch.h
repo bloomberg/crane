@@ -18,7 +18,7 @@ concept Mk = requires {
 
 struct TcMethodArityMismatch {
   struct MkNat {
-    static uint64_t mkf(uint64_t a, uint64_t a0) {
+    constexpr static uint64_t mkf(uint64_t a, uint64_t a0) {
       return [&]() {
         uint64_t b = (a + UINT64_C(1));
         return [=](uint64_t k) { return (k + b); };
@@ -30,7 +30,7 @@ struct TcMethodArityMismatch {
 
   template <typename _tcI0>
     requires Mk<_tcI0, uint64_t>
-  static uint64_t useit(uint64_t k) {
+  constexpr static uint64_t useit(uint64_t k) {
     return _tcI0::mkf(k, k);
   }
 

@@ -70,7 +70,7 @@ struct ParserAnyCast {
   sum_a_entries(const Datatypes::List<Specif::SigT<Tag, crane::obj>> &es);
 
   static const uint64_t &test_sum() {
-    static const uint64_t v = sum_a_entries(test_entries());
+    static const uint64_t v = UINT64_C(42);
     return v;
   }
   enum class Label { NUML, STRL, UNITL };
@@ -98,7 +98,7 @@ struct ParserAnyCast {
   static Label get_entry_label(labeled_entry x0_);
 
   static const Label &test_default_label() {
-    static const Label v = get_entry_label(make_default_entry());
+    static const Label v = Label::UNITL;
     return v;
   }
 };

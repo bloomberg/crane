@@ -209,8 +209,7 @@ struct ErasedPairFnCall {
                             true, List<bool>::cons(false, List<bool>::nil()))),
                         List<boxed>::cons(mk<uint64_t>(List<uint64_t>::nil()),
                                           List<boxed>::nil())));
-  static inline const uint64_t total = items.template fold_left<uint64_t>(
-      [](uint64_t acc, boxed b) { return (acc + size(b)); }, UINT64_C(0));
+  static constexpr uint64_t total = UINT64_C(5);
 };
 
 #endif // INCLUDED_ERASED_PAIR_FN_CALL

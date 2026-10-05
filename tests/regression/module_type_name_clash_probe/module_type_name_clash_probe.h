@@ -60,7 +60,7 @@ struct ModuleTypeNameClashProbe {
     return f(a0);
   }
 
-  static inline const Bool0 sample = Bool0::TRUE_;
+  static constexpr Bool0 sample = Bool0::TRUE_;
 };
 
 #endif // INCLUDED_MODULE_TYPE_NAME_CLASH_PROBE

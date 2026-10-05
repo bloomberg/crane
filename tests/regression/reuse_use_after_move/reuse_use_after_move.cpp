@@ -1,24 +1,44 @@
 #include "reuse_use_after_move.h"
 
 uint64_t ReuseUseAfterMove::length(const ReuseUseAfterMove::mylist &l) {
-  if (std::holds_alternative<typename ReuseUseAfterMove::mylist::Mycons>(
-          l.v())) {
-    const auto &[a0, a1] =
-        std::get<typename ReuseUseAfterMove::mylist::Mycons>(l.v());
-    return (UINT64_C(1) + length(*a1));
-  } else {
-    return UINT64_C(0);
+  {
+    const ReuseUseAfterMove::mylist &_lc1_l0 = l;
+    uint64_t _lc1_acc = UINT64_C(0);
+    uint64_t _lc1_loop_acc = std::move(_lc1_acc);
+    const ReuseUseAfterMove::mylist *_lc1_loop_l0 = &_lc1_l0;
+    while (true) {
+      if (std::holds_alternative<typename ReuseUseAfterMove::mylist::Mycons>(
+              _lc1_loop_l0->v())) {
+        const auto &[a0, a1] =
+            std::get<typename ReuseUseAfterMove::mylist::Mycons>(
+                _lc1_loop_l0->v());
+        _lc1_loop_acc = (_lc1_loop_acc + UINT64_C(1));
+        _lc1_loop_l0 = crane_raw(a1);
+      } else {
+        return _lc1_loop_acc;
+      }
+    }
   }
 }
 
 uint64_t ReuseUseAfterMove::sum(const ReuseUseAfterMove::mylist &l) {
-  if (std::holds_alternative<typename ReuseUseAfterMove::mylist::Mycons>(
-          l.v())) {
-    const auto &[a0, a1] =
-        std::get<typename ReuseUseAfterMove::mylist::Mycons>(l.v());
-    return (a0 + sum(*a1));
-  } else {
-    return UINT64_C(0);
+  {
+    const ReuseUseAfterMove::mylist &_lc1_l0 = l;
+    uint64_t _lc1_acc = UINT64_C(0);
+    uint64_t _lc1_loop_acc = std::move(_lc1_acc);
+    const ReuseUseAfterMove::mylist *_lc1_loop_l0 = &_lc1_l0;
+    while (true) {
+      if (std::holds_alternative<typename ReuseUseAfterMove::mylist::Mycons>(
+              _lc1_loop_l0->v())) {
+        const auto &[a0, a1] =
+            std::get<typename ReuseUseAfterMove::mylist::Mycons>(
+                _lc1_loop_l0->v());
+        _lc1_loop_acc = (_lc1_loop_acc + a0);
+        _lc1_loop_l0 = crane_raw(a1);
+      } else {
+        return _lc1_loop_acc;
+      }
+    }
   }
 }
 

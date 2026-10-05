@@ -127,31 +127,12 @@ struct FixFoldEscape {
                             uint64_t x);
   /// test1: collect_adders 10; 20; 30 -> adder_30; adder_20; adder_10
   /// (reversed by fold_left). apply_head picks adder_30, apply to 5 -> 35.
-  static inline const uint64_t test1 = apply_head(
-      collect_adders(List<uint64_t>::cons(
-          UINT64_C(10),
-          List<uint64_t>::cons(
-              UINT64_C(20),
-              List<uint64_t>::cons(UINT64_C(30), List<uint64_t>::nil())))),
-      UINT64_C(5));
+  static constexpr uint64_t test1 = UINT64_C(35);
   /// test2: Sum all adders applied to 0.
   /// adder_30(0) + adder_20(0) + adder_10(0) = 30 + 20 + 10 = 60.
-  static inline const uint64_t test2 = sum_apply(
-      collect_adders(List<uint64_t>::cons(
-          UINT64_C(10),
-          List<uint64_t>::cons(
-              UINT64_C(20),
-              List<uint64_t>::cons(UINT64_C(30), List<uint64_t>::nil())))),
-      UINT64_C(0));
+  static constexpr uint64_t test2 = UINT64_C(60);
   /// test3: With noise between collection and use.
-  static inline const uint64_t test3 = []() {
-    List<crane::fn<uint64_t(uint64_t)>> fns =
-        collect_adders(List<uint64_t>::cons(
-            UINT64_C(100),
-            List<uint64_t>::cons(UINT64_C(200), List<uint64_t>::nil())));
-    uint64_t noise = ((UINT64_C(55) + UINT64_C(44)) + UINT64_C(33));
-    return (apply_head(std::move(fns), UINT64_C(0)) + noise);
-  }();
+  static constexpr uint64_t test3 = UINT64_C(332);
 };
 
 #endif // INCLUDED_FIX_FOLD_ESCAPE

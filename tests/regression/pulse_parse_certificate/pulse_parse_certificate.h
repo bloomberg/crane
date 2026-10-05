@@ -223,28 +223,10 @@ struct PulseParseCertificateCase {
       certify_trace(sample_trace);
   static inline const bool sample_certificate_consistent =
       pulse_parse_certificate_self_consistent(sample_certificate);
-  static inline const uint64_t sample_certificate_base =
-      sample_certificate.certificate_base;
-  static inline const uint64_t sample_certificate_first_active =
-      []() -> uint64_t {
-    if (sample_certificate.certificate_first_active.has_value()) {
-      const uint64_t &idx = *sample_certificate.certificate_first_active;
-      return idx;
-    } else {
-      return UINT64_C(99);
-    }
-  }();
-  static inline const uint64_t sample_certificate_last_active =
-      []() -> uint64_t {
-    if (sample_certificate.certificate_last_active.has_value()) {
-      const uint64_t &idx = *sample_certificate.certificate_last_active;
-      return idx;
-    } else {
-      return UINT64_C(99);
-    }
-  }();
-  static inline const uint64_t sample_certificate_class_count =
-      sample_certificate.certificate_classes.length();
+  static constexpr uint64_t sample_certificate_base = UINT64_C(1);
+  static constexpr uint64_t sample_certificate_first_active = UINT64_C(1);
+  static constexpr uint64_t sample_certificate_last_active = UINT64_C(4);
+  static constexpr uint64_t sample_certificate_class_count = UINT64_C(5);
 };
 
 #endif // INCLUDED_PULSE_PARSE_CERTIFICATE

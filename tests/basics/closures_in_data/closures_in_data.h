@@ -185,18 +185,11 @@ struct ClosuresInData {
               uint64_t x);
   static inline const List<uint64_t> test_apply_all =
       apply_all(fn_list, UINT64_C(5));
-  static inline const uint64_t test_forward =
-      apply_forward(double_transform, UINT64_C(7));
-  static inline const uint64_t test_backward =
-      apply_backward(double_transform, UINT64_C(14));
-  static inline const uint64_t test_compose =
-      compose_all(pipeline, UINT64_C(3));
-  static inline const uint64_t test_maybe_some =
-      maybe_apply(std::make_optional<crane::fn<uint64_t(uint64_t)>>(
-                      [](uint64_t x) { return (x + 1); }),
-                  UINT64_C(41));
-  static inline const uint64_t test_maybe_none =
-      maybe_apply(std::optional<crane::fn<uint64_t(uint64_t)>>(), UINT64_C(42));
+  static constexpr uint64_t test_forward = UINT64_C(14);
+  static constexpr uint64_t test_backward = UINT64_C(7);
+  static constexpr uint64_t test_compose = UINT64_C(18);
+  static constexpr uint64_t test_maybe_some = UINT64_C(42);
+  static constexpr uint64_t test_maybe_none = UINT64_C(42);
 };
 
 #endif // INCLUDED_CLOSURES_IN_DATA

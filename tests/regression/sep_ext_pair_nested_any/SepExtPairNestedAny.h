@@ -19,10 +19,7 @@ const std::pair<std::optional<Datatypes::List<token>>, bool> produce =
             Datatypes::List<Specif::SigT<Datatypes::Nat, crane::obj>>>(),
         true);
 
-const bool use_it = []() -> bool {
-  auto [_x, b] = produce;
-  return b;
-}();
+inline constexpr bool use_it = true;
 
 } // namespace SepExtPairNestedAny
 

@@ -205,42 +205,21 @@ struct NestedInd {
     const variant_t &v() const { return v_; }
 
     uint64_t custom_list_length() const {
-      const custom_list<A> *_self = this;
-
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
-        const custom_list<A> *_self;
-      };
-
-      /// CraneCont_Ccons: resumes after recursive call, then processes rest.
-      struct CraneCont_Ccons {};
-
-      using CraneFrame = std::variant<CraneEnter, CraneCont_Ccons>;
-      uint64_t _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified custom_list_length: CraneEnter -> CraneCont_Ccons.
-      while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
-          const custom_list<A> *_self = _f._self;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename custom_list<A>::Cnil>(_sv.v())) {
-            _result = UINT64_C(0);
-          } else {
-            const auto &[a0, a1] =
-                std::get<typename custom_list<A>::Ccons>(_sv.v());
-            _stack.emplace_back(CraneCont_Ccons{});
-            _stack.emplace_back(CraneEnter{crane_raw(a1)});
-          }
+      auto go_impl = [](auto &_self_go, const custom_list<A> &l0,
+                        uint64_t acc) -> uint64_t {
+        if (std::holds_alternative<typename custom_list<A>::Cnil>(l0.v())) {
+          return acc;
         } else {
-          auto _f = std::move(std::get<CraneCont_Ccons>(_frame));
-          _result = (UINT64_C(1) + std::move(_result));
+          const auto &[a0, a1] =
+              std::get<typename custom_list<A>::Ccons>(l0.v());
+          return _self_go(_self_go, *a1, (acc + UINT64_C(1)));
         }
+      };
+      {
+        const custom_list<A> &_lc1_l0 = *this;
+        uint64_t _lc1_acc = UINT64_C(0);
+        return go_impl(go_impl, _lc1_l0, _lc1_acc);
       }
-      return _result;
     }
 
     template <typename T1, typename F1>
@@ -457,14 +436,11 @@ struct NestedInd {
                        small_tree, custom_list<rose<uint64_t>>::ccons(
                                        leaf(UINT64_C(4)),
                                        custom_list<rose<uint64_t>>::cnil())));
-  static inline const uint64_t test_root_leaf = leaf(UINT64_C(5)).root();
-  static inline const uint64_t test_root_small = small_tree.root();
-  static inline const uint64_t test_children_leaf =
-      leaf(UINT64_C(5)).children_count();
-  static inline const uint64_t test_children_small =
-      small_tree.children_count();
-  static inline const uint64_t test_children_bigger =
-      bigger_tree.children_count();
+  static constexpr uint64_t test_root_leaf = UINT64_C(5);
+  static constexpr uint64_t test_root_small = UINT64_C(1);
+  static constexpr uint64_t test_children_leaf = UINT64_C(0);
+  static constexpr uint64_t test_children_small = UINT64_C(2);
+  static constexpr uint64_t test_children_bigger = UINT64_C(2);
 
   struct expr {
     // TYPES
@@ -923,14 +899,13 @@ struct NestedInd {
               expr::lit(UINT64_C(3)),
               List<expr>::cons(expr::lit(UINT64_C(4)), List<expr>::nil()))),
           List<expr>::nil())));
-  static inline const uint64_t test_eval_add = test_add.eval();
-  static inline const uint64_t test_eval_mul = test_mul.eval();
-  static inline const uint64_t test_eval_nested = test_nested.eval();
-  static inline const uint64_t test_size_nested = test_nested.expr_size();
-  static inline const uint64_t test_depth_nested = test_nested.expr_depth();
+  static constexpr uint64_t test_eval_add = UINT64_C(6);
+  static constexpr uint64_t test_eval_mul = UINT64_C(24);
+  static constexpr uint64_t test_eval_nested = UINT64_C(21);
+  static constexpr uint64_t test_size_nested = UINT64_C(7);
+  static constexpr uint64_t test_depth_nested = UINT64_C(2);
   static inline const List<uint64_t> test_literals = test_nested.literals();
-  static inline const uint64_t test_doubled =
-      test_nested.lit_map([](uint64_t n) { return (n * UINT64_C(2)); }).eval();
+  static constexpr uint64_t test_doubled = UINT64_C(84);
   static inline const std::pair<
       std::pair<
           std::pair<

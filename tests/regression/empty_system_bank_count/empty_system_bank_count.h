@@ -149,11 +149,11 @@ struct EmptySystemBankCount {
     List<ram_chip> bank_chips;
   };
 
-  static inline const uint64_t NBANKS = UINT64_C(4);
-  static inline const uint64_t NCHIPS = UINT64_C(4);
-  static inline const uint64_t NREGS = UINT64_C(4);
-  static inline const uint64_t NMAIN = UINT64_C(16);
-  static inline const uint64_t NSTAT = UINT64_C(4);
+  static constexpr uint64_t NBANKS = UINT64_C(4);
+  static constexpr uint64_t NCHIPS = UINT64_C(4);
+  static constexpr uint64_t NREGS = UINT64_C(4);
+  static constexpr uint64_t NMAIN = UINT64_C(16);
+  static constexpr uint64_t NSTAT = UINT64_C(4);
   static inline const ram_reg empty_reg =
       ram_reg{ListDef::template repeat<uint64_t>(UINT64_C(0), NMAIN),
               ListDef::template repeat<uint64_t>(UINT64_C(0), NSTAT)};
@@ -163,7 +163,7 @@ struct EmptySystemBankCount {
       ram_bank{ListDef::template repeat<ram_chip>(empty_chip, NCHIPS)};
   static inline const List<ram_bank> empty_sys =
       ListDef::template repeat<ram_bank>(empty_bank, NBANKS);
-  static inline const uint64_t t = empty_sys.length();
+  static constexpr uint64_t t = UINT64_C(4);
 };
 
 template <typename T1> List<T1> ListDef::repeat(const T1 &x, uint64_t n) {

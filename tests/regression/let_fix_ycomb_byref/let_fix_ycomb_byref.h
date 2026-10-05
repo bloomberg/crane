@@ -96,15 +96,7 @@ struct LetFixYcombByref {
   static List<uint64_t> zip_sum(const List<uint64_t> &xs,
                                 const List<uint64_t> &ys);
   static List<uint64_t> countdown(uint64_t k);
-  static inline const uint64_t test_sum = sum_list(List<uint64_t>::cons(
-      UINT64_C(1),
-      List<uint64_t>::cons(
-          UINT64_C(2),
-          List<uint64_t>::cons(
-              UINT64_C(3),
-              List<uint64_t>::cons(
-                  UINT64_C(4),
-                  List<uint64_t>::cons(UINT64_C(5), List<uint64_t>::nil()))))));
+  static constexpr uint64_t test_sum = UINT64_C(15);
   static inline const List<uint64_t> test_zip = zip_sum(
       List<uint64_t>::cons(
           UINT64_C(1),

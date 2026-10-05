@@ -80,7 +80,7 @@ struct RocqBug4844 {
       Sum<crane::obj, crane::obj>::inl(crane::obj());
   enum class SomeType { BUILD_SOMETYPE };
   using ST = crane::obj;
-  static inline const SomeType SomeTrue = SomeType::BUILD_SOMETYPE;
+  static constexpr SomeType SomeTrue = SomeType::BUILD_SOMETYPE;
   using abstrSum = Sum<ST, ST>;
   static inline const abstrSum semilogic_ =
       crane::any_cast<abstrSum>(semilogic);

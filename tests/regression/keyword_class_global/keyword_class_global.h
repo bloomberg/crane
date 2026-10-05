@@ -5,7 +5,7 @@
 
 struct KeywordClassGlobal {
   static uint64_t class_(uint64_t n);
-  static inline const uint64_t t = class_(UINT64_C(4));
+  static constexpr uint64_t t = UINT64_C(8);
 };
 
 #endif // INCLUDED_KEYWORD_CLASS_GLOBAL

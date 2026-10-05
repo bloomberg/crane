@@ -12,7 +12,7 @@ struct ParallelTest {
 };
 
 struct Nat {
-  static inline const uint64_t one = UINT64_C(1);
+  static constexpr uint64_t one = UINT64_C(1);
 };
 
 #endif // INCLUDED_PARALLEL

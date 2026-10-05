@@ -1420,11 +1420,17 @@ let report_body_generations fn =
              (fun (p, n) -> str (phase_name p) ++ str " " ++ int n)
              (Gen_decls.body_generation_counts ()) )
 
-(** [Modutil.optimize_struct], then {!Normalize}: every consumer of the
-    structure -- the method registry built before printing as much as the
-    printer -- sees the same normalized bodies. *)
+(** [Modutil.optimize_struct], the bounded source rewrites in a fixed order
+    -- evaluation of small closed definitions, then the whitelisted reduction
+    -- and then {!Normalize}, so that every consumer of the structure (the
+    method registry built before printing as much as the printer) sees the
+    same bodies, and a body a rewrite introduces meets Normalize's contract
+    like any other. *)
 let optimize_struct to_appear struc =
-  Normalize.structure (Modutil.optimize_struct to_appear struc)
+  Modutil.optimize_struct to_appear struc
+  |> Ml_const_eval.structure
+  |> Ml_reduce.structure
+  |> Normalize.structure
 
 (** Renders an entire ML structure to C++ header and implementation files.
     Performs dry run first for renaming, then generates and formats the output.

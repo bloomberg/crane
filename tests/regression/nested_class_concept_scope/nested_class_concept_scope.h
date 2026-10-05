@@ -20,11 +20,11 @@ struct NestedClassConceptScope {
   };
 
   struct IN {
-    static uint64_t m(uint64_t n) { return n; }
+    constexpr static uint64_t m(uint64_t n) { return n; }
   };
 
   static_assert(C<IN, uint64_t>);
-  static inline const uint64_t test = IN::m(UINT64_C(5));
+  static constexpr uint64_t test = UINT64_C(5);
 };
 
 #endif // INCLUDED_NESTED_CLASS_CONCEPT_SCOPE

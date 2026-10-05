@@ -269,17 +269,7 @@ struct CtorFamilyIndexAny {
                   Nat::s(Nat::s(Nat::o()))))))));
   static inline const tree<noE, Nat> t1 =
       ret<noE, Nat>(Nat::s(Nat::s(Nat::s(Nat::o()))));
-  static inline const bool is_three = []() -> bool {
-    auto _cs = run(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-                       Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))))),
-                   t1);
-    if (_cs.has_value()) {
-      const Nat &n = *_cs;
-      return n.eqb(Nat::s(Nat::s(Nat::s(Nat::o()))));
-    } else {
-      return false;
-    }
-  }();
+  static constexpr bool is_three = true;
 };
 
 #endif // INCLUDED_CTOR_FAMILY_INDEX_ANY

@@ -104,45 +104,20 @@ struct CtorArgMoveAlias {
     const variant_t &v() const { return v_; }
 
     uint64_t isum() const {
-      const inner *_self = this;
-
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
-        const inner *_self;
-      };
-
-      /// CraneCont_ICons: saves [a0], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_ICons {
-        uint64_t a0;
-      };
-
-      using CraneFrame = std::variant<CraneEnter, CraneCont_ICons>;
-      uint64_t _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified isum: CraneEnter -> CraneCont_ICons.
-      while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
-          const inner *_self = _f._self;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename inner::INil>(_sv.v())) {
-            _result = UINT64_C(0);
-          } else {
-            const auto &[a0, a1] = std::get<typename inner::ICons>(_sv.v());
-            _stack.emplace_back(CraneCont_ICons{a0});
-            _stack.emplace_back(CraneEnter{crane_raw(a1)});
-          }
+      auto go_impl = [](auto &_self_go, const inner &l,
+                        uint64_t acc) -> uint64_t {
+        if (std::holds_alternative<typename inner::INil>(l.v())) {
+          return acc;
         } else {
-          auto _f = std::move(std::get<CraneCont_ICons>(_frame));
-          uint64_t a0 = _f.a0;
-          _result = (a0 + std::move(_result));
+          const auto &[a0, a1] = std::get<typename inner::ICons>(l.v());
+          return _self_go(_self_go, *a1, (acc + a0));
         }
+      };
+      {
+        const inner &_lc1_l = *this;
+        uint64_t _lc1_acc = UINT64_C(0);
+        return go_impl(go_impl, _lc1_l, _lc1_acc);
       }
-      return _result;
     }
 
     template <typename T1, typename F1> T1 inner_rec(T1 f, F1 &&f0) const {

@@ -258,7 +258,7 @@ struct TailCallSameNameOtherModule {
   static inline const Nat go =
       T2::t2::c2(Nat::s(Nat::o())).cmp(T2::t2::c2(Nat::s(Nat::s(Nat::o()))));
 
-  static inline const bool ok = go.eqb(Nat::s(Nat::s(Nat::s(Nat::o()))));
+  static constexpr bool ok = true;
 };
 
 #endif // INCLUDED_TAIL_CALL_SAME_NAME_OTHER_MODULE

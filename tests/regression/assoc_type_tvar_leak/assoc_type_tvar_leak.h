@@ -131,7 +131,7 @@ struct AssocTypeTvarLeak {
   struct EN {
     using E = uint64_t;
 
-    static uint64_t e0() { return UINT64_C(0); }
+    constexpr static uint64_t e0() { return UINT64_C(0); }
 
     static List<uint64_t> elist() {
       return List<uint64_t>::cons(
@@ -150,7 +150,7 @@ struct AssocTypeTvarLeak {
 
   static_assert(Elt<EN>);
 
-  template <Elt _tcI0> static uint64_t go() {
+  template <Elt _tcI0> constexpr static uint64_t go() {
     return _tcI0::ecount(
         List<typename _tcI0::E>::cons(_tcI0::e0(), _tcI0::elist()));
   }

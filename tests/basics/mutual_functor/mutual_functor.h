@@ -289,7 +289,7 @@ template <Elem E> struct MutualTree {
 
 struct NatElem {
   using t = uint64_t;
-  static inline const uint64_t dflt = UINT64_C(0);
+  static constexpr uint64_t dflt = UINT64_C(0);
 };
 
 static_assert(Elem<NatElem>);

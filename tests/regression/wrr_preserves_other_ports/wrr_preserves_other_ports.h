@@ -134,9 +134,7 @@ struct WrrPreservesOtherPorts {
                   UINT64_C(3),
                   List<uint64_t>::cons(UINT64_C(4), List<uint64_t>::nil())))),
       UINT64_C(2)};
-  static inline const bool t = ListDef::template nth<uint64_t>(
-                                   UINT64_C(0), execute_wrr(sample).rom_ports,
-                                   UINT64_C(0)) == UINT64_C(1);
+  static constexpr bool t = true;
 };
 
 template <typename T1>

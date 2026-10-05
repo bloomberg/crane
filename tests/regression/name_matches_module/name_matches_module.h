@@ -46,9 +46,8 @@ struct NameMatchesModule {
   /// its enclosing module becomes a member with the same name as its class,
   /// which C++ forbids.  Both spellings are here: Inner inside module Inner,
   /// and NameMatchesModule inside module NameMatchesModule.
-  static inline const uint64_t NameMatchesModule0 = UINT64_C(4);
-  static inline const uint64_t run =
-      (NameMatchesModule0 + Inner_Mod::Inner::i(UINT64_C(6)).get());
+  static constexpr uint64_t NameMatchesModule0 = UINT64_C(4);
+  static constexpr uint64_t run = UINT64_C(10);
 };
 
 #endif // INCLUDED_NAME_MATCHES_MODULE

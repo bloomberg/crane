@@ -23,17 +23,7 @@ struct Monadic {
   }
 
   static State<bool, std::monostate> foo_state(std::monostate _x);
-  static inline const bool foo = []() {
-    crane::fn<State<bool, std::monostate>(std::monostate)> foo_state_ =
-        [](std::monostate u) {
-          return state_bind<bool, std::monostate, std::monostate>(
-              foo_state(u), [](std::monostate) {
-                return state_return<bool, std::monostate>(std::monostate{});
-              });
-        };
-    auto [_x, a] = foo_state_(std::monostate{})(true);
-    return a;
-  }();
+  static constexpr bool foo = true;
 };
 
 #endif // INCLUDED_LOCAL_FIXPOINT

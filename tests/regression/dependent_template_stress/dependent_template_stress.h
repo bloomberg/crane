@@ -41,7 +41,8 @@ struct DependentTemplateStress {
       return v;
     }
 
-    static typename C::template t<uint64_t> complex_use(uint64_t x0_) {
+    constexpr static typename C::template t<uint64_t>
+    complex_use(uint64_t x0_) {
       return C::template singleton<uint64_t>(x0_);
     }
   };

@@ -25,28 +25,9 @@ struct FixHigherOrder {
   static std::optional<crane::fn<uint64_t(uint64_t)>>
   make_wrapped(uint64_t base);
   /// test1: make_wrapped(5) -> Some(go), go(3) = 5+3 = 8.
-  static inline const uint64_t test1 = []() -> uint64_t {
-    auto _cs = make_wrapped(UINT64_C(5));
-    if (_cs.has_value()) {
-      const crane::fn<uint64_t(uint64_t)> &f = *_cs;
-      return f(UINT64_C(3));
-    } else {
-      return UINT64_C(999);
-    }
-  }();
+  static constexpr uint64_t test1 = UINT64_C(8);
   /// test2: with noise between creation and use.
-  static inline const uint64_t test2 = []() {
-    std::optional<crane::fn<uint64_t(uint64_t)>> o = make_wrapped(UINT64_C(42));
-    uint64_t noise =
-        ((((UINT64_C(1) + UINT64_C(2)) + UINT64_C(3)) + UINT64_C(4)) +
-         UINT64_C(5));
-    if (o.has_value()) {
-      const crane::fn<uint64_t(uint64_t)> &f = *o;
-      return (f(UINT64_C(10)) + noise);
-    } else {
-      return UINT64_C(999);
-    }
-  }();
+  static constexpr uint64_t test2 = UINT64_C(67);
 
   /// Two layers of wrapping: fixpoint passed through two functions.
   template <typename F0>
@@ -59,20 +40,7 @@ struct FixHigherOrder {
   static std::optional<std::optional<crane::fn<uint64_t(uint64_t)>>>
   make_double_wrapped(uint64_t base);
   /// test3: Doubly wrapped fixpoint. go(7) = 100+7 = 107.
-  static inline const uint64_t test3 = []() -> uint64_t {
-    auto _cs = make_double_wrapped(UINT64_C(100));
-    if (_cs.has_value()) {
-      const std::optional<crane::fn<uint64_t(uint64_t)>> &o = *_cs;
-      if (o.has_value()) {
-        const crane::fn<uint64_t(uint64_t)> &f = *o;
-        return f(UINT64_C(7));
-      } else {
-        return UINT64_C(999);
-      }
-    } else {
-      return UINT64_C(999);
-    }
-  }();
+  static constexpr uint64_t test3 = UINT64_C(107);
 };
 
 #endif // INCLUDED_FIX_HIGHER_ORDER

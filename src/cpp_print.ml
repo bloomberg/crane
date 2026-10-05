@@ -790,6 +790,8 @@ let rec is_constexpr_type ty =
   | Tfun _ -> false  (* std::function uses type erasure *)
   | Tdecay _ -> false
   | Tglob (r, _, _) when is_axiom_type_ref r -> false
+  (* A type mapped to a C++ scalar is that scalar. *)
+  | Tglob (r, [], _) when Table.is_custom_scalar_ref r -> true
   | Tglob (GlobRef.IndRef _ as r, tys, _) ->
     (* Crane-generated non-enum inductives have user-provided constructors
        (T() {}, explicit T(Ctor _v) : d_v_(_v) {}) that are not constexpr,
@@ -4293,11 +4295,24 @@ and pp_leaf_decl env (d : cpp_decl) =
          work for both template and non-template implementing modules. *)
       pp_meyers_singleton env id ty expr_pp
     else
+      (* A value written as a literal of a literal type is a constant
+         expression: [constexpr] says so, and lets it stand in a
+         [static_assert] or a template argument.  A mapped constant
+         constructor of such a type ([true]) is that type's literal. *)
+      let literal =
+        (match e with
+         | CPPlit _ | CPPuint _ | CPPint _ | CPPbool _ | CPPenum_val _ -> true
+         | CPPglob ((GlobRef.ConstructRef _ as r), [], _) -> Table.is_custom r
+         | _ -> false)
+        && is_constexpr_type ty
+      in
+      let ty = match ty with Tconst t when literal -> t | t -> t in
       let static_kw =
-        if (!render_ctx).rc_in_struct then
-          str "static inline "
-        else
-          mt ()
+        match ((!render_ctx).rc_in_struct, literal) with
+        | true, true -> str "static constexpr "
+        | true, false -> str "static inline "
+        | false, true -> str "inline constexpr "
+        | false, false -> mt ()
       in
       let needs_iife =
         (!render_ctx).rc_in_struct && expr_contains_capturing_lambda e

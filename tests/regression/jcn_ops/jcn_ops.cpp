@@ -2,12 +2,10 @@
 
 bool JcnOps::jcn_condition(const JcnOps::state &s, uint64_t cond) {
   uint64_t c1 = (UINT64_C(8) ? cond / UINT64_C(8) : 0);
-  uint64_t c2 =
-      (UINT64_C(2) ? (UINT64_C(4) ? cond / UINT64_C(4) : 0) % UINT64_C(2)
-                   : (UINT64_C(4) ? cond / UINT64_C(4) : 0));
-  uint64_t c3 =
-      (UINT64_C(2) ? (UINT64_C(2) ? cond / UINT64_C(2) : 0) % UINT64_C(2)
-                   : (UINT64_C(2) ? cond / UINT64_C(2) : 0));
+  auto &&_once1 = (UINT64_C(4) ? cond / UINT64_C(4) : 0);
+  uint64_t c2 = (UINT64_C(2) ? _once1 % UINT64_C(2) : _once1);
+  auto &&_once2 = (UINT64_C(2) ? cond / UINT64_C(2) : 0);
+  uint64_t c3 = (UINT64_C(2) ? _once2 % UINT64_C(2) : _once2);
   uint64_t c4 = (UINT64_C(2) ? cond % UINT64_C(2) : cond);
   bool base = ((s.acc == UINT64_C(0) && c2 == UINT64_C(1)) ||
                ((s.carry && c3 == UINT64_C(1)) ||

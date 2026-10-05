@@ -493,12 +493,8 @@ struct Cotree {
                       }));
             }));
       });
-  static inline const uint64_t test_root = sample_cotree.root();
-  static inline const uint64_t test_doubled_root =
-      sample_cotree
-          .template comap_cotree<uint64_t>(
-              [](uint64_t n) { return (n * UINT64_C(2)); })
-          .root();
+  static constexpr uint64_t test_root = UINT64_C(1);
+  static constexpr uint64_t test_doubled_root = UINT64_C(2);
   static colist<uint64_t> nats(uint64_t n);
   static inline const List<uint64_t> test_first_five =
       list_of_colist<uint64_t>(UINT64_C(5), nats(UINT64_C(0)));

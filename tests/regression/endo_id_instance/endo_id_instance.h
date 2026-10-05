@@ -146,8 +146,7 @@ struct EndoIdInstance {
       bump<lit>(Endo_lit, lit{Nat::s(Nat::s(Nat::s(Nat::o()))),
                               Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))});
 
-  static inline const bool is_seven = l1.sz.add(l1.x).eqb(
-      Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))));
+  static constexpr bool is_seven = true;
 };
 
 #endif // INCLUDED_ENDO_ID_INSTANCE

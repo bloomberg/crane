@@ -312,21 +312,13 @@ struct MemSafetyProbe22 {
   /// TEST 2: Function that recurses on children AND stores result
   /// in constructor, forcing the tree to be owned.
   static tree double_tree(const tree &t);
-  static inline const uint64_t test_double_tree =
-      tree_sum(double_tree(tree::node(
-          tree::node(tree::leaf(), UINT64_C(3), tree::leaf()), UINT64_C(5),
-          tree::node(tree::leaf(), UINT64_C(7), tree::leaf()))));
+  static constexpr uint64_t test_double_tree = UINT64_C(30);
   /// TEST 3: Two recursive calls with child + value in result.
   static uint64_t weighted_sum(const tree &t, uint64_t w);
-  static inline const uint64_t test_weighted_sum = weighted_sum(
-      tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
-                 UINT64_C(5),
-                 tree::node(tree::leaf(), UINT64_C(7), tree::leaf())),
-      UINT64_C(1));
+  static constexpr uint64_t test_weighted_sum = UINT64_C(25);
   /// TEST 4: Function with constructed-tree recursive calls.
   static uint64_t split_sum(const tree &t, uint64_t n);
-  static inline const uint64_t test_split_sum = split_sum(
-      tree::node(tree::leaf(), UINT64_C(10), tree::leaf()), UINT64_C(1));
+  static constexpr uint64_t test_split_sum = UINT64_C(22);
 
   /// TEST 5: Tree map with two recursive calls on children.
   template <typename F0>
@@ -387,39 +379,18 @@ struct MemSafetyProbe22 {
     return _result;
   }
 
-  static inline const uint64_t test_tree_map = tree_sum(tree_map(
-      [](uint64_t n) { return (n + UINT64_C(10)); },
-      tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
-                 UINT64_C(2),
-                 tree::node(tree::leaf(), UINT64_C(3), tree::leaf()))));
+  static constexpr uint64_t test_tree_map = UINT64_C(36);
   /// TEST 6: Mirror tree (swap children). Two recursive calls.
   static tree mirror(const tree &t);
-  static inline const uint64_t test_mirror = tree_sum(mirror(tree::node(
-      tree::node(tree::leaf(), UINT64_C(1), tree::leaf()), UINT64_C(2),
-      tree::node(tree::leaf(), UINT64_C(3), tree::leaf()))));
+  static constexpr uint64_t test_mirror = UINT64_C(6);
   /// TEST 7: Insert into BST (non-pointer-safe because constructed tree
   /// in recursive call).
   static tree insert(const tree &t, uint64_t x);
   static tree insert_all(tree t, const List<uint64_t> &xs);
-  static inline const uint64_t test_insert = tree_sum(
-      insert_all(tree::leaf(),
-                 List<uint64_t>::cons(
-                     UINT64_C(5),
-                     List<uint64_t>::cons(
-                         UINT64_C(3),
-                         List<uint64_t>::cons(
-                             UINT64_C(7),
-                             List<uint64_t>::cons(
-                                 UINT64_C(1),
-                                 List<uint64_t>::cons(
-                                     UINT64_C(9), List<uint64_t>::nil())))))));
+  static constexpr uint64_t test_insert = UINT64_C(25);
   /// TEST 8: Deep tree transformation with two recursive calls.
   static tree label_depth(const tree &t, uint64_t d);
-  static inline const uint64_t test_label_depth = tree_sum(label_depth(
-      tree::node(tree::node(tree::leaf(), UINT64_C(0), tree::leaf()),
-                 UINT64_C(0),
-                 tree::node(tree::leaf(), UINT64_C(0), tree::leaf())),
-      UINT64_C(1)));
+  static constexpr uint64_t test_label_depth = UINT64_C(5);
 };
 
 #endif // INCLUDED_MEM_SAFETY_PROBE22

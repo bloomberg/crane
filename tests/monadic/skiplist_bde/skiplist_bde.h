@@ -1009,10 +1009,10 @@ template <typename K, typename V> struct SkipList {
   static T2 data(bsl::shared_ptr<SkipNode<T1, T2>> pair) {
     return stm::readTVar<T2>(bsl::move(pair)->value);
   }
-  static inline const unsigned int e_SUCCESS = 0u;
-  static inline const unsigned int e_NOT_FOUND = 1u;
-  static inline const unsigned int e_DUPLICATE = 2u;
-  static inline const unsigned int e_INVALID = 3u;
+  static constexpr unsigned int e_SUCCESS = 0u;
+  static constexpr unsigned int e_NOT_FOUND = 1u;
+  static constexpr unsigned int e_DUPLICATE = 2u;
+  static constexpr unsigned int e_INVALID = 3u;
   template <typename T1, typename T2>
   static bsl::pair<unsigned int,
                    bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>>>
@@ -1031,8 +1031,9 @@ template <typename K, typename V> struct SkipList {
   }
   template <typename T1, typename T2>
   static SkipList<T1, T2> create(const T1 &dummyKey, const T2 &dummyVal) {
+    auto &&_once1 = 16u;
     bsl::shared_ptr<SkipNode<T1, T2>> headNode = SkipNode<T1, T2>::create(
-        dummyKey, dummyVal, (((16u - 1u) > 16u ? 0 : (16u - 1u))));
+        dummyKey, dummyVal, (((_once1 - 1u) > _once1 ? 0 : (_once1 - 1u))));
     stm::TVar<unsigned int> lvlTV = stm::newTVar(0u);
     stm::TVar<unsigned int> lenTV = stm::newTVar(0u);
     return SkipList<T1, T2>{bsl::move(headNode), 16u, bsl::move(lvlTV),

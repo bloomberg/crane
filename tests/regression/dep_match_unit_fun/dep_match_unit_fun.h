@@ -70,8 +70,7 @@ struct DepMatchUnitFun {
   }
 
   static uint64_t get(const tg &t, uint64_t x0_);
-  static inline const uint64_t go =
-      get(tg::tf([](uint64_t x) { return (x + UINT64_C(1)); }), UINT64_C(4));
+  static constexpr uint64_t go = UINT64_C(5);
 };
 
 #endif // INCLUDED_DEP_MATCH_UNIT_FUN

@@ -95,8 +95,8 @@ public:
 struct UniversePoly {
   template <typename T1> static T1 poly_id(T1 x) { return x; }
 
-  static inline const uint64_t test_id_nat = poly_id<uint64_t>(UINT64_C(42));
-  static inline const bool test_id_bool = poly_id<bool>(true);
+  static constexpr uint64_t test_id_nat = UINT64_C(42);
+  static constexpr bool test_id_bool = true;
 
   template <typename A, typename B> struct ppair {
     A pfst;
@@ -126,8 +126,8 @@ struct UniversePoly {
 
   static inline const ppair<uint64_t, bool> test_pair =
       ppair<uint64_t, bool>{UINT64_C(5), true};
-  static inline const uint64_t test_pfst = test_pair.pfst;
-  static inline const bool test_psnd = test_pair.psnd;
+  static constexpr uint64_t test_pfst = UINT64_C(5);
+  static constexpr bool test_psnd = true;
 
   template <typename A> struct poption {
     // TYPES
@@ -248,12 +248,7 @@ struct UniversePoly {
     }
   }
 
-  static inline const uint64_t test_length =
-      poly_length<uint64_t>(List<uint64_t>::cons(
-          UINT64_C(1),
-          List<uint64_t>::cons(
-              UINT64_C(2),
-              List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))));
+  static constexpr uint64_t test_length = UINT64_C(3);
 };
 
 #endif // INCLUDED_UNIVERSE_POLY

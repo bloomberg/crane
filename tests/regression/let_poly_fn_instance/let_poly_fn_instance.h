@@ -1,7 +1,6 @@
 #ifndef INCLUDED_LET_POLY_FN_INSTANCE
 #define INCLUDED_LET_POLY_FN_INSTANCE
 
-#include "fn.h"
 #include <cstdint>
 
 /// A let-bound polymorphic function is lifted to a template, and the lifted
@@ -9,13 +8,7 @@
 /// type and applying the result absorbs the extra argument into the same call,
 /// so g 4 is emitted as a second argument to the one-parameter _anon_f.
 struct LetPolyFnInstance {
-  template <typename T1> static T1 test_crane_f(const T1 x) { return x; }
-
-  static inline const uint64_t test = []() {
-    return (test_crane_f(UINT64_C(3)) + test_crane_f(crane::fn([](uint64_t y) {
-              return (y + UINT64_C(1));
-            }))(UINT64_C(4)));
-  }();
+  static constexpr uint64_t test = UINT64_C(8);
 };
 
 #endif // INCLUDED_LET_POLY_FN_INSTANCE

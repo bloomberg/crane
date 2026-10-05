@@ -117,15 +117,7 @@ struct CurriedValueInContainer {
     return a;
   }
 
-  static inline const uint64_t use =
-      ((constK<uint64_t, bool>(UINT64_C(5), true) +
-        constK<uint64_t, List<uint64_t>>(
-            UINT64_C(6),
-            List<uint64_t>::cons(
-                UINT64_C(1),
-                List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())))) +
-       constK<uint64_t, crane::fn<uint64_t(uint64_t)>>(
-           UINT64_C(7), [](uint64_t n) { return n; }));
+  static constexpr uint64_t use = UINT64_C(18);
   /// Stored in a list and reapplied.
   static inline const List<crane::fn<uint64_t(uint64_t, uint64_t)>> stored =
       List<crane::fn<uint64_t(uint64_t, uint64_t)>>::cons(
@@ -133,12 +125,7 @@ struct CurriedValueInContainer {
           List<crane::fn<uint64_t(uint64_t, uint64_t)>>::cons(
               [](uint64_t a, uint64_t) { return (a * UINT64_C(2)); },
               List<crane::fn<uint64_t(uint64_t, uint64_t)>>::nil()));
-  static inline const uint64_t total =
-      (use + stored.template fold_left<uint64_t>(
-                 [](uint64_t acc, crane::fn<uint64_t(uint64_t, uint64_t)> f) {
-                   return (acc + f(UINT64_C(3), UINT64_C(4)));
-                 },
-                 UINT64_C(0)));
+  static constexpr uint64_t total = UINT64_C(27);
 };
 
 #endif // INCLUDED_CURRIED_VALUE_IN_CONTAINER

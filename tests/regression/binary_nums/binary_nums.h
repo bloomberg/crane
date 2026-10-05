@@ -311,9 +311,7 @@ struct BinaryNums {
       N::npos(Positive::xi(Positive::xh())));
   static inline const N n_pred_result =
       BinNat::pred(N::npos(Positive::xi(Positive::xo(Positive::xh()))));
-  static inline const Comparison n_compare_result =
-      BinNat::compare(N::npos(Positive::xi(Positive::xh())),
-                      N::npos(Positive::xi(Positive::xo(Positive::xh()))));
+  static constexpr Comparison n_compare_result = Comparison::LT;
   static inline const Z z_zero = Z::z0();
   static inline const Z z_pos = Z::zpos(Positive::xo(
       Positive::xi(Positive::xo(Positive::xi(Positive::xo(Positive::xh()))))));
@@ -330,15 +328,10 @@ struct BinaryNums {
       Z::zpos(Positive::xo(Positive::xi(Positive::xo(Positive::xh())))));
   static inline const Z z_abs_result = BinInt::abs(Z::zneg(Positive::xo(
       Positive::xi(Positive::xo(Positive::xi(Positive::xo(Positive::xh())))))));
-  static inline const Comparison z_compare_result =
-      BinInt::compare(Z::zneg(Positive::xi(Positive::xh())),
-                      Z::zpos(Positive::xi(Positive::xo(Positive::xh()))));
-  static inline const uint64_t pos_to_nat =
-      Coq_Pos::to_nat(Positive::xi(Positive::xi(Positive::xh())));
-  static inline const uint64_t n_to_nat = BinNat::to_nat(
-      N::npos(Positive::xi(Positive::xi(Positive::xi(Positive::xh())))));
-  static inline const uint64_t z_to_nat = BinInt::to_nat(
-      Z::zpos(Positive::xo(Positive::xi(Positive::xo(Positive::xh())))));
+  static constexpr Comparison z_compare_result = Comparison::LT;
+  static constexpr uint64_t pos_to_nat = UINT64_C(7);
+  static constexpr uint64_t n_to_nat = UINT64_C(15);
+  static constexpr uint64_t z_to_nat = UINT64_C(10);
   static N n_max(N a, N b);
   static Z z_sign(const Z &z);
   static inline const N test_n_max =

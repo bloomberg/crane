@@ -2,7 +2,6 @@
 #define INCLUDED_ERASED_FN_IN_RECURSIVE_CONTAINER
 
 #include "crane_fn.h"
-#include "fn.h"
 #include "obj.h"
 #include "small_vector.h"
 #include <atomic>
@@ -228,18 +227,7 @@ struct ErasedFnInRecursiveContainer {
             1);
   }
 
-  static inline const uint64_t run =
-      size<std::optional<crane::fn<uint64_t(uint64_t)>>>(
-          rose<std::optional<crane::fn<uint64_t(uint64_t)>>>::node(
-              std::make_optional<crane::fn<uint64_t(uint64_t)>>(
-                  [](uint64_t x) { return x; }),
-              List<rose<std::optional<crane::fn<uint64_t(uint64_t)>>>>::cons(
-                  rose<std::optional<crane::fn<uint64_t(uint64_t)>>>::node(
-                      std::optional<crane::fn<uint64_t(uint64_t)>>(),
-                      List<rose<std::optional<crane::fn<uint64_t(uint64_t)>>>>::
-                          nil()),
-                  List<rose<std::optional<crane::fn<uint64_t(uint64_t)>>>>::
-                      nil())));
+  static constexpr uint64_t run = UINT64_C(2);
 };
 
 #endif // INCLUDED_ERASED_FN_IN_RECURSIVE_CONTAINER

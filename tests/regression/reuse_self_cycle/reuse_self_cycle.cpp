@@ -1,12 +1,23 @@
 #include "reuse_self_cycle.h"
 
 uint64_t ReuseSelfCycle::length(const ReuseSelfCycle::mylist &l) {
-  if (std::holds_alternative<typename ReuseSelfCycle::mylist::Mycons>(l.v())) {
-    const auto &[a0, a1] =
-        std::get<typename ReuseSelfCycle::mylist::Mycons>(l.v());
-    return (UINT64_C(1) + length(*a1));
-  } else {
-    return UINT64_C(0);
+  {
+    const ReuseSelfCycle::mylist &_lc1_l0 = l;
+    uint64_t _lc1_acc = UINT64_C(0);
+    uint64_t _lc1_loop_acc = std::move(_lc1_acc);
+    const ReuseSelfCycle::mylist *_lc1_loop_l0 = &_lc1_l0;
+    while (true) {
+      if (std::holds_alternative<typename ReuseSelfCycle::mylist::Mycons>(
+              _lc1_loop_l0->v())) {
+        const auto &[a0, a1] =
+            std::get<typename ReuseSelfCycle::mylist::Mycons>(
+                _lc1_loop_l0->v());
+        _lc1_loop_acc = (_lc1_loop_acc + UINT64_C(1));
+        _lc1_loop_l0 = crane_raw(a1);
+      } else {
+        return _lc1_loop_acc;
+      }
+    }
   }
 }
 

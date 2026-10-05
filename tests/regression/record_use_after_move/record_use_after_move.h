@@ -32,17 +32,9 @@ struct RecordUseAfterMove {
     }
   }();
   /// Simple case: same record used twice in let bindings.
-  static inline const uint64_t double_let = []() {
-    uint64_t x = initial_box.payload;
-    uint64_t y = initial_box.payload;
-    return (x + y);
-  }();
+  static constexpr uint64_t double_let = UINT64_C(82);
   /// Record passed to two different functions.
-  static inline const uint64_t two_consumers = []() {
-    uint64_t p = use_box(initial_box);
-    uint64_t q = use_box(initial_box);
-    return (p + q);
-  }();
+  static constexpr uint64_t two_consumers = UINT64_C(82);
 };
 
 #endif // INCLUDED_RECORD_USE_AFTER_MOVE

@@ -17,7 +17,7 @@ struct RecordFunctionFieldStdlibProbe {
   };
 
   static inline const endo e = endo{Datatypes::negb};
-  static inline const Bool0 sample = e.run(Bool0::TRUE_);
+  static constexpr Bool0 sample = Bool0::FALSE_;
 };
 
 #endif // INCLUDED_RECORD_FUNCTION_FIELD_STDLIB_PROBE

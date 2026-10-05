@@ -16,7 +16,7 @@ concept Weigh = requires {
 
 struct ClassInstanceAtFunctionType {
   struct WeighNat {
-    static uint64_t weigh(uint64_t n) { return n; }
+    constexpr static uint64_t weigh(uint64_t n) { return n; }
   };
 
   static_assert(Weigh<WeighNat, uint64_t>);

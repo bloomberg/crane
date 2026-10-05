@@ -279,10 +279,9 @@ struct Sum {
 
   static inline const triple<uint64_t, bool, uint64_t> triple_test =
       triple<uint64_t, bool, uint64_t>::second(true);
-  static inline const bool test_left = left_val.is_left();
-  static inline const bool test_right = right_val.is_left();
-  static inline const uint64_t test_either =
-      either_to_nat(either<uint64_t, uint64_t>::left(UINT64_C(3)));
+  static constexpr bool test_left = true;
+  static constexpr bool test_right = false;
+  static constexpr uint64_t test_either = UINT64_C(3);
 };
 
 #endif // INCLUDED_SUM

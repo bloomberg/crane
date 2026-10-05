@@ -12,19 +12,13 @@ struct FixEscapeCapture {
   static std::pair<uint64_t, crane::fn<uint64_t(uint64_t)>>
   make_pair_fn(uint64_t base);
   /// Invokes the escaped fixpoint — use-after-free if & capture.
-  static inline const uint64_t test_pair = []() -> uint64_t {
-    auto [_x, f] = make_pair_fn(UINT64_C(5));
-    return f(UINT64_C(3));
-  }();
+  static constexpr uint64_t test_pair = UINT64_C(8);
   /// Same pattern with a non-recursive local fixpoint to isolate the
   /// capture issue from self-reference.
   static std::pair<uint64_t, crane::fn<uint64_t(uint64_t)>>
   make_pair_fn2(uint64_t base);
 
-  static inline const uint64_t test_pair2 = []() -> uint64_t {
-    auto [n, f] = make_pair_fn2(UINT64_C(5));
-    return (n + f(UINT64_C(3)));
-  }();
+  static constexpr uint64_t test_pair2 = UINT64_C(18);
 };
 
 #endif // INCLUDED_FIX_ESCAPE_CAPTURE

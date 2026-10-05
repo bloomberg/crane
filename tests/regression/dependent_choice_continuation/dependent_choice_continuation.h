@@ -143,7 +143,7 @@ struct DependentChoiceContinuation {
   static inline const MemS<bool> fresh_prov =
       Mfresh_prov<bool>([](bool p) { return MemS<bool>::mret(p); });
   static bool run(const MemS<bool> &m);
-  static inline const bool is_true = run(fresh_prov);
+  static constexpr bool is_true = true;
 };
 
 #endif // INCLUDED_DEPENDENT_CHOICE_CONTINUATION

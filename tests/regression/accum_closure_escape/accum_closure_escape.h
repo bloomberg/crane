@@ -559,27 +559,9 @@ struct AccumClosureEscape {
   apply_all_sum(const mylist<crane::fn<uint64_t(uint64_t)>> &fns, uint64_t x);
   /// test1: build_adders 10, 20, 30  = 30+_, 20+_, 10+_ (reversed)
   /// apply_first result 5 = 30 + 5 = 35
-  static inline const uint64_t test1 = []() {
-    mylist<crane::fn<uint64_t(uint64_t)>> fns = build_adders(
-        mylist<uint64_t>::mycons(
-            UINT64_C(10),
-            mylist<uint64_t>::mycons(
-                UINT64_C(20), mylist<uint64_t>::mycons(
-                                  UINT64_C(30), mylist<uint64_t>::mynil()))),
-        mylist<crane::fn<uint64_t(uint64_t)>>::mynil());
-    return apply_first(std::move(fns), UINT64_C(5));
-  }();
+  static constexpr uint64_t test1 = UINT64_C(35);
   /// test2: apply all closures: (30+5) + (20+5) + (10+5) = 35+25+15 = 75
-  static inline const uint64_t test2 = []() {
-    mylist<crane::fn<uint64_t(uint64_t)>> fns = build_adders(
-        mylist<uint64_t>::mycons(
-            UINT64_C(10),
-            mylist<uint64_t>::mycons(
-                UINT64_C(20), mylist<uint64_t>::mycons(
-                                  UINT64_C(30), mylist<uint64_t>::mynil()))),
-        mylist<crane::fn<uint64_t(uint64_t)>>::mynil());
-    return apply_all_sum(std::move(fns), UINT64_C(5));
-  }();
+  static constexpr uint64_t test2 = UINT64_C(75);
 
   /// COMPOSE CLOSURES: Each step builds a composed function.
   /// This creates closures that capture OTHER closures.
@@ -600,30 +582,13 @@ struct AccumClosureEscape {
   /// = fun x => id (10 + (20 + (30 + x)))
   /// = fun x => 60 + x
   /// test3 = 60 + 7 = 67
-  static inline const uint64_t test3 = compose_from_list(
-      mylist<uint64_t>::mycons(
-          UINT64_C(10),
-          mylist<uint64_t>::mycons(
-              UINT64_C(20), mylist<uint64_t>::mycons(
-                                UINT64_C(30), mylist<uint64_t>::mynil()))),
-      [](uint64_t x) { return x; }, UINT64_C(7));
+  static constexpr uint64_t test3 = UINT64_C(67);
   /// test4: Tree (Node (Node Leaf 10 Leaf) 20 (Node Leaf 30 Leaf))
   /// Closures: 20+_, 10+_, 30+_
   /// apply_all_sum with 5: (20+5) + (10+5) + (30+5) = 25+15+35 = 75
-  static inline const uint64_t test4 = []() {
-    tree t = tree::tnode(
-        tree::tnode(tree::tleaf(), UINT64_C(10), tree::tleaf()), UINT64_C(20),
-        tree::tnode(tree::tleaf(), UINT64_C(30), tree::tleaf()));
-    return apply_all_sum(std::move(t).tree_to_adders(), UINT64_C(5));
-  }();
+  static constexpr uint64_t test4 = UINT64_C(75);
   /// Store a closure and then clobber the stack before using it.
-  static inline const uint64_t test5 = []() {
-    tree t =
-        tree::tnode(tree::tnode(tree::tleaf(), UINT64_C(42), tree::tleaf()),
-                    UINT64_C(100), tree::tleaf());
-    mylist<crane::fn<uint64_t(uint64_t)>> fns = std::move(t).tree_to_adders();
-    return apply_first(std::move(fns), UINT64_C(0));
-  }();
+  static constexpr uint64_t test5 = UINT64_C(100);
 };
 
 #endif // INCLUDED_ACCUM_CLOSURE_ESCAPE

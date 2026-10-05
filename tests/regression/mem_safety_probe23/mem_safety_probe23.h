@@ -242,16 +242,7 @@ struct MemSafetyProbe23 {
   /// they appear in both continuation and recursive positions.
   static std::pair<std::pair<tree, tree>, uint64_t>
   collect_children(const tree &t);
-  static inline const uint64_t test_collect_children = []() {
-    std::pair<std::pair<tree, tree>, uint64_t> r = collect_children(tree::node(
-        tree::node(tree::leaf(), UINT64_C(2), tree::leaf()), UINT64_C(5),
-        tree::node(tree::leaf(), UINT64_C(8), tree::leaf())));
-    auto [p, s] = std::move(r);
-    auto [left_child, right_child] = std::move(p);
-    return (
-        (tree_sum(std::move(left_child)) + tree_sum(std::move(right_child))) +
-        s);
-  }();
+  static constexpr uint64_t test_collect_children = UINT64_C(25);
   /// TEST 4: Recursive function that rebuilds tree with an
   /// ACCUMULATOR that captures the original tree. The accumulator
   /// forces the tree to be owned. Two recursive calls on children.
@@ -277,19 +268,13 @@ struct MemSafetyProbe23 {
   /// TEST 6: Nested tree type — tree of trees. Tests clone correctness
   /// for deeply nested value types.
   static uint64_t flatten_tree_of_trees(const tree &t, const tree &inner);
-  static inline const uint64_t test_flatten_tree_of_trees =
-      flatten_tree_of_trees(
-          tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
-                     UINT64_C(2),
-                     tree::node(tree::leaf(), UINT64_C(3), tree::leaf())),
-          tree::node(tree::leaf(), UINT64_C(10), tree::leaf()));
+  static constexpr uint64_t test_flatten_tree_of_trees = UINT64_C(48);
   /// TEST 7: Two recursive calls where one takes a CONSTRUCTED tree
   /// with t embedded AND another takes a child of t.
   /// Forces t to NOT be pointer-safe. The After frame saves
   /// state for the child-based call.
   static uint64_t mixed_recurse(const tree &t, uint64_t n);
-  static inline const uint64_t test_mixed_recurse = mixed_recurse(
-      tree::node(tree::leaf(), UINT64_C(5), tree::leaf()), UINT64_C(1));
+  static constexpr uint64_t test_mixed_recurse = UINT64_C(10);
   /// TEST 8: Three-way split: function returns original tree AND
   /// uses tree_size on children. Forces tree owned; exercises
   /// the interplay between clone, move, and raw pointer in

@@ -45,24 +45,18 @@ struct Comparison {
   static uint64_t min_nat(uint64_t a, uint64_t b);
   static uint64_t clamp(uint64_t val, uint64_t lo, uint64_t hi);
   static Cmp flip_cmp(Cmp c);
-  static inline const uint64_t test_lt_nat = cmp_to_nat(Cmp::CMPLT);
-  static inline const uint64_t test_eq_nat = cmp_to_nat(Cmp::CMPEQ);
-  static inline const uint64_t test_gt_nat = cmp_to_nat(Cmp::CMPGT);
-  static inline const Cmp test_compare_lt =
-      compare_nats(UINT64_C(3), UINT64_C(5));
-  static inline const Cmp test_compare_eq =
-      compare_nats(UINT64_C(5), UINT64_C(5));
-  static inline const Cmp test_compare_gt =
-      compare_nats(UINT64_C(7), UINT64_C(5));
-  static inline const uint64_t test_max = max_nat(UINT64_C(3), UINT64_C(7));
-  static inline const uint64_t test_min = min_nat(UINT64_C(3), UINT64_C(7));
-  static inline const uint64_t test_clamp_lo =
-      clamp(UINT64_C(1), UINT64_C(3), UINT64_C(7));
-  static inline const uint64_t test_clamp_mid =
-      clamp(UINT64_C(5), UINT64_C(3), UINT64_C(7));
-  static inline const uint64_t test_clamp_hi =
-      clamp(UINT64_C(9), UINT64_C(3), UINT64_C(7));
-  static inline const Cmp test_flip = flip_cmp(Cmp::CMPLT);
+  static constexpr uint64_t test_lt_nat = UINT64_C(0);
+  static constexpr uint64_t test_eq_nat = UINT64_C(1);
+  static constexpr uint64_t test_gt_nat = UINT64_C(2);
+  static constexpr Cmp test_compare_lt = Cmp::CMPLT;
+  static constexpr Cmp test_compare_eq = Cmp::CMPEQ;
+  static constexpr Cmp test_compare_gt = Cmp::CMPGT;
+  static constexpr uint64_t test_max = UINT64_C(7);
+  static constexpr uint64_t test_min = UINT64_C(3);
+  static constexpr uint64_t test_clamp_lo = UINT64_C(3);
+  static constexpr uint64_t test_clamp_mid = UINT64_C(5);
+  static constexpr uint64_t test_clamp_hi = UINT64_C(7);
+  static constexpr Cmp test_flip = Cmp::CMPGT;
 };
 
 #endif // INCLUDED_COMPARISON

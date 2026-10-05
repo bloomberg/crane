@@ -280,10 +280,10 @@ struct MutualRecursion {
 
   static uint64_t tree_sum(const tree<uint64_t> &t);
   static uint64_t forest_sum(const forest<uint64_t> &f);
-  static inline const bool test_even_0 = is_even(UINT64_C(0));
-  static inline const bool test_even_4 = is_even(UINT64_C(4));
-  static inline const bool test_odd_3 = is_odd(UINT64_C(3));
-  static inline const bool test_odd_4 = is_odd(UINT64_C(4));
+  static constexpr bool test_even_0 = true;
+  static constexpr bool test_even_4 = true;
+  static constexpr bool test_odd_3 = true;
+  static constexpr bool test_odd_4 = false;
   static inline const tree<uint64_t> simple_tree =
       tree<uint64_t>::node(forest<uint64_t>::trees(
           tree<uint64_t>::leaf(UINT64_C(1)),
@@ -295,12 +295,10 @@ struct MutualRecursion {
               tree<uint64_t>::leaf(UINT64_C(3)), forest<uint64_t>::empty())),
           forest<uint64_t>::trees(tree<uint64_t>::leaf(UINT64_C(4)),
                                   forest<uint64_t>::empty())));
-  static inline const uint64_t test_size_simple =
-      tree_size<uint64_t>(simple_tree);
-  static inline const uint64_t test_size_nested =
-      tree_size<uint64_t>(nested_tree);
-  static inline const uint64_t test_sum_simple = tree_sum(simple_tree);
-  static inline const uint64_t test_sum_nested = tree_sum(nested_tree);
+  static constexpr uint64_t test_size_simple = UINT64_C(2);
+  static constexpr uint64_t test_size_nested = UINT64_C(2);
+  static constexpr uint64_t test_sum_simple = UINT64_C(3);
+  static constexpr uint64_t test_sum_nested = UINT64_C(7);
 };
 
 #endif // INCLUDED_MUTUAL_RECURSION

@@ -30,13 +30,15 @@ struct Equations {
   static uint64_t gcd_clause_3(uint64_t n, uint64_t n0, bool refine,
                                F3 &&gcd0) {
     if (refine) {
+      auto &&_once1 = (n0 + 1);
+      auto &&_once2 = (n + 1);
       return gcd0(std::make_pair(
-          (n + 1),
-          ((((n0 + 1) - (n + 1)) > (n0 + 1) ? 0 : ((n0 + 1) - (n + 1))))));
+          (n + 1), (((_once1 - _once2) > _once1 ? 0 : (_once1 - _once2)))));
     } else {
+      auto &&_once3 = (n + 1);
+      auto &&_once4 = (n0 + 1);
       return gcd0(std::make_pair(
-          ((((n + 1) - (n0 + 1)) > (n + 1) ? 0 : ((n + 1) - (n0 + 1)))),
-          (n0 + 1)));
+          (((_once3 - _once4) > _once3 ? 0 : (_once3 - _once4))), (n0 + 1)));
     }
   }
 
@@ -299,31 +301,37 @@ struct Equations {
               g.v())) {
         const auto &[n1, n00, hind0] = std::get<
             typename gcd_clause_3_graph::Gcd_clause_3_graph_equation_1>(g.v());
-        return f2(n1, n00, *hind0,
-                  _self_f4(_self_f4, _self_f5,
-                           std::make_pair((n1 + 1),
-                                          ((((n00 + 1) - (n1 + 1)) > (n00 + 1)
-                                                ? 0
-                                                : ((n00 + 1) - (n1 + 1))))),
-                           gcd(std::make_pair(
-                               (n1 + 1), ((((n00 + 1) - (n1 + 1)) > (n00 + 1)
-                                               ? 0
-                                               : ((n00 + 1) - (n1 + 1)))))),
-                           *hind0));
+        auto &&_once1 = (n00 + 1);
+        auto &&_once2 = (n1 + 1);
+        auto &&_once3 = (n00 + 1);
+        auto &&_once4 = (n1 + 1);
+        return f2(
+            n1, n00, *hind0,
+            _self_f4(
+                _self_f4, _self_f5,
+                std::make_pair(
+                    (n1 + 1),
+                    (((_once3 - _once4) > _once3 ? 0 : (_once3 - _once4)))),
+                gcd(std::make_pair(
+                    (n1 + 1),
+                    (((_once1 - _once2) > _once1 ? 0 : (_once1 - _once2))))),
+                *hind0));
       } else {
         const auto &[n1, n00, hind0] = std::get<
             typename gcd_clause_3_graph::Gcd_clause_3_graph_equation_2>(g.v());
+        auto &&_once5 = (n1 + 1);
+        auto &&_once6 = (n00 + 1);
+        auto &&_once7 = (n1 + 1);
+        auto &&_once8 = (n00 + 1);
         return f3(
             n1, n00, *hind0,
             _self_f4(_self_f4, _self_f5,
-                     std::make_pair(((((n1 + 1) - (n00 + 1)) > (n1 + 1)
-                                          ? 0
-                                          : ((n1 + 1) - (n00 + 1)))),
-                                    (n00 + 1)),
-                     gcd(std::make_pair(((((n1 + 1) - (n00 + 1)) > (n1 + 1)
-                                              ? 0
-                                              : ((n1 + 1) - (n00 + 1)))),
-                                        (n00 + 1))),
+                     std::make_pair(
+                         (((_once7 - _once8) > _once7 ? 0 : (_once7 - _once8))),
+                         (n00 + 1)),
+                     gcd(std::make_pair(
+                         (((_once5 - _once6) > _once5 ? 0 : (_once5 - _once6))),
+                         (n00 + 1))),
                      *hind0));
       }
     };
@@ -378,31 +386,37 @@ struct Equations {
               g.v())) {
         const auto &[n1, n00, hind0] = std::get<
             typename gcd_clause_3_graph::Gcd_clause_3_graph_equation_1>(g.v());
-        return f2(n1, n00, *hind0,
-                  _self_f4(_self_f4, _self_f5,
-                           std::make_pair((n1 + 1),
-                                          ((((n00 + 1) - (n1 + 1)) > (n00 + 1)
-                                                ? 0
-                                                : ((n00 + 1) - (n1 + 1))))),
-                           gcd(std::make_pair(
-                               (n1 + 1), ((((n00 + 1) - (n1 + 1)) > (n00 + 1)
-                                               ? 0
-                                               : ((n00 + 1) - (n1 + 1)))))),
-                           *hind0));
+        auto &&_once1 = (n00 + 1);
+        auto &&_once2 = (n1 + 1);
+        auto &&_once3 = (n00 + 1);
+        auto &&_once4 = (n1 + 1);
+        return f2(
+            n1, n00, *hind0,
+            _self_f4(
+                _self_f4, _self_f5,
+                std::make_pair(
+                    (n1 + 1),
+                    (((_once3 - _once4) > _once3 ? 0 : (_once3 - _once4)))),
+                gcd(std::make_pair(
+                    (n1 + 1),
+                    (((_once1 - _once2) > _once1 ? 0 : (_once1 - _once2))))),
+                *hind0));
       } else {
         const auto &[n1, n00, hind0] = std::get<
             typename gcd_clause_3_graph::Gcd_clause_3_graph_equation_2>(g.v());
+        auto &&_once5 = (n1 + 1);
+        auto &&_once6 = (n00 + 1);
+        auto &&_once7 = (n1 + 1);
+        auto &&_once8 = (n00 + 1);
         return f3(
             n1, n00, *hind0,
             _self_f4(_self_f4, _self_f5,
-                     std::make_pair(((((n1 + 1) - (n00 + 1)) > (n1 + 1)
-                                          ? 0
-                                          : ((n1 + 1) - (n00 + 1)))),
-                                    (n00 + 1)),
-                     gcd(std::make_pair(((((n1 + 1) - (n00 + 1)) > (n1 + 1)
-                                              ? 0
-                                              : ((n1 + 1) - (n00 + 1)))),
-                                        (n00 + 1))),
+                     std::make_pair(
+                         (((_once7 - _once8) > _once7 ? 0 : (_once7 - _once8))),
+                         (n00 + 1)),
+                     gcd(std::make_pair(
+                         (((_once5 - _once6) > _once5 ? 0 : (_once5 - _once6))),
+                         (n00 + 1))),
                      *hind0));
       }
     };
@@ -889,9 +903,8 @@ struct Equations {
 
   static_assert(FunctionalInduction<FunctionalInduction_collatz_steps,
                                     crane::fn<uint64_t(uint64_t)>>);
-  static inline const uint64_t test_gcd =
-      gcd(std::make_pair(UINT64_C(12), UINT64_C(8)));
-  static inline const uint64_t test_collatz = collatz_steps(UINT64_C(6));
+  static constexpr uint64_t test_gcd = UINT64_C(4);
+  static constexpr uint64_t test_collatz = UINT64_C(2);
 };
 
 #endif // INCLUDED_EQUATIONS

@@ -168,12 +168,11 @@ struct LoopifyNameHygiene {
   static uint64_t depth(const Frame_ &f);
   static Frame_ mk(uint64_t n);
   /// Definition names that become loopify's locals.
-  static inline const uint64_t stack_ = UINT64_C(1);
-  static inline const uint64_t result_ = UINT64_C(2);
-  static inline const uint64_t self_ = UINT64_C(3);
+  static constexpr uint64_t stack_ = UINT64_C(1);
+  static constexpr uint64_t result_ = UINT64_C(2);
+  static constexpr uint64_t self_ = UINT64_C(3);
   static uint64_t locals(uint64_t n);
-  static inline const uint64_t run =
-      (depth(mk(UINT64_C(5))) + locals(UINT64_C(10)));
+  static constexpr uint64_t run = UINT64_C(22);
 };
 
 #endif // INCLUDED_LOOPIFY_NAME_HYGIENE

@@ -11688,3 +11688,14 @@
   (alias runtest)
   (deps local_record_closures.t.exe)
   (action (run ./local_record_closures.t.exe))))
+
+(subdir semantic_fold
+ (rule
+  (targets semantic_fold.t.exe)
+  (deps SemanticFold.vo semantic_fold.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} semantic_fold.t.exe semantic_fold.cpp semantic_fold.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps semantic_fold.t.exe)
+  (action (run ./semantic_fold.t.exe))))

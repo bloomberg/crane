@@ -809,9 +809,9 @@ struct LargeMutual {
       stmt::sif(bexpr::beq(expr::evar(UINT64_C(0)), expr::ENum_(UINT64_C(42))),
                 stmt::sskip(),
                 stmt::sassign(UINT64_C(0), expr::ENum_(UINT64_C(0)))));
-  static inline const uint64_t test_expr_size = expr_size(test_expr);
-  static inline const uint64_t test_bexpr_size = bexpr_size(test_bexpr);
-  static inline const uint64_t test_stmt_size = stmt_size(test_stmt);
+  static constexpr uint64_t test_expr_size = UINT64_C(5);
+  static constexpr uint64_t test_bexpr_size = UINT64_C(7);
+  static constexpr uint64_t test_stmt_size = UINT64_C(10);
 };
 
 #endif // INCLUDED_LARGE_MUTUAL

@@ -8,9 +8,8 @@ uint64_t SrcWrrUpdatesRomPort::get_reg(const SrcWrrUpdatesRomPort::state &s,
 uint64_t
 SrcWrrUpdatesRomPort::get_reg_pair(const SrcWrrUpdatesRomPort::state &s,
                                    uint64_t r) {
-  uint64_t base = (((r - (UINT64_C(2) ? r % UINT64_C(2) : r)) > r
-                        ? 0
-                        : (r - (UINT64_C(2) ? r % UINT64_C(2) : r))));
+  auto &&_once1 = (UINT64_C(2) ? r % UINT64_C(2) : r);
+  uint64_t base = (((r - _once1) > r ? 0 : (r - _once1)));
   return ((get_reg(s, base) * UINT64_C(16)) + get_reg(s, (base + UINT64_C(1))));
 }
 

@@ -183,12 +183,10 @@ struct InstructionCycles {
       if (std::holds_alternative<typename instruction1::JCN1>(this->v())) {
         const auto &[a0, a1] = std::get<typename instruction1::JCN1>(this->v());
         uint64_t c1 = (UINT64_C(8) ? a0 / UINT64_C(8) : 0);
-        uint64_t c2 =
-            (UINT64_C(2) ? (UINT64_C(4) ? a0 / UINT64_C(4) : 0) % UINT64_C(2)
-                         : (UINT64_C(4) ? a0 / UINT64_C(4) : 0));
-        uint64_t c3 =
-            (UINT64_C(2) ? (UINT64_C(2) ? a0 / UINT64_C(2) : 0) % UINT64_C(2)
-                         : (UINT64_C(2) ? a0 / UINT64_C(2) : 0));
+        auto &&_once1 = (UINT64_C(4) ? a0 / UINT64_C(4) : 0);
+        uint64_t c2 = (UINT64_C(2) ? _once1 % UINT64_C(2) : _once1);
+        auto &&_once2 = (UINT64_C(2) ? a0 / UINT64_C(2) : 0);
+        uint64_t c3 = (UINT64_C(2) ? _once2 % UINT64_C(2) : _once2);
         uint64_t c4 = (UINT64_C(2) ? a0 % UINT64_C(2) : a0);
         bool base_cond = ((s.acc1 == UINT64_C(0) && c2 == UINT64_C(1)) ||
                           ((s.carry1 && c3 == UINT64_C(1)) ||
@@ -298,8 +296,7 @@ struct InstructionCycles {
   };
 
   static uint64_t cycles_jms(const state2 &_x, const instruction2 &i);
-  static inline const uint64_t test_cycles_jms_constant =
-      cycles_jms(state2{UINT64_C(0)}, instruction2::jms2(UINT64_C(77)));
+  static constexpr uint64_t test_cycles_jms_constant = UINT64_C(24);
   enum class Instr3 {
     NOP3,
     ADD3,
@@ -563,9 +560,9 @@ struct InstructionCycles {
 
     state5 execute5(state5 s) const {
       if (std::holds_alternative<typename instruction5::INC5>(this->v())) {
-        return state5{(UINT64_C(16) ? (s.acc5 + UINT64_C(1)) % UINT64_C(16)
-                                    : (s.acc5 + UINT64_C(1))),
-                      s.carry5, s.test5};
+        auto &&_once1 = (s.acc5 + UINT64_C(1));
+        return state5{(UINT64_C(16) ? _once1 % UINT64_C(16) : _once1), s.carry5,
+                      s.test5};
       } else {
         return s;
       }
@@ -626,14 +623,7 @@ struct InstructionCycles {
 
   static uint64_t program_cycles5(const state5 &s,
                                   const List<instruction5> &prog);
-  static inline const uint64_t test_instruction_cycle_sum = program_cycles5(
-      state5{UINT64_C(0), false, true},
-      List<instruction5>::cons(
-          instruction5::jcn5(UINT64_C(8)),
-          List<instruction5>::cons(
-              instruction5::inc5(UINT64_C(0)),
-              List<instruction5>::cons(instruction5::nop5(),
-                                       List<instruction5>::nil()))));
+  static constexpr uint64_t test_instruction_cycle_sum = UINT64_C(32);
   enum class Instruction6 { NOP6 };
 
   template <typename T1> static T1 instruction6_rect(T1 f, Instruction6) {
@@ -651,17 +641,8 @@ struct InstructionCycles {
   static uint64_t cycles6(const state6 &_x, Instruction6 _x0);
   static uint64_t program_cycles6(const state6 &s,
                                   const List<Instruction6> &prog);
-  static inline const uint64_t singleton_cycles6 = program_cycles6(
-      state6{UINT64_C(0)},
-      List<Instruction6>::cons(Instruction6::NOP6, List<Instruction6>::nil()));
-  static inline const uint64_t three_nop_cycles6 = program_cycles6(
-      state6{UINT64_C(0)},
-      List<Instruction6>::cons(
-          Instruction6::NOP6,
-          List<Instruction6>::cons(
-              Instruction6::NOP6,
-              List<Instruction6>::cons(Instruction6::NOP6,
-                                       List<Instruction6>::nil()))));
+  static constexpr uint64_t singleton_cycles6 = UINT64_C(8);
+  static constexpr uint64_t three_nop_cycles6 = UINT64_C(24);
   static inline const std::pair<uint64_t, uint64_t> test_program_cycles =
       std::make_pair(singleton_cycles6, three_nop_cycles6);
   enum class Instruction7 { NOP7 };
@@ -681,9 +662,7 @@ struct InstructionCycles {
   static uint64_t cycles7(const state7 &_x, Instruction7 _x0);
   static uint64_t program_cycles7(const state7 &s,
                                   const List<Instruction7> &prog);
-  static inline const uint64_t test_program_cycles_single = program_cycles7(
-      state7{UINT64_C(16)},
-      List<Instruction7>::cons(Instruction7::NOP7, List<Instruction7>::nil()));
+  static constexpr uint64_t test_program_cycles_single = UINT64_C(8);
   static inline const std::pair<
       std::pair<
           std::pair<

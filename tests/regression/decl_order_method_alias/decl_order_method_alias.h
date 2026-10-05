@@ -140,40 +140,8 @@ const std::optional<rfile> written = RegFile::write_r(
                    List<Rv>::cons(Rv::rs(UINT64_C(1)),
                                   List<Rv>::cons(Rv::ru(), List<Rv>::nil()))),
     UINT64_C(1), Rv::rs(UINT64_C(7)));
-const uint64_t written_second = []() -> uint64_t {
-  if (written.has_value()) {
-    const List<Rv> &r = *written;
-    if (std::holds_alternative<typename List<Rv>::Nil>(r.v())) {
-      return UINT64_C(0);
-    } else {
-      const auto &[a0, a1] = std::get<typename List<Rv>::Cons>(r.v());
-      auto &&_sv0 = *a1;
-      if (std::holds_alternative<typename List<Rv>::Nil>(_sv0.v())) {
-        return UINT64_C(0);
-      } else {
-        const auto &[a00, a10] = std::get<typename List<Rv>::Cons>(_sv0.v());
-        if (std::holds_alternative<typename Rv::RU>(a00.v())) {
-          return UINT64_C(0);
-        } else {
-          const auto &[n1] = std::get<typename Rv::RS>(a00.v());
-          return n1;
-        }
-      }
-    }
-  } else {
-    return UINT64_C(0);
-  }
-}();
-const bool out_of_range = []() -> bool {
-  auto _cs = RegFile::write_r(List<Rv>::cons(Rv::ru(), List<Rv>::nil()),
-                              UINT64_C(5), Rv::ru());
-  if (_cs.has_value()) {
-    const List<Rv> &_x = *_cs;
-    return false;
-  } else {
-    return true;
-  }
-}();
+inline constexpr uint64_t written_second = UINT64_C(7);
+inline constexpr bool out_of_range = true;
 
 template <typename T1>
 std::optional<List<T1>> RegFile::replace_nth(const List<T1> &l, uint64_t i,

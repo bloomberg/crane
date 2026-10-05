@@ -108,8 +108,8 @@ template <typename K, typename V> struct CHT {
   int64_t cht_nbuckets;
   stm::TVar<List<bsl::pair<K, V>>> cht_fallback;
   stm::TVar<List<bsl::pair<K, V>>> bucket_of(const K &k) const {
-    int64_t i =
-        (this->cht_nbuckets == 0 ? 0 : this->cht_hash(k) % this->cht_nbuckets);
+    auto &&_once1 = this->cht_nbuckets;
+    int64_t i = (_once1 == 0 ? 0 : this->cht_hash(k) % _once1);
     return this->cht_buckets.at(i);
   }
   bsl::optional<V> stm_get(const K &k) const {

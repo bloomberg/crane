@@ -72,6 +72,32 @@ From Corelib Require Import PrimInt63.
 Axiom nat_of_int : int -> nat.
 Crane Extract Inlined Constant nat_of_int => "static_cast<uint64_t>(%a0)".
 
+(** What the mappings above compute, for the passes that evaluate or rewrite
+    with them: [nat] is an unsigned 64-bit integer, and each operation is the
+    unsigned operation its text performs at that width. *)
+Crane Semantics nat := "unsigned_nat 64".
+Crane Semantics Nat.add := "unsigned add 64".
+Crane Semantics Nat.mul := "unsigned mul 64".
+Crane Semantics Nat.sub := "unsigned sub_truncated 64".
+Crane Semantics Nat.div := "unsigned div 64".
+Crane Semantics Nat.modulo := "unsigned mod 64".
+Crane Semantics Nat.eqb := "unsigned eqb 64".
+Crane Semantics Nat.ltb := "unsigned ltb 64".
+Crane Semantics Nat.leb := "unsigned leb 64".
+Crane Semantics Nat.max := "unsigned max 64".
+Crane Semantics Nat.min := "unsigned min 64".
+Crane Semantics PeanoNat.Nat.add := "unsigned add 64".
+Crane Semantics PeanoNat.Nat.mul := "unsigned mul 64".
+Crane Semantics PeanoNat.Nat.sub := "unsigned sub_truncated 64".
+Crane Semantics PeanoNat.Nat.div := "unsigned div 64".
+Crane Semantics PeanoNat.Nat.modulo := "unsigned mod 64".
+Crane Semantics PeanoNat.Nat.eqb := "unsigned eqb 64".
+Crane Semantics PeanoNat.Nat.ltb := "unsigned ltb 64".
+Crane Semantics PeanoNat.Nat.leb := "unsigned leb 64".
+Crane Semantics PeanoNat.Nat.max := "unsigned max 64".
+Crane Semantics PeanoNat.Nat.min := "unsigned min 64".
+
+
 Axiom nat_of_int_0 : nat_of_int 0 = 0%nat.
 Axiom nat_of_int_pos : forall n, eqb n 0 = false -> exists m, nat_of_int n = S m.
 Axiom nat_of_int_1 : nat_of_int 1 = 1%nat.

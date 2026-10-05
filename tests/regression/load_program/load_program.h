@@ -235,25 +235,7 @@ struct LoadProgram {
               ListDef::template nth<uint64_t>(UINT64_C(3), after.rom,
                                               UINT64_C(0)) == UINT64_C(13))));
   }();
-  static inline const bool test_load_preserves_rom_length = []() {
-    state sample = state{
-        List<uint64_t>::cons(
-            UINT64_C(10),
-            List<uint64_t>::cons(
-                UINT64_C(11),
-                List<uint64_t>::cons(
-                    UINT64_C(12), List<uint64_t>::cons(
-                                      UINT64_C(13), List<uint64_t>::nil())))),
-        UINT64_C(0), UINT64_C(0), false};
-    state after = load_program(
-        std::move(sample), UINT64_C(1),
-        List<uint64_t>::cons(
-            UINT64_C(99),
-            List<uint64_t>::cons(
-                UINT64_C(88),
-                List<uint64_t>::cons(UINT64_C(77), List<uint64_t>::nil()))));
-    return std::move(after).rom.length() == UINT64_C(4);
-  }();
+  static constexpr bool test_load_preserves_rom_length = true;
   static inline const bool test_load_program_step_preserves_wf_simple = []() {
     state_extended sample = state_extended{
         UINT64_C(4),
@@ -275,60 +257,9 @@ struct LoadProgram {
             (after.rom_ext.length() == UINT64_C(4) &&
              (after.pc < UINT64_C(4096) && after.stack_len <= UINT64_C(3))));
   }();
-  static inline const bool test_load_program_step_rom_length_weak = []() {
-    state sample = state{
-        List<uint64_t>::cons(
-            UINT64_C(10),
-            List<uint64_t>::cons(
-                UINT64_C(11),
-                List<uint64_t>::cons(
-                    UINT64_C(12), List<uint64_t>::cons(
-                                      UINT64_C(13), List<uint64_t>::nil())))),
-        UINT64_C(0), UINT64_C(0), false};
-    state after = execute_wpm(
-        set_prom_params(std::move(sample), UINT64_C(1), UINT64_C(99), true));
-    return std::move(after).rom.length() == UINT64_C(4);
-  }();
-  static inline const bool test_load_program_step_writes_at_base = []() {
-    state sample = state{
-        List<uint64_t>::cons(
-            UINT64_C(10),
-            List<uint64_t>::cons(
-                UINT64_C(11),
-                List<uint64_t>::cons(
-                    UINT64_C(12), List<uint64_t>::cons(
-                                      UINT64_C(13), List<uint64_t>::nil())))),
-        UINT64_C(0), UINT64_C(0), false};
-    state after = execute_wpm(
-        set_prom_params(std::move(sample), UINT64_C(1), UINT64_C(99), true));
-    return ListDef::template nth<uint64_t>(UINT64_C(1), std::move(after).rom,
-                                           UINT64_C(0)) == UINT64_C(99);
-  }();
-  static inline const uint64_t test_sequential_program_load = []() {
-    state_simple sample = state_simple{
-        List<uint64_t>::cons(
-            UINT64_C(0),
-            List<uint64_t>::cons(
-                UINT64_C(0),
-                List<uint64_t>::cons(
-                    UINT64_C(0),
-                    List<uint64_t>::cons(
-                        UINT64_C(0),
-                        List<uint64_t>::cons(UINT64_C(0),
-                                             List<uint64_t>::nil()))))),
-        UINT64_C(1)};
-    return ListDef::template nth<uint64_t>(
-        UINT64_C(2),
-        load_program_simple(
-            std::move(sample),
-            List<uint64_t>::cons(
-                UINT64_C(5),
-                List<uint64_t>::cons(
-                    UINT64_C(6),
-                    List<uint64_t>::cons(UINT64_C(7), List<uint64_t>::nil()))))
-            .rom_,
-        UINT64_C(0));
-  }();
+  static constexpr bool test_load_program_step_rom_length_weak = true;
+  static constexpr bool test_load_program_step_writes_at_base = true;
+  static constexpr uint64_t test_sequential_program_load = UINT64_C(6);
   static inline const std::pair<
       std::pair<
           std::pair<std::pair<std::pair<std::pair<bool, bool>, bool>, bool>,

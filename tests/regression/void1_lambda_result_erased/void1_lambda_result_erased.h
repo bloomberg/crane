@@ -333,9 +333,7 @@ struct Void1LambdaResultErased {
   static tree<crane::obj, Sum<std::pair<Nat, Nat>, Nat>>
   step(const std::pair<Nat, Nat> &p);
   static Nat first(const std::pair<Nat, Nat> &p);
-  static inline const bool is_three =
-      first(std::make_pair(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))), Nat::o()))
-          .eqb(Nat::s(Nat::s(Nat::s(Nat::o()))));
+  static constexpr bool is_three = true;
 };
 
 #endif // INCLUDED_VOID1_LAMBDA_RESULT_ERASED

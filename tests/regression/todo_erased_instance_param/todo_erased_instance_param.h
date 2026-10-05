@@ -11,7 +11,7 @@ concept Default = requires {
 
 struct TodoErasedInstanceParam {
   struct natDefault {
-    static uint64_t def() { return UINT64_C(4); }
+    constexpr static uint64_t def() { return UINT64_C(4); }
   };
 
   static_assert(Default<natDefault, uint64_t>);
@@ -22,8 +22,7 @@ struct TodoErasedInstanceParam {
     return _tcI0::def();
   }
 
-  static inline const uint64_t test_value =
-      (pick<natDefault, uint64_t>() + pick<natDefault, uint64_t>());
+  static constexpr uint64_t test_value = UINT64_C(8);
 };
 
 #endif // INCLUDED_TODO_ERASED_INSTANCE_PARAM

@@ -254,24 +254,7 @@ struct ItreeVoid1TypeArg {
   static inline const Itree<crane::obj, Nat> u =
       wrap<crane::obj>(Nat::s(Nat::s(Nat::s(Nat::o()))));
 
-  static inline const bool is_three = []() {
-    auto &&_sv = []() {
-      auto &&_sv0 = u;
-      const auto &[_observe0] =
-          std::get<typename Itree<crane::obj, Nat>::Go>(_sv0.v());
-      return _observe0;
-    }();
-    if (std::holds_alternative<
-            typename ItreeF<crane::obj, Nat, Itree<crane::obj, Nat>>::RetF>(
-            _sv.v())) {
-      const auto &[r0] = std::get<
-          typename ItreeF<crane::obj, Nat, Itree<crane::obj, Nat>>::RetF>(
-          _sv.v());
-      return r0.eqb(Nat::s(Nat::s(Nat::s(Nat::o()))));
-    } else {
-      return false;
-    }
-  }();
+  static constexpr bool is_three = true;
 };
 
 #endif // INCLUDED_ITREE_VOID1_TYPE_ARG

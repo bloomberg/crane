@@ -255,37 +255,7 @@ struct DeepSum1Match {
     }
   }
 
-  static inline const bool is_three = []() -> bool {
-    auto _cs = get5<std::monostate>(
-        Sum1<E1,
-             Sum1<E2,
-                  Sum1<E3, Sum1<E4, Sum1<e5, E6, crane::obj>, crane::obj>,
-                       crane::obj>,
-                  crane::obj>,
-             std::monostate>::
-            inr1(
-                Sum1<
-                    E2,
-                    Sum1<E3,
-                         Sum1<E4, Sum1<e5, E6, std::monostate>, std::monostate>,
-                         std::monostate>,
-                    std::monostate>::
-                    inr1(Sum1<
-                         E3,
-                         Sum1<E4, Sum1<e5, E6, std::monostate>, std::monostate>,
-                         std::monostate>::
-                             inr1(Sum1<E4, Sum1<e5, E6, std::monostate>,
-                                       std::monostate>::
-                                      inr1(Sum1<e5, E6, std::monostate>::inl1(
-                                          e5::e6(Nat::s(
-                                              Nat::s(Nat::s(Nat::o()))))))))));
-    if (_cs.has_value()) {
-      const Nat &n = *_cs;
-      return n.eqb(Nat::s(Nat::s(Nat::s(Nat::o()))));
-    } else {
-      return false;
-    }
-  }();
+  static constexpr bool is_three = true;
 };
 
 #endif // INCLUDED_DEEP_SUM1_MATCH

@@ -22,7 +22,7 @@ concept NAT_BASE = BASE<M> && std::same_as<typename M::t, uint64_t>;
 struct TodoWithTypeConstraint {
   struct NatBase {
     using t = uint64_t;
-    static inline const uint64_t zero = UINT64_C(0);
+    static constexpr uint64_t zero = UINT64_C(0);
     static uint64_t bump(uint64_t n);
   };
 

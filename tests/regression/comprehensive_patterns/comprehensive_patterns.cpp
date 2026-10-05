@@ -701,43 +701,23 @@ ComprehensivePatterns::multi_positions(const ComprehensivePatterns::NC &r) {
   return (r.nc_a + (r.nc_b == UINT64_C(0) ? r.nc_a : r.nc_c));
 }
 
-uint64_t
-ComprehensivePatterns::sum_proj(uint64_t n,
-                                const ComprehensivePatterns::NC &
-                                    r) { /// CraneEnter: captures varying
-                                         /// parameters for each recursive call.
-
-  struct CraneEnter {
-    uint64_t n;
-  };
-
-  /// CraneCont_m: resumes after recursive call, then processes rest.
-  struct CraneCont_m {};
-
-  using CraneFrame = std::variant<CraneEnter, CraneCont_m>;
-  uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{n});
-  /// Loopified sum_proj: CraneEnter -> CraneCont_m.
-  while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
-    _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
-      uint64_t n = _f.n;
-      if (n <= 0) {
-        _result = UINT64_C(0);
+uint64_t ComprehensivePatterns::sum_proj(uint64_t n,
+                                         ComprehensivePatterns::NC r) {
+  {
+    uint64_t _lc1_l = n;
+    uint64_t _lc1_acc = UINT64_C(0);
+    uint64_t _lc1_loop_acc = std::move(_lc1_acc);
+    uint64_t _lc1_loop_l = std::move(_lc1_l);
+    while (true) {
+      if (_lc1_loop_l <= 0) {
+        return _lc1_loop_acc;
       } else {
-        uint64_t m = n - 1;
-        _stack.emplace_back(CraneCont_m{});
-        _stack.emplace_back(CraneEnter{m});
+        uint64_t m = _lc1_loop_l - 1;
+        _lc1_loop_acc = (_lc1_loop_acc + r.nc_a);
+        _lc1_loop_l = m;
       }
-    } else {
-      auto _f = std::move(std::get<CraneCont_m>(_frame));
-      _result = (r.nc_a + std::move(_result));
     }
   }
-  return _result;
 }
 
 uint64_t ComprehensivePatterns::hof_test(const ComprehensivePatterns::NC &r) {
@@ -950,42 +930,23 @@ bool ComprehensivePatterns::bool_with_proj(
   return !(s.stmt_value == UINT64_C(0));
 }
 
-uint64_t ComprehensivePatterns::sum_values(
-    uint64_t n, const ComprehensivePatterns::StateStmt
-                    &s) { /// CraneEnter: captures varying parameters for each
-                          /// recursive call.
-
-  struct CraneEnter {
-    uint64_t n;
-  };
-
-  /// CraneCont_m: resumes after recursive call, then processes rest.
-  struct CraneCont_m {};
-
-  using CraneFrame = std::variant<CraneEnter, CraneCont_m>;
-  uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{n});
-  /// Loopified sum_values: CraneEnter -> CraneCont_m.
-  while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
-    _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
-      uint64_t n = _f.n;
-      if (n <= 0) {
-        _result = UINT64_C(0);
+uint64_t ComprehensivePatterns::sum_values(uint64_t n,
+                                           ComprehensivePatterns::StateStmt s) {
+  {
+    uint64_t _lc1_l = n;
+    uint64_t _lc1_acc = UINT64_C(0);
+    uint64_t _lc1_loop_acc = std::move(_lc1_acc);
+    uint64_t _lc1_loop_l = std::move(_lc1_l);
+    while (true) {
+      if (_lc1_loop_l <= 0) {
+        return _lc1_loop_acc;
       } else {
-        uint64_t m = n - 1;
-        _stack.emplace_back(CraneCont_m{});
-        _stack.emplace_back(CraneEnter{m});
+        uint64_t m = _lc1_loop_l - 1;
+        _lc1_loop_acc = (_lc1_loop_acc + s.stmt_value);
+        _lc1_loop_l = m;
       }
-    } else {
-      auto _f = std::move(std::get<CraneCont_m>(_frame));
-      _result = (s.stmt_value + std::move(_result));
     }
   }
-  return _result;
 }
 
 uint64_t

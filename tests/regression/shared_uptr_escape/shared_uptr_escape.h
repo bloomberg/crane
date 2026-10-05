@@ -292,13 +292,7 @@ struct SharedUptrEscape {
   /// If escape analysis optimistically picks unique_ptr based on
   /// one branch, the other branch's sharing crashes.
   static uint64_t conditional_share(uint64_t flag);
-  static inline const uint64_t use_extracted_twice = []() {
-    tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
-                        UINT64_C(20),
-                        tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
-    tree sub = std::move(t).extract_subtree(UINT64_C(0));
-    return (sub.tree_sum() + sub.tree_sum());
-  }();
+  static constexpr uint64_t use_extracted_twice = UINT64_C(20);
 
   /// Pattern 3: Build a value, pass to a function that returns it
   /// wrapped in a constructor, then unwrap and use twice.
@@ -328,12 +322,7 @@ struct SharedUptrEscape {
   }
 
   static wrapper wrap_tree(const tree &t);
-  static inline const uint64_t unwrap_and_dup = []() {
-    tree t = tree::node(tree::leaf(), UINT64_C(42), tree::leaf());
-    wrapper w = wrap_tree(std::move(t));
-    auto &[a0] = w;
-    return (a0.tree_sum() + a0.tree_sum());
-  }();
+  static constexpr uint64_t unwrap_and_dup = UINT64_C(84);
 };
 
 #endif // INCLUDED_SHARED_UPTR_ESCAPE

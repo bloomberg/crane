@@ -113,13 +113,7 @@ struct VoidCallback {
   }
 
   static void print_nat(uint64_t _x);
-  static inline const std::monostate test_for_each = []() {
-    for_each(print_nat,
-             List<uint64_t>::cons(
-                 UINT64_C(1),
-                 List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())));
-    return std::monostate{};
-  }();
+  static constexpr std::monostate test_for_each = std::monostate{};
 
   /// 2. Monadic for-each: callback returns itree ioE unit
   template <typename F0>
@@ -138,7 +132,7 @@ struct VoidCallback {
   static void test_for_each_m();
   /// 3. Pure function returning unit, used in let
   static void side_effect_pure(uint64_t _x);
-  static inline const uint64_t use_side_effect = UINT64_C(42);
+  static constexpr uint64_t use_side_effect = UINT64_C(42);
 
   /// 4. Callback that ignores argument and returns nat
   template <typename F0>
@@ -151,13 +145,7 @@ struct VoidCallback {
     }
   }
 
-  static inline const uint64_t test_ignore = ignore_and_count(
-      print_nat,
-      List<uint64_t>::cons(
-          UINT64_C(1),
-          List<uint64_t>::cons(
-              UINT64_C(2),
-              List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))));
+  static constexpr uint64_t test_ignore = UINT64_C(3);
 
   /// 5. Nested void callbacks
   template <typename F0>
@@ -167,10 +155,7 @@ struct VoidCallback {
     return;
   }
 
-  static inline const std::monostate test_apply_twice = []() {
-    apply_twice(print_nat, UINT64_C(42));
-    return std::monostate{};
-  }();
+  static constexpr std::monostate test_apply_twice = std::monostate{};
 
   /// 6. Void function as argument to polymorphic function
   template <typename T1, typename T2, typename F0>
@@ -179,15 +164,7 @@ struct VoidCallback {
     return f(std::move(x0_));
   }
 
-  static inline const std::monostate test_apply_to_void = []() {
-    apply_to<uint64_t, std::monostate>(
-        [](const uint64_t &_wa0) {
-          print_nat(_wa0);
-          return std::monostate{};
-        },
-        UINT64_C(5));
-    return std::monostate{};
-  }();
+  static constexpr std::monostate test_apply_to_void = std::monostate{};
   /// 7. Void returning function in a match arm
   static void void_in_match(bool b);
   /// 8. Option of void function result

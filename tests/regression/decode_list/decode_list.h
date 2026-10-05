@@ -189,46 +189,10 @@ struct DecodeList {
 
   static instruction decode(uint64_t b1, uint64_t b2);
   static List<instruction> decode_list(const List<uint64_t> &bytes);
-  static inline const uint64_t t_empty =
-      decode_list(List<uint64_t>::nil()).length();
-  static inline const uint64_t t_odd_tail = []() {
-    auto &&_sv = decode_list(List<uint64_t>::cons(
-        UINT64_C(0),
-        List<uint64_t>::cons(
-            UINT64_C(99),
-            List<uint64_t>::cons(UINT64_C(42), List<uint64_t>::nil()))));
-    if (std::holds_alternative<typename List<instruction>::Nil>(_sv.v())) {
-      return UINT64_C(0);
-    } else {
-      const auto &[a0, a1] =
-          std::get<typename List<instruction>::Cons>(_sv.v());
-      if (std::holds_alternative<typename instruction::NOP>(a0.v())) {
-        auto &&_sv = *a1;
-        if (std::holds_alternative<typename List<instruction>::Nil>(_sv.v())) {
-          return UINT64_C(1);
-        } else {
-          return UINT64_C(0);
-        }
-      } else {
-        return UINT64_C(0);
-      }
-    }
-  }();
-  static inline const uint64_t t_pair_count =
-      decode_list(
-          List<uint64_t>::cons(
-              UINT64_C(0),
-              List<uint64_t>::cons(
-                  UINT64_C(1),
-                  List<uint64_t>::cons(
-                      UINT64_C(2), List<uint64_t>::cons(
-                                       UINT64_C(3), List<uint64_t>::nil())))))
-          .length();
-  static inline const uint64_t t_single_pair =
-      decode_list(List<uint64_t>::cons(
-                      UINT64_C(0),
-                      List<uint64_t>::cons(UINT64_C(7), List<uint64_t>::nil())))
-          .length();
+  static constexpr uint64_t t_empty = UINT64_C(0);
+  static constexpr uint64_t t_odd_tail = UINT64_C(1);
+  static constexpr uint64_t t_pair_count = UINT64_C(2);
+  static constexpr uint64_t t_single_pair = UINT64_C(1);
 };
 
 #endif // INCLUDED_DECODE_LIST

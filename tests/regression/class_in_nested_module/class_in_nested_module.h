@@ -18,9 +18,9 @@ concept Show = requires {
 struct ClassInNestedModule {
   struct Cls {
     struct SN {
-      static uint64_t sz(uint64_t x) { return x; }
+      constexpr static uint64_t sz(uint64_t x) { return x; }
 
-      static uint64_t tag() { return UINT64_C(1); }
+      constexpr static uint64_t tag() { return UINT64_C(1); }
     };
 
     static_assert(Show<SN, uint64_t>);
@@ -32,7 +32,7 @@ struct ClassInNestedModule {
     return (_tcI0::sz(x) + _tcI0::tag());
   }
 
-  static inline const uint64_t run = use<Cls::SN, uint64_t>(UINT64_C(5));
+  static constexpr uint64_t run = UINT64_C(6);
 };
 
 #endif // INCLUDED_CLASS_IN_NESTED_MODULE

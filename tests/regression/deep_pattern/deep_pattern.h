@@ -665,11 +665,8 @@ struct DeepPattern {
   };
 
   static uint64_t list_deep_match(const list<tree> &l);
-  static inline const uint64_t test1 =
-      tree::node(tree::leaf(UINT64_C(1)), tree::leaf(UINT64_C(2))).deep_match();
-
-  static inline const uint64_t test2 =
-      tree::leaf(UINT64_C(5)).multi_constructor(tree::leaf(UINT64_C(10)));
+  static constexpr uint64_t test1 = UINT64_C(3);
+  static constexpr uint64_t test2 = UINT64_C(15);
 };
 
 #endif // INCLUDED_DEEP_PATTERN

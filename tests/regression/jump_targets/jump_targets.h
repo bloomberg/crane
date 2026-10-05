@@ -233,17 +233,7 @@ struct JumpTargets {
   };
 
   static List<uint64_t> collect_targets(const List<instr_collection> &prog);
-  static inline const uint64_t test_collection =
-      collect_targets(List<instr_collection>::cons(
-                          instr_collection::jun_coll(UINT64_C(17)),
-                          List<instr_collection>::cons(
-                              instr_collection::nop_coll(),
-                              List<instr_collection>::cons(
-                                  instr_collection::jms_coll(UINT64_C(511)),
-                                  List<instr_collection>::cons(
-                                      instr_collection::nop_coll(),
-                                      List<instr_collection>::nil())))))
-          .length();
+  static constexpr uint64_t test_collection = UINT64_C(2);
 
   struct instr_region {
     // TYPES
@@ -432,8 +422,7 @@ struct JumpTargets {
   };
 
   static uint64_t option_nat_or_zero(const std::optional<uint64_t> &o);
-  static inline const uint64_t test_jms =
-      option_nat_or_zero(instr_jms::jms_jms(UINT64_C(144)).jump_target_jms());
+  static constexpr uint64_t test_jms = UINT64_C(144);
 
   struct instr_jun {
     // TYPES
@@ -522,9 +511,7 @@ struct JumpTargets {
   };
 
   static uint64_t target_default(const std::optional<uint64_t> &o);
-  static inline const uint64_t test_jun =
-      target_default(instr_jun::jun_jun(UINT64_C(511)).jump_target_jun());
-
+  static constexpr uint64_t test_jun = UINT64_C(511);
   static inline const std::pair<std::pair<std::pair<uint64_t, bool>, uint64_t>,
                                 uint64_t>
       t = std::make_pair(

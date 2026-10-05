@@ -272,7 +272,7 @@ template <Elem E> struct Container {
 
 struct NatElem {
   using t = uint64_t;
-  static inline const uint64_t dflt = UINT64_C(42);
+  static constexpr uint64_t dflt = UINT64_C(42);
 };
 
 static_assert(Elem<NatElem>);

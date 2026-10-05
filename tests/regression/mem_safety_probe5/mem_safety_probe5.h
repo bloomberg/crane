@@ -477,64 +477,24 @@ struct MemSafetyProbe5 {
   /// TEST 1: Partial app of get_left_val, applied to recursive result.
   /// The closure body accesses nested tree structure.
   static uint64_t sum_left_vals(const mylist<tree> &l);
-  static inline const uint64_t test_sum_left =
-      sum_left_vals(mylist<tree>::mycons(
-          tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
-                     UINT64_C(20), tree::leaf()),
-          mylist<tree>::mycons(
-              tree::node(tree::node(tree::leaf(), UINT64_C(30), tree::leaf()),
-                         UINT64_C(40), tree::leaf()),
-              mylist<tree>::mycons(
-                  tree::node(tree::leaf(), UINT64_C(50), tree::leaf()),
-                  mylist<tree>::mynil()))));
+  static constexpr uint64_t test_sum_left = UINT64_C(10);
   /// TEST 2: Build a list of partial apps from trees, then apply all.
   /// Each partial app captures a tree with nested structure.
   static mylist<crane::fn<uint64_t(uint64_t)>>
   build_getters(const mylist<tree> &l);
   static uint64_t apply_all(const mylist<crane::fn<uint64_t(uint64_t)>> &l,
                             uint64_t x);
-  static inline const uint64_t test_build_apply = []() {
-    mylist<tree> trees = mylist<tree>::mycons(
-        tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
-                   UINT64_C(20), tree::leaf()),
-        mylist<tree>::mycons(
-            tree::node(tree::node(tree::leaf(), UINT64_C(30), tree::leaf()),
-                       UINT64_C(40), tree::leaf()),
-            mylist<tree>::mycons(
-                tree::node(tree::leaf(), UINT64_C(50), tree::leaf()),
-                mylist<tree>::mynil())));
-    mylist<crane::fn<uint64_t(uint64_t)>> getters =
-        build_getters(std::move(trees));
-    return apply_all(std::move(getters), UINT64_C(0));
-  }();
-  static inline const uint64_t test_pair_apply =
-      tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
-                 UINT64_C(20), tree::leaf())
-          .pair_and_apply();
+  static constexpr uint64_t test_build_apply = UINT64_C(10);
+  static constexpr uint64_t test_pair_apply = UINT64_C(10);
   static mylist<crane::fn<uint64_t(uint64_t)>>
   collect_left_vals(tree t, mylist<crane::fn<uint64_t(uint64_t)>> acc);
-  static inline const uint64_t test_collect = []() {
-    tree t = tree::node(
-        tree::node(tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
-                   UINT64_C(10), tree::leaf()),
-        UINT64_C(15),
-        tree::node(tree::leaf(), UINT64_C(20),
-                   tree::node(tree::leaf(), UINT64_C(25), tree::leaf())));
-    mylist<crane::fn<uint64_t(uint64_t)>> fns = collect_left_vals(
-        std::move(t), mylist<crane::fn<uint64_t(uint64_t)>>::mynil());
-    return apply_all(std::move(fns), UINT64_C(0));
-  }();
+  static constexpr uint64_t test_collect = UINT64_C(5);
   /// TEST 6: Stress test with very large list of trees.
   static mylist<tree> make_tree_list(uint64_t n);
   static uint64_t sum_getters(const mylist<crane::fn<uint64_t(uint64_t)>> &l,
                               uint64_t x);
 
-  static inline const uint64_t test_stress = []() {
-    mylist<tree> trees = make_tree_list(UINT64_C(50));
-    mylist<crane::fn<uint64_t(uint64_t)>> getters =
-        build_getters(std::move(trees));
-    return sum_getters(std::move(getters), UINT64_C(0));
-  }();
+  static constexpr uint64_t test_stress = UINT64_C(1275);
 };
 
 #endif // INCLUDED_MEM_SAFETY_PROBE5

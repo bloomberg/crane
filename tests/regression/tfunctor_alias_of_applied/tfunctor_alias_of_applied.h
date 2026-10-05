@@ -385,8 +385,7 @@ struct TfunctorAliasOfApplied {
       return a0.df_ty.add(a0.df_body.blk);
     }
   }();
-  static inline const bool is_five =
-      total.eqb(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))));
+  static constexpr bool is_five = true;
 };
 
 #endif // INCLUDED_TFUNCTOR_ALIAS_OF_APPLIED

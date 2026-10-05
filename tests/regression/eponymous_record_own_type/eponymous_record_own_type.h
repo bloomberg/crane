@@ -11,7 +11,7 @@ struct EponymousRecordOwnType_Mod {
   static inline const EponymousRecordOwnType default_value =
       EponymousRecordOwnType{UINT64_C(5)};
 
-  static inline const uint64_t answer = default_value.field;
+  static constexpr uint64_t answer = UINT64_C(5);
 };
 
 #endif // INCLUDED_EPONYMOUS_RECORD_OWN_TYPE

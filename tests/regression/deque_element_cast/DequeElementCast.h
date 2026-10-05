@@ -87,7 +87,7 @@ struct DequeElementCast {
   }
 
   static const uint64_t &test_item_num() {
-    static const uint64_t v = get_item_num(item_value());
+    static const uint64_t v = UINT64_C(99);
     return v;
   }
 };

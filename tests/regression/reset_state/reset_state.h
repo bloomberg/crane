@@ -155,45 +155,9 @@ struct ResetState {
   };
 
   static state_full reset_state_full(const state_full &s);
-  static inline const uint64_t memory_preserve_test = []() {
-    state_full s = state_full{
-        UINT64_C(9),
-        List<uint64_t>::cons(
-            UINT64_C(1),
-            List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())),
-        true,
-        UINT64_C(55),
-        List<uint64_t>::cons(
-            UINT64_C(8),
-            List<uint64_t>::cons(UINT64_C(7), List<uint64_t>::nil())),
-        List<uint64_t>::cons(
-            UINT64_C(3),
-            List<uint64_t>::cons(
-                UINT64_C(4),
-                List<uint64_t>::cons(UINT64_C(5), List<uint64_t>::nil()))),
-        List<uint64_t>::cons(
-            UINT64_C(10),
-            List<uint64_t>::cons(UINT64_C(11), List<uint64_t>::nil()))};
-    state_full s_ = reset_state_full(std::move(s));
-    return (
-        ((s_.acc + ListDef::template nth<uint64_t>(UINT64_C(1), s_.ram_sys,
-                                                   UINT64_C(0))) +
-         ListDef::template nth<uint64_t>(UINT64_C(0), s_.rom, UINT64_C(0))) +
-        s_.stack.length());
-  }();
+  static constexpr uint64_t memory_preserve_test = UINT64_C(14);
   static state_minimal reset_state_minimal(const state_minimal &s);
-  static inline const uint64_t pc_clear_test =
-      reset_state_minimal(
-          state_minimal{
-              List<uint64_t>::cons(
-                  UINT64_C(1),
-                  List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())),
-              true, UINT64_C(99),
-              List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()),
-              List<uint64_t>::cons(
-                  UINT64_C(4),
-                  List<uint64_t>::cons(UINT64_C(5), List<uint64_t>::nil()))})
-          .pc_minimal;
+  static constexpr uint64_t pc_clear_test = UINT64_C(0);
   static inline const std::pair<uint64_t, uint64_t> t =
       std::make_pair(memory_preserve_test, pc_clear_test);
 };

@@ -16,7 +16,7 @@ concept M1_C = requires {
 
 struct M1 {
   struct i {
-    static uint64_t m(uint64_t x) { return x; }
+    constexpr static uint64_t m(uint64_t x) { return x; }
   };
 
   static_assert(M1_C<i, uint64_t>);
@@ -29,7 +29,7 @@ concept M2_C = requires {
 
 struct M2 {
   struct i {
-    static uint64_t m(bool b) {
+    constexpr static uint64_t m(bool b) {
       if (b) {
         return UINT64_C(1);
       } else {
@@ -42,7 +42,7 @@ struct M2 {
 };
 
 struct DuplicateClassNameModules {
-  static inline const uint64_t run = (M1::i::m(UINT64_C(1)) + M2::i::m(true));
+  static constexpr uint64_t run = UINT64_C(2);
 };
 
 #endif // INCLUDED_DUPLICATE_CLASS_NAME_MODULES

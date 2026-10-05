@@ -369,36 +369,7 @@ struct FamilySumAlias {
                                        crane::obj>,
                                   Nat>>::retf(crane::any_cast<Nat>(n)));
                   })));
-  static inline const bool is_three = []() {
-    auto &&_sv = []() {
-      auto &&_sv0 = t;
-      const auto &[_observe0] = std::get<typename Itree<
-          Sum1<aE<Nat>, Sum1<BE, CE, crane::obj>, crane::obj>, Nat>::Go>(
-          _sv0.v());
-      return _observe0;
-    }();
-    if (std::holds_alternative<typename ItreeF<
-            Sum1<aE<Nat>, Sum1<BE, CE, crane::obj>, crane::obj>, Nat,
-            Itree<Sum1<aE<Nat>, Sum1<BE, CE, crane::obj>, crane::obj>,
-                  Nat>>::VisF>(_sv.v())) {
-      const auto &[x, e0] = std::get<typename ItreeF<
-          Sum1<aE<Nat>, Sum1<BE, CE, crane::obj>, crane::obj>, Nat,
-          Itree<Sum1<aE<Nat>, Sum1<BE, CE, crane::obj>, crane::obj>,
-                Nat>>::VisF>(_sv.v());
-      if (std::holds_alternative<typename Sum1<
-              aE<Nat>, Sum1<BE, CE, crane::obj>, crane::obj>::Inl1>(x.v())) {
-        const auto &[a01] = std::get<
-            typename Sum1<aE<Nat>, Sum1<BE, CE, crane::obj>, crane::obj>::Inl1>(
-            x.v());
-        const auto &[a02] = a01;
-        return crane::any_cast<Nat>(a02).eqb(Nat::s(Nat::s(Nat::s(Nat::o()))));
-      } else {
-        return false;
-      }
-    } else {
-      return false;
-    }
-  }();
+  static constexpr bool is_three = true;
 };
 
 #endif // INCLUDED_FAMILY_SUM_ALIAS

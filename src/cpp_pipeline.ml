@@ -141,6 +141,10 @@ let finish decl =
   (* The temporaries Normalize named for loopification and loopification did
      not need go back where they are read. *)
   let decl = pass "temporaries" Cpp_temporaries.decl decl in
+  (* An argument a mapping would splice, and so evaluate, more than once is
+     named once -- after the temporaries went back, so that none of them is
+     put back into the text that repeats it. *)
+  let decl = pass "shared_args" Cpp_shared_args.transform_decl decl in
   (* An initialiser nested deeper than a compiler will parse becomes a run of
      bindings; everything shallower is left as it stands. *)
   let decl = pass "depth" Cpp_depth.flatten decl in

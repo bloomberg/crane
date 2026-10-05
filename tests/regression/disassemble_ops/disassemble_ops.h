@@ -224,27 +224,7 @@ struct DisassembleOps {
   static List<uint64_t> drop_(uint64_t n, List<uint64_t> l);
   static std::optional<std::pair<instruction, uint64_t>>
   disassemble1(const List<uint64_t> &rom0, uint64_t addr);
-  static inline const uint64_t test_disassemble_drop_window = []() -> uint64_t {
-    auto _cs = disassemble1(
-        List<uint64_t>::cons(
-            UINT64_C(1),
-            List<uint64_t>::cons(
-                UINT64_C(2),
-                List<uint64_t>::cons(
-                    UINT64_C(3),
-                    List<uint64_t>::cons(
-                        UINT64_C(4),
-                        List<uint64_t>::cons(UINT64_C(5),
-                                             List<uint64_t>::nil()))))),
-        UINT64_C(1));
-    if (_cs.has_value()) {
-      const std::pair<instruction, uint64_t> &p = *_cs;
-      const auto &[_x, next] = p;
-      return next;
-    } else {
-      return UINT64_C(0);
-    }
-  }();
+  static constexpr uint64_t test_disassemble_drop_window = UINT64_C(3);
   static instruction decode2(uint64_t b1, uint64_t b2);
 
   template <typename T1> static List<T1> drop(uint64_t n, List<T1> l) {
@@ -263,25 +243,7 @@ struct DisassembleOps {
 
   static std::optional<std::pair<instruction, uint64_t>>
   disassemble2(const List<uint64_t> &rom0, uint64_t addr);
-  static inline const uint64_t test_disassemble_next_address =
-      []() -> uint64_t {
-    auto _cs = disassemble2(
-        List<uint64_t>::cons(
-            UINT64_C(0),
-            List<uint64_t>::cons(
-                UINT64_C(7),
-                List<uint64_t>::cons(
-                    UINT64_C(9), List<uint64_t>::cons(UINT64_C(11),
-                                                      List<uint64_t>::nil())))),
-        UINT64_C(0));
-    if (_cs.has_value()) {
-      const std::pair<instruction, uint64_t> &p = *_cs;
-      const auto &[_x, next] = p;
-      return next;
-    } else {
-      return UINT64_C(0);
-    }
-  }();
+  static constexpr uint64_t test_disassemble_next_address = UINT64_C(2);
   static instruction decode3(uint64_t b1, uint64_t b2);
   static std::optional<std::pair<instruction, uint64_t>>
   disassemble3(const List<uint64_t> &rom0, uint64_t addr);
@@ -295,10 +257,7 @@ struct DisassembleOps {
     }
   }
 
-  static inline const bool test_disassemble_short_rom_none =
-      is_none<std::pair<instruction, uint64_t>>(
-          disassemble3(List<uint64_t>::cons(UINT64_C(9), List<uint64_t>::nil()),
-                       UINT64_C(0)));
+  static constexpr bool test_disassemble_short_rom_none = true;
   static instruction decode4(uint64_t b1, uint64_t b2);
   static std::optional<std::pair<instruction, uint64_t>>
   disassemble4(const List<uint64_t> &rom0, uint64_t addr);
@@ -311,42 +270,8 @@ struct DisassembleOps {
   static inline const state init_state =
       state{ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(16)),
             ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(4096))};
-  static inline const uint64_t test_decode_disassemble_1 = []() -> uint64_t {
-    auto _cs = disassemble4(
-        List<uint64_t>::cons(
-            UINT64_C(0),
-            List<uint64_t>::cons(
-                UINT64_C(7),
-                List<uint64_t>::cons(
-                    UINT64_C(9), List<uint64_t>::cons(UINT64_C(11),
-                                                      List<uint64_t>::nil())))),
-        UINT64_C(0));
-    if (_cs.has_value()) {
-      const std::pair<instruction, uint64_t> &p = *_cs;
-      const auto &[_x, next] = p;
-      return next;
-    } else {
-      return UINT64_C(0);
-    }
-  }();
-  static inline const uint64_t test_decode_disassemble_2 = []() -> uint64_t {
-    auto _cs = disassemble4(
-        List<uint64_t>::cons(
-            UINT64_C(0),
-            List<uint64_t>::cons(
-                UINT64_C(7),
-                List<uint64_t>::cons(
-                    UINT64_C(9), List<uint64_t>::cons(UINT64_C(11),
-                                                      List<uint64_t>::nil())))),
-        UINT64_C(0));
-    if (_cs.has_value()) {
-      const std::pair<instruction, uint64_t> &p = *_cs;
-      const auto &[_x, next] = p;
-      return next;
-    } else {
-      return UINT64_C(0);
-    }
-  }();
+  static constexpr uint64_t test_decode_disassemble_1 = UINT64_C(2);
+  static constexpr uint64_t test_decode_disassemble_2 = UINT64_C(2);
   static inline const uint64_t test_init_state_regs = init_state.regs.length();
   static inline const uint64_t test_init_state_rom = init_state.rom.length();
   static inline const std::pair<

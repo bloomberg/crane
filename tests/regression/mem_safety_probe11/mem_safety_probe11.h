@@ -107,42 +107,20 @@ struct MemSafetyProbe11 {
     const variant_t &v() const { return v_; }
 
     uint64_t length() const {
-      const mylist<A> *_self = this;
-
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
-        const mylist<A> *_self;
-      };
-
-      /// CraneCont_Mycons: resumes after recursive call, then processes rest.
-      struct CraneCont_Mycons {};
-
-      using CraneFrame = std::variant<CraneEnter, CraneCont_Mycons>;
-      uint64_t _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified length: CraneEnter -> CraneCont_Mycons.
-      while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
-          const mylist<A> *_self = _f._self;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
-            _result = UINT64_C(0);
-          } else {
-            const auto &[a0, a1] =
-                std::get<typename mylist<A>::Mycons>(_sv.v());
-            _stack.emplace_back(CraneCont_Mycons{});
-            _stack.emplace_back(CraneEnter{crane_raw(a1)});
-          }
+      auto go_impl = [](auto &_self_go, const mylist<A> &l0,
+                        uint64_t acc) -> uint64_t {
+        if (std::holds_alternative<typename mylist<A>::Mynil>(l0.v())) {
+          return acc;
         } else {
-          auto _f = std::move(std::get<CraneCont_Mycons>(_frame));
-          _result = (UINT64_C(1) + std::move(_result));
+          const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(l0.v());
+          return _self_go(_self_go, *a1, (acc + UINT64_C(1)));
         }
+      };
+      {
+        const mylist<A> &_lc1_l0 = *this;
+        uint64_t _lc1_acc = UINT64_C(0);
+        return go_impl(go_impl, _lc1_l0, _lc1_acc);
       }
-      return _result;
     }
 
     template <typename T1, typename F1> T1 mylist_rec(T1 f, F1 &&f0) const {
@@ -584,77 +562,29 @@ struct MemSafetyProbe11 {
   static mylist<crane::fn<uint64_t(uint64_t)>>
   collect_dual_captures(const tree &t,
                         mylist<crane::fn<uint64_t(uint64_t)>> acc);
-  static inline const uint64_t test_dual_capture = []() {
-    tree t = tree::node(
-        tree::node(tree::leaf(), UINT64_C(5), tree::leaf()), UINT64_C(10),
-        tree::node(tree::leaf(), UINT64_C(15),
-                   tree::node(tree::leaf(), UINT64_C(20), tree::leaf())));
-    return sum_fns(collect_dual_captures(
-        std::move(t), mylist<crane::fn<uint64_t(uint64_t)>>::mynil()));
-  }();
+  static constexpr uint64_t test_dual_capture = UINT64_C(60);
   /// TEST 2: Closure captures the TAIL of the list (unique_ptr field).
   /// Each closure computes length of the tail.
   /// After loopification, the tail pointer may be moved.
   static mylist<crane::fn<uint64_t(uint64_t)>>
   capture_tails(const mylist<uint64_t> &l,
                 mylist<crane::fn<uint64_t(uint64_t)>> acc);
-  static inline const uint64_t test_capture_tails = []() {
-    mylist<uint64_t> l = mylist<uint64_t>::mycons(
-        UINT64_C(100),
-        mylist<uint64_t>::mycons(
-            UINT64_C(200), mylist<uint64_t>::mycons(
-                               UINT64_C(300), mylist<uint64_t>::mynil())));
-    return sum_fns(capture_tails(
-        std::move(l), mylist<crane::fn<uint64_t(uint64_t)>>::mynil()));
-  }();
+  static constexpr uint64_t test_capture_tails = UINT64_C(603);
   /// TEST 3: Closure captures a SUBTREE, but the subtree is ALSO
   /// passed to a recursive call AND used in the continuation.
   /// Tests whether the clone/pre-copy mechanism handles triple use.
   static mylist<crane::fn<uint64_t(uint64_t)>>
   triple_use_tree(const tree &t, mylist<crane::fn<uint64_t(uint64_t)>> acc);
-  static inline const uint64_t test_triple_use = []() {
-    tree t = tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
-                        UINT64_C(7),
-                        tree::node(tree::leaf(), UINT64_C(11), tree::leaf()));
-    return sum_fns(triple_use_tree(
-        std::move(t), mylist<crane::fn<uint64_t(uint64_t)>>::mynil()));
-  }();
-  static inline const uint64_t test_nested_capture = []() {
-    tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
-                        UINT64_C(20),
-                        tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
-    mylist<uint64_t> l = mylist<uint64_t>::mycons(
-        UINT64_C(5),
-        mylist<uint64_t>::mycons(UINT64_C(99), mylist<uint64_t>::mynil()));
-    return std::move(t).nested_capture(std::move(l), UINT64_C(7));
-  }();
+  static constexpr uint64_t test_triple_use = UINT64_C(14);
+  static constexpr uint64_t test_nested_capture = UINT64_C(72);
   /// TEST 5: Tail-recursive function with two accumulators,
   /// one of which stores closures that capture the other.
   /// Tests whether accumulator values are properly captured.
   static mylist<crane::fn<uint64_t(uint64_t)>>
   dual_accum(const mylist<uint64_t> &l, uint64_t sum_acc,
              mylist<crane::fn<uint64_t(uint64_t)>> fn_acc);
-  static inline const uint64_t test_dual_accum = []() {
-    mylist<uint64_t> l = mylist<uint64_t>::mycons(
-        UINT64_C(10),
-        mylist<uint64_t>::mycons(
-            UINT64_C(20),
-            mylist<uint64_t>::mycons(UINT64_C(30), mylist<uint64_t>::mynil())));
-    return sum_fns(dual_accum(std::move(l), UINT64_C(0),
-                              mylist<crane::fn<uint64_t(uint64_t)>>::mynil()));
-  }();
-  static inline const uint64_t test_tree_transformer = []() {
-    return []() {
-      tree t = tree::node(tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
-                          UINT64_C(10),
-                          tree::node(tree::leaf(), UINT64_C(15), tree::leaf()));
-      crane::fn<tree(uint64_t)> f = [&](uint64_t _x0) -> tree {
-        return std::move(t).tree_transformer(_x0);
-      };
-      tree t2 = f(UINT64_C(100));
-      return std::move(t2).tree_sum();
-    }();
-  }();
+  static constexpr uint64_t test_dual_accum = UINT64_C(100);
+  static constexpr uint64_t test_tree_transformer = UINT64_C(130);
 };
 
 #endif // INCLUDED_MEM_SAFETY_PROBE11

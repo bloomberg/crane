@@ -1567,48 +1567,16 @@ struct MemSafetyProbe29 {
 
   /// TEST 1: Build and sum an outer tree with inner tree values.
   /// Tests nested value-type clone/destructor interaction.
-  static inline const uint64_t test_outer_basic = []() {
-    outer o = outer::onode(
-        outer::onode(outer::oleaf(),
-                     inner::inode(inner::ileaf(), UINT64_C(10), inner::ileaf()),
-                     outer::oleaf()),
-        inner::inode(inner::inode(inner::ileaf(), UINT64_C(1), inner::ileaf()),
-                     UINT64_C(2),
-                     inner::inode(inner::ileaf(), UINT64_C(3), inner::ileaf())),
-        outer::onode(outer::oleaf(),
-                     inner::inode(inner::ileaf(), UINT64_C(20), inner::ileaf()),
-                     outer::oleaf()));
-    return std::move(o).outer_sum();
-  }();
+  static constexpr uint64_t test_outer_basic = UINT64_C(36);
   /// TEST 2: Dup pattern — use inner tree twice in outer construction.
   static outer dup_inner(const inner &i);
-  static inline const uint64_t test_dup_inner = []() {
-    inner i = inner::inode(
-        inner::inode(inner::ileaf(), UINT64_C(5), inner::ileaf()), UINT64_C(10),
-        inner::inode(inner::ileaf(), UINT64_C(15), inner::ileaf()));
-    return dup_inner(std::move(i)).outer_sum();
-  }();
-  static inline const uint64_t test_transform = []() {
-    outer o = outer::onode(
-        outer::oleaf(),
-        inner::inode(inner::ileaf(), UINT64_C(5), inner::ileaf()),
-        outer::onode(outer::oleaf(),
-                     inner::inode(inner::ileaf(), UINT64_C(10), inner::ileaf()),
-                     outer::oleaf()));
-    return std::move(o).transform_outer().outer_sum();
-  }();
+  static constexpr uint64_t test_dup_inner = UINT64_C(90);
+  static constexpr uint64_t test_transform = UINT64_C(30);
   /// TEST 4: Build and evaluate a complex expression tree.
-  static inline const uint64_t test_expr = []() {
-    expr e = expr::add(
-        expr::mul(expr::add(expr::lit(UINT64_C(2)), expr::lit(UINT64_C(3))),
-                  expr::lit(UINT64_C(4))),
-        expr::neg(expr::add(expr::lit(UINT64_C(10)), expr::lit(UINT64_C(5)))));
-    return std::move(e).eval_expr();
-  }();
+  static constexpr uint64_t test_expr = UINT64_C(35);
   /// TEST 5: Deep 3-child tree to stress clone/destructor.
   static tree3 build_tree3(uint64_t n);
-  static inline const uint64_t test_tree3 =
-      build_tree3(UINT64_C(4)).tree3_sum();
+  static constexpr uint64_t test_tree3 = UINT64_C(58);
   static inline const uint64_t test_dup_outer = []() {
     outer o =
         outer::onode(outer::oleaf(),
@@ -1617,19 +1585,8 @@ struct MemSafetyProbe29 {
     std::pair<outer, outer> p = std::move(o).dup_outer();
     return (p.first.outer_sum() + p.second.outer_sum());
   }();
-  static inline const uint64_t test_double_expr =
-      expr::add(expr::lit(UINT64_C(5)),
-                expr::mul(expr::lit(UINT64_C(3)), expr::lit(UINT64_C(7))))
-          .double_expr()
-          .eval_expr();
-  static inline const uint64_t test_cross_type = []() {
-    expr e =
-        expr::add(expr::lit(UINT64_C(5)),
-                  expr::mul(expr::lit(UINT64_C(3)), expr::lit(UINT64_C(7))));
-    inner i = std::move(e).expr_to_inner();
-    outer o = outer::onode(outer::oleaf(), i, outer::oleaf());
-    return (std::move(o).outer_sum() + std::move(i).inner_sum());
-  }();
+  static constexpr uint64_t test_double_expr = UINT64_C(94);
+  static constexpr uint64_t test_cross_type = UINT64_C(32);
 };
 
 #endif // INCLUDED_MEM_SAFETY_PROBE29

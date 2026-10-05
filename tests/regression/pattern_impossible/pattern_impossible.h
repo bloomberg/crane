@@ -141,11 +141,9 @@ struct PatternImpossible {
   static uint64_t nested_match(const nested &n);
   static uint64_t double_match(Three x, Three y);
   static uint64_t multi_arg_pattern(const nested &n);
-  static inline const uint64_t test1 = complex_match(Three::ONE);
-  static inline const uint64_t test2 = nested_match(
-      nested::node(nested::leaf(UINT64_C(5)), nested::leaf(UINT64_C(10))));
-
-  static inline const uint64_t test3 = double_match(Three::ONE, Three::TWO);
+  static constexpr uint64_t test1 = UINT64_C(1);
+  static constexpr uint64_t test2 = UINT64_C(15);
+  static constexpr uint64_t test3 = UINT64_C(2);
 };
 
 #endif // INCLUDED_PATTERN_IMPOSSIBLE

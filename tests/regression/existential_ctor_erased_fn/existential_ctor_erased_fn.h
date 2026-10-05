@@ -205,9 +205,7 @@ struct ExistentialCtorErasedFn {
                       [](const List<crane::obj> &_x) { return _x.length(); })),
               List<dynamic>::nil())));
 
-  static inline const uint64_t total = items.template fold_left<uint64_t>(
-      [](uint64_t acc, const dynamic &d) { return (acc + read(d)); },
-      UINT64_C(0));
+  static constexpr uint64_t total = UINT64_C(11);
 };
 
 #endif // INCLUDED_EXISTENTIAL_CTOR_ERASED_FN

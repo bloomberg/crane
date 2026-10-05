@@ -147,13 +147,7 @@ struct MapReturnsClosure {
   make_adders(const List<uint64_t> &xs);
   static uint64_t apply_all(const List<crane::fn<uint64_t(uint64_t)>> &fs,
                             uint64_t n);
-  static inline const uint64_t total = apply_all(
-      make_adders(List<uint64_t>::cons(
-          UINT64_C(1),
-          List<uint64_t>::cons(
-              UINT64_C(2),
-              List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())))),
-      UINT64_C(10));
+  static constexpr uint64_t total = UINT64_C(36);
 };
 
 #endif // INCLUDED_MAP_RETURNS_CLOSURE

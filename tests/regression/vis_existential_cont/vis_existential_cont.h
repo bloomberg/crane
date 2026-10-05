@@ -273,15 +273,7 @@ struct VisExistentialCont {
                         Nat::s(crane::any_cast<Nat>(n))));
               })));
   static std::optional<Nat> answer(const Nat &_x, tree<askE, Nat> t0);
-  static inline const bool is_three = []() -> bool {
-    auto _cs = answer(Nat::s(Nat::o()), t);
-    if (_cs.has_value()) {
-      const Nat &n = *_cs;
-      return n.eqb(Nat::s(Nat::s(Nat::s(Nat::o()))));
-    } else {
-      return false;
-    }
-  }();
+  static constexpr bool is_three = true;
 };
 
 #endif // INCLUDED_VIS_EXISTENTIAL_CONT

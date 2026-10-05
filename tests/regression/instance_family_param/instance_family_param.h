@@ -164,11 +164,7 @@ struct InstanceFamilyParam {
   static inline const box<noE, Nat> b = fmap<Functor_box<noE>, Nat, Nat>(
       [](const Nat &x) { return Nat::s(x); },
       box<noE, Nat>::box0(Nat::s(Nat::s(Nat::o()))));
-  static inline const bool is_three = []() {
-    const auto &_sv = b;
-    const auto &[a] = _sv;
-    return a.eqb(Nat::s(Nat::s(Nat::s(Nat::o()))));
-  }();
+  static constexpr bool is_three = true;
 };
 
 #endif // INCLUDED_INSTANCE_FAMILY_PARAM

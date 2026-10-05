@@ -33,7 +33,7 @@ struct TodoNestedModuleType {
 
   struct NatInner {
     using t = uint64_t;
-    static inline const uint64_t zero = UINT64_C(0);
+    static constexpr uint64_t zero = UINT64_C(0);
   };
 
   struct NatOuter {

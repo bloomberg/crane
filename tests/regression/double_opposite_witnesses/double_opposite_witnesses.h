@@ -255,37 +255,12 @@ struct DoubleOppositeWitnessesCase {
   static inline const std::pair<crane::fn<Path<uint64_t>(uint64_t)>,
                                 crane::fn<Path<uint64_t>(uint64_t)>>
       identity_witnesses = backward_package.projT2();
-  static inline const uint64_t forward_object_7 =
-      crane::any_cast<uint64_t>(forward_functor.object_of(UINT64_C(7)));
-  static inline const uint64_t backward_object_9 =
-      crane::any_cast<uint64_t>(backward_functor.object_of(UINT64_C(9)));
-  static inline const uint64_t forward_morphism_3 = crane::any_cast<uint64_t>(
-      forward_functor.morphism_of(UINT64_C(4), UINT64_C(7), UINT64_C(3)));
-  static inline const uint64_t roundtrip_left_11 = crane::any_cast<uint64_t>(
-      compose_functor<
-          typename toy_prestable::base_category,
-          typename opposite_prestable_category<
-              opposite_prestable_category<toy_prestable>>::base_category,
-          typename toy_prestable::base_category>(backward_functor,
-                                                 forward_functor)
-          .object_of(UINT64_C(11)));
-  static inline const uint64_t roundtrip_right_13 = crane::any_cast<uint64_t>(
-      compose_functor<
-          typename opposite_prestable_category<
-              opposite_prestable_category<toy_prestable>>::base_category,
-          typename toy_prestable::base_category,
-          typename opposite_prestable_category<
-              opposite_prestable_category<toy_prestable>>::base_category>(
-          forward_functor, backward_functor)
-          .object_of(UINT64_C(13)));
-  static inline const uint64_t roundtrip_morphism_5 = crane::any_cast<uint64_t>(
-      compose_functor<
-          typename toy_prestable::base_category,
-          typename opposite_prestable_category<
-              opposite_prestable_category<toy_prestable>>::base_category,
-          typename toy_prestable::base_category>(backward_functor,
-                                                 forward_functor)
-          .morphism_of(UINT64_C(2), UINT64_C(9), UINT64_C(5)));
+  static constexpr uint64_t forward_object_7 = UINT64_C(7);
+  static constexpr uint64_t backward_object_9 = UINT64_C(9);
+  static constexpr uint64_t forward_morphism_3 = UINT64_C(3);
+  static constexpr uint64_t roundtrip_left_11 = UINT64_C(11);
+  static constexpr uint64_t roundtrip_right_13 = UINT64_C(13);
+  static constexpr uint64_t roundtrip_morphism_5 = UINT64_C(5);
   static inline const uint64_t left_identity_code_11 = path_code<uint64_t>(
       crane::any_cast<uint64_t>(
           compose_functor<
@@ -307,8 +282,7 @@ struct DoubleOppositeWitnessesCase {
               toy_duality_involution.projT1(), backward_package.projT1())
               .object_of(UINT64_C(13))),
       UINT64_C(13), identity_witnesses.second(UINT64_C(13)));
-  static inline const uint64_t suspended_zero = crane::any_cast<uint64_t>(
-      toy_prestable::suspension(toy_prestable::zero_object()));
+  static constexpr uint64_t suspended_zero = UINT64_C(1);
 };
 
 #endif // INCLUDED_DOUBLE_OPPOSITE_WITNESSES

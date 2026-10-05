@@ -35,7 +35,7 @@ struct AssocTypeAnyCast {
 
   static_assert(Wrap<PairWrap>);
 
-  template <Wrap _tcI0> static uint64_t roundtrip(uint64_t n) {
+  template <Wrap _tcI0> constexpr static uint64_t roundtrip(uint64_t n) {
     return _tcI0::unwrap(crane_erase_fn(_tcI0::wrap(n)));
   }
 

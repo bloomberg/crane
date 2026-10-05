@@ -116,7 +116,7 @@ struct DepRecord {
   struct nat_magma {
     using carrier = uint64_t;
 
-    static uint64_t op(uint64_t a0, uint64_t a1) { return (a0 + a1); }
+    constexpr static uint64_t op(uint64_t a0, uint64_t a1) { return (a0 + a1); }
   };
 
   static_assert(Magma<nat_magma>);
@@ -133,9 +133,11 @@ struct DepRecord {
   struct nat_monoid {
     using m_carrier = uint64_t;
 
-    static uint64_t m_op(uint64_t a0, uint64_t a1) { return (a0 + a1); }
+    constexpr static uint64_t m_op(uint64_t a0, uint64_t a1) {
+      return (a0 + a1);
+    }
 
-    static uint64_t m_id() { return UINT64_C(0); }
+    constexpr static uint64_t m_id() { return UINT64_C(0); }
   };
 
   static_assert(Monoid<nat_monoid>);
@@ -143,9 +145,11 @@ struct DepRecord {
   struct nat_mul_monoid {
     using m_carrier = uint64_t;
 
-    static uint64_t m_op(uint64_t a0, uint64_t a1) { return (a0 * a1); }
+    constexpr static uint64_t m_op(uint64_t a0, uint64_t a1) {
+      return (a0 * a1);
+    }
 
-    static uint64_t m_id() { return UINT64_C(1); }
+    constexpr static uint64_t m_id() { return UINT64_C(1); }
   };
 
   static_assert(Monoid<nat_mul_monoid>);
@@ -163,20 +167,8 @@ struct DepRecord {
     }
   }
 
-  static inline const uint64_t test_fold_add =
-      crane::any_cast<uint64_t>(mfold<nat_monoid>(List<uint64_t>::cons(
-          UINT64_C(1),
-          List<uint64_t>::cons(
-              UINT64_C(2),
-              List<uint64_t>::cons(
-                  UINT64_C(3),
-                  List<uint64_t>::cons(UINT64_C(4), List<uint64_t>::nil()))))));
-  static inline const uint64_t test_fold_mul =
-      crane::any_cast<uint64_t>(mfold<nat_mul_monoid>(List<uint64_t>::cons(
-          UINT64_C(2),
-          List<uint64_t>::cons(
-              UINT64_C(3),
-              List<uint64_t>::cons(UINT64_C(4), List<uint64_t>::nil())))));
+  static constexpr uint64_t test_fold_add = UINT64_C(10);
+  static constexpr uint64_t test_fold_mul = UINT64_C(24);
   enum class Tag { TNAT, TBOOL };
 
   template <typename T1> static T1 tag_rect(T1 f, T1 f0, Tag t) {

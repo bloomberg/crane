@@ -133,16 +133,15 @@ struct CpsClosureChain {
   static tree build_right(uint64_t n);
   static tree build_balanced(uint64_t n);
   /// Test: left-spine tree with 5 nodes: sum = 1+2+3+4+5 = 15
-  static inline const uint64_t test_left = tree_sum(build_left(UINT64_C(5)));
+  static constexpr uint64_t test_left = UINT64_C(15);
   /// Test: right-spine tree with 5 nodes: sum = 1+2+3+4+5 = 15
-  static inline const uint64_t test_right = tree_sum(build_right(UINT64_C(5)));
+  static constexpr uint64_t test_right = UINT64_C(15);
   /// Test: balanced tree depth 3: values 1,2,3 with structure
   /// Node (Node (Node Leaf 1 Leaf) 2 (Node Leaf 1 Leaf))
   /// 3
   /// (Node (Node Leaf 1 Leaf) 2 (Node Leaf 1 Leaf))
   /// sum = 4*1 + 2*2 + 1*3 = 11
-  static inline const uint64_t test_balanced =
-      tree_sum(build_balanced(UINT64_C(3)));
+  static constexpr uint64_t test_balanced = UINT64_C(11);
 
   /// CPS fold: accumulates results through continuation chain.
   /// This creates closures that capture BOTH a pattern variable
@@ -167,13 +166,7 @@ struct CpsClosureChain {
   }
 
   /// Test: fold with multiplication: each node multiplies (left + right + n)
-  static inline const uint64_t test_fold = tree_fold_cps(
-      tree::node(tree::node(tree::leaf(), UINT64_C(2), tree::leaf()),
-                 UINT64_C(3),
-                 tree::node(tree::leaf(), UINT64_C(4), tree::leaf())),
-      UINT64_C(1),
-      [](uint64_t l, uint64_t n, uint64_t r) { return ((l + n) + r); },
-      [](uint64_t x) { return x; });
+  static constexpr uint64_t test_fold = UINT64_C(13);
   /// Store CPS result in a pair with another computation to test
   /// that the continuation chain doesn't interfere with other data.
   static inline const std::pair<uint64_t, uint64_t> test_pair = []() {

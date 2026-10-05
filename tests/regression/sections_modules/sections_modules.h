@@ -45,7 +45,7 @@ struct SectionsModules {
   struct NatMonoid {
     using T = uint64_t;
     static uint64_t op(uint64_t x0_, uint64_t x1_);
-    static inline const uint64_t id = UINT64_C(0);
+    static constexpr uint64_t id = UINT64_C(0);
   };
 
   using TransparentMod = NatMonoid;
@@ -73,19 +73,18 @@ struct SectionsModules {
   static uint64_t use_outer(uint64_t x0_, uint64_t x1_);
 
   struct Base {
-    static inline const uint64_t base_val = UINT64_C(42);
+    static constexpr uint64_t base_val = UINT64_C(42);
     static uint64_t base_fun(uint64_t n);
   };
 
   struct Extended {
-    static inline const uint64_t base_val = UINT64_C(42);
+    static constexpr uint64_t base_val = UINT64_C(42);
     static uint64_t base_fun(uint64_t n);
-    static inline const uint64_t extended_val = UINT64_C(100);
+    static constexpr uint64_t extended_val = UINT64_C(100);
     static uint64_t extended_fun(uint64_t n);
   };
 
-  static inline const uint64_t test_extended =
-      Extended::extended_fun(Extended::base_val);
+  static constexpr uint64_t test_extended = UINT64_C(143);
 };
 
 #endif // INCLUDED_SECTIONS_MODULES

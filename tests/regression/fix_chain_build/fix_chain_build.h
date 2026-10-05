@@ -22,23 +22,14 @@ struct FixChainBuild {
   /// step1(2) = S(prev(step1(1))) = S(prev(S(prev(step1(0)))))
   /// = S(prev(S(prev(1)))) = S(prev(S(1))) = S(prev(2)) = S(2) = 3.
   /// Pair first + step1(2) = 1 + 3 = 4.
-  static inline const uint64_t test1 = []() -> uint64_t {
-    auto [base, f] = build_chain(UINT64_C(1));
-    return (base + f(UINT64_C(2)));
-  }();
+  static constexpr uint64_t test1 = UINT64_C(4);
   /// test2: build_chain(2).
   /// step1 captures prev=id, n=1. step2 captures prev=step1, n=2.
   /// step2(0) = 2. Result: 2 + step2(0) = 2 + 2 = 4.
-  static inline const uint64_t test2 = []() -> uint64_t {
-    auto [base, f] = build_chain(UINT64_C(2));
-    return (base + f(UINT64_C(0)));
-  }();
+  static constexpr uint64_t test2 = UINT64_C(4);
   /// test3: build_chain(3). More nesting = more dangling frames.
   /// step3(0) = 3. Result: 3 + 3 = 6.
-  static inline const uint64_t test3 = []() -> uint64_t {
-    auto [base, f] = build_chain(UINT64_C(3));
-    return (base + f(UINT64_C(0)));
-  }();
+  static constexpr uint64_t test3 = UINT64_C(6);
 };
 
 #endif // INCLUDED_FIX_CHAIN_BUILD

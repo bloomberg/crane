@@ -238,11 +238,9 @@ struct EncodeOps {
       } else if (std::holds_alternative<typename instruction1::FIM>(
                      this->v())) {
         const auto &[a0, a1] = std::get<typename instruction1::FIM>(this->v());
+        auto &&_once1 = (UINT64_C(2) ? a0 % UINT64_C(2) : a0);
         return std::make_pair(
-            (UINT64_C(32) +
-             (((a0 - (UINT64_C(2) ? a0 % UINT64_C(2) : a0)) > a0
-                   ? 0
-                   : (a0 - (UINT64_C(2) ? a0 % UINT64_C(2) : a0))))),
+            (UINT64_C(32) + (((a0 - _once1) > a0 ? 0 : (a0 - _once1)))),
             (UINT64_C(256) ? a1 % UINT64_C(256) : a1));
       } else if (std::holds_alternative<typename instruction1::JUN>(
                      this->v())) {
@@ -443,15 +441,7 @@ struct EncodeOps {
   };
 
   static List<uint64_t> encode_list2(const List<instruction2> &prog);
-  static inline const uint64_t test_encode_list_byte_count =
-      encode_list2(
-          List<instruction2>::cons(
-              instruction2::nop2(),
-              List<instruction2>::cons(
-                  instruction2::ldm2(UINT64_C(5)),
-                  List<instruction2>::cons(instruction2::nop2(),
-                                           List<instruction2>::nil()))))
-          .length();
+  static constexpr uint64_t test_encode_list_byte_count = UINT64_C(6);
 
   struct instruction3 {
     // TYPES

@@ -586,16 +586,8 @@ struct FunctionVernac {
   }
 
   static R_list_sum R_list_sum_correct(const List<uint64_t> &l, uint64_t res_);
-  static inline const uint64_t test_div2 = div2(UINT64_C(10));
-  static inline const uint64_t test_sum = list_sum(List<uint64_t>::cons(
-      UINT64_C(1),
-      List<uint64_t>::cons(
-          UINT64_C(2),
-          List<uint64_t>::cons(
-              UINT64_C(3),
-              List<uint64_t>::cons(
-                  UINT64_C(4),
-                  List<uint64_t>::cons(UINT64_C(5), List<uint64_t>::nil()))))));
+  static constexpr uint64_t test_div2 = UINT64_C(5);
+  static constexpr uint64_t test_sum = UINT64_C(15);
 };
 
 #endif // INCLUDED_FUNCTION_VERNAC

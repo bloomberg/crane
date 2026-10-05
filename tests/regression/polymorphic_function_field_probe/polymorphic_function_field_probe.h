@@ -19,7 +19,7 @@ struct PolymorphicFunctionFieldProbe {
 
   static inline const poly p =
       poly{crane_erase_fn<crane::obj>([](const auto &x) { return x; })};
-  static inline const Bool0 sample_bool = apply<Bool0>(p, Bool0::TRUE_);
+  static constexpr Bool0 sample_bool = Bool0::TRUE_;
 };
 
 #endif // INCLUDED_POLYMORPHIC_FUNCTION_FIELD_PROBE

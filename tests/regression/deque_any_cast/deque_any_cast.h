@@ -26,9 +26,11 @@ struct DequeAnyCast {
   struct nat_monoid {
     using m_carrier = uint64_t;
 
-    static uint64_t m_op(uint64_t a0, uint64_t a1) { return (a0 + a1); }
+    constexpr static uint64_t m_op(uint64_t a0, uint64_t a1) {
+      return (a0 + a1);
+    }
 
-    static uint64_t m_id() { return UINT64_C(0); }
+    constexpr static uint64_t m_id() { return UINT64_C(0); }
   };
 
   static_assert(Monoid<nat_monoid>);
@@ -80,17 +82,7 @@ struct DequeAnyCast {
     return _result;
   }
 
-  static inline const uint64_t test_fold_add =
-      crane::any_cast<uint64_t>(mfold<nat_monoid>([](auto _a0, auto _a1) {
-        _a1.push_front(_a0);
-        return _a1;
-      }(UINT64_C(1), [](auto _a0, auto _a1) {
-        _a1.push_front(_a0);
-        return _a1;
-      }(UINT64_C(2), [](auto _a0, auto _a1) {
-          _a1.push_front(_a0);
-          return _a1;
-        }(UINT64_C(3), std::deque<uint64_t>{})))));
+  static constexpr uint64_t test_fold_add = UINT64_C(6);
 };
 
 #endif // INCLUDED_DEQUE_ANY_CAST

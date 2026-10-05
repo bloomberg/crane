@@ -26,7 +26,7 @@ template <S X> struct F {
 
 struct N {
   using t = uint64_t;
-  static inline const uint64_t zero = UINT64_C(0);
+  static constexpr uint64_t zero = UINT64_C(0);
   static uint64_t to_nat(uint64_t n);
 };
 

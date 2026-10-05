@@ -94,23 +94,8 @@ public:
 struct LetFixTailLoop {
   static uint64_t sum_list(const List<uint64_t> &l);
   static uint64_t length_list(const List<uint64_t> &l);
-  static inline const uint64_t test_sum = sum_list(List<uint64_t>::cons(
-      UINT64_C(1),
-      List<uint64_t>::cons(
-          UINT64_C(2),
-          List<uint64_t>::cons(
-              UINT64_C(3),
-              List<uint64_t>::cons(
-                  UINT64_C(4),
-                  List<uint64_t>::cons(UINT64_C(5), List<uint64_t>::nil()))))));
-
-  static inline const uint64_t test_len = length_list(List<uint64_t>::cons(
-      UINT64_C(10),
-      List<uint64_t>::cons(
-          UINT64_C(20),
-          List<uint64_t>::cons(
-              UINT64_C(30),
-              List<uint64_t>::cons(UINT64_C(40), List<uint64_t>::nil())))));
+  static constexpr uint64_t test_sum = UINT64_C(15);
+  static constexpr uint64_t test_len = UINT64_C(4);
 };
 
 #endif // INCLUDED_LET_FIX_TAIL_LOOP

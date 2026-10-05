@@ -28,14 +28,7 @@ struct MultiArgFunctionValue {
           }
         }();
       }();
-  static inline const uint64_t run = []() -> uint64_t {
-    if (partial.has_value()) {
-      const crane::fn<uint64_t(uint64_t)> &g = *partial;
-      return g(UINT64_C(2));
-    } else {
-      return UINT64_C(0);
-    }
-  }();
+  static constexpr uint64_t run = UINT64_C(3);
 };
 
 #endif // INCLUDED_MULTI_ARG_FUNCTION_VALUE

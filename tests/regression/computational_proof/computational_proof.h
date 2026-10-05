@@ -100,15 +100,12 @@ struct ComputationalProof {
   static uint64_t max_dec(uint64_t n, uint64_t m);
   static List<uint64_t> insert_dec(uint64_t x, const List<uint64_t> &l);
   static List<uint64_t> isort_dec(const List<uint64_t> &l);
-  static inline const bool test_eq_true = nat_eqb_dec(UINT64_C(5), UINT64_C(5));
-  static inline const bool test_eq_false =
-      nat_eqb_dec(UINT64_C(3), UINT64_C(7));
-  static inline const bool test_leb_true =
-      nat_leb_dec(UINT64_C(3), UINT64_C(5));
-  static inline const bool test_leb_false =
-      nat_leb_dec(UINT64_C(8), UINT64_C(2));
-  static inline const uint64_t test_min = min_dec(UINT64_C(4), UINT64_C(9));
-  static inline const uint64_t test_max = max_dec(UINT64_C(4), UINT64_C(9));
+  static constexpr bool test_eq_true = true;
+  static constexpr bool test_eq_false = false;
+  static constexpr bool test_leb_true = true;
+  static constexpr bool test_leb_false = false;
+  static constexpr uint64_t test_min = UINT64_C(4);
+  static constexpr uint64_t test_max = UINT64_C(9);
   static inline const List<uint64_t> test_sort = isort_dec(List<uint64_t>::cons(
       UINT64_C(5),
       List<uint64_t>::cons(

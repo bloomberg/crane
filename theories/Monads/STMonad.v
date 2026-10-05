@@ -315,6 +315,11 @@ Crane Extract Inlined Constant STRef => "std::shared_ptr<%t2>".
 Crane Extract Inlined Constant newSTRef => "%result = std::make_shared<decltype(%a1)>(%a1)".
 Crane Extract Inlined Constant readSTRef => "*%a1".
 Crane Extract Inlined Constant writeSTRef => "*%a1 = %a2".
+
+(** A reference cell's operations, by the positions their templates splice. *)
+Crane Semantics newSTRef := "ref new 1".
+Crane Semantics readSTRef := "ref read 1".
+Crane Semantics writeSTRef := "ref write 1 2".
 (* array extraction *)
 
 Crane Extract Inductive STArray => "std::vector<%t2> *" [ "" ].

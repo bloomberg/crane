@@ -6,8 +6,7 @@
 struct EscapeCollision {
   static uint64_t double_(uint64_t n);
   static uint64_t double_0(uint64_t n);
-  static inline const uint64_t t =
-      (double_(UINT64_C(1)) + double_0(UINT64_C(2)));
+  static constexpr uint64_t t = UINT64_C(4);
 };
 
 #endif // INCLUDED_ESCAPE_COLLISION

@@ -1135,11 +1135,13 @@ uint64_t LoopifyNumbers::power_mod_fuel(
     } else if (std::holds_alternative<CraneCont1>(_frame)) {
       auto _f = std::move(std::get<CraneCont1>(_frame));
       uint64_t half = std::move(_result);
-      _result = (m ? (half * half) % m : (half * half));
+      auto &&_once1 = (half * half);
+      _result = (m ? _once1 % m : _once1);
     } else {
       auto _f = std::move(std::get<CraneCont2>(_frame));
       uint64_t half = std::move(_result);
-      _result = (m ? (b * (half * half)) % m : (b * (half * half)));
+      auto &&_once2 = (b * (half * half));
+      _result = (m ? _once2 % m : _once2);
     }
   }
   return _result;

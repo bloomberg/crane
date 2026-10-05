@@ -208,13 +208,13 @@ struct ValidatedPumpDeliveryTraceCase {
   using Minutes = uint64_t;
   using DIA_minutes = uint64_t;
   using Insulin_twentieth = uint64_t;
-  static inline const uint64_t ONE_UNIT = UINT64_C(20);
-  static inline const uint64_t BG_LEVEL2_HYPO = UINT64_C(54);
-  static inline const uint64_t BG_HYPO = UINT64_C(70);
-  static inline const uint64_t BG_HYPER = UINT64_C(180);
-  static inline const uint64_t BG_METER_MIN = UINT64_C(20);
-  static inline const uint64_t BG_METER_MAX = UINT64_C(600);
-  static inline const uint64_t CARBS_SANITY_MAX = UINT64_C(200);
+  static constexpr uint64_t ONE_UNIT = UINT64_C(20);
+  static constexpr uint64_t BG_LEVEL2_HYPO = UINT64_C(54);
+  static constexpr uint64_t BG_HYPO = UINT64_C(70);
+  static constexpr uint64_t BG_HYPER = UINT64_C(180);
+  static constexpr uint64_t BG_METER_MIN = UINT64_C(20);
+  static constexpr uint64_t BG_METER_MAX = UINT64_C(600);
+  static constexpr uint64_t CARBS_SANITY_MAX = UINT64_C(200);
   static bool bg_in_meter_range(const Mg_dL &bg);
   static bool carbs_reasonable(const Grams &carbs);
 
@@ -693,16 +693,16 @@ struct ValidatedPumpDeliveryTraceCase {
     }
   }
 
-  static inline const uint64_t prec_error_invalid_params = UINT64_C(1);
-  static inline const uint64_t prec_error_invalid_input = UINT64_C(2);
-  static inline const uint64_t prec_error_hypo = UINT64_C(3);
-  static inline const uint64_t prec_error_invalid_history = UINT64_C(4);
-  static inline const uint64_t prec_error_invalid_time = UINT64_C(5);
-  static inline const uint64_t prec_error_stacking = UINT64_C(6);
-  static inline const uint64_t prec_error_fault = UINT64_C(7);
-  static inline const uint64_t prec_error_tdd_exceeded = UINT64_C(8);
-  static inline const uint64_t prec_error_iob_high = UINT64_C(9);
-  static inline const uint64_t prec_error_extraction_unsafe = UINT64_C(10);
+  static constexpr uint64_t prec_error_invalid_params = UINT64_C(1);
+  static constexpr uint64_t prec_error_invalid_input = UINT64_C(2);
+  static constexpr uint64_t prec_error_hypo = UINT64_C(3);
+  static constexpr uint64_t prec_error_invalid_history = UINT64_C(4);
+  static constexpr uint64_t prec_error_invalid_time = UINT64_C(5);
+  static constexpr uint64_t prec_error_stacking = UINT64_C(6);
+  static constexpr uint64_t prec_error_fault = UINT64_C(7);
+  static constexpr uint64_t prec_error_tdd_exceeded = UINT64_C(8);
+  static constexpr uint64_t prec_error_iob_high = UINT64_C(9);
+  static constexpr uint64_t prec_error_extraction_unsafe = UINT64_C(10);
   static bool bolus_too_soon(uint64_t now, const List<BolusEvent> &history);
   static Insulin_twentieth cap_twentieths(uint64_t t);
   static PrecisionResult
@@ -910,10 +910,8 @@ struct ValidatedPumpDeliveryTraceCase {
   static inline const uint64_t pediatric_final_delivery = option_nat_default(
       final_delivery(RoundingMode::ROUNDTWENTIETH, pediatric_result),
       UINT64_C(0));
-  static inline const bool low_reservoir_blocks =
-      FaultStatus::fault_lowreservoir(UINT64_C(5)).fault_blocks_bolus();
-  static inline const bool unknown_fault_blocks =
-      FaultStatus::fault_unknown().fault_blocks_bolus();
+  static constexpr bool low_reservoir_blocks = true;
+  static constexpr bool unknown_fault_blocks = true;
 };
 
 #endif // INCLUDED_VALIDATED_PUMP_DELIVERY_TRACE

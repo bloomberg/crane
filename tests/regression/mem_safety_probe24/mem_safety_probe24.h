@@ -517,42 +517,20 @@ struct MemSafetyProbe24 {
     const variant_t &v() const { return v_; }
 
     uint64_t length() const {
-      const mylist<A> *_self = this;
-
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
-        const mylist<A> *_self;
-      };
-
-      /// CraneCont_Mycons: resumes after recursive call, then processes rest.
-      struct CraneCont_Mycons {};
-
-      using CraneFrame = std::variant<CraneEnter, CraneCont_Mycons>;
-      uint64_t _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified length: CraneEnter -> CraneCont_Mycons.
-      while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
-          const mylist<A> *_self = _f._self;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
-            _result = UINT64_C(0);
-          } else {
-            const auto &[a0, a1] =
-                std::get<typename mylist<A>::Mycons>(_sv.v());
-            _stack.emplace_back(CraneCont_Mycons{});
-            _stack.emplace_back(CraneEnter{crane_raw(a1)});
-          }
+      auto go_impl = [](auto &_self_go, const mylist<A> &l0,
+                        uint64_t acc) -> uint64_t {
+        if (std::holds_alternative<typename mylist<A>::Mynil>(l0.v())) {
+          return acc;
         } else {
-          auto _f = std::move(std::get<CraneCont_Mycons>(_frame));
-          _result = (UINT64_C(1) + std::move(_result));
+          const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(l0.v());
+          return _self_go(_self_go, *a1, (acc + UINT64_C(1)));
         }
+      };
+      {
+        const mylist<A> &_lc1_l0 = *this;
+        uint64_t _lc1_acc = UINT64_C(0);
+        return go_impl(go_impl, _lc1_l0, _lc1_acc);
       }
-      return _result;
     }
 
     mylist<A> app(mylist<A> l2) const {
@@ -674,10 +652,7 @@ struct MemSafetyProbe24 {
   };
 
   static uint64_t sum_list(const mylist<uint64_t> &l);
-  static inline const uint64_t test_self_annotate =
-      tree::node(tree::leaf(), UINT64_C(5), tree::leaf())
-          .self_annotate()
-          .tree_sum();
+  static constexpr uint64_t test_self_annotate = UINT64_C(10);
   static inline const uint64_t test_pair_self = []() {
     std::pair<tree, uint64_t> p =
         tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
@@ -701,14 +676,7 @@ struct MemSafetyProbe24 {
     return (p.first.tree_sum() + p.second);
   }();
   static mylist<uint64_t> tree_to_list(const tree &t);
-  static inline const uint64_t test_nested_ops = []() {
-    tree t = tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
-                        UINT64_C(7),
-                        tree::node(tree::leaf(), UINT64_C(11), tree::leaf()));
-    tree doubled = t.map_tree([](uint64_t n) { return (n * UINT64_C(2)); });
-    mylist<uint64_t> flat = tree_to_list(std::move(doubled));
-    return (sum_list(std::move(flat)) + std::move(t).tree_sum());
-  }();
+  static constexpr uint64_t test_nested_ops = UINT64_C(63);
   static inline const uint64_t test_clone_and_transform =
       tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
                  UINT64_C(2),
@@ -717,15 +685,7 @@ struct MemSafetyProbe24 {
   /// TEST 7: Build a tree from a list, using accumulated state.
   /// Tests interaction between list recursion and tree construction.
   static tree list_to_tree(const mylist<uint64_t> &l, tree acc);
-  static inline const uint64_t test_list_to_tree =
-      list_to_tree(
-          mylist<uint64_t>::mycons(
-              UINT64_C(1),
-              mylist<uint64_t>::mycons(
-                  UINT64_C(2), mylist<uint64_t>::mycons(
-                                   UINT64_C(3), mylist<uint64_t>::mynil()))),
-          tree::leaf())
-          .tree_sum();
+  static constexpr uint64_t test_list_to_tree = UINT64_C(6);
   /// TEST 8: Zip two trees, producing a list of pairs.
   /// Both trees are destructured simultaneously.
   static mylist<std::pair<uint64_t, uint64_t>> zip_trees(const tree &t1,

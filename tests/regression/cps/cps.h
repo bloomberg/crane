@@ -308,28 +308,11 @@ struct CPS {
   }
 
   static uint64_t count_evens(const List<uint64_t> &l);
-  static inline const uint64_t test_fact_5 = factorial(UINT64_C(5));
-  static inline const uint64_t test_fib_7 = fibonacci(UINT64_C(7));
-  static inline const uint64_t test_tree = tree_sum(
-      tree::node(tree::node(tree::leaf(UINT64_C(1)), tree::leaf(UINT64_C(2))),
-                 tree::leaf(UINT64_C(3))));
-  static inline const uint64_t test_list_sum = list_sum(List<uint64_t>::cons(
-      UINT64_C(10),
-      List<uint64_t>::cons(
-          UINT64_C(20),
-          List<uint64_t>::cons(UINT64_C(30), List<uint64_t>::nil()))));
-  static inline const uint64_t test_evens = count_evens(List<uint64_t>::cons(
-      UINT64_C(1),
-      List<uint64_t>::cons(
-          UINT64_C(2),
-          List<uint64_t>::cons(
-              UINT64_C(3),
-              List<uint64_t>::cons(
-                  UINT64_C(4),
-                  List<uint64_t>::cons(
-                      UINT64_C(5),
-                      List<uint64_t>::cons(UINT64_C(6),
-                                           List<uint64_t>::nil())))))));
+  static constexpr uint64_t test_fact_5 = UINT64_C(120);
+  static constexpr uint64_t test_fib_7 = UINT64_C(13);
+  static constexpr uint64_t test_tree = UINT64_C(6);
+  static constexpr uint64_t test_list_sum = UINT64_C(60);
+  static constexpr uint64_t test_evens = UINT64_C(3);
 };
 
 #endif // INCLUDED_CPS

@@ -56,10 +56,7 @@ struct ErasedMultiIndex {
     }
   };
 
-  static inline const uint64_t test_tagged = []() {
-    tagged t = tagged::mktagged(UINT64_C(42), true);
-    return std::move(t).template get_key<uint64_t>();
-  }();
+  static constexpr uint64_t test_tagged = UINT64_C(42);
 
   /// Heterogeneous list using type-indexed existential
   struct hlist {
@@ -119,41 +116,20 @@ struct ErasedMultiIndex {
     const variant_t &v() const { return v_; }
 
     uint64_t hlist_length() const {
-      const hlist *_self = this;
-
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
-        const hlist *_self;
-      };
-
-      /// CraneCont_HCons: resumes after recursive call, then processes rest.
-      struct CraneCont_HCons {};
-
-      using CraneFrame = std::variant<CraneEnter, CraneCont_HCons>;
-      uint64_t _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified hlist_length: CraneEnter -> CraneCont_HCons.
-      while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
-          const hlist *_self = _f._self;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename hlist::HNil>(_sv.v())) {
-            _result = UINT64_C(0);
-          } else {
-            const auto &[a, a1] = std::get<typename hlist::HCons>(_sv.v());
-            _stack.emplace_back(CraneCont_HCons{});
-            _stack.emplace_back(CraneEnter{crane_raw(a1)});
-          }
+      auto go_impl = [](auto &_self_go, const hlist &l0,
+                        uint64_t acc) -> uint64_t {
+        if (std::holds_alternative<typename hlist::HNil>(l0.v())) {
+          return acc;
         } else {
-          auto _f = std::move(std::get<CraneCont_HCons>(_frame));
-          _result = (UINT64_C(1) + std::move(_result));
+          const auto &[a, a1] = std::get<typename hlist::HCons>(l0.v());
+          return _self_go(_self_go, *a1, (acc + UINT64_C(1)));
         }
+      };
+      {
+        const hlist &_lc1_l0 = *this;
+        uint64_t _lc1_acc = UINT64_C(0);
+        return go_impl(go_impl, _lc1_l0, _lc1_acc);
       }
-      return _result;
     }
 
     template <typename T1, typename F1> T1 hlist_rec(T1 f, F1 &&f0) const {
@@ -255,12 +231,7 @@ struct ErasedMultiIndex {
     }
   };
 
-  static inline const uint64_t test_hlist = []() {
-    hlist l = hlist::hcons(
-        UINT64_C(42),
-        hlist::hcons(true, hlist::hcons(UINT64_C(7), hlist::hnil())));
-    return std::move(l).hlist_length();
-  }();
+  static constexpr uint64_t test_hlist = UINT64_C(3);
 };
 
 #endif // INCLUDED_ERASED_MULTI_INDEX

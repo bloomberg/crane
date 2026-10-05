@@ -64,8 +64,7 @@ struct MatchFallbackNat {
   }
 
   static uint64_t fallback(const maybe_nat &x);
-  static inline const uint64_t t = (fallback(maybe_nat::nonenat()) +
-                                    fallback(maybe_nat::somenat(UINT64_C(7))));
+  static constexpr uint64_t t = UINT64_C(7);
 };
 
 #endif // INCLUDED_MATCH_FALLBACK_NAT

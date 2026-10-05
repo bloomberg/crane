@@ -18,7 +18,7 @@ concept Def = requires {
 
 struct InstanceParamInstanceConstraint {
   struct DNat {
-    static uint64_t dflt() { return UINT64_C(9); }
+    constexpr static uint64_t dflt() { return UINT64_C(9); }
   };
 
   static_assert(Def<DNat, uint64_t>);
@@ -31,20 +31,7 @@ struct InstanceParamInstanceConstraint {
     }
   };
 
-  static inline const uint64_t go = []() -> uint64_t {
-    auto _cs = DOpt<DOpt<DNat, uint64_t>, std::optional<uint64_t>>::dflt();
-    if (_cs.has_value()) {
-      const std::optional<uint64_t> &o = *_cs;
-      if (o.has_value()) {
-        const uint64_t &n = *o;
-        return n;
-      } else {
-        return UINT64_C(0);
-      }
-    } else {
-      return UINT64_C(0);
-    }
-  }();
+  static constexpr uint64_t go = UINT64_C(9);
 };
 
 #endif // INCLUDED_INSTANCE_PARAM_INSTANCE_CONSTRAINT

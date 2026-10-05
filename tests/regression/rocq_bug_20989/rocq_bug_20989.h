@@ -17,7 +17,7 @@ concept S = requires {
 
 struct RocqBug20989 {
   struct A {
-    static inline const uint64_t n = UINT64_C(0);
+    static constexpr uint64_t n = UINT64_C(0);
   };
 
   template <S X> struct M {

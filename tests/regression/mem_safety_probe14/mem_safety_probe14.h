@@ -537,43 +537,18 @@ struct MemSafetyProbe14 {
   };
 
   static uint64_t sum_fns(const mylist<crane::fn<uint64_t(uint64_t)>> &l);
-  static inline const uint64_t use_make_adder = []() {
-    tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
-                        UINT64_C(20),
-                        tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
-    return std::move(t).make_adder(UINT64_C(5));
-  }();
-  static inline const uint64_t test_use_twice =
-      tree::node(tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
-                 UINT64_C(10),
-                 tree::node(tree::leaf(), UINT64_C(15), tree::leaf()))
-          .use_tree_twice();
-  static inline const uint64_t test_closure_consume =
-      tree::node(tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
-                 UINT64_C(10),
-                 tree::node(tree::leaf(), UINT64_C(15), tree::leaf()))
-          .closure_then_consume();
-  static inline const uint64_t test_two_closures =
-      tree::node(tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
-                 UINT64_C(10),
-                 tree::node(tree::leaf(), UINT64_C(15), tree::leaf()))
-          .two_closures();
+  static constexpr uint64_t use_make_adder = UINT64_C(65);
+  static constexpr uint64_t test_use_twice = UINT64_C(60);
+  static constexpr uint64_t test_closure_consume = UINT64_C(40);
+  static constexpr uint64_t test_two_closures = UINT64_C(93);
   /// TEST 5: Closure captures tree, tree is pattern-matched
   /// AFTER closure creation. The match destructures the tree.
   /// The closure must still hold the original tree.
   static uint64_t capture_then_match(tree t);
-  static inline const uint64_t test_capture_match =
-      capture_then_match(tree::node(
-          tree::node(tree::leaf(), UINT64_C(5), tree::leaf()), UINT64_C(10),
-          tree::node(tree::leaf(), UINT64_C(15), tree::leaf())));
+  static constexpr uint64_t test_capture_match = UINT64_C(60);
   static mylist<crane::fn<uint64_t(uint64_t)>> tree_level_fns(const tree &t,
                                                               uint64_t depth);
-  static inline const uint64_t test_level_fns = []() {
-    tree t = tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
-                        UINT64_C(7),
-                        tree::node(tree::leaf(), UINT64_C(11), tree::leaf()));
-    return sum_fns(tree_level_fns(std::move(t), UINT64_C(0)));
-  }();
+  static constexpr uint64_t test_level_fns = UINT64_C(235);
   static inline const uint64_t test_fn_and_val = []() {
     tree t = tree::node(tree::node(tree::leaf(), UINT64_C(100), tree::leaf()),
                         UINT64_C(200),
@@ -585,10 +560,7 @@ struct MemSafetyProbe14 {
   /// TEST 8: Large tree stress test. Many closures, deep recursion.
   static tree make_balanced(uint64_t n);
   static mylist<crane::fn<uint64_t(uint64_t)>> collect_closures(const tree &t);
-  static inline const uint64_t test_stress = []() {
-    tree t = make_balanced(UINT64_C(8));
-    return sum_fns(collect_closures(std::move(t)));
-  }();
+  static constexpr uint64_t test_stress = UINT64_C(36);
 };
 
 #endif // INCLUDED_MEM_SAFETY_PROBE14

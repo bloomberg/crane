@@ -141,14 +141,7 @@ struct RecordFieldNamedList {
   };
 
   static uint64_t weigh(const point &p);
-  static inline const uint64_t total = weigh(
-      point{UINT64_C(1),
-            List<uint64_t>::cons(
-                UINT64_C(1),
-                List<uint64_t>::cons(
-                    UINT64_C(2),
-                    List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))),
-            UINT64_C(5)});
+  static constexpr uint64_t total = UINT64_C(9);
 };
 
 #endif // INCLUDED_RECORD_FIELD_NAMED_LIST

@@ -26,7 +26,7 @@ struct ic {
 static_assert(C<ic, crane::obj>);
 
 struct InstanceMethodIgnoresArg {
-  static inline const uint64_t run = ic::m(crane::obj());
+  static constexpr uint64_t run = UINT64_C(1);
 };
 
 #endif // INCLUDED_INSTANCE_METHOD_IGNORES_ARG

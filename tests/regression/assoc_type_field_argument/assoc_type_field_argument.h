@@ -188,13 +188,7 @@ struct AssocTypeFieldArgument {
     return _tcI0::insert(a, _tcI0::insert(b, _tcI0::insert(c, _tcI0::empty())));
   }
 
-  static inline const uint64_t total =
-      (CNat::size(build3<CNat, List<uint64_t>>(UINT64_C(1), UINT64_C(2),
-                                               UINT64_C(3))) +
-       CPair::size(build3<CPair, List<std::pair<uint64_t, uint64_t>>>(
-           std::make_pair(UINT64_C(1), UINT64_C(1)),
-           std::make_pair(UINT64_C(2), UINT64_C(2)),
-           std::make_pair(UINT64_C(3), UINT64_C(3)))));
+  static constexpr uint64_t total = UINT64_C(6);
 };
 
 #endif // INCLUDED_ASSOC_TYPE_FIELD_ARGUMENT

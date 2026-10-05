@@ -1,7 +1,6 @@
 #ifndef INCLUDED_LIFTED_LAMBDA_TWO_USERS
 #define INCLUDED_LIFTED_LAMBDA_TWO_USERS
 
-#include "fn.h"
 #include <atomic>
 #include <cstdint>
 #include <memory>
@@ -84,21 +83,9 @@ struct LiftedLambdaTwoUsers {
   }
 
   static uint64_t depth(const t &x);
-  static inline const uint64_t one = []() {
-    return []() {
-      t x = t::n(t::l());
-      crane::fn<uint64_t(uint64_t)> f = [=](uint64_t) { return depth(x); };
-      return (f(UINT64_C(0)) + f(UINT64_C(1)));
-    }();
-  }();
-  static inline const uint64_t two = []() {
-    return []() {
-      t y = t::n(t::n(t::l()));
-      crane::fn<uint64_t(uint64_t)> g = [=](uint64_t) { return depth(y); };
-      return (g(UINT64_C(0)) + g(UINT64_C(1)));
-    }();
-  }();
-  static inline const uint64_t go = (one + two);
+  static constexpr uint64_t one = UINT64_C(2);
+  static constexpr uint64_t two = UINT64_C(4);
+  static constexpr uint64_t go = UINT64_C(6);
 };
 
 #endif // INCLUDED_LIFTED_LAMBDA_TWO_USERS

@@ -71,7 +71,7 @@ struct ForwardSpecAscii {
 
   static uint64_t helper_nat(uint64_t n);
   static uint64_t bump_node(const node &x);
-  static inline const uint64_t t = bump_node(node::anode(UINT64_C(2)));
+  static constexpr uint64_t t = UINT64_C(3);
 };
 
 #endif // INCLUDED_FORWARD_SPEC_ASCII

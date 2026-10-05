@@ -168,8 +168,7 @@ struct PromOps {
   };
 
   static uint64_t prom_data_or_zero(const state1 &s);
-  static inline const uint64_t test1 =
-      prom_data_or_zero(state1{UINT64_C(77), false});
+  static constexpr uint64_t test1 = UINT64_C(0);
 
   struct state2 {
     uint64_t acc2;
@@ -179,8 +178,7 @@ struct PromOps {
   };
 
   static uint64_t flagged_sum(const state2 &s);
-  static inline const uint64_t test2 =
-      flagged_sum(state2{UINT64_C(3), UINT64_C(12), UINT64_C(77), false});
+  static constexpr uint64_t test2 = UINT64_C(15);
 
   struct state3 {
     uint64_t acc3;
@@ -202,64 +200,8 @@ struct PromOps {
 
   static state3 set_prom_params3(const state3 &s, uint64_t addr, uint64_t data,
                                  bool enable);
-  static inline const uint64_t test3 = []() {
-    return []() {
-      state3 s =
-          state3{UINT64_C(1),
-                 List<uint64_t>::cons(
-                     UINT64_C(2),
-                     List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())),
-                 false,
-                 UINT64_C(4),
-                 List<uint64_t>::cons(UINT64_C(5), List<uint64_t>::nil()),
-                 List<uint64_t>::cons(UINT64_C(6), List<uint64_t>::nil()),
-                 UINT64_C(0),
-                 UINT64_C(0),
-                 List<uint64_t>::cons(UINT64_C(7), List<uint64_t>::nil()),
-                 UINT64_C(0),
-                 List<uint64_t>::cons(
-                     UINT64_C(8),
-                     List<uint64_t>::cons(UINT64_C(9), List<uint64_t>::nil())),
-                 true,
-                 UINT64_C(0),
-                 UINT64_C(0),
-                 false};
-      state3 s_ =
-          set_prom_params3(std::move(s), UINT64_C(21), UINT64_C(144), true);
-      return ((s_.prom_addr3 +
-               (s_.prom_enable3 ? std::move(s_).prom_data3 : UINT64_C(0))) +
-              s_.regs3.length());
-    }();
-  }();
-  static inline const uint64_t test4 = []() {
-    return []() {
-      state3 s =
-          state3{UINT64_C(1),
-                 List<uint64_t>::cons(
-                     UINT64_C(2),
-                     List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())),
-                 false,
-                 UINT64_C(4),
-                 List<uint64_t>::cons(UINT64_C(5), List<uint64_t>::nil()),
-                 List<uint64_t>::cons(UINT64_C(6), List<uint64_t>::nil()),
-                 UINT64_C(0),
-                 UINT64_C(0),
-                 List<uint64_t>::cons(UINT64_C(7), List<uint64_t>::nil()),
-                 UINT64_C(0),
-                 List<uint64_t>::cons(
-                     UINT64_C(8),
-                     List<uint64_t>::cons(UINT64_C(9), List<uint64_t>::nil())),
-                 true,
-                 UINT64_C(0),
-                 UINT64_C(0),
-                 false};
-      state3 s_ =
-          set_prom_params3(std::move(s), UINT64_C(21), UINT64_C(144), true);
-      return ((s_.prom_addr3 +
-               (s_.prom_enable3 ? std::move(s_).prom_data3 : UINT64_C(0))) +
-              s_.regs3.length());
-    }();
-  }();
+  static constexpr uint64_t test3 = UINT64_C(167);
+  static constexpr uint64_t test4 = UINT64_C(167);
 
   struct state5 {
     uint64_t acc5;
@@ -272,27 +214,7 @@ struct PromOps {
 
   static state5 set_prom_params5(const state5 &s, uint64_t addr, uint64_t data,
                                  bool enable);
-  static inline const uint64_t test5 = []() {
-    return []() {
-      state5 s = state5{
-          UINT64_C(3),
-          List<uint64_t>::cons(
-              UINT64_C(1),
-              List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())),
-          List<uint64_t>::cons(
-              UINT64_C(9),
-              List<uint64_t>::cons(
-                  UINT64_C(8),
-                  List<uint64_t>::cons(UINT64_C(7), List<uint64_t>::nil()))),
-          UINT64_C(0),
-          UINT64_C(0),
-          false};
-      state5 s_ =
-          set_prom_params5(std::move(s), UINT64_C(23), UINT64_C(77), true);
-      return ((s_.acc5 + s_.prom_addr5) +
-              (s_.prom_enable5 ? std::move(s_).prom_data5 : UINT64_C(0)));
-    }();
-  }();
+  static constexpr uint64_t test5 = UINT64_C(103);
 
   struct state6 {
     List<uint64_t> rom6;
@@ -312,9 +234,7 @@ struct PromOps {
                   UINT64_C(12),
                   List<uint64_t>::cons(UINT64_C(13), List<uint64_t>::nil())))),
       UINT64_C(0), UINT64_C(0), false};
-  static inline const bool test6 = Bool::eqb(
-      set_prom_params6(sample6, UINT64_C(2), UINT64_C(99), true).prom_enable6,
-      true);
+  static constexpr bool test6 = true;
 
   struct state7 {
     List<uint64_t> regs7;
@@ -384,9 +304,7 @@ struct PromOps {
                   UINT64_C(12),
                   List<uint64_t>::cons(UINT64_C(13), List<uint64_t>::nil())))),
       UINT64_C(0), UINT64_C(0), false};
-  static inline const bool test9 =
-      set_prom_params9(sample9, UINT64_C(12), UINT64_C(99), true)
-          .rom9.length() == sample9.rom9.length();
+  static constexpr bool test9 = true;
 
   struct state10 {
     List<uint64_t> regs10;
@@ -447,56 +365,16 @@ struct PromOps {
       UINT64_C(0),
       UINT64_C(0),
       false};
-  static inline const bool check_pc_bound = []() {
-    state10 after = execute_wpm10(
-        set_prom_params10(sample10, UINT64_C(3), UINT64_C(99), true));
-    return std::move(after).pc10 < UINT64_C(4096);
-  }();
-  static inline const bool check_acc_bound = []() {
-    state10 after = execute_wpm10(
-        set_prom_params10(sample10, UINT64_C(3), UINT64_C(99), true));
-    return std::move(after).acc10 < UINT64_C(16);
-  }();
-  static inline const bool check_bank_bound = []() {
-    state10 after = execute_wpm10(
-        set_prom_params10(sample10, UINT64_C(3), UINT64_C(99), true));
-    return std::move(after).cur_bank10 < UINT64_C(8);
-  }();
-  static inline const bool check_regs_length = []() {
-    state10 after = execute_wpm10(
-        set_prom_params10(sample10, UINT64_C(3), UINT64_C(99), true));
-    return std::move(after).regs10.length() == UINT64_C(4);
-  }();
-  static inline const bool check_rom_ports_length = []() {
-    state10 after = execute_wpm10(
-        set_prom_params10(sample10, UINT64_C(3), UINT64_C(99), true));
-    return std::move(after).rom_ports10.length() == UINT64_C(4);
-  }();
-  static inline const bool check_sel_rom_bound = []() {
-    state10 after = execute_wpm10(
-        set_prom_params10(sample10, UINT64_C(3), UINT64_C(99), true));
-    return std::move(after).sel_rom10 < UINT64_C(16);
-  }();
-  static inline const bool check_stack_length = []() {
-    state10 after = execute_wpm10(
-        set_prom_params10(sample10, UINT64_C(3), UINT64_C(99), true));
-    return std::move(after).stack10.length() <= UINT64_C(3);
-  }();
-  static inline const bool check_prom_addr_bound = []() {
-    state10 after = execute_wpm10(
-        set_prom_params10(sample10, UINT64_C(2048), UINT64_C(99), true));
-    return std::move(after).prom_addr10 < UINT64_C(4096);
-  }();
-  static inline const bool check_prom_data_bound = []() {
-    state10 after = execute_wpm10(
-        set_prom_params10(sample10, UINT64_C(3), UINT64_C(155), true));
-    return std::move(after).prom_data10 < UINT64_C(256);
-  }();
-  static inline const bool check_rom_length = []() {
-    state10 after = execute_wpm10(
-        set_prom_params10(sample10, UINT64_C(3), UINT64_C(99), true));
-    return std::move(after).rom10.length() == UINT64_C(8);
-  }();
+  static constexpr bool check_pc_bound = true;
+  static constexpr bool check_acc_bound = true;
+  static constexpr bool check_bank_bound = true;
+  static constexpr bool check_regs_length = true;
+  static constexpr bool check_rom_ports_length = true;
+  static constexpr bool check_sel_rom_bound = true;
+  static constexpr bool check_stack_length = true;
+  static constexpr bool check_prom_addr_bound = true;
+  static constexpr bool check_prom_data_bound = true;
+  static constexpr bool check_rom_length = true;
   static inline const bool test10 =
       (((((((((check_pc_bound && check_acc_bound) && check_bank_bound) &&
              check_regs_length) &&
@@ -522,8 +400,7 @@ struct PromOps {
               UINT64_C(0),
               List<uint64_t>::cons(UINT64_C(0), List<uint64_t>::nil()))),
       UINT64_C(1), UINT64_C(9), true};
-  static inline const uint64_t test11 = ListDef::template nth<uint64_t>(
-      UINT64_C(1), execute_wpm11(sample11).rom11, UINT64_C(0));
+  static constexpr uint64_t test11 = UINT64_C(9);
   static inline const std::pair<
       std::pair<
           std::pair<

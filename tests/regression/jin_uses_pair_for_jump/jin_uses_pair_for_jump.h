@@ -120,8 +120,7 @@ struct JinUsesPairForJump {
                                 List<uint64_t>::cons(
                                     UINT64_C(0), List<uint64_t>::nil())))))),
             UINT64_C(300)};
-  static inline const bool t =
-      execute_jin(sample, UINT64_C(3)).pc == UINT64_C(555);
+  static constexpr bool t = false;
 };
 
 template <typename T1>

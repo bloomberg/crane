@@ -96,8 +96,7 @@ struct IndShadowsGeneratedMembers {
   }
 
   static uint64_t depth(const variant_t0 &x);
-  static inline const uint64_t run =
-      depth(variant_t0::V_p(variant_t0::V_p(variant_t0::V_mut_(UINT64_C(2)))));
+  static constexpr uint64_t run = UINT64_C(4);
 };
 
 #endif // INCLUDED_IND_SHADOWS_GENERATED_MEMBERS

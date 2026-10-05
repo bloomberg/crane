@@ -194,6 +194,11 @@ VERNAC COMMAND EXTEND ExtractionTriviallyCopyable CLASSIFIED AS SIDEFF
   -> { Table.extraction_trivially_copyable l }
 END
 
+VERNAC COMMAND EXTEND CraneSemantics CLASSIFIED AS SIDEFF
+| [ "Crane" "Semantics" global(x) ":=" string(s) ]
+  -> { Mapping_semantics.declare x s }
+END
+
 VERNAC COMMAND EXTEND ExtractionReuse CLASSIFIED AS SIDEFF
 | [ "Crane" "Reuse" ne_global_list(l) ]
   -> { extraction_reuse true l }

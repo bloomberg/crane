@@ -266,8 +266,7 @@ struct RamStateOps {
       empty_bank, UINT64_C(2), upd_port_in_chip(empty_chip, UINT64_C(9)));
   static inline const List<ram_bank> patched_system =
       upd_bank_in_sys(init_state, UINT64_C(3), patched_bank);
-  static inline const uint64_t t =
-      (get_stat(empty_reg, UINT64_C(2)) + reset_state(cleared_state).state_acc);
+  static constexpr uint64_t t = UINT64_C(0);
 };
 
 template <typename T1> List<T1> ListDef::repeat(const T1 &x, uint64_t n) {

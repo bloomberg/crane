@@ -219,27 +219,22 @@ struct MemSafetyProbe21 {
   /// a constructed tree. The loopifier must store the new tree
   /// somewhere that outlives the iteration.
   static uint64_t grow_and_sum(const tree &t, uint64_t n);
-  static inline const uint64_t test_grow_and_sum =
-      grow_and_sum(tree::leaf(), UINT64_C(3));
+  static constexpr uint64_t test_grow_and_sum = UINT64_C(6);
   /// TEST 2: Non-tail recursive with constructed tree argument.
   /// The recursive call creates a new tree AND uses the original.
   static uint64_t double_grow(const tree &t, uint64_t n);
-  static inline const uint64_t test_double_grow = double_grow(
-      tree::node(tree::leaf(), UINT64_C(5), tree::leaf()), UINT64_C(2));
+  static constexpr uint64_t test_double_grow = UINT64_C(15);
   /// TEST 3: Two recursive calls, one with original tree, one with
   /// constructed tree.
   static uint64_t branch_grow(const tree &t, uint64_t n);
-  static inline const uint64_t test_branch_grow = branch_grow(
-      tree::node(tree::leaf(), UINT64_C(10), tree::leaf()), UINT64_C(2));
+  static constexpr uint64_t test_branch_grow = UINT64_C(14);
   /// TEST 4: Recursive call where the tree argument is built from
   /// MULTIPLE constructor calls with the original tree embedded.
   static uint64_t embed_grow(const tree &t, uint64_t n);
-  static inline const uint64_t test_embed_grow =
-      embed_grow(tree::leaf(), UINT64_C(2));
+  static constexpr uint64_t test_embed_grow = UINT64_C(10);
   /// TEST 5: Accumulator pattern with tree building.
   static tree accum_tree(tree acc, uint64_t n);
-  static inline const uint64_t test_accum_tree =
-      tree_sum(accum_tree(tree::leaf(), UINT64_C(4)));
+  static constexpr uint64_t test_accum_tree = UINT64_C(10);
 
   /// TEST 6: CPS-like pattern where the continuation builds a tree.
   static uint64_t cps_sum(
@@ -281,21 +276,14 @@ struct MemSafetyProbe21 {
     return _result;
   }
 
-  static inline const uint64_t test_cps_sum =
-      cps_sum(tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
-                         UINT64_C(2),
-                         tree::node(tree::leaf(), UINT64_C(3), tree::leaf())),
-              [](uint64_t n) { return n; });
+  static constexpr uint64_t test_cps_sum = UINT64_C(6);
   /// TEST 7: Mutually-referencing recursive call with tree
   /// construction at each level.
   static uint64_t weave(const tree &t1, const tree &t2, uint64_t n);
-  static inline const uint64_t test_weave =
-      weave(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
-            tree::node(tree::leaf(), UINT64_C(2), tree::leaf()), UINT64_C(2));
+  static constexpr uint64_t test_weave = UINT64_C(9);
   /// TEST 8: Deep nesting with tree_sum at each level before recursion.
   static uint64_t sum_and_grow(const tree &t, uint64_t n);
-  static inline const uint64_t test_sum_and_grow = sum_and_grow(
-      tree::node(tree::leaf(), UINT64_C(1), tree::leaf()), UINT64_C(3));
+  static constexpr uint64_t test_sum_and_grow = UINT64_C(15);
 };
 
 #endif // INCLUDED_MEM_SAFETY_PROBE21

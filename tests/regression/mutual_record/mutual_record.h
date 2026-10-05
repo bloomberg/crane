@@ -202,9 +202,9 @@ struct MutualRecord {
       List<employee>::cons(
           emp1, List<employee>::cons(
                     emp2, List<employee>::cons(emp3, List<employee>::nil()))));
-  static inline const uint64_t test_total_salary = dept_total_salary(test_dept);
-  static inline const uint64_t test_dept_count = dept_count(test_dept);
-  static inline const uint64_t test_dept_id = dept_id(test_dept);
+  static constexpr uint64_t test_total_salary = UINT64_C(180);
+  static constexpr uint64_t test_dept_count = UINT64_C(3);
+  static constexpr uint64_t test_dept_id = UINT64_C(100);
 };
 
 #endif // INCLUDED_MUTUAL_RECORD

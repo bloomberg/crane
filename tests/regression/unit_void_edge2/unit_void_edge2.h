@@ -31,12 +31,8 @@ struct UnitVoidEdge2 {
   static uint64_t mono_bind_match();
   static uint64_t mono_bind_opaque();
   static void count_down_unit(uint64_t n);
-  static inline const uint64_t call_fixpoint = UINT64_C(7);
-  static inline const uint64_t fixpoint_result_used = []() {
-    count_down_unit(UINT64_C(50));
-    std::monostate x = std::monostate{};
-    return take_unit(x);
-  }();
+  static constexpr uint64_t call_fixpoint = UINT64_C(7);
+  static constexpr uint64_t fixpoint_result_used = UINT64_C(42);
 
   template <typename F0> static uint64_t call_and_discard(F0 &&, uint64_t n) {
     return n;
@@ -56,8 +52,7 @@ struct UnitVoidEdge2 {
     return f(std::move(x0_));
   }
 
-  static inline const uint64_t apply_take_unit =
-      apply<std::monostate, uint64_t>(take_unit, std::monostate{});
+  static constexpr uint64_t apply_take_unit = UINT64_C(42);
   static std::optional<std::monostate> make_some_unit(bool b);
   static uint64_t use_option_unit(const std::optional<std::monostate> &o);
   static uint64_t compose_option_unit(bool b1, bool b2);
@@ -117,27 +112,20 @@ struct UnitVoidEdge2 {
     return a0;
   }
 
-  static inline const uint64_t use_pair = []() {
-    pair<uint64_t, std::monostate> p = make_nat_unit_pair(UINT64_C(7));
-    return get_fst<uint64_t, std::monostate>(std::move(p));
-  }();
-  static inline const uint64_t test_let_use = let_use_as_arg(UINT64_C(5));
-  static inline const uint64_t test_let_match = let_match_unit(UINT64_C(3));
-  static inline const uint64_t test_let_chain = let_chain_use(UINT64_C(8));
-  static inline const uint64_t test_let_if_t = let_use_in_if(UINT64_C(4), true);
-  static inline const uint64_t test_let_if_f =
-      let_use_in_if(UINT64_C(4), false);
-  static inline const uint64_t test_call_fix = call_fixpoint;
-  static inline const uint64_t test_fix_used = fixpoint_result_used;
-  static inline const uint64_t test_call_discard =
-      call_and_discard(opaque_unit, UINT64_C(11));
-  static inline const uint64_t test_call_use =
-      call_and_use(opaque_unit, UINT64_C(22));
-  static inline const uint64_t test_apply_take = apply_take_unit;
-  static inline const uint64_t test_option_use =
-      use_option_unit(std::make_optional<std::monostate>(std::monostate{}));
-  static inline const uint64_t test_compose = compose_option_unit(true, false);
-  static inline const uint64_t test_use_pair = use_pair;
+  static constexpr uint64_t use_pair = UINT64_C(7);
+  static constexpr uint64_t test_let_use = UINT64_C(42);
+  static constexpr uint64_t test_let_match = UINT64_C(3);
+  static constexpr uint64_t test_let_chain = UINT64_C(42);
+  static constexpr uint64_t test_let_if_t = UINT64_C(42);
+  static constexpr uint64_t test_let_if_f = UINT64_C(0);
+  static constexpr uint64_t test_call_fix = UINT64_C(7);
+  static constexpr uint64_t test_fix_used = UINT64_C(42);
+  static constexpr uint64_t test_call_discard = UINT64_C(11);
+  static constexpr uint64_t test_call_use = UINT64_C(42);
+  static constexpr uint64_t test_apply_take = UINT64_C(42);
+  static constexpr uint64_t test_option_use = UINT64_C(42);
+  static constexpr uint64_t test_compose = UINT64_C(42);
+  static constexpr uint64_t test_use_pair = UINT64_C(7);
 };
 
 #endif // INCLUDED_UNIT_VOID_EDGE2

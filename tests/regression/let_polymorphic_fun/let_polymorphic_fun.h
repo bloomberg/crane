@@ -2,7 +2,6 @@
 #define INCLUDED_LET_POLYMORPHIC_FUN
 
 #include "crane_fn.h"
-#include "fn.h"
 #include "obj.h"
 #include "small_vector.h"
 #include <atomic>
@@ -136,21 +135,7 @@ public:
 /// site was translated first.  The other two uses then have no matching
 /// overload.
 struct LetPolymorphicFun {
-  template <typename T1>
-  static uint64_t run_crane_f(const T1 x, const List<T1> l) {
-    return List<T1>::cons(x, l).length();
-  }
-
-  static inline const uint64_t run = []() {
-    return ((run_crane_f(UINT64_C(1),
-                         List<uint64_t>::cons(
-                             UINT64_C(2),
-                             List<uint64_t>::cons(UINT64_C(3),
-                                                  List<uint64_t>::nil()))) +
-             run_crane_f(true, List<bool>::nil())) +
-            run_crane_f(crane::fn([](uint64_t x) { return (x + 1); }),
-                        List<crane::fn<uint64_t(uint64_t)>>::nil()));
-  }();
+  static constexpr uint64_t run = UINT64_C(5);
 };
 
 #endif // INCLUDED_LET_POLYMORPHIC_FUN

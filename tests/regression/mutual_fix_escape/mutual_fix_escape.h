@@ -11,21 +11,9 @@ struct MutualFixEscape {
   static std::pair<crane::fn<bool(uint64_t)>, crane::fn<bool(uint64_t)>>
   make_even_odd(uint64_t _x);
   /// test1: even(4) = true, odd(3) = true. 1+1=2.
-  static inline const uint64_t test1 = []() {
-    return []() -> uint64_t {
-      auto [ev, od] = make_even_odd(UINT64_C(0));
-      return ((ev(UINT64_C(4)) ? UINT64_C(1) : UINT64_C(0)) +
-              (od(UINT64_C(3)) ? UINT64_C(1) : UINT64_C(0)));
-    }();
-  }();
+  static constexpr uint64_t test1 = UINT64_C(2);
   /// test2: even(5) = false, odd(6) = false. 0+0=0.
-  static inline const uint64_t test2 = []() {
-    return []() -> uint64_t {
-      auto [ev, od] = make_even_odd(UINT64_C(0));
-      return ((ev(UINT64_C(5)) ? UINT64_C(1) : UINT64_C(0)) +
-              (od(UINT64_C(6)) ? UINT64_C(1) : UINT64_C(0)));
-    }();
-  }();
+  static constexpr uint64_t test2 = UINT64_C(0);
   /// A mutual fixpoint that captures a parameter base.
   static std::pair<crane::fn<uint64_t(uint64_t)>, crane::fn<uint64_t(uint64_t)>>
   make_count_pair(uint64_t base);
@@ -33,10 +21,7 @@ struct MutualFixEscape {
   /// count_even(3) = 1+count_odd(2) = 1+(1+count_even(1))
   /// = 1+(1+(1+count_odd(0))) = 1+1+1+20 = 23.
   /// Total = 10 + 23 = 33.
-  static inline const uint64_t test3 = []() -> uint64_t {
-    auto [ce, _x] = make_count_pair(UINT64_C(10));
-    return (ce(UINT64_C(0)) + ce(UINT64_C(3)));
-  }();
+  static constexpr uint64_t test3 = UINT64_C(33);
   /// test4: with noise. count_odd(1) = 1+count_even(0) = 1+5 = 6.
   static inline const uint64_t test4 = []() {
     std::pair<crane::fn<uint64_t(uint64_t)>, crane::fn<uint64_t(uint64_t)>> p =

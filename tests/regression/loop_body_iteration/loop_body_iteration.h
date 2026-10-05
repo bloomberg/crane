@@ -128,7 +128,7 @@ struct LoopBodyIteration {
       UINT64_C(0), List<uint64_t>::cons(
                        UINT64_C(1), List<uint64_t>::cons(
                                         UINT64_C(2), List<uint64_t>::nil())))};
-  static inline const uint64_t t = get_reg0(iterate_body(UINT64_C(5), sample));
+  static constexpr uint64_t t = UINT64_C(5);
 };
 
 template <typename T1>

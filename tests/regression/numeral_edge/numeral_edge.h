@@ -98,31 +98,31 @@ public:
 
 struct NumeralEdge {
   /// 1. Zero
-  static inline const uint64_t nat_zero = UINT64_C(0);
-  static inline const unsigned int n_zero = 0u;
-  static inline const int64_t z_zero = INT64_C(0);
+  static constexpr uint64_t nat_zero = UINT64_C(0);
+  static constexpr unsigned int n_zero = 0u;
+  static constexpr int64_t z_zero = INT64_C(0);
   /// 2. Small values
-  static inline const uint64_t nat_one = UINT64_C(1);
-  static inline const uint64_t nat_ten = UINT64_C(10);
-  static inline const int64_t z_neg = INT64_C(-5);
-  static inline const int64_t z_neg_one = INT64_C(-1);
+  static constexpr uint64_t nat_one = UINT64_C(1);
+  static constexpr uint64_t nat_ten = UINT64_C(10);
+  static constexpr int64_t z_neg = INT64_C(-5);
+  static constexpr int64_t z_neg_one = INT64_C(-1);
   /// 3. Moderate values
-  static inline const uint64_t nat_hundred = UINT64_C(100);
-  static inline const int64_t z_thousand = INT64_C(1000);
-  static inline const unsigned int n_large = 65535u;
+  static constexpr uint64_t nat_hundred = UINT64_C(100);
+  static constexpr int64_t z_thousand = INT64_C(1000);
+  static constexpr unsigned int n_large = 65535u;
   /// 4. Powers of 2
-  static inline const uint64_t nat_pow2_8 = UINT64_C(256);
-  static inline const uint64_t nat_pow2_16 = UINT64_C(65536);
-  static inline const int64_t z_pow2_30 = INT64_C(1073741824);
+  static constexpr uint64_t nat_pow2_8 = UINT64_C(256);
+  static constexpr uint64_t nat_pow2_16 = UINT64_C(65536);
+  static constexpr int64_t z_pow2_30 = INT64_C(1073741824);
   /// 5. Numerals in arithmetic expressions
-  static inline const uint64_t add_numerals = (UINT64_C(100) + UINT64_C(200));
+  static constexpr uint64_t add_numerals = UINT64_C(300);
   static inline const int64_t mul_numerals = static_cast<int64_t>(
       static_cast<uint64_t>(INT64_C(10)) * static_cast<uint64_t>(INT64_C(20)));
   static inline const int64_t sub_numerals = static_cast<int64_t>(
       static_cast<uint64_t>(INT64_C(100)) - static_cast<uint64_t>(INT64_C(1)));
   /// 6. Numeral as function argument
   static uint64_t take_nat(uint64_t n);
-  static inline const uint64_t test_arg = take_nat(UINT64_C(42));
+  static constexpr uint64_t test_arg = UINT64_C(43);
   /// 7. Numeral in list
   static inline const List<uint64_t> nat_list = List<uint64_t>::cons(
       UINT64_C(1), List<uint64_t>::cons(

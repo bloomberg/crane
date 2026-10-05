@@ -362,26 +362,7 @@ struct TranslateIfunLambda {
   static inline const Itree<Sum1<AE, bE, crane::obj>, Nat> t =
       lift<Nat>(Itree<bE, Nat>::go(ItreeF<bE, Nat, Itree<bE, Nat>>::retf(
           Nat::s(Nat::s(Nat::s(Nat::o()))))));
-  static inline const bool is_three = []() {
-    auto &&_sv = []() {
-      auto &&_sv0 = t;
-      const auto &[_observe0] =
-          std::get<typename Itree<Sum1<AE, bE, crane::obj>, Nat>::Go>(_sv0.v());
-      return _observe0;
-    }();
-    if (std::holds_alternative<
-            typename ItreeF<Sum1<AE, bE, crane::obj>, Nat,
-                            Itree<Sum1<AE, bE, crane::obj>, Nat>>::RetF>(
-            _sv.v())) {
-      const auto &[r] =
-          std::get<typename ItreeF<Sum1<AE, bE, crane::obj>, Nat,
-                                   Itree<Sum1<AE, bE, crane::obj>, Nat>>::RetF>(
-              _sv.v());
-      return r.eqb(Nat::s(Nat::s(Nat::s(Nat::o()))));
-    } else {
-      return false;
-    }
-  }();
+  static constexpr bool is_three = true;
 };
 
 template <typename T1, typename T2, typename T3>

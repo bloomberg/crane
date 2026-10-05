@@ -113,8 +113,7 @@ struct SigSubset {
   }
 
   static uint64_t head(const Sig<lst> &p);
-  static inline const uint64_t go =
-      head(Sig<lst>::exist(lst::cons(UINT64_C(7), lst::nil())));
+  static constexpr uint64_t go = UINT64_C(7);
 };
 
 #endif // INCLUDED_SIG_PROP_COMMENT

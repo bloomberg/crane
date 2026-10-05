@@ -12,7 +12,7 @@ concept Numeric = requires {
 
 struct TodoTypeclassRequires {
   struct NatNumeric {
-    static uint64_t to_nat_val(uint64_t n) { return n; }
+    constexpr static uint64_t to_nat_val(uint64_t n) { return n; }
   };
 
   static_assert(Numeric<NatNumeric, uint64_t>);
@@ -23,8 +23,7 @@ struct TodoTypeclassRequires {
     return (_tcI0::to_nat_val(x) + _tcI0::to_nat_val(x));
   }
 
-  static inline const uint64_t test_result =
-      double_val<NatNumeric, uint64_t>(UINT64_C(7));
+  static constexpr uint64_t test_result = UINT64_C(14);
 };
 
 #endif // INCLUDED_TODO_TYPECLASS_REQUIRES

@@ -1053,10 +1053,10 @@ template <typename K, typename V> struct SkipList {
     return stm::readTVar<T2>(std::move(pair)->value);
   }
 
-  static inline const uint64_t e_SUCCESS = UINT64_C(0);
-  static inline const uint64_t e_NOT_FOUND = UINT64_C(1);
-  static inline const uint64_t e_DUPLICATE = UINT64_C(2);
-  static inline const uint64_t e_INVALID = UINT64_C(3);
+  static constexpr uint64_t e_SUCCESS = UINT64_C(0);
+  static constexpr uint64_t e_NOT_FOUND = UINT64_C(1);
+  static constexpr uint64_t e_DUPLICATE = UINT64_C(2);
+  static constexpr uint64_t e_INVALID = UINT64_C(3);
 
   template <typename T1, typename T2>
   static std::pair<uint64_t, std::optional<std::shared_ptr<SkipNode<T1, T2>>>>
@@ -1076,9 +1076,10 @@ template <typename K, typename V> struct SkipList {
 
   template <typename T1, typename T2>
   static SkipList<T1, T2> create(const T1 &dummyKey, const T2 &dummyVal) {
+    auto &&_once1 = 16u;
     std::shared_ptr<SkipNode<T1, T2>> headNode = SkipNode<T1, T2>::create(
         dummyKey, dummyVal,
-        (((16u - UINT64_C(1)) > 16u ? 0 : (16u - UINT64_C(1)))));
+        (((_once1 - UINT64_C(1)) > _once1 ? 0 : (_once1 - UINT64_C(1)))));
     stm::TVar<uint64_t> lvlTV = stm::newTVar(UINT64_C(0));
     stm::TVar<uint64_t> lenTV = stm::newTVar(UINT64_C(0));
     return SkipList<T1, T2>{std::move(headNode), 16u, std::move(lvlTV),

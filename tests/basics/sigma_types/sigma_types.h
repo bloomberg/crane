@@ -159,13 +159,9 @@ struct SigmaTypes {
   static Sig<uint64_t> double_positive(uint64_t n);
   static uint64_t use_nat_double(uint64_t n);
   static List<uint64_t> positives_up_to(uint64_t k);
-  static inline const uint64_t test_double_5 = use_nat_double(UINT64_C(5));
-  static inline const uint64_t test_positive_3 = get_positive(UINT64_C(3));
-  static inline const uint64_t test_double_pos = []() {
-    const auto &_sv = double_positive(UINT64_C(3));
-    const auto &[x] = _sv;
-    return x;
-  }();
+  static constexpr uint64_t test_double_5 = UINT64_C(10);
+  static constexpr uint64_t test_positive_3 = UINT64_C(4);
+  static constexpr uint64_t test_double_pos = UINT64_C(8);
   static inline const List<uint64_t> test_positives =
       positives_up_to(UINT64_C(5));
 };

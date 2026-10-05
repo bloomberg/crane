@@ -281,9 +281,8 @@ struct STRefNat {
 struct STMonadTests {
   struct nat_idx {
     static List<uint64_t> range(uint64_t fp, uint64_t sp) {
-      return ListDef::seq(fp, ((((UINT64_C(1) + sp) - fp) > (UINT64_C(1) + sp)
-                                    ? 0
-                                    : ((UINT64_C(1) + sp) - fp))));
+      auto &&_once1 = (UINT64_C(1) + sp);
+      return ListDef::seq(fp, (((_once1 - fp) > _once1 ? 0 : (_once1 - fp))));
     }
 
     static std::optional<uint64_t> index(uint64_t fp, uint64_t sp, uint64_t i) {
@@ -294,25 +293,26 @@ struct STMonadTests {
       }
     }
 
-    static uint64_t rangeSize(uint64_t fp, uint64_t sp) {
-      return ((((UINT64_C(1) + sp) - fp) > (UINT64_C(1) + sp)
-                   ? 0
-                   : ((UINT64_C(1) + sp) - fp)));
+    constexpr static uint64_t rangeSize(uint64_t fp, uint64_t sp) {
+      auto &&_once2 = (UINT64_C(1) + sp);
+      return (((_once2 - fp) > _once2 ? 0 : (_once2 - fp)));
     }
 
-    static uint64_t toNat(uint64_t n) { return n; }
+    constexpr static uint64_t toNat(uint64_t n) { return n; }
 
-    static uint64_t fromNat(uint64_t n) { return n; }
+    constexpr static uint64_t fromNat(uint64_t n) { return n; }
 
-    static uint64_t suc(uint64_t x) { return (x + 1); }
+    constexpr static uint64_t suc(uint64_t x) { return (x + 1); }
 
-    static uint64_t sub(uint64_t a0, uint64_t a1) {
+    constexpr static uint64_t sub(uint64_t a0, uint64_t a1) {
       return (((a0 - a1) > a0 ? 0 : (a0 - a1)));
     }
 
-    static uint64_t max(uint64_t a0, uint64_t a1) { return std::max(a0, a1); }
+    constexpr static uint64_t max(uint64_t a0, uint64_t a1) {
+      return std::max(a0, a1);
+    }
 
-    static uint64_t zero() { return UINT64_C(0); }
+    constexpr static uint64_t zero() { return UINT64_C(0); }
   };
 
   static_assert(Ix<nat_idx, uint64_t>);

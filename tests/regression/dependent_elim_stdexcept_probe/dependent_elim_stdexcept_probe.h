@@ -39,10 +39,7 @@ struct DependentElimStdexceptProbe {
   }
 
   static void get_present(Avail a);
-  static inline const Unit sample = []() {
-    get_present(Avail::PRESENT);
-    return Unit::TT;
-  }();
+  static constexpr Unit sample = Unit::TT;
 };
 
 #endif // INCLUDED_DEPENDENT_ELIM_STDEXCEPT_PROBE

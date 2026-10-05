@@ -110,83 +110,37 @@ struct FixSharedPtrField {
     }
 
     uint64_t mylist_length() const {
-      const mylist *_self = this;
-
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
-        const mylist *_self;
-      };
-
-      /// CraneCont_Mycons: resumes after recursive call, then processes rest.
-      struct CraneCont_Mycons {};
-
-      using CraneFrame = std::variant<CraneEnter, CraneCont_Mycons>;
-      uint64_t _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified mylist_length: CraneEnter -> CraneCont_Mycons.
-      while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
-          const mylist *_self = _f._self;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename mylist::Mynil>(_sv.v())) {
-            _result = UINT64_C(0);
-          } else {
-            const auto &[a0, a1] = std::get<typename mylist::Mycons>(_sv.v());
-            _stack.emplace_back(CraneCont_Mycons{});
-            _stack.emplace_back(CraneEnter{crane_raw(a1)});
-          }
+      auto go_impl = [](auto &_self_go, const mylist &l0,
+                        uint64_t acc) -> uint64_t {
+        if (std::holds_alternative<typename mylist::Mynil>(l0.v())) {
+          return acc;
         } else {
-          auto _f = std::move(std::get<CraneCont_Mycons>(_frame));
-          _result = (UINT64_C(1) + std::move(_result));
+          const auto &[a0, a1] = std::get<typename mylist::Mycons>(l0.v());
+          return _self_go(_self_go, *a1, (acc + UINT64_C(1)));
         }
+      };
+      {
+        const mylist &_lc1_l0 = *this;
+        uint64_t _lc1_acc = UINT64_C(0);
+        return go_impl(go_impl, _lc1_l0, _lc1_acc);
       }
-      return _result;
     }
 
     uint64_t mylist_sum() const {
-      const mylist *_self = this;
-
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
-        const mylist *_self;
-      };
-
-      /// CraneCont_Mycons: saves [a0], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_Mycons {
-        uint64_t a0;
-      };
-
-      using CraneFrame = std::variant<CraneEnter, CraneCont_Mycons>;
-      uint64_t _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified mylist_sum: CraneEnter -> CraneCont_Mycons.
-      while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
-          const mylist *_self = _f._self;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename mylist::Mynil>(_sv.v())) {
-            _result = UINT64_C(0);
-          } else {
-            const auto &[a0, a1] = std::get<typename mylist::Mycons>(_sv.v());
-            _stack.emplace_back(CraneCont_Mycons{a0});
-            _stack.emplace_back(CraneEnter{crane_raw(a1)});
-          }
+      auto go_impl = [](auto &_self_go, const mylist &l0,
+                        uint64_t acc) -> uint64_t {
+        if (std::holds_alternative<typename mylist::Mynil>(l0.v())) {
+          return acc;
         } else {
-          auto _f = std::move(std::get<CraneCont_Mycons>(_frame));
-          uint64_t a0 = _f.a0;
-          _result = (a0 + std::move(_result));
+          const auto &[a0, a1] = std::get<typename mylist::Mycons>(l0.v());
+          return _self_go(_self_go, *a1, (acc + a0));
         }
+      };
+      {
+        const mylist &_lc1_l0 = *this;
+        uint64_t _lc1_acc = UINT64_C(0);
+        return go_impl(go_impl, _lc1_l0, _lc1_acc);
       }
-      return _result;
     }
 
     template <typename T1, typename F1> T1 mylist_rec(T1 f, F1 &&f0) const {
@@ -307,61 +261,15 @@ struct FixSharedPtrField {
   /// test1: l = 10, 20, 30, h=10, t=20,30, mylist_sum(t)=50.
   /// compute(5) = (10+50) + 5 = 65.
   /// Bug: h and t captured by &, dangle after match scope ends.
-  static inline const uint64_t test1 = []() -> uint64_t {
-    auto _cs = mylist::mycons(UINT64_C(10),
-                              mylist::mycons(UINT64_C(20),
-                                             mylist::mycons(UINT64_C(30),
-                                                            mylist::mynil())))
-                   .make_list_fn();
-    if (_cs.has_value()) {
-      const crane::fn<uint64_t(uint64_t)> &f = *_cs;
-      return f(UINT64_C(5));
-    } else {
-      return UINT64_C(999);
-    }
-  }();
+  static constexpr uint64_t test1 = UINT64_C(65);
   /// test2: With intervening allocation to increase stack pressure.
   /// l = 100, 200, h=100, t=200, mylist_sum(t)=200.
   /// compute(0) = 100+200 = 300.
-  static inline const uint64_t test2 = []() {
-    std::optional<crane::fn<uint64_t(uint64_t)>> opt =
-        mylist::mycons(UINT64_C(100),
-                       mylist::mycons(UINT64_C(200), mylist::mynil()))
-            .make_list_fn();
-    uint64_t noise =
-        mylist::mycons(
-            UINT64_C(1),
-            mylist::mycons(UINT64_C(2),
-                           mylist::mycons(UINT64_C(3), mylist::mynil())))
-            .mylist_sum();
-    if (opt.has_value()) {
-      const crane::fn<uint64_t(uint64_t)> &f = *opt;
-      return f(UINT64_C(0));
-    } else {
-      return noise;
-    }
-  }();
+  static constexpr uint64_t test2 = UINT64_C(300);
   /// test3: Longer list, use mylist_length on captured tail.
   /// l = 5, 10, 15, 20, 25, h=5, t=10,15,20,25,
   /// mylist_sum(t) = 70, compute(10) = (5+70)+10 = 85.
-  static inline const uint64_t test3 = []() -> uint64_t {
-    auto _cs = mylist::mycons(
-                   UINT64_C(5),
-                   mylist::mycons(
-                       UINT64_C(10),
-                       mylist::mycons(
-                           UINT64_C(15),
-                           mylist::mycons(
-                               UINT64_C(20),
-                               mylist::mycons(UINT64_C(25), mylist::mynil())))))
-                   .make_list_fn();
-    if (_cs.has_value()) {
-      const crane::fn<uint64_t(uint64_t)> &f = *_cs;
-      return f(UINT64_C(10));
-    } else {
-      return UINT64_C(999);
-    }
-  }();
+  static constexpr uint64_t test3 = UINT64_C(85);
   /// Dummy use of wrapper to keep it alive for extraction.
   static wrapper wrap_list(const mylist &l);
 };

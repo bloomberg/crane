@@ -310,27 +310,13 @@ struct ThisCaptureRecord {
   /// test1: flag=0, tree_sum=5.
   /// cr_add(10) = 10 + 5 = 15, cr_mul(3) = 3 * 5 = 15.
   /// Total = 30.
-  static inline const uint64_t test1 = []() {
-    callback_rec cb = tree_callbacks(
-        tree::node(tree::leaf(), UINT64_C(5), tree::leaf()), UINT64_C(0));
-    return (cb.cr_add(UINT64_C(10)) + cb.cr_mul(UINT64_C(3)));
-  }();
+  static constexpr uint64_t test1 = UINT64_C(30);
   /// test2: With noise to clobber memory.
   /// flag=0, tree_sum = 60. cr_add(0) = 60, cr_mul(1) = 60.
   /// Total = 120.
-  static inline const uint64_t test2 = []() {
-    callback_rec cb = tree_callbacks(
-        tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
-                   UINT64_C(20),
-                   tree::node(tree::leaf(), UINT64_C(30), tree::leaf())),
-        UINT64_C(0));
-    return (cb.cr_add(UINT64_C(0)) + cb.cr_mul(UINT64_C(1)));
-  }();
+  static constexpr uint64_t test2 = UINT64_C(120);
   /// test3: flag=1, tree_sum=100. cr_mul(7) = tree_sum = 100.
-  static inline const uint64_t test3 =
-      tree_callbacks(tree::node(tree::leaf(), UINT64_C(100), tree::leaf()),
-                     UINT64_C(1))
-          .cr_mul(UINT64_C(7));
+  static constexpr uint64_t test3 = UINT64_C(100);
   /// Dummy use of tag to keep it around for extraction.
   static tag mk_tag(uint64_t n);
 };

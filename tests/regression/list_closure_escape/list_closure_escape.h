@@ -387,16 +387,7 @@ struct ListClosureEscape {
   /// Each lambda for (sum_values t_i) captures t_i by &.
   /// When build_fns returns, t1 and t2 are destroyed.
   static fn_list build_fns(tree t1, tree t2);
-  static inline const uint64_t bug_list_clobber = []() {
-    tree t1 = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
-                         UINT64_C(20),
-                         tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
-    tree t2 = tree::node(tree::node(tree::leaf(), UINT64_C(77), tree::leaf()),
-                         UINT64_C(88),
-                         tree::node(tree::leaf(), UINT64_C(99), tree::leaf()));
-    fn_list fns = build_fns(std::move(t1), std::move(t2));
-    return std::move(fns).apply_first(UINT64_C(0));
-  }();
+  static constexpr uint64_t bug_list_clobber = UINT64_C(60);
 };
 
 #endif // INCLUDED_LIST_CLOSURE_ESCAPE

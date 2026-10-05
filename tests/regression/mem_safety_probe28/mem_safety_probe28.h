@@ -310,67 +310,33 @@ struct MemSafetyProbe28 {
   /// tree_sum t2 uses the whole tree. If the optimization moves *(l2),
   /// tree_sum t2 might see corrupted data.
   static uint64_t zip_trees(const tree &t1, const tree &t2);
-  static inline const uint64_t test_zip_trees = zip_trees(
-      tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
-                 UINT64_C(2),
-                 tree::node(tree::leaf(), UINT64_C(3), tree::leaf())),
-      tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
-                 UINT64_C(20),
-                 tree::node(tree::leaf(), UINT64_C(30), tree::leaf())));
+  static constexpr uint64_t test_zip_trees = UINT64_C(166);
   /// TEST 2: zip_depth - Similar but uses tree_depth on t2.
   /// Tests a different tree traversal on the non-pointer-safe param.
   static uint64_t zip_depth(const tree &t1, const tree &t2);
-  static inline const uint64_t test_zip_depth = zip_depth(
-      tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
-                 UINT64_C(2),
-                 tree::node(tree::leaf(), UINT64_C(3), tree::leaf())),
-      tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
-                 UINT64_C(20),
-                 tree::node(tree::leaf(), UINT64_C(30), tree::leaf())));
+  static constexpr uint64_t test_zip_depth = UINT64_C(4);
   /// TEST 3: zip_and_build - Recurse and also construct using t2's children.
   /// t2's left child is used for recursion AND returned as part of result.
   static uint64_t zip_and_sum(const tree &t1, const tree &t2);
-  static inline const uint64_t test_zip_and_sum = zip_and_sum(
-      tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
-      tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
-                 UINT64_C(20),
-                 tree::node(tree::leaf(), UINT64_C(30), tree::leaf())));
+  static constexpr uint64_t test_zip_and_sum = UINT64_C(100);
   /// TEST 4: double_zip - Both t1 and t2 are trees, but t2 is used
   /// in a different way for each call. Makes t2 non-pointer-safe.
   static uint64_t double_zip(const tree &t1, const tree &t2);
-  static inline const uint64_t test_double_zip = double_zip(
-      tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
-                 UINT64_C(2),
-                 tree::node(tree::leaf(), UINT64_C(3), tree::leaf())),
-      tree::node(tree::leaf(), UINT64_C(10), tree::leaf()));
+  static constexpr uint64_t test_double_zip = UINT64_C(24);
   /// TEST 5: zip with list accumulator. t2 is tree, acc is list.
   /// t2 non-pointer-safe due to Leaf in some calls.
   static List<uint64_t> zip_collect(const tree &t1, const tree &t2,
                                     List<uint64_t> acc);
   static uint64_t list_sum(const List<uint64_t> &l);
-  static inline const uint64_t test_zip_collect =
-      list_sum(zip_collect(tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
-                           tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
-                           List<uint64_t>::nil()));
+  static constexpr uint64_t test_zip_collect = UINT64_C(15);
   /// TEST 6: Three-way recursion with non-pointer-safe second tree.
   static tree merge_trees(const tree &t1, tree t2);
-  static inline const uint64_t test_merge_trees = tree_sum(
-      merge_trees(tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
-                  tree::node(tree::leaf(), UINT64_C(10), tree::leaf())));
+  static constexpr uint64_t test_merge_trees = UINT64_C(15);
   /// TEST 7: Deep trees to stress the optimization.
   static tree build_balanced(uint64_t n);
-  static inline const uint64_t test_deep_zip =
-      zip_trees(build_balanced(UINT64_C(5)), build_balanced(UINT64_C(5)));
+  static constexpr uint64_t test_deep_zip = UINT64_C(315);
   /// TEST 8: Nested zip where result of one zip feeds into another.
-  static inline const uint64_t test_nested_zip = []() {
-    tree t1 = tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
-                         UINT64_C(2),
-                         tree::node(tree::leaf(), UINT64_C(3), tree::leaf()));
-    tree t2 = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
-                         UINT64_C(20),
-                         tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
-    return (zip_trees(t1, t2) + zip_depth(t1, t2));
-  }();
+  static constexpr uint64_t test_nested_zip = UINT64_C(170);
 };
 
 #endif // INCLUDED_MEM_SAFETY_PROBE28

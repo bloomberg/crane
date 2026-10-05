@@ -29,24 +29,20 @@ Tokenizer::next_token(std::basic_string_view<char> input,
                    ? _lc1_loop_s[_lc1_loop_index]
                    : static_cast<char>(0));
           if (hard.contains(c)) {
+            auto &&_once1 =
+                static_cast<int64_t>((static_cast<uint64_t>(_lc1_loop_index) +
+                                      static_cast<uint64_t>(INT64_C(1))) &
+                                     0x7FFFFFFFFFFFFFFFULL);
             return std::make_pair(
                 std::make_optional<std::basic_string_view<char>>(
                     ((INT64_C(0) >= 0 &&
                       INT64_C(0) <= static_cast<int64_t>(_lc1_loop_s.length()))
                          ? _lc1_loop_s.substr(INT64_C(0), _lc1_loop_index)
                          : std::basic_string_view<char>())),
-                ((static_cast<int64_t>((static_cast<uint64_t>(_lc1_loop_index) +
-                                        static_cast<uint64_t>(INT64_C(1))) &
-                                       0x7FFFFFFFFFFFFFFFULL) >= 0 &&
-                  static_cast<int64_t>((static_cast<uint64_t>(_lc1_loop_index) +
-                                        static_cast<uint64_t>(INT64_C(1))) &
-                                       0x7FFFFFFFFFFFFFFFULL) <=
-                      static_cast<int64_t>(_lc1_loop_s.length()))
+                ((_once1 >= 0 &&
+                  _once1 <= static_cast<int64_t>(_lc1_loop_s.length()))
                      ? _lc1_loop_s.substr(
-                           static_cast<int64_t>(
-                               (static_cast<uint64_t>(_lc1_loop_index) +
-                                static_cast<uint64_t>(INT64_C(1))) &
-                               0x7FFFFFFFFFFFFFFFULL),
+                           _once1,
                            static_cast<int64_t>(
                                (static_cast<uint64_t>(input.length()) -
                                 static_cast<uint64_t>(static_cast<int64_t>(
@@ -71,6 +67,10 @@ Tokenizer::next_token(std::basic_string_view<char> input,
                 _lc1_loop_index = INT64_C(0);
                 _lc1_loop_fuel = fuel_;
               } else {
+                auto &&_once2 = static_cast<int64_t>(
+                    (static_cast<uint64_t>(_lc1_loop_index) +
+                     static_cast<uint64_t>(INT64_C(1))) &
+                    0x7FFFFFFFFFFFFFFFULL);
                 return std::make_pair(
                     std::make_optional<std::basic_string_view<char>>(
                         ((INT64_C(0) >= 0 &&
@@ -78,20 +78,10 @@ Tokenizer::next_token(std::basic_string_view<char> input,
                               static_cast<int64_t>(_lc1_loop_s.length()))
                              ? _lc1_loop_s.substr(INT64_C(0), _lc1_loop_index)
                              : std::basic_string_view<char>())),
-                    ((static_cast<int64_t>(
-                          (static_cast<uint64_t>(_lc1_loop_index) +
-                           static_cast<uint64_t>(INT64_C(1))) &
-                          0x7FFFFFFFFFFFFFFFULL) >= 0 &&
-                      static_cast<int64_t>(
-                          (static_cast<uint64_t>(_lc1_loop_index) +
-                           static_cast<uint64_t>(INT64_C(1))) &
-                          0x7FFFFFFFFFFFFFFFULL) <=
-                          static_cast<int64_t>(_lc1_loop_s.length()))
+                    ((_once2 >= 0 &&
+                      _once2 <= static_cast<int64_t>(_lc1_loop_s.length()))
                          ? _lc1_loop_s.substr(
-                               static_cast<int64_t>(
-                                   (static_cast<uint64_t>(_lc1_loop_index) +
-                                    static_cast<uint64_t>(INT64_C(1))) &
-                                   0x7FFFFFFFFFFFFFFFULL),
+                               _once2,
                                static_cast<int64_t>(
                                    (static_cast<uint64_t>(input.length()) -
                                     static_cast<uint64_t>(static_cast<int64_t>(

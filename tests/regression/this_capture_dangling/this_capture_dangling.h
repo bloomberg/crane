@@ -319,47 +319,14 @@ struct ThisCaptureDangling {
   /// Unwrapping the option and calling the closure dereferences
   /// the dangling this.
   /// Expected: match result is Some f, then f 10 = 10 + 42 = 52.
-  static inline const uint64_t test1 = []() -> uint64_t {
-    auto _cs = tree::node(tree::leaf(), UINT64_C(42), tree::leaf()).get_fn();
-    if (_cs.has_value()) {
-      const crane::fn<uint64_t(uint64_t)> &f = *_cs;
-      return f(UINT64_C(10));
-    } else {
-      return UINT64_C(999);
-    }
-  }();
+  static constexpr uint64_t test1 = UINT64_C(52);
   /// test2: Same pattern with a larger tree (sum = 42).
   /// Expected: 5 + 42 = 47.
-  static inline const uint64_t test2 = []() -> uint64_t {
-    auto _cs = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
-                          UINT64_C(20),
-                          tree::node(tree::leaf(), UINT64_C(12), tree::leaf()))
-                   .get_fn();
-    if (_cs.has_value()) {
-      const crane::fn<uint64_t(uint64_t)> &f = *_cs;
-      return f(UINT64_C(5));
-    } else {
-      return UINT64_C(999);
-    }
-  }();
+  static constexpr uint64_t test2 = UINT64_C(47);
   /// test3: Allocate another tree between getting the closure and calling it.
   /// This increases memory pressure on the freed region.
   /// Expected: f noise = noise + 100 where noise = 1+2+3 = 6. So 106.
-  static inline const uint64_t test3 = []() {
-    std::optional<crane::fn<uint64_t(uint64_t)>> opt =
-        tree::node(tree::leaf(), UINT64_C(100), tree::leaf()).get_fn();
-    uint64_t noise =
-        tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
-                   UINT64_C(2),
-                   tree::node(tree::leaf(), UINT64_C(3), tree::leaf()))
-            .tree_sum();
-    if (opt.has_value()) {
-      const crane::fn<uint64_t(uint64_t)> &f = *opt;
-      return f(noise);
-    } else {
-      return UINT64_C(999);
-    }
-  }();
+  static constexpr uint64_t test3 = UINT64_C(106);
 };
 
 #endif // INCLUDED_THIS_CAPTURE_DANGLING

@@ -434,7 +434,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
                                               uint64_t mfi);
   static MFIStrength classify_mfi_safe(const ValidatedMFIConfig &vcfg,
                                        uint64_t mfi);
-  static inline const uint64_t mfi_negative_threshold = UINT64_C(1000);
+  static constexpr uint64_t mfi_negative_threshold = UINT64_C(1000);
   static uint64_t max_dsa_mfi(const VirtualXMProfile &recipient,
                               const HLATyping &donor);
   static bool has_complement_fixing_dsa(const VirtualXMProfile &recipient,

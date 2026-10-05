@@ -450,23 +450,10 @@ struct AccumClosureCapture {
   /// test1: Create tree with sum=42, extract closures, apply to 0.
   /// Expected: 0 + 42 = 42, 42 + 20 = 62, 62 + 42 = 104.
   /// With dangling this, tree_sum reads garbage.
-  static inline const uint64_t test1 = []() {
-    fn_list fs =
-        tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
-                   UINT64_C(20),
-                   tree::node(tree::leaf(), UINT64_C(12), tree::leaf()))
-            .extract_closures();
-    return std::move(fs).apply_all(UINT64_C(0));
-  }();
+  static constexpr uint64_t test1 = UINT64_C(104);
   /// test2: Allocate a noise tree between extracting closures and applying
   /// them. Increases memory pressure on freed region.
-  static inline const uint64_t test2 = []() {
-    fn_list fs = tree::node(tree::leaf(), UINT64_C(100), tree::leaf())
-                     .extract_closures();
-    uint64_t noise =
-        tree::node(tree::leaf(), UINT64_C(999), tree::leaf()).tree_sum();
-    return std::move(fs).apply_all(noise);
-  }();
+  static constexpr uint64_t test2 = UINT64_C(1299);
 };
 
 #endif // INCLUDED_ACCUM_CLOSURE_CAPTURE

@@ -219,8 +219,7 @@ struct SigtErasedFnParam {
                                                List<uint64_t>::nil()))),
                   [](const List<uint64_t> &_x) { return _x.length(); }),
               List<packed>::nil())));
-  static inline const uint64_t total = items.template fold_left<uint64_t>(
-      [](uint64_t acc, packed p) { return (acc + unpack(p)); }, UINT64_C(0));
+  static constexpr uint64_t total = UINT64_C(9);
 };
 
 #endif // INCLUDED_SIGT_ERASED_FN_PARAM

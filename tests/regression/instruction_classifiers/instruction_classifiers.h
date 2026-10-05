@@ -443,19 +443,7 @@ struct InstructionClassifiers {
   };
 
   static uint64_t count_writes_acc(const List<instr_acc> &prog);
-  static inline const uint64_t test_writes_acc =
-      count_writes_acc(List<instr_acc>::cons(
-          instr_acc::nop_acc(),
-          List<instr_acc>::cons(
-              instr_acc::ldm(UINT64_C(9)),
-              List<instr_acc>::cons(
-                  instr_acc::rar(),
-                  List<instr_acc>::cons(
-                      instr_acc::kbp(),
-                      List<instr_acc>::cons(
-                          instr_acc::nop_acc(),
-                          List<instr_acc>::cons(instr_acc::add(UINT64_C(1)),
-                                                List<instr_acc>::nil())))))));
+  static constexpr uint64_t test_writes_acc = UINT64_C(4);
 
   struct instr_ram {
     // TYPES
@@ -589,19 +577,7 @@ struct InstructionClassifiers {
   };
 
   static uint64_t count_writes_ram(const List<instr_ram> &prog);
-  static inline const uint64_t test_writes_ram =
-      count_writes_ram(List<instr_ram>::cons(
-          instr_ram::nop_ram(),
-          List<instr_ram>::cons(
-              instr_ram::wrm(),
-              List<instr_ram>::cons(
-                  instr_ram::add_ram(UINT64_C(3)),
-                  List<instr_ram>::cons(
-                      instr_ram::wr3(),
-                      List<instr_ram>::cons(
-                          instr_ram::wmp(),
-                          List<instr_ram>::cons(instr_ram::nop_ram(),
-                                                List<instr_ram>::nil())))))));
+  static constexpr uint64_t test_writes_ram = UINT64_C(3);
 
   struct instr_regs {
     // TYPES
@@ -769,18 +745,7 @@ struct InstructionClassifiers {
   };
 
   static uint64_t count_writes_regs(const List<instr_regs> &prog);
-  static inline const uint64_t test_writes_regs =
-      count_writes_regs(List<instr_regs>::cons(
-          instr_regs::nop_regs(),
-          List<instr_regs>::cons(
-              instr_regs::fim(UINT64_C(0), UINT64_C(12)),
-              List<instr_regs>::cons(
-                  instr_regs::add_regs(UINT64_C(1)),
-                  List<instr_regs>::cons(
-                      instr_regs::inc_regs(UINT64_C(7)),
-                      List<instr_regs>::cons(
-                          instr_regs::isz(UINT64_C(1), UINT64_C(2)),
-                          List<instr_regs>::nil()))))));
+  static constexpr uint64_t test_writes_regs = UINT64_C(3);
 
   struct instr_jump {
     // TYPES
@@ -968,19 +933,7 @@ struct InstructionClassifiers {
   };
 
   static uint64_t count_jumps(const List<instr_jump> &prog);
-  static inline const uint64_t test_jump_classifier =
-      count_jumps(List<instr_jump>::cons(
-          instr_jump::add_jump(UINT64_C(0)),
-          List<instr_jump>::cons(
-              instr_jump::jcn(UINT64_C(4), UINT64_C(8)),
-              List<instr_jump>::cons(
-                  instr_jump::nop_jump(),
-                  List<instr_jump>::cons(
-                      instr_jump::jms(UINT64_C(33)),
-                      List<instr_jump>::cons(
-                          instr_jump::isz_jump(UINT64_C(1), UINT64_C(2)),
-                          List<instr_jump>::nil()))))));
-
+  static constexpr uint64_t test_jump_classifier = UINT64_C(3);
   static inline const std::pair<
       std::pair<std::pair<uint64_t, uint64_t>, uint64_t>, uint64_t>
       t = std::make_pair(

@@ -11,7 +11,7 @@ concept Boxed = requires {
 
 struct TodoTypeAppInstanceAlias {
   struct natBoxed {
-    static uint64_t boxed_default() { return UINT64_C(7); }
+    constexpr static uint64_t boxed_default() { return UINT64_C(7); }
   };
 
   static_assert(Boxed<natBoxed, uint64_t>);
@@ -22,9 +22,7 @@ struct TodoTypeAppInstanceAlias {
     return _tcI0::boxed_default();
   }
 
-  static inline const uint64_t test_value = []() {
-    return (pick<natBoxed, uint64_t>() + pick<natBoxed, uint64_t>());
-  }();
+  static constexpr uint64_t test_value = UINT64_C(14);
 };
 
 #endif // INCLUDED_TODO_TYPE_APP_INSTANCE_ALIAS

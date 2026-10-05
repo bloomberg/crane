@@ -288,7 +288,7 @@ enum class Byte {
 /// generated code also declares a struct Byte for the module wrapping it and
 /// then reaches into it with Byte::x41, so the two spellings disagree.
 struct StdlibByte {
-  static inline const Byte b = Byte::X41;
+  static constexpr Byte b = Byte::X41;
   static inline const bool isA = Byte1::eqb0(b, Byte::X41);
 };
 

@@ -589,33 +589,7 @@ struct ItreeInterp {
           },
           prog);
   static std::optional<Nat> run(const Nat &fuel, Itree<noE, Nat> t);
-  static inline const bool is_four = []() -> bool {
-    auto _cs = []() {
-      auto _lit0 = Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-          Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-              Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-                  Nat::s(Nat::s(Nat::s(Nat::o()))))))))))))))))))))))))))))));
-      auto _lit1 = Nat::s(Nat::s(
-          Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-              Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-                  Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-                      Nat::s(std::move(_lit0)))))))))))))))))))))))))))))));
-      auto _lit2 = Nat::s(Nat::s(
-          Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-              Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-                  Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-                      Nat::s(std::move(_lit1)))))))))))))))))))))))))))))));
-      return run(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-                     Nat::s(Nat::s(Nat::s(Nat::s(std::move(_lit2))))))))))),
-                 run_it);
-    }();
-    if (_cs.has_value()) {
-      const Nat &n = *_cs;
-      return n.eqb(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))));
-    } else {
-      return false;
-    }
-  }();
+  static constexpr bool is_four = true;
 };
 
 template <Functor _tcI0, typename T2, typename T3, typename F0>

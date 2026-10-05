@@ -7,6 +7,7 @@
 #include <utility>
 #include <variant>
 #define CRANE_NON_ATOMIC_RC 1
+#include "crane_fn.h"
 #include "rc.h"
 
 struct R {

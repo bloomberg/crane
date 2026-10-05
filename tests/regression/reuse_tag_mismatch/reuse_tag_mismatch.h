@@ -93,34 +93,13 @@ struct ReuseTagMismatch {
   /// Match on the result:
   /// - GoUp _ => 1 (wrong, reuse bug would make this match)
   /// - GoDown _ => 2 (correct)
-  static inline const uint64_t test1 =
-      (std::holds_alternative<typename direction::GoUp>(
-           id_or_flip(direction::goup(UINT64_C(42)), true).v())
-           ? UINT64_C(1)
-           : UINT64_C(2));
+  static constexpr uint64_t test1 = UINT64_C(2);
   /// test2: no flip -> should be GoUp 42 unchanged.
-  static inline const uint64_t test2 =
-      (std::holds_alternative<typename direction::GoUp>(
-           id_or_flip(direction::goup(UINT64_C(42)), false).v())
-           ? UINT64_C(1)
-           : UINT64_C(2));
+  static constexpr uint64_t test2 = UINT64_C(1);
   /// test3: flip GoDown 100 -> should be GoUp 100.
-  static inline const uint64_t test3 =
-      (std::holds_alternative<typename direction::GoUp>(
-           id_or_flip(direction::godown(UINT64_C(100)), true).v())
-           ? UINT64_C(3)
-           : UINT64_C(4));
+  static constexpr uint64_t test3 = UINT64_C(3);
   /// test4: use the flipped value's payload.
-  static inline const uint64_t test4 = []() {
-    auto &&_sv = id_or_flip(direction::goup(UINT64_C(10)), true);
-    if (std::holds_alternative<typename direction::GoUp>(_sv.v())) {
-      const auto &[a0] = std::get<typename direction::GoUp>(_sv.v());
-      return (a0 + UINT64_C(1000));
-    } else {
-      const auto &[a0] = std::get<typename direction::GoDown>(_sv.v());
-      return a0;
-    }
-  }();
+  static constexpr uint64_t test4 = UINT64_C(10);
 };
 
 #endif // INCLUDED_REUSE_TAG_MISMATCH

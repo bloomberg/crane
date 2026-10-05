@@ -22,12 +22,9 @@ struct ErasedRecord {
   };
 
   static uint64_t access_mostly_props(const MostlyProps &r);
-  static inline const uint64_t test1 = complex_match(ManyProps{
-      UINT64_C(1), UINT64_C(2), UINT64_C(3), UINT64_C(4), UINT64_C(5)});
-  static inline const uint64_t test2 = unusual_body(ManyProps{
-      UINT64_C(1), UINT64_C(2), UINT64_C(3), UINT64_C(4), UINT64_C(5)});
-  static inline const uint64_t test3 =
-      access_mostly_props(MostlyProps{UINT64_C(5), UINT64_C(10), UINT64_C(15)});
+  static constexpr uint64_t test1 = UINT64_C(15);
+  static constexpr uint64_t test2 = UINT64_C(15);
+  static constexpr uint64_t test3 = UINT64_C(30);
 };
 
 #endif // INCLUDED_ERASED_RECORD

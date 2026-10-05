@@ -506,12 +506,7 @@ struct MemSafetyProbe10 {
   };
 
   static uint64_t sum_fns(const mylist<crane::fn<uint64_t(uint64_t)>> &l);
-  static inline const uint64_t test_tree_adder = []() {
-    tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
-                        UINT64_C(20),
-                        tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
-    return std::move(t).tree_to_adder(UINT64_C(5));
-  }();
+  static constexpr uint64_t test_tree_adder = UINT64_C(65);
 
   /// TEST 2: Build closures during list traversal,
   /// where each closure captures the HEAD of the list
@@ -535,54 +530,17 @@ struct MemSafetyProbe10 {
     }
   }
 
-  static inline const uint64_t test_chain = []() {
-    mylist<uint64_t> l = mylist<uint64_t>::mycons(
-        UINT64_C(10),
-        mylist<uint64_t>::mycons(
-            UINT64_C(20),
-            mylist<uint64_t>::mycons(UINT64_C(30), mylist<uint64_t>::mynil())));
-    return chain_adders(
-        std::move(l), [](uint64_t x) { return x; }, UINT64_C(7));
-  }();
+  static constexpr uint64_t test_chain = UINT64_C(67);
   /// TEST 3: Recursive function returning a list of closures.
   /// Each closure captures the tree node's value and subtrees.
   static mylist<crane::fn<uint64_t(uint64_t)>> collect_adders(const tree &t);
-  static inline const uint64_t test_collect_adders = []() {
-    tree t = tree::node(tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
-                        UINT64_C(10),
-                        tree::node(tree::leaf(), UINT64_C(15), tree::leaf()));
-    return sum_fns(collect_adders(std::move(t)));
-  }();
+  static constexpr uint64_t test_collect_adders = UINT64_C(35);
   /// TEST 4: Closure returned from nested match.
   /// Tests return_captures_by_value through Sif branches.
   static uint64_t choose_fn(const std::optional<bool> &o, uint64_t v,
                             uint64_t n);
-  static inline const uint64_t test_choose = []() {
-    crane::fn<uint64_t(uint64_t)> f1 = [](uint64_t _x0) -> uint64_t {
-      return choose_fn(std::make_optional<bool>(true), UINT64_C(10), _x0);
-    };
-    crane::fn<uint64_t(uint64_t)> f2 = [](uint64_t _x0) -> uint64_t {
-      return choose_fn(std::make_optional<bool>(false), UINT64_C(3), _x0);
-    };
-    crane::fn<uint64_t(uint64_t)> f3 = [](uint64_t _x0) -> uint64_t {
-      return choose_fn(std::optional<bool>(), UINT64_C(99), _x0);
-    };
-    return ((f1(UINT64_C(5)) + f2(UINT64_C(7))) + f3(UINT64_C(42)));
-  }();
-  static inline const uint64_t test_nested = []() {
-    return []() {
-      tree t = tree::node(tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
-                          UINT64_C(10),
-                          tree::node(tree::leaf(), UINT64_C(15), tree::leaf()));
-      crane::fn<uint64_t(uint64_t)> f1 = [=](uint64_t _x0) -> uint64_t {
-        return t.nested_match_closure(true, _x0);
-      };
-      crane::fn<uint64_t(uint64_t)> f2 = [&](uint64_t _x0) -> uint64_t {
-        return std::move(t).nested_match_closure(false, _x0);
-      };
-      return (f1(UINT64_C(0)) + f2(UINT64_C(0)));
-    }();
-  }();
+  static constexpr uint64_t test_choose = UINT64_C(78);
+  static constexpr uint64_t test_nested = UINT64_C(40);
   /// TEST 6: Function returning closure in pair.
   /// Tests pair construction with closure.
   static std::pair<crane::fn<uint64_t(uint64_t)>, uint64_t>
@@ -596,18 +554,8 @@ struct MemSafetyProbe10 {
   /// where one captures the other's result as a closure.
   static mylist<crane::fn<uint64_t(uint64_t)>> build_tree_fns(const tree &t,
                                                               uint64_t depth);
-  static inline const uint64_t test_tree_fns = []() {
-    tree t = tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
-                        UINT64_C(7),
-                        tree::node(tree::leaf(), UINT64_C(11), tree::leaf()));
-    return sum_fns(build_tree_fns(std::move(t), UINT64_C(2)));
-  }();
-  static inline const uint64_t test_tree_capture = []() {
-    tree t = tree::node(tree::node(tree::leaf(), UINT64_C(100), tree::leaf()),
-                        UINT64_C(200),
-                        tree::node(tree::leaf(), UINT64_C(300), tree::leaf()));
-    return std::move(t).make_tree_summer(UINT64_C(0));
-  }();
+  static constexpr uint64_t test_tree_fns = UINT64_C(24);
+  static constexpr uint64_t test_tree_capture = UINT64_C(600);
 };
 
 #endif // INCLUDED_MEM_SAFETY_PROBE10

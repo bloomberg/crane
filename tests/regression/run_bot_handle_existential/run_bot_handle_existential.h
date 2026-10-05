@@ -540,33 +540,7 @@ struct RunBotHandleExistential {
   static std::optional<Nat> run(const Nat &fuel,
                                 Itree<crane::obj, Sum<Run_error, Nat>> t);
 
-  static inline const bool is_three = []() -> bool {
-    auto _cs = []() {
-      auto _lit0 = Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-          Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-              Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-                  Nat::s(Nat::s(Nat::s(Nat::o()))))))))))))))))))))))))))))));
-      auto _lit1 = Nat::s(Nat::s(
-          Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-              Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-                  Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-                      Nat::s(std::move(_lit0)))))))))))))))))))))))))))))));
-      auto _lit2 = Nat::s(Nat::s(
-          Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-              Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-                  Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-                      Nat::s(std::move(_lit1)))))))))))))))))))))))))))))));
-      return run(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-                     Nat::s(Nat::s(Nat::s(Nat::s(std::move(_lit2))))))))))),
-                 run_bot<natParams, Nat>(prog<natParams>()));
-    }();
-    if (_cs.has_value()) {
-      const Nat &n = *_cs;
-      return n.eqb(Nat::s(Nat::s(Nat::s(Nat::o()))));
-    } else {
-      return false;
-    }
-  }();
+  static constexpr bool is_three = true;
 };
 
 #endif // INCLUDED_RUN_BOT_HANDLE_EXISTENTIAL

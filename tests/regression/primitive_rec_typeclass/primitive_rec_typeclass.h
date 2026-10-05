@@ -50,18 +50,17 @@ struct PrimitiveRecTypeclass {
   static uint64_t rect_perimeter(const rect &r);
   static inline const point p1 = point{UINT64_C(3), UINT64_C(4)};
   static inline const point p2 = point{UINT64_C(10), UINT64_C(20)};
-  static inline const uint64_t test_px = p1.px;
-  static inline const uint64_t test_py = p1.py;
-  static inline const uint64_t test_norm_point = pointNorm::norm(p1);
-  static inline const uint64_t test_double_norm =
-      double_norm<pointNorm, point>(p1);
+  static constexpr uint64_t test_px = UINT64_C(3);
+  static constexpr uint64_t test_py = UINT64_C(4);
+  static constexpr uint64_t test_norm_point = UINT64_C(7);
+  static constexpr uint64_t test_double_norm = UINT64_C(14);
   static inline const vec3 v1 = vec3{UINT64_C(1), UINT64_C(2), UINT64_C(3)};
-  static inline const uint64_t test_norm_vec3 = vec3Norm::norm(v1);
+  static constexpr uint64_t test_norm_vec3 = UINT64_C(6);
   static inline const rect r1 =
       rect{point{UINT64_C(2), UINT64_C(3)}, point{UINT64_C(12), UINT64_C(8)}};
-  static inline const uint64_t test_width = rect_width(r1);
-  static inline const uint64_t test_height = rect_height(r1);
-  static inline const uint64_t test_perimeter = rect_perimeter(r1);
+  static constexpr uint64_t test_width = UINT64_C(10);
+  static constexpr uint64_t test_height = UINT64_C(5);
+  static constexpr uint64_t test_perimeter = UINT64_C(30);
 };
 
 #endif // INCLUDED_PRIMITIVE_REC_TYPECLASS

@@ -121,13 +121,23 @@ RecordCaseBody::constructor_body(const RecordCaseBody::Rec &r) {
 }
 
 uint64_t RecordCaseBody::sum_list(const RecordCaseBody::list<uint64_t> &l) {
-  if (std::holds_alternative<typename RecordCaseBody::list<uint64_t>::Nil>(
-          l.v())) {
-    return UINT64_C(0);
-  } else {
-    const auto &[a0, a1] =
-        std::get<typename RecordCaseBody::list<uint64_t>::Cons>(l.v());
-    return (a0 + sum_list(*a1));
+  {
+    const RecordCaseBody::list<uint64_t> &_lc1_l0 = l;
+    uint64_t _lc1_acc = UINT64_C(0);
+    uint64_t _lc1_loop_acc = std::move(_lc1_acc);
+    const RecordCaseBody::list<uint64_t> *_lc1_loop_l0 = &_lc1_l0;
+    while (true) {
+      if (std::holds_alternative<typename RecordCaseBody::list<uint64_t>::Nil>(
+              _lc1_loop_l0->v())) {
+        return _lc1_loop_acc;
+      } else {
+        const auto &[a0, a1] =
+            std::get<typename RecordCaseBody::list<uint64_t>::Cons>(
+                _lc1_loop_l0->v());
+        _lc1_loop_acc = (_lc1_loop_acc + a0);
+        _lc1_loop_l0 = crane_raw(a1);
+      }
+    }
   }
 }
 

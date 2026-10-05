@@ -148,14 +148,7 @@ struct TfunctorOptionInstance {
           }(),
           [](const Nat &x) { return Nat::s(x); },
           std::make_optional<box<Nat>>(box<Nat>{Nat::s(Nat::s(Nat::o()))}));
-  static inline const bool is_three = []() -> bool {
-    if (o.has_value()) {
-      const box<Nat> &b = *o;
-      return b.unbox.eqb(Nat::s(Nat::s(Nat::s(Nat::o()))));
-    } else {
-      return false;
-    }
-  }();
+  static constexpr bool is_three = true;
 };
 
 #endif // INCLUDED_TFUNCTOR_OPTION_INSTANCE

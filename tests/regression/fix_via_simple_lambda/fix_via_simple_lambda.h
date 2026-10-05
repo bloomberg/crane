@@ -23,47 +23,14 @@ struct FixViaSimpleLambda {
   static std::optional<crane::fn<uint64_t(uint64_t)>> make_combined(uint64_t n);
   /// test1: base=42, double_add(5) = 42+10 = 52,
   /// triple_add(5) = 42+15 = 57. Total = 109.
-  static inline const uint64_t test1 = []() -> uint64_t {
-    auto _cs = make_combined(UINT64_C(21));
-    if (_cs.has_value()) {
-      const crane::fn<uint64_t(uint64_t)> &f = *_cs;
-      return f(UINT64_C(5));
-    } else {
-      return UINT64_C(999);
-    }
-  }();
+  static constexpr uint64_t test1 = UINT64_C(109);
   /// test2: With intervening computation to clobber the stack.
   /// base=200, double_add(0) = 200, triple_add(0) = 200. Total = 400.
-  static inline const uint64_t test2 = []() {
-    std::optional<crane::fn<uint64_t(uint64_t)>> opt =
-        make_combined(UINT64_C(100));
-    uint64_t noise =
-        (((((((((UINT64_C(1) + UINT64_C(2)) + UINT64_C(3)) + UINT64_C(4)) +
-              UINT64_C(5)) +
-             UINT64_C(6)) +
-            UINT64_C(7)) +
-           UINT64_C(8)) +
-          UINT64_C(9)) +
-         UINT64_C(10));
-    if (opt.has_value()) {
-      const crane::fn<uint64_t(uint64_t)> &f = *opt;
-      return f(UINT64_C(0));
-    } else {
-      return noise;
-    }
-  }();
+  static constexpr uint64_t test2 = UINT64_C(400);
   /// test3: Larger recursion depth to increase chance of stack corruption.
   /// base=10, double_add(20) = 10+40 = 50,
   /// triple_add(20) = 10+60 = 70. Total = 120.
-  static inline const uint64_t test3 = []() -> uint64_t {
-    auto _cs = make_combined(UINT64_C(5));
-    if (_cs.has_value()) {
-      const crane::fn<uint64_t(uint64_t)> &f = *_cs;
-      return f(UINT64_C(20));
-    } else {
-      return UINT64_C(999);
-    }
-  }();
+  static constexpr uint64_t test3 = UINT64_C(120);
 };
 
 #endif // INCLUDED_FIX_VIA_SIMPLE_LAMBDA

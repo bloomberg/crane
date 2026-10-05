@@ -9,11 +9,11 @@
 /// as its class".  The clash is with a name Crane invented, so no amount of
 /// care on the Rocq side avoids it.
 struct Nat {
-  static inline const uint64_t k = UINT64_C(1);
+  static constexpr uint64_t k = UINT64_C(1);
 };
 
 struct ModuleNamedLikeGeneratedType {
-  static inline const uint64_t run = Nat::k;
+  static constexpr uint64_t run = UINT64_C(1);
 };
 
 #endif // INCLUDED_MODULE_NAMED_LIKE_GENERATED_TYPE

@@ -276,8 +276,7 @@ struct MatchClosureEscape {
       tree::node(tree::leaf(), UINT64_C(10), tree::leaf()), UINT64_C(20),
       tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
 
-  static inline const uint64_t bug_match_box =
-      match_arm_box(test_tree).apply_box(UINT64_C(99));
+  static constexpr uint64_t bug_match_box = UINT64_C(109);
 };
 
 #endif // INCLUDED_MATCH_CLOSURE_ESCAPE

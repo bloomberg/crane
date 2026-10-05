@@ -2,7 +2,6 @@
 #define INCLUDED_MEM_SAFETY_PROBE19
 
 #include "crane_fn.h"
-#include "fn.h"
 #include "obj.h"
 #include "small_vector.h"
 #include <atomic>
@@ -298,9 +297,7 @@ struct MemSafetyProbe19 {
     }
   };
 
-  static inline const uint64_t test_choose =
-      tree::node(tree::leaf(), UINT64_C(42), tree::leaf())
-          .choose_fn(true, UINT64_C(0));
+  static constexpr uint64_t test_choose = UINT64_C(42);
 
   /// TEST 2: Return closure from match on option.
   /// The match becomes a top-level Smatch.
@@ -381,9 +378,7 @@ struct MemSafetyProbe19 {
 
   static uint64_t option_fn(const tree &t, const myopt<uint64_t> &o,
                             uint64_t n);
-  static inline const uint64_t test_option_fn =
-      option_fn(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
-                myopt<uint64_t>::mysome(UINT64_C(5)), UINT64_C(3));
+  static constexpr uint64_t test_option_fn = UINT64_C(18);
   /// TEST 3: Return closure from match on custom 3-constructor type.
   enum class Choice { CLEFT, CRIGHT, CBOTH };
 
@@ -420,29 +415,17 @@ struct MemSafetyProbe19 {
   }
 
   static uint64_t choice_fn(const tree &t, Choice c, uint64_t n);
-  static inline const uint64_t test_choice_left =
-      choice_fn(tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
-                           UINT64_C(7), tree::leaf()),
-                Choice::CLEFT, UINT64_C(0));
+  static constexpr uint64_t test_choice_left = UINT64_C(10);
   /// tree_sum = 3 + 7 = 10. f(0) = 10
-  static inline const uint64_t test_choice_both =
-      choice_fn(tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
-                Choice::CBOTH, UINT64_C(1));
+  static constexpr uint64_t test_choice_both = UINT64_C(11);
   /// TEST 4: Closure returned from if, capturing a locally-built tree.
   /// The let-bound tree is on the stack. If the returned lambda
   /// captures by &, it holds a reference to the dead stack frame.
   static uint64_t make_adder(uint64_t n, bool b, uint64_t x0_);
-  static inline const uint64_t test_make_adder =
-      make_adder(UINT64_C(20), true, UINT64_C(5));
+  static constexpr uint64_t test_make_adder = UINT64_C(25);
   /// TEST 5: Double use of returned closure.
   /// Ensures the closure is a real std::function, not inlined.
-  static inline const uint64_t test_double_use = []() {
-    crane::fn<uint64_t(uint64_t)> f = [](uint64_t _x0) -> uint64_t {
-      return tree::node(tree::leaf(), UINT64_C(7), tree::leaf())
-          .choose_fn(true, _x0);
-    };
-    return (f(UINT64_C(1)) + f(UINT64_C(2)));
-  }();
+  static constexpr uint64_t test_double_use = UINT64_C(17);
 
   /// TEST 6: Pass returned closure to a higher-order function.
   template <typename F0>
@@ -451,35 +434,13 @@ struct MemSafetyProbe19 {
     return f(x0_);
   }
 
-  static inline const uint64_t test_pass_closure = []() {
-    crane::fn<uint64_t(uint64_t)> f = [](uint64_t _x0) -> uint64_t {
-      return tree::node(tree::leaf(), UINT64_C(15), tree::leaf())
-          .choose_fn(true, _x0);
-    };
-    return apply_to(f, UINT64_C(10));
-  }();
-  static inline const uint64_t test_nested_match =
-      tree::node(tree::leaf(), UINT64_C(4), tree::leaf())
-          .nested_match_fn(true, true, UINT64_C(0));
+  static constexpr uint64_t test_pass_closure = UINT64_C(25);
+  static constexpr uint64_t test_nested_match = UINT64_C(4);
   /// f(0) = 4
-  static inline const uint64_t test_nested_match2 =
-      tree::node(tree::leaf(), UINT64_C(4), tree::leaf())
-          .nested_match_fn(true, false, UINT64_C(0));
+  static constexpr uint64_t test_nested_match2 = UINT64_C(8);
   /// TEST 8: Closure from match, used across let-bindings.
   /// Maximum distance between closure creation and use.
-  static inline const uint64_t test_delayed_use = []() {
-    crane::fn<uint64_t(uint64_t)> f = [](uint64_t _x0) -> uint64_t {
-      return choice_fn(
-          tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
-                     UINT64_C(2),
-                     tree::node(tree::leaf(), UINT64_C(3), tree::leaf())),
-          Choice::CLEFT, _x0);
-    };
-    uint64_t a = UINT64_C(100);
-    uint64_t b = (a + UINT64_C(200));
-    uint64_t c = (b + UINT64_C(300));
-    return f(c);
-  }();
+  static constexpr uint64_t test_delayed_use = UINT64_C(606);
 };
 
 #endif // INCLUDED_MEM_SAFETY_PROBE19

@@ -67,15 +67,7 @@ struct DepMatchUnitOption {
   }
 
   static std::optional<uint64_t> get(const tg &t);
-  static inline const uint64_t go = []() -> uint64_t {
-    auto _cs = get(tg::to(std::make_optional<uint64_t>(UINT64_C(4))));
-    if (_cs.has_value()) {
-      const uint64_t &n = *_cs;
-      return n;
-    } else {
-      return UINT64_C(0);
-    }
-  }();
+  static constexpr uint64_t go = UINT64_C(4);
 };
 
 #endif // INCLUDED_DEP_MATCH_UNIT_OPTION

@@ -211,9 +211,9 @@ concept Monoid = requires {
 
 struct MonoidClassArg {
   struct MNat {
-    static uint64_t unit_() { return UINT64_C(0); }
+    constexpr static uint64_t unit_() { return UINT64_C(0); }
 
-    static uint64_t op(uint64_t a0, uint64_t a1) { return (a0 + a1); }
+    constexpr static uint64_t op(uint64_t a0, uint64_t a1) { return (a0 + a1); }
   };
 
   static_assert(Monoid<MNat, uint64_t>);

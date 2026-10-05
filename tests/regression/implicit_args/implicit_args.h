@@ -135,27 +135,35 @@ struct ImplicitArgs {
   }
 
   template <typename T1> static uint64_t length(const mylist<T1> &l) {
-    if (std::holds_alternative<typename mylist<T1>::Mynil>(l.v())) {
-      return UINT64_C(0);
-    } else {
-      const auto &[a0, a1] = std::get<typename mylist<T1>::Mycons>(l.v());
-      return (UINT64_C(1) + length<T1>(*a1));
+    {
+      const mylist<T1> &_lc1_l0 = l;
+      uint64_t _lc1_acc = UINT64_C(0);
+      uint64_t _lc1_loop_acc = std::move(_lc1_acc);
+      const mylist<T1> *_lc1_loop_l0 = &_lc1_l0;
+      while (true) {
+        if (std::holds_alternative<typename mylist<T1>::Mynil>(
+                _lc1_loop_l0->v())) {
+          return _lc1_loop_acc;
+        } else {
+          const auto &[a0, a1] =
+              std::get<typename mylist<T1>::Mycons>(_lc1_loop_l0->v());
+          _lc1_loop_acc = (_lc1_loop_acc + UINT64_C(1));
+          _lc1_loop_l0 = crane_raw(a1);
+        }
+      }
     }
   }
 
-  static inline const uint64_t explicit_id = id<uint64_t>(UINT64_C(5));
-  static inline const uint64_t explicit_fst =
-      fst_of<uint64_t, bool>(UINT64_C(3), true);
+  static constexpr uint64_t explicit_id = UINT64_C(5);
+  static constexpr uint64_t explicit_fst = UINT64_C(3);
   static uint64_t add_one(uint64_t x0_);
   static uint64_t double_nat(uint64_t n);
   static uint64_t add_implicit(uint64_t x0_, uint64_t x1_);
-  static inline const uint64_t use_add_implicit =
-      add_implicit(UINT64_C(5), UINT64_C(3));
+  static constexpr uint64_t use_add_implicit = UINT64_C(8);
   static uint64_t scale(uint64_t x0_, uint64_t x1_);
-  static inline const uint64_t use_scale = scale(UINT64_C(3), UINT64_C(7));
+  static constexpr uint64_t use_scale = UINT64_C(21);
   static uint64_t combine(uint64_t a, uint64_t b, uint64_t x);
-  static inline const uint64_t use_combine =
-      combine(UINT64_C(2), UINT64_C(3), UINT64_C(4));
+  static constexpr uint64_t use_combine = UINT64_C(9);
 
   template <typename F0>
     requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
@@ -163,14 +171,12 @@ struct ImplicitArgs {
     return f(x0_);
   }
 
-  static inline const uint64_t use_apply_implicit = apply_implicit(
-      [](uint64_t _x0) -> uint64_t { return (UINT64_C(1) + _x0); },
-      UINT64_C(5));
+  static constexpr uint64_t use_apply_implicit = UINT64_C(6);
   static uint64_t with_base(uint64_t x0_, uint64_t x1_);
   static uint64_t from_zero(uint64_t x0_);
   static uint64_t from_ten(uint64_t x0_);
-  static inline const uint64_t use_from_zero = from_zero(UINT64_C(5));
-  static inline const uint64_t use_from_ten = from_ten(UINT64_C(5));
+  static constexpr uint64_t use_from_zero = UINT64_C(5);
+  static constexpr uint64_t use_from_ten = UINT64_C(15);
 
   template <typename T1> static T1 head_or(T1 default0, const mylist<T1> &l) {
     if (std::holds_alternative<typename mylist<T1>::Mynil>(l.v())) {
@@ -181,55 +187,34 @@ struct ImplicitArgs {
     }
   }
 
-  static inline const uint64_t use_head_empty =
-      head_or<uint64_t>(UINT64_C(0), mylist<uint64_t>::mynil());
-  static inline const uint64_t use_head_nonempty = head_or<uint64_t>(
-      UINT64_C(0),
-      mylist<uint64_t>::mycons(UINT64_C(7), mylist<uint64_t>::mynil()));
+  static constexpr uint64_t use_head_empty = UINT64_C(0);
+  static constexpr uint64_t use_head_nonempty = UINT64_C(7);
   static uint64_t sum_with_init(uint64_t init, const mylist<uint64_t> &l);
-  static inline const uint64_t use_sum_init = sum_with_init(
-      UINT64_C(5),
-      mylist<uint64_t>::mycons(
-          UINT64_C(1),
-          mylist<uint64_t>::mycons(UINT64_C(2), mylist<uint64_t>::mynil())));
+  static constexpr uint64_t use_sum_init = UINT64_C(8);
   static uint64_t nested_implicits(uint64_t a, uint64_t b, uint64_t c);
-  static inline const uint64_t use_nested =
-      nested_implicits(UINT64_C(1), UINT64_C(2), UINT64_C(3));
+  static constexpr uint64_t use_nested = UINT64_C(6);
   static uint64_t choose_branch(bool flag, uint64_t t, uint64_t f);
-  static inline const uint64_t use_choose_true =
-      choose_branch(true, UINT64_C(7), UINT64_C(3));
-  static inline const uint64_t use_choose_false =
-      choose_branch(false, UINT64_C(7), UINT64_C(3));
-  static inline const uint64_t test_id = id<uint64_t>(UINT64_C(5));
-  static inline const uint64_t test_fst =
-      fst_of<uint64_t, uint64_t>(UINT64_C(3), UINT64_C(7));
-  static inline const uint64_t test_apply =
-      apply<uint64_t, uint64_t>(double_nat, UINT64_C(5));
-  static inline const uint64_t test_compose =
-      compose<uint64_t, uint64_t, uint64_t>(
-          double_nat,
-          [](uint64_t _x0) -> uint64_t { return (UINT64_C(1) + _x0); },
-          UINT64_C(3));
-  static inline const uint64_t test_length =
-      length<uint64_t>(mylist<uint64_t>::mycons(
-          UINT64_C(1),
-          mylist<uint64_t>::mycons(
-              UINT64_C(2), mylist<uint64_t>::mycons(
-                               UINT64_C(3), mylist<uint64_t>::mynil()))));
-  static inline const uint64_t test_explicit_id = explicit_id;
-  static inline const uint64_t test_explicit_fst = explicit_fst;
-  static inline const uint64_t test_add_implicit = use_add_implicit;
-  static inline const uint64_t test_scale = use_scale;
-  static inline const uint64_t test_combine = use_combine;
-  static inline const uint64_t test_apply_implicit = use_apply_implicit;
-  static inline const uint64_t test_from_zero = use_from_zero;
-  static inline const uint64_t test_from_ten = use_from_ten;
-  static inline const uint64_t test_head_empty = use_head_empty;
-  static inline const uint64_t test_head_nonempty = use_head_nonempty;
-  static inline const uint64_t test_sum_init = use_sum_init;
-  static inline const uint64_t test_nested = use_nested;
-  static inline const uint64_t test_choose_true = use_choose_true;
-  static inline const uint64_t test_choose_false = use_choose_false;
+  static constexpr uint64_t use_choose_true = UINT64_C(7);
+  static constexpr uint64_t use_choose_false = UINT64_C(3);
+  static constexpr uint64_t test_id = UINT64_C(5);
+  static constexpr uint64_t test_fst = UINT64_C(3);
+  static constexpr uint64_t test_apply = UINT64_C(10);
+  static constexpr uint64_t test_compose = UINT64_C(8);
+  static constexpr uint64_t test_length = UINT64_C(3);
+  static constexpr uint64_t test_explicit_id = UINT64_C(5);
+  static constexpr uint64_t test_explicit_fst = UINT64_C(3);
+  static constexpr uint64_t test_add_implicit = UINT64_C(8);
+  static constexpr uint64_t test_scale = UINT64_C(21);
+  static constexpr uint64_t test_combine = UINT64_C(9);
+  static constexpr uint64_t test_apply_implicit = UINT64_C(6);
+  static constexpr uint64_t test_from_zero = UINT64_C(5);
+  static constexpr uint64_t test_from_ten = UINT64_C(15);
+  static constexpr uint64_t test_head_empty = UINT64_C(0);
+  static constexpr uint64_t test_head_nonempty = UINT64_C(7);
+  static constexpr uint64_t test_sum_init = UINT64_C(8);
+  static constexpr uint64_t test_nested = UINT64_C(6);
+  static constexpr uint64_t test_choose_true = UINT64_C(7);
+  static constexpr uint64_t test_choose_false = UINT64_C(3);
 };
 
 #endif // INCLUDED_IMPLICIT_ARGS

@@ -42,7 +42,7 @@ struct ModuleParamClassInstance {
     using t = uint64_t;
 
     struct inst {
-      static uint64_t weigh(uint64_t n) { return n; }
+      constexpr static uint64_t weigh(uint64_t n) { return n; }
     };
 
     static_assert(Weigh<inst, uint64_t>);

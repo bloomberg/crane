@@ -101,31 +101,12 @@ struct FixEscapeMatch {
   /// h is destroyed — invoking the closure is use-after-free.
   static std::optional<crane::fn<uint64_t(uint64_t)>>
   make_fn_from_head(const List<uint64_t> &l);
-  static inline const uint64_t test_match = []() -> uint64_t {
-    auto _cs = make_fn_from_head(
-        List<uint64_t>::cons(UINT64_C(10), List<uint64_t>::nil()));
-    if (_cs.has_value()) {
-      const crane::fn<uint64_t(uint64_t)> &f = *_cs;
-      return f(UINT64_C(3));
-    } else {
-      return UINT64_C(0);
-    }
-  }();
+  static constexpr uint64_t test_match = UINT64_C(13);
   /// Variant: fixpoint captures TWO pattern variables from the match.
   static std::optional<crane::fn<uint64_t(uint64_t)>>
   make_fn_from_pair(const List<uint64_t> &l);
 
-  static inline const uint64_t test_match2 = []() -> uint64_t {
-    auto _cs = make_fn_from_pair(List<uint64_t>::cons(
-        UINT64_C(10),
-        List<uint64_t>::cons(UINT64_C(20), List<uint64_t>::nil())));
-    if (_cs.has_value()) {
-      const crane::fn<uint64_t(uint64_t)> &f = *_cs;
-      return f(UINT64_C(3));
-    } else {
-      return UINT64_C(0);
-    }
-  }();
+  static constexpr uint64_t test_match2 = UINT64_C(33);
 };
 
 #endif // INCLUDED_FIX_ESCAPE_MATCH

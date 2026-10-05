@@ -98,14 +98,14 @@ struct WellFoundedRec {
   static List<uint64_t> countdown(uint64_t x0_);
   static uint64_t div2_wf(uint64_t x);
   static uint64_t gcd_wf(uint64_t x, uint64_t b);
-  static inline const uint64_t test_div2_0 = div2_wf(UINT64_C(0));
-  static inline const uint64_t test_div2_1 = div2_wf(UINT64_C(1));
-  static inline const uint64_t test_div2_7 = div2_wf(UINT64_C(7));
-  static inline const uint64_t test_div2_10 = div2_wf(UINT64_C(10));
+  static constexpr uint64_t test_div2_0 = UINT64_C(0);
+  static constexpr uint64_t test_div2_1 = UINT64_C(0);
+  static constexpr uint64_t test_div2_7 = UINT64_C(3);
+  static constexpr uint64_t test_div2_10 = UINT64_C(5);
   static inline const List<uint64_t> test_countdown = countdown(UINT64_C(5));
-  static inline const uint64_t test_gcd_1 = gcd_wf(UINT64_C(12), UINT64_C(8));
-  static inline const uint64_t test_gcd_2 = gcd_wf(UINT64_C(35), UINT64_C(14));
-  static inline const uint64_t test_gcd_3 = gcd_wf(UINT64_C(0), UINT64_C(5));
+  static constexpr uint64_t test_gcd_1 = UINT64_C(4);
+  static constexpr uint64_t test_gcd_2 = UINT64_C(7);
+  static constexpr uint64_t test_gcd_3 = UINT64_C(5);
 };
 
 #endif // INCLUDED_WELL_FOUNDED_REC

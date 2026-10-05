@@ -482,26 +482,13 @@ struct PolyInductive {
     }
   };
 
-  static inline const uint64_t test_pbox =
-      pbox<uint64_t>::pbox0(UINT64_C(42)).punbox();
-  static inline const uint64_t test_ppair_fst =
-      ppair<uint64_t, bool>::ppair0(UINT64_C(7), true).pfst();
-  static inline const bool test_ppair_snd =
-      ppair<uint64_t, bool>::ppair0(UINT64_C(7), true).psnd();
-  static inline const uint64_t test_pjust =
-      pmaybe<uint64_t>::pjust(UINT64_C(99)).pmaybe_default(UINT64_C(0));
-  static inline const uint64_t test_pnothing =
-      pmaybe<uint64_t>::pnothing().pmaybe_default(UINT64_C(0));
-  static inline const uint64_t test_pmap =
-      pmaybe<uint64_t>::pjust(UINT64_C(5))
-          .template pmaybe_map<uint64_t>([](uint64_t x) { return (x + 1); })
-          .pmaybe_default(UINT64_C(0));
-  static inline const uint64_t test_ptree =
-      ptree<uint64_t>::pnode(
-          ptree<uint64_t>::pleaf(UINT64_C(1)),
-          ptree<uint64_t>::pnode(ptree<uint64_t>::pleaf(UINT64_C(2)),
-                                 ptree<uint64_t>::pleaf(UINT64_C(3))))
-          .ptree_size();
+  static constexpr uint64_t test_pbox = UINT64_C(42);
+  static constexpr uint64_t test_ppair_fst = UINT64_C(7);
+  static constexpr bool test_ppair_snd = true;
+  static constexpr uint64_t test_pjust = UINT64_C(99);
+  static constexpr uint64_t test_pnothing = UINT64_C(0);
+  static constexpr uint64_t test_pmap = UINT64_C(6);
+  static constexpr uint64_t test_ptree = UINT64_C(5);
 };
 
 #endif // INCLUDED_POLY_INDUCTIVE
