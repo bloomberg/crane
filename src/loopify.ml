@@ -1083,77 +1083,21 @@ let try_inline_functional_into names body =
            parameters matter in particular: a filter predicate [fun x => x < p]
            would otherwise collide with a wrapper parameter also named [x],
            confusing the decltype-based frame-field typing. *)
-        let bound = ref [] in
-        let add id = bound := id :: !bound in
-        let rec cb_expr e =
-          ( match e with
-          | CPPlambda {cl_params = ps; _} ->
-            List.iter (fun (_, ido) -> Option.iter add ido) (to_reversed ps)
-          | _ -> () );
-          ignore (map_expr (fun e' -> cb_expr e'; e') (fun s -> cb_stmt s; s) Fun.id e)
-        and cb_stmt s =
-          ( match s with
-          | Sdecl (id, _) | Sdecl_init (id, _) | Sasgn (id, Declare _, _) ->
-            add id
-          | Sbind (ids, _) -> List.iter add ids
-          | Smatch (scrut, branches, _) ->
-            List.iter
-              (fun br ->
-                Option.iter add br.smb_var;
-                List.iter (fun (id, _, _) -> add id) br.smb_field_bindings )
-              branches
-          | _ -> () );
-          ignore (map_stmt (fun e -> cb_expr e; e) (fun s' -> cb_stmt s'; s') Fun.id s)
-        in
         let keep_params =
           List.filteri (fun i _ -> i <> k) g_params
         in
-        List.iter (fun (pid, _) -> add pid) keep_params;
-        List.iter cb_stmt g_body;
         let rename_map =
           List.map
             (fun id -> (id, Generated_name.prefixed "_inl" id))
-            !bound
+            (List.map fst keep_params @ declared_ids g_body)
         in
         let rename_var id =
           match List.assoc_opt id rename_map with Some f -> f | None -> id
         in
-        let rec ren_expr = function
-          | CPPvar id -> CPPvar (rename_var id)
-          | CPPlambda l ->
-            CPPlambda
-              { (map_lambda ren_stmt Fun.id l) with
-                cl_params =
-                  of_reversed
-                    (List.map
-                       (fun (ty, ido) -> (ty, Option.map rename_var ido))
-                       (to_reversed l.cl_params) ) }
-          | e -> map_expr ren_expr ren_stmt Fun.id e
-        and ren_stmt s =
-          match s with
-          | Sasgn (id, ty, e) -> Sasgn (rename_var id, ty, ren_expr e)
-          | Sdecl (id, ty) -> Sdecl (rename_var id, ty)
-          | Smatch (scrut, branches, default) ->
-            Smatch
-              ( { scrut with sc_expr = ren_expr scrut.sc_expr },
-                List.map
-                  (fun br ->
-                    { br with
-                      smb_var = Option.map rename_var br.smb_var;
-                      smb_field_bindings =
-                        List.map
-                          (fun (id, ty, u) -> (rename_var id, ty, u))
-                          br.smb_field_bindings;
-                      smb_extra_conds = List.map ren_expr br.smb_extra_conds;
-                      smb_body = List.map ren_stmt br.smb_body } )
-                  branches,
-                Option.map (List.map ren_stmt) default )
-          | _ -> map_stmt ren_expr ren_stmt Fun.id s
-        in
         let fresh_params =
           List.map (fun (pid, ty) -> (rename_var pid, ty)) keep_params
         in
-        let fresh_body = List.map ren_stmt g_body in
+        let fresh_body = rename_ids rename_var g_body in
         (* Match exactly the knot call: a call to a registered functional whose
            argument at position [k] is the eta-self lambda. *)
         let spec =
