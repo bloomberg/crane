@@ -82,3 +82,6 @@ let declare q words =
     | GlobRef.ConstRef _ -> ()
     | _ -> error "an operation names a constant" ) );
   Lib.add_leaf (semantics_object (r, s))
+
+let nat_width ind =
+  match find (GlobRef.IndRef ind) with Some (Unsigned_nat w) -> Some w | _ -> None

@@ -1421,14 +1421,15 @@ let report_body_generations fn =
              (Gen_decls.body_generation_counts ()) )
 
 (** [Modutil.optimize_struct], the bounded source rewrites in a fixed order
-    -- evaluation of small closed definitions, then the whitelisted reduction
-    -- and then {!Normalize}, so that every consumer of the structure (the
+    -- evaluation of small closed definitions, fusion of a fold of a map,
+    the whitelisted reduction -- and then {!Normalize}, so that every consumer of the structure (the
     method registry built before printing as much as the printer) sees the
     same bodies, and a body a rewrite introduces meets Normalize's contract
     like any other. *)
 let optimize_struct to_appear struc =
   Modutil.optimize_struct to_appear struc
   |> Ml_const_eval.structure
+  |> Ml_fuse.structure
   |> Ml_reduce.structure
   |> Normalize.structure
 

@@ -17,34 +17,16 @@ let lift_above m k t =
   in
   go m t
 
-(* The width an inductive is declared an unsigned integer at. *)
+(* The width the constructor's inductive is declared an unsigned integer
+   at. *)
 let nat_width = function
-  | GlobRef.ConstructRef (ind, _) -> (
-    match MS.find (GlobRef.IndRef ind) with
-    | Some (MS.Unsigned_nat w) -> Some w
-    | _ -> None )
+  | GlobRef.ConstructRef (ind, _) -> MS.nat_width ind
   | _ -> None
 
 (* [e] is that type's zero: its constant constructor. *)
 let zero_width = function
   | MLcons (_, c, []) -> nat_width c
   | _ -> None
-
-(* [e] is built from declared operations, constructors, literals and
-   variables only, and so evaluates to a value and does nothing else, at any
-   point. *)
-let rec declared_pure = function
-  | MLrel _ | MLuint _ | MLfloat _ | MLstring _ -> true
-  | MLcons (_, _, args) | MLtuple args -> List.for_all declared_pure args
-  | MLapp (MLglob (g, _), args) -> (
-    match MS.find g with
-    | Some (MS.Unsigned _) -> List.for_all declared_pure args
-    | _ -> false )
-  | MLmagic (_, a) -> declared_pure a
-  | MLletin (_, _, a, b) -> declared_pure a && declared_pure b
-  | MLcase (_, s, brs) ->
-    declared_pure s && Array.for_all (fun (_, _, _, b) -> declared_pure b) brs
-  | _ -> false
 
 let rec mentions_glob r = function
   | MLglob (r', _) -> GlobRef.CanOrd.equal r r'
@@ -77,7 +59,7 @@ let accumulate f ty body =
       (* Pure [let]s in front of the addition belong to the contribution:
          [let c := ... in c + f xs]. *)
       let rec peel k lets = function
-        | MLletin (id, t, e, body) when declared_pure e -> peel (k + 1) ((id, t, e) :: lets) body
+        | MLletin (id, t, e, body) when Ml_declared.pure e -> peel (k + 1) ((id, t, e) :: lets) body
         | body -> (k, lets, body)
       in
       let k, lets, core = peel 0 [] b in
@@ -112,7 +94,7 @@ let accumulate f ty body =
           ( match rec_and_contrib with
           | Some (field, contrib)
             when (not (mentions_glob f contrib))
-                 && declared_pure contrib
+                 && Ml_declared.pure contrib
                  && not (Mlutil.ast_occurs (j + m) contrib) ->
             `Step (w, add, List.rev lets, field, contrib)
           | _ -> `Other )
@@ -174,18 +156,4 @@ let decl = function
     | None -> d )
   | d -> d
 
-let rec structure_elems sel =
-  List.map
-    (fun (l, se) ->
-      match se with
-      | SEdecl d -> (l, SEdecl (decl d))
-      | SEmodule m -> (l, SEmodule {m with ml_mod_expr = module_expr m.ml_mod_expr})
-      | se -> (l, se) )
-    sel
-
-and module_expr = function
-  | MEstruct (mp, sel) -> MEstruct (mp, structure_elems sel)
-  | MEfunctor (mbid, mt, me) -> MEfunctor (mbid, mt, module_expr me)
-  | me -> me
-
-let structure struc = List.map (fun (mp, sel) -> (mp, structure_elems sel)) struc
+let structure = Ml_declared.map_decls decl

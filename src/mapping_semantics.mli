@@ -50,5 +50,9 @@ val find : Names.GlobRef.t -> t option
     record it. *)
 val declare : Libnames.qualid -> string -> unit
 
+(** The width the inductive is declared an unsigned integer at
+    ({!Unsigned_nat}). *)
+val nat_width : Names.inductive -> width option
+
 (** [2^width - 1], the largest value of the width. *)
 val max_value : width -> Z.t

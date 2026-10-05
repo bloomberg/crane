@@ -11699,3 +11699,14 @@
   (alias runtest)
   (deps semantic_fold.t.exe)
   (action (run ./semantic_fold.t.exe))))
+
+(subdir map_fold_fusion
+ (rule
+  (targets map_fold_fusion.t.exe)
+  (deps MapFoldFusion.vo map_fold_fusion.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} map_fold_fusion.t.exe map_fold_fusion.cpp map_fold_fusion.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps map_fold_fusion.t.exe)
+  (action (run ./map_fold_fusion.t.exe))))

@@ -43,10 +43,6 @@ let grow b n =
 
 let unknown () = raise_notrace (Stop Unknown_operation)
 
-(* The unsigned width an inductive is declared at. *)
-let nat_width ind =
-  match MS.find (GlobRef.IndRef ind) with Some (MS.Unsigned_nat w) -> Some w | _ -> None
-
 let wrap w n = Z.logand n (MS.max_value w)
 
 let bool_ctor b =
@@ -70,7 +66,7 @@ let rec run b defs env e =
 and construct b c args =
   match c with
   | GlobRef.ConstructRef (ind, _) -> (
-    match (nat_width ind, args) with
+    match (MS.nat_width ind, args) with
     | Some w, [] -> Nat (Z.zero, w)
     | Some w, [Nat (n, _)] -> Nat (wrap w (Z.succ n), w)
     | Some _, _ -> unknown ()
@@ -133,7 +129,7 @@ and case b defs env v brs =
                match p with
                | Pusual (GlobRef.ConstructRef (ind, _) as c)
                | Pcons ((GlobRef.ConstructRef (ind, _) as c), _)
-                 when nat_width ind <> None ->
+                 when MS.nat_width ind <> None ->
                  Some (ind, c)
                | _ -> None)
       in
@@ -182,7 +178,7 @@ let candidate ty body =
   ( match body with MLlam _ | MLcons (_, _, []) -> false | _ -> true )
   &&
   match ty with
-  | Tglob (GlobRef.IndRef ind, [], _) -> nat_width ind <> None || Table.is_enum_inductive (GlobRef.IndRef ind)
+  | Tglob (GlobRef.IndRef ind, [], _) -> MS.nat_width ind <> None || Table.is_enum_inductive (GlobRef.IndRef ind)
   | _ -> false
 
 let evaluate defs ty body =
@@ -193,36 +189,13 @@ let evaluate defs ty body =
     | v -> quote ty v
     | exception Stop _ -> None
 
-(* Every definition's body, by reference, for calls to follow. *)
-let definitions struc =
-  let defs = ref Table.Refmap'.empty in
-  let rec sel l =
-    List.iter
-      (fun (_, se) ->
-        match se with
-        | SEdecl (Dterm (r, body, _)) -> defs := Table.Refmap'.add r body !defs
-        | SEdecl (Dfix fds) ->
-          List.iter (fun fd -> defs := Table.Refmap'.add fd.fd_ref fd.fd_body !defs) fds
-        | SEmodule {ml_mod_expr = MEstruct (_, l); _} -> sel l
-        | _ -> ())
-      l
-  in
-  List.iter (fun (_, l) -> sel l) struc;
-  !defs
-
 let structure struc =
-  let defs = definitions struc in
-  let rec sel l =
-    List.map
-      (fun (lbl, se) ->
-        match se with
-        | SEdecl (Dterm (r, body, ty)) -> (
-          match evaluate defs ty body with
-          | Some lit -> (lbl, SEdecl (Dterm (r, lit, ty)))
-          | None -> (lbl, se) )
-        | SEmodule ({ml_mod_expr = MEstruct (mp, l); _} as m) ->
-          (lbl, SEmodule {m with ml_mod_expr = MEstruct (mp, sel l)})
-        | se -> (lbl, se))
-      l
-  in
-  List.map (fun (mp, l) -> (mp, sel l)) struc
+  let defs = Ml_declared.definitions struc in
+  Ml_declared.map_decls
+    (function
+      | Dterm (r, body, ty) as d -> (
+        match evaluate defs ty body with
+        | Some lit -> Dterm (r, lit, ty)
+        | None -> d )
+      | d -> d)
+    struc
