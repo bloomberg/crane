@@ -10,7 +10,7 @@ struct KbpMultibitDefault {
 
   static state execute_kbp(const state &s);
   static inline const state sample = state{UINT64_C(3)};
-  static constexpr bool t = true;
+  static inline const bool t = execute_kbp(sample).acc == UINT64_C(15);
 };
 
 #endif // INCLUDED_KBP_MULTIBIT_DEFAULT

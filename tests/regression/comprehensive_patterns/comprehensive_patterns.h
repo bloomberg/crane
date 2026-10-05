@@ -362,7 +362,7 @@ struct ComprehensivePatterns {
 
   static uint64_t double_proj_nc(const OuterNC &o);
   static uint64_t multi_positions(const NC &r);
-  static uint64_t sum_proj(uint64_t n, NC r);
+  static uint64_t sum_proj(uint64_t n, const NC &r);
 
   template <typename F0>
     requires std::is_invocable_r_v<uint64_t, F0 &, NC &&>
@@ -438,7 +438,7 @@ struct ComprehensivePatterns {
   static List<uint64_t> proj_in_list(const StateStmt &s);
   static bool compare_projs(const StateStmt &s);
   static bool bool_with_proj(const StateStmt &s);
-  static uint64_t sum_values(uint64_t n, StateStmt s);
+  static uint64_t sum_values(uint64_t n, const StateStmt &s);
 
   struct RCF {
     uint64_t cf_val;

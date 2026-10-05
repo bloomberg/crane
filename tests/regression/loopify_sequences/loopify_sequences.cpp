@@ -71,9 +71,10 @@ List<uint64_t> LoopifySequences::collatz_list_fuel(
           _result = List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil());
         } else {
           List<uint64_t> _tmp1;
-          if ((n % UINT64_C(2)) == UINT64_C(0)) {
+          if ((UINT64_C(2) ? n % UINT64_C(2) : n) == UINT64_C(0)) {
             _stack.emplace_back(CraneCont1{n});
-            _stack.emplace_back(CraneEnter{(n / UINT64_C(2)), f});
+            _stack.emplace_back(
+                CraneEnter{(UINT64_C(2) ? n / UINT64_C(2) : 0), f});
           } else {
             _stack.emplace_back(CraneCont2{n});
             _stack.emplace_back(
@@ -416,7 +417,9 @@ List<uint64_t> LoopifySequences::replace_at(uint64_t idx, uint64_t value,
                     : _root.emplace(std::move(_cell)));
         _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
         _loop_l = crane_raw(a1);
-        _loop_idx = (_loop_idx - UINT64_C(1));
+        _loop_idx = (((_loop_idx - UINT64_C(1)) > _loop_idx
+                          ? 0
+                          : (_loop_idx - UINT64_C(1))));
         continue;
       }
     }
@@ -1029,7 +1032,8 @@ List<uint64_t> LoopifySequences::remove_if_sum_even(const List<uint64_t> &l) {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       uint64_t next = head_or(UINT64_C(0), *a1);
-      if (((a0 + next) % UINT64_C(2)) == UINT64_C(0)) {
+      if ((UINT64_C(2) ? (a0 + next) % UINT64_C(2) : (a0 + next)) ==
+          UINT64_C(0)) {
         _loop_l = crane_raw(a1);
         continue;
       } else {

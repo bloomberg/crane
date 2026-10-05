@@ -36,7 +36,11 @@ struct ModuleLocalReturnType {
   };
 
   static M::t make(uint64_t n);
-  static constexpr uint64_t run = UINT64_C(4);
+  static inline const uint64_t run = []() {
+    const auto &_sv = make(UINT64_C(4));
+    const auto &[a0] = _sv;
+    return a0;
+  }();
 };
 
 #endif // INCLUDED_MODULE_LOCAL_RETURN_TYPE

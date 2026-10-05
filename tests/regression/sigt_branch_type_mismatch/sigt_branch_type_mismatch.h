@@ -2,10 +2,13 @@
 #define INCLUDED_SIGT_BRANCH_TYPE_MISMATCH
 
 #include "crane_fn.h"
+#include "fn.h"
 #include "obj.h"
 #include <cstdint>
+#include <functional>
 #include <stdexcept>
 #include <utility>
+#include <variant>
 
 template <typename A, typename P> struct SigT;
 
@@ -52,7 +55,16 @@ struct SigtBranchTypeMismatch {
             uint64_t n = crane::any_cast<uint64_t>(_any_n);
             return (n + UINT64_C(7));
           }));
-  static constexpr uint64_t go = UINT64_C(8);
+  static inline const uint64_t go = []() {
+    const auto &_sv = pack;
+    const auto &[x0, a1] = _sv;
+    if (crane::any_cast<bool>(x0)) {
+      return crane::any_cast<uint64_t>(a1);
+    } else {
+      return crane::any_cast<uint64_t>(
+          crane::any_cast<crane::fn<crane::obj(crane::obj)>>(a1)(UINT64_C(1)));
+    }
+  }();
 };
 
 #endif // INCLUDED_SIGT_BRANCH_TYPE_MISMATCH

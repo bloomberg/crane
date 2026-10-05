@@ -143,14 +143,15 @@ List<uint64_t> LoopifyScans::pairwise_diff(uint64_t prev,
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       uint64_t diff;
       if (a0 < _loop_prev) {
-        uint64_t sub = (_loop_prev - a0);
+        uint64_t sub =
+            (((_loop_prev - a0) > _loop_prev ? 0 : (_loop_prev - a0)));
         if (_loop_prev < sub) {
           diff = UINT64_C(0);
         } else {
           diff = sub;
         }
       } else {
-        uint64_t sub = (a0 - _loop_prev);
+        uint64_t sub = (((a0 - _loop_prev) > a0 ? 0 : (a0 - _loop_prev)));
         if (a0 < sub) {
           diff = UINT64_C(0);
         } else {
@@ -186,7 +187,7 @@ List<uint64_t> LoopifyScans::accumulate_if_even(uint64_t acc,
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
-      if ((a0 % UINT64_C(2)) == UINT64_C(0)) {
+      if ((UINT64_C(2) ? a0 % UINT64_C(2) : a0) == UINT64_C(0)) {
         auto _cell = typename List<uint64_t>::Cons(_loop_acc, nullptr);
         List<uint64_t> &_node =
             (_write ? *(*_write =

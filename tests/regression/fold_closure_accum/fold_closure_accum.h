@@ -237,13 +237,46 @@ struct FoldClosureAccum {
   /// t1 sums to 10, t2 sums to 20, t3 sums to 30.
   /// compose_adders t1; t2; t3 x = x + 30 + 20 + 10 = x + 60
   /// Expected: compose_adders t1; t2; t3 0 = 60
-  static constexpr uint64_t fold_bug = UINT64_C(60);
+  static inline const uint64_t fold_bug = []() {
+    tree t1 = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
+    tree t2 = tree::node(tree::leaf(), UINT64_C(20), tree::leaf());
+    tree t3 = tree::node(tree::leaf(), UINT64_C(30), tree::leaf());
+    return compose_adders(
+        List<tree>::cons(std::move(t1),
+                         List<tree>::cons(std::move(t2),
+                                          List<tree>::cons(std::move(t3),
+                                                           List<tree>::nil()))),
+        UINT64_C(0));
+  }();
   /// Test with non-zero starting value.
   /// Expected: compose_adders t1; t2; t3 7 = 67
-  static constexpr uint64_t fold_bug_offset = UINT64_C(67);
+  static inline const uint64_t fold_bug_offset = []() {
+    tree t1 = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
+    tree t2 = tree::node(tree::leaf(), UINT64_C(20), tree::leaf());
+    tree t3 = tree::node(tree::leaf(), UINT64_C(30), tree::leaf());
+    return compose_adders(
+        List<tree>::cons(std::move(t1),
+                         List<tree>::cons(std::move(t2),
+                                          List<tree>::cons(std::move(t3),
+                                                           List<tree>::nil()))),
+        UINT64_C(7));
+  }();
   /// Invoke the composed function twice — tests if closures survive
   /// multiple invocations.
-  static constexpr uint64_t fold_bug_double = UINT64_C(160);
+  static inline const uint64_t fold_bug_double = []() {
+    return []() {
+      tree t1 = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
+      tree t2 = tree::node(tree::leaf(), UINT64_C(20), tree::leaf());
+      crane::fn<uint64_t(uint64_t)> f = [=](uint64_t _x0) -> uint64_t {
+        return compose_adders(
+            List<tree>::cons(
+                std::move(t1),
+                List<tree>::cons(std::move(t2), List<tree>::nil())),
+            _x0);
+      };
+      return (f(UINT64_C(0)) + f(UINT64_C(100)));
+    }();
+  }();
 };
 
 #endif // INCLUDED_FOLD_CLOSURE_ACCUM

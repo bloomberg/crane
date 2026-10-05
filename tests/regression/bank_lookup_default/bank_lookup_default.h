@@ -154,7 +154,8 @@ struct BankLookupDefault {
   static inline const state sample_state = state{List<ram_bank>::cons(
       ram_bank{List<ram_chip>::cons(empty_chip, List<ram_chip>::nil())},
       List<ram_bank>::nil())};
-  static constexpr uint64_t t = UINT64_C(0);
+  static inline const uint64_t t =
+      get_bank(sample_state, UINT64_C(7)).bank_chips.length();
 };
 
 template <typename T1>

@@ -44,14 +44,19 @@ struct ExistentialClosureProbe {
   /// Unpack and apply.
   static uint64_t apply_packed(const wrap &x0_, uint64_t x1_);
   /// test1: pack base=10, apply to 5. Expected: 15.
-  static constexpr uint64_t test1 = UINT64_C(15);
+  static inline const uint64_t test1 =
+      apply_packed(pack_fn(UINT64_C(10)), UINT64_C(5));
   /// test2: Pack and unpack through a let binding.
   /// base=42, apply to 0. Expected: 42.
-  static constexpr uint64_t test2 = UINT64_C(42);
+  static inline const uint64_t test2 = []() {
+    wrap p = pack_fn(UINT64_C(42));
+    return apply_packed(std::move(p), UINT64_C(0));
+  }();
   /// Store a closure that captures another closure.
   static wrap pack_composed(uint64_t a, uint64_t b);
   /// test3: a=3, b=2, g(5) = (5+3)*2 = 16.
-  static constexpr uint64_t test3 = UINT64_C(16);
+  static inline const uint64_t test3 =
+      apply_packed(pack_composed(UINT64_C(3), UINT64_C(2)), UINT64_C(5));
 };
 
 #endif // INCLUDED_EXISTENTIAL_CLOSURE_PROBE

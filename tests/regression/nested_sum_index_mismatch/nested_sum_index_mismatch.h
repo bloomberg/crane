@@ -202,7 +202,18 @@ struct NestedSumIndexMismatch {
     }
   }
 
-  static constexpr bool is_three = true;
+  static inline const bool is_three = []() -> bool {
+    auto _cs = c_of<std::monostate>(
+        Sum1<AE, Sum1<BE, cE, crane::obj>, std::monostate>::inr1(
+            Sum1<BE, cE, std::monostate>::inr1(
+                cE::c(Nat::s(Nat::s(Nat::s(Nat::o())))))));
+    if (_cs.has_value()) {
+      const Nat &n = *_cs;
+      return n.eqb(Nat::s(Nat::s(Nat::s(Nat::o()))));
+    } else {
+      return false;
+    }
+  }();
 };
 
 #endif // INCLUDED_NESTED_SUM_INDEX_MISMATCH

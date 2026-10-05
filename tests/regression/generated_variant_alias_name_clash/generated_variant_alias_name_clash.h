@@ -62,7 +62,7 @@ struct GeneratedVariantAliasNameClash {
   }
 
   static bool is_flag(const variant_t0 &x);
-  static constexpr bool sample = true;
+  static inline const bool sample = is_flag(variant_t0::flag(true));
 };
 
 #endif // INCLUDED_GENERATED_VARIANT_ALIAS_NAME_CLASH

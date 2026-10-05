@@ -1,7 +1,6 @@
 #ifndef INCLUDED_REUSE_SELF_CYCLE
 #define INCLUDED_REUSE_SELF_CYCLE
 
-#include "crane_fn.h"
 #include <atomic>
 #include <cstdint>
 #include <memory>
@@ -102,11 +101,14 @@ struct ReuseSelfCycle {
   /// test1: prepend_self(1, 2, true) should produce 1, 1, 2.
   /// In Rocq: mycons 1 (mycons 1 (mycons 2 mynil)), length = 3.
   /// With reuse bug: mycons 1 -> itself (cycle), length = infinite loop.
-  static constexpr uint64_t test1 = UINT64_C(3);
+  static inline const uint64_t test1 = length(prepend_self(
+      mylist::mycons(UINT64_C(1), mylist::mycons(UINT64_C(2), mylist::mynil())),
+      true));
   /// test2: Even simpler - single element list.
   /// prepend_self(42, true) should produce 42, 42, length = 2.
   /// With bug: 42 -> itself, length = infinite.
-  static constexpr uint64_t test2 = UINT64_C(2);
+  static inline const uint64_t test2 =
+      length(prepend_self(mylist::mycons(UINT64_C(42), mylist::mynil()), true));
 };
 
 #endif // INCLUDED_REUSE_SELF_CYCLE

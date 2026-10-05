@@ -32,7 +32,7 @@ struct ClassInNestedModule {
     return (_tcI0::sz(x) + _tcI0::tag());
   }
 
-  static constexpr uint64_t run = UINT64_C(6);
+  static inline const uint64_t run = use<Cls::SN, uint64_t>(UINT64_C(5));
 };
 
 #endif // INCLUDED_CLASS_IN_NESTED_MODULE

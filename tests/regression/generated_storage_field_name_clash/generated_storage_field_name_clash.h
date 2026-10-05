@@ -62,7 +62,7 @@ struct GeneratedStorageFieldNameClash {
   }
 
   static bool is_flag(const d_v_ &x);
-  static constexpr bool sample = true;
+  static inline const bool sample = is_flag(d_v_::flag(true));
 };
 
 #endif // INCLUDED_GENERATED_STORAGE_FIELD_NAME_CLASH

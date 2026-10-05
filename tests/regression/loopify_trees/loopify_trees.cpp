@@ -280,7 +280,7 @@ LoopifyTrees::count_paths(const LoopifyTrees::tree<uint64_t> &t,
             _result = UINT64_C(0);
           }
         } else {
-          uint64_t remaining = (n - a1);
+          uint64_t remaining = (((n - a1) > n ? 0 : (n - a1)));
           _stack.emplace_back(CraneCont3{crane_raw(a2), remaining});
           _stack.emplace_back(CraneEnter{remaining, crane_raw(a0)});
         }

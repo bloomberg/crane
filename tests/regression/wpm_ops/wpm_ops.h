@@ -203,7 +203,18 @@ struct WpmOps {
   };
 
   static state4 execute_wpm4(const state4 &s);
-  static constexpr uint64_t test_wpm_update_gate = UINT64_C(99);
+  static inline const uint64_t test_wpm_update_gate = []() {
+    state4 s = state4{
+        List<uint64_t>::cons(
+            UINT64_C(10),
+            List<uint64_t>::cons(
+                UINT64_C(11),
+                List<uint64_t>::cons(UINT64_C(12), List<uint64_t>::nil()))),
+        UINT64_C(1), UINT64_C(99), true};
+    state4 s_ = execute_wpm4(std::move(s));
+    return ListDef::template nth<uint64_t>(UINT64_C(1), std::move(s_).rom4,
+                                           UINT64_C(0));
+  }();
 
   struct state5 {
     List<uint64_t> rom5;
@@ -222,7 +233,9 @@ struct WpmOps {
                   UINT64_C(12),
                   List<uint64_t>::cons(UINT64_C(13), List<uint64_t>::nil())))),
       UINT64_C(2), UINT64_C(99), true};
-  static constexpr bool test_wpm_updates_rom_at_addr = true;
+  static inline const bool test_wpm_updates_rom_at_addr =
+      ListDef::template nth<uint64_t>(UINT64_C(2), execute_wpm5(sample5).rom5,
+                                      UINT64_C(0)) == UINT64_C(99);
 
   struct state6 {
     List<uint64_t> rom6;

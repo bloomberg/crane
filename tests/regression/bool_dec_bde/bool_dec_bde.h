@@ -7,8 +7,8 @@ struct Bool {
 
 struct BoolDecBde {
   static bool eqb_dec(bool a, bool b);
-  static constexpr bool t1 = true;
-  static constexpr bool t2 = false;
+  static inline const bool t1 = eqb_dec(true, true);
+  static inline const bool t2 = eqb_dec(true, false);
 };
 
 #endif // INCLUDED_BOOL_DEC_BDE

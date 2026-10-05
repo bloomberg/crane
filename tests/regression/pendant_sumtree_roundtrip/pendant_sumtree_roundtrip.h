@@ -806,14 +806,19 @@ struct PendantSumtreeRoundtripCase {
                   SigT<uint64_t, CertifiedPendant>::existt(UINT64_C(1),
                                                            pendant_5),
                   List<SigT<uint64_t, CertifiedPendant>>::nil0())));
-  static constexpr bool sample_group_valid = true;
+  static inline const bool sample_group_valid =
+      group_sums_validb(UINT64_C(3), sample_group);
   static inline const bool sample_subtree_valid =
       sumtree_validb(UINT64_C(3), sample_subtree);
   static inline const bool sample_tree_valid =
       sumtree_validb(UINT64_C(3), sample_tree);
-  static constexpr bool sample_leaf_total_matches_root = true;
-  static constexpr uint64_t sample_tree_depth = UINT64_C(3);
-  static constexpr uint64_t sample_ledger_entry_count = UINT64_C(3);
+  static inline const bool sample_leaf_total_matches_root =
+      option_nat_eqb(sumtree_leaf_total(UINT64_C(3), sample_tree),
+                     pendant_value(UINT64_C(3), pendant_731));
+  static inline const uint64_t sample_tree_depth =
+      sumtree_depth(UINT64_C(3), sample_tree);
+  static inline const uint64_t sample_ledger_entry_count =
+      ledger_values(sample_ledger).length();
   static inline const bool sample_ledger_all_present =
       ledger_values(sample_ledger).forallb(option_nat_is_some);
 };

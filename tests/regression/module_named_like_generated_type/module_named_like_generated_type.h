@@ -13,7 +13,7 @@ struct Nat {
 };
 
 struct ModuleNamedLikeGeneratedType {
-  static constexpr uint64_t run = UINT64_C(1);
+  static inline const uint64_t run = Nat::k;
 };
 
 #endif // INCLUDED_MODULE_NAMED_LIKE_GENERATED_TYPE

@@ -71,7 +71,7 @@ struct GeneratedMethodNameClash {
   }
 
   static bool is_clone(const token &t);
-  static constexpr bool sample = true;
+  static inline const bool sample = is_clone(token::Clone_());
 };
 
 #endif // INCLUDED_GENERATED_METHOD_NAME_CLASH

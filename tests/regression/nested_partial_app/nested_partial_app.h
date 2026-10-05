@@ -1,6 +1,7 @@
 #ifndef INCLUDED_NESTED_PARTIAL_APP
 #define INCLUDED_NESTED_PARTIAL_APP
 
+#include "fn.h"
 #include "small_vector.h"
 #include <atomic>
 #include <cstdint>
@@ -106,13 +107,59 @@ struct NestedPartialApp {
   /// h c2 = Node(t1, 42, c2)
   /// tree_sum(h c1) + tree_sum(h c2) where c1=Node Leaf 1 Leaf, c2=Node Leaf 2
   /// Leaf = (10 + 42 + 1) + (10 + 42 + 2) = 53 + 54 = 107
-  static constexpr uint64_t nested_partial_bug = UINT64_C(107);
+  static inline const uint64_t nested_partial_bug = []() {
+    return []() {
+      tree t1 = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
+      crane::fn<tree(uint64_t, tree)> g = [=](uint64_t _x0, tree _x1) -> tree {
+        return build_node(std::move(t1), _x0, _x1);
+      };
+      crane::fn<tree(tree)> h = [=](tree _pa0) {
+        return g(UINT64_C(42), _pa0);
+      };
+      tree r1 = h(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()));
+      tree r2 = h(tree::node(tree::leaf(), UINT64_C(2), tree::leaf()));
+      return (tree_sum(std::move(r1)) + tree_sum(std::move(r2)));
+    }();
+  }();
   /// Variation: use intermediate partial app g twice before further
   /// partial application. Tests if g's capture of t1 survives.
-  static constexpr uint64_t nested_partial_reuse = UINT64_C(164);
+  static inline const uint64_t nested_partial_reuse = []() {
+    return []() {
+      tree t1 = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
+      crane::fn<tree(uint64_t, tree)> g = [=](uint64_t _x0, tree _x1) -> tree {
+        return build_node(std::move(t1), _x0, _x1);
+      };
+      crane::fn<tree(tree)> h1 = [=](tree _pa0) {
+        return g(UINT64_C(42), _pa0);
+      };
+      crane::fn<tree(tree)> h2 = [=](tree _pa0) {
+        return g(UINT64_C(99), _pa0);
+      };
+      tree r1 = h1(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()));
+      tree r2 = h2(tree::node(tree::leaf(), UINT64_C(2), tree::leaf()));
+      return (tree_sum(std::move(r1)) + tree_sum(std::move(r2)));
+    }();
+  }();
   /// Variation: 4-argument function, triple nesting.
   static uint64_t quad_fn(const tree &a, uint64_t b, uint64_t c, const tree &d);
-  static constexpr uint64_t triple_partial = UINT64_C(123);
+  static inline const uint64_t triple_partial = []() {
+    return []() {
+      tree t = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
+      crane::fn<uint64_t(uint64_t, uint64_t, tree)> f1 =
+          [=](uint64_t _x0, uint64_t _x1, tree _x2) -> uint64_t {
+        return quad_fn(std::move(t), _x0, _x1, _x2);
+      };
+      crane::fn<uint64_t(uint64_t, tree)> f2 = [=](uint64_t _pa0, tree _pa1) {
+        return f1(UINT64_C(20), _pa0, _pa1);
+      };
+      crane::fn<uint64_t(tree)> f3 = [=](tree _pa0) {
+        return f2(UINT64_C(30), _pa0);
+      };
+      uint64_t r1 = f3(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()));
+      uint64_t r2 = f3(tree::node(tree::leaf(), UINT64_C(2), tree::leaf()));
+      return (r1 + r2);
+    }();
+  }();
 };
 
 #endif // INCLUDED_NESTED_PARTIAL_APP

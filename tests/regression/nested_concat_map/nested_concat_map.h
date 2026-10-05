@@ -271,7 +271,13 @@ struct NestedConcatMap {
               List<List<List<uint64_t>>>::nil())));
   static List<uint64_t> flatten(const List<List<List<uint64_t>>> &c);
   static List<List<uint64_t>> regroup(const List<List<List<uint64_t>>> &c);
-  static constexpr uint64_t total = UINT64_C(27);
+  static inline const uint64_t total =
+      (flatten(sample).template fold_left<uint64_t>(
+           [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
+           UINT64_C(0)) +
+       regroup(sample).template fold_left<uint64_t>(
+           [](uint64_t a, const List<uint64_t> &l) { return (a + l.length()); },
+           UINT64_C(0)));
 };
 
 #endif // INCLUDED_NESTED_CONCAT_MAP

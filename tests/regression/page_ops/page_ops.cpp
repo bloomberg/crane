@@ -1,12 +1,18 @@
 #include "page_ops.h"
 
-uint64_t PageOps::addr12_of_nat(uint64_t n) { return (n % UINT64_C(4096)); }
+uint64_t PageOps::addr12_of_nat(uint64_t n) {
+  return (UINT64_C(4096) ? n % UINT64_C(4096) : n);
+}
 
-uint64_t PageOps::page_of(uint64_t p) { return (p / UINT64_C(256)); }
+uint64_t PageOps::page_of(uint64_t p) {
+  return (UINT64_C(256) ? p / UINT64_C(256) : 0);
+}
 
 uint64_t PageOps::page_base(uint64_t p) { return (page_of(p) * UINT64_C(256)); }
 
-uint64_t PageOps::page_offset(uint64_t p) { return (p % UINT64_C(256)); }
+uint64_t PageOps::page_offset(uint64_t p) {
+  return (UINT64_C(256) ? p % UINT64_C(256) : p);
+}
 
 uint64_t PageOps::pc_inc1(const PageOps::state &s) {
   return addr12_of_nat((s.pc + UINT64_C(1)));
@@ -32,7 +38,7 @@ PageOps::instruction PageOps::decode(uint64_t b1, uint64_t b2) {
   if (b1 == UINT64_C(0)) {
     return instruction::nop();
   } else {
-    return instruction::ldm((b2 % UINT64_C(16)));
+    return instruction::ldm((UINT64_C(16) ? b2 % UINT64_C(16) : b2));
   }
 }
 

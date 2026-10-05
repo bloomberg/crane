@@ -13,7 +13,7 @@ struct ShadowQualNode {
   };
 
   static Node::Shadow id(Node::Shadow x);
-  static constexpr Node::Shadow t = Node::Shadow::TAG;
+  static inline const Node::Shadow t = id(Node::Shadow::TAG);
 };
 
 #endif // INCLUDED_SHADOW_QUAL_NODE

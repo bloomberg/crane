@@ -124,17 +124,23 @@ std::string show_comparison(const T1 &x, const T1 &y) {
   }
 }
 
-inline constexpr bool test_eq_true = true;
-inline constexpr bool test_eq_false = false;
+const bool test_eq_true = is_equal<NatEq, uint64_t>(UINT64_C(42), UINT64_C(42));
+const bool test_eq_false =
+    is_equal<NatEq, uint64_t>(UINT64_C(42), UINT64_C(43));
 const bool test_neq_true =
     is_different<NatEq, uint64_t>(UINT64_C(42), UINT64_C(43));
 const bool test_neq_false =
     is_different<NatEq, uint64_t>(UINT64_C(42), UINT64_C(42));
-inline constexpr bool test_lt_true = true;
-inline constexpr bool test_lt_false = false;
-inline constexpr Ordering test_compare_lt = Ordering::LT;
-inline constexpr Ordering test_compare_eq = Ordering::EQ;
-inline constexpr Ordering test_compare_gt = Ordering::GT;
+const bool test_lt_true =
+    is_less_than<NatOrd, NatEq, uint64_t>(UINT64_C(10), UINT64_C(20));
+const bool test_lt_false =
+    is_less_than<NatOrd, NatEq, uint64_t>(UINT64_C(20), UINT64_C(10));
+const Ordering test_compare_lt =
+    compare<NatOrd, NatEq, uint64_t>(UINT64_C(10), UINT64_C(20));
+const Ordering test_compare_eq =
+    compare<NatOrd, NatEq, uint64_t>(UINT64_C(15), UINT64_C(15));
+const Ordering test_compare_gt =
+    compare<NatOrd, NatEq, uint64_t>(UINT64_C(20), UINT64_C(10));
 const std::string test_show = to_string<NatShow, uint64_t>(UINT64_C(42));
 
 #endif // INCLUDED_EQ_ORD_SHOW

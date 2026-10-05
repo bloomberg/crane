@@ -11,7 +11,6 @@ Crane Extract Inductive bool =>
   "bool"
   [ "true" "false" ]
   "if (%scrut) { %br0 } else { %br1 }".
-Crane Semantics bool := "boolean".
 
 Crane Extract Inductive sumbool =>
   "bool"

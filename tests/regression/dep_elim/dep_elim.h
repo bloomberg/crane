@@ -515,8 +515,11 @@ struct DepElim {
     }
   };
 
-  static constexpr uint64_t test_fin0 = UINT64_C(0);
-  static constexpr uint64_t test_fin2 = UINT64_C(2);
+  static inline const uint64_t test_fin0 =
+      fin::fz(UINT64_C(2)).fin_to_nat(UINT64_C(3));
+  static inline const uint64_t test_fin2 =
+      fin::fs(UINT64_C(2), fin::fs(UINT64_C(1), fin::fz(UINT64_C(0))))
+          .fin_to_nat(UINT64_C(3));
   static inline const vec<uint64_t> my_vec = vec<uint64_t>::vcons(
       UINT64_C(2), UINT64_C(10),
       vec<uint64_t>::vcons(UINT64_C(1), UINT64_C(20),
@@ -524,7 +527,7 @@ struct DepElim {
                                                 vec<uint64_t>::vnil())));
   static inline const List<uint64_t> test_vec_list =
       my_vec.vec_to_list(UINT64_C(3));
-  static constexpr uint64_t test_vec_head = UINT64_C(10);
+  static inline const uint64_t test_vec_head = my_vec.vec_head(UINT64_C(2));
   static inline const List<uint64_t> test_vec_tail_list =
       my_vec.vec_tail(UINT64_C(2)).vec_to_list(UINT64_C(2));
   static inline const List<uint64_t> test_vec_map =
@@ -532,7 +535,8 @@ struct DepElim {
           .template vec_map<uint64_t>(
               UINT64_C(3), [](uint64_t n) { return (n + UINT64_C(1)); })
           .vec_to_list(UINT64_C(3));
-  static constexpr uint64_t test_present = UINT64_C(42);
+  static inline const uint64_t test_present =
+      avail::present(UINT64_C(42)).get_present();
 };
 
 #endif // INCLUDED_DEP_ELIM

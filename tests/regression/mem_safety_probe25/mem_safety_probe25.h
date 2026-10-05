@@ -320,8 +320,16 @@ struct MemSafetyProbe25 {
     }
   };
 
-  static constexpr uint64_t test_make_sum_fn = UINT64_C(121);
-  static constexpr uint64_t test_match_closure = UINT64_C(121);
+  static inline const uint64_t test_make_sum_fn =
+      tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
+                 UINT64_C(7),
+                 tree::node(tree::leaf(), UINT64_C(11), tree::leaf()))
+          .make_sum_fn(UINT64_C(100));
+  static inline const uint64_t test_match_closure =
+      tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
+                 UINT64_C(7),
+                 tree::node(tree::leaf(), UINT64_C(11), tree::leaf()))
+          .match_closure(UINT64_C(100));
   static inline const uint64_t test_pair_closures = []() {
     std::pair<crane::fn<uint64_t(uint64_t)>, crane::fn<uint64_t(uint64_t)>> p =
         tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
@@ -330,8 +338,22 @@ struct MemSafetyProbe25 {
             .pair_closures();
     return (p.first(UINT64_C(100)) + p.second(UINT64_C(200)));
   }();
-  static constexpr uint64_t test_nested_match_closure = UINT64_C(116);
-  static constexpr uint64_t test_deep_match_closure = UINT64_C(113);
+  static inline const uint64_t test_nested_match_closure =
+      tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
+                 UINT64_C(7),
+                 tree::node(tree::leaf(), UINT64_C(11), tree::leaf()))
+          .nested_match_closure(
+              tree::node(tree::node(tree::leaf(), UINT64_C(2), tree::leaf()),
+                         UINT64_C(5),
+                         tree::node(tree::leaf(), UINT64_C(8), tree::leaf())),
+              UINT64_C(100));
+  static inline const uint64_t test_deep_match_closure =
+      tree::node(
+          tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
+                     UINT64_C(2),
+                     tree::node(tree::leaf(), UINT64_C(3), tree::leaf())),
+          UINT64_C(10), tree::leaf())
+          .deep_match_closure(UINT64_C(100));
 
   /// TEST 6: Build a list of closures from recursive tree traversal.
   /// Each closure captures v from the current node.
@@ -472,7 +494,11 @@ struct MemSafetyProbe25 {
   static mylist<crane::fn<uint64_t(uint64_t)>> build_adders(const tree &t);
   static uint64_t apply_first(const mylist<crane::fn<uint64_t(uint64_t)>> &l,
                               uint64_t x);
-  static constexpr uint64_t test_build_adders = UINT64_C(142);
+  static inline const uint64_t test_build_adders = []() {
+    mylist<crane::fn<uint64_t(uint64_t)>> adders =
+        build_adders(tree::node(tree::leaf(), UINT64_C(42), tree::leaf()));
+    return apply_first(std::move(adders), UINT64_C(100));
+  }();
   static inline const uint64_t test_match_then_pair = []() {
     std::pair<crane::fn<uint64_t(uint64_t)>, uint64_t> p =
         tree::node(tree::node(tree::leaf(), UINT64_C(4), tree::leaf()),
@@ -481,7 +507,18 @@ struct MemSafetyProbe25 {
             .match_then_pair();
     return (p.first(UINT64_C(100)) + p.second);
   }();
-  static constexpr uint64_t test_match_closure_opt = UINT64_C(115);
+  static inline const uint64_t test_match_closure_opt = []() -> uint64_t {
+    auto _cs = tree::node(tree::node(tree::leaf(), UINT64_C(2), tree::leaf()),
+                          UINT64_C(5),
+                          tree::node(tree::leaf(), UINT64_C(8), tree::leaf()))
+                   .match_closure_opt(true);
+    if (_cs.has_value()) {
+      const crane::fn<uint64_t(uint64_t)> &f = *_cs;
+      return f(UINT64_C(100));
+    } else {
+      return UINT64_C(0);
+    }
+  }();
 };
 
 #endif // INCLUDED_MEM_SAFETY_PROBE25

@@ -28,7 +28,7 @@ struct TypeclassFunctionFieldProbe {
     return _tcI0::endo(_tcI0::endo(x));
   }
 
-  static constexpr Bool0 sample = Bool0::TRUE_;
+  static inline const Bool0 sample = use<boolEndo, Bool0>(Bool0::TRUE_);
 };
 
 #endif // INCLUDED_TYPECLASS_FUNCTION_FIELD_PROBE

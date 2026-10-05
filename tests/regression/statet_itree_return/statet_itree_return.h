@@ -311,7 +311,21 @@ struct StatetItreeReturn {
   static inline const Itree<noE, std::pair<Nat, Nat>> r =
       get_st<noE>(Nat::s(Nat::o()))(Nat::s(Nat::s(Nat::o())));
 
-  static constexpr bool is_three = true;
+  static inline const bool is_three = []() {
+    auto &&_sv = r.observe();
+    if (std::holds_alternative<typename ItreeF<
+            noE, std::pair<Nat, Nat>, Itree<noE, std::pair<Nat, Nat>>>::RetF>(
+            _sv.v())) {
+      const auto &[r1] =
+          std::get<typename ItreeF<noE, std::pair<Nat, Nat>,
+                                   Itree<noE, std::pair<Nat, Nat>>>::RetF>(
+              _sv.v());
+      const auto &[a, _x] = r1;
+      return a.eqb(Nat::s(Nat::s(Nat::s(Nat::o()))));
+    } else {
+      return false;
+    }
+  }();
 };
 
 #endif // INCLUDED_STATET_ITREE_RETURN

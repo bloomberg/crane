@@ -150,7 +150,12 @@ struct PartialAppCarrier {
   static inline const box<noE, std::pair<Nat, Nat>> r =
       get_st<noE>()(Nat::s(Nat::s(Nat::s(Nat::o()))));
 
-  static constexpr bool is_three = true;
+  static inline const bool is_three = []() {
+    const auto &_sv = r;
+    const auto &[a] = _sv;
+    const auto &[a1, _x] = a;
+    return a1.eqb(Nat::s(Nat::s(Nat::s(Nat::o()))));
+  }();
 };
 
 #endif // INCLUDED_PARTIAL_APP_CARRIER

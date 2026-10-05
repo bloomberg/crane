@@ -52,8 +52,11 @@ struct TypeclassEnumEq {
     return _tcI0::eqb(x, y);
   }
 
-  static constexpr bool test_same = true;
-  static constexpr bool test_diff = false;
+  static inline const bool test_same =
+      is_equal<ColorEq, Color>(Color::RED, Color::RED);
+
+  static inline const bool test_diff =
+      is_equal<ColorEq, Color>(Color::RED, Color::BLUE);
 };
 
 #endif // INCLUDED_TYPECLASS_ENUM_EQ

@@ -398,20 +398,42 @@ struct MemSafetyProbe16 {
     const variant_t &v() const { return v_; }
 
     uint64_t length() const {
-      auto go_impl = [](auto &_self_go, const mylist<A> &l0,
-                        uint64_t acc) -> uint64_t {
-        if (std::holds_alternative<typename mylist<A>::Mynil>(l0.v())) {
-          return acc;
-        } else {
-          const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(l0.v());
-          return _self_go(_self_go, *a1, (acc + UINT64_C(1)));
-        }
+      const mylist<A> *_self = this;
+
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
+        const mylist<A> *_self;
       };
-      {
-        const mylist<A> &_lc1_l0 = *this;
-        uint64_t _lc1_acc = UINT64_C(0);
-        return go_impl(go_impl, _lc1_l0, _lc1_acc);
+
+      /// CraneCont_Mycons: resumes after recursive call, then processes rest.
+      struct CraneCont_Mycons {};
+
+      using CraneFrame = std::variant<CraneEnter, CraneCont_Mycons>;
+      uint64_t _result{};
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified length: CraneEnter -> CraneCont_Mycons.
+      while (!_stack.empty()) {
+        CraneFrame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
+          const mylist<A> *_self = _f._self;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
+            _result = UINT64_C(0);
+          } else {
+            const auto &[a0, a1] =
+                std::get<typename mylist<A>::Mycons>(_sv.v());
+            _stack.emplace_back(CraneCont_Mycons{});
+            _stack.emplace_back(CraneEnter{crane_raw(a1)});
+          }
+        } else {
+          auto _f = std::move(std::get<CraneCont_Mycons>(_frame));
+          _result = (UINT64_C(1) + std::move(_result));
+        }
       }
+      return _result;
     }
 
     mylist<A> myapp(mylist<A> l2) const {
@@ -497,7 +519,17 @@ struct MemSafetyProbe16 {
   build_summers(const mylist<tree> &trees);
   static uint64_t apply_fns(const mylist<crane::fn<uint64_t(uint64_t)>> &fns,
                             uint64_t x);
-  static constexpr uint64_t test_store_closures = UINT64_C(60);
+  static inline const uint64_t test_store_closures = []() {
+    mylist<tree> trees = mylist<tree>::mycons(
+        tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+        mylist<tree>::mycons(
+            tree::node(tree::leaf(), UINT64_C(20), tree::leaf()),
+            mylist<tree>::mycons(
+                tree::node(tree::leaf(), UINT64_C(30), tree::leaf()),
+                mylist<tree>::mynil())));
+    mylist<crane::fn<uint64_t(uint64_t)>> fns = build_summers(std::move(trees));
+    return apply_fns(std::move(fns), UINT64_C(0));
+  }();
 
   /// TEST 2: Fold that accumulates a function by composing closures.
   /// Each step captures the tree from the current list element.
@@ -520,27 +552,89 @@ struct MemSafetyProbe16 {
     }
   }
 
-  static constexpr uint64_t test_compose = UINT64_C(30);
+  static inline const uint64_t test_compose = []() {
+    mylist<tree> trees = mylist<tree>::mycons(
+        tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
+        mylist<tree>::mycons(
+            tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+            mylist<tree>::mycons(
+                tree::node(tree::leaf(), UINT64_C(15), tree::leaf()),
+                mylist<tree>::mynil())));
+    return compose_summers(
+        std::move(trees), [](uint64_t n) { return n; }, UINT64_C(0));
+  }();
   /// TEST 3: Build a list of closures where each closure captures
   /// the SAME tree at different levels.
   /// Tests whether the tree is properly cloned for each closure.
   static mylist<crane::fn<uint64_t(uint64_t)>> multi_capture_tree(tree t,
                                                                   uint64_t n);
-  static constexpr uint64_t test_multi_capture = UINT64_C(69);
+  static inline const uint64_t test_multi_capture = []() {
+    tree t = tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
+                        UINT64_C(7),
+                        tree::node(tree::leaf(), UINT64_C(11), tree::leaf()));
+    mylist<crane::fn<uint64_t(uint64_t)>> fns =
+        multi_capture_tree(std::move(t), UINT64_C(3));
+    return apply_fns(std::move(fns), UINT64_C(0));
+  }();
   /// TEST 4: Return a closure from inside a NESTED match.
   /// The closure captures bindings from BOTH match levels.
   static uint64_t nested_match_closure(const tree &t, const mylist<uint64_t> &l,
                                        uint64_t n);
-  static constexpr uint64_t test_nested_match = UINT64_C(40);
-  static constexpr uint64_t test_pair_closure = UINT64_C(350);
-  static constexpr uint64_t test_deep_nested = UINT64_C(31);
+  static inline const uint64_t test_nested_match = []() {
+    tree t = tree::node(tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
+                        UINT64_C(10),
+                        tree::node(tree::leaf(), UINT64_C(15), tree::leaf()));
+    mylist<uint64_t> l = mylist<uint64_t>::mycons(
+        UINT64_C(7),
+        mylist<uint64_t>::mycons(UINT64_C(99), mylist<uint64_t>::mynil()));
+    return nested_match_closure(std::move(t), std::move(l), UINT64_C(3));
+  }();
+  static inline const uint64_t test_pair_closure = []() {
+    return []() {
+      tree t1 = tree::node(tree::leaf(), UINT64_C(100), tree::leaf());
+      tree t2 = tree::node(tree::node(tree::leaf(), UINT64_C(50), tree::leaf()),
+                           UINT64_C(25), tree::leaf());
+      crane::fn<uint64_t(uint64_t)> f = [=](uint64_t _x0) -> uint64_t {
+        return std::move(t1).pair_closure(std::move(t2), _x0);
+      };
+      return (f(UINT64_C(0)) + f(UINT64_C(0)));
+    }();
+  }();
+  static inline const uint64_t test_deep_nested = []() {
+    tree t = tree::node(
+        tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
+                   UINT64_C(2),
+                   tree::node(tree::leaf(), UINT64_C(3), tree::leaf())),
+        UINT64_C(10),
+        tree::node(tree::node(tree::leaf(), UINT64_C(4), tree::leaf()),
+                   UINT64_C(5),
+                   tree::node(tree::leaf(), UINT64_C(6), tree::leaf())));
+    return std::move(t).deep_nested_closure(UINT64_C(0));
+  }();
   /// TEST 7: Map + apply pattern: build closures from tree children,
   /// apply them to values from another list.
   static mylist<uint64_t>
   zip_apply(const mylist<crane::fn<uint64_t(uint64_t)>> &fns,
             const mylist<uint64_t> &vals);
-  static constexpr uint64_t test_zip_apply = UINT64_C(33);
-  static constexpr uint64_t test_tree_map = UINT64_C(9);
+  static inline const uint64_t test_zip_apply = []() {
+    mylist<tree> trees = mylist<tree>::mycons(
+        tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+        mylist<tree>::mycons(
+            tree::node(tree::leaf(), UINT64_C(20), tree::leaf()),
+            mylist<tree>::mynil()));
+    mylist<crane::fn<uint64_t(uint64_t)>> fns = build_summers(std::move(trees));
+    mylist<uint64_t> vals = mylist<uint64_t>::mycons(
+        UINT64_C(1),
+        mylist<uint64_t>::mycons(UINT64_C(2), mylist<uint64_t>::mynil()));
+    mylist<uint64_t> results = zip_apply(std::move(fns), std::move(vals));
+    return sum_list(std::move(results));
+  }();
+  static inline const uint64_t test_tree_map = []() {
+    tree t = tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
+                        UINT64_C(2),
+                        tree::node(tree::leaf(), UINT64_C(3), tree::leaf()));
+    return std::move(t).tree_map_val().tree_sum();
+  }();
 
   /// TEST 9: CPS-style flattening where each step builds a continuation
   /// that captures tree structure.
@@ -585,7 +679,12 @@ struct MemSafetyProbe16 {
   }
 
   static mylist<uint64_t> flatten_cps(const tree &t);
-  static constexpr uint64_t test_flatten_cps = UINT64_C(6);
+  static inline const uint64_t test_flatten_cps = []() {
+    tree t = tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
+                        UINT64_C(2),
+                        tree::node(tree::leaf(), UINT64_C(3), tree::leaf()));
+    return sum_list(flatten_cps(std::move(t)));
+  }();
 };
 
 #endif // INCLUDED_MEM_SAFETY_PROBE16

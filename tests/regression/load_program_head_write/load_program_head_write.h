@@ -110,7 +110,24 @@ struct LoadProgramHeadWrite {
   static state execute_wpm(const state &s);
   static state load_program(state s, uint64_t base,
                             const List<uint64_t> &bytes);
-  static constexpr uint64_t t = UINT64_C(7);
+  static inline const uint64_t t = []() {
+    state s0 = state{
+        List<uint64_t>::cons(
+            UINT64_C(0),
+            List<uint64_t>::cons(
+                UINT64_C(0),
+                List<uint64_t>::cons(
+                    UINT64_C(0),
+                    List<uint64_t>::cons(UINT64_C(0), List<uint64_t>::nil())))),
+        UINT64_C(0), UINT64_C(0), false};
+    state s1 = load_program(
+        std::move(s0), UINT64_C(1),
+        List<uint64_t>::cons(
+            UINT64_C(7),
+            List<uint64_t>::cons(UINT64_C(8), List<uint64_t>::nil())));
+    return ListDef::template nth<uint64_t>(UINT64_C(1), std::move(s1).rom,
+                                           UINT64_C(0));
+  }();
 };
 
 template <typename T1>

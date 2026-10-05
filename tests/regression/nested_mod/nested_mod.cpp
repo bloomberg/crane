@@ -15,7 +15,7 @@ NestedMod::Outer::Inner::area(const NestedMod::Outer::Inner::shape &s) {
   } else {
     const auto &[a0, a1, a2] =
         std::get<typename NestedMod::Outer::Inner::shape::Triangle>(s.v());
-    return ((a0 * a1) / UINT64_C(2));
+    return (UINT64_C(2) ? (a0 * a1) / UINT64_C(2) : 0);
   }
 }
 

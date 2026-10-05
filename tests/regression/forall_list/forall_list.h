@@ -159,7 +159,8 @@ struct ForallList {
               UINT64_C(3),
               List<uint64_t>::cons(UINT64_C(4), List<uint64_t>::nil()))));
 
-  static constexpr uint64_t updated_length = UINT64_C(4);
+  static inline const uint64_t updated_length =
+      update_nth<uint64_t>(UINT64_C(1), UINT64_C(9), sample).length();
 };
 
 #endif // INCLUDED_FORALL_LIST

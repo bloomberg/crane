@@ -472,8 +472,9 @@ struct BoxedFields {
                            std::make_pair(UINT64_C(6),
                                           point::pt(UINT64_C(7), UINT64_C(8)))),
                        scene::empty())));
-  static constexpr uint64_t sample_total = UINT64_C(36);
-  static constexpr uint64_t moved_total = UINT64_C(76);
+  static inline const uint64_t sample_total = sample.total();
+  static inline const uint64_t moved_total =
+      sample.move_all(UINT64_C(10)).total();
 
   /// Fields typed by a parameter: boxed or not per instantiation.
   template <typename A> struct tagged {
@@ -524,8 +525,9 @@ struct BoxedFields {
       tagged<scene>::tag(UINT64_C(1), sample);
   static inline const tagged<uint64_t> light =
       tagged<uint64_t>::tag(UINT64_C(2), UINT64_C(40));
-  static constexpr uint64_t heavy_total = UINT64_C(37);
-  static constexpr uint64_t light_total = UINT64_C(42);
+  static inline const uint64_t heavy_total =
+      (heavy.tag_of() + heavy.untag().total());
+  static inline const uint64_t light_total = (light.tag_of() + light.untag());
 };
 
 #endif // INCLUDED_BOXED_FIELDS

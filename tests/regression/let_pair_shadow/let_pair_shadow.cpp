@@ -1,24 +1,13 @@
 #include "let_pair_shadow.h"
 
 uint64_t LetPairShadow::mylist_sum(const LetPairShadow::mylist<uint64_t> &l) {
-  {
-    const LetPairShadow::mylist<uint64_t> &_lc1_l0 = l;
-    uint64_t _lc1_acc = UINT64_C(0);
-    uint64_t _lc1_loop_acc = _lc1_acc;
-    const LetPairShadow::mylist<uint64_t> *_lc1_loop_l0 = &_lc1_l0;
-    while (true) {
-      if (std::holds_alternative<
-              typename LetPairShadow::mylist<uint64_t>::Mynil>(
-              _lc1_loop_l0->v())) {
-        return _lc1_loop_acc;
-      } else {
-        const auto &[a0, a1] =
-            std::get<typename LetPairShadow::mylist<uint64_t>::Mycons>(
-                _lc1_loop_l0->v());
-        _lc1_loop_acc = (_lc1_loop_acc + a0);
-        _lc1_loop_l0 = crane_raw(a1);
-      }
-    }
+  if (std::holds_alternative<typename LetPairShadow::mylist<uint64_t>::Mynil>(
+          l.v())) {
+    return UINT64_C(0);
+  } else {
+    const auto &[a0, a1] =
+        std::get<typename LetPairShadow::mylist<uint64_t>::Mycons>(l.v());
+    return (a0 + mylist_sum(*a1));
   }
 }
 

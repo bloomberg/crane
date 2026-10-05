@@ -44,7 +44,8 @@ struct ClassSuperclassField {
     }
   }
 
-  static constexpr uint64_t go = UINT64_C(1);
+  static inline const uint64_t go =
+      cmp<ordnat, uint64_t>(UINT64_C(1), UINT64_C(2));
 };
 
 #endif // INCLUDED_CLASS_SUPERCLASS_FIELD

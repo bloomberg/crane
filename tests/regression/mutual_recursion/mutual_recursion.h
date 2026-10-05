@@ -126,9 +126,12 @@ struct MutualRecursion {
   static uint64_t f1(uint64_t n);
   static uint64_t f2(uint64_t n);
   static uint64_t f3(uint64_t n);
-  static constexpr bool test_even = true;
-  static constexpr uint64_t test_sum = UINT64_C(6);
-  static constexpr uint64_t test_eval = UINT64_C(15);
+  static inline const bool test_even = even(UINT64_C(10));
+  static inline const uint64_t test_sum =
+      sum_even_indices(UINT64_C(5), UINT64_C(0));
+
+  static inline const uint64_t test_eval = eval_expr(expr::binop(
+      UINT64_C(0), expr::val(UINT64_C(5)), expr::val(UINT64_C(10))));
 };
 
 #endif // INCLUDED_MUTUAL_RECURSION

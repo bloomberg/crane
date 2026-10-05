@@ -117,13 +117,18 @@ struct BenchLetIn {
   static uint64_t mid3(uint64_t a, uint64_t b, uint64_t c);
   static uint64_t sum3(uint64_t a, uint64_t b, uint64_t c);
   static uint64_t chain_pairs(uint64_t a, uint64_t b, uint64_t c);
-  static constexpr uint64_t test_swap = UINT64_C(4);
-  static constexpr uint64_t test_add = UINT64_C(7);
-  static constexpr uint64_t test_nested = UINT64_C(5);
-  static constexpr uint64_t test_sum_pairs = UINT64_C(15);
-  static constexpr uint64_t test_mid3 = UINT64_C(2);
-  static constexpr uint64_t test_sum3 = UINT64_C(6);
-  static constexpr uint64_t test_chain = UINT64_C(4);
+  static inline const uint64_t test_swap = swap_snd(UINT64_C(3), UINT64_C(4));
+  static inline const uint64_t test_add =
+      add_via_pair(UINT64_C(3), UINT64_C(4));
+  static inline const uint64_t test_nested =
+      nested_swap(UINT64_C(1), UINT64_C(2), UINT64_C(3), UINT64_C(4));
+  static inline const uint64_t test_sum_pairs = sum_via_pairs(UINT64_C(5));
+  static inline const uint64_t test_mid3 =
+      mid3(UINT64_C(1), UINT64_C(2), UINT64_C(3));
+  static inline const uint64_t test_sum3 =
+      sum3(UINT64_C(1), UINT64_C(2), UINT64_C(3));
+  static inline const uint64_t test_chain =
+      chain_pairs(UINT64_C(1), UINT64_C(2), UINT64_C(3));
 };
 
 #endif // INCLUDED_BENCH_LET_IN

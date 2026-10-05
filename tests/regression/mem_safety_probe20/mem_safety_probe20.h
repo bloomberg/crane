@@ -249,7 +249,11 @@ struct MemSafetyProbe20 {
   /// The if becomes top-level Sif. return_captures_by_value sees
   /// Sif, matches s -> s, leaves lambda as &.
   static wrapped wrap_if(tree t, bool b);
-  static constexpr uint64_t test_wrap_if = UINT64_C(42);
+  static inline const uint64_t test_wrap_if = []() {
+    wrapped w =
+        wrap_if(tree::node(tree::leaf(), UINT64_C(42), tree::leaf()), true);
+    return std::move(w).unwrap(UINT64_C(0));
+  }();
   /// TEST 2: Return wrapped closure from match on custom type.
   enum class Choice { CLEFT, CRIGHT };
 
@@ -272,7 +276,13 @@ struct MemSafetyProbe20 {
   }
 
   static wrapped wrap_match(tree t, Choice c);
-  static constexpr uint64_t test_wrap_match = UINT64_C(10);
+  static inline const uint64_t test_wrap_match = []() {
+    wrapped w = wrap_match(
+        tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
+                   UINT64_C(7), tree::leaf()),
+        Choice::CLEFT);
+    return std::move(w).unwrap(UINT64_C(0));
+  }();
   /// TEST 3: Pair of closure and value, returned from if.
   /// Uses prod to wrap the closure.
   static std::pair<wrapped, uint64_t> pair_from_if(tree t, bool b);
@@ -286,12 +296,23 @@ struct MemSafetyProbe20 {
   /// TEST 4: Wrapped closure captured in a locally-constructed tree.
   /// The let-bound tree is stack-allocated.
   static wrapped wrap_local(uint64_t n, bool b);
-  static constexpr uint64_t test_wrap_local = UINT64_C(25);
+  static inline const uint64_t test_wrap_local = []() {
+    wrapped w = wrap_local(UINT64_C(20), true);
+    return std::move(w).unwrap(UINT64_C(5));
+  }();
   /// TEST 5: Double use of unwrapped closure.
-  static constexpr uint64_t test_double_unwrap = UINT64_C(17);
+  static inline const uint64_t test_double_unwrap = []() {
+    wrapped w =
+        wrap_if(tree::node(tree::leaf(), UINT64_C(7), tree::leaf()), true);
+    return (w.unwrap(UINT64_C(1)) + w.unwrap(UINT64_C(2)));
+  }();
   /// TEST 6: Nested wrapped closure: wrapped inside a pair inside if.
   static wrapped nested_wrap(tree t, bool b1, bool b2);
-  static constexpr uint64_t test_nested_wrap = UINT64_C(10);
+  static inline const uint64_t test_nested_wrap = []() {
+    wrapped w = nested_wrap(tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
+                            true, false);
+    return std::move(w).unwrap(UINT64_C(0));
+  }();
 
   /// TEST 7: List of wrapped closures from if branches.
   template <typename A> struct mylist {
@@ -429,7 +450,11 @@ struct MemSafetyProbe20 {
 
   static mylist<wrapped> wrap_list(tree t, bool b);
   static uint64_t sum_wrapped(const mylist<wrapped> &l, uint64_t x);
-  static constexpr uint64_t test_wrap_list = UINT64_C(9);
+  static inline const uint64_t test_wrap_list = []() {
+    mylist<wrapped> l =
+        wrap_list(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()), true);
+    return sum_wrapped(std::move(l), UINT64_C(0));
+  }();
 };
 
 #endif // INCLUDED_MEM_SAFETY_PROBE20

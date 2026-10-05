@@ -204,7 +204,16 @@ struct MemSafetyProbe27 {
   /// TEST 4: Closure stored in option (no match on tree).
   static std::optional<crane::fn<uint64_t(uint64_t)>> opt_tree_fn(tree t,
                                                                   bool b);
-  static constexpr uint64_t test_opt_tree_fn = UINT64_C(115);
+  static inline const uint64_t test_opt_tree_fn = []() -> uint64_t {
+    auto _cs =
+        opt_tree_fn(tree::node(tree::leaf(), UINT64_C(15), tree::leaf()), true);
+    if (_cs.has_value()) {
+      const crane::fn<uint64_t(uint64_t)> &f = *_cs;
+      return f(UINT64_C(100));
+    } else {
+      return UINT64_C(0);
+    }
+  }();
   /// TEST 5: Nested closures — inner captures tree, outer captures inner.
   /// Tests that the inner closure correctly clones the tree.
   static std::pair<crane::fn<uint64_t(uint64_t)>, uint64_t>

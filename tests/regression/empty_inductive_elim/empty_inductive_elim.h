@@ -25,7 +25,7 @@ struct EmptyInductiveElim {
 
   static uint64_t absurd();
   static uint64_t g(const std::optional<crane::obj> &o);
-  static constexpr uint64_t test = UINT64_C(0);
+  static inline const uint64_t test = g(std::optional<crane::obj>());
 };
 
 #endif // INCLUDED_EMPTY_INDUCTIVE_ELIM

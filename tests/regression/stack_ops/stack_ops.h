@@ -154,14 +154,52 @@ struct StackOps {
           .first);
   static std::pair<std::optional<uint64_t>, state_with_acc>
   pop_stack_acc(const state_with_acc &s);
-  static constexpr uint64_t pop_acc_test = UINT64_C(13);
+  static inline const uint64_t pop_acc_test = []() -> uint64_t {
+    auto [o, s_] = pop_stack_acc(state_with_acc{
+        List<uint64_t>::cons(
+            UINT64_C(9),
+            List<uint64_t>::cons(UINT64_C(8), List<uint64_t>::nil())),
+        UINT64_C(3)});
+    if (o.has_value()) {
+      const uint64_t &a = *o;
+      return ((a + s_.stack_with_acc.length()) + s_.acc);
+    } else {
+      return std::move(s_).acc;
+    }
+  }();
   static state_basic push_stack(const state_basic &s, uint64_t addr);
   static uint64_t top_or_zero(const state_basic &s);
-  static constexpr uint64_t empty_len = UINT64_C(1);
-  static constexpr uint64_t overflow_head = UINT64_C(9);
-  static constexpr uint64_t overflow_len = UINT64_C(3);
+  static inline const uint64_t empty_len =
+      push_stack(state_basic{List<uint64_t>::nil()}, UINT64_C(12))
+          .stack_basic.length();
+  static inline const uint64_t overflow_head = top_or_zero(push_stack(
+      state_basic{List<uint64_t>::cons(
+          UINT64_C(1),
+          List<uint64_t>::cons(
+              UINT64_C(2),
+              List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())))},
+      UINT64_C(9)));
+  static inline const uint64_t overflow_len =
+      push_stack(
+          state_basic{List<uint64_t>::cons(
+              UINT64_C(1),
+              List<uint64_t>::cons(
+                  UINT64_C(2),
+                  List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())))},
+          UINT64_C(9))
+          .stack_basic.length();
   static state_basic push_stack_cap(const state_basic &s, uint64_t addr);
-  static constexpr uint64_t push_cap_test = UINT64_C(3);
+  static inline const uint64_t push_cap_test =
+      push_stack_cap(state_basic{List<uint64_t>::cons(
+                         UINT64_C(10),
+                         List<uint64_t>::cons(
+                             UINT64_C(20),
+                             List<uint64_t>::cons(
+                                 UINT64_C(30),
+                                 List<uint64_t>::cons(
+                                     UINT64_C(40), List<uint64_t>::nil()))))},
+                     UINT64_C(7))
+          .stack_basic.length();
   static inline const std::pair<
       std::pair<std::pair<std::pair<uint64_t, bool>, uint64_t>,
                 std::pair<std::pair<uint64_t, uint64_t>, uint64_t>>,

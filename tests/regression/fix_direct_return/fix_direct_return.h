@@ -1,6 +1,7 @@
 #ifndef INCLUDED_FIX_DIRECT_RETURN
 #define INCLUDED_FIX_DIRECT_RETURN
 
+#include "fn.h"
 #include <cstdint>
 #include <type_traits>
 
@@ -29,12 +30,26 @@ struct FixDirectReturn {
   }
 
   /// test1: make_callback(42)(fun x => x) = id(42) + 43 = 85.
-  static constexpr uint64_t test1 = UINT64_C(85);
+  static inline const uint64_t test1 =
+      make_callback(UINT64_C(42), [](uint64_t x) { return x; });
   /// test2: make_callback(10)(fun x => x * 2) = 20 + 11 = 31.
-  static constexpr uint64_t test2 = UINT64_C(31);
+  static inline const uint64_t test2 =
+      make_callback(UINT64_C(10), [](uint64_t x) { return (x * UINT64_C(2)); });
   /// test3: Nested — use the closure from make_callback inside another
   /// make_callback.
-  static constexpr uint64_t test3 = UINT64_C(207);
+  static inline const uint64_t test3 = []() {
+    return []() {
+      crane::fn<uint64_t(crane::fn<uint64_t(uint64_t)>)> cb1 =
+          [](crane::fn<uint64_t(uint64_t)> _x0) -> uint64_t {
+        return make_callback(UINT64_C(5), _x0);
+      };
+      crane::fn<uint64_t(crane::fn<uint64_t(uint64_t)>)> cb2 =
+          [](crane::fn<uint64_t(uint64_t)> _x0) -> uint64_t {
+        return make_callback(UINT64_C(100), _x0);
+      };
+      return cb1([=](uint64_t) { return cb2([](uint64_t x) { return x; }); });
+    }();
+  }();
 };
 
 #endif // INCLUDED_FIX_DIRECT_RETURN

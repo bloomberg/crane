@@ -1,7 +1,6 @@
 #ifndef INCLUDED_REUSE_FN_IN_BODY
 #define INCLUDED_REUSE_FN_IN_BODY
 
-#include "crane_fn.h"
 #include <atomic>
 #include <cstdint>
 #include <memory>
@@ -101,12 +100,18 @@ struct ReuseFnInBody {
   /// is used through a DIFFERENT function (sum instead of length)
   /// AND combined with a pattern variable in an arithmetic expression.
   static mylist prefix_sum(mylist l, bool b);
-  static constexpr uint64_t test1 = UINT64_C(12);
+  static inline const uint64_t test1 = sum(prefix_sum(
+      mylist::mycons(
+          UINT64_C(1),
+          mylist::mycons(UINT64_C(2),
+                         mylist::mycons(UINT64_C(3), mylist::mynil()))),
+      true));
   /// Original list: 1, 2, 3. sum = 6.
   /// prefix_sum: head becomes sum(1,2,3) + 1 = 6 + 1 = 7, tail = 2, 3.
   /// Result: 7, 2, 3. sum = 12.
   /// BUG: sum(l) crashes because l's fields are moved.
-  static constexpr uint64_t test2 = UINT64_C(20);
+  static inline const uint64_t test2 =
+      sum(prefix_sum(mylist::mycons(UINT64_C(10), mylist::mynil()), true));
 };
 
 #endif // INCLUDED_REUSE_FN_IN_BODY

@@ -128,7 +128,7 @@ struct RamEmptyWf {
       ListDef::template repeat<ram_bank>(empty_bank, UINT64_C(4));
   static inline const ram_sel default_sel =
       ram_sel{UINT64_C(0), UINT64_C(0), UINT64_C(0), UINT64_C(0)};
-  static constexpr uint64_t default_bank_idx = UINT64_C(0);
+  static inline const uint64_t default_bank_idx = default_sel.sel_bank;
 };
 
 template <typename T1> List<T1> ListDef::repeat(const T1 &x, uint64_t n) {

@@ -52,7 +52,7 @@ struct DictCtorField {
   }
 
   static uint64_t run(const box &b);
-  static constexpr uint64_t test = UINT64_C(7);
+  static inline const uint64_t test = run(box::box0(SzNat, UINT64_C(7)));
 };
 
 #endif // INCLUDED_DICT_CTOR_FIELD

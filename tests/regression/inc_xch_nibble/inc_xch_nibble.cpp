@@ -4,10 +4,12 @@ uint64_t IncXchNibble::get_reg(const IncXchNibble::state &s, uint64_t r) {
   return ListDef::template nth<uint64_t>(r, s.regs, UINT64_C(0));
 }
 
-uint64_t IncXchNibble::nibble_of_nat(uint64_t n) { return (n % UINT64_C(16)); }
+uint64_t IncXchNibble::nibble_of_nat(uint64_t n) {
+  return (UINT64_C(16) ? n % UINT64_C(16) : n);
+}
 
 uint64_t IncXchNibble::get_reg_pair(const IncXchNibble::state &s, uint64_t r) {
-  auto &&_once1 = (r % UINT64_C(2));
+  auto &&_once1 = (UINT64_C(2) ? r % UINT64_C(2) : r);
   uint64_t base = (((r - _once1) > r ? 0 : (r - _once1)));
   return ((get_reg(s, base) * UINT64_C(16)) + get_reg(s, (base + UINT64_C(1))));
 }

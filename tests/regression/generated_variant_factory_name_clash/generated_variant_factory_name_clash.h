@@ -62,7 +62,7 @@ struct GeneratedVariantFactoryNameClash {
   }
 
   static bool is_variant(const token &t);
-  static constexpr bool sample = true;
+  static inline const bool sample = is_variant(token::Variant_t_());
 };
 
 #endif // INCLUDED_GENERATED_VARIANT_FACTORY_NAME_CLASH

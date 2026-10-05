@@ -720,7 +720,8 @@ struct IntrinsicTableCurry {
               },
               crane::obj()))
           .length();
-  static constexpr bool is_six = true;
+  static inline const bool is_six =
+      count.eqb(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))));
 };
 
 template <typename T1, typename T2>

@@ -22,7 +22,8 @@ struct TodoErasedInstanceParam {
     return _tcI0::def();
   }
 
-  static constexpr uint64_t test_value = UINT64_C(8);
+  static inline const uint64_t test_value =
+      (pick<natDefault, uint64_t>() + pick<natDefault, uint64_t>());
 };
 
 #endif // INCLUDED_TODO_ERASED_INSTANCE_PARAM

@@ -218,7 +218,7 @@ const prog sample =
                  List<Instr<uint64_t>>::cons(Instr<uint64_t>::istop(),
                                              List<Instr<uint64_t>>::nil()))),
          UINT64_C(2)};
-inline constexpr uint64_t sample_size = UINT64_C(3);
-inline constexpr uint64_t sample_regs = UINT64_C(2);
+const uint64_t sample_size = sample.code.length();
+const uint64_t sample_regs = sample.nregs;
 
 #endif // INCLUDED_DECL_ORDER_ALIAS_RECORD

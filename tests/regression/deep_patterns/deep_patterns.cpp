@@ -108,9 +108,9 @@ uint64_t DeepPatterns::complex_match(
 uint64_t DeepPatterns::guarded_match(const std::pair<uint64_t, uint64_t> &p) {
   const auto &[a, b] = p;
   if (a <= b) {
-    return (b - a);
+    return (((b - a) > b ? 0 : (b - a)));
   } else {
-    return (a - b);
+    return (((a - b) > a ? 0 : (a - b)));
   }
 }
 

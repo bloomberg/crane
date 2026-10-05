@@ -205,7 +205,13 @@ struct PartialApply {
       List<bool>::cons(
           true,
           List<bool>::cons(false, List<bool>::cons(true, List<bool>::nil()))));
-  static constexpr uint64_t test_sum = UINT64_C(106);
+  static inline const uint64_t test_sum = sum_with_init(
+      UINT64_C(100),
+      List<uint64_t>::cons(
+          UINT64_C(1),
+          List<uint64_t>::cons(
+              UINT64_C(2),
+              List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))));
 };
 
 #endif // INCLUDED_PARTIAL_APPLY

@@ -165,7 +165,7 @@ struct EvenOdd {
                        odd_list::ocons(UINT64_C(1), even_list::enil())));
 };
 
-inline constexpr uint64_t test_even_len = UINT64_C(2);
-inline constexpr uint64_t test_odd_len = UINT64_C(3);
+const uint64_t test_even_len = EvenOdd::even_length(EvenOdd::two);
+const uint64_t test_odd_len = EvenOdd::odd_length(EvenOdd::three);
 
 #endif // INCLUDED_MUTUAL_MOD

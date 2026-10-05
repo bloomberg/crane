@@ -113,7 +113,13 @@ struct VoidCallback {
   }
 
   static void print_nat(uint64_t _x);
-  static constexpr std::monostate test_for_each = std::monostate{};
+  static inline const std::monostate test_for_each = []() {
+    for_each(print_nat,
+             List<uint64_t>::cons(
+                 UINT64_C(1),
+                 List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())));
+    return std::monostate{};
+  }();
 
   /// 2. Monadic for-each: callback returns itree ioE unit
   template <typename F0>
@@ -145,7 +151,13 @@ struct VoidCallback {
     }
   }
 
-  static constexpr uint64_t test_ignore = UINT64_C(3);
+  static inline const uint64_t test_ignore = ignore_and_count(
+      print_nat,
+      List<uint64_t>::cons(
+          UINT64_C(1),
+          List<uint64_t>::cons(
+              UINT64_C(2),
+              List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))));
 
   /// 5. Nested void callbacks
   template <typename F0>
@@ -155,7 +167,10 @@ struct VoidCallback {
     return;
   }
 
-  static constexpr std::monostate test_apply_twice = std::monostate{};
+  static inline const std::monostate test_apply_twice = []() {
+    apply_twice(print_nat, UINT64_C(42));
+    return std::monostate{};
+  }();
 
   /// 6. Void function as argument to polymorphic function
   template <typename T1, typename T2, typename F0>
@@ -164,7 +179,15 @@ struct VoidCallback {
     return f(std::move(x0_));
   }
 
-  static constexpr std::monostate test_apply_to_void = std::monostate{};
+  static inline const std::monostate test_apply_to_void = []() {
+    apply_to<uint64_t, std::monostate>(
+        [](const uint64_t &_wa0) {
+          print_nat(_wa0);
+          return std::monostate{};
+        },
+        UINT64_C(5));
+    return std::monostate{};
+  }();
   /// 7. Void returning function in a match arm
   static void void_in_match(bool b);
   /// 8. Option of void function result

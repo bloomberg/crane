@@ -116,12 +116,20 @@ struct OppositePropertyTransferTraceCase {
           dual_property_equiv,
           crane_erase_fn<LeftProperty>(sample_left_property), sample_category,
           sample_right_stable, sample_triangle2);
-  static constexpr uint64_t sample_opposite_tag = UINT64_C(7);
-  static constexpr uint64_t sample_opposite_loop_value = UINT64_C(15);
-  static constexpr uint64_t sample_result_seed = UINT64_C(6);
-  static constexpr uint64_t sample_result_value = UINT64_C(22);
-  static constexpr uint64_t sample_result_tag = UINT64_C(7);
-  static constexpr uint64_t sample_checksum = UINT64_C(57);
+  static inline const uint64_t sample_opposite_tag =
+      opposite_prestable_category(sample_category).ps_tag;
+  static inline const uint64_t sample_opposite_loop_value =
+      opposite_prestable_category(sample_category).ps_Loop(UINT64_C(5));
+  static inline const uint64_t sample_result_seed =
+      sample_right_property.rp_seed;
+  static inline const uint64_t sample_result_value =
+      sample_right_property.rp_value;
+  static inline const uint64_t sample_result_tag = sample_right_property.rp_tag;
+  static inline const uint64_t sample_checksum =
+      ((((sample_opposite_tag + sample_opposite_loop_value) +
+         sample_result_seed) +
+        sample_result_value) +
+       sample_result_tag);
 };
 
 #endif // INCLUDED_OPPOSITE_PROPERTY_TRANSFER_TRACE

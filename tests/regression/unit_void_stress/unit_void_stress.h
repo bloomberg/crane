@@ -172,7 +172,15 @@ struct UnitVoidStress {
     return f(x0_);
   }
 
-  static constexpr std::monostate test_apply_result_void = std::monostate{};
+  static inline const std::monostate test_apply_result_void = []() {
+    apply_result<std::monostate>(
+        [](const uint64_t &_wa0) {
+          consume(_wa0);
+          return std::monostate{};
+        },
+        UINT64_C(5));
+    return std::monostate{};
+  }();
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, uint64_t &>
@@ -189,17 +197,24 @@ struct UnitVoidStress {
           UINT64_C(5));
   static void even_void(uint64_t n);
   static void odd_void(uint64_t n);
-  static constexpr std::monostate test_mutual_void = std::monostate{};
+  static inline const std::monostate test_mutual_void = []() {
+    even_void(UINT64_C(10));
+    return std::monostate{};
+  }();
   static void match_opt_void(const std::optional<uint64_t> &o);
-  static constexpr std::monostate test_match_opt_void = std::monostate{};
+  static inline const std::monostate test_match_opt_void = []() {
+    match_opt_void(std::make_optional<uint64_t>(UINT64_C(3)));
+    return std::monostate{};
+  }();
   static inline const std::pair<uint64_t, std::monostate> test_pair_void =
       pair_with_void_call(UINT64_C(5));
   static inline const std::optional<std::monostate> test_some_void =
       some_void_call(UINT64_C(3));
   static inline const std::pair<uint64_t, uint64_t> test_let_void =
       let_void_then_pair(UINT64_C(7));
-  static constexpr uint64_t test_seq = UINT64_C(42);
-  static constexpr uint64_t test_branch = UINT64_C(42);
+  static inline const uint64_t test_seq = seq_voids_value(UINT64_C(10));
+  static inline const uint64_t test_branch =
+      void_in_one_branch(true, UINT64_C(5));
 };
 
 #endif // INCLUDED_UNIT_VOID_STRESS

@@ -183,7 +183,8 @@ struct RecordFieldPatterns {
   /// After section closing, scaled_sum is parameterized by scale : nat.
   /// The record type itself is NOT parameterized (scale is only used in
   /// the function body), but the function signature changes.
-  static constexpr uint64_t test_labeled = UINT64_C(90);
+  static inline const uint64_t test_labeled =
+      scaled_sum(UINT64_C(3), ScaledPoint{UINT64_C(10), UINT64_C(20)});
 
   struct PointImpl {
     using R = Point;
@@ -228,17 +229,29 @@ struct RecordFieldPatterns {
 
   using elem_type = crane::obj;
   static uint64_t get_count(const Container &c);
-  static constexpr uint64_t test_container = UINT64_C(5);
-  static constexpr uint64_t test_origin = UINT64_C(0);
-  static constexpr uint64_t test_y_axis = UINT64_C(1);
-  static constexpr uint64_t test_x_axis = UINT64_C(2);
-  static constexpr uint64_t test_general = UINT64_C(7);
-  static constexpr uint64_t test_zero_x = UINT64_C(42);
-  static constexpr uint64_t test_nonzero = UINT64_C(14);
+  static inline const uint64_t test_container =
+      get_count(Container{UINT64_C(42), UINT64_C(5)});
+  static inline const uint64_t test_origin =
+      classify_point(Point{UINT64_C(0), UINT64_C(0)});
+  static inline const uint64_t test_y_axis =
+      classify_point(Point{UINT64_C(0), UINT64_C(5)});
+  static inline const uint64_t test_x_axis =
+      classify_point(Point{UINT64_C(3), UINT64_C(0)});
+  static inline const uint64_t test_general =
+      classify_point(Point{UINT64_C(3), UINT64_C(4)});
+  static inline const uint64_t test_zero_x =
+      zero_x(Point{UINT64_C(0), UINT64_C(42)});
+  static inline const uint64_t test_nonzero =
+      zero_x(Point{UINT64_C(5), UINT64_C(10)});
   static inline const Point test_id =
       id_point(Point{UINT64_C(99), UINT64_C(1)});
-  static constexpr uint64_t test_seg = UINT64_C(25);
-  static constexpr uint64_t test_sum = UINT64_C(60);
+  static inline const uint64_t test_seg = segment_length_sq(Segment{
+      Point{UINT64_C(1), UINT64_C(2)}, Point{UINT64_C(4), UINT64_C(6)}});
+  static inline const uint64_t test_sum = sum_px(List<Point>::cons(
+      Point{UINT64_C(10), UINT64_C(0)},
+      List<Point>::cons(Point{UINT64_C(20), UINT64_C(0)},
+                        List<Point>::cons(Point{UINT64_C(30), UINT64_C(0)},
+                                          List<Point>::nil()))));
   static inline const List<uint64_t> test_map = map_py(List<Point>::cons(
       Point{UINT64_C(0), UINT64_C(1)},
       List<Point>::cons(Point{UINT64_C(0), UINT64_C(2)},

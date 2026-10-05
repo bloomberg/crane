@@ -1,6 +1,7 @@
 #ifndef INCLUDED_DOUBLE_INVOKE_MOVE
 #define INCLUDED_DOUBLE_INVOKE_MOVE
 
+#include "fn.h"
 #include "small_vector.h"
 #include <atomic>
 #include <cstdint>
@@ -114,7 +115,19 @@ struct DoubleInvokeMove {
   /// w2 = Node(t, 1, Leaf)  if t is still valid
   /// left_value w2: same as w1 → 20
   /// Total: 40
-  static constexpr uint64_t bug_double_invoke = UINT64_C(40);
+  static inline const uint64_t bug_double_invoke = []() {
+    return []() {
+      tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                          UINT64_C(20),
+                          tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
+      crane::fn<tree(uint64_t)> f = [=](uint64_t _x0) -> tree {
+        return wrap_with(std::move(t), _x0);
+      };
+      tree w1 = f(UINT64_C(0));
+      tree w2 = f(UINT64_C(1));
+      return (left_value(std::move(w1)) + left_value(std::move(w2)));
+    }();
+  }();
 };
 
 #endif // INCLUDED_DOUBLE_INVOKE_MOVE

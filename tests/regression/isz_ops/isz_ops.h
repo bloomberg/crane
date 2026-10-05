@@ -105,9 +105,12 @@ struct IszOps {
 
   static uint64_t get_reg(const state &s, uint64_t r);
   static uint64_t cycles_isz(const state &s, uint64_t r);
-  static constexpr uint64_t test_cycle_branch = UINT64_C(8);
+  static inline const uint64_t test_cycle_branch = cycles_isz(
+      state{List<uint64_t>::cons(UINT64_C(15), List<uint64_t>::nil())},
+      UINT64_C(0));
   static uint64_t isz_iterations(uint64_t v);
-  static constexpr uint64_t test_iterations_remaining = UINT64_C(20);
+  static inline const uint64_t test_iterations_remaining =
+      (isz_iterations(UINT64_C(0)) + isz_iterations(UINT64_C(12)));
   static bool isz_loops(const state &s, uint64_t r);
   static bool isz_terminates(const state &s, uint64_t r);
   static inline const uint64_t test_loop_flags = []() {

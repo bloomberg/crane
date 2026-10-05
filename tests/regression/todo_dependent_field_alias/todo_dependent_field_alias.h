@@ -32,7 +32,8 @@ struct TodoDependentFieldAlias {
     return _tcI0::op(x0_, x1_);
   }
 
-  static constexpr uint64_t test_value = UINT64_C(5);
+  static inline const uint64_t test_value =
+      crane::any_cast<uint64_t>(pick_op<nat_magma>(UINT64_C(2), UINT64_C(3)));
 };
 
 #endif // INCLUDED_TODO_DEPENDENT_FIELD_ALIAS

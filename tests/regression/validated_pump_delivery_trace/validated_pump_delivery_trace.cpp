@@ -164,8 +164,11 @@ uint64_t ValidatedPumpDeliveryTraceCase::bilinear_iob_fraction(
           if (dia <= pt) {
             return UINT64_C(0);
           } else {
-            auto &&_once2 = (dia - pt);
-            return (_once2 ? ((dia - elapsed) * UINT64_C(75)) / _once2 : 0);
+            auto &&_once2 = (((dia - pt) > dia ? 0 : (dia - pt)));
+            return (_once2 ? ((((dia - elapsed) > dia ? 0 : (dia - elapsed))) *
+                              UINT64_C(75)) /
+                                 _once2
+                           : 0);
           }
         }
       }
@@ -213,7 +216,8 @@ ValidatedPumpDeliveryTraceCase::apply_sensor_margin(
     ValidatedPumpDeliveryTraceCase::Mg_dL bg,
     const ValidatedPumpDeliveryTraceCase::Mg_dL &target) {
   if (target.mg_dL_val <= bg.mg_dL_val) {
-    auto &&_once1 = ((bg.mg_dL_val * UINT64_C(15)) / UINT64_C(100));
+    auto &&_once1 =
+        (UINT64_C(100) ? (bg.mg_dL_val * UINT64_C(15)) / UINT64_C(100) : 0);
     return Mg_dL{((
         (bg.mg_dL_val - _once1) > bg.mg_dL_val ? 0 : (bg.mg_dL_val - _once1)))};
   } else {
@@ -227,9 +231,11 @@ uint64_t ValidatedPumpDeliveryTraceCase::adjusted_isf_tenths(
     return base_isf_tenths;
   } else {
     if (bg.mg_dL_val < UINT64_C(350)) {
-      return ((base_isf_tenths * UINT64_C(80)) / UINT64_C(100));
+      return (UINT64_C(100) ? (base_isf_tenths * UINT64_C(80)) / UINT64_C(100)
+                            : 0);
     } else {
-      return ((base_isf_tenths * UINT64_C(60)) / UINT64_C(100));
+      return (UINT64_C(100) ? (base_isf_tenths * UINT64_C(60)) / UINT64_C(100)
+                            : 0);
     }
   }
 }
@@ -278,7 +284,7 @@ ValidatedPumpDeliveryTraceCase::apply_reverse_correction_twentieths(
     if (carb <= reverse_units) {
       return UINT64_C(0);
     } else {
-      return (carb - reverse_units);
+      return (((carb - reverse_units) > carb ? 0 : (carb - reverse_units)));
     }
   } else {
     return carb;
@@ -291,15 +297,17 @@ ValidatedPumpDeliveryTraceCase::predict_bg_drop_tenths(uint64_t iob_twentieths,
   if (isf_tenths == UINT64_C(0)) {
     return UINT64_C(0);
   } else {
-    return ((iob_twentieths * isf_tenths) / UINT64_C(200));
+    return (UINT64_C(200) ? (iob_twentieths * isf_tenths) / UINT64_C(200) : 0);
   }
 }
 
 uint64_t ValidatedPumpDeliveryTraceCase::conservative_cob_rise(
     const ValidatedPumpDeliveryTraceCase::Config &cfg, uint64_t cob_grams) {
-  return (((cob_grams * cfg.cfg_conservative_cob_absorption_percent) *
-           cfg.cfg_bg_rise_per_gram) /
-          UINT64_C(100));
+  return (UINT64_C(100)
+              ? ((cob_grams * cfg.cfg_conservative_cob_absorption_percent) *
+                 cfg.cfg_bg_rise_per_gram) /
+                    UINT64_C(100)
+              : 0);
 }
 
 uint64_t ValidatedPumpDeliveryTraceCase::predicted_eventual_bg_tenths(
@@ -361,7 +369,9 @@ ValidatedPumpDeliveryTraceCase::suspend_check_tenths_with_cob(
           return SuspendDecision::suspend_withhold();
         } else {
           return SuspendDecision::suspend_reduce(
-              (safe_insulin - iob_twentieths));
+              (((safe_insulin - iob_twentieths) > safe_insulin
+                    ? 0
+                    : (safe_insulin - iob_twentieths))));
         }
       } else {
         return SuspendDecision::suspend_none();
@@ -435,11 +445,15 @@ ValidatedPumpDeliveryTraceCase::calculate_precision_bolus(
     const ValidatedPumpDeliveryTraceCase::PrecisionInput &input,
     const ValidatedPumpDeliveryTraceCase::PrecisionParams &params) {
   uint64_t activity_isf =
-      ((params.prec_isf_tenths * isf_activity_modifier(input.pi_activity)) /
-       UINT64_C(100));
+      (UINT64_C(100) ? (params.prec_isf_tenths *
+                        isf_activity_modifier(input.pi_activity)) /
+                           UINT64_C(100)
+                     : 0);
   uint64_t activity_icr =
-      ((params.prec_icr_tenths * icr_activity_modifier(input.pi_activity)) /
-       UINT64_C(100));
+      (UINT64_C(100) ? (params.prec_icr_tenths *
+                        icr_activity_modifier(input.pi_activity)) /
+                           UINT64_C(100)
+                     : 0);
   ValidatedPumpDeliveryTraceCase::Mg_dL eff_bg;
   if (input.pi_use_sensor_margin) {
     eff_bg = apply_sensor_margin(input.pi_current_bg, params.prec_target_bg);
@@ -461,7 +475,7 @@ ValidatedPumpDeliveryTraceCase::calculate_precision_bolus(
   if (raw <= iob) {
     return UINT64_C(0);
   } else {
-    return (raw - iob);
+    return (((raw - iob) > raw ? 0 : (raw - iob)));
   }
 }
 
@@ -589,12 +603,16 @@ ValidatedPumpDeliveryTraceCase::validated_precision_bolus(
                       if ((raw + tdd_current) <= tdd_limit) {
                         tdd_capped = raw;
                       } else {
-                        tdd_capped = (tdd_limit - tdd_current);
+                        tdd_capped = (((tdd_limit - tdd_current) > tdd_limit
+                                           ? 0
+                                           : (tdd_limit - tdd_current)));
                       }
                       uint64_t activity_isf =
-                          ((params.prec_isf_tenths *
-                            isf_activity_modifier(input.pi_activity)) /
-                           UINT64_C(100));
+                          (UINT64_C(100)
+                               ? (params.prec_isf_tenths *
+                                  isf_activity_modifier(input.pi_activity)) /
+                                     UINT64_C(100)
+                               : 0);
                       ValidatedPumpDeliveryTraceCase::Mg_dL eff_bg;
                       if (input.pi_use_sensor_margin) {
                         eff_bg = apply_sensor_margin(input.pi_current_bg,
@@ -652,7 +670,7 @@ ValidatedPumpDeliveryTraceCase::prec_result_twentieths(
 
 uint64_t
 ValidatedPumpDeliveryTraceCase::mmol_tenths_to_mg_dL(uint64_t mmol_tenths) {
-  return ((mmol_tenths * UINT64_C(18)) / UINT64_C(10));
+  return (UINT64_C(10) ? (mmol_tenths * UINT64_C(18)) / UINT64_C(10) : 0);
 }
 
 ValidatedPumpDeliveryTraceCase::PrecisionInput

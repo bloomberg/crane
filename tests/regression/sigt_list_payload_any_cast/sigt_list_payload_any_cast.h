@@ -176,7 +176,15 @@ struct SigtListPayloadAnyCast {
                   UINT64_C(2), List<crane::obj>::cons(
                                    UINT64_C(3), List<crane::obj>::nil()))));
 
-  static constexpr uint64_t go = UINT64_C(3);
+  static inline const uint64_t go = []() {
+    const auto &_sv = pack;
+    const auto &[x0, a1] = _sv;
+    if (crane::any_cast<bool>(x0)) {
+      return crane::any_cast<uint64_t>(a1);
+    } else {
+      return List<uint64_t>(crane::any_cast<List<crane::obj>>(a1)).length();
+    }
+  }();
 };
 
 #endif // INCLUDED_SIGT_LIST_PAYLOAD_ANY_CAST

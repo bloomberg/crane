@@ -379,6 +379,8 @@ bool test_eq(const T1 &x, const T1 &y) {
   return _tcI0::eqb(x, y);
 }
 
-inline constexpr bool test_int_eq = true;
+const bool test_int_eq =
+    test_eq<NatEq, Nat>(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))),
+                        Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))));
 
 #endif // INCLUDED_GRAPH

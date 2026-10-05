@@ -94,7 +94,8 @@ struct Ev {
 struct SiblingModuleQualified {
   static Ev::Color flip(Ev::Color c);
   static Nat count(Ev::Color c, Nat n);
-  static constexpr bool is_one = true;
+  static inline const bool is_one =
+      count(Ev::Color::RED, Nat::o()).eqb(Nat::s(Nat::o()));
 };
 
 #endif // INCLUDED_SIBLING_MODULE_QUALIFIED

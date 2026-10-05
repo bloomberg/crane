@@ -302,7 +302,8 @@ struct TfunctorComposedInstance {
   static inline const Nat total = l.template fold_left<Nat>(
       [](const Nat &acc, const box<Nat> &b) { return acc.add(b.unbox); },
       Nat::o());
-  static constexpr bool is_five = true;
+  static inline const bool is_five =
+      total.eqb(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))));
 };
 
 #endif // INCLUDED_TFUNCTOR_COMPOSED_INSTANCE

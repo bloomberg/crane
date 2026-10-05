@@ -209,7 +209,17 @@ struct MethodPartialApp {
   };
 
   /// Direct partial app stored in let, called twice.
-  static constexpr uint64_t method_partial_bug = UINT64_C(135);
+  static inline const uint64_t method_partial_bug = []() {
+    return []() {
+      tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                          UINT64_C(20),
+                          tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
+      crane::fn<uint64_t(uint64_t)> f = [=](uint64_t _x0) -> uint64_t {
+        return std::move(t).add_to_sum(_x0);
+      };
+      return (f(UINT64_C(5)) + f(UINT64_C(10)));
+    }();
+  }();
 
   /// Partial app stored in a constructor.
   struct box {
@@ -237,9 +247,32 @@ struct MethodPartialApp {
     }
   };
 
-  static constexpr uint64_t method_partial_box = UINT64_C(135);
+  static inline const uint64_t method_partial_box = []() {
+    return []() {
+      tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                          UINT64_C(20),
+                          tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
+      box b = box::box0([=](uint64_t _x0) -> uint64_t {
+        return std::move(t).add_to_sum(_x0);
+      });
+      auto &[a0] = b;
+      return (a0(UINT64_C(5)) + a0(UINT64_C(10)));
+    }();
+  }();
   /// Two partial apps from different trees.
-  static constexpr uint64_t method_partial_two = UINT64_C(30);
+  static inline const uint64_t method_partial_two = []() {
+    return []() {
+      tree t1 = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
+      tree t2 = tree::node(tree::leaf(), UINT64_C(20), tree::leaf());
+      crane::fn<uint64_t(uint64_t)> f1 = [&](uint64_t _x0) -> uint64_t {
+        return std::move(t1).add_to_sum(_x0);
+      };
+      crane::fn<uint64_t(uint64_t)> f2 = [&](uint64_t _x0) -> uint64_t {
+        return std::move(t2).add_to_sum(_x0);
+      };
+      return (f1(UINT64_C(0)) + f2(UINT64_C(0)));
+    }();
+  }();
 };
 
 #endif // INCLUDED_METHOD_PARTIAL_APP

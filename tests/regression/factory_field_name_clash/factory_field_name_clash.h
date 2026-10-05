@@ -33,7 +33,7 @@ struct FactoryFieldNameClash {
   }
 
   static uint64_t get(const a &x);
-  static constexpr uint64_t test = UINT64_C(1);
+  static inline const uint64_t test = get(a::a0(UINT64_C(1)));
 };
 
 #endif // INCLUDED_FACTORY_FIELD_NAME_CLASH

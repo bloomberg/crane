@@ -16,8 +16,8 @@ struct WrapperCollisionPos {
     };
   };
 
-  static constexpr uint64_t t1 = UINT64_C(1);
-  static constexpr uint64_t t2 = UINT64_C(2);
+  static inline const uint64_t t1 = Left::Pos::id_left(UINT64_C(1));
+  static inline const uint64_t t2 = Right::Pos::inc_right(UINT64_C(1));
 };
 
 #endif // INCLUDED_WRAPPER_COLLISION_POS

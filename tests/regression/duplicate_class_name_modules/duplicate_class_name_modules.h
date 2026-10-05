@@ -42,7 +42,7 @@ struct M2 {
 };
 
 struct DuplicateClassNameModules {
-  static constexpr uint64_t run = UINT64_C(2);
+  static inline const uint64_t run = (M1::i::m(UINT64_C(1)) + M2::i::m(true));
 };
 
 #endif // INCLUDED_DUPLICATE_CLASS_NAME_MODULES

@@ -129,14 +129,14 @@ struct ConstrainedPoly {
     }
   }
 
-  static constexpr uint64_t test_id_nat = UINT64_C(42);
-  static constexpr bool test_id_bool = true;
+  static inline const uint64_t test_id_nat = poly_id<uint64_t>(UINT64_C(42));
+  static inline const bool test_id_bool = poly_id<bool>(true);
   static inline const UPair<uint64_t, bool> test_pair =
       wrap_pair<uint64_t, bool>(UINT64_C(5), false);
   static inline const UPair<bool, uint64_t> test_swap =
       swap<uint64_t, bool>(test_pair);
-  static constexpr uint64_t test_fst = UINT64_C(5);
-  static constexpr bool test_snd = false;
+  static inline const uint64_t test_fst = test_pair.ufst;
+  static inline const bool test_snd = test_pair.usnd;
   static inline const UOption<uint64_t> test_umap =
       uoption_map<uint64_t, uint64_t>(
           [](uint64_t n) { return (n + UINT64_C(1)); },

@@ -136,11 +136,13 @@ LoopifyClassics::ack_fuel(uint64_t fuel, uint64_t m,
           _result = (n + UINT64_C(1));
         } else {
           if (n == UINT64_C(0)) {
-            _stack.emplace_back(
-                CraneEnter{UINT64_C(1), (m - UINT64_C(1)), fuel_});
+            _stack.emplace_back(CraneEnter{
+                UINT64_C(1), (((m - UINT64_C(1)) > m ? 0 : (m - UINT64_C(1)))),
+                fuel_});
           } else {
             _stack.emplace_back(CraneCont1{fuel_, m});
-            _stack.emplace_back(CraneEnter{(n - UINT64_C(1)), m, fuel_});
+            _stack.emplace_back(CraneEnter{
+                (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), m, fuel_});
           }
         }
       }

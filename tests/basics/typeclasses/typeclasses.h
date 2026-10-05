@@ -221,20 +221,40 @@ struct Typeclasses {
     }
   }
 
-  static constexpr uint64_t test_nat = UINT64_C(42);
-  static constexpr uint64_t test_bool_true = UINT64_C(1);
-  static constexpr uint64_t test_bool_false = UINT64_C(0);
-  static constexpr uint64_t test_option_some = UINT64_C(6);
-  static constexpr uint64_t test_option_none = UINT64_C(0);
-  static constexpr uint64_t test_list = UINT64_C(10);
-  static constexpr uint64_t test_sum = UINT64_C(60);
-  static constexpr uint64_t test_double = UINT64_C(14);
+  static inline const uint64_t test_nat = numNat::to_nat(UINT64_C(42));
+  static inline const uint64_t test_bool_true = numBool::to_nat(true);
+  static inline const uint64_t test_bool_false = numBool::to_nat(false);
+  static inline const uint64_t test_option_some =
+      numOption<numNat, uint64_t>::to_nat(
+          std::make_optional<uint64_t>(UINT64_C(5)));
+  static inline const uint64_t test_option_none =
+      numOption<numNat, uint64_t>::to_nat(std::optional<uint64_t>());
+  static inline const uint64_t test_list =
+      numList<numNat, uint64_t>::to_nat(List<uint64_t>::cons(
+          UINT64_C(1),
+          List<uint64_t>::cons(
+              UINT64_C(2),
+              List<uint64_t>::cons(
+                  UINT64_C(3),
+                  List<uint64_t>::cons(UINT64_C(4), List<uint64_t>::nil())))));
+  static inline const uint64_t test_sum =
+      numeric_sum<numNat, uint64_t>(List<uint64_t>::cons(
+          UINT64_C(10),
+          List<uint64_t>::cons(
+              UINT64_C(20),
+              List<uint64_t>::cons(UINT64_C(30), List<uint64_t>::nil()))));
+  static inline const uint64_t test_double =
+      numeric_double<numNat, uint64_t>(UINT64_C(7));
   static inline const std::pair<uint64_t, uint64_t> test_sort_pair =
       sort_pair<ordNat, eqNat, uint64_t>(UINT64_C(5), UINT64_C(3));
-  static constexpr uint64_t test_min = UINT64_C(3);
-  static constexpr uint64_t test_max = UINT64_C(8);
-  static constexpr uint64_t test_describe_eq = UINT64_C(5);
-  static constexpr uint64_t test_describe_ne = UINT64_C(10);
+  static inline const uint64_t test_min =
+      min_of<ordNat, eqNat, uint64_t>(UINT64_C(8), UINT64_C(3));
+  static inline const uint64_t test_max =
+      max_of<ordNat, eqNat, uint64_t>(UINT64_C(8), UINT64_C(3));
+  static inline const uint64_t test_describe_eq =
+      describe<eqNat, numNat, uint64_t>(UINT64_C(5), UINT64_C(5));
+  static inline const uint64_t test_describe_ne =
+      describe<eqNat, numNat, uint64_t>(UINT64_C(3), UINT64_C(7));
 };
 
 #endif // INCLUDED_TYPECLASSES

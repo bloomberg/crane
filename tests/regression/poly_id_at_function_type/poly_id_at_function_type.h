@@ -12,7 +12,8 @@ struct PolyIdAtFunctionType {
 
   static uint64_t apply_id(uint64_t n);
   static uint64_t apply_id2(uint64_t n);
-  static constexpr uint64_t total = UINT64_C(23);
+  static inline const uint64_t total =
+      (apply_id(UINT64_C(4)) + apply_id2(UINT64_C(2)));
 };
 
 #endif // INCLUDED_POLY_ID_AT_FUNCTION_TYPE

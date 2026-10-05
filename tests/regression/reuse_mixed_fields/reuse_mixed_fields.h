@@ -77,13 +77,33 @@ struct ReuseMixedFields {
   /// With reuse bug: variant stays AsNat, fields are 20, 10.
   /// Match sees AsNat -> returns first field + 1000 = 1020.
   /// Correct: Match sees AsPair -> returns first field = 20.
-  static constexpr uint64_t test1 = UINT64_C(20);
+  static inline const uint64_t test1 = []() {
+    auto &&_sv =
+        swap_tag_or_id(payload::asnat(UINT64_C(10), UINT64_C(20)), true);
+    if (std::holds_alternative<typename payload::AsNat>(_sv.v())) {
+      const auto &[a0, a1] = std::get<typename payload::AsNat>(_sv.v());
+      return (a0 + UINT64_C(1000));
+    } else {
+      const auto &[a0, a1] = std::get<typename payload::AsPair>(_sv.v());
+      return a0;
+    }
+  }();
   /// test2: chain two swaps. Should be identity.
   /// swap(swap(AsNat 5 6)) = swap(AsPair 6 5) = AsNat 5 6.
   /// With reuse bug: first swap returns AsNat 6 5 (wrong tag),
   /// second swap matches AsNat -> returns AsNat 5 6 (right tag but
   /// swapped fields).
-  static constexpr uint64_t test2 = UINT64_C(56);
+  static inline const uint64_t test2 = []() {
+    auto &&_sv = swap_tag_or_id(
+        swap_tag_or_id(payload::asnat(UINT64_C(5), UINT64_C(6)), true), true);
+    if (std::holds_alternative<typename payload::AsNat>(_sv.v())) {
+      const auto &[a0, a1] = std::get<typename payload::AsNat>(_sv.v());
+      return ((a0 * UINT64_C(10)) + a1);
+    } else {
+      const auto &[a0, a1] = std::get<typename payload::AsPair>(_sv.v());
+      return (((a0 * UINT64_C(10)) + a1) + UINT64_C(1000));
+    }
+  }();
 };
 
 #endif // INCLUDED_REUSE_MIXED_FIELDS

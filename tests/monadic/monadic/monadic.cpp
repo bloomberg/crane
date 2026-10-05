@@ -14,7 +14,7 @@ std::optional<uint64_t> Monadic::safe_sub(uint64_t n, uint64_t m) {
   if (n < m) {
     return std::optional<uint64_t>();
   } else {
-    return std::make_optional<uint64_t>((n - m));
+    return std::make_optional<uint64_t>((((n - m) > n ? 0 : (n - m))));
   }
 }
 

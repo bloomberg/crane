@@ -357,7 +357,18 @@ struct MemSafetyProbe26 {
             .split_closures();
     return (p.first(UINT64_C(100)) + p.second(UINT64_C(200)));
   }();
-  static constexpr uint64_t test_match_to_option = UINT64_C(115);
+  static inline const uint64_t test_match_to_option = []() -> uint64_t {
+    auto _cs = tree::node(tree::node(tree::leaf(), UINT64_C(2), tree::leaf()),
+                          UINT64_C(5),
+                          tree::node(tree::leaf(), UINT64_C(8), tree::leaf()))
+                   .match_to_option();
+    if (_cs.has_value()) {
+      const crane::fn<uint64_t(uint64_t)> &f = *_cs;
+      return f(UINT64_C(100));
+    } else {
+      return UINT64_C(0);
+    }
+  }();
 
   /// TEST 4: Recursive function building list of closures.
   /// Each closure captures tree children from its level.
@@ -499,7 +510,13 @@ struct MemSafetyProbe26 {
   static uint64_t
   apply_first_closure(const mylist<crane::fn<uint64_t(uint64_t)>> &l,
                       uint64_t x);
-  static constexpr uint64_t test_build_tree_closures = UINT64_C(119);
+  static inline const uint64_t test_build_tree_closures = []() {
+    mylist<crane::fn<uint64_t(uint64_t)>> closures =
+        build_tree_closures(tree::node(
+            tree::node(tree::leaf(), UINT64_C(4), tree::leaf()), UINT64_C(6),
+            tree::node(tree::leaf(), UINT64_C(9), tree::leaf())));
+    return apply_first_closure(std::move(closures), UINT64_C(100));
+  }();
   static inline const uint64_t test_closure_and_sum = []() {
     std::pair<crane::fn<uint64_t(uint64_t)>, uint64_t> p =
         tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),

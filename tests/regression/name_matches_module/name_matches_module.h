@@ -44,7 +44,8 @@ struct NameMatchesModule {
   /// which C++ forbids.  Both spellings are here: Inner inside module Inner,
   /// and NameMatchesModule inside module NameMatchesModule.
   static constexpr uint64_t NameMatchesModule0 = UINT64_C(4);
-  static constexpr uint64_t run = UINT64_C(10);
+  static inline const uint64_t run =
+      (NameMatchesModule0 + Inner_Mod::Inner::i(UINT64_C(6)).get());
 };
 
 #endif // INCLUDED_NAME_MATCHES_MODULE

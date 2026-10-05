@@ -41,7 +41,8 @@ struct TodoTypeSubstPackAlias {
   };
 
   static_assert(Pack<nat_pack>);
-  static constexpr uint64_t test_value = UINT64_C(5);
+  static inline const uint64_t test_value =
+      crane::any_cast<uint64_t>(run_twice<nat_pack>());
 };
 
 #endif // INCLUDED_TODO_TYPE_SUBST_PACK_ALIAS

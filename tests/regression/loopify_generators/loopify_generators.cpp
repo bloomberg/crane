@@ -216,7 +216,7 @@ List<uint64_t> LoopifyGenerators::build_list_fuel(
             _result = List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil());
           } else {
             uint64_t _x = n_ - 1;
-            uint64_t half = (n_ / UINT64_C(2));
+            uint64_t half = (UINT64_C(2) ? n_ / UINT64_C(2) : 0);
             _stack.emplace_back(CraneCont_px{n_});
             _stack.emplace_back(CraneEnter{half, f});
           }
@@ -265,7 +265,8 @@ List<uint64_t> LoopifyGenerators::take(uint64_t n, const List<uint64_t> &l) {
                     : _root.emplace(std::move(_cell)));
         _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
         _loop_l = crane_raw(a1);
-        _loop_n = (_loop_n - UINT64_C(1));
+        _loop_n =
+            (((_loop_n - UINT64_C(1)) > _loop_n ? 0 : (_loop_n - UINT64_C(1))));
         continue;
       }
     }

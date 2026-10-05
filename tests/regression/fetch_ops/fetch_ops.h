@@ -103,10 +103,20 @@ struct FetchOps {
   };
 
   static uint64_t fetch_byte(const state &s, uint64_t addr);
-  static constexpr uint64_t fetch_default_test = UINT64_C(0);
+  static inline const uint64_t fetch_default_test =
+      fetch_byte(state{List<uint64_t>::cons(
+                     UINT64_C(1),
+                     List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil()))},
+                 UINT64_C(5));
   static uint64_t fetch_byte_direct(const List<uint64_t> &rom_data,
                                     uint64_t addr);
-  static constexpr uint64_t fetch_in_range_test = UINT64_C(22);
+  static inline const uint64_t fetch_in_range_test = fetch_byte_direct(
+      List<uint64_t>::cons(
+          UINT64_C(11),
+          List<uint64_t>::cons(
+              UINT64_C(22),
+              List<uint64_t>::cons(UINT64_C(33), List<uint64_t>::nil()))),
+      UINT64_C(1));
 
   template <typename T1> static List<T1> drop(uint64_t n, List<T1> l) {
     if (n <= 0) {
@@ -136,7 +146,22 @@ struct FetchOps {
   }();
   static std::optional<std::pair<uint64_t, uint64_t>>
   fetch_window(const List<uint64_t> &rom_data, uint64_t addr);
-  static constexpr uint64_t fetch_window_test = UINT64_C(2);
+  static inline const uint64_t fetch_window_test = []() -> uint64_t {
+    auto _cs = fetch_window(
+        List<uint64_t>::cons(
+            UINT64_C(9),
+            List<uint64_t>::cons(
+                UINT64_C(8),
+                List<uint64_t>::cons(UINT64_C(7), List<uint64_t>::nil()))),
+        UINT64_C(0));
+    if (_cs.has_value()) {
+      const std::pair<uint64_t, uint64_t> &p = *_cs;
+      const auto &[_x, next] = p;
+      return next;
+    } else {
+      return UINT64_C(0);
+    }
+  }();
   static inline const std::pair<
       std::pair<std::pair<uint64_t, uint64_t>, uint64_t>, uint64_t>
       t = std::make_pair(std::make_pair(std::make_pair(fetch_default_test,

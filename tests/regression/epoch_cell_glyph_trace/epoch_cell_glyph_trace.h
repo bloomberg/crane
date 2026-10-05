@@ -646,19 +646,36 @@ struct EpochCellGlyphTraceCase {
       epoch_205_bc_valid.ve_eclipse);
   static uint64_t phase_code_after_steps(uint64_t n);
   static uint64_t zodiac_code_after_steps(uint64_t n);
-  static constexpr uint64_t sample_total_lunar_count = UINT64_C(5);
-  static constexpr uint64_t sample_total_lunar_visible_count = UINT64_C(5);
-  static constexpr uint64_t sample_visible_series_checksum = UINT64_C(296);
-  static constexpr bool sample_epoch_cell_zero = true;
-  static constexpr bool sample_epoch_glyph_match = true;
-  static constexpr uint64_t sample_epoch_phase_code = UINT64_C(0);
-  static constexpr uint64_t sample_epoch_zodiac_code = UINT64_C(0);
-  static constexpr bool sample_valid_epoch_visible = true;
-  static constexpr bool sample_valid_epoch_series_44 = true;
-  static constexpr bool sample_valid_epoch_magnitude_ge_one = true;
-  static constexpr bool sample_step_roundtrip_saros = true;
-  static constexpr bool sample_olympiad_year_is_one_after_4 = true;
-  static constexpr bool sample_eclipse_possible_after_6 = true;
+  static inline const uint64_t sample_total_lunar_count =
+      count_total_lunar(eclipse_database);
+  static inline const uint64_t sample_total_lunar_visible_count =
+      count_visible_total_lunar(eclipse_database);
+  static inline const uint64_t sample_visible_series_checksum =
+      visible_series_checksum(eclipse_database);
+  static inline const bool sample_epoch_cell_zero =
+      BinInt::eqb(sample_epoch_reading.reading_cell, Z::z0());
+  static inline const bool sample_epoch_glyph_match =
+      reading_matches(sample_epoch_reading);
+  static inline const uint64_t sample_epoch_phase_code =
+      reading_phase_code(sample_epoch_reading);
+  static inline const uint64_t sample_epoch_zodiac_code =
+      reading_zodiac_code(sample_epoch_reading);
+  static inline const bool sample_valid_epoch_visible =
+      epoch_205_bc_valid.ve_eclipse.he_visible_mediterranean;
+  static inline const bool sample_valid_epoch_series_44 =
+      BinInt::eqb(epoch_205_bc_valid.ve_eclipse.he_saros_series,
+                  Z::zpos(Positive::xo(Positive::xo(Positive::xi(
+                      Positive::xi(Positive::xo(Positive::xh())))))));
+  static inline const bool sample_valid_epoch_magnitude_ge_one =
+      QArith_base::Qle_bool(Q{Z::zpos(Positive::xh()), Positive::xh()},
+                            epoch_205_bc_valid.ve_eclipse.he_magnitude);
+  static inline const bool sample_step_roundtrip_saros =
+      BinInt::eqb(step_reverse(step(initial_state)).saros_dial, Z::z0());
+  static inline const bool sample_olympiad_year_is_one_after_4 =
+      BinInt::eqb(predict_olympiad_year(step_n(UINT64_C(4), initial_state)),
+                  Z::zpos(Positive::xh()));
+  static inline const bool sample_eclipse_possible_after_6 =
+      eclipse_possible_at_dial(step_n(UINT64_C(6), initial_state).saros_dial);
   static inline const bool sample_epoch_178_misaligned = !(BinInt::eqb(
       saros_cell(
           Z::zneg(Positive::xo(Positive::xo(Positive::xi(Positive::xi(

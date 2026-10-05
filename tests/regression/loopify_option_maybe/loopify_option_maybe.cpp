@@ -8,7 +8,7 @@ std::optional<uint64_t> LoopifyOptionMaybe::find_even(const List<uint64_t> &l) {
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
-      if ((a0 % UINT64_C(2)) == UINT64_C(0)) {
+      if ((UINT64_C(2) ? a0 % UINT64_C(2) : a0) == UINT64_C(0)) {
         return std::make_optional<uint64_t>(a0);
       } else {
         _loop_l = crane_raw(a1);
@@ -156,7 +156,7 @@ LoopifyOptionMaybe::find_index_even_aux(const List<uint64_t> &l, uint64_t idx) {
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
-      if ((a0 % UINT64_C(2)) == UINT64_C(0)) {
+      if ((UINT64_C(2) ? a0 % UINT64_C(2) : a0) == UINT64_C(0)) {
         return std::make_optional<uint64_t>(_loop_idx);
       } else {
         _loop_idx = (_loop_idx + UINT64_C(1));

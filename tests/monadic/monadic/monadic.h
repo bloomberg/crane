@@ -212,7 +212,7 @@ struct Monadic {
                       UINT64_C(4), List<uint64_t>::cons(
                                        UINT64_C(5), List<uint64_t>::nil()))))))(
           UINT64_C(0));
-  static constexpr uint64_t test_state_fib = UINT64_C(5);
+  static inline const uint64_t test_state_fib = fib(UINT64_C(5));
 };
 
 #endif // INCLUDED_MONADIC

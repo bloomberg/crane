@@ -37,7 +37,9 @@ struct InstanceAtFunctionType {
     return (_tcI1::sz(a) + _tcI0::sz(b));
   }
 
-  static constexpr uint64_t go = UINT64_C(7);
+  static inline const uint64_t go =
+      both<SzF, SzN, uint64_t, crane::fn<uint64_t(uint64_t)>>(
+          UINT64_C(3), [](uint64_t n) { return (n + UINT64_C(4)); });
 };
 
 #endif // INCLUDED_INSTANCE_AT_FUNCTION_TYPE

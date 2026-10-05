@@ -903,8 +903,9 @@ struct Equations {
 
   static_assert(FunctionalInduction<FunctionalInduction_collatz_steps,
                                     crane::fn<uint64_t(uint64_t)>>);
-  static constexpr uint64_t test_gcd = UINT64_C(4);
-  static constexpr uint64_t test_collatz = UINT64_C(2);
+  static inline const uint64_t test_gcd =
+      gcd(std::make_pair(UINT64_C(12), UINT64_C(8)));
+  static inline const uint64_t test_collatz = collatz_steps(UINT64_C(6));
 };
 
 #endif // INCLUDED_EQUATIONS

@@ -159,12 +159,44 @@ struct PartialAppMove {
   /// then the lambda accesses the moved-from t.
   static uint64_t trigger_bug(tree t);
   /// Build a tree and trigger the bug.
-  static constexpr uint64_t run_bug = UINT64_C(159);
+  static inline const uint64_t run_bug = trigger_bug(tree::node(
+      tree::node(tree::leaf(), UINT64_C(10), tree::leaf()), UINT64_C(20),
+      tree::node(tree::leaf(), UINT64_C(30), tree::leaf())));
   /// Inline version: t is a local variable, not a function parameter.
   /// This is where move optimization might actually move t.
-  static constexpr uint64_t inline_bug = UINT64_C(159);
+  static inline const uint64_t inline_bug = []() {
+    return []() {
+      tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                          UINT64_C(20),
+                          tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
+      crane::fn<uint64_t(uint64_t)> f = [=](uint64_t _x0) -> uint64_t {
+        return sum_values(t, _x0);
+      };
+      tree w = tree::node(std::move(t), UINT64_C(42), tree::leaf());
+      if (std::holds_alternative<typename tree::Leaf>(w.v_mut())) {
+        return f(UINT64_C(0));
+      } else {
+        return f(UINT64_C(99));
+      }
+    }();
+  }();
   /// Same but using wrap function.
-  static constexpr uint64_t inline_bug2 = UINT64_C(159);
+  static inline const uint64_t inline_bug2 = []() {
+    return []() {
+      tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                          UINT64_C(20),
+                          tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
+      crane::fn<uint64_t(uint64_t)> f = [=](uint64_t _x0) -> uint64_t {
+        return sum_values(t, _x0);
+      };
+      tree w = wrap(std::move(t));
+      if (std::holds_alternative<typename tree::Leaf>(w.v_mut())) {
+        return f(UINT64_C(0));
+      } else {
+        return f(UINT64_C(99));
+      }
+    }();
+  }();
 };
 
 #endif // INCLUDED_PARTIAL_APP_MOVE

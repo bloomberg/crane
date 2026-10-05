@@ -11,7 +11,8 @@ uint64_t FixPartialAppEscape::count_bits(uint64_t x0_) {
           return UINT64_C(0);
         } else {
           uint64_t _x = n - 1;
-          return (_self_go(_self_go, d, (n / UINT64_C(2))) + 1);
+          return (_self_go(_self_go, d, (UINT64_C(2) ? n / UINT64_C(2) : 0)) +
+                  1);
         }
       }
     };

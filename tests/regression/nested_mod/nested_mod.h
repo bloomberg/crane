@@ -113,9 +113,10 @@ struct NestedMod {
   static inline const Outer::Inner::shape my_circle =
       Outer::Inner::shape::circle(UINT64_C(5));
   static constexpr Outer::Color my_color = Outer::Color::RED;
-  static constexpr uint64_t test_area = UINT64_C(75);
-  static constexpr uint64_t test_combined = UINT64_C(175);
-  static constexpr uint64_t test_color = UINT64_C(1);
+  static inline const uint64_t test_area = Outer::Inner::area(my_circle);
+  static inline const uint64_t test_combined =
+      Outer::shape_with_color(my_circle, my_color);
+  static inline const uint64_t test_color = Outer::color_code(my_color);
 };
 
 #endif // INCLUDED_NESTED_MOD

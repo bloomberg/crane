@@ -1,6 +1,8 @@
 #include "setoid_rw.h"
 
-uint64_t SetoidRw::mod3(uint64_t n) { return (n % UINT64_C(3)); }
+uint64_t SetoidRw::mod3(uint64_t n) {
+  return (UINT64_C(3) ? n % UINT64_C(3) : n);
+}
 
 uint64_t SetoidRw::classify_mod3(uint64_t n) {
   auto _cs = mod3(n);

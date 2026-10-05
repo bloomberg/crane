@@ -170,7 +170,7 @@ struct ProgramWf {
           instruction::jun(UINT64_C(205)),
           List<instruction>::cons(instruction::jms(UINT64_C(218)),
                                   List<instruction>::nil())));
-  static constexpr uint64_t sample_code_size = UINT64_C(20);
+  static inline const uint64_t sample_code_size = sample_layout.code_size;
 };
 
 #endif // INCLUDED_PROGRAM_WF

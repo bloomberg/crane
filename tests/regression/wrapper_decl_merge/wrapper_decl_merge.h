@@ -16,8 +16,8 @@ struct WrapperDeclMerge {
     };
   };
 
-  static constexpr uint64_t x = UINT64_C(4);
-  static constexpr uint64_t y = UINT64_C(5);
+  static inline const uint64_t x = A::Nat::fa(UINT64_C(4));
+  static inline const uint64_t y = B::Nat::fb(UINT64_C(4));
 };
 
 #endif // INCLUDED_WRAPPER_DECL_MERGE

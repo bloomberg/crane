@@ -27,7 +27,7 @@ struct InstanceAlias {
   static_assert(Monoid<MNat, uint64_t>);
   using dict = MNat;
   static_assert(Monoid<dict, uint64_t>);
-  static constexpr uint64_t test = UINT64_C(7);
+  static inline const uint64_t test = dict::op(UINT64_C(3), UINT64_C(4));
 };
 
 #endif // INCLUDED_INSTANCE_ALIAS

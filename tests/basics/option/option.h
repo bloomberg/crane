@@ -33,8 +33,10 @@ struct Option {
     }
   }
 
-  static constexpr uint64_t test_some = UINT64_C(5);
-  static constexpr uint64_t test_none = UINT64_C(0);
+  static inline const uint64_t test_some =
+      get_or_default(some_val, UINT64_C(0));
+  static inline const uint64_t test_none =
+      get_or_default(none_val, UINT64_C(0));
   static inline const std::optional<uint64_t> test_pred_zero =
       safe_pred(UINT64_C(0));
   static inline const std::optional<uint64_t> test_pred_five =

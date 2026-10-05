@@ -453,7 +453,10 @@ struct HofTreeLoopify {
                                tree<uint64_t>::leaf())));
   static inline const tree<uint64_t> mapped = tree_map<uint64_t, uint64_t>(
       [](uint64_t x) { return (x * UINT64_C(2)); }, small_tree);
-  static constexpr uint64_t folded = UINT64_C(28);
+  static inline const uint64_t folded = tree_fold<uint64_t, uint64_t>(
+      UINT64_C(0),
+      [](uint64_t l, uint64_t x, uint64_t r) { return ((l + x) + r); },
+      small_tree);
   static inline const tree<uint64_t> zipped =
       tree_zip_with<uint64_t, uint64_t, uint64_t>(
           [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },

@@ -210,7 +210,8 @@ uint64_t LoopifyListSubsequences::nth_elem(uint64_t n,
         return a0;
       } else {
         _loop_l = crane_raw(a1);
-        _loop_n = (_loop_n - UINT64_C(1));
+        _loop_n =
+            (((_loop_n - UINT64_C(1)) > _loop_n ? 0 : (_loop_n - UINT64_C(1))));
       }
     }
   }

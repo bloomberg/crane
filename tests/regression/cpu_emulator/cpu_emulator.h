@@ -592,10 +592,13 @@ struct CpuEmulator {
               List<uint64_t>::cons(
                   UINT64_C(3),
                   List<uint64_t>::cons(UINT64_C(4), List<uint64_t>::nil()))))};
-  static constexpr uint64_t add_result = UINT64_C(8);
-  static constexpr uint64_t nop_acc = UINT64_C(3);
-  static constexpr uint64_t ldm_result = UINT64_C(5);
-  static constexpr uint64_t jun_pc = UINT64_C(1024);
+  static inline const uint64_t add_result =
+      execute(sample, instr::add(UINT64_C(4))).ex_acc;
+  static inline const uint64_t nop_acc = execute(sample, instr::nop()).ex_acc;
+  static inline const uint64_t ldm_result =
+      execute(sample, instr::ldm(UINT64_C(5))).ex_acc;
+  static inline const uint64_t jun_pc =
+      execute(sample, instr::jun(UINT64_C(1024))).ex_pc;
 };
 
 template <typename T1>

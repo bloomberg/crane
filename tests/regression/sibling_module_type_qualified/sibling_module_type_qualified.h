@@ -40,7 +40,8 @@ struct Lib {
 struct SiblingModuleTypeQualified {
   static uint64_t f(const Lib::t &x);
   static uint64_t g(const Lib::Inner::u &y);
-  static constexpr uint64_t run = UINT64_C(3);
+  static inline const uint64_t run =
+      (f(Lib::t::c(UINT64_C(1))) + g(Lib::Inner::u::d(UINT64_C(2))));
 };
 
 #endif // INCLUDED_SIBLING_MODULE_TYPE_QUALIFIED

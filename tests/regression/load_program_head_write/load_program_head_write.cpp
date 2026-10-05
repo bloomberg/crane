@@ -49,6 +49,8 @@ LoadProgramHeadWrite::load_program(LoadProgramHeadWrite::state s, uint64_t base,
         set_prom_params(std::move(s), base, a0, true);
     LoadProgramHeadWrite::state s2 = execute_wpm(std::move(s1));
     auto &&_once1 = (base + UINT64_C(1));
-    return load_program(std::move(s2), (_once1 % UINT64_C(4096)), *a1);
+    return load_program(std::move(s2),
+                        (UINT64_C(4096) ? _once1 % UINT64_C(4096) : _once1),
+                        *a1);
   }
 }

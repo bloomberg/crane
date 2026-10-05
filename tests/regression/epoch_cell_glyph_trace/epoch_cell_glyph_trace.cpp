@@ -619,9 +619,13 @@ bool EpochCellGlyphTraceCase::eclipse_possible_at_dial(const Z &dial_pos) {
                                     Positive::xi(Positive::xh())))))) {
         return true;
       } else {
-        return BinInt::eqb(dial_pos,
-                           Z::zpos(Positive::xi(Positive::xo(
-                               Positive::xo(Positive::xo(Positive::xh()))))));
+        if (BinInt::eqb(dial_pos,
+                        Z::zpos(Positive::xi(Positive::xo(
+                            Positive::xo(Positive::xo(Positive::xh()))))))) {
+          return true;
+        } else {
+          return false;
+        }
       }
     }
   }
@@ -924,74 +928,54 @@ EpochCellGlyphTraceCase::glyph_at_cell(const Z &cell) {
 
 uint64_t EpochCellGlyphTraceCase::count_total_lunar(
     const List<EpochCellGlyphTraceCase::HistoricalEclipse> &es) {
-  {
-    const List<EpochCellGlyphTraceCase::HistoricalEclipse> &_lc1_l = es;
-    uint64_t _lc1_acc = UINT64_C(0);
-    uint64_t _lc1_loop_acc = _lc1_acc;
-    const List<EpochCellGlyphTraceCase::HistoricalEclipse> *_lc1_loop_l =
-        &_lc1_l;
-    while (true) {
-      if (std::holds_alternative<
-              typename List<EpochCellGlyphTraceCase::HistoricalEclipse>::Nil>(
-              _lc1_loop_l->v())) {
-        return _lc1_loop_acc;
-      } else {
-        const auto &[a0, a1] = std::get<
-            typename List<EpochCellGlyphTraceCase::HistoricalEclipse>::Cons>(
-            _lc1_loop_l->v());
-        uint64_t count_here = [&]() {
-          switch (a0.he_category) {
-          case EclipseCategory::EC_TOTALLUNAR: {
-            return UINT64_C(1);
-          }
-          default: {
-            return UINT64_C(0);
-          }
-          }
-        }();
-        _lc1_loop_acc = (_lc1_loop_acc + count_here);
-        _lc1_loop_l = crane_raw(a1);
+  if (std::holds_alternative<
+          typename List<EpochCellGlyphTraceCase::HistoricalEclipse>::Nil>(
+          es.v())) {
+    return UINT64_C(0);
+  } else {
+    const auto &[a0, a1] = std::get<
+        typename List<EpochCellGlyphTraceCase::HistoricalEclipse>::Cons>(
+        es.v());
+    uint64_t count_here = [&]() {
+      switch (a0.he_category) {
+      case EclipseCategory::EC_TOTALLUNAR: {
+        return UINT64_C(1);
       }
-    }
+      default: {
+        return UINT64_C(0);
+      }
+      }
+    }();
+    return (count_here + count_total_lunar(*a1));
   }
 }
 
 uint64_t EpochCellGlyphTraceCase::count_visible_total_lunar(
     const List<EpochCellGlyphTraceCase::HistoricalEclipse> &es) {
-  {
-    const List<EpochCellGlyphTraceCase::HistoricalEclipse> &_lc1_l = es;
-    uint64_t _lc1_acc = UINT64_C(0);
-    uint64_t _lc1_loop_acc = _lc1_acc;
-    const List<EpochCellGlyphTraceCase::HistoricalEclipse> *_lc1_loop_l =
-        &_lc1_l;
-    while (true) {
-      if (std::holds_alternative<
-              typename List<EpochCellGlyphTraceCase::HistoricalEclipse>::Nil>(
-              _lc1_loop_l->v())) {
-        return _lc1_loop_acc;
-      } else {
-        const auto &[a0, a1] = std::get<
-            typename List<EpochCellGlyphTraceCase::HistoricalEclipse>::Cons>(
-            _lc1_loop_l->v());
-        uint64_t count_here = [&]() {
-          switch (a0.he_category) {
-          case EclipseCategory::EC_TOTALLUNAR: {
-            if (a0.he_visible_mediterranean) {
-              return UINT64_C(1);
-            } else {
-              return UINT64_C(0);
-            }
-            break;
-          }
-          default: {
-            return UINT64_C(0);
-          }
-          }
-        }();
-        _lc1_loop_acc = (_lc1_loop_acc + count_here);
-        _lc1_loop_l = crane_raw(a1);
+  if (std::holds_alternative<
+          typename List<EpochCellGlyphTraceCase::HistoricalEclipse>::Nil>(
+          es.v())) {
+    return UINT64_C(0);
+  } else {
+    const auto &[a0, a1] = std::get<
+        typename List<EpochCellGlyphTraceCase::HistoricalEclipse>::Cons>(
+        es.v());
+    uint64_t count_here = [&]() {
+      switch (a0.he_category) {
+      case EclipseCategory::EC_TOTALLUNAR: {
+        if (a0.he_visible_mediterranean) {
+          return UINT64_C(1);
+        } else {
+          return UINT64_C(0);
+        }
+        break;
       }
-    }
+      default: {
+        return UINT64_C(0);
+      }
+      }
+    }();
+    return (count_here + count_visible_total_lunar(*a1));
   }
 }
 

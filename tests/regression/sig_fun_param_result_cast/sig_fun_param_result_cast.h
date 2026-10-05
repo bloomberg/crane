@@ -41,7 +41,7 @@ struct SigFunParamResultCast {
                             uint64_t n);
   static inline const Sig<crane::fn<uint64_t(uint64_t)>> idf =
       Sig<crane::fn<uint64_t(uint64_t)>>::exist([](uint64_t n) { return n; });
-  static constexpr uint64_t go = UINT64_C(2);
+  static inline const uint64_t go = apply_sig(idf, UINT64_C(2));
 };
 
 #endif // INCLUDED_SIG_FUN_PARAM_RESULT_CAST

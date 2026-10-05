@@ -95,13 +95,19 @@ struct ClosureRecursiveBuild {
   static uint64_t apply_all_sum(const fn_list &fl, uint64_t x);
   /// test1: build_adders(3) = adder_3, adder_2, adder_1.
   /// apply_first returns adder_3(10) = 3 + 10 = 13.
-  static constexpr uint64_t test1 = UINT64_C(13);
+  static inline const uint64_t test1 =
+      apply_first(build_adders(UINT64_C(3)), UINT64_C(10));
   /// test2: apply_all_sum sums all adders applied to 0.
   /// adder_3(0) + adder_2(0) + adder_1(0) = 3 + 2 + 1 = 6.
-  static constexpr uint64_t test2 = UINT64_C(6);
+  static inline const uint64_t test2 =
+      apply_all_sum(build_adders(UINT64_C(3)), UINT64_C(0));
   /// test3: with noise between build and use.
   /// build_adders(5), noise, then apply_first(fns, 0) = 5.
-  static constexpr uint64_t test3 = UINT64_C(269);
+  static inline const uint64_t test3 = []() {
+    fn_list fns = build_adders(UINT64_C(5));
+    uint64_t noise = ((UINT64_C(99) + UINT64_C(88)) + UINT64_C(77));
+    return (apply_first(std::move(fns), UINT64_C(0)) + noise);
+  }();
 };
 
 #endif // INCLUDED_CLOSURE_RECURSIVE_BUILD

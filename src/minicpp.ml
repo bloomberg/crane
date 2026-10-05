@@ -321,9 +321,6 @@ and cpp_binop =
   | Bneq  (* != *)
   | Band  (* && *)
   | Bor  (* || *)
-  | Bsub
-  | Bdiv
-  | Bmod
   | Bassign
     (* = in expression position (a for-loop step, a comma expression).  A
        statement-position assignment is an [Sassign_expr]. *)

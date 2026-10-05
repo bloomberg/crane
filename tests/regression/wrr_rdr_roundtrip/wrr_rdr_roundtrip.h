@@ -135,7 +135,8 @@ struct WrrRdrRoundtrip {
                   UINT64_C(7),
                   List<uint64_t>::cons(UINT64_C(4), List<uint64_t>::nil())))),
       UINT64_C(2)};
-  static constexpr bool t = true;
+  static inline const bool t =
+      execute_rdr(execute_wrr(sample)).acc == UINT64_C(13);
 };
 
 template <typename T1>

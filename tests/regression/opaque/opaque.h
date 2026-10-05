@@ -37,10 +37,10 @@ struct Opaque {
   static bool nat_eq_dec(uint64_t n, uint64_t x);
   static bool are_equal(uint64_t n, uint64_t m);
   static Sig<uint64_t> bounded_add(uint64_t x0_, uint64_t x1_, uint64_t x2_);
-  static constexpr uint64_t test_safe_pred = UINT64_C(4);
-  static constexpr uint64_t test_pred_succ = UINT64_C(7);
-  static constexpr bool test_eq_true = true;
-  static constexpr bool test_eq_false = false;
+  static inline const uint64_t test_safe_pred = safe_pred(UINT64_C(5));
+  static inline const uint64_t test_pred_succ = pred_of_succ(UINT64_C(7));
+  static inline const bool test_eq_true = are_equal(UINT64_C(5), UINT64_C(5));
+  static inline const bool test_eq_false = are_equal(UINT64_C(3), UINT64_C(7));
 };
 
 #endif // INCLUDED_OPAQUE

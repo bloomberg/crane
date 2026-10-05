@@ -82,7 +82,7 @@ struct RecursiveUnderOption {
 
   static c build(uint64_t n);
   static uint64_t depth(const c &x);
-  static constexpr uint64_t go = UINT64_C(1000);
+  static inline const uint64_t go = depth(build(UINT64_C(1000)));
 };
 
 #endif // INCLUDED_RECURSIVE_UNDER_OPTION

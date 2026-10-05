@@ -105,7 +105,16 @@ struct ReuseScrutinee {
   /// → d_a0 and d_a2 are now null
   /// 2. New values are computed: subtree_sum(t) accesses t's subtrees
   /// → t's d_a0 is null → left_val dereferences null → CRASH
-  static constexpr uint64_t reuse_bug = UINT64_C(40);
+  static inline const uint64_t reuse_bug = []() {
+    tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                        UINT64_C(20),
+                        tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
+    if (std::holds_alternative<typename tree::Leaf>(t.v_mut())) {
+      return UINT64_C(0);
+    } else {
+      return subtree_sum(t);
+    }
+  }();
   /// Direct version: the result directly uses the scrutinee in a
   /// tail constructor that could trigger reuse.
   static inline const tree reuse_direct = []() {
@@ -121,7 +130,9 @@ struct ReuseScrutinee {
   }();
   /// Expected: subtree_sum on Node(Node(Leaf,10,Leaf), 20, Node(Leaf,30,Leaf))
   /// = left_val + right_val = 10 + 30 = 40
-  static constexpr uint64_t expected_sum = UINT64_C(40);
+  static inline const uint64_t expected_sum = subtree_sum(tree::node(
+      tree::node(tree::leaf(), UINT64_C(10), tree::leaf()), UINT64_C(20),
+      tree::node(tree::leaf(), UINT64_C(30), tree::leaf())));
 };
 
 #endif // INCLUDED_REUSE_SCRUTINEE

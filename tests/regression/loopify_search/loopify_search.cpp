@@ -324,7 +324,7 @@ bool LoopifySearch::binary_search_fuel(uint64_t fuel, uint64_t target,
         return false;
       } else {
         uint64_t _x = n - 1;
-        uint64_t mid = (n / UINT64_C(2));
+        uint64_t mid = (UINT64_C(2) ? n / UINT64_C(2) : 0);
         uint64_t mid_val = nth_impl(mid, _loop_l);
         if (target == mid_val) {
           return true;
@@ -438,9 +438,10 @@ uint64_t LoopifySearch::collatz_fuel(
         if (n == UINT64_C(1)) {
           _result = UINT64_C(0);
         } else {
-          if ((n % UINT64_C(2)) == UINT64_C(0)) {
+          if ((UINT64_C(2) ? n % UINT64_C(2) : n) == UINT64_C(0)) {
             _stack.emplace_back(CraneCont1{});
-            _stack.emplace_back(CraneEnter{(n / UINT64_C(2)), f});
+            _stack.emplace_back(
+                CraneEnter{(UINT64_C(2) ? n / UINT64_C(2) : 0), f});
           } else {
             _stack.emplace_back(CraneCont2{});
             _stack.emplace_back(
@@ -525,7 +526,8 @@ bool LoopifySearch::subset_sum_fuel(
         _result = true;
       } else {
         if (a0 <= target) {
-          _stack.emplace_back(CraneEnter{&a1, (target - a0), f});
+          _stack.emplace_back(CraneEnter{
+              &a1, (((target - a0) > target ? 0 : (target - a0))), f});
         } else {
           _result = false;
         }

@@ -1,7 +1,6 @@
 #ifndef INCLUDED_REUSE_USE_AFTER_MOVE
 #define INCLUDED_REUSE_USE_AFTER_MOVE
 
-#include "crane_fn.h"
 #include <atomic>
 #include <cstdint>
 #include <memory>
@@ -109,10 +108,36 @@ struct ReuseUseAfterMove {
   /// test1: rewrite_head on 1, 2, 3 with true.
   /// Expected: length 1,2,3 = 3, so result = 3, 2, 3.
   /// Bug: null dereference inside length.
-  static constexpr uint64_t test1 = UINT64_C(3);
+  static inline const uint64_t test1 = []() {
+    auto &&_sv = rewrite_head(
+        mylist::mycons(
+            UINT64_C(1),
+            mylist::mycons(UINT64_C(2),
+                           mylist::mycons(UINT64_C(3), mylist::mynil()))),
+        true);
+    if (std::holds_alternative<typename mylist::Mycons>(_sv.v())) {
+      const auto &[a0, a1] = std::get<typename mylist::Mycons>(_sv.v());
+      return a0;
+    } else {
+      return UINT64_C(999);
+    }
+  }();
   /// test2: Use sum instead of length — same bug pattern.
   static mylist rewrite_head_sum(mylist l, bool b);
-  static constexpr uint64_t test2 = UINT64_C(60);
+  static inline const uint64_t test2 = []() {
+    auto &&_sv = rewrite_head_sum(
+        mylist::mycons(
+            UINT64_C(10),
+            mylist::mycons(UINT64_C(20),
+                           mylist::mycons(UINT64_C(30), mylist::mynil()))),
+        true);
+    if (std::holds_alternative<typename mylist::Mycons>(_sv.v())) {
+      const auto &[a0, a1] = std::get<typename mylist::Mycons>(_sv.v());
+      return a0;
+    } else {
+      return UINT64_C(999);
+    }
+  }();
 };
 
 #endif // INCLUDED_REUSE_USE_AFTER_MOVE

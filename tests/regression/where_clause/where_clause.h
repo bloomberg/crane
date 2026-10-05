@@ -924,13 +924,20 @@ struct WhereClause {
     }
   };
 
-  static constexpr uint64_t test_eval_plus = UINT64_C(7);
-  static constexpr uint64_t test_eval_times = UINT64_C(30);
-  static constexpr uint64_t test_eval_nested = UINT64_C(7);
-  static constexpr uint64_t test_size = UINT64_C(5);
+  static inline const uint64_t test_eval_plus =
+      Expr::plus(Expr::num(UINT64_C(3)), Expr::num(UINT64_C(4))).eval();
+  static inline const uint64_t test_eval_times =
+      Expr::times(Expr::num(UINT64_C(5)), Expr::num(UINT64_C(6))).eval();
+  static inline const uint64_t test_eval_nested =
+      Expr::plus(Expr::times(Expr::num(UINT64_C(2)), Expr::num(UINT64_C(3))),
+                 Expr::num(UINT64_C(1)))
+          .eval();
+  static inline const uint64_t test_size =
+      Expr::plus(Expr::times(Expr::num(UINT64_C(2)), Expr::num(UINT64_C(3))),
+                 Expr::num(UINT64_C(1)))
+          .expr_size();
   static inline const bool test_beval =
       BExpr::band(BExpr::btrue(), BExpr::bnot(BExpr::bfalse())).beval();
-
   static inline const uint64_t test_aeval =
       AExpr::aif(BExpr::band(BExpr::btrue(), BExpr::btrue()),
                  AExpr::anum(UINT64_C(10)), AExpr::anum(UINT64_C(20)))

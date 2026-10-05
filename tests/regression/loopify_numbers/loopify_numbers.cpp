@@ -438,9 +438,10 @@ uint64_t LoopifyNumbers::collatz_length_fuel(
         if (n == UINT64_C(1)) {
           _result = UINT64_C(0);
         } else {
-          if ((n % UINT64_C(2)) == UINT64_C(0)) {
+          if ((UINT64_C(2) ? n % UINT64_C(2) : n) == UINT64_C(0)) {
             _stack.emplace_back(CraneCont1{});
-            _stack.emplace_back(CraneEnter{(n / UINT64_C(2)), f});
+            _stack.emplace_back(
+                CraneEnter{(UINT64_C(2) ? n / UINT64_C(2) : 0), f});
           } else {
             _stack.emplace_back(CraneCont2{});
             _stack.emplace_back(
@@ -499,13 +500,14 @@ uint64_t LoopifyNumbers::digitsum_fuel(
         } else {
           uint64_t _x = n - 1;
           _stack.emplace_back(CraneCont_px{n});
-          _stack.emplace_back(CraneEnter{(n / UINT64_C(10)), f});
+          _stack.emplace_back(
+              CraneEnter{(UINT64_C(10) ? n / UINT64_C(10) : 0), f});
         }
       }
     } else {
       auto _f = std::move(std::get<CraneCont_px>(_frame));
       uint64_t n = _f.n;
-      _result = ((n % UINT64_C(10)) + std::move(_result));
+      _result = ((UINT64_C(10) ? n % UINT64_C(10) : n) + std::move(_result));
     }
   }
   return _result;
@@ -550,9 +552,10 @@ uint64_t LoopifyNumbers::dec_to_bin_fuel(
           _result = UINT64_C(0);
         } else {
           uint64_t _x = n - 1;
-          uint64_t digit = (n % UINT64_C(2));
+          uint64_t digit = (UINT64_C(2) ? n % UINT64_C(2) : n);
           _stack.emplace_back(CraneCont_px{digit});
-          _stack.emplace_back(CraneEnter{(n / UINT64_C(2)), f});
+          _stack.emplace_back(
+              CraneEnter{(UINT64_C(2) ? n / UINT64_C(2) : 0), f});
         }
       }
     } else {
@@ -822,7 +825,7 @@ uint64_t LoopifyNumbers::count_down_by_fuel(
             _result = UINT64_C(1);
           } else {
             _stack.emplace_back(CraneCont1{});
-            _stack.emplace_back(CraneEnter{(n - k), f});
+            _stack.emplace_back(CraneEnter{(((n - k) > n ? 0 : (n - k))), f});
           }
         }
       }
@@ -918,7 +921,10 @@ uint64_t LoopifyNumbers::mixed_arith_fuel(
       uint64_t m = _f.m;
       _stack.emplace_back(CraneCont_m_2{std::move(_result), _f._tmp3});
       _stack.emplace_back(
-          CraneEnter{(m == UINT64_C(0) ? UINT64_C(0) : (m - UINT64_C(1))), f});
+          CraneEnter{(m == UINT64_C(0)
+                          ? UINT64_C(0)
+                          : (((m - UINT64_C(1)) > m ? 0 : (m - UINT64_C(1))))),
+                     f});
     } else {
       auto _f = std::move(std::get<CraneCont_m_2>(_frame));
       _result = ((_f._tmp3 * _f._tmp2) + std::move(_result));
@@ -943,7 +949,8 @@ bool LoopifyNumbers::is_even_fuel(uint64_t fuel, uint64_t n) {
       if (_loop_n == UINT64_C(0)) {
         return true;
       } else {
-        uint64_t _inl_n = (_loop_n - UINT64_C(1));
+        uint64_t _inl_n =
+            (((_loop_n - UINT64_C(1)) > _loop_n ? 0 : (_loop_n - UINT64_C(1))));
         uint64_t _inl_fuel = f;
         if (_inl_fuel <= 0) {
           return false;
@@ -952,7 +959,8 @@ bool LoopifyNumbers::is_even_fuel(uint64_t fuel, uint64_t n) {
           if (_inl_n == UINT64_C(0)) {
             return false;
           } else {
-            _loop_n = (_inl_n - UINT64_C(1));
+            _loop_n = ((
+                (_inl_n - UINT64_C(1)) > _inl_n ? 0 : (_inl_n - UINT64_C(1))));
             _loop_fuel = _inl_f;
           }
         }
@@ -972,7 +980,8 @@ bool LoopifyNumbers::is_odd_fuel(uint64_t fuel, uint64_t n) {
       if (_loop_n == UINT64_C(0)) {
         return false;
       } else {
-        uint64_t _inl_n = (_loop_n - UINT64_C(1));
+        uint64_t _inl_n =
+            (((_loop_n - UINT64_C(1)) > _loop_n ? 0 : (_loop_n - UINT64_C(1))));
         uint64_t _inl_fuel = f;
         if (_inl_fuel <= 0) {
           return true;
@@ -981,7 +990,8 @@ bool LoopifyNumbers::is_odd_fuel(uint64_t fuel, uint64_t n) {
           if (_inl_n == UINT64_C(0)) {
             return true;
           } else {
-            _loop_n = (_inl_n - UINT64_C(1));
+            _loop_n = ((
+                (_inl_n - UINT64_C(1)) > _inl_n ? 0 : (_inl_n - UINT64_C(1))));
             _loop_fuel = _inl_f;
           }
         }
@@ -1073,12 +1083,14 @@ uint64_t LoopifyNumbers::power_mod_fuel(
         if (e == UINT64_C(0)) {
           _result = UINT64_C(1);
         } else {
-          if ((e % UINT64_C(2)) == UINT64_C(0)) {
+          if ((UINT64_C(2) ? e % UINT64_C(2) : e) == UINT64_C(0)) {
             _stack.emplace_back(CraneCont1{});
-            _stack.emplace_back(CraneEnter{(e / UINT64_C(2)), f});
+            _stack.emplace_back(
+                CraneEnter{(UINT64_C(2) ? e / UINT64_C(2) : 0), f});
           } else {
             _stack.emplace_back(CraneCont2{});
-            _stack.emplace_back(CraneEnter{(e / UINT64_C(2)), f});
+            _stack.emplace_back(
+                CraneEnter{(UINT64_C(2) ? e / UINT64_C(2) : 0), f});
           }
         }
       }
@@ -1160,7 +1172,8 @@ uint64_t LoopifyNumbers::sum_divisors(uint64_t n) {
       return UINT64_C(0);
     } else {
       uint64_t _x = n_ - 1;
-      return sum_divisors_aux(n_, (n_ - UINT64_C(1)));
+      return sum_divisors_aux(
+          n_, (((n_ - UINT64_C(1)) > n_ ? 0 : (n_ - UINT64_C(1)))));
     }
   }
 }
@@ -1333,25 +1346,25 @@ List<uint64_t> LoopifyNumbers::collatz_list_fuel(uint64_t fuel, uint64_t n) {
              : _root.emplace(std::move(_value)));
         break;
       } else {
-        if ((_loop_n % UINT64_C(2)) == UINT64_C(0)) {
+        if ((UINT64_C(2) ? _loop_n % UINT64_C(2) : _loop_n) == UINT64_C(0)) {
           auto _cell = typename List<uint64_t>::Cons(_loop_n, nullptr);
           List<uint64_t> &_node =
               (_write ? *(*_write = std::make_shared<List<uint64_t>>(
                               std::move(_cell)))
                       : _root.emplace(std::move(_cell)));
           _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
-          _loop_n = (_loop_n / UINT64_C(2));
+          _loop_n = (UINT64_C(2) ? _loop_n / UINT64_C(2) : 0);
           _loop_fuel = f;
           continue;
         } else {
-          if ((_loop_n % UINT64_C(3)) == UINT64_C(0)) {
+          if ((UINT64_C(3) ? _loop_n % UINT64_C(3) : _loop_n) == UINT64_C(0)) {
             auto _cell = typename List<uint64_t>::Cons(_loop_n, nullptr);
             List<uint64_t> &_node =
                 (_write ? *(*_write = std::make_shared<List<uint64_t>>(
                                 std::move(_cell)))
                         : _root.emplace(std::move(_cell)));
             _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
-            _loop_n = (_loop_n / UINT64_C(3));
+            _loop_n = (UINT64_C(3) ? _loop_n / UINT64_C(3) : 0);
             _loop_fuel = f;
             continue;
           } else {

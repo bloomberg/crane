@@ -37,7 +37,16 @@ struct OpcodeOperandDecode {
   }
 
   static Instruction decode(uint64_t b1, uint64_t _x);
-  static constexpr uint64_t t = UINT64_C(1);
+  static inline const uint64_t t = []() {
+    switch (decode(UINT64_C(224), UINT64_C(0))) {
+    case Instruction::WRM_: {
+      return UINT64_C(1);
+    }
+    default: {
+      return UINT64_C(0);
+    }
+    }
+  }();
 };
 
 #endif // INCLUDED_OPCODE_OPERAND_DECODE

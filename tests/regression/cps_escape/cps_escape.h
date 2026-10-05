@@ -247,13 +247,52 @@ struct CpsEscape {
   /// Expected: tree_sum(Node(Node(Leaf,10,Leaf), 20, Node(Leaf,30,Leaf)))
   /// = 10 + 20 + 30 = 60
   /// adder 5 = 60 + 5 = 65
-  static constexpr uint64_t cps_escape = UINT64_C(65);
+  static inline const uint64_t cps_escape = []() {
+    return []() {
+      tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                          UINT64_C(20),
+                          tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
+      crane::fn<uint64_t(uint64_t)> adder = [=](uint64_t _x0) -> uint64_t {
+        return std::move(t).make_adder(_x0);
+      };
+      box b = store_in_box(adder);
+      auto &[a0] = b;
+      return std::move(a0)(UINT64_C(5));
+    }();
+  }();
   /// Same but inline: no intermediate let for adder.
   /// The closure goes directly from make_adder into store_in_box.
-  static constexpr uint64_t cps_escape_inline = UINT64_C(65);
+  static inline const uint64_t cps_escape_inline = []() {
+    return []() {
+      tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                          UINT64_C(20),
+                          tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
+      box b = store_in_box([=](uint64_t _x0) -> uint64_t {
+        return std::move(t).make_adder(_x0);
+      });
+      auto &[a0] = b;
+      return std::move(a0)(UINT64_C(5));
+    }();
+  }();
   /// CPS with two stored continuations.
   /// Build two adders from different trees and store both.
-  static constexpr uint64_t cps_escape_two = UINT64_C(160);
+  static inline const uint64_t cps_escape_two = []() {
+    return []() {
+      tree t1 = tree::node(
+          tree::node(tree::leaf(), UINT64_C(10), tree::leaf()), UINT64_C(20),
+          tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
+      tree t2 = tree::node(tree::leaf(), UINT64_C(100), tree::leaf());
+      box b1 = store_in_box([=](uint64_t _x0) -> uint64_t {
+        return std::move(t1).make_adder(_x0);
+      });
+      box b2 = store_in_box([=](uint64_t _x0) -> uint64_t {
+        return std::move(t2).make_adder(_x0);
+      });
+      auto &[a0] = b1;
+      auto &[a00] = b2;
+      return (std::move(a0)(UINT64_C(0)) + std::move(a00)(UINT64_C(0)));
+    }();
+  }();
 };
 
 #endif // INCLUDED_CPS_ESCAPE

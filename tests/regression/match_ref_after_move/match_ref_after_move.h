@@ -102,20 +102,42 @@ struct MatchRefAfterMove {
     /// to the tail that also takes the head as argument.
     /// The generated code must ensure h survives until both uses.
     uint64_t mylist_length() const {
-      auto go_impl = [](auto &_self_go, const mylist<A> &l0,
-                        uint64_t acc) -> uint64_t {
-        if (std::holds_alternative<typename mylist<A>::Mynil>(l0.v())) {
-          return acc;
-        } else {
-          const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(l0.v());
-          return _self_go(_self_go, *a1, (acc + UINT64_C(1)));
-        }
+      const mylist<A> *_self = this;
+
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
+        const mylist<A> *_self;
       };
-      {
-        const mylist<A> &_lc1_l0 = *this;
-        uint64_t _lc1_acc = UINT64_C(0);
-        return go_impl(go_impl, _lc1_l0, _lc1_acc);
+
+      /// CraneCont_Mycons: resumes after recursive call, then processes rest.
+      struct CraneCont_Mycons {};
+
+      using CraneFrame = std::variant<CraneEnter, CraneCont_Mycons>;
+      uint64_t _result{};
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified mylist_length: CraneEnter -> CraneCont_Mycons.
+      while (!_stack.empty()) {
+        CraneFrame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
+          const mylist<A> *_self = _f._self;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
+            _result = UINT64_C(0);
+          } else {
+            const auto &[a0, a1] =
+                std::get<typename mylist<A>::Mycons>(_sv.v());
+            _stack.emplace_back(CraneCont_Mycons{});
+            _stack.emplace_back(CraneEnter{crane_raw(a1)});
+          }
+        } else {
+          auto _f = std::move(std::get<CraneCont_Mycons>(_frame));
+          _result = (UINT64_C(1) + std::move(_result));
+        }
       }
+      return _result;
     }
 
     template <typename T1, typename F1>
@@ -237,13 +259,40 @@ struct MatchRefAfterMove {
   double_match(const mylist<uint64_t> &l);
   static uint64_t mylist_sum(const mylist<uint64_t> &l);
   /// test1: head_and_tail_length 10,20,30 = (10, 2)
-  static constexpr uint64_t test1 = UINT64_C(12);
+  static inline const uint64_t test1 = []() {
+    const auto &_sv = head_and_tail_length(mylist<uint64_t>::mycons(
+        UINT64_C(10),
+        mylist<uint64_t>::mycons(
+            UINT64_C(20), mylist<uint64_t>::mycons(
+                              UINT64_C(30), mylist<uint64_t>::mynil()))));
+    const auto &[a0, a1] = _sv;
+    return (a0 + a1);
+  }();
   /// test2: nested_match_probe 10,20,30 = 10+20+1 = 31
-  static constexpr uint64_t test2 = UINT64_C(31);
+  static inline const uint64_t test2 =
+      nested_match_probe(mylist<uint64_t>::mycons(
+          UINT64_C(10),
+          mylist<uint64_t>::mycons(
+              UINT64_C(20), mylist<uint64_t>::mycons(
+                                UINT64_C(30), mylist<uint64_t>::mynil()))));
   /// test3: match_into_pair 5,10 = (5, 6,10)
-  static constexpr uint64_t test3 = UINT64_C(21);
+  static inline const uint64_t test3 = []() {
+    const auto &_sv = match_into_pair(mylist<uint64_t>::mycons(
+        UINT64_C(5),
+        mylist<uint64_t>::mycons(UINT64_C(10), mylist<uint64_t>::mynil())));
+    const auto &[a0, a1] = _sv;
+    return (a0 + mylist_sum(a1));
+  }();
   /// test4: double_match 7,8,9 = (7, 8,9)
-  static constexpr uint64_t test4 = UINT64_C(24);
+  static inline const uint64_t test4 = []() {
+    const auto &_sv = double_match(mylist<uint64_t>::mycons(
+        UINT64_C(7),
+        mylist<uint64_t>::mycons(
+            UINT64_C(8),
+            mylist<uint64_t>::mycons(UINT64_C(9), mylist<uint64_t>::mynil()))));
+    const auto &[a0, a1] = _sv;
+    return (a0 + mylist_sum(a1));
+  }();
 
   /// Pattern 5: CPS with explicit continuation that captures from match.
   /// The continuation is a SIMPLE lambda, not a fixpoint.
@@ -258,7 +307,13 @@ struct MatchRefAfterMove {
   }
 
   /// test5: match_with_cont 100, 200, 300 (+) = 100 + 2 = 102
-  static constexpr uint64_t test5 = UINT64_C(102);
+  static inline const uint64_t test5 = match_with_cont(
+      mylist<uint64_t>::mycons(
+          UINT64_C(100),
+          mylist<uint64_t>::mycons(
+              UINT64_C(200), mylist<uint64_t>::mycons(
+                                 UINT64_C(300), mylist<uint64_t>::mynil()))),
+      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); });
 
   /// Pattern 6: Deep nesting of matches with multiple constructors.
   template <typename A, typename B> struct either {
@@ -349,7 +404,11 @@ struct MatchRefAfterMove {
   static uint64_t
   complex_match(const either<mylist<uint64_t>, mylist<uint64_t>> &e);
   /// test6: complex_match (Right 50, 60) = 50 + 1 = 51
-  static constexpr uint64_t test6 = UINT64_C(51);
+  static inline const uint64_t test6 =
+      complex_match(either<mylist<uint64_t>, mylist<uint64_t>>::right(
+          mylist<uint64_t>::mycons(
+              UINT64_C(50), mylist<uint64_t>::mycons(
+                                UINT64_C(60), mylist<uint64_t>::mynil()))));
 };
 
 #endif // INCLUDED_MATCH_REF_AFTER_MOVE

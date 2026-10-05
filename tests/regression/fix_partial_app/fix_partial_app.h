@@ -126,7 +126,17 @@ struct FixPartialApp {
   /// = 3
   ///
   /// So count_nodes tree 0 = 3
-  static constexpr uint64_t fix_partial_bug = UINT64_C(106);
+  static inline const uint64_t fix_partial_bug = []() {
+    return []() {
+      tree t = tree::node(tree::node(tree::leaf(), UINT64_C(0), tree::leaf()),
+                          UINT64_C(0),
+                          tree::node(tree::leaf(), UINT64_C(0), tree::leaf()));
+      crane::fn<uint64_t(uint64_t)> f = [=](uint64_t _x0) -> uint64_t {
+        return count_nodes(std::move(t), _x0);
+      };
+      return (f(UINT64_C(0)) + f(UINT64_C(100)));
+    }();
+  }();
   /// Same but store partial app in pair
   static inline const uint64_t fix_partial_pair = []() {
     return []() {
@@ -158,7 +168,14 @@ struct FixPartialApp {
   /// Partial app of tree_map: g := tree_map (fun x => x + 1)
   /// Then apply g to two different trees.
   /// If the closure for g captures the function arg by &, it could dangle.
-  static constexpr uint64_t map_partial_bug = UINT64_C(32);
+  static inline const uint64_t map_partial_bug = []() {
+    crane::fn<tree(tree)> g = [](tree _x0) -> tree {
+      return tree_map([](uint64_t x) { return (x + UINT64_C(1)); }, _x0);
+    };
+    tree t1 = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
+    tree t2 = tree::node(tree::leaf(), UINT64_C(20), tree::leaf());
+    return (tree_sum(g(std::move(t1))) + tree_sum(g(std::move(t2))));
+  }();
 };
 
 #endif // INCLUDED_FIX_PARTIAL_APP

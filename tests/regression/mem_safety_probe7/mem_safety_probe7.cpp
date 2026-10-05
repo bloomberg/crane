@@ -1,25 +1,47 @@
 #include "mem_safety_probe7.h"
 
-uint64_t MemSafetyProbe7::sum_list(const MemSafetyProbe7::mylist<uint64_t> &l) {
-  {
-    const MemSafetyProbe7::mylist<uint64_t> &_lc1_l0 = l;
-    uint64_t _lc1_acc = UINT64_C(0);
-    uint64_t _lc1_loop_acc = _lc1_acc;
-    const MemSafetyProbe7::mylist<uint64_t> *_lc1_loop_l0 = &_lc1_l0;
-    while (true) {
+uint64_t
+MemSafetyProbe7::sum_list(const MemSafetyProbe7::mylist<uint64_t>
+                              &l) { /// CraneEnter: captures varying parameters
+                                    /// for each recursive call.
+
+  struct CraneEnter {
+    const MemSafetyProbe7::mylist<uint64_t> *l;
+  };
+
+  /// CraneCont_Mycons: saves [a0], resumes after recursive call, then processes
+  /// rest.
+  struct CraneCont_Mycons {
+    uint64_t a0;
+  };
+
+  using CraneFrame = std::variant<CraneEnter, CraneCont_Mycons>;
+  uint64_t _result{};
+  crane::small_vector<CraneFrame> _stack;
+  _stack.emplace_back(CraneEnter{&l});
+  /// Loopified sum_list: CraneEnter -> CraneCont_Mycons.
+  while (!_stack.empty()) {
+    CraneFrame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<CraneEnter>(_frame)) {
+      auto _f = std::move(std::get<CraneEnter>(_frame));
+      const MemSafetyProbe7::mylist<uint64_t> &l = *_f.l;
       if (std::holds_alternative<
-              typename MemSafetyProbe7::mylist<uint64_t>::Mynil>(
-              _lc1_loop_l0->v())) {
-        return _lc1_loop_acc;
+              typename MemSafetyProbe7::mylist<uint64_t>::Mynil>(l.v())) {
+        _result = UINT64_C(0);
       } else {
         const auto &[a0, a1] =
-            std::get<typename MemSafetyProbe7::mylist<uint64_t>::Mycons>(
-                _lc1_loop_l0->v());
-        _lc1_loop_acc = (_lc1_loop_acc + a0);
-        _lc1_loop_l0 = crane_raw(a1);
+            std::get<typename MemSafetyProbe7::mylist<uint64_t>::Mycons>(l.v());
+        _stack.emplace_back(CraneCont_Mycons{a0});
+        _stack.emplace_back(CraneEnter{crane_raw(a1)});
       }
+    } else {
+      auto _f = std::move(std::get<CraneCont_Mycons>(_frame));
+      uint64_t a0 = _f.a0;
+      _result = (a0 + std::move(_result));
     }
   }
+  return _result;
 }
 
 /// TEST 1: Build a list of closures where each captures the TAIL

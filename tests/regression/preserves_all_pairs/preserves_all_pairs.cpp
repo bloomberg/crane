@@ -6,12 +6,12 @@ uint64_t PreservesAllPairs::get_reg(const PreservesAllPairs::state &s,
 }
 
 uint64_t PreservesAllPairs::nibble_of_nat(uint64_t n) {
-  return (n % UINT64_C(16));
+  return (UINT64_C(16) ? n % UINT64_C(16) : n);
 }
 
 uint64_t PreservesAllPairs::get_reg_pair(const PreservesAllPairs::state &s,
                                          uint64_t r) {
-  auto &&_once1 = (r % UINT64_C(2));
+  auto &&_once1 = (UINT64_C(2) ? r % UINT64_C(2) : r);
   uint64_t base = (((r - _once1) > r ? 0 : (r - _once1)));
   return ((get_reg(s, base) * UINT64_C(16)) + get_reg(s, (base + UINT64_C(1))));
 }

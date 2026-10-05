@@ -673,30 +673,51 @@ uint64_t LoopifyAlgorithms::weighted_sum(
 }
 
 /// step_sum l sums with conditional doubling for odd numbers.
-uint64_t LoopifyAlgorithms::step_sum(const List<uint64_t> &l) {
-  {
-    const List<uint64_t> &_lc1_l0 = l;
-    uint64_t _lc1_acc = UINT64_C(0);
-    uint64_t _lc1_loop_acc = _lc1_acc;
-    const List<uint64_t> *_lc1_loop_l0 = &_lc1_l0;
-    while (true) {
-      if (std::holds_alternative<typename List<uint64_t>::Nil>(
-              _lc1_loop_l0->v())) {
-        return _lc1_loop_acc;
+uint64_t LoopifyAlgorithms::step_sum(
+    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
+                               /// each recursive call.
+
+  struct CraneEnter {
+    const List<uint64_t> *l;
+  };
+
+  /// CraneCont_Cons: saves [contribution], resumes after recursive call, then
+  /// processes rest.
+  struct CraneCont_Cons {
+    uint64_t contribution;
+  };
+
+  using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+  uint64_t _result{};
+  crane::small_vector<CraneFrame> _stack;
+  _stack.emplace_back(CraneEnter{&l});
+  /// Loopified step_sum: CraneEnter -> CraneCont_Cons.
+  while (!_stack.empty()) {
+    CraneFrame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<CraneEnter>(_frame)) {
+      auto _f = std::move(std::get<CraneEnter>(_frame));
+      const List<uint64_t> &l = *_f.l;
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+        _result = UINT64_C(0);
       } else {
-        const auto &[a0, a1] =
-            std::get<typename List<uint64_t>::Cons>(_lc1_loop_l0->v());
+        const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
         uint64_t contribution;
-        if ((a0 % UINT64_C(2)) == UINT64_C(0)) {
+        if ((UINT64_C(2) ? a0 % UINT64_C(2) : a0) == UINT64_C(0)) {
           contribution = a0;
         } else {
           contribution = (a0 * UINT64_C(2));
         }
-        _lc1_loop_acc = (_lc1_loop_acc + contribution);
-        _lc1_loop_l0 = crane_raw(a1);
+        _stack.emplace_back(CraneCont_Cons{contribution});
+        _stack.emplace_back(CraneEnter{crane_raw(a1)});
       }
+    } else {
+      auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+      uint64_t contribution = _f.contribution;
+      _result = (contribution + std::move(_result));
     }
   }
+  return _result;
 }
 
 /// Helper: get head with default value.

@@ -277,7 +277,15 @@ struct CoindFamilyParam {
                          Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))))),
                      Nat::o()));
   }();
-  static constexpr bool is_ten = true;
+  static inline const bool is_ten = []() -> bool {
+    if (result.has_value()) {
+      const Nat &n = *result;
+      return n.eqb(Nat::s(Nat::s(Nat::s(
+          Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))))));
+    } else {
+      return false;
+    }
+  }();
 };
 
 #endif // INCLUDED_COIND_FAMILY_PARAM

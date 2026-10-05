@@ -45,7 +45,8 @@ struct UserInductiveShadowsStdlib {
 
   static uint64_t mine(Comparison c);
   static uint64_t theirs(uint64_t a, uint64_t b);
-  static constexpr uint64_t run = UINT64_C(1);
+  static inline const uint64_t run =
+      (mine(Comparison::EQ_) + theirs(UINT64_C(1), UINT64_C(2)));
 };
 
 #endif // INCLUDED_USER_INDUCTIVE_SHADOWS_STDLIB

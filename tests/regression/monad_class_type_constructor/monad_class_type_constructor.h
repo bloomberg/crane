@@ -65,7 +65,14 @@ struct MonadClassTypeConstructor {
   static inline const Opt<uint64_t> prog = mbind<MOpt, uint64_t, uint64_t>(
       mret<MOpt, uint64_t>(UINT64_C(20)),
       [](uint64_t a) { return mret<MOpt, uint64_t>((a + UINT64_C(22))); });
-  static constexpr uint64_t go = UINT64_C(42);
+  static inline const uint64_t go = []() -> uint64_t {
+    if (prog.has_value()) {
+      const uint64_t &n = *prog;
+      return n;
+    } else {
+      return UINT64_C(0);
+    }
+  }();
 };
 
 #endif // INCLUDED_MONAD_CLASS_TYPE_CONSTRUCTOR

@@ -232,7 +232,18 @@ struct ClosureCaptureMatch {
 
   static fn_box box_from_match(const tree &t);
   /// Build a tree, extract closures, drop the tree, use closures.
-  static constexpr uint64_t test_capture = UINT64_C(92);
+  static inline const uint64_t test_capture = []() {
+    return []() {
+      tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                          UINT64_C(20),
+                          tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
+      crane::fn<uint64_t(uint64_t)> f = [=](uint64_t _x0) -> uint64_t {
+        return t.deep_capture(_x0);
+      };
+      fn_box b = box_from_match(std::move(t));
+      return (f(UINT64_C(5)) + std::move(b).unbox(UINT64_C(7)));
+    }();
+  }();
 };
 
 #endif // INCLUDED_CLOSURE_CAPTURE_MATCH

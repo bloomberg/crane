@@ -44,8 +44,10 @@ struct CanonStruct {
     return _tcI0::eqb(x, y);
   }
 
-  static constexpr bool test_nat = false;
-  static constexpr bool test_bool = false;
+  static inline const bool test_nat =
+      same<nat_eqType>(UINT64_C(3), UINT64_C(5));
+
+  static inline const bool test_bool = same<bool_eqType>(true, false);
 };
 
 #endif // INCLUDED_CANON_STRUCT

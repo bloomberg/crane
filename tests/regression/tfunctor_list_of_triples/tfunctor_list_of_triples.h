@@ -361,7 +361,8 @@ struct TfunctorListOfTriples {
       return id.add(t0);
     }
   }();
-  static constexpr bool is_four = true;
+  static inline const bool is_four =
+      total.eqb(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))));
 };
 
 #endif // INCLUDED_TFUNCTOR_LIST_OF_TRIPLES

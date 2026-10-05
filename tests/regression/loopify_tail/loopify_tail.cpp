@@ -35,7 +35,8 @@ uint64_t LoopifyTail::nth(uint64_t n, const LoopifyTail::list<uint64_t> &l,
         return a0;
       } else {
         _loop_l = crane_raw(a1);
-        _loop_n = (_loop_n - UINT64_C(1));
+        _loop_n =
+            (((_loop_n - UINT64_C(1)) > _loop_n ? 0 : (_loop_n - UINT64_C(1))));
       }
     }
   }

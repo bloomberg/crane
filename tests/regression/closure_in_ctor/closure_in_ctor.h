@@ -76,13 +76,43 @@ struct ClosureInCtor {
   /// test1: make_box_fix(5) returns Box(add) where add(x) = x + 5.
   /// Expected: add(3) = 5 + 3 = 8.
   /// Bug: & captures dangling reference to n.
-  static constexpr uint64_t test1 = UINT64_C(8);
+  static inline const uint64_t test1 = []() {
+    auto &&_sv = make_box_fix(UINT64_C(5));
+    if (std::holds_alternative<typename box::Box0>(_sv.v())) {
+      const auto &[a0] = std::get<typename box::Box0>(_sv.v());
+      return a0(UINT64_C(3));
+    } else {
+      return UINT64_C(999);
+    }
+  }();
   /// test2: Interleave noise between closure creation and use.
   /// Expected: add(10) = 42 + 10 = 52.
-  static constexpr uint64_t test2 = UINT64_C(52);
+  static inline const uint64_t test2 = []() {
+    box b = make_box_fix(UINT64_C(42));
+    if (std::holds_alternative<typename box::Box0>(b.v_mut())) {
+      auto &[a0] = std::get<typename box::Box0>(b.v_mut());
+      return std::move(a0)(UINT64_C(10));
+    } else {
+      return UINT64_C(999);
+    }
+  }();
   /// test3: Two boxes — capture different parameters.
   /// Expected: add_10(0) + add_20(0) = 10 + 20 = 30.
-  static constexpr uint64_t test3 = UINT64_C(30);
+  static inline const uint64_t test3 = []() {
+    box b1 = make_box_fix(UINT64_C(10));
+    box b2 = make_box_fix(UINT64_C(20));
+    if (std::holds_alternative<typename box::Box0>(b1.v_mut())) {
+      auto &[a0] = std::get<typename box::Box0>(b1.v_mut());
+      if (std::holds_alternative<typename box::Box0>(b2.v_mut())) {
+        auto &[a00] = std::get<typename box::Box0>(b2.v_mut());
+        return (std::move(a0)(UINT64_C(0)) + std::move(a00)(UINT64_C(0)));
+      } else {
+        return UINT64_C(999);
+      }
+    } else {
+      return UINT64_C(999);
+    }
+  }();
 };
 
 #endif // INCLUDED_CLOSURE_IN_CTOR

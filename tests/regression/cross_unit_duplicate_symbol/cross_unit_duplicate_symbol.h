@@ -8,7 +8,7 @@ struct Use {
   static inline const Lib::lst two =
       Lib::lst::cons(UINT64_C(1), Lib::lst::cons(UINT64_C(2), Lib::lst::nil()));
 
-  static constexpr uint64_t answer = UINT64_C(2);
+  static inline const uint64_t answer = Lib::len(two);
 };
 
 #endif // INCLUDED_CROSS_UNIT_DUPLICATE_SYMBOL

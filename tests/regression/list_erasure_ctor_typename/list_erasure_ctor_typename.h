@@ -112,7 +112,15 @@ struct List {
 /// typename List::template list<_U>::Nil.
 struct ListErasureCtorTypename {
   static std::optional<crane::fn<uint64_t(uint64_t)>> pick(uint64_t n);
-  static constexpr uint64_t go = UINT64_C(42);
+  static inline const uint64_t go = []() -> uint64_t {
+    auto _cs = pick(UINT64_C(1));
+    if (_cs.has_value()) {
+      const crane::fn<uint64_t(uint64_t)> &f = *_cs;
+      return f(UINT64_C(21));
+    } else {
+      return UINT64_C(0);
+    }
+  }();
 };
 
 template <typename T1>

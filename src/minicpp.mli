@@ -380,13 +380,6 @@ and cpp_binop =
   | Bneq  (** [!=] *)
   | Band  (** [&&] *)
   | Bor  (** [||] *)
-  | Bsub
-      (** [-], [/] and [%] on an unsigned integer type of at least [int]'s
-          width, where no promotion intervenes: the language's own
-          arithmetic, written where a declared meaning shows a mapping's
-          guard cannot fire ({!Cpp_simplify}). *)
-  | Bdiv
-  | Bmod
   | Bassign
       (** [=] in expression position -- a for-loop step, a comma expression.
           An assignment in statement position is an {!Sassign_expr}. *)

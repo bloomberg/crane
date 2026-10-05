@@ -430,7 +430,17 @@ struct MemSafetyProbe {
     return f(f(x));
   }
 
-  static constexpr uint64_t test_hof_double = UINT64_C(120);
+  static inline const uint64_t test_hof_double = []() {
+    return []() {
+      tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                          UINT64_C(20),
+                          tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
+      crane::fn<uint64_t(uint64_t)> f = [=](uint64_t _x0) -> uint64_t {
+        return std::move(t).sum_values(_x0);
+      };
+      return apply_twice(f, UINT64_C(0));
+    }();
+  }();
   /// ---- TEST 2: Build list of closures from tree branches ----
   /// Each closure captures a tree value via partial application.
   /// The closures must survive after the function returns.
@@ -438,7 +448,18 @@ struct MemSafetyProbe {
   build_adders(const mylist<tree> &trees);
   static uint64_t apply_all(const mylist<crane::fn<uint64_t(uint64_t)>> &fns,
                             uint64_t x);
-  static constexpr uint64_t test_closure_list = UINT64_C(75);
+  static inline const uint64_t test_closure_list = []() {
+    tree t1 = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
+    tree t2 = tree::node(tree::leaf(), UINT64_C(20), tree::leaf());
+    tree t3 = tree::node(tree::leaf(), UINT64_C(30), tree::leaf());
+    mylist<crane::fn<uint64_t(uint64_t)>> fns =
+        build_adders(mylist<tree>::mycons(
+            std::move(t1),
+            mylist<tree>::mycons(
+                std::move(t2),
+                mylist<tree>::mycons(std::move(t3), mylist<tree>::mynil()))));
+    return apply_all(std::move(fns), UINT64_C(5));
+  }();
   static inline const uint64_t test_pair_closures = []() {
     tree t = tree::node(tree::leaf(), UINT64_C(42), tree::leaf());
     std::pair<crane::fn<uint64_t(uint64_t)>, crane::fn<uint64_t(uint64_t)>> p =
@@ -468,36 +489,95 @@ struct MemSafetyProbe {
     }
   }
 
-  static constexpr uint64_t test_fold_compose = UINT64_C(35);
+  static inline const uint64_t test_fold_compose = []() {
+    tree t1 = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
+    tree t2 = tree::node(tree::leaf(), UINT64_C(20), tree::leaf());
+    return fold_compose(
+        mylist<tree>::mycons(
+            std::move(t1),
+            mylist<tree>::mycons(std::move(t2), mylist<tree>::mynil())),
+        [](uint64_t n) { return n; }, UINT64_C(5));
+  }();
   /// ---- TEST 5: Partial application + match scrutinee reuse ----
   /// f captures t by partial application, then t is used as a match
   /// scrutinee. The escape analysis must handle this correctly.
   static uint64_t match_partial(tree t);
-  static constexpr uint64_t test_match_partial = UINT64_C(80);
+  static inline const uint64_t test_match_partial = match_partial(tree::node(
+      tree::node(tree::leaf(), UINT64_C(10), tree::leaf()), UINT64_C(20),
+      tree::node(tree::leaf(), UINT64_C(30), tree::leaf())));
   /// ---- TEST 6: Deep currying chain ----
   /// Multi-level partial application where each level binds a new value.
   static uint64_t add3(uint64_t a, uint64_t b, uint64_t c);
-  static constexpr uint64_t test_deep_curry = UINT64_C(60);
+  static inline const uint64_t test_deep_curry = []() {
+    tree t = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
+    uint64_t v = std::move(t).sum_values(UINT64_C(0));
+    return add3(v, UINT64_C(20), UINT64_C(30));
+  }();
   /// ---- TEST 7: Store partial application in Box, then apply twice ----
   /// The Box stores a closure. If the closure uses & capture,
   /// the Box holds dangling references after make_box returns.
   static fn_box make_box(tree t);
-  static constexpr uint64_t test_box_apply_twice = UINT64_C(219);
+  static inline const uint64_t test_box_apply_twice = []() {
+    tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                        UINT64_C(20),
+                        tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
+    fn_box b = make_box(std::move(t));
+    return (b.apply_box(UINT64_C(0)) + b.apply_box(UINT64_C(99)));
+  }();
   /// ---- TEST 8: Two closures capture the same tree ----
   /// Both must independently own data. The second partial application
   /// should not move the tree.
-  static constexpr uint64_t test_dual_capture = UINT64_C(87);
-  static constexpr uint64_t test_map_tree = UINT64_C(63);
+  static inline const uint64_t test_dual_capture = []() {
+    return []() {
+      tree t = tree::node(tree::leaf(), UINT64_C(42), tree::leaf());
+      crane::fn<uint64_t(uint64_t)> f = [=](uint64_t _x0) -> uint64_t {
+        return t.sum_values(_x0);
+      };
+      crane::fn<uint64_t(uint64_t)> g = [&](uint64_t _x0) -> uint64_t {
+        return std::move(t).sum_values(_x0);
+      };
+      return (f(UINT64_C(1)) + g(UINT64_C(2)));
+    }();
+  }();
+  static inline const uint64_t test_map_tree = []() {
+    tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                        UINT64_C(20),
+                        tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
+    tree t2 =
+        std::move(t).map_tree([](uint64_t n) { return (n + UINT64_C(1)); });
+    return std::move(t2).sum_values(UINT64_C(0));
+  }();
   /// ---- TEST 10: Partial application stored in Box via match ----
   /// The partial application captures a match-bound tree value and
   /// is stored in a Box. Tests closure escape through constructor inside match.
   static fn_box box_from_match(const tree &t);
-  static constexpr uint64_t test_box_from_match = UINT64_C(15);
-  static constexpr uint64_t test_combine = UINT64_C(40);
+  static inline const uint64_t test_box_from_match = []() {
+    tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                        UINT64_C(20),
+                        tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
+    fn_box b = box_from_match(std::move(t));
+    return std::move(b).apply_box(UINT64_C(5));
+  }();
+  static inline const uint64_t test_combine = []() {
+    tree t1 = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
+    tree t2 = tree::node(tree::leaf(), UINT64_C(20), tree::leaf());
+    return std::move(t1).combine_trees(std::move(t2), UINT64_C(5));
+  }();
   /// ---- TEST 12: Chain of partial applications with intermediate let ----
   /// f captures t, then g uses f's result to build another closure.
   /// Tests that intermediate values are properly kept alive.
-  static constexpr uint64_t test_chain_partial = UINT64_C(360);
+  static inline const uint64_t test_chain_partial = []() {
+    return []() {
+      tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                          UINT64_C(20),
+                          tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
+      crane::fn<uint64_t(uint64_t)> f = [&](uint64_t _x0) -> uint64_t {
+        return std::move(t).sum_values(_x0);
+      };
+      uint64_t v = f(UINT64_C(0));
+      return add3(v, UINT64_C(100), UINT64_C(200));
+    }();
+  }();
 };
 
 #endif // INCLUDED_MEM_SAFETY_PROBE

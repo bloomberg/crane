@@ -185,7 +185,7 @@ let ty_bool = Tid_external ("bool", [])
     hand their operand's type back. *)
 let binop_yields_bool = function
   | Beq | Bneq | Band | Bor -> true
-  | Bsub | Bdiv | Bmod | Bassign -> false
+  | Bassign -> false
 
 (** The raw-pointer type an owning or raw pointer decays to.  Both
     [crane_raw(x)] and [x.get()] answer this way.  [None] for anything that is

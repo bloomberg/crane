@@ -59,7 +59,7 @@ bool LoopifyListRelations::is_suffix_of(const List<uint64_t> &l1,
   if (len2 < len1) {
     return false;
   } else {
-    uint64_t diff = (len2 - len1);
+    uint64_t diff = (((len2 - len1) > len2 ? 0 : (len2 - len1)));
     List<uint64_t> suffix;
     auto drop = [](uint64_t n, List<uint64_t> xs) -> List<uint64_t> {
       List<uint64_t> _loop_xs = std::move(xs);

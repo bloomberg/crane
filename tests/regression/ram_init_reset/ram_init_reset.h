@@ -171,7 +171,7 @@ struct RamInitReset {
             ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(8))};
   static state reset_state(const state &s);
   static std::pair<std::optional<uint64_t>, state> pop_stack(const state &s);
-  static constexpr uint64_t reset_pc = UINT64_C(0);
+  static inline const uint64_t reset_pc = reset_state(init_state).state_pc;
 };
 
 template <typename T1> List<T1> ListDef::repeat(const T1 &x, uint64_t n) {

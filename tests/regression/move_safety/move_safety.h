@@ -214,17 +214,57 @@ struct MoveSafety {
   /// The & lambda from partial application captures t by reference.
   /// Then wrap_tree takes t by value, so std::move(t) is generated.
   /// The lambda then holds a dangling reference.
-  static constexpr uint64_t bug_partial_then_wrap = UINT64_C(159);
+  static inline const uint64_t bug_partial_then_wrap = []() {
+    tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                        UINT64_C(20),
+                        tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
+    return std::move(t).sum_values(UINT64_C(99));
+  }();
   /// TEST 2: Store partial application in a Box.
   /// If the eta-expanded lambda uses & capture,
   /// the Box will hold a dangling reference after the
   /// function returns.
   static fn_box make_box(tree t);
-  static constexpr uint64_t bug_box_escape = UINT64_C(159);
+  static inline const uint64_t bug_box_escape = []() {
+    tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                        UINT64_C(20),
+                        tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
+    fn_box b = make_box(std::move(t));
+    return std::move(b).apply_box(UINT64_C(99));
+  }();
   /// TEST 3: Two partial applications of same variable.
   /// Second one should not move t.
-  static constexpr uint64_t bug_double_partial = UINT64_C(123);
-  static constexpr uint64_t bug_partial_then_id = UINT64_C(80);
+  static inline const uint64_t bug_double_partial = []() {
+    return []() {
+      tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                          UINT64_C(20),
+                          tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
+      crane::fn<uint64_t(uint64_t)> f = [=](uint64_t _x0) -> uint64_t {
+        return t.sum_values(_x0);
+      };
+      crane::fn<uint64_t(uint64_t)> g = [&](uint64_t _x0) -> uint64_t {
+        return std::move(t).sum_values(_x0);
+      };
+      return (f(UINT64_C(1)) + g(UINT64_C(2)));
+    }();
+  }();
+  static inline const uint64_t bug_partial_then_id = []() {
+    return []() {
+      tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                          UINT64_C(20),
+                          tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
+      crane::fn<uint64_t(uint64_t)> f = [=](uint64_t _x0) -> uint64_t {
+        return t.sum_values(_x0);
+      };
+      tree t2 = std::move(t).tree_id();
+      if (std::holds_alternative<typename tree::Leaf>(t2.v_mut())) {
+        return f(UINT64_C(0));
+      } else {
+        auto &[a0, a1, a2] = std::get<typename tree::Node>(t2.v_mut());
+        return f(std::move(a1));
+      }
+    }();
+  }();
 };
 
 #endif // INCLUDED_MOVE_SAFETY

@@ -150,7 +150,17 @@ struct LetPairShadow {
   /// f(acc, x) = (acc+x, acc).
   /// map_accum f 0 10,20,30 = (0,10,30, 60)
   /// sum(list) + acc = 40 + 60 = 100
-  static constexpr uint64_t test1 = UINT64_C(100);
+  static inline const uint64_t test1 = []() -> uint64_t {
+    auto [l, acc] = map_accum<uint64_t, uint64_t, uint64_t>(
+        [](uint64_t s, uint64_t x) { return std::make_pair((s + x), s); },
+        UINT64_C(0),
+        mylist<uint64_t>::mycons(
+            UINT64_C(10),
+            mylist<uint64_t>::mycons(
+                UINT64_C(20), mylist<uint64_t>::mycons(
+                                  UINT64_C(30), mylist<uint64_t>::mynil()))));
+    return (mylist_sum(std::move(l)) + acc);
+  }();
   /// Helper functions that return pairs (force temporary allocation).
   static std::pair<uint64_t, uint64_t> add_pair(uint64_t a, uint64_t b);
   static std::pair<uint64_t, uint64_t> sub_pair(uint64_t a, uint64_t b);
@@ -159,13 +169,16 @@ struct LetPairShadow {
                                        uint64_t d);
   /// test2: add_pair 3 4 = (7, 12), sub_pair 10 3 = (7, 13)
   /// 7 + 12 + 7 + 13 = 39
-  static constexpr uint64_t test2 = UINT64_C(39);
+  static inline const uint64_t test2 =
+      double_call_destruct(UINT64_C(3), UINT64_C(4), UINT64_C(10), UINT64_C(3));
   /// Pattern 3: Three destructs of function-call results.
   static uint64_t triple_call_destruct(uint64_t a, uint64_t b, uint64_t c,
                                        uint64_t d, uint64_t e, uint64_t f);
   /// test3: add_pair 1 2 = (3,2), add_pair 3 4 = (7,12),
   /// add_pair 5 6 = (11,30).  3+2+7+12+11+30 = 65
-  static constexpr uint64_t test3 = UINT64_C(65);
+  static inline const uint64_t test3 =
+      triple_call_destruct(UINT64_C(1), UINT64_C(2), UINT64_C(3), UINT64_C(4),
+                           UINT64_C(5), UINT64_C(6));
 };
 
 #endif // INCLUDED_LET_PAIR_SHADOW

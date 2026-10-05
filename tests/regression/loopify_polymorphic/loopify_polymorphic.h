@@ -121,23 +121,42 @@ public:
 };
 
 struct LoopifyPolymorphic {
-  template <typename T1> static uint64_t poly_length(const List<T1> &l) {
-    {
-      const List<T1> &_lc1_l0 = l;
-      uint64_t _lc1_acc = UINT64_C(0);
-      uint64_t _lc1_loop_acc = _lc1_acc;
-      const List<T1> *_lc1_loop_l0 = &_lc1_l0;
-      while (true) {
-        if (std::holds_alternative<typename List<T1>::Nil>(_lc1_loop_l0->v())) {
-          return _lc1_loop_acc;
+  template <typename T1>
+  static uint64_t
+  poly_length(const List<T1> &l) { /// CraneEnter: captures varying parameters
+                                   /// for each recursive call.
+
+    struct CraneEnter {
+      const List<T1> *l;
+    };
+
+    /// CraneCont_Cons: resumes after recursive call, then processes rest.
+    struct CraneCont_Cons {};
+
+    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+    uint64_t _result{};
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{&l});
+    /// Loopified poly_length: CraneEnter -> CraneCont_Cons.
+    while (!_stack.empty()) {
+      CraneFrame _frame = std::move(_stack.back());
+      _stack.pop_back();
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
+        const List<T1> &l = *_f.l;
+        if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
+          _result = UINT64_C(0);
         } else {
-          const auto &[a0, a1] =
-              std::get<typename List<T1>::Cons>(_lc1_loop_l0->v());
-          _lc1_loop_acc = (_lc1_loop_acc + UINT64_C(1));
-          _lc1_loop_l0 = crane_raw(a1);
+          const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
+          _stack.emplace_back(CraneCont_Cons{});
+          _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }
+      } else {
+        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+        _result = (UINT64_C(1) + std::move(_result));
       }
     }
+    return _result;
   }
 
   template <typename T1>
@@ -294,7 +313,8 @@ struct LoopifyPolymorphic {
           return std::make_optional<T1>(a0);
         } else {
           _loop_l = crane_raw(a1);
-          _loop_n = (_loop_n - UINT64_C(1));
+          _loop_n = ((
+              (_loop_n - UINT64_C(1)) > _loop_n ? 0 : (_loop_n - UINT64_C(1))));
         }
       }
     }

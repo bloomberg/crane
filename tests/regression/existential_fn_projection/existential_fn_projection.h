@@ -2,8 +2,10 @@
 #define INCLUDED_EXISTENTIAL_FN_PROJECTION
 
 #include "crane_fn.h"
+#include "fn.h"
 #include "obj.h"
 #include <cstdint>
+#include <functional>
 #include <stdexcept>
 #include <utility>
 #include <variant>
@@ -55,12 +57,13 @@ struct ExistentialFnProjection {
             uint64_t x = crane::any_cast<uint64_t>(_any_x);
             return (crane::any_cast<uint64_t>(x) + UINT64_C(1));
           }));
-  static constexpr uint64_t measured = UINT64_C(5);
+  static inline const uint64_t measured = crane::any_cast<uint64_t>(
+      crane::any_cast<crane::fn<crane::obj(crane::obj)>>(measurer.projT2())(
+          crane::obj(UINT64_C(4))));
   static inline const SigT<crane::obj, std::pair<crane::obj, crane::obj>>
       tagged = SigT<crane::obj, std::pair<crane::obj, crane::obj>>::existt(
           crane::obj(),
           std::make_pair(crane::obj(UINT64_C(7)), crane::obj(UINT64_C(8))));
-
   static inline const uint64_t tag = crane::any_cast<uint64_t>(
       crane_any_cast<std::pair<crane::obj, crane::obj>>(tagged.projT2())
           .second);

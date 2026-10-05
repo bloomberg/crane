@@ -159,11 +159,20 @@ struct MemSafetyProbe8 {
   /// dummy ensures tree is NOT the first arg (avoiding methodification).
   /// tree is the second arg — should be owned if it doesn't escape.
   static uint64_t tree_sum_ext(uint64_t _x, const tree &t);
-  static constexpr uint64_t test_tree_sum = UINT64_C(60);
+  static inline const uint64_t test_tree_sum = tree_sum_ext(
+      UINT64_C(0),
+      tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                 UINT64_C(20),
+                 tree::node(tree::leaf(), UINT64_C(30), tree::leaf())));
   /// TEST 2: Same but with a more complex computation to prevent
   /// the optimizer from simplifying.
   static uint64_t tree_weighted(uint64_t _x, const tree &t, uint64_t depth);
-  static constexpr uint64_t test_tree_weighted = UINT64_C(100);
+  static inline const uint64_t test_tree_weighted = tree_weighted(
+      UINT64_C(0),
+      tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                 UINT64_C(20),
+                 tree::node(tree::leaf(), UINT64_C(30), tree::leaf())),
+      UINT64_C(1));
   /// TEST 3: Deep tree traversal — more iterations, more frames.
   static tree make_left_spine(uint64_t n);
   static inline const uint64_t test_deep_tree =
@@ -172,15 +181,29 @@ struct MemSafetyProbe8 {
   /// different subtrees — _After frame must hold one while
   /// processing the other.
   static uint64_t tree_collect(uint64_t _x, const tree &t);
-  static constexpr uint64_t test_collect = UINT64_C(105);
+  static inline const uint64_t test_collect = tree_collect(
+      UINT64_C(0),
+      tree::node(
+          tree::node(tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
+                     UINT64_C(10), tree::leaf()),
+          UINT64_C(20),
+          tree::node(tree::leaf(), UINT64_C(30),
+                     tree::node(tree::leaf(), UINT64_C(40), tree::leaf()))));
   /// TEST 5: Tree function where the tree is consumed (not
   /// used after recursive calls) — maximally owned.
   static uint64_t tree_flatten(uint64_t _x, const tree &t);
-  static constexpr uint64_t test_flatten = UINT64_C(30);
+  static inline const uint64_t test_flatten = tree_flatten(
+      UINT64_C(0),
+      tree::node(tree::node(tree::leaf(), UINT64_C(2), tree::leaf()),
+                 UINT64_C(3),
+                 tree::node(tree::leaf(), UINT64_C(5), tree::leaf())));
   /// TEST 6: Pass tree as a higher-order function argument
   /// to prevent methodification completely.
   static uint64_t tree_size_via_fold(const tree &t);
-  static constexpr uint64_t test_fold_size = UINT64_C(4);
+  static inline const uint64_t test_fold_size = tree_size_via_fold(tree::node(
+      tree::node(tree::leaf(), UINT64_C(1), tree::leaf()), UINT64_C(2),
+      tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
+                 UINT64_C(4), tree::leaf())));
 };
 
 #endif // INCLUDED_MEM_SAFETY_PROBE8

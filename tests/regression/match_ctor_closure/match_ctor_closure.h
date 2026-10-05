@@ -205,7 +205,13 @@ struct MatchCtorClosure {
   /// but the fn_box retains the closure with a dangling reference.
   static fn_box match_and_box(const tree &t);
   /// Clobber stack, then use the closure from the box.
-  static constexpr uint64_t bug_match_ctor = UINT64_C(15);
+  static inline const uint64_t bug_match_ctor = []() {
+    tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                        UINT64_C(20),
+                        tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
+    fn_box b = match_and_box(std::move(t));
+    return std::move(b).apply_box(UINT64_C(5));
+  }();
 };
 
 #endif // INCLUDED_MATCH_CTOR_CLOSURE

@@ -201,7 +201,7 @@ struct RamBadState {
             empty_ram,
             default_sel,
             ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(8))};
-  static constexpr uint64_t overflow_acc = UINT64_C(16);
+  static inline const uint64_t overflow_acc = bad_state_acc_overflow.state_acc;
 };
 
 template <typename T1> List<T1> ListDef::repeat(const T1 &x, uint64_t n) {

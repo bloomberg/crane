@@ -54,8 +54,12 @@ bool run(const SigT<std::pair<uint64_t, List<uint64_t>>,
   const auto &[x0, a1] = e;
   const auto &[n, _x] = x0;
   const auto &[f, _x0] = a1;
-  return crane::any_cast<bool>(
-      crane::any_cast<crane::fn<crane::obj(crane::obj)>>(f)(garg(n)));
+  if (crane::any_cast<bool>(
+          crane::any_cast<crane::fn<crane::obj(crane::obj)>>(f)(garg(n)))) {
+    return true;
+  } else {
+    return false;
+  }
 }
 
 bool check(std::monostate) { return run(my_entry); }

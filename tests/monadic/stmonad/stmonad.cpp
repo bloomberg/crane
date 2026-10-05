@@ -208,22 +208,31 @@ List<uint64_t> STMonadTests::quicksort_ST_mine(const List<uint64_t> &xs) {
               auto &&_once2 = nat_idx::toNat(l);
               uint64_t pivotValue = (*arr0)[nat_idx::fromNat(
                   (nat_idx::toNat(l) +
-                   ((((_once1 - _once2) > _once1 ? 0 : (_once1 - _once2))) /
-                    UINT64_C(2))))];
+                   (UINT64_C(2)
+                        ? (((_once1 - _once2) > _once1 ? 0
+                                                       : (_once1 - _once2))) /
+                              UINT64_C(2)
+                        : 0)))];
               [&]() {
                 auto &&_once3 = nat_idx::toNat(r);
                 auto &&_once4 = nat_idx::toNat(l);
                 uint64_t leftVal = (*arr0)[nat_idx::fromNat(
                     (nat_idx::toNat(l) +
-                     ((((_once3 - _once4) > _once3 ? 0 : (_once3 - _once4))) /
-                      UINT64_C(2))))];
+                     (UINT64_C(2)
+                          ? (((_once3 - _once4) > _once3 ? 0
+                                                         : (_once3 - _once4))) /
+                                UINT64_C(2)
+                          : 0)))];
                 uint64_t rightVal = (*arr0)[r];
                 auto &&_once5 = nat_idx::toNat(r);
                 auto &&_once6 = nat_idx::toNat(l);
                 (*arr0)[nat_idx::fromNat(
                     (nat_idx::toNat(l) +
-                     ((((_once5 - _once6) > _once5 ? 0 : (_once5 - _once6))) /
-                      UINT64_C(2))))] = rightVal;
+                     (UINT64_C(2)
+                          ? (((_once5 - _once6) > _once5 ? 0
+                                                         : (_once5 - _once6))) /
+                                UINT64_C(2)
+                          : 0)))] = rightVal;
                 (*arr0)[r] = leftVal;
                 return std::monostate{};
               }();

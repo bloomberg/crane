@@ -132,13 +132,31 @@ struct ClosureMapEscape {
   /// test1: map_to_adders 10, 20, 30, apply first to 5.
   /// add(5) where add(x) = x + 10. So 10 + 5 = 15.
   /// Bug: h=10 captured by &, dangling after match.
-  static constexpr uint64_t test1 = UINT64_C(15);
+  static inline const uint64_t test1 = apply_first(
+      map_to_adders(mylist<uint64_t>::mycons(
+          UINT64_C(10),
+          mylist<uint64_t>::mycons(
+              UINT64_C(20), mylist<uint64_t>::mycons(
+                                UINT64_C(30), mylist<uint64_t>::mynil())))),
+      UINT64_C(5));
   /// test2: Sum of applying all adders to 0.
   /// (0+10) + (0+20) + (0+30) = 60.
-  static constexpr uint64_t test2 = UINT64_C(60);
+  static inline const uint64_t test2 = sum_apply(
+      map_to_adders(mylist<uint64_t>::mycons(
+          UINT64_C(10),
+          mylist<uint64_t>::mycons(
+              UINT64_C(20), mylist<uint64_t>::mycons(
+                                UINT64_C(30), mylist<uint64_t>::mynil())))),
+      UINT64_C(0));
   /// test3: Build adders, noise, then apply.
   /// (1+100) + (1+200) = 302.
-  static constexpr uint64_t test3 = UINT64_C(302);
+  static inline const uint64_t test3 = []() {
+    mylist<crane::fn<uint64_t(uint64_t)>> fns =
+        map_to_adders(mylist<uint64_t>::mycons(
+            UINT64_C(100), mylist<uint64_t>::mycons(
+                               UINT64_C(200), mylist<uint64_t>::mynil())));
+    return sum_apply(std::move(fns), UINT64_C(1));
+  }();
 };
 
 #endif // INCLUDED_CLOSURE_MAP_ESCAPE

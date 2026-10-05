@@ -205,7 +205,13 @@ struct LetClosureEscape {
   /// When let_escape returns, t is destroyed → dangling reference in Box.
   static fn_box let_escape(tree t);
   /// Clobber stack after let_escape returns, then use the closure.
-  static constexpr uint64_t bug_let_clobber = UINT64_C(60);
+  static inline const uint64_t bug_let_clobber = []() {
+    tree t1 = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                         UINT64_C(20),
+                         tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
+    fn_box b1 = let_escape(std::move(t1));
+    return std::move(b1).apply_box(UINT64_C(0));
+  }();
 };
 
 #endif // INCLUDED_LET_CLOSURE_ESCAPE

@@ -319,7 +319,8 @@ struct TfunctorRecordListField {
         return acc.add(t);
       },
       Nat::o());
-  static constexpr bool is_five = true;
+  static inline const bool is_five =
+      total.eqb(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))));
 };
 
 #endif // INCLUDED_TFUNCTOR_RECORD_LIST_FIELD

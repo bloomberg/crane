@@ -381,20 +381,42 @@ struct MemSafetyProbe13 {
     }
 
     uint64_t length() const {
-      auto go_impl = [](auto &_self_go, const mylist<A> &l0,
-                        uint64_t acc) -> uint64_t {
-        if (std::holds_alternative<typename mylist<A>::Mynil>(l0.v())) {
-          return acc;
-        } else {
-          const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(l0.v());
-          return _self_go(_self_go, *a1, (acc + UINT64_C(1)));
-        }
+      const mylist<A> *_self = this;
+
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
+        const mylist<A> *_self;
       };
-      {
-        const mylist<A> &_lc1_l0 = *this;
-        uint64_t _lc1_acc = UINT64_C(0);
-        return go_impl(go_impl, _lc1_l0, _lc1_acc);
+
+      /// CraneCont_Mycons: resumes after recursive call, then processes rest.
+      struct CraneCont_Mycons {};
+
+      using CraneFrame = std::variant<CraneEnter, CraneCont_Mycons>;
+      uint64_t _result{};
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified length: CraneEnter -> CraneCont_Mycons.
+      while (!_stack.empty()) {
+        CraneFrame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
+          const mylist<A> *_self = _f._self;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
+            _result = UINT64_C(0);
+          } else {
+            const auto &[a0, a1] =
+                std::get<typename mylist<A>::Mycons>(_sv.v());
+            _stack.emplace_back(CraneCont_Mycons{});
+            _stack.emplace_back(CraneEnter{crane_raw(a1)});
+          }
+        } else {
+          auto _f = std::move(std::get<CraneCont_Mycons>(_frame));
+          _result = (UINT64_C(1) + std::move(_result));
+        }
       }
+      return _result;
     }
 
     template <typename T1, typename F1>
@@ -455,15 +477,37 @@ struct MemSafetyProbe13 {
   /// that are also captured by closures.
   static std::pair<mylist<uint64_t>, mylist<crane::fn<uint64_t(uint64_t)>>>
   tree_vals_and_fns(const tree &t);
-  static constexpr uint64_t test_vals_and_fns = UINT64_C(35);
-  static constexpr uint64_t test_double_match = UINT64_C(26);
+  static inline const uint64_t test_vals_and_fns = []() {
+    tree t = tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
+                        UINT64_C(7),
+                        tree::node(tree::leaf(), UINT64_C(11), tree::leaf()));
+    auto [vals, fns] = tree_vals_and_fns(std::move(t));
+    uint64_t val_sum = sum_list(std::move(vals));
+    uint64_t fn_sum = sum_list(std::move(fns).template map_list<uint64_t>(
+        [](crane::fn<uint64_t(uint64_t)> f) { return f(UINT64_C(0)); }));
+    return (val_sum + fn_sum);
+  }();
+  static inline const uint64_t test_double_match = []() {
+    tree t = tree::node(
+        tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
+                   UINT64_C(2),
+                   tree::node(tree::leaf(), UINT64_C(3), tree::leaf())),
+        UINT64_C(10), tree::node(tree::leaf(), UINT64_C(20), tree::leaf()));
+    return std::move(t).double_match();
+  }();
   /// TEST 4: Deeply nested tree with closures at EVERY level.
   /// Each closure captures values from its level AND from the parent.
   /// Tests stack depth and closure lifetime with deep nesting.
   static tree make_deep(uint64_t n);
   static mylist<crane::fn<uint64_t(uint64_t)>> depth_fns(const tree &t,
                                                          uint64_t parent_val);
-  static constexpr uint64_t test_depth_fns = UINT64_C(29);
+  static inline const uint64_t test_depth_fns = []() {
+    tree t = make_deep(UINT64_C(5));
+    mylist<crane::fn<uint64_t(uint64_t)>> fns =
+        depth_fns(std::move(t), UINT64_C(0));
+    return sum_list(std::move(fns).template map_list<uint64_t>(
+        [](crane::fn<uint64_t(uint64_t)> f) { return f(UINT64_C(0)); }));
+  }();
 
   /// TEST 5: Transform a tree by replacing each value with a
   /// function, then evaluate. Tests closures in recursive
@@ -664,11 +708,24 @@ struct MemSafetyProbe13 {
   };
 
   static ftree tree_to_ftree(const tree &t);
-  static constexpr uint64_t test_ftree = UINT64_C(321);
+  static inline const uint64_t test_ftree = []() {
+    tree t = tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
+                        UINT64_C(7),
+                        tree::node(tree::leaf(), UINT64_C(11), tree::leaf()));
+    ftree ft = tree_to_ftree(std::move(t));
+    return std::move(ft).eval_ftree(UINT64_C(100));
+  }();
   /// TEST 6: Flatten a tree of lists into a single list,
   /// where each list element is a closure.
   static mylist<crane::fn<uint64_t(uint64_t)>> flatten_tree_fns(const tree &t);
-  static constexpr uint64_t test_flatten_fns = UINT64_C(24);
+  static inline const uint64_t test_flatten_fns = []() {
+    tree t = tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
+                        UINT64_C(7),
+                        tree::node(tree::leaf(), UINT64_C(11), tree::leaf()));
+    mylist<crane::fn<uint64_t(uint64_t)>> fns = flatten_tree_fns(std::move(t));
+    return sum_list(std::move(fns).template map_list<uint64_t>(
+        [](crane::fn<uint64_t(uint64_t)> f) { return f(UINT64_C(1)); }));
+  }();
 };
 
 #endif // INCLUDED_MEM_SAFETY_PROBE13

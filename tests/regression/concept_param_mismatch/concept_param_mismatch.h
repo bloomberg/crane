@@ -113,7 +113,8 @@ struct ConceptParamMismatch {
   };
 
   static_assert(C<cNat, uint64_t>);
-  static constexpr uint64_t test = UINT64_C(6);
+  static inline const uint64_t test =
+      cNat::h(List<uint64_t>::nil(), cNat::g(UINT64_C(5)));
 };
 
 #endif // INCLUDED_CONCEPT_PARAM_MISMATCH

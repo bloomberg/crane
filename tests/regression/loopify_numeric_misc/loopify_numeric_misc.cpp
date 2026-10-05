@@ -1,23 +1,44 @@
 #include "loopify_numeric_misc.h"
 
-uint64_t LoopifyNumericMisc::sum_abs(const List<uint64_t> &l) {
-  {
-    const List<uint64_t> &_lc1_l0 = l;
-    uint64_t _lc1_acc = UINT64_C(0);
-    uint64_t _lc1_loop_acc = _lc1_acc;
-    const List<uint64_t> *_lc1_loop_l0 = &_lc1_l0;
-    while (true) {
-      if (std::holds_alternative<typename List<uint64_t>::Nil>(
-              _lc1_loop_l0->v())) {
-        return _lc1_loop_acc;
+uint64_t LoopifyNumericMisc::sum_abs(
+    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
+                               /// each recursive call.
+
+  struct CraneEnter {
+    const List<uint64_t> *l;
+  };
+
+  /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
+  /// rest.
+  struct CraneCont_Cons {
+    uint64_t a0;
+  };
+
+  using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+  uint64_t _result{};
+  crane::small_vector<CraneFrame> _stack;
+  _stack.emplace_back(CraneEnter{&l});
+  /// Loopified sum_abs: CraneEnter -> CraneCont_Cons.
+  while (!_stack.empty()) {
+    CraneFrame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<CraneEnter>(_frame)) {
+      auto _f = std::move(std::get<CraneEnter>(_frame));
+      const List<uint64_t> &l = *_f.l;
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+        _result = UINT64_C(0);
       } else {
-        const auto &[a0, a1] =
-            std::get<typename List<uint64_t>::Cons>(_lc1_loop_l0->v());
-        _lc1_loop_acc = (_lc1_loop_acc + a0);
-        _lc1_loop_l0 = crane_raw(a1);
+        const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+        _stack.emplace_back(CraneCont_Cons{a0});
+        _stack.emplace_back(CraneEnter{crane_raw(a1)});
       }
+    } else {
+      auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+      uint64_t a0 = _f.a0;
+      _result = (a0 + std::move(_result));
     }
   }
+  return _result;
 }
 
 uint64_t LoopifyNumericMisc::alternating_ops(
@@ -53,7 +74,7 @@ uint64_t LoopifyNumericMisc::alternating_ops(
         _result = UINT64_C(0);
       } else {
         uint64_t n_ = n - 1;
-        if (((n_ + 1) % UINT64_C(2)) == UINT64_C(0)) {
+        if ((UINT64_C(2) ? (n_ + 1) % UINT64_C(2) : (n_ + 1)) == UINT64_C(0)) {
           _stack.emplace_back(CraneCont1{n_});
           _stack.emplace_back(CraneEnter{n_});
         } else {
@@ -100,7 +121,7 @@ uint64_t LoopifyNumericMisc::count_even(
         _result = UINT64_C(0);
       } else {
         const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-        if ((a0 % UINT64_C(2)) == UINT64_C(0)) {
+        if ((UINT64_C(2) ? a0 % UINT64_C(2) : a0) == UINT64_C(0)) {
           _stack.emplace_back(CraneCont1{});
           _stack.emplace_back(CraneEnter{crane_raw(a1)});
         } else {
@@ -141,7 +162,7 @@ uint64_t LoopifyNumericMisc::count_odd(
         _result = UINT64_C(0);
       } else {
         const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-        if ((a0 % UINT64_C(2)) == UINT64_C(1)) {
+        if ((UINT64_C(2) ? a0 % UINT64_C(2) : a0) == UINT64_C(1)) {
           _stack.emplace_back(CraneCont1{});
           _stack.emplace_back(CraneEnter{crane_raw(a1)});
         } else {
@@ -197,24 +218,45 @@ uint64_t LoopifyNumericMisc::product(
   return _result;
 }
 
-uint64_t LoopifyNumericMisc::sum_of_squares(const List<uint64_t> &l) {
-  {
-    const List<uint64_t> &_lc1_l0 = l;
-    uint64_t _lc1_acc = UINT64_C(0);
-    uint64_t _lc1_loop_acc = _lc1_acc;
-    const List<uint64_t> *_lc1_loop_l0 = &_lc1_l0;
-    while (true) {
-      if (std::holds_alternative<typename List<uint64_t>::Nil>(
-              _lc1_loop_l0->v())) {
-        return _lc1_loop_acc;
+uint64_t LoopifyNumericMisc::sum_of_squares(
+    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
+                               /// each recursive call.
+
+  struct CraneEnter {
+    const List<uint64_t> *l;
+  };
+
+  /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
+  /// rest.
+  struct CraneCont_Cons {
+    uint64_t a0;
+  };
+
+  using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+  uint64_t _result{};
+  crane::small_vector<CraneFrame> _stack;
+  _stack.emplace_back(CraneEnter{&l});
+  /// Loopified sum_of_squares: CraneEnter -> CraneCont_Cons.
+  while (!_stack.empty()) {
+    CraneFrame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<CraneEnter>(_frame)) {
+      auto _f = std::move(std::get<CraneEnter>(_frame));
+      const List<uint64_t> &l = *_f.l;
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+        _result = UINT64_C(0);
       } else {
-        const auto &[a0, a1] =
-            std::get<typename List<uint64_t>::Cons>(_lc1_loop_l0->v());
-        _lc1_loop_acc = (_lc1_loop_acc + (a0 * a0));
-        _lc1_loop_l0 = crane_raw(a1);
+        const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+        _stack.emplace_back(CraneCont_Cons{a0});
+        _stack.emplace_back(CraneEnter{crane_raw(a1)});
       }
+    } else {
+      auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+      uint64_t a0 = _f.a0;
+      _result = ((a0 * a0) + std::move(_result));
     }
   }
+  return _result;
 }
 
 uint64_t LoopifyNumericMisc::max_two(uint64_t a, uint64_t b) {

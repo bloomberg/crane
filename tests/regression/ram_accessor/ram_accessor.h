@@ -191,7 +191,7 @@ struct RamAccessor {
   static List<ram_bank> ram_write_main_sys(const state &s, uint64_t v);
   static List<ram_bank> ram_write_status_sys(const state &s, uint64_t idx,
                                              uint64_t v);
-  static constexpr uint64_t init_read = UINT64_C(0);
+  static inline const uint64_t init_read = ram_read_main(init_state);
 };
 
 template <typename T1> List<T1> ListDef::repeat(const T1 &x, uint64_t n) {

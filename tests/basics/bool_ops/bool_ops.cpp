@@ -32,7 +32,11 @@ bool BoolOps::my_xorb(bool a, bool b) {
       return true;
     }
   } else {
-    return b;
+    if (b) {
+      return true;
+    } else {
+      return false;
+    }
   }
 }
 

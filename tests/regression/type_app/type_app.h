@@ -30,8 +30,8 @@ concept Monoid = requires {
 struct TypeApp {
   template <typename T1> static T1 id(T1 x) { return x; }
 
-  static constexpr uint64_t id_int = UINT64_C(42);
-  static constexpr bool id_bool = true;
+  static inline const uint64_t id_int = id<uint64_t>(UINT64_C(42));
+  static inline const bool id_bool = id<bool>(true);
 
   template <typename T1, typename T2, typename T3, typename F0, typename F1>
     requires std::is_invocable_r_v<T3, F0 &, T2> &&
@@ -172,7 +172,8 @@ struct TypeApp {
     return f(f(x));
   }
 
-  static constexpr uint64_t test_twice = UINT64_C(12);
+  static inline const uint64_t test_twice = twice<uint64_t>(
+      [](uint64_t x) { return (x + UINT64_C(1)); }, UINT64_C(10));
 
   struct NatMonoid {
     using T = uint64_t;

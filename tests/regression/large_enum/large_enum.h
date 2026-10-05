@@ -221,18 +221,20 @@ struct LargeEnum {
 
   static uint64_t tok_to_nat(const tok &t);
   static bool is_operator(const tok &t);
-  static constexpr uint64_t test_red = UINT64_C(0);
-  static constexpr uint64_t test_pink = UINT64_C(11);
-  static constexpr bool test_warm_red = true;
-  static constexpr bool test_warm_blue = false;
-  static constexpr bool test_neutral_black = true;
-  static constexpr bool test_neutral_red = false;
-  static constexpr uint64_t test_tok_num = UINT64_C(42);
-  static constexpr uint64_t test_tok_plus = UINT64_C(100);
-  static constexpr uint64_t test_tok_ident = UINT64_C(203);
-  static constexpr uint64_t test_tok_eof = UINT64_C(999);
-  static constexpr bool test_is_op_plus = true;
-  static constexpr bool test_is_op_num = false;
+  static inline const uint64_t test_red = color_to_nat(Color::RED);
+  static inline const uint64_t test_pink = color_to_nat(Color::PINK);
+  static inline const bool test_warm_red = is_warm(Color::RED);
+  static inline const bool test_warm_blue = is_warm(Color::BLUE);
+  static inline const bool test_neutral_black = is_neutral(Color::BLACK);
+  static inline const bool test_neutral_red = is_neutral(Color::RED);
+  static inline const uint64_t test_tok_num =
+      tok_to_nat(tok::tnum(UINT64_C(42)));
+  static inline const uint64_t test_tok_plus = tok_to_nat(tok::tplus());
+  static inline const uint64_t test_tok_ident =
+      tok_to_nat(tok::tident(UINT64_C(3)));
+  static inline const uint64_t test_tok_eof = tok_to_nat(tok::teof());
+  static inline const bool test_is_op_plus = is_operator(tok::tplus());
+  static inline const bool test_is_op_num = is_operator(tok::tnum(UINT64_C(0)));
 };
 
 #endif // INCLUDED_LARGE_ENUM

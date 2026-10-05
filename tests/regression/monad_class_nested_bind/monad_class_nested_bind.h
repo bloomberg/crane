@@ -282,7 +282,15 @@ struct MonadClassNestedBind {
         });
   }
 
-  static constexpr uint64_t total = UINT64_C(3);
+  static inline const uint64_t total = ([]() -> uint64_t {
+    auto _cs = chain<MOption>(UINT64_C(1));
+    if (_cs.has_value()) {
+      const List<uint64_t> &l = *_cs;
+      return l.length();
+    } else {
+      return UINT64_C(0);
+    }
+  }() + chain<MList>(UINT64_C(2)).length());
 };
 
 #endif // INCLUDED_MONAD_CLASS_NESTED_BIND

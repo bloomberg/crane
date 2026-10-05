@@ -29,11 +29,14 @@ struct RecordDefaults {
   static uint64_t rect_area(const Rect &r);
   static Rect make_rect(uint64_t x, uint64_t y, uint64_t w, uint64_t h);
   static uint64_t total_cells(const Config &c);
-  static constexpr uint64_t test_default_width = UINT64_C(80);
-  static constexpr bool test_default_debug = false;
-  static constexpr uint64_t test_cells = UINT64_C(1920);
-  static constexpr uint64_t test_modified = UINT64_C(2880);
-  static constexpr uint64_t test_rect_area = UINT64_C(50);
+  static inline const uint64_t test_default_width = default_config.cfg_width;
+  static inline const bool test_default_debug = default_config.cfg_debug;
+  static inline const uint64_t test_cells = total_cells(default_config);
+  static inline const uint64_t test_modified =
+      total_cells(set_width(UINT64_C(120), set_debug(true, default_config)));
+
+  static inline const uint64_t test_rect_area =
+      rect_area(make_rect(UINT64_C(0), UINT64_C(0), UINT64_C(10), UINT64_C(5)));
 };
 
 #endif // INCLUDED_RECORD_DEFAULTS

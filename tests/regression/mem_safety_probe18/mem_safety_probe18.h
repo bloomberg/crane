@@ -2,6 +2,7 @@
 #define INCLUDED_MEM_SAFETY_PROBE18
 
 #include "crane_fn.h"
+#include "fn.h"
 #include "obj.h"
 #include "small_vector.h"
 #include <atomic>
@@ -442,8 +443,15 @@ struct MemSafetyProbe18 {
   };
 
   static uint64_t sum_list(const mylist<uint64_t> &l);
-  static constexpr uint64_t test_dup = UINT64_C(84);
-  static constexpr uint64_t test_let_reuse = UINT64_C(60);
+  static inline const uint64_t test_dup = []() {
+    tree t = tree::node(tree::leaf(), UINT64_C(42), tree::leaf());
+    return std::move(t).dup_tree().tree_sum();
+  }();
+  static inline const uint64_t test_let_reuse =
+      tree::node(tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
+                 UINT64_C(10),
+                 tree::node(tree::leaf(), UINT64_C(15), tree::leaf()))
+          .let_reuse();
 
   /// TEST 3: Apply a higher-order function multiple times
   /// to a closure that captures a tree.
@@ -454,11 +462,29 @@ struct MemSafetyProbe18 {
     return f(f(x));
   }
 
-  static constexpr uint64_t test_apply_twice = UINT64_C(14);
-  static constexpr uint64_t test_tree_from_tree = UINT64_C(15);
+  static inline const uint64_t test_apply_twice = []() {
+    return []() {
+      tree t = tree::node(tree::leaf(), UINT64_C(7), tree::leaf());
+      crane::fn<uint64_t(uint64_t)> f = [=](uint64_t n) {
+        return (t.tree_sum() + n);
+      };
+      return apply_twice(f, UINT64_C(0));
+    }();
+  }();
+  static inline const uint64_t test_tree_from_tree = []() {
+    tree t = tree::node(tree::leaf(), UINT64_C(5), tree::leaf());
+    return std::move(t).tree_from_tree().tree_sum();
+  }();
   /// TEST 5: Complex fold that builds a tree from a list.
   static tree fold_left_tree(const mylist<uint64_t> &l, tree acc);
-  static constexpr uint64_t test_fold_tree = UINT64_C(6);
+  static inline const uint64_t test_fold_tree = []() {
+    mylist<uint64_t> l = mylist<uint64_t>::mycons(
+        UINT64_C(1),
+        mylist<uint64_t>::mycons(
+            UINT64_C(2),
+            mylist<uint64_t>::mycons(UINT64_C(3), mylist<uint64_t>::mynil())));
+    return fold_left_tree(std::move(l), tree::leaf()).tree_sum();
+  }();
 
   /// TEST 6: Concat two lists, using both in the result.
   template <typename T1>
@@ -505,14 +531,39 @@ struct MemSafetyProbe18 {
     return _result;
   }
 
-  static constexpr uint64_t test_concat = UINT64_C(21);
-  static constexpr uint64_t test_chain = UINT64_C(20);
+  static inline const uint64_t test_concat = []() {
+    mylist<uint64_t> l1 = mylist<uint64_t>::mycons(
+        UINT64_C(1),
+        mylist<uint64_t>::mycons(UINT64_C(2), mylist<uint64_t>::mynil()));
+    mylist<uint64_t> l2 = mylist<uint64_t>::mycons(
+        UINT64_C(3),
+        mylist<uint64_t>::mycons(UINT64_C(4), mylist<uint64_t>::mynil()));
+    mylist<uint64_t> l3 = mylist<uint64_t>::mycons(
+        UINT64_C(5),
+        mylist<uint64_t>::mycons(UINT64_C(6), mylist<uint64_t>::mynil()));
+    mylist<mylist<uint64_t>> ls = mylist<mylist<uint64_t>>::mycons(
+        std::move(l1),
+        mylist<mylist<uint64_t>>::mycons(
+            std::move(l2),
+            mylist<mylist<uint64_t>>::mycons(
+                std::move(l3), mylist<mylist<uint64_t>>::mynil())));
+    return sum_list(concat_flat<uint64_t>(std::move(ls)));
+  }();
+  static inline const uint64_t test_chain = []() {
+    tree t = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
+    return std::move(t).chain_transforms();
+  }();
   /// TEST 8: Nested constructor building: build a list of trees
   /// using the same tree in different positions.
   static mylist<tree> build_tree_list(const tree &t, uint64_t n);
   static uint64_t sum_tree_list(const mylist<tree> &l);
-  static constexpr uint64_t test_build_tree_list = UINT64_C(36);
-  static constexpr uint64_t test_triple_use = UINT64_C(28);
+  static inline const uint64_t test_build_tree_list = []() {
+    tree t = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
+    mylist<tree> trees = build_tree_list(std::move(t), UINT64_C(3));
+    return sum_tree_list(std::move(trees));
+  }();
+  static inline const uint64_t test_triple_use =
+      tree::node(tree::leaf(), UINT64_C(7), tree::leaf()).triple_use();
 };
 
 #endif // INCLUDED_MEM_SAFETY_PROBE18

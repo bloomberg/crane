@@ -163,7 +163,7 @@ struct EmptySystemBankCount {
       ram_bank{ListDef::template repeat<ram_chip>(empty_chip, NCHIPS)};
   static inline const List<ram_bank> empty_sys =
       ListDef::template repeat<ram_bank>(empty_bank, NBANKS);
-  static constexpr uint64_t t = UINT64_C(4);
+  static inline const uint64_t t = empty_sys.length();
 };
 
 template <typename T1> List<T1> ListDef::repeat(const T1 &x, uint64_t n) {

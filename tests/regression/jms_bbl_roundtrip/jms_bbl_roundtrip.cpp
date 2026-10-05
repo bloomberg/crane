@@ -1,7 +1,7 @@
 #include "jms_bbl_roundtrip.h"
 
 uint64_t JmsBblRoundtrip::addr12_of_nat(uint64_t n) {
-  return (n % UINT64_C(4096));
+  return (UINT64_C(4096) ? n % UINT64_C(4096) : n);
 }
 
 JmsBblRoundtrip::state

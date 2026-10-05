@@ -238,20 +238,22 @@ struct EncodeOps {
       } else if (std::holds_alternative<typename instruction1::FIM>(
                      this->v())) {
         const auto &[a0, a1] = std::get<typename instruction1::FIM>(this->v());
-        auto &&_once1 = (a0 % UINT64_C(2));
+        auto &&_once1 = (UINT64_C(2) ? a0 % UINT64_C(2) : a0);
         return std::make_pair(
             (UINT64_C(32) + (((a0 - _once1) > a0 ? 0 : (a0 - _once1)))),
-            (a1 % UINT64_C(256)));
+            (UINT64_C(256) ? a1 % UINT64_C(256) : a1));
       } else if (std::holds_alternative<typename instruction1::JUN>(
                      this->v())) {
         const auto &[a0] = std::get<typename instruction1::JUN>(this->v());
-        return std::make_pair((UINT64_C(64) + (a0 / UINT64_C(256))),
-                              (a0 % UINT64_C(256)));
+        return std::make_pair(
+            (UINT64_C(64) + (UINT64_C(256) ? a0 / UINT64_C(256) : 0)),
+            (UINT64_C(256) ? a0 % UINT64_C(256) : a0));
       } else if (std::holds_alternative<typename instruction1::LDM1>(
                      this->v())) {
         const auto &[a0] = std::get<typename instruction1::LDM1>(this->v());
-        return std::make_pair((UINT64_C(208) + (a0 % UINT64_C(16))),
-                              UINT64_C(0));
+        return std::make_pair(
+            (UINT64_C(208) + (UINT64_C(16) ? a0 % UINT64_C(16) : a0)),
+            UINT64_C(0));
       } else if (std::holds_alternative<typename instruction1::NOP1>(
                      this->v())) {
         return std::make_pair(UINT64_C(0), UINT64_C(0));
@@ -374,7 +376,8 @@ struct EncodeOps {
         return std::make_pair(UINT64_C(0), UINT64_C(0));
       } else {
         const auto &[a0] = std::get<typename instruction2::LDM2>(this->v());
-        return std::make_pair(UINT64_C(13), (a0 % UINT64_C(16)));
+        return std::make_pair(UINT64_C(13),
+                              (UINT64_C(16) ? a0 % UINT64_C(16) : a0));
       }
     }
 
@@ -396,7 +399,15 @@ struct EncodeOps {
   };
 
   static List<uint64_t> encode_list2(const List<instruction2> &prog);
-  static constexpr uint64_t test_encode_list_byte_count = UINT64_C(6);
+  static inline const uint64_t test_encode_list_byte_count =
+      encode_list2(
+          List<instruction2>::cons(
+              instruction2::nop2(),
+              List<instruction2>::cons(
+                  instruction2::ldm2(UINT64_C(5)),
+                  List<instruction2>::cons(instruction2::nop2(),
+                                           List<instruction2>::nil()))))
+          .length();
 
   struct instruction3 {
     // TYPES
@@ -435,8 +446,9 @@ struct EncodeOps {
         return std::make_pair(UINT64_C(0), UINT64_C(0));
       } else {
         const auto &[a0] = std::get<typename instruction3::LDM3>(this->v());
-        return std::make_pair(
-            ((UINT64_C(13) * UINT64_C(16)) + (a0 % UINT64_C(16))), UINT64_C(0));
+        return std::make_pair(((UINT64_C(13) * UINT64_C(16)) +
+                               (UINT64_C(16) ? a0 % UINT64_C(16) : a0)),
+                              UINT64_C(0));
       }
     }
 

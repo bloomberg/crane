@@ -881,10 +881,39 @@ struct MemSafetyProbe17 {
   };
 
   /// TEST 1: Sum of a 4-ary tree. Basic correctness.
-  static constexpr uint64_t test_qtree_sum = UINT64_C(20);
+  static inline const uint64_t test_qtree_sum = []() {
+    qtree t =
+        qtree::qnode(qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(1),
+                                  qtree::qleaf(), qtree::qleaf()),
+                     qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(2),
+                                  qtree::qleaf(), qtree::qleaf()),
+                     UINT64_C(10),
+                     qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(3),
+                                  qtree::qleaf(), qtree::qleaf()),
+                     qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(4),
+                                  qtree::qleaf(), qtree::qleaf()));
+    return std::move(t).qtree_sum();
+  }();
   /// TEST 2: Depth of a deep 4-ary tree.
-  static constexpr uint64_t test_qtree_depth = UINT64_C(3);
-  static constexpr uint64_t test_qtree_mirror = UINT64_C(14);
+  static inline const uint64_t test_qtree_depth = []() {
+    qtree inner = qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(1),
+                               qtree::qleaf(), qtree::qleaf());
+    qtree t = qtree::qnode(inner,
+                           qtree::qnode(inner, qtree::qleaf(), UINT64_C(2),
+                                        qtree::qleaf(), qtree::qleaf()),
+                           UINT64_C(3), qtree::qleaf(), qtree::qleaf());
+    return std::move(t).qtree_depth();
+  }();
+  static inline const uint64_t test_qtree_mirror = []() {
+    qtree t =
+        qtree::qnode(qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(1),
+                                  qtree::qleaf(), qtree::qleaf()),
+                     qtree::qleaf(), UINT64_C(10),
+                     qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(3),
+                                  qtree::qleaf(), qtree::qleaf()),
+                     qtree::qleaf());
+    return std::move(t).qtree_mirror().qtree_sum();
+  }();
 
   /// TEST 4: Flatten a 4-ary tree to a list (inorder traversal).
   /// Uses all 4 children in recursive calls + value in list construction.
@@ -1050,14 +1079,57 @@ struct MemSafetyProbe17 {
 
   static uint64_t sum_list(const mylist<uint64_t> &l);
   static mylist<uint64_t> qtree_flatten(const qtree &t);
-  static constexpr uint64_t test_qtree_flatten = UINT64_C(15);
-  static constexpr uint64_t test_qtree_zip = UINT64_C(30);
-  static constexpr uint64_t test_weighted = UINT64_C(91);
+  static inline const uint64_t test_qtree_flatten = []() {
+    qtree t =
+        qtree::qnode(qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(1),
+                                  qtree::qleaf(), qtree::qleaf()),
+                     qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(2),
+                                  qtree::qleaf(), qtree::qleaf()),
+                     UINT64_C(5),
+                     qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(3),
+                                  qtree::qleaf(), qtree::qleaf()),
+                     qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(4),
+                                  qtree::qleaf(), qtree::qleaf()));
+    return sum_list(qtree_flatten(std::move(t)));
+  }();
+  static inline const uint64_t test_qtree_zip = []() {
+    qtree t1 = qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(10),
+                            qtree::qleaf(), qtree::qleaf());
+    qtree t2 = qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(20),
+                            qtree::qleaf(), qtree::qleaf());
+    return std::move(t1).qtree_zip(std::move(t2)).qtree_sum();
+  }();
+  static inline const uint64_t test_weighted = []() {
+    qtree t =
+        qtree::qnode(qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(1),
+                                  qtree::qleaf(), qtree::qleaf()),
+                     qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(2),
+                                  qtree::qleaf(), qtree::qleaf()),
+                     UINT64_C(3),
+                     qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(4),
+                                  qtree::qleaf(), qtree::qleaf()),
+                     qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(5),
+                                  qtree::qleaf(), qtree::qleaf()));
+    return std::move(t).weighted_sum();
+  }();
   /// TEST 7: Build a 4-ary tree programmatically and check.
   static qtree make_qtree(uint64_t n);
-  static constexpr uint64_t test_make_qtree = UINT64_C(26);
+  static inline const uint64_t test_make_qtree =
+      make_qtree(UINT64_C(4)).qtree_sum();
   /// TEST 8: Two-pass on a 4-ary tree: flatten then sum vs direct sum.
-  static constexpr uint64_t test_two_pass_qtree = UINT64_C(30);
+  static inline const uint64_t test_two_pass_qtree = []() {
+    qtree t =
+        qtree::qnode(qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(1),
+                                  qtree::qleaf(), qtree::qleaf()),
+                     qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(2),
+                                  qtree::qleaf(), qtree::qleaf()),
+                     UINT64_C(5),
+                     qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(3),
+                                  qtree::qleaf(), qtree::qleaf()),
+                     qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(4),
+                                  qtree::qleaf(), qtree::qleaf()));
+    return (sum_list(qtree_flatten(t)) + t.qtree_sum());
+  }();
 };
 
 #endif // INCLUDED_MEM_SAFETY_PROBE17

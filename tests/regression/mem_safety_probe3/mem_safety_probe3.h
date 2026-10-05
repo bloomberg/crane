@@ -499,10 +499,46 @@ struct MemSafetyProbe3 {
 
   /// TEST 1: Local fixpoint capturing a tree value.
   /// The fixpoint accesses the captured tree on each recursive call.
-  static constexpr uint64_t local_fix_capture = UINT64_C(171);
+  static inline const uint64_t local_fix_capture = []() {
+    return []() {
+      tree t = tree::node(tree::leaf(), UINT64_C(42), tree::leaf());
+      auto helper_impl = [&](auto &_self_helper, uint64_t n) -> uint64_t {
+        if (n <= 0) {
+          return t.sum_values(UINT64_C(0));
+        } else {
+          uint64_t n_ = n - 1;
+          return (t.sum_values(UINT64_C(1)) + _self_helper(_self_helper, n_));
+        }
+      };
+      auto helper = [&](uint64_t n) -> uint64_t {
+        return helper_impl(helper_impl, n);
+      };
+      return helper(UINT64_C(3));
+    }();
+  }();
   /// TEST 2: Local fixpoint returning a closure that captures
   /// a match-destructured field from a tree.
-  static constexpr uint64_t fix_with_closure = UINT64_C(80);
+  static inline const uint64_t fix_with_closure = []() {
+    return []() {
+      tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                          UINT64_C(20),
+                          tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
+      if (std::holds_alternative<typename tree::Leaf>(t.v_mut())) {
+        return UINT64_C(0);
+      } else {
+        auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v_mut());
+        crane::fn<uint64_t(uint64_t)> fl = [&](uint64_t _x0) -> uint64_t {
+          return a0->sum_values(_x0);
+        };
+        uint64_t vl = fl(a1);
+        crane::fn<uint64_t(uint64_t)> fr = [&](uint64_t _x0) -> uint64_t {
+          return a2->sum_values(_x0);
+        };
+        uint64_t vr = fr(std::move(a1));
+        return (vl + vr);
+      }
+    }();
+  }();
   static inline const uint64_t test_paired_closures = []() {
     tree t1 = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
     tree t2 = tree::node(tree::leaf(), UINT64_C(20), tree::leaf());
@@ -510,10 +546,18 @@ struct MemSafetyProbe3 {
         std::move(t1).paired_closures(std::move(t2));
     return (p.first(UINT64_C(5)) + p.second(UINT64_C(5)));
   }();
-  static constexpr uint64_t test_tree_sum = UINT64_C(60);
+  static inline const uint64_t test_tree_sum =
+      tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                 UINT64_C(20),
+                 tree::node(tree::leaf(), UINT64_C(30), tree::leaf()))
+          .tree_sum();
   /// f = sum_values (Node (Node Leaf 10 Leaf) 20 (...))
   /// r = 20. f 20 = 10+30+20+20 = 80
-  static constexpr uint64_t test_mutual_use = UINT64_C(80);
+  static inline const uint64_t test_mutual_use =
+      tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                 UINT64_C(20),
+                 tree::node(tree::leaf(), UINT64_C(30), tree::leaf()))
+          .mutual_use();
   static inline const uint64_t test_nested_pair = []() {
     tree t = tree::node(tree::leaf(), UINT64_C(42), tree::leaf());
     std::pair<
@@ -523,8 +567,21 @@ struct MemSafetyProbe3 {
     return (((p.first).first(UINT64_C(10)) + (p.first).second(UINT64_C(10))) +
             p.second);
   }();
-  static constexpr uint64_t test_map_with_captured = UINT64_C(330);
-  static constexpr uint64_t test_chain_three = UINT64_C(60);
+  static inline const uint64_t test_map_with_captured = []() {
+    return []() {
+      tree t = tree::node(tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
+                          UINT64_C(10),
+                          tree::node(tree::leaf(), UINT64_C(15), tree::leaf()));
+      tree t2 = tree::node(tree::leaf(), UINT64_C(100), tree::leaf());
+      tree mapped = std::move(t).map_tree(
+          [=](uint64_t v) { return (v + t2.sum_values(UINT64_C(0))); });
+      return std::move(mapped).tree_sum();
+    }();
+  }();
+  static inline const uint64_t test_chain_three =
+      tree::node(tree::leaf(), UINT64_C(10), tree::leaf())
+          .chain_three(tree::node(tree::leaf(), UINT64_C(20), tree::leaf()),
+                       tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
   static inline const uint64_t test_opt_pair = []() {
     tree t = tree::node(tree::leaf(), UINT64_C(42), tree::leaf());
     std::pair<std::optional<crane::fn<uint64_t(uint64_t)>>, tree> p =
@@ -587,10 +644,31 @@ struct MemSafetyProbe3 {
     return _result;
   }
 
-  static constexpr uint64_t test_apply_n = UINT64_C(50);
+  static inline const uint64_t test_apply_n = []() {
+    return []() {
+      tree t = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
+      return apply_n_times(
+          [=](uint64_t _x0) -> uint64_t {
+            return std::move(t).sum_values(_x0);
+          },
+          UINT64_C(5), UINT64_C(0));
+    }();
+  }();
   /// TEST 12: Closure that partially applies a fixpoint.
   /// The fixpoint itself takes a function argument.
-  static constexpr uint64_t test_partial_fix = UINT64_C(40);
+  static inline const uint64_t test_partial_fix = []() {
+    return []() {
+      tree t = tree::node(tree::leaf(), UINT64_C(5), tree::leaf());
+      crane::fn<uint64_t(uint64_t)> f = [=](uint64_t _x0) -> uint64_t {
+        return apply_n_times(
+            [=](uint64_t _x0) -> uint64_t {
+              return std::move(t).sum_values(_x0);
+            },
+            UINT64_C(3), _x0);
+      };
+      return (f(UINT64_C(0)) + f(UINT64_C(10)));
+    }();
+  }();
 };
 
 #endif // INCLUDED_MEM_SAFETY_PROBE3

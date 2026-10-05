@@ -191,9 +191,9 @@ struct MutualIndexed {
   static inline const EvenTree tree2 = EvenTree::enode(
       UINT64_C(1), UINT64_C(20),
       OddTree::onode(UINT64_C(0), UINT64_C(10), EvenTree::eleaf()));
-  static constexpr uint64_t test_leaf_val = UINT64_C(0);
-  static constexpr uint64_t test_tree1_val = UINT64_C(10);
-  static constexpr uint64_t test_tree2_val = UINT64_C(20);
+  static inline const uint64_t test_leaf_val = even_val(UINT64_C(0), leaf);
+  static inline const uint64_t test_tree1_val = odd_val(UINT64_C(1), tree1);
+  static inline const uint64_t test_tree2_val = even_val(UINT64_C(2), tree2);
 };
 
 #endif // INCLUDED_MUTUAL_INDEXED

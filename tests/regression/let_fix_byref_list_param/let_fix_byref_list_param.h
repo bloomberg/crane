@@ -94,8 +94,21 @@ public:
 struct LetFixByrefListParam {
   static uint64_t count_elements(const List<uint64_t> &xs);
   static uint64_t sum_with_acc(const List<uint64_t> &l);
-  static constexpr uint64_t test_count = UINT64_C(5);
-  static constexpr uint64_t test_sum = UINT64_C(60);
+  static inline const uint64_t test_count = count_elements(List<uint64_t>::cons(
+      UINT64_C(1),
+      List<uint64_t>::cons(
+          UINT64_C(2),
+          List<uint64_t>::cons(
+              UINT64_C(3),
+              List<uint64_t>::cons(
+                  UINT64_C(4),
+                  List<uint64_t>::cons(UINT64_C(5), List<uint64_t>::nil()))))));
+
+  static inline const uint64_t test_sum = sum_with_acc(List<uint64_t>::cons(
+      UINT64_C(10),
+      List<uint64_t>::cons(
+          UINT64_C(20),
+          List<uint64_t>::cons(UINT64_C(30), List<uint64_t>::nil()))));
 };
 
 #endif // INCLUDED_LET_FIX_BYREF_LIST_PARAM

@@ -30,7 +30,7 @@ struct EnumSwitchQualified {
     static uint64_t code(Color c);
   };
 
-  static constexpr uint64_t t = UINT64_C(2);
+  static inline const uint64_t t = Outer::code(Outer::flip(Outer::Color::RED));
 };
 
 #endif // INCLUDED_ENUM_SWITCH_QUALIFIED

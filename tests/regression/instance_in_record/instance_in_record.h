@@ -37,7 +37,8 @@ struct InstanceInRecord {
   };
 
   static inline const bundle b = bundle{MNat, UINT64_C(5)};
-  static constexpr uint64_t run = UINT64_C(5);
+  static inline const uint64_t run =
+      b.carrierDict.op(b.seed, b.carrierDict.unit_);
 };
 
 #endif // INCLUDED_INSTANCE_IN_RECORD

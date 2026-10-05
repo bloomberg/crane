@@ -362,7 +362,36 @@ struct MatchObserveAliasFamily {
   static std::optional<Nat> run(const Nat &fuel,
                                 Itree<Sum1<aE<Nat>, BE, crane::obj>, Nat> t);
 
-  static constexpr bool is_three = true;
+  static inline const bool is_three = []() -> bool {
+    auto _cs = []() {
+      auto _lit0 = Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
+          Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
+              Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
+                  Nat::s(Nat::s(Nat::s(Nat::o()))))))))))))))))))))))))))))));
+      auto _lit1 = Nat::s(Nat::s(
+          Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
+              Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
+                  Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
+                      Nat::s(std::move(_lit0)))))))))))))))))))))))))))))));
+      auto _lit2 = Nat::s(Nat::s(
+          Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
+              Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
+                  Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
+                      Nat::s(std::move(_lit1)))))))))))))))))))))))))))))));
+      return run(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
+                     Nat::s(Nat::s(Nat::s(Nat::s(std::move(_lit2))))))))))),
+                 Itree<Sum1<aE<Nat>, BE, crane::obj>, Nat>::go(
+                     ItreeF<Sum1<aE<Nat>, BE, crane::obj>, Nat,
+                            Itree<Sum1<aE<Nat>, BE, crane::obj>, Nat>>::
+                         retf(Nat::s(Nat::s(Nat::s(Nat::o()))))));
+    }();
+    if (_cs.has_value()) {
+      const Nat &n = *_cs;
+      return n.eqb(Nat::s(Nat::s(Nat::s(Nat::o()))));
+    } else {
+      return false;
+    }
+  }();
 };
 
 #endif // INCLUDED_MATCH_OBSERVE_ALIAS_FAMILY

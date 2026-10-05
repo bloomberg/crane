@@ -182,7 +182,9 @@ struct DepMatchUnitList {
   }
 
   static List<uint64_t> get(const tg &t);
-  static constexpr uint64_t go = UINT64_C(1);
+  static inline const uint64_t go =
+      get(tg::tl(List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil())))
+          .length();
 };
 
 #endif // INCLUDED_DEP_MATCH_UNIT_LIST

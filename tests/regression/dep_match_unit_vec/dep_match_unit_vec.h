@@ -111,7 +111,9 @@ struct DepMatchUnitVec {
   }
 
   static uint64_t head(uint64_t _x, const vec<uint64_t> &v);
-  static constexpr uint64_t go = UINT64_C(5);
+  static inline const uint64_t go =
+      head(UINT64_C(0), vec<uint64_t>::vcons(UINT64_C(0), UINT64_C(5),
+                                             vec<uint64_t>::vnil()));
 };
 
 #endif // INCLUDED_DEP_MATCH_UNIT_VEC

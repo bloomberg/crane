@@ -95,7 +95,13 @@ public:
 
 struct UnitVoidEdge {
   static void return_unit(uint64_t _x);
-  static constexpr uint64_t let_bind_void_call = UINT64_C(42);
+  static inline const uint64_t let_bind_void_call = []() {
+    return_unit(UINT64_C(5));
+    std::monostate x = std::monostate{};
+    {
+      return UINT64_C(42);
+    }
+  }();
   static void count_down(uint64_t n);
 
   template <typename F0>
@@ -111,7 +117,10 @@ struct UnitVoidEdge {
 
   template <typename T1> static T1 id(T1 x) { return x; }
 
-  static constexpr std::monostate id_unit = std::monostate{};
+  static inline const std::monostate id_unit = []() {
+    id<std::monostate>(std::monostate{});
+    return std::monostate{};
+  }();
   static void id_unit_fn(uint64_t _x);
   static constexpr uint64_t nested_lets = UINT64_C(42);
   static inline const std::optional<std::monostate> unit_some =
@@ -132,7 +141,8 @@ struct UnitVoidEdge {
     return UINT64_C(42);
   }
 
-  static constexpr uint64_t take_tt = UINT64_C(42);
+  static inline const uint64_t take_tt =
+      poly_take<std::monostate>(std::monostate{});
   static inline const List<std::monostate> unit_list =
       List<std::monostate>::cons(
           std::monostate{}, List<std::monostate>::cons(
@@ -146,7 +156,10 @@ struct UnitVoidEdge {
     }
   }
 
-  static constexpr std::monostate test_apply_discard = std::monostate{};
+  static inline const std::monostate test_apply_discard = []() {
+    apply_and_discard(return_unit, UINT64_C(42));
+    return std::monostate{};
+  }();
 
   struct tagged_nat {
     uint64_t tn_value;
@@ -155,9 +168,15 @@ struct UnitVoidEdge {
 
   static tagged_nat make_tagged(uint64_t n);
   static uint64_t get_value(const tagged_nat &t);
-  static constexpr uint64_t test_record_unit = UINT64_C(99);
+  static inline const uint64_t test_record_unit = []() {
+    tagged_nat t = make_tagged(UINT64_C(99));
+    return get_value(std::move(t));
+  }();
   static void make_callback(uint64_t n, std::monostate _x);
-  static constexpr std::monostate test_make_callback = std::monostate{};
+  static inline const std::monostate test_make_callback = []() {
+    make_callback(UINT64_C(5), std::monostate{});
+    return std::monostate{};
+  }();
 
   template <typename F0, typename F1>
   static void multi_void_callbacks(F0 &&, F1 &&, uint64_t, bool) {
@@ -165,20 +184,31 @@ struct UnitVoidEdge {
   }
 
   static void dummy_bool_void(bool _x);
-  static constexpr std::monostate test_multi_cb = std::monostate{};
-  static constexpr uint64_t test_let_bind = UINT64_C(42);
-  static constexpr std::monostate test_count_down = std::monostate{};
-  static constexpr std::monostate test_apply = std::monostate{};
-  static constexpr uint64_t test_map = UINT64_C(42);
-  static constexpr uint64_t test_nested = UINT64_C(42);
-  static constexpr uint64_t test_match_some = UINT64_C(1);
-  static constexpr uint64_t test_match_none = UINT64_C(0);
+  static inline const std::monostate test_multi_cb = []() {
+    multi_void_callbacks(return_unit, dummy_bool_void, UINT64_C(7), true);
+    return std::monostate{};
+  }();
+  static inline const uint64_t test_let_bind = let_bind_void_call;
+  static inline const std::monostate test_count_down = []() {
+    count_down(UINT64_C(10));
+    return std::monostate{};
+  }();
+  static inline const std::monostate test_apply = []() {
+    apply_unit_fn(return_unit, UINT64_C(5));
+    return std::monostate{};
+  }();
+  static inline const uint64_t test_map = map_to_unit(return_unit, UINT64_C(5));
+  static inline const uint64_t test_nested = nested_lets;
+  static inline const uint64_t test_match_some = match_option_unit(unit_some);
+  static inline const uint64_t test_match_none = match_option_unit(unit_none);
   static inline const std::optional<std::monostate> test_return_some =
       return_some_tt(UINT64_C(1));
-  static constexpr uint64_t test_use_helper = UINT64_C(7);
-  static constexpr uint64_t test_match_nontail = UINT64_C(7);
-  static constexpr uint64_t test_double_match = UINT64_C(99);
-  static constexpr uint64_t test_take_tt = UINT64_C(42);
+  static inline const uint64_t test_use_helper = use_helper(UINT64_C(7));
+  static inline const uint64_t test_match_nontail =
+      match_unit_nontail(std::monostate{});
+  static inline const uint64_t test_double_match =
+      double_match_unit(std::monostate{}, std::monostate{});
+  static inline const uint64_t test_take_tt = take_tt;
 };
 
 #endif // INCLUDED_UNIT_VOID_EDGE

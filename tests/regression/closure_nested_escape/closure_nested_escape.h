@@ -21,7 +21,10 @@ struct ClosureNestedEscape {
   /// test1: make_pair_fix(5) returns (add, mul).
   /// add(3) = 5 + 3 = 8, mul(3) = 5 * 3 = 15.
   /// Expected: 8 + 15 = 23.
-  static constexpr uint64_t test1 = UINT64_C(23);
+  static inline const uint64_t test1 = []() -> uint64_t {
+    auto [f, g] = make_pair_fix(UINT64_C(5));
+    return (f(UINT64_C(3)) + g(UINT64_C(3)));
+  }();
   /// test2: With noise.
   /// add(0) = 7, mul(4) = 7 * 4 = 28.
   /// Expected: 7 + 28 = 35.
@@ -33,7 +36,10 @@ struct ClosureNestedEscape {
   /// test3: Only use one of the two fixpoints.
   /// mul(10) where n=3 → 3*10 = 30.
   /// Expected: 30.
-  static constexpr uint64_t test3 = UINT64_C(30);
+  static inline const uint64_t test3 = []() -> uint64_t {
+    auto [_x, g] = make_pair_fix(UINT64_C(3));
+    return g(UINT64_C(10));
+  }();
 };
 
 #endif // INCLUDED_CLOSURE_NESTED_ESCAPE

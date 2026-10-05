@@ -195,7 +195,24 @@ struct MoveCaptureReuse {
           List<List<uint64_t>>::cons(
               List<uint64_t>::cons(UINT64_C(20), List<uint64_t>::nil()),
               List<List<uint64_t>>::nil())));
-  static constexpr uint64_t len_sum = UINT64_C(4);
+  static inline const uint64_t len_sum = []() {
+    auto &&_sv = sample;
+    if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(_sv.v())) {
+      return UINT64_C(0);
+    } else {
+      const auto &[a0, a1] =
+          std::get<typename List<List<uint64_t>>::Cons>(_sv.v());
+      auto &&_sv0 = *a1;
+      if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(
+              _sv0.v())) {
+        return UINT64_C(0);
+      } else {
+        const auto &[a00, a10] =
+            std::get<typename List<List<uint64_t>>::Cons>(_sv0.v());
+        return (a0.length() + a00.length());
+      }
+    }
+  }();
 };
 
 #endif // INCLUDED_MOVE_CAPTURE_REUSE

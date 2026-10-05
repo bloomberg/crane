@@ -255,11 +255,16 @@ struct RecordErasedProofFieldsCase {
                                        const ErasedProofRecord &erased);
   static uint64_t trace_checksum_of(const PrimaryRecord &primary,
                                     const ErasedProofRecord &erased);
-  static constexpr uint64_t sample_left_kind_code = UINT64_C(2);
-  static constexpr uint64_t sample_right_kind_code = UINT64_C(4);
-  static constexpr uint64_t sample_tag_code = UINT64_C(12);
-  static constexpr uint64_t sample_bucket_code = UINT64_C(32);
-  static constexpr uint64_t sample_trace_checksum = UINT64_C(71);
+  static inline const uint64_t sample_left_kind_code =
+      left_kind_code_of(sample_primary_record);
+  static inline const uint64_t sample_right_kind_code =
+      right_kind_code_of(sample_primary_record);
+  static inline const uint64_t sample_tag_code =
+      tag_code_of(sample_primary_record);
+  static inline const uint64_t sample_bucket_code =
+      bucket_code_of(sample_erased_proof_record);
+  static inline const uint64_t sample_trace_checksum =
+      trace_checksum_of(sample_primary_record, sample_erased_proof_record);
 };
 
 #endif // INCLUDED_RECORD_ERASED_PROOF_FIELDS

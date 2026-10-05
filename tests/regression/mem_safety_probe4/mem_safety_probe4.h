@@ -368,20 +368,54 @@ struct MemSafetyProbe4 {
   /// recursive call in the loopified version.
   /// f(sum_through(xs)) requires f to be stored in a continuation frame.
   static uint64_t sum_through(const mylist<tree> &l);
-  static constexpr uint64_t test_sum_through = UINT64_C(60);
+  static inline const uint64_t test_sum_through =
+      sum_through(mylist<tree>::mycons(
+          tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+          mylist<tree>::mycons(
+              tree::node(tree::leaf(), UINT64_C(20), tree::leaf()),
+              mylist<tree>::mycons(
+                  tree::node(tree::leaf(), UINT64_C(30), tree::leaf()),
+                  mylist<tree>::mynil()))));
   /// TEST 2: Recursive result + partial app result.
   /// add_through(xs) + f(0): f might be pre-evaluated or stored in frame.
   static uint64_t add_through(const mylist<tree> &l);
-  static constexpr uint64_t test_add_through = UINT64_C(60);
+  static inline const uint64_t test_add_through =
+      add_through(mylist<tree>::mycons(
+          tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+          mylist<tree>::mycons(
+              tree::node(tree::leaf(), UINT64_C(20), tree::leaf()),
+              mylist<tree>::mycons(
+                  tree::node(tree::leaf(), UINT64_C(30), tree::leaf()),
+                  mylist<tree>::mynil()))));
   /// TEST 3: Two partial apps from same tree, used around recursive call.
   static uint64_t double_partial(const mylist<tree> &l);
-  static constexpr uint64_t test_double_partial = UINT64_C(60);
+  static inline const uint64_t test_double_partial =
+      double_partial(mylist<tree>::mycons(
+          tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+          mylist<tree>::mycons(
+              tree::node(tree::leaf(), UINT64_C(20), tree::leaf()),
+              mylist<tree>::mynil())));
   static uint64_t weighted_sum(const mylist<tree> &l, uint64_t w);
-  static constexpr uint64_t test_weighted_sum = UINT64_C(95);
+  static inline const uint64_t test_weighted_sum = weighted_sum(
+      mylist<tree>::mycons(
+          tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+          mylist<tree>::mycons(
+              tree::node(tree::leaf(), UINT64_C(20), tree::leaf()),
+              mylist<tree>::mycons(
+                  tree::node(tree::leaf(), UINT64_C(30), tree::leaf()),
+                  mylist<tree>::mynil()))),
+      UINT64_C(5));
   /// TEST 5: Map building new trees from partial app results across recursion.
   static mylist<uint64_t> transform_list(const mylist<tree> &l);
   static uint64_t mysum(const mylist<uint64_t> &l);
-  static constexpr uint64_t test_transform = UINT64_C(60);
+  static inline const uint64_t test_transform =
+      mysum(transform_list(mylist<tree>::mycons(
+          tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+          mylist<tree>::mycons(
+              tree::node(tree::leaf(), UINT64_C(20), tree::leaf()),
+              mylist<tree>::mycons(
+                  tree::node(tree::leaf(), UINT64_C(30), tree::leaf()),
+                  mylist<tree>::mynil())))));
 
   /// TEST 6: Recursive function where partial app is used as argument
   /// to a higher-order function alongside the recursive call.
@@ -392,10 +426,25 @@ struct MemSafetyProbe4 {
   }
 
   static uint64_t process_list(const mylist<tree> &l);
-  static constexpr uint64_t test_process_list = UINT64_C(60);
+  static inline const uint64_t test_process_list =
+      process_list(mylist<tree>::mycons(
+          tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+          mylist<tree>::mycons(
+              tree::node(tree::leaf(), UINT64_C(20), tree::leaf()),
+              mylist<tree>::mycons(
+                  tree::node(tree::leaf(), UINT64_C(30), tree::leaf()),
+                  mylist<tree>::mynil()))));
   /// TEST 7: Nested recursion with closure capture across calls.
   static uint64_t nested_apply(const mylist<tree> &l, uint64_t base);
-  static constexpr uint64_t test_nested_apply = UINT64_C(60);
+  static inline const uint64_t test_nested_apply = nested_apply(
+      mylist<tree>::mycons(
+          tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+          mylist<tree>::mycons(
+              tree::node(tree::leaf(), UINT64_C(20), tree::leaf()),
+              mylist<tree>::mycons(
+                  tree::node(tree::leaf(), UINT64_C(30), tree::leaf()),
+                  mylist<tree>::mynil()))),
+      UINT64_C(0));
 };
 
 #endif // INCLUDED_MEM_SAFETY_PROBE4

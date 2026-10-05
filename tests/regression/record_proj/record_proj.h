@@ -28,8 +28,11 @@ struct RecordProj {
     return (f(a) + f(b));
   }
 
-  static constexpr uint64_t test1 = UINT64_C(40);
-  static constexpr uint64_t test2 = UINT64_C(30);
+  static inline const uint64_t test1 =
+      weird_access(Point{UINT64_C(10), UINT64_C(20)});
+
+  static inline const uint64_t test2 =
+      complex_access(ComplexRecord{UINT64_C(5), UINT64_C(10), UINT64_C(15)});
 };
 
 #endif // INCLUDED_RECORD_PROJ

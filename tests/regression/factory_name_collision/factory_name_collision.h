@@ -198,8 +198,9 @@ struct FactoryNameCollision {
     }
   };
 
-  static constexpr uint64_t head = UINT64_C(7);
-  static constexpr uint64_t cased_sum = UINT64_C(3);
+  static inline const uint64_t head = lst::cons(UINT64_C(7), lst::nil()).nil0();
+  static inline const uint64_t cased_sum =
+      (cased::mk(UINT64_C(1)).uncase() + cased::mk0(UINT64_C(1)).uncase());
 };
 
 #endif // INCLUDED_FACTORY_NAME_COLLISION

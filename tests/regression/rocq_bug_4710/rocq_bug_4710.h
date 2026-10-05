@@ -17,8 +17,8 @@ struct RocqBug4710 {
   static bool bla_(uint64_t _x, const Foo2 &x);
   static inline const Foo_ test_foo = Foo_{UINT64_C(5)};
   static inline const Foo2 test_foo2 = Foo2{UINT64_C(10), true};
-  static constexpr uint64_t test_bla = UINT64_C(10);
-  static constexpr bool test_bla_ = true;
+  static inline const uint64_t test_bla = bla(test_foo2);
+  static inline const bool test_bla_ = bla_(UINT64_C(0), test_foo2);
 };
 
 #endif // INCLUDED_ROCQ_BUG_4710

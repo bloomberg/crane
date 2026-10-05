@@ -262,7 +262,24 @@ struct ClassMethodFunctionPayload {
         });
   }
 
-  static constexpr uint64_t run = UINT64_C(9);
+  static inline const uint64_t run =
+      ([]() -> uint64_t {
+        auto _cs = adders<MOpt>(std::make_optional<uint64_t>(UINT64_C(3)));
+        if (_cs.has_value()) {
+          const crane::fn<uint64_t(uint64_t)> &f = *_cs;
+          return f(UINT64_C(1));
+        } else {
+          return UINT64_C(0);
+        }
+      }() + adders<MList>(List<uint64_t>::cons(UINT64_C(1),
+                                               List<uint64_t>::cons(
+                                                   UINT64_C(2),
+                                                   List<uint64_t>::nil())))
+                       .template fold_left<uint64_t>(
+                           [](uint64_t a, crane::fn<uint64_t(uint64_t)> f) {
+                             return (a + f(UINT64_C(1)));
+                           },
+                           UINT64_C(0)));
 };
 
 #endif // INCLUDED_CLASS_METHOD_FUNCTION_PAYLOAD

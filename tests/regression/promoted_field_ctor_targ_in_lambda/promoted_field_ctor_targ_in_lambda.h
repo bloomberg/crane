@@ -448,7 +448,17 @@ struct PromotedFieldCtorTargInLambda {
   };
 
   static_assert(Params<natParams>);
-  static constexpr bool is_zero = true;
+  static inline const bool is_zero = []() -> bool {
+    auto _cs = run<natParams>(
+        read_size<natParams>(Nat::s(Nat::s(Nat::s(Nat::o())))),
+        St<Nat>{List<Nat>::cons(Nat::s(Nat::o()), List<Nat>::nil())});
+    if (_cs.has_value()) {
+      const Nat &n = *_cs;
+      return n.eqb(Nat::o());
+    } else {
+      return false;
+    }
+  }();
 };
 
 template <Monad _tcI0, typename T2>

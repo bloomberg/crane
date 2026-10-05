@@ -269,7 +269,20 @@ struct TfunctorRecordOptionField {
         return TFunctor_global(_ec0, _ec1);
       },
       [](const Nat &x) { return Nat::s(x); }, g0);
-  static constexpr bool is_five = true;
+  static inline const bool is_five = []() -> bool {
+    if (g1.g_exp.has_value()) {
+      const exp<Nat> &e = *g1.g_exp;
+      if (std::holds_alternative<typename exp<Nat>::Lit>(e.v())) {
+        const auto &[t] = std::get<typename exp<Nat>::Lit>(e.v());
+        return g1.g_typ.add(t).eqb(
+            Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))));
+      } else {
+        return false;
+      }
+    } else {
+      return false;
+    }
+  }();
 };
 
 #endif // INCLUDED_TFUNCTOR_RECORD_OPTION_FIELD

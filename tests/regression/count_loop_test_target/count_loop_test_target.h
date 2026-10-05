@@ -62,7 +62,7 @@ struct CountLoopTestTarget {
 
   static instruction count_loop_test(uint64_t loop_addr);
   static uint64_t target_of(const instruction &i);
-  static constexpr uint64_t t = UINT64_C(37);
+  static inline const uint64_t t = target_of(count_loop_test(UINT64_C(37)));
 };
 
 #endif // INCLUDED_COUNT_LOOP_TEST_TARGET

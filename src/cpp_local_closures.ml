@@ -331,61 +331,6 @@ let specialize_local_records fresh stmts =
   in
   go stmts
 
-(** R4.  A local cell -- made by a mapping declared [Ref_new]
-    ({!Mapping_semantics}) -- whose every later use is the cell argument of a
-    declared read, or of a declared write standing as a statement, is a local
-    variable: [auto x = v;], each read [x], each write [x = v;].  [auto] is
-    the type the cell held: a fresh cell holds its initial value, as made.
-    Nothing but those operations sees the cell, so no other name observes
-    the change; a lambda that mentions it could carry it out of the body,
-    and leaves it as it was.  The R3 expansions are what expose such a cell:
-    the closures that shared it are now straight-line code beside it. *)
-type cell_use = Read | Write of cpp_expr
-
-let cell_use x e =
-  match Cpp_declared.applied e with
-  | Some (m, args) -> (
-    let is_cell i =
-      match List.nth_opt args i with
-      | Some (CPPvar y | CPPmove (CPPvar y)) -> Id.equal x y
-      | _ -> false
-    in
-    match m with
-    | Ref_read i when is_cell i -> Some Read
-    | Ref_write (i, j) when is_cell i -> Option.map (fun v -> Write v) (List.nth_opt args j)
-    | _ -> None )
-  | None -> None
-
-let scalarize_local_cells stmts =
-  let rec go = function
-    | [] -> []
-    | (Sblock_custom (r, _, x, _, args, _) as decl) :: rest -> (
-      match Mapping_semantics.find r with
-      | Some (Ref_new i) when i < List.length args -> (
-        let exception Decline in
-        let rec in_expr e =
-          match (cell_use x e, e) with
-          | Some Read, _ -> CPPvar x
-          | Some (Write _), _ -> raise_notrace Decline
-          | None, CPPvar y when Id.equal x y -> raise_notrace Decline
-          | None, CPPlambda l when mentions x l.cl_body -> raise_notrace Decline
-          | None, _ -> map_expr in_expr in_stmt Fun.id e
-        and in_stmt s =
-          match s with
-          | Sexpr e -> (
-            match cell_use x e with
-            | Some (Write v) -> Sasgn (x, Existing, in_expr v)
-            | _ -> map_stmt in_expr in_stmt Fun.id s )
-          | _ -> map_stmt in_expr in_stmt Fun.id s
-        in
-        match List.map in_stmt rest with
-        | rest' -> Sasgn (x, Declare Tauto, List.nth args i) :: go rest'
-        | exception Decline -> decl :: go rest )
-      | _ -> decl :: go rest )
-    | s :: rest -> s :: go rest
-  in
-  go stmts
-
 (** {1 Entry point} *)
 
 let body ret_ty stmts =
@@ -394,7 +339,6 @@ let body ret_ty stmts =
   |> inline_iife_initializers fresh
   |> specialize_local_records fresh
   |> inline_tail_call fresh ret_ty
-  |> scalarize_local_cells
 
 let rec field (f, vis, tag) =
   let f =

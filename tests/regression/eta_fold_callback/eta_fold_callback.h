@@ -2,6 +2,7 @@
 #define INCLUDED_ETA_FOLD_CALLBACK
 
 #include "crane_fn.h"
+#include "fn.h"
 #include "obj.h"
 #include "small_vector.h"
 #include <atomic>
@@ -189,7 +190,30 @@ struct EtaFoldCallback {
   }
 
   static uint64_t grab(const box &b, uint64_t k);
-  static constexpr uint64_t run = UINT64_C(15);
+  static inline const uint64_t run = []() {
+    return []() {
+      List<crane::fn<uint64_t(uint64_t)>> fs =
+          List<uint64_t>::cons(
+              UINT64_C(1),
+              List<uint64_t>::cons(
+                  UINT64_C(2),
+                  List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())))
+              .template map<crane::fn<uint64_t(uint64_t)>>([](uint64_t n) {
+                return [=](uint64_t _x0) -> uint64_t {
+                  return grab(
+                      box::box0(List<uint64_t>::cons(
+                          n, List<uint64_t>::cons((n + UINT64_C(1)),
+                                                  List<uint64_t>::nil()))),
+                      _x0);
+                };
+              });
+      return std::move(fs).template fold_right<uint64_t>(
+          [](crane::fn<uint64_t(uint64_t)> f, uint64_t eta0_) {
+            return f(eta0_);
+          },
+          UINT64_C(0));
+    }();
+  }();
 };
 
 #endif // INCLUDED_ETA_FOLD_CALLBACK

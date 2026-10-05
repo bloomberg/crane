@@ -84,7 +84,8 @@ struct SectionsModules {
     static uint64_t extended_fun(uint64_t n);
   };
 
-  static constexpr uint64_t test_extended = UINT64_C(143);
+  static inline const uint64_t test_extended =
+      Extended::extended_fun(Extended::base_val);
 };
 
 #endif // INCLUDED_SECTIONS_MODULES

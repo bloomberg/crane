@@ -7,7 +7,7 @@ struct QualifiedShadowAscii {
   };
 
   static Shadow::shadow id_shadow(Shadow::shadow x);
-  static constexpr Shadow::shadow t = Shadow::shadow::MK;
+  static inline const Shadow::shadow t = id_shadow(Shadow::shadow::MK);
 };
 
 #endif // INCLUDED_QUALIFIED_SHADOW_ASCII

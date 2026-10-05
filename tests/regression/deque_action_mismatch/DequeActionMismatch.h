@@ -48,7 +48,7 @@ const Specif::SigT<Tag, sem_ty> chain = []() {
 uint64_t get_length(const Specif::SigT<Tag, sem_ty> &v);
 uint64_t get_first(const Specif::SigT<Tag, sem_ty> &v);
 const uint64_t test_length = get_length(chain);
-inline constexpr uint64_t test_first = UINT64_C(42);
+const uint64_t test_first = get_first(chain);
 
 } // namespace DequeActionMismatch
 

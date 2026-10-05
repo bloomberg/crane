@@ -128,7 +128,7 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifyListPairing::partition(
       auto _f = std::move(std::get<CraneCont_Cons>(_frame));
       uint64_t a0 = _f.a0;
       auto [yes, no] = std::move(_result);
-      if ((a0 % UINT64_C(2)) == UINT64_C(0)) {
+      if ((UINT64_C(2) ? a0 % UINT64_C(2) : a0) == UINT64_C(0)) {
         _result = std::make_pair(List<uint64_t>::cons(a0, std::move(yes)),
                                  std::move(no));
       } else {

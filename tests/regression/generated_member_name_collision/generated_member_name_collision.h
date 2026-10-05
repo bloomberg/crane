@@ -64,8 +64,10 @@ struct GeneratedMemberNameCollision {
     }
   };
 
-  static constexpr uint64_t boxed_sum = UINT64_C(3);
-  static constexpr uint64_t clone_val = UINT64_C(4);
+  static inline const uint64_t boxed_sum =
+      boxed::box(UINT64_C(1), UINT64_C(2)).unbox();
+
+  static inline const uint64_t clone_val = clone0::dup(UINT64_C(4)).undup();
 };
 
 #endif // INCLUDED_GENERATED_MEMBER_NAME_COLLISION

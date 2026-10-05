@@ -152,7 +152,9 @@ struct SrcWrrRomPortRoundtrip {
       UINT64_C(0)};
   static inline const state after_src = execute_src(sample, UINT64_C(3));
   static inline const state after_wrr = execute_wrr(after_src);
-  static constexpr bool t = true;
+  static inline const bool t =
+      ListDef::template nth<uint64_t>(after_src.sel_rom, after_wrr.rom_ports,
+                                      UINT64_C(0)) == UINT64_C(13);
 };
 
 template <typename T1>

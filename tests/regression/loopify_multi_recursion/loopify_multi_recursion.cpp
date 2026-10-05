@@ -205,7 +205,8 @@ bool LoopifyMultiRecursion::bool_and_chain_fuel(
           _result = true;
         } else {
           _stack.emplace_back(CraneCont1{fuel_, n});
-          _stack.emplace_back(CraneEnter{(n - UINT64_C(1)), fuel_});
+          _stack.emplace_back(CraneEnter{
+              (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), fuel_});
         }
       }
     } else if (std::holds_alternative<CraneCont1>(_frame)) {

@@ -155,7 +155,8 @@ struct NonUniformListNest {
     }
   }
 
-  static constexpr uint64_t go = UINT64_C(1);
+  static inline const uint64_t go = depth<uint64_t>(
+      n2::s2(n2::z2(List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil()))));
 };
 
 #endif // INCLUDED_NON_UNIFORM_LIST_NEST

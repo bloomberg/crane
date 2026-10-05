@@ -72,7 +72,8 @@ struct TodoEtaExpansionTaxiom {
       swap_pair<uint64_t, bool>(
           Pair<uint64_t, bool>::mkpair(UINT64_C(3), true));
 
-  static constexpr uint64_t test_fst = UINT64_C(42);
+  static inline const uint64_t test_fst = fst_pair<uint64_t, bool>(
+      Pair<uint64_t, bool>::mkpair(UINT64_C(42), true));
 };
 
 #endif // INCLUDED_TODO_ETA_EXPANSION_TAXIOM

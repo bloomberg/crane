@@ -13,6 +13,6 @@ struct catalog {
   uint64_t size;
 };
 
-inline constexpr uint64_t answer = UINT64_C(2);
+const uint64_t answer = Catalog0::grow(catalog{UINT64_C(1)}).size;
 
 #endif // INCLUDED_FILE_MODULE_EPONYMOUS_RECORD

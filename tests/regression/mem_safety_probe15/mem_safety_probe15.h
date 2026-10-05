@@ -483,20 +483,42 @@ struct MemSafetyProbe15 {
     }
 
     uint64_t length() const {
-      auto go_impl = [](auto &_self_go, const mylist<A> &l0,
-                        uint64_t acc) -> uint64_t {
-        if (std::holds_alternative<typename mylist<A>::Mynil>(l0.v())) {
-          return acc;
-        } else {
-          const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(l0.v());
-          return _self_go(_self_go, *a1, (acc + UINT64_C(1)));
-        }
+      const mylist<A> *_self = this;
+
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
+        const mylist<A> *_self;
       };
-      {
-        const mylist<A> &_lc1_l0 = *this;
-        uint64_t _lc1_acc = UINT64_C(0);
-        return go_impl(go_impl, _lc1_l0, _lc1_acc);
+
+      /// CraneCont_Mycons: resumes after recursive call, then processes rest.
+      struct CraneCont_Mycons {};
+
+      using CraneFrame = std::variant<CraneEnter, CraneCont_Mycons>;
+      uint64_t _result{};
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified length: CraneEnter -> CraneCont_Mycons.
+      while (!_stack.empty()) {
+        CraneFrame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
+          const mylist<A> *_self = _f._self;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
+            _result = UINT64_C(0);
+          } else {
+            const auto &[a0, a1] =
+                std::get<typename mylist<A>::Mycons>(_sv.v());
+            _stack.emplace_back(CraneCont_Mycons{});
+            _stack.emplace_back(CraneEnter{crane_raw(a1)});
+          }
+        } else {
+          auto _f = std::move(std::get<CraneCont_Mycons>(_frame));
+          _result = (UINT64_C(1) + std::move(_result));
+        }
       }
+      return _result;
     }
 
     mylist<A> myapp(mylist<A> l2) const {
@@ -583,24 +605,77 @@ struct MemSafetyProbe15 {
   /// In loopified code, the Enter frame for the right subtree
   /// may move the left subtree's pointer.
   static mylist<uint64_t> flatten(const tree &t);
-  static constexpr uint64_t test_flatten = UINT64_C(28);
+  static inline const uint64_t test_flatten = []() {
+    tree t = tree::node(
+        tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
+                   UINT64_C(2),
+                   tree::node(tree::leaf(), UINT64_C(3), tree::leaf())),
+        UINT64_C(4),
+        tree::node(tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
+                   UINT64_C(6),
+                   tree::node(tree::leaf(), UINT64_C(7), tree::leaf())));
+    return sum_list(flatten(std::move(t)));
+  }();
   /// TEST 2: Tree to list where each element is the sum of
   /// its subtree. Uses both subtrees for computation AND recursion.
   static mylist<uint64_t> subtree_sums(const tree &t);
-  static constexpr uint64_t test_subtree_sums = UINT64_C(35);
-  static constexpr uint64_t test_mirror = UINT64_C(10);
-  static constexpr uint64_t test_zip = UINT64_C(40);
+  static inline const uint64_t test_subtree_sums = []() {
+    tree t = tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
+                        UINT64_C(7),
+                        tree::node(tree::leaf(), UINT64_C(11), tree::leaf()));
+    return sum_list(subtree_sums(std::move(t)));
+  }();
+  static inline const uint64_t test_mirror = []() {
+    tree t = tree::node(
+        tree::node(tree::leaf(), UINT64_C(1),
+                   tree::node(tree::leaf(), UINT64_C(2), tree::leaf())),
+        UINT64_C(3), tree::node(tree::leaf(), UINT64_C(4), tree::leaf()));
+    return std::move(t).mirror().tree_sum();
+  }();
+  static inline const uint64_t test_zip = []() {
+    tree t1 = tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
+                         UINT64_C(10),
+                         tree::node(tree::leaf(), UINT64_C(2), tree::leaf()));
+    tree t2 = tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
+                         UINT64_C(20),
+                         tree::node(tree::leaf(), UINT64_C(4), tree::leaf()));
+    return std::move(t1).zip_trees(std::move(t2)).tree_sum();
+  }();
   /// TEST 5: Deep left-spine tree.
   /// Stresses the frame stack depth.
   static tree left_spine(uint64_t n);
   static inline const uint64_t test_deep_spine =
       left_spine(UINT64_C(100)).tree_sum();
-  static constexpr uint64_t test_rev = UINT64_C(10);
-  static constexpr uint64_t test_two_pass = UINT64_C(56);
-  static constexpr uint64_t test_map = UINT64_C(63);
+  static inline const uint64_t test_rev = []() {
+    mylist<uint64_t> l = mylist<uint64_t>::mycons(
+        UINT64_C(1),
+        mylist<uint64_t>::mycons(
+            UINT64_C(2),
+            mylist<uint64_t>::mycons(
+                UINT64_C(3), mylist<uint64_t>::mycons(
+                                 UINT64_C(4), mylist<uint64_t>::mynil()))));
+    mylist<uint64_t> r = std::move(l).rev_aux(mylist<uint64_t>::mynil());
+    return sum_list(std::move(r));
+  }();
+  static inline const uint64_t test_two_pass =
+      tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
+                 UINT64_C(7),
+                 tree::node(tree::leaf(), UINT64_C(11), tree::leaf()))
+          .two_pass();
+  static inline const uint64_t test_map = []() {
+    mylist<uint64_t> l = mylist<uint64_t>::mycons(
+        UINT64_C(10),
+        mylist<uint64_t>::mycons(
+            UINT64_C(20),
+            mylist<uint64_t>::mycons(UINT64_C(30), mylist<uint64_t>::mynil())));
+    mylist<uint64_t> l2 = std::move(l).template map_list<uint64_t>(
+        [](uint64_t x) { return (x + UINT64_C(1)); });
+    return sum_list(std::move(l2));
+  }();
   /// TEST 9: Build a large tree and verify all values are preserved.
   static tree make_tree(uint64_t n);
-  static constexpr uint64_t test_large_tree = UINT64_C(120);
+  static inline const uint64_t test_large_tree =
+      make_tree(UINT64_C(6)).tree_sum();
 };
 
 #endif // INCLUDED_MEM_SAFETY_PROBE15

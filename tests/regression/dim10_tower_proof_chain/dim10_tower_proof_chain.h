@@ -123,20 +123,46 @@ struct Dim10TowerProofChainCase {
 
   static inline const Dim10Bundle dim10_bundle =
       Dim10Bundle{dim10_tower, dim10_chain};
-  static constexpr uint64_t dim10_p0_dim = UINT64_C(10);
-  static constexpr uint64_t dim10_p4_dim = UINT64_C(6);
-  static constexpr uint64_t dim10_p9_dim = UINT64_C(1);
-  static constexpr uint64_t dim10_p10_dim = UINT64_C(0);
-  static constexpr uint64_t dim10_p12_dim = UINT64_C(0);
-  static constexpr uint64_t dim10_d0_dim = UINT64_C(1);
-  static constexpr uint64_t dim10_d4_dim = UINT64_C(1);
-  static constexpr uint64_t dim10_d9_dim = UINT64_C(1);
-  static constexpr uint64_t dim10_d10_dim = UINT64_C(0);
-  static constexpr uint64_t dim10_layers_cutoff = UINT64_C(10);
-  static constexpr uint64_t dim10_P_cutoff = UINT64_C(10);
-  static constexpr bool dim10_layers_cutoff_matches = true;
-  static constexpr bool dim10_P_cutoff_matches = true;
-  static constexpr uint64_t dim10_dimension_checksum = UINT64_C(40);
+  static inline const uint64_t dim10_p0_dim =
+      dim10_bundle.dt_tower.ggt_P(UINT64_C(0)).go_dim;
+  static inline const uint64_t dim10_p4_dim =
+      dim10_bundle.dt_tower.ggt_P(UINT64_C(4)).go_dim;
+  static inline const uint64_t dim10_p9_dim =
+      dim10_bundle.dt_tower.ggt_P(UINT64_C(9)).go_dim;
+  static inline const uint64_t dim10_p10_dim =
+      dim10_bundle.dt_tower.ggt_P(UINT64_C(10)).go_dim;
+  static inline const uint64_t dim10_p12_dim =
+      dim10_bundle.dt_tower.ggt_P(UINT64_C(12)).go_dim;
+  static inline const uint64_t dim10_d0_dim =
+      dim10_bundle.dt_tower.ggt_D(UINT64_C(0)).go_dim;
+  static inline const uint64_t dim10_d4_dim =
+      dim10_bundle.dt_tower.ggt_D(UINT64_C(4)).go_dim;
+  static inline const uint64_t dim10_d9_dim =
+      dim10_bundle.dt_tower.ggt_D(UINT64_C(9)).go_dim;
+  static inline const uint64_t dim10_d10_dim =
+      dim10_bundle.dt_tower.ggt_D(UINT64_C(10)).go_dim;
+  static inline const uint64_t dim10_layers_cutoff = []() {
+    const auto &_sv = dim10_bundle.dt_chain.gc_layers_stabilize;
+    const auto &[x, a1] = _sv;
+    return x;
+  }();
+  static inline const uint64_t dim10_P_cutoff = []() {
+    const auto &_sv = dim10_bundle.dt_chain.gc_P_stabilize;
+    const auto &[x, a1] = _sv;
+    return x;
+  }();
+  static inline const bool dim10_layers_cutoff_matches =
+      dim10_layers_cutoff == UINT64_C(10);
+  static inline const bool dim10_P_cutoff_matches =
+      dim10_P_cutoff == UINT64_C(10);
+  static inline const uint64_t dim10_dimension_checksum =
+      (((((((((dim10_p0_dim + dim10_p4_dim) + dim10_p9_dim) + dim10_p10_dim) +
+            dim10_d0_dim) +
+           dim10_d4_dim) +
+          dim10_d9_dim) +
+         dim10_d10_dim) +
+        dim10_layers_cutoff) +
+       dim10_P_cutoff);
 };
 
 #endif // INCLUDED_DIM10_TOWER_PROOF_CHAIN

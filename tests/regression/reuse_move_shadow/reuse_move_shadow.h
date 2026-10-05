@@ -123,17 +123,32 @@ struct ReuseMoveShadow {
   /// Expected result: node 10 (node 1 leaf leaf) (node 1 leaf leaf)
   /// tree_sum = 10 + 1 + 0 + 0 + 1 + 0 + 0 = 12
   /// BUG: right subtree is null -> crash in tree_sum.
-  static constexpr uint64_t test1 = UINT64_C(12);
+  static inline const uint64_t test1 = tree_sum(
+      dup_left(tree::node(UINT64_C(10),
+                          tree::node(UINT64_C(1), tree::leaf(), tree::leaf()),
+                          tree::node(UINT64_C(2), tree::leaf(), tree::leaf())),
+               true));
   /// test2: Deeper tree to stress memory.
   /// dup_left (node 5 (node 3 (node 4 leaf leaf) leaf) leaf) true
   /// Expected: node 5 (node 3 (node 4 leaf leaf) leaf) (node 3 (node 4 leaf
   /// leaf) leaf) tree_sum = 5 + (3 + 4 + 0) + (3 + 4 + 0) = 19 BUG: right
   /// subtree is null -> crash.
-  static constexpr uint64_t test2 = UINT64_C(19);
+  static inline const uint64_t test2 = tree_sum(dup_left(
+      tree::node(UINT64_C(5),
+                 tree::node(UINT64_C(3),
+                            tree::node(UINT64_C(4), tree::leaf(), tree::leaf()),
+                            tree::leaf()),
+                 tree::leaf()),
+      true));
   /// test3: Non-reuse path (use_count > 1).
   /// This should work correctly because the normal branch uses
   /// with_shifted_move_tracking which properly shifts the indices.
-  static constexpr uint64_t test3 = UINT64_C(47);
+  static inline const uint64_t test3 = []() {
+    tree t = tree::node(UINT64_C(7),
+                        tree::node(UINT64_C(8), tree::leaf(), tree::leaf()),
+                        tree::node(UINT64_C(9), tree::leaf(), tree::leaf()));
+    return (tree_sum(dup_left(t, true)) + tree_sum(t));
+  }();
 };
 
 #endif // INCLUDED_REUSE_MOVE_SHADOW

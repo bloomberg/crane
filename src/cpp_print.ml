@@ -260,9 +260,6 @@ let spell_binop = function
   | Bneq -> "!="
   | Band -> "&&"
   | Bor -> "||"
-  | Bsub -> "-"
-  | Bdiv -> "/"
-  | Bmod -> "%"
   | Bassign -> "="
 
 (** The C++ source spelling of a unary prefix operator. *)
@@ -2337,14 +2334,11 @@ and pp_cpp_expr env args t =
         str "(" ++ pp_cpp_expr env args child ++ str ")"
       | _ -> pp_cpp_expr env args child
     in
-    let body =
-      paren_child lhs ++ str " " ++ str (spell_binop op) ++ str " " ++ paren_child rhs
-    in
-    (* An arithmetic operation is spliced into mapping text as an operand,
-       where only parentheses keep it one. *)
-    ( match op with
-    | Bsub | Bdiv | Bmod -> str "(" ++ body ++ str ")"
-    | Beq | Bneq | Band | Bor | Bassign -> body )
+    paren_child lhs
+    ++ str " "
+    ++ str (spell_binop op)
+    ++ str " "
+    ++ paren_child rhs
   | CPPcond (cond, then_expr, else_expr) ->
     (* Wrap the whole ternary in parentheses like the other ternary sites, so a
        conditional used as a subexpression cannot bind incorrectly against a

@@ -108,7 +108,13 @@ struct RecordClosureEscape {
   static fn_record record_escape(tree t);
   static uint64_t use_record(const fn_record &r);
   /// Clobber stack after record_escape returns.
-  static constexpr uint64_t bug_record_escape = UINT64_C(102);
+  static inline const uint64_t bug_record_escape = []() {
+    tree t1 = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                         UINT64_C(20),
+                         tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
+    fn_record r1 = record_escape(std::move(t1));
+    return use_record(std::move(r1));
+  }();
 };
 
 #endif // INCLUDED_RECORD_CLOSURE_ESCAPE

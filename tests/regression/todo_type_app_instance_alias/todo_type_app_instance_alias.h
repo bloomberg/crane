@@ -22,7 +22,9 @@ struct TodoTypeAppInstanceAlias {
     return _tcI0::boxed_default();
   }
 
-  static constexpr uint64_t test_value = UINT64_C(14);
+  static inline const uint64_t test_value = []() {
+    return (pick<natBoxed, uint64_t>() + pick<natBoxed, uint64_t>());
+  }();
 };
 
 #endif // INCLUDED_TODO_TYPE_APP_INSTANCE_ALIAS

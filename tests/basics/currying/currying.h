@@ -86,12 +86,16 @@ struct Currying {
   static uint64_t flipped_sub(uint64_t x0_, uint64_t x1_);
   static uint64_t add_base(uint64_t x0_, uint64_t x1_);
   static uint64_t add_ten(uint64_t x0_);
-  static constexpr uint64_t test_add3 = UINT64_C(6);
-  static constexpr uint64_t test_partial1 = UINT64_C(6);
-  static constexpr uint64_t test_partial2 = UINT64_C(6);
-  static constexpr uint64_t test_curried = UINT64_C(7);
-  static constexpr uint64_t test_flip = UINT64_C(4);
-  static constexpr uint64_t test_add_ten = UINT64_C(15);
+  static inline const uint64_t test_add3 =
+      add3(UINT64_C(1), UINT64_C(2), UINT64_C(3));
+  static inline const uint64_t test_partial1 =
+      add3_partial1(UINT64_C(2), UINT64_C(3));
+  static inline const uint64_t test_partial2 = add3_partial2(UINT64_C(3));
+  static inline const uint64_t test_curried =
+      curried_add(UINT64_C(3), UINT64_C(4));
+  static inline const uint64_t test_flip =
+      flipped_sub(UINT64_C(3), UINT64_C(7));
+  static inline const uint64_t test_add_ten = add_ten(UINT64_C(5));
 };
 
 #endif // INCLUDED_CURRYING

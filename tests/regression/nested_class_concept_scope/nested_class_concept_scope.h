@@ -24,7 +24,7 @@ struct NestedClassConceptScope {
   };
 
   static_assert(C<IN, uint64_t>);
-  static constexpr uint64_t test = UINT64_C(5);
+  static inline const uint64_t test = IN::m(UINT64_C(5));
 };
 
 #endif // INCLUDED_NESTED_CLASS_CONCEPT_SCOPE

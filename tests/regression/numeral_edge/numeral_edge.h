@@ -115,14 +115,14 @@ struct NumeralEdge {
   static constexpr uint64_t nat_pow2_16 = UINT64_C(65536);
   static constexpr int64_t z_pow2_30 = INT64_C(1073741824);
   /// 5. Numerals in arithmetic expressions
-  static constexpr uint64_t add_numerals = UINT64_C(300);
+  static inline const uint64_t add_numerals = (UINT64_C(100) + UINT64_C(200));
   static inline const int64_t mul_numerals = static_cast<int64_t>(
       static_cast<uint64_t>(INT64_C(10)) * static_cast<uint64_t>(INT64_C(20)));
   static inline const int64_t sub_numerals = static_cast<int64_t>(
       static_cast<uint64_t>(INT64_C(100)) - static_cast<uint64_t>(INT64_C(1)));
   /// 6. Numeral as function argument
   static uint64_t take_nat(uint64_t n);
-  static constexpr uint64_t test_arg = UINT64_C(43);
+  static inline const uint64_t test_arg = take_nat(UINT64_C(42));
   /// 7. Numeral in list
   static inline const List<uint64_t> nat_list = List<uint64_t>::cons(
       UINT64_C(1), List<uint64_t>::cons(

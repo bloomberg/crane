@@ -13,8 +13,9 @@ struct PageAddress {
   static constexpr uint64_t p_same = UINT64_C(600);
   static constexpr uint64_t p_cross_254 = UINT64_C(254);
   static constexpr uint64_t p_cross_255 = UINT64_C(255);
-  static constexpr uint64_t page_base_777 = UINT64_C(768);
-  static constexpr uint64_t branch_example = UINT64_C(42);
+  static inline const uint64_t page_base_777 = page_base(UINT64_C(777));
+  static inline const uint64_t branch_example =
+      branch_target(UINT64_C(100), UINT64_C(42));
 };
 
 #endif // INCLUDED_PAGE_ADDRESS

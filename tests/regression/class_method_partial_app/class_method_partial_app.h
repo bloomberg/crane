@@ -2,6 +2,7 @@
 #define INCLUDED_CLASS_METHOD_PARTIAL_APP
 
 #include "crane_fn.h"
+#include "fn.h"
 #include "obj.h"
 #include "small_vector.h"
 #include <atomic>
@@ -157,7 +158,17 @@ struct ClassMethodPartialApp {
   };
 
   static_assert(Sz<SzNat, uint64_t>);
-  static constexpr uint64_t test = UINT64_C(7);
+  static inline const uint64_t test =
+      List<crane::fn<uint64_t(uint64_t)>>::cons(
+          [](uint64_t _sat0) { return SzNat::sz(UINT64_C(2), _sat0); },
+          List<crane::fn<uint64_t(uint64_t)>>::cons(
+              [](uint64_t _sat0) { return SzNat::sz(UINT64_C(3), _sat0); },
+              List<crane::fn<uint64_t(uint64_t)>>::nil()))
+          .template fold_right<uint64_t>(
+              [](crane::fn<uint64_t(uint64_t)> f, uint64_t n) {
+                return (f(UINT64_C(1)) + n);
+              },
+              UINT64_C(0));
 };
 
 #endif // INCLUDED_CLASS_METHOD_PARTIAL_APP

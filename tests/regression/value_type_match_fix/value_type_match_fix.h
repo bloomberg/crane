@@ -52,14 +52,42 @@ struct ValueTypeMatchFix {
   static std::optional<crane::fn<uint64_t(uint64_t)>>
   make_adder_from_triple(const triple &t);
   /// test1: MkTriple 10 20 30 -> base=60, go(5) = 60+5 = 65.
-  static constexpr uint64_t test1 = UINT64_C(65);
+  static inline const uint64_t test1 = []() -> uint64_t {
+    auto _cs = make_adder_from_triple(
+        triple::mktriple(UINT64_C(10), UINT64_C(20), UINT64_C(30)));
+    if (_cs.has_value()) {
+      const crane::fn<uint64_t(uint64_t)> &f = *_cs;
+      return f(UINT64_C(5));
+    } else {
+      return UINT64_C(999);
+    }
+  }();
   /// test2: With noise between creation and use.
-  static constexpr uint64_t test2 = UINT64_C(655);
+  static inline const uint64_t test2 = []() {
+    std::optional<crane::fn<uint64_t(uint64_t)>> o = make_adder_from_triple(
+        triple::mktriple(UINT64_C(100), UINT64_C(200), UINT64_C(300)));
+    uint64_t noise = (UINT64_C(42) + UINT64_C(13));
+    if (o.has_value()) {
+      const crane::fn<uint64_t(uint64_t)> &f = *o;
+      return (f(UINT64_C(0)) + noise);
+    } else {
+      return UINT64_C(999);
+    }
+  }();
   /// Direct capture of pattern fields (no intermediate let binding).
   static std::optional<crane::fn<uint64_t(uint64_t)>>
   make_field_adder(const triple &t);
   /// test3: MkTriple 42 0 0 -> a=42, go(3) = 42+3 = 45.
-  static constexpr uint64_t test3 = UINT64_C(45);
+  static inline const uint64_t test3 = []() -> uint64_t {
+    auto _cs = make_field_adder(
+        triple::mktriple(UINT64_C(42), UINT64_C(0), UINT64_C(0)));
+    if (_cs.has_value()) {
+      const crane::fn<uint64_t(uint64_t)> &f = *_cs;
+      return f(UINT64_C(3));
+    } else {
+      return UINT64_C(999);
+    }
+  }();
 };
 
 #endif // INCLUDED_VALUE_TYPE_MATCH_FIX

@@ -38,7 +38,7 @@ bool LoopifyPolymorphic::nat_eq(uint64_t x0_, uint64_t x1_) {
 }
 
 bool LoopifyPolymorphic::is_even(uint64_t x) {
-  return (x % UINT64_C(2)) == UINT64_C(0);
+  return (UINT64_C(2) ? x % UINT64_C(2) : x) == UINT64_C(0);
 }
 
 bool LoopifyPolymorphic::nat_member(uint64_t x0_, const List<uint64_t> &x1_) {

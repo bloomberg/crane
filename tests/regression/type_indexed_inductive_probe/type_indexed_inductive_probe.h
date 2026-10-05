@@ -41,7 +41,11 @@ struct TypeIndexedInductiveProbe {
   }
 
   static inline const wrap w = wrap::wrap0(Bool0::TRUE_);
-  static constexpr Bool0 sample = Bool0::TRUE_;
+  static inline const Bool0 sample = []() {
+    const auto &_sv = w;
+    const auto &[a] = _sv;
+    return crane::any_cast<Bool0>(a);
+  }();
 };
 
 #endif // INCLUDED_TYPE_INDEXED_INDUCTIVE_PROBE

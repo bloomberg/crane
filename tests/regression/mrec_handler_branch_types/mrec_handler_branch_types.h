@@ -603,7 +603,38 @@ struct MrecHandlerBranchTypes {
   static std::optional<Sum<Nat, Nat>>
   run(const Nat &fuel,
       Itree<Sum1<extE<Nat>, FailE, crane::obj>, Sum<Nat, Nat>> t);
-  static constexpr bool is_three = true;
+  static inline const bool is_three = []() -> bool {
+    auto _cs = []() {
+      auto _lit0 = Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
+          Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
+              Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
+                  Nat::s(Nat::s(Nat::s(Nat::o()))))))))))))))))))))))))))))));
+      auto _lit1 = Nat::s(Nat::s(
+          Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
+              Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
+                  Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
+                      Nat::s(std::move(_lit0)))))))))))))))))))))))))))))));
+      auto _lit2 = Nat::s(Nat::s(
+          Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
+              Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
+                  Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
+                      Nat::s(std::move(_lit1)))))))))))))))))))))))))))))));
+      return run(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
+                     Nat::s(Nat::s(Nat::s(Nat::s(std::move(_lit2))))))))))),
+                 den<Nat>(Nat::s(Nat::s(Nat::o()))));
+    }();
+    if (_cs.has_value()) {
+      const Sum<Nat, Nat> &s = *_cs;
+      if (std::holds_alternative<typename Sum<Nat, Nat>::Inl>(s.v())) {
+        return false;
+      } else {
+        const auto &[a0] = std::get<typename Sum<Nat, Nat>::Inr>(s.v());
+        return a0.eqb(Nat::s(Nat::s(Nat::s(Nat::o()))));
+      }
+    } else {
+      return false;
+    }
+  }();
 };
 
 template <Functor _tcI0, typename T2, typename T3, typename F0>

@@ -36,7 +36,7 @@ struct ClassSuperclassExplicit {
     return (_tcI0::ext_base::base(x) + _tcI0::ext(x));
   }
 
-  static constexpr uint64_t go = UINT64_C(7);
+  static inline const uint64_t go = use<en, uint64_t>(UINT64_C(3));
 };
 
 #endif // INCLUDED_CLASS_SUPERCLASS_EXPLICIT

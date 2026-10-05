@@ -167,8 +167,20 @@ struct DepRecord {
     }
   }
 
-  static constexpr uint64_t test_fold_add = UINT64_C(10);
-  static constexpr uint64_t test_fold_mul = UINT64_C(24);
+  static inline const uint64_t test_fold_add =
+      crane::any_cast<uint64_t>(mfold<nat_monoid>(List<uint64_t>::cons(
+          UINT64_C(1),
+          List<uint64_t>::cons(
+              UINT64_C(2),
+              List<uint64_t>::cons(
+                  UINT64_C(3),
+                  List<uint64_t>::cons(UINT64_C(4), List<uint64_t>::nil()))))));
+  static inline const uint64_t test_fold_mul =
+      crane::any_cast<uint64_t>(mfold<nat_mul_monoid>(List<uint64_t>::cons(
+          UINT64_C(2),
+          List<uint64_t>::cons(
+              UINT64_C(3),
+              List<uint64_t>::cons(UINT64_C(4), List<uint64_t>::nil())))));
   enum class Tag { TNAT, TBOOL };
 
   template <typename T1> static T1 tag_rect(T1 f, T1 f0, Tag t) {

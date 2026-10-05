@@ -180,8 +180,8 @@ struct HigherKinded {
       Tree<uint64_t>::leaf(UINT64_C(1)),
       Tree<uint64_t>::branch(Tree<uint64_t>::leaf(UINT64_C(2)),
                              Tree<uint64_t>::leaf(UINT64_C(3))));
-  static constexpr uint64_t test_tree_sum = UINT64_C(6);
-  static constexpr uint64_t test_tree_size = UINT64_C(3);
+  static inline const uint64_t test_tree_sum = tree_sum(test_tree);
+  static inline const uint64_t test_tree_size = tree_size<uint64_t>(test_tree);
   static inline const Tree<uint64_t> test_tree_map =
       tree_map<uint64_t, uint64_t>([](uint64_t n) { return (n * UINT64_C(2)); },
                                    test_tree);

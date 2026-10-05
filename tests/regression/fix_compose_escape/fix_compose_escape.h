@@ -28,16 +28,23 @@ struct FixComposeEscape {
   }
 
   /// test1: compose_add 42 id 3 = id (42 + 3) = 45
-  static constexpr uint64_t test1 = UINT64_C(45);
+  static inline const uint64_t test1 =
+      compose_add(UINT64_C(42), [](uint64_t x) { return x; }, UINT64_C(3));
   /// test2: compose_add 10 double 5 = 2 * (10 + 5) = 30
-  static constexpr uint64_t test2 = UINT64_C(30);
+  static inline const uint64_t test2 = compose_add(
+      UINT64_C(10), [](uint64_t x) { return (x * UINT64_C(2)); }, UINT64_C(5));
   /// test3: Compose two different compositions.
   /// compose_add 100 (compose_add 50 id)
   /// = fun x => (compose_add 50 id) (100 + x)
   /// = fun x => id (50 + (100 + x))
   /// = fun x => 150 + x
   /// test3 = 150 + 7 = 157
-  static constexpr uint64_t test3 = UINT64_C(157);
+  static inline const uint64_t test3 = []() {
+    crane::fn<uint64_t(uint64_t)> inner = [](uint64_t _x0) -> uint64_t {
+      return compose_add(UINT64_C(50), [](uint64_t x) { return x; }, _x0);
+    };
+    return compose_add(UINT64_C(100), inner, UINT64_C(7));
+  }();
 };
 
 #endif // INCLUDED_FIX_COMPOSE_ESCAPE

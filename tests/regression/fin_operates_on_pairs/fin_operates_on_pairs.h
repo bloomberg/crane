@@ -147,7 +147,8 @@ struct FinOperatesOnPairs {
               List<uint64_t>::cons(
                   UINT64_C(55),
                   List<uint64_t>::cons(UINT64_C(66), List<uint64_t>::nil()))))};
-  static constexpr bool t = true;
+  static inline const bool t = get_reg_pair(execute_fin(sample, UINT64_C(2)),
+                                            UINT64_C(2)) == UINT64_C(55);
 };
 
 template <typename T1>

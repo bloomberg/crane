@@ -116,14 +116,35 @@ struct NestedMatchClosure {
   /// outer_val = 20, l = Node Leaf 10 Leaf
   /// inner_val = 10, combined = 30
   /// go(5) = 30 + 5 = 35
-  static constexpr uint64_t test1 = UINT64_C(35);
+  static inline const uint64_t test1 = []() -> uint64_t {
+    auto _cs = make_combiner(
+        tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                   UINT64_C(20), tree::leaf()));
+    if (_cs.has_value()) {
+      const crane::fn<uint64_t(uint64_t)> &f = *_cs;
+      return f(UINT64_C(5));
+    } else {
+      return UINT64_C(999);
+    }
+  }();
   /// Pattern 2: Triple nesting
   static std::optional<crane::fn<uint64_t(uint64_t)>>
   make_deep_combiner(const tree &t);
   /// test2: Node (Node (Node Leaf 100 Leaf) 200 Leaf) 300 Leaf
   /// v1=300, v2=200, v3=100, total=600
   /// go(0) = 600
-  static constexpr uint64_t test2 = UINT64_C(600);
+  static inline const uint64_t test2 = []() -> uint64_t {
+    auto _cs = make_deep_combiner(tree::node(
+        tree::node(tree::node(tree::leaf(), UINT64_C(100), tree::leaf()),
+                   UINT64_C(200), tree::leaf()),
+        UINT64_C(300), tree::leaf()));
+    if (_cs.has_value()) {
+      const crane::fn<uint64_t(uint64_t)> &f = *_cs;
+      return f(UINT64_C(0));
+    } else {
+      return UINT64_C(999);
+    }
+  }();
   /// Pattern 3: Closure capturing variables from match AND function param.
   /// The fixpoint captures BOTH pattern variables AND the function parameter.
   /// After the function returns, BOTH the pattern variables AND the
@@ -133,9 +154,32 @@ struct NestedMatchClosure {
   /// test3: Node (Node Leaf 5 Leaf) 10 (Node Leaf 15 Leaf), base=1000
   /// go(0) = 1000 + 10 + 5 + 15 = 1030
   /// go(3) = 1030 + 3 = 1033
-  static constexpr uint64_t test3 = UINT64_C(1033);
+  static inline const uint64_t test3 = []() -> uint64_t {
+    auto _cs = make_param_combiner(
+        tree::node(tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
+                   UINT64_C(10),
+                   tree::node(tree::leaf(), UINT64_C(15), tree::leaf())),
+        UINT64_C(1000));
+    if (_cs.has_value()) {
+      const crane::fn<uint64_t(uint64_t)> &f = *_cs;
+      return f(UINT64_C(3));
+    } else {
+      return UINT64_C(999);
+    }
+  }();
   /// Pattern 4: Store closure, THEN clobber stack with heavy computation
-  static constexpr uint64_t test4 = UINT64_C(642);
+  static inline const uint64_t test4 = []() {
+    std::optional<crane::fn<uint64_t(uint64_t)>> f = make_param_combiner(
+        tree::node(tree::node(tree::leaf(), UINT64_C(42), tree::leaf()),
+                   UINT64_C(100), tree::leaf()),
+        UINT64_C(500));
+    if (f.has_value()) {
+      const crane::fn<uint64_t(uint64_t)> &g = *f;
+      return g(UINT64_C(0));
+    } else {
+      return UINT64_C(999);
+    }
+  }();
 };
 
 #endif // INCLUDED_NESTED_MATCH_CLOSURE

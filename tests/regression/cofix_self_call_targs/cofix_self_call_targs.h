@@ -293,7 +293,17 @@ struct CofixSelfCallTargs {
             treeF<noE, Nat, tree<noE, Nat>>::retf(Nat::s(n)));
       },
       [](tree<noE, Nat> u) { return u; }, t0);
-  static constexpr bool is_three = true;
+  static inline const bool is_three = []() -> bool {
+    auto _cs = run(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
+                       Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))))),
+                   t1);
+    if (_cs.has_value()) {
+      const Nat &n = *_cs;
+      return n.eqb(Nat::s(Nat::s(Nat::s(Nat::o()))));
+    } else {
+      return false;
+    }
+  }();
 };
 
 #endif // INCLUDED_COFIX_SELF_CALL_TARGS

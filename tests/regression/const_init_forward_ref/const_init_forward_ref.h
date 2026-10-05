@@ -140,6 +140,6 @@ struct Coord {
   static inline const tbl table_a = Store::build(List<uint64_t>::nil());
 };
 
-inline constexpr uint64_t answer = UINT64_C(1);
+const uint64_t answer = Coord::table_a.length();
 
 #endif // INCLUDED_CONST_INIT_FORWARD_REF

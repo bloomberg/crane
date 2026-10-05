@@ -51,7 +51,8 @@ struct ParamInductiveFnInstantiation {
           return [=](uint64_t n) { return g(g(n)); };
         });
   }();
-  static constexpr uint64_t go = UINT64_C(2);
+  static inline const uint64_t go = run<crane::fn<uint64_t(uint64_t)>>(
+      d, [](uint64_t n) { return (n + UINT64_C(1)); })(UINT64_C(0));
 };
 
 #endif // INCLUDED_PARAM_INDUCTIVE_FN_INSTANTIATION

@@ -126,7 +126,7 @@ struct EmptyMatch {
 
   static inline const either<uint64_t, empty> test_either =
       either<uint64_t, empty>::left(UINT64_C(5));
-  static constexpr uint64_t test_handle = UINT64_C(5);
+  static inline const uint64_t test_handle = handle_left<uint64_t>(test_either);
 
   template <typename T1, typename T2>
   static either<T1, T2> complex_absurd(const empty &) {

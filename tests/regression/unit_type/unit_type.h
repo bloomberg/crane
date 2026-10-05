@@ -72,10 +72,12 @@ struct UnitType {
     return b;
   }
 
-  static constexpr uint64_t sequenced = UINT64_C(5);
-  static constexpr uint64_t test_take = UINT64_C(5);
-  static constexpr uint64_t test_match = UINT64_C(7);
-  static constexpr uint64_t test_seq = UINT64_C(5);
+  static inline const uint64_t sequenced = seq<std::monostate, uint64_t>(
+      std::monostate{},
+      seq<std::monostate, uint64_t>(std::monostate{}, UINT64_C(5)));
+  static inline const uint64_t test_take = take_unit(std::monostate{});
+  static inline const uint64_t test_match = match_unit(std::monostate{});
+  static inline const uint64_t test_seq = sequenced;
 };
 
 #endif // INCLUDED_UNIT_TYPE

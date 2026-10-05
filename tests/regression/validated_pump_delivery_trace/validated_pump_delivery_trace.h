@@ -832,8 +832,10 @@ struct ValidatedPumpDeliveryTraceCase {
   static inline const uint64_t pediatric_final_delivery = option_nat_default(
       final_delivery(RoundingMode::ROUNDTWENTIETH, pediatric_result),
       UINT64_C(0));
-  static constexpr bool low_reservoir_blocks = true;
-  static constexpr bool unknown_fault_blocks = true;
+  static inline const bool low_reservoir_blocks =
+      FaultStatus::fault_lowreservoir(UINT64_C(5)).fault_blocks_bolus();
+  static inline const bool unknown_fault_blocks =
+      FaultStatus::fault_unknown().fault_blocks_bolus();
 };
 
 #endif // INCLUDED_VALIDATED_PUMP_DELIVERY_TRACE

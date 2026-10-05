@@ -30,7 +30,7 @@ struct CtorFieldShadowsType {
   }
 
   static uint64_t total(const t &x);
-  static constexpr uint64_t answer = UINT64_C(3);
+  static inline const uint64_t answer = total(t::mk(UINT64_C(1), UINT64_C(2)));
 };
 
 #endif // INCLUDED_CTOR_FIELD_SHADOWS_TYPE
