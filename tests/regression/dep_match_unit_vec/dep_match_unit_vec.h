@@ -37,28 +37,42 @@ struct DepMatchUnitVec {
 
     template <typename CraneU>
     vec(const vec<CraneU> &_other)
-        : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename vec<CraneU>::Vnil>(
-                    _other.v())) {
-              return Vnil{};
-            } else {
-              const auto &[n, a1, a2] =
-                  std::get<typename vec<CraneU>::Vcons>(_other.v());
-              return Vcons{
-                  n,
-                  [&]() -> A {
-                    if constexpr (crane_convertible<A, const CraneU &>) {
-                      return crane_convert<A>(a1);
-                    } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
-                    }
-                  }(),
-                  (a2 ? std::make_shared<vec<A>>(crane_convert<vec<A>>(*a2))
-                      : nullptr)};
-            }
-          }()) {}
+        : v_(crane_convert_spine(
+              _other, std::shared_ptr<vec<A>>(nullptr),
+              [](const vec<CraneU> &_cell) -> const vec<CraneU> * {
+                if (std::holds_alternative<typename vec<CraneU>::Vcons>(
+                        _cell.v())) {
+                  return std::get<typename vec<CraneU>::Vcons>(_cell.v())
+                      .a2.get();
+                } else {
+                  return nullptr;
+                }
+              },
+              [&](const vec<CraneU> &_other,
+                  std::shared_ptr<vec<A>> _below) -> variant_t {
+                if (std::holds_alternative<typename vec<CraneU>::Vnil>(
+                        _other.v())) {
+                  return Vnil{};
+                } else {
+                  const auto &[n, a1, a2] =
+                      std::get<typename vec<CraneU>::Vcons>(_other.v());
+                  return Vcons{
+                      n,
+                      [&]() -> A {
+                        if constexpr (crane_convertible<A, const CraneU &>) {
+                          return crane_convert<A>(a1);
+                        } else {
+                          throw std::logic_error(
+                              "unreachable: inactive constructor field at this "
+                              "instantiation");
+                        }
+                      }(),
+                      std::move(_below)};
+                }
+              },
+              [](auto &&_alt) {
+                return std::make_shared<vec<A>>(std::move(_alt));
+              })) {}
 
     static vec<A> vnil() { return vec<A>(Vnil{}); }
 

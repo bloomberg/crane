@@ -156,24 +156,40 @@ struct TfunctorAliasCarrier {
 
     template <typename CraneU>
     exp(const exp<CraneU> &_other)
-        : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename exp<CraneU>::Lit>(_other.v())) {
-              const auto &[t] = std::get<typename exp<CraneU>::Lit>(_other.v());
-              return Lit{[&]() -> T {
-                if constexpr (crane_convertible<T, const CraneU &>) {
-                  return crane_convert<T>(t);
+        : v_(crane_convert_spine(
+              _other, std::shared_ptr<exp<T>>(nullptr),
+              [](const exp<CraneU> &_cell) -> const exp<CraneU> * {
+                if (std::holds_alternative<typename exp<CraneU>::Neg>(
+                        _cell.v())) {
+                  return std::get<typename exp<CraneU>::Neg>(_cell.v()).e.get();
                 } else {
-                  throw std::logic_error("unreachable: inactive constructor "
-                                         "field at this instantiation");
+                  return nullptr;
                 }
-              }()};
-            } else {
-              const auto &[e] = std::get<typename exp<CraneU>::Neg>(_other.v());
-              return Neg{
-                  (e ? std::make_shared<exp<T>>(crane_convert<exp<T>>(*e))
-                     : nullptr)};
-            }
-          }()) {}
+              },
+              [&](const exp<CraneU> &_other,
+                  std::shared_ptr<exp<T>> _below) -> variant_t {
+                if (std::holds_alternative<typename exp<CraneU>::Lit>(
+                        _other.v())) {
+                  const auto &[t] =
+                      std::get<typename exp<CraneU>::Lit>(_other.v());
+                  return Lit{[&]() -> T {
+                    if constexpr (crane_convertible<T, const CraneU &>) {
+                      return crane_convert<T>(t);
+                    } else {
+                      throw std::logic_error(
+                          "unreachable: inactive constructor field at this "
+                          "instantiation");
+                    }
+                  }()};
+                } else {
+                  const auto &[e] =
+                      std::get<typename exp<CraneU>::Neg>(_other.v());
+                  return Neg{std::move(_below)};
+                }
+              },
+              [](auto &&_alt) {
+                return std::make_shared<exp<T>>(std::move(_alt));
+              })) {}
 
     static exp<T> lit(T t) { return exp<T>(Lit{std::move(t)}); }
 

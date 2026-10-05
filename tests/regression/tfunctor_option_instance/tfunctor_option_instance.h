@@ -7,7 +7,6 @@
 #include <atomic>
 #include <memory>
 #include <optional>
-#include <stdexcept>
 #include <utility>
 #include <variant>
 
@@ -120,15 +119,10 @@ struct TfunctorOptionInstance {
     T unbox;
 
     // ACCESSORS
-    template <typename CraneU> operator box<CraneU>() const {
-      return {[&]() -> CraneU {
-        if constexpr (crane_convertible<CraneU, const T &>) {
-          return crane_convert<CraneU>(unbox);
-        } else {
-          throw std::logic_error(
-              "unreachable: inactive constructor field at this instantiation");
-        }
-      }()};
+    template <typename CraneU>
+      requires crane_convertible<CraneU, const T &>
+    operator box<CraneU>() const {
+      return {crane_convert<CraneU>(unbox)};
     }
   };
 

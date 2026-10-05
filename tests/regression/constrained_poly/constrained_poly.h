@@ -19,23 +19,10 @@ struct ConstrainedPoly {
 
     // ACCESSORS
     template <typename CraneU0, typename CraneU1>
+      requires crane_convertible<CraneU0, const A &> &&
+               crane_convertible<CraneU1, const B &>
     operator UPair<CraneU0, CraneU1>() const {
-      return {[&]() -> CraneU0 {
-                if constexpr (crane_convertible<CraneU0, const A &>) {
-                  return crane_convert<CraneU0>(ufst);
-                } else {
-                  throw std::logic_error("unreachable: inactive constructor "
-                                         "field at this instantiation");
-                }
-              }(),
-              [&]() -> CraneU1 {
-                if constexpr (crane_convertible<CraneU1, const B &>) {
-                  return crane_convert<CraneU1>(usnd);
-                } else {
-                  throw std::logic_error("unreachable: inactive constructor "
-                                         "field at this instantiation");
-                }
-              }()};
+      return {crane_convert<CraneU0>(ufst), crane_convert<CraneU1>(usnd)};
     }
   };
 

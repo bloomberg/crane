@@ -776,7 +776,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
         mf_is_inline = false;
         mf_no_pure = no_pure;
         mf_is_noexcept = false;
-        mf_is_conversion = false;
+        mf_kind = Ordinary;
       },
     VPublic,
     SNoTag )
@@ -1015,7 +1015,7 @@ let gen_ind_header_v2
                 mf_is_inline = false;
                 mf_no_pure = true;
                 mf_is_noexcept = false;
-                mf_is_conversion = false },
+                mf_kind = Ordinary },
             VPublic, SAccessors )
         in
         let conversion_field =
@@ -2726,6 +2726,68 @@ let gen_ind_header_v2
               let branches =
                 List.init n_ctors (fun i -> gen_branch i tys.(i))
               in
+              (* A spine -- each constructor holding at most one cell of the
+                 type itself, and no field otherwise mentioning it or a
+                 mutual sibling -- converts without recursion
+                 ([crane_convert_spine]): each cell's alternative is converted
+                 with the cell below it already converted, passed in as
+                 [_below]. *)
+              let self_cell dst_fty =
+                match dst_fty with
+                | Tshared_ptr (Tglob (g, _, _) as node) when GlobRef.CanOrd.equal g name ->
+                  Some node
+                | _ -> None
+              in
+              let mentions_block ty =
+                let found = ref false in
+                ignore
+                  (map_cpp_type
+                     (function
+                       | Tglob (g, _, _) as t
+                         when GlobRef.CanOrd.equal g name || Table.same_mutual_block g name ->
+                         found := true;
+                         t
+                       | t -> t )
+                     ty );
+                !found
+              in
+              let spine_node =
+                let cells =
+                  List.map
+                    (fun (_, _, field_info, _) ->
+                      let selves, others =
+                        List.partition
+                          (fun (_, _, dst) -> self_cell dst <> None)
+                          field_info
+                      in
+                      if List.exists (fun (_, src, dst) -> mentions_block src || mentions_block dst) others
+                      then None
+                      else Some (List.filter_map (fun (_, _, dst) -> self_cell dst) selves))
+                    branches
+                in
+                match List.concat (List.filter_map Fun.id cells) with
+                | node :: _
+                  when (not is_coinductive)
+                       && List.for_all
+                            (function Some l -> List.length l <= 1 | None -> false)
+                            cells ->
+                  Some node
+                | _ -> None
+              in
+              let below_id = Id.of_string "_below" in
+              let branches =
+                match spine_node with
+                | None -> branches
+                | Some _ ->
+                  List.map
+                    (fun (src_ty, cname_id, field_info, converted) ->
+                      ( src_ty, cname_id, field_info,
+                        List.map2
+                          (fun (_, _, dst) conv ->
+                            if self_cell dst <> None then CPPmove (CPPvar below_id) else conv)
+                          field_info converted ))
+                    branches
+              in
               (* Each branch returns the source's alternative read at this
                  instantiation; see [init] below. *)
               let make_branch_body cname_id field_info converted =
@@ -2811,7 +2873,45 @@ let gen_ind_header_v2
                           ^ ">::converted_from") ))
                     [ mk_call (CPPaccess (Adot, CPPvar other_id, Id.of_string "lazy_cell")) [];
                       convert_variant ~capture:Closure ]
-                else mk_call (convert_variant ~capture:Immediate) []
+                else
+                  match spine_node with
+                  | None -> mk_call (convert_variant ~capture:Immediate) []
+                  | Some node ->
+                    let s_id = Id.of_string "_cell" and alt_id = Id.of_string "_alt" in
+                    let source_ref = Tref (Lvalue, Tconst source_ty) in
+                    let s_v = CPPaccess_call (Adot, CPPvar s_id, Id.of_string "v", []) in
+                    (* A cell's own cell, or null. *)
+                    let child =
+                      let rec chain = function
+                        | [] -> [Sreturn (Some CPPnullptr)]
+                        | (_, cname_id, field_info, _) :: rest -> (
+                          match List.find_opt (fun (_, _, dst) -> self_cell dst <> None) field_info with
+                          | None -> chain rest
+                          | Some (field_id, _, _) ->
+                            let alt = Tqualified (source_ty, cname_id) in
+                            let field =
+                              CPPaccess (Adot, CPPstd_get (alt, Some s_v), field_id)
+                            in
+                            [ Sif
+                                ( mk_call (CPPstd_holds_alternative alt) [s_v],
+                                  [Sreturn (Some (CPPaccess_call (Adot, field, Id.of_string "get", [])))],
+                                  chain rest ) ] )
+                      in
+                      mk_lambda [(source_ref, Some s_id)] (Some (Tptr (Tconst source_ty)))
+                        (chain branches) ~capture:Immediate
+                    in
+                    let cell =
+                      mk_lambda
+                        [(source_ref, Some other_id); (Tshared_ptr node, Some below_id)]
+                        (Some variant_alias_ty) body ~capture:Immediate
+                    in
+                    let make =
+                      mk_lambda [(rval_ref Tauto, Some alt_id)] None
+                        [Sreturn (Some (mk_call (CPPalloc (Alloc_heap, node)) [CPPmove (CPPvar alt_id)]))]
+                        ~capture:Immediate
+                    in
+                    mk_call (CPPrt Crane_rt.Convert_spine)
+                      [CPPvar other_id; CPPshared_ptr_ctor (node, CPPnullptr); child; cell; make]
               in
               (* Non-explicit: erased grammar actions produce a [List<std::any>]
                  that must implicitly recover to the concrete-element list at
@@ -2854,7 +2954,7 @@ let gen_ind_header_v2
                   mf_is_inline = false;
                   mf_no_pure = false;
                   mf_is_noexcept = false;
-                  mf_is_conversion = false;
+                  mf_kind = Ordinary;
                 },
               VPublic,
               SAccessors ) ]
@@ -2885,7 +2985,7 @@ let gen_ind_header_v2
                 mf_is_inline = false;
                 mf_no_pure = false;
                 mf_is_noexcept = false;
-                mf_is_conversion = false;
+                mf_kind = Ordinary;
               },
             VPublic,
             SAccessors )
@@ -2903,7 +3003,7 @@ let gen_ind_header_v2
                 mf_is_inline = false;
                 mf_no_pure = false;
                 mf_is_noexcept = false;
-                mf_is_conversion = false;
+                mf_kind = Ordinary;
               },
             VPublic,
             SAccessors )
@@ -2929,7 +3029,7 @@ let gen_ind_header_v2
                   mf_is_inline = true;
                   mf_no_pure = true;
                   mf_is_noexcept = false;
-                  mf_is_conversion = false;
+                  mf_kind = Ordinary;
                 },
               VPublic,
               SManipulators );

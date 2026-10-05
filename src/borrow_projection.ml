@@ -25,7 +25,7 @@ let is_projection m =
   ( match m.mf_receiver with
   | Instance {is_const = true; ref_qual = Rq_any; _} -> true
   | _ -> false )
-  && m.mf_params = [] && not m.mf_is_conversion
+  && m.mf_params = [] && m.mf_kind = Ordinary
   && ( match m.mf_ret_type with
      | Tref _ | Tvoid -> false
      | _ -> true )

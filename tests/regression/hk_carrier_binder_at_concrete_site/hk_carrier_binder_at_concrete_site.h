@@ -6,7 +6,6 @@
 #include "obj.h"
 #include <atomic>
 #include <memory>
-#include <stdexcept>
 #include <utility>
 #include <variant>
 
@@ -104,15 +103,10 @@ template <typename T> struct box {
   T b_payload;
 
   // ACCESSORS
-  template <typename CraneU> operator box<CraneU>() const {
-    return {[&]() -> CraneU {
-      if constexpr (crane_convertible<CraneU, const T &>) {
-        return crane_convert<CraneU>(b_payload);
-      } else {
-        throw std::logic_error(
-            "unreachable: inactive constructor field at this instantiation");
-      }
-    }()};
+  template <typename CraneU>
+    requires crane_convertible<CraneU, const T &>
+  operator box<CraneU>() const {
+    return {crane_convert<CraneU>(b_payload)};
   }
 };
 
@@ -125,23 +119,10 @@ template <typename T, typename Body> struct holder {
 
   // ACCESSORS
   template <typename CraneU0, typename CraneU1>
+    requires crane_convertible<CraneU0, const T &> &&
+             crane_convertible<CraneU1, const Body &>
   operator holder<CraneU0, CraneU1>() const {
-    return {[&]() -> CraneU0 {
-              if constexpr (crane_convertible<CraneU0, const T &>) {
-                return crane_convert<CraneU0>(h_head);
-              } else {
-                throw std::logic_error("unreachable: inactive constructor "
-                                       "field at this instantiation");
-              }
-            }(),
-            [&]() -> CraneU1 {
-              if constexpr (crane_convertible<CraneU1, const Body &>) {
-                return crane_convert<CraneU1>(h_body);
-              } else {
-                throw std::logic_error("unreachable: inactive constructor "
-                                       "field at this instantiation");
-              }
-            }()};
+    return {crane_convert<CraneU0>(h_head), crane_convert<CraneU1>(h_body)};
   }
 };
 

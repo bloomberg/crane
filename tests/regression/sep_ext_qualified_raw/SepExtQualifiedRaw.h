@@ -41,28 +41,42 @@ template <OrderedType X> struct Make {
 
     template <typename CraneU>
     Fmap(const Fmap<CraneU> &_other)
-        : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename Fmap<CraneU>::Empty>(
-                    _other.v())) {
-              return Empty{};
-            } else {
-              const auto &[a0, a1, a2] =
-                  std::get<typename Fmap<CraneU>::Node>(_other.v());
-              return Node{
-                  a0,
-                  [&]() -> A {
-                    if constexpr (crane_convertible<A, const CraneU &>) {
-                      return crane_convert<A>(a1);
-                    } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
-                    }
-                  }(),
-                  (a2 ? std::make_shared<Fmap<A>>(crane_convert<Fmap<A>>(*a2))
-                      : nullptr)};
-            }
-          }()) {}
+        : v_(crane_convert_spine(
+              _other, std::shared_ptr<Fmap<A>>(nullptr),
+              [](const Fmap<CraneU> &_cell) -> const Fmap<CraneU> * {
+                if (std::holds_alternative<typename Fmap<CraneU>::Node>(
+                        _cell.v())) {
+                  return std::get<typename Fmap<CraneU>::Node>(_cell.v())
+                      .a2.get();
+                } else {
+                  return nullptr;
+                }
+              },
+              [&](const Fmap<CraneU> &_other,
+                  std::shared_ptr<Fmap<A>> _below) -> variant_t {
+                if (std::holds_alternative<typename Fmap<CraneU>::Empty>(
+                        _other.v())) {
+                  return Empty{};
+                } else {
+                  const auto &[a0, a1, a2] =
+                      std::get<typename Fmap<CraneU>::Node>(_other.v());
+                  return Node{
+                      a0,
+                      [&]() -> A {
+                        if constexpr (crane_convertible<A, const CraneU &>) {
+                          return crane_convert<A>(a1);
+                        } else {
+                          throw std::logic_error(
+                              "unreachable: inactive constructor field at this "
+                              "instantiation");
+                        }
+                      }(),
+                      std::move(_below)};
+                }
+              },
+              [](auto &&_alt) {
+                return std::make_shared<Fmap<A>>(std::move(_alt));
+              })) {}
 
     static Fmap<A> empty() { return Fmap<A>(Empty{}); }
 

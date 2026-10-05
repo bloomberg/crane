@@ -2312,7 +2312,7 @@ and pp_cpp_expr env args t =
   (* Low-level constructs for reuse optimization *)
   | CPPrt h ->
     (match h with
-     | Crane_rt.Raw -> Table.mark_needs_erase_fn ()
+     | Crane_rt.Raw | Crane_rt.Convert_spine -> Table.mark_needs_erase_fn ()
      | Crane_rt.Unbox_field -> Table.demand_header (Table.Runtime Crane_rt.field_header)
      | Crane_rt.Make_rc_reusing_unchecked | Crane_rt.Reuse_step -> ());
     str (Crane_rt.name h)
@@ -2471,6 +2471,13 @@ and pp_object env args e =
     str "(" ++ pp_cpp_expr env args e ++ str ")"
   | _ -> pp_cpp_expr env args e
 
+(** A compile-time question about types, as the condition C++ states it. *)
+and pp_type_test = function
+  | Tt_convertible (t1, t2) ->
+    Table.mark_needs_erase_fn ();
+    str Crane_rt.convertible ++ str "<" ++ pp_cpp_type false [] t1 ++ str ", "
+    ++ pp_cpp_type false [] t2 ++ str ">"
+
 (** Pretty-print a MiniCpp statement as C++ source.
 
     @param env   name environment (see {!pp_cpp_expr})
@@ -2583,13 +2590,8 @@ and pp_cpp_stmt env args = function
       fnl () ++ str "assert(" ++ str expr_str ++ str ");"
     | Pstated _ -> mt () )
   (* Reuse optimization constructs *)
-  | Sif_constexpr (Tt_convertible (t1, t2), then_stmts, else_stmts) ->
-    Table.mark_needs_erase_fn ();
-    str "if constexpr (" ++ str Crane_rt.convertible ++ str "<"
-    ++ pp_cpp_type false [] t1
-    ++ str ", "
-    ++ pp_cpp_type false [] t2
-    ++ str ">) {"
+  | Sif_constexpr (test, then_stmts, else_stmts) ->
+    str "if constexpr (" ++ pp_type_test test ++ str ") {"
     ++ fnl ()
     ++ pp_list_stmt (pp_cpp_stmt env args) then_stmts
     ++ fnl ()
@@ -3323,7 +3325,7 @@ let pp_template_param_redecl (tt, id) = pp_template_type tt ++ spc () ++ Id.prin
                     template parameter declaration
     @return [Some pp] where [pp] is the full [requires ...] clause, or [None]
             if no [TTfun] constraints are present *)
-let pp_requires_of_tparams tparams =
+let pp_requires_of_tparams ?(tests = []) tparams =
   let invocable_r =
     if String.equal (Table.std_lib ()) "BDE" then "bsl::is_invocable_r_v"
     else "std::is_invocable_r_v"
@@ -3373,6 +3375,7 @@ let pp_requires_of_tparams tparams =
             ++ str ">" )
         | _ -> None)
       tparams
+    @ List.map pp_type_test tests
   in
   match clauses with
   | [] -> None
@@ -3551,7 +3554,7 @@ let rec pp_cpp_field
         mf_is_inline;
         mf_no_pure;
         mf_is_noexcept;
-        mf_is_conversion;
+        mf_kind;
       } ->
     let const_s =
       match mf_receiver with
@@ -3598,7 +3601,8 @@ let rec pp_cpp_field
       | [] -> mt ()
       | _ ->
         let args = pp_list pp_template_param mf_tparams in
-        let req = pp_requires_of_tparams mf_tparams in
+        let tests = match mf_kind with Conversion tests -> tests | Ordinary -> [] in
+        let req = pp_requires_of_tparams ~tests mf_tparams in
         str "template <" ++ args ++ str ">" ++ fnl ()
         ++ ( match req with
            | None -> mt ()
@@ -3621,11 +3625,11 @@ let rec pp_cpp_field
     let head =
       h
         ( inline_s
-        ++ ( if mf_is_conversion then
-               qual_s ++ str "operator " ++ pp_type mf_ret_type
-             else
-               qualifier ++ static_s ++ pp_type mf_ret_type ++ str " "
-               ++ qual_s ++ Id.print mf_name )
+        ++ ( match mf_kind with
+           | Conversion _ -> qual_s ++ str "operator " ++ pp_type mf_ret_type
+           | Ordinary ->
+             qualifier ++ static_s ++ pp_type mf_ret_type ++ str " "
+             ++ qual_s ++ Id.print mf_name )
         ++ pp_par true params_s
         ++ const_s
         ++ noexcept_s )

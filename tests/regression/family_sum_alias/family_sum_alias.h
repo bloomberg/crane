@@ -326,15 +326,10 @@ struct FamilySumAlias {
     // ACCESSORS
     aE<P> clone() const { return {a0}; }
 
-    template <typename CraneU> operator aE<CraneU>() const {
-      return {[&]() -> CraneU {
-        if constexpr (crane_convertible<CraneU, const P &>) {
-          return crane_convert<CraneU>(a0);
-        } else {
-          throw std::logic_error(
-              "unreachable: inactive constructor field at this instantiation");
-        }
-      }()};
+    template <typename CraneU>
+      requires crane_convertible<CraneU, const P &>
+    operator aE<CraneU>() const {
+      return {crane_convert<CraneU>(a0)};
     }
 
     // CREATORS

@@ -8,7 +8,6 @@
 #include <cstdint>
 #include <deque>
 #include <memory>
-#include <stdexcept>
 #include <string>
 #include <utility>
 #include <variant>
@@ -29,23 +28,10 @@ template <typename A, typename P> struct SigT {
   SigT<A, P> clone() const { return {x, a1}; }
 
   template <typename CraneU0, typename CraneU1>
+    requires crane_convertible<CraneU0, const A &> &&
+             crane_convertible<CraneU1, const P &>
   operator SigT<CraneU0, CraneU1>() const {
-    return {[&]() -> CraneU0 {
-              if constexpr (crane_convertible<CraneU0, const A &>) {
-                return crane_convert<CraneU0>(x);
-              } else {
-                throw std::logic_error("unreachable: inactive constructor "
-                                       "field at this instantiation");
-              }
-            }(),
-            [&]() -> CraneU1 {
-              if constexpr (crane_convertible<CraneU1, const P &>) {
-                return crane_convert<CraneU1>(a1);
-              } else {
-                throw std::logic_error("unreachable: inactive constructor "
-                                       "field at this instantiation");
-              }
-            }()};
+    return {crane_convert<CraneU0>(x), crane_convert<CraneU1>(a1)};
   }
 
   // CREATORS

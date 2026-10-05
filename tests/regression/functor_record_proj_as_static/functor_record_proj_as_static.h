@@ -146,25 +146,40 @@ public:
 
   template <typename CraneU>
   List(const List<CraneU> &_other)
-      : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
-            return Nil{};
-          } else {
-            const auto &[a, l] =
-                std::get<typename List<CraneU>::Cons>(_other.v());
-            return Cons{
-                [&]() -> A {
-                  if constexpr (crane_convertible<A, const CraneU &>) {
-                    return crane_convert<A>(a);
-                  } else {
-                    throw std::logic_error("unreachable: inactive constructor "
-                                           "field at this instantiation");
-                  }
-                }(),
-                (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
-                   : nullptr)};
-          }
-        }()) {}
+      : v_(crane_convert_spine(
+            _other, std::shared_ptr<List<A>>(nullptr),
+            [](const List<CraneU> &_cell) -> const List<CraneU> * {
+              if (std::holds_alternative<typename List<CraneU>::Cons>(
+                      _cell.v())) {
+                return std::get<typename List<CraneU>::Cons>(_cell.v()).l.get();
+              } else {
+                return nullptr;
+              }
+            },
+            [&](const List<CraneU> &_other,
+                std::shared_ptr<List<A>> _below) -> variant_t {
+              if (std::holds_alternative<typename List<CraneU>::Nil>(
+                      _other.v())) {
+                return Nil{};
+              } else {
+                const auto &[a, l] =
+                    std::get<typename List<CraneU>::Cons>(_other.v());
+                return Cons{
+                    [&]() -> A {
+                      if constexpr (crane_convertible<A, const CraneU &>) {
+                        return crane_convert<A>(a);
+                      } else {
+                        throw std::logic_error(
+                            "unreachable: inactive constructor field at this "
+                            "instantiation");
+                      }
+                    }(),
+                    std::move(_below)};
+              }
+            },
+            [](auto &&_alt) {
+              return std::make_shared<List<A>>(std::move(_alt));
+            })) {}
 
   static List<A> nil() { return List<A>(Nil{}); }
 
@@ -1499,30 +1514,43 @@ template <Int I, OrderedType X> struct Raw {
 
     template <typename CraneU>
     enumeration(const enumeration<CraneU> &_other)
-        : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename enumeration<CraneU>::End>(
-                    _other.v())) {
-              return End{};
-            } else {
-              const auto &[a0, a1, a2, a3] =
-                  std::get<typename enumeration<CraneU>::More>(_other.v());
-              return More{
-                  a0,
-                  [&]() -> elt {
-                    if constexpr (crane_convertible<elt, const CraneU &>) {
-                      return crane_convert<elt>(a1);
-                    } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
-                    }
-                  }(),
-                  crane_convert<tree<elt>>(a2),
-                  (a3 ? std::make_shared<enumeration<elt>>(
-                            crane_convert<enumeration<elt>>(*a3))
-                      : nullptr)};
-            }
-          }()) {}
+        : v_(crane_convert_spine(
+              _other, std::shared_ptr<enumeration<elt>>(nullptr),
+              [](const enumeration<CraneU> &_cell)
+                  -> const enumeration<CraneU> * {
+                if (std::holds_alternative<typename enumeration<CraneU>::More>(
+                        _cell.v())) {
+                  return std::get<typename enumeration<CraneU>::More>(_cell.v())
+                      .a3.get();
+                } else {
+                  return nullptr;
+                }
+              },
+              [&](const enumeration<CraneU> &_other,
+                  std::shared_ptr<enumeration<elt>> _below) -> variant_t {
+                if (std::holds_alternative<typename enumeration<CraneU>::End>(
+                        _other.v())) {
+                  return End{};
+                } else {
+                  const auto &[a0, a1, a2, a3] =
+                      std::get<typename enumeration<CraneU>::More>(_other.v());
+                  return More{
+                      a0,
+                      [&]() -> elt {
+                        if constexpr (crane_convertible<elt, const CraneU &>) {
+                          return crane_convert<elt>(a1);
+                        } else {
+                          throw std::logic_error(
+                              "unreachable: inactive constructor field at this "
+                              "instantiation");
+                        }
+                      }(),
+                      crane_convert<tree<elt>>(a2), std::move(_below)};
+                }
+              },
+              [](auto &&_alt) {
+                return std::make_shared<enumeration<elt>>(std::move(_alt));
+              })) {}
 
     static enumeration<elt> end() { return enumeration<elt>(End{}); }
 

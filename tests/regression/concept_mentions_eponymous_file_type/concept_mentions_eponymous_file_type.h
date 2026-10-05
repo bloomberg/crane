@@ -95,29 +95,48 @@ struct List {
 
     template <typename CraneU>
     list(const typename List::template list<CraneU> &_other)
-        : v_([&]() -> variant_t {
-            if (std::holds_alternative<
-                    typename List::template list<CraneU>::Nil>(_other.v())) {
-              return Nil{};
-            } else {
-              const auto &[a, l] =
-                  std::get<typename List::template list<CraneU>::Cons>(
-                      _other.v());
-              return Cons{
-                  [&]() -> A {
-                    if constexpr (crane_convertible<A, const CraneU &>) {
-                      return crane_convert<A>(a);
-                    } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
-                    }
-                  }(),
-                  (l ? std::make_shared<typename List::template list<A>>(
-                           crane_convert<typename List::template list<A>>(*l))
-                     : nullptr)};
-            }
-          }()) {}
+        : v_(crane_convert_spine(
+              _other, std::shared_ptr<typename List::template list<A>>(nullptr),
+              [](const typename List::template list<CraneU> &_cell)
+                  -> const typename List::template list<CraneU> * {
+                if (std::holds_alternative<
+                        typename List::template list<CraneU>::Cons>(
+                        _cell.v())) {
+                  return std::get<typename List::template list<CraneU>::Cons>(
+                             _cell.v())
+                      .l.get();
+                } else {
+                  return nullptr;
+                }
+              },
+              [&](const typename List::template list<CraneU> &_other,
+                  std::shared_ptr<typename List::template list<A>> _below)
+                  -> variant_t {
+                if (std::holds_alternative<
+                        typename List::template list<CraneU>::Nil>(
+                        _other.v())) {
+                  return Nil{};
+                } else {
+                  const auto &[a, l] =
+                      std::get<typename List::template list<CraneU>::Cons>(
+                          _other.v());
+                  return Cons{
+                      [&]() -> A {
+                        if constexpr (crane_convertible<A, const CraneU &>) {
+                          return crane_convert<A>(a);
+                        } else {
+                          throw std::logic_error(
+                              "unreachable: inactive constructor field at this "
+                              "instantiation");
+                        }
+                      }(),
+                      std::move(_below)};
+                }
+              },
+              [](auto &&_alt) {
+                return std::make_shared<typename List::template list<A>>(
+                    std::move(_alt));
+              })) {}
 
     static typename List::template list<A> nil() {
       return typename List::template list<A>(Nil{});

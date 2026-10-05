@@ -20,15 +20,10 @@ struct PolyInductive {
     // ACCESSORS
     pbox<A> clone() const { return {a0}; }
 
-    template <typename CraneU> operator pbox<CraneU>() const {
-      return {[&]() -> CraneU {
-        if constexpr (crane_convertible<CraneU, const A &>) {
-          return crane_convert<CraneU>(a0);
-        } else {
-          throw std::logic_error(
-              "unreachable: inactive constructor field at this instantiation");
-        }
-      }()};
+    template <typename CraneU>
+      requires crane_convertible<CraneU, const A &>
+    operator pbox<CraneU>() const {
+      return {crane_convert<CraneU>(a0)};
     }
 
     // CREATORS
@@ -63,23 +58,10 @@ struct PolyInductive {
     ppair<A, B> clone() const { return {a0, a1}; }
 
     template <typename CraneU0, typename CraneU1>
+      requires crane_convertible<CraneU0, const A &> &&
+               crane_convertible<CraneU1, const B &>
     operator ppair<CraneU0, CraneU1>() const {
-      return {[&]() -> CraneU0 {
-                if constexpr (crane_convertible<CraneU0, const A &>) {
-                  return crane_convert<CraneU0>(a0);
-                } else {
-                  throw std::logic_error("unreachable: inactive constructor "
-                                         "field at this instantiation");
-                }
-              }(),
-              [&]() -> CraneU1 {
-                if constexpr (crane_convertible<CraneU1, const B &>) {
-                  return crane_convert<CraneU1>(a1);
-                } else {
-                  throw std::logic_error("unreachable: inactive constructor "
-                                         "field at this instantiation");
-                }
-              }()};
+      return {crane_convert<CraneU0>(a0), crane_convert<CraneU1>(a1)};
     }
 
     // CREATORS

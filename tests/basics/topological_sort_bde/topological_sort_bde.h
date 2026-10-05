@@ -50,26 +50,41 @@ public:
   explicit List(Cons _v) : d_v_(bsl::move(_v)) {}
   template <typename CraneU>
   List(const List<CraneU> &_other)
-      : d_v_([&]() -> variant_t {
-          if (bsl::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
-            return Nil{};
-          } else {
-            const auto &[d_a, d_l] =
-                bsl::get<typename List<CraneU>::Cons>(_other.v());
-            return Cons{
-                [&]() -> t_A {
-                  if constexpr (crane_convertible<t_A, const CraneU &>) {
-                    return crane_convert<t_A>(d_a);
-                  } else {
-                    throw bsl::logic_error("unreachable: inactive constructor "
-                                           "field at this instantiation");
-                  }
-                }(),
-                (d_l ? bsl::make_shared<List<t_A>>(
-                           crane_convert<List<t_A>>(*d_l))
-                     : nullptr)};
-          }
-        }()) {}
+      : d_v_(crane_convert_spine(
+            _other, bsl::shared_ptr<List<t_A>>(nullptr),
+            [](const List<CraneU> &_cell) -> const List<CraneU> * {
+              if (bsl::holds_alternative<typename List<CraneU>::Cons>(
+                      _cell.v())) {
+                return bsl::get<typename List<CraneU>::Cons>(_cell.v())
+                    .d_l.get();
+              } else {
+                return nullptr;
+              }
+            },
+            [&](const List<CraneU> &_other,
+                bsl::shared_ptr<List<t_A>> _below) -> variant_t {
+              if (bsl::holds_alternative<typename List<CraneU>::Nil>(
+                      _other.v())) {
+                return Nil{};
+              } else {
+                const auto &[d_a, d_l] =
+                    bsl::get<typename List<CraneU>::Cons>(_other.v());
+                return Cons{
+                    [&]() -> t_A {
+                      if constexpr (crane_convertible<t_A, const CraneU &>) {
+                        return crane_convert<t_A>(d_a);
+                      } else {
+                        throw bsl::logic_error(
+                            "unreachable: inactive constructor field at this "
+                            "instantiation");
+                      }
+                    }(),
+                    bsl::move(_below)};
+              }
+            },
+            [](auto &&_alt) {
+              return bsl::make_shared<List<t_A>>(bsl::move(_alt));
+            })) {}
   static List<t_A> nil() { return List<t_A>(Nil{}); }
   static List<t_A> cons(t_A a, List<t_A> l) {
     return List<t_A>(

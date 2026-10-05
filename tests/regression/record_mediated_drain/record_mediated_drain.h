@@ -7,7 +7,6 @@
 #include <atomic>
 #include <cstdint>
 #include <memory>
-#include <stdexcept>
 #include <utility>
 #include <variant>
 
@@ -17,15 +16,10 @@ struct RecordMediatedDrain {
     A tl;
 
     // ACCESSORS
-    template <typename CraneU> operator cell<CraneU>() const {
-      return {hd, [&]() -> CraneU {
-                if constexpr (crane_convertible<CraneU, const A &>) {
-                  return crane_convert<CraneU>(tl);
-                } else {
-                  throw std::logic_error("unreachable: inactive constructor "
-                                         "field at this instantiation");
-                }
-              }()};
+    template <typename CraneU>
+      requires crane_convertible<CraneU, const A &>
+    operator cell<CraneU>() const {
+      return {hd, crane_convert<CraneU>(tl)};
     }
   };
 

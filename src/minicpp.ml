@@ -662,8 +662,10 @@ and method_field = {
   mf_is_inline : bool;
   mf_no_pure : bool;
   mf_is_noexcept : bool;
-  mf_is_conversion : bool;
+  mf_kind : method_kind;
 }
+
+and method_kind = Ordinary | Conversion of type_test list
 
 and receiver =
   | Static
@@ -748,7 +750,7 @@ let static_fun ~name ~ret ~params ~body =
     mf_is_inline = false;
     mf_no_pure = false;
     mf_is_noexcept = false;
-    mf_is_conversion = false }
+    mf_kind = Ordinary }
 
 (** Rvalue reference type [T&&]. *)
 let rval_ref ty = Tref (Forwarding, ty)

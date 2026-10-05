@@ -5,7 +5,6 @@
 #include "fn.h"
 #include "obj.h"
 #include <cstdint>
-#include <stdexcept>
 
 struct SingletonRecord {
   struct wrapper {
@@ -22,15 +21,10 @@ struct SingletonRecord {
     A contents;
 
     // ACCESSORS
-    template <typename CraneU> operator box<CraneU>() const {
-      return {[&]() -> CraneU {
-        if constexpr (crane_convertible<CraneU, const A &>) {
-          return crane_convert<CraneU>(contents);
-        } else {
-          throw std::logic_error(
-              "unreachable: inactive constructor field at this instantiation");
-        }
-      }()};
+    template <typename CraneU>
+      requires crane_convertible<CraneU, const A &>
+    operator box<CraneU>() const {
+      return {crane_convert<CraneU>(contents)};
     }
   };
 
