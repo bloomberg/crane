@@ -245,15 +245,8 @@ struct LoopifyStructures {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 nested_rec(F0 &&f, F1 &&f0) const {
-      if (std::holds_alternative<typename nested::Elem>(this->v())) {
-        const auto &[a0] = std::get<typename nested::Elem>(this->v());
-        return f(a0);
-      } else {
-        const auto &[a0] = std::get<typename nested::NList>(this->v());
-        return f0(*a0);
-      }
+      return this->template nested_rect<T1>(f, f0);
     }
 
     template <typename T1, typename F0, typename F1>
@@ -662,122 +655,8 @@ struct LoopifyStructures {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 quadtree_rec(F0 &&f, F1 &&f0) const {
-      const quadtree *_self = this;
-
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
-        const quadtree *_self;
-      };
-
-      /// CraneCont_Quad: saves [a0, a1, a2, a3], resumes after recursive call,
-      /// then processes rest.
-      struct CraneCont_Quad {
-        std::shared_ptr<quadtree> a0;
-        std::shared_ptr<quadtree> a1;
-        std::shared_ptr<quadtree> a2;
-        std::shared_ptr<quadtree> a3;
-      };
-
-      /// CraneCont_Quad_1: saves [_tmp4, a0, a1, a2, a3], resumes after
-      /// recursive call, then processes rest.
-      struct CraneCont_Quad_1 {
-        T1 _tmp4;
-        std::shared_ptr<quadtree> a0;
-        std::shared_ptr<quadtree> a1;
-        std::shared_ptr<quadtree> a2;
-        std::shared_ptr<quadtree> a3;
-      };
-
-      /// CraneCont_Quad_2: saves [_tmp3, _tmp4, a0, a1, a2, a3], resumes after
-      /// recursive call, then processes rest.
-      struct CraneCont_Quad_2 {
-        T1 _tmp3;
-        T1 _tmp4;
-        std::shared_ptr<quadtree> a0;
-        std::shared_ptr<quadtree> a1;
-        std::shared_ptr<quadtree> a2;
-        std::shared_ptr<quadtree> a3;
-      };
-
-      /// CraneCont_Quad_3: saves [_tmp2, _tmp3, _tmp4, a0, a1, a2, a3], resumes
-      /// after recursive call, then processes rest.
-      struct CraneCont_Quad_3 {
-        T1 _tmp2;
-        T1 _tmp3;
-        T1 _tmp4;
-        std::shared_ptr<quadtree> a0;
-        std::shared_ptr<quadtree> a1;
-        std::shared_ptr<quadtree> a2;
-        std::shared_ptr<quadtree> a3;
-      };
-
-      using CraneFrame =
-          std::variant<CraneEnter, CraneCont_Quad, CraneCont_Quad_1,
-                       CraneCont_Quad_2, CraneCont_Quad_3>;
-      T1 _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified quadtree_rec: CraneEnter -> CraneCont_Quad ->
-      /// CraneCont_Quad_1 -> CraneCont_Quad_2 -> CraneCont_Quad_3.
-      while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
-          const quadtree *_self = _f._self;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename quadtree::QLeaf>(_sv.v())) {
-            const auto &[a0] = std::get<typename quadtree::QLeaf>(_sv.v());
-            _result = f(a0);
-          } else {
-            const auto &[a0, a1, a2, a3] =
-                std::get<typename quadtree::Quad>(_sv.v());
-            _stack.emplace_back(CraneCont_Quad{a0, a1, a2, a3});
-            _stack.emplace_back(CraneEnter{crane_raw(a0)});
-          }
-        } else if (std::holds_alternative<CraneCont_Quad>(_frame)) {
-          auto _f = std::move(std::get<CraneCont_Quad>(_frame));
-          std::shared_ptr<quadtree> a0 = std::move(_f.a0);
-          std::shared_ptr<quadtree> a1 = std::move(_f.a1);
-          std::shared_ptr<quadtree> a2 = std::move(_f.a2);
-          std::shared_ptr<quadtree> a3 = std::move(_f.a3);
-          _stack.emplace_back(CraneCont_Quad_1{std::move(_result),
-                                               std::move(a0), a1, std::move(a2),
-                                               std::move(a3)});
-          _stack.emplace_back(CraneEnter{crane_raw(a1)});
-        } else if (std::holds_alternative<CraneCont_Quad_1>(_frame)) {
-          auto _f = std::move(std::get<CraneCont_Quad_1>(_frame));
-          std::shared_ptr<quadtree> a0 = std::move(_f.a0);
-          std::shared_ptr<quadtree> a1 = std::move(_f.a1);
-          std::shared_ptr<quadtree> a2 = std::move(_f.a2);
-          std::shared_ptr<quadtree> a3 = std::move(_f.a3);
-          _stack.emplace_back(CraneCont_Quad_2{
-              std::move(_result), std::move(_f._tmp4), std::move(a0),
-              std::move(a1), a2, std::move(a3)});
-          _stack.emplace_back(CraneEnter{crane_raw(a2)});
-        } else if (std::holds_alternative<CraneCont_Quad_2>(_frame)) {
-          auto _f = std::move(std::get<CraneCont_Quad_2>(_frame));
-          std::shared_ptr<quadtree> a0 = std::move(_f.a0);
-          std::shared_ptr<quadtree> a1 = std::move(_f.a1);
-          std::shared_ptr<quadtree> a2 = std::move(_f.a2);
-          std::shared_ptr<quadtree> a3 = std::move(_f.a3);
-          _stack.emplace_back(CraneCont_Quad_3{
-              std::move(_result), std::move(_f._tmp3), std::move(_f._tmp4),
-              std::move(a0), std::move(a1), std::move(a2), a3});
-          _stack.emplace_back(CraneEnter{crane_raw(a3)});
-        } else {
-          auto _f = std::move(std::get<CraneCont_Quad_3>(_frame));
-          std::shared_ptr<quadtree> a0 = std::move(_f.a0);
-          std::shared_ptr<quadtree> a1 = std::move(_f.a1);
-          std::shared_ptr<quadtree> a2 = std::move(_f.a2);
-          std::shared_ptr<quadtree> a3 = std::move(_f.a3);
-          _result = f0(*a0, std::move(_f._tmp4), *a1, std::move(_f._tmp3), *a2,
-                       std::move(_f._tmp2), *a3, std::move(_result));
-        }
-      }
-      return _result;
+      return this->template quadtree_rect<T1>(f, f0);
     }
 
     template <typename T1, typename F0, typename F1>
@@ -1147,71 +1026,8 @@ struct LoopifyStructures {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 ltree_rec(F0 &&f, F1 &&f0) const {
-      const ltree *_self = this;
-
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
-        const ltree *_self;
-      };
-
-      /// CraneCont_LNode: saves [a0, a1, a2], resumes after recursive call,
-      /// then processes rest.
-      struct CraneCont_LNode {
-        uint64_t a0;
-        std::shared_ptr<ltree> a1;
-        std::shared_ptr<ltree> a2;
-      };
-
-      /// CraneCont_LNode_1: saves [_tmp2, a0, a1, a2], resumes after recursive
-      /// call, then processes rest.
-      struct CraneCont_LNode_1 {
-        T1 _tmp2;
-        uint64_t a0;
-        std::shared_ptr<ltree> a1;
-        std::shared_ptr<ltree> a2;
-      };
-
-      using CraneFrame =
-          std::variant<CraneEnter, CraneCont_LNode, CraneCont_LNode_1>;
-      T1 _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified ltree_rec: CraneEnter -> CraneCont_LNode ->
-      /// CraneCont_LNode_1.
-      while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
-          const ltree *_self = _f._self;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename ltree::LLeaf>(_sv.v())) {
-            const auto &[a0] = std::get<typename ltree::LLeaf>(_sv.v());
-            _result = f(a0);
-          } else {
-            const auto &[a0, a1, a2] = std::get<typename ltree::LNode>(_sv.v());
-            _stack.emplace_back(CraneCont_LNode{a0, a1, a2});
-            _stack.emplace_back(CraneEnter{crane_raw(a1)});
-          }
-        } else if (std::holds_alternative<CraneCont_LNode>(_frame)) {
-          auto _f = std::move(std::get<CraneCont_LNode>(_frame));
-          uint64_t a0 = _f.a0;
-          std::shared_ptr<ltree> a1 = std::move(_f.a1);
-          std::shared_ptr<ltree> a2 = std::move(_f.a2);
-          _stack.emplace_back(
-              CraneCont_LNode_1{std::move(_result), a0, std::move(a1), a2});
-          _stack.emplace_back(CraneEnter{crane_raw(a2)});
-        } else {
-          auto _f = std::move(std::get<CraneCont_LNode_1>(_frame));
-          uint64_t a0 = _f.a0;
-          std::shared_ptr<ltree> a1 = std::move(_f.a1);
-          std::shared_ptr<ltree> a2 = std::move(_f.a2);
-          _result = f0(a0, *a1, std::move(_f._tmp2), *a2, std::move(_result));
-        }
-      }
-      return _result;
+      return this->template ltree_rect<T1>(f, f0);
     }
 
     template <typename T1, typename F0, typename F1>

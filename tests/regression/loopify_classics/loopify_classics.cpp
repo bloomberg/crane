@@ -232,71 +232,9 @@ uint64_t LoopifyClassics::binomial(uint64_t n, uint64_t k) {
   return binomial_fuel((n * k), n, k);
 }
 
-uint64_t LoopifyClassics::pascal_fuel(
-    uint64_t fuel, uint64_t row,
-    uint64_t col) { /// CraneEnter: captures varying parameters for each
-                    /// recursive call.
-
-  struct CraneEnter {
-    uint64_t col;
-    uint64_t row;
-    uint64_t fuel;
-  };
-
-  /// CraneCont1: saves [col, fuel_, row], resumes after recursive call, then
-  /// processes rest.
-  struct CraneCont1 {
-    uint64_t col;
-    uint64_t fuel_;
-    uint64_t row;
-  };
-
-  /// CraneCont2: saves [_tmp2], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont2 {
-    uint64_t _tmp2;
-  };
-
-  using CraneFrame = std::variant<CraneEnter, CraneCont1, CraneCont2>;
-  uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{col, row, fuel});
-  /// Loopified pascal_fuel: CraneEnter -> CraneCont1 -> CraneCont2.
-  while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
-    _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
-      uint64_t col = _f.col;
-      uint64_t row = _f.row;
-      uint64_t fuel = _f.fuel;
-      if (fuel <= 0) {
-        _result = UINT64_C(1);
-      } else {
-        uint64_t fuel_ = fuel - 1;
-        if ((col == UINT64_C(0) || col == row)) {
-          _result = UINT64_C(1);
-        } else {
-          _stack.emplace_back(CraneCont1{col, fuel_, row});
-          _stack.emplace_back(CraneEnter{
-              (((col - UINT64_C(1)) > col ? 0 : (col - UINT64_C(1)))),
-              (((row - UINT64_C(1)) > row ? 0 : (row - UINT64_C(1)))), fuel_});
-        }
-      }
-    } else if (std::holds_alternative<CraneCont1>(_frame)) {
-      auto _f = std::move(std::get<CraneCont1>(_frame));
-      uint64_t col = _f.col;
-      uint64_t fuel_ = _f.fuel_;
-      uint64_t row = _f.row;
-      _stack.emplace_back(CraneCont2{std::move(_result)});
-      _stack.emplace_back(CraneEnter{
-          col, (((row - UINT64_C(1)) > row ? 0 : (row - UINT64_C(1)))), fuel_});
-    } else {
-      auto _f = std::move(std::get<CraneCont2>(_frame));
-      _result = (_f._tmp2 + std::move(_result));
-    }
-  }
-  return _result;
+uint64_t LoopifyClassics::pascal_fuel(uint64_t fuel, uint64_t row,
+                                      uint64_t col) {
+  return binomial_fuel(fuel, row, col);
 }
 
 uint64_t LoopifyClassics::pascal(uint64_t row, uint64_t col) {

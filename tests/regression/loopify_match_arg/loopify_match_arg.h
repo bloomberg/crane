@@ -126,20 +126,9 @@ struct LoopifyMatchArg {
     }
   }
 
-  template <typename T1> static T1 cell_rec(T1 f, T1 f0, T1 f1, Cell c) {
-    switch (c) {
-    case Cell::WALL: {
-      return f;
-    }
-    case Cell::EMPTY: {
-      return f0;
-    }
-    case Cell::DOT: {
-      return f1;
-    }
-    default:
-      std::unreachable();
-    }
+  template <typename T1>
+  static T1 cell_rec(const T1 &f, const T1 &f0, const T1 &f1, Cell c) {
+    return cell_rect<T1>(f, f0, f1, c);
   }
 
   /// Count the number of Dot cells in a list.

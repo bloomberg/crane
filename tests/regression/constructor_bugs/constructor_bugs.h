@@ -271,16 +271,8 @@ struct ConstructorBugs {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, const Inner &> &&
-             std::is_invocable_r_v<T1, F1 &, const uint64_t &>
   static T1 MySum_rec(F0 &&f, F1 &&f0, const MySum &m) {
-    if (std::holds_alternative<typename MySum::Left>(m.v())) {
-      const auto &[a0] = std::get<typename MySum::Left>(m.v());
-      return f(a0);
-    } else {
-      const auto &[a0] = std::get<typename MySum::Right>(m.v());
-      return f0(a0);
-    }
+    return MySum_rect<T1>(f, f0, m);
   }
 
   static std::pair<Inner, uint64_t> match_sum(const MySum &s);

@@ -132,13 +132,8 @@ struct ShadowRuntimeNat {
   }
 
   template <typename T1, typename F1>
-  static T1 Nat_rec(T1 f, F1 &&f0, const Nat &n) {
-    if (std::holds_alternative<typename Nat::O2>(n.v())) {
-      return f;
-    } else {
-      const auto &[a0] = std::get<typename Nat::S2>(n.v());
-      return f0(*a0, Nat_rec<T1>(std::move(f), f0, *a0));
-    }
+  static T1 Nat_rec(const T1 &f, F1 &&f0, const Nat &n) {
+    return Nat_rect<T1>(f, f0, n);
   }
 
   static inline const Nat two = Nat::s2(Nat::s2(Nat::o2()));

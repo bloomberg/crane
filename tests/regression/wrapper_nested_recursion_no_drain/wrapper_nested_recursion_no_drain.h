@@ -30,11 +30,8 @@ struct WrapperNestedRecursionNoDrain {
     // CREATORS
     static box<A> box0(A a0) { return {std::move(a0)}; }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, const A &>
-    T1 box_rec(F0 &&f) const {
-      const auto &[a0] = *this;
-      return f(a0);
+    template <typename T1, typename F0> T1 box_rec(F0 &&f) const {
+      return this->template box_rect<T1>(f);
     }
 
     template <typename T1, typename F0>
@@ -120,15 +117,8 @@ struct WrapperNestedRecursionNoDrain {
     const variant_t &v() const { return v_; }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 rose_rec(F0 &&f, F1 &&f0) const {
-      if (std::holds_alternative<typename rose::RLeaf>(this->v())) {
-        const auto &[a0] = std::get<typename rose::RLeaf>(this->v());
-        return f(a0);
-      } else {
-        const auto &[a0] = std::get<typename rose::RNode>(this->v());
-        return f0(*a0);
-      }
+      return this->template rose_rect<T1>(f, f0);
     }
 
     template <typename T1, typename F0, typename F1>

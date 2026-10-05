@@ -69,48 +69,11 @@ struct LargeEnum {
   }
 
   template <typename T1>
-  static T1 color_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5, T1 f6,
-                      T1 f7, T1 f8, T1 f9, T1 f10, Color c) {
-    switch (c) {
-    case Color::RED: {
-      return f;
-    }
-    case Color::ORANGE: {
-      return f0;
-    }
-    case Color::YELLOW: {
-      return f1;
-    }
-    case Color::GREEN: {
-      return f2;
-    }
-    case Color::BLUE: {
-      return f3;
-    }
-    case Color::INDIGO: {
-      return f4;
-    }
-    case Color::VIOLET: {
-      return f5;
-    }
-    case Color::BLACK: {
-      return f6;
-    }
-    case Color::WHITE: {
-      return f7;
-    }
-    case Color::GRAY: {
-      return f8;
-    }
-    case Color::BROWN: {
-      return f9;
-    }
-    case Color::PINK: {
-      return f10;
-    }
-    default:
-      std::unreachable();
-    }
+  static T1 color_rec(const T1 &f, const T1 &f0, const T1 &f1, const T1 &f2,
+                      const T1 &f3, const T1 &f4, const T1 &f5, const T1 &f6,
+                      const T1 &f7, const T1 &f8, const T1 &f9, const T1 &f10,
+                      Color c) {
+    return color_rect<T1>(f, f0, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, c);
   }
 
   static uint64_t color_to_nat(Color c);
@@ -249,37 +212,11 @@ struct LargeEnum {
   }
 
   template <typename T1, typename F0, typename F10>
-    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
-             std::is_invocable_r_v<T1, F10 &, const uint64_t &>
-  static T1 tok_rec(F0 &&f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5, T1 f6,
-                    T1 f7, T1 f8, F10 &&f9, T1 f10, const tok &t) {
-    if (std::holds_alternative<typename tok::TNum>(t.v())) {
-      const auto &[a0] = std::get<typename tok::TNum>(t.v());
-      return f(a0);
-    } else if (std::holds_alternative<typename tok::TPlus>(t.v())) {
-      return f0;
-    } else if (std::holds_alternative<typename tok::TMinus>(t.v())) {
-      return f1;
-    } else if (std::holds_alternative<typename tok::TStar>(t.v())) {
-      return f2;
-    } else if (std::holds_alternative<typename tok::TSlash>(t.v())) {
-      return f3;
-    } else if (std::holds_alternative<typename tok::TLParen>(t.v())) {
-      return f4;
-    } else if (std::holds_alternative<typename tok::TRParen>(t.v())) {
-      return f5;
-    } else if (std::holds_alternative<typename tok::TEq>(t.v())) {
-      return f6;
-    } else if (std::holds_alternative<typename tok::TBang>(t.v())) {
-      return f7;
-    } else if (std::holds_alternative<typename tok::TSemicolon>(t.v())) {
-      return f8;
-    } else if (std::holds_alternative<typename tok::TIdent>(t.v())) {
-      const auto &[a0] = std::get<typename tok::TIdent>(t.v());
-      return f9(a0);
-    } else {
-      return f10;
-    }
+  static T1 tok_rec(F0 &&f, const T1 &f0, const T1 &f1, const T1 &f2,
+                    const T1 &f3, const T1 &f4, const T1 &f5, const T1 &f6,
+                    const T1 &f7, const T1 &f8, F10 &&f9, const T1 &f10,
+                    const tok &t) {
+    return tok_rect<T1>(f, f0, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, t);
   }
 
   static uint64_t tok_to_nat(const tok &t);

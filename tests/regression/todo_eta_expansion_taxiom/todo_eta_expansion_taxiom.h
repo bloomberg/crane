@@ -38,10 +38,8 @@ struct TodoEtaExpansionTaxiom {
   }
 
   template <typename T1, typename T2, typename T3, typename F0>
-    requires std::is_invocable_r_v<T3, F0 &, const T1 &, const T2 &>
   static T3 Pair_rec(F0 &&f, const Pair<T1, T2> &p) {
-    const auto &[a0, a1] = p;
-    return f(a0, a1);
+    return Pair_rect<T1, T2, T3>(f, p);
   }
 
   template <typename T1, typename T2>

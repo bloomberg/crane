@@ -24,12 +24,8 @@ struct GeneratedMemberNameCollision {
       return (clone_0 + v_mut_1);
     }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &,
-                                     const uint64_t &>
-    T1 boxed_rec(F0 &&f) const {
-      const auto &[clone_0, v_mut_1] = *this;
-      return f(clone_0, v_mut_1);
+    template <typename T1, typename F0> T1 boxed_rec(F0 &&f) const {
+      return this->template boxed_rect<T1>(f);
     }
 
     template <typename T1, typename F0>
@@ -56,11 +52,8 @@ struct GeneratedMemberNameCollision {
       return a0;
     }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
-    T1 clone_rec(F0 &&f) const {
-      const auto &[a0] = *this;
-      return f(a0);
+    template <typename T1, typename F0> T1 clone_rec(F0 &&f) const {
+      return this->template clone_rect<T1>(f);
     }
 
     template <typename T1, typename F0>

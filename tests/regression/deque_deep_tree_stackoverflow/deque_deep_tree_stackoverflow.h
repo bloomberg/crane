@@ -90,15 +90,8 @@ struct DequeDeepTreeStackoverflow {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
   static T1 rose_rec(F0 &&f, F1 &&f0, const rose &r) {
-    if (std::holds_alternative<typename rose::RLeaf>(r.v())) {
-      const auto &[a0] = std::get<typename rose::RLeaf>(r.v());
-      return f(a0);
-    } else {
-      const auto &[a0] = std::get<typename rose::RNode>(r.v());
-      return f0(*a0);
-    }
+    return rose_rect<T1>(f, f0, r);
   }
 
   static rose deep_tree(uint64_t depth);

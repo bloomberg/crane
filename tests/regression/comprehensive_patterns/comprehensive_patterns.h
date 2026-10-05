@@ -199,20 +199,9 @@ struct ComprehensivePatterns {
     }
   }
 
-  template <typename T1> static T1 Three_rec(T1 f, T1 f0, T1 f3, Three t) {
-    switch (t) {
-    case Three::A: {
-      return f;
-    }
-    case Three::B: {
-      return f0;
-    }
-    case Three::C: {
-      return f3;
-    }
-    default:
-      std::unreachable();
-    }
+  template <typename T1>
+  static T1 Three_rec(const T1 &f, const T1 &f0, const T1 &f3, Three t) {
+    return Three_rect<T1>(f, f0, f3, t);
   }
 
   static std::pair<S, uint64_t> match_three(Three t, const S &s);
@@ -261,16 +250,8 @@ struct ComprehensivePatterns {
     const variant_t &v() const { return v_; }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, const S &> &&
-               std::is_invocable_r_v<T1, F1 &, const uint64_t &>
     T1 Either_rec(F0 &&f, F1 &&f0) const {
-      if (std::holds_alternative<typename Either::Left_S>(this->v())) {
-        const auto &[s0] = std::get<typename Either::Left_S>(this->v());
-        return f(s0);
-      } else {
-        const auto &[n0] = std::get<typename Either::Right_N>(this->v());
-        return f0(n0);
-      }
+      return this->template Either_rect<T1>(f, f0);
     }
 
     template <typename T1, typename F0, typename F1>
@@ -695,70 +676,8 @@ struct ComprehensivePatterns {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 Tree_rec(F0 &&f, F1 &&f0) const {
-      const Tree *_self = this;
-
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
-        const Tree *_self;
-      };
-
-      /// CraneCont_Node: saves [a0, a1, a2], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_Node {
-        std::shared_ptr<Tree> a0;
-        uint64_t a1;
-        std::shared_ptr<Tree> a2;
-      };
-
-      /// CraneCont_Node_1: saves [_tmp2, a0, a1, a2], resumes after recursive
-      /// call, then processes rest.
-      struct CraneCont_Node_1 {
-        T1 _tmp2;
-        std::shared_ptr<Tree> a0;
-        uint64_t a1;
-        std::shared_ptr<Tree> a2;
-      };
-
-      using CraneFrame =
-          std::variant<CraneEnter, CraneCont_Node, CraneCont_Node_1>;
-      T1 _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified Tree_rec: CraneEnter -> CraneCont_Node -> CraneCont_Node_1.
-      while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
-          const Tree *_self = _f._self;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename Tree::Leaf>(_sv.v())) {
-            const auto &[a0] = std::get<typename Tree::Leaf>(_sv.v());
-            _result = f(a0);
-          } else {
-            const auto &[a0, a1, a2] = std::get<typename Tree::Node>(_sv.v());
-            _stack.emplace_back(CraneCont_Node{a0, a1, a2});
-            _stack.emplace_back(CraneEnter{crane_raw(a0)});
-          }
-        } else if (std::holds_alternative<CraneCont_Node>(_frame)) {
-          auto _f = std::move(std::get<CraneCont_Node>(_frame));
-          std::shared_ptr<Tree> a0 = std::move(_f.a0);
-          uint64_t a1 = _f.a1;
-          std::shared_ptr<Tree> a2 = std::move(_f.a2);
-          _stack.emplace_back(
-              CraneCont_Node_1{std::move(_result), std::move(a0), a1, a2});
-          _stack.emplace_back(CraneEnter{crane_raw(a2)});
-        } else {
-          auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
-          std::shared_ptr<Tree> a0 = std::move(_f.a0);
-          uint64_t a1 = _f.a1;
-          std::shared_ptr<Tree> a2 = std::move(_f.a2);
-          _result = f0(*a0, std::move(_f._tmp2), a1, *a2, std::move(_result));
-        }
-      }
-      return _result;
+      return this->template Tree_rect<T1>(f, f0);
     }
 
     template <typename T1, typename F0, typename F1>
@@ -878,14 +797,8 @@ struct ComprehensivePatterns {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, const StateRO &>
-    T1 Container_rec(T1 f, F1 &&f0) const {
-      if (std::holds_alternative<typename Container::Empty>(this->v())) {
-        return f;
-      } else {
-        const auto &[a0] = std::get<typename Container::Full>(this->v());
-        return f0(a0);
-      }
+    T1 Container_rec(const T1 &f, F1 &&f0) const {
+      return this->template Container_rect<T1>(f, f0);
     }
 
     template <typename T1, typename F1>
@@ -907,7 +820,7 @@ struct ComprehensivePatterns {
 
   static StateOP identity(StateOP s);
   static uint64_t extract_via_match(const StateOP &s);
-  static StateOP consume_state(StateOP s);
+  static StateOP consume_state(const StateOP &s);
   static uint64_t match_consumed(const StateOP &s);
   static std::pair<StateOP, uint64_t> force_owned(const StateOP &s);
   static std::pair<std::pair<StateOP, StateOP>, uint64_t>

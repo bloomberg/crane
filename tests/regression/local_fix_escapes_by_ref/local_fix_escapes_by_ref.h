@@ -211,10 +211,8 @@ struct LocalFixEscapesByRef {
   }
 
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, const uint64_t &, const T1 &>
   static T2 res_rec(F0 &&f, const res<T1> &r) {
-    const auto &[s0, a0] = r;
-    return f(s0, a0);
+    return res_rect<T1, T2>(f, r);
   }
 
   template <typename A> struct st {

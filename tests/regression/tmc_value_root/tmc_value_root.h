@@ -116,47 +116,8 @@ struct TmcValueRoot {
   }
 
   template <typename T1, typename F1>
-  static T1 lst_rec(T1 f, F1 &&f0,
-                    const lst &l) { /// CraneEnter: captures varying parameters
-                                    /// for each recursive call.
-
-    struct CraneEnter {
-      const lst *l;
-    };
-
-    /// CraneCont_Cons: saves [l1, x0], resumes after recursive call, then
-    /// processes rest.
-    struct CraneCont_Cons {
-      std::shared_ptr<lst> l1;
-      uint64_t x0;
-    };
-
-    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
-    T1 _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{&l});
-    /// Loopified lst_rec: CraneEnter -> CraneCont_Cons.
-    while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      if (std::holds_alternative<CraneEnter>(_frame)) {
-        auto _f = std::move(std::get<CraneEnter>(_frame));
-        const lst &l = *_f.l;
-        if (std::holds_alternative<typename lst::Nil>(l.v())) {
-          _result = f;
-        } else {
-          const auto &[x0, l1] = std::get<typename lst::Cons>(l.v());
-          _stack.emplace_back(CraneCont_Cons{l1, x0});
-          _stack.emplace_back(CraneEnter{crane_raw(l1)});
-        }
-      } else {
-        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
-        std::shared_ptr<lst> l1 = std::move(_f.l1);
-        uint64_t x0 = _f.x0;
-        _result = f0(x0, *l1, std::move(_result));
-      }
-    }
-    return _result;
+  static T1 lst_rec(const T1 &f, F1 &&f0, const lst &l) {
+    return lst_rect<T1>(f, f0, l);
   }
 
   static lst range(uint64_t start, uint64_t count);

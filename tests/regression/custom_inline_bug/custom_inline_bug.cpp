@@ -32,7 +32,7 @@ std::optional<uint64_t> CustomInlineBug::bug_some_of_call(uint64_t n) {
 
 std::pair<CustomInlineBug::State, uint64_t>
 CustomInlineBug::pair_simple(const CustomInlineBug::State &s) {
-  return std::make_pair(s, s.value);
+  return bug_pair_proj(s);
 }
 
 std::pair<CustomInlineBug::State, uint64_t>
@@ -88,7 +88,7 @@ CustomInlineBug::pair_extreme(const CustomInlineBug::State &s) {
 
 std::pair<CustomInlineBug::State, uint64_t>
 CustomInlineBug::make_pair(const CustomInlineBug::State &s) {
-  return std::make_pair(s, s.value);
+  return bug_pair_proj(s);
 }
 
 std::pair<CustomInlineBug::State, uint64_t>

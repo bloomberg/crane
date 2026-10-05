@@ -301,28 +301,7 @@ List<uint64_t> LoopifyGenerators::repeat(uint64_t x, uint64_t n) {
 
 /// Helper: replicate single element n times.
 List<uint64_t> LoopifyGenerators::replicate_single(uint64_t x, uint64_t n) {
-  std::optional<List<uint64_t>> _root{};
-  std::shared_ptr<List<uint64_t>> *_write = nullptr;
-  uint64_t _loop_n = n;
-  while (true) {
-    if (_loop_n <= 0) {
-      auto _value = List<uint64_t>::nil();
-      (_write ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-              : _root.emplace(std::move(_value)));
-      break;
-    } else {
-      uint64_t m = _loop_n - 1;
-      auto _cell = typename List<uint64_t>::Cons(x, nullptr);
-      List<uint64_t> &_node =
-          (_write
-               ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_cell)))
-               : _root.emplace(std::move(_cell)));
-      _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
-      _loop_n = m;
-      continue;
-    }
-  }
-  return std::move(*_root);
+  return repeat(x, n);
 }
 
 /// replicate_each n l replicates each element n times: replicate_each 2 1,2 ->

@@ -56,14 +56,8 @@ struct CountLoopTestTarget {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &, const uint64_t &>
-  static T1 instruction_rec(F0 &&f, T1 f0, const instruction &i) {
-    if (std::holds_alternative<typename instruction::ISZ>(i.v())) {
-      const auto &[a0, a1] = std::get<typename instruction::ISZ>(i.v());
-      return f(a0, a1);
-    } else {
-      return f0;
-    }
+  static T1 instruction_rec(F0 &&f, const T1 &f0, const instruction &i) {
+    return instruction_rect<T1>(f, f0, i);
   }
 
   static instruction count_loop_test(uint64_t loop_addr);

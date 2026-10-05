@@ -41,10 +41,8 @@ struct TodoIotaComplexPattern {
   }
 
   template <typename T1, typename T2, typename T3, typename T4, typename F0>
-    requires std::is_invocable_r_v<T4, F0 &, const T1 &, const T2 &, const T3 &>
   static T4 Triple_rec(F0 &&f, const Triple<T1, T2, T3> &t) {
-    const auto &[a0, a1, a2] = t;
-    return f(a0, a1, a2);
+    return Triple_rect<T1, T2, T3, T4>(f, t);
   }
 
   static uint64_t sum_triple(const Triple<uint64_t, uint64_t, uint64_t> &t);

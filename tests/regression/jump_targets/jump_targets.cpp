@@ -43,10 +43,5 @@ uint64_t JumpTargets::option_nat_or_zero(const std::optional<uint64_t> &o) {
 }
 
 uint64_t JumpTargets::target_default(const std::optional<uint64_t> &o) {
-  if (o.has_value()) {
-    const uint64_t &a = *o;
-    return a;
-  } else {
-    return UINT64_C(0);
-  }
+  return option_nat_or_zero(o);
 }

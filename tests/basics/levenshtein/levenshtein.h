@@ -284,22 +284,9 @@ struct Levenshtein {
     const variant_t &v() const { return v_; }
 
     template <typename T1, typename F0, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F0 &, const Ascii &, const String &> &&
-               std::is_invocable_r_v<T1, F1 &, const Ascii &, const String &> &&
-               std::is_invocable_r_v<T1, F2 &, const Ascii &, const Ascii &,
-                                     const String &>
-    T1 edit_rec(F0 &&f, F1 &&f0, F2 &&f1, const String &,
-                const String &) const {
-      if (std::holds_alternative<typename edit::Insertion>(this->v())) {
-        const auto &[a0, s0] = std::get<typename edit::Insertion>(this->v());
-        return f(a0, s0);
-      } else if (std::holds_alternative<typename edit::Deletion>(this->v())) {
-        const auto &[a0, s0] = std::get<typename edit::Deletion>(this->v());
-        return f0(a0, s0);
-      } else {
-        const auto &[a0, a_1, neq] = std::get<typename edit::Update>(this->v());
-        return f1(a0, a_1, neq);
-      }
+    T1 edit_rec(F0 &&f, F1 &&f0, F2 &&f1, const String &_x,
+                const String &_x0) const {
+      return this->template edit_rect<T1>(f, f0, f1, _x, _x0);
     }
 
     template <typename T1, typename F0, typename F1, typename F2>
@@ -451,88 +438,9 @@ struct Levenshtein {
     }
 
     template <typename T1, typename F1, typename F2>
-    T1 chain_rec(T1 f, F1 &&f0, F2 &&f1, const String &_x, const String &_x0,
-                 const Nat &_x1) const {
-      const chain *_self = this;
-
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
-        const chain *_self;
-        String _x;
-        String _x0;
-        Nat _x1;
-      };
-
-      /// CraneCont_Change: saves [a4, a5, n0, s0, t0, u0], resumes after
-      /// recursive call, then processes rest.
-      struct CraneCont_Change {
-        edit a4;
-        std::shared_ptr<chain> a5;
-        Nat n0;
-        String s0;
-        String t0;
-        String u0;
-      };
-
-      /// CraneCont_Skip: saves [a0, a4, n0, s0, t0], resumes after recursive
-      /// call, then processes rest.
-      struct CraneCont_Skip {
-        Ascii a0;
-        std::shared_ptr<chain> a4;
-        Nat n0;
-        String s0;
-        String t0;
-      };
-
-      using CraneFrame =
-          std::variant<CraneEnter, CraneCont_Change, CraneCont_Skip>;
-      T1 _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self, _x, _x0, _x1});
-      /// Loopified chain_rec: CraneEnter -> CraneCont_Change -> CraneCont_Skip.
-      while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
-          const chain *_self = _f._self;
-          const String &_x = std::move(_f._x);
-          const String &_x0 = std::move(_f._x0);
-          const Nat &_x1 = std::move(_f._x1);
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename chain::Empty>(_sv.v())) {
-            _result = f;
-          } else if (std::holds_alternative<typename chain::Skip>(_sv.v())) {
-            const auto &[a0, s0, t0, n0, a4] =
-                std::get<typename chain::Skip>(_sv.v());
-            _stack.emplace_back(CraneCont_Skip{a0, a4, n0, s0, t0});
-            _stack.emplace_back(CraneEnter{crane_raw(a4), s0, t0, n0});
-          } else {
-            const auto &[s0, t0, u0, n0, a4, a5] =
-                std::get<typename chain::Change>(_sv.v());
-            _stack.emplace_back(CraneCont_Change{a4, a5, n0, s0, t0, u0});
-            _stack.emplace_back(CraneEnter{crane_raw(a5), t0, u0, n0});
-          }
-        } else if (std::holds_alternative<CraneCont_Change>(_frame)) {
-          auto _f = std::move(std::get<CraneCont_Change>(_frame));
-          edit a4 = std::move(_f.a4);
-          std::shared_ptr<chain> a5 = std::move(_f.a5);
-          Nat n0 = std::move(_f.n0);
-          String s0 = std::move(_f.s0);
-          String t0 = std::move(_f.t0);
-          String u0 = std::move(_f.u0);
-          _result = f1(s0, t0, u0, n0, a4, *a5, std::move(_result));
-        } else {
-          auto _f = std::move(std::get<CraneCont_Skip>(_frame));
-          Ascii a0 = std::move(_f.a0);
-          std::shared_ptr<chain> a4 = std::move(_f.a4);
-          Nat n0 = std::move(_f.n0);
-          String s0 = std::move(_f.s0);
-          String t0 = std::move(_f.t0);
-          _result = f0(a0, s0, t0, n0, *a4, std::move(_result));
-        }
-      }
-      return _result;
+    T1 chain_rec(const T1 &f, F1 &&f0, F2 &&f1, const String &_x,
+                 const String &_x0, const Nat &_x1) const {
+      return this->template chain_rect<T1>(f, f0, f1, _x, _x0, _x1);
     }
 
     template <typename T1, typename F1, typename F2>

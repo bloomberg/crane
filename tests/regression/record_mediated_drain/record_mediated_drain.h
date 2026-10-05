@@ -96,13 +96,8 @@ struct RecordMediatedDrain {
   }
 
   template <typename T1, typename F1>
-  static T1 t_rec(T1 f, F1 &&f0, const t &t0) {
-    if (std::holds_alternative<typename t::Stop>(t0.v())) {
-      return f;
-    } else {
-      const auto &[a0] = std::get<typename t::More>(t0.v());
-      return f0(*a0);
-    }
+  static T1 t_rec(const T1 &f, F1 &&f0, const t &t0) {
+    return t_rect<T1>(f, f0, t0);
   }
 
   static t wrap(uint64_t k, const t &acc);

@@ -159,48 +159,8 @@ struct LoopifyTmc {
   }
 
   template <typename T1, typename T2, typename F1>
-  static T2
-  list_rec(T2 f, F1 &&f0,
-           const list<T1> &l) { /// CraneEnter: captures varying parameters for
-                                /// each recursive call.
-
-    struct CraneEnter {
-      const list<T1> *l;
-    };
-
-    /// CraneCont_Cons: saves [a0, a1], resumes after recursive call, then
-    /// processes rest.
-    struct CraneCont_Cons {
-      T1 a0;
-      std::shared_ptr<list<T1>> a1;
-    };
-
-    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
-    T2 _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{&l});
-    /// Loopified list_rec: CraneEnter -> CraneCont_Cons.
-    while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      if (std::holds_alternative<CraneEnter>(_frame)) {
-        auto _f = std::move(std::get<CraneEnter>(_frame));
-        const list<T1> &l = *_f.l;
-        if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
-          _result = f;
-        } else {
-          const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
-          _stack.emplace_back(CraneCont_Cons{a0, a1});
-          _stack.emplace_back(CraneEnter{crane_raw(a1)});
-        }
-      } else {
-        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
-        auto a0 = std::move(_f.a0);
-        std::shared_ptr<list<T1>> a1 = std::move(_f.a1);
-        _result = f0(a0, *a1, std::move(_result));
-      }
-    }
-    return _result;
+  static T2 list_rec(const T2 &f, F1 &&f0, const list<T1> &l) {
+    return list_rect<T1, T2>(f, f0, l);
   }
 
   /// app l1 l2 appends two lists. Basic TMC pattern: cons head (app tail l2).

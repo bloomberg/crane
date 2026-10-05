@@ -113,13 +113,8 @@ public:
     }
   }
 
-  template <typename T1, typename F1> T1 list_rec(T1 f, F1 &&f0) const {
-    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return f;
-    } else {
-      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      return f0(a0, *a1, a1->template list_rec<T1>(std::move(f), f0));
-    }
+  template <typename T1, typename F1> T1 list_rec(const T1 &f, F1 &&f0) const {
+    return this->template list_rect<T1>(f, f0);
   }
 
   List<A> tl() const {

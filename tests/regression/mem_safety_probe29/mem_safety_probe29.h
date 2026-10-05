@@ -195,69 +195,9 @@ struct MemSafetyProbe29 {
       return _result;
     }
 
-    template <typename T1, typename F1> T1 inner_rec(T1 f, F1 &&f0) const {
-      const inner *_self = this;
-
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
-        const inner *_self;
-      };
-
-      /// CraneCont_INode: saves [a0, a1, a2], resumes after recursive call,
-      /// then processes rest.
-      struct CraneCont_INode {
-        std::shared_ptr<inner> a0;
-        uint64_t a1;
-        std::shared_ptr<inner> a2;
-      };
-
-      /// CraneCont_INode_1: saves [_tmp2, a0, a1, a2], resumes after recursive
-      /// call, then processes rest.
-      struct CraneCont_INode_1 {
-        T1 _tmp2;
-        std::shared_ptr<inner> a0;
-        uint64_t a1;
-        std::shared_ptr<inner> a2;
-      };
-
-      using CraneFrame =
-          std::variant<CraneEnter, CraneCont_INode, CraneCont_INode_1>;
-      T1 _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified inner_rec: CraneEnter -> CraneCont_INode ->
-      /// CraneCont_INode_1.
-      while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
-          const inner *_self = _f._self;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename inner::ILeaf>(_sv.v())) {
-            _result = f;
-          } else {
-            const auto &[a0, a1, a2] = std::get<typename inner::INode>(_sv.v());
-            _stack.emplace_back(CraneCont_INode{a0, a1, a2});
-            _stack.emplace_back(CraneEnter{crane_raw(a0)});
-          }
-        } else if (std::holds_alternative<CraneCont_INode>(_frame)) {
-          auto _f = std::move(std::get<CraneCont_INode>(_frame));
-          std::shared_ptr<inner> a0 = std::move(_f.a0);
-          uint64_t a1 = _f.a1;
-          std::shared_ptr<inner> a2 = std::move(_f.a2);
-          _stack.emplace_back(
-              CraneCont_INode_1{std::move(_result), std::move(a0), a1, a2});
-          _stack.emplace_back(CraneEnter{crane_raw(a2)});
-        } else {
-          auto _f = std::move(std::get<CraneCont_INode_1>(_frame));
-          std::shared_ptr<inner> a0 = std::move(_f.a0);
-          uint64_t a1 = _f.a1;
-          std::shared_ptr<inner> a2 = std::move(_f.a2);
-          _result = f0(*a0, std::move(_f._tmp2), a1, *a2, std::move(_result));
-        }
-      }
-      return _result;
+    template <typename T1, typename F1>
+    T1 inner_rec(const T1 &f, F1 &&f0) const {
+      return this->template inner_rect<T1>(f, f0);
     }
 
     template <typename T1, typename F1> T1 inner_rect(T1 f, F1 &&f0) const {
@@ -516,69 +456,9 @@ struct MemSafetyProbe29 {
       return _result;
     }
 
-    template <typename T1, typename F1> T1 outer_rec(T1 f, F1 &&f0) const {
-      const outer *_self = this;
-
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
-        const outer *_self;
-      };
-
-      /// CraneCont_ONode: saves [a0, a1, a2], resumes after recursive call,
-      /// then processes rest.
-      struct CraneCont_ONode {
-        std::shared_ptr<outer> a0;
-        inner a1;
-        std::shared_ptr<outer> a2;
-      };
-
-      /// CraneCont_ONode_1: saves [_tmp2, a0, a1, a2], resumes after recursive
-      /// call, then processes rest.
-      struct CraneCont_ONode_1 {
-        T1 _tmp2;
-        std::shared_ptr<outer> a0;
-        inner a1;
-        std::shared_ptr<outer> a2;
-      };
-
-      using CraneFrame =
-          std::variant<CraneEnter, CraneCont_ONode, CraneCont_ONode_1>;
-      T1 _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified outer_rec: CraneEnter -> CraneCont_ONode ->
-      /// CraneCont_ONode_1.
-      while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
-          const outer *_self = _f._self;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename outer::OLeaf>(_sv.v())) {
-            _result = f;
-          } else {
-            const auto &[a0, a1, a2] = std::get<typename outer::ONode>(_sv.v());
-            _stack.emplace_back(CraneCont_ONode{a0, a1, a2});
-            _stack.emplace_back(CraneEnter{crane_raw(a0)});
-          }
-        } else if (std::holds_alternative<CraneCont_ONode>(_frame)) {
-          auto _f = std::move(std::get<CraneCont_ONode>(_frame));
-          std::shared_ptr<outer> a0 = std::move(_f.a0);
-          inner a1 = std::move(_f.a1);
-          std::shared_ptr<outer> a2 = std::move(_f.a2);
-          _stack.emplace_back(CraneCont_ONode_1{
-              std::move(_result), std::move(a0), std::move(a1), a2});
-          _stack.emplace_back(CraneEnter{crane_raw(a2)});
-        } else {
-          auto _f = std::move(std::get<CraneCont_ONode_1>(_frame));
-          std::shared_ptr<outer> a0 = std::move(_f.a0);
-          inner a1 = std::move(_f.a1);
-          std::shared_ptr<outer> a2 = std::move(_f.a2);
-          _result = f0(*a0, std::move(_f._tmp2), a1, *a2, std::move(_result));
-        }
-      }
-      return _result;
+    template <typename T1, typename F1>
+    T1 outer_rec(const T1 &f, F1 &&f0) const {
+      return this->template outer_rect<T1>(f, f0);
     }
 
     template <typename T1, typename F1> T1 outer_rect(T1 f, F1 &&f0) const {
@@ -1011,113 +891,8 @@ struct MemSafetyProbe29 {
     }
 
     template <typename T1, typename F0, typename F1, typename F2, typename F3>
-      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 expr_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2) const {
-      const expr *_self = this;
-
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
-        const expr *_self;
-      };
-
-      /// CraneCont_Add: saves [a0, a1], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_Add {
-        std::shared_ptr<expr> a0;
-        std::shared_ptr<expr> a1;
-      };
-
-      /// CraneCont_Add_1: saves [_tmp3, a0, a1], resumes after recursive call,
-      /// then processes rest.
-      struct CraneCont_Add_1 {
-        T1 _tmp3;
-        std::shared_ptr<expr> a0;
-        std::shared_ptr<expr> a1;
-      };
-
-      /// CraneCont_Mul: saves [a0, a1], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_Mul {
-        std::shared_ptr<expr> a0;
-        std::shared_ptr<expr> a1;
-      };
-
-      /// CraneCont_Mul_1: saves [_tmp5, a0, a1], resumes after recursive call,
-      /// then processes rest.
-      struct CraneCont_Mul_1 {
-        T1 _tmp5;
-        std::shared_ptr<expr> a0;
-        std::shared_ptr<expr> a1;
-      };
-
-      /// CraneCont_Neg: saves [a0], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_Neg {
-        std::shared_ptr<expr> a0;
-      };
-
-      using CraneFrame =
-          std::variant<CraneEnter, CraneCont_Add, CraneCont_Add_1,
-                       CraneCont_Mul, CraneCont_Mul_1, CraneCont_Neg>;
-      T1 _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified expr_rec: CraneEnter -> CraneCont_Add -> CraneCont_Add_1 ->
-      /// CraneCont_Mul -> CraneCont_Mul_1 -> CraneCont_Neg.
-      while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
-          const expr *_self = _f._self;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename expr::Lit>(_sv.v())) {
-            const auto &[a0] = std::get<typename expr::Lit>(_sv.v());
-            _result = f(a0);
-          } else if (std::holds_alternative<typename expr::Neg>(_sv.v())) {
-            const auto &[a0] = std::get<typename expr::Neg>(_sv.v());
-            _stack.emplace_back(CraneCont_Neg{a0});
-            _stack.emplace_back(CraneEnter{crane_raw(a0)});
-          } else if (std::holds_alternative<typename expr::Add>(_sv.v())) {
-            const auto &[a0, a1] = std::get<typename expr::Add>(_sv.v());
-            _stack.emplace_back(CraneCont_Add{a0, a1});
-            _stack.emplace_back(CraneEnter{crane_raw(a0)});
-          } else {
-            const auto &[a0, a1] = std::get<typename expr::Mul>(_sv.v());
-            _stack.emplace_back(CraneCont_Mul{a0, a1});
-            _stack.emplace_back(CraneEnter{crane_raw(a0)});
-          }
-        } else if (std::holds_alternative<CraneCont_Add>(_frame)) {
-          auto _f = std::move(std::get<CraneCont_Add>(_frame));
-          std::shared_ptr<expr> a0 = std::move(_f.a0);
-          std::shared_ptr<expr> a1 = std::move(_f.a1);
-          _stack.emplace_back(
-              CraneCont_Add_1{std::move(_result), std::move(a0), a1});
-          _stack.emplace_back(CraneEnter{crane_raw(a1)});
-        } else if (std::holds_alternative<CraneCont_Add_1>(_frame)) {
-          auto _f = std::move(std::get<CraneCont_Add_1>(_frame));
-          std::shared_ptr<expr> a0 = std::move(_f.a0);
-          std::shared_ptr<expr> a1 = std::move(_f.a1);
-          _result = f1(*a0, std::move(_f._tmp3), *a1, std::move(_result));
-        } else if (std::holds_alternative<CraneCont_Mul>(_frame)) {
-          auto _f = std::move(std::get<CraneCont_Mul>(_frame));
-          std::shared_ptr<expr> a0 = std::move(_f.a0);
-          std::shared_ptr<expr> a1 = std::move(_f.a1);
-          _stack.emplace_back(
-              CraneCont_Mul_1{std::move(_result), std::move(a0), a1});
-          _stack.emplace_back(CraneEnter{crane_raw(a1)});
-        } else if (std::holds_alternative<CraneCont_Mul_1>(_frame)) {
-          auto _f = std::move(std::get<CraneCont_Mul_1>(_frame));
-          std::shared_ptr<expr> a0 = std::move(_f.a0);
-          std::shared_ptr<expr> a1 = std::move(_f.a1);
-          _result = f2(*a0, std::move(_f._tmp5), *a1, std::move(_result));
-        } else {
-          auto _f = std::move(std::get<CraneCont_Neg>(_frame));
-          std::shared_ptr<expr> a0 = std::move(_f.a0);
-          _result = f0(*a0, std::move(_result));
-        }
-      }
-      return _result;
+      return this->template expr_rect<T1>(f, f0, f1, f2);
     }
 
     template <typename T1, typename F0, typename F1, typename F2, typename F3>
@@ -1380,96 +1155,9 @@ struct MemSafetyProbe29 {
       return _result;
     }
 
-    template <typename T1, typename F1> T1 tree3_rec(T1 f, F1 &&f0) const {
-      const tree3 *_self = this;
-
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
-        const tree3 *_self;
-      };
-
-      /// CraneCont_T3Node: saves [a0, a1, a2, a3], resumes after recursive
-      /// call, then processes rest.
-      struct CraneCont_T3Node {
-        std::shared_ptr<tree3> a0;
-        std::shared_ptr<tree3> a1;
-        std::shared_ptr<tree3> a2;
-        uint64_t a3;
-      };
-
-      /// CraneCont_T3Node_1: saves [_tmp3, a0, a1, a2, a3], resumes after
-      /// recursive call, then processes rest.
-      struct CraneCont_T3Node_1 {
-        T1 _tmp3;
-        std::shared_ptr<tree3> a0;
-        std::shared_ptr<tree3> a1;
-        std::shared_ptr<tree3> a2;
-        uint64_t a3;
-      };
-
-      /// CraneCont_T3Node_2: saves [_tmp2, _tmp3, a0, a1, a2, a3], resumes
-      /// after recursive call, then processes rest.
-      struct CraneCont_T3Node_2 {
-        T1 _tmp2;
-        T1 _tmp3;
-        std::shared_ptr<tree3> a0;
-        std::shared_ptr<tree3> a1;
-        std::shared_ptr<tree3> a2;
-        uint64_t a3;
-      };
-
-      using CraneFrame = std::variant<CraneEnter, CraneCont_T3Node,
-                                      CraneCont_T3Node_1, CraneCont_T3Node_2>;
-      T1 _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified tree3_rec: CraneEnter -> CraneCont_T3Node ->
-      /// CraneCont_T3Node_1 -> CraneCont_T3Node_2.
-      while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
-          const tree3 *_self = _f._self;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename tree3::T3Leaf>(_sv.v())) {
-            _result = f;
-          } else {
-            const auto &[a0, a1, a2, a3] =
-                std::get<typename tree3::T3Node>(_sv.v());
-            _stack.emplace_back(CraneCont_T3Node{a0, a1, a2, a3});
-            _stack.emplace_back(CraneEnter{crane_raw(a0)});
-          }
-        } else if (std::holds_alternative<CraneCont_T3Node>(_frame)) {
-          auto _f = std::move(std::get<CraneCont_T3Node>(_frame));
-          std::shared_ptr<tree3> a0 = std::move(_f.a0);
-          std::shared_ptr<tree3> a1 = std::move(_f.a1);
-          std::shared_ptr<tree3> a2 = std::move(_f.a2);
-          uint64_t a3 = _f.a3;
-          _stack.emplace_back(CraneCont_T3Node_1{
-              std::move(_result), std::move(a0), a1, std::move(a2), a3});
-          _stack.emplace_back(CraneEnter{crane_raw(a1)});
-        } else if (std::holds_alternative<CraneCont_T3Node_1>(_frame)) {
-          auto _f = std::move(std::get<CraneCont_T3Node_1>(_frame));
-          std::shared_ptr<tree3> a0 = std::move(_f.a0);
-          std::shared_ptr<tree3> a1 = std::move(_f.a1);
-          std::shared_ptr<tree3> a2 = std::move(_f.a2);
-          uint64_t a3 = _f.a3;
-          _stack.emplace_back(
-              CraneCont_T3Node_2{std::move(_result), std::move(_f._tmp3),
-                                 std::move(a0), std::move(a1), a2, a3});
-          _stack.emplace_back(CraneEnter{crane_raw(a2)});
-        } else {
-          auto _f = std::move(std::get<CraneCont_T3Node_2>(_frame));
-          std::shared_ptr<tree3> a0 = std::move(_f.a0);
-          std::shared_ptr<tree3> a1 = std::move(_f.a1);
-          std::shared_ptr<tree3> a2 = std::move(_f.a2);
-          uint64_t a3 = _f.a3;
-          _result = f0(*a0, std::move(_f._tmp3), *a1, std::move(_f._tmp2), *a2,
-                       std::move(_result), a3);
-        }
-      }
-      return _result;
+    template <typename T1, typename F1>
+    T1 tree3_rec(const T1 &f, F1 &&f0) const {
+      return this->template tree3_rect<T1>(f, f0);
     }
 
     template <typename T1, typename F1> T1 tree3_rect(T1 f, F1 &&f0) const {

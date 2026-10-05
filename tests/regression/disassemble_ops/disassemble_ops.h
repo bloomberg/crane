@@ -218,21 +218,9 @@ struct DisassembleOps {
   }
 
   template <typename T1, typename F2, typename F3>
-    requires std::is_invocable_r_v<T1, F2 &, const uint64_t &> &&
-             std::is_invocable_r_v<T1, F3 &, const uint64_t &>
-  static T1 instruction_rec(T1 f, T1 f0, F2 &&f1, F3 &&f2,
+  static T1 instruction_rec(const T1 &f, const T1 &f0, F2 &&f1, F3 &&f2,
                             const instruction &i) {
-    if (std::holds_alternative<typename instruction::NOP>(i.v())) {
-      return f;
-    } else if (std::holds_alternative<typename instruction::NOP2>(i.v())) {
-      return f0;
-    } else if (std::holds_alternative<typename instruction::LDM>(i.v())) {
-      const auto &[a0] = std::get<typename instruction::LDM>(i.v());
-      return f1(a0);
-    } else {
-      const auto &[a0] = std::get<typename instruction::LDM2>(i.v());
-      return f2(a0);
-    }
+    return instruction_rect<T1>(f, f0, f1, f2, i);
   }
 
   static instruction decode1(uint64_t b1, uint64_t b2);

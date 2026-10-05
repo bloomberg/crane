@@ -138,13 +138,8 @@ struct ImplicitArgs {
   }
 
   template <typename T1, typename T2, typename F1>
-  static T2 mylist_rec(T2 f, F1 &&f0, const mylist<T1> &m) {
-    if (std::holds_alternative<typename mylist<T1>::Mynil>(m.v())) {
-      return f;
-    } else {
-      const auto &[a0, a1] = std::get<typename mylist<T1>::Mycons>(m.v());
-      return f0(a0, *a1, mylist_rec<T1, T2>(std::move(f), f0, *a1));
-    }
+  static T2 mylist_rec(const T2 &f, F1 &&f0, const mylist<T1> &m) {
+    return mylist_rect<T1, T2>(f, f0, m);
   }
 
   template <typename T1> static uint64_t length(const mylist<T1> &l) {

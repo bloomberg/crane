@@ -110,16 +110,8 @@ struct Sum {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, const A &> &&
-               std::is_invocable_r_v<T1, F1 &, const B &>
     T1 either_rec(F0 &&f, F1 &&f0) const {
-      if (std::holds_alternative<typename either<A, B>::Left>(this->v())) {
-        const auto &[a0] = std::get<typename either<A, B>::Left>(this->v());
-        return f(a0);
-      } else {
-        const auto &[a0] = std::get<typename either<A, B>::Right>(this->v());
-        return f0(a0);
-      }
+      return this->template either_rect<T1>(f, f0);
     }
 
     template <typename T1, typename F0, typename F1>
@@ -239,22 +231,8 @@ struct Sum {
     const variant_t &v() const { return v_; }
 
     template <typename T1, typename F0, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F0 &, const A &> &&
-               std::is_invocable_r_v<T1, F1 &, const B &> &&
-               std::is_invocable_r_v<T1, F2 &, const C &>
     T1 triple_rec(F0 &&f, F1 &&f0, F2 &&f1) const {
-      if (std::holds_alternative<typename triple<A, B, C>::First>(this->v())) {
-        const auto &[a0] = std::get<typename triple<A, B, C>::First>(this->v());
-        return f(a0);
-      } else if (std::holds_alternative<typename triple<A, B, C>::Second>(
-                     this->v())) {
-        const auto &[a0] =
-            std::get<typename triple<A, B, C>::Second>(this->v());
-        return f0(a0);
-      } else {
-        const auto &[a0] = std::get<typename triple<A, B, C>::Third>(this->v());
-        return f1(a0);
-      }
+      return this->template triple_rect<T1>(f, f0, f1);
     }
 
     template <typename T1, typename F0, typename F1, typename F2>

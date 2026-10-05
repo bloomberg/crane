@@ -199,11 +199,8 @@ struct EtaFoldCallback {
     return f(a0);
   }
 
-  template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, const List<uint64_t> &>
-  static T1 box_rec(F0 &&f, const box &b) {
-    const auto &[a0] = b;
-    return f(a0);
+  template <typename T1, typename F0> static T1 box_rec(F0 &&f, const box &b) {
+    return box_rect<T1>(f, b);
   }
 
   static uint64_t grab(const box &b, uint64_t k);

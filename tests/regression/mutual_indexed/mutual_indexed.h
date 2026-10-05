@@ -168,13 +168,8 @@ struct MutualIndexed {
   }
 
   template <typename T1, typename F1>
-  static T1 EvenTree_rec(T1 f, F1 &&f0, uint64_t, const EvenTree &e) {
-    if (std::holds_alternative<typename EvenTree::ELeaf>(e.v())) {
-      return f;
-    } else {
-      const auto &[n1, a1, a2] = std::get<typename EvenTree::ENode>(e.v());
-      return f0(n1, a1, *a2);
-    }
+  static T1 EvenTree_rec(const T1 &f, F1 &&f0, uint64_t _x, const EvenTree &e) {
+    return EvenTree_rect<T1>(f, f0, _x, e);
   }
 
   template <typename T1, typename F0>
@@ -184,9 +179,8 @@ struct MutualIndexed {
   }
 
   template <typename T1, typename F0>
-  static T1 OddTree_rec(F0 &&f, uint64_t, const OddTree &o) {
-    const auto &[n1, a1, a2] = std::get<typename OddTree::ONode>(o.v());
-    return f(n1, a1, *a2);
+  static T1 OddTree_rec(F0 &&f, uint64_t _x, const OddTree &o) {
+    return OddTree_rect<T1>(f, _x, o);
   }
 
   static uint64_t even_val(uint64_t _x, const EvenTree &t);

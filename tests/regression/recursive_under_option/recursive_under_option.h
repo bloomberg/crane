@@ -77,8 +77,7 @@ struct RecursiveUnderOption {
   }
 
   template <typename T1, typename F0> static T1 c_rec(F0 &&f, const c &c0) {
-    const auto &[a0] = std::get<typename c::N>(c0.v());
-    return f(*a0);
+    return c_rect<T1>(f, c0);
   }
 
   static c build(uint64_t n);

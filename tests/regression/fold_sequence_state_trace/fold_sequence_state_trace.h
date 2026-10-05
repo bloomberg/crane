@@ -173,11 +173,8 @@ struct FoldSequenceStateTraceCase {
       return a0;
     }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, const Line &>
-    T1 Fold_rec(F0 &&f) const {
-      const auto &[a0] = *this;
-      return f(a0);
+    template <typename T1, typename F0> T1 Fold_rec(F0 &&f) const {
+      return this->template Fold_rect<T1>(f);
     }
 
     template <typename T1, typename F0>
@@ -297,23 +294,8 @@ struct FoldSequenceStateTraceCase {
   }
 
   template <typename T1, typename F0, typename F1, typename F2>
-    requires std::is_invocable_r_v<T1, F0 &, const std::pair<Real, Real> &,
-                                   const std::pair<Real, Real> &> &&
-             std::is_invocable_r_v<T1, F1 &, const std::pair<Real, Real> &,
-                                   const std::pair<Real, Real> &> &&
-             std::is_invocable_r_v<T1, F2 &, const std::pair<Real, Real> &,
-                                   const Line &>
   static T1 FoldStep_rec(F0 &&f, F1 &&f0, F2 &&f1, const FoldStep &f2) {
-    if (std::holds_alternative<typename FoldStep::FS_O1>(f2.v())) {
-      const auto &[a0, a1] = std::get<typename FoldStep::FS_O1>(f2.v());
-      return f(a0, a1);
-    } else if (std::holds_alternative<typename FoldStep::FS_O2>(f2.v())) {
-      const auto &[a0, a1] = std::get<typename FoldStep::FS_O2>(f2.v());
-      return f0(a0, a1);
-    } else {
-      const auto &[a0, a1] = std::get<typename FoldStep::FS_O4>(f2.v());
-      return f1(a0, a1);
-    }
+    return FoldStep_rect<T1>(f, f0, f1, f2);
   }
 
   using FoldSequence = List<FoldStep>;

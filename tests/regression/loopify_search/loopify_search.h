@@ -535,65 +535,8 @@ struct LoopifySearch {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
-  static T1 btree_rec(F0 &&f, F1 &&f0,
-                      const btree &b) { /// CraneEnter: captures varying
-                                        /// parameters for each recursive call.
-
-    struct CraneEnter {
-      const btree *b;
-    };
-
-    /// CraneCont_BNode: saves [a0, a1], resumes after recursive call, then
-    /// processes rest.
-    struct CraneCont_BNode {
-      std::shared_ptr<btree> a0;
-      const btree *a1;
-    };
-
-    /// CraneCont_BNode_1: saves [_tmp2, a0, a1], resumes after recursive call,
-    /// then processes rest.
-    struct CraneCont_BNode_1 {
-      T1 _tmp2;
-      std::shared_ptr<btree> a0;
-      const btree *a1;
-    };
-
-    using CraneFrame =
-        std::variant<CraneEnter, CraneCont_BNode, CraneCont_BNode_1>;
-    T1 _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{&b});
-    /// Loopified btree_rec: CraneEnter -> CraneCont_BNode -> CraneCont_BNode_1.
-    while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      if (std::holds_alternative<CraneEnter>(_frame)) {
-        auto _f = std::move(std::get<CraneEnter>(_frame));
-        const btree &b = *_f.b;
-        if (std::holds_alternative<typename btree::BLeaf>(b.v())) {
-          const auto &[a0] = std::get<typename btree::BLeaf>(b.v());
-          _result = f(a0);
-        } else {
-          const auto &[a0, a1] = std::get<typename btree::BNode>(b.v());
-          _stack.emplace_back(CraneCont_BNode{a0, crane_raw(a1)});
-          _stack.emplace_back(CraneEnter{crane_raw(a0)});
-        }
-      } else if (std::holds_alternative<CraneCont_BNode>(_frame)) {
-        auto _f = std::move(std::get<CraneCont_BNode>(_frame));
-        std::shared_ptr<btree> a0 = std::move(_f.a0);
-        const btree &a1 = *_f.a1;
-        _stack.emplace_back(
-            CraneCont_BNode_1{std::move(_result), std::move(a0), &a1});
-        _stack.emplace_back(CraneEnter{&a1});
-      } else {
-        auto _f = std::move(std::get<CraneCont_BNode_1>(_frame));
-        std::shared_ptr<btree> a0 = std::move(_f.a0);
-        const btree &a1 = *_f.a1;
-        _result = f0(*a0, std::move(_f._tmp2), a1, std::move(_result));
-      }
-    }
-    return _result;
+  static T1 btree_rec(F0 &&f, F1 &&f0, const btree &b) {
+    return btree_rect<T1>(f, f0, b);
   }
 
   /// or_search p t searches tree with || recursion.

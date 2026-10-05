@@ -344,11 +344,8 @@ struct RocqBug14174 {
         return x;
       }
 
-      template <typename T1, typename F0>
-        requires std::is_invocable_r_v<T1, F0 &, const A &>
-      T1 sig_rec(F0 &&f) const {
-        const auto &[x0] = *this;
-        return f(x0);
+      template <typename T1, typename F0> T1 sig_rec(F0 &&f) const {
+        return this->template sig_rect<T1>(f);
       }
 
       template <typename T1, typename F0>
@@ -413,11 +410,8 @@ struct RocqBug14174 {
         }());
       }
 
-      template <typename T1, typename F0>
-        requires std::is_invocable_r_v<T1, F0 &, const A &>
-      T1 sig2_rec(F0 &&f) const {
-        const auto &[x0] = *this;
-        return f(x0);
+      template <typename T1, typename F0> T1 sig2_rec(F0 &&f) const {
+        return this->template sig2_rect<T1>(f);
       }
 
       template <typename T1, typename F0>
@@ -492,11 +486,8 @@ struct RocqBug14174 {
         return x0;
       }
 
-      template <typename T1, typename F0>
-        requires std::is_invocable_r_v<T1, F0 &, const A &, const P &>
-      T1 sigT_rec(F0 &&f) const {
-        const auto &[x0, a1] = *this;
-        return f(x0, a1);
+      template <typename T1, typename F0> T1 sigT_rec(F0 &&f) const {
+        return this->template sigT_rect<T1>(f);
       }
 
       template <typename T1, typename F0>
@@ -582,12 +573,8 @@ struct RocqBug14174 {
             }());
       }
 
-      template <typename T1, typename F0>
-        requires std::is_invocable_r_v<T1, F0 &, const A &, const P &,
-                                       const Q &>
-      T1 sigT2_rec(F0 &&f) const {
-        const auto &[x0, a1, a2] = *this;
-        return f(x0, a1, a2);
+      template <typename T1, typename F0> T1 sigT2_rec(F0 &&f) const {
+        return this->template sigT2_rect<T1>(f);
       }
 
       template <typename T1, typename F0>
@@ -671,16 +658,7 @@ struct RocqBug14174 {
 
     template <typename T1>
     static T1 sumbool_rec(const T1 &f, const T1 &f0, Sumbool s) {
-      switch (s) {
-      case Sumbool::LEFT: {
-        return f;
-      }
-      case Sumbool::RIGHT: {
-        return f0;
-      }
-      default:
-        std::unreachable();
-      }
+      return sumbool_rect<T1>(f, f0, s);
     }
 
     template <typename A> struct sumor {
@@ -736,14 +714,8 @@ struct RocqBug14174 {
       const variant_t &v() const { return v_; }
 
       template <typename T1, typename F0>
-        requires std::is_invocable_r_v<T1, F0 &, const A &>
       T1 sumor_rec(F0 &&f, const T1 &f0) const {
-        if (std::holds_alternative<typename sumor<A>::Inleft>(this->v())) {
-          const auto &[a0] = std::get<typename sumor<A>::Inleft>(this->v());
-          return f(a0);
-        } else {
-          return f0;
-        }
+        return this->template sumor_rect<T1>(f, f0);
       }
 
       template <typename T1, typename F0>
@@ -824,8 +796,11 @@ struct RocqBug14174 {
       throw std::logic_error("absurd case");
     }
 
-    template <typename T1> static T1 absurd_set() {
-      throw std::logic_error("absurd case");
+    template <typename T1> static const T1 &absurd_set() {
+      static const T1 v = [](crane::obj) {
+        throw std::logic_error("untranslatable curried proof term");
+      };
+      return v;
     }
   };
 };

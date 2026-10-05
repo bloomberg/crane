@@ -199,17 +199,8 @@ struct DepRecord {
     }
   }
 
-  template <typename T1> static T1 tag_rec(T1 f, T1 f0, Tag t) {
-    switch (t) {
-    case Tag::TNAT: {
-      return f;
-    }
-    case Tag::TBOOL: {
-      return f0;
-    }
-    default:
-      std::unreachable();
-    }
+  template <typename T1> static T1 tag_rec(const T1 &f, const T1 &f0, Tag t) {
+    return tag_rect<T1>(f, f0, t);
   }
 
   using tag_type = crane::obj;

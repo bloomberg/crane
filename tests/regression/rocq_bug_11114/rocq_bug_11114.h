@@ -127,10 +127,8 @@ struct RocqBug11114 {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, const uint64_t &>
-  static T1 t_rec(const List<uint64_t> &, F1 &&f, const t &t0) {
-    const auto &[k0] = t0;
-    return f(k0);
+  static T1 t_rec(const List<uint64_t> &_x, F1 &&f, const t &t0) {
+    return t_rect<T1>(_x, f, t0);
   }
 
   struct pkg {

@@ -107,48 +107,8 @@ struct NestedInductiveNoDrain {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    template <typename T1, typename F1> T1 lst_rec(T1 f, F1 &&f0) const {
-      const lst<A> *_self = this;
-
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
-        const lst<A> *_self;
-      };
-
-      /// CraneCont_Cons: saves [a0, a1], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_Cons {
-        A a0;
-        std::shared_ptr<lst<A>> a1;
-      };
-
-      using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
-      T1 _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified lst_rec: CraneEnter -> CraneCont_Cons.
-      while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
-          const lst<A> *_self = _f._self;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename lst<A>::Nil>(_sv.v())) {
-            _result = f;
-          } else {
-            const auto &[a0, a1] = std::get<typename lst<A>::Cons>(_sv.v());
-            _stack.emplace_back(CraneCont_Cons{a0, a1});
-            _stack.emplace_back(CraneEnter{crane_raw(a1)});
-          }
-        } else {
-          auto _f = std::move(std::get<CraneCont_Cons>(_frame));
-          auto a0 = std::move(_f.a0);
-          std::shared_ptr<lst<A>> a1 = std::move(_f.a1);
-          _result = f0(a0, *a1, std::move(_result));
-        }
-      }
-      return _result;
+    template <typename T1, typename F1> T1 lst_rec(const T1 &f, F1 &&f0) const {
+      return this->template lst_rect<T1>(f, f0);
     }
 
     template <typename T1, typename F1> T1 lst_rect(T1 f, F1 &&f0) const {
@@ -319,8 +279,7 @@ struct NestedInductiveNoDrain {
     }
 
     template <typename T1, typename F0> T1 tree_rec(F0 &&f) const {
-      const auto &[a0, a1] = std::get<typename tree::Node>(this->v());
-      return f(a0, *a1);
+      return this->template tree_rect<T1>(f);
     }
 
     template <typename T1, typename F0> T1 tree_rect(F0 &&f) const {

@@ -238,15 +238,8 @@ struct TfunctorAliasCarrier {
   }
 
   template <typename T1, typename T2, typename F0, typename F1>
-    requires std::is_invocable_r_v<T2, F0 &, const T1 &>
   static T2 exp_rec(F0 &&f, F1 &&f0, const exp<T1> &e) {
-    if (std::holds_alternative<typename exp<T1>::Lit>(e.v())) {
-      const auto &[t0] = std::get<typename exp<T1>::Lit>(e.v());
-      return f(t0);
-    } else {
-      const auto &[e1] = std::get<typename exp<T1>::Neg>(e.v());
-      return f0(*e1, exp_rec<T1, T2>(f, f0, *e1));
-    }
+    return exp_rect<T1, T2>(f, f0, e);
   }
 
   template <typename t> using texp = std::pair<t, exp<t>>;

@@ -29,11 +29,8 @@ struct BenchLetIn {
       return {std::move(a0), std::move(a1)};
     }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, const A &, const B &>
-    T1 pair_rec(F0 &&f) const {
-      const auto &[a0, a1] = *this;
-      return f(a0, a1);
+    template <typename T1, typename F0> T1 pair_rec(F0 &&f) const {
+      return this->template pair_rect<T1>(f);
     }
 
     template <typename T1, typename F0>
@@ -72,11 +69,8 @@ struct BenchLetIn {
       return {std::move(a0), std::move(a1), std::move(a2)};
     }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, const A &, const B &, const C &>
-    T1 triple_rec(F0 &&f) const {
-      const auto &[a0, a1, a2] = *this;
-      return f(a0, a1, a2);
+    template <typename T1, typename F0> T1 triple_rec(F0 &&f) const {
+      return this->template triple_rect<T1>(f);
     }
 
     template <typename T1, typename F0>

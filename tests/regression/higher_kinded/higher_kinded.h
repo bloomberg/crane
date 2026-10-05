@@ -127,16 +127,8 @@ struct HigherKinded {
   }
 
   template <typename T1, typename T2, typename F0, typename F1>
-    requires std::is_invocable_r_v<T2, F0 &, const T1 &>
   static T2 Tree_rec(F0 &&f, F1 &&f0, const Tree<T1> &t) {
-    if (std::holds_alternative<typename Tree<T1>::Leaf>(t.v())) {
-      const auto &[a0] = std::get<typename Tree<T1>::Leaf>(t.v());
-      return f(a0);
-    } else {
-      const auto &[a0, a1] = std::get<typename Tree<T1>::Branch>(t.v());
-      return f0(*a0, Tree_rec<T1, T2>(f, f0, *a0), *a1,
-                Tree_rec<T1, T2>(f, f0, *a1));
-    }
+    return Tree_rect<T1, T2>(f, f0, t);
   }
 
   template <typename T1, typename T2, typename F0>

@@ -189,8 +189,7 @@ struct RoseSharedSuffixDrainSize {
 
   template <typename T1, typename F0>
   static T1 rose_rec(F0 &&f, const rose &r) {
-    const auto &[a0, a1] = std::get<typename rose::Node>(r.v());
-    return f(a0, *a1);
+    return rose_rect<T1>(f, r);
   }
 
   static uint64_t rsize(const rose &t);

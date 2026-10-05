@@ -253,49 +253,8 @@ struct NestedInd {
     }
 
     template <typename T1, typename F1>
-    T1 custom_list_rec(T1 f, F1 &&f0) const {
-      const custom_list<A> *_self = this;
-
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
-        const custom_list<A> *_self;
-      };
-
-      /// CraneCont_Ccons: saves [a0, a1], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_Ccons {
-        A a0;
-        std::shared_ptr<custom_list<A>> a1;
-      };
-
-      using CraneFrame = std::variant<CraneEnter, CraneCont_Ccons>;
-      T1 _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified custom_list_rec: CraneEnter -> CraneCont_Ccons.
-      while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
-          const custom_list<A> *_self = _f._self;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename custom_list<A>::Cnil>(_sv.v())) {
-            _result = f;
-          } else {
-            const auto &[a0, a1] =
-                std::get<typename custom_list<A>::Ccons>(_sv.v());
-            _stack.emplace_back(CraneCont_Ccons{a0, a1});
-            _stack.emplace_back(CraneEnter{crane_raw(a1)});
-          }
-        } else {
-          auto _f = std::move(std::get<CraneCont_Ccons>(_frame));
-          auto a0 = std::move(_f.a0);
-          std::shared_ptr<custom_list<A>> a1 = std::move(_f.a1);
-          _result = f0(a0, *a1, std::move(_result));
-        }
-      }
-      return _result;
+    T1 custom_list_rec(const T1 &f, F1 &&f0) const {
+      return this->template custom_list_rect<T1>(f, f0);
     }
 
     template <typename T1, typename F1>
@@ -444,8 +403,7 @@ struct NestedInd {
     }
 
     template <typename T1, typename F0> T1 rose_rec(F0 &&f) const {
-      const auto &[a0, a1] = std::get<typename rose<A>::Node>(this->v());
-      return f(a0, *a1);
+      return this->template rose_rect<T1>(f);
     }
 
     template <typename T1, typename F0> T1 rose_rect(F0 &&f) const {
@@ -880,18 +838,8 @@ struct NestedInd {
     }
 
     template <typename T1, typename F0, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 expr_rec(F0 &&f, F1 &&f0, F2 &&f1) const {
-      if (std::holds_alternative<typename expr::Lit>(this->v())) {
-        const auto &[a0] = std::get<typename expr::Lit>(this->v());
-        return f(a0);
-      } else if (std::holds_alternative<typename expr::Add>(this->v())) {
-        const auto &[a0] = std::get<typename expr::Add>(this->v());
-        return f0(*a0);
-      } else {
-        const auto &[a0] = std::get<typename expr::Mul>(this->v());
-        return f1(*a0);
-      }
+      return this->template expr_rect<T1>(f, f0, f1);
     }
 
     template <typename T1, typename F0, typename F1, typename F2>

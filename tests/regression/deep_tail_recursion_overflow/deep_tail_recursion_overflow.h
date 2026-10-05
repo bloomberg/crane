@@ -121,49 +121,8 @@ struct DeepTailRecursionOverflow {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
-  static T1 chain_rec(F0 &&f, F1 &&f0,
-                      const chain &c) { /// CraneEnter: captures varying
-                                        /// parameters for each recursive call.
-
-    struct CraneEnter {
-      const chain *c;
-    };
-
-    /// CraneCont_Link: saves [a0, a1], resumes after recursive call, then
-    /// processes rest.
-    struct CraneCont_Link {
-      std::shared_ptr<chain> a0;
-      uint64_t a1;
-    };
-
-    using CraneFrame = std::variant<CraneEnter, CraneCont_Link>;
-    T1 _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{&c});
-    /// Loopified chain_rec: CraneEnter -> CraneCont_Link.
-    while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      if (std::holds_alternative<CraneEnter>(_frame)) {
-        auto _f = std::move(std::get<CraneEnter>(_frame));
-        const chain &c = *_f.c;
-        if (std::holds_alternative<typename chain::End_>(c.v())) {
-          const auto &[a0] = std::get<typename chain::End_>(c.v());
-          _result = f(a0);
-        } else {
-          const auto &[a0, a1] = std::get<typename chain::Link>(c.v());
-          _stack.emplace_back(CraneCont_Link{a0, a1});
-          _stack.emplace_back(CraneEnter{crane_raw(a0)});
-        }
-      } else {
-        auto _f = std::move(std::get<CraneCont_Link>(_frame));
-        std::shared_ptr<chain> a0 = std::move(_f.a0);
-        uint64_t a1 = _f.a1;
-        _result = f0(*a0, std::move(_result), a1);
-      }
-    }
-    return _result;
+  static T1 chain_rec(F0 &&f, F1 &&f0, const chain &c) {
+    return chain_rect<T1>(f, f0, c);
   }
 
   static chain build(uint64_t n, chain acc);

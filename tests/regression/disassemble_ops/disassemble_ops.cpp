@@ -71,11 +71,7 @@ DisassembleOps::disassemble2(const List<uint64_t> &rom0, uint64_t addr) {
 }
 
 DisassembleOps::instruction DisassembleOps::decode3(uint64_t b1, uint64_t b2) {
-  if (b1 == UINT64_C(0)) {
-    return instruction::nop();
-  } else {
-    return instruction::ldm((b2 % UINT64_C(16)));
-  }
+  return decode2(b1, b2);
 }
 
 std::optional<std::pair<DisassembleOps::instruction, uint64_t>>
@@ -99,11 +95,7 @@ DisassembleOps::disassemble3(const List<uint64_t> &rom0, uint64_t addr) {
 }
 
 DisassembleOps::instruction DisassembleOps::decode4(uint64_t b1, uint64_t b2) {
-  if (b1 == UINT64_C(0)) {
-    return instruction::nop();
-  } else {
-    return instruction::ldm((b2 % UINT64_C(16)));
-  }
+  return decode2(b1, b2);
 }
 
 std::optional<std::pair<DisassembleOps::instruction, uint64_t>>

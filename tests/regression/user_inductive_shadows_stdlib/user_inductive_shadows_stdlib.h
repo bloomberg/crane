@@ -38,20 +38,9 @@ struct UserInductiveShadowsStdlib {
   }
 
   template <typename T1>
-  static T1 Comparison_rec(T1 f, T1 f0, T1 f1, Comparison c) {
-    switch (c) {
-    case Comparison::LT_: {
-      return f;
-    }
-    case Comparison::EQ_: {
-      return f0;
-    }
-    case Comparison::GT_: {
-      return f1;
-    }
-    default:
-      std::unreachable();
-    }
+  static T1 Comparison_rec(const T1 &f, const T1 &f0, const T1 &f1,
+                           Comparison c) {
+    return Comparison_rect<T1>(f, f0, f1, c);
   }
 
   static uint64_t mine(Comparison c);

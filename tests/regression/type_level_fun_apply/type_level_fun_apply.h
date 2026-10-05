@@ -144,13 +144,8 @@ struct TypeLevelFunApply {
   }
 
   template <typename T1, typename F1>
-  static T1 ty_rec(T1 f, F1 &&f0, const ty &t) {
-    if (std::holds_alternative<typename ty::TNat>(t.v())) {
-      return f;
-    } else {
-      const auto &[a0, a1] = std::get<typename ty::TArr>(t.v());
-      return f0(*a0, ty_rec<T1>(f, f0, *a0), *a1, ty_rec<T1>(f, f0, *a1));
-    }
+  static T1 ty_rec(const T1 &f, F1 &&f0, const ty &t) {
+    return ty_rect<T1>(f, f0, t);
   }
 
   using sem = crane::obj;

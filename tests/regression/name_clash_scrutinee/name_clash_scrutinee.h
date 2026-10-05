@@ -26,20 +26,9 @@ struct NameClashScrutinee {
     }
   }
 
-  template <typename T1> static T1 color_rec(T1 f, T1 f0, T1 f1, Color c) {
-    switch (c) {
-    case Color::RED: {
-      return f;
-    }
-    case Color::GREEN: {
-      return f0;
-    }
-    case Color::BLUE: {
-      return f1;
-    }
-    default:
-      std::unreachable();
-    }
+  template <typename T1>
+  static T1 color_rec(const T1 &f, const T1 &f0, const T1 &f1, Color c) {
+    return color_rect<T1>(f, f0, f1, c);
   }
 
   struct shape {
@@ -144,17 +133,8 @@ struct NameClashScrutinee {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, const uint64_t &,
-                                     const uint64_t &>
     T1 shape_rec(F0 &&f, F1 &&f0) const {
-      if (std::holds_alternative<typename shape::Circle>(this->v())) {
-        const auto &[a0] = std::get<typename shape::Circle>(this->v());
-        return f(a0);
-      } else {
-        const auto &[a0, a1] = std::get<typename shape::Square>(this->v());
-        return f0(a0, a1);
-      }
+      return this->template shape_rect<T1>(f, f0);
     }
 
     template <typename T1, typename F0, typename F1>
@@ -260,14 +240,8 @@ struct NameClashScrutinee {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, const Color &, const shape &>
-  static T1 wrapper_rec(F0 &&f, T1 f0, const wrapper &w) {
-    if (std::holds_alternative<typename wrapper::Wrap>(w.v())) {
-      const auto &[a0, a1] = std::get<typename wrapper::Wrap>(w.v());
-      return f(a0, a1);
-    } else {
-      return f0;
-    }
+  static T1 wrapper_rec(F0 &&f, const T1 &f0, const wrapper &w) {
+    return wrapper_rect<T1>(f, f0, w);
   }
 };
 

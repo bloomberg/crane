@@ -229,8 +229,7 @@ struct ErasedFnInRecursiveContainer {
 
   template <typename T1, typename T2, typename F0>
   static T2 rose_rec(F0 &&f, const rose<T1> &r) {
-    const auto &[a0, a1] = std::get<typename rose<T1>::Node>(r.v());
-    return f(a0, *a1);
+    return rose_rect<T1, T2>(f, r);
   }
 
   template <typename T1> static uint64_t size(const rose<T1> &x) {

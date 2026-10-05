@@ -273,15 +273,8 @@ struct ConceptAfterUse {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, const Positive &>
   static T1 ty_rec(F0 &&f, F1 &&f0, const ty &t) {
-    if (std::holds_alternative<typename ty::TB>(t.v())) {
-      const auto &[n0] = std::get<typename ty::TB>(t.v());
-      return f(n0);
-    } else {
-      const auto &[sz1, t1] = std::get<typename ty::TA>(t.v());
-      return f0(sz1, *t1, ty_rec<T1>(f, f0, *t1));
-    }
+    return ty_rect<T1>(f, f0, t);
   }
 
   template <typename _tcI0> static N walk(const ty &t) {

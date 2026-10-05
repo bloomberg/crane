@@ -44,7 +44,10 @@ void UnitVoidEdge::unit_chain(std::monostate u) {
   }
 }
 
-void UnitVoidEdge::helper_void(uint64_t) { return; }
+void UnitVoidEdge::helper_void(uint64_t _x) {
+  return_unit(_x);
+  return;
+}
 
 uint64_t UnitVoidEdge::use_helper(uint64_t n) { return n; }
 
@@ -60,7 +63,10 @@ void UnitVoidEdge::unit_to_unit_with_work(std::monostate) {
   }
 }
 
-void UnitVoidEdge::seq_voids(uint64_t) { return; }
+void UnitVoidEdge::seq_voids(uint64_t _x) {
+  return_unit(_x);
+  return;
+}
 
 void UnitVoidEdge::conditional_unit(bool b) {
   if (b) {

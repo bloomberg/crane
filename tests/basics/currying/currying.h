@@ -42,10 +42,8 @@ struct Currying {
   }
 
   template <typename T1, typename T2, typename T3, typename F0>
-    requires std::is_invocable_r_v<T3, F0 &, const T1 &, const T2 &>
   static T3 pair_rec(F0 &&f, const pair<T1, T2> &p) {
-    const auto &[a0, a1] = p;
-    return f(a0, a1);
+    return pair_rect<T1, T2, T3>(f, p);
   }
 
   template <typename T1, typename T2, typename T3, typename F0>
@@ -55,10 +53,8 @@ struct Currying {
   }
 
   template <typename T1, typename T2, typename T3, typename F0>
-    requires std::is_invocable_r_v<T3, F0 &, const T1 &, const T2 &>
   static T3 uncurry(F0 &&f, const pair<T1, T2> &p) {
-    const auto &[a0, a1] = p;
-    return f(a0, a1);
+    return pair_rect<T1, T2, T3>(f, p);
   }
 
   static uint64_t pair_add(const pair<uint64_t, uint64_t> &p);

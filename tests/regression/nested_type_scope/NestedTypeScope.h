@@ -44,20 +44,9 @@ struct Tags {
     }
   }
 
-  template <typename T1> static T1 Tag_prec(T1 f, T1 f0, T1 f1, Tag_ t) {
-    switch (t) {
-    case Tag_::FOO: {
-      return f;
-    }
-    case Tag_::BAR: {
-      return f0;
-    }
-    case Tag_::BAZ: {
-      return f1;
-    }
-    default:
-      std::unreachable();
-    }
+  template <typename T1>
+  static T1 Tag_prec(const T1 &f, const T1 &f0, const T1 &f1, Tag_ t) {
+    return Tag_prect<T1>(f, f0, f1, t);
   }
 
   using Tag = Tag_;

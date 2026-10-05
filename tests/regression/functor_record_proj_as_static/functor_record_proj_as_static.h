@@ -1141,15 +1141,8 @@ template <Int I, OrderedType X> struct Raw {
   }
 
   template <typename T1, typename T2, typename F1>
-  static T2 tree_rec(T2 f, F1 &&f0, const tree<T1> &t0) {
-    if (std::holds_alternative<typename tree<T1>::Leaf>(t0.v())) {
-      return f;
-    } else {
-      const auto &[a0, a1, a2, a3, a4] =
-          std::get<typename tree<T1>::Node>(t0.v());
-      return f0(*a0, tree_rec<T1, T2>(f, f0, *a0), a1, a2, *a3,
-                tree_rec<T1, T2>(f, f0, *a3), a4);
-    }
+  static T2 tree_rec(const T2 &f, F1 &&f0, const tree<T1> &t0) {
+    return tree_rect<T1, T2>(f, f0, t0);
   }
 
   template <typename T1> static typename I::t height(const tree<T1> &m) {
@@ -1602,15 +1595,8 @@ template <Int I, OrderedType X> struct Raw {
   }
 
   template <typename T1, typename T2, typename F1>
-  static T2 enumeration_rec(T2 f, F1 &&f0, const enumeration<T1> &e) {
-    if (std::holds_alternative<typename enumeration<T1>::End>(e.v())) {
-      return f;
-    } else {
-      const auto &[a0, a1, a2, a3] =
-          std::get<typename enumeration<T1>::More>(e.v());
-      return f0(a0, a1, a2, *a3,
-                enumeration_rec<T1, T2>(std::move(f), f0, *a3));
-    }
+  static T2 enumeration_rec(const T2 &f, F1 &&f0, const enumeration<T1> &e) {
+    return enumeration_rect<T1, T2>(f, f0, e);
   }
 
   template <typename T1>

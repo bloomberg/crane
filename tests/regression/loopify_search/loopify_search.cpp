@@ -465,45 +465,7 @@ uint64_t LoopifySearch::collatz(uint64_t n) {
 
 /// lis l simple longest increasing subsequence (greedy approach).
 List<uint64_t> LoopifySearch::lis(const List<uint64_t> &l) {
-  std::optional<List<uint64_t>> _root{};
-  std::shared_ptr<List<uint64_t>> *_write = nullptr;
-  const List<uint64_t> *_loop_l = &l;
-  while (true) {
-    if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      auto _value = List<uint64_t>::nil();
-      (_write ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-              : _root.emplace(std::move(_value)));
-      break;
-    } else {
-      const auto &[a0, a1] =
-          std::get<typename List<uint64_t>::Cons>(_loop_l->v());
-      auto &&_sv0 = *a1;
-      if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv0.v())) {
-        auto _value = List<uint64_t>::cons(a0, List<uint64_t>::nil());
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
-        break;
-      } else {
-        const auto &[a00, a10] =
-            std::get<typename List<uint64_t>::Cons>(_sv0.v());
-        if (a0 < a00) {
-          auto _cell = typename List<uint64_t>::Cons(a0, nullptr);
-          List<uint64_t> &_node =
-              (_write ? *(*_write = std::make_shared<List<uint64_t>>(
-                              std::move(_cell)))
-                      : _root.emplace(std::move(_cell)));
-          _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
-          _loop_l = crane_raw(a1);
-          continue;
-        } else {
-          _loop_l = crane_raw(a1);
-          continue;
-        }
-      }
-    }
-  }
-  return std::move(*_root);
+  return longest_increasing_subseq(l);
 }
 
 /// subset_sum target l checks if any subset sums to target.

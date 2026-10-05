@@ -353,14 +353,8 @@ public:
     }
   }
 
-  template <typename T1, typename F1> T1 tree_rec(T1 f, F1 &&f0) const {
-    if (std::holds_alternative<typename Tree<A>::Leaf>(this->v())) {
-      return f;
-    } else {
-      const auto &[a0, a1, a2] = std::get<typename Tree<A>::Node>(this->v());
-      return f0(*a0, a0->template tree_rec<T1>(f, f0), a1, *a2,
-                a2->template tree_rec<T1>(f, f0));
-    }
+  template <typename T1, typename F1> T1 tree_rec(const T1 &f, F1 &&f0) const {
+    return this->template tree_rect<T1>(f, f0);
   }
 
   /// Returns true if t is a leaf, false otherwise.

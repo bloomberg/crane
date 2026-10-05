@@ -209,22 +209,8 @@ struct JumpTargets {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, const uint64_t &>
-    T1 instr_collection_rec(F0 &&f, F1 &&f0, T1 f1) const {
-      if (std::holds_alternative<typename instr_collection::JUN_coll>(
-              this->v())) {
-        const auto &[a0] =
-            std::get<typename instr_collection::JUN_coll>(this->v());
-        return f(a0);
-      } else if (std::holds_alternative<typename instr_collection::JMS_coll>(
-                     this->v())) {
-        const auto &[a0] =
-            std::get<typename instr_collection::JMS_coll>(this->v());
-        return f0(a0);
-      } else {
-        return f1;
-      }
+    T1 instr_collection_rec(F0 &&f, F1 &&f0, const T1 &f1) const {
+      return this->template instr_collection_rect<T1>(f, f0, f1);
     }
 
     template <typename T1, typename F0, typename F1>
@@ -308,19 +294,8 @@ struct JumpTargets {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, const uint64_t &>
-    T1 instr_region_rec(F0 &&f, F1 &&f0, T1 f1) const {
-      if (std::holds_alternative<typename instr_region::JUN_reg>(this->v())) {
-        const auto &[a0] = std::get<typename instr_region::JUN_reg>(this->v());
-        return f(a0);
-      } else if (std::holds_alternative<typename instr_region::JMS_reg>(
-                     this->v())) {
-        const auto &[a0] = std::get<typename instr_region::JMS_reg>(this->v());
-        return f0(a0);
-      } else {
-        return f1;
-      }
+    T1 instr_region_rec(F0 &&f, F1 &&f0, const T1 &f1) const {
+      return this->template instr_region_rect<T1>(f, f0, f1);
     }
 
     template <typename T1, typename F0, typename F1>
@@ -404,19 +379,8 @@ struct JumpTargets {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, const uint64_t &>
-    T1 instr_jms_rec(F0 &&f, F1 &&f0, T1 f1) const {
-      if (std::holds_alternative<typename instr_jms::JUN_jms>(this->v())) {
-        const auto &[a0] = std::get<typename instr_jms::JUN_jms>(this->v());
-        return f(a0);
-      } else if (std::holds_alternative<typename instr_jms::JMS_jms>(
-                     this->v())) {
-        const auto &[a0] = std::get<typename instr_jms::JMS_jms>(this->v());
-        return f0(a0);
-      } else {
-        return f1;
-      }
+    T1 instr_jms_rec(F0 &&f, F1 &&f0, const T1 &f1) const {
+      return this->template instr_jms_rect<T1>(f, f0, f1);
     }
 
     template <typename T1, typename F0, typename F1>
@@ -493,19 +457,8 @@ struct JumpTargets {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, const uint64_t &>
-    T1 instr_jun_rec(F0 &&f, F1 &&f0, T1 f1) const {
-      if (std::holds_alternative<typename instr_jun::JUN_jun>(this->v())) {
-        const auto &[a0] = std::get<typename instr_jun::JUN_jun>(this->v());
-        return f(a0);
-      } else if (std::holds_alternative<typename instr_jun::JMS_jun>(
-                     this->v())) {
-        const auto &[a0] = std::get<typename instr_jun::JMS_jun>(this->v());
-        return f0(a0);
-      } else {
-        return f1;
-      }
+    T1 instr_jun_rec(F0 &&f, F1 &&f0, const T1 &f1) const {
+      return this->template instr_jun_rect<T1>(f, f0, f1);
     }
 
     template <typename T1, typename F0, typename F1>

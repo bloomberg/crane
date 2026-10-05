@@ -52,23 +52,9 @@ struct LetMatchType {
   }
 
   template <typename T1>
-  static T1 direction_rec(T1 f, T1 f0, T1 f1, T1 f2, Direction d) {
-    switch (d) {
-    case Direction::NORTH: {
-      return f;
-    }
-    case Direction::SOUTH: {
-      return f0;
-    }
-    case Direction::EAST: {
-      return f1;
-    }
-    case Direction::WEST: {
-      return f2;
-    }
-    default:
-      std::unreachable();
-    }
+  static T1 direction_rec(const T1 &f, const T1 &f0, const T1 &f1, const T1 &f2,
+                          Direction d) {
+    return direction_rect<T1>(f, f0, f1, f2, d);
   }
 
   static std::pair<uint64_t, uint64_t> direction_offset(Direction d);

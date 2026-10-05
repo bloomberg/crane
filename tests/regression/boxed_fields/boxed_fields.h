@@ -150,12 +150,8 @@ struct BoxedFields {
       return a0;
     }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &,
-                                     const uint64_t &>
-    T1 point_rec(F0 &&f) const {
-      const auto &[a0, a1] = *this;
-      return f(a0, a1);
+    template <typename T1, typename F0> T1 point_rec(F0 &&f) const {
+      return this->template point_rect<T1>(f);
     }
 
     template <typename T1, typename F0>
@@ -265,16 +261,7 @@ struct BoxedFields {
 
   template <typename T1, typename F0, typename F1, typename F2>
   static T1 shape_rec(F0 &&f, F1 &&f0, F2 &&f1, const shape &s) {
-    if (std::holds_alternative<typename shape::Circle>(s.v())) {
-      const auto &[a0, a1] = std::get<typename shape::Circle>(s.v());
-      return f(*a0, a1);
-    } else if (std::holds_alternative<typename shape::Poly>(s.v())) {
-      const auto &[a0] = std::get<typename shape::Poly>(s.v());
-      return f0(*a0);
-    } else {
-      const auto &[a0, a1] = std::get<typename shape::Tagged>(s.v());
-      return f1(*a0, *a1);
-    }
+    return shape_rect<T1>(f, f0, f1, s);
   }
 
   static List<point> shift(uint64_t d, const List<point> &ps);
@@ -435,48 +422,9 @@ struct BoxedFields {
       return _result;
     }
 
-    template <typename T1, typename F1> T1 scene_rec(T1 f, F1 &&f0) const {
-      const scene *_self = this;
-
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
-        const scene *_self;
-      };
-
-      /// CraneCont_Layer: saves [a0, a1], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_Layer {
-        std::shared_ptr<shape> a0;
-        std::shared_ptr<scene> a1;
-      };
-
-      using CraneFrame = std::variant<CraneEnter, CraneCont_Layer>;
-      T1 _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified scene_rec: CraneEnter -> CraneCont_Layer.
-      while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
-          const scene *_self = _f._self;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename scene::Empty>(_sv.v())) {
-            _result = f;
-          } else {
-            const auto &[a0, a1] = std::get<typename scene::Layer>(_sv.v());
-            _stack.emplace_back(CraneCont_Layer{a0, a1});
-            _stack.emplace_back(CraneEnter{crane_raw(a1)});
-          }
-        } else {
-          auto _f = std::move(std::get<CraneCont_Layer>(_frame));
-          std::shared_ptr<shape> a0 = std::move(_f.a0);
-          std::shared_ptr<scene> a1 = std::move(_f.a1);
-          _result = f0(*a0, *a1, std::move(_result));
-        }
-      }
-      return _result;
+    template <typename T1, typename F1>
+    T1 scene_rec(const T1 &f, F1 &&f0) const {
+      return this->template scene_rect<T1>(f, f0);
     }
 
     template <typename T1, typename F1> T1 scene_rect(T1 f, F1 &&f0) const {
@@ -570,11 +518,8 @@ struct BoxedFields {
       return crane::unbox(a1);
     }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &, A>
-    T1 tagged_rec(F0 &&f) const {
-      const auto &[a0, a1] = *this;
-      return f(a0, crane::unbox(a1));
+    template <typename T1, typename F0> T1 tagged_rec(F0 &&f) const {
+      return this->template tagged_rect<T1>(f);
     }
 
     template <typename T1, typename F0>

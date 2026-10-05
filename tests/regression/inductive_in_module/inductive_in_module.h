@@ -30,20 +30,9 @@ struct InductiveInModule {
       }
     }
 
-    template <typename T1> static T1 color_rec(T1 f, T1 f0, T1 f1, Color c) {
-      switch (c) {
-      case Color::RED: {
-        return f;
-      }
-      case Color::GREEN: {
-        return f0;
-      }
-      case Color::BLUE: {
-        return f1;
-      }
-      default:
-        std::unreachable();
-      }
+    template <typename T1>
+    static T1 color_rec(const T1 &f, const T1 &f0, const T1 &f1, Color c) {
+      return color_rect<T1>(f, f0, f1, c);
     }
 
     static constexpr Color default_color = Color::RED;
@@ -120,14 +109,8 @@ struct InductiveInModule {
       }
 
       template <typename T1, typename T2, typename F1>
-        requires std::is_invocable_r_v<T2, F1 &, const T1 &>
-      static T2 option_rec(T2 f, F1 &&f0, const option<T1> &o) {
-        if (std::holds_alternative<typename option<T1>::None>(o.v())) {
-          return f;
-        } else {
-          const auto &[a0] = std::get<typename option<T1>::Some>(o.v());
-          return f0(a0);
-        }
+      static T2 option_rec(const T2 &f, F1 &&f0, const option<T1> &o) {
+        return option_rect<T1, T2>(f, f0, o);
       }
 
       template <typename T1>

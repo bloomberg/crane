@@ -15,7 +15,10 @@ void VoidCallback::test_for_each_m() {
 }
 
 /// 3. Pure function returning unit, used in let
-void VoidCallback::side_effect_pure(uint64_t) { return; }
+void VoidCallback::side_effect_pure(uint64_t _x) {
+  print_nat(_x);
+  return;
+}
 
 /// 7. Void returning function in a match arm
 void VoidCallback::void_in_match(bool b) {

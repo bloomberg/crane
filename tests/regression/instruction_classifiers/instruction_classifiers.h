@@ -308,77 +308,16 @@ struct InstructionClassifiers {
 
     template <typename T1, typename F0, typename F1, typename F2, typename F3,
               typename F4, typename F5, typename F6>
-      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, const uint64_t &> &&
-               std::is_invocable_r_v<T1, F2 &, const uint64_t &> &&
-               std::is_invocable_r_v<T1, F3 &, const uint64_t &> &&
-               std::is_invocable_r_v<T1, F4 &, const uint64_t &> &&
-               std::is_invocable_r_v<T1, F5 &, const uint64_t &> &&
-               std::is_invocable_r_v<T1, F6 &, const uint64_t &>
     T1 instr_acc_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
-                     F6 &&f5, T1 f6, T1 f7, T1 f8, T1 f9, T1 f10, T1 f11,
-                     T1 f12, T1 f13, T1 f14, T1 f15, T1 f16, T1 f17, T1 f18,
-                     T1 f19, T1 f20, T1 f21, T1 f22, T1 f23, T1 f24) const {
-      if (std::holds_alternative<typename instr_acc::LDM>(this->v())) {
-        const auto &[a0] = std::get<typename instr_acc::LDM>(this->v());
-        return f(a0);
-      } else if (std::holds_alternative<typename instr_acc::LD>(this->v())) {
-        const auto &[a0] = std::get<typename instr_acc::LD>(this->v());
-        return f0(a0);
-      } else if (std::holds_alternative<typename instr_acc::ADD>(this->v())) {
-        const auto &[a0] = std::get<typename instr_acc::ADD>(this->v());
-        return f1(a0);
-      } else if (std::holds_alternative<typename instr_acc::SUB>(this->v())) {
-        const auto &[a0] = std::get<typename instr_acc::SUB>(this->v());
-        return f2(a0);
-      } else if (std::holds_alternative<typename instr_acc::INC>(this->v())) {
-        const auto &[a0] = std::get<typename instr_acc::INC>(this->v());
-        return f3(a0);
-      } else if (std::holds_alternative<typename instr_acc::XCH>(this->v())) {
-        const auto &[a0] = std::get<typename instr_acc::XCH>(this->v());
-        return f4(a0);
-      } else if (std::holds_alternative<typename instr_acc::BBL>(this->v())) {
-        const auto &[a0] = std::get<typename instr_acc::BBL>(this->v());
-        return f5(a0);
-      } else if (std::holds_alternative<typename instr_acc::SBM>(this->v())) {
-        return f6;
-      } else if (std::holds_alternative<typename instr_acc::RDM>(this->v())) {
-        return f7;
-      } else if (std::holds_alternative<typename instr_acc::RDR>(this->v())) {
-        return f8;
-      } else if (std::holds_alternative<typename instr_acc::ADM>(this->v())) {
-        return f9;
-      } else if (std::holds_alternative<typename instr_acc::RD0>(this->v())) {
-        return f10;
-      } else if (std::holds_alternative<typename instr_acc::RD1>(this->v())) {
-        return f11;
-      } else if (std::holds_alternative<typename instr_acc::RD2>(this->v())) {
-        return f12;
-      } else if (std::holds_alternative<typename instr_acc::RD3>(this->v())) {
-        return f13;
-      } else if (std::holds_alternative<typename instr_acc::CLB>(this->v())) {
-        return f14;
-      } else if (std::holds_alternative<typename instr_acc::CMA>(this->v())) {
-        return f15;
-      } else if (std::holds_alternative<typename instr_acc::IAC>(this->v())) {
-        return f16;
-      } else if (std::holds_alternative<typename instr_acc::DAC>(this->v())) {
-        return f17;
-      } else if (std::holds_alternative<typename instr_acc::RAL>(this->v())) {
-        return f18;
-      } else if (std::holds_alternative<typename instr_acc::RAR>(this->v())) {
-        return f19;
-      } else if (std::holds_alternative<typename instr_acc::TCC>(this->v())) {
-        return f20;
-      } else if (std::holds_alternative<typename instr_acc::TCS>(this->v())) {
-        return f21;
-      } else if (std::holds_alternative<typename instr_acc::DAA>(this->v())) {
-        return f22;
-      } else if (std::holds_alternative<typename instr_acc::KBP>(this->v())) {
-        return f23;
-      } else {
-        return f24;
-      }
+                     F6 &&f5, const T1 &f6, const T1 &f7, const T1 &f8,
+                     const T1 &f9, const T1 &f10, const T1 &f11, const T1 &f12,
+                     const T1 &f13, const T1 &f14, const T1 &f15, const T1 &f16,
+                     const T1 &f17, const T1 &f18, const T1 &f19, const T1 &f20,
+                     const T1 &f21, const T1 &f22, const T1 &f23,
+                     const T1 &f24) const {
+      return this->template instr_acc_rect<T1>(
+          f, f0, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14,
+          f15, f16, f17, f18, f19, f20, f21, f22, f23, f24);
     }
 
     template <typename T1, typename F0, typename F1, typename F2, typename F3,
@@ -541,28 +480,9 @@ struct InstructionClassifiers {
     }
 
     template <typename T1, typename F7>
-      requires std::is_invocable_r_v<T1, F7 &, const uint64_t &>
-    T1 instr_ram_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5,
-                     F7 &&f6) const {
-      if (std::holds_alternative<typename instr_ram::WRM>(this->v())) {
-        return f;
-      } else if (std::holds_alternative<typename instr_ram::WMP>(this->v())) {
-        return f0;
-      } else if (std::holds_alternative<typename instr_ram::WR0>(this->v())) {
-        return f1;
-      } else if (std::holds_alternative<typename instr_ram::WR1>(this->v())) {
-        return f2;
-      } else if (std::holds_alternative<typename instr_ram::WR2>(this->v())) {
-        return f3;
-      } else if (std::holds_alternative<typename instr_ram::WR3>(this->v())) {
-        return f4;
-      } else if (std::holds_alternative<typename instr_ram::NOP_ram>(
-                     this->v())) {
-        return f5;
-      } else {
-        const auto &[a0] = std::get<typename instr_ram::ADD_ram>(this->v());
-        return f6(a0);
-      }
+    T1 instr_ram_rec(const T1 &f, const T1 &f0, const T1 &f1, const T1 &f2,
+                     const T1 &f3, const T1 &f4, const T1 &f5, F7 &&f6) const {
+      return this->template instr_ram_rect<T1>(f, f0, f1, f2, f3, f4, f5, f6);
     }
 
     template <typename T1, typename F7>
@@ -686,39 +606,9 @@ struct InstructionClassifiers {
 
     template <typename T1, typename F0, typename F1, typename F2, typename F3,
               typename F4, typename F6>
-      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, const uint64_t &> &&
-               std::is_invocable_r_v<T1, F2 &, const uint64_t &,
-                                     const uint64_t &> &&
-               std::is_invocable_r_v<T1, F3 &, const uint64_t &> &&
-               std::is_invocable_r_v<T1, F4 &, const uint64_t &,
-                                     const uint64_t &> &&
-               std::is_invocable_r_v<T1, F6 &, const uint64_t &>
-    T1 instr_regs_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, T1 f4,
+    T1 instr_regs_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, const T1 &f4,
                       F6 &&f5) const {
-      if (std::holds_alternative<typename instr_regs::XCH_regs>(this->v())) {
-        const auto &[a0] = std::get<typename instr_regs::XCH_regs>(this->v());
-        return f(a0);
-      } else if (std::holds_alternative<typename instr_regs::INC_regs>(
-                     this->v())) {
-        const auto &[a0] = std::get<typename instr_regs::INC_regs>(this->v());
-        return f0(a0);
-      } else if (std::holds_alternative<typename instr_regs::FIM>(this->v())) {
-        const auto &[a0, a1] = std::get<typename instr_regs::FIM>(this->v());
-        return f1(a0, a1);
-      } else if (std::holds_alternative<typename instr_regs::FIN>(this->v())) {
-        const auto &[a0] = std::get<typename instr_regs::FIN>(this->v());
-        return f2(a0);
-      } else if (std::holds_alternative<typename instr_regs::ISZ>(this->v())) {
-        const auto &[a0, a1] = std::get<typename instr_regs::ISZ>(this->v());
-        return f3(a0, a1);
-      } else if (std::holds_alternative<typename instr_regs::NOP_regs>(
-                     this->v())) {
-        return f4;
-      } else {
-        const auto &[a0] = std::get<typename instr_regs::ADD_regs>(this->v());
-        return f5(a0);
-      }
+      return this->template instr_regs_rect<T1>(f, f0, f1, f2, f3, f4, f5);
     }
 
     template <typename T1, typename F0, typename F1, typename F2, typename F3,
@@ -862,45 +752,9 @@ struct InstructionClassifiers {
 
     template <typename T1, typename F0, typename F1, typename F2, typename F3,
               typename F4, typename F5, typename F6>
-      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &,
-                                     const uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, const uint64_t &> &&
-               std::is_invocable_r_v<T1, F2 &, const uint64_t &> &&
-               std::is_invocable_r_v<T1, F3 &, const uint64_t &> &&
-               std::is_invocable_r_v<T1, F4 &, const uint64_t &> &&
-               std::is_invocable_r_v<T1, F5 &, const uint64_t &,
-                                     const uint64_t &> &&
-               std::is_invocable_r_v<T1, F6 &, const uint64_t &>
     T1 instr_jump_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
-                      F6 &&f5, T1 f6) const {
-      if (std::holds_alternative<typename instr_jump::JCN>(this->v())) {
-        const auto &[a0, a1] = std::get<typename instr_jump::JCN>(this->v());
-        return f(a0, a1);
-      } else if (std::holds_alternative<typename instr_jump::JUN>(this->v())) {
-        const auto &[a0] = std::get<typename instr_jump::JUN>(this->v());
-        return f0(a0);
-      } else if (std::holds_alternative<typename instr_jump::JMS>(this->v())) {
-        const auto &[a0] = std::get<typename instr_jump::JMS>(this->v());
-        return f1(a0);
-      } else if (std::holds_alternative<typename instr_jump::JIN>(this->v())) {
-        const auto &[a0] = std::get<typename instr_jump::JIN>(this->v());
-        return f2(a0);
-      } else if (std::holds_alternative<typename instr_jump::BBL_jump>(
-                     this->v())) {
-        const auto &[a0] = std::get<typename instr_jump::BBL_jump>(this->v());
-        return f3(a0);
-      } else if (std::holds_alternative<typename instr_jump::ISZ_jump>(
-                     this->v())) {
-        const auto &[a0, a1] =
-            std::get<typename instr_jump::ISZ_jump>(this->v());
-        return f4(a0, a1);
-      } else if (std::holds_alternative<typename instr_jump::ADD_jump>(
-                     this->v())) {
-        const auto &[a0] = std::get<typename instr_jump::ADD_jump>(this->v());
-        return f5(a0);
-      } else {
-        return f6;
-      }
+                      F6 &&f5, const T1 &f6) const {
+      return this->template instr_jump_rect<T1>(f, f0, f1, f2, f3, f4, f5, f6);
     }
 
     template <typename T1, typename F0, typename F1, typename F2, typename F3,

@@ -26,11 +26,8 @@ struct NameMatchesModule {
         return a0;
       }
 
-      template <typename T1, typename F0>
-        requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
-      T1 Inner_rec(F0 &&f) const {
-        const auto &[a0] = *this;
-        return f(a0);
+      template <typename T1, typename F0> T1 Inner_rec(F0 &&f) const {
+        return this->template Inner_rect<T1>(f);
       }
 
       template <typename T1, typename F0>

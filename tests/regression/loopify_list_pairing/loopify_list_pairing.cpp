@@ -285,50 +285,7 @@ List<uint64_t> LoopifyListPairing::zipWith(const List<uint64_t> &l1,
   return std::move(*_root);
 }
 
-std::pair<List<uint64_t>, List<uint64_t>> LoopifyListPairing::split_even_odd(
-    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
-  struct CraneEnter {
-    const List<uint64_t> *l;
-  };
-
-  /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_Cons {
-    uint64_t a0;
-  };
-
-  using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
-  std::pair<List<uint64_t>, List<uint64_t>> _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&l});
-  /// Loopified split_even_odd: CraneEnter -> CraneCont_Cons.
-  while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
-    _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
-      const List<uint64_t> &l = *_f.l;
-      if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
-        _result = std::make_pair(List<uint64_t>::nil(), List<uint64_t>::nil());
-      } else {
-        const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-        _stack.emplace_back(CraneCont_Cons{a0});
-        _stack.emplace_back(CraneEnter{crane_raw(a1)});
-      }
-    } else {
-      auto _f = std::move(std::get<CraneCont_Cons>(_frame));
-      uint64_t a0 = _f.a0;
-      auto [evens, odds] = std::move(_result);
-      if ((a0 % UINT64_C(2)) == UINT64_C(0)) {
-        _result = std::make_pair(List<uint64_t>::cons(a0, std::move(evens)),
-                                 std::move(odds));
-      } else {
-        _result = std::make_pair(std::move(evens),
-                                 List<uint64_t>::cons(a0, std::move(odds)));
-      }
-    }
-  }
-  return _result;
+std::pair<List<uint64_t>, List<uint64_t>>
+LoopifyListPairing::split_even_odd(const List<uint64_t> &l) {
+  return partition(l);
 }

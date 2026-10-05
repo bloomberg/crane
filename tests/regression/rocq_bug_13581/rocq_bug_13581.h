@@ -301,14 +301,9 @@ struct RocqBug13581 {
   }
 
   template <typename T1, typename T2, typename F3>
-  static T2 I_rec(const T1 &, const T1 &, T2 f, F3 &&f0, const Nat &,
-                  const I<T1> &i) {
-    if (std::holds_alternative<typename I<T1>::C>(i.v())) {
-      return f;
-    } else {
-      const auto &[a0] = std::get<typename I<T1>::D>(i.v());
-      return f0(*a0);
-    }
+  static T2 I_rec(const T1 &_x, const T1 &_x0, const T2 &f, F3 &&f0,
+                  const Nat &_x1, const I<T1> &i) {
+    return I_rect<T1, T2>(_x, _x0, f, f0, _x1, i);
   }
 
   template <typename T1, typename T2, typename F2>
@@ -318,9 +313,9 @@ struct RocqBug13581 {
   }
 
   template <typename T1, typename T2, typename F2>
-  static T2 J_rec(const T1 &, const T1 &, F2 &&f, Bool0, const J<T1> &j) {
-    const auto &[a0] = std::get<typename J<T1>::E>(j.v());
-    return f(*a0);
+  static T2 J_rec(const T1 &_x, const T1 &_x0, F2 &&f, Bool0 _x1,
+                  const J<T1> &j) {
+    return J_rect<T1, T2>(_x, _x0, f, _x1, j);
   }
 
   static inline const I<Nat> c = I<Nat>::d(J<Nat>::e(I<Nat>::c()));

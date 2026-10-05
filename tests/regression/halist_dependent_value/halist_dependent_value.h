@@ -269,17 +269,8 @@ struct HalistDependentValue {
     }
   }
 
-  template <typename T1> static T1 key_rec(T1 f, T1 f0, Key k) {
-    switch (k) {
-    case Key::KNAT: {
-      return f;
-    }
-    case Key::KLIST: {
-      return f0;
-    }
-    default:
-      std::unreachable();
-    }
+  template <typename T1> static T1 key_rec(const T1 &f, const T1 &f0, Key k) {
+    return key_rect<T1>(f, f0, k);
   }
 
   using vty = crane::obj;

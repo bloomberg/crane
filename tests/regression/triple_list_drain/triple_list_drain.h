@@ -308,8 +308,7 @@ struct TripleListDrain {
   }
 
   template <typename T1, typename F0> static T1 t_rec(F0 &&f, const t &t0) {
-    const auto &[a0, a1] = std::get<typename t::Node>(t0.v());
-    return f(a0, *a1);
+    return t_rect<T1>(f, t0);
   }
 
   static t wrap(uint64_t k, const t &acc);

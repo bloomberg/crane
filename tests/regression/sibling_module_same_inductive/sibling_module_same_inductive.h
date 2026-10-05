@@ -89,11 +89,8 @@ struct SiblingModuleSameInductive {
       return f(a0);
     }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, const Nat &>
-    static T1 t_rec(F0 &&f, const t &t0) {
-      const auto &[a0] = t0;
-      return f(a0);
+    template <typename T1, typename F0> static T1 t_rec(F0 &&f, const t &t0) {
+      return t_rect<T1>(f, t0);
     }
 
     static Nat get(const t &x);
@@ -118,11 +115,8 @@ struct SiblingModuleSameInductive {
       return f(a0);
     }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, const bool &>
-    static T1 t_rec(F0 &&f, const t &t0) {
-      const auto &[a0] = t0;
-      return f(a0);
+    template <typename T1, typename F0> static T1 t_rec(F0 &&f, const t &t0) {
+      return t_rect<T1>(f, t0);
     }
 
     static bool get(const t &x);

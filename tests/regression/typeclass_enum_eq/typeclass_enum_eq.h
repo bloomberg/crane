@@ -31,20 +31,9 @@ struct TypeclassEnumEq {
     }
   }
 
-  template <typename T1> static T1 color_rec(T1 f, T1 f0, T1 f1, Color c) {
-    switch (c) {
-    case Color::RED: {
-      return f;
-    }
-    case Color::GREEN: {
-      return f0;
-    }
-    case Color::BLUE: {
-      return f1;
-    }
-    default:
-      std::unreachable();
-    }
+  template <typename T1>
+  static T1 color_rec(const T1 &f, const T1 &f0, const T1 &f1, Color c) {
+    return color_rect<T1>(f, f0, f1, c);
   }
 
   /// Returns true when x and y are the same colour.

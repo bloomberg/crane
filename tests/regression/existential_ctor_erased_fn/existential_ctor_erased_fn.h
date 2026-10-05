@@ -189,8 +189,7 @@ struct ExistentialCtorErasedFn {
 
   template <typename T1, typename F0>
   static T1 dynamic_rec(F0 &&f, const dynamic &d) {
-    const auto &[a0, a1] = d;
-    return crane_any_cast<T1>(f(a0, a1));
+    return dynamic_rect<T1>(crane_erase_fn<T1>(f), d);
   }
 
   static uint64_t read(const dynamic &d);

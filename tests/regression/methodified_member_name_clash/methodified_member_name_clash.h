@@ -66,46 +66,9 @@ struct MethodifiedMemberNameClash {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    template <typename T1, typename F1> T1 other_rec(T1 f, F1 &&f0) const {
-      const other *_self = this;
-
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
-        const other *_self;
-      };
-
-      /// CraneCont_O2: saves [a0], resumes after recursive call, then processes
-      /// rest.
-      struct CraneCont_O2 {
-        std::shared_ptr<other> a0;
-      };
-
-      using CraneFrame = std::variant<CraneEnter, CraneCont_O2>;
-      T1 _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified other_rec: CraneEnter -> CraneCont_O2.
-      while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
-          const other *_self = _f._self;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename other::O1>(_sv.v())) {
-            _result = f;
-          } else {
-            const auto &[a0] = std::get<typename other::O2>(_sv.v());
-            _stack.emplace_back(CraneCont_O2{a0});
-            _stack.emplace_back(CraneEnter{crane_raw(a0)});
-          }
-        } else {
-          auto _f = std::move(std::get<CraneCont_O2>(_frame));
-          std::shared_ptr<other> a0 = std::move(_f.a0);
-          _result = f0(*a0, std::move(_result));
-        }
-      }
-      return _result;
+    template <typename T1, typename F1>
+    T1 other_rec(const T1 &f, F1 &&f0) const {
+      return this->template other_rect<T1>(f, f0);
     }
 
     template <typename T1, typename F1> T1 other_rect(T1 f, F1 &&f0) const {
@@ -213,48 +176,8 @@ struct MethodifiedMemberNameClash {
     uint64_t v0() const { return UINT64_C(0); }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, const other &>
     T1 wrap_rec(F0 &&f, F1 &&f0) const {
-      const wrap *_self = this;
-
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
-        const wrap *_self;
-      };
-
-      /// CraneCont_WW: saves [a0], resumes after recursive call, then processes
-      /// rest.
-      struct CraneCont_WW {
-        std::shared_ptr<wrap> a0;
-      };
-
-      using CraneFrame = std::variant<CraneEnter, CraneCont_WW>;
-      T1 _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified wrap_rec: CraneEnter -> CraneCont_WW.
-      while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
-          const wrap *_self = _f._self;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename wrap::W>(_sv.v())) {
-            const auto &[a0] = std::get<typename wrap::W>(_sv.v());
-            _result = f(a0);
-          } else {
-            const auto &[a0] = std::get<typename wrap::WW>(_sv.v());
-            _stack.emplace_back(CraneCont_WW{a0});
-            _stack.emplace_back(CraneEnter{crane_raw(a0)});
-          }
-        } else {
-          auto _f = std::move(std::get<CraneCont_WW>(_frame));
-          std::shared_ptr<wrap> a0 = std::move(_f.a0);
-          _result = f0(*a0, std::move(_result));
-        }
-      }
-      return _result;
+      return this->template wrap_rect<T1>(f, f0);
     }
 
     template <typename T1, typename F0, typename F1>

@@ -124,13 +124,8 @@ template <OrderedType X> struct Make {
   }
 
   template <typename T1, typename T2, typename F1>
-  static T2 fmap_rec(T2 f, F1 &&f0, const Fmap<T1> &f1) {
-    if (std::holds_alternative<typename Fmap<T1>::Empty>(f1.v())) {
-      return f;
-    } else {
-      const auto &[a0, a1, a2] = std::get<typename Fmap<T1>::Node>(f1.v());
-      return f0(a0, a1, *a2, fmap_rec<T1, T2>(std::move(f), f0, *a2));
-    }
+  static T2 fmap_rec(const T2 &f, F1 &&f0, const Fmap<T1> &f1) {
+    return fmap_rect<T1, T2>(f, f0, f1);
   }
 
   template <typename T1> static bool is_empty(const Fmap<T1> &m) {

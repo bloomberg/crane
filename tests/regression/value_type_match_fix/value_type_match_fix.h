@@ -35,11 +35,8 @@ struct ValueTypeMatchFix {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &, const uint64_t &,
-                                   const uint64_t &>
   static T1 triple_rec(F0 &&f, const triple &t) {
-    const auto &[a0, a1, a2] = t;
-    return f(a0, a1, a2);
+    return triple_rect<T1>(f, t);
   }
 
   /// A fixpoint that captures a field from a value-type match.

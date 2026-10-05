@@ -161,14 +161,8 @@ struct TailCallSameNameOtherModule {
       }
 
       template <typename T1, typename F1>
-        requires std::is_invocable_r_v<T1, F1 &, const Nat &>
-      T1 t1_rec(T1 f, F1 &&f0) const {
-        if (std::holds_alternative<typename t1::Z1>(this->v())) {
-          return f;
-        } else {
-          const auto &[a0] = std::get<typename t1::C1>(this->v());
-          return f0(a0);
-        }
+      T1 t1_rec(const T1 &f, F1 &&f0) const {
+        return this->template t1_rect<T1>(f, f0);
       }
 
       Nat cmp(const t1 &y) const {
@@ -232,14 +226,8 @@ struct TailCallSameNameOtherModule {
       }
 
       template <typename T1, typename F1>
-        requires std::is_invocable_r_v<T1, F1 &, const Nat &>
-      T1 t2_rec(T1 f, F1 &&f0) const {
-        if (std::holds_alternative<typename t2::Z2>(this->v())) {
-          return f;
-        } else {
-          const auto &[a0] = std::get<typename t2::C2>(this->v());
-          return f0(a0);
-        }
+      T1 t2_rec(const T1 &f, F1 &&f0) const {
+        return this->template t2_rect<T1>(f, f0);
       }
 
       T1::t1 to1() const {

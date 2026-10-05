@@ -180,20 +180,8 @@ struct LoopifyAdvancedPatterns {
   }
 
   template <typename T1, typename F0, typename F1, typename F2>
-    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, const uint64_t &> &&
-             std::is_invocable_r_v<T1, F2 &, const uint64_t &>
   static T1 shape_rec(F0 &&f, F1 &&f0, F2 &&f1, const shape &s) {
-    if (std::holds_alternative<typename shape::Circle>(s.v())) {
-      const auto &[a0] = std::get<typename shape::Circle>(s.v());
-      return f(a0);
-    } else if (std::holds_alternative<typename shape::Square>(s.v())) {
-      const auto &[a0] = std::get<typename shape::Square>(s.v());
-      return f0(a0);
-    } else {
-      const auto &[a0] = std::get<typename shape::Triangle>(s.v());
-      return f1(a0);
-    }
+    return shape_rect<T1>(f, f0, f1, s);
   }
 
   static uint64_t extract_value(const shape &s);

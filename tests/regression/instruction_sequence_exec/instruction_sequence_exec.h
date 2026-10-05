@@ -166,16 +166,9 @@ struct InstructionSequenceExec {
   }
 
   template <typename T1, typename F2>
-    requires std::is_invocable_r_v<T1, F2 &, const uint64_t &>
-  static T1 instruction_rec(T1 f, T1 f0, F2 &&f1, const instruction &i) {
-    if (std::holds_alternative<typename instruction::NOP_>(i.v())) {
-      return f;
-    } else if (std::holds_alternative<typename instruction::INC_PC>(i.v())) {
-      return f0;
-    } else {
-      const auto &[a0] = std::get<typename instruction::ADD_ACC>(i.v());
-      return f1(a0);
-    }
+  static T1 instruction_rec(const T1 &f, const T1 &f0, F2 &&f1,
+                            const instruction &i) {
+    return instruction_rect<T1>(f, f0, f1, i);
   }
 
   static state execute(state s, const instruction &i);

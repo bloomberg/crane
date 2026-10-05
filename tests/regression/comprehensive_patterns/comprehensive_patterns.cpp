@@ -168,7 +168,7 @@ ComprehensivePatterns::match_three(ComprehensivePatterns::Three t,
 
 std::pair<ComprehensivePatterns::S, uint64_t>
 ComprehensivePatterns::let_in_arg(const ComprehensivePatterns::S &s) {
-  return std::make_pair(s, s.s_a);
+  return with_magic(s);
 }
 
 std::pair<ComprehensivePatterns::S, uint64_t>
@@ -181,7 +181,7 @@ ComprehensivePatterns::match_record(const ComprehensivePatterns::S &s) {
 
 std::pair<ComprehensivePatterns::S, uint64_t>
 ComprehensivePatterns::rebind(const ComprehensivePatterns::S &s1) {
-  return std::make_pair(s1, s1.s_a);
+  return with_magic(s1);
 }
 
 std::pair<crane::fn<uint64_t(std::monostate)>,
@@ -461,12 +461,12 @@ std::optional<uint64_t> ComprehensivePatterns::match_multi_use(
 
 std::pair<std::pair<ComprehensivePatterns::R, uint64_t>, uint64_t>
 ComprehensivePatterns::tuple_proj(const ComprehensivePatterns::R &r) {
-  return std::make_pair(std::make_pair(r, r.val), r.dat);
+  return nested_pair_inline(r);
 }
 
 std::pair<ComprehensivePatterns::R, uint64_t>
 ComprehensivePatterns::chain_to_pair(const ComprehensivePatterns::R &r1) {
-  return std::make_pair(r1, r1.val);
+  return pair_inline_proj(r1);
 }
 
 List<std::pair<ComprehensivePatterns::R, uint64_t>>
@@ -651,7 +651,7 @@ uint64_t ComprehensivePatterns::count_down(
 }
 
 uint64_t ComprehensivePatterns::f1(const ComprehensivePatterns::NC &r) {
-  return r.nc_a;
+  return return_proj_nc(r);
 }
 
 uint64_t ComprehensivePatterns::f2(const ComprehensivePatterns::NC &r) {
@@ -754,9 +754,7 @@ uint64_t ComprehensivePatterns::bug_state_and_proj(
   return take_state_and_val(s, s.state_value);
 }
 
-uint64_t ComprehensivePatterns::inner_func(uint64_t n) {
-  return (n + UINT64_C(1));
-}
+uint64_t ComprehensivePatterns::inner_func(uint64_t n) { return inc(n); }
 
 uint64_t
 ComprehensivePatterns::bug_nested_calls(const ComprehensivePatterns::State &s) {
@@ -772,9 +770,9 @@ ComprehensivePatterns::bug_in_condition(const ComprehensivePatterns::State &s) {
   }
 }
 
-uint64_t ComprehensivePatterns::f1_fc(uint64_t n) { return n; }
+uint64_t ComprehensivePatterns::f1_fc(uint64_t n) { return use_proj(n); }
 
-uint64_t ComprehensivePatterns::f2_fc(uint64_t n) { return (n + UINT64_C(1)); }
+uint64_t ComprehensivePatterns::f2_fc(uint64_t n) { return inc(n); }
 
 uint64_t
 ComprehensivePatterns::bug_multi_calls(const ComprehensivePatterns::State &s) {
@@ -812,25 +810,17 @@ uint64_t ComprehensivePatterns::two_proj_sequence(
 
 uint64_t
 ComprehensivePatterns::let_multi_proj(const ComprehensivePatterns::State &s) {
-  uint64_t v = s.state_value;
-  uint64_t d = s.state_data;
-  return (v + d);
+  return two_proj_sequence(s);
 }
 
 uint64_t ComprehensivePatterns::nested_lets_same_base(
     const ComprehensivePatterns::State &s) {
-  uint64_t v = s.state_value;
-  uint64_t d = s.state_data;
-  return (v + d);
+  return two_proj_sequence(s);
 }
 
 uint64_t
 ComprehensivePatterns::if_with_proj(const ComprehensivePatterns::State &s) {
-  if (s.state_value == UINT64_C(0)) {
-    return s.state_data;
-  } else {
-    return s.state_value;
-  }
+  return bug_in_condition(s);
 }
 
 uint64_t ComprehensivePatterns::match_scrutinee_proj(
@@ -846,8 +836,7 @@ uint64_t ComprehensivePatterns::match_scrutinee_proj(
 std::pair<ComprehensivePatterns::State, uint64_t>
 ComprehensivePatterns::bind_proj_use_base(
     const ComprehensivePatterns::State &s) {
-  uint64_t v = s.state_value;
-  return std::make_pair(s, v);
+  return let_then_use_base(s);
 }
 
 ComprehensivePatterns::RSeq
@@ -1195,8 +1184,8 @@ uint64_t ComprehensivePatterns::extract_via_match(
 }
 
 ComprehensivePatterns::StateOP
-ComprehensivePatterns::consume_state(ComprehensivePatterns::StateOP s) {
-  return s;
+ComprehensivePatterns::consume_state(const ComprehensivePatterns::StateOP &s) {
+  return identity(s);
 }
 
 uint64_t

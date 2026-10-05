@@ -53,14 +53,8 @@ struct IifeNameClash {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
-  static T1 wrapper_rec(F0 &&f, T1 f0, const wrapper &w) {
-    if (std::holds_alternative<typename wrapper::Wrap>(w.v())) {
-      const auto &[n0] = std::get<typename wrapper::Wrap>(w.v());
-      return f(n0);
-    } else {
-      return f0;
-    }
+  static T1 wrapper_rec(F0 &&f, const T1 &f0, const wrapper &w) {
+    return wrapper_rect<T1>(f, f0, w);
   }
 
   static uint64_t double_get(const wrapper &w1, const wrapper &w2);

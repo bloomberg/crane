@@ -151,51 +151,8 @@ struct LoopifyVariantSelfAssign {
   }
 
   template <typename T1, typename F1, typename F2>
-    requires std::is_invocable_r_v<T1, F1 &, const uint64_t &>
-  static T1 lst_rec(T1 f, F1 &&f0, F2 &&f1,
-                    const lst &l) { /// CraneEnter: captures varying parameters
-                                    /// for each recursive call.
-
-    struct CraneEnter {
-      const lst *l;
-    };
-
-    /// CraneCont_Cons: saves [a0, a1], resumes after recursive call, then
-    /// processes rest.
-    struct CraneCont_Cons {
-      uint64_t a0;
-      std::shared_ptr<lst> a1;
-    };
-
-    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
-    T1 _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{&l});
-    /// Loopified lst_rec: CraneEnter -> CraneCont_Cons.
-    while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      if (std::holds_alternative<CraneEnter>(_frame)) {
-        auto _f = std::move(std::get<CraneEnter>(_frame));
-        const lst &l = *_f.l;
-        if (std::holds_alternative<typename lst::Nil>(l.v())) {
-          _result = f;
-        } else if (std::holds_alternative<typename lst::One>(l.v())) {
-          const auto &[a0] = std::get<typename lst::One>(l.v());
-          _result = f0(a0);
-        } else {
-          const auto &[a0, a1] = std::get<typename lst::Cons>(l.v());
-          _stack.emplace_back(CraneCont_Cons{a0, a1});
-          _stack.emplace_back(CraneEnter{crane_raw(a1)});
-        }
-      } else {
-        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
-        uint64_t a0 = _f.a0;
-        std::shared_ptr<lst> a1 = std::move(_f.a1);
-        _result = f1(a0, *a1, std::move(_result));
-      }
-    }
-    return _result;
+  static T1 lst_rec(const T1 &f, F1 &&f0, F2 &&f1, const lst &l) {
+    return lst_rect<T1>(f, f0, f1, l);
   }
 
   static uint64_t drain(uint64_t n, const lst &l, uint64_t s);

@@ -70,16 +70,8 @@ struct ReuseTagMismatch {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, const uint64_t &>
   static T1 direction_rec(F0 &&f, F1 &&f0, const direction &d) {
-    if (std::holds_alternative<typename direction::GoUp>(d.v())) {
-      const auto &[a0] = std::get<typename direction::GoUp>(d.v());
-      return f(a0);
-    } else {
-      const auto &[a0] = std::get<typename direction::GoDown>(d.v());
-      return f0(a0);
-    }
+    return direction_rect<T1>(f, f0, d);
   }
 
   /// The 'else d' branch causes d to escape (returned in tail position).

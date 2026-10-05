@@ -126,15 +126,8 @@ template <S X> struct HashTrie {
   }
 
   template <typename T1, typename T2, typename F1>
-  static T2 Trie_rec(T2 f, F1 &&f0, const Trie<T1> &t0) {
-    if (std::holds_alternative<typename Trie<T1>::Empty>(t0.v())) {
-      return f;
-    } else {
-      const auto &[k0, v_1, left0, right0] =
-          std::get<typename Trie<T1>::Node>(t0.v());
-      return f0(k0, v_1, *left0, Trie_rec<T1, T2>(f, f0, *left0), *right0,
-                Trie_rec<T1, T2>(f, f0, *right0));
-    }
+  static T2 Trie_rec(const T2 &f, F1 &&f0, const Trie<T1> &t0) {
+    return Trie_rect<T1, T2>(f, f0, t0);
   }
 
   template <typename T1> static const Trie<T1> &empty() {

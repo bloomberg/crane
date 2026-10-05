@@ -120,48 +120,9 @@ struct CtorArgMoveAlias {
       }
     }
 
-    template <typename T1, typename F1> T1 inner_rec(T1 f, F1 &&f0) const {
-      const inner *_self = this;
-
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
-        const inner *_self;
-      };
-
-      /// CraneCont_ICons: saves [a0, a1], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_ICons {
-        uint64_t a0;
-        std::shared_ptr<inner> a1;
-      };
-
-      using CraneFrame = std::variant<CraneEnter, CraneCont_ICons>;
-      T1 _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified inner_rec: CraneEnter -> CraneCont_ICons.
-      while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
-          const inner *_self = _f._self;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename inner::INil>(_sv.v())) {
-            _result = f;
-          } else {
-            const auto &[a0, a1] = std::get<typename inner::ICons>(_sv.v());
-            _stack.emplace_back(CraneCont_ICons{a0, a1});
-            _stack.emplace_back(CraneEnter{crane_raw(a1)});
-          }
-        } else {
-          auto _f = std::move(std::get<CraneCont_ICons>(_frame));
-          uint64_t a0 = _f.a0;
-          std::shared_ptr<inner> a1 = std::move(_f.a1);
-          _result = f0(a0, *a1, std::move(_result));
-        }
-      }
-      return _result;
+    template <typename T1, typename F1>
+    T1 inner_rec(const T1 &f, F1 &&f0) const {
+      return this->template inner_rect<T1>(f, f0);
     }
 
     template <typename T1, typename F1> T1 inner_rect(T1 f, F1 &&f0) const {
@@ -304,49 +265,9 @@ struct CtorArgMoveAlias {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    template <typename T1, typename F1> T1 mylist_rec(T1 f, F1 &&f0) const {
-      const mylist<A> *_self = this;
-
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
-        const mylist<A> *_self;
-      };
-
-      /// CraneCont_Mycons: saves [a0, a1], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_Mycons {
-        A a0;
-        std::shared_ptr<mylist<A>> a1;
-      };
-
-      using CraneFrame = std::variant<CraneEnter, CraneCont_Mycons>;
-      T1 _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified mylist_rec: CraneEnter -> CraneCont_Mycons.
-      while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
-          const mylist<A> *_self = _f._self;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
-            _result = f;
-          } else {
-            const auto &[a0, a1] =
-                std::get<typename mylist<A>::Mycons>(_sv.v());
-            _stack.emplace_back(CraneCont_Mycons{a0, a1});
-            _stack.emplace_back(CraneEnter{crane_raw(a1)});
-          }
-        } else {
-          auto _f = std::move(std::get<CraneCont_Mycons>(_frame));
-          auto a0 = std::move(_f.a0);
-          std::shared_ptr<mylist<A>> a1 = std::move(_f.a1);
-          _result = f0(a0, *a1, std::move(_result));
-        }
-      }
-      return _result;
+    template <typename T1, typename F1>
+    T1 mylist_rec(const T1 &f, F1 &&f0) const {
+      return this->template mylist_rect<T1>(f, f0);
     }
 
     template <typename T1, typename F1> T1 mylist_rect(T1 f, F1 &&f0) const {
@@ -447,16 +368,8 @@ struct CtorArgMoveAlias {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, const inner &, const uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, const mylist<inner> &>
   static T1 pack_rec(F0 &&f, F1 &&f0, const pack &p) {
-    if (std::holds_alternative<typename pack::Pack0>(p.v())) {
-      const auto &[a0, a1] = std::get<typename pack::Pack0>(p.v());
-      return f(a0, a1);
-    } else {
-      const auto &[a0] = std::get<typename pack::PList>(p.v());
-      return f0(a0);
-    }
+    return pack_rect<T1>(f, f0, p);
   }
 
   static uint64_t osum(const mylist<inner> &o);

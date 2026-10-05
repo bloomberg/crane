@@ -151,67 +151,8 @@ struct MemSafetyProbe21 {
   }
 
   template <typename T1, typename F1>
-  static T1 tree_rec(T1 f, F1 &&f0,
-                     const tree &t) { /// CraneEnter: captures varying
-                                      /// parameters for each recursive call.
-
-    struct CraneEnter {
-      const tree *t;
-    };
-
-    /// CraneCont_Node: saves [a0, a1, a2], resumes after recursive call, then
-    /// processes rest.
-    struct CraneCont_Node {
-      std::shared_ptr<tree> a0;
-      uint64_t a1;
-      const tree *a2;
-    };
-
-    /// CraneCont_Node_1: saves [_tmp2, a0, a1, a2], resumes after recursive
-    /// call, then processes rest.
-    struct CraneCont_Node_1 {
-      T1 _tmp2;
-      std::shared_ptr<tree> a0;
-      uint64_t a1;
-      const tree *a2;
-    };
-
-    using CraneFrame =
-        std::variant<CraneEnter, CraneCont_Node, CraneCont_Node_1>;
-    T1 _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{&t});
-    /// Loopified tree_rec: CraneEnter -> CraneCont_Node -> CraneCont_Node_1.
-    while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      if (std::holds_alternative<CraneEnter>(_frame)) {
-        auto _f = std::move(std::get<CraneEnter>(_frame));
-        const tree &t = *_f.t;
-        if (std::holds_alternative<typename tree::Leaf>(t.v())) {
-          _result = f;
-        } else {
-          const auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v());
-          _stack.emplace_back(CraneCont_Node{a0, a1, crane_raw(a2)});
-          _stack.emplace_back(CraneEnter{crane_raw(a0)});
-        }
-      } else if (std::holds_alternative<CraneCont_Node>(_frame)) {
-        auto _f = std::move(std::get<CraneCont_Node>(_frame));
-        std::shared_ptr<tree> a0 = std::move(_f.a0);
-        uint64_t a1 = _f.a1;
-        const tree &a2 = *_f.a2;
-        _stack.emplace_back(
-            CraneCont_Node_1{std::move(_result), std::move(a0), a1, &a2});
-        _stack.emplace_back(CraneEnter{&a2});
-      } else {
-        auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
-        std::shared_ptr<tree> a0 = std::move(_f.a0);
-        uint64_t a1 = _f.a1;
-        const tree &a2 = *_f.a2;
-        _result = f0(*a0, std::move(_f._tmp2), a1, a2, std::move(_result));
-      }
-    }
-    return _result;
+  static T1 tree_rec(const T1 &f, F1 &&f0, const tree &t) {
+    return tree_rect<T1>(f, f0, t);
   }
 
   static uint64_t tree_sum(const tree &t);

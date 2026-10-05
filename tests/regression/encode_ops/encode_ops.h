@@ -285,47 +285,11 @@ struct EncodeOps {
     }
 
     template <typename T1, typename F3, typename F4, typename F5>
-      requires std::is_invocable_r_v<T1, F3 &, const uint64_t &,
-                                     const uint64_t &> &&
-               std::is_invocable_r_v<T1, F4 &, const uint64_t &> &&
-               std::is_invocable_r_v<T1, F5 &, const uint64_t &>
-    T1 instruction1_rec(T1 f, T1 f0, T1 f1, F3 &&f2, F4 &&f3, F5 &&f4, T1 f5,
-                        T1 f6, T1 f7, T1 f8, T1 f9) const {
-      if (std::holds_alternative<typename instruction1::CLB>(this->v())) {
-        return f;
-      } else if (std::holds_alternative<typename instruction1::CMC>(
-                     this->v())) {
-        return f0;
-      } else if (std::holds_alternative<typename instruction1::DAA>(
-                     this->v())) {
-        return f1;
-      } else if (std::holds_alternative<typename instruction1::FIM>(
-                     this->v())) {
-        const auto &[a0, a1] = std::get<typename instruction1::FIM>(this->v());
-        return f2(a0, a1);
-      } else if (std::holds_alternative<typename instruction1::JUN>(
-                     this->v())) {
-        const auto &[a0] = std::get<typename instruction1::JUN>(this->v());
-        return f3(a0);
-      } else if (std::holds_alternative<typename instruction1::LDM1>(
-                     this->v())) {
-        const auto &[a0] = std::get<typename instruction1::LDM1>(this->v());
-        return f4(a0);
-      } else if (std::holds_alternative<typename instruction1::NOP1>(
-                     this->v())) {
-        return f5;
-      } else if (std::holds_alternative<typename instruction1::RDM>(
-                     this->v())) {
-        return f6;
-      } else if (std::holds_alternative<typename instruction1::TCS>(
-                     this->v())) {
-        return f7;
-      } else if (std::holds_alternative<typename instruction1::WPM>(
-                     this->v())) {
-        return f8;
-      } else {
-        return f9;
-      }
+    T1 instruction1_rec(const T1 &f, const T1 &f0, const T1 &f1, F3 &&f2,
+                        F4 &&f3, F5 &&f4, const T1 &f5, const T1 &f6,
+                        const T1 &f7, const T1 &f8, const T1 &f9) const {
+      return this->template instruction1_rect<T1>(f, f0, f1, f2, f3, f4, f5, f6,
+                                                  f7, f8, f9);
     }
 
     template <typename T1, typename F3, typename F4, typename F5>
@@ -430,14 +394,8 @@ struct EncodeOps {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, const uint64_t &>
-    T1 instruction2_rec(T1 f, F1 &&f0) const {
-      if (std::holds_alternative<typename instruction2::NOP2>(this->v())) {
-        return f;
-      } else {
-        const auto &[a0] = std::get<typename instruction2::LDM2>(this->v());
-        return f0(a0);
-      }
+    T1 instruction2_rec(const T1 &f, F1 &&f0) const {
+      return this->template instruction2_rect<T1>(f, f0);
     }
 
     template <typename T1, typename F1>
@@ -498,14 +456,8 @@ struct EncodeOps {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, const uint64_t &>
-    T1 instruction3_rec(T1 f, F1 &&f0) const {
-      if (std::holds_alternative<typename instruction3::NOP3>(this->v())) {
-        return f;
-      } else {
-        const auto &[a0] = std::get<typename instruction3::LDM3>(this->v());
-        return f0(a0);
-      }
+    T1 instruction3_rec(const T1 &f, F1 &&f0) const {
+      return this->template instruction3_rect<T1>(f, f0);
     }
 
     template <typename T1, typename F1>

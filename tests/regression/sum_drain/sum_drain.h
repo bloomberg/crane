@@ -143,8 +143,7 @@ struct SumDrain {
   }
 
   template <typename T1, typename F0> static T1 t_rec(F0 &&f, const t &t0) {
-    const auto &[a0] = std::get<typename t::N>(t0.v());
-    return f(*a0);
+    return t_rect<T1>(f, t0);
   }
 
   static t build(uint64_t n, t acc);

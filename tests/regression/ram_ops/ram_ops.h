@@ -185,22 +185,7 @@ struct RamOps {
 
   template <typename T1>
   static List<T1> update_nth_port(uint64_t n, const T1 &x, const List<T1> &l) {
-    if (n <= 0) {
-      if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
-        return List<T1>::nil();
-      } else {
-        const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
-        return List<T1>::cons(x, *a1);
-      }
-    } else {
-      uint64_t n_ = n - 1;
-      if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
-        return List<T1>::nil();
-      } else {
-        const auto &[a00, a10] = std::get<typename List<T1>::Cons>(l.v());
-        return List<T1>::cons(a00, update_nth_port<T1>(n_, x, *a10));
-      }
-    }
+    return update_nth_main<T1>(n, x, l);
   }
 
   static bank_port get_bank_port(const state_port &s, uint64_t b);
@@ -235,22 +220,7 @@ struct RamOps {
   template <typename T1>
   static List<T1> update_nth_status(uint64_t n, const T1 &x,
                                     const List<T1> &l) {
-    if (n <= 0) {
-      if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
-        return List<T1>::nil();
-      } else {
-        const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
-        return List<T1>::cons(x, *a1);
-      }
-    } else {
-      uint64_t n_ = n - 1;
-      if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
-        return List<T1>::nil();
-      } else {
-        const auto &[a00, a10] = std::get<typename List<T1>::Cons>(l.v());
-        return List<T1>::cons(a00, update_nth_status<T1>(n_, x, *a10));
-      }
-    }
+    return update_nth_main<T1>(n, x, l);
   }
 
   static ram_bank_status get_bank_status(const state_status &s, uint64_t b);
@@ -405,22 +375,7 @@ struct RamOps {
 
   template <typename T1>
   static List<T1> update_nth_frame(uint64_t n, const T1 &x, const List<T1> &l) {
-    if (n <= 0) {
-      if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
-        return List<T1>::nil();
-      } else {
-        const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
-        return List<T1>::cons(x, *a1);
-      }
-    } else {
-      uint64_t n_ = n - 1;
-      if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
-        return List<T1>::nil();
-      } else {
-        const auto &[a00, a10] = std::get<typename List<T1>::Cons>(l.v());
-        return List<T1>::cons(a00, update_nth_frame<T1>(n_, x, *a10));
-      }
-    }
+    return update_nth_main<T1>(n, x, l);
   }
 
   using reg_frame = List<uint64_t>;
@@ -480,22 +435,7 @@ struct RamOps {
   template <typename T1>
   static List<T1> update_nth_preserve(uint64_t n, const T1 &x,
                                       const List<T1> &l) {
-    if (n <= 0) {
-      if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
-        return List<T1>::nil();
-      } else {
-        const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
-        return List<T1>::cons(x, *a1);
-      }
-    } else {
-      uint64_t n_ = n - 1;
-      if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
-        return List<T1>::nil();
-      } else {
-        const auto &[a00, a10] = std::get<typename List<T1>::Cons>(l.v());
-        return List<T1>::cons(a00, update_nth_preserve<T1>(n_, x, *a10));
-      }
-    }
+    return update_nth_main<T1>(n, x, l);
   }
 
   struct state_preserve {
@@ -548,22 +488,7 @@ struct RamOps {
   template <typename T1>
   static List<T1> update_nth_nested_bank(uint64_t n, const T1 &x,
                                          const List<T1> &l) {
-    if (n <= 0) {
-      if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
-        return List<T1>::nil();
-      } else {
-        const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
-        return List<T1>::cons(x, *a1);
-      }
-    } else {
-      uint64_t n_ = n - 1;
-      if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
-        return List<T1>::nil();
-      } else {
-        const auto &[a00, a10] = std::get<typename List<T1>::Cons>(l.v());
-        return List<T1>::cons(a00, update_nth_nested_bank<T1>(n_, x, *a10));
-      }
-    }
+    return update_nth_main<T1>(n, x, l);
   }
 
   static bank_nested_bank get_bank0(const state_nested_bank &s);
@@ -598,17 +523,8 @@ struct RamOps {
     }
   }
 
-  template <typename T1> static T1 item_rec(T1 f, T1 f0, Item i) {
-    switch (i) {
-    case Item::S_: {
-      return f;
-    }
-    case Item::S_0: {
-      return f0;
-    }
-    default:
-      std::unreachable();
-    }
+  template <typename T1> static T1 item_rec(const T1 &f, const T1 &f0, Item i) {
+    return item_rect<T1>(f, f0, i);
   }
 
   static uint64_t score(Item x);

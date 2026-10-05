@@ -144,13 +144,8 @@ struct ReuseMapTypeChange {
   }
 
   template <typename T1, typename T2, typename F1>
-  static T2 lst_rec(T2 f, F1 &&f0, const lst<T1> &l) {
-    if (std::holds_alternative<typename lst<T1>::Nil>(l.v())) {
-      return f;
-    } else {
-      const auto &[a0, a1] = std::get<typename lst<T1>::Cons>(l.v());
-      return f0(a0, *a1, lst_rec<T1, T2>(std::move(f), f0, *a1));
-    }
+  static T2 lst_rec(const T2 &f, F1 &&f0, const lst<T1> &l) {
+    return lst_rect<T1, T2>(f, f0, l);
   }
 
   static lst<uint64_t> build(uint64_t n, lst<uint64_t> acc);

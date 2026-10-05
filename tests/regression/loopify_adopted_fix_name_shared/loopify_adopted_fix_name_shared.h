@@ -363,18 +363,8 @@ struct LoopifyAdoptedFixNameShared {
   }
 
   template <typename T1, typename F0, typename F1, typename F2>
-    requires std::is_invocable_r_v<T1, F0 &, const Nat &>
   static T1 tree_rec(F0 &&f0, F1 &&f1, F2 &&f2, const tree &t) {
-    if (std::holds_alternative<typename tree::Leaf>(t.v())) {
-      const auto &[n0] = std::get<typename tree::Leaf>(t.v());
-      return f0(n0);
-    } else if (std::holds_alternative<typename tree::Node>(t.v())) {
-      const auto &[ts0] = std::get<typename tree::Node>(t.v());
-      return f1(*ts0);
-    } else {
-      const auto &[ts0] = std::get<typename tree::Arr>(t.v());
-      return f2(*ts0);
-    }
+    return tree_rect<T1>(f0, f1, f2, t);
   }
 
   static std::optional<Nat> f(const tree &t, const Nat &i);

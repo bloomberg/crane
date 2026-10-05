@@ -199,8 +199,7 @@ struct RecursiveRecordIncompleteType {
 
   template <typename T1, typename F0>
   static T1 cell_rec(F0 &&f, const cell &c) {
-    const auto &[key1, kids1] = std::get<typename cell::MkCell>(c.v());
-    return f(key1, *kids1);
+    return cell_rect<T1>(f, c);
   }
 
   static uint64_t key(const cell &c);

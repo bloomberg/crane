@@ -63,15 +63,8 @@ struct UserOptionWrapper {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, const A &>
-    T1 opt_rec(T1 f, F1 &&f0) const {
-      if (std::holds_alternative<typename opt<A>::Non>(this->v())) {
-        return f;
-      } else {
-        const auto &[a0] = std::get<typename opt<A>::So>(this->v());
-        return f0(a0);
-      }
+    template <typename T1, typename F1> T1 opt_rec(const T1 &f, F1 &&f0) const {
+      return this->template opt_rect<T1>(f, f0);
     }
 
     template <typename T1, typename F1>
@@ -148,8 +141,7 @@ struct UserOptionWrapper {
     t wrap(uint64_t k) const { return t::node(k, opt<t>::so(*this)); }
 
     template <typename T1, typename F0> T1 t_rec(F0 &&f) const {
-      const auto &[a0, a1] = std::get<typename t::Node>(this->v());
-      return f(a0, *a1);
+      return this->template t_rect<T1>(f);
     }
 
     template <typename T1, typename F0> T1 t_rect(F0 &&f) const {

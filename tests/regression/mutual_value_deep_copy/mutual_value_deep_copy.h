@@ -171,13 +171,8 @@ struct MutualValueDeepCopy {
   }
 
   template <typename T1, typename F1>
-  static T1 a_rec(T1 f, F1 &&f0, const a &a0) {
-    if (std::holds_alternative<typename a::AEnd>(a0.v())) {
-      return f;
-    } else {
-      const auto &[a1, a2] = std::get<typename a::ANode>(a0.v());
-      return f0(a1, *a2);
-    }
+  static T1 a_rec(const T1 &f, F1 &&f0, const a &a0) {
+    return a_rect<T1>(f, f0, a0);
   }
 
   template <typename T1, typename F0> static T1 b_rect(F0 &&f, const b &b0) {
@@ -186,8 +181,7 @@ struct MutualValueDeepCopy {
   }
 
   template <typename T1, typename F0> static T1 b_rec(F0 &&f, const b &b0) {
-    const auto &[a1] = std::get<typename b::BNode>(b0.v());
-    return f(*a1);
+    return b_rect<T1>(f, b0);
   }
 
   static bool reaches_end_a(const a &x);

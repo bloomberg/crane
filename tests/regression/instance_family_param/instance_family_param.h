@@ -133,10 +133,8 @@ struct InstanceFamilyParam {
   }
 
   template <typename T1, typename T2, typename T3, typename F0>
-    requires std::is_invocable_r_v<T3, F0 &, const T2 &>
   static T3 box_rec(F0 &&f, const box<T1, T2> &b0) {
-    const auto &[a0] = b0;
-    return f(a0);
+    return box_rect<T1, T2, T3>(f, b0);
   }
 
   template <typename T1> struct Functor_box {

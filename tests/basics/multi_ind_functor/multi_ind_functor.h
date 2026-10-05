@@ -67,14 +67,8 @@ template <Elem E> struct Container {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, const uint64_t &>
-  static T1 maybe_rec(T1 f, F1 &&f0, const maybe &m) {
-    if (std::holds_alternative<typename maybe::Nothing>(m.v())) {
-      return f;
-    } else {
-      const auto &[a0] = std::get<typename maybe::Just>(m.v());
-      return f0(a0);
-    }
+  static T1 maybe_rec(const T1 &f, F1 &&f0, const maybe &m) {
+    return maybe_rect<T1>(f, f0, m);
   }
 
   struct mlist {
@@ -146,13 +140,8 @@ template <Elem E> struct Container {
   }
 
   template <typename T1, typename F1>
-  static T1 mlist_rec(T1 f, F1 &&f0, const mlist &m) {
-    if (std::holds_alternative<typename mlist::MNil>(m.v())) {
-      return f;
-    } else {
-      const auto &[a0, a1] = std::get<typename mlist::MCons>(m.v());
-      return f0(a0, *a1, mlist_rec<T1>(std::move(f), f0, *a1));
-    }
+  static T1 mlist_rec(const T1 &f, F1 &&f0, const mlist &m) {
+    return mlist_rect<T1>(f, f0, m);
   }
 
   struct mtree {
@@ -204,16 +193,8 @@ template <Elem E> struct Container {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, const maybe &> &&
-             std::is_invocable_r_v<T1, F1 &, const mlist &>
   static T1 mtree_rec(F0 &&f, F1 &&f0, const mtree &m) {
-    if (std::holds_alternative<typename mtree::Leaf>(m.v())) {
-      const auto &[a0] = std::get<typename mtree::Leaf>(m.v());
-      return f(a0);
-    } else {
-      const auto &[a0] = std::get<typename mtree::Node>(m.v());
-      return f0(a0);
-    }
+    return mtree_rect<T1>(f, f0, m);
   }
 
   static bool is_nothing(const maybe &m) {

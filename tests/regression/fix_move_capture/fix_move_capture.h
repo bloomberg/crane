@@ -91,13 +91,8 @@ struct FixMoveCapture {
   }
 
   template <typename T1, typename F1>
-  static T1 mylist_rec(T1 f0, F1 &&f1, const mylist &m) {
-    if (std::holds_alternative<typename mylist::Mynil>(m.v())) {
-      return f0;
-    } else {
-      const auto &[a0, a1] = std::get<typename mylist::Mycons>(m.v());
-      return f1(a0, *a1, mylist_rec<T1>(std::move(f0), f1, *a1));
-    }
+  static T1 mylist_rec(const T1 &f0, F1 &&f1, const mylist &m) {
+    return mylist_rect<T1>(f0, f1, m);
   }
 
   static uint64_t length(const mylist &l);

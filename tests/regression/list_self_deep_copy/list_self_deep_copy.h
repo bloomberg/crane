@@ -195,13 +195,8 @@ struct ListSelfDeepCopy {
   }
 
   template <typename T1, typename F1>
-  static T1 chain_rec(T1 f, F1 &&f0, const chain &c) {
-    if (std::holds_alternative<typename chain::Stop>(c.v())) {
-      return f;
-    } else {
-      const auto &[a0] = std::get<typename chain::Link>(c.v());
-      return f0(*a0);
-    }
+  static T1 chain_rec(const T1 &f, F1 &&f0, const chain &c) {
+    return chain_rect<T1>(f, f0, c);
   }
 
   static std::pair<chain, chain> dup_chain(const chain &c);

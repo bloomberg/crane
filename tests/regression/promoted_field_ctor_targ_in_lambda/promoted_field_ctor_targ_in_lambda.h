@@ -351,26 +351,10 @@ struct PromotedFieldCtorTargInLambda {
     }
   }
 
-  template <typename T1, typename T2, typename T3>
-  static T3
-  memS_rec(std::type_identity_t<crane::fn<T3(T2)>> f,
-           std::type_identity_t<crane::fn<T3(Nat)>> f0,
-           std::type_identity_t<
-               crane::fn<T3(crane::fn<memS<T1, T2>(T1)>, crane::fn<T3(T1)>)>>
-               f1,
-           const memS<T1, T2> &m) {
-    if (std::holds_alternative<typename memS<T1, T2>::Mret>(m.v())) {
-      const auto &[a0] = std::get<typename memS<T1, T2>::Mret>(m.v());
-      return f(a0);
-    } else if (std::holds_alternative<typename memS<T1, T2>::Mub>(m.v())) {
-      const auto &[a0] = std::get<typename memS<T1, T2>::Mub>(m.v());
-      return f0(a0);
-    } else {
-      const auto &[a0] = std::get<typename memS<T1, T2>::Mget>(m.v());
-      return f1(a0, [=](const T1 &y) {
-        return memS_rec<T1, T2, T3>(f, f0, f1, a0(y));
-      });
-    }
+  template <typename T1, typename T2, typename T3, typename F0, typename F1,
+            typename F2>
+  static T3 memS_rec(F0 &&f, F1 &&f0, F2 &&f1, const memS<T1, T2> &m) {
+    return memS_rect<T1, T2, T3>(f, f0, f1, m);
   }
 
   template <typename T1, typename T2, typename T3>

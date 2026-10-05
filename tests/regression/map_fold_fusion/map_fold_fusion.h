@@ -121,13 +121,8 @@ struct MapFoldFusion {
   }
 
   template <typename T1, typename T2, typename F1>
-  static T2 list_rec(T2 f, F1 &&f0, const list<T1> &l) {
-    if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
-      return f;
-    } else {
-      const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
-      return f0(a0, *a1, list_rec<T1, T2>(std::move(f), f0, *a1));
-    }
+  static T2 list_rec(const T2 &f, F1 &&f0, const list<T1> &l) {
+    return list_rect<T1, T2>(f, f0, l);
   }
 
   template <typename T1, typename T2, typename F0>

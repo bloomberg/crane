@@ -31,26 +31,9 @@ struct TimingPreservesWfSimple {
   }
 
   template <typename T1>
-  static T1 instr_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, Instr i) {
-    switch (i) {
-    case Instr::NOP: {
-      return f;
-    }
-    case Instr::ADD: {
-      return f0;
-    }
-    case Instr::WRM: {
-      return f1;
-    }
-    case Instr::FIM: {
-      return f2;
-    }
-    case Instr::JMS: {
-      return f3;
-    }
-    default:
-      std::unreachable();
-    }
+  static T1 instr_rec(const T1 &f, const T1 &f0, const T1 &f1, const T1 &f2,
+                      const T1 &f3, Instr i) {
+    return instr_rect<T1>(f, f0, f1, f2, f3, i);
   }
 
   struct state {

@@ -89,14 +89,8 @@ struct HofClosureEscape {
   }
 
   template <typename T1, typename F1>
-  static T1 tree_rec(T1 f, F1 &&f0, const tree &t) {
-    if (std::holds_alternative<typename tree::Leaf>(t.v())) {
-      return f;
-    } else {
-      const auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v());
-      return f0(*a0, tree_rec<T1>(f, f0, *a0), a1, *a2,
-                tree_rec<T1>(f, f0, *a2));
-    }
+  static T1 tree_rec(const T1 &f, F1 &&f0, const tree &t) {
+    return tree_rect<T1>(f, f0, t);
   }
 
   static uint64_t sum_values(const tree &t, uint64_t x);

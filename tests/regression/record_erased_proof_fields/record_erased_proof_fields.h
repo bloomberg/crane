@@ -158,33 +158,9 @@ struct RecordErasedProofFieldsCase {
   }
 
   template <typename T1>
-  static T1 ItemKind_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5,
-                         ItemKind i) {
-    switch (i) {
-    case ItemKind::KINDA: {
-      return f;
-    }
-    case ItemKind::KINDB: {
-      return f0;
-    }
-    case ItemKind::KINDC: {
-      return f1;
-    }
-    case ItemKind::KINDD: {
-      return f2;
-    }
-    case ItemKind::KINDE: {
-      return f3;
-    }
-    case ItemKind::KINDF: {
-      return f4;
-    }
-    case ItemKind::KINDG: {
-      return f5;
-    }
-    default:
-      std::unreachable();
-    }
+  static T1 ItemKind_rec(const T1 &f, const T1 &f0, const T1 &f1, const T1 &f2,
+                         const T1 &f3, const T1 &f4, const T1 &f5, ItemKind i) {
+    return ItemKind_rect<T1>(f, f0, f1, f2, f3, f4, f5, i);
   }
 
   struct StoredTag {
@@ -240,16 +216,8 @@ struct RecordErasedProofFieldsCase {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, const ItemKind &> &&
-             std::is_invocable_r_v<T1, F1 &, const ItemKind &>
   static T1 StoredTag_rec(F0 &&f, F1 &&f0, const StoredTag &s) {
-    if (std::holds_alternative<typename StoredTag::TagPrimary>(s.v())) {
-      const auto &[a0] = std::get<typename StoredTag::TagPrimary>(s.v());
-      return f(a0);
-    } else {
-      const auto &[a0] = std::get<typename StoredTag::TagSecondary>(s.v());
-      return f0(a0);
-    }
+    return StoredTag_rect<T1>(f, f0, s);
   }
   enum class TraceBucket { BUCKETA, BUCKETB, BUCKETC };
 
@@ -271,20 +239,9 @@ struct RecordErasedProofFieldsCase {
   }
 
   template <typename T1>
-  static T1 TraceBucket_rec(T1 f, T1 f0, T1 f1, TraceBucket t) {
-    switch (t) {
-    case TraceBucket::BUCKETA: {
-      return f;
-    }
-    case TraceBucket::BUCKETB: {
-      return f0;
-    }
-    case TraceBucket::BUCKETC: {
-      return f1;
-    }
-    default:
-      std::unreachable();
-    }
+  static T1 TraceBucket_rec(const T1 &f, const T1 &f0, const T1 &f1,
+                            TraceBucket t) {
+    return TraceBucket_rect<T1>(f, f0, f1, t);
   }
 
   struct PrimaryRecord {

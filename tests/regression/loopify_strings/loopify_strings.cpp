@@ -306,43 +306,7 @@ bool LoopifyStrings::is_palindrome(const List<uint64_t> &l) {
 
 List<uint64_t> LoopifyStrings::intersperse(uint64_t sep,
                                            const List<uint64_t> &l) {
-  std::optional<List<uint64_t>> _root{};
-  std::shared_ptr<List<uint64_t>> *_write = nullptr;
-  const List<uint64_t> *_loop_l = &l;
-  while (true) {
-    if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      auto _value = List<uint64_t>::nil();
-      (_write ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-              : _root.emplace(std::move(_value)));
-      break;
-    } else {
-      const auto &[a0, a1] =
-          std::get<typename List<uint64_t>::Cons>(_loop_l->v());
-      auto &&_sv = *a1;
-      if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
-        auto _value = List<uint64_t>::cons(a0, List<uint64_t>::nil());
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
-        break;
-      } else {
-        auto _cell1 = std::make_shared<List<uint64_t>>(
-            typename List<uint64_t>::Cons(sep, nullptr));
-        auto _cell = typename List<uint64_t>::Cons(a0, std::move(_cell1));
-        List<uint64_t> &_node =
-            (_write ? *(*_write =
-                            std::make_shared<List<uint64_t>>(std::move(_cell)))
-                    : _root.emplace(std::move(_cell)));
-        _write = &std::get<typename List<uint64_t>::Cons>(
-                      std::get<typename List<uint64_t>::Cons>(_node.v_mut())
-                          .l->v_mut())
-                      .l;
-        _loop_l = crane_raw(a1);
-        continue;
-      }
-    }
-  }
-  return std::move(*_root);
+  return join_with(sep, l);
 }
 
 List<uint64_t> LoopifyStrings::intercalate(

@@ -186,10 +186,8 @@ struct PartialApply {
   }
 
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, const uint64_t &, const T1 &>
   static T2 tagged_rec(F0 &&f, const tagged<T1> &t) {
-    const auto &[a0, a1] = t;
-    return f(a0, a1);
+    return tagged_rect<T1, T2>(f, t);
   }
 
   static List<tagged<bool>> tag_with(uint64_t n, const List<bool> &l);

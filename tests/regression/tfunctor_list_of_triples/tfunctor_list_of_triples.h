@@ -279,11 +279,8 @@ struct TfunctorListOfTriples {
     // CREATORS
     static phi<T> phi0(T t) { return {std::move(t)}; }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, const T &>
-    T1 phi_rec(F0 &&f) const {
-      const auto &[t0] = *this;
-      return f(t0);
+    template <typename T1, typename F0> T1 phi_rec(F0 &&f) const {
+      return this->template phi_rect<T1>(f);
     }
 
     template <typename T1, typename F0>
@@ -310,11 +307,8 @@ struct TfunctorListOfTriples {
     // CREATORS
     static metadata<T> md(T t) { return {std::move(t)}; }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, const T &>
-    T1 metadata_rec(F0 &&f) const {
-      const auto &[t0] = *this;
-      return f(t0);
+    template <typename T1, typename F0> T1 metadata_rec(F0 &&f) const {
+      return this->template metadata_rect<T1>(f);
     }
 
     template <typename T1, typename F0>

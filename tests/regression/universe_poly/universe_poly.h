@@ -196,14 +196,8 @@ struct UniversePoly {
   }
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, const T1 &>
-  static T2 poption_rec(T2 f, F1 &&f0, const poption<T1> &p) {
-    if (std::holds_alternative<typename poption<T1>::Pnone>(p.v())) {
-      return f;
-    } else {
-      const auto &[a0] = std::get<typename poption<T1>::Psome>(p.v());
-      return f0(a0);
-    }
+  static T2 poption_rec(const T2 &f, F1 &&f0, const poption<T1> &p) {
+    return poption_rect<T1, T2>(f, f0, p);
   }
 
   template <typename T1, typename T2, typename F0>

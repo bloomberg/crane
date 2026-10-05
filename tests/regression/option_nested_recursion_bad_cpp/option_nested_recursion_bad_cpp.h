@@ -95,8 +95,7 @@ struct OptionNestedRecursionBadCpp {
 
   template <typename T1, typename F0>
   static T1 chain_rec(F0 &&f, const chain &c) {
-    const auto &[a0, a1] = std::get<typename chain::Link>(c.v());
-    return f(a0, *a1);
+    return chain_rect<T1>(f, c);
   }
 
   static chain build(uint64_t n);

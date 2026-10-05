@@ -175,13 +175,8 @@ struct DefaultedMoveNoexcept {
   }
 
   template <typename T1, typename T2, typename F1>
-  static T2 seq_rec(T2 f, F1 &&f0, const seq<T1> &s) {
-    if (std::holds_alternative<typename seq<T1>::Nil>(s.v())) {
-      return f;
-    } else {
-      const auto &[a0, s1] = std::get<typename seq<T1>::Cons>(s.v());
-      return f0(a0, *s1, seq_rec<T1, T2>(std::move(f), f0, *s1));
-    }
+  static T2 seq_rec(const T2 &f, F1 &&f0, const seq<T1> &s) {
+    return seq_rect<T1, T2>(f, f0, s);
   }
 
   template <typename T1> static Nat len(const seq<T1> &s) {

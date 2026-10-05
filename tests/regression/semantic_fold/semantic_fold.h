@@ -81,13 +81,8 @@ struct SemanticFold {
   }
 
   template <typename T1, typename F1>
-  static T1 list_rec(T1 f, F1 &&f0, const list &l) {
-    if (std::holds_alternative<typename list::Nil>(l.v())) {
-      return f;
-    } else {
-      const auto &[a0, a1] = std::get<typename list::Cons>(l.v());
-      return f0(a0, *a1, list_rec<T1>(std::move(f), f0, *a1));
-    }
+  static T1 list_rec(const T1 &f, F1 &&f0, const list &l) {
+    return list_rect<T1>(f, f0, l);
   }
 
   static list seq(uint64_t start, uint64_t len);
@@ -119,20 +114,9 @@ struct SemanticFold {
     }
   }
 
-  template <typename T1> static T1 color_rec(T1 f, T1 f0, T1 f1, Color c) {
-    switch (c) {
-    case Color::RED: {
-      return f;
-    }
-    case Color::GREEN: {
-      return f0;
-    }
-    case Color::BLUE: {
-      return f1;
-    }
-    default:
-      std::unreachable();
-    }
+  template <typename T1>
+  static T1 color_rec(const T1 &f, const T1 &f0, const T1 &f1, Color c) {
+    return color_rect<T1>(f, f0, f1, c);
   }
 
   static Color next(Color c);

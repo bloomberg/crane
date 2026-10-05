@@ -229,15 +229,8 @@ struct MutualRecursion {
   }
 
   template <typename T1, typename T2, typename F0, typename F1>
-    requires std::is_invocable_r_v<T2, F0 &, const T1 &>
   static T2 tree_rec(F0 &&f, F1 &&f0, const tree<T1> &t) {
-    if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
-      const auto &[a0] = std::get<typename tree<T1>::Leaf>(t.v());
-      return f(a0);
-    } else {
-      const auto &[a0] = std::get<typename tree<T1>::Node>(t.v());
-      return f0(*a0);
-    }
+    return tree_rect<T1, T2>(f, f0, t);
   }
 
   template <typename T1, typename T2, typename F1>
@@ -251,13 +244,8 @@ struct MutualRecursion {
   }
 
   template <typename T1, typename T2, typename F1>
-  static T2 forest_rec(T2 f, F1 &&f0, const forest<T1> &f1) {
-    if (std::holds_alternative<typename forest<T1>::Empty>(f1.v())) {
-      return f;
-    } else {
-      const auto &[a0, a1] = std::get<typename forest<T1>::Trees>(f1.v());
-      return f0(*a0, *a1, forest_rec<T1, T2>(std::move(f), f0, *a1));
-    }
+  static T2 forest_rec(const T2 &f, F1 &&f0, const forest<T1> &f1) {
+    return forest_rect<T1, T2>(f, f0, f1);
   }
 
   template <typename T1> static uint64_t tree_size(const tree<T1> &t) {

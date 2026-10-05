@@ -118,19 +118,8 @@ struct MutualRecursion {
   }
 
   template <typename T1, typename F0, typename F1, typename F2>
-    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
   static T1 expr_rec(F0 &&f, F1 &&f0, F2 &&f4, const expr &e) {
-    if (std::holds_alternative<typename expr::Val>(e.v())) {
-      const auto &[a0] = std::get<typename expr::Val>(e.v());
-      return f(a0);
-    } else if (std::holds_alternative<typename expr::BinOp>(e.v())) {
-      const auto &[a0, a1, a2] = std::get<typename expr::BinOp>(e.v());
-      return f0(a0, *a1, expr_rec<T1>(f, f0, f4, *a1), *a2,
-                expr_rec<T1>(f, f0, f4, *a2));
-    } else {
-      const auto &[a0, a1] = std::get<typename expr::UnOp>(e.v());
-      return f4(a0, *a1, expr_rec<T1>(f, f0, f4, *a1));
-    }
+    return expr_rect<T1>(f, f0, f4, e);
   }
 
   static uint64_t eval_expr(const expr &e);

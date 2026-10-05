@@ -8,10 +8,7 @@ uint64_t PathologicalRecord::hof_access(const PathologicalRecord::Rec &r) {
 }
 
 uint64_t PathologicalRecord::nested_lets(const PathologicalRecord::Rec &r) {
-  uint64_t a = r.f1;
-  uint64_t b = r.f2;
-  uint64_t c = r.f3;
-  return ((a + b) + c);
+  return hof_access(r);
 }
 
 uint64_t

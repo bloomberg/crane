@@ -208,10 +208,8 @@ struct InstanceUseDropsFamilyArg {
   }
 
   template <typename T1, typename T2, typename T3, typename F0>
-    requires std::is_invocable_r_v<T3, F0 &, const T2 &>
   static T3 box_rec(F0 &&f, const box<T1, T2> &b) {
-    const auto &[a0] = b;
-    return f(a0);
+    return box_rect<T1, T2, T3>(f, b);
   }
 
   template <typename T1> struct Monad_box {

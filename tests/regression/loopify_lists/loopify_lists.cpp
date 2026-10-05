@@ -901,51 +901,7 @@ LoopifyLists::list<uint64_t> LoopifyLists::flatten_nested(
 /// compress l removes consecutive duplicates: 1,1,2,2,2,3 -> 1,2,3.
 LoopifyLists::list<uint64_t>
 LoopifyLists::compress(const LoopifyLists::list<uint64_t> &l) {
-  std::optional<LoopifyLists::list<uint64_t>> _root{};
-  std::shared_ptr<LoopifyLists::list<uint64_t>> *_write = nullptr;
-  const LoopifyLists::list<uint64_t> *_loop_l = &l;
-  while (true) {
-    if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
-            _loop_l->v())) {
-      auto _value = list<uint64_t>::nil();
-      (_write ? *(*_write = std::make_shared<LoopifyLists::list<uint64_t>>(
-                      std::move(_value)))
-              : _root.emplace(std::move(_value)));
-      break;
-    } else {
-      const auto &[a0, a1] =
-          std::get<typename LoopifyLists::list<uint64_t>::Cons>(_loop_l->v());
-      auto &&_sv0 = *a1;
-      if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
-              _sv0.v())) {
-        auto _value = list<uint64_t>::cons(a0, list<uint64_t>::nil());
-        (_write ? *(*_write = std::make_shared<LoopifyLists::list<uint64_t>>(
-                        std::move(_value)))
-                : _root.emplace(std::move(_value)));
-        break;
-      } else {
-        const auto &[a00, a10] =
-            std::get<typename LoopifyLists::list<uint64_t>::Cons>(_sv0.v());
-        if (a0 == a00) {
-          _loop_l = crane_raw(a1);
-          continue;
-        } else {
-          auto _cell = typename LoopifyLists::list<uint64_t>::Cons(a0, nullptr);
-          LoopifyLists::list<uint64_t> &_node =
-              (_write
-                   ? *(*_write = std::make_shared<LoopifyLists::list<uint64_t>>(
-                           std::move(_cell)))
-                   : _root.emplace(std::move(_cell)));
-          _write = &std::get<typename LoopifyLists::list<uint64_t>::Cons>(
-                        _node.v_mut())
-                        .l;
-          _loop_l = crane_raw(a1);
-          continue;
-        }
-      }
-    }
-  }
-  return std::move(*_root);
+  return uniq_sorted(l);
 }
 
 /// group_pairs l groups consecutive elements into pairs: 1,2,3,4 ->

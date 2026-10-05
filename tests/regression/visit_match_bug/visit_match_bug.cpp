@@ -26,15 +26,7 @@ uint64_t VisitMatchBug::match_last_use(const VisitMatchBug::Tree &t) {
 }
 
 uint64_t VisitMatchBug::nested_match_consume(const VisitMatchBug::Tree &t) {
-  VisitMatchBug::Tree t2 = consume(t);
-  if (std::holds_alternative<typename VisitMatchBug::Tree::Leaf>(t2.v_mut())) {
-    auto &[a0] = std::get<typename VisitMatchBug::Tree::Leaf>(t2.v_mut());
-    return a0;
-  } else {
-    auto &[a0, a1, a2] =
-        std::get<typename VisitMatchBug::Tree::Node>(t2.v_mut());
-    return a1;
-  }
+  return match_after_consume(t);
 }
 
 uint64_t VisitMatchBug::chain_then_match(const VisitMatchBug::Tree &t1) {
@@ -61,11 +53,11 @@ uint64_t VisitMatchBug::match_extract_two(const VisitMatchBug::State &s) {
 }
 
 uint64_t VisitMatchBug::match_nested(const VisitMatchBug::State &s) {
-  return s.value;
+  return match_extract_field(s);
 }
 
 uint64_t VisitMatchBug::match_in_tail(const VisitMatchBug::State &s) {
-  return s.value;
+  return match_extract_field(s);
 }
 
 uint64_t VisitMatchBug::match_in_expr(const VisitMatchBug::State &s) {

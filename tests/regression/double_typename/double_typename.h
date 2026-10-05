@@ -141,11 +141,8 @@ struct DoubleTypename {
     }
 
     template <typename T1, typename T2, typename F0>
-      requires std::is_invocable_r_v<T2, F0 &, const typename X::t &,
-                                     const T1 &>
     static T2 entry_rec(F0 &&f, const entry<T1> &e) {
-      const auto &[a0, a1] = e;
-      return f(a0, a1);
+      return entry_rect<T1, T2>(f, e);
     }
 
     template <typename T1>

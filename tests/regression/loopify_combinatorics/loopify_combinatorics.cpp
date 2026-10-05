@@ -423,89 +423,8 @@ List<std::pair<uint64_t, uint64_t>> LoopifyCombinatorics::cartesian(
 }
 
 /// power_set l generates the power set (all subsets).
-List<List<uint64_t>> LoopifyCombinatorics::power_set(
-    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
-  struct CraneEnter {
-    const List<uint64_t> *l;
-  };
-
-  /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_Cons {
-    uint64_t a0;
-  };
-
-  using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
-  List<List<uint64_t>> _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&l});
-  /// Loopified power_set: CraneEnter -> CraneCont_Cons.
-  while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
-    _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
-      const List<uint64_t> &l = *_f.l;
-      if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
-        _result = List<List<uint64_t>>::cons(List<uint64_t>::nil(),
-                                             List<List<uint64_t>>::nil());
-      } else {
-        const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-        _stack.emplace_back(CraneCont_Cons{a0});
-        _stack.emplace_back(CraneEnter{crane_raw(a1)});
-      }
-    } else {
-      auto _f = std::move(std::get<CraneCont_Cons>(_frame));
-      uint64_t a0 = _f.a0;
-      List<List<uint64_t>> rest = std::move(_result);
-      auto map_add_x =
-          [&](const List<List<uint64_t>> &lst) -> List<List<uint64_t>> {
-        /// CraneEnter: captures varying parameters for each recursive call.
-        struct CraneEnter {
-          const List<List<uint64_t>> *lst;
-        };
-        /// CraneCont_Cons: saves [a0, a00], resumes after recursive call, then
-        /// processes rest.
-        struct CraneCont_Cons {
-          std::decay_t<decltype(a0)> a0;
-          List<uint64_t> a00;
-        };
-        using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
-        List<List<uint64_t>> _result{};
-        crane::small_vector<CraneFrame> _stack;
-        _stack.emplace_back(CraneEnter{&lst});
-        /// Loopified map_add_x: CraneEnter -> CraneCont_Cons.
-        while (!_stack.empty()) {
-          CraneFrame _frame = std::move(_stack.back());
-          _stack.pop_back();
-          if (std::holds_alternative<CraneEnter>(_frame)) {
-            auto _f = std::move(std::get<CraneEnter>(_frame));
-            const List<List<uint64_t>> &lst = *_f.lst;
-            if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(
-                    lst.v())) {
-              _result = List<List<uint64_t>>::nil();
-            } else {
-              const auto &[a00, a10] =
-                  std::get<typename List<List<uint64_t>>::Cons>(lst.v());
-              _stack.emplace_back(CraneCont_Cons{a0, a00});
-              _stack.emplace_back(CraneEnter{crane_raw(a10)});
-            }
-          } else {
-            auto _f = std::move(std::get<CraneCont_Cons>(_frame));
-            a0 = _f.a0;
-            List<uint64_t> a00 = std::move(_f.a00);
-            _result = List<List<uint64_t>>::cons(List<uint64_t>::cons(a0, a00),
-                                                 std::move(_result));
-          }
-        }
-        return _result;
-      };
-      _result = rest.app(map_add_x(rest));
-    }
-  }
-  return _result;
+List<List<uint64_t>> LoopifyCombinatorics::power_set(const List<uint64_t> &l) {
+  return subsequences(l);
 }
 
 /// insert_everywhere x l inserts x at every position in l.
@@ -643,41 +562,8 @@ bool LoopifyCombinatorics::elem(
 }
 
 /// Helper: list length.
-uint64_t LoopifyCombinatorics::len_impl(
-    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
-  struct CraneEnter {
-    const List<uint64_t> *l;
-  };
-
-  /// CraneCont_Cons: resumes after recursive call, then processes rest.
-  struct CraneCont_Cons {};
-
-  using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
-  uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&l});
-  /// Loopified len_impl: CraneEnter -> CraneCont_Cons.
-  while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
-    _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
-      const List<uint64_t> &l = *_f.l;
-      if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
-        _result = UINT64_C(0);
-      } else {
-        const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-        _stack.emplace_back(CraneCont_Cons{});
-        _stack.emplace_back(CraneEnter{crane_raw(a1)});
-      }
-    } else {
-      auto _f = std::move(std::get<CraneCont_Cons>(_frame));
-      _result = (std::move(_result) + 1);
-    }
-  }
-  return _result;
+uint64_t LoopifyCombinatorics::len_impl(const List<uint64_t> &l) {
+  return len_list(l);
 }
 
 /// dedup l removes all duplicates (keeps first occurrence).

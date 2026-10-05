@@ -544,17 +544,9 @@ struct PendantSumtreeRoundtripCase {
     }
   }
 
-  template <typename T1> static T1 Twist_rec(T1 f, T1 f0, Twist t1) {
-    switch (t1) {
-    case Twist::TS: {
-      return f;
-    }
-    case Twist::TZ: {
-      return f0;
-    }
-    default:
-      std::unreachable();
-    }
+  template <typename T1>
+  static T1 Twist_rec(const T1 &f, const T1 &f0, Twist t1) {
+    return Twist_rect<T1>(f, f0, t1);
   }
   enum class Fiber { COTTON, CAMELID };
 
@@ -571,17 +563,9 @@ struct PendantSumtreeRoundtripCase {
     }
   }
 
-  template <typename T1> static T1 Fiber_rec(T1 f, T1 f0, Fiber f1) {
-    switch (f1) {
-    case Fiber::COTTON: {
-      return f;
-    }
-    case Fiber::CAMELID: {
-      return f0;
-    }
-    default:
-      std::unreachable();
-    }
+  template <typename T1>
+  static T1 Fiber_rec(const T1 &f, const T1 &f0, Fiber f1) {
+    return Fiber_rect<T1>(f, f0, f1);
   }
   enum class Color { WHITE, BROWN, RED, BLUE };
 
@@ -606,23 +590,9 @@ struct PendantSumtreeRoundtripCase {
   }
 
   template <typename T1>
-  static T1 Color_rec(T1 f, T1 f0, T1 f1, T1 f2, Color c) {
-    switch (c) {
-    case Color::WHITE: {
-      return f;
-    }
-    case Color::BROWN: {
-      return f0;
-    }
-    case Color::RED: {
-      return f1;
-    }
-    case Color::BLUE: {
-      return f2;
-    }
-    default:
-      std::unreachable();
-    }
+  static T1 Color_rec(const T1 &f, const T1 &f0, const T1 &f1, const T1 &f2,
+                      Color c) {
+    return Color_rect<T1>(f, f0, f1, f2, c);
   }
 
   struct CordMeta {
@@ -744,15 +714,8 @@ struct PendantSumtreeRoundtripCase {
   }
 
   template <typename T1, typename F1, typename F2>
-    requires std::is_invocable_r_v<T1, F1 &, const CertifiedPendant &>
-  static T1 SumTree_rec(uint64_t, F1 &&f, F2 &&f0, const SumTree &s) {
-    if (std::holds_alternative<typename SumTree::SumLeaf>(s.v())) {
-      const auto &[a0] = std::get<typename SumTree::SumLeaf>(s.v());
-      return f(a0);
-    } else {
-      const auto &[a0, a1] = std::get<typename SumTree::SumNode>(s.v());
-      return f0(a0, *a1);
-    }
+  static T1 SumTree_rec(uint64_t _x, F1 &&f, F2 &&f0, const SumTree &s) {
+    return SumTree_rect<T1>(_x, f, f0, s);
   }
 
   static CertifiedPendant sumtree_top(uint64_t _x, const SumTree &st);

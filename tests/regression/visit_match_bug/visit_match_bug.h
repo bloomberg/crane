@@ -92,16 +92,8 @@ struct VisitMatchBug {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
   static T1 Tree_rec(F0 &&f, F1 &&f0, const Tree &t) {
-    if (std::holds_alternative<typename Tree::Leaf>(t.v())) {
-      const auto &[a0] = std::get<typename Tree::Leaf>(t.v());
-      return f(a0);
-    } else {
-      const auto &[a0, a1, a2] = std::get<typename Tree::Node>(t.v());
-      return f0(*a0, Tree_rec<T1>(f, f0, *a0), a1, *a2,
-                Tree_rec<T1>(f, f0, *a2));
-    }
+    return Tree_rect<T1>(f, f0, t);
   }
 
   static Tree consume(Tree t);

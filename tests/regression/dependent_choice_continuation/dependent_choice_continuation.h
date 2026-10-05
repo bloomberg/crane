@@ -25,17 +25,8 @@ struct DependentChoiceContinuation {
     }
   }
 
-  template <typename T1> static T1 MemC_rec(T1 f, T1 f0, MemC m) {
-    switch (m) {
-    case MemC::CNEXT_KEY: {
-      return f;
-    }
-    case MemC::CFRESH_PROV: {
-      return f0;
-    }
-    default:
-      std::unreachable();
-    }
+  template <typename T1> static T1 MemC_rec(const T1 &f, const T1 &f0, MemC m) {
+    return MemC_rect<T1>(f, f0, m);
   }
 
   using memCType = crane::obj;
@@ -118,22 +109,9 @@ struct DependentChoiceContinuation {
     }
   }
 
-  template <typename T1, typename T2>
-  static T2 MemS_rec(
-      std::type_identity_t<crane::fn<T2(T1)>> f,
-      std::type_identity_t<crane::fn<T2(MemC, crane::fn<MemS<T1>(memCType)>,
-                                        crane::fn<T2(memCType)>)>>
-          f0,
-      const MemS<T1> &m) {
-    if (std::holds_alternative<typename MemS<T1>::MRet>(m.v())) {
-      const auto &[a0] = std::get<typename MemS<T1>::MRet>(m.v());
-      return f(a0);
-    } else {
-      const auto &[c0, k0] = std::get<typename MemS<T1>::Mchoose>(m.v());
-      return f0(c0, k0, [=](const auto &m0) {
-        return MemS_rec<T1, T2>(f, crane_erase_fn<T2>(f0), k0(m0));
-      });
-    }
+  template <typename T1, typename T2, typename F0, typename F1>
+  static T2 MemS_rec(F0 &&f, F1 &&f0, const MemS<T1> &m) {
+    return MemS_rect<T1, T2>(f, crane_erase_fn<T2>(f0), m);
   }
 
   template <typename T1, typename F0> static MemS<T1> Mfresh_prov(F0 &&k) {

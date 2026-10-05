@@ -127,20 +127,9 @@ struct LoopifySwitchBreak {
     }
   }
 
-  template <typename T1> static T1 tag_rec(T1 f, T1 f0, T1 f1, Tag t) {
-    switch (t) {
-    case Tag::ADD: {
-      return f;
-    }
-    case Tag::MUL: {
-      return f0;
-    }
-    case Tag::KEEP: {
-      return f1;
-    }
-    default:
-      std::unreachable();
-    }
+  template <typename T1>
+  static T1 tag_rec(const T1 &f, const T1 &f0, const T1 &f1, Tag t) {
+    return tag_rect<T1>(f, f0, f1, t);
   }
 
   /// eval_ops ops acc folds a list of (tag, value) pairs into an accumulator.

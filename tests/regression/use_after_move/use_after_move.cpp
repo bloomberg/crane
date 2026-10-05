@@ -12,17 +12,17 @@ UseAfterMove::pattern2(const UseAfterMove::State &s) {
 
 std::pair<std::pair<UseAfterMove::State, uint64_t>, uint64_t>
 UseAfterMove::pattern3(const UseAfterMove::State &s) {
-  return std::make_pair(std::make_pair(s, s.value), s.data);
+  return pattern2(s);
 }
 
 std::pair<UseAfterMove::State, uint64_t>
 UseAfterMove::pattern4(const UseAfterMove::State &s1) {
-  return std::make_pair(s1, s1.value);
+  return pattern1(s1);
 }
 
 std::pair<UseAfterMove::State, uint64_t>
 UseAfterMove::pattern5(const UseAfterMove::State &s1) {
-  return std::make_pair(s1, s1.value);
+  return pattern1(s1);
 }
 
 std::pair<UseAfterMove::State, uint64_t>

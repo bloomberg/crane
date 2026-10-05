@@ -55,14 +55,8 @@ struct DepMatchUnitPair {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &, const uint64_t &>
-  static T1 tg_rec(F0 &&f, T1 f0, bool, const tg &t) {
-    if (std::holds_alternative<typename tg::TP>(t.v())) {
-      const auto &[a0, a1] = std::get<typename tg::TP>(t.v());
-      return f(a0, a1);
-    } else {
-      return f0;
-    }
+  static T1 tg_rec(F0 &&f, const T1 &f0, bool _x, const tg &t) {
+    return tg_rect<T1>(f, f0, _x, t);
   }
 
   static std::pair<uint64_t, uint64_t> get(const tg &t);

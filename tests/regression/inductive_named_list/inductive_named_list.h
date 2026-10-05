@@ -214,13 +214,8 @@ struct InductiveNamedList {
   }
 
   template <typename T1, typename F1>
-  static T1 List_rec(T1 f, F1 &&f0, const List_ &l) {
-    if (std::holds_alternative<typename List_::LNil>(l.v())) {
-      return f;
-    } else {
-      const auto &[a0, a1] = std::get<typename List_::LCons>(l.v());
-      return f0(a0, *a1, List_rec<T1>(std::move(f), f0, *a1));
-    }
+  static T1 List_rec(const T1 &f, F1 &&f0, const List_ &l) {
+    return List_rect<T1>(f, f0, l);
   }
 
   static uint64_t len(const List_ &l);

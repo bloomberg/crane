@@ -90,14 +90,8 @@ struct NameClashMatchMatch {
   }
 
   template <typename T1, typename F1>
-  static T1 tree_rec(T1 f, F1 &&f0, const tree &t) {
-    if (std::holds_alternative<typename tree::Leaf>(t.v())) {
-      return f;
-    } else {
-      const auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v());
-      return f0(*a0, tree_rec<T1>(f, f0, *a0), a1, *a2,
-                tree_rec<T1>(f, f0, *a2));
-    }
+  static T1 tree_rec(const T1 &f, F1 &&f0, const tree &t) {
+    return tree_rect<T1>(f, f0, t);
   }
   /// Returns a subtree based on a direction.
   enum class Dir { GOLEFT, GORIGHT };
@@ -115,17 +109,8 @@ struct NameClashMatchMatch {
     }
   }
 
-  template <typename T1> static T1 dir_rec(T1 f, T1 f0, Dir d) {
-    switch (d) {
-    case Dir::GOLEFT: {
-      return f;
-    }
-    case Dir::GORIGHT: {
-      return f0;
-    }
-    default:
-      std::unreachable();
-    }
+  template <typename T1> static T1 dir_rec(const T1 &f, const T1 &f0, Dir d) {
+    return dir_rect<T1>(f, f0, d);
   }
 
   static tree choose_subtree(Dir d, const tree &t);

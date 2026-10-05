@@ -34,29 +34,9 @@ struct CtorEscapeCollision {
   }
 
   template <typename T1>
-  static T1 item_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, Item i) {
-    switch (i) {
-    case Item::D_: {
-      return f;
-    }
-    case Item::D_0: {
-      return f0;
-    }
-    case Item::D_P: {
-      return f1;
-    }
-    case Item::D_P0: {
-      return f2;
-    }
-    case Item::D_P1: {
-      return f3;
-    }
-    case Item::D_P2: {
-      return f4;
-    }
-    default:
-      std::unreachable();
-    }
+  static T1 item_rec(const T1 &f, const T1 &f0, const T1 &f1, const T1 &f2,
+                     const T1 &f3, const T1 &f4, Item i) {
+    return item_rect<T1>(f, f0, f1, f2, f3, f4, i);
   }
 
   static uint64_t tag(Item x);

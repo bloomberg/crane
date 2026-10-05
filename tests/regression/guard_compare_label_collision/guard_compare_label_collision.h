@@ -153,17 +153,8 @@ struct Ordered {
     }
   }
 
-  template <typename T1> static T1 t_rec(T1 f, T1 f0, T t0) {
-    switch (t0) {
-    case T::A: {
-      return f;
-    }
-    case T::B: {
-      return f0;
-    }
-    default:
-      std::unreachable();
-    }
+  template <typename T1> static T1 t_rec(const T1 &f, const T1 &f0, T t0) {
+    return t_rect<T1>(f, f0, t0);
   }
 
   /// An ordinary structural comparator returning the plain extraction

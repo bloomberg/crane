@@ -143,48 +143,9 @@ struct FixSharedPtrField {
       }
     }
 
-    template <typename T1, typename F1> T1 mylist_rec(T1 f, F1 &&f0) const {
-      const mylist *_self = this;
-
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
-        const mylist *_self;
-      };
-
-      /// CraneCont_Mycons: saves [a0, a1], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_Mycons {
-        uint64_t a0;
-        std::shared_ptr<mylist> a1;
-      };
-
-      using CraneFrame = std::variant<CraneEnter, CraneCont_Mycons>;
-      T1 _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified mylist_rec: CraneEnter -> CraneCont_Mycons.
-      while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
-          const mylist *_self = _f._self;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename mylist::Mynil>(_sv.v())) {
-            _result = f;
-          } else {
-            const auto &[a0, a1] = std::get<typename mylist::Mycons>(_sv.v());
-            _stack.emplace_back(CraneCont_Mycons{a0, a1});
-            _stack.emplace_back(CraneEnter{crane_raw(a1)});
-          }
-        } else {
-          auto _f = std::move(std::get<CraneCont_Mycons>(_frame));
-          uint64_t a0 = _f.a0;
-          std::shared_ptr<mylist> a1 = std::move(_f.a1);
-          _result = f0(a0, *a1, std::move(_result));
-        }
-      }
-      return _result;
+    template <typename T1, typename F1>
+    T1 mylist_rec(const T1 &f, F1 &&f0) const {
+      return this->template mylist_rect<T1>(f, f0);
     }
 
     template <typename T1, typename F1> T1 mylist_rect(T1 f, F1 &&f0) const {
@@ -252,10 +213,8 @@ struct FixSharedPtrField {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, const mylist &>
   static T1 wrapper_rec(F0 &&f, const wrapper &w) {
-    const auto &[a0] = w;
-    return f(a0);
+    return wrapper_rect<T1>(f, w);
   }
 
   /// test1: l = 10, 20, 30, h=10, t=20,30, mylist_sum(t)=50.

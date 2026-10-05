@@ -104,10 +104,8 @@ struct RocqBug4844 {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, const Sum<ST, ST> &>
-  static T1 box_rec(SomeType, F1 &&f, const box &b) {
-    const auto &[a0] = b;
-    return f(a0);
+  static T1 box_rec(SomeType _x, F1 &&f, const box &b) {
+    return box_rect<T1>(_x, f, b);
   }
 
   static inline const box boxed_semilogic = box::box0(semilogic);

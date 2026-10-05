@@ -25,12 +25,8 @@ struct NameClashCtorField {
       return (d_a0 + d_a1);
     }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &,
-                                     const uint64_t &>
-    T1 clash1_rec(F0 &&f) const {
-      const auto &[d_a2, d_a3] = *this;
-      return f(d_a2, d_a3);
+    template <typename T1, typename F0> T1 clash1_rec(F0 &&f) const {
+      return this->template clash1_rect<T1>(f);
     }
 
     template <typename T1, typename F0>
@@ -88,16 +84,8 @@ struct NameClashCtorField {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, const uint64_t &>
     T1 clash2_rec(F0 &&f, F1 &&f0) const {
-      if (std::holds_alternative<typename clash2::C2a>(this->v())) {
-        const auto &[v_0] = std::get<typename clash2::C2a>(this->v());
-        return f(v_0);
-      } else {
-        const auto &[result0] = std::get<typename clash2::C2b>(this->v());
-        return f0(result0);
-      }
+      return this->template clash2_rect<T1>(f, f0);
     }
 
     template <typename T1, typename F0, typename F1>
@@ -131,12 +119,8 @@ struct NameClashCtorField {
       return pair_ind::mkpair(a1, a0);
     }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &,
-                                     const uint64_t &>
-    T1 pair_ind_rec(F0 &&f) const {
-      const auto &[a0, a1] = *this;
-      return f(a0, a1);
+    template <typename T1, typename F0> T1 pair_ind_rec(F0 &&f) const {
+      return this->template pair_ind_rect<T1>(f);
     }
 
     template <typename T1, typename F0>
@@ -204,14 +188,8 @@ struct NameClashCtorField {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, const pair_ind &>
-  static T1 box_rec(F0 &&f, T1 f0, const box &b) {
-    if (std::holds_alternative<typename box::Box0>(b.v())) {
-      const auto &[a0] = std::get<typename box::Box0>(b.v());
-      return f(a0);
-    } else {
-      return f0;
-    }
+  static T1 box_rec(F0 &&f, const T1 &f0, const box &b) {
+    return box_rect<T1>(f, f0, b);
   }
 };
 

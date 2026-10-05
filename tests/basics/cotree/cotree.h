@@ -406,8 +406,7 @@ struct Cotree {
 
   template <typename T1, typename T2, typename F0>
   static T2 tree_rec(F0 &&f, const tree<T1> &t) {
-    const auto &[a0, a1] = std::get<typename tree<T1>::Node>(t.v());
-    return f(a0, *a1);
+    return tree_rect<T1, T2>(f, t);
   }
 
   template <typename T1> static T1 tree_root(const tree<T1> &t) {

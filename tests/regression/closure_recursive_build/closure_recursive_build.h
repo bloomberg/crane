@@ -79,13 +79,8 @@ struct ClosureRecursiveBuild {
   }
 
   template <typename T1, typename F1>
-  static T1 fn_list_rec(T1 f, F1 &&f0, const fn_list &f1) {
-    if (std::holds_alternative<typename fn_list::FNil>(f1.v())) {
-      return f;
-    } else {
-      const auto &[a0, a1] = std::get<typename fn_list::FCons>(f1.v());
-      return f0(a0, *a1, fn_list_rec<T1>(std::move(f), f0, *a1));
-    }
+  static T1 fn_list_rec(const T1 &f, F1 &&f0, const fn_list &f1) {
+    return fn_list_rect<T1>(f, f0, f1);
   }
 
   /// Recursively build a list of fixpoint closures. Each recursive call

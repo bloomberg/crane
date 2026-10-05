@@ -196,17 +196,9 @@ struct PulseParseCertificateCase {
     }
   }
 
-  template <typename T1> static T1 PulseClass_rec(T1 f, T1 f0, PulseClass p) {
-    switch (p) {
-    case PulseClass::MARKSHORT: {
-      return f;
-    }
-    case PulseClass::MARKLONG: {
-      return f0;
-    }
-    default:
-      std::unreachable();
-    }
+  template <typename T1>
+  static T1 PulseClass_rec(const T1 &f, const T1 &f0, PulseClass p) {
+    return PulseClass_rect<T1>(f, f0, p);
   }
 
   static PulseClass classify_run_with_base(uint64_t base, uint64_t n);

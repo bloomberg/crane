@@ -490,20 +490,9 @@ struct CoalitionBidHonorTraceCase {
     }
   }
 
-  template <typename T1> static T1 Clan_rec(T1 f, T1 f0, T1 f1, Clan c) {
-    switch (c) {
-    case Clan::CLANWOLF: {
-      return f;
-    }
-    case Clan::CLANJADEFALCON: {
-      return f0;
-    }
-    case Clan::CLANGHOSTBEAR: {
-      return f1;
-    }
-    default:
-      std::unreachable();
-    }
+  template <typename T1>
+  static T1 Clan_rec(const T1 &f, const T1 &f0, const T1 &f1, Clan c) {
+    return Clan_rect<T1>(f, f0, f1, c);
   }
 
   static bool clan_eq_dec(Clan c1, Clan c2);
@@ -526,20 +515,9 @@ struct CoalitionBidHonorTraceCase {
     }
   }
 
-  template <typename T1> static T1 Rank_rec(T1 f, T1 f0, T1 f1, Rank r) {
-    switch (r) {
-    case Rank::WARRIOR: {
-      return f;
-    }
-    case Rank::STARCAPTAIN: {
-      return f0;
-    }
-    case Rank::STARCOLONEL: {
-      return f1;
-    }
-    default:
-      std::unreachable();
-    }
+  template <typename T1>
+  static T1 Rank_rec(const T1 &f, const T1 &f0, const T1 &f1, Rank r) {
+    return Rank_rect<T1>(f, f0, f1, r);
   }
 
   static uint64_t rank_to_nat(Rank r);
@@ -573,20 +551,9 @@ struct CoalitionBidHonorTraceCase {
   }
 
   template <typename T1>
-  static T1 UnitClass_rec(T1 f, T1 f0, T1 f1, UnitClass u) {
-    switch (u) {
-    case UnitClass::OMNIMECH: {
-      return f;
-    }
-    case UnitClass::BATTLEMECH: {
-      return f0;
-    }
-    case UnitClass::ELEMENTAL: {
-      return f1;
-    }
-    default:
-      std::unreachable();
-    }
+  static T1 UnitClass_rec(const T1 &f, const T1 &f0, const T1 &f1,
+                          UnitClass u) {
+    return UnitClass_rect<T1>(f, f0, f1, u);
   }
   enum class WeightClass { LIGHT, HEAVY, ASSAULT };
 
@@ -608,20 +575,9 @@ struct CoalitionBidHonorTraceCase {
   }
 
   template <typename T1>
-  static T1 WeightClass_rec(T1 f, T1 f0, T1 f1, WeightClass w) {
-    switch (w) {
-    case WeightClass::LIGHT: {
-      return f;
-    }
-    case WeightClass::HEAVY: {
-      return f0;
-    }
-    case WeightClass::ASSAULT: {
-      return f1;
-    }
-    default:
-      std::unreachable();
-    }
+  static T1 WeightClass_rec(const T1 &f, const T1 &f0, const T1 &f1,
+                            WeightClass w) {
+    return WeightClass_rect<T1>(f, f0, f1, w);
   }
 
   static uint64_t weight_class_value(WeightClass w);
@@ -678,17 +634,8 @@ struct CoalitionBidHonorTraceCase {
     }
   }
 
-  template <typename T1> static T1 Side_rec(T1 f, T1 f0, Side s) {
-    switch (s) {
-    case Side::ATTACKER: {
-      return f;
-    }
-    case Side::DEFENDER: {
-      return f0;
-    }
-    default:
-      std::unreachable();
-    }
+  template <typename T1> static T1 Side_rec(const T1 &f, const T1 &f0, Side s) {
+    return Side_rect<T1>(f, f0, s);
   }
 
   struct CoalitionMember {
@@ -744,17 +691,9 @@ struct CoalitionBidHonorTraceCase {
     }
   }
 
-  template <typename T1> static T1 TrialType_rec(T1 f, T1 f0, TrialType t) {
-    switch (t) {
-    case TrialType::TRIALOFPOSSESSION: {
-      return f;
-    }
-    case TrialType::TRIALOFANNIHILATION: {
-      return f0;
-    }
-    default:
-      std::unreachable();
-    }
+  template <typename T1>
+  static T1 TrialType_rec(const T1 &f, const T1 &f0, TrialType t) {
+    return TrialType_rect<T1>(f, f0, t);
   }
 
   struct Prize {
@@ -792,15 +731,8 @@ struct CoalitionBidHonorTraceCase {
     const variant_t &v() const { return v_; }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, const uint64_t &>
-    T1 Prize_rec(T1 f, F1 &&f0) const {
-      if (std::holds_alternative<typename Prize::PrizeHonor>(this->v())) {
-        return f;
-      } else {
-        const auto &[enclave_id0] =
-            std::get<typename Prize::PrizeEnclave>(this->v());
-        return f0(enclave_id0);
-      }
+    T1 Prize_rec(const T1 &f, F1 &&f0) const {
+      return this->template Prize_rect<T1>(f, f0);
     }
 
     template <typename T1, typename F1>
@@ -856,20 +788,8 @@ struct CoalitionBidHonorTraceCase {
     const variant_t &v() const { return v_; }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &,
-                                     const uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, const uint64_t &>
     T1 Location_rec(F0 &&f, F1 &&f0) const {
-      if (std::holds_alternative<typename Location::LocPlanetSurface>(
-              this->v())) {
-        const auto &[world_id0, region_id0] =
-            std::get<typename Location::LocPlanetSurface>(this->v());
-        return f(world_id0, region_id0);
-      } else {
-        const auto &[enclave_id0] =
-            std::get<typename Location::LocEnclave>(this->v());
-        return f0(enclave_id0);
-      }
+      return this->template Location_rect<T1>(f, f0);
     }
 
     template <typename T1, typename F0, typename F1>
@@ -951,16 +871,8 @@ struct CoalitionBidHonorTraceCase {
     const variant_t &v() const { return v_; }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, const uint64_t &>
-    T1 RefusalReason_rec(T1 f, F1 &&f0) const {
-      if (std::holds_alternative<
-              typename RefusalReason::RefusalInsufficientRank>(this->v())) {
-        return f;
-      } else {
-        const auto &[note0] =
-            std::get<typename RefusalReason::RefusalOther>(this->v());
-        return f0(note0);
-      }
+    T1 RefusalReason_rec(const T1 &f, F1 &&f0) const {
+      return this->template RefusalReason_rect<T1>(f, f0);
     }
 
     template <typename T1, typename F1>
@@ -1140,56 +1052,10 @@ struct CoalitionBidHonorTraceCase {
 
   template <typename T1, typename F0, typename F1, typename F2, typename F3,
             typename F4, typename F5, typename F7, typename F8>
-    requires std::is_invocable_r_v<T1, F0 &, const BatchallChallenge &> &&
-             std::is_invocable_r_v<T1, F1 &, const BatchallResponse &> &&
-             std::is_invocable_r_v<T1, F2 &, const RefusalReason &> &&
-             std::is_invocable_r_v<T1, F3 &, const ForceBid &> &&
-             std::is_invocable_r_v<T1, F4 &, const CoalitionMemberBid &> &&
-             std::is_invocable_r_v<T1, F5 &, const Side &> &&
-             std::is_invocable_r_v<T1, F7 &, const Side &> &&
-             std::is_invocable_r_v<T1, F8 &, const Side &>
   static T1 ProtocolAction_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3,
-                               F5 &&f4, T1 f5, F7 &&f6, F8 &&f7,
+                               F5 &&f4, const T1 &f5, F7 &&f6, F8 &&f7,
                                const ProtocolAction &p) {
-    if (std::holds_alternative<typename ProtocolAction::ActChallenge>(p.v())) {
-      const auto &[chal0] =
-          std::get<typename ProtocolAction::ActChallenge>(p.v());
-      return f(chal0);
-    } else if (std::holds_alternative<typename ProtocolAction::ActRespond>(
-                   p.v())) {
-      const auto &[resp0] =
-          std::get<typename ProtocolAction::ActRespond>(p.v());
-      return f0(resp0);
-    } else if (std::holds_alternative<typename ProtocolAction::ActRefuse>(
-                   p.v())) {
-      const auto &[reason0] =
-          std::get<typename ProtocolAction::ActRefuse>(p.v());
-      return f1(reason0);
-    } else if (std::holds_alternative<typename ProtocolAction::ActBid>(p.v())) {
-      const auto &[bid0] = std::get<typename ProtocolAction::ActBid>(p.v());
-      return f2(bid0);
-    } else if (std::holds_alternative<typename ProtocolAction::ActCoalitionBid>(
-                   p.v())) {
-      const auto &[cbid0] =
-          std::get<typename ProtocolAction::ActCoalitionBid>(p.v());
-      return f3(cbid0);
-    } else if (std::holds_alternative<typename ProtocolAction::ActPass>(
-                   p.v())) {
-      const auto &[side0] = std::get<typename ProtocolAction::ActPass>(p.v());
-      return f4(side0);
-    } else if (std::holds_alternative<typename ProtocolAction::ActClose>(
-                   p.v())) {
-      return f5;
-    } else if (std::holds_alternative<typename ProtocolAction::ActWithdraw>(
-                   p.v())) {
-      const auto &[side0] =
-          std::get<typename ProtocolAction::ActWithdraw>(p.v());
-      return f6(side0);
-    } else {
-      const auto &[side0] =
-          std::get<typename ProtocolAction::ActBreakBid>(p.v());
-      return f7(side0);
-    }
+    return ProtocolAction_rect<T1>(f, f0, f1, f2, f3, f4, f5, f6, f7, p);
   }
   enum class ReadyStatus {
     NEITHERREADY,
@@ -1219,23 +1085,9 @@ struct CoalitionBidHonorTraceCase {
   }
 
   template <typename T1>
-  static T1 ReadyStatus_rec(T1 f, T1 f0, T1 f1, T1 f2, ReadyStatus r) {
-    switch (r) {
-    case ReadyStatus::NEITHERREADY: {
-      return f;
-    }
-    case ReadyStatus::ATTACKERREADY: {
-      return f0;
-    }
-    case ReadyStatus::DEFENDERREADY: {
-      return f1;
-    }
-    case ReadyStatus::BOTHREADY: {
-      return f2;
-    }
-    default:
-      std::unreachable();
-    }
+  static T1 ReadyStatus_rec(const T1 &f, const T1 &f0, const T1 &f1,
+                            const T1 &f2, ReadyStatus r) {
+    return ReadyStatus_rect<T1>(f, f0, f1, f2, r);
   }
 
   static bool is_ready(ReadyStatus rs, Side side);
@@ -1543,58 +1395,9 @@ struct CoalitionBidHonorTraceCase {
 
   template <typename T1, typename F1, typename F2, typename F3, typename F4,
             typename F5, typename F6>
-    requires std::is_invocable_r_v<T1, F1 &, const BatchallChallenge &> &&
-             std::is_invocable_r_v<T1, F2 &, const BatchallChallenge &,
-                                   const BatchallResponse &> &&
-             std::is_invocable_r_v<
-                 T1, F3 &, const BatchallChallenge &, const BatchallResponse &,
-                 const ForceBid &, const ForceBid &,
-                 const std::optional<List<CoalitionMember>> &,
-                 const std::optional<List<CoalitionMember>> &,
-                 const List<ForceBid> &, const ReadyStatus &> &&
-             std::is_invocable_r_v<T1, F4 &, const BatchallChallenge &,
-                                   const BatchallResponse &, const ForceBid &,
-                                   const ForceBid &> &&
-             std::is_invocable_r_v<T1, F5 &, const BatchallChallenge &,
-                                   const RefusalReason &> &&
-             std::is_invocable_r_v<T1, F6 &, const ProtocolAction &>
-  static T1 BatchallPhase_rec(T1 f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
-                              F6 &&f5, const BatchallPhase &b) {
-    if (std::holds_alternative<typename BatchallPhase::PhaseIdle>(b.v())) {
-      return f;
-    } else if (std::holds_alternative<typename BatchallPhase::PhaseChallenged>(
-                   b.v())) {
-      const auto &[challenge0] =
-          std::get<typename BatchallPhase::PhaseChallenged>(b.v());
-      return f0(challenge0);
-    } else if (std::holds_alternative<typename BatchallPhase::PhaseResponded>(
-                   b.v())) {
-      const auto &[challenge0, response0] =
-          std::get<typename BatchallPhase::PhaseResponded>(b.v());
-      return f1(challenge0, response0);
-    } else if (std::holds_alternative<typename BatchallPhase::PhaseBidding>(
-                   b.v())) {
-      const auto &[challenge0, response0, attacker_bid0, defender_bid0,
-                   attacker_coalition1, defender_coalition1, bid_history0,
-                   ready0] =
-          std::get<typename BatchallPhase::PhaseBidding>(b.v());
-      return f2(challenge0, response0, attacker_bid0, defender_bid0,
-                attacker_coalition1, defender_coalition1, bid_history0, ready0);
-    } else if (std::holds_alternative<typename BatchallPhase::PhaseAgreed>(
-                   b.v())) {
-      const auto &[challenge0, response0, final_attacker0, final_defender0] =
-          std::get<typename BatchallPhase::PhaseAgreed>(b.v());
-      return f3(challenge0, response0, final_attacker0, final_defender0);
-    } else if (std::holds_alternative<typename BatchallPhase::PhaseRefused>(
-                   b.v())) {
-      const auto &[challenge0, reason0] =
-          std::get<typename BatchallPhase::PhaseRefused>(b.v());
-      return f4(challenge0, reason0);
-    } else {
-      const auto &[reason0] =
-          std::get<typename BatchallPhase::PhaseAborted>(b.v());
-      return f5(reason0);
-    }
+  static T1 BatchallPhase_rec(const T1 &f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3,
+                              F5 &&f4, F6 &&f5, const BatchallPhase &b) {
+    return BatchallPhase_rect<T1>(f, f0, f1, f2, f3, f4, f5, b);
   }
 
   using Honor = Z;

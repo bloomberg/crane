@@ -280,30 +280,10 @@ struct ValidatedPumpDeliveryTraceCase {
   }
 
   template <typename T1>
-  static T1 ActivityState_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4,
+  static T1 ActivityState_rec(const T1 &f, const T1 &f0, const T1 &f1,
+                              const T1 &f2, const T1 &f3, const T1 &f4,
                               ActivityState a) {
-    switch (a) {
-    case ActivityState::ACTIVITY_NORMAL: {
-      return f;
-    }
-    case ActivityState::ACTIVITY_LIGHTEXERCISE: {
-      return f0;
-    }
-    case ActivityState::ACTIVITY_MODERATEEXERCISE: {
-      return f1;
-    }
-    case ActivityState::ACTIVITY_INTENSEEXERCISE: {
-      return f2;
-    }
-    case ActivityState::ACTIVITY_ILLNESS: {
-      return f3;
-    }
-    case ActivityState::ACTIVITY_STRESS: {
-      return f4;
-    }
-    default:
-      std::unreachable();
-    }
+    return ActivityState_rect<T1>(f, f0, f1, f2, f3, f4, a);
   }
 
   static uint64_t isf_activity_modifier(ActivityState state);
@@ -384,24 +364,9 @@ struct ValidatedPumpDeliveryTraceCase {
     }
 
     template <typename T1, typename F2>
-      requires std::is_invocable_r_v<T1, F2 &, const uint64_t &>
-    T1 FaultStatus_rec(T1 f, T1 f0, F2 &&f1, T1 f2, T1 f3) const {
-      if (std::holds_alternative<typename FaultStatus::Fault_None>(this->v())) {
-        return f;
-      } else if (std::holds_alternative<typename FaultStatus::Fault_Occlusion>(
-                     this->v())) {
-        return f0;
-      } else if (std::holds_alternative<
-                     typename FaultStatus::Fault_LowReservoir>(this->v())) {
-        const auto &[a0] =
-            std::get<typename FaultStatus::Fault_LowReservoir>(this->v());
-        return f1(a0);
-      } else if (std::holds_alternative<typename FaultStatus::Fault_BatteryLow>(
-                     this->v())) {
-        return f2;
-      } else {
-        return f3;
-      }
+    T1 FaultStatus_rec(const T1 &f, const T1 &f0, F2 &&f1, const T1 &f2,
+                       const T1 &f3) const {
+      return this->template FaultStatus_rect<T1>(f, f0, f1, f2, f3);
     }
 
     template <typename T1, typename F2>
@@ -445,20 +410,9 @@ struct ValidatedPumpDeliveryTraceCase {
   }
 
   template <typename T1>
-  static T1 InsulinType_rec(T1 f, T1 f0, T1 f1, InsulinType i) {
-    switch (i) {
-    case InsulinType::INSULIN_HUMALOG: {
-      return f;
-    }
-    case InsulinType::INSULIN_ASPART: {
-      return f0;
-    }
-    case InsulinType::INSULIN_LISPRO: {
-      return f1;
-    }
-    default:
-      std::unreachable();
-    }
+  static T1 InsulinType_rec(const T1 &f, const T1 &f0, const T1 &f1,
+                            InsulinType i) {
+    return InsulinType_rect<T1>(f, f0, f1, i);
   }
 
   static Minutes peak_time(InsulinType itype, uint64_t _x);
@@ -559,19 +513,9 @@ struct ValidatedPumpDeliveryTraceCase {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, const uint64_t &>
-  static T1 SuspendDecision_rec(T1 f, F1 &&f0, T1 f1,
+  static T1 SuspendDecision_rec(const T1 &f, F1 &&f0, const T1 &f1,
                                 const SuspendDecision &s) {
-    if (std::holds_alternative<typename SuspendDecision::Suspend_None>(s.v())) {
-      return f;
-    } else if (std::holds_alternative<typename SuspendDecision::Suspend_Reduce>(
-                   s.v())) {
-      const auto &[a0] =
-          std::get<typename SuspendDecision::Suspend_Reduce>(s.v());
-      return f0(a0);
-    } else {
-      return f1;
-    }
+    return SuspendDecision_rect<T1>(f, f0, f1, s);
   }
 
   static uint64_t predict_bg_drop_tenths(uint64_t iob_twentieths,
@@ -696,16 +640,8 @@ struct ValidatedPumpDeliveryTraceCase {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &, const bool &> &&
-             std::is_invocable_r_v<T1, F1 &, const uint64_t &>
   static T1 PrecisionResult_rec(F0 &&f, F1 &&f0, const PrecisionResult &p) {
-    if (std::holds_alternative<typename PrecisionResult::PrecOK>(p.v())) {
-      const auto &[a0, a1] = std::get<typename PrecisionResult::PrecOK>(p.v());
-      return f(a0, a1);
-    } else {
-      const auto &[a0] = std::get<typename PrecisionResult::PrecError>(p.v());
-      return f0(a0);
-    }
+    return PrecisionResult_rect<T1>(f, f0, p);
   }
 
   static constexpr uint64_t prec_error_invalid_params = UINT64_C(1);
@@ -764,23 +700,9 @@ struct ValidatedPumpDeliveryTraceCase {
   }
 
   template <typename T1>
-  static T1 RoundingMode_rec(T1 f, T1 f0, T1 f1, T1 f2, RoundingMode r) {
-    switch (r) {
-    case RoundingMode::ROUNDTWENTIETH: {
-      return f;
-    }
-    case RoundingMode::ROUNDTENTH: {
-      return f0;
-    }
-    case RoundingMode::ROUNDHALF: {
-      return f1;
-    }
-    case RoundingMode::ROUNDUNIT: {
-      return f2;
-    }
-    default:
-      std::unreachable();
-    }
+  static T1 RoundingMode_rec(const T1 &f, const T1 &f0, const T1 &f1,
+                             const T1 &f2, RoundingMode r) {
+    return RoundingMode_rect<T1>(f, f0, f1, f2, r);
   }
 
   static uint64_t round_down_to_increment(uint64_t t, uint64_t increment);

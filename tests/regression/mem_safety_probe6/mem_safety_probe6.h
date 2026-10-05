@@ -187,49 +187,9 @@ struct MemSafetyProbe6 {
       }
     }
 
-    template <typename T1, typename F1> T1 mylist_rec(T1 f, F1 &&f0) const {
-      const mylist<A> *_self = this;
-
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
-        const mylist<A> *_self;
-      };
-
-      /// CraneCont_Mycons: saves [a0, a1], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_Mycons {
-        A a0;
-        std::shared_ptr<mylist<A>> a1;
-      };
-
-      using CraneFrame = std::variant<CraneEnter, CraneCont_Mycons>;
-      T1 _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified mylist_rec: CraneEnter -> CraneCont_Mycons.
-      while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
-          const mylist<A> *_self = _f._self;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
-            _result = f;
-          } else {
-            const auto &[a0, a1] =
-                std::get<typename mylist<A>::Mycons>(_sv.v());
-            _stack.emplace_back(CraneCont_Mycons{a0, a1});
-            _stack.emplace_back(CraneEnter{crane_raw(a1)});
-          }
-        } else {
-          auto _f = std::move(std::get<CraneCont_Mycons>(_frame));
-          auto a0 = std::move(_f.a0);
-          std::shared_ptr<mylist<A>> a1 = std::move(_f.a1);
-          _result = f0(a0, *a1, std::move(_result));
-        }
-      }
-      return _result;
+    template <typename T1, typename F1>
+    T1 mylist_rec(const T1 &f, F1 &&f0) const {
+      return this->template mylist_rect<T1>(f, f0);
     }
 
     template <typename T1, typename F1> T1 mylist_rect(T1 f, F1 &&f0) const {
@@ -419,68 +379,9 @@ struct MemSafetyProbe6 {
       return _result;
     }
 
-    template <typename T1, typename F1> T1 tree_rec(T1 f, F1 &&f0) const {
-      const tree *_self = this;
-
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
-        const tree *_self;
-      };
-
-      /// CraneCont_Node: saves [a0, a1, a2], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_Node {
-        std::shared_ptr<tree> a0;
-        uint64_t a1;
-        std::shared_ptr<tree> a2;
-      };
-
-      /// CraneCont_Node_1: saves [_tmp2, a0, a1, a2], resumes after recursive
-      /// call, then processes rest.
-      struct CraneCont_Node_1 {
-        T1 _tmp2;
-        std::shared_ptr<tree> a0;
-        uint64_t a1;
-        std::shared_ptr<tree> a2;
-      };
-
-      using CraneFrame =
-          std::variant<CraneEnter, CraneCont_Node, CraneCont_Node_1>;
-      T1 _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified tree_rec: CraneEnter -> CraneCont_Node -> CraneCont_Node_1.
-      while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
-          const tree *_self = _f._self;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
-            _result = f;
-          } else {
-            const auto &[a0, a1, a2] = std::get<typename tree::Node>(_sv.v());
-            _stack.emplace_back(CraneCont_Node{a0, a1, a2});
-            _stack.emplace_back(CraneEnter{crane_raw(a0)});
-          }
-        } else if (std::holds_alternative<CraneCont_Node>(_frame)) {
-          auto _f = std::move(std::get<CraneCont_Node>(_frame));
-          std::shared_ptr<tree> a0 = std::move(_f.a0);
-          uint64_t a1 = _f.a1;
-          std::shared_ptr<tree> a2 = std::move(_f.a2);
-          _stack.emplace_back(
-              CraneCont_Node_1{std::move(_result), std::move(a0), a1, a2});
-          _stack.emplace_back(CraneEnter{crane_raw(a2)});
-        } else {
-          auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
-          std::shared_ptr<tree> a0 = std::move(_f.a0);
-          uint64_t a1 = _f.a1;
-          std::shared_ptr<tree> a2 = std::move(_f.a2);
-          _result = f0(*a0, std::move(_f._tmp2), a1, *a2, std::move(_result));
-        }
-      }
-      return _result;
+    template <typename T1, typename F1>
+    T1 tree_rec(const T1 &f, F1 &&f0) const {
+      return this->template tree_rect<T1>(f, f0);
     }
 
     template <typename T1, typename F1> T1 tree_rect(T1 f, F1 &&f0) const {

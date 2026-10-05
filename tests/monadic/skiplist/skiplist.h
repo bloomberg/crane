@@ -138,9 +138,7 @@ template <typename K, typename V> struct SkipList {
 
   template <typename F0, typename F1>
   bool member(F0 &&ltK, F1 &&eqK, const K &k) const {
-    uint64_t lvl = stm::readTVar(this->slLevel);
-    return SkipList<int, int>::template findKey_aux<K, V>(ltK, eqK,
-                                                          this->slHead, k, lvl);
+    return this->memberFast(ltK, eqK, k);
   }
 
   bool isEmpty() const {
@@ -167,9 +165,7 @@ template <typename K, typename V> struct SkipList {
 
   template <typename F0, typename F1>
   bool exists_(F0 &&ltK, F1 &&eqK, const K &k) const {
-    uint64_t lvl = stm::readTVar(this->slLevel);
-    return SkipList<int, int>::template findKey_aux<K, V>(ltK, eqK,
-                                                          this->slHead, k, lvl);
+    return this->memberFast(ltK, eqK, k);
   }
 
   std::optional<std::shared_ptr<SkipNode<K, V>>> front() const {
@@ -215,43 +211,8 @@ template <typename K, typename V> struct SkipList {
   template <typename F0, typename F1>
   std::monostate add(F0 &&ltK, F1 &&eqK, const K &k, const V &v,
                      uint64_t newLevel) const {
-    SkipPath<K, V> path = this->findPath(ltK, k);
-    uint64_t curLvl = stm::readTVar(this->slLevel);
-    SkipList<int, int>::template extendPath<K, V>(path, this->slHead,
-                                                  (newLevel + 1), curLvl);
-    std::shared_ptr<SkipNode<K, V>> pred0 = path.get(UINT64_C(0));
-    std::optional<std::shared_ptr<SkipNode<K, V>>> nextOpt =
-        ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
-            std::move(pred0)->forward[UINT64_C(0)]));
-    if (nextOpt.has_value()) {
-      const std::shared_ptr<SkipNode<K, V>> &existing = *nextOpt;
-      if (eqK(existing->key, k)) {
-        stm::writeTVar<V>(existing->value, v);
-        return std::monostate{};
-      } else {
-        std::shared_ptr<SkipNode<K, V>> newN =
-            SkipNode<K, V>::create(k, v, newLevel);
-        SkipList<int, int>::template linkNode<K, V>(
-            std::move(path), this->slHead, std::move(newN));
-        if (curLvl < newLevel) {
-          stm::writeTVar(this->slLevel, newLevel);
-          return std::monostate{};
-        } else {
-          return std::monostate{};
-        }
-      }
-    } else {
-      std::shared_ptr<SkipNode<K, V>> newN =
-          SkipNode<K, V>::create(k, v, newLevel);
-      SkipList<int, int>::template linkNode<K, V>(std::move(path), this->slHead,
-                                                  std::move(newN));
-      if (curLvl < newLevel) {
-        stm::writeTVar(this->slLevel, newLevel);
-        return std::monostate{};
-      } else {
-        return std::monostate{};
-      }
-    }
+    this->insert(ltK, eqK, k, v, newLevel);
+    return std::monostate{};
   }
 
   template <typename F0, typename F1>
@@ -618,9 +579,7 @@ template <typename K, typename V> struct SkipList {
 
   template <typename F0, typename F1>
   bool bde_exists(F0 &&ltK, F1 &&eqK, const K &key0) const {
-    uint64_t lvl = stm::readTVar(this->slLevel);
-    return SkipList<int, int>::template findKey_aux<K, V>(
-        ltK, eqK, this->slHead, key0, lvl);
+    return this->memberFast(ltK, eqK, key0);
   }
 
   bool bde_isEmpty() const { return this->isEmpty(); }
@@ -961,20 +920,8 @@ template <typename K, typename V> struct SkipList {
   static void unlinkNodeAtAllLevels(std::shared_ptr<SkipNode<T1, T2>> head,
                                     std::shared_ptr<SkipNode<T1, T2>> node,
                                     uint64_t lvl) {
-    uint64_t _loop_lvl = lvl;
-    while (true) {
-      std::optional<std::shared_ptr<SkipNode<T1, T2>>> nodeNext =
-          ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<T1, T2>>>(
-              node->forward[_loop_lvl]));
-      stm::writeTVar<std::shared_ptr<SkipNode<T1, T2>>>(
-          head->forward[_loop_lvl], opt_to_ptr(std::move(nodeNext)));
-      if (_loop_lvl <= 0) {
-        return;
-      } else {
-        uint64_t lvl_ = _loop_lvl - 1;
-        _loop_lvl = lvl_;
-      }
-    }
+    SkipList<int, int>::template unlinkFirstFromHead<T1, T2>(
+        std::move(head), std::move(node), lvl);
     return;
   }
 

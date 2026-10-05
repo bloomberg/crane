@@ -110,16 +110,8 @@ struct NameClashLetMatch {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, const uint64_t &>
     T1 either_rec(F0 &&f, F1 &&f0) const {
-      if (std::holds_alternative<typename either::Left>(this->v())) {
-        const auto &[a0] = std::get<typename either::Left>(this->v());
-        return f(a0);
-      } else {
-        const auto &[a0] = std::get<typename either::Right>(this->v());
-        return f0(a0);
-      }
+      return this->template either_rect<T1>(f, f0);
     }
 
     template <typename T1, typename F0, typename F1>
@@ -165,12 +157,8 @@ struct NameClashLetMatch {
       return (((a0 + a1) + a2) + from_either);
     }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &,
-                                     const uint64_t &, const uint64_t &>
-    T1 triple_rec(F0 &&f) const {
-      const auto &[a0, a1, a2] = *this;
-      return f(a0, a1, a2);
+    template <typename T1, typename F0> T1 triple_rec(F0 &&f) const {
+      return this->template triple_rect<T1>(f);
     }
 
     template <typename T1, typename F0>

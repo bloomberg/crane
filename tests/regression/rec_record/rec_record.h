@@ -146,48 +146,9 @@ struct RecRecord {
       return _result;
     }
 
-    template <typename T1, typename F1> T1 rlist_rec(T1 f, F1 &&f0) const {
-      const rlist<A> *_self = this;
-
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
-        const rlist<A> *_self;
-      };
-
-      /// CraneCont_Rcons: saves [a0, a1], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_Rcons {
-        A a0;
-        std::shared_ptr<rlist<A>> a1;
-      };
-
-      using CraneFrame = std::variant<CraneEnter, CraneCont_Rcons>;
-      T1 _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified rlist_rec: CraneEnter -> CraneCont_Rcons.
-      while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
-          const rlist<A> *_self = _f._self;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename rlist<A>::Rnil>(_sv.v())) {
-            _result = f;
-          } else {
-            const auto &[a0, a1] = std::get<typename rlist<A>::Rcons>(_sv.v());
-            _stack.emplace_back(CraneCont_Rcons{a0, a1});
-            _stack.emplace_back(CraneEnter{crane_raw(a1)});
-          }
-        } else {
-          auto _f = std::move(std::get<CraneCont_Rcons>(_frame));
-          auto a0 = std::move(_f.a0);
-          std::shared_ptr<rlist<A>> a1 = std::move(_f.a1);
-          _result = f0(a0, *a1, std::move(_result));
-        }
-      }
-      return _result;
+    template <typename T1, typename F1>
+    T1 rlist_rec(const T1 &f, F1 &&f0) const {
+      return this->template rlist_rect<T1>(f, f0);
     }
 
     template <typename T1, typename F1> T1 rlist_rect(T1 f, F1 &&f0) const {
@@ -318,9 +279,7 @@ struct RecRecord {
     }
 
     template <typename T1, typename F0> T1 RNode_rec(F0 &&f) const {
-      const auto &[rn_value1, rn_next1] =
-          std::get<typename RNode::MkRNode>(this->v());
-      return f(rn_value1, *rn_next1);
+      return this->template RNode_rect<T1>(f);
     }
 
     template <typename T1, typename F0> T1 RNode_rect(F0 &&f) const {

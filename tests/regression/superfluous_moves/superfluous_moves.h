@@ -127,17 +127,8 @@ struct SuperfluousMoves {
     }
   }
 
-  template <typename T1> static T1 mode_rec(T1 f, T1 f0, Mode m) {
-    switch (m) {
-    case Mode::CHASE: {
-      return f;
-    }
-    case Mode::FRIGHTENED: {
-      return f0;
-    }
-    default:
-      std::unreachable();
-    }
+  template <typename T1> static T1 mode_rec(const T1 &f, const T1 &f0, Mode m) {
+    return mode_rect<T1>(f, f0, m);
   }
 
   /// Minimal source state carrying the projected fields that trigger the bug.

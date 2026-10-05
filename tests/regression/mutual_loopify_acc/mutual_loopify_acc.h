@@ -184,15 +184,8 @@ struct MutualLoopifyAcc {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
   static T1 tree_rec(F0 &&f, F1 &&f0, const tree &t) {
-    if (std::holds_alternative<typename tree::Leaf>(t.v())) {
-      const auto &[a0] = std::get<typename tree::Leaf>(t.v());
-      return f(a0);
-    } else {
-      const auto &[a0] = std::get<typename tree::Node>(t.v());
-      return f0(*a0);
-    }
+    return tree_rect<T1>(f, f0, t);
   }
 
   template <typename T1, typename F1>
@@ -241,48 +234,8 @@ struct MutualLoopifyAcc {
   }
 
   template <typename T1, typename F1>
-  static T1
-  forest_rec(T1 f, F1 &&f0,
-             const forest &f1) { /// CraneEnter: captures varying parameters for
-                                 /// each recursive call.
-
-    struct CraneEnter {
-      const forest *f1;
-    };
-
-    /// CraneCont_Fcons: saves [a0, a1], resumes after recursive call, then
-    /// processes rest.
-    struct CraneCont_Fcons {
-      std::shared_ptr<tree> a0;
-      std::shared_ptr<forest> a1;
-    };
-
-    using CraneFrame = std::variant<CraneEnter, CraneCont_Fcons>;
-    T1 _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{&f1});
-    /// Loopified forest_rec: CraneEnter -> CraneCont_Fcons.
-    while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      if (std::holds_alternative<CraneEnter>(_frame)) {
-        auto _f = std::move(std::get<CraneEnter>(_frame));
-        const forest &f1 = *_f.f1;
-        if (std::holds_alternative<typename forest::Fnil>(f1.v())) {
-          _result = f;
-        } else {
-          const auto &[a0, a1] = std::get<typename forest::Fcons>(f1.v());
-          _stack.emplace_back(CraneCont_Fcons{a0, a1});
-          _stack.emplace_back(CraneEnter{crane_raw(a1)});
-        }
-      } else {
-        auto _f = std::move(std::get<CraneCont_Fcons>(_frame));
-        std::shared_ptr<tree> a0 = std::move(_f.a0);
-        std::shared_ptr<forest> a1 = std::move(_f.a1);
-        _result = f0(*a0, *a1, std::move(_result));
-      }
-    }
-    return _result;
+  static T1 forest_rec(const T1 &f, F1 &&f0, const forest &f1) {
+    return forest_rect<T1>(f, f0, f1);
   }
 
   static uint64_t tsum(uint64_t acc, const tree &t);

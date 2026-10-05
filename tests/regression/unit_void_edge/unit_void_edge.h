@@ -154,11 +154,11 @@ struct UnitVoidEdge {
                                 std::monostate{}, List<std::monostate>::nil()));
   static uint64_t double_match_unit(std::monostate u1, std::monostate u2);
 
-  template <typename F0>
-    requires std::is_invocable_r_v<void, F0 &, uint64_t &>
-  static void apply_and_discard(F0 &&f, uint64_t x0_) {
-    f(x0_);
-    return;
+  template <typename F0> static void apply_and_discard(F0 &&f, uint64_t x0_) {
+    {
+      apply_unit_fn(f, x0_);
+      return;
+    }
   }
 
   static constexpr std::monostate test_apply_discard = std::monostate{};

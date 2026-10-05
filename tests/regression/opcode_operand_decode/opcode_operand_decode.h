@@ -31,26 +31,9 @@ struct OpcodeOperandDecode {
   }
 
   template <typename T1>
-  static T1 instruction_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, Instruction i) {
-    switch (i) {
-    case Instruction::NOP_: {
-      return f;
-    }
-    case Instruction::WRM_: {
-      return f0;
-    }
-    case Instruction::WRR_: {
-      return f1;
-    }
-    case Instruction::RDM_: {
-      return f2;
-    }
-    case Instruction::DCL_: {
-      return f3;
-    }
-    default:
-      std::unreachable();
-    }
+  static T1 instruction_rec(const T1 &f, const T1 &f0, const T1 &f1,
+                            const T1 &f2, const T1 &f3, Instruction i) {
+    return instruction_rect<T1>(f, f0, f1, f2, f3, i);
   }
 
   static Instruction decode(uint64_t b1, uint64_t _x);

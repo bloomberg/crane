@@ -63,16 +63,8 @@ struct NameClashReturnThis {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, const uint64_t &, const uint64_t &>
   static T1 shape_rec(F0 &&f, F1 &&f0, const shape &s) {
-    if (std::holds_alternative<typename shape::Circle>(s.v())) {
-      const auto &[a0] = std::get<typename shape::Circle>(s.v());
-      return f(a0);
-    } else {
-      const auto &[a0, a1] = std::get<typename shape::Square>(s.v());
-      return f0(a0, a1);
-    }
+    return shape_rect<T1>(f, f0, s);
   }
 
   /// Inner match returns shape in all branches, one branch returns the

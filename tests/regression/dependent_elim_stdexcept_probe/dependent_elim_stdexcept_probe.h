@@ -25,17 +25,9 @@ struct DependentElimStdexceptProbe {
     }
   }
 
-  template <typename T1> static T1 avail_rec(T1 f, T1 f0, Bool0, Avail a) {
-    switch (a) {
-    case Avail::PRESENT: {
-      return f;
-    }
-    case Avail::ABSENT: {
-      return f0;
-    }
-    default:
-      std::unreachable();
-    }
+  template <typename T1>
+  static T1 avail_rec(const T1 &f, const T1 &f0, Bool0 _x, Avail a) {
+    return avail_rect<T1>(f, f0, _x, a);
   }
 
   static void get_present(Avail a);

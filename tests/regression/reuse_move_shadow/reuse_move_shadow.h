@@ -89,14 +89,8 @@ struct ReuseMoveShadow {
   }
 
   template <typename T1, typename F0>
-  static T1 tree_rec(F0 &&f, T1 f0, const tree &t) {
-    if (std::holds_alternative<typename tree::Node>(t.v())) {
-      const auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v());
-      return f(a0, *a1, tree_rec<T1>(f, f0, *a1), *a2,
-               tree_rec<T1>(f, f0, *a2));
-    } else {
-      return f0;
-    }
+  static T1 tree_rec(F0 &&f, const T1 &f0, const tree &t) {
+    return tree_rect<T1>(f, f0, t);
   }
 
   static uint64_t tree_sum(const tree &t);

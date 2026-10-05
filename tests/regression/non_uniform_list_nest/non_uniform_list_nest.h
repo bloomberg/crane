@@ -157,16 +157,8 @@ struct NonUniformListNest {
   }
 
   template <typename T1, typename T2 = void, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, const crane::obj &>
   static T1 n2_rec(F0 &&f, F1 &&f0, const n2 &n) {
-    if (std::holds_alternative<typename n2::Z2>(n.v())) {
-      const auto &[a0] = std::get<typename n2::Z2>(n.v());
-      return crane_any_cast<T1>(f(a0));
-    } else {
-      const auto &[a0] = std::get<typename n2::S2>(n.v());
-      return crane_any_cast<T1>(
-          f0(*a0, n2_rec(crane_erase_fn<T1>(f), f0, *a0)));
-    }
+    return n2_rect<T1, crane::obj>(crane_erase_fn<T1>(f), f0, n);
   }
 
   template <typename T1 = void> static uint64_t depth(const n2 &x) {

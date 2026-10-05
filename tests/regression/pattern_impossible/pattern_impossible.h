@@ -28,20 +28,9 @@ struct PatternImpossible {
     }
   }
 
-  template <typename T1> static T1 three_rec(T1 f, T1 f0, T1 f1, Three t) {
-    switch (t) {
-    case Three::ONE: {
-      return f;
-    }
-    case Three::TWO: {
-      return f0;
-    }
-    case Three::THREE: {
-      return f1;
-    }
-    default:
-      std::unreachable();
-    }
+  template <typename T1>
+  static T1 three_rec(const T1 &f, const T1 &f0, const T1 &f1, Three t) {
+    return three_rect<T1>(f, f0, f1, t);
   }
 
   struct nested {
@@ -125,16 +114,8 @@ struct PatternImpossible {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
   static T1 nested_rec(F0 &&f, F1 &&f0, const nested &n) {
-    if (std::holds_alternative<typename nested::Leaf>(n.v())) {
-      const auto &[a0] = std::get<typename nested::Leaf>(n.v());
-      return f(a0);
-    } else {
-      const auto &[a0, a1] = std::get<typename nested::Node>(n.v());
-      return f0(*a0, nested_rec<T1>(f, f0, *a0), *a1,
-                nested_rec<T1>(f, f0, *a1));
-    }
+    return nested_rect<T1>(f, f0, n);
   }
 
   static uint64_t complex_match(Three x);

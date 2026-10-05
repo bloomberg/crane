@@ -274,15 +274,8 @@ struct DeepPatterns {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, const uint64_t &>
   static T1 outer_rec(F0 &&f, F1 &&f0, const outer &o) {
-    if (std::holds_alternative<typename outer::OLeft>(o.v())) {
-      const auto &[a0] = std::get<typename outer::OLeft>(o.v());
-      return f(*a0);
-    } else {
-      const auto &[a0] = std::get<typename outer::ORight>(o.v());
-      return f0(a0);
-    }
+    return outer_rect<T1>(f, f0, o);
   }
 
   template <typename T1, typename F0, typename F1>
@@ -299,16 +292,8 @@ struct DeepPatterns {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, const bool &>
   static T1 inner_rec(F0 &&f, F1 &&f0, const inner &i) {
-    if (std::holds_alternative<typename inner::ILeft>(i.v())) {
-      const auto &[a0] = std::get<typename inner::ILeft>(i.v());
-      return f(a0);
-    } else {
-      const auto &[a0] = std::get<typename inner::IRight>(i.v());
-      return f0(a0);
-    }
+    return inner_rect<T1>(f, f0, i);
   }
 
   static uint64_t deep_sum(const outer &o);
@@ -336,11 +321,8 @@ struct DeepPatterns {
       return {std::move(a0), std::move(a1)};
     }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, const A &, const B &>
-    T1 pair_rec(F0 &&f) const {
-      const auto &[a0, a1] = *this;
-      return f(a0, a1);
+    template <typename T1, typename F0> T1 pair_rec(F0 &&f) const {
+      return this->template pair_rect<T1>(f);
     }
 
     template <typename T1, typename F0>
@@ -446,48 +428,9 @@ struct DeepPatterns {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    template <typename T1, typename F1> T1 mylist_rec(T1 f, F1 &&f0) const {
-      const mylist<A> *_self = this;
-
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
-        const mylist<A> *_self;
-      };
-
-      /// CraneCont_Cons: saves [a0, a1], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_Cons {
-        A a0;
-        std::shared_ptr<mylist<A>> a1;
-      };
-
-      using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
-      T1 _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified mylist_rec: CraneEnter -> CraneCont_Cons.
-      while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
-          const mylist<A> *_self = _f._self;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename mylist<A>::Nil>(_sv.v())) {
-            _result = f;
-          } else {
-            const auto &[a0, a1] = std::get<typename mylist<A>::Cons>(_sv.v());
-            _stack.emplace_back(CraneCont_Cons{a0, a1});
-            _stack.emplace_back(CraneEnter{crane_raw(a1)});
-          }
-        } else {
-          auto _f = std::move(std::get<CraneCont_Cons>(_frame));
-          auto a0 = std::move(_f.a0);
-          std::shared_ptr<mylist<A>> a1 = std::move(_f.a1);
-          _result = f0(a0, *a1, std::move(_result));
-        }
-      }
-      return _result;
+    template <typename T1, typename F1>
+    T1 mylist_rec(const T1 &f, F1 &&f0) const {
+      return this->template mylist_rect<T1>(f, f0);
     }
 
     template <typename T1, typename F1> T1 mylist_rect(T1 f, F1 &&f0) const {

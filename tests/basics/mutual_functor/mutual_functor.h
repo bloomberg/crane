@@ -197,15 +197,8 @@ template <Elem E> struct MutualTree {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
   static T1 tree_rec(F0 &&f, F1 &&f0, const tree &t0) {
-    if (std::holds_alternative<typename tree::Leaf>(t0.v())) {
-      const auto &[a0] = std::get<typename tree::Leaf>(t0.v());
-      return f(a0);
-    } else {
-      const auto &[a0, a1] = std::get<typename tree::Node>(t0.v());
-      return f0(a0, *a1);
-    }
+    return tree_rect<T1>(f, f0, t0);
   }
 
   template <typename T1, typename F1>
@@ -219,13 +212,8 @@ template <Elem E> struct MutualTree {
   }
 
   template <typename T1, typename F1>
-  static T1 forest_rec(T1 f, F1 &&f0, const forest &f1) {
-    if (std::holds_alternative<typename forest::FNil>(f1.v())) {
-      return f;
-    } else {
-      const auto &[a0, a1] = std::get<typename forest::FCons>(f1.v());
-      return f0(*a0, *a1, forest_rec<T1>(std::move(f), f0, *a1));
-    }
+  static T1 forest_rec(const T1 &f, F1 &&f0, const forest &f1) {
+    return forest_rect<T1>(f, f0, f1);
   }
 
   static uint64_t tree_size(const tree &t0) {

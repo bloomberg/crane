@@ -142,13 +142,8 @@ struct DependentMatchBranchTypes {
   }
 
   template <typename T1, typename F1>
-  static T1 vec_rec(T1 f, F1 &&f0, const Nat &, const vec &v) {
-    if (std::holds_alternative<typename vec::Vnil>(v.v())) {
-      return f;
-    } else {
-      const auto &[n1, a1, a2] = std::get<typename vec::Vcons>(v.v());
-      return f0(n1, a1, *a2, vec_rec<T1>(std::move(f), f0, n1, *a2));
-    }
+  static T1 vec_rec(const T1 &f, F1 &&f0, const Nat &_x, const vec &v) {
+    return vec_rect<T1>(f, f0, _x, v);
   }
 
   static Nat hd(const Nat &_x, const vec &v);

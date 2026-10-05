@@ -36,10 +36,8 @@ struct ParamInductiveFnInstantiation {
   }
 
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, const crane::fn<T1(T1)> &>
   static T2 endo_rec(F0 &&f, const endo<T1> &e) {
-    const auto &[a0] = e;
-    return f(a0);
+    return endo_rect<T1, T2>(f, e);
   }
 
   template <typename T1> static T1 run(const endo<T1> &e, const T1 &x) {

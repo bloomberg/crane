@@ -69,13 +69,8 @@ public:
     }
   }
 
-  template <typename T1, typename F1> T1 nat_rec(T1 f, F1 &&f0) const {
-    if (std::holds_alternative<typename Nat::O>(this->v())) {
-      return f;
-    } else {
-      const auto &[n1] = std::get<typename Nat::S>(this->v());
-      return f0(*n1, n1->template nat_rec<T1>(std::move(f), f0));
-    }
+  template <typename T1, typename F1> T1 nat_rec(const T1 &f, F1 &&f0) const {
+    return this->template nat_rect<T1>(f, f0);
   }
 
   /// add m n computes the sum of m and n by recursion on m.

@@ -78,13 +78,8 @@ struct ReuseSelfCycle {
   }
 
   template <typename T1, typename F0>
-  static T1 mylist_rec(F0 &&f, T1 f0, const mylist &m) {
-    if (std::holds_alternative<typename mylist::Mycons>(m.v())) {
-      const auto &[a0, a1] = std::get<typename mylist::Mycons>(m.v());
-      return f(a0, *a1, mylist_rec<T1>(f, std::move(f0), *a1));
-    } else {
-      return f0;
-    }
+  static T1 mylist_rec(F0 &&f, const T1 &f0, const mylist &m) {
+    return mylist_rect<T1>(f, f0, m);
   }
 
   static uint64_t length(const mylist &l);

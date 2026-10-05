@@ -209,52 +209,8 @@ struct DepElim {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 fin_rec(F0 &&f, F1 &&f0, uint64_t _x) const {
-      const fin *_self = this;
-
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
-        const fin *_self;
-        uint64_t _x;
-      };
-
-      /// CraneCont_FS: saves [a1, n0], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_FS {
-        std::shared_ptr<fin> a1;
-        uint64_t n0;
-      };
-
-      using CraneFrame = std::variant<CraneEnter, CraneCont_FS>;
-      T1 _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self, _x});
-      /// Loopified fin_rec: CraneEnter -> CraneCont_FS.
-      while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
-          const fin *_self = _f._self;
-          uint64_t _x = _f._x;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename fin::FZ>(_sv.v())) {
-            const auto &[n0] = std::get<typename fin::FZ>(_sv.v());
-            _result = f(n0);
-          } else {
-            const auto &[n0, a1] = std::get<typename fin::FS>(_sv.v());
-            _stack.emplace_back(CraneCont_FS{a1, n0});
-            _stack.emplace_back(CraneEnter{crane_raw(a1), n0});
-          }
-        } else {
-          auto _f = std::move(std::get<CraneCont_FS>(_frame));
-          std::shared_ptr<fin> a1 = std::move(_f.a1);
-          uint64_t n0 = _f.n0;
-          _result = f0(n0, *a1, std::move(_result));
-        }
-      }
-      return _result;
+      return this->template fin_rect<T1>(f, f0, _x);
     }
 
     template <typename T1, typename F0, typename F1>
@@ -475,53 +431,8 @@ struct DepElim {
     }
 
     template <typename T1, typename F1>
-    T1 vec_rec(T1 f, F1 &&f0, uint64_t _x) const {
-      const vec<A> *_self = this;
-
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
-        const vec<A> *_self;
-        uint64_t _x;
-      };
-
-      /// CraneCont_Vcons: saves [a1, a2, n0], resumes after recursive call,
-      /// then processes rest.
-      struct CraneCont_Vcons {
-        A a1;
-        std::shared_ptr<vec<A>> a2;
-        uint64_t n0;
-      };
-
-      using CraneFrame = std::variant<CraneEnter, CraneCont_Vcons>;
-      T1 _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self, _x});
-      /// Loopified vec_rec: CraneEnter -> CraneCont_Vcons.
-      while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
-          const vec<A> *_self = _f._self;
-          uint64_t _x = _f._x;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename vec<A>::Vnil>(_sv.v())) {
-            _result = f;
-          } else {
-            const auto &[n0, a1, a2] =
-                std::get<typename vec<A>::Vcons>(_sv.v());
-            _stack.emplace_back(CraneCont_Vcons{a1, a2, n0});
-            _stack.emplace_back(CraneEnter{crane_raw(a2), n0});
-          }
-        } else {
-          auto _f = std::move(std::get<CraneCont_Vcons>(_frame));
-          auto a1 = std::move(_f.a1);
-          std::shared_ptr<vec<A>> a2 = std::move(_f.a2);
-          uint64_t n0 = _f.n0;
-          _result = f0(n0, a1, *a2, std::move(_result));
-        }
-      }
-      return _result;
+    T1 vec_rec(const T1 &f, F1 &&f0, uint64_t _x) const {
+      return this->template vec_rect<T1>(f, f0, _x);
     }
 
     template <typename T1, typename F1>
@@ -617,14 +528,8 @@ struct DepElim {
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
-    T1 avail_rec(F0 &&f, T1 f0, bool) const {
-      if (std::holds_alternative<typename avail::Present>(this->v())) {
-        const auto &[a0] = std::get<typename avail::Present>(this->v());
-        return f(a0);
-      } else {
-        return f0;
-      }
+    T1 avail_rec(F0 &&f, const T1 &f0, bool _x) const {
+      return this->template avail_rect<T1>(f, f0, _x);
     }
 
     template <typename T1, typename F0>

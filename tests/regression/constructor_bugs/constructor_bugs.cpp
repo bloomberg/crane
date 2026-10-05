@@ -223,7 +223,7 @@ ConstructorBugs::match_sum(const ConstructorBugs::MySum &s) {
 
 std::pair<ConstructorBugs::Inner, uint64_t>
 ConstructorBugs::with_cast(const ConstructorBugs::Inner &i) {
-  return std::make_pair(i, i.inner_val);
+  return pair_with_proj(i);
 }
 
 std::pair<std::pair<ConstructorBugs::Inner, uint64_t>,
@@ -312,7 +312,7 @@ ConstructorBugs::inline_triple(const ConstructorBugs::State0 &s) {
 
 std::pair<std::pair<ConstructorBugs::State0, uint64_t>, uint64_t>
 ConstructorBugs::inline_nested(const ConstructorBugs::State0 &s) {
-  return std::make_pair(std::make_pair(s, s.value_inline), s.data_inline);
+  return inline_triple(s);
 }
 
 ConstructorBugs::State0 ConstructorBugs::get_state_inline(uint64_t n) {

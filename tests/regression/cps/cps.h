@@ -261,15 +261,8 @@ struct CPS {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
   static T1 tree_rec(F0 &&f, F1 &&f0, const tree &t) {
-    if (std::holds_alternative<typename tree::Leaf>(t.v())) {
-      const auto &[a0] = std::get<typename tree::Leaf>(t.v());
-      return f(a0);
-    } else {
-      const auto &[a0, a1] = std::get<typename tree::Node>(t.v());
-      return f0(*a0, tree_rec<T1>(f, f0, *a0), *a1, tree_rec<T1>(f, f0, *a1));
-    }
+    return tree_rect<T1>(f, f0, t);
   }
 
   static uint64_t tree_sum_cps(const tree &t, crane::fn<uint64_t(uint64_t)> k) {

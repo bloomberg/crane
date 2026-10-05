@@ -261,31 +261,9 @@ struct Matcher {
   }
 
   template <typename T1, typename F1, typename F3, typename F4, typename F6>
-    requires std::is_invocable_r_v<T1, F1 &, const int64_t &>
-  static T1 regexp_rec(T1 f, F1 &&f0, T1 f1, F3 &&f2, F4 &&f3, T1 f4, F6 &&f5,
-                       const regexp &r) {
-    if (std::holds_alternative<typename regexp::Any>(r.v())) {
-      return f;
-    } else if (std::holds_alternative<typename regexp::Char>(r.v())) {
-      const auto &[c0] = std::get<typename regexp::Char>(r.v());
-      return f0(c0);
-    } else if (std::holds_alternative<typename regexp::Eps>(r.v())) {
-      return f1;
-    } else if (std::holds_alternative<typename regexp::Cat>(r.v())) {
-      const auto &[r4, r5] = std::get<typename regexp::Cat>(r.v());
-      return f2(*r4, regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, *r4), *r5,
-                regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, *r5));
-    } else if (std::holds_alternative<typename regexp::Alt>(r.v())) {
-      const auto &[r4, r5] = std::get<typename regexp::Alt>(r.v());
-      return f3(*r4, regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, *r4), *r5,
-                regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, *r5));
-    } else if (std::holds_alternative<typename regexp::Zero>(r.v())) {
-      return f4;
-    } else {
-      const auto &[r2] = std::get<typename regexp::Star>(r.v());
-      return f5(*r2, regexp_rec<T1>(std::move(f), f0, std::move(f1), f2, f3,
-                                    std::move(f4), f5, *r2));
-    }
+  static T1 regexp_rec(const T1 &f, F1 &&f0, const T1 &f1, F3 &&f2, F4 &&f3,
+                       const T1 &f4, F6 &&f5, const regexp &r) {
+    return regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, r);
   }
 
   static bool regexp_eq(const regexp &r, const regexp &x);

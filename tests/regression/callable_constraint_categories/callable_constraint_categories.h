@@ -120,13 +120,8 @@ struct CallableConstraintCategories {
   }
 
   template <typename T1, typename T2, typename F1>
-  static T2 lst_rec(T2 f, F1 &&f0, const lst<T1> &l) {
-    if (std::holds_alternative<typename lst<T1>::Nil>(l.v())) {
-      return f;
-    } else {
-      const auto &[a0, l1] = std::get<typename lst<T1>::Cons>(l.v());
-      return f0(a0, *l1, lst_rec<T1, T2>(std::move(f), f0, *l1));
-    }
+  static T2 lst_rec(const T2 &f, F1 &&f0, const lst<T1> &l) {
+    return lst_rect<T1, T2>(f, f0, l);
   }
 
   template <typename T1, typename T2, typename T3, typename F0>

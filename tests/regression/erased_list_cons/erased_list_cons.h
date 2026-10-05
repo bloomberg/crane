@@ -205,16 +205,8 @@ template <SYM Ty> struct DefsFn {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, const typename Ty::terminal &> &&
-             std::is_invocable_r_v<T1, F1 &, const typename Ty::nonterminal &>
   static T1 symbol_rec(F0 &&f, F1 &&f0, const symbol &s) {
-    if (std::holds_alternative<typename symbol::T>(s.v())) {
-      const auto &[a0] = std::get<typename symbol::T>(s.v());
-      return f(a0);
-    } else {
-      const auto &[a0] = std::get<typename symbol::NT>(s.v());
-      return f0(a0);
-    }
+    return symbol_rect<T1>(f, f0, s);
   }
 
   static bool symbol_eq_dec(const symbol &s1, const symbol &s2) {
@@ -332,17 +324,8 @@ struct MySym {
     }
   }
 
-  template <typename T1> static T1 term_rec(T1 f, T1 f0, Term t) {
-    switch (t) {
-    case Term::LBRACE: {
-      return f;
-    }
-    case Term::RBRACE: {
-      return f0;
-    }
-    default:
-      std::unreachable();
-    }
+  template <typename T1> static T1 term_rec(const T1 &f, const T1 &f0, Term t) {
+    return term_rect<T1>(f, f0, t);
   }
   enum class Nt { ELEM, LST };
 
@@ -359,17 +342,8 @@ struct MySym {
     }
   }
 
-  template <typename T1> static T1 nt_rec(T1 f, T1 f0, Nt n) {
-    switch (n) {
-    case Nt::ELEM: {
-      return f;
-    }
-    case Nt::LST: {
-      return f0;
-    }
-    default:
-      std::unreachable();
-    }
+  template <typename T1> static T1 nt_rec(const T1 &f, const T1 &f0, Nt n) {
+    return nt_rect<T1>(f, f0, n);
   }
 
   using terminal = Term;

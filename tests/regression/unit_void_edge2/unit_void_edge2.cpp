@@ -23,11 +23,7 @@ uint64_t UnitVoidEdge2::let_match_unit(uint64_t n) {
   }
 }
 
-uint64_t UnitVoidEdge2::let_chain_use(uint64_t n) {
-  opaque_unit(n);
-  std::monostate a = std::monostate{};
-  return take_unit(a);
-}
+uint64_t UnitVoidEdge2::let_chain_use(uint64_t n) { return let_use_as_arg(n); }
 
 uint64_t UnitVoidEdge2::let_use_in_if(uint64_t n, bool flag) {
   opaque_unit(n);

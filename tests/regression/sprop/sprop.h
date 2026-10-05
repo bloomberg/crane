@@ -12,8 +12,11 @@ struct SPropTest {
     throw std::logic_error("absurd case");
   }
 
-  template <typename T1> static T1 sFalse_rec() {
-    throw std::logic_error("absurd case");
+  template <typename T1> static const T1 &sFalse_rec() {
+    static const T1 v = [](crane::obj) {
+      throw std::logic_error("untranslatable curried proof term");
+    };
+    return v;
   }
 
   template <typename A> struct Box {
