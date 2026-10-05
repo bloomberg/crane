@@ -1,7 +1,6 @@
 #ifndef INCLUDED_BIND_ETA_REDUCED
 #define INCLUDED_BIND_ETA_REDUCED
 
-#include "fn.h"
 #include <crane_itree.h>
 #include <filesystem>
 #include <fstream>
@@ -24,7 +23,7 @@ struct BindEtaReduced {
   }
 
   /// Bug case 2: same with a pure callback.
-  static std::string transform(crane::fn<std::string(std::string)> f) {
+  template <typename F0> static std::string transform(F0 &&f) {
     std::string line;
     std::getline(std::cin, line);
     return f(line);

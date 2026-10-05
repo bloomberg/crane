@@ -2,7 +2,6 @@
 #define INCLUDED_RECURSIVE_MONADIC
 
 #include "crane_fn.h"
-#include "fn.h"
 #include "obj.h"
 #include <atomic>
 #include <crane_itree.h>
@@ -110,8 +109,8 @@ struct RecursiveMonadic {
   static uint64_t repeat_action(uint64_t n, std::string msg);
 
   /// 5. Recursive with match in the middle
-  static List<uint64_t> filter_print(crane::fn<bool(uint64_t)> pred,
-                                     const List<uint64_t> &xs) {
+  template <typename F0>
+  static List<uint64_t> filter_print(F0 &&pred, const List<uint64_t> &xs) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(xs.v())) {
       return List<uint64_t>::nil();
     } else {
@@ -133,7 +132,8 @@ struct RecursiveMonadic {
   static std::string odd_action(uint64_t n);
 
   /// 8. Recursive option-returning function
-  static std::optional<uint64_t> find_first(crane::fn<bool(uint64_t)> pred,
+  template <typename F0>
+  static std::optional<uint64_t> find_first(F0 &&pred,
                                             const List<uint64_t> &xs) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(xs.v())) {
       return std::optional<uint64_t>();

@@ -2,7 +2,6 @@
 #define INCLUDED_TOKENIZER
 
 #include "crane_fn.h"
-#include "fn.h"
 #include "obj.h"
 #include "small_vector.h"
 #include <atomic>
@@ -236,10 +235,9 @@ struct Tokenizer {
     return list_to_vec_h<T1>(l.rev());
   }
 
-  template <typename T1, typename T2>
-  static std::vector<T2>
-  list_to_vec_map_h(std::type_identity_t<crane::fn<T2(T1)>> f,
-                    const List<T1> &l) {
+  template <typename T1, typename T2, typename F0>
+    requires std::is_invocable_r_v<T2, F0 &, const T1 &>
+  static std::vector<T2> list_to_vec_map_h(F0 &&f, const List<T1> &l) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return {};
     } else {

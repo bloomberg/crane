@@ -1,7 +1,6 @@
 #ifndef INCLUDED_SKIPLIST
 #define INCLUDED_SKIPLIST
 
-#include "fn.h"
 #include <crane_itree.h>
 #include <cstdint>
 #include <filesystem>
@@ -676,11 +675,10 @@ template <typename K, typename V> struct SkipList {
     }
   }
 
-  template <typename T1, typename T2>
+  template <typename T1, typename T2, typename F0>
   static std::shared_ptr<SkipNode<T1, T2>>
-  findPred_go(std::type_identity_t<crane::fn<bool(T1, T1)>> ltK, uint64_t fuel,
-              std::shared_ptr<SkipNode<T1, T2>> curr, const T1 &target,
-              uint64_t level) {
+  findPred_go(F0 &&ltK, uint64_t fuel, std::shared_ptr<SkipNode<T1, T2>> curr,
+              const T1 &target, uint64_t level) {
     std::shared_ptr<SkipNode<T1, T2>> _loop_curr = std::move(curr);
     uint64_t _loop_fuel = std::move(fuel);
     while (true) {
@@ -714,11 +712,10 @@ template <typename K, typename V> struct SkipList {
         ltK, 10000u, std::move(curr), target, level);
   }
 
-  template <typename T1, typename T2>
+  template <typename T1, typename T2, typename F0>
   static SkipPath<T1, T2>
-  findPath_aux(std::type_identity_t<crane::fn<bool(T1, T1)>> ltK,
-               std::shared_ptr<SkipNode<T1, T2>> curr, const T1 &target,
-               uint64_t level, SkipPath<T1, T2> path) {
+  findPath_aux(F0 &&ltK, std::shared_ptr<SkipNode<T1, T2>> curr,
+               const T1 &target, uint64_t level, SkipPath<T1, T2> path) {
     uint64_t _loop_level = std::move(level);
     std::shared_ptr<SkipNode<T1, T2>> _loop_curr = std::move(curr);
     while (true) {
@@ -857,9 +854,8 @@ template <typename K, typename V> struct SkipList {
     return;
   }
 
-  template <typename T1, typename T2>
-  static bool findKey_aux(std::type_identity_t<crane::fn<bool(T1, T1)>> ltK,
-                          std::type_identity_t<crane::fn<bool(T1, T1)>> eqK,
+  template <typename T1, typename T2, typename F0, typename F1>
+  static bool findKey_aux(F0 &&ltK, F1 &&eqK,
                           std::shared_ptr<SkipNode<T1, T2>> curr,
                           const T1 &target, uint64_t level) {
     uint64_t _loop_level = std::move(level);
@@ -1016,10 +1012,9 @@ template <typename K, typename V> struct SkipList {
         std::move(pair)->forward[UINT64_C(0)]));
   }
 
-  template <typename T1, typename T2>
+  template <typename T1, typename T2, typename F0>
   static std::optional<std::shared_ptr<SkipNode<T1, T2>>>
-  findPrev_aux(std::type_identity_t<crane::fn<bool(T1, T1)>> eqK, uint64_t fuel,
-               std::shared_ptr<SkipNode<T1, T2>> curr,
+  findPrev_aux(F0 &&eqK, uint64_t fuel, std::shared_ptr<SkipNode<T1, T2>> curr,
                std::shared_ptr<SkipNode<T1, T2>>, const T1 &target) {
     std::shared_ptr<SkipNode<T1, T2>> _loop_curr = std::move(curr);
     uint64_t _loop_fuel = std::move(fuel);

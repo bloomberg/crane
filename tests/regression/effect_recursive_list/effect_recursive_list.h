@@ -2,7 +2,6 @@
 #define INCLUDED_EFFECT_RECURSIVE_LIST
 
 #include "crane_fn.h"
-#include "fn.h"
 #include "obj.h"
 #include <atomic>
 #include <crane_itree.h>
@@ -13,6 +12,7 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -102,14 +102,15 @@ struct EffectRecursiveList {
   static List<std::string> read_n_lines(uint64_t n);
 
   /// 2. Map a function over a list with effects
-  static void map_effect(crane::fn<void(std::string)> f,
-                         const List<std::string> &xs) {
+  template <typename F0>
+    requires std::is_invocable_r_v<void, F0 &, const std::string &>
+  static void map_effect(F0 &&f, const List<std::string> &xs) {
     if (std::holds_alternative<typename List<std::string>::Nil>(xs.v())) {
       return;
     } else {
       const auto &[a0, a1] = std::get<typename List<std::string>::Cons>(xs.v());
       f(a0);
-      map_effect(std::move(f), *a1);
+      map_effect(f, *a1);
       return;
     }
   }

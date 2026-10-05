@@ -2,12 +2,12 @@
 #define INCLUDED_INNER_FIX_CAPTURES_FN
 
 #include "crane_fn.h"
-#include "fn.h"
 #include "small_vector.h"
 #include <atomic>
 #include <cstdint>
 #include <memory>
 #include <optional>
+#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -157,7 +157,10 @@ struct InnerFixCapturesFn {
     return _result;
   }
 
-  static uint64_t walk(crane::fn<uint64_t(uint64_t)> f,
+  template <typename F0>
+    requires std::is_invocable_r_v<uint64_t, F0 &, const uint64_t &> &&
+             std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
+  static uint64_t walk(F0 &&f,
                        const lst &l) { /// CraneEnter: captures varying
                                        /// parameters for each recursive call.
 

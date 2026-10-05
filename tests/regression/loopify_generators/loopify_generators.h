@@ -2,7 +2,6 @@
 #define INCLUDED_LOOPIFY_GENERATORS
 
 #include "crane_fn.h"
-#include "fn.h"
 #include "obj.h"
 #include "small_vector.h"
 #include <atomic>
@@ -267,7 +266,7 @@ struct LoopifyGenerators {
 
   /// tabulate n f generates f 0, f 1, ..., f (n-1) (same as init_list but
   /// different naming).
-  static List<uint64_t> tabulate(uint64_t n, crane::fn<uint64_t(uint64_t)> f) {
+  template <typename F1> static List<uint64_t> tabulate(uint64_t n, F1 &&f) {
     auto go_impl = [&](auto &, uint64_t i) -> List<uint64_t> {
       /// CraneEnter: captures varying parameters for each recursive call.
       struct CraneEnter {
@@ -276,7 +275,7 @@ struct LoopifyGenerators {
       /// CraneCont_j: saves [f, i, n], resumes after recursive call, then
       /// processes rest.
       struct CraneCont_j {
-        crane::fn<uint64_t(uint64_t)> f;
+        std::decay_t<F1> f;
         uint64_t i;
         uint64_t n;
       };
@@ -300,7 +299,7 @@ struct LoopifyGenerators {
           }
         } else {
           auto _f = std::move(std::get<CraneCont_j>(_frame));
-          crane::fn<uint64_t(uint64_t)> f = std::move(_f.f);
+          std::decay_t<F1> f = std::move(_f.f);
           uint64_t i = _f.i;
           uint64_t n = _f.n;
           _result = List<uint64_t>::cons(f((((n - i) > n ? 0 : (n - i)))),

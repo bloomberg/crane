@@ -2071,6 +2071,31 @@ let escaping_params ~suspended n_params body =
       in
       spine (List.length args) depth f;
       List.iter (walk under depth) args
+    | MLapp (MLglob (r, _), (_ :: _ :: _ as args))
+      when Table.is_bind r && (!tctx).itree_mode <> Reified ->
+      (* A bind outside reified mode is desugared into statements: its
+         continuation runs where it is written, so the binders it opens are
+         locals, not a closure's. *)
+      let rec spine depth = function
+        | MLlam (_, _, b) -> spine (depth + 1) b
+        | b -> walk under depth b
+      in
+      ( match List.rev args with
+      | k :: rest ->
+        List.iter (walk under depth) rest;
+        spine depth k
+      | [] -> () )
+    | MLapp (MLfix (_, _, bodies, _), args) ->
+      (* A local fixpoint entered where it is written, as [let fix go ... in
+         go l []] is: its recursion runs here, through a lambda captured by
+         reference, and nothing outlives the call. *)
+      let n = Array.length bodies in
+      let rec spine k depth = function
+        | MLlam (_, _, b) when k > 0 -> spine (k - 1) (depth + 1) b
+        | b -> walk under depth b
+      in
+      Array.iter (spine (List.length args) (depth + n)) bodies;
+      List.iter (walk under depth) args
     | MLlam (_, _, b) -> walk true (depth + 1) b
     | MLapp (f, args) ->
       walk under depth f;

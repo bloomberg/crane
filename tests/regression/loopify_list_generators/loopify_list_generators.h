@@ -2,7 +2,6 @@
 #define INCLUDED_LOOPIFY_LIST_GENERATORS
 
 #include "crane_fn.h"
-#include "fn.h"
 #include "obj.h"
 #include "small_vector.h"
 #include <atomic>
@@ -226,7 +225,7 @@ struct LoopifyListGenerators {
     return build_list_aux(n, UINT64_C(0), f);
   }
 
-  static List<uint64_t> init_list(uint64_t n, crane::fn<uint64_t(uint64_t)> f) {
+  template <typename F1> static List<uint64_t> init_list(uint64_t n, F1 &&f) {
     if (n <= 0) {
       return List<uint64_t>::nil();
     } else {
@@ -240,7 +239,7 @@ struct LoopifyListGenerators {
           /// CraneCont_i_: saves [f, i, n], resumes after recursive call, then
           /// processes rest.
           struct CraneCont_i_ {
-            crane::fn<uint64_t(uint64_t)> f;
+            std::decay_t<F1> f;
             uint64_t i;
             uint64_t n;
           };
@@ -264,7 +263,7 @@ struct LoopifyListGenerators {
               }
             } else {
               auto _f = std::move(std::get<CraneCont_i_>(_frame));
-              crane::fn<uint64_t(uint64_t)> f = std::move(_f.f);
+              std::decay_t<F1> f = std::move(_f.f);
               uint64_t i = _f.i;
               uint64_t n = _f.n;
               _result = List<uint64_t>::cons(f((((n - i) > n ? 0 : (n - i)))),
@@ -285,7 +284,7 @@ struct LoopifyListGenerators {
   static List<uint64_t> replicate_elem(uint64_t n, uint64_t x);
   static List<uint64_t> replicate_each(uint64_t n, const List<uint64_t> &l);
 
-  static List<uint64_t> tabulate(uint64_t n, crane::fn<uint64_t(uint64_t)> f) {
+  template <typename F1> static List<uint64_t> tabulate(uint64_t n, F1 &&f) {
     if (n <= 0) {
       return List<uint64_t>::nil();
     } else {
@@ -298,7 +297,7 @@ struct LoopifyListGenerators {
         /// CraneCont_idx_: saves [f, idx], resumes after recursive call, then
         /// processes rest.
         struct CraneCont_idx_ {
-          crane::fn<uint64_t(uint64_t)> f;
+          std::decay_t<F1> f;
           uint64_t idx;
         };
         using CraneFrame = std::variant<CraneEnter, CraneCont_idx_>;
@@ -322,7 +321,7 @@ struct LoopifyListGenerators {
             }
           } else {
             auto _f = std::move(std::get<CraneCont_idx_>(_frame));
-            crane::fn<uint64_t(uint64_t)> f = std::move(_f.f);
+            std::decay_t<F1> f = std::move(_f.f);
             uint64_t idx = _f.idx;
             _result = std::move(_result).app(
                 List<uint64_t>::cons(f(idx), List<uint64_t>::nil()));

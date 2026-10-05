@@ -107,14 +107,15 @@ struct EffectHigherOrder {
   }
 
   /// 2. Map-like function over a list with effects
-  static void for_each_str(crane::fn<void(std::string)> f,
-                           const List<std::string> &xs) {
+  template <typename F0>
+    requires std::is_invocable_r_v<void, F0 &, const std::string &>
+  static void for_each_str(F0 &&f, const List<std::string> &xs) {
     if (std::holds_alternative<typename List<std::string>::Nil>(xs.v())) {
       return;
     } else {
       const auto &[a0, a1] = std::get<typename List<std::string>::Cons>(xs.v());
       f(a0);
-      for_each_str(std::move(f), *a1);
+      for_each_str(f, *a1);
       return;
     }
   }
@@ -130,7 +131,7 @@ struct EffectHigherOrder {
   }
 
   /// 4. Nested bind in callback
-  static std::string transform_input(crane::fn<std::string(std::string)> f) {
+  template <typename F0> static std::string transform_input(F0 &&f) {
     std::string line;
     std::getline(std::cin, line);
     return f(line);

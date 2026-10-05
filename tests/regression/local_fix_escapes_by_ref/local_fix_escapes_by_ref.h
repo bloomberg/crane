@@ -236,10 +236,9 @@ struct LocalFixEscapesByRef {
 
   static_assert(Monad<Monad_st>);
 
-  template <typename T1, typename T2>
-  static st<List<T2>>
-  map_monad_acc(std::type_identity_t<crane::fn<st<T2>(T1)>> f,
-                const List<T1> &l) {
+  template <typename T1, typename T2, typename F0>
+    requires std::is_invocable_r_v<st<T2>, const F0 &, const T1 &>
+  static st<List<T2>> map_monad_acc(F0 &&f, const List<T1> &l) {
     auto loop_impl = [=](auto &_self_loop, List<crane::obj> acc,
                          List<T1> l0) -> st<List<T2>> {
       if (std::holds_alternative<typename List<T1>::Nil>(l0.v())) {

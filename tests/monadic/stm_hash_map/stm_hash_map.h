@@ -283,10 +283,8 @@ template <typename K, typename V> struct CHT {
     return f(static_cast<unsigned int>(num));
   }
 
-  template <typename T1, typename T2>
-  static CHT<T1, T2> new_hash(std::type_identity_t<crane::fn<bool(T1, T1)>> eqb,
-                              std::type_identity_t<crane::fn<int64_t(T1)>> hash,
-                              int64_t requested) {
+  template <typename T1, typename T2, typename F0, typename F1>
+  static CHT<T1, T2> new_hash(F0 &&eqb, F1 &&hash, int64_t requested) {
     int64_t n = std::max<int64_t>(requested, 1);
     std::vector<stm::TVar<List<std::pair<T1, T2>>>> bs =
         CHT<int, int>::template mk_buckets<T1, T2>(n);
@@ -296,12 +294,10 @@ template <typename K, typename V> struct CHT {
           [&] { return stm::newTVar(List<std::pair<T1, T2>>::nil()); });
       std::vector<stm::TVar<List<std::pair<T1, T2>>>> v = {};
       v.push_back(fb);
-      return CHT<T1, T2>{std::move(eqb), std::move(hash), std::move(v), 1,
-                         std::move(fb)};
+      return CHT<T1, T2>{eqb, hash, std::move(v), 1, std::move(fb)};
     } else {
       stm::TVar<List<std::pair<T1, T2>>> b = bs.at(0);
-      return CHT<T1, T2>{std::move(eqb), std::move(hash), std::move(bs), n,
-                         std::move(b)};
+      return CHT<T1, T2>{eqb, hash, std::move(bs), n, std::move(b)};
     }
   }
 };

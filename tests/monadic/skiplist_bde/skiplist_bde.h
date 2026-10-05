@@ -1,7 +1,6 @@
 #ifndef INCLUDED_SKIPLIST_BDE
 #define INCLUDED_SKIPLIST_BDE
 
-#include "fn.h"
 #include <bdls_filesystemutil.h>
 #include <bsl_concepts.h>
 #include <bsl_functional.h>
@@ -653,11 +652,11 @@ template <typename K, typename V> struct SkipList {
                             bsl::optional<bsl::shared_ptr<SkipNode<K, V>>>());
     }
   }
-  template <typename T1, typename T2>
+  template <typename T1, typename T2, typename F0>
   static bsl::shared_ptr<SkipNode<T1, T2>>
-  findPred_go(std::type_identity_t<crane::fn<bool(T1, T1)>> ltK,
-              unsigned int fuel, bsl::shared_ptr<SkipNode<T1, T2>> curr,
-              const T1 &target, unsigned int level) {
+  findPred_go(F0 &&ltK, unsigned int fuel,
+              bsl::shared_ptr<SkipNode<T1, T2>> curr, const T1 &target,
+              unsigned int level) {
     bsl::shared_ptr<SkipNode<T1, T2>> _loop_curr = bsl::move(curr);
     unsigned int _loop_fuel = bsl::move(fuel);
     while (true) {
@@ -689,11 +688,10 @@ template <typename K, typename V> struct SkipList {
     return SkipList<int, int>::template findPred_go<T1, T2>(
         ltK, 10000u, bsl::move(curr), target, level);
   }
-  template <typename T1, typename T2>
+  template <typename T1, typename T2, typename F0>
   static SkipPath<T1, T2>
-  findPath_aux(std::type_identity_t<crane::fn<bool(T1, T1)>> ltK,
-               bsl::shared_ptr<SkipNode<T1, T2>> curr, const T1 &target,
-               unsigned int level, SkipPath<T1, T2> path) {
+  findPath_aux(F0 &&ltK, bsl::shared_ptr<SkipNode<T1, T2>> curr,
+               const T1 &target, unsigned int level, SkipPath<T1, T2> path) {
     unsigned int _loop_level = bsl::move(level);
     bsl::shared_ptr<SkipNode<T1, T2>> _loop_curr = bsl::move(curr);
     while (true) {
@@ -822,9 +820,8 @@ template <typename K, typename V> struct SkipList {
                                                         bsl::move(target), lvl);
     return;
   }
-  template <typename T1, typename T2>
-  static bool findKey_aux(std::type_identity_t<crane::fn<bool(T1, T1)>> ltK,
-                          std::type_identity_t<crane::fn<bool(T1, T1)>> eqK,
+  template <typename T1, typename T2, typename F0, typename F1>
+  static bool findKey_aux(F0 &&ltK, F1 &&eqK,
                           bsl::shared_ptr<SkipNode<T1, T2>> curr,
                           const T1 &target, unsigned int level) {
     unsigned int _loop_level = bsl::move(level);
@@ -973,10 +970,10 @@ template <typename K, typename V> struct SkipList {
     return ptr_to_opt(stm::readTVar<bsl::shared_ptr<SkipNode<T1, T2>>>(
         bsl::move(pair)->forward[0u]));
   }
-  template <typename T1, typename T2>
+  template <typename T1, typename T2, typename F0>
   static bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>>
-  findPrev_aux(std::type_identity_t<crane::fn<bool(T1, T1)>> eqK,
-               unsigned int fuel, bsl::shared_ptr<SkipNode<T1, T2>> curr,
+  findPrev_aux(F0 &&eqK, unsigned int fuel,
+               bsl::shared_ptr<SkipNode<T1, T2>> curr,
                bsl::shared_ptr<SkipNode<T1, T2>>, const T1 &target) {
     bsl::shared_ptr<SkipNode<T1, T2>> _loop_curr = bsl::move(curr);
     unsigned int _loop_fuel = bsl::move(fuel);

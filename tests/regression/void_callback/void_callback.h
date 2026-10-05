@@ -2,7 +2,6 @@
 #define INCLUDED_VOID_CALLBACK
 
 #include "crane_fn.h"
-#include "fn.h"
 #include "obj.h"
 #include <atomic>
 #include <crane_itree.h>
@@ -123,14 +122,15 @@ struct VoidCallback {
   }();
 
   /// 2. Monadic for-each: callback returns itree ioE unit
-  static void for_each_m(crane::fn<void(uint64_t)> f,
-                         const List<uint64_t> &xs) {
+  template <typename F0>
+    requires std::is_invocable_r_v<void, F0 &, const uint64_t &>
+  static void for_each_m(F0 &&f, const List<uint64_t> &xs) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(xs.v())) {
       return;
     } else {
       const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(xs.v());
       f(a0);
-      for_each_m(std::move(f), *a1);
+      for_each_m(f, *a1);
       return;
     }
   }

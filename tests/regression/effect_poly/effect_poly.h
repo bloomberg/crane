@@ -2,7 +2,6 @@
 #define INCLUDED_EFFECT_POLY
 
 #include "crane_fn.h"
-#include "fn.h"
 #include "obj.h"
 #include <atomic>
 #include <crane_itree.h>
@@ -14,6 +13,7 @@
 #include <stdexcept>
 #include <string>
 #include <system_error>
+#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -100,8 +100,9 @@ public:
 
 struct EffectPoly {
   /// 1. Polymorphic monadic map
-  template <typename T1, typename T2>
-  static T2 map_result(std::type_identity_t<crane::fn<T2(T1)>> f, const T1 &m) {
+  template <typename T1, typename T2, typename F0>
+    requires std::is_invocable_r_v<T2, F0 &, T1 &&>
+  static T2 map_result(F0 &&f, const T1 &m) {
     T1 a = m;
     return f(std::move(a));
   }
@@ -125,15 +126,14 @@ struct EffectPoly {
   static void test_sequence_void();
 
   /// 6. Polymorphic fold over itree results
-  template <typename T1, typename T2>
-  static T1 fold_m(std::type_identity_t<crane::fn<T1(T1, T2)>> f,
-                   const T1 &init, const List<T2> &xs) {
+  template <typename T1, typename T2, typename F0>
+  static T1 fold_m(F0 &&f, const T1 &init, const List<T2> &xs) {
     if (std::holds_alternative<typename List<T2>::Nil>(xs.v())) {
       return init;
     } else {
       const auto &[a0, a1] = std::get<typename List<T2>::Cons>(xs.v());
       T1 acc = f(init, a0);
-      return fold_m<T1, T2>(std::move(f), std::move(acc), *a1);
+      return fold_m<T1, T2>(f, std::move(acc), *a1);
     }
   }
 

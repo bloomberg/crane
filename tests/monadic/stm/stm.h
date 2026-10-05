@@ -2,7 +2,6 @@
 #define INCLUDED_STM
 
 #include "crane_fn.h"
-#include "fn.h"
 #include "obj.h"
 #include <atomic>
 #include <crane_itree.h>
@@ -15,6 +14,7 @@
 #include <stdexcept>
 #include <stm_adapter.h>
 #include <system_error>
+#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -126,15 +126,14 @@ public:
 };
 
 struct STMDefs {
-  template <typename T1>
-  static void modifyTVar(stm::TVar<T1> a,
-                         std::type_identity_t<crane::fn<T1(T1)>> f);
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, T1 &&>
+  static void modifyTVar(stm::TVar<T1> a, F1 &&f);
 };
 
 struct stmtest {
-  template <typename T1>
-  static T1 readOrRetry(stm::TVar<T1> tv,
-                        std::type_identity_t<crane::fn<bool(T1)>> ok) {
+  template <typename T1, typename F1>
+  static T1 readOrRetry(stm::TVar<T1> tv, F1 &&ok) {
     T1 x = stm::readTVar(std::move(tv));
     if (ok(x)) {
       return x;
@@ -158,9 +157,9 @@ struct stmtest {
   static uint64_t io_orElse_retry_example();
 };
 
-template <typename T1>
-void STMDefs::modifyTVar(stm::TVar<T1> a,
-                         std::type_identity_t<crane::fn<T1(T1)>> f) {
+template <typename T1, typename F1>
+  requires std::is_invocable_r_v<T1, F1 &, T1 &&>
+void STMDefs::modifyTVar(stm::TVar<T1> a, F1 &&f) {
   T1 val = stm::readTVar(a);
   stm::writeTVar(std::move(a), f(std::move(val)));
   return;

@@ -2,7 +2,6 @@
 #define INCLUDED_LOOPIFY_LISTS
 
 #include "crane_fn.h"
-#include "fn.h"
 #include "obj.h"
 #include "small_vector.h"
 #include <atomic>
@@ -436,9 +435,8 @@ struct LoopifyLists {
   }
 
   /// init_list n f generates f 0, f 1, ..., f (n-1).
-  template <typename T1>
-  static list<T1> init_list(uint64_t n,
-                            std::type_identity_t<crane::fn<T1(uint64_t)>> f) {
+  template <typename T1, typename F1>
+  static list<T1> init_list(uint64_t n, F1 &&f) {
     auto go_impl = [&](auto &, uint64_t i) -> list<T1> {
       /// CraneEnter: captures varying parameters for each recursive call.
       struct CraneEnter {
@@ -447,7 +445,7 @@ struct LoopifyLists {
       /// CraneCont_j: saves [f, i, n], resumes after recursive call, then
       /// processes rest.
       struct CraneCont_j {
-        std::type_identity_t<crane::fn<T1(uint64_t)>> f;
+        std::decay_t<F1> f;
         uint64_t i;
         uint64_t n;
       };
@@ -471,7 +469,7 @@ struct LoopifyLists {
           }
         } else {
           auto _f = std::move(std::get<CraneCont_j>(_frame));
-          std::type_identity_t<crane::fn<T1(uint64_t)>> f = std::move(_f.f);
+          std::decay_t<F1> f = std::move(_f.f);
           uint64_t i = _f.i;
           uint64_t n = _f.n;
           _result = list<T1>::cons(f((((n - i) > n ? 0 : (n - i)))),

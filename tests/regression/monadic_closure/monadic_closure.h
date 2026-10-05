@@ -14,6 +14,7 @@
 #include <stdexcept>
 #include <string>
 #include <system_error>
+#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -103,9 +104,9 @@ struct MonadicClosure {
   static int64_t capture_bind();
 
   /// 2. Higher-order function taking a pure callback
-  template <typename T1, typename T2>
-  static T2 apply_after_effect(std::type_identity_t<crane::fn<T2(T1)>> f,
-                               const T1 &m) {
+  template <typename T1, typename T2, typename F0>
+    requires std::is_invocable_r_v<T2, F0 &, T1 &&>
+  static T2 apply_after_effect(F0 &&f, const T1 &m) {
     T1 x = m;
     return f(std::move(x));
   }
@@ -115,7 +116,9 @@ struct MonadicClosure {
   static crane::fn<std::string(std::string)> make_greeter();
 
   /// 4. Passing effectful result to a HOF
-  static int64_t with_length(crane::fn<int64_t(int64_t)> f) {
+  template <typename F0>
+    requires std::is_invocable_r_v<int64_t, F0 &, int64_t>
+  static int64_t with_length(F0 &&f) {
     std::string line;
     std::getline(std::cin, line);
     return f(static_cast<int64_t>(line.length()));
@@ -126,8 +129,8 @@ struct MonadicClosure {
   static int64_t nested_capture();
 
   /// 6. Closure used in a fold-like pattern
-  static uint64_t count_matching(crane::fn<bool(std::string)> pred,
-                                 const List<std::string> &xs) {
+  template <typename F0>
+  static uint64_t count_matching(F0 &&pred, const List<std::string> &xs) {
     if (std::holds_alternative<typename List<std::string>::Nil>(xs.v())) {
       return UINT64_C(0);
     } else {

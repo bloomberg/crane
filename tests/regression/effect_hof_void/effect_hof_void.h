@@ -46,24 +46,24 @@ struct EffectHofVoid {
   }
 
   /// 5. Chain two void callbacks
-  template <typename F0>
-    requires std::is_invocable_r_v<void, F0 &, std::string &>
-  static void chain_void(F0 &&f, crane::fn<void(std::string)> g,
-                         std::string x) {
+  template <typename F0, typename F1>
+    requires std::is_invocable_r_v<void, F0 &, std::string &> &&
+             std::is_invocable_r_v<void, F1 &, std::string &&>
+  static void chain_void(F0 &&f, F1 &&g, std::string x) {
     f(x);
     g(std::move(x));
     return;
   }
 
   /// 6. Apply a callback N times
-  static uint64_t apply_n(crane::fn<void(std::string)> f, std::string x,
-                          uint64_t n) {
+  template <typename F0>
+  static uint64_t apply_n(F0 &&f, std::string x, uint64_t n) {
     if (n <= 0) {
       return UINT64_C(0);
     } else {
       uint64_t n_ = n - 1;
       f(x);
-      uint64_t rest = apply_n(std::move(f), std::move(x), n_);
+      uint64_t rest = apply_n(f, std::move(x), n_);
       return (rest + 1);
     }
   }

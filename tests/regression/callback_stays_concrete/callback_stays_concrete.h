@@ -1,5 +1,5 @@
-#ifndef INCLUDED_BIND_TYPE_INFERENCE
-#define INCLUDED_BIND_TYPE_INFERENCE
+#ifndef INCLUDED_CALLBACK_STAYS_CONCRETE
+#define INCLUDED_CALLBACK_STAYS_CONCRETE
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -15,7 +15,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 template <typename A> struct List;
 
@@ -98,34 +97,46 @@ public:
   const variant_t &v() const { return v_; }
 };
 
-struct BindTypeInference {
-  template <typename T1> static T1 ignoreAndReturn(const T1 &b) { return b; }
-
-  static int64_t test1();
-
-  template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &&>
-  static T2 transform(const T1 &ma, F1 &&f) {
-    T1 x = ma;
-    return f(std::move(x));
+struct CallbackStaysConcrete {
+  /// A callback the body only calls -- through a local fixpoint entered where
+  /// it is written, or under a bind that is desugared into statements -- keeps
+  /// its own type, and is passed by reference rather than erased into a
+  /// crane::fn.
+  template <typename F0>
+    requires std::is_invocable_r_v<uint64_t, F0 &, const uint64_t &>
+  static uint64_t sum_map_acc(F0 &&f, const List<uint64_t> &l, uint64_t acc) {
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+      return acc;
+    } else {
+      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+      return sum_map_acc(f, *a1, (acc + f(a0)));
+    }
   }
 
-  static int64_t test2();
-
-  template <typename T1, typename T2, typename T3, typename F1, typename F2>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &&> &&
-             std::is_invocable_r_v<T3, F2 &, T2 &&>
-  static T3 nested(const T1 &a, F1 &&f, F2 &&g) {
-    T1 x = a;
-    T2 y = f(std::move(x));
-    return g(std::move(y));
+  template <typename F0>
+    requires std::is_invocable_r_v<uint64_t, F0 &, const uint64_t &>
+  static uint64_t better_sum(F0 &&f, const List<uint64_t> &l) {
+    auto go_impl = [&](auto &_self_go, const List<uint64_t> &l0,
+                       uint64_t acc) -> uint64_t {
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(l0.v())) {
+        return acc;
+      } else {
+        const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l0.v());
+        return _self_go(_self_go, *a1, (acc + f(a0)));
+      }
+    };
+    auto go = [&](const List<uint64_t> &l0, uint64_t acc) -> uint64_t {
+      return go_impl(go_impl, l0, acc);
+    };
+    return go(l, UINT64_C(0));
   }
 
-  static int64_t test3();
-  static int64_t test4();
-  static List<int64_t> intToList(int64_t n);
-  static List<int64_t> test5();
-  static int64_t test6();
+  template <typename F0>
+    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
+  static uint64_t apply_io(F0 &&f, uint64_t n) {
+    uint64_t x = n;
+    return f(x);
+  }
 };
 
-#endif // INCLUDED_BIND_TYPE_INFERENCE
+#endif // INCLUDED_CALLBACK_STAYS_CONCRETE

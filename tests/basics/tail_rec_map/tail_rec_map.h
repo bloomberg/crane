@@ -2,13 +2,13 @@
 #define INCLUDED_TAIL_REC_MAP
 
 #include "crane_fn.h"
-#include "fn.h"
 #include "obj.h"
 #include "small_vector.h"
 #include <atomic>
 #include <memory>
 #include <optional>
 #include <stdexcept>
+#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -161,9 +161,9 @@ public:
   }
 };
 
-template <typename T1, typename T2>
-List<T2> better_map(std::type_identity_t<crane::fn<T2(T1)>> f,
-                    const List<T1> &l) {
+template <typename T1, typename T2, typename F0>
+  requires std::is_invocable_r_v<T2, F0 &, const T1 &>
+List<T2> better_map(F0 &&f, const List<T1> &l) {
   auto go_impl = [&](auto &_self_go, const List<T1> &l0,
                      const List<T2> &acc) -> List<T2> {
     if (std::holds_alternative<typename List<T1>::Nil>(l0.v())) {

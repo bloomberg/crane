@@ -11655,3 +11655,14 @@
   (alias runtest)
   (deps tmc_value_root.t.exe)
   (action (run ./tmc_value_root.t.exe))))
+
+(subdir callback_stays_concrete
+ (rule
+  (targets callback_stays_concrete.t.exe)
+  (deps CallbackStaysConcrete.vo callback_stays_concrete.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} callback_stays_concrete.t.exe callback_stays_concrete.cpp callback_stays_concrete.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps callback_stays_concrete.t.exe)
+  (action (run ./callback_stays_concrete.t.exe))))

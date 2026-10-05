@@ -2,7 +2,6 @@
 #define INCLUDED_EFFECT_CROSS_MODULE
 
 #include "crane_fn.h"
-#include "fn.h"
 #include "obj.h"
 #include <atomic>
 #include <crane_itree.h>
@@ -105,9 +104,7 @@ struct EffectCrossModule {
     static std::string ask_name();
 
     /// Function taking a callback
-    template <typename T1>
-    static T1
-    with_greeting(std::type_identity_t<crane::fn<T1(std::string)>> f) {
+    template <typename T1, typename F0> static T1 with_greeting(F0 &&f) {
       std::string name = ask_name();
       greet(name);
       return f(std::move(name));
