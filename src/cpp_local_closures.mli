@@ -10,6 +10,8 @@
     - a local record of lambdas whose every use is a call through one of its
       fields becomes those lambdas' bodies at the calls;
     - a lambda bound once and called once, as what the function returns,
-      becomes the end of the function. *)
+      becomes the end of the function;
+    - a mutable cell only ever read and written through its declared
+      operations ({!Mapping_semantics}) becomes a local variable. *)
 
 val transform_decl : Minicpp.cpp_decl -> Minicpp.cpp_decl
