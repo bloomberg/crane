@@ -1885,12 +1885,17 @@ let rec simpl o = function
   | MLletin (Dummy, _, _, e) -> simpl o (ast_pop e)
   | MLletin (id, t, c, e) ->
     let e = simpl o e in
+    (* A call {!Normalize} named stays named: the binding is where
+       loopification splits the body, and a later simplification -- an
+       eta-expansion pushed into the branches, say -- must not put the call
+       back into the expression it was taken out of. *)
+    let normalized = match id with Tmp x -> is_temporary_id x | _ -> false in
     if
       is_atomic c
       || is_atomic e
       ||
       let n = nb_occur_match e in
-      Int.equal n 0 || (Int.equal n 1 && expand_linear_let o id e)
+      Int.equal n 0 || (Int.equal n 1 && (not normalized) && expand_linear_let o id e)
     then
       simpl o (ast_subst c e)
     else

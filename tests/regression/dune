@@ -11710,3 +11710,13 @@
   (alias runtest)
   (deps mrec_fact.t.exe)
   (action (run ./mrec_fact.t.exe))))
+(subdir loopify_inner_fix_self_call
+ (rule
+  (targets loopify_inner_fix_self_call.t.exe)
+  (deps LoopifyInnerFixSelfCall.vo loopify_inner_fix_self_call.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_inner_fix_self_call.t.exe loopify_inner_fix_self_call.cpp loopify_inner_fix_self_call.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_inner_fix_self_call.t.exe)
+  (action (run ./loopify_inner_fix_self_call.t.exe))))
