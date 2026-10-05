@@ -251,7 +251,7 @@ struct SigArgMatch {
   static inline const Nat run = []() {
     return ps
         .template fold_right<Nat>(
-            [](const Sig<Nat> &p, const Nat &acc) {
+            [](const Sig<Nat> &p, Nat acc) {
               return [&]() {
                 const auto &[x] = p;
                 return x;

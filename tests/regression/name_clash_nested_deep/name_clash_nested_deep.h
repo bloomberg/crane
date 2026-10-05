@@ -78,8 +78,8 @@ struct NameClashNestedDeep {
   }
 
   template <typename T1, typename F1>
-  static T1 mylist_rec(const T1 &f, F1 &&f0, const mylist &m) {
-    return mylist_rect<T1>(f, f0, m);
+  static T1 mylist_rec(T1 f, F1 &&f0, const mylist &m) {
+    return mylist_rect<T1>(std::move(f), f0, m);
   }
 
   /// Four levels of nested matching.

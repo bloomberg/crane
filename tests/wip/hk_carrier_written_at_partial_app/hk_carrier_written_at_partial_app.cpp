@@ -1,7 +1,7 @@
 #include "hk_carrier_written_at_partial_app.h"
 
 Phi<crane::obj> TFunctor_phi(TFunctor<Exp0<crane::obj>> h,
-                             crane::fn<crane::obj(crane::obj)> f,
+                             const crane::fn<crane::obj(crane::obj)> &f,
                              const Phi<crane::obj> &p) {
   const auto &[es0] = p;
   return Phi<crane::obj>::phi0(es0.template map<Exp0<crane::obj>>(

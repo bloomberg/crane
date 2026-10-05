@@ -239,7 +239,8 @@ List<uint64_t> STMonadTests::quicksort_ST_mine(const List<uint64_t> &xs) {
               uint64_t storeIndex = [&]() {
                 auto for_each_with =
                     [](const List<uint64_t> &xs0, uint64_t v,
-                       crane::fn<uint64_t(uint64_t, uint64_t)> f) -> uint64_t {
+                       const crane::fn<uint64_t(uint64_t, uint64_t)> &f)
+                    -> uint64_t {
                   uint64_t _loop_v = v;
                   const List<uint64_t> *_loop_xs0 = &xs0;
                   while (true) {

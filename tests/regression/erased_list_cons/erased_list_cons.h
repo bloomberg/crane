@@ -322,8 +322,8 @@ struct MySym {
     }
   }
 
-  template <typename T1> static T1 term_rec(const T1 &f, const T1 &f0, Term t) {
-    return term_rect<T1>(f, f0, t);
+  template <typename T1> static T1 term_rec(T1 f, T1 f0, Term t) {
+    return term_rect<T1>(std::move(f), std::move(f0), t);
   }
   enum class Nt { ELEM, LST };
 
@@ -340,8 +340,8 @@ struct MySym {
     }
   }
 
-  template <typename T1> static T1 nt_rec(const T1 &f, const T1 &f0, Nt n) {
-    return nt_rect<T1>(f, f0, n);
+  template <typename T1> static T1 nt_rec(T1 f, T1 f0, Nt n) {
+    return nt_rect<T1>(std::move(f), std::move(f0), n);
   }
 
   using terminal = Term;

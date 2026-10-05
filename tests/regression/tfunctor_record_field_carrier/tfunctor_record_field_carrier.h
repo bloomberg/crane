@@ -414,7 +414,7 @@ template <typename t> struct glob {
   }
 };
 
-glob<crane::obj> TFunctor_glob(crane::fn<crane::obj(crane::obj)> f,
+glob<crane::obj> TFunctor_glob(const crane::fn<crane::obj(crane::obj)> &f,
                                const glob<crane::obj> &g);
 
 /// The composed carrier at a top-level argument: this one is already correct,

@@ -360,8 +360,8 @@ struct LoopifyMutualResultTypes {
   }
 
   template <typename T1, typename F1, typename F2>
-  static T1 md_rec(const T1 &f, F1 &&f0, F2 &&f1, const md &m) {
-    return md_rect<T1>(f, f0, f1, m);
+  static T1 md_rec(T1 f, F1 &&f0, F2 &&f1, const md &m) {
+    return md_rect<T1>(std::move(f), f0, f1, m);
   }
 
   static e dbl_e(const e &x);

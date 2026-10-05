@@ -239,14 +239,15 @@ struct TfunctorAliasCarrier {
     }
   };
 
-  static exp<crane::obj> TFunctor_exp(crane::fn<crane::obj(crane::obj)> f,
-                                      const exp<crane::obj> &e);
+  static exp<crane::obj>
+  TFunctor_exp(const crane::fn<crane::obj(crane::obj)> &f,
+               const exp<crane::obj> &e);
   static texp<crane::obj>
   TFunctor_texp(TFunctor<exp<crane::obj>> h,
-                crane::fn<crane::obj(crane::obj)> f,
+                const crane::fn<crane::obj(crane::obj)> &f,
                 const std::pair<crane::obj, exp<crane::obj>> &pat);
   static cmpxchg<crane::obj>
-  TFunctor_cmpxchg(crane::fn<crane::obj(crane::obj)> f,
+  TFunctor_cmpxchg(const crane::fn<crane::obj(crane::obj)> &f,
                    const cmpxchg<crane::obj> &c);
   static inline const cmpxchg<Nat> c0 = cmpxchg<Nat>{
       std::make_pair(Nat::s(Nat::o()), exp<Nat>::lit(Nat::s(Nat::o()))),

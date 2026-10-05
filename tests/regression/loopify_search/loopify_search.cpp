@@ -311,8 +311,8 @@ List<uint64_t> LoopifySearch::drop_impl(uint64_t k, List<uint64_t> l) {
 /// binary_search_fuel target sorted_list searches for target in sorted list.
 /// Returns true if found.
 bool LoopifySearch::binary_search_fuel(uint64_t fuel, uint64_t target,
-                                       const List<uint64_t> &l) {
-  List<uint64_t> _loop_l = l;
+                                       List<uint64_t> l) {
+  List<uint64_t> _loop_l = std::move(l);
   uint64_t _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
@@ -330,10 +330,10 @@ bool LoopifySearch::binary_search_fuel(uint64_t fuel, uint64_t target,
           return true;
         } else {
           if (target < mid_val) {
-            _loop_l = take_impl(mid, _loop_l);
+            _loop_l = take_impl(mid, std::move(_loop_l));
             _loop_fuel = f;
           } else {
-            _loop_l = drop_impl((mid + 1), _loop_l);
+            _loop_l = drop_impl((mid + 1), std::move(_loop_l));
             _loop_fuel = f;
           }
         }
@@ -342,7 +342,7 @@ bool LoopifySearch::binary_search_fuel(uint64_t fuel, uint64_t target,
   }
 }
 
-bool LoopifySearch::binary_search(uint64_t target, const List<uint64_t> &l) {
+bool LoopifySearch::binary_search(uint64_t target, List<uint64_t> l) {
   return binary_search_fuel(len_impl<uint64_t>(l), target, l);
 }
 
@@ -583,7 +583,7 @@ List<uint64_t> LoopifySearch::sieve_fuel(uint64_t fuel, List<uint64_t> l) {
   return std::move(*_root);
 }
 
-List<uint64_t> LoopifySearch::sieve(const List<uint64_t> &l) {
+List<uint64_t> LoopifySearch::sieve(List<uint64_t> l) {
   return sieve_fuel(len_impl<uint64_t>(l), l);
 }
 
@@ -650,7 +650,7 @@ List<uint64_t> LoopifySearch::nub_fuel(uint64_t fuel, List<uint64_t> l) {
   return std::move(*_root);
 }
 
-List<uint64_t> LoopifySearch::nub(const List<uint64_t> &l) {
+List<uint64_t> LoopifySearch::nub(List<uint64_t> l) {
   return nub_fuel(len_impl<uint64_t>(l), l);
 }
 
@@ -702,7 +702,7 @@ List<uint64_t> LoopifySearch::remove_duplicates_fuel(uint64_t fuel,
   return std::move(*_root);
 }
 
-List<uint64_t> LoopifySearch::remove_duplicates(const List<uint64_t> &l) {
+List<uint64_t> LoopifySearch::remove_duplicates(List<uint64_t> l) {
   return remove_duplicates_fuel(len_impl<uint64_t>(l), l);
 }
 
@@ -778,7 +778,7 @@ List<uint64_t> LoopifySearch::quicksort_fuel(
   return _result;
 }
 
-List<uint64_t> LoopifySearch::quicksort(const List<uint64_t> &l) {
+List<uint64_t> LoopifySearch::quicksort(List<uint64_t> l) {
   return quicksort_fuel(len_impl<uint64_t>(l), l);
 }
 
@@ -902,8 +902,8 @@ List<uint64_t> LoopifySearch::merge_sorted_fuel(uint64_t fuel,
   return std::move(*_root);
 }
 
-List<uint64_t> LoopifySearch::merge_sorted(const List<uint64_t> &l1,
-                                           const List<uint64_t> &l2) {
+List<uint64_t> LoopifySearch::merge_sorted(List<uint64_t> l1,
+                                           List<uint64_t> l2) {
   return merge_sorted_fuel((len_impl<uint64_t>(l1) + len_impl<uint64_t>(l2)),
                            l1, l2);
 }
@@ -975,7 +975,7 @@ List<uint64_t> LoopifySearch::merge_sort_fuel(
   return _result;
 }
 
-List<uint64_t> LoopifySearch::merge_sort(const List<uint64_t> &l) {
+List<uint64_t> LoopifySearch::merge_sort(List<uint64_t> l) {
   return merge_sort_fuel(len_impl<uint64_t>(l), l);
 }
 

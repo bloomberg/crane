@@ -1,8 +1,8 @@
 #include "itree_interp_state.h"
 
-std::optional<std::pair<Nat, Nat>>
-ItreeInterpState::run(const Nat &fuel,
-                      Itree<ItreeInterpState::noE, std::pair<Nat, Nat>> t) {
+std::optional<std::pair<Nat, Nat>> ItreeInterpState::run(
+    const Nat &fuel,
+    const Itree<ItreeInterpState::noE, std::pair<Nat, Nat>> &t) {
   if (std::holds_alternative<typename Nat::O>(fuel.v())) {
     return std::optional<std::pair<Nat, Nat>>();
   } else {

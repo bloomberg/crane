@@ -27,9 +27,8 @@ struct ModuleInductiveSameName {
       }
     }
 
-    template <typename T1>
-    static T1 Color_rec(const T1 &f, const T1 &f0, Color c) {
-      return Color_rect<T1>(f, f0, c);
+    template <typename T1> static T1 Color_rec(T1 f, T1 f0, Color c) {
+      return Color_rect<T1>(std::move(f), std::move(f0), c);
     }
 
     static uint64_t v(Color c);

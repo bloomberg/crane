@@ -316,9 +316,9 @@ struct LoopifyFixCapturesClassParam {
   }
 
   template <Sized _tcI0>
-  static std::optional<Nat>
-  f(const tree &t, const Nat &i) { /// CraneEnter: captures varying parameters
-                                   /// for each recursive call.
+  static std::optional<Nat> f(const tree &t,
+                              Nat i) { /// CraneEnter: captures varying
+                                       /// parameters for each recursive call.
 
     struct CraneEnter {
       Nat i;
@@ -334,35 +334,35 @@ struct LoopifyFixCapturesClassParam {
     using CraneFrame = std::variant<CraneEnter, CraneEnter_loop>;
     std::optional<Nat> _result{};
     crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{i, t});
+    _stack.emplace_back(CraneEnter{std::move(i), t});
     /// Loopified f: CraneEnter.
     while (!_stack.empty()) {
       CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<CraneEnter>(_frame)) {
         auto _f = std::move(std::get<CraneEnter>(_frame));
-        const Nat &i = std::move(_f.i);
+        Nat i = std::move(_f.i);
         const tree &t = std::move(_f.t);
         if (std::holds_alternative<typename tree::Leaf>(t.v())) {
           const auto &[n0] = std::get<typename tree::Leaf>(t.v());
-          _result = std::make_optional<Nat>(n0.add(i));
+          _result = std::make_optional<Nat>(n0.add(std::move(i)));
         } else {
           const auto &[ts0] = std::get<typename tree::Node>(t.v());
-          _stack.emplace_back(CraneEnter_loop{i, *ts0});
+          _stack.emplace_back(CraneEnter_loop{std::move(i), *ts0});
         }
       } else {
         auto _f = std::move(std::get<CraneEnter_loop>(_frame));
-        const Nat &k = std::move(_f.k);
+        Nat k = std::move(_f.k);
         const List<tree> &ts = std::move(_f.ts);
         if (std::holds_alternative<typename List<tree>::Nil>(ts.v())) {
           _result = std::optional<Nat>();
         } else {
           const auto &[a0, a1] = std::get<typename List<tree>::Cons>(ts.v());
           if (k.ltb(_tcI0::size(Nat::s(Nat::s(Nat::o()))))) {
-            _stack.emplace_back(CraneEnter{k, a0});
+            _stack.emplace_back(CraneEnter{std::move(k), a0});
           } else {
             _stack.emplace_back(CraneEnter_loop{
-                k.sub(_tcI0::size(Nat::s(Nat::s(Nat::o())))), *a1});
+                std::move(k).sub(_tcI0::size(Nat::s(Nat::s(Nat::o())))), *a1});
           }
         }
       }

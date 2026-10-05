@@ -612,7 +612,7 @@ struct LoopifyHofs {
   }
 
   template <typename F0>
-  static List<uint64_t> scanl1(F0 &&f, const List<uint64_t> &l) {
+  static List<uint64_t> scanl1(F0 &&f, List<uint64_t> l) {
     return scanl1_fuel(l.length(), f, l);
   }
 
@@ -979,8 +979,8 @@ struct LoopifyHofs {
   }
 
   template <typename F0>
-  static List<uint64_t> merge_by(F0 &&cmp, const List<uint64_t> &l1,
-                                 const List<uint64_t> &l2) {
+  static List<uint64_t> merge_by(F0 &&cmp, List<uint64_t> l1,
+                                 List<uint64_t> l2) {
     return merge_by_fuel((l1.length() + l2.length()), cmp, l1, l2);
   }
 
@@ -1233,7 +1233,7 @@ struct LoopifyHofs {
   /// longest_run l finds the longest consecutive run of equal elements.
   /// Matches on recursive result to decide behavior.
   static List<uint64_t> longest_run_fuel(uint64_t fuel, List<uint64_t> l);
-  static List<uint64_t> longest_run(const List<uint64_t> &l);
+  static List<uint64_t> longest_run(List<uint64_t> l);
 
   /// any p l checks if any element satisfies predicate (same as exists_fn but
   /// different name).

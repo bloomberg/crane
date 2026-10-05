@@ -315,13 +315,12 @@ struct PromotedFieldCtorTargInLambda {
   };
 
   template <typename T1, typename T2, typename T3>
-  static T3
-  memS_rect(std::type_identity_t<crane::fn<T3(T2)>> f,
-            std::type_identity_t<crane::fn<T3(Nat)>> f0,
-            std::type_identity_t<
-                crane::fn<T3(crane::fn<memS<T1, T2>(T1)>, crane::fn<T3(T1)>)>>
-                f1,
-            const memS<T1, T2> &m) {
+  static T3 memS_rect(
+      const std::type_identity_t<crane::fn<T3(T2)>> &f,
+      const std::type_identity_t<crane::fn<T3(Nat)>> &f0,
+      const std::type_identity_t<
+          crane::fn<T3(crane::fn<memS<T1, T2>(T1)>, crane::fn<T3(T1)>)>> &f1,
+      const memS<T1, T2> &m) {
     if (std::holds_alternative<typename memS<T1, T2>::Mret>(m.v())) {
       const auto &[a0] = std::get<typename memS<T1, T2>::Mret>(m.v());
       return f(a0);

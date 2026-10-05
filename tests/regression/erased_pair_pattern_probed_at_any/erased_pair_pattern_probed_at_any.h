@@ -210,7 +210,7 @@ crane::rebind_t<T1, T3> tfmap(std::type_identity_t<TFunctor<T1>> tFunctor,
       tFunctor(crane_erase_fn(f), crane_convert<T1>(std::move(x))));
 }
 
-List<crane::obj> TFunctor_list(crane::fn<crane::obj(crane::obj)> x0_,
+List<crane::obj> TFunctor_list(const crane::fn<crane::obj(crane::obj)> &x0_,
                                const List<crane::obj> &x1_);
 
 struct ident {
@@ -233,7 +233,7 @@ template <typename T> struct box {
   }
 };
 
-box<crane::obj> TFunctor_box(crane::fn<crane::obj(crane::obj)> f,
+box<crane::obj> TFunctor_box(const crane::fn<crane::obj(crane::obj)> &f,
                              const box<crane::obj> &b);
 
 template <typename T, typename Body> struct pairs {
@@ -257,7 +257,7 @@ template <typename T, typename Body> struct pairs {
 
 template <typename T1>
 pairs<crane::obj, T1> TFunctor_pairs(std::type_identity_t<TFunctor<T1>> h,
-                                     crane::fn<crane::obj(crane::obj)> f,
+                                     const crane::fn<crane::obj(crane::obj)> &f,
                                      const pairs<crane::obj, T1> &m) {
   return pairs<crane::obj, T1>{
       tfmap<List<crane::obj>, std::pair<ident, crane::obj>,

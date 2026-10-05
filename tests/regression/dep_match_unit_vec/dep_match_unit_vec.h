@@ -106,8 +106,8 @@ struct DepMatchUnitVec {
   }
 
   template <typename T1, typename T2, typename F1>
-  static T2 vec_rec(const T2 &f, F1 &&f0, uint64_t _x, const vec<T1> &v) {
-    return vec_rect<T1, T2>(f, f0, _x, v);
+  static T2 vec_rec(T2 f, F1 &&f0, uint64_t _x, const vec<T1> &v) {
+    return vec_rect<T1, T2>(std::move(f), f0, _x, v);
   }
 
   static uint64_t head(uint64_t _x, const vec<uint64_t> &v);

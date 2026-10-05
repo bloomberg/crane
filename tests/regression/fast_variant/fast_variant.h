@@ -378,9 +378,8 @@ struct FastVariant {
       return _result;
     }
 
-    template <typename T1, typename F1>
-    T1 tree_rec(const T1 &f, F1 &&f0) const {
-      return this->template tree_rect<T1>(f, f0);
+    template <typename T1, typename F1> T1 tree_rec(T1 f, F1 &&f0) const {
+      return this->template tree_rect<T1>(std::move(f), f0);
     }
 
     template <typename T1, typename F1> T1 tree_rect(T1 f, F1 &&f0) const {
@@ -504,8 +503,8 @@ struct FastVariant {
     }
 
     template <typename T1, typename F0, typename F1>
-    T1 shape_rec(F0 &&f, F1 &&f0, const T1 &f1) const {
-      return this->template shape_rect<T1>(f, f0, f1);
+    T1 shape_rec(F0 &&f, F1 &&f0, T1 f1) const {
+      return this->template shape_rect<T1>(f, f0, std::move(f1));
     }
 
     template <typename T1, typename F0, typename F1>
@@ -567,7 +566,7 @@ struct FastVariant {
   };
 
   static stream from(uint64_t n);
-  static List<uint64_t> take(uint64_t n, stream s);
+  static List<uint64_t> take(uint64_t n, const stream &s);
   static inline const tree sample = build(List<uint64_t>::cons(
       UINT64_C(5),
       List<uint64_t>::cons(

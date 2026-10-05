@@ -255,13 +255,13 @@ struct Sort {
   static Sig<List<uint64_t>> isort(const List<uint64_t> &l);
   static List<uint64_t> merge(List<uint64_t> l1, const List<uint64_t> &l2);
   static Sig<List<uint64_t>> merge_prog(const List<uint64_t> &_x,
-                                        const List<uint64_t> &l1,
+                                        List<uint64_t> l1,
                                         const List<uint64_t> &l2);
   static Sig<List<uint64_t>> msort(const List<uint64_t> &x0_);
   static Sig<List<uint64_t>> pair_merge_prog(uint64_t _x, uint64_t _x0,
                                              const List<uint64_t> &_x1,
                                              const List<uint64_t> &l_,
-                                             const List<uint64_t> &l_0);
+                                             List<uint64_t> l_0);
   static Sig<List<uint64_t>> psort(const List<uint64_t> &x0_);
   static Sig<List<uint64_t>> qsort(const List<uint64_t> &x0_);
 };

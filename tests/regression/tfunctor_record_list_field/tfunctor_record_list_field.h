@@ -254,8 +254,9 @@ struct TfunctorRecordListField {
         tFunctor(crane_erase_fn(f), crane_convert<T1>(std::move(x))));
   }
 
-  static List<crane::obj> TFunctor_list(crane::fn<crane::obj(crane::obj)> x0_,
-                                        const List<crane::obj> &x1_);
+  static List<crane::obj>
+  TFunctor_list(const crane::fn<crane::obj(crane::obj)> &x0_,
+                const List<crane::obj> &x1_);
 
   template <typename T1, typename F1>
   static List<T1> TFunctor_list_(std::type_identity_t<TFunctor<T1>> h, F1 &&f,
@@ -298,10 +299,11 @@ struct TfunctorRecordListField {
   };
 
   static operand<crane::obj>
-  TFunctor_operand(crane::fn<crane::obj(crane::obj)> f,
+  TFunctor_operand(const crane::fn<crane::obj(crane::obj)> &f,
                    const operand<crane::obj> &o);
-  static bundle<crane::obj> TFunctor_bundle(crane::fn<crane::obj(crane::obj)> f,
-                                            const bundle<crane::obj> &b);
+  static bundle<crane::obj>
+  TFunctor_bundle(const crane::fn<crane::obj(crane::obj)> &f,
+                  const bundle<crane::obj> &b);
   static inline const bundle<Nat> b0 = bundle<Nat>{
       Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))),
       List<operand<Nat>>::cons(

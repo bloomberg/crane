@@ -57,8 +57,8 @@ struct GeneratedVariantAliasNameClash {
   }
 
   template <typename T1, typename F1>
-  static T1 variant_t_rec(const T1 &f, F1 &&f0, const variant_t0 &v) {
-    return variant_t_rect<T1>(f, f0, v);
+  static T1 variant_t_rec(T1 f, F1 &&f0, const variant_t0 &v) {
+    return variant_t_rect<T1>(std::move(f), f0, v);
   }
 
   static bool is_flag(const variant_t0 &x);

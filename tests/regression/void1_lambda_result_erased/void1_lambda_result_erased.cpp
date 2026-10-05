@@ -2,7 +2,7 @@
 
 std::optional<Nat> Void1LambdaResultErased::run(
     const Nat &fuel,
-    Void1LambdaResultErased::tree<Void1LambdaResultErased::noE, Nat> t) {
+    const Void1LambdaResultErased::tree<Void1LambdaResultErased::noE, Nat> &t) {
   if (std::holds_alternative<typename Nat::O>(fuel.v())) {
     return std::optional<Nat>();
   } else {

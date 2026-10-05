@@ -1,7 +1,8 @@
 #include "vis_cont_type.h"
 
 std::optional<Nat>
-VisContType::run(const Nat &fuel, VisContType::tree<VisContType::noE, Nat> t) {
+VisContType::run(const Nat &fuel,
+                 const VisContType::tree<VisContType::noE, Nat> &t) {
   if (std::holds_alternative<typename Nat::O>(fuel.v())) {
     return std::optional<Nat>();
   } else {

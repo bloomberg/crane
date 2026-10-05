@@ -2,8 +2,8 @@
 
 VisitMatchBug::Tree VisitMatchBug::consume(VisitMatchBug::Tree t) { return t; }
 
-uint64_t VisitMatchBug::match_after_consume(const VisitMatchBug::Tree &t) {
-  VisitMatchBug::Tree t2 = consume(t);
+uint64_t VisitMatchBug::match_after_consume(VisitMatchBug::Tree t) {
+  VisitMatchBug::Tree t2 = consume(std::move(t));
   if (std::holds_alternative<typename VisitMatchBug::Tree::Leaf>(t2.v_mut())) {
     auto &[a0] = std::get<typename VisitMatchBug::Tree::Leaf>(t2.v_mut());
     return a0;
@@ -25,12 +25,12 @@ uint64_t VisitMatchBug::match_last_use(const VisitMatchBug::Tree &t) {
   }
 }
 
-uint64_t VisitMatchBug::nested_match_consume(const VisitMatchBug::Tree &t) {
-  return match_after_consume(t);
+uint64_t VisitMatchBug::nested_match_consume(VisitMatchBug::Tree t) {
+  return match_after_consume(std::move(t));
 }
 
-uint64_t VisitMatchBug::chain_then_match(const VisitMatchBug::Tree &t1) {
-  VisitMatchBug::Tree t2 = consume(t1);
+uint64_t VisitMatchBug::chain_then_match(VisitMatchBug::Tree t1) {
+  VisitMatchBug::Tree t2 = consume(std::move(t1));
   VisitMatchBug::Tree t3 = consume(std::move(t2));
   if (std::holds_alternative<typename VisitMatchBug::Tree::Leaf>(t3.v_mut())) {
     auto &[a0] = std::get<typename VisitMatchBug::Tree::Leaf>(t3.v_mut());

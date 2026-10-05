@@ -331,12 +331,13 @@ public:
 struct Interp {
   template <typename T1, typename T2, typename T3>
   static Itree<T2, T3>
-  translateF(std::type_identity_t<crane::fn<T2(T1)>> h,
+  translateF(const std::type_identity_t<crane::fn<T2(T1)>> &h,
              std::type_identity_t<crane::fn<Itree<T2, T3>(Itree<T1, T3>)>> rec,
              const ItreeF<T1, T3, Itree<T1, T3>> &t0);
   template <typename T1, typename T2, typename T3>
-  static Itree<T2, T3> translate(std::type_identity_t<crane::fn<T2(T1)>> h,
-                                 Itree<T1, T3> t0);
+  static Itree<T2, T3>
+  translate(const std::type_identity_t<crane::fn<T2(T1)>> &h,
+            const Itree<T1, T3> &t0);
 };
 
 struct TranslateIfunLambda {
@@ -354,7 +355,7 @@ struct TranslateIfunLambda {
   };
 
   template <typename T1>
-  static Itree<Sum1<AE, bE, crane::obj>, T1> lift(Itree<bE, T1> x) {
+  static Itree<Sum1<AE, bE, crane::obj>, T1> lift(const Itree<bE, T1> &x) {
     return Interp::template translate<bE, Sum1<AE, bE, crane::obj>, T1>(
         [](const bE &x0) { return Sum1<AE, bE, crane::obj>::inr1(x0); }, x);
   }
@@ -386,7 +387,7 @@ struct TranslateIfunLambda {
 
 template <typename T1, typename T2, typename T3>
 Itree<T2, T3> Interp::translateF(
-    std::type_identity_t<crane::fn<T2(T1)>> h,
+    const std::type_identity_t<crane::fn<T2(T1)>> &h,
     std::type_identity_t<crane::fn<Itree<T2, T3>(Itree<T1, T3>)>> rec,
     const ItreeF<T1, T3, Itree<T1, T3>> &t0) {
   if (std::holds_alternative<typename ItreeF<T1, T3, Itree<T1, T3>>::RetF>(
@@ -415,8 +416,9 @@ Itree<T2, T3> Interp::translateF(
 }
 
 template <typename T1, typename T2, typename T3>
-Itree<T2, T3> Interp::translate(std::type_identity_t<crane::fn<T2(T1)>> h,
-                                Itree<T1, T3> t0) {
+Itree<T2, T3>
+Interp::translate(const std::type_identity_t<crane::fn<T2(T1)>> &h,
+                  const Itree<T1, T3> &t0) {
   return Itree<T2, T3>::lazy_([=]() -> Itree<T2, T3> {
     return Interp::template translateF<T1, T2, T3>(
         h,

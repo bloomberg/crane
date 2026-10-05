@@ -66,8 +66,8 @@ struct GeneratedMethodNameClash {
   }
 
   template <typename T1, typename F2>
-  static T1 token_rec(const T1 &f, const T1 &f0, F2 &&f1, const token &t) {
-    return token_rect<T1>(f, f0, f1, t);
+  static T1 token_rec(T1 f, T1 f0, F2 &&f1, const token &t) {
+    return token_rect<T1>(std::move(f), std::move(f0), f1, t);
   }
 
   static bool is_clone(const token &t);

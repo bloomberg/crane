@@ -1,10 +1,9 @@
 #include "interp_state_after_interp.h"
 
 std::optional<Nat> InterpStateAfterInterp::first_out(
-    const Nat &fuel, Itree<Sum1<InterpStateAfterInterp::outE,
-                                InterpStateAfterInterp::noE, crane::obj>,
-                           std::pair<Nat, Nat>>
-                         t) {
+    const Nat &fuel, const Itree<Sum1<InterpStateAfterInterp::outE,
+                                      InterpStateAfterInterp::noE, crane::obj>,
+                                 std::pair<Nat, Nat>> &t) {
   if (std::holds_alternative<typename Nat::O>(fuel.v())) {
     return std::optional<Nat>();
   } else {

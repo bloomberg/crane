@@ -452,9 +452,9 @@ struct Levenshtein {
     }
 
     template <typename T1, typename F1, typename F2>
-    T1 chain_rec(const T1 &f, F1 &&f0, F2 &&f1, const String &_x,
-                 const String &_x0, const Nat &_x1) const {
-      return this->template chain_rect<T1>(f, f0, f1, _x, _x0, _x1);
+    T1 chain_rec(T1 f, F1 &&f0, F2 &&f1, const String &_x, const String &_x0,
+                 const Nat &_x1) const {
+      return this->template chain_rect<T1>(std::move(f), f0, f1, _x, _x0, _x1);
     }
 
     template <typename T1, typename F1, typename F2>
@@ -545,9 +545,9 @@ struct Levenshtein {
   };
 
   static chain same_chain(const String &s);
-  static chain inserts_chain(const String &s1, const String &s2);
+  static chain inserts_chain(const String &s1, String s2);
   static chain inserts_chain_empty(const String &s);
-  static chain deletes_chain(const String &s1, const String &s2);
+  static chain deletes_chain(const String &s1, String s2);
   static chain deletes_chain_empty(const String &s);
   static chain aux_both_empty(const String &_x, const String &_x0);
 
@@ -590,7 +590,7 @@ struct Levenshtein {
   }
 
   static SigT<Nat, chain> levenshtein_chain(const String &s, String x0_);
-  static Nat levenshtein_computed(const String &s, const String &t);
+  static Nat levenshtein_computed(String s, const String &t);
   static Nat levenshtein(const String &x0_, const String &x1_);
 };
 

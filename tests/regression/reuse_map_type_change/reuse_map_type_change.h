@@ -129,8 +129,8 @@ struct ReuseMapTypeChange {
   }
 
   template <typename T1, typename T2, typename F1>
-  static T2 lst_rec(const T2 &f, F1 &&f0, const lst<T1> &l) {
-    return lst_rect<T1, T2>(f, f0, l);
+  static T2 lst_rec(T2 f, F1 &&f0, const lst<T1> &l) {
+    return lst_rect<T1, T2>(std::move(f), f0, l);
   }
 
   static lst<uint64_t> build(uint64_t n, lst<uint64_t> acc);

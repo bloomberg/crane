@@ -54,7 +54,7 @@ struct crane_ {
   };
 
   static stream ones();
-  static bool head(stream s);
+  static bool head(const stream &s);
   static inline const bool sample = head(ones());
 };
 

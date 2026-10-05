@@ -236,7 +236,7 @@ public:
   }
 
   template <typename T1>
-  static List<T1> list_of_colist(const Nat &fuel, Colist<T1> l) {
+  static List<T1> list_of_colist(const Nat &fuel, const Colist<T1> &l) {
     if (std::holds_alternative<typename Nat::O>(fuel.v())) {
       return List<T1>::nil();
     } else {

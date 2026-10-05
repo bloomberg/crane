@@ -400,8 +400,8 @@ struct Cotree {
   }
 
   template <typename T1, typename T2>
-  static colist<T2> comap(std::type_identity_t<crane::fn<T2(T1)>> f,
-                          colist<T1> l) {
+  static colist<T2> comap(const std::type_identity_t<crane::fn<T2(T1)>> &f,
+                          const colist<T1> &l) {
     if (std::holds_alternative<typename colist<T1>::Conil>(l.v())) {
       return colist<T2>::conil();
     } else {
@@ -418,7 +418,7 @@ struct Cotree {
 
   template <typename T1>
   static cotree<T1>
-  unfold_cotree(std::type_identity_t<crane::fn<colist<T1>(T1)>> next,
+  unfold_cotree(const std::type_identity_t<crane::fn<colist<T1>(T1)>> &next,
                 const T1 &init) {
     return cotree<T1>::lazy_([=]() -> cotree<T1> {
       return cotree<T1>::conode(init, comap<T1, cotree<T1>>(
@@ -430,7 +430,7 @@ struct Cotree {
   }
 
   template <typename T1>
-  static List<T1> list_of_colist(uint64_t fuel, colist<T1> l) {
+  static List<T1> list_of_colist(uint64_t fuel, const colist<T1> &l) {
     if (fuel <= 0) {
       return List<T1>::nil();
     } else {
@@ -445,7 +445,7 @@ struct Cotree {
   }
 
   template <typename T1>
-  static tree<T1> tree_of_cotree(uint64_t fuel, cotree<T1> t) {
+  static tree<T1> tree_of_cotree(uint64_t fuel, const cotree<T1> &t) {
     const auto &[a0, a1] = std::get<typename cotree<T1>::Conode>(t.v());
     if (fuel <= 0) {
       return tree<T1>::node(a0, List<tree<T1>>::nil());

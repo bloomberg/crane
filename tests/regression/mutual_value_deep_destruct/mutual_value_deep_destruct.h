@@ -169,8 +169,8 @@ struct MutualValueDeepDestruct {
   }
 
   template <typename T1, typename F1>
-  static T1 a_rec(const T1 &f, F1 &&f0, const a &a0) {
-    return a_rect<T1>(f, f0, a0);
+  static T1 a_rec(T1 f, F1 &&f0, const a &a0) {
+    return a_rect<T1>(std::move(f), f0, a0);
   }
 
   template <typename T1, typename F0> static T1 b_rect(F0 &&f, const b &b0) {

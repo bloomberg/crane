@@ -208,8 +208,8 @@ struct InstructionCycles {
     }
 
     template <typename T1, typename F0>
-    T1 instruction1_rec(F0 &&f, const T1 &f0) const {
-      return this->template instruction1_rect<T1>(f, f0);
+    T1 instruction1_rec(F0 &&f, T1 f0) const {
+      return this->template instruction1_rect<T1>(f, std::move(f0));
     }
 
     template <typename T1, typename F0>
@@ -262,8 +262,8 @@ struct InstructionCycles {
     const variant_t &v() const { return v_; }
 
     template <typename T1, typename F0>
-    T1 instruction2_rec(F0 &&f, const T1 &f0) const {
-      return this->template instruction2_rect<T1>(f, f0);
+    T1 instruction2_rec(F0 &&f, T1 f0) const {
+      return this->template instruction2_rect<T1>(f, std::move(f0));
     }
 
     template <typename T1, typename F0>
@@ -334,10 +334,11 @@ struct InstructionCycles {
   }
 
   template <typename T1>
-  static T1 instr3_rec(const T1 &f, const T1 &f0, const T1 &f1, const T1 &f2,
-                       const T1 &f3, const T1 &f4, const T1 &f5, const T1 &f6,
-                       const T1 &f7, Instr3 i) {
-    return instr3_rect<T1>(f, f0, f1, f2, f3, f4, f5, f6, f7, i);
+  static T1 instr3_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5, T1 f6,
+                       T1 f7, Instr3 i) {
+    return instr3_rect<T1>(std::move(f), std::move(f0), std::move(f1),
+                           std::move(f2), std::move(f3), std::move(f4),
+                           std::move(f5), std::move(f6), std::move(f7), i);
   }
 
   static uint64_t cycles_min(Instr3 i);
@@ -412,10 +413,11 @@ struct InstructionCycles {
   }
 
   template <typename T1>
-  static T1 instr4_rec(const T1 &f, const T1 &f0, const T1 &f1, const T1 &f2,
-                       const T1 &f3, const T1 &f4, const T1 &f5, const T1 &f6,
-                       const T1 &f7, Instr4 i) {
-    return instr4_rect<T1>(f, f0, f1, f2, f3, f4, f5, f6, f7, i);
+  static T1 instr4_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5, T1 f6,
+                       T1 f7, Instr4 i) {
+    return instr4_rect<T1>(std::move(f), std::move(f0), std::move(f1),
+                           std::move(f2), std::move(f3), std::move(f4),
+                           std::move(f5), std::move(f6), std::move(f7), i);
   }
 
   static uint64_t cycles_max(Instr4 i);
@@ -519,8 +521,8 @@ struct InstructionCycles {
     }
 
     template <typename T1, typename F1, typename F2>
-    T1 instruction5_rec(const T1 &f, F1 &&f0, F2 &&f1) const {
-      return this->template instruction5_rect<T1>(f, f0, f1);
+    T1 instruction5_rec(T1 f, F1 &&f0, F2 &&f1) const {
+      return this->template instruction5_rect<T1>(std::move(f), f0, f1);
     }
 
     template <typename T1, typename F1, typename F2>
@@ -540,8 +542,7 @@ struct InstructionCycles {
     }
   };
 
-  static uint64_t program_cycles5(const state5 &s,
-                                  const List<instruction5> &prog);
+  static uint64_t program_cycles5(state5 s, const List<instruction5> &prog);
   static inline const uint64_t test_instruction_cycle_sum = program_cycles5(
       state5{UINT64_C(0), false, true},
       List<instruction5>::cons(
@@ -556,9 +557,8 @@ struct InstructionCycles {
     return f;
   }
 
-  template <typename T1>
-  static T1 instruction6_rec(const T1 &f, Instruction6 _x) {
-    return instruction6_rect<T1>(f, _x);
+  template <typename T1> static T1 instruction6_rec(T1 f, Instruction6 _x) {
+    return instruction6_rect<T1>(std::move(f), _x);
   }
 
   struct state6 {
@@ -587,9 +587,8 @@ struct InstructionCycles {
     return f;
   }
 
-  template <typename T1>
-  static T1 instruction7_rec(const T1 &f, Instruction7 _x) {
-    return instruction7_rect<T1>(f, _x);
+  template <typename T1> static T1 instruction7_rec(T1 f, Instruction7 _x) {
+    return instruction7_rect<T1>(std::move(f), _x);
   }
 
   struct state7 {

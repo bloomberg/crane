@@ -102,8 +102,8 @@ struct RecordMediatedDrain {
   }
 
   template <typename T1, typename F1>
-  static T1 t_rec(const T1 &f, F1 &&f0, const t &t0) {
-    return t_rect<T1>(f, f0, t0);
+  static T1 t_rec(T1 f, F1 &&f0, const t &t0) {
+    return t_rect<T1>(std::move(f), f0, t0);
   }
 
   static t wrap(uint64_t k, const t &acc);

@@ -143,8 +143,8 @@ struct TailrecReorderProbe {
   }
 
   template <typename T1, typename T2, typename F1>
-  static T2 mylist_rec(const T2 &f, F1 &&f0, const mylist<T1> &m) {
-    return mylist_rect<T1, T2>(f, f0, m);
+  static T2 mylist_rec(T2 f, F1 &&f0, const mylist<T1> &m) {
+    return mylist_rect<T1, T2>(std::move(f), f0, m);
   }
 
   /// Tail-recursive reverse via accumulator.
@@ -248,8 +248,7 @@ struct TailrecReorderProbe {
   }();
   /// Tail-recursive function where the recursive argument is a COMPLEX
   /// expression involving multiple pattern variables.
-  static mylist<uint64_t> weave(const mylist<uint64_t> &l1,
-                                const mylist<uint64_t> &l2,
+  static mylist<uint64_t> weave(mylist<uint64_t> l1, mylist<uint64_t> l2,
                                 const mylist<uint64_t> &acc);
 
   static inline const uint64_t test_weave = mylist_sum<uint64_t>(

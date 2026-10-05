@@ -6,7 +6,7 @@ List<uint64_t>
 ClosuresInData::apply_all(const List<crane::fn<uint64_t(uint64_t)>> &fns,
                           uint64_t x) {
   return fns.template map<uint64_t>(
-      [=](crane::fn<uint64_t(uint64_t)> f) { return f(x); });
+      [=](const crane::fn<uint64_t(uint64_t)> &f) { return f(x); });
 }
 
 uint64_t ClosuresInData::apply_forward(const ClosuresInData::transform &t,
@@ -25,7 +25,10 @@ uint64_t
 ClosuresInData::compose_all(const List<crane::fn<uint64_t(uint64_t)>> &fns,
                             uint64_t x) {
   return fns.template fold_left<uint64_t>(
-      [](uint64_t acc, crane::fn<uint64_t(uint64_t)> f) { return f(acc); }, x);
+      [](uint64_t acc, const crane::fn<uint64_t(uint64_t)> &f) {
+        return f(acc);
+      },
+      x);
 }
 
 /// maybe_apply mf x applies function mf to x if present,

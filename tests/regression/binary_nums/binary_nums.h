@@ -278,7 +278,7 @@ struct BinInt {
   static Z pos_sub(const Positive &x, const Positive &y);
   static Z add(Z x, Z y);
   static Z opp(const Z &x);
-  static Z sub(const Z &m, const Z &n);
+  static Z sub(Z m, const Z &n);
   static Z mul(const Z &x, const Z &y);
   static Comparison compare(const Z &x, const Z &y);
   static uint64_t to_nat(const Z &z);

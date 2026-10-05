@@ -90,8 +90,8 @@ struct OptionalSelfDeepCopy {
   }
 
   template <typename T1, typename F1>
-  static T1 chain_rec(const T1 &f, F1 &&f0, const chain &c) {
-    return chain_rect<T1>(f, f0, c);
+  static T1 chain_rec(T1 f, F1 &&f0, const chain &c) {
+    return chain_rect<T1>(std::move(f), f0, c);
   }
 
   static std::pair<chain, chain> dup_chain(const chain &c);

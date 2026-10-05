@@ -257,10 +257,12 @@ struct TfunctorRecordOptionField {
     }
   };
 
-  static exp<crane::obj> TFunctor_exp(crane::fn<crane::obj(crane::obj)> f,
-                                      const exp<crane::obj> &e);
-  static global<crane::obj> TFunctor_global(crane::fn<crane::obj(crane::obj)> f,
-                                            const global<crane::obj> &g);
+  static exp<crane::obj>
+  TFunctor_exp(const crane::fn<crane::obj(crane::obj)> &f,
+               const exp<crane::obj> &e);
+  static global<crane::obj>
+  TFunctor_global(const crane::fn<crane::obj(crane::obj)> &f,
+                  const global<crane::obj> &g);
   static inline const global<Nat> g0 = global<Nat>{
       Nat::s(Nat::o()),
       std::make_optional<exp<Nat>>(exp<Nat>::lit(Nat::s(Nat::s(Nat::o()))))};

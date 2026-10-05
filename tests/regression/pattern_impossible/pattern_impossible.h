@@ -28,9 +28,8 @@ struct PatternImpossible {
     }
   }
 
-  template <typename T1>
-  static T1 three_rec(const T1 &f, const T1 &f0, const T1 &f1, Three t) {
-    return three_rect<T1>(f, f0, f1, t);
+  template <typename T1> static T1 three_rec(T1 f, T1 f0, T1 f1, Three t) {
+    return three_rect<T1>(std::move(f), std::move(f0), std::move(f1), t);
   }
 
   struct nested {

@@ -138,11 +138,11 @@ struct ConstructorBugs {
   };
 
   static source_state step(source_state s);
-  static std::pair<bool, packed_state> bad_branch(const source_state &s1);
-  static std::pair<bool, packed_state> bad_direct(const source_state &s1);
+  static std::pair<bool, packed_state> bad_branch(source_state s1);
+  static std::pair<bool, packed_state> bad_direct(source_state s1);
   static source_state step2(const source_state &s);
   static std::pair<bool, packed_state> bad_complex_step(const source_state &s1);
-  static std::pair<bool, packed_state> bad_nested(const source_state &s1);
+  static std::pair<bool, packed_state> bad_nested(source_state s1);
 
   struct source_state_list {
     field_a source_a_list;
@@ -158,7 +158,7 @@ struct ConstructorBugs {
 
   static source_state_list step_list(source_state_list s);
   static std::pair<bool, packed_state_list>
-  bad_branch_list(const source_state_list &s1);
+  bad_branch_list(source_state_list s1);
 
   struct state {
     uint64_t value;

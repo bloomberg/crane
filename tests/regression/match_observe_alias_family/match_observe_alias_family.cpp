@@ -1,10 +1,9 @@
 #include "match_observe_alias_family.h"
 
 std::optional<Nat> MatchObserveAliasFamily::run(
-    const Nat &fuel, Itree<Sum1<MatchObserveAliasFamily::aE<Nat>,
-                                MatchObserveAliasFamily::BE, crane::obj>,
-                           Nat>
-                         t) {
+    const Nat &fuel, const Itree<Sum1<MatchObserveAliasFamily::aE<Nat>,
+                                      MatchObserveAliasFamily::BE, crane::obj>,
+                                 Nat> &t) {
   if (std::holds_alternative<typename Nat::O>(fuel.v())) {
     return std::optional<Nat>();
   } else {

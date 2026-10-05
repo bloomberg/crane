@@ -15,8 +15,8 @@ struct FactoryNameCollision {
 
   template <typename T1> static T1 other_rect(T1 f, Other) { return f; }
 
-  template <typename T1> static T1 other_rec(const T1 &f, Other _x) {
-    return other_rect<T1>(f, _x);
+  template <typename T1> static T1 other_rec(T1 f, Other _x) {
+    return other_rect<T1>(std::move(f), _x);
   }
 
   struct lst {
@@ -86,8 +86,8 @@ struct FactoryNameCollision {
       }
     }
 
-    template <typename T1, typename F1> T1 lst_rec(const T1 &f, F1 &&f0) const {
-      return this->template lst_rect<T1>(f, f0);
+    template <typename T1, typename F1> T1 lst_rec(T1 f, F1 &&f0) const {
+      return this->template lst_rect<T1>(std::move(f), f0);
     }
 
     template <typename T1, typename F1> T1 lst_rect(T1 f, F1 &&f0) const {

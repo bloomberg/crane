@@ -88,8 +88,8 @@ struct CpsClosureChain {
   }
 
   template <typename T1, typename F1>
-  static T1 tree_rec(const T1 &f, F1 &&f0, const tree &t) {
-    return tree_rect<T1>(f, f0, t);
+  static T1 tree_rec(T1 f, F1 &&f0, const tree &t) {
+    return tree_rect<T1>(std::move(f), f0, t);
   }
 
   /// CPS-style tree traversal that builds a deep chain of continuations.
@@ -106,7 +106,8 @@ struct CpsClosureChain {
   /// is whether the = capture correctly copies all pattern variables,
   /// especially when the pattern match is on a shared_ptr type and the
   /// structured bindings are references.
-  static uint64_t tree_sum_cps(const tree &t, crane::fn<uint64_t(uint64_t)> k) {
+  static uint64_t tree_sum_cps(const tree &t,
+                               const crane::fn<uint64_t(uint64_t)> &k) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return k(UINT64_C(0));
     } else {
@@ -141,10 +142,10 @@ struct CpsClosureChain {
   /// CPS fold: accumulates results through continuation chain.
   /// This creates closures that capture BOTH a pattern variable
   /// AND the accumulator function.
-  static uint64_t
-  tree_fold_cps(const tree &t, uint64_t base,
-                crane::fn<uint64_t(uint64_t, uint64_t, uint64_t)> combine,
-                crane::fn<uint64_t(uint64_t)> k) {
+  static uint64_t tree_fold_cps(
+      const tree &t, uint64_t base,
+      const crane::fn<uint64_t(uint64_t, uint64_t, uint64_t)> &combine,
+      const crane::fn<uint64_t(uint64_t)> &k) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return k(base);
     } else {

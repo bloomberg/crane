@@ -40,8 +40,8 @@ struct TypeApp {
     return g(f(x));
   }
 
-  template <typename T1> static T1 nested_poly(const T1 &x) {
-    return id<T1>(id<T1>(id<T1>(x)));
+  template <typename T1> static T1 nested_poly(T1 x) {
+    return id<T1>(id<T1>(id<T1>(std::move(x))));
   }
 
   template <typename A> struct list {
@@ -137,8 +137,8 @@ struct TypeApp {
   }
 
   template <typename T1, typename T2, typename F1>
-  static T2 list_rec(const T2 &f, F1 &&f0, const list<T1> &l) {
-    return list_rect<T1, T2>(f, f0, l);
+  static T2 list_rec(T2 f, F1 &&f0, const list<T1> &l) {
+    return list_rect<T1, T2>(std::move(f), f0, l);
   }
 
   template <typename T1, typename T2, typename F0>

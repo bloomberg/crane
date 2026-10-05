@@ -194,8 +194,8 @@ struct UniversePoly {
   }
 
   template <typename T1, typename T2, typename F1>
-  static T2 poption_rec(const T2 &f, F1 &&f0, const poption<T1> &p) {
-    return poption_rect<T1, T2>(f, f0, p);
+  static T2 poption_rec(T2 f, F1 &&f0, const poption<T1> &p) {
+    return poption_rect<T1, T2>(std::move(f), f0, p);
   }
 
   template <typename T1, typename T2, typename F0>

@@ -2,7 +2,7 @@
 
 modu<crane::obj> TFunctor_modu(TFunctor<Exp<crane::obj>> h, Endo<Nat> h0,
                                TFunctor<Decl<crane::obj>> h1,
-                               crane::fn<crane::obj(crane::obj)> f,
+                               const crane::fn<crane::obj(crane::obj)> &f,
                                const modu<crane::obj> &m) {
   return modu<crane::obj>{
       endo<Nat>(std::move(h0), m.m_tag),

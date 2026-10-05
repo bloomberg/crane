@@ -70,8 +70,8 @@ public:
       return f0(*d_n, d_n->template nat_rect<T1>(bsl::move(f), f0));
     }
   }
-  template <typename T1, typename F1> T1 nat_rec(const T1 &f, F1 &&f0) const {
-    return this->template nat_rect<T1>(f, f0);
+  template <typename T1, typename F1> T1 nat_rec(T1 f, F1 &&f0) const {
+    return this->template nat_rect<T1>(bsl::move(f), f0);
   }
   Nat add(Nat n) const {
     if (bsl::holds_alternative<typename Nat::O>(this->v())) {

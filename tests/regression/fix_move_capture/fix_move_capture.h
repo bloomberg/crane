@@ -90,8 +90,8 @@ struct FixMoveCapture {
   }
 
   template <typename T1, typename F1>
-  static T1 mylist_rec(const T1 &f0, F1 &&f1, const mylist &m) {
-    return mylist_rect<T1>(f0, f1, m);
+  static T1 mylist_rec(T1 f0, F1 &&f1, const mylist &m) {
+    return mylist_rect<T1>(std::move(f0), f1, m);
   }
 
   static uint64_t length(const mylist &l);

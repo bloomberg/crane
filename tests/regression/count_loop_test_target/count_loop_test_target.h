@@ -56,8 +56,8 @@ struct CountLoopTestTarget {
   }
 
   template <typename T1, typename F0>
-  static T1 instruction_rec(F0 &&f, const T1 &f0, const instruction &i) {
-    return instruction_rect<T1>(f, f0, i);
+  static T1 instruction_rec(F0 &&f, T1 f0, const instruction &i) {
+    return instruction_rect<T1>(f, std::move(f0), i);
   }
 
   static instruction count_loop_test(uint64_t loop_addr);

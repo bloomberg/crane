@@ -1,6 +1,6 @@
 #include "hk_carrier_binder_at_concrete_site.h"
 
-box<crane::obj> TFunctor_box(crane::fn<crane::obj(crane::obj)> f,
+box<crane::obj> TFunctor_box(const crane::fn<crane::obj(crane::obj)> &f,
                              const box<crane::obj> &b) {
   return box<crane::obj>{f(b.b_payload)};
 }

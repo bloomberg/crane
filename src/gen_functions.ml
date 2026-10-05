@@ -828,7 +828,7 @@ let gen_dfun n b cty ty temps =
      type parameters that were filtered out as phantom by gen_decl_for_pp. *)
   let primary = primary_tvar_indices dom cod in
   let unwrap_fun_ty2 = function
-    | Tconst ((Tfun _ as f)) -> Some f
+    | Tconst ((Tfun _ as f)) | Tref (Lvalue, Tconst (Tfun _ as f)) -> Some f
     | Tfun _ as f -> Some f
     | _ -> None
   in

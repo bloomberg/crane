@@ -1,8 +1,8 @@
 #include "hk_carrier_alias_applied_as_type.h"
 
-List<crane::obj> TFunctor_list(crane::fn<crane::obj(crane::obj)> x0_,
+List<crane::obj> TFunctor_list(const crane::fn<crane::obj(crane::obj)> &x0_,
                                const List<crane::obj> &x1_) {
-  return x1_.template map<crane::obj>(std::move(x0_));
+  return x1_.template map<crane::obj>(x0_);
 }
 
 modul<Nat, List<Nat>>

@@ -312,7 +312,7 @@ struct Void1LambdaResultErased {
   };
 
   template <typename T1, typename T2>
-  static treeF<T1, T2, tree<T1, T2>> observe(tree<T1, T2> t) {
+  static treeF<T1, T2, tree<T1, T2>> observe(const tree<T1, T2> &t) {
     const auto &[observe1] = std::get<typename tree<T1, T2>::Go>(t.v());
     return observe1;
   }
@@ -321,12 +321,12 @@ struct Void1LambdaResultErased {
     noE() = delete;
   };
 
-  static std::optional<Nat> run(const Nat &fuel, tree<noE, Nat> t);
+  static std::optional<Nat> run(const Nat &fuel, const tree<noE, Nat> &t);
 
   template <typename T1, typename T2, typename T3>
-  static tree<T1, Sum<T2, T3>>
-  apply_step(std::type_identity_t<crane::fn<tree<T1, Sum<T2, T3>>(T2)>> f,
-             T2 x0_) {
+  static tree<T1, Sum<T2, T3>> apply_step(
+      const std::type_identity_t<crane::fn<tree<T1, Sum<T2, T3>>(T2)>> &f,
+      T2 x0_) {
     return f(std::move(x0_));
   }
 

@@ -1,27 +1,26 @@
 #include "tfunctor_list_of_triples.h"
 
-List<crane::obj>
-TfunctorListOfTriples::TFunctor_list(crane::fn<crane::obj(crane::obj)> x0_,
-                                     const List<crane::obj> &x1_) {
-  return x1_.template map<crane::obj>(std::move(x0_));
+List<crane::obj> TfunctorListOfTriples::TFunctor_list(
+    const crane::fn<crane::obj(crane::obj)> &x0_, const List<crane::obj> &x1_) {
+  return x1_.template map<crane::obj>(x0_);
 }
 
 TfunctorListOfTriples::phi<crane::obj> TfunctorListOfTriples::TFunctor_phi(
-    crane::fn<crane::obj(crane::obj)> f,
+    const crane::fn<crane::obj(crane::obj)> &f,
     const TfunctorListOfTriples::phi<crane::obj> &p) {
   const auto &[t0] = p;
-  return phi<crane::obj>::phi0(crane_call_erased(std::move(f), t0));
+  return phi<crane::obj>::phi0(crane_call_erased(f, t0));
 }
 
 TfunctorListOfTriples::metadata<crane::obj> TfunctorListOfTriples::TFunctor_md(
-    crane::fn<crane::obj(crane::obj)> f,
+    const crane::fn<crane::obj(crane::obj)> &f,
     const TfunctorListOfTriples::metadata<crane::obj> &p) {
   const auto &[t0] = p;
-  return metadata<crane::obj>::md(crane_call_erased(std::move(f), t0));
+  return metadata<crane::obj>::md(crane_call_erased(f, t0));
 }
 
 TfunctorListOfTriples::block<crane::obj> TfunctorListOfTriples::TFunctor_block(
-    crane::fn<crane::obj(crane::obj)> f,
+    const crane::fn<crane::obj(crane::obj)> &f,
     const TfunctorListOfTriples::block<crane::obj> &b) {
   return block<crane::obj>{tfmap<
       List<crane::obj>,

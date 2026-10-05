@@ -1567,9 +1567,9 @@ struct LoopifyExprVariants {
     }
 
     template <typename T1, typename F2, typename F3, typename F4>
-    T1 bool_expr_rec(const T1 &f, const T1 &f0, F2 &&f1, F3 &&f2,
-                     F4 &&f3) const {
-      return this->template bool_expr_rect<T1>(f, f0, f1, f2, f3);
+    T1 bool_expr_rec(T1 f, T1 f0, F2 &&f1, F3 &&f2, F4 &&f3) const {
+      return this->template bool_expr_rect<T1>(std::move(f), std::move(f0), f1,
+                                               f2, f3);
     }
 
     template <typename T1, typename F2, typename F3, typename F4>
@@ -1919,8 +1919,8 @@ struct LoopifyExprVariants {
     }
 
     template <typename T1, typename F1, typename F2, typename F3>
-    T1 list_expr_rec(const T1 &f, F1 &&f0, F2 &&f1, F3 &&f2) const {
-      return this->template list_expr_rect<T1>(f, f0, f1, f2);
+    T1 list_expr_rec(T1 f, F1 &&f0, F2 &&f1, F3 &&f2) const {
+      return this->template list_expr_rect<T1>(std::move(f), f0, f1, f2);
     }
 
     template <typename T1, typename F1, typename F2, typename F3>

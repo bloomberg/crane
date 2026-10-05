@@ -24,5 +24,6 @@ uint64_t EtaClosureFirstClass::run(uint64_t k) {
             return [=](uint64_t _ec1) { return mkclosure(_ec0, _ec1); };
           });
   return std::move(fs).template fold_left<uint64_t>(
-      [](uint64_t a, crane::fn<uint64_t(uint64_t)> f) { return f(a); }, k);
+      [](uint64_t a, const crane::fn<uint64_t(uint64_t)> &f) { return f(a); },
+      k);
 }

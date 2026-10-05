@@ -164,8 +164,8 @@ struct IndParam {
     }
 
     template <typename T1, typename F1, typename F2>
-    static T1 t_rec(const T1 &f, F1 &&f0, F2 &&f1, const t &t0) {
-      return t_rect<T1>(f, f0, f1, t0);
+    static T1 t_rec(T1 f, F1 &&f0, F2 &&f1, const t &t0) {
+      return t_rect<T1>(std::move(f), f0, f1, t0);
     }
 
     static uint64_t size(const t &c);

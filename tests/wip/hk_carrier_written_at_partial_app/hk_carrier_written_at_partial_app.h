@@ -272,7 +272,7 @@ template <typename T> struct Phi {
 };
 
 Phi<crane::obj> TFunctor_phi(TFunctor<Exp0<crane::obj>> h,
-                             crane::fn<crane::obj(crane::obj)> f,
+                             const crane::fn<crane::obj(crane::obj)> &f,
                              const Phi<crane::obj> &p);
 
 #endif // INCLUDED_HK_CARRIER_WRITTEN_AT_PARTIAL_APP

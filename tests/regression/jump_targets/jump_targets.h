@@ -194,8 +194,8 @@ struct JumpTargets {
     }
 
     template <typename T1, typename F0, typename F1>
-    T1 instr_collection_rec(F0 &&f, F1 &&f0, const T1 &f1) const {
-      return this->template instr_collection_rect<T1>(f, f0, f1);
+    T1 instr_collection_rec(F0 &&f, F1 &&f0, T1 f1) const {
+      return this->template instr_collection_rect<T1>(f, f0, std::move(f1));
     }
 
     template <typename T1, typename F0, typename F1>
@@ -289,8 +289,8 @@ struct JumpTargets {
     }
 
     template <typename T1, typename F0, typename F1>
-    T1 instr_region_rec(F0 &&f, F1 &&f0, const T1 &f1) const {
-      return this->template instr_region_rect<T1>(f, f0, f1);
+    T1 instr_region_rec(F0 &&f, F1 &&f0, T1 f1) const {
+      return this->template instr_region_rect<T1>(f, f0, std::move(f1));
     }
 
     template <typename T1, typename F0, typename F1>
@@ -374,8 +374,8 @@ struct JumpTargets {
     }
 
     template <typename T1, typename F0, typename F1>
-    T1 instr_jms_rec(F0 &&f, F1 &&f0, const T1 &f1) const {
-      return this->template instr_jms_rect<T1>(f, f0, f1);
+    T1 instr_jms_rec(F0 &&f, F1 &&f0, T1 f1) const {
+      return this->template instr_jms_rect<T1>(f, f0, std::move(f1));
     }
 
     template <typename T1, typename F0, typename F1>
@@ -453,8 +453,8 @@ struct JumpTargets {
     }
 
     template <typename T1, typename F0, typename F1>
-    T1 instr_jun_rec(F0 &&f, F1 &&f0, const T1 &f1) const {
-      return this->template instr_jun_rect<T1>(f, f0, f1);
+    T1 instr_jun_rec(F0 &&f, F1 &&f0, T1 f1) const {
+      return this->template instr_jun_rect<T1>(f, f0, std::move(f1));
     }
 
     template <typename T1, typename F0, typename F1>

@@ -172,8 +172,8 @@ struct HofTreeLoopify {
   }
 
   template <typename T1, typename T2, typename F1>
-  static T2 tree_rec(const T2 &f, F1 &&f0, const tree<T1> &t) {
-    return tree_rect<T1, T2>(f, f0, t);
+  static T2 tree_rec(T2 f, F1 &&f0, const tree<T1> &t) {
+    return tree_rect<T1, T2>(std::move(f), f0, t);
   }
 
   static tree<uint64_t> depth_tree(uint64_t n);

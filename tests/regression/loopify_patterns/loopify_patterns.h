@@ -144,8 +144,8 @@ struct LoopifyPatterns {
   }
 
   template <typename T1, typename T2, typename F1>
-  static T2 list_rec(const T2 &f, F1 &&f0, const list<T1> &l) {
-    return list_rect<T1, T2>(f, f0, l);
+  static T2 list_rec(T2 f, F1 &&f0, const list<T1> &l) {
+    return list_rect<T1, T2>(std::move(f), f0, l);
   }
 
   /// multi_let n multiple sequential let bindings before recursion.
@@ -413,14 +413,14 @@ struct LoopifyPatterns {
   }
 
   template <typename F0>
-  static list<uint64_t> merge_by(F0 &&cmp, const list<uint64_t> &l1,
-                                 const list<uint64_t> &l2) {
+  static list<uint64_t> merge_by(F0 &&cmp, list<uint64_t> l1,
+                                 list<uint64_t> l2) {
     return merge_by_fuel((list_len(l1) + list_len(l2)), cmp, l1, l2);
   }
 
   /// process_twice l applies recursion twice: process(process(xs)).
   static list<uint64_t> process_twice_fuel(uint64_t fuel, list<uint64_t> l);
-  static list<uint64_t> process_twice(const list<uint64_t> &l);
+  static list<uint64_t> process_twice(list<uint64_t> l);
   /// as_guard l uses as-pattern with guard (length check).
   static list<uint64_t> as_guard_fuel(uint64_t fuel, const list<uint64_t> &l);
   static list<uint64_t> as_guard(const list<uint64_t> &l);
@@ -435,9 +435,8 @@ struct LoopifyPatterns {
   static list<uint64_t> double_append(const list<uint64_t> &l1,
                                       list<uint64_t> l2);
   /// process_twice_alt l applies transformation twice on recursive result.
-  static list<uint64_t> process_twice_alt_fuel(uint64_t fuel,
-                                               const list<uint64_t> &l);
-  static list<uint64_t> process_twice_alt(const list<uint64_t> &l);
+  static list<uint64_t> process_twice_alt_fuel(uint64_t fuel, list<uint64_t> l);
+  static list<uint64_t> process_twice_alt(list<uint64_t> l);
   /// sum_if_positive_else_double l conditional logic on each element.
   static uint64_t sum_if_positive_else_double(const list<uint64_t> &l);
 

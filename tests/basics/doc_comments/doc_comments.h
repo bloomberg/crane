@@ -142,8 +142,8 @@ struct DocComments {
   }
 
   template <typename T1, typename T2, typename F1>
-  static T2 mylist_rec(const T2 &f, F1 &&f0, const mylist<T1> &m) {
-    return mylist_rect<T1, T2>(f, f0, m);
+  static T2 mylist_rec(T2 f, F1 &&f0, const mylist<T1> &m) {
+    return mylist_rect<T1, T2>(std::move(f), f0, m);
   }
 
   static uint64_t no_doc_comment(uint64_t x);
@@ -179,9 +179,8 @@ struct DocComments {
     }
   }
 
-  template <typename T1>
-  static T1 color_rec(const T1 &f, const T1 &f0, const T1 &f1, Color c) {
-    return color_rect<T1>(f, f0, f1, c);
+  template <typename T1> static T1 color_rec(T1 f, T1 f0, T1 f1, Color c) {
+    return color_rect<T1>(std::move(f), std::move(f0), std::move(f1), c);
   }
 };
 

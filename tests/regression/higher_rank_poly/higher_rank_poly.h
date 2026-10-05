@@ -69,7 +69,9 @@ public:
 /// Crane emits the two results without casting them back from std::any, and
 /// emits a bogus body for the identity lambda passed in.
 struct HigherRankPoly {
-  static std::pair<Nat, bool> apply_id(crane::fn<crane::obj(crane::obj)> f);
+  static std::pair<Nat, bool>
+  apply_id(const crane::fn<crane::obj(crane::obj)> &f);
+
   static inline const std::pair<Nat, bool> ex =
       apply_id(crane_erase_fn([](const auto &x) { return x; }));
 };

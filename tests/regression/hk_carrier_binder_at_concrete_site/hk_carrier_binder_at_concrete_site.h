@@ -116,7 +116,7 @@ template <typename T> struct box {
   }
 };
 
-box<crane::obj> TFunctor_box(crane::fn<crane::obj(crane::obj)> f,
+box<crane::obj> TFunctor_box(const crane::fn<crane::obj(crane::obj)> &f,
                              const box<crane::obj> &b);
 
 template <typename T, typename Body> struct holder {

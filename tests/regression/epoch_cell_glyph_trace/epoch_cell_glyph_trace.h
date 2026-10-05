@@ -254,7 +254,7 @@ struct BinInt {
   static Z pos_sub(const Positive &x, const Positive &y);
   static Z add(Z x, Z y);
   static Z opp(const Z &x);
-  static Z sub(const Z &m, const Z &n);
+  static Z sub(Z m, const Z &n);
   static Z mul(const Z &x, const Z &y);
   static Comparison compare(const Z &x, const Z &y);
   static bool leb(const Z &x, const Z &y);
@@ -262,9 +262,9 @@ struct BinInt {
   static bool eqb(const Z &x, const Z &y);
   static uint64_t to_nat(const Z &z);
   static std::pair<Z, Z> pos_div_eucl(const Positive &a, const Z &b);
-  static std::pair<Z, Z> div_eucl(const Z &a, const Z &b);
-  static Z div(const Z &a, const Z &b);
-  static Z modulo(const Z &a, const Z &b);
+  static std::pair<Z, Z> div_eucl(const Z &a, Z b);
+  static Z div(const Z &a, Z b);
+  static Z modulo(const Z &a, Z b);
   static Z abs(const Z &z);
 };
 
@@ -297,9 +297,9 @@ struct EpochCellGlyphTraceCase {
   }
 
   template <typename T1>
-  static T1 LunarPhase_rec(const T1 &f, const T1 &f0, const T1 &f1,
-                           const T1 &f2, LunarPhase l) {
-    return LunarPhase_rect<T1>(f, f0, f1, f2, l);
+  static T1 LunarPhase_rec(T1 f, T1 f0, T1 f1, T1 f2, LunarPhase l) {
+    return LunarPhase_rect<T1>(std::move(f), std::move(f0), std::move(f1),
+                               std::move(f2), l);
   }
 
   static uint64_t phase_code(LunarPhase p);
@@ -365,13 +365,12 @@ struct EpochCellGlyphTraceCase {
   }
 
   template <typename T1>
-  static T1 ZodiacSign_rec(const T1 &f, const T1 &f0, const T1 &f1,
-                           const T1 &f2, const T1 &f3, const T1 &f4,
-                           const T1 &f5, const T1 &f6, const T1 &f7,
-                           const T1 &f8, const T1 &f9, const T1 &f10,
-                           ZodiacSign z) {
-    return ZodiacSign_rect<T1>(f, f0, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10,
-                               z);
+  static T1 ZodiacSign_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5,
+                           T1 f6, T1 f7, T1 f8, T1 f9, T1 f10, ZodiacSign z) {
+    return ZodiacSign_rect<T1>(std::move(f), std::move(f0), std::move(f1),
+                               std::move(f2), std::move(f3), std::move(f4),
+                               std::move(f5), std::move(f6), std::move(f7),
+                               std::move(f8), std::move(f9), std::move(f10), z);
   }
 
   static uint64_t zodiac_code(ZodiacSign z);
@@ -444,9 +443,10 @@ struct EpochCellGlyphTraceCase {
   }
 
   template <typename T1>
-  static T1 EclipseCategory_rec(const T1 &f, const T1 &f0, const T1 &f1,
-                                const T1 &f2, const T1 &f3, EclipseCategory e) {
-    return EclipseCategory_rect<T1>(f, f0, f1, f2, f3, e);
+  static T1 EclipseCategory_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3,
+                                EclipseCategory e) {
+    return EclipseCategory_rect<T1>(std::move(f), std::move(f0), std::move(f1),
+                                    std::move(f2), std::move(f3), e);
   }
 
   static uint64_t eclipse_category_code(EclipseCategory c);
@@ -493,9 +493,9 @@ struct EpochCellGlyphTraceCase {
   }
 
   template <typename T1>
-  static T1 DialGlyph_rec(const T1 &f, const T1 &f0, const T1 &f1, const T1 &f2,
-                          const T1 &f3, DialGlyph d) {
-    return DialGlyph_rect<T1>(f, f0, f1, f2, f3, d);
+  static T1 DialGlyph_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, DialGlyph d) {
+    return DialGlyph_rect<T1>(std::move(f), std::move(f0), std::move(f1),
+                              std::move(f2), std::move(f3), d);
   }
 
   static uint64_t glyph_code(DialGlyph g);
@@ -611,11 +611,11 @@ struct EpochCellGlyphTraceCase {
   static uint64_t count_total_lunar(const List<HistoricalEclipse> &es);
   static uint64_t count_visible_total_lunar(const List<HistoricalEclipse> &es);
   static uint64_t visible_series_checksum(const List<HistoricalEclipse> &es);
-  static Z months_from_epoch(const Z &epoch_year, const Z &eclipse_year,
-                             const Z &epoch_month, const Z &eclipse_month);
-  static Z saros_cell(const Z &epoch_year, const Z &epoch_month,
+  static Z months_from_epoch(Z epoch_year, const Z &eclipse_year,
+                             const Z &epoch_month, Z eclipse_month);
+  static Z saros_cell(Z epoch_year, const Z &epoch_month,
                       const HistoricalEclipse &e);
-  static Z saros_dial_at_month(const Z &start_cell, const Z &months);
+  static Z saros_dial_at_month(Z start_cell, Z months);
 
   struct EpochReading {
     MechanismState reading_state;
@@ -624,8 +624,7 @@ struct EpochCellGlyphTraceCase {
     DialGlyph reading_glyph;
   };
 
-  static EpochReading build_epoch_reading(const Z &epoch_year,
-                                          const Z &epoch_month,
+  static EpochReading build_epoch_reading(Z epoch_year, const Z &epoch_month,
                                           const HistoricalEclipse &e);
   static bool reading_matches(const EpochReading &reading);
   static uint64_t reading_phase_code(const EpochReading &reading);

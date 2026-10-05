@@ -173,9 +173,8 @@ struct MemSafetyProbe13 {
       return _result;
     }
 
-    template <typename T1, typename F1>
-    T1 tree_rec(const T1 &f, F1 &&f0) const {
-      return this->template tree_rect<T1>(f, f0);
+    template <typename T1, typename F1> T1 tree_rec(T1 f, F1 &&f0) const {
+      return this->template tree_rect<T1>(std::move(f), f0);
     }
 
     template <typename T1, typename F1> T1 tree_rect(T1 f, F1 &&f0) const {
@@ -419,9 +418,8 @@ struct MemSafetyProbe13 {
       return _result;
     }
 
-    template <typename T1, typename F1>
-    T1 mylist_rec(const T1 &f, F1 &&f0) const {
-      return this->template mylist_rect<T1>(f, f0);
+    template <typename T1, typename F1> T1 mylist_rec(T1 f, F1 &&f0) const {
+      return this->template mylist_rect<T1>(std::move(f), f0);
     }
 
     template <typename T1, typename F1> T1 mylist_rect(T1 f, F1 &&f0) const {
@@ -484,7 +482,7 @@ struct MemSafetyProbe13 {
     auto [vals, fns] = tree_vals_and_fns(std::move(t));
     uint64_t val_sum = sum_list(std::move(vals));
     uint64_t fn_sum = sum_list(std::move(fns).template map_list<uint64_t>(
-        [](crane::fn<uint64_t(uint64_t)> f) { return f(UINT64_C(0)); }));
+        [](const crane::fn<uint64_t(uint64_t)> &f) { return f(UINT64_C(0)); }));
     return (val_sum + fn_sum);
   }();
   static inline const uint64_t test_double_match = []() {
@@ -506,7 +504,7 @@ struct MemSafetyProbe13 {
     mylist<crane::fn<uint64_t(uint64_t)>> fns =
         depth_fns(std::move(t), UINT64_C(0));
     return sum_list(std::move(fns).template map_list<uint64_t>(
-        [](crane::fn<uint64_t(uint64_t)> f) { return f(UINT64_C(0)); }));
+        [](const crane::fn<uint64_t(uint64_t)> &f) { return f(UINT64_C(0)); }));
   }();
 
   /// TEST 5: Transform a tree by replacing each value with a
@@ -636,9 +634,8 @@ struct MemSafetyProbe13 {
       return _result;
     }
 
-    template <typename T1, typename F1>
-    T1 ftree_rec(const T1 &f, F1 &&f0) const {
-      return this->template ftree_rect<T1>(f, f0);
+    template <typename T1, typename F1> T1 ftree_rec(T1 f, F1 &&f0) const {
+      return this->template ftree_rect<T1>(std::move(f), f0);
     }
 
     template <typename T1, typename F1> T1 ftree_rect(T1 f, F1 &&f0) const {
@@ -724,7 +721,7 @@ struct MemSafetyProbe13 {
                         tree::node(tree::leaf(), UINT64_C(11), tree::leaf()));
     mylist<crane::fn<uint64_t(uint64_t)>> fns = flatten_tree_fns(std::move(t));
     return sum_list(std::move(fns).template map_list<uint64_t>(
-        [](crane::fn<uint64_t(uint64_t)> f) { return f(UINT64_C(1)); }));
+        [](const crane::fn<uint64_t(uint64_t)> &f) { return f(UINT64_C(1)); }));
   }();
 };
 

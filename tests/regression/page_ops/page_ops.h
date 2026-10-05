@@ -162,8 +162,8 @@ struct PageOps {
   }
 
   template <typename T1, typename F1>
-  static T1 instruction_rec(const T1 &f, F1 &&f0, const instruction &i) {
-    return instruction_rect<T1>(f, f0, i);
+  static T1 instruction_rec(T1 f, F1 &&f0, const instruction &i) {
+    return instruction_rect<T1>(std::move(f), f0, i);
   }
 
   static instruction decode(uint64_t b1, uint64_t b2);
@@ -183,7 +183,7 @@ struct PageOps {
   }
 
   static std::optional<std::pair<instruction, uint64_t>>
-  disassemble(const List<uint64_t> &rom, uint64_t addr);
+  disassemble(List<uint64_t> rom, uint64_t addr);
   static inline const uint64_t test_page_base_alignment =
       (UINT64_C(256) ? page_base(UINT64_C(777)) % UINT64_C(256)
                      : page_base(UINT64_C(777)));

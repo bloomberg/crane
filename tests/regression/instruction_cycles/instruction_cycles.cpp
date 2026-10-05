@@ -52,7 +52,7 @@ uint64_t InstructionCycles::cycles_max(InstructionCycles::Instr4 i) {
 }
 
 uint64_t InstructionCycles::program_cycles5(
-    const InstructionCycles::state5 &s,
+    InstructionCycles::state5 s,
     const List<InstructionCycles::instruction5> &prog) {
   if (std::holds_alternative<
           typename List<InstructionCycles::instruction5>::Nil>(prog.v())) {

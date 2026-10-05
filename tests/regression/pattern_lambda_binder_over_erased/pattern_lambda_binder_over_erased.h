@@ -256,7 +256,7 @@ public:
   }
 };
 
-List<crane::obj> TFunctor_list(crane::fn<crane::obj(crane::obj)> x0_,
+List<crane::obj> TFunctor_list(const crane::fn<crane::obj(crane::obj)> &x0_,
                                const List<crane::obj> &x1_);
 
 template <typename T> struct Phi {
@@ -277,7 +277,7 @@ template <typename T> struct Phi {
 };
 
 Phi<crane::obj> TFunctor_phi(TFunctor<Exp0<crane::obj>> h,
-                             crane::fn<crane::obj(crane::obj)> f,
+                             const crane::fn<crane::obj(crane::obj)> &f,
                              const Phi<crane::obj> &p);
 
 #endif // INCLUDED_PATTERN_LAMBDA_BINDER_OVER_ERASED

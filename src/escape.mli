@@ -47,6 +47,12 @@ type escape_query = Conservative | Of_sub_binding | Of_param
     @return [true] if the value bound at index [k] may outlive its scope *)
 val escapes : ?query:escape_query -> int -> ml_ast -> bool
 
+(** The settled ownership of each global's parameters, innermost first --
+    [None] for a global not settled.  {!Ownership} installs it; an
+    [Of_param] query reads a parameter passed directly to an owned parameter
+    of a callee as owned, since the callee keeps it. *)
+val callee_flags : (Names.GlobRef.t -> bool list option) ref
+
 (** [partial_app_remaining head args] returns [Some remaining] when
     [MLapp(head, args)] is a partial application with [remaining] args still
     needed.  Returns [None] when fully applied.  Only handles [MLglob]

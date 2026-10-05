@@ -120,7 +120,7 @@ List<uint64_t> LoopifyAlgorithms::sieve_fuel(uint64_t fuel, List<uint64_t> l) {
   return std::move(*_root);
 }
 
-List<uint64_t> LoopifyAlgorithms::sieve(const List<uint64_t> &l) {
+List<uint64_t> LoopifyAlgorithms::sieve(List<uint64_t> l) {
   return sieve_fuel(len_impl(l), l);
 }
 
@@ -288,9 +288,8 @@ List<uint64_t> LoopifyAlgorithms::rotate_left_fuel(uint64_t fuel, uint64_t n,
   }
 }
 
-List<uint64_t> LoopifyAlgorithms::rotate_left(uint64_t n,
-                                              const List<uint64_t> &l) {
-  return rotate_left_fuel(n, n, l);
+List<uint64_t> LoopifyAlgorithms::rotate_left(uint64_t n, List<uint64_t> l) {
+  return rotate_left_fuel(n, n, std::move(l));
 }
 
 /// nub l removes ALL duplicates (not just consecutive): 1,2,1,3,2 -> 1,2,3.

@@ -119,8 +119,8 @@ struct ErasedIndexFunType {
   }
 
   template <typename T1, typename T2 = void, typename F1>
-  static T1 ty_rec(const T1 &f, F1 &&f0, const ty &t) {
-    return ty_rect<T1, crane::obj>(f, f0, t);
+  static T1 ty_rec(T1 f, F1 &&f0, const ty &t) {
+    return ty_rect<T1, crane::obj>(std::move(f), f0, t);
   }
 
   template <typename T1 = void> static crane::obj dflt(const ty &t) {

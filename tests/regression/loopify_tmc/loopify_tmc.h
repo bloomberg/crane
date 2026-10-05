@@ -145,8 +145,8 @@ struct LoopifyTmc {
   }
 
   template <typename T1, typename T2, typename F1>
-  static T2 list_rec(const T2 &f, F1 &&f0, const list<T1> &l) {
-    return list_rect<T1, T2>(f, f0, l);
+  static T2 list_rec(T2 f, F1 &&f0, const list<T1> &l) {
+    return list_rect<T1, T2>(std::move(f), f0, l);
   }
 
   /// app l1 l2 appends two lists. Basic TMC pattern: cons head (app tail l2).

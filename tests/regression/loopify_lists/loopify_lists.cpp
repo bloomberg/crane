@@ -1900,8 +1900,8 @@ LoopifyLists::rotate_left_fuel(uint64_t fuel, uint64_t n,
 /// rotate_left n l rotates list left by n positions: rotate 2 1,2,3,4 ->
 /// 3,4,1,2.
 LoopifyLists::list<uint64_t>
-LoopifyLists::rotate_left(uint64_t n, const LoopifyLists::list<uint64_t> &l) {
-  return rotate_left_fuel((n + 1), n, l);
+LoopifyLists::rotate_left(uint64_t n, LoopifyLists::list<uint64_t> l) {
+  return rotate_left_fuel((n + 1), n, std::move(l));
 }
 
 /// intercalate sep lists joins lists with separator: intercalate 0 [1,2],[3,4]

@@ -1,13 +1,13 @@
 #include "alias_carrier_under_map_lambda.h"
 
 texp<crane::obj>
-TFunctor_texp(crane::fn<crane::obj(crane::obj)> f,
+TFunctor_texp(const crane::fn<crane::obj(crane::obj)> &f,
               const std::pair<crane::obj, Exp<crane::obj>> &p) {
   return std::make_pair(crane::obj(f(p.first)),
                         p.second.template exp_map<crane::obj>(f));
 }
 
-Instr<crane::obj> TFunctor_instr(crane::fn<crane::obj(crane::obj)> f,
+Instr<crane::obj> TFunctor_instr(const crane::fn<crane::obj(crane::obj)> &f,
                                  const Instr<crane::obj> &i) {
   if (std::holds_alternative<typename Instr<crane::obj>::I_op>(i.v())) {
     const auto &[a0] = std::get<typename Instr<crane::obj>::I_op>(i.v());

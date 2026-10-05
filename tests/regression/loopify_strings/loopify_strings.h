@@ -23,10 +23,10 @@ struct LoopifyStrings {
   static List<uint64_t> string_chain_fuel(uint64_t fuel,
                                           const List<uint64_t> &s, uint64_t n,
                                           const List<uint64_t> &sep,
-                                          const List<uint64_t> &end_marker);
+                                          List<uint64_t> end_marker);
   static List<uint64_t> string_chain(const List<uint64_t> &s, uint64_t n,
                                      const List<uint64_t> &sep,
-                                     const List<uint64_t> &end_marker);
+                                     List<uint64_t> end_marker);
   static List<uint64_t> reverse(const List<uint64_t> &l);
   static bool list_eq(const List<uint64_t> &l1, const List<uint64_t> &l2);
   static bool is_palindrome(const List<uint64_t> &l);

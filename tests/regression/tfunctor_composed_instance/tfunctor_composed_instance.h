@@ -254,8 +254,9 @@ struct TfunctorComposedInstance {
         tFunctor(crane_erase_fn(f), crane_convert<T1>(std::move(x))));
   }
 
-  static List<crane::obj> TFunctor_list(crane::fn<crane::obj(crane::obj)> x0_,
-                                        const List<crane::obj> &x1_);
+  static List<crane::obj>
+  TFunctor_list(const crane::fn<crane::obj(crane::obj)> &x0_,
+                const List<crane::obj> &x1_);
 
   template <typename T1, typename F1>
   static List<T1> TFunctor_list_(std::type_identity_t<TFunctor<T1>> h, F1 &&f,
@@ -281,8 +282,9 @@ struct TfunctorComposedInstance {
     }
   };
 
-  static box<crane::obj> TFunctor_box(crane::fn<crane::obj(crane::obj)> f,
-                                      const box<crane::obj> &b);
+  static box<crane::obj>
+  TFunctor_box(const crane::fn<crane::obj(crane::obj)> &f,
+               const box<crane::obj> &b);
   static inline const List<box<Nat>> l = tfmap<List<box<crane::obj>>, Nat, Nat>(
       []() {
         return [](crane::fn<crane::obj(crane::obj)> _x0,

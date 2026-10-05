@@ -160,9 +160,8 @@ struct TailCallSameNameOtherModule {
         }
       }
 
-      template <typename T1, typename F1>
-      T1 t1_rec(const T1 &f, F1 &&f0) const {
-        return this->template t1_rect<T1>(f, f0);
+      template <typename T1, typename F1> T1 t1_rec(T1 f, F1 &&f0) const {
+        return this->template t1_rect<T1>(std::move(f), f0);
       }
 
       Nat cmp(const t1 &y) const {
@@ -225,9 +224,8 @@ struct TailCallSameNameOtherModule {
         }
       }
 
-      template <typename T1, typename F1>
-      T1 t2_rec(const T1 &f, F1 &&f0) const {
-        return this->template t2_rect<T1>(f, f0);
+      template <typename T1, typename F1> T1 t2_rec(T1 f, F1 &&f0) const {
+        return this->template t2_rect<T1>(std::move(f), f0);
       }
 
       T1::t1 to1() const {

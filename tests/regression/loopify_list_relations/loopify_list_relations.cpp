@@ -506,11 +506,11 @@ List<uint64_t> LoopifyListRelations::merge_fuel(uint64_t fuel,
   return std::move(*_root);
 }
 
-List<uint64_t> LoopifyListRelations::merge(const List<uint64_t> &l1,
-                                           const List<uint64_t> &l2) {
+List<uint64_t> LoopifyListRelations::merge(List<uint64_t> l1,
+                                           List<uint64_t> l2) {
   uint64_t len1 = l1.length();
   uint64_t len2 = l2.length();
-  return merge_fuel((len1 + len2), l1, l2);
+  return merge_fuel((len1 + len2), std::move(l1), std::move(l2));
 }
 
 List<uint64_t> LoopifyListRelations::union_(const List<uint64_t> &l1,

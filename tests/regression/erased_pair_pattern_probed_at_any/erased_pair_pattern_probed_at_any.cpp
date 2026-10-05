@@ -1,11 +1,11 @@
 #include "erased_pair_pattern_probed_at_any.h"
 
-List<crane::obj> TFunctor_list(crane::fn<crane::obj(crane::obj)> x0_,
+List<crane::obj> TFunctor_list(const crane::fn<crane::obj(crane::obj)> &x0_,
                                const List<crane::obj> &x1_) {
-  return x1_.template map<crane::obj>(std::move(x0_));
+  return x1_.template map<crane::obj>(x0_);
 }
 
-box<crane::obj> TFunctor_box(crane::fn<crane::obj(crane::obj)> f,
+box<crane::obj> TFunctor_box(const crane::fn<crane::obj(crane::obj)> &f,
                              const box<crane::obj> &b) {
   return box<crane::obj>{f(b.b_payload)};
 }

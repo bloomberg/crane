@@ -247,7 +247,7 @@ struct VisExistentialCont {
   };
 
   template <typename T1, typename T2>
-  static treeF<T1, T2, tree<T1, T2>> observe(tree<T1, T2> t0) {
+  static treeF<T1, T2, tree<T1, T2>> observe(const tree<T1, T2> &t0) {
     const auto &[observe1] = std::get<typename tree<T1, T2>::Go>(t0.v());
     return observe1;
   }
@@ -272,7 +272,7 @@ struct VisExistentialCont {
                     treeF<askE, Nat, tree<askE, Nat>>::retf(
                         Nat::s(crane::any_cast<Nat>(n))));
               })));
-  static std::optional<Nat> answer(const Nat &_x, tree<askE, Nat> t0);
+  static std::optional<Nat> answer(const Nat &_x, const tree<askE, Nat> &t0);
   static inline const bool is_three = []() -> bool {
     auto _cs = answer(Nat::s(Nat::o()), t);
     if (_cs.has_value()) {

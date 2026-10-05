@@ -652,8 +652,8 @@ struct Comp {
       }
     }
 
-    template <typename T1, typename F1> T1 avl_rec(const T1 &f, F1 &&f0) const {
-      return this->template avl_rect<T1>(f, f0);
+    template <typename T1, typename F1> T1 avl_rec(T1 f, F1 &&f0) const {
+      return this->template avl_rect<T1>(std::move(f), f0);
     }
 
     template <typename T1, typename F1> T1 avl_rect(T1 f, F1 &&f0) const {

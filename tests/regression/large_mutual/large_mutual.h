@@ -663,9 +663,8 @@ struct LargeMutual {
   }
 
   template <typename T1, typename F0, typename F1, typename F2, typename F3>
-  static T1 stmt_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, const T1 &f3,
-                     const stmt &s) {
-    return stmt_rect<T1>(f, f0, f1, f2, f3, s);
+  static T1 stmt_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, T1 f3, const stmt &s) {
+    return stmt_rect<T1>(f, f0, f1, f2, std::move(f3), s);
   }
 
   template <typename T1, typename F0, typename F1, typename F2, typename F3,
@@ -733,9 +732,9 @@ struct LargeMutual {
 
   template <typename T1, typename F2, typename F3, typename F4, typename F5,
             typename F6>
-  static T1 bexpr_rec(const T1 &f, const T1 &f0, F2 &&f1, F3 &&f2, F4 &&f3,
-                      F5 &&f4, F6 &&f5, const bexpr &b) {
-    return bexpr_rect<T1>(f, f0, f1, f2, f3, f4, f5, b);
+  static T1 bexpr_rec(T1 f, T1 f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4, F6 &&f5,
+                      const bexpr &b) {
+    return bexpr_rect<T1>(std::move(f), std::move(f0), f1, f2, f3, f4, f5, b);
   }
 
   static uint64_t expr_size(const expr &e);

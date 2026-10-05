@@ -478,7 +478,7 @@ struct BinInt {
   static Z pos_sub(const Positive &x, const Positive &y);
   static Z add(Z x, Z y);
   static Z opp(const Z &x);
-  static Z sub(const Z &m, const Z &n);
+  static Z sub(Z m, const Z &n);
   static Z mul(const Z &x, const Z &y);
   static Comparison compare(const Z &x, const Z &y);
   static bool leb(const Z &x, const Z &y);
@@ -729,11 +729,9 @@ template <OrderedType X> struct Coq_Raw {
   }
 
   template <typename T1, typename T2, typename T3>
-  static t<T3>
-  map2(std::type_identity_t<
-           crane::fn<std::optional<T3>(std::optional<T1>, std::optional<T2>)>>
-           f,
-       List<std::pair<typename X::t, T1>> m, t<T2> x0_) {
+  static t<T3> map2(const std::type_identity_t<crane::fn<std::optional<T3>(
+                        std::optional<T1>, std::optional<T2>)>> &f,
+                    List<std::pair<typename X::t, T1>> m, t<T2> x0_) {
     if (std::holds_alternative<
             typename List<std::pair<typename X::t, T1>>::Nil>(m.v_mut())) {
       return map2_r<T1, T2, T3>(f, std::move(x0_));
@@ -851,22 +849,22 @@ template <OrderedType X> struct Coq_Raw {
   }
 
   template <typename T1, typename T2, typename T3>
-  static T3 fold_right_pair(std::type_identity_t<crane::fn<T3(T1, T2, T3)>> f,
-                            const List<std::pair<T1, T2>> &l, const T3 &i) {
+  static T3
+  fold_right_pair(const std::type_identity_t<crane::fn<T3(T1, T2, T3)>> &f,
+                  const List<std::pair<T1, T2>> &l, T3 i) {
     return l.template fold_right<T3>(
         [=](const std::pair<T1, T2> &p, const T3 &eta0_) {
           return [=](T3 _pa0) { return f(p.first, p.second, _pa0); }(eta0_);
         },
-        i);
+        std::move(i));
   }
 
   template <typename T1, typename T2, typename T3>
-  static List<std::pair<key, T3>> map2_alt(
-      std::type_identity_t<
-          crane::fn<std::optional<T3>(std::optional<T1>, std::optional<T2>)>>
-          f,
-      const List<std::pair<typename X::t, T1>> &m,
-      const List<std::pair<typename X::t, T2>> &m_) {
+  static List<std::pair<key, T3>>
+  map2_alt(const std::type_identity_t<crane::fn<
+               std::optional<T3>(std::optional<T1>, std::optional<T2>)>> &f,
+           const List<std::pair<typename X::t, T1>> &m,
+           const List<std::pair<typename X::t, T2>> &m_) {
     List<std::pair<typename X::t,
                    std::pair<std::optional<T1>, std::optional<T2>>>>
         m0 = combine<T1, T2>(m, m_);
@@ -1607,7 +1605,7 @@ template <Int I, OrderedType X> struct Raw {
   template <typename T1, typename F0>
   static bool
   equal_cont(F0 &&cmp, const tree<T1> &m1,
-             std::type_identity_t<crane::fn<bool(enumeration<T1>)>> cont,
+             const std::type_identity_t<crane::fn<bool(enumeration<T1>)>> &cont,
              const enumeration<T1> &e2) {
     if (std::holds_alternative<typename tree<T1>::Leaf>(m1.v())) {
       return cont(e2);
@@ -1720,11 +1718,9 @@ template <Int I, OrderedType X> struct Raw {
   }
 
   template <typename T1, typename T2, typename T3>
-  static tree<T3>
-  map2(std::type_identity_t<
-           crane::fn<std::optional<T3>(std::optional<T1>, std::optional<T2>)>>
-           f,
-       const tree<T1> &x0_, tree<T2> x1_) {
+  static tree<T3> map2(const std::type_identity_t<crane::fn<std::optional<T3>(
+                           std::optional<T1>, std::optional<T2>)>> &f,
+                       const tree<T1> &x0_, tree<T2> x1_) {
     return map2_opt<T1, T2, T3>(
         [=](key, const T1 &d, const std::optional<T2> &o) {
           return f(std::make_optional<T1>(d), o);

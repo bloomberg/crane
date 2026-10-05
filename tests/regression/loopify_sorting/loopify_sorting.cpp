@@ -139,8 +139,7 @@ List<uint64_t> LoopifySorting::merge_fuel(uint64_t fuel, List<uint64_t> l1,
   return std::move(*_root);
 }
 
-List<uint64_t> LoopifySorting::merge(const List<uint64_t> &l1,
-                                     const List<uint64_t> &l2) {
+List<uint64_t> LoopifySorting::merge(List<uint64_t> l1, List<uint64_t> l2) {
   return merge_fuel((len_impl<uint64_t>(l1) + len_impl<uint64_t>(l2)), l1, l2);
 }
 
@@ -210,7 +209,7 @@ List<uint64_t> LoopifySorting::merge_sort_fuel(
   return _result;
 }
 
-List<uint64_t> LoopifySorting::merge_sort(const List<uint64_t> &l) {
+List<uint64_t> LoopifySorting::merge_sort(List<uint64_t> l) {
   return merge_sort_fuel(len_impl<uint64_t>(l), l);
 }
 
@@ -329,7 +328,7 @@ List<uint64_t> LoopifySorting::quicksort_fuel(
   return _result;
 }
 
-List<uint64_t> LoopifySorting::quicksort(const List<uint64_t> &l) {
+List<uint64_t> LoopifySorting::quicksort(List<uint64_t> l) {
   return quicksort_fuel(len_impl<uint64_t>(l), l);
 }
 

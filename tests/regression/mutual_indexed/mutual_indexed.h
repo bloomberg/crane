@@ -168,8 +168,8 @@ struct MutualIndexed {
   }
 
   template <typename T1, typename F1>
-  static T1 EvenTree_rec(const T1 &f, F1 &&f0, uint64_t _x, const EvenTree &e) {
-    return EvenTree_rect<T1>(f, f0, _x, e);
+  static T1 EvenTree_rec(T1 f, F1 &&f0, uint64_t _x, const EvenTree &e) {
+    return EvenTree_rect<T1>(std::move(f), f0, _x, e);
   }
 
   template <typename T1, typename F0>

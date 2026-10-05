@@ -1,7 +1,8 @@
 #include "cofix_self_call_targs.h"
 
 std::optional<Nat> CofixSelfCallTargs::run(
-    const Nat &fuel, CofixSelfCallTargs::tree<CofixSelfCallTargs::noE, Nat> t) {
+    const Nat &fuel,
+    const CofixSelfCallTargs::tree<CofixSelfCallTargs::noE, Nat> &t) {
   if (std::holds_alternative<typename Nat::O>(fuel.v())) {
     return std::optional<Nat>();
   } else {

@@ -555,7 +555,9 @@ Z BinInt::opp(const Z &x) {
   }
 }
 
-Z BinInt::sub(const Z &m, const Z &n) { return BinInt::add(m, BinInt::opp(n)); }
+Z BinInt::sub(Z m, const Z &n) {
+  return BinInt::add(std::move(m), BinInt::opp(n));
+}
 
 Z BinInt::mul(const Z &x, const Z &y) {
   if (std::holds_alternative<typename Z::Z0>(x.v())) {

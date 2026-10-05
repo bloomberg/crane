@@ -133,9 +133,8 @@ struct CtorArgMoveAliasRec {
       return _result;
     }
 
-    template <typename T1, typename F1>
-    T1 inner_rec(const T1 &f, F1 &&f0) const {
-      return this->template inner_rect<T1>(f, f0);
+    template <typename T1, typename F1> T1 inner_rec(T1 f, F1 &&f0) const {
+      return this->template inner_rect<T1>(std::move(f), f0);
     }
 
     template <typename T1, typename F1> T1 inner_rect(T1 f, F1 &&f0) const {
@@ -265,9 +264,8 @@ struct CtorArgMoveAliasRec {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    template <typename T1, typename F1>
-    T1 mylist_rec(const T1 &f, F1 &&f0) const {
-      return this->template mylist_rect<T1>(f, f0);
+    template <typename T1, typename F1> T1 mylist_rec(T1 f, F1 &&f0) const {
+      return this->template mylist_rect<T1>(std::move(f), f0);
     }
 
     template <typename T1, typename F1> T1 mylist_rect(T1 f, F1 &&f0) const {

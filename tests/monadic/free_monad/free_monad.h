@@ -67,13 +67,12 @@ struct FreeMonad {
   };
 
   template <typename T1, typename T2 = void>
-  static T1
-  IO_rect(std::type_identity_t<crane::fn<T1(crane::obj)>> f,
-          std::type_identity_t<crane::fn<T1(IO, T1, crane::fn<IO(crane::obj)>,
-                                            crane::fn<T1(crane::obj)>)>>
-              f0,
-          T1 f1, std::type_identity_t<crane::fn<T1(std::string)>> f2,
-          const IO &i) {
+  static T1 IO_rect(
+      const std::type_identity_t<crane::fn<T1(crane::obj)>> &f,
+      const std::type_identity_t<crane::fn<T1(IO, T1, crane::fn<IO(crane::obj)>,
+                                              crane::fn<T1(crane::obj)>)>> &f0,
+      T1 f1, const std::type_identity_t<crane::fn<T1(std::string)>> &f2,
+      const IO &i) {
     if (std::holds_alternative<typename IO::Pure>(i.v())) {
       const auto &[a0] = std::get<typename IO::Pure>(i.v());
       return crane_any_cast<T1>(crane_call_erased(f, crane_any_cast<T2>(a0)));
@@ -95,8 +94,9 @@ struct FreeMonad {
 
   template <typename T1, typename T2 = void, typename F0, typename F1,
             typename F3>
-  static T1 IO_rec(F0 &&f, F1 &&f0, const T1 &f1, F3 &&f2, const IO &i) {
-    return IO_rect<T1, crane::obj>(crane_erase_fn<T1>(f), f0, f1, f2, i);
+  static T1 IO_rec(F0 &&f, F1 &&f0, T1 f1, F3 &&f2, const IO &i) {
+    return IO_rect<T1, crane::obj>(crane_erase_fn<T1>(f), f0, std::move(f1), f2,
+                                   i);
   }
 
   static inline const IO test = IO::pure(Unit::TT);

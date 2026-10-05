@@ -2,25 +2,25 @@
 
 TfunctorRecordOptionField::exp<crane::obj>
 TfunctorRecordOptionField::TFunctor_exp(
-    crane::fn<crane::obj(crane::obj)> f,
+    const crane::fn<crane::obj(crane::obj)> &f,
     const TfunctorRecordOptionField::exp<crane::obj> &e) {
   if (std::holds_alternative<
           typename TfunctorRecordOptionField::exp<crane::obj>::Lit>(e.v())) {
     const auto &[t0] =
         std::get<typename TfunctorRecordOptionField::exp<crane::obj>::Lit>(
             e.v());
-    return exp<crane::obj>::lit(crane_call_erased(std::move(f), t0));
+    return exp<crane::obj>::lit(crane_call_erased(f, t0));
   } else {
     const auto &[e0] =
         std::get<typename TfunctorRecordOptionField::exp<crane::obj>::Neg>(
             e.v());
-    return exp<crane::obj>::neg(TFunctor_exp(std::move(f), *e0));
+    return exp<crane::obj>::neg(TFunctor_exp(f, *e0));
   }
 }
 
 TfunctorRecordOptionField::global<crane::obj>
 TfunctorRecordOptionField::TFunctor_global(
-    crane::fn<crane::obj(crane::obj)> f,
+    const crane::fn<crane::obj(crane::obj)> &f,
     const TfunctorRecordOptionField::global<crane::obj> &g) {
   return global<crane::obj>{
       f(g.g_typ),

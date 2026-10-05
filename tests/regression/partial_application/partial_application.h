@@ -145,7 +145,7 @@ Box<T2> ft_box(F0 &&f, const Box<T1> &b) {
 }
 
 Box<crane::obj> TFunctor_box(Endo<Nat> _x,
-                             crane::fn<crane::obj(crane::obj)> x0_,
+                             const crane::fn<crane::obj(crane::obj)> &x0_,
                              const Box<crane::obj> &x1_);
 
 template <typename T1, typename T2, typename F1>

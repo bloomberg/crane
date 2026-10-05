@@ -195,7 +195,8 @@ struct GenericMonadResultRewrapped {
   /// variable, which is what the reification gate cannot read.
   template <Monad _tcI0, typename T2, typename T3>
   static typename _tcI0::template m<List<T3>> map_monad(
-      std::type_identity_t<crane::fn<typename _tcI0::template m<T3>(T2)>> f,
+      const std::type_identity_t<crane::fn<typename _tcI0::template m<T3>(T2)>>
+          &f,
       const List<T2> &l) {
     if (std::holds_alternative<typename List<T2>::Nil>(l.v())) {
       return _tcI0::template ret<List<T3>>(List<T3>::nil());
@@ -212,7 +213,7 @@ struct GenericMonadResultRewrapped {
   }
 
   template <typename T1 = void>
-  static std::shared_ptr<ITree<Nat>> twice(const Nat &n) {
+  static std::shared_ptr<ITree<Nat>> twice(Nat n) {
     return itree_ret(n.add(n));
   }
 

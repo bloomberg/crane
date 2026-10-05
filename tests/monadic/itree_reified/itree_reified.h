@@ -26,9 +26,9 @@ struct ITreeReified {
   /// the right, logging effects (IO) on the left.
   template <typename T1 = void, typename T2>
   static std::shared_ptr<ITree<T2>> with_logging_body(
-      std::type_identity_t<
+      const std::type_identity_t<
           crane::fn<std::shared_ptr<ITree<T2>>(std::shared_ptr<ITree<T2>>)>>
-          rec,
+          &rec,
       const itreeF_t<T2> &ot) {
     if (std::holds_alternative<typename ITree<T2>::Ret>(ot)) {
       const auto &_itf = *std::get_if<typename ITree<T2>::Ret>(&ot);

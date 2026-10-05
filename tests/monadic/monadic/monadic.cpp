@@ -31,9 +31,9 @@ Monadic::fib_state(uint64_t n) {
   return ListDef::seq(UINT64_C(0), n)
       .template fold_left<
           Monadic::State<std::pair<uint64_t, uint64_t>, std::monostate>>(
-          [](crane::fn<std::pair<std::monostate, std::pair<uint64_t, uint64_t>>(
-                 std::pair<uint64_t, uint64_t>)>
-                 acc,
+          [](const crane::fn<
+                 std::pair<std::monostate, std::pair<uint64_t, uint64_t>>(
+                     std::pair<uint64_t, uint64_t>)> &acc,
              uint64_t) {
             return state_bind<std::pair<uint64_t, uint64_t>, std::monostate,
                               std::monostate>(acc, [](std::monostate) {

@@ -153,8 +153,8 @@ List<uint64_t> LoopifyStrings::repeat_with_sep(
 List<uint64_t> LoopifyStrings::string_chain_fuel(
     uint64_t fuel, const List<uint64_t> &s, uint64_t n,
     const List<uint64_t> &sep,
-    const List<uint64_t> &end_marker) { /// CraneEnter: captures varying
-                                        /// parameters for each recursive call.
+    List<uint64_t> end_marker) { /// CraneEnter: captures varying parameters for
+                                 /// each recursive call.
 
   struct CraneEnter {
     uint64_t n;
@@ -198,8 +198,8 @@ List<uint64_t> LoopifyStrings::string_chain_fuel(
 
 List<uint64_t> LoopifyStrings::string_chain(const List<uint64_t> &s, uint64_t n,
                                             const List<uint64_t> &sep,
-                                            const List<uint64_t> &end_marker) {
-  return string_chain_fuel(n, s, n, sep, end_marker);
+                                            List<uint64_t> end_marker) {
+  return string_chain_fuel(n, s, n, sep, std::move(end_marker));
 }
 
 List<uint64_t> LoopifyStrings::reverse(

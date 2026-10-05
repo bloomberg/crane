@@ -16,7 +16,7 @@ ClosureEscapeMatch::make_prepender_opt(
         ClosureEscapeMatch::mylist<uint64_t>>::Mycons>(l.v());
     return std::make_optional<crane::fn<ClosureEscapeMatch::mylist<uint64_t>(
         ClosureEscapeMatch::mylist<uint64_t>)>>(
-        [=](const ClosureEscapeMatch::mylist<uint64_t> &x) {
+        [=](ClosureEscapeMatch::mylist<uint64_t> x) {
           return app<uint64_t>(a0, x);
         });
   }
@@ -90,7 +90,7 @@ ClosureEscapeMatch::closure_in_pair(
     const auto &[a0, a1] = std::get<typename ClosureEscapeMatch::mylist<
         ClosureEscapeMatch::mylist<uint64_t>>::Mycons>(l.v());
     return std::make_pair(length<uint64_t>(a0),
-                          [=](const ClosureEscapeMatch::mylist<uint64_t> &x) {
+                          [=](ClosureEscapeMatch::mylist<uint64_t> x) {
                             return app<uint64_t>(a0, x);
                           });
   }

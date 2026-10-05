@@ -237,8 +237,9 @@ struct TfunctorListOfTriples {
         tFunctor(crane_erase_fn(f), crane_convert<T1>(std::move(x))));
   }
 
-  static List<crane::obj> TFunctor_list(crane::fn<crane::obj(crane::obj)> x0_,
-                                        const List<crane::obj> &x1_);
+  static List<crane::obj>
+  TFunctor_list(const crane::fn<crane::obj(crane::obj)> &x0_,
+                const List<crane::obj> &x1_);
 
   template <typename T1, typename F1>
   static List<T1> TFunctor_list_(std::type_identity_t<TFunctor<T1>> h, F1 &&f,
@@ -325,12 +326,15 @@ struct TfunctorListOfTriples {
     }
   };
 
-  static phi<crane::obj> TFunctor_phi(crane::fn<crane::obj(crane::obj)> f,
-                                      const phi<crane::obj> &p);
-  static metadata<crane::obj> TFunctor_md(crane::fn<crane::obj(crane::obj)> f,
-                                          const metadata<crane::obj> &p);
-  static block<crane::obj> TFunctor_block(crane::fn<crane::obj(crane::obj)> f,
-                                          const block<crane::obj> &b);
+  static phi<crane::obj>
+  TFunctor_phi(const crane::fn<crane::obj(crane::obj)> &f,
+               const phi<crane::obj> &p);
+  static metadata<crane::obj>
+  TFunctor_md(const crane::fn<crane::obj(crane::obj)> &f,
+              const metadata<crane::obj> &p);
+  static block<crane::obj>
+  TFunctor_block(const crane::fn<crane::obj(crane::obj)> &f,
+                 const block<crane::obj> &b);
   static inline const block<Nat> b0 = block<
       Nat>{List<std::pair<std::pair<Nat, phi<Nat>>, List<metadata<Nat>>>>::cons(
       std::make_pair(std::make_pair(Nat::s(Nat::o()),

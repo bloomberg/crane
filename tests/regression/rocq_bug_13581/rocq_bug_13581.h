@@ -301,9 +301,9 @@ struct RocqBug13581 {
   }
 
   template <typename T1, typename T2, typename F3>
-  static T2 I_rec(const T1 &_x, const T1 &_x0, const T2 &f, F3 &&f0,
-                  const Nat &_x1, const I<T1> &i) {
-    return I_rect<T1, T2>(_x, _x0, f, f0, _x1, i);
+  static T2 I_rec(const T1 &_x, const T1 &_x0, T2 f, F3 &&f0, const Nat &_x1,
+                  const I<T1> &i) {
+    return I_rect<T1, T2>(_x, _x0, std::move(f), f0, _x1, i);
   }
 
   template <typename T1, typename T2, typename F2>

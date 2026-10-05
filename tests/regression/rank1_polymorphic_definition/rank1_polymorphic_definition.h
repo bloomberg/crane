@@ -11,7 +11,8 @@ struct Rank1PolymorphicDefinition {
   /// signature to std::any, but the call sites pass concrete types unboxed.
   using church =
       crane::fn<crane::obj(crane::fn<crane::obj(crane::obj)>, crane::obj)>;
-  static crane::obj three(crane::fn<crane::obj(crane::obj)> f, crane::obj x);
+  static crane::obj three(const crane::fn<crane::obj(crane::obj)> &f,
+                          crane::obj x);
   static uint64_t to_nat(church c);
   static bool to_bool(church c);
   static inline const uint64_t total =

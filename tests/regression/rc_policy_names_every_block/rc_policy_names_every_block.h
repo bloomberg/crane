@@ -90,7 +90,7 @@ struct RcPolicyNamesEveryBlock {
   };
 
   static stream from(uint64_t n);
-  static uint64_t hd(stream s);
+  static uint64_t hd(const stream &s);
 
   template <typename F0>
     requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t> &&

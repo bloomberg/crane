@@ -223,22 +223,22 @@ struct MutualCoind {
     const crane::lazy<variant_t> &lazy_cell() const { return lazy_v_; }
   };
 
-  template <typename T1> static T1 headA(streamA<T1> s) {
+  template <typename T1> static T1 headA(const streamA<T1> &s) {
     const auto &[a0, a1] = std::get<typename streamA<T1>::ConsA>(s.v());
     return a0;
   }
 
-  template <typename T1> static streamB<T1> tailA(streamA<T1> s) {
+  template <typename T1> static streamB<T1> tailA(const streamA<T1> &s) {
     const auto &[a0, a1] = std::get<typename streamA<T1>::ConsA>(s.v());
     return a1;
   }
 
-  template <typename T1> static T1 headB(streamB<T1> s) {
+  template <typename T1> static T1 headB(const streamB<T1> &s) {
     const auto &[a0, a1] = std::get<typename streamB<T1>::ConsB>(s.v());
     return a0;
   }
 
-  template <typename T1> static streamA<T1> tailB(streamB<T1> s) {
+  template <typename T1> static streamA<T1> tailB(const streamB<T1> &s) {
     const auto &[a0, a1] = std::get<typename streamB<T1>::ConsB>(s.v());
     return a1;
   }
@@ -246,7 +246,8 @@ struct MutualCoind {
   static streamA<uint64_t> countA(uint64_t n);
   static streamB<uint64_t> countB(uint64_t n);
 
-  template <typename T1> static List<T1> takeA(uint64_t fuel, streamA<T1> s) {
+  template <typename T1>
+  static List<T1> takeA(uint64_t fuel, const streamA<T1> &s) {
     if (fuel <= 0) {
       return List<T1>::nil();
     } else {
@@ -256,7 +257,8 @@ struct MutualCoind {
     }
   }
 
-  template <typename T1> static List<T1> takeB(uint64_t fuel, streamB<T1> s) {
+  template <typename T1>
+  static List<T1> takeB(uint64_t fuel, const streamB<T1> &s) {
     if (fuel <= 0) {
       return List<T1>::nil();
     } else {

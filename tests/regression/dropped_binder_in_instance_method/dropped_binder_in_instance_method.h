@@ -165,8 +165,9 @@ crane::rebind_t<T1, T3> fmapish(std::type_identity_t<Functorish<T1>> functorish,
       functorish(crane_erase_fn(x), crane_convert<T1>(std::move(x0))));
 }
 
-std::optional<crane::obj> Functorish_option(crane::fn<crane::obj(crane::obj)> f,
-                                            const std::optional<crane::obj> &o);
+std::optional<crane::obj>
+Functorish_option(const crane::fn<crane::obj(crane::obj)> &f,
+                  const std::optional<crane::obj> &o);
 
 struct Prov_nat {
   static std::optional<List<Nat>> aid_to_prov(std::optional<Nat> aid) {

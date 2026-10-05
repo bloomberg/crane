@@ -142,8 +142,8 @@ struct PartialAppMove {
   }
 
   template <typename T1, typename F1>
-  static T1 tree_rec(const T1 &f, F1 &&f0, const tree &t) {
-    return tree_rect<T1>(f, f0, t);
+  static T1 tree_rec(T1 f, F1 &&f0, const tree &t) {
+    return tree_rect<T1>(std::move(f), f0, t);
   }
 
   /// A function taking two args: tree -> nat -> nat.

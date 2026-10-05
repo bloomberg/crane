@@ -30,9 +30,8 @@ CraneMoveHunt::handle_state(const CraneMoveHunt::state &s) {
   return std::make_pair(s.visible, render_state(s));
 }
 
-CraneMoveHunt::box
-CraneMoveHunt::record_function(const CraneMoveHunt::box &b0) {
-  CraneMoveHunt::box b = keep_box(b0);
+CraneMoveHunt::box CraneMoveHunt::record_function(CraneMoveHunt::box b0) {
+  CraneMoveHunt::box b = keep_box(std::move(b0));
   CraneMoveHunt::box b1 = clone_box(b);
   CraneMoveHunt::box b2 = clone_box(b);
   if (keep_box(b).enabled) {

@@ -103,8 +103,8 @@ struct SigSubset {
   }
 
   template <typename T1, typename F1>
-  static T1 lst_rec(const T1 &f, F1 &&f0, const lst &l) {
-    return lst_rect<T1>(f, f0, l);
+  static T1 lst_rec(T1 f, F1 &&f0, const lst &l) {
+    return lst_rect<T1>(std::move(f), f0, l);
   }
 
   static uint64_t head(const Sig<lst> &p);

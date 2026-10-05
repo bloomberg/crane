@@ -2,10 +2,10 @@
 
 Nat LocalFixHigherOrderProbe::sample(const Nat &n) {
   {
-    crane::fn<Nat(Nat)> _lc1_k = [](Nat x) { return x; };
+    const crane::fn<Nat(Nat)> &_lc1_k = [](Nat x) { return x; };
     const Nat &_lc1_n0 = n;
     Nat _lc1_loop_n0 = _lc1_n0;
-    crane::fn<Nat(Nat)> _lc1_loop_k = std::move(_lc1_k);
+    crane::fn<Nat(Nat)> _lc1_loop_k = _lc1_k;
     while (true) {
       if (std::holds_alternative<typename Nat::O>(_lc1_loop_n0.v())) {
         return _lc1_loop_k(Nat::o());

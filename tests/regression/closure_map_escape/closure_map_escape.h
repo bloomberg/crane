@@ -106,8 +106,8 @@ struct ClosureMapEscape {
   }
 
   template <typename T1, typename T2, typename F1>
-  static T2 mylist_rec(const T2 &f, F1 &&f0, const mylist<T1> &m) {
-    return mylist_rect<T1, T2>(f, f0, m);
+  static T2 mylist_rec(T2 f, F1 &&f0, const mylist<T1> &m) {
+    return mylist_rect<T1, T2>(std::move(f), f0, m);
   }
 
   /// Build a list of closures from a list of nats using LOCAL FIXPOINTS.

@@ -523,7 +523,8 @@ public:
 struct ITree {
   template <typename T1, typename T2, typename T3>
   static Itree<T1, T3>
-  subst(std::type_identity_t<crane::fn<Itree<T1, T3>(T2)>> k, Itree<T1, T2> u) {
+  subst(std::type_identity_t<crane::fn<Itree<T1, T3>(T2)>> k,
+        const Itree<T1, T2> &u) {
     auto &&_sv = u.observe();
     if (std::holds_alternative<typename ItreeF<T1, T2, Itree<T1, T2>>::RetF>(
             _sv.v())) {
@@ -551,13 +552,14 @@ struct ITree {
 
   template <typename T1, typename T2, typename T3>
   static Itree<T1, T3>
-  bind(Itree<T1, T2> u, std::type_identity_t<crane::fn<Itree<T1, T3>(T2)>> k) {
+  bind(const Itree<T1, T2> &u,
+       std::type_identity_t<crane::fn<Itree<T1, T3>(T2)>> k) {
     return subst<T1, T2, T3>(std::move(k), u);
   }
 
   template <typename T1, typename T2, typename T3>
   static Itree<T1, T2>
-  iter(std::type_identity_t<crane::fn<Itree<T1, Sum<T3, T2>>(T3)>> step,
+  iter(const std::type_identity_t<crane::fn<Itree<T1, Sum<T3, T2>>(T3)>> &step,
        const T3 &i) {
     return bind<T1, Sum<T3, T2>, T2>(
         step(i), [=](const Sum<T3, T2> &lr) -> Itree<T1, T2> {
@@ -575,8 +577,8 @@ struct ITree {
   }
 
   template <typename T1, typename T2, typename T3>
-  static Itree<T1, T3> map(std::type_identity_t<crane::fn<T3(T2)>> f,
-                           Itree<T1, T2> t) {
+  static Itree<T1, T3> map(const std::type_identity_t<crane::fn<T3(T2)>> &f,
+                           const Itree<T1, T2> &t) {
     return bind<T1, T2, T3>(t, [=](const T2 &x) {
       return Itree<T1, T3>::lazy_([=]() -> Itree<T1, T3> {
         return Itree<T1, T3>::go(ItreeF<T1, T3, Itree<T1, T3>>::retf(f(x)));
@@ -684,7 +686,7 @@ struct ItreeInterpState {
                           },
                           crane::obj()),
                       GetE::GET)),
-              [=](const Nat &y) {
+              [=](Nat y) {
                 return Itree<GetE, Nat>::lazy_([=]() -> Itree<GetE, Nat> {
                   return Itree<GetE, Nat>::go(
                       ItreeF<GetE, Nat, Itree<GetE, Nat>>::retf(x.add(y)));
@@ -718,7 +720,7 @@ struct ItreeInterpState {
           },
           prog)(Nat::s(Nat::o()));
   static std::optional<std::pair<Nat, Nat>>
-  run(const Nat &fuel, Itree<noE, std::pair<Nat, Nat>> t);
+  run(const Nat &fuel, const Itree<noE, std::pair<Nat, Nat>> &t);
   static inline const bool is_three = []() -> bool {
     auto _cs = []() {
       auto _lit0 = Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
@@ -798,7 +800,7 @@ typename _tcI0::template m<T3> Interp::interp(
     Itree<T1, T3> x0_) {
   return ::template iter<_tcI0::template m, T3, Itree<T1, T3>>(
       std::move(iM),
-      [=](Itree<T1, T3> t) ->
+      [=](const Itree<T1, T3> &t) ->
       typename _tcI0::template m<Sum<Itree<T1, T3>, T3>> {
         auto &&_sv = t.observe();
         if (std::holds_alternative<

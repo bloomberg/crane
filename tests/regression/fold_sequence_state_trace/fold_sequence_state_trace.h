@@ -308,7 +308,7 @@ struct FoldSequenceStateTraceCase {
                                List<FoldStep>::nil())));
   static inline const ConstructionState sample_final_state =
       execute_sequence(initial_state, sample_sequence);
-  static uint64_t line_count_after_sample_sequence(const ConstructionState &st);
+  static uint64_t line_count_after_sample_sequence(ConstructionState st);
   static inline const uint64_t sample_sequence_length =
       sample_sequence.length();
   static inline const uint64_t sample_line_count =

@@ -102,6 +102,6 @@ template <typename T1> Nat size(std::type_identity_t<Sized<T1>> sized, T1 x0_) {
 }
 
 const Sized<Nat> Sized_nat_ = [](const Nat &n) { return Nat::s(n); };
-Nat twice_(const Nat &n);
+Nat twice_(Nat n);
 
 #endif // INCLUDED_PRIMED_IDENTIFIER

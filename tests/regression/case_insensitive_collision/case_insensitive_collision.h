@@ -26,8 +26,8 @@ struct CaseInsensitiveCollision {
     }
   }
 
-  template <typename T1> static T1 bar_rec(const T1 &f, const T1 &f0, Bar b) {
-    return bar_rect<T1>(f, f0, b);
+  template <typename T1> static T1 bar_rec(T1 f, T1 f0, Bar b) {
+    return bar_rect<T1>(std::move(f), std::move(f0), b);
   }
 
   static uint64_t Bar0(Bar b);

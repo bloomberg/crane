@@ -1,22 +1,21 @@
 #include "tfunctor_record_list_field.h"
 
-List<crane::obj>
-TfunctorRecordListField::TFunctor_list(crane::fn<crane::obj(crane::obj)> x0_,
-                                       const List<crane::obj> &x1_) {
-  return x1_.template map<crane::obj>(std::move(x0_));
+List<crane::obj> TfunctorRecordListField::TFunctor_list(
+    const crane::fn<crane::obj(crane::obj)> &x0_, const List<crane::obj> &x1_) {
+  return x1_.template map<crane::obj>(x0_);
 }
 
 TfunctorRecordListField::operand<crane::obj>
 TfunctorRecordListField::TFunctor_operand(
-    crane::fn<crane::obj(crane::obj)> f,
+    const crane::fn<crane::obj(crane::obj)> &f,
     const TfunctorRecordListField::operand<crane::obj> &o) {
   const auto &[t0] = o;
-  return operand<crane::obj>::op(crane_call_erased(std::move(f), t0));
+  return operand<crane::obj>::op(crane_call_erased(f, t0));
 }
 
 TfunctorRecordListField::bundle<crane::obj>
 TfunctorRecordListField::TFunctor_bundle(
-    crane::fn<crane::obj(crane::obj)> f,
+    const crane::fn<crane::obj(crane::obj)> &f,
     const TfunctorRecordListField::bundle<crane::obj> &b) {
   return bundle<crane::obj>{
       b.tag,
@@ -36,5 +35,5 @@ TfunctorRecordListField::TFunctor_bundle(
                       List<TfunctorRecordListField::operand<crane::obj>>>(_x1));
             };
           }(),
-          std::move(f), b.ops)};
+          f, b.ops)};
 }

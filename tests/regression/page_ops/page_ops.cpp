@@ -43,7 +43,7 @@ PageOps::instruction PageOps::decode(uint64_t b1, uint64_t b2) {
 }
 
 std::optional<std::pair<PageOps::instruction, uint64_t>>
-PageOps::disassemble(const List<uint64_t> &rom, uint64_t addr) {
+PageOps::disassemble(List<uint64_t> rom, uint64_t addr) {
   auto &&_sv = drop<uint64_t>(addr, rom);
   if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
     return std::optional<std::pair<PageOps::instruction, uint64_t>>();

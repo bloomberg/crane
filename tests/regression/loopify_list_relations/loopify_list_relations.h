@@ -36,8 +36,7 @@ struct LoopifyListRelations {
   static List<uint64_t> interleave(List<uint64_t> l1, List<uint64_t> l2);
   static List<uint64_t> merge_fuel(uint64_t fuel, List<uint64_t> l1,
                                    List<uint64_t> l2);
-  static List<uint64_t> merge(const List<uint64_t> &l1,
-                              const List<uint64_t> &l2);
+  static List<uint64_t> merge(List<uint64_t> l1, List<uint64_t> l2);
   static List<uint64_t> union_(const List<uint64_t> &l1, List<uint64_t> l2);
   static List<uint64_t> intersection(const List<uint64_t> &l1,
                                      const List<uint64_t> &l2);

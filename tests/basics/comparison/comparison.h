@@ -23,9 +23,8 @@ struct Comparison {
     }
   }
 
-  template <typename T1>
-  static T1 cmp_rec(const T1 &f, const T1 &f0, const T1 &f1, Cmp c) {
-    return cmp_rect<T1>(f, f0, f1, c);
+  template <typename T1> static T1 cmp_rec(T1 f, T1 f0, T1 f1, Cmp c) {
+    return cmp_rect<T1>(std::move(f), std::move(f0), std::move(f1), c);
   }
 
   static uint64_t cmp_to_nat(Cmp c);

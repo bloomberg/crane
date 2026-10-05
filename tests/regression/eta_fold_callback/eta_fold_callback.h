@@ -208,7 +208,7 @@ struct EtaFoldCallback {
                 };
               });
       return std::move(fs).template fold_right<uint64_t>(
-          [](crane::fn<uint64_t(uint64_t)> f, uint64_t eta0_) {
+          [](const crane::fn<uint64_t(uint64_t)> &f, uint64_t eta0_) {
             return f(eta0_);
           },
           UINT64_C(0));

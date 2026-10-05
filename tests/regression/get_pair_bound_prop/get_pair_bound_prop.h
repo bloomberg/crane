@@ -528,16 +528,18 @@ struct GetPairBoundProp {
             typename F5, typename F6, typename F20, typename F21, typename F22,
             typename F23, typename F24, typename F25, typename F26,
             typename F27, typename F28>
-  static T1 instr_rec(const T1 &f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
-                      F6 &&f5, const T1 &f6, const T1 &f7, const T1 &f8,
-                      const T1 &f9, const T1 &f10, const T1 &f11, const T1 &f12,
-                      const T1 &f13, const T1 &f14, const T1 &f15,
-                      const T1 &f16, const T1 &f17, const T1 &f18, F20 &&f19,
-                      F21 &&f20, F22 &&f21, F23 &&f22, F24 &&f23, F25 &&f24,
-                      F26 &&f25, F27 &&f26, F28 &&f27, const instr &i) {
-    return instr_rect<T1>(f, f0, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11,
-                          f12, f13, f14, f15, f16, f17, f18, f19, f20, f21, f22,
-                          f23, f24, f25, f26, f27, i);
+  static T1 instr_rec(T1 f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
+                      F6 &&f5, T1 f6, T1 f7, T1 f8, T1 f9, T1 f10, T1 f11,
+                      T1 f12, T1 f13, T1 f14, T1 f15, T1 f16, T1 f17, T1 f18,
+                      F20 &&f19, F21 &&f20, F22 &&f21, F23 &&f22, F24 &&f23,
+                      F25 &&f24, F26 &&f25, F27 &&f26, F28 &&f27,
+                      const instr &i) {
+    return instr_rect<T1>(std::move(f), f0, f1, f2, f3, f4, f5, std::move(f6),
+                          std::move(f7), std::move(f8), std::move(f9),
+                          std::move(f10), std::move(f11), std::move(f12),
+                          std::move(f13), std::move(f14), std::move(f15),
+                          std::move(f16), std::move(f17), std::move(f18), f19,
+                          f20, f21, f22, f23, f24, f25, f26, f27, i);
   }
 
   static state execute(const state &s, const instr &i);

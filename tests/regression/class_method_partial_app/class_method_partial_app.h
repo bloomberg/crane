@@ -165,7 +165,7 @@ struct ClassMethodPartialApp {
               [](uint64_t _sat0) { return SzNat::sz(UINT64_C(3), _sat0); },
               List<crane::fn<uint64_t(uint64_t)>>::nil()))
           .template fold_right<uint64_t>(
-              [](crane::fn<uint64_t(uint64_t)> f, uint64_t n) {
+              [](const crane::fn<uint64_t(uint64_t)> &f, uint64_t n) {
                 return (f(UINT64_C(1)) + n);
               },
               UINT64_C(0));

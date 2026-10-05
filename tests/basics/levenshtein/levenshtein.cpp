@@ -9,8 +9,7 @@ Levenshtein::chain Levenshtein::same_chain(const String &s) {
   }
 }
 
-Levenshtein::chain Levenshtein::inserts_chain(const String &s1,
-                                              const String &s2) {
+Levenshtein::chain Levenshtein::inserts_chain(const String &s1, String s2) {
   if (std::holds_alternative<typename String::EmptyString>(s1.v())) {
     auto f_impl = [](auto &_self_f, const String &s) -> Levenshtein::chain {
       if (std::holds_alternative<typename String::EmptyString>(s.v())) {
@@ -23,7 +22,7 @@ Levenshtein::chain Levenshtein::inserts_chain(const String &s1,
     auto f = [&](const String &s) -> Levenshtein::chain {
       return f_impl(f_impl, s);
     };
-    return f(s2);
+    return f(std::move(s2));
   } else {
     const auto &[a0, a1] = std::get<typename String::String0>(s1.v());
     return inserts_chain(*a1, s2).insert_chain(a0, s2, a1->append(s2),
@@ -41,10 +40,9 @@ Levenshtein::chain Levenshtein::inserts_chain_empty(const String &s) {
   }
 }
 
-Levenshtein::chain Levenshtein::deletes_chain(const String &s1,
-                                              const String &s2) {
+Levenshtein::chain Levenshtein::deletes_chain(const String &s1, String s2) {
   if (std::holds_alternative<typename String::EmptyString>(s1.v())) {
-    return same_chain(s2);
+    return same_chain(std::move(s2));
   } else {
     const auto &[a0, a1] = std::get<typename String::String0>(s1.v());
     return deletes_chain(*a1, s2).delete_chain(a0, a1->append(s2), s2,
@@ -124,8 +122,8 @@ SigT<Nat, Levenshtein::chain> Levenshtein::levenshtein_chain(const String &s,
   }
 }
 
-Nat Levenshtein::levenshtein_computed(const String &s, const String &t) {
-  return levenshtein_chain(s, t).projT1();
+Nat Levenshtein::levenshtein_computed(String s, const String &t) {
+  return levenshtein_chain(std::move(s), t).projT1();
 }
 
 Nat Levenshtein::levenshtein(const String &x0_, const String &x1_) {

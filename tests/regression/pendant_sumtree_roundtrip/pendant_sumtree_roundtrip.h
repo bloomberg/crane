@@ -546,9 +546,8 @@ struct PendantSumtreeRoundtripCase {
     }
   }
 
-  template <typename T1>
-  static T1 Twist_rec(const T1 &f, const T1 &f0, Twist t1) {
-    return Twist_rect<T1>(f, f0, t1);
+  template <typename T1> static T1 Twist_rec(T1 f, T1 f0, Twist t1) {
+    return Twist_rect<T1>(std::move(f), std::move(f0), t1);
   }
   enum class Fiber { COTTON, CAMELID };
 
@@ -565,9 +564,8 @@ struct PendantSumtreeRoundtripCase {
     }
   }
 
-  template <typename T1>
-  static T1 Fiber_rec(const T1 &f, const T1 &f0, Fiber f1) {
-    return Fiber_rect<T1>(f, f0, f1);
+  template <typename T1> static T1 Fiber_rec(T1 f, T1 f0, Fiber f1) {
+    return Fiber_rect<T1>(std::move(f), std::move(f0), f1);
   }
   enum class Color { WHITE, BROWN, RED, BLUE };
 
@@ -592,9 +590,9 @@ struct PendantSumtreeRoundtripCase {
   }
 
   template <typename T1>
-  static T1 Color_rec(const T1 &f, const T1 &f0, const T1 &f1, const T1 &f2,
-                      Color c) {
-    return Color_rect<T1>(f, f0, f1, f2, c);
+  static T1 Color_rec(T1 f, T1 f0, T1 f1, T1 f2, Color c) {
+    return Color_rect<T1>(std::move(f), std::move(f0), std::move(f1),
+                          std::move(f2), c);
   }
 
   struct CordMeta {

@@ -55,7 +55,7 @@ struct GeneratedLazyFieldNameClash {
   };
 
   static d_lazyV_ true_stream();
-  static bool head(d_lazyV_ s);
+  static bool head(const d_lazyV_ &s);
   static inline const bool sample = head(true_stream());
 };
 

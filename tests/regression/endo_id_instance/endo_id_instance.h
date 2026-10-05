@@ -133,7 +133,7 @@ struct EndoIdInstance {
     Nat x;
   };
 
-  static inline const Endo<lit> Endo_lit = [](const lit &eta0_) {
+  static inline const Endo<lit> Endo_lit = [](lit eta0_) {
     return crane::any_cast<lit>(Datatypes::id(eta0_));
   };
 

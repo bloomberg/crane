@@ -63,8 +63,8 @@ struct UserOptionWrapper {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    template <typename T1, typename F1> T1 opt_rec(const T1 &f, F1 &&f0) const {
-      return this->template opt_rect<T1>(f, f0);
+    template <typename T1, typename F1> T1 opt_rec(T1 f, F1 &&f0) const {
+      return this->template opt_rect<T1>(std::move(f), f0);
     }
 
     template <typename T1, typename F1>

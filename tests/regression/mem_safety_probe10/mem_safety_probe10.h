@@ -203,9 +203,8 @@ struct MemSafetyProbe10 {
       return _result;
     }
 
-    template <typename T1, typename F1>
-    T1 tree_rec(const T1 &f, F1 &&f0) const {
-      return this->template tree_rect<T1>(f, f0);
+    template <typename T1, typename F1> T1 tree_rec(T1 f, F1 &&f0) const {
+      return this->template tree_rect<T1>(std::move(f), f0);
     }
 
     template <typename T1, typename F1> T1 tree_rect(T1 f, F1 &&f0) const {
@@ -355,9 +354,8 @@ struct MemSafetyProbe10 {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    template <typename T1, typename F1>
-    T1 mylist_rec(const T1 &f, F1 &&f0) const {
-      return this->template mylist_rect<T1>(f, f0);
+    template <typename T1, typename F1> T1 mylist_rec(T1 f, F1 &&f0) const {
+      return this->template mylist_rect<T1>(std::move(f), f0);
     }
 
     template <typename T1, typename F1> T1 mylist_rect(T1 f, F1 &&f0) const {
@@ -418,9 +416,9 @@ struct MemSafetyProbe10 {
   /// where each closure captures the HEAD of the list
   /// and the closure from the previous step.
   static uint64_t chain_adders(const mylist<uint64_t> &l,
-                               crane::fn<uint64_t(uint64_t)> acc,
+                               const crane::fn<uint64_t(uint64_t)> &acc,
                                uint64_t x0_) {
-    crane::fn<uint64_t(uint64_t)> _loop_acc = std::move(acc);
+    crane::fn<uint64_t(uint64_t)> _loop_acc = acc;
     mylist<uint64_t> _loop_l = l;
     while (true) {
       if (std::holds_alternative<typename mylist<uint64_t>::Mynil>(

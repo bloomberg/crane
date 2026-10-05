@@ -54,7 +54,7 @@ InterpChainPerf::prog(const Nat &n) {
                               },
                               crane::obj())),
                       GetE::GET)),
-              [=](const Nat &x) {
+              [=](Nat x) {
                 return Itree<InterpChainPerf::TopE<crane::obj>,
                              Sum<std::pair<Nat, Nat>, Nat>>::
                     lazy_([=]() -> Itree<InterpChainPerf::TopE<crane::obj>,
@@ -113,9 +113,8 @@ InterpChainPerf::run_n(const Nat &n) {
 
 std::optional<Nat> InterpChainPerf::drive(
     const Nat &fuel,
-    Itree<Sum1<InterpChainPerf::outE, InterpChainPerf::noE, crane::obj>,
-          std::pair<Nat, Nat>>
-        t) {
+    const Itree<Sum1<InterpChainPerf::outE, InterpChainPerf::noE, crane::obj>,
+                std::pair<Nat, Nat>> &t) {
   if (std::holds_alternative<typename Nat::O>(fuel.v())) {
     return std::optional<Nat>();
   } else {

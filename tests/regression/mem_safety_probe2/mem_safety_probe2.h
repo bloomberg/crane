@@ -241,9 +241,8 @@ struct MemSafetyProbe2 {
       }
     }
 
-    template <typename T1, typename F1>
-    T1 tree_rec(const T1 &f, F1 &&f0) const {
-      return this->template tree_rect<T1>(f, f0);
+    template <typename T1, typename F1> T1 tree_rec(T1 f, F1 &&f0) const {
+      return this->template tree_rect<T1>(std::move(f), f0);
     }
 
     template <typename T1, typename F1> T1 tree_rect(T1 f, F1 &&f0) const {
@@ -451,9 +450,8 @@ struct MemSafetyProbe2 {
       return _result;
     }
 
-    template <typename T1, typename F1>
-    T1 mylist_rec(const T1 &f, F1 &&f0) const {
-      return this->template mylist_rect<T1>(f, f0);
+    template <typename T1, typename F1> T1 mylist_rec(T1 f, F1 &&f0) const {
+      return this->template mylist_rect<T1>(std::move(f), f0);
     }
 
     template <typename T1, typename F1> T1 mylist_rect(T1 f, F1 &&f0) const {
@@ -512,7 +510,7 @@ struct MemSafetyProbe2 {
                         UINT64_C(20),
                         tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
     return std::move(t).template with_tree<uint64_t>(
-        [](crane::fn<uint64_t(uint64_t)> f) {
+        [](const crane::fn<uint64_t(uint64_t)> &f) {
           return (f(UINT64_C(5)) + f(UINT64_C(0)));
         });
   }();

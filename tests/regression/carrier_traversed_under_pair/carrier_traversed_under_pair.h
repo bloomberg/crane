@@ -359,7 +359,7 @@ crane::rebind_t<T1, T3> tfmap(std::type_identity_t<TFunctor<T1>> tFunctor,
 }
 
 List<std::pair<std::optional<Nat>, Exp<crane::obj>>>
-TFunctor_tagged(crane::fn<crane::obj(crane::obj)> f,
+TFunctor_tagged(const crane::fn<crane::obj(crane::obj)> &f,
                 const List<std::pair<std::optional<Nat>, Exp<crane::obj>>> &l);
 
 template <typename t> struct blk {
@@ -374,7 +374,7 @@ template <typename t> struct blk {
   }
 };
 
-blk<crane::obj> TFunctor_blk(crane::fn<crane::obj(crane::obj)> f,
+blk<crane::obj> TFunctor_blk(const crane::fn<crane::obj(crane::obj)> &f,
                              const blk<crane::obj> &b);
 
 template <typename F0> blk<bool> use_blk(F0 &&f, const blk<Nat> &b) {

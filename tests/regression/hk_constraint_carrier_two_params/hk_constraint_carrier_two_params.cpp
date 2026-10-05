@@ -1,8 +1,8 @@
 #include "hk_constraint_carrier_two_params.h"
 
-List<crane::obj> TFunctor_list(crane::fn<crane::obj(crane::obj)> x0_,
+List<crane::obj> TFunctor_list(const crane::fn<crane::obj(crane::obj)> &x0_,
                                const List<crane::obj> &x1_) {
-  return x1_.template map<crane::obj>(std::move(x0_));
+  return x1_.template map<crane::obj>(x0_);
 }
 
 outer1<Nat, two<Nat, List<Nat>>>

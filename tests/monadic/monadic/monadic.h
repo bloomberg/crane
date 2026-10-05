@@ -164,7 +164,7 @@ struct Monadic {
   template <typename T1>
   static State<uint64_t, uint64_t> count_elements(const List<T1> &l) {
     return l.template fold_left<State<uint64_t, uint64_t>>(
-        [](crane::fn<std::pair<uint64_t, uint64_t>(uint64_t)> acc, T1) {
+        [](const crane::fn<std::pair<uint64_t, uint64_t>(uint64_t)> &acc, T1) {
           return state_bind<uint64_t, uint64_t, uint64_t>(acc, [](uint64_t) {
             return state_bind<uint64_t, uint64_t, uint64_t>(
                 state_get<uint64_t>(), [](uint64_t n) {

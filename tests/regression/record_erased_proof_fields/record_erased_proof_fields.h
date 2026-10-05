@@ -143,9 +143,11 @@ struct RecordErasedProofFieldsCase {
   }
 
   template <typename T1>
-  static T1 ItemKind_rec(const T1 &f, const T1 &f0, const T1 &f1, const T1 &f2,
-                         const T1 &f3, const T1 &f4, const T1 &f5, ItemKind i) {
-    return ItemKind_rect<T1>(f, f0, f1, f2, f3, f4, f5, i);
+  static T1 ItemKind_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5,
+                         ItemKind i) {
+    return ItemKind_rect<T1>(std::move(f), std::move(f0), std::move(f1),
+                             std::move(f2), std::move(f3), std::move(f4),
+                             std::move(f5), i);
   }
 
   struct StoredTag {
@@ -224,9 +226,8 @@ struct RecordErasedProofFieldsCase {
   }
 
   template <typename T1>
-  static T1 TraceBucket_rec(const T1 &f, const T1 &f0, const T1 &f1,
-                            TraceBucket t) {
-    return TraceBucket_rect<T1>(f, f0, f1, t);
+  static T1 TraceBucket_rec(T1 f, T1 f0, T1 f1, TraceBucket t) {
+    return TraceBucket_rect<T1>(std::move(f), std::move(f0), std::move(f1), t);
   }
 
   struct PrimaryRecord {

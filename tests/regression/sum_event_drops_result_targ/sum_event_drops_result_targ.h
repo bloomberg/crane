@@ -178,7 +178,7 @@ struct SumEventDropsResultTarg {
 
 template <typename T1, typename T2>
 std::shared_ptr<ITree<T2>> FailE::cast_() const {
-  return itree_bind(itree_trigger(*this),
+  return itree_bind(itree_trigger(std::move(*this)),
                     [](Empty_set) -> std::shared_ptr<ITree<T2>> {
                       throw std::logic_error("absurd case");
                     });

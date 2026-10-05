@@ -50,7 +50,7 @@ struct RuntimeBlockInvariants {
   };
 
   static stream from(uint64_t n);
-  static uint64_t hd(stream s);
+  static uint64_t hd(const stream &s);
 };
 
 #endif // INCLUDED_RUNTIME_BLOCK_INVARIANTS

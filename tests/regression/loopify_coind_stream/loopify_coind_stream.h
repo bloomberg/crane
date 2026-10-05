@@ -157,17 +157,17 @@ struct LoopifyCoindStream {
     const crane::lazy<variant_t> &lazy_cell() const { return lazy_v_; }
   };
 
-  template <typename T1> static T1 hd(stream<T1> s) {
+  template <typename T1> static T1 hd(const stream<T1> &s) {
     const auto &[a0, a1] = std::get<typename stream<T1>::Scons>(s.v());
     return a0;
   }
 
-  template <typename T1> static stream<T1> tl(stream<T1> s) {
+  template <typename T1> static stream<T1> tl(const stream<T1> &s) {
     const auto &[a0, a1] = std::get<typename stream<T1>::Scons>(s.v());
     return a1;
   }
 
-  template <typename T1> static List<T1> take(uint64_t n, stream<T1> s) {
+  template <typename T1> static List<T1> take(uint64_t n, const stream<T1> &s) {
     std::optional<List<T1>> _root{};
     std::shared_ptr<List<T1>> *_write = nullptr;
     stream<T1> _loop_s = s;
@@ -195,7 +195,7 @@ struct LoopifyCoindStream {
 
   template <typename T1>
   static stream<T1>
-  iterate(std::type_identity_t<crane::fn<T1(T1)>> f,
+  iterate(const std::type_identity_t<crane::fn<T1(T1)>> &f,
           const T1 &x) { /// CraneEnter: captures varying parameters for each
                          /// recursive call.
 
@@ -221,9 +221,10 @@ struct LoopifyCoindStream {
   }
 
   template <typename T1, typename T2>
-  static stream<T2> smap(std::type_identity_t<crane::fn<T2(T1)>> f,
-                         stream<T1> s) { /// CraneEnter: captures varying
-                                         /// parameters for each recursive call.
+  static stream<T2>
+  smap(const std::type_identity_t<crane::fn<T2(T1)>> &f,
+       const stream<T1> &s) { /// CraneEnter: captures varying parameters for
+                              /// each recursive call.
 
     struct CraneEnter {
       stream<T1> s;
@@ -232,13 +233,13 @@ struct LoopifyCoindStream {
     using CraneFrame = std::variant<CraneEnter>;
     stream<T2> _result{};
     crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{std::move(s)});
+    _stack.emplace_back(CraneEnter{s});
     /// Loopified smap: CraneEnter.
     while (!_stack.empty()) {
       CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
       auto _f = std::move(std::get<CraneEnter>(_frame));
-      stream<T1> s = std::move(_f.s);
+      const stream<T1> &s = _f.s;
       _result = stream<T2>::lazy_([=]() -> stream<T2> {
         return stream<T2>::scons(f(hd<T1>(s)), smap<T1, T2>(f, tl<T1>(s)));
       });
@@ -248,9 +249,10 @@ struct LoopifyCoindStream {
 
   template <typename T1, typename T2, typename T3>
   static stream<T3>
-  zipWith(std::type_identity_t<crane::fn<T3(T1, T2)>> f, stream<T1> s1,
-          stream<T2> s2) { /// CraneEnter: captures varying parameters for each
-                           /// recursive call.
+  zipWith(const std::type_identity_t<crane::fn<T3(T1, T2)>> &f,
+          const stream<T1> &s1,
+          const stream<T2> &s2) { /// CraneEnter: captures varying parameters
+                                  /// for each recursive call.
 
     struct CraneEnter {
       stream<T2> s2;
@@ -260,14 +262,14 @@ struct LoopifyCoindStream {
     using CraneFrame = std::variant<CraneEnter>;
     stream<T3> _result{};
     crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{std::move(s2), std::move(s1)});
+    _stack.emplace_back(CraneEnter{s2, s1});
     /// Loopified zipWith: CraneEnter.
     while (!_stack.empty()) {
       CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
       auto _f = std::move(std::get<CraneEnter>(_frame));
-      stream<T2> s2 = std::move(_f.s2);
-      stream<T1> s1 = std::move(_f.s1);
+      const stream<T2> &s2 = _f.s2;
+      const stream<T1> &s1 = _f.s1;
       _result = stream<T3>::lazy_([=]() -> stream<T3> {
         return stream<T3>::scons(
             f(hd<T1>(s1), hd<T2>(s2)),
@@ -279,7 +281,7 @@ struct LoopifyCoindStream {
 
   template <typename T1, typename T2>
   static stream<T1>
-  unfold(std::type_identity_t<crane::fn<std::pair<T1, T2>(T2)>> f,
+  unfold(const std::type_identity_t<crane::fn<std::pair<T1, T2>(T2)>> &f,
          const T2 &seed) { /// CraneEnter: captures varying parameters for each
                            /// recursive call.
 

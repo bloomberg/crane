@@ -246,8 +246,8 @@ struct ITree {
   template <typename T1, typename T2, typename T3>
   static Itree<T1, T3>
   subst(std::type_identity_t<crane::fn<Itree<T1, T3>(T2)>> k,
-        Itree<T1, T2> u) { /// CraneEnter: captures varying parameters for each
-                           /// recursive call.
+        const Itree<T1, T2> &u) { /// CraneEnter: captures varying parameters
+                                  /// for each recursive call.
 
     struct CraneEnter {
       Itree<T1, T2> u;
@@ -256,13 +256,13 @@ struct ITree {
     using CraneFrame = std::variant<CraneEnter>;
     Itree<T1, T3> _result{};
     crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{std::move(u)});
+    _stack.emplace_back(CraneEnter{u});
     /// Loopified subst: CraneEnter.
     while (!_stack.empty()) {
       CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
       auto _f = std::move(std::get<CraneEnter>(_frame));
-      Itree<T1, T2> u = std::move(_f.u);
+      const Itree<T1, T2> &u = _f.u;
       auto &&_sv = u.observe();
       if (std::holds_alternative<typename ItreeF<T1, T2, Itree<T1, T2>>::RetF>(
               _sv.v())) {
@@ -294,13 +294,14 @@ struct ITree {
 
   template <typename T1, typename T2, typename T3>
   static Itree<T1, T3>
-  bind(Itree<T1, T2> u, std::type_identity_t<crane::fn<Itree<T1, T3>(T2)>> k) {
+  bind(const Itree<T1, T2> &u,
+       std::type_identity_t<crane::fn<Itree<T1, T3>(T2)>> k) {
     return subst<T1, T2, T3>(std::move(k), u);
   }
 
   template <typename T1, typename T2, typename T3>
-  static Itree<T1, T3> map(std::type_identity_t<crane::fn<T3(T2)>> f,
-                           Itree<T1, T2> t) {
+  static Itree<T1, T3> map(const std::type_identity_t<crane::fn<T3(T2)>> &f,
+                           const Itree<T1, T2> &t) {
     return bind<T1, T2, T3>(t, [=](const T2 &x) {
       return Itree<T1, T3>::lazy_([=]() -> Itree<T1, T3> {
         return Itree<T1, T3>::go(ItreeF<T1, T3, Itree<T1, T3>>::retf(f(x)));

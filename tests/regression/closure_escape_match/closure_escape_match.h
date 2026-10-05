@@ -107,8 +107,8 @@ struct ClosureEscapeMatch {
   }
 
   template <typename T1, typename T2, typename F1>
-  static T2 mylist_rec(const T2 &f, F1 &&f0, const mylist<T1> &m) {
-    return mylist_rect<T1, T2>(f, f0, m);
+  static T2 mylist_rec(T2 f, F1 &&f0, const mylist<T1> &m) {
+    return mylist_rect<T1, T2>(std::move(f), f0, m);
   }
 
   template <typename T1> static uint64_t length(const mylist<T1> &l) {

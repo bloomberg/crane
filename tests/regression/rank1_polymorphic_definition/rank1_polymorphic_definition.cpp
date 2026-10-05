@@ -1,7 +1,7 @@
 #include "rank1_polymorphic_definition.h"
 
 crane::obj
-Rank1PolymorphicDefinition::three(crane::fn<crane::obj(crane::obj)> f,
+Rank1PolymorphicDefinition::three(const crane::fn<crane::obj(crane::obj)> &f,
                                   crane::obj x) {
   return f(f(f(x)));
 }

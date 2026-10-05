@@ -2803,11 +2803,24 @@ let infer_owned_flags n_params body params_with_types =
 (** Wraps a C++ parameter type with const/ref based on ownership semantics.
     Owned inductive/shared_ptr params are passed by value (moved in);
     borrowed inductive/shared_ptr params are passed by const reference;
-    other types are passed by const value. *)
+    other types are passed by const value.
+
+    A closure and a coinductive value are a pointer to a shared block, as a
+    [shared_ptr] is: copying one in is a retain, and dropping it at the end
+    of the call a release.  Borrowed, they too are passed by const
+    reference. *)
 let wrap_param_by_ownership ?(is_owned = false) cpp_ty =
+  let rec shared_block = function
+    | Tfun _ -> true
+    | Tnondeduced t | Tnamespace (_, t) -> shared_block t
+    | Tglob (r, _, _) -> Table.is_coinductive r
+    | _ -> false
+  in
   match cpp_ty with
   | Tshared_ptr _ when is_owned -> cpp_ty
   | Tshared_ptr _ -> Tref (Lvalue, Tconst cpp_ty)
+  | _ when shared_block cpp_ty ->
+    if is_owned then cpp_ty else Tref (Lvalue, Tconst cpp_ty)
   | _ when is_inductive_value_type cpp_ty ->
     if is_owned then cpp_ty  (* pass by value, caller moves *)
     else Tref (Lvalue, Tconst cpp_ty)  (* const T& for borrowing *)

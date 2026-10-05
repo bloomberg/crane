@@ -33,7 +33,7 @@ FastVariant::from(uint64_t n) { /// CraneEnter: captures varying parameters for
   return _result;
 }
 
-List<uint64_t> FastVariant::take(uint64_t n, FastVariant::stream s) {
+List<uint64_t> FastVariant::take(uint64_t n, const FastVariant::stream &s) {
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   FastVariant::stream _loop_s = s;

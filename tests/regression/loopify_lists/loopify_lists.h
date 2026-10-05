@@ -144,8 +144,8 @@ struct LoopifyLists {
   }
 
   template <typename T1, typename T2, typename F1>
-  static T2 list_rec(const T2 &f, F1 &&f0, const list<T1> &l) {
-    return list_rect<T1, T2>(f, f0, l);
+  static T2 list_rec(T2 f, F1 &&f0, const list<T1> &l) {
+    return list_rect<T1, T2>(std::move(f), f0, l);
   }
 
   /// stutter l duplicates each element: 1,2 -> 1,1,2,2.
@@ -1620,7 +1620,7 @@ struct LoopifyLists {
                                          list<uint64_t> l);
   /// rotate_left n l rotates list left by n positions: rotate 2 1,2,3,4 ->
   /// 3,4,1,2.
-  static list<uint64_t> rotate_left(uint64_t n, const list<uint64_t> &l);
+  static list<uint64_t> rotate_left(uint64_t n, list<uint64_t> l);
   /// intercalate sep lists joins lists with separator: intercalate 0
   /// [1,2],[3,4] -> 1,2,0,3,4.
   static list<uint64_t> intercalate(const list<uint64_t> &sep,

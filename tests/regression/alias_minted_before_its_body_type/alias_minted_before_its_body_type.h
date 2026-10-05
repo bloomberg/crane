@@ -379,7 +379,7 @@ boxed<T2> bump(F0 &&f, std::pair<Nat, Exp<T1>> p) {
 }
 
 List<boxed<crane::obj>>
-TFunctor_boxedlist(crane::fn<crane::obj(crane::obj)> f,
+TFunctor_boxedlist(const crane::fn<crane::obj(crane::obj)> &f,
                    const List<std::pair<Nat, Exp<crane::obj>>> &l);
 
 template <typename F0>

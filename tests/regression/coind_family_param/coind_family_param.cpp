@@ -19,9 +19,9 @@ CoindFamilyParam::count(const Nat &n, const Nat &acc) {
   }
 }
 
-std::optional<Nat>
-CoindFamilyParam::run(const Nat &fuel,
-                      CoindFamilyParam::tree<CoindFamilyParam::voidE, Nat> t) {
+std::optional<Nat> CoindFamilyParam::run(
+    const Nat &fuel,
+    const CoindFamilyParam::tree<CoindFamilyParam::voidE, Nat> &t) {
   if (std::holds_alternative<typename Nat::O>(fuel.v())) {
     return std::optional<Nat>();
   } else {

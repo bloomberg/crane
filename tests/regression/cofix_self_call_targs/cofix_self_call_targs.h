@@ -247,7 +247,7 @@ struct CofixSelfCallTargs {
   };
 
   template <typename T1, typename T2>
-  static treeF<T1, T2, tree<T1, T2>> observe(tree<T1, T2> t) {
+  static treeF<T1, T2, tree<T1, T2>> observe(const tree<T1, T2> &t) {
     const auto &[observe1] = std::get<typename tree<T1, T2>::Go>(t.v());
     return observe1;
   }
@@ -256,13 +256,13 @@ struct CofixSelfCallTargs {
     noE() = delete;
   };
 
-  static std::optional<Nat> run(const Nat &fuel, tree<noE, Nat> t);
+  static std::optional<Nat> run(const Nat &fuel, const tree<noE, Nat> &t);
 
   template <typename T1, typename T2, typename T3>
   static tree<T1, T3>
-  subst(std::type_identity_t<crane::fn<tree<T1, T3>(T2)>> k,
-        std::type_identity_t<crane::fn<tree<T1, T3>(tree<T1, T2>)>> kv,
-        tree<T1, T2> u) {
+  subst(const std::type_identity_t<crane::fn<tree<T1, T3>(T2)>> &k,
+        const std::type_identity_t<crane::fn<tree<T1, T3>(tree<T1, T2>)>> &kv,
+        const tree<T1, T2> &u) {
     auto &&_sv = observe<T1, T2>(u);
     if (std::holds_alternative<typename treeF<T1, T2, tree<T1, T2>>::RetF>(
             _sv.v())) {

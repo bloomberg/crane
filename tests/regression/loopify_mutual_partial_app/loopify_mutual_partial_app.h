@@ -626,8 +626,8 @@ struct LoopifyMutualPartialApp {
   }
 
   template <typename T1, typename T2, typename F1, typename F2, typename F3>
-  static T2 md_rec(const T2 &f, F1 &&f0, F2 &&f1, F3 &&f2, const md<T1> &m) {
-    return md_rect<T1, T2>(f, f0, f1, f2, m);
+  static T2 md_rec(T2 f, F1 &&f0, F2 &&f1, F3 &&f2, const md<T1> &m) {
+    return md_rect<T1, T2>(std::move(f), f0, f1, f2, m);
   }
 
   template <typename T1, typename T2, typename F1>

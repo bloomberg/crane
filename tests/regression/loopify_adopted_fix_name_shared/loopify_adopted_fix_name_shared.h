@@ -352,7 +352,7 @@ struct LoopifyAdoptedFixNameShared {
     return tree_rect<T1>(f0, f1, f2, t);
   }
 
-  static std::optional<Nat> f(const tree &t, const Nat &i);
+  static std::optional<Nat> f(const tree &t, Nat i);
   /// The struct loop skips Leaf 1 (4 >= 3), enters the array at 1, and
   /// the array loop reaches Leaf 7 at 1.
   static inline const std::optional<Nat> r1 =

@@ -31,8 +31,8 @@ struct LoopifyListWindows {
                                            const List<uint64_t> &l);
   static List<List<uint64_t>> windows(uint64_t n, const List<uint64_t> &l);
   static List<List<uint64_t>> chunks_fuel(uint64_t fuel, uint64_t n,
-                                          const List<uint64_t> &l);
-  static List<List<uint64_t>> chunks(uint64_t n, const List<uint64_t> &l);
+                                          List<uint64_t> l);
+  static List<List<uint64_t>> chunks(uint64_t n, List<uint64_t> l);
   static List<List<uint64_t>> group_fuel(uint64_t fuel,
                                          const List<uint64_t> &l);
   static List<List<uint64_t>> group(const List<uint64_t> &l);

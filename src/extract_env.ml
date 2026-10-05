@@ -1427,10 +1427,16 @@ let report_body_generations fn =
     same bodies, and a body a rewrite introduces meets Normalize's contract
     like any other. *)
 let optimize_struct to_appear struc =
-  Modutil.optimize_struct to_appear struc
-  |> Ml_dedup.structure
-  |> Ml_specialize.structure
-  |> Normalize.structure
+  let struc =
+    Modutil.optimize_struct to_appear struc
+    |> Ml_dedup.structure
+    |> Ml_specialize.structure
+    |> Normalize.structure
+  in
+  (* With the bodies final, which parameters are owned is settled across
+     calls, before any signature is written. *)
+  Ownership.settle struc;
+  struc
 
 (** Renders an entire ML structure to C++ header and implementation files.
     Performs dry run first for renaming, then generates and formats the output.

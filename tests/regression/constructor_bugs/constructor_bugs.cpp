@@ -6,8 +6,8 @@ ConstructorBugs::step(ConstructorBugs::source_state s) {
 }
 
 std::pair<bool, ConstructorBugs::packed_state>
-ConstructorBugs::bad_branch(const ConstructorBugs::source_state &s1) {
-  ConstructorBugs::source_state s2 = step(s1);
+ConstructorBugs::bad_branch(ConstructorBugs::source_state s1) {
+  ConstructorBugs::source_state s2 = step(std::move(s1));
   if (s2.source_flag == UINT64_C(0)) {
     return std::make_pair(false, packed_state{s2, s2.source_a, s2.source_b});
   } else {
@@ -16,8 +16,8 @@ ConstructorBugs::bad_branch(const ConstructorBugs::source_state &s1) {
 }
 
 std::pair<bool, ConstructorBugs::packed_state>
-ConstructorBugs::bad_direct(const ConstructorBugs::source_state &s1) {
-  ConstructorBugs::source_state s2 = step(s1);
+ConstructorBugs::bad_direct(ConstructorBugs::source_state s1) {
+  ConstructorBugs::source_state s2 = step(std::move(s1));
   return std::make_pair(false, packed_state{s2, s2.source_a, s2.source_b});
 }
 
@@ -37,8 +37,8 @@ ConstructorBugs::bad_complex_step(const ConstructorBugs::source_state &s1) {
 }
 
 std::pair<bool, ConstructorBugs::packed_state>
-ConstructorBugs::bad_nested(const ConstructorBugs::source_state &s1) {
-  ConstructorBugs::source_state s2 = step(s1);
+ConstructorBugs::bad_nested(ConstructorBugs::source_state s1) {
+  ConstructorBugs::source_state s2 = step(std::move(s1));
   ConstructorBugs::source_state s3 = step(std::move(s2));
   return std::make_pair(false, packed_state{s3, s3.source_a, s3.source_b});
 }
@@ -49,8 +49,8 @@ ConstructorBugs::step_list(ConstructorBugs::source_state_list s) {
 }
 
 std::pair<bool, ConstructorBugs::packed_state_list>
-ConstructorBugs::bad_branch_list(const ConstructorBugs::source_state_list &s1) {
-  ConstructorBugs::source_state_list s2 = step_list(s1);
+ConstructorBugs::bad_branch_list(ConstructorBugs::source_state_list s1) {
+  ConstructorBugs::source_state_list s2 = step_list(std::move(s1));
   if (s2.source_flag_list == UINT64_C(0)) {
     return std::make_pair(
         false, packed_state_list{s2, s2.source_a_list, s2.source_b_list});

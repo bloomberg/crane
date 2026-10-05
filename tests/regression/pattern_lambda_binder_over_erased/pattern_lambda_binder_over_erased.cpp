@@ -1,12 +1,12 @@
 #include "pattern_lambda_binder_over_erased.h"
 
-List<crane::obj> TFunctor_list(crane::fn<crane::obj(crane::obj)> x0_,
+List<crane::obj> TFunctor_list(const crane::fn<crane::obj(crane::obj)> &x0_,
                                const List<crane::obj> &x1_) {
-  return x1_.template map<crane::obj>(std::move(x0_));
+  return x1_.template map<crane::obj>(x0_);
 }
 
 Phi<crane::obj> TFunctor_phi(TFunctor<Exp0<crane::obj>> h,
-                             crane::fn<crane::obj(crane::obj)> f,
+                             const crane::fn<crane::obj(crane::obj)> &f,
                              const Phi<crane::obj> &p) {
   const auto &[es0] = p;
   return Phi<crane::obj>::phi0(

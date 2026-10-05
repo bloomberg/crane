@@ -1,10 +1,10 @@
 #include "mrec_handler_branch_types.h"
 
 std::optional<Sum<Nat, Nat>> MrecHandlerBranchTypes::run(
-    const Nat &fuel, Itree<Sum1<MrecHandlerBranchTypes::extE<Nat>,
-                                MrecHandlerBranchTypes::FailE, crane::obj>,
-                           Sum<Nat, Nat>>
-                         t) {
+    const Nat &fuel,
+    const Itree<Sum1<MrecHandlerBranchTypes::extE<Nat>,
+                     MrecHandlerBranchTypes::FailE, crane::obj>,
+                Sum<Nat, Nat>> &t) {
   if (std::holds_alternative<typename Nat::O>(fuel.v())) {
     return std::optional<Sum<Nat, Nat>>();
   } else {

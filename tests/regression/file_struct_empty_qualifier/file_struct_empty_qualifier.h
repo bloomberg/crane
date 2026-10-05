@@ -315,7 +315,8 @@ struct BinNat {
 struct Helpers {
   template <Monad _tcI0, typename T2, typename T3>
   static typename _tcI0::template m<List<T3>> map_monad(
-      std::type_identity_t<crane::fn<typename _tcI0::template m<T3>(T2)>> f,
+      const std::type_identity_t<crane::fn<typename _tcI0::template m<T3>(T2)>>
+          &f,
       const List<T2> &l) {
     if (std::holds_alternative<typename List<T2>::Nil>(l.v())) {
       return Monad0::template ret<_tcI0, List<T3>>(List<T3>::nil());

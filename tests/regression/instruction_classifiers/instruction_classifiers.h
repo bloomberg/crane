@@ -294,15 +294,16 @@ struct InstructionClassifiers {
     template <typename T1, typename F0, typename F1, typename F2, typename F3,
               typename F4, typename F5, typename F6>
     T1 instr_acc_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
-                     F6 &&f5, const T1 &f6, const T1 &f7, const T1 &f8,
-                     const T1 &f9, const T1 &f10, const T1 &f11, const T1 &f12,
-                     const T1 &f13, const T1 &f14, const T1 &f15, const T1 &f16,
-                     const T1 &f17, const T1 &f18, const T1 &f19, const T1 &f20,
-                     const T1 &f21, const T1 &f22, const T1 &f23,
-                     const T1 &f24) const {
+                     F6 &&f5, T1 f6, T1 f7, T1 f8, T1 f9, T1 f10, T1 f11,
+                     T1 f12, T1 f13, T1 f14, T1 f15, T1 f16, T1 f17, T1 f18,
+                     T1 f19, T1 f20, T1 f21, T1 f22, T1 f23, T1 f24) const {
       return this->template instr_acc_rect<T1>(
-          f, f0, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14,
-          f15, f16, f17, f18, f19, f20, f21, f22, f23, f24);
+          f, f0, f1, f2, f3, f4, f5, std::move(f6), std::move(f7),
+          std::move(f8), std::move(f9), std::move(f10), std::move(f11),
+          std::move(f12), std::move(f13), std::move(f14), std::move(f15),
+          std::move(f16), std::move(f17), std::move(f18), std::move(f19),
+          std::move(f20), std::move(f21), std::move(f22), std::move(f23),
+          std::move(f24));
     }
 
     template <typename T1, typename F0, typename F1, typename F2, typename F3,
@@ -477,9 +478,11 @@ struct InstructionClassifiers {
     }
 
     template <typename T1, typename F7>
-    T1 instr_ram_rec(const T1 &f, const T1 &f0, const T1 &f1, const T1 &f2,
-                     const T1 &f3, const T1 &f4, const T1 &f5, F7 &&f6) const {
-      return this->template instr_ram_rect<T1>(f, f0, f1, f2, f3, f4, f5, f6);
+    T1 instr_ram_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5,
+                     F7 &&f6) const {
+      return this->template instr_ram_rect<T1>(
+          std::move(f), std::move(f0), std::move(f1), std::move(f2),
+          std::move(f3), std::move(f4), std::move(f5), f6);
     }
 
     template <typename T1, typename F7>
@@ -615,9 +618,10 @@ struct InstructionClassifiers {
 
     template <typename T1, typename F0, typename F1, typename F2, typename F3,
               typename F4, typename F6>
-    T1 instr_regs_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, const T1 &f4,
+    T1 instr_regs_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, T1 f4,
                       F6 &&f5) const {
-      return this->template instr_regs_rect<T1>(f, f0, f1, f2, f3, f4, f5);
+      return this->template instr_regs_rect<T1>(f, f0, f1, f2, f3,
+                                                std::move(f4), f5);
     }
 
     template <typename T1, typename F0, typename F1, typename F2, typename F3,
@@ -773,8 +777,9 @@ struct InstructionClassifiers {
     template <typename T1, typename F0, typename F1, typename F2, typename F3,
               typename F4, typename F5, typename F6>
     T1 instr_jump_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
-                      F6 &&f5, const T1 &f6) const {
-      return this->template instr_jump_rect<T1>(f, f0, f1, f2, f3, f4, f5, f6);
+                      F6 &&f5, T1 f6) const {
+      return this->template instr_jump_rect<T1>(f, f0, f1, f2, f3, f4, f5,
+                                                std::move(f6));
     }
 
     template <typename T1, typename F0, typename F1, typename F2, typename F3,

@@ -105,7 +105,7 @@ public:
 /// and overflows the stack.
 struct CpsContinuationCopy {
   static uint64_t sumk(const List<uint64_t> &l,
-                       crane::fn<uint64_t(uint64_t)> k) {
+                       const crane::fn<uint64_t(uint64_t)> &k) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
       return k(UINT64_C(0));
     } else {

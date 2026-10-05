@@ -286,12 +286,12 @@ List<uint64_t> LoopifyListTransforms::drop(uint64_t n, List<uint64_t> l) {
   }
 }
 
-List<List<uint64_t>>
-LoopifyListTransforms::chunks_of_fuel(uint64_t fuel, uint64_t n,
-                                      const List<uint64_t> &l) {
+List<List<uint64_t>> LoopifyListTransforms::chunks_of_fuel(uint64_t fuel,
+                                                           uint64_t n,
+                                                           List<uint64_t> l) {
   std::optional<List<List<uint64_t>>> _root{};
   std::shared_ptr<List<List<uint64_t>>> *_write = nullptr;
-  List<uint64_t> _loop_l = l;
+  List<uint64_t> _loop_l = std::move(l);
   uint64_t _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
@@ -309,7 +309,8 @@ LoopifyListTransforms::chunks_of_fuel(uint64_t fuel, uint64_t n,
                 : _root.emplace(std::move(_value)));
         break;
       } else {
-        if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l.v())) {
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(
+                _loop_l.v_mut())) {
           auto _value = List<List<uint64_t>>::nil();
           (_write ? *(*_write = std::make_shared<List<List<uint64_t>>>(
                           std::move(_value)))
@@ -335,9 +336,9 @@ LoopifyListTransforms::chunks_of_fuel(uint64_t fuel, uint64_t n,
 }
 
 List<List<uint64_t>> LoopifyListTransforms::chunks_of(uint64_t n,
-                                                      const List<uint64_t> &l) {
+                                                      List<uint64_t> l) {
   uint64_t len = l.length();
-  return chunks_of_fuel(len, n, l);
+  return chunks_of_fuel(len, n, std::move(l));
 }
 
 List<uint64_t> LoopifyListTransforms::rotate_left_fuel(uint64_t fuel,
@@ -373,8 +374,8 @@ List<uint64_t> LoopifyListTransforms::rotate_left_fuel(uint64_t fuel,
 }
 
 List<uint64_t> LoopifyListTransforms::rotate_left(uint64_t n,
-                                                  const List<uint64_t> &l) {
-  return rotate_left_fuel((n + UINT64_C(1)), n, l);
+                                                  List<uint64_t> l) {
+  return rotate_left_fuel((n + UINT64_C(1)), n, std::move(l));
 }
 
 List<uint64_t>

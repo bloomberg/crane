@@ -132,8 +132,8 @@ struct FetchOps {
     }
   }
 
-  static std::pair<uint64_t, uint64_t>
-  fetch_pair(const List<uint64_t> &rom_data, uint64_t addr);
+  static std::pair<uint64_t, uint64_t> fetch_pair(List<uint64_t> rom_data,
+                                                  uint64_t addr);
   static inline const uint64_t fetch_pair_test = []() {
     std::pair<uint64_t, uint64_t> p = fetch_pair(
         List<uint64_t>::cons(
@@ -145,7 +145,7 @@ struct FetchOps {
     return (p.first + p.second);
   }();
   static std::optional<std::pair<uint64_t, uint64_t>>
-  fetch_window(const List<uint64_t> &rom_data, uint64_t addr);
+  fetch_window(List<uint64_t> rom_data, uint64_t addr);
   static inline const uint64_t fetch_window_test = []() -> uint64_t {
     auto _cs = fetch_window(
         List<uint64_t>::cons(

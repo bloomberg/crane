@@ -189,9 +189,8 @@ struct ComprehensivePatterns {
     }
   }
 
-  template <typename T1>
-  static T1 Three_rec(const T1 &f, const T1 &f0, const T1 &f3, Three t) {
-    return Three_rect<T1>(f, f0, f3, t);
+  template <typename T1> static T1 Three_rec(T1 f, T1 f0, T1 f3, Three t) {
+    return Three_rect<T1>(std::move(f), std::move(f0), std::move(f3), t);
   }
 
   static std::pair<S, uint64_t> match_three(Three t, const S &s);
@@ -404,9 +403,9 @@ struct ComprehensivePatterns {
   };
 
   static RSeq side_effect(RSeq r);
-  static uint64_t after_side_effect(const RSeq &r);
-  static uint64_t two_side_effects(const RSeq &r);
-  static uint64_t side_effect_in_branch(bool b, const RSeq &r);
+  static uint64_t after_side_effect(RSeq r);
+  static uint64_t two_side_effects(RSeq r);
+  static uint64_t side_effect_in_branch(bool b, RSeq r);
 
   struct StateStmt {
     uint64_t stmt_value;
@@ -786,9 +785,8 @@ struct ComprehensivePatterns {
       }
     }
 
-    template <typename T1, typename F1>
-    T1 Container_rec(const T1 &f, F1 &&f0) const {
-      return this->template Container_rect<T1>(f, f0);
+    template <typename T1, typename F1> T1 Container_rec(T1 f, F1 &&f0) const {
+      return this->template Container_rect<T1>(std::move(f), f0);
     }
 
     template <typename T1, typename F1>
@@ -809,9 +807,9 @@ struct ComprehensivePatterns {
   };
 
   static StateOP identity(StateOP s);
-  static uint64_t extract_via_match(const StateOP &s);
-  static StateOP consume_state(const StateOP &s);
-  static uint64_t match_consumed(const StateOP &s);
+  static uint64_t extract_via_match(StateOP s);
+  static StateOP consume_state(StateOP s);
+  static uint64_t match_consumed(StateOP s);
   static std::pair<StateOP, uint64_t> force_owned(const StateOP &s);
   static std::pair<std::pair<StateOP, StateOP>, uint64_t>
   pair_then_match(const StateOP &s);

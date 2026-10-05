@@ -69,11 +69,12 @@ struct LargeEnum {
   }
 
   template <typename T1>
-  static T1 color_rec(const T1 &f, const T1 &f0, const T1 &f1, const T1 &f2,
-                      const T1 &f3, const T1 &f4, const T1 &f5, const T1 &f6,
-                      const T1 &f7, const T1 &f8, const T1 &f9, const T1 &f10,
-                      Color c) {
-    return color_rect<T1>(f, f0, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, c);
+  static T1 color_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5, T1 f6,
+                      T1 f7, T1 f8, T1 f9, T1 f10, Color c) {
+    return color_rect<T1>(std::move(f), std::move(f0), std::move(f1),
+                          std::move(f2), std::move(f3), std::move(f4),
+                          std::move(f5), std::move(f6), std::move(f7),
+                          std::move(f8), std::move(f9), std::move(f10), c);
   }
 
   static uint64_t color_to_nat(Color c);
@@ -212,11 +213,12 @@ struct LargeEnum {
   }
 
   template <typename T1, typename F0, typename F10>
-  static T1 tok_rec(F0 &&f, const T1 &f0, const T1 &f1, const T1 &f2,
-                    const T1 &f3, const T1 &f4, const T1 &f5, const T1 &f6,
-                    const T1 &f7, const T1 &f8, F10 &&f9, const T1 &f10,
-                    const tok &t) {
-    return tok_rect<T1>(f, f0, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, t);
+  static T1 tok_rec(F0 &&f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5, T1 f6,
+                    T1 f7, T1 f8, F10 &&f9, T1 f10, const tok &t) {
+    return tok_rect<T1>(f, std::move(f0), std::move(f1), std::move(f2),
+                        std::move(f3), std::move(f4), std::move(f5),
+                        std::move(f6), std::move(f7), std::move(f8), f9,
+                        std::move(f10), t);
   }
 
   static uint64_t tok_to_nat(const tok &t);

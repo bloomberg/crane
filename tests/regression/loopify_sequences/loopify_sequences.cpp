@@ -165,9 +165,8 @@ List<uint64_t> LoopifySequences::rotate_left_fuel(uint64_t fuel, uint64_t n,
   }
 }
 
-List<uint64_t> LoopifySequences::rotate_left(uint64_t n,
-                                             const List<uint64_t> &l) {
-  return rotate_left_fuel(UINT64_C(100), n, l);
+List<uint64_t> LoopifySequences::rotate_left(uint64_t n, List<uint64_t> l) {
+  return rotate_left_fuel(UINT64_C(100), n, std::move(l));
 }
 
 /// sum_acc acc l sum with accumulator.
@@ -273,8 +272,8 @@ List<uint64_t> LoopifySequences::repeat_with_sep(
 List<uint64_t> LoopifySequences::string_chain_fuel(
     uint64_t fuel, const List<uint64_t> &s, uint64_t n,
     const List<uint64_t> &sep,
-    const List<uint64_t> &end_marker) { /// CraneEnter: captures varying
-                                        /// parameters for each recursive call.
+    List<uint64_t> end_marker) { /// CraneEnter: captures varying parameters for
+                                 /// each recursive call.
 
   struct CraneEnter {
     uint64_t n;
@@ -316,11 +315,11 @@ List<uint64_t> LoopifySequences::string_chain_fuel(
   return _result;
 }
 
-List<uint64_t>
-LoopifySequences::string_chain(const List<uint64_t> &s, uint64_t n,
-                               const List<uint64_t> &sep,
-                               const List<uint64_t> &end_marker) {
-  return string_chain_fuel(UINT64_C(1000), s, n, sep, end_marker);
+List<uint64_t> LoopifySequences::string_chain(const List<uint64_t> &s,
+                                              uint64_t n,
+                                              const List<uint64_t> &sep,
+                                              List<uint64_t> end_marker) {
+  return string_chain_fuel(UINT64_C(1000), s, n, sep, std::move(end_marker));
 }
 
 /// split_by_sign l base pos neg splits list based on base threshold.

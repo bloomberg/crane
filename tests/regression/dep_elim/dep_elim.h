@@ -402,8 +402,8 @@ struct DepElim {
     }
 
     template <typename T1, typename F1>
-    T1 vec_rec(const T1 &f, F1 &&f0, uint64_t _x) const {
-      return this->template vec_rect<T1>(f, f0, _x);
+    T1 vec_rec(T1 f, F1 &&f0, uint64_t _x) const {
+      return this->template vec_rect<T1>(std::move(f), f0, _x);
     }
 
     template <typename T1, typename F1>
@@ -499,8 +499,8 @@ struct DepElim {
     }
 
     template <typename T1, typename F0>
-    T1 avail_rec(F0 &&f, const T1 &f0, bool _x) const {
-      return this->template avail_rect<T1>(f, f0, _x);
+    T1 avail_rec(F0 &&f, T1 f0, bool _x) const {
+      return this->template avail_rect<T1>(f, std::move(f0), _x);
     }
 
     template <typename T1, typename F0>

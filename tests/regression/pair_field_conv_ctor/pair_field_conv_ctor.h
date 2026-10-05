@@ -339,7 +339,7 @@ public:
   const variant_t &v() const { return v_; }
 };
 
-Ann<crane::obj> TFunctor_ann(crane::fn<crane::obj(crane::obj)> f,
+Ann<crane::obj> TFunctor_ann(const crane::fn<crane::obj(crane::obj)> &f,
                              const Ann<crane::obj> &a);
 
 Ann<Dt> run(const Ann<Nat> &a);

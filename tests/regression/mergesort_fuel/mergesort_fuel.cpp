@@ -72,7 +72,7 @@ List<uint64_t> MergesortFuel::msort_go(uint64_t fuel, List<uint64_t> l) {
 }
 
 /// * Top-level sort and correctness
-List<uint64_t> MergesortFuel::msort(const List<uint64_t> &l) {
+List<uint64_t> MergesortFuel::msort(List<uint64_t> l) {
   return msort_go(l.length(), l);
 }
 

@@ -114,8 +114,8 @@ struct ConstrainedPoly {
   }
 
   template <typename T1, typename T2, typename F0>
-  static T2 UOption_rec(F0 &&f, const T2 &f0, const UOption<T1> &u) {
-    return UOption_rect<T1, T2>(f, f0, u);
+  static T2 UOption_rec(F0 &&f, T2 f0, const UOption<T1> &u) {
+    return UOption_rect<T1, T2>(f, std::move(f0), u);
   }
 
   template <typename T1, typename T2, typename F0>

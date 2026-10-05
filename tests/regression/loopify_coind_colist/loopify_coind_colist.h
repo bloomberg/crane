@@ -174,9 +174,9 @@ struct LoopifyCoindColist {
 
   template <typename T1, typename T2>
   static colist<T2>
-  comap(std::type_identity_t<crane::fn<T2(T1)>> f,
-        colist<T1> l) { /// CraneEnter: captures varying parameters for each
-                        /// recursive call.
+  comap(const std::type_identity_t<crane::fn<T2(T1)>> &f,
+        const colist<T1> &l) { /// CraneEnter: captures varying parameters for
+                               /// each recursive call.
 
     struct CraneEnter {
       colist<T1> l;
@@ -185,13 +185,13 @@ struct LoopifyCoindColist {
     using CraneFrame = std::variant<CraneEnter>;
     colist<T2> _result{};
     crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{std::move(l)});
+    _stack.emplace_back(CraneEnter{l});
     /// Loopified comap: CraneEnter.
     while (!_stack.empty()) {
       CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
       auto _f = std::move(std::get<CraneEnter>(_frame));
-      colist<T1> l = std::move(_f.l);
+      const colist<T1> &l = _f.l;
       if (std::holds_alternative<typename colist<T1>::Conil>(l.v())) {
         _result = colist<T2>::conil();
       } else {
@@ -206,8 +206,9 @@ struct LoopifyCoindColist {
 
   template <typename T1>
   static colist<T1>
-  cotake(uint64_t n, colist<T1> l) { /// CraneEnter: captures varying parameters
-                                     /// for each recursive call.
+  cotake(uint64_t n,
+         const colist<T1> &l) { /// CraneEnter: captures varying parameters for
+                                /// each recursive call.
 
     struct CraneEnter {
       colist<T1> l;
@@ -217,13 +218,13 @@ struct LoopifyCoindColist {
     using CraneFrame = std::variant<CraneEnter>;
     colist<T1> _result{};
     crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{std::move(l), n});
+    _stack.emplace_back(CraneEnter{l, n});
     /// Loopified cotake: CraneEnter.
     while (!_stack.empty()) {
       CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
       auto _f = std::move(std::get<CraneEnter>(_frame));
-      colist<T1> l = std::move(_f.l);
+      const colist<T1> &l = _f.l;
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = colist<T1>::conil();
@@ -274,7 +275,8 @@ struct LoopifyCoindColist {
     return _result;
   }
 
-  template <typename T1> static List<T1> to_list(uint64_t fuel, colist<T1> l) {
+  template <typename T1>
+  static List<T1> to_list(uint64_t fuel, const colist<T1> &l) {
     std::optional<List<T1>> _root{};
     std::shared_ptr<List<T1>> *_write = nullptr;
     colist<T1> _loop_l = l;

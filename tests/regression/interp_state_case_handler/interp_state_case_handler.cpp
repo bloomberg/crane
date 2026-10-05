@@ -2,7 +2,7 @@
 
 std::optional<std::pair<Nat, Nat>> InterpStateCaseHandler::run(
     const Nat &fuel,
-    Itree<InterpStateCaseHandler::noE, std::pair<Nat, Nat>> t) {
+    const Itree<InterpStateCaseHandler::noE, std::pair<Nat, Nat>> &t) {
   if (std::holds_alternative<typename Nat::O>(fuel.v())) {
     return std::optional<std::pair<Nat, Nat>>();
   } else {

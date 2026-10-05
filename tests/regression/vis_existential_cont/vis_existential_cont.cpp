@@ -1,7 +1,8 @@
 #include "vis_existential_cont.h"
 
 std::optional<Nat> VisExistentialCont::answer(
-    const Nat &, VisExistentialCont::tree<VisExistentialCont::askE, Nat> t0) {
+    const Nat &,
+    const VisExistentialCont::tree<VisExistentialCont::askE, Nat> &t0) {
   auto &&_sv = observe<VisExistentialCont::askE, Nat>(t0);
   if (std::holds_alternative<typename VisExistentialCont::treeF<
           VisExistentialCont::askE, Nat,

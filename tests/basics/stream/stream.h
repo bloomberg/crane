@@ -206,13 +206,14 @@ public:
 
   const crane::lazy<variant_t> &lazy_cell() const { return lazy_v_; }
 
-  Stream<A> interleave(Stream<A> sb) const {
+  Stream<A> interleave(const Stream<A> &sb) const {
     const auto &[a0, a1] = std::get<typename Stream<A>::Scons>(this->v());
     return Stream<A>::lazy_(
         [=]() -> Stream<A> { return Stream<A>::scons(a0, sb.interleave(a1)); });
   }
 
-  template <typename T1> static List<T1> take(const Nat &n, Stream<T1> s) {
+  template <typename T1>
+  static List<T1> take(const Nat &n, const Stream<T1> &s) {
     if (std::holds_alternative<typename Nat::O>(n.v())) {
       return List<T1>::nil();
     } else {

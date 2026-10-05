@@ -218,14 +218,13 @@ struct LoopifySorting {
 
   static List<uint64_t> merge_fuel(uint64_t fuel, List<uint64_t> l1,
                                    List<uint64_t> l2);
-  static List<uint64_t> merge(const List<uint64_t> &l1,
-                              const List<uint64_t> &l2);
+  static List<uint64_t> merge(List<uint64_t> l1, List<uint64_t> l2);
   static List<uint64_t> merge_sort_fuel(uint64_t fuel, List<uint64_t> l);
-  static List<uint64_t> merge_sort(const List<uint64_t> &l);
+  static List<uint64_t> merge_sort(List<uint64_t> l);
   static std::pair<List<uint64_t>, List<uint64_t>>
   partition(uint64_t pivot, const List<uint64_t> &l);
   static List<uint64_t> quicksort_fuel(uint64_t fuel, List<uint64_t> l);
-  static List<uint64_t> quicksort(const List<uint64_t> &l);
+  static List<uint64_t> quicksort(List<uint64_t> l);
   static bool is_sorted_aux(uint64_t prev, const List<uint64_t> &l);
   static bool is_sorted(const List<uint64_t> &l);
 
@@ -298,8 +297,8 @@ struct LoopifySorting {
   }
 
   template <typename F0>
-  static List<uint64_t> merge_by(F0 &&cmp, const List<uint64_t> &l1,
-                                 const List<uint64_t> &l2) {
+  static List<uint64_t> merge_by(F0 &&cmp, List<uint64_t> l1,
+                                 List<uint64_t> l2) {
     return merge_by_fuel((len_impl<uint64_t>(l1) + len_impl<uint64_t>(l2)), cmp,
                          l1, l2);
   }

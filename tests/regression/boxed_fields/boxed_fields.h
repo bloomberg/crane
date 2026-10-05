@@ -407,9 +407,8 @@ struct BoxedFields {
       return _result;
     }
 
-    template <typename T1, typename F1>
-    T1 scene_rec(const T1 &f, F1 &&f0) const {
-      return this->template scene_rect<T1>(f, f0);
+    template <typename T1, typename F1> T1 scene_rec(T1 f, F1 &&f0) const {
+      return this->template scene_rect<T1>(std::move(f), f0);
     }
 
     template <typename T1, typename F1> T1 scene_rect(T1 f, F1 &&f0) const {

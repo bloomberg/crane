@@ -1,12 +1,12 @@
 #include "monad_instance_missing.h"
 
-EOU<Nat> double0(const Nat &n) {
+EOU<Nat> double0(Nat n) {
   return Monad0::template ret<EOU_monad, Nat>(n.add(n));
 }
 
-EOU<Nat> MonadInstanceMissing::use(const Nat &n) {
+EOU<Nat> MonadInstanceMissing::use(Nat n) {
   return Monad0::template bind<EOU_monad, Nat, Nat>(
-      double0(n), [](const Nat &x) {
+      double0(std::move(n)), [](const Nat &x) {
         return Monad0::template ret<EOU_monad, Nat>(Nat::s(x));
       });
 }

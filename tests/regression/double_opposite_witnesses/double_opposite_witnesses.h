@@ -90,9 +90,8 @@ struct DoubleOppositeWitnessesCase {
   }
 
   template <typename T1, typename T2>
-  static T2 Path_rec(const T1 &_x, const T2 &f, const T1 &_x0,
-                     const Path<T1> &_x1) {
-    return Path_rect<T1, T2>(_x, f, _x0, _x1);
+  static T2 Path_rec(const T1 &_x, T2 f, const T1 &_x0, const Path<T1> &_x1) {
+    return Path_rect<T1, T2>(_x, std::move(f), _x0, _x1);
   }
 
   template <typename T1>

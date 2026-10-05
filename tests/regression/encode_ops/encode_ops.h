@@ -272,11 +272,11 @@ struct EncodeOps {
     }
 
     template <typename T1, typename F3, typename F4, typename F5>
-    T1 instruction1_rec(const T1 &f, const T1 &f0, const T1 &f1, F3 &&f2,
-                        F4 &&f3, F5 &&f4, const T1 &f5, const T1 &f6,
-                        const T1 &f7, const T1 &f8, const T1 &f9) const {
-      return this->template instruction1_rect<T1>(f, f0, f1, f2, f3, f4, f5, f6,
-                                                  f7, f8, f9);
+    T1 instruction1_rec(T1 f, T1 f0, T1 f1, F3 &&f2, F4 &&f3, F5 &&f4, T1 f5,
+                        T1 f6, T1 f7, T1 f8, T1 f9) const {
+      return this->template instruction1_rect<T1>(
+          std::move(f), std::move(f0), std::move(f1), f2, f3, f4, std::move(f5),
+          std::move(f6), std::move(f7), std::move(f8), std::move(f9));
     }
 
     template <typename T1, typename F3, typename F4, typename F5>
@@ -382,8 +382,8 @@ struct EncodeOps {
     }
 
     template <typename T1, typename F1>
-    T1 instruction2_rec(const T1 &f, F1 &&f0) const {
-      return this->template instruction2_rect<T1>(f, f0);
+    T1 instruction2_rec(T1 f, F1 &&f0) const {
+      return this->template instruction2_rect<T1>(std::move(f), f0);
     }
 
     template <typename T1, typename F1>
@@ -453,8 +453,8 @@ struct EncodeOps {
     }
 
     template <typename T1, typename F1>
-    T1 instruction3_rec(const T1 &f, F1 &&f0) const {
-      return this->template instruction3_rect<T1>(f, f0);
+    T1 instruction3_rec(T1 f, F1 &&f0) const {
+      return this->template instruction3_rect<T1>(std::move(f), f0);
     }
 
     template <typename T1, typename F1>

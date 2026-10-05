@@ -53,8 +53,8 @@ struct IifeNameClash {
   }
 
   template <typename T1, typename F0>
-  static T1 wrapper_rec(F0 &&f, const T1 &f0, const wrapper &w) {
-    return wrapper_rect<T1>(f, f0, w);
+  static T1 wrapper_rec(F0 &&f, T1 f0, const wrapper &w) {
+    return wrapper_rect<T1>(f, std::move(f0), w);
   }
 
   static uint64_t double_get(const wrapper &w1, const wrapper &w2);

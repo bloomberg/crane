@@ -185,9 +185,10 @@ struct PolygonWindingAreaTraceCase {
   using Polygon = List<Point>;
 
   template <typename T1>
-  static T1 nth_cyclic(const T1 &default0, const List<T1> &l, uint64_t i) {
+  static T1 nth_cyclic(T1 default0, const List<T1> &l, uint64_t i) {
     auto &&_once1 = l.length();
-    return ListDef::template nth<T1>((_once1 ? i % _once1 : i), l, default0);
+    return ListDef::template nth<T1>((_once1 ? i % _once1 : i), l,
+                                     std::move(default0));
   }
 
   static Real lon_diff(Real lon1, Real lon2);

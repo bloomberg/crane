@@ -11,10 +11,9 @@ Case_sum1_Handler(Handler<crane::obj, crane::obj> x,
 
 std::optional<Nat> InterpParamsFamily::run(
     const Nat &fuel,
-    Itree<Sum1<InterpParamsFamily::putE<InterpParamsFamily::ptr>,
-               InterpParamsFamily::noE, crane::obj>,
-          Nat>
-        t) {
+    const Itree<Sum1<InterpParamsFamily::putE<InterpParamsFamily::ptr>,
+                     InterpParamsFamily::noE, crane::obj>,
+                Nat> &t) {
   if (std::holds_alternative<typename Nat::O>(fuel.v())) {
     return std::optional<Nat>();
   } else {

@@ -32,33 +32,33 @@ TailrecReorderProbe::dual_accum(
 /// Tail-recursive function where the recursive argument is a COMPLEX
 /// expression involving multiple pattern variables.
 TailrecReorderProbe::mylist<uint64_t>
-TailrecReorderProbe::weave(const TailrecReorderProbe::mylist<uint64_t> &l1,
-                           const TailrecReorderProbe::mylist<uint64_t> &l2,
+TailrecReorderProbe::weave(TailrecReorderProbe::mylist<uint64_t> l1,
+                           TailrecReorderProbe::mylist<uint64_t> l2,
                            const TailrecReorderProbe::mylist<uint64_t> &acc) {
   TailrecReorderProbe::mylist<uint64_t> _loop_acc = acc;
-  const TailrecReorderProbe::mylist<uint64_t> *_loop_l2 = &l2;
-  const TailrecReorderProbe::mylist<uint64_t> *_loop_l1 = &l1;
+  TailrecReorderProbe::mylist<uint64_t> _loop_l2 = std::move(l2);
+  TailrecReorderProbe::mylist<uint64_t> _loop_l1 = std::move(l1);
   while (true) {
     if (std::holds_alternative<
             typename TailrecReorderProbe::mylist<uint64_t>::Mynil>(
-            _loop_l1->v())) {
-      return my_rev_append<uint64_t>(_loop_acc, *_loop_l2);
+            _loop_l1.v_mut())) {
+      return my_rev_append<uint64_t>(_loop_acc, std::move(_loop_l2));
     } else {
-      const auto &[a0, a1] =
+      auto &[a0, a1] =
           std::get<typename TailrecReorderProbe::mylist<uint64_t>::Mycons>(
-              _loop_l1->v());
+              _loop_l1.v_mut());
       if (std::holds_alternative<
               typename TailrecReorderProbe::mylist<uint64_t>::Mynil>(
-              _loop_l2->v())) {
-        return my_rev_append<uint64_t>(_loop_acc, *_loop_l1);
+              _loop_l2.v_mut())) {
+        return my_rev_append<uint64_t>(_loop_acc, _loop_l1);
       } else {
-        const auto &[a00, a10] =
+        auto &[a00, a10] =
             std::get<typename TailrecReorderProbe::mylist<uint64_t>::Mycons>(
-                _loop_l2->v());
+                _loop_l2.v_mut());
         _loop_acc = mylist<uint64_t>::mycons(
-            a00, mylist<uint64_t>::mycons(a0, std::move(_loop_acc)));
-        _loop_l2 = crane_raw(a10);
-        _loop_l1 = crane_raw(a1);
+            std::move(a00), mylist<uint64_t>::mycons(a0, std::move(_loop_acc)));
+        _loop_l2 = TailrecReorderProbe::mylist<uint64_t>(*a10);
+        _loop_l1 = TailrecReorderProbe::mylist<uint64_t>(*a1);
       }
     }
   }

@@ -732,9 +732,8 @@ struct LoopifyTrees {
       return _result;
     }
 
-    template <typename T1, typename F1>
-    T1 tree_rec(const T1 &f, F1 &&f0) const {
-      return this->template tree_rect<T1>(f, f0);
+    template <typename T1, typename F1> T1 tree_rec(T1 f, F1 &&f0) const {
+      return this->template tree_rect<T1>(std::move(f), f0);
     }
 
     template <typename T1, typename F1> T1 tree_rect(T1 f, F1 &&f0) const {
@@ -1047,9 +1046,8 @@ struct LoopifyTrees {
       return _result;
     }
 
-    template <typename T1, typename F1>
-    T1 ternary_rec(const T1 &f, F1 &&f0) const {
-      return this->template ternary_rect<T1>(f, f0);
+    template <typename T1, typename F1> T1 ternary_rec(T1 f, F1 &&f0) const {
+      return this->template ternary_rect<T1>(std::move(f), f0);
     }
 
     template <typename T1, typename F1> T1 ternary_rect(T1 f, F1 &&f0) const {

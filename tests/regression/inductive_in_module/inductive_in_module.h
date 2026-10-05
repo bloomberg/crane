@@ -30,9 +30,8 @@ struct InductiveInModule {
       }
     }
 
-    template <typename T1>
-    static T1 color_rec(const T1 &f, const T1 &f0, const T1 &f1, Color c) {
-      return color_rect<T1>(f, f0, f1, c);
+    template <typename T1> static T1 color_rec(T1 f, T1 f0, T1 f1, Color c) {
+      return color_rect<T1>(std::move(f), std::move(f0), std::move(f1), c);
     }
 
     static constexpr Color default_color = Color::RED;
@@ -110,8 +109,8 @@ struct InductiveInModule {
       }
 
       template <typename T1, typename T2, typename F1>
-      static T2 option_rec(const T2 &f, F1 &&f0, const option<T1> &o) {
-        return option_rect<T1, T2>(f, f0, o);
+      static T2 option_rec(T2 f, F1 &&f0, const option<T1> &o) {
+        return option_rect<T1, T2>(std::move(f), f0, o);
       }
 
       template <typename T1>

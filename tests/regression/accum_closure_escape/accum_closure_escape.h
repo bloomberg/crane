@@ -131,9 +131,8 @@ struct AccumClosureEscape {
       return std::move(*_root);
     }
 
-    template <typename T1, typename F1>
-    T1 mylist_rec(const T1 &f, F1 &&f0) const {
-      return this->template mylist_rect<T1>(f, f0);
+    template <typename T1, typename F1> T1 mylist_rec(T1 f, F1 &&f0) const {
+      return this->template mylist_rect<T1>(std::move(f), f0);
     }
 
     template <typename T1, typename F1> T1 mylist_rect(T1 f, F1 &&f0) const {
@@ -372,9 +371,8 @@ struct AccumClosureEscape {
       return _result;
     }
 
-    template <typename T1, typename F1>
-    T1 tree_rec(const T1 &f, F1 &&f0) const {
-      return this->template tree_rect<T1>(f, f0);
+    template <typename T1, typename F1> T1 tree_rec(T1 f, F1 &&f0) const {
+      return this->template tree_rect<T1>(std::move(f), f0);
     }
 
     template <typename T1, typename F1> T1 tree_rect(T1 f, F1 &&f0) const {
@@ -484,7 +482,7 @@ struct AccumClosureEscape {
   /// COMPOSE CLOSURES: Each step builds a composed function.
   /// This creates closures that capture OTHER closures.
   static uint64_t compose_from_list(const mylist<uint64_t> &l,
-                                    crane::fn<uint64_t(uint64_t)> acc,
+                                    const crane::fn<uint64_t(uint64_t)> &acc,
                                     uint64_t x0_) {
     if (std::holds_alternative<typename mylist<uint64_t>::Mynil>(l.v())) {
       return acc(x0_);

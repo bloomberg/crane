@@ -132,8 +132,9 @@ struct TfunctorOptionInstance {
     }
   };
 
-  static box<crane::obj> TFunctor_box(crane::fn<crane::obj(crane::obj)> f,
-                                      const box<crane::obj> &b);
+  static box<crane::obj>
+  TFunctor_box(const crane::fn<crane::obj(crane::obj)> &f,
+               const box<crane::obj> &b);
   static inline const std::optional<box<Nat>> o =
       tfmap<std::optional<box<crane::obj>>, Nat, Nat>(
           []() {

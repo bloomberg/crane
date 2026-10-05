@@ -237,8 +237,9 @@ struct TfunctorAliasOfApplied {
         tFunctor(crane_erase_fn(f), crane_convert<T1>(std::move(x))));
   }
 
-  static List<crane::obj> TFunctor_list(crane::fn<crane::obj(crane::obj)> x0_,
-                                        const List<crane::obj> &x1_);
+  static List<crane::obj>
+  TFunctor_list(const crane::fn<crane::obj(crane::obj)> &x0_,
+                const List<crane::obj> &x1_);
 
   template <typename T1, typename F1>
   static List<T1> TFunctor_list_(std::type_identity_t<TFunctor<T1>> h, F1 &&f,
@@ -301,8 +302,9 @@ struct TfunctorAliasOfApplied {
   };
 
   template <typename t> using mcfg = modul<t, cfg<t>>;
-  static cfg<crane::obj> TFunctor_cfg(crane::fn<crane::obj(crane::obj)> f,
-                                      const cfg<crane::obj> &c);
+  static cfg<crane::obj>
+  TFunctor_cfg(const crane::fn<crane::obj(crane::obj)> &f,
+               const cfg<crane::obj> &c);
 
   template <typename T1, typename F1>
   static definition<crane::obj, T1>

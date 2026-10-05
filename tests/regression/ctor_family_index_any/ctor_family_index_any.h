@@ -247,7 +247,7 @@ struct CtorFamilyIndexAny {
   };
 
   template <typename T1, typename T2>
-  static treeF<T1, T2, tree<T1, T2>> observe(tree<T1, T2> t) {
+  static treeF<T1, T2, tree<T1, T2>> observe(const tree<T1, T2> &t) {
     const auto &[observe1] = std::get<typename tree<T1, T2>::Go>(t.v());
     return observe1;
   }
@@ -256,7 +256,7 @@ struct CtorFamilyIndexAny {
     noE() = delete;
   };
 
-  static std::optional<Nat> run(const Nat &fuel, tree<noE, Nat> t);
+  static std::optional<Nat> run(const Nat &fuel, const tree<noE, Nat> &t);
 
   template <typename T1, typename T2> static tree<T1, T2> ret(const T2 &r) {
     return tree<T1, T2>::go(treeF<T1, T2, tree<T1, T2>>::retf(r));

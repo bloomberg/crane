@@ -57,8 +57,8 @@ struct GeneratedVariantFactoryNameClash {
   }
 
   template <typename T1, typename F1>
-  static T1 token_rec(const T1 &f, F1 &&f0, const token &t) {
-    return token_rect<T1>(f, f0, t);
+  static T1 token_rec(T1 f, F1 &&f0, const token &t) {
+    return token_rect<T1>(std::move(f), f0, t);
   }
 
   static bool is_variant(const token &t);

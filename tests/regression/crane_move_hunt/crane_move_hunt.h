@@ -42,7 +42,7 @@ struct CraneMoveHunt {
       return b1;
     }
   }();
-  static box record_function(const box &b0);
+  static box record_function(box b0);
   static inline const state state_constant = []() {
     state s1 = render_state(initial_state);
     state s2 = resolve_state(std::move(s1));

@@ -97,10 +97,10 @@ struct VisitMatchBug {
   }
 
   static Tree consume(Tree t);
-  static uint64_t match_after_consume(const Tree &t);
+  static uint64_t match_after_consume(Tree t);
   static uint64_t match_last_use(const Tree &t);
-  static uint64_t nested_match_consume(const Tree &t);
-  static uint64_t chain_then_match(const Tree &t1);
+  static uint64_t nested_match_consume(Tree t);
+  static uint64_t chain_then_match(Tree t1);
 
   struct State {
     uint64_t value;

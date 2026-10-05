@@ -151,9 +151,8 @@ struct InstructionSequenceExec {
   }
 
   template <typename T1, typename F2>
-  static T1 instruction_rec(const T1 &f, const T1 &f0, F2 &&f1,
-                            const instruction &i) {
-    return instruction_rect<T1>(f, f0, f1, i);
+  static T1 instruction_rec(T1 f, T1 f0, F2 &&f1, const instruction &i) {
+    return instruction_rect<T1>(std::move(f), std::move(f0), f1, i);
   }
 
   static state execute(state s, const instruction &i);

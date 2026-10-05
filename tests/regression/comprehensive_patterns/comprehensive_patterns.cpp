@@ -865,25 +865,26 @@ ComprehensivePatterns::side_effect(ComprehensivePatterns::RSeq r) {
 }
 
 uint64_t
-ComprehensivePatterns::after_side_effect(const ComprehensivePatterns::RSeq &r) {
-  ComprehensivePatterns::RSeq r2 = side_effect(r);
+ComprehensivePatterns::after_side_effect(ComprehensivePatterns::RSeq r) {
+  ComprehensivePatterns::RSeq r2 = side_effect(std::move(r));
   return std::move(r2).seq_val;
 }
 
 uint64_t
-ComprehensivePatterns::two_side_effects(const ComprehensivePatterns::RSeq &r) {
-  ComprehensivePatterns::RSeq r2 = side_effect(r);
+ComprehensivePatterns::two_side_effects(ComprehensivePatterns::RSeq r) {
+  ComprehensivePatterns::RSeq r2 = side_effect(std::move(r));
   ComprehensivePatterns::RSeq r3 = side_effect(std::move(r2));
   return std::move(r3).seq_val;
 }
 
-uint64_t ComprehensivePatterns::side_effect_in_branch(
-    bool b, const ComprehensivePatterns::RSeq &r) {
+uint64_t
+ComprehensivePatterns::side_effect_in_branch(bool b,
+                                             ComprehensivePatterns::RSeq r) {
   ComprehensivePatterns::RSeq r2;
   if (b) {
-    r2 = side_effect(r);
+    r2 = side_effect(std::move(r));
   } else {
-    r2 = r;
+    r2 = std::move(r);
   }
   return std::move(r2).seq_val;
 }
@@ -1217,19 +1218,19 @@ ComprehensivePatterns::identity(ComprehensivePatterns::StateOP s) {
   return s;
 }
 
-uint64_t ComprehensivePatterns::extract_via_match(
-    const ComprehensivePatterns::StateOP &s) {
-  return identity(s).op_value;
+uint64_t
+ComprehensivePatterns::extract_via_match(ComprehensivePatterns::StateOP s) {
+  return identity(std::move(s)).op_value;
 }
 
 ComprehensivePatterns::StateOP
-ComprehensivePatterns::consume_state(const ComprehensivePatterns::StateOP &s) {
-  return identity(s);
+ComprehensivePatterns::consume_state(ComprehensivePatterns::StateOP s) {
+  return identity(std::move(s));
 }
 
 uint64_t
-ComprehensivePatterns::match_consumed(const ComprehensivePatterns::StateOP &s) {
-  return consume_state(s).op_value;
+ComprehensivePatterns::match_consumed(ComprehensivePatterns::StateOP s) {
+  return consume_state(std::move(s)).op_value;
 }
 
 std::pair<ComprehensivePatterns::StateOP, uint64_t>

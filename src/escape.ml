@@ -165,6 +165,23 @@ let is_partial_app head args =
       asks [Of_param]. *)
 type escape_query = Conservative | Of_sub_binding | Of_param
 
+(** The settled ownership of each global's parameters, innermost first, as
+    {!Ownership} computed it -- [None] for a global it has not settled. *)
+let callee_flags : (Names.GlobRef.t -> bool list option) ref = ref (fun _ -> None)
+
+(* Whether [args], applied to the global [g], pass [MLrel k] itself to one of
+   [g]'s owned parameters: the callee keeps it, so a borrowed [k] would be
+   copied there, where an owned one is moved. *)
+let passed_to_owned g k args =
+  match !callee_flags g with
+  | None -> false
+  | Some flags ->
+    let n = List.length flags in
+    let rec direct = function MLrel i -> i = k | MLmagic (_, a) -> direct a | _ -> false in
+    List.exists
+      (fun (j, a) -> j < n && direct a && List.nth flags (n - 1 - j))
+      (List.mapi (fun j a -> (j, a)) args)
+
 let escapes ?(query = Conservative) k t =
   let refined = query <> Conservative in
   let cons_escapes = query <> Of_param in
@@ -185,6 +202,7 @@ let escapes ?(query = Conservative) k t =
         check (k + 1) false false body
       else
         occurs (k + 1) body
+    | MLapp (MLglob (g, _), args) when query = Of_param && passed_to_owned g k args -> true
     | MLapp (head, args) ->
       check k false false head
       || List.exists (check k false (refined)) args

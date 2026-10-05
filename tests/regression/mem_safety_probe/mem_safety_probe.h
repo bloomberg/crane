@@ -185,9 +185,8 @@ struct MemSafetyProbe {
       }
     }
 
-    template <typename T1, typename F1>
-    T1 tree_rec(const T1 &f, F1 &&f0) const {
-      return this->template tree_rect<T1>(f, f0);
+    template <typename T1, typename F1> T1 tree_rec(T1 f, F1 &&f0) const {
+      return this->template tree_rect<T1>(std::move(f), f0);
     }
 
     template <typename T1, typename F1> T1 tree_rect(T1 f, F1 &&f0) const {
@@ -369,9 +368,8 @@ struct MemSafetyProbe {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    template <typename T1, typename F1>
-    T1 mylist_rec(const T1 &f, F1 &&f0) const {
-      return this->template mylist_rect<T1>(f, f0);
+    template <typename T1, typename F1> T1 mylist_rec(T1 f, F1 &&f0) const {
+      return this->template mylist_rect<T1>(std::move(f), f0);
     }
 
     template <typename T1, typename F1> T1 mylist_rect(T1 f, F1 &&f0) const {
@@ -471,9 +469,9 @@ struct MemSafetyProbe {
   /// Each iteration wraps the accumulator in a new closure that captures
   /// a tree value. Tests deep closure chaining with value type captures.
   static uint64_t fold_compose(const mylist<tree> &trees,
-                               crane::fn<uint64_t(uint64_t)> acc,
+                               const crane::fn<uint64_t(uint64_t)> &acc,
                                uint64_t x0_) {
-    crane::fn<uint64_t(uint64_t)> _loop_acc = std::move(acc);
+    crane::fn<uint64_t(uint64_t)> _loop_acc = acc;
     mylist<tree> _loop_trees = trees;
     while (true) {
       if (std::holds_alternative<typename mylist<tree>::Mynil>(

@@ -264,11 +264,10 @@ struct Equations {
 
   template <typename T1, typename T2>
   static T1 gcd_graph_mut(
-      std::type_identity_t<crane::fn<T1(uint64_t)>> f,
-      std::type_identity_t<crane::fn<T1(uint64_t)>> f0,
-      std::type_identity_t<
-          crane::fn<T1(uint64_t, uint64_t, gcd_clause_3_graph, T2)>>
-          f1,
+      const std::type_identity_t<crane::fn<T1(uint64_t)>> &f,
+      const std::type_identity_t<crane::fn<T1(uint64_t)>> &f0,
+      const std::type_identity_t<
+          crane::fn<T1(uint64_t, uint64_t, gcd_clause_3_graph, T2)>> &f1,
       std::type_identity_t<crane::fn<T2(uint64_t, uint64_t, gcd_graph, T1)>> f2,
       std::type_identity_t<crane::fn<T2(uint64_t, uint64_t, gcd_graph, T1)>> f3,
       std::pair<uint64_t, uint64_t> x0_, uint64_t x1_, gcd_graph x2_) {
@@ -348,13 +347,14 @@ struct Equations {
 
   template <typename T1, typename T2>
   static T2 gcd_clause_3_graph_mut(
-      std::type_identity_t<crane::fn<T1(uint64_t)>> f,
-      std::type_identity_t<crane::fn<T1(uint64_t)>> f0,
-      std::type_identity_t<
-          crane::fn<T1(uint64_t, uint64_t, gcd_clause_3_graph, T2)>>
-          f1,
-      std::type_identity_t<crane::fn<T2(uint64_t, uint64_t, gcd_graph, T1)>> f2,
-      std::type_identity_t<crane::fn<T2(uint64_t, uint64_t, gcd_graph, T1)>> f3,
+      const std::type_identity_t<crane::fn<T1(uint64_t)>> &f,
+      const std::type_identity_t<crane::fn<T1(uint64_t)>> &f0,
+      const std::type_identity_t<
+          crane::fn<T1(uint64_t, uint64_t, gcd_clause_3_graph, T2)>> &f1,
+      const std::type_identity_t<
+          crane::fn<T2(uint64_t, uint64_t, gcd_graph, T1)>> &f2,
+      const std::type_identity_t<
+          crane::fn<T2(uint64_t, uint64_t, gcd_graph, T1)>> &f3,
       uint64_t x0_, uint64_t x1_, bool x2_, uint64_t x3_,
       gcd_clause_3_graph x4_) {
     auto f4_impl = [&](auto &_self_f4, auto &_self_f5,
@@ -732,9 +732,8 @@ struct Equations {
   template <typename T1, typename T2>
   static T1 collatz_steps_graph_mut(
       const T1 &f, const T1 &f0,
-      std::type_identity_t<
-          crane::fn<T1(uint64_t, collatz_steps_clause_3_graph, T2)>>
-          f1,
+      const std::type_identity_t<
+          crane::fn<T1(uint64_t, collatz_steps_clause_3_graph, T2)>> &f1,
       std::type_identity_t<crane::fn<T2(uint64_t, collatz_steps_graph, T1)>> f2,
       std::type_identity_t<crane::fn<T2(uint64_t, collatz_steps_graph, T1)>> f3,
       uint64_t x0_, uint64_t x1_, collatz_steps_graph x2_) {
@@ -795,10 +794,10 @@ struct Equations {
   template <typename T1, typename T2>
   static T2 collatz_steps_clause_3_graph_mut(
       const T1 &f, const T1 &f0,
-      std::type_identity_t<
-          crane::fn<T1(uint64_t, collatz_steps_clause_3_graph, T2)>>
-          f1,
-      std::type_identity_t<crane::fn<T2(uint64_t, collatz_steps_graph, T1)>> f2,
+      const std::type_identity_t<
+          crane::fn<T1(uint64_t, collatz_steps_clause_3_graph, T2)>> &f1,
+      const std::type_identity_t<
+          crane::fn<T2(uint64_t, collatz_steps_graph, T1)>> &f2,
       std::type_identity_t<crane::fn<T2(uint64_t, collatz_steps_graph, T1)>> f3,
       uint64_t x0_, bool x1_, uint64_t x2_, collatz_steps_clause_3_graph x3_) {
     auto f4_impl = [&](auto &_self_f4, auto &_self_f5, uint64_t, uint64_t,
@@ -869,13 +868,11 @@ struct Equations {
   static collatz_steps_graph collatz_steps_graph_correct(uint64_t x);
 
   template <typename T1>
-  static T1
-  collatz_steps_elim(const T1 &f, const T1 &f0,
-                     std::type_identity_t<crane::fn<T1(uint64_t, T1)>> f2,
-                     std::type_identity_t<crane::fn<T1(uint64_t, T1)>> f3,
-                     uint64_t n) {
+  static T1 collatz_steps_elim(
+      T1 f, T1 f0, std::type_identity_t<crane::fn<T1(uint64_t, T1)>> f2,
+      std::type_identity_t<crane::fn<T1(uint64_t, T1)>> f3, uint64_t n) {
     return collatz_steps_graph_mut<T1, crane::obj>(
-        f, f0,
+        std::move(f), std::move(f0),
         [](uint64_t, collatz_steps_clause_3_graph, const T1 &x) { return x; },
         [=](uint64_t n0, collatz_steps_graph, const T1 &eta0_) {
           return [=](T1 _pa0) { return f2(n0, _pa0); }(eta0_);

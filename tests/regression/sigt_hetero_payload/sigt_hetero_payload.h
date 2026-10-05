@@ -275,7 +275,7 @@ struct SigtHeteroPayload {
                                                  }),
                                         List<item>::nil()));
   static inline const Nat run = items.template fold_right<Nat>(
-      [](const auto &i, const Nat &acc) {
+      [](const auto &i, Nat acc) {
         const auto &[x, a1] = i;
         const auto &[v, f] = a1;
         return crane::any_cast<Nat>(

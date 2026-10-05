@@ -247,7 +247,7 @@ struct CoindFamilyParam {
   };
 
   template <typename T1, typename T2>
-  static treeF<T1, T2, tree<T1, T2>> observe(tree<T1, T2> t) {
+  static treeF<T1, T2, tree<T1, T2>> observe(const tree<T1, T2> &t) {
     const auto &[observe1] = std::get<typename tree<T1, T2>::Go>(t.v());
     return observe1;
   }
@@ -257,7 +257,7 @@ struct CoindFamilyParam {
   };
 
   static tree<voidE, Nat> count(const Nat &n, const Nat &acc);
-  static std::optional<Nat> run(const Nat &fuel, tree<voidE, Nat> t);
+  static std::optional<Nat> run(const Nat &fuel, const tree<voidE, Nat> &t);
   static inline const std::optional<Nat> result = []() {
     auto _lit0 = Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
         Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(

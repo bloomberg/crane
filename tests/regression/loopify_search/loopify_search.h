@@ -239,8 +239,8 @@ struct LoopifySearch {
   /// binary_search_fuel target sorted_list searches for target in sorted list.
   /// Returns true if found.
   static bool binary_search_fuel(uint64_t fuel, uint64_t target,
-                                 const List<uint64_t> &l);
-  static bool binary_search(uint64_t target, const List<uint64_t> &l);
+                                 List<uint64_t> l);
+  static bool binary_search(uint64_t target, List<uint64_t> l);
   /// longest_run l finds the longest run of consecutive equal elements.
   static List<uint64_t> longest_run_aux(List<uint64_t> current_run,
                                         List<uint64_t> best_run,
@@ -292,29 +292,28 @@ struct LoopifySearch {
 
   /// sieve l removes multiples (simplified sieve of Eratosthenes).
   static List<uint64_t> sieve_fuel(uint64_t fuel, List<uint64_t> l);
-  static List<uint64_t> sieve(const List<uint64_t> &l);
+  static List<uint64_t> sieve(List<uint64_t> l);
   /// Helper: check if element is in list.
   static bool elem_impl(uint64_t x, const List<uint64_t> &l);
   /// nub l removes duplicates from list.
   static List<uint64_t> nub_fuel(uint64_t fuel, List<uint64_t> l);
-  static List<uint64_t> nub(const List<uint64_t> &l);
+  static List<uint64_t> nub(List<uint64_t> l);
   /// remove_duplicates l removes all duplicate elements.
   static List<uint64_t> remove_duplicates_fuel(uint64_t fuel, List<uint64_t> l);
-  static List<uint64_t> remove_duplicates(const List<uint64_t> &l);
+  static List<uint64_t> remove_duplicates(List<uint64_t> l);
   /// quicksort l sorts list using quicksort with filter-based partitioning.
   static List<uint64_t> quicksort_fuel(uint64_t fuel, List<uint64_t> l);
-  static List<uint64_t> quicksort(const List<uint64_t> &l);
+  static List<uint64_t> quicksort(List<uint64_t> l);
   /// Helper: split list into two roughly equal parts.
   static std::pair<List<uint64_t>, List<uint64_t>>
   split_list(const List<uint64_t> &l);
   /// Helper: merge two sorted lists with fuel.
   static List<uint64_t> merge_sorted_fuel(uint64_t fuel, List<uint64_t> l1,
                                           List<uint64_t> l2);
-  static List<uint64_t> merge_sorted(const List<uint64_t> &l1,
-                                     const List<uint64_t> &l2);
+  static List<uint64_t> merge_sorted(List<uint64_t> l1, List<uint64_t> l2);
   /// merge_sort l sorts list using merge sort.
   static List<uint64_t> merge_sort_fuel(uint64_t fuel, List<uint64_t> l);
-  static List<uint64_t> merge_sort(const List<uint64_t> &l);
+  static List<uint64_t> merge_sort(List<uint64_t> l);
   /// Helper: remove first occurrence of x from list.
   static List<uint64_t> remove_first(uint64_t x, const List<uint64_t> &l);
 

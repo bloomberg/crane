@@ -261,8 +261,7 @@ struct CategoryOps {
     requires std::is_invocable_r_v<T1, F0 &, const T1 &, const T1 &>
   static ReSum<T1, T2> ReSum_inl(F0 &&bif, std::type_identity_t<Cat<T1, T2>> h0,
                                  std::type_identity_t<Inl<T1, T2>> h2,
-                                 const T1 &a, const T1 &b, const T1 &c,
-                                 const T2 &h4);
+                                 const T1 &a, const T1 &b, const T1 &c, T2 h4);
 };
 
 template <typename E1, typename E2, typename X> struct Sum1 {
@@ -502,7 +501,8 @@ public:
 struct ITree {
   template <typename T1, typename T2, typename T3>
   static Itree<T1, T3>
-  subst(std::type_identity_t<crane::fn<Itree<T1, T3>(T2)>> k, Itree<T1, T2> u) {
+  subst(std::type_identity_t<crane::fn<Itree<T1, T3>(T2)>> k,
+        const Itree<T1, T2> &u) {
     auto &&_sv = u.observe();
     if (std::holds_alternative<typename ItreeF<T1, T2, Itree<T1, T2>>::RetF>(
             _sv.v())) {
@@ -530,13 +530,14 @@ struct ITree {
 
   template <typename T1, typename T2, typename T3>
   static Itree<T1, T3>
-  bind(Itree<T1, T2> u, std::type_identity_t<crane::fn<Itree<T1, T3>(T2)>> k) {
+  bind(const Itree<T1, T2> &u,
+       std::type_identity_t<crane::fn<Itree<T1, T3>(T2)>> k) {
     return subst<T1, T2, T3>(std::move(k), u);
   }
 
   template <typename T1, typename T2, typename T3>
   static Itree<T1, T2>
-  iter(std::type_identity_t<crane::fn<Itree<T1, Sum<T3, T2>>(T3)>> step,
+  iter(const std::type_identity_t<crane::fn<Itree<T1, Sum<T3, T2>>(T3)>> &step,
        const T3 &i) {
     return bind<T1, Sum<T3, T2>, T2>(
         step(i), [=](const Sum<T3, T2> &lr) -> Itree<T1, T2> {
@@ -554,8 +555,8 @@ struct ITree {
   }
 
   template <typename T1, typename T2, typename T3>
-  static Itree<T1, T3> map(std::type_identity_t<crane::fn<T3(T2)>> f,
-                           Itree<T1, T2> t) {
+  static Itree<T1, T3> map(const std::type_identity_t<crane::fn<T3(T2)>> &f,
+                           const Itree<T1, T2> &t) {
     return bind<T1, T2, T3>(t, [=](const T2 &x) {
       return Itree<T1, T3>::lazy_([=]() -> Itree<T1, T3> {
         return Itree<T1, T3>::go(ItreeF<T1, T3, Itree<T1, T3>>::retf(f(x)));
@@ -628,8 +629,8 @@ struct Interp {
 struct Handler_Mod {
   template <typename T1, typename T2, typename T3, typename T4>
   static Itree<T3, T4>
-  case_(std::type_identity_t<crane::fn<Itree<T3, crane::obj>(T1)>> f,
-        std::type_identity_t<crane::fn<Itree<T3, crane::obj>(T2)>> g,
+  case_(const std::type_identity_t<crane::fn<Itree<T3, crane::obj>(T1)>> &f,
+        const std::type_identity_t<crane::fn<Itree<T3, crane::obj>(T2)>> &g,
         const Sum1<T1, T2, T4> &ab) {
     if (std::holds_alternative<typename Sum1<T1, T2, T4>::Inl1>(ab.v())) {
       const auto &[a0] = std::get<typename Sum1<T1, T2, T4>::Inl1>(ab.v());
@@ -748,7 +749,7 @@ struct InterpParamsFamily {
                           },
                           crane::obj())),
                   GetE::GET)),
-              [=](const Nat &y) {
+              [=](Nat y) {
                 return Itree<InE<typename _tcI0::ptr, crane::obj>, Nat>::lazy_(
                     [=]() -> Itree<InE<typename _tcI0::ptr, crane::obj>, Nat> {
                       return Itree<InE<typename _tcI0::ptr, crane::obj>, Nat>::
@@ -772,7 +773,7 @@ struct InterpParamsFamily {
 
   template <Params _tcI0, typename T1>
   static Itree<OutE<typename _tcI0::ptr, crane::obj>, T1>
-  h_put(const putE<typename _tcI0::ptr> &e) {
+  h_put(putE<typename _tcI0::ptr> e) {
     return ITree::template trigger<OutE<typename _tcI0::ptr, crane::obj>, T1>(
         Subevent::template subevent<
             putE<typename _tcI0::ptr>,
@@ -798,7 +799,7 @@ struct InterpParamsFamily {
                       return crane_erase_fn<crane::obj>(Function::Id_IFun);
                     },
                     crane::obj())),
-            e));
+            std::move(e)));
   }
 
   template <Params _tcI0, typename T1>
@@ -856,8 +857,8 @@ struct InterpParamsFamily {
   };
 
   static_assert(Params<natParams>);
-  static std::optional<Nat> run(const Nat &fuel,
-                                Itree<Sum1<putE<ptr>, noE, crane::obj>, Nat> t);
+  static std::optional<Nat>
+  run(const Nat &fuel, const Itree<Sum1<putE<ptr>, noE, crane::obj>, Nat> &t);
   static inline const bool is_four = []() -> bool {
     auto _cs = []() {
       auto _lit0 = Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
@@ -945,10 +946,10 @@ template <typename T1, typename T2, typename F0>
 ReSum<T1, T2>
 CategoryOps::ReSum_inl(F0 &&bif, std::type_identity_t<Cat<T1, T2>> h0,
                        std::type_identity_t<Inl<T1, T2>> h2, const T1 &a,
-                       const T1 &b, const T1 &c, const T2 &h4) {
+                       const T1 &b, const T1 &c, T2 h4) {
   return CategoryOps::template cat<T1, T2>(
       std::move(h0), a, b, bif(b, c),
-      CategoryOps::template resum<T1, T2>(a, b, h4),
+      CategoryOps::template resum<T1, T2>(a, b, std::move(h4)),
       CategoryOps::template inl_<T1, T2>(bif, std::move(h2), b, c));
 }
 
@@ -960,7 +961,7 @@ typename _tcI0::template m<T3> Interp::interp(
     Itree<T1, T3> x0_) {
   return Basics::template iter<_tcI0::template m, T3, Itree<T1, T3>>(
       std::move(iM),
-      [=](Itree<T1, T3> t) ->
+      [=](const Itree<T1, T3> &t) ->
       typename _tcI0::template m<Sum<Itree<T1, T3>, T3>> {
         auto &&_sv = t.observe();
         if (std::holds_alternative<

@@ -88,6 +88,6 @@ FoldSequenceStateTraceCase::execute_sequence(
 }
 
 uint64_t FoldSequenceStateTraceCase::line_count_after_sample_sequence(
-    const FoldSequenceStateTraceCase::ConstructionState &st) {
-  return execute_sequence(st, sample_sequence).state_lines.length();
+    FoldSequenceStateTraceCase::ConstructionState st) {
+  return execute_sequence(std::move(st), sample_sequence).state_lines.length();
 }

@@ -151,8 +151,8 @@ struct LoopifyVariantSelfAssign {
   }
 
   template <typename T1, typename F1, typename F2>
-  static T1 lst_rec(const T1 &f, F1 &&f0, F2 &&f1, const lst &l) {
-    return lst_rect<T1>(f, f0, f1, l);
+  static T1 lst_rec(T1 f, F1 &&f0, F2 &&f1, const lst &l) {
+    return lst_rect<T1>(std::move(f), f0, f1, l);
   }
 
   static uint64_t drain(uint64_t n, const lst &l, uint64_t s);

@@ -178,9 +178,8 @@ struct PolyInductive {
       }
     }
 
-    template <typename T1, typename F1>
-    T1 pmaybe_rec(const T1 &f, F1 &&f0) const {
-      return this->template pmaybe_rect<T1>(f, f0);
+    template <typename T1, typename F1> T1 pmaybe_rec(T1 f, F1 &&f0) const {
+      return this->template pmaybe_rect<T1>(std::move(f), f0);
     }
 
     template <typename T1, typename F1>

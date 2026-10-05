@@ -57,8 +57,8 @@ struct ClosureInCtor {
   }
 
   template <typename T1, typename F0>
-  static T1 box_rec(F0 &&f, const T1 &f0, const box &b) {
-    return box_rect<T1>(f, f0, b);
+  static T1 box_rec(F0 &&f, T1 f0, const box &b) {
+    return box_rect<T1>(f, std::move(f0), b);
   }
 
   /// A local fixpoint captures the function parameter n and is stored

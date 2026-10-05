@@ -270,7 +270,8 @@ template <typename a> using EOUP = Sum<Nat, a>;
 struct MemoryBytes {
   template <Monad _tcI0, typename T2, typename T3>
   static typename _tcI0::template m<List<T3>> map_monad(
-      std::type_identity_t<crane::fn<typename _tcI0::template m<T3>(T2)>> f,
+      const std::type_identity_t<crane::fn<typename _tcI0::template m<T3>(T2)>>
+          &f,
       const List<T2> &l);
   static Nat helper0(Nat n);
   static EOUP<List<Nat>> bump_all(const List<Nat> &bs);
@@ -315,7 +316,8 @@ typename _tcI0::template m<T3> Monad0::bind(typename _tcI0::template m<T2> x,
 
 template <Monad _tcI0, typename T2, typename T3>
 typename _tcI0::template m<List<T3>> MemoryBytes::map_monad(
-    std::type_identity_t<crane::fn<typename _tcI0::template m<T3>(T2)>> f,
+    const std::type_identity_t<crane::fn<typename _tcI0::template m<T3>(T2)>>
+        &f,
     const List<T2> &l) {
   if (std::holds_alternative<typename List<T2>::Nil>(l.v())) {
     return Monad0::template ret<_tcI0, List<T3>>(List<T3>::nil());

@@ -145,9 +145,9 @@ stateT<env, std::shared_ptr<ITree<crane::obj>>, Nat> step(Nat n) {
 }
 
 template <typename T1 = void>
-stateT<env, std::shared_ptr<ITree<crane::obj>>, Nat> twice(const Nat &n) {
+stateT<env, std::shared_ptr<ITree<crane::obj>>, Nat> twice(Nat n) {
   return Monad_stateT<Monad_itree<crane::obj>, env>::template bind<Nat, Nat>(
-      step<crane::obj>(n), [](const Nat &a) {
+      step<crane::obj>(std::move(n)), [](Nat a) {
         return Monad_stateT<Monad_itree<crane::obj>, env>::template bind<
             Nat, Nat>(step<crane::obj>(a), [](const Nat &b) {
           return Monad_stateT<Monad_itree<crane::obj>, env>::template ret<Nat>(
@@ -157,7 +157,7 @@ stateT<env, std::shared_ptr<ITree<crane::obj>>, Nat> twice(const Nat &n) {
 }
 
 struct StateTDictArgDropped {
-  static std::shared_ptr<ITree<std::pair<Nat, env>>> use(const Nat &n);
+  static std::shared_ptr<ITree<std::pair<Nat, env>>> use(Nat n);
 };
 
 #endif // INCLUDED_STATET_DICT_ARG_DROPPED

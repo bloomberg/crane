@@ -1,8 +1,9 @@
 #include "partial_application.h"
 
-Box<crane::obj> TFunctor_box(Endo<Nat>, crane::fn<crane::obj(crane::obj)> x0_,
+Box<crane::obj> TFunctor_box(Endo<Nat>,
+                             const crane::fn<crane::obj(crane::obj)> &x0_,
                              const Box<crane::obj> &x1_) {
-  return ft_box<crane::obj, crane::obj>(std::move(x0_), x1_);
+  return ft_box<crane::obj, crane::obj>(x0_, x1_);
 }
 
 std::pair<crane::obj, Box<crane::obj>>

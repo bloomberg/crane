@@ -31,9 +31,9 @@ struct TimingPreservesWfSimple {
   }
 
   template <typename T1>
-  static T1 instr_rec(const T1 &f, const T1 &f0, const T1 &f1, const T1 &f2,
-                      const T1 &f3, Instr i) {
-    return instr_rect<T1>(f, f0, f1, f2, f3, i);
+  static T1 instr_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, Instr i) {
+    return instr_rect<T1>(std::move(f), std::move(f0), std::move(f1),
+                          std::move(f2), std::move(f3), i);
   }
 
   struct state {

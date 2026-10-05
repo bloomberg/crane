@@ -192,7 +192,7 @@ crane::rebind_t<T1, T3> tfmap(std::type_identity_t<TFunctor<T1>> tFunctor,
       tFunctor(crane_erase_fn(f), crane_convert<T1>(std::move(x))));
 }
 
-List<crane::obj> TFunctor_list(crane::fn<crane::obj(crane::obj)> x0_,
+List<crane::obj> TFunctor_list(const crane::fn<crane::obj(crane::obj)> &x0_,
                                const List<crane::obj> &x1_);
 
 template <typename T, typename Body> struct two {

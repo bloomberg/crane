@@ -1,6 +1,6 @@
 #include "tfunctor_record_field_carrier.h"
 
-glob<crane::obj> TFunctor_glob(crane::fn<crane::obj(crane::obj)> f,
+glob<crane::obj> TFunctor_glob(const crane::fn<crane::obj(crane::obj)> &f,
                                const glob<crane::obj> &g) {
   return glob<crane::obj>{
       f(g.g_name),

@@ -57,10 +57,9 @@ List<uint64_t> Sort::merge(List<uint64_t> l1, const List<uint64_t> &l2) {
   }
 }
 
-Sig<List<uint64_t>> Sort::merge_prog(const List<uint64_t> &,
-                                     const List<uint64_t> &l1,
+Sig<List<uint64_t>> Sort::merge_prog(const List<uint64_t> &, List<uint64_t> l1,
                                      const List<uint64_t> &l2) {
-  return Sig<List<uint64_t>>::exist(merge(l1, l2));
+  return Sig<List<uint64_t>>::exist(merge(std::move(l1), l2));
 }
 
 Sig<List<uint64_t>> Sort::msort(const List<uint64_t> &x0_) {
@@ -82,8 +81,8 @@ Sig<List<uint64_t>> Sort::msort(const List<uint64_t> &x0_) {
 Sig<List<uint64_t>> Sort::pair_merge_prog(uint64_t, uint64_t,
                                           const List<uint64_t> &,
                                           const List<uint64_t> &l_,
-                                          const List<uint64_t> &l_0) {
-  return Sig<List<uint64_t>>::exist(merge(l_0, l_));
+                                          List<uint64_t> l_0) {
+  return Sig<List<uint64_t>>::exist(merge(std::move(l_0), l_));
 }
 
 Sig<List<uint64_t>> Sort::psort(const List<uint64_t> &x0_) {

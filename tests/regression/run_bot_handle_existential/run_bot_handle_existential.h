@@ -441,8 +441,8 @@ struct RunBotHandleExistential {
   }
 
   template <Params _tcI0, typename T1>
-  static Itree<crane::obj, Sum<Run_error, T1>>
-  run_bot(Itree<Sum1<outE<typename _tcI0::ptr>, FailE, crane::obj>, T1> t) {
+  static Itree<crane::obj, Sum<Run_error, T1>> run_bot(
+      const Itree<Sum1<outE<typename _tcI0::ptr>, FailE, crane::obj>, T1> &t) {
     auto &&_sv = t.observe();
     if (std::holds_alternative<typename ItreeF<
             Sum1<outE<typename _tcI0::ptr>, FailE, crane::obj>, T1,
@@ -537,8 +537,8 @@ struct RunBotHandleExistential {
   };
 
   static_assert(Params<natParams>);
-  static std::optional<Nat> run(const Nat &fuel,
-                                Itree<crane::obj, Sum<Run_error, Nat>> t);
+  static std::optional<Nat>
+  run(const Nat &fuel, const Itree<crane::obj, Sum<Run_error, Nat>> &t);
 
   static inline const bool is_three = []() -> bool {
     auto _cs = []() {

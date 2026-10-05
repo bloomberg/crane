@@ -150,10 +150,10 @@ public:
 
 struct Recursion {
   template <typename T1, typename T2 = void, typename T3>
-  static std::shared_ptr<ITree<T3>> interp_mrec(
-      std::type_identity_t<crane::fn<std::shared_ptr<ITree<crane::obj>>(T1)>>
-          ctx0,
-      std::shared_ptr<ITree<T3>> x0_);
+  static std::shared_ptr<ITree<T3>>
+  interp_mrec(const std::type_identity_t<
+                  crane::fn<std::shared_ptr<ITree<crane::obj>>(T1)>> &ctx0,
+              std::shared_ptr<ITree<T3>> x0_);
   template <typename T1, typename T2 = void, typename T3, typename F0>
   static std::shared_ptr<ITree<T3>> mrec(F0 &&ctx0, crane::rebind_t<T1, T3> d);
 };
@@ -205,8 +205,8 @@ static_assert(Params<natParams>);
 
 template <typename T1, typename T2, typename T3>
 std::shared_ptr<ITree<T3>> Recursion::interp_mrec(
-    std::type_identity_t<crane::fn<std::shared_ptr<ITree<crane::obj>>(T1)>>
-        ctx0,
+    const std::type_identity_t<
+        crane::fn<std::shared_ptr<ITree<crane::obj>>(T1)>> &ctx0,
     std::shared_ptr<ITree<T3>> x0_) {
   return itree_iter(
       [=](const std::shared_ptr<ITree<T3>> &t)

@@ -196,8 +196,8 @@ struct DepRecord {
     }
   }
 
-  template <typename T1> static T1 tag_rec(const T1 &f, const T1 &f0, Tag t) {
-    return tag_rect<T1>(f, f0, t);
+  template <typename T1> static T1 tag_rec(T1 f, T1 f0, Tag t) {
+    return tag_rect<T1>(std::move(f), std::move(f0), t);
   }
 
   using tag_type = crane::obj;

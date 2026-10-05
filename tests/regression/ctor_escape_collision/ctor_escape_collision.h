@@ -34,9 +34,9 @@ struct CtorEscapeCollision {
   }
 
   template <typename T1>
-  static T1 item_rec(const T1 &f, const T1 &f0, const T1 &f1, const T1 &f2,
-                     const T1 &f3, const T1 &f4, Item i) {
-    return item_rect<T1>(f, f0, f1, f2, f3, f4, i);
+  static T1 item_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, Item i) {
+    return item_rect<T1>(std::move(f), std::move(f0), std::move(f1),
+                         std::move(f2), std::move(f3), std::move(f4), i);
   }
 
   static uint64_t tag(Item x);

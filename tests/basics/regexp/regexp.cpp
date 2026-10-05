@@ -183,8 +183,8 @@ Matcher::regexp Matcher::derivs(Matcher::regexp r, const List<int64_t> &cs) {
 
 /// To see if cs matches r, calculate the derivative of r with respect
 /// to s, and see if the resulting regexp accepts the empty string.
-bool Matcher::deriv_parse(const Matcher::regexp &r, const List<int64_t> &cs) {
-  if (accepts_null(derivs(r, cs))) {
+bool Matcher::deriv_parse(Matcher::regexp r, const List<int64_t> &cs) {
+  if (accepts_null(derivs(std::move(r), cs))) {
     return true;
   } else {
     return false;
@@ -234,8 +234,8 @@ bool Matcher::NullEpsOrZero(const Matcher::regexp &r) {
 
 /// From this, we can build a decidable regexp matcher by running
 /// the derivative-based parser.
-bool Matcher::parse(const Matcher::regexp &r, const List<int64_t> &cs) {
-  bool b = deriv_parse(r, cs);
+bool Matcher::parse(Matcher::regexp r, const List<int64_t> &cs) {
+  bool b = deriv_parse(std::move(r), cs);
   if (b) {
     return true;
   } else {
@@ -243,8 +243,8 @@ bool Matcher::parse(const Matcher::regexp &r, const List<int64_t> &cs) {
   }
 }
 
-bool Matcher::parse_bool(const Matcher::regexp &r, const List<int64_t> &cs) {
-  if (parse(r, cs)) {
+bool Matcher::parse_bool(Matcher::regexp r, const List<int64_t> &cs) {
+  if (parse(std::move(r), cs)) {
     return true;
   } else {
     return false;

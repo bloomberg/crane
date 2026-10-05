@@ -513,10 +513,10 @@ concept Size = requires {
 
 struct BorrowedFieldMovedIntoMethod {
   template <Size _tcI0>
-  static std::optional<Z> walk(const BfmTypes::ty &t, const Z &off,
+  static std::optional<Z> walk(const BfmTypes::ty &t, Z off,
                                const List<Nat> &vs) {
     if (std::holds_alternative<typename List<Nat>::Nil>(vs.v())) {
-      return std::make_optional<Z>(off);
+      return std::make_optional<Z>(std::move(off));
     } else {
       const auto &[a0, a1] = std::get<typename List<Nat>::Cons>(vs.v());
       Z k = BinInt::of_nat(a0);
@@ -525,8 +525,9 @@ struct BorrowedFieldMovedIntoMethod {
             std::get<typename BfmTypes::ty::TA>(t.v());
         return walk<_tcI0>(
             *t0,
-            BinInt::add(off, BinInt::mul(std::move(k),
-                                         BinInt::of_N(_tcI0::size_of(*t0)))),
+            BinInt::add(
+                std::move(off),
+                BinInt::mul(std::move(k), BinInt::of_N(_tcI0::size_of(*t0)))),
             *a1);
       } else {
         return std::optional<Z>();

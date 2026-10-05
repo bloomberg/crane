@@ -155,18 +155,18 @@ struct CoindGuard {
     const crane::lazy<variant_t> &lazy_cell() const { return lazy_v_; }
   };
 
-  template <typename T1> static T1 hd(Stream<T1> s) {
+  template <typename T1> static T1 hd(const Stream<T1> &s) {
     const auto &[a0, a1] = std::get<typename Stream<T1>::Cons>(s.v());
     return a0;
   }
 
-  template <typename T1> static Stream<T1> tl(Stream<T1> s) {
+  template <typename T1> static Stream<T1> tl(const Stream<T1> &s) {
     const auto &[a0, a1] = std::get<typename Stream<T1>::Cons>(s.v());
     return a1;
   }
 
   template <typename T1>
-  static Stream<T1> iterate(std::type_identity_t<crane::fn<T1(T1)>> f,
+  static Stream<T1> iterate(const std::type_identity_t<crane::fn<T1(T1)>> &f,
                             const T1 &x) {
     return Stream<T1>::lazy_([=]() -> Stream<T1> {
       return Stream<T1>::cons(x, iterate<T1>(f, f(x)));
@@ -174,8 +174,9 @@ struct CoindGuard {
   }
 
   template <typename T1, typename T2, typename T3>
-  static Stream<T3> zipWith(std::type_identity_t<crane::fn<T3(T1, T2)>> f,
-                            Stream<T1> s1, Stream<T2> s2) {
+  static Stream<T3>
+  zipWith(const std::type_identity_t<crane::fn<T3(T1, T2)>> &f,
+          const Stream<T1> &s1, const Stream<T2> &s2) {
     return Stream<T3>::lazy_([=]() -> Stream<T3> {
       return Stream<T3>::cons(f(hd<T1>(s1), hd<T2>(s2)),
                               zipWith<T1, T2, T3>(f, tl<T1>(s1), tl<T2>(s2)));
@@ -183,8 +184,8 @@ struct CoindGuard {
   }
 
   template <typename T1, typename T2>
-  static Stream<T2> smap(std::type_identity_t<crane::fn<T2(T1)>> f,
-                         Stream<T1> s) {
+  static Stream<T2> smap(const std::type_identity_t<crane::fn<T2(T1)>> &f,
+                         const Stream<T1> &s) {
     return Stream<T2>::lazy_([=]() -> Stream<T2> {
       return Stream<T2>::cons(f(hd<T1>(s)), smap<T1, T2>(f, tl<T1>(s)));
     });
@@ -192,7 +193,7 @@ struct CoindGuard {
 
   template <typename T1, typename T2>
   static Stream<T1>
-  unfold(std::type_identity_t<crane::fn<std::pair<T1, T2>(T2)>> f,
+  unfold(const std::type_identity_t<crane::fn<std::pair<T1, T2>(T2)>> &f,
          const T2 &seed) {
     auto [a, s_] = f(seed);
     return Stream<T1>::lazy_([=]() -> Stream<T1> {
@@ -200,7 +201,7 @@ struct CoindGuard {
     });
   }
 
-  template <typename T1> static List<T1> take(uint64_t n, Stream<T1> s) {
+  template <typename T1> static List<T1> take(uint64_t n, const Stream<T1> &s) {
     if (n <= 0) {
       return List<T1>::nil();
     } else {

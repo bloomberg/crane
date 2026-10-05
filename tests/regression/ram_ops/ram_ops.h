@@ -589,8 +589,8 @@ struct RamOps {
     }
   }
 
-  template <typename T1> static T1 item_rec(const T1 &f, const T1 &f0, Item i) {
-    return item_rect<T1>(f, f0, i);
+  template <typename T1> static T1 item_rec(T1 f, T1 f0, Item i) {
+    return item_rect<T1>(std::move(f), std::move(f0), i);
   }
 
   static uint64_t score(Item x);

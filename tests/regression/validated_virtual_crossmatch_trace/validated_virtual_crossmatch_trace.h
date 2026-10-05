@@ -293,8 +293,8 @@ struct ValidatedVirtualCrossmatchTraceCase {
   }
 
   template <typename T1>
-  static T1 HLALocus_rec(const T1 &f, const T1 &f0, const T1 &f1, HLALocus h) {
-    return HLALocus_rect<T1>(f, f0, f1, h);
+  static T1 HLALocus_rec(T1 f, T1 f0, T1 f1, HLALocus h) {
+    return HLALocus_rect<T1>(std::move(f), std::move(f0), std::move(f1), h);
   }
 
   static bool hla_locus_eq_dec(HLALocus x, HLALocus y);
@@ -396,9 +396,9 @@ struct ValidatedVirtualCrossmatchTraceCase {
   }
 
   template <typename T1>
-  static T1 MFIStrength_rec(const T1 &f, const T1 &f0, const T1 &f1,
-                            const T1 &f2, const T1 &f3, MFIStrength m) {
-    return MFIStrength_rect<T1>(f, f0, f1, f2, f3, m);
+  static T1 MFIStrength_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, MFIStrength m) {
+    return MFIStrength_rect<T1>(std::move(f), std::move(f0), std::move(f1),
+                                std::move(f2), std::move(f3), m);
   }
 
   static MFIStrength classify_mfi_with_config(const MFIThresholdConfig &cfg,
@@ -438,9 +438,9 @@ struct ValidatedVirtualCrossmatchTraceCase {
   }
 
   template <typename T1>
-  static T1 VirtualXMResult_rec(const T1 &f, const T1 &f0, const T1 &f1,
-                                const T1 &f2, VirtualXMResult v) {
-    return VirtualXMResult_rect<T1>(f, f0, f1, f2, v);
+  static T1 VirtualXMResult_rec(T1 f, T1 f0, T1 f1, T1 f2, VirtualXMResult v) {
+    return VirtualXMResult_rect<T1>(std::move(f), std::move(f0), std::move(f1),
+                                    std::move(f2), v);
   }
 
   static VirtualXMResult
@@ -476,10 +476,10 @@ struct ValidatedVirtualCrossmatchTraceCase {
   }
 
   template <typename T1>
-  static T1 TransplantAcceptability_rec(const T1 &f, const T1 &f0, const T1 &f1,
-                                        const T1 &f2,
+  static T1 TransplantAcceptability_rec(T1 f, T1 f0, T1 f1, T1 f2,
                                         TransplantAcceptability t) {
-    return TransplantAcceptability_rect<T1>(f, f0, f1, f2, t);
+    return TransplantAcceptability_rect<T1>(std::move(f), std::move(f0),
+                                            std::move(f1), std::move(f2), t);
   }
 
   static TransplantAcceptability
@@ -512,9 +512,9 @@ struct ValidatedVirtualCrossmatchTraceCase {
   }
 
   template <typename T1>
-  static T1 TestConfidence_rec(const T1 &f, const T1 &f0, const T1 &f1,
-                               TestConfidence t) {
-    return TestConfidence_rect<T1>(f, f0, f1, t);
+  static T1 TestConfidence_rec(T1 f, T1 f0, T1 f1, TestConfidence t) {
+    return TestConfidence_rect<T1>(std::move(f), std::move(f0), std::move(f1),
+                                   t);
   }
   enum class CrossmatchResult {
     XM_COMPATIBLE,
@@ -545,9 +545,10 @@ struct ValidatedVirtualCrossmatchTraceCase {
   }
 
   template <typename T1>
-  static T1 CrossmatchResult_rec(const T1 &f, const T1 &f0, const T1 &f1,
-                                 const T1 &f2, CrossmatchResult c) {
-    return CrossmatchResult_rect<T1>(f, f0, f1, f2, c);
+  static T1 CrossmatchResult_rec(T1 f, T1 f0, T1 f1, T1 f2,
+                                 CrossmatchResult c) {
+    return CrossmatchResult_rect<T1>(std::move(f), std::move(f0), std::move(f1),
+                                     std::move(f2), c);
   }
 
   struct CrossmatchWithUncertainty {

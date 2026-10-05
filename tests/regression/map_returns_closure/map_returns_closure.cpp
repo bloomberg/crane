@@ -15,7 +15,7 @@ uint64_t
 MapReturnsClosure::apply_all(const List<crane::fn<uint64_t(uint64_t)>> &fs,
                              uint64_t n) {
   return fs.template fold_left<uint64_t>(
-      [=](uint64_t acc, crane::fn<uint64_t(uint64_t)> f) {
+      [=](uint64_t acc, const crane::fn<uint64_t(uint64_t)> &f) {
         return (acc + f(n));
       },
       UINT64_C(0));

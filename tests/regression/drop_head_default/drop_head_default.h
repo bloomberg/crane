@@ -106,7 +106,7 @@ struct DropHeadDefault {
     }
   }
 
-  static uint64_t head_after_drop(const List<uint64_t> &rom, uint64_t addr);
+  static uint64_t head_after_drop(List<uint64_t> rom, uint64_t addr);
   static inline const uint64_t t = head_after_drop(
       List<uint64_t>::cons(
           UINT64_C(5),

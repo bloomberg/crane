@@ -244,8 +244,8 @@ struct NestedInd {
     }
 
     template <typename T1, typename F1>
-    T1 custom_list_rec(const T1 &f, F1 &&f0) const {
-      return this->template custom_list_rect<T1>(f, f0);
+    T1 custom_list_rec(T1 f, F1 &&f0) const {
+      return this->template custom_list_rect<T1>(std::move(f), f0);
     }
 
     template <typename T1, typename F1>

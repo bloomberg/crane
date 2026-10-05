@@ -134,11 +134,12 @@ struct CurriedValueInContainer {
               [](uint64_t a, uint64_t) { return (a * UINT64_C(2)); },
               List<crane::fn<uint64_t(uint64_t, uint64_t)>>::nil()));
   static inline const uint64_t total =
-      (use + stored.template fold_left<uint64_t>(
-                 [](uint64_t acc, crane::fn<uint64_t(uint64_t, uint64_t)> f) {
-                   return (acc + f(UINT64_C(3), UINT64_C(4)));
-                 },
-                 UINT64_C(0)));
+      (use +
+       stored.template fold_left<uint64_t>(
+           [](uint64_t acc, const crane::fn<uint64_t(uint64_t, uint64_t)> &f) {
+             return (acc + f(UINT64_C(3), UINT64_C(4)));
+           },
+           UINT64_C(0)));
 };
 
 #endif // INCLUDED_CURRIED_VALUE_IN_CONTAINER

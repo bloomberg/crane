@@ -151,8 +151,8 @@ struct MemSafetyProbe21 {
   }
 
   template <typename T1, typename F1>
-  static T1 tree_rec(const T1 &f, F1 &&f0, const tree &t) {
-    return tree_rect<T1>(f, f0, t);
+  static T1 tree_rec(T1 f, F1 &&f0, const tree &t) {
+    return tree_rect<T1>(std::move(f), f0, t);
   }
 
   static uint64_t tree_sum(const tree &t);
@@ -183,10 +183,10 @@ struct MemSafetyProbe21 {
       tree_sum(accum_tree(tree::leaf(), UINT64_C(4)));
 
   /// TEST 6: CPS-like pattern where the continuation builds a tree.
-  static uint64_t cps_sum(
-      const tree &t,
-      crane::fn<uint64_t(uint64_t)> k) { /// CraneEnter: captures varying
-                                         /// parameters for each recursive call.
+  static uint64_t cps_sum(const tree &t,
+                          const crane::fn<uint64_t(uint64_t)>
+                              &k) { /// CraneEnter: captures varying parameters
+                                    /// for each recursive call.
 
     struct CraneEnter {
       crane::fn<uint64_t(uint64_t)> k;
@@ -196,13 +196,13 @@ struct MemSafetyProbe21 {
     using CraneFrame = std::variant<CraneEnter>;
     uint64_t _result{};
     crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{std::move(k), &t});
+    _stack.emplace_back(CraneEnter{k, &t});
     /// Loopified cps_sum: CraneEnter.
     while (!_stack.empty()) {
       CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
       auto _f = std::move(std::get<CraneEnter>(_frame));
-      crane::fn<uint64_t(uint64_t)> k = std::move(_f.k);
+      const crane::fn<uint64_t(uint64_t)> &k = std::move(_f.k);
       const tree &t = *_f.t;
       if (std::holds_alternative<typename tree::Leaf>(t.v())) {
         _result = k(UINT64_C(0));

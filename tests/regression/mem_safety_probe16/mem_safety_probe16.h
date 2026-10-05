@@ -245,9 +245,8 @@ struct MemSafetyProbe16 {
       return _result;
     }
 
-    template <typename T1, typename F1>
-    T1 tree_rec(const T1 &f, F1 &&f0) const {
-      return this->template tree_rect<T1>(f, f0);
+    template <typename T1, typename F1> T1 tree_rec(T1 f, F1 &&f0) const {
+      return this->template tree_rect<T1>(std::move(f), f0);
     }
 
     template <typename T1, typename F1> T1 tree_rect(T1 f, F1 &&f0) const {
@@ -463,9 +462,8 @@ struct MemSafetyProbe16 {
       return std::move(*_root);
     }
 
-    template <typename T1, typename F1>
-    T1 mylist_rec(const T1 &f, F1 &&f0) const {
-      return this->template mylist_rect<T1>(f, f0);
+    template <typename T1, typename F1> T1 mylist_rec(T1 f, F1 &&f0) const {
+      return this->template mylist_rect<T1>(std::move(f), f0);
     }
 
     template <typename T1, typename F1> T1 mylist_rect(T1 f, F1 &&f0) const {
@@ -534,9 +532,9 @@ struct MemSafetyProbe16 {
   /// TEST 2: Fold that accumulates a function by composing closures.
   /// Each step captures the tree from the current list element.
   static uint64_t compose_summers(const mylist<tree> &trees,
-                                  crane::fn<uint64_t(uint64_t)> acc,
+                                  const crane::fn<uint64_t(uint64_t)> &acc,
                                   uint64_t x0_) {
-    crane::fn<uint64_t(uint64_t)> _loop_acc = std::move(acc);
+    crane::fn<uint64_t(uint64_t)> _loop_acc = acc;
     mylist<tree> _loop_trees = trees;
     while (true) {
       if (std::holds_alternative<typename mylist<tree>::Mynil>(
@@ -640,9 +638,9 @@ struct MemSafetyProbe16 {
   /// that captures tree structure.
   static mylist<uint64_t>
   flatten_cps_aux(const tree &t,
-                  crane::fn<mylist<uint64_t>(mylist<uint64_t>)>
-                      k) { /// CraneEnter: captures varying parameters for each
-                           /// recursive call.
+                  const crane::fn<mylist<uint64_t>(mylist<uint64_t>)>
+                      &k) { /// CraneEnter: captures varying parameters for each
+                            /// recursive call.
 
     struct CraneEnter {
       crane::fn<mylist<uint64_t>(mylist<uint64_t>)> k;
@@ -652,13 +650,13 @@ struct MemSafetyProbe16 {
     using CraneFrame = std::variant<CraneEnter>;
     mylist<uint64_t> _result{};
     crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{std::move(k), &t});
+    _stack.emplace_back(CraneEnter{k, &t});
     /// Loopified flatten_cps_aux: CraneEnter.
     while (!_stack.empty()) {
       CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
       auto _f = std::move(std::get<CraneEnter>(_frame));
-      crane::fn<mylist<uint64_t>(mylist<uint64_t>)> k = std::move(_f.k);
+      const crane::fn<mylist<uint64_t>(mylist<uint64_t>)> &k = std::move(_f.k);
       const tree &t = *_f.t;
       if (std::holds_alternative<typename tree::Leaf>(t.v())) {
         _result = k(mylist<uint64_t>::mynil());

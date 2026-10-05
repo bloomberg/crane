@@ -475,9 +475,8 @@ struct CoalitionBidHonorTraceCase {
     }
   }
 
-  template <typename T1>
-  static T1 Clan_rec(const T1 &f, const T1 &f0, const T1 &f1, Clan c) {
-    return Clan_rect<T1>(f, f0, f1, c);
+  template <typename T1> static T1 Clan_rec(T1 f, T1 f0, T1 f1, Clan c) {
+    return Clan_rect<T1>(std::move(f), std::move(f0), std::move(f1), c);
   }
 
   static bool clan_eq_dec(Clan c1, Clan c2);
@@ -500,9 +499,8 @@ struct CoalitionBidHonorTraceCase {
     }
   }
 
-  template <typename T1>
-  static T1 Rank_rec(const T1 &f, const T1 &f0, const T1 &f1, Rank r) {
-    return Rank_rect<T1>(f, f0, f1, r);
+  template <typename T1> static T1 Rank_rec(T1 f, T1 f0, T1 f1, Rank r) {
+    return Rank_rect<T1>(std::move(f), std::move(f0), std::move(f1), r);
   }
 
   static uint64_t rank_to_nat(Rank r);
@@ -536,9 +534,8 @@ struct CoalitionBidHonorTraceCase {
   }
 
   template <typename T1>
-  static T1 UnitClass_rec(const T1 &f, const T1 &f0, const T1 &f1,
-                          UnitClass u) {
-    return UnitClass_rect<T1>(f, f0, f1, u);
+  static T1 UnitClass_rec(T1 f, T1 f0, T1 f1, UnitClass u) {
+    return UnitClass_rect<T1>(std::move(f), std::move(f0), std::move(f1), u);
   }
   enum class WeightClass { LIGHT, HEAVY, ASSAULT };
 
@@ -560,9 +557,8 @@ struct CoalitionBidHonorTraceCase {
   }
 
   template <typename T1>
-  static T1 WeightClass_rec(const T1 &f, const T1 &f0, const T1 &f1,
-                            WeightClass w) {
-    return WeightClass_rect<T1>(f, f0, f1, w);
+  static T1 WeightClass_rec(T1 f, T1 f0, T1 f1, WeightClass w) {
+    return WeightClass_rect<T1>(std::move(f), std::move(f0), std::move(f1), w);
   }
 
   static uint64_t weight_class_value(WeightClass w);
@@ -619,8 +615,8 @@ struct CoalitionBidHonorTraceCase {
     }
   }
 
-  template <typename T1> static T1 Side_rec(const T1 &f, const T1 &f0, Side s) {
-    return Side_rect<T1>(f, f0, s);
+  template <typename T1> static T1 Side_rec(T1 f, T1 f0, Side s) {
+    return Side_rect<T1>(std::move(f), std::move(f0), s);
   }
 
   struct CoalitionMember {
@@ -676,9 +672,8 @@ struct CoalitionBidHonorTraceCase {
     }
   }
 
-  template <typename T1>
-  static T1 TrialType_rec(const T1 &f, const T1 &f0, TrialType t) {
-    return TrialType_rect<T1>(f, f0, t);
+  template <typename T1> static T1 TrialType_rec(T1 f, T1 f0, TrialType t) {
+    return TrialType_rect<T1>(std::move(f), std::move(f0), t);
   }
 
   struct Prize {
@@ -715,9 +710,8 @@ struct CoalitionBidHonorTraceCase {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    template <typename T1, typename F1>
-    T1 Prize_rec(const T1 &f, F1 &&f0) const {
-      return this->template Prize_rect<T1>(f, f0);
+    template <typename T1, typename F1> T1 Prize_rec(T1 f, F1 &&f0) const {
+      return this->template Prize_rect<T1>(std::move(f), f0);
     }
 
     template <typename T1, typename F1>
@@ -856,8 +850,8 @@ struct CoalitionBidHonorTraceCase {
     const variant_t &v() const { return v_; }
 
     template <typename T1, typename F1>
-    T1 RefusalReason_rec(const T1 &f, F1 &&f0) const {
-      return this->template RefusalReason_rect<T1>(f, f0);
+    T1 RefusalReason_rec(T1 f, F1 &&f0) const {
+      return this->template RefusalReason_rect<T1>(std::move(f), f0);
     }
 
     template <typename T1, typename F1>
@@ -1038,9 +1032,10 @@ struct CoalitionBidHonorTraceCase {
   template <typename T1, typename F0, typename F1, typename F2, typename F3,
             typename F4, typename F5, typename F7, typename F8>
   static T1 ProtocolAction_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3,
-                               F5 &&f4, const T1 &f5, F7 &&f6, F8 &&f7,
+                               F5 &&f4, T1 f5, F7 &&f6, F8 &&f7,
                                const ProtocolAction &p) {
-    return ProtocolAction_rect<T1>(f, f0, f1, f2, f3, f4, f5, f6, f7, p);
+    return ProtocolAction_rect<T1>(f, f0, f1, f2, f3, f4, std::move(f5), f6, f7,
+                                   p);
   }
   enum class ReadyStatus {
     NEITHERREADY,
@@ -1070,9 +1065,9 @@ struct CoalitionBidHonorTraceCase {
   }
 
   template <typename T1>
-  static T1 ReadyStatus_rec(const T1 &f, const T1 &f0, const T1 &f1,
-                            const T1 &f2, ReadyStatus r) {
-    return ReadyStatus_rect<T1>(f, f0, f1, f2, r);
+  static T1 ReadyStatus_rec(T1 f, T1 f0, T1 f1, T1 f2, ReadyStatus r) {
+    return ReadyStatus_rect<T1>(std::move(f), std::move(f0), std::move(f1),
+                                std::move(f2), r);
   }
 
   static bool is_ready(ReadyStatus rs, Side side);
@@ -1380,9 +1375,9 @@ struct CoalitionBidHonorTraceCase {
 
   template <typename T1, typename F1, typename F2, typename F3, typename F4,
             typename F5, typename F6>
-  static T1 BatchallPhase_rec(const T1 &f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3,
-                              F5 &&f4, F6 &&f5, const BatchallPhase &b) {
-    return BatchallPhase_rect<T1>(f, f0, f1, f2, f3, f4, f5, b);
+  static T1 BatchallPhase_rec(T1 f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
+                              F6 &&f5, const BatchallPhase &b) {
+    return BatchallPhase_rect<T1>(std::move(f), f0, f1, f2, f3, f4, f5, b);
   }
 
   using Honor = Z;
@@ -1394,7 +1389,7 @@ struct CoalitionBidHonorTraceCase {
   ledger_update_by_id(const List<std::pair<uint64_t, Z>> &ledger,
                       uint64_t warrior_id, const Z &new_honor);
   static HonorLedger update_honor(const List<std::pair<uint64_t, Z>> &ledger,
-                                  const Commander &actor, const Z &delta);
+                                  const Commander &actor, Z delta);
   static Honor refusal_honor_delta(const RefusalReason &r);
   static Honor protocol_honor_delta(const ProtocolAction &action);
 

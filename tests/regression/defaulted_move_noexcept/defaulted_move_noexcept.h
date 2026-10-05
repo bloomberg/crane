@@ -160,8 +160,8 @@ struct DefaultedMoveNoexcept {
   }
 
   template <typename T1, typename T2, typename F1>
-  static T2 seq_rec(const T2 &f, F1 &&f0, const seq<T1> &s) {
-    return seq_rect<T1, T2>(f, f0, s);
+  static T2 seq_rec(T2 f, F1 &&f0, const seq<T1> &s) {
+    return seq_rect<T1, T2>(std::move(f), f0, s);
   }
 
   template <typename T1> static Nat len(const seq<T1> &s) {

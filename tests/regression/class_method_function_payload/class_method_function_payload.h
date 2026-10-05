@@ -276,7 +276,8 @@ struct ClassMethodFunctionPayload {
                                                    UINT64_C(2),
                                                    List<uint64_t>::nil())))
                        .template fold_left<uint64_t>(
-                           [](uint64_t a, crane::fn<uint64_t(uint64_t)> f) {
+                           [](uint64_t a,
+                              const crane::fn<uint64_t(uint64_t)> &f) {
                              return (a + f(UINT64_C(1)));
                            },
                            UINT64_C(0)));

@@ -490,7 +490,7 @@ struct TopologicalSort {
              List<std::pair<T1, T1>> l) {
     List<T1> elems = get_elems<T1>(eqb_node, l);
     return std::move(elems).template fold_right<List<entry<T1>>>(
-        [=](const T1 &e, const List<std::pair<T1, List<T1>>> &ret) {
+        [=](T1 e, const List<std::pair<T1, List<T1>>> &ret) {
           return List<entry<T1>>::cons(make_entry<T1>(eqb_node, l, e), ret);
         },
         List<entry<T1>>::nil());
@@ -498,7 +498,7 @@ struct TopologicalSort {
 
   template <typename T1>
   static List<T1>
-  graph_lookup(std::type_identity_t<crane::fn<bool(T1, T1)>> eqb_node,
+  graph_lookup(const std::type_identity_t<crane::fn<bool(T1, T1)>> &eqb_node,
                const T1 &elem, const List<std::pair<T1, List<T1>>> &graph0) {
     auto _cs = graph0.find([=](const std::pair<T1, List<T1>> &entry0) {
       return eqb_node(elem, entry0.first);
@@ -513,8 +513,9 @@ struct TopologicalSort {
   }
 
   template <typename T1>
-  static bool contains(std::type_identity_t<crane::fn<bool(T1, T1)>> eqb_node,
-                       const T1 &elem, const List<T1> &es) {
+  static bool
+  contains(const std::type_identity_t<crane::fn<bool(T1, T1)>> &eqb_node,
+           const T1 &elem, const List<T1> &es) {
     auto _cs = es.find([=](const T1 &x) { return eqb_node(elem, x); });
     if (_cs.has_value()) {
       const T1 &_x = *_cs;
@@ -605,10 +606,9 @@ struct TopologicalSort {
   }
 
   template <typename T1>
-  static order<T1>
-  topological_sort_aux(std::type_identity_t<crane::fn<bool(T1, T1)>> eqb_node,
-                       const List<std::pair<T1, List<T1>>> &graph0,
-                       uint64_t counter) {
+  static order<T1> topological_sort_aux(
+      const std::type_identity_t<crane::fn<bool(T1, T1)>> &eqb_node,
+      const List<std::pair<T1, List<T1>>> &graph0, uint64_t counter) {
     if (counter <= 0) {
       return List<List<T1>>::nil();
     } else {
@@ -651,8 +651,8 @@ struct TopologicalSort {
 
   template <typename T1, typename F0>
   static List<List<T1>> topological_sort(F0 &&eqb_node,
-                                         const List<std::pair<T1, T1>> &g) {
-    List<std::pair<T1, List<T1>>> g_ = make_graph<T1>(eqb_node, g);
+                                         List<std::pair<T1, T1>> g) {
+    List<std::pair<T1, List<T1>>> g_ = make_graph<T1>(eqb_node, std::move(g));
     return topological_sort_aux<T1>(eqb_node, g_, g_.length());
   }
 

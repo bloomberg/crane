@@ -421,7 +421,7 @@ struct LoopifySequences {
   /// rotate_left n l rotates list left by n positions.
   static List<uint64_t> rotate_left_fuel(uint64_t fuel, uint64_t n,
                                          List<uint64_t> l);
-  static List<uint64_t> rotate_left(uint64_t n, const List<uint64_t> &l);
+  static List<uint64_t> rotate_left(uint64_t n, List<uint64_t> l);
 
   /// iterate f n x generates x, f x, f (f x), ... of length n.
   template <typename F0>
@@ -464,10 +464,10 @@ struct LoopifySequences {
   static List<uint64_t> string_chain_fuel(uint64_t fuel,
                                           const List<uint64_t> &s, uint64_t n,
                                           const List<uint64_t> &sep,
-                                          const List<uint64_t> &end_marker);
+                                          List<uint64_t> end_marker);
   static List<uint64_t> string_chain(const List<uint64_t> &s, uint64_t n,
                                      const List<uint64_t> &sep,
-                                     const List<uint64_t> &end_marker);
+                                     List<uint64_t> end_marker);
   /// split_by_sign l base pos neg splits list based on base threshold.
   static std::pair<List<uint64_t>, List<uint64_t>>
   split_by_sign(const List<uint64_t> &l, uint64_t base,

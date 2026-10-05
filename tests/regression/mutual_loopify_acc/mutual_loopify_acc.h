@@ -234,8 +234,8 @@ struct MutualLoopifyAcc {
   }
 
   template <typename T1, typename F1>
-  static T1 forest_rec(const T1 &f, F1 &&f0, const forest &f1) {
-    return forest_rect<T1>(f, f0, f1);
+  static T1 forest_rec(T1 f, F1 &&f0, const forest &f1) {
+    return forest_rect<T1>(std::move(f), f0, f1);
   }
 
   static uint64_t tsum(uint64_t acc, const tree &t);

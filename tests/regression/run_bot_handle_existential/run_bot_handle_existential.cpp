@@ -2,7 +2,7 @@
 
 std::optional<Nat> RunBotHandleExistential::run(
     const Nat &fuel,
-    Itree<crane::obj, Sum<RunBotHandleExistential::Run_error, Nat>> t) {
+    const Itree<crane::obj, Sum<RunBotHandleExistential::Run_error, Nat>> &t) {
   if (std::holds_alternative<typename Nat::O>(fuel.v())) {
     return std::optional<Nat>();
   } else {

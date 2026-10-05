@@ -137,7 +137,7 @@ public:
 };
 
 struct CPS {
-  static uint64_t fact_cps(uint64_t n, crane::fn<uint64_t(uint64_t)> k) {
+  static uint64_t fact_cps(uint64_t n, const crane::fn<uint64_t(uint64_t)> &k) {
     if (n <= 0) {
       return k(UINT64_C(1));
     } else {
@@ -148,7 +148,7 @@ struct CPS {
 
   static uint64_t factorial(uint64_t n);
 
-  static uint64_t fib_cps(uint64_t n, crane::fn<uint64_t(uint64_t)> k) {
+  static uint64_t fib_cps(uint64_t n, const crane::fn<uint64_t(uint64_t)> &k) {
     if (n <= 0) {
       return k(UINT64_C(0));
     } else {
@@ -250,7 +250,8 @@ struct CPS {
     return tree_rect<T1>(f, f0, t);
   }
 
-  static uint64_t tree_sum_cps(const tree &t, crane::fn<uint64_t(uint64_t)> k) {
+  static uint64_t tree_sum_cps(const tree &t,
+                               const crane::fn<uint64_t(uint64_t)> &k) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       const auto &[a0] = std::get<typename tree::Leaf>(t.v());
       return k(a0);
@@ -268,7 +269,7 @@ struct CPS {
   static uint64_t tree_sum(const tree &t);
 
   static uint64_t sum_cps(const List<uint64_t> &l,
-                          crane::fn<uint64_t(uint64_t)> k) {
+                          const crane::fn<uint64_t(uint64_t)> &k) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
       return k(UINT64_C(0));
     } else {

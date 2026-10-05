@@ -336,7 +336,8 @@ public:
 struct ITree {
   template <typename T1, typename T2, typename T3>
   static Itree<T1, T3>
-  subst(std::type_identity_t<crane::fn<Itree<T1, T3>(T2)>> k, Itree<T1, T2> u) {
+  subst(std::type_identity_t<crane::fn<Itree<T1, T3>(T2)>> k,
+        const Itree<T1, T2> &u) {
     auto &&_sv = u.observe();
     if (std::holds_alternative<typename ItreeF<T1, T2, Itree<T1, T2>>::RetF>(
             _sv.v())) {
@@ -364,13 +365,14 @@ struct ITree {
 
   template <typename T1, typename T2, typename T3>
   static Itree<T1, T3>
-  bind(Itree<T1, T2> u, std::type_identity_t<crane::fn<Itree<T1, T3>(T2)>> k) {
+  bind(const Itree<T1, T2> &u,
+       std::type_identity_t<crane::fn<Itree<T1, T3>(T2)>> k) {
     return subst<T1, T2, T3>(std::move(k), u);
   }
 
   template <typename T1, typename T2, typename T3>
   static Itree<T1, T2>
-  iter(std::type_identity_t<crane::fn<Itree<T1, Sum<T3, T2>>(T3)>> step,
+  iter(const std::type_identity_t<crane::fn<Itree<T1, Sum<T3, T2>>(T3)>> &step,
        const T3 &i) {
     return bind<T1, Sum<T3, T2>, T2>(
         step(i), [=](const Sum<T3, T2> &lr) -> Itree<T1, T2> {
@@ -408,16 +410,14 @@ struct Subevent {
 
 struct Recursion {
   template <typename T1, typename T2, typename T3>
-  static Itree<T2, T3>
-  interp_mrec(std::type_identity_t<
-                  crane::fn<Itree<Sum1<T1, T2, crane::obj>, crane::obj>(T1)>>
-                  ctx,
-              Itree<Sum1<T1, T2, crane::obj>, T3> i);
+  static Itree<T2, T3> interp_mrec(
+      const std::type_identity_t<
+          crane::fn<Itree<Sum1<T1, T2, crane::obj>, crane::obj>(T1)>> &ctx,
+      const Itree<Sum1<T1, T2, crane::obj>, T3> &i);
   template <typename T1, typename T2, typename T3>
   static Itree<T2, T3>
-  mrec(std::type_identity_t<
-           crane::fn<Itree<Sum1<T1, T2, crane::obj>, crane::obj>(T1)>>
-           ctx,
+  mrec(const std::type_identity_t<
+           crane::fn<Itree<Sum1<T1, T2, crane::obj>, crane::obj>(T1)>> &ctx,
        crane::rebind_t<T1, T3> d);
 };
 
@@ -498,10 +498,9 @@ Subevent::subevent(ReSum<crane::obj, IFun<crane::obj, crane::obj>> h,
 
 template <typename T1, typename T2, typename T3>
 Itree<T2, T3> Recursion::interp_mrec(
-    std::type_identity_t<
-        crane::fn<Itree<Sum1<T1, T2, crane::obj>, crane::obj>(T1)>>
-        ctx,
-    Itree<Sum1<T1, T2, crane::obj>, T3> i) {
+    const std::type_identity_t<
+        crane::fn<Itree<Sum1<T1, T2, crane::obj>, crane::obj>(T1)>> &ctx,
+    const Itree<Sum1<T1, T2, crane::obj>, T3> &i) {
   auto &&_sv = i.observe();
   if (std::holds_alternative<
           typename ItreeF<Sum1<T1, T2, crane::obj>, T3,
@@ -617,11 +616,10 @@ Itree<T2, T3> Recursion::interp_mrec(
 }
 
 template <typename T1, typename T2, typename T3>
-Itree<T2, T3>
-Recursion::mrec(std::type_identity_t<
-                    crane::fn<Itree<Sum1<T1, T2, crane::obj>, crane::obj>(T1)>>
-                    ctx,
-                crane::rebind_t<T1, T3> d) {
+Itree<T2, T3> Recursion::mrec(
+    const std::type_identity_t<
+        crane::fn<Itree<Sum1<T1, T2, crane::obj>, crane::obj>(T1)>> &ctx,
+    crane::rebind_t<T1, T3> d) {
   return Recursion::template interp_mrec<T1, T2, T3>(ctx, ctx(std::move(d)));
 }
 

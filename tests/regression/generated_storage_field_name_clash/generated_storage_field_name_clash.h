@@ -57,8 +57,8 @@ struct GeneratedStorageFieldNameClash {
   }
 
   template <typename T1, typename F1>
-  static T1 d_v_prec(const T1 &f, F1 &&f0, const d_v_ &d) {
-    return d_v_prect<T1>(f, f0, d);
+  static T1 d_v_prec(T1 f, F1 &&f0, const d_v_ &d) {
+    return d_v_prect<T1>(std::move(f), f0, d);
   }
 
   static bool is_flag(const d_v_ &x);

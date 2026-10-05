@@ -170,9 +170,10 @@ public:
 /// declaration and the call site disagree.
 struct CurriedTvarInstantiation {
   template <typename T1>
-  static T1 apply_all(const List<crane::fn<T1(T1)>> &fs, const T1 &x) {
+  static T1 apply_all(const List<crane::fn<T1(T1)>> &fs, T1 x) {
     return fs.template fold_left<T1>(
-        [](const T1 &a, crane::fn<T1(T1)> f) { return f(a); }, x);
+        [](const T1 &a, const crane::fn<T1(T1)> &f) { return f(a); },
+        std::move(x));
   }
 
   static Nat ex(const Nat &x0_);

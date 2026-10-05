@@ -143,7 +143,7 @@ struct MergesortFuel {
   /// * Fuel-based merge sort
   static List<uint64_t> msort_go(uint64_t fuel, List<uint64_t> l);
   /// * Top-level sort and correctness
-  static List<uint64_t> msort(const List<uint64_t> &l);
+  static List<uint64_t> msort(List<uint64_t> l);
 };
 
 #endif // INCLUDED_MERGESORT_FUEL

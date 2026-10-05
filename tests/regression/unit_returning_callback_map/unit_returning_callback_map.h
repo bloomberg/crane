@@ -181,13 +181,13 @@ struct UnitReturningCallbackMap {
                     [](uint64_t) { return std::monostate{}; },
                     List<crane::fn<void(uint64_t)>>::nil()));
   static inline const uint64_t run =
-      (units.length() +
-       callbacks
-           .template map<std::monostate>([](crane::fn<void(uint64_t)> f) {
-             f(UINT64_C(0));
-             return std::monostate{};
-           })
-           .length());
+      (units.length() + callbacks
+                            .template map<std::monostate>(
+                                [](const crane::fn<void(uint64_t)> &f) {
+                                  f(UINT64_C(0));
+                                  return std::monostate{};
+                                })
+                            .length());
 
   struct sink {
     crane::fn<void(uint64_t)> emit;

@@ -112,8 +112,8 @@ struct SuperfluousMoves {
     }
   }
 
-  template <typename T1> static T1 mode_rec(const T1 &f, const T1 &f0, Mode m) {
-    return mode_rect<T1>(f, f0, m);
+  template <typename T1> static T1 mode_rec(T1 f, T1 f0, Mode m) {
+    return mode_rect<T1>(std::move(f), std::move(f0), m);
   }
 
   /// Minimal source state carrying the projected fields that trigger the bug.

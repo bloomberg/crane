@@ -25,8 +25,8 @@ struct DependentChoiceContinuation {
     }
   }
 
-  template <typename T1> static T1 MemC_rec(const T1 &f, const T1 &f0, MemC m) {
-    return MemC_rect<T1>(f, f0, m);
+  template <typename T1> static T1 MemC_rec(T1 f, T1 f0, MemC m) {
+    return MemC_rect<T1>(std::move(f), std::move(f0), m);
   }
 
   using memCType = crane::obj;
@@ -93,10 +93,9 @@ struct DependentChoiceContinuation {
 
   template <typename T1, typename T2>
   static T2 MemS_rect(
-      std::type_identity_t<crane::fn<T2(T1)>> f,
-      std::type_identity_t<crane::fn<T2(MemC, crane::fn<MemS<T1>(memCType)>,
-                                        crane::fn<T2(memCType)>)>>
-          f0,
+      const std::type_identity_t<crane::fn<T2(T1)>> &f,
+      const std::type_identity_t<crane::fn<T2(
+          MemC, crane::fn<MemS<T1>(memCType)>, crane::fn<T2(memCType)>)>> &f0,
       const MemS<T1> &m) {
     if (std::holds_alternative<typename MemS<T1>::MRet>(m.v())) {
       const auto &[a0] = std::get<typename MemS<T1>::MRet>(m.v());

@@ -369,7 +369,7 @@ crane::rebind_t<T1, T3> tfmap(std::type_identity_t<TFunctor<T1>> tFunctor,
       tFunctor(crane_erase_fn(x), crane_convert<T1>(std::move(x0))));
 }
 
-texp<crane::obj> TFunctor_texp(crane::fn<crane::obj(crane::obj)> f,
+texp<crane::obj> TFunctor_texp(const crane::fn<crane::obj(crane::obj)> &f,
                                const std::pair<crane::obj, Exp<crane::obj>> &p);
 
 template <typename t> struct Instr {
@@ -426,7 +426,7 @@ public:
   const variant_t &v() const { return v_; }
 };
 
-Instr<crane::obj> TFunctor_instr(crane::fn<crane::obj(crane::obj)> f,
+Instr<crane::obj> TFunctor_instr(const crane::fn<crane::obj(crane::obj)> &f,
                                  const Instr<crane::obj> &i);
 
 template <typename F0> Instr<bool> use_instr(F0 &&f, const Instr<Nat> &i) {

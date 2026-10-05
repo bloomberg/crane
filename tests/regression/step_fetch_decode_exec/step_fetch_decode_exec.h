@@ -143,8 +143,8 @@ struct StepFetchDecodeExec {
   }
 
   template <typename T1, typename F1>
-  static T1 instruction_rec(const T1 &f, F1 &&f0, const instruction &i) {
-    return instruction_rect<T1>(f, f0, i);
+  static T1 instruction_rec(T1 f, F1 &&f0, const instruction &i) {
+    return instruction_rect<T1>(std::move(f), f0, i);
   }
 
   struct state {

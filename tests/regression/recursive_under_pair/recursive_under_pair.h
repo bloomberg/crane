@@ -85,8 +85,8 @@ struct RecursiveUnderPair {
   }
 
   template <typename T1, typename F1>
-  static T1 c_rec(const T1 &f, F1 &&f0, const c &c0) {
-    return c_rect<T1>(f, f0, c0);
+  static T1 c_rec(T1 f, F1 &&f0, const c &c0) {
+    return c_rect<T1>(std::move(f), f0, c0);
   }
 
   static c build(uint64_t n);

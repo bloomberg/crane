@@ -31,9 +31,9 @@ struct OpcodeOperandDecode {
   }
 
   template <typename T1>
-  static T1 instruction_rec(const T1 &f, const T1 &f0, const T1 &f1,
-                            const T1 &f2, const T1 &f3, Instruction i) {
-    return instruction_rect<T1>(f, f0, f1, f2, f3, i);
+  static T1 instruction_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, Instruction i) {
+    return instruction_rect<T1>(std::move(f), std::move(f0), std::move(f1),
+                                std::move(f2), std::move(f3), i);
   }
 
   static Instruction decode(uint64_t b1, uint64_t _x);

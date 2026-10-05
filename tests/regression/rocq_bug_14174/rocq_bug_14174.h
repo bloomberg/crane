@@ -371,8 +371,9 @@ struct RocqBug14174 {
       static sig<A> exist(A x) { return {std::move(x)}; }
 
       template <typename T1>
-      T1 eq_sig_rec_uncurried(const sig<A> &x1_, const T1 &x2_) const {
-        return this->template eq_sig_rect_uncurried<crane::obj>(x1_, x2_);
+      T1 eq_sig_rec_uncurried(const sig<A> &x1_, T1 x2_) const {
+        return this->template eq_sig_rect_uncurried<crane::obj>(x1_,
+                                                                std::move(x2_));
       }
 
       template <typename T1>
@@ -438,8 +439,9 @@ struct RocqBug14174 {
       static sig2<A> exist2(A x) { return {std::move(x)}; }
 
       template <typename T1>
-      T1 eq_sig2_rec_uncurried(const sig2<A> &x1_, const T1 &x2_) const {
-        return this->template eq_sig2_rect_uncurried<crane::obj>(x1_, x2_);
+      T1 eq_sig2_rec_uncurried(const sig2<A> &x1_, T1 x2_) const {
+        return this->template eq_sig2_rect_uncurried<crane::obj>(
+            x1_, std::move(x2_));
       }
 
       template <typename T1>
@@ -521,8 +523,8 @@ struct RocqBug14174 {
       }
 
       template <typename T1>
-      T1 eq_sigT_rec_uncurried(const sigT<A, P> &x1_, const T1 &x2_) const {
-        return this->template eq_sigT_rect_uncurried<T1>(x1_, x2_);
+      T1 eq_sigT_rec_uncurried(const sigT<A, P> &x1_, T1 x2_) const {
+        return this->template eq_sigT_rect_uncurried<T1>(x1_, std::move(x2_));
       }
 
       template <typename T1>
@@ -619,9 +621,8 @@ struct RocqBug14174 {
       }
 
       template <typename T1>
-      T1 eq_sigT2_rec_uncurried(const sigT2<A, P, Q> &x1_,
-                                const T1 &x2_) const {
-        return this->template eq_sigT2_rect_uncurried<T1>(x1_, x2_);
+      T1 eq_sigT2_rec_uncurried(const sigT2<A, P, Q> &x1_, T1 x2_) const {
+        return this->template eq_sigT2_rect_uncurried<T1>(x1_, std::move(x2_));
       }
 
       template <typename T1>

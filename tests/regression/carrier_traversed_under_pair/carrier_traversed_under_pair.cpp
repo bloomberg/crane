@@ -1,7 +1,7 @@
 #include "carrier_traversed_under_pair.h"
 
 List<std::pair<std::optional<Nat>, Exp<crane::obj>>>
-TFunctor_tagged(crane::fn<crane::obj(crane::obj)> f,
+TFunctor_tagged(const crane::fn<crane::obj(crane::obj)> &f,
                 const List<std::pair<std::optional<Nat>, Exp<crane::obj>>> &l) {
   return l.template map<std::pair<std::optional<Nat>, Exp<crane::obj>>>(
       [=](const std::pair<std::optional<Nat>, Exp<crane::obj>> &p) {
@@ -10,7 +10,7 @@ TFunctor_tagged(crane::fn<crane::obj(crane::obj)> f,
       });
 }
 
-blk<crane::obj> TFunctor_blk(crane::fn<crane::obj(crane::obj)> f,
+blk<crane::obj> TFunctor_blk(const crane::fn<crane::obj(crane::obj)> &f,
                              const blk<crane::obj> &b) {
   return blk<crane::obj>{
       b.b_id,
@@ -20,5 +20,5 @@ blk<crane::obj> TFunctor_blk(crane::fn<crane::obj(crane::obj)> f,
              List<std::pair<std::optional<Nat>, Exp<crane::obj>>> _ec1) {
             return TFunctor_tagged(_ec0, _ec1);
           },
-          std::move(f), b.b_code)};
+          f, b.b_code)};
 }

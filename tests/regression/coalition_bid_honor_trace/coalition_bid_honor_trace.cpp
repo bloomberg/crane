@@ -755,11 +755,11 @@ CoalitionBidHonorTraceCase::ledger_update_by_id(
 CoalitionBidHonorTraceCase::HonorLedger
 CoalitionBidHonorTraceCase::update_honor(
     const List<std::pair<uint64_t, Z>> &ledger,
-    const CoalitionBidHonorTraceCase::Commander &actor, const Z &delta) {
+    const CoalitionBidHonorTraceCase::Commander &actor, Z delta) {
   CoalitionBidHonorTraceCase::Honor current =
       ledger_lookup(ledger, actor.cmd_id);
   return ledger_update_by_id(ledger, actor.cmd_id,
-                             BinInt::add(std::move(current), delta));
+                             BinInt::add(std::move(current), std::move(delta)));
 }
 
 CoalitionBidHonorTraceCase::Honor

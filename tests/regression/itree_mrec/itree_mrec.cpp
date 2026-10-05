@@ -11,7 +11,7 @@ Itree<ItreeMrec::noE, Nat> ItreeMrec::sum_to(const Nat &n) {
 }
 
 std::optional<Nat> ItreeMrec::run(const Nat &fuel,
-                                  Itree<ItreeMrec::noE, Nat> t) {
+                                  const Itree<ItreeMrec::noE, Nat> &t) {
   if (std::holds_alternative<typename Nat::O>(fuel.v())) {
     return std::optional<Nat>();
   } else {

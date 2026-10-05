@@ -10,10 +10,9 @@ Case_sum1_Handler(Handler<crane::obj, crane::obj> x,
 }
 
 Itree<LetBoundMonadFamily::BotE<crane::obj>, Nat> LetBoundMonadFamily::gen(
-    Itree<
+    const Itree<
         Sum1<LetBoundMonadFamily::getE, LetBoundMonadFamily::outE, crane::obj>,
-        Nat>
-        arg) {
+        Nat> &arg) {
   auto t = Monad0::template bind<
       Monad_itree<Sum1<LetBoundMonadFamily::getE, LetBoundMonadFamily::outE,
                        crane::obj>>,
@@ -40,9 +39,9 @@ Itree<LetBoundMonadFamily::BotE<crane::obj>, Nat> LetBoundMonadFamily::gen(
 
 std::optional<Nat> LetBoundMonadFamily::run(
     const Nat &fuel,
-    Itree<Sum1<LetBoundMonadFamily::outE, LetBoundMonadFamily::noE, crane::obj>,
-          Nat>
-        t) {
+    const Itree<
+        Sum1<LetBoundMonadFamily::outE, LetBoundMonadFamily::noE, crane::obj>,
+        Nat> &t) {
   if (std::holds_alternative<typename Nat::O>(fuel.v())) {
     return std::optional<Nat>();
   } else {

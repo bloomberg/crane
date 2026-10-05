@@ -11,7 +11,7 @@ Nat MemoryBytes::helper0(Nat n) { return n; }
 
 EOUP<List<Nat>> MemoryBytes::bump_all(const List<Nat> &bs) {
   return MemoryBytes::template map_monad<EOUP_Monad, Nat, Nat>(
-      [](const Nat &b) {
+      [](Nat b) {
         return Monad0::template ret<EOUP_Monad, Nat>(
             MemoryBytes::helper0(b).add(Nat::s(Nat::o())));
       },

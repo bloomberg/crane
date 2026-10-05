@@ -265,10 +265,11 @@ struct ValidatedPumpDeliveryTraceCase {
   }
 
   template <typename T1>
-  static T1 ActivityState_rec(const T1 &f, const T1 &f0, const T1 &f1,
-                              const T1 &f2, const T1 &f3, const T1 &f4,
+  static T1 ActivityState_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4,
                               ActivityState a) {
-    return ActivityState_rect<T1>(f, f0, f1, f2, f3, f4, a);
+    return ActivityState_rect<T1>(std::move(f), std::move(f0), std::move(f1),
+                                  std::move(f2), std::move(f3), std::move(f4),
+                                  a);
   }
 
   static uint64_t isf_activity_modifier(ActivityState state);
@@ -349,9 +350,9 @@ struct ValidatedPumpDeliveryTraceCase {
     }
 
     template <typename T1, typename F2>
-    T1 FaultStatus_rec(const T1 &f, const T1 &f0, F2 &&f1, const T1 &f2,
-                       const T1 &f3) const {
-      return this->template FaultStatus_rect<T1>(f, f0, f1, f2, f3);
+    T1 FaultStatus_rec(T1 f, T1 f0, F2 &&f1, T1 f2, T1 f3) const {
+      return this->template FaultStatus_rect<T1>(
+          std::move(f), std::move(f0), f1, std::move(f2), std::move(f3));
     }
 
     template <typename T1, typename F2>
@@ -395,9 +396,8 @@ struct ValidatedPumpDeliveryTraceCase {
   }
 
   template <typename T1>
-  static T1 InsulinType_rec(const T1 &f, const T1 &f0, const T1 &f1,
-                            InsulinType i) {
-    return InsulinType_rect<T1>(f, f0, f1, i);
+  static T1 InsulinType_rec(T1 f, T1 f0, T1 f1, InsulinType i) {
+    return InsulinType_rect<T1>(std::move(f), std::move(f0), std::move(f1), i);
   }
 
   static Minutes peak_time(InsulinType itype, uint64_t _x);
@@ -498,9 +498,9 @@ struct ValidatedPumpDeliveryTraceCase {
   }
 
   template <typename T1, typename F1>
-  static T1 SuspendDecision_rec(const T1 &f, F1 &&f0, const T1 &f1,
+  static T1 SuspendDecision_rec(T1 f, F1 &&f0, T1 f1,
                                 const SuspendDecision &s) {
-    return SuspendDecision_rect<T1>(f, f0, f1, s);
+    return SuspendDecision_rect<T1>(std::move(f), f0, std::move(f1), s);
   }
 
   static uint64_t predict_bg_drop_tenths(uint64_t iob_twentieths,
@@ -685,9 +685,9 @@ struct ValidatedPumpDeliveryTraceCase {
   }
 
   template <typename T1>
-  static T1 RoundingMode_rec(const T1 &f, const T1 &f0, const T1 &f1,
-                             const T1 &f2, RoundingMode r) {
-    return RoundingMode_rect<T1>(f, f0, f1, f2, r);
+  static T1 RoundingMode_rec(T1 f, T1 f0, T1 f1, T1 f2, RoundingMode r) {
+    return RoundingMode_rect<T1>(std::move(f), std::move(f0), std::move(f1),
+                                 std::move(f2), r);
   }
 
   static uint64_t round_down_to_increment(uint64_t t, uint64_t increment);

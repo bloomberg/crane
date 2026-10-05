@@ -9,8 +9,9 @@ Case_sum1_Handler(Handler<crane::obj, crane::obj> x,
       crane::any_cast<Sum1<crane::obj, crane::obj, crane::obj>>(x1));
 }
 
-std::optional<Nat> ItreeCaseHandler::run(const Nat &fuel,
-                                         Itree<ItreeCaseHandler::noE, Nat> t) {
+std::optional<Nat>
+ItreeCaseHandler::run(const Nat &fuel,
+                      const Itree<ItreeCaseHandler::noE, Nat> &t) {
   if (std::holds_alternative<typename Nat::O>(fuel.v())) {
     return std::optional<Nat>();
   } else {

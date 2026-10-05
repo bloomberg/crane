@@ -244,8 +244,8 @@ struct MutualRecursion {
   }
 
   template <typename T1, typename T2, typename F1>
-  static T2 forest_rec(const T2 &f, F1 &&f0, const forest<T1> &f1) {
-    return forest_rect<T1, T2>(f, f0, f1);
+  static T2 forest_rec(T2 f, F1 &&f0, const forest<T1> &f1) {
+    return forest_rect<T1, T2>(std::move(f), f0, f1);
   }
 
   template <typename T1> static uint64_t tree_size(const tree<T1> &t) {

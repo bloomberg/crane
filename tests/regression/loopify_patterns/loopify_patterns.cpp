@@ -797,8 +797,8 @@ LoopifyPatterns::list<uint64_t> LoopifyPatterns::process_twice_fuel(
 }
 
 LoopifyPatterns::list<uint64_t>
-LoopifyPatterns::process_twice(const LoopifyPatterns::list<uint64_t> &l) {
-  return process_twice_fuel(UINT64_C(100), l);
+LoopifyPatterns::process_twice(LoopifyPatterns::list<uint64_t> l) {
+  return process_twice_fuel(UINT64_C(100), std::move(l));
 }
 
 /// as_guard l uses as-pattern with guard (length check).
@@ -1078,14 +1078,15 @@ LoopifyPatterns::double_append(const LoopifyPatterns::list<uint64_t> &l1,
 }
 
 /// process_twice_alt l applies transformation twice on recursive result.
-LoopifyPatterns::list<uint64_t> LoopifyPatterns::process_twice_alt_fuel(
-    uint64_t fuel, const LoopifyPatterns::list<uint64_t> &l) {
-  return process_twice_fuel(fuel, l);
+LoopifyPatterns::list<uint64_t>
+LoopifyPatterns::process_twice_alt_fuel(uint64_t fuel,
+                                        LoopifyPatterns::list<uint64_t> l) {
+  return process_twice_fuel(fuel, std::move(l));
 }
 
 LoopifyPatterns::list<uint64_t>
-LoopifyPatterns::process_twice_alt(const LoopifyPatterns::list<uint64_t> &l) {
-  return process_twice_alt_fuel(UINT64_C(100), l);
+LoopifyPatterns::process_twice_alt(LoopifyPatterns::list<uint64_t> l) {
+  return process_twice_alt_fuel(UINT64_C(100), std::move(l));
 }
 
 /// sum_if_positive_else_double l conditional logic on each element.

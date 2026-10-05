@@ -1,7 +1,7 @@
 #include "itree_interp.h"
 
 std::optional<Nat> ItreeInterp::run(const Nat &fuel,
-                                    Itree<ItreeInterp::noE, Nat> t) {
+                                    const Itree<ItreeInterp::noE, Nat> &t) {
   if (std::holds_alternative<typename Nat::O>(fuel.v())) {
     return std::optional<Nat>();
   } else {

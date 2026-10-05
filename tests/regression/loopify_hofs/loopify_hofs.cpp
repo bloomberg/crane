@@ -322,7 +322,7 @@ List<uint64_t> LoopifyHofs::longest_run_fuel(
   return _result;
 }
 
-List<uint64_t> LoopifyHofs::longest_run(const List<uint64_t> &l) {
+List<uint64_t> LoopifyHofs::longest_run(List<uint64_t> l) {
   return longest_run_fuel(l.length(), l);
 }
 

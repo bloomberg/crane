@@ -30,7 +30,7 @@ concept Monad = requires {
 };
 
 struct ModuleTypeNameCollision {
-  static Opt<Nat> use(const Nat &n);
+  static Opt<Nat> use(Nat n);
 };
 
 struct Nat {
@@ -191,7 +191,7 @@ struct opt_monad {
 };
 
 static_assert(Monad<opt_monad>);
-Opt<Nat> double0(const Nat &n);
+Opt<Nat> double0(Nat n);
 
 template <Monad _tcI0, typename T2>
 typename _tcI0::template m<T2> Monad0::ret(const T2 &x) {

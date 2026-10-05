@@ -154,9 +154,9 @@ struct ErasedMultiIndex {
       return _result;
     }
 
-    template <typename T1, typename F1>
-    T1 hlist_rec(const T1 &f, F1 &&f0) const {
-      return this->template hlist_rect<T1>(f, crane_erase_fn<T1>(f0));
+    template <typename T1, typename F1> T1 hlist_rec(T1 f, F1 &&f0) const {
+      return this->template hlist_rect<T1>(std::move(f),
+                                           crane_erase_fn<T1>(f0));
     }
 
     template <typename T1, typename F1> T1 hlist_rect(T1 f, F1 &&f0) const {
