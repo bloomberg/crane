@@ -272,15 +272,17 @@ LoopifyPairs::sum_prod_count(const LoopifyPairs::list<uint64_t>
 /// lookup_all key l finds all values associated with key.
 LoopifyPairs::list<uint64_t> LoopifyPairs::lookup_all(
     uint64_t key, const LoopifyPairs::list<std::pair<uint64_t, uint64_t>> &l) {
-  std::shared_ptr<LoopifyPairs::list<uint64_t>> _head{};
-  std::shared_ptr<LoopifyPairs::list<uint64_t>> *_write = &_head;
+  std::optional<LoopifyPairs::list<uint64_t>> _root{};
+  std::shared_ptr<LoopifyPairs::list<uint64_t>> *_write = nullptr;
   const LoopifyPairs::list<std::pair<uint64_t, uint64_t>> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<
             typename LoopifyPairs::list<std::pair<uint64_t, uint64_t>>::Nil>(
             _loop_l->v())) {
-      *_write =
-          std::make_shared<LoopifyPairs::list<uint64_t>>(list<uint64_t>::nil());
+      auto _value = list<uint64_t>::nil();
+      (_write ? *(*_write = std::make_shared<LoopifyPairs::list<uint64_t>>(
+                      std::move(_value)))
+              : _root.emplace(std::move(_value)));
       break;
     } else {
       const auto &[a0, a1] = std::get<
@@ -288,11 +290,14 @@ LoopifyPairs::list<uint64_t> LoopifyPairs::lookup_all(
           _loop_l->v());
       const auto &[k, v] = a0;
       if (k == key) {
-        auto _cell = std::make_shared<LoopifyPairs::list<uint64_t>>(
-            typename LoopifyPairs::list<uint64_t>::Cons(v, nullptr));
-        *_write = std::move(_cell);
+        auto _cell = typename LoopifyPairs::list<uint64_t>::Cons(v, nullptr);
+        LoopifyPairs::list<uint64_t> &_node =
+            (_write
+                 ? *(*_write = std::make_shared<LoopifyPairs::list<uint64_t>>(
+                         std::move(_cell)))
+                 : _root.emplace(std::move(_cell)));
         _write = &std::get<typename LoopifyPairs::list<uint64_t>::Cons>(
-                      (*_write)->v_mut())
+                      _node.v_mut())
                       .l;
         _loop_l = crane_raw(a1);
         continue;
@@ -302,23 +307,25 @@ LoopifyPairs::list<uint64_t> LoopifyPairs::lookup_all(
       }
     }
   }
-  return std::move(*_head);
+  return std::move(*_root);
 }
 
 /// swap_pairs l swaps elements in each pair.
 LoopifyPairs::list<std::pair<uint64_t, uint64_t>> LoopifyPairs::swap_pairs(
     const LoopifyPairs::list<std::pair<uint64_t, uint64_t>> &l) {
-  std::shared_ptr<LoopifyPairs::list<std::pair<uint64_t, uint64_t>>> _head{};
+  std::optional<LoopifyPairs::list<std::pair<uint64_t, uint64_t>>> _root{};
   std::shared_ptr<LoopifyPairs::list<std::pair<uint64_t, uint64_t>>> *_write =
-      &_head;
+      nullptr;
   const LoopifyPairs::list<std::pair<uint64_t, uint64_t>> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<
             typename LoopifyPairs::list<std::pair<uint64_t, uint64_t>>::Nil>(
             _loop_l->v())) {
-      *_write =
-          std::make_shared<LoopifyPairs::list<std::pair<uint64_t, uint64_t>>>(
-              list<std::pair<uint64_t, uint64_t>>::nil());
+      auto _value = list<std::pair<uint64_t, uint64_t>>::nil();
+      (_write ? *(*_write = std::make_shared<
+                      LoopifyPairs::list<std::pair<uint64_t, uint64_t>>>(
+                      std::move(_value)))
+              : _root.emplace(std::move(_value)));
       break;
     } else {
       const auto &[a0, a1] = std::get<
@@ -326,16 +333,19 @@ LoopifyPairs::list<std::pair<uint64_t, uint64_t>> LoopifyPairs::swap_pairs(
           _loop_l->v());
       const auto &[a, b] = a0;
       auto _cell =
-          std::make_shared<LoopifyPairs::list<std::pair<uint64_t, uint64_t>>>(
-              typename LoopifyPairs::list<std::pair<uint64_t, uint64_t>>::Cons(
-                  std::make_pair(b, a), nullptr));
-      *_write = std::move(_cell);
+          typename LoopifyPairs::list<std::pair<uint64_t, uint64_t>>::Cons(
+              std::make_pair(b, a), nullptr);
+      LoopifyPairs::list<std::pair<uint64_t, uint64_t>> &_node =
+          (_write ? *(*_write = std::make_shared<
+                          LoopifyPairs::list<std::pair<uint64_t, uint64_t>>>(
+                          std::move(_cell)))
+                  : _root.emplace(std::move(_cell)));
       _write = &std::get<typename LoopifyPairs::list<
-          std::pair<uint64_t, uint64_t>>::Cons>((*_write)->v_mut())
+          std::pair<uint64_t, uint64_t>>::Cons>(_node.v_mut())
                     .l;
       _loop_l = crane_raw(a1);
       continue;
     }
   }
-  return std::move(*_head);
+  return std::move(*_root);
 }

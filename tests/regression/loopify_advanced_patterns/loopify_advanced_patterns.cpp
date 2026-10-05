@@ -38,21 +38,25 @@ uint64_t LoopifyAdvancedPatterns::len_impl(
 }
 
 List<uint64_t> LoopifyAdvancedPatterns::as_guard(const List<uint64_t> &l) {
-  std::shared_ptr<List<uint64_t>> _head{};
-  std::shared_ptr<List<uint64_t>> *_write = &_head;
+  std::optional<List<uint64_t>> _root{};
+  std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      *_write = std::make_shared<List<uint64_t>>(List<uint64_t>::nil());
+      auto _value = List<uint64_t>::nil();
+      (_write ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
+              : _root.emplace(std::move(_value)));
       break;
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       if (UINT64_C(3) < len_impl(*_loop_l)) {
-        auto _cell = std::make_shared<List<uint64_t>>(
-            typename List<uint64_t>::Cons(a0, nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
+        auto _cell = typename List<uint64_t>::Cons(a0, nullptr);
+        List<uint64_t> &_node =
+            (_write ? *(*_write =
+                            std::make_shared<List<uint64_t>>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
         _loop_l = crane_raw(a1);
         continue;
       } else {
@@ -61,7 +65,7 @@ List<uint64_t> LoopifyAdvancedPatterns::as_guard(const List<uint64_t> &l) {
       }
     }
   }
-  return std::move(*_head);
+  return std::move(*_root);
 }
 
 uint64_t LoopifyAdvancedPatterns::multi_guard(
@@ -271,13 +275,15 @@ uint64_t LoopifyAdvancedPatterns::guard_accum(uint64_t acc,
 
 List<uint64_t> LoopifyAdvancedPatterns::cons_computed(uint64_t n,
                                                       const List<uint64_t> &l) {
-  std::shared_ptr<List<uint64_t>> _head{};
-  std::shared_ptr<List<uint64_t>> *_write = &_head;
+  std::optional<List<uint64_t>> _root{};
+  std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
   uint64_t _loop_n = std::move(n);
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      *_write = std::make_shared<List<uint64_t>>(List<uint64_t>::nil());
+      auto _value = List<uint64_t>::nil();
+      (_write ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
+              : _root.emplace(std::move(_value)));
       break;
     } else {
       const auto &[a0, a1] =
@@ -289,16 +295,18 @@ List<uint64_t> LoopifyAdvancedPatterns::cons_computed(uint64_t n,
       } else {
         next_n = _loop_n;
       }
-      auto _cell = std::make_shared<List<uint64_t>>(
-          typename List<uint64_t>::Cons(a0, nullptr));
-      *_write = std::move(_cell);
-      _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
+      auto _cell = typename List<uint64_t>::Cons(a0, nullptr);
+      List<uint64_t> &_node =
+          (_write
+               ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_cell)))
+               : _root.emplace(std::move(_cell)));
+      _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
       _loop_l = crane_raw(a1);
       _loop_n = next_n;
       continue;
     }
   }
-  return std::move(*_head);
+  return std::move(*_root);
 }
 
 uint64_t LoopifyAdvancedPatterns::extract_value(
@@ -427,26 +435,32 @@ LoopifyAdvancedPatterns::count_by_shape(
 
 List<uint64_t> LoopifyAdvancedPatterns::replace_at(uint64_t idx, uint64_t value,
                                                    const List<uint64_t> &l) {
-  std::shared_ptr<List<uint64_t>> _head{};
-  std::shared_ptr<List<uint64_t>> *_write = &_head;
+  std::optional<List<uint64_t>> _root{};
+  std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
   uint64_t _loop_idx = std::move(idx);
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      *_write = std::make_shared<List<uint64_t>>(List<uint64_t>::nil());
+      auto _value = List<uint64_t>::nil();
+      (_write ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
+              : _root.emplace(std::move(_value)));
       break;
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       if (_loop_idx == UINT64_C(0)) {
-        *_write =
-            std::make_shared<List<uint64_t>>(List<uint64_t>::cons(value, *a1));
+        auto _value = List<uint64_t>::cons(value, *a1);
+        (_write
+             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
+             : _root.emplace(std::move(_value)));
         break;
       } else {
-        auto _cell = std::make_shared<List<uint64_t>>(
-            typename List<uint64_t>::Cons(a0, nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
+        auto _cell = typename List<uint64_t>::Cons(a0, nullptr);
+        List<uint64_t> &_node =
+            (_write ? *(*_write =
+                            std::make_shared<List<uint64_t>>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
         _loop_l = crane_raw(a1);
         _loop_idx = (((_loop_idx - UINT64_C(1)) > _loop_idx
                           ? 0
@@ -455,5 +469,5 @@ List<uint64_t> LoopifyAdvancedPatterns::replace_at(uint64_t idx, uint64_t value,
       }
     }
   }
-  return std::move(*_head);
+  return std::move(*_root);
 }

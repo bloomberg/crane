@@ -1362,46 +1362,53 @@ uint64_t LoopifyNumbers::sum_even_indices(const List<uint64_t> &l) {
 
 /// collatz_list n generates collatz sequence as a list.
 List<uint64_t> LoopifyNumbers::collatz_list_fuel(uint64_t fuel, uint64_t n) {
-  std::shared_ptr<List<uint64_t>> _head{};
-  std::shared_ptr<List<uint64_t>> *_write = &_head;
+  std::optional<List<uint64_t>> _root{};
+  std::shared_ptr<List<uint64_t>> *_write = nullptr;
   uint64_t _loop_n = std::move(n);
   uint64_t _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
-      *_write = std::make_shared<List<uint64_t>>(List<uint64_t>::nil());
+      auto _value = List<uint64_t>::nil();
+      (_write ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
+              : _root.emplace(std::move(_value)));
       break;
     } else {
       uint64_t f = _loop_fuel - 1;
       if (_loop_n == UINT64_C(1)) {
-        *_write = std::make_shared<List<uint64_t>>(
-            List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil()));
+        auto _value = List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil());
+        (_write
+             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
+             : _root.emplace(std::move(_value)));
         break;
       } else {
         if ((UINT64_C(2) ? _loop_n % UINT64_C(2) : _loop_n) == UINT64_C(0)) {
-          auto _cell = std::make_shared<List<uint64_t>>(
-              typename List<uint64_t>::Cons(_loop_n, nullptr));
-          *_write = std::move(_cell);
-          _write =
-              &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
+          auto _cell = typename List<uint64_t>::Cons(_loop_n, nullptr);
+          List<uint64_t> &_node =
+              (_write ? *(*_write = std::make_shared<List<uint64_t>>(
+                              std::move(_cell)))
+                      : _root.emplace(std::move(_cell)));
+          _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
           _loop_n = (UINT64_C(2) ? _loop_n / UINT64_C(2) : 0);
           _loop_fuel = f;
           continue;
         } else {
           if ((UINT64_C(3) ? _loop_n % UINT64_C(3) : _loop_n) == UINT64_C(0)) {
-            auto _cell = std::make_shared<List<uint64_t>>(
-                typename List<uint64_t>::Cons(_loop_n, nullptr));
-            *_write = std::move(_cell);
-            _write =
-                &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
+            auto _cell = typename List<uint64_t>::Cons(_loop_n, nullptr);
+            List<uint64_t> &_node =
+                (_write ? *(*_write = std::make_shared<List<uint64_t>>(
+                                std::move(_cell)))
+                        : _root.emplace(std::move(_cell)));
+            _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
             _loop_n = (UINT64_C(3) ? _loop_n / UINT64_C(3) : 0);
             _loop_fuel = f;
             continue;
           } else {
-            auto _cell = std::make_shared<List<uint64_t>>(
-                typename List<uint64_t>::Cons(_loop_n, nullptr));
-            *_write = std::move(_cell);
-            _write =
-                &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
+            auto _cell = typename List<uint64_t>::Cons(_loop_n, nullptr);
+            List<uint64_t> &_node =
+                (_write ? *(*_write = std::make_shared<List<uint64_t>>(
+                                std::move(_cell)))
+                        : _root.emplace(std::move(_cell)));
+            _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
             _loop_n = ((UINT64_C(3) * _loop_n) + UINT64_C(1));
             _loop_fuel = f;
             continue;
@@ -1410,7 +1417,7 @@ List<uint64_t> LoopifyNumbers::collatz_list_fuel(uint64_t fuel, uint64_t n) {
       }
     }
   }
-  return std::move(*_head);
+  return std::move(*_root);
 }
 
 List<uint64_t> LoopifyNumbers::collatz_list(uint64_t n) {

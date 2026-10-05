@@ -7,6 +7,7 @@
 #include <atomic>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -395,47 +396,53 @@ struct DepElim {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, const A &>
     vec<T1> vec_map(uint64_t, F1 &&f) const {
-      std::shared_ptr<vec<T1>> _head{};
-      std::shared_ptr<vec<T1>> *_write = &_head;
+      std::optional<vec<T1>> _root{};
+      std::shared_ptr<vec<T1>> *_write = nullptr;
       const vec<A> *_loop_self = this;
       while (true) {
         auto &&_sv = *_loop_self;
         if (std::holds_alternative<typename vec<A>::Vnil>(_sv.v())) {
-          *_write = std::make_shared<vec<T1>>(vec<T1>::vnil());
+          auto _value = vec<T1>::vnil();
+          (_write ? *(*_write = std::make_shared<vec<T1>>(std::move(_value)))
+                  : _root.emplace(std::move(_value)));
           break;
         } else {
           const auto &[n, a1, a2] = std::get<typename vec<A>::Vcons>(_sv.v());
-          auto _cell = std::make_shared<vec<T1>>(
-              typename vec<T1>::Vcons(n, f(a1), nullptr));
-          *_write = std::move(_cell);
-          _write = &std::get<typename vec<T1>::Vcons>((*_write)->v_mut()).a2;
+          auto _cell = typename vec<T1>::Vcons(n, f(a1), nullptr);
+          vec<T1> &_node =
+              (_write ? *(*_write = std::make_shared<vec<T1>>(std::move(_cell)))
+                      : _root.emplace(std::move(_cell)));
+          _write = &std::get<typename vec<T1>::Vcons>(_node.v_mut()).a2;
           _loop_self = crane_raw(a2);
           continue;
         }
       }
-      return std::move(*_head);
+      return std::move(*_root);
     }
 
     List<A> vec_to_list(uint64_t) const {
-      std::shared_ptr<List<A>> _head{};
-      std::shared_ptr<List<A>> *_write = &_head;
+      std::optional<List<A>> _root{};
+      std::shared_ptr<List<A>> *_write = nullptr;
       const vec<A> *_loop_self = this;
       while (true) {
         auto &&_sv = *_loop_self;
         if (std::holds_alternative<typename vec<A>::Vnil>(_sv.v())) {
-          *_write = std::make_shared<List<A>>(List<A>::nil());
+          auto _value = List<A>::nil();
+          (_write ? *(*_write = std::make_shared<List<A>>(std::move(_value)))
+                  : _root.emplace(std::move(_value)));
           break;
         } else {
           const auto &[n, a1, a2] = std::get<typename vec<A>::Vcons>(_sv.v());
-          auto _cell =
-              std::make_shared<List<A>>(typename List<A>::Cons(a1, nullptr));
-          *_write = std::move(_cell);
-          _write = &std::get<typename List<A>::Cons>((*_write)->v_mut()).l;
+          auto _cell = typename List<A>::Cons(a1, nullptr);
+          List<A> &_node =
+              (_write ? *(*_write = std::make_shared<List<A>>(std::move(_cell)))
+                      : _root.emplace(std::move(_cell)));
+          _write = &std::get<typename List<A>::Cons>(_node.v_mut()).l;
           _loop_self = crane_raw(a2);
           continue;
         }
       }
-      return std::move(*_head);
+      return std::move(*_root);
     }
 
     template <typename T1, typename F1>

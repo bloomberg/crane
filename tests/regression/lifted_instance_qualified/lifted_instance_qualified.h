@@ -5,6 +5,7 @@
 #include <atomic>
 #include <concepts>
 #include <memory>
+#include <optional>
 #include <utility>
 #include <variant>
 
@@ -155,26 +156,29 @@ public:
   const variant_t &v() const { return v_; }
 
   String append(String s2) const {
-    std::shared_ptr<String> _head{};
-    std::shared_ptr<String> *_write = &_head;
+    std::optional<String> _root{};
+    std::shared_ptr<String> *_write = nullptr;
     const String *_loop_self = this;
     String _loop_s2 = std::move(s2);
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename String::EmptyString>(_sv.v())) {
-        *_write = std::make_shared<String>(std::move(_loop_s2));
+        auto _value = std::move(_loop_s2);
+        (_write ? *(*_write = std::make_shared<String>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] = std::get<typename String::String0>(_sv.v());
-        auto _cell =
-            std::make_shared<String>(typename String::String0(a0, nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename String::String0>((*_write)->v_mut()).a1;
+        auto _cell = typename String::String0(a0, nullptr);
+        String &_node =
+            (_write ? *(*_write = std::make_shared<String>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename String::String0>(_node.v_mut()).a1;
         _loop_self = crane_raw(a1);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 };
 

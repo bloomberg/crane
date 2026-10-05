@@ -32,6 +32,12 @@ let frame_field_key field = Id.to_string id_f ^ "." ^ Id.to_string field
 
 (* Perceus reuse cursor (see {!section:reuse-cursor}). *)
 let id_own          = Id.of_string "_own"
+
+(* A value-type result assembled in place (see {!Loopify_tmc.result_storage}). *)
+let id_root         = Id.of_string "_root"
+let id_node         = Id.of_string "_node"
+let id_value        = Id.of_string "_value"
+let id_emplace      = Id.of_string "emplace"
 let id_uniq         = Id.of_string "_uniq"
 let id_rstep        = Id.of_string "_rs"
 

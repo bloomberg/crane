@@ -53,39 +53,43 @@ uint64_t MemSafetyProbe5::sum_left_vals(
 MemSafetyProbe5::mylist<crane::fn<uint64_t(uint64_t)>>
 MemSafetyProbe5::build_getters(
     const MemSafetyProbe5::mylist<MemSafetyProbe5::tree> &l) {
+  std::optional<MemSafetyProbe5::mylist<crane::fn<uint64_t(uint64_t)>>> _root{};
   std::shared_ptr<MemSafetyProbe5::mylist<crane::fn<uint64_t(uint64_t)>>>
-      _head{};
-  std::shared_ptr<MemSafetyProbe5::mylist<crane::fn<uint64_t(uint64_t)>>>
-      *_write = &_head;
+      *_write = nullptr;
   MemSafetyProbe5::mylist<MemSafetyProbe5::tree> _loop_l = l;
   while (true) {
     if (std::holds_alternative<
             typename MemSafetyProbe5::mylist<MemSafetyProbe5::tree>::Mynil>(
             _loop_l.v())) {
-      *_write = std::make_shared<
-          MemSafetyProbe5::mylist<crane::fn<uint64_t(uint64_t)>>>(
-          mylist<crane::fn<uint64_t(uint64_t)>>::mynil());
+      auto _value = mylist<crane::fn<uint64_t(uint64_t)>>::mynil();
+      (_write ? *(*_write = std::make_shared<
+                      MemSafetyProbe5::mylist<crane::fn<uint64_t(uint64_t)>>>(
+                      std::move(_value)))
+              : _root.emplace(std::move(_value)));
       break;
     } else {
       const auto &[a0, a1] = std::get<
           typename MemSafetyProbe5::mylist<MemSafetyProbe5::tree>::Mycons>(
           _loop_l.v());
       const MemSafetyProbe5::mylist<MemSafetyProbe5::tree> &a1_value = *a1;
-      auto _cell = std::make_shared<
-          MemSafetyProbe5::mylist<crane::fn<uint64_t(uint64_t)>>>(
-          typename MemSafetyProbe5::mylist<crane::fn<uint64_t(uint64_t)>>::
-              Mycons([=](uint64_t _x0)
-                         -> uint64_t { return a0.get_left_val(_x0); },
-                     nullptr));
-      *_write = std::move(_cell);
+      auto _cell = typename MemSafetyProbe5::
+          mylist<crane::fn<uint64_t(uint64_t)>>::Mycons(
+              [=](uint64_t _x0) -> uint64_t { return a0.get_left_val(_x0); },
+              nullptr);
+      MemSafetyProbe5::mylist<crane::fn<uint64_t(uint64_t)>> &_node =
+          (_write
+               ? *(*_write = std::make_shared<
+                       MemSafetyProbe5::mylist<crane::fn<uint64_t(uint64_t)>>>(
+                       std::move(_cell)))
+               : _root.emplace(std::move(_cell)));
       _write = &std::get<typename MemSafetyProbe5::mylist<
-          crane::fn<uint64_t(uint64_t)>>::Mycons>((*_write)->v_mut())
+          crane::fn<uint64_t(uint64_t)>>::Mycons>(_node.v_mut())
                     .a1;
       _loop_l = a1_value;
       continue;
     }
   }
-  return std::move(*_head);
+  return std::move(*_root);
 }
 
 uint64_t MemSafetyProbe5::apply_all(
@@ -191,35 +195,40 @@ MemSafetyProbe5::collect_left_vals(
 /// TEST 6: Stress test with very large list of trees.
 MemSafetyProbe5::mylist<MemSafetyProbe5::tree>
 MemSafetyProbe5::make_tree_list(uint64_t n) {
-  std::shared_ptr<MemSafetyProbe5::mylist<MemSafetyProbe5::tree>> _head{};
+  std::optional<MemSafetyProbe5::mylist<MemSafetyProbe5::tree>> _root{};
   std::shared_ptr<MemSafetyProbe5::mylist<MemSafetyProbe5::tree>> *_write =
-      &_head;
+      nullptr;
   uint64_t _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
-      *_write =
-          std::make_shared<MemSafetyProbe5::mylist<MemSafetyProbe5::tree>>(
-              mylist<MemSafetyProbe5::tree>::mynil());
+      auto _value = mylist<MemSafetyProbe5::tree>::mynil();
+      (_write ? *(*_write = std::make_shared<
+                      MemSafetyProbe5::mylist<MemSafetyProbe5::tree>>(
+                      std::move(_value)))
+              : _root.emplace(std::move(_value)));
       break;
     } else {
       uint64_t n_ = _loop_n - 1;
       auto _cell =
-          std::make_shared<MemSafetyProbe5::mylist<MemSafetyProbe5::tree>>(
-              typename MemSafetyProbe5::mylist<MemSafetyProbe5::tree>::Mycons(
-                  tree::node(tree::node(tree::leaf(), _loop_n, tree::leaf()),
-                             (_loop_n * UINT64_C(2)), tree::leaf()),
-                  nullptr));
-      *_write = std::move(_cell);
+          typename MemSafetyProbe5::mylist<MemSafetyProbe5::tree>::Mycons(
+              tree::node(tree::node(tree::leaf(), _loop_n, tree::leaf()),
+                         (_loop_n * UINT64_C(2)), tree::leaf()),
+              nullptr);
+      MemSafetyProbe5::mylist<MemSafetyProbe5::tree> &_node =
+          (_write ? *(*_write = std::make_shared<
+                          MemSafetyProbe5::mylist<MemSafetyProbe5::tree>>(
+                          std::move(_cell)))
+                  : _root.emplace(std::move(_cell)));
       _write =
           &std::get<
                typename MemSafetyProbe5::mylist<MemSafetyProbe5::tree>::Mycons>(
-               (*_write)->v_mut())
+               _node.v_mut())
                .a1;
       _loop_n = n_;
       continue;
     }
   }
-  return std::move(*_head);
+  return std::move(*_root);
 }
 
 uint64_t MemSafetyProbe5::sum_getters(

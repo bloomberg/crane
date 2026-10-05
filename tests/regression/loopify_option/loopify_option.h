@@ -251,22 +251,26 @@ struct LoopifyOption {
   template <typename T1, typename T2, typename F0>
     requires std::is_invocable_r_v<std::optional<T2>, F0 &, const T1 &>
   static list<T2> map_opt(F0 &&f, const list<T1> &l) {
-    std::shared_ptr<list<T2>> _head{};
-    std::shared_ptr<list<T2>> *_write = &_head;
+    std::optional<list<T2>> _root{};
+    std::shared_ptr<list<T2>> *_write = nullptr;
     const list<T1> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
-        *_write = std::make_shared<list<T2>>(list<T2>::nil());
+        auto _value = list<T2>::nil();
+        (_write ? *(*_write = std::make_shared<list<T2>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] = std::get<typename list<T1>::Cons>(_loop_l->v());
         auto _cs = f(a0);
         if (_cs.has_value()) {
           const T2 &y = *_cs;
-          auto _cell =
-              std::make_shared<list<T2>>(typename list<T2>::Cons(y, nullptr));
-          *_write = std::move(_cell);
-          _write = &std::get<typename list<T2>::Cons>((*_write)->v_mut()).l;
+          auto _cell = typename list<T2>::Cons(y, nullptr);
+          list<T2> &_node =
+              (_write
+                   ? *(*_write = std::make_shared<list<T2>>(std::move(_cell)))
+                   : _root.emplace(std::move(_cell)));
+          _write = &std::get<typename list<T2>::Cons>(_node.v_mut()).l;
           _loop_l = crane_raw(a1);
           continue;
         } else {
@@ -275,7 +279,7 @@ struct LoopifyOption {
         }
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 
   /// find_index p l returns the index of the first match, or None.

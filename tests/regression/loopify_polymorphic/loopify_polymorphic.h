@@ -94,26 +94,29 @@ public:
   const variant_t &v() const { return v_; }
 
   List<A> app(List<A> m) const {
-    std::shared_ptr<List<A>> _head{};
-    std::shared_ptr<List<A>> *_write = &_head;
+    std::optional<List<A>> _root{};
+    std::shared_ptr<List<A>> *_write = nullptr;
     const List<A> *_loop_self = this;
     List<A> _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
-        *_write = std::make_shared<List<A>>(std::move(_loop_m));
+        auto _value = std::move(_loop_m);
+        (_write ? *(*_write = std::make_shared<List<A>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-        auto _cell =
-            std::make_shared<List<A>>(typename List<A>::Cons(a0, nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename List<A>::Cons>((*_write)->v_mut()).l;
+        auto _cell = typename List<A>::Cons(a0, nullptr);
+        List<A> &_node =
+            (_write ? *(*_write = std::make_shared<List<A>>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename List<A>::Cons>(_node.v_mut()).l;
         _loop_self = crane_raw(a1);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 };
 
@@ -200,25 +203,28 @@ struct LoopifyPolymorphic {
 
   template <typename T1>
   static List<T1> poly_append(const List<T1> &l1, List<T1> l2) {
-    std::shared_ptr<List<T1>> _head{};
-    std::shared_ptr<List<T1>> *_write = &_head;
+    std::optional<List<T1>> _root{};
+    std::shared_ptr<List<T1>> *_write = nullptr;
     List<T1> _loop_l2 = std::move(l2);
     const List<T1> *_loop_l1 = &l1;
     while (true) {
       if (std::holds_alternative<typename List<T1>::Nil>(_loop_l1->v())) {
-        *_write = std::make_shared<List<T1>>(std::move(_loop_l2));
+        auto _value = std::move(_loop_l2);
+        (_write ? *(*_write = std::make_shared<List<T1>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] = std::get<typename List<T1>::Cons>(_loop_l1->v());
-        auto _cell =
-            std::make_shared<List<T1>>(typename List<T1>::Cons(a0, nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename List<T1>::Cons>((*_write)->v_mut()).l;
+        auto _cell = typename List<T1>::Cons(a0, nullptr);
+        List<T1> &_node =
+            (_write ? *(*_write = std::make_shared<List<T1>>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename List<T1>::Cons>(_node.v_mut()).l;
         _loop_l1 = crane_raw(a1);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 
   template <typename T1> static std::optional<T1> poly_last(const List<T1> &l) {
@@ -240,33 +246,39 @@ struct LoopifyPolymorphic {
 
   template <typename T1>
   static List<T1> poly_take(uint64_t n, const List<T1> &l) {
-    std::shared_ptr<List<T1>> _head{};
-    std::shared_ptr<List<T1>> *_write = &_head;
+    std::optional<List<T1>> _root{};
+    std::shared_ptr<List<T1>> *_write = nullptr;
     const List<T1> *_loop_l = &l;
     uint64_t _loop_n = std::move(n);
     while (true) {
       if (_loop_n <= 0) {
-        *_write = std::make_shared<List<T1>>(List<T1>::nil());
+        auto _value = List<T1>::nil();
+        (_write ? *(*_write = std::make_shared<List<T1>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         uint64_t n_ = _loop_n - 1;
         if (std::holds_alternative<typename List<T1>::Nil>(_loop_l->v())) {
-          *_write = std::make_shared<List<T1>>(List<T1>::nil());
+          auto _value = List<T1>::nil();
+          (_write ? *(*_write = std::make_shared<List<T1>>(std::move(_value)))
+                  : _root.emplace(std::move(_value)));
           break;
         } else {
           const auto &[a0, a1] =
               std::get<typename List<T1>::Cons>(_loop_l->v());
-          auto _cell =
-              std::make_shared<List<T1>>(typename List<T1>::Cons(a0, nullptr));
-          *_write = std::move(_cell);
-          _write = &std::get<typename List<T1>::Cons>((*_write)->v_mut()).l;
+          auto _cell = typename List<T1>::Cons(a0, nullptr);
+          List<T1> &_node =
+              (_write
+                   ? *(*_write = std::make_shared<List<T1>>(std::move(_cell)))
+                   : _root.emplace(std::move(_cell)));
+          _write = &std::get<typename List<T1>::Cons>(_node.v_mut()).l;
           _loop_l = crane_raw(a1);
           _loop_n = n_;
           continue;
         }
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 
   template <typename T1> static List<T1> poly_drop(uint64_t n, List<T1> l) {
@@ -310,20 +322,24 @@ struct LoopifyPolymorphic {
 
   template <typename T1, typename F0>
   static List<T1> poly_filter(F0 &&p, const List<T1> &l) {
-    std::shared_ptr<List<T1>> _head{};
-    std::shared_ptr<List<T1>> *_write = &_head;
+    std::optional<List<T1>> _root{};
+    std::shared_ptr<List<T1>> *_write = nullptr;
     const List<T1> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename List<T1>::Nil>(_loop_l->v())) {
-        *_write = std::make_shared<List<T1>>(List<T1>::nil());
+        auto _value = List<T1>::nil();
+        (_write ? *(*_write = std::make_shared<List<T1>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] = std::get<typename List<T1>::Cons>(_loop_l->v());
         if (p(a0)) {
-          auto _cell =
-              std::make_shared<List<T1>>(typename List<T1>::Cons(a0, nullptr));
-          *_write = std::move(_cell);
-          _write = &std::get<typename List<T1>::Cons>((*_write)->v_mut()).l;
+          auto _cell = typename List<T1>::Cons(a0, nullptr);
+          List<T1> &_node =
+              (_write
+                   ? *(*_write = std::make_shared<List<T1>>(std::move(_cell)))
+                   : _root.emplace(std::move(_cell)));
+          _write = &std::get<typename List<T1>::Cons>(_node.v_mut()).l;
           _loop_l = crane_raw(a1);
           continue;
         } else {
@@ -332,67 +348,76 @@ struct LoopifyPolymorphic {
         }
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 
   template <typename T1, typename T2, typename F0>
     requires std::is_invocable_r_v<T2, F0 &, const T1 &>
   static List<T2> poly_map(F0 &&f, const List<T1> &l) {
-    std::shared_ptr<List<T2>> _head{};
-    std::shared_ptr<List<T2>> *_write = &_head;
+    std::optional<List<T2>> _root{};
+    std::shared_ptr<List<T2>> *_write = nullptr;
     const List<T1> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename List<T1>::Nil>(_loop_l->v())) {
-        *_write = std::make_shared<List<T2>>(List<T2>::nil());
+        auto _value = List<T2>::nil();
+        (_write ? *(*_write = std::make_shared<List<T2>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] = std::get<typename List<T1>::Cons>(_loop_l->v());
-        auto _cell =
-            std::make_shared<List<T2>>(typename List<T2>::Cons(f(a0), nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename List<T2>::Cons>((*_write)->v_mut()).l;
+        auto _cell = typename List<T2>::Cons(f(a0), nullptr);
+        List<T2> &_node =
+            (_write ? *(*_write = std::make_shared<List<T2>>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename List<T2>::Cons>(_node.v_mut()).l;
         _loop_l = crane_raw(a1);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 
   template <typename T1, typename T2>
   static List<std::pair<T1, T2>> poly_zip(const List<T1> &l1,
                                           const List<T2> &l2) {
-    std::shared_ptr<List<std::pair<T1, T2>>> _head{};
-    std::shared_ptr<List<std::pair<T1, T2>>> *_write = &_head;
+    std::optional<List<std::pair<T1, T2>>> _root{};
+    std::shared_ptr<List<std::pair<T1, T2>>> *_write = nullptr;
     const List<T2> *_loop_l2 = &l2;
     const List<T1> *_loop_l1 = &l1;
     while (true) {
       if (std::holds_alternative<typename List<T1>::Nil>(_loop_l1->v())) {
-        *_write = std::make_shared<List<std::pair<T1, T2>>>(
-            List<std::pair<T1, T2>>::nil());
+        auto _value = List<std::pair<T1, T2>>::nil();
+        (_write ? *(*_write = std::make_shared<List<std::pair<T1, T2>>>(
+                        std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] = std::get<typename List<T1>::Cons>(_loop_l1->v());
         if (std::holds_alternative<typename List<T2>::Nil>(_loop_l2->v())) {
-          *_write = std::make_shared<List<std::pair<T1, T2>>>(
-              List<std::pair<T1, T2>>::nil());
+          auto _value = List<std::pair<T1, T2>>::nil();
+          (_write ? *(*_write = std::make_shared<List<std::pair<T1, T2>>>(
+                          std::move(_value)))
+                  : _root.emplace(std::move(_value)));
           break;
         } else {
           const auto &[a00, a10] =
               std::get<typename List<T2>::Cons>(_loop_l2->v());
-          auto _cell = std::make_shared<List<std::pair<T1, T2>>>(
-              typename List<std::pair<T1, T2>>::Cons(std::make_pair(a0, a00),
-                                                     nullptr));
-          *_write = std::move(_cell);
-          _write = &std::get<typename List<std::pair<T1, T2>>::Cons>(
-                        (*_write)->v_mut())
-                        .l;
+          auto _cell = typename List<std::pair<T1, T2>>::Cons(
+              std::make_pair(a0, a00), nullptr);
+          List<std::pair<T1, T2>> &_node =
+              (_write ? *(*_write = std::make_shared<List<std::pair<T1, T2>>>(
+                              std::move(_cell)))
+                      : _root.emplace(std::move(_cell)));
+          _write =
+              &std::get<typename List<std::pair<T1, T2>>::Cons>(_node.v_mut())
+                   .l;
           _loop_l2 = crane_raw(a10);
           _loop_l1 = crane_raw(a1);
           continue;
         }
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 
   template <typename T1, typename T2>
@@ -514,24 +539,27 @@ struct LoopifyPolymorphic {
 
   template <typename T1>
   static List<T1> poly_replicate(uint64_t n, const T1 &x) {
-    std::shared_ptr<List<T1>> _head{};
-    std::shared_ptr<List<T1>> *_write = &_head;
+    std::optional<List<T1>> _root{};
+    std::shared_ptr<List<T1>> *_write = nullptr;
     uint64_t _loop_n = std::move(n);
     while (true) {
       if (_loop_n <= 0) {
-        *_write = std::make_shared<List<T1>>(List<T1>::nil());
+        auto _value = List<T1>::nil();
+        (_write ? *(*_write = std::make_shared<List<T1>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         uint64_t n_ = _loop_n - 1;
-        auto _cell =
-            std::make_shared<List<T1>>(typename List<T1>::Cons(x, nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename List<T1>::Cons>((*_write)->v_mut()).l;
+        auto _cell = typename List<T1>::Cons(x, nullptr);
+        List<T1> &_node =
+            (_write ? *(*_write = std::make_shared<List<T1>>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename List<T1>::Cons>(_node.v_mut()).l;
         _loop_n = n_;
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 
   static uint64_t nat_length(const List<uint64_t> &x0_);

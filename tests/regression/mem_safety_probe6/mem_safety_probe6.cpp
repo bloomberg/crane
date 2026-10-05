@@ -3,17 +3,18 @@
 /// TEST 5: Chain of closures each pre-computing from the tail.
 MemSafetyProbe6::mylist<crane::fn<uint64_t(uint64_t)>>
 MemSafetyProbe6::build_chain(const MemSafetyProbe6::mylist<uint64_t> &l) {
+  std::optional<MemSafetyProbe6::mylist<crane::fn<uint64_t(uint64_t)>>> _root{};
   std::shared_ptr<MemSafetyProbe6::mylist<crane::fn<uint64_t(uint64_t)>>>
-      _head{};
-  std::shared_ptr<MemSafetyProbe6::mylist<crane::fn<uint64_t(uint64_t)>>>
-      *_write = &_head;
+      *_write = nullptr;
   MemSafetyProbe6::mylist<uint64_t> _loop_l = l;
   while (true) {
     if (std::holds_alternative<
             typename MemSafetyProbe6::mylist<uint64_t>::Mynil>(_loop_l.v())) {
-      *_write = std::make_shared<
-          MemSafetyProbe6::mylist<crane::fn<uint64_t(uint64_t)>>>(
-          mylist<crane::fn<uint64_t(uint64_t)>>::mynil());
+      auto _value = mylist<crane::fn<uint64_t(uint64_t)>>::mynil();
+      (_write ? *(*_write = std::make_shared<
+                      MemSafetyProbe6::mylist<crane::fn<uint64_t(uint64_t)>>>(
+                      std::move(_value)))
+              : _root.emplace(std::move(_value)));
       break;
     } else {
       const auto &[a0, a1] =
@@ -21,20 +22,23 @@ MemSafetyProbe6::build_chain(const MemSafetyProbe6::mylist<uint64_t> &l) {
               _loop_l.v());
       const MemSafetyProbe6::mylist<uint64_t> &a1_value = *a1;
       uint64_t rest_len = a1_value.length();
-      auto _cell = std::make_shared<
-          MemSafetyProbe6::mylist<crane::fn<uint64_t(uint64_t)>>>(
-          typename MemSafetyProbe6::mylist<crane::fn<uint64_t(uint64_t)>>::
-              Mycons([=](uint64_t n) { return ((a0 + rest_len) + n); },
-                     nullptr));
-      *_write = std::move(_cell);
+      auto _cell = typename MemSafetyProbe6::
+          mylist<crane::fn<uint64_t(uint64_t)>>::Mycons(
+              [=](uint64_t n) { return ((a0 + rest_len) + n); }, nullptr);
+      MemSafetyProbe6::mylist<crane::fn<uint64_t(uint64_t)>> &_node =
+          (_write
+               ? *(*_write = std::make_shared<
+                       MemSafetyProbe6::mylist<crane::fn<uint64_t(uint64_t)>>>(
+                       std::move(_cell)))
+               : _root.emplace(std::move(_cell)));
       _write = &std::get<typename MemSafetyProbe6::mylist<
-          crane::fn<uint64_t(uint64_t)>>::Mycons>((*_write)->v_mut())
+          crane::fn<uint64_t(uint64_t)>>::Mycons>(_node.v_mut())
                     .a1;
       _loop_l = a1_value;
       continue;
     }
   }
-  return std::move(*_head);
+  return std::move(*_root);
 }
 
 uint64_t MemSafetyProbe6::apply_chain(

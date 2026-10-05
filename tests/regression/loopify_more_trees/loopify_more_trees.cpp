@@ -481,26 +481,30 @@ LoopifyMoreTrees::tree LoopifyMoreTrees::build_bst(
 
 List<uint64_t> LoopifyMoreTrees::append_lists(const List<uint64_t> &l1,
                                               List<uint64_t> l2) {
-  std::shared_ptr<List<uint64_t>> _head{};
-  std::shared_ptr<List<uint64_t>> *_write = &_head;
+  std::optional<List<uint64_t>> _root{};
+  std::shared_ptr<List<uint64_t>> *_write = nullptr;
   List<uint64_t> _loop_l2 = std::move(l2);
   const List<uint64_t> *_loop_l1 = &l1;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l1->v())) {
-      *_write = std::make_shared<List<uint64_t>>(std::move(_loop_l2));
+      auto _value = std::move(_loop_l2);
+      (_write ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
+              : _root.emplace(std::move(_value)));
       break;
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l1->v());
-      auto _cell = std::make_shared<List<uint64_t>>(
-          typename List<uint64_t>::Cons(a0, nullptr));
-      *_write = std::move(_cell);
-      _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
+      auto _cell = typename List<uint64_t>::Cons(a0, nullptr);
+      List<uint64_t> &_node =
+          (_write
+               ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_cell)))
+               : _root.emplace(std::move(_cell)));
+      _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
       _loop_l1 = crane_raw(a1);
       continue;
     }
   }
-  return std::move(*_head);
+  return std::move(*_root);
 }
 
 List<uint64_t> LoopifyMoreTrees::flatten(
@@ -547,28 +551,32 @@ List<uint64_t> LoopifyMoreTrees::flatten(
 
 List<List<uint64_t>>
 LoopifyMoreTrees::map_tree_to_list(const List<LoopifyMoreTrees::tree> &lt) {
-  std::shared_ptr<List<List<uint64_t>>> _head{};
-  std::shared_ptr<List<List<uint64_t>>> *_write = &_head;
+  std::optional<List<List<uint64_t>>> _root{};
+  std::shared_ptr<List<List<uint64_t>>> *_write = nullptr;
   const List<LoopifyMoreTrees::tree> *_loop_lt = &lt;
   while (true) {
     if (std::holds_alternative<typename List<LoopifyMoreTrees::tree>::Nil>(
             _loop_lt->v())) {
-      *_write =
-          std::make_shared<List<List<uint64_t>>>(List<List<uint64_t>>::nil());
+      auto _value = List<List<uint64_t>>::nil();
+      (_write ? *(*_write =
+                      std::make_shared<List<List<uint64_t>>>(std::move(_value)))
+              : _root.emplace(std::move(_value)));
       break;
     } else {
       const auto &[a0, a1] =
           std::get<typename List<LoopifyMoreTrees::tree>::Cons>(_loop_lt->v());
-      auto _cell = std::make_shared<List<List<uint64_t>>>(
-          typename List<List<uint64_t>>::Cons(tree_to_list(a0), nullptr));
-      *_write = std::move(_cell);
-      _write =
-          &std::get<typename List<List<uint64_t>>::Cons>((*_write)->v_mut()).l;
+      auto _cell =
+          typename List<List<uint64_t>>::Cons(tree_to_list(a0), nullptr);
+      List<List<uint64_t>> &_node =
+          (_write ? *(*_write = std::make_shared<List<List<uint64_t>>>(
+                          std::move(_cell)))
+                  : _root.emplace(std::move(_cell)));
+      _write = &std::get<typename List<List<uint64_t>>::Cons>(_node.v_mut()).l;
       _loop_lt = crane_raw(a1);
       continue;
     }
   }
-  return std::move(*_head);
+  return std::move(*_root);
 }
 
 List<LoopifyMoreTrees::tree>
@@ -587,30 +595,34 @@ LoopifyMoreTrees::tree_children(const LoopifyMoreTrees::tree &t) {
 List<LoopifyMoreTrees::tree>
 LoopifyMoreTrees::append_trees(const List<LoopifyMoreTrees::tree> &l1,
                                List<LoopifyMoreTrees::tree> l2) {
-  std::shared_ptr<List<LoopifyMoreTrees::tree>> _head{};
-  std::shared_ptr<List<LoopifyMoreTrees::tree>> *_write = &_head;
+  std::optional<List<LoopifyMoreTrees::tree>> _root{};
+  std::shared_ptr<List<LoopifyMoreTrees::tree>> *_write = nullptr;
   List<LoopifyMoreTrees::tree> _loop_l2 = std::move(l2);
   const List<LoopifyMoreTrees::tree> *_loop_l1 = &l1;
   while (true) {
     if (std::holds_alternative<typename List<LoopifyMoreTrees::tree>::Nil>(
             _loop_l1->v())) {
-      *_write =
-          std::make_shared<List<LoopifyMoreTrees::tree>>(std::move(_loop_l2));
+      auto _value = std::move(_loop_l2);
+      (_write ? *(*_write = std::make_shared<List<LoopifyMoreTrees::tree>>(
+                      std::move(_value)))
+              : _root.emplace(std::move(_value)));
       break;
     } else {
       const auto &[a0, a1] =
           std::get<typename List<LoopifyMoreTrees::tree>::Cons>(_loop_l1->v());
-      auto _cell = std::make_shared<List<LoopifyMoreTrees::tree>>(
-          typename List<LoopifyMoreTrees::tree>::Cons(a0, nullptr));
-      *_write = std::move(_cell);
-      _write = &std::get<typename List<LoopifyMoreTrees::tree>::Cons>(
-                    (*_write)->v_mut())
-                    .l;
+      auto _cell = typename List<LoopifyMoreTrees::tree>::Cons(a0, nullptr);
+      List<LoopifyMoreTrees::tree> &_node =
+          (_write ? *(*_write = std::make_shared<List<LoopifyMoreTrees::tree>>(
+                          std::move(_cell)))
+                  : _root.emplace(std::move(_cell)));
+      _write =
+          &std::get<typename List<LoopifyMoreTrees::tree>::Cons>(_node.v_mut())
+               .l;
       _loop_l1 = crane_raw(a1);
       continue;
     }
   }
-  return std::move(*_head);
+  return std::move(*_root);
 }
 
 List<LoopifyMoreTrees::tree> LoopifyMoreTrees::concat_map_children(
@@ -660,38 +672,44 @@ List<LoopifyMoreTrees::tree> LoopifyMoreTrees::concat_map_children(
 List<List<uint64_t>>
 LoopifyMoreTrees::tree_levels_fuel(uint64_t fuel,
                                    const List<LoopifyMoreTrees::tree> &level) {
-  std::shared_ptr<List<List<uint64_t>>> _head{};
-  std::shared_ptr<List<List<uint64_t>>> *_write = &_head;
+  std::optional<List<List<uint64_t>>> _root{};
+  std::shared_ptr<List<List<uint64_t>>> *_write = nullptr;
   List<LoopifyMoreTrees::tree> _loop_level = level;
   uint64_t _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
-      *_write =
-          std::make_shared<List<List<uint64_t>>>(List<List<uint64_t>>::nil());
+      auto _value = List<List<uint64_t>>::nil();
+      (_write ? *(*_write =
+                      std::make_shared<List<List<uint64_t>>>(std::move(_value)))
+              : _root.emplace(std::move(_value)));
       break;
     } else {
       uint64_t fuel_ = _loop_fuel - 1;
       if (std::holds_alternative<typename List<LoopifyMoreTrees::tree>::Nil>(
               _loop_level.v())) {
-        *_write =
-            std::make_shared<List<List<uint64_t>>>(List<List<uint64_t>>::nil());
+        auto _value = List<List<uint64_t>>::nil();
+        (_write ? *(*_write = std::make_shared<List<List<uint64_t>>>(
+                        std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         List<uint64_t> values = flatten(map_tree_to_list(_loop_level));
         List<LoopifyMoreTrees::tree> next = concat_map_children(_loop_level);
-        auto _cell = std::make_shared<List<List<uint64_t>>>(
-            typename List<List<uint64_t>>::Cons(std::move(values), nullptr));
-        *_write = std::move(_cell);
+        auto _cell =
+            typename List<List<uint64_t>>::Cons(std::move(values), nullptr);
+        List<List<uint64_t>> &_node =
+            (_write ? *(*_write = std::make_shared<List<List<uint64_t>>>(
+                            std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
         _write =
-            &std::get<typename List<List<uint64_t>>::Cons>((*_write)->v_mut())
-                 .l;
+            &std::get<typename List<List<uint64_t>>::Cons>(_node.v_mut()).l;
         _loop_level = std::move(next);
         _loop_fuel = fuel_;
         continue;
       }
     }
   }
-  return std::move(*_head);
+  return std::move(*_root);
 }
 
 List<List<uint64_t>>

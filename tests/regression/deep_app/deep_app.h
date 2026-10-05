@@ -7,6 +7,7 @@
 #include <atomic>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -194,51 +195,59 @@ struct DeepApp {
   /// the result is still deep.
   template <typename T1>
   static mylist<T1> app(const mylist<T1> &l1, mylist<T1> l2) {
-    std::shared_ptr<mylist<T1>> _head{};
-    std::shared_ptr<mylist<T1>> *_write = &_head;
+    std::optional<mylist<T1>> _root{};
+    std::shared_ptr<mylist<T1>> *_write = nullptr;
     mylist<T1> _loop_l2 = std::move(l2);
     const mylist<T1> *_loop_l1 = &l1;
     while (true) {
       if (std::holds_alternative<typename mylist<T1>::Mynil>(_loop_l1->v())) {
-        *_write = std::make_shared<mylist<T1>>(std::move(_loop_l2));
+        auto _value = std::move(_loop_l2);
+        (_write ? *(*_write = std::make_shared<mylist<T1>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] =
             std::get<typename mylist<T1>::Mycons>(_loop_l1->v());
-        auto _cell = std::make_shared<mylist<T1>>(
-            typename mylist<T1>::Mycons(a0, nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename mylist<T1>::Mycons>((*_write)->v_mut()).a1;
+        auto _cell = typename mylist<T1>::Mycons(a0, nullptr);
+        mylist<T1> &_node =
+            (_write
+                 ? *(*_write = std::make_shared<mylist<T1>>(std::move(_cell)))
+                 : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename mylist<T1>::Mycons>(_node.v_mut()).a1;
         _loop_l1 = crane_raw(a1);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 
   /// Recursive map — same issue.
   template <typename T1, typename T2, typename F0>
     requires std::is_invocable_r_v<T2, F0 &, const T1 &>
   static mylist<T2> map(F0 &&f, const mylist<T1> &l) {
-    std::shared_ptr<mylist<T2>> _head{};
-    std::shared_ptr<mylist<T2>> *_write = &_head;
+    std::optional<mylist<T2>> _root{};
+    std::shared_ptr<mylist<T2>> *_write = nullptr;
     const mylist<T1> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename mylist<T1>::Mynil>(_loop_l->v())) {
-        *_write = std::make_shared<mylist<T2>>(mylist<T2>::mynil());
+        auto _value = mylist<T2>::mynil();
+        (_write ? *(*_write = std::make_shared<mylist<T2>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] =
             std::get<typename mylist<T1>::Mycons>(_loop_l->v());
-        auto _cell = std::make_shared<mylist<T2>>(
-            typename mylist<T2>::Mycons(f(a0), nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename mylist<T2>::Mycons>((*_write)->v_mut()).a1;
+        auto _cell = typename mylist<T2>::Mycons(f(a0), nullptr);
+        mylist<T2> &_node =
+            (_write
+                 ? *(*_write = std::make_shared<mylist<T2>>(std::move(_cell)))
+                 : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename mylist<T2>::Mycons>(_node.v_mut()).a1;
         _loop_l = crane_raw(a1);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 
   /// Identity map to force traversal.

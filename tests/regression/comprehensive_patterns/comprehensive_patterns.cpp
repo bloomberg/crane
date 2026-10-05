@@ -94,32 +94,36 @@ ComprehensivePatterns::match_pair(
 List<std::pair<ComprehensivePatterns::S, uint64_t>>
 ComprehensivePatterns::make_list(uint64_t n,
                                  const ComprehensivePatterns::S &s) {
-  std::shared_ptr<List<std::pair<ComprehensivePatterns::S, uint64_t>>> _head{};
+  std::optional<List<std::pair<ComprehensivePatterns::S, uint64_t>>> _root{};
   std::shared_ptr<List<std::pair<ComprehensivePatterns::S, uint64_t>>> *_write =
-      &_head;
+      nullptr;
   uint64_t _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
-      *_write =
-          std::make_shared<List<std::pair<ComprehensivePatterns::S, uint64_t>>>(
-              List<std::pair<ComprehensivePatterns::S, uint64_t>>::nil());
+      auto _value = List<std::pair<ComprehensivePatterns::S, uint64_t>>::nil();
+      (_write ? *(*_write = std::make_shared<
+                      List<std::pair<ComprehensivePatterns::S, uint64_t>>>(
+                      std::move(_value)))
+              : _root.emplace(std::move(_value)));
       break;
     } else {
       uint64_t m = _loop_n - 1;
-      auto _cell = std::make_shared<
-          List<std::pair<ComprehensivePatterns::S, uint64_t>>>(
+      auto _cell =
           typename List<std::pair<ComprehensivePatterns::S, uint64_t>>::Cons(
-              std::make_pair(s, s.s_a), nullptr));
-      *_write = std::move(_cell);
+              std::make_pair(s, s.s_a), nullptr);
+      List<std::pair<ComprehensivePatterns::S, uint64_t>> &_node =
+          (_write ? *(*_write = std::make_shared<
+                          List<std::pair<ComprehensivePatterns::S, uint64_t>>>(
+                          std::move(_cell)))
+                  : _root.emplace(std::move(_cell)));
       _write = &std::get<typename List<
-          std::pair<ComprehensivePatterns::S, uint64_t>>::Cons>(
-                    (*_write)->v_mut())
+          std::pair<ComprehensivePatterns::S, uint64_t>>::Cons>(_node.v_mut())
                     .l;
       _loop_n = m;
       continue;
     }
   }
-  return std::move(*_head);
+  return std::move(*_root);
 }
 
 std::optional<std::pair<ComprehensivePatterns::S, ComprehensivePatterns::S>>
@@ -296,38 +300,43 @@ ComprehensivePatterns::cond_proj(bool b, const ComprehensivePatterns::R2 &r2) {
 List<std::pair<ComprehensivePatterns::R2, ComprehensivePatterns::R1>>
 ComprehensivePatterns::repeat_r2(uint64_t n,
                                  const ComprehensivePatterns::R2 &r2) {
+  std::optional<
+      List<std::pair<ComprehensivePatterns::R2, ComprehensivePatterns::R1>>>
+      _root{};
   std::shared_ptr<
       List<std::pair<ComprehensivePatterns::R2, ComprehensivePatterns::R1>>>
-      _head{};
-  std::shared_ptr<
-      List<std::pair<ComprehensivePatterns::R2, ComprehensivePatterns::R1>>>
-      *_write = &_head;
+      *_write = nullptr;
   uint64_t _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
-      *_write = std::make_shared<List<
-          std::pair<ComprehensivePatterns::R2, ComprehensivePatterns::R1>>>(
-          List<std::pair<ComprehensivePatterns::R2,
-                         ComprehensivePatterns::R1>>::nil());
+      auto _value = List<std::pair<ComprehensivePatterns::R2,
+                                   ComprehensivePatterns::R1>>::nil();
+      (_write ? *(*_write = std::make_shared<List<std::pair<
+                      ComprehensivePatterns::R2, ComprehensivePatterns::R1>>>(
+                      std::move(_value)))
+              : _root.emplace(std::move(_value)));
       break;
     } else {
       uint64_t m = _loop_n - 1;
-      auto _cell = std::make_shared<List<
-          std::pair<ComprehensivePatterns::R2, ComprehensivePatterns::R1>>>(
-          typename List<
-              std::pair<ComprehensivePatterns::R2, ComprehensivePatterns::R1>>::
-              Cons(std::make_pair(r2, r2.r2_inner), nullptr));
-      *_write = std::move(_cell);
+      auto _cell = typename List<
+          std::pair<ComprehensivePatterns::R2, ComprehensivePatterns::R1>>::
+          Cons(std::make_pair(r2, r2.r2_inner), nullptr);
+      List<std::pair<ComprehensivePatterns::R2, ComprehensivePatterns::R1>>
+          &_node = (_write ? *(*_write = std::make_shared<
+                                   List<std::pair<ComprehensivePatterns::R2,
+                                                  ComprehensivePatterns::R1>>>(
+                                   std::move(_cell)))
+                           : _root.emplace(std::move(_cell)));
       _write =
           &std::get<typename List<std::pair<ComprehensivePatterns::R2,
                                             ComprehensivePatterns::R1>>::Cons>(
-               (*_write)->v_mut())
+               _node.v_mut())
                .l;
       _loop_n = m;
       continue;
     }
   }
-  return std::move(*_head);
+  return std::move(*_root);
 }
 
 std::pair<std::pair<ComprehensivePatterns::R3, ComprehensivePatterns::R2>,
@@ -463,32 +472,36 @@ ComprehensivePatterns::chain_to_pair(const ComprehensivePatterns::R &r1) {
 List<std::pair<ComprehensivePatterns::R, uint64_t>>
 ComprehensivePatterns::repeat_pair(uint64_t n,
                                    const ComprehensivePatterns::R &r) {
-  std::shared_ptr<List<std::pair<ComprehensivePatterns::R, uint64_t>>> _head{};
+  std::optional<List<std::pair<ComprehensivePatterns::R, uint64_t>>> _root{};
   std::shared_ptr<List<std::pair<ComprehensivePatterns::R, uint64_t>>> *_write =
-      &_head;
+      nullptr;
   uint64_t _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
-      *_write =
-          std::make_shared<List<std::pair<ComprehensivePatterns::R, uint64_t>>>(
-              List<std::pair<ComprehensivePatterns::R, uint64_t>>::nil());
+      auto _value = List<std::pair<ComprehensivePatterns::R, uint64_t>>::nil();
+      (_write ? *(*_write = std::make_shared<
+                      List<std::pair<ComprehensivePatterns::R, uint64_t>>>(
+                      std::move(_value)))
+              : _root.emplace(std::move(_value)));
       break;
     } else {
       uint64_t m = _loop_n - 1;
-      auto _cell = std::make_shared<
-          List<std::pair<ComprehensivePatterns::R, uint64_t>>>(
+      auto _cell =
           typename List<std::pair<ComprehensivePatterns::R, uint64_t>>::Cons(
-              std::make_pair(r, r.val), nullptr));
-      *_write = std::move(_cell);
+              std::make_pair(r, r.val), nullptr);
+      List<std::pair<ComprehensivePatterns::R, uint64_t>> &_node =
+          (_write ? *(*_write = std::make_shared<
+                          List<std::pair<ComprehensivePatterns::R, uint64_t>>>(
+                          std::move(_cell)))
+                  : _root.emplace(std::move(_cell)));
       _write = &std::get<typename List<
-          std::pair<ComprehensivePatterns::R, uint64_t>>::Cons>(
-                    (*_write)->v_mut())
+          std::pair<ComprehensivePatterns::R, uint64_t>>::Cons>(_node.v_mut())
                     .l;
       _loop_n = m;
       continue;
     }
   }
-  return std::move(*_head);
+  return std::move(*_root);
 }
 
 std::pair<ComprehensivePatterns::R, uint64_t>

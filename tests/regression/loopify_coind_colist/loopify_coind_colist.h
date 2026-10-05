@@ -9,6 +9,7 @@
 #include <atomic>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <utility>
 #include <variant>
@@ -274,33 +275,39 @@ struct LoopifyCoindColist {
   }
 
   template <typename T1> static List<T1> to_list(uint64_t fuel, colist<T1> l) {
-    std::shared_ptr<List<T1>> _head{};
-    std::shared_ptr<List<T1>> *_write = &_head;
+    std::optional<List<T1>> _root{};
+    std::shared_ptr<List<T1>> *_write = nullptr;
     colist<T1> _loop_l = std::move(l);
     uint64_t _loop_fuel = std::move(fuel);
     while (true) {
       if (_loop_fuel <= 0) {
-        *_write = std::make_shared<List<T1>>(List<T1>::nil());
+        auto _value = List<T1>::nil();
+        (_write ? *(*_write = std::make_shared<List<T1>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         uint64_t f = _loop_fuel - 1;
         if (std::holds_alternative<typename colist<T1>::Conil>(_loop_l.v())) {
-          *_write = std::make_shared<List<T1>>(List<T1>::nil());
+          auto _value = List<T1>::nil();
+          (_write ? *(*_write = std::make_shared<List<T1>>(std::move(_value)))
+                  : _root.emplace(std::move(_value)));
           break;
         } else {
           const auto &[a0, a1] =
               std::get<typename colist<T1>::Cocons>(_loop_l.v());
-          auto _cell =
-              std::make_shared<List<T1>>(typename List<T1>::Cons(a0, nullptr));
-          *_write = std::move(_cell);
-          _write = &std::get<typename List<T1>::Cons>((*_write)->v_mut()).l;
+          auto _cell = typename List<T1>::Cons(a0, nullptr);
+          List<T1> &_node =
+              (_write
+                   ? *(*_write = std::make_shared<List<T1>>(std::move(_cell)))
+                   : _root.emplace(std::move(_cell)));
+          _write = &std::get<typename List<T1>::Cons>(_node.v_mut()).l;
           _loop_l = a1;
           _loop_fuel = f;
           continue;
         }
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 
   static inline const List<uint64_t> test_comap = to_list<uint64_t>(

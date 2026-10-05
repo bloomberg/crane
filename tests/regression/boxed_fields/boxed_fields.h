@@ -322,13 +322,15 @@ struct BoxedFields {
     const variant_t &v() const { return v_; }
 
     scene move_all(uint64_t d) const {
-      std::shared_ptr<scene> _head{};
-      std::shared_ptr<scene> *_write = &_head;
+      std::optional<scene> _root{};
+      std::shared_ptr<scene> *_write = nullptr;
       const scene *_loop_self = this;
       while (true) {
         auto &&_sv = *_loop_self;
         if (std::holds_alternative<typename scene::Empty>(_sv.v())) {
-          *_write = std::make_shared<scene>(scene::empty());
+          auto _value = scene::empty();
+          (_write ? *(*_write = std::make_shared<scene>(std::move(_value)))
+                  : _root.emplace(std::move(_value)));
           break;
         } else {
           const auto &[a0, a1] = std::get<typename scene::Layer>(_sv.v());
@@ -337,37 +339,43 @@ struct BoxedFields {
             const auto &[a00, a10] = std::get<typename shape::Circle>(_sv0.v());
             const auto &_sv1 = *a00;
             const auto &[a01, a11] = _sv1;
-            auto _cell = std::make_shared<scene>(typename scene::Layer(
+            auto _cell = typename scene::Layer(
                 std::make_shared<std::decay_t<decltype(shape::circle(
                     point::pt((a01 + d), a11), a10))>>(
                     shape::circle(point::pt((a01 + d), a11), a10)),
-                nullptr));
-            *_write = std::move(_cell);
-            _write = &std::get<typename scene::Layer>((*_write)->v_mut()).a1;
+                nullptr);
+            scene &_node =
+                (_write ? *(*_write = std::make_shared<scene>(std::move(_cell)))
+                        : _root.emplace(std::move(_cell)));
+            _write = &std::get<typename scene::Layer>(_node.v_mut()).a1;
             _loop_self = crane_raw(a1);
             continue;
           } else if (std::holds_alternative<typename shape::Poly>(_sv0.v())) {
             const auto &[a00] = std::get<typename shape::Poly>(_sv0.v());
-            auto _cell = std::make_shared<scene>(typename scene::Layer(
+            auto _cell = typename scene::Layer(
                 std::make_shared<
                     std::decay_t<decltype(shape::poly(shift(d, *a00)))>>(
                     shape::poly(shift(d, *a00))),
-                nullptr));
-            *_write = std::move(_cell);
-            _write = &std::get<typename scene::Layer>((*_write)->v_mut()).a1;
+                nullptr);
+            scene &_node =
+                (_write ? *(*_write = std::make_shared<scene>(std::move(_cell)))
+                        : _root.emplace(std::move(_cell)));
+            _write = &std::get<typename scene::Layer>(_node.v_mut()).a1;
             _loop_self = crane_raw(a1);
             continue;
           } else {
-            auto _cell = std::make_shared<scene>(typename scene::Layer(
-                std::make_shared<std::decay_t<decltype(*a0)>>(*a0), nullptr));
-            *_write = std::move(_cell);
-            _write = &std::get<typename scene::Layer>((*_write)->v_mut()).a1;
+            auto _cell = typename scene::Layer(
+                std::make_shared<std::decay_t<decltype(*a0)>>(*a0), nullptr);
+            scene &_node =
+                (_write ? *(*_write = std::make_shared<scene>(std::move(_cell)))
+                        : _root.emplace(std::move(_cell)));
+            _write = &std::get<typename scene::Layer>(_node.v_mut()).a1;
             _loop_self = crane_raw(a1);
             continue;
           }
         }
       }
-      return std::move(*_head);
+      return std::move(*_root);
     }
 
     uint64_t total() const {

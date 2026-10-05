@@ -60,13 +60,15 @@ LoopifyOptionMaybe::lookup(uint64_t key,
 List<uint64_t>
 LoopifyOptionMaybe::lookup_all(uint64_t key,
                                const List<std::pair<uint64_t, uint64_t>> &l) {
-  std::shared_ptr<List<uint64_t>> _head{};
-  std::shared_ptr<List<uint64_t>> *_write = &_head;
+  std::optional<List<uint64_t>> _root{};
+  std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<std::pair<uint64_t, uint64_t>> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<
             typename List<std::pair<uint64_t, uint64_t>>::Nil>(_loop_l->v())) {
-      *_write = std::make_shared<List<uint64_t>>(List<uint64_t>::nil());
+      auto _value = List<uint64_t>::nil();
+      (_write ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
+              : _root.emplace(std::move(_value)));
       break;
     } else {
       const auto &[a0, a1] =
@@ -74,10 +76,12 @@ LoopifyOptionMaybe::lookup_all(uint64_t key,
               _loop_l->v());
       const auto &[k, v] = a0;
       if (key == k) {
-        auto _cell = std::make_shared<List<uint64_t>>(
-            typename List<uint64_t>::Cons(v, nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
+        auto _cell = typename List<uint64_t>::Cons(v, nullptr);
+        List<uint64_t> &_node =
+            (_write ? *(*_write =
+                            std::make_shared<List<uint64_t>>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
         _loop_l = crane_raw(a1);
         continue;
       } else {
@@ -86,7 +90,7 @@ LoopifyOptionMaybe::lookup_all(uint64_t key,
       }
     }
   }
-  return std::move(*_head);
+  return std::move(*_root);
 }
 
 std::optional<uint64_t> LoopifyOptionMaybe::safe_head(const List<uint64_t> &l) {
@@ -110,23 +114,27 @@ LoopifyOptionMaybe::safe_tail(const List<uint64_t> &l) {
 
 List<uint64_t>
 LoopifyOptionMaybe::catMaybes(const List<std::optional<uint64_t>> &l) {
-  std::shared_ptr<List<uint64_t>> _head{};
-  std::shared_ptr<List<uint64_t>> *_write = &_head;
+  std::optional<List<uint64_t>> _root{};
+  std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<std::optional<uint64_t>> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename List<std::optional<uint64_t>>::Nil>(
             _loop_l->v())) {
-      *_write = std::make_shared<List<uint64_t>>(List<uint64_t>::nil());
+      auto _value = List<uint64_t>::nil();
+      (_write ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
+              : _root.emplace(std::move(_value)));
       break;
     } else {
       const auto &[a0, a1] =
           std::get<typename List<std::optional<uint64_t>>::Cons>(_loop_l->v());
       if (a0.has_value()) {
         const uint64_t &x = *a0;
-        auto _cell = std::make_shared<List<uint64_t>>(
-            typename List<uint64_t>::Cons(x, nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
+        auto _cell = typename List<uint64_t>::Cons(x, nullptr);
+        List<uint64_t> &_node =
+            (_write ? *(*_write =
+                            std::make_shared<List<uint64_t>>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
         _loop_l = crane_raw(a1);
         continue;
       } else {
@@ -135,7 +143,7 @@ LoopifyOptionMaybe::catMaybes(const List<std::optional<uint64_t>> &l) {
       }
     }
   }
-  return std::move(*_head);
+  return std::move(*_root);
 }
 
 std::optional<uint64_t>

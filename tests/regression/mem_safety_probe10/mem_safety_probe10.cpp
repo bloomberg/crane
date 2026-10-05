@@ -48,27 +48,25 @@ uint64_t MemSafetyProbe10::sum_fns(
 /// Each closure captures the tree node's value and subtrees.
 MemSafetyProbe10::mylist<crane::fn<uint64_t(uint64_t)>>
 MemSafetyProbe10::collect_adders(const MemSafetyProbe10::tree &t) {
+  std::optional<MemSafetyProbe10::mylist<crane::fn<uint64_t(uint64_t)>>>
+      _root{};
   std::shared_ptr<MemSafetyProbe10::mylist<crane::fn<uint64_t(uint64_t)>>>
-      _head{};
-  std::shared_ptr<MemSafetyProbe10::mylist<crane::fn<uint64_t(uint64_t)>>>
-      *_write = &_head;
+      *_write = nullptr;
   MemSafetyProbe10::tree _loop_t = t;
   while (true) {
     if (std::holds_alternative<typename MemSafetyProbe10::tree::Leaf>(
             _loop_t.v())) {
-      *_write = std::make_shared<
-          MemSafetyProbe10::mylist<crane::fn<uint64_t(uint64_t)>>>(
-          mylist<crane::fn<uint64_t(uint64_t)>>::mynil());
+      auto _value = mylist<crane::fn<uint64_t(uint64_t)>>::mynil();
+      (_write ? *(*_write = std::make_shared<
+                      MemSafetyProbe10::mylist<crane::fn<uint64_t(uint64_t)>>>(
+                      std::move(_value)))
+              : _root.emplace(std::move(_value)));
       break;
     } else {
       const auto &[a0, a1, a2] =
           std::get<typename MemSafetyProbe10::tree::Node>(_loop_t.v());
       const MemSafetyProbe10::tree &a0_value = *a0;
       const MemSafetyProbe10::tree &a2_value = *a2;
-      auto _cell = std::make_shared<
-          MemSafetyProbe10::mylist<crane::fn<uint64_t(uint64_t)>>>(
-          typename MemSafetyProbe10::mylist<crane::fn<uint64_t(uint64_t)>>::
-              Mycons([=](uint64_t n) { return (a1 + n); }, nullptr));
       auto _cell1 = std::make_shared<
           MemSafetyProbe10::mylist<crane::fn<uint64_t(uint64_t)>>>(
           typename MemSafetyProbe10::mylist<crane::fn<uint64_t(uint64_t)>>::
@@ -82,25 +80,30 @@ MemSafetyProbe10::collect_adders(const MemSafetyProbe10::tree &t) {
       std::get<typename MemSafetyProbe10::mylist<
           crane::fn<uint64_t(uint64_t)>>::Mycons>(_cell1->v_mut())
           .a1 = std::move(_cell2);
-      std::get<typename MemSafetyProbe10::mylist<
-          crane::fn<uint64_t(uint64_t)>>::Mycons>(_cell->v_mut())
-          .a1 = std::move(_cell1);
-      *_write = std::move(_cell);
-      _write = &std::get<typename MemSafetyProbe10::mylist<
-          crane::fn<uint64_t(uint64_t)>>::Mycons>(
-                    std::get<typename MemSafetyProbe10::mylist<
-                        crane::fn<uint64_t(uint64_t)>>::Mycons>(
-                        std::get<typename MemSafetyProbe10::mylist<
-                            crane::fn<uint64_t(uint64_t)>>::Mycons>(
-                            (*_write)->v_mut())
-                            .a1->v_mut())
-                        .a1->v_mut())
-                    .a1;
+      auto _cell =
+          typename MemSafetyProbe10::mylist<crane::fn<uint64_t(uint64_t)>>::
+              Mycons([=](uint64_t n) { return (a1 + n); }, std::move(_cell1));
+      MemSafetyProbe10::mylist<crane::fn<uint64_t(uint64_t)>> &_node =
+          (_write
+               ? *(*_write = std::make_shared<
+                       MemSafetyProbe10::mylist<crane::fn<uint64_t(uint64_t)>>>(
+                       std::move(_cell)))
+               : _root.emplace(std::move(_cell)));
+      _write =
+          &std::get<typename MemSafetyProbe10::mylist<
+              crane::fn<uint64_t(uint64_t)>>::Mycons>(
+               std::get<typename MemSafetyProbe10::mylist<
+                   crane::fn<uint64_t(uint64_t)>>::Mycons>(
+                   std::get<typename MemSafetyProbe10::mylist<
+                       crane::fn<uint64_t(uint64_t)>>::Mycons>(_node.v_mut())
+                       .a1->v_mut())
+                   .a1->v_mut())
+               .a1;
       _loop_t = a0_value;
       continue;
     }
   }
-  return std::move(*_head);
+  return std::move(*_root);
 }
 
 /// TEST 4: Closure returned from nested match.
@@ -131,37 +134,38 @@ MemSafetyProbe10::pair_with_fn(uint64_t n) {
 MemSafetyProbe10::mylist<crane::fn<uint64_t(uint64_t)>>
 MemSafetyProbe10::build_tree_fns(const MemSafetyProbe10::tree &t,
                                  uint64_t depth) {
+  std::optional<MemSafetyProbe10::mylist<crane::fn<uint64_t(uint64_t)>>>
+      _root{};
   std::shared_ptr<MemSafetyProbe10::mylist<crane::fn<uint64_t(uint64_t)>>>
-      _head{};
-  std::shared_ptr<MemSafetyProbe10::mylist<crane::fn<uint64_t(uint64_t)>>>
-      *_write = &_head;
+      *_write = nullptr;
   uint64_t _loop_depth = std::move(depth);
   MemSafetyProbe10::tree _loop_t = t;
   while (true) {
     if (_loop_depth <= 0) {
-      *_write = std::make_shared<
-          MemSafetyProbe10::mylist<crane::fn<uint64_t(uint64_t)>>>(
-          mylist<crane::fn<uint64_t(uint64_t)>>::mynil());
+      auto _value = mylist<crane::fn<uint64_t(uint64_t)>>::mynil();
+      (_write ? *(*_write = std::make_shared<
+                      MemSafetyProbe10::mylist<crane::fn<uint64_t(uint64_t)>>>(
+                      std::move(_value)))
+              : _root.emplace(std::move(_value)));
       break;
     } else {
       uint64_t d = _loop_depth - 1;
       if (std::holds_alternative<typename MemSafetyProbe10::tree::Leaf>(
               _loop_t.v())) {
-        *_write = std::make_shared<
-            MemSafetyProbe10::mylist<crane::fn<uint64_t(uint64_t)>>>(
-            mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
-                [](uint64_t n) { return n; },
-                mylist<crane::fn<uint64_t(uint64_t)>>::mynil()));
+        auto _value = mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
+            [](uint64_t n) { return n; },
+            mylist<crane::fn<uint64_t(uint64_t)>>::mynil());
+        (_write
+             ? *(*_write = std::make_shared<
+                     MemSafetyProbe10::mylist<crane::fn<uint64_t(uint64_t)>>>(
+                     std::move(_value)))
+             : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1, a2] =
             std::get<typename MemSafetyProbe10::tree::Node>(_loop_t.v());
         const MemSafetyProbe10::tree &a0_value = *a0;
         const MemSafetyProbe10::tree &a2_value = *a2;
-        auto _cell = std::make_shared<
-            MemSafetyProbe10::mylist<crane::fn<uint64_t(uint64_t)>>>(
-            typename MemSafetyProbe10::mylist<crane::fn<uint64_t(uint64_t)>>::
-                Mycons([=](uint64_t n) { return (a1 + n); }, nullptr));
         auto _cell1 = std::make_shared<
             MemSafetyProbe10::mylist<crane::fn<uint64_t(uint64_t)>>>(
             typename MemSafetyProbe10::mylist<crane::fn<uint64_t(uint64_t)>>::
@@ -170,22 +174,24 @@ MemSafetyProbe10::build_tree_fns(const MemSafetyProbe10::tree &t,
                       return ((a0_value.tree_sum() + a2_value.tree_sum()) + n);
                     },
                     nullptr));
-        std::get<typename MemSafetyProbe10::mylist<
-            crane::fn<uint64_t(uint64_t)>>::Mycons>(_cell->v_mut())
-            .a1 = std::move(_cell1);
-        *_write = std::move(_cell);
-        _write =
-            &std::get<typename MemSafetyProbe10::mylist<
-                crane::fn<uint64_t(uint64_t)>>::Mycons>(
-                 std::get<typename MemSafetyProbe10::mylist<
-                     crane::fn<uint64_t(uint64_t)>>::Mycons>((*_write)->v_mut())
-                     .a1->v_mut())
-                 .a1;
+        auto _cell =
+            typename MemSafetyProbe10::mylist<crane::fn<uint64_t(uint64_t)>>::
+                Mycons([=](uint64_t n) { return (a1 + n); }, std::move(_cell1));
+        MemSafetyProbe10::mylist<crane::fn<uint64_t(uint64_t)>> &_node =
+            (_write ? *(*_write = std::make_shared<MemSafetyProbe10::mylist<
+                            crane::fn<uint64_t(uint64_t)>>>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename MemSafetyProbe10::mylist<
+            crane::fn<uint64_t(uint64_t)>>::Mycons>(
+                      std::get<typename MemSafetyProbe10::mylist<
+                          crane::fn<uint64_t(uint64_t)>>::Mycons>(_node.v_mut())
+                          .a1->v_mut())
+                      .a1;
         _loop_depth = d;
         _loop_t = a0_value;
         continue;
       }
     }
   }
-  return std::move(*_head);
+  return std::move(*_root);
 }

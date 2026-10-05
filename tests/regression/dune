@@ -11644,3 +11644,14 @@
   (alias runtest)
   (deps last_use_places.t.exe)
   (action (run ./last_use_places.t.exe))))
+
+(subdir tmc_value_root
+ (rule
+  (targets tmc_value_root.t.exe)
+  (deps TmcValueRoot.vo tmc_value_root.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} tmc_value_root.t.exe tmc_value_root.cpp tmc_value_root.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps tmc_value_root.t.exe)
+  (action (run ./tmc_value_root.t.exe))))

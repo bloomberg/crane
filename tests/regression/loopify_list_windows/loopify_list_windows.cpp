@@ -40,29 +40,32 @@ uint64_t LoopifyListWindows::len(
 List<List<uint64_t>>
 LoopifyListWindows::map_cons_helper(uint64_t x,
                                     const List<List<uint64_t>> &ll) {
-  std::shared_ptr<List<List<uint64_t>>> _head{};
-  std::shared_ptr<List<List<uint64_t>>> *_write = &_head;
+  std::optional<List<List<uint64_t>>> _root{};
+  std::shared_ptr<List<List<uint64_t>>> *_write = nullptr;
   const List<List<uint64_t>> *_loop_ll = &ll;
   while (true) {
     if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(
             _loop_ll->v())) {
-      *_write =
-          std::make_shared<List<List<uint64_t>>>(List<List<uint64_t>>::nil());
+      auto _value = List<List<uint64_t>>::nil();
+      (_write ? *(*_write =
+                      std::make_shared<List<List<uint64_t>>>(std::move(_value)))
+              : _root.emplace(std::move(_value)));
       break;
     } else {
       const auto &[a0, a1] =
           std::get<typename List<List<uint64_t>>::Cons>(_loop_ll->v());
-      auto _cell = std::make_shared<List<List<uint64_t>>>(
-          typename List<List<uint64_t>>::Cons(List<uint64_t>::cons(x, a0),
-                                              nullptr));
-      *_write = std::move(_cell);
-      _write =
-          &std::get<typename List<List<uint64_t>>::Cons>((*_write)->v_mut()).l;
+      auto _cell = typename List<List<uint64_t>>::Cons(
+          List<uint64_t>::cons(x, a0), nullptr);
+      List<List<uint64_t>> &_node =
+          (_write ? *(*_write = std::make_shared<List<List<uint64_t>>>(
+                          std::move(_cell)))
+                  : _root.emplace(std::move(_cell)));
+      _write = &std::get<typename List<List<uint64_t>>::Cons>(_node.v_mut()).l;
       _loop_ll = crane_raw(a1);
       continue;
     }
   }
-  return std::move(*_head);
+  return std::move(*_root);
 }
 
 List<uint64_t> LoopifyListWindows::drop(uint64_t m, List<uint64_t> xs) {
@@ -134,77 +137,98 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifyListWindows::span_eq(
 }
 
 List<uint64_t> LoopifyListWindows::differences(const List<uint64_t> &l) {
-  std::shared_ptr<List<uint64_t>> _head{};
-  std::shared_ptr<List<uint64_t>> *_write = &_head;
+  std::optional<List<uint64_t>> _root{};
+  std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      *_write = std::make_shared<List<uint64_t>>(List<uint64_t>::nil());
+      auto _value = List<uint64_t>::nil();
+      (_write ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
+              : _root.emplace(std::move(_value)));
       break;
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       auto &&_sv = *a1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
-        *_write = std::make_shared<List<uint64_t>>(List<uint64_t>::nil());
+        auto _value = List<uint64_t>::nil();
+        (_write
+             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
+             : _root.emplace(std::move(_value)));
         break;
       } else {
         auto &&_sv1 = *a1;
         if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv1.v())) {
-          *_write = std::make_shared<List<uint64_t>>(List<uint64_t>::nil());
+          auto _value = List<uint64_t>::nil();
+          (_write ? *(*_write =
+                          std::make_shared<List<uint64_t>>(std::move(_value)))
+                  : _root.emplace(std::move(_value)));
           break;
         } else {
           const auto &[a01, a11] =
               std::get<typename List<uint64_t>::Cons>(_sv1.v());
-          auto _cell =
-              std::make_shared<List<uint64_t>>(typename List<uint64_t>::Cons(
-                  (((a01 - a0) > a01 ? 0 : (a01 - a0))), nullptr));
-          *_write = std::move(_cell);
-          _write =
-              &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
+          auto _cell = typename List<uint64_t>::Cons(
+              (((a01 - a0) > a01 ? 0 : (a01 - a0))), nullptr);
+          List<uint64_t> &_node =
+              (_write ? *(*_write = std::make_shared<List<uint64_t>>(
+                              std::move(_cell)))
+                      : _root.emplace(std::move(_cell)));
+          _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
           _loop_l = crane_raw(a1);
           continue;
         }
       }
     }
   }
-  return std::move(*_head);
+  return std::move(*_root);
 }
 
 List<std::pair<uint64_t, uint64_t>>
 LoopifyListWindows::sliding_pairs(const List<uint64_t> &l) {
-  std::shared_ptr<List<std::pair<uint64_t, uint64_t>>> _head{};
-  std::shared_ptr<List<std::pair<uint64_t, uint64_t>>> *_write = &_head;
+  std::optional<List<std::pair<uint64_t, uint64_t>>> _root{};
+  std::shared_ptr<List<std::pair<uint64_t, uint64_t>>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      *_write = std::make_shared<List<std::pair<uint64_t, uint64_t>>>(
-          List<std::pair<uint64_t, uint64_t>>::nil());
+      auto _value = List<std::pair<uint64_t, uint64_t>>::nil();
+      (_write
+           ? *(*_write = std::make_shared<List<std::pair<uint64_t, uint64_t>>>(
+                   std::move(_value)))
+           : _root.emplace(std::move(_value)));
       break;
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       auto &&_sv = *a1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
-        *_write = std::make_shared<List<std::pair<uint64_t, uint64_t>>>(
-            List<std::pair<uint64_t, uint64_t>>::nil());
+        auto _value = List<std::pair<uint64_t, uint64_t>>::nil();
+        (_write ? *(*_write =
+                        std::make_shared<List<std::pair<uint64_t, uint64_t>>>(
+                            std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         auto &&_sv1 = *a1;
         if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv1.v())) {
-          *_write = std::make_shared<List<std::pair<uint64_t, uint64_t>>>(
-              List<std::pair<uint64_t, uint64_t>>::nil());
+          auto _value = List<std::pair<uint64_t, uint64_t>>::nil();
+          (_write ? *(*_write =
+                          std::make_shared<List<std::pair<uint64_t, uint64_t>>>(
+                              std::move(_value)))
+                  : _root.emplace(std::move(_value)));
           break;
         } else {
           const auto &[a01, a11] =
               std::get<typename List<uint64_t>::Cons>(_sv1.v());
-          auto _cell = std::make_shared<List<std::pair<uint64_t, uint64_t>>>(
-              typename List<std::pair<uint64_t, uint64_t>>::Cons(
-                  std::make_pair(a0, a01), nullptr));
-          *_write = std::move(_cell);
+          auto _cell = typename List<std::pair<uint64_t, uint64_t>>::Cons(
+              std::make_pair(a0, a01), nullptr);
+          List<std::pair<uint64_t, uint64_t>> &_node =
+              (_write ? *(*_write = std::make_shared<
+                              List<std::pair<uint64_t, uint64_t>>>(
+                              std::move(_cell)))
+                      : _root.emplace(std::move(_cell)));
           _write =
               &std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
-                   (*_write)->v_mut())
+                   _node.v_mut())
                    .l;
           _loop_l = crane_raw(a1);
           continue;
@@ -212,7 +236,7 @@ LoopifyListWindows::sliding_pairs(const List<uint64_t> &l) {
       }
     }
   }
-  return std::move(*_head);
+  return std::move(*_root);
 }
 
 List<List<uint64_t>> LoopifyListWindows::inits(
@@ -259,91 +283,109 @@ List<List<uint64_t>> LoopifyListWindows::inits(
 }
 
 List<List<uint64_t>> LoopifyListWindows::tails(const List<uint64_t> &l) {
-  std::shared_ptr<List<List<uint64_t>>> _head{};
-  std::shared_ptr<List<List<uint64_t>>> *_write = &_head;
+  std::optional<List<List<uint64_t>>> _root{};
+  std::shared_ptr<List<List<uint64_t>>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      *_write =
-          std::make_shared<List<List<uint64_t>>>(List<List<uint64_t>>::cons(
-              List<uint64_t>::nil(), List<List<uint64_t>>::nil()));
+      auto _value = List<List<uint64_t>>::cons(List<uint64_t>::nil(),
+                                               List<List<uint64_t>>::nil());
+      (_write ? *(*_write =
+                      std::make_shared<List<List<uint64_t>>>(std::move(_value)))
+              : _root.emplace(std::move(_value)));
       break;
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
-      auto _cell = std::make_shared<List<List<uint64_t>>>(
-          typename List<List<uint64_t>>::Cons(*_loop_l, nullptr));
-      *_write = std::move(_cell);
-      _write =
-          &std::get<typename List<List<uint64_t>>::Cons>((*_write)->v_mut()).l;
+      auto _cell = typename List<List<uint64_t>>::Cons(*_loop_l, nullptr);
+      List<List<uint64_t>> &_node =
+          (_write ? *(*_write = std::make_shared<List<List<uint64_t>>>(
+                          std::move(_cell)))
+                  : _root.emplace(std::move(_cell)));
+      _write = &std::get<typename List<List<uint64_t>>::Cons>(_node.v_mut()).l;
       _loop_l = crane_raw(a1);
       continue;
     }
   }
-  return std::move(*_head);
+  return std::move(*_root);
 }
 
 List<uint64_t> LoopifyListWindows::take(uint64_t n, const List<uint64_t> &l) {
-  std::shared_ptr<List<uint64_t>> _head{};
-  std::shared_ptr<List<uint64_t>> *_write = &_head;
+  std::optional<List<uint64_t>> _root{};
+  std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
   uint64_t _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
-      *_write = std::make_shared<List<uint64_t>>(List<uint64_t>::nil());
+      auto _value = List<uint64_t>::nil();
+      (_write ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
+              : _root.emplace(std::move(_value)));
       break;
     } else {
       uint64_t n_ = _loop_n - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-        *_write = std::make_shared<List<uint64_t>>(List<uint64_t>::nil());
+        auto _value = List<uint64_t>::nil();
+        (_write
+             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
+             : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l->v());
-        auto _cell = std::make_shared<List<uint64_t>>(
-            typename List<uint64_t>::Cons(a0, nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
+        auto _cell = typename List<uint64_t>::Cons(a0, nullptr);
+        List<uint64_t> &_node =
+            (_write ? *(*_write =
+                            std::make_shared<List<uint64_t>>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
         _loop_l = crane_raw(a1);
         _loop_n = n_;
         continue;
       }
     }
   }
-  return std::move(*_head);
+  return std::move(*_root);
 }
 
 List<List<uint64_t>> LoopifyListWindows::windows_fuel(uint64_t fuel, uint64_t n,
                                                       const List<uint64_t> &l) {
-  std::shared_ptr<List<List<uint64_t>>> _head{};
-  std::shared_ptr<List<List<uint64_t>>> *_write = &_head;
+  std::optional<List<List<uint64_t>>> _root{};
+  std::shared_ptr<List<List<uint64_t>>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
   uint64_t _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
-      *_write =
-          std::make_shared<List<List<uint64_t>>>(List<List<uint64_t>>::nil());
+      auto _value = List<List<uint64_t>>::nil();
+      (_write ? *(*_write =
+                      std::make_shared<List<List<uint64_t>>>(std::move(_value)))
+              : _root.emplace(std::move(_value)));
       break;
     } else {
       uint64_t fuel_ = _loop_fuel - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-        *_write =
-            std::make_shared<List<List<uint64_t>>>(List<List<uint64_t>>::nil());
+        auto _value = List<List<uint64_t>>::nil();
+        (_write ? *(*_write = std::make_shared<List<List<uint64_t>>>(
+                        std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l->v());
         if (len(*_loop_l) < n) {
-          *_write = std::make_shared<List<List<uint64_t>>>(
-              List<List<uint64_t>>::nil());
+          auto _value = List<List<uint64_t>>::nil();
+          (_write ? *(*_write = std::make_shared<List<List<uint64_t>>>(
+                          std::move(_value)))
+                  : _root.emplace(std::move(_value)));
           break;
         } else {
-          auto _cell = std::make_shared<List<List<uint64_t>>>(
-              typename List<List<uint64_t>>::Cons(take(n, *_loop_l), nullptr));
-          *_write = std::move(_cell);
+          auto _cell =
+              typename List<List<uint64_t>>::Cons(take(n, *_loop_l), nullptr);
+          List<List<uint64_t>> &_node =
+              (_write ? *(*_write = std::make_shared<List<List<uint64_t>>>(
+                              std::move(_cell)))
+                      : _root.emplace(std::move(_cell)));
           _write =
-              &std::get<typename List<List<uint64_t>>::Cons>((*_write)->v_mut())
-                   .l;
+              &std::get<typename List<List<uint64_t>>::Cons>(_node.v_mut()).l;
           _loop_l = crane_raw(a1);
           _loop_fuel = fuel_;
           continue;
@@ -351,7 +393,7 @@ List<List<uint64_t>> LoopifyListWindows::windows_fuel(uint64_t fuel, uint64_t n,
       }
     }
   }
-  return std::move(*_head);
+  return std::move(*_root);
 }
 
 List<List<uint64_t>> LoopifyListWindows::windows(uint64_t n,
@@ -361,37 +403,43 @@ List<List<uint64_t>> LoopifyListWindows::windows(uint64_t n,
 
 List<List<uint64_t>> LoopifyListWindows::chunks_fuel(uint64_t fuel, uint64_t n,
                                                      const List<uint64_t> &l) {
-  std::shared_ptr<List<List<uint64_t>>> _head{};
-  std::shared_ptr<List<List<uint64_t>>> *_write = &_head;
+  std::optional<List<List<uint64_t>>> _root{};
+  std::shared_ptr<List<List<uint64_t>>> *_write = nullptr;
   List<uint64_t> _loop_l = l;
   uint64_t _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
-      *_write =
-          std::make_shared<List<List<uint64_t>>>(List<List<uint64_t>>::nil());
+      auto _value = List<List<uint64_t>>::nil();
+      (_write ? *(*_write =
+                      std::make_shared<List<List<uint64_t>>>(std::move(_value)))
+              : _root.emplace(std::move(_value)));
       break;
     } else {
       uint64_t fuel_ = _loop_fuel - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l.v())) {
-        *_write =
-            std::make_shared<List<List<uint64_t>>>(List<List<uint64_t>>::nil());
+        auto _value = List<List<uint64_t>>::nil();
+        (_write ? *(*_write = std::make_shared<List<List<uint64_t>>>(
+                        std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         List<uint64_t> chunk = take(n, _loop_l);
         List<uint64_t> rest = drop(n, _loop_l);
-        auto _cell = std::make_shared<List<List<uint64_t>>>(
-            typename List<List<uint64_t>>::Cons(std::move(chunk), nullptr));
-        *_write = std::move(_cell);
+        auto _cell =
+            typename List<List<uint64_t>>::Cons(std::move(chunk), nullptr);
+        List<List<uint64_t>> &_node =
+            (_write ? *(*_write = std::make_shared<List<List<uint64_t>>>(
+                            std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
         _write =
-            &std::get<typename List<List<uint64_t>>::Cons>((*_write)->v_mut())
-                 .l;
+            &std::get<typename List<List<uint64_t>>::Cons>(_node.v_mut()).l;
         _loop_l = std::move(rest);
         _loop_fuel = fuel_;
         continue;
       }
     }
   }
-  return std::move(*_head);
+  return std::move(*_root);
 }
 
 List<List<uint64_t>> LoopifyListWindows::chunks(uint64_t n,
@@ -401,39 +449,44 @@ List<List<uint64_t>> LoopifyListWindows::chunks(uint64_t n,
 
 List<List<uint64_t>> LoopifyListWindows::group_fuel(uint64_t fuel,
                                                     const List<uint64_t> &l) {
-  std::shared_ptr<List<List<uint64_t>>> _head{};
-  std::shared_ptr<List<List<uint64_t>>> *_write = &_head;
+  std::optional<List<List<uint64_t>>> _root{};
+  std::shared_ptr<List<List<uint64_t>>> *_write = nullptr;
   List<uint64_t> _loop_l = l;
   uint64_t _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
-      *_write =
-          std::make_shared<List<List<uint64_t>>>(List<List<uint64_t>>::nil());
+      auto _value = List<List<uint64_t>>::nil();
+      (_write ? *(*_write =
+                      std::make_shared<List<List<uint64_t>>>(std::move(_value)))
+              : _root.emplace(std::move(_value)));
       break;
     } else {
       uint64_t fuel_ = _loop_fuel - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l.v())) {
-        *_write =
-            std::make_shared<List<List<uint64_t>>>(List<List<uint64_t>>::nil());
+        auto _value = List<List<uint64_t>>::nil();
+        (_write ? *(*_write = std::make_shared<List<List<uint64_t>>>(
+                        std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l.v());
         auto [same, rest] = span_eq(a0, *a1);
-        auto _cell = std::make_shared<List<List<uint64_t>>>(
-            typename List<List<uint64_t>>::Cons(
-                List<uint64_t>::cons(a0, std::move(same)), nullptr));
-        *_write = std::move(_cell);
+        auto _cell = typename List<List<uint64_t>>::Cons(
+            List<uint64_t>::cons(a0, std::move(same)), nullptr);
+        List<List<uint64_t>> &_node =
+            (_write ? *(*_write = std::make_shared<List<List<uint64_t>>>(
+                            std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
         _write =
-            &std::get<typename List<List<uint64_t>>::Cons>((*_write)->v_mut())
-                 .l;
+            &std::get<typename List<List<uint64_t>>::Cons>(_node.v_mut()).l;
         _loop_l = std::move(rest);
         _loop_fuel = fuel_;
         continue;
       }
     }
   }
-  return std::move(*_head);
+  return std::move(*_root);
 }
 
 List<List<uint64_t>> LoopifyListWindows::group(const List<uint64_t> &l) {

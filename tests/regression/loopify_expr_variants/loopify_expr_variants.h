@@ -7,6 +7,7 @@
 #include <atomic>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -93,26 +94,29 @@ public:
   const variant_t &v() const { return v_; }
 
   List<A> app(List<A> m) const {
-    std::shared_ptr<List<A>> _head{};
-    std::shared_ptr<List<A>> *_write = &_head;
+    std::optional<List<A>> _root{};
+    std::shared_ptr<List<A>> *_write = nullptr;
     const List<A> *_loop_self = this;
     List<A> _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
-        *_write = std::make_shared<List<A>>(std::move(_loop_m));
+        auto _value = std::move(_loop_m);
+        (_write ? *(*_write = std::make_shared<List<A>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-        auto _cell =
-            std::make_shared<List<A>>(typename List<A>::Cons(a0, nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename List<A>::Cons>((*_write)->v_mut()).l;
+        auto _cell = typename List<A>::Cons(a0, nullptr);
+        List<A> &_node =
+            (_write ? *(*_write = std::make_shared<List<A>>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename List<A>::Cons>(_node.v_mut()).l;
         _loop_self = crane_raw(a1);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 };
 
@@ -2440,24 +2444,27 @@ struct LoopifyExprVariants {
 };
 
 template <typename T1> List<T1> ListDef::repeat(const T1 &x, uint64_t n) {
-  std::shared_ptr<List<T1>> _head{};
-  std::shared_ptr<List<T1>> *_write = &_head;
+  std::optional<List<T1>> _root{};
+  std::shared_ptr<List<T1>> *_write = nullptr;
   uint64_t _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
-      *_write = std::make_shared<List<T1>>(List<T1>::nil());
+      auto _value = List<T1>::nil();
+      (_write ? *(*_write = std::make_shared<List<T1>>(std::move(_value)))
+              : _root.emplace(std::move(_value)));
       break;
     } else {
       uint64_t k = _loop_n - 1;
-      auto _cell =
-          std::make_shared<List<T1>>(typename List<T1>::Cons(x, nullptr));
-      *_write = std::move(_cell);
-      _write = &std::get<typename List<T1>::Cons>((*_write)->v_mut()).l;
+      auto _cell = typename List<T1>::Cons(x, nullptr);
+      List<T1> &_node =
+          (_write ? *(*_write = std::make_shared<List<T1>>(std::move(_cell)))
+                  : _root.emplace(std::move(_cell)));
+      _write = &std::get<typename List<T1>::Cons>(_node.v_mut()).l;
       _loop_n = k;
       continue;
     }
   }
-  return std::move(*_head);
+  return std::move(*_root);
 }
 
 #endif // INCLUDED_LOOPIFY_EXPR_VARIANTS

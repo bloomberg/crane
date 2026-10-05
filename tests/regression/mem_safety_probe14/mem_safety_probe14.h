@@ -8,6 +8,7 @@
 #include <atomic>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <utility>
 #include <variant>
@@ -418,26 +419,30 @@ struct MemSafetyProbe14 {
     /// Each closure captures a value from its level. Closures
     /// are evaluated after the full traversal completes.
     mylist<A> mylist_append(mylist<A> l2) const {
-      std::shared_ptr<mylist<A>> _head{};
-      std::shared_ptr<mylist<A>> *_write = &_head;
+      std::optional<mylist<A>> _root{};
+      std::shared_ptr<mylist<A>> *_write = nullptr;
       const mylist<A> *_loop_self = this;
       mylist<A> _loop_l2 = std::move(l2);
       while (true) {
         auto &&_sv = *_loop_self;
         if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
-          *_write = std::make_shared<mylist<A>>(std::move(_loop_l2));
+          auto _value = std::move(_loop_l2);
+          (_write ? *(*_write = std::make_shared<mylist<A>>(std::move(_value)))
+                  : _root.emplace(std::move(_value)));
           break;
         } else {
           const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(_sv.v());
-          auto _cell = std::make_shared<mylist<A>>(
-              typename mylist<A>::Mycons(a0, nullptr));
-          *_write = std::move(_cell);
-          _write = &std::get<typename mylist<A>::Mycons>((*_write)->v_mut()).a1;
+          auto _cell = typename mylist<A>::Mycons(a0, nullptr);
+          mylist<A> &_node =
+              (_write
+                   ? *(*_write = std::make_shared<mylist<A>>(std::move(_cell)))
+                   : _root.emplace(std::move(_cell)));
+          _write = &std::get<typename mylist<A>::Mycons>(_node.v_mut()).a1;
           _loop_self = crane_raw(a1);
           continue;
         }
       }
-      return std::move(*_head);
+      return std::move(*_root);
     }
 
     template <typename T1, typename F1> T1 mylist_rec(T1 f, F1 &&f0) const {

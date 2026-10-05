@@ -7,6 +7,7 @@
 #include <atomic>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <utility>
 #include <variant>
@@ -242,79 +243,98 @@ struct LoopifyPairs {
   /// zip combines two lists into pairs.
   template <typename T1, typename T2>
   static list<std::pair<T1, T2>> zip(const list<T1> &l1, const list<T2> &l2) {
-    std::shared_ptr<list<std::pair<T1, T2>>> _head{};
-    std::shared_ptr<list<std::pair<T1, T2>>> *_write = &_head;
+    std::optional<list<std::pair<T1, T2>>> _root{};
+    std::shared_ptr<list<std::pair<T1, T2>>> *_write = nullptr;
     const list<T2> *_loop_l2 = &l2;
     const list<T1> *_loop_l1 = &l1;
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l1->v())) {
-        *_write = std::make_shared<list<std::pair<T1, T2>>>(
-            list<std::pair<T1, T2>>::nil());
+        auto _value = list<std::pair<T1, T2>>::nil();
+        (_write ? *(*_write = std::make_shared<list<std::pair<T1, T2>>>(
+                        std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] = std::get<typename list<T1>::Cons>(_loop_l1->v());
         if (std::holds_alternative<typename list<T2>::Nil>(_loop_l2->v())) {
-          *_write = std::make_shared<list<std::pair<T1, T2>>>(
-              list<std::pair<T1, T2>>::nil());
+          auto _value = list<std::pair<T1, T2>>::nil();
+          (_write ? *(*_write = std::make_shared<list<std::pair<T1, T2>>>(
+                          std::move(_value)))
+                  : _root.emplace(std::move(_value)));
           break;
         } else {
           const auto &[a00, a10] =
               std::get<typename list<T2>::Cons>(_loop_l2->v());
-          auto _cell = std::make_shared<list<std::pair<T1, T2>>>(
-              typename list<std::pair<T1, T2>>::Cons(std::make_pair(a0, a00),
-                                                     nullptr));
-          *_write = std::move(_cell);
-          _write = &std::get<typename list<std::pair<T1, T2>>::Cons>(
-                        (*_write)->v_mut())
-                        .l;
+          auto _cell = typename list<std::pair<T1, T2>>::Cons(
+              std::make_pair(a0, a00), nullptr);
+          list<std::pair<T1, T2>> &_node =
+              (_write ? *(*_write = std::make_shared<list<std::pair<T1, T2>>>(
+                              std::move(_cell)))
+                      : _root.emplace(std::move(_cell)));
+          _write =
+              &std::get<typename list<std::pair<T1, T2>>::Cons>(_node.v_mut())
+                   .l;
           _loop_l2 = crane_raw(a10);
           _loop_l1 = crane_raw(a1);
           continue;
         }
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 
   /// zip3 combines three lists.
   template <typename T1, typename T2, typename T3>
   static list<std::pair<T1, std::pair<T2, T3>>>
   zip3(const list<T1> &l1, const list<T2> &l2, const list<T3> &l3) {
-    std::shared_ptr<list<std::pair<T1, std::pair<T2, T3>>>> _head{};
-    std::shared_ptr<list<std::pair<T1, std::pair<T2, T3>>>> *_write = &_head;
+    std::optional<list<std::pair<T1, std::pair<T2, T3>>>> _root{};
+    std::shared_ptr<list<std::pair<T1, std::pair<T2, T3>>>> *_write = nullptr;
     const list<T3> *_loop_l3 = &l3;
     const list<T2> *_loop_l2 = &l2;
     const list<T1> *_loop_l1 = &l1;
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l1->v())) {
-        *_write = std::make_shared<list<std::pair<T1, std::pair<T2, T3>>>>(
-            list<std::pair<T1, std::pair<T2, T3>>>::nil());
+        auto _value = list<std::pair<T1, std::pair<T2, T3>>>::nil();
+        (_write
+             ? *(*_write =
+                     std::make_shared<list<std::pair<T1, std::pair<T2, T3>>>>(
+                         std::move(_value)))
+             : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] = std::get<typename list<T1>::Cons>(_loop_l1->v());
         if (std::holds_alternative<typename list<T2>::Nil>(_loop_l2->v())) {
-          *_write = std::make_shared<list<std::pair<T1, std::pair<T2, T3>>>>(
-              list<std::pair<T1, std::pair<T2, T3>>>::nil());
+          auto _value = list<std::pair<T1, std::pair<T2, T3>>>::nil();
+          (_write
+               ? *(*_write =
+                       std::make_shared<list<std::pair<T1, std::pair<T2, T3>>>>(
+                           std::move(_value)))
+               : _root.emplace(std::move(_value)));
           break;
         } else {
           const auto &[a00, a10] =
               std::get<typename list<T2>::Cons>(_loop_l2->v());
           if (std::holds_alternative<typename list<T3>::Nil>(_loop_l3->v())) {
-            *_write = std::make_shared<list<std::pair<T1, std::pair<T2, T3>>>>(
-                list<std::pair<T1, std::pair<T2, T3>>>::nil());
+            auto _value = list<std::pair<T1, std::pair<T2, T3>>>::nil();
+            (_write ? *(*_write = std::make_shared<
+                            list<std::pair<T1, std::pair<T2, T3>>>>(
+                            std::move(_value)))
+                    : _root.emplace(std::move(_value)));
             break;
           } else {
             const auto &[a01, a11] =
                 std::get<typename list<T3>::Cons>(_loop_l3->v());
-            auto _cell =
-                std::make_shared<list<std::pair<T1, std::pair<T2, T3>>>>(
-                    typename list<std::pair<T1, std::pair<T2, T3>>>::Cons(
-                        std::make_pair(a0, std::make_pair(a00, a01)), nullptr));
-            *_write = std::move(_cell);
+            auto _cell = typename list<std::pair<T1, std::pair<T2, T3>>>::Cons(
+                std::make_pair(a0, std::make_pair(a00, a01)), nullptr);
+            list<std::pair<T1, std::pair<T2, T3>>> &_node =
+                (_write ? *(*_write = std::make_shared<
+                                list<std::pair<T1, std::pair<T2, T3>>>>(
+                                std::move(_cell)))
+                        : _root.emplace(std::move(_cell)));
             _write =
                 &std::get<
                      typename list<std::pair<T1, std::pair<T2, T3>>>::Cons>(
-                     (*_write)->v_mut())
+                     _node.v_mut())
                      .l;
             _loop_l3 = crane_raw(a11);
             _loop_l2 = crane_raw(a10);
@@ -324,7 +344,7 @@ struct LoopifyPairs {
         }
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 
   /// split_at n l splits at position n.

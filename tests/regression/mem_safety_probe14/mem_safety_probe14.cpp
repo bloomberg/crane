@@ -148,28 +148,32 @@ MemSafetyProbe14::tree_level_fns(
 
 /// TEST 8: Large tree stress test. Many closures, deep recursion.
 MemSafetyProbe14::tree MemSafetyProbe14::make_balanced(uint64_t n) {
-  std::shared_ptr<MemSafetyProbe14::tree> _head{};
-  std::shared_ptr<MemSafetyProbe14::tree> *_write = &_head;
+  std::optional<MemSafetyProbe14::tree> _root{};
+  std::shared_ptr<MemSafetyProbe14::tree> *_write = nullptr;
   uint64_t _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
-      *_write = std::make_shared<MemSafetyProbe14::tree>(tree::leaf());
+      auto _value = tree::leaf();
+      (_write ? *(*_write = std::make_shared<MemSafetyProbe14::tree>(
+                      std::move(_value)))
+              : _root.emplace(std::move(_value)));
       break;
     } else {
       uint64_t n_ = _loop_n - 1;
-      auto _cell = std::make_shared<MemSafetyProbe14::tree>(
-          typename MemSafetyProbe14::tree::Node(
-              nullptr, _loop_n,
-              std::make_shared<MemSafetyProbe14::tree>(tree::leaf())));
-      *_write = std::move(_cell);
+      auto _cell = typename MemSafetyProbe14::tree::Node(
+          nullptr, _loop_n,
+          std::make_shared<MemSafetyProbe14::tree>(tree::leaf()));
+      MemSafetyProbe14::tree &_node =
+          (_write ? *(*_write = std::make_shared<MemSafetyProbe14::tree>(
+                          std::move(_cell)))
+                  : _root.emplace(std::move(_cell)));
       _write =
-          &std::get<typename MemSafetyProbe14::tree::Node>((*_write)->v_mut())
-               .a0;
+          &std::get<typename MemSafetyProbe14::tree::Node>(_node.v_mut()).a0;
       _loop_n = n_;
       continue;
     }
   }
-  return std::move(*_head);
+  return std::move(*_root);
 }
 
 MemSafetyProbe14::mylist<crane::fn<uint64_t(uint64_t)>>

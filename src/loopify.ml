@@ -955,7 +955,7 @@ let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted check
      back.  Everything else reads the normalized body. *)
   let restored = Cpp_temporaries.own_stmts body in
   match try_tmc_classify check restored with
-  | Some ti ->
+  | Some () ->
     (* TMC only rewrites calls that sit directly under a constructor.  A body
        can mix shapes -- one branch conses onto the recursive result while
        another scrutinises it -- and {!try_tmc_classify} accepts it on the
@@ -963,7 +963,7 @@ let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted check
        real C++ self-call.  That is exactly the stack growth this pass exists to
        remove, so check the postcondition and fall back to the frame transform,
        which handles the scrutinising shape via a continuation frame. *)
-    let tmc = transform_tmc ~param_inits tparams check ti params ret_ty restored in
+    let tmc = transform_tmc ~param_inits tparams check params ret_ty restored in
     if classify check tmc = No_recursion then
       {nt_body = tmc; nt_outcome = Lp_tmc; nt_used_param_inits = true}
     else frame ()

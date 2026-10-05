@@ -69,31 +69,36 @@ MemSafetyProbe18::fold_left_tree(const MemSafetyProbe18::mylist<uint64_t> &l,
 /// using the same tree in different positions.
 MemSafetyProbe18::mylist<MemSafetyProbe18::tree>
 MemSafetyProbe18::build_tree_list(const MemSafetyProbe18::tree &t, uint64_t n) {
-  std::shared_ptr<MemSafetyProbe18::mylist<MemSafetyProbe18::tree>> _head{};
+  std::optional<MemSafetyProbe18::mylist<MemSafetyProbe18::tree>> _root{};
   std::shared_ptr<MemSafetyProbe18::mylist<MemSafetyProbe18::tree>> *_write =
-      &_head;
+      nullptr;
   uint64_t _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
-      *_write =
-          std::make_shared<MemSafetyProbe18::mylist<MemSafetyProbe18::tree>>(
-              mylist<MemSafetyProbe18::tree>::mynil());
+      auto _value = mylist<MemSafetyProbe18::tree>::mynil();
+      (_write ? *(*_write = std::make_shared<
+                      MemSafetyProbe18::mylist<MemSafetyProbe18::tree>>(
+                      std::move(_value)))
+              : _root.emplace(std::move(_value)));
       break;
     } else {
       uint64_t n_ = _loop_n - 1;
       auto _cell =
-          std::make_shared<MemSafetyProbe18::mylist<MemSafetyProbe18::tree>>(
-              typename MemSafetyProbe18::mylist<MemSafetyProbe18::tree>::Mycons(
-                  tree::node(t, _loop_n, tree::leaf()), nullptr));
-      *_write = std::move(_cell);
+          typename MemSafetyProbe18::mylist<MemSafetyProbe18::tree>::Mycons(
+              tree::node(t, _loop_n, tree::leaf()), nullptr);
+      MemSafetyProbe18::mylist<MemSafetyProbe18::tree> &_node =
+          (_write ? *(*_write = std::make_shared<
+                          MemSafetyProbe18::mylist<MemSafetyProbe18::tree>>(
+                          std::move(_cell)))
+                  : _root.emplace(std::move(_cell)));
       _write = &std::get<typename MemSafetyProbe18::mylist<
-          MemSafetyProbe18::tree>::Mycons>((*_write)->v_mut())
+          MemSafetyProbe18::tree>::Mycons>(_node.v_mut())
                     .a1;
       _loop_n = n_;
       continue;
     }
   }
-  return std::move(*_head);
+  return std::move(*_root);
 }
 
 uint64_t MemSafetyProbe18::sum_tree_list(

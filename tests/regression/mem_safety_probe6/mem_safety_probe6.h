@@ -8,6 +8,7 @@
 #include <atomic>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -109,26 +110,29 @@ struct MemSafetyProbe6 {
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, const A &>
     mylist<T1> mymap(F0 &&f) const {
-      std::shared_ptr<mylist<T1>> _head{};
-      std::shared_ptr<mylist<T1>> *_write = &_head;
+      std::optional<mylist<T1>> _root{};
+      std::shared_ptr<mylist<T1>> *_write = nullptr;
       const mylist<A> *_loop_self = this;
       while (true) {
         auto &&_sv = *_loop_self;
         if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
-          *_write = std::make_shared<mylist<T1>>(mylist<T1>::mynil());
+          auto _value = mylist<T1>::mynil();
+          (_write ? *(*_write = std::make_shared<mylist<T1>>(std::move(_value)))
+                  : _root.emplace(std::move(_value)));
           break;
         } else {
           const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(_sv.v());
-          auto _cell = std::make_shared<mylist<T1>>(
-              typename mylist<T1>::Mycons(f(a0), nullptr));
-          *_write = std::move(_cell);
-          _write =
-              &std::get<typename mylist<T1>::Mycons>((*_write)->v_mut()).a1;
+          auto _cell = typename mylist<T1>::Mycons(f(a0), nullptr);
+          mylist<T1> &_node =
+              (_write
+                   ? *(*_write = std::make_shared<mylist<T1>>(std::move(_cell)))
+                   : _root.emplace(std::move(_cell)));
+          _write = &std::get<typename mylist<T1>::Mycons>(_node.v_mut()).a1;
           _loop_self = crane_raw(a1);
           continue;
         }
       }
-      return std::move(*_head);
+      return std::move(*_root);
     }
 
     /// TEST 2: Closure from match that reconstructs using both

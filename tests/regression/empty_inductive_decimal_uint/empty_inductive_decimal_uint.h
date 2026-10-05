@@ -4,6 +4,7 @@
 #include "crane_fn.h"
 #include <atomic>
 #include <memory>
+#include <optional>
 #include <utility>
 #include <variant>
 
@@ -418,24 +419,28 @@ public:
   const variant_t &v() const { return v_; }
 
   Nat::nat length() const {
-    std::shared_ptr<Nat::nat> _head{};
-    std::shared_ptr<Nat::nat> *_write = &_head;
+    std::optional<Nat::nat> _root{};
+    std::shared_ptr<Nat::nat> *_write = nullptr;
     const String *_loop_self = this;
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename String::EmptyString>(_sv.v())) {
-        *_write = std::make_shared<Nat::nat>(Nat::nat::o());
+        auto _value = Nat::nat::o();
+        (_write ? *(*_write = std::make_shared<Nat::nat>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] = std::get<typename String::String0>(_sv.v());
-        auto _cell = std::make_shared<Nat::nat>(typename Nat::nat::S(nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename Nat::nat::S>((*_write)->v_mut()).a0;
+        auto _cell = typename Nat::nat::S(nullptr);
+        Nat::nat &_node =
+            (_write ? *(*_write = std::make_shared<Nat::nat>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename Nat::nat::S>(_node.v_mut()).a0;
         _loop_self = crane_raw(a1);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 };
 

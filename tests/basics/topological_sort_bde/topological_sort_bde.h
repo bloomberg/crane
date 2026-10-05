@@ -100,39 +100,45 @@ public:
   const variant_t &v() const { return d_v_; }
   template <typename T1>
   List<bsl::pair<t_A, T1>> combine(const List<T1> &l_) const {
-    bsl::shared_ptr<List<bsl::pair<t_A, T1>>> _head{};
-    bsl::shared_ptr<List<bsl::pair<t_A, T1>>> *_write = &_head;
+    bsl::optional<List<bsl::pair<t_A, T1>>> _root{};
+    bsl::shared_ptr<List<bsl::pair<t_A, T1>>> *_write = nullptr;
     const List<t_A> *_loop_self = this;
     const List<T1> *_loop_l_ = &l_;
     while (true) {
       auto &&_sv = *_loop_self;
       if (bsl::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
-        *_write = bsl::make_shared<List<bsl::pair<t_A, T1>>>(
-            List<bsl::pair<t_A, T1>>::nil());
+        auto _value = List<bsl::pair<t_A, T1>>::nil();
+        (_write ? *(*_write = bsl::make_shared<List<bsl::pair<t_A, T1>>>(
+                        bsl::move(_value)))
+                : _root.emplace(bsl::move(_value)));
         break;
       } else {
         const auto &[d_a0, d_a1] = bsl::get<typename List<t_A>::Cons>(_sv.v());
         if (bsl::holds_alternative<typename List<T1>::Nil>(_loop_l_->v())) {
-          *_write = bsl::make_shared<List<bsl::pair<t_A, T1>>>(
-              List<bsl::pair<t_A, T1>>::nil());
+          auto _value = List<bsl::pair<t_A, T1>>::nil();
+          (_write ? *(*_write = bsl::make_shared<List<bsl::pair<t_A, T1>>>(
+                          bsl::move(_value)))
+                  : _root.emplace(bsl::move(_value)));
           break;
         } else {
           const auto &[d_a00, d_a10] =
               bsl::get<typename List<T1>::Cons>(_loop_l_->v());
-          auto _cell = bsl::make_shared<List<bsl::pair<t_A, T1>>>(
-              typename List<bsl::pair<t_A, T1>>::Cons(
-                  bsl::make_pair(d_a0, d_a00), nullptr));
-          *_write = bsl::move(_cell);
-          _write = &bsl::get<typename List<bsl::pair<t_A, T1>>::Cons>(
-                        (*_write)->v_mut())
-                        .d_l;
+          auto _cell = typename List<bsl::pair<t_A, T1>>::Cons(
+              bsl::make_pair(d_a0, d_a00), nullptr);
+          List<bsl::pair<t_A, T1>> &_node =
+              (_write ? *(*_write = bsl::make_shared<List<bsl::pair<t_A, T1>>>(
+                              bsl::move(_cell)))
+                      : _root.emplace(bsl::move(_cell)));
+          _write =
+              &bsl::get<typename List<bsl::pair<t_A, T1>>::Cons>(_node.v_mut())
+                   .d_l;
           _loop_self = crane_raw(d_a1);
           _loop_l_ = crane_raw(d_a10);
           continue;
         }
       }
     }
-    return bsl::move(*_head);
+    return bsl::move(*_root);
   }
   template <typename F0> bsl::optional<t_A> find(F0 &&f) const {
     const List<t_A> *_loop_self = this;
@@ -151,21 +157,25 @@ public:
     }
   }
   template <typename F0> List<t_A> filter(F0 &&f) const {
-    bsl::shared_ptr<List<t_A>> _head{};
-    bsl::shared_ptr<List<t_A>> *_write = &_head;
+    bsl::optional<List<t_A>> _root{};
+    bsl::shared_ptr<List<t_A>> *_write = nullptr;
     const List<t_A> *_loop_self = this;
     while (true) {
       auto &&_sv = *_loop_self;
       if (bsl::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
-        *_write = bsl::make_shared<List<t_A>>(List<t_A>::nil());
+        auto _value = List<t_A>::nil();
+        (_write ? *(*_write = bsl::make_shared<List<t_A>>(bsl::move(_value)))
+                : _root.emplace(bsl::move(_value)));
         break;
       } else {
         const auto &[d_a0, d_a1] = bsl::get<typename List<t_A>::Cons>(_sv.v());
         if (f(d_a0)) {
-          auto _cell = bsl::make_shared<List<t_A>>(
-              typename List<t_A>::Cons(d_a0, nullptr));
-          *_write = bsl::move(_cell);
-          _write = &bsl::get<typename List<t_A>::Cons>((*_write)->v_mut()).d_l;
+          auto _cell = typename List<t_A>::Cons(d_a0, nullptr);
+          List<t_A> &_node =
+              (_write
+                   ? *(*_write = bsl::make_shared<List<t_A>>(bsl::move(_cell)))
+                   : _root.emplace(bsl::move(_cell)));
+          _write = &bsl::get<typename List<t_A>::Cons>(_node.v_mut()).d_l;
           _loop_self = crane_raw(d_a1);
           continue;
         } else {
@@ -174,7 +184,7 @@ public:
         }
       }
     }
-    return bsl::move(*_head);
+    return bsl::move(*_root);
   }
   template <typename T1, typename F0>
     requires bsl::is_invocable_r_v<T1, F0 &, t_A &, T1 &&>
@@ -259,25 +269,28 @@ public:
   template <typename T1, typename F0>
     requires bsl::is_invocable_r_v<T1, F0 &, const t_A &>
   List<T1> map(F0 &&f) const {
-    bsl::shared_ptr<List<T1>> _head{};
-    bsl::shared_ptr<List<T1>> *_write = &_head;
+    bsl::optional<List<T1>> _root{};
+    bsl::shared_ptr<List<T1>> *_write = nullptr;
     const List<t_A> *_loop_self = this;
     while (true) {
       auto &&_sv = *_loop_self;
       if (bsl::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
-        *_write = bsl::make_shared<List<T1>>(List<T1>::nil());
+        auto _value = List<T1>::nil();
+        (_write ? *(*_write = bsl::make_shared<List<T1>>(bsl::move(_value)))
+                : _root.emplace(bsl::move(_value)));
         break;
       } else {
         const auto &[d_a0, d_a1] = bsl::get<typename List<t_A>::Cons>(_sv.v());
-        auto _cell = bsl::make_shared<List<T1>>(
-            typename List<T1>::Cons(f(d_a0), nullptr));
-        *_write = bsl::move(_cell);
-        _write = &bsl::get<typename List<T1>::Cons>((*_write)->v_mut()).d_l;
+        auto _cell = typename List<T1>::Cons(f(d_a0), nullptr);
+        List<T1> &_node =
+            (_write ? *(*_write = bsl::make_shared<List<T1>>(bsl::move(_cell)))
+                    : _root.emplace(bsl::move(_cell)));
+        _write = &bsl::get<typename List<T1>::Cons>(_node.v_mut()).d_l;
         _loop_self = crane_raw(d_a1);
         continue;
       }
     }
-    return bsl::move(*_head);
+    return bsl::move(*_root);
   }
   unsigned int length() const {
     const List<t_A> *_self = this;
@@ -315,26 +328,29 @@ public:
     return _result;
   }
   List<t_A> app(List<t_A> m) const {
-    bsl::shared_ptr<List<t_A>> _head{};
-    bsl::shared_ptr<List<t_A>> *_write = &_head;
+    bsl::optional<List<t_A>> _root{};
+    bsl::shared_ptr<List<t_A>> *_write = nullptr;
     const List<t_A> *_loop_self = this;
     List<t_A> _loop_m = bsl::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
       if (bsl::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
-        *_write = bsl::make_shared<List<t_A>>(bsl::move(_loop_m));
+        auto _value = bsl::move(_loop_m);
+        (_write ? *(*_write = bsl::make_shared<List<t_A>>(bsl::move(_value)))
+                : _root.emplace(bsl::move(_value)));
         break;
       } else {
         const auto &[d_a0, d_a1] = bsl::get<typename List<t_A>::Cons>(_sv.v());
-        auto _cell = bsl::make_shared<List<t_A>>(
-            typename List<t_A>::Cons(d_a0, nullptr));
-        *_write = bsl::move(_cell);
-        _write = &bsl::get<typename List<t_A>::Cons>((*_write)->v_mut()).d_l;
+        auto _cell = typename List<t_A>::Cons(d_a0, nullptr);
+        List<t_A> &_node =
+            (_write ? *(*_write = bsl::make_shared<List<t_A>>(bsl::move(_cell)))
+                    : _root.emplace(bsl::move(_cell)));
+        _write = &bsl::get<typename List<t_A>::Cons>(_node.v_mut()).d_l;
         _loop_self = crane_raw(d_a1);
         continue;
       }
     }
-    return bsl::move(*_head);
+    return bsl::move(*_root);
   }
 };
 struct ToString {

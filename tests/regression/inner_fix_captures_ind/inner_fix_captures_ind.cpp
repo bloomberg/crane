@@ -106,26 +106,31 @@ uint64_t InnerFixCapturesInd::outer(
 }
 
 InnerFixCapturesInd::lst InnerFixCapturesInd::mk(uint64_t n) {
-  std::shared_ptr<InnerFixCapturesInd::lst> _head{};
-  std::shared_ptr<InnerFixCapturesInd::lst> *_write = &_head;
+  std::optional<InnerFixCapturesInd::lst> _root{};
+  std::shared_ptr<InnerFixCapturesInd::lst> *_write = nullptr;
   uint64_t _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
-      *_write = std::make_shared<InnerFixCapturesInd::lst>(lst::nil());
+      auto _value = lst::nil();
+      (_write ? *(*_write = std::make_shared<InnerFixCapturesInd::lst>(
+                      std::move(_value)))
+              : _root.emplace(std::move(_value)));
       break;
     } else {
       uint64_t m = _loop_n - 1;
-      auto _cell = std::make_shared<InnerFixCapturesInd::lst>(
-          typename InnerFixCapturesInd::lst::Cons(UINT64_C(1), nullptr));
-      *_write = std::move(_cell);
+      auto _cell =
+          typename InnerFixCapturesInd::lst::Cons(UINT64_C(1), nullptr);
+      InnerFixCapturesInd::lst &_node =
+          (_write ? *(*_write = std::make_shared<InnerFixCapturesInd::lst>(
+                          std::move(_cell)))
+                  : _root.emplace(std::move(_cell)));
       _write =
-          &std::get<typename InnerFixCapturesInd::lst::Cons>((*_write)->v_mut())
-               .a1;
+          &std::get<typename InnerFixCapturesInd::lst::Cons>(_node.v_mut()).a1;
       _loop_n = m;
       continue;
     }
   }
-  return std::move(*_head);
+  return std::move(*_root);
 }
 
 uint64_t InnerFixCapturesInd::go(uint64_t n) { return outer(mk(n)); }

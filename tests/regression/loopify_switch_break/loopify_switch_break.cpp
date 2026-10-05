@@ -52,16 +52,17 @@ uint64_t LoopifySwitchBreak::eval_ops(
 List<uint64_t> LoopifySwitchBreak::collect_ops(
     const List<std::pair<LoopifySwitchBreak::Tag, uint64_t>> &ops,
     uint64_t acc) {
-  std::shared_ptr<List<uint64_t>> _head{};
-  std::shared_ptr<List<uint64_t>> *_write = &_head;
+  std::optional<List<uint64_t>> _root{};
+  std::shared_ptr<List<uint64_t>> *_write = nullptr;
   uint64_t _loop_acc = std::move(acc);
   const List<std::pair<LoopifySwitchBreak::Tag, uint64_t>> *_loop_ops = &ops;
   while (true) {
     if (std::holds_alternative<
             typename List<std::pair<LoopifySwitchBreak::Tag, uint64_t>>::Nil>(
             _loop_ops->v())) {
-      *_write = std::make_shared<List<uint64_t>>(
-          List<uint64_t>::cons(_loop_acc, List<uint64_t>::nil()));
+      auto _value = List<uint64_t>::cons(_loop_acc, List<uint64_t>::nil());
+      (_write ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
+              : _root.emplace(std::move(_value)));
       break;
     } else {
       const auto &[a0, a1] = std::get<
@@ -70,30 +71,36 @@ List<uint64_t> LoopifySwitchBreak::collect_ops(
       const auto &[t, v] = a0;
       switch (t) {
       case Tag::ADD: {
-        auto _cell = std::make_shared<List<uint64_t>>(
-            typename List<uint64_t>::Cons(_loop_acc, nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
+        auto _cell = typename List<uint64_t>::Cons(_loop_acc, nullptr);
+        List<uint64_t> &_node =
+            (_write ? *(*_write =
+                            std::make_shared<List<uint64_t>>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
         _loop_acc = (_loop_acc + v);
         _loop_ops = crane_raw(a1);
         continue;
         break;
       }
       case Tag::MUL: {
-        auto _cell = std::make_shared<List<uint64_t>>(
-            typename List<uint64_t>::Cons(_loop_acc, nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
+        auto _cell = typename List<uint64_t>::Cons(_loop_acc, nullptr);
+        List<uint64_t> &_node =
+            (_write ? *(*_write =
+                            std::make_shared<List<uint64_t>>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
         _loop_acc = (_loop_acc * v);
         _loop_ops = crane_raw(a1);
         continue;
         break;
       }
       case Tag::KEEP: {
-        auto _cell = std::make_shared<List<uint64_t>>(
-            typename List<uint64_t>::Cons(_loop_acc, nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
+        auto _cell = typename List<uint64_t>::Cons(_loop_acc, nullptr);
+        List<uint64_t> &_node =
+            (_write ? *(*_write =
+                            std::make_shared<List<uint64_t>>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
         _loop_ops = crane_raw(a1);
         continue;
         break;
@@ -103,7 +110,7 @@ List<uint64_t> LoopifySwitchBreak::collect_ops(
       }
     }
   }
-  return std::move(*_head);
+  return std::move(*_root);
 }
 
 /// count_tags tag ops counts how many times a given tag appears.
