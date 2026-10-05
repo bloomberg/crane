@@ -57,6 +57,12 @@ inline constexpr std::size_t classes = 32; // pooled blocks are at most 512 byte
 template <std::size_t Size>
 inline constexpr std::size_t class_of = (Size + grain - 1) / grain - 1;
 
+#ifdef CRANE_COUNT_TAKES
+// Measurement only: every block handed out, fresh or recycled, so a test can
+// count allocations that the free lists hide from [operator new].
+inline std::size_t takes = 0;
+#endif
+
 // The heap has no destructor: a value in a static is freed after the
 // thread's own thread_local objects are gone, so the heap must still work
 // then.  Its lists and its queue's buffer live as long as the thread.
@@ -71,6 +77,9 @@ struct thread_heap {
   arena *open_arena = nullptr;
 
   template <std::size_t Size> void *take() {
+#ifdef CRANE_COUNT_TAKES
+    ++takes;
+#endif
     if constexpr (class_of<Size> >= classes) {
       return ::operator new(Size);
     } else {

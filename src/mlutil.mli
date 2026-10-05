@@ -393,6 +393,10 @@ val ast_iter : (ml_ast -> unit) -> ml_ast -> unit
     @return [true] if [MLrel k] appears free in [t] *)
 val ast_occurs : int -> ml_ast -> bool
 
+(** How many times [MLrel 1] is read on the path through [a] that reads it
+    most: a match counts its most-reading branch, not their sum. *)
+val nb_occur_match : ml_ast -> int
+
 (** Check if any de Bruijn index in the interval [[k, k']] occurs in a term.
     @param k  lower bound of the index range (inclusive)
     @param k' upper bound of the index range (inclusive)

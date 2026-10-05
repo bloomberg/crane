@@ -1420,14 +1420,16 @@ let report_body_generations fn =
              (fun (p, n) -> str (phase_name p) ++ str " " ++ int n)
              (Gen_decls.body_generation_counts ()) )
 
-(** [Modutil.optimize_struct], one body for coinciding definitions, and then
-    {!Normalize}, so that every consumer of the structure (the
+(** [Modutil.optimize_struct], one body for coinciding definitions, a
+    recursive function specialized to the lambda a definition passes it, and
+    then {!Normalize}, so that every consumer of the structure (the
     method registry built before printing as much as the printer) sees the
     same bodies, and a body a rewrite introduces meets Normalize's contract
     like any other. *)
 let optimize_struct to_appear struc =
   Modutil.optimize_struct to_appear struc
   |> Ml_dedup.structure
+  |> Ml_specialize.structure
   |> Normalize.structure
 
 (** Renders an entire ML structure to C++ header and implementation files.

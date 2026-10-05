@@ -368,20 +368,21 @@ let dfix_to_mlfix fds i =
     of code. The inlined functions are kept for the moment in order to preserve
     the global interface, later [depcheck_se] will get rid of them if possible
 *)
+let decl_of_term r a t =
+  match dump_unused_vars (optimize_fix a) with
+  | MLfix (0, _, [|c|], _) ->
+    Dfix [{fd_ref = r; fd_body = ast_subst (MLglob (r, [])) c; fd_type = t}]
+    (* The [] ML type args are safe: gen_expr reads template args from the
+       C++ environment, not from MLglob's arg list. *)
+  | a -> Dterm (r, a, t)
+
 let rec optim_se top to_appear s = function
   | [] -> []
   | (l, SEdecl (Dterm (r, a, t))) :: lse ->
     let a = normalize (ast_glob_subst !s a) in
     let i = inline r a in
     if i then s := Refmap'.add r a !s;
-    let d =
-      match dump_unused_vars (optimize_fix a) with
-      | MLfix (0, _, [|c|], _) ->
-        Dfix [{fd_ref = r; fd_body = ast_subst (MLglob (r, [])) c; fd_type = t}]
-        (* The [] ML type args are safe: gen_expr reads template args from the
-           C++ environment, not from MLglob's arg list. *)
-      | a -> Dterm (r, a, t)
-    in
+    let d = decl_of_term r a t in
     (l, SEdecl d) :: optim_se top to_appear s lse
   | (l, SEdecl (Dfix fds)) :: lse ->
     let fds =

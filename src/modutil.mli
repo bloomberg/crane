@@ -90,6 +90,11 @@ val msid_of_mt : ml_module_type -> ModPath.t
     @raise Not_found if the reference is not in the structure. *)
 val get_decl_in_structure : GlobRef.t -> ml_structure -> ml_decl
 
+(** [decl_of_term r a t] is the declaration of [r], with body [a] and type
+    [t]: a fixpoint when [a] is one under its lambdas -- the fixpoint's own
+    name becoming [r], its parameters [r]'s -- and a term otherwise. *)
+val decl_of_term : GlobRef.t -> ml_ast -> ml_type -> ml_decl
+
 (** Simplify the structure: beta-iota reduction, dead code elimination, inlining
     of singly-used let-bindings. The first argument specifies which definitions
     must be kept (not eliminated).

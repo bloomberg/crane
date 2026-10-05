@@ -11688,3 +11688,25 @@
   (alias runtest)
   (deps local_record_closures.t.exe)
   (action (run ./local_record_closures.t.exe))))
+
+(subdir iter_step_fusion
+ (rule
+  (targets iter_step_fusion.t.exe)
+  (deps IterStepFusion.vo iter_step_fusion.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} iter_step_fusion.t.exe iter_step_fusion.cpp iter_step_fusion.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps iter_step_fusion.t.exe)
+  (action (run ./iter_step_fusion.t.exe))))
+
+(subdir mrec_fact
+ (rule
+  (targets mrec_fact.t.exe)
+  (deps MrecFact.vo mrec_fact.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mrec_fact.t.exe mrec_fact.cpp mrec_fact.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mrec_fact.t.exe)
+  (action (run ./mrec_fact.t.exe))))
