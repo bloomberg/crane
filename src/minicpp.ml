@@ -2422,7 +2422,19 @@ and free_vars_stmt = function
       branches
     @ (match default with Some ss -> free_vars_body ss | None -> [])
   | Sblock ss -> free_vars_body ss
-  | _ -> []
+  | Sif_decl (id, _, e, t, f) ->
+    free_vars_expr e
+    @ List.filter (fun v -> not (Id.equal v id)) (free_vars_body t)
+    @ free_vars_body f
+  | Sfor_range (id, e, body) ->
+    free_vars_expr e @ List.filter (fun v -> not (Id.equal v id)) (free_vars_body body)
+  (* Every other statement binds nothing its own children see: what is free
+     in it is what is free in them. *)
+  | s ->
+    fold_stmt_children
+      ~on_expr:(fun acc e -> acc @ free_vars_expr e)
+      ~on_stmts:(fun acc b -> acc @ free_vars_body b)
+      [] s
 
 (** Collect free variables from a list of statements, properly excluding
     variables defined by [Sasgn] or [Sdecl] bindings in preceding statements.
@@ -2434,8 +2446,9 @@ and free_vars_body (stmts : cpp_stmt list) : Id.t list =
     | stmt :: rest ->
       let newly_defined =
         match stmt with
-        | Sasgn (id, Declare _, _) -> [id]
-        | Sdecl (id, _) -> [id]
+        | Sasgn (id, Declare _, _) | Sdecl (id, _) | Sdecl_init (id, _)
+        | Sblock_custom (_, _, id, _, _, _) -> [id]
+        | Sbind (ids, _) -> ids
         | _ -> []
       in
       let stmt_fvs = free_vars_stmt stmt in

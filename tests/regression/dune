@@ -11710,3 +11710,14 @@
   (alias runtest)
   (deps map_fold_fusion.t.exe)
   (action (run ./map_fold_fusion.t.exe))))
+
+(subdir vector_capacity
+ (rule
+  (targets vector_capacity.t.exe)
+  (deps VectorCapacity.vo vector_capacity.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} vector_capacity.t.exe vector_capacity.cpp vector_capacity.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps vector_capacity.t.exe)
+  (action (run ./vector_capacity.t.exe))))

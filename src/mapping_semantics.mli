@@ -39,15 +39,26 @@ type t =
   | Ref_read of int  (** the value the cell at this position holds *)
   | Ref_write of int * int
       (** store the second position's value in the first position's cell *)
+  | Vec_new  (** a fresh, empty growable array *)
+  | Vec_push of int * int
+      (** append the second position's value to the first position's array *)
+  | Vec_reserve of int * int
+      (** make room in the first position's array for as many more elements
+          as the second position's unsigned count, if it can; the contents
+          are unchanged *)
 (** A position counts every argument the mapping's template can splice, as
     its [%aN] holes do -- an implicit argument included. *)
 
 (** The meaning declared for [r], if any. *)
 val find : Names.GlobRef.t -> t option
 
+(** The one mapping declared with a meaning [p] accepts, if there is exactly
+    one: for a pass that must spell an operation the program does not call. *)
+val unique_declaration : (t -> bool) -> Names.GlobRef.t option
+
 (** [Crane Semantics r := "words"]: parse [words] -- ["unsigned_nat 64"],
-    ["unsigned add 64"], ["ref write 1 2"] -- check it fits what [r] is, and
-    record it. *)
+    ["unsigned add 64"], ["ref write 1 2"], ["vector push 0 1"] -- check it
+    fits what [r] is, and record it. *)
 val declare : Libnames.qualid -> string -> unit
 
 (** The width the inductive is declared an unsigned integer at

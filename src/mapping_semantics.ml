@@ -13,6 +13,9 @@ type t =
   | Ref_new of int
   | Ref_read of int
   | Ref_write of int * int
+  | Vec_new
+  | Vec_push of int * int
+  | Vec_reserve of int * int
 
 let bits = function W8 -> 8 | W16 -> 16 | W32 -> 32 | W64 -> 64
 
@@ -22,6 +25,11 @@ let table : t GlobRef.Map.t ref =
   Summary.ref GlobRef.Map.empty ~name:"CraneExtrSemantics"
 
 let find r = GlobRef.Map.find_opt r !table
+
+let unique_declaration p =
+  match GlobRef.Map.bindings (GlobRef.Map.filter (fun _ s -> p s) !table) with
+  | [(r, _)] -> Some r
+  | _ -> None
 
 let semantics_object : GlobRef.t * t -> Libobject.obj =
   let open Libobject in
@@ -55,11 +63,15 @@ let parse words =
   | ["ref"; "new"; v] -> Ref_new (position v)
   | ["ref"; "read"; c] -> Ref_read (position c)
   | ["ref"; "write"; c; v] -> Ref_write (position c, position v)
+  | ["vector"; "new"] -> Vec_new
+  | ["vector"; "push"; c; v] -> Vec_push (position c, position v)
+  | ["vector"; "reserve"; c; n] -> Vec_reserve (position c, position n)
   | _ ->
     error
       ("cannot read \"" ^ words
      ^ "\"; expected \"unsigned_nat W\", \"unsigned OP W\", \"ref new V\", \
-        \"ref read C\" or \"ref write C V\"")
+        \"ref read C\", \"ref write C V\", \"vector new\", \"vector push C V\" \
+        or \"vector reserve C N\"")
 
 (* An [Unsigned_nat] type is [O | S n]: two constructors, the first constant
    and the second taking one argument -- the order the passes that read the
@@ -77,7 +89,8 @@ let declare q words =
   let s = parse words in
   ( match s with
   | Unsigned_nat _ -> check_nat_shape r
-  | Unsigned _ | Ref_new _ | Ref_read _ | Ref_write _ -> (
+  | Unsigned _ | Ref_new _ | Ref_read _ | Ref_write _ | Vec_new | Vec_push _
+  | Vec_reserve _ -> (
     match r with
     | GlobRef.ConstRef _ -> ()
     | _ -> error "an operation names a constant" ) );

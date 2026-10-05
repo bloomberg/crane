@@ -145,6 +145,9 @@ let finish decl =
      named once -- after the temporaries went back, so that none of them is
      put back into the text that repeats it. *)
   let decl = pass "shared_args" Cpp_shared_args.transform_decl decl in
+  (* A vector filled by a counted loop is given its final capacity up front,
+     with the loops in their final shape. *)
+  let decl = pass "capacity" Cpp_capacity.transform_decl decl in
   (* An initialiser nested deeper than a compiler will parse becomes a run of
      bindings; everything shallower is left as it stands. *)
   let decl = pass "depth" Cpp_depth.flatten decl in

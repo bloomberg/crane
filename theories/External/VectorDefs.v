@@ -42,6 +42,10 @@ Definition isEmpty {E} `{vectorE -< E} {A} (v : vector A) : itree E bool :=
 Definition assign {E} `{vectorE -< E} {A} (v : vector A) (x : int) (a : A)
   : itree E (vector A) := embed (Assign v x a).
 
+(** Room for [n] more elements: a hint, which changes no contents.  Programs
+    need not call it; the extractor does, where it can see the count. *)
+Definition reserve {E} {A} (v : vector A) (n : nat) : itree E unit := Ret tt.
+
 Crane Extract Inlined Constant emptyVec => "{}".
 Crane Extract Inlined Constant get => "%a0.at(%a1)".
 Crane Extract Inlined Constant push => "%a0.push_back(%a1)".
@@ -49,3 +53,11 @@ Crane Extract Inlined Constant pop => "%a0.pop_back()".
 Crane Extract Inlined Constant size => "%a0.size()".
 Crane Extract Inlined Constant isEmpty => "%a0.empty()".
 Crane Extract Inlined Constant assign => "%a0.assign(%a1, %a2)".
+(* A count past what the vector could ever hold reserves nothing: the pushes
+   fail where they would have. *)
+Crane Extract Inlined Constant reserve =>
+  "(%a1 <= %a0.max_size() ? %a0.reserve(%a1) : void())".
+
+Crane Semantics emptyVec := "vector new".
+Crane Semantics push := "vector push 0 1".
+Crane Semantics reserve := "vector reserve 0 1".

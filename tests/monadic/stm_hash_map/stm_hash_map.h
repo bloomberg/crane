@@ -265,6 +265,8 @@ template <typename K, typename V> struct CHT {
     {
       uint64_t _lc1_n = static_cast<unsigned int>(num);
       uint64_t _lc1_loop_n = std::move(_lc1_n);
+      (_lc1_loop_n <= buckets.max_size() ? buckets.reserve(_lc1_loop_n)
+                                         : void());
       while (true) {
         if (_lc1_loop_n <= 0) {
           return buckets;
