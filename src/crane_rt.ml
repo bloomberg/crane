@@ -43,8 +43,10 @@ type helper =
   | Reuse_step
   | Raw
   | Unbox_field
+  | Apply2
 
 let name = function
+  | Apply2 -> "crane::apply2"
   | Make_rc_reusing_unchecked -> make_rc_reusing_unchecked
   | Raw -> raw
   | Unbox_field -> "crane::unbox"

@@ -378,7 +378,7 @@ struct Monads {
         return Monad0::template bind<_tcI0, std::pair<T1, CraneA0>,
                                      std::pair<T1, CraneA1>>(
             t(s), [=](const std::pair<T1, CraneA0> &sa) {
-              return k(sa.second)(sa.first);
+              return crane::apply2(k, sa.second, sa.first);
             });
       };
     }
@@ -421,7 +421,7 @@ template <Monad _tcI0, MonadIter _tcI1, typename T1> struct MonadIter_stateT0 {
             return Monad0::template bind<
                 _tcI0, std::pair<T1, Sum<CraneA1, CraneA0>>,
                 Sum<std::pair<T1, CraneA1>, std::pair<T1, CraneA0>>>(
-                step(i0)(s0),
+                crane::apply2(step, i0, s0),
                 [](const std::pair<T1, Sum<CraneA1, CraneA0>> &si_) {
                   return Monad0::template ret<
                       _tcI0, Sum<std::pair<T1, CraneA1>,

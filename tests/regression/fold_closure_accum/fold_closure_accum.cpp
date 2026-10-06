@@ -24,8 +24,7 @@ uint64_t
 FoldClosureAccum::compose_adders(const List<FoldClosureAccum::tree> &trees,
                                  uint64_t x0_) {
   return trees.template fold_right<crane::fn<uint64_t(uint64_t)>>(
-      [](FoldClosureAccum::tree t,
-         crane::fn<uint64_t(uint64_t)> acc) -> crane::fn<uint64_t(uint64_t)> {
+      [](FoldClosureAccum::tree t, crane::fn<uint64_t(uint64_t)> acc) {
         return [=](uint64_t x) { return (acc(x) + tree_sum(t)); };
       },
       [](uint64_t x) { return x; })(x0_);

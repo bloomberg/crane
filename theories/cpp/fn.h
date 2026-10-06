@@ -58,7 +58,22 @@ inline fn_stats_t &fn_stats() noexcept {
 
 CRANE_RC_POLICY_BEGIN
 
+template <class Sig> class fn;
+
 namespace fn_detail {
+
+// The entry for a saturated application of a curried function, [f(a)(b)]
+// for an [f] whose result is itself an [fn]: a callable written as one
+// lambda returning another -- a state monad's continuation -- runs the inner
+// one where it is made, never boxing it into the [fn] the one-argument entry
+// must return.  OCaml compiles [fun a s -> ...] to a closure of arity two for
+// the same reason.  Present only for that shape.
+template <class R, class... A> struct curried_entry {};
+template <class R2, class B, class A> struct curried_entry<fn<R2(B)>, A> {
+  using result2 = R2;
+  using arg2 = B;
+  R2 (*const invoke2)(const void *, const A &, const B &);
+};
 
 // What every block of one signature starts with.  The entry points are
 // function pointers rather than a vtable so the header is three words and
@@ -71,7 +86,8 @@ namespace fn_detail {
 // once, in its own parameter.  Through a single by-value entry every
 // argument the caller kept -- a field of a node, a loop's state -- was
 // copied at the call whatever the callable did with it.
-template <class R, class... A> struct block : shared_block {
+template <class R, class... A>
+struct block : shared_block, curried_entry<R, A...> {
   R (*const invoke)(const block *, A &&...);
   R (*const invoke_ref)(const block *, const A &...);
 };
@@ -91,7 +107,23 @@ struct holder : block<R, A...>,
 
   template <class G>
   explicit holder(G &&g)
-      : block<R, A...>{{{}, &drop}, &call, &call_ref}, f(std::forward<G>(g)) {}
+      : block<R, A...>{{{}, &drop}, curried(), &call, &call_ref},
+        f(std::forward<G>(g)) {}
+
+  static constexpr curried_entry<R, A...> curried() {
+    if constexpr (std::is_empty_v<curried_entry<R, A...>>)
+      return {};
+    else
+      return {&call2<>};
+  }
+  // [f(a)(b)], the inner callable left as [f] made it.
+  template <class E = curried_entry<R, A...>>
+  static typename E::result2 call2(const void *b, const A &...a,
+                                   const typename E::arg2 &x) {
+    const F &f =
+        static_cast<const holder *>(static_cast<const block<R, A...> *>(b))->f;
+    return invoke_as<typename E::result2>(std::invoke(f, a...), x);
+  }
 
   static R call(const block<R, A...> *b, A &&...a) {
     return invoke_as<R>(static_cast<const holder *>(b)->f,
@@ -222,12 +254,38 @@ public:
     return p_->invoke(p_, std::forward<A>(a)...);
   }
 
+  template <class R2, class B, class A0>
+  friend R2 apply2(const fn<fn<R2(B)>(A0)> &f, const std::type_identity_t<A0> &a,
+                   const std::type_identity_t<B> &b);
+
   explicit operator bool() const noexcept { return p_ != nullptr; }
   friend bool operator==(const fn &f, std::nullptr_t) noexcept {
     return f.p_ == nullptr;
   }
   void swap(fn &o) noexcept { std::swap(p_, o.p_); }
 };
+
+// [f(a)(b)].  Through an [fn] whose result is an [fn], by the entry that
+// leaves the intermediate callable unboxed; anything else is applied twice.
+namespace fn_detail {
+template <class F> struct is_curried_fn : std::false_type {};
+template <class R2, class B, class A0>
+struct is_curried_fn<fn<fn<R2(B)>(A0)>> : std::true_type {};
+} // namespace fn_detail
+
+template <class F, class X, class Y>
+  requires(!fn_detail::is_curried_fn<F>::value)
+decltype(auto) apply2(const F &f, X &&a, Y &&b) {
+  return f(std::forward<X>(a))(std::forward<Y>(b));
+}
+template <class R2, class B, class A0>
+R2 apply2(const fn<fn<R2(B)>(A0)> &f, const std::type_identity_t<A0> &a,
+          const std::type_identity_t<B> &b) {
+  if (!f.p_)
+    throw std::bad_function_call();
+  CRANE_FN_STAT(calls);
+  return f.p_->invoke2(f.p_, a, b);
+}
 
 template <class R, class... A> fn(R (*)(A...)) -> fn<R(A...)>;
 template <class F>

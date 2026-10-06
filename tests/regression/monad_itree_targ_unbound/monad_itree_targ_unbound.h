@@ -170,7 +170,7 @@ struct Monads {
         return _tcI0::template bind<std::pair<T1, CraneA0>,
                                     std::pair<T1, CraneA1>>(
             t(s), [=](const std::pair<T1, CraneA0> &sa) {
-              return k(sa.second)(sa.first);
+              return crane::apply2(k, sa.second, sa.first);
             });
       };
     }

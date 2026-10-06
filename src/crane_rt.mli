@@ -125,6 +125,9 @@ type helper =
   | Reuse_step
   | Raw  (** [crane_raw(p)] -- the raw pointer a smart pointer holds. *)
   | Unbox_field  (** [crane::unbox(f)] -- a {!field} read as [const T&]. *)
+  | Apply2
+      (** [crane::apply2(f, a, b)] -- [f(a)(b)], without boxing [f(a)] where
+          [f] is an {!fn} written as one lambda returning another. *)
 
 (** [crane_raw], in {!erasure_header}. *)
 val raw : string

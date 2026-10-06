@@ -22,8 +22,7 @@ struct NatIterFunctionAcc {
       return _crane_acc;
     }(
                UINT64_C(10),
-               [](crane::fn<uint64_t(uint64_t)> f)
-                   -> crane::fn<uint64_t(uint64_t)> {
+               [](crane::fn<uint64_t(uint64_t)> f) {
                  return [=](uint64_t x) { return f((x + UINT64_C(1))); };
                },
                [](uint64_t x) { return x; })(UINT64_C(0));

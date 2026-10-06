@@ -8,6 +8,10 @@
     - [if (c) return true; else return false;] returns [c], for a [c] that
       is a comparison or a connective, and so a [bool].
     - A binding of a pure value nothing reads is dropped.
+    - A local closure whose result is applied at once, [k(a)(b)], is
+      [crane::apply2(k, a, b)], which skips the closure in between; and a
+      lambda that only returns a lambda returns it unboxed, so that the
+      skip has something to skip.
 
     Effects and evaluation counts are kept: a mapped constant is never pure,
     so nothing its text might do is removed. *)

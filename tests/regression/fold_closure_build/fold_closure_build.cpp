@@ -15,8 +15,7 @@ uint64_t
 FoldClosureBuild::compose_adders(const FoldClosureBuild::mylist<uint64_t> &l,
                                  uint64_t x0_) {
   return fold_left<crane::fn<uint64_t(uint64_t)>, uint64_t>(
-      [](crane::fn<uint64_t(uint64_t)> acc,
-         uint64_t h) -> crane::fn<uint64_t(uint64_t)> {
+      [](crane::fn<uint64_t(uint64_t)> acc, uint64_t h) {
         return [=](uint64_t x) { return acc((h + x)); };
       },
       [](uint64_t x) { return x; }, l)(x0_);

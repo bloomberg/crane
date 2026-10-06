@@ -474,7 +474,7 @@ struct UnappliedSubeventHandler {
              Nat, crane_carrier_tc_e4b67e60f94a9e42, crane::obj>(MemE)>
              h,
          MemE x) {
-    return [=](const Nat &x0) { return h(x)(x0); };
+    return [=](const Nat &x0) { return crane::apply2(h, x, x0); };
   }
 
   template <typename T1>
