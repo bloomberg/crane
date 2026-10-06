@@ -11753,3 +11753,14 @@
   (alias runtest)
   (deps reuse_two_children.t.exe)
   (action (run ./reuse_two_children.t.exe))))
+
+(subdir reuse_list_shapes
+ (rule
+  (targets reuse_list_shapes.t.exe)
+  (deps ReuseListShapes.vo reuse_list_shapes.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} reuse_list_shapes.t.exe reuse_list_shapes.cpp reuse_list_shapes.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps reuse_list_shapes.t.exe)
+  (action (run ./reuse_list_shapes.t.exe))))

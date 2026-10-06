@@ -7778,11 +7778,14 @@ and gen_cpp_case (typ : ml_type) t env pv =
             let matched_alt =
               Id.of_string_soft (ctor_struct_name_of_ref matched_ctor)
             in
+            (* The field by the name the constructor's struct gives it --
+               [l] for [list]'s tail, not the positional [a1]. *)
             let rf i =
               CPPaccess
                 ( Adot,
                   CPPstd_get (Tqualified (scrut_cpp_ty, matched_alt), Some scrut_vmut),
-                  field_param_id i )
+                  Common.lookup_ctor_field_name ~owner:matched_ctor
+                    (ctor_struct_name_of_ref matched_ctor) i )
             in
             let token_expr = Some (rf rec_idx) in
             let extract =

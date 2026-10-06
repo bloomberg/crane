@@ -44,11 +44,17 @@ let rec member_root = function
 
 and path_root = function CPPvar x -> Some x | e -> member_root e
 
-(* Whether [stmts] move from [v] anywhere, or from anything inside it. *)
-let moves_from v stmts =
+(* Whether [stmts] move from [v] anywhere, or from anything inside it, or
+   reach into it mutably -- a reuse arm decomposes its scrutinee through
+   [v_mut()]. *)
+let takes_from v stmts =
   let rec fe found e =
     found
-    || (match e with CPPmove e -> path_root e = Some v | _ -> false)
+    || ( match e with
+       | CPPmove e -> path_root e = Some v
+       | CPPaccess (_, e, f) | CPPaccess_call (_, e, f, _) ->
+         String.equal (Id.to_string f) "v_mut" && path_root e = Some v
+       | _ -> false )
     || fold_expr_children ~on_expr:fe ~on_stmts:fl false e
   and fl found l =
     found || List.exists (fold_stmt_children ~on_expr:fe ~on_stmts:fl false) l
@@ -57,7 +63,8 @@ let moves_from v stmts =
 
 (* A local copied out of a member of another -- [T2 s0 = si.first] -- is a
    [const] reference to it instead, where the other is neither assigned nor
-   moved from afterwards, and the local not assigned: the other outlives it,
+   moved from afterwards, and the local neither assigned nor taken from: the
+   other outlives it,
    and {!Last_use} moves from nothing a reference binds into, so what it
    names stays put.  The copy it saved is made only by a use that keeps the
    value.  A type a copy costs nothing for -- a scalar, a pointer -- is
@@ -70,7 +77,9 @@ let rec bind_by_reference = function
          && ( match member_root rhs with
             | Some v ->
               let assigned = assigned_vars rest in
-              not (Id.Set.mem x assigned || Id.Set.mem v assigned || moves_from v rest)
+              not
+                ( Id.Set.mem x assigned || Id.Set.mem v assigned
+                || takes_from v rest || takes_from x rest )
             | None -> false ) ->
     let ty = match ty with Tconst _ -> ty | _ -> Tconst ty in
     Sasgn (x, Declare (Tref (Lvalue, ty)), rhs) :: bind_by_reference rest

@@ -589,21 +589,27 @@ let unmove_invariant_params invariant_params stmts =
 
     Identify the cursor: the single varying parameter that the loop walks by
     pointer and whose recursive argument is a dereference of one of the matched
-    cell's fields, i.e. exactly the spine being consumed.  Everything else --
-    accumulators, unchanged parameters, several pointer-walked parameters at
-    once -- yields [None] and the ordinary allocating path. *)
+    cell's fields, i.e. exactly the spine being consumed -- and whose cells are
+    the output's own type, since a recycled cell is rebuilt in place: [combine]
+    walks a [list B] beside the [list A] it consumes and builds a
+    [list (A * B)], and no cell of either input is the right size for its
+    output.  Everything else -- accumulators, unchanged parameters, several
+    pointer-walked parameters at once -- yields [None] and the ordinary
+    allocating path. *)
 let tmc_reuse_cursor ~storage varying shadow_params br =
   match storage with
   | Value_root _ | Pointer_result _ -> None
-  | Boxed_root _ ->
+  | Boxed_root ret_ty ->
     let rec_args = filter_by_mask varying br.tmc_rec_args in
     if List.length rec_args <> List.length shadow_params then None
     else
+      let rec pointee = function Tconst t -> pointee t | t -> t in
       let candidates =
         List.filter_map
           (fun ((sid, sty), arg) ->
             match sty, arg with
-            | Tptr _, CPPderef inner -> Some (sid, inner)
+            | Tptr t, CPPderef inner when Ml_type_util.cpp_ty_eq (pointee t) ret_ty ->
+              Some (sid, inner)
             | _ -> None)
           (List.combine shadow_params rec_args)
       in
@@ -896,19 +902,18 @@ let transform_tmc ?(param_inits = []) tparams check params ret_ty body =
     |> strip_unnecessary_blocks
     |> rewrite_borrowed_shadow_uses shadow_params
   in
-  (* The reuse cursor's declarations, and the matches it reads through.
-     Escape analysis passed the scrutinee owned so that this loop would have
-     cells to recycle, which also made translation emit a destructive match
-     ([auto&] over [v_mut()], fields moved out).  That is exactly what must not
-     happen here: whether the cell may be consumed is not known until
-     [reuse_step] tests it, and on a shared spine moving its fields out would
-     corrupt the other holder.  So the matches revert to borrowing, and
-     [reuse_step] does the one steal that is licensed -- the recursive field of
-     a cell it has just proven unique. *)
-  let body'' =
-    if not !cursor_used then body''
-    else borrow_cursor_matches shadow_params body''
-  in
+  (* The matches the loop reads through its pointer shadows.  Escape analysis
+     may have passed a scrutinee owned so that a loop would have cells to
+     recycle, which also made translation emit a destructive match ([auto&]
+     over [v_mut()], fields moved out).  That is exactly what must not happen
+     here: a shadow is a [const] pointer to a cell the loop does not own --
+     under the reuse cursor, whether the cell may be consumed is not known
+     until [reuse_step] tests it, and on a shared spine moving its fields out
+     would corrupt the other holder; without the cursor (a walk the cursor
+     declined, [combine]'s second list) nothing may consume it at all.  So the
+     matches revert to borrowing, and [reuse_step] does the one steal that is
+     licensed -- the recursive field of a cell it has just proven unique. *)
+  let body'' = borrow_cursor_matches shadow_params body'' in
   let cursor_decls =
     if not !cursor_used then []
     else
