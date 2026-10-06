@@ -372,6 +372,32 @@ let with_reuse_token (tok : (cpp_expr * GlobRef.t) option) (f : unit -> 'a) : 'a
     (fun t -> tctx := { !tctx with pending_reuse_token = t })
     tok f
 
+(** A match's branches are alternatives: each may consume the pending reuse
+    token, since at most one of them runs.  [begin_alternatives] notes the
+    token they start from, [enter_alternative] gives it to the next branch,
+    [leave_alternative] notes whether that branch consumed it, and
+    [end_alternatives] leaves it pending after the match only if none did --
+    a later constructor on a path through a consuming branch would use it a
+    second time. *)
+type alternatives = {
+  alt_start : (cpp_expr * GlobRef.t) option;
+  mutable alt_consumed : bool;
+}
+
+let begin_alternatives () =
+  {alt_start = (!tctx).pending_reuse_token; alt_consumed = false}
+
+let enter_alternative a = tctx := { !tctx with pending_reuse_token = a.alt_start }
+
+let leave_alternative a =
+  if a.alt_start <> None && (!tctx).pending_reuse_token = None then
+    a.alt_consumed <- true
+
+let end_alternatives a =
+  tctx :=
+    { !tctx with
+      pending_reuse_token = (if a.alt_consumed then None else a.alt_start) }
+
 (** Accessors for {!translation_ctx.current_param_types}: the 1-indexed
     parameter types of the current function, used to recover erased type info
     at call sites. [set_current_param_types] assigns the 1-based indices. *)

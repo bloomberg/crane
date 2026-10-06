@@ -284,21 +284,25 @@ let find_reuse_candidates (_typ : ml_type) (pv : ml_branch array) =
       Names.MutInd.CanOrd.equal m1 m2 && Int.equal i1 i2
     | _ -> false
   in
-  let rec tail_cons = function
-    | MLmagic (_, a) -> tail_cons a
-    | MLletin (_, _, _, b) -> tail_cons b
-    | MLcons (_, r, args) -> Some (r, args)
-    | _ -> None
+  (* The constructors [body] returns, wherever it returns one: under its
+     [let]s, and in each branch of a match it ends in -- a map's update
+     rebuilds its node in whichever branch the key comparison picks. *)
+  let rec tail_conses = function
+    | MLmagic (_, a) -> tail_conses a
+    | MLletin (_, _, _, b) -> tail_conses b
+    | MLcons (_, r, args) -> [(r, args)]
+    | MLcase (_, _, brs) ->
+      List.concat_map (fun (_, _, _, b) -> tail_conses b) (Array.to_list brs)
+    | _ -> []
   in
   let cands = ref [] in
   Array.iteri
     (fun idx (ids, _rty, pat, body) ->
       match pat with
       | Pusual mr | Pcons (mr, _) -> (
-        match tail_cons body with
-        | Some (tr, targs) when same_inductive mr tr ->
-          cands := (idx, mr, List.length ids, tr, targs) :: !cands
-        | _ -> () )
+        match List.find_opt (fun (tr, _) -> same_inductive mr tr) (tail_conses body) with
+        | Some (tr, targs) -> cands := (idx, mr, List.length ids, tr, targs) :: !cands
+        | None -> () )
       | Pwild | Prel _ | Ptuple _ -> () )
     pv;
   List.rev !cands

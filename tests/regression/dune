@@ -11742,3 +11742,14 @@
   (alias runtest)
   (deps pattern_lambda_through_instance.t.exe)
   (action (run ./pattern_lambda_through_instance.t.exe))))
+
+(subdir reuse_two_children
+ (rule
+  (targets reuse_two_children.t.exe)
+  (deps ReuseTwoChildren.vo reuse_two_children.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} reuse_two_children.t.exe reuse_two_children.cpp reuse_two_children.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps reuse_two_children.t.exe)
+  (action (run ./reuse_two_children.t.exe))))

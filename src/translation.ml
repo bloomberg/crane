@@ -7619,6 +7619,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
     in
     (* Generate one {!smatch_branch} per constructor pattern, collecting
        a wildcard body from [Pwild] / [Prel]. *)
+    let alternatives = begin_alternatives () in
     let rec gen_branches = function
       | [] -> ([], None)
       | (ids, rty, p, body) :: cs ->
@@ -7627,56 +7628,47 @@ and gen_cpp_case (typ : ml_type) t env pv =
         let saved_env_types = (!tctx).env_types in
         let saved_erased = save_erased_env () in
         let ids', env', dummies = process_match_pattern_vars ids env in
+        enter_alternative alternatives;
         let br =
           gen_match_branch env' typ rty r ids' dummies body sname
             match_i scrut ~scrut_db
         in
+        leave_alternative alternatives;
         restore_env_types saved_env_types;
         restore_erased_env saved_erased;
         let rest, wild = gen_branches cs in
         (br :: rest, wild)
       | Pwild | Prel _ ->
+        enter_alternative alternatives;
         let body_stmts =
           gen_stmts env (fun x -> Sreturn (Some x)) body
         in
+        leave_alternative alternatives;
         ([], Some body_stmts)
       | Ptuple _ -> gen_branches cs
     in
     let branches, wildcard = gen_branches (Array.to_list pv) in
+    end_alternatives alternatives;
     let iife_ret_opt =
       match iife_void_return env typ pv with
       | Some _ as v -> v
       | None ->
         iife_closure_return env typ pv [Smatch (scrut, branches, wildcard)]
     in
-    (* Perceus reuse (Crane Reuse): when the matched constructor's single
+    (* Perceus reuse (Crane Reuse): when the matched constructor's first
        recursive child is uniquely owned at runtime, rebuild a same-inductive
        constructor by recycling that child's cell in place via the
        [<ctor>__reuse] factory instead of allocating.  Dual path guarded by
        [scrut.v().index()==branch_idx && child.use_count()==1]; otherwise the
        normal [Smatch].  Only under NonAtomicRc (crane::rc carries the reusable
        control block) and an owned, non-coinductive scrutinee whose matched
-       constructor has exactly one recursive field. *)
+       constructor has a recursive field -- a map's node has two, and its
+       rebuild recycles the first. *)
     let reuse_stmts_opt =
       if Table.reuse () && Table.reuse_loopify_ok () && Table.non_atomic_rc ()
          && scrut_is_owned && (not is_flat_match) && (not is_enum)
          && (match typ with Tglob (r, _, _) -> not (Table.is_coinductive r) | _ -> true)
       then
-        let typ_ind_kn =
-          match typ with
-          | Tglob (GlobRef.IndRef (kn, _), _, _) -> Some kn
-          | _ -> None
-        in
-        let is_rec_ml_ty ml_ty =
-          let rec head = function
-            | Miniml.Tmeta {contents = Some t} -> head t
-            | t -> t
-          in
-          match head ml_ty with
-          | Miniml.Tglob (GlobRef.IndRef (kn, _), _, _) ->
-            (match typ_ind_kn with Some k -> MutInd.CanOrd.equal kn k | None -> false)
-          | _ -> false
-        in
         let scrut_cpp_ty = cpp_of_ml env typ in
         (* The recycled cell is a [crane::rc] over the *scrutinee's* inductive
            instance, so it can only be handed to a [__reuse] factory that
@@ -7709,24 +7701,69 @@ and gen_cpp_case (typ : ml_type) t env pv =
                     (fun (x, _) -> match x with Dummy -> false | _ -> true)
                     ids))
           in
-          (* Locate the single recursive field (the reuse token) over rev_ids'. *)
-          let rec_idx =
-            let found = ref None in
-            List.iteri
-              (fun i (_, ml_ty) ->
-                if !found = None && dummies_arr.(i) && is_rec_ml_ty ml_ty then
-                  found := Some i)
-              rev_ids';
-            !found
+          (* How each bound field comes out of the recycled node, read off
+             the constructor's own field types: the token -- the first field
+             holding the scrutinee's inductive itself, uniformly -- has its
+             value moved out of its cell; another field behind a pointer, or
+             in a [crane::field], is copied, since only the token's cell was
+             found unique; a field stored in place is moved.  A field the
+             rules do not cover -- a self-reference inside a container, a
+             mutual sibling -- declines reuse. *)
+          let def_tys =
+            match Table.get_ctor_ip_types_opt matched_ctor with
+            | Some tys -> List.filter (fun t -> not (isTdummy t)) tys
+            | None -> []
           in
-          let n_rec =
-            List.length
-              (List.filteri
-                 (fun i (_, ml_ty) -> dummies_arr.(i) && is_rec_ml_ty ml_ty)
-                 rev_ids')
+          let self_ref =
+            match typ with Tglob ((GlobRef.IndRef _ as r), _, _) -> Some r | _ -> None
+          in
+          let is_uniform_self t =
+            match (Mlutil.ml_resolve t, self_ref) with
+            | Miniml.Tglob (r, args, _), Some r0 when GlobRef.CanOrd.equal r r0 ->
+              List.for_all Fun.id
+                (List.mapi
+                   (fun j a ->
+                     match Mlutil.ml_resolve a with
+                     | Miniml.Tvar (_, k) -> k = j + 1
+                     | _ -> false )
+                   args )
+            | _ -> false
+          in
+          let rec mentions_family t =
+            match (Mlutil.ml_resolve t, self_ref) with
+            | Miniml.Tglob (GlobRef.IndRef (kn, _), _, _), Some (GlobRef.IndRef (kn0, _))
+              when MutInd.CanOrd.equal kn kn0 ->
+              true
+            | Miniml.Tglob (_, args, _), _ -> List.exists mentions_family args
+            | Miniml.Tarr (a, b), _ -> mentions_family a || mentions_family b
+            | _ -> false
+          in
+          let reads =
+            List.mapi
+              (fun i _ ->
+                if not dummies_arr.(i) then Some `Unused
+                else
+                  match List.nth_opt def_tys i with
+                  | Some t when is_uniform_self t -> Some `Child
+                  | Some t when Ml_type_util.boxes_field t -> Some `Deref
+                  | Some t when Ml_type_util.boxes_param_field t -> Some `Unbox
+                  | Some t when mentions_family t -> None
+                  | Some _ -> Some `Move
+                  | None -> None )
+              rev_ids'
+          in
+          let rec_idx =
+            if List.mem None reads then None
+            else
+              let rec first i = function
+                | Some `Child :: _ -> Some i
+                | _ :: rest -> first (i + 1) rest
+                | [] -> None
+              in
+              first 0 reads
           in
           (match rec_idx with
-          | Some rec_idx when n_rec = 1 ->
+          | Some rec_idx ->
             let saved_env_types = (!tctx).env_types in
             push_binders env ids';
             let scrut_vmut =
@@ -7747,33 +7784,25 @@ and gen_cpp_case (typ : ml_type) t env pv =
                   CPPstd_get (Tqualified (scrut_cpp_ty, matched_alt), Some scrut_vmut),
                   field_param_id i )
             in
-            let token_expr = ref None in
+            let token_expr = Some (rf rec_idx) in
             let extract =
               List.concat
-                (List.mapi
-                   (fun i (var_name, ml_ty) ->
-                     if dummies_arr.(i) then begin
-                       let cpp_ty = cpp_of_ml env ml_ty in
-                       if i = rec_idx then begin
-                         (* Recursive child: bind the pattern var to the moved-out
-                            *value* (owned, so the recursion propagates reuse), and
-                            keep the rc field access itself as the reuse token. *)
-                         token_expr := Some (rf i);
-                         [
-                           Sasgn
-                             ( var_name,
-                               Declare cpp_ty,
-                               CPPmove (CPPderef (rf i)) );
-                         ]
-                       end
-                       else
-                         (* Non-recursive field: stored by value; move it out. *)
-                         [ Sasgn (var_name, Declare cpp_ty, CPPmove (rf i)) ]
-                     end
-                     else [])
-                   rev_ids')
+                (List.map2
+                   (fun (i, (var_name, ml_ty)) read ->
+                     let bind e = [Sasgn (var_name, Declare (cpp_of_ml env ml_ty), e)] in
+                     match read with
+                     | Some `Unused | None -> []
+                     (* The token: its value is moved out, owned, so the
+                        recursion propagates reuse; the cell stays behind as
+                        the token. *)
+                     | Some `Child when i = rec_idx -> bind (CPPmove (CPPderef (rf i)))
+                     | Some (`Child | `Deref) -> bind (CPPderef (rf i))
+                     | Some `Unbox -> bind (mk_call (CPPrt Crane_rt.Unbox_field) [rf i])
+                     | Some `Move -> bind (CPPmove (rf i)) )
+                   (List.mapi (fun i x -> (i, x)) rev_ids')
+                   reads)
             in
-            (match !token_expr with
+            (match token_expr with
             | Some tok ->
               let body_stmts =
                 with_reuse_token (Some (tok, tail_ctor)) (fun () ->
@@ -7794,9 +7823,9 @@ and gen_cpp_case (typ : ml_type) t env pv =
               None)
           | _ -> None )
         in
-        (* Pick the first candidate whose matched constructor has exactly one
-           recursive field (skips nullary-reconstruction arms like Nil->Nil that
-           have no cell to recycle). *)
+        (* Pick the first candidate whose matched constructor has a recursive
+           field (skips nullary-reconstruction arms like Nil->Nil that have no
+           cell to recycle). *)
         List.find_map try_cand (Escape.find_reuse_candidates typ pv)
       else None
     in
@@ -8152,11 +8181,13 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
   (* Generate [(params, ret_ty, body)] triples for each branch.  Handles env
      retyping for [fix_a_fired], move tracking for owned pairs, use-site
      [any_cast] insertion, and template-arg stripping for erased arguments. *)
+  let alternatives = begin_alternatives () in
   let rec gen_cases = function
     | [] -> []
     | (ids, rty, p, t) :: cs ->
     match p with
     | Pusual r | Pcons (r, _) ->
+      enter_alternative alternatives;
       let ids', env' =
         push_vars'
           (List.rev_map
@@ -8426,15 +8457,18 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
               br_stmts
         | _ -> br_stmts
       in
+      leave_alternative alternatives;
       (br_ids, br_ret, br_stmts) :: gen_cases cs
     | Pwild | Prel _ | Ptuple _ -> gen_cases cs
   in
+  let cases = gen_cases (Array.to_list pv) in
+  end_alternatives alternatives;
   cache_prefix @
   [ Scustom_case
       ( case_typ,
         scrut,
         temps,
-        gen_cases (Array.to_list pv),
+        cases,
         { cm_template = cmatch;
           cm_inductive = Table.indref_of_match pv;
           cm_scrutinee = (if binds_by_value then Scrut_owned else Scrut_borrowed) } ) ]

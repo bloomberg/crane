@@ -542,8 +542,13 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
               (* Under [Crane Reuse], the receiver at [this_pos] is a const [this]
                  (borrowed) and must never be treated as owned, or a reuse arm would
                  try to consume it via v_mut() on a const method.  Gated on reuse so
-                 reuse-off output stays byte-identical to the pre-reuse baseline. *)
-              if owned && not (Table.reuse () && Table.reuse_loopify_ok () && i = this_pos)
+                 reuse-off output stays byte-identical to the pre-reuse baseline.
+                 [this_pos] counts the parameters outermost first, [i] innermost
+                 first. *)
+              if owned
+                 && not
+                      ( Table.reuse () && Table.reuse_loopify_ok ()
+                      && i = method_n_params - 1 - this_pos )
               then
                 let ml_ty = snd (List.nth ids_with_types i) in
                 if Escape.is_shared_ptr_type ml_ty
@@ -2484,49 +2489,46 @@ let gen_ind_header_v2
             SCreators )
         in
         (* Perceus reuse factory (Crane Reuse): a variant [<ctor>__reuse] that
-           takes a leading reuse-token parameter [_tok] and, for the single
-           recursive field, allocates via [crane::make_rc_reusing(_tok, ...)]
-           instead of make_shared/arena_make — recycling the token's cell in
-           place when it is uniquely owned.  Only for NonAtomicRc (crane::rc
-           carries the reusable control block) and single-recursive-field,
-           non-coinductive constructors; the caller (a reuse-eligible match arm)
-           threads a matched, uniquely-owned recursive child as the token. *)
-        let n_rec_fields =
-          List.length
-            (List.filter
-               (fun (_, storage_ty, _) ->
-                 match storage_ty with Tshared_ptr _ -> true | _ -> false)
-               cpp_tys )
+           takes a leading reuse-token parameter [_tok] and, for the first
+           field holding the inductive itself, allocates via
+           [crane::make_rc_reusing(_tok, ...)] instead of make_shared/arena_make
+           -- recycling the token's cell in place when it is uniquely owned.
+           The other boxed fields allocate as before.  Only for NonAtomicRc
+           (crane::rc carries the reusable control block) and non-coinductive
+           constructors with such a field; the caller (a reuse-eligible match
+           arm) threads a matched, uniquely-owned recursive child as the
+           token. *)
+        let token_field =
+          List.find_map
+            (fun ((j, storage_ty, _), ty) ->
+              match (storage_ty, Mlutil.ml_resolve ty) with
+              | Tshared_ptr inner, Miniml.Tglob (r, _, _)
+                when GlobRef.CanOrd.equal r name ->
+                Some (j, inner)
+              | _ -> None )
+            (List.combine cpp_tys tys_list)
         in
         let reuse_factory =
-          if Table.reuse () && Table.non_atomic_rc ()
-             && (not is_coinductive) && n_rec_fields = 1
-          then
+          match token_field with
+          | Some (tok_j, rec_inner)
+            when Table.reuse () && Table.non_atomic_rc () && not is_coinductive ->
               let tok_id = Id.of_string "_tok" in
-              let rec_inner =
-                List.find_map
-                  (fun (_, storage_ty, _) ->
-                    match storage_ty with
-                    | Tshared_ptr inner -> Some inner
-                    | _ -> None )
-                  cpp_tys
-                |> Option.get
-              in
               let reuse_params =
                 (tok_id, Tshared_ptr rec_inner) :: params
               in
               let reuse_ctor_args =
-                List.map
-                  (fun a ->
+                List.map2
+                  (fun (j, _, _) a ->
                     match a with
                     | CPPfun_call (_, CPPalloc (Alloc_heap, inner), cargs)
                     | CPPfun_call
-                        (_, CPPalloc (Alloc_arena_scoped, inner), cargs) ->
+                        (_, CPPalloc (Alloc_arena_scoped, inner), cargs)
+                      when j = tok_j ->
                       (* make_rc_reusing takes the token first. *)
                       mk_call (CPPalloc (Alloc_reusing, inner))
                         (CPPmove (CPPvar tok_id) :: call_args cargs)
                     | other -> other )
-                  ctor_args
+                  cpp_tys ctor_args
               in
               let reuse_body = [Sreturn (Some (build i cname reuse_ctor_args))] in
               [ ( Fmethod
@@ -2535,7 +2537,7 @@ let gen_ind_header_v2
                        ~ret:ret_ty ~params:reuse_params ~body:reuse_body),
                   VPublic,
                   SCreators ) ]
-          else []
+          | _ -> []
         in
         primary :: reuse_factory
       in
