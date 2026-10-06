@@ -587,14 +587,15 @@ struct ItreeMrec {
                         };
                       },
                       [](crane::obj, crane::obj) {
-                        return crane_erase_fn<crane::obj>(Function::Inl_sum1);
+                        return crane_erase_global<Function::Inl_sum1,
+                                                  crane::obj>();
                       },
                       crane::obj(), crane::obj(), crane::obj(),
                       CategoryOps::template ReSum_id<
                           crane::obj, crane::fn<crane::obj(crane::obj)>>(
                           [](crane::obj) {
-                            return crane_erase_fn<crane::obj>(
-                                Function::Id_IFun);
+                            return crane_erase_global<Function::Id_IFun,
+                                                      crane::obj>();
                           },
                           crane::obj())),
                   callE::call(a00_value))),

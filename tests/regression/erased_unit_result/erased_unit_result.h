@@ -47,9 +47,11 @@ template <typename A, typename P> struct SigT {
 struct ErasedUnitResult {
   static void touch(uint64_t _x);
   static inline const SigT<crane::obj, crane::obj> packed =
-      SigT<crane::obj, crane::obj>::existt(crane::obj(), crane_erase_fn(touch));
+      SigT<crane::obj, crane::obj>::existt(crane::obj(),
+                                           crane_erase_global<touch>());
   static inline const SigT<crane::obj, crane::obj> boxed =
-      SigT<crane::obj, crane::obj>::existt(crane::obj(), crane_erase_fn(touch));
+      SigT<crane::obj, crane::obj>::existt(crane::obj(),
+                                           crane_erase_global<touch>());
 
   template <typename T1, typename F0>
   static void run_twice(F0 &&f, const T1 &x) {
@@ -65,7 +67,7 @@ struct ErasedUnitResult {
 
   static inline const bool check =
       through_sig(SigT<crane::obj, std::pair<crane::obj, crane::obj>>::existt(
-          crane::obj(), std::make_pair(crane::obj(crane_erase_fn(touch)),
+          crane::obj(), std::make_pair(crane::obj(crane_erase_global<touch>()),
                                        crane::obj(UINT64_C(3)))));
 };
 

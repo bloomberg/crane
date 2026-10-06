@@ -509,40 +509,44 @@ struct FamilyAliasArityAtCall {
   template <Params _tcI0, typename T1>
   static Monads::template stateT<Nat, crane_carrier_tch1<_tcI0>::template c, T1>
   fused_intrinsic(IntrE e) {
-    return on_mem<
-        _tcI0, T1>(handle_intrinsic<BotE<typename _tcI0::ptr, crane::obj>, T1>(
-        []() {
-          return [](MemE _x0) -> Monads::template stateT<
-                                  Nat, crane_carrier_tch1<_tcI0>::template c,
-                                  crane::obj> {
-            return memM_interp<BotE<typename _tcI0::ptr, crane::obj>,
-                               crane::obj>(
-                CategoryOps::template ReSum_inr<
-                    crane::obj, crane::fn<crane::obj(crane::obj)>>(
-                    [](const auto &, const auto &) { return crane::obj(); },
-                    [](crane::obj, crane::obj, crane::obj, const auto &x,
-                       crane::fn<crane::obj(crane::obj)> x0) {
-                      return [=](crane::obj _x0) -> crane::obj {
-                        return Function::Cat_IFun(
-                            x,
-                            crane::any_cast<IFun<crane::obj, crane::obj>>(x0),
-                            _x0);
-                      };
-                    },
-                    [](crane::obj, crane::obj) {
-                      return crane_erase_fn<crane::obj>(Function::Inr_sum1);
-                    },
-                    crane::obj(), crane::obj(), crane::obj(),
-                    CategoryOps::template ReSum_id<
+    return on_mem<_tcI0, T1>(
+        handle_intrinsic<BotE<typename _tcI0::ptr, crane::obj>, T1>(
+            []() {
+              return [](MemE _x0)
+                         -> Monads::template stateT<
+                             Nat, crane_carrier_tch1<_tcI0>::template c,
+                             crane::obj> {
+                return memM_interp<BotE<typename _tcI0::ptr, crane::obj>,
+                                   crane::obj>(
+                    CategoryOps::template ReSum_inr<
                         crane::obj, crane::fn<crane::obj(crane::obj)>>(
-                        [](crane::obj) {
-                          return crane_erase_fn<crane::obj>(Function::Id_IFun);
+                        [](const auto &, const auto &) { return crane::obj(); },
+                        [](crane::obj, crane::obj, crane::obj, const auto &x,
+                           crane::fn<crane::obj(crane::obj)> x0) {
+                          return [=](crane::obj _x0) -> crane::obj {
+                            return Function::Cat_IFun(
+                                x,
+                                crane::any_cast<IFun<crane::obj, crane::obj>>(
+                                    x0),
+                                _x0);
+                          };
                         },
-                        crane::obj())),
-                _x0);
-          };
-        }(),
-        e));
+                        [](crane::obj, crane::obj) {
+                          return crane_erase_global<Function::Inr_sum1,
+                                                    crane::obj>();
+                        },
+                        crane::obj(), crane::obj(), crane::obj(),
+                        CategoryOps::template ReSum_id<
+                            crane::obj, crane::fn<crane::obj(crane::obj)>>(
+                            [](crane::obj) {
+                              return crane_erase_global<Function::Id_IFun,
+                                                        crane::obj>();
+                            },
+                            crane::obj())),
+                    _x0);
+              };
+            }(),
+            e));
   }
 
   struct natParams {

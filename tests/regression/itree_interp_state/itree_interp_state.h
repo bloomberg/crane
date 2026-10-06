@@ -680,15 +680,15 @@ struct ItreeInterpState {
 
   static inline const Itree<GetE, Nat> prog = []() {
     return ITree::template bind<GetE, Nat, Nat>(
-        ITree::template trigger<GetE, Nat>(
-            Subevent::template subevent<GetE, GetE, Nat>(
-                CategoryOps::template ReSum_id<
-                    crane::obj, crane::fn<crane::obj(crane::obj)>>(
-                    [](crane::obj) {
-                      return crane_erase_fn<crane::obj>(Function::Id_IFun);
-                    },
-                    crane::obj()),
-                GetE::GET)),
+        ITree::template trigger<
+            GetE, Nat>(Subevent::template subevent<GetE, GetE, Nat>(
+            CategoryOps::template ReSum_id<crane::obj,
+                                           crane::fn<crane::obj(crane::obj)>>(
+                [](crane::obj) {
+                  return crane_erase_global<Function::Id_IFun, crane::obj>();
+                },
+                crane::obj()),
+            GetE::GET)),
         [](const Nat &x) {
           return ITree::template bind<GetE, Nat, Nat>(
               ITree::template trigger<GetE, Nat>(
@@ -696,8 +696,8 @@ struct ItreeInterpState {
                       CategoryOps::template ReSum_id<
                           crane::obj, crane::fn<crane::obj(crane::obj)>>(
                           [](crane::obj) {
-                            return crane_erase_fn<crane::obj>(
-                                Function::Id_IFun);
+                            return crane_erase_global<Function::Id_IFun,
+                                                      crane::obj>();
                           },
                           crane::obj()),
                       GetE::GET)),

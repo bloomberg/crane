@@ -136,6 +136,16 @@ template <class Ret = crane::obj, class F> auto crane_erase_fn(F &&f) {
   }
 }
 
+// [crane_erase_fn<Ret>(F)] for a global -- a function, or a constant -- made
+// once and shared: the adapter of a value that never changes is itself one,
+// and building it at every use cost an allocation each time a subevent was
+// injected.  Per thread, as the [fn]'s count may not be atomic; and never
+// freed, so that no thread's exit runs after the heap it came from.
+template <auto &F, class Ret = crane::obj> const auto &crane_erase_global() {
+  static thread_local const auto *f = new auto(crane_erase_fn<Ret>(F));
+  return *f;
+}
+
 // Runtime helper for calling a genuinely-concrete callable [f] with
 // arguments that may be boxed as [crane::obj] even though [f] does not accept
 // [crane::obj] directly.

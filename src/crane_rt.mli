@@ -48,6 +48,10 @@ val erase_fn : string
 (** [crane_erase_fn<Ret>] -- adapt a concrete callable to the canonical erased
     signature. *)
 
+val erase_global : string
+(** [crane_erase_global<F, Ret>()] -- {!erase_fn} of the global [F], made
+    once and shared. *)
+
 val call_erased : string
 (** [crane_call_erased] -- apply a callable whose parameter types are only
     known once C++ instantiates the enclosing template, recovering them by

@@ -519,15 +519,15 @@ struct ResumIdEtaLambda {
                             };
                           },
                           [](crane::obj, crane::obj) {
-                            return crane_erase_fn<crane::obj>(
-                                Function::Inl_sum1);
+                            return crane_erase_global<Function::Inl_sum1,
+                                                      crane::obj>();
                           },
                           crane::obj(), crane::obj(), crane::obj(),
                           CategoryOps::template ReSum_id<
                               crane::obj, crane::fn<crane::obj(crane::obj)>>(
                               [](crane::obj) {
-                                return crane_erase_fn<crane::obj>(
-                                    Function::Id_IFun);
+                                return crane_erase_global<Function::Id_IFun,
+                                                          crane::obj>();
                               },
                               crane::obj())),
                       _x0);
@@ -568,8 +568,8 @@ struct ResumIdEtaLambda {
                                 };
                               },
                               [](crane::obj, crane::obj) {
-                                return crane_erase_fn<crane::obj>(
-                                    Function::Inr_sum1);
+                                return crane_erase_global<Function::Inr_sum1,
+                                                          crane::obj>();
                               },
                               crane::obj(), crane::obj(), crane::obj(),
                               CategoryOps::template ReSum_inl<
@@ -590,16 +590,16 @@ struct ResumIdEtaLambda {
                                     };
                                   },
                                   [](crane::obj, crane::obj) {
-                                    return crane_erase_fn<crane::obj>(
-                                        Function::Inl_sum1);
+                                    return crane_erase_global<
+                                        Function::Inl_sum1, crane::obj>();
                                   },
                                   crane::obj(), crane::obj(), crane::obj(),
                                   CategoryOps::template ReSum_id<
                                       crane::obj,
                                       crane::fn<crane::obj(crane::obj)>>(
                                       [](crane::obj) {
-                                        return crane_erase_fn<crane::obj>(
-                                            Function::Id_IFun);
+                                        return crane_erase_global<
+                                            Function::Id_IFun, crane::obj>();
                                       },
                                       crane::obj()))),
                           _x0);
@@ -628,8 +628,8 @@ struct ResumIdEtaLambda {
                                 };
                               },
                               [](crane::obj, crane::obj) {
-                                return crane_erase_fn<crane::obj>(
-                                    Function::Inr_sum1);
+                                return crane_erase_global<Function::Inr_sum1,
+                                                          crane::obj>();
                               },
                               crane::obj(), crane::obj(), crane::obj(),
                               CategoryOps::template ReSum_inr<
@@ -650,16 +650,16 @@ struct ResumIdEtaLambda {
                                     };
                                   },
                                   [](crane::obj, crane::obj) {
-                                    return crane_erase_fn<crane::obj>(
-                                        Function::Inr_sum1);
+                                    return crane_erase_global<
+                                        Function::Inr_sum1, crane::obj>();
                                   },
                                   crane::obj(), crane::obj(), crane::obj(),
                                   CategoryOps::template ReSum_id<
                                       crane::obj,
                                       crane::fn<crane::obj(crane::obj)>>(
                                       [](crane::obj) {
-                                        return crane_erase_fn<crane::obj>(
-                                            Function::Id_IFun);
+                                        return crane_erase_global<
+                                            Function::Id_IFun, crane::obj>();
                                       },
                                       crane::obj()))),
                           _x0);

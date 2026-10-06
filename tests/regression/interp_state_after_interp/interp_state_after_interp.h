@@ -804,32 +804,32 @@ struct InterpStateAfterInterp {
   template <typename x> using BotE = Sum1<outE, noE, x>;
   static inline const Itree<TopE<crane::obj>, Nat> prog = []() {
     return ITree::template bind<TopE<crane::obj>, Nat, Nat>(
-        ITree::template trigger<TopE<crane::obj>, Nat>(
-            Subevent::template subevent<GetE, Sum1<GetE, outE, crane::obj>,
-                                        Nat>(
-                CategoryOps::template ReSum_inl<
+        ITree::template trigger<TopE<crane::obj>,
+                                Nat>(Subevent::template subevent<
+                                     GetE, Sum1<GetE, outE, crane::obj>, Nat>(
+            CategoryOps::template ReSum_inl<crane::obj,
+                                            crane::fn<crane::obj(crane::obj)>>(
+                [](const auto &, const auto &) { return crane::obj(); },
+                [](crane::obj, crane::obj, crane::obj, const auto &x,
+                   crane::fn<crane::obj(crane::obj)> x0) {
+                  return [=](crane::obj _x0) -> crane::obj {
+                    return Function::Cat_IFun(
+                        x, crane::any_cast<IFun<crane::obj, crane::obj>>(x0),
+                        _x0);
+                  };
+                },
+                [](crane::obj, crane::obj) {
+                  return crane_erase_global<Function::Inl_sum1, crane::obj>();
+                },
+                crane::obj(), crane::obj(), crane::obj(),
+                CategoryOps::template ReSum_id<
                     crane::obj, crane::fn<crane::obj(crane::obj)>>(
-                    [](const auto &, const auto &) { return crane::obj(); },
-                    [](crane::obj, crane::obj, crane::obj, const auto &x,
-                       crane::fn<crane::obj(crane::obj)> x0) {
-                      return [=](crane::obj _x0) -> crane::obj {
-                        return Function::Cat_IFun(
-                            x,
-                            crane::any_cast<IFun<crane::obj, crane::obj>>(x0),
-                            _x0);
-                      };
+                    [](crane::obj) {
+                      return crane_erase_global<Function::Id_IFun,
+                                                crane::obj>();
                     },
-                    [](crane::obj, crane::obj) {
-                      return crane_erase_fn<crane::obj>(Function::Inl_sum1);
-                    },
-                    crane::obj(), crane::obj(), crane::obj(),
-                    CategoryOps::template ReSum_id<
-                        crane::obj, crane::fn<crane::obj(crane::obj)>>(
-                        [](crane::obj) {
-                          return crane_erase_fn<crane::obj>(Function::Id_IFun);
-                        },
-                        crane::obj())),
-                GetE::GET)),
+                    crane::obj())),
+            GetE::GET)),
         [](const Nat &x) {
           return ITree::template bind<TopE<crane::obj>, std::monostate, Nat>(
               ITree::template trigger<TopE<crane::obj>, std::monostate>(
@@ -851,15 +851,15 @@ struct InterpStateAfterInterp {
                             };
                           },
                           [](crane::obj, crane::obj) {
-                            return crane_erase_fn<crane::obj>(
-                                Function::Inr_sum1);
+                            return crane_erase_global<Function::Inr_sum1,
+                                                      crane::obj>();
                           },
                           crane::obj(), crane::obj(), crane::obj(),
                           CategoryOps::template ReSum_id<
                               crane::obj, crane::fn<crane::obj(crane::obj)>>(
                               [](crane::obj) {
-                                return crane_erase_fn<crane::obj>(
-                                    Function::Id_IFun);
+                                return crane_erase_global<Function::Id_IFun,
+                                                          crane::obj>();
                               },
                               crane::obj())),
                       outE::out(x))),
@@ -885,16 +885,16 @@ struct InterpStateAfterInterp {
                                   };
                                 },
                                 [](crane::obj, crane::obj) {
-                                  return crane_erase_fn<crane::obj>(
-                                      Function::Inl_sum1);
+                                  return crane_erase_global<Function::Inl_sum1,
+                                                            crane::obj>();
                                 },
                                 crane::obj(), crane::obj(), crane::obj(),
                                 CategoryOps::template ReSum_id<
                                     crane::obj,
                                     crane::fn<crane::obj(crane::obj)>>(
                                     [](crane::obj) {
-                                      return crane_erase_fn<crane::obj>(
-                                          Function::Id_IFun);
+                                      return crane_erase_global<
+                                          Function::Id_IFun, crane::obj>();
                                     },
                                     crane::obj())),
                             GetE::GET)),
@@ -989,15 +989,15 @@ struct InterpStateAfterInterp {
                             };
                           },
                           [](crane::obj, crane::obj) {
-                            return crane_erase_fn<crane::obj>(
-                                Function::Inl_sum1);
+                            return crane_erase_global<Function::Inl_sum1,
+                                                      crane::obj>();
                           },
                           crane::obj(), crane::obj(), crane::obj(),
                           CategoryOps::template ReSum_id<
                               crane::obj, crane::fn<crane::obj(crane::obj)>>(
                               [](crane::obj) {
-                                return crane_erase_fn<crane::obj>(
-                                    Function::Id_IFun);
+                                return crane_erase_global<Function::Id_IFun,
+                                                          crane::obj>();
                               },
                               crane::obj())),
                       _x0);
@@ -1014,7 +1014,7 @@ struct InterpStateAfterInterp {
             CategoryOps::template ReSum_id<crane::obj,
                                            crane::fn<crane::obj(crane::obj)>>(
                 [](crane::obj) {
-                  return crane_erase_fn<crane::obj>(Function::Id_IFun);
+                  return crane_erase_global<Function::Id_IFun, crane::obj>();
                 },
                 crane::obj()),
             std::move(e)));

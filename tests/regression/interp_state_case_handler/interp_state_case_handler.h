@@ -809,13 +809,15 @@ struct InterpStateCaseHandler {
                       };
                     },
                     [](crane::obj, crane::obj) {
-                      return crane_erase_fn<crane::obj>(Function::Inr_sum1);
+                      return crane_erase_global<Function::Inr_sum1,
+                                                crane::obj>();
                     },
                     crane::obj(), crane::obj(), crane::obj(),
                     CategoryOps::template ReSum_id<
                         crane::obj, crane::fn<crane::obj(crane::obj)>>(
                         [](crane::obj) {
-                          return crane_erase_fn<crane::obj>(Function::Id_IFun);
+                          return crane_erase_global<Function::Id_IFun,
+                                                    crane::obj>();
                         },
                         crane::obj())),
                 IncE::INC)),
@@ -840,15 +842,15 @@ struct InterpStateCaseHandler {
                             };
                           },
                           [](crane::obj, crane::obj) {
-                            return crane_erase_fn<crane::obj>(
-                                Function::Inl_sum1);
+                            return crane_erase_global<Function::Inl_sum1,
+                                                      crane::obj>();
                           },
                           crane::obj(), crane::obj(), crane::obj(),
                           CategoryOps::template ReSum_id<
                               crane::obj, crane::fn<crane::obj(crane::obj)>>(
                               [](crane::obj) {
-                                return crane_erase_fn<crane::obj>(
-                                    Function::Id_IFun);
+                                return crane_erase_global<Function::Id_IFun,
+                                                          crane::obj>();
                               },
                               crane::obj())),
                       GetE::GET)),
@@ -876,59 +878,57 @@ struct InterpStateCaseHandler {
                                   };
                                 },
                                 [](crane::obj, crane::obj) {
-                                  return crane_erase_fn<crane::obj>(
-                                      Function::Inr_sum1);
+                                  return crane_erase_global<Function::Inr_sum1,
+                                                            crane::obj>();
                                 },
                                 crane::obj(), crane::obj(), crane::obj(),
                                 CategoryOps::template ReSum_id<
                                     crane::obj,
                                     crane::fn<crane::obj(crane::obj)>>(
                                     [](crane::obj) {
-                                      return crane_erase_fn<crane::obj>(
-                                          Function::Id_IFun);
+                                      return crane_erase_global<
+                                          Function::Id_IFun, crane::obj>();
                                     },
                                     crane::obj())),
                             IncE::INC)),
                     [=](std::monostate) {
                       return ITree::template bind<Sum1<GetE, IncE, crane::obj>,
                                                   Nat, Nat>(
-                          ITree::template trigger<Sum1<GetE, IncE, crane::obj>,
-                                                  Nat>(
-                              Subevent::template subevent<
-                                  GetE, Sum1<GetE, IncE, crane::obj>, Nat>(
-                                  CategoryOps::template ReSum_inl<
+                          ITree::template trigger<
+                              Sum1<GetE, IncE, crane::obj>,
+                              Nat>(Subevent::template subevent<
+                                   GetE, Sum1<GetE, IncE, crane::obj>, Nat>(
+                              CategoryOps::template ReSum_inl<
+                                  crane::obj,
+                                  crane::fn<crane::obj(crane::obj)>>(
+                                  [](const auto &, const auto &) {
+                                    return crane::obj();
+                                  },
+                                  [](crane::obj, crane::obj, crane::obj,
+                                     const auto &x0,
+                                     crane::fn<crane::obj(crane::obj)> x1) {
+                                    return [=](crane::obj _x0) -> crane::obj {
+                                      return Function::Cat_IFun(
+                                          x0,
+                                          crane::any_cast<
+                                              IFun<crane::obj, crane::obj>>(x1),
+                                          _x0);
+                                    };
+                                  },
+                                  [](crane::obj, crane::obj) {
+                                    return crane_erase_global<
+                                        Function::Inl_sum1, crane::obj>();
+                                  },
+                                  crane::obj(), crane::obj(), crane::obj(),
+                                  CategoryOps::template ReSum_id<
                                       crane::obj,
                                       crane::fn<crane::obj(crane::obj)>>(
-                                      [](const auto &, const auto &) {
-                                        return crane::obj();
+                                      [](crane::obj) {
+                                        return crane_erase_global<
+                                            Function::Id_IFun, crane::obj>();
                                       },
-                                      [](crane::obj, crane::obj, crane::obj,
-                                         const auto &x0,
-                                         crane::fn<crane::obj(crane::obj)> x1) {
-                                        return [=](crane::obj _x0)
-                                                   -> crane::obj {
-                                          return Function::Cat_IFun(
-                                              x0,
-                                              crane::any_cast<
-                                                  IFun<crane::obj, crane::obj>>(
-                                                  x1),
-                                              _x0);
-                                        };
-                                      },
-                                      [](crane::obj, crane::obj) {
-                                        return crane_erase_fn<crane::obj>(
-                                            Function::Inl_sum1);
-                                      },
-                                      crane::obj(), crane::obj(), crane::obj(),
-                                      CategoryOps::template ReSum_id<
-                                          crane::obj,
-                                          crane::fn<crane::obj(crane::obj)>>(
-                                          [](crane::obj) {
-                                            return crane_erase_fn<crane::obj>(
-                                                Function::Id_IFun);
-                                          },
-                                          crane::obj())),
-                                  GetE::GET)),
+                                      crane::obj())),
+                              GetE::GET)),
                           [=](Nat y) {
                             return Itree<
                                 Sum1<GetE, IncE, crane::obj>,

@@ -518,15 +518,15 @@ struct BinderTypeNamesSectionField {
     return [=](FusedS<typename _tcI0::ptr> s) {
       return ITree::template bind<CntE, T1,
                                   std::pair<FusedS<typename _tcI0::ptr>, T1>>(
-          ITree::template trigger<CntE, T1>(
-              Subevent::template subevent<CntE, CntE, T1>(
-                  CategoryOps::template ReSum_id<
-                      crane::obj, crane::fn<crane::obj(crane::obj)>>(
-                      [](crane::obj) {
-                        return crane_erase_fn<crane::obj>(Function::Id_IFun);
-                      },
-                      crane::obj()),
-                  e)),
+          ITree::template trigger<
+              CntE, T1>(Subevent::template subevent<CntE, CntE, T1>(
+              CategoryOps::template ReSum_id<crane::obj,
+                                             crane::fn<crane::obj(crane::obj)>>(
+                  [](crane::obj) {
+                    return crane_erase_global<Function::Id_IFun, crane::obj>();
+                  },
+                  crane::obj()),
+              e)),
           [=](const T1 &r) {
             return Itree<CntE, std::pair<FusedS<typename _tcI0::ptr>, T1>>::go(
                 ItreeF<CntE, std::pair<FusedS<typename _tcI0::ptr>, T1>,

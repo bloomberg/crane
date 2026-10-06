@@ -2406,6 +2406,17 @@ and pp_cpp_expr env args t =
     in
     str caster ++ str "<" ++ pp_cpp_type false [] ty ++ str ">(" ++ inner
     ++ str ")"
+  | CPPerase_fn
+      (ret_ty, (CPPglob ((GlobRef.ConstRef _ as r), [], (None | Some {ci_inline = None; _})) as g))
+    when lookup_method_this_pos r = None ->
+    (* A global never changes, so neither does its adapter: made once.  Not a
+       method, which is named through a lambda, never as itself. *)
+    Table.mark_needs_erase_fn ();
+    str Crane_rt.erase_global ++ str "<" ++ pp_cpp_expr env args g
+    ++ ( match ret_ty with
+       | None -> mt ()
+       | Some ty -> str ", " ++ pp_cpp_type false [] ty )
+    ++ str ">()"
   | CPPerase_fn (ret_ty, e) ->
     Table.mark_needs_erase_fn ();
     str Crane_rt.erase_fn
