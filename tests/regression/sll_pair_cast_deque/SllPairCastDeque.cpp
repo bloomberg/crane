@@ -4,13 +4,13 @@ namespace SllPairCastDeque {
 
 bool SllPairCastDeque::sll_final_config(
     const SllPairCastDeque::sll_subparser &sp) {
-  crane::obj _x = sp.sll_pred;
-  std::pair<SllPairCastDeque::sll_frame,
-            std::deque<SllPairCastDeque::sll_frame>>
-      sll_stk0 = sp.sll_stk;
+  const crane::obj &_x = sp.sll_pred;
+  const std::pair<SllPairCastDeque::sll_frame,
+                  std::deque<SllPairCastDeque::sll_frame>> &sll_stk0 =
+      sp.sll_stk;
   const auto &[s, l] = sll_stk0;
   std::optional<uint64_t> fr_ret0 = s.fr_ret;
-  std::deque<uint64_t> fr_suf0 = s.fr_suf;
+  const std::deque<uint64_t> &fr_suf0 = s.fr_suf;
   if (fr_ret0.has_value()) {
     const uint64_t &_x0 = *fr_ret0;
     return false;

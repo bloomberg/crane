@@ -374,7 +374,7 @@ std::pair<std::pair<uint64_t, ConstructorBugs::State0>, uint64_t>
 ConstructorBugs::inline_pattern(const ConstructorBugs::State0 &s) {
   uint64_t v = s.value_inline;
   uint64_t d = s.data_inline;
-  crane::obj _x = s.flag;
+  const crane::obj &_x = s.flag;
   return std::make_pair(std::make_pair(v, s), d);
 }
 

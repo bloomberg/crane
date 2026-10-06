@@ -31,7 +31,52 @@ let rec drop_unused = function
     drop_unused rest
   | s :: rest -> s :: drop_unused rest
 
-let rec stmts ss = drop_unused (List.map stmt ss)
+(* The variable [e] reads a member of, through a chain of member reads: a
+   field, a pair's component through its projection mapping, a
+   [crane::field]'s contents. *)
+let rec member_root = function
+  | CPPaccess (Adot, e, _) | CPPget (e, _) | CPPget' (e, _, _) -> path_root e
+  | CPPfun_call
+      (_, CPPglob (_, _, Some {ci_inline = Some {it_shape = Inline_pair_projection _; _}; _}), {rev = [e]})
+  | CPPfun_call (_, CPPrt Crane_rt.Unbox_field, {rev = [e]}) ->
+    path_root e
+  | _ -> None
+
+and path_root = function CPPvar x -> Some x | e -> member_root e
+
+(* Whether [stmts] move from [v] anywhere, or from anything inside it. *)
+let moves_from v stmts =
+  let rec fe found e =
+    found
+    || (match e with CPPmove e -> path_root e = Some v | _ -> false)
+    || fold_expr_children ~on_expr:fe ~on_stmts:fl false e
+  and fl found l =
+    found || List.exists (fold_stmt_children ~on_expr:fe ~on_stmts:fl false) l
+  in
+  fl false stmts
+
+(* A local copied out of a member of another -- [T2 s0 = si.first] -- is a
+   [const] reference to it instead, where the other is neither assigned nor
+   moved from afterwards, and the local not assigned: the other outlives it,
+   and {!Last_use} moves from nothing a reference binds into, so what it
+   names stays put.  The copy it saved is made only by a use that keeps the
+   value.  A type a copy costs nothing for -- a scalar, a pointer -- is
+   copied as it was. *)
+let rec bind_by_reference = function
+  | [] -> []
+  | Sasgn (x, Declare ty, rhs) :: rest
+    when (match ty with Tref _ | Tconst (Tref _) -> false | _ -> true)
+         && (ty = Tauto || Loopify.worthwhile_move_type ty)
+         && ( match member_root rhs with
+            | Some v ->
+              let assigned = assigned_vars rest in
+              not (Id.Set.mem x assigned || Id.Set.mem v assigned || moves_from v rest)
+            | None -> false ) ->
+    let ty = match ty with Tconst _ -> ty | _ -> Tconst ty in
+    Sasgn (x, Declare (Tref (Lvalue, ty)), rhs) :: bind_by_reference rest
+  | s :: rest -> s :: bind_by_reference rest
+
+let rec stmts ss = bind_by_reference (drop_unused (List.map stmt ss))
 
 and stmt s =
   match s with

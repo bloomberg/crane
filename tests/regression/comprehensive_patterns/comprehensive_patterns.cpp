@@ -174,8 +174,8 @@ ComprehensivePatterns::let_in_arg(const ComprehensivePatterns::S &s) {
 std::pair<ComprehensivePatterns::S, uint64_t>
 ComprehensivePatterns::match_record(const ComprehensivePatterns::S &s) {
   uint64_t a = s.s_a;
-  crane::obj _x = s.s_b;
-  crane::obj _x0 = s.s_c;
+  const crane::obj &_x = s.s_b;
+  const crane::obj &_x0 = s.s_c;
   return std::make_pair(s, a);
 }
 
@@ -666,9 +666,9 @@ uint64_t ComprehensivePatterns::multi_function_calls(
 uint64_t
 ComprehensivePatterns::proj_then_match(const ComprehensivePatterns::NC &r) {
   uint64_t x = r.nc_a;
-  crane::obj _x = r.nc_a;
+  const crane::obj &_x = r.nc_a;
   uint64_t b = r.nc_b;
-  crane::obj _x0 = r.nc_c;
+  const crane::obj &_x0 = r.nc_c;
   return (x + b);
 }
 

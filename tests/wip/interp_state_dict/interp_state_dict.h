@@ -223,8 +223,8 @@ template <Monad _tcI0, MonadIter _tcI1, typename T1> struct MonadIter_stateT0 {
       return _tcI1::template iter<std::pair<T1, CraneA0>,
                                   std::pair<T1, CraneA1>>(
           [=](const std::pair<T1, CraneA1> &si) {
-            T1 s0 = si.first;
-            CraneA1 i0 = si.second;
+            const T1 &s0 = si.first;
+            const CraneA1 &i0 = si.second;
             return Monad0::template bind<
                 _tcI0, std::pair<T1, Sum<CraneA1, CraneA0>>,
                 Sum<std::pair<T1, CraneA1>, std::pair<T1, CraneA0>>>(
