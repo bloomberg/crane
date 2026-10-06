@@ -1237,8 +1237,9 @@ let gen_dfun n b cty ty temps =
               (fun (_, ty) -> cpp_ty_eq (match ty with Tconst t -> t | t -> t) s_ty)
               ids
           with
-          | Some (state_id, _) ->
+          | Some (state_id, _) when state_threads_linearly n state_id b ->
             rewrite_state_threading_moves n state_id s_ty ids b
+          | Some _
           | None -> (ids, b) )
         | _ -> (ids, b)
       in

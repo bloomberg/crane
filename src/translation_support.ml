@@ -589,6 +589,66 @@ let build_guard_compare_stmts n ids =
             [Sreturn (Some ctor_expr)], [] ) ]
     | None -> [] )
 
+(** Whether [state_id] is threaded through [body] linearly: no statement that
+    passes it to a self-call of [fn_ref] reads it a second time, nor is it
+    read by any statement after one.  A parameter of the state's type need
+    not be state at all -- [N]'s [pos_div_eucl] returns a pair of [N]s and
+    takes its divisor as an [N], which it compares against again after the
+    recursive call -- and moving it into the call would leave that read a
+    moved-from value. *)
+let state_threads_linearly fn_ref state_id body =
+  let rec count_e e =
+    (match e with CPPvar id when Id.equal id state_id -> 1 | _ -> 0)
+    + fold_expr_children
+        ~on_expr:(fun n e -> n + count_e e)
+        ~on_stmts:(fun n l -> n + count_l l)
+        0 e
+  and count_s s =
+    fold_stmt_children
+      ~on_expr:(fun n e -> n + count_e e)
+      ~on_stmts:(fun n l -> n + count_l l)
+      0 s
+  and count_l l = List.fold_left (fun n s -> n + count_s s) 0 l in
+  let rec self_call_e e =
+    ( match e with
+    | CPPfun_call (_, CPPglob (g, _, _), args) when GlobRef.CanOrd.equal g fn_ref ->
+      List.exists (fun a -> count_e a > 0) (call_args args)
+    | _ -> false )
+    || fold_expr_children
+         ~on_expr:(fun b e -> b || self_call_e e)
+         ~on_stmts:(fun b l -> b || List.exists self_call_s l)
+         false e
+  and self_call_s s =
+    fold_stmt_children
+      ~on_expr:(fun b e -> b || self_call_e e)
+      ~on_stmts:(fun b l -> b || List.exists self_call_s l)
+      false s
+  in
+  (* A statement's own expressions -- a condition, a scrutinee, a call --
+     run before the statement lists it holds, which are alternatives (the
+     branches of a match) and run before what follows the statement.  A
+     self-call passing the state in a statement's own expressions may be its
+     only read up to the end of the function; one inside a branch only on
+     that branch's path. *)
+  let rec linear after = function
+    | [] -> true
+    | s :: rest ->
+      let after = after || count_l rest > 0 in
+      let exprs =
+        fold_stmt_children ~on_expr:(fun acc e -> e :: acc) ~on_stmts:(fun acc _ -> acc) [] s
+      in
+      let lists =
+        fold_stmt_children ~on_expr:(fun acc _ -> acc) ~on_stmts:(fun acc l -> l :: acc) [] s
+      in
+      let in_exprs = List.fold_left (fun n e -> n + count_e e) 0 exprs in
+      let in_lists = List.fold_left (fun n l -> n + count_l l) 0 lists in
+      ( (not (List.exists self_call_e exprs))
+      || ((not after) && in_exprs <= 1 && in_lists = 0) )
+      && List.for_all (linear after) lists
+      && linear after rest
+  in
+  linear false body
+
 (** Post-processing pass: insert [std::move] for state-threading pattern.
 
     When a fixpoint's return type is [pair<S,R>] and it has a value parameter

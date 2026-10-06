@@ -240,6 +240,11 @@ val qualify_inductives : ?skip:(GlobRef.t -> bool) -> cpp_type -> cpp_type
 val build_guard_compare_stmts :
   GlobRef.t -> (Id.t * cpp_type) list -> cpp_stmt list
 
+(** Whether a state parameter is threaded linearly: no statement passing it
+    to a self-call reads it again, and no later statement reads it.  The
+    state-threading rewrite is sound only then. *)
+val state_threads_linearly : GlobRef.t -> Id.t -> cpp_stmt list -> bool
+
 (** Post-processing pass: insert [std::move] for the state-threading pattern
     in tail-recursive functions returning [pair<S,R>]. *)
 val rewrite_state_threading_moves :

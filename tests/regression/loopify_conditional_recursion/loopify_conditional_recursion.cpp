@@ -64,7 +64,6 @@ LoopifyConditionalRecursion::find_or_recurse(
 
   struct CraneEnter {
     const List<uint64_t> *l;
-    uint64_t target;
   };
 
   /// CraneCont1: resumes after recursive call, then processes rest.
@@ -73,7 +72,7 @@ LoopifyConditionalRecursion::find_or_recurse(
   using CraneFrame = std::variant<CraneEnter, CraneCont1>;
   std::pair<uint64_t, List<uint64_t>> _result{};
   crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&l, target});
+  _stack.emplace_back(CraneEnter{&l});
   /// Loopified find_or_recurse: CraneEnter -> CraneCont1.
   while (!_stack.empty()) {
     CraneFrame _frame = std::move(_stack.back());
@@ -81,7 +80,6 @@ LoopifyConditionalRecursion::find_or_recurse(
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
       const List<uint64_t> &l = *_f.l;
-      uint64_t target = _f.target;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = std::make_pair(UINT64_C(0), List<uint64_t>::nil());
       } else {
@@ -95,7 +93,7 @@ LoopifyConditionalRecursion::find_or_recurse(
           }
         } else {
           _stack.emplace_back(CraneCont1{});
-          _stack.emplace_back(CraneEnter{crane_raw(a1), std::move(target)});
+          _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }
       }
     } else {
@@ -266,7 +264,6 @@ std::pair<uint64_t, uint64_t> LoopifyConditionalRecursion::accum_with_cache(
 
   struct CraneEnter {
     const List<uint64_t> *l;
-    uint64_t key;
   };
 
   /// CraneCont1: saves [a0], resumes after recursive call, then processes rest.
@@ -277,7 +274,7 @@ std::pair<uint64_t, uint64_t> LoopifyConditionalRecursion::accum_with_cache(
   using CraneFrame = std::variant<CraneEnter, CraneCont1>;
   std::pair<uint64_t, uint64_t> _result{};
   crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&l, key});
+  _stack.emplace_back(CraneEnter{&l});
   /// Loopified accum_with_cache: CraneEnter -> CraneCont1.
   while (!_stack.empty()) {
     CraneFrame _frame = std::move(_stack.back());
@@ -285,7 +282,6 @@ std::pair<uint64_t, uint64_t> LoopifyConditionalRecursion::accum_with_cache(
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
       const List<uint64_t> &l = *_f.l;
-      uint64_t key = _f.key;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = std::make_pair(UINT64_C(0), UINT64_C(0));
       } else {
@@ -306,7 +302,7 @@ std::pair<uint64_t, uint64_t> LoopifyConditionalRecursion::accum_with_cache(
           }
         } else {
           _stack.emplace_back(CraneCont1{a0});
-          _stack.emplace_back(CraneEnter{crane_raw(a1), std::move(key)});
+          _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }
       }
     } else {

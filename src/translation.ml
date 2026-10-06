@@ -7682,8 +7682,18 @@ and gen_cpp_case (typ : ml_type) t env pv =
           Ml_type_util.cpp_ty_eq scrut_cpp_ty
             (cpp_of_ml env rty)
         in
+        (* The arm moves the scrutinee's fields out and recycles its child's
+           cell, so a body that reads the scrutinee whole -- an association
+           list's [add] returning [(k, x) :: s] -- would read what is left. *)
+        let body_reads_scrutinee branch_idx =
+          let ids, _, _, body = pv.(branch_idx) in
+          match scrut_db with
+          | Some db -> Mlutil.ast_occurs (db + List.length ids) body
+          | None -> false
+        in
         let try_cand (branch_idx, matched_ctor, _ar, tail_ctor, _ta) =
           if not (branch_rebuilds_scrut_ty branch_idx) then None
+          else if body_reads_scrutinee branch_idx then None
           else
           let ids, _rty, _pat, body = pv.(branch_idx) in
           let ids', env' =
@@ -8024,22 +8034,21 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
       && pair_g_opt_early <> None
   in
   (* Before generating the scrutinee, mark owned vars that are dead after
-     the scrutinee (not used in any branch body) so they get std::move. *)
+     the scrutinee (not used in any branch body) so they get std::move.  What
+     the enclosing context found dead is dead after the scrutinee only if no
+     branch reads it either. *)
+  let branch_free =
+    Array.fold_left (fun acc (ids, _, _, body) ->
+      let n = List.length ids in
+      Escape.IntSet.union acc (Escape.free_rels n body))
+      Escape.IntSet.empty pv
+  in
   let saved_dead = (!tctx).move_dead_after in
   let dead_in_scrut =
-    if Escape.IntSet.is_empty (!tctx).move_owned_vars then
-      Escape.IntSet.empty
-    else
-      let branch_free =
-        Array.fold_left (fun acc (ids, _, _, body) ->
-          let n = List.length ids in
-          Escape.IntSet.union acc (Escape.free_rels n body))
-          Escape.IntSet.empty pv
-      in
-      Escape.IntSet.filter (fun i ->
-        not (Escape.IntSet.mem i branch_free)
-        && Escape.nb_occur_match i t = 1)
-        (!tctx).move_owned_vars
+    Escape.IntSet.filter (fun i ->
+      not (Escape.IntSet.mem i branch_free)
+      && Escape.nb_occur_match i t = 1)
+      (!tctx).move_owned_vars
   in
   let scrut_is_trivial_ml = match t with
     | MLrel _ | MLmagic (_, MLrel _) -> true
@@ -8050,7 +8059,10 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
   else
     tctx :=
       { !tctx with
-        move_dead_after = Escape.IntSet.union saved_dead dead_in_scrut };
+        move_dead_after =
+          Escape.IntSet.union
+            (Escape.IntSet.diff saved_dead branch_free)
+            dead_in_scrut };
   (* A scrutinee whose result is only pinned down by a type index arrives
      boxed, and a match cannot inspect a [std::any].  Telling the call what
      type this position wants is what makes it recover the value. *)
@@ -9281,11 +9293,13 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           (!tctx).move_owned_vars
       in
       (* Also add any vars from our current dead set that have single occurrence
-         in a *)
+         in a -- and that [b] does not read: dead after the whole [let] is not
+         dead after [a] when the continuation still reads the variable. *)
       let dead_from_above =
         Escape.IntSet.filter
           (fun i ->
             Escape.IntSet.mem i (!tctx).move_dead_after
+            && (not (Escape.IntSet.mem i cont_free))
             && Escape.nb_occur_match i a = 1 )
           (!tctx).move_owned_vars
       in
