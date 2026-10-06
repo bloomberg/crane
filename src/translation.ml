@@ -100,6 +100,7 @@ let gen_local_fix_ycomb env renamed_ids funs_with_params =
             Declare Tauto,
             CPPlambda
               { cl_tparams = [];
+                cl_moved = [];
                 cl_params = of_reversed (orig_params @ self_params);
                 cl_ret = ret_ty fty;
                 cl_body = List.map rewrite_stmt body;
@@ -134,6 +135,7 @@ let gen_local_fix_ycomb env renamed_ids funs_with_params =
             CPPlambda
               { cl_params = of_reversed orig_params;
               cl_tparams = [];
+              cl_moved = [];
                 cl_ret = rty;
                 cl_body = wrapper_body;
                 cl_capture = Closure } ))
@@ -209,6 +211,7 @@ let gen_local_fix_by_ref env renamed_ids funs_with_params owned_flags_per_fun =
             CPPlambda
               { cl_params = of_reversed (orig_params @ self_params);
               cl_tparams = [];
+              cl_moved = [];
                 cl_ret = ret_ty fty;
                 cl_body = List.map rewrite_stmt body;
                 cl_capture = Immediate } ))
@@ -245,6 +248,7 @@ let gen_local_fix_by_ref env renamed_ids funs_with_params owned_flags_per_fun =
             CPPlambda
               { cl_params = of_reversed orig_params;
               cl_tparams = [];
+              cl_moved = [];
                 cl_ret = rty;
                 cl_body = wrapper_body;
                 cl_capture = Immediate } ))
@@ -8967,6 +8971,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
               CPPlambda
                 { cl_params = of_reversed wrapper_params;
                 cl_tparams = [];
+                cl_moved = [];
                   cl_ret = None;
                   cl_body =
                     [ Sreturn

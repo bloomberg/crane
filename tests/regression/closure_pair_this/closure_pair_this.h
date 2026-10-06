@@ -93,7 +93,9 @@ struct ClosurePairThis {
       } else {
         uint64_t _x = flag - 1;
         return std::make_pair(
-            [=](uint64_t x) { return (_self_val.tree_sum() + x); },
+            [=, _self_val = std::move(_self_val)](uint64_t x) {
+              return (_self_val.tree_sum() + x);
+            },
             [](uint64_t x) { return x; });
       }
     }

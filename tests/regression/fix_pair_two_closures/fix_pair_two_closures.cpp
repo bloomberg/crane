@@ -15,7 +15,9 @@ FixPairTwoClosures::make_ops(uint64_t a, uint64_t b) {
       return (_self_f(_self_f, x_) + 1);
     }
   };
-  auto f = [=](uint64_t x) -> uint64_t { return f_impl(f_impl, x); };
+  auto f = [=, f_impl = std::move(f_impl)](uint64_t x) -> uint64_t {
+    return f_impl(f_impl, x);
+  };
   auto g_impl = [=](auto &_self_g, uint64_t x) -> uint64_t {
     if (x <= 0) {
       return b;
@@ -24,6 +26,8 @@ FixPairTwoClosures::make_ops(uint64_t a, uint64_t b) {
       return (_self_g(_self_g, x_) + 1);
     }
   };
-  auto g = [=](uint64_t x) -> uint64_t { return g_impl(g_impl, x); };
+  auto g = [=, g_impl = std::move(g_impl)](uint64_t x) -> uint64_t {
+    return g_impl(g_impl, x);
+  };
   return std::make_pair(std::move(f), std::move(g));
 }

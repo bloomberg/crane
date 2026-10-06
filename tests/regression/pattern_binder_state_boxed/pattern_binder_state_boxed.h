@@ -333,7 +333,7 @@ struct ITree {
                    typename ItreeF<T1, T2, Itree<T1, T2>>::TauF>(_sv.v())) {
       const auto &[t1] =
           std::get<typename ItreeF<T1, T2, Itree<T1, T2>>::TauF>(_sv.v());
-      return Itree<T1, T3>::lazy_([=]() -> Itree<T1, T3> {
+      return Itree<T1, T3>::lazy_([=, k = std::move(k)]() -> Itree<T1, T3> {
         return Itree<T1, T3>::go(
             ItreeF<T1, T3, Itree<T1, T3>>::tauf(subst<T1, T2, T3>(k, t1)));
       });
@@ -342,7 +342,7 @@ struct ITree {
           std::get<typename ItreeF<T1, T2, Itree<T1, T2>>::VisF>(_sv.v());
       return Itree<T1, T3>::go(ItreeF<T1, T3, Itree<T1, T3>>::visf(
           x, crane::fn<Itree<T1, T3>(crane::obj)>(
-                 [=](const crane::obj &x0) -> Itree<T1, T3> {
+                 [=, k = std::move(k)](const crane::obj &x0) -> Itree<T1, T3> {
                    return subst<T1, T2, T3>(k, crane_call_erased(e0, x0));
                  })));
     }
@@ -418,7 +418,7 @@ struct PatternBinderStateBoxed {
   on_genv(std::type_identity_t<
           Monads::template stateT<Nat, crane_carrier_tc_73ef07e9f18b86f9, T1>>
               f) {
-    return [=](FusedS<typename _tcI0::ptr> pat) {
+    return [=, f = std::move(f)](FusedS<typename _tcI0::ptr> pat) {
       const auto &[m, p] = pat;
       const auto &[ls, g] = p;
       return ITree::template bind<

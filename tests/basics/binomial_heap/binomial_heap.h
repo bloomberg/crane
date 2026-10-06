@@ -191,7 +191,8 @@ struct BinomialHeap {
       const auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v());
       const tree &a1_value = *a1;
       const tree &a2_value = *a2;
-      crane::fn<List<tree>(priqueue)> f = [=](priqueue q) {
+      crane::fn<List<tree>(priqueue)> f = [=,
+                                           cont = std::move(cont)](priqueue q) {
         return List<tree>::cons(tree::node(a0, a1_value, tree::leaf()),
                                 cont(q));
       };

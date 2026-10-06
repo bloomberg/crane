@@ -162,7 +162,7 @@ template <Monad _tcI0> struct Functor_Monad {
   static typename _tcI0::template m<CraneA1>
   fmap(crane::fn<CraneA1(CraneA0)> f, typename _tcI0::template m<CraneA0> x) {
     return Monad0::template bind<_tcI0, CraneA0, CraneA1>(
-        std::move(x), [=](const CraneA0 &a) {
+        std::move(x), [=, f = std::move(f)](const CraneA0 &a) {
           return Monad0::template ret<_tcI0, CraneA1>(f(a));
         });
   }

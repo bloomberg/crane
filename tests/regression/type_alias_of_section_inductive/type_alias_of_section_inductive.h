@@ -187,7 +187,7 @@ return _tcI0::to_Z(std::move(p).first);}
 static EOU<typename PointerV<_tcI0>::ptr> int_to_ptr(Nat i, typename ProvenanceV::prov pr) {
 return EOU_monad::template bind<typename _tcI0::iptr,
 std::pair<typename _tcI0::iptr, bool>>(_tcI0::from_Z(std::move(i)),
-[=](const typename _tcI0::iptr&
+[=, pr = std::move(pr)](const typename _tcI0::iptr&
 a) {
 return EOU_monad::template ret<std::pair<typename _tcI0::iptr, bool>>(std::make_pair(a, pr));
 });}

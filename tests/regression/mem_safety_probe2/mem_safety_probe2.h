@@ -116,7 +116,9 @@ struct MemSafetyProbe2 {
     std::pair<crane::fn<uint64_t(uint64_t)>, tree> pair_closure_tree() const {
       tree _self_val = *this;
       return std::make_pair(
-          [=](uint64_t _x0) -> uint64_t { return _self_val.sum_values(_x0); },
+          [=, _self_val = std::move(_self_val)](uint64_t _x0) -> uint64_t {
+            return _self_val.sum_values(_x0);
+          },
           *this);
     }
 
@@ -151,7 +153,7 @@ struct MemSafetyProbe2 {
       tree _self_val = *this;
       if (b) {
         return std::make_optional<crane::fn<uint64_t(uint64_t)>>(
-            [=](uint64_t _x0) -> uint64_t {
+            [=, _self_val = std::move(_self_val)](uint64_t _x0) -> uint64_t {
               return std::move(_self_val).sum_values(_x0);
             });
       } else {
@@ -207,8 +209,9 @@ struct MemSafetyProbe2 {
       requires std::is_invocable_r_v<T1, F0 &, crane::fn<uint64_t(uint64_t)>>
     T1 with_tree(F0 &&k) const {
       tree _self_val = *this;
-      return k(
-          [=](uint64_t _x0) -> uint64_t { return _self_val.sum_values(_x0); });
+      return k([=, _self_val = std::move(_self_val)](uint64_t _x0) -> uint64_t {
+        return _self_val.sum_values(_x0);
+      });
     }
 
     /// TEST 1: Use value type in both a partial application AND as a

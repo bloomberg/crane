@@ -470,7 +470,8 @@ struct TopologicalSort {
              List<bsl::pair<T1, T1>> l) {
     List<T1> elems = get_elems<T1>(eqb_node, l);
     return bsl::move(elems).template fold_right<List<entry<T1>>>(
-        [=](T1 e, const List<bsl::pair<T1, List<T1>>> &ret) {
+        [=, eqb_node = std::move(eqb_node),
+         l = std::move(l)](T1 e, const List<bsl::pair<T1, List<T1>>> &ret) {
           return List<entry<T1>>::cons(make_entry<T1>(eqb_node, l, e), ret);
         },
         List<entry<T1>>::nil());

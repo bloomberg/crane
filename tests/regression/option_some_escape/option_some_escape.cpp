@@ -34,7 +34,9 @@ uint64_t OptionSomeEscape::sum_values(const OptionSomeEscape::tree &t,
 std::optional<crane::fn<uint64_t(uint64_t)>>
 OptionSomeEscape::option_escape(OptionSomeEscape::tree t) {
   return std::make_optional<crane::fn<uint64_t(uint64_t)>>(
-      [=](uint64_t _x0) -> uint64_t { return sum_values(std::move(t), _x0); });
+      [=, t = std::move(t)](uint64_t _x0) -> uint64_t {
+        return sum_values(std::move(t), _x0);
+      });
 }
 
 uint64_t OptionSomeEscape::apply_option(

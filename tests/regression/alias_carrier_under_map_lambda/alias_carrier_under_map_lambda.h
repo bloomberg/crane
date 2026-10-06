@@ -460,7 +460,7 @@ struct TFunctor_instr {
     if (std::holds_alternative<typename Instr<CraneA0>::I_op>(i.v())) {
       const auto &[a0] = std::get<typename Instr<CraneA0>::I_op>(i.v());
       return Instr<CraneA1>::i_op(
-          TFunctor_exp::template tfmap<CraneA0, CraneA1>(f, a0));
+          TFunctor_exp::template tfmap<CraneA0, CraneA1>(std::move(f), a0));
     } else {
       const auto &[a0, a1] = std::get<typename Instr<CraneA0>::I_call>(i.v());
       return Instr<CraneA1>::i_call(

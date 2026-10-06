@@ -264,7 +264,7 @@ struct TfunctorListOfTriples {
     tfmap(crane::fn<CraneA1(CraneA0)> f,
           List<typename _tcI0::template T<CraneA0>> a0) {
       return a0.template map<typename _tcI0::template T<CraneA1>>(
-          [=](typename _tcI0::template T<CraneA0> a1) {
+          [=, f = std::move(f)](typename _tcI0::template T<CraneA0> a1) {
             return _tcI0::template tfmap<CraneA0, CraneA1>(f, a1);
           });
     }
@@ -381,8 +381,8 @@ struct TfunctorListOfTriples {
       return block<CraneA1>{TFunctor_list::template tfmap<
           std::pair<std::pair<Nat, phi<CraneA0>>, List<metadata<CraneA0>>>,
           std::pair<std::pair<Nat, phi<CraneA1>>, List<metadata<CraneA1>>>>(
-          [=](const std::pair<std::pair<Nat, phi<CraneA0>>,
-                              List<metadata<CraneA0>>> &pat) {
+          [=, f = std::move(f)](const std::pair<std::pair<Nat, phi<CraneA0>>,
+                                                List<metadata<CraneA0>>> &pat) {
             const auto &[y, md] = pat;
             const auto &[id, p] = y;
             return std::make_pair(

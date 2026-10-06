@@ -311,7 +311,7 @@ struct ITree {
                    typename ItreeF<T1, T2, Itree<T1, T2>>::TauF>(_sv.v())) {
       const auto &[t0] =
           std::get<typename ItreeF<T1, T2, Itree<T1, T2>>::TauF>(_sv.v());
-      return Itree<T1, T3>::lazy_([=]() -> Itree<T1, T3> {
+      return Itree<T1, T3>::lazy_([=, k = std::move(k)]() -> Itree<T1, T3> {
         return Itree<T1, T3>::go(
             ItreeF<T1, T3, Itree<T1, T3>>::tauf(subst<T1, T2, T3>(k, t0)));
       });
@@ -320,7 +320,7 @@ struct ITree {
           std::get<typename ItreeF<T1, T2, Itree<T1, T2>>::VisF>(_sv.v());
       return Itree<T1, T3>::go(ItreeF<T1, T3, Itree<T1, T3>>::visf(
           x, crane::fn<Itree<T1, T3>(crane::obj)>(
-                 [=](const crane::obj &x0) -> Itree<T1, T3> {
+                 [=, k = std::move(k)](const crane::obj &x0) -> Itree<T1, T3> {
                    return subst<T1, T2, T3>(k, crane_call_erased(e0, x0));
                  })));
     }
@@ -469,7 +469,8 @@ struct FamilyAliasArityAtCall {
   template <typename T1, typename T2>
   static Monads::template stateT<Nat, crane_carrier_tch<T1>::template c, T2>
   memM_interp(ReSum<crane::obj, IFun<crane::obj, crane::obj>> h, MemE) {
-    return [=](const Nat &s) -> Itree<T1, std::pair<Nat, T2>> {
+    return [=,
+            h = std::move(h)](const Nat &s) -> Itree<T1, std::pair<Nat, T2>> {
       if (s.eqb(Nat::o())) {
         return ITree::template bind<T1, Empty_set, std::pair<Nat, Nat>>(
             ITree::template trigger<T1, Empty_set>(

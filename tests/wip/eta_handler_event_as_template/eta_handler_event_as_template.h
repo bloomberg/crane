@@ -100,7 +100,8 @@ struct M {
           st, itree_tc_609e8855cd7ad294, crane::obj>(AE)>>
           h,
       AE e) {
-    return [=](const Nat &s) { return crane::apply2(h, e, s); };
+    return
+        [=, h = std::move(h)](const Nat &s) { return crane::apply2(h, e, s); };
   }
 
   template <typename T1, typename T2>

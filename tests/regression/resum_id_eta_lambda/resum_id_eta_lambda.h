@@ -292,7 +292,7 @@ struct ITree {
                    typename ItreeF<T1, T2, Itree<T1, T2>>::TauF>(_sv.v())) {
       const auto &[t0] =
           std::get<typename ItreeF<T1, T2, Itree<T1, T2>>::TauF>(_sv.v());
-      return Itree<T1, T3>::lazy_([=]() -> Itree<T1, T3> {
+      return Itree<T1, T3>::lazy_([=, k = std::move(k)]() -> Itree<T1, T3> {
         return Itree<T1, T3>::go(
             ItreeF<T1, T3, Itree<T1, T3>>::tauf(subst<T1, T2, T3>(k, t0)));
       });
@@ -301,7 +301,7 @@ struct ITree {
           std::get<typename ItreeF<T1, T2, Itree<T1, T2>>::VisF>(_sv.v());
       return Itree<T1, T3>::go(ItreeF<T1, T3, Itree<T1, T3>>::visf(
           x, crane::fn<Itree<T1, T3>(crane::obj)>(
-                 [=](const crane::obj &x0) -> Itree<T1, T3> {
+                 [=, k = std::move(k)](const crane::obj &x0) -> Itree<T1, T3> {
                    return subst<T1, T2, T3>(k, crane_call_erased(e0, x0));
                  })));
     }
@@ -458,7 +458,7 @@ struct ResumIdEtaLambda {
   template <Params _tcI0, typename T1 = void, typename T2, typename CraneP0>
   static stateT<Nat, crane_carrier_tch<_tcI0>::template c, T2>
   fused_trigger(ReSum<crane::obj, IFun<crane::obj, crane::obj>> h0, CraneP0 e) {
-    return [=](const Nat &s) {
+    return [=, e = std::move(e), h0 = std::move(h0)](const Nat &s) {
       return ITree::template bind<BotE<typename _tcI0::ptr, crane::obj>, T2,
                                   std::pair<Nat, T2>>(
           ITree::template trigger<BotE<typename _tcI0::ptr, crane::obj>, T2>(
@@ -480,7 +480,7 @@ struct ResumIdEtaLambda {
   template <Params _tcI0, typename T1>
   static stateT<Nat, crane_carrier_tch<_tcI0>::template c, T1>
   h(Sum1<aE<typename _tcI0::ptr>, Sum1<BE, CE, crane::obj>, T1> x) {
-    return [=](Nat x0) {
+    return [=, x = std::move(x)](Nat x0) {
       return crane_convert<
           Itree<BotE<typename _tcI0::ptr, crane::obj>, std::pair<Nat, T1>>>(
           crane::any_cast<crane::fn<Itree<BotE<typename _tcI0::ptr, crane::obj>,

@@ -272,7 +272,7 @@ struct TfunctorAliasOfApplied {
     tfmap(crane::fn<CraneA1(CraneA0)> f,
           List<typename _tcI0::template T<CraneA0>> a0) {
       return a0.template map<typename _tcI0::template T<CraneA1>>(
-          [=](typename _tcI0::template T<CraneA0> a1) {
+          [=, f = std::move(f)](typename _tcI0::template T<CraneA0> a1) {
             return _tcI0::template tfmap<CraneA0, CraneA1>(f, a1);
           });
     }
@@ -381,8 +381,9 @@ struct TfunctorAliasOfApplied {
 
     static mcfg<Nat> convert_typ(Nat k, mcfg<Nat> a0) {
       return TFunctor_mcfg<TFunctor_cfg, TFunctor_definition<TFunctor_cfg>>::
-          template tfmap<Nat, Nat>([=](const Nat &n) { return n.add(k); },
-                                   std::move(a0));
+          template tfmap<Nat, Nat>(
+              [=, k = std::move(k)](const Nat &n) { return n.add(k); },
+              std::move(a0));
     }
   };
 

@@ -168,7 +168,9 @@ struct FileEponymousWithAlias {
 template <typename T1>
 DList<T1> DList0::DList_append(std::type_identity_t<DList<T1>> d1,
                                std::type_identity_t<DList<T1>> d2) {
-  return [=](const List<T1> &xs) { return d1(d2(xs)); };
+  return [=, d1 = std::move(d1), d2 = std::move(d2)](const List<T1> &xs) {
+    return d1(d2(xs));
+  };
 }
 
 #endif // INCLUDED_FILE_EPONYMOUS_WITH_ALIAS

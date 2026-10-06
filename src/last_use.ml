@@ -29,13 +29,51 @@ let member_read = function
 
 let note occ id p = IdMap.add id (p :: (try IdMap.find id occ with Not_found -> [])) occ
 
+(* Every name [e] mentions, wherever, a lambda body included. *)
+let rec names_expr acc e =
+  let acc = match e with CPPvar id -> IdSet.add id acc | _ -> acc in
+  fold_expr_children ~on_expr:names_expr ~on_stmts:names_stmts acc e
+
+and names_stmts acc l =
+  List.fold_left
+    (fun acc s -> fold_stmt_children ~on_expr:names_expr ~on_stmts:names_stmts acc s)
+    acc l
+
+let declared_in stmts =
+  let found = ref IdSet.empty in
+  let note id = found := IdSet.add id !found in
+  let rec fe e =
+    iter_expr_children ~on_expr:fe ~on_stmts:fl e
+  and fl l = List.iter fs l
+  and fs s =
+    ( match s with
+    | Sasgn (id, Declare _, _) | Sdecl (id, _) | Sdecl_init (id, _) -> note id
+    | Sbind (ids, _) -> List.iter note ids
+    | _ -> () );
+    iter_stmt_children ~on_expr:fe ~on_stmts:fl s
+  in
+  fl stmts;
+  !found
+
+(* What a lambda binds of its own: its parameters and its locals. *)
+let bound_in (l : cpp_lambda) =
+  List.fold_left
+    (fun acc (_, id) -> match id with Some id -> IdSet.add id acc | None -> acc)
+    (declared_in l.cl_body) (lambda_params l.cl_params)
+
+(* The variables a closure captures: what its body names and does not bind. *)
+let captured l = IdSet.diff (names_stmts IdSet.empty l.cl_body) (bound_in l)
+
 (* [fold_expr_children] and [fold_stmt_children] descend one level, so these
-   three are the whole traversal: a variable is noted wherever it is named,
-   a lambda body and a branch body included. *)
+   three are the whole traversal: a variable is noted wherever it is named, a
+   branch body included.  A closure copies what it captures where it is made,
+   so that is where it reads it -- once, whole, however its body uses it. *)
 let rec occ_expr occ e =
-  match member_read e with
-  | Some (x, f) -> note occ x (Field f)
-  | None ->
+  match (member_read e, e) with
+  | Some (x, f), _ -> note occ x (Field f)
+  | None, CPPlambda ({cl_capture = Closure; _} as l) ->
+    IdSet.fold (fun x occ -> note occ x Whole) (captured l) occ
+  | None, _ ->
     let occ = match e with CPPvar id -> note occ id Whole | _ -> occ in
     fold_expr_children ~on_expr:occ_expr ~on_stmts:occ_stmts occ e
 
@@ -96,6 +134,11 @@ let bind_other_opt scope = function
 let rec scan_expr scope e =
   ( match e with
   | CPPraw _ -> scope.opaque <- true
+  | CPPlambda ({cl_capture = Closure; _} as l) ->
+    (* What a closure binds is its own, and the walk never looks inside it:
+       a name it binds is out everywhere, so that no read of one of its own
+       variables can be taken for one of the enclosing function's. *)
+    scope.banned <- IdSet.union scope.banned (bound_in l)
   | CPPlambda l ->
     (* Deferred execution: the read happens when the lambda runs, which is
        not where it is written. *)
@@ -144,22 +187,6 @@ and scan_stmt scope s =
   | Sblock_custom (_, _, _, _, args, _) -> List.iter (ban scope) args
   | _ -> () );
   iter_stmt_children ~on_expr:(scan_expr scope) ~on_stmts:(scan_stmts scope) s
-
-let declared_in stmts =
-  let found = ref IdSet.empty in
-  let note id = found := IdSet.add id !found in
-  let rec fe e =
-    iter_expr_children ~on_expr:fe ~on_stmts:fl e
-  and fl l = List.iter fs l
-  and fs s =
-    ( match s with
-    | Sasgn (id, Declare _, _) | Sdecl (id, _) | Sdecl_init (id, _) -> note id
-    | Sbind (ids, _) -> List.iter note ids
-    | _ -> () );
-    iter_stmt_children ~on_expr:fe ~on_stmts:fl s
-  in
-  fl stmts;
-  !found
 
 (** {1 The backward walk} *)
 
@@ -213,6 +240,13 @@ let rec move_reads moved e =
       CPPfun_call (s, g, of_reversed [CPPmove v])
     | _ -> e )
   | CPPvar id when transfer id = Some Move_whole -> CPPmove e
+  (* A closure's last read of what it captures is the capture: it takes it
+     by move.  Nothing inside it is the enclosing function's to move. *)
+  | CPPlambda ({cl_capture = Closure; _} as l) ->
+    let taken =
+      IdSet.filter (fun x -> transfer x = Some Move_whole) (captured l)
+    in
+    CPPlambda {l with cl_moved = IdSet.elements taken}
   (* A template that may splice an argument twice would evaluate a move
      written into it twice. *)
   | CPPfun_call (_, CPPglob (_, _, Some {ci_inline = Some {it_linear = false; _}; _}), _) ->

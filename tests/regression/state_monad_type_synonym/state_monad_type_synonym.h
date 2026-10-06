@@ -12,13 +12,13 @@ struct StateMonadTypeSynonym {
   template <typename a> using st = crane::fn<std::pair<a, uint64_t>(uint64_t)>;
 
   template <typename T1> static st<T1> ret(T1 a) {
-    return [=](uint64_t s) { return std::make_pair(a, s); };
+    return [=, a = std::move(a)](uint64_t s) { return std::make_pair(a, s); };
   }
 
   template <typename T1, typename T2>
   static st<T2> bind(std::type_identity_t<st<T1>> m,
                      std::type_identity_t<crane::fn<st<T2>(T1)>> f) {
-    return [=](uint64_t s) {
+    return [=, f = std::move(f), m = std::move(m)](uint64_t s) {
       std::pair<T1, uint64_t> p = m(s);
       return crane::apply2(f, p.first, p.second);
     };

@@ -141,7 +141,8 @@ struct MemSafetyProbe5 {
     /// the tree might have been moved.
     uint64_t pair_and_apply() const {
       tree _self_val = *this;
-      crane::fn<uint64_t(uint64_t)> f = [=](uint64_t _x0) -> uint64_t {
+      crane::fn<uint64_t(uint64_t)> f =
+          [=, _self_val = std::move(_self_val)](uint64_t _x0) -> uint64_t {
         return _self_val.get_left_val(_x0);
       };
       uint64_t v = [&]() {

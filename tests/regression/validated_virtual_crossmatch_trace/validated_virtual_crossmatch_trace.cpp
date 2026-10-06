@@ -350,7 +350,8 @@ bool ValidatedVirtualCrossmatchTraceCase::has_complement_fixing_dsa(
   List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope> donor_epitopes =
       epitope_dedup(typing_epitopes(donor));
   return recipient.vxm_epitope_abs.existsb(
-      [=](const ValidatedVirtualCrossmatchTraceCase::EpitopeAntibody &ab) {
+      [=, donor_epitopes = std::move(donor_epitopes)](
+          const ValidatedVirtualCrossmatchTraceCase::EpitopeAntibody &ab) {
         return (
             (ab.ab_complement_fixing && mfi_negative_threshold < ab.ab_mfi) &&
             donor_epitopes.existsb(

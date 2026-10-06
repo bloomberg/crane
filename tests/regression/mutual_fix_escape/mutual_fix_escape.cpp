@@ -23,7 +23,8 @@ MutualFixEscape::make_even_odd(uint64_t) {
   auto even = [=](uint64_t n) -> bool {
     return even_impl(even_impl, odd_impl, n);
   };
-  auto odd = [=](uint64_t n) -> bool {
+  auto odd = [=, even_impl = std::move(even_impl),
+              odd_impl = std::move(odd_impl)](uint64_t n) -> bool {
     return odd_impl(even_impl, odd_impl, n);
   };
   auto even0_impl = [](auto &_self_even0, auto &_self_odd0,
@@ -46,7 +47,8 @@ MutualFixEscape::make_even_odd(uint64_t) {
   auto even0 = [=](uint64_t n) -> bool {
     return even0_impl(even0_impl, odd0_impl, n);
   };
-  auto odd0 = [=](uint64_t n) -> bool {
+  auto odd0 = [=, even0_impl = std::move(even0_impl),
+               odd0_impl = std::move(odd0_impl)](uint64_t n) -> bool {
     return odd0_impl(even0_impl, odd0_impl, n);
   };
   return std::make_pair(std::move(even), std::move(odd0));
@@ -78,7 +80,9 @@ MutualFixEscape::make_count_pair(uint64_t base) {
   auto count_even = [=](uint64_t n) -> uint64_t {
     return count_even_impl(count_even_impl, count_odd_impl, n);
   };
-  auto count_odd = [=](uint64_t n) -> uint64_t {
+  auto count_odd = [=, count_even_impl = std::move(count_even_impl),
+                    count_odd_impl =
+                        std::move(count_odd_impl)](uint64_t n) -> uint64_t {
     return count_odd_impl(count_even_impl, count_odd_impl, n);
   };
   auto count_even0_impl = [=](auto &_self_count_even0, auto &_self_count_odd0,
@@ -104,7 +108,9 @@ MutualFixEscape::make_count_pair(uint64_t base) {
   auto count_even0 = [=](uint64_t n) -> uint64_t {
     return count_even0_impl(count_even0_impl, count_odd0_impl, n);
   };
-  auto count_odd0 = [=](uint64_t n) -> uint64_t {
+  auto count_odd0 = [=, count_even0_impl = std::move(count_even0_impl),
+                     count_odd0_impl =
+                         std::move(count_odd0_impl)](uint64_t n) -> uint64_t {
     return count_odd0_impl(count_even0_impl, count_odd0_impl, n);
   };
   return std::make_pair(std::move(count_even), std::move(count_odd0));

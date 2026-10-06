@@ -37,7 +37,9 @@ NestedMatchClosure::make_combiner(const NestedMatchClosure::tree &t) {
           return (_self_go(_self_go, x_) + 1);
         }
       };
-      auto go = [=](uint64_t x) -> uint64_t { return go_impl(go_impl, x); };
+      auto go = [=, go_impl = std::move(go_impl)](uint64_t x) -> uint64_t {
+        return go_impl(go_impl, x);
+      };
       return std::make_optional<crane::fn<uint64_t(uint64_t)>>(std::move(go));
     }
   }
@@ -74,7 +76,9 @@ NestedMatchClosure::make_deep_combiner(const NestedMatchClosure::tree &t) {
             return (_self_go(_self_go, x_) + 1);
           }
         };
-        auto go = [=](uint64_t x) -> uint64_t { return go_impl(go_impl, x); };
+        auto go = [=, go_impl = std::move(go_impl)](uint64_t x) -> uint64_t {
+          return go_impl(go_impl, x);
+        };
         return std::make_optional<crane::fn<uint64_t(uint64_t)>>(std::move(go));
       }
     }
@@ -103,7 +107,9 @@ NestedMatchClosure::make_param_combiner(const NestedMatchClosure::tree &t,
         return (_self_go(_self_go, x_) + 1);
       }
     };
-    auto go = [=](uint64_t x) -> uint64_t { return go_impl(go_impl, x); };
+    auto go = [=, go_impl = std::move(go_impl)](uint64_t x) -> uint64_t {
+      return go_impl(go_impl, x);
+    };
     return std::make_optional<crane::fn<uint64_t(uint64_t)>>(std::move(go));
   }
 }

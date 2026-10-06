@@ -755,7 +755,7 @@ struct LoopifyMutualPartialApp {
         std::variant<CraneEnter, CraneCont_MPair, CraneCont_MPair_1>;
     md<T2> _result{};
     crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{m, f});
+    _stack.emplace_back(CraneEnter{m, std::move(f)});
     /// Loopified ft_md: CraneEnter -> CraneCont_MPair -> CraneCont_MPair_1.
     while (!_stack.empty()) {
       CraneFrame _frame = std::move(_stack.back());
@@ -796,14 +796,14 @@ struct LoopifyMutualPartialApp {
         } else if (std::holds_alternative<typename md<T1>::MNode>(m.v())) {
           const auto &[l0] = std::get<typename md<T1>::MNode>(m.v());
           const List<md<T1>> &l0_value = *l0;
-          _result = md<T2>::mnode(
-              l0_value.template map<md<T2>>([=](md<T1> _x0) -> md<T2> {
+          _result = md<T2>::mnode(l0_value.template map<md<T2>>(
+              [=, f = std::move(f)](md<T1> _x0) -> md<T2> {
                 return ft_md<_tcI0, T1, T2>(f, _x0);
               }));
         } else {
           const auto &[a0, b0] = std::get<typename md<T1>::MPair>(m.v());
           _stack.emplace_back(CraneCont_MPair{b0, f});
-          _stack.emplace_back(CraneEnter{*a0, f});
+          _stack.emplace_back(CraneEnter{*a0, std::move(f)});
         }
       } else if (std::holds_alternative<CraneCont_MPair>(_frame)) {
         auto _f = std::move(std::get<CraneCont_MPair>(_frame));

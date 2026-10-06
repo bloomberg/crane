@@ -193,7 +193,8 @@ struct Convert_holder {
 
   static holder<bool, box<bool>> convert(Nat n, holder<Nat, box<Nat>> a0) {
     return TFunctor_holder<TFunctor_box>::template tfmap<Nat, bool>(
-        [=](const Nat &x) { return n.ltb(x); }, std::move(a0));
+        [=, n = std::move(n)](const Nat &x) { return n.ltb(x); },
+        std::move(a0));
   }
 };
 

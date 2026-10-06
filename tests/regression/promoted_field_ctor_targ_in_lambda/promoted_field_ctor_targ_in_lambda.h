@@ -353,8 +353,9 @@ struct PromotedFieldCtorTargInLambda {
       return memS<T1, T3>::mub(a0);
     } else {
       const auto &[a0] = std::get<typename memS<T1, T2>::Mget>(c.v());
-      return memS<T1, T3>::mget(
-          [=](const T1 &s) { return memS_bind<T1, T2, T3>(a0(s), k); });
+      return memS<T1, T3>::mget([=, k = std::move(k)](const T1 &s) {
+        return memS_bind<T1, T2, T3>(a0(s), k);
+      });
     }
   }
 

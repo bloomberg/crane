@@ -344,7 +344,7 @@ struct Monads {
     fmap(
         crane::fn<CraneA1(CraneA0)> f,
         crane::fn<typename _tcI0::template F<std::pair<T1, CraneA0>>(T1)> run) {
-      return [=](const T1 &s) {
+      return [=, f = std::move(f), run = std::move(run)](const T1 &s) {
         return Functor0::template fmap<_tcI0, std::pair<T1, CraneA0>,
                                        std::pair<T1, CraneA1>>(
             [=](const std::pair<T1, CraneA0> &sa) {
@@ -362,7 +362,7 @@ struct Monads {
     template <typename CraneA0>
     static crane::fn<typename _tcI0::template m<std::pair<T1, CraneA0>>(T1)>
     ret(CraneA0 a) {
-      return [=](const T1 &s) {
+      return [=, a = std::move(a)](const T1 &s) {
         return Monad0::template ret<_tcI0, std::pair<T1, CraneA0>>(
             std::make_pair(s, a));
       };
@@ -374,7 +374,7 @@ struct Monads {
          crane::fn<crane::fn<
              typename _tcI0::template m<std::pair<T1, CraneA1>>(T1)>(CraneA0)>
              k) {
-      return [=](const T1 &s) {
+      return [=, k = std::move(k), t = std::move(t)](const T1 &s) {
         return Monad0::template bind<_tcI0, std::pair<T1, CraneA0>,
                                      std::pair<T1, CraneA1>>(
             t(s), [=](const std::pair<T1, CraneA0> &sa) {
@@ -412,7 +412,7 @@ template <Monad _tcI0, MonadIter _tcI1, typename T1> struct MonadIter_stateT0 {
            T1, _tcI1::template M, Sum<CraneA1, CraneA0>>(CraneA1)>
            step,
        CraneA1 i) {
-    return [=](const T1 &s) {
+    return [=, i = std::move(i), step = std::move(step)](const T1 &s) {
       return _tcI1::template iter<std::pair<T1, CraneA0>,
                                   std::pair<T1, CraneA1>>(
           [=](const std::pair<T1, CraneA1> &si) {
@@ -645,7 +645,7 @@ struct ITree {
                    typename ItreeF<T1, T2, Itree<T1, T2>>::TauF>(_sv.v())) {
       const auto &[t0] =
           std::get<typename ItreeF<T1, T2, Itree<T1, T2>>::TauF>(_sv.v());
-      return Itree<T1, T3>::lazy_([=]() -> Itree<T1, T3> {
+      return Itree<T1, T3>::lazy_([=, k = std::move(k)]() -> Itree<T1, T3> {
         return Itree<T1, T3>::go(
             ItreeF<T1, T3, Itree<T1, T3>>::tauf(subst<T1, T2, T3>(k, t0)));
       });
@@ -654,7 +654,7 @@ struct ITree {
           std::get<typename ItreeF<T1, T2, Itree<T1, T2>>::VisF>(_sv.v());
       return Itree<T1, T3>::go(ItreeF<T1, T3, Itree<T1, T3>>::visf(
           x, crane::fn<Itree<T1, T3>(crane::obj)>(
-                 [=](const crane::obj &x0) -> Itree<T1, T3> {
+                 [=, k = std::move(k)](const crane::obj &x0) -> Itree<T1, T3> {
                    return subst<T1, T2, T3>(k, crane_call_erased(e0, x0));
                  })));
     }
@@ -825,7 +825,7 @@ struct InterpChainPerf {
   template <typename T1 = void, typename T2, typename CraneP0>
   static Monads::template stateT<Nat, crane_carrier_tc_e4b67e60f94a9e42, T2>
   pass(ReSum<crane::obj, IFun<crane::obj, crane::obj>> h0, CraneP0 e) {
-    return [=](const Nat &s) {
+    return [=, e = std::move(e), h0 = std::move(h0)](const Nat &s) {
       return ITree::template bind<BotE<crane::obj>, T2, std::pair<Nat, T2>>(
           ITree::template trigger<BotE<crane::obj>, T2>(
               Subevent::template subevent<crane::obj,
@@ -843,7 +843,7 @@ struct InterpChainPerf {
   template <typename T1>
   static Monads::template stateT<Nat, crane_carrier_tc_e4b67e60f94a9e42, T1>
   h(Sum1<GetE, outE, T1> x) {
-    return [=](Nat x0) {
+    return [=, x = std::move(x)](Nat x0) {
       return crane_convert<Itree<BotE<crane::obj>, std::pair<Nat, T1>>>(
           crane::any_cast<
               crane::fn<Itree<BotE<crane::obj>, std::pair<Nat, crane::obj>>(
@@ -1000,7 +1000,7 @@ typename _tcI0::template M<T3> Interp::interp(
         h0,
     Itree<T1, T3> x0_) {
   return _tcI0::template iter<T3, Itree<T1, T3>>(
-      [=](const Itree<T1, T3> &t) ->
+      [=, h0 = std::move(h0)](const Itree<T1, T3> &t) ->
       typename _tcI0::template M<Sum<Itree<T1, T3>, T3>> {
         auto &&_sv = t.observe();
         if (std::holds_alternative<
@@ -1036,7 +1036,7 @@ Monads::template stateT<T3, _tcI0::template M, T4> State::interp_state(
         Monads::template stateT<T3, _tcI0::template M, crane::obj>(T1)>>
         h0,
     Itree<T1, T4> x) {
-  return [=](const T3 &x0) {
+  return [=, h0 = std::move(h0)](const T3 &x0) {
     return crane_any_cast<typename _tcI0::template M<std::pair<T3, T4>>>(
         Interp::template interp<MonadIter_stateT0<_tcI1, _tcI0, T3>,
                                 Monads::template Monad_stateT<_tcI1, T3>,

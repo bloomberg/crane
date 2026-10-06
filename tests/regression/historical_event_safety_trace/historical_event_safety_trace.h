@@ -213,7 +213,8 @@ struct HistoricalEventSafetyTraceCase {
                       uint64_t default_inflow, F3 &&ctrl, F4 &&stage_fn,
                       const State &initial_state, uint64_t horizon,
                       uint64_t event_id) {
-    crane::fn<uint64_t(uint64_t)> inflow = [=](uint64_t _x0) -> uint64_t {
+    crane::fn<uint64_t(uint64_t)> inflow =
+        [=, event = std::move(event)](uint64_t _x0) -> uint64_t {
       return event_to_inflow(std::move(event), default_inflow, _x0);
     };
     bool initial_safe = is_safe_bool(pconf, initial_state);

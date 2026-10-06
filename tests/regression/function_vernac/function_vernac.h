@@ -286,7 +286,9 @@ struct FunctionVernac {
         return f3;
       } else {
         uint64_t n1 = n0 - 1;
-        crane::fn<T1(T1)> f5 = [=](T1 _pa0) { return f2(n1, _pa0); };
+        crane::fn<T1(T1)> f5 = [=, f2 = std::move(f2)](T1 _pa0) {
+          return f2(n1, _pa0);
+        };
         T1 hrec = div2_rect<T1>(f, f0, f1, n1);
         return f5(std::move(hrec));
       }
@@ -463,7 +465,9 @@ struct FunctionVernac {
     } else {
       const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
       const List<uint64_t> &a1_value = *a1;
-      crane::fn<T1(T1)> f3 = [=](T1 _pa0) { return f1(a0, a1_value, _pa0); };
+      crane::fn<T1(T1)> f3 = [=, f1 = std::move(f1)](T1 _pa0) {
+        return f1(a0, a1_value, _pa0);
+      };
       T1 hrec = list_sum_rect<T1>(f, f0, a1_value);
       return f3(std::move(hrec));
     }

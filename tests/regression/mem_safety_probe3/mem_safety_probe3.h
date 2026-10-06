@@ -172,19 +172,19 @@ struct MemSafetyProbe3 {
         uint64_t>
     nested_pair() const {
       tree _self_val = *this;
-      return std::make_pair(std::make_pair(
-                                [=](uint64_t _x0) -> uint64_t {
-                                  return _self_val.sum_values(_x0);
-                                },
-                                [](uint64_t x) { return x; }),
-                            this->sum_values(UINT64_C(0)));
+      return std::make_pair(
+          std::make_pair([=, _self_val = std::move(_self_val)](uint64_t _x0)
+                             -> uint64_t { return _self_val.sum_values(_x0); },
+                         [](uint64_t x) { return x; }),
+          this->sum_values(UINT64_C(0)));
     }
 
     /// TEST 5: Mutual use: tree used BOTH as partial application arg
     /// AND as match scrutinee in the SAME scope.
     uint64_t mutual_use() const {
       tree _self_val = *this;
-      crane::fn<uint64_t(uint64_t)> f = [=](uint64_t _x0) -> uint64_t {
+      crane::fn<uint64_t(uint64_t)> f =
+          [=, _self_val = std::move(_self_val)](uint64_t _x0) -> uint64_t {
         return _self_val.sum_values(_x0);
       };
       uint64_t r = [&]() {
@@ -264,10 +264,10 @@ struct MemSafetyProbe3 {
     paired_closures(tree t2) const {
       tree _self_val = *this;
       return std::make_pair(
-          [=](uint64_t _x0) -> uint64_t {
+          [=, _self_val = std::move(_self_val)](uint64_t _x0) -> uint64_t {
             return std::move(_self_val).sum_values(_x0);
           },
-          [=](uint64_t _x0) -> uint64_t {
+          [=, t2 = std::move(t2)](uint64_t _x0) -> uint64_t {
             return std::move(t2).sum_values(_x0);
           });
     }

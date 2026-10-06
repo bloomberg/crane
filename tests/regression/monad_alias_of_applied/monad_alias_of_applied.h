@@ -267,7 +267,8 @@ struct MonadAliasOfApplied {
       return Monad0::template bind<EOU_monad, MaybePoison<CraneA0>,
                                    MaybePoison<CraneA1>>(
           std::move(c),
-          [=](const MaybePoison<CraneA0> &pov) -> EOU<MaybePoison<CraneA1>> {
+          [=, k = std::move(k)](
+              const MaybePoison<CraneA0> &pov) -> EOU<MaybePoison<CraneA1>> {
             if (std::holds_alternative<typename MaybePoison<CraneA0>::Pois>(
                     pov.v())) {
               return Monad0::template ret<EOU_monad, MaybePoison<CraneA1>>(

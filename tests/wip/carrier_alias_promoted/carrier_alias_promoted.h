@@ -318,7 +318,7 @@ struct CarrierAliasPromoted {
 
   template <Params _tcI0>
   static stateT<Nat, crane_carrier_tch<_tcI0>::template c, Nat> get_st(Nat n) {
-    return [=](const Nat &s) {
+    return [=, n = std::move(n)](const Nat &s) {
       return Itree<memE<typename _tcI0::ptr>, std::pair<Nat, Nat>>::lazy_(
           [=]() -> Itree<memE<typename _tcI0::ptr>, std::pair<Nat, Nat>> {
             return Itree<memE<typename _tcI0::ptr>, std::pair<Nat, Nat>>::go(

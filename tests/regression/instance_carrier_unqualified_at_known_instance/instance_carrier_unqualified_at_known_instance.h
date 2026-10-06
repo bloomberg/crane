@@ -154,7 +154,7 @@ using ptr = std::pair<typename _tcI0::iptr, typename _tcI0::prov>;
 static EOU<std::pair<typename _tcI0::iptr, typename _tcI0::prov>> int_to_ptr(Nat i, typename _tcI0::prov pr) {
 return EOU_monad::template bind<typename _tcI0::iptr,
 std::pair<typename _tcI0::iptr, typename _tcI0::prov>>(_tcI0::from_Z(std::move(i)),
-[=](const typename _tcI0::iptr&
+[=, pr = std::move(pr)](const typename _tcI0::iptr&
 a) {
 return EOU_monad::template ret<std::pair<typename _tcI0::iptr, typename _tcI0::prov>>(std::make_pair(a, pr));
 });}

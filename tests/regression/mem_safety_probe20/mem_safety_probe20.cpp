@@ -6,7 +6,8 @@
 MemSafetyProbe20::wrapped MemSafetyProbe20::wrap_if(MemSafetyProbe20::tree t,
                                                     bool b) {
   if (b) {
-    return wrapped::wrap([=](uint64_t n) { return (t.tree_sum() + n); });
+    return wrapped::wrap(
+        [=, t = std::move(t)](uint64_t n) { return (t.tree_sum() + n); });
   } else {
     return wrapped::wrap([](uint64_t n) { return n; });
   }
@@ -17,7 +18,8 @@ MemSafetyProbe20::wrap_match(MemSafetyProbe20::tree t,
                              MemSafetyProbe20::Choice c) {
   switch (c) {
   case Choice::CLEFT: {
-    return wrapped::wrap([=](uint64_t n) { return (t.tree_sum() + n); });
+    return wrapped::wrap(
+        [=, t = std::move(t)](uint64_t n) { return (t.tree_sum() + n); });
   }
   case Choice::CRIGHT: {
     return wrapped::wrap([](uint64_t n) { return n; });
@@ -46,7 +48,8 @@ MemSafetyProbe20::pair_from_if(MemSafetyProbe20::tree t, bool b) {
 MemSafetyProbe20::wrapped MemSafetyProbe20::wrap_local(uint64_t n, bool b) {
   MemSafetyProbe20::tree t = tree::node(tree::leaf(), n, tree::leaf());
   if (b) {
-    return wrapped::wrap([=](uint64_t m) { return (t.tree_sum() + m); });
+    return wrapped::wrap(
+        [=, t = std::move(t)](uint64_t m) { return (t.tree_sum() + m); });
   } else {
     return wrapped::wrap([](uint64_t m) { return m; });
   }
@@ -57,10 +60,12 @@ MemSafetyProbe20::wrapped
 MemSafetyProbe20::nested_wrap(MemSafetyProbe20::tree t, bool b1, bool b2) {
   if (b1) {
     if (b2) {
-      return wrapped::wrap([=](uint64_t n) { return (t.tree_sum() + n); });
-    } else {
       return wrapped::wrap(
-          [=](uint64_t n) { return ((t.tree_sum() * UINT64_C(2)) + n); });
+          [=, t = std::move(t)](uint64_t n) { return (t.tree_sum() + n); });
+    } else {
+      return wrapped::wrap([=, t = std::move(t)](uint64_t n) {
+        return ((t.tree_sum() * UINT64_C(2)) + n);
+      });
     }
   } else {
     return wrapped::wrap([](uint64_t n) { return n; });

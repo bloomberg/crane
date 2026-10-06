@@ -309,7 +309,7 @@ template <TFunctor _tcI0> struct TFunctor_phi {
     return Phi<CraneA1>::phi0(
         TFunctor_list::template tfmap<std::pair<Nat, Exp0<CraneA0>>,
                                       std::pair<Nat, Exp0<CraneA1>>>(
-            [=](std::pair<Nat, Exp0<CraneA0>> ie) {
+            [=, f = std::move(f)](std::pair<Nat, Exp0<CraneA0>> ie) {
               const auto &[i, e] = ie;
               return std::make_pair(
                   i, _tcI0::template tfmap<CraneA0, CraneA1>(f, e));

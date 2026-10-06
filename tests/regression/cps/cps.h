@@ -291,7 +291,8 @@ struct CPS {
       const List<uint64_t> &a1_value = *a1;
       return partition_cps(
           p, a1_value,
-          [=](const List<uint64_t> &yes, const List<uint64_t> &no) -> uint64_t {
+          [=, k = std::move(k)](const List<uint64_t> &yes,
+                                const List<uint64_t> &no) -> uint64_t {
             if (p(a0)) {
               return k(List<uint64_t>::cons(a0, yes), no);
             } else {

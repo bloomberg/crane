@@ -627,6 +627,10 @@ and cpp_lambda = {
   cl_ret : cpp_type option;  (** Trailing return type, when one is written. *)
   cl_body : cpp_stmt list;
   cl_capture : capture;
+  cl_moved : Id.t list;
+      (** The variables a {!Closure} takes by move, at their last use --
+          [\[=, x = std::move(x)\]]; the rest it copies.  Set by
+          {!Last_use} only. *)
 }
 
 (** Alias for constraint expressions in requires clauses. *)

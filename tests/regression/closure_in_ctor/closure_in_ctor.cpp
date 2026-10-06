@@ -20,6 +20,8 @@ ClosureInCtor::box ClosureInCtor::make_box_fix(uint64_t n) {
       return (_self_add(_self_add, x_) + 1);
     }
   };
-  auto add = [=](uint64_t x) -> uint64_t { return add_impl(add_impl, x); };
+  auto add = [=, add_impl = std::move(add_impl)](uint64_t x) -> uint64_t {
+    return add_impl(add_impl, x);
+  };
   return box::box0(std::move(add));
 }

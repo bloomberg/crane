@@ -156,7 +156,7 @@ struct MemSafetyProbe {
     pair_of_closures() const {
       tree _self_val = *this;
       return std::make_pair(
-          [=](uint64_t _x0) -> uint64_t {
+          [=, _self_val = std::move(_self_val)](uint64_t _x0) -> uint64_t {
             return std::move(_self_val).sum_values(_x0);
           },
           [](uint64_t n) { return n; });

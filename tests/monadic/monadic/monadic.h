@@ -137,14 +137,14 @@ struct Monadic {
   template <typename s, typename a> using State = crane::fn<std::pair<a, s>(s)>;
 
   template <typename T1, typename T2> static State<T1, T2> state_return(T2 x) {
-    return [=](const T1 &s) { return std::make_pair(x, s); };
+    return [=, x = std::move(x)](const T1 &s) { return std::make_pair(x, s); };
   }
 
   template <typename T1, typename T2, typename T3>
   static State<T1, T3>
   state_bind(std::type_identity_t<State<T1, T2>> ma,
              std::type_identity_t<crane::fn<State<T1, T3>(T2)>> f) {
-    return [=](const T1 &s) {
+    return [=, f = std::move(f)](const T1 &s) {
       auto [a, s_] = ma(s);
       return crane::apply2(f, a, s_);
     };
@@ -158,7 +158,9 @@ struct Monadic {
   }
 
   template <typename T1> static State<T1, std::monostate> state_put(T1 s) {
-    return [=](T1) { return std::make_pair(std::monostate{}, s); };
+    return [=, s = std::move(s)](T1) {
+      return std::make_pair(std::monostate{}, s);
+    };
   }
 
   template <typename T1>

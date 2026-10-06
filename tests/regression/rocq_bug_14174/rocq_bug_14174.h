@@ -832,7 +832,7 @@ struct RocqBug14174 {
     static sig<crane::fn<T2(T1)>>
     Choice(std::type_identity_t<crane::fn<sig<T2>(T1)>> h) {
       return sig<crane::fn<T2(T1)>>::exist(
-          [=](const T1 &z) { return h(z).proj1_sig(); });
+          [=, h = std::move(h)](const T1 &z) { return h(z).proj1_sig(); });
     }
 
     template <typename T1, typename T2, typename T3>
@@ -850,24 +850,26 @@ struct RocqBug14174 {
     template <typename T1>
     static sig<crane::fn<Bool0(T1)>>
     bool_choice(std::type_identity_t<crane::fn<Sumbool(T1)>> h) {
-      return sig<crane::fn<Bool0(T1)>>::exist([=](const T1 &z) {
-        switch (h(z)) {
-        case Sumbool::LEFT: {
-          return Bool0::TRUE_;
-        }
-        case Sumbool::RIGHT: {
-          return Bool0::FALSE_;
-        }
-        default:
-          std::unreachable();
-        }
-      });
+      return sig<crane::fn<Bool0(T1)>>::exist(
+          [=, h = std::move(h)](const T1 &z) {
+            switch (h(z)) {
+            case Sumbool::LEFT: {
+              return Bool0::TRUE_;
+            }
+            case Sumbool::RIGHT: {
+              return Bool0::FALSE_;
+            }
+            default:
+              std::unreachable();
+            }
+          });
     }
 
     template <typename T1>
     static sig<crane::fn<T1(Nat)>>
     dependent_choice(std::type_identity_t<crane::fn<sig<T1>(T1)>> h, T1 x0) {
-      auto f_impl = [=](auto &_self_f, Nat n) -> T1 {
+      auto f_impl = [=, h = std::move(h), x0 = std::move(x0)](auto &_self_f,
+                                                              Nat n) -> T1 {
         if (std::holds_alternative<typename Nat::O>(n.v())) {
           return x0;
         } else {
@@ -875,7 +877,9 @@ struct RocqBug14174 {
           return h(_self_f(_self_f, *a0)).proj1_sig();
         }
       };
-      auto f = [=](Nat n) -> T1 { return f_impl(f_impl, n); };
+      auto f = [=, f_impl = std::move(f_impl)](Nat n) -> T1 {
+        return f_impl(f_impl, n);
+      };
       return sig<crane::fn<T1(Nat)>>::exist(std::move(f));
     }
 

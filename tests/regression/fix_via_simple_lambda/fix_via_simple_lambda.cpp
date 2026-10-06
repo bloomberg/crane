@@ -24,7 +24,8 @@ FixViaSimpleLambda::make_combined(uint64_t n) {
       return (UINT64_C(2) + _self_double_add(_self_double_add, x_));
     }
   };
-  auto double_add = [=](uint64_t x) -> uint64_t {
+  auto double_add = [=, double_add_impl = std::move(double_add_impl)](
+                        uint64_t x) -> uint64_t {
     return double_add_impl(double_add_impl, x);
   };
   auto triple_add_impl = [=](auto &_self_triple_add, uint64_t x) -> uint64_t {
@@ -35,9 +36,13 @@ FixViaSimpleLambda::make_combined(uint64_t n) {
       return (UINT64_C(3) + _self_triple_add(_self_triple_add, x_));
     }
   };
-  auto triple_add = [=](uint64_t x) -> uint64_t {
+  auto triple_add = [=, triple_add_impl = std::move(triple_add_impl)](
+                        uint64_t x) -> uint64_t {
     return triple_add_impl(triple_add_impl, x);
   };
   return std::make_optional<crane::fn<uint64_t(uint64_t)>>(
-      [=](uint64_t x) { return (double_add(x) + triple_add(x)); });
+      [=, double_add = std::move(double_add),
+       triple_add = std::move(triple_add)](uint64_t x) {
+        return (double_add(x) + triple_add(x));
+      });
 }

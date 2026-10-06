@@ -67,7 +67,7 @@ struct Monads {
     fmap(
         crane::fn<CraneA1(CraneA0)> f,
         crane::fn<typename _tcI0::template F<std::pair<T1, CraneA0>>(T1)> run) {
-      return [=](const T1 &s) {
+      return [=, f = std::move(f), run = std::move(run)](const T1 &s) {
         return Functor0::template fmap<_tcI0, std::pair<T1, CraneA0>,
                                        std::pair<T1, CraneA1>>(
             [=](const std::pair<T1, CraneA0> &sa) {

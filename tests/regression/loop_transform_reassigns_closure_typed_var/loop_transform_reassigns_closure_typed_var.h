@@ -203,7 +203,8 @@ public:
   }
 
   Lst<Nat> go(Nat n) const {
-    return this->template map_In<Nat>([=](const Nat &x) { return x.add(n); });
+    return this->template map_In<Nat>(
+        [=, n = std::move(n)](const Nat &x) { return x.add(n); });
   }
 };
 

@@ -229,7 +229,7 @@ template <IPtr _tcI0> struct PointerV {
     return bind0<MonId, typename _tcI0::iptr,
                  std::pair<typename _tcI0::iptr, prov>>(
         ret<MonId, typename _tcI0::iptr>(_tcI0::zero_iptr()),
-        [=](const typename _tcI0::iptr &x) {
+        [=, pr = std::move(pr)](const typename _tcI0::iptr &x) {
           return ret<MonId, std::pair<typename _tcI0::iptr, prov>>(
               std::make_pair(x, pr));
         });

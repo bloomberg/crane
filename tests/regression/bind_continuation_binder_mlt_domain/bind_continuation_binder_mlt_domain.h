@@ -388,12 +388,14 @@ bytes_to_dv(typename _tcI0::addr a, const Nat &n, const List<Byte> &bs) {
     if (std::holds_alternative<typename List<Byte>::Nil>(bs.v())) {
       return Monad0::template ret<
           EOU_monad, Dv<typename _tcI0::tag, typename _tcI0::addr>>(
-          Dv<typename _tcI0::tag, typename _tcI0::addr>::daddr(_tcI0::t0(), a));
+          Dv<typename _tcI0::tag, typename _tcI0::addr>::daddr(_tcI0::t0(),
+                                                               std::move(a)));
     } else {
       const auto &[a00, a10] = std::get<typename List<Byte>::Cons>(bs.v());
       const List<Byte> &a10_value = *a10;
       const auto &[a01] = a00;
-      auto go_impl = [=](auto &_self_go, List<Nat> ds, List<Byte> bs0)
+      auto go_impl = [=, a = std::move(a)](auto &_self_go, List<Nat> ds,
+                                           List<Byte> bs0)
           -> EOU<List<Dv<typename _tcI0::tag, typename _tcI0::addr>>> {
         if (std::holds_alternative<typename List<Nat>::Nil>(ds.v())) {
           return Monad0::template ret<
@@ -423,7 +425,7 @@ bytes_to_dv(typename _tcI0::addr a, const Nat &n, const List<Byte> &bs) {
               });
         }
       };
-      auto go = [=](List<Nat> ds, List<Byte> bs0)
+      auto go = [=, go_impl = std::move(go_impl)](List<Nat> ds, List<Byte> bs0)
           -> EOU<List<Dv<typename _tcI0::tag, typename _tcI0::addr>>> {
         return go_impl(go_impl, ds, bs0);
       };

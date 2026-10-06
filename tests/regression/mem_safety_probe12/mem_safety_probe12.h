@@ -66,7 +66,9 @@ struct MemSafetyProbe12 {
 
   /// TEST 5: Pack a composed closure (let-bound, safe path).
   static wrap pack_composed(crane::fn<uint64_t(uint64_t)> f, uint64_t base) {
-    crane::fn<uint64_t(uint64_t)> g = [=](uint64_t x) { return (f(x) + base); };
+    crane::fn<uint64_t(uint64_t)> g = [=, f = std::move(f)](uint64_t x) {
+      return (f(x) + base);
+    };
     return wrap::wrap0(std::move(g));
   }
 

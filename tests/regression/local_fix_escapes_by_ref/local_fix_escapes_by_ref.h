@@ -218,13 +218,14 @@ struct LocalFixEscapesByRef {
     template <typename CraneA0> using m = st<CraneA0>;
 
     template <typename CraneA0> static st<CraneA0> ret(CraneA0 x) {
-      return st<CraneA0>{
-          [=](uint64_t s) { return res<crane::obj>::res0(s, x); }};
+      return st<CraneA0>{[=, x = std::move(x)](uint64_t s) {
+        return res<crane::obj>::res0(s, x);
+      }};
     }
 
     template <typename CraneA0, typename CraneA1>
     static st<CraneA1> bind(st<CraneA0> m, crane::fn<st<CraneA1>(CraneA0)> k) {
-      return st<CraneA1>{[=](uint64_t s) {
+      return st<CraneA1>{[=, k = std::move(k)](uint64_t s) {
         const auto &_sv = m.runst(s);
         const auto &[s0, a0] = _sv;
         return k(a0).runst(s0);

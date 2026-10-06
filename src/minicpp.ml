@@ -527,6 +527,10 @@ and cpp_lambda = {
   cl_ret : cpp_type option;  (** Trailing return type, when one is written. *)
   cl_body : cpp_stmt list;
   cl_capture : capture;
+  cl_moved : Id.t list;
+      (** The variables a {!Closure} takes by move, at their last use --
+          [\[=, x = std::move(x)\]]; the rest it copies.  Set by
+          {!Last_use} only. *)
 }
 
 (** A C++ constraint expression (used in requires clauses). *)
@@ -2196,7 +2200,8 @@ let rec lambda ?(tparams = []) params ret body ~capture =
       cl_tparams = tparams;
       cl_ret = (match ret with Some (Tconst t) -> Some t | r -> r);
       cl_body = body;
-      cl_capture = capture }
+      cl_capture = capture;
+      cl_moved = [] }
   in
   settle_lambda_tparams l
 

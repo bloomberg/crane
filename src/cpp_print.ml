@@ -2024,7 +2024,8 @@ and pp_cpp_expr env args t =
       cl_tparams = tparams;
       cl_ret = ret_ty;
       cl_body = body;
-      cl_capture = capture } ->
+      cl_capture = capture;
+      cl_moved = moved } ->
     let params = to_reversed params in
     let needs_capture, uses_this = lambda_needs_capture params body in
     (* A polymorphic function object: the erased positions of a rank-2
@@ -2043,7 +2044,14 @@ and pp_cpp_expr env args t =
     let capture_str =
       ( if not needs_capture then str "[]"
         else match capture with
-          | Closure -> if uses_this then str "[=, this]" else str "[=]"
+          | Closure ->
+            (* A variable whose last use is this capture moves into it. *)
+            let moves =
+              List.map
+                (fun x -> str ", " ++ Id.print x ++ str " = std::move(" ++ Id.print x ++ str ")")
+                moved
+            in
+            str "[=" ++ (if uses_this then str ", this" else mt ()) ++ seq moves ++ str "]"
           | Immediate -> str "[&]" )
       ++ tparams_str ++ str "("
     in

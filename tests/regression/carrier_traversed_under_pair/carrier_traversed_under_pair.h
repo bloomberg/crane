@@ -376,7 +376,8 @@ struct TFunctor_tagged {
   tfmap(crane::fn<CraneA1(CraneA0)> f,
         List<std::pair<std::optional<Nat>, Exp<CraneA0>>> l) {
     return l.template map<std::pair<std::optional<Nat>, Exp<CraneA1>>>(
-        [=](const std::pair<std::optional<Nat>, Exp<CraneA0>> &p) {
+        [=, f = std::move(f)](
+            const std::pair<std::optional<Nat>, Exp<CraneA0>> &p) {
           return std::make_pair(p.first, p.second.template exp_map<CraneA1>(f));
         });
   }

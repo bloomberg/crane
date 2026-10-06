@@ -99,7 +99,9 @@ struct ThisCaptureDangling {
       } else {
         uint64_t _x = _cs - 1;
         return std::make_optional<crane::fn<uint64_t(uint64_t)>>(
-            [=](uint64_t x) { return (x + _self_val.tree_sum()); });
+            [=, _self_val = std::move(_self_val)](uint64_t x) {
+              return (x + _self_val.tree_sum());
+            });
       }
     }
 

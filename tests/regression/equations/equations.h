@@ -457,11 +457,13 @@ struct Equations {
           const auto &[_x2, _x3] = p;
           return x;
         },
-        [=](uint64_t n1, uint64_t n2, gcd_graph, const T1 &eta0_) {
+        [=, f2 = std::move(f2)](uint64_t n1, uint64_t n2, gcd_graph,
+                                const T1 &eta0_) {
           const auto &[_x0, _x1] = p;
           return f2(n1, n2, eta0_);
         },
-        [=](uint64_t n1, uint64_t n2, gcd_graph, const T1 &eta0_) {
+        [=, f3 = std::move(f3)](uint64_t n1, uint64_t n2, gcd_graph,
+                                const T1 &eta0_) {
           const auto &[_x0, _x1] = p;
           return f3(n1, n2, eta0_);
         },
@@ -874,10 +876,12 @@ struct Equations {
     return collatz_steps_graph_mut<T1, crane::obj>(
         std::move(f), std::move(f0),
         [](uint64_t, collatz_steps_clause_3_graph, const T1 &x) { return x; },
-        [=](uint64_t n0, collatz_steps_graph, const T1 &eta0_) {
+        [=, f2 = std::move(f2)](uint64_t n0, collatz_steps_graph,
+                                const T1 &eta0_) {
           return [=](T1 _pa0) { return f2(n0, _pa0); }(eta0_);
         },
-        [=](uint64_t n0, collatz_steps_graph, const T1 &eta0_) {
+        [=, f3 = std::move(f3)](uint64_t n0, collatz_steps_graph,
+                                const T1 &eta0_) {
           return [=](T1 _pa0) { return f3(n0, _pa0); }(eta0_);
         },
         n, collatz_steps(n), collatz_steps_graph_correct(n));

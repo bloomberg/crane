@@ -5,6 +5,7 @@
 /// the Box will hold a dangling reference after the
 /// function returns.
 MoveSafety::fn_box MoveSafety::make_box(MoveSafety::tree t) {
-  return fn_box::box(
-      [=](uint64_t _x0) -> uint64_t { return std::move(t).sum_values(_x0); });
+  return fn_box::box([=, t = std::move(t)](uint64_t _x0) -> uint64_t {
+    return std::move(t).sum_values(_x0);
+  });
 }

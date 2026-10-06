@@ -396,7 +396,7 @@ struct TFunctor_boxedlist {
   static List<boxed<CraneA1>> tfmap(crane::fn<CraneA1(CraneA0)> f,
                                     List<boxed<CraneA0>> l) {
     return l.template map<boxed<CraneA1>>(
-        [=](boxed<CraneA0> _x0) -> boxed<CraneA1> {
+        [=, f = std::move(f)](boxed<CraneA0> _x0) -> boxed<CraneA1> {
           return bump<CraneA0, CraneA1>(f, _x0);
         });
   }

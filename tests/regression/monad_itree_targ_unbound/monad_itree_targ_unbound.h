@@ -154,7 +154,7 @@ struct Monads {
     template <typename CraneA0>
     static crane::fn<typename _tcI0::template m<std::pair<T1, CraneA0>>(T1)>
     ret(CraneA0 a) {
-      return [=](const T1 &s) {
+      return [=, a = std::move(a)](const T1 &s) {
         return _tcI0::template ret<std::pair<T1, CraneA0>>(
             std::make_pair(s, a));
       };
@@ -166,7 +166,7 @@ struct Monads {
          crane::fn<crane::fn<
              typename _tcI0::template m<std::pair<T1, CraneA1>>(T1)>(CraneA0)>
              k) {
-      return [=](const T1 &s) {
+      return [=, k = std::move(k), t = std::move(t)](const T1 &s) {
         return _tcI0::template bind<std::pair<T1, CraneA0>,
                                     std::pair<T1, CraneA1>>(
             t(s), [=](const std::pair<T1, CraneA0> &sa) {
@@ -194,7 +194,7 @@ using itree_tc_609e8855cd7ad294 = std::shared_ptr<ITree<CraneTcArg>>;
 
 template <Params _tcI0, typename T1>
 Monads::template stateT<env, itree_tc_609e8855cd7ad294, Nat> step(Nat n) {
-  return [=](const Nat &s) {
+  return [=, n = std::move(n)](const Nat &s) {
     return itree_ret(std::make_pair(s, n.add(_tcI0::width())));
   };
 }

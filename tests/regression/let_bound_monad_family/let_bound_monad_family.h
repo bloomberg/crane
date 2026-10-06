@@ -499,7 +499,7 @@ struct ITree {
                    typename ItreeF<T1, T2, Itree<T1, T2>>::TauF>(_sv.v())) {
       const auto &[t0] =
           std::get<typename ItreeF<T1, T2, Itree<T1, T2>>::TauF>(_sv.v());
-      return Itree<T1, T3>::lazy_([=]() -> Itree<T1, T3> {
+      return Itree<T1, T3>::lazy_([=, k = std::move(k)]() -> Itree<T1, T3> {
         return Itree<T1, T3>::go(
             ItreeF<T1, T3, Itree<T1, T3>>::tauf(subst<T1, T2, T3>(k, t0)));
       });
@@ -508,7 +508,7 @@ struct ITree {
           std::get<typename ItreeF<T1, T2, Itree<T1, T2>>::VisF>(_sv.v());
       return Itree<T1, T3>::go(ItreeF<T1, T3, Itree<T1, T3>>::visf(
           x, crane::fn<Itree<T1, T3>(crane::obj)>(
-                 [=](const crane::obj &x0) -> Itree<T1, T3> {
+                 [=, k = std::move(k)](const crane::obj &x0) -> Itree<T1, T3> {
                    return subst<T1, T2, T3>(k, crane_call_erased(e0, x0));
                  })));
     }
@@ -868,7 +868,7 @@ typename _tcI0::template M<T3> Interp::interp(
         h0,
     Itree<T1, T3> x0_) {
   return _tcI0::template iter<T3, Itree<T1, T3>>(
-      [=](const Itree<T1, T3> &t) ->
+      [=, h0 = std::move(h0)](const Itree<T1, T3> &t) ->
       typename _tcI0::template M<Sum<Itree<T1, T3>, T3>> {
         auto &&_sv = t.observe();
         if (std::holds_alternative<

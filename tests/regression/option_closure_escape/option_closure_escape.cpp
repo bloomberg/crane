@@ -33,7 +33,9 @@ uint64_t OptionClosureEscape::sum_values(const OptionClosureEscape::tree &t,
 std::pair<crane::fn<uint64_t(uint64_t)>, uint64_t>
 OptionClosureEscape::pair_escape(OptionClosureEscape::tree t) {
   return std::make_pair(
-      [=](uint64_t _x0) -> uint64_t { return sum_values(std::move(t), _x0); },
+      [=, t = std::move(t)](uint64_t _x0) -> uint64_t {
+        return sum_values(std::move(t), _x0);
+      },
       UINT64_C(42));
 }
 

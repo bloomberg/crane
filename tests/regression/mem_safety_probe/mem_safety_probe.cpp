@@ -116,8 +116,9 @@ uint64_t MemSafetyProbe::add3(uint64_t a, uint64_t b, uint64_t c) {
 /// The Box stores a closure. If the closure uses & capture,
 /// the Box holds dangling references after make_box returns.
 MemSafetyProbe::fn_box MemSafetyProbe::make_box(MemSafetyProbe::tree t) {
-  return fn_box::box(
-      [=](uint64_t _x0) -> uint64_t { return std::move(t).sum_values(_x0); });
+  return fn_box::box([=, t = std::move(t)](uint64_t _x0) -> uint64_t {
+    return std::move(t).sum_values(_x0);
+  });
 }
 
 /// ---- TEST 10: Partial application stored in Box via match ----

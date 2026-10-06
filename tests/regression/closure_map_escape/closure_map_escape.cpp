@@ -30,7 +30,9 @@ ClosureMapEscape::map_to_adders(const ClosureMapEscape::mylist<uint64_t> &l) {
         return (_self_add(_self_add, x_) + 1);
       }
     };
-    auto add = [=](uint64_t x) -> uint64_t { return add_impl(add_impl, x); };
+    auto add = [=, add_impl = std::move(add_impl)](uint64_t x) -> uint64_t {
+      return add_impl(add_impl, x);
+    };
     return mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
         std::move(add), map_to_adders(a1_value));
   }

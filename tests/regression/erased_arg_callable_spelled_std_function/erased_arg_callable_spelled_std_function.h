@@ -167,7 +167,8 @@ bool forall_dec(const List<T1> &l,
     const List<T1> &a1_value = *a1;
     bool s = hD(a0);
     if (s) {
-      bool s0 = forall_dec<T1>(a1_value, [=](const T1 &x) { return hD(x); });
+      bool s0 = forall_dec<T1>(
+          a1_value, [=, hD = std::move(hD)](const T1 &x) { return hD(x); });
       if (s0) {
         return true;
       } else {

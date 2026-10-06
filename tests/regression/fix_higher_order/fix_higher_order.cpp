@@ -18,7 +18,9 @@ FixHigherOrder::make_wrapped(uint64_t base) {
       return (_self_go(_self_go, x_) + 1);
     }
   };
-  auto go = [=](uint64_t x) -> uint64_t { return go_impl(go_impl, x); };
+  auto go = [=, go_impl = std::move(go_impl)](uint64_t x) -> uint64_t {
+    return go_impl(go_impl, x);
+  };
   return wrap_fn(std::move(go));
 }
 
@@ -32,6 +34,8 @@ FixHigherOrder::make_double_wrapped(uint64_t base) {
       return (_self_go(_self_go, x_) + 1);
     }
   };
-  auto go = [=](uint64_t x) -> uint64_t { return go_impl(go_impl, x); };
+  auto go = [=, go_impl = std::move(go_impl)](uint64_t x) -> uint64_t {
+    return go_impl(go_impl, x);
+  };
   return double_wrap(std::move(go));
 }

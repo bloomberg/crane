@@ -100,7 +100,7 @@ template <Monad _tcI0, typename T1> struct Monad_stateT {
   static stateT<T1, typename _tcI0::template m<CraneA0>, CraneA0>
   ret(CraneA0 x) {
     return stateT<T1, typename _tcI0::template m<CraneA0>, CraneA0>{
-        [=](const auto &s) {
+        [=, x = std::move(x)](const auto &s) {
           return _tcI0::template ret<std::pair<CraneA0, T1>>(
               std::make_pair(x, s));
         }};
@@ -113,7 +113,7 @@ template <Monad _tcI0, typename T1> struct Monad_stateT {
            stateT<T1, typename _tcI0::template m<CraneA1>, CraneA1>(CraneA0)>
            c2) {
     return stateT<T1, typename _tcI0::template m<CraneA1>, CraneA1>{
-        [=](const auto &s) {
+        [=, c1 = std::move(c1), c2 = std::move(c2)](const auto &s) {
           return _tcI0::template bind<std::pair<CraneA0, T1>,
                                       std::pair<CraneA1, T1>>(
               crane_container_cast<
@@ -145,7 +145,9 @@ using env = Nat;
 template <typename T1 = void>
 stateT<env, std::shared_ptr<ITree<crane::obj>>, Nat> step(Nat n) {
   return stateT<Nat, std::shared_ptr<ITree<crane::obj>>, Nat>{
-      [=](const Nat &s) { return itree_ret(std::make_pair(n, s)); }};
+      [=, n = std::move(n)](const Nat &s) {
+        return itree_ret(std::make_pair(n, s));
+      }};
 }
 
 template <typename T1 = void>

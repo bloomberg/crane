@@ -161,7 +161,7 @@ using ptr = std::pair<typename _tcI0::iptr, typename _tcI0::prov>;
 static EOU<Nat> int_to_ptr(Nat i, typename _tcI0::prov pr) {
 return EOU_monad::template bind<typename _tcI0::iptr,
 Nat>(_tcI0::from_Z(std::move(i)),
-[=](typename _tcI0::iptr) {
+[=, pr = std::move(pr)](typename _tcI0::iptr) {
 return EOU_monad::template ret<Nat>(_tcI0::prov_nat(pr));
 });}
 };

@@ -20,7 +20,7 @@ Nat ImmediateMatchOwnedScrutinee::count(const List<Nat> &l) {
 
 std::optional<Nat> ImmediateMatchOwnedScrutinee::pred_count(List<Nat> l) {
   Nat n = count(l);
-  crane::fn<Nat(Nat)> g = [=](const Nat &k) {
+  crane::fn<Nat(Nat)> g = [=, l = std::move(l)](const Nat &k) {
     return count(List<Nat>::cons(k, l));
   };
   return std::make_optional<Nat>([&]() {

@@ -229,6 +229,7 @@ and generic_inline_expr spec expr =
         CPPlambda
           { cl_params = of_reversed lparams;
             cl_tparams = [];
+            cl_moved = [];
             cl_ret = Some spec.ret_ty;
             cl_body = spec.body;
             cl_capture = Closure },
@@ -596,6 +597,7 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
         :: Sasgn (id, Existing, CPPlambda
           { cl_params = lparams;
           cl_tparams = [];
+          cl_moved = [];
             cl_ret = ret_ty_opt;
             cl_body = lbody';
             cl_capture = cap })
@@ -606,6 +608,7 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
         :: Sasgn (id, Existing, CPPlambda
           { cl_params = lparams;
           cl_tparams = [];
+          cl_moved = [];
             cl_ret = ret_ty_opt;
             cl_body = lbody';
             cl_capture = cap })
@@ -626,6 +629,7 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
         Sasgn (id, tgt, CPPlambda
           { cl_params = lparams;
           cl_tparams = [];
+          cl_moved = [];
             cl_ret = ret_ty_opt;
             cl_body = lbody';
             cl_capture = cap })
@@ -635,6 +639,7 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
         Sasgn (id, tgt, CPPlambda
           { cl_params = lparams;
           cl_tparams = [];
+          cl_moved = [];
             cl_ret = ret_ty_opt;
             cl_body = lbody';
             cl_capture = cap })
@@ -671,6 +676,7 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
         :: Sasgn (id, Existing, CPPlambda
           { cl_params = lparams;
           cl_tparams = [];
+          cl_moved = [];
             cl_ret = ret_ty_opt;
             cl_body = lbody';
             cl_capture = Immediate })
@@ -681,6 +687,7 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
         :: Sassign_expr (CPPderef (CPPvar id), CPPlambda
           { cl_params = lparams;
           cl_tparams = [];
+          cl_moved = [];
             cl_ret = ret_ty_opt;
             cl_body = lbody';
             cl_capture = cap })
@@ -726,6 +733,7 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
                     of_reversed
                       (List.filter (fun (_, x) -> x <> self) lparams');
                   cl_tparams = [];
+                  cl_moved = [];
                   cl_ret = ret_ty_opt;
                   cl_body = lbody';
                   cl_capture = cap } )
@@ -735,6 +743,7 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
             (id, tgt, CPPlambda
               { cl_params = of_reversed lparams';
               cl_tparams = [];
+              cl_moved = [];
                 cl_ret = ret_ty_opt;
                 cl_body = lbody';
                 cl_capture = cap })
@@ -744,6 +753,7 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
         Sasgn (id, tgt, CPPlambda
           { cl_params = lparams;
           cl_tparams = [];
+          cl_moved = [];
             cl_ret = ret_ty_opt;
             cl_body = lbody';
             cl_capture = cap })

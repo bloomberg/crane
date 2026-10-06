@@ -487,7 +487,7 @@ struct ITree {
                    typename ItreeF<T1, T2, Itree<T1, T2>>::TauF>(_sv.v())) {
       const auto &[t0] =
           std::get<typename ItreeF<T1, T2, Itree<T1, T2>>::TauF>(_sv.v());
-      return Itree<T1, T3>::lazy_([=]() -> Itree<T1, T3> {
+      return Itree<T1, T3>::lazy_([=, k = std::move(k)]() -> Itree<T1, T3> {
         return Itree<T1, T3>::go(
             ItreeF<T1, T3, Itree<T1, T3>>::tauf(subst<T1, T2, T3>(k, t0)));
       });
@@ -496,7 +496,7 @@ struct ITree {
           std::get<typename ItreeF<T1, T2, Itree<T1, T2>>::VisF>(_sv.v());
       return Itree<T1, T3>::go(ItreeF<T1, T3, Itree<T1, T3>>::visf(
           x, crane::fn<Itree<T1, T3>(crane::obj)>(
-                 [=](const crane::obj &x0) -> Itree<T1, T3> {
+                 [=, k = std::move(k)](const crane::obj &x0) -> Itree<T1, T3> {
                    return subst<T1, T2, T3>(k, crane_call_erased(e0, x0));
                  })));
     }
@@ -576,7 +576,8 @@ struct IntrinsicTableCurry {
   static semantic_function<typename _tcI0::ptr, T1>
   pure_to_semantic(ReSum<crane::obj, IFun<crane::obj, crane::obj>> h,
                    pure_function f) {
-    return [=](const List<Nat> &args, std::optional<typename _tcI0::ptr>) {
+    return [=, f = std::move(f), h = std::move(h)](
+               const List<Nat> &args, std::optional<typename _tcI0::ptr>) {
       return to_itree<T1>(h, f(args));
     };
   }
@@ -615,28 +616,29 @@ struct IntrinsicTableCurry {
   template <Params _tcI0, typename T1>
   static semantic_function<typename _tcI0::ptr, T1>
   my_vastart(ReSum<crane::obj, IFun<crane::obj, crane::obj>> h) {
-    return [=](const List<Nat> &args,
-               const std::optional<typename _tcI0::ptr> &varargs)
-               -> Itree<T1, Sum<Nat, Nat>> {
-      if (std::holds_alternative<typename List<Nat>::Nil>(args.v())) {
-        return to_itree<T1>(h, std::optional<Sum<Nat, Nat>>());
-      } else {
-        const auto &[a0, a1] = std::get<typename List<Nat>::Cons>(args.v());
-        auto &&_sv = *a1;
-        if (std::holds_alternative<typename List<Nat>::Nil>(_sv.v())) {
-          if (varargs.has_value()) {
-            const typename _tcI0::ptr &_x = *varargs;
-            return Itree<T1, Sum<Nat, Nat>>::go(
-                ItreeF<T1, Sum<Nat, Nat>, Itree<T1, Sum<Nat, Nat>>>::retf(
-                    Sum<Nat, Nat>::inl(a0)));
-          } else {
+    return
+        [=, h = std::move(h)](const List<Nat> &args,
+                              const std::optional<typename _tcI0::ptr> &varargs)
+            -> Itree<T1, Sum<Nat, Nat>> {
+          if (std::holds_alternative<typename List<Nat>::Nil>(args.v())) {
             return to_itree<T1>(h, std::optional<Sum<Nat, Nat>>());
+          } else {
+            const auto &[a0, a1] = std::get<typename List<Nat>::Cons>(args.v());
+            auto &&_sv = *a1;
+            if (std::holds_alternative<typename List<Nat>::Nil>(_sv.v())) {
+              if (varargs.has_value()) {
+                const typename _tcI0::ptr &_x = *varargs;
+                return Itree<T1, Sum<Nat, Nat>>::go(
+                    ItreeF<T1, Sum<Nat, Nat>, Itree<T1, Sum<Nat, Nat>>>::retf(
+                        Sum<Nat, Nat>::inl(a0)));
+              } else {
+                return to_itree<T1>(h, std::optional<Sum<Nat, Nat>>());
+              }
+            } else {
+              return to_itree<T1>(h, std::optional<Sum<Nat, Nat>>());
+            }
           }
-        } else {
-          return to_itree<T1>(h, std::optional<Sum<Nat, Nat>>());
-        }
-      }
-    };
+        };
   }
 
   template <Params _tcI0, typename T1>

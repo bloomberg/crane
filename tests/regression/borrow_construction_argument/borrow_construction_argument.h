@@ -48,13 +48,14 @@ struct BorrowConstructionArgument {
 
     template <typename CraneA0>
     static crane::fn<std::pair<big, CraneA0>(big)> ret(CraneA0 a) {
-      return [=](const big &s) { return std::make_pair(s, a); };
+      return
+          [=, a = std::move(a)](const big &s) { return std::make_pair(s, a); };
     }
 
     static crane::fn<std::pair<big, crane::obj>(big)>
     bind(crane::fn<std::pair<big, crane::obj>(big)> t,
          crane::fn<crane::fn<std::pair<big, crane::obj>(big)>(crane::obj)> k) {
-      return [=](const big &s) {
+      return [=, k = std::move(k)](const big &s) {
         auto [s_, v] = t(s);
         return crane::apply2(k, v, std::move(s_));
       };

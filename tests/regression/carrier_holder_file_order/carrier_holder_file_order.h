@@ -376,7 +376,7 @@ struct CarrierHolderFileOrder {
 
 template <Params _tcI0>
 stateT<Nat, crane_carrier_tch<_tcI0>::template c, Nat> HoStack::get_st(Nat n) {
-  return [=](const Nat &s) {
+  return [=, n = std::move(n)](const Nat &s) {
     return Itree<
         AllE<typename _tcI0::ptr, crane::obj>,
         std::pair<Nat, Nat>>::lazy_([=]() -> Itree<AllE<typename _tcI0::ptr,

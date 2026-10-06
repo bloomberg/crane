@@ -2273,6 +2273,7 @@ let rec rewrite_field_access_for_decltype env expr =
       (call_opaque, CPPlambda
         { cl_params = of_reversed (extra @ to_reversed params);
           cl_tparams = [];
+          cl_moved = [];
           cl_ret = rt;
           cl_body = body;
           cl_capture = Immediate },

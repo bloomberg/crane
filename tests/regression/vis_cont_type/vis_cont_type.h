@@ -276,7 +276,7 @@ struct VisContType {
           std::get<typename treeF<T1, T2, tree<T1, T2>>::VisF>(_sv.v());
       return tree<T1, T3>::go(treeF<T1, T3, tree<T1, T3>>::visf(
           x, crane::fn<tree<T1, T3>(crane::obj)>(
-                 [=](const crane::obj &x0) -> tree<T1, T3> {
+                 [=, k = std::move(k)](const crane::obj &x0) -> tree<T1, T3> {
                    return k(crane_call_erased(e0, x0));
                  })));
     }

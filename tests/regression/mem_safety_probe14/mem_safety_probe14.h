@@ -102,17 +102,19 @@ struct MemSafetyProbe14 {
       crane::fn<uint64_t(uint64_t)> f1 = [=](uint64_t n) {
         return (_self_val.tree_sum() + n);
       };
-      crane::fn<uint64_t(uint64_t)> f2 = [=](uint64_t n) {
-        return (_self_val.tree_sum() * n);
-      };
+      crane::fn<uint64_t(uint64_t)> f2 =
+          [=, _self_val = std::move(_self_val)](uint64_t n) {
+            return (_self_val.tree_sum() * n);
+          };
       return (f1(UINT64_C(3)) + f2(UINT64_C(2)));
     }
 
     uint64_t closure_then_consume() const {
       tree _self_val = *this;
-      crane::fn<uint64_t(uint64_t)> f = [=](uint64_t n) {
-        return (_self_val.tree_sum() + n);
-      };
+      crane::fn<uint64_t(uint64_t)> f =
+          [=, _self_val = std::move(_self_val)](uint64_t n) {
+            return (_self_val.tree_sum() + n);
+          };
       uint64_t v = std::move(*this).consume_tree();
       return (f(UINT64_C(0)) + v);
     }
@@ -135,9 +137,10 @@ struct MemSafetyProbe14 {
     uint64_t use_tree_twice() const {
       tree _self_val = *this;
       uint64_t ts = this->tree_sum();
-      crane::fn<uint64_t(uint64_t)> f = [=](uint64_t n) {
-        return (_self_val.tree_sum() + n);
-      };
+      crane::fn<uint64_t(uint64_t)> f =
+          [=, _self_val = std::move(_self_val)](uint64_t n) {
+            return (_self_val.tree_sum() + n);
+          };
       return (ts + f(UINT64_C(0)));
     }
 

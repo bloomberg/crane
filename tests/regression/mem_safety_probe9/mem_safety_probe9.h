@@ -116,9 +116,10 @@ struct MemSafetyProbe9 {
         crane::fn<uint64_t(uint64_t)> f2 = [=](uint64_t) {
           return a2_value.tree_sum();
         };
-        crane::fn<uint64_t(uint64_t)> f3 = [=](uint64_t) {
-          return _self_val.tree_sum();
-        };
+        crane::fn<uint64_t(uint64_t)> f3 =
+            [=, _self_val = std::move(_self_val)](uint64_t) {
+              return _self_val.tree_sum();
+            };
         return ((f1(UINT64_C(0)) + f2(UINT64_C(0))) + f3(UINT64_C(0)));
       }
     }

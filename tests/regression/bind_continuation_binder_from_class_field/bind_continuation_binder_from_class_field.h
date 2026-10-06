@@ -393,7 +393,8 @@ EOU<Dv<typename _tcI0::addr>> bytes_to_dv(const Nat &n, const List<Byte> &bs) {
               });
         }
       };
-      auto go = [=](List<Nat> ds,
+      auto go = [=, go_impl = std::move(go_impl)](
+                    List<Nat> ds,
                     List<Byte> bs0) -> EOU<List<Dv<typename _tcI0::addr>>> {
         return go_impl(go_impl, ds, bs0);
       };
