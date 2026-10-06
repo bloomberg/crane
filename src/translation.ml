@@ -1230,6 +1230,23 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       | _ -> result
     end
     else result
+  (* A singleton class's dictionary applied, which is the body of the class's
+     projection: the method, called on the instance -- a template parameter,
+     so a static member -- at the method's own type variables, which here are
+     the projection's, numbered past the class's parameters. *)
+  | MLapp (head, args) when singleton_dictionary env head <> None ->
+    let inst, class_ref, method_ref = Option.get (singleton_dictionary env head) in
+    let ipv = List.length (Table.get_ind_ip_vars class_ref) in
+    let n_own = Ml_type_util.method_tvar_count class_ref (Table.find_type method_ref) in
+    let tvars = get_current_type_vars () in
+    let targs =
+      List.init n_own (fun k ->
+          convert_ml_type_to_cpp_type env tvars (Miniml.Tvar (Schematic, ipv + 1 + k)))
+    in
+    let value_args = List.filter (function MLdummy _ -> false | _ -> true) args in
+    mk_call
+      (CPPscope (CPPvar inst, Common.id_of_global Term method_ref, targs))
+      (List.map (gen_expr env) value_args)
   | MLapp (MLmagic (_, t), args) ->
     gen_expr ?expected_ty ~slot env (MLapp (t, args))
   | MLapp (((MLdummy _ | MLexn _) as absurd), _) ->
@@ -1284,7 +1301,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
        extracts as MLapp(MLapp(MLglob(dcs), [x,f1,f2]), [l]). Flattening to
        MLapp(MLglob(dcs), [x,f1,f2,l]) lets eta_fun see the complete argument
        list and generate a direct call. *)
-    eta_fun ~slot env g (inner_args @ outer_args)
+    gen_expr ?expected_ty ~slot env (MLapp (g, inner_args @ outer_args))
   | MLapp (MLglob (r, _), [arg]) when Table.is_numeral_converter r ->
     (* Fold Number.uint/signed_int digit chain into a direct integer literal.
        Tries unsigned (of_num_uint) then signed (of_num_int).
@@ -1322,12 +1339,22 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     gen_expr ~slot env (MLcase (typ, scrut, [|(ids, rty, pat, new_body)|]))
   (* A class field is projected through the instance wherever the instance
      survived, whatever mapping the field carries -- see
-     {!kept_instance_of_projection}. *)
-  | MLapp (MLglob (x, tys), args)
-    when Table.is_inline_custom x
-         && kept_instance_of_projection env x args <> None ->
-    let inst = Option.get (kept_instance_of_projection env x args) in
-    project_through_instance env x tys args inst
+     {!static_projection_instance}. *)
+  | MLapp (MLglob (x, tys), args) when static_projection_instance env x args <> None -> (
+    let inst = Option.get (static_projection_instance env x args) in
+    match static_projection_missing env x tys args inst with
+    | [] -> project_through_instance env x tys args inst
+    | missing ->
+      let k = List.length missing in
+      let call =
+        MLapp
+          ( MLglob (x, tys),
+            List.map (Mlutil.ast_lift k) args @ List.init k (fun i -> MLrel (k - i)) )
+      in
+      gen_expr ?expected_ty ~slot env
+        (Mlutil.named_lams
+           (List.rev (List.mapi (fun i t -> (Id (Id.of_string ("a" ^ string_of_int i)), t)) missing))
+           call ) )
   | MLapp (f, args) ->
     (* A partial application is a callable this position may expect at a
        different currying than the callee's own arrows give it, so the slot's
@@ -1389,9 +1416,15 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
         | _ -> false )
       | _ -> false
     in
+    (* Nor can a global whose declaration boxed its result -- [id] declared
+       at [crane::obj] -- hand back anything else, however this call
+       instantiates it. *)
+    let declared_result_is_boxed =
+      match f with MLglob (r, _) -> glob_declared_cod_erases r | _ -> false
+    in
     let result =
       if
-        binder_result_is_boxed
+        binder_result_is_boxed || declared_result_is_boxed
         || ( match callee_ty with
            | Some ty -> result_is_index_only_tvar ty || alias_result_is_boxed ty
            | None -> false )
@@ -4853,13 +4886,16 @@ and project_through_instance env x tys args inst =
       args
   in
   (* The instance declares each method as a member template over the method's
-     own type variables -- the class's carrier is the instance, not a parameter
-     of its methods -- so the call's type arguments minus the carrier are the
-     method's.  They are given explicitly rather than deduced: a method
-     declares its continuation as a [std::function], which a closure does not
-     deduce, and [ret] mentions its variable only in its result. *)
+     own type variables -- the class's parameters are the instance, not
+     parameters of its methods -- so the call's type arguments minus the
+     class's are the method's.  The class's stand in front of the dictionary
+     in the projection's type, erased.  They are given explicitly rather than
+     deduced: a method declares its continuation as a [std::function], which
+     a closure does not deduce, and [ret] mentions its variable only in its
+     result. *)
   let targs =
-    match tys with [] -> [] | _ :: rest -> List.map (cpp_of_ml env) rest
+    let n_class = Ml_type_util.projection_class_arity x in
+    List.map (cpp_of_ml env) (List.filteri (fun i _ -> i >= n_class) tys)
   in
   (* What each operand is written into.  [tys] leads with the carrier, which
      is how the field's own type numbers the class parameter, so the single
@@ -4869,35 +4905,21 @@ and project_through_instance env x tys args inst =
      the enclosing declaration returns.  An argument is not a tail position,
      so that is never the right answer; see {!position_cpp_ty}.
 
-     Two substitutions, because the projection's type quantifies over the
-     class's carrier as well as the method's own variables and [tys] carries
-     only the latter -- its leading entry, the carrier's, is [Tdummy].  The
-     carrier is what the instance is an instance {e at}, the sole argument of
-     its class type; without it every [m A] absorbs its argument and says
-     [std::any].
-
-     The method's value parameters are the {e trailing} domains: the carrier,
-     the dictionary and the erased type arguments all stand in front of them,
-     and only a suffix as long as the operand list is safe to read. *)
+     Only a suffix as long as the operand list is safe to read. *)
   let operand_ml_tys =
-    match find_type x with
-    | exception Not_found -> []
-    | ty ->
-      let ty =
-        match resolve_tmeta (instance_class_ty env inst) with
-        | Miniml.Tglob (_, [carrier], _) -> subst_dict_carrier carrier ty
-        | _ -> ty
-      in
-      let doms =
-        ml_domains (if tys = [] then ty else type_subst_list tys ty)
-        |> List.filter (fun t ->
-               match resolve_tmeta t with Miniml.Tdummy _ -> false | _ -> true)
-      in
-      let extra = List.length doms - List.length operands in
-      if extra >= 0 then List.filteri (fun i _ -> i >= extra) doms else []
+    let doms = projection_value_domains env x tys inst in
+    let extra = List.length doms - List.length operands in
+    if extra >= 0 then List.filteri (fun i _ -> i >= extra) doms else []
+  in
+  (* The instance is a type: an applied one -- [TFunctor_option
+     TFunctor_box] -- is spelled as the template argument it would be. *)
+  let inst_expr =
+    match ml_arg_to_template_type env inst with
+    | Some t -> CPPtype_name t
+    | None -> gen_expr env inst
   in
   mk_call
-    (CPPscope (gen_expr env inst, Common.id_of_global Term x, targs))
+    (CPPscope (inst_expr, Common.id_of_global Term x, targs))
     (List.mapi
        (fun i a ->
          let expected = param_expected_cpp_ty env operand_ml_tys i in

@@ -214,6 +214,16 @@ let rec strip_erased_method_prefix = function
     strip_erased_method_prefix rest
   | t -> t
 
+(** How many of the class's parameters a projection takes in front of its
+    dictionary: the erased arrows leading its type. *)
+let projection_class_arity proj =
+  let rec count = function
+    | Miniml.Tarr (d, b) when Mlutil.isTdummy d -> 1 + count b
+    | Miniml.Tmeta {contents = Some t} -> count t
+    | _ -> 0
+  in
+  match Table.find_type proj with exception Not_found -> 0 | ty -> count ty
+
 (** [method_tvar_count class_ref ty] is the arity of the member template an
     instance method of type [ty] emits: the type variables the method
     quantifies on its own, past the class's parameters.

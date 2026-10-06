@@ -5,6 +5,7 @@
 #include "fn.h"
 #include "obj.h"
 #include <atomic>
+#include <concepts>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -118,16 +119,21 @@ public:
   }
 };
 
-struct TfunctorAliasCarrier {
-  template <typename t>
-  using TFunctor = crane::fn<t(crane::fn<crane::obj(crane::obj)>, t)>;
+template <typename I>
+concept TFunctor = requires {
+  typename I::template T<crane::obj>;
+  {
+    I::template tfmap<crane::obj, crane::obj>(
+        std::declval<crane::fn<crane::obj(crane::obj)>>(),
+        std::declval<typename I::template T<crane::obj>>())
+  } -> std::convertible_to<typename I::template T<crane::obj>>;
+};
 
-  template <typename T1, typename T2, typename T3, typename F1>
-  static crane::rebind_t<T1, T3>
-  tfmap(std::type_identity_t<TFunctor<T1>> tFunctor, F1 &&f,
-        crane::rebind_t<T1, T2> x) {
-    return crane_container_cast<crane::rebind_t<T1, T3>>(
-        tFunctor(crane_erase_fn(f), crane_convert<T1>(std::move(x))));
+struct TfunctorAliasCarrier {
+  template <TFunctor _tcI0, typename T2, typename T3, typename F0>
+  static typename _tcI0::template T<T3>
+  tfmap(F0 &&f, typename _tcI0::template T<T2> x) {
+    return _tcI0::template tfmap<T2, T3>(f, std::move(x));
   }
 
   template <typename T> struct exp {
@@ -239,25 +245,57 @@ struct TfunctorAliasCarrier {
     }
   };
 
-  static exp<crane::obj>
-  TFunctor_exp(const crane::fn<crane::obj(crane::obj)> &f,
-               const exp<crane::obj> &e);
-  static texp<crane::obj>
-  TFunctor_texp(TFunctor<exp<crane::obj>> h,
-                const crane::fn<crane::obj(crane::obj)> &f,
-                const std::pair<crane::obj, exp<crane::obj>> &pat);
-  static cmpxchg<crane::obj>
-  TFunctor_cmpxchg(const crane::fn<crane::obj(crane::obj)> &f,
-                   const cmpxchg<crane::obj> &c);
+  struct TFunctor_exp {
+    template <typename CraneA0> using T = exp<CraneA0>;
+
+    template <typename CraneA0, typename CraneA1>
+    static exp<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f, exp<CraneA0> e) {
+      if (std::holds_alternative<typename exp<CraneA0>::Lit>(e.v())) {
+        const auto &[t0] = std::get<typename exp<CraneA0>::Lit>(e.v());
+        return exp<CraneA1>::lit(f(t0));
+      } else {
+        const auto &[e0] = std::get<typename exp<CraneA0>::Neg>(e.v());
+        return exp<CraneA1>::neg(TFunctor_exp::tfmap(std::move(f), *e0));
+      }
+    }
+  };
+
+  static_assert(TFunctor<TFunctor_exp>);
+
+  template <TFunctor _tcI0> struct TFunctor_texp {
+    template <typename CraneA0> using T = texp<CraneA0>;
+
+    template <typename CraneA0, typename CraneA1>
+    static texp<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f,
+                               texp<CraneA0> pat) {
+      const auto &[t, e] = pat;
+      return std::make_pair(f(t),
+                            _tcI0::template tfmap<CraneA0, CraneA1>(f, e));
+    }
+  };
+
+  struct TFunctor_cmpxchg {
+    template <typename CraneA0> using T = cmpxchg<CraneA0>;
+
+    template <typename CraneA0, typename CraneA1>
+    static cmpxchg<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f,
+                                  cmpxchg<CraneA0> c) {
+      return cmpxchg<CraneA1>{
+          TFunctor_texp<TFunctor_exp>::template tfmap<CraneA0, CraneA1>(
+              f, c.c_ptr),
+          TFunctor_texp<TFunctor_exp>::template tfmap<CraneA0, CraneA1>(
+              f, c.c_new)};
+    }
+  };
+
+  static_assert(TFunctor<TFunctor_cmpxchg>);
   static inline const cmpxchg<Nat> c0 = cmpxchg<Nat>{
       std::make_pair(Nat::s(Nat::o()), exp<Nat>::lit(Nat::s(Nat::o()))),
       std::make_pair(Nat::s(Nat::s(Nat::o())),
                      exp<Nat>::neg(exp<Nat>::lit(Nat::s(Nat::s(Nat::o())))))};
-  static inline const cmpxchg<Nat> c1 = tfmap<cmpxchg<crane::obj>, Nat, Nat>(
-      [](auto &&_ec0, cmpxchg<crane::obj> _ec1) {
-        return TFunctor_cmpxchg(_ec0, _ec1);
-      },
-      [](const Nat &x) { return Nat::s(x); }, c0);
+  static inline const cmpxchg<Nat> c1 =
+      TFunctor_cmpxchg::template tfmap<Nat, Nat>(
+          [](const Nat &x) { return Nat::s(x); }, c0);
   static inline const bool is_five =
       c1.c_ptr.first.add(c1.c_new.first)
           .eqb(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))));

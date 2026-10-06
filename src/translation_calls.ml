@@ -799,7 +799,7 @@ let rec ml_arg_to_template_type ?expected env ml_arg =
              (List.map Option.get filled) )
       else None
   in
-  match strip_magic ml_arg with
+  match strip_dictionary ml_arg with
   | MLglob (r, ts) ->
     if ref_returns_skipped r then None
     else

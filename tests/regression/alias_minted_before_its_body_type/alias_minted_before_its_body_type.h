@@ -6,6 +6,7 @@
 #include "obj.h"
 #include "small_vector.h"
 #include <atomic>
+#include <concepts>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -16,6 +17,8 @@
 struct Nat;
 template <typename A> struct List;
 template <typename t> struct Exp;
+struct TFunctor_exp;
+struct TFunctor_boxedlist;
 
 struct Nat {
   // TYPES
@@ -349,47 +352,62 @@ public:
     }
     return _result;
   }
+};
 
-  template <typename F0> Exp<crane::obj> TFunctor_exp(F0 &&x0_) const {
-    return this->template exp_map<crane::obj>(x0_);
+template <typename I>
+concept TFunctor = requires {
+  typename I::template T<crane::obj>;
+  {
+    I::template tfmap<crane::obj, crane::obj>(
+        std::declval<crane::fn<crane::obj(crane::obj)>>(),
+        std::declval<typename I::template T<crane::obj>>())
+  } -> std::convertible_to<typename I::template T<crane::obj>>;
+};
+
+template <TFunctor _tcI0, typename T2, typename T3, typename F0>
+typename _tcI0::template T<T3> tfmap(F0 &&x,
+                                     typename _tcI0::template T<T2> x0) {
+  return _tcI0::template tfmap<T2, T3>(x, std::move(x0));
+}
+
+struct TFunctor_exp {
+  template <typename CraneA0> using T = Exp<CraneA0>;
+
+  template <typename CraneA0, typename CraneA1>
+  static Exp<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> a0, Exp<CraneA0> a1) {
+    return a1.template exp_map<CraneA1>(std::move(a0));
   }
 };
 
-template <typename t>
-using TFunctor = crane::fn<t(crane::fn<crane::obj(crane::obj)>, t)>;
-
-template <typename T1, typename T2, typename T3, typename F1>
-crane::rebind_t<T1, T3> tfmap(std::type_identity_t<TFunctor<T1>> tFunctor,
-                              F1 &&x, crane::rebind_t<T1, T2> x0) {
-  return crane_container_cast<crane::rebind_t<T1, T3>>(
-      tFunctor(crane_erase_fn(x), crane_convert<T1>(std::move(x0))));
-}
-
+static_assert(TFunctor<TFunctor_exp>);
 template <typename t> using boxed = std::pair<Nat, Exp<t>>;
 
 template <typename T1, typename T2, typename F0>
 boxed<T2> bump(F0 &&f, std::pair<Nat, Exp<T1>> p) {
   auto [n, e] = std::move(p);
   return std::make_pair(std::move(n),
-                        tfmap<Exp<crane::obj>, T1, T2>(
-                            [](auto &&_ec0, Exp<crane::obj> _ec1) {
-                              return _ec1.TFunctor_exp(_ec0);
-                            },
-                            f, std::move(e)));
+                        TFunctor_exp::template tfmap<T1, T2>(f, std::move(e)));
 }
 
-List<boxed<crane::obj>>
-TFunctor_boxedlist(const crane::fn<crane::obj(crane::obj)> &f,
-                   const List<std::pair<Nat, Exp<crane::obj>>> &l);
+struct TFunctor_boxedlist {
+  template <typename CraneA0> using T = List<boxed<CraneA0>>;
+
+  template <typename CraneA0, typename CraneA1>
+  static List<boxed<CraneA1>> tfmap(crane::fn<CraneA1(CraneA0)> f,
+                                    List<boxed<CraneA0>> l) {
+    return l.template map<boxed<CraneA1>>(
+        [=](boxed<CraneA0> _x0) -> boxed<CraneA1> {
+          return bump<CraneA0, CraneA1>(f, _x0);
+        });
+  }
+};
+
+static_assert(TFunctor<TFunctor_boxedlist>);
 
 template <typename F0>
 List<boxed<bool>> use_boxedlist(F0 &&f,
                                 const List<std::pair<Nat, Exp<Nat>>> &l) {
-  return tfmap<List<boxed<crane::obj>>, Nat, bool>(
-      [](auto &&_ec0, List<boxed<crane::obj>> _ec1) {
-        return TFunctor_boxedlist(_ec0, _ec1);
-      },
-      f, l);
+  return TFunctor_boxedlist::template tfmap<Nat, bool>(f, l);
 }
 
 #endif // INCLUDED_ALIAS_MINTED_BEFORE_ITS_BODY_TYPE

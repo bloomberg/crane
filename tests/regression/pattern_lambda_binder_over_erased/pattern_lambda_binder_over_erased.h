@@ -5,6 +5,7 @@
 #include "fn.h"
 #include "obj.h"
 #include <atomic>
+#include <concepts>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -15,6 +16,8 @@
 struct Nat;
 template <typename A> struct List;
 template <typename T> struct Exp0;
+struct TFunctor_list;
+struct TFunctor_exp;
 template <typename T> struct Phi;
 
 struct PatternLambdaBinderOverErased {
@@ -182,14 +185,20 @@ public:
   }
 };
 
-template <typename t>
-using TFunctor = crane::fn<t(crane::fn<crane::obj(crane::obj)>, t)>;
+template <typename I>
+concept TFunctor = requires {
+  typename I::template T<crane::obj>;
+  {
+    I::template tfmap<crane::obj, crane::obj>(
+        std::declval<crane::fn<crane::obj(crane::obj)>>(),
+        std::declval<typename I::template T<crane::obj>>())
+  } -> std::convertible_to<typename I::template T<crane::obj>>;
+};
 
-template <typename T1, typename T2, typename T3, typename F1>
-crane::rebind_t<T1, T3> tfmap(std::type_identity_t<TFunctor<T1>> tFunctor,
-                              F1 &&x, crane::rebind_t<T1, T2> x0) {
-  return crane_container_cast<crane::rebind_t<T1, T3>>(
-      tFunctor(crane_erase_fn(x), crane_convert<T1>(std::move(x0))));
+template <TFunctor _tcI0, typename T2, typename T3, typename F0>
+typename _tcI0::template T<T3> tfmap(F0 &&x,
+                                     typename _tcI0::template T<T2> x0) {
+  return _tcI0::template tfmap<T2, T3>(x, std::move(x0));
 }
 
 template <typename T> struct Exp0 {
@@ -244,20 +253,35 @@ public:
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
+};
 
-  template <typename F0> Exp0<crane::obj> TFunctor_exp(F0 &&f) const {
-    if (std::holds_alternative<typename Exp0<crane::obj>::Var>(this->v())) {
-      const auto &[t0] = std::get<typename Exp0<crane::obj>::Var>(this->v());
-      return Exp0<crane::obj>::var(crane_call_erased(f, t0));
+struct TFunctor_list {
+  template <typename CraneA0> using T = List<CraneA0>;
+
+  template <typename CraneA0, typename CraneA1>
+  static List<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> a0, List<CraneA0> a1) {
+    return a1.template map<CraneA1>(std::move(a0));
+  }
+};
+
+static_assert(TFunctor<TFunctor_list>);
+
+struct TFunctor_exp {
+  template <typename CraneA0> using T = Exp0<CraneA0>;
+
+  template <typename CraneA0, typename CraneA1>
+  static Exp0<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f, Exp0<CraneA0> e) {
+    if (std::holds_alternative<typename Exp0<CraneA0>::Var>(e.v())) {
+      const auto &[t0] = std::get<typename Exp0<CraneA0>::Var>(e.v());
+      return Exp0<CraneA1>::var(f(t0));
     } else {
-      const auto &[n0] = std::get<typename Exp0<crane::obj>::Lit>(this->v());
-      return Exp0<crane::obj>::lit(n0);
+      const auto &[n0] = std::get<typename Exp0<CraneA0>::Lit>(e.v());
+      return Exp0<CraneA1>::lit(n0);
     }
   }
 };
 
-List<crane::obj> TFunctor_list(const crane::fn<crane::obj(crane::obj)> &x0_,
-                               const List<crane::obj> &x1_);
+static_assert(TFunctor<TFunctor_exp>);
 
 template <typename T> struct Phi {
   // DATA
@@ -276,8 +300,22 @@ template <typename T> struct Phi {
   }
 };
 
-Phi<crane::obj> TFunctor_phi(TFunctor<Exp0<crane::obj>> h,
-                             const crane::fn<crane::obj(crane::obj)> &f,
-                             const Phi<crane::obj> &p);
+template <TFunctor _tcI0> struct TFunctor_phi {
+  template <typename CraneA0> using T = Phi<CraneA0>;
+
+  template <typename CraneA0, typename CraneA1>
+  static Phi<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f, Phi<CraneA0> p) {
+    const auto &[es0] = p;
+    return Phi<CraneA1>::phi0(
+        TFunctor_list::template tfmap<std::pair<Nat, Exp0<CraneA0>>,
+                                      std::pair<Nat, Exp0<CraneA1>>>(
+            [=](std::pair<Nat, Exp0<CraneA0>> ie) {
+              const auto &[i, e] = ie;
+              return std::make_pair(
+                  i, _tcI0::template tfmap<CraneA0, CraneA1>(f, e));
+            },
+            es0));
+  }
+};
 
 #endif // INCLUDED_PATTERN_LAMBDA_BINDER_OVER_ERASED

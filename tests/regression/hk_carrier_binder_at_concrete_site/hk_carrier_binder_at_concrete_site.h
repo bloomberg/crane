@@ -5,6 +5,7 @@
 #include "fn.h"
 #include "obj.h"
 #include <atomic>
+#include <concepts>
 #include <memory>
 #include <stdexcept>
 #include <utility>
@@ -12,7 +13,9 @@
 
 struct Nat;
 template <typename T> struct box;
+struct TFunctor_box;
 template <typename T, typename Body> struct holder;
+struct Convert_holder;
 
 struct Nat {
   // TYPES
@@ -90,14 +93,19 @@ public:
   }
 };
 
-template <typename t>
-using TFunctor = crane::fn<t(crane::fn<crane::obj(crane::obj)>, t)>;
+template <typename I>
+concept TFunctor = requires {
+  typename I::template T<crane::obj>;
+  {
+    I::template tfmap<crane::obj, crane::obj>(
+        std::declval<crane::fn<crane::obj(crane::obj)>>(),
+        std::declval<typename I::template T<crane::obj>>())
+  } -> std::convertible_to<typename I::template T<crane::obj>>;
+};
 
-template <typename T1, typename T2, typename T3, typename F1>
-crane::rebind_t<T1, T3> tfmap(std::type_identity_t<TFunctor<T1>> tFunctor,
-                              F1 &&f, crane::rebind_t<T1, T2> x) {
-  return crane_container_cast<crane::rebind_t<T1, T3>>(
-      tFunctor(crane_erase_fn(f), crane_convert<T1>(std::move(x))));
+template <TFunctor _tcI0, typename T2, typename T3, typename F0>
+typename _tcI0::template T<T3> tfmap(F0 &&f, typename _tcI0::template T<T2> x) {
+  return _tcI0::template tfmap<T2, T3>(f, std::move(x));
 }
 
 template <typename T> struct box {
@@ -116,8 +124,16 @@ template <typename T> struct box {
   }
 };
 
-box<crane::obj> TFunctor_box(const crane::fn<crane::obj(crane::obj)> &f,
-                             const box<crane::obj> &b);
+struct TFunctor_box {
+  template <typename CraneA0> using T = box<CraneA0>;
+
+  template <typename CraneA0, typename CraneA1>
+  static box<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f, box<CraneA0> b) {
+    return box<CraneA1>{f(std::move(b).b_payload)};
+  }
+};
+
+static_assert(TFunctor<TFunctor_box>);
 
 template <typename T, typename Body> struct holder {
   T h_head;
@@ -145,39 +161,43 @@ template <typename T, typename Body> struct holder {
   }
 };
 
-template <typename T1, typename F1>
-holder<crane::obj, T1> TFunctor_holder(std::type_identity_t<TFunctor<T1>> h,
-                                       F1 &&f,
-                                       const holder<crane::obj, T1> &m) {
-  return holder<crane::obj, T1>{f(m.h_head), tfmap<T1, crane::obj, crane::obj>(
-                                                 std::move(h), f, m.h_body)};
-}
-template <template <typename> class f>
-using Convert = crane::fn<f<bool>(Nat, f<Nat>)>;
+template <TFunctor _tcI0> struct TFunctor_holder {
+  template <typename CraneA0>
+  using T = holder<CraneA0, typename _tcI0::template T<CraneA0>>;
 
-template <template <typename> class T1>
-T1<bool> convert(std::type_identity_t<Convert<T1>> convert0, const Nat &x0_,
-                 T1<Nat> x1_) {
-  return crane_container_cast<T1<bool>>(convert0(x0_, std::move(x1_)));
+  template <typename CraneA0, typename CraneA1>
+  static holder<CraneA1, typename _tcI0::template T<CraneA1>>
+  tfmap(crane::fn<CraneA1(CraneA0)> f,
+        holder<CraneA0, typename _tcI0::template T<CraneA0>> m) {
+    return holder<CraneA1, typename _tcI0::template T<CraneA1>>{
+        f(m.h_head), _tcI0::template tfmap<CraneA0, CraneA1>(f, m.h_body)};
+  }
+};
+
+template <typename I>
+concept Convert = requires {
+  typename I::template F<crane::obj>;
+  {
+    I::convert(std::declval<Nat>(), std::declval<typename I::template F<Nat>>())
+  } -> std::convertible_to<typename I::template F<bool>>;
+};
+
+template <Convert _tcI0>
+typename _tcI0::template F<bool> convert(const Nat &x0_,
+                                         typename _tcI0::template F<Nat> x1_) {
+  return _tcI0::convert(x0_, std::move(x1_));
 }
 
-template <typename CraneTcArg>
-using crane_carrier_tc_c3f54f3304e568f5 = holder<CraneTcArg, box<CraneTcArg>>;
-const Convert<crane_carrier_tc_c3f54f3304e568f5> Convert_holder =
-    [](Nat n, const holder<Nat, box<Nat>> &eta0_) {
-      return tfmap<holder<crane::obj, box<crane::obj>>, Nat, bool>(
-          []() {
-            return [](crane::fn<crane::obj(crane::obj)> _x0,
-                      const auto &_x1) -> holder<crane::obj, box<crane::obj>> {
-              return TFunctor_holder<box<crane::obj>>(
-                  [](auto &&_ec0, box<crane::obj> _ec1) {
-                    return TFunctor_box(_ec0, _ec1);
-                  },
-                  _x0, crane_convert<holder<crane::obj, box<crane::obj>>>(_x1));
-            };
-          }(),
-          [=](const Nat &x) { return n.ltb(x); }, eta0_);
-    };
+struct Convert_holder {
+  template <typename CraneA0> using F = holder<CraneA0, box<CraneA0>>;
+
+  static holder<bool, box<bool>> convert(Nat n, holder<Nat, box<Nat>> a0) {
+    return TFunctor_holder<TFunctor_box>::template tfmap<Nat, bool>(
+        [=](const Nat &x) { return n.ltb(x); }, std::move(a0));
+  }
+};
+
+static_assert(Convert<Convert_holder>);
 holder<bool, box<bool>> run(const holder<Nat, box<Nat>> &m);
 
 #endif // INCLUDED_HK_CARRIER_BINDER_AT_CONCRETE_SITE

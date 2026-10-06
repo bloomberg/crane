@@ -5,6 +5,7 @@
 #include "fn.h"
 #include "obj.h"
 #include <atomic>
+#include <concepts>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -14,8 +15,10 @@
 
 struct Nat;
 template <typename A> struct List;
+struct TFunctor_list;
 struct ident;
 template <typename T> struct box;
+struct TFunctor_box;
 template <typename T, typename Body> struct pairs;
 
 struct Nat {
@@ -200,18 +203,31 @@ public:
   }
 };
 
-template <typename t>
-using TFunctor = crane::fn<t(crane::fn<crane::obj(crane::obj)>, t)>;
+template <typename I>
+concept TFunctor = requires {
+  typename I::template T<crane::obj>;
+  {
+    I::template tfmap<crane::obj, crane::obj>(
+        std::declval<crane::fn<crane::obj(crane::obj)>>(),
+        std::declval<typename I::template T<crane::obj>>())
+  } -> std::convertible_to<typename I::template T<crane::obj>>;
+};
 
-template <typename T1, typename T2, typename T3, typename F1>
-crane::rebind_t<T1, T3> tfmap(std::type_identity_t<TFunctor<T1>> tFunctor,
-                              F1 &&f, crane::rebind_t<T1, T2> x) {
-  return crane_container_cast<crane::rebind_t<T1, T3>>(
-      tFunctor(crane_erase_fn(f), crane_convert<T1>(std::move(x))));
+template <TFunctor _tcI0, typename T2, typename T3, typename F0>
+typename _tcI0::template T<T3> tfmap(F0 &&f, typename _tcI0::template T<T2> x) {
+  return _tcI0::template tfmap<T2, T3>(f, std::move(x));
 }
 
-List<crane::obj> TFunctor_list(const crane::fn<crane::obj(crane::obj)> &x0_,
-                               const List<crane::obj> &x1_);
+struct TFunctor_list {
+  template <typename CraneA0> using T = List<CraneA0>;
+
+  template <typename CraneA0, typename CraneA1>
+  static List<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> a0, List<CraneA0> a1) {
+    return a1.template map<CraneA1>(std::move(a0));
+  }
+};
+
+static_assert(TFunctor<TFunctor_list>);
 
 struct ident {
   Nat i_name;
@@ -233,8 +249,16 @@ template <typename T> struct box {
   }
 };
 
-box<crane::obj> TFunctor_box(const crane::fn<crane::obj(crane::obj)> &f,
-                             const box<crane::obj> &b);
+struct TFunctor_box {
+  template <typename CraneA0> using T = box<CraneA0>;
+
+  template <typename CraneA0, typename CraneA1>
+  static box<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f, box<CraneA0> b) {
+    return box<CraneA1>{f(std::move(b).b_payload)};
+  }
+};
+
+static_assert(TFunctor<TFunctor_box>);
 
 template <typename T, typename Body> struct pairs {
   List<std::pair<ident, T>> p_defs;
@@ -255,24 +279,25 @@ template <typename T, typename Body> struct pairs {
   }
 };
 
-template <typename T1>
-pairs<crane::obj, T1> TFunctor_pairs(std::type_identity_t<TFunctor<T1>> h,
-                                     const crane::fn<crane::obj(crane::obj)> &f,
-                                     const pairs<crane::obj, T1> &m) {
-  return pairs<crane::obj, T1>{
-      tfmap<List<crane::obj>, std::pair<ident, crane::obj>,
-            std::pair<ident, crane::obj>>(
-          [](auto &&_ec0, List<crane::obj> _ec1) {
-            return TFunctor_list(_ec0, _ec1);
-          },
-          [=](std::pair<ident, crane::obj> pat) {
-            const auto &[id, t] = pat;
-            return std::make_pair(crane::any_cast<ident>(id),
-                                  crane_call_erased(f, t));
-          },
-          m.p_defs),
-      tfmap<T1, crane::obj, crane::obj>(std::move(h), f, m.p_body)};
-}
+template <TFunctor _tcI0> struct TFunctor_pairs {
+  template <typename CraneA0>
+  using T = pairs<CraneA0, typename _tcI0::template T<CraneA0>>;
+
+  template <typename CraneA0, typename CraneA1>
+  static pairs<CraneA1, typename _tcI0::template T<CraneA1>>
+  tfmap(crane::fn<CraneA1(CraneA0)> f,
+        pairs<CraneA0, typename _tcI0::template T<CraneA0>> m) {
+    return pairs<CraneA1, typename _tcI0::template T<CraneA1>>{
+        TFunctor_list::template tfmap<std::pair<ident, CraneA0>,
+                                      std::pair<ident, CraneA1>>(
+            [=](std::pair<ident, CraneA0> pat) {
+              const auto &[id, t] = pat;
+              return std::make_pair(id, f(t));
+            },
+            m.p_defs),
+        _tcI0::template tfmap<CraneA0, CraneA1>(f, m.p_body)};
+  }
+};
 
 pairs<bool, box<bool>> run(const pairs<Nat, box<Nat>> &m);
 

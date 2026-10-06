@@ -5,6 +5,7 @@
 #include "fn.h"
 #include "obj.h"
 #include <atomic>
+#include <concepts>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -225,29 +226,49 @@ public:
   }
 };
 
+template <typename I>
+concept TFunctor = requires {
+  typename I::template T<crane::obj>;
+  {
+    I::template tfmap<crane::obj, crane::obj>(
+        std::declval<crane::fn<crane::obj(crane::obj)>>(),
+        std::declval<typename I::template T<crane::obj>>())
+  } -> std::convertible_to<typename I::template T<crane::obj>>;
+};
+
 struct TfunctorListOfTriples {
-  template <typename t>
-  using TFunctor = crane::fn<t(crane::fn<crane::obj(crane::obj)>, t)>;
-
-  template <typename T1, typename T2, typename T3, typename F1>
-  static crane::rebind_t<T1, T3>
-  tfmap(std::type_identity_t<TFunctor<T1>> tFunctor, F1 &&f,
-        crane::rebind_t<T1, T2> x) {
-    return crane_container_cast<crane::rebind_t<T1, T3>>(
-        tFunctor(crane_erase_fn(f), crane_convert<T1>(std::move(x))));
+  template <TFunctor _tcI0, typename T2, typename T3, typename F0>
+  static typename _tcI0::template T<T3>
+  tfmap(F0 &&f, typename _tcI0::template T<T2> x) {
+    return _tcI0::template tfmap<T2, T3>(f, std::move(x));
   }
 
-  static List<crane::obj>
-  TFunctor_list(const crane::fn<crane::obj(crane::obj)> &x0_,
-                const List<crane::obj> &x1_);
+  struct TFunctor_list {
+    template <typename CraneA0> using T = List<CraneA0>;
 
-  template <typename T1, typename F1>
-  static List<T1> TFunctor_list_(std::type_identity_t<TFunctor<T1>> h, F1 &&f,
-                                 List<T1> x0_) {
-    return std::move(x0_).template map<T1>([=](T1 _x0) -> T1 {
-      return tfmap<T1, crane::obj, crane::obj>(h, f, _x0);
-    });
-  }
+    template <typename CraneA0, typename CraneA1>
+    static List<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> a0,
+                               List<CraneA0> a1) {
+      return a1.template map<CraneA1>(std::move(a0));
+    }
+  };
+
+  static_assert(TFunctor<TFunctor_list>);
+
+  template <TFunctor _tcI0> struct TFunctor_list_ {
+    template <typename CraneA0>
+    using T = List<typename _tcI0::template T<CraneA0>>;
+
+    template <typename CraneA0, typename CraneA1>
+    static List<typename _tcI0::template T<CraneA1>>
+    tfmap(crane::fn<CraneA1(CraneA0)> f,
+          List<typename _tcI0::template T<CraneA0>> a0) {
+      return a0.template map<typename _tcI0::template T<CraneA1>>(
+          [=](typename _tcI0::template T<CraneA0> a1) {
+            return _tcI0::template tfmap<CraneA0, CraneA1>(f, a1);
+          });
+    }
+  };
 
   template <typename T> struct phi {
     // DATA
@@ -326,15 +347,55 @@ struct TfunctorListOfTriples {
     }
   };
 
-  static phi<crane::obj>
-  TFunctor_phi(const crane::fn<crane::obj(crane::obj)> &f,
-               const phi<crane::obj> &p);
-  static metadata<crane::obj>
-  TFunctor_md(const crane::fn<crane::obj(crane::obj)> &f,
-              const metadata<crane::obj> &p);
-  static block<crane::obj>
-  TFunctor_block(const crane::fn<crane::obj(crane::obj)> &f,
-                 const block<crane::obj> &b);
+  struct TFunctor_phi {
+    template <typename CraneA0> using T = phi<CraneA0>;
+
+    template <typename CraneA0, typename CraneA1>
+    static phi<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f, phi<CraneA0> p) {
+      const auto &[t0] = p;
+      return phi<CraneA1>::phi0(f(t0));
+    }
+  };
+
+  static_assert(TFunctor<TFunctor_phi>);
+
+  struct TFunctor_md {
+    template <typename CraneA0> using T = metadata<CraneA0>;
+
+    template <typename CraneA0, typename CraneA1>
+    static metadata<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f,
+                                   metadata<CraneA0> p) {
+      const auto &[t0] = p;
+      return metadata<CraneA1>::md(f(t0));
+    }
+  };
+
+  static_assert(TFunctor<TFunctor_md>);
+
+  struct TFunctor_block {
+    template <typename CraneA0> using T = block<CraneA0>;
+
+    template <typename CraneA0, typename CraneA1>
+    static block<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f,
+                                block<CraneA0> b) {
+      return block<CraneA1>{TFunctor_list::template tfmap<
+          std::pair<std::pair<Nat, phi<CraneA0>>, List<metadata<CraneA0>>>,
+          std::pair<std::pair<Nat, phi<CraneA1>>, List<metadata<CraneA1>>>>(
+          [=](const std::pair<std::pair<Nat, phi<CraneA0>>,
+                              List<metadata<CraneA0>>> &pat) {
+            const auto &[y, md] = pat;
+            const auto &[id, p] = y;
+            return std::make_pair(
+                std::make_pair(
+                    id, TFunctor_phi::template tfmap<CraneA0, CraneA1>(f, p)),
+                TFunctor_list_<TFunctor_md>::template tfmap<CraneA0, CraneA1>(
+                    f, md));
+          },
+          std::move(b).blk_phis)};
+    }
+  };
+
+  static_assert(TFunctor<TFunctor_block>);
   static inline const block<Nat> b0 = block<
       Nat>{List<std::pair<std::pair<Nat, phi<Nat>>, List<metadata<Nat>>>>::cons(
       std::make_pair(std::make_pair(Nat::s(Nat::o()),
@@ -344,10 +405,7 @@ struct TfunctorListOfTriples {
                              Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))),
                          List<metadata<Nat>>::nil())),
       List<std::pair<std::pair<Nat, phi<Nat>>, List<metadata<Nat>>>>::nil())};
-  static inline const block<Nat> b1 = tfmap<block<crane::obj>, Nat, Nat>(
-      [](auto &&_ec0, block<crane::obj> _ec1) {
-        return TFunctor_block(_ec0, _ec1);
-      },
+  static inline const block<Nat> b1 = TFunctor_block::template tfmap<Nat, Nat>(
       [](const Nat &x) { return Nat::s(x); }, b0);
   static inline const Nat total = []() {
     auto &&_sv = b1.blk_phis;

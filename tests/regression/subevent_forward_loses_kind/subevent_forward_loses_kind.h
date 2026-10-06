@@ -2,9 +2,9 @@
 #define INCLUDED_SUBEVENT_FORWARD_LOSES_KIND
 
 #include "crane_fn.h"
-#include "fn.h"
 #include "obj.h"
 #include <atomic>
+#include <concepts>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -188,13 +188,19 @@ template <typename A> struct UBE {
   static UBE<A> throwub(Unit a0) { return {a0}; }
 };
 
-template <typename f, typename g> using Sub = crane::fn<g(f)>;
+template <typename I>
+concept Sub = requires {
+  typename I::template F<crane::obj>;
+  typename I::template G<crane::obj>;
+  {
+    I::template inj<crane::obj>(
+        std::declval<typename I::template F<crane::obj>>())
+  } -> std::convertible_to<typename I::template G<crane::obj>>;
+};
 
-template <typename T1, typename T2, typename T3>
-crane::rebind_t<T2, T3> inj(std::type_identity_t<Sub<T1, T2>> sub,
-                            crane::rebind_t<T1, T3> x) {
-  return crane_container_cast<crane::rebind_t<T2, T3>>(
-      sub(crane_convert<T1>(std::move(x))));
+template <Sub _tcI0, typename T3>
+typename _tcI0::template G<T3> inj(typename _tcI0::template F<T3> x) {
+  return _tcI0::template inj<T3>(std::move(x));
 }
 
 template <typename T1 = void, typename T2, typename CraneP0>
@@ -203,15 +209,22 @@ List<T2> trigger_cast(CraneP0) {
 }
 
 struct SubeventForwardLosesKind {
-  template <typename T1, typename T2>
-  static List<T2> raiseUB(std::type_identity_t<Sub<UBE<crane::obj>, T1>> s) {
-    return trigger_cast<void, T2>(inj<UBE<crane::obj>, T1, Nat>(
-        std::move(s), UBE<crane::obj>::throwub(Unit::TT)));
+  template <Sub _tcI0, typename T2> static List<T2> raiseUB() {
+    return trigger_cast<void, T2>(
+        _tcI0::template inj<Nat>(UBE<crane::obj>::throwub(Unit::TT)));
   }
 
-  static UBE<crane::obj> sub_refl(UBE<crane::obj> e);
-  static inline const Nat run =
-      raiseUB<UBE<crane::obj>, Nat>(sub_refl).length();
+  struct sub_refl {
+    template <typename CraneA0> using F = UBE<CraneA0>;
+    template <typename CraneA0> using G = UBE<CraneA0>;
+
+    template <typename CraneA0> static UBE<CraneA0> inj(UBE<CraneA0> e) {
+      return e;
+    }
+  };
+
+  static_assert(Sub<sub_refl>);
+  static inline const Nat run = raiseUB<sub_refl, Nat>().length();
 };
 
 #endif // INCLUDED_SUBEVENT_FORWARD_LOSES_KIND

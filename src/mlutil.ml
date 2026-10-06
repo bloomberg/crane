@@ -195,7 +195,9 @@ and eq_ml_meta m1 m2 =
     would apply the family a second time when it is applied for real:
     [sum1 (CE _) (FailE _) _] nested in [CE +' FailE +' ...] became
     [Sum1<CE, FailE, X, X>].  [~generated:false] says the head is such a
-    mapping. *)
+    mapping.  Its own arguments' placeholders are nested; a hole standing as
+    one of its arguments, short of the trailing run, can only be the binder:
+    [fun T => T * box T] arrives as [prod[_, box[_]]]. *)
 let type_has_hole = exists_ml_type (function Tunknown -> true | _ -> false)
 
 (* Sees through a resolved meta, as [type_has_hole] does: one that answered
@@ -207,9 +209,9 @@ let rec drop_placeholders rpre n =
   | Tunknown :: rest, n when n > 0 -> drop_placeholders rest (n - 1)
   | _ -> rpre
 
-let writes_binder args =
-  List.exists type_has_hole
-    (drop_placeholders (List.rev args) (List.length args))
+let writes_binder ?(generated = true) args =
+  let binder = if generated then type_has_hole else ( = ) Tunknown in
+  List.exists binder (drop_placeholders (List.rev args) (List.length args))
 
 let fill_placeholders ?(generated = true) pre args =
   let kept = List.rev (drop_placeholders (List.rev pre) (List.length args)) in
@@ -222,7 +224,7 @@ let fill_placeholders ?(generated = true) pre args =
      application is a fill of every occurrence at once, and one argument is
      all such a spelling can say where to put. *)
   match args with
-  | [arg] when generated && writes_binder pre ->
+  | [arg] when writes_binder ~generated pre ->
     List.map (fill_type_hole arg) pre
   | _ -> kept @ args
 
@@ -886,6 +888,20 @@ let rec ast_map_types f = function
     | MLuint _
     | MLfloat _
     | MLstring _ ) as a -> a
+
+let freshen_metas e =
+  let copies = Hashtbl.create 8 in
+  let fresh = function
+    | Tmeta {contents = None; id} -> (
+      match Hashtbl.find_opt copies id with
+      | Some m -> m
+      | None ->
+        let m = new_meta () in
+        Hashtbl.add copies id m;
+        m )
+    | t -> t
+  in
+  ast_map_types (map_ml_type fresh) e
 
 (** [has_unknown t] — whether [t] mentions {!Tunknown} anywhere.
 

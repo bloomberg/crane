@@ -213,7 +213,7 @@ type hkt_tvar_position = {
 }
 
 (** Type variables standing for a higher-kinded class parameter. *)
-val hkt_tvar_positions_of_type : ml_type -> hkt_tvar_position list
+val hkt_tvar_positions_of_type : ?source_order:bool -> ml_type -> hkt_tvar_position list
 
 (** Whether a declaration of this ML type is emitted as returning [void]: its
     result, after the arrows and a monad's result argument, is [unit] -- and

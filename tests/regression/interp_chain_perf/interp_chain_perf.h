@@ -21,6 +21,7 @@ template <typename E, typename R, typename itree> struct ItreeF;
 template <typename E, typename R> struct Itree;
 template <typename T1> struct Functor_itree;
 template <typename T1> struct Monad_itree;
+template <typename T1> struct MonadIter_itree;
 template <typename I>
 concept Functor = requires {
   typename I::template F<crane::obj>;
@@ -383,66 +384,88 @@ struct Monads {
     }
   };
 };
-template <template <typename> class m>
-using MonadIter = crane::fn<m<crane::obj>(
-    crane::fn<m<Sum<crane::obj, crane::obj>>(crane::obj)>, crane::obj)>;
 
-template <template <typename> class T1, typename T2, typename T3, typename F1>
-T1<T2> iter0(std::type_identity_t<MonadIter<T1>> monadIter, F1 &&x,
-             const T3 &x0) {
-  return crane_container_cast<T1<T2>>(
-      monadIter(crane_erase_fn<T1<Sum<crane::obj, crane::obj>>>(x), x0));
+template <typename I>
+concept MonadIter = requires {
+  typename I::template M<crane::obj>;
+  {
+    I::template iter<crane::obj, crane::obj>(
+        std::declval<crane::fn<
+            typename I::template M<Sum<crane::obj, crane::obj>>(crane::obj)>>(),
+        std::declval<crane::obj>())
+  } -> std::convertible_to<typename I::template M<crane::obj>>;
+};
+
+template <MonadIter _tcI0, typename T2, typename T3, typename F0>
+typename _tcI0::template M<T2> iter(F0 &&x, const T3 &x0) {
+  return _tcI0::template iter<T2, T3>(x, x0);
 }
 
-template <Monad _tcI0, typename T2>
-Monads::template stateT<T2, _tcI0::template m, crane::obj> MonadIter_stateT0(
-    std::type_identity_t<MonadIter<_tcI0::template m>> aM,
-    std::type_identity_t<crane::fn<Monads::template stateT<
-        T2, _tcI0::template m, Sum<crane::obj, crane::obj>>(crane::obj)>>
-        step,
-    crane::obj i) {
-  return [=](const T2 &s) {
-    return iter0<_tcI0::template m, std::pair<T2, crane::obj>,
-                 std::pair<T2, crane::obj>>(
-        aM,
-        [=](const std::pair<T2, crane::obj> &si) {
-          T2 s0 = si.first;
-          auto i0 = si.second;
-          return Monad0::template bind<
-              _tcI0, std::pair<T2, Sum<crane::obj, crane::obj>>,
-              Sum<std::pair<T2, crane::obj>, std::pair<T2, crane::obj>>>(
-              step(i0)(s0),
-              [](const std::pair<T2, Sum<crane::obj, crane::obj>> &si_) {
-                return Monad0::template ret<
-                    _tcI0,
-                    Sum<std::pair<T2, crane::obj>, std::pair<T2, crane::obj>>>(
-                    [&]() {
-                      auto &&_sv = si_.second;
-                      if (std::holds_alternative<
-                              typename Sum<crane::obj, crane::obj>::Inl>(
-                              _sv.v())) {
-                        const auto &[a0] =
-                            std::get<typename Sum<crane::obj, crane::obj>::Inl>(
-                                _sv.v());
-                        return Sum<std::pair<T2, crane::obj>,
-                                   std::pair<T2, crane::obj>>::
-                            inl(std::make_pair(si_.first,
-                                               crane_any_cast<crane::obj>(a0)));
-                      } else {
-                        const auto &[a0] =
-                            std::get<typename Sum<crane::obj, crane::obj>::Inr>(
-                                _sv.v());
-                        return Sum<std::pair<T2, crane::obj>,
-                                   std::pair<T2, crane::obj>>::
-                            inr(std::make_pair(si_.first,
-                                               crane_any_cast<crane::obj>(a0)));
-                      }
-                    }());
-              });
-        },
-        std::make_pair(s, i));
-  };
-}
+template <Monad _tcI0, MonadIter _tcI1, typename T1> struct MonadIter_stateT0 {
+  template <typename CraneA0> using m = typename _tcI0::template m<CraneA0>;
+  template <typename CraneA0>
+  using M = typename Monads::template stateT<T1, _tcI1::template M, CraneA0>;
+
+  template <typename CraneA0, typename CraneA1>
+  static typename Monads::template stateT<T1, _tcI1::template M, CraneA0>
+  iter(crane::fn<typename Monads::template stateT<
+           T1, _tcI1::template M, Sum<CraneA1, CraneA0>>(CraneA1)>
+           step,
+       CraneA1 i) {
+    return [=](const T1 &s) {
+      return _tcI1::template iter<std::pair<T1, CraneA0>,
+                                  std::pair<T1, CraneA1>>(
+          [=](const std::pair<T1, CraneA1> &si) {
+            T1 s0 = si.first;
+            CraneA1 i0 = si.second;
+            return Monad0::template bind<
+                _tcI0, std::pair<T1, Sum<CraneA1, CraneA0>>,
+                Sum<std::pair<T1, CraneA1>, std::pair<T1, CraneA0>>>(
+                step(i0)(s0),
+                [](const std::pair<T1, Sum<CraneA1, CraneA0>> &si_) {
+                  return Monad0::template ret<
+                      _tcI0, Sum<std::pair<T1, CraneA1>,
+                                 std::pair<T1, CraneA0>>>([&]() {
+                    auto &&_sv = si_.second;
+                    if (std::holds_alternative<
+                            typename Sum<CraneA1, CraneA0>::Inl>(_sv.v())) {
+                      const auto &[a0] =
+                          std::get<typename Sum<CraneA1, CraneA0>::Inl>(
+                              _sv.v());
+                      return Sum<
+                          std::pair<T1, CraneA1>,
+                          std::pair<T1, CraneA0>>::inl(std::make_pair(si_.first,
+                                                                      a0));
+                    } else {
+                      const auto &[a0] =
+                          std::get<typename Sum<CraneA1, CraneA0>::Inr>(
+                              _sv.v());
+                      return Sum<
+                          std::pair<T1, CraneA1>,
+                          std::pair<T1, CraneA0>>::inr(std::make_pair(si_.first,
+                                                                      a0));
+                    }
+                  }());
+                });
+          },
+          std::make_pair(s, i));
+    };
+  }
+};
+
+template <typename e, typename f> using IFun = crane::fn<f(e)>;
+
+struct Function {
+  static crane::obj Id_IFun(crane::obj e);
+  static crane::obj Cat_IFun(IFun<crane::obj, crane::obj> f1,
+                             IFun<crane::obj, crane::obj> f2, crane::obj e);
+  template <typename T1, typename T2, typename T4, typename F0, typename F1>
+  static std::invoke_result_t<F0 &, crane::rebind_t<T1, T4> &>
+  case_sum1(F0 &&f, F1 &&g, const Sum1<T1, T2, T4> &ab);
+  static crane::obj Case_sum1(IFun<crane::obj, crane::obj> x,
+                              IFun<crane::obj, crane::obj> x0, crane::obj x1);
+  static crane::obj Inl_sum1(crane::obj x);
+};
 
 template <typename E, typename R, typename itree> struct ItreeF {
   // TYPES
@@ -711,33 +734,15 @@ template <typename T1> struct Monad_itree {
   }
 };
 
-template <typename T1, typename F0>
-Itree<T1, crane::obj> MonadIter_itree(F0 &&x0_, crane::obj x1_) {
-  return ITree::template iter<T1, crane::obj, crane::obj>(x0_, x1_);
-}
+template <typename T1> struct MonadIter_itree {
+  template <typename CraneA0> using M = Itree<T1, CraneA0>;
 
-template <typename e, typename f> using IFun = crane::fn<f(e)>;
-
-struct Function {
-  static crane::obj Id_IFun(crane::obj e);
-  static crane::obj Cat_IFun(IFun<crane::obj, crane::obj> f1,
-                             IFun<crane::obj, crane::obj> f2, crane::obj e);
-  template <typename T1, typename T2, typename T4, typename F0, typename F1>
-  static std::invoke_result_t<F0 &, crane::rebind_t<T1, T4> &>
-  case_sum1(F0 &&f, F1 &&g, const Sum1<T1, T2, T4> &ab);
-  static crane::obj Case_sum1(IFun<crane::obj, crane::obj> x,
-                              IFun<crane::obj, crane::obj> x0, crane::obj x1);
-  static crane::obj Inl_sum1(crane::obj x);
-};
-
-struct Interp {
-  template <Monad _tcI0, Functor _tcI1, typename T1, typename T3>
-  static typename _tcI0::template m<T3>
-  interp(std::type_identity_t<MonadIter<_tcI0::template m>> iM,
-         std::type_identity_t<
-             crane::fn<typename _tcI0::template m<crane::obj>(T1)>>
-             h0,
-         Itree<T1, T3> x0_);
+  template <typename CraneA0, typename CraneA1>
+  static Itree<T1, CraneA0>
+  iter(crane::fn<Itree<T1, Sum<CraneA1, CraneA0>>(CraneA1)> a0, CraneA1 a1) {
+    return ITree::template iter<T1, CraneA0, CraneA1>(std::move(a0),
+                                                      std::move(a1));
+  }
 };
 
 struct Subevent {
@@ -747,12 +752,22 @@ struct Subevent {
            crane::rebind_t<T1, T3> x);
 };
 
+struct Interp {
+  template <MonadIter _tcI0, Monad _tcI1, Functor _tcI2, typename T1,
+            typename T3>
+  static typename _tcI0::template M<T3>
+  interp(std::type_identity_t<
+             crane::fn<typename _tcI0::template M<crane::obj>(T1)>>
+             h0,
+         Itree<T1, T3> x0_);
+};
+
 struct State {
-  template <Monad _tcI0, Functor _tcI1, typename T1, typename T3, typename T4>
-  static Monads::template stateT<T3, _tcI0::template m, T4> interp_state(
-      std::type_identity_t<MonadIter<_tcI0::template m>> iM,
+  template <MonadIter _tcI0, Monad _tcI1, Functor _tcI2, typename T1,
+            typename T3, typename T4>
+  static Monads::template stateT<T3, _tcI0::template M, T4> interp_state(
       std::type_identity_t<crane::fn<
-          Monads::template stateT<T3, _tcI0::template m, crane::obj>(T1)>>
+          Monads::template stateT<T3, _tcI0::template M, crane::obj>(T1)>>
           h0,
       Itree<T1, T4> x);
 };
@@ -971,33 +986,39 @@ Function::case_sum1(F0 &&f, F1 &&g, const Sum1<T1, T2, T4> &ab) {
   }
 }
 
-template <Monad _tcI0, Functor _tcI1, typename T1, typename T3>
-typename _tcI0::template m<T3> Interp::interp(
-    std::type_identity_t<MonadIter<_tcI0::template m>> iM,
-    std::type_identity_t<crane::fn<typename _tcI0::template m<crane::obj>(T1)>>
+template <typename T1, typename T2, typename T3>
+crane::rebind_t<T2, T3>
+Subevent::subevent(ReSum<crane::obj, IFun<crane::obj, crane::obj>> h0,
+                   crane::rebind_t<T1, T3> x) {
+  return crane_any_cast<crane::rebind_t<T2, T3>>(
+      CategoryOps::resum(crane::obj(), crane::obj(), h0)(std::move(x)));
+}
+
+template <MonadIter _tcI0, Monad _tcI1, Functor _tcI2, typename T1, typename T3>
+typename _tcI0::template M<T3> Interp::interp(
+    std::type_identity_t<crane::fn<typename _tcI0::template M<crane::obj>(T1)>>
         h0,
     Itree<T1, T3> x0_) {
-  return ::template iter0<_tcI0::template m, T3, Itree<T1, T3>>(
-      std::move(iM),
+  return _tcI0::template iter<T3, Itree<T1, T3>>(
       [=](const Itree<T1, T3> &t) ->
-      typename _tcI0::template m<Sum<Itree<T1, T3>, T3>> {
+      typename _tcI0::template M<Sum<Itree<T1, T3>, T3>> {
         auto &&_sv = t.observe();
         if (std::holds_alternative<
                 typename ItreeF<T1, T3, Itree<T1, T3>>::RetF>(_sv.v())) {
           const auto &[r0] =
               std::get<typename ItreeF<T1, T3, Itree<T1, T3>>::RetF>(_sv.v());
-          return Monad0::template ret<_tcI0, Sum<Itree<T1, T3>, T3>>(
+          return Monad0::template ret<_tcI1, Sum<Itree<T1, T3>, T3>>(
               Sum<Itree<T1, T3>, T3>::inr(r0));
         } else if (std::holds_alternative<
                        typename ItreeF<T1, T3, Itree<T1, T3>>::TauF>(_sv.v())) {
           const auto &[t1] =
               std::get<typename ItreeF<T1, T3, Itree<T1, T3>>::TauF>(_sv.v());
-          return Monad0::template ret<_tcI0, Sum<Itree<T1, T3>, T3>>(
+          return Monad0::template ret<_tcI1, Sum<Itree<T1, T3>, T3>>(
               Sum<Itree<T1, T3>, T3>::inl(t1));
         } else {
           const auto &[x, e0] =
               std::get<typename ItreeF<T1, T3, Itree<T1, T3>>::VisF>(_sv.v());
-          return Functor0::template fmap<_tcI1, crane::obj,
+          return Functor0::template fmap<_tcI2, crane::obj,
                                          Sum<Itree<T1, T3>, T3>>(
               [=](const auto &x0) {
                 return Sum<Itree<T1, T3>, T3>::inl(e0(x0));
@@ -1008,40 +1029,19 @@ typename _tcI0::template m<T3> Interp::interp(
       x0_);
 }
 
-template <typename T1, typename T2, typename T3>
-crane::rebind_t<T2, T3>
-Subevent::subevent(ReSum<crane::obj, IFun<crane::obj, crane::obj>> h0,
-                   crane::rebind_t<T1, T3> x) {
-  return crane_any_cast<crane::rebind_t<T2, T3>>(
-      CategoryOps::resum(crane::obj(), crane::obj(), h0)(std::move(x)));
-}
-
-template <Monad _tcI0, Functor _tcI1, typename T1, typename T3, typename T4>
-Monads::template stateT<T3, _tcI0::template m, T4> State::interp_state(
-    std::type_identity_t<MonadIter<_tcI0::template m>> iM,
+template <MonadIter _tcI0, Monad _tcI1, Functor _tcI2, typename T1, typename T3,
+          typename T4>
+Monads::template stateT<T3, _tcI0::template M, T4> State::interp_state(
     std::type_identity_t<crane::fn<
-        Monads::template stateT<T3, _tcI0::template m, crane::obj>(T1)>>
+        Monads::template stateT<T3, _tcI0::template M, crane::obj>(T1)>>
         h0,
     Itree<T1, T4> x) {
   return [=](const T3 &x0) {
-    return crane_any_cast<typename _tcI0::template m<std::pair<T3, T4>>>(
-        Interp::template interp<Monads::template Monad_stateT<_tcI0, T3>,
-                                Monads::template Functor_stateT<_tcI1, T3>, T1,
-                                T4>(
-            [=]() {
-              return
-                  [=](crane::fn<Monads::template stateT<
-                          T3, _tcI0::template m, Sum<crane::obj, crane::obj>>(
-                          crane::obj)>
-                          _x0,
-                      crane::obj _x1)
-                      -> Monads::template stateT<T3, _tcI0::template m,
-                                                 crane::obj> {
-                    return ::template MonadIter_stateT0<_tcI0, T3>(iM, _x0,
-                                                                   _x1);
-                  };
-            }(),
-            h0, x)(x0));
+    return crane_any_cast<typename _tcI0::template M<std::pair<T3, T4>>>(
+        Interp::template interp<MonadIter_stateT0<_tcI1, _tcI0, T3>,
+                                Monads::template Monad_stateT<_tcI1, T3>,
+                                Monads::template Functor_stateT<_tcI2, T3>, T1,
+                                T4>(h0, x)(x0));
   };
 }
 

@@ -154,8 +154,10 @@ val type_has_hole : ml_type -> bool
     run of placeholders.  That run is eta-expansion, which the next argument
     replaces; a hole anywhere else is the binder of a type-level lambda --
     [fun Z => EOU (MaybePoison Z)] arrives as [EOU (MaybePoison _)] -- and
-    applying it fills every occurrence. *)
-val writes_binder : ml_type list -> bool
+    applying it fills every occurrence.  [~generated:false], for a mapped
+    head, counts only a hole standing as an argument itself: a nested one is
+    the argument's own placeholder (see {!fill_placeholders}). *)
+val writes_binder : ?generated:bool -> ml_type list -> bool
 
 (** [fill_type_hole a t] is [t] with its [Tunknown] holes filled by [a]: the
     type-level lambda {!type_has_hole} recognises, applied to [a]. *)
@@ -360,6 +362,11 @@ val map_magic_types : (ml_type -> ml_type) -> ml_magic -> ml_magic
 (** [ast_map_types f a] rewrites every [ml_type] embedded in [a] with [f],
     recursing through the whole term. *)
 val ast_map_types : (ml_type -> ml_type) -> ml_ast -> ml_ast
+
+(** [e] with each of its open metavariables replaced by a fresh one, the same
+    one wherever [e] shares it: a pass that fills holes in the copy, as type
+    recovery does, then leaves [e] itself as it was for the next pass. *)
+val freshen_metas : ml_ast -> ml_ast
 
 (** [has_unknown t] — whether [t] mentions [Tunknown], the marker extraction
     leaves where a type was erased. *)

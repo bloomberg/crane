@@ -1173,21 +1173,26 @@ let rec pp_structure_elem ~is_header f = function
                        match ind.ind_kind with
                        | TypeClass fields ->
                          let ind_ref = GlobRef.IndRef (kn, i) in
-                         let packet = ind.ind_packets.(i) in
                          let concept_pp, mentions_outer =
                            watching_for_reference_to
                              (Pp.string_of_ppcmds name)
                            @@ fun () ->
                            render_decl
                              (empty_env ())
-                             (Gen_decls.gen_typeclass_cpp
-                                ind_ref
-                                fields
-                                packet )
+                             (Gen_decls.gen_typeclass_cpp ind_ref fields)
                          in
                          let doc = pp_doc_comment l in
                          [(HCclass ind_ref, doc ++ concept_pp, mentions_outer)]
                        | _ -> [] ) )
+                (* A singleton class is declared as its method's type, and
+                   becomes a concept all the same. *)
+                | SEdecl (Dtype (r, _, _)) when Table.singleton_class_method r <> None ->
+                  let concept_pp, mentions_outer =
+                    watching_for_reference_to (Pp.string_of_ppcmds name) @@ fun () ->
+                    render_decl (empty_env ())
+                      (Gen_decls.gen_typeclass_cpp r (Table.get_record_field_bindings r))
+                  in
+                  [(HCclass r, pp_doc_comment l ++ concept_pp, mentions_outer)]
                 | _ -> [] )
               sel
           else

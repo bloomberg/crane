@@ -68,8 +68,7 @@ val gen_record_cpp :
   GlobRef.t -> Miniml.record_field list -> ml_ind_packet -> cpp_decl
 
 (** Generate C++ concept for a type class. *)
-val gen_typeclass_cpp :
-  GlobRef.t -> Miniml.record_field list -> ml_ind_packet -> cpp_decl
+val gen_typeclass_cpp : GlobRef.t -> Miniml.record_field list -> cpp_decl
 
 (** Generate C++ header for an inductive type (v2 style: encapsulated struct
     with methods).

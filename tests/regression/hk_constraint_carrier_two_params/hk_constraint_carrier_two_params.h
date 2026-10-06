@@ -5,6 +5,7 @@
 #include "fn.h"
 #include "obj.h"
 #include <atomic>
+#include <concepts>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -14,6 +15,7 @@
 
 struct Nat;
 template <typename A> struct List;
+struct TFunctor_list;
 template <typename T, typename Body> struct two;
 template <typename T, typename Body> struct outer1;
 
@@ -182,18 +184,31 @@ public:
   }
 };
 
-template <typename t>
-using TFunctor = crane::fn<t(crane::fn<crane::obj(crane::obj)>, t)>;
+template <typename I>
+concept TFunctor = requires {
+  typename I::template T<crane::obj>;
+  {
+    I::template tfmap<crane::obj, crane::obj>(
+        std::declval<crane::fn<crane::obj(crane::obj)>>(),
+        std::declval<typename I::template T<crane::obj>>())
+  } -> std::convertible_to<typename I::template T<crane::obj>>;
+};
 
-template <typename T1, typename T2, typename T3, typename F1>
-crane::rebind_t<T1, T3> tfmap(std::type_identity_t<TFunctor<T1>> tFunctor,
-                              F1 &&f, crane::rebind_t<T1, T2> x) {
-  return crane_container_cast<crane::rebind_t<T1, T3>>(
-      tFunctor(crane_erase_fn(f), crane_convert<T1>(std::move(x))));
+template <TFunctor _tcI0, typename T2, typename T3, typename F0>
+typename _tcI0::template T<T3> tfmap(F0 &&f, typename _tcI0::template T<T2> x) {
+  return _tcI0::template tfmap<T2, T3>(f, std::move(x));
 }
 
-List<crane::obj> TFunctor_list(const crane::fn<crane::obj(crane::obj)> &x0_,
-                               const List<crane::obj> &x1_);
+struct TFunctor_list {
+  template <typename CraneA0> using T = List<CraneA0>;
+
+  template <typename CraneA0, typename CraneA1>
+  static List<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> a0, List<CraneA0> a1) {
+    return a1.template map<CraneA1>(std::move(a0));
+  }
+};
+
+static_assert(TFunctor<TFunctor_list>);
 
 template <typename T, typename Body> struct two {
   T t_head;
@@ -221,12 +236,18 @@ template <typename T, typename Body> struct two {
   }
 };
 
-template <typename T1, typename F1>
-two<crane::obj, T1> TFunctor_two(std::type_identity_t<TFunctor<T1>> h, F1 &&f,
-                                 const two<crane::obj, T1> &p) {
-  return two<crane::obj, T1>{f(p.t_head), tfmap<T1, crane::obj, crane::obj>(
-                                              std::move(h), f, p.t_body)};
-}
+template <TFunctor _tcI0> struct TFunctor_two {
+  template <typename CraneA0>
+  using T = two<CraneA0, typename _tcI0::template T<CraneA0>>;
+
+  template <typename CraneA0, typename CraneA1>
+  static two<CraneA1, typename _tcI0::template T<CraneA1>>
+  tfmap(crane::fn<CraneA1(CraneA0)> f,
+        two<CraneA0, typename _tcI0::template T<CraneA0>> p) {
+    return two<CraneA1, typename _tcI0::template T<CraneA1>>{
+        f(p.t_head), _tcI0::template tfmap<CraneA0, CraneA1>(f, p.t_body)};
+  }
+};
 
 template <typename T, typename Body> struct outer1 {
   Body o_inner;
@@ -245,14 +266,18 @@ template <typename T, typename Body> struct outer1 {
   }
 };
 
-template <typename T1, typename F2>
-outer1<crane::obj, two<crane::obj, T1>>
-TFunctor_outer1(std::type_identity_t<TFunctor<T1>>,
-                std::type_identity_t<TFunctor<two<crane::obj, T1>>> h0, F2 &&f,
-                const outer1<crane::obj, two<crane::obj, T1>> &m) {
-  return outer1<crane::obj, two<crane::obj, T1>>{
-      tfmap<two<crane::obj, crane::obj>, crane::obj, crane::obj>(std::move(h0),
-                                                                 f, m.o_inner)};
-}
+template <TFunctor _tcI0, TFunctor _tcI1> struct TFunctor_outer1 {
+  template <typename CraneA0>
+  using T = outer1<CraneA0, two<CraneA0, typename _tcI0::template T<CraneA0>>>;
+
+  template <typename CraneA0, typename CraneA1>
+  static outer1<CraneA1, two<CraneA1, typename _tcI0::template T<CraneA1>>>
+  tfmap(crane::fn<CraneA1(CraneA0)> f,
+        outer1<CraneA0, two<CraneA0, typename _tcI0::template T<CraneA0>>> m) {
+    return outer1<CraneA1, two<CraneA1, typename _tcI0::template T<CraneA1>>>{
+        _tcI1::template tfmap<CraneA0, CraneA1>(std::move(f),
+                                                std::move(m).o_inner)};
+  }
+};
 
 #endif // INCLUDED_HK_CONSTRAINT_CARRIER_TWO_PARAMS

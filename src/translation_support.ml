@@ -301,10 +301,13 @@ type hkt_tvar_position = {
 
     Instance parameters are numbered as [Gen_decls.gen_dfun] numbers them --
     it walks the binders innermost first, so the source-{e last} instance is
-    [_tcI0].  With one instance the two orders coincide; with two they do not,
-    and a signature numbered the other way swaps the functors. *)
-let hkt_tvar_positions_of_type ty =
+    [_tcI0] -- or, with [~source_order], as an instance struct numbers its
+    own parameters, source-first.  With one instance the two orders coincide;
+    with two they do not, and a signature numbered the other way swaps the
+    functors. *)
+let hkt_tvar_positions_of_type ?(source_order = false) ty =
   let last = List.length (collect_typeclass_param_ids ty) - 1 in
+  let number i = if source_order then i else last - i in
   let rec go i acc = function
     | Miniml.Tarr (Miniml.Tglob (class_ref, type_args, _), rest)
       when Table.is_typeclass class_ref ->
@@ -317,7 +320,7 @@ let hkt_tvar_positions_of_type ty =
                 Some var_name ) ->
               { htp_tvar = j;
                 htp_instance =
-                  Minicpp.Tinstance (tc_instance_id (last - i), class_ref);
+                  Minicpp.Tinstance (tc_instance_id (number i), class_ref);
                 htp_field = var_name }
               :: acc
             | _ -> acc )

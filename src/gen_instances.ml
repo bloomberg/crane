@@ -62,14 +62,29 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
               (concept_constraint_of_class_type arg_ty)
           | _ -> TTtypename
         in
+        (* The binder is typed by the class, as the instance's type writes
+           it: a singleton class's binder is annotated with the class
+           unfolded, which no call through it can read the carrier from. *)
         strip_outer_layers
           rest_ty
           rest_body
           (tc_idx + 1)
           ((tt, instance_name) :: tc_acc)
-          ((instance_name, lam_ty) :: lam_acc)
+          ((instance_name, arg_ty) :: lam_acc)
       else (* Not a type param or typeclass — stop stripping *)
         (ty, body, List.rev tc_acc, List.rev lam_acc)
+    | Tarr (arg_ty, _), _
+      when Mlutil.isTdummy arg_ty || Table.is_typeclass_type arg_ty ->
+      (* An instance eta-reduced past its own parameters -- [TFunctor_pair
+         := ft_pair] -- takes them all the same. *)
+      let arg = if Mlutil.isTdummy arg_ty then MLdummy Ktype else MLrel 1 in
+      let applied =
+        match Mlutil.ast_lift 1 body with
+        | MLapp (f, args) -> MLapp (f, args @ [arg])
+        | f -> MLapp (f, [arg])
+      in
+      let body = MLlam (Id (Id.of_string "x"), arg_ty, applied) in
+      strip_outer_layers ty body tc_idx tc_acc lam_acc
     | _ -> (ty, body, List.rev tc_acc, List.rev lam_acc)
   in
   let inner_ty, inner_body, tc_temps, lam_params =
@@ -88,9 +103,15 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
       | Miniml.Tmeta {contents = Some t} -> vars acc t
       | _ -> acc
     in
-    List.fold_left
-      (fun acc (_, t) -> if Table.is_typeclass_type t then vars acc t else acc)
-      [] lam_params
+    (* Read off the instance's type, not its binders: a singleton class's
+       dictionary binder is annotated with the class unfolded. *)
+    let rec dicts acc = function
+      | Miniml.Tarr (a, b) ->
+        dicts (if Table.is_typeclass_type a then vars acc a else acc) b
+      | Miniml.Tmeta {contents = Some t} -> dicts acc t
+      | _ -> acc
+    in
+    dicts [] ty
   in
   let rec collect_ml_tvars acc = function
     | Miniml.Tvar (Schematic, i) ->
@@ -223,6 +244,25 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
       | MLmagic (_, b) -> b
       | b -> b
     in
+    (* A singleton class's instance is its method: past the instance's own
+       parameters, the body is the record's one field.  A fixpoint is the
+       method calling itself, through this very instance. *)
+    let inner_body =
+      let as_method m = function
+        | MLfix (0, [|_|], [|c|], _) when lam_params = [] ->
+          let n_class = Ml_type_util.projection_class_arity m in
+          Mlutil.ast_subst
+            (MLapp
+               ( MLglob (m, []),
+                 List.init n_class (fun _ -> MLdummy Ktype) @ [MLglob (name, [])] ))
+            c
+        | b -> b
+      in
+      match (Table.singleton_class_method class_ref, inner_body) with
+      | Some _, (MLcons _ as b) -> b
+      | Some m, b -> MLcons (inner_ty, class_ref, [as_method m b])
+      | None, b -> b
+    in
     ( match inner_body with
     | MLcons (cons_ty, _ctor_ref, method_bodies) ->
       (* For promoted dependent records, the definition type Tglob(Magma,[],[])
@@ -301,7 +341,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
          For parameterized instances, method bodies reference the outer lambda
          parameters (e.g., the typeclass dictionary) via MLrel indices. We push
          lam_params into the env so these references resolve correctly. *)
-      let base_env = snd (push_vars' (List.rev lam_params) (empty_env ())) in
+      let outer_binders, base_env = push_vars' (List.rev lam_params) (empty_env ()) in
       (* Collect type var names for convert_ml_type_to_cpp_type *)
       let type_var_names = tv_names_by_index in
       (* Set up type variable context for fixpoint lifting. Without this,
@@ -336,7 +376,11 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
             | MLmagic (_, b) -> strip_magic b
             | b -> b
           in
-          let field_body = strip_magic field_body in
+          (* The method is generated more than once -- declared, then
+             defined -- and each generation fills the body's open holes in
+             its own renumbering of the type variables, so each gets its own
+             holes. *)
+          let field_body = Mlutil.freshen_metas (strip_magic field_body) in
           (* Substitute type class parameter with instance's type arg in the
              field type. This gives us the concrete return type (e.g., bool for
              eqb: A -> A -> bool). For promoted dependent records, type_args may
@@ -580,9 +624,10 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
           (* Extract parameter names and types from the lambda. For promoted
              type vars (e.g., Tvar 3 for edge in Graph), substitute them with
              their concrete types from type_args. Only substitute Tvars beyond
-             the ip_sign Keep count to avoid disturbing regular type variable
-             references. *)
-          let nb_sign_keeps = List.length tv_temps in
+             the ones the instance binds -- its template parameters, and the
+             carriers it reaches through a dictionary -- to avoid disturbing
+             regular type variable references. *)
+          let nb_sign_keeps = instance_tvar_count in
           let subst_promoted_tvars ty =
             if List.length type_args > nb_sign_keeps then
               let rec subst = function
@@ -914,7 +959,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                 in
                 let renamed_eta, env = push_vars' ml_vars base_env in
                 let stmts =
-                  with_method_env_types env renamed_eta (fun () ->
+                  with_method_env_types ~outer:outer_binders env renamed_eta (fun () ->
                     gen_stmts env (fun x -> Sreturn (Some x)) call_expr )
                 in
                 let stmts =
@@ -991,7 +1036,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                    arities the signature was written at rather than
                    re-deriving them from ML types substitution has since
                    given extra arrows.  Same order as [renamed_ml]. *)
-                with_method_env_types
+                with_method_env_types ~outer:outer_binders
                   ~cpp:(List.rev_map (fun b -> Some b.mb_cpp_ty) binders)
                   env renamed_ml
                   (fun () ->
@@ -1367,7 +1412,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
             }
         in
         ( Some
-            (apply_hkt_resolutions_decl (hkt_tvar_resolutions_of_type ty) decl),
+            (apply_hkt_resolutions_decl (hkt_tvar_resolutions_of_type ~source_order:true ty) decl),
           Some class_ref,
           concept_args class_ref non_promoted_type_args )
     | MLglob (other, _) ->

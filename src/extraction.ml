@@ -2585,9 +2585,22 @@ let extract_std_constant env sg kn body typ =
   let numtvars, t = record_constant_type env sg kn (Some typ) in
   (* Detect sigma type preconditions and register assertions *)
   (try detect_sigma_assertions env sg kn typ with _ -> ());
+  (* An instance of a singleton class keeps its class's type, but its body is
+     the class's method, and is extracted at the method's type: unfolded at
+     the class in [typ], the method's own [forall]s are type variables the
+     body's annotations can name, where the class spelling erases them. *)
+  let singleton = Table.singleton_instance_class ~env (GlobRef.ConstRef kn) <> None in
+  let typ_body, t_body =
+    if not singleton then (typ, t)
+    else
+      let ctx, concl = EConstr.decompose_prod_decls sg typ in
+      let concl = Reductionops.whd_all (EConstr.push_rel_context ctx env) sg concl in
+      let typ' = EConstr.it_mkProd_or_LetIn concl ctx in
+      (typ', extract_type env sg [] 1 typ' [])
+  in
   (* The real type [t']: without head products, expanded, *)
   (* and with its own type variables made rigid (not instantiable). *)
-  let l, t' = type_decomp (expand env (rigidify t)) in
+  let l, t' = type_decomp (expand env (rigidify t_body)) in
   let s = List.map (type2sign env) l in
   (* Check for user-declared implicit information *)
   let s = sign_with_implicits (GlobRef.ConstRef kn) s 0 in
@@ -2606,7 +2619,7 @@ let extract_std_constant env sg kn body typ =
       if List.for_all (( == ) Keep) s' && sign_kind s != UnsafeLogicalSig then
         decompose_lambda_n sg m body
       else
-        decomp_lams_eta_n n m env sg body typ
+        decomp_lams_eta_n n m env sg body typ_body
   in
   (* Should we do one eta-expansion to avoid non-generalizable '_a ? *)
   let rels, c =
@@ -2618,9 +2631,9 @@ let extract_std_constant env sg kn body typ =
       empty_s
       && (not (gentypvar_ok sg c))
       && (not (List.is_empty s'))
-      && not (Int.equal (type_maxvar t) 0)
+      && not (Int.equal (type_maxvar t_body) 0)
     then
-      decomp_lams_eta_n (n + 1) n env sg body typ
+      decomp_lams_eta_n (n + 1) n env sg body typ_body
     else
       (rels, c)
   in
@@ -2647,6 +2660,17 @@ let extract_std_constant env sg kn body typ =
   pending_cpp_meta_fills := [];
   (* Expunging term and type from dummy lambdas. *)
   let trm = term_expunge s (List.combine ids (List.rev l), e) in
+  (* Only the arrows the short type writes are expunged from it. *)
+  let s =
+    if not singleton then s
+    else
+      let rec arrows = function
+        | Tarr (_, b) -> 1 + arrows b
+        | Tmeta {contents = Some t} -> arrows t
+        | _ -> 0
+      in
+      List.firstn (min (arrows t) (List.length s)) s
+  in
   (trm, add_tvars numtvars (type_expunge_from_sign env s t))
 
 (* Extracts the type of an axiom, honors the Extraction Implicit declaration. *)

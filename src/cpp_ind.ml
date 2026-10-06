@@ -139,7 +139,7 @@ let ind_header_decls kn ind =
     if (!render_ctx).rc_in_struct || (!render_ctx).rc_concepts_hoisted then
       []
     else
-      [(empty_env (), gen_typeclass_cpp names.(0) fields ind.ind_packets.(0))]
+      [(empty_env (), gen_typeclass_cpp names.(0) fields)]
   | Record fields ->
     (* Check if this is an eponymous record being merged into module struct *)
     let ind_ref = names.(0) in
@@ -707,6 +707,12 @@ let generate d =
   | (Dtype (r, _, _) | Dterm (r, _, _)) when is_any_inline_custom r -> Nothing
   | Dterm (r, _, _) when skipped r -> Nothing
   | Dind (kn, ind) -> Header_only (fun () -> ind_header_decls kn ind)
+  (* A singleton class is a concept, declared where concepts are. *)
+  | Dtype (r, _, _) when Table.singleton_class_method r <> None ->
+    if (!render_ctx).rc_in_struct || (!render_ctx).rc_concepts_hoisted then Nothing
+    else
+      Header_only
+        (fun () -> [(empty_env (), gen_typeclass_cpp r (Table.get_record_field_bindings r))])
   | Dtype (r, l, t) ->
     if t == Taxiom then begin
       Cpp_erasure.register_axiom_type r;

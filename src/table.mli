@@ -430,6 +430,22 @@ val get_ctor_num_param_vars : GlobRef.t -> int
 (** Check if reference is a typeclass. *)
 val is_typeclass : GlobRef.t -> bool
 
+(** [Some m] when [r] is a singleton class -- a class defined as one method's
+    type, [Class C := m : T], so that an instance is the method itself -- and
+    [m] is that method; [None] for a record class, for a singleton class that
+    is mapped or skipped, and for one with a parameter that is not a type or
+    a type constructor -- a category's [C : obj -> obj -> Type] -- which
+    stays the type it is declared as. *)
+val singleton_class_method : GlobRef.t -> GlobRef.t option
+
+(** The singleton class whose one method [m] is, if it is one. *)
+val singleton_method_class : GlobRef.t -> GlobRef.t option
+
+(** The singleton class [r] is an instance of, if it is one, read off [r]'s
+    type in [env] (by default the global one; a functor body's constants
+    are only in the environment it is extracted in). *)
+val singleton_instance_class : ?env:Environ.env -> GlobRef.t -> GlobRef.t option
+
 (** Check if ML type is a typeclass. *)
 val is_typeclass_type : ml_type -> bool
 

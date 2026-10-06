@@ -349,11 +349,134 @@ let inductive_kind_of r =
     Mindmap_env.find_opt kn !inductive_kinds
   | ConstRef _ | VarRef _ -> None
 
+let glob_tys = Summary.ref Refmap'.empty ~name:"GlobalDefTypes"
+
+let init_glob_tys () = glob_tys := Refmap'.empty
+
+let () = on_reset init_glob_tys
+
+let add_type id ty = glob_tys := Refmap'.add id ty !glob_tys
+
+let find_type id = Refmap'.find id !glob_tys
+
+(* The custom extraction mappings, by global; declared here, ahead of their
+   commands, because whether a class is kept depends on them. *)
+let customs = Summary.ref Refmap'.empty ~name:"CraneExtrCustom"
+
+(** A class declared as one method's type -- [Class MonadIter M := iter :
+    forall R I, ...] -- whose dictionary is that method: such a class is kept
+    as a record class with one field.  Only where every parameter is a type
+    or a type constructor, whose type is a closed arity: a category's
+    [Id_ {obj} (C : obj -> obj -> Type)] ranges over a family indexed by
+    another parameter, and stays the type it is declared as.  Nor a mapped
+    class. *)
+let singleton_class_method r =
+  match r with
+  | GlobRef.ConstRef _ when not (Refmap'.mem r !customs) -> (
+    let closed_arity decl =
+      let t = Context.Rel.Declaration.get_type decl in
+      Term.isArity t && Vars.closed0 t
+    in
+    match Typeclasses.class_info r with
+    | Some {Typeclasses.cl_impl; cl_context; cl_projs = [{Typeclasses.meth_const = Some c; _}]; _}
+      when GlobRef.CanOrd.equal cl_impl r && List.for_all closed_arity cl_context ->
+      Some (GlobRef.ConstRef c)
+    | _ -> None )
+  | _ -> None
+
+(* The singleton class whose method [m] is, read off the dictionary its
+   projection takes first. *)
+let singleton_method_class m =
+  let rec first = function
+    | Tarr (Tdummy _, b) -> first b
+    | Tarr (Tglob (c, _, _), _) -> (
+      match singleton_class_method c with
+      | Some m' when GlobRef.CanOrd.equal m m' -> Some c
+      | _ -> None )
+    | Tmeta {contents = Some t} -> first t
+    | _ -> None
+  in
+  match find_type m with exception Not_found -> None | ty -> first ty
+
+(* The singleton class [r] is an instance of, if it is one: read off [r]'s
+   type, as for any instance, and not off the instance table -- an instance
+   declared inside a closed module is no longer loaded.  [env] is the one
+   [r] is extracted in: a functor body's constants are in no other. *)
+let singleton_instance_class ?(env = Global.env ()) r =
+  match r with
+  | GlobRef.ConstRef c when Environ.mem_constant c env -> (
+    let ty, _ = Typeops.type_of_global_in_context env r in
+    let _, concl = Term.decompose_prod ty in
+    match Constr.kind (fst (Constr.decompose_app concl)) with
+    | Constr.Const (c, _) when singleton_class_method (GlobRef.ConstRef c) <> None ->
+      Some (GlobRef.ConstRef c)
+    | _ -> None )
+  | _ -> None
+
+(** A singleton class seen as the record class it stands for: its
+    parameters, the higher-kinded ones among them with their arities, and
+    its one field -- the method, typed as its projection is past the
+    dictionary, which numbers the class's parameters first, with the
+    method's own quantifiers erased as a record class's field has them (an
+    instance method takes them back from the projection). *)
+type singleton_shape = {
+  sc_vars : Id.t list;
+  sc_hkt : (int * int) list;
+  sc_field : GlobRef.t * ml_type;
+}
+
+let singleton_shape r =
+  match (singleton_class_method r, Typeclasses.class_info r) with
+  | Some m, Some cl -> (
+    (* A parameter that is a type, or a type constructor of some arity. *)
+    let arity t =
+      let ctx, concl = Term.decompose_prod_decls t in
+      match Constr.kind concl with Constr.Sort _ -> Some (List.length ctx) | _ -> None
+    in
+    let params =
+      List.filter_map
+        (fun d ->
+          Option.map
+            (fun a -> (Context.Rel.Declaration.get_name d, a))
+            (arity (Context.Rel.Declaration.get_type d)))
+        (List.rev cl.Typeclasses.cl_context)
+    in
+    let sc_vars =
+      List.mapi
+        (fun i (n, _) ->
+          match n with Name id -> id | Anonymous -> Id.of_string ("T" ^ string_of_int (i + 1)))
+        params
+    in
+    let sc_hkt = List.concat (List.mapi (fun i (_, a) -> if a > 0 then [(i, a)] else []) params) in
+    let rec past_dictionary = function
+      | Tarr (Tglob (c, _, _), rest) when GlobRef.CanOrd.equal c r -> Some rest
+      | Tarr (_, rest) -> past_dictionary rest
+      | _ -> None
+    in
+    let n = List.length sc_vars in
+    let rec erase_own = function
+      | Tvar (_, i) when i > n -> Tunknown
+      | Tapp (i, _) when i > n -> Tunknown
+      | Tapp (i, ts) -> Tapp (i, List.map erase_own ts)
+      | Tarr (a, b) -> Tarr (erase_own a, erase_own b)
+      | Tglob (g, ts, es) -> Tglob (g, List.map erase_own ts, es)
+      | Tmeta {contents = Some t} -> erase_own t
+      | t -> t
+    in
+    match find_type m with
+    | exception Not_found -> None
+    | ty ->
+      Option.map
+        (fun fty -> {sc_vars; sc_hkt; sc_field = (m, erase_own fty)})
+        (past_dictionary ty) )
+  | _ -> None
+
 (** Whether a global reference names a type class.  Defined here, with the
     other kind queries, because the higher-kinded parameter table below is
     restricted by it. *)
 let is_typeclass r =
-  match inductive_kind_of r with Some (TypeClass _) -> true | _ -> false
+  (match inductive_kind_of r with Some (TypeClass _) -> true | _ -> false)
+  || singleton_class_method r <> None
 
 let is_coinductive r =
   match inductive_kind_of r with Some Coinductive -> true | _ -> false
@@ -486,17 +609,6 @@ let is_coinductive_type = function
   | Tglob (r, _, _) -> is_coinductive r
   | _ -> false
 
-(** Get the list of field references for a record or typeclass inductive type.
-*)
-let get_record_fields r =
-  (* A reference that names no inductive at all has no fields, which is the
-     same answer already given for an inductive that is not a record.  It is
-     reachable: {!record_fields_of_type} asks this of whatever a [Tglob]
-     carries, and an ML type may perfectly well be headed by a constant. *)
-  match inductive_kind_of r with
-  | Some (Record f | TypeClass f) -> List.map fst f
-  | _ -> []
-
 (** The fields of a record or type class, each paired with its ML type, in
     declaration order.  Prefer this to zipping {!get_record_fields} against
     {!record_field_types}: the latter is read straight off [ip_types] and still
@@ -505,7 +617,15 @@ let get_record_fields r =
 let get_record_field_bindings r =
   match inductive_kind_of r with
   | Some (Record f | TypeClass f) -> f
-  | _ -> []
+  | _ -> (
+    match singleton_shape r with
+    | Some {sc_field = m, ty; _} -> [(Some m, ty)]
+    | None -> [] )
+
+(** The field references of a record or type class.  Anything else has none:
+    {!record_fields_of_type} asks this of whatever a [Tglob] carries, and an
+    ML type may perfectly well be headed by a constant. *)
+let get_record_fields r = List.map fst (get_record_field_bindings r)
 
 (** {!get_record_field_bindings} for a record named by an ML type. *)
 let record_field_bindings_of_type = function
@@ -533,7 +653,7 @@ let record_field_types r =
         else
           []
       with Not_found | Invalid_argument _ -> [] )
-  | _ -> []
+  | _ -> (match singleton_shape r with Some {sc_field = _, ty; _} -> [ty] | None -> [])
 
 (** Get the type variable names (ip_vars) for an inductive, including promoted
     carriers for dependent records. *)
@@ -545,7 +665,7 @@ let get_ind_ip_vars r =
         let ind = unsafe_lookup_ind kn in
         ind.ind_packets.(i).ip_vars
       with Not_found | Invalid_argument _ -> [] )
-  | _ -> []
+  | _ -> (match singleton_shape r with Some s -> s.sc_vars | None -> [])
 
 (** How many constructors an inductive's [i]th packet has.  [None] when the
     inductive is not in the table. *)
@@ -564,7 +684,7 @@ let get_ind_nb_sign_keeps r =
         List.length
           (List.filter (fun x -> x == Miniml.Keep) ind.ind_packets.(i).ip_sign)
       with Not_found | Invalid_argument _ -> 0 )
-  | _ -> 0
+  | _ -> (match singleton_shape r with Some s -> List.length s.sc_vars | None -> 0)
 
 (** {2 Higher-kinded class parameters}
 
@@ -598,7 +718,10 @@ let get_ind_hkt_params_arities r =
      Extraction records the positions before the kind is known, so the
      restriction is made here -- the one place every consumer reads them. *)
   if not (is_typeclass r) then []
-  else try Refmap'.find r !hkt_params_table with Not_found -> []
+  else
+    match singleton_shape r with
+    | Some s -> s.sc_hkt
+    | None -> ( try Refmap'.find r !hkt_params_table with Not_found -> [] )
 
 (** Positions (0-based among the [Keep] type parameters) of [r]'s parameters
     that are type constructors. Empty for everything else. *)
@@ -2821,8 +2944,6 @@ let reset_used_custom_imports () = used_refs := Refset'.empty
 
 let () = on_reset reset_used_custom_imports
 
-let customs = Summary.ref Refmap'.empty ~name:"CraneExtrCustom"
-
 (* Fires when a global already has a Crane extraction mapping and a *different*
    one is registered on top of it -- almost always the symptom of importing two
    overlapping [Mapping.*] modules (e.g. an int-backed and a GMP-backed flavor of
@@ -3480,16 +3601,6 @@ let extract_inductive ?boxed ?drain r s l optstr imports =
         Lib.add_leaf (in_customs (g, [], s)) )
       l
   | _ -> error_inductive ?loc:r.CAst.loc g
-
-let glob_tys = Summary.ref Refmap'.empty ~name:"GlobalDefTypes"
-
-let init_glob_tys () = glob_tys := Refmap'.empty
-
-let () = on_reset init_glob_tys
-
-let add_type id ty = glob_tys := Refmap'.add id ty !glob_tys
-
-let find_type id = Refmap'.find id !glob_tys
 
 let glob_def_registration : GlobRef.t * ml_type -> obj =
   declare_object

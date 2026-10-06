@@ -5,6 +5,7 @@
 #include "fn.h"
 #include "obj.h"
 #include <atomic>
+#include <concepts>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -118,30 +119,40 @@ public:
   }
 };
 
+template <typename I>
+concept TFunctor = requires {
+  typename I::template T<crane::obj>;
+  {
+    I::template tfmap<crane::obj, crane::obj>(
+        std::declval<crane::fn<crane::obj(crane::obj)>>(),
+        std::declval<typename I::template T<crane::obj>>())
+  } -> std::convertible_to<typename I::template T<crane::obj>>;
+};
+
 struct TfunctorRecordOptionField {
-  template <typename t>
-  using TFunctor = crane::fn<t(crane::fn<crane::obj(crane::obj)>, t)>;
-
-  template <typename T1, typename T2, typename T3, typename F1>
-  static crane::rebind_t<T1, T3>
-  tfmap(std::type_identity_t<TFunctor<T1>> tFunctor, F1 &&f,
-        crane::rebind_t<T1, T2> x) {
-    return crane_container_cast<crane::rebind_t<T1, T3>>(
-        tFunctor(crane_erase_fn(f), crane_convert<T1>(std::move(x))));
+  template <TFunctor _tcI0, typename T2, typename T3, typename F0>
+  static typename _tcI0::template T<T3>
+  tfmap(F0 &&f, typename _tcI0::template T<T2> x) {
+    return _tcI0::template tfmap<T2, T3>(f, std::move(x));
   }
 
-  template <typename T1, typename F1>
-  static std::optional<T1> TFunctor_option(std::type_identity_t<TFunctor<T1>> h,
-                                           F1 &&f,
-                                           const std::optional<T1> &ot) {
-    if (ot.has_value()) {
-      const auto &t = *ot;
-      return std::make_optional<T1>(
-          tfmap<T1, crane::obj, crane::obj>(std::move(h), f, t));
-    } else {
-      return std::optional<T1>();
+  template <TFunctor _tcI0> struct TFunctor_option {
+    template <typename CraneA0>
+    using T = std::optional<typename _tcI0::template T<CraneA0>>;
+
+    template <typename CraneA0, typename CraneA1>
+    static std::optional<typename _tcI0::template T<CraneA1>>
+    tfmap(crane::fn<CraneA1(CraneA0)> f,
+          std::optional<typename _tcI0::template T<CraneA0>> ot) {
+      if (ot.has_value()) {
+        const typename _tcI0::template T<CraneA0> &t = *ot;
+        return std::make_optional<typename _tcI0::template T<CraneA1>>(
+            _tcI0::template tfmap<CraneA0, CraneA1>(std::move(f), t));
+      } else {
+        return std::optional<typename _tcI0::template T<CraneA1>>();
+      }
     }
-  }
+  };
 
   template <typename T> struct exp {
     // TYPES
@@ -257,20 +268,43 @@ struct TfunctorRecordOptionField {
     }
   };
 
-  static exp<crane::obj>
-  TFunctor_exp(const crane::fn<crane::obj(crane::obj)> &f,
-               const exp<crane::obj> &e);
-  static global<crane::obj>
-  TFunctor_global(const crane::fn<crane::obj(crane::obj)> &f,
-                  const global<crane::obj> &g);
+  struct TFunctor_exp {
+    template <typename CraneA0> using T = exp<CraneA0>;
+
+    template <typename CraneA0, typename CraneA1>
+    static exp<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f, exp<CraneA0> e) {
+      if (std::holds_alternative<typename exp<CraneA0>::Lit>(e.v())) {
+        const auto &[t0] = std::get<typename exp<CraneA0>::Lit>(e.v());
+        return exp<CraneA1>::lit(f(t0));
+      } else {
+        const auto &[e0] = std::get<typename exp<CraneA0>::Neg>(e.v());
+        return exp<CraneA1>::neg(TFunctor_exp::tfmap(std::move(f), *e0));
+      }
+    }
+  };
+
+  static_assert(TFunctor<TFunctor_exp>);
+
+  struct TFunctor_global {
+    template <typename CraneA0> using T = global<CraneA0>;
+
+    template <typename CraneA0, typename CraneA1>
+    static global<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f,
+                                 global<CraneA0> g) {
+      return global<CraneA1>{
+          f(g.g_typ),
+          TFunctor_option<TFunctor_exp>::template tfmap<CraneA0, CraneA1>(
+              f, g.g_exp)};
+    }
+  };
+
+  static_assert(TFunctor<TFunctor_global>);
   static inline const global<Nat> g0 = global<Nat>{
       Nat::s(Nat::o()),
       std::make_optional<exp<Nat>>(exp<Nat>::lit(Nat::s(Nat::s(Nat::o()))))};
-  static inline const global<Nat> g1 = tfmap<global<crane::obj>, Nat, Nat>(
-      [](auto &&_ec0, global<crane::obj> _ec1) {
-        return TFunctor_global(_ec0, _ec1);
-      },
-      [](const Nat &x) { return Nat::s(x); }, g0);
+  static inline const global<Nat> g1 =
+      TFunctor_global::template tfmap<Nat, Nat>(
+          [](const Nat &x) { return Nat::s(x); }, g0);
   static inline const bool is_five = []() -> bool {
     if (g1.g_exp.has_value()) {
       const exp<Nat> &e = *g1.g_exp;

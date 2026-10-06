@@ -92,7 +92,7 @@ Sig<List<uint64_t>> Sort::psort(const List<uint64_t> &x0_) {
         return Sig<List<uint64_t>>::exist(
             List<uint64_t>::cons(a, List<uint64_t>::nil()));
       },
-      [](uint64_t a1, uint64_t a2) {
+      [](uint64_t a1, uint64_t a2) -> Sig<List<uint64_t>> {
         bool s = a1 <= a2;
         if (s) {
           return Sig<List<uint64_t>>::exist(List<uint64_t>::cons(

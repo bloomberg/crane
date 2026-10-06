@@ -14,6 +14,7 @@
 
 struct Nat;
 template <typename A> struct List;
+struct Functorish_option;
 struct Prov_nat;
 template <typename I, typename N>
 concept Prov = requires {
@@ -155,26 +156,42 @@ public:
   const variant_t &v() const { return v_; }
 };
 
-template <typename f>
-using Functorish = crane::fn<f(crane::fn<crane::obj(crane::obj)>, f)>;
+template <typename I>
+concept Functorish = requires {
+  typename I::template F<crane::obj>;
+  {
+    I::template fmapish<crane::obj, crane::obj>(
+        std::declval<crane::fn<crane::obj(crane::obj)>>(),
+        std::declval<typename I::template F<crane::obj>>())
+  } -> std::convertible_to<typename I::template F<crane::obj>>;
+};
 
-template <typename T1, typename T2, typename T3, typename F1>
-crane::rebind_t<T1, T3> fmapish(std::type_identity_t<Functorish<T1>> functorish,
-                                F1 &&x, crane::rebind_t<T1, T2> x0) {
-  return crane_container_cast<crane::rebind_t<T1, T3>>(
-      functorish(crane_erase_fn(x), crane_convert<T1>(std::move(x0))));
+template <Functorish _tcI0, typename T2, typename T3, typename F0>
+typename _tcI0::template F<T3> fmapish(F0 &&x,
+                                       typename _tcI0::template F<T2> x0) {
+  return _tcI0::template fmapish<T2, T3>(x, std::move(x0));
 }
 
-std::optional<crane::obj>
-Functorish_option(const crane::fn<crane::obj(crane::obj)> &f,
-                  const std::optional<crane::obj> &o);
+struct Functorish_option {
+  template <typename CraneA0> using F = std::optional<CraneA0>;
+
+  template <typename CraneA0, typename CraneA1>
+  static std::optional<CraneA1> fmapish(crane::fn<CraneA1(CraneA0)> f,
+                                        std::optional<CraneA0> o) {
+    if (o.has_value()) {
+      const CraneA0 &a = *o;
+      return std::make_optional<CraneA1>(f(a));
+    } else {
+      return std::optional<CraneA1>();
+    }
+  }
+};
+
+static_assert(Functorish<Functorish_option>);
 
 struct Prov_nat {
   static std::optional<List<Nat>> aid_to_prov(std::optional<Nat> aid) {
-    return fmapish<std::optional<crane::obj>, Nat, List<Nat>>(
-        [](auto &&_ec0, std::optional<crane::obj> _ec1) {
-          return Functorish_option(_ec0, _ec1);
-        },
+    return Functorish_option::template fmapish<Nat, List<Nat>>(
         [](const Nat &x) { return List<Nat>::cons(x, List<Nat>::nil()); },
         std::move(aid));
   }

@@ -5,6 +5,7 @@
 #include "fn.h"
 #include "obj.h"
 #include <atomic>
+#include <concepts>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -16,7 +17,9 @@ struct Nat;
 template <typename A> struct List;
 struct Dt;
 template <typename T> struct Exp0;
+struct TFunctor_exp;
 template <typename T> struct Ann;
+struct TFunctor_ann;
 
 struct Nat {
   // TYPES
@@ -178,14 +181,20 @@ public:
   }
 };
 
-template <typename f>
-using TFunctor = crane::fn<f(crane::fn<crane::obj(crane::obj)>, f)>;
+template <typename I>
+concept TFunctor = requires {
+  typename I::template F<crane::obj>;
+  {
+    I::template tfmap<crane::obj, crane::obj>(
+        std::declval<crane::fn<crane::obj(crane::obj)>>(),
+        std::declval<typename I::template F<crane::obj>>())
+  } -> std::convertible_to<typename I::template F<crane::obj>>;
+};
 
-template <typename T1, typename T2, typename T3, typename F1>
-crane::rebind_t<T1, T3> tfmap(std::type_identity_t<TFunctor<T1>> tFunctor,
-                              F1 &&x, crane::rebind_t<T1, T2> x0) {
-  return crane_container_cast<crane::rebind_t<T1, T3>>(
-      tFunctor(crane_erase_fn(x), crane_convert<T1>(std::move(x0))));
+template <TFunctor _tcI0, typename T2, typename T3, typename F0>
+typename _tcI0::template F<T3> tfmap(F0 &&x,
+                                     typename _tcI0::template F<T2> x0) {
+  return _tcI0::template tfmap<T2, T3>(x, std::move(x0));
 }
 
 struct Dt {
@@ -270,17 +279,23 @@ public:
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
+};
 
-  template <typename F0> Exp0<crane::obj> TFunctor_exp(F0 &&f) const {
-    if (std::holds_alternative<typename Exp0<crane::obj>::EV>(this->v())) {
-      const auto &[a0] = std::get<typename Exp0<crane::obj>::EV>(this->v());
-      return Exp0<crane::obj>::ev(crane_call_erased(f, a0));
+struct TFunctor_exp {
+  template <typename CraneA0> using F = Exp0<CraneA0>;
+
+  template <typename CraneA0, typename CraneA1>
+  static Exp0<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f, Exp0<CraneA0> e) {
+    if (std::holds_alternative<typename Exp0<CraneA0>::EV>(e.v())) {
+      const auto &[a0] = std::get<typename Exp0<CraneA0>::EV>(e.v());
+      return Exp0<CraneA1>::ev(f(a0));
     } else {
-      return Exp0<crane::obj>::en();
+      return Exp0<CraneA1>::en();
     }
   }
 };
 
+static_assert(TFunctor<TFunctor_exp>);
 template <typename t> using texp = std::pair<t, Exp0<t>>;
 
 /// The two field kinds, side by side: a Crane container that converts, and a
@@ -339,9 +354,24 @@ public:
   const variant_t &v() const { return v_; }
 };
 
-Ann<crane::obj> TFunctor_ann(const crane::fn<crane::obj(crane::obj)> &f,
-                             const Ann<crane::obj> &a);
+struct TFunctor_ann {
+  template <typename CraneA0> using F = Ann<CraneA0>;
 
+  template <typename CraneA0, typename CraneA1>
+  static Ann<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f, Ann<CraneA0> a) {
+    if (std::holds_alternative<typename Ann<CraneA0>::ANN_metadata>(a.v())) {
+      const auto &[a0] = std::get<typename Ann<CraneA0>::ANN_metadata>(a.v());
+      return Ann<CraneA1>::ann_metadata(a0.template map<CraneA1>(std::move(f)));
+    } else {
+      const auto &[a0] = std::get<typename Ann<CraneA0>::ANN_prefix>(a.v());
+      const auto &[t, e] = a0;
+      return Ann<CraneA1>::ann_prefix(std::make_pair(
+          f(t), TFunctor_exp::template tfmap<CraneA0, CraneA1>(f, e)));
+    }
+  }
+};
+
+static_assert(TFunctor<TFunctor_ann>);
 Ann<Dt> run(const Ann<Nat> &a);
 
 #endif // INCLUDED_PAIR_FIELD_CONV_CTOR

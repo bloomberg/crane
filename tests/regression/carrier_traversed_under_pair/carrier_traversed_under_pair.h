@@ -6,6 +6,7 @@
 #include "obj.h"
 #include "small_vector.h"
 #include <atomic>
+#include <concepts>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -16,7 +17,9 @@
 struct Nat;
 template <typename A> struct List;
 template <typename t> struct Exp;
+struct TFunctor_tagged;
 template <typename t> struct blk;
+struct TFunctor_blk;
 
 struct Nat {
   // TYPES
@@ -348,19 +351,38 @@ public:
   }
 };
 
-template <typename t>
-using TFunctor = crane::fn<t(crane::fn<crane::obj(crane::obj)>, t)>;
+template <typename I>
+concept TFunctor = requires {
+  typename I::template T<crane::obj>;
+  {
+    I::template tfmap<crane::obj, crane::obj>(
+        std::declval<crane::fn<crane::obj(crane::obj)>>(),
+        std::declval<typename I::template T<crane::obj>>())
+  } -> std::convertible_to<typename I::template T<crane::obj>>;
+};
 
-template <typename T1, typename T2, typename T3, typename F1>
-crane::rebind_t<T1, T3> tfmap(std::type_identity_t<TFunctor<T1>> tFunctor,
-                              F1 &&x, crane::rebind_t<T1, T2> x0) {
-  return crane_container_cast<crane::rebind_t<T1, T3>>(
-      tFunctor(crane_erase_fn(x), crane_convert<T1>(std::move(x0))));
+template <TFunctor _tcI0, typename T2, typename T3, typename F0>
+typename _tcI0::template T<T3> tfmap(F0 &&x,
+                                     typename _tcI0::template T<T2> x0) {
+  return _tcI0::template tfmap<T2, T3>(x, std::move(x0));
 }
 
-List<std::pair<std::optional<Nat>, Exp<crane::obj>>>
-TFunctor_tagged(const crane::fn<crane::obj(crane::obj)> &f,
-                const List<std::pair<std::optional<Nat>, Exp<crane::obj>>> &l);
+struct TFunctor_tagged {
+  template <typename CraneA0>
+  using T = List<std::pair<std::optional<Nat>, Exp<CraneA0>>>;
+
+  template <typename CraneA0, typename CraneA1>
+  static List<std::pair<std::optional<Nat>, Exp<CraneA1>>>
+  tfmap(crane::fn<CraneA1(CraneA0)> f,
+        List<std::pair<std::optional<Nat>, Exp<CraneA0>>> l) {
+    return l.template map<std::pair<std::optional<Nat>, Exp<CraneA1>>>(
+        [=](const std::pair<std::optional<Nat>, Exp<CraneA0>> &p) {
+          return std::make_pair(p.first, p.second.template exp_map<CraneA1>(f));
+        });
+  }
+};
+
+static_assert(TFunctor<TFunctor_tagged>);
 
 template <typename t> struct blk {
   Nat b_id;
@@ -374,15 +396,21 @@ template <typename t> struct blk {
   }
 };
 
-blk<crane::obj> TFunctor_blk(const crane::fn<crane::obj(crane::obj)> &f,
-                             const blk<crane::obj> &b);
+struct TFunctor_blk {
+  template <typename CraneA0> using T = blk<CraneA0>;
+
+  template <typename CraneA0, typename CraneA1>
+  static blk<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f, blk<CraneA0> b) {
+    return blk<CraneA1>{
+        b.b_id, TFunctor_tagged::template tfmap<CraneA0, CraneA1>(std::move(f),
+                                                                  b.b_code)};
+  }
+};
+
+static_assert(TFunctor<TFunctor_blk>);
 
 template <typename F0> blk<bool> use_blk(F0 &&f, const blk<Nat> &b) {
-  return tfmap<blk<crane::obj>, Nat, bool>(
-      [](auto &&_ec0, blk<crane::obj> _ec1) {
-        return TFunctor_blk(_ec0, _ec1);
-      },
-      f, b);
+  return TFunctor_blk::template tfmap<Nat, bool>(f, b);
 }
 
 #endif // INCLUDED_CARRIER_TRAVERSED_UNDER_PAIR

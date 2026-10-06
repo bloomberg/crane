@@ -5,6 +5,7 @@
 #include "fn.h"
 #include "obj.h"
 #include <atomic>
+#include <concepts>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -242,29 +243,49 @@ public:
   }
 };
 
+template <typename I>
+concept TFunctor = requires {
+  typename I::template T<crane::obj>;
+  {
+    I::template tfmap<crane::obj, crane::obj>(
+        std::declval<crane::fn<crane::obj(crane::obj)>>(),
+        std::declval<typename I::template T<crane::obj>>())
+  } -> std::convertible_to<typename I::template T<crane::obj>>;
+};
+
 struct TfunctorComposedInstance {
-  template <typename t>
-  using TFunctor = crane::fn<t(crane::fn<crane::obj(crane::obj)>, t)>;
-
-  template <typename T1, typename T2, typename T3, typename F1>
-  static crane::rebind_t<T1, T3>
-  tfmap(std::type_identity_t<TFunctor<T1>> tFunctor, F1 &&f,
-        crane::rebind_t<T1, T2> x) {
-    return crane_container_cast<crane::rebind_t<T1, T3>>(
-        tFunctor(crane_erase_fn(f), crane_convert<T1>(std::move(x))));
+  template <TFunctor _tcI0, typename T2, typename T3, typename F0>
+  static typename _tcI0::template T<T3>
+  tfmap(F0 &&f, typename _tcI0::template T<T2> x) {
+    return _tcI0::template tfmap<T2, T3>(f, std::move(x));
   }
 
-  static List<crane::obj>
-  TFunctor_list(const crane::fn<crane::obj(crane::obj)> &x0_,
-                const List<crane::obj> &x1_);
+  struct TFunctor_list {
+    template <typename CraneA0> using T = List<CraneA0>;
 
-  template <typename T1, typename F1>
-  static List<T1> TFunctor_list_(std::type_identity_t<TFunctor<T1>> h, F1 &&f,
-                                 List<T1> x0_) {
-    return std::move(x0_).template map<T1>([=](T1 _x0) -> T1 {
-      return tfmap<T1, crane::obj, crane::obj>(h, f, _x0);
-    });
-  }
+    template <typename CraneA0, typename CraneA1>
+    static List<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> a0,
+                               List<CraneA0> a1) {
+      return a1.template map<CraneA1>(std::move(a0));
+    }
+  };
+
+  static_assert(TFunctor<TFunctor_list>);
+
+  template <TFunctor _tcI0> struct TFunctor_list_ {
+    template <typename CraneA0>
+    using T = List<typename _tcI0::template T<CraneA0>>;
+
+    template <typename CraneA0, typename CraneA1>
+    static List<typename _tcI0::template T<CraneA1>>
+    tfmap(crane::fn<CraneA1(CraneA0)> f,
+          List<typename _tcI0::template T<CraneA0>> a0) {
+      return a0.template map<typename _tcI0::template T<CraneA1>>(
+          [=](typename _tcI0::template T<CraneA0> a1) {
+            return _tcI0::template tfmap<CraneA0, CraneA1>(f, a1);
+          });
+    }
+  };
 
   template <typename T> struct box {
     T unbox;
@@ -282,25 +303,23 @@ struct TfunctorComposedInstance {
     }
   };
 
-  static box<crane::obj>
-  TFunctor_box(const crane::fn<crane::obj(crane::obj)> &f,
-               const box<crane::obj> &b);
-  static inline const List<box<Nat>> l = tfmap<List<box<crane::obj>>, Nat, Nat>(
-      []() {
-        return [](crane::fn<crane::obj(crane::obj)> _x0,
-                  const auto &_x1) -> List<box<crane::obj>> {
-          return TFunctor_list_<box<crane::obj>>(
-              [](auto &&_ec0, box<crane::obj> _ec1) {
-                return TFunctor_box(_ec0, _ec1);
-              },
-              _x0, crane_convert<List<box<crane::obj>>>(_x1));
-        };
-      }(),
-      [](const Nat &x) { return Nat::s(x); },
-      List<box<Nat>>::cons(
-          box<Nat>{Nat::s(Nat::o())},
-          List<box<Nat>>::cons(box<Nat>{Nat::s(Nat::s(Nat::o()))},
-                               List<box<Nat>>::nil())));
+  struct TFunctor_box {
+    template <typename CraneA0> using T = box<CraneA0>;
+
+    template <typename CraneA0, typename CraneA1>
+    static box<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f, box<CraneA0> b) {
+      return box<CraneA1>{f(std::move(b).unbox)};
+    }
+  };
+
+  static_assert(TFunctor<TFunctor_box>);
+  static inline const List<box<Nat>> l =
+      TFunctor_list_<TFunctor_box>::template tfmap<Nat, Nat>(
+          [](const Nat &x) { return Nat::s(x); },
+          List<crane::obj>::cons(
+              box<Nat>{Nat::s(Nat::o())},
+              List<crane::obj>::cons(box<Nat>{Nat::s(Nat::s(Nat::o()))},
+                                     List<crane::obj>::nil())));
   static inline const Nat total = l.template fold_left<Nat>(
       [](const Nat &acc, const box<Nat> &b) { return acc.add(b.unbox); },
       Nat::o());

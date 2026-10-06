@@ -2,14 +2,15 @@
 #define INCLUDED_PRIMED_IDENTIFIER
 
 #include "crane_fn.h"
-#include "fn.h"
 #include <atomic>
+#include <concepts>
 #include <memory>
 #include <optional>
 #include <utility>
 #include <variant>
 
 struct Nat;
+struct Sized_nat_;
 
 struct PrimedIdentifier {
   static Nat use(const Nat &n);
@@ -95,13 +96,22 @@ public:
   }
 };
 
-template <typename t> using Sized = crane::fn<Nat(t)>;
+template <typename I, typename T>
+concept Sized = requires {
+  { I::size(std::declval<T>()) } -> std::convertible_to<Nat>;
+};
 
-template <typename T1> Nat size(std::type_identity_t<Sized<T1>> sized, T1 x0_) {
-  return sized(std::move(x0_));
+template <typename _tcI0, typename T1>
+  requires Sized<_tcI0, T1>
+Nat size(T1 x0_) {
+  return _tcI0::size(std::move(x0_));
 }
 
-const Sized<Nat> Sized_nat_ = [](const Nat &n) { return Nat::s(n); };
+struct Sized_nat_ {
+  static Nat size(Nat n) { return Nat::s(std::move(n)); }
+};
+
+static_assert(Sized<Sized_nat_, Nat>);
 Nat twice_(Nat n);
 
 #endif // INCLUDED_PRIMED_IDENTIFIER

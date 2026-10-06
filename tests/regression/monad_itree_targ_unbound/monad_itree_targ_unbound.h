@@ -154,7 +154,10 @@ struct Monads {
     template <typename CraneA0>
     static crane::fn<typename _tcI0::template m<std::pair<T1, CraneA0>>(T1)>
     ret(CraneA0 a) {
-      return [=](const T1 &s) { return itree_ret(std::make_pair(s, a)); };
+      return [=](const T1 &s) {
+        return _tcI0::template ret<std::pair<T1, CraneA0>>(
+            std::make_pair(s, a));
+      };
     }
 
     template <typename CraneA0, typename CraneA1>
@@ -164,9 +167,11 @@ struct Monads {
              typename _tcI0::template m<std::pair<T1, CraneA1>>(T1)>(CraneA0)>
              k) {
       return [=](const T1 &s) {
-        return itree_bind(t(s), [=](const std::pair<T1, CraneA0> &sa) {
-          return k(sa.second)(sa.first);
-        });
+        return _tcI0::template bind<std::pair<T1, CraneA0>,
+                                    std::pair<T1, CraneA1>>(
+            t(s), [=](const std::pair<T1, CraneA0> &sa) {
+              return k(sa.second)(sa.first);
+            });
       };
     }
   };

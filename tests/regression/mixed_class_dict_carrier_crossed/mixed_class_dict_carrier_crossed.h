@@ -6,6 +6,7 @@
 #include "obj.h"
 #include "small_vector.h"
 #include <atomic>
+#include <concepts>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -17,6 +18,9 @@ struct Nat;
 template <typename A> struct List;
 template <typename t> struct Exp;
 template <typename t> struct Decl;
+struct TFunctor_exp;
+struct TFunctor_decl;
+struct Endo_nat;
 template <typename t> struct modu;
 
 struct Nat {
@@ -342,10 +346,6 @@ public:
     }
     return _result;
   }
-
-  template <typename F0> Exp<crane::obj> TFunctor_exp(F0 &&x0_) const {
-    return this->template exp_map<crane::obj>(x0_);
-  }
 };
 
 template <typename t> struct Decl {
@@ -368,40 +368,80 @@ template <typename t> struct Decl {
 
   // CREATORS
   static Decl<t> d_mk(t a0) { return {std::move(a0)}; }
-
-  template <typename F0> Decl<crane::obj> TFunctor_decl(F0 &&f) const {
-    const auto &[a0] = *this;
-    return Decl<crane::obj>::d_mk(crane_call_erased(f, a0));
-  }
 };
 
-template <typename t>
-using TFunctor = crane::fn<t(crane::fn<crane::obj(crane::obj)>, t)>;
+template <typename I>
+concept TFunctor = requires {
+  typename I::template T<crane::obj>;
+  {
+    I::template tfmap<crane::obj, crane::obj>(
+        std::declval<crane::fn<crane::obj(crane::obj)>>(),
+        std::declval<typename I::template T<crane::obj>>())
+  } -> std::convertible_to<typename I::template T<crane::obj>>;
+};
 
-template <typename T1, typename T2, typename T3, typename F1>
-crane::rebind_t<T1, T3> tfmap(std::type_identity_t<TFunctor<T1>> tFunctor,
-                              F1 &&x, crane::rebind_t<T1, T2> x0) {
-  return crane_container_cast<crane::rebind_t<T1, T3>>(
-      tFunctor(crane_erase_fn(x), crane_convert<T1>(std::move(x0))));
+template <TFunctor _tcI0, typename T2, typename T3, typename F0>
+typename _tcI0::template T<T3> tfmap(F0 &&x,
+                                     typename _tcI0::template T<T2> x0) {
+  return _tcI0::template tfmap<T2, T3>(x, std::move(x0));
 }
 
 /// Not higher-kinded: its parameter is an ordinary type, so it has no carrier
 /// at all. This is the entry that sits between the two that do.
-template <typename t> using Endo = crane::fn<t(t)>;
+template <typename I, typename T>
+concept Endo = requires {
+  { I::endo(std::declval<T>()) } -> std::convertible_to<T>;
+};
 
-template <typename T1> T1 endo(std::type_identity_t<Endo<T1>> endo0, T1 x0_) {
-  return endo0(std::move(x0_));
+template <typename _tcI0, typename T1>
+  requires Endo<_tcI0, T1>
+T1 endo(T1 x0_) {
+  return _tcI0::endo(std::move(x0_));
 }
 
-template <typename T1, typename F1>
-List<T1> TFunctor_list(std::type_identity_t<TFunctor<T1>> h, F1 &&f,
-                       const List<T1> &l) {
-  return l.template map<T1>([=](T1 _x0) -> T1 {
-    return tfmap<T1, crane::obj, crane::obj>(h, f, _x0);
-  });
-}
+struct TFunctor_exp {
+  template <typename CraneA0> using T = Exp<CraneA0>;
 
-const Endo<Nat> Endo_nat = [](Nat n) { return n; };
+  template <typename CraneA0, typename CraneA1>
+  static Exp<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> a0, Exp<CraneA0> a1) {
+    return a1.template exp_map<CraneA1>(std::move(a0));
+  }
+};
+
+static_assert(TFunctor<TFunctor_exp>);
+
+struct TFunctor_decl {
+  template <typename CraneA0> using T = Decl<CraneA0>;
+
+  template <typename CraneA0, typename CraneA1>
+  static Decl<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f, Decl<CraneA0> d) {
+    const auto &[a0] = d;
+    return Decl<CraneA1>::d_mk(f(a0));
+  }
+};
+
+static_assert(TFunctor<TFunctor_decl>);
+
+template <TFunctor _tcI0> struct TFunctor_list {
+  template <typename CraneA0>
+  using T = List<typename _tcI0::template T<CraneA0>>;
+
+  template <typename CraneA0, typename CraneA1>
+  static List<typename _tcI0::template T<CraneA1>>
+  tfmap(crane::fn<CraneA1(CraneA0)> f,
+        List<typename _tcI0::template T<CraneA0>> l) {
+    return l.template map<typename _tcI0::template T<CraneA1>>(
+        [=](typename _tcI0::template T<CraneA0> a0) {
+          return _tcI0::template tfmap<CraneA0, CraneA1>(f, a0);
+        });
+  }
+};
+
+struct Endo_nat {
+  static Nat endo(Nat n) { return n; }
+};
+
+static_assert(Endo<Endo_nat, Nat>);
 
 template <typename t> struct modu {
   Nat m_tag;
@@ -415,28 +455,23 @@ template <typename t> struct modu {
   }
 };
 
-modu<crane::obj> TFunctor_modu(TFunctor<Exp<crane::obj>> h, Endo<Nat> h0,
-                               TFunctor<Decl<crane::obj>> h1,
-                               const crane::fn<crane::obj(crane::obj)> &f,
-                               const modu<crane::obj> &m);
+template <TFunctor _tcI0, typename _tcI1, TFunctor _tcI2>
+  requires Endo<_tcI1, Nat>
+struct TFunctor_modu {
+  template <typename CraneA0> using T = modu<CraneA0>;
+
+  template <typename CraneA0, typename CraneA1>
+  static modu<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f, modu<CraneA0> m) {
+    return modu<CraneA1>{
+        _tcI1::endo(m.m_tag),
+        TFunctor_list<_tcI0>::template tfmap<CraneA0, CraneA1>(f, m.m_exps),
+        TFunctor_list<_tcI2>::template tfmap<CraneA0, CraneA1>(f, m.m_decls)};
+  }
+};
 
 template <typename F0> modu<bool> use_modu(F0 &&f, const modu<Nat> &m) {
-  return tfmap<modu<crane::obj>, Nat, bool>(
-      []() {
-        return [](crane::fn<crane::obj(crane::obj)> _x0,
-                  const auto &_x1) -> modu<crane::obj> {
-          return TFunctor_modu(
-              [](auto &&_ec0, Exp<crane::obj> _ec1) {
-                return _ec1.TFunctor_exp(_ec0);
-              },
-              Endo_nat,
-              [](auto &&_ec0, Decl<crane::obj> _ec1) {
-                return _ec1.TFunctor_decl(_ec0);
-              },
-              _x0, crane_convert<modu<crane::obj>>(_x1));
-        };
-      }(),
-      f, m);
+  return TFunctor_modu<TFunctor_exp, Endo_nat,
+                       TFunctor_decl>::template tfmap<Nat, bool>(f, m);
 }
 
 #endif // INCLUDED_MIXED_CLASS_DICT_CARRIER_CROSSED

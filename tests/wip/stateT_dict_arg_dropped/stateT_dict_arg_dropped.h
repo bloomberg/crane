@@ -100,7 +100,10 @@ template <Monad _tcI0, typename T1> struct Monad_stateT {
   static stateT<T1, typename _tcI0::template m<CraneA0>, CraneA0>
   ret(CraneA0 x) {
     return stateT<T1, typename _tcI0::template m<CraneA0>, CraneA0>{
-        [=](const T1 &s) { return itree_ret(std::make_pair(x, s)); }};
+        [=](const auto &s) {
+          return _tcI0::template ret<std::pair<CraneA0, T1>>(
+              std::make_pair(x, s));
+        }};
   }
 
   template <typename CraneA0, typename CraneA1>
@@ -110,8 +113,9 @@ template <Monad _tcI0, typename T1> struct Monad_stateT {
            stateT<T1, typename _tcI0::template m<CraneA1>, CraneA1>(CraneA0)>
            c2) {
     return stateT<T1, typename _tcI0::template m<CraneA1>, CraneA1>{
-        [=](const T1 &s) {
-          return itree_bind(
+        [=](const auto &s) {
+          return _tcI0::template bind<std::pair<CraneA0, T1>,
+                                      std::pair<CraneA1, T1>>(
               crane_container_cast<
                   typename _tcI0::template m<std::pair<CraneA0, T1>>>(
                   c1.runStateT(s)),

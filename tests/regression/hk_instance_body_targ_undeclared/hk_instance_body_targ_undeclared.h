@@ -5,6 +5,7 @@
 #include "fn.h"
 #include "obj.h"
 #include <atomic>
+#include <concepts>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -14,6 +15,7 @@
 
 struct Nat;
 template <typename A> struct List;
+struct TFunctor_list;
 
 struct HkInstanceBodyTargUndeclared {
   static Nat bump(const Nat &n);
@@ -181,37 +183,63 @@ public:
   }
 };
 
-template <typename t>
-using TFunctor = crane::fn<t(crane::fn<crane::obj(crane::obj)>, t)>;
+template <typename I>
+concept TFunctor = requires {
+  typename I::template T<crane::obj>;
+  {
+    I::template tfmap<crane::obj, crane::obj>(
+        std::declval<crane::fn<crane::obj(crane::obj)>>(),
+        std::declval<typename I::template T<crane::obj>>())
+  } -> std::convertible_to<typename I::template T<crane::obj>>;
+};
 
-template <typename T1, typename T2, typename T3, typename F1>
-crane::rebind_t<T1, T3> tfmap(std::type_identity_t<TFunctor<T1>> tFunctor,
-                              F1 &&f, crane::rebind_t<T1, T2> x) {
-  return crane_container_cast<crane::rebind_t<T1, T3>>(
-      tFunctor(crane_erase_fn(f), crane_convert<T1>(std::move(x))));
+template <TFunctor _tcI0, typename T2, typename T3, typename F0>
+typename _tcI0::template T<T3> tfmap(F0 &&f, typename _tcI0::template T<T2> x) {
+  return _tcI0::template tfmap<T2, T3>(f, std::move(x));
 }
 
-List<crane::obj> TFunctor_list(const crane::fn<crane::obj(crane::obj)> &x0_,
-                               const List<crane::obj> &x1_);
+struct TFunctor_list {
+  template <typename CraneA0> using T = List<CraneA0>;
 
-template <typename T1, typename F1>
-List<T1> TFunctor_list_(std::type_identity_t<TFunctor<T1>> h, F1 &&f,
-                        List<T1> x0_) {
-  return std::move(x0_).template map<T1>([=](T1 _x0) -> T1 {
-    return tfmap<T1, crane::obj, crane::obj>(h, f, _x0);
-  });
-}
-
-template <typename T1, typename F1>
-std::optional<T1> TFunctor_option(std::type_identity_t<TFunctor<T1>> h, F1 &&f,
-                                  const std::optional<T1> &ot) {
-  if (ot.has_value()) {
-    const auto &t = *ot;
-    return std::make_optional<T1>(
-        tfmap<T1, crane::obj, crane::obj>(std::move(h), f, t));
-  } else {
-    return std::optional<T1>();
+  template <typename CraneA0, typename CraneA1>
+  static List<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> a0, List<CraneA0> a1) {
+    return a1.template map<CraneA1>(std::move(a0));
   }
-}
+};
+
+static_assert(TFunctor<TFunctor_list>);
+
+template <TFunctor _tcI0> struct TFunctor_list_ {
+  template <typename CraneA0>
+  using T = List<typename _tcI0::template T<CraneA0>>;
+
+  template <typename CraneA0, typename CraneA1>
+  static List<typename _tcI0::template T<CraneA1>>
+  tfmap(crane::fn<CraneA1(CraneA0)> f,
+        List<typename _tcI0::template T<CraneA0>> a0) {
+    return a0.template map<typename _tcI0::template T<CraneA1>>(
+        [=](typename _tcI0::template T<CraneA0> a1) {
+          return _tcI0::template tfmap<CraneA0, CraneA1>(f, a1);
+        });
+  }
+};
+
+template <TFunctor _tcI0> struct TFunctor_option {
+  template <typename CraneA0>
+  using T = std::optional<typename _tcI0::template T<CraneA0>>;
+
+  template <typename CraneA0, typename CraneA1>
+  static std::optional<typename _tcI0::template T<CraneA1>>
+  tfmap(crane::fn<CraneA1(CraneA0)> f,
+        std::optional<typename _tcI0::template T<CraneA0>> ot) {
+    if (ot.has_value()) {
+      const typename _tcI0::template T<CraneA0> &t = *ot;
+      return std::make_optional<typename _tcI0::template T<CraneA1>>(
+          _tcI0::template tfmap<CraneA0, CraneA1>(std::move(f), t));
+    } else {
+      return std::optional<typename _tcI0::template T<CraneA1>>();
+    }
+  }
+};
 
 #endif // INCLUDED_HK_INSTANCE_BODY_TARG_UNDECLARED

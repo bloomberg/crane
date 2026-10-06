@@ -149,13 +149,14 @@ let concept_constraint_of_class_type ty =
    Uses CPPconvertible_to with the actual cpp_type for the constraint,
    which will be pretty-printed in cpp.ml.
 *)
-let gen_typeclass_cpp name fields ind =
-  let nb_keep = count_keep_params ind.ip_sign in
+let gen_typeclass_cpp name fields =
+  let ip_vars = Table.get_ind_ip_vars name in
+  let nb_keep = Table.get_ind_nb_sign_keeps name in
   let inst_id =
     let param_names =
       List.mapi (fun i x -> if i < nb_keep
                             then Id.to_string (Common.tparam_name x)
-                            else "") ind.ip_vars
+                            else "") ip_vars
     in
     if List.mem "I" param_names then Generated_name.id "Inst"
     else Id.of_string "I"
@@ -168,7 +169,7 @@ let gen_typeclass_cpp name fields ind =
   let is_tparam i = is_class_tparam name i in
   let prefixed_ip_vars =
     List.mapi (fun i x -> if is_tparam i then Common.tparam_name x else x)
-      ind.ip_vars
+      ip_vars
   in
   let param_vars = List.filteri (fun i _ -> is_tparam i) prefixed_ip_vars in
   (* Read the promoted half off {!class_promoted_vars} rather than re-deriving

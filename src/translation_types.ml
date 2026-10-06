@@ -125,6 +125,16 @@ let adapter_arg (_, id) = CPPvar (Option.get id)
     in the ML AST and should be ignored by numeral-folding traversals. *)
 let rec strip_magic = function MLmagic (_, e) -> strip_magic e | e -> e
 
+(** A dictionary as an argument, without what only wraps it: coercions, and
+    the lambdas over a singleton class method's erased type arguments that
+    an instance passed as a value is eta-expanded with -- [fun _ _ => d],
+    whose body never mentions them. *)
+let rec strip_dictionary e =
+  match strip_magic e with
+  | MLlam (_, ty, b) when Mlutil.isTdummy ty && not (Mlutil.ast_occurs 1 b) ->
+    strip_dictionary (Mlutil.ast_pop b)
+  | e -> e
+
 (** Whether a position has stated a type concrete enough to recover a box into.
     A slot spelled [std::any] wants the box as it stands, and one still spelled
     as a template parameter has not been stated at all: an [any_cast] there
@@ -1051,6 +1061,17 @@ let binder_is_instance env i =
      | Some ty -> ml_ret_is_skipped ty
      | None -> false )
 
+(** A singleton class's dictionary at the head of a call: the instance
+    parameter it is, the class, and the class's one method. *)
+let singleton_dictionary env head =
+  match strip_magic head with
+  | MLrel i -> (
+    match (Common.get_db_name_opt i env, get_env_type_opt i) with
+    | Some id, Some (Tglob (c, _, _)) when Common.is_tc_instance_id id ->
+      Option.map (fun m -> (id, c, m)) (Table.singleton_class_method c)
+    | _ -> None )
+  | _ -> None
+
 (* Check if an ML arg is a type class instance (a reference to a struct that
    implements a type class).
 
@@ -1060,7 +1081,7 @@ let binder_is_instance env i =
    position and the generated call names the instance struct as if it were a
    value. *)
 let is_typeclass_instance_arg env ml_arg =
-  match strip_magic ml_arg with
+  match strip_dictionary ml_arg with
   | MLglob (r, _) ->
     (* An instance parameterised over types alone carries its parameters in
        the [MLglob]'s type arguments, so its ML type is still an arrow --
@@ -1339,7 +1360,7 @@ let instance_class_ty env ml_arg =
     | ty -> ml_return_type ty
     | exception Not_found -> Miniml.Tunknown
   in
-  match strip_magic ml_arg with
+  match strip_dictionary ml_arg with
   | MLglob (r, _) | MLapp (MLglob (r, _), _) -> of_ref r
   | MLrel i -> (
     match get_env_type_opt i with
@@ -1369,6 +1390,57 @@ let kept_instance_of_projection env x args =
       && List.mem (Some x)
            (record_fields_of_type (instance_class_ty env a)) )
     args
+
+(* The instance a class field is called on as a static member, rather than
+   through the field's dispatcher: a mapped field's, as above, and a singleton
+   class's method's -- its dictionary is known wherever the call is, its
+   projection's only one, and the instance struct declaring the method under
+   the dispatcher's own name hides the dispatcher from any call inside it. *)
+let static_projection_instance env x args =
+  if Table.is_inline_custom x then kept_instance_of_projection env x args
+  else if Table.singleton_method_class x <> None then
+    List.find_opt
+      (fun a -> is_typeclass_instance_arg env a && not (instance_arg_is_erased env a))
+      args
+  else None
+
+(* The value parameters of class field [x] called through [inst] at [tys], as
+   the method declares them.
+
+   Two substitutions, because the projection's type quantifies over the
+   class's carrier as well as the method's own variables and [tys] carries
+   only the latter -- its leading entry, the carrier's, is [Tdummy].  The
+   carrier is what the instance is an instance {e at}, the sole argument of
+   its class type; without it every [m A] absorbs its argument and says
+   [std::any].  The carrier, the dictionary and the erased type arguments
+   all stand in front of the value parameters. *)
+let projection_value_domains env x tys inst =
+  match Table.find_type x with
+  | exception Not_found -> []
+  | ty ->
+    let ty =
+      match resolve_tmeta (instance_class_ty env inst) with
+      | Tglob (_, [carrier], _) -> subst_dict_carrier carrier ty
+      | _ -> ty
+    in
+    ml_domains (if tys = [] then ty else Mlutil.type_subst_list tys ty)
+    |> List.filter (fun t ->
+           match resolve_tmeta t with
+           | Tdummy _ -> false
+           | t -> not (Table.is_typeclass_type t))
+
+(* The operands a singleton method's call through [inst] leaves out: a
+   static member takes them all, so a partial application closes over the
+   rest. *)
+let static_projection_missing env x tys args inst =
+  if Table.is_inline_custom x then []
+  else
+    let operands =
+      List.filter (fun a -> not (Mlutil.isMLdummy a || a == inst)) args
+    in
+    List.filteri
+      (fun i _ -> i >= List.length operands)
+      (projection_value_domains env x tys inst)
 
 (** The shape a value physically has once it has been through a [std::any]:
     unchanged for a leaf, and one level of template with every argument boxed

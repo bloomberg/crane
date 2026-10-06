@@ -1,7 +1,6 @@
 #ifndef INCLUDED_HK_CLASS_ARG_NUMBERING
 #define INCLUDED_HK_CLASS_ARG_NUMBERING
 
-#include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
 #include <atomic>
@@ -13,6 +12,7 @@
 
 struct Monad_option;
 struct Nat;
+struct Iter_option;
 template <typename I>
 concept Functor = requires {
   typename I::template F<crane::obj>;
@@ -138,27 +138,38 @@ struct Monad_option {
 };
 
 static_assert(Monad<Monad_option>);
-template <typename m>
-using Iter = crane::fn<m(crane::fn<m(crane::obj)>, crane::obj)>;
+template <typename I>
+concept Iter = requires {
+  typename I::template M<crane::obj>;
+  {
+    I::template iter<crane::obj>(
+        std::declval<
+            crane::fn<typename I::template M<crane::obj>(crane::obj)>>(),
+        std::declval<crane::obj>())
+  } -> std::convertible_to<typename I::template M<crane::obj>>;
+};
 
-template <typename T1, typename T2, typename F1>
-crane::rebind_t<T1, T2> iter(std::type_identity_t<Iter<T1>> iter0, F1 &&x,
-                             const T2 &x0) {
-  return crane_container_cast<crane::rebind_t<T1, T2>>(
-      iter0(crane_erase_fn<T1>(x), x0));
+template <Iter _tcI0, typename T2, typename F0>
+typename _tcI0::template M<T2> iter(F0 &&x, const T2 &x0) {
+  return _tcI0::template iter<T2>(x, x0);
 }
 
-template <Functor _tcI0, Monad _tcI1, typename T2, typename F1>
-typename _tcI0::template F<T2>
-run(Iter<typename _tcI0::template F<crane::obj>> x0_, F1 &&x1_, const T2 &x2_) {
-  return iter<typename _tcI0::template F<crane::obj>, T2>(std::move(x0_), x1_,
-                                                          x2_);
+template <Iter _tcI0, Functor _tcI1, Monad _tcI2, typename T2, typename F0>
+typename _tcI0::template M<T2> run(F0 &&x1_, const T2 &x2_) {
+  return _tcI0::template iter<T2>(x1_, x2_);
 }
 
-template <typename F0>
-std::optional<crane::obj> Iter_option(F0 &&f, crane::obj x0_) {
-  return f(x0_);
-}
+struct Iter_option {
+  template <typename CraneA0> using M = std::optional<CraneA0>;
+
+  template <typename CraneA0>
+  static std::optional<CraneA0>
+  iter(crane::fn<std::optional<CraneA0>(CraneA0)> f, CraneA0 a0) {
+    return f(std::move(a0));
+  }
+};
+
+static_assert(Iter<Iter_option>);
 
 template <Monad _tcI0, typename T2>
 typename _tcI0::template m<T2> Monad0::ret(const T2 &x) {

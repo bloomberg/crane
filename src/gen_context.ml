@@ -53,11 +53,15 @@ let begin_body () =
     without this the stack still describes whatever was translated last — and
     a lookup of a parameter's type answers with a stale, unrelated entry (for
     a class's associated [Type], the unresolved class type variable, which
-    reads as erased and provokes a spurious [any_cast]). *)
-let with_method_env_types ?(cpp = []) env params f =
+    reads as erased and provokes a spurious [any_cast]).
+
+    [?outer] are the binders around the method -- an instance's own
+    parameters, its dictionaries among them -- pushed beneath [params]. *)
+let with_method_env_types ?(cpp = []) ?(outer = []) env params f =
   let saved_env_types = (!tctx).env_types in
   let saved_erased = save_erased_env () in
   reset_env_types ();
+  push_binders env outer;
   push_binders ~cpp env params;
   Fun.protect
     ~finally:(fun () ->
@@ -620,11 +624,11 @@ let with_body_resolutions r b f =
     @ type_resolutions_of_referenced_globals b )
     f
 
-let hkt_tvar_resolutions_of_type ty =
+let hkt_tvar_resolutions_of_type ?source_order ty =
   List.map
     (fun { htp_tvar; htp_instance; htp_field } ->
       (htp_tvar, Tqualified (htp_instance, htp_field)) )
-    (hkt_tvar_positions_of_type ty)
+    (hkt_tvar_positions_of_type ?source_order ty)
 
 (** Rewrite the type variables listed in [resolutions] (see
     {!hkt_tvar_resolutions_of_type}) throughout a C++ type. *)

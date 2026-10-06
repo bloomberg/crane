@@ -2,9 +2,9 @@
 #define INCLUDED_ENDO_ID_INSTANCE
 
 #include "crane_fn.h"
-#include "fn.h"
 #include "obj.h"
 #include <atomic>
+#include <concepts>
 #include <memory>
 #include <optional>
 #include <utility>
@@ -120,12 +120,16 @@ struct Datatypes {
   static crane::obj id(crane::obj x0);
 };
 
-struct EndoIdInstance {
-  template <typename t> using Endo = crane::fn<t(t)>;
+template <typename I, typename T>
+concept Endo = requires {
+  { I::endo(std::declval<T>()) } -> std::convertible_to<T>;
+};
 
-  template <typename T1>
-  static T1 endo(std::type_identity_t<Endo<T1>> endo0, T1 x0_) {
-    return endo0(std::move(x0_));
+struct EndoIdInstance {
+  template <typename _tcI0, typename T1>
+    requires Endo<_tcI0, T1>
+  static T1 endo(T1 x0_) {
+    return _tcI0::endo(std::move(x0_));
   }
 
   struct lit {
@@ -133,17 +137,22 @@ struct EndoIdInstance {
     Nat x;
   };
 
-  static inline const Endo<lit> Endo_lit = [](lit eta0_) {
-    return crane::any_cast<lit>(Datatypes::id(eta0_));
+  struct Endo_lit {
+    static lit endo(lit a0) {
+      return crane::any_cast<lit>(Datatypes::id(std::move(a0)));
+    }
   };
 
-  template <typename T1>
-  static T1 bump(std::type_identity_t<Endo<T1>> x0_, const T1 &x1_) {
-    return endo<T1>(std::move(x0_), x1_);
+  static_assert(Endo<Endo_lit, lit>);
+
+  template <typename _tcI0, typename T1>
+    requires Endo<_tcI0, T1>
+  static T1 bump(const T1 &x1_) {
+    return _tcI0::endo(x1_);
   }
 
   static inline const lit l1 =
-      bump<lit>(Endo_lit, lit{Nat::s(Nat::s(Nat::s(Nat::o()))),
+      bump<Endo_lit, lit>(lit{Nat::s(Nat::s(Nat::s(Nat::o()))),
                               Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))});
 
   static inline const bool is_seven = l1.sz.add(l1.x).eqb(

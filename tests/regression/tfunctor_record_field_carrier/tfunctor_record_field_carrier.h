@@ -6,6 +6,7 @@
 #include "obj.h"
 #include "small_vector.h"
 #include <atomic>
+#include <concepts>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -16,7 +17,9 @@
 struct Nat;
 template <typename A> struct List;
 template <typename t> struct Exp;
+struct TFunctor_exp;
 template <typename t> struct glob;
+struct TFunctor_glob;
 
 struct Nat {
   // TYPES
@@ -358,41 +361,67 @@ public:
     }
     return _result;
   }
+};
 
-  template <typename F0> Exp<crane::obj> TFunctor_exp(F0 &&x0_) const {
-    return this->template exp_map<crane::obj>(x0_);
+template <typename I>
+concept TFunctor = requires {
+  typename I::template T<crane::obj>;
+  {
+    I::template tfmap<crane::obj, crane::obj>(
+        std::declval<crane::fn<crane::obj(crane::obj)>>(),
+        std::declval<typename I::template T<crane::obj>>())
+  } -> std::convertible_to<typename I::template T<crane::obj>>;
+};
+
+template <TFunctor _tcI0, typename T2, typename T3, typename F0>
+typename _tcI0::template T<T3> tfmap(F0 &&x,
+                                     typename _tcI0::template T<T2> x0) {
+  return _tcI0::template tfmap<T2, T3>(x, std::move(x0));
+}
+
+struct TFunctor_exp {
+  template <typename CraneA0> using T = Exp<CraneA0>;
+
+  template <typename CraneA0, typename CraneA1>
+  static Exp<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> a0, Exp<CraneA0> a1) {
+    return a1.template exp_map<CraneA1>(std::move(a0));
   }
 };
 
-template <typename t>
-using TFunctor = crane::fn<t(crane::fn<crane::obj(crane::obj)>, t)>;
+static_assert(TFunctor<TFunctor_exp>);
 
-template <typename T1, typename T2, typename T3, typename F1>
-crane::rebind_t<T1, T3> tfmap(std::type_identity_t<TFunctor<T1>> tFunctor,
-                              F1 &&x, crane::rebind_t<T1, T2> x0) {
-  return crane_container_cast<crane::rebind_t<T1, T3>>(
-      tFunctor(crane_erase_fn(x), crane_convert<T1>(std::move(x0))));
-}
+template <TFunctor _tcI0> struct TFunctor_option {
+  template <typename CraneA0>
+  using T = std::optional<typename _tcI0::template T<CraneA0>>;
 
-template <typename T1, typename F1>
-std::optional<T1> TFunctor_option(std::type_identity_t<TFunctor<T1>> h, F1 &&f,
-                                  const std::optional<T1> &o) {
-  if (o.has_value()) {
-    const auto &x = *o;
-    return std::make_optional<T1>(
-        tfmap<T1, crane::obj, crane::obj>(std::move(h), f, x));
-  } else {
-    return std::optional<T1>();
+  template <typename CraneA0, typename CraneA1>
+  static std::optional<typename _tcI0::template T<CraneA1>>
+  tfmap(crane::fn<CraneA1(CraneA0)> f,
+        std::optional<typename _tcI0::template T<CraneA0>> o) {
+    if (o.has_value()) {
+      const typename _tcI0::template T<CraneA0> &x = *o;
+      return std::make_optional<typename _tcI0::template T<CraneA1>>(
+          _tcI0::template tfmap<CraneA0, CraneA1>(std::move(f), x));
+    } else {
+      return std::optional<typename _tcI0::template T<CraneA1>>();
+    }
   }
-}
+};
 
-template <typename T1, typename F1>
-List<T1> TFunctor_list(std::type_identity_t<TFunctor<T1>> h, F1 &&f,
-                       const List<T1> &l) {
-  return l.template map<T1>([=](T1 _x0) -> T1 {
-    return tfmap<T1, crane::obj, crane::obj>(h, f, _x0);
-  });
-}
+template <TFunctor _tcI0> struct TFunctor_list {
+  template <typename CraneA0>
+  using T = List<typename _tcI0::template T<CraneA0>>;
+
+  template <typename CraneA0, typename CraneA1>
+  static List<typename _tcI0::template T<CraneA1>>
+  tfmap(crane::fn<CraneA1(CraneA0)> f,
+        List<typename _tcI0::template T<CraneA0>> l) {
+    return l.template map<typename _tcI0::template T<CraneA1>>(
+        [=](typename _tcI0::template T<CraneA0> a0) {
+          return _tcI0::template tfmap<CraneA0, CraneA1>(f, a0);
+        });
+  }
+};
 
 template <typename t> struct glob {
   t g_name;
@@ -414,34 +443,32 @@ template <typename t> struct glob {
   }
 };
 
-glob<crane::obj> TFunctor_glob(const crane::fn<crane::obj(crane::obj)> &f,
-                               const glob<crane::obj> &g);
+struct TFunctor_glob {
+  template <typename CraneA0> using T = glob<CraneA0>;
+
+  template <typename CraneA0, typename CraneA1>
+  static glob<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f, glob<CraneA0> g) {
+    return glob<CraneA1>{
+        f(g.g_name),
+        TFunctor_option<TFunctor_exp>::template tfmap<CraneA0, CraneA1>(
+            f, g.g_exp),
+        TFunctor_list<TFunctor_exp>::template tfmap<CraneA0, CraneA1>(
+            f, g.g_anns)};
+  }
+};
+
+static_assert(TFunctor<TFunctor_glob>);
 
 /// The composed carrier at a top-level argument: this one is already correct,
 /// and is kept as the control that says the emitter can do it.
 template <typename F0>
 std::optional<Exp<Nat>> use_option(F0 &&f, const std::optional<Exp<Nat>> &o) {
-  return tfmap<std::optional<Exp<crane::obj>>, Nat, Nat>(
-      []() {
-        return [](crane::fn<crane::obj(crane::obj)> _x0,
-                  const auto &_x1) -> std::optional<Exp<crane::obj>> {
-          return TFunctor_option<Exp<crane::obj>>(
-              [](auto &&_ec0, Exp<crane::obj> _ec1) {
-                return _ec1.TFunctor_exp(_ec0);
-              },
-              _x0, crane_convert<std::optional<Exp<crane::obj>>>(_x1));
-        };
-      }(),
-      f, o);
+  return TFunctor_option<TFunctor_exp>::template tfmap<Nat, Nat>(f, o);
 }
 
 /// The same carrier through a record field.
 template <typename F0> glob<Nat> use_glob(F0 &&f, const glob<Nat> &g) {
-  return tfmap<glob<crane::obj>, Nat, Nat>(
-      [](auto &&_ec0, glob<crane::obj> _ec1) {
-        return TFunctor_glob(_ec0, _ec1);
-      },
-      f, g);
+  return TFunctor_glob::template tfmap<Nat, Nat>(f, g);
 }
 
 #endif // INCLUDED_TFUNCTOR_RECORD_FIELD_CARRIER

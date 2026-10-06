@@ -84,25 +84,20 @@ using crane_carrier_tc_556dca13c30ca6b8 =
 Itree<InterpChainPerf::BotE<crane::obj>, std::pair<Nat, Nat>>
 InterpChainPerf::run_n(const Nat &n) {
   return State::template interp_state<
+      MonadIter_itree<InterpChainPerf::BotE<crane::obj>>,
       Monad_itree<InterpChainPerf::BotE<crane::obj>>,
       Functor_itree<InterpChainPerf::BotE<crane::obj>>,
       InterpChainPerf::TopE<crane::obj>, Nat, Nat>(
-      [](auto &&_ec0, crane::obj _ec1) {
-        return ::template MonadIter_itree<InterpChainPerf::BotE<crane::obj>>(
-            _ec0, _ec1);
-      },
       [](const auto &a0)
           -> Monads::template stateT<Nat, crane_carrier_tc_556dca13c30ca6b8,
                                      crane::obj> {
         return h<crane::obj>(
             crane_convert<InterpChainPerf::TopE<crane::obj>>(a0));
       },
-      Interp::template interp<Monad_itree<InterpChainPerf::TopE<crane::obj>>,
-                              Functor_itree<InterpChainPerf::TopE<crane::obj>>>(
-          [](auto &&_ec0, crane::obj _ec1) {
-            return ::template MonadIter_itree<
-                InterpChainPerf::TopE<crane::obj>>(_ec0, _ec1);
-          },
+      Interp::template interp<
+          MonadIter_itree<InterpChainPerf::TopE<crane::obj>>,
+          Monad_itree<InterpChainPerf::TopE<crane::obj>>,
+          Functor_itree<InterpChainPerf::TopE<crane::obj>>>(
           [](const auto &a0)
               -> Itree<InterpChainPerf::TopE<crane::obj>, crane::obj> {
             return intr<crane::obj>(

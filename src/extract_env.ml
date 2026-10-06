@@ -397,6 +397,10 @@ let rec extract_structure access env mp reso ~all = function
   | (l, SFBconst cb) :: struc ->
     ( try
         let sg = Evd.from_env env in
+        (* An instance of a singleton class is extracted as an instance,
+           whatever its body: the fixpoint is its method's. *)
+        if singleton_instance_class ~env (GlobRef.ConstRef (make_cst reso mp l)) <> None then
+          raise Impossible;
         let vl, is_fix, recd, struc = factor_fix env sg l cb struc in
         let vc = Array.map (make_cst reso mp) vl in
         let ms = extract_structure access env mp reso ~all struc in

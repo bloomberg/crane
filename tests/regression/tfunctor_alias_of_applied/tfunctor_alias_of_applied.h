@@ -5,6 +5,7 @@
 #include "fn.h"
 #include "obj.h"
 #include <atomic>
+#include <concepts>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -225,29 +226,57 @@ public:
   }
 };
 
+template <typename I>
+concept TFunctor = requires {
+  typename I::template T<crane::obj>;
+  {
+    I::template tfmap<crane::obj, crane::obj>(
+        std::declval<crane::fn<crane::obj(crane::obj)>>(),
+        std::declval<typename I::template T<crane::obj>>())
+  } -> std::convertible_to<typename I::template T<crane::obj>>;
+};
+template <typename I>
+concept ConvertTyp = requires {
+  typename I::template F<crane::obj>;
+  {
+    I::convert_typ(std::declval<Nat>(),
+                   std::declval<typename I::template F<Nat>>())
+  } -> std::convertible_to<typename I::template F<Nat>>;
+};
+
 struct TfunctorAliasOfApplied {
-  template <typename t>
-  using TFunctor = crane::fn<t(crane::fn<crane::obj(crane::obj)>, t)>;
-
-  template <typename T1, typename T2, typename T3, typename F1>
-  static crane::rebind_t<T1, T3>
-  tfmap(std::type_identity_t<TFunctor<T1>> tFunctor, F1 &&f,
-        crane::rebind_t<T1, T2> x) {
-    return crane_container_cast<crane::rebind_t<T1, T3>>(
-        tFunctor(crane_erase_fn(f), crane_convert<T1>(std::move(x))));
+  template <TFunctor _tcI0, typename T2, typename T3, typename F0>
+  static typename _tcI0::template T<T3>
+  tfmap(F0 &&f, typename _tcI0::template T<T2> x) {
+    return _tcI0::template tfmap<T2, T3>(f, std::move(x));
   }
 
-  static List<crane::obj>
-  TFunctor_list(const crane::fn<crane::obj(crane::obj)> &x0_,
-                const List<crane::obj> &x1_);
+  struct TFunctor_list {
+    template <typename CraneA0> using T = List<CraneA0>;
 
-  template <typename T1, typename F1>
-  static List<T1> TFunctor_list_(std::type_identity_t<TFunctor<T1>> h, F1 &&f,
-                                 List<T1> x0_) {
-    return std::move(x0_).template map<T1>([=](T1 _x0) -> T1 {
-      return tfmap<T1, crane::obj, crane::obj>(h, f, _x0);
-    });
-  }
+    template <typename CraneA0, typename CraneA1>
+    static List<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> a0,
+                               List<CraneA0> a1) {
+      return a1.template map<CraneA1>(std::move(a0));
+    }
+  };
+
+  static_assert(TFunctor<TFunctor_list>);
+
+  template <TFunctor _tcI0> struct TFunctor_list_ {
+    template <typename CraneA0>
+    using T = List<typename _tcI0::template T<CraneA0>>;
+
+    template <typename CraneA0, typename CraneA1>
+    static List<typename _tcI0::template T<CraneA1>>
+    tfmap(crane::fn<CraneA1(CraneA0)> f,
+          List<typename _tcI0::template T<CraneA0>> a0) {
+      return a0.template map<typename _tcI0::template T<CraneA1>>(
+          [=](typename _tcI0::template T<CraneA0> a1) {
+            return _tcI0::template tfmap<CraneA0, CraneA1>(f, a1);
+          });
+    }
+  };
 
   template <typename T> struct cfg {
     T blk;
@@ -302,74 +331,62 @@ struct TfunctorAliasOfApplied {
   };
 
   template <typename t> using mcfg = modul<t, cfg<t>>;
-  static cfg<crane::obj>
-  TFunctor_cfg(const crane::fn<crane::obj(crane::obj)> &f,
-               const cfg<crane::obj> &c);
 
-  template <typename T1, typename F1>
-  static definition<crane::obj, T1>
-  TFunctor_definition(std::type_identity_t<TFunctor<T1>> h, F1 &&f,
-                      const definition<crane::obj, T1> &d) {
-    return definition<crane::obj, T1>{
-        f(d.df_ty),
-        tfmap<T1, crane::obj, crane::obj>(std::move(h), f, d.df_body)};
+  struct TFunctor_cfg {
+    template <typename CraneA0> using T = cfg<CraneA0>;
+
+    template <typename CraneA0, typename CraneA1>
+    static cfg<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f, cfg<CraneA0> c) {
+      return cfg<CraneA1>{f(std::move(c).blk)};
+    }
+  };
+
+  static_assert(TFunctor<TFunctor_cfg>);
+
+  template <TFunctor _tcI0> struct TFunctor_definition {
+    template <typename CraneA0>
+    using T = definition<CraneA0, typename _tcI0::template T<CraneA0>>;
+
+    template <typename CraneA0, typename CraneA1>
+    static definition<CraneA1, typename _tcI0::template T<CraneA1>>
+    tfmap(crane::fn<CraneA1(CraneA0)> f,
+          definition<CraneA0, typename _tcI0::template T<CraneA0>> d) {
+      return definition<CraneA1, typename _tcI0::template T<CraneA1>>{
+          f(d.df_ty), _tcI0::template tfmap<CraneA0, CraneA1>(f, d.df_body)};
+    }
+  };
+
+  template <TFunctor _tcI0, TFunctor _tcI1> struct TFunctor_mcfg {
+    template <typename CraneA0>
+    using T = modul<CraneA0, typename _tcI0::template T<CraneA0>>;
+
+    template <typename CraneA0, typename CraneA1>
+    static modul<CraneA1, typename _tcI0::template T<CraneA1>>
+    tfmap(crane::fn<CraneA1(CraneA0)> f,
+          modul<CraneA0, typename _tcI0::template T<CraneA0>> p) {
+      return modul<CraneA1, typename _tcI0::template T<CraneA1>>{
+          TFunctor_list_<_tcI1>::template tfmap<CraneA0, CraneA1>(
+              std::move(f), std::move(p).m_defs)};
+    }
+  };
+
+  template <ConvertTyp _tcI0>
+  static typename _tcI0::template F<Nat>
+  convert_typ(const Nat &x0_, typename _tcI0::template F<Nat> x1_) {
+    return _tcI0::convert_typ(x0_, std::move(x1_));
   }
 
-  template <typename T1, typename F2>
-  static modul<crane::obj, T1>
-  TFunctor_mcfg(std::type_identity_t<TFunctor<T1>>,
-                std::type_identity_t<TFunctor<definition<crane::obj, T1>>> h0,
-                F2 &&f, const modul<crane::obj, T1> &p) {
-    return modul<crane::obj, T1>{
-        tfmap<List<definition<crane::obj, T1>>, crane::obj, crane::obj>(
-            [=]() {
-              return [=](crane::fn<crane::obj(crane::obj)> _x0,
-                         const auto &_x1) -> List<definition<crane::obj, T1>> {
-                return TFunctor_list_<definition<crane::obj, T1>>(
-                    h0, _x0,
-                    crane_convert<List<definition<crane::obj, T1>>>(_x1));
-              };
-            }(),
-            f, p.m_defs)};
-  }
-  template <template <typename> class f>
-  using ConvertTyp = crane::fn<f<Nat>(Nat, f<Nat>)>;
+  struct ConvertTyp_mcfg {
+    template <typename CraneA0> using F = mcfg<CraneA0>;
 
-  template <template <typename> class T1>
-  static T1<Nat> convert_typ(std::type_identity_t<ConvertTyp<T1>> convertTyp,
-                             const Nat &x0_, T1<Nat> x1_) {
-    return crane_container_cast<T1<Nat>>(convertTyp(x0_, std::move(x1_)));
-  }
+    static mcfg<Nat> convert_typ(Nat k, mcfg<Nat> a0) {
+      return TFunctor_mcfg<TFunctor_cfg, TFunctor_definition<TFunctor_cfg>>::
+          template tfmap<Nat, Nat>([=](const Nat &n) { return n.add(k); },
+                                   std::move(a0));
+    }
+  };
 
-  static inline const ConvertTyp<mcfg> ConvertTyp_mcfg = []() {
-    return [](Nat k, mcfg<Nat> eta0_) {
-      return tfmap<modul<crane::obj, cfg<crane::obj>>, Nat, Nat>(
-          []() {
-            return [](crane::fn<crane::obj(crane::obj)> _x0,
-                      const auto &_x1) -> modul<crane::obj, cfg<crane::obj>> {
-              return TFunctor_mcfg<cfg<crane::obj>>(
-                  [](auto &&_ec0, cfg<crane::obj> _ec1) {
-                    return TFunctor_cfg(_ec0, _ec1);
-                  },
-                  []() {
-                    return [](crane::fn<crane::obj(crane::obj)> _x0,
-                              const auto &_x1)
-                               -> definition<crane::obj, cfg<crane::obj>> {
-                      return TFunctor_definition<cfg<crane::obj>>(
-                          [](auto &&_ec0, cfg<crane::obj> _ec1) {
-                            return TFunctor_cfg(_ec0, _ec1);
-                          },
-                          _x0,
-                          crane_convert<
-                              definition<crane::obj, cfg<crane::obj>>>(_x1));
-                    };
-                  }(),
-                  _x0, crane_convert<modul<crane::obj, cfg<crane::obj>>>(_x1));
-            };
-          }(),
-          [=](const Nat &n) { return n.add(k); }, eta0_);
-    };
-  }();
+  static_assert(ConvertTyp<ConvertTyp_mcfg>);
   static mcfg<Nat> convert(const modul<Nat, cfg<Nat>> &m);
   static inline const mcfg<Nat> m0 =
       modul<Nat, cfg<Nat>>{List<definition<Nat, cfg<Nat>>>::cons(

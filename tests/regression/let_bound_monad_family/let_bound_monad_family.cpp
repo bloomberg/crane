@@ -23,12 +23,9 @@ Itree<LetBoundMonadFamily::BotE<crane::obj>, Nat> LetBoundMonadFamily::gen(
         Nat>(Nat::s(x));
   });
   return Interp::template interp<
+      MonadIter_itree<LetBoundMonadFamily::BotE<crane::obj>>,
       Monad_itree<LetBoundMonadFamily::BotE<crane::obj>>,
       Functor_itree<LetBoundMonadFamily::BotE<crane::obj>>>(
-      [](auto &&_ec0, crane::obj _ec1) {
-        return ::template MonadIter_itree<
-            LetBoundMonadFamily::BotE<crane::obj>>(_ec0, _ec1);
-      },
       [](const auto &a0)
           -> Itree<LetBoundMonadFamily::BotE<crane::obj>, crane::obj> {
         return h<crane::obj>(

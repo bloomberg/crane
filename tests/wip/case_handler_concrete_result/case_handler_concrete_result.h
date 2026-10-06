@@ -105,22 +105,29 @@ struct Functor0 {
   static typename _tcI0::template F<T3> fmap(F0 &&x,
                                              typename _tcI0::template F<T2> x0);
 };
-template <template <typename> class m>
-using MonadIter = crane::fn<m<crane::obj>(
-    crane::fn<m<Sum<crane::obj, crane::obj>>(crane::obj)>, crane::obj)>;
+
+template <typename I>
+concept MonadIter = requires {
+  typename I::template M<crane::obj>;
+  {
+    I::template iter<crane::obj, crane::obj>(
+        std::declval<crane::fn<
+            typename I::template M<Sum<crane::obj, crane::obj>>(crane::obj)>>(),
+        std::declval<crane::obj>())
+  } -> std::convertible_to<typename I::template M<crane::obj>>;
+};
 
 struct Basics {
-  template <template <typename> class T1, typename T2, typename T3, typename F1>
-  static T1<T2> iter(std::type_identity_t<MonadIter<T1>> monadIter, F1 &&x,
-                     const T3 &x0);
+  template <MonadIter _tcI0, typename T2, typename T3, typename F0>
+  static typename _tcI0::template M<T2> iter(F0 &&x, const T3 &x0);
 };
 
 struct Interp {
-  template <Monad _tcI0, Functor _tcI1, typename T1, typename T3>
-  static typename _tcI0::template m<T3>
-  interp(std::type_identity_t<MonadIter<_tcI0::template m>> iM,
-         std::type_identity_t<
-             crane::fn<typename _tcI0::template m<crane::obj>(T1)>>
+  template <MonadIter _tcI0, Monad _tcI1, Functor _tcI2, typename T1,
+            typename T3>
+  static typename _tcI0::template M<T3>
+  interp(std::type_identity_t<
+             crane::fn<typename _tcI0::template M<crane::obj>(T1)>>
              h,
          std::shared_ptr<ITree<T3>> x0_);
 };
@@ -142,10 +149,9 @@ struct CaseHandlerConcreteResult {
                          const std::shared_ptr<ITree<uint64_t>> &t);
   static inline const uint64_t handled_left =
       result(UINT64_C(10),
-             Interp::template interp<Monad_itree<crane::obj>,
-                                     Functor_itree<crane::obj>,
-                                     Sum1<AE, AE, crane::obj>, uint64_t>(
-                 MonadIter_itree<void>,
+             Interp::template interp<
+                 MonadIter_itree<crane::obj>, Monad_itree<crane::obj>,
+                 Functor_itree<crane::obj>, Sum1<AE, AE, crane::obj>, uint64_t>(
                  itree_case(
                      [](const AE &a0) -> std::shared_ptr<ITree<crane::obj>> {
                        return hl<crane::obj>(crane_convert<AE>(a0));
@@ -156,10 +162,9 @@ struct CaseHandlerConcreteResult {
                  tl()));
   static inline const uint64_t handled_right =
       result(UINT64_C(10),
-             Interp::template interp<Monad_itree<crane::obj>,
-                                     Functor_itree<crane::obj>,
-                                     Sum1<AE, AE, crane::obj>, uint64_t>(
-                 MonadIter_itree<void>,
+             Interp::template interp<
+                 MonadIter_itree<crane::obj>, Monad_itree<crane::obj>,
+                 Functor_itree<crane::obj>, Sum1<AE, AE, crane::obj>, uint64_t>(
                  itree_case(
                      [](const AE &a0) -> std::shared_ptr<ITree<crane::obj>> {
                        return hl<crane::obj>(crane_convert<AE>(a0));
@@ -176,40 +181,35 @@ Functor0::fmap(F0 &&x, typename _tcI0::template F<T2> x0) {
   return _tcI0::template fmap<T2, T3>(x, std::move(x0));
 }
 
-template <template <typename> class T1, typename T2, typename T3, typename F1>
-T1<T2> Basics::iter(std::type_identity_t<MonadIter<T1>> monadIter, F1 &&x,
-                    const T3 &x0) {
-  return crane_container_cast<T1<T2>>(
-      monadIter(crane_erase_fn<T1<Sum<crane::obj, crane::obj>>>(x), x0));
+template <MonadIter _tcI0, typename T2, typename T3, typename F0>
+typename _tcI0::template M<T2> Basics::iter(F0 &&x, const T3 &x0) {
+  return _tcI0::template iter<T2, T3>(x, x0);
 }
 
-template <Monad _tcI0, Functor _tcI1, typename T1, typename T3>
-typename _tcI0::template m<T3> Interp::interp(
-    std::type_identity_t<MonadIter<_tcI0::template m>> iM,
-    std::type_identity_t<crane::fn<typename _tcI0::template m<crane::obj>(T1)>>
+template <MonadIter _tcI0, Monad _tcI1, Functor _tcI2, typename T1, typename T3>
+typename _tcI0::template M<T3> Interp::interp(
+    std::type_identity_t<crane::fn<typename _tcI0::template M<crane::obj>(T1)>>
         h,
     std::shared_ptr<ITree<T3>> x0_) {
-  return Basics::template iter<_tcI0::template m, T3,
-                               std::shared_ptr<ITree<T3>>>(
-      std::move(iM),
+  return _tcI0::template iter<T3, std::shared_ptr<ITree<T3>>>(
       [=](const std::shared_ptr<ITree<T3>> &t) ->
-      typename _tcI0::template m<Sum<std::shared_ptr<ITree<T3>>, T3>> {
+      typename _tcI0::template M<Sum<std::shared_ptr<ITree<T3>>, T3>> {
         auto _cs = t->observe();
         if (std::holds_alternative<typename ITree<T3>::Ret>(_cs)) {
           const auto &_itf = *std::get_if<typename ITree<T3>::Ret>(&_cs);
           auto r = _itf.value;
-          return _tcI0::template ret<Sum<std::shared_ptr<ITree<T3>>, T3>>(
+          return _tcI1::template ret<Sum<std::shared_ptr<ITree<T3>>, T3>>(
               Sum<std::shared_ptr<ITree<T3>>, T3>::inr(r));
         } else if (std::holds_alternative<typename ITree<T3>::Tau>(_cs)) {
           const auto &_itf = *std::get_if<typename ITree<T3>::Tau>(&_cs);
           auto t0 = _itf.next;
-          return _tcI0::template ret<Sum<std::shared_ptr<ITree<T3>>, T3>>(
+          return _tcI1::template ret<Sum<std::shared_ptr<ITree<T3>>, T3>>(
               Sum<std::shared_ptr<ITree<T3>>, T3>::inl(t0));
         } else {
           const auto &_itf = *std::get_if<typename ITree<T3>::Vis>(&_cs);
           auto e = crane_event_as<T1>(_itf.effect);
           auto k = _itf.cont;
-          return Functor0::template fmap<_tcI1, crane::obj,
+          return Functor0::template fmap<_tcI2, crane::obj,
                                          Sum<std::shared_ptr<ITree<T3>>, T3>>(
               [=](const auto &x) {
                 return Sum<std::shared_ptr<ITree<T3>>, T3>::inl(k(x));

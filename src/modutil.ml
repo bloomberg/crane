@@ -370,7 +370,9 @@ let dfix_to_mlfix fds i =
 *)
 let decl_of_term r a t =
   match dump_unused_vars (optimize_fix a) with
-  | MLfix (0, _, [|c|], _) ->
+  (* An instance of a singleton class stays an instance, whose method the
+     fixpoint is. *)
+  | MLfix (0, _, [|c|], _) when singleton_instance_class r = None ->
     Dfix [{fd_ref = r; fd_body = ast_subst (MLglob (r, [])) c; fd_type = t}]
     (* The [] ML type args are safe: gen_expr reads template args from the
        C++ environment, not from MLglob's arg list. *)

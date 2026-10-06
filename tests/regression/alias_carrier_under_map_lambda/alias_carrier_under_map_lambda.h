@@ -6,6 +6,7 @@
 #include "obj.h"
 #include "small_vector.h"
 #include <atomic>
+#include <concepts>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -16,7 +17,10 @@
 struct Nat;
 template <typename A> struct List;
 template <typename t> struct Exp;
+struct TFunctor_exp;
+struct TFunctor_texp;
 template <typename t> struct Instr;
+struct TFunctor_instr;
 
 struct Nat {
   // TYPES
@@ -351,26 +355,48 @@ public:
     }
     return _result;
   }
-
-  template <typename F0> Exp<crane::obj> TFunctor_exp(F0 &&x0_) const {
-    return this->template exp_map<crane::obj>(x0_);
-  }
 };
 
 /// An alias carrier: arity 1, body arity 2.
 template <typename t> using texp = std::pair<t, Exp<t>>;
-template <typename t>
-using TFunctor = crane::fn<t(crane::fn<crane::obj(crane::obj)>, t)>;
+template <typename I>
+concept TFunctor = requires {
+  typename I::template T<crane::obj>;
+  {
+    I::template tfmap<crane::obj, crane::obj>(
+        std::declval<crane::fn<crane::obj(crane::obj)>>(),
+        std::declval<typename I::template T<crane::obj>>())
+  } -> std::convertible_to<typename I::template T<crane::obj>>;
+};
 
-template <typename T1, typename T2, typename T3, typename F1>
-crane::rebind_t<T1, T3> tfmap(std::type_identity_t<TFunctor<T1>> tFunctor,
-                              F1 &&x, crane::rebind_t<T1, T2> x0) {
-  return crane_container_cast<crane::rebind_t<T1, T3>>(
-      tFunctor(crane_erase_fn(x), crane_convert<T1>(std::move(x0))));
+template <TFunctor _tcI0, typename T2, typename T3, typename F0>
+typename _tcI0::template T<T3> tfmap(F0 &&x,
+                                     typename _tcI0::template T<T2> x0) {
+  return _tcI0::template tfmap<T2, T3>(x, std::move(x0));
 }
 
-texp<crane::obj> TFunctor_texp(const crane::fn<crane::obj(crane::obj)> &f,
-                               const std::pair<crane::obj, Exp<crane::obj>> &p);
+struct TFunctor_exp {
+  template <typename CraneA0> using T = Exp<CraneA0>;
+
+  template <typename CraneA0, typename CraneA1>
+  static Exp<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> a0, Exp<CraneA0> a1) {
+    return a1.template exp_map<CraneA1>(std::move(a0));
+  }
+};
+
+static_assert(TFunctor<TFunctor_exp>);
+
+struct TFunctor_texp {
+  template <typename CraneA0> using T = texp<CraneA0>;
+
+  template <typename CraneA0, typename CraneA1>
+  static texp<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f, texp<CraneA0> p) {
+    return std::make_pair(f(std::move(p).first),
+                          p.second.template exp_map<CraneA1>(f));
+  }
+};
+
+static_assert(TFunctor<TFunctor_texp>);
 
 template <typename t> struct Instr {
   // TYPES
@@ -426,15 +452,33 @@ public:
   const variant_t &v() const { return v_; }
 };
 
-Instr<crane::obj> TFunctor_instr(const crane::fn<crane::obj(crane::obj)> &f,
-                                 const Instr<crane::obj> &i);
+struct TFunctor_instr {
+  template <typename CraneA0> using T = Instr<CraneA0>;
+
+  template <typename CraneA0, typename CraneA1>
+  static Instr<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f, Instr<CraneA0> i) {
+    if (std::holds_alternative<typename Instr<CraneA0>::I_op>(i.v())) {
+      const auto &[a0] = std::get<typename Instr<CraneA0>::I_op>(i.v());
+      return Instr<CraneA1>::i_op(
+          TFunctor_exp::template tfmap<CraneA0, CraneA1>(f, a0));
+    } else {
+      const auto &[a0, a1] = std::get<typename Instr<CraneA0>::I_call>(i.v());
+      return Instr<CraneA1>::i_call(
+          TFunctor_texp::template tfmap<CraneA0, CraneA1>(f, a0),
+          a1.template map<std::pair<texp<CraneA1>, Nat>>(
+              [=](std::pair<std::pair<CraneA0, Exp<CraneA0>>, Nat> pat) {
+                const auto &[te, a] = pat;
+                return std::make_pair(
+                    TFunctor_texp::template tfmap<CraneA0, CraneA1>(f, te), a);
+              }));
+    }
+  }
+};
+
+static_assert(TFunctor<TFunctor_instr>);
 
 template <typename F0> Instr<bool> use_instr(F0 &&f, const Instr<Nat> &i) {
-  return tfmap<Instr<crane::obj>, Nat, bool>(
-      [](auto &&_ec0, Instr<crane::obj> _ec1) {
-        return TFunctor_instr(_ec0, _ec1);
-      },
-      f, i);
+  return TFunctor_instr::template tfmap<Nat, bool>(f, i);
 }
 
 #endif // INCLUDED_ALIAS_CARRIER_UNDER_MAP_LAMBDA
