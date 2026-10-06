@@ -85,7 +85,12 @@ let rec bind_by_reference = function
     Sasgn (x, Declare (Tref (Lvalue, ty)), rhs) :: bind_by_reference rest
   | s :: rest -> s :: bind_by_reference rest
 
-let rec stmts ss = bind_by_reference (drop_unused (List.map stmt ss))
+(* Under Reuse, a match-only scrutinee may be marked owned so that a reuse arm
+   can consume it; one reached through a [const] reference or a pointer cannot
+   be, and its matches borrow -- see {!Minicpp.borrow_bound_matches}. *)
+let borrow_bound ss = if Table.reuse () then borrow_bound_matches ss else ss
+
+let rec stmts ss = borrow_bound (bind_by_reference (drop_unused (List.map stmt ss)))
 
 and stmt s =
   match s with

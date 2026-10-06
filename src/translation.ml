@@ -7752,8 +7752,16 @@ and gen_cpp_case (typ : ml_type) t env pv =
                   | None -> None )
               rev_ids'
           in
+          (* The constructor rebuilt must hold the inductive itself too, the
+             field its [__reuse] factory recycles the cell into: [nil] has
+             none. *)
+          let rebuilds_a_child =
+            match Table.get_ctor_ip_types_opt tail_ctor with
+            | Some tys -> List.exists is_uniform_self tys
+            | None -> false
+          in
           let rec_idx =
-            if List.mem None reads then None
+            if List.mem None reads || not rebuilds_a_child then None
             else
               let rec first i = function
                 | Some `Child :: _ -> Some i

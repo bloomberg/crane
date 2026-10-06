@@ -209,6 +209,7 @@ struct ReuseListShapes {
               List<uint64_t>::cons(UINT64_C(7), List<uint64_t>::nil())))
           .firstn(UINT64_C(2));
   static List<uint64_t> bump(List<uint64_t> l);
+  static List<uint64_t> take(uint64_t n, List<uint64_t> l);
 
   struct frames {
     // TYPES
@@ -300,42 +301,74 @@ struct ReuseListShapes {
   };
 
   static frames add_to_frame(const mem &m, uint64_t k);
+  static frames add_to_frame_(const mem &m, uint64_t k);
   static inline const uint64_t result =
-      (((zipped.template fold_left<uint64_t>(
-             [](uint64_t acc, const std::pair<uint64_t, uint64_t> &pat) {
-               const auto &[a, b] = pat;
-               return ((acc + a) + b);
-             },
-             UINT64_C(0)) +
-         firsts.template fold_left<uint64_t>(
-             [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
-             UINT64_C(0))) +
-        bump(List<uint64_t>::cons(
-                 UINT64_C(1),
-                 List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())))
+      (((((zipped.template fold_left<uint64_t>(
+               [](uint64_t acc, const std::pair<uint64_t, uint64_t> &pat) {
+                 const auto &[a, b] = pat;
+                 return ((acc + a) + b);
+               },
+               UINT64_C(0)) +
+           firsts.template fold_left<uint64_t>(
+               [](uint64_t _x0, uint64_t _x1) -> uint64_t {
+                 return (_x0 + _x1);
+               },
+               UINT64_C(0))) +
+          bump(List<uint64_t>::cons(
+                   UINT64_C(1),
+                   List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())))
+              .template fold_left<uint64_t>(
+                  [](uint64_t _x0, uint64_t _x1) -> uint64_t {
+                    return (_x0 + _x1);
+                  },
+                  UINT64_C(0))) +
+         []() {
+           auto &&_sv = add_to_frame(
+               mem{frames::push(
+                       List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil()),
+                       frames::single(List<uint64_t>::cons(
+                           UINT64_C(2), List<uint64_t>::nil()))),
+                   UINT64_C(0)},
+               UINT64_C(7));
+           if (crane::holds_alternative<typename frames::Single>(_sv.v())) {
+             return UINT64_C(0);
+           } else {
+             const auto &[a0, a1] = crane::get<typename frames::Push>(_sv.v());
+             const List<uint64_t> &a0_value = *a0;
+             return a0_value.template fold_left<uint64_t>(
+                 [](uint64_t _x0, uint64_t _x1) -> uint64_t {
+                   return (_x0 + _x1);
+                 },
+                 UINT64_C(0));
+           }
+         }()) +
+        take(UINT64_C(2),
+             List<uint64_t>::cons(
+                 UINT64_C(4),
+                 List<uint64_t>::cons(
+                     UINT64_C(5),
+                     List<uint64_t>::cons(UINT64_C(6), List<uint64_t>::nil()))))
             .template fold_left<uint64_t>(
                 [](uint64_t _x0, uint64_t _x1) -> uint64_t {
                   return (_x0 + _x1);
                 },
                 UINT64_C(0))) +
        []() {
-         auto &&_sv = add_to_frame(
-             mem{frames::push(
-                     List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil()),
-                     frames::single(List<uint64_t>::cons(
-                         UINT64_C(2), List<uint64_t>::nil()))),
-                 UINT64_C(0)},
-             UINT64_C(7));
-         if (crane::holds_alternative<typename frames::Single>(_sv.v())) {
-           return UINT64_C(0);
-         } else {
-           const auto &[a0, a1] = crane::get<typename frames::Push>(_sv.v());
-           const List<uint64_t> &a0_value = *a0;
-           return a0_value.template fold_left<uint64_t>(
+         auto &&_sv0 =
+             add_to_frame_(mem{frames::single(List<uint64_t>::cons(
+                                   UINT64_C(3), List<uint64_t>::nil())),
+                               UINT64_C(0)},
+                           UINT64_C(9));
+         if (crane::holds_alternative<typename frames::Single>(_sv0.v())) {
+           const auto &[a00] = crane::get<typename frames::Single>(_sv0.v());
+           const List<uint64_t> &a00_value = *a00;
+           return a00_value.template fold_left<uint64_t>(
                [](uint64_t _x0, uint64_t _x1) -> uint64_t {
                  return (_x0 + _x1);
                },
                UINT64_C(0));
+         } else {
+           return UINT64_C(0);
          }
        }());
 };

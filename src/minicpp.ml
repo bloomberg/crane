@@ -2589,3 +2589,56 @@ let declared_ids stmts =
   List.iter fs stmts;
   List.rev !acc
 
+(** Turn destructive matches on any of [ids] back into borrowing ones.
+
+    Clears [sc_owned] (so the printer emits [const auto& [..] = std::get<C>(
+    p->v())] rather than [auto& [..]] over [v_mut()]) and drops the [std::move]
+    translation put on the field bindings.  Reverting a destructive match to a
+    borrowing one is always sound -- it only copies where it could have moved --
+    so this pass is a safety net, never a rewrite that changes meaning. *)
+let borrow_matches_on ids stmts =
+  let rec mentions e =
+    (match e with CPPvar id -> List.exists (Id.equal id) ids | _ -> false)
+    || fold_expr_children
+         ~on_expr:(fun acc e -> acc || mentions e)
+         ~on_stmts:(fun acc _ -> acc)
+         false e
+  in
+  let strip_moves bound =
+    let rec expr = function
+      | CPPmove (CPPvar id) when List.exists (Id.equal id) bound -> CPPvar id
+      | e -> map_expr expr stmt Fun.id e
+    and stmt s = map_stmt expr stmt Fun.id s in
+    List.map stmt
+  in
+  let rec stmt = function
+    | Smatch (scrut, branches, default) ->
+      let through = mentions scrut.sc_expr in
+      Smatch
+        ( { scrut with sc_owned = scrut.sc_owned && not through },
+          List.map
+            (fun br ->
+              if not through then { br with smb_body = List.map stmt br.smb_body }
+              else
+                let bound = List.map (fun (id, _, _) -> id) br.smb_field_bindings in
+                { br with smb_body = strip_moves bound (List.map stmt br.smb_body) })
+            branches,
+          Option.map (List.map stmt) default )
+    | s -> map_stmt Fun.id stmt Fun.id s
+  in
+  List.map stmt stmts
+
+(** [stmts] with every match on a local bound by [const] reference or by
+    pointer borrowing: such a local names a value something else owns -- a
+    record's field, a frame's cell -- and a destructive match on it would call
+    [v_mut()] through a [const] view. *)
+let borrow_bound_matches stmts =
+  let ids = ref [] in
+  let rec scan s =
+    ( match s with
+    | Sasgn (id, Declare (Tref (Lvalue, Tconst _) | Tptr _), _) -> ids := id :: !ids
+    | _ -> () );
+    ignore (map_stmt Fun.id (fun s -> scan s; s) Fun.id s)
+  in
+  List.iter scan stmts;
+  if !ids = [] then stmts else borrow_matches_on !ids stmts

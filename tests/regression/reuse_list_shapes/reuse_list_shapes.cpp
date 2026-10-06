@@ -27,9 +27,69 @@ List<uint64_t> ReuseListShapes::bump(List<uint64_t> l) {
   return std::move(*_head);
 }
 
+List<uint64_t> ReuseListShapes::take(uint64_t n, List<uint64_t> l) {
+  if (l.v().index() == 1) {
+    if (crane::get<typename List<uint64_t>::Cons>(l.v_mut()).l.use_count() ==
+        1) {
+      uint64_t x =
+          crane::unbox(crane::get<typename List<uint64_t>::Cons>(l.v_mut()).a);
+      List<uint64_t> t =
+          std::move(*crane::get<typename List<uint64_t>::Cons>(l.v_mut()).l);
+      if (n <= 0) {
+        return List<uint64_t>::nil();
+      } else {
+        uint64_t m = n - 1;
+        return List<uint64_t>::cons_crane_reuse(
+            std::move(crane::get<typename List<uint64_t>::Cons>(l.v_mut()).l),
+            x, take(m, std::move(t)));
+      }
+    } else {
+      if (crane::holds_alternative<typename List<uint64_t>::Nil>(l.v_mut())) {
+        return List<uint64_t>::nil();
+      } else {
+        auto &[a0, a1] = crane::get<typename List<uint64_t>::Cons>(l.v_mut());
+        if (n <= 0) {
+          return List<uint64_t>::nil();
+        } else {
+          uint64_t m = n - 1;
+          return List<uint64_t>::cons(crane::unbox(a0), take(m, *a1));
+        }
+      }
+    }
+  } else {
+    if (crane::holds_alternative<typename List<uint64_t>::Nil>(l.v_mut())) {
+      return List<uint64_t>::nil();
+    } else {
+      auto &[a0, a1] = crane::get<typename List<uint64_t>::Cons>(l.v_mut());
+      if (n <= 0) {
+        return List<uint64_t>::nil();
+      } else {
+        uint64_t m = n - 1;
+        return List<uint64_t>::cons(crane::unbox(a0), take(m, *a1));
+      }
+    }
+  }
+}
+
 ReuseListShapes::frames
 ReuseListShapes::add_to_frame(const ReuseListShapes::mem &m, uint64_t k) {
   const ReuseListShapes::frames &s = m.stack;
+  if (crane::holds_alternative<typename ReuseListShapes::frames::Single>(
+          s.v())) {
+    const auto &[a0] =
+        crane::get<typename ReuseListShapes::frames::Single>(s.v());
+    return frames::single(List<uint64_t>::cons(k, *a0));
+  } else {
+    const auto &[a0, a1] =
+        crane::get<typename ReuseListShapes::frames::Push>(s.v());
+    return frames::push(List<uint64_t>::cons(k, *a0), *a1);
+  }
+}
+
+ReuseListShapes::frames
+ReuseListShapes::add_to_frame_(const ReuseListShapes::mem &m, uint64_t k) {
+  const ReuseListShapes::frames &s = m.stack;
+  const crane::obj &_x = m.top;
   if (crane::holds_alternative<typename ReuseListShapes::frames::Single>(
           s.v())) {
     const auto &[a0] =

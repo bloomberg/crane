@@ -450,81 +450,16 @@ let build_cell_call ?token ?(rec_arg = CPPnullptr) ?(allocate = true) ~vt_ret ce
   | None ->
     CPPfun_call (call_opaque, cell.tca_factory, of_reversed (args))
 
-(** Turn destructive matches on any of [ids] back into borrowing ones.
-
-    Clears [smb_is_owned] (so the printer emits [const auto& [..] = std::get<C>(
-    p->v())] rather than [auto& [..]] over [v_mut()]) and drops the [std::move]
-    translation put on the field bindings.  Reverting a destructive match to a
-    borrowing one is always sound -- it only copies where it could have moved --
-    so this pass is a safety net, never a rewrite that changes meaning. *)
-let borrow_matches_on ids stmts =
-  let mentions_ptr_shadow e =
-    expr_exists
-      (function
-        | CPPvar id -> List.exists (Id.equal id) ids
-        | _ -> false)
-      e
-  in
-  let strip_moves bound =
-    let rec expr = function
-      | CPPmove (CPPvar id) when List.exists (Id.equal id) bound -> CPPvar id
-      | e -> map_expr expr stmt Fun.id e
-    and stmt s = map_stmt expr stmt Fun.id s in
-    List.map stmt
-  in
-  let rec stmt = function
-    | Smatch (scrut, branches, default) ->
-      let through_shadow = mentions_ptr_shadow scrut.sc_expr in
-      Smatch
-        ( { scrut with sc_owned = scrut.sc_owned && not through_shadow },
-          List.map
-            (fun br ->
-              if not through_shadow then
-                { br with smb_body = List.map stmt br.smb_body }
-              else
-                let bound =
-                  List.map (fun (id, _, _) -> id) br.smb_field_bindings
-                in
-                { br with
-                  smb_body = strip_moves bound (List.map stmt br.smb_body) })
-            branches,
-          Option.map (List.map stmt) default )
-    | s -> map_stmt Fun.id stmt Fun.id s
-  in
-  List.map stmt stmts
-
 (** Borrowing fix-up for the TMC loop: the scrutinee is reached through a
     pointer shadow.  See the ownership discussion in {!transform_tmc} -- under
     the reuse cursor the scrutinee is owned but not known to be unique, and only
     [crane::reuse_step] may consume it. *)
 let borrow_cursor_matches shadow_params stmts =
-  borrow_matches_on
+  Minicpp.borrow_matches_on
     (List.filter_map
        (fun (id, ty) -> match ty with Tptr _ -> Some id | _ -> None)
        shadow_params)
     stmts
-
-(** Borrowing fix-up for the frame-based loop: a varying parameter that the
-    caller passes owned is nevertheless re-bound inside a frame handler as
-    [const T& x = *_f.x] (a borrow of the cell the frame points at), so a
-    destructive match on it would call [v_mut()] on a const reference and fail
-    to compile.  Collect every local bound by const reference or pointer and
-    make matches on them borrow.
-
-    Gated by the caller on [Crane Reuse]: it is only reachable when reuse marks
-    a match-only scrutinee owned, and keeping it off otherwise leaves reuse-off
-    output byte-identical. *)
-let borrow_frame_bound_matches stmts =
-  let ids = ref [] in
-  let rec scan s =
-    ( match s with
-    | Sasgn (id, Declare (Tref (Lvalue, Tconst _) | Tptr _), _) ->
-      ids := id :: !ids
-    | _ -> () );
-    ignore (map_stmt Fun.id (fun s -> scan s; s) Fun.id s)
-  in
-  List.iter scan stmts;
-  if !ids = [] then stmts else borrow_matches_on !ids stmts
 
 (** Drop [std::move] from every read of a loop-invariant parameter.
 

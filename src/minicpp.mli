@@ -1541,3 +1541,14 @@ val rename_ids : (Id.t -> Id.t) -> cpp_stmt list -> cpp_stmt list
 
 (** The identifiers [stmts] declare, at any depth, in order of appearance. *)
 val declared_ids : cpp_stmt list -> Id.t list
+
+(** Turn destructive matches on any of the given locals back into borrowing
+    ones: clear [sc_owned] and drop the moves on their field bindings.
+    Always sound -- it only copies where it could have moved. *)
+val borrow_matches_on : Id.t list -> cpp_stmt list -> cpp_stmt list
+
+(** Make every match on a local bound by [const] reference or by pointer
+    borrow ({!borrow_matches_on}): such a local names a value something else
+    owns, and a destructive match would call [v_mut()] through a [const]
+    view. *)
+val borrow_bound_matches : cpp_stmt list -> cpp_stmt list

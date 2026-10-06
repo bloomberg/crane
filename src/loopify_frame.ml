@@ -2869,10 +2869,7 @@ let transform_nontail ?(fn_name : string option) ?adopted ?(outer_env = [])
                 ~last_use_candidate:is_cf_cand))
       frames
   in
-  let result =
-    make_loop_and_return ?fn_name struct_defs ret_ty init_push
-      (enter_branches @ call_branches) ~frame_names:call_names
-    |> unmove_invariant_params invariant_params
-  in
-  if Table.reuse () then borrow_frame_bound_matches result else result
+  make_loop_and_return ?fn_name struct_defs ret_ty init_push
+    (enter_branches @ call_branches) ~frame_names:call_names
+  |> unmove_invariant_params invariant_params
   )

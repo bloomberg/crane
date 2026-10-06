@@ -299,10 +299,18 @@ let find_reuse_candidates (_typ : ml_type) (pv : ml_branch array) =
   Array.iteri
     (fun idx (ids, _rty, pat, body) ->
       match pat with
-      | Pusual mr | Pcons (mr, _) -> (
-        match List.find_opt (fun (tr, _) -> same_inductive mr tr) (tail_conses body) with
-        | Some (tr, targs) -> cands := (idx, mr, List.length ids, tr, targs) :: !cands
-        | None -> () )
+      | Pusual mr | Pcons (mr, _) ->
+        (* One candidate per constructor the arm may rebuild: a nullary one
+           among them ([take]'s [nil]) has no cell to recycle into, so the
+           caller picks among them. *)
+        let tails =
+          List.sort_uniq
+            (fun (a, _) (b, _) -> Names.GlobRef.CanOrd.compare a b)
+            (List.filter (fun (tr, _) -> same_inductive mr tr) (tail_conses body))
+        in
+        List.iter
+          (fun (tr, targs) -> cands := (idx, mr, List.length ids, tr, targs) :: !cands)
+          tails
       | Pwild | Prel _ | Ptuple _ -> () )
     pv;
   List.rev !cands
