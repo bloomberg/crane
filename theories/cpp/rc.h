@@ -1,10 +1,11 @@
 // Copyright 2025 Bloomberg Finance L.P.
 // Distributed under the terms of the GNU LGPL v2.1 license.
-// rc.h — single-allocation, Rust-like rc<T>/weak<T> for C++ (single-threaded)
+// rc.h — single-allocation, Rust-like rc<T> for C++ (single-threaded)
 // GENERATED USING GPT-5
 // - **Single allocation**: control block and T live in one heap block
-// - Non-atomic counts (like Rust's rc). Not thread-safe.
-// - weak<T> supported to break cycles. No enable_shared_from_this, by design.
+// - Non-atomic count (like Rust's rc). Not thread-safe.
+// - No weak references: the values Crane extracts are acyclic, so a block
+//   carries one count and is freed when it reaches zero.
 // - Intentionally minimal; extend with custom allocators/deleters as needed.
 
 #pragma once
@@ -30,7 +31,6 @@ namespace crane {
 
 // Forward declarations
 template <typename T> class rc;
-template <typename T> class weak;
 template <typename T> class enable_rc_from_this;
 template <typename T> bool rc_unique(const rc<T>& p) noexcept;
 template <typename T, typename... Args> rc<T> make_rc_reusing_unchecked(rc<T> token, Args&&... args);
@@ -47,10 +47,9 @@ template <typename T, typename... Args> rc<T> make_rc_reusing_unchecked(rc<T> to
 template <typename T>
 struct ControlBlock : pool_detail::pooled<ControlBlock<T>> {
     std::size_t strong{1}; // number of owning rc
-    std::size_t weak{0};   // number of weak
 
     // Raw storage for T. We construct/destroy T manually via placement new.
-    // Kept as the first-after-counts member so [offsetof(ControlBlock<T>,
+    // Kept as the first member after the count so [offsetof(ControlBlock<T>,
     // storage)] (used by enable_rc_from_this) is unaffected by the arena fields
     // appended below.
     alignas(T) unsigned char storage[sizeof(T)];
@@ -95,12 +94,6 @@ public:
     rc(const rc& other) noexcept : ctrl_(other.ctrl_) { inc_strong(); }
     rc(rc&& other) noexcept : ctrl_(other.ctrl_) { other.ctrl_ = nullptr; }
 
-    // Construct from weak if still alive
-    explicit rc(const weak<T>& weak) noexcept : ctrl_(weak.ctrl_) {
-        if (!ctrl_ || ctrl_->strong == 0) { ctrl_ = nullptr; return; }
-        inc_strong();
-    }
-
     rc& operator=(const rc& other) noexcept {
         if (this != &other) { release(); ctrl_ = other.ctrl_; inc_strong(); }
         return *this;
@@ -124,8 +117,6 @@ public:
 
     void swap(rc& other) noexcept { std::swap(ctrl_, other.ctrl_); }
 
-    weak<T> downgrade() const noexcept; // like Rc::downgrade() in Rust
-
     // Arena-aware factory (runtime scoped-arena feature, arena.h).  When a
     // [crane::arena_scope] / [crane::arena_use_scope] is open on this thread the
     // control block (and T inside it) is bump-allocated from the current arena
@@ -144,7 +135,6 @@ private:
     template <typename U, typename... Args>
     friend rc<U> make_rc_reusing_unchecked(rc<U> token, Args&&... args);
     template <typename U> friend bool rc_unique(const rc<U>& p) noexcept;
-    friend class weak<T>;
     template <typename U> friend class enable_rc_from_this;
 
     explicit rc(ControlBlock<T>* ctrl) noexcept : ctrl_(ctrl) {}
@@ -162,8 +152,7 @@ private:
         ctrl_ = nullptr;
     }
 
-    // The last reference is gone: destroy the value, and free the block
-    // unless a weak reference still observes it.
+    // The last reference is gone: destroy the value and free the block.
     [[gnu::noinline]] void destroy_last() noexcept {
         ControlBlock<T>* c = ctrl_;
 #ifdef CRANE_ARENA
@@ -180,70 +169,11 @@ private:
         }
 #endif
         c->ptr()->~T();
-        if (c->weak == 0) delete c;
+        delete c;
     }
 
     ControlBlock<T>* ctrl_{nullptr};
 };
-
-// weak<T> — non-owning observer
-
-template <typename T>
-class weak {
-public:
-    weak() noexcept = default;
-    weak(const weak& other) noexcept : ctrl_(other.ctrl_) { inc_weak(); }
-    weak(weak&& other) noexcept : ctrl_(other.ctrl_) { other.ctrl_ = nullptr; }
-
-    weak& operator=(const weak& other) noexcept {
-        if (this != &other) { release(); ctrl_ = other.ctrl_; inc_weak(); }
-        return *this;
-    }
-
-    weak& operator=(weak&& other) noexcept {
-        if (this != &other) { release(); ctrl_ = other.ctrl_; other.ctrl_ = nullptr; }
-        return *this;
-    }
-
-    ~weak() { release(); }
-
-    bool expired() const noexcept { return !ctrl_ || ctrl_->strong == 0; }
-    rc<T> lock() const noexcept { return rc<T>(*this); }
-    void reset() noexcept { release(); }
-
-private:
-    friend class rc<T>;
-
-    explicit weak(ControlBlock<T>* ctrl) noexcept : ctrl_(ctrl) { inc_weak(); }
-
-    void inc_weak() noexcept { if (ctrl_) { ++ctrl_->weak; } }
-
-    void release() noexcept {
-        if (!ctrl_) return;
-        assert(ctrl_->weak > 0);
-        // Never [delete] an arena-backed block: the region owns its memory.
-        // (Arena-backed values are acyclic Coq inductives that do not use weak
-        // refs; a weak ref into a region that has already been freed is out of
-        // scope for this feature, same as the pre-redesign arena representation.)
-        if (--ctrl_->weak == 0 && ctrl_->strong == 0
-#ifdef CRANE_ARENA
-            && !ctrl_->arena_backed
-#endif
-           ) {
-            delete ctrl_;
-            ctrl_ = nullptr;
-            return;
-        }
-        ctrl_ = nullptr;
-    }
-
-    ControlBlock<T>* ctrl_{nullptr};
-};
-
-// rc::downgrade implementation
-
-template <typename T>
-weak<T> rc<T>::downgrade() const noexcept { return weak<T>(ctrl_); }
 
 // enable_rc_from_this<T> — analogue of std::enable_shared_from_this for rc<T>.
 // A type T that derives from enable_rc_from_this<T> gains rc_from_this(), which
@@ -287,7 +217,7 @@ rc<T> make_rc(Args&&... args) {
 }
 
 // Perceus-style drop-guided reuse.  If [token] is the sole owner of its cell
-// (strong==1, weak==0, not arena-backed), recycle that cell for a fresh T:
+// (strong==1, not arena-backed), recycle that cell for a fresh T:
 // destroy the old T and placement-construct the new one in place — no
 // allocation, no free.  Otherwise fall back to make_rc and let [token] drop
 // normally.  The construction args are fully evaluated before the old T is
@@ -299,7 +229,7 @@ template <typename T, typename... Args>
 rc<T> make_rc_reusing(rc<T> token, Args&&... args) {
     static_assert(!std::is_array<T>::value, "rc<T> does not support arrays");
     ControlBlock<T>* c = token.ctrl_;
-    if (c && c->strong == 1 && c->weak == 0
+    if (c && c->strong == 1
 #ifdef CRANE_ARENA
         && !c->arena_backed
 #endif
@@ -317,8 +247,8 @@ rc<T> make_rc_reusing(rc<T> token, Args&&... args) {
     return make_rc<T>(std::forward<Args>(args)...);  // token drops at return
 }
 
-// Whether [p]'s cell may be destructively consumed: [p] is the sole owner, no
-// weak refs exist, and the block is not arena-backed (arena blocks are owned by
+// Whether [p]'s cell may be destructively consumed: [p] is the sole owner and
+// the block is not arena-backed (arena blocks are owned by
 // the region and must never be recycled individually).  This is the *read*-side
 // guard: it licenses moving fields out of the cell.  [make_rc_reusing]'s own
 // test is the *write*-side guard; when a caller has already established
@@ -326,7 +256,7 @@ rc<T> make_rc_reusing(rc<T> token, Args&&... args) {
 template <typename T>
 bool rc_unique(const rc<T>& p) noexcept {
     const ControlBlock<T>* c = p.ctrl_;
-    return c && c->strong == 1 && c->weak == 0
+    return c && c->strong == 1
 #ifdef CRANE_ARENA
         && !c->arena_backed
 #endif
@@ -466,7 +396,6 @@ using namespace crane;
 
 struct Node {
     int value;
-    weak<Node> parent;         // break cycles
     rc<Node> left, right;      // children own their subtrees
     explicit Node(int v): value(v) {}
     ~Node(){ std::cout << "drop Node(" << value << ")
@@ -476,7 +405,6 @@ struct Node {
 int main(){
     auto root = make_rc<Node>(1);
     root->left = make_rc<Node>(2);
-    root->left->parent = root.downgrade();
 
     std::cout << root.use_count() << "
 "; // 1
