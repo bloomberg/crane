@@ -19,10 +19,10 @@ struct SharedVariantReuse {
     struct Leaf {};
 
     struct Node {
-      crane::box<tree> a0;
+      crane::shared_box<tree> a0;
       uint64_t a1;
       uint64_t a2;
-      crane::box<tree> a3;
+      crane::shared_box<tree> a3;
     };
 
     using variant_t = crane::shared_variant<Leaf, Node>;
@@ -42,14 +42,14 @@ struct SharedVariantReuse {
     static tree leaf() { return tree(Leaf{}); }
 
     static tree node(tree a0, uint64_t a1, uint64_t a2, tree a3) {
-      return tree(Node{crane::box<tree>::make(std::move(a0)), a1, a2,
-                       crane::box<tree>::make(std::move(a3))});
+      return tree(Node{crane::shared_box<tree>::make(std::move(a0)), a1, a2,
+                       crane::shared_box<tree>::make(std::move(a3))});
     }
 
     static tree node_crane_reuse(tree _tok, tree a0, uint64_t a1, uint64_t a2,
                                  tree a3) {
-      auto _alt = Node{crane::box<tree>::make(std::move(a0)), a1, a2,
-                       crane::box<tree>::make(std::move(a3))};
+      auto _alt = Node{crane::shared_box<tree>::make(std::move(a0)), a1, a2,
+                       crane::shared_box<tree>::make(std::move(a3))};
       if (_tok.v_.try_reuse(std::move(_alt))) {
         return _tok;
       }
@@ -99,20 +99,20 @@ struct SharedVariantReuse {
       /// CraneCont_Node: saves [a0, a1, a2, a3], resumes after recursive call,
       /// then processes rest.
       struct CraneCont_Node {
-        crane::box<tree> a0;
+        crane::shared_box<tree> a0;
         uint64_t a1;
         uint64_t a2;
-        crane::box<tree> a3;
+        crane::shared_box<tree> a3;
       };
 
       /// CraneCont_Node_1: saves [_tmp2, a0, a1, a2, a3], resumes after
       /// recursive call, then processes rest.
       struct CraneCont_Node_1 {
         T1 _tmp2;
-        crane::box<tree> a0;
+        crane::shared_box<tree> a0;
         uint64_t a1;
         uint64_t a2;
-        crane::box<tree> a3;
+        crane::shared_box<tree> a3;
       };
 
       using CraneFrame =
@@ -138,19 +138,19 @@ struct SharedVariantReuse {
           }
         } else if (crane::holds_alternative<CraneCont_Node>(_frame)) {
           auto _f = std::move(crane::get<CraneCont_Node>(_frame));
-          crane::box<tree> a0 = std::move(_f.a0);
+          crane::shared_box<tree> a0 = std::move(_f.a0);
           uint64_t a1 = _f.a1;
           uint64_t a2 = _f.a2;
-          crane::box<tree> a3 = std::move(_f.a3);
+          crane::shared_box<tree> a3 = std::move(_f.a3);
           _stack.emplace_back(
               CraneCont_Node_1{std::move(_result), std::move(a0), a1, a2, a3});
           _stack.emplace_back(CraneEnter{crane_raw(a3)});
         } else {
           auto _f = std::move(crane::get<CraneCont_Node_1>(_frame));
-          crane::box<tree> a0 = std::move(_f.a0);
+          crane::shared_box<tree> a0 = std::move(_f.a0);
           uint64_t a1 = _f.a1;
           uint64_t a2 = _f.a2;
-          crane::box<tree> a3 = std::move(_f.a3);
+          crane::shared_box<tree> a3 = std::move(_f.a3);
           _result =
               f0(*a0, std::move(_f._tmp2), a1, a2, *a3, std::move(_result));
         }
@@ -167,7 +167,7 @@ struct SharedVariantReuse {
 
     struct Cons {
       uint64_t a0;
-      crane::box<lst> a1;
+      crane::shared_box<lst> a1;
     };
 
     using variant_t = crane::shared_variant<Nil, Cons>;
@@ -187,11 +187,11 @@ struct SharedVariantReuse {
     static lst nil() { return lst(Nil{}); }
 
     static lst cons(uint64_t a0, lst a1) {
-      return lst(Cons{a0, crane::box<lst>::make(std::move(a1))});
+      return lst(Cons{a0, crane::shared_box<lst>::make(std::move(a1))});
     }
 
     static lst cons_crane_reuse(lst _tok, uint64_t a0, lst a1) {
-      auto _alt = Cons{a0, crane::box<lst>::make(std::move(a1))};
+      auto _alt = Cons{a0, crane::shared_box<lst>::make(std::move(a1))};
       if (_tok.v_.try_reuse(std::move(_alt))) {
         return _tok;
       }
@@ -262,7 +262,7 @@ struct SharedVariantReuse {
       /// processes rest.
       struct CraneCont_Cons {
         uint64_t a0;
-        crane::box<lst> a1;
+        crane::shared_box<lst> a1;
       };
 
       using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
@@ -287,7 +287,7 @@ struct SharedVariantReuse {
         } else {
           auto _f = std::move(crane::get<CraneCont_Cons>(_frame));
           uint64_t a0 = _f.a0;
-          crane::box<lst> a1 = std::move(_f.a1);
+          crane::shared_box<lst> a1 = std::move(_f.a1);
           _result = f0(a0, *a1, std::move(_result));
         }
       }

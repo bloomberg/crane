@@ -2357,7 +2357,7 @@ let fast_variant () = fast_variant_requested () && not (String.equal (std_lib ()
 
 (* [Set Crane SharedVariant] stores a recursive inductive's values as shared
    blocks ([crane::shared_variant]), its recursive fields as the values
-   themselves ([crane::box]).  See [is_shared_variant]. *)
+   themselves ([crane::shared_box]).  See [is_shared_variant]. *)
 let {Goptions.get = shared_variant_requested} =
   declare_bool_option_and_ref ~key:["Crane"; "SharedVariant"] ~value:false ()
 

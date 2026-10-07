@@ -28,7 +28,7 @@ template <typename A> struct List {
 
   struct Cons {
     A a;
-    crane::box<List<A>> l;
+    crane::shared_box<List<A>> l;
   };
 
   using variant_t = crane::shared_variant<Nil, Cons>;
@@ -54,24 +54,26 @@ public:
           } else {
             const auto &[a, l] =
                 crane::get<typename List<CraneU>::Cons>(_other.v());
-            return Cons{
-                [&]() -> A {
-                  if constexpr (crane_convertible<A, const CraneU &>) {
-                    return crane_convert<A>(a);
-                  } else {
-                    throw std::logic_error("unreachable: inactive constructor "
-                                           "field at this instantiation");
-                  }
-                }(),
-                (l ? crane::box<List<A>>::make(crane_convert<List<A>>(*l))
-                   : nullptr)};
+            return Cons{[&]() -> A {
+                          if constexpr (crane_convertible<A, const CraneU &>) {
+                            return crane_convert<A>(a);
+                          } else {
+                            throw std::logic_error(
+                                "unreachable: inactive constructor field at "
+                                "this instantiation");
+                          }
+                        }(),
+                        (l ? crane::shared_box<List<A>>::make(
+                                 crane_convert<List<A>>(*l))
+                           : nullptr)};
           }
         }()) {}
 
   static List<A> nil() { return List<A>(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List<A>(Cons{std::move(a), crane::box<List<A>>::make(std::move(l))});
+    return List<A>(
+        Cons{std::move(a), crane::shared_box<List<A>>::make(std::move(l))});
   }
 
   // MANIPULATORS
@@ -101,20 +103,22 @@ public:
     requires std::is_invocable_r_v<T1, F0 &, const A &>
   List<T1> map(F0 &&f) const {
     std::optional<List<T1>> _root{};
-    crane::box<List<T1>> *_write = nullptr;
+    crane::shared_box<List<T1>> *_write = nullptr;
     const List<A> *_loop_self = this;
     while (true) {
       auto &&_sv = *_loop_self;
       if (crane::holds_alternative<typename List<A>::Nil>(_sv.v())) {
         auto _value = List<T1>::nil();
-        (_write ? *(*_write = crane::box<List<T1>>::make(std::move(_value)))
-                : _root.emplace(std::move(_value)));
+        (_write
+             ? *(*_write = crane::shared_box<List<T1>>::make(std::move(_value)))
+             : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] = crane::get<typename List<A>::Cons>(_sv.v());
         auto _cell = typename List<T1>::Cons(f(a0), nullptr);
         List<T1> &_node =
-            (_write ? *(*_write = crane::box<List<T1>>::make(std::move(_cell)))
+            (_write ? *(*_write =
+                            crane::shared_box<List<T1>>::make(std::move(_cell)))
                     : _root.emplace(std::move(_cell)));
         _write = &crane::get<typename List<T1>::Cons>(_node.v_mut()).l;
         _loop_self = crane_raw(a1);
@@ -169,10 +173,10 @@ struct SharedVariantBasic {
     struct Leaf {};
 
     struct Node {
-      crane::box<tree> a0;
+      crane::shared_box<tree> a0;
       uint64_t a1;
       uint64_t a2;
-      crane::box<tree> a3;
+      crane::shared_box<tree> a3;
     };
 
     using variant_t = crane::shared_variant<Leaf, Node>;
@@ -192,8 +196,8 @@ struct SharedVariantBasic {
     static tree leaf() { return tree(Leaf{}); }
 
     static tree node(tree a0, uint64_t a1, uint64_t a2, tree a3) {
-      return tree(Node{crane::box<tree>::make(std::move(a0)), a1, a2,
-                       crane::box<tree>::make(std::move(a3))});
+      return tree(Node{crane::shared_box<tree>::make(std::move(a0)), a1, a2,
+                       crane::shared_box<tree>::make(std::move(a3))});
     }
 
     // MANIPULATORS

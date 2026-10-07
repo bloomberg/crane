@@ -11797,3 +11797,14 @@
   (alias runtest)
   (deps shared_variant_nested.t.exe)
   (action (run ./shared_variant_nested.t.exe))))
+
+(subdir erased_let_not_result_type
+ (rule
+  (targets erased_let_not_result_type.t.exe)
+  (deps ErasedLetNotResultType.vo erased_let_not_result_type.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} erased_let_not_result_type.t.exe erased_let_not_result_type.cpp erased_let_not_result_type.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps erased_let_not_result_type.t.exe)
+  (action (run ./erased_let_not_result_type.t.exe))))

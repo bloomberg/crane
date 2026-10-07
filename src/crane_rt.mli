@@ -107,10 +107,14 @@ val shared_variant : string
 (** [crane::shared_variant], the tagged union of [Crane SharedVariant]: one
     word, the alternative in a counted block. *)
 
-val box : string
-(** [crane::box<T>], the slot a recursive field holds a shared value in. *)
+val shared_box : string
+(** [crane::shared_box<T>], the slot a recursive field holds a shared value in. *)
 
-val shared_variant_header : string  (** [shared_variant.h] -- {!shared_variant}, {!box}. *)
+val shared_or : string
+(** [crane::shared_or_t<T, P>], the slot for an inductive whose being a shared
+    variant only a template's instantiation knows: [shared_box<T>] or [P]. *)
+
+val shared_variant_header : string  (** [shared_variant.h] -- {!shared_variant}, {!shared_box}, {!shared_or}. *)
 
 val field : string
 (** [crane::field<T>], how [Crane BoxedFields] stores a parameter-typed

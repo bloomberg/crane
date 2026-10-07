@@ -21,7 +21,7 @@
 // queues a free that happens during another instead of recursing: dropping
 // the last reference to a long list or a deep tree takes constant stack.
 //
-// crane::box<T> is the slot a recursive field holds a shared value in.  T is
+// crane::shared_box<T> is the slot a recursive field holds a shared value in.  T is
 // incomplete where the slot is declared -- inside its own alternatives -- so
 // the slot reserves a shared value's one word and checks the fit where T is
 // complete.  The word 0, which no shared value uses, is the empty slot.
@@ -247,12 +247,12 @@ template <class T, class... Ts> const T *get_if(const shared_variant<Ts...> *v) 
 
 // The slot a recursive field holds a shared value in: the value itself, in
 // place, in one word, with 0 for empty.
-template <class T> class box {
+template <class T> class shared_box {
   alignas(void *) unsigned char s_[sizeof(void *)] = {};
 
   static constexpr void fits() {
     static_assert(sizeof(T) == sizeof(void *) && alignof(T) <= alignof(void *),
-                  "crane::box<T>: T must be one shared_variant");
+                  "crane::shared_box<T>: T must be one shared_variant");
   }
   bool full() const {
     std::uintptr_t w;
@@ -266,32 +266,32 @@ public:
   // A copy is a count bump.
   using crane_cheap_copy = void;
 
-  box() = default;
-  box(std::nullptr_t) noexcept {}
+  shared_box() = default;
+  shared_box(std::nullptr_t) noexcept {}
   // The value built in place from [a], as [make_rc<T>(a...)] would build it.
-  template <class... A> static box make(A &&...a) {
+  template <class... A> static shared_box make(A &&...a) {
     fits();
-    box b;
+    shared_box b;
     ::new (b.s_) T(std::forward<A>(a)...);
     return b;
   }
-  box(const box &o) {
+  shared_box(const shared_box &o) {
     if (o.full()) ::new (s_) T(*o.ptr());
   }
-  box(box &&o) noexcept {
+  shared_box(shared_box &&o) noexcept {
     std::memcpy(s_, o.s_, sizeof s_);
     std::memset(o.s_, 0, sizeof o.s_);
   }
-  box &operator=(box o) noexcept {
+  shared_box &operator=(shared_box o) noexcept {
     std::swap(s_, o.s_);
     return *this;
   }
-  box &operator=(std::nullptr_t) noexcept {
-    box empty;
+  shared_box &operator=(std::nullptr_t) noexcept {
+    shared_box empty;
     std::swap(s_, empty.s_);
     return *this;
   }
-  ~box() {
+  ~shared_box() {
     if (full()) ptr()->~T();
   }
 
@@ -303,16 +303,32 @@ public:
   T *operator->() const { return ptr(); }
   T *get() const { return full() ? ptr() : nullptr; }
   explicit operator bool() const { return full(); }
-  friend bool operator==(const box &b, std::nullptr_t) { return !b.full(); }
+  friend bool operator==(const shared_box &b, std::nullptr_t) { return !b.full(); }
 
   void reset() noexcept { *this = nullptr; }
 };
+
+// Whether a type is an inductive stored as a shared variant.
+template <class V> struct is_shared_variant : std::false_type {};
+template <class... Ts> struct is_shared_variant<shared_variant<Ts...>> : std::true_type {};
+template <class T> constexpr bool stored_shared() {
+  if constexpr (requires { typename T::variant_t; })
+    return is_shared_variant<typename T::variant_t>::value;
+  else
+    return false;
+}
+
+// The slot for a T a template's body reaches through its parameter -- a
+// functor's argument -- which is a shared variant or not according to the
+// instantiation: a shared_box if it is, [Pointer] if not.
+template <class T, class Pointer>
+using shared_or_t = std::conditional_t<stored_shared<T>(), shared_box<T>, Pointer>;
 
 CRANE_RC_POLICY_END
 
 } // namespace crane
 
 // [crane_raw] for a shared slot: the value it holds, or null.
-template <typename T> T *crane_raw(const crane::box<T> &p) noexcept { return p.get(); }
+template <typename T> T *crane_raw(const crane::shared_box<T> &p) noexcept { return p.get(); }
 
 #endif // INCLUDED_CRANE_SHARED_VARIANT
