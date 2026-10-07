@@ -590,11 +590,11 @@ struct MrecHandlerBranchTypes {
                                     retf(Sum<crane::obj, crane::obj>::inl(
                                         Nat::o())));
           } else {
-            return Functor0::template fmap<
-                Functor_itree<Sum1<callE, OtherE<T1, crane::obj>, crane::obj>>,
-                Nat, Sum<Nat, Nat>>(
-                [](const Nat &x) { return Sum<Nat, Nat>::inr(x); },
-                ext_call<T1>(a0));
+            return Functor_itree<
+                Sum1<callE, OtherE<T1, crane::obj>, crane::obj>>::
+                template fmap<Nat, Sum<Nat, Nat>>(
+                    [](const Nat &x) { return Sum<Nat, Nat>::inr(x); },
+                    ext_call<T1>(a0));
           }
         },
         callE::call(n));

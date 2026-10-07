@@ -9,8 +9,7 @@
 /// ambient state, and should borrow it exactly as bind's does.
 BorrowConstructionArgument::stateT<uint64_t>
 BorrowConstructionArgument::test(uint64_t a) {
-  return Monad0::template ret<BorrowConstructionArgument::Monad_stateT,
-                              uint64_t>(a);
+  return BorrowConstructionArgument::Monad_stateT::template ret<uint64_t>(a);
 }
 
 std::pair<uint64_t, BorrowConstructionArgument::big>

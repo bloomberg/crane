@@ -152,8 +152,8 @@ struct Monads {
          crane::fn<typename _tcI0::template F<std::pair<T1, CraneA0>>(T1)>
              run0) {
       return [=, f = std::move(f), run0 = std::move(run0)](const T1 &s) {
-        return Functor0::template fmap<_tcI0, std::pair<T1, CraneA0>,
-                                       std::pair<T1, CraneA1>>(
+        return _tcI0::template fmap<std::pair<T1, CraneA0>,
+                                    std::pair<T1, CraneA1>>(
             [=](const std::pair<T1, CraneA0> &sa) {
               return std::make_pair(sa.first, f(sa.second));
             },
@@ -170,7 +170,7 @@ struct Monads {
     static crane::fn<typename _tcI0::template m<std::pair<T1, CraneA0>>(T1)>
     ret(CraneA0 a) {
       return [=, a = std::move(a)](const T1 &s) {
-        return Monad0::template ret<_tcI0, std::pair<T1, CraneA0>>(
+        return _tcI0::template ret<std::pair<T1, CraneA0>>(
             std::make_pair(s, a));
       };
     }
@@ -182,8 +182,8 @@ struct Monads {
              typename _tcI0::template m<std::pair<T1, CraneA1>>(T1)>(CraneA0)>
              k) {
       return [=, k = std::move(k), t = std::move(t)](const T1 &s) {
-        return Monad0::template bind<_tcI0, std::pair<T1, CraneA0>,
-                                     std::pair<T1, CraneA1>>(
+        return _tcI0::template bind<std::pair<T1, CraneA0>,
+                                    std::pair<T1, CraneA1>>(
             t(s), [=](const std::pair<T1, CraneA0> &sa) {
               return crane::apply2(k, sa.second, sa.first);
             });
@@ -225,14 +225,13 @@ template <Monad _tcI0, MonadIter _tcI1, typename T1> struct MonadIter_stateT0 {
           [=](const std::pair<T1, CraneA1> &si) {
             const T1 &s0 = si.first;
             const CraneA1 &i0 = si.second;
-            return Monad0::template bind<
-                _tcI0, std::pair<T1, Sum<CraneA1, CraneA0>>,
+            return _tcI0::template bind<
+                std::pair<T1, Sum<CraneA1, CraneA0>>,
                 Sum<std::pair<T1, CraneA1>, std::pair<T1, CraneA0>>>(
                 crane::apply2(step, i0, s0),
                 [](const std::pair<T1, Sum<CraneA1, CraneA0>> &si_) {
-                  return Monad0::template ret<
-                      _tcI0, Sum<std::pair<T1, CraneA1>,
-                                 std::pair<T1, CraneA0>>>([&]() {
+                  return _tcI0::template ret<Sum<
+                      std::pair<T1, CraneA1>, std::pair<T1, CraneA0>>>([&]() {
                     auto &&_sv = si_.second;
                     if (std::holds_alternative<
                             typename Sum<CraneA1, CraneA0>::Inl>(_sv.v())) {
@@ -666,19 +665,18 @@ typename _tcI0::template M<T3> Interp::interp(
                 typename ItreeF<T1, T3, Itree<T1, T3>>::RetF>(_sv.v())) {
           const auto &[r0] =
               std::get<typename ItreeF<T1, T3, Itree<T1, T3>>::RetF>(_sv.v());
-          return Monad0::template ret<_tcI1, Sum<Itree<T1, T3>, T3>>(
+          return _tcI1::template ret<Sum<Itree<T1, T3>, T3>>(
               Sum<Itree<T1, T3>, T3>::inr(r0));
         } else if (std::holds_alternative<
                        typename ItreeF<T1, T3, Itree<T1, T3>>::TauF>(_sv.v())) {
           const auto &[t1] =
               std::get<typename ItreeF<T1, T3, Itree<T1, T3>>::TauF>(_sv.v());
-          return Monad0::template ret<_tcI1, Sum<Itree<T1, T3>, T3>>(
+          return _tcI1::template ret<Sum<Itree<T1, T3>, T3>>(
               Sum<Itree<T1, T3>, T3>::inl(t1));
         } else {
           const auto &[x, e0] =
               std::get<typename ItreeF<T1, T3, Itree<T1, T3>>::VisF>(_sv.v());
-          return Functor0::template fmap<_tcI2, crane::obj,
-                                         Sum<Itree<T1, T3>, T3>>(
+          return _tcI2::template fmap<crane::obj, Sum<Itree<T1, T3>, T3>>(
               [=](const auto &x0) {
                 return Sum<Itree<T1, T3>, T3>::inl(e0(x0));
               },

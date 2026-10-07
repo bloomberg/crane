@@ -167,9 +167,9 @@ struct HktInstanceAnyMismatch {
   };
 
   static_assert(Mon<optMon>);
-  static inline const Option<Nat> test = bind<optMon, Nat, Nat>(
-      ret<optMon, Nat>(Nat::s(Nat::o())),
-      [](const Nat &n) { return ret<optMon, Nat>(Nat::s(n)); });
+  static inline const Option<Nat> test = optMon::template bind<Nat, Nat>(
+      optMon::template ret<Nat>(Nat::s(Nat::o())),
+      [](const Nat &n) { return optMon::template ret<Nat>(Nat::s(n)); });
 };
 
 #endif // INCLUDED_HKT_INSTANCE_ANY_MISMATCH

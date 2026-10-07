@@ -229,10 +229,12 @@ struct HktInstanceArgOrder {
   static typename _tcI1::template F<typename _tcI0::template F<T4>>
   compose_map(F0 &&f,
               typename _tcI1::template F<typename _tcI0::template F<T3>> x) {
-    return fm<_tcI1, typename _tcI0::template F<T3>,
-              typename _tcI0::template F<T4>>(
+    return _tcI1::template fm<typename _tcI0::template F<T3>,
+                              typename _tcI0::template F<T4>>(
         [=](typename _tcI0::template F<T3> _x0) ->
-        typename _tcI0::template F<T4> { return fm<_tcI0, T3, T4>(f, _x0); },
+        typename _tcI0::template F<T4> {
+          return _tcI0::template fm<T3, T4>(f, _x0);
+        },
         std::move(x));
   }
 

@@ -216,8 +216,8 @@ struct HktNullaryMethodTyarg {
   static_assert(Coll<LC>);
 
   template <Coll _tcI0, typename T2> static Nat two(const T2 &x, const T2 &y) {
-    return sizec<_tcI0, T2>(
-        addc<_tcI0, T2>(x, addc<_tcI0, T2>(y, emptyc<_tcI0, T2>())));
+    return _tcI0::template sizec<T2>(_tcI0::template addc<T2>(
+        x, _tcI0::template addc<T2>(y, _tcI0::template emptyc<T2>())));
   }
 
   static inline const Nat run =

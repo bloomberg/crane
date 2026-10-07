@@ -13,15 +13,14 @@ Itree<LetBoundMonadFamily::BotE<crane::obj>, Nat> LetBoundMonadFamily::gen(
     const Itree<
         Sum1<LetBoundMonadFamily::getE, LetBoundMonadFamily::outE, crane::obj>,
         Nat> &arg) {
-  auto t = Monad0::template bind<
+  auto t =
       Monad_itree<Sum1<LetBoundMonadFamily::getE, LetBoundMonadFamily::outE,
-                       crane::obj>>,
-      Nat, Nat>(arg, [](const Nat &x) {
-    return Monad0::template ret<
-        Monad_itree<Sum1<LetBoundMonadFamily::getE, LetBoundMonadFamily::outE,
-                         crane::obj>>,
-        Nat>(Nat::s(x));
-  });
+                       crane::obj>>::template bind<Nat, Nat>(arg, [](const Nat
+                                                                         &x) {
+        return Monad_itree<
+            Sum1<LetBoundMonadFamily::getE, LetBoundMonadFamily::outE,
+                 crane::obj>>::template ret<Nat>(Nat::s(x));
+      });
   return Interp::template interp<
       MonadIter_itree<LetBoundMonadFamily::BotE<crane::obj>>,
       Monad_itree<LetBoundMonadFamily::BotE<crane::obj>>,

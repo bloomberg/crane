@@ -68,8 +68,8 @@ struct Monads {
         crane::fn<CraneA1(CraneA0)> f,
         crane::fn<typename _tcI0::template F<std::pair<T1, CraneA0>>(T1)> run) {
       return [=, f = std::move(f), run = std::move(run)](const T1 &s) {
-        return Functor0::template fmap<_tcI0, std::pair<T1, CraneA0>,
-                                       std::pair<T1, CraneA1>>(
+        return _tcI0::template fmap<std::pair<T1, CraneA0>,
+                                    std::pair<T1, CraneA1>>(
             [=](const std::pair<T1, CraneA0> &sa) {
               return std::make_pair(sa.first, f(sa.second));
             },
@@ -355,8 +355,7 @@ struct LoopifyInnerInstanceCall {
   static inline const Monads::template stateT<
       uint64_t, crane_carrier_tc_21402bc4025dedf3, uint64_t>
       st = [](uint64_t s) {
-        return Monad0::template ret<Monad_itree<Ev>,
-                                    std::pair<uint64_t, uint64_t>>(
+        return Monad_itree<Ev>::template ret<std::pair<uint64_t, uint64_t>>(
             std::make_pair(s, UINT64_C(41)));
       };
   static Itree<Ev, std::pair<uint64_t, uint64_t>> bumped(std::monostate _x);

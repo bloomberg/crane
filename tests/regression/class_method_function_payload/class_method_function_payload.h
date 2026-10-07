@@ -255,9 +255,9 @@ struct ClassMethodFunctionPayload {
   template <Monad _tcI0>
   static typename _tcI0::template M<crane::fn<uint64_t(uint64_t)>>
   adders(typename _tcI0::template M<uint64_t> x) {
-    return bind<_tcI0, uint64_t, crane::fn<uint64_t(uint64_t)>>(
+    return _tcI0::template bind<uint64_t, crane::fn<uint64_t(uint64_t)>>(
         std::move(x), [](uint64_t n) {
-          return ret<_tcI0, crane::fn<uint64_t(uint64_t)>>(
+          return _tcI0::template ret<crane::fn<uint64_t(uint64_t)>>(
               [=](uint64_t k) { return (k + n); });
         });
   }

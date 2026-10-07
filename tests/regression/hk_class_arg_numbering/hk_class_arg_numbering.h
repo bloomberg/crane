@@ -186,8 +186,8 @@ template <Monad _tcI0, typename T2, typename T3>
 typename _tcI0::template m<T3>
 Monad0::liftM(const std::type_identity_t<crane::fn<T3(T2)>> &f,
               typename _tcI0::template m<T2> x) {
-  return Monad0::template bind<_tcI0, T2, T3>(std::move(x), [=](const T2 &x0) {
-    return Monad0::template ret<_tcI0, T3>(f(x0));
+  return _tcI0::template bind<T2, T3>(std::move(x), [=](const T2 &x0) {
+    return _tcI0::template ret<T3>(f(x0));
   });
 }
 

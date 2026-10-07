@@ -19,11 +19,11 @@ Bool0 PeanoNat::eqb(const Nat &n, const Nat &m) {
 }
 
 EOU<Dv> ErrorCtorThroughMonadInstance::eval_icmp(const Nat &x, const Nat &y) {
-  return Monad0::template bind<EOU_monad, Bool0, Dv>(
+  return EOU_monad::template bind<Bool0, Dv>(
       [&]() {
         switch (PeanoNat::eqb(x, y)) {
         case Bool0::TRUE_: {
-          return Monad0::template ret<EOU_monad, Bool0>(Bool0::TRUE_);
+          return EOU_monad::template ret<Bool0>(Bool0::TRUE_);
         }
         case Bool0::FALSE_: {
           return EOU<Bool0>::err(
@@ -33,7 +33,5 @@ EOU<Dv> ErrorCtorThroughMonadInstance::eval_icmp(const Nat &x, const Nat &y) {
           std::unreachable();
         }
       }(),
-      [](Bool0 b) {
-        return Monad0::template ret<EOU_monad, Dv>(Dv::dvbool(b));
-      });
+      [](Bool0 b) { return EOU_monad::template ret<Dv>(Dv::dvbool(b)); });
 }

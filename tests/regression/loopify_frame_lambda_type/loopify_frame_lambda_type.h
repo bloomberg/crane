@@ -291,15 +291,14 @@ struct LoopifyFrameLambdaType {
         const List<T1> &l1 = *_f.l1;
         if (std::holds_alternative<typename List<T1>::Nil>(l1.v())) {
           if (std::holds_alternative<typename List<T2>::Nil>(l2.v())) {
-            _result = Monad0::template ret<
-                Monad_res, std::pair<List<std::pair<T1, T2>>, List<T2>>>(
+            _result = Monad_res::template ret<
+                std::pair<List<std::pair<T1, T2>>, List<T2>>>(
                 std::make_pair(List<std::pair<crane::obj, crane::obj>>::nil(),
                                List<crane::obj>::nil()));
           } else {
-            _result = Monad0::template ret<
-                Monad_res, std::pair<List<std::pair<T1, T2>>, List<T2>>>(
-                std::make_pair(List<std::pair<crane::obj, crane::obj>>::nil(),
-                               l2));
+            _result = Monad_res::template ret<
+                std::pair<List<std::pair<T1, T2>>, List<T2>>>(std::make_pair(
+                List<std::pair<crane::obj, crane::obj>>::nil(), l2));
           }
         } else {
           const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l1.v());
@@ -317,19 +316,17 @@ struct LoopifyFrameLambdaType {
         auto _f = std::move(std::get<CraneCont_Cons>(_frame));
         auto a0 = std::move(_f.a0);
         auto a00 = std::move(_f.a00);
-        _result =
-            Monad0::template bind<Monad_res,
-                                  std::pair<List<std::pair<T1, T2>>, List<T2>>,
-                                  std::pair<List<std::pair<T1, T2>>, List<T2>>>(
-                std::move(_result),
-                [=](std::pair<List<std::pair<T1, T2>>, List<T2>> x0) {
-                  const auto &[l, rest] = x0;
-                  return Monad0::template ret<
-                      Monad_res, std::pair<List<std::pair<T1, T2>>, List<T2>>>(
-                      std::make_pair(List<std::pair<T1, T2>>::cons(
-                                         std::make_pair(a0, a00), l),
-                                     rest));
-                });
+        _result = Monad_res::template bind<
+            std::pair<List<std::pair<T1, T2>>, List<T2>>,
+            std::pair<List<std::pair<T1, T2>>, List<T2>>>(
+            std::move(_result),
+            [=](std::pair<List<std::pair<T1, T2>>, List<T2>> x0) {
+              const auto &[l, rest] = x0;
+              return Monad_res::template ret<
+                  std::pair<List<std::pair<T1, T2>>, List<T2>>>(std::make_pair(
+                  List<std::pair<T1, T2>>::cons(std::make_pair(a0, a00), l),
+                  rest));
+            });
       }
     }
     return _result;

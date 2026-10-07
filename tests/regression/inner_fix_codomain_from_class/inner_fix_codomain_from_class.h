@@ -308,8 +308,7 @@ EOU<dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>> collect(
           if (std::holds_alternative<typename List<dv<
                   typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>::Nil>(
                   ys.v())) {
-            return mret<
-                EOU_monad,
+            return EOU_monad::template mret<
                 List<dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>>(
                 List<dv<typename _tcI0::PTR::ptr,
                         typename _tcI0::IPTR::iptr>>::nil());
@@ -320,8 +319,7 @@ EOU<dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>> collect(
                     ys.v());
             const List<dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>
                 &a1_value = *a1;
-            return mbind<
-                EOU_monad,
+            return EOU_monad::template mbind<
                 List<dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>,
                 List<dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>>(
                 _self_go(_self_go, m, a1_value),
@@ -331,15 +329,14 @@ EOU<dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>> collect(
                                               typename _tcI0::IPTR::iptr>>> {
                   if (pad.has_value()) {
                     const Nat &_x = *pad;
-                    return mret<EOU_monad,
-                                List<dv<typename _tcI0::PTR::ptr,
-                                        typename _tcI0::IPTR::iptr>>>(
+                    return EOU_monad::template mret<List<dv<
+                        typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>>(
                         List<dv<typename _tcI0::PTR::ptr,
                                 typename _tcI0::IPTR::iptr>>::cons(a0, rest));
                   } else {
-                    return mret<EOU_monad,
-                                List<dv<typename _tcI0::PTR::ptr,
-                                        typename _tcI0::IPTR::iptr>>>(rest);
+                    return EOU_monad::template mret<List<dv<
+                        typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>>(
+                        rest);
                   }
                 });
           }
@@ -367,9 +364,8 @@ EOU<dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>> collect(
       if (std::holds_alternative<typename EOU<List<dv<
               typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>>::Eou_err>(
               _sv1.v())) {
-        return mret<EOU_monad,
-                    dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>(
-            a0);
+        return EOU_monad::template mret<
+            dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>(a0);
       } else {
         const auto &[a01] = std::get<typename EOU<List<dv<
             typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>>::Eou_ret>(
@@ -377,16 +373,14 @@ EOU<dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>> collect(
         if (std::holds_alternative<typename List<
                 dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>::Nil>(
                 a01.v())) {
-          return mret<EOU_monad,
-                      dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>(
-              a0);
+          return EOU_monad::template mret<
+              dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>(a0);
         } else {
           const auto &[a02, a12] = std::get<typename List<
               dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>::Cons>(
               a01.v());
-          return mret<EOU_monad,
-                      dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>(
-              a02);
+          return EOU_monad::template mret<
+              dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>(a02);
         }
       }
     } else {

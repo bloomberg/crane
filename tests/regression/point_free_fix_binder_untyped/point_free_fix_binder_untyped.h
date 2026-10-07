@@ -343,15 +343,15 @@ typename _tcI0::template m<List<T3>> Denote::map_monad(
         &f,
     const List<T2> &l) {
   if (std::holds_alternative<typename List<T2>::Nil>(l.v())) {
-    return Denote::template ret<_tcI0, List<T3>>(List<T3>::nil());
+    return _tcI0::template ret<List<T3>>(List<T3>::nil());
   } else {
     const auto &[a0, a1] = std::get<typename List<T2>::Cons>(l.v());
     const List<T2> &a1_value = *a1;
-    return Denote::template bind<_tcI0, T3, List<T3>>(f(a0), [=](const T3 &y) {
-      return Denote::template bind<_tcI0, List<T3>, List<T3>>(
+    return _tcI0::template bind<T3, List<T3>>(f(a0), [=](const T3 &y) {
+      return _tcI0::template bind<List<T3>, List<T3>>(
           Denote::template map_monad<_tcI0, T2, T3>(f, a1_value),
           [=](const List<T3> &ys) {
-            return Denote::template ret<_tcI0, List<T3>>(List<T3>::cons(y, ys));
+            return _tcI0::template ret<List<T3>>(List<T3>::cons(y, ys));
           });
     });
   }
@@ -366,14 +366,14 @@ Denote::freeze(const Tree<typename _tcI4::base> &t) {
           t.v())) {
     const auto &[b0] =
         std::get<typename Tree<typename _tcI4::base>::Leaf>(t.v());
-    return Denote::template ret<option_monad, Tree<typename _tcI4::base>>(
+    return option_monad::template ret<Tree<typename _tcI4::base>>(
         Tree<typename _tcI4::base>::leaf(b0));
   } else {
     const auto &[kids0] =
         std::get<typename Tree<typename _tcI4::base>::Node>(t.v());
     const List<Tree<typename _tcI4::base>> &kids0_value = *kids0;
-    return Denote::template bind<option_monad, List<Tree<typename _tcI4::base>>,
-                                 Tree<typename _tcI4::base>>(
+    return option_monad::template bind<List<Tree<typename _tcI4::base>>,
+                                       Tree<typename _tcI4::base>>(
         Denote::template map_monad<option_monad, Tree<typename _tcI4::base>,
                                    Tree<typename _tcI4::base>>(
             [](const Tree<typename _tcI4::base> &x) {
@@ -382,7 +382,7 @@ Denote::freeze(const Tree<typename _tcI4::base> &t) {
             },
             kids0_value),
         [](const List<Tree<typename _tcI4::base>> &ks) {
-          return Denote::template ret<option_monad, Tree<typename _tcI4::base>>(
+          return option_monad::template ret<Tree<typename _tcI4::base>>(
               Tree<typename _tcI4::base>::node(ks));
         });
   }

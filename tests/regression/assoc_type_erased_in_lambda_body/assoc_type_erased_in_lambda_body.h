@@ -226,11 +226,11 @@ template <IPtr _tcI0> struct PointerV {
 
   static Id<std::pair<typename _tcI0::iptr, prov>> int_to_ptr(Nat,
                                                               List<Nat> pr) {
-    return bind0<MonId, typename _tcI0::iptr,
-                 std::pair<typename _tcI0::iptr, prov>>(
-        ret<MonId, typename _tcI0::iptr>(_tcI0::zero_iptr()),
+    return MonId::template bind0<typename _tcI0::iptr,
+                                 std::pair<typename _tcI0::iptr, prov>>(
+        MonId::template ret<typename _tcI0::iptr>(_tcI0::zero_iptr()),
         [=, pr = std::move(pr)](const typename _tcI0::iptr &x) {
-          return ret<MonId, std::pair<typename _tcI0::iptr, prov>>(
+          return MonId::template ret<std::pair<typename _tcI0::iptr, prov>>(
               std::make_pair(x, pr));
         });
   }

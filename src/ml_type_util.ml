@@ -256,6 +256,17 @@ let recover_method_quantifier class_ref field_ref erased =
     then recovered
     else erased
 
+(** Whether an instance declares class field [field_ref] of [class_ref] as a
+    member template: where {!recover_method_quantifier} takes the quantifier
+    back.  Its arguments and result are then the method's own, not erased. *)
+let method_is_member_template class_ref field_ref =
+  Table.get_ind_hkt_params class_ref <> []
+  || Table.is_typeclass class_ref
+     &&
+     match Table.find_type field_ref with
+     | exception Not_found -> false
+     | projection -> method_tvar_count class_ref (strip_erased_method_prefix projection) > 0
+
 (** [ml_drop_arrows n t] is what is left of [t] after [n] of its arrows have
     been applied. Erased ([Tdummy]) domains do not count, matching the value
     arrows a C++ call consumes. Fewer than [n] arrows leaves [Tunresolved], which

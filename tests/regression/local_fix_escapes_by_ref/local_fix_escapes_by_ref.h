@@ -241,16 +241,15 @@ struct LocalFixEscapesByRef {
     auto loop_impl = [=](auto &_self_loop, List<crane::obj> acc,
                          List<T1> l0) -> st<List<T2>> {
       if (std::holds_alternative<typename List<T1>::Nil>(l0.v())) {
-        return Monad0::template ret<Monad_st, List<T2>>(
+        return Monad_st::template ret<List<T2>>(
             acc.rev_append(List<T2>::nil()));
       } else {
         const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l0.v());
         const List<T1> &a1_value = *a1;
-        return Monad0::template bind<Monad_st, T2, List<T2>>(
-            f(a0), [=](const T2 &b) {
-              return _self_loop(_self_loop, List<crane::obj>::cons(b, acc),
-                                a1_value);
-            });
+        return Monad_st::template bind<T2, List<T2>>(f(a0), [=](const T2 &b) {
+          return _self_loop(_self_loop, List<crane::obj>::cons(b, acc),
+                            a1_value);
+        });
       }
     };
     {

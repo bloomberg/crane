@@ -256,7 +256,7 @@ struct MonadAliasOfApplied {
 
     template <typename CraneA0>
     static EOU<MaybePoison<CraneA0>> ret(CraneA0 a) {
-      return Monad0::template ret<EOU_monad, MaybePoison<CraneA0>>(
+      return EOU_monad::template ret<MaybePoison<CraneA0>>(
           MaybePoison<CraneA0>::nopois(std::move(a)));
     }
 
@@ -264,14 +264,14 @@ struct MonadAliasOfApplied {
     static EOU<MaybePoison<CraneA1>>
     bind(EOU<MaybePoison<CraneA0>> c,
          crane::fn<EOU<MaybePoison<CraneA1>>(CraneA0)> k) {
-      return Monad0::template bind<EOU_monad, MaybePoison<CraneA0>,
-                                   MaybePoison<CraneA1>>(
+      return EOU_monad::template bind<MaybePoison<CraneA0>,
+                                      MaybePoison<CraneA1>>(
           std::move(c),
           [=, k = std::move(k)](
               const MaybePoison<CraneA0> &pov) -> EOU<MaybePoison<CraneA1>> {
             if (std::holds_alternative<typename MaybePoison<CraneA0>::Pois>(
                     pov.v())) {
-              return Monad0::template ret<EOU_monad, MaybePoison<CraneA1>>(
+              return EOU_monad::template ret<MaybePoison<CraneA1>>(
                   MaybePoison<CraneA1>::pois());
             } else {
               const auto &[a0] =

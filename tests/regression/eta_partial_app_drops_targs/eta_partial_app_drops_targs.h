@@ -190,8 +190,9 @@ template <Mon _tcI0, typename T2, typename T3>
 typename _tcI0::template m<T3>
 liftM(const std::type_identity_t<crane::fn<T3(T2)>> &f,
       typename _tcI0::template m<T2> x) {
-  return mbind<_tcI0, T2, T3>(
-      std::move(x), [=](const T2 &a) { return mret<_tcI0, T3>(f(a)); });
+  return _tcI0::template mbind<T2, T3>(std::move(x), [=](const T2 &a) {
+    return _tcI0::template mret<T3>(f(a));
+  });
 }
 
 template <Fun _tcI0, typename T2, typename T3, typename F0>

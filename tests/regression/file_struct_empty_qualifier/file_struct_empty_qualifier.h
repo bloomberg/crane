@@ -319,19 +319,17 @@ struct Helpers {
           &f,
       const List<T2> &l) {
     if (std::holds_alternative<typename List<T2>::Nil>(l.v())) {
-      return Monad0::template ret<_tcI0, List<T3>>(List<T3>::nil());
+      return _tcI0::template ret<List<T3>>(List<T3>::nil());
     } else {
       const auto &[a1, a2] = std::get<typename List<T2>::Cons>(l.v());
       const List<T2> &a2_value = *a2;
-      return Monad0::template bind<_tcI0, T3, List<T3>>(
-          f(a1), [=](const T3 &b0) {
-            return Monad0::template bind<_tcI0, List<T3>, List<T3>>(
-                Helpers::template map_monad<_tcI0, T2, T3>(f, a2_value),
-                [=](const List<T3> &bs) {
-                  return Monad0::template ret<_tcI0, List<T3>>(
-                      List<T3>::cons(b0, bs));
-                });
-          });
+      return _tcI0::template bind<T3, List<T3>>(f(a1), [=](const T3 &b0) {
+        return _tcI0::template bind<List<T3>, List<T3>>(
+            Helpers::template map_monad<_tcI0, T2, T3>(f, a2_value),
+            [=](const List<T3> &bs) {
+              return _tcI0::template ret<List<T3>>(List<T3>::cons(b0, bs));
+            });
+      });
     }
   }
 

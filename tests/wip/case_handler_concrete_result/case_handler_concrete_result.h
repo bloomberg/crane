@@ -209,8 +209,8 @@ typename _tcI0::template M<T3> Interp::interp(
           const auto &_itf = *std::get_if<typename ITree<T3>::Vis>(&_cs);
           auto e = crane_event_as<T1>(_itf.effect);
           auto k = _itf.cont;
-          return Functor0::template fmap<_tcI2, crane::obj,
-                                         Sum<std::shared_ptr<ITree<T3>>, T3>>(
+          return _tcI2::template fmap<crane::obj,
+                                      Sum<std::shared_ptr<ITree<T3>>, T3>>(
               [=](const auto &x) {
                 return Sum<std::shared_ptr<ITree<T3>>, T3>::inl(k(x));
               },

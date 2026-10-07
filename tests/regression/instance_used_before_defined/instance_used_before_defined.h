@@ -217,7 +217,7 @@ template <typename I> struct Arith {
 struct Ops {
   static inline const Arith<Nat> Arith_nat =
       Arith<Nat>{[](const Nat &x, Nat y) {
-                   return Monad0::template ret<EOU_monad, Nat>(x.add(y));
+                   return EOU_monad::template ret<Nat>(x.add(y));
                  },
                  Nat::o()};
 };

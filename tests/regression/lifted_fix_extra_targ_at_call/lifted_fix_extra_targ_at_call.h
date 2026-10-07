@@ -406,8 +406,8 @@ std::optional<Dvalue<typename _tcI0::ptr>> to_dvalue(const List<Nat> &dbs,
                            List<Nat> dbs0)
             -> std::optional<List<Dvalue<typename _tcI0::ptr>>> {
           if (std::holds_alternative<typename List<Dtyp>::Nil>(dts.v())) {
-            return Monad0::template ret<Monad_option,
-                                        List<Dvalue<typename _tcI0::ptr>>>(
+            return Monad_option::template ret<
+                List<Dvalue<typename _tcI0::ptr>>>(
                 List<Dvalue<typename _tcI0::ptr>>::nil());
           } else {
             const auto &[a0, a1] = std::get<typename List<Dtyp>::Cons>(dts.v());
@@ -419,18 +419,17 @@ std::optional<Dvalue<typename _tcI0::ptr>> to_dvalue(const List<Nat> &dbs,
             } else {
               padding = Nat::o();
             }
-            return Monad0::template bind<Monad_option,
-                                         Dvalue<typename _tcI0::ptr>,
-                                         List<Dvalue<typename _tcI0::ptr>>>(
+            return Monad_option::template bind<
+                Dvalue<typename _tcI0::ptr>, List<Dvalue<typename _tcI0::ptr>>>(
                 to_dvalue<_tcI0>(dbs0, a0),
                 [=](const Dvalue<typename _tcI0::ptr> &f) {
-                  return Monad0::template bind<
-                      Monad_option, List<Dvalue<typename _tcI0::ptr>>,
+                  return Monad_option::template bind<
+                      List<Dvalue<typename _tcI0::ptr>>,
                       List<Dvalue<typename _tcI0::ptr>>>(
                       _self_go(_self_go, offset.add(padding), a1_value, dbs0),
                       [=](const List<Dvalue<typename _tcI0::ptr>> &rest) {
-                        return Monad0::template ret<
-                            Monad_option, List<Dvalue<typename _tcI0::ptr>>>(
+                        return Monad_option::template ret<
+                            List<Dvalue<typename _tcI0::ptr>>>(
                             List<Dvalue<typename _tcI0::ptr>>::cons(f, rest));
                       });
                 });
@@ -443,14 +442,13 @@ std::optional<Dvalue<typename _tcI0::ptr>> to_dvalue(const List<Nat> &dbs,
         return go(x, x0, x1);
       };
   if (std::holds_alternative<typename Dtyp::DLeaf>(dt.v())) {
-    return Monad0::template ret<Monad_option, Dvalue<typename _tcI0::ptr>>(
+    return Monad_option::template ret<Dvalue<typename _tcI0::ptr>>(
         Dvalue<typename _tcI0::ptr>::dv0(_tcI0::nullp()));
   } else {
     const auto &[a0] = std::get<typename Dtyp::DStruct>(dt.v());
     const List<Dtyp> &a0_value = *a0;
-    return Functor0::template fmap<Functor_Monad<Monad_option>,
-                                   List<Dvalue<typename _tcI0::ptr>>,
-                                   Dvalue<typename _tcI0::ptr>>(
+    return Functor_Monad<Monad_option>::template fmap<
+        List<Dvalue<typename _tcI0::ptr>>, Dvalue<typename _tcI0::ptr>>(
         [](const List<Dvalue<typename _tcI0::ptr>> &x) {
           return Dvalue<typename _tcI0::ptr>::dvs(x);
         },
@@ -499,8 +497,8 @@ template <Monad _tcI0, typename T2, typename T3>
 typename _tcI0::template m<T3>
 Monad0::liftM(const std::type_identity_t<crane::fn<T3(T2)>> &f,
               typename _tcI0::template m<T2> x) {
-  return Monad0::template bind<_tcI0, T2, T3>(std::move(x), [=](const T2 &x0) {
-    return Monad0::template ret<_tcI0, T3>(f(x0));
+  return _tcI0::template bind<T2, T3>(std::move(x), [=](const T2 &x0) {
+    return _tcI0::template ret<T3>(f(x0));
   });
 }
 

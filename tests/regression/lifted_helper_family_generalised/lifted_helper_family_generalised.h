@@ -763,16 +763,14 @@ struct LiftedHelperFamilyGeneralised {
                          Sum<std::pair<Nat, Nat>, Nat>> {
               const auto &[c0, off] = pat;
               if (c0.eqb(Nat::o())) {
-                return Monad0::template ret<
-                    Monad_itree<AllE<typename _tcI0::ptr, crane::obj>>,
-                    Sum<std::pair<Nat, Nat>, Nat>>(
-                    Sum<std::pair<Nat, Nat>, Nat>::inr(off));
+                return Monad_itree<AllE<typename _tcI0::ptr, crane::obj>>::
+                    template ret<Sum<std::pair<Nat, Nat>, Nat>>(
+                        Sum<std::pair<Nat, Nat>, Nat>::inr(off));
               } else {
-                return Monad0::template ret<
-                    Monad_itree<AllE<typename _tcI0::ptr, crane::obj>>,
-                    Sum<std::pair<Nat, Nat>, Nat>>(
-                    Sum<std::pair<Nat, Nat>, Nat>::inl(
-                        std::make_pair(c0.pred(), Nat::s(off))));
+                return Monad_itree<AllE<typename _tcI0::ptr, crane::obj>>::
+                    template ret<Sum<std::pair<Nat, Nat>, Nat>>(
+                        Sum<std::pair<Nat, Nat>, Nat>::inl(
+                            std::make_pair(c0.pred(), Nat::s(off))));
               }
             },
             std::make_pair(a0_value, Nat::o()));
@@ -781,21 +779,19 @@ struct LiftedHelperFamilyGeneralised {
     return [=, body = std::move(body)](const List<Nat> &args)
                -> top<typename _tcI0::ptr, Sum<Nat, Nat>> {
       if (std::holds_alternative<typename List<Nat>::Nil>(args.v())) {
-        return Monad0::template ret<
-            Monad_itree<AllE<typename _tcI0::ptr, crane::obj>>, Sum<Nat, Nat>>(
-            Sum<Nat, Nat>::inl(Nat::o()));
+        return Monad_itree<AllE<typename _tcI0::ptr, crane::obj>>::template ret<
+            Sum<Nat, Nat>>(Sum<Nat, Nat>::inl(Nat::o()));
       } else {
         const auto &[a0, a1] = std::get<typename List<Nat>::Cons>(args.v());
         const List<Nat> &a1_value = *a1;
         if (std::holds_alternative<typename List<Nat>::Nil>(a1_value.v())) {
-          return Functor0::template fmap<
-              Functor_itree<AllE<typename _tcI0::ptr, crane::obj>>, Nat,
-              Sum<Nat, Nat>>(
-              [](const Nat &x0) { return Sum<Nat, Nat>::inr(x0); }, body(a0));
+          return Functor_itree<AllE<typename _tcI0::ptr, crane::obj>>::
+              template fmap<Nat, Sum<Nat, Nat>>(
+                  [](const Nat &x0) { return Sum<Nat, Nat>::inr(x0); },
+                  body(a0));
         } else {
-          return Monad0::template ret<
-              Monad_itree<AllE<typename _tcI0::ptr, crane::obj>>,
-              Sum<Nat, Nat>>(Sum<Nat, Nat>::inl(Nat::o()));
+          return Monad_itree<AllE<typename _tcI0::ptr, crane::obj>>::
+              template ret<Sum<Nat, Nat>>(Sum<Nat, Nat>::inl(Nat::o()));
         }
       }
     };

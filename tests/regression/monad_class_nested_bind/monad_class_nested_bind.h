@@ -272,11 +272,12 @@ struct MonadClassNestedBind {
 
   template <Monad _tcI0>
   static typename _tcI0::template M<List<uint64_t>> chain(uint64_t x) {
-    return bind<_tcI0, uint64_t, List<uint64_t>>(
-        ret<_tcI0, uint64_t>(x), [](uint64_t n) {
-          return bind<_tcI0, uint64_t, List<uint64_t>>(
-              ret<_tcI0, uint64_t>((n + UINT64_C(1))), [=](uint64_t m) {
-                return ret<_tcI0, List<uint64_t>>(List<uint64_t>::cons(
+    return _tcI0::template bind<uint64_t, List<uint64_t>>(
+        _tcI0::template ret<uint64_t>(x), [](uint64_t n) {
+          return _tcI0::template bind<uint64_t, List<uint64_t>>(
+              _tcI0::template ret<uint64_t>((n + UINT64_C(1))),
+              [=](uint64_t m) {
+                return _tcI0::template ret<List<uint64_t>>(List<uint64_t>::cons(
                     n, List<uint64_t>::cons(m, List<uint64_t>::nil())));
               });
         });

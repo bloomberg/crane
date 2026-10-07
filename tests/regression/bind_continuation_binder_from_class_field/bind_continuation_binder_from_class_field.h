@@ -355,13 +355,13 @@ struct Byte {
 template <Params _tcI0>
 EOU<Dv<typename _tcI0::addr>> bytes_to_dv(const Nat &n, const List<Byte> &bs) {
   if (std::holds_alternative<typename Nat::O>(n.v())) {
-    return Monad0::template ret<EOU_monad, Dv<typename _tcI0::addr>>(
+    return EOU_monad::template ret<Dv<typename _tcI0::addr>>(
         Dv<typename _tcI0::addr>::dnum(Nat::o()));
   } else {
     const auto &[a0] = std::get<typename Nat::S>(n.v());
     const Nat &a0_value = *a0;
     if (std::holds_alternative<typename List<Byte>::Nil>(bs.v())) {
-      return Monad0::template ret<EOU_monad, Dv<typename _tcI0::addr>>(
+      return EOU_monad::template ret<Dv<typename _tcI0::addr>>(
           Dv<typename _tcI0::addr>::daddr(_tcI0::zero()));
     } else {
       const auto &[a00, a10] = std::get<typename List<Byte>::Cons>(bs.v());
@@ -371,23 +371,21 @@ EOU<Dv<typename _tcI0::addr>> bytes_to_dv(const Nat &n, const List<Byte> &bs) {
           [=](auto &_self_go, List<Nat> ds,
               List<Byte> bs0) -> EOU<List<Dv<typename _tcI0::addr>>> {
         if (std::holds_alternative<typename List<Nat>::Nil>(ds.v())) {
-          return Monad0::template ret<EOU_monad,
-                                      List<Dv<typename _tcI0::addr>>>(
+          return EOU_monad::template ret<List<Dv<typename _tcI0::addr>>>(
               List<Dv<typename _tcI0::addr>>::nil());
         } else {
           const auto &[a02, a12] = std::get<typename List<Nat>::Cons>(ds.v());
           const List<Nat> &a12_value = *a12;
-          return Monad0::template bind<EOU_monad, Dv<typename _tcI0::addr>,
-                                       List<Dv<typename _tcI0::addr>>>(
+          return EOU_monad::template bind<Dv<typename _tcI0::addr>,
+                                          List<Dv<typename _tcI0::addr>>>(
               bytes_to_dv<_tcI0>(a0_value, bs0),
               [=](const Dv<typename _tcI0::addr> &f) {
-                return Monad0::template bind<EOU_monad,
-                                             List<Dv<typename _tcI0::addr>>,
-                                             List<Dv<typename _tcI0::addr>>>(
+                return EOU_monad::template bind<List<Dv<typename _tcI0::addr>>,
+                                                List<Dv<typename _tcI0::addr>>>(
                     _self_go(_self_go, a12_value, bs0),
                     [=](const List<Dv<typename _tcI0::addr>> &r) {
-                      return Monad0::template ret<
-                          EOU_monad, List<Dv<typename _tcI0::addr>>>(
+                      return EOU_monad::template ret<
+                          List<Dv<typename _tcI0::addr>>>(
                           List<Dv<typename _tcI0::addr>>::cons(f, r));
                     });
               });
@@ -398,11 +396,11 @@ EOU<Dv<typename _tcI0::addr>> bytes_to_dv(const Nat &n, const List<Byte> &bs) {
                     List<Byte> bs0) -> EOU<List<Dv<typename _tcI0::addr>>> {
         return go_impl(go_impl, ds, bs0);
       };
-      return Monad0::template bind<EOU_monad, List<Dv<typename _tcI0::addr>>,
-                                   Dv<typename _tcI0::addr>>(
+      return EOU_monad::template bind<List<Dv<typename _tcI0::addr>>,
+                                      Dv<typename _tcI0::addr>>(
           go(List<Nat>::cons(a01, List<Nat>::nil()), a10_value),
           [](const List<Dv<typename _tcI0::addr>> &r) {
-            return Monad0::template ret<EOU_monad, Dv<typename _tcI0::addr>>(
+            return EOU_monad::template ret<Dv<typename _tcI0::addr>>(
                 Dv<typename _tcI0::addr>::dnum(r.length()));
           });
     }

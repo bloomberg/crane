@@ -117,6 +117,11 @@ val projection_class_arity : Names.GlobRef.t -> int
 val recover_method_quantifier :
   Names.GlobRef.t -> Names.GlobRef.t -> Miniml.ml_type -> Miniml.ml_type
 
+(** Whether an instance declares class field [field_ref] of [class_ref] as a
+    member template: where {!recover_method_quantifier} takes the quantifier
+    back.  Its arguments and result are then the method's own, not erased. *)
+val method_is_member_template : Names.GlobRef.t -> Names.GlobRef.t -> bool
+
 (** [method_tvar_count class_ref ty] is the arity of the member template an
     instance method of type [ty] emits: the type variables the method
     quantifies on its own, past the class's parameters.  The instance, the

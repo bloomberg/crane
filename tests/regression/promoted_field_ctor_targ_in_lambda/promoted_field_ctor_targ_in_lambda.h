@@ -398,8 +398,8 @@ struct PromotedFieldCtorTargInLambda {
 
   template <Params _tcI0>
   static memM<typename StateV<_tcI0>::state, Nat> read_size(const Nat &msg) {
-    return Monad0::template bind<memS_mon<St<typename _tcI0::ptr>>,
-                                 St<typename _tcI0::ptr>, Nat>(
+    return memS_mon<St<typename _tcI0::ptr>>::template bind<
+        St<typename _tcI0::ptr>, Nat>(
         get<St<typename _tcI0::ptr>>(),
         [=](const St<typename _tcI0::ptr> &s)
             -> memS<typename StateV<_tcI0>::state, Nat> {
@@ -408,8 +408,7 @@ struct PromotedFieldCtorTargInLambda {
             return memS<typename StateV<_tcI0>::state, Nat>::mub(msg);
           } else {
             const auto &[a0] = std::get<typename Nat::S>(_sv.v());
-            return Monad0::template ret<memS_mon<St<typename _tcI0::ptr>>, Nat>(
-                *a0);
+            return memS_mon<St<typename _tcI0::ptr>>::template ret<Nat>(*a0);
           }
         });
   }

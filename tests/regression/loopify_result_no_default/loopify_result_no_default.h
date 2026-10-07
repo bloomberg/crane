@@ -398,7 +398,7 @@ struct LoopifyResultNoDefault {
         auto _f = std::move(std::get<CraneEnter>(_frame));
         const List<T2> &l = *_f.l;
         if (std::holds_alternative<typename List<T2>::Nil>(l.v())) {
-          _result = Monad0::template ret<_tcI0, T3>(b);
+          _result = _tcI0::template ret<T3>(b);
         } else {
           const auto &[a0, a1] = std::get<typename List<T2>::Cons>(l.v());
           const List<T2> &a1_value = *a1;
@@ -408,7 +408,7 @@ struct LoopifyResultNoDefault {
       } else {
         auto _f = std::move(std::get<CraneCont_Cons>(_frame));
         auto a0 = std::move(_f.a0);
-        _result = Monad0::template bind<_tcI0, T3, T3>(
+        _result = _tcI0::template bind<T3, T3>(
             std::move(_result), [=](const T3 &r) { return f(r, a0); });
       }
     }

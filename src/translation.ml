@@ -4416,10 +4416,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
            arguments nor its result are erased here.  The count is the one the
            instance and the concept read ({!Ml_type_util.method_tvar_count}). *)
         let member_template =
-          match typ, declared with
-          | Miniml.Tglob (r, _, _), _ when Table.get_ind_hkt_params r <> [] -> true
-          | Miniml.Tglob (r, _, _), Some d ->
-            method_tvar_count r (recover_method_quantifier r fld d) > 0
+          match typ with
+          | Miniml.Tglob (r, _, _) -> Ml_type_util.method_is_member_template r fld
           | _ -> false
         in
         let fld_ty_opt =
@@ -5659,7 +5657,25 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
     let ty, tys, all_type_args, written_tvar_args =
       call_type_args ?expected_ty env id plan args
     in
-    let cglob = mk_cppglob ?yields:(glob_yields env id tys) id all_type_args in
+    (* A class field called with the instance it projects through, where
+       that instance was kept and declares the field as a member template:
+       the instance's own method, at the type arguments the projection's body
+       forwards -- all but the instance's.  The dispatcher is a template
+       forwarding to [_tcI0::bind] that repeats its argument passing, which a
+       C++ compiler is not sure to see through.  A method erased at
+       [std::any] is left to the dispatcher, which does the erasing. *)
+    let cglob =
+      match (plan.cp_instance_args, plan.cp_instance_type_args, all_type_args) with
+      | [inst], [Some inst_ty], _ :: method_targs
+        when (match kept_instance_of_projection env id [inst] with
+              | Some _ -> (
+                match resolve_tmeta (instance_class_ty env inst) with
+                | Miniml.Tglob (c, _, _) -> Ml_type_util.method_is_member_template c id
+                | _ -> false )
+              | None -> false) ->
+        CPPscope (CPPtype_name inst_ty, Common.id_of_global Term id, method_targs)
+      | _ -> mk_cppglob ?yields:(glob_yields env id tys) id all_type_args
+    in
     (* Check if this is a typeclass instance used as a type (for :: access).
        When all args are consumed (domain and args both empty after filtering),
        return just the type reference, not a function call. This avoids

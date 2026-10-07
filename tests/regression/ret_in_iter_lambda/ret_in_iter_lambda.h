@@ -515,12 +515,11 @@ struct RetInIterLambda {
     return ITree::template iter<AllE<T1, crane::obj>, Nat, Nat>(
         [=](const Nat &k) -> Itree<AllE<T1, crane::obj>, Sum<Nat, Nat>> {
           if (k.eqb(n)) {
-            return Monad0::template ret<Monad_itree<AllE<T1, crane::obj>>,
-                                        Sum<Nat, Nat>>(Sum<Nat, Nat>::inr(k));
+            return Monad_itree<AllE<T1, crane::obj>>::template ret<
+                Sum<Nat, Nat>>(Sum<Nat, Nat>::inr(k));
           } else {
-            return Monad0::template ret<Monad_itree<AllE<T1, crane::obj>>,
-                                        Sum<Nat, Nat>>(
-                Sum<Nat, Nat>::inl(Nat::s(k)));
+            return Monad_itree<AllE<T1, crane::obj>>::template ret<
+                Sum<Nat, Nat>>(Sum<Nat, Nat>::inl(Nat::s(k)));
           }
         },
         Nat::o());

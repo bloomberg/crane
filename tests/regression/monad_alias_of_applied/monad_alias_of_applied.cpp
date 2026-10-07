@@ -3,11 +3,9 @@
 MonadAliasOfApplied::EOUP<Nat> MonadAliasOfApplied::extract(bool b,
                                                             const Nat &n) {
   if (b) {
-    return Monad0::template ret<MonadAliasOfApplied::EOUP_Monad, Nat>(
-        Nat::s(n));
+    return MonadAliasOfApplied::EOUP_Monad::template ret<Nat>(Nat::s(n));
   } else {
-    return Monad0::template ret<MonadAliasOfApplied::EOU_monad,
-                                MonadAliasOfApplied::MaybePoison<Nat>>(
-        MaybePoison<Nat>::pois());
+    return MonadAliasOfApplied::EOU_monad::template ret<
+        MonadAliasOfApplied::MaybePoison<Nat>>(MaybePoison<Nat>::pois());
   }
 }

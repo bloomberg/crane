@@ -260,9 +260,10 @@ struct InstanceUseDropsFamilyArg {
 
   template <typename T1>
   static box<AllE<T1, crane::obj>, Nat> incr(const Nat &n) {
-    return bind<Monad_box<AllE<T1, crane::obj>>, Nat, Nat>(
-        ret<Monad_box<AllE<T1, crane::obj>>, Nat>(n), [](const Nat &m) {
-          return ret<Monad_box<AllE<T1, crane::obj>>, Nat>(Nat::s(m));
+    return Monad_box<AllE<T1, crane::obj>>::template bind<Nat, Nat>(
+        Monad_box<AllE<T1, crane::obj>>::template ret<Nat>(n),
+        [](const Nat &m) {
+          return Monad_box<AllE<T1, crane::obj>>::template ret<Nat>(Nat::s(m));
         });
   }
 

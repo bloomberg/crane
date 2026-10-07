@@ -61,9 +61,9 @@ struct ClassTypeConstructorParam {
 
   static_assert(Container<IdC>);
   static inline const uint64_t go =
-      cout<IdC, uint64_t>(cmap<IdC, uint64_t, uint64_t>(
+      IdC::template cout<uint64_t>(IdC::template cmap<uint64_t, uint64_t>(
           [](uint64_t n) { return (n + UINT64_C(1)); },
-          cwrap<IdC, uint64_t>(UINT64_C(4))));
+          IdC::template cwrap<uint64_t>(UINT64_C(4))));
 };
 
 #endif // INCLUDED_CLASS_TYPE_CONSTRUCTOR_PARAM

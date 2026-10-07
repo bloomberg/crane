@@ -685,19 +685,18 @@ typename _tcI0::template M<T3> Interp::interp(
                 typename ItreeF<T1, T3, Itree<T1, T3>>::RetF>(_sv.v())) {
           const auto &[r0] =
               std::get<typename ItreeF<T1, T3, Itree<T1, T3>>::RetF>(_sv.v());
-          return Monad0::template ret<_tcI1, Sum<Itree<T1, T3>, T3>>(
+          return _tcI1::template ret<Sum<Itree<T1, T3>, T3>>(
               Sum<Itree<T1, T3>, T3>::inr(r0));
         } else if (std::holds_alternative<
                        typename ItreeF<T1, T3, Itree<T1, T3>>::TauF>(_sv.v())) {
           const auto &[t1] =
               std::get<typename ItreeF<T1, T3, Itree<T1, T3>>::TauF>(_sv.v());
-          return Monad0::template ret<_tcI1, Sum<Itree<T1, T3>, T3>>(
+          return _tcI1::template ret<Sum<Itree<T1, T3>, T3>>(
               Sum<Itree<T1, T3>, T3>::inl(t1));
         } else {
           const auto &[x, e0] =
               std::get<typename ItreeF<T1, T3, Itree<T1, T3>>::VisF>(_sv.v());
-          return Functor0::template fmap<_tcI2, crane::obj,
-                                         Sum<Itree<T1, T3>, T3>>(
+          return _tcI2::template fmap<crane::obj, Sum<Itree<T1, T3>, T3>>(
               [=](const auto &x0) {
                 return Sum<Itree<T1, T3>, T3>::inl(e0(x0));
               },

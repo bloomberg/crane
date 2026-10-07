@@ -205,7 +205,7 @@ static_assert(Monad<EOU_monad>);
 
 struct Ops_nat {
   static EOU<Nat> madd(Nat x, Nat y) {
-    return Monad0::template ret<EOU_monad, Nat>(x.add(std::move(y)));
+    return EOU_monad::template ret<Nat>(x.add(std::move(y)));
   }
 
   static Nat mzero() { return Nat::o(); }
