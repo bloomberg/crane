@@ -1,8 +1,7 @@
 (* SPDX-License-Identifier: BSD-3-Clause *)
 From Stdlib Require Import ExtrOcamlBasic.
-(*Require Import ExtrOcamlNatInt.*)
-(*Require Import ExtrOcamlZInt.*)
 From Stdlib Require Import ExtrOcamlString.
+From Crane.Libraries.ParseALot.Benchmarking Require Import ExtractionParity.
 From Crane.Libraries.ParseALot.Utils Require Import NativeMap.
 From Crane.Libraries.ParseALot.Examples.JSON.Parser Require Import JSON.
 From Crane.Libraries.ParseALot.Examples.CSV.Parser Require Import CSV.

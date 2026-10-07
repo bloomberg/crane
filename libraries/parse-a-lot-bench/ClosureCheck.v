@@ -20,6 +20,7 @@
 From Stdlib Require Import List.
 Import ListNotations.
 From Stdlib Require Import ExtrOcamlBasic ExtrOcamlString.
+From Crane.Libraries.ParseALot.Benchmarking Require Import ExtractionParity.
 
 From Crane.Libraries.ParseALot.Examples.JSON.Lexer Require Literal.
 From Crane.Libraries.ParseALot.Examples.CSV.Lexer  Require Literal.
