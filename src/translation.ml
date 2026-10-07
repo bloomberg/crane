@@ -9493,9 +9493,14 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
              is a tree over [arg]'s family, whatever family the function
              returns into. *)
           let rhs_result =
-            if ml_type_contains_erased t_effective then (!tctx).current_cpp_return_type
+            let c = cpp_of_ml env t_effective in
+            (* A binder erasure took the whole type from -- [nt_semty x], a
+               type computed from a value -- holds a box, and its value is
+               one; read at the function's result instead, it is cast to a
+               type it does not have. *)
+            if prints_as_any c then Some c
+            else if ml_type_contains_erased t_effective then (!tctx).current_cpp_return_type
             else
-              let c = cpp_of_ml env t_effective in
               match spell_in_scope c with
               | Some _ as t -> t
               | None -> (!tctx).current_cpp_return_type
