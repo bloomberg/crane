@@ -161,3 +161,9 @@ type t = {
     @param ml_structure The full extraction structure to analyze.
     @return Analysis results consumed by [cpp.ml]'s rendering pass. *)
 val analyze : Method_registry.t -> ml_structure -> t
+
+(** Register the inductives stored as shared variants
+    ([Table.is_shared_variant_packet]), once the structure's declarations are
+    final and before anything asks: the type's declaration, every slot holding
+    it and the method registry must give one answer. *)
+val register_shared_variants : ml_structure -> unit

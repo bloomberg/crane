@@ -142,3 +142,8 @@ val find_reuse_candidates :
      ml_type
   -> ml_branch array
   -> (int * Names.GlobRef.t * int * Names.GlobRef.t * ml_ast list) list
+
+(** [is_reuse_scrutinee k body]: whether [body] matches on parameter [k]
+    (de Bruijn, 1 = innermost) with at least one reuse candidate arm, on a
+    type whose cells can be recycled. *)
+val is_reuse_scrutinee : int -> ml_ast -> bool

@@ -11775,3 +11775,14 @@
   (alias runtest)
   (deps shared_variant_basic.t.exe)
   (action (run ./shared_variant_basic.t.exe))))
+
+(subdir shared_variant_reuse
+ (rule
+  (targets shared_variant_reuse.t.exe)
+  (deps SharedVariantReuse.vo shared_variant_reuse.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} shared_variant_reuse.t.exe shared_variant_reuse.cpp shared_variant_reuse.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps shared_variant_reuse.t.exe)
+  (action (run ./shared_variant_reuse.t.exe))))

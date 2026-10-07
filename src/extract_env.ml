@@ -1437,8 +1437,13 @@ let report_body_generations fn =
     same bodies, and a body a rewrite introduces meets Normalize's contract
     like any other. *)
 let optimize_struct to_appear struc =
+  let struc = Modutil.optimize_struct to_appear struc in
+  (* Which inductives are shared variants is a property of their
+     declarations, final from here; the method registry {!Normalize} builds
+     already asks. *)
+  Structure_analysis.register_shared_variants struc;
   let struc =
-    Modutil.optimize_struct to_appear struc
+    struc
     |> Ml_dedup.structure
     |> Ml_specialize.structure
     |> Normalize.structure

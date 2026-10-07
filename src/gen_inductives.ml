@@ -2511,7 +2511,37 @@ let gen_ind_header_v2
               | _ -> None )
             (List.combine cpp_tys tys_list)
         in
+        (* A shared variant's reuse factory takes the matched value itself as
+           the token: where its block is unique and holds this alternative,
+           the new fields are written into it ([shared_variant::try_reuse]);
+           otherwise the value is built as [<ctor>] builds it.  The test is
+           the factory's, so a match arm needs no path of its own. *)
+        let shared_reuse_factory () =
+          let tok_id = Id.of_string "_tok" and alt_id = Id.of_string "_alt" in
+          let reused =
+            CPPaccess_call
+              ( Adot,
+                CPPaccess (Adot, CPPvar tok_id, Id.of_string "v_"),
+                Id.of_string "try_reuse",
+                [CPPmove (CPPvar alt_id)] )
+          in
+          let body =
+            [ Sasgn (alt_id, Declare Tauto, CPPstruct_id (Id.of_string cname, [], ctor_args));
+              Sif (reused, [Sreturn (Some (CPPvar tok_id))], []);
+              Sreturn (Some (build i cname [CPPmove (CPPvar alt_id)])) ]
+          in
+          [ ( Fmethod
+                (static_fun
+                   ~name:(Generated_name.companion (Id.of_string fname) "reuse")
+                   ~ret:ret_ty ~params:((tok_id, ret_ty) :: params) ~body),
+              VPublic,
+              SCreators ) ]
+        in
         let reuse_factory =
+          if Table.reuse () && (not is_coinductive) && Table.is_shared_variant name then
+            (* A constructor with no fields has no block to write into. *)
+            if tys_list = [] then [] else shared_reuse_factory ()
+          else
           match token_field with
           | Some (tok_j, rec_inner)
             when Table.reuse () && Table.non_atomic_rc () && (not is_coinductive)

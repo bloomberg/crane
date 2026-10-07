@@ -479,15 +479,28 @@ let settle_file_calls ~already_method ~calls ~ref_of cands =
   in
   settle cands
 
+(** The receiver position of [body : ty] as a method of [epon_ref], and the
+    inductive's type variables among its parameters, when it may be one.  Not
+    where reuse would consume the receiver: a method's [this] is borrowed, and
+    under [Crane Reuse] a shared variant's match rebuilds into the matched
+    value's own block, which only an owned parameter can give up. *)
+let method_receiver epon_ref body ty =
+  match find_epon_arg_pos epon_ref ty with
+  | Some (pos, _) as r
+    when body_safe_for_method ~this_pos:pos
+           ~ret_has_shared_epon:(ml_return_type_has_ref epon_ref ty)
+           body ->
+    let params, inner = Mlutil.collect_lams body in
+    let consumed () =
+      Table.reuse () && Table.is_shared_variant epon_ref
+      && Escape.is_reuse_scrutinee (List.length params - pos) inner
+    in
+    if consumed () then None else r
+  | _ -> None
+
 (** Whether [try_register_method] would accept the function, without
     registering anything. *)
-let would_register epon_ref body ty =
-  match find_epon_arg_pos epon_ref ty with
-  | Some (pos, _) ->
-    body_safe_for_method ~this_pos:pos
-      ~ret_has_shared_epon:(ml_return_type_has_ref epon_ref ty)
-      body
-  | None -> false
+let would_register epon_ref body ty = Option.has_some (method_receiver epon_ref body ty)
 
 (** Top-level sibling candidates, each with the file functions it calls and
     the registration to run if it is kept.  Collected by
@@ -653,11 +666,8 @@ let register_methods_for_epon
             (fun {fd_ref = r; fd_body = body; fd_type = ty} ->
               if same_module r && not (refs_forward ty) && not (refs_alias ty)
               then
-                match find_epon_arg_pos epon_ref ty with
-                | Some (pos, ind_tvar_positions)
-                  when body_safe_for_method ~this_pos:pos
-                         ~ret_has_shared_epon:(ml_return_type_has_ref epon_ref ty)
-                         body ->
+                match method_receiver epon_ref body ty with
+                | Some (pos, ind_tvar_positions) ->
                   consider r body ty pos ind_tvar_positions
                 | _ -> () )
             (Mlutil.term_defs d)
@@ -772,11 +782,8 @@ let register_methods_for_all_inductives tbl cands ind_refs decls =
       if refs_excluded_for best_ref ty then ()
       else if has_concrete_type_args best_ref ty then ()
       else
-        match find_epon_arg_pos best_ref ty with
-        | Some (pos, ind_tvar_positions)
-          when body_safe_for_method ~this_pos:pos
-                 ~ret_has_shared_epon:(ml_return_type_has_ref best_ref ty)
-                 body ->
+        match method_receiver best_ref body ty with
+        | Some (pos, ind_tvar_positions) ->
           add_candidate best_ref r body ty pos ind_tvar_positions
         | _ -> ()
   in
@@ -1153,11 +1160,8 @@ let add_candidate (reg : t) (ind_ref : GlobRef.t) (cand : method_candidate) =
 let try_register_method (reg : t) (epon_ref : GlobRef.t)
     (func_ref : GlobRef.t) (body : Miniml.ml_ast) (ty : Miniml.ml_type) :
     method_candidate option =
-  match find_epon_arg_pos epon_ref ty with
-  | Some (pos, ind_tvar_positions)
-    when body_safe_for_method ~this_pos:pos
-           ~ret_has_shared_epon:(ml_return_type_has_ref epon_ref ty)
-           body ->
+  match method_receiver epon_ref body ty with
+  | Some (pos, ind_tvar_positions) ->
     register_into ~arity:(ml_value_arity ty) reg.methods func_ref epon_ref
       (cpp_arg_pos ty pos)
       ~ind_tvar_positions;

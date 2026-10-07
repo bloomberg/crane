@@ -316,17 +316,26 @@ let find_reuse_candidates (_typ : ml_type) (pv : ml_branch array) =
   List.rev !cands
 
 (** [is_reuse_scrutinee k body]: does [body] match on parameter [k] (de Bruijn,
-    1 = innermost) with at least one reuse candidate arm?  Such a scrutinee must
-    be passed OWNED (by value) so the reuse path can consume its recursive
-    child; escape analysis would otherwise borrow a match-only param. *)
+    1 = innermost) with at least one reuse candidate arm, on a type whose cells
+    can be recycled?  Such a scrutinee must be passed OWNED (by value) so the
+    reuse path can consume it; escape analysis would otherwise borrow a
+    match-only param.  A shared variant's block is recycled whatever the
+    counts; another type's child cell only under non-atomic counts (the
+    recycling helpers in rc.h are single-threaded, matching the rest of
+    Crane's clone-at-boundary model). *)
 let is_reuse_scrutinee k body =
+  let recyclable = function
+    | Tglob (r, _, _) when Table.is_shared_variant r -> true
+    | _ -> non_atomic_rc ()
+  in
   let found = ref false in
   let rec scan d = function
     | MLcase (typ, scrut, branches) ->
       ( match scrut with
       | MLrel j | MLmagic (_, MLrel j) ->
-        if j > d && j - d = k && find_reuse_candidates typ branches <> [] then
-          found := true
+        if j > d && j - d = k && recyclable typ
+           && find_reuse_candidates typ branches <> []
+        then found := true
       | _ -> () );
       scan d scrut;
       Array.iter
@@ -352,16 +361,13 @@ let infer_owned_params n_params body =
      passed owned, because both recycle its cells: loopify does so through the
      owning cursor its TMC loop carries (see Loopify.reuse_cursor).  So this
      inference does not defer to loopify; it asks only whether reuse can be
-     performed at all, which additionally requires non-atomic refcounts (the
-     recycling helpers in rc.h are single-threaded, matching the rest of Crane's
-     clone-at-boundary model).  The consumers that actually emit a rewrite --
+     performed at all.  The consumers that actually emit a rewrite --
      translation's dual-path match and gen_decls' argument passing -- keep
      deferring to loopify via [reuse_loopify_ok]. *)
-  let reuse_on = reuse () && non_atomic_rc () in
   List.init n_params (fun i ->
     let k = i + 1 in
     escapes ~query:Of_param k body
-    || (reuse_on && is_reuse_scrutinee k body))
+    || (reuse () && is_reuse_scrutinee k body))
 
 (** Like [infer_owned_params] but returns only the [sub_bindings_escape]
     contribution.  Callers can OR this into the base owned flags selectively

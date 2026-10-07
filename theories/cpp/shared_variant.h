@@ -178,6 +178,22 @@ public:
   // Whether no other value shares this one's block.
   bool unique() const { return !boxed() || hdr()->rc.sole(); }
 
+  // Perceus reuse: when this value is the only one holding its block and the
+  // block holds [Alt], [a] replaces what it holds there -- no allocation, and
+  // the old fields are released as the assignment overwrites them -- and the
+  // answer is true.  Otherwise [a] is left as it was, for the caller to build
+  // a fresh value from.
+  template <class Alt> bool try_reuse(Alt &&a) {
+    constexpr std::size_t I = index_of<std::decay_t<Alt>>();
+    if constexpr (inline_alt<I>) {
+      return false;
+    } else {
+      if (!is<I>() || !hdr()->rc.sole()) return false;
+      blk<I>()->value = std::move(a);
+      return true;
+    }
+  }
+
   // How many values share this one's block: 1 for an alternative with no
   // fields, which no one shares because there is nothing to share.
   std::size_t use_count() const {

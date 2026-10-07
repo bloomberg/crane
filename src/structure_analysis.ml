@@ -165,9 +165,6 @@ let register_enum_inductives (s : ml_structure) : unit =
         (element_inductives se) )
     s
 
-(** Register the inductives stored as shared variants
-    ([Table.is_shared_variant_packet]), once, before anything is rendered:
-    the type's declaration and every slot holding it must give one answer. *)
 let register_shared_variants (s : ml_structure) : unit =
   if Table.shared_variant () then
     iter_structure
@@ -927,7 +924,6 @@ let collect_lifted_instances (modules : module_info list) : GlobRef.t list =
 let analyze (reg : Method_registry.t) (s : ml_structure) : t =
   (* 1. Register enum inductives (side-effect: populates Table). *)
   register_enum_inductives s;
-  register_shared_variants s;
   (* 2. Collect inductive names for name collision detection. *)
   let declared_inductive_names = collect_inductive_names s in
   (* At global scope a type is emitted under a capitalised name, which is what

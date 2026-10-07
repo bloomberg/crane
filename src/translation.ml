@@ -7576,15 +7576,18 @@ and gen_cpp_case (typ : ml_type) t env pv =
     let scrut_is_shared =
       match typ with Tglob (r, _, _) -> Table.is_shared_variant r | _ -> false
     in
-    let scrut_is_owned =
+    (* Whether this match may consume the scrutinee.  A shared value is
+       matched by borrowing all the same -- its fields are count bumps away --
+       and is consumed only by block reuse below. *)
+    let scrut_consumable =
       match scrut_expr with
       | CPPthis | CPPderef CPPthis -> false
-      | _ when scrut_is_shared -> false
       | _ -> (
         match scrut_db with
         | Some i -> Escape.IntSet.mem i (!tctx).move_owned_vars
         | None -> false )
     in
+    let scrut_is_owned = scrut_consumable && not scrut_is_shared in
     (* Build variant accessor.  All inductives (including coinductives)
        are value types and use [scrut.v()] (dot access).  Exception:
        [this] is always a pointer, so method bodies use [this->v()].
@@ -7662,18 +7665,22 @@ and gen_cpp_case (typ : ml_type) t env pv =
       | None ->
         iife_closure_return env typ pv [Smatch (scrut, branches, wildcard)]
     in
-    (* Perceus reuse (Crane Reuse): when the matched constructor's first
-       recursive child is uniquely owned at runtime, rebuild a same-inductive
-       constructor by recycling that child's cell in place via the
-       [<ctor>__reuse] factory instead of allocating.  Dual path guarded by
-       [scrut.v().index()==branch_idx && child.use_count()==1]; otherwise the
-       normal [Smatch].  Only under NonAtomicRc (crane::rc carries the reusable
-       control block) and an owned, non-coinductive scrutinee whose matched
-       constructor has a recursive field -- a map's node has two, and its
-       rebuild recycles the first. *)
+    (* Perceus reuse (Crane Reuse): rebuild a same-inductive constructor in
+       a cell the match frees instead of allocating, via the [<ctor>__reuse]
+       factory.  Dual path guarded by [scrut.v().index()==branch_idx] and a
+       uniqueness test; otherwise the normal [Smatch].  Which cell:
+       - a shared variant: the scrutinee's own block, when no other value
+         holds it -- the fields are moved out, and the factory writes the new
+         ones in (or allocates, if the rebuilt constructor is another);
+       - otherwise, under NonAtomicRc (crane::rc carries the reusable control
+         block): the matched constructor's first recursive child's cell, when
+         unique -- a map's node has two, and its rebuild recycles the first.
+       Only for an owned, non-coinductive scrutinee. *)
     let reuse_stmts_opt =
-      if Table.reuse () && Table.reuse_loopify_ok () && Table.non_atomic_rc ()
-         && scrut_is_owned && (not is_flat_match) && (not is_enum)
+      if Table.reuse () && Table.reuse_loopify_ok ()
+         && (if scrut_is_shared then scrut_consumable
+             else Table.non_atomic_rc () && scrut_is_owned)
+         && (not is_flat_match) && (not is_enum)
          && (match typ with Tglob (r, _, _) -> not (Table.is_coinductive r) | _ -> true)
       then
         let scrut_cpp_ty = cpp_of_ml env typ in
@@ -7769,26 +7776,29 @@ and gen_cpp_case (typ : ml_type) t env pv =
                   | None -> None )
               rev_ids'
           in
-          (* The constructor rebuilt must hold the inductive itself too, the
-             field its [__reuse] factory recycles the cell into: [nil] has
-             none. *)
-          let rebuilds_a_child =
-            match Table.get_ctor_ip_types_opt tail_ctor with
-            | Some tys -> List.exists is_uniform_self tys
-            | None -> false
+          (* The constructor rebuilt must have somewhere to put the cell: a
+             shared variant's block needs fields to hold, a child's cell needs
+             a field holding the inductive itself.  [nil] has neither. *)
+          let tail_tys =
+            Option.default [] (Table.get_ctor_ip_types_opt tail_ctor)
           in
-          let rec_idx =
-            if List.mem None reads || not rebuilds_a_child then None
+          let reused_cell =
+            if List.mem None reads then None
+            else if scrut_is_shared then
+              if def_tys <> [] && List.exists (fun t -> not (isTdummy t)) tail_tys
+              then Some `Block
+              else None
+            else if not (List.exists is_uniform_self tail_tys) then None
             else
               let rec first i = function
-                | Some `Child :: _ -> Some i
+                | Some `Child :: _ -> Some (`Child_cell i)
                 | _ :: rest -> first (i + 1) rest
                 | [] -> None
               in
               first 0 reads
           in
-          (match rec_idx with
-          | Some rec_idx ->
+          (match reused_cell with
+          | Some reused_cell ->
             let saved_env_types = (!tctx).env_types in
             push_binders env ids';
             let scrut_vmut =
@@ -7812,7 +7822,13 @@ and gen_cpp_case (typ : ml_type) t env pv =
                   Common.lookup_ctor_field_name ~owner:matched_ctor
                     (ctor_struct_name_of_ref matched_ctor) i )
             in
-            let token_expr = Some (rf rec_idx) in
+            (* A field moved out: the token's cell keeps nothing the arm
+               reads.  In a unique block every child is the block's alone. *)
+            let moved_child i =
+              match reused_cell with
+              | `Block -> true
+              | `Child_cell k -> i = k
+            in
             let extract =
               List.concat
                 (List.map2
@@ -7823,32 +7839,30 @@ and gen_cpp_case (typ : ml_type) t env pv =
                      (* The token: its value is moved out, owned, so the
                         recursion propagates reuse; the cell stays behind as
                         the token. *)
-                     | Some `Child when i = rec_idx -> bind (CPPmove (CPPderef (rf i)))
+                     | Some `Child when moved_child i -> bind (CPPmove (CPPderef (rf i)))
                      | Some (`Child | `Deref) -> bind (CPPderef (rf i))
                      | Some `Unbox -> bind (mk_call (CPPrt Crane_rt.Unbox_field) [rf i])
                      | Some `Move -> bind (CPPmove (rf i)) )
                    (List.mapi (fun i x -> (i, x)) rev_ids')
                    reads)
             in
-            (match token_expr with
-            | Some tok ->
-              let body_stmts =
-                with_reuse_token (Some (tok, tail_ctor)) (fun () ->
-                    gen_stmts env' (fun x -> Sreturn (Some x)) body )
-              in
-              restore_env_types saved_env_types;
-              let use_count_cond =
-                CPPbinop
-                  ( Beq,
-                    mk_call
-                      (CPPaccess (Adot, rf rec_idx, Id.of_string "use_count"))
-                      [],
-                    CPPint 1 )
-              in
-              Some (branch_idx, extract @ body_stmts, use_count_cond)
-            | None ->
-              restore_env_types saved_env_types;
-              None)
+            let tok, unique_cond =
+              match reused_cell with
+              | `Block ->
+                (scrut_expr, mk_call (CPPaccess (Adot, scrut_v, Id.of_string "unique")) [])
+              | `Child_cell k ->
+                ( rf k,
+                  CPPbinop
+                    ( Beq,
+                      mk_call (CPPaccess (Adot, rf k, Id.of_string "use_count")) [],
+                      CPPint 1 ) )
+            in
+            let body_stmts =
+              with_reuse_token (Some (tok, tail_ctor)) (fun () ->
+                  gen_stmts env' (fun x -> Sreturn (Some x)) body )
+            in
+            restore_env_types saved_env_types;
+            Some (branch_idx, extract @ body_stmts, unique_cond)
           | _ -> None )
         in
         (* Pick the first candidate whose matched constructor has a recursive
