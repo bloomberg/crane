@@ -11786,3 +11786,14 @@
   (alias runtest)
   (deps shared_variant_reuse.t.exe)
   (action (run ./shared_variant_reuse.t.exe))))
+
+(subdir shared_variant_nested
+ (rule
+  (targets shared_variant_nested.t.exe)
+  (deps SharedVariantNested.vo shared_variant_nested.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} shared_variant_nested.t.exe shared_variant_nested.cpp shared_variant_nested.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps shared_variant_nested.t.exe)
+  (action (run ./shared_variant_nested.t.exe))))

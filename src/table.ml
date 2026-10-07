@@ -3040,33 +3040,28 @@ let is_flat_inductive r =
     | _ -> false
 
 (** Whether the [i]th packet of [ind] is stored as a shared variant: under
-    [Set Crane SharedVariant], an ordinary, single-packet inductive Crane
-    declares itself, with a field holding the inductive itself -- uniformly,
-    at its own parameters -- and no other mention of it, such as one inside
-    a container's element type.  A value of it is one word, a recursive field
-    is the value, and building a node shares its children's blocks. *)
+    [Set Crane SharedVariant], an ordinary inductive Crane declares itself
+    that is recursive, mutually or not, or large: a tagged union (not a flat
+    struct) whose widest constructor has more than two fields.  A value of it
+    is one word, so copying one is a count bump; a field holding an
+    inductive of its block -- itself or a sibling, directly or inside a
+    container's element type -- is a slot holding a value, and building a
+    node shares its children's blocks. *)
 let is_shared_variant_packet kn ind i =
   shared_variant ()
   &&
   try
     let p = ind.ind_packets.(i) in
-    let self = GlobRef.IndRef (kn, i) in
-    let _, n = ind_param_vars ind p in
-    let uniform_self = function
-      | Tglob (r, args, _) when GlobRef.CanOrd.equal r self ->
-        List.length args = n
-        && List.for_all Fun.id
-             (List.mapi (fun j a -> match a with Tvar (_, k) -> k = j + 1 | _ -> false) args)
-      | _ -> false
-    in
     let fields = List.concat (Array.to_list p.ip_types) in
+    let large () =
+      (not (is_flat_inductive_packet kn ind i))
+      && Array.exists
+           (fun tys -> List.length (List.filter (function Tdummy _ -> false | _ -> true) tys) > 2)
+           p.ip_types
+    in
     (match ind.ind_kind with Standard -> true | _ -> false)
-    && (not (is_custom self))
-    && Array.length ind.ind_packets = 1
-    && List.exists uniform_self fields
-    && List.for_all
-         (fun t -> uniform_self t || not (type_mentions_kn ~descend_arr:false kn t))
-         fields
+    && (not (is_custom (GlobRef.IndRef (kn, i))))
+    && (List.exists (type_mentions_kn ~descend_arr:false kn) fields || large ())
   with _ -> false
 
 (* Registered by [Structure_analysis] before anything is rendered, so the
