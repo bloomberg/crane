@@ -95,6 +95,11 @@ type capture =
   | Immediate
   | Closure
 
+(** Where an inductive's alternatives live: inline in the value
+    ([std::variant], [crane::variant]), or in a counted block the value points
+    at ([crane::shared_variant], [Set Crane SharedVariant]). *)
+type variant_storage = Inline_variant | Shared_variant
+
 (** {2 C++ type expressions} *)
 
 type ref_kind = Lvalue | Forwarding
@@ -155,7 +160,7 @@ type cpp_type =
   | Tref of ref_kind * cpp_type
   | Terased of erased_kind
   | Tptr of cpp_type
-  | Tvariant of cpp_type list
+  | Tvariant of variant_storage * cpp_type list
   | Tshared_ptr of cpp_type
   | Tvoid
   | Tunresolved (* no C++ type determined; should not reach the printer *)
@@ -858,7 +863,7 @@ let rec map_cpp_type (f : cpp_type -> cpp_type) (ty : cpp_type) : cpp_type =
   | Tshared_ptr t -> Tshared_ptr (map_cpp_type f t)
   | Tref (k, t) -> Tref (k, map_cpp_type f t)
   | Tptr t -> Tptr (map_cpp_type f t)
-  | Tvariant ts -> Tvariant (List.map (map_cpp_type f) ts)
+  | Tvariant (k, ts) -> Tvariant (k, List.map (map_cpp_type f) ts)
   | Tnamespace (r, t) -> Tnamespace (r, map_cpp_type f t)
   | Tqualified (t, id) -> Tqualified (map_cpp_type f t, id)
   (* An erased head erases the application (see {!tapply}). *)
@@ -896,7 +901,7 @@ let rec rewrite_cpp_type (f : cpp_type -> cpp_type option) (ty : cpp_type) :
     | Tshared_ptr t -> Tshared_ptr (go t)
     | Tref (k, t) -> Tref (k, go t)
     | Tptr t -> Tptr (go t)
-    | Tvariant ts -> Tvariant (List.map go ts)
+    | Tvariant (k, ts) -> Tvariant (k, List.map go ts)
     | Tnamespace (r, t) -> Tnamespace (r, go t)
     | Tqualified (t, id) -> Tqualified (go t, id)
     | Tapply (h, ts) -> Tapply (go h, List.map go ts)
@@ -1057,7 +1062,7 @@ let rec subst_cpp_tvars (sub : int -> cpp_type option) (ty : cpp_type) : cpp_typ
   | Tshared_ptr t -> Tshared_ptr (go t)
   | Tref (k, t) -> Tref (k, go t)
   | Tptr t -> Tptr (go t)
-  | Tvariant ts -> Tvariant (List.map go ts)
+  | Tvariant (k, ts) -> Tvariant (k, List.map go ts)
   | Tnamespace (r, t) -> Tnamespace (r, go t)
   | Tqualified (t, id) -> Tqualified (go t, id)
   (* Substituting into the head of an application is where an abstraction
@@ -1088,7 +1093,7 @@ let rec exists_cpp_type (p : cpp_type -> bool) (ty : cpp_type) : bool =
   p ty
   ||
   match ty with
-  | Tglob (_, tys, _) | Tid (_, tys) | Tid_external (_, tys) | Tvariant tys ->
+  | Tglob (_, tys, _) | Tid (_, tys) | Tid_external (_, tys) | Tvariant (_, tys) ->
     List.exists (exists_cpp_type p) tys
   | Tfun (dom, cod) ->
     List.exists (exists_cpp_type p) dom || exists_cpp_type p cod

@@ -76,8 +76,15 @@ type result_storage =
       (** A result that is itself the pointer at the head of the chain. *)
 
 let storage_of ret_ty =
+  let rec shared = function
+    | Tglob (r, _, _) -> Table.is_shared_variant r
+    | Tnamespace (_, t) | Tconst t -> shared t
+    | _ -> false
+  in
+  let shared = shared ret_ty in
   if is_value_type_ret ret_ty then
-    if Table.reuse () && Table.non_atomic_rc () then Boxed_root ret_ty
+    (* A shared variant's slot holds no cell for the cursor to recycle. *)
+    if Table.reuse () && Table.non_atomic_rc () && not shared then Boxed_root ret_ty
     else Value_root ret_ty
   else Pointer_result ret_ty
 

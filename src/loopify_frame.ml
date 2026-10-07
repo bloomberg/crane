@@ -2762,7 +2762,7 @@ let transform_nontail ?(fn_name : string option) ?adopted ?(outer_env = [])
          Sstruct_def (ee.ee_id, entry_fields ee)])
       emissions
     @ call_structs
-    @ [Susing (id_Frame, Tvariant variant_tys)]
+    @ [Susing (id_Frame, Tvariant (Inline_variant, variant_tys))]
   in
   let frame_field_types =
     List.map (fun ee -> (ee_name ee, List.map snd (entry_fields ee))) emissions

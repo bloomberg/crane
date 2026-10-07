@@ -11764,3 +11764,14 @@
   (alias runtest)
   (deps reuse_list_shapes.t.exe)
   (action (run ./reuse_list_shapes.t.exe))))
+
+(subdir shared_variant_basic
+ (rule
+  (targets shared_variant_basic.t.exe)
+  (deps SharedVariantBasic.vo shared_variant_basic.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} shared_variant_basic.t.exe shared_variant_basic.cpp shared_variant_basic.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps shared_variant_basic.t.exe)
+  (action (run ./shared_variant_basic.t.exe))))

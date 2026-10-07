@@ -201,7 +201,7 @@ let rec worthwhile_move_type = function
                              || not (Table.is_custom_scalar_ref r
                                      || Table.is_trivially_copyable_ref r))
   | Tshared_ptr _ | Tfun _ | Terased _ -> true
-  | Tvariant ts -> List.exists worthwhile_move_type ts
+  | Tvariant (_, ts) -> List.exists worthwhile_move_type ts
   | Tid (_, ts) | Tid_external (_, ts) ->
     List.exists worthwhile_move_type ts
   | Tnondeduced t -> worthwhile_move_type t

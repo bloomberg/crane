@@ -2355,6 +2355,14 @@ let {Goptions.get = fast_variant_requested} =
 
 let fast_variant () = fast_variant_requested () && not (String.equal (std_lib ()) "BDE")
 
+(* [Set Crane SharedVariant] stores a recursive inductive's values as shared
+   blocks ([crane::shared_variant]), its recursive fields as the values
+   themselves ([crane::box]).  See [is_shared_variant]. *)
+let {Goptions.get = shared_variant_requested} =
+  declare_bool_option_and_ref ~key:["Crane"; "SharedVariant"] ~value:false ()
+
+let shared_variant () = shared_variant_requested () && not (String.equal (std_lib ()) "BDE")
+
 (* --- Boxed fields ----------------------------------------------------- *)
 
 (* [Set Crane BoxedFields] stores a constructor field whose type is an
@@ -3030,6 +3038,45 @@ let is_flat_inductive r =
       | Some (_, ind) -> is_flat_inductive_packet kn ind i
       | None -> false )
     | _ -> false
+
+(** Whether the [i]th packet of [ind] is stored as a shared variant: under
+    [Set Crane SharedVariant], an ordinary, single-packet inductive Crane
+    declares itself, with a field holding the inductive itself -- uniformly,
+    at its own parameters -- and no other mention of it, such as one inside
+    a container's element type.  A value of it is one word, a recursive field
+    is the value, and building a node shares its children's blocks. *)
+let is_shared_variant_packet kn ind i =
+  shared_variant ()
+  &&
+  try
+    let p = ind.ind_packets.(i) in
+    let self = GlobRef.IndRef (kn, i) in
+    let _, n = ind_param_vars ind p in
+    let uniform_self = function
+      | Tglob (r, args, _) when GlobRef.CanOrd.equal r self ->
+        List.length args = n
+        && List.for_all Fun.id
+             (List.mapi (fun j a -> match a with Tvar (_, k) -> k = j + 1 | _ -> false) args)
+      | _ -> false
+    in
+    let fields = List.concat (Array.to_list p.ip_types) in
+    (match ind.ind_kind with Standard -> true | _ -> false)
+    && (not (is_custom self))
+    && Array.length ind.ind_packets = 1
+    && List.exists uniform_self fields
+    && List.for_all
+         (fun t -> uniform_self t || not (type_mentions_kn ~descend_arr:false kn t))
+         fields
+  with _ -> false
+
+(* Registered by [Structure_analysis] before anything is rendered, so the
+   type's own declaration and every slot that holds it agree -- the [.cpp] is
+   printed before the [.h], and an answer worked out at each site from
+   whatever the inductive cache held then did not. *)
+let (_, add_shared_variant, is_shared_variant_registered) =
+  make_refset_can ~name:"shared_variants" ()
+
+let is_shared_variant r = shared_variant () && is_shared_variant_registered r
 
 let is_inline_custom r = is_custom r && to_inline r
 

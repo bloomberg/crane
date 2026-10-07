@@ -750,6 +750,16 @@ let init_std_names () =
         holds_alternative = "crane::holds_alternative";
         get_if = "crane::get_if";
         get = "crane::get" }
+    else if Table.shared_variant () then
+      (* [Crane SharedVariant] without FastVariant: inline types keep
+         [std::variant], and every match reads through the [crane::]
+         accessors, which take a shared variant and forward a [std::variant]
+         to [std::]. *)
+      { base with
+        variant_header = Table.Runtime Crane_rt.variant_header;
+        holds_alternative = "crane::holds_alternative";
+        get_if = "crane::get_if";
+        get = "crane::get" }
     else base
   in
   std_names :=

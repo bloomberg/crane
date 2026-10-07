@@ -790,6 +790,12 @@ let spec_header ?(unit_includes = []) si () =
       h
   in
   let h =
+    if Table.demanded Crane_rt.shared_variant_header then
+      h ++ mk_include_quoted Crane_rt.shared_variant_header ++ fnl ()
+    else
+      h
+  in
+  let h =
     if Table.demanded Crane_rt.field_header then
       h ++ mk_include_quoted Crane_rt.field_header ++ fnl ()
     else

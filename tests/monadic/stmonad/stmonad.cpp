@@ -25,11 +25,10 @@ STMonadTests::array_simp_list() {
                 UINT64_C(3),
                 List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil()))));
     for (size_t _i = 0; _i < arr->size(); _i++) {
-      if (std::holds_alternative<
-              typename std::remove_cvref_t<decltype(_xs)>::Cons>(_xs.v())) {
-        auto &[_a, _l] =
-            std::get<typename std::remove_cvref_t<decltype(_xs)>::Cons>(
-                _xs.v_mut());
+      if (holds_alternative<typename std::remove_cvref_t<decltype(_xs)>::Cons>(
+              _xs.v())) {
+        const auto &[_a, _l] =
+            get<typename std::remove_cvref_t<decltype(_xs)>::Cons>(_xs.v());
         (*arr)[_i] = _a;
         if (_l)
           _xs = *_l;
@@ -168,11 +167,10 @@ List<uint64_t> STMonadTests::quicksort_ST_mine(const List<uint64_t> &xs) {
     {
       auto _xs = xs;
       for (size_t _i = 0; _i < arr->size(); _i++) {
-        if (std::holds_alternative<
+        if (holds_alternative<
                 typename std::remove_cvref_t<decltype(_xs)>::Cons>(_xs.v())) {
-          auto &[_a, _l] =
-              std::get<typename std::remove_cvref_t<decltype(_xs)>::Cons>(
-                  _xs.v_mut());
+          const auto &[_a, _l] =
+              get<typename std::remove_cvref_t<decltype(_xs)>::Cons>(_xs.v());
           (*arr)[_i] = _a;
           if (_l)
             _xs = *_l;

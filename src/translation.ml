@@ -7570,9 +7570,16 @@ and gen_cpp_case (typ : ml_type) t env pv =
        original parameter as owned, but a const method cannot decompose the
        receiver through [v_mut()].  Treat receiver matches as borrowed so
        generated access goes through [v()]. *)
+    (* A shared variant is matched by reading: a field taken out of it is a
+       count bump, while decomposing it through [v_mut()] would first copy a
+       block anyone else holds. *)
+    let scrut_is_shared =
+      match typ with Tglob (r, _, _) -> Table.is_shared_variant r | _ -> false
+    in
     let scrut_is_owned =
       match scrut_expr with
       | CPPthis | CPPderef CPPthis -> false
+      | _ when scrut_is_shared -> false
       | _ -> (
         match scrut_db with
         | Some i -> Escape.IntSet.mem i (!tctx).move_owned_vars

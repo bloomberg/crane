@@ -1199,7 +1199,8 @@ let gen_ind_header_v2
       (* Note: nested structs inherit template params from parent, so don't add <A> to them *)
       let variant_ty =
         Tvariant
-          (Array.to_list
+          ( (if Table.is_shared_variant name then Shared_variant else Inline_variant),
+            Array.to_list
              (Array.mapi
                 (fun i c ->
                   let cname_id = ctor_struct_id_of_ref ~fallback_idx:i c in
@@ -1347,14 +1348,16 @@ let gen_ind_header_v2
 
          Self-recursive types use [shared_ptr<Self>] directly on the stack.
          Mutually recursive types use [std::any] to hold different [shared_ptr]
-         types.  Returns [[]] for non-recursive or coinductive types. *)
+         types.  Returns [[]] for non-recursive or coinductive types, and for
+         a shared variant, whose blocks the runtime already frees iteratively
+         (shared_block.h's [free_block]). *)
       let iterative_destructor =
         (* Scoped-arena redesign: recursive fields are ordinary smart pointers
            even for arena-backed values (the region only owns the payload
            memory; per-node refcounting still drives destruction), so the
            iterative destructor that drains those smart-pointer chains is
            needed here exactly as for any other recursive type. *)
-        if is_coinductive then []
+        if is_coinductive || Table.is_shared_variant name then []
         else
           (* Check whether ML type [t] is a reference to [ref_name] applied to
              the same type variables [ref_vars] (i.e., a direct recursive or
@@ -2511,7 +2514,9 @@ let gen_ind_header_v2
         let reuse_factory =
           match token_field with
           | Some (tok_j, rec_inner)
-            when Table.reuse () && Table.non_atomic_rc () && not is_coinductive ->
+            when Table.reuse () && Table.non_atomic_rc () && (not is_coinductive)
+                 (* A shared variant's slot holds no cell to recycle. *)
+                 && not (Table.is_shared_variant name) ->
               let tok_id = Id.of_string "_tok" in
               let reuse_params =
                 (tok_id, Tshared_ptr rec_inner) :: params

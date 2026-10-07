@@ -127,7 +127,7 @@ let hkt_templates ?applied r vars tys =
               tys
           then Hashtbl.replace demanded i ();
           List.iter scan tys
-        | Tglob (_, tys, _) | Tvariant tys -> List.iter scan tys
+        | Tglob (_, tys, _) | Tvariant (_, tys) -> List.iter scan tys
         | Tfun (tys, ty) -> List.iter scan (ty :: tys)
         | Tconst ty | Tnamespace (_, ty) | Tref (_, ty) | Tshared_ptr ty -> scan ty
         | Tapply (ty, tys) -> List.iter scan (ty :: tys)

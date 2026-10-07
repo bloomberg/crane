@@ -168,7 +168,7 @@ let rec same_type a b =
     same_type t t'
   | Tref (k, t), Tref (k', t') -> k = k' && same_type t t'
   | Tfun (d, c), Tfun (d', c') -> all d d' && same_type c c'
-  | Tvariant ts, Tvariant ts' -> all ts ts'
+  | Tvariant (k, ts), Tvariant (k', ts') -> k = k' && all ts ts'
   | _ -> a = b
 
 let inline_tail_call fresh ret_ty stmts =

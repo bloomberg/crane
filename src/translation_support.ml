@@ -2761,7 +2761,7 @@ let make_subst_extra_tvars num_ind_vars extra_tvar_map =
     | Tglob (r, args, e) -> Tglob (r, List.map subst args, e)
     | Tref (k, t) -> Tref (k, subst t)
     | Tconst t -> Tconst (subst t)
-    | Tvariant tys -> Tvariant (List.map subst tys)
+    | Tvariant (k, tys) -> Tvariant (k, List.map subst tys)
     | Tnamespace (r, t) -> Tnamespace (r, subst t)
     | Tqualified (t, id) -> Tqualified (subst t, id)
     | t -> t

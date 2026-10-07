@@ -282,6 +282,14 @@ let spell_double (x : float) : string =
     are stored in, and its accessors. *)
 let require_variant () = Table.demand_header (sn ()).variant_header
 
+(* Whether a pointer to [t] is a shared slot ([crane::box]): [t] is an
+   inductive stored as a shared variant, whose value is already the shared
+   handle a pointer would otherwise add. *)
+let rec boxes_shared = function
+  | Tglob (r, _, _) -> Table.is_shared_variant r
+  | Tnamespace (_, t) | Tconst t -> boxes_shared t
+  | _ -> false
+
 (** Print an unqualified angle-bracket type: [label<s>].
 
     @param label  the type name (e.g. a typedef or BDE name)
@@ -799,7 +807,7 @@ let rec is_constexpr_type ty =
        [enum class]) are literal types. *)
     Table.is_enum_inductive r && List.for_all is_constexpr_type tys
   | Tconst t | Tref (Lvalue, t) | Tptr t -> is_constexpr_type t
-  | Tvariant tys -> List.for_all is_constexpr_type tys
+  | Tvariant (_, tys) -> List.for_all is_constexpr_type tys
   | Tglob (GlobRef.ConstRef _, [], _) -> false  (* defined constant with no type args — opaque alias *)
   | Tglob (_, tys, _) -> List.for_all is_constexpr_type tys
   | Tid (_, []) -> false  (* unresolved type alias — conservatively non-literal *)
@@ -1157,9 +1165,15 @@ let rec pp_cpp_type ?(lead = true) par vl t =
         in
         (if dependent_member then leading_typename else mt ())
         ++ head_pp ++ str "<" ++ pp_list (pp_rec false) args ++ str ">" )
-    | Tvariant tys ->
+    | Tvariant (Inline_variant, tys) ->
       require_variant ();
       cpp_angle (sn ()).variant (pp_list (pp_rec false) tys)
+    | Tvariant (Shared_variant, tys) ->
+      Table.demand_header (Table.Runtime Crane_rt.shared_variant_header);
+      cpp_angle Crane_rt.shared_variant (pp_list (pp_rec false) tys)
+    | Tshared_ptr t when boxes_shared t ->
+      Table.demand_header (Table.Runtime Crane_rt.shared_variant_header);
+      cpp_angle Crane_rt.box (pp_rec false t)
     | Tshared_ptr t ->
       require_header "memory";
       cpp_angle (sn ()).shared_ptr (pp_rec false t)
@@ -1204,7 +1218,7 @@ let rec pp_cpp_type ?(lead = true) par vl t =
           | Tvar (Tv_index (i, _)) ->
             if not (List.mem i !seen) then seen := !seen @ [i]
           | Tglob (_, ts, _) | Tid (_, ts) | Tid_external (_, ts)
-          | Tvariant ts ->
+          | Tvariant (_, ts) ->
             List.iter go ts
           | Tfun (dom, cod) -> List.iter go dom; go cod
           | Tconst t | Tshared_ptr t | Tref (_, t) | Tptr t | Tnamespace (_, t)
@@ -1235,7 +1249,7 @@ let rec pp_cpp_type ?(lead = true) par vl t =
               seen := i :: !seen;
               List.iter go ts
             | Tglob (_, ts, _) | Tid (_, ts) | Tid_external (_, ts)
-            | Tvariant ts ->
+            | Tvariant (_, ts) ->
               List.iter go ts
             | Tfun (dom, cod) -> List.iter go dom; go cod
             | Tconst t | Tshared_ptr t | Tref (_, t) | Tptr t | Tnamespace (_, t)
@@ -2091,6 +2105,10 @@ and pp_cpp_expr env args t =
       ++ body_s
       ++ fnl ()
       ++ str "}" )
+  | CPPalloc ((Alloc_heap | Alloc_arena_scoped), t) when boxes_shared t ->
+    (* A shared value goes into its slot as it is: no cell to allocate. *)
+    Table.demand_header (Table.Runtime Crane_rt.shared_variant_header);
+    cpp_angle Crane_rt.box (pp_cpp_type false [] t) ++ str "::make"
   | CPPalloc (Alloc_heap, t) ->
     require_header "memory";
     cpp_angle (sn ()).make_shared (pp_cpp_type false [] t)

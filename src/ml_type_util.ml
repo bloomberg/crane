@@ -1301,7 +1301,7 @@ let get_tvars_indexed t =
     | Tconst ty -> aux l ty
     | Tnamespace (_, ty) -> aux l ty
     | Tref (_, ty) -> aux l ty
-    | Tvariant tys -> List.fold_left aux l tys
+    | Tvariant (_, tys) -> List.fold_left aux l tys
     | Tshared_ptr ty -> aux l ty
     | Tapply (ty, tys) -> List.fold_left aux l (ty :: tys)
     (* A carrier abstraction names the variables its body does -- written
@@ -1328,7 +1328,7 @@ let get_rendered_tvar_indices t =
     | Tconst ty -> aux l ty
     | Tnamespace (_, ty) -> aux l ty
     | Tref (_, ty) -> aux l ty
-    | Tvariant tys -> List.fold_left aux l tys
+    | Tvariant (_, tys) -> List.fold_left aux l tys
     | Tshared_ptr ty -> aux l ty
     | Tapply (ty, tys) -> List.fold_left aux l (ty :: tys)
     | _ -> l
@@ -1356,7 +1356,7 @@ let rendered_tvar_arities t =
     | Tglob (g, tys, _) -> List.iter aux (written_type_args g tys)
     | Tfun (tys, ty) -> List.iter aux (ty :: tys)
     | Tconst ty | Tnamespace (_, ty) | Tref (_, ty) | Tshared_ptr ty -> aux ty
-    | Tvariant tys -> List.iter aux tys
+    | Tvariant (_, tys) -> List.iter aux tys
     | Tapply (ty, tys) -> List.iter aux (ty :: tys)
     | _ -> ()
   in

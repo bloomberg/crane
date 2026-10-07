@@ -90,6 +90,11 @@ type capture =
   | Immediate
   | Closure
 
+(** Where an inductive's alternatives live: inline in the value
+    ([std::variant], [crane::variant]), or in a counted block the value points
+    at ([crane::shared_variant], [Set Crane SharedVariant]). *)
+type variant_storage = Inline_variant | Shared_variant
+
 (** What a reference type is: [T&], or [T&&] as a deduced parameter takes
     it -- a forwarding reference, which binds either value category. *)
 type ref_kind = Lvalue | Forwarding
@@ -176,7 +181,9 @@ type cpp_type =
           The filtering passes drop it from template argument lists and
           signatures; one that survives prints as [crane::obj]. *)
   | Tptr of cpp_type  (** C++ pointer type *)
-  | Tvariant of cpp_type list  (** std::variant<...> for sum types *)
+  | Tvariant of variant_storage * cpp_type list
+      (** An inductive's alternatives: inline ([std::variant]/[crane::variant])
+          or in a shared block ([crane::shared_variant]). *)
   | Tshared_ptr of cpp_type  (** std::shared_ptr<T> for managed memory *)
   | Tvoid  (** void type *)
   | Tunresolved

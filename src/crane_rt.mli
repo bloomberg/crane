@@ -103,6 +103,15 @@ val variant : string  (** [crane::variant], the tagged union of [Crane FastVaria
 
 val variant_header : string  (** [crane_variant.h] -- {!variant}. *)
 
+val shared_variant : string
+(** [crane::shared_variant], the tagged union of [Crane SharedVariant]: one
+    word, the alternative in a counted block. *)
+
+val box : string
+(** [crane::box<T>], the slot a recursive field holds a shared value in. *)
+
+val shared_variant_header : string  (** [shared_variant.h] -- {!shared_variant}, {!box}. *)
+
 val field : string
 (** [crane::field<T>], how [Crane BoxedFields] stores a parameter-typed
     constructor field: [T], or [T] boxed where copying it is not cheap. *)

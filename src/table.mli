@@ -870,6 +870,23 @@ val should_use_arena_at_runtime : GlobRef.t -> bool
     inductive type stored behind the recursive-field smart pointer. *)
 val boxed_fields : unit -> bool
 
+(** Whether [Set Crane SharedVariant] is in effect. *)
+val shared_variant : unit -> bool
+
+(** Whether an inductive is stored as a shared variant: one word per value,
+    an alternative with fields in a counted block, a recursive field holding
+    the value itself ([crane::box]).  Under [Set Crane SharedVariant], for an
+    ordinary single-packet inductive with a uniform field of its own type and
+    no other mention of it. *)
+val is_shared_variant : GlobRef.t -> bool
+
+val is_shared_variant_packet : Names.MutInd.t -> Miniml.ml_ind -> int -> bool
+
+(** Record that an inductive is stored as a shared variant; done by
+    [Structure_analysis] for every packet {!is_shared_variant_packet}
+    accepts, before rendering. *)
+val add_shared_variant : GlobRef.t -> unit
+
 (** Whether [Set Crane FastVariant] is in effect: inductives' alternatives in
     [crane::variant] rather than [std::variant].  Never in the BDE flavor. *)
 val fast_variant : unit -> bool

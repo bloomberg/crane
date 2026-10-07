@@ -218,9 +218,14 @@ let rec pp_spec_as_requirement modtype_mp modtype_refs = function
             ++ str ">" ) )
       | Tshared_ptr ty ->
         str stdlib_ns ++ str "shared_ptr<" ++ qualify_type ty ++ str ">"
-      | Tvariant tys ->
+      | Tvariant (Inline_variant, tys) ->
         str stdlib_ns
         ++ str "variant<"
+        ++ prlist_with_sep (fun () -> str ", ") qualify_type tys
+        ++ str ">"
+      | Tvariant (Shared_variant, tys) ->
+        str Crane_rt.shared_variant
+        ++ str "<"
         ++ prlist_with_sep (fun () -> str ", ") qualify_type tys
         ++ str ">"
       | Tnamespace (r, Tglob (r', args, e)) when not (is_member_ref r) ->
