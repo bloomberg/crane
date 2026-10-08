@@ -1,0 +1,85 @@
+(* Copyright 2026 Bloomberg Finance L.P. *)
+(* Distributed under the terms of the GNU LGPL v2.1 license. *)
+
+(** A function's constants as named locals.  See [cpp_constants.mli]. *)
+
+open Names
+open Minicpp
+
+(* [Some (name, init)] where [e] is a constant translation marked:
+   [crane::constant(name, init)], in {!Crane_rt.Constant}'s convention. *)
+let marked e =
+  match e with
+  | CPPfun_call (_, CPPrt Crane_rt.Constant, args) -> (
+    match call_args args with
+    | [CPPvar name; init] -> Some (name, init)
+    | _ -> None )
+  | _ -> None
+
+(* The identifiers [body] declares or reads, which a constant's name must not
+   shadow or be shadowed by. *)
+let names_in body =
+  let names = ref Id.Set.empty in
+  let add id = names := Id.Set.add id !names in
+  let rec fe e =
+    match marked e with
+    | Some (_, init) -> fe init
+    | None ->
+      ( match e with CPPvar id -> add id | _ -> () );
+      map_expr fe fs Fun.id e
+  and fs s =
+    ( match s with Sasgn (id, _, _) | Sdecl (id, _) -> add id | _ -> () );
+    map_stmt fe fs Fun.id s
+  in
+  List.iter (fun s -> ignore (fs s)) body;
+  !names
+
+(* [body] with each marked constant read from a [static const] declared at
+   its top, one per distinct constant. *)
+let hoist_body body =
+  let hoisted = ref [] in
+  (* Names are only needed where there is something to name. *)
+  let taken = lazy (ref (names_in body)) in
+  let fresh hint =
+    let taken = Lazy.force taken in
+    let rec go k =
+      let id = if k = 0 then hint else Id.of_string (Id.to_string hint ^ "_" ^ string_of_int k) in
+      if Id.Set.mem id !taken then go (k + 1) else id
+    in
+    let id = go 0 in
+    taken := Id.Set.add id !taken;
+    id
+  in
+  let rec fe e =
+    match marked e with
+    | Some (hint, init) ->
+      let id =
+        match List.assoc_opt init !hoisted with
+        | Some id -> id
+        | None ->
+          let id = fresh hint in
+          hoisted := (init, id) :: !hoisted;
+          id
+      in
+      CPPvar id
+    | None -> map_expr fe fs Fun.id e
+  and fs s = map_stmt fe fs Fun.id s in
+  let body' = List.map fs body in
+  if !hoisted = [] then body
+  else
+    List.rev_map
+      (fun (init, id) ->
+        Sasgn (id, Declare_static (Tconst Tauto), mk_call (CPPrt Crane_rt.Immortal) [init]))
+      !hoisted
+    @ body'
+
+(* A constant outside any function -- in a global's initialiser, which is
+   evaluated once anyway -- is its initialiser. *)
+let rec unmark e =
+  match marked e with
+  | Some (_, init) -> unmark init
+  | None -> map_expr unmark unmark_stmt Fun.id e
+
+and unmark_stmt s = map_stmt unmark unmark_stmt Fun.id s
+
+let decl d = map_decl ~fl:hoist_body unmark unmark_stmt Fun.id d

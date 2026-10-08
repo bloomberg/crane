@@ -47,6 +47,10 @@ case "$OPT_LEVEL" in
         ;;
 esac
 
+# The language standard the generated code is written to.  It names the
+# precompiled header too: a header built under another standard is refused.
+CXX_STD=c++2c
+
 # Precompiled header support
 PCH_SRC="$THEORIES_CPP/crane_pch.h"
 DEFAULT_PCH_DIR="$PROJECT_ROOT/_build/pch"
@@ -54,7 +58,7 @@ if [ "${GITHUB_ACTIONS:-}" = "true" ]; then
     DEFAULT_PCH_DIR="${RUNNER_TEMP:-${TMPDIR:-/tmp}}/crane-pch"
 fi
 PCH_DIR="${CRANE_PCH_DIR:-$DEFAULT_PCH_DIR}"
-PCH_FILE="$PCH_DIR/crane_pch_${OPT_LEVEL}.h.pch"
+PCH_FILE="$PCH_DIR/crane_pch_${CXX_STD}_${OPT_LEVEL}.h.pch"
 
 # Detect Homebrew LLVM
 HB_LLVM="${HB_LLVM:-/opt/homebrew/opt/llvm}"
@@ -71,7 +75,7 @@ if [ -d "$HB_LLVM" ]; then
         fi
     fi
     CXX_FLAGS=(
-        -std=c++23
+        -std="$CXX_STD"
         -"$OPT_LEVEL"
         -fbracket-depth=1024
         "${SYSROOT_FLAGS[@]}"
@@ -99,7 +103,7 @@ if [ -d "$HB_LLVM" ]; then
 else
     CXX="clang++"
     CXX_FLAGS=(
-        -std=c++23
+        -std="$CXX_STD"
         -"$OPT_LEVEL"
         -fbracket-depth=1024
         -I .
@@ -139,7 +143,7 @@ case "$SANITIZE_SPEC" in
             -fno-omit-frame-pointer
         )
         # Use a separate PCH for sanitizer builds (different flags = different PCH)
-        PCH_FILE="$PCH_DIR/crane_pch_${OPT_LEVEL}_san.h.pch"
+        PCH_FILE="$PCH_DIR/crane_pch_${CXX_STD}_${OPT_LEVEL}_san.h.pch"
         ;;
     *)
         echo "Error: invalid CRANE_CPP_SANITIZE='$CRANE_CPP_SANITIZE' (expected address, undefined, address,undefined, 1, or empty)" >&2

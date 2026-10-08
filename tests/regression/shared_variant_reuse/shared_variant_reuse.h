@@ -23,14 +23,6 @@ struct SharedVariantReuse {
       uint64_t a1;
       uint64_t a2;
       crane::shared_box<tree> a3;
-
-      // MANIPULATORS
-      template <typename F> inline void crane_each_field(F &&_f) {
-        _f(a0);
-        _f(a1);
-        _f(a2);
-        _f(a3);
-      }
     };
 
     using variant_t = crane::shared_variant<Leaf, Node>;
@@ -176,12 +168,6 @@ struct SharedVariantReuse {
     struct Cons {
       uint64_t a0;
       crane::shared_box<lst> a1;
-
-      // MANIPULATORS
-      template <typename F> inline void crane_each_field(F &&_f) {
-        _f(a0);
-        _f(a1);
-      }
     };
 
     using variant_t = crane::shared_variant<Nil, Cons>;

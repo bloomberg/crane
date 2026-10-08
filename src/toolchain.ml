@@ -103,7 +103,7 @@ let sysroot_args =
 
     Include directories and user flags are kept as distinct argv entries. BDE
     mode selects C++20 and the configured BDE headers/libraries; standard mode
-    selects C++23. *)
+    selects C++26 ([-std=c++2c]). *)
 let compile_cpp
     ?(shouldlink = false)
     ?(includes = [])
@@ -153,7 +153,7 @@ let compile_cpp
     else
       prepend_to_all "-I" includes
       @ (if shouldlink then [] else ["-c"])
-      @ ["-std=c++23"]
+      @ ["-std=c++2c"]
       @ flags
       @ [infile; "-o"; outfile]
   in
@@ -247,7 +247,7 @@ let compile_and_test ?outfile ?errfile infile =
     else
       [
         "-O2";
-        "-std=c++23";
+        "-std=c++2c";
         "-I";
         directory;
         object_file;

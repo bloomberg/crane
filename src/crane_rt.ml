@@ -50,9 +50,11 @@ type helper =
   | Unbox_field
   | Apply2
   | Constant
+  | Immortal
 
 let name = function
   | Constant -> "crane::constant"
+  | Immortal -> "crane::immortal"
   | Apply2 -> "crane::apply2"
   | Make_rc_reusing_unchecked -> make_rc_reusing_unchecked
   | Raw -> raw

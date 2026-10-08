@@ -96,7 +96,7 @@ if [ -d "$HB_LLVM" ]; then
         fi
     fi
     CXX_FLAGS=(
-        -std=c++23
+        -std=c++2c
         -"$OPT_LEVEL"
         -fbracket-depth=1024
         "${SYSROOT_FLAGS[@]}"
@@ -128,7 +128,7 @@ if [ -d "$HB_LLVM" ]; then
 else
     CXX="clang++"
     CXX_FLAGS=(
-        -std=c++23
+        -std=c++2c
         -"$OPT_LEVEL"
         -fbracket-depth=1024
         -I .

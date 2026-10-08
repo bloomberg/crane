@@ -28,7 +28,7 @@ else
     CXX="clang++"
     FLAGS=()
 fi
-FLAGS+=(-std=c++23 -fsyntax-only -fbracket-depth=1024 -isystem "$THEORIES_CPP"
+FLAGS+=(-std=c++2c -fsyntax-only -fbracket-depth=1024 -isystem "$THEORIES_CPP"
         -Werror=reserved-identifier)
 
 if [ $# -eq 0 ]; then

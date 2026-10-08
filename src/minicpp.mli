@@ -238,6 +238,9 @@ and asgn_target =
       (** [ty x = e;] -- a declaration with an initialiser; [Tauto] gives
           [auto x = e;]. *)
   | Existing  (** [x = e;] -- [x] is already in scope. *)
+  | Declare_static of cpp_type
+      (** [static ty x = e;] -- a local built the first time control reaches
+          it and kept for the rest of the program: a hoisted constant. *)
 
 (** A compile-time question about types, the condition of an
     {!Sif_constexpr}. *)

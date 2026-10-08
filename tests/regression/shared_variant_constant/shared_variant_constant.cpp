@@ -1,6 +1,7 @@
 #include "shared_variant_constant.h"
 
 Positive Pos::succ(const Positive &x) {
+  static const auto pos_2 = crane::immortal(Positive::xo(Positive::xh()));
   if (crane::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[a0] = crane::get<typename Positive::XI>(x.v());
     return Positive::xo(succ(*a0));
@@ -8,11 +9,12 @@ Positive Pos::succ(const Positive &x) {
     const auto &[a0] = crane::get<typename Positive::XO>(x.v());
     return Positive::xi(*a0);
   } else {
-    return crane::constant([]() { return Positive::xo(Positive::xh()); });
+    return pos_2;
   }
 }
 
 Positive Pos::add(const Positive &x, const Positive &y) {
+  static const auto pos_2 = crane::immortal(Positive::xo(Positive::xh()));
   if (crane::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[a0] = crane::get<typename Positive::XI>(x.v());
     if (crane::holds_alternative<typename Positive::XI>(y.v())) {
@@ -43,12 +45,13 @@ Positive Pos::add(const Positive &x, const Positive &y) {
       const auto &[a00] = crane::get<typename Positive::XO>(y.v());
       return Positive::xi(*a00);
     } else {
-      return crane::constant([]() { return Positive::xo(Positive::xh()); });
+      return pos_2;
     }
   }
 }
 
 Positive Pos::add_carry(const Positive &x, const Positive &y) {
+  static const auto pos_3 = crane::immortal(Positive::xi(Positive::xh()));
   if (crane::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[a0] = crane::get<typename Positive::XI>(x.v());
     if (crane::holds_alternative<typename Positive::XI>(y.v())) {
@@ -79,30 +82,29 @@ Positive Pos::add_carry(const Positive &x, const Positive &y) {
       const auto &[a00] = crane::get<typename Positive::XO>(y.v());
       return Positive::xo(succ(*a00));
     } else {
-      return crane::constant([]() { return Positive::xi(Positive::xh()); });
+      return pos_3;
     }
   }
 }
 
 Positive SharedVariantConstant::seven(std::monostate) {
-  return crane::constant(
-      []() { return Positive::xi(Positive::xi(Positive::xh())); });
+  static const auto pos_7 =
+      crane::immortal(Positive::xi(Positive::xi(Positive::xh())));
+  return pos_7;
 }
 
 std::pair<Positive, Positive> SharedVariantConstant::pair_of(std::monostate) {
-  return std::make_pair(
-      crane::constant(
-          []() { return Positive::xo(Positive::xi(Positive::xh())); }),
-      crane::constant([]() {
-        return Positive::xo(Positive::xo(Positive::xi(Positive::xh())));
-      }));
+  static const auto pos_12 =
+      crane::immortal(Positive::xo(Positive::xo(Positive::xi(Positive::xh()))));
+  static const auto pos_6 =
+      crane::immortal(Positive::xo(Positive::xi(Positive::xh())));
+  return std::make_pair(pos_6, pos_12);
 }
 
 Positive SharedVariantConstant::add_ten(const Positive &p) {
-  return Pos::add(p, crane::constant([]() {
-                    return Positive::xo(
-                        Positive::xi(Positive::xo(Positive::xh())));
-                  }));
+  static const auto pos_10 =
+      crane::immortal(Positive::xo(Positive::xi(Positive::xo(Positive::xh()))));
+  return Pos::add(p, pos_10);
 }
 
 Positive SharedVariantConstant::sum_tens(uint64_t n, Positive acc) {

@@ -14,7 +14,7 @@ TESTS_DIR="$PROJECT_ROOT/tests"
 # -nostdlib++/-stdlib=libc++ flags — they conflict with infer's bundled
 # clang-18 headers.
 CXX="clang++"
-CXX_FLAGS="-std=c++23 -fbracket-depth=1024 -I $THEORIES_CPP"
+CXX_FLAGS="-std=c++2c -fbracket-depth=1024 -I $THEORIES_CPP"
 
 # Colors
 RED='\033[0;31m'

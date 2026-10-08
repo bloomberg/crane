@@ -125,13 +125,6 @@ struct shared_block {
   }
 };
 
-// [f] applied to each field of [x], where [x] is an alternative Crane wrote
-// a [crane_each_field] for; nothing otherwise.
-template <class T, class F> void each_field(T &x, F &&f) {
-  if constexpr (requires { x.crane_each_field(f); })
-    x.crane_each_field(f);
-}
-
 // Releases what [x] holds into [h], from inside a [destroy], and leaves it
 // empty, so that its destructor, run next, releases nothing: a handle by its
 // own [release_into], a generated inductive by its variant's, anything else

@@ -522,7 +522,7 @@ let unstable_locals ~(stable : Id.Set.t) (body : cpp_stmt list) : Id.Set.t =
     ( match e with
     | CPPaccess_call _ | CPPfun_call _ -> true
     | _ -> false )
-    && match ty with Declare t -> not (is_alias_ty t) | Existing -> true
+    && match ty with Declare t | Declare_static t -> not (is_alias_ty t) | Existing -> true
   in
   let classify ok id =
     if ok then stable := Id.Set.add id !stable

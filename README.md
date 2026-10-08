@@ -73,7 +73,7 @@ Or using dune directly:
 dune build -p rocq-crane && dune install
 ```
 
-You will also need [Clang](https://clang.llvm.org/) 19 or higher to run the tests, and [clang-format](https://clang.llvm.org/docs/ClangFormat.html) for standard formatting.
+You will also need [Clang](https://clang.llvm.org/) 22 or higher (the generated code is C++26, `-std=c++2c`) to run the tests, and [clang-format](https://clang.llvm.org/docs/ClangFormat.html) for standard formatting.
 
 ### Building and Testing
 
@@ -149,7 +149,7 @@ Crane Extraction "Foo" Foo.
 Now run:
 
 ```bash
-rocq compile Foo.v && clang++ -c -std=c++23 Foo.cpp -o Foo.o
+rocq compile Foo.v && clang++ -c -std=c++2c Foo.cpp -o Foo.o
 ```
 
 This command creates `Foo.h` and `Foo.cpp` files from the Rocq file, and then compiles the C++ to the object file `Foo.o` with Clang, ready to be linked to your own C++ file containing a `main` function for execution.

@@ -44,6 +44,13 @@ namespace crane {
 
 CRANE_RC_POLICY_BEGIN
 
+// [f] applied to each field of [x], an alternative: a plain aggregate, its
+// fields bound as a pack (C++26 structured binding packs).
+template <class T, class F> void each_field(T &x, F &&f) {
+  auto &[... fields] = x;
+  (f(fields), ...);
+}
+
 template <class... Ts> class shared_variant {
   static_assert(sizeof...(Ts) > 0, "crane::shared_variant: at least one alternative");
 
@@ -337,17 +344,12 @@ public:
   }
 };
 
-// A closed constructor term, built the first time it is evaluated and kept:
-// [f] builds it, and every later evaluation copies it, a count bump.  Its
-// blocks are immortal, so the threads that read it never write their counts.
-// One [F], one lambda at one site, is one constant.
-template <class F> const auto &constant(F f) {
-  static const auto k = [&] {
-    auto v = f();
-    crane::make_immortal(v);
-    return v;
-  }();
-  return k;
+// [v], every block it holds made immortal: a constant, declared once as a
+// static local -- [static const auto pos_10 = crane::immortal(...)] -- and
+// read from every thread, which then never write its counts.
+template <class T> T immortal(T v) {
+  crane::make_immortal(v);
+  return v;
 }
 
 // Whether a type is an inductive stored as a shared variant.

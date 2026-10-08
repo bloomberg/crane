@@ -276,6 +276,47 @@ let is_shared_constant_term e =
     && List.for_all closed ts
   | _ -> false
 
+(* The name a hoisted constant is declared under (see {!Cpp_constants}): a
+   numeral's value where the term is one of Rocq's [positive], [N], [Z] or
+   [nat] -- [pos_10], [z_neg_5] -- and [k] otherwise. *)
+let constant_name e =
+  let ind_name = function
+    | GlobRef.ConstructRef ((kn, _), j) -> Some (Label.to_string (MutInd.label kn), j)
+    | _ -> None
+  in
+  let rec pos = function
+    | MLcons (_, r, args) -> (
+      match (ind_name r, args) with
+      | Some ("positive", 1), [p] -> Option.map (fun v -> Z.(add (mul v (of_int 2)) one)) (pos p)
+      | Some ("positive", 2), [p] -> Option.map (fun v -> Z.mul v (Z.of_int 2)) (pos p)
+      | Some ("positive", 3), [] -> Some Z.one
+      | _ -> None )
+    | MLmagic (_, a) -> pos a
+    | _ -> None
+  in
+  let rec nat = function
+    | MLcons (_, r, args) -> (
+      match (ind_name r, args) with
+      | Some ("nat", 1), [] -> Some Z.zero
+      | Some ("nat", 2), [n] -> Option.map Z.succ (nat n)
+      | _ -> None )
+    | _ -> None
+  in
+  let named prefix v = Some (prefix ^ Z.to_string v) in
+  let name =
+    match e with
+    | MLcons (_, r, args) -> (
+      match (ind_name r, args) with
+      | Some ("positive", _), _ -> Option.bind (pos e) (named "pos_")
+      | Some ("N", 2), [p] -> Option.bind (pos p) (named "n_")
+      | Some ("Z", 2), [p] -> Option.bind (pos p) (named "z_")
+      | Some ("Z", 3), [p] -> Option.bind (pos p) (named "z_neg_")
+      | Some ("nat", _), _ -> Option.bind (nat e) (named "nat_")
+      | _ -> None )
+    | _ -> None
+  in
+  Id.of_string (Option.default "k" name)
+
 let rec gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
     r ts =
   (* Extraction leaves a type argument [Tunresolved] where it could not read the
@@ -2795,8 +2836,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     match built with
     | CPPfun_call (_, CPPqualified_t (Tglob (n, _, _), _), _)
       when Table.is_shared_variant n && ts <> [] ->
-      mk_call (CPPrt Crane_rt.Constant)
-        [mk_lambda [] None [Sreturn (Some built)] ~capture:Closure]
+      mk_call (CPPrt Crane_rt.Constant) [CPPvar (constant_name e); built]
     | _ -> built )
   | MLcons (ty, r, ts) ->
     (* A value built directly into an erased ([std::any]) slot -- the

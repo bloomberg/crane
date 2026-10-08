@@ -156,7 +156,7 @@ let lambda_needs_capture
     | Sasgn (id, ty, e) ->
       let refs', decls' = collect_from_expr (refs, decls) e in
       ( match ty with
-      | Declare _ -> (refs', IdSet.add id decls')
+      | Declare _ | Declare_static _ -> (refs', IdSet.add id decls')
       | Existing -> (IdSet.add id refs', decls') )
     | Sassign_expr (lhs, e) ->
       (* The lhs is scanned for captures (referenced, not declared); the RHS
@@ -2355,7 +2355,8 @@ and pp_cpp_expr env args t =
      | Crane_rt.Raw -> Table.mark_needs_erase_fn ()
      | Crane_rt.Unbox_field -> Table.demand_header (Table.Runtime Crane_rt.field_header)
      | Crane_rt.Apply2 -> Table.demand_header (Table.Runtime Crane_rt.fn_header)
-     | Crane_rt.Constant -> Table.demand_header (Table.Runtime Crane_rt.shared_variant_header)
+     | Crane_rt.Constant | Crane_rt.Immortal ->
+       Table.demand_header (Table.Runtime Crane_rt.shared_variant_header)
      | Crane_rt.Make_rc_reusing_unchecked | Crane_rt.Reuse_step -> ());
     str (Crane_rt.name h)
   | CPPnumeral (r, n) -> (
@@ -2559,6 +2560,9 @@ and pp_cpp_stmt env args = function
     ++ str ";"
   | Sasgn (id, Existing, e) ->
     Id.print id ++ str " = " ++ pp_cpp_expr env args e ++ str ";"
+  | Sasgn (id, Declare_static ty, e) ->
+    str "static " ++ pp_cpp_type false [] ty ++ str " " ++ Id.print id ++ str " = "
+    ++ pp_cpp_expr env args e ++ str ";"
   | Sexpr e -> pp_cpp_expr env args e ++ str ";"
   | Sthrow msg ->
     require_header "stdexcept";

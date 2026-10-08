@@ -201,10 +201,11 @@ type cpp_type =
 
 (* Whether an assignment also declares its target: [Declare ty] prints
    [ty x = e;] (Tauto for [auto]), [Existing] prints [x = e;] for a variable
-   already in scope. *)
+   already in scope, [Declare_static ty] prints [static ty x = e;]. *)
 and asgn_target =
   | Declare of cpp_type
   | Existing
+  | Declare_static of cpp_type
 
 (** C++ statements. *)
 and type_test = Tt_convertible of cpp_type * cpp_type
@@ -1435,7 +1436,12 @@ let map_stmt ?fl
   | Sreturn (Some e) -> Sreturn (Some (fe e))
   | Sdecl (id, ty) -> Sdecl (id, ft ty)
   | Sasgn (id, tgt, e) ->
-    let tgt = match tgt with Declare ty -> Declare (ft ty) | Existing -> tgt in
+    let tgt =
+      match tgt with
+      | Declare ty -> Declare (ft ty)
+      | Declare_static ty -> Declare_static (ft ty)
+      | Existing -> tgt
+    in
     Sasgn (id, tgt, fe e)
   | Sexpr e -> Sexpr (fe e)
   | Scustom_case (ty, scrut, tyargs, branches, err) ->
