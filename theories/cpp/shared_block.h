@@ -46,19 +46,33 @@ CRANE_RC_POLICY_BEGIN
 
 namespace block_detail {
 
+// A count at [immortal] is never changed, so its block is never freed and
+// no thread writes it: a constant ([crane::constant]) is read from every
+// thread, non-atomic counts or not.
+inline constexpr std::size_t immortal = ~std::size_t{0};
+
 #ifdef CRANE_NON_ATOMIC_RC
 struct count {
   std::size_t n{1};
-  void inc() noexcept { ++n; }
-  bool dec() noexcept { return --n == 0; }
+  void inc() noexcept {
+    if (n != immortal) ++n;
+  }
+  bool dec() noexcept { return n != immortal && --n == 0; }
   bool sole() const noexcept { return n == 1; }
+  void make_immortal() noexcept { n = immortal; }
 };
 #else
 struct count {
   std::atomic<std::size_t> n{1};
-  void inc() noexcept { n.fetch_add(1, std::memory_order_relaxed); }
-  bool dec() noexcept { return n.fetch_sub(1, std::memory_order_acq_rel) == 1; }
+  void inc() noexcept {
+    if (n.load(std::memory_order_relaxed) != immortal) n.fetch_add(1, std::memory_order_relaxed);
+  }
+  bool dec() noexcept {
+    return n.load(std::memory_order_relaxed) != immortal
+           && n.fetch_sub(1, std::memory_order_acq_rel) == 1;
+  }
   bool sole() const noexcept { return n.load(std::memory_order_acquire) == 1; }
+  void make_immortal() noexcept { n.store(immortal, std::memory_order_relaxed); }
 };
 #endif
 

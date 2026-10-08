@@ -125,6 +125,9 @@ type slot = {
   stated_ml_ty : ml_type option;
       (** The ML type the position states, erased parts and all; read only
           where an erased part is expected. *)
+  building_constant : bool;
+      (** The constructor in this slot is the body of the constant it is
+          hoisted into, so it is built here rather than hoisted again. *)
 }
 
 (** The slot properties of a position that constrains nothing. *)

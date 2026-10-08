@@ -11808,3 +11808,14 @@
   (alias runtest)
   (deps erased_let_not_result_type.t.exe)
   (action (run ./erased_let_not_result_type.t.exe))))
+
+(subdir shared_variant_constant
+ (rule
+  (targets shared_variant_constant.t.exe)
+  (deps SharedVariantConstant.vo shared_variant_constant.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} shared_variant_constant.t.exe shared_variant_constant.cpp shared_variant_constant.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps shared_variant_constant.t.exe)
+  (action (run ./shared_variant_constant.t.exe))))

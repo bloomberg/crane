@@ -227,20 +227,29 @@ struct SharedVariantBasic {
   static std::optional<uint64_t> find(uint64_t k, const tree &t);
   static uint64_t size(const tree &t);
   static inline const tree t0 =
-      List<uint64_t>::cons(
-          UINT64_C(5),
-          List<uint64_t>::cons(
-              UINT64_C(3),
-              List<uint64_t>::cons(
-                  UINT64_C(8),
-                  List<uint64_t>::cons(
-                      UINT64_C(1),
-                      List<uint64_t>::cons(
-                          UINT64_C(4),
-                          List<uint64_t>::cons(
-                              UINT64_C(7),
-                              List<uint64_t>::cons(UINT64_C(9),
-                                                   List<uint64_t>::nil())))))))
+      crane::constant([]() {
+        return List<uint64_t>::cons(
+            UINT64_C(5), crane::constant([]() {
+              return List<uint64_t>::cons(
+                  UINT64_C(3), crane::constant([]() {
+                    return List<uint64_t>::cons(
+                        UINT64_C(8), crane::constant([]() {
+                          return List<uint64_t>::cons(
+                              UINT64_C(1), crane::constant([]() {
+                                return List<uint64_t>::cons(
+                                    UINT64_C(4), crane::constant([]() {
+                                      return List<uint64_t>::cons(
+                                          UINT64_C(7), crane::constant([]() {
+                                            return List<uint64_t>::cons(
+                                                UINT64_C(9),
+                                                List<uint64_t>::nil());
+                                          }));
+                                    }));
+                              }));
+                        }));
+                  }));
+            }));
+      })
           .template fold_left<tree>(
               [](const tree &t, uint64_t k) {
                 return insert(k, (k * UINT64_C(10)), t);
@@ -270,11 +279,16 @@ struct SharedVariantBasic {
   }();
   static List<uint64_t> bump(const List<uint64_t> &l);
   static inline const uint64_t list_result =
-      bump(List<uint64_t>::cons(
-               UINT64_C(1),
-               List<uint64_t>::cons(
-                   UINT64_C(2),
-                   List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))))
+      bump(crane::constant([]() {
+        return List<uint64_t>::cons(UINT64_C(1), crane::constant([]() {
+                                      return List<uint64_t>::cons(
+                                          UINT64_C(2), crane::constant([]() {
+                                            return List<uint64_t>::cons(
+                                                UINT64_C(3),
+                                                List<uint64_t>::nil());
+                                          }));
+                                    }));
+      }))
           .template fold_left<uint64_t>(
               [](uint64_t _x0, uint64_t _x1) -> uint64_t {
                 return (_x0 + _x1);

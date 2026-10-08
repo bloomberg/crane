@@ -145,6 +145,9 @@ type helper =
   | Apply2
       (** [crane::apply2(f, a, b)] -- [f(a)(b)], without boxing [f(a)] where
           [f] is an {!fn} written as one lambda returning another. *)
+  | Constant
+      (** [crane::constant([] { return e; })] -- a closed constructor term of
+          a shared variant, built once and kept ({!shared_variant_header}). *)
 
 (** [crane_raw], in {!erasure_header}. *)
 val raw : string

@@ -178,6 +178,12 @@ public:
   // Whether no other value shares this one's block.
   bool unique() const { return !boxed() || hdr()->rc.sole(); }
 
+  // Keeps this value's block for the rest of the program; see
+  // [crane::constant].
+  void make_immortal() const {
+    if (boxed()) hdr()->rc.make_immortal();
+  }
+
   // Perceus reuse: when this value is the only one holding its block and the
   // block holds [Alt], [a] replaces what it holds there -- no allocation, and
   // the old fields are released as the assignment overwrites them -- and the
@@ -307,6 +313,20 @@ public:
 
   void reset() noexcept { *this = nullptr; }
 };
+
+// A closed constructor term, built the first time it is evaluated and kept:
+// [f] builds it, and every later evaluation copies it, a count bump.  Its
+// block is immortal, and so is every block it holds -- a closed subterm is a
+// constant of its own -- so the threads that read it never write its counts.
+// One [F], one lambda at one site, is one constant.
+template <class F> const auto &constant(F f) {
+  static const auto k = [&] {
+    auto v = f();
+    v.v().make_immortal();
+    return v;
+  }();
+  return k;
+}
 
 // Whether a type is an inductive stored as a shared variant.
 template <class V> struct is_shared_variant : std::false_type {};

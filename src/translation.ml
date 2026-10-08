@@ -258,6 +258,24 @@ let gen_local_fix_by_ref env renamed_ids funs_with_params owned_flags_per_fun =
   (impl_stmts @ wrapper_stmts, [])
 
 
+(* Whether [e] is a closed constructor term of a shared variant with fields:
+   built from constructors, literals and erased arguments only, so its value
+   is the same every time it is evaluated. *)
+let is_shared_constant_term e =
+  let rec closed = function
+    | MLcons (_, _, ts) -> List.for_all closed ts
+    | MLuint _ | MLfloat _ | MLstring _ | MLdummy _ -> true
+    | MLmagic (_, a) -> closed a
+    | _ -> false
+  in
+  match e with
+  | MLcons (_, (GlobRef.ConstructRef ((kn, i), _) as r), (_ :: _ as ts)) ->
+    Table.is_shared_variant (GlobRef.IndRef (kn, i))
+    && (not (Table.is_custom r))
+    && List.exists (function MLdummy _ -> false | _ -> true) ts
+    && List.for_all closed ts
+  | _ -> false
+
 let rec gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
     r ts =
   (* Extraction leaves a type argument [Tunresolved] where it could not read the
@@ -2761,7 +2779,27 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           (Pp.str "gen_expr: enum constructor expected ConstructRef")
     in
     CPPenum_val (ind_ref, ctor_name)
+  (* A closed constructor term of a shared variant -- a numeral built from
+     [xI]/[xO]/[xH], say -- is built once and kept, as ocamlopt keeps a
+     structured constant: evaluated again, it is a count bump rather than an
+     allocation per node.  Each closed subterm with fields is a constant of
+     its own, so every block the constant holds is immortal too.  Only where
+     the term comes out as its factory call: a conversion into another slot
+     type is left as it is. *)
+  | MLcons (_, r, ts) as e
+    when (not slot.building_constant) && is_shared_constant_term e
+         && not (match (!tctx).pending_reuse_token with
+                 | Some (_, ctor) -> globref_equal r ctor
+                 | None -> false) -> (
+    let built = gen_expr ?expected_ty ~slot:{slot with building_constant = true} env e in
+    match built with
+    | CPPfun_call (_, CPPqualified_t (Tglob (n, _, _), _), _)
+      when Table.is_shared_variant n && ts <> [] ->
+      mk_call (CPPrt Crane_rt.Constant)
+        [mk_lambda [] None [Sreturn (Some built)] ~capture:Closure]
+    | _ -> built )
   | MLcons (ty, r, ts) ->
+    let slot = {slot with building_constant = false} in
     (* A value built directly into an erased ([std::any]) slot -- the
        enclosing function's C++ return type is opaque, as for a definition
        whose return type is value-dependent -- must use the canonical erased

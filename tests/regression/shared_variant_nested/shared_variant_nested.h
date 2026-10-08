@@ -201,16 +201,29 @@ struct SharedVariantNested {
     }
   };
 
-  static inline const rose r0 = rose::rnode(
-      UINT64_C(1),
-      List<rose>::cons(
-          rose::rnode(UINT64_C(2), List<rose>::nil()),
-          List<rose>::cons(
-              rose::rnode(
-                  UINT64_C(3),
-                  List<rose>::cons(rose::rnode(UINT64_C(4), List<rose>::nil()),
-                                   List<rose>::nil())),
-              List<rose>::nil())));
+  static inline const rose r0 = crane::constant([]() {
+    return rose::rnode(
+        UINT64_C(1), crane::constant([]() {
+          return List<rose>::cons(
+              crane::constant(
+                  []() { return rose::rnode(UINT64_C(2), List<rose>::nil()); }),
+              crane::constant([]() {
+                return List<rose>::cons(
+                    crane::constant([]() {
+                      return rose::rnode(UINT64_C(3), crane::constant([]() {
+                                           return List<rose>::cons(
+                                               crane::constant([]() {
+                                                 return rose::rnode(
+                                                     UINT64_C(4),
+                                                     List<rose>::nil());
+                                               }),
+                                               List<rose>::nil());
+                                         }));
+                    }),
+                    List<rose>::nil());
+              }));
+        }));
+  });
   static inline const rose r1 = r0.rbump();
 
   struct chain {
@@ -292,11 +305,15 @@ struct SharedVariantNested {
     }
   };
 
-  static inline const chain c0 =
-      chain::link(UINT64_C(1),
-                  std::make_optional<chain>(chain::link(
-                      UINT64_C(2), std::make_optional<chain>(chain::link(
-                                       UINT64_C(3), std::optional<chain>())))));
+  static inline const chain c0 = crane::constant([]() {
+    return chain::link(
+        UINT64_C(1), std::make_optional<chain>(crane::constant([]() {
+          return chain::link(
+              UINT64_C(2), std::make_optional<chain>(crane::constant([]() {
+                return chain::link(UINT64_C(3), std::optional<chain>());
+              })));
+        })));
+  });
   struct stmt;
   struct expr;
 
@@ -441,11 +458,22 @@ struct SharedVariantNested {
 
   static uint64_t ssize(const stmt &s);
   static uint64_t esize(const expr &e);
-  static inline const stmt s0 = stmt::seq(
-      stmt::assign(UINT64_C(1), expr::add(expr::num(UINT64_C(2)),
-                                          expr::block(stmt::skip(),
-                                                      expr::num(UINT64_C(3))))),
-      stmt::skip());
+  static inline const stmt s0 = crane::constant([]() {
+    return stmt::seq(
+        crane::constant([]() {
+          return stmt::assign(
+              UINT64_C(1), crane::constant([]() {
+                return expr::add(
+                    crane::constant([]() { return expr::num(UINT64_C(2)); }),
+                    crane::constant([]() {
+                      return expr::block(stmt::skip(), crane::constant([]() {
+                                           return expr::num(UINT64_C(3));
+                                         }));
+                    }));
+              }));
+        }),
+        stmt::skip());
+  });
 
   /// Not recursive, but large: a value is one word all the same.
   struct shape {
@@ -510,13 +538,22 @@ struct SharedVariantNested {
     }
   };
 
-  static inline const List<shape> shapes = List<shape>::cons(
-      shape::box3(UINT64_C(2), UINT64_C(3), UINT64_C(4)),
-      List<shape>::cons(
-          shape::point(),
-          List<shape>::cons(shape::box3(UINT64_C(1), UINT64_C(1), UINT64_C(1)),
-                            List<shape>::nil())));
-
+  static inline const List<shape> shapes = crane::constant([]() {
+    return List<shape>::cons(
+        crane::constant([]() {
+          return shape::box3(UINT64_C(2), UINT64_C(3), UINT64_C(4));
+        }),
+        crane::constant([]() {
+          return List<shape>::cons(
+              shape::point(), crane::constant([]() {
+                return List<shape>::cons(
+                    crane::constant([]() {
+                      return shape::box3(UINT64_C(1), UINT64_C(1), UINT64_C(1));
+                    }),
+                    List<shape>::nil());
+              }));
+        }));
+  });
   static inline const uint64_t result =
       ((((r0.rsum() + r1.rsum()) + c0.clen()) + ssize(s0)) +
        shapes.template fold_left<uint64_t>(
