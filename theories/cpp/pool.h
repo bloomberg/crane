@@ -118,8 +118,28 @@ struct thread_heap {
   }
 };
 
+// The heap blocks come from and go back to: the thread's own, or under
+// CRANE_SINGLE_THREADED ([Crane SingleThreaded], a program that uses Crane
+// values from one thread at a time) one global -- on Darwin a thread-local
+// access is a call, made by every allocation and free.  What reaches the heap
+// is declared inside CRANE_HEAP_POLICY_BEGIN / CRANE_HEAP_POLICY_END, an
+// inline namespace named after the policy, so units compiled under the two
+// do not share a definition.
+#ifdef CRANE_SINGLE_THREADED
+#define CRANE_HEAP_POLICY_BEGIN inline namespace heap_single {
+#else
+#define CRANE_HEAP_POLICY_BEGIN inline namespace heap_per_thread {
+#endif
+#define CRANE_HEAP_POLICY_END }
+
+CRANE_HEAP_POLICY_BEGIN
+
 inline thread_heap &this_thread_heap() noexcept {
+#ifdef CRANE_SINGLE_THREADED
+  static constinit thread_heap h;
+#else
   static constinit thread_local thread_heap h;
+#endif
   return h;
 }
 
@@ -152,6 +172,8 @@ template <typename Derived> struct pooled {
     ::operator delete(p, a);
   }
 };
+
+CRANE_HEAP_POLICY_END
 
 } // namespace pool_detail
 } // namespace crane

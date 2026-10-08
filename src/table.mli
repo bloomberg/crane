@@ -900,6 +900,12 @@ val fast_variant : unit -> bool
     the unit's used custom extractions have been marked. *)
 val non_atomic_rc : unit -> bool
 
+(** Whether the runtime's block heap is one global ([Set Crane
+    SingleThreaded]): the request, a promise that Crane values are used from
+    one thread at a time, withheld from a unit that spawns threads like
+    {!non_atomic_rc}. *)
+val single_threaded : unit -> bool
+
 (** Whether this unit reaches a custom extraction spelled in terms of
     [<thread>], i.e. whether the extracted code can spawn a thread. *)
 val unit_is_concurrent : unit -> bool

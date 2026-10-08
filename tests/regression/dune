@@ -11819,3 +11819,14 @@
   (alias runtest)
   (deps shared_variant_constant.t.exe)
   (action (run ./shared_variant_constant.t.exe))))
+
+(subdir single_threaded_heap
+ (rule
+  (targets single_threaded_heap.t.exe)
+  (deps SingleThreadedHeap.vo single_threaded_heap.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} single_threaded_heap.t.exe single_threaded_heap.cpp single_threaded_heap.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps single_threaded_heap.t.exe)
+  (action (run ./single_threaded_heap.t.exe))))

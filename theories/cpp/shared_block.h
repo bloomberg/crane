@@ -27,8 +27,14 @@
 #include <atomic>
 #endif
 
-#ifdef CRANE_NON_ATOMIC_RC
+// The heap policy (pool.h) is part of the name too: a block's class inherits
+// its heap's [pooled].
+#if defined(CRANE_NON_ATOMIC_RC) && defined(CRANE_SINGLE_THREADED)
+#define CRANE_RC_POLICY_BEGIN inline namespace rc_local_single {
+#elif defined(CRANE_NON_ATOMIC_RC)
 #define CRANE_RC_POLICY_BEGIN inline namespace rc_local {
+#elif defined(CRANE_SINGLE_THREADED)
+#define CRANE_RC_POLICY_BEGIN inline namespace rc_shared_single {
 #else
 #define CRANE_RC_POLICY_BEGIN inline namespace rc_shared {
 #endif

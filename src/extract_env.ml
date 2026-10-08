@@ -777,6 +777,14 @@ let spec_header ?(unit_includes = []) si () =
     else
       h
   in
+  (* [Crane SingleThreaded]: the block heap is one global (pool.h), likewise
+     ahead of every runtime header. *)
+  let h =
+    if Table.single_threaded () then
+      h ++ str "#define CRANE_SINGLE_THREADED 1" ++ fnl ()
+    else
+      h
+  in
   let h =
     if Table.demanded Crane_rt.fn_header then
       h ++ mk_include_quoted Crane_rt.fn_header ++ fnl ()
@@ -1477,7 +1485,7 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
      that only their associated imports appear in the generated header. *)
   mark_used_customs struc;
   (* The used customs decide whether this unit can spawn a thread, which is
-     what resolves a [Crane NonAtomicRc] request. *)
+     what resolves a [Crane NonAtomicRc] or [Crane SingleThreaded] request. *)
   Table.check_non_atomic_rc_request ();
   mark_higher_order_projections struc;
   align_functor_instance_kinds struc;

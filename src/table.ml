@@ -2341,6 +2341,14 @@ let reset_extraction_reuse () = Lib.add_leaf (reset_reuse ())
 let {Goptions.get = non_atomic_rc_requested} =
   declare_bool_option_and_ref ~key:["Crane"; "NonAtomicRc"] ~value:false ()
 
+(* [Set Crane SingleThreaded]: the program uses Crane values from one thread
+   at a time, so the runtime's block heap is one global rather than one per
+   thread -- on Darwin every thread-local access is a call, and every
+   allocation and free made one.  A promise, like NonAtomicRc, and withheld
+   from a unit that spawns threads. *)
+let {Goptions.get = single_threaded_requested} =
+  declare_bool_option_and_ref ~key:["Crane"; "SingleThreaded"] ~value:false ()
+
 (* --- Tagged unions ---------------------------------------------------- *)
 
 (* [Set Crane FastVariant] stores an inductive's alternatives in
@@ -3454,6 +3462,8 @@ let unit_is_concurrent () =
    say no thread is spawned. *)
 let non_atomic_rc () = non_atomic_rc_requested () && not (unit_is_concurrent ())
 
+let single_threaded () = single_threaded_requested () && not (unit_is_concurrent ())
+
 (* Resolved smart-pointer names for string-level codegen (kept here, in a low
    module, so both [Cpp_state.init_std_names] and the string-building sites in
    Translation/Gen_decls agree without a module cycle).  [Crane NonAtomicRc]
@@ -3534,9 +3544,19 @@ let warn_non_atomic_rc_concurrent =
          a non-atomic reference count shared between threads corrupts the \
          heap. Falling back to std::shared_ptr." )
 
+let warn_single_threaded_concurrent =
+  CWarnings.create ~name:"crane-single-threaded-concurrent"
+    ~category:CWarnings.CoreCategories.extraction (fun () ->
+      Pp.str
+        "Set Crane SingleThreaded is ignored in this unit: it spawns threads, \
+         and one block heap shared between threads corrupts it. Falling back \
+         to a heap per thread." )
+
 let check_non_atomic_rc_request () =
   if non_atomic_rc_requested () && unit_is_concurrent () then
-    warn_non_atomic_rc_concurrent ()
+    warn_non_atomic_rc_concurrent ();
+  if single_threaded_requested () && unit_is_concurrent () then
+    warn_single_threaded_concurrent ()
 
 let extract_callback optstr x =
   if lang () != Cpp then
