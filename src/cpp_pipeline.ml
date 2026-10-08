@@ -138,6 +138,11 @@ let finish decl =
   (* Closures made and used in one place become the code they stand for,
      before ownership is decided, so what they captured is seen as local. *)
   let decl = pass "local_closures" Cpp_local_closures.transform_decl decl in
+  (* A function's constants are declared once at its top, now that nothing
+     moves code between functions -- and before the passes that rewrite what
+     an initialiser holds: [depth] splits a deep one into bindings, which in
+     a static's initialiser run once. *)
+  let decl = pass "constants" Cpp_constants.decl decl in
   (* The temporaries Normalize named for loopification and loopification did
      not need go back where they are read. *)
   let decl = pass "temporaries" Cpp_temporaries.decl decl in
@@ -163,9 +168,6 @@ let finish decl =
   (* Which callable parameters keep a constraint is decided here, with the
      body that decides it in hand; the printer writes what it is given. *)
   let decl = pass "constraints" Minicpp.settle_constraints decl in
-  (* A function's constants are declared once at its top, now that its body
-     is final and nothing will move code between functions. *)
-  let decl = pass "constants" Cpp_constants.decl decl in
   (* Writing a type down is what decides its representation, so settle the
      [Topaque] slots before anything reads the declaration as final.  Crossing
      this seam is what gives {!Cpp_erasure.settled}, the printer's input

@@ -6,7 +6,8 @@
     again copies the same block rather than allocating, and every block it
     holds is immortal.  Arithmetic over the constants is unchanged. *)
 
-From Stdlib Require Import BinPos.
+From Stdlib Require Import BinPos List.
+Import ListNotations.
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.NatIntStd.
 
@@ -22,6 +23,14 @@ Fixpoint sum_tens (n : nat) (acc : positive) : positive :=
   match n with O => acc | S m => sum_tens m (add_ten acc) end.
 
 Definition result : positive := sum_tens 100 1.
+
+(** 2^110: a constant nested deeper than a compiler parses, whose
+    initialiser is split into bindings that run once. *)
+Definition huge (u : unit) : positive := 1298074214633706907132624082305024%positive.
+
+(** A constant that is no numeral is named [k]; so is the parameter, read
+    last -- and so moved -- where the constant is built. *)
+Definition with_k (k : list positive) : list positive * list positive := (k, [3; 5]%positive).
 
 End SharedVariantConstant.
 

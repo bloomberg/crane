@@ -278,7 +278,8 @@ let is_shared_constant_term e =
 
 (* The name a hoisted constant is declared under (see {!Cpp_constants}): a
    numeral's value where the term is one of Rocq's [positive], [N], [Z] or
-   [nat] -- [pos_10], [z_neg_5] -- and [k] otherwise. *)
+   [nat] -- [pos_10], [z_neg_5], [pos] past twenty digits -- and [k]
+   otherwise. *)
 let constant_name e =
   let ind_name = function
     | GlobRef.ConstructRef ((kn, _), j) -> Some (Label.to_string (MutInd.label kn), j)
@@ -302,7 +303,11 @@ let constant_name e =
       | _ -> None )
     | _ -> None
   in
-  let named prefix v = Some (prefix ^ Z.to_string v) in
+  (* A numeral too long to read is named by its kind alone. *)
+  let named prefix v =
+    let digits = Z.to_string v in
+    Some (if String.length digits <= 20 then prefix ^ digits else String.sub prefix 0 (String.length prefix - 1))
+  in
   let name =
     match e with
     | MLcons (_, r, args) -> (
@@ -315,7 +320,7 @@ let constant_name e =
       | _ -> None )
     | _ -> None
   in
-  Id.of_string (Option.default "k" name)
+  Option.default "k" name
 
 let rec gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
     r ts =
@@ -2836,7 +2841,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     match built with
     | CPPfun_call (_, CPPqualified_t (Tglob (n, _, _), _), _)
       when Table.is_shared_variant n && ts <> [] ->
-      mk_call (CPPrt Crane_rt.Constant) [CPPvar (constant_name e); built]
+      mk_call (CPPrt (Crane_rt.Constant (constant_name e))) [built]
     | _ -> built )
   | MLcons (ty, r, ts) ->
     (* A value built directly into an erased ([std::any]) slot -- the

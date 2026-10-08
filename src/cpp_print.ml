@@ -2355,7 +2355,7 @@ and pp_cpp_expr env args t =
      | Crane_rt.Raw -> Table.mark_needs_erase_fn ()
      | Crane_rt.Unbox_field -> Table.demand_header (Table.Runtime Crane_rt.field_header)
      | Crane_rt.Apply2 -> Table.demand_header (Table.Runtime Crane_rt.fn_header)
-     | Crane_rt.Constant | Crane_rt.Immortal ->
+     | Crane_rt.Constant _ | Crane_rt.Immortal ->
        Table.demand_header (Table.Runtime Crane_rt.shared_variant_header)
      | Crane_rt.Make_rc_reusing_unchecked | Crane_rt.Reuse_step -> ());
     str (Crane_rt.name h)

@@ -6,13 +6,13 @@
 open Names
 open Minicpp
 
-(* [Some (name, init)] where [e] is a constant translation marked:
-   [crane::constant(name, init)], in {!Crane_rt.Constant}'s convention. *)
+(* [Some (name, init)] where [e] is a constant translation marked
+   ({!Crane_rt.Constant}). *)
 let marked e =
   match e with
-  | CPPfun_call (_, CPPrt Crane_rt.Constant, args) -> (
+  | CPPfun_call (_, CPPrt (Crane_rt.Constant name), args) -> (
     match call_args args with
-    | [CPPvar name; init] -> Some (name, init)
+    | [init] -> Some (Id.of_string name, init)
     | _ -> None )
   | _ -> None
 
@@ -22,11 +22,8 @@ let names_in body =
   let names = ref Id.Set.empty in
   let add id = names := Id.Set.add id !names in
   let rec fe e =
-    match marked e with
-    | Some (_, init) -> fe init
-    | None ->
-      ( match e with CPPvar id -> add id | _ -> () );
-      map_expr fe fs Fun.id e
+    ( match e with CPPvar id -> add id | _ -> () );
+    map_expr fe fs Fun.id e
   and fs s =
     ( match s with Sasgn (id, _, _) | Sdecl (id, _) -> add id | _ -> () );
     map_stmt fe fs Fun.id s

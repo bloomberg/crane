@@ -145,11 +145,13 @@ type helper =
   | Apply2
       (** [crane::apply2(f, a, b)] -- [f(a)(b)], without boxing [f(a)] where
           [f] is an {!fn} written as one lambda returning another. *)
-  | Constant
+  | Constant of string
       (** A closed constructor term of a shared variant, marked where
-          translation builds it -- [Constant(name, e)], the name a hint --
-          for {!Cpp_constants} to declare once as a static local.  Never
-          printed. *)
+          translation builds it -- called on the term, and carrying the name
+          it is to be declared under, a hint -- for {!Cpp_constants} to
+          declare once as a static local.  Never printed.  The name is part
+          of the helper rather than an argument, out of the reach of the
+          passes that rewrite variables. *)
   | Immortal
       (** [crane::immortal(v)] -- [v], its blocks made immortal
           ({!shared_variant_header}). *)

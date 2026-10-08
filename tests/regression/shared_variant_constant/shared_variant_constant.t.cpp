@@ -24,5 +24,22 @@ int main() {
   auto p = M::pair_of(std::monostate{});
   assert(value(p.first) == 6 && value(p.second) == 12);
   assert(value(M::result) == 1 + 100 * 10);
+  // 2^110 overflows the value check; its 110 xO nodes over xH are counted.
+  {
+    const Positive h = M::huge(std::monostate{});
+    const Positive *p = &h;
+    int zeros = 0;
+    while (auto *x = crane::get_if<Positive::XO>(&p->v())) { ++zeros; p = &*x->a0; }
+    assert(zeros == 110 && crane::holds_alternative<Positive::XH>(p->v()));
+  }
+  {
+    auto r = M::with_k(List<Positive>::cons(M::seven(std::monostate{}), List<Positive>::nil()));
+    auto length = [](const List<Positive> &l) {
+      int n = 0;
+      for (const List<Positive> *c = &l; auto *x = crane::get_if<List<Positive>::Cons>(&c->v()); c = &*x->l) ++n;
+      return n;
+    };
+    assert(length(r.first) == 1 && length(r.second) == 2);
+  }
   return 0;
 }
