@@ -1094,11 +1094,13 @@ let clang_format_available () = executable_available "clang-format"
     line breaking can blow up on a long, fully qualified, template-heavy
     expression -- a 4700-line separately extracted Vellvm header ran for
     minutes and grew past 10 GB -- so a file taking ten times the usual rate
-    is abandoned. *)
+    is abandoned, and none is given more than two minutes: a whole-program
+    header the size of Vellvm's would take most of an hour even at the usual
+    rate, and is better kept as written. *)
 let format_budget text =
   let lines = ref 0 in
   String.iter (fun c -> if c = '\n' then incr lines) text;
-  30. +. (0.02 *. float_of_int !lines)
+  Float.min 120. (30. +. (0.02 *. float_of_int !lines))
 
 (** Whether the formatter was killed for running past {!format_budget}, in
     which case [what] is reported as left unformatted. *)
