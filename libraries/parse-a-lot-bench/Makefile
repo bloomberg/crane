@@ -16,6 +16,7 @@
 #   * opam:  yojson, unix          (OCaml runners)
 #   * coq-color                    (already a rocq-crane dep)
 #   * immer headers at $(IMMER)    (default $(HOME)/cpp/immer) for the Crane C++
+#   * mimalloc                     (brew install mimalloc) -- the C++ allocator
 #   * simdjson / libxml2           (reference baselines only)
 #   * hyperfine                    (wall-clock measurement in bench.ml)
 #   * A benchmark corpus under $(DATA) -- NOT shipped with crane; see README.md.
@@ -61,7 +62,15 @@ CRANE_EXT_DIR   := crane_extracted/Benchmarking
 # CRANE_EXTRA_FLAGS is for measurement builds: -g -DCRANE_COUNT_RC_SITES to
 # attribute reference-count traffic to call sites (theories/cpp/count_rc.h).
 CRANE_EXTRA_FLAGS ?=
-CRANE_CXX_FLAGS := -O2 -std=c++23 -DIMMER_NO_THREAD_SAFETY=1 \
+# Optimisation: the release build of a C++ program, link-time optimisation
+# included.  Neither changes how any Rocq value is represented.
+CRANE_OPT ?= -O3 -flto
+# The C++ side's allocator, as OCaml has its own: mimalloc, linked in, which
+# replaces malloc for the whole process.  The system allocator's slow path
+# was two thirds of a large input's run (immer's map nodes, vectors growing).
+# Set MIMALLOC_LIBS= to measure with the system allocator.
+MIMALLOC_LIBS ?= $(shell pkg-config --libs mimalloc 2>/dev/null || echo "-L/opt/homebrew/lib -lmimalloc")
+CRANE_CXX_FLAGS := $(CRANE_OPT) -std=c++2c -DIMMER_NO_THREAD_SAFETY=1 \
                    -iquote $(CRANE_EXT_DIR) -I$(CRANE_CPP_DIR) -I$(IMMER) \
                    $(CRANE_EXTRA_FLAGS)
 CRANE_SRCS      := $(wildcard $(CRANE_EXT_DIR)/*.cpp)
@@ -72,7 +81,7 @@ CRANE_HDRS      := $(wildcard $(CRANE_EXT_DIR)/*.h) $(wildcard $(CRANE_CPP_DIR)/
 
 _build/default/run_%_crane.exe: run_%_crane.cpp $(CRANE_SRCS) $(CRANE_HDRS)
 	@mkdir -p _build/default
-	$(CRANE_CXX) $(CRANE_CXX_FLAGS) -o $@ $(filter %.cpp,$^)
+	$(CRANE_CXX) $(CRANE_CXX_FLAGS) -o $@ $(filter %.cpp,$^) $(MIMALLOC_LIBS)
 
 crane-build: crane-extract \
   _build/default/run_json_crane.exe \
