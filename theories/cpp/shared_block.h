@@ -116,6 +116,13 @@ struct shared_block {
     if (rc.dec())
       block_detail::free_block(this, destroy);
   }
+  // [release] from inside a block's [destroy], which is handed the heap: the
+  // last reference queues the block there, where [free_block] would first
+  // look the heap up -- on Darwin a call per freed child.
+  void release_into(pool_detail::thread_heap &h) const noexcept {
+    if (rc.dec())
+      h.push({this, destroy});
+  }
 };
 
 // [f] applied to each field of [x], where [x] is an alternative Crane wrote
@@ -123,6 +130,17 @@ struct shared_block {
 template <class T, class F> void each_field(T &x, F &&f) {
   if constexpr (requires { x.crane_each_field(f); })
     x.crane_each_field(f);
+}
+
+// Releases what [x] holds into [h], from inside a [destroy], and leaves it
+// empty, so that its destructor, run next, releases nothing: a handle by its
+// own [release_into], a generated inductive by its variant's, anything else
+// not at all -- its destructor does the work.
+template <class T> void release_into(T &x, pool_detail::thread_heap &h) noexcept {
+  if constexpr (requires { x.release_into(h); })
+    x.release_into(h);
+  else if constexpr (requires { x.v_mut().release_into(h); })
+    x.v_mut().release_into(h);
 }
 
 // Makes every block [x] holds immortal ([crane::constant]): a handle by its

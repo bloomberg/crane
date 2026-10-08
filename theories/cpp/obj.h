@@ -44,7 +44,9 @@ template <class T> struct box : shared_block, pool_detail::pooled<box<T>> {
   explicit box(A &&...a)
       : shared_block{{}, &drop}, value(std::forward<A>(a)...) {}
   static void drop(const void *b, pool_detail::thread_heap &h) noexcept {
-    box::dispose(static_cast<const box *>(static_cast<const shared_block *>(b)), h);
+    auto *self = static_cast<box *>(const_cast<shared_block *>(static_cast<const shared_block *>(b)));
+    crane::release_into(self->value, h);
+    box::dispose(self, h);
   }
 };
 
@@ -131,6 +133,11 @@ public:
   }
   void reset() noexcept {
     release();
+    tag_ = nullptr;
+  }
+  // [crane::release_into]: the box released into [h], this value empty.
+  void release_into(pool_detail::thread_heap &h) noexcept {
+    if (boxed()) box_->release_into(h);
     tag_ = nullptr;
   }
   // [crane::make_immortal]: the box and what its value holds.

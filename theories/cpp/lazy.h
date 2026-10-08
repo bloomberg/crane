@@ -110,6 +110,12 @@ public:
   }
   ~lazy() { release(); }
 
+  // [crane::release_into]: the node released into [h], this cell empty.
+  void release_into(pool_detail::thread_heap &h) noexcept {
+    if (p_) p_->release_into(h);
+    p_ = nullptr;
+  }
+
   // The cell of a value converted from [source] by [thunk].  A coinductive
   // value converts lazily, one layer per conversion; a value that goes out
   // to an erased instantiation and back -- the loop state of an erased
@@ -203,7 +209,12 @@ struct lazy<T>::node : base, pool_detail::pooled<typename lazy<T>::node> {
       : base{{}, &drop}, state(std::forward<A>(a)...) {}
   ~node() { lazy_detail::release(origin); }
   static void drop(const void *b, pool_detail::thread_heap &h) noexcept {
-    node::dispose(static_cast<const node *>(static_cast<const base *>(b)), h);
+    auto *self = static_cast<node *>(const_cast<base *>(static_cast<const base *>(b)));
+    if (!self->state.valueless_by_exception())
+      std::visit([&](auto &s) { crane::release_into(s, h); }, self->state);
+    if (self->origin) self->origin->release_into(h);
+    self->origin = nullptr;
+    node::dispose(self, h);
   }
 };
 

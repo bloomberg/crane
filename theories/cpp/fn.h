@@ -236,6 +236,12 @@ public:
   }
   ~fn() { release(); }
 
+  // [crane::release_into]: the closure released into [h], this one empty.
+  void release_into(pool_detail::thread_heap &h) noexcept {
+    if (p_) p_->release_into(h);
+    p_ = nullptr;
+  }
+
   // Arguments the caller keeps go in by reference; arguments it gives up
   // are moved.  Where a parameter type is itself a reference the two
   // coincide, and only the first exists.

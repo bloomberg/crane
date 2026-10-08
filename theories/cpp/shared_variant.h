@@ -64,7 +64,9 @@ template <class... Ts> class shared_variant {
     template <class... A>
     explicit block(A &&...a) : shared_block{{}, &drop}, value(std::forward<A>(a)...) {}
     static void drop(const void *b, pool_detail::thread_heap &h) noexcept {
-      block::dispose(static_cast<const block *>(static_cast<const shared_block *>(b)), h);
+      auto *self = static_cast<block *>(const_cast<shared_block *>(static_cast<const shared_block *>(b)));
+      crane::each_field(self->value, [&](auto &x) { crane::release_into(x, h); });
+      block::dispose(self, h);
     }
   };
 
@@ -177,6 +179,12 @@ public:
 
   // Whether no other value shares this one's block.
   bool unique() const { return !boxed() || hdr()->rc.sole(); }
+
+  // [crane::release_into]: the block released into [h], this value empty.
+  void release_into(pool_detail::thread_heap &h) noexcept {
+    if (boxed()) hdr()->release_into(h);
+    w_ = 0;
+  }
 
   // Keeps this value's block, and every block it holds, for the rest of the
   // program; see [crane::constant].
@@ -319,6 +327,10 @@ public:
 
   void reset() noexcept { *this = nullptr; }
 
+  // [crane::release_into]: the held value's block released into [h].
+  void release_into(pool_detail::thread_heap &h) noexcept {
+    if (full()) crane::release_into(*ptr(), h);
+  }
   // [crane::make_immortal]: the held value's blocks.
   void make_immortal() const noexcept {
     if (full()) crane::make_immortal(*ptr());
