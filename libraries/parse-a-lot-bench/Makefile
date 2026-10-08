@@ -53,7 +53,13 @@ ocaml-build: coq-extract
 # ---------------------------------------------------------------
 # Crane C++ runners
 # ---------------------------------------------------------------
-CRANE_CXX       ?= c++
+# Clang 22 or later: the extracted code is C++26 (structured binding packs,
+# under SharedVariant).  Homebrew's LLVM, with its own libc++.
+HB_LLVM         ?= /opt/homebrew/opt/llvm
+CRANE_CXX       ?= $(HB_LLVM)/bin/clang++
+CRANE_STDLIB    ?= -isysroot $(shell xcrun --show-sdk-path) -nostdlib++ -stdlib=libc++ \
+                   -I$(HB_LLVM)/include/c++/v1 -L$(HB_LLVM)/lib/c++ \
+                   -Wl,-rpath,$(HB_LLVM)/lib/c++ -lc++
 IMMER           ?= $(HOME)/cpp/immer
 CRANE_CPP_DIR   := ../../theories/cpp
 CRANE_EXT_DIR   := crane_extracted/Benchmarking
@@ -70,7 +76,7 @@ CRANE_OPT ?= -O3 -flto
 # was two thirds of a large input's run (immer's map nodes, vectors growing).
 # Set MIMALLOC_LIBS= to measure with the system allocator.
 MIMALLOC_LIBS ?= $(shell pkg-config --libs mimalloc 2>/dev/null || echo "-L/opt/homebrew/lib -lmimalloc")
-CRANE_CXX_FLAGS := $(CRANE_OPT) -std=c++2c -DIMMER_NO_THREAD_SAFETY=1 \
+CRANE_CXX_FLAGS := $(CRANE_OPT) -std=c++2c -DIMMER_NO_THREAD_SAFETY=1 $(CRANE_STDLIB) \
                    -iquote $(CRANE_EXT_DIR) -I$(CRANE_CPP_DIR) -I$(IMMER) \
                    $(CRANE_EXTRA_FLAGS)
 CRANE_SRCS      := $(wildcard $(CRANE_EXT_DIR)/*.cpp)

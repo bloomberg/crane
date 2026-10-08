@@ -121,6 +121,9 @@ Set Crane Loopify.
    exclusion. Per-type opt-in remains the only verified-safe arena usage.
    See project_crane_arena_ambient memory. *)
 Set Crane NonAtomicRc.
+(* An inductive's values as shared one-word handles (crane::shared_variant):
+   copying one is a count bump, and building a node shares its children. *)
+Set Crane SharedVariant.
 From Crane.Libraries.ParseALot.Lexer.DFA Require Import DFA.
 From Crane.Libraries.ParseALot.Lexer Require Import Regex.
 

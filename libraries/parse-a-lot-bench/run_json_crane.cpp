@@ -14,6 +14,10 @@
 #include "conslist.h"
 #include "JSON.h"
 
+// Unqualified, so it finds crane::get_if for a shared variant
+// ([Set Crane SharedVariant]) and std::get_if for a std::variant.
+using std::get_if;
+
 struct RunArgs { int argc; char **argv; int result; };
 
 // Count parse-tree nodes, mirroring run_json.ml's count_json_nodes:
@@ -23,11 +27,11 @@ struct RunArgs { int argc; char **argv; int result; };
 static long count_json_nodes(const JSON::Json_value &jv) {
     using JV = JSON::Json_value;
     const auto &v = jv.v();
-    if (const auto *a = std::get_if<JV::JAssoc>(&v)) {
+    if (const auto *a = get_if<JV::JAssoc>(&v)) {
         long n = 1;
         for (const auto &kv : a->a0) n += count_json_nodes(kv.second);
         return n;
-    } else if (const auto *l = std::get_if<JV::JList>(&v)) {
+    } else if (const auto *l = get_if<JV::JList>(&v)) {
         long n = 1;
         for (const auto &e : l->a0) n += count_json_nodes(e);
         return n;
@@ -74,9 +78,9 @@ static void *run_main(void *arg) {
     using PR = JSON::JSON_Parser::ParserAndProofs::PEF::PS::P::Parse_result;
     const char *kind = nullptr;
     const crane::obj *val = nullptr;
-    if (const auto *u = std::get_if<PR::Unique>(&pr.v())) {
+    if (const auto *u = get_if<PR::Unique>(&pr.v())) {
         kind = "unique"; val = &u->a0;
-    } else if (const auto *am = std::get_if<PR::Ambig>(&pr.v())) {
+    } else if (const auto *am = get_if<PR::Ambig>(&pr.v())) {
         kind = "ambig";  val = &am->a0;
     }
     if (kind) {
