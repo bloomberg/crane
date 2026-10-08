@@ -18,8 +18,9 @@ int main() {
   const void *b = crane::get_if<Positive::XI>(&M::seven(std::monostate{}).v());
   assert(a != nullptr && a == b);
   assert(value(M::seven(std::monostate{})) == 7);
-  // 6 = xO 3 and 12 = xO 6 share the closed subterm 3 = xI xH only if it is
-  // the same constant; at least both values are right.
+  // 7 = xI (xI xH): the inner block is the constant's too, and immortal.
+  const auto &inner = *crane::get_if<Positive::XI>(&M::seven(std::monostate{}).v())->a0;
+  assert(inner.v().use_count() == ~std::size_t{0});
   auto p = M::pair_of(std::monostate{});
   assert(value(p.first) == 6 && value(p.second) == 12);
   assert(value(M::result) == 1 + 100 * 10);

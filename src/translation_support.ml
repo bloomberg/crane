@@ -3150,9 +3150,9 @@ type slot = {
           this is read only where an erased part is expected, to recover an
           event family nothing deduces. *)
   building_constant : bool;
-      (** The constructor in this slot is the body of the constant it is
-          hoisted into ({!Crane_rt.Constant}), so it is built here rather than
-          hoisted again.  Its arguments start from [false]. *)
+      (** The constructor in this slot is part of a constant
+          ({!Crane_rt.Constant}), so it is built here rather than hoisted
+          again: the constant is the outermost closed term. *)
 }
 
 (** What a call to a global is, before its arguments are generated; see

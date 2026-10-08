@@ -29,6 +29,12 @@ template <typename A> struct List {
   struct Cons {
     A a;
     crane::shared_box<List<A>> l;
+
+    // MANIPULATORS
+    template <typename F> inline void crane_each_field(F &&_f) {
+      _f(a);
+      _f(l);
+    }
   };
 
   using variant_t = crane::shared_variant<Nil, Cons>;
@@ -177,6 +183,14 @@ struct SharedVariantBasic {
       uint64_t a1;
       uint64_t a2;
       crane::shared_box<tree> a3;
+
+      // MANIPULATORS
+      template <typename F> inline void crane_each_field(F &&_f) {
+        _f(a0);
+        _f(a1);
+        _f(a2);
+        _f(a3);
+      }
     };
 
     using variant_t = crane::shared_variant<Leaf, Node>;
@@ -229,26 +243,19 @@ struct SharedVariantBasic {
   static inline const tree t0 =
       crane::constant([]() {
         return List<uint64_t>::cons(
-            UINT64_C(5), crane::constant([]() {
-              return List<uint64_t>::cons(
-                  UINT64_C(3), crane::constant([]() {
-                    return List<uint64_t>::cons(
-                        UINT64_C(8), crane::constant([]() {
-                          return List<uint64_t>::cons(
-                              UINT64_C(1), crane::constant([]() {
-                                return List<uint64_t>::cons(
-                                    UINT64_C(4), crane::constant([]() {
-                                      return List<uint64_t>::cons(
-                                          UINT64_C(7), crane::constant([]() {
-                                            return List<uint64_t>::cons(
-                                                UINT64_C(9),
-                                                List<uint64_t>::nil());
-                                          }));
-                                    }));
-                              }));
-                        }));
-                  }));
-            }));
+            UINT64_C(5),
+            List<uint64_t>::cons(
+                UINT64_C(3),
+                List<uint64_t>::cons(
+                    UINT64_C(8),
+                    List<uint64_t>::cons(
+                        UINT64_C(1),
+                        List<uint64_t>::cons(
+                            UINT64_C(4),
+                            List<uint64_t>::cons(
+                                UINT64_C(7),
+                                List<uint64_t>::cons(
+                                    UINT64_C(9), List<uint64_t>::nil())))))));
       })
           .template fold_left<tree>(
               [](const tree &t, uint64_t k) {
@@ -280,14 +287,11 @@ struct SharedVariantBasic {
   static List<uint64_t> bump(const List<uint64_t> &l);
   static inline const uint64_t list_result =
       bump(crane::constant([]() {
-        return List<uint64_t>::cons(UINT64_C(1), crane::constant([]() {
-                                      return List<uint64_t>::cons(
-                                          UINT64_C(2), crane::constant([]() {
-                                            return List<uint64_t>::cons(
-                                                UINT64_C(3),
-                                                List<uint64_t>::nil());
-                                          }));
-                                    }));
+        return List<uint64_t>::cons(
+            UINT64_C(1),
+            List<uint64_t>::cons(
+                UINT64_C(2),
+                List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())));
       }))
           .template fold_left<uint64_t>(
               [](uint64_t _x0, uint64_t _x1) -> uint64_t {

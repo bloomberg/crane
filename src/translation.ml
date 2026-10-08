@@ -2782,10 +2782,10 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
   (* A closed constructor term of a shared variant -- a numeral built from
      [xI]/[xO]/[xH], say -- is built once and kept, as ocamlopt keeps a
      structured constant: evaluated again, it is a count bump rather than an
-     allocation per node.  Each closed subterm with fields is a constant of
-     its own, so every block the constant holds is immortal too.  Only where
-     the term comes out as its factory call: a conversion into another slot
-     type is left as it is. *)
+     allocation per node.  The outermost closed term is the constant; the
+     runtime makes every block it holds immortal too.  Only where the term
+     comes out as its factory call: a conversion into another slot type is
+     left as it is. *)
   | MLcons (_, r, ts) as e
     when (not slot.building_constant) && is_shared_constant_term e
          && not (match (!tctx).pending_reuse_token with
@@ -2799,7 +2799,6 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
         [mk_lambda [] None [Sreturn (Some built)] ~capture:Closure]
     | _ -> built )
   | MLcons (ty, r, ts) ->
-    let slot = {slot with building_constant = false} in
     (* A value built directly into an erased ([std::any]) slot -- the
        enclosing function's C++ return type is opaque, as for a definition
        whose return type is value-dependent -- must use the canonical erased

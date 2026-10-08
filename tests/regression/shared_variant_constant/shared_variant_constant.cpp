@@ -85,31 +85,23 @@ Positive Pos::add_carry(const Positive &x, const Positive &y) {
 }
 
 Positive SharedVariantConstant::seven(std::monostate) {
-  return crane::constant([]() {
-    return Positive::xi(
-        crane::constant([]() { return Positive::xi(Positive::xh()); }));
-  });
+  return crane::constant(
+      []() { return Positive::xi(Positive::xi(Positive::xh())); });
 }
 
 std::pair<Positive, Positive> SharedVariantConstant::pair_of(std::monostate) {
-  return std::make_pair(crane::constant([]() {
-                          return Positive::xo(crane::constant(
-                              []() { return Positive::xi(Positive::xh()); }));
-                        }),
-                        crane::constant([]() {
-                          return Positive::xo(crane::constant([]() {
-                            return Positive::xo(crane::constant(
-                                []() { return Positive::xi(Positive::xh()); }));
-                          }));
-                        }));
+  return std::make_pair(
+      crane::constant(
+          []() { return Positive::xo(Positive::xi(Positive::xh())); }),
+      crane::constant([]() {
+        return Positive::xo(Positive::xo(Positive::xi(Positive::xh())));
+      }));
 }
 
 Positive SharedVariantConstant::add_ten(const Positive &p) {
   return Pos::add(p, crane::constant([]() {
-                    return Positive::xo(crane::constant([]() {
-                      return Positive::xi(crane::constant(
-                          []() { return Positive::xo(Positive::xh()); }));
-                    }));
+                    return Positive::xo(
+                        Positive::xi(Positive::xo(Positive::xh())));
                   }));
 }
 

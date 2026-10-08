@@ -59,6 +59,7 @@ struct count {
   }
   bool dec() noexcept { return n != immortal && --n == 0; }
   bool sole() const noexcept { return n == 1; }
+  bool is_immortal() const noexcept { return n == immortal; }
   void make_immortal() noexcept { n = immortal; }
 };
 #else
@@ -72,6 +73,7 @@ struct count {
            && n.fetch_sub(1, std::memory_order_acq_rel) == 1;
   }
   bool sole() const noexcept { return n.load(std::memory_order_acquire) == 1; }
+  bool is_immortal() const noexcept { return n.load(std::memory_order_relaxed) == immortal; }
   void make_immortal() noexcept { n.store(immortal, std::memory_order_relaxed); }
 };
 #endif
@@ -115,6 +117,22 @@ struct shared_block {
       block_detail::free_block(this, destroy);
   }
 };
+
+// [f] applied to each field of [x], where [x] is an alternative Crane wrote
+// a [crane_each_field] for; nothing otherwise.
+template <class T, class F> void each_field(T &x, F &&f) {
+  if constexpr (requires { x.crane_each_field(f); })
+    x.crane_each_field(f);
+}
+
+// Makes every block [x] holds immortal ([crane::constant]): a handle by its
+// own [make_immortal], a generated inductive by its variant's.
+template <class T> void make_immortal(const T &x) noexcept {
+  if constexpr (requires { x.make_immortal(); })
+    x.make_immortal();
+  else if constexpr (requires { x.v().make_immortal(); })
+    x.v().make_immortal();
+}
 
 CRANE_RC_POLICY_END
 

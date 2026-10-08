@@ -48,13 +48,20 @@ template <class T> struct box : shared_block, pool_detail::pooled<box<T>> {
   }
 };
 
-// One per held type: what the handle's tag points at.
+// One per held type: what the handle's tag points at.  [immortalize] makes a
+// box of the type, and every block its value holds, immortal.
 struct type_tag {
   const std::type_info &info;
   bool inline_;
+  void (*immortalize)(const shared_block *) noexcept;
 };
+template <class T> void immortalize(const shared_block *b) noexcept {
+  if (b->rc.is_immortal()) return;
+  b->rc.make_immortal();
+  crane::make_immortal(static_cast<const box<T> *>(b)->value);
+}
 template <class T>
-inline constexpr type_tag tag_of{typeid(T), held_inline<T>};
+inline constexpr type_tag tag_of{typeid(T), held_inline<T>, &immortalize<T>};
 
 } // namespace obj_detail
 
@@ -125,6 +132,10 @@ public:
   void reset() noexcept {
     release();
     tag_ = nullptr;
+  }
+  // [crane::make_immortal]: the box and what its value holds.
+  void make_immortal() const noexcept {
+    if (boxed()) tag_->immortalize(box_);
   }
 
   bool has_value() const noexcept { return tag_ != nullptr; }

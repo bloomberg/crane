@@ -1126,6 +1126,28 @@ let gen_ind_header_v2
          itself and of its mutual siblings, each incomplete inside its own
          body.  Each of those types becomes a parameter of the struct, so the
          struct is completed only once they are. *)
+      (* A shared variant alternative's [crane_each_field(f)]: [f] applied to
+         each field.  The runtime walks a block's fields with it -- to release
+         them into the heap a block's destroy was handed, and to make a
+         constant's blocks immortal (see [crane::each_field] in
+         shared_variant.h) -- since C++ cannot list an aggregate's members. *)
+      let each_field_method fields =
+        let f = Id.of_string "_f" and tf = Id.of_string "F" in
+        ( Fmethod
+            { mf_name = Id.of_string "crane_each_field";
+              mf_globref = None;
+              mf_tparams = [(TTtypename, tf)];
+              mf_ret_type = Tvoid;
+              mf_params = [(f, Tref (Forwarding, named_tvar tf))];
+              mf_body = List.map (fun (x, _) -> Sexpr (mk_call (CPPvar f) [CPPvar x])) fields;
+              mf_receiver = Instance { this_pos = 0; is_const = false; ref_qual = Rq_any };
+              mf_is_inline = true;
+              mf_no_pure = true;
+              mf_is_noexcept = false;
+              mf_is_conversion = false },
+          VPublic,
+          SManipulators )
+      in
       let deferred_ctor_struct cname fields =
         let group =
           (* Mutual siblings share their parameters. *)
@@ -1187,9 +1209,15 @@ let gen_ind_header_v2
                if is_coinductive && deferred.dfs_fields <> fields then
                  (Fdeferred_struct deferred, VPublic, STypes)
                else
+                 let release =
+                   if Table.is_shared_variant name && fields <> [] then
+                     [each_field_method fields]
+                   else []
+                 in
                  ( Fnested_struct
                      ( cname,
-                       List.map (fun (f, ty) -> (Fvar (f, ty), VPublic, SNoTag)) fields ),
+                       List.map (fun (f, ty) -> (Fvar (f, ty), VPublic, SNoTag)) fields
+                       @ release ),
                    VPublic,
                    STypes ) )
              tys )

@@ -178,10 +178,16 @@ public:
   // Whether no other value shares this one's block.
   bool unique() const { return !boxed() || hdr()->rc.sole(); }
 
-  // Keeps this value's block for the rest of the program; see
-  // [crane::constant].
+  // Keeps this value's block, and every block it holds, for the rest of the
+  // program; see [crane::constant].
   void make_immortal() const {
-    if (boxed()) hdr()->rc.make_immortal();
+    if (!boxed() || hdr()->rc.is_immortal()) return;
+    hdr()->rc.make_immortal();
+    on_index([&](auto i) {
+      constexpr std::size_t I = decltype(i)::value;
+      if constexpr (!inline_alt<I>)
+        crane::each_field(blk<I>()->value, [](const auto &x) { crane::make_immortal(x); });
+    });
   }
 
   // Perceus reuse: when this value is the only one holding its block and the
@@ -312,17 +318,21 @@ public:
   friend bool operator==(const shared_box &b, std::nullptr_t) { return !b.full(); }
 
   void reset() noexcept { *this = nullptr; }
+
+  // [crane::make_immortal]: the held value's blocks.
+  void make_immortal() const noexcept {
+    if (full()) crane::make_immortal(*ptr());
+  }
 };
 
 // A closed constructor term, built the first time it is evaluated and kept:
 // [f] builds it, and every later evaluation copies it, a count bump.  Its
-// block is immortal, and so is every block it holds -- a closed subterm is a
-// constant of its own -- so the threads that read it never write its counts.
+// blocks are immortal, so the threads that read it never write their counts.
 // One [F], one lambda at one site, is one constant.
 template <class F> const auto &constant(F f) {
   static const auto k = [&] {
     auto v = f();
-    v.v().make_immortal();
+    crane::make_immortal(v);
     return v;
   }();
   return k;

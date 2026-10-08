@@ -19,10 +19,16 @@ struct Positive {
   // TYPES
   struct XI {
     crane::shared_box<Positive> a0;
+
+    // MANIPULATORS
+    template <typename F> inline void crane_each_field(F &&_f) { _f(a0); }
   };
 
   struct XO {
     crane::shared_box<Positive> a0;
+
+    // MANIPULATORS
+    template <typename F> inline void crane_each_field(F &&_f) { _f(a0); }
   };
 
   struct XH {};

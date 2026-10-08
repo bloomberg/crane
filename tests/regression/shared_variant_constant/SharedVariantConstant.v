@@ -3,8 +3,8 @@
 
 (** [Set Crane SharedVariant]: a closed constructor term -- a [positive]
     literal inside a function -- is built once and kept, so evaluating it
-    again copies the same block rather than allocating; a closed subterm is a
-    constant of its own.  Arithmetic over the constants is unchanged. *)
+    again copies the same block rather than allocating, and every block it
+    holds is immortal.  Arithmetic over the constants is unchanged. *)
 
 From Stdlib Require Import BinPos.
 From Crane Require Import Extraction.

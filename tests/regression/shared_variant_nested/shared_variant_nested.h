@@ -23,6 +23,12 @@ template <typename A> struct List {
   struct Cons {
     A a;
     crane::shared_box<List<A>> l;
+
+    // MANIPULATORS
+    template <typename F> inline void crane_each_field(F &&_f) {
+      _f(a);
+      _f(l);
+    }
   };
 
   using variant_t = crane::shared_variant<Nil, Cons>;
@@ -129,6 +135,12 @@ struct SharedVariantNested {
     struct RNode {
       uint64_t a0;
       crane::shared_box<List<rose>> a1;
+
+      // MANIPULATORS
+      template <typename F> inline void crane_each_field(F &&_f) {
+        _f(a0);
+        _f(a1);
+      }
     };
 
     using variant_t = crane::shared_variant<RNode>;
@@ -203,26 +215,15 @@ struct SharedVariantNested {
 
   static inline const rose r0 = crane::constant([]() {
     return rose::rnode(
-        UINT64_C(1), crane::constant([]() {
-          return List<rose>::cons(
-              crane::constant(
-                  []() { return rose::rnode(UINT64_C(2), List<rose>::nil()); }),
-              crane::constant([]() {
-                return List<rose>::cons(
-                    crane::constant([]() {
-                      return rose::rnode(UINT64_C(3), crane::constant([]() {
-                                           return List<rose>::cons(
-                                               crane::constant([]() {
-                                                 return rose::rnode(
-                                                     UINT64_C(4),
-                                                     List<rose>::nil());
-                                               }),
-                                               List<rose>::nil());
-                                         }));
-                    }),
-                    List<rose>::nil());
-              }));
-        }));
+        UINT64_C(1),
+        List<rose>::cons(
+            rose::rnode(UINT64_C(2), List<rose>::nil()),
+            List<rose>::cons(
+                rose::rnode(UINT64_C(3),
+                            List<rose>::cons(
+                                rose::rnode(UINT64_C(4), List<rose>::nil()),
+                                List<rose>::nil())),
+                List<rose>::nil())));
   });
   static inline const rose r1 = r0.rbump();
 
@@ -231,6 +232,12 @@ struct SharedVariantNested {
     struct Link {
       uint64_t a0;
       std::shared_ptr<std::optional<chain>> a1;
+
+      // MANIPULATORS
+      template <typename F> inline void crane_each_field(F &&_f) {
+        _f(a0);
+        _f(a1);
+      }
     };
 
     using variant_t = crane::shared_variant<Link>;
@@ -307,12 +314,10 @@ struct SharedVariantNested {
 
   static inline const chain c0 = crane::constant([]() {
     return chain::link(
-        UINT64_C(1), std::make_optional<chain>(crane::constant([]() {
-          return chain::link(
-              UINT64_C(2), std::make_optional<chain>(crane::constant([]() {
-                return chain::link(UINT64_C(3), std::optional<chain>());
-              })));
-        })));
+        UINT64_C(1),
+        std::make_optional<chain>(chain::link(
+            UINT64_C(2), std::make_optional<chain>(chain::link(
+                             UINT64_C(3), std::optional<chain>())))));
   });
   struct stmt;
   struct expr;
@@ -322,11 +327,23 @@ struct SharedVariantNested {
     struct Assign {
       uint64_t a0;
       crane::shared_box<expr> a1;
+
+      // MANIPULATORS
+      template <typename F> inline void crane_each_field(F &&_f) {
+        _f(a0);
+        _f(a1);
+      }
     };
 
     struct Seq {
       crane::shared_box<stmt> a0;
       crane::shared_box<stmt> a1;
+
+      // MANIPULATORS
+      template <typename F> inline void crane_each_field(F &&_f) {
+        _f(a0);
+        _f(a1);
+      }
     };
 
     struct Skip {};
@@ -369,16 +386,31 @@ struct SharedVariantNested {
     // TYPES
     struct Num {
       uint64_t a0;
+
+      // MANIPULATORS
+      template <typename F> inline void crane_each_field(F &&_f) { _f(a0); }
     };
 
     struct Add {
       crane::shared_box<expr> a0;
       crane::shared_box<expr> a1;
+
+      // MANIPULATORS
+      template <typename F> inline void crane_each_field(F &&_f) {
+        _f(a0);
+        _f(a1);
+      }
     };
 
     struct Block {
       crane::shared_box<stmt> a0;
       crane::shared_box<expr> a1;
+
+      // MANIPULATORS
+      template <typename F> inline void crane_each_field(F &&_f) {
+        _f(a0);
+        _f(a1);
+      }
     };
 
     using variant_t = crane::shared_variant<Num, Add, Block>;
@@ -460,18 +492,10 @@ struct SharedVariantNested {
   static uint64_t esize(const expr &e);
   static inline const stmt s0 = crane::constant([]() {
     return stmt::seq(
-        crane::constant([]() {
-          return stmt::assign(
-              UINT64_C(1), crane::constant([]() {
-                return expr::add(
-                    crane::constant([]() { return expr::num(UINT64_C(2)); }),
-                    crane::constant([]() {
-                      return expr::block(stmt::skip(), crane::constant([]() {
-                                           return expr::num(UINT64_C(3));
-                                         }));
-                    }));
-              }));
-        }),
+        stmt::assign(
+            UINT64_C(1),
+            expr::add(expr::num(UINT64_C(2)),
+                      expr::block(stmt::skip(), expr::num(UINT64_C(3))))),
         stmt::skip());
   });
 
@@ -484,6 +508,13 @@ struct SharedVariantNested {
       uint64_t a0;
       uint64_t a1;
       uint64_t a2;
+
+      // MANIPULATORS
+      template <typename F> inline void crane_each_field(F &&_f) {
+        _f(a0);
+        _f(a1);
+        _f(a2);
+      }
     };
 
     using variant_t = crane::shared_variant<Point, Box3>;
@@ -540,19 +571,12 @@ struct SharedVariantNested {
 
   static inline const List<shape> shapes = crane::constant([]() {
     return List<shape>::cons(
-        crane::constant([]() {
-          return shape::box3(UINT64_C(2), UINT64_C(3), UINT64_C(4));
-        }),
-        crane::constant([]() {
-          return List<shape>::cons(
-              shape::point(), crane::constant([]() {
-                return List<shape>::cons(
-                    crane::constant([]() {
-                      return shape::box3(UINT64_C(1), UINT64_C(1), UINT64_C(1));
-                    }),
-                    List<shape>::nil());
-              }));
-        }));
+        shape::box3(UINT64_C(2), UINT64_C(3), UINT64_C(4)),
+        List<shape>::cons(
+            shape::point(),
+            List<shape>::cons(
+                shape::box3(UINT64_C(1), UINT64_C(1), UINT64_C(1)),
+                List<shape>::nil())));
   });
   static inline const uint64_t result =
       ((((r0.rsum() + r1.rsum()) + c0.clen()) + ssize(s0)) +
