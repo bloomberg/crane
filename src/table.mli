@@ -876,7 +876,7 @@ val shared_variant : unit -> bool
 (** Whether an inductive is stored as a shared variant: one word per value,
     an alternative with fields in a counted block, a recursive field holding
     the value itself ([crane::shared_box]).  Under [Set Crane SharedVariant],
-    for an ordinary inductive that is recursive or large; see
+    for an ordinary inductive that is recursive or holds something; see
     {!is_shared_variant_packet}. *)
 val is_shared_variant : GlobRef.t -> bool
 

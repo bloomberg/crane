@@ -3041,27 +3041,27 @@ let is_flat_inductive r =
 
 (** Whether the [i]th packet of [ind] is stored as a shared variant: under
     [Set Crane SharedVariant], an ordinary inductive Crane declares itself
-    that is recursive, mutually or not, or large: a tagged union (not a flat
-    struct) whose widest constructor has more than two fields.  A value of it
-    is one word, so copying one is a count bump; a field holding an
-    inductive of its block -- itself or a sibling, directly or inside a
-    container's element type -- is a slot holding a value, and building a
-    node shares its children's blocks. *)
+    that is recursive, mutually or not, or that is a tagged union (not a flat
+    struct) with a constructor holding something.  A value of it is one word,
+    so copying one is a count bump where an inline value is copied field by
+    field -- a sum nested in a sum, as an itree's events are, all of them; a
+    field holding an inductive of its block -- itself or a sibling, directly
+    or inside a container's element type -- is a slot holding a value, and
+    building a node shares its children's blocks.  Building a constructor
+    with fields allocates, as OCaml's does. *)
 let is_shared_variant_packet kn ind i =
   shared_variant ()
   &&
   try
     let p = ind.ind_packets.(i) in
     let fields = List.concat (Array.to_list p.ip_types) in
-    let large () =
+    let holds_something () =
       (not (is_flat_inductive_packet kn ind i))
-      && Array.exists
-           (fun tys -> List.length (List.filter (function Tdummy _ -> false | _ -> true) tys) > 2)
-           p.ip_types
+      && List.exists (function Tdummy _ -> false | _ -> true) fields
     in
     (match ind.ind_kind with Standard -> true | _ -> false)
     && (not (is_custom (GlobRef.IndRef (kn, i))))
-    && (List.exists (type_mentions_kn ~descend_arr:false kn) fields || large ())
+    && (List.exists (type_mentions_kn ~descend_arr:false kn) fields || holds_something ())
   with _ -> false
 
 (* Registered by [Structure_analysis] before anything is rendered, so the
