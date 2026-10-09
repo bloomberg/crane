@@ -11765,6 +11765,17 @@
   (deps reuse_list_shapes.t.exe)
   (action (run ./reuse_list_shapes.t.exe))))
 
+(subdir shared_array_vec
+ (rule
+  (targets shared_array_vec.t.exe)
+  (deps SharedArrayVec.vo shared_array_vec.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} shared_array_vec.t.exe shared_array_vec.cpp shared_array_vec.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps shared_array_vec.t.exe)
+  (action (run ./shared_array_vec.t.exe))))
+
 (subdir shared_variant_basic
  (rule
   (targets shared_variant_basic.t.exe)

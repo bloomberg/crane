@@ -77,15 +77,21 @@ Crane Extract Inlined Constant NativeMap.get   =>
    It is deliberately a *separate* inductive from [list] precisely so that it
    can be mapped to a random-access container here without disturbing the
    project-wide [list] -> [crane::list] cons-list mapping (ConsList.v), which
-   has no O(1) indexing. [immer::flex_vector] gives O(1) [operator[]] and
-   [size()]; [push_front] is O(log n), which is irrelevant because the matrix
-   is built exactly once per lexical rule and read-only afterwards. *)
+   has no O(1) indexing.  It is an array, as ExtractionParity.v gives OCaml:
+   [crane::shared_array], immutable and shared by reference, so a copy -- a
+   DFA state carries its table, and every transition and loop frame copies
+   the state -- is a count bump, and [operator[]] and [size()] are O(1).  It is
+   built once per lexical rule, from a list ([vec_of_list] is
+   [Array.of_list] on both sides), and read-only afterwards. *)
 Crane Extract Inductive vec =>
-  "immer::flex_vector<%t0>"
-  [ "immer::flex_vector<%t0>{}"
+  "crane::shared_array<%t0>"
+  [ "crane::shared_array<%t0>{}"
     "%a1.push_front(%a0)" ]
   "if (%scrut.empty()) { %br0 } else { const %t0& %b1a0 = %scrut.front(); auto %b1a1 = %scrut.drop(1); %br1 }"
-  From "immer/flex_vector.hpp".
+  From "shared_array.h".
+
+Crane Extract Inlined Constant IntDFA.vec_of_list =>
+  "crane::shared_array<%t0>::of_range(%a0)" From "shared_array.h".
 
 Crane Extract Inlined Constant IntDFA.vec_nth =>
   "(static_cast<std::size_t>(%a1) < (%a0).size() ? (%a0)[static_cast<std::size_t>(%a1)] : %a2)".
