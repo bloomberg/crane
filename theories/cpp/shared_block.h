@@ -84,26 +84,27 @@ struct count {
 };
 #endif
 
-// Frees a block whose count reached zero without recursing into what it
-// held.  A block's destructor releases what it captured, which may free
-// another block, and so on down a chain as long as the program's longest
-// continuation or tree: freed recursively, that is one C++ frame per link.
-// Instead a free that happens while another is running is queued on the
-// thread's heap (pool.h), and the outermost one drains the queue.
+// Frees a block whose count reached zero.  A block's destructor releases what
+// it held, which may free another block, and so on down a chain as long as
+// the program's longest continuation or tree: freed recursively, that is one
+// C++ frame per link.  So a free runs at once only a bounded number of frames
+// deep -- the common case, where what dies is a node and a few children,
+// costs a direct call and leaves the children's memory warm -- and past that
+// is queued on the thread's heap (pool.h), which the outermost free drains.
 [[gnu::noinline]] inline void
 free_block(const void *block, pool_detail::destroy_fn destroy) noexcept {
   pool_detail::thread_heap &h = pool_detail::this_thread_heap();
-  if (h.draining) {
-    h.push({block, destroy});
+  if (h.depth != 0) {
+    h.reclaim({block, destroy});
     return;
   }
-  h.draining = true;
+  h.depth = 1;
   destroy(block, h);
   while (h.size != 0) {
     pool_detail::pending_free f = h.items[--h.size];
     f.destroy(f.block, h);
   }
-  h.draining = false;
+  h.depth = 0;
 }
 
 } // namespace block_detail
@@ -123,11 +124,12 @@ struct shared_block {
       block_detail::free_block(this, destroy);
   }
   // [release] from inside a block's [destroy], which is handed the heap: the
-  // last reference queues the block there, where [free_block] would first
-  // look the heap up -- on Darwin a call per freed child.
+  // last reference frees the block through it ([thread_heap::reclaim]),
+  // where [free_block] would first look the heap up -- on Darwin a call per
+  // freed child.
   void release_into(pool_detail::thread_heap &h) const noexcept {
     if (rc.dec())
-      h.push({this, destroy});
+      h.reclaim({this, destroy});
   }
 };
 

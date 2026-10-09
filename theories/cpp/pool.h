@@ -69,7 +69,8 @@ inline std::size_t takes = 0;
 struct thread_heap {
   void *lists[classes] = {};
 
-  bool draining = false;
+  // How many frees are running, nested; see [free_block] in shared_block.h.
+  unsigned depth = 0;
   pending_free *items = nullptr;
   std::size_t size = 0, cap = 0;
 
@@ -101,6 +102,22 @@ struct thread_heap {
       *static_cast<void **>(p) = head;
       head = p;
     }
+  }
+
+  // Frees nested this deep at most run at once; deeper ones are queued.
+  // Measured on Vellvm: 1 to 16 all beat queueing every nested free (-3% to
+  // -7%, best near 8), and 32 was 3% slower than it.
+  static constexpr unsigned max_depth = 8;
+
+  // A free that happens while another is running: run now, nested, unless
+  // that is already [max_depth] frees deep, and queued otherwise.
+  void reclaim(pending_free f) noexcept {
+    if (depth < max_depth) {
+      ++depth;
+      f.destroy(f.block, *this);
+      --depth;
+    } else
+      push(f);
   }
 
   void push(pending_free f) {
