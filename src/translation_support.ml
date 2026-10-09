@@ -1393,6 +1393,41 @@ let calls_eagerly r body =
   in
   try walk body; false with Found -> true
 
+(** Whether the arguments [ts] of a coinductive constructor may run the
+    corecursion the constructor guards, so that only a suspension keeps them
+    from unfolding without end: they name the declaration being generated, a
+    global or a binder that yields a coinductive value -- a sibling in a
+    mutual block, a local cofixpoint -- or a fixpoint of their own.  Anything
+    else is an ordinary call, which ends: every body suspends its own
+    corecursive calls at its constructors.  A binder whose type is not known
+    counts as corecursive. *)
+let args_may_corecurse ts =
+  let yields_coinductive ty = Table.is_coinductive_type (ml_codomain ty) in
+  let rec corec depth t =
+    match t with
+    | MLglob (g, _) -> (
+      (match !Table.current_decl_ref with
+       | Some self -> globref_equal g self
+       | None -> false)
+      || match find_type_opt g with Some ty -> yields_coinductive ty | None -> false )
+    | MLrel i when i > depth -> (
+      match get_env_type_opt (i - depth) with
+      | Some (Tunknown | Taxiom) | None -> true
+      | Some ty -> yields_coinductive ty )
+    | MLrel _ -> false
+    | MLfix _ -> true
+    | MLlam (_, _, b) -> corec (depth + 1) b
+    | MLletin (_, _, a, b) -> corec depth a || corec (depth + 1) b
+    | MLcase (_, s, brs) ->
+      corec depth s
+      || Array.exists (fun (ids, _, _, b) -> corec (depth + List.length ids) b) brs
+    | e ->
+      let exception Found in
+      (try Mlutil.ast_iter (fun c -> if corec depth c then raise Found) e; false
+       with Found -> true)
+  in
+  List.exists (corec 0) ts
+
 (** [suspend_ctor ty ctor args] is the coinductive constructor [ctor] of
     type [ty] applied to [args], suspended:
     [ty::lazy_([=]() -> typename ty::ctor { return {args}; })].  The thunk
@@ -1402,10 +1437,12 @@ let calls_eagerly r body =
 
     The only suspension point a coinductive value has, as in OCaml's
     extraction: everything else in a body runs where it is written.  It is
-    taken only where the constructor's arguments compute.  Rocq's guard
-    condition puts every corecursive call under a constructor, so a
-    constructor whose arguments are values holds no call to delay, and is
-    built directly. *)
+    taken only where the constructor's arguments may run the corecursion
+    ({!args_may_corecurse}).  Rocq's guard condition puts every corecursive
+    call under a constructor, so a constructor whose arguments only compute
+    -- [Ret (f x)] -- holds no call to delay, and is built directly: a lazy
+    cell already holding its value, where a suspension would be a closure
+    to allocate, run and free. *)
 let suspend_ctor ty ctor args =
   CPPfun_call
     ( Minicpp.call_sig ~yields:ty ~nargs:1 (),

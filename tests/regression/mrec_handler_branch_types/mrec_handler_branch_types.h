@@ -497,9 +497,7 @@ struct ITree {
   static Itree<T1, T3> map(const std::type_identity_t<crane::fn<T3(T2)>> &f,
                            const Itree<T1, T2> &t) {
     return bind<T1, T2, T3>(t, [=](const T2 &x) {
-      return Itree<T1, T3>::lazy_([=]() -> typename Itree<T1, T3>::Go {
-        return {ItreeF<T1, T3, Itree<T1, T3>>::retf(f(x))};
-      });
+      return Itree<T1, T3>::go(ItreeF<T1, T3, Itree<T1, T3>>::retf(f(x)));
     });
   }
 };
@@ -566,12 +564,9 @@ struct MrecHandlerBranchTypes {
   template <typename T1>
   static Itree<Sum1<callE, OtherE<T1, crane::obj>, crane::obj>, Nat>
   ext_call(const Nat &n) {
-    return Itree<Sum1<callE, OtherE<T1, crane::obj>, crane::obj>, Nat>::lazy_(
-        [=]() -> typename Itree<Sum1<callE, OtherE<T1, crane::obj>, crane::obj>,
-                                Nat>::Go {
-          return {ItreeF<crane::obj, Nat, Itree<crane::obj, Nat>>::retf(
-              n.add(Nat::s(Nat::o())))};
-        });
+    return Itree<Sum1<callE, OtherE<T1, crane::obj>, crane::obj>, Nat>::go(
+        ItreeF<crane::obj, Nat, Itree<crane::obj, Nat>>::retf(
+            n.add(Nat::s(Nat::o()))));
   }
 
   template <typename T1>

@@ -7,13 +7,8 @@ Cotree::colist<uint64_t> Cotree::nats(uint64_t n) {
 }
 
 Cotree::colist<uint64_t> Cotree::binary_children(uint64_t n) {
-  return colist<uint64_t>::lazy_(
-      [=]() -> typename Cotree::colist<uint64_t>::Cocons {
-        return {((UINT64_C(2) * n) + UINT64_C(1)),
-                colist<uint64_t>::lazy_(
-                    [=]() -> typename Cotree::colist<uint64_t>::Cocons {
-                      return {((UINT64_C(2) * n) + UINT64_C(2)),
-                              colist<uint64_t>::conil()};
-                    })};
-      });
+  return colist<uint64_t>::cocons(
+      ((UINT64_C(2) * n) + UINT64_C(1)),
+      colist<uint64_t>::cocons(((UINT64_C(2) * n) + UINT64_C(2)),
+                               colist<uint64_t>::conil()));
 }

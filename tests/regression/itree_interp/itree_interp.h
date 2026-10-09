@@ -480,9 +480,7 @@ struct ITree {
   static Itree<T1, T3> map(const std::type_identity_t<crane::fn<T3(T2)>> &f,
                            const Itree<T1, T2> &t) {
     return bind<T1, T2, T3>(t, [=](const T2 &x) {
-      return Itree<T1, T3>::lazy_([=]() -> typename Itree<T1, T3>::Go {
-        return {ItreeF<T1, T3, Itree<T1, T3>>::retf(f(x))};
-      });
+      return Itree<T1, T3>::go(ItreeF<T1, T3, Itree<T1, T3>>::retf(f(x)));
     });
   }
 
@@ -583,11 +581,8 @@ struct ItreeInterp {
                   Subevent::template subevent<GetE, GetE, Nat>(resum_id,
                                                                GetE::GET)),
               [=](Nat y) {
-                return Itree<GetE, Nat>::lazy_(
-                    [=]() -> typename Itree<GetE, Nat>::Go {
-                      return {
-                          ItreeF<GetE, Nat, Itree<GetE, Nat>>::retf(x.add(y))};
-                    });
+                return Itree<GetE, Nat>::go(
+                    ItreeF<GetE, Nat, Itree<GetE, Nat>>::retf(x.add(y)));
               });
         });
   }();

@@ -461,12 +461,8 @@ struct MrecFact {
                   resum_id, Sum1<crane::obj, crane::obj, crane::obj>::inl1(
                                 call::fact(m)))),
           [=](uint64_t r) {
-            return Itree<Sum1<call, crane::obj, crane::obj>, T1>::lazy_(
-                [=]() ->
-                typename Itree<Sum1<call, crane::obj, crane::obj>, T1>::Go {
-                  return {ItreeF<crane::obj, T1, Itree<crane::obj, T1>>::retf(
-                      (n0 * r))};
-                });
+            return Itree<Sum1<call, crane::obj, crane::obj>, T1>::go(
+                ItreeF<crane::obj, T1, Itree<crane::obj, T1>>::retf((n0 * r)));
           });
     }
   }

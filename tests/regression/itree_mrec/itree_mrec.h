@@ -598,11 +598,9 @@ struct ItreeMrec {
                                           Nat>(resum_inl,
                                                callE::call(a00_value))),
           [=](Nat r) {
-            return Itree<Sum1<callE, noE, crane::obj>, T1>::lazy_(
-                [=]() -> typename Itree<Sum1<callE, noE, crane::obj>, T1>::Go {
-                  return {ItreeF<crane::obj, T1, Itree<crane::obj, T1>>::retf(
-                      Nat::s(a00_value).add(r))};
-                });
+            return Itree<Sum1<callE, noE, crane::obj>, T1>::go(
+                ItreeF<crane::obj, T1, Itree<crane::obj, T1>>::retf(
+                    Nat::s(a00_value).add(r)));
           });
     }
   }
