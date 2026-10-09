@@ -5,6 +5,7 @@
 #include "fn.h"
 #include "lazy.h"
 #include "obj.h"
+#include "shared_block.h"
 #include <atomic>
 #include <concepts>
 #include <memory>
@@ -454,7 +455,8 @@ struct PatternBinderStateBoxed {
   template <Params _tcI0>
   static Itree<noE, std::pair<FusedS<typename _tcI0::ptr>, Nat>>
   go(std::monostate) {
-    return on_genv<_tcI0, Nat>(incr)(std::make_pair(
+    static const auto on_genv_1 = crane::immortal(on_genv<_tcI0, Nat>(incr));
+    return on_genv_1(std::make_pair(
         MemStateV<_tcI0>::initial_state(),
         std::make_pair(List<Nat>::nil(),
                        Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))));

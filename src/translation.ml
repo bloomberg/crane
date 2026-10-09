@@ -276,15 +276,20 @@ let is_shared_constant_term e =
     && List.for_all closed ts
   | _ -> false
 
-(* Whether [e], the call [f args], is closed -- no free variable -- and builds
-   a typeclass instance, which its Rocq type says ({!Table.builds_instance}):
-   a singleton class's method is a function, so its instance's ML type is an
+(* Whether [e] names no value of [env]: its only free variables are instance
+   parameters, which C++ takes as template arguments ({!binder_is_instance}),
+   so a static built from it is the same at every evaluation. *)
+let names_no_value env e = Escape.IntSet.for_all (binder_is_instance env) (Escape.free_rels 0 e)
+
+(* Whether [e], the call [f args], is closed ({!names_no_value}) and builds a
+   typeclass instance, which its Rocq type says ({!Table.builds_instance}): a
+   singleton class's method is a function, so its instance's ML type is an
    arrow, not the class. *)
-let is_closed_instance_call f args e =
+let is_closed_instance_call env f args e =
   (not (Table.is_custom f))
   && args <> []
   && Table.builds_instance f
-  && Escape.IntSet.is_empty (Escape.free_rels 0 e)
+  && names_no_value env e
 
 (* The name a hoisted constant is declared under (see {!Cpp_constants}): a
    numeral's value where the term is one of Rocq's [positive], [N], [Z] or
@@ -1440,7 +1445,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
      (see {!Cpp_constants}).  An instance is a pure value, so building it
      once cannot drop an effect; only where it comes out as a call. *)
   | MLapp (MLglob (f, _), args) as e
-    when (not slot.building_constant) && is_closed_instance_call f args e -> (
+    when (not slot.building_constant) && is_closed_instance_call env f args e -> (
     let built = gen_expr ?expected_ty ~slot:{slot with building_constant = true} env e in
     match built with
     | CPPfun_call _ ->
@@ -5759,8 +5764,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
     let closed_head =
       let n = List.length args - List.length excess_args in
       (not slot.building_constant) && (not (Table.is_custom id)) && n > 0 && excess_args <> []
-      && Escape.IntSet.is_empty
-           (Escape.free_rels 0 (MLapp (f, List.filteri (fun i _ -> i < n) args)))
+      && names_no_value env (MLapp (f, List.filteri (fun i _ -> i < n) args))
     in
     let args =
       let slot = if closed_head then {slot with building_constant = true} else slot in

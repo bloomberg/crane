@@ -549,7 +549,8 @@ struct BinderTypeNamesSectionField {
   template <Params _tcI0>
   static Itree<CntE, std::pair<FusedS<typename _tcI0::ptr>, Nat>>
   after_cnt(const Nat &n) {
-    return fused<_tcI0, Nat>(CntE::CNT)(start<_tcI0>(n));
+    static const auto fused_1 = crane::immortal(fused<_tcI0, Nat>(CntE::CNT));
+    return fused_1(start<_tcI0>(n));
   }
 
   struct natParams {

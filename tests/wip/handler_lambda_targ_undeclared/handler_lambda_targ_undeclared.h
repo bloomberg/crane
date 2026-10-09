@@ -4,6 +4,7 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
+#include "shared_block.h"
 #include <atomic>
 #include <concepts>
 #include <crane_itree.h>
@@ -150,7 +151,9 @@ fused_local(LocalE e) {
 
 template <Params _tcI0>
 std::shared_ptr<ITree<std::pair<Big, Nat>>> use(const Nat &n) {
-  return fused_local<_tcI0, Nat>(LocalE::LGET)(std::make_pair(n, n));
+  static const auto fused_local_1 =
+      crane::immortal(fused_local<_tcI0, Nat>(LocalE::LGET));
+  return fused_local_1(std::make_pair(n, n));
 }
 
 struct HandlerLambdaTargUndeclared {

@@ -4,6 +4,7 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
+#include "shared_block.h"
 #include <atomic>
 #include <concepts>
 #include <crane_itree.h>
@@ -229,7 +230,9 @@ Monads::template stateT<env, itree_tc_609e8855cd7ad294, T2> twice(Ev e) {
 struct Qf {
   template <Params _tcI0>
   static std::shared_ptr<ITree<std::pair<Nat, env>>> use(const Nat &n) {
-    return twice<_tcI0, FailE, Nat>(Ev::EV0)(n);
+    static const auto twice_1 =
+        crane::immortal(twice<_tcI0, FailE, Nat>(Ev::EV0));
+    return twice_1(n);
   }
 };
 
