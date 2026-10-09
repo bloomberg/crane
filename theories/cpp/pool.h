@@ -112,13 +112,14 @@ struct thread_heap {
   // A free that happens while another is running: run now, nested, unless
   // that is already [max_depth] frees deep, and queued otherwise.
   void reclaim(pending_free f) noexcept {
-    if (depth < max_depth) {
+    if (depth < max_depth) [[likely]] {
       ++depth;
       f.destroy(f.block, *this);
       --depth;
     } else
-      push(f);
+      push_slow(f);
   }
+  [[gnu::noinline]] void push_slow(pending_free f) noexcept { push(f); }
 
   void push(pending_free f) {
     if (size == cap) {
