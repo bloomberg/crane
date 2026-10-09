@@ -3,6 +3,7 @@
 
 #include "fn.h"
 #include "obj.h"
+#include "shared_block.h"
 #include <concepts>
 #include <cstdint>
 #include <utility>

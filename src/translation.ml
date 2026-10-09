@@ -5753,7 +5753,17 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
       cp_instance_promoted = instance_promoted_map;
       _
     } = plan in
+    (* The callee applied to all but the excess args, where that names no
+       local: a function -- a handler [case_] combines -- built from nothing
+       the call can change. *)
+    let closed_head =
+      let n = List.length args - List.length excess_args in
+      (not slot.building_constant) && (not (Table.is_custom id)) && n > 0 && excess_args <> []
+      && Escape.IntSet.is_empty
+           (Escape.free_rels 0 (MLapp (f, List.filteri (fun i _ -> i < n) args)))
+    in
     let args =
+      let slot = if closed_head then {slot with building_constant = true} else slot in
       with_promoted_var_map (instance_promoted_map @ (!tctx).promoted_var_map)
         (fun () -> gen_call_args ~slot ?expected_ty env id plan)
     in
@@ -5821,6 +5831,18 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
       if excess_args = [] then
         base
       else (
+        (* A closed head is built once ({!Cpp_constants}), not at every
+           evaluation of the application: in OCaml it would be a partial
+           application, evaluated where the handler is passed rather than at
+           every event the handler answers. *)
+        let base =
+          match base with
+          | CPPfun_call _ when closed_head ->
+            mk_call
+              (CPPrt (Crane_rt.Constant (String.lowercase_ascii (Label.to_string (Common.label_of_r id)))))
+              [base]
+          | _ -> base
+        in
         let ret_is_chainable =
           is_inline_custom id
           ||

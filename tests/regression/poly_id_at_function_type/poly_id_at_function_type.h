@@ -2,6 +2,7 @@
 #define INCLUDED_POLY_ID_AT_FUNCTION_TYPE
 
 #include "fn.h"
+#include "shared_block.h"
 #include <cstdint>
 
 struct PolyIdAtFunctionType {

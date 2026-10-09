@@ -25,12 +25,16 @@ let closed_erase_fn e =
   | _ -> None
 
 (* The identifiers [body] declares or reads, which a constant's name must not
-   shadow or be shadowed by. *)
+   shadow or be shadowed by -- the globals it names included: a constant is
+   named after the function that builds it. *)
 let names_in body =
   let names = ref Id.Set.empty in
   let add id = names := Id.Set.add id !names in
   let rec fe e =
-    ( match e with CPPvar id -> add id | _ -> () );
+    ( match e with
+    | CPPvar id -> add id
+    | CPPglob (r, _, _) -> add (Label.to_id (Common.label_of_r r))
+    | _ -> () );
     map_expr fe fs Fun.id e
   and fs s =
     ( match s with Sasgn (id, _, _) | Sdecl (id, _) -> add id | _ -> () );
@@ -49,7 +53,14 @@ let rec hoist_body body =
   let fresh hint =
     let taken = Lazy.force taken in
     let rec go k =
-      let id = if k = 0 then hint else Id.of_string (Id.to_string hint ^ "_" ^ string_of_int k) in
+      (* [case_] numbers as [case_1]: a double underscore is reserved. *)
+      let id =
+        if k = 0 then hint
+        else
+          let h = Id.to_string hint in
+          let sep = if h <> "" && h.[String.length h - 1] = '_' then "" else "_" in
+          Id.of_string (h ^ sep ^ string_of_int k)
+      in
       if Id.Set.mem id !taken then go (k + 1) else id
     in
     let id = go 0 in

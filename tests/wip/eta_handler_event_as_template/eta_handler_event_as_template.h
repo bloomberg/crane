@@ -3,6 +3,7 @@
 
 #include "fn.h"
 #include "obj.h"
+#include "shared_block.h"
 #include <atomic>
 #include <crane_itree.h>
 #include <memory>

@@ -5,6 +5,7 @@
 #include "fn.h"
 #include "lazy.h"
 #include "obj.h"
+#include "shared_block.h"
 #include "small_vector.h"
 #include <atomic>
 #include <concepts>
