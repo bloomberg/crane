@@ -128,15 +128,17 @@ public:
   // to an erased instantiation and back -- the loop state of an erased
   // [MonadIter], every iteration -- would pile up a layer per round trip,
   // and forcing the k-th step would walk k of them.  Converting back to the
-  // type the source was itself converted from is the source.
-  template <typename S>
-  static lazy converted_from(const lazy<S> &source, fn<T()> thunk) {
+  // type the source was itself converted from is the source.  The thunk is
+  // kept in the node ([thunk_node]), and the value it builds goes straight
+  // in: one block per conversion.
+  template <typename S, typename F>
+  static lazy converted_from(const lazy<S> &source, F &&thunk) {
     const auto *src = source.p_;
     if (src && src->origin_tag == &tag) {
       src->origin->rc.inc();
       return lazy(static_cast<node *>(const_cast<base *>(src->origin)));
     }
-    lazy converted(std::move(thunk));
+    lazy converted(thunk_node<std::decay_t<F>>::make(std::forward<F>(thunk)));
     if (src) {
       src->rc.inc();
       converted.p_->origin = src;
