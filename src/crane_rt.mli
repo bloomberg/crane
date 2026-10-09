@@ -114,6 +114,10 @@ val shared_or : string
 (** [crane::shared_or_t<T, P>], the slot for an inductive whose being a shared
     variant only a template's instantiation knows: [shared_box<T>] or [P]. *)
 
+val shared_block_header : string
+(** [shared_block.h] -- the counted block header, [crane::make_immortal] and
+    [crane::immortal]. *)
+
 val shared_variant_header : string  (** [shared_variant.h] -- {!shared_variant}, {!shared_box}, {!shared_or}. *)
 
 val field : string

@@ -2,6 +2,27 @@
 
 Itree<InterpChainPerf::TopE<crane::obj>, Nat>
 InterpChainPerf::prog(const Nat &n) {
+  static const auto resum_inl = crane::immortal(
+      CategoryOps::template ReSum_inl<crane::obj,
+                                      crane::fn<crane::obj(crane::obj)>>(
+          [](const auto &, const auto &) { return crane::obj(); },
+          [](crane::obj, crane::obj, crane::obj, const auto &x,
+             crane::fn<crane::obj(crane::obj)> x0) {
+            return [=](crane::obj _x0) -> crane::obj {
+              return Function::Cat_IFun(
+                  x, crane::any_cast<IFun<crane::obj, crane::obj>>(x0), _x0);
+            };
+          },
+          [](crane::obj, crane::obj) {
+            return crane_erase_global<Function::Inl_sum1, crane::obj>();
+          },
+          crane::obj(), crane::obj(), crane::obj(),
+          CategoryOps::template ReSum_id<crane::obj,
+                                         crane::fn<crane::obj(crane::obj)>>(
+              [](crane::obj) {
+                return crane_erase_global<Function::Id_IFun, crane::obj>();
+              },
+              crane::obj())));
   return ITree::template iter<InterpChainPerf::TopE<crane::obj>, Nat,
                               std::pair<Nat, Nat>>(
       [=](std::pair<Nat, Nat> pat) -> Itree<InterpChainPerf::TopE<crane::obj>,
@@ -25,35 +46,7 @@ InterpChainPerf::prog(const Nat &n) {
                       InterpChainPerf::GetE,
                       Sum1<InterpChainPerf::GetE, InterpChainPerf::outE,
                            crane::obj>,
-                      Nat>(
-                      CategoryOps::template ReSum_inl<
-                          crane::obj, crane::fn<crane::obj(crane::obj)>>(
-                          [](const auto &, const auto &) {
-                            return crane::obj();
-                          },
-                          [](crane::obj, crane::obj, crane::obj, const auto &x,
-                             crane::fn<crane::obj(crane::obj)> x0) {
-                            return [=](crane::obj _x0) -> crane::obj {
-                              return Function::Cat_IFun(
-                                  x,
-                                  crane::any_cast<IFun<crane::obj, crane::obj>>(
-                                      x0),
-                                  _x0);
-                            };
-                          },
-                          [](crane::obj, crane::obj) {
-                            return crane_erase_global<Function::Inl_sum1,
-                                                      crane::obj>();
-                          },
-                          crane::obj(), crane::obj(), crane::obj(),
-                          CategoryOps::template ReSum_id<
-                              crane::obj, crane::fn<crane::obj(crane::obj)>>(
-                              [](crane::obj) {
-                                return crane_erase_global<Function::Id_IFun,
-                                                          crane::obj>();
-                              },
-                              crane::obj())),
-                      GetE::GET)),
+                      Nat>(resum_inl, GetE::GET)),
               [=](Nat x) {
                 return Itree<InterpChainPerf::TopE<crane::obj>,
                              Sum<std::pair<Nat, Nat>, Nat>>::

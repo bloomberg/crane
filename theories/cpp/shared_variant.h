@@ -348,14 +348,6 @@ public:
   }
 };
 
-// [v], every block it holds made immortal: a constant, declared once as a
-// static local -- [static const auto pos_10 = crane::immortal(...)] -- and
-// read from every thread, which then never write its counts.
-template <class T> T immortal(T v) {
-  crane::make_immortal(v);
-  return v;
-}
-
 // Whether a type is an inductive stored as a shared variant.
 template <class V> struct is_shared_variant : std::false_type {};
 template <class... Ts> struct is_shared_variant<shared_variant<Ts...>> : std::true_type {};

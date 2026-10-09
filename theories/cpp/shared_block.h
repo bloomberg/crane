@@ -142,13 +142,21 @@ template <class T> void release_into(T &x, pool_detail::thread_heap &h) noexcept
     x.v_mut().release_into(h);
 }
 
-// Makes every block [x] holds immortal ([crane::constant]): a handle by its
-// own [make_immortal], a generated inductive by its variant's.
+// Makes every block [x] holds immortal: a handle by its own
+// [make_immortal], a generated inductive by its variant's.
 template <class T> void make_immortal(const T &x) noexcept {
   if constexpr (requires { x.make_immortal(); })
     x.make_immortal();
   else if constexpr (requires { x.v().make_immortal(); })
     x.v().make_immortal();
+}
+
+// [v], every block it holds made immortal: a constant, declared once as a
+// static local -- [static const auto pos_10 = crane::immortal(...)] -- and
+// read from every thread, which then never write its counts.
+template <class T> T immortal(T v) {
+  crane::make_immortal(v);
+  return v;
 }
 
 CRANE_RC_POLICY_END

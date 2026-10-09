@@ -236,6 +236,13 @@ public:
   }
   ~fn() { release(); }
 
+  // [crane::make_immortal]: the closure's block kept for the rest of the
+  // program -- a constant ([crane::immortal]).  What it captured is
+  // reached only through it, by calls, which leave the counts alone.
+  void make_immortal() const noexcept {
+    if (p_) p_->rc.make_immortal();
+  }
+
   // [crane::release_into]: the closure released into [h], this one empty.
   void release_into(pool_detail::thread_heap &h) noexcept {
     if (p_) p_->release_into(h);

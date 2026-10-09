@@ -413,6 +413,20 @@ let singleton_instance_class ?(env = Global.env ()) r =
     | _ -> None )
   | _ -> None
 
+(** Whether [r] builds an instance of some class -- record or singleton,
+    kept or skipped -- read off its Rocq type: once its arguments are applied,
+    the head of what it returns is a class. *)
+let builds_instance ?(env = Global.env ()) r =
+  match r with
+  | GlobRef.ConstRef c when Environ.mem_constant c env -> (
+    let ty, _ = Typeops.type_of_global_in_context env r in
+    let _, concl = Term.decompose_prod ty in
+    match Constr.kind (fst (Constr.decompose_app concl)) with
+    | Constr.Const (c, _) -> Typeclasses.is_class (GlobRef.ConstRef c)
+    | Constr.Ind (i, _) -> Typeclasses.is_class (GlobRef.IndRef i)
+    | _ -> false )
+  | _ -> false
+
 (** A singleton class seen as the record class it stands for: its
     parameters, the higher-kinded ones among them with their arities, and
     its one field -- the method, typed as its projection is past the

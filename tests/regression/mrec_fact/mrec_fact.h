@@ -5,6 +5,7 @@
 #include "fn.h"
 #include "lazy.h"
 #include "obj.h"
+#include "shared_block.h"
 #include <atomic>
 #include <cstdint>
 #include <stdexcept>
@@ -439,6 +440,13 @@ struct MrecFact {
 
   template <typename T1>
   static Itree<Sum1<call, crane::obj, crane::obj>, T1> body(const call &c) {
+    static const auto resum_id = crane::immortal(
+        CategoryOps::template ReSum_id<crane::obj,
+                                       crane::fn<crane::obj(crane::obj)>>(
+            [](crane::obj) {
+              return crane_erase_global<Function::Id_IFun, crane::obj>();
+            },
+            crane::obj()));
     const auto &[n0] = c;
     if (n0 <= 0) {
       return Itree<Sum1<call, crane::obj, crane::obj>, T1>::go(
@@ -450,15 +458,8 @@ struct MrecFact {
           ITree::template trigger<Sum1<call, crane::obj, crane::obj>, uint64_t>(
               Subevent::template subevent<
                   crane::obj, Sum1<call, crane::obj, crane::obj>, uint64_t>(
-                  CategoryOps::template ReSum_id<
-                      crane::obj, crane::fn<crane::obj(crane::obj)>>(
-                      [](crane::obj) {
-                        return crane_erase_global<Function::Id_IFun,
-                                                  crane::obj>();
-                      },
-                      crane::obj()),
-                  Sum1<crane::obj, crane::obj, crane::obj>::inl1(
-                      call::fact(m)))),
+                  resum_id, Sum1<crane::obj, crane::obj, crane::obj>::inl1(
+                                call::fact(m)))),
           [=](uint64_t r) {
             return Itree<Sum1<call, crane::obj, crane::obj>, T1>::lazy_(
                 [=]() -> Itree<Sum1<call, crane::obj, crane::obj>, T1> {

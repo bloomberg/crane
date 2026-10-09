@@ -5,6 +5,7 @@
 #include "fn.h"
 #include "lazy.h"
 #include "obj.h"
+#include "shared_block.h"
 #include <atomic>
 #include <concepts>
 #include <memory>
@@ -795,16 +796,17 @@ struct InterpChainPerf {
 
   template <typename T1>
   static Itree<TopE<crane::obj>, T1> intr(Sum1<GetE, outE, T1> e) {
+    static const auto resum_id = crane::immortal(
+        CategoryOps::template ReSum_id<crane::obj,
+                                       crane::fn<crane::obj(crane::obj)>>(
+            [](crane::obj) {
+              return crane_erase_global<Function::Id_IFun, crane::obj>();
+            },
+            crane::obj()));
     return ITree::template trigger<TopE<crane::obj>, T1>(
         Subevent::template subevent<Sum1<GetE, outE, crane::obj>,
                                     Sum1<GetE, outE, crane::obj>, T1>(
-            CategoryOps::template ReSum_id<crane::obj,
-                                           crane::fn<crane::obj(crane::obj)>>(
-                [](crane::obj) {
-                  return crane_erase_global<Function::Id_IFun, crane::obj>();
-                },
-                crane::obj()),
-            std::move(e)));
+            resum_id, std::move(e)));
   }
 
   template <typename CraneTcArg>
@@ -842,64 +844,57 @@ struct InterpChainPerf {
   template <typename T1>
   static Monads::template stateT<Nat, crane_carrier_tc_e4b67e60f94a9e42, T1>
   h(Sum1<GetE, outE, T1> x) {
+    static const auto resum_inl = crane::immortal(
+        CategoryOps::template ReSum_inl<crane::obj,
+                                        crane::fn<crane::obj(crane::obj)>>(
+            [](const auto &, const auto &) { return crane::obj(); },
+            [](crane::obj, crane::obj, crane::obj, const auto &x1,
+               crane::fn<crane::obj(crane::obj)> x2) {
+              return [=](crane::obj _x0) -> crane::obj {
+                return Function::Cat_IFun(
+                    x1, crane::any_cast<IFun<crane::obj, crane::obj>>(x2), _x0);
+              };
+            },
+            [](crane::obj, crane::obj) {
+              return crane_erase_global<Function::Inl_sum1, crane::obj>();
+            },
+            crane::obj(), crane::obj(), crane::obj(),
+            CategoryOps::template ReSum_id<crane::obj,
+                                           crane::fn<crane::obj(crane::obj)>>(
+                [](crane::obj) {
+                  return crane_erase_global<Function::Id_IFun, crane::obj>();
+                },
+                crane::obj())));
     return [=, x = std::move(x)](Nat x0) {
       return crane_convert<Itree<BotE<crane::obj>, std::pair<Nat, T1>>>(
-          crane::any_cast<
-              crane::fn<Itree<BotE<crane::obj>, std::pair<Nat, crane::obj>>(
-                  Nat)>>(CategoryOps::template case_<crane::obj,
-                                                     crane::fn<crane::obj(
-                                                         crane::obj)>>(
-              [](const auto &, const auto &) { return crane::obj(); },
-              [](crane::obj, crane::obj, crane::obj, const auto &x1,
-                 crane::fn<crane::obj(crane::obj)> x2) {
-                return [=](crane::obj _x0) -> crane::obj {
-                  return Function::Case_sum1(
-                      x1, crane::any_cast<IFun<crane::obj, crane::obj>>(x2),
-                      _x0);
-                };
-              },
-              crane::obj(), crane::obj(), crane::obj(),
-              crane_erase_fn(
-                  [](const GetE &a0)
-                      -> Monads::template stateT<
-                          Nat, crane_carrier_tc_e4b67e60f94a9e42, crane::obj> {
+          crane::any_cast<crane::fn<
+              Itree<BotE<crane::obj>, std::pair<Nat, crane::obj>>(Nat)>>(
+              CategoryOps::template case_<crane::obj,
+                                          crane::fn<crane::obj(crane::obj)>>(
+                  [](const auto &, const auto &) { return crane::obj(); },
+                  [](crane::obj, crane::obj, crane::obj, const auto &x1,
+                     crane::fn<crane::obj(crane::obj)> x2) {
+                    return [=](crane::obj _x0) -> crane::obj {
+                      return Function::Case_sum1(
+                          x1, crane::any_cast<IFun<crane::obj, crane::obj>>(x2),
+                          _x0);
+                    };
+                  },
+                  crane::obj(), crane::obj(), crane::obj(),
+                  crane_erase_fn([](const GetE &a0)
+                                     -> Monads::template stateT<
+                                         Nat, crane_carrier_tc_e4b67e60f94a9e42,
+                                         crane::obj> {
                     return h_get<crane::obj>(crane_convert<GetE>(a0));
                   }),
-              crane_erase_fn([]() {
-                return [](outE _x0) -> Monads::template stateT<
-                                        Nat, crane_carrier_tc_e4b67e60f94a9e42,
-                                        crane::obj> {
-                  return pass<void, crane::obj>(
-                      CategoryOps::template ReSum_inl<
-                          crane::obj, crane::fn<crane::obj(crane::obj)>>(
-                          [](const auto &, const auto &) {
-                            return crane::obj();
-                          },
-                          [](crane::obj, crane::obj, crane::obj, const auto &x1,
-                             crane::fn<crane::obj(crane::obj)> x2) {
-                            return [=](crane::obj _x0) -> crane::obj {
-                              return Function::Cat_IFun(
-                                  x1,
-                                  crane::any_cast<IFun<crane::obj, crane::obj>>(
-                                      x2),
-                                  _x0);
-                            };
-                          },
-                          [](crane::obj, crane::obj) {
-                            return crane_erase_global<Function::Inl_sum1,
-                                                      crane::obj>();
-                          },
-                          crane::obj(), crane::obj(), crane::obj(),
-                          CategoryOps::template ReSum_id<
-                              crane::obj, crane::fn<crane::obj(crane::obj)>>(
-                              [](crane::obj) {
-                                return crane_erase_global<Function::Id_IFun,
-                                                          crane::obj>();
-                              },
-                              crane::obj())),
-                      _x0);
-                };
-              }()))(Sum1<crane::obj, crane::obj, crane::obj>(x)))(x0));
+                  crane_erase_fn([=]() {
+                    return [=](outE _x0)
+                               -> Monads::template stateT<
+                                   Nat, crane_carrier_tc_e4b67e60f94a9e42,
+                                   crane::obj> {
+                      return pass<void, crane::obj>(resum_inl, _x0);
+                    };
+                  }()))(Sum1<crane::obj, crane::obj, crane::obj>(x)))(x0));
     };
   }
 

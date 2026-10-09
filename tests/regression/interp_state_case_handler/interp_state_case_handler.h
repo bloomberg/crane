@@ -5,6 +5,7 @@
 #include "fn.h"
 #include "lazy.h"
 #include "obj.h"
+#include "shared_block.h"
 #include <atomic>
 #include <concepts>
 #include <memory>
@@ -821,113 +822,96 @@ struct InterpStateCaseHandler {
                         crane::obj())),
                 IncE::INC)),
         [](std::monostate) {
+          static const auto resum_inl =
+              crane::immortal(CategoryOps::template ReSum_inl<
+                              crane::obj, crane::fn<crane::obj(crane::obj)>>(
+                  [](const auto &, const auto &) { return crane::obj(); },
+                  [](crane::obj, crane::obj, crane::obj, const auto &x0,
+                     crane::fn<crane::obj(crane::obj)> x1) {
+                    return [=](crane::obj _x0) -> crane::obj {
+                      return Function::Cat_IFun(
+                          x0, crane::any_cast<IFun<crane::obj, crane::obj>>(x1),
+                          _x0);
+                    };
+                  },
+                  [](crane::obj, crane::obj) {
+                    return crane_erase_global<Function::Inl_sum1, crane::obj>();
+                  },
+                  crane::obj(), crane::obj(), crane::obj(),
+                  CategoryOps::template ReSum_id<
+                      crane::obj, crane::fn<crane::obj(crane::obj)>>(
+                      [](crane::obj) {
+                        return crane_erase_global<Function::Id_IFun,
+                                                  crane::obj>();
+                      },
+                      crane::obj())));
+          static const auto resum_inr =
+              crane::immortal(CategoryOps::template ReSum_inr<
+                              crane::obj, crane::fn<crane::obj(crane::obj)>>(
+                  [](const auto &, const auto &) { return crane::obj(); },
+                  [](crane::obj, crane::obj, crane::obj, const auto &x0,
+                     crane::fn<crane::obj(crane::obj)> x1) {
+                    return [=](crane::obj _x0) -> crane::obj {
+                      return Function::Cat_IFun(
+                          x0, crane::any_cast<IFun<crane::obj, crane::obj>>(x1),
+                          _x0);
+                    };
+                  },
+                  [](crane::obj, crane::obj) {
+                    return crane_erase_global<Function::Inr_sum1, crane::obj>();
+                  },
+                  crane::obj(), crane::obj(), crane::obj(),
+                  CategoryOps::template ReSum_id<
+                      crane::obj, crane::fn<crane::obj(crane::obj)>>(
+                      [](crane::obj) {
+                        return crane_erase_global<Function::Id_IFun,
+                                                  crane::obj>();
+                      },
+                      crane::obj())));
+          static const auto resum_inl_1 =
+              crane::immortal(CategoryOps::template ReSum_inl<
+                              crane::obj, crane::fn<crane::obj(crane::obj)>>(
+                  [](const auto &, const auto &) { return crane::obj(); },
+                  [](crane::obj, crane::obj, crane::obj, const auto &x,
+                     crane::fn<crane::obj(crane::obj)> x0) {
+                    return [=](crane::obj _x0) -> crane::obj {
+                      return Function::Cat_IFun(
+                          x, crane::any_cast<IFun<crane::obj, crane::obj>>(x0),
+                          _x0);
+                    };
+                  },
+                  [](crane::obj, crane::obj) {
+                    return crane_erase_global<Function::Inl_sum1, crane::obj>();
+                  },
+                  crane::obj(), crane::obj(), crane::obj(),
+                  CategoryOps::template ReSum_id<
+                      crane::obj, crane::fn<crane::obj(crane::obj)>>(
+                      [](crane::obj) {
+                        return crane_erase_global<Function::Id_IFun,
+                                                  crane::obj>();
+                      },
+                      crane::obj())));
           return ITree::template bind<Sum1<GetE, IncE, crane::obj>, Nat, Nat>(
               ITree::template trigger<Sum1<GetE, IncE, crane::obj>, Nat>(
                   Subevent::template subevent<
-                      GetE, Sum1<GetE, IncE, crane::obj>, Nat>(
-                      CategoryOps::template ReSum_inl<
-                          crane::obj, crane::fn<crane::obj(crane::obj)>>(
-                          [](const auto &, const auto &) {
-                            return crane::obj();
-                          },
-                          [](crane::obj, crane::obj, crane::obj, const auto &x,
-                             crane::fn<crane::obj(crane::obj)> x0) {
-                            return [=](crane::obj _x0) -> crane::obj {
-                              return Function::Cat_IFun(
-                                  x,
-                                  crane::any_cast<IFun<crane::obj, crane::obj>>(
-                                      x0),
-                                  _x0);
-                            };
-                          },
-                          [](crane::obj, crane::obj) {
-                            return crane_erase_global<Function::Inl_sum1,
-                                                      crane::obj>();
-                          },
-                          crane::obj(), crane::obj(), crane::obj(),
-                          CategoryOps::template ReSum_id<
-                              crane::obj, crane::fn<crane::obj(crane::obj)>>(
-                              [](crane::obj) {
-                                return crane_erase_global<Function::Id_IFun,
-                                                          crane::obj>();
-                              },
-                              crane::obj())),
-                      GetE::GET)),
-              [](const Nat &x) {
+                      GetE, Sum1<GetE, IncE, crane::obj>, Nat>(resum_inl_1,
+                                                               GetE::GET)),
+              [=](const Nat &x) {
                 return ITree::template bind<Sum1<GetE, IncE, crane::obj>,
                                             std::monostate, Nat>(
                     ITree::template trigger<Sum1<GetE, IncE, crane::obj>,
                                             std::monostate>(
                         Subevent::template subevent<
                             IncE, Sum1<GetE, IncE, crane::obj>, std::monostate>(
-                            CategoryOps::template ReSum_inr<
-                                crane::obj, crane::fn<crane::obj(crane::obj)>>(
-                                [](const auto &, const auto &) {
-                                  return crane::obj();
-                                },
-                                [](crane::obj, crane::obj, crane::obj,
-                                   const auto &x0,
-                                   crane::fn<crane::obj(crane::obj)> x1) {
-                                  return [=](crane::obj _x0) -> crane::obj {
-                                    return Function::Cat_IFun(
-                                        x0,
-                                        crane::any_cast<
-                                            IFun<crane::obj, crane::obj>>(x1),
-                                        _x0);
-                                  };
-                                },
-                                [](crane::obj, crane::obj) {
-                                  return crane_erase_global<Function::Inr_sum1,
-                                                            crane::obj>();
-                                },
-                                crane::obj(), crane::obj(), crane::obj(),
-                                CategoryOps::template ReSum_id<
-                                    crane::obj,
-                                    crane::fn<crane::obj(crane::obj)>>(
-                                    [](crane::obj) {
-                                      return crane_erase_global<
-                                          Function::Id_IFun, crane::obj>();
-                                    },
-                                    crane::obj())),
-                            IncE::INC)),
+                            resum_inr, IncE::INC)),
                     [=](std::monostate) {
                       return ITree::template bind<Sum1<GetE, IncE, crane::obj>,
                                                   Nat, Nat>(
-                          ITree::template trigger<
-                              Sum1<GetE, IncE, crane::obj>,
-                              Nat>(Subevent::template subevent<
-                                   GetE, Sum1<GetE, IncE, crane::obj>, Nat>(
-                              CategoryOps::template ReSum_inl<
-                                  crane::obj,
-                                  crane::fn<crane::obj(crane::obj)>>(
-                                  [](const auto &, const auto &) {
-                                    return crane::obj();
-                                  },
-                                  [](crane::obj, crane::obj, crane::obj,
-                                     const auto &x0,
-                                     crane::fn<crane::obj(crane::obj)> x1) {
-                                    return [=](crane::obj _x0) -> crane::obj {
-                                      return Function::Cat_IFun(
-                                          x0,
-                                          crane::any_cast<
-                                              IFun<crane::obj, crane::obj>>(x1),
-                                          _x0);
-                                    };
-                                  },
-                                  [](crane::obj, crane::obj) {
-                                    return crane_erase_global<
-                                        Function::Inl_sum1, crane::obj>();
-                                  },
-                                  crane::obj(), crane::obj(), crane::obj(),
-                                  CategoryOps::template ReSum_id<
-                                      crane::obj,
-                                      crane::fn<crane::obj(crane::obj)>>(
-                                      [](crane::obj) {
-                                        return crane_erase_global<
-                                            Function::Id_IFun, crane::obj>();
-                                      },
-                                      crane::obj())),
-                              GetE::GET)),
+                          ITree::template trigger<Sum1<GetE, IncE, crane::obj>,
+                                                  Nat>(
+                              Subevent::template subevent<
+                                  GetE, Sum1<GetE, IncE, crane::obj>, Nat>(
+                                  resum_inl, GetE::GET)),
                           [=](Nat y) {
                             return Itree<
                                 Sum1<GetE, IncE, crane::obj>,

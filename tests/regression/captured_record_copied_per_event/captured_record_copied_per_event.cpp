@@ -20,6 +20,13 @@ CapturedRecordCopiedPerEvent::mk(const Nat &n) {
 
 Itree<CapturedRecordCopiedPerEvent::TickE, std::monostate>
 CapturedRecordCopiedPerEvent::ticks(const Nat &k) {
+  static const auto resum_id = crane::immortal(
+      CategoryOps::template ReSum_id<crane::obj,
+                                     crane::fn<crane::obj(crane::obj)>>(
+          [](crane::obj) {
+            return crane_erase_global<Function::Id_IFun, crane::obj>();
+          },
+          crane::obj()));
   if (std::holds_alternative<typename Nat::O>(k.v())) {
     return Itree<CapturedRecordCopiedPerEvent::TickE, std::monostate>::go(
         ItreeF<CapturedRecordCopiedPerEvent::TickE, std::monostate,
@@ -34,15 +41,7 @@ CapturedRecordCopiedPerEvent::ticks(const Nat &k) {
                                 std::monostate>(
             Subevent::template subevent<CapturedRecordCopiedPerEvent::TickE,
                                         CapturedRecordCopiedPerEvent::TickE,
-                                        std::monostate>(
-                CategoryOps::template ReSum_id<
-                    crane::obj, crane::fn<crane::obj(crane::obj)>>(
-                    [](crane::obj) {
-                      return crane_erase_global<Function::Id_IFun,
-                                                crane::obj>();
-                    },
-                    crane::obj()),
-                TickE::TICK)),
+                                        std::monostate>(resum_id, TickE::TICK)),
         [=](std::monostate) { return ticks(a0_value); });
   }
 }

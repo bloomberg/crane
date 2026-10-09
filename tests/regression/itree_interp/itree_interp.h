@@ -5,6 +5,7 @@
 #include "fn.h"
 #include "lazy.h"
 #include "obj.h"
+#include "shared_block.h"
 #include <atomic>
 #include <concepts>
 #include <memory>
@@ -570,17 +571,17 @@ struct ItreeInterp {
                 crane::obj()),
             GetE::GET)),
         [](const Nat &x) {
+          static const auto resum_id = crane::immortal(
+              CategoryOps::template ReSum_id<crane::obj,
+                                             crane::fn<crane::obj(crane::obj)>>(
+                  [](crane::obj) {
+                    return crane_erase_global<Function::Id_IFun, crane::obj>();
+                  },
+                  crane::obj()));
           return ITree::template bind<GetE, Nat, Nat>(
               ITree::template trigger<GetE, Nat>(
-                  Subevent::template subevent<GetE, GetE, Nat>(
-                      CategoryOps::template ReSum_id<
-                          crane::obj, crane::fn<crane::obj(crane::obj)>>(
-                          [](crane::obj) {
-                            return crane_erase_global<Function::Id_IFun,
-                                                      crane::obj>();
-                          },
-                          crane::obj()),
-                      GetE::GET)),
+                  Subevent::template subevent<GetE, GetE, Nat>(resum_id,
+                                                               GetE::GET)),
               [=](Nat y) {
                 return Itree<GetE, Nat>::lazy_([=]() -> Itree<GetE, Nat> {
                   return Itree<GetE, Nat>::go(

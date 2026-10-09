@@ -4,6 +4,7 @@
 #include "crane_fn.h"
 #include "crane_variant.h"
 #include "obj.h"
+#include "shared_block.h"
 #include "shared_variant.h"
 #include <cstdint>
 #include <memory>

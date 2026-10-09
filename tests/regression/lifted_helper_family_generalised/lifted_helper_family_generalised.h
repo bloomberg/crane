@@ -5,6 +5,7 @@
 #include "fn.h"
 #include "lazy.h"
 #include "obj.h"
+#include "shared_block.h"
 #include <atomic>
 #include <concepts>
 #include <memory>
@@ -726,33 +727,32 @@ struct LiftedHelperFamilyGeneralised {
 
   template <Params _tcI0>
   static function_denotation<typename _tcI0::ptr> puts() {
+    static const auto resum_inr = crane::immortal(
+        CategoryOps::template ReSum_inr<crane::obj,
+                                        crane::fn<crane::obj(crane::obj)>>(
+            [](const auto &, const auto &) { return crane::obj(); },
+            [](crane::obj, crane::obj, crane::obj, const auto &x,
+               crane::fn<crane::obj(crane::obj)> x0) {
+              return [=](crane::obj _x0) -> crane::obj {
+                return Function::Cat_IFun(
+                    x, crane::any_cast<IFun<crane::obj, crane::obj>>(x0), _x0);
+              };
+            },
+            [](crane::obj, crane::obj) {
+              return crane_erase_global<Function::Inr_sum1, crane::obj>();
+            },
+            crane::obj(), crane::obj(), crane::obj(),
+            CategoryOps::template ReSum_id<crane::obj,
+                                           crane::fn<crane::obj(crane::obj)>>(
+                [](crane::obj) {
+                  return crane_erase_global<Function::Id_IFun, crane::obj>();
+                },
+                crane::obj())));
     crane::fn<top<typename _tcI0::ptr, Nat>(Nat)> body =
-        [](const Nat &u) -> top<typename _tcI0::ptr, Sum<Nat, Nat>> {
+        [=](const Nat &u) -> top<typename _tcI0::ptr, Sum<Nat, Nat>> {
       if (std::holds_alternative<typename Nat::O>(u.v())) {
-        return raiseUB<AllE<typename _tcI0::ptr, crane::obj>, Nat>(
-            CategoryOps::template ReSum_inr<crane::obj,
-                                            crane::fn<crane::obj(crane::obj)>>(
-                [](const auto &, const auto &) { return crane::obj(); },
-                [](crane::obj, crane::obj, crane::obj, const auto &x,
-                   crane::fn<crane::obj(crane::obj)> x0) {
-                  return [=](crane::obj _x0) -> crane::obj {
-                    return Function::Cat_IFun(
-                        x, crane::any_cast<IFun<crane::obj, crane::obj>>(x0),
-                        _x0);
-                  };
-                },
-                [](crane::obj, crane::obj) {
-                  return crane_erase_global<Function::Inr_sum1, crane::obj>();
-                },
-                crane::obj(), crane::obj(), crane::obj(),
-                CategoryOps::template ReSum_id<
-                    crane::obj, crane::fn<crane::obj(crane::obj)>>(
-                    [](crane::obj) {
-                      return crane_erase_global<Function::Id_IFun,
-                                                crane::obj>();
-                    },
-                    crane::obj())),
-            Nat::o());
+        return raiseUB<AllE<typename _tcI0::ptr, crane::obj>, Nat>(resum_inr,
+                                                                   Nat::o());
       } else {
         const auto &[a0] = std::get<typename Nat::S>(u.v());
         const Nat &a0_value = *a0;

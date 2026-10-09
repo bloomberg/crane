@@ -70,12 +70,13 @@ let hoist_body body =
       !hoisted
     @ body'
 
-(* A constant outside any function -- in a global's initialiser, which is
-   evaluated once anyway -- is its initialiser. *)
+(* Outside any function -- in a global's initialiser, evaluated once anyway --
+   a constant is its initialiser, unless it is inside a lambda there: a
+   lambda's body is a function's, and its constants are declared at its top. *)
 let rec unmark e =
   match marked e with
   | Some (_, init) -> unmark init
-  | None -> map_expr unmark unmark_stmt Fun.id e
+  | None -> map_expr ~fl:hoist_body unmark unmark_stmt Fun.id e
 
 and unmark_stmt s = map_stmt unmark unmark_stmt Fun.id s
 

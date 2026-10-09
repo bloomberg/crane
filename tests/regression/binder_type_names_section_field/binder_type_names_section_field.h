@@ -5,6 +5,7 @@
 #include "fn.h"
 #include "lazy.h"
 #include "obj.h"
+#include "shared_block.h"
 #include <atomic>
 #include <concepts>
 #include <memory>
@@ -515,18 +516,18 @@ struct BinderTypeNamesSectionField {
   static Monads::template stateT<FusedS<typename _tcI0::ptr>,
                                  crane_carrier_tc_63634b67fb88739b, T1>
   fused(CntE e) {
+    static const auto resum_id = crane::immortal(
+        CategoryOps::template ReSum_id<crane::obj,
+                                       crane::fn<crane::obj(crane::obj)>>(
+            [](crane::obj) {
+              return crane_erase_global<Function::Id_IFun, crane::obj>();
+            },
+            crane::obj()));
     return [=](FusedS<typename _tcI0::ptr> s) {
       return ITree::template bind<CntE, T1,
                                   std::pair<FusedS<typename _tcI0::ptr>, T1>>(
-          ITree::template trigger<
-              CntE, T1>(Subevent::template subevent<CntE, CntE, T1>(
-              CategoryOps::template ReSum_id<crane::obj,
-                                             crane::fn<crane::obj(crane::obj)>>(
-                  [](crane::obj) {
-                    return crane_erase_global<Function::Id_IFun, crane::obj>();
-                  },
-                  crane::obj()),
-              e)),
+          ITree::template trigger<CntE, T1>(
+              Subevent::template subevent<CntE, CntE, T1>(resum_id, e)),
           [=](const T1 &r) {
             return Itree<CntE, std::pair<FusedS<typename _tcI0::ptr>, T1>>::go(
                 ItreeF<CntE, std::pair<FusedS<typename _tcI0::ptr>, T1>,

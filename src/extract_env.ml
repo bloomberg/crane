@@ -803,6 +803,13 @@ let spec_header ?(unit_includes = []) si () =
     else
       h
   in
+  (* [crane::immortal], for a function's constants (see {!Cpp_constants}). *)
+  let h =
+    if Table.demanded Crane_rt.shared_block_header then
+      h ++ mk_include_quoted Crane_rt.shared_block_header ++ fnl ()
+    else
+      h
+  in
   let h =
     if Table.demanded Crane_rt.field_header then
       h ++ mk_include_quoted Crane_rt.field_header ++ fnl ()

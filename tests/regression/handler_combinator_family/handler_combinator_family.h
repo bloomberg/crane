@@ -5,6 +5,7 @@
 #include "fn.h"
 #include "lazy.h"
 #include "obj.h"
+#include "shared_block.h"
 #include <atomic>
 #include <memory>
 #include <stdexcept>
@@ -487,37 +488,33 @@ struct HandlerCombinatorFamily {
   template <typename T1>
   static Monads::template stateT<Nat, crane_carrier_tc_e4b67e60f94a9e42, T1>
   fused_intrinsic(IntrE e) {
+    static const auto resum_inl = crane::immortal(
+        CategoryOps::template ReSum_inl<crane::obj,
+                                        crane::fn<crane::obj(crane::obj)>>(
+            [](const auto &, const auto &) { return crane::obj(); },
+            [](crane::obj, crane::obj, crane::obj, const auto &x,
+               crane::fn<crane::obj(crane::obj)> x0) {
+              return [=](crane::obj _x0) -> crane::obj {
+                return Function::Cat_IFun(
+                    x, crane::any_cast<IFun<crane::obj, crane::obj>>(x0), _x0);
+              };
+            },
+            [](crane::obj, crane::obj) {
+              return crane_erase_global<Function::Inl_sum1, crane::obj>();
+            },
+            crane::obj(), crane::obj(), crane::obj(),
+            CategoryOps::template ReSum_id<crane::obj,
+                                           crane::fn<crane::obj(crane::obj)>>(
+                [](crane::obj) {
+                  return crane_erase_global<Function::Id_IFun, crane::obj>();
+                },
+                crane::obj())));
     return on_mem<T1>(handle_intrinsic<BotE<crane::obj>, T1>(
-        []() {
-          return [](MemE _x0)
+        [=]() {
+          return [=](MemE _x0)
                      -> Monads::template stateT<
                          Nat, crane_carrier_tc_e4b67e60f94a9e42, crane::obj> {
-            return memM_interp<BotE<crane::obj>, crane::obj>(
-                CategoryOps::template ReSum_inl<
-                    crane::obj, crane::fn<crane::obj(crane::obj)>>(
-                    [](const auto &, const auto &) { return crane::obj(); },
-                    [](crane::obj, crane::obj, crane::obj, const auto &x,
-                       crane::fn<crane::obj(crane::obj)> x0) {
-                      return [=](crane::obj _x0) -> crane::obj {
-                        return Function::Cat_IFun(
-                            x,
-                            crane::any_cast<IFun<crane::obj, crane::obj>>(x0),
-                            _x0);
-                      };
-                    },
-                    [](crane::obj, crane::obj) {
-                      return crane_erase_global<Function::Inl_sum1,
-                                                crane::obj>();
-                    },
-                    crane::obj(), crane::obj(), crane::obj(),
-                    CategoryOps::template ReSum_id<
-                        crane::obj, crane::fn<crane::obj(crane::obj)>>(
-                        [](crane::obj) {
-                          return crane_erase_global<Function::Id_IFun,
-                                                    crane::obj>();
-                        },
-                        crane::obj())),
-                _x0);
+            return memM_interp<BotE<crane::obj>, crane::obj>(resum_inl, _x0);
           };
         }(),
         e));

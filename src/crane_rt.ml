@@ -34,6 +34,7 @@ let shared_variant = "crane::shared_variant"
 let shared_box = "crane::shared_box"
 let shared_or = "crane::shared_or_t"
 let shared_variant_header = "shared_variant.h"
+let shared_block_header = "shared_block.h"
 let field = "crane::field"
 let field_header = "field.h"
 

@@ -5,6 +5,7 @@
 #include "fn.h"
 #include "lazy.h"
 #include "obj.h"
+#include "shared_block.h"
 #include <atomic>
 #include <memory>
 #include <optional>
@@ -563,6 +564,27 @@ struct ItreeMrec {
 
   template <typename T1>
   static Itree<Sum1<callE, noE, crane::obj>, T1> body(const callE &e) {
+    static const auto resum_inl = crane::immortal(
+        CategoryOps::template ReSum_inl<crane::obj,
+                                        crane::fn<crane::obj(crane::obj)>>(
+            [](const auto &, const auto &) { return crane::obj(); },
+            [](crane::obj, crane::obj, crane::obj, const auto &x,
+               crane::fn<crane::obj(crane::obj)> x0) {
+              return [=](crane::obj _x0) -> crane::obj {
+                return Function::Cat_IFun(
+                    x, crane::any_cast<IFun<crane::obj, crane::obj>>(x0), _x0);
+              };
+            },
+            [](crane::obj, crane::obj) {
+              return crane_erase_global<Function::Inl_sum1, crane::obj>();
+            },
+            crane::obj(), crane::obj(), crane::obj(),
+            CategoryOps::template ReSum_id<crane::obj,
+                                           crane::fn<crane::obj(crane::obj)>>(
+                [](crane::obj) {
+                  return crane_erase_global<Function::Id_IFun, crane::obj>();
+                },
+                crane::obj())));
     const auto &[a0] = e;
     if (std::holds_alternative<typename Nat::O>(a0.v())) {
       return Itree<Sum1<callE, noE, crane::obj>, T1>::go(
@@ -573,32 +595,8 @@ struct ItreeMrec {
       return ITree::template bind<Sum1<callE, noE, crane::obj>, Nat, Nat>(
           ITree::template trigger<Sum1<callE, noE, crane::obj>, Nat>(
               Subevent::template subevent<callE, Sum1<callE, noE, crane::obj>,
-                                          Nat>(
-                  CategoryOps::template ReSum_inl<
-                      crane::obj, crane::fn<crane::obj(crane::obj)>>(
-                      [](const auto &, const auto &) { return crane::obj(); },
-                      [](crane::obj, crane::obj, crane::obj, const auto &x,
-                         crane::fn<crane::obj(crane::obj)> x0) {
-                        return [=](crane::obj _x0) -> crane::obj {
-                          return Function::Cat_IFun(
-                              x,
-                              crane::any_cast<IFun<crane::obj, crane::obj>>(x0),
-                              _x0);
-                        };
-                      },
-                      [](crane::obj, crane::obj) {
-                        return crane_erase_global<Function::Inl_sum1,
-                                                  crane::obj>();
-                      },
-                      crane::obj(), crane::obj(), crane::obj(),
-                      CategoryOps::template ReSum_id<
-                          crane::obj, crane::fn<crane::obj(crane::obj)>>(
-                          [](crane::obj) {
-                            return crane_erase_global<Function::Id_IFun,
-                                                      crane::obj>();
-                          },
-                          crane::obj())),
-                  callE::call(a00_value))),
+                                          Nat>(resum_inl,
+                                               callE::call(a00_value))),
           [=](Nat r) {
             return Itree<Sum1<callE, noE, crane::obj>, T1>::lazy_(
                 [=]() -> Itree<Sum1<callE, noE, crane::obj>, T1> {

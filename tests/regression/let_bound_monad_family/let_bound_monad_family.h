@@ -5,6 +5,7 @@
 #include "fn.h"
 #include "lazy.h"
 #include "obj.h"
+#include "shared_block.h"
 #include <atomic>
 #include <concepts>
 #include <memory>
@@ -685,31 +686,30 @@ struct LetBoundMonadFamily {
   }
 
   template <typename T1> static Itree<BotE<crane::obj>, T1> h_out(outE e) {
+    static const auto resum_inl = crane::immortal(
+        CategoryOps::template ReSum_inl<crane::obj,
+                                        crane::fn<crane::obj(crane::obj)>>(
+            [](const auto &, const auto &) { return crane::obj(); },
+            [](crane::obj, crane::obj, crane::obj, const auto &x,
+               crane::fn<crane::obj(crane::obj)> x0) {
+              return [=](crane::obj _x0) -> crane::obj {
+                return Function::Cat_IFun(
+                    x, crane::any_cast<IFun<crane::obj, crane::obj>>(x0), _x0);
+              };
+            },
+            [](crane::obj, crane::obj) {
+              return crane_erase_global<Function::Inl_sum1, crane::obj>();
+            },
+            crane::obj(), crane::obj(), crane::obj(),
+            CategoryOps::template ReSum_id<crane::obj,
+                                           crane::fn<crane::obj(crane::obj)>>(
+                [](crane::obj) {
+                  return crane_erase_global<Function::Id_IFun, crane::obj>();
+                },
+                crane::obj())));
     return ITree::template trigger<BotE<crane::obj>, T1>(
         Subevent::template subevent<outE, Sum1<outE, noE, crane::obj>, T1>(
-            CategoryOps::template ReSum_inl<crane::obj,
-                                            crane::fn<crane::obj(crane::obj)>>(
-                [](const auto &, const auto &) { return crane::obj(); },
-                [](crane::obj, crane::obj, crane::obj, const auto &x,
-                   crane::fn<crane::obj(crane::obj)> x0) {
-                  return [=](crane::obj _x0) -> crane::obj {
-                    return Function::Cat_IFun(
-                        x, crane::any_cast<IFun<crane::obj, crane::obj>>(x0),
-                        _x0);
-                  };
-                },
-                [](crane::obj, crane::obj) {
-                  return crane_erase_global<Function::Inl_sum1, crane::obj>();
-                },
-                crane::obj(), crane::obj(), crane::obj(),
-                CategoryOps::template ReSum_id<
-                    crane::obj, crane::fn<crane::obj(crane::obj)>>(
-                    [](crane::obj) {
-                      return crane_erase_global<Function::Id_IFun,
-                                                crane::obj>();
-                    },
-                    crane::obj())),
-            std::move(e)));
+            resum_inl, std::move(e)));
   }
 
   template <typename T1>

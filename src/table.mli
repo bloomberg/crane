@@ -446,6 +446,11 @@ val singleton_method_class : GlobRef.t -> GlobRef.t option
     are only in the environment it is extracted in). *)
 val singleton_instance_class : ?env:Environ.env -> GlobRef.t -> GlobRef.t option
 
+(** Whether [r] builds an instance of some class -- record or singleton,
+    kept or skipped -- read off its Rocq type: the head of what it returns,
+    its arguments applied, is a class. *)
+val builds_instance : ?env:Environ.env -> GlobRef.t -> bool
+
 (** Check if ML type is a typeclass. *)
 val is_typeclass_type : ml_type -> bool
 

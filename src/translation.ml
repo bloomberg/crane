@@ -276,6 +276,16 @@ let is_shared_constant_term e =
     && List.for_all closed ts
   | _ -> false
 
+(* Whether [e], the call [f args], is closed -- no free variable -- and builds
+   a typeclass instance, which its Rocq type says ({!Table.builds_instance}):
+   a singleton class's method is a function, so its instance's ML type is an
+   arrow, not the class. *)
+let is_closed_instance_call f args e =
+  (not (Table.is_custom f))
+  && args <> []
+  && Table.builds_instance f
+  && Escape.IntSet.is_empty (Escape.free_rels 0 e)
+
 (* The name a hoisted constant is declared under (see {!Cpp_constants}): a
    numeral's value where the term is one of Rocq's [positive], [N], [Z] or
    [nat] -- [pos_10], [z_neg_5], [pos] past twenty digits -- and [k]
@@ -1423,6 +1433,19 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
         (Mlutil.named_lams
            (List.rev (List.mapi (fun i t -> (Id (Id.of_string ("a" ^ string_of_int i)), t)) missing))
            call ) )
+  (* A closed call building a typeclass instance -- an event injection
+     [ReSum_inr] composed from instances and closed lambdas, say -- is the
+     same value every time it is evaluated, and evaluating it composes fresh
+     closures.  It is built once and kept, as a closed constructor term is
+     (see {!Cpp_constants}).  An instance is a pure value, so building it
+     once cannot drop an effect; only where it comes out as a call. *)
+  | MLapp (MLglob (f, _), args) as e
+    when (not slot.building_constant) && is_closed_instance_call f args e -> (
+    let built = gen_expr ?expected_ty ~slot:{slot with building_constant = true} env e in
+    match built with
+    | CPPfun_call _ ->
+      mk_call (CPPrt (Crane_rt.Constant (String.lowercase_ascii (Label.to_string (Common.label_of_r f))))) [built]
+    | _ -> built )
   | MLapp (f, args) ->
     (* A partial application is a callable this position may expect at a
        different currying than the callee's own arrows give it, so the slot's
