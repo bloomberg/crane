@@ -11830,3 +11830,14 @@
   (alias runtest)
   (deps single_threaded_heap.t.exe)
   (action (run ./single_threaded_heap.t.exe))))
+
+(subdir guard_compare_shared
+ (rule
+  (targets guard_compare_shared.t.exe)
+  (deps GuardCompareShared.vo guard_compare_shared.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} guard_compare_shared.t.exe guard_compare_shared.cpp guard_compare_shared.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps guard_compare_shared.t.exe)
+  (action (run ./guard_compare_shared.t.exe))))

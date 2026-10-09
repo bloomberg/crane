@@ -525,9 +525,16 @@ let rec qualify_inductives ?(skip = fun _ -> false) = function
 let is_methodified r = Cpp_names.lookup_method_this_pos r <> None
 
 
-let build_guard_compare_stmts n ids =
+(** [body] under the [Crane Guard Compare] of [n], if it has one: where its
+    first two arguments of one type are the same value, the guard's
+    constructor at once, [body] otherwise.  The rest of the body is the
+    guard's [else], not a statement after it, so a loop transformation that
+    turns the [return] into an assignment still skips it.  The same value is
+    the same word for a shared variant -- one block, or one constructor with
+    no fields -- and the same object otherwise. *)
+let guard_compare n ids body =
   match Table.find_guard_compare n with
-  | None -> []
+  | None -> body
   | Some ctor_ref ->
     let strip_wrappers t =
       let rec go = function
@@ -584,10 +591,15 @@ let build_guard_compare_stmts n ids =
             []
         | _ -> mk_cppglob ctor_ref []
       in
-      [ Sif
-          ( CPPbinop (Beq, CPPunop (Uaddr, CPPvar p1), CPPunop (Uaddr, CPPvar p2)),
-            [Sreturn (Some ctor_expr)], [] ) ]
-    | None -> [] )
+      let same =
+        match strip_wrappers (snd (List.find (fun (i, _) -> i = p1) ids)) with
+        | Tglob (r, _, _) when Table.is_shared_variant r ->
+          let v x = mk_call (CPPaccess (Adot, CPPvar x, Id.of_string "v")) [] in
+          CPPaccess_call (Adot, v p1, Id.of_string "same_as", [v p2])
+        | _ -> CPPbinop (Beq, CPPunop (Uaddr, CPPvar p1), CPPunop (Uaddr, CPPvar p2))
+      in
+      [Sif (same, [Sreturn (Some ctor_expr)], body)]
+    | None -> body )
 
 (** Whether [state_id] is threaded through [body] linearly: no statement that
     passes it to a self-call of [fn_ref] reads it a second time, nor is it

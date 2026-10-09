@@ -187,6 +187,10 @@ public:
   // Whether no other value shares this one's block.
   bool unique() const { return !boxed() || hdr()->rc.sole(); }
 
+  // Whether [o] is this very value: the same block, or the same alternative
+  // with no fields -- equal without looking inside ([Crane Guard Compare]).
+  bool same_as(const shared_variant &o) const noexcept { return w_ == o.w_; }
+
   // [crane::release_into]: the block released into [h], this value empty.
   void release_into(pool_detail::thread_heap &h) noexcept {
     if (boxed()) hdr()->release_into(h);

@@ -1243,9 +1243,6 @@ let gen_dfun n b cty ty temps =
           | None -> (ids, b) )
         | _ -> (ids, b)
       in
-      let guard =
-        build_guard_compare_stmts n ids
-      in
       clear_current_type_vars ();
       clear_current_param_types ();
       Dfun
@@ -1253,7 +1250,7 @@ let gen_dfun n b cty ty temps =
            (Ddef
               ( ids,
                 dead_unit_returns_to_abort cod
-                  (erase_returned_fn_values cod (guard @ sigma_asserts @ b)) ) ) ) )
+                  (erase_returned_fn_values cod (guard_compare n ids (sigma_asserts @ b))) ) ) ) )
     else
       (* Eta-expansion: the body 'b' references original params starting at
          MLrel 1. After adding k=|missing| new params to the environment, the
@@ -1295,9 +1292,6 @@ let gen_dfun n b cty ty temps =
       in
       let b = return_captures_by_value b in
       (* let b = List.map forward_fun_args b in *)
-      let guard =
-        build_guard_compare_stmts n ids
-      in
       clear_current_type_vars ();
       clear_current_param_types ();
       Dfun
@@ -1305,7 +1299,7 @@ let gen_dfun n b cty ty temps =
            (Ddef
               ( ids,
                 dead_unit_returns_to_abort cod
-                  (erase_returned_fn_values cod (guard @ sigma_asserts @ b)) ) ) )
+                  (erase_returned_fn_values cod (guard_compare n ids (sigma_asserts @ b))) ) ) )
   in
   tctx := { !tctx with current_cpp_return_type = saved_return_type };
   Table.current_decl_ref := saved_decl_ref;

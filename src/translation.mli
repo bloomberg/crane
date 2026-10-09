@@ -234,14 +234,16 @@ val mk_tt_expr : unit -> cpp_expr
 val qualify_inductives : ?skip:(GlobRef.t -> bool) -> cpp_type -> cpp_type
 
 
-(** Build guard-compare statements for a constructor whose fields alias-check
-    two identical-typed pointer parameters.  A parametric guard constructor
+(** [guard_compare n params body]: [body] under [n]'s [Crane Guard Compare],
+    if it has one -- the guard's constructor where the first two parameters of
+    one type are the same value (the same word for a shared variant, the same
+    object otherwise), [body] in its [else].  A parametric guard constructor
     (e.g. [Compare<T>::eq()]) is instantiated with a compared parameter's own
     type, taken from the parameter list rather than from the enclosing
     function's return type: the latter loses any functor-parameter-dependent
     module qualification that the parameter types retain. *)
-val build_guard_compare_stmts :
-  GlobRef.t -> (Id.t * cpp_type) list -> cpp_stmt list
+val guard_compare :
+  GlobRef.t -> (Id.t * cpp_type) list -> cpp_stmt list -> cpp_stmt list
 
 (** Whether a state parameter is threaded linearly: no statement passing it
     to a self-call reads it again, and no later statement reads it.  The
