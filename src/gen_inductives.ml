@@ -1106,7 +1106,7 @@ let gen_ind_header_v2
           match cpp_ty with
           | Tshared_ptr _ -> cpp_ty
           | _ when (not is_coinductive) && boxes_field ty -> Tshared_ptr bare_cpp_ty
-          | _ when (not is_coinductive) && boxes_param_field ty && bare_cpp_ty <> Tany ->
+          | _ when (not is_coinductive) && boxes_param_field ~owner:name ty && bare_cpp_ty <> Tany ->
             Table.demand_header (Table.Runtime Crane_rt.field_header);
             Tid_external (Crane_rt.field, [bare_cpp_ty])
           | _ -> cpp_ty
@@ -1809,7 +1809,7 @@ let gen_ind_header_v2
                           queued rather than freed in place (shared_block.h):
                           its destruction cannot recurse, so there is nothing
                           to drain. *)
-                       else if boxes_param_field fty then []
+                       else if boxes_param_field ~owner:g fty then []
                        else
                          let fe =
                            access

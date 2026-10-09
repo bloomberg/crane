@@ -11776,6 +11776,17 @@
   (deps shared_variant_basic.t.exe)
   (action (run ./shared_variant_basic.t.exe))))
 
+(subdir shared_variant_param_field
+ (rule
+  (targets shared_variant_param_field.t.exe)
+  (deps SharedVariantParamField.vo shared_variant_param_field.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} shared_variant_param_field.t.exe shared_variant_param_field.cpp shared_variant_param_field.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps shared_variant_param_field.t.exe)
+  (action (run ./shared_variant_param_field.t.exe))))
+
 (subdir shared_variant_reuse
  (rule
   (targets shared_variant_reuse.t.exe)

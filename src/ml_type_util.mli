@@ -391,11 +391,13 @@ val count_real_ml_args : Miniml.ml_ast list -> int
     parameter is not: its type is not known where the field is declared. *)
 val boxes_field : Miniml.ml_type -> bool
 
-(** Under [Crane BoxedFields], whether a constructor field declared at ML
-    type [ty] is one of the inductive's type parameters, stored as
-    [crane::field<T>]: boxed or not per instantiation, by what copying the
-    instantiating type costs. *)
-val boxes_param_field : Miniml.ml_type -> bool
+(** Under [Crane BoxedFields], whether a constructor field of inductive
+    [owner] declared at ML type [ty] is one of the inductive's type
+    parameters, stored as [crane::field<T>]: boxed or not per instantiation,
+    by what copying the instantiating type costs.  Not in a shared variant:
+    its alternative is a block already, shared rather than copied, and a box
+    inside it would be a second allocation sharing nothing more. *)
+val boxes_param_field : owner:Names.GlobRef.t -> Miniml.ml_type -> bool
 
 (** Whether a C++ type is an inductive value type. *)
 val is_inductive_value_type : Minicpp.cpp_type -> bool

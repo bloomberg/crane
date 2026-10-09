@@ -7062,7 +7062,7 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
     match List.nth_opt non_erased_def_site_field_tys i with Some ty -> p ty | None -> false
   in
   let is_boxed_at_def i = def_site_field i boxes_field in
-  let is_param_boxed_at_def i = def_site_field i boxes_param_field in
+  let is_param_boxed_at_def i = def_site_field i (boxes_param_field ~owner:ind_ref) in
   let field_is_uptr i =
     not (Table.is_coinductive ind_ref)
     && ( not (field_recurses_through_boxed_at_def i)
@@ -7915,7 +7915,12 @@ and gen_cpp_case (typ : ml_type) t env pv =
                   match List.nth_opt def_tys i with
                   | Some t when is_uniform_self t -> Some `Child
                   | Some t when Ml_type_util.boxes_field t -> Some `Deref
-                  | Some t when Ml_type_util.boxes_param_field t -> Some `Unbox
+                  | Some t
+                    when Ml_type_util.boxes_param_field
+                           ~owner:(match matched_ctor with
+                                   | GlobRef.ConstructRef (ind, _) -> GlobRef.IndRef ind
+                                   | r -> r)
+                           t -> Some `Unbox
                   | Some t when mentions_family t -> None
                   | Some _ -> Some `Move
                   | None -> None )
