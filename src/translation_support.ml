@@ -1393,8 +1393,12 @@ let calls_eagerly r body =
   in
   try walk body; false with Found -> true
 
-(** [suspend_ctor ty call] is the coinductive constructor application [call]
-    of type [ty], suspended: [ty::lazy_([=]() -> ty { return call; })].
+(** [suspend_ctor ty ctor args] is the coinductive constructor [ctor] of
+    type [ty] applied to [args], suspended:
+    [ty::lazy_([=]() -> typename ty::ctor { return {args}; })].  The thunk
+    yields the constructor's fields rather than a [ty] built by its factory,
+    so forcing builds the value in the suspended cell itself, not in a cell
+    of its own that is then emptied into it.
 
     The only suspension point a coinductive value has, as in OCaml's
     extraction: everything else in a body runs where it is written.  It is
@@ -1402,12 +1406,13 @@ let calls_eagerly r body =
     condition puts every corecursive call under a constructor, so a
     constructor whose arguments are values holds no call to delay, and is
     built directly. *)
-let suspend_ctor ty call =
+let suspend_ctor ty ctor args =
   CPPfun_call
     ( Minicpp.call_sig ~yields:ty ~nargs:1 (),
       CPPqualified_t (ty, Id.of_string "lazy_"),
       of_reversed
-        [mk_lambda [] (Some ty) [Sreturn (Some call)] ~capture:Closure] )
+        [ mk_lambda [] (Some (Tqualified (ty, ctor)))
+            [Sreturn (Some (CPPbraced (call_args args)))] ~capture:Closure ] )
 
 (** Run [f] in a fresh escape-analysis scope, restoring the enclosing one
     afterwards.  Escape analysis runs at several nesting levels (lambdas,

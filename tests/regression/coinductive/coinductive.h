@@ -57,7 +57,7 @@ struct Coinductive {
   static stream smap(const crane::fn<uint64_t(uint64_t)> &f, const stream &s) {
     const auto &[a0, a1] = std::get<typename stream::Cons>(s.v());
     return stream::lazy_(
-        [=]() -> stream { return stream::cons(f(a0), smap(f, a1)); });
+        [=]() -> typename stream::Cons { return {f(a0), smap(f, a1)}; });
   }
 
   static stream interleave(const stream &s1, const stream &s2);

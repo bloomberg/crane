@@ -394,17 +394,14 @@ struct CarrierHolderBeforeAlias {
   static stateT<Nat, crane_carrier_tch<_tcI0>::template c, Nat> get_st(Nat n) {
     return [=, n = std::move(n)](const Nat &s) {
       return Itree<AllE<typename _tcI0::ptr, crane::obj>, std::pair<Nat, Nat>>::
-          lazy_([=]() -> Itree<AllE<typename _tcI0::ptr, crane::obj>,
-                               std::pair<Nat, Nat>> {
-            return Itree<AllE<typename _tcI0::ptr, crane::obj>,
-                         std::pair<Nat, Nat>>::
-                go(ItreeF<
+          lazy_([=]() -> typename Itree<AllE<typename _tcI0::ptr, crane::obj>,
+                                        std::pair<Nat, Nat>>::Go {
+            return {ItreeF<
+                Sum1<memE<typename _tcI0::ptr>, FailE, std::pair<Nat, Nat>>,
+                std::pair<Nat, Nat>,
+                Itree<
                     Sum1<memE<typename _tcI0::ptr>, FailE, std::pair<Nat, Nat>>,
-                    std::pair<Nat, Nat>,
-                    Itree<Sum1<memE<typename _tcI0::ptr>, FailE,
-                               std::pair<Nat, Nat>>,
-                          std::pair<Nat, Nat>>>::retf(std::make_pair(s.add(n),
-                                                                     s)));
+                    std::pair<Nat, Nat>>>::retf(std::make_pair(s.add(n), s))};
           });
     };
   }

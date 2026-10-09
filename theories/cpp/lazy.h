@@ -50,9 +50,10 @@ private:
   // A node holding its thunk in place, rather than in an [fn] of its own:
   // one block where there would be two.
   template <typename F> struct thunk_node;
-  // The state of a [thunk_node] whose thunk has not run: how to run it.
+  // The state of a [thunk_node] whose thunk has not run: how to run it and
+  // store what it produced.
   struct pending {
-    lazy (*run)(node *);
+    void (*run)(node *);
   };
 
   // One address per instantiation, naming it without RTTI.
@@ -79,17 +80,18 @@ public:
   explicit lazy(fn<T()> thunk)
       : p_(new node(std::in_place_index<0>, std::move(thunk))) {}
 
-  // The value of whatever [thunk] returns, once it is asked for: a [lazy],
-  // or a coinductive value, which is one wrapped around its [lazy_cell()].
-  // The thunk is kept in the node ([thunk_node]).
+  // The value of whatever [thunk] returns, once it is asked for: a [lazy];
+  // a coinductive value, which is one wrapped around its [lazy_cell()]; or
+  // what a [T] is built from -- a constructor's fields, which then go
+  // straight into this node, with no cell of their own on the way.  The
+  // thunk is kept in the node ([thunk_node]).
   template <typename F> static lazy delegate(F &&thunk) {
     using R = std::remove_cvref_t<decltype(thunk())>;
-    if constexpr (std::is_same_v<R, lazy>)
-      return lazy(thunk_node<std::decay_t<F>>::make(std::forward<F>(thunk)));
-    else {
+    if constexpr (requires(const R &r) { r.lazy_cell(); }) {
       auto cell = [f = std::forward<F>(thunk)]() -> lazy { return f().lazy_cell(); };
       return lazy(thunk_node<decltype(cell)>::make(std::move(cell)));
-    }
+    } else
+      return lazy(thunk_node<std::decay_t<F>>::make(std::forward<F>(thunk)));
   }
 
   lazy(const lazy &o) noexcept : p_(o.p_) {
@@ -170,14 +172,12 @@ public:
       case 5: {
         pending p = std::get<5>(end->state);
         end->state.template emplace<4>();
-        lazy r;
         try {
-          r = p.run(end);
+          p.run(end);
         } catch (...) {
           end->state.template emplace<5>(p);
           throw;
         }
-        end->adopt(std::move(r));
         continue;
       }
       case 3:
@@ -268,7 +268,8 @@ template <typename T>
 template <typename F>
 struct lazy<T>::thunk_node : lazy<T>::node {
   // Alive while the state is [pending]: run, the thunk is let go of -- and
-  // what it captured -- before its result is stored.
+  // what it captured -- before a [lazy] it produced is stored, and as soon
+  // as a value it produced is built in place.
   union {
     F f;
   };
@@ -283,11 +284,16 @@ struct lazy<T>::thunk_node : lazy<T>::node {
     void *p = pool_detail::this_thread_heap().template take<sizeof(thunk_node)>();
     return ::new (p) thunk_node(std::forward<G>(g));
   }
-  static lazy run_it(node *n) {
+  static void run_it(node *n) {
     auto *self = static_cast<thunk_node *>(n);
-    lazy r = self->f();
-    self->f.~F();
-    return r;
+    if constexpr (std::is_same_v<std::remove_cvref_t<decltype(self->f())>, lazy>) {
+      lazy r = self->f();
+      self->f.~F();
+      n->adopt(std::move(r));
+    } else {
+      n->state.template emplace<2>(self->f());
+      self->f.~F();
+    }
   }
   static void drop(const void *b, pool_detail::thread_heap &h) noexcept {
     auto *self = static_cast<thunk_node *>(

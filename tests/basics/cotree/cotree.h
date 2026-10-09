@@ -284,13 +284,12 @@ struct Cotree {
       requires std::is_invocable_r_v<T1, const F0 &, const A &>
     cotree<T1> comap_cotree(F0 &&g) const {
       const auto &[a0, a1] = std::get<typename cotree<A>::Conode>(this->v());
-      return cotree<T1>::lazy_([=]() -> cotree<T1> {
-        return cotree<T1>::conode(g(a0),
-                                  comap<cotree<A>, cotree<T1>>(
-                                      [=](cotree<A> _x0) -> cotree<T1> {
-                                        return _x0.template comap_cotree<T1>(g);
-                                      },
-                                      a1));
+      return cotree<T1>::lazy_([=]() -> typename cotree<T1>::Conode {
+        return {g(a0), comap<cotree<A>, cotree<T1>>(
+                           [=](cotree<A> _x0) -> cotree<T1> {
+                             return _x0.template comap_cotree<T1>(g);
+                           },
+                           a1)};
       });
     }
   };
@@ -406,8 +405,8 @@ struct Cotree {
       return colist<T2>::conil();
     } else {
       const auto &[a0, a1] = std::get<typename colist<T1>::Cocons>(l.v());
-      return colist<T2>::lazy_([=]() -> colist<T2> {
-        return colist<T2>::cocons(f(a0), comap<T1, T2>(f, a1));
+      return colist<T2>::lazy_([=]() -> typename colist<T2>::Cocons {
+        return {f(a0), comap<T1, T2>(f, a1)};
       });
     }
   }
@@ -420,12 +419,12 @@ struct Cotree {
   static cotree<T1>
   unfold_cotree(const std::type_identity_t<crane::fn<colist<T1>(T1)>> &next,
                 const T1 &init) {
-    return cotree<T1>::lazy_([=]() -> cotree<T1> {
-      return cotree<T1>::conode(init, comap<T1, cotree<T1>>(
-                                          [=](T1 _x0) -> cotree<T1> {
-                                            return unfold_cotree<T1>(next, _x0);
-                                          },
-                                          next(init)));
+    return cotree<T1>::lazy_([=]() -> typename cotree<T1>::Conode {
+      return {init, comap<T1, cotree<T1>>(
+                        [=](T1 _x0) -> cotree<T1> {
+                          return unfold_cotree<T1>(next, _x0);
+                        },
+                        next(init))};
     });
   }
 
@@ -478,19 +477,19 @@ struct Cotree {
   }
 
   static inline const cotree<uint64_t> sample_cotree =
-      cotree<uint64_t>::lazy_([]() -> cotree<uint64_t> {
-        return cotree<uint64_t>::conode(
+      cotree<uint64_t>::lazy_([]() -> typename cotree<uint64_t>::Conode {
+        return {
             UINT64_C(1),
-            colist<cotree<uint64_t>>::lazy_([]() -> colist<cotree<uint64_t>> {
-              return colist<cotree<uint64_t>>::cocons(
-                  singleton_cotree<uint64_t>(UINT64_C(2)),
-                  colist<cotree<uint64_t>>::lazy_(
-                      []() -> colist<cotree<uint64_t>> {
-                        return colist<cotree<uint64_t>>::cocons(
-                            singleton_cotree<uint64_t>(UINT64_C(3)),
-                            colist<cotree<uint64_t>>::conil());
-                      }));
-            }));
+            colist<cotree<uint64_t>>::lazy_(
+                []() -> typename colist<cotree<uint64_t>>::Cocons {
+                  return {
+                      singleton_cotree<uint64_t>(UINT64_C(2)),
+                      colist<cotree<uint64_t>>::lazy_(
+                          []() -> typename colist<cotree<uint64_t>>::Cocons {
+                            return {singleton_cotree<uint64_t>(UINT64_C(3)),
+                                    colist<cotree<uint64_t>>::conil()};
+                          })};
+                })};
       });
   static inline const uint64_t test_root = sample_cotree.root();
   static inline const uint64_t test_doubled_root =

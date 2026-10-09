@@ -2,7 +2,7 @@
 
 crane_::stream crane_::ones() {
   return stream::lazy_(
-      []() -> crane_::stream { return stream::cons(true, ones()); });
+      []() -> typename crane_::stream::Cons { return {true, ones()}; });
 }
 
 bool crane_::head(const crane_::stream &s) {

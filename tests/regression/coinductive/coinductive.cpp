@@ -1,14 +1,14 @@
 #include "coinductive.h"
 
 Coinductive::stream Coinductive::zeros() {
-  return stream::lazy_([]() -> Coinductive::stream {
-    return stream::cons(UINT64_C(0), zeros());
+  return stream::lazy_([]() -> typename Coinductive::stream::Cons {
+    return {UINT64_C(0), zeros()};
   });
 }
 
 Coinductive::stream Coinductive::count_from(uint64_t n) {
-  return stream::lazy_([=]() -> Coinductive::stream {
-    return stream::cons(n, count_from((n + 1)));
+  return stream::lazy_([=]() -> typename Coinductive::stream::Cons {
+    return {n, count_from((n + 1))};
   });
 }
 
@@ -25,14 +25,14 @@ Coinductive::stream Coinductive::tl(const Coinductive::stream &s) {
 Coinductive::stream Coinductive::interleave(const Coinductive::stream &s1,
                                             const Coinductive::stream &s2) {
   const auto &[a0, a1] = std::get<typename Coinductive::stream::Cons>(s1.v());
-  return stream::lazy_([=]() -> Coinductive::stream {
-    return stream::cons(a0, interleave(s2, a1));
+  return stream::lazy_([=]() -> typename Coinductive::stream::Cons {
+    return {a0, interleave(s2, a1)};
   });
 }
 
 Coinductive::tree Coinductive::infinite_tree(uint64_t n) {
-  return tree::lazy_([=]() -> Coinductive::tree {
-    return tree::node(n, infinite_tree((n + UINT64_C(1))),
-                      infinite_tree((n + UINT64_C(2))));
+  return tree::lazy_([=]() -> typename Coinductive::tree::Node {
+    return {n, infinite_tree((n + UINT64_C(1))),
+            infinite_tree((n + UINT64_C(2)))};
   });
 }

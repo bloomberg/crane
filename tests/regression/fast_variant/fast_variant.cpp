@@ -26,8 +26,8 @@ FastVariant::from(uint64_t n) { /// CraneEnter: captures varying parameters for
     _stack.pop_back();
     auto _f = std::move(crane::get<CraneEnter>(_frame));
     uint64_t n = _f.n;
-    _result = stream::lazy_([=]() -> FastVariant::stream {
-      return stream::cons(n, from((n + 1)));
+    _result = stream::lazy_([=]() -> typename FastVariant::stream::Cons {
+      return {n, from((n + 1))};
     });
   }
   return _result;

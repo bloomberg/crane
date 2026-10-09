@@ -465,11 +465,10 @@ struct RunBotHandleExistential {
           Itree<Sum1<outE<typename _tcI0::ptr>, FailE, crane::obj>, T1>>::TauF>(
           _sv.v());
       return Itree<crane::obj, Sum<Run_error, T1>>::lazy_(
-          [=]() -> Itree<crane::obj, Sum<Run_error, T1>> {
-            return Itree<crane::obj, Sum<Run_error, T1>>::go(
-                ItreeF<crane::obj, Sum<Run_error, T1>,
-                       Itree<crane::obj, Sum<Run_error, T1>>>::
-                    tauf(run_bot<_tcI0, T1>(t0)));
+          [=]() -> typename Itree<crane::obj, Sum<Run_error, T1>>::Go {
+            return {ItreeF<crane::obj, Sum<Run_error, T1>,
+                           Itree<crane::obj, Sum<Run_error, T1>>>::
+                        tauf(run_bot<_tcI0, T1>(t0))};
           });
     } else {
       const auto &[x, e0] = std::get<typename ItreeF<
@@ -489,11 +488,10 @@ struct RunBotHandleExistential {
         const auto &[a00] =
             std::get<typename Sum<Run_error, crane::obj>::Inr>(_sv0.v());
         return Itree<crane::obj, Sum<Run_error, T1>>::lazy_(
-            [=]() -> Itree<crane::obj, Sum<Run_error, T1>> {
-              return Itree<crane::obj, Sum<Run_error, T1>>::go(
-                  ItreeF<crane::obj, Sum<Run_error, T1>,
-                         Itree<crane::obj, Sum<Run_error, T1>>>::
-                      tauf(run_bot<_tcI0, T1>(crane_call_erased(e0, a00))));
+            [=]() -> typename Itree<crane::obj, Sum<Run_error, T1>>::Go {
+              return {ItreeF<crane::obj, Sum<Run_error, T1>,
+                             Itree<crane::obj, Sum<Run_error, T1>>>::
+                          tauf(run_bot<_tcI0, T1>(crane_call_erased(e0, a00)))};
             });
       }
     }
@@ -501,10 +499,11 @@ struct RunBotHandleExistential {
 
   template <Params _tcI0>
   static Itree<BotE<typename _tcI0::ptr, crane::obj>, Nat> prog() {
-    return Itree<
-        BotE<typename _tcI0::ptr, crane::obj>,
-        Nat>::lazy_([=]() -> Itree<BotE<typename _tcI0::ptr, crane::obj>, Nat> {
-      return Itree<BotE<typename _tcI0::ptr, crane::obj>, Nat>::go(
+    return Itree<BotE<typename _tcI0::ptr, crane::obj>,
+                 Nat>::lazy_([=]() -> typename Itree<BotE<typename _tcI0::ptr,
+                                                          crane::obj>,
+                                                     Nat>::Go {
+      return {
           ItreeF<
               Sum1<outE<typename _tcI0::ptr>, FailE, crane::obj>, Nat,
               Itree<Sum1<outE<typename _tcI0::ptr>, FailE, crane::obj>, Nat>>::
@@ -526,7 +525,7 @@ struct RunBotHandleExistential {
                                                     FailE, crane::obj>,
                                                Nat>>::
                                       retf(Nat::s(Nat::s(Nat::s(Nat::o())))));
-                   })));
+                   }))};
     });
   }
 

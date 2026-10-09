@@ -19,8 +19,8 @@ CoinductiveTakeOverflow::stream<uint64_t> CoinductiveTakeOverflow::from(
     auto _f = std::move(std::get<CraneEnter>(_frame));
     uint64_t n = _f.n;
     _result = stream<uint64_t>::lazy_(
-        [=]() -> CoinductiveTakeOverflow::stream<uint64_t> {
-          return stream<uint64_t>::cons(n, from((n + 1)));
+        [=]() -> typename CoinductiveTakeOverflow::stream<uint64_t>::Cons {
+          return {n, from((n + 1))};
         });
   }
   return _result;

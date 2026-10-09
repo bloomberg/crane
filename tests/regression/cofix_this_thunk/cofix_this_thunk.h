@@ -174,9 +174,8 @@ public:
 
   template <typename F0> Sseq<A> smap(F0 &&f) const {
     Sseq<A> _self_val = *this;
-    return Sseq<A>::lazy_([=]() -> Sseq<A> {
-      return Sseq<A>::scons(_self_val.double_head(f),
-                            _self_val.stail().smap(f));
+    return Sseq<A>::lazy_([=]() -> typename Sseq<A>::SCons {
+      return {_self_val.double_head(f), _self_val.stail().smap(f)};
     });
   }
 
@@ -184,9 +183,8 @@ public:
     requires std::is_invocable_r_v<A, const F0 &, A>
   Sseq<A> smap_direct(F0 &&f) const {
     Sseq<A> _self_val = *this;
-    return Sseq<A>::lazy_([=]() -> Sseq<A> {
-      return Sseq<A>::scons(f(_self_val.shead()),
-                            _self_val.stail().smap_direct(f));
+    return Sseq<A>::lazy_([=]() -> typename Sseq<A>::SCons {
+      return {f(_self_val.shead()), _self_val.stail().smap_direct(f)};
     });
   }
 
@@ -201,8 +199,8 @@ public:
   }
 
   static Sseq<uint64_t> nats_from(uint64_t n) {
-    return Sseq<uint64_t>::lazy_([=]() -> Sseq<uint64_t> {
-      return Sseq<uint64_t>::scons(n, nats_from((n + 1)));
+    return Sseq<uint64_t>::lazy_([=]() -> typename Sseq<uint64_t>::SCons {
+      return {n, nats_from((n + 1))};
     });
   }
 

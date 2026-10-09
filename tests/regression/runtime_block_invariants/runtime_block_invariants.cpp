@@ -1,8 +1,8 @@
 #include "runtime_block_invariants.h"
 
 RuntimeBlockInvariants::stream RuntimeBlockInvariants::from(uint64_t n) {
-  return stream::lazy_([=]() -> RuntimeBlockInvariants::stream {
-    return stream::scons(n, from((n + 1)));
+  return stream::lazy_([=]() -> typename RuntimeBlockInvariants::stream::SCons {
+    return {n, from((n + 1))};
   });
 }
 

@@ -3354,14 +3354,12 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                   (type_expr, Generated_name.companion (Id.of_string fname) "reuse"),
                 of_reversed args )
           | _ ->
-            let call =
+            if Table.is_coinductive n && not (List.for_all ml_is_value ts) then
+              suspend_ctor type_expr (Id.of_string ctor_struct) (of_reversed args)
+            else
               CPPfun_call
                 ( ctor_sig args, CPPqualified_t (type_expr, Id.of_string fname),
-                  of_reversed args )
-            in
-            if Table.is_coinductive n && not (List.for_all ml_is_value ts) then
-              suspend_ctor type_expr call
-            else call )
+                  of_reversed args ) )
         | _ ->
           (* Fallback for non-Tglob types *)
           let ctor_struct = ctor_struct_name_of_ref r in

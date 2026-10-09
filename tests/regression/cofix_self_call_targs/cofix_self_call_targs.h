@@ -273,9 +273,9 @@ struct CofixSelfCallTargs {
                    typename treeF<T1, T2, tree<T1, T2>>::TauF>(_sv.v())) {
       const auto &[t2] =
           std::get<typename treeF<T1, T2, tree<T1, T2>>::TauF>(_sv.v());
-      return tree<T1, T3>::lazy_([=]() -> tree<T1, T3> {
-        return tree<T1, T3>::go(
-            treeF<T1, T3, tree<T1, T3>>::tauf(subst<T1, T2, T3>(k, kv, t2)));
+      return tree<T1, T3>::lazy_([=]() -> typename tree<T1, T3>::Go {
+        return {
+            treeF<T1, T3, tree<T1, T3>>::tauf(subst<T1, T2, T3>(k, kv, t2))};
       });
     } else {
       return kv(u);

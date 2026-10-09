@@ -202,8 +202,8 @@ struct CoinductiveTakeOverflow {
       auto _f = std::move(std::get<CraneEnter>(_frame));
       const stream<T1> &s = _f.s;
       const auto &[a0, a1] = std::get<typename stream<T1>::Cons>(s.v());
-      _result = stream<T2>::lazy_([=]() -> stream<T2> {
-        return stream<T2>::cons(f(a0), smap<T1, T2>(f, a1));
+      _result = stream<T2>::lazy_([=]() -> typename stream<T2>::Cons {
+        return {f(a0), smap<T1, T2>(f, a1)};
       });
     }
     return _result;

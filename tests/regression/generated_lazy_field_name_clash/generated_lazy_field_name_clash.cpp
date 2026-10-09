@@ -2,9 +2,10 @@
 
 GeneratedLazyFieldNameClash::d_lazyV_
 GeneratedLazyFieldNameClash::true_stream() {
-  return d_lazyV_::lazy_([]() -> GeneratedLazyFieldNameClash::d_lazyV_ {
-    return d_lazyV_::cons(true, true_stream());
-  });
+  return d_lazyV_::lazy_([]() ->
+                         typename GeneratedLazyFieldNameClash::d_lazyV_::Cons {
+                           return {true, true_stream()};
+                         });
 }
 
 bool GeneratedLazyFieldNameClash::head(

@@ -314,11 +314,11 @@ struct ITree {
                      typename ItreeF<T1, T2, Itree<T1, T2>>::TauF>(_sv.v())) {
         const auto &[t0] =
             std::get<typename ItreeF<T1, T2, Itree<T1, T2>>::TauF>(_sv.v());
-        _result = Itree<T1, T3>::lazy_([=]() -> Itree<T1, T3> {
-          return Itree<T1, T3>::go([&]() {
+        _result = Itree<T1, T3>::lazy_([=]() -> typename Itree<T1, T3>::Go {
+          return {[&]() {
             return ItreeF<T1, T3, Itree<T1, T3>>::tauf(
                 subst<T1, T2, T3>(k, t0));
-          }());
+          }()};
         });
       } else {
         const auto &[x, e0] =

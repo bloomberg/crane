@@ -295,11 +295,11 @@ struct StatetItreeReturn {
   static stateT<Nat, crane_carrier_tch<T1>::template c, Nat> get_st(Nat n) {
     return [=, n = std::move(n)](const Nat &s) {
       return Itree<T1, std::pair<Nat, Nat>>::lazy_(
-          [=]() -> Itree<T1, std::pair<Nat, Nat>> {
-            return Itree<T1, std::pair<Nat, Nat>>::go(
-                ItreeF<T1, std::pair<Nat, Nat>,
-                       Itree<T1, std::pair<Nat, Nat>>>::
-                    retf(std::make_pair(s.add(n), s)));
+          [=]() -> typename Itree<T1, std::pair<Nat, Nat>>::Go {
+            return {ItreeF<
+                T1, std::pair<Nat, Nat>,
+                Itree<T1, std::pair<Nat, Nat>>>::retf(std::make_pair(s.add(n),
+                                                                     s))};
           });
     };
   }

@@ -399,19 +399,21 @@ Itree<T2, T3> Interp::translateF(
                  typename ItreeF<T1, T3, Itree<T1, T3>>::TauF>(t0.v())) {
     const auto &[t2] =
         std::get<typename ItreeF<T1, T3, Itree<T1, T3>>::TauF>(t0.v());
-    return Itree<T2, T3>::lazy_([=, rec = std::move(rec)]() -> Itree<T2, T3> {
-      return Itree<T2, T3>::go(ItreeF<T2, T3, Itree<T2, T3>>::tauf(rec(t2)));
-    });
+    return Itree<T2, T3>::lazy_(
+        [=, rec = std::move(rec)]() -> typename Itree<T2, T3>::Go {
+          return {ItreeF<T2, T3, Itree<T2, T3>>::tauf(rec(t2))};
+        });
   } else {
     const auto &[x, e0] =
         std::get<typename ItreeF<T1, T3, Itree<T1, T3>>::VisF>(t0.v());
-    return Itree<T2, T3>::lazy_([=, rec = std::move(rec)]() -> Itree<T2, T3> {
-      return Itree<T2, T3>::go(ItreeF<T2, T3, Itree<T2, T3>>::visf(
-          h(x), crane::fn<Itree<T2, T3>(crane::obj)>(
-                    [=](const crane::obj &x0) -> Itree<T2, T3> {
-                      return rec(crane_call_erased(e0, x0));
-                    })));
-    });
+    return Itree<T2, T3>::lazy_(
+        [=, rec = std::move(rec)]() -> typename Itree<T2, T3>::Go {
+          return {ItreeF<T2, T3, Itree<T2, T3>>::visf(
+              h(x), crane::fn<Itree<T2, T3>(crane::obj)>(
+                        [=](const crane::obj &x0) -> Itree<T2, T3> {
+                          return rec(crane_call_erased(e0, x0));
+                        }))};
+        });
   }
 }
 

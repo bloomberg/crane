@@ -213,8 +213,8 @@ struct LoopifyCoindStream {
       _stack.pop_back();
       auto _f = std::move(std::get<CraneEnter>(_frame));
       const T1 x = std::move(_f.x);
-      _result = stream<T1>::lazy_([=]() -> stream<T1> {
-        return stream<T1>::scons(x, iterate<T1>(f, f(x)));
+      _result = stream<T1>::lazy_([=]() -> typename stream<T1>::Scons {
+        return {x, iterate<T1>(f, f(x))};
       });
     }
     return _result;
@@ -240,8 +240,8 @@ struct LoopifyCoindStream {
       _stack.pop_back();
       auto _f = std::move(std::get<CraneEnter>(_frame));
       const stream<T1> &s = _f.s;
-      _result = stream<T2>::lazy_([=]() -> stream<T2> {
-        return stream<T2>::scons(f(hd<T1>(s)), smap<T1, T2>(f, tl<T1>(s)));
+      _result = stream<T2>::lazy_([=]() -> typename stream<T2>::Scons {
+        return {f(hd<T1>(s)), smap<T1, T2>(f, tl<T1>(s))};
       });
     }
     return _result;
@@ -270,10 +270,9 @@ struct LoopifyCoindStream {
       auto _f = std::move(std::get<CraneEnter>(_frame));
       const stream<T2> &s2 = _f.s2;
       const stream<T1> &s1 = _f.s1;
-      _result = stream<T3>::lazy_([=]() -> stream<T3> {
-        return stream<T3>::scons(
-            f(hd<T1>(s1), hd<T2>(s2)),
-            zipWith<T1, T2, T3>(f, tl<T1>(s1), tl<T2>(s2)));
+      _result = stream<T3>::lazy_([=]() -> typename stream<T3>::Scons {
+        return {f(hd<T1>(s1), hd<T2>(s2)),
+                zipWith<T1, T2, T3>(f, tl<T1>(s1), tl<T2>(s2))};
       });
     }
     return _result;
@@ -300,8 +299,8 @@ struct LoopifyCoindStream {
       auto _f = std::move(std::get<CraneEnter>(_frame));
       const T2 seed = std::move(_f.seed);
       auto [a, s_] = f(seed);
-      _result = stream<T1>::lazy_([=]() -> stream<T1> {
-        return stream<T1>::scons(a, unfold<T1, T2>(f, s_));
+      _result = stream<T1>::lazy_([=]() -> typename stream<T1>::Scons {
+        return {a, unfold<T1, T2>(f, s_)};
       });
     }
     return _result;

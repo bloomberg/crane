@@ -498,9 +498,9 @@ struct ITree {
                    typename ItreeF<T1, T2, Itree<T1, T2>>::TauF>(_sv.v())) {
       const auto &[t0] =
           std::get<typename ItreeF<T1, T2, Itree<T1, T2>>::TauF>(_sv.v());
-      return Itree<T1, T3>::lazy_([=, k = std::move(k)]() -> Itree<T1, T3> {
-        return Itree<T1, T3>::go(
-            ItreeF<T1, T3, Itree<T1, T3>>::tauf(subst<T1, T2, T3>(k, t0)));
+      return Itree<T1, T3>::lazy_([=, k = std::move(
+                                          k)]() -> typename Itree<T1, T3>::Go {
+        return {ItreeF<T1, T3, Itree<T1, T3>>::tauf(subst<T1, T2, T3>(k, t0))};
       });
     } else {
       const auto &[x, e0] =
@@ -528,9 +528,9 @@ struct ITree {
         step(i), [=](const Sum<T3, T2> &lr) -> Itree<T1, T2> {
           if (std::holds_alternative<typename Sum<T3, T2>::Inl>(lr.v())) {
             const auto &[a0] = std::get<typename Sum<T3, T2>::Inl>(lr.v());
-            return Itree<T1, T2>::lazy_([=]() -> Itree<T1, T2> {
-              return Itree<T1, T2>::go(ItreeF<T1, T2, Itree<T1, T2>>::tauf(
-                  iter<T1, T2, T3>(step, a0)));
+            return Itree<T1, T2>::lazy_([=]() -> typename Itree<T1, T2>::Go {
+              return {ItreeF<T1, T2, Itree<T1, T2>>::tauf(
+                  iter<T1, T2, T3>(step, a0))};
             });
           } else {
             const auto &[a0] = std::get<typename Sum<T3, T2>::Inr>(lr.v());
@@ -543,8 +543,8 @@ struct ITree {
   static Itree<T1, T3> map(const std::type_identity_t<crane::fn<T3(T2)>> &f,
                            const Itree<T1, T2> &t) {
     return bind<T1, T2, T3>(t, [=](const T2 &x) {
-      return Itree<T1, T3>::lazy_([=]() -> Itree<T1, T3> {
-        return Itree<T1, T3>::go(ItreeF<T1, T3, Itree<T1, T3>>::retf(f(x)));
+      return Itree<T1, T3>::lazy_([=]() -> typename Itree<T1, T3>::Go {
+        return {ItreeF<T1, T3, Itree<T1, T3>>::retf(f(x))};
       });
     });
   }
@@ -681,18 +681,17 @@ struct ItreeCaseHandler {
                                                    -> Itree<
                                                        Sum1<AE, BE, crane::obj>,
                                                        Nat> {
-                                return Itree<
-                                    Sum1<AE, BE, crane::obj>,
-                                    Nat>::lazy_([=]() -> Itree<Sum1<AE, BE,
-                                                                    crane::obj>,
-                                                               Nat> {
-                                  return Itree<Sum1<AE, BE, crane::obj>, Nat>::
-                                      go(ItreeF<Sum1<AE, BE, crane::obj>, Nat,
-                                                Itree<Sum1<AE, BE, crane::obj>,
-                                                      Nat>>::
-                                             retf(crane::any_cast<Nat>(x).add(
-                                                 crane::any_cast<Nat>(y))));
-                                });
+                                return Itree<Sum1<AE, BE, crane::obj>, Nat>::
+                                    lazy_([=]() -> typename Itree<
+                                                    Sum1<AE, BE, crane::obj>,
+                                                    Nat>::Go {
+                                      return {
+                                          ItreeF<Sum1<AE, BE, crane::obj>, Nat,
+                                                 Itree<Sum1<AE, BE, crane::obj>,
+                                                       Nat>>::
+                                              retf(crane::any_cast<Nat>(x).add(
+                                                  crane::any_cast<Nat>(y)))};
+                                    });
                               })));
                 })));
   }();
