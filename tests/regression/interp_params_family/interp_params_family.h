@@ -816,6 +816,22 @@ struct InterpParamsFamily {
   template <Params _tcI0, typename T1>
   static Itree<OutE<typename _tcI0::ptr, crane::obj>, T1>
   h(InE<typename _tcI0::ptr, T1> x) {
+    static const auto erased_fn =
+        crane::immortal(crane_erase_fn<Itree<crane::obj, crane::obj>>([]() {
+          return
+              [](putE<typename _tcI0::ptr> _x0)
+                  -> Itree<OutE<typename _tcI0::ptr, crane::obj>, crane::obj> {
+                return h_put<_tcI0, crane::obj>(_x0);
+              };
+        }()));
+    static const auto erased_fn_1 =
+        crane::immortal(crane_erase_fn<Itree<crane::obj, crane::obj>>([]() {
+          return
+              [](GetE _x0)
+                  -> Itree<OutE<typename _tcI0::ptr, crane::obj>, crane::obj> {
+                return h_get<_tcI0, crane::obj>(_x0);
+              };
+        }()));
     return CategoryOps::template case_<
         crane::obj, crane::fn<Itree<crane::obj, crane::obj>(crane::obj)>>(
         [](const auto &, const auto &) { return crane::obj(); },
@@ -826,21 +842,8 @@ struct InterpParamsFamily {
                 x0, crane::any_cast<Handler<crane::obj, crane::obj>>(x1), _x0);
           };
         },
-        crane::obj(), crane::obj(), crane::obj(),
-        crane_erase_fn<Itree<crane::obj, crane::obj>>([]() {
-          return
-              [](GetE _x0)
-                  -> Itree<OutE<typename _tcI0::ptr, crane::obj>, crane::obj> {
-                return h_get<_tcI0, crane::obj>(_x0);
-              };
-        }()),
-        crane_erase_fn<Itree<crane::obj, crane::obj>>([]() {
-          return
-              [](putE<typename _tcI0::ptr> _x0)
-                  -> Itree<OutE<typename _tcI0::ptr, crane::obj>, crane::obj> {
-                return h_put<_tcI0, crane::obj>(_x0);
-              };
-        }()))(Sum1<crane::obj, crane::obj, crane::obj>(std::move(x)));
+        crane::obj(), crane::obj(), crane::obj(), erased_fn_1,
+        erased_fn)(Sum1<crane::obj, crane::obj, crane::obj>(std::move(x)));
   }
 
   template <Params _tcI0>

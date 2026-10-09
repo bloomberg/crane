@@ -4,6 +4,7 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
+#include "shared_block.h"
 #include <concepts>
 #include <cstdint>
 #include <stdexcept>
@@ -179,11 +180,11 @@ struct DoubleOppositeWitnessesCase {
 
   template <PreCategory _tcI0>
   static Functor<typename _tcI0::Obj> into_double_opposite_functor() {
-    return Functor<typename _tcI0::Obj>{
-        [](typename _tcI0::Obj x) { return x; },
-        crane_erase_fn<Hom>([](const typename _tcI0::Obj &,
-                               const typename _tcI0::Obj &,
-                               const auto &f) { return f; })};
+    static const auto erased_fn = crane::immortal(crane_erase_fn<Hom>(
+        [](const typename _tcI0::Obj &, const typename _tcI0::Obj &,
+           const auto &f) { return f; }));
+    return Functor<typename _tcI0::Obj>{[](typename _tcI0::Obj x) { return x; },
+                                        erased_fn};
   }
 
   template <PreCategory _tcI0>

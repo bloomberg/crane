@@ -4,6 +4,7 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
+#include "shared_block.h"
 #include <atomic>
 #include <cstdint>
 #include <functional>
@@ -146,12 +147,13 @@ template <SEM S> struct Make {
   /// grammar produces — and now wraps each with crane_erase_fn before storing
   /// it into the pair<std::any,std::any> payload.
   static entry mk_entry(typename S::idx a) {
+    static const auto erased_fn = crane::immortal(
+        crane_erase_fn([](const auto &) { return UINT64_C(0); }));
+    static const auto erased_fn_1 =
+        crane::immortal(crane_erase_fn([](const auto &) { return true; }));
     return SigT<prod2, psem>::existt(
         std::make_pair(std::move(a), List<typename S::idx>::nil()),
-        std::make_pair(
-            crane::obj(crane_erase_fn([](const auto &) { return true; })),
-            crane::obj(
-                crane_erase_fn([](const auto &) { return UINT64_C(0); }))));
+        std::make_pair(crane::obj(erased_fn_1), crane::obj(erased_fn)));
   }
 
   /// Apply the predicate, exactly like Parser.v:113 if p vs' ....

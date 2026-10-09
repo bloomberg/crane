@@ -961,6 +961,18 @@ struct InterpStateCaseHandler {
   template <typename T1>
   static Monads::template stateT<Nat, crane_carrier_tc_73ef07e9f18b86f9, T1>
   h(Sum1<GetE, IncE, T1> x) {
+    static const auto erased_fn = crane::immortal(crane_erase_fn(
+        [](const IncE &a0)
+            -> Monads::template stateT<Nat, crane_carrier_tc_73ef07e9f18b86f9,
+                                       crane::obj> {
+          return h_inc<crane::obj>(crane_convert<IncE>(a0));
+        }));
+    static const auto erased_fn_1 = crane::immortal(crane_erase_fn(
+        [](const GetE &a0)
+            -> Monads::template stateT<Nat, crane_carrier_tc_73ef07e9f18b86f9,
+                                       crane::obj> {
+          return h_get<crane::obj>(crane_convert<GetE>(a0));
+        }));
     return [=, x = std::move(x)](Nat x0) {
       return crane_convert<Itree<noE, std::pair<Nat, T1>>>(
           crane::any_cast<
@@ -976,19 +988,8 @@ struct InterpStateCaseHandler {
                           _x0);
                     };
                   },
-                  crane::obj(), crane::obj(), crane::obj(),
-                  crane_erase_fn([](const GetE &a0)
-                                     -> Monads::template stateT<
-                                         Nat, crane_carrier_tc_73ef07e9f18b86f9,
-                                         crane::obj> {
-                    return h_get<crane::obj>(crane_convert<GetE>(a0));
-                  }),
-                  crane_erase_fn([](const IncE &a0)
-                                     -> Monads::template stateT<
-                                         Nat, crane_carrier_tc_73ef07e9f18b86f9,
-                                         crane::obj> {
-                    return h_inc<crane::obj>(crane_convert<IncE>(a0));
-                  }))(Sum1<crane::obj, crane::obj, crane::obj>(x)))(x0));
+                  crane::obj(), crane::obj(), crane::obj(), erased_fn_1,
+                  erased_fn)(Sum1<crane::obj, crane::obj, crane::obj>(x)))(x0));
     };
   }
 

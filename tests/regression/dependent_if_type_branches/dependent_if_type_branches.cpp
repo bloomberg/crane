@@ -5,9 +5,11 @@
 /// closure is stored through the canonical adapter and the application site
 /// casts it back.
 crane::obj DependentIfTypeBranches::choose(uint64_t n) {
+  static const auto erased_fn = crane::immortal(
+      crane_erase_fn([](uint64_t k) { return (k + UINT64_C(1)); }));
   if (n == UINT64_C(0)) {
     return UINT64_C(7);
   } else {
-    return crane_erase_fn([](uint64_t k) { return (k + UINT64_C(1)); });
+    return erased_fn;
   }
 }

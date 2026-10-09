@@ -4,6 +4,7 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
+#include "shared_block.h"
 #include <atomic>
 #include <functional>
 #include <memory>
@@ -157,19 +158,15 @@ template <SEM S> struct Make {
   using entry = SigT<prod2, psem>;
 
   static entry mk_entry(typename S::idx a) {
+    static const auto erased_fn =
+        crane::immortal(crane_erase_fn([](const auto &tup) {
+          const auto &[_x, _x0] =
+              crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
+          return true;
+        }));
     return SigT<prod2, psem>::existt(
         std::make_pair(std::move(a), List<typename S::idx>::nil()),
-        std::make_pair(
-            crane::obj(crane_erase_fn([](const auto &tup) {
-              const auto &[_x, _x0] =
-                  crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
-              return true;
-            })),
-            crane::obj(crane_erase_fn([](const auto &tup) {
-              const auto &[_x, _x0] =
-                  crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
-              return true;
-            }))));
+        std::make_pair(crane::obj(erased_fn), crane::obj(erased_fn)));
   }
 
   template <typename F1>

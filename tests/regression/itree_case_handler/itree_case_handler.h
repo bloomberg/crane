@@ -5,6 +5,7 @@
 #include "fn.h"
 #include "lazy.h"
 #include "obj.h"
+#include "shared_block.h"
 #include <atomic>
 #include <concepts>
 #include <memory>
@@ -637,6 +638,16 @@ struct ItreeCaseHandler {
   }
 
   template <typename T1> static Itree<noE, T1> h(Sum1<AE, BE, T1> x) {
+    static const auto erased_fn =
+        crane::immortal(crane_erase_fn<Itree<crane::obj, crane::obj>>(
+            [](const BE &a0) -> Itree<noE, crane::obj> {
+              return hb<crane::obj>(crane_convert<BE>(a0));
+            }));
+    static const auto erased_fn_1 =
+        crane::immortal(crane_erase_fn<Itree<crane::obj, crane::obj>>(
+            [](const AE &a0) -> Itree<noE, crane::obj> {
+              return ha<crane::obj>(crane_convert<AE>(a0));
+            }));
     return CategoryOps::template case_<
         crane::obj, crane::fn<Itree<crane::obj, crane::obj>(crane::obj)>>(
         [](const auto &, const auto &) { return crane::obj(); },
@@ -647,15 +658,8 @@ struct ItreeCaseHandler {
                 x0, crane::any_cast<Handler<crane::obj, crane::obj>>(x1), _x0);
           };
         },
-        crane::obj(), crane::obj(), crane::obj(),
-        crane_erase_fn<Itree<crane::obj, crane::obj>>(
-            [](const AE &a0) -> Itree<noE, crane::obj> {
-              return ha<crane::obj>(crane_convert<AE>(a0));
-            }),
-        crane_erase_fn<Itree<crane::obj, crane::obj>>(
-            [](const BE &a0) -> Itree<noE, crane::obj> {
-              return hb<crane::obj>(crane_convert<BE>(a0));
-            }))(Sum1<crane::obj, crane::obj, crane::obj>(std::move(x)));
+        crane::obj(), crane::obj(), crane::obj(), erased_fn_1,
+        erased_fn)(Sum1<crane::obj, crane::obj, crane::obj>(std::move(x)));
   }
 
   static inline const Itree<Sum1<AE, BE, crane::obj>, Nat> prog = []() {

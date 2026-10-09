@@ -16,6 +16,14 @@ let marked e =
     | _ -> None )
   | _ -> None
 
+(* [Some e] where [e] is an erased closure ([crane_erase_fn]) over a closed
+   lambda: like a marked constant, the same value wherever it is evaluated,
+   and an allocation each time. *)
+let closed_erase_fn e =
+  match e with
+  | CPPerase_fn (_, l) when Cpp_print.closed_lambda l -> Some e
+  | _ -> None
+
 (* The identifiers [body] declares or reads, which a constant's name must not
    shadow or be shadowed by. *)
 let names_in body =
@@ -32,8 +40,9 @@ let names_in body =
   !names
 
 (* [body] with each marked constant read from a [static const] declared at
-   its top, one per distinct constant. *)
-let hoist_body body =
+   its top, one per distinct constant.  The initialiser is evaluated once, as
+   a global's is, so it is [unmark]ed. *)
+let rec hoist_body body =
   let hoisted = ref [] in
   (* Names are only needed where there is something to name. *)
   let taken = lazy (ref (names_in body)) in
@@ -48,18 +57,23 @@ let hoist_body body =
     id
   in
   let rec fe e =
+    match closed_erase_fn e with
+    | Some init -> hoisted_var (Id.of_string "erased_fn") init
+    | None ->
     match marked e with
-    | Some (hint, init) ->
-      let id =
-        match List.assoc_opt init !hoisted with
-        | Some id -> id
-        | None ->
-          let id = fresh hint in
-          hoisted := (init, id) :: !hoisted;
-          id
-      in
-      CPPvar id
+    | Some (hint, init) -> hoisted_var hint init
     | None -> map_expr fe fs Fun.id e
+  and hoisted_var hint init =
+    let init = unmark init in
+    let id =
+      match List.assoc_opt init !hoisted with
+      | Some id -> id
+      | None ->
+        let id = fresh hint in
+        hoisted := (init, id) :: !hoisted;
+        id
+    in
+    CPPvar id
   and fs s = map_stmt fe fs Fun.id s in
   let body' = List.map fs body in
   if !hoisted = [] then body
@@ -73,7 +87,7 @@ let hoist_body body =
 (* Outside any function -- in a global's initialiser, evaluated once anyway --
    a constant is its initialiser, unless it is inside a lambda there: a
    lambda's body is a function's, and its constants are declared at its top. *)
-let rec unmark e =
+and unmark e =
   match marked e with
   | Some (_, init) -> unmark init
   | None -> map_expr ~fl:hoist_body unmark unmark_stmt Fun.id e

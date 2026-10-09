@@ -217,6 +217,20 @@ let lambda_needs_capture
   let free_vars = IdSet.diff all_refs bound_vars in
   ((not (IdSet.is_empty free_vars)) || !uses_this, !uses_this)
 
+(** Whether [e] is a lambda that captures nothing, or one such invoked at
+    once with no argument: a value that names no variable of its scope, so
+    the same wherever it is evaluated.  The printer writes [[]] for it, and
+    the C++ compiler holds it to that. *)
+let closed_lambda (e : Minicpp.cpp_expr) : bool =
+  let captureless = function
+    | CPPlambda {cl_params; cl_body; _} -> not (fst (lambda_needs_capture (to_reversed cl_params) cl_body))
+    | _ -> false
+  in
+  match e with
+  | CPPlambda _ -> captureless e
+  | CPPfun_call (_, f, args) -> call_args args = [] && captureless f
+  | _ -> false
+
 (** Check if a cpp_expr contains any lambdas that need capture (have free
     variables). Used to determine if IIFE wrapping is needed for static inline
     initializers. Closed lambdas (with []) don't need IIFE wrapping. *)

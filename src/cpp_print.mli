@@ -106,3 +106,8 @@ val reset_ctor_alias_emitted : unit -> unit
 
 (** Whether [text] spells [name] as a whole identifier. *)
 val mentions_name : string -> string -> bool
+
+(** Whether an expression is a lambda that captures nothing, or one such
+    invoked at once with no argument: the same value wherever it is evaluated
+    (see {!Cpp_constants}). *)
+val closed_lambda : Minicpp.cpp_expr -> bool

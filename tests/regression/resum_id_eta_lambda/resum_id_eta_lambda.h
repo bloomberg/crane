@@ -481,80 +481,96 @@ struct ResumIdEtaLambda {
   template <Params _tcI0, typename T1>
   static stateT<Nat, crane_carrier_tch<_tcI0>::template c, T1>
   h(Sum1<aE<typename _tcI0::ptr>, Sum1<BE, CE, crane::obj>, T1> x) {
-    static const auto resum_inr = crane::immortal(
-        CategoryOps::template ReSum_inr<crane::obj,
-                                        crane::fn<crane::obj(crane::obj)>>(
-            [](const auto &, const auto &) { return crane::obj(); },
-            [](crane::obj, crane::obj, crane::obj, const auto &x1,
-               crane::fn<crane::obj(crane::obj)> x2) {
-              return [=](crane::obj _x0) -> crane::obj {
-                return Function::Cat_IFun(
-                    x1, crane::any_cast<IFun<crane::obj, crane::obj>>(x2), _x0);
-              };
-            },
-            [](crane::obj, crane::obj) {
-              return crane_erase_global<Function::Inr_sum1, crane::obj>();
-            },
-            crane::obj(), crane::obj(), crane::obj(),
-            CategoryOps::template ReSum_inr<crane::obj,
-                                            crane::fn<crane::obj(crane::obj)>>(
-                [](const auto &, const auto &) { return crane::obj(); },
-                [](crane::obj, crane::obj, crane::obj, const auto &x1,
-                   crane::fn<crane::obj(crane::obj)> x2) {
-                  return [=](crane::obj _x0) -> crane::obj {
-                    return Function::Cat_IFun(
-                        x1, crane::any_cast<IFun<crane::obj, crane::obj>>(x2),
-                        _x0);
-                  };
-                },
-                [](crane::obj, crane::obj) {
-                  return crane_erase_global<Function::Inr_sum1, crane::obj>();
-                },
-                crane::obj(), crane::obj(), crane::obj(),
-                CategoryOps::template ReSum_id<
-                    crane::obj, crane::fn<crane::obj(crane::obj)>>(
-                    [](crane::obj) {
-                      return crane_erase_global<Function::Id_IFun,
-                                                crane::obj>();
-                    },
-                    crane::obj()))));
-    static const auto resum_inr_1 = crane::immortal(
-        CategoryOps::template ReSum_inr<crane::obj,
-                                        crane::fn<crane::obj(crane::obj)>>(
-            [](const auto &, const auto &) { return crane::obj(); },
-            [](crane::obj, crane::obj, crane::obj, const auto &x1,
-               crane::fn<crane::obj(crane::obj)> x2) {
-              return [=](crane::obj _x0) -> crane::obj {
-                return Function::Cat_IFun(
-                    x1, crane::any_cast<IFun<crane::obj, crane::obj>>(x2), _x0);
-              };
-            },
-            [](crane::obj, crane::obj) {
-              return crane_erase_global<Function::Inr_sum1, crane::obj>();
-            },
-            crane::obj(), crane::obj(), crane::obj(),
-            CategoryOps::template ReSum_inl<crane::obj,
-                                            crane::fn<crane::obj(crane::obj)>>(
-                [](const auto &, const auto &) { return crane::obj(); },
-                [](crane::obj, crane::obj, crane::obj, const auto &x1,
-                   crane::fn<crane::obj(crane::obj)> x2) {
-                  return [=](crane::obj _x0) -> crane::obj {
-                    return Function::Cat_IFun(
-                        x1, crane::any_cast<IFun<crane::obj, crane::obj>>(x2),
-                        _x0);
-                  };
-                },
-                [](crane::obj, crane::obj) {
-                  return crane_erase_global<Function::Inl_sum1, crane::obj>();
-                },
-                crane::obj(), crane::obj(), crane::obj(),
-                CategoryOps::template ReSum_id<
-                    crane::obj, crane::fn<crane::obj(crane::obj)>>(
-                    [](crane::obj) {
-                      return crane_erase_global<Function::Id_IFun,
-                                                crane::obj>();
-                    },
-                    crane::obj()))));
+    static const auto erased_fn = crane::immortal(crane_erase_fn([]() {
+      static const auto resum_inr = crane::immortal(
+          CategoryOps::template ReSum_inr<crane::obj,
+                                          crane::fn<crane::obj(crane::obj)>>(
+              [](const auto &, const auto &) { return crane::obj(); },
+              [](crane::obj, crane::obj, crane::obj, const auto &x1,
+                 crane::fn<crane::obj(crane::obj)> x2) {
+                return [=](crane::obj _x0) -> crane::obj {
+                  return Function::Cat_IFun(
+                      x1, crane::any_cast<IFun<crane::obj, crane::obj>>(x2),
+                      _x0);
+                };
+              },
+              [](crane::obj, crane::obj) {
+                return crane_erase_global<Function::Inr_sum1, crane::obj>();
+              },
+              crane::obj(), crane::obj(), crane::obj(),
+              CategoryOps::template ReSum_inr<
+                  crane::obj, crane::fn<crane::obj(crane::obj)>>(
+                  [](const auto &, const auto &) { return crane::obj(); },
+                  [](crane::obj, crane::obj, crane::obj, const auto &x1,
+                     crane::fn<crane::obj(crane::obj)> x2) {
+                    return [=](crane::obj _x0) -> crane::obj {
+                      return Function::Cat_IFun(
+                          x1, crane::any_cast<IFun<crane::obj, crane::obj>>(x2),
+                          _x0);
+                    };
+                  },
+                  [](crane::obj, crane::obj) {
+                    return crane_erase_global<Function::Inr_sum1, crane::obj>();
+                  },
+                  crane::obj(), crane::obj(), crane::obj(),
+                  CategoryOps::template ReSum_id<
+                      crane::obj, crane::fn<crane::obj(crane::obj)>>(
+                      [](crane::obj) {
+                        return crane_erase_global<Function::Id_IFun,
+                                                  crane::obj>();
+                      },
+                      crane::obj()))));
+      return
+          [=](CE _x0)
+              -> stateT<Nat, crane_carrier_tch<_tcI0>::template c, crane::obj> {
+            return fused_trigger<_tcI0, void, crane::obj>(resum_inr, _x0);
+          };
+    }()));
+    static const auto erased_fn_1 = crane::immortal(crane_erase_fn([]() {
+      static const auto resum_inr = crane::immortal(
+          CategoryOps::template ReSum_inr<crane::obj,
+                                          crane::fn<crane::obj(crane::obj)>>(
+              [](const auto &, const auto &) { return crane::obj(); },
+              [](crane::obj, crane::obj, crane::obj, const auto &x1,
+                 crane::fn<crane::obj(crane::obj)> x2) {
+                return [=](crane::obj _x0) -> crane::obj {
+                  return Function::Cat_IFun(
+                      x1, crane::any_cast<IFun<crane::obj, crane::obj>>(x2),
+                      _x0);
+                };
+              },
+              [](crane::obj, crane::obj) {
+                return crane_erase_global<Function::Inr_sum1, crane::obj>();
+              },
+              crane::obj(), crane::obj(), crane::obj(),
+              CategoryOps::template ReSum_inl<
+                  crane::obj, crane::fn<crane::obj(crane::obj)>>(
+                  [](const auto &, const auto &) { return crane::obj(); },
+                  [](crane::obj, crane::obj, crane::obj, const auto &x1,
+                     crane::fn<crane::obj(crane::obj)> x2) {
+                    return [=](crane::obj _x0) -> crane::obj {
+                      return Function::Cat_IFun(
+                          x1, crane::any_cast<IFun<crane::obj, crane::obj>>(x2),
+                          _x0);
+                    };
+                  },
+                  [](crane::obj, crane::obj) {
+                    return crane_erase_global<Function::Inl_sum1, crane::obj>();
+                  },
+                  crane::obj(), crane::obj(), crane::obj(),
+                  CategoryOps::template ReSum_id<
+                      crane::obj, crane::fn<crane::obj(crane::obj)>>(
+                      [](crane::obj) {
+                        return crane_erase_global<Function::Id_IFun,
+                                                  crane::obj>();
+                      },
+                      crane::obj()))));
+      return
+          [=](BE _x0)
+              -> stateT<Nat, crane_carrier_tch<_tcI0>::template c, crane::obj> {
+            return fused_trigger<_tcI0, void, crane::obj>(resum_inr, _x0);
+          };
+    }()));
     static const auto resum_inl = crane::immortal(
         CategoryOps::template ReSum_inl<crane::obj,
                                         crane::fn<crane::obj(crane::obj)>>(
@@ -614,27 +630,9 @@ struct ResumIdEtaLambda {
                               _x0);
                         };
                       },
-                      crane::obj(), crane::obj(), crane::obj(),
-                      crane_erase_fn([=]() {
-                        return
-                            [=](BE _x0)
-                                -> stateT<Nat,
-                                          crane_carrier_tch<_tcI0>::template c,
-                                          crane::obj> {
-                              return fused_trigger<_tcI0, void, crane::obj>(
-                                  resum_inr_1, _x0);
-                            };
-                      }()),
-                      crane_erase_fn([=]() {
-                        return
-                            [=](CE _x0)
-                                -> stateT<Nat,
-                                          crane_carrier_tch<_tcI0>::template c,
-                                          crane::obj> {
-                              return fused_trigger<_tcI0, void, crane::obj>(
-                                  resum_inr, _x0);
-                            };
-                      }())))(Sum1<crane::obj, crane::obj, crane::obj>(x)))(x0));
+                      crane::obj(), crane::obj(), crane::obj(), erased_fn_1,
+                      erased_fn))(Sum1<crane::obj, crane::obj, crane::obj>(x)))(
+              x0));
     };
   }
 

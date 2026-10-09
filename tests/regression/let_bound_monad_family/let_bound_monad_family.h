@@ -714,6 +714,16 @@ struct LetBoundMonadFamily {
 
   template <typename T1>
   static Itree<BotE<crane::obj>, T1> h(Sum1<getE, outE, T1> x) {
+    static const auto erased_fn =
+        crane::immortal(crane_erase_fn<Itree<crane::obj, crane::obj>>(
+            [](const outE &a0) -> Itree<BotE<crane::obj>, crane::obj> {
+              return h_out<crane::obj>(crane_convert<outE>(a0));
+            }));
+    static const auto erased_fn_1 =
+        crane::immortal(crane_erase_fn<Itree<crane::obj, crane::obj>>(
+            [](const getE &a0) -> Itree<BotE<crane::obj>, crane::obj> {
+              return h_get<crane::obj>(crane_convert<getE>(a0));
+            }));
     return CategoryOps::template case_<
         crane::obj, crane::fn<Itree<crane::obj, crane::obj>(crane::obj)>>(
         [](const auto &, const auto &) { return crane::obj(); },
@@ -724,15 +734,8 @@ struct LetBoundMonadFamily {
                 x0, crane::any_cast<Handler<crane::obj, crane::obj>>(x1), _x0);
           };
         },
-        crane::obj(), crane::obj(), crane::obj(),
-        crane_erase_fn<Itree<crane::obj, crane::obj>>(
-            [](const getE &a0) -> Itree<BotE<crane::obj>, crane::obj> {
-              return h_get<crane::obj>(crane_convert<getE>(a0));
-            }),
-        crane_erase_fn<Itree<crane::obj, crane::obj>>(
-            [](const outE &a0) -> Itree<BotE<crane::obj>, crane::obj> {
-              return h_out<crane::obj>(crane_convert<outE>(a0));
-            }))(Sum1<crane::obj, crane::obj, crane::obj>(std::move(x)));
+        crane::obj(), crane::obj(), crane::obj(), erased_fn_1,
+        erased_fn)(Sum1<crane::obj, crane::obj, crane::obj>(std::move(x)));
   }
 
   static Itree<BotE<crane::obj>, Nat>
