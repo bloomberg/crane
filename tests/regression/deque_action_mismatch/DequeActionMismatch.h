@@ -36,7 +36,7 @@ const action cons_action =
         }));
 Specif::SigT<Tag, sem_ty>
 apply_action(const Specif::SigT<Tag, crane::fn<crane::obj(crane::obj)>> &a,
-             Specif::SigT<Tag, sem_ty> v);
+             const Specif::SigT<Tag, sem_ty> &v);
 const Specif::SigT<Tag, sem_ty> chain = []() {
   Specif::SigT<Tag, sem_ty> v0 = Specif::template SigT<Tag, sem_ty>::existt(
       Tag::TAGLIST, std::deque<crane::obj>{});

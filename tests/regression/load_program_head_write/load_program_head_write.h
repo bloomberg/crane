@@ -104,7 +104,8 @@ struct LoadProgramHeadWrite {
     bool prom_enable;
   };
 
-  static List<uint64_t> update_nth(uint64_t n, uint64_t x, List<uint64_t> l);
+  static List<uint64_t> update_nth(uint64_t n, uint64_t x,
+                                   const List<uint64_t> &l);
   static state set_prom_params(const state &s, uint64_t addr, uint64_t data,
                                bool enable);
   static state execute_wpm(const state &s);

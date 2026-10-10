@@ -1928,6 +1928,12 @@ and pp_cpp_expr env args t =
       ++ args_s
       ++ str ")"
     | None -> pp_cpp_expr env args (CPPglob (n, tys, None)) ++ str "()" )
+  | CPPfun_call (_, CPPrt Crane_rt.Share_child, {rev = [arg]}) -> (
+    (* A field read out of a matched value goes to the new node as the cell
+       it is in; anything else is the value itself. *)
+    match arg with
+    | CPPderef p -> str (Crane_rt.name Crane_rt.Share_child) ++ str "(" ++ pp_cpp_expr env args p ++ str ")"
+    | _ -> pp_cpp_expr env args arg )
   | CPPfun_call (_, CPPderef e, ts) ->
     (* Call through a dereferenced pointer: deref + invoke pattern.
        Arises from the shared_ptr fixpoint pattern where recursive calls
@@ -2371,7 +2377,8 @@ and pp_cpp_expr env args t =
      | Crane_rt.Apply2 -> Table.demand_header (Table.Runtime Crane_rt.fn_header)
      | Crane_rt.Constant _ | Crane_rt.Immortal ->
        Table.demand_header (Table.Runtime Crane_rt.shared_block_header)
-     | Crane_rt.Make_rc_reusing_unchecked | Crane_rt.Reuse_step -> ());
+     | Crane_rt.Make_rc_reusing_unchecked | Crane_rt.Reuse_step
+     | Crane_rt.Share_child -> ());
     str (Crane_rt.name h)
   | CPPnumeral (r, n) -> (
     match Table.get_numeral_info r with

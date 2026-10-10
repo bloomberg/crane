@@ -281,19 +281,21 @@ struct LoopifyPolymorphic {
     return std::move(*_root);
   }
 
-  template <typename T1> static List<T1> poly_drop(uint64_t n, List<T1> l) {
-    List<T1> _loop_l = std::move(l);
+  template <typename T1>
+  static List<T1> poly_drop(uint64_t n, const List<T1> &l) {
+    const List<T1> *_loop_l = &l;
     uint64_t _loop_n = n;
     while (true) {
       if (_loop_n <= 0) {
-        return _loop_l;
+        return *_loop_l;
       } else {
         uint64_t n_ = _loop_n - 1;
-        if (std::holds_alternative<typename List<T1>::Nil>(_loop_l.v_mut())) {
+        if (std::holds_alternative<typename List<T1>::Nil>(_loop_l->v())) {
           return List<T1>::nil();
         } else {
-          auto &[a0, a1] = std::get<typename List<T1>::Cons>(_loop_l.v_mut());
-          _loop_l = List<T1>(*a1);
+          const auto &[a0, a1] =
+              std::get<typename List<T1>::Cons>(_loop_l->v());
+          _loop_l = crane_raw(a1);
           _loop_n = n_;
         }
       }

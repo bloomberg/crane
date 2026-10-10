@@ -68,21 +68,20 @@ LoopifyListWindows::map_cons_helper(uint64_t x,
   return std::move(*_root);
 }
 
-List<uint64_t> LoopifyListWindows::drop(uint64_t m, List<uint64_t> xs) {
-  List<uint64_t> _loop_xs = std::move(xs);
+List<uint64_t> LoopifyListWindows::drop(uint64_t m, const List<uint64_t> &xs) {
+  const List<uint64_t> *_loop_xs = &xs;
   uint64_t _loop_m = m;
   while (true) {
     if (_loop_m <= 0) {
-      return _loop_xs;
+      return *_loop_xs;
     } else {
       uint64_t m_ = _loop_m - 1;
-      if (std::holds_alternative<typename List<uint64_t>::Nil>(
-              _loop_xs.v_mut())) {
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_xs->v())) {
         return List<uint64_t>::nil();
       } else {
-        auto &[a0, a1] =
-            std::get<typename List<uint64_t>::Cons>(_loop_xs.v_mut());
-        _loop_xs = List<uint64_t>(*a1);
+        const auto &[a0, a1] =
+            std::get<typename List<uint64_t>::Cons>(_loop_xs->v());
+        _loop_xs = crane_raw(a1);
         _loop_m = m_;
       }
     }
@@ -402,10 +401,10 @@ List<List<uint64_t>> LoopifyListWindows::windows(uint64_t n,
 }
 
 List<List<uint64_t>> LoopifyListWindows::chunks_fuel(uint64_t fuel, uint64_t n,
-                                                     List<uint64_t> l) {
+                                                     const List<uint64_t> &l) {
   std::optional<List<List<uint64_t>>> _root{};
   std::shared_ptr<List<List<uint64_t>>> *_write = nullptr;
-  List<uint64_t> _loop_l = std::move(l);
+  List<uint64_t> _loop_l = l;
   uint64_t _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
@@ -416,8 +415,7 @@ List<List<uint64_t>> LoopifyListWindows::chunks_fuel(uint64_t fuel, uint64_t n,
       break;
     } else {
       uint64_t fuel_ = _loop_fuel - 1;
-      if (std::holds_alternative<typename List<uint64_t>::Nil>(
-              _loop_l.v_mut())) {
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l.v())) {
         auto _value = List<List<uint64_t>>::nil();
         (_write ? *(*_write = std::make_shared<List<List<uint64_t>>>(
                         std::move(_value)))
@@ -443,7 +441,8 @@ List<List<uint64_t>> LoopifyListWindows::chunks_fuel(uint64_t fuel, uint64_t n,
   return std::move(*_root);
 }
 
-List<List<uint64_t>> LoopifyListWindows::chunks(uint64_t n, List<uint64_t> l) {
+List<List<uint64_t>> LoopifyListWindows::chunks(uint64_t n,
+                                                const List<uint64_t> &l) {
   return chunks_fuel(len(l), n, l);
 }
 

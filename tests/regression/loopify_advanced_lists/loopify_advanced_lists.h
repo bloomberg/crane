@@ -126,7 +126,8 @@ struct LoopifyAdvancedLists {
   static List<uint64_t> pairwise_sum(const List<uint64_t> &l);
   static List<std::pair<uint64_t, uint64_t>>
   group_pairs(const List<uint64_t> &l);
-  static List<uint64_t> interleave(List<uint64_t> l1, List<uint64_t> l2);
+  static List<uint64_t> interleave(const List<uint64_t> &l1,
+                                   const List<uint64_t> &l2);
   static List<uint64_t> concat_lists(const List<List<uint64_t>> &ll);
 
   template <typename F0>

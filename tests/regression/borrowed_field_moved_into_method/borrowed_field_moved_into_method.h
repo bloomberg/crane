@@ -367,7 +367,7 @@ struct Pos {
 struct BinNat {
   static N succ_double(const N &x);
   static N double_(const N &n);
-  static N sub(N n, const N &m);
+  static N sub(const N &n, const N &m);
   static Comparison compare(const N &n, const N &m);
   static bool leb(const N &x, const N &y);
   static std::pair<N, N> pos_div_eucl(const Positive &a, const N &b);
@@ -381,7 +381,7 @@ struct BinInt {
   static Z succ_double(const Z &x);
   static Z pred_double(const Z &x);
   static Z pos_sub(const Positive &x, const Positive &y);
-  static Z add(Z x, Z y);
+  static Z add(const Z &x, const Z &y);
   static Z mul(const Z &x, const Z &y);
   static bool eqb(const Z &x, const Z &y);
   static Z of_nat(const Nat &n);
@@ -456,6 +456,14 @@ struct BfmTypes {
 
     // MANIPULATORS
     ~ty() {
+      if (std::holds_alternative<TB>(v_mut())) {
+        return;
+      }
+      if (auto *_alt = std::get_if<TA>(&v_mut())) {
+        if (!(_alt->t && _alt->t.use_count() == 1)) {
+          return;
+        }
+      }
       crane::small_vector<std::shared_ptr<ty>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<TS>(&_v)) {
@@ -513,10 +521,10 @@ concept Size = requires {
 
 struct BorrowedFieldMovedIntoMethod {
   template <Size _tcI0>
-  static std::optional<Z> walk(const BfmTypes::ty &t, Z off,
+  static std::optional<Z> walk(const BfmTypes::ty &t, const Z &off,
                                const List<Nat> &vs) {
     if (std::holds_alternative<typename List<Nat>::Nil>(vs.v())) {
-      return std::make_optional<Z>(std::move(off));
+      return std::make_optional<Z>(off);
     } else {
       const auto &[a0, a1] = std::get<typename List<Nat>::Cons>(vs.v());
       Z k = BinInt::of_nat(a0);
@@ -525,9 +533,8 @@ struct BorrowedFieldMovedIntoMethod {
             std::get<typename BfmTypes::ty::TA>(t.v());
         return walk<_tcI0>(
             *t0,
-            BinInt::add(
-                std::move(off),
-                BinInt::mul(std::move(k), BinInt::of_N(_tcI0::size_of(*t0)))),
+            BinInt::add(off, BinInt::mul(std::move(k),
+                                         BinInt::of_N(_tcI0::size_of(*t0)))),
             *a1);
       } else {
         return std::optional<Z>();

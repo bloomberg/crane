@@ -123,8 +123,8 @@ public:
 struct LoopifyAlgorithms {
   static uint64_t len_impl(const List<uint64_t> &l);
   /// sieve l Sieve of Eratosthenes - filters out multiples.
-  static List<uint64_t> sieve_fuel(uint64_t fuel, List<uint64_t> l);
-  static List<uint64_t> sieve(List<uint64_t> l);
+  static List<uint64_t> sieve_fuel(uint64_t fuel, const List<uint64_t> &l);
+  static List<uint64_t> sieve(const List<uint64_t> &l);
   /// run_length_encode l encodes consecutive runs: 1,1,2,3,3,3 ->
   /// (1,2),(2,1),(3,3).
   static List<std::pair<uint64_t, uint64_t>>
@@ -135,8 +135,8 @@ struct LoopifyAlgorithms {
   static List<uint64_t> differences(const List<uint64_t> &l);
   /// rotate_left n l rotates list left by n positions.
   static List<uint64_t> rotate_left_fuel(uint64_t fuel, uint64_t n,
-                                         List<uint64_t> l);
-  static List<uint64_t> rotate_left(uint64_t n, List<uint64_t> l);
+                                         const List<uint64_t> &l);
+  static List<uint64_t> rotate_left(uint64_t n, const List<uint64_t> &l);
   /// nub l removes ALL duplicates (not just consecutive): 1,2,1,3,2 -> 1,2,3.
   static List<uint64_t> nub_aux(const List<uint64_t> &l, uint64_t fuel);
   static List<uint64_t> nub(const List<uint64_t> &l);

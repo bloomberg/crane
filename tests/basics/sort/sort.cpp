@@ -33,15 +33,16 @@ Sig<List<uint64_t>> Sort::isort(const List<uint64_t> &l) {
 
 List<uint64_t> Sort::merge(List<uint64_t> l1, const List<uint64_t> &l2) {
   auto merge_aux_impl = [&](auto &_self_merge_aux,
-                            List<uint64_t> l3) -> List<uint64_t> {
+                            const List<uint64_t> &l3) -> List<uint64_t> {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(l1.v())) {
       return l3;
     } else {
       const auto &[a0, a2] = std::get<typename List<uint64_t>::Cons>(l1.v());
-      if (std::holds_alternative<typename List<uint64_t>::Nil>(l3.v_mut())) {
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(l3.v())) {
         return l1;
       } else {
-        auto &[a00, a10] = std::get<typename List<uint64_t>::Cons>(l3.v_mut());
+        const auto &[a00, a10] =
+            std::get<typename List<uint64_t>::Cons>(l3.v());
         if (a0 <= a00) {
           return List<uint64_t>::cons(a0, merge(*a2, l3));
         } else {
@@ -52,8 +53,8 @@ List<uint64_t> Sort::merge(List<uint64_t> l1, const List<uint64_t> &l2) {
     }
   };
   {
-    List<uint64_t> _lc1_l3 = l2;
-    return merge_aux_impl(merge_aux_impl, std::move(_lc1_l3));
+    const List<uint64_t> &_lc1_l3 = l2;
+    return merge_aux_impl(merge_aux_impl, _lc1_l3);
   }
 }
 

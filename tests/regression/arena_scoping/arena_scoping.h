@@ -155,6 +155,15 @@ public:
 
   // MANIPULATORS
   ~Tree() {
+    if (std::holds_alternative<Leaf>(v_mut())) {
+      return;
+    }
+    if (auto *_alt = std::get_if<Node>(&v_mut())) {
+      if (!((_alt->t1 && _alt->t1.use_count() == 1) ||
+            (_alt->t2 && _alt->t2.use_count() == 1))) {
+        return;
+      }
+    }
     crane::small_vector<std::shared_ptr<Tree<A>>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<Node>(&_v)) {

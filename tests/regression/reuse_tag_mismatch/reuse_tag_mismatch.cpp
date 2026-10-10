@@ -7,17 +7,18 @@
 /// - Both have arity 1
 /// But GoUp and GoDown are DIFFERENT constructors.
 ReuseTagMismatch::direction
-ReuseTagMismatch::id_or_flip(ReuseTagMismatch::direction d, bool flip_flag) {
+ReuseTagMismatch::id_or_flip(const ReuseTagMismatch::direction &d,
+                             bool flip_flag) {
   if (flip_flag) {
     if (std::holds_alternative<typename ReuseTagMismatch::direction::GoUp>(
-            d.v_mut())) {
-      auto &[a0] =
-          std::get<typename ReuseTagMismatch::direction::GoUp>(d.v_mut());
-      return direction::godown(std::move(a0));
+            d.v())) {
+      const auto &[a0] =
+          std::get<typename ReuseTagMismatch::direction::GoUp>(d.v());
+      return direction::godown(a0);
     } else {
-      auto &[a0] =
-          std::get<typename ReuseTagMismatch::direction::GoDown>(d.v_mut());
-      return direction::goup(std::move(a0));
+      const auto &[a0] =
+          std::get<typename ReuseTagMismatch::direction::GoDown>(d.v());
+      return direction::goup(a0);
     }
   } else {
     return d;

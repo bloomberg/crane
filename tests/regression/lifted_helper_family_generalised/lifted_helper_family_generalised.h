@@ -130,7 +130,7 @@ public:
     if (std::holds_alternative<typename Nat::O>(this->v())) {
       return *this;
     } else {
-      auto &[a0] = std::get<typename Nat::S>(this->v());
+      const auto &[a0] = std::get<typename Nat::S>(this->v());
       return *a0;
     }
   }

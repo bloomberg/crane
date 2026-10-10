@@ -466,6 +466,9 @@ struct NestedInd {
 
     // MANIPULATORS
     ~expr() {
+      if (std::holds_alternative<Lit>(v_mut())) {
+        return;
+      }
       crane::small_vector<std::shared_ptr<expr>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Add>(&_v)) {

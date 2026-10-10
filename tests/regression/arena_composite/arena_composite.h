@@ -101,7 +101,7 @@ public:
 struct PeanoNat {
   static Bool0 leb(const Nat &n, const Nat &m);
   static Bool0 ltb(const Nat &n, const Nat &m);
-  static Nat max(Nat n, Nat m);
+  static Nat max(const Nat &n, const Nat &m);
 };
 
 struct Comp {
@@ -139,6 +139,15 @@ struct Comp {
 
     // MANIPULATORS
     ~expr() {
+      if (std::holds_alternative<Lit>(v_mut())) {
+        return;
+      }
+      if (auto *_alt = std::get_if<Add>(&v_mut())) {
+        if (!((_alt->a0 && _alt->a0.use_count() == 1) ||
+              (_alt->a1 && _alt->a1.use_count() == 1))) {
+          return;
+        }
+      }
       crane::small_vector<std::shared_ptr<expr>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Add>(&_v)) {
@@ -385,6 +394,15 @@ struct Comp {
 
     // MANIPULATORS
     ~avl() {
+      if (std::holds_alternative<Leaf>(v_mut())) {
+        return;
+      }
+      if (auto *_alt = std::get_if<Node>(&v_mut())) {
+        if (!((_alt->a0 && _alt->a0.use_count() == 1) ||
+              (_alt->a3 && _alt->a3.use_count() == 1))) {
+          return;
+        }
+      }
       crane::small_vector<std::shared_ptr<avl>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {

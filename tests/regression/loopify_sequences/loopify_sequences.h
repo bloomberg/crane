@@ -420,8 +420,8 @@ struct LoopifySequences {
   static List<uint64_t> run_sum(const List<uint64_t> &l);
   /// rotate_left n l rotates list left by n positions.
   static List<uint64_t> rotate_left_fuel(uint64_t fuel, uint64_t n,
-                                         List<uint64_t> l);
-  static List<uint64_t> rotate_left(uint64_t n, List<uint64_t> l);
+                                         const List<uint64_t> &l);
+  static List<uint64_t> rotate_left(uint64_t n, const List<uint64_t> &l);
 
   /// iterate f n x generates x, f x, f (f x), ... of length n.
   template <typename F0>
@@ -499,7 +499,7 @@ struct LoopifySequences {
   /// is_prefix_of l1 l2 checks if l1 is a prefix of l2.
   static bool is_prefix_of(const List<uint64_t> &l1, const List<uint64_t> &l2);
   /// lis l longest increasing subsequence (greedy, not optimal).
-  static List<uint64_t> lis(List<uint64_t> l);
+  static List<uint64_t> lis(const List<uint64_t> &l);
 
   /// take_while p l takes elements while predicate holds.
   template <typename F0>

@@ -181,7 +181,7 @@ struct Pos {
 struct BinNat {
   static N succ_double(const N &x);
   static N double_(const N &n);
-  static N sub(N n, const N &m);
+  static N sub(const N &n, const N &m);
   static Comparison compare(const N &n, const N &m);
   static bool leb(const N &x, const N &y);
   static std::pair<N, N> pos_div_eucl(const Positive &a, const N &b);

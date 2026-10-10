@@ -236,7 +236,7 @@ struct Pos {
 };
 
 struct BinNat {
-  static N add(N n, N m);
+  static N add(const N &n, const N &m);
   static N mul(const N &n, const N &m);
   static uint64_t to_nat(const N &a);
 };

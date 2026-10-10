@@ -653,8 +653,8 @@ uint64_t MemSafetyProbe28::list_sum(
 /// TEST 6: Three-way recursion with non-pointer-safe second tree.
 MemSafetyProbe28::tree MemSafetyProbe28::merge_trees(
     const MemSafetyProbe28::tree &t1,
-    MemSafetyProbe28::tree t2) { /// CraneEnter: captures varying parameters for
-                                 /// each recursive call.
+    const MemSafetyProbe28::tree &t2) { /// CraneEnter: captures varying
+                                        /// parameters for each recursive call.
 
   struct CraneEnter {
     MemSafetyProbe28::tree t2;
@@ -696,7 +696,7 @@ MemSafetyProbe28::tree MemSafetyProbe28::merge_trees(
                                   CraneCont_Node, CraneCont_Node_1>;
   MemSafetyProbe28::tree _result{};
   crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{std::move(t2), &t1});
+  _stack.emplace_back(CraneEnter{t2, &t1});
   /// Loopified merge_trees: CraneEnter -> CraneCont_Leaf -> CraneCont_Leaf_1 ->
   /// CraneCont_Node -> CraneCont_Node_1.
   while (!_stack.empty()) {
@@ -704,7 +704,7 @@ MemSafetyProbe28::tree MemSafetyProbe28::merge_trees(
     _stack.pop_back();
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
-      MemSafetyProbe28::tree t2 = std::move(_f.t2);
+      const MemSafetyProbe28::tree &t2 = std::move(_f.t2);
       const MemSafetyProbe28::tree &t1 = *_f.t1;
       if (std::holds_alternative<typename MemSafetyProbe28::tree::Leaf>(
               t1.v())) {
@@ -713,12 +713,12 @@ MemSafetyProbe28::tree MemSafetyProbe28::merge_trees(
         const auto &[a0, a1, a2] =
             std::get<typename MemSafetyProbe28::tree::Node>(t1.v());
         if (std::holds_alternative<typename MemSafetyProbe28::tree::Leaf>(
-                t2.v_mut())) {
+                t2.v())) {
           _stack.emplace_back(CraneCont_Leaf{a1, crane_raw(a2)});
           _stack.emplace_back(CraneEnter{tree::leaf(), crane_raw(a0)});
         } else {
-          auto &[a00, a10, a20] =
-              std::get<typename MemSafetyProbe28::tree::Node>(t2.v_mut());
+          const auto &[a00, a10, a20] =
+              std::get<typename MemSafetyProbe28::tree::Node>(t2.v());
           _stack.emplace_back(CraneCont_Node{a1, a10, crane_raw(a2), a20});
           _stack.emplace_back(CraneEnter{*a00, crane_raw(a0)});
         }
@@ -745,8 +745,7 @@ MemSafetyProbe28::tree MemSafetyProbe28::merge_trees(
       auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
       uint64_t a1 = _f.a1;
       uint64_t a10 = _f.a10;
-      _result = tree::node(std::move(_f._tmp4), (a1 + std::move(a10)),
-                           std::move(_result));
+      _result = tree::node(std::move(_f._tmp4), (a1 + a10), std::move(_result));
     }
   }
   return _result;

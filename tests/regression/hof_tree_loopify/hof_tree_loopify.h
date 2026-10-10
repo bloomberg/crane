@@ -73,6 +73,15 @@ struct HofTreeLoopify {
 
     // MANIPULATORS
     ~tree() {
+      if (std::holds_alternative<Leaf>(v_mut())) {
+        return;
+      }
+      if (auto *_alt = std::get_if<Node>(&v_mut())) {
+        if (!((_alt->l && _alt->l.use_count() == 1) ||
+              (_alt->r && _alt->r.use_count() == 1))) {
+          return;
+        }
+      }
       crane::small_vector<std::shared_ptr<tree<A>>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {

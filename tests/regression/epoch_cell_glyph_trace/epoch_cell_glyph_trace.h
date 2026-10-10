@@ -252,9 +252,9 @@ struct BinInt {
   static Z succ_double(const Z &x);
   static Z pred_double(const Z &x);
   static Z pos_sub(const Positive &x, const Positive &y);
-  static Z add(Z x, Z y);
+  static Z add(const Z &x, const Z &y);
   static Z opp(const Z &x);
-  static Z sub(Z m, const Z &n);
+  static Z sub(const Z &m, const Z &n);
   static Z mul(const Z &x, const Z &y);
   static Comparison compare(const Z &x, const Z &y);
   static bool leb(const Z &x, const Z &y);
@@ -262,9 +262,9 @@ struct BinInt {
   static bool eqb(const Z &x, const Z &y);
   static uint64_t to_nat(const Z &z);
   static std::pair<Z, Z> pos_div_eucl(const Positive &a, const Z &b);
-  static std::pair<Z, Z> div_eucl(const Z &a, Z b);
-  static Z div(const Z &a, Z b);
-  static Z modulo(const Z &a, Z b);
+  static std::pair<Z, Z> div_eucl(const Z &a, const Z &b);
+  static Z div(const Z &a, const Z &b);
+  static Z modulo(const Z &a, const Z &b);
   static Z abs(const Z &z);
 };
 
@@ -611,11 +611,11 @@ struct EpochCellGlyphTraceCase {
   static uint64_t count_total_lunar(const List<HistoricalEclipse> &es);
   static uint64_t count_visible_total_lunar(const List<HistoricalEclipse> &es);
   static uint64_t visible_series_checksum(const List<HistoricalEclipse> &es);
-  static Z months_from_epoch(Z epoch_year, const Z &eclipse_year,
-                             const Z &epoch_month, Z eclipse_month);
-  static Z saros_cell(Z epoch_year, const Z &epoch_month,
+  static Z months_from_epoch(const Z &epoch_year, const Z &eclipse_year,
+                             const Z &epoch_month, const Z &eclipse_month);
+  static Z saros_cell(const Z &epoch_year, const Z &epoch_month,
                       const HistoricalEclipse &e);
-  static Z saros_dial_at_month(Z start_cell, Z months);
+  static Z saros_dial_at_month(const Z &start_cell, const Z &months);
 
   struct EpochReading {
     MechanismState reading_state;
@@ -624,7 +624,8 @@ struct EpochCellGlyphTraceCase {
     DialGlyph reading_glyph;
   };
 
-  static EpochReading build_epoch_reading(Z epoch_year, const Z &epoch_month,
+  static EpochReading build_epoch_reading(const Z &epoch_year,
+                                          const Z &epoch_month,
                                           const HistoricalEclipse &e);
   static bool reading_matches(const EpochReading &reading);
   static uint64_t reading_phase_code(const EpochReading &reading);

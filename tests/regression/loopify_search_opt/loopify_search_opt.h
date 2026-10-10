@@ -17,7 +17,8 @@ template <typename A> struct List;
 
 struct LoopifySearchOpt {
   static List<uint64_t> lis(const List<uint64_t> &l);
-  static List<uint64_t> longest_run_fuel(uint64_t fuel, List<uint64_t> current,
+  static List<uint64_t> longest_run_fuel(uint64_t fuel,
+                                         const List<uint64_t> &current,
                                          List<uint64_t> best,
                                          const List<uint64_t> &l);
   static List<uint64_t> longest_run(const List<uint64_t> &l);

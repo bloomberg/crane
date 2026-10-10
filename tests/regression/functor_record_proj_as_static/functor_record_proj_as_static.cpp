@@ -277,30 +277,30 @@ Z BinInt::pos_sub(const Positive &x, const Positive &y) {
   }
 }
 
-Z BinInt::add(Z x, Z y) {
-  if (std::holds_alternative<typename Z::Z0>(x.v_mut())) {
+Z BinInt::add(const Z &x, const Z &y) {
+  if (std::holds_alternative<typename Z::Z0>(x.v())) {
     return y;
-  } else if (std::holds_alternative<typename Z::Zpos>(x.v_mut())) {
-    auto &[a0] = std::get<typename Z::Zpos>(x.v_mut());
-    if (std::holds_alternative<typename Z::Z0>(y.v_mut())) {
+  } else if (std::holds_alternative<typename Z::Zpos>(x.v())) {
+    const auto &[a0] = std::get<typename Z::Zpos>(x.v());
+    if (std::holds_alternative<typename Z::Z0>(y.v())) {
       return x;
-    } else if (std::holds_alternative<typename Z::Zpos>(y.v_mut())) {
-      auto &[a00] = std::get<typename Z::Zpos>(y.v_mut());
-      return Z::zpos(Pos::add(a0, std::move(a00)));
+    } else if (std::holds_alternative<typename Z::Zpos>(y.v())) {
+      const auto &[a00] = std::get<typename Z::Zpos>(y.v());
+      return Z::zpos(Pos::add(a0, a00));
     } else {
-      auto &[a00] = std::get<typename Z::Zneg>(y.v_mut());
-      return BinInt::pos_sub(a0, std::move(a00));
+      const auto &[a00] = std::get<typename Z::Zneg>(y.v());
+      return BinInt::pos_sub(a0, a00);
     }
   } else {
-    auto &[a0] = std::get<typename Z::Zneg>(x.v_mut());
-    if (std::holds_alternative<typename Z::Z0>(y.v_mut())) {
+    const auto &[a0] = std::get<typename Z::Zneg>(x.v());
+    if (std::holds_alternative<typename Z::Z0>(y.v())) {
       return x;
-    } else if (std::holds_alternative<typename Z::Zpos>(y.v_mut())) {
-      auto &[a00] = std::get<typename Z::Zpos>(y.v_mut());
-      return BinInt::pos_sub(std::move(a00), a0);
+    } else if (std::holds_alternative<typename Z::Zpos>(y.v())) {
+      const auto &[a00] = std::get<typename Z::Zpos>(y.v());
+      return BinInt::pos_sub(a00, a0);
     } else {
-      auto &[a00] = std::get<typename Z::Zneg>(y.v_mut());
-      return Z::zneg(Pos::add(a0, std::move(a00)));
+      const auto &[a00] = std::get<typename Z::Zneg>(y.v());
+      return Z::zneg(Pos::add(a0, a00));
     }
   }
 }
@@ -317,9 +317,7 @@ Z BinInt::opp(const Z &x) {
   }
 }
 
-Z BinInt::sub(Z m, const Z &n) {
-  return BinInt::add(std::move(m), BinInt::opp(n));
-}
+Z BinInt::sub(const Z &m, const Z &n) { return BinInt::add(m, BinInt::opp(n)); }
 
 Z BinInt::mul(const Z &x, const Z &y) {
   if (std::holds_alternative<typename Z::Z0>(x.v())) {

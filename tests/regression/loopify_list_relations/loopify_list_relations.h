@@ -33,10 +33,12 @@ struct LoopifyListRelations {
   static List<std::pair<std::pair<uint64_t, uint64_t>, uint64_t>>
   zip3(const List<uint64_t> &l1, const List<uint64_t> &l2,
        const List<uint64_t> &l3);
-  static List<uint64_t> interleave(List<uint64_t> l1, List<uint64_t> l2);
-  static List<uint64_t> merge_fuel(uint64_t fuel, List<uint64_t> l1,
-                                   List<uint64_t> l2);
-  static List<uint64_t> merge(List<uint64_t> l1, List<uint64_t> l2);
+  static List<uint64_t> interleave(const List<uint64_t> &l1,
+                                   const List<uint64_t> &l2);
+  static List<uint64_t> merge_fuel(uint64_t fuel, const List<uint64_t> &l1,
+                                   const List<uint64_t> &l2);
+  static List<uint64_t> merge(const List<uint64_t> &l1,
+                              const List<uint64_t> &l2);
   static List<uint64_t> union_(const List<uint64_t> &l1, List<uint64_t> l2);
   static List<uint64_t> intersection(const List<uint64_t> &l1,
                                      const List<uint64_t> &l2);

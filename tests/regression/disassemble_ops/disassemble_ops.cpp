@@ -8,22 +8,22 @@ DisassembleOps::instruction DisassembleOps::decode1(uint64_t b1, uint64_t b2) {
   }
 }
 
-List<uint64_t> DisassembleOps::drop_(uint64_t n, List<uint64_t> l) {
+List<uint64_t> DisassembleOps::drop_(uint64_t n, const List<uint64_t> &l) {
   if (n <= 0) {
     return l;
   } else {
     uint64_t n_ = n - 1;
-    if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v_mut())) {
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
       return List<uint64_t>::nil();
     } else {
-      auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v_mut());
+      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
       return drop_(n_, *a1);
     }
   }
 }
 
 std::optional<std::pair<DisassembleOps::instruction, uint64_t>>
-DisassembleOps::disassemble1(List<uint64_t> rom0, uint64_t addr) {
+DisassembleOps::disassemble1(const List<uint64_t> &rom0, uint64_t addr) {
   auto &&_sv = drop_(addr, rom0);
   if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
     return std::optional<std::pair<DisassembleOps::instruction, uint64_t>>();
@@ -51,7 +51,7 @@ DisassembleOps::instruction DisassembleOps::decode2(uint64_t b1, uint64_t b2) {
 }
 
 std::optional<std::pair<DisassembleOps::instruction, uint64_t>>
-DisassembleOps::disassemble2(List<uint64_t> rom0, uint64_t addr) {
+DisassembleOps::disassemble2(const List<uint64_t> &rom0, uint64_t addr) {
   auto &&_sv = drop<uint64_t>(addr, rom0);
   if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
     return std::optional<std::pair<DisassembleOps::instruction, uint64_t>>();
@@ -75,7 +75,7 @@ DisassembleOps::instruction DisassembleOps::decode3(uint64_t b1, uint64_t b2) {
 }
 
 std::optional<std::pair<DisassembleOps::instruction, uint64_t>>
-DisassembleOps::disassemble3(List<uint64_t> rom0, uint64_t addr) {
+DisassembleOps::disassemble3(const List<uint64_t> &rom0, uint64_t addr) {
   auto &&_sv = drop<uint64_t>(addr, rom0);
   if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
     return std::optional<std::pair<DisassembleOps::instruction, uint64_t>>();
@@ -99,7 +99,7 @@ DisassembleOps::instruction DisassembleOps::decode4(uint64_t b1, uint64_t b2) {
 }
 
 std::optional<std::pair<DisassembleOps::instruction, uint64_t>>
-DisassembleOps::disassemble4(List<uint64_t> rom0, uint64_t addr) {
+DisassembleOps::disassemble4(const List<uint64_t> &rom0, uint64_t addr) {
   auto &&_sv = drop<uint64_t>(addr, rom0);
   if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
     return std::optional<std::pair<DisassembleOps::instruction, uint64_t>>();

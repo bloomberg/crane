@@ -71,10 +71,10 @@ struct ReuseTwoChildren {
 
     static tree<A> leaf() { return tree<A>(Leaf{}); }
 
-    static tree<A> node(tree<A> a0, uint64_t a1, A a2, tree<A> a3) {
-      return tree<A>(Node{crane::make_rc<tree<A>>(std::move(a0)), a1,
-                          crane::field<A>(std::move(a2)),
-                          crane::make_rc<tree<A>>(std::move(a3))});
+    static tree<A> node(crane::child_slot<tree<A>> a0, uint64_t a1, A a2,
+                        crane::child_slot<tree<A>> a3) {
+      return tree<A>(
+          Node{a0.take(), a1, crane::field<A>(std::move(a2)), a3.take()});
     }
 
     static tree<A> node_crane_reuse(crane::rc<tree<A>> _tok, tree<A> a0,
@@ -87,6 +87,15 @@ struct ReuseTwoChildren {
 
     // MANIPULATORS
     ~tree() {
+      if (std::holds_alternative<Leaf>(v_mut())) {
+        return;
+      }
+      if (auto *_alt = std::get_if<Node>(&v_mut())) {
+        if (!((_alt->a0 && _alt->a0.use_count() == 1) ||
+              (_alt->a3 && _alt->a3.use_count() == 1))) {
+          return;
+        }
+      }
       crane::small_vector<crane::rc<tree<A>>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
@@ -168,13 +177,13 @@ struct ReuseTwoChildren {
           auto &[a0, a1, a2, a3] = std::get<typename tree<T1>::Node>(t.v_mut());
           if (k < a1) {
             return tree<T1>::node(insert<T1>(k, v, *a0), std::move(a1),
-                                  crane::unbox(a2), *a3);
+                                  crane::unbox(a2), crane::child(a3));
           } else {
             if (a1 < k) {
-              return tree<T1>::node(*a0, std::move(a1), crane::unbox(a2),
-                                    insert<T1>(k, v, *a3));
+              return tree<T1>::node(crane::child(a0), std::move(a1),
+                                    crane::unbox(a2), insert<T1>(k, v, *a3));
             } else {
-              return tree<T1>::node(*a0, k, v, *a3);
+              return tree<T1>::node(crane::child(a0), k, v, crane::child(a3));
             }
           }
         }
@@ -186,13 +195,13 @@ struct ReuseTwoChildren {
         auto &[a0, a1, a2, a3] = std::get<typename tree<T1>::Node>(t.v_mut());
         if (k < a1) {
           return tree<T1>::node(insert<T1>(k, v, *a0), std::move(a1),
-                                crane::unbox(a2), *a3);
+                                crane::unbox(a2), crane::child(a3));
         } else {
           if (a1 < k) {
-            return tree<T1>::node(*a0, std::move(a1), crane::unbox(a2),
-                                  insert<T1>(k, v, *a3));
+            return tree<T1>::node(crane::child(a0), std::move(a1),
+                                  crane::unbox(a2), insert<T1>(k, v, *a3));
           } else {
-            return tree<T1>::node(*a0, k, v, *a3);
+            return tree<T1>::node(crane::child(a0), k, v, crane::child(a3));
           }
         }
       }

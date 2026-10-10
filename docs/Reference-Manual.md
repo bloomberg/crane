@@ -546,6 +546,12 @@ Crane NoLoopify <function0> <function1> ...  (* Disable for specific functions *
 Crane Reset Loopify.                         (* Reset all loopification settings *)
 ```
 
+A function defined inside a functor is generated from the functor's body,
+whose members cannot be named. A setting for a function of one of its
+instances, such as `Crane NoLoopify ZMap.Raw.add` for `ZMap := FMapAVL.Make(Z_as_OT)`,
+therefore also applies to every function whose last two path components are
+the same (`Raw.add`), when no setting names that function itself.
+
 ### Example
 
 ```coq
@@ -729,6 +735,17 @@ across threads, which is Crane's clone-at-boundary model: values crossing a
 thread boundary are copied rather than shared. It takes precedence over the
 `bsl::shared_ptr` that [`Set Crane StdLib "BDE"`](#set-crane-stdlib) would
 otherwise select.
+
+Under this option, a constructor's factory takes each field holding a value of
+the inductive itself as a `crane::child_slot<T>`. A slot built from a value
+boxes it into a new cell, except that all values of a constructor without
+fields (`Leaf`, `Nil`) share one cell per constructor and thread. Where a
+constructor is applied to a field read out of a matched value, the generated
+code passes `crane::child(p)` for the field `p`, and the new node shares the
+cell `p` points to instead of copying the child into a new one. Rebuilding a
+path in a persistent tree then allocates only the nodes on the path. Neither
+applies to coinductive types, to types under `Set Crane SharedVariant`, whose
+values are shared blocks already, or under [`Set Crane Arena`](#set-crane-arena--crane-noarena).
 
 ---
 

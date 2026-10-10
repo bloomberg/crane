@@ -209,9 +209,9 @@ struct DisassembleOps {
   }
 
   static instruction decode1(uint64_t b1, uint64_t b2);
-  static List<uint64_t> drop_(uint64_t n, List<uint64_t> l);
+  static List<uint64_t> drop_(uint64_t n, const List<uint64_t> &l);
   static std::optional<std::pair<instruction, uint64_t>>
-  disassemble1(List<uint64_t> rom0, uint64_t addr);
+  disassemble1(const List<uint64_t> &rom0, uint64_t addr);
   static inline const uint64_t test_disassemble_drop_window = []() -> uint64_t {
     auto _cs = disassemble1(
         List<uint64_t>::cons(
@@ -235,22 +235,22 @@ struct DisassembleOps {
   }();
   static instruction decode2(uint64_t b1, uint64_t b2);
 
-  template <typename T1> static List<T1> drop(uint64_t n, List<T1> l) {
+  template <typename T1> static List<T1> drop(uint64_t n, const List<T1> &l) {
     if (n <= 0) {
       return l;
     } else {
       uint64_t n_ = n - 1;
-      if (std::holds_alternative<typename List<T1>::Nil>(l.v_mut())) {
+      if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         return List<T1>::nil();
       } else {
-        auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v_mut());
+        const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
         return drop<T1>(n_, *a1);
       }
     }
   }
 
   static std::optional<std::pair<instruction, uint64_t>>
-  disassemble2(List<uint64_t> rom0, uint64_t addr);
+  disassemble2(const List<uint64_t> &rom0, uint64_t addr);
   static inline const uint64_t test_disassemble_next_address =
       []() -> uint64_t {
     auto _cs = disassemble2(
@@ -272,7 +272,7 @@ struct DisassembleOps {
   }();
   static instruction decode3(uint64_t b1, uint64_t b2);
   static std::optional<std::pair<instruction, uint64_t>>
-  disassemble3(List<uint64_t> rom0, uint64_t addr);
+  disassemble3(const List<uint64_t> &rom0, uint64_t addr);
 
   template <typename T1> static bool is_none(const std::optional<T1> &o) {
     if (o.has_value()) {
@@ -289,7 +289,7 @@ struct DisassembleOps {
                        UINT64_C(0)));
   static instruction decode4(uint64_t b1, uint64_t b2);
   static std::optional<std::pair<instruction, uint64_t>>
-  disassemble4(List<uint64_t> rom0, uint64_t addr);
+  disassemble4(const List<uint64_t> &rom0, uint64_t addr);
 
   struct state {
     List<uint64_t> regs;

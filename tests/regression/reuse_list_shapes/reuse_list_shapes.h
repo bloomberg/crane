@@ -67,9 +67,8 @@ public:
 
   static List<A> nil() { return List<A>(Nil{}); }
 
-  static List<A> cons(A a, List<A> l) {
-    return List<A>(Cons{crane::field<A>(std::move(a)),
-                        crane::make_rc<List<A>>(std::move(l))});
+  static List<A> cons(A a, crane::child_slot<List<A>> l) {
+    return List<A>(Cons{crane::field<A>(std::move(a)), l.take()});
   }
 
   static List<A> cons_crane_reuse(crane::rc<List<A>> _tok, A a, List<A> l) {
@@ -218,8 +217,8 @@ public:
 
   explicit Positive(XH _v) : v_(_v) {}
 
-  static Positive xi(Positive a0) {
-    return Positive(XI{crane::make_rc<Positive>(std::move(a0))});
+  static Positive xi(crane::child_slot<Positive> a0) {
+    return Positive(XI{a0.take()});
   }
 
   static Positive xi_crane_reuse(crane::rc<Positive> _tok, Positive a0) {
@@ -227,8 +226,8 @@ public:
         XI{crane::make_rc_reusing<Positive>(std::move(_tok), std::move(a0))});
   }
 
-  static Positive xo(Positive a0) {
-    return Positive(XO{crane::make_rc<Positive>(std::move(a0))});
+  static Positive xo(crane::child_slot<Positive> a0) {
+    return Positive(XO{a0.take()});
   }
 
   static Positive xo_crane_reuse(crane::rc<Positive> _tok, Positive a0) {
@@ -443,9 +442,9 @@ struct ReuseListShapes {
       return frames(Single{crane::make_rc<List<uint64_t>>(std::move(a0))});
     }
 
-    static frames push(List<uint64_t> a0, frames a1) {
-      return frames(Push{crane::make_rc<List<uint64_t>>(std::move(a0)),
-                         crane::make_rc<frames>(std::move(a1))});
+    static frames push(List<uint64_t> a0, crane::child_slot<frames> a1) {
+      return frames(
+          Push{crane::make_rc<List<uint64_t>>(std::move(a0)), a1.take()});
     }
 
     static frames push_crane_reuse(crane::rc<frames> _tok, List<uint64_t> a0,

@@ -15,6 +15,8 @@
 #include <new>
 #include <cassert>
 #include <memory>
+#include <variant>
+#include <concepts>
 #include "pool.h"
 // The non-atomic [crane::rc] participates in the runtime scoped-arena feature
 // (arena.h) only when the [Set Crane Arena] master switch is on, in which case
@@ -376,6 +378,90 @@ rc<T> rc<T>::make(Args&&... args) {
     return make_rc<T>(std::forward<Args>(args)...);
 #endif
 }
+
+// Child slots: how a constructor's factory fills a field holding a value of
+// the inductive itself.
+//
+// [child_slot<T>] is the parameter type of such a field.  It is built from
+//   - a value of [T]: boxed into a new cell, except that a value of a
+//     constructor without fields shares one cell per constructor (per thread,
+//     never freed), since all such values are equal and the drains never
+//     mutate a cell they do not own alone;
+//   - a [child_ref<T>], made by [crane::child(p)] for a field [p] read out of a
+//     matched value: the new node shares the cell [p] points to, instead of
+//     copying the child into a new cell.
+// A [child_ref] converts to [const T&] too, so it can stand wherever the
+// child's value is expected.
+template <typename T> struct child_ref {
+    const rc<T>& p;
+    operator const T&() const noexcept { return *p; }
+};
+
+template <typename T> child_ref<T> child(const rc<T>& p) noexcept { return {p}; }
+
+// Any other pointer -- [this], a raw pointer a loop walks with -- names no
+// cell to share: the child is its value.
+template <typename P> decltype(auto) child(const P& p) noexcept { return *p; }
+
+namespace child_detail {
+
+// A generated inductive over [std::variant] ([Crane FastVariant]'s
+// [crane::variant] has no [variant_size], and is boxed as it is).
+template <typename T>
+concept variant_value = requires(const T& t) {
+    std::variant_size<typename T::variant_t>::value;
+    { t.v().index() } -> std::convertible_to<std::size_t>;
+};
+
+template <typename T, std::size_t I> const rc<T>& nullary_cell() {
+    using Alt = std::variant_alternative_t<I, typename T::variant_t>;
+    thread_local const rc<T>* cell = new rc<T>(make_rc<T>(Alt{}));
+    return *cell;
+}
+
+template <typename T, std::size_t... Is>
+rc<T> box(T&& v, std::index_sequence<Is...>) {
+    using V = typename T::variant_t;
+    const std::size_t i = v.v().index();
+    rc<T> shared;
+    (void)((std::is_empty_v<std::variant_alternative_t<Is, V>> && i == Is
+                ? (shared = nullary_cell<T, Is>(), true)
+                : false) ||
+           ...);
+    if (shared) return shared;
+    return make_rc<T>(std::move(v));
+}
+
+} // namespace child_detail
+
+template <typename T> rc<T> box_child(T&& v) {
+    if constexpr (child_detail::variant_value<T>)
+        return child_detail::box(
+            std::move(v),
+            std::make_index_sequence<std::variant_size_v<typename T::variant_t>>{});
+    else
+        return make_rc<T>(std::move(v));
+}
+
+template <typename T> class child_slot {
+public:
+    child_slot() : p_(box_child(T{})) {}  // [{}], as for a by-value [T]
+    child_slot(child_ref<T> c) noexcept : p_(c.p) {}
+    child_slot(T&& v) : p_(box_child(std::move(v))) {}
+    child_slot(const T& v) : p_(box_child(T(v))) {}
+    // Anything else that converts to [T], once.
+    template <typename U>
+        requires(!std::is_same_v<std::remove_cvref_t<U>, T> &&
+                 !std::is_same_v<std::remove_cvref_t<U>, child_ref<T>> &&
+                 std::is_constructible_v<T, U &&>)
+    child_slot(U&& u) : p_(box_child(T(std::forward<U>(u)))) {}
+
+    // The cell, moved out: a slot is consumed by the factory it is passed to.
+    rc<T> take() noexcept { return std::move(p_); }
+
+private:
+    rc<T> p_;
+};
 
 } // namespace crane
 

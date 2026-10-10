@@ -76,12 +76,13 @@ List<uint64_t> LoopifySorting::insertion_sort(
   return _result;
 }
 
-List<uint64_t> LoopifySorting::merge_fuel(uint64_t fuel, List<uint64_t> l1,
-                                          List<uint64_t> l2) {
+List<uint64_t> LoopifySorting::merge_fuel(uint64_t fuel,
+                                          const List<uint64_t> &l1,
+                                          const List<uint64_t> &l2) {
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
-  List<uint64_t> _loop_l2 = std::move(l2);
-  List<uint64_t> _loop_l1 = std::move(l1);
+  const List<uint64_t> *_loop_l2 = &l2;
+  const List<uint64_t> *_loop_l1 = &l1;
   uint64_t _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
@@ -91,26 +92,25 @@ List<uint64_t> LoopifySorting::merge_fuel(uint64_t fuel, List<uint64_t> l1,
       break;
     } else {
       uint64_t f = _loop_fuel - 1;
-      if (std::holds_alternative<typename List<uint64_t>::Nil>(
-              _loop_l1.v_mut())) {
-        auto _value = std::move(_loop_l2);
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l1->v())) {
+        auto _value = *_loop_l2;
         (_write
              ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
              : _root.emplace(std::move(_value)));
         break;
       } else {
-        auto &[a0, a1] =
-            std::get<typename List<uint64_t>::Cons>(_loop_l1.v_mut());
+        const auto &[a0, a1] =
+            std::get<typename List<uint64_t>::Cons>(_loop_l1->v());
         if (std::holds_alternative<typename List<uint64_t>::Nil>(
-                _loop_l2.v_mut())) {
-          auto _value = _loop_l1;
+                _loop_l2->v())) {
+          auto _value = *_loop_l1;
           (_write ? *(*_write =
                           std::make_shared<List<uint64_t>>(std::move(_value)))
                   : _root.emplace(std::move(_value)));
           break;
         } else {
-          auto &[a00, a10] =
-              std::get<typename List<uint64_t>::Cons>(_loop_l2.v_mut());
+          const auto &[a00, a10] =
+              std::get<typename List<uint64_t>::Cons>(_loop_l2->v());
           if (a0 <= a00) {
             auto _cell = typename List<uint64_t>::Cons(a0, nullptr);
             List<uint64_t> &_node =
@@ -118,7 +118,8 @@ List<uint64_t> LoopifySorting::merge_fuel(uint64_t fuel, List<uint64_t> l1,
                                 std::move(_cell)))
                         : _root.emplace(std::move(_cell)));
             _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
-            _loop_l1 = List<uint64_t>(*a1);
+            _loop_l2 = &*_loop_l2;
+            _loop_l1 = crane_raw(a1);
             _loop_fuel = f;
             continue;
           } else {
@@ -128,7 +129,8 @@ List<uint64_t> LoopifySorting::merge_fuel(uint64_t fuel, List<uint64_t> l1,
                                 std::move(_cell)))
                         : _root.emplace(std::move(_cell)));
             _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
-            _loop_l2 = List<uint64_t>(*a10);
+            _loop_l2 = crane_raw(a10);
+            _loop_l1 = &*_loop_l1;
             _loop_fuel = f;
             continue;
           }
@@ -139,13 +141,15 @@ List<uint64_t> LoopifySorting::merge_fuel(uint64_t fuel, List<uint64_t> l1,
   return std::move(*_root);
 }
 
-List<uint64_t> LoopifySorting::merge(List<uint64_t> l1, List<uint64_t> l2) {
+List<uint64_t> LoopifySorting::merge(const List<uint64_t> &l1,
+                                     const List<uint64_t> &l2) {
   return merge_fuel((len_impl<uint64_t>(l1) + len_impl<uint64_t>(l2)), l1, l2);
 }
 
 List<uint64_t> LoopifySorting::merge_sort_fuel(
-    uint64_t fuel, List<uint64_t> l) { /// CraneEnter: captures varying
-                                       /// parameters for each recursive call.
+    uint64_t fuel,
+    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
+                               /// each recursive call.
 
   struct CraneEnter {
     List<uint64_t> l;
@@ -168,23 +172,23 @@ List<uint64_t> LoopifySorting::merge_sort_fuel(
   using CraneFrame = std::variant<CraneEnter, CraneCont_l1, CraneCont_l1_1>;
   List<uint64_t> _result{};
   crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{std::move(l), fuel});
+  _stack.emplace_back(CraneEnter{l, fuel});
   /// Loopified merge_sort_fuel: CraneEnter -> CraneCont_l1 -> CraneCont_l1_1.
   while (!_stack.empty()) {
     CraneFrame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
-      List<uint64_t> l = std::move(_f.l);
+      const List<uint64_t> &l = std::move(_f.l);
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
         _result = std::move(l);
       } else {
         uint64_t f = fuel - 1;
-        if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v_mut())) {
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
           _result = List<uint64_t>::nil();
         } else {
-          auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v_mut());
+          const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
           auto &&_sv = *a1;
           if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
             _result = std::move(l);
@@ -209,7 +213,7 @@ List<uint64_t> LoopifySorting::merge_sort_fuel(
   return _result;
 }
 
-List<uint64_t> LoopifySorting::merge_sort(List<uint64_t> l) {
+List<uint64_t> LoopifySorting::merge_sort(const List<uint64_t> &l) {
   return merge_sort_fuel(len_impl<uint64_t>(l), l);
 }
 
@@ -263,8 +267,9 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifySorting::partition(
 }
 
 List<uint64_t> LoopifySorting::quicksort_fuel(
-    uint64_t fuel, List<uint64_t> l) { /// CraneEnter: captures varying
-                                       /// parameters for each recursive call.
+    uint64_t fuel,
+    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
+                               /// each recursive call.
 
   struct CraneEnter {
     List<uint64_t> l;
@@ -289,23 +294,23 @@ List<uint64_t> LoopifySorting::quicksort_fuel(
   using CraneFrame = std::variant<CraneEnter, CraneCont_lo, CraneCont_lo_1>;
   List<uint64_t> _result{};
   crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{std::move(l), fuel});
+  _stack.emplace_back(CraneEnter{l, fuel});
   /// Loopified quicksort_fuel: CraneEnter -> CraneCont_lo -> CraneCont_lo_1.
   while (!_stack.empty()) {
     CraneFrame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
-      List<uint64_t> l = std::move(_f.l);
+      const List<uint64_t> &l = std::move(_f.l);
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
         _result = std::move(l);
       } else {
         uint64_t f = fuel - 1;
-        if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v_mut())) {
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
           _result = List<uint64_t>::nil();
         } else {
-          auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v_mut());
+          const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
           auto [lo, hi] = partition(a0, *a1);
           _stack.emplace_back(CraneCont_lo{a0, f, hi});
           _stack.emplace_back(CraneEnter{std::move(lo), f});
@@ -321,14 +326,14 @@ List<uint64_t> LoopifySorting::quicksort_fuel(
     } else {
       auto _f = std::move(std::get<CraneCont_lo_1>(_frame));
       uint64_t a0 = _f.a0;
-      _result = std::move(_f._tmp2).app(
-          List<uint64_t>::cons(std::move(a0), std::move(_result)));
+      _result =
+          std::move(_f._tmp2).app(List<uint64_t>::cons(a0, std::move(_result)));
     }
   }
   return _result;
 }
 
-List<uint64_t> LoopifySorting::quicksort(List<uint64_t> l) {
+List<uint64_t> LoopifySorting::quicksort(const List<uint64_t> &l) {
   return quicksort_fuel(len_impl<uint64_t>(l), l);
 }
 

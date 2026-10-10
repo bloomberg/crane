@@ -10,7 +10,7 @@ Positive Pos::pred_double(Positive x) {
     } else {
       if (crane::holds_alternative<typename Positive::XI>(x.v_mut())) {
         auto &[a0] = crane::get<typename Positive::XI>(x.v_mut());
-        return Positive::xi(Positive::xo(*a0));
+        return Positive::xi(Positive::xo(crane::child(a0)));
       } else if (crane::holds_alternative<typename Positive::XO>(x.v_mut())) {
         auto &[a0] = crane::get<typename Positive::XO>(x.v_mut());
         return Positive::xi(pred_double(*a0));
@@ -21,7 +21,7 @@ Positive Pos::pred_double(Positive x) {
   } else {
     if (crane::holds_alternative<typename Positive::XI>(x.v_mut())) {
       auto &[a0] = crane::get<typename Positive::XI>(x.v_mut());
-      return Positive::xi(Positive::xo(*a0));
+      return Positive::xi(Positive::xo(crane::child(a0)));
     } else if (crane::holds_alternative<typename Positive::XO>(x.v_mut())) {
       auto &[a0] = crane::get<typename Positive::XO>(x.v_mut());
       return Positive::xi(pred_double(*a0));
@@ -36,7 +36,7 @@ Pos::mask Pos::succ_double_mask(Pos::mask x) {
     return mask::ispos(Positive::xh());
   } else if (crane::holds_alternative<typename Pos::mask::IsPos>(x.v_mut())) {
     auto &[a0] = crane::get<typename Pos::mask::IsPos>(x.v_mut());
-    return mask::ispos(Positive::xi(*a0));
+    return mask::ispos(Positive::xi(crane::child(a0)));
   } else {
     return mask::isneg();
   }
@@ -47,7 +47,7 @@ Pos::mask Pos::double_mask(Pos::mask x) {
     return mask::isnul();
   } else if (crane::holds_alternative<typename Pos::mask::IsPos>(x.v_mut())) {
     auto &[a0] = crane::get<typename Pos::mask::IsPos>(x.v_mut());
-    return mask::ispos(Positive::xo(*a0));
+    return mask::ispos(Positive::xo(crane::child(a0)));
   } else {
     return mask::isneg();
   }
@@ -56,7 +56,7 @@ Pos::mask Pos::double_mask(Pos::mask x) {
 Pos::mask Pos::double_pred_mask(const Positive &x) {
   if (crane::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[a0] = crane::get<typename Positive::XI>(x.v());
-    return mask::ispos(Positive::xo(Positive::xo(*a0)));
+    return mask::ispos(Positive::xo(Positive::xo(crane::child(a0))));
   } else if (crane::holds_alternative<typename Positive::XO>(x.v())) {
     const auto &[a0] = crane::get<typename Positive::XO>(x.v());
     return mask::ispos(Positive::xo(pred_double(*a0)));
@@ -75,7 +75,7 @@ Pos::mask Pos::sub_mask(const Positive &x, const Positive &y) {
       const auto &[a00] = crane::get<typename Positive::XO>(y.v());
       return succ_double_mask(sub_mask(*a0, *a00));
     } else {
-      return mask::ispos(Positive::xo(*a0));
+      return mask::ispos(Positive::xo(crane::child(a0)));
     }
   } else if (crane::holds_alternative<typename Positive::XO>(x.v())) {
     const auto &[a0] = crane::get<typename Positive::XO>(x.v());
@@ -173,7 +173,7 @@ N BinNat::succ_double(N x) {
     return N::npos(Positive::xh());
   } else {
     auto &[a0] = crane::get<typename N::Npos>(x.v_mut());
-    return N::npos(Positive::xi(*a0));
+    return N::npos(Positive::xi(crane::child(a0)));
   }
 }
 
@@ -182,7 +182,7 @@ N BinNat::double_(N n) {
     return N::n0();
   } else {
     auto &[a0] = crane::get<typename N::Npos>(n.v_mut());
-    return N::npos(Positive::xo(*a0));
+    return N::npos(Positive::xo(crane::child(a0)));
   }
 }
 
@@ -377,7 +377,7 @@ List<uint64_t> ReuseListShapes::ins(uint64_t k, List<uint64_t> s) {
       return List<uint64_t>::cons(k, s);
     } else {
       if (k == crane::unbox(a0)) {
-        return List<uint64_t>::cons(k, *a1);
+        return List<uint64_t>::cons(k, crane::child(a1));
       } else {
         return List<uint64_t>::cons(crane::unbox(a0), ins(k, *a1));
       }
@@ -392,11 +392,12 @@ ReuseListShapes::add_to_frame(const ReuseListShapes::mem &m, uint64_t k) {
           s.v())) {
     const auto &[a0] =
         crane::get<typename ReuseListShapes::frames::Single>(s.v());
-    return frames::single(List<uint64_t>::cons(k, *a0));
+    return frames::single(List<uint64_t>::cons(k, crane::child(a0)));
   } else {
     const auto &[a0, a1] =
         crane::get<typename ReuseListShapes::frames::Push>(s.v());
-    return frames::push(List<uint64_t>::cons(k, *a0), *a1);
+    return frames::push(List<uint64_t>::cons(k, crane::child(a0)),
+                        crane::child(a1));
   }
 }
 
@@ -408,10 +409,11 @@ ReuseListShapes::add_to_frame_(const ReuseListShapes::mem &m, uint64_t k) {
           s.v())) {
     const auto &[a0] =
         crane::get<typename ReuseListShapes::frames::Single>(s.v());
-    return frames::single(List<uint64_t>::cons(k, *a0));
+    return frames::single(List<uint64_t>::cons(k, crane::child(a0)));
   } else {
     const auto &[a0, a1] =
         crane::get<typename ReuseListShapes::frames::Push>(s.v());
-    return frames::push(List<uint64_t>::cons(k, *a0), *a1);
+    return frames::push(List<uint64_t>::cons(k, crane::child(a0)),
+                        crane::child(a1));
   }
 }

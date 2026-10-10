@@ -560,34 +560,33 @@ struct LoopifyHofs {
 
   /// scanl1 f l like scanl but no initial value, uses first element.
   template <typename F1>
-  static List<uint64_t> scanl1_fuel(uint64_t fuel, F1 &&f, List<uint64_t> l) {
+  static List<uint64_t> scanl1_fuel(uint64_t fuel, F1 &&f,
+                                    const List<uint64_t> &l) {
     std::optional<List<uint64_t>> _root{};
     std::shared_ptr<List<uint64_t>> *_write = nullptr;
-    List<uint64_t> _loop_l = std::move(l);
+    List<uint64_t> _loop_l = l;
     uint64_t _loop_fuel = fuel;
     while (true) {
       if (_loop_fuel <= 0) {
-        auto _value = std::move(_loop_l);
+        auto _value = _loop_l;
         (_write
              ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
              : _root.emplace(std::move(_value)));
         break;
       } else {
         uint64_t g = _loop_fuel - 1;
-        if (std::holds_alternative<typename List<uint64_t>::Nil>(
-                _loop_l.v_mut())) {
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l.v())) {
           auto _value = List<uint64_t>::nil();
           (_write ? *(*_write =
                           std::make_shared<List<uint64_t>>(std::move(_value)))
                   : _root.emplace(std::move(_value)));
           break;
         } else {
-          auto &[a0, a1] =
-              std::get<typename List<uint64_t>::Cons>(_loop_l.v_mut());
+          const auto &[a0, a1] =
+              std::get<typename List<uint64_t>::Cons>(_loop_l.v());
           auto &&_sv0 = *a1;
           if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv0.v())) {
-            auto _value =
-                List<uint64_t>::cons(std::move(a0), List<uint64_t>::nil());
+            auto _value = List<uint64_t>::cons(a0, List<uint64_t>::nil());
             (_write ? *(*_write =
                             std::make_shared<List<uint64_t>>(std::move(_value)))
                     : _root.emplace(std::move(_value)));
@@ -595,7 +594,7 @@ struct LoopifyHofs {
           } else {
             const auto &[a00, a10] =
                 std::get<typename List<uint64_t>::Cons>(_sv0.v());
-            auto _cell = typename List<uint64_t>::Cons(std::move(a0), nullptr);
+            auto _cell = typename List<uint64_t>::Cons(a0, nullptr);
             List<uint64_t> &_node =
                 (_write ? *(*_write = std::make_shared<List<uint64_t>>(
                                 std::move(_cell)))
@@ -612,7 +611,7 @@ struct LoopifyHofs {
   }
 
   template <typename F0>
-  static List<uint64_t> scanl1(F0 &&f, List<uint64_t> l) {
+  static List<uint64_t> scanl1(F0 &&f, const List<uint64_t> &l) {
     return scanl1_fuel(l.length(), f, l);
   }
 
@@ -913,15 +912,16 @@ struct LoopifyHofs {
   /// merge_by cmp l1 l2 merges two lists using comparison function.
   template <typename F1>
   static List<uint64_t> merge_by_fuel(uint64_t fuel, F1 &&cmp,
-                                      List<uint64_t> l1, List<uint64_t> l2) {
+                                      const List<uint64_t> &l1,
+                                      const List<uint64_t> &l2) {
     std::optional<List<uint64_t>> _root{};
     std::shared_ptr<List<uint64_t>> *_write = nullptr;
-    List<uint64_t> _loop_l2 = std::move(l2);
-    List<uint64_t> _loop_l1 = std::move(l1);
+    const List<uint64_t> *_loop_l2 = &l2;
+    const List<uint64_t> *_loop_l1 = &l1;
     uint64_t _loop_fuel = fuel;
     while (true) {
       if (_loop_fuel <= 0) {
-        auto _value = std::move(_loop_l1);
+        auto _value = *_loop_l1;
         (_write
              ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
              : _root.emplace(std::move(_value)));
@@ -929,25 +929,25 @@ struct LoopifyHofs {
       } else {
         uint64_t f = _loop_fuel - 1;
         if (std::holds_alternative<typename List<uint64_t>::Nil>(
-                _loop_l1.v_mut())) {
-          auto _value = std::move(_loop_l2);
+                _loop_l1->v())) {
+          auto _value = *_loop_l2;
           (_write ? *(*_write =
                           std::make_shared<List<uint64_t>>(std::move(_value)))
                   : _root.emplace(std::move(_value)));
           break;
         } else {
-          auto &[a0, a1] =
-              std::get<typename List<uint64_t>::Cons>(_loop_l1.v_mut());
+          const auto &[a0, a1] =
+              std::get<typename List<uint64_t>::Cons>(_loop_l1->v());
           if (std::holds_alternative<typename List<uint64_t>::Nil>(
-                  _loop_l2.v_mut())) {
-            auto _value = _loop_l1;
+                  _loop_l2->v())) {
+            auto _value = *_loop_l1;
             (_write ? *(*_write =
                             std::make_shared<List<uint64_t>>(std::move(_value)))
                     : _root.emplace(std::move(_value)));
             break;
           } else {
-            auto &[a00, a10] =
-                std::get<typename List<uint64_t>::Cons>(_loop_l2.v_mut());
+            const auto &[a00, a10] =
+                std::get<typename List<uint64_t>::Cons>(_loop_l2->v());
             if (cmp(a0, a00) <= UINT64_C(0)) {
               auto _cell = typename List<uint64_t>::Cons(a0, nullptr);
               List<uint64_t> &_node =
@@ -956,7 +956,8 @@ struct LoopifyHofs {
                           : _root.emplace(std::move(_cell)));
               _write =
                   &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
-              _loop_l1 = List<uint64_t>(*a1);
+              _loop_l2 = &*_loop_l2;
+              _loop_l1 = crane_raw(a1);
               _loop_fuel = f;
               continue;
             } else {
@@ -967,7 +968,8 @@ struct LoopifyHofs {
                           : _root.emplace(std::move(_cell)));
               _write =
                   &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
-              _loop_l2 = List<uint64_t>(*a10);
+              _loop_l2 = crane_raw(a10);
+              _loop_l1 = &*_loop_l1;
               _loop_fuel = f;
               continue;
             }
@@ -979,8 +981,8 @@ struct LoopifyHofs {
   }
 
   template <typename F0>
-  static List<uint64_t> merge_by(F0 &&cmp, List<uint64_t> l1,
-                                 List<uint64_t> l2) {
+  static List<uint64_t> merge_by(F0 &&cmp, const List<uint64_t> &l1,
+                                 const List<uint64_t> &l2) {
     return merge_by_fuel((l1.length() + l2.length()), cmp, l1, l2);
   }
 
@@ -1232,8 +1234,9 @@ struct LoopifyHofs {
   cartesian(const List<uint64_t> &l1, const List<uint64_t> &l2);
   /// longest_run l finds the longest consecutive run of equal elements.
   /// Matches on recursive result to decide behavior.
-  static List<uint64_t> longest_run_fuel(uint64_t fuel, List<uint64_t> l);
-  static List<uint64_t> longest_run(List<uint64_t> l);
+  static List<uint64_t> longest_run_fuel(uint64_t fuel,
+                                         const List<uint64_t> &l);
+  static List<uint64_t> longest_run(const List<uint64_t> &l);
 
   /// any p l checks if any element satisfies predicate (same as exists_fn but
   /// different name).

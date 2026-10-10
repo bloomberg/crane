@@ -1,21 +1,21 @@
 #include "load_program_head_write.h"
 
 List<uint64_t> LoadProgramHeadWrite::update_nth(uint64_t n, uint64_t x,
-                                                List<uint64_t> l) {
+                                                const List<uint64_t> &l) {
   if (n <= 0) {
-    if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v_mut())) {
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
       return l;
     } else {
-      auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v_mut());
+      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
       return List<uint64_t>::cons(x, *a1);
     }
   } else {
     uint64_t n_ = n - 1;
-    if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v_mut())) {
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
       return l;
     } else {
-      auto &[a00, a10] = std::get<typename List<uint64_t>::Cons>(l.v_mut());
-      return List<uint64_t>::cons(std::move(a00), update_nth(n_, x, *a10));
+      const auto &[a00, a10] = std::get<typename List<uint64_t>::Cons>(l.v());
+      return List<uint64_t>::cons(a00, update_nth(n_, x, *a10));
     }
   }
 }

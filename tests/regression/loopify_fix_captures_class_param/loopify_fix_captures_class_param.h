@@ -255,6 +255,9 @@ struct LoopifyFixCapturesClassParam {
 
     // MANIPULATORS
     ~tree() {
+      if (std::holds_alternative<Leaf>(v_mut())) {
+        return;
+      }
       crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {

@@ -27,13 +27,13 @@ struct LoopifyListTransforms {
                                          const List<uint64_t> &l);
   static List<uint64_t> differences(const List<uint64_t> &l);
   static List<uint64_t> take(uint64_t n, const List<uint64_t> &l);
-  static List<uint64_t> drop(uint64_t n, List<uint64_t> l);
+  static List<uint64_t> drop(uint64_t n, const List<uint64_t> &l);
   static List<List<uint64_t>> chunks_of_fuel(uint64_t fuel, uint64_t n,
-                                             List<uint64_t> l);
-  static List<List<uint64_t>> chunks_of(uint64_t n, List<uint64_t> l);
+                                             const List<uint64_t> &l);
+  static List<List<uint64_t>> chunks_of(uint64_t n, const List<uint64_t> &l);
   static List<uint64_t> rotate_left_fuel(uint64_t fuel, uint64_t n,
-                                         List<uint64_t> l);
-  static List<uint64_t> rotate_left(uint64_t n, List<uint64_t> l);
+                                         const List<uint64_t> &l);
+  static List<uint64_t> rotate_left(uint64_t n, const List<uint64_t> &l);
   static List<uint64_t> uniq_sorted_fuel(uint64_t fuel,
                                          const List<uint64_t> &l);
   static List<uint64_t> uniq_sorted(const List<uint64_t> &l);

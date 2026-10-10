@@ -9,8 +9,8 @@ uint64_t FetchOps::fetch_byte_direct(const List<uint64_t> &rom_data,
   return ListDef::template nth<uint64_t>(addr, rom_data, UINT64_C(0));
 }
 
-std::pair<uint64_t, uint64_t> FetchOps::fetch_pair(List<uint64_t> rom_data,
-                                                   uint64_t addr) {
+std::pair<uint64_t, uint64_t>
+FetchOps::fetch_pair(const List<uint64_t> &rom_data, uint64_t addr) {
   auto &&_sv = drop<uint64_t>(addr, rom_data);
   if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
     return std::make_pair(UINT64_C(0), UINT64_C(0));
@@ -28,7 +28,7 @@ std::pair<uint64_t, uint64_t> FetchOps::fetch_pair(List<uint64_t> rom_data,
 }
 
 std::optional<std::pair<uint64_t, uint64_t>>
-FetchOps::fetch_window(List<uint64_t> rom_data, uint64_t addr) {
+FetchOps::fetch_window(const List<uint64_t> &rom_data, uint64_t addr) {
   auto &&_sv = drop<uint64_t>(addr, rom_data);
   if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
     return std::optional<std::pair<uint64_t, uint64_t>>();

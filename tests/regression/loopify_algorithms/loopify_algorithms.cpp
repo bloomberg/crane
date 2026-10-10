@@ -39,29 +39,29 @@ uint64_t LoopifyAlgorithms::len_impl(
 }
 
 /// sieve l Sieve of Eratosthenes - filters out multiples.
-List<uint64_t> LoopifyAlgorithms::sieve_fuel(uint64_t fuel, List<uint64_t> l) {
+List<uint64_t> LoopifyAlgorithms::sieve_fuel(uint64_t fuel,
+                                             const List<uint64_t> &l) {
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
-  List<uint64_t> _loop_l = std::move(l);
+  List<uint64_t> _loop_l = l;
   uint64_t _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
-      auto _value = std::move(_loop_l);
+      auto _value = _loop_l;
       (_write ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
       uint64_t f = _loop_fuel - 1;
-      if (std::holds_alternative<typename List<uint64_t>::Nil>(
-              _loop_l.v_mut())) {
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l.v())) {
         auto _value = List<uint64_t>::nil();
         (_write
              ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
              : _root.emplace(std::move(_value)));
         break;
       } else {
-        auto &[a0, a1] =
-            std::get<typename List<uint64_t>::Cons>(_loop_l.v_mut());
+        const auto &[a0, a1] =
+            std::get<typename List<uint64_t>::Cons>(_loop_l.v());
         auto filter_multiples =
             [&](uint64_t p, const List<uint64_t> &rest) -> List<uint64_t> {
           /// CraneEnter: captures varying parameters for each recursive call.
@@ -105,7 +105,7 @@ List<uint64_t> LoopifyAlgorithms::sieve_fuel(uint64_t fuel, List<uint64_t> l) {
           }
           return _result;
         };
-        auto _cell = typename List<uint64_t>::Cons(std::move(a0), nullptr);
+        auto _cell = typename List<uint64_t>::Cons(a0, nullptr);
         List<uint64_t> &_node =
             (_write ? *(*_write =
                             std::make_shared<List<uint64_t>>(std::move(_cell)))
@@ -120,7 +120,7 @@ List<uint64_t> LoopifyAlgorithms::sieve_fuel(uint64_t fuel, List<uint64_t> l) {
   return std::move(*_root);
 }
 
-List<uint64_t> LoopifyAlgorithms::sieve(List<uint64_t> l) {
+List<uint64_t> LoopifyAlgorithms::sieve(const List<uint64_t> &l) {
   return sieve_fuel(len_impl(l), l);
 }
 
@@ -259,8 +259,8 @@ List<uint64_t> LoopifyAlgorithms::differences(const List<uint64_t> &l) {
 
 /// rotate_left n l rotates list left by n positions.
 List<uint64_t> LoopifyAlgorithms::rotate_left_fuel(uint64_t fuel, uint64_t n,
-                                                   List<uint64_t> l) {
-  List<uint64_t> _loop_l = std::move(l);
+                                                   const List<uint64_t> &l) {
+  List<uint64_t> _loop_l = l;
   uint64_t _loop_n = n;
   uint64_t _loop_fuel = fuel;
   while (true) {
@@ -271,14 +271,12 @@ List<uint64_t> LoopifyAlgorithms::rotate_left_fuel(uint64_t fuel, uint64_t n,
       if (_loop_n <= UINT64_C(0)) {
         return _loop_l;
       } else {
-        if (std::holds_alternative<typename List<uint64_t>::Nil>(
-                _loop_l.v_mut())) {
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l.v())) {
           return List<uint64_t>::nil();
         } else {
-          auto &[a0, a1] =
-              std::get<typename List<uint64_t>::Cons>(_loop_l.v_mut());
-          _loop_l = a1->app(
-              List<uint64_t>::cons(std::move(a0), List<uint64_t>::nil()));
+          const auto &[a0, a1] =
+              std::get<typename List<uint64_t>::Cons>(_loop_l.v());
+          _loop_l = a1->app(List<uint64_t>::cons(a0, List<uint64_t>::nil()));
           _loop_n = ((
               (_loop_n - UINT64_C(1)) > _loop_n ? 0 : (_loop_n - UINT64_C(1))));
           _loop_fuel = f;
@@ -288,8 +286,9 @@ List<uint64_t> LoopifyAlgorithms::rotate_left_fuel(uint64_t fuel, uint64_t n,
   }
 }
 
-List<uint64_t> LoopifyAlgorithms::rotate_left(uint64_t n, List<uint64_t> l) {
-  return rotate_left_fuel(n, n, std::move(l));
+List<uint64_t> LoopifyAlgorithms::rotate_left(uint64_t n,
+                                              const List<uint64_t> &l) {
+  return rotate_left_fuel(n, n, l);
 }
 
 /// nub l removes ALL duplicates (not just consecutive): 1,2,1,3,2 -> 1,2,3.

@@ -56,6 +56,15 @@ struct MemSafetyProbe15 {
 
     // MANIPULATORS
     ~tree() {
+      if (std::holds_alternative<Leaf>(v_mut())) {
+        return;
+      }
+      if (auto *_alt = std::get_if<Node>(&v_mut())) {
+        if (!((_alt->a0 && _alt->a0.use_count() == 1) ||
+              (_alt->a2 && _alt->a2.use_count() == 1))) {
+          return;
+        }
+      }
       crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
@@ -98,13 +107,13 @@ struct MemSafetyProbe15 {
     }
 
     /// TEST 4: Tree zipping — combine two trees into one.
-    tree zip_trees(tree t2) const {
+    tree zip_trees(const tree &t2) const {
       const tree *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
       struct CraneEnter {
         const tree *_self;
-        tree t2;
+        const tree *t2;
       };
 
       /// CraneCont_Node: saves [a1, a10, a2, a20], resumes after recursive
@@ -113,7 +122,7 @@ struct MemSafetyProbe15 {
         uint64_t a1;
         uint64_t a10;
         std::shared_ptr<tree> a2;
-        std::shared_ptr<tree> a20;
+        const tree *a20;
       };
 
       /// CraneCont_Node_1: saves [_tmp2, a1, a10], resumes after recursive
@@ -128,7 +137,7 @@ struct MemSafetyProbe15 {
           std::variant<CraneEnter, CraneCont_Node, CraneCont_Node_1>;
       tree _result{};
       crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self, std::move(t2)});
+      _stack.emplace_back(CraneEnter{_self, &t2});
       /// Loopified zip_trees: CraneEnter -> CraneCont_Node -> CraneCont_Node_1.
       while (!_stack.empty()) {
         CraneFrame _frame = std::move(_stack.back());
@@ -136,18 +145,19 @@ struct MemSafetyProbe15 {
         if (std::holds_alternative<CraneEnter>(_frame)) {
           auto _f = std::move(std::get<CraneEnter>(_frame));
           const tree *_self = _f._self;
-          tree t2 = std::move(_f.t2);
+          const tree &t2 = *_f.t2;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
             _result = std::move(t2);
           } else {
             const auto &[a0, a1, a2] = std::get<typename tree::Node>(_sv.v());
-            if (std::holds_alternative<typename tree::Leaf>(t2.v_mut())) {
+            if (std::holds_alternative<typename tree::Leaf>(t2.v())) {
               _result = *_self;
             } else {
-              auto &[a00, a10, a20] = std::get<typename tree::Node>(t2.v_mut());
-              _stack.emplace_back(CraneCont_Node{a1, a10, a2, a20});
-              _stack.emplace_back(CraneEnter{crane_raw(a0), *a00});
+              const auto &[a00, a10, a20] =
+                  std::get<typename tree::Node>(t2.v());
+              _stack.emplace_back(CraneCont_Node{a1, a10, a2, crane_raw(a20)});
+              _stack.emplace_back(CraneEnter{crane_raw(a0), crane_raw(a00)});
             }
           }
         } else if (std::holds_alternative<CraneCont_Node>(_frame)) {
@@ -155,15 +165,15 @@ struct MemSafetyProbe15 {
           uint64_t a1 = _f.a1;
           uint64_t a10 = _f.a10;
           std::shared_ptr<tree> a2 = std::move(_f.a2);
-          std::shared_ptr<tree> a20 = std::move(_f.a20);
+          const tree &a20 = *_f.a20;
           _stack.emplace_back(CraneCont_Node_1{std::move(_result), a1, a10});
-          _stack.emplace_back(CraneEnter{crane_raw(a2), *a20});
+          _stack.emplace_back(CraneEnter{crane_raw(a2), &a20});
         } else {
           auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
           uint64_t a1 = _f.a1;
           uint64_t a10 = _f.a10;
-          _result = tree::node(std::move(_f._tmp2), (a1 + std::move(a10)),
-                               std::move(_result));
+          _result =
+              tree::node(std::move(_f._tmp2), (a1 + a10), std::move(_result));
         }
       }
       return _result;

@@ -249,30 +249,30 @@ Z BinInt::pos_sub(const Positive &x, const Positive &y) {
   }
 }
 
-Z BinInt::add(Z x, Z y) {
-  if (std::holds_alternative<typename Z::Z0>(x.v_mut())) {
+Z BinInt::add(const Z &x, const Z &y) {
+  if (std::holds_alternative<typename Z::Z0>(x.v())) {
     return y;
-  } else if (std::holds_alternative<typename Z::Zpos>(x.v_mut())) {
-    auto &[a0] = std::get<typename Z::Zpos>(x.v_mut());
-    if (std::holds_alternative<typename Z::Z0>(y.v_mut())) {
+  } else if (std::holds_alternative<typename Z::Zpos>(x.v())) {
+    const auto &[a0] = std::get<typename Z::Zpos>(x.v());
+    if (std::holds_alternative<typename Z::Z0>(y.v())) {
       return x;
-    } else if (std::holds_alternative<typename Z::Zpos>(y.v_mut())) {
-      auto &[a00] = std::get<typename Z::Zpos>(y.v_mut());
-      return Z::zpos(Pos::add(a0, std::move(a00)));
+    } else if (std::holds_alternative<typename Z::Zpos>(y.v())) {
+      const auto &[a00] = std::get<typename Z::Zpos>(y.v());
+      return Z::zpos(Pos::add(a0, a00));
     } else {
-      auto &[a00] = std::get<typename Z::Zneg>(y.v_mut());
-      return BinInt::pos_sub(a0, std::move(a00));
+      const auto &[a00] = std::get<typename Z::Zneg>(y.v());
+      return BinInt::pos_sub(a0, a00);
     }
   } else {
-    auto &[a0] = std::get<typename Z::Zneg>(x.v_mut());
-    if (std::holds_alternative<typename Z::Z0>(y.v_mut())) {
+    const auto &[a0] = std::get<typename Z::Zneg>(x.v());
+    if (std::holds_alternative<typename Z::Z0>(y.v())) {
       return x;
-    } else if (std::holds_alternative<typename Z::Zpos>(y.v_mut())) {
-      auto &[a00] = std::get<typename Z::Zpos>(y.v_mut());
-      return BinInt::pos_sub(std::move(a00), a0);
+    } else if (std::holds_alternative<typename Z::Zpos>(y.v())) {
+      const auto &[a00] = std::get<typename Z::Zpos>(y.v());
+      return BinInt::pos_sub(a00, a0);
     } else {
-      auto &[a00] = std::get<typename Z::Zneg>(y.v_mut());
-      return Z::zneg(Pos::add(a0, std::move(a00)));
+      const auto &[a00] = std::get<typename Z::Zneg>(y.v());
+      return Z::zneg(Pos::add(a0, a00));
     }
   }
 }
@@ -289,9 +289,7 @@ Z BinInt::opp(const Z &x) {
   }
 }
 
-Z BinInt::sub(Z m, const Z &n) {
-  return BinInt::add(std::move(m), BinInt::opp(n));
-}
+Z BinInt::sub(const Z &m, const Z &n) { return BinInt::add(m, BinInt::opp(n)); }
 
 Z BinInt::mul(const Z &x, const Z &y) {
   if (std::holds_alternative<typename Z::Z0>(x.v())) {
@@ -448,17 +446,17 @@ std::pair<Z, Z> BinInt::pos_div_eucl(const Positive &a, const Z &b) {
   }
 }
 
-std::pair<Z, Z> BinInt::div_eucl(const Z &a, Z b) {
+std::pair<Z, Z> BinInt::div_eucl(const Z &a, const Z &b) {
   if (std::holds_alternative<typename Z::Z0>(a.v())) {
     return std::make_pair(Z::z0(), Z::z0());
   } else if (std::holds_alternative<typename Z::Zpos>(a.v())) {
     const auto &[a0] = std::get<typename Z::Zpos>(a.v());
-    if (std::holds_alternative<typename Z::Z0>(b.v_mut())) {
+    if (std::holds_alternative<typename Z::Z0>(b.v())) {
       return std::make_pair(Z::z0(), a);
-    } else if (std::holds_alternative<typename Z::Zpos>(b.v_mut())) {
+    } else if (std::holds_alternative<typename Z::Zpos>(b.v())) {
       return BinInt::pos_div_eucl(a0, b);
     } else {
-      auto &[a00] = std::get<typename Z::Zneg>(b.v_mut());
+      const auto &[a00] = std::get<typename Z::Zneg>(b.v());
       auto [q, r] = BinInt::pos_div_eucl(a0, Z::zpos(a00));
       if (std::holds_alternative<typename Z::Z0>(r.v_mut())) {
         return std::make_pair(BinInt::opp(std::move(q)), Z::z0());
@@ -470,9 +468,9 @@ std::pair<Z, Z> BinInt::div_eucl(const Z &a, Z b) {
     }
   } else {
     const auto &[a0] = std::get<typename Z::Zneg>(a.v());
-    if (std::holds_alternative<typename Z::Z0>(b.v_mut())) {
+    if (std::holds_alternative<typename Z::Z0>(b.v())) {
       return std::make_pair(Z::z0(), a);
-    } else if (std::holds_alternative<typename Z::Zpos>(b.v_mut())) {
+    } else if (std::holds_alternative<typename Z::Zpos>(b.v())) {
       auto [q, r] = BinInt::pos_div_eucl(a0, b);
       if (std::holds_alternative<typename Z::Z0>(r.v_mut())) {
         return std::make_pair(BinInt::opp(std::move(q)), Z::z0());
@@ -482,20 +480,20 @@ std::pair<Z, Z> BinInt::div_eucl(const Z &a, Z b) {
             BinInt::sub(b, std::move(r)));
       }
     } else {
-      auto &[a00] = std::get<typename Z::Zneg>(b.v_mut());
-      auto [q, r] = BinInt::pos_div_eucl(a0, Z::zpos(std::move(a00)));
+      const auto &[a00] = std::get<typename Z::Zneg>(b.v());
+      auto [q, r] = BinInt::pos_div_eucl(a0, Z::zpos(a00));
       return std::make_pair(std::move(q), BinInt::opp(std::move(r)));
     }
   }
 }
 
-Z BinInt::div(const Z &a, Z b) {
-  auto [q, _x] = BinInt::div_eucl(a, std::move(b));
+Z BinInt::div(const Z &a, const Z &b) {
+  auto [q, _x] = BinInt::div_eucl(a, b);
   return q;
 }
 
-Z BinInt::modulo(const Z &a, Z b) {
-  auto [_x, r] = BinInt::div_eucl(a, std::move(b));
+Z BinInt::modulo(const Z &a, const Z &b) {
+  auto [_x, r] = BinInt::div_eucl(a, b);
   return r;
 }
 
@@ -1001,12 +999,12 @@ uint64_t EpochCellGlyphTraceCase::visible_series_checksum(
   }
 }
 
-Z EpochCellGlyphTraceCase::months_from_epoch(Z epoch_year,
+Z EpochCellGlyphTraceCase::months_from_epoch(const Z &epoch_year,
                                              const Z &eclipse_year,
                                              const Z &epoch_month,
-                                             Z eclipse_month) {
-  Z year_diff = BinInt::sub(std::move(epoch_year), eclipse_year);
-  Z month_diff = BinInt::sub(std::move(eclipse_month), epoch_month);
+                                             const Z &eclipse_month) {
+  Z year_diff = BinInt::sub(epoch_year, eclipse_year);
+  Z month_diff = BinInt::sub(eclipse_month, epoch_month);
   return BinInt::add(
       BinInt::mul(std::move(year_diff), Z::zpos(Positive::xo(Positive::xo(
                                             Positive::xi(Positive::xh()))))),
@@ -1014,28 +1012,28 @@ Z EpochCellGlyphTraceCase::months_from_epoch(Z epoch_year,
 }
 
 Z EpochCellGlyphTraceCase::saros_cell(
-    Z epoch_year, const Z &epoch_month,
+    const Z &epoch_year, const Z &epoch_month,
     const EpochCellGlyphTraceCase::HistoricalEclipse &e) {
-  Z months = months_from_epoch(std::move(epoch_year), e.he_year, epoch_month,
-                               e.he_month);
+  Z months = months_from_epoch(epoch_year, e.he_year, epoch_month, e.he_month);
   return BinInt::modulo(
       std::move(months),
       Z::zpos(Positive::xi(Positive::xi(Positive::xi(Positive::xi(
           Positive::xi(Positive::xo(Positive::xi(Positive::xh())))))))));
 }
 
-Z EpochCellGlyphTraceCase::saros_dial_at_month(Z start_cell, Z months) {
+Z EpochCellGlyphTraceCase::saros_dial_at_month(const Z &start_cell,
+                                               const Z &months) {
   return BinInt::modulo(
-      BinInt::add(std::move(start_cell), std::move(months)),
+      BinInt::add(start_cell, months),
       Z::zpos(Positive::xi(Positive::xi(Positive::xi(Positive::xi(
           Positive::xi(Positive::xo(Positive::xi(Positive::xh())))))))));
 }
 
 EpochCellGlyphTraceCase::EpochReading
 EpochCellGlyphTraceCase::build_epoch_reading(
-    Z epoch_year, const Z &epoch_month,
+    const Z &epoch_year, const Z &epoch_month,
     const EpochCellGlyphTraceCase::HistoricalEclipse &e) {
-  Z cell = saros_cell(std::move(epoch_year), epoch_month, e);
+  Z cell = saros_cell(epoch_year, epoch_month, e);
   return EpochReading{state_at_cell(cell), e, cell, glyph_at_cell(cell)};
 }
 

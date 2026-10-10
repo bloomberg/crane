@@ -97,7 +97,7 @@ public:
     uint64_t _loop_n = n;
     while (true) {
       if (_loop_n <= 0) {
-        return std::move(*_loop_self);
+        return *_loop_self;
       } else {
         uint64_t n0 = _loop_n - 1;
         auto &&_sv = *_loop_self;

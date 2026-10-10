@@ -82,8 +82,8 @@ struct ReuseMapTypeChange {
 
     static lst<A> nil() { return lst<A>(Nil{}); }
 
-    static lst<A> cons(A a0, lst<A> a1) {
-      return lst<A>(Cons{std::move(a0), crane::make_rc<lst<A>>(std::move(a1))});
+    static lst<A> cons(A a0, crane::child_slot<lst<A>> a1) {
+      return lst<A>(Cons{std::move(a0), a1.take()});
     }
 
     static lst<A> cons_crane_reuse(crane::rc<lst<A>> _tok, A a0, lst<A> a1) {

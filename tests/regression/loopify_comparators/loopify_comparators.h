@@ -17,9 +17,10 @@ template <typename A> struct List;
 struct LoopifyComparators {
   static uint64_t maximum_by(const List<uint64_t> &l);
   static uint64_t minimum_by(const List<uint64_t> &l);
-  static List<uint64_t> merge_by_fuel(uint64_t fuel, List<uint64_t> l1,
-                                      List<uint64_t> l2);
-  static List<uint64_t> merge_by(List<uint64_t> l1, List<uint64_t> l2);
+  static List<uint64_t> merge_by_fuel(uint64_t fuel, const List<uint64_t> &l1,
+                                      const List<uint64_t> &l2);
+  static List<uint64_t> merge_by(const List<uint64_t> &l1,
+                                 const List<uint64_t> &l2);
   static List<uint64_t> insert_sorted(uint64_t x, const List<uint64_t> &l);
   static List<uint64_t> insertion_sort(const List<uint64_t> &l);
   static bool is_sorted_fuel(uint64_t fuel, const List<uint64_t> &l);

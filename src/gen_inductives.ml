@@ -881,6 +881,25 @@ let maybe_record_boxed_recursive_ind ~ind_ref ml_ty =
     @param consarg_names field names from Rocq binders, indexed by constructor
     @param mutual_partners other types in the mutual block *)
 
+(* Whether ML type [t] is a reference to [ref_name] applied to the same type
+   variables [ref_vars] (i.e., a direct recursive or mutual recursive
+   occurrence). *)
+let rec is_ref_to ref_name ref_vars = function
+  | Miniml.Tglob (r, args, _) ->
+    globref_equal r ref_name
+    && List.length args = List.length ref_vars
+    && List.for_all
+         (fun (j, arg) ->
+           match arg with
+           | Miniml.Tvar (_, k) -> k = j + 1
+           | Miniml.Tmeta {contents = Some (Miniml.Tvar (Schematic, k))}
+           | Miniml.Tmeta {contents = Some (Miniml.Tvar (Rigid, k))} ->
+             k = j + 1
+           | _ -> false)
+         (List.mapi (fun j a -> (j, a)) args)
+  | Miniml.Tmeta {contents = Some t} -> is_ref_to ref_name ref_vars t
+  | _ -> false
+
 let gen_ind_header_v2
     ?(is_mutual = false)
     ?(consarg_names = [||])
@@ -1359,25 +1378,6 @@ let gen_ind_header_v2
            needed here exactly as for any other recursive type. *)
         if is_coinductive || Table.is_shared_variant name then []
         else
-          (* Check whether ML type [t] is a reference to [ref_name] applied to
-             the same type variables [ref_vars] (i.e., a direct recursive or
-             mutual recursive occurrence). *)
-          let rec is_ref_to ref_name ref_vars = function
-            | Miniml.Tglob (r, args, _) ->
-              globref_equal r ref_name
-              && List.length args = List.length ref_vars
-              && List.for_all
-                   (fun (j, arg) ->
-                     match arg with
-                     | Miniml.Tvar (_, k) -> k = j + 1
-                     | Miniml.Tmeta {contents = Some (Miniml.Tvar (Schematic, k))}
-                     | Miniml.Tmeta {contents = Some (Miniml.Tvar (Rigid, k))} ->
-                       k = j + 1
-                     | _ -> false)
-                   (List.mapi (fun j a -> (j, a)) args)
-            | Miniml.Tmeta {contents = Some t} -> is_ref_to ref_name ref_vars t
-            | _ -> false
-          in
           let is_direct_self_ref t = is_ref_to name vars t in
           (* Does [t] mention the inductive being generated anywhere, at any
              depth?  [is_direct_self_ref] only matches the type at the root. *)
@@ -2175,7 +2175,72 @@ let gen_ind_header_v2
                 [(Tref (Lvalue, variant_t_ty), Some _v_id)]
                 None drain_stmts ~capture:Immediate
             in
+            (* Most destroyed values own none of their children alone: they
+               are temporaries that were moved from, or nodes whose children
+               are shared with a newer version of the structure.  For a
+               constructor whose recursive fields are all direct, such a value
+               would push nothing onto the worklist, so it returns before the
+               worklist is set up.  Constructors with other recursive fields
+               always take the general path. *)
+            let early_returns =
+              Array.to_list
+                (Array.mapi
+                   (fun i tys_list ->
+                     let fields =
+                       List.filter_map
+                         (fun (j, ty) ->
+                           match classify_ml_self_ref ty, is_mutual_ref ty with
+                           | `None, false -> None
+                           | `Direct, false ->
+                             let cname_str =
+                               ctor_struct_name_of_ref ~fallback_idx:i cnames.(i)
+                             in
+                             Some
+                               (Some
+                                  (Common.lookup_ctor_field_name ~owner:cnames.(i)
+                                     cname_str j))
+                           | _ -> Some None)
+                         (List.mapi (fun j ty -> (j, ty)) tys_list)
+                     in
+                     if not (List.for_all Option.has_some fields) then None
+                     else
+                       let owns_one =
+                         List.fold_left
+                           (fun acc f ->
+                             let fe =
+                               CPPaccess (Aarrow, CPPvar _alt_id, Option.get f)
+                             in
+                             let owned = CPPbinop (Band, fe, is_sole fe) in
+                             match acc with
+                             | None -> Some owned
+                             | Some e -> Some (CPPbinop (Bor, e, owned)))
+                           None fields
+                       in
+                       let ctor_id =
+                         ctor_struct_id_of_ref ~fallback_idx:i cnames.(i)
+                       in
+                       let v_mut = mk_call (CPPvar (Id.of_string "v_mut")) [] in
+                       match owns_one with
+                       | None ->
+                         Some
+                           (Sif
+                              ( mk_call
+                                  (CPPstd_holds_alternative (Tid (ctor_id, [])))
+                                  [v_mut],
+                                [Sreturn None], [] ))
+                       | Some e ->
+                         Some
+                           (Sif_decl
+                              ( _alt_id, Tptr Tauto,
+                                CPPstd_get_if
+                                  (Tid (ctor_id, []), CPPunop (Uaddr, v_mut)),
+                                [Sif (CPPunop (Unot, e), [Sreturn None], [])],
+                                [] )))
+                   tys)
+              |> List.filter_map Fun.id
+            in
             let body =
+              early_returns @
               [ Sasgn (_stack_id, Declare stack_ty,
                   CPPbraced []);
                 (* Most drains only ever hold a handful of pending nodes at
@@ -2484,10 +2549,42 @@ let gen_ind_header_v2
                   ~src_ty:api_ty ~dst_ty:storage_ty var )
             cpp_tys
         in
-        let body = [Sreturn (Some (build i cname ctor_args))] in
+        (* Under [Crane NonAtomicRc], a field holding the inductive itself
+           takes a [crane::child_slot]: a value, which it boxes, sharing one
+           cell between all values of a constructor without fields, or a
+           [crane::child] reference to the cell of a field read out of a
+           matched value, which the new node shares.  Rebuilding a path in a
+           persistent tree then allocates only the nodes on the path.  Not
+           for arena allocation, nor for coinductive or shared-variant types,
+           whose cells are made differently. *)
+        let child_field (_, storage_ty, _) ty =
+          Table.non_atomic_rc () && (not is_coinductive) && (not arena_runtime_ok)
+          && (not (Table.is_shared_variant name))
+          && is_ref_to name vars ty
+          && (match storage_ty with Tshared_ptr _ -> true | _ -> false)
+        in
+        let fields = List.combine cpp_tys tys_list in
+        let primary_params =
+          List.map2
+            (fun ((_, storage_ty, _) as f, ty) (pname, pty) ->
+              match storage_ty with
+              | Tshared_ptr inner when child_field f ty ->
+                (pname, Tid_external (Crane_rt.child_slot, [inner]))
+              | _ -> (pname, pty) )
+            fields params
+        in
+        let primary_ctor_args =
+          List.map2
+            (fun (((j, _, _) as f), ty) arg ->
+              if child_field f ty then
+                CPPaccess_call (Adot, CPPvar (param_name_of j), Id.of_string "take", [])
+              else arg )
+            fields ctor_args
+        in
+        let body = [Sreturn (Some (build i cname primary_ctor_args))] in
         let primary =
           ( Fmethod
-              (static_fun ~name:factory_name ~ret:ret_ty ~params ~body),
+              (static_fun ~name:factory_name ~ret:ret_ty ~params:primary_params ~body),
             VPublic,
             SCreators )
         in

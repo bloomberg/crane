@@ -70,34 +70,34 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  Nat max(Nat m) const {
+  Nat max(const Nat &m) const {
     std::optional<Nat> _root{};
     std::shared_ptr<Nat> *_write = nullptr;
     const Nat *_loop_self = this;
-    Nat _loop_m = std::move(m);
+    const Nat *_loop_m = &m;
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename Nat::O>(_sv.v())) {
-        auto _value = std::move(_loop_m);
+        auto _value = *_loop_m;
         (_write ? *(*_write = std::make_shared<Nat>(std::move(_value)))
                 : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0] = std::get<typename Nat::S>(_sv.v());
-        if (std::holds_alternative<typename Nat::O>(_loop_m.v_mut())) {
+        if (std::holds_alternative<typename Nat::O>(_loop_m->v())) {
           auto _value = *_loop_self;
           (_write ? *(*_write = std::make_shared<Nat>(std::move(_value)))
                   : _root.emplace(std::move(_value)));
           break;
         } else {
-          auto &[a00] = std::get<typename Nat::S>(_loop_m.v_mut());
+          const auto &[a00] = std::get<typename Nat::S>(_loop_m->v());
           auto _cell = typename Nat::S(nullptr);
           Nat &_node =
               (_write ? *(*_write = std::make_shared<Nat>(std::move(_cell)))
                       : _root.emplace(std::move(_cell)));
           _write = &std::get<typename Nat::S>(_node.v_mut()).a0;
           _loop_self = crane_raw(a0);
-          _loop_m = Nat(*a00);
+          _loop_m = crane_raw(a00);
           continue;
         }
       }
@@ -296,6 +296,15 @@ public:
 
   // MANIPULATORS
   ~Tree() {
+    if (std::holds_alternative<Leaf>(v_mut())) {
+      return;
+    }
+    if (auto *_alt = std::get_if<Node>(&v_mut())) {
+      if (!((_alt->t1 && _alt->t1.use_count() == 1) ||
+            (_alt->t2 && _alt->t2.use_count() == 1))) {
+        return;
+      }
+    }
     crane::small_vector<std::shared_ptr<Tree<A>>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<Node>(&_v)) {

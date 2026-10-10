@@ -240,8 +240,9 @@ List<std::pair<uint64_t, uint64_t>> LoopifyHofs::cartesian(
 /// longest_run l finds the longest consecutive run of equal elements.
 /// Matches on recursive result to decide behavior.
 List<uint64_t> LoopifyHofs::longest_run_fuel(
-    uint64_t fuel, List<uint64_t> l) { /// CraneEnter: captures varying
-                                       /// parameters for each recursive call.
+    uint64_t fuel,
+    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
+                               /// each recursive call.
 
   struct CraneEnter {
     List<uint64_t> l;
@@ -261,27 +262,26 @@ List<uint64_t> LoopifyHofs::longest_run_fuel(
   using CraneFrame = std::variant<CraneEnter, CraneCont1, CraneCont2>;
   List<uint64_t> _result{};
   crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{std::move(l), fuel});
+  _stack.emplace_back(CraneEnter{l, fuel});
   /// Loopified longest_run_fuel: CraneEnter -> CraneCont1 -> CraneCont2.
   while (!_stack.empty()) {
     CraneFrame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
-      List<uint64_t> l = std::move(_f.l);
+      const List<uint64_t> &l = std::move(_f.l);
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
         _result = std::move(l);
       } else {
         uint64_t f = fuel - 1;
-        if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v_mut())) {
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
           _result = List<uint64_t>::nil();
         } else {
-          auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v_mut());
+          const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
           auto &&_sv0 = *a1;
           if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv0.v())) {
-            _result =
-                List<uint64_t>::cons(std::move(a0), List<uint64_t>::nil());
+            _result = List<uint64_t>::cons(a0, List<uint64_t>::nil());
           } else {
             const auto &[a00, a10] =
                 std::get<typename List<uint64_t>::Cons>(_sv0.v());
@@ -300,18 +300,18 @@ List<uint64_t> LoopifyHofs::longest_run_fuel(
     } else if (std::holds_alternative<CraneCont1>(_frame)) {
       auto _f = std::move(std::get<CraneCont1>(_frame));
       uint64_t a0 = _f.a0;
-      _result = List<uint64_t>::cons(std::move(a0), std::move(_result));
+      _result = List<uint64_t>::cons(a0, std::move(_result));
     } else {
       auto _f = std::move(std::get<CraneCont2>(_frame));
       uint64_t a0 = _f.a0;
       List<uint64_t> rec_result = std::move(_result);
       if (std::holds_alternative<typename List<uint64_t>::Nil>(
               rec_result.v_mut())) {
-        _result = List<uint64_t>::cons(std::move(a0), List<uint64_t>::nil());
+        _result = List<uint64_t>::cons(a0, List<uint64_t>::nil());
       } else {
         auto &[a01, a11] =
             std::get<typename List<uint64_t>::Cons>(rec_result.v_mut());
-        if (std::move(a0) == a01) {
+        if (a0 == a01) {
           _result = std::move(rec_result);
         } else {
           _result = std::move(rec_result);
@@ -322,7 +322,7 @@ List<uint64_t> LoopifyHofs::longest_run_fuel(
   return _result;
 }
 
-List<uint64_t> LoopifyHofs::longest_run(List<uint64_t> l) {
+List<uint64_t> LoopifyHofs::longest_run(const List<uint64_t> &l) {
   return longest_run_fuel(l.length(), l);
 }
 

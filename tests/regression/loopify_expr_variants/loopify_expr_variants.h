@@ -173,6 +173,22 @@ struct LoopifyExprVariants {
 
     // MANIPULATORS
     ~cond_expr() {
+      if (std::holds_alternative<Lit>(v_mut())) {
+        return;
+      }
+      if (auto *_alt = std::get_if<Add>(&v_mut())) {
+        if (!((_alt->a0 && _alt->a0.use_count() == 1) ||
+              (_alt->a1 && _alt->a1.use_count() == 1))) {
+          return;
+        }
+      }
+      if (auto *_alt = std::get_if<Cond>(&v_mut())) {
+        if (!((_alt->a0 && _alt->a0.use_count() == 1) ||
+              (_alt->a1 && _alt->a1.use_count() == 1) ||
+              (_alt->a2 && _alt->a2.use_count() == 1))) {
+          return;
+        }
+      }
       crane::small_vector<std::shared_ptr<cond_expr>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Add>(&_v)) {
@@ -576,6 +592,27 @@ struct LoopifyExprVariants {
 
     // MANIPULATORS
     ~arith_expr() {
+      if (std::holds_alternative<ANum>(v_mut())) {
+        return;
+      }
+      if (auto *_alt = std::get_if<AAdd>(&v_mut())) {
+        if (!((_alt->a0 && _alt->a0.use_count() == 1) ||
+              (_alt->a1 && _alt->a1.use_count() == 1))) {
+          return;
+        }
+      }
+      if (auto *_alt = std::get_if<AMul>(&v_mut())) {
+        if (!((_alt->a0 && _alt->a0.use_count() == 1) ||
+              (_alt->a1 && _alt->a1.use_count() == 1))) {
+          return;
+        }
+      }
+      if (auto *_alt = std::get_if<ADiv>(&v_mut())) {
+        if (!((_alt->a0 && _alt->a0.use_count() == 1) ||
+              (_alt->a1 && _alt->a1.use_count() == 1))) {
+          return;
+        }
+      }
       crane::small_vector<std::shared_ptr<arith_expr>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<AAdd>(&_v)) {
@@ -1044,6 +1081,29 @@ struct LoopifyExprVariants {
 
     // MANIPULATORS
     ~bool_expr() {
+      if (std::holds_alternative<BTrue>(v_mut())) {
+        return;
+      }
+      if (std::holds_alternative<BFalse>(v_mut())) {
+        return;
+      }
+      if (auto *_alt = std::get_if<BAnd>(&v_mut())) {
+        if (!((_alt->a0 && _alt->a0.use_count() == 1) ||
+              (_alt->a1 && _alt->a1.use_count() == 1))) {
+          return;
+        }
+      }
+      if (auto *_alt = std::get_if<BOr>(&v_mut())) {
+        if (!((_alt->a0 && _alt->a0.use_count() == 1) ||
+              (_alt->a1 && _alt->a1.use_count() == 1))) {
+          return;
+        }
+      }
+      if (auto *_alt = std::get_if<BNot>(&v_mut())) {
+        if (!(_alt->a0 && _alt->a0.use_count() == 1)) {
+          return;
+        }
+      }
       crane::small_vector<std::shared_ptr<bool_expr>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<BAnd>(&_v)) {
@@ -1740,6 +1800,23 @@ struct LoopifyExprVariants {
 
     // MANIPULATORS
     ~list_expr() {
+      if (std::holds_alternative<LNil>(v_mut())) {
+        return;
+      }
+      if (auto *_alt = std::get_if<LCons>(&v_mut())) {
+        if (!(_alt->a1 && _alt->a1.use_count() == 1)) {
+          return;
+        }
+      }
+      if (auto *_alt = std::get_if<LAppend>(&v_mut())) {
+        if (!((_alt->a0 && _alt->a0.use_count() == 1) ||
+              (_alt->a1 && _alt->a1.use_count() == 1))) {
+          return;
+        }
+      }
+      if (std::holds_alternative<LReplicate>(v_mut())) {
+        return;
+      }
       crane::small_vector<std::shared_ptr<list_expr>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<LCons>(&_v)) {

@@ -19,8 +19,8 @@ struct Option {
   static inline const std::optional<std::optional<uint64_t>> nested_none =
       std::make_optional<std::optional<uint64_t>>(std::optional<uint64_t>());
   static std::optional<uint64_t> safe_pred(uint64_t n);
-  static std::optional<uint64_t> chain_options(std::optional<uint64_t> o1,
-                                               std::optional<uint64_t> o2);
+  static std::optional<uint64_t>
+  chain_options(const std::optional<uint64_t> &o1, std::optional<uint64_t> o2);
 
   template <typename T1, typename T2>
   static std::optional<T2>

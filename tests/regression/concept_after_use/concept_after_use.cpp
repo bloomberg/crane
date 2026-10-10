@@ -283,11 +283,11 @@ N BinNat::double_(const N &n) {
   }
 }
 
-N BinNat::sub(N n, const N &m) {
-  if (std::holds_alternative<typename N::N0>(n.v_mut())) {
+N BinNat::sub(const N &n, const N &m) {
+  if (std::holds_alternative<typename N::N0>(n.v())) {
     return N::n0();
   } else {
-    auto &[a0] = std::get<typename N::Npos>(n.v_mut());
+    const auto &[a0] = std::get<typename N::Npos>(n.v());
     if (std::holds_alternative<typename N::N0>(m.v())) {
       return n;
     } else {

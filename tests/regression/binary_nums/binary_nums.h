@@ -263,10 +263,10 @@ struct Pos {
 };
 
 struct BinNat {
-  static N sub(N n, const N &m);
+  static N sub(const N &n, const N &m);
   static Comparison compare(const N &n, const N &m);
   static N pred(const N &n);
-  static N add(N n, N m);
+  static N add(const N &n, const N &m);
   static N mul(const N &n, const N &m);
   static uint64_t to_nat(const N &a);
 };
@@ -276,9 +276,9 @@ struct BinInt {
   static Z succ_double(const Z &x);
   static Z pred_double(const Z &x);
   static Z pos_sub(const Positive &x, const Positive &y);
-  static Z add(Z x, Z y);
+  static Z add(const Z &x, const Z &y);
   static Z opp(const Z &x);
-  static Z sub(Z m, const Z &n);
+  static Z sub(const Z &m, const Z &n);
   static Z mul(const Z &x, const Z &y);
   static Comparison compare(const Z &x, const Z &y);
   static uint64_t to_nat(const Z &z);

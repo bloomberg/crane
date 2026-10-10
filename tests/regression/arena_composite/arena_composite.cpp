@@ -18,15 +18,15 @@ Bool0 PeanoNat::ltb(const Nat &n, const Nat &m) {
   return PeanoNat::leb(Nat::s(n), m);
 }
 
-Nat PeanoNat::max(Nat n, Nat m) {
-  if (std::holds_alternative<typename Nat::O>(n.v_mut())) {
+Nat PeanoNat::max(const Nat &n, const Nat &m) {
+  if (std::holds_alternative<typename Nat::O>(n.v())) {
     return m;
   } else {
-    auto &[a0] = std::get<typename Nat::S>(n.v_mut());
-    if (std::holds_alternative<typename Nat::O>(m.v_mut())) {
+    const auto &[a0] = std::get<typename Nat::S>(n.v());
+    if (std::holds_alternative<typename Nat::O>(m.v())) {
       return n;
     } else {
-      auto &[a00] = std::get<typename Nat::S>(m.v_mut());
+      const auto &[a00] = std::get<typename Nat::S>(m.v());
       return Nat::s(PeanoNat::max(*a0, *a00));
     }
   }

@@ -3,6 +3,7 @@
 
 let rc = "crane::rc"
 let make_rc = "crane::make_rc"
+let child_slot = "crane::child_slot"
 let enable_rc_from_this = "crane::enable_rc_from_this"
 let make_rc_reusing = "crane::make_rc_reusing"
 let make_rc_reusing_unchecked = "crane::make_rc_reusing_unchecked"
@@ -49,6 +50,7 @@ type helper =
   | Reuse_step
   | Raw
   | Unbox_field
+  | Share_child
   | Apply2
   | Constant of string
   | Immortal
@@ -60,4 +62,5 @@ let name = function
   | Make_rc_reusing_unchecked -> make_rc_reusing_unchecked
   | Raw -> raw
   | Unbox_field -> "crane::unbox"
+  | Share_child -> "crane::child"
   | Reuse_step -> reuse_step

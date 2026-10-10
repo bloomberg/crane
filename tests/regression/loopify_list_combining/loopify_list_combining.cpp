@@ -203,34 +203,32 @@ List<uint64_t> LoopifyListCombining::mapcat(
   return _result;
 }
 
-List<uint64_t> LoopifyListCombining::interleave_two(List<uint64_t> l1,
-                                                    List<uint64_t> l2) {
+List<uint64_t> LoopifyListCombining::interleave_two(const List<uint64_t> &l1,
+                                                    const List<uint64_t> &l2) {
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
-  List<uint64_t> _loop_l2 = std::move(l2);
-  List<uint64_t> _loop_l1 = std::move(l1);
+  const List<uint64_t> *_loop_l2 = &l2;
+  const List<uint64_t> *_loop_l1 = &l1;
   while (true) {
-    if (std::holds_alternative<typename List<uint64_t>::Nil>(
-            _loop_l1.v_mut())) {
-      auto _value = std::move(_loop_l2);
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l1->v())) {
+      auto _value = *_loop_l2;
       (_write ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      auto &[a0, a1] =
-          std::get<typename List<uint64_t>::Cons>(_loop_l1.v_mut());
-      if (std::holds_alternative<typename List<uint64_t>::Nil>(
-              _loop_l2.v_mut())) {
-        auto _value = _loop_l1;
+      const auto &[a0, a1] =
+          std::get<typename List<uint64_t>::Cons>(_loop_l1->v());
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l2->v())) {
+        auto _value = *_loop_l1;
         (_write
              ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
              : _root.emplace(std::move(_value)));
         break;
       } else {
-        auto &[a00, a10] =
-            std::get<typename List<uint64_t>::Cons>(_loop_l2.v_mut());
+        const auto &[a00, a10] =
+            std::get<typename List<uint64_t>::Cons>(_loop_l2->v());
         auto _cell1 = std::make_shared<List<uint64_t>>(
-            typename List<uint64_t>::Cons(std::move(a00), nullptr));
+            typename List<uint64_t>::Cons(a00, nullptr));
         auto _cell = typename List<uint64_t>::Cons(a0, std::move(_cell1));
         List<uint64_t> &_node =
             (_write ? *(*_write =
@@ -240,8 +238,8 @@ List<uint64_t> LoopifyListCombining::interleave_two(List<uint64_t> l1,
                       std::get<typename List<uint64_t>::Cons>(_node.v_mut())
                           .l->v_mut())
                       .l;
-        _loop_l2 = List<uint64_t>(*a10);
-        _loop_l1 = List<uint64_t>(*a1);
+        _loop_l2 = crane_raw(a10);
+        _loop_l1 = crane_raw(a1);
         continue;
       }
     }

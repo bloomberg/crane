@@ -154,6 +154,15 @@ struct LoopifyMoreTrees {
 
     // MANIPULATORS
     ~tree() {
+      if (std::holds_alternative<Leaf>(v_mut())) {
+        return;
+      }
+      if (auto *_alt = std::get_if<Node>(&v_mut())) {
+        if (!((_alt->a0 && _alt->a0.use_count() == 1) ||
+              (_alt->a2 && _alt->a2.use_count() == 1))) {
+          return;
+        }
+      }
       crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
@@ -261,7 +270,7 @@ struct LoopifyMoreTrees {
   static List<uint64_t> tree_to_list(const tree &t);
   static bool mirror_equal(const tree &t);
   static uint64_t count_nodes(const tree &t);
-  static tree tree_max(tree t1, tree t2);
+  static tree tree_max(const tree &t1, const tree &t2);
   static uint64_t sum_of_max_branches(const tree &t);
   static tree insert_bst(uint64_t x, const tree &t);
   static tree build_bst(const List<uint64_t> &l);

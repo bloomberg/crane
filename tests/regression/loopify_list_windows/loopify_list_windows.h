@@ -18,7 +18,7 @@ struct LoopifyListWindows {
   static uint64_t len(const List<uint64_t> &l);
   static List<List<uint64_t>> map_cons_helper(uint64_t x,
                                               const List<List<uint64_t>> &ll);
-  static List<uint64_t> drop(uint64_t m, List<uint64_t> xs);
+  static List<uint64_t> drop(uint64_t m, const List<uint64_t> &xs);
   static std::pair<List<uint64_t>, List<uint64_t>>
   span_eq(uint64_t first, const List<uint64_t> &lst);
   static List<uint64_t> differences(const List<uint64_t> &l);
@@ -31,8 +31,8 @@ struct LoopifyListWindows {
                                            const List<uint64_t> &l);
   static List<List<uint64_t>> windows(uint64_t n, const List<uint64_t> &l);
   static List<List<uint64_t>> chunks_fuel(uint64_t fuel, uint64_t n,
-                                          List<uint64_t> l);
-  static List<List<uint64_t>> chunks(uint64_t n, List<uint64_t> l);
+                                          const List<uint64_t> &l);
+  static List<List<uint64_t>> chunks(uint64_t n, const List<uint64_t> &l);
   static List<List<uint64_t>> group_fuel(uint64_t fuel,
                                          const List<uint64_t> &l);
   static List<List<uint64_t>> group(const List<uint64_t> &l);

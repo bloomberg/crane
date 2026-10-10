@@ -244,13 +244,13 @@ uint64_t LoopifyMoreTrees::count_nodes(
 }
 
 LoopifyMoreTrees::tree LoopifyMoreTrees::tree_max(
-    LoopifyMoreTrees::tree t1,
-    LoopifyMoreTrees::tree t2) { /// CraneEnter: captures varying parameters for
-                                 /// each recursive call.
+    const LoopifyMoreTrees::tree &t1,
+    const LoopifyMoreTrees::tree &t2) { /// CraneEnter: captures varying
+                                        /// parameters for each recursive call.
 
   struct CraneEnter {
-    LoopifyMoreTrees::tree t2;
-    LoopifyMoreTrees::tree t1;
+    const LoopifyMoreTrees::tree *t2;
+    const LoopifyMoreTrees::tree *t1;
   };
 
   /// CraneCont_Node: saves [a1, a10, a2, a20], resumes after recursive call,
@@ -258,8 +258,8 @@ LoopifyMoreTrees::tree LoopifyMoreTrees::tree_max(
   struct CraneCont_Node {
     uint64_t a1;
     uint64_t a10;
-    std::shared_ptr<LoopifyMoreTrees::tree> a2;
-    std::shared_ptr<LoopifyMoreTrees::tree> a20;
+    const LoopifyMoreTrees::tree *a2;
+    const LoopifyMoreTrees::tree *a20;
   };
 
   /// CraneCont_Node_1: saves [_tmp2, a1, a10], resumes after recursive call,
@@ -273,44 +273,45 @@ LoopifyMoreTrees::tree LoopifyMoreTrees::tree_max(
   using CraneFrame = std::variant<CraneEnter, CraneCont_Node, CraneCont_Node_1>;
   LoopifyMoreTrees::tree _result{};
   crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{std::move(t2), std::move(t1)});
+  _stack.emplace_back(CraneEnter{&t2, &t1});
   /// Loopified tree_max: CraneEnter -> CraneCont_Node -> CraneCont_Node_1.
   while (!_stack.empty()) {
     CraneFrame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
-      LoopifyMoreTrees::tree t2 = std::move(_f.t2);
-      LoopifyMoreTrees::tree t1 = std::move(_f.t1);
+      const LoopifyMoreTrees::tree &t2 = *_f.t2;
+      const LoopifyMoreTrees::tree &t1 = *_f.t1;
       if (std::holds_alternative<typename LoopifyMoreTrees::tree::Leaf>(
-              t1.v_mut())) {
+              t1.v())) {
         _result = std::move(t2);
       } else {
-        auto &[a0, a1, a2] =
-            std::get<typename LoopifyMoreTrees::tree::Node>(t1.v_mut());
+        const auto &[a0, a1, a2] =
+            std::get<typename LoopifyMoreTrees::tree::Node>(t1.v());
         if (std::holds_alternative<typename LoopifyMoreTrees::tree::Leaf>(
-                t2.v_mut())) {
+                t2.v())) {
           _result = std::move(t1);
         } else {
-          auto &[a00, a10, a20] =
-              std::get<typename LoopifyMoreTrees::tree::Node>(t2.v_mut());
-          _stack.emplace_back(CraneCont_Node{a1, a10, a2, a20});
-          _stack.emplace_back(CraneEnter{*a00, *a0});
+          const auto &[a00, a10, a20] =
+              std::get<typename LoopifyMoreTrees::tree::Node>(t2.v());
+          _stack.emplace_back(
+              CraneCont_Node{a1, a10, crane_raw(a2), crane_raw(a20)});
+          _stack.emplace_back(CraneEnter{crane_raw(a00), crane_raw(a0)});
         }
       }
     } else if (std::holds_alternative<CraneCont_Node>(_frame)) {
       auto _f = std::move(std::get<CraneCont_Node>(_frame));
       uint64_t a1 = _f.a1;
       uint64_t a10 = _f.a10;
-      std::shared_ptr<LoopifyMoreTrees::tree> a2 = std::move(_f.a2);
-      std::shared_ptr<LoopifyMoreTrees::tree> a20 = std::move(_f.a20);
+      const LoopifyMoreTrees::tree &a2 = *_f.a2;
+      const LoopifyMoreTrees::tree &a20 = *_f.a20;
       _stack.emplace_back(CraneCont_Node_1{std::move(_result), a1, a10});
-      _stack.emplace_back(CraneEnter{*a20, *a2});
+      _stack.emplace_back(CraneEnter{&a20, &a2});
     } else {
       auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
       uint64_t a1 = _f.a1;
       uint64_t a10 = _f.a10;
-      _result = tree::node(std::move(_f._tmp2), std::max(a1, std::move(a10)),
+      _result = tree::node(std::move(_f._tmp2), std::max(a1, a10),
                            std::move(_result));
     }
   }

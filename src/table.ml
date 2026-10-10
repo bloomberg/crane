@@ -2194,9 +2194,32 @@ let {Goptions.get = loopify_strict} =
 (* Per-function loopify/noloopify table. First set = force-loopify, second set =
    force-noloopify. *)
 
+(* Suffix of a dotted kernel-name-string path: the last [n] '.'-separated
+   components. Used as a fallback match key for functor-internal
+   registrations below (both arena and, further down, guard-compare). *)
+let key_suffix n key =
+  let parts = String.split_on_char '.' key in
+  let len = List.length parts in
+  if len <= n then key
+  else String.concat "." (List.filteri (fun i _ -> i >= len - n) parts)
+
 let empty_loopify_table = (Refset'.empty, Refset'.empty)
 
 let loopify_table = Summary.ref empty_loopify_table ~name:"CraneExtrLoopify"
+
+(* A function defined inside a functor is extracted from the functor's body,
+   which is a different global from the one a command can name: [Crane
+   NoLoopify ZMap.Raw.add] names the [add] of the instance [ZMap], while the
+   code is generated from [FMapAVL.Raw]'s own [add], and members of a functor
+   cannot be named at all.  So an entry also matches, when the exact lookup
+   misses, a constant whose last two path components ([Raw.add]) are the
+   same.  Maps each such suffix to the setting last given for it. *)
+let loopify_suffix_table : bool CString.Map.t ref =
+  Summary.ref CString.Map.empty ~name:"CraneExtrLoopifySuffix"
+
+let loopify_key = function
+  | GlobRef.ConstRef c -> Some (key_suffix 2 (KerName.to_string (Constant.user c)))
+  | _ -> None
 
 (** Determines whether a function should be loopified: forced on/off per
     function, falling back to the global [Crane Loopify] setting. *)
@@ -2207,14 +2230,22 @@ let should_loopify ?default r =
   else if Refset'.mem r no then
     false
   else
-    match default with Some d -> d | None -> loopify ()
+    match Option.bind (loopify_key r) (fun k -> CString.Map.find_opt k !loopify_suffix_table) with
+    | Some b -> b
+    | None -> ( match default with Some d -> d | None -> loopify () )
 
 let loopifies_methods_of r = should_loopify ~default:(not (is_coinductive r)) r
 
 let add_loopify_entries b l =
   let f b = if b then Refset'.add else Refset'.remove in
   let y, n = !loopify_table in
-  loopify_table := (List.fold_right (f b) l y, List.fold_right (f (not b)) l n)
+  loopify_table := (List.fold_right (f b) l y, List.fold_right (f (not b)) l n);
+  List.iter
+    (fun r ->
+      Option.iter
+        (fun k -> loopify_suffix_table := CString.Map.add k b !loopify_suffix_table)
+        (loopify_key r))
+    l
 
 let loopify_extraction : bool * GlobRef.t list -> obj =
   declare_object
@@ -2241,7 +2272,9 @@ let reset_loopify : unit -> obj =
   declare_object
   @@ superglobal_object_nodischarge
        "Crane Reset Extraction Loopify"
-       ~cache:(fun () -> loopify_table := empty_loopify_table)
+       ~cache:(fun () ->
+         loopify_table := empty_loopify_table;
+         loopify_suffix_table := CString.Map.empty)
        ~subst:None
 
 let reset_extraction_loopify () = Lib.add_leaf (reset_loopify ())
@@ -2427,15 +2460,6 @@ let {Goptions.get = move_last_use} =
    reintroduce the old per-type deep-clone/composite-hang failure mode. *)
 let {Goptions.get = arena_enabled} =
   declare_bool_option_and_ref ~key:["Crane"; "Arena"] ~value:false ()
-
-(* Suffix of a dotted kernel-name-string path: the last [n] '.'-separated
-   components. Used as a fallback match key for functor-internal
-   registrations below (both arena and, further down, guard-compare). *)
-let key_suffix n key =
-  let parts = String.split_on_char '.' key in
-  let len = List.length parts in
-  if len <= n then key
-  else String.concat "." (List.filteri (fun i _ -> i >= len - n) parts)
 
 (* Per-inductive NoArena opt-out table (scoped-arena redesign).  Membership
    means "never bump-allocate this type's nodes even when an arena scope is

@@ -171,6 +171,35 @@ struct Matcher {
 
     // MANIPULATORS
     ~regexp() {
+      if (std::holds_alternative<Any>(v_mut())) {
+        return;
+      }
+      if (std::holds_alternative<Char>(v_mut())) {
+        return;
+      }
+      if (std::holds_alternative<Eps>(v_mut())) {
+        return;
+      }
+      if (auto *_alt = std::get_if<Cat>(&v_mut())) {
+        if (!((_alt->r1 && _alt->r1.use_count() == 1) ||
+              (_alt->r2 && _alt->r2.use_count() == 1))) {
+          return;
+        }
+      }
+      if (auto *_alt = std::get_if<Alt>(&v_mut())) {
+        if (!((_alt->r1 && _alt->r1.use_count() == 1) ||
+              (_alt->r2 && _alt->r2.use_count() == 1))) {
+          return;
+        }
+      }
+      if (std::holds_alternative<Zero>(v_mut())) {
+        return;
+      }
+      if (auto *_alt = std::get_if<Star>(&v_mut())) {
+        if (!(_alt->r && _alt->r.use_count() == 1)) {
+          return;
+        }
+      }
       crane::small_vector<std::shared_ptr<regexp>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Cat>(&_v)) {
@@ -254,9 +283,9 @@ struct Matcher {
 
   static bool regexp_eq(const regexp &r, const regexp &x);
   /// An optimized constructor for Cat.
-  static regexp OptCat(regexp r2, regexp r3);
+  static regexp OptCat(const regexp &r2, const regexp &r3);
   /// Optimized version of Alt.
-  static regexp OptAlt(regexp r2, regexp r3);
+  static regexp OptAlt(const regexp &r2, const regexp &r3);
   /// If r accepts the empty string, return Eps, else return Zero.
   static regexp null(const regexp &r);
   static bool accepts_null(const regexp &r);

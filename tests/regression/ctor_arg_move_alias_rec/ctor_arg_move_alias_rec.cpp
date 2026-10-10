@@ -39,13 +39,13 @@ uint64_t CtorArgMoveAliasRec::osum(
 /// sibling argument still reads o.
 CtorArgMoveAliasRec::mylist<CtorArgMoveAliasRec::inner>
 CtorArgMoveAliasRec::annotate(
-    CtorArgMoveAliasRec::mylist<CtorArgMoveAliasRec::inner> o) {
+    const CtorArgMoveAliasRec::mylist<CtorArgMoveAliasRec::inner> &o) {
   if (std::holds_alternative<typename CtorArgMoveAliasRec::mylist<
-          CtorArgMoveAliasRec::inner>::Mynil>(o.v_mut())) {
+          CtorArgMoveAliasRec::inner>::Mynil>(o.v())) {
     return o;
   } else {
-    auto &[a0, a1] = std::get<typename CtorArgMoveAliasRec::mylist<
-        CtorArgMoveAliasRec::inner>::Mycons>(o.v_mut());
+    const auto &[a0, a1] = std::get<typename CtorArgMoveAliasRec::mylist<
+        CtorArgMoveAliasRec::inner>::Mycons>(o.v());
     return mylist<CtorArgMoveAliasRec::inner>::mycons(
         a0, mylist<CtorArgMoveAliasRec::inner>::mycons(
                 inner::icons(osum(o), inner::inil()), annotate(*a1)));

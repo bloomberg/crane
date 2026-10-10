@@ -265,33 +265,33 @@ List<uint64_t> LoopifyListTransforms::take(uint64_t n,
   return std::move(*_root);
 }
 
-List<uint64_t> LoopifyListTransforms::drop(uint64_t n, List<uint64_t> l) {
-  List<uint64_t> _loop_l = std::move(l);
+List<uint64_t> LoopifyListTransforms::drop(uint64_t n,
+                                           const List<uint64_t> &l) {
+  const List<uint64_t> *_loop_l = &l;
   uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
-      return _loop_l;
+      return *_loop_l;
     } else {
       uint64_t n_ = _loop_n - 1;
-      if (std::holds_alternative<typename List<uint64_t>::Nil>(
-              _loop_l.v_mut())) {
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
         return List<uint64_t>::nil();
       } else {
-        auto &[a0, a1] =
-            std::get<typename List<uint64_t>::Cons>(_loop_l.v_mut());
-        _loop_l = List<uint64_t>(*a1);
+        const auto &[a0, a1] =
+            std::get<typename List<uint64_t>::Cons>(_loop_l->v());
+        _loop_l = crane_raw(a1);
         _loop_n = n_;
       }
     }
   }
 }
 
-List<List<uint64_t>> LoopifyListTransforms::chunks_of_fuel(uint64_t fuel,
-                                                           uint64_t n,
-                                                           List<uint64_t> l) {
+List<List<uint64_t>>
+LoopifyListTransforms::chunks_of_fuel(uint64_t fuel, uint64_t n,
+                                      const List<uint64_t> &l) {
   std::optional<List<List<uint64_t>>> _root{};
   std::shared_ptr<List<List<uint64_t>>> *_write = nullptr;
-  List<uint64_t> _loop_l = std::move(l);
+  List<uint64_t> _loop_l = l;
   uint64_t _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
@@ -309,8 +309,7 @@ List<List<uint64_t>> LoopifyListTransforms::chunks_of_fuel(uint64_t fuel,
                 : _root.emplace(std::move(_value)));
         break;
       } else {
-        if (std::holds_alternative<typename List<uint64_t>::Nil>(
-                _loop_l.v_mut())) {
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l.v())) {
           auto _value = List<List<uint64_t>>::nil();
           (_write ? *(*_write = std::make_shared<List<List<uint64_t>>>(
                           std::move(_value)))
@@ -336,15 +335,15 @@ List<List<uint64_t>> LoopifyListTransforms::chunks_of_fuel(uint64_t fuel,
 }
 
 List<List<uint64_t>> LoopifyListTransforms::chunks_of(uint64_t n,
-                                                      List<uint64_t> l) {
+                                                      const List<uint64_t> &l) {
   uint64_t len = l.length();
-  return chunks_of_fuel(len, n, std::move(l));
+  return chunks_of_fuel(len, n, l);
 }
 
-List<uint64_t> LoopifyListTransforms::rotate_left_fuel(uint64_t fuel,
-                                                       uint64_t n,
-                                                       List<uint64_t> l) {
-  List<uint64_t> _loop_l = std::move(l);
+List<uint64_t>
+LoopifyListTransforms::rotate_left_fuel(uint64_t fuel, uint64_t n,
+                                        const List<uint64_t> &l) {
+  List<uint64_t> _loop_l = l;
   uint64_t _loop_n = n;
   uint64_t _loop_fuel = fuel;
   while (true) {
@@ -355,14 +354,13 @@ List<uint64_t> LoopifyListTransforms::rotate_left_fuel(uint64_t fuel,
       if (_loop_n <= UINT64_C(0)) {
         return _loop_l;
       } else {
-        if (std::holds_alternative<typename List<uint64_t>::Nil>(
-                _loop_l.v_mut())) {
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l.v())) {
           return List<uint64_t>::nil();
         } else {
-          auto &[a0, a1] =
-              std::get<typename List<uint64_t>::Cons>(_loop_l.v_mut());
-          List<uint64_t> rotated = a1->app(
-              List<uint64_t>::cons(std::move(a0), List<uint64_t>::nil()));
+          const auto &[a0, a1] =
+              std::get<typename List<uint64_t>::Cons>(_loop_l.v());
+          List<uint64_t> rotated =
+              a1->app(List<uint64_t>::cons(a0, List<uint64_t>::nil()));
           _loop_l = std::move(rotated);
           _loop_n = ((
               (_loop_n - UINT64_C(1)) > _loop_n ? 0 : (_loop_n - UINT64_C(1))));
@@ -374,8 +372,8 @@ List<uint64_t> LoopifyListTransforms::rotate_left_fuel(uint64_t fuel,
 }
 
 List<uint64_t> LoopifyListTransforms::rotate_left(uint64_t n,
-                                                  List<uint64_t> l) {
-  return rotate_left_fuel((n + UINT64_C(1)), n, std::move(l));
+                                                  const List<uint64_t> &l) {
+  return rotate_left_fuel((n + UINT64_C(1)), n, l);
 }
 
 List<uint64_t>

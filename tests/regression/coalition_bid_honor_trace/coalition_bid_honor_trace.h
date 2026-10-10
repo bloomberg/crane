@@ -452,7 +452,7 @@ struct BinInt {
   static Z succ_double(const Z &x);
   static Z pred_double(const Z &x);
   static Z pos_sub(const Positive &x, const Positive &y);
-  static Z add(Z x, Z y);
+  static Z add(const Z &x, const Z &y);
   static bool eqb(const Z &x, const Z &y);
 };
 
@@ -1389,7 +1389,7 @@ struct CoalitionBidHonorTraceCase {
   ledger_update_by_id(const List<std::pair<uint64_t, Z>> &ledger,
                       uint64_t warrior_id, const Z &new_honor);
   static HonorLedger update_honor(const List<std::pair<uint64_t, Z>> &ledger,
-                                  const Commander &actor, Z delta);
+                                  const Commander &actor, const Z &delta);
   static Honor refusal_honor_delta(const RefusalReason &r);
   static Honor protocol_honor_delta(const ProtocolAction &action);
 

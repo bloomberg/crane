@@ -155,6 +155,9 @@ struct LoopifyStructures {
 
     // MANIPULATORS
     ~nested() {
+      if (std::holds_alternative<Elem>(v_mut())) {
+        return;
+      }
       crane::small_vector<std::shared_ptr<nested>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<NList>(&_v)) {
@@ -295,6 +298,17 @@ struct LoopifyStructures {
 
     // MANIPULATORS
     ~quadtree() {
+      if (std::holds_alternative<QLeaf>(v_mut())) {
+        return;
+      }
+      if (auto *_alt = std::get_if<Quad>(&v_mut())) {
+        if (!((_alt->a0 && _alt->a0.use_count() == 1) ||
+              (_alt->a1 && _alt->a1.use_count() == 1) ||
+              (_alt->a2 && _alt->a2.use_count() == 1) ||
+              (_alt->a3 && _alt->a3.use_count() == 1))) {
+          return;
+        }
+      }
       crane::small_vector<std::shared_ptr<quadtree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Quad>(&_v)) {
@@ -895,6 +909,15 @@ struct LoopifyStructures {
 
     // MANIPULATORS
     ~ltree() {
+      if (std::holds_alternative<LLeaf>(v_mut())) {
+        return;
+      }
+      if (auto *_alt = std::get_if<LNode>(&v_mut())) {
+        if (!((_alt->a1 && _alt->a1.use_count() == 1) ||
+              (_alt->a2 && _alt->a2.use_count() == 1))) {
+          return;
+        }
+      }
       crane::small_vector<std::shared_ptr<ltree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<LNode>(&_v)) {
@@ -928,20 +951,20 @@ struct LoopifyStructures {
     const variant_t &v() const { return v_; }
 
     /// ltree_max t1 t2 element-wise max of two leaf-trees.
-    ltree ltree_max(ltree t2) const {
+    ltree ltree_max(const ltree &t2) const {
       const ltree *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
       struct CraneEnter {
         const ltree *_self;
-        ltree t2;
+        const ltree *t2;
       };
 
       /// CraneCont_LNode: saves [a2, a20, max_val], resumes after recursive
       /// call, then processes rest.
       struct CraneCont_LNode {
         std::shared_ptr<ltree> a2;
-        std::shared_ptr<ltree> a20;
+        const ltree *a20;
         uint64_t max_val;
       };
 
@@ -956,7 +979,7 @@ struct LoopifyStructures {
           std::variant<CraneEnter, CraneCont_LNode, CraneCont_LNode_1>;
       ltree _result{};
       crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self, std::move(t2)});
+      _stack.emplace_back(CraneEnter{_self, &t2});
       /// Loopified ltree_max: CraneEnter -> CraneCont_LNode ->
       /// CraneCont_LNode_1.
       while (!_stack.empty()) {
@@ -965,41 +988,40 @@ struct LoopifyStructures {
         if (std::holds_alternative<CraneEnter>(_frame)) {
           auto _f = std::move(std::get<CraneEnter>(_frame));
           const ltree *_self = _f._self;
-          ltree t2 = std::move(_f.t2);
+          const ltree &t2 = *_f.t2;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename ltree::LLeaf>(_sv.v())) {
             const auto &[a0] = std::get<typename ltree::LLeaf>(_sv.v());
-            if (std::holds_alternative<typename ltree::LLeaf>(t2.v_mut())) {
-              auto &[a00] = std::get<typename ltree::LLeaf>(t2.v_mut());
-              _result =
-                  ltree::lleaf((a0 <= a00 ? std::move(a00) : std::move(a0)));
+            if (std::holds_alternative<typename ltree::LLeaf>(t2.v())) {
+              const auto &[a00] = std::get<typename ltree::LLeaf>(t2.v());
+              _result = ltree::lleaf((a0 <= a00 ? a00 : a0));
             } else {
               _result = std::move(t2);
             }
           } else {
             const auto &[a0, a1, a2] = std::get<typename ltree::LNode>(_sv.v());
-            if (std::holds_alternative<typename ltree::LLeaf>(t2.v_mut())) {
+            if (std::holds_alternative<typename ltree::LLeaf>(t2.v())) {
               _result = *_self;
             } else {
-              auto &[a00, a10, a20] =
-                  std::get<typename ltree::LNode>(t2.v_mut());
+              const auto &[a00, a10, a20] =
+                  std::get<typename ltree::LNode>(t2.v());
               uint64_t max_val;
               if (a0 <= a00) {
                 max_val = a00;
               } else {
                 max_val = a0;
               }
-              _stack.emplace_back(CraneCont_LNode{a2, a20, max_val});
-              _stack.emplace_back(CraneEnter{crane_raw(a1), *a10});
+              _stack.emplace_back(CraneCont_LNode{a2, crane_raw(a20), max_val});
+              _stack.emplace_back(CraneEnter{crane_raw(a1), crane_raw(a10)});
             }
           }
         } else if (std::holds_alternative<CraneCont_LNode>(_frame)) {
           auto _f = std::move(std::get<CraneCont_LNode>(_frame));
           std::shared_ptr<ltree> a2 = std::move(_f.a2);
-          std::shared_ptr<ltree> a20 = std::move(_f.a20);
+          const ltree &a20 = *_f.a20;
           uint64_t max_val = _f.max_val;
           _stack.emplace_back(CraneCont_LNode_1{std::move(_result), max_val});
-          _stack.emplace_back(CraneEnter{crane_raw(a2), *a20});
+          _stack.emplace_back(CraneEnter{crane_raw(a2), &a20});
         } else {
           auto _f = std::move(std::get<CraneCont_LNode_1>(_frame));
           uint64_t max_val = _f.max_val;

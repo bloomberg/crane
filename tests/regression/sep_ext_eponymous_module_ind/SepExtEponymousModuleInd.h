@@ -64,6 +64,15 @@ public:
 
   // MANIPULATORS
   ~Trie() {
+    if (std::holds_alternative<Leaf>(v_mut())) {
+      return;
+    }
+    if (auto *_alt = std::get_if<Branch>(&v_mut())) {
+      if (!((_alt->t0 && _alt->t0.use_count() == 1) ||
+            (_alt->t1 && _alt->t1.use_count() == 1))) {
+        return;
+      }
+    }
     crane::small_vector<std::shared_ptr<Trie<A>>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<Branch>(&_v)) {

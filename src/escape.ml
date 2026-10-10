@@ -182,11 +182,11 @@ let passed_to_owned g k args =
       (fun (j, a) -> j < n && direct a && List.nth flags (n - 1 - j))
       (List.mapi (fun j a -> (j, a)) args)
 
-let escapes ?(query = Conservative) k t =
+let escapes ?(query = Conservative) ?(return_escapes = true) k t =
   let refined = query <> Conservative in
   let cons_escapes = query <> Of_param in
   let rec check k in_tail in_fn_arg = function
-    | MLrel i -> i = k && in_tail
+    | MLrel i -> i = k && in_tail && return_escapes
     | MLcase (_, scrut, branches) ->
       ( match scrut with
       | MLrel i when i = k -> false
@@ -354,6 +354,26 @@ let is_reuse_scrutinee k body =
   scan 0 body;
   !found
 
+(* Whether [MLrel k] is matched on in [t]. *)
+let rec matched k = function
+  | MLcase (_, scrut, branches) ->
+    (match scrut with MLrel i | MLmagic (_, MLrel i) -> i = k | _ -> false)
+    || matched k scrut
+    || Array.exists (fun (ids, _, _, b) -> matched (k + List.length ids) b) branches
+  | MLletin (_, _, rhs, cont) -> matched k rhs || matched (k + 1) cont
+  | MLmagic (_, a) -> matched k a
+  | _ -> false
+
+(* A parameter that is matched on, and otherwise only ever returned as it is
+   -- the tree an update returns unchanged when the key is absent -- is
+   borrowed.  Owning it would let the return move instead of copy, but every
+   call that passes it a part of a matched value, which is how a structural
+   recursion calls itself, would copy that part in: at every level, against
+   one copy at the end. *)
+let returned_or_matched k body =
+  matched k body
+  && not (escapes ~query:Of_param ~return_escapes:false k body)
+
 let infer_owned_params n_params body =
   (* Reuse and loopify both rewrite tail-recursive-modulo-cons matches (the
      [Cons x (rec xs)] shape).  Only one of them may rewrite a given match --
@@ -366,7 +386,8 @@ let infer_owned_params n_params body =
      deferring to loopify via [reuse_loopify_ok]. *)
   List.init n_params (fun i ->
     let k = i + 1 in
-    escapes ~query:Of_param k body
+    ( escapes ~query:Of_param k body
+      && not (returned_or_matched k body) )
     || (reuse () && is_reuse_scrutinee k body))
 
 (** Like [infer_owned_params] but returns only the [sub_bindings_escape]

@@ -141,6 +141,15 @@ struct MemSafetyProbe28 {
 
     // MANIPULATORS
     ~tree() {
+      if (std::holds_alternative<Leaf>(v_mut())) {
+        return;
+      }
+      if (auto *_alt = std::get_if<Node>(&v_mut())) {
+        if (!((_alt->a0 && _alt->a0.use_count() == 1) ||
+              (_alt->a2 && _alt->a2.use_count() == 1))) {
+          return;
+        }
+      }
       crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
@@ -294,7 +303,7 @@ struct MemSafetyProbe28 {
                            tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
                            List<uint64_t>::nil()));
   /// TEST 6: Three-way recursion with non-pointer-safe second tree.
-  static tree merge_trees(const tree &t1, tree t2);
+  static tree merge_trees(const tree &t1, const tree &t2);
   static inline const uint64_t test_merge_trees = tree_sum(
       merge_trees(tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
                   tree::node(tree::leaf(), UINT64_C(10), tree::leaf())));

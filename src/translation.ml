@@ -4181,7 +4181,24 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           | Some ft -> container_cast_erased_field ft e expr
           | None -> expr
         in
-        expr
+        (* A variable going into a field that holds the inductive itself is
+           marked, so that where the variable turns out to be a field read
+           out of a matched value ([*p]), the new node shares [p]'s cell
+           rather than copying the child into a new one (see
+           [Crane_rt.Share_child] and the factory's [crane::child_slot]). *)
+        let shares_child =
+          Table.non_atomic_rc ()
+          && (match expr with CPPvar _ -> true | _ -> false)
+          && match ft_opt, resolve_tmeta ty with
+             | Some ft, Miniml.Tglob (n_ind, _, _) ->
+               (match resolve_tmeta ft with
+                | Miniml.Tglob (g, _, _) -> globref_equal g n_ind
+                | _ -> false)
+               && (not (Table.is_coinductive n_ind))
+               && not (Table.is_shared_variant n_ind)
+             | _ -> false
+        in
+        if shares_child then mk_call (CPPrt Crane_rt.Share_child) [expr] else expr
       in
       gen_ctor_call (List.rev (List.mapi gen_and_wrap ts_updated))
     | _ ->

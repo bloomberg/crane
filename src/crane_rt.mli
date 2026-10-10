@@ -15,6 +15,11 @@ val rc : string  (** [crane::rc<T>] -- the non-atomic [shared_ptr]. *)
 
 val make_rc : string  (** [crane::make_rc<T>] *)
 
+val child_slot : string
+(** [crane::child_slot<T>] -- the parameter type of a factory's field that
+    holds the inductive itself: a value, boxed, or a {!helper.Share_child}
+    reference to an existing cell, shared. *)
+
 val enable_rc_from_this : string  (** [crane::enable_rc_from_this<T>] *)
 
 (** {2 [crane_reuse.h]} -- Perceus in-place reuse. *)
@@ -146,6 +151,11 @@ type helper =
   | Reuse_step
   | Raw  (** [crane_raw(p)] -- the raw pointer a smart pointer holds. *)
   | Unbox_field  (** [crane::unbox(f)] -- a {!field} read as [const T&]. *)
+  | Share_child
+      (** Marks a constructor argument for a field holding the inductive
+          itself.  Printed as [crane::child(p)] when the argument is a field
+          [*p] read out of a matched value, so the new node shares [p]'s cell
+          (see {!child_slot}), and as the argument itself otherwise. *)
   | Apply2
       (** [crane::apply2(f, a, b)] -- [f(a)(b)], without boxing [f(a)] where
           [f] is an {!fn} written as one lambda returning another. *)

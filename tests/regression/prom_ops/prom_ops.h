@@ -514,7 +514,7 @@ struct PromOps {
     bool prom_enable11;
   };
 
-  static state11 execute_wpm11(state11 s);
+  static state11 execute_wpm11(const state11 &s);
   static inline const state11 sample11 = state11{
       List<uint64_t>::cons(
           UINT64_C(0),

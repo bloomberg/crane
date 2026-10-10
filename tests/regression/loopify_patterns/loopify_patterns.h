@@ -347,15 +347,16 @@ struct LoopifyPatterns {
   /// merge_by cmp l1 l2 merge with custom comparator.
   template <typename F1>
   static list<uint64_t> merge_by_fuel(uint64_t fuel, F1 &&cmp,
-                                      list<uint64_t> l1, list<uint64_t> l2) {
+                                      const list<uint64_t> &l1,
+                                      const list<uint64_t> &l2) {
     std::optional<list<uint64_t>> _root{};
     std::shared_ptr<list<uint64_t>> *_write = nullptr;
-    list<uint64_t> _loop_l2 = std::move(l2);
-    list<uint64_t> _loop_l1 = std::move(l1);
+    const list<uint64_t> *_loop_l2 = &l2;
+    const list<uint64_t> *_loop_l1 = &l1;
     uint64_t _loop_fuel = fuel;
     while (true) {
       if (_loop_fuel <= 0) {
-        auto _value = std::move(_loop_l1);
+        auto _value = *_loop_l1;
         (_write
              ? *(*_write = std::make_shared<list<uint64_t>>(std::move(_value)))
              : _root.emplace(std::move(_value)));
@@ -363,25 +364,25 @@ struct LoopifyPatterns {
       } else {
         uint64_t f = _loop_fuel - 1;
         if (std::holds_alternative<typename list<uint64_t>::Nil>(
-                _loop_l1.v_mut())) {
-          auto _value = std::move(_loop_l2);
+                _loop_l1->v())) {
+          auto _value = *_loop_l2;
           (_write ? *(*_write =
                           std::make_shared<list<uint64_t>>(std::move(_value)))
                   : _root.emplace(std::move(_value)));
           break;
         } else {
-          auto &[a0, a1] =
-              std::get<typename list<uint64_t>::Cons>(_loop_l1.v_mut());
+          const auto &[a0, a1] =
+              std::get<typename list<uint64_t>::Cons>(_loop_l1->v());
           if (std::holds_alternative<typename list<uint64_t>::Nil>(
-                  _loop_l2.v_mut())) {
-            auto _value = _loop_l1;
+                  _loop_l2->v())) {
+            auto _value = *_loop_l1;
             (_write ? *(*_write =
                             std::make_shared<list<uint64_t>>(std::move(_value)))
                     : _root.emplace(std::move(_value)));
             break;
           } else {
-            auto &[a00, a10] =
-                std::get<typename list<uint64_t>::Cons>(_loop_l2.v_mut());
+            const auto &[a00, a10] =
+                std::get<typename list<uint64_t>::Cons>(_loop_l2->v());
             if (cmp(a0, a00) <= UINT64_C(0)) {
               auto _cell = typename list<uint64_t>::Cons(a0, nullptr);
               list<uint64_t> &_node =
@@ -390,7 +391,8 @@ struct LoopifyPatterns {
                           : _root.emplace(std::move(_cell)));
               _write =
                   &std::get<typename list<uint64_t>::Cons>(_node.v_mut()).l;
-              _loop_l1 = list<uint64_t>(*a1);
+              _loop_l2 = &*_loop_l2;
+              _loop_l1 = crane_raw(a1);
               _loop_fuel = f;
               continue;
             } else {
@@ -401,7 +403,8 @@ struct LoopifyPatterns {
                           : _root.emplace(std::move(_cell)));
               _write =
                   &std::get<typename list<uint64_t>::Cons>(_node.v_mut()).l;
-              _loop_l2 = list<uint64_t>(*a10);
+              _loop_l2 = crane_raw(a10);
+              _loop_l1 = &*_loop_l1;
               _loop_fuel = f;
               continue;
             }
@@ -413,14 +416,15 @@ struct LoopifyPatterns {
   }
 
   template <typename F0>
-  static list<uint64_t> merge_by(F0 &&cmp, list<uint64_t> l1,
-                                 list<uint64_t> l2) {
+  static list<uint64_t> merge_by(F0 &&cmp, const list<uint64_t> &l1,
+                                 const list<uint64_t> &l2) {
     return merge_by_fuel((list_len(l1) + list_len(l2)), cmp, l1, l2);
   }
 
   /// process_twice l applies recursion twice: process(process(xs)).
-  static list<uint64_t> process_twice_fuel(uint64_t fuel, list<uint64_t> l);
-  static list<uint64_t> process_twice(list<uint64_t> l);
+  static list<uint64_t> process_twice_fuel(uint64_t fuel,
+                                           const list<uint64_t> &l);
+  static list<uint64_t> process_twice(const list<uint64_t> &l);
   /// as_guard l uses as-pattern with guard (length check).
   static list<uint64_t> as_guard_fuel(uint64_t fuel, const list<uint64_t> &l);
   static list<uint64_t> as_guard(const list<uint64_t> &l);
@@ -435,8 +439,9 @@ struct LoopifyPatterns {
   static list<uint64_t> double_append(const list<uint64_t> &l1,
                                       list<uint64_t> l2);
   /// process_twice_alt l applies transformation twice on recursive result.
-  static list<uint64_t> process_twice_alt_fuel(uint64_t fuel, list<uint64_t> l);
-  static list<uint64_t> process_twice_alt(list<uint64_t> l);
+  static list<uint64_t> process_twice_alt_fuel(uint64_t fuel,
+                                               const list<uint64_t> &l);
+  static list<uint64_t> process_twice_alt(const list<uint64_t> &l);
   /// sum_if_positive_else_double l conditional logic on each element.
   static uint64_t sum_if_positive_else_double(const list<uint64_t> &l);
 
@@ -544,7 +549,8 @@ struct LoopifyPatterns {
   }
 
   /// merge_alternating l1 l2 merges two lists by alternating elements.
-  static list<uint64_t> merge_alternating(list<uint64_t> l1, list<uint64_t> l2);
+  static list<uint64_t> merge_alternating(const list<uint64_t> &l1,
+                                          const list<uint64_t> &l2);
 
   /// filter_map_indexed p f l filters and maps with index.
   template <typename F0, typename F1>

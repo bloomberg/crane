@@ -697,21 +697,21 @@ struct LoopifyLists {
           }
           return _result;
         };
-        auto drop0 = [](uint64_t k, list<T1> lst) -> list<T1> {
-          list<T1> _loop_lst = std::move(lst);
+        auto drop0 = [](uint64_t k, const list<T1> &lst) -> list<T1> {
+          const list<T1> *_loop_lst = &lst;
           uint64_t _loop_k = k;
           while (true) {
             if (_loop_k <= 0) {
-              return _loop_lst;
+              return *_loop_lst;
             } else {
               uint64_t m = _loop_k - 1;
               if (std::holds_alternative<typename list<T1>::Nil>(
-                      _loop_lst.v_mut())) {
+                      _loop_lst->v())) {
                 return list<T1>::nil();
               } else {
-                auto &[a00, a10] =
-                    std::get<typename list<T1>::Cons>(_loop_lst.v_mut());
-                _loop_lst = list<T1>(*a10);
+                const auto &[a00, a10] =
+                    std::get<typename list<T1>::Cons>(_loop_lst->v());
+                _loop_lst = crane_raw(a10);
                 _loop_k = m;
               }
             }
@@ -1523,7 +1523,8 @@ struct LoopifyLists {
   static uint64_t index_of_aux(uint64_t x, const list<uint64_t> &l, uint64_t i);
   static uint64_t index_of(uint64_t x, const list<uint64_t> &l);
   /// interleave l1 l2 interleaves two lists: 1,2 3,4 -> 1,3,2,4.
-  static list<uint64_t> interleave(list<uint64_t> l1, list<uint64_t> l2);
+  static list<uint64_t> interleave(const list<uint64_t> &l1,
+                                   const list<uint64_t> &l2);
   /// lookup key l finds value for key in association list.
   static uint64_t lookup(uint64_t key,
                          const list<std::pair<uint64_t, uint64_t>> &l);
@@ -1606,7 +1607,7 @@ struct LoopifyLists {
   /// last l default returns last element or default if empty.
   static uint64_t last(const list<uint64_t> &l, uint64_t default0);
   /// drop n l drops first n elements.
-  static list<uint64_t> drop(uint64_t n, list<uint64_t> l);
+  static list<uint64_t> drop(uint64_t n, const list<uint64_t> &l);
   /// init l returns all but last element.
   static list<uint64_t> init(const list<uint64_t> &l);
   /// count x l counts occurrences of x in l.
@@ -1617,10 +1618,10 @@ struct LoopifyLists {
   static std::pair<uint64_t, uint64_t> minmax(const list<uint64_t> &l);
   /// Helper for rotate_left.
   static list<uint64_t> rotate_left_fuel(uint64_t fuel, uint64_t n,
-                                         list<uint64_t> l);
+                                         const list<uint64_t> &l);
   /// rotate_left n l rotates list left by n positions: rotate 2 1,2,3,4 ->
   /// 3,4,1,2.
-  static list<uint64_t> rotate_left(uint64_t n, list<uint64_t> l);
+  static list<uint64_t> rotate_left(uint64_t n, const list<uint64_t> &l);
   /// intercalate sep lists joins lists with separator: intercalate 0
   /// [1,2],[3,4] -> 1,2,0,3,4.
   static list<uint64_t> intercalate(const list<uint64_t> &sep,

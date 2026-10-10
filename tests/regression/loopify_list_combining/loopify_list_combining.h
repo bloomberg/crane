@@ -21,7 +21,8 @@ struct LoopifyListCombining {
                                     const List<List<uint64_t>> &ll);
   static List<uint64_t> concat(const List<List<uint64_t>> &ll);
   static List<uint64_t> mapcat(const List<uint64_t> &l);
-  static List<uint64_t> interleave_two(List<uint64_t> l1, List<uint64_t> l2);
+  static List<uint64_t> interleave_two(const List<uint64_t> &l1,
+                                       const List<uint64_t> &l2);
   static List<uint64_t> concat_sep(uint64_t sep,
                                    const List<List<uint64_t>> &ll);
 };

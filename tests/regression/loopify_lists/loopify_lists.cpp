@@ -1122,37 +1122,36 @@ uint64_t LoopifyLists::index_of(uint64_t x,
 
 /// interleave l1 l2 interleaves two lists: 1,2 3,4 -> 1,3,2,4.
 LoopifyLists::list<uint64_t>
-LoopifyLists::interleave(LoopifyLists::list<uint64_t> l1,
-                         LoopifyLists::list<uint64_t> l2) {
+LoopifyLists::interleave(const LoopifyLists::list<uint64_t> &l1,
+                         const LoopifyLists::list<uint64_t> &l2) {
   std::optional<LoopifyLists::list<uint64_t>> _root{};
   std::shared_ptr<LoopifyLists::list<uint64_t>> *_write = nullptr;
-  LoopifyLists::list<uint64_t> _loop_l2 = std::move(l2);
-  LoopifyLists::list<uint64_t> _loop_l1 = std::move(l1);
+  const LoopifyLists::list<uint64_t> *_loop_l2 = &l2;
+  const LoopifyLists::list<uint64_t> *_loop_l1 = &l1;
   while (true) {
     if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
-            _loop_l1.v_mut())) {
-      auto _value = std::move(_loop_l2);
+            _loop_l1->v())) {
+      auto _value = *_loop_l2;
       (_write ? *(*_write = std::make_shared<LoopifyLists::list<uint64_t>>(
                       std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      auto &[a0, a1] = std::get<typename LoopifyLists::list<uint64_t>::Cons>(
-          _loop_l1.v_mut());
+      const auto &[a0, a1] =
+          std::get<typename LoopifyLists::list<uint64_t>::Cons>(_loop_l1->v());
       if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
-              _loop_l2.v_mut())) {
-        auto _value = _loop_l1;
+              _loop_l2->v())) {
+        auto _value = *_loop_l1;
         (_write ? *(*_write = std::make_shared<LoopifyLists::list<uint64_t>>(
                         std::move(_value)))
                 : _root.emplace(std::move(_value)));
         break;
       } else {
-        auto &[a00, a10] =
+        const auto &[a00, a10] =
             std::get<typename LoopifyLists::list<uint64_t>::Cons>(
-                _loop_l2.v_mut());
+                _loop_l2->v());
         auto _cell1 = std::make_shared<LoopifyLists::list<uint64_t>>(
-            typename LoopifyLists::list<uint64_t>::Cons(std::move(a00),
-                                                        nullptr));
+            typename LoopifyLists::list<uint64_t>::Cons(a00, nullptr));
         auto _cell =
             typename LoopifyLists::list<uint64_t>::Cons(a0, std::move(_cell1));
         LoopifyLists::list<uint64_t> &_node =
@@ -1165,8 +1164,8 @@ LoopifyLists::interleave(LoopifyLists::list<uint64_t> l1,
                           _node.v_mut())
                           .l->v_mut())
                       .l;
-        _loop_l2 = LoopifyLists::list<uint64_t>(*a10);
-        _loop_l1 = LoopifyLists::list<uint64_t>(*a1);
+        _loop_l2 = crane_raw(a10);
+        _loop_l1 = crane_raw(a1);
         continue;
       }
     }
@@ -1648,20 +1647,20 @@ uint64_t LoopifyLists::last(const LoopifyLists::list<uint64_t> &l,
 
 /// drop n l drops first n elements.
 LoopifyLists::list<uint64_t>
-LoopifyLists::drop(uint64_t n, LoopifyLists::list<uint64_t> l) {
-  LoopifyLists::list<uint64_t> _loop_l = std::move(l);
+LoopifyLists::drop(uint64_t n, const LoopifyLists::list<uint64_t> &l) {
+  const LoopifyLists::list<uint64_t> *_loop_l = &l;
   uint64_t _loop_n = n;
   while (true) {
     if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
-            _loop_l.v_mut())) {
+            _loop_l->v())) {
       return list<uint64_t>::nil();
     } else {
-      auto &[a0, a1] = std::get<typename LoopifyLists::list<uint64_t>::Cons>(
-          _loop_l.v_mut());
+      const auto &[a0, a1] =
+          std::get<typename LoopifyLists::list<uint64_t>::Cons>(_loop_l->v());
       if (_loop_n == UINT64_C(0)) {
-        return _loop_l;
+        return *_loop_l;
       } else {
-        _loop_l = LoopifyLists::list<uint64_t>(*a1);
+        _loop_l = crane_raw(a1);
         _loop_n =
             (((_loop_n - UINT64_C(1)) > _loop_n ? 0 : (_loop_n - UINT64_C(1))));
       }
@@ -1867,8 +1866,8 @@ LoopifyLists::minmax(const LoopifyLists::list<uint64_t>
 /// Helper for rotate_left.
 LoopifyLists::list<uint64_t>
 LoopifyLists::rotate_left_fuel(uint64_t fuel, uint64_t n,
-                               LoopifyLists::list<uint64_t> l) {
-  LoopifyLists::list<uint64_t> _loop_l = std::move(l);
+                               const LoopifyLists::list<uint64_t> &l) {
+  LoopifyLists::list<uint64_t> _loop_l = l;
   uint64_t _loop_n = n;
   uint64_t _loop_fuel = fuel;
   while (true) {
@@ -1880,14 +1879,14 @@ LoopifyLists::rotate_left_fuel(uint64_t fuel, uint64_t n,
         return _loop_l;
       } else {
         if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
-                _loop_l.v_mut())) {
+                _loop_l.v())) {
           return list<uint64_t>::nil();
         } else {
-          auto &[a0, a1] =
+          const auto &[a0, a1] =
               std::get<typename LoopifyLists::list<uint64_t>::Cons>(
-                  _loop_l.v_mut());
-          _loop_l = app_helper(
-              *a1, list<uint64_t>::cons(std::move(a0), list<uint64_t>::nil()));
+                  _loop_l.v());
+          _loop_l =
+              app_helper(*a1, list<uint64_t>::cons(a0, list<uint64_t>::nil()));
           _loop_n = ((
               (_loop_n - UINT64_C(1)) > _loop_n ? 0 : (_loop_n - UINT64_C(1))));
           _loop_fuel = f;
@@ -1900,8 +1899,8 @@ LoopifyLists::rotate_left_fuel(uint64_t fuel, uint64_t n,
 /// rotate_left n l rotates list left by n positions: rotate 2 1,2,3,4 ->
 /// 3,4,1,2.
 LoopifyLists::list<uint64_t>
-LoopifyLists::rotate_left(uint64_t n, LoopifyLists::list<uint64_t> l) {
-  return rotate_left_fuel((n + 1), n, std::move(l));
+LoopifyLists::rotate_left(uint64_t n, const LoopifyLists::list<uint64_t> &l) {
+  return rotate_left_fuel((n + 1), n, l);
 }
 
 /// intercalate sep lists joins lists with separator: intercalate 0 [1,2],[3,4]

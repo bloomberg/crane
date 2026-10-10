@@ -130,6 +130,15 @@ struct BinomialHeap {
 
     // MANIPULATORS
     ~tree() {
+      if (auto *_alt = std::get_if<Node>(&v_mut())) {
+        if (!((_alt->a1 && _alt->a1.use_count() == 1) ||
+              (_alt->a2 && _alt->a2.use_count() == 1))) {
+          return;
+        }
+      }
+      if (std::holds_alternative<Leaf>(v_mut())) {
+        return;
+      }
       crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {

@@ -132,19 +132,18 @@ struct LoopifyPredicates {
   }
 
   template <typename F0>
-  static List<uint64_t> drop_while(F0 &&p, List<uint64_t> l) {
-    List<uint64_t> _loop_l = std::move(l);
+  static List<uint64_t> drop_while(F0 &&p, const List<uint64_t> &l) {
+    const List<uint64_t> *_loop_l = &l;
     while (true) {
-      if (std::holds_alternative<typename List<uint64_t>::Nil>(
-              _loop_l.v_mut())) {
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
         return List<uint64_t>::nil();
       } else {
-        auto &[a0, a1] =
-            std::get<typename List<uint64_t>::Cons>(_loop_l.v_mut());
+        const auto &[a0, a1] =
+            std::get<typename List<uint64_t>::Cons>(_loop_l->v());
         if (p(a0)) {
-          _loop_l = List<uint64_t>(*a1);
+          _loop_l = crane_raw(a1);
         } else {
-          return _loop_l;
+          return *_loop_l;
         }
       }
     }

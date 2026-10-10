@@ -175,6 +175,14 @@ public:
 
   // MANIPULATORS
   ~Exp0() {
+    if (std::holds_alternative<EV>(v_mut())) {
+      return;
+    }
+    if (auto *_alt = std::get_if<ESELF>(&v_mut())) {
+      if (!(_alt->a0 && _alt->a0.use_count() == 1)) {
+        return;
+      }
+    }
     crane::small_vector<std::shared_ptr<Exp0<T>>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<ESELF>(&_v)) {

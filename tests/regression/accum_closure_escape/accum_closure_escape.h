@@ -215,6 +215,15 @@ struct AccumClosureEscape {
 
     // MANIPULATORS
     ~tree() {
+      if (std::holds_alternative<TLeaf>(v_mut())) {
+        return;
+      }
+      if (auto *_alt = std::get_if<TNode>(&v_mut())) {
+        if (!((_alt->a0 && _alt->a0.use_count() == 1) ||
+              (_alt->a2 && _alt->a2.use_count() == 1))) {
+          return;
+        }
+      }
       crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<TNode>(&_v)) {

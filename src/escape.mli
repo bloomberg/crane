@@ -42,10 +42,12 @@ type escape_query = Conservative | Of_sub_binding | Of_param
     partial-application captures.
 
     @param query defaults to [Conservative]
+    @param return_escapes whether being returned counts (default [true])
     @param k de Bruijn index to check (1 = innermost binder)
     @param t the MiniML term to analyse
     @return [true] if the value bound at index [k] may outlive its scope *)
-val escapes : ?query:escape_query -> int -> ml_ast -> bool
+val escapes :
+  ?query:escape_query -> ?return_escapes:bool -> int -> ml_ast -> bool
 
 (** The settled ownership of each global's parameters, innermost first --
     [None] for a global not settled.  {!Ownership} installs it; an

@@ -729,9 +729,9 @@ LoopifyPatterns::list_len(const LoopifyPatterns::list<uint64_t>
 
 /// process_twice l applies recursion twice: process(process(xs)).
 LoopifyPatterns::list<uint64_t> LoopifyPatterns::process_twice_fuel(
-    uint64_t fuel,
-    LoopifyPatterns::list<uint64_t> l) { /// CraneEnter: captures varying
-                                         /// parameters for each recursive call.
+    uint64_t fuel, const LoopifyPatterns::list<uint64_t>
+                       &l) { /// CraneEnter: captures varying parameters for
+                             /// each recursive call.
 
   struct CraneEnter {
     LoopifyPatterns::list<uint64_t> l;
@@ -754,7 +754,7 @@ LoopifyPatterns::list<uint64_t> LoopifyPatterns::process_twice_fuel(
   using CraneFrame = std::variant<CraneEnter, CraneCont_Cons, CraneCont_Cons_1>;
   LoopifyPatterns::list<uint64_t> _result{};
   crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{std::move(l), fuel});
+  _stack.emplace_back(CraneEnter{l, fuel});
   /// Loopified process_twice_fuel: CraneEnter -> CraneCont_Cons ->
   /// CraneCont_Cons_1.
   while (!_stack.empty()) {
@@ -762,19 +762,18 @@ LoopifyPatterns::list<uint64_t> LoopifyPatterns::process_twice_fuel(
     _stack.pop_back();
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
-      LoopifyPatterns::list<uint64_t> l = std::move(_f.l);
+      const LoopifyPatterns::list<uint64_t> &l = std::move(_f.l);
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
         _result = std::move(l);
       } else {
         uint64_t f = fuel - 1;
         if (std::holds_alternative<
-                typename LoopifyPatterns::list<uint64_t>::Nil>(l.v_mut())) {
+                typename LoopifyPatterns::list<uint64_t>::Nil>(l.v())) {
           _result = list<uint64_t>::nil();
         } else {
-          auto &[a0, a1] =
-              std::get<typename LoopifyPatterns::list<uint64_t>::Cons>(
-                  l.v_mut());
+          const auto &[a0, a1] =
+              std::get<typename LoopifyPatterns::list<uint64_t>::Cons>(l.v());
           _stack.emplace_back(CraneCont_Cons{a0, f});
           _stack.emplace_back(CraneEnter{*a1, f});
         }
@@ -790,15 +789,15 @@ LoopifyPatterns::list<uint64_t> LoopifyPatterns::process_twice_fuel(
       auto _f = std::move(std::get<CraneCont_Cons_1>(_frame));
       uint64_t a0 = _f.a0;
       LoopifyPatterns::list<uint64_t> second = std::move(_result);
-      _result = list<uint64_t>::cons(std::move(a0), std::move(second));
+      _result = list<uint64_t>::cons(a0, std::move(second));
     }
   }
   return _result;
 }
 
 LoopifyPatterns::list<uint64_t>
-LoopifyPatterns::process_twice(LoopifyPatterns::list<uint64_t> l) {
-  return process_twice_fuel(UINT64_C(100), std::move(l));
+LoopifyPatterns::process_twice(const LoopifyPatterns::list<uint64_t> &l) {
+  return process_twice_fuel(UINT64_C(100), l);
 }
 
 /// as_guard l uses as-pattern with guard (length check).
@@ -1078,15 +1077,14 @@ LoopifyPatterns::double_append(const LoopifyPatterns::list<uint64_t> &l1,
 }
 
 /// process_twice_alt l applies transformation twice on recursive result.
-LoopifyPatterns::list<uint64_t>
-LoopifyPatterns::process_twice_alt_fuel(uint64_t fuel,
-                                        LoopifyPatterns::list<uint64_t> l) {
-  return process_twice_fuel(fuel, std::move(l));
+LoopifyPatterns::list<uint64_t> LoopifyPatterns::process_twice_alt_fuel(
+    uint64_t fuel, const LoopifyPatterns::list<uint64_t> &l) {
+  return process_twice_fuel(fuel, l);
 }
 
 LoopifyPatterns::list<uint64_t>
-LoopifyPatterns::process_twice_alt(LoopifyPatterns::list<uint64_t> l) {
-  return process_twice_alt_fuel(UINT64_C(100), std::move(l));
+LoopifyPatterns::process_twice_alt(const LoopifyPatterns::list<uint64_t> &l) {
+  return process_twice_alt_fuel(UINT64_C(100), l);
 }
 
 /// sum_if_positive_else_double l conditional logic on each element.
@@ -1141,37 +1139,37 @@ uint64_t LoopifyPatterns::sum_if_positive_else_double(
 
 /// merge_alternating l1 l2 merges two lists by alternating elements.
 LoopifyPatterns::list<uint64_t>
-LoopifyPatterns::merge_alternating(LoopifyPatterns::list<uint64_t> l1,
-                                   LoopifyPatterns::list<uint64_t> l2) {
+LoopifyPatterns::merge_alternating(const LoopifyPatterns::list<uint64_t> &l1,
+                                   const LoopifyPatterns::list<uint64_t> &l2) {
   std::optional<LoopifyPatterns::list<uint64_t>> _root{};
   std::shared_ptr<LoopifyPatterns::list<uint64_t>> *_write = nullptr;
-  LoopifyPatterns::list<uint64_t> _loop_l2 = std::move(l2);
-  LoopifyPatterns::list<uint64_t> _loop_l1 = std::move(l1);
+  const LoopifyPatterns::list<uint64_t> *_loop_l2 = &l2;
+  const LoopifyPatterns::list<uint64_t> *_loop_l1 = &l1;
   while (true) {
     if (std::holds_alternative<typename LoopifyPatterns::list<uint64_t>::Nil>(
-            _loop_l1.v_mut())) {
-      auto _value = std::move(_loop_l2);
+            _loop_l1->v())) {
+      auto _value = *_loop_l2;
       (_write ? *(*_write = std::make_shared<LoopifyPatterns::list<uint64_t>>(
                       std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      auto &[a0, a1] = std::get<typename LoopifyPatterns::list<uint64_t>::Cons>(
-          _loop_l1.v_mut());
+      const auto &[a0, a1] =
+          std::get<typename LoopifyPatterns::list<uint64_t>::Cons>(
+              _loop_l1->v());
       if (std::holds_alternative<typename LoopifyPatterns::list<uint64_t>::Nil>(
-              _loop_l2.v_mut())) {
-        auto _value = _loop_l1;
+              _loop_l2->v())) {
+        auto _value = *_loop_l1;
         (_write ? *(*_write = std::make_shared<LoopifyPatterns::list<uint64_t>>(
                         std::move(_value)))
                 : _root.emplace(std::move(_value)));
         break;
       } else {
-        auto &[a00, a10] =
+        const auto &[a00, a10] =
             std::get<typename LoopifyPatterns::list<uint64_t>::Cons>(
-                _loop_l2.v_mut());
+                _loop_l2->v());
         auto _cell1 = std::make_shared<LoopifyPatterns::list<uint64_t>>(
-            typename LoopifyPatterns::list<uint64_t>::Cons(std::move(a00),
-                                                           nullptr));
+            typename LoopifyPatterns::list<uint64_t>::Cons(a00, nullptr));
         auto _cell = typename LoopifyPatterns::list<uint64_t>::Cons(
             a0, std::move(_cell1));
         LoopifyPatterns::list<uint64_t> &_node =
@@ -1184,8 +1182,8 @@ LoopifyPatterns::merge_alternating(LoopifyPatterns::list<uint64_t> l1,
                           _node.v_mut())
                           .l->v_mut())
                       .l;
-        _loop_l2 = LoopifyPatterns::list<uint64_t>(*a10);
-        _loop_l1 = LoopifyPatterns::list<uint64_t>(*a1);
+        _loop_l2 = crane_raw(a10);
+        _loop_l1 = crane_raw(a1);
         continue;
       }
     }

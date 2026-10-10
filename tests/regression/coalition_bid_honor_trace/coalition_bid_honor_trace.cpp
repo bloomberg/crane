@@ -194,30 +194,30 @@ Z BinInt::pos_sub(const Positive &x, const Positive &y) {
   }
 }
 
-Z BinInt::add(Z x, Z y) {
-  if (std::holds_alternative<typename Z::Z0>(x.v_mut())) {
+Z BinInt::add(const Z &x, const Z &y) {
+  if (std::holds_alternative<typename Z::Z0>(x.v())) {
     return y;
-  } else if (std::holds_alternative<typename Z::Zpos>(x.v_mut())) {
-    auto &[a0] = std::get<typename Z::Zpos>(x.v_mut());
-    if (std::holds_alternative<typename Z::Z0>(y.v_mut())) {
+  } else if (std::holds_alternative<typename Z::Zpos>(x.v())) {
+    const auto &[a0] = std::get<typename Z::Zpos>(x.v());
+    if (std::holds_alternative<typename Z::Z0>(y.v())) {
       return x;
-    } else if (std::holds_alternative<typename Z::Zpos>(y.v_mut())) {
-      auto &[a00] = std::get<typename Z::Zpos>(y.v_mut());
-      return Z::zpos(Pos::add(a0, std::move(a00)));
+    } else if (std::holds_alternative<typename Z::Zpos>(y.v())) {
+      const auto &[a00] = std::get<typename Z::Zpos>(y.v());
+      return Z::zpos(Pos::add(a0, a00));
     } else {
-      auto &[a00] = std::get<typename Z::Zneg>(y.v_mut());
-      return BinInt::pos_sub(a0, std::move(a00));
+      const auto &[a00] = std::get<typename Z::Zneg>(y.v());
+      return BinInt::pos_sub(a0, a00);
     }
   } else {
-    auto &[a0] = std::get<typename Z::Zneg>(x.v_mut());
-    if (std::holds_alternative<typename Z::Z0>(y.v_mut())) {
+    const auto &[a0] = std::get<typename Z::Zneg>(x.v());
+    if (std::holds_alternative<typename Z::Z0>(y.v())) {
       return x;
-    } else if (std::holds_alternative<typename Z::Zpos>(y.v_mut())) {
-      auto &[a00] = std::get<typename Z::Zpos>(y.v_mut());
-      return BinInt::pos_sub(std::move(a00), a0);
+    } else if (std::holds_alternative<typename Z::Zpos>(y.v())) {
+      const auto &[a00] = std::get<typename Z::Zpos>(y.v());
+      return BinInt::pos_sub(a00, a0);
     } else {
-      auto &[a00] = std::get<typename Z::Zneg>(y.v_mut());
-      return Z::zneg(Pos::add(a0, std::move(a00)));
+      const auto &[a00] = std::get<typename Z::Zneg>(y.v());
+      return Z::zneg(Pos::add(a0, a00));
     }
   }
 }
@@ -755,11 +755,11 @@ CoalitionBidHonorTraceCase::ledger_update_by_id(
 CoalitionBidHonorTraceCase::HonorLedger
 CoalitionBidHonorTraceCase::update_honor(
     const List<std::pair<uint64_t, Z>> &ledger,
-    const CoalitionBidHonorTraceCase::Commander &actor, Z delta) {
+    const CoalitionBidHonorTraceCase::Commander &actor, const Z &delta) {
   CoalitionBidHonorTraceCase::Honor current =
       ledger_lookup(ledger, actor.cmd_id);
   return ledger_update_by_id(ledger, actor.cmd_id,
-                             BinInt::add(std::move(current), std::move(delta)));
+                             BinInt::add(std::move(current), delta));
 }
 
 CoalitionBidHonorTraceCase::Honor

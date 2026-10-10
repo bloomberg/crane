@@ -104,11 +104,11 @@ struct Nat {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    Nat::nat div(Nat::nat y) const {
-      if (std::holds_alternative<typename Nat::nat::O>(y.v_mut())) {
+    Nat::nat div(const Nat::nat &y) const {
+      if (std::holds_alternative<typename Nat::nat::O>(y.v())) {
         return y;
       } else {
-        auto &[a0] = std::get<typename Nat::nat::S>(y.v_mut());
+        const auto &[a0] = std::get<typename Nat::nat::S>(y.v());
         return Nat::divmod(*this, *a0, Nat::nat::o(), *a0).fst();
       }
     }

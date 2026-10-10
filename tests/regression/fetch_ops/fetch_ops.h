@@ -118,22 +118,22 @@ struct FetchOps {
               List<uint64_t>::cons(UINT64_C(33), List<uint64_t>::nil()))),
       UINT64_C(1));
 
-  template <typename T1> static List<T1> drop(uint64_t n, List<T1> l) {
+  template <typename T1> static List<T1> drop(uint64_t n, const List<T1> &l) {
     if (n <= 0) {
       return l;
     } else {
       uint64_t n_ = n - 1;
-      if (std::holds_alternative<typename List<T1>::Nil>(l.v_mut())) {
+      if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         return List<T1>::nil();
       } else {
-        auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v_mut());
+        const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
         return drop<T1>(n_, *a1);
       }
     }
   }
 
-  static std::pair<uint64_t, uint64_t> fetch_pair(List<uint64_t> rom_data,
-                                                  uint64_t addr);
+  static std::pair<uint64_t, uint64_t>
+  fetch_pair(const List<uint64_t> &rom_data, uint64_t addr);
   static inline const uint64_t fetch_pair_test = []() {
     std::pair<uint64_t, uint64_t> p = fetch_pair(
         List<uint64_t>::cons(
@@ -145,7 +145,7 @@ struct FetchOps {
     return (p.first + p.second);
   }();
   static std::optional<std::pair<uint64_t, uint64_t>>
-  fetch_window(List<uint64_t> rom_data, uint64_t addr);
+  fetch_window(const List<uint64_t> &rom_data, uint64_t addr);
   static inline const uint64_t fetch_window_test = []() -> uint64_t {
     auto _cs = fetch_window(
         List<uint64_t>::cons(

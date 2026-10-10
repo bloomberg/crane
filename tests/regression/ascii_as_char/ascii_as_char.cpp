@@ -102,16 +102,16 @@ uint64_t Pos::to_nat(const Positive &x) {
       UINT64_C(1));
 }
 
-N BinNat::add(N n, N m) {
-  if (std::holds_alternative<typename N::N0>(n.v_mut())) {
+N BinNat::add(const N &n, const N &m) {
+  if (std::holds_alternative<typename N::N0>(n.v())) {
     return m;
   } else {
-    auto &[a0] = std::get<typename N::Npos>(n.v_mut());
-    if (std::holds_alternative<typename N::N0>(m.v_mut())) {
+    const auto &[a0] = std::get<typename N::Npos>(n.v());
+    if (std::holds_alternative<typename N::N0>(m.v())) {
       return n;
     } else {
-      auto &[a00] = std::get<typename N::Npos>(m.v_mut());
-      return N::npos(Coq_Pos::add(a0, std::move(a00)));
+      const auto &[a00] = std::get<typename N::Npos>(m.v());
+      return N::npos(Coq_Pos::add(a0, a00));
     }
   }
 }

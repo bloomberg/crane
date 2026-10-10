@@ -43,12 +43,12 @@ List<uint64_t> LoopifySearchOpt::lis(const List<uint64_t> &l) {
 }
 
 List<uint64_t> LoopifySearchOpt::longest_run_fuel(uint64_t fuel,
-                                                  List<uint64_t> current,
+                                                  const List<uint64_t> &current,
                                                   List<uint64_t> best,
                                                   const List<uint64_t> &l) {
   const List<uint64_t> *_loop_l = &l;
   List<uint64_t> _loop_best = std::move(best);
-  List<uint64_t> _loop_current = std::move(current);
+  List<uint64_t> _loop_current = current;
   uint64_t _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
@@ -67,13 +67,13 @@ List<uint64_t> LoopifySearchOpt::longest_run_fuel(uint64_t fuel,
         const auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l->v());
         if (std::holds_alternative<typename List<uint64_t>::Nil>(
-                _loop_current.v_mut())) {
+                _loop_current.v())) {
           _loop_l = crane_raw(a1);
           _loop_current = List<uint64_t>::cons(a0, List<uint64_t>::nil());
           _loop_fuel = fuel_;
         } else {
-          auto &[a00, a10] =
-              std::get<typename List<uint64_t>::Cons>(_loop_current.v_mut());
+          const auto &[a00, a10] =
+              std::get<typename List<uint64_t>::Cons>(_loop_current.v());
           if (a0 == a00) {
             _loop_l = crane_raw(a1);
             _loop_current = List<uint64_t>::cons(a0, _loop_current);
@@ -427,21 +427,22 @@ bool LoopifySearchOpt::binary_search_fuel(uint64_t fuel, uint64_t target,
           };
           left = take(mid, _loop_l);
           List<uint64_t> right;
-          auto drop = [](uint64_t n, List<uint64_t> xs) -> List<uint64_t> {
-            List<uint64_t> _loop_xs = std::move(xs);
+          auto drop = [](uint64_t n,
+                         const List<uint64_t> &xs) -> List<uint64_t> {
+            const List<uint64_t> *_loop_xs = &xs;
             uint64_t _loop_n = n;
             while (true) {
               if (_loop_n <= 0) {
-                return _loop_xs;
+                return *_loop_xs;
               } else {
                 uint64_t n_ = _loop_n - 1;
                 if (std::holds_alternative<typename List<uint64_t>::Nil>(
-                        _loop_xs.v_mut())) {
+                        _loop_xs->v())) {
                   return List<uint64_t>::nil();
                 } else {
-                  auto &[a04, a14] =
-                      std::get<typename List<uint64_t>::Cons>(_loop_xs.v_mut());
-                  _loop_xs = List<uint64_t>(*a14);
+                  const auto &[a04, a14] =
+                      std::get<typename List<uint64_t>::Cons>(_loop_xs->v());
+                  _loop_xs = crane_raw(a14);
                   _loop_n = n_;
                 }
               }

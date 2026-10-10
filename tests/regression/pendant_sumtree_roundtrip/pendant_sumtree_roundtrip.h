@@ -658,6 +658,9 @@ struct PendantSumtreeRoundtripCase {
 
     // MANIPULATORS
     ~SumTree() {
+      if (std::holds_alternative<SumLeaf>(v_mut())) {
+        return;
+      }
       crane::small_vector<std::shared_ptr<SumTree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<SumNode>(&_v)) {

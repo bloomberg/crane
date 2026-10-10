@@ -216,26 +216,28 @@ struct LoopifySorting {
     return _result;
   }
 
-  static List<uint64_t> merge_fuel(uint64_t fuel, List<uint64_t> l1,
-                                   List<uint64_t> l2);
-  static List<uint64_t> merge(List<uint64_t> l1, List<uint64_t> l2);
-  static List<uint64_t> merge_sort_fuel(uint64_t fuel, List<uint64_t> l);
-  static List<uint64_t> merge_sort(List<uint64_t> l);
+  static List<uint64_t> merge_fuel(uint64_t fuel, const List<uint64_t> &l1,
+                                   const List<uint64_t> &l2);
+  static List<uint64_t> merge(const List<uint64_t> &l1,
+                              const List<uint64_t> &l2);
+  static List<uint64_t> merge_sort_fuel(uint64_t fuel, const List<uint64_t> &l);
+  static List<uint64_t> merge_sort(const List<uint64_t> &l);
   static std::pair<List<uint64_t>, List<uint64_t>>
   partition(uint64_t pivot, const List<uint64_t> &l);
-  static List<uint64_t> quicksort_fuel(uint64_t fuel, List<uint64_t> l);
-  static List<uint64_t> quicksort(List<uint64_t> l);
+  static List<uint64_t> quicksort_fuel(uint64_t fuel, const List<uint64_t> &l);
+  static List<uint64_t> quicksort(const List<uint64_t> &l);
   static bool is_sorted_aux(uint64_t prev, const List<uint64_t> &l);
   static bool is_sorted(const List<uint64_t> &l);
 
   /// merge_by cmp merges with custom comparator.
   template <typename F1>
   static List<uint64_t> merge_by_fuel(uint64_t fuel, F1 &&cmp,
-                                      List<uint64_t> l1, List<uint64_t> l2) {
+                                      const List<uint64_t> &l1,
+                                      const List<uint64_t> &l2) {
     std::optional<List<uint64_t>> _root{};
     std::shared_ptr<List<uint64_t>> *_write = nullptr;
-    List<uint64_t> _loop_l2 = std::move(l2);
-    List<uint64_t> _loop_l1 = std::move(l1);
+    const List<uint64_t> *_loop_l2 = &l2;
+    const List<uint64_t> *_loop_l1 = &l1;
     uint64_t _loop_fuel = fuel;
     while (true) {
       if (_loop_fuel <= 0) {
@@ -247,25 +249,25 @@ struct LoopifySorting {
       } else {
         uint64_t f = _loop_fuel - 1;
         if (std::holds_alternative<typename List<uint64_t>::Nil>(
-                _loop_l1.v_mut())) {
-          auto _value = std::move(_loop_l2);
+                _loop_l1->v())) {
+          auto _value = *_loop_l2;
           (_write ? *(*_write =
                           std::make_shared<List<uint64_t>>(std::move(_value)))
                   : _root.emplace(std::move(_value)));
           break;
         } else {
-          auto &[a0, a1] =
-              std::get<typename List<uint64_t>::Cons>(_loop_l1.v_mut());
+          const auto &[a0, a1] =
+              std::get<typename List<uint64_t>::Cons>(_loop_l1->v());
           if (std::holds_alternative<typename List<uint64_t>::Nil>(
-                  _loop_l2.v_mut())) {
-            auto _value = _loop_l1;
+                  _loop_l2->v())) {
+            auto _value = *_loop_l1;
             (_write ? *(*_write =
                             std::make_shared<List<uint64_t>>(std::move(_value)))
                     : _root.emplace(std::move(_value)));
             break;
           } else {
-            auto &[a00, a10] =
-                std::get<typename List<uint64_t>::Cons>(_loop_l2.v_mut());
+            const auto &[a00, a10] =
+                std::get<typename List<uint64_t>::Cons>(_loop_l2->v());
             if (cmp(a0, a00)) {
               auto _cell = typename List<uint64_t>::Cons(a0, nullptr);
               List<uint64_t> &_node =
@@ -274,7 +276,8 @@ struct LoopifySorting {
                           : _root.emplace(std::move(_cell)));
               _write =
                   &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
-              _loop_l1 = List<uint64_t>(*a1);
+              _loop_l2 = &*_loop_l2;
+              _loop_l1 = crane_raw(a1);
               _loop_fuel = f;
               continue;
             } else {
@@ -285,7 +288,8 @@ struct LoopifySorting {
                           : _root.emplace(std::move(_cell)));
               _write =
                   &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
-              _loop_l2 = List<uint64_t>(*a10);
+              _loop_l2 = crane_raw(a10);
+              _loop_l1 = &*_loop_l1;
               _loop_fuel = f;
               continue;
             }
@@ -297,8 +301,8 @@ struct LoopifySorting {
   }
 
   template <typename F0>
-  static List<uint64_t> merge_by(F0 &&cmp, List<uint64_t> l1,
-                                 List<uint64_t> l2) {
+  static List<uint64_t> merge_by(F0 &&cmp, const List<uint64_t> &l1,
+                                 const List<uint64_t> &l2) {
     return merge_by_fuel((len_impl<uint64_t>(l1) + len_impl<uint64_t>(l2)), cmp,
                          l1, l2);
   }

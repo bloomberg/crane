@@ -70,11 +70,11 @@ struct NameClashReturnThis {
   /// Inner match returns shape in all branches, one branch returns the
   /// argument itself. The function takes shape as input, so it gets
   /// methodified. In the Blue branch, `s` becomes `this`.
-  static shape maybe_transform(bool flag, shape s);
+  static shape maybe_transform(bool flag, const shape &s);
   /// Match on shape where one branch returns the same shape unchanged.
   static shape identity_or_double(const shape &s);
   /// Two shapes, return one of them based on a match on the other.
-  static shape pick_shape(shape s1, shape s2);
+  static shape pick_shape(const shape &s1, shape s2);
   /// Nested: match on result of a function that may return this
   static uint64_t nested_this(const shape &s);
 };

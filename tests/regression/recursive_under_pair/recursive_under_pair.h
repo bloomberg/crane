@@ -42,6 +42,9 @@ struct RecursiveUnderPair {
 
     // MANIPULATORS
     ~c() {
+      if (std::holds_alternative<Stop>(v_mut())) {
+        return;
+      }
       crane::small_vector<std::shared_ptr<c>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<N>(&_v)) {

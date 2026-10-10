@@ -136,8 +136,8 @@ List<uint64_t> LoopifySequences::run_sum(const List<uint64_t> &l) {
 
 /// rotate_left n l rotates list left by n positions.
 List<uint64_t> LoopifySequences::rotate_left_fuel(uint64_t fuel, uint64_t n,
-                                                  List<uint64_t> l) {
-  List<uint64_t> _loop_l = std::move(l);
+                                                  const List<uint64_t> &l) {
+  List<uint64_t> _loop_l = l;
   uint64_t _loop_n = n;
   uint64_t _loop_fuel = fuel;
   while (true) {
@@ -148,14 +148,12 @@ List<uint64_t> LoopifySequences::rotate_left_fuel(uint64_t fuel, uint64_t n,
       if (_loop_n == UINT64_C(0)) {
         return _loop_l;
       } else {
-        if (std::holds_alternative<typename List<uint64_t>::Nil>(
-                _loop_l.v_mut())) {
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l.v())) {
           return List<uint64_t>::nil();
         } else {
-          auto &[a0, a1] =
-              std::get<typename List<uint64_t>::Cons>(_loop_l.v_mut());
-          _loop_l = a1->app(
-              List<uint64_t>::cons(std::move(a0), List<uint64_t>::nil()));
+          const auto &[a0, a1] =
+              std::get<typename List<uint64_t>::Cons>(_loop_l.v());
+          _loop_l = a1->app(List<uint64_t>::cons(a0, List<uint64_t>::nil()));
           _loop_n = ((
               (_loop_n - UINT64_C(1)) > _loop_n ? 0 : (_loop_n - UINT64_C(1))));
           _loop_fuel = f;
@@ -165,8 +163,9 @@ List<uint64_t> LoopifySequences::rotate_left_fuel(uint64_t fuel, uint64_t n,
   }
 }
 
-List<uint64_t> LoopifySequences::rotate_left(uint64_t n, List<uint64_t> l) {
-  return rotate_left_fuel(UINT64_C(100), n, std::move(l));
+List<uint64_t> LoopifySequences::rotate_left(uint64_t n,
+                                             const List<uint64_t> &l) {
+  return rotate_left_fuel(UINT64_C(100), n, l);
 }
 
 /// sum_acc acc l sum with accumulator.
@@ -758,21 +757,22 @@ bool LoopifySequences::is_prefix_of(const List<uint64_t> &l1,
 }
 
 /// lis l longest increasing subsequence (greedy, not optimal).
-List<uint64_t> LoopifySequences::lis(List<uint64_t> l) {
+List<uint64_t> LoopifySequences::lis(const List<uint64_t> &l) {
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
-  List<uint64_t> _loop_l = std::move(l);
+  const List<uint64_t> *_loop_l = &l;
   while (true) {
-    if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l.v_mut())) {
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
       auto _value = List<uint64_t>::nil();
       (_write ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(_loop_l.v_mut());
+      const auto &[a0, a1] =
+          std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       auto &&_sv0 = *a1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv0.v())) {
-        auto _value = _loop_l;
+        auto _value = *_loop_l;
         (_write
              ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
              : _root.emplace(std::move(_value)));
@@ -787,10 +787,10 @@ List<uint64_t> LoopifySequences::lis(List<uint64_t> l) {
                               std::move(_cell)))
                       : _root.emplace(std::move(_cell)));
           _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
-          _loop_l = List<uint64_t>(*a1);
+          _loop_l = crane_raw(a1);
           continue;
         } else {
-          _loop_l = List<uint64_t>(*a1);
+          _loop_l = crane_raw(a1);
           continue;
         }
       }

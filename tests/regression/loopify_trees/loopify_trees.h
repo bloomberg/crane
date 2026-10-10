@@ -181,6 +181,15 @@ struct LoopifyTrees {
 
     // MANIPULATORS
     ~tree() {
+      if (std::holds_alternative<Leaf>(v_mut())) {
+        return;
+      }
+      if (auto *_alt = std::get_if<Node>(&v_mut())) {
+        if (!((_alt->l && _alt->l.use_count() == 1) ||
+              (_alt->r && _alt->r.use_count() == 1))) {
+          return;
+        }
+      }
       crane::small_vector<std::shared_ptr<tree<A>>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
@@ -847,6 +856,16 @@ struct LoopifyTrees {
 
     // MANIPULATORS
     ~ternary() {
+      if (std::holds_alternative<TLeaf>(v_mut())) {
+        return;
+      }
+      if (auto *_alt = std::get_if<TNode>(&v_mut())) {
+        if (!((_alt->a0 && _alt->a0.use_count() == 1) ||
+              (_alt->a1 && _alt->a1.use_count() == 1) ||
+              (_alt->a2 && _alt->a2.use_count() == 1))) {
+          return;
+        }
+      }
       crane::small_vector<std::shared_ptr<ternary>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<TNode>(&_v)) {
@@ -1330,7 +1349,8 @@ struct LoopifyTrees {
   /// Helper: compute maximum depth among a list of rose trees.
   static uint64_t depth_rose_list_fuel(uint64_t fuel, const List<rose> &cs);
   /// tree_max t1 t2 element-wise maximum of two trees.
-  static tree<uint64_t> tree_max(tree<uint64_t> t1, tree<uint64_t> t2);
+  static tree<uint64_t> tree_max(const tree<uint64_t> &t1,
+                                 const tree<uint64_t> &t2);
   /// Helper: extract values from trees.
   static List<uint64_t> extract_tree_values(const List<tree<uint64_t>> &ts);
   /// Helper: extract children from trees.
@@ -1454,6 +1474,17 @@ struct LoopifyTrees {
 
     // MANIPULATORS
     ~quadtree() {
+      if (std::holds_alternative<QLeaf>(v_mut())) {
+        return;
+      }
+      if (auto *_alt = std::get_if<Quad>(&v_mut())) {
+        if (!((_alt->a0 && _alt->a0.use_count() == 1) ||
+              (_alt->a1 && _alt->a1.use_count() == 1) ||
+              (_alt->a2 && _alt->a2.use_count() == 1) ||
+              (_alt->a3 && _alt->a3.use_count() == 1))) {
+          return;
+        }
+      }
       crane::small_vector<std::shared_ptr<quadtree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Quad>(&_v)) {
@@ -1843,6 +1874,15 @@ struct LoopifyTrees {
 
     // MANIPULATORS
     ~simple_tree() {
+      if (std::holds_alternative<SLeaf>(v_mut())) {
+        return;
+      }
+      if (auto *_alt = std::get_if<SNode>(&v_mut())) {
+        if (!((_alt->a0 && _alt->a0.use_count() == 1) ||
+              (_alt->a1 && _alt->a1.use_count() == 1))) {
+          return;
+        }
+      }
       crane::small_vector<std::shared_ptr<simple_tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<SNode>(&_v)) {

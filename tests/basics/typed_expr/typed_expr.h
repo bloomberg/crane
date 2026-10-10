@@ -82,6 +82,31 @@ public:
 
   // MANIPULATORS
   ~Expr() {
+    if (std::holds_alternative<ENat>(v_mut())) {
+      return;
+    }
+    if (std::holds_alternative<EBool>(v_mut())) {
+      return;
+    }
+    if (auto *_alt = std::get_if<EAdd>(&v_mut())) {
+      if (!((_alt->a0 && _alt->a0.use_count() == 1) ||
+            (_alt->a1 && _alt->a1.use_count() == 1))) {
+        return;
+      }
+    }
+    if (auto *_alt = std::get_if<EEq>(&v_mut())) {
+      if (!((_alt->a0 && _alt->a0.use_count() == 1) ||
+            (_alt->a1 && _alt->a1.use_count() == 1))) {
+        return;
+      }
+    }
+    if (auto *_alt = std::get_if<EIf>(&v_mut())) {
+      if (!((_alt->a1 && _alt->a1.use_count() == 1) ||
+            (_alt->a2 && _alt->a2.use_count() == 1) ||
+            (_alt->a3 && _alt->a3.use_count() == 1))) {
+        return;
+      }
+    }
     crane::small_vector<std::shared_ptr<Expr>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<EAdd>(&_v)) {

@@ -476,9 +476,9 @@ struct BinInt {
   static Z succ_double(const Z &x);
   static Z pred_double(const Z &x);
   static Z pos_sub(const Positive &x, const Positive &y);
-  static Z add(Z x, Z y);
+  static Z add(const Z &x, const Z &y);
   static Z opp(const Z &x);
-  static Z sub(Z m, const Z &n);
+  static Z sub(const Z &m, const Z &n);
   static Z mul(const Z &x, const Z &y);
   static Comparison compare(const Z &x, const Z &y);
   static bool leb(const Z &x, const Z &y);
@@ -583,14 +583,14 @@ template <OrderedType X> struct Coq_Raw {
   }
 
   template <typename T1>
-  static t<T1> remove(typename X::t k, List<std::pair<typename X::t, T1>> s) {
+  static t<T1> remove(typename X::t k,
+                      const List<std::pair<typename X::t, T1>> &s) {
     if (std::holds_alternative<
-            typename List<std::pair<typename X::t, T1>>::Nil>(s.v_mut())) {
+            typename List<std::pair<typename X::t, T1>>::Nil>(s.v())) {
       return List<std::pair<typename X::t, T1>>::nil();
     } else {
-      auto &[a0, a1] =
-          std::get<typename List<std::pair<typename X::t, T1>>::Cons>(
-              s.v_mut());
+      const auto &[a0, a1] =
+          std::get<typename List<std::pair<typename X::t, T1>>::Cons>(s.v());
       const auto &[k_, x] = a0;
       auto &&_sv = X::compare(k, k_);
       if (std::holds_alternative<typename Compare<typename X::t>::LT>(
@@ -1078,6 +1078,15 @@ template <Int I, OrderedType X> struct Raw {
 
     // MANIPULATORS
     ~tree() {
+      if (std::holds_alternative<Leaf>(v_mut())) {
+        return;
+      }
+      if (auto *_alt = std::get_if<Node>(&v_mut())) {
+        if (!((_alt->a0 && _alt->a0.use_count() == 1) ||
+              (_alt->a3 && _alt->a3.use_count() == 1))) {
+          return;
+        }
+      }
       crane::small_vector<std::shared_ptr<tree<elt>>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
@@ -1301,17 +1310,17 @@ template <Int I, OrderedType X> struct Raw {
     }
   }
 
-  template <typename T1> static tree<T1> merge(tree<T1> s1, tree<T1> s2) {
-    if (std::holds_alternative<typename tree<T1>::Leaf>(s1.v_mut())) {
+  template <typename T1>
+  static tree<T1> merge(const tree<T1> &s1, const tree<T1> &s2) {
+    if (std::holds_alternative<typename tree<T1>::Leaf>(s1.v())) {
       return s2;
     } else {
-      if (std::holds_alternative<typename tree<T1>::Leaf>(s2.v_mut())) {
+      if (std::holds_alternative<typename tree<T1>::Leaf>(s2.v())) {
         return s1;
       } else {
-        auto &[a00, a10, a20, a30, a40] =
-            std::get<typename tree<T1>::Node>(s2.v_mut());
-        auto [s2_, p] =
-            remove_min<T1>(*a00, std::move(a10), std::move(a20), *a30);
+        const auto &[a00, a10, a20, a30, a40] =
+            std::get<typename tree<T1>::Node>(s2.v());
+        auto [s2_, p] = remove_min<T1>(*a00, a10, a20, *a30);
         auto [x, d] = std::move(p);
         return bal<T1>(s1, x, d, std::move(s2_));
       }
@@ -1413,17 +1422,17 @@ template <Int I, OrderedType X> struct Raw {
     }
   }
 
-  template <typename T1> static tree<T1> concat(tree<T1> m1, tree<T1> m2) {
-    if (std::holds_alternative<typename tree<T1>::Leaf>(m1.v_mut())) {
+  template <typename T1>
+  static tree<T1> concat(const tree<T1> &m1, const tree<T1> &m2) {
+    if (std::holds_alternative<typename tree<T1>::Leaf>(m1.v())) {
       return m2;
     } else {
-      if (std::holds_alternative<typename tree<T1>::Leaf>(m2.v_mut())) {
+      if (std::holds_alternative<typename tree<T1>::Leaf>(m2.v())) {
         return m1;
       } else {
-        auto &[a00, a10, a20, a30, a40] =
-            std::get<typename tree<T1>::Node>(m2.v_mut());
-        auto [m2_, xd] =
-            remove_min<T1>(*a00, std::move(a10), std::move(a20), *a30);
+        const auto &[a00, a10, a20, a30, a40] =
+            std::get<typename tree<T1>::Node>(m2.v());
+        auto [m2_, xd] = remove_min<T1>(*a00, a10, a20, *a30);
         return join<T1>(m1, xd.first, xd.second, std::move(m2_));
       }
     }

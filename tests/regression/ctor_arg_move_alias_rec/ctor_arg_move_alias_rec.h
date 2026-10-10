@@ -317,7 +317,7 @@ struct CtorArgMoveAliasRec {
   static uint64_t osum(const mylist<inner> &o);
   /// The head element h is consumed into the freshly built cell while the
   /// sibling argument still reads o.
-  static mylist<inner> annotate(mylist<inner> o);
+  static mylist<inner> annotate(const mylist<inner> &o);
   /// For n = 1 the input is [ICons 1 INil; ICons 2 INil], so
   /// annotate yields [I 1; I 3; I 2; I 2] and run 1 = 1+3+2+2 = 8.
   static uint64_t run(uint64_t n);

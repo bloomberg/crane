@@ -36,13 +36,12 @@ uint64_t ReuseFnInBody::sum(const ReuseFnInBody::mylist &l) {
 /// This is similar to reuse_use_after_move but the scrutinee
 /// is used through a DIFFERENT function (sum instead of length)
 /// AND combined with a pattern variable in an arithmetic expression.
-ReuseFnInBody::mylist ReuseFnInBody::prefix_sum(ReuseFnInBody::mylist l,
+ReuseFnInBody::mylist ReuseFnInBody::prefix_sum(const ReuseFnInBody::mylist &l,
                                                 bool b) {
   if (b) {
-    if (std::holds_alternative<typename ReuseFnInBody::mylist::Mycons>(
-            l.v_mut())) {
-      auto &[a0, a1] =
-          std::get<typename ReuseFnInBody::mylist::Mycons>(l.v_mut());
+    if (std::holds_alternative<typename ReuseFnInBody::mylist::Mycons>(l.v())) {
+      const auto &[a0, a1] =
+          std::get<typename ReuseFnInBody::mylist::Mycons>(l.v());
       return mylist::mycons((sum(l) + a0), *a1);
     } else {
       return mylist::mynil();

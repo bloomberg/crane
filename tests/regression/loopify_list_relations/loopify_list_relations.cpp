@@ -61,21 +61,21 @@ bool LoopifyListRelations::is_suffix_of(const List<uint64_t> &l1,
   } else {
     uint64_t diff = (((len2 - len1) > len2 ? 0 : (len2 - len1)));
     List<uint64_t> suffix;
-    auto drop = [](uint64_t n, List<uint64_t> xs) -> List<uint64_t> {
-      List<uint64_t> _loop_xs = std::move(xs);
+    auto drop = [](uint64_t n, const List<uint64_t> &xs) -> List<uint64_t> {
+      const List<uint64_t> *_loop_xs = &xs;
       uint64_t _loop_n = n;
       while (true) {
         if (_loop_n <= 0) {
-          return _loop_xs;
+          return *_loop_xs;
         } else {
           uint64_t n_ = _loop_n - 1;
           if (std::holds_alternative<typename List<uint64_t>::Nil>(
-                  _loop_xs.v_mut())) {
+                  _loop_xs->v())) {
             return List<uint64_t>::nil();
           } else {
-            auto &[a0, a1] =
-                std::get<typename List<uint64_t>::Cons>(_loop_xs.v_mut());
-            _loop_xs = List<uint64_t>(*a1);
+            const auto &[a0, a1] =
+                std::get<typename List<uint64_t>::Cons>(_loop_xs->v());
+            _loop_xs = crane_raw(a1);
             _loop_n = n_;
           }
         }
@@ -396,34 +396,32 @@ LoopifyListRelations::zip3(const List<uint64_t> &l1, const List<uint64_t> &l2,
   return std::move(*_root);
 }
 
-List<uint64_t> LoopifyListRelations::interleave(List<uint64_t> l1,
-                                                List<uint64_t> l2) {
+List<uint64_t> LoopifyListRelations::interleave(const List<uint64_t> &l1,
+                                                const List<uint64_t> &l2) {
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
-  List<uint64_t> _loop_l2 = std::move(l2);
-  List<uint64_t> _loop_l1 = std::move(l1);
+  const List<uint64_t> *_loop_l2 = &l2;
+  const List<uint64_t> *_loop_l1 = &l1;
   while (true) {
-    if (std::holds_alternative<typename List<uint64_t>::Nil>(
-            _loop_l1.v_mut())) {
-      auto _value = std::move(_loop_l2);
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l1->v())) {
+      auto _value = *_loop_l2;
       (_write ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      auto &[a0, a1] =
-          std::get<typename List<uint64_t>::Cons>(_loop_l1.v_mut());
-      if (std::holds_alternative<typename List<uint64_t>::Nil>(
-              _loop_l2.v_mut())) {
-        auto _value = _loop_l1;
+      const auto &[a0, a1] =
+          std::get<typename List<uint64_t>::Cons>(_loop_l1->v());
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l2->v())) {
+        auto _value = *_loop_l1;
         (_write
              ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
              : _root.emplace(std::move(_value)));
         break;
       } else {
-        auto &[a00, a10] =
-            std::get<typename List<uint64_t>::Cons>(_loop_l2.v_mut());
+        const auto &[a00, a10] =
+            std::get<typename List<uint64_t>::Cons>(_loop_l2->v());
         auto _cell1 = std::make_shared<List<uint64_t>>(
-            typename List<uint64_t>::Cons(std::move(a00), nullptr));
+            typename List<uint64_t>::Cons(a00, nullptr));
         auto _cell = typename List<uint64_t>::Cons(a0, std::move(_cell1));
         List<uint64_t> &_node =
             (_write ? *(*_write =
@@ -433,8 +431,8 @@ List<uint64_t> LoopifyListRelations::interleave(List<uint64_t> l1,
                       std::get<typename List<uint64_t>::Cons>(_node.v_mut())
                           .l->v_mut())
                       .l;
-        _loop_l2 = List<uint64_t>(*a10);
-        _loop_l1 = List<uint64_t>(*a1);
+        _loop_l2 = crane_raw(a10);
+        _loop_l1 = crane_raw(a1);
         continue;
       }
     }
@@ -443,12 +441,12 @@ List<uint64_t> LoopifyListRelations::interleave(List<uint64_t> l1,
 }
 
 List<uint64_t> LoopifyListRelations::merge_fuel(uint64_t fuel,
-                                                List<uint64_t> l1,
-                                                List<uint64_t> l2) {
+                                                const List<uint64_t> &l1,
+                                                const List<uint64_t> &l2) {
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
-  List<uint64_t> _loop_l2 = std::move(l2);
-  List<uint64_t> _loop_l1 = std::move(l1);
+  const List<uint64_t> *_loop_l2 = &l2;
+  const List<uint64_t> *_loop_l1 = &l1;
   uint64_t _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
@@ -458,26 +456,25 @@ List<uint64_t> LoopifyListRelations::merge_fuel(uint64_t fuel,
       break;
     } else {
       uint64_t fuel_ = _loop_fuel - 1;
-      if (std::holds_alternative<typename List<uint64_t>::Nil>(
-              _loop_l1.v_mut())) {
-        auto _value = std::move(_loop_l2);
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l1->v())) {
+        auto _value = *_loop_l2;
         (_write
              ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
              : _root.emplace(std::move(_value)));
         break;
       } else {
-        auto &[a0, a1] =
-            std::get<typename List<uint64_t>::Cons>(_loop_l1.v_mut());
+        const auto &[a0, a1] =
+            std::get<typename List<uint64_t>::Cons>(_loop_l1->v());
         if (std::holds_alternative<typename List<uint64_t>::Nil>(
-                _loop_l2.v_mut())) {
-          auto _value = _loop_l1;
+                _loop_l2->v())) {
+          auto _value = *_loop_l1;
           (_write ? *(*_write =
                           std::make_shared<List<uint64_t>>(std::move(_value)))
                   : _root.emplace(std::move(_value)));
           break;
         } else {
-          auto &[a00, a10] =
-              std::get<typename List<uint64_t>::Cons>(_loop_l2.v_mut());
+          const auto &[a00, a10] =
+              std::get<typename List<uint64_t>::Cons>(_loop_l2->v());
           if (a0 <= a00) {
             auto _cell = typename List<uint64_t>::Cons(a0, nullptr);
             List<uint64_t> &_node =
@@ -485,7 +482,8 @@ List<uint64_t> LoopifyListRelations::merge_fuel(uint64_t fuel,
                                 std::move(_cell)))
                         : _root.emplace(std::move(_cell)));
             _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
-            _loop_l1 = List<uint64_t>(*a1);
+            _loop_l2 = &*_loop_l2;
+            _loop_l1 = crane_raw(a1);
             _loop_fuel = fuel_;
             continue;
           } else {
@@ -495,7 +493,8 @@ List<uint64_t> LoopifyListRelations::merge_fuel(uint64_t fuel,
                                 std::move(_cell)))
                         : _root.emplace(std::move(_cell)));
             _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
-            _loop_l2 = List<uint64_t>(*a10);
+            _loop_l2 = crane_raw(a10);
+            _loop_l1 = &*_loop_l1;
             _loop_fuel = fuel_;
             continue;
           }
@@ -506,11 +505,11 @@ List<uint64_t> LoopifyListRelations::merge_fuel(uint64_t fuel,
   return std::move(*_root);
 }
 
-List<uint64_t> LoopifyListRelations::merge(List<uint64_t> l1,
-                                           List<uint64_t> l2) {
+List<uint64_t> LoopifyListRelations::merge(const List<uint64_t> &l1,
+                                           const List<uint64_t> &l2) {
   uint64_t len1 = l1.length();
   uint64_t len2 = l2.length();
-  return merge_fuel((len1 + len2), std::move(l1), std::move(l2));
+  return merge_fuel((len1 + len2), l1, l2);
 }
 
 List<uint64_t> LoopifyListRelations::union_(const List<uint64_t> &l1,

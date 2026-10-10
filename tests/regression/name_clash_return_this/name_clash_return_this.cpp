@@ -4,17 +4,18 @@
 /// argument itself. The function takes shape as input, so it gets
 /// methodified. In the Blue branch, `s` becomes `this`.
 NameClashReturnThis::shape
-NameClashReturnThis::maybe_transform(bool flag, NameClashReturnThis::shape s) {
+NameClashReturnThis::maybe_transform(bool flag,
+                                     const NameClashReturnThis::shape &s) {
   if (flag) {
     if (std::holds_alternative<typename NameClashReturnThis::shape::Circle>(
-            s.v_mut())) {
-      auto &[a0] =
-          std::get<typename NameClashReturnThis::shape::Circle>(s.v_mut());
+            s.v())) {
+      const auto &[a0] =
+          std::get<typename NameClashReturnThis::shape::Circle>(s.v());
       return shape::square(a0, a0);
     } else {
-      auto &[a0, a1] =
-          std::get<typename NameClashReturnThis::shape::Square>(s.v_mut());
-      return shape::circle((std::move(a0) + std::move(a1)));
+      const auto &[a0, a1] =
+          std::get<typename NameClashReturnThis::shape::Square>(s.v());
+      return shape::circle((a0 + a1));
     }
   } else {
     return s;
@@ -38,10 +39,10 @@ NameClashReturnThis::identity_or_double(const NameClashReturnThis::shape &s) {
 
 /// Two shapes, return one of them based on a match on the other.
 NameClashReturnThis::shape
-NameClashReturnThis::pick_shape(NameClashReturnThis::shape s1,
+NameClashReturnThis::pick_shape(const NameClashReturnThis::shape &s1,
                                 NameClashReturnThis::shape s2) {
   if (std::holds_alternative<typename NameClashReturnThis::shape::Circle>(
-          s1.v_mut())) {
+          s1.v())) {
     return s2;
   } else {
     return s1;

@@ -99,7 +99,7 @@ struct ReuseFnInBody {
   /// This is similar to reuse_use_after_move but the scrutinee
   /// is used through a DIFFERENT function (sum instead of length)
   /// AND combined with a pattern variable in an arithmetic expression.
-  static mylist prefix_sum(mylist l, bool b);
+  static mylist prefix_sum(const mylist &l, bool b);
   static inline const uint64_t test1 = sum(prefix_sum(
       mylist::mycons(
           UINT64_C(1),

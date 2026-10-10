@@ -34,14 +34,13 @@ uint64_t ReuseMoveShadow::tree_sum(const ReuseMoveShadow::tree &t) {
 ///
 /// The returned tree has d_a2 = nullptr.  Traversing the right subtree
 /// crashes with a null-pointer dereference.
-ReuseMoveShadow::tree ReuseMoveShadow::dup_left(ReuseMoveShadow::tree t,
+ReuseMoveShadow::tree ReuseMoveShadow::dup_left(const ReuseMoveShadow::tree &t,
                                                 bool b) {
   if (b) {
-    if (std::holds_alternative<typename ReuseMoveShadow::tree::Node>(
-            t.v_mut())) {
-      auto &[a0, a1, a2] =
-          std::get<typename ReuseMoveShadow::tree::Node>(t.v_mut());
-      return tree::node(std::move(a0), *a1, *a1);
+    if (std::holds_alternative<typename ReuseMoveShadow::tree::Node>(t.v())) {
+      const auto &[a0, a1, a2] =
+          std::get<typename ReuseMoveShadow::tree::Node>(t.v());
+      return tree::node(a0, *a1, *a1);
     } else {
       return tree::leaf();
     }

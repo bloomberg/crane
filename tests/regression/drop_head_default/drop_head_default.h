@@ -92,21 +92,21 @@ public:
 };
 
 struct DropHeadDefault {
-  template <typename T1> static List<T1> drop(uint64_t n, List<T1> l) {
+  template <typename T1> static List<T1> drop(uint64_t n, const List<T1> &l) {
     if (n <= 0) {
       return l;
     } else {
       uint64_t n_ = n - 1;
-      if (std::holds_alternative<typename List<T1>::Nil>(l.v_mut())) {
+      if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         return List<T1>::nil();
       } else {
-        auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v_mut());
+        const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
         return drop<T1>(n_, *a1);
       }
     }
   }
 
-  static uint64_t head_after_drop(List<uint64_t> rom, uint64_t addr);
+  static uint64_t head_after_drop(const List<uint64_t> &rom, uint64_t addr);
   static inline const uint64_t t = head_after_drop(
       List<uint64_t>::cons(
           UINT64_C(5),
