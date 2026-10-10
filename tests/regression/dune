@@ -10842,6 +10842,17 @@
   (deps match_observe_alias_family.t.exe)
   (action (run ./match_observe_alias_family.t.exe))))
 
+(subdir translate_alias_source
+ (rule
+  (targets translate_alias_source.t.exe)
+  (deps TranslateAliasSource.vo translate_alias_source.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} translate_alias_source.t.exe translate_alias_source.cpp translate_alias_source.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps translate_alias_source.t.exe)
+  (action (run ./translate_alias_source.t.exe))))
+
 (subdir translate_ifun_lambda
  (rule
   (targets translate_ifun_lambda.t.exe)
