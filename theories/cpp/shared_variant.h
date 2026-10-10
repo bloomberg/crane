@@ -54,6 +54,14 @@ template <class T, class F> void each_field(T &x, F &&f) {
 template <class... Ts> class shared_variant {
   static_assert(sizeof...(Ts) > 0, "crane::shared_variant: at least one alternative");
 
+public:
+  // A copy is a count bump (see field.h), and the value is one counted word:
+  // null, an odd tag, or the address of a [shared_block] (see obj.h).
+  using crane_cheap_copy = void;
+  using crane_counted_word = void;
+
+private:
+
   template <std::size_t I> using alt = std::tuple_element_t<I, std::tuple<Ts...>>;
 
   template <class T> static constexpr std::size_t index_of() {
@@ -294,8 +302,9 @@ template <class T> class shared_box {
 
 public:
   using element_type = T;
-  // A copy is a count bump.
+  // A copy is a count bump, of the value's own word (see obj.h).
   using crane_cheap_copy = void;
+  using crane_counted_word = void;
 
   shared_box() = default;
   shared_box(std::nullptr_t) noexcept {}

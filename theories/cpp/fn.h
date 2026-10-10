@@ -172,8 +172,10 @@ template <class R, class... A> class fn<R(A...)> {
   const block *p_ = nullptr;
 
 public:
-  // A copy is a refcount bump (see field.h).
+  // A copy is a refcount bump (see field.h), and the value is one counted
+  // word: null or the address of a [shared_block] (see obj.h).
   using crane_cheap_copy = void;
+  using crane_counted_word = void;
 
 private:
   void retain() const noexcept {
