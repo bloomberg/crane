@@ -80,7 +80,8 @@ InterpChainPerf::run_n(const Nat &n) {
       Interp::template interp<
           MonadIter_itree<InterpChainPerf::TopE<crane::obj>>,
           Monad_itree<InterpChainPerf::TopE<crane::obj>>,
-          Functor_itree<InterpChainPerf::TopE<crane::obj>>>(
+          Functor_itree<InterpChainPerf::TopE<crane::obj>>,
+          InterpChainPerf::TopE<crane::obj>, Nat>(
           [](const auto &a0)
               -> Itree<InterpChainPerf::TopE<crane::obj>, crane::obj> {
             return intr<crane::obj>(

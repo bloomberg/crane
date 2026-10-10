@@ -1011,9 +1011,9 @@ struct InterpStateAfterInterp {
                                          crane::obj> {
             return h<crane::obj>(crane_convert<TopE<crane::obj>>(a0));
           },
-          Interp::template interp<MonadIter_itree<TopE<crane::obj>>,
-                                  Monad_itree<TopE<crane::obj>>,
-                                  Functor_itree<TopE<crane::obj>>>(
+          Interp::template interp<
+              MonadIter_itree<TopE<crane::obj>>, Monad_itree<TopE<crane::obj>>,
+              Functor_itree<TopE<crane::obj>>, TopE<crane::obj>, Nat>(
               [](const auto &a0) -> Itree<TopE<crane::obj>, crane::obj> {
                 return intr<crane::obj>(crane_convert<TopE<crane::obj>>(a0));
               },

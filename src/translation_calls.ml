@@ -617,7 +617,33 @@ let call_type_args ?expected_ty env id plan args =
           match build_type_args (fill_erased_tys id tys primary_ml_args) with
           | [] -> phantom_prefix_args id
           | targs -> targs ) )
-    else all_type_args
+    else
+      (* A list the call does write may still hold a family MiniML erased
+         -- [translate inr1]'s source, taken off a morphism that erases it --
+         which the argument constrained in it names.  Written erased, the
+         argument is read at the erased family: converted node by node. *)
+      let filled =
+        List.mapi
+          (fun k (f, t) ->
+            (* Not where the family is an axiom: it has no struct to name. *)
+            let no_struct =
+              match resolve_tmeta f with
+              | Miniml.Tglob (g, _, _) ->
+                Table.is_custom g
+                || (match g with
+                    | GlobRef.IndRef _ -> false
+                    | GlobRef.ConstRef kn -> not (Option.has_some (Table.lookup_typedef_unchecked kn))
+                    | _ -> true)
+              | _ -> false
+            in
+            if Table.is_phantom_type_param id k || no_struct then t else f)
+          (List.combine (fill_erased_tys id tys primary_ml_args) tys)
+      in
+      if List.for_all2 ( == ) filled tys then all_type_args
+      else
+        match build_type_args filled with
+        | [] -> all_type_args
+        | targs -> targs
   in
   (* The same holds past a class dictionary: a call that writes only the
      instance still leaves the callee's leading phantom parameters with

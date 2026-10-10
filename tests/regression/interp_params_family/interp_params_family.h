@@ -843,7 +843,8 @@ struct InterpParamsFamily {
     return Interp::template interp<
         MonadIter_itree<OutE<typename _tcI0::ptr, crane::obj>>,
         Monad_itree<OutE<typename _tcI0::ptr, crane::obj>>,
-        Functor_itree<OutE<typename _tcI0::ptr, crane::obj>>>(
+        Functor_itree<OutE<typename _tcI0::ptr, crane::obj>>,
+        InE<typename _tcI0::ptr, crane::obj>, Nat>(
         []() {
           return []<typename T1>(InE<typename _tcI0::ptr, T1> _x0)
                      -> Itree<OutE<typename _tcI0::ptr, crane::obj>, T1> {

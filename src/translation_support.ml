@@ -2562,6 +2562,13 @@ and tvar_instantiation_found
     | Miniml.Tglob (g1, a1, _), Miniml.Tglob (g2, a2, _)
       when GlobRef.CanOrd.equal g1 g2 && List.length a1 = List.length a2 ->
       List.iter2 unify a1 a2
+    (* An actual type spelled through an alias -- [MCFGtop T] for [itree
+       MCFGEtop T] -- is what the alias stands for. *)
+    | (Miniml.Tglob (g1, _, _) as f), Miniml.Tglob ((GlobRef.ConstRef kn as g2), a2, _)
+      when (not (GlobRef.CanOrd.equal g1 g2))
+           && Option.has_some (Table.lookup_typedef_unchecked kn) ->
+      let body = Option.get (Table.lookup_typedef_unchecked kn) in
+      unify f (if a2 = [] then body else Mlutil.type_subst_list a2 body)
     (* Where both sides open with type abstractions, they may abstract
        different numbers of them -- [E ~> M]'s one against a handler written
        [fun T => intr], itself abstracting its own [T] -- and the value
