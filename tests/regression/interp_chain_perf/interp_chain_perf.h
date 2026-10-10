@@ -721,8 +721,7 @@ template <typename T1> struct Monad_itree {
 
   template <typename CraneA0> static Itree<T1, CraneA0> ret(CraneA0 x) {
     return Itree<T1, CraneA0>::go(
-        ItreeF<crane::obj, crane::obj, Itree<crane::obj, crane::obj>>::retf(
-            std::move(x)));
+        ItreeF<T1, CraneA0, Itree<T1, CraneA0>>::retf(std::move(x)));
   }
 
   template <typename CraneA0, typename CraneA1>
@@ -815,8 +814,8 @@ struct InterpChainPerf {
   h_get(GetE) {
     return [](const Nat &s) {
       return Itree<BotE<crane::obj>, std::pair<Nat, T1>>::go(
-          ItreeF<crane::obj, std::pair<Nat, T1>,
-                 Itree<crane::obj, std::pair<Nat, T1>>>::
+          ItreeF<BotE<crane::obj>, std::pair<Nat, T1>,
+                 Itree<BotE<crane::obj>, std::pair<Nat, T1>>>::
               retf(std::make_pair(s, Nat::s(Nat::o()))));
     };
   }
@@ -832,8 +831,8 @@ struct InterpChainPerf {
                                                                            e)),
           [=](const T2 &r) {
             return Itree<BotE<crane::obj>, std::pair<Nat, T2>>::go(
-                ItreeF<crane::obj, std::pair<Nat, T2>,
-                       Itree<crane::obj,
+                ItreeF<BotE<crane::obj>, std::pair<Nat, T2>,
+                       Itree<BotE<crane::obj>,
                              std::pair<Nat, T2>>>::retf(std::make_pair(s, r)));
           });
     };

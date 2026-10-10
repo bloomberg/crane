@@ -598,8 +598,7 @@ template <typename T1> struct Monad_itree {
 
   template <typename CraneA0> static Itree<T1, CraneA0> ret(CraneA0 x) {
     return Itree<T1, CraneA0>::go(
-        ItreeF<crane::obj, crane::obj, Itree<crane::obj, crane::obj>>::retf(
-            std::move(x)));
+        ItreeF<T1, CraneA0, Itree<T1, CraneA0>>::retf(std::move(x)));
   }
 
   static Itree<T1, crane::obj>
@@ -760,10 +759,9 @@ struct InterpParamsFamily {
                       Nat>(resum_inl, GetE::GET)),
               [=](Nat y) {
                 return Itree<InE<typename _tcI0::ptr, crane::obj>, Nat>::go(
-                    ItreeF<
-                        Sum1<GetE, putE<typename _tcI0::ptr>, crane::obj>, Nat,
-                        Itree<Sum1<GetE, putE<typename _tcI0::ptr>, crane::obj>,
-                              Nat>>::retf(x.add(y)));
+                    ItreeF<InE<typename _tcI0::ptr, crane::obj>, Nat,
+                           Itree<InE<typename _tcI0::ptr, crane::obj>,
+                                 Nat>>::retf(x.add(y)));
               });
         });
   }
@@ -771,8 +769,9 @@ struct InterpParamsFamily {
   template <Params _tcI0, typename T1>
   static Itree<OutE<typename _tcI0::ptr, crane::obj>, T1> h_get(GetE) {
     return Itree<OutE<typename _tcI0::ptr, crane::obj>, T1>::go(
-        ItreeF<crane::obj, T1, Itree<crane::obj, T1>>::retf(
-            Nat::s(Nat::s(Nat::o()))));
+        ItreeF<OutE<typename _tcI0::ptr, crane::obj>, T1,
+               Itree<OutE<typename _tcI0::ptr, crane::obj>,
+                     T1>>::retf(Nat::s(Nat::s(Nat::o()))));
   }
 
   template <Params _tcI0, typename T1>

@@ -379,11 +379,10 @@ template <Params _tcI0>
 stateT<Nat, crane_carrier_tch<_tcI0>::template c, Nat> HoStack::get_st(Nat n) {
   return [=, n = std::move(n)](const Nat &s) {
     return Itree<AllE<typename _tcI0::ptr, crane::obj>, std::pair<Nat, Nat>>::
-        go(ItreeF<
-            Sum1<MemE<typename _tcI0::ptr>, FailE, std::pair<Nat, Nat>>,
-            std::pair<Nat, Nat>,
-            Itree<Sum1<MemE<typename _tcI0::ptr>, FailE, std::pair<Nat, Nat>>,
-                  std::pair<Nat, Nat>>>::retf(std::make_pair(s.add(n), s)));
+        go(ItreeF<AllE<typename _tcI0::ptr, crane::obj>, std::pair<Nat, Nat>,
+                  Itree<AllE<typename _tcI0::ptr, crane::obj>,
+                        std::pair<Nat, Nat>>>::retf(std::make_pair(s.add(n),
+                                                                   s)));
   };
 }
 

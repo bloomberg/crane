@@ -576,8 +576,7 @@ template <typename T1> struct Monad_itree {
 
   template <typename CraneA0> static Itree<T1, CraneA0> ret(CraneA0 x) {
     return Itree<T1, CraneA0>::go(
-        ItreeF<crane::obj, crane::obj, Itree<crane::obj, crane::obj>>::retf(
-            std::move(x)));
+        ItreeF<T1, CraneA0, Itree<T1, CraneA0>>::retf(std::move(x)));
   }
 
   template <typename CraneA0, typename CraneA1>
@@ -679,7 +678,7 @@ struct LetBoundMonadFamily {
   template <typename T1>
   static Itree<BotE<crane::obj>, T1> h_get(const getE &) {
     return Itree<BotE<crane::obj>, T1>::go(
-        ItreeF<crane::obj, T1, Itree<crane::obj, T1>>::retf(
+        ItreeF<BotE<crane::obj>, T1, Itree<BotE<crane::obj>, T1>>::retf(
             Nat::s(Nat::s(Nat::o()))));
   }
 

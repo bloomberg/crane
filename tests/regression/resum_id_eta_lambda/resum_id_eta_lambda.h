@@ -471,9 +471,11 @@ struct ResumIdEtaLambda {
           [=](const T2 &r) {
             return Itree<BotE<typename _tcI0::ptr, crane::obj>,
                          std::pair<Nat, T2>>::
-                go(ItreeF<crane::obj, std::pair<Nat, T2>,
-                          Itree<crane::obj, std::pair<Nat, T2>>>::
-                       retf(std::make_pair(s, r)));
+                go(ItreeF<BotE<typename _tcI0::ptr, crane::obj>,
+                          std::pair<Nat, T2>,
+                          Itree<BotE<typename _tcI0::ptr, crane::obj>,
+                                std::pair<Nat, T2>>>::retf(std::make_pair(s,
+                                                                          r)));
           });
     };
   }

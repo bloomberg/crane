@@ -4062,7 +4062,17 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                 let rec erased_outside_family_apps t =
                   match t with
                   | Tapply (Tvar _, _) -> false
-                  | Tglob (_, args, _) | Tapply (_, args) ->
+                  (* A family position holds the family's own struct, written
+                     at an erased index ([Sum1<AE, BE, std::any>]) by the same
+                     convention: only the family itself erased counts. *)
+                  | Tglob (fg, args, _) ->
+                    List.exists Fun.id
+                      (List.mapi
+                         (fun i a ->
+                           if Table.is_family_ind_param fg i then prints_as_any a
+                           else erased_outside_family_apps a)
+                         args)
+                  | Tapply (_, args) ->
                     List.exists erased_outside_family_apps args
                   | Tfun (ps, r) ->
                     List.exists erased_outside_family_apps (r :: ps)
@@ -4070,7 +4080,30 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                     erased_outside_family_apps t
                   | t -> prints_as_any t
                 in
-                let ct = instantiated_field_cpp_ty ft in
+                (* A family position written as a family variable applied at
+                   the erased index ([T1<std::any>]) holds the variable itself,
+                   as the declaration spells it. *)
+                let rec plain_families t =
+                  match t with
+                  | Tnamespace (n, t) -> Tnamespace (n, plain_families t)
+                  | Tglob (fg, args, ns) ->
+                    Tglob
+                      ( fg,
+                        List.mapi
+                          (fun i a ->
+                            if Table.is_family_ind_param fg i then
+                              let rec unapply = function
+                                | Tapply (h, _) -> unapply h
+                                | Tnamespace (n, t) -> Tnamespace (n, unapply t)
+                                | t -> t
+                              in
+                              unapply a
+                            else plain_families a)
+                          args,
+                        ns )
+                  | t -> t
+                in
+                let ct = plain_families (instantiated_field_cpp_ty ft) in
                 let spine =
                   match resolve_tmeta ty with
                   | Miniml.Tglob (n_ind, _, _) -> globref_equal g n_ind

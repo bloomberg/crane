@@ -565,8 +565,9 @@ struct MrecHandlerBranchTypes {
   static Itree<Sum1<callE, OtherE<T1, crane::obj>, crane::obj>, Nat>
   ext_call(const Nat &n) {
     return Itree<Sum1<callE, OtherE<T1, crane::obj>, crane::obj>, Nat>::go(
-        ItreeF<crane::obj, Nat, Itree<crane::obj, Nat>>::retf(
-            n.add(Nat::s(Nat::o()))));
+        ItreeF<Sum1<callE, OtherE<T1, crane::obj>, crane::obj>, Nat,
+               Itree<Sum1<callE, OtherE<T1, crane::obj>, crane::obj>,
+                     Nat>>::retf(n.add(Nat::s(Nat::o()))));
   }
 
   template <typename T1>
@@ -680,10 +681,9 @@ Itree<T2, T3> Recursion::interp_mrec(
             typename Itree<T2,
                            Sum<Itree<Sum1<T1, T2, crane::obj>, T3>, T3>>::Go {
               return {
-                  ItreeF<crane::obj,
-                         Sum<Itree<Sum1<T1, T2, crane::obj>, T3>, T3>,
-                         Itree<crane::obj,
-                               Sum<Itree<Sum1<T1, T2, crane::obj>, T3>, T3>>>::
+                  ItreeF<
+                      T2, Sum<Itree<Sum1<T1, T2, crane::obj>, T3>, T3>,
+                      Itree<T2, Sum<Itree<Sum1<T1, T2, crane::obj>, T3>, T3>>>::
                       retf(Sum<Itree<Sum1<T1, T2, crane::obj>, T3>, T3>::inl(
                           ITree::template bind<Sum1<T1, T2, crane::obj>,
                                                crane::obj, T3>(
@@ -693,44 +693,38 @@ Itree<T2, T3> Recursion::interp_mrec(
         const auto &[a00] =
             std::get<typename Sum1<T1, T2, crane::obj>::Inr1>(x.v());
         return Itree<T2, Sum<Itree<Sum1<T1, T2, crane::obj>, T3>, T3>>::go(
-            ItreeF<crane::obj, Sum<Itree<Sum1<T1, T2, crane::obj>, T3>, T3>,
-                   Itree<crane::obj,
-                         Sum<Itree<Sum1<T1, T2, crane::obj>, T3>, T3>>>::
+            ItreeF<T2, Sum<Itree<Sum1<T1, T2, crane::obj>, T3>, T3>,
+                   Itree<T2, Sum<Itree<Sum1<T1, T2, crane::obj>, T3>, T3>>>::
                 visf(
                     a00,
                     crane::fn<
-                        Itree<crane::obj,
-                              Sum<Itree<Sum1<T1, T2, crane::obj>, T3>, T3>>(
-                            crane::obj)>(
-                        [=](const crane::obj &x0)
-                            -> Itree<
-                                crane::obj,
-                                Sum<Itree<Sum1<T1, T2, crane::obj>, T3>, T3>> {
-                          return Itree<
-                              crane::obj,
-                              Sum<Itree<Sum1<T1, T2, crane::obj>, T3>, T3>>::
-                              lazy_([=]()
-                                        -> typename Itree<
-                                            crane::obj,
-                                            Sum<Itree<Sum1<T1, T2, crane::obj>,
-                                                      T3>,
-                                                T3>>::Go {
-                                return {ItreeF<
-                                    crane::obj,
-                                    Sum<Itree<Sum1<T1, T2, crane::obj>, T3>,
-                                        T3>,
-                                    Itree<
-                                        crane::obj,
+                        Itree<T2, Sum<Itree<Sum1<T1, T2, crane::obj>, T3>, T3>>(
+                            crane::obj)>([=](const crane::obj &x0)
+                                             -> Itree<
+                                                 T2, Sum<Itree<Sum1<T1, T2,
+                                                                    crane::obj>,
+                                                               T3>,
+                                                         T3>> {
+                      return Itree<
+                          T2, Sum<Itree<Sum1<T1, T2, crane::obj>, T3>, T3>>::
+                          lazy_([=]()
+                                    -> typename Itree<
+                                        T2,
                                         Sum<Itree<Sum1<T1, T2, crane::obj>, T3>,
-                                            T3>>>::
-                                            retf(Sum<
-                                                 Itree<Sum1<T1, T2, crane::obj>,
-                                                       T3>,
-                                                 T3>::
-                                                     inl(crane_call_erased(
-                                                         e, x0)))};
-                              });
-                        })));
+                                            T3>>::Go {
+                            return {ItreeF<
+                                T2,
+                                Sum<Itree<Sum1<T1, T2, crane::obj>, T3>, T3>,
+                                Itree<T2,
+                                      Sum<Itree<Sum1<T1, T2, crane::obj>, T3>,
+                                          T3>>>::
+                                        retf(Sum<
+                                             Itree<Sum1<T1, T2, crane::obj>,
+                                                   T3>,
+                                             T3>::inl(crane_call_erased(e,
+                                                                        x0)))};
+                          });
+                    })));
       }
     }();
     return ITree::template bind<

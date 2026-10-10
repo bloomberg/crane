@@ -11007,6 +11007,17 @@
   (deps nested_class_state_arg.t.exe)
   (action (run ./nested_class_state_arg.t.exe))))
 
+(subdir itree_ret_family_from_result
+ (rule
+  (targets itree_ret_family_from_result.t.exe)
+  (deps ItreeRetFamilyFromResult.vo itree_ret_family_from_result.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} itree_ret_family_from_result.t.exe itree_ret_family_from_result.cpp itree_ret_family_from_result.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps itree_ret_family_from_result.t.exe)
+  (action (run ./itree_ret_family_from_result.t.exe))))
+
 (subdir itree_case_handler
  (rule
   (targets itree_case_handler.t.exe)

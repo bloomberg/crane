@@ -500,27 +500,22 @@ struct RunBotHandleExistential {
   template <Params _tcI0>
   static Itree<BotE<typename _tcI0::ptr, crane::obj>, Nat> prog() {
     return Itree<BotE<typename _tcI0::ptr, crane::obj>, Nat>::go(
-        ItreeF<Sum1<outE<typename _tcI0::ptr>, FailE, crane::obj>, Nat,
-               Itree<Sum1<outE<typename _tcI0::ptr>, FailE, crane::obj>, Nat>>::
-            visf(
-                Sum1<outE<typename _tcI0::ptr>, FailE,
-                     outE<typename _tcI0::ptr>>::
-                    inl1(outE<typename _tcI0::ptr>::out(_tcI0::zero())),
-                crane::fn<Itree<
-                    Sum1<outE<typename _tcI0::ptr>, FailE, crane::obj>, Nat>(
-                    crane::obj)>([](const crane::obj &)
-                                     -> Itree<Sum1<outE<typename _tcI0::ptr>,
-                                                   FailE, crane::obj>,
-                                              Nat> {
-                  return Itree<
-                      Sum1<outE<typename _tcI0::ptr>, FailE, crane::obj>, Nat>::
-                      go(ItreeF<
-                          Sum1<outE<typename _tcI0::ptr>, FailE, crane::obj>,
-                          Nat,
-                          Itree<Sum1<outE<typename _tcI0::ptr>, FailE,
-                                     crane::obj>,
-                                Nat>>::retf(Nat::s(Nat::s(Nat::s(Nat::o())))));
-                })));
+        ItreeF<BotE<typename _tcI0::ptr, crane::obj>, Nat,
+               Itree<BotE<typename _tcI0::ptr, crane::obj>, Nat>>::
+            visf(Sum1<outE<typename _tcI0::ptr>, FailE,
+                      outE<typename _tcI0::ptr>>::
+                     inl1(outE<typename _tcI0::ptr>::out(_tcI0::zero())),
+                 crane::fn<Itree<BotE<typename _tcI0::ptr, crane::obj>, Nat>(
+                     crane::obj)>([](const crane::obj &)
+                                      -> Itree<
+                                          BotE<typename _tcI0::ptr, crane::obj>,
+                                          Nat> {
+                   return Itree<BotE<typename _tcI0::ptr, crane::obj>, Nat>::go(
+                       ItreeF<
+                           BotE<typename _tcI0::ptr, crane::obj>, Nat,
+                           Itree<BotE<typename _tcI0::ptr, crane::obj>,
+                                 Nat>>::retf(Nat::s(Nat::s(Nat::s(Nat::o())))));
+                 })));
   }
 
   struct natParams {

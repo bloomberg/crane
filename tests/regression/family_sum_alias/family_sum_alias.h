@@ -346,29 +346,18 @@ struct FamilySumAlias {
   using AllE = Sum1<aE<p>, Sum1<BE, CE, crane::obj>, x>;
   static inline const Itree<AllE<Nat, crane::obj>, Nat> t =
       Itree<AllE<Nat, crane::obj>, Nat>::go(
-          ItreeF<
-              Sum1<aE<Nat>, Sum1<BE, CE, crane::obj>, crane::obj>, Nat,
-              Itree<Sum1<aE<Nat>, Sum1<BE, CE, crane::obj>, crane::obj>, Nat>>::
-              visf(
-                  Sum1<aE<Nat>, Sum1<BE, CE, crane::obj>, aE<Nat>>::inl1(
-                      aE<Nat>::a(Nat::s(Nat::s(Nat::s(Nat::o()))))),
-                  crane::fn<Itree<
-                      Sum1<aE<Nat>, Sum1<BE, CE, crane::obj>, crane::obj>, Nat>(
-                      crane::obj)>([](const crane::obj &n)
-                                       -> Itree<Sum1<aE<Nat>,
-                                                     Sum1<BE, CE, crane::obj>,
-                                                     crane::obj>,
-                                                Nat> {
-                    return Itree<
-                        Sum1<aE<Nat>, Sum1<BE, CE, crane::obj>, crane::obj>,
-                        Nat>::
-                        go(ItreeF<
-                            Sum1<aE<Nat>, Sum1<BE, CE, crane::obj>, crane::obj>,
-                            Nat,
-                            Itree<Sum1<aE<Nat>, Sum1<BE, CE, crane::obj>,
-                                       crane::obj>,
-                                  Nat>>::retf(crane::any_cast<Nat>(n)));
-                  })));
+          ItreeF<AllE<Nat, crane::obj>, Nat,
+                 Itree<AllE<Nat, crane::obj>, Nat>>::
+              visf(Sum1<aE<Nat>, Sum1<BE, CE, crane::obj>, aE<Nat>>::inl1(
+                       aE<Nat>::a(Nat::s(Nat::s(Nat::s(Nat::o()))))),
+                   crane::fn<Itree<AllE<Nat, crane::obj>, Nat>(crane::obj)>(
+                       [](const crane::obj &n)
+                           -> Itree<AllE<Nat, crane::obj>, Nat> {
+                         return Itree<AllE<Nat, crane::obj>, Nat>::go(
+                             ItreeF<AllE<Nat, crane::obj>, Nat,
+                                    Itree<AllE<Nat, crane::obj>,
+                                          Nat>>::retf(crane::any_cast<Nat>(n)));
+                       })));
   static inline const bool is_three = []() {
     auto &&_sv = []() {
       auto &&_sv0 = t;

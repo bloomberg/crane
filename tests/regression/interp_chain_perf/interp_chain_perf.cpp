@@ -31,11 +31,9 @@ InterpChainPerf::prog(const Nat &n) {
         if (i.eqb(n)) {
           return Itree<InterpChainPerf::TopE<crane::obj>,
                        Sum<std::pair<Nat, Nat>, Nat>>::
-              go(ItreeF<Sum1<InterpChainPerf::GetE, InterpChainPerf::outE,
-                             crane::obj>,
+              go(ItreeF<InterpChainPerf::TopE<crane::obj>,
                         Sum<std::pair<Nat, Nat>, Nat>,
-                        Itree<Sum1<InterpChainPerf::GetE, InterpChainPerf::outE,
-                                   crane::obj>,
+                        Itree<InterpChainPerf::TopE<crane::obj>,
                               Sum<std::pair<Nat, Nat>, Nat>>>::
                      retf(Sum<std::pair<Nat, Nat>, Nat>::inr(acc)));
         } else {
@@ -50,11 +48,9 @@ InterpChainPerf::prog(const Nat &n) {
               [=](Nat x) {
                 return Itree<InterpChainPerf::TopE<crane::obj>,
                              Sum<std::pair<Nat, Nat>, Nat>>::
-                    go(ItreeF<Sum1<InterpChainPerf::GetE, InterpChainPerf::outE,
-                                   crane::obj>,
+                    go(ItreeF<InterpChainPerf::TopE<crane::obj>,
                               Sum<std::pair<Nat, Nat>, Nat>,
-                              Itree<Sum1<InterpChainPerf::GetE,
-                                         InterpChainPerf::outE, crane::obj>,
+                              Itree<InterpChainPerf::TopE<crane::obj>,
                                     Sum<std::pair<Nat, Nat>, Nat>>>::
                            retf(Sum<std::pair<Nat, Nat>, Nat>::inl(
                                std::make_pair(Nat::s(i), acc.add(x)))));
