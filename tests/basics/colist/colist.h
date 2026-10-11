@@ -8,7 +8,6 @@
 #include <atomic>
 #include <memory>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -222,9 +221,7 @@ public:
 
   const crane::lazy<variant_t> &lazy_cell() const { return lazy_v_; }
 
-  template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, const F0 &, const A &>
-  Colist<T1> comap(F0 &&f) const {
+  template <typename T1> Colist<T1> comap(const crane::fn<T1(A)> &f) const {
     if (std::holds_alternative<typename Colist<A>::Conil>(this->v())) {
       return Colist<T1>::conil();
     } else {

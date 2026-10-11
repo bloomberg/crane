@@ -61,7 +61,7 @@ MemSafetyProbe9::collect_subtree_sums(
   /// CraneCont_Node: saves [a0], resumes after recursive call, then processes
   /// rest.
   struct CraneCont_Node {
-    std::shared_ptr<MemSafetyProbe9::tree> a0;
+    const MemSafetyProbe9::tree *a0;
   };
 
   using CraneFrame = std::variant<CraneEnter, CraneCont_Node>;
@@ -87,7 +87,7 @@ MemSafetyProbe9::collect_subtree_sums(
         crane::fn<uint64_t(uint64_t)> f = [=](uint64_t) {
           return ((a0_value.tree_sum() + a1) + a2_value.tree_sum());
         };
-        _stack.emplace_back(CraneCont_Node{a0});
+        _stack.emplace_back(CraneCont_Node{crane_raw(a0)});
         _stack.emplace_back(
             CraneEnter{mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
                            std::move(f), std::move(acc)),
@@ -95,9 +95,9 @@ MemSafetyProbe9::collect_subtree_sums(
       }
     } else {
       auto _f = std::move(std::get<CraneCont_Node>(_frame));
-      std::shared_ptr<MemSafetyProbe9::tree> a0 = std::move(_f.a0);
-      const MemSafetyProbe9::tree &a0_value = *a0;
-      _stack.emplace_back(CraneEnter{std::move(_result), crane_raw(a0)});
+      const MemSafetyProbe9::tree &a0 = *_f.a0;
+      const MemSafetyProbe9::tree &a0_value = a0;
+      _stack.emplace_back(CraneEnter{std::move(_result), &a0_value});
     }
   }
   return _result;
@@ -120,7 +120,7 @@ MemSafetyProbe9::collect_left_sums(
   /// CraneCont_Node: saves [a0], resumes after recursive call, then processes
   /// rest.
   struct CraneCont_Node {
-    std::shared_ptr<MemSafetyProbe9::tree> a0;
+    const MemSafetyProbe9::tree *a0;
   };
 
   using CraneFrame = std::variant<CraneEnter, CraneCont_Node>;
@@ -146,7 +146,7 @@ MemSafetyProbe9::collect_left_sums(
         crane::fn<uint64_t(uint64_t)> f = [=](uint64_t) {
           return a0_value.tree_sum();
         };
-        _stack.emplace_back(CraneCont_Node{a0});
+        _stack.emplace_back(CraneCont_Node{crane_raw(a0)});
         _stack.emplace_back(
             CraneEnter{mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
                            std::move(f), std::move(acc)),
@@ -154,9 +154,9 @@ MemSafetyProbe9::collect_left_sums(
       }
     } else {
       auto _f = std::move(std::get<CraneCont_Node>(_frame));
-      std::shared_ptr<MemSafetyProbe9::tree> a0 = std::move(_f.a0);
-      const MemSafetyProbe9::tree &a0_value = *a0;
-      _stack.emplace_back(CraneEnter{std::move(_result), crane_raw(a0)});
+      const MemSafetyProbe9::tree &a0 = *_f.a0;
+      const MemSafetyProbe9::tree &a0_value = a0;
+      _stack.emplace_back(CraneEnter{std::move(_result), &a0_value});
     }
   }
   return _result;

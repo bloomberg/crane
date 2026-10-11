@@ -172,16 +172,14 @@ public:
     return f(this->shead());
   }
 
-  template <typename F0> Sseq<A> smap(F0 &&f) const {
+  Sseq<A> smap(const crane::fn<A(A)> &f) const {
     Sseq<A> _self_val = *this;
     return Sseq<A>::lazy_([=]() -> typename Sseq<A>::SCons {
       return {_self_val.double_head(f), _self_val.stail().smap(f)};
     });
   }
 
-  template <typename F0>
-    requires std::is_invocable_r_v<A, const F0 &, A>
-  Sseq<A> smap_direct(F0 &&f) const {
+  Sseq<A> smap_direct(const crane::fn<A(A)> &f) const {
     Sseq<A> _self_val = *this;
     return Sseq<A>::lazy_([=]() -> typename Sseq<A>::SCons {
       return {f(_self_val.shead()), _self_val.stail().smap_direct(f)};

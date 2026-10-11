@@ -200,33 +200,6 @@ let dead_unit_returns_to_abort (cod : cpp_type) (body : cpp_stmt list) =
   in
   fix_stmts (Some cod) body
 
-(** Detect function-typed parameters that are NOT simply forwarded at
-   self-recursive call sites.
-
-   Higher-order function parameters are normally emitted as C++ template
-   parameters constrained with [is_invocable_v], preserving the exact lambda
-   type for inlining.  However, when a recursive call passes a *different*
-   expression (not the parameter variable itself) for a function-typed parameter,
-   each recursion level creates a new template instantiation with a distinct type,
-   leading to infinite recursive template instantiation.
-
-   The fix: detect which parameters are not forwarded unchanged at any recursive
-   call site.  Those parameters are emitted as [std::function] instead of template
-   parameters, since [std::function] is a concrete type that stays the same
-   regardless of wrapping.
-
-   Parameters that ARE forwarded unchanged (e.g., a predicate [p] passed as-is in
-   [partition_cps p rest (fun ...)]) keep their template parameter status.
-   Non-recursive higher-order functions like [tree_rect] are unaffected since they
-   have no self-recursive calls. *)
-let detect_non_forwarded_params (self_ref : GlobRef.t) (n_params : int)
-    (body : ml_ast) : int list =
-  detect_non_forwarded_params_generic
-    ~is_self_call:(fun _depth -> function
-      | MLglob (r, _) -> globref_equal r self_ref
-      | _ -> false )
-    n_params body
-
 (** The C++ expression stating the witness held by a [sig]-typed parameter
     called [name], when it can be stated at all.  A transparently extracted
     [sig] {i is} its witness, so the parameter stands for it; one left as a
@@ -632,26 +605,18 @@ let gen_dfun n b cty ty temps =
     | [] -> b
     | subst -> map_types_in_ast (subst_tvars_type subst) b
   in
-  (* Detect which function-typed parameters are NOT simply forwarded at
-     self-recursive call sites.  These are excluded from template-parameter
-     promotion below — they keep their [Tconst (Tfun(dom, cod))] type
-     which prints as [const std::function<R(Args...)>].
-
-     [detect_non_forwarded_params] returns source-order indices (param 0 =
-     first Rocq parameter).  The parameter list [ids] is in de Bruijn order
-     (innermost first), so a loop over it asks about source index
-     [List.length ids - 1 - i] -- the length of the list it is iterating,
-     which by then also holds the eta-expanded parameters. *)
-  let non_fwd_param_indices = detect_non_forwarded_params n (List.length ids) b in
-  (* A callable a closure holds on to is not generalised either: it arrives
-     as a [crane::fn], so every capture shares it rather than copying the
-     caller's closure. *)
-  let escaping =
-    escaping_params
+  (* The callable parameters kept as [crane::fn] rather than promoted to
+     template parameters below; they keep their [Tconst (Tfun(dom, cod))]
+     type.  The indices are source order (param 0 = first Rocq parameter),
+     while [ids] is in de Bruijn order (innermost first), so a loop over it
+     asks about source index [List.length ids - 1 - i] -- the length of the
+     list it is iterating, which by then also holds the eta-expanded
+     parameters. *)
+  let non_fwd_set =
+    ungeneralised_callable_params ~self_ref:n
       ~suspended:(Table.is_coinductive_type (ml_return_type ty))
       (List.length ids) b
   in
-  let non_fwd_set = IntSet.of_list (escaping @ non_fwd_param_indices) in
   let is_non_fwd_param_source i = IntSet.mem i non_fwd_set in
   let all_params = missing @ ids in
   (* Type class instance parameters become C++ template type parameters. We

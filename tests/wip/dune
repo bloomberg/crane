@@ -288,18 +288,6 @@
   (deps type_family_constant_motive.t.exe)
   (action (run ./type_family_constant_motive.t.exe))))
 
-(subdir loopify_owned_child_pointer
- (rule
-  (targets loopify_owned_child_pointer.t.exe)
-  (deps LoopifyOwnedChildPointer.vo loopify_owned_child_pointer.t.cpp (source_tree .))
-  (action
-   (setenv CRANE_CPP_SANITIZE address
-    (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_owned_child_pointer.t.exe loopify_owned_child_pointer.cpp loopify_owned_child_pointer.t.cpp))))
- (rule
-  (alias runtest)
-  (deps loopify_owned_child_pointer.t.exe)
-  (action (run ./loopify_owned_child_pointer.t.exe))))
-
 (subdir arrow_behind_type_function
  (rule
   (targets arrow_behind_type_function.t.exe)
@@ -310,18 +298,6 @@
   (alias runtest)
   (deps arrow_behind_type_function.t.exe)
   (action (run ./arrow_behind_type_function.t.exe))))
-
-(subdir option_field_of_call_scrutinee
- (rule
-  (targets option_field_of_call_scrutinee.t.exe)
-  (deps OptionFieldOfCallScrutinee.vo option_field_of_call_scrutinee.t.cpp (source_tree .))
-  (action
-   (setenv CRANE_CPP_SANITIZE address
-    (run %{project_root}/scripts/compile-std.sh %{project_root} option_field_of_call_scrutinee.t.exe option_field_of_call_scrutinee.cpp option_field_of_call_scrutinee.t.cpp))))
- (rule
-  (alias runtest)
-  (deps option_field_of_call_scrutinee.t.exe)
-  (action (run ./option_field_of_call_scrutinee.t.exe))))
 
 (subdir instance_tvar_substitution_order
  (rule
@@ -410,17 +386,6 @@
   (alias runtest)
   (deps type_field_record_in_expression.t.exe)
   (action (run ./type_field_record_in_expression.t.exe))))
-
-(subdir loopify_method_varying_fn_arg
- (rule
-  (targets loopify_method_varying_fn_arg.t.exe)
-  (deps LoopifyMethodVaryingFnArg.vo loopify_method_varying_fn_arg.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_method_varying_fn_arg.t.exe loopify_method_varying_fn_arg.cpp loopify_method_varying_fn_arg.t.cpp)))
- (rule
-  (alias runtest)
-  (deps loopify_method_varying_fn_arg.t.exe)
-  (action (run ./loopify_method_varying_fn_arg.t.exe))))
 
 (subdir user_name_hides_crane_runtime
  (rule

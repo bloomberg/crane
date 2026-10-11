@@ -527,11 +527,11 @@ and scrutinee_head_is_callable h =
     access that can safely be duplicated without side effects.  Non-trivial
     expressions (function calls, constructor applications, etc.) should be
     cached in a temporary when the custom match template uses [%scrut] more
-    than once. *)
-let is_trivial_scrut = function
-  | CPPvar _ | CPPget _ | CPPget' _ | CPPaccess _
-  | CPPscope _ | CPPqualified_t _ | CPPderef _ | CPPenum_val _
-  | CPPglob _ -> true
+    than once.  A member access or dereference is trivial only as far as the
+    object it reads is: [mk(n).sub] calls [mk] at every mention. *)
+let rec is_trivial_scrut = function
+  | CPPvar _ | CPPscope _ | CPPqualified_t _ | CPPenum_val _ | CPPglob _ -> true
+  | CPPget (e, _) | CPPget' (e, _, _) | CPPaccess (_, e, _) | CPPderef e -> is_trivial_scrut e
   | _ -> false
 
 (** The C++ type a pattern match pinned down for the binder at de Bruijn index

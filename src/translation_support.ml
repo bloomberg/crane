@@ -2256,6 +2256,44 @@ let detect_non_forwarded_params_fix n_params n_fix fix_idx body =
       | _ -> false )
     n_params body
 
+(** Detect function-typed parameters that are NOT simply forwarded at
+   self-recursive call sites.
+
+   Higher-order function parameters are normally emitted as C++ template
+   parameters constrained with [is_invocable_v], preserving the exact lambda
+   type for inlining.  However, when a recursive call passes a *different*
+   expression (not the parameter variable itself) for a function-typed parameter,
+   each recursion level creates a new template instantiation with a distinct type,
+   leading to infinite recursive template instantiation.
+
+   The fix: detect which parameters are not forwarded unchanged at any recursive
+   call site.  Those parameters are emitted as [std::function] instead of template
+   parameters, since [std::function] is a concrete type that stays the same
+   regardless of wrapping.
+
+   Parameters that ARE forwarded unchanged (e.g., a predicate [p] passed as-is in
+   [partition_cps p rest (fun ...)]) keep their template parameter status.
+   Non-recursive higher-order functions like [tree_rect] are unaffected since they
+   have no self-recursive calls. *)
+let detect_non_forwarded_params (self_ref : GlobRef.t) (n_params : int)
+    (body : ml_ast) : int list =
+  detect_non_forwarded_params_generic
+    ~is_self_call:(fun _depth -> function
+      | MLglob (r, _) -> globref_equal r self_ref
+      | _ -> false )
+    n_params body
+
+(** The source-order indices of the callable parameters, among the first
+    [n_params], that a function made from [self_ref] takes as a [crane::fn]
+    rather than generalising to [F &&]: those a self-call passes something
+    else for (see {!detect_non_forwarded_params}), and those a closure holds
+    on to (see {!escaping_params}).  A free function and a method of an
+    inductive are generalised alike. *)
+let ungeneralised_callable_params ~self_ref ~suspended n_params body =
+  Escape.IntSet.of_list
+    (detect_non_forwarded_params self_ref n_params body
+    @ escaping_params ~suspended n_params body)
+
 (** Convert ML params to C++ types with const/ref wrapping, and create
     forwarding-ref template parameters for function-typed params. convert_fn:
     function to convert ml_type -> cpp_type (typically

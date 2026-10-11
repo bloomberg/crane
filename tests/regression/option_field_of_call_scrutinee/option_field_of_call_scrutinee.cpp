@@ -5,8 +5,9 @@ OptionFieldOfCallScrutinee::box OptionFieldOfCallScrutinee::mk(uint64_t n) {
 }
 
 uint64_t OptionFieldOfCallScrutinee::count(uint64_t n) {
-  if (mk(n).sub.has_value()) {
-    const List<uint64_t> &l = *mk(n).sub;
+  auto _cs = mk(n).sub;
+  if (_cs.has_value()) {
+    const List<uint64_t> &l = *_cs;
     return l.length();
   } else {
     return UINT64_C(0);

@@ -280,9 +280,8 @@ struct Cotree {
       return a1;
     }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, const F0 &, const A &>
-    cotree<T1> comap_cotree(F0 &&g) const {
+    template <typename T1>
+    cotree<T1> comap_cotree(const crane::fn<T1(A)> &g) const {
       const auto &[a0, a1] = std::get<typename cotree<A>::Conode>(this->v());
       return cotree<T1>::lazy_([=]() -> typename cotree<T1>::Conode {
         return {g(a0), comap<cotree<A>, cotree<T1>>(

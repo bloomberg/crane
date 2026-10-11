@@ -270,7 +270,7 @@ struct AccumClosureEscape {
       /// processes rest.
       struct CraneCont_TNode {
         uint64_t a1;
-        std::shared_ptr<tree> a2;
+        const tree *a2;
       };
 
       /// CraneCont_TNode_1: saves [_tmp2, a1], resumes after recursive call,
@@ -300,14 +300,14 @@ struct AccumClosureEscape {
             const auto &[a0, a1, a2] = std::get<typename tree::TNode>(_sv.v());
             const tree &a0_value = *a0;
             const tree &a2_value = *a2;
-            _stack.emplace_back(CraneCont_TNode{a1, a2});
+            _stack.emplace_back(CraneCont_TNode{a1, crane_raw(a2)});
             _stack.emplace_back(CraneEnter{&a0_value});
           }
         } else if (std::holds_alternative<CraneCont_TNode>(_frame)) {
           auto _f = std::move(std::get<CraneCont_TNode>(_frame));
           uint64_t a1 = _f.a1;
-          std::shared_ptr<tree> a2 = std::move(_f.a2);
-          const tree &a2_value = *a2;
+          const tree &a2 = *_f.a2;
+          const tree &a2_value = a2;
           _stack.emplace_back(CraneCont_TNode_1{std::move(_result), a1});
           _stack.emplace_back(CraneEnter{&a2_value});
         } else {

@@ -2,6 +2,7 @@
 #define INCLUDED_LOOPIFY_METHOD_VARYING_FN_ARG
 
 #include "crane_fn.h"
+#include "fn.h"
 #include "obj.h"
 #include "small_vector.h"
 #include <atomic>
@@ -87,20 +88,20 @@ struct LoopifyMethodVaryingFnArg {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    template <typename F0> uint64_t go(F0 &&f) const {
+    uint64_t go(const crane::fn<uint64_t(uint64_t)> &f) const {
       const tree *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
       struct CraneEnter {
         const tree *_self;
-        std::decay_t<F0> f;
+        crane::fn<uint64_t(uint64_t)> f;
       };
 
       /// CraneCont_Node: saves [f, a2], resumes after recursive call, then
       /// processes rest.
       struct CraneCont_Node {
-        std::decay_t<F0> f;
-        std::shared_ptr<tree> a2;
+        crane::fn<uint64_t(uint64_t)> f;
+        const tree *a2;
       };
 
       /// CraneCont_Node_1: saves [_tmp2], resumes after recursive call, then
@@ -113,7 +114,7 @@ struct LoopifyMethodVaryingFnArg {
           std::variant<CraneEnter, CraneCont_Node, CraneCont_Node_1>;
       uint64_t _result{};
       crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self, std::move(f)});
+      _stack.emplace_back(CraneEnter{_self, f});
       /// Loopified go: CraneEnter -> CraneCont_Node -> CraneCont_Node_1.
       while (!_stack.empty()) {
         CraneFrame _frame = std::move(_stack.back());
@@ -121,7 +122,7 @@ struct LoopifyMethodVaryingFnArg {
         if (std::holds_alternative<CraneEnter>(_frame)) {
           auto _f = std::move(std::get<CraneEnter>(_frame));
           const tree *_self = _f._self;
-          auto f = std::move(_f.f);
+          const crane::fn<uint64_t(uint64_t)> &f = std::move(_f.f);
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
             _result = f(UINT64_C(0));
@@ -129,19 +130,17 @@ struct LoopifyMethodVaryingFnArg {
             const auto &[a0, a1, a2] = std::get<typename tree::Node>(_sv.v());
             const tree &a0_value = *a0;
             const tree &a2_value = *a2;
-            _stack.emplace_back(CraneCont_Node{f, a2});
+            _stack.emplace_back(CraneCont_Node{f, crane_raw(a2)});
             _stack.emplace_back(
-                CraneEnter{&a0_value, [=, f = std::move(f)](uint64_t y) {
-                             return f((y + a1));
-                           }});
+                CraneEnter{&a0_value, [=](uint64_t y) { return f((y + a1)); }});
           }
         } else if (std::holds_alternative<CraneCont_Node>(_frame)) {
           auto _f = std::move(std::get<CraneCont_Node>(_frame));
-          std::decay_t<F0> f = std::move(_f.f);
-          std::shared_ptr<tree> a2 = std::move(_f.a2);
-          const tree &a2_value = *a2;
+          const crane::fn<uint64_t(uint64_t)> &f = std::move(_f.f);
+          const tree &a2 = *_f.a2;
+          const tree &a2_value = a2;
           _stack.emplace_back(CraneCont_Node_1{std::move(_result)});
-          _stack.emplace_back(CraneEnter{&a2_value, std::move(f)});
+          _stack.emplace_back(CraneEnter{&a2_value, f});
         } else {
           auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
           _result = (_f._tmp2 + std::move(_result));

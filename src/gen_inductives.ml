@@ -426,6 +426,13 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
   (* Convert params to C++ types.  Use method_ns so that self-references
      inside container types get shared_ptr (matching struct field types).
      Strip top-level shared_ptr since value-type params are bare values. *)
+  (* A callable parameter is generalised to [F &&] as a free function's is:
+     not where a self-call passes something else for it, nor where a closure
+     holds on to it. *)
+  let ungeneralised =
+    ungeneralised_callable_params ~self_ref:func_ref
+      ~suspended:(Table.is_coinductive_type ret_ty) n_method_params inner_body
+  in
   let params_with_idx =
     List.mapi
       (fun i (id, ty, orig_idx) ->
@@ -437,16 +444,16 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
         let cpp_ty = strip_top_level_self_ptr cpp_ty in
         let cpp_ty = subst_extra_tvars cpp_ty in
         let owned = get_param_owned_flag orig_idx in
-        (id, cpp_ty, i, owned) )
+        (id, cpp_ty, i, owned, not (Escape.IntSet.mem orig_idx ungeneralised)) )
       param_ids_with_pos
   in
 
   (* Extract function-typed parameters for template params *)
   let fun_params =
     List.filter_map
-      (fun (id, cpp_ty, i, _) ->
+      (fun (id, cpp_ty, i, _, generalised) ->
         match cpp_ty with
-        | Tfun (dom, cod) ->
+        | Tfun (dom, cod) when generalised ->
           let cod = if is_cpp_unit_type cod then Tvoid else cod in
           Some (id, TTfun (dom, cod), fun_tparam_id i)
         | _ -> None )
@@ -474,10 +481,10 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
      ensure forward declarations and definitions agree. *)
   let params =
     List.map
-      (fun (id, cpp_ty, i, owned) ->
+      (fun (id, cpp_ty, i, owned, generalised) ->
         let wrapped =
           match cpp_ty with
-          | Tfun _ -> Tref (Forwarding, named_tvar (fun_tparam_id i))
+          | Tfun _ when generalised -> Tref (Forwarding, named_tvar (fun_tparam_id i))
           | _ -> wrap_param_by_ownership ~is_owned:owned cpp_ty
         in
         (id, wrapped) )

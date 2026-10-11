@@ -289,6 +289,13 @@ val calls_eagerly : Names.GlobRef.t -> ml_ast -> bool
     spot, or anywhere when [suspended]. *)
 val escaping_params : suspended:bool -> int -> ml_ast -> int list
 
+(** The source-order indices of the callable parameters, among the first
+    [n_params], that a function made from [self_ref] takes as a [crane::fn]
+    rather than generalising to [F &&]: those a self-call passes something
+    else for, and those a closure in [body] holds on to. *)
+val ungeneralised_callable_params :
+  self_ref:Names.GlobRef.t -> suspended:bool -> int -> ml_ast -> Escape.IntSet.t
+
 (** Infer, for each of [n_params] parameters, whether it is "owned" (should be
     passed by value / moved) based on escape analysis of [body]. *)
 val infer_owned_flags :

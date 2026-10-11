@@ -1656,63 +1656,38 @@ let compute_frame_pointer_safe pointer_safe_varying frames =
   if not (List.exists Fun.id pointer_safe_varying) then []
   else
   let n_enter = List.length pointer_safe_varying in
-  (* Build a map from local variable id to field index in [(cf_field_names cf)].
-     Scans top-level [Sasgn(id, _, _f.field)] and [Sasgn(id, _, move(_f.field))]
-     statements so that [CraneEnter{local_var}] pushes can be traced back to the
-     frame field that [local_var] was loaded from. *)
+  (* The frame field, by index in [field_names], that [expr] reads: through
+     the moves, dereferences, addresses and [crane_raw] a push wraps around
+     a value, and through the locals in [local_map] bound to one.  Whatever
+     the shape, a pointer pushed from such an expression points into the
+     field's storage -- a copy in the frame dies with the handler that
+     pushed the pointer to it, so the field must be saved as that pointer. *)
+  let rec field_read field_names local_map expr =
+    match expr with
+    | CPPmove e | CPPderef e | CPPunop (Uaddr, e)
+    | CPPfun_call (_, CPPrt Crane_rt.Raw, {rev = [e]}) ->
+      field_read field_names local_map e
+    | CPPaccess (Adot, CPPvar f, field_id) when Id.equal f id_f ->
+      (try Some (Util.List.index0 Id.equal field_id field_names) with Not_found -> None)
+    | CPPvar x -> List.assoc_opt x local_map
+    | _ -> None
+  in
+  (* The locals a handler binds, at top level, to a frame field or to
+     another such local, so that a [CraneEnter{local_var}] push can be
+     traced back to the frame field [local_var] was loaded from. *)
   let build_local_to_field_map field_names stmts =
-    let field_idx expr =
-      let base = match expr with CPPmove e -> e | e -> e in
-      match base with
-      | CPPaccess (Adot, CPPvar f, field_id) when Id.equal f id_f ->
-        let rec find i = function
-          | [] -> None
-          | fn :: rest -> if Id.equal fn field_id then Some i else find (i + 1) rest
-        in
-        find 0 field_names
-      | _ -> None
-    in
-    List.filter_map
-      (fun stmt ->
+    List.fold_left
+      (fun local_map stmt ->
         match stmt with
-        | Sasgn (id, _, expr) ->
-          (match field_idx expr with
-          | Some j -> Some (id, j)
-          | None -> None)
-        | _ -> None)
-      stmts
+        | Sasgn (id, _, expr) -> (
+          match field_read field_names local_map expr with
+          | Some j -> (id, j) :: local_map
+          | None -> local_map )
+        | _ -> local_map )
+      [] stmts
   in
   let is_field_access_or_alias local_map field_names j expr =
-    (* Strip CPPmove wrappers before pattern matching, since push arguments
-       are commonly [CPPmove (CPPvar x)] or
-       [CPPmove (CPPaccess (Adot, CPPvar _f, fld))]. *)
-    let expr = match expr with CPPmove e -> e | e -> e in
-    (* So is a raw pointer taken from one -- [crane_raw(a2)] for a method's
-       receiver -- and the field must then be saved as that pointer: a copy
-       in the frame dies with the handler that pushed the pointer to it. *)
-    let expr =
-      match expr with
-      | CPPfun_call (_, CPPrt Crane_rt.Raw, {rev = [e]}) -> (match e with CPPmove e -> e | e -> e)
-      | e -> e
-    in
-    match expr with
-    | CPPaccess (Adot, CPPvar f, field_id) ->
-      Id.equal f id_f
-      && j < List.length field_names
-      && Id.equal field_id (List.nth field_names j)
-    | CPPvar x ->
-      (match List.assoc_opt x local_map with
-       | Some k -> k = j
-       | None -> false)
-    | CPPderef (CPPvar x) ->
-      (match List.assoc_opt x local_map with
-       | Some k -> k = j
-       | None -> false)
-    | CPPderef (CPPaccess (Adot, CPPvar f, field_id)) ->
-      Id.equal f id_f
-      && j < List.length field_names
-      && Id.equal field_id (List.nth field_names j)
-    | _ -> false
+    field_read field_names local_map expr = Some j
   in
   (* Find all struct pushes in handler body: returns (name, args) list *)
   let find_struct_pushes stmts =

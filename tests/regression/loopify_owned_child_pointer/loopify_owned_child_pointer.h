@@ -170,7 +170,7 @@ struct LoopifyOwnedChildPointer {
       /// processes rest.
       struct CraneCont_a {
         uint64_t a0;
-        t b;
+        const t *b;
       };
 
       /// CraneCont_a_1: saves [_tmp2, a0], resumes after recursive call, then
@@ -195,7 +195,7 @@ struct LoopifyOwnedChildPointer {
           if (crane::holds_alternative<typename t::N>(_sv.v())) {
             const auto &[a0, a1] = crane::get<typename t::N>(_sv.v());
             const auto &[a, b] = (*a1);
-            _stack.emplace_back(CraneCont_a{a0, b});
+            _stack.emplace_back(CraneCont_a{a0, &b});
             _stack.emplace_back(CraneEnter{&a});
           } else {
             _result = UINT64_C(0);
@@ -203,7 +203,7 @@ struct LoopifyOwnedChildPointer {
         } else if (crane::holds_alternative<CraneCont_a>(_frame)) {
           auto _f = std::move(crane::get<CraneCont_a>(_frame));
           uint64_t a0 = _f.a0;
-          t b = std::move(_f.b);
+          const t &b = *_f.b;
           _stack.emplace_back(CraneCont_a_1{std::move(_result), a0});
           _stack.emplace_back(CraneEnter{&b});
         } else {
@@ -316,7 +316,7 @@ struct LoopifyOwnedChildPointer {
       /// processes rest.
       struct CraneCont_Node {
         crane::shared_box<tree> a0;
-        crane::shared_box<tree> a2;
+        const tree *a2;
       };
 
       /// CraneCont_Node_1: saves [_tmp2, a0], resumes after recursive call,
@@ -345,15 +345,15 @@ struct LoopifyOwnedChildPointer {
             const auto &[a0, a1, a2] = crane::get<typename tree::Node>(_sv.v());
             const tree &a0_value = *a0;
             const tree &a2_value = *a2;
-            _stack.emplace_back(CraneCont_Node{a0, a2});
+            _stack.emplace_back(CraneCont_Node{a0, crane_raw(a2)});
             _stack.emplace_back(CraneEnter{&a0_value});
           }
         } else if (crane::holds_alternative<CraneCont_Node>(_frame)) {
           auto _f = std::move(crane::get<CraneCont_Node>(_frame));
           crane::shared_box<tree> a0 = std::move(_f.a0);
-          crane::shared_box<tree> a2 = std::move(_f.a2);
+          const tree &a2 = *_f.a2;
           const tree &a0_value = *a0;
-          const tree &a2_value = *a2;
+          const tree &a2_value = a2;
           _stack.emplace_back(
               CraneCont_Node_1{std::move(_result), std::move(a0)});
           _stack.emplace_back(CraneEnter{&a2_value});

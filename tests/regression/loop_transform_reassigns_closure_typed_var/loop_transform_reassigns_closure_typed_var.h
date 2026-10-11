@@ -174,11 +174,11 @@ public:
 
   /// The callable takes a membership proof, so the recursive call cannot pass
   /// it through unchanged.
-  template <typename T1, typename F0> Lst<T1> map_In(F0 &&f) const {
+  template <typename T1> Lst<T1> map_In(crane::fn<T1(A)> f) const {
     std::optional<Lst<T1>> _root{};
     std::shared_ptr<Lst<T1>> *_write = nullptr;
     const Lst<A> *_loop_self = this;
-    crane::fn<T1(A)> _loop_f = f;
+    crane::fn<T1(A)> _loop_f = std::move(f);
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename Lst<A>::Nil>(_sv.v())) {
