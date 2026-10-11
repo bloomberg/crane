@@ -105,11 +105,18 @@ and prepend_to_all sep = function
     out of this namespace. *)
 let crane_local_prefix = "_crane_"
 
+(** Prefix of the helpers the runtime headers declare at global scope and
+    generated code calls unqualified ([crane_raw], [crane_any_cast], ...).  A
+    Rocq definition spelled like one would hide it from every member of the
+    struct it is declared in. *)
+let crane_runtime_prefix = "crane_"
+
 (** The C++ spelling of a Rocq identifier: ASCII, with no two underscores
     side by side.  An identifier that would land in the {!crane_local_prefix}
-    namespace is moved out of it, and a prime -- which Rocq allows in a name
-    and C++ reads as an open character literal -- becomes an underscore, or a
-    [p] where that would double one ({!Generated_name.separate_underscores}).
+    or {!crane_runtime_prefix} namespace is moved out of it, and a prime --
+    which Rocq allows in a name and C++ reads as an open character literal --
+    becomes an underscore, or a [p] where that would double one
+    ({!Generated_name.separate_underscores}).
 
     This is the one place a Rocq name turns into a C++ one, so it is the only
     place that has to know which characters C++ will accept. *)
@@ -117,7 +124,12 @@ let ascii_of_id id =
   let s = Unicode.ascii_of_ident (Id.to_string id) in
   let s = String.map (fun c -> if c = '\'' then '_' else c) s in
   let s = Generated_name.separate_underscores s in
-  if String.starts_with ~prefix:crane_local_prefix s then "u" ^ s else s
+  if
+    List.exists
+      (fun prefix -> String.starts_with ~prefix s)
+      [crane_local_prefix; crane_runtime_prefix]
+  then "u" ^ s
+  else s
 
 (** Test if a module path is a bound module parameter. *)
 let is_mp_bound = function
@@ -680,7 +692,12 @@ let clear_non_output_modules () = Hashtbl.clear valid_output_module_set
       [MPbound] coming first in the list.
 
     - The [content] part is used to record all the names already seen at this
-      level. *)
+      level.
+
+    - The [members] part holds the C++ names the level declares, known when
+      it is entered: [content] fills in only as references are printed, and a
+      member printed later still hides an outer name from a body printed
+      before it. *)
 
 (** A layer of the visibility stack, tracking names visible at one scope level.
 *)
@@ -688,6 +705,7 @@ type visible_layer = {
   mp : ModPath.t;
   params : ModPath.t list;
   mutable content : Label.t KMap.t;
+  mutable members : Id.Set.t;
 }
 
 (** Visibility stack for module rendering: tracks which module paths are in
@@ -703,7 +721,8 @@ let pop_visible, push_visible, get_visible, set_visible =
       (* we save the 1st-level-content of MPfile for later use *)
       if get_phase () = Emit Impl && modular () && is_modfile v.mp then
         add_mpfiles_content v.mp v.content
-  and push mp mps = vis := {mp; params = mps; content = KMap.empty} :: !vis
+  and push mp mps =
+    vis := {mp; params = mps; content = KMap.empty; members = Id.Set.empty} :: !vis
   and get () = !vis
   and set v = vis := v in
   (pop, push, get, set)
@@ -739,6 +758,11 @@ let top_visible_mp () = (top_visible ()).mp
 let add_visible ks l =
   let visible = top_visible () in
   visible.content <- KMap.add ks l visible.content
+
+(** Declare the C++ names the current visible layer's scope holds. *)
+let add_visible_members ids =
+  let visible = top_visible () in
+  visible.members <- Id.Set.union ids visible.members
 
 (** What to reset: all renaming tables, or also external file content. *)
 type reset_kind =
@@ -802,6 +826,33 @@ let inductive_names_of_sel sel =
       | SEdecl d -> Stdlib.Option.to_list (type_alias_name_of_decl d)
       | _ -> [] )
     sel
+
+let label_of_r : GlobRef.t -> Label.t = function
+  | GlobRef.ConstRef c -> Constant.label c
+  | GlobRef.IndRef (ind, _) -> MutInd.label ind
+  | GlobRef.ConstructRef ((ind, _), _) -> MutInd.label ind
+  | GlobRef.VarRef v -> Label.of_id v
+
+(** C++ names a structure [sel] declares as members of its struct: its
+    definitions, its inductives' types and its submodules, spelled as
+    {!modular_rename} spells them.  Approximate for a name a later collision
+    renames, which then only qualifies an outer reference that did not need
+    it. *)
+let member_names_of_sel sel =
+  let name k id = Id.of_string (modular_rename k id) in
+  List.fold_left
+    (fun acc (l, se) ->
+      let ids =
+        match se with
+        | SEdecl (Dind (_, ind)) ->
+          Array.to_list (Array.map (fun p -> name Type p.ip_typename) ind.ind_packets)
+        | SEdecl (Dfix fds) ->
+          List.map (fun fd -> name Term (Label.to_id (label_of_r fd.fd_ref))) fds
+        | SEdecl _ -> [name Term (Label.to_id l)]
+        | SEmodule _ | SEmodtype _ -> [name Mod (Label.to_id l)]
+      in
+      List.fold_left (fun acc id -> Id.Set.add id acc) acc ids )
+    Id.Set.empty sel
 
 (** C++ names declared directly in [sel] that a file of the same name cannot
     live beside.  A file has no eponymous merge: a type it declares becomes a
@@ -1237,7 +1288,10 @@ let visible_clash mp0 ks =
     | [] -> false
     | v :: _ when ModPath.equal v.mp mp0 -> false
     | v :: vis ->
-      if KMap.mem ks v.content && not (is_mp_bound mp0) then
+      if
+        (KMap.mem ks v.content || Id.Set.mem (Id.of_string (snd ks)) v.members)
+        && not (is_mp_bound mp0)
+      then
         true
       else if params_lookup mp0 v.params then
         false
@@ -1388,12 +1442,6 @@ let pp_cpp_gen k mp rls olab =
       plain [unquote (last rls)]
     else
       pp_ocaml_extern k base rls
-
-let label_of_r : GlobRef.t -> Label.t = function
-  | GlobRef.ConstRef c -> Constant.label c
-  | GlobRef.IndRef (ind, _) -> MutInd.label ind
-  | GlobRef.ConstructRef ((ind, _), _) -> MutInd.label ind
-  | GlobRef.VarRef v -> Label.of_id v
 
 (** Main name printing function for a reference, using a kernel name key.
     Registers the reference's short name in the current visible scope and

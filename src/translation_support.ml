@@ -16,23 +16,41 @@ open Translation_state
 open Ml_type_util
 
 
-(** Compute the factory method name for a constructor.
+(** The C++ name of the inductive that [cref] constructs, or [""] when [cref]
+    is not a constructor reference. *)
+let owning_type_name cref =
+  match cref with
+  | GlobRef.ConstructRef ((kn, i), _) ->
+    Common.pp_global_name Type (GlobRef.IndRef (kn, i))
+  | _ -> ""
+
+(** Whether the module that declares constructor [cref]'s inductive also
+    declares an inductive labelled [s].  Its struct sits in that module's
+    scope, so a member named [s] would hide the type from the members after
+    it: a record [pt] spelled in a later factory's signature. *)
+let shadows_module_type cref s =
+  match cref with
+  | GlobRef.ConstructRef ((kn, _), _) ->
+    Environ.mem_mind (MutInd.make2 (MutInd.modpath kn) (Label.make s)) (Global.env ())
+  | _ -> false
+
+(** The factory method name for constructor [cref] (its struct's name falls
+    back to [ctor<fallback_idx>] when [cref] is not a constructor).
     Factory names are the lowercase of the constructor struct name
     (e.g. [Cons] -> ["cons"]). If the lowercased name collides with a C++
-    keyword, one of {!Common.inductive_generated_members}, or the enclosing
-    type's own name (which
-    C++ treats as a constructor declaration), the original PascalCase is kept
-    with a trailing underscore
-    (e.g. [Char] -> ["Char_"]).
-
-    @param type_name  the enclosing inductive type's C++ name, for same-name
-                      collision detection (default [""]) *)
-let factory_name_of_ctor ?(type_name = "") ctor_struct_name =
+    keyword, one of {!Common.inductive_generated_members}, the enclosing
+    type's own name (which C++ treats as a constructor declaration), or a
+    type declared in the inductive's module ({!shadows_module_type}), the
+    original PascalCase is kept with a trailing underscore
+    (e.g. [Char] -> ["Char_"]). *)
+let factory_name_of_ctor ?fallback_idx cref =
+  let ctor_struct_name = ctor_struct_name_of_ref ?fallback_idx cref in
   let lc = String.lowercase_ascii ctor_struct_name in
   let collides =
     Common.is_reserved_cpp_name lc
-    || lc = String.lowercase_ascii type_name
+    || lc = String.lowercase_ascii (owning_type_name cref)
     || Id.Set.mem (Id.of_string lc) Common.inductive_generated_members
+    || shadows_module_type cref lc
   in
   if collides then Generated_name.separate_underscores (ctor_struct_name ^ "_")
   else lc
@@ -44,16 +62,6 @@ let factory_name_of_ctor ?(type_name = "") ctor_struct_name =
 let abort_ty : cpp_type option -> cpp_type = function
   | Some ty -> ty
   | None -> Tany
-
-(** The C++ name of the inductive that [cref] constructs, or [""] when [cref]
-    is not a constructor reference.  {!factory_name_of_ctor} needs it, and a
-    caller holding only the constructor should not have to take the inductive
-    apart to supply it. *)
-let owning_type_name cref =
-  match cref with
-  | GlobRef.ConstructRef ((kn, i), _) ->
-    Common.pp_global_name Type (GlobRef.IndRef (kn, i))
-  | _ -> ""
 
 (** {2 Named Constructor Fields}
 
@@ -154,7 +162,7 @@ let compute_field_name ~owner ctor_struct_name field_consarg_names
       (Id.Set.of_list
          (List.map Id.of_string
             ( ctor_struct_name :: type_name
-              :: factory_name_of_ctor ~type_name ctor_struct_name
+              :: factory_name_of_ctor owner
               :: List.init j (field_name_str_of_idx field_consarg_names) ) ))
   in
   let needs_index = Id.Set.mem (Id.of_string base_str) reserved in
@@ -571,9 +579,7 @@ let guard_compare n ids body =
              ([cod]), since the guard only fires when the function returns
              this same inductive. *)
           let ind = GlobRef.IndRef (kn, i) in
-          let ctor_struct = ctor_struct_name_of_ref ctor_ref in
-          let ind_type_name = Common.pp_global_name Type ind in
-          let fname = factory_name_of_ctor ~type_name:ind_type_name ctor_struct in
+          let fname = factory_name_of_ctor ctor_ref in
           (* The qualifier is a type and is spelled as one, so the type printer
              supplies both halves this used to render by hand: the enclosing
              module of the inductive (e.g. "OrderedType::Compare", see

@@ -3571,6 +3571,29 @@ let pp_doc_comment_for_name ?(indent = "") name =
     let lines = Doc_comments.format_as_cpp_lines text in
     prlist_with_sep fnl (fun l -> str (indent ^ l)) lines ++ fnl ()
 
+(** Run [f] in the scope an inductive [r]'s struct opens.  The struct is a
+    scope of its own between its module and its members: a constructor's
+    struct declared in it hides a name the module declares, so a body that
+    reaches the module's [Node] from inside [tree] has to qualify it.  The
+    scope is a visibility layer whose path names nothing a reference could
+    be declared in, holding the constructors' struct names. *)
+let with_struct_scope r f =
+  match r with
+  | GlobRef.IndRef ((kn, i) as ind) ->
+    let ctors =
+      List.init (Option.default 0 (Table.get_ind_nb_ctors_opt kn i)) (fun j ->
+          Ml_type_util.ctor_struct_id_of_ref (GlobRef.ConstructRef (ind, j + 1)))
+    in
+    let scope =
+      Label.make
+        (Printf.sprintf "%sstruct_%s_%d" Common.crane_local_prefix
+           (Label.to_string (MutInd.label kn)) i)
+    in
+    push_visible (ModPath.MPdot (top_visible_mp (), scope)) [];
+    add_visible_members (Id.Set.of_list ctors);
+    Fun.protect ~finally:pop_visible f
+  | _ -> f ()
+
 (** Where a member is being written.
 
     A member's signature is spelled the same in all three places, so one
@@ -4333,12 +4356,13 @@ and pp_leaf_decl env (d : cpp_decl) =
     if (!render_ctx).rc_in_struct then
       add_nested_struct_name (Pp.string_of_ppcmds struct_name) (NSref id);
     let f_s =
-      match tparams with
-      | [] -> pp_cpp_fields_with_vis ~struct_name env fields
-      | _ ->
-        with_render_ctx
-          (fun c -> { c with rc_in_template = true })
-          (fun () -> pp_cpp_fields_with_vis ~struct_name env fields)
+      with_struct_scope id (fun () ->
+          match tparams with
+          | [] -> pp_cpp_fields_with_vis ~struct_name env fields
+          | _ ->
+            with_render_ctx
+              (fun c -> { c with rc_in_template = true })
+              (fun () -> pp_cpp_fields_with_vis ~struct_name env fields) )
     in
     let tmpl = struct_template_head ~pp_param:pp_template_param env tparams cstr in
     let inherit_clause =
@@ -4478,9 +4502,10 @@ and pp_leaf_decl env (d : cpp_decl) =
     with_render_ctx
       (fun c -> {c with rc_in_template = c.rc_in_template || dm_tparams <> []})
       (fun () ->
-        pp_cpp_field ~struct_name:(str own_name)
-          ~mode:(Mm_defined (qual, dm_tparams))
-          env (field_of_member dm_field) )
+        with_struct_scope dm_owner (fun () ->
+            pp_cpp_field ~struct_name:(str own_name)
+              ~mode:(Mm_defined (qual, dm_tparams))
+              env (field_of_member dm_field) ) )
   | Dfields ds ->
     let struct_name =
       str (String.capitalize_ascii (str_global Type ds.ds_ref))
@@ -4490,7 +4515,9 @@ and pp_leaf_decl env (d : cpp_decl) =
         { c with
           rc_in_struct = true;
           rc_in_template = c.rc_in_template || ds.ds_tparams <> [] } )
-      (fun () -> pp_cpp_fields_with_vis ~struct_name env ds.ds_fields)
+      (fun () ->
+        with_struct_scope ds.ds_ref (fun () ->
+            pp_cpp_fields_with_vis ~struct_name env ds.ds_fields ) )
   | Dstatic_assert (CPPconcept_app (class_ref, subject, tys), None)
     when class_concept_held_back class_ref ->
     (* The concept is declared after the struct being rendered, because its

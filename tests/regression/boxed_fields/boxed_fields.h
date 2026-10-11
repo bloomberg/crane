@@ -189,9 +189,8 @@ struct BoxedFields {
       return shape(Poly{std::make_shared<List<point>>(std::move(a0))});
     }
 
-    /// Fields typed by a parameter: boxed or not per instantiation.
-    static shape tagged(std::optional<point> a0,
-                        std::pair<uint64_t, point> a1) {
+    static shape Tagged_(std::optional<point> a0,
+                         std::pair<uint64_t, point> a1) {
       return shape(
           Tagged{std::make_shared<std::optional<point>>(std::move(a0)),
                  std::make_shared<std::pair<uint64_t, point>>(std::move(a1))});
@@ -465,7 +464,7 @@ struct BoxedFields {
                   point::pt(UINT64_C(2), UINT64_C(2)),
                   List<point>::cons(point::pt(UINT64_C(3), UINT64_C(3)),
                                     List<point>::nil())))),
-          scene::layer(shape::tagged(
+          scene::layer(shape::Tagged_(
                            std::make_optional<point>(
                                point::pt(UINT64_C(4), UINT64_C(5))),
                            std::make_pair(UINT64_C(6),

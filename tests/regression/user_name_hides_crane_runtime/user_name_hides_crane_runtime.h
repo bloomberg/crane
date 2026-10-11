@@ -1,8 +1,7 @@
-#ifndef INCLUDED_OUTER_MEMBER_SHADOWED_BY_NESTED
-#define INCLUDED_OUTER_MEMBER_SHADOWED_BY_NESTED
+#ifndef INCLUDED_USER_NAME_HIDES_CRANE_RUNTIME
+#define INCLUDED_USER_NAME_HIDES_CRANE_RUNTIME
 
 #include "crane_fn.h"
-#include "fn.h"
 #include "small_vector.h"
 #include <atomic>
 #include <cstdint>
@@ -11,19 +10,27 @@
 #include <utility>
 #include <variant>
 
-struct OuterMemberShadowedByNested {
-  static uint64_t f(uint64_t n);
-  static constexpr uint64_t k = UINT64_C(10);
+struct UserNameHidesCraneRuntime {
+  struct crane_ {
+    // DATA
+    uint64_t a0;
 
-  struct Sub {
-    static uint64_t f(uint64_t n);
-    static inline const uint64_t k = (k + UINT64_C(1));
-  };
+    // ACCESSORS
+    crane_ clone() const { return {a0}; }
 
-  static inline const uint64_t shadowed = (Sub::f(UINT64_C(3)) + Sub::k);
+    // CREATORS
+    static crane_ cr(uint64_t a0) { return {a0}; }
 
-  struct Node {
-    static constexpr uint64_t bonus = UINT64_C(7);
+    template <typename T1, typename F0> T1 ucrane_rec(F0 &&f) const {
+      return this->template ucrane_rect<T1>(f);
+    }
+
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
+    T1 ucrane_rect(F0 &&f) const {
+      const auto &[a0] = *this;
+      return f(a0);
+    }
   };
 
   struct tree {
@@ -136,7 +143,7 @@ struct OuterMemberShadowedByNested {
           const tree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
-            _result = Node::bonus;
+            _result = UINT64_C(0);
           } else {
             const auto &[a0, a1, a2] = std::get<typename tree::Node>(_sv.v());
             _stack.emplace_back(CraneCont_Node{a1, crane_raw(a2)});
@@ -151,17 +158,17 @@ struct OuterMemberShadowedByNested {
         } else {
           auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
           uint64_t a1 = _f.a1;
-          _result = ((_f._tmp2 + a1) + std::move(_result));
+          _result = ((_f._tmp2 + ucrane_raw(a1)) + std::move(_result));
         }
       }
       return _result;
     }
 
-    template <typename T1, typename F1> T1 tree_rec(T1 f0, F1 &&f1) const {
-      return this->template tree_rect<T1>(std::move(f0), f1);
+    template <typename T1, typename F1> T1 tree_rec(T1 f, F1 &&f0) const {
+      return this->template tree_rect<T1>(std::move(f), f0);
     }
 
-    template <typename T1, typename F1> T1 tree_rect(T1 f0, F1 &&f1) const {
+    template <typename T1, typename F1> T1 tree_rect(T1 f, F1 &&f0) const {
       const tree *_self = this;
 
       /// CraneEnter: captures varying parameters for each recursive call.
@@ -200,7 +207,7 @@ struct OuterMemberShadowedByNested {
           const tree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
-            _result = f0;
+            _result = f;
           } else {
             const auto &[a0, a1, a2] = std::get<typename tree::Node>(_sv.v());
             _stack.emplace_back(CraneCont_Node{a0, a1, crane_raw(a2)});
@@ -219,45 +226,20 @@ struct OuterMemberShadowedByNested {
           std::shared_ptr<tree> a0 = std::move(_f.a0);
           uint64_t a1 = _f.a1;
           const tree &a2 = *_f.a2;
-          _result = f1(*a0, std::move(_f._tmp2), a1, a2, std::move(_result));
+          _result = f0(*a0, std::move(_f._tmp2), a1, a2, std::move(_result));
         }
       }
       return _result;
     }
   };
 
-  struct reader {
-    // DATA
-    crane::fn<uint64_t(uint64_t)> a0;
-
-    // ACCESSORS
-    reader clone() const { return {a0}; }
-
-    // CREATORS
-    static reader reader0(crane::fn<uint64_t(uint64_t)> a0) {
-      return {std::move(a0)};
-    }
-
-    template <typename T1, typename F0> T1 reader_rec(F0 &&f0) const {
-      return this->template reader_rect<T1>(f0);
-    }
-
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &,
-                                     const crane::fn<uint64_t(uint64_t)> &>
-    T1 reader_rect(F0 &&f0) const {
-      const auto &[a0] = *this;
-      return f0(a0);
-    }
-  };
-
-  static reader read_with(tree t);
-  static inline const uint64_t with_bonus =
-      (tree::node(tree::leaf(), UINT64_C(1), tree::leaf()).sum() + []() {
-        const auto &_sv = read_with(tree::leaf());
-        const auto &[a0] = _sv;
-        return a0(UINT64_C(0));
-      }());
+  static uint64_t ucrane_raw(uint64_t n);
+  static inline const uint64_t result =
+      (tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
+                  UINT64_C(2),
+                  tree::node(tree::leaf(), UINT64_C(3), tree::leaf()))
+           .sum() +
+       UINT64_C(1));
 };
 
-#endif // INCLUDED_OUTER_MEMBER_SHADOWED_BY_NESTED
+#endif // INCLUDED_USER_NAME_HIDES_CRANE_RUNTIME

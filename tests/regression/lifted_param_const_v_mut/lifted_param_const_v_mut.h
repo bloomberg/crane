@@ -363,7 +363,7 @@ public:
           }
         }()) {}
 
-  static Dvalue<ptr> dvalue_base(Dvalue_base<ptr> a0) {
+  static Dvalue<ptr> DVALUE_Base_(Dvalue_base<ptr> a0) {
     return Dvalue<ptr>(DVALUE_Base{std::move(a0)});
   }
 
@@ -404,7 +404,7 @@ den_crane_body(const T1 tag, const Dvalue<typename _tcI0::ptr> u) {
                           Nat::s(Nat::o())))))))))))))))))))))))))))))))))) {
         return std::make_optional<std::pair<T1, Dvalue<typename _tcI0::ptr>>>(
             std::make_pair(
-                tag, Dvalue<typename _tcI0::ptr>::dvalue_base(
+                tag, Dvalue<typename _tcI0::ptr>::DVALUE_Base_(
                          Dvalue_base<typename _tcI0::ptr>::dvalue_i(
                              Nat::s(Nat::s(Nat::s(Nat::s(
                                  Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))),
@@ -462,7 +462,7 @@ static_assert(Params<natParams>);
 struct LiftedParamConstVMut {
   static inline const std::optional<Sum<Nat, Dvalue<typename natParams::ptr>>>
       run = den<natParams>(List<Dvalue<Nat>>::cons(
-          Dvalue<Nat>::dvalue_base(Dvalue_base<Nat>::dvalue_i(
+          Dvalue<Nat>::DVALUE_Base_(Dvalue_base<Nat>::dvalue_i(
               Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
                   Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
                       Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(

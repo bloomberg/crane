@@ -176,7 +176,7 @@ struct DeepSum1Match {
     e5 clone() const { return {a0}; }
 
     // CREATORS
-    static e5 e6(Nat a0) { return {std::move(a0)}; }
+    static e5 E6_(Nat a0) { return {std::move(a0)}; }
   };
   enum class E6 { E6 };
   template <typename x>
@@ -277,7 +277,7 @@ struct DeepSum1Match {
                              inr1(Sum1<E4, Sum1<e5, E6, std::monostate>,
                                        std::monostate>::
                                       inr1(Sum1<e5, E6, std::monostate>::inl1(
-                                          e5::e6(Nat::s(
+                                          e5::E6_(Nat::s(
                                               Nat::s(Nat::s(Nat::o()))))))))));
     if (_cs.has_value()) {
       const Nat &n = *_cs;

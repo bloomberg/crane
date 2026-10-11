@@ -1,14 +1,10 @@
 #ifndef INCLUDED_MODULE_TYPE_RECORD_CONCEPT
 #define INCLUDED_MODULE_TYPE_RECORD_CONCEPT
 
-#include <concepts>
 #include <cstdint>
 
 template <typename M>
-concept T = requires {
-  typename M::pt;
-  { M::px(std::declval<typename M::pt>()) } -> std::same_as<uint64_t>;
-};
+concept T = requires { typename M::pt; };
 
 struct ModuleTypeRecordConcept {
   struct Impl {

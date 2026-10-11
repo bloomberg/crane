@@ -1,8 +1,8 @@
 #ifndef INCLUDED_MACRO_NAMED_CONSTRUCTOR
 #define INCLUDED_MACRO_NAMED_CONSTRUCTOR
 
+#include <cmath>
 #include <cstdint>
-#include <stdexcept>
 #include <utility>
 
 enum class Float_class;
@@ -12,26 +12,22 @@ enum class Float_class {
   PSUBN,
   NSUBN,
   PZERO,
-  NZERO,
+  NZERO_,
   PINF,
   NINF,
-  NAN
-};
-
-struct PrimFloat {
-  static Float_class classify(double x0_);
+  NAN_
 };
 
 struct MacroNamedConstructor {
-  enum class Num { NAN, INFINITY, EOF_, NULL_, ERRNO };
+  enum class Num { NAN_, INFINITY_, EOF_, NULL_, ERRNO };
 
   template <typename T1>
   static T1 num_rect(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, Num n) {
     switch (n) {
-    case Num::NAN: {
+    case Num::NAN_: {
       return f;
     }
-    case Num::INFINITY: {
+    case Num::INFINITY_: {
       return f0;
     }
     case Num::EOF_: {

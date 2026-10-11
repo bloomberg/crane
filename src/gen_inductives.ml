@@ -995,7 +995,6 @@ let gen_ind_header_v2
       (* The main struct type: all inductives (including coinductives)
          are value types. *)
       let self_ty = Tglob (name, ty_vars, []) in
-      let ind_type_name_str = Common.pp_global_name Type name in
 
       (* Preparation registered the flat inductives
          ({!Table.is_flat_inductive_packet}). *)
@@ -1058,9 +1057,7 @@ let gen_ind_header_v2
                  (fun j ty -> (List.nth field_ids j, fun var_names -> stored_ty var_names ty))
                  tys_list)
         in
-        let factory_name =
-          Id.of_string (factory_name_of_ctor ~type_name:ind_type_name_str cname_str)
-        in
+        let factory_name = Id.of_string (factory_name_of_ctor c) in
         let factory_params =
           List.mapi (fun j ty -> (List.nth field_ids j, value_ty vars ty)) tys_list
         in
@@ -1092,7 +1089,6 @@ let gen_ind_header_v2
             ds_needs_shared_from_this = false; }
       end else
 
-      let _ = ind_type_name_str in (* suppress unused warning if non-flat path also needs it *)
 
       (* The type a constructor struct stores field [ty] at, under the
          variable names [var_names]: recursive occurrences and, under
@@ -2409,23 +2405,20 @@ let gen_ind_header_v2
          method as a direct static member of the struct, returning by value.
 
          Factory names are the lowercase of the constructor struct name
-         (e.g., Cons → cons).  If this collides with a C++ keyword or the
-         type's own name, the factory falls back to PascalCase with trailing
-         underscore (e.g., Char → Char_).  See {!factory_name_of_ctor}.
+         (e.g., Cons → cons).  If this collides with a C++ keyword, the
+         type's own name or a type its module declares, the factory falls
+         back to PascalCase with trailing underscore (e.g., Char → Char_).
+         See {!factory_name_of_ctor}.
 
          Move semantics: All parameters use the "sink parameter" idiom
          (passed by value, std::move'd into the struct initializer).
          Non-coinductive recursive fields take the inner type by value and
          are wrapped in make_shared internally; coinductive fields take a
          [const shared_ptr<T>&]. *)
-      let ind_type_name = Common.pp_global_name Type name in
-
       let mk_factory_methods ret_ty build i tys_list =
         let c = cnames.(i) in
         let cname = ctor_struct_name_of_ref ~fallback_idx:i c in
-        let fname =
-          factory_name_of_ctor ~type_name:ind_type_name cname
-        in
+        let fname = factory_name_of_ctor ~fallback_idx:i c in
         let factory_name = Id.of_string fname in
         (* Convert ML types both as public API types and constructor storage
            types.  Public APIs remain value-shaped (empty ns); storage uses

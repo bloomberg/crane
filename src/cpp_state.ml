@@ -231,13 +231,14 @@ let keywords =
       "ptrdiff_t";
       "size_t";
       "List";
-      "persistent_array";
       (* Macros the C standard headers define.  The preprocessor runs before
          any scope, so a declaration spelled like one is rewritten before the
          compiler sees it -- [static Request alloca(Nat, Nat, bool)] against
          <alloca.h> is "too many arguments provided to function-like macro".
-         Only the spelling the header uses is reserved; the case-folded forms
-         are separate names to the preprocessor. *)
+         An enum constructor is upper-cased, so [Inductive c := NaN | NZero]
+         meets <cmath>'s [NAN] and <limits.h>'s [NZERO].  Only the spelling
+         the header uses is reserved; the case-folded forms are separate
+         names to the preprocessor. *)
       "alloca";
       "va_start";
       "va_end";
@@ -255,8 +256,78 @@ let keywords =
       "STDIN";
       "STDOUT";
       "STDERR";
+      "NAN";
+      "INFINITY";
+      "HUGE_VALF";
+      "HUGE_VALL";
+      "FP_NAN";
+      "FP_INFINITE";
+      "FP_ZERO";
+      "FP_SUBNORMAL";
+      "FP_NORMAL";
+      "MATH_ERRNO";
+      "MATH_ERREXCEPT";
+      "math_errhandling";
+      "errno";
+      "EDOM";
+      "EILSEQ";
+      "EXIT_SUCCESS";
+      "EXIT_FAILURE";
+      "RAND_MAX";
+      "MB_CUR_MAX";
+      "BUFSIZ";
+      "FILENAME_MAX";
+      "FOPEN_MAX";
+      "SEEK_SET";
+      "SEEK_CUR";
+      "SEEK_END";
+      "TMP_MAX";
+      "stdin";
+      "stdout";
+      "stderr";
+      "assert";
+      "offsetof";
+      "CHAR_BIT";
+      "INT_MAX";
+      "INT_MIN";
+      "UINT_MAX";
+      "LONG_MAX";
+      "LONG_MIN";
+      "ULONG_MAX";
+      "LLONG_MAX";
+      "LLONG_MIN";
+      "ULLONG_MAX";
+      "CHAR_MAX";
+      "CHAR_MIN";
+      "SCHAR_MAX";
+      "SCHAR_MIN";
+      "UCHAR_MAX";
+      "SHRT_MAX";
+      "SHRT_MIN";
+      "USHRT_MAX";
+      "MB_LEN_MAX";
+      "NZERO";
+      "PATH_MAX";
+      "NAME_MAX";
+      "ARG_MAX";
+      "CHILD_MAX";
+      "OPEN_MAX";
+      "LINE_MAX";
+      "PIPE_BUF";
+      "NGROUPS_MAX";
+      "SIZE_MAX";
+      "INT64_MAX";
+      "INT64_MIN";
+      "UINT64_MAX";
+      "INT64_C";
+      "UINT64_C";
     ]
-    Id.Set.empty
+    (* The namespaces and global names the runtime is spelled with: a
+       [crane] or [std] declared in a struct hides [crane::rc] or
+       [std::shared_ptr] from every member after it. *)
+    (List.fold_right
+       (fun s -> Id.Set.add (Id.of_string s))
+       Table.reserved_global_cpp_names Id.Set.empty)
 
 (** Names the C and POSIX libraries declare at global scope.
 

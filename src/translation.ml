@@ -3329,10 +3329,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           let temps = apply_hkt_tyctors n temps in
           let temps = ind_promoted_type_args n @ temps in
           let ctor_struct = ctor_struct_name_of_ref r in
-          let ind_type_name = Common.pp_global_name Type n in
-          let fname =
-            factory_name_of_ctor ~type_name:ind_type_name ctor_struct
-          in
+          let fname = factory_name_of_ctor r in
           (* Build: Type<temps>::factory(args).  The qualifier is a type, and
              is spelled as one: loopify reads it back off the call to build
              [make_shared], [std::get] and [typename T::Ctor] nodes, and can
@@ -3367,8 +3364,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                   of_reversed args ) )
         | _ ->
           (* Fallback for non-Tglob types *)
-          let ctor_struct = ctor_struct_name_of_ref r in
-          let fname = factory_name_of_ctor ctor_struct in
+          let fname = factory_name_of_ctor r in
           CPPfun_call
             (call_opaque, CPPqualified_t (Tglob (r, [], []), Id.of_string fname),
               of_reversed args )

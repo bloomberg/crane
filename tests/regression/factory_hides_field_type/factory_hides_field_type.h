@@ -37,7 +37,7 @@ struct FactoryHidesFieldType {
 
     explicit shape(Tag _v) : v_(std::move(_v)) {}
 
-    static shape pt(pt a0) { return shape(Pt{std::move(a0)}); }
+    static shape Pt_(pt a0) { return shape(Pt{std::move(a0)}); }
 
     static shape tag(pt a0) { return shape(Tag{std::move(a0)}); }
 
@@ -69,7 +69,7 @@ struct FactoryHidesFieldType {
   static uint64_t area(const shape &s);
   static inline const uint64_t result =
       (area(shape::tag(pt{UINT64_C(2), UINT64_C(3)})) +
-       area(shape::pt(pt{UINT64_C(2), UINT64_C(3)})));
+       area(shape::Pt_(pt{UINT64_C(2), UINT64_C(3)})));
 };
 
 #endif // INCLUDED_FACTORY_HIDES_FIELD_TYPE

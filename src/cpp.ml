@@ -159,9 +159,17 @@ let watching_for_reference_to outer f =
 let rec pp_spec_as_requirement modtype_mp modtype_refs = function
   | Sval (r, _, _) when is_inline_custom r -> mt ()
   | Stype (r, _, _) when is_inline_custom r -> mt ()
+  (* A record's projection is a data member of the record's struct, which
+     [typename M::pt] already requires: a module emits no static function for
+     it, and the functor body reads the field off the value. *)
+  | Sval (r, _, _) when Table.is_projection r -> mt ()
   | Sind (kn, i) ->
-    let name = pp_global_name Type (GlobRef.IndRef (kn, 0)) in
-    str "typename M::" ++ name ++ str ";" ++ fnl ()
+    let r = GlobRef.IndRef (kn, 0) in
+    let name = Common.pp_global_name Type r in
+    (* Spelled as a reference from inside [M] spells it: an enum is declared
+       capitalised. *)
+    let name = if is_enum_cached r then capitalize_enum_qualified name r else name in
+    str "typename M::" ++ str name ++ str ";" ++ fnl ()
   | Sval (r, _, t) when has_tvar t -> mt ()
   | Sval (r, b, t) ->
     let name = pp_global_name Term r in
@@ -1832,6 +1840,7 @@ and pp_module_expr ~is_header f params = function
     pp_module_expr ~is_header f (MPbound mbid :: params) me
   | MEstruct (mp, sel) ->
     push_visible mp params;
+    add_visible_members (member_names_of_sel sel);
     let old_structure_decls = !current_structure_decls in
     current_structure_decls := sel;
     let old_local_inductives = get_local_inductives () in

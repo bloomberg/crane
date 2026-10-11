@@ -217,17 +217,6 @@
   (deps interp_state_dict.t.exe)
   (action (run ./interp_state_dict.t.exe))))
 
-(subdir macro_named_constructor
- (rule
-  (targets macro_named_constructor.t.exe)
-  (deps MacroNamedConstructor.vo macro_named_constructor.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} macro_named_constructor.t.exe macro_named_constructor.cpp macro_named_constructor.t.cpp)))
- (rule
-  (alias runtest)
-  (deps macro_named_constructor.t.exe)
-  (action (run ./macro_named_constructor.t.exe))))
-
 (subdir dep_match_wildcard_unit_arm
  (rule
   (targets dep_match_wildcard_unit_arm.t.exe)
@@ -238,17 +227,6 @@
   (alias runtest)
   (deps dep_match_wildcard_unit_arm.t.exe)
   (action (run ./dep_match_wildcard_unit_arm.t.exe))))
-
-(subdir factory_hides_field_type
- (rule
-  (targets factory_hides_field_type.t.exe)
-  (deps FactoryHidesFieldType.vo factory_hides_field_type.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} factory_hides_field_type.t.exe factory_hides_field_type.cpp factory_hides_field_type.t.cpp)))
- (rule
-  (alias runtest)
-  (deps factory_hides_field_type.t.exe)
-  (action (run ./factory_hides_field_type.t.exe))))
 
 (subdir wf_fix_sigma_domain
  (rule
@@ -316,46 +294,3 @@
   (deps den_fn_ctor_arg_not_wrapped.t.exe)
   (action (run ./den_fn_ctor_arg_not_wrapped.t.exe))))
 
-(subdir user_name_hides_crane_runtime
- (rule
-  (targets user_name_hides_crane_runtime.t.exe)
-  (deps UserNameHidesCraneRuntime.vo user_name_hides_crane_runtime.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} user_name_hides_crane_runtime.t.exe user_name_hides_crane_runtime.cpp user_name_hides_crane_runtime.t.cpp)))
- (rule
-  (alias runtest)
-  (deps user_name_hides_crane_runtime.t.exe)
-  (action (run ./user_name_hides_crane_runtime.t.exe))))
-
-(subdir outer_member_shadowed_by_nested
- (rule
-  (targets outer_member_shadowed_by_nested.t.exe)
-  (deps OuterMemberShadowedByNested.vo outer_member_shadowed_by_nested.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} outer_member_shadowed_by_nested.t.exe outer_member_shadowed_by_nested.cpp outer_member_shadowed_by_nested.t.cpp)))
- (rule
-  (alias runtest)
-  (deps outer_member_shadowed_by_nested.t.exe)
-  (action (run ./outer_member_shadowed_by_nested.t.exe))))
-
-(subdir module_type_enum_concept
- (rule
-  (targets module_type_enum_concept.t.exe)
-  (deps ModuleTypeEnumConcept.vo module_type_enum_concept.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} module_type_enum_concept.t.exe module_type_enum_concept.cpp module_type_enum_concept.t.cpp)))
- (rule
-  (alias runtest)
-  (deps module_type_enum_concept.t.exe)
-  (action (run ./module_type_enum_concept.t.exe))))
-
-(subdir module_type_record_concept
- (rule
-  (targets module_type_record_concept.t.exe)
-  (deps ModuleTypeRecordConcept.vo module_type_record_concept.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} module_type_record_concept.t.exe module_type_record_concept.cpp module_type_record_concept.t.cpp)))
- (rule
-  (alias runtest)
-  (deps module_type_record_concept.t.exe)
-  (action (run ./module_type_record_concept.t.exe))))

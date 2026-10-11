@@ -5,7 +5,7 @@ uint64_t OuterMemberShadowedByNested::f(uint64_t n) {
 }
 
 uint64_t OuterMemberShadowedByNested::Sub::f(uint64_t n) {
-  return (UINT64_C(2) * f(n));
+  return (UINT64_C(2) * OuterMemberShadowedByNested::f(n));
 }
 
 OuterMemberShadowedByNested::reader

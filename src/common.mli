@@ -100,6 +100,10 @@ type env = Id.t list * Id.Set.t
 (** Create a fresh de Bruijn environment with current global ids. *)
 val empty_env : unit -> env
 
+(** Prefix of the names Crane introduces itself, which no Rocq identifier is
+    spelled with in C++. *)
+val crane_local_prefix : string
+
 (** The C++ spelling of a Rocq identifier, as an [Id.t]. *)
 val cpp_id_of_id : Id.t -> Id.t
 
@@ -260,6 +264,15 @@ val push_visible : ModPath.t -> ModPath.t list -> unit
 
 (** Pop the innermost visible layer. *)
 val pop_visible : unit -> unit
+
+(** Declare the C++ names the innermost visible layer's scope holds, before
+    any is printed: an outer name they hide is then qualified even in a body
+    printed ahead of their declarations. *)
+val add_visible_members : Id.Set.t -> unit
+
+(** The C++ names a structure declares as members of its struct, as
+    {!add_visible_members} takes them. *)
+val member_names_of_sel : Miniml.ml_module_structure -> Id.Set.t
 
 (** A snapshot of the visibility stack: the scope a name is spelled from. *)
 type visibility

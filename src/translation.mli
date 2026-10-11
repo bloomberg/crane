@@ -359,9 +359,9 @@ val return_captures_by_value : cpp_stmt list -> cpp_stmt list
     definitions. *)
 val resolve_body_tvars : ml_ast -> ml_type -> ml_ast
 
-(** Compute the factory method name for a constructor (see
-    {!Translation.factory_name_of_ctor} implementation notes). *)
-val factory_name_of_ctor : ?type_name:string -> string -> string
+(** The factory method name for a constructor (see
+    {!Translation_support.factory_name_of_ctor}). *)
+val factory_name_of_ctor : ?fallback_idx:int -> GlobRef.t -> string
 
 (** Augment [kernel_arg_names] with names from an [Arguments] declaration.
     Where [kernel_arg_names] has [None] (anonymous binder), the corresponding

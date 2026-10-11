@@ -1075,8 +1075,11 @@ val extraction_trivially_copyable : qualid list -> unit
     a trivially-copyable scalar (e.g. [nat] → [unsigned int]). *)
 val is_custom_scalar_ref : GlobRef.t -> bool
 
-(** Append [_] to struct names that collide with C++ global names
-    (e.g. [std], [crane], [persistent_array]). *)
+(** The global names generated code spells unqualified or as namespaces:
+    [std], [crane], [persistent_array]. *)
+val reserved_global_cpp_names : string list
+
+(** Append [_] to struct names that collide with {!reserved_global_cpp_names}. *)
 val escape_reserved_struct_name : string -> string
 
 (** Find custom type extraction (imports and code). *)
