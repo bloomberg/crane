@@ -51,7 +51,7 @@ struct InstanceTvarSubstitutionOrder {
   }
 
   template <typename T1> struct unw {
-    static wrap<T1> conv(wrap<T1> w) {
+    static T1 conv(wrap<T1> w) {
       const auto &[a0] = w;
       return a0;
     }

@@ -150,18 +150,6 @@
   (deps mrec_ctx_wrapped_in_ret.t.exe)
   (action (run ./mrec_ctx_wrapped_in_ret.t.exe))))
 
-
-
-
-
-
-
-
-
-
-
-
-
 (subdir carrier_alias_promoted
  (rule
   (targets carrier_alias_promoted.t.exe)
@@ -172,8 +160,6 @@
   (alias runtest)
   (deps carrier_alias_promoted.t.exe)
   (action (run ./carrier_alias_promoted.t.exe))))
-
-
 
 (subdir carrier_holder_before_alias
  (rule
@@ -207,9 +193,7 @@
 
 ; --- Stage A: an immediately invoked [=] lambda matching an owned capture.
 
-
 ; --- A local fix captured by reference escapes through a state-monad bind.
-
 
 (subdir case_handler_concrete_result
  (rule
@@ -298,28 +282,6 @@
   (alias runtest)
   (deps arrow_behind_type_function.t.exe)
   (action (run ./arrow_behind_type_function.t.exe))))
-
-(subdir instance_tvar_substitution_order
- (rule
-  (targets instance_tvar_substitution_order.t.exe)
-  (deps InstanceTvarSubstitutionOrder.vo instance_tvar_substitution_order.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} instance_tvar_substitution_order.t.exe instance_tvar_substitution_order.cpp instance_tvar_substitution_order.t.cpp)))
- (rule
-  (alias runtest)
-  (deps instance_tvar_substitution_order.t.exe)
-  (action (run ./instance_tvar_substitution_order.t.exe))))
-
-(subdir instance_constraint_only_binder
- (rule
-  (targets instance_constraint_only_binder.t.exe)
-  (deps InstanceConstraintOnlyBinder.vo instance_constraint_only_binder.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} instance_constraint_only_binder.t.exe instance_constraint_only_binder.cpp instance_constraint_only_binder.t.cpp)))
- (rule
-  (alias runtest)
-  (deps instance_constraint_only_binder.t.exe)
-  (action (run ./instance_constraint_only_binder.t.exe))))
 
 (subdir class_method_unapplied_arg
  (rule

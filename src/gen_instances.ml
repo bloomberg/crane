@@ -94,6 +94,18 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
      parameterized instances like numOption : Numeric (option A), the return
      type is Tglob(Numeric, [option A], []) which contains Tvar for A. These
      need to become template typename parameters (T1, T2, etc.). *)
+  (* The classes of the instance's dictionary parameters.  Read off the
+     instance's type, not its binders: a singleton class's dictionary binder
+     is annotated with the class unfolded. *)
+  let dict_tys =
+    let rec dicts acc = function
+      | Miniml.Tarr (a, b) ->
+        dicts (if Table.is_typeclass_type a then a :: acc else acc) b
+      | Miniml.Tmeta {contents = Some t} -> dicts acc t
+      | _ -> List.rev acc
+    in
+    dicts [] ty
+  in
   let dict_vars =
     let rec vars acc = function
       | Miniml.Tvar (_, i) | Miniml.Tapp (i, []) -> i :: acc
@@ -103,15 +115,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
       | Miniml.Tmeta {contents = Some t} -> vars acc t
       | _ -> acc
     in
-    (* Read off the instance's type, not its binders: a singleton class's
-       dictionary binder is annotated with the class unfolded. *)
-    let rec dicts acc = function
-      | Miniml.Tarr (a, b) ->
-        dicts (if Table.is_typeclass_type a then vars acc a else acc) b
-      | Miniml.Tmeta {contents = Some t} -> dicts acc t
-      | _ -> acc
-    in
-    dicts [] ty
+    List.fold_left vars [] dict_tys
   in
   let rec collect_ml_tvars acc = function
     | Miniml.Tvar (Schematic, i) ->
@@ -133,10 +137,21 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
     | Miniml.Tmeta {contents = Some t} -> collect_ml_tvars acc t
     | _ -> acc
   in
+  (* A variable a dictionary parameter mentions is one of the instance's too,
+     though the class arguments may not: [via {A B C} `{Conv A B} `{Conv B C}
+     : Sz (A * C)] binds [B] for its constraints alone.  Not one a dictionary
+     is about as its carrier -- see [dict_vars]. *)
+  let constraint_args = function
+    | Miniml.Tglob (cls, args, _) ->
+      List.filteri (fun i _ -> not (Table.is_hkt_param cls i)) args
+    | _ -> []
+  in
   let instance_tvars =
     match inner_ty with
     | Tglob (_, type_args, _) ->
-      List.sort compare (List.fold_left collect_ml_tvars [] type_args)
+      List.sort compare
+        (List.fold_left collect_ml_tvars []
+           (type_args @ List.concat_map constraint_args dict_tys))
     | _ -> []
   in
   let tv_temps =
@@ -804,11 +819,20 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
              substituted type. Otherwise, infer from the lambda binders. *)
           let method_ret_ty =
             let ret = snd (method_args_and_ret ()) in
+            (* A variable the substitution put there -- [B := A] for
+               [Instance : Conv (wrap A) A] -- is one of the instance's own
+               parameters, not a class variable the instance left open. *)
+            let substituted =
+              match snd (orig_args_and_ret ()) with
+              | Miniml.Tvar (_, j) -> j <= List.length subst_args
+              | _ -> true
+            in
             match ret with
-            | (Miniml.Tvar (_, _)) when method_tvars <> [] ->
-              (* The method is a member template, so a bare type variable in
-                 the return type is one of its own parameters and is already
-                 meaningful -- no need to guess it from the last binder. *)
+            | (Miniml.Tvar (_, _)) when method_tvars <> [] || substituted ->
+              (* The method is a member template, or the variable is the
+                 instance's, so a bare type variable in the return type is
+                 already meaningful -- no need to guess it from the last
+                 binder. *)
               convert_ml_type_to_cpp_type base_env type_var_names ret
             | (Miniml.Tvar (_, _)) when binders <> [] ->
               (* Unsubstituted Tvar — infer from the last lambda binder's type.

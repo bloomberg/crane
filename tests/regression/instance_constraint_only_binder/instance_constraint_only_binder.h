@@ -35,10 +35,11 @@ struct InstanceConstraintOnlyBinder {
 
   static_assert(Conv<boolNat, bool, uint64_t>);
 
-  template <typename _tcI0, typename _tcI1, typename T1, typename T2>
+  template <typename _tcI0, typename _tcI1, typename T1, typename T2,
+            typename T3>
     requires Conv<_tcI0, T1, T2> && Conv<_tcI1, T2, T3>
   struct via {
-    static uint64_t sz(std::pair<T1, T2>) { return UINT64_C(1); }
+    static uint64_t sz(std::pair<T1, T3>) { return UINT64_C(1); }
   };
 
   static inline const uint64_t result =

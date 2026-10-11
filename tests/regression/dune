@@ -11946,3 +11946,26 @@
   (alias runtest)
   (deps loopify_method_varying_fn_arg.t.exe)
   (action (run ./loopify_method_varying_fn_arg.t.exe))))
+
+(subdir instance_tvar_substitution_order
+ (rule
+  (targets instance_tvar_substitution_order.t.exe)
+  (deps InstanceTvarSubstitutionOrder.vo instance_tvar_substitution_order.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} instance_tvar_substitution_order.t.exe instance_tvar_substitution_order.cpp instance_tvar_substitution_order.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps instance_tvar_substitution_order.t.exe)
+  (action (run ./instance_tvar_substitution_order.t.exe))))
+
+(subdir instance_constraint_only_binder
+ (rule
+  (targets instance_constraint_only_binder.t.exe)
+  (deps InstanceConstraintOnlyBinder.vo instance_constraint_only_binder.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} instance_constraint_only_binder.t.exe instance_constraint_only_binder.cpp instance_constraint_only_binder.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps instance_constraint_only_binder.t.exe)
+  (action (run ./instance_constraint_only_binder.t.exe))))
+
