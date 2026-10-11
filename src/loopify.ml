@@ -1684,7 +1684,8 @@ let rec transform_field ~tparams ~self_ty (fld, vis, tag) =
 
 and transform_field_exn ~tparams ~self_ty (fld, vis, tag) =
   match fld with
-  | Fmethod mf ->
+  | Fmethod mf
+    when (match mf.mf_globref with Some r -> Table.loopifies_method r | None -> true) ->
     (transform_method ~tparams ~self_ty mf, vis, tag)
   | Fnested_struct (id, fields) ->
     let fields' =

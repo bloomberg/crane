@@ -86,56 +86,12 @@ struct NoloopifyMethod {
     const variant_t &v() const { return v_; }
 
     uint64_t size() const {
-      const tree *_self = this;
-
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
-        const tree *_self;
-      };
-
-      /// CraneCont_Node: saves [a1], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_Node {
-        std::shared_ptr<tree> a1;
-      };
-
-      /// CraneCont_Node_1: saves [_tmp2], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_Node_1 {
-        uint64_t _tmp2;
-      };
-
-      using CraneFrame =
-          std::variant<CraneEnter, CraneCont_Node, CraneCont_Node_1>;
-      uint64_t _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified size: CraneEnter -> CraneCont_Node -> CraneCont_Node_1.
-      while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
-          const tree *_self = _f._self;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
-            _result = UINT64_C(1);
-          } else {
-            const auto &[a0, a1] = std::get<typename tree::Node>(_sv.v());
-            _stack.emplace_back(CraneCont_Node{a1});
-            _stack.emplace_back(CraneEnter{crane_raw(a0)});
-          }
-        } else if (std::holds_alternative<CraneCont_Node>(_frame)) {
-          auto _f = std::move(std::get<CraneCont_Node>(_frame));
-          std::shared_ptr<tree> a1 = std::move(_f.a1);
-          _stack.emplace_back(CraneCont_Node_1{std::move(_result)});
-          _stack.emplace_back(CraneEnter{crane_raw(a1)});
-        } else {
-          auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
-          _result = (_f._tmp2 + std::move(_result));
-        }
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
+        return UINT64_C(1);
+      } else {
+        const auto &[a0, a1] = std::get<typename tree::Node>(this->v());
+        return (a0->size() + a1->size());
       }
-      return _result;
     }
 
     template <typename T1, typename F1> T1 tree_rec(T1 f, F1 &&f0) const {
@@ -154,7 +110,7 @@ struct NoloopifyMethod {
       /// processes rest.
       struct CraneCont_Node {
         std::shared_ptr<tree> a0;
-        std::shared_ptr<tree> a1;
+        const tree *a1;
       };
 
       /// CraneCont_Node_1: saves [_tmp2, a0, a1], resumes after recursive call,
@@ -162,7 +118,7 @@ struct NoloopifyMethod {
       struct CraneCont_Node_1 {
         T1 _tmp2;
         std::shared_ptr<tree> a0;
-        std::shared_ptr<tree> a1;
+        const tree *a1;
       };
 
       using CraneFrame =
@@ -182,21 +138,21 @@ struct NoloopifyMethod {
             _result = f;
           } else {
             const auto &[a0, a1] = std::get<typename tree::Node>(_sv.v());
-            _stack.emplace_back(CraneCont_Node{a0, a1});
+            _stack.emplace_back(CraneCont_Node{a0, crane_raw(a1)});
             _stack.emplace_back(CraneEnter{crane_raw(a0)});
           }
         } else if (std::holds_alternative<CraneCont_Node>(_frame)) {
           auto _f = std::move(std::get<CraneCont_Node>(_frame));
           std::shared_ptr<tree> a0 = std::move(_f.a0);
-          std::shared_ptr<tree> a1 = std::move(_f.a1);
+          const tree &a1 = *_f.a1;
           _stack.emplace_back(
-              CraneCont_Node_1{std::move(_result), std::move(a0), a1});
-          _stack.emplace_back(CraneEnter{crane_raw(a1)});
+              CraneCont_Node_1{std::move(_result), std::move(a0), &a1});
+          _stack.emplace_back(CraneEnter{_f.a1});
         } else {
           auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
           std::shared_ptr<tree> a0 = std::move(_f.a0);
-          std::shared_ptr<tree> a1 = std::move(_f.a1);
-          _result = f0(*a0, std::move(_f._tmp2), *a1, std::move(_result));
+          const tree &a1 = *_f.a1;
+          _result = f0(*a0, std::move(_f._tmp2), a1, std::move(_result));
         }
       }
       return _result;

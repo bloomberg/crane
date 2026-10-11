@@ -212,14 +212,13 @@ let rec scope ~group ~depth e =
   in
   if k = 0 then body else wrap 1 calls
 
-(* Whether [r] is loopified: by its own name, or as a method of an
-   inductive whose methods are (see {!Table.loopifies_methods_of}). *)
+(* Whether [r] is loopified: by its own name, or, made a method, where its
+   inductive's methods are (see {!Table.loopifies_methods_of}) and its own
+   name does not decline. *)
 let loopified ~methods r =
-  Table.should_loopify r
-  ||
   match Method_registry.is_registered_method methods r with
-  | Some (ind, _) -> Table.loopifies_methods_of ind
-  | None -> false
+  | Some (ind, _) -> Table.loopifies_methods_of ind && Table.loopifies_method r
+  | None -> Table.should_loopify r
 
 (* A declaration's body, normalized against the top-level functions
    [globals] it recurses through. *)

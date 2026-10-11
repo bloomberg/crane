@@ -306,7 +306,7 @@ struct PolyInductive {
       /// CraneCont_PNode: saves [a1], resumes after recursive call, then
       /// processes rest.
       struct CraneCont_PNode {
-        std::shared_ptr<ptree<A>> a1;
+        const ptree<A> *a1;
       };
 
       /// CraneCont_PNode_1: saves [_tmp2], resumes after recursive call, then
@@ -333,14 +333,14 @@ struct PolyInductive {
             _result = UINT64_C(1);
           } else {
             const auto &[a0, a1] = std::get<typename ptree<A>::PNode>(_sv.v());
-            _stack.emplace_back(CraneCont_PNode{a1});
+            _stack.emplace_back(CraneCont_PNode{crane_raw(a1)});
             _stack.emplace_back(CraneEnter{crane_raw(a0)});
           }
         } else if (std::holds_alternative<CraneCont_PNode>(_frame)) {
           auto _f = std::move(std::get<CraneCont_PNode>(_frame));
-          std::shared_ptr<ptree<A>> a1 = std::move(_f.a1);
+          const ptree<A> &a1 = *_f.a1;
           _stack.emplace_back(CraneCont_PNode_1{std::move(_result)});
-          _stack.emplace_back(CraneEnter{crane_raw(a1)});
+          _stack.emplace_back(CraneEnter{_f.a1});
         } else {
           auto _f = std::move(std::get<CraneCont_PNode_1>(_frame));
           _result = ((_f._tmp2 + std::move(_result)) + 1);
@@ -368,7 +368,7 @@ struct PolyInductive {
       /// processes rest.
       struct CraneCont_PNode {
         std::shared_ptr<ptree<A>> a0;
-        std::shared_ptr<ptree<A>> a1;
+        const ptree<A> *a1;
       };
 
       /// CraneCont_PNode_1: saves [_tmp2, a0, a1], resumes after recursive
@@ -376,7 +376,7 @@ struct PolyInductive {
       struct CraneCont_PNode_1 {
         T1 _tmp2;
         std::shared_ptr<ptree<A>> a0;
-        std::shared_ptr<ptree<A>> a1;
+        const ptree<A> *a1;
       };
 
       using CraneFrame =
@@ -398,21 +398,21 @@ struct PolyInductive {
             _result = f(a0);
           } else {
             const auto &[a0, a1] = std::get<typename ptree<A>::PNode>(_sv.v());
-            _stack.emplace_back(CraneCont_PNode{a0, a1});
+            _stack.emplace_back(CraneCont_PNode{a0, crane_raw(a1)});
             _stack.emplace_back(CraneEnter{crane_raw(a0)});
           }
         } else if (std::holds_alternative<CraneCont_PNode>(_frame)) {
           auto _f = std::move(std::get<CraneCont_PNode>(_frame));
           std::shared_ptr<ptree<A>> a0 = std::move(_f.a0);
-          std::shared_ptr<ptree<A>> a1 = std::move(_f.a1);
+          const ptree<A> &a1 = *_f.a1;
           _stack.emplace_back(
-              CraneCont_PNode_1{std::move(_result), std::move(a0), a1});
-          _stack.emplace_back(CraneEnter{crane_raw(a1)});
+              CraneCont_PNode_1{std::move(_result), std::move(a0), &a1});
+          _stack.emplace_back(CraneEnter{_f.a1});
         } else {
           auto _f = std::move(std::get<CraneCont_PNode_1>(_frame));
           std::shared_ptr<ptree<A>> a0 = std::move(_f.a0);
-          std::shared_ptr<ptree<A>> a1 = std::move(_f.a1);
-          _result = f0(*a0, std::move(_f._tmp2), *a1, std::move(_result));
+          const ptree<A> &a1 = *_f.a1;
+          _result = f0(*a0, std::move(_f._tmp2), a1, std::move(_result));
         }
       }
       return _result;

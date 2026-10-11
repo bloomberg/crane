@@ -1687,6 +1687,14 @@ let compute_frame_pointer_safe pointer_safe_varying frames =
        are commonly [CPPmove (CPPvar x)] or
        [CPPmove (CPPaccess (Adot, CPPvar _f, fld))]. *)
     let expr = match expr with CPPmove e -> e | e -> e in
+    (* So is a raw pointer taken from one -- [crane_raw(a2)] for a method's
+       receiver -- and the field must then be saved as that pointer: a copy
+       in the frame dies with the handler that pushed the pointer to it. *)
+    let expr =
+      match expr with
+      | CPPfun_call (_, CPPrt Crane_rt.Raw, {rev = [e]}) -> (match e with CPPmove e -> e | e -> e)
+      | e -> e
+    in
     match expr with
     | CPPaccess (Adot, CPPvar f, field_id) ->
       Id.equal f id_f
@@ -1882,8 +1890,19 @@ let adjust_frame_push_args ?(binding_env = []) ?(frame_sptr = []) frame_pointer_
            | _ -> CPPunop (Uaddr, arg))
         | _ -> arg
     in
+    (* [crane_raw(x)] of a local read through a pointer the frame saved --
+       [const T &x = *_f.field] -- is that pointer. *)
+    let saved_pointer arg =
+      match arg with
+      | CPPfun_call (_, CPPrt Crane_rt.Raw, {rev = [CPPvar x]}) -> (
+        match List.assoc_opt x binding_env with
+        | Some (CPPderef (CPPaccess (Adot, CPPvar f, _) as field)) when Id.equal f id_f -> field
+        | _ -> arg )
+      | _ -> arg
+    in
     let rec on_stmt = function
       | Sexpr (CPPfun_call (_, callee, {rev = [CPPstruct_id (name, targs, args)]})) -> (
+        let args = List.map saved_pointer args in
         match lookup (Id.to_string name) with
         | Some flags when List.length args = List.length flags ->
           let uptr_flags = match lookup_uptr (Id.to_string name) with
@@ -2618,9 +2637,15 @@ let transform_nontail ?(fn_name : string option) ?adopted ?(outer_env = [])
   let frames =
     List.sort (fun a b -> String.compare a.cf_name b.cf_name) !frames_ref
   in
-  (* Compute pointer-safe flags for Call frames *)
+  (* Compute pointer-safe flags for Call frames.  A parameter that is a raw
+     pointer already -- a method's receiver, [_self] -- takes a pointer at
+     every entry, so what a frame saves to compute it is saved as the
+     pointer it was taken from too. *)
   let frame_ps_map =
-    compute_frame_pointer_safe pointer_safe_varying frames
+    let is_pointer_param (_, ty) = match ty with Tptr _ | Tconst (Tptr _) -> true | _ -> false in
+    compute_frame_pointer_safe
+      (List.map2 ( || ) pointer_safe_varying (filter_by_mask varying (List.map is_pointer_param params)))
+      frames
   in
   (* One emission per entry point, in {!entries} order. *)
   let emissions =

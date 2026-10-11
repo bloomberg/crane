@@ -2236,6 +2236,10 @@ let should_loopify ?default r =
 
 let loopifies_methods_of r = should_loopify ~default:(not (is_coinductive r)) r
 
+(* Whether the method made from function [r] is loopified, when its
+   inductive's methods are: unless [r]'s own setting says otherwise. *)
+let loopifies_method r = should_loopify ~default:true r
+
 let add_loopify_entries b l =
   let f b = if b then Refset'.add else Refset'.remove in
   let y, n = !loopify_table in

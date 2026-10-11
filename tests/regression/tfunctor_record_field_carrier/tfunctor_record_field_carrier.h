@@ -328,7 +328,7 @@ public:
     /// CraneCont_E_node: saves [a1], resumes after recursive call, then
     /// processes rest.
     struct CraneCont_E_node {
-      std::shared_ptr<Exp<t>> a1;
+      const Exp<t> *a1;
     };
 
     /// CraneCont_E_node_1: saves [_tmp2], resumes after recursive call, then
@@ -355,14 +355,14 @@ public:
           _result = Exp<T1>::e_leaf(f(a0));
         } else {
           const auto &[a0, a1] = std::get<typename Exp<t>::E_node>(_sv.v());
-          _stack.emplace_back(CraneCont_E_node{a1});
+          _stack.emplace_back(CraneCont_E_node{crane_raw(a1)});
           _stack.emplace_back(CraneEnter{crane_raw(a0)});
         }
       } else if (std::holds_alternative<CraneCont_E_node>(_frame)) {
         auto _f = std::move(std::get<CraneCont_E_node>(_frame));
-        std::shared_ptr<Exp<t>> a1 = std::move(_f.a1);
+        const Exp<t> &a1 = *_f.a1;
         _stack.emplace_back(CraneCont_E_node_1{std::move(_result)});
-        _stack.emplace_back(CraneEnter{crane_raw(a1)});
+        _stack.emplace_back(CraneEnter{_f.a1});
       } else {
         auto _f = std::move(std::get<CraneCont_E_node_1>(_frame));
         _result = Exp<T1>::e_node(std::move(_f._tmp2), std::move(_result));

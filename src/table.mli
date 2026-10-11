@@ -829,6 +829,11 @@ val should_loopify : ?default:bool -> GlobRef.t -> bool
     no name to hang [Crane Loopify] on, so they are by default -- except on a
     coinductive, whose recursion sits under a lazy thunk and never builds a
     deep C++ stack. *)
+val loopifies_method : GlobRef.t -> bool
+(** Whether the method made from a function is loopified where its
+    inductive's methods are: its own [Crane Loopify] / [Crane NoLoopify]
+    setting, and yes by default. *)
+
 val loopifies_methods_of : GlobRef.t -> bool
 
 (** Declaration currently being translated; consulted by {!reuse_loopify_ok}. *)
