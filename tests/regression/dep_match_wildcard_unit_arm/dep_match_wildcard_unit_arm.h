@@ -6,6 +6,7 @@
 #include <atomic>
 #include <cstdint>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -234,13 +235,15 @@ struct DepMatchWildcardUnitArm {
           const auto &[a0] = std::get<typename exp::ELit>(_sv.v());
           return a0;
         } else if (std::holds_alternative<typename exp::EB>(_sv.v())) {
-          return std::monostate{};
+          throw std::logic_error(
+              "unreachable: impossible dependent match branch");
         } else {
           const auto &[t0, a1] = std::get<typename exp::EIf>(_sv.v());
           if (std::holds_alternative<typename ty::TNat>(t0.v())) {
             _loop_self = crane_raw(a1);
           } else {
-            return std::monostate{};
+            throw std::logic_error(
+                "unreachable: impossible dependent match branch");
           }
         }
       }

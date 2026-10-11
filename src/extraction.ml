@@ -809,6 +809,20 @@ and extract_type_scheme env sg db c p =
       let eta_args = List.rev_map EConstr.mkRel (List.interval 1 p) in
       extract_type env sg db 0 (EConstr.Vars.lift p c) eta_args
 
+(** Extracts [c], the argument a type variable is instantiated at, when that
+    variable stands for a family over values: [P : nat -> Type], whose every
+    application [P n] {!extract_type} reads as the variable itself.  The ML type
+    the variable is instantiated at is then the family's body, its value
+    binders erased as any index is -- [fun _ => bool] instantiates it at
+    [bool], [fun n => vec A n] at [vec A].  A binder ranging over types is a
+    type constructor, not a family, and stays the plain {!extract_type}
+    question. *)
+and extract_family_type env sg db c =
+  match EConstr.kind sg (whd_betaiotazeta env sg c) with
+  | Lambda (n, t, d) when snd (flag_of_type env sg t) == Default ->
+    extract_family_type (push_rel_assum (n, t) env) sg (0 :: db) d
+  | _ -> extract_type env sg db 0 c []
+
 (* First, a version with cache *)
 
 (** {1 Extraction of an inductive type} *)
@@ -1677,7 +1691,7 @@ and make_tyargs env sg mle args typs ~orig_typs =
 
          The fallback preserves positional consistency: we always emit exactly
          one ML type for each type argument position, even if it's Tdummy. *)
-      ( try extract_type env sg db 0 a [] :: f (la, lt, lo)
+      ( try extract_family_type env sg db a :: f (la, lt, lo)
         with _ ->
           let fallback =
             match EConstr.kind sg (whd_betaiotazeta env sg a) with
@@ -1899,7 +1913,7 @@ and extract_cst_app env sg mle mlt kn args =
       in
       if List.length tyargs = Array.length tvar_metas then
         List.iteri
-          (fun i t -> if informative t then try_mgu tvar_metas.(i) t)
+          (fun i t -> if informative t then try_mgu tvar_metas.(i) (expand env t))
           tyargs
   in
   let mla = make_mlargs env sg mle s args metas in

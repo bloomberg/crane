@@ -164,7 +164,7 @@ struct Pos {
 };
 
 struct SelfPartialAppInLet {
-  static inline const Nat run = Pos::peano_rect(
+  static inline const Nat run = Pos::template peano_rect<Nat>(
       Nat::o(), [](Positive, const Nat &n) { return Nat::s(n); },
       Positive::xi(Positive::xo(Positive::xh())));
 };

@@ -12,7 +12,7 @@
 bool wrap_list(const List<uint64_t> &xs) { return xs.length() == xs.length(); }
 
 domty run(const SigT<uint64_t, crane::fn<crane::obj(std::monostate)>> &e) {
-  return crane_any_cast<domty>(e.projT2()(std::monostate{}));
+  return e.projT2()(std::monostate{});
 }
 
 bool check(std::monostate) {

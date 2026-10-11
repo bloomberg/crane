@@ -219,7 +219,7 @@ struct SigtListHeterogeneousBox {
       SigT<crane::obj, crane::obj>::existt(crane::obj(), Nat::s(Nat::o())),
       List<anyv>::cons(SigT<crane::obj, crane::obj>::existt(crane::obj(), true),
                        List<anyv>::nil()));
-  static Nat count(const List<SigT<crane::obj, crane::obj>> &l);
+  static Nat count(const List<anyv> &x0_);
   static inline const Nat run = count(items);
 };
 

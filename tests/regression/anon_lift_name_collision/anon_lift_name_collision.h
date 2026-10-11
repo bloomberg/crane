@@ -125,7 +125,7 @@ struct AnonLiftNameCollision {
   }
 
   static inline const uint64_t run = (Helper::count + []() {
-    return run_crane_F<uint64_t>(
+    return run_crane_F(
         List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil()));
   }());
 };

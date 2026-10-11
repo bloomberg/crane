@@ -1,7 +1,6 @@
 #ifndef INCLUDED_TYPE_FAMILY_CONSTANT_MOTIVE
 #define INCLUDED_TYPE_FAMILY_CONSTANT_MOTIVE
 
-#include "obj.h"
 #include <algorithm>
 #include <cstdint>
 #include <type_traits>

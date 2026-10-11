@@ -172,7 +172,8 @@ struct SigtPairFnPayload {
   score(const SigT<crane::obj, std::pair<crane::obj, crane::obj>> &it);
 
   static inline const uint64_t go = items.template fold_left<uint64_t>(
-      [](uint64_t acc, item it) { return (acc + score(it)); }, UINT64_C(0));
+      [](uint64_t acc, const auto &it) { return (acc + score(it)); },
+      UINT64_C(0));
 };
 
 #endif // INCLUDED_SIGT_PAIR_FN_PAYLOAD

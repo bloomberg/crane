@@ -68,11 +68,11 @@ PendantSumtreeRoundtripCase::decode_multi(uint64_t n,
   return std::move(decoded)
       .template fold_right<
           std::optional<List<T0<PendantSumtreeRoundtripCase::digit>>>>(
-          [](const std::optional<T0<PendantSumtreeRoundtripCase::digit>> &ov,
+          [](const std::optional<T0<T>> &ov,
              const std::optional<List<T0<T>>> &acc)
               -> std::optional<List<T0<PendantSumtreeRoundtripCase::digit>>> {
             if (ov.has_value()) {
-              const T0<PendantSumtreeRoundtripCase::digit> &v = *ov;
+              const T0<T> &v = *ov;
               if (acc.has_value()) {
                 const List<T0<T>> &vs = *acc;
                 return std::make_optional<List<T0<T>>>(

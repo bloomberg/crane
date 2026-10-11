@@ -2594,7 +2594,7 @@ let hkt_carrier_type_args env tvars ?result id tys =
     Explicit arguments are positional, so only a trailing deducible run can be
     dropped.
 
-    Both lift paths ask this, and the only difference between them is where
+    Every lift path asks this, and the only difference between them is where
     the type and the parameters come from. *)
 let lifted_call_type_args
     ~class_args ~env ~outer_tvars ~head ~all_tvar_names ~binder_ty ~param_ml_tys =
@@ -3026,7 +3026,7 @@ let rec coerce ?term ?from ~into expr =
     only be a position that is never reached.  What it returns is immaterial,
     and the only thing writable at an impossible type is an abort.
 
-    The mirror is {!Gen_decls.dead_unit_returns_to_abort}, which catches the
+    The mirror is {!Gen_functions.dead_unit_returns_to_abort}, which catches the
     same branch where extraction recorded no coercion at all and a bare [tt]
     reaches a [return]; both throw {!Minicpp.dead_branch_message}. *)
 let absurd_coercion from into =

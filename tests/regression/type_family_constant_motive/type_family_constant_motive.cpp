@@ -20,7 +20,7 @@ Comparison Nat::compare(uint64_t n, uint64_t m) {
 }
 
 bool Nat::Private_Dec::max_dec(uint64_t n, uint64_t m) {
-  return max_case(
+  return max_case<bool>(
       n, m,
       [](uint64_t, uint64_t, bool h0) -> bool {
         if (h0) {
@@ -29,7 +29,7 @@ bool Nat::Private_Dec::max_dec(uint64_t n, uint64_t m) {
           return false;
         }
       },
-      crane::obj(true), crane::obj(false));
+      true, false);
 }
 
 bool Nat::max_dec(uint64_t x0_, uint64_t x1_) {
@@ -37,9 +37,8 @@ bool Nat::max_dec(uint64_t x0_, uint64_t x1_) {
 }
 
 bool TypeFamilyConstantMotive::larger_is_first(uint64_t n, uint64_t m) {
-  return pick(
-      n, m, [](uint64_t, uint64_t, bool b) { return b; }, crane::obj(true),
-      crane::obj(false));
+  return pick<bool>(
+      n, m, [](uint64_t, uint64_t, bool b) { return b; }, true, false);
 }
 
 CompareSpecT Datatypes::CompareSpec2Type(Comparison c) {

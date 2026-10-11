@@ -8765,7 +8765,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     (* Special case for let-fix: the let binding name is the fix function name *)
     (* Resolve unresolved metas in fix function types to Tvars using mgu. *)
     let next_tvar = ref 1 in
-    resolve_fix_types ~app_result:ml_app_result_type ~next_tvar ids funs;
+    let ids, funs = resolve_fix_types ~app_result:ml_app_result_type ~next_tvar ids funs in
     (* Collect all Tvar indices from the fixpoint types *)
     let fix_tvar_indices =
       Array.fold_left (fun acc (_, ty) -> collect_tvars acc ty) [] ids
@@ -9822,7 +9822,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
        Traverse types and assign Tvar 1, 2, ... to each unresolved meta. *)
     let next_tvar = ref 1 in
     let resolve_metas = resolve_type_metas ~next_tvar in
-    resolve_fix_types ~app_result:ml_app_result_type ~next_tvar ids funs;
+    let ids, funs = resolve_fix_types ~app_result:ml_app_result_type ~next_tvar ids funs in
     Array.iter (resolve_metas_in_ast resolve_metas) funs;
     List.iter (resolve_metas_in_ast resolve_metas) args;
     (* Collect Tvars from bodies too *)
@@ -9908,57 +9908,13 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           in
           add_lifted_decl lifted_decl )
         funs_compiled;
-      (* Generate args in outer scope and call the lifted function. Build
-         explicit type args: outer tvars stay as Tvar references, extra tvars
-         are resolved to concrete types from the enclosing context. Extra tvars
-         that appear as the fixpoint's return type are resolved to the enclosing
-         function's C++ return type (current_cpp_return_type). *)
       let call_type_args =
-        class_args
-        @
-        let extra_tvar_names =
-          List.filter
-            (fun id -> not (List.exists (Id.equal id) outer_tvars))
-            all_tvar_names
-        in
-        if extra_tvar_names = [] then
-          (* All tvars are outer — C++ can deduce them *)
-          []
-        else
-          (* Get the fixpoint's template return type to identify which extra
-             tvar it uses *)
-          let fix_ty = snd ids.(x) in
-          let tmpl_cpp_ty =
-            convert_ml_type_to_cpp_type
-              env
-              extended_tvar_names
-              fix_ty
-          in
-          let tmpl_cod =
-            match tmpl_cpp_ty with
-            | Tfun (_, cod) -> cod
-            | t -> t
-          in
-          let outer_args = List.map (fun id -> named_tvar id) outer_tvars in
-          let tvar_map =
-            match (!tctx).current_cpp_return_type with
-            | Some conc_ret -> extract_tvar_map tmpl_cod conc_ret
-            | None -> []
-          in
-          let extra_args =
-            List.map
-              (fun tvar_name ->
-                match List.find_opt
-                        (fun (id, _) -> Id.equal id tvar_name)
-                        tvar_map with
-                | Some (_, ty) -> ty
-                | None ->
-                  match (!tctx).current_cpp_return_type with
-                  | Some ret_ty -> ret_ty
-                  | None -> named_tvar tvar_name )
-              extra_tvar_names
-          in
-          outer_args @ extra_args
+        lifted_call_type_args ~class_args ~env ~outer_tvars ~head:None
+          ~all_tvar_names ~binder_ty:(snd ids.(x))
+          ~param_ml_tys:
+            ( match List.nth_opt funs_compiled x with
+            | Some (_, params, _) -> List.map snd params
+            | None -> [] )
       in
       let cpp_args = List.rev_map (gen_expr env) args in
       [k (CPPfun_call (call_opaque, mk_cppglob lifted_ref call_type_args, of_reversed cpp_args))] )
@@ -10048,7 +10004,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
        called in place), it will always escape.  Use the Y-combinator pattern:
        the generated wrapper lambda [fix_name] is already a plain callable. *)
     let next_tvar = ref 1 in
-    resolve_fix_types ~app_result:ml_app_result_type ~next_tvar ids funs;
+    let ids, funs = resolve_fix_types ~app_result:ml_app_result_type ~next_tvar ids funs in
     let all_fix_ids_list = Array.to_list ids in
     let funs_compiled =
       Array.to_list

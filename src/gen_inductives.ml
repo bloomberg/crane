@@ -654,7 +654,13 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
      extended_vars covers positions 1..num_ind_vars (inductive vars) and
      num_ind_vars+1, num_ind_vars+2, etc. (extra vars) so tvar_subst_stmt can
      name them all correctly. *)
-  let stmts = List.map (tvar_subst_stmt extended_vars) stmts in
+  (* A [tt] the method returns is dead where its result is not [unit] -- with
+     the codomain read as a top-level function's is, a monad's unit included. *)
+  let stmts =
+    dead_unit_returns_to_abort
+      (apply_unit_void (ml_type_is_void_call ty) ret_cpp)
+      (List.map (tvar_subst_stmt extended_vars) stmts)
+  in
 
   let no_pure = is_monadic_ml_type ret_ty in
   (* Filter out phantom extra template params: if an extra tvar name doesn't

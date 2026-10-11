@@ -107,7 +107,9 @@ SigT<Nat, Levenshtein::chain> Levenshtein::levenshtein_chain(const String &s,
               SigT<Nat, Levenshtein::chain>::existt(Nat::s(x2), std::move(r1_)),
               SigT<Nat, Levenshtein::chain>::existt(Nat::s(x3), std::move(r2_)),
               SigT<Nat, Levenshtein::chain>::existt(Nat::s(x4), std::move(r3_)),
-              [](const auto &_x) { return _x.projT1(); });
+              [](const SigT<Nat, Levenshtein::chain> &_x) {
+                return _x.projT1();
+              });
           break;
         }
         default:

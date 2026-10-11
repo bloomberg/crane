@@ -1940,15 +1940,17 @@ let recover_fix_codomain ~app_result ((id, ty) : Id.t * ml_type)
 (** Settle the types of a fixpoint's functions: recover each codomain from its
     body where erasure lost it, then mint [Tvar]s for the metas that remain.
     The order is the point -- a variable already standing for the result type
-    is no longer asking what the body builds. *)
+    is no longer asking what the body builds.
+
+    The settled signatures and bodies come back in new arrays.  The fixpoint's
+    own are shared by every declaration its definition was inlined into --
+    [Fix_F] into each function defined by well-founded recursion -- and what
+    one of them returns is not what the next one does. *)
 let resolve_fix_types ~app_result ~next_tvar ids funs =
-  Array.iteri
-    (fun i idty ->
-      let idty, body = recover_fix_codomain ~app_result idty funs.(i) in
-      ids.(i) <- idty;
-      funs.(i) <- body )
-    ids;
-  Array.iter (fun (_, ty) -> resolve_type_metas ~next_tvar ty) ids
+  let settled = Array.map2 (recover_fix_codomain ~app_result) ids funs in
+  let ids = Array.map fst settled and funs = Array.map snd settled in
+  Array.iter (fun (_, ty) -> resolve_type_metas ~next_tvar ty) ids;
+  (ids, funs)
 
 (** Resolve unresolved metas in an ML AST by walking its sub-types.
     resolve_metas should be a function that resolves metas in a single ml_type.

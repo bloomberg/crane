@@ -11,8 +11,5 @@ Nat SigtErasedStructuredBinding::score(
 Nat SigtErasedStructuredBinding::total(
     const List<SigT<crane::obj, std::pair<crane::obj, crane::obj>>> &l) {
   return l.template fold_left<Nat>(
-      [](const Nat &a, SigtErasedStructuredBinding::item i) {
-        return a.add(score(i));
-      },
-      Nat::o());
+      [](const Nat &a, const auto &i) { return a.add(score(i)); }, Nat::o());
 }

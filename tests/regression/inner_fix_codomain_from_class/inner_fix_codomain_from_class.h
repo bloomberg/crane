@@ -323,10 +323,10 @@ EOU<dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>> collect(
                 List<dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>,
                 List<dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>>(
                 _self_go(_self_go, m, a1_value),
-                [=](const List<
-                    dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>
-                        &rest) -> EOU<List<dv<typename _tcI0::PTR::ptr,
-                                              typename _tcI0::IPTR::iptr>>> {
+                [=](const List<std::pair<typename _tcI0::PTR::ptr,
+                                         typename _tcI0::IPTR::iptr>> &rest)
+                    -> EOU<List<dv<typename _tcI0::PTR::ptr,
+                                   typename _tcI0::IPTR::iptr>>> {
                   if (pad.has_value()) {
                     const Nat &_x = *pad;
                     return EOU_monad::template mret<List<dv<

@@ -217,39 +217,6 @@
   (deps interp_state_dict.t.exe)
   (action (run ./interp_state_dict.t.exe))))
 
-(subdir dep_match_wildcard_unit_arm
- (rule
-  (targets dep_match_wildcard_unit_arm.t.exe)
-  (deps DepMatchWildcardUnitArm.vo dep_match_wildcard_unit_arm.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} dep_match_wildcard_unit_arm.t.exe dep_match_wildcard_unit_arm.cpp dep_match_wildcard_unit_arm.t.cpp)))
- (rule
-  (alias runtest)
-  (deps dep_match_wildcard_unit_arm.t.exe)
-  (action (run ./dep_match_wildcard_unit_arm.t.exe))))
-
-(subdir wf_fix_sigma_domain
- (rule
-  (targets wf_fix_sigma_domain.t.exe)
-  (deps WfFixSigmaDomain.vo wf_fix_sigma_domain.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} wf_fix_sigma_domain.t.exe wf_fix_sigma_domain.cpp wf_fix_sigma_domain.t.cpp)))
- (rule
-  (alias runtest)
-  (deps wf_fix_sigma_domain.t.exe)
-  (action (run ./wf_fix_sigma_domain.t.exe))))
-
-(subdir type_family_constant_motive
- (rule
-  (targets type_family_constant_motive.t.exe)
-  (deps TypeFamilyConstantMotive.vo type_family_constant_motive.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} type_family_constant_motive.t.exe type_family_constant_motive.cpp type_family_constant_motive.t.cpp)))
- (rule
-  (alias runtest)
-  (deps type_family_constant_motive.t.exe)
-  (action (run ./type_family_constant_motive.t.exe))))
-
 (subdir arrow_behind_type_function
  (rule
   (targets arrow_behind_type_function.t.exe)
