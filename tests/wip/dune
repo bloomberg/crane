@@ -232,3 +232,236 @@
   (alias runtest)
   (deps interp_state_dict.t.exe)
   (action (run ./interp_state_dict.t.exe))))
+
+(subdir macro_named_constructor
+ (rule
+  (targets macro_named_constructor.t.exe)
+  (deps MacroNamedConstructor.vo macro_named_constructor.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} macro_named_constructor.t.exe macro_named_constructor.cpp macro_named_constructor.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps macro_named_constructor.t.exe)
+  (action (run ./macro_named_constructor.t.exe))))
+
+(subdir dep_match_wildcard_unit_arm
+ (rule
+  (targets dep_match_wildcard_unit_arm.t.exe)
+  (deps DepMatchWildcardUnitArm.vo dep_match_wildcard_unit_arm.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} dep_match_wildcard_unit_arm.t.exe dep_match_wildcard_unit_arm.cpp dep_match_wildcard_unit_arm.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps dep_match_wildcard_unit_arm.t.exe)
+  (action (run ./dep_match_wildcard_unit_arm.t.exe))))
+
+(subdir factory_hides_field_type
+ (rule
+  (targets factory_hides_field_type.t.exe)
+  (deps FactoryHidesFieldType.vo factory_hides_field_type.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} factory_hides_field_type.t.exe factory_hides_field_type.cpp factory_hides_field_type.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps factory_hides_field_type.t.exe)
+  (action (run ./factory_hides_field_type.t.exe))))
+
+(subdir wf_fix_sigma_domain
+ (rule
+  (targets wf_fix_sigma_domain.t.exe)
+  (deps WfFixSigmaDomain.vo wf_fix_sigma_domain.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} wf_fix_sigma_domain.t.exe wf_fix_sigma_domain.cpp wf_fix_sigma_domain.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps wf_fix_sigma_domain.t.exe)
+  (action (run ./wf_fix_sigma_domain.t.exe))))
+
+(subdir type_family_constant_motive
+ (rule
+  (targets type_family_constant_motive.t.exe)
+  (deps TypeFamilyConstantMotive.vo type_family_constant_motive.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} type_family_constant_motive.t.exe type_family_constant_motive.cpp type_family_constant_motive.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps type_family_constant_motive.t.exe)
+  (action (run ./type_family_constant_motive.t.exe))))
+
+(subdir loopify_owned_child_pointer
+ (rule
+  (targets loopify_owned_child_pointer.t.exe)
+  (deps LoopifyOwnedChildPointer.vo loopify_owned_child_pointer.t.cpp (source_tree .))
+  (action
+   (setenv CRANE_CPP_SANITIZE address
+    (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_owned_child_pointer.t.exe loopify_owned_child_pointer.cpp loopify_owned_child_pointer.t.cpp))))
+ (rule
+  (alias runtest)
+  (deps loopify_owned_child_pointer.t.exe)
+  (action (run ./loopify_owned_child_pointer.t.exe))))
+
+(subdir arrow_behind_type_function
+ (rule
+  (targets arrow_behind_type_function.t.exe)
+  (deps ArrowBehindTypeFunction.vo arrow_behind_type_function.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} arrow_behind_type_function.t.exe arrow_behind_type_function.cpp arrow_behind_type_function.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps arrow_behind_type_function.t.exe)
+  (action (run ./arrow_behind_type_function.t.exe))))
+
+(subdir option_field_of_call_scrutinee
+ (rule
+  (targets option_field_of_call_scrutinee.t.exe)
+  (deps OptionFieldOfCallScrutinee.vo option_field_of_call_scrutinee.t.cpp (source_tree .))
+  (action
+   (setenv CRANE_CPP_SANITIZE address
+    (run %{project_root}/scripts/compile-std.sh %{project_root} option_field_of_call_scrutinee.t.exe option_field_of_call_scrutinee.cpp option_field_of_call_scrutinee.t.cpp))))
+ (rule
+  (alias runtest)
+  (deps option_field_of_call_scrutinee.t.exe)
+  (action (run ./option_field_of_call_scrutinee.t.exe))))
+
+(subdir instance_tvar_substitution_order
+ (rule
+  (targets instance_tvar_substitution_order.t.exe)
+  (deps InstanceTvarSubstitutionOrder.vo instance_tvar_substitution_order.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} instance_tvar_substitution_order.t.exe instance_tvar_substitution_order.cpp instance_tvar_substitution_order.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps instance_tvar_substitution_order.t.exe)
+  (action (run ./instance_tvar_substitution_order.t.exe))))
+
+(subdir instance_constraint_only_binder
+ (rule
+  (targets instance_constraint_only_binder.t.exe)
+  (deps InstanceConstraintOnlyBinder.vo instance_constraint_only_binder.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} instance_constraint_only_binder.t.exe instance_constraint_only_binder.cpp instance_constraint_only_binder.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps instance_constraint_only_binder.t.exe)
+  (action (run ./instance_constraint_only_binder.t.exe))))
+
+(subdir class_method_unapplied_arg
+ (rule
+  (targets class_method_unapplied_arg.t.exe)
+  (deps ClassMethodUnappliedArg.vo class_method_unapplied_arg.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} class_method_unapplied_arg.t.exe class_method_unapplied_arg.cpp class_method_unapplied_arg.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps class_method_unapplied_arg.t.exe)
+  (action (run ./class_method_unapplied_arg.t.exe))))
+
+(subdir existential_record_dict_field
+ (rule
+  (targets existential_record_dict_field.t.exe)
+  (deps ExistentialRecordDictField.vo existential_record_dict_field.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} existential_record_dict_field.t.exe existential_record_dict_field.cpp existential_record_dict_field.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps existential_record_dict_field.t.exe)
+  (action (run ./existential_record_dict_field.t.exe))))
+
+(subdir den_value_not_deep_erased
+ (rule
+  (targets den_value_not_deep_erased.t.exe)
+  (deps DenValueNotDeepErased.vo den_value_not_deep_erased.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} den_value_not_deep_erased.t.exe den_value_not_deep_erased.cpp den_value_not_deep_erased.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps den_value_not_deep_erased.t.exe)
+  (action (run ./den_value_not_deep_erased.t.exe))))
+
+(subdir den_fn_result_not_cast
+ (rule
+  (targets den_fn_result_not_cast.t.exe)
+  (deps DenFnResultNotCast.vo den_fn_result_not_cast.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} den_fn_result_not_cast.t.exe den_fn_result_not_cast.cpp den_fn_result_not_cast.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps den_fn_result_not_cast.t.exe)
+  (action (run ./den_fn_result_not_cast.t.exe))))
+
+(subdir den_fn_ctor_arg_not_wrapped
+ (rule
+  (targets den_fn_ctor_arg_not_wrapped.t.exe)
+  (deps DenFnCtorArgNotWrapped.vo den_fn_ctor_arg_not_wrapped.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} den_fn_ctor_arg_not_wrapped.t.exe den_fn_ctor_arg_not_wrapped.cpp den_fn_ctor_arg_not_wrapped.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps den_fn_ctor_arg_not_wrapped.t.exe)
+  (action (run ./den_fn_ctor_arg_not_wrapped.t.exe))))
+
+(subdir type_field_record_in_expression
+ (rule
+  (targets type_field_record_in_expression.t.exe)
+  (deps TypeFieldRecordInExpression.vo type_field_record_in_expression.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} type_field_record_in_expression.t.exe type_field_record_in_expression.cpp type_field_record_in_expression.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps type_field_record_in_expression.t.exe)
+  (action (run ./type_field_record_in_expression.t.exe))))
+
+(subdir loopify_method_varying_fn_arg
+ (rule
+  (targets loopify_method_varying_fn_arg.t.exe)
+  (deps LoopifyMethodVaryingFnArg.vo loopify_method_varying_fn_arg.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_method_varying_fn_arg.t.exe loopify_method_varying_fn_arg.cpp loopify_method_varying_fn_arg.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_method_varying_fn_arg.t.exe)
+  (action (run ./loopify_method_varying_fn_arg.t.exe))))
+
+(subdir user_name_hides_crane_runtime
+ (rule
+  (targets user_name_hides_crane_runtime.t.exe)
+  (deps UserNameHidesCraneRuntime.vo user_name_hides_crane_runtime.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} user_name_hides_crane_runtime.t.exe user_name_hides_crane_runtime.cpp user_name_hides_crane_runtime.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps user_name_hides_crane_runtime.t.exe)
+  (action (run ./user_name_hides_crane_runtime.t.exe))))
+
+(subdir outer_member_shadowed_by_nested
+ (rule
+  (targets outer_member_shadowed_by_nested.t.exe)
+  (deps OuterMemberShadowedByNested.vo outer_member_shadowed_by_nested.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} outer_member_shadowed_by_nested.t.exe outer_member_shadowed_by_nested.cpp outer_member_shadowed_by_nested.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps outer_member_shadowed_by_nested.t.exe)
+  (action (run ./outer_member_shadowed_by_nested.t.exe))))
+
+(subdir module_type_enum_concept
+ (rule
+  (targets module_type_enum_concept.t.exe)
+  (deps ModuleTypeEnumConcept.vo module_type_enum_concept.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} module_type_enum_concept.t.exe module_type_enum_concept.cpp module_type_enum_concept.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps module_type_enum_concept.t.exe)
+  (action (run ./module_type_enum_concept.t.exe))))
+
+(subdir module_type_record_concept
+ (rule
+  (targets module_type_record_concept.t.exe)
+  (deps ModuleTypeRecordConcept.vo module_type_record_concept.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} module_type_record_concept.t.exe module_type_record_concept.cpp module_type_record_concept.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps module_type_record_concept.t.exe)
+  (action (run ./module_type_record_concept.t.exe))))
