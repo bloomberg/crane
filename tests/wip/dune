@@ -283,17 +283,6 @@
   (deps arrow_behind_type_function.t.exe)
   (action (run ./arrow_behind_type_function.t.exe))))
 
-(subdir class_method_unapplied_arg
- (rule
-  (targets class_method_unapplied_arg.t.exe)
-  (deps ClassMethodUnappliedArg.vo class_method_unapplied_arg.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} class_method_unapplied_arg.t.exe class_method_unapplied_arg.cpp class_method_unapplied_arg.t.cpp)))
- (rule
-  (alias runtest)
-  (deps class_method_unapplied_arg.t.exe)
-  (action (run ./class_method_unapplied_arg.t.exe))))
-
 (subdir existential_record_dict_field
  (rule
   (targets existential_record_dict_field.t.exe)

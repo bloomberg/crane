@@ -4543,7 +4543,22 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           if is_value_field then
             mk_call access []
           else
-            access
+            (* A method named rather than called: curried to the slot as
+               a global function would be. *)
+            let fld_ty =
+              (* At the instance's class type where that is closed: the
+                 match's own annotation may have erased the arguments. *)
+              let class_ty =
+                match instance_class_ty env t with
+                | ct when Mlutil.type_maxvar ct = 0
+                          && not (ml_type_contains_erased ct) -> ct
+                | _ -> typ
+              in
+              match class_ty with
+              | Tglob (_, args, _) -> Mlutil.type_subst_list args fld_ty
+              | _ -> fld_ty
+            in
+            curry_value_to_expected env ?expected_ty (Some fld_ty) access
         else
           access
       | _ ->

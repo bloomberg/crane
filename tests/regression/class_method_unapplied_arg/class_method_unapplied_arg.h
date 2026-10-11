@@ -152,11 +152,14 @@ struct ClassMethodUnappliedArg {
   };
 
   static_assert(Op<opN, uint64_t>);
-  static inline const List<crane::fn<uint64_t(uint64_t)>> adders =
-      List<uint64_t>::cons(
-          UINT64_C(1), List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil()))
-          .template map<crane::fn<uint64_t(uint64_t)>>(opN::op);
-
+  static inline const List<crane::fn<uint64_t(uint64_t)>> adders = []() {
+    return List<uint64_t>::cons(
+               UINT64_C(1),
+               List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil()))
+        .template map<crane::fn<uint64_t(uint64_t)>>([](uint64_t _ec0) {
+          return [=](uint64_t _ec1) { return opN::op(_ec0, _ec1); };
+        });
+  }();
   static inline const uint64_t result = adders.template fold_left<uint64_t>(
       [](uint64_t a, const crane::fn<uint64_t(uint64_t)> &f) { return f(a); },
       UINT64_C(0));

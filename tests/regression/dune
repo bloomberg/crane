@@ -11969,3 +11969,14 @@
   (deps instance_constraint_only_binder.t.exe)
   (action (run ./instance_constraint_only_binder.t.exe))))
 
+(subdir class_method_unapplied_arg
+ (rule
+  (targets class_method_unapplied_arg.t.exe)
+  (deps ClassMethodUnappliedArg.vo class_method_unapplied_arg.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} class_method_unapplied_arg.t.exe class_method_unapplied_arg.cpp class_method_unapplied_arg.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps class_method_unapplied_arg.t.exe)
+  (action (run ./class_method_unapplied_arg.t.exe))))
+

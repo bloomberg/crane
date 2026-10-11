@@ -34,25 +34,16 @@ open Translation_types
 
     {v [](std::function<uint64_t(uint64_t)> _ec0, uint64_t _ec1) { return f(_ec0, _ec1); } v}
 
+    A class method projected through its instance ([opN::op]) is a function
+    named the same way, and is curried the same way: {!curry_value_to_expected}
+    takes the callee's ML type rather than its name.
+
     Returns [cglob] unchanged when the declaration is already a value. *)
-let curry_to_expected env ?expected_ty ?(tys = []) x cglob =
+let curry_value_to_expected env ?expected_ty ml_ty cglob =
   let decl_dom =
-    match find_type_opt x with
-    | Some ml_ty -> (
-      (* The eta-parameters are spelled here, in the caller's scope, so the
-         callee's own type variables must not survive into them: this call
-         site's type arguments are what they stand for. *)
-      let ml_ty =
-        match tys with
-        | [] -> ml_ty
-        | _ -> ( try Mlutil.type_subst_list tys ml_ty with _ -> ml_ty )
-      in
-      match
-        cpp_of_ml env ml_ty
-      with
-      | Tfun (dom, _) -> dom
-      | _ -> [] )
-    | None -> []
+    match Option.map (cpp_of_ml env) ml_ty with
+    | Some (Tfun (dom, _)) -> dom
+    | _ -> []
   in
   (* Number of parameters the outer lambda takes; the rest, if any, go into a
      nested one.  Only the arity comes from [exp_dom]; the types come from the
@@ -94,6 +85,21 @@ let curry_to_expected env ?expected_ty ?(tys = []) x cglob =
       else mk_lambda inner None [Sreturn (Some call)] ~capture:Closure
     in
     mk_lambda outer None [Sreturn (Some body)] ~capture:Closure
+
+(** {!curry_value_to_expected} for the global [x], called at [tys]. *)
+let curry_to_expected env ?expected_ty ?(tys = []) x cglob =
+  (* The eta-parameters are spelled here, in the caller's scope, so the
+     callee's own type variables must not survive into them: this call
+     site's type arguments are what they stand for. *)
+  let ml_ty =
+    Option.map
+      (fun ml_ty ->
+        match tys with
+        | [] -> ml_ty
+        | _ -> ( try Mlutil.type_subst_list tys ml_ty with _ -> ml_ty ) )
+      (find_type_opt x)
+  in
+  curry_value_to_expected env ?expected_ty ml_ty cglob
 
 (** [call_type_args ?expected_ty env id plan args] -- the type arguments a
     call to [id] writes, given its generated arguments: the dictionaries'
