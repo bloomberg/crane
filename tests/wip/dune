@@ -316,17 +316,6 @@
   (deps den_fn_ctor_arg_not_wrapped.t.exe)
   (action (run ./den_fn_ctor_arg_not_wrapped.t.exe))))
 
-(subdir type_field_record_in_expression
- (rule
-  (targets type_field_record_in_expression.t.exe)
-  (deps TypeFieldRecordInExpression.vo type_field_record_in_expression.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} type_field_record_in_expression.t.exe type_field_record_in_expression.cpp type_field_record_in_expression.t.cpp)))
- (rule
-  (alias runtest)
-  (deps type_field_record_in_expression.t.exe)
-  (action (run ./type_field_record_in_expression.t.exe))))
-
 (subdir user_name_hides_crane_runtime
  (rule
   (targets user_name_hides_crane_runtime.t.exe)

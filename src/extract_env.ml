@@ -1394,11 +1394,25 @@ let demote_value_typeclasses struc =
     scan_type u;
     scan_computed_class u
   in
+  (* A body says the same thing with the types it annotates: [[natalg;
+     natalg]] is a [list alg] whether or not any declaration's type says so. *)
+  let scan_body body =
+    ignore
+      (Mlutil.ast_map_types
+         (fun t ->
+           scan_type t;
+           t )
+         body)
+  in
   let scan_decl = function
     | Dind (_, ind) -> scan_ind ind
     | Dtype (_, _, u) -> scan_type u
     | (Dterm _ | Dfix _) as d ->
-      List.iter (fun fd -> scan_term_type fd.fd_type) (Mlutil.term_defs d)
+      List.iter
+        (fun fd ->
+          scan_term_type fd.fd_type;
+          scan_body fd.fd_body )
+        (Mlutil.term_defs d)
   in
   let scan_spec = function
     | Sind (_, ind) -> scan_ind ind

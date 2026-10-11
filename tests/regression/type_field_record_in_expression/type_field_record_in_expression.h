@@ -2,10 +2,10 @@
 #define INCLUDED_TYPE_FIELD_RECORD_IN_EXPRESSION
 
 #include "crane_fn.h"
+#include "fn.h"
 #include "obj.h"
 #include "small_vector.h"
 #include <atomic>
-#include <concepts>
 #include <cstdint>
 #include <memory>
 #include <stdexcept>
@@ -131,37 +131,20 @@ public:
   }
 };
 
-template <typename
-I>concept alg = requires {
-    typename I::ty;
-    { I::f(std::declval<typename I::ty>()) } -> std::convertible_to<uint64_t>;
-  } && (requires {
-    { I::unit_() } -> std::convertible_to<typename I::ty>;
-  } || requires {
-    { I::unit_ } -> std::convertible_to<typename I::ty>;
-  });
-
 struct TypeFieldRecordInExpression {
-  using ty = crane::obj;
-
-  struct natalg {
-    using ty = uint64_t;
-
-    constexpr static uint64_t unit_() { return UINT64_C(3); }
-
-    constexpr static uint64_t f(uint64_t x) { return x; }
+  struct alg {
+    crane::obj unit_;
+    crane::fn<uint64_t(crane::obj)> f;
   };
 
-  static_assert(alg<natalg>);
-
-  template <alg _tcI0> constexpr static uint64_t get() {
-    return _tcI0::f(_tcI0::unit_());
-  }
-
+  using ty = crane::obj;
+  static inline const alg natalg = alg{
+      UINT64_C(3), crane_erase_fn<uint64_t>([](const auto &x) { return x; })};
+  static uint64_t get(const alg &a);
   static inline const uint64_t result =
       (List<alg>::cons(natalg, List<alg>::cons(natalg, List<alg>::nil()))
            .length() +
-       get<natalg>());
+       get(natalg));
 };
 
 #endif // INCLUDED_TYPE_FIELD_RECORD_IN_EXPRESSION

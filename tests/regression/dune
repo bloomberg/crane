@@ -11991,3 +11991,14 @@
   (deps existential_record_dict_field.t.exe)
   (action (run ./existential_record_dict_field.t.exe))))
 
+(subdir type_field_record_in_expression
+ (rule
+  (targets type_field_record_in_expression.t.exe)
+  (deps TypeFieldRecordInExpression.vo type_field_record_in_expression.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} type_field_record_in_expression.t.exe type_field_record_in_expression.cpp type_field_record_in_expression.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps type_field_record_in_expression.t.exe)
+  (action (run ./type_field_record_in_expression.t.exe))))
+
