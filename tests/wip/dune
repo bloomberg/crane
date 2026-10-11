@@ -12,6 +12,32 @@
    ITree Equations ExtLib Paco)
  (flags (:standard -output-directory ../../tests/wip)))
 
+(subdir loopify_cont_box_pointer
+ (rule
+  (targets loopify_cont_box_pointer.t.exe)
+  (deps LoopifyContBoxPointer.vo loopify_cont_box_pointer.t.cpp (source_tree .))
+  (action
+   (setenv CRANE_CPP_SANITIZE address
+    (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_cont_box_pointer.t.exe loopify_cont_box_pointer.cpp loopify_cont_box_pointer.t.cpp))))
+ (rule
+  (alias runtest)
+  (deps loopify_cont_box_pointer.t.exe)
+  (action (run ./loopify_cont_box_pointer.t.exe))))
+
+(subdir noloopify_method
+ (rule
+  (targets noloopify_method.t.exe)
+  (deps NoloopifyMethod.vo noloopify_method.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} noloopify_method.t.exe noloopify_method.cpp noloopify_method.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps noloopify_method.t.exe (source_tree .))
+  (action
+   (progn
+    (run ./noloopify_method.t.exe)
+    (system "! grep -q 'Loopified size' noloopify_method.h")))))
+
 (subdir z_abs_min
  (rule
   (targets z_abs_min.t.exe)
