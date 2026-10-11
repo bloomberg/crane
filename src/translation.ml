@@ -81,7 +81,10 @@ let gen_local_fix_ycomb env renamed_ids funs_with_params =
       (fun (id, _) -> Id.of_string (Id.to_string id ^ "_impl"))
       renamed_ids
   in
-  let rewrite_expr, rewrite_stmt = self_call_rewriter renamed_ids self_ids in
+  let rewrite_expr, rewrite_stmt =
+    self_call_rewriter renamed_ids self_ids
+      (List.map (fun (args, _) -> List.map (fun (_, ty) -> cpp_of_ml env ty) args) funs_with_params)
+  in
   (* Generate impl lambdas: each takes all self params (auto &) + original params. *)
   let impl_stmts =
     List.map2
@@ -188,7 +191,10 @@ let gen_local_fix_by_ref env renamed_ids funs_with_params owned_flags_per_fun =
       (fun (id, _) -> Id.of_string (Id.to_string id ^ "_impl"))
       renamed_ids
   in
-  let rewrite_expr, rewrite_stmt = self_call_rewriter renamed_ids self_ids in
+  let rewrite_expr, rewrite_stmt =
+    self_call_rewriter renamed_ids self_ids
+      (List.map (fun (args, _) -> List.map (fun (_, ty) -> cpp_of_ml env ty) args) funs_with_params)
+  in
   let impl_stmts =
     List.map2
       (fun (((_fix_id, fty), impl_id), owned_flags) (args, body) ->
@@ -10046,32 +10052,35 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         decls @ defs
         @ [k (CPPfun_call (call_opaque, CPPvar (fst (List.nth renamed_ids x)), of_reversed args))]
       end
-  | MLfix (x, ids, funs, _) ->
-    (* Standalone fixpoint (not immediately applied) — e.g., appearing as the
-       RHS of a let-binding.  Since the fixpoint value itself is returned (not
-       called in place), it will always escape.  Use the Y-combinator pattern:
-       the generated wrapper lambda [fix_name] is already a plain callable. *)
-    let next_tvar = ref 1 in
-    let ids, funs = resolve_fix_types ~app_result:ml_app_result_type ~next_tvar ids funs in
-    let all_fix_ids_list = Array.to_list ids in
-    let funs_compiled =
-      Array.to_list
-        (Array.mapi
-           (fun i f ->
-             gen_fix env ~all_fix_ids:all_fix_ids_list ~fix_idx:i ids.(i) f )
-           funs )
-    in
-    let renamed_ids =
-      List.map (fun (renamed_id, _, _) -> renamed_id) funs_compiled
-    in
-    let funs_with_params =
-      List.map (fun (_, params, body) -> (params, body)) funs_compiled
-    in
-    let decls, defs, _deref_subst =
-      gen_local_fix_ycomb env renamed_ids funs_with_params
-    in
-    let fix_id = fst (List.nth renamed_ids x) in
-    decls @ defs @ [k (CPPvar fix_id)]
+  | MLfix (x, ids, funs, is_cofix) -> (
+    match thunk_nullary_cofix x ids funs is_cofix with
+    | Some thunked -> gen_stmts ~slot env k thunked
+    | None ->
+      (* Standalone fixpoint (not immediately applied) — e.g., appearing as the
+         RHS of a let-binding.  Since the fixpoint value itself is returned (not
+         called in place), it will always escape.  Use the Y-combinator pattern:
+         the generated wrapper lambda [fix_name] is already a plain callable. *)
+      let next_tvar = ref 1 in
+      let ids, funs = resolve_fix_types ~app_result:ml_app_result_type ~next_tvar ids funs in
+      let all_fix_ids_list = Array.to_list ids in
+      let funs_compiled =
+        Array.to_list
+          (Array.mapi
+             (fun i f ->
+               gen_fix env ~all_fix_ids:all_fix_ids_list ~fix_idx:i ids.(i) f )
+             funs )
+      in
+      let renamed_ids =
+        List.map (fun (renamed_id, _, _) -> renamed_id) funs_compiled
+      in
+      let funs_with_params =
+        List.map (fun (_, params, body) -> (params, body)) funs_compiled
+      in
+      let decls, defs, _deref_subst =
+        gen_local_fix_ycomb env renamed_ids funs_with_params
+      in
+      let fix_id = fst (List.nth renamed_ids x) in
+      decls @ defs @ [k (CPPvar fix_id)] )
   (* | MLapp (MLglob (h, _), a1 :: a2 :: l) when is_hoist h -> gen_stmts env k
      (MLapp (a1, a2::[])) *)
   | MLapp (MLglob (r, bind_tys), a1 :: a2 :: l) when is_bind r ->
@@ -10470,11 +10479,7 @@ and gen_tail_expr ?expected_ty ?(slot = empty_slot) env t =
     fixpoints; [fix_idx] is the index of this fixpoint in the mutual group. *)
 and gen_fix env ?(all_fix_ids = []) ~fix_idx (n, ty) f =
   let ids, f = collect_lams f in
-  let ids, _ =
-    push_vars'
-      (List.map (fun (x, ty) -> (cpp_id_of_id (id_of_mlid x), ty)) ids)
-      env
-  in
+  let ids = List.map (fun (x, ty) -> (cpp_id_of_id (id_of_mlid x), ty)) ids in
   (* Push all mutual fixpoint names (or just (n,ty) for single fixpoints). For
      mutual fixpoints, all_fix_ids contains all fixpoint names in array order.
      For single fixpoints, all_fix_ids is empty and we use [(n,ty)].
@@ -10487,11 +10492,14 @@ and gen_fix env ?(all_fix_ids = []) ~fix_idx (n, ty) f =
   let fix_names_db_order = List.rev fix_names in
   let renamed_fix_ids, env = push_vars' (ids @ fix_names_db_order) env in
   let saved_env_types = (!tctx).env_types in
-  push_binders env (ids @ fix_names_db_order);
+  push_binders env renamed_fix_ids;
   (* Extract the renamed name for THIS fixpoint function. fix_names_db_order
      is reversed from the array order, so fix array index i corresponds to
      position (n_fix_funs - 1 - i) in the reversed list. *)
   let n_lam_params = List.length ids in
+  (* The parameters as the body names them: renamed together with the
+     fixpoints, which may take a parameter's name first. *)
+  let ids = safe_firstn n_lam_params renamed_fix_ids in
   let renamed_n =
     fst (List.nth renamed_fix_ids
            (n_lam_params + (n_fix_funs - 1 - fix_idx))) in

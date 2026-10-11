@@ -540,6 +540,9 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
       let lbody = expose_tail_calls check lbody in
       match classify check lbody with
       | No_recursion -> None
+      (* A local cofixpoint: its calls run when a thunk is forced, after it
+         has returned, as a top-level one's do ({!transform_fundef_exn}). *)
+      | _ when body_contains_lazy_factory lbody -> None
       | Nontail_recursion when tail_only -> None
       | (Tail_recursion | Nontail_recursion) as kind ->
         (* Loop params = all params except the trailing self-param. *)
@@ -892,18 +895,6 @@ let has_lazy_body body =
       {rev = [CPPlambda {cl_params = {rev = []}; cl_ret = Some _; _}]}))))
     when Id.equal lazy_id id_lazy -> true
   | _ -> false
-
-(** Whether the expression tree contains a [lazy_] factory call.
-    Used to detect cofixpoint bodies even when the [lazy_] return is buried
-    inside branches rather than at the top level (where {!has_lazy_body}
-    catches it). *)
-let is_lazy_factory_call = function
-  | CPPfun_call (_, CPPscope (_, lazy_id, []), _) ->
-    Id.equal lazy_id id_lazy
-  | _ -> false
-
-let body_contains_lazy_factory body =
-  body_exists is_lazy_factory_call body
 
 (** Apply nontail-recursion loopification, trying strategies in priority order:
     {ol

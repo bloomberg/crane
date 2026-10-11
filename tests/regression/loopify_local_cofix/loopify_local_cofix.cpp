@@ -31,29 +31,14 @@ List<uint64_t> LoopifyLocalCofix::take(uint64_t n,
 }
 
 LoopifyLocalCofix::stream LoopifyLocalCofix::from_list(List<uint64_t> l) {
+  auto go_impl = [=, l = std::move(l)](
+                     auto &_self_go, uint64_t n) -> LoopifyLocalCofix::stream {
+    return stream::lazy_([=]() -> typename LoopifyLocalCofix::stream::Cons {
+      return {(l.length() + n), _self_go(_self_go, (n + 1))};
+    });
+  };
   {
     uint64_t _lc1_n = UINT64_C(0);
-
-    /// CraneEnter: captures varying parameters for each recursive call.
-    struct CraneEnter {
-      uint64_t n;
-    };
-
-    using CraneFrame = std::variant<CraneEnter>;
-    LoopifyLocalCofix::stream _lc1_result{};
-    crane::small_vector<CraneFrame> _lc1_stack;
-    _lc1_stack.emplace_back(CraneEnter{_lc1_n});
-    /// Loopified go: CraneEnter.
-    while (!_lc1_stack.empty()) {
-      CraneFrame _frame = std::move(_lc1_stack.back());
-      _lc1_stack.pop_back();
-      auto _f = std::move(std::get<CraneEnter>(_frame));
-      uint64_t _lc1_n = _f.n;
-      _lc1_result =
-          stream::lazy_([=]() -> typename LoopifyLocalCofix::stream::Cons {
-            return {(l.length() + _lc1_n), _self_go(_self_go, (_lc1_n + 1))};
-          });
-    }
-    return _lc1_result;
+    return go_impl(go_impl, _lc1_n);
   }
 }

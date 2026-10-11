@@ -101,21 +101,23 @@ struct FixLetBinderSelfReference {
                              List<uint64_t>)>
               h = [](const crane::fn<uint64_t(List<uint64_t>)> &g,
                      const List<uint64_t> &l) { return (g(l) + UINT64_C(1)); };
-          auto f_impl = [=](auto &) -> uint64_t {
+          auto f_impl = [=](auto &_self_f, List<uint64_t> l) -> uint64_t {
             crane::fn<uint64_t(List<uint64_t>)> h0 = [=](List<uint64_t> _pa0) {
-              return h(f, _pa0);
+              return h(
+                  [=](List<uint64_t> _ec0) { return _self_f(_self_f, _ec0); },
+                  _pa0);
             };
-            return [=](const List<uint64_t> &l) {
-              if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
-                return UINT64_C(0);
-              } else {
-                const auto &[a0, a1] =
-                    std::get<typename List<uint64_t>::Cons>(l.v());
-                return h0(*a1);
-              }
-            };
+            if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+              return UINT64_C(0);
+            } else {
+              const auto &[a0, a1] =
+                  std::get<typename List<uint64_t>::Cons>(l.v());
+              return h0(*a1);
+            }
           };
-          auto f = [=]() -> uint64_t { return f_impl(f_impl); };
+          auto f = [=](List<uint64_t> l) -> uint64_t {
+            return f_impl(f_impl, l);
+          };
           return std::make_pair(
               f, [=](List<uint64_t> _pa0) { return h(f, _pa0); });
         }();

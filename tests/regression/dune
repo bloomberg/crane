@@ -12188,3 +12188,48 @@
   (alias runtest)
   (deps n_to_nat_representation.t.exe)
   (action (run ./n_to_nat_representation.t.exe))))
+
+(subdir local_cofix_without_parameters
+ (rule
+  (targets local_cofix_without_parameters.t.exe)
+  (deps LocalCofixWithoutParameters.vo local_cofix_without_parameters.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} local_cofix_without_parameters.t.exe local_cofix_without_parameters.cpp local_cofix_without_parameters.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps local_cofix_without_parameters.t.exe)
+  (action (run ./local_cofix_without_parameters.t.exe))))
+
+(subdir loopify_local_cofix
+ (rule
+  (targets loopify_local_cofix.t.exe)
+  (deps LoopifyLocalCofix.vo loopify_local_cofix.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_local_cofix.t.exe loopify_local_cofix.cpp loopify_local_cofix.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_local_cofix.t.exe)
+  (action (run ./loopify_local_cofix.t.exe))))
+
+(subdir local_fix_parameter_names
+ (rule
+  (targets local_fix_parameter_names.t.exe)
+  (deps LocalFixParameterNames.vo local_fix_parameter_names.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} local_fix_parameter_names.t.exe local_fix_parameter_names.cpp local_fix_parameter_names.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps local_fix_parameter_names.t.exe)
+  (action (run ./local_fix_parameter_names.t.exe))))
+
+(subdir fix_let_binder_self_reference
+ (rule
+  (targets fix_let_binder_self_reference.t.exe)
+  (deps FixLetBinderSelfReference.vo fix_let_binder_self_reference.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fix_let_binder_self_reference.t.exe fix_let_binder_self_reference.cpp fix_let_binder_self_reference.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps fix_let_binder_self_reference.t.exe)
+  (action (run ./fix_let_binder_self_reference.t.exe))))
+

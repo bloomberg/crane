@@ -8,29 +8,10 @@ FastVariant::tree FastVariant::build(const List<uint64_t> &l) {
       tree::leaf());
 }
 
-FastVariant::stream
-FastVariant::from(uint64_t n) { /// CraneEnter: captures varying parameters for
-                                /// each recursive call.
-
-  struct CraneEnter {
-    uint64_t n;
-  };
-
-  using CraneFrame = crane::variant<CraneEnter>;
-  FastVariant::stream _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{n});
-  /// Loopified from: CraneEnter.
-  while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
-    _stack.pop_back();
-    auto _f = std::move(crane::get<CraneEnter>(_frame));
-    uint64_t n = _f.n;
-    _result = stream::lazy_([=]() -> typename FastVariant::stream::Cons {
-      return {n, from((n + 1))};
-    });
-  }
-  return _result;
+FastVariant::stream FastVariant::from(uint64_t n) {
+  return stream::lazy_([=]() -> typename FastVariant::stream::Cons {
+    return {n, from((n + 1))};
+  });
 }
 
 List<uint64_t> FastVariant::take(uint64_t n, const FastVariant::stream &s) {

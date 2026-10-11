@@ -182,31 +182,12 @@ struct CoinductiveTakeOverflow {
   static stream<uint64_t> from(uint64_t n);
 
   template <typename T1, typename T2>
-  static stream<T2>
-  smap(const std::type_identity_t<crane::fn<T2(T1)>> &f,
-       const stream<T1> &s) { /// CraneEnter: captures varying parameters for
-                              /// each recursive call.
-
-    struct CraneEnter {
-      stream<T1> s;
-    };
-
-    using CraneFrame = std::variant<CraneEnter>;
-    stream<T2> _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{s});
-    /// Loopified smap: CraneEnter.
-    while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      auto _f = std::move(std::get<CraneEnter>(_frame));
-      const stream<T1> &s = _f.s;
-      const auto &[a0, a1] = std::get<typename stream<T1>::Cons>(s.v());
-      _result = stream<T2>::lazy_([=]() -> typename stream<T2>::Cons {
-        return {f(a0), smap<T1, T2>(f, a1)};
-      });
-    }
-    return _result;
+  static stream<T2> smap(const std::type_identity_t<crane::fn<T2(T1)>> &f,
+                         const stream<T1> &s) {
+    const auto &[a0, a1] = std::get<typename stream<T1>::Cons>(s.v());
+    return stream<T2>::lazy_([=]() -> typename stream<T2>::Cons {
+      return {f(a0), smap<T1, T2>(f, a1)};
+    });
   }
 
   template <typename T1> static List<T1> take(uint64_t n, const stream<T1> &s) {

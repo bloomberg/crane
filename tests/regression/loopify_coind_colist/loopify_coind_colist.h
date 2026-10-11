@@ -173,106 +173,45 @@ struct LoopifyCoindColist {
   };
 
   template <typename T1, typename T2>
-  static colist<T2>
-  comap(const std::type_identity_t<crane::fn<T2(T1)>> &f,
-        const colist<T1> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
+  static colist<T2> comap(const std::type_identity_t<crane::fn<T2(T1)>> &f,
+                          const colist<T1> &l) {
+    if (std::holds_alternative<typename colist<T1>::Conil>(l.v())) {
+      return colist<T2>::conil();
+    } else {
+      const auto &[a0, a1] = std::get<typename colist<T1>::Cocons>(l.v());
+      return colist<T2>::lazy_([=]() -> typename colist<T2>::Cocons {
+        return {f(a0), comap<T1, T2>(f, a1)};
+      });
+    }
+  }
 
-    struct CraneEnter {
-      colist<T1> l;
-    };
-
-    using CraneFrame = std::variant<CraneEnter>;
-    colist<T2> _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{l});
-    /// Loopified comap: CraneEnter.
-    while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      auto _f = std::move(std::get<CraneEnter>(_frame));
-      const colist<T1> &l = _f.l;
+  template <typename T1>
+  static colist<T1> cotake(uint64_t n, const colist<T1> &l) {
+    if (n <= 0) {
+      return colist<T1>::conil();
+    } else {
+      uint64_t n_ = n - 1;
       if (std::holds_alternative<typename colist<T1>::Conil>(l.v())) {
-        _result = colist<T2>::conil();
+        return colist<T1>::conil();
       } else {
         const auto &[a0, a1] = std::get<typename colist<T1>::Cocons>(l.v());
-        _result = colist<T2>::lazy_([=]() -> typename colist<T2>::Cocons {
-          return {f(a0), comap<T1, T2>(f, a1)};
+        return colist<T1>::lazy_([=]() -> typename colist<T1>::Cocons {
+          return {a0, cotake<T1>(n_, a1)};
         });
       }
     }
-    return _result;
   }
 
-  template <typename T1>
-  static colist<T1>
-  cotake(uint64_t n,
-         const colist<T1> &l) { /// CraneEnter: captures varying parameters for
-                                /// each recursive call.
-
-    struct CraneEnter {
-      colist<T1> l;
-      uint64_t n;
-    };
-
-    using CraneFrame = std::variant<CraneEnter>;
-    colist<T1> _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{l, n});
-    /// Loopified cotake: CraneEnter.
-    while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      auto _f = std::move(std::get<CraneEnter>(_frame));
-      const colist<T1> &l = _f.l;
-      uint64_t n = _f.n;
-      if (n <= 0) {
-        _result = colist<T1>::conil();
-      } else {
-        uint64_t n_ = n - 1;
-        if (std::holds_alternative<typename colist<T1>::Conil>(l.v())) {
-          _result = colist<T1>::conil();
-        } else {
-          const auto &[a0, a1] = std::get<typename colist<T1>::Cocons>(l.v());
-          _result = colist<T1>::lazy_([=]() -> typename colist<T1>::Cocons {
-            return {a0, cotake<T1>(n_, a1)};
-          });
-        }
-      }
+  template <typename T1> static colist<T1> from_list(const List<T1> &l) {
+    if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
+      return colist<T1>::conil();
+    } else {
+      const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
+      const List<T1> &a1_value = *a1;
+      return colist<T1>::lazy_([=]() -> typename colist<T1>::Cocons {
+        return {a0, from_list<T1>(a1_value)};
+      });
     }
-    return _result;
-  }
-
-  template <typename T1>
-  static colist<T1>
-  from_list(const List<T1> &l) { /// CraneEnter: captures varying parameters for
-                                 /// each recursive call.
-
-    struct CraneEnter {
-      const List<T1> *l;
-    };
-
-    using CraneFrame = std::variant<CraneEnter>;
-    colist<T1> _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{&l});
-    /// Loopified from_list: CraneEnter.
-    while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      auto _f = std::move(std::get<CraneEnter>(_frame));
-      const List<T1> &l = *_f.l;
-      if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
-        _result = colist<T1>::conil();
-      } else {
-        const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
-        const List<T1> &a1_value = *a1;
-        _result = colist<T1>::lazy_([=]() -> typename colist<T1>::Cocons {
-          return {a0, from_list<T1>(a1_value)};
-        });
-      }
-    }
-    return _result;
   }
 
   template <typename T1>

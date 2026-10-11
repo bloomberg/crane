@@ -11,7 +11,7 @@ uint64_t LocalFixParameterNames::walk2(uint64_t f, List<uint64_t> x0_) {
     }
   };
   auto g_impl = [&](auto &_self_f0, auto &_self_g,
-                    const List<uint64_t> &) -> uint64_t {
+                    const List<uint64_t> &f1) -> uint64_t {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(f1.v())) {
       return (f + UINT64_C(1));
     } else {
@@ -22,8 +22,8 @@ uint64_t LocalFixParameterNames::walk2(uint64_t f, List<uint64_t> x0_) {
   auto f0 = [&](const List<uint64_t> &l) -> uint64_t {
     return f0_impl(f0_impl, g_impl, l);
   };
-  auto g = [&](const List<uint64_t> &f0) -> uint64_t {
-    return g_impl(f0_impl, g_impl, f0);
+  auto g = [&](const List<uint64_t> &f1) -> uint64_t {
+    return g_impl(f0_impl, g_impl, f1);
   };
   return f0(std::move(x0_));
 }

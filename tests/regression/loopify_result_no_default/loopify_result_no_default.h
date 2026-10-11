@@ -287,50 +287,31 @@ struct ITree {
   template <typename T1, typename T2, typename T3>
   static Itree<T1, T3>
   subst(std::type_identity_t<crane::fn<Itree<T1, T3>(T2)>> k,
-        const Itree<T1, T2> &u) { /// CraneEnter: captures varying parameters
-                                  /// for each recursive call.
-
-    struct CraneEnter {
-      Itree<T1, T2> u;
-    };
-
-    using CraneFrame = std::variant<CraneEnter>;
-    Itree<T1, T3> _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{u});
-    /// Loopified subst: CraneEnter.
-    while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      auto _f = std::move(std::get<CraneEnter>(_frame));
-      const Itree<T1, T2> &u = _f.u;
-      auto &&_sv = u.observe();
-      if (std::holds_alternative<typename ItreeF<T1, T2, Itree<T1, T2>>::RetF>(
-              _sv.v())) {
-        const auto &[r0] =
-            std::get<typename ItreeF<T1, T2, Itree<T1, T2>>::RetF>(_sv.v());
-        _result = k(r0);
-      } else if (std::holds_alternative<
-                     typename ItreeF<T1, T2, Itree<T1, T2>>::TauF>(_sv.v())) {
-        const auto &[t0] =
-            std::get<typename ItreeF<T1, T2, Itree<T1, T2>>::TauF>(_sv.v());
-        _result = Itree<T1, T3>::lazy_([=]() -> typename Itree<T1, T3>::Go {
-          return {[&]() {
-            return ItreeF<T1, T3, Itree<T1, T3>>::tauf(
-                subst<T1, T2, T3>(k, t0));
-          }()};
-        });
-      } else {
-        const auto &[x, e0] =
-            std::get<typename ItreeF<T1, T2, Itree<T1, T2>>::VisF>(_sv.v());
-        _result = Itree<T1, T3>::go(ItreeF<T1, T3, Itree<T1, T3>>::visf(
-            x, crane::fn<Itree<T1, T3>(crane::obj)>(
-                   [=](const crane::obj &x0) -> Itree<T1, T3> {
-                     return subst<T1, T2, T3>(k, crane_call_erased(e0, x0));
-                   })));
-      }
+        const Itree<T1, T2> &u) {
+    auto &&_sv = u.observe();
+    if (std::holds_alternative<typename ItreeF<T1, T2, Itree<T1, T2>>::RetF>(
+            _sv.v())) {
+      const auto &[r0] =
+          std::get<typename ItreeF<T1, T2, Itree<T1, T2>>::RetF>(_sv.v());
+      return k(r0);
+    } else if (std::holds_alternative<
+                   typename ItreeF<T1, T2, Itree<T1, T2>>::TauF>(_sv.v())) {
+      const auto &[t0] =
+          std::get<typename ItreeF<T1, T2, Itree<T1, T2>>::TauF>(_sv.v());
+      return Itree<T1, T3>::lazy_([=]() -> typename Itree<T1, T3>::Go {
+        return {[&]() {
+          return ItreeF<T1, T3, Itree<T1, T3>>::tauf(subst<T1, T2, T3>(k, t0));
+        }()};
+      });
+    } else {
+      const auto &[x, e0] =
+          std::get<typename ItreeF<T1, T2, Itree<T1, T2>>::VisF>(_sv.v());
+      return Itree<T1, T3>::go(ItreeF<T1, T3, Itree<T1, T3>>::visf(
+          x, crane::fn<Itree<T1, T3>(crane::obj)>(
+                 [=](const crane::obj &x0) -> Itree<T1, T3> {
+                   return subst<T1, T2, T3>(k, crane_call_erased(e0, x0));
+                 })));
     }
-    return _result;
   }
 
   template <typename T1, typename T2, typename T3>

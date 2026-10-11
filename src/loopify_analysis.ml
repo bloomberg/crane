@@ -150,6 +150,18 @@ and stmt_exists (pred : cpp_expr -> bool) (s : cpp_stmt) : bool =
 let body_exists (pred : cpp_expr -> bool) (stmts : cpp_stmt list) : bool =
   List.exists (stmt_exists pred) stmts
 
+(** Whether the expression tree contains a [lazy_] factory call.
+    Used to detect cofixpoint bodies even when the [lazy_] return is buried
+    inside branches rather than at the top level (where {!Loopify.has_lazy_body}
+    catches it). *)
+let is_lazy_factory_call = function
+  | CPPfun_call (_, (CPPscope (_, lazy_id, []) | CPPqualified_t (_, lazy_id)), _) ->
+    Id.equal lazy_id id_lazy
+  | _ -> false
+
+let body_contains_lazy_factory body =
+  body_exists is_lazy_factory_call body
+
 (** Check whether a C++ return type is a value-type inductive (non-coinductive,
     non-enum bare [Tglob]).  When true, TMC must wrap [_head]/_write in
     [shared_ptr] because the constructor's recursive field is [shared_ptr].

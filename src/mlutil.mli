@@ -419,6 +419,11 @@ val ast_lift : int -> ml_ast -> ml_ast
 (** Pop the outermost de Bruijn level (equivalent to [ast_lift (-1)]). *)
 val ast_pop : ml_ast -> ml_ast
 
+(** [permut_rels k k' c] exchanges two adjacent runs of binders: [Rel 1 ...
+    Rel k] become [Rel (k'+1) ... Rel (k'+k)], and [Rel (k+1) ... Rel (k+k')]
+    become [Rel 1 ... Rel k']. *)
+val permut_rels : int -> int -> ml_ast -> ml_ast
+
 (** Substitute a term for de Bruijn index 1, adjusting other indices.
     @param e the term to substitute for [Rel 1]
     @param t the term in which the substitution is performed *)
