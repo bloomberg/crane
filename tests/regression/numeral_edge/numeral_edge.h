@@ -148,7 +148,7 @@ struct NumeralEdge {
   static inline const std::pair<int64_t, int64_t> z_pair =
       std::make_pair(INT64_C(-42), INT64_C(42));
   /// 14. N conversion
-  static inline const uint64_t n_to_nat_test = static_cast<unsigned int>(255u);
+  static inline const uint64_t n_to_nat_test = static_cast<uint64_t>(255u);
 };
 
 #endif // INCLUDED_NUMERAL_EDGE

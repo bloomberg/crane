@@ -6,6 +6,6 @@
 int main() {
   assert(NToNatRepresentation::larger == 300);
   assert(NToNatRepresentation::smaller == 7);
-  assert(NToNatRepresentation::big == 5000000000ULL);
+  assert(NToNatRepresentation::mapped == 3);
   return 0;
 }

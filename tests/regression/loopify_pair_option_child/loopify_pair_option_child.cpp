@@ -19,7 +19,7 @@ LoopifyPairOptionChild::sum(const LoopifyPairOptionChild::tree
   /// CraneCont_x: saves [o, x], resumes after recursive call, then processes
   /// rest.
   struct CraneCont_x {
-    std::optional<std::shared_ptr<LoopifyPairOptionChild::tree>> o;
+    std::optional<LoopifyPairOptionChild::tree> o;
     uint64_t x;
   };
 
@@ -50,8 +50,7 @@ LoopifyPairOptionChild::sum(const LoopifyPairOptionChild::tree
       _result = ((_f._tmp2 + x) + std::move(_result));
     } else {
       auto _f = std::move(std::get<CraneCont_x>(_frame));
-      std::optional<std::shared_ptr<LoopifyPairOptionChild::tree>> o =
-          std::move(_f.o);
+      std::optional<LoopifyPairOptionChild::tree> o = std::move(_f.o);
       uint64_t x = _f.x;
       uint64_t _tmp2 = std::move(_result);
       uint64_t _tmp1;

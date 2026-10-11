@@ -47,13 +47,28 @@ class persistent_array {
     std::shared_ptr<std::vector<T>> data_;
     T default_;
 
+    // An array holding `data`, with `def` for its out-of-bounds reads.
+    persistent_array(std::shared_ptr<std::vector<T>> data, T def)
+        : data_(std::move(data)), default_(std::move(def)) {}
+
 public:
+    // PrimArray.max_length: the longest array Rocq's make builds.
+    static constexpr int64_t max_length = 4194303;
+
     // Construct an array of `len` elements, each initialized to `def`.
-    // Matches PrimArray.make.
+    // Matches PrimArray.make, which clamps `len` to max_length.
     persistent_array(int64_t len, T def)
-        : data_(std::make_shared<std::vector<T>>(len, def))
-        , default_(std::move(def))
+        : persistent_array(
+              std::make_shared<std::vector<T>>(
+                  static_cast<size_t>(len < max_length ? len : max_length), def),
+              def)
     {}
+
+    // The empty array, its default element value-initialised.  Rocq never
+    // builds one; a holder does where it default-constructs its members --
+    // an array of arrays keeping its default element, a variant whose first
+    // alternative holds an array.
+    persistent_array() : persistent_array(std::make_shared<std::vector<T>>(), T{}) {}
 
     // Read element at index `i`. Returns default_ on out-of-bounds.
     // Matches PrimArray.get (which returns the array's default on OOB).
@@ -75,10 +90,7 @@ public:
         // mutate the shared vector.
         auto new_data = std::make_shared<std::vector<T>>(*data_);
         (*new_data)[static_cast<size_t>(i)] = std::move(val);
-        persistent_array result;
-        result.data_ = std::move(new_data);
-        result.default_ = default_;
-        return result;
+        return persistent_array(std::move(new_data), default_);
     }
 
     // Rvalue overload: called on temporaries (e.g. arr.set(0,x).set(1,y) —
@@ -97,10 +109,7 @@ public:
         // Shared even though we're a temporary (rare). Deep-copy.
         auto new_data = std::make_shared<std::vector<T>>(*data_);
         (*new_data)[static_cast<size_t>(i)] = std::move(val);
-        persistent_array result;
-        result.data_ = std::move(new_data);
-        result.default_ = default_;
-        return result;
+        return persistent_array(std::move(new_data), default_);
     }
 
     // Number of elements. Matches PrimArray.length.
@@ -110,13 +119,6 @@ public:
 
     // Independent deep copy. Matches PrimArray.copy.
     persistent_array copy() const {
-        persistent_array result;
-        result.data_ = std::make_shared<std::vector<T>>(*data_);
-        result.default_ = default_;
-        return result;
+        return persistent_array(std::make_shared<std::vector<T>>(*data_), default_);
     }
-
-private:
-    // Default constructor for internal use (set/copy factory).
-    persistent_array() : default_{} {}
 };

@@ -544,40 +544,6 @@ let pattern_binder_type i =
   | Some (t, Bpattern) -> Some t
   | _ -> None
 
-(** Generate a custom match body using user-provided custom extraction syntax.
-    Wraps the body in a lambda with pattern-bound variables. *)
-let rec collect_recursive_ns ml_ty =
-  (* Collect self-recursive inductive types that appear *nested inside* ml_ty
-     and return them as a namespace set so convert_ml_type_to_cpp_type wraps
-     them with Tshared_ptr when they appear as field references.
-
-     The top-level type itself is NOT added: a binding variable h : T has the
-     same C++ type as the deque element (e.g. `const T&` from `front()`), not
-     `shared_ptr<T>`.  Recursive wrapping is only needed when T appears as a
-     *field* of an enclosing composite type (e.g. `pair<string, json_value>`
-     → field `json_value` wrapped as `shared_ptr<json_value>`). *)
-  let rec collect_nested acc = function
-    | Miniml.Tglob (GlobRef.IndRef _ as g, args, _) ->
-      let acc' =
-        if Table.has_recursive_fields g && not (Table.is_custom g)
-        then Refset'.add g acc
-        else acc
-      in
-      List.fold_left collect_nested acc' args
-    | Miniml.Tarr (a, b) -> collect_nested (collect_nested acc a) b
-    | Miniml.Tmeta {contents = Some t} -> collect_nested acc t
-    | _ -> acc
-  in
-  (* Start from the args of the top-level type so the top-level itself
-     is never added to the namespace. *)
-  match ml_ty with
-  | Miniml.Tglob (_, args, _) ->
-    List.fold_left collect_nested Refset'.empty args
-  | Miniml.Tarr (a, b) ->
-    collect_nested (collect_nested Refset'.empty a) b
-  | Miniml.Tmeta {contents = Some t} -> collect_recursive_ns t
-  | _ -> Refset'.empty
-
 (** [convert_ml_type_to_cpp_type] only resolves [Tvar] indices within
     [tvars]; anything out of range comes back as [Tvar (Tv_index (_, None))], which
     prints as a bogus, undeclared template parameter name (e.g. "T3").

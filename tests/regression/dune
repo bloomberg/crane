@@ -12145,3 +12145,46 @@
   (deps den_fn_ctor_arg_not_wrapped.t.exe)
   (action (run ./den_fn_ctor_arg_not_wrapped.t.exe))))
 
+(subdir persistent_array_default_construction
+ (rule
+  (targets persistent_array_default_construction.t.exe)
+  (deps PersistentArrayDefaultConstruction.vo persistent_array_default_construction.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} persistent_array_default_construction.t.exe persistent_array_default_construction.cpp persistent_array_default_construction.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps persistent_array_default_construction.t.exe)
+  (action (run ./persistent_array_default_construction.t.exe))))
+
+(subdir persistent_array_make_unclamped
+ (rule
+  (targets persistent_array_make_unclamped.t.exe)
+  (deps PersistentArrayMakeUnclamped.vo persistent_array_make_unclamped.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} persistent_array_make_unclamped.t.exe persistent_array_make_unclamped.cpp persistent_array_make_unclamped.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps persistent_array_make_unclamped.t.exe)
+  (action (run ./persistent_array_make_unclamped.t.exe))))
+
+(subdir loopify_pair_option_child
+ (rule
+  (targets loopify_pair_option_child.t.exe)
+  (deps LoopifyPairOptionChild.vo loopify_pair_option_child.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_pair_option_child.t.exe loopify_pair_option_child.cpp loopify_pair_option_child.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_pair_option_child.t.exe)
+  (action (run ./loopify_pair_option_child.t.exe))))
+
+(subdir n_to_nat_representation
+ (rule
+  (targets n_to_nat_representation.t.exe)
+  (deps NToNatRepresentation.vo n_to_nat_representation.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} n_to_nat_representation.t.exe n_to_nat_representation.cpp n_to_nat_representation.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps n_to_nat_representation.t.exe)
+  (action (run ./n_to_nat_representation.t.exe))))

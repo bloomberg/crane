@@ -6435,6 +6435,22 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
               eta_args
           in
           let call_args = args @ eta_vars in
+          (* The result is the callee's, so it is read off the declaration for
+             the same reason the parameters are: what the call returns is
+             [std::optional<T1<std::any>>], not the [std::optional<std::any>]
+             the erased ML type says. *)
+          let cod =
+            match decl_cod with
+            | Some slot when !decl_spoke ->
+              Ml_type_util.refine_param_from_slot ~tvars ~slot cod
+            (* A result the substitution erased outright has no other
+               statement than the declaration's, which is taken whole
+               wherever this scope can spell it. *)
+            | Some slot when prints_as_any cod && names_only_scoped_tvars slot
+              ->
+              slot
+            | _ -> cod
+          in
           let call =
             (* The number of arguments the callee itself takes.  An
                inline-custom template stops at its last [%aN] placeholder:
@@ -6463,24 +6479,11 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
               let k = max 0 (arity - List.length args) in
               let fill = List.filteri (fun i _ -> i < k) eta_vars in
               let surplus = List.filteri (fun i _ -> i >= k) eta_vars in
-              mk_apply (mk_call cglob (args @ fill)) surplus
+              (* A call that fills the callee exactly yields the lambda's
+                 result: recorded, so a mapping's [%ret] can name it. *)
+              let yields = if surplus = [] && cod <> Tvoid then Some cod else None in
+              mk_apply (mk_call ?yields cglob (args @ fill)) surplus
             | None -> mk_call cglob call_args
-          in
-          (* The result is the callee's, so it is read off the declaration for
-             the same reason the parameters are: what the call returns is
-             [std::optional<T1<std::any>>], not the [std::optional<std::any>]
-             the erased ML type says. *)
-          let cod =
-            match decl_cod with
-            | Some slot when !decl_spoke ->
-              Ml_type_util.refine_param_from_slot ~tvars ~slot cod
-            (* A result the substitution erased outright has no other
-               statement than the declaration's, which is taken whole
-               wherever this scope can spell it. *)
-            | Some slot when prints_as_any cod && names_only_scoped_tvars slot
-              ->
-              slot
-            | _ -> cod
           in
           let ret_ty, body =
             if cod = Tvoid then
@@ -8152,14 +8155,14 @@ and gen_cpp_custom_body env k rty ids body scrut_ind_opt =
           | Some g_scrut when not (is_prod_global g_scrut) ->
             (* Use {g_scrut} as the namespace so that type args that are
                self-references of the scrutinee get shared_ptr wrapping —
-               matching struct field storage.  Exception 1: when the
-               scrutinee is a product/pair (grammar production context),
-               fall through to collect_recursive_ns which correctly uses
-               the binding variable's own type to find recursive inductives.
-               Exception 2: when the binding type IS g_scrut directly (a
-               non-parametric direct self-ref dereferenced by the custom
-               match template), use empty ns so the binding is a value type
-               rather than shared_ptr. *)
+               matching struct field storage.  Exception 1: a product's
+               components are bound at the bare type, as a field holding a
+               nested self-reference stores it (see [field_storage_ty]): the
+               field is boxed whole, so [(nat * option tree)] holds an
+               [std::optional<tree>].  Exception 2: when the binding type IS
+               g_scrut directly (a non-parametric direct self-ref
+               dereferenced by the custom match template), use empty ns so
+               the binding is a value type rather than shared_ptr. *)
             let is_direct_self_ref =
               match ty with
               | Miniml.Tglob (g, [], _) -> GlobRef.CanOrd.equal g g_scrut
@@ -8167,7 +8170,7 @@ and gen_cpp_custom_body env k rty ids body scrut_ind_opt =
             in
             if is_direct_self_ref then Refset'.empty
             else Refset'.singleton g_scrut
-          | _ -> collect_recursive_ns ty
+          | _ -> Refset'.empty
         in
         (x, convert_ml_type_to_cpp_type env ~ns tvars ty) )
       (List.rev ids)
