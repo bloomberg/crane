@@ -494,15 +494,25 @@ std::optional<A> crane_cast_to(crane_tag<std::optional<A>>,
   return std::optional<A>(crane_convert<A>(*src));
 }
 
-// A function at another result type -- a continuation built where the
+// A function at another instantiation -- a continuation built where the
 // result was erased, [crane::fn<Itree<crane::obj, crane::obj>(crane::obj)>],
-// stored where it is [crane::fn<Itree<E, R>(crane::obj)>] -- is read by
-// reading what it returns.  The arguments are the same, so only the result
-// is converted.
-template <class R, class... A, class S>
+// stored where it is [crane::fn<Itree<E, R>(crane::obj)>], or a method
+// [crane::fn<uint64_t(uint64_t)>] stored where its argument is erased -- is
+// read by converting what it is given into what it takes, and what it
+// returns into what the reader wants.  An argument already at the type it is
+// taken at passes through.
+template <class B, class A> decltype(auto) crane_convert_arg(A &&a) {
+  if constexpr (std::is_same_v<std::remove_cvref_t<A>, std::remove_cvref_t<B>>)
+    return std::forward<A>(a);
+  else
+    return crane_convert<std::remove_cvref_t<B>>(std::forward<A>(a));
+}
+
+template <class R, class... A, class S, class... B>
+  requires(sizeof...(A) == sizeof...(B))
 crane::fn<R(A...)> crane_cast_to(crane_tag<crane::fn<R(A...)>>,
-                                 const crane::fn<S(A...)> &src) {
+                                 const crane::fn<S(B...)> &src) {
   return [src](A... a) -> R {
-    return crane_convert<R>(src(std::forward<A>(a)...));
+    return crane_convert<R>(src(crane_convert_arg<B>(std::forward<A>(a))...));
   };
 }
