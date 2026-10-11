@@ -217,3 +217,256 @@
   (deps interp_state_dict.t.exe)
   (action (run ./interp_state_dict.t.exe))))
 
+
+(subdir module_type_parameterised_inductive
+ (rule
+  (targets module_type_parameterised_inductive.t.exe)
+  (deps ModuleTypeParameterisedInductive.vo module_type_parameterised_inductive.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} module_type_parameterised_inductive.t.exe module_type_parameterised_inductive.cpp module_type_parameterised_inductive.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps module_type_parameterised_inductive.t.exe)
+  (action (run ./module_type_parameterised_inductive.t.exe))))
+
+(subdir module_type_enum_in_parameter
+ (rule
+  (targets module_type_enum_in_parameter.t.exe)
+  (deps ModuleTypeEnumInParameter.vo module_type_enum_in_parameter.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} module_type_enum_in_parameter.t.exe module_type_enum_in_parameter.cpp module_type_enum_in_parameter.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps module_type_enum_in_parameter.t.exe)
+  (action (run ./module_type_enum_in_parameter.t.exe))))
+
+(subdir module_type_mentions_outer_record
+ (rule
+  (targets module_type_mentions_outer_record.t.exe)
+  (deps ModuleTypeMentionsOuterRecord.vo module_type_mentions_outer_record.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} module_type_mentions_outer_record.t.exe module_type_mentions_outer_record.cpp module_type_mentions_outer_record.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps module_type_mentions_outer_record.t.exe)
+  (action (run ./module_type_mentions_outer_record.t.exe))))
+
+(subdir abstract_projection_overapplied
+ (rule
+  (targets abstract_projection_overapplied.t.exe)
+  (deps AbstractProjectionOverapplied.vo abstract_projection_overapplied.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} abstract_projection_overapplied.t.exe abstract_projection_overapplied.cpp abstract_projection_overapplied.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps abstract_projection_overapplied.t.exe)
+  (action (run ./abstract_projection_overapplied.t.exe))))
+
+(subdir module_type_inside_functor
+ (rule
+  (targets module_type_inside_functor.t.exe)
+  (deps ModuleTypeInsideFunctor.vo module_type_inside_functor.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} module_type_inside_functor.t.exe module_type_inside_functor.cpp module_type_inside_functor.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps module_type_inside_functor.t.exe)
+  (action (run ./module_type_inside_functor.t.exe))))
+
+(subdir lifted_let_lambda_polymorphic
+ (rule
+  (targets lifted_let_lambda_polymorphic.t.exe)
+  (deps LiftedLetLambdaPolymorphic.vo lifted_let_lambda_polymorphic.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} lifted_let_lambda_polymorphic.t.exe lifted_let_lambda_polymorphic.cpp lifted_let_lambda_polymorphic.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps lifted_let_lambda_polymorphic.t.exe)
+  (action (run ./lifted_let_lambda_polymorphic.t.exe))))
+
+(subdir local_cofix_without_parameters
+ (rule
+  (targets local_cofix_without_parameters.t.exe)
+  (deps LocalCofixWithoutParameters.vo local_cofix_without_parameters.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} local_cofix_without_parameters.t.exe local_cofix_without_parameters.cpp local_cofix_without_parameters.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps local_cofix_without_parameters.t.exe)
+  (action (run ./local_cofix_without_parameters.t.exe))))
+
+(subdir loopify_local_cofix
+ (rule
+  (targets loopify_local_cofix.t.exe)
+  (deps LoopifyLocalCofix.vo loopify_local_cofix.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_local_cofix.t.exe loopify_local_cofix.cpp loopify_local_cofix.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_local_cofix.t.exe)
+  (action (run ./loopify_local_cofix.t.exe))))
+
+(subdir persistent_array_default_construction
+ (rule
+  (targets persistent_array_default_construction.t.exe)
+  (deps PersistentArrayDefaultConstruction.vo persistent_array_default_construction.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} persistent_array_default_construction.t.exe persistent_array_default_construction.cpp persistent_array_default_construction.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps persistent_array_default_construction.t.exe)
+  (action (run ./persistent_array_default_construction.t.exe))))
+
+(subdir persistent_array_make_unclamped
+ (rule
+  (targets persistent_array_make_unclamped.t.exe)
+  (deps PersistentArrayMakeUnclamped.vo persistent_array_make_unclamped.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} persistent_array_make_unclamped.t.exe persistent_array_make_unclamped.cpp persistent_array_make_unclamped.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps persistent_array_make_unclamped.t.exe)
+  (action (run ./persistent_array_make_unclamped.t.exe))))
+
+(subdir rank2_alias_definition_as_value
+ (rule
+  (targets rank2_alias_definition_as_value.t.exe)
+  (deps Rank2AliasDefinitionAsValue.vo rank2_alias_definition_as_value.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} rank2_alias_definition_as_value.t.exe rank2_alias_definition_as_value.cpp rank2_alias_definition_as_value.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps rank2_alias_definition_as_value.t.exe)
+  (action (run ./rank2_alias_definition_as_value.t.exe))))
+
+(subdir function_type_argument_curried
+ (rule
+  (targets function_type_argument_curried.t.exe)
+  (deps FunctionTypeArgumentCurried.vo function_type_argument_curried.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} function_type_argument_curried.t.exe function_type_argument_curried.cpp function_type_argument_curried.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps function_type_argument_curried.t.exe)
+  (action (run ./function_type_argument_curried.t.exe))))
+
+(subdir projection_result_overapplied
+ (rule
+  (targets projection_result_overapplied.t.exe)
+  (deps ProjectionResultOverapplied.vo projection_result_overapplied.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} projection_result_overapplied.t.exe projection_result_overapplied.cpp projection_result_overapplied.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps projection_result_overapplied.t.exe)
+  (action (run ./projection_result_overapplied.t.exe))))
+
+(subdir local_function_value_not_curried
+ (rule
+  (targets local_function_value_not_curried.t.exe)
+  (deps LocalFunctionValueNotCurried.vo local_function_value_not_curried.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} local_function_value_not_curried.t.exe local_function_value_not_curried.cpp local_function_value_not_curried.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps local_function_value_not_curried.t.exe)
+  (action (run ./local_function_value_not_curried.t.exe))))
+
+(subdir polymorphic_value_eta_arity
+ (rule
+  (targets polymorphic_value_eta_arity.t.exe)
+  (deps PolymorphicValueEtaArity.vo polymorphic_value_eta_arity.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} polymorphic_value_eta_arity.t.exe polymorphic_value_eta_arity.cpp polymorphic_value_eta_arity.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps polymorphic_value_eta_arity.t.exe)
+  (action (run ./polymorphic_value_eta_arity.t.exe))))
+
+(subdir loopify_pair_option_child
+ (rule
+  (targets loopify_pair_option_child.t.exe)
+  (deps LoopifyPairOptionChild.vo loopify_pair_option_child.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_pair_option_child.t.exe loopify_pair_option_child.cpp loopify_pair_option_child.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_pair_option_child.t.exe)
+  (action (run ./loopify_pair_option_child.t.exe))))
+
+(subdir value_family_over_mapped_container
+ (rule
+  (targets value_family_over_mapped_container.t.exe)
+  (deps ValueFamilyOverMappedContainer.vo value_family_over_mapped_container.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} value_family_over_mapped_container.t.exe value_family_over_mapped_container.cpp value_family_over_mapped_container.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps value_family_over_mapped_container.t.exe)
+  (action (run ./value_family_over_mapped_container.t.exe))))
+
+(subdir list_literal_lambda_mapped_result
+ (rule
+  (targets list_literal_lambda_mapped_result.t.exe)
+  (deps ListLiteralLambdaMappedResult.vo list_literal_lambda_mapped_result.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} list_literal_lambda_mapped_result.t.exe list_literal_lambda_mapped_result.cpp list_literal_lambda_mapped_result.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps list_literal_lambda_mapped_result.t.exe)
+  (action (run ./list_literal_lambda_mapped_result.t.exe))))
+
+(subdir n_to_nat_representation
+ (rule
+  (targets n_to_nat_representation.t.exe)
+  (deps NToNatRepresentation.vo n_to_nat_representation.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} n_to_nat_representation.t.exe n_to_nat_representation.cpp n_to_nat_representation.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps n_to_nat_representation.t.exe)
+  (action (run ./n_to_nat_representation.t.exe))))
+
+(subdir local_fix_parameter_names
+ (rule
+  (targets local_fix_parameter_names.t.exe)
+  (deps LocalFixParameterNames.vo local_fix_parameter_names.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} local_fix_parameter_names.t.exe local_fix_parameter_names.cpp local_fix_parameter_names.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps local_fix_parameter_names.t.exe)
+  (action (run ./local_fix_parameter_names.t.exe))))
+
+(subdir absurd_under_proof_binder
+ (rule
+  (targets absurd_under_proof_binder.t.exe)
+  (deps AbsurdUnderProofBinder.vo absurd_under_proof_binder.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} absurd_under_proof_binder.t.exe absurd_under_proof_binder.cpp absurd_under_proof_binder.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps absurd_under_proof_binder.t.exe)
+  (action (run ./absurd_under_proof_binder.t.exe))))
+
+(subdir rank2_family_argument_adapter
+ (rule
+  (targets rank2_family_argument_adapter.t.exe)
+  (deps Rank2FamilyArgumentAdapter.vo rank2_family_argument_adapter.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} rank2_family_argument_adapter.t.exe rank2_family_argument_adapter.cpp rank2_family_argument_adapter.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps rank2_family_argument_adapter.t.exe)
+  (action (run ./rank2_family_argument_adapter.t.exe))))
+
+(subdir fix_let_binder_self_reference
+ (rule
+  (targets fix_let_binder_self_reference.t.exe)
+  (deps FixLetBinderSelfReference.vo fix_let_binder_self_reference.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fix_let_binder_self_reference.t.exe fix_let_binder_self_reference.cpp fix_let_binder_self_reference.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps fix_let_binder_self_reference.t.exe)
+  (action (run ./fix_let_binder_self_reference.t.exe))))
