@@ -210,7 +210,7 @@ struct PolyRank2RecordField {
 
   template <typename T1, typename T2, typename F1>
   static List<T2> run(const mapper &m0, F1 &&x, const List<T1> &x0) {
-    return m0.run(crane_erase_fn(x), x0);
+    return m0.run(crane_erase_fn<crane::obj>(x), x0);
   }
 
   static inline const mapper m =

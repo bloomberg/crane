@@ -108,8 +108,41 @@ crane_erase_fn_impl(crane::fn<R(A...)> *, F &&f) {
   };
 }
 
-template <class Ret = crane::obj, class F> auto crane_erase_fn(F &&f) {
-  if constexpr (requires { crane::fn{f}; }) {
+// [crane_erase_fn] without a result type adapts a callable that is boxed
+// whole into a [crane::obj].  Such a box is opened one argument at a time --
+// [crane::fn<crane::obj(crane::obj)>], whatever the callable's arity, since
+// nothing about a box says how many arguments it takes -- so a callable taking
+// several is curried, each partial application boxed in turn.  With a result
+// type, it adapts a callable to a slot that declares its signature, flat.
+struct crane_boxed_fn {};
+
+template <class Ret = crane_boxed_fn, class F> auto crane_erase_fn(F &&f);
+
+template <class R, class A0, class... A, class F> auto crane_curry_head(F &&f) {
+  return crane::fn<crane::obj(crane::obj)>(
+      [f = std::forward<F>(f)](crane::obj a0) -> crane::obj {
+        return crane::obj(crane_erase_fn(
+            [f, x = std::remove_cvref_t<A0>(crane_erase_fn_unbox<A0>(a0))](
+                A... as) -> R { return f(x, std::forward<A>(as)...); }));
+      });
+}
+
+template <class R, class... A, class F>
+auto crane_curry_boxed(crane::fn<R(A...)> *, F &&f) {
+  if constexpr (sizeof...(A) < 2)
+    return crane_erase_fn<crane::obj>(std::forward<F>(f));
+  else
+    return crane_curry_head<R, A...>(std::forward<F>(f));
+}
+
+template <class Ret, class F> auto crane_erase_fn(F &&f) {
+  if constexpr (std::is_same_v<Ret, crane_boxed_fn>) {
+    if constexpr (requires { crane::fn{f}; })
+      return crane_curry_boxed(static_cast<decltype(crane::fn{f}) *>(nullptr),
+                               std::forward<F>(f));
+    else
+      return crane_erase_fn<crane::obj>(std::forward<F>(f));
+  } else if constexpr (requires { crane::fn{f}; }) {
     return crane_erase_fn_impl<Ret>(
         static_cast<decltype(crane::fn{f}) *>(nullptr), std::forward<F>(f));
   } else if constexpr (!requires { f(std::declval<crane::obj>()); }) {
@@ -141,7 +174,7 @@ template <class Ret = crane::obj, class F> auto crane_erase_fn(F &&f) {
 // and building it at every use cost an allocation each time a subevent was
 // injected.  Per thread, as the [fn]'s count may not be atomic; and never
 // freed, so that no thread's exit runs after the heap it came from.
-template <auto &F, class Ret = crane::obj> const auto &crane_erase_global() {
+template <auto &F, class Ret = crane_boxed_fn> const auto &crane_erase_global() {
   static thread_local const auto *f = new auto(crane_erase_fn<Ret>(F));
   return *f;
 }

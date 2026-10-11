@@ -329,12 +329,12 @@ val classify_erasure :
     canonical representation. *)
 val erase_returned_fn_values : cpp_type -> cpp_stmt list -> cpp_stmt list
 
-(** [erase_fn_for_any_slot e expr] wraps [expr] in the [crane_erase_fn]
-    runtime helper when the ML expression [e] is a function value being stored
-    into a slot erased to [std::any], so that the application side's
-    [any_cast<std::function<std::any(std::any...)>>] finds the canonical
-    representation.  Other expressions are returned unchanged. *)
-val erase_fn_for_any_slot : ml_ast -> cpp_expr -> cpp_expr
+(** [box_for_any_slot ?into e expr] adapts [expr], generated from [e], to the
+    shape a slot erased to [std::any] is read back at: a function value in the
+    [crane_erase_fn] adapter, and -- where the slot [into] is a value-indexed
+    family -- a list at a concrete element type converted to the
+    element-boxed shape.  Other expressions are returned unchanged. *)
+val box_for_any_slot : ?into:cpp_type -> ml_ast -> cpp_expr -> cpp_expr
 
 (** True when a single-branch match body is a direct projection returning a
     field stored as an erased [std::any]. *)

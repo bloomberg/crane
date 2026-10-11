@@ -1,6 +1,7 @@
 #ifndef INCLUDED_LIFTED_LAMBDA_PASSES_CLASS_INSTANCE
 #define INCLUDED_LIFTED_LAMBDA_PASSES_CLASS_INSTANCE
 
+#include "crane_fn.h"
 #include "obj.h"
 #include <atomic>
 #include <concepts>
@@ -97,7 +98,7 @@ template <typename addr> struct Box {
 template <Params _tcI0, typename T1>
 Box<typename _tcI0::addr> walk_crane_step(const T1,
                                           const typename _tcI0::addr x) {
-  return Box<typename _tcI0::addr>::box0(_tcI0::bump(x));
+  return Box<typename _tcI0::addr>::box0(crane_erase_fn(_tcI0::bump(x)));
 }
 
 template <Params _tcI0>

@@ -333,7 +333,8 @@ struct DepElim {
 
     vec<A> vec_tail(uint64_t) const {
       if (std::holds_alternative<typename vec<A>::Vnil>(this->v())) {
-        throw std::logic_error("unreachable");
+        return crane::any_cast<vec<crane::obj>>(
+            ([]() -> crane::obj { throw std::logic_error("unreachable"); })());
       } else {
         const auto &[n, a1, a2] = std::get<typename vec<A>::Vcons>(this->v());
         return *a2;
@@ -342,7 +343,8 @@ struct DepElim {
 
     A vec_head(uint64_t) const {
       if (std::holds_alternative<typename vec<A>::Vnil>(this->v())) {
-        throw std::logic_error("unreachable");
+        return crane_any_cast<A>(
+            ([]() -> crane::obj { throw std::logic_error("unreachable"); })());
       } else {
         const auto &[n, a1, a2] = std::get<typename vec<A>::Vcons>(this->v());
         return a1;
@@ -494,7 +496,8 @@ struct DepElim {
         const auto &[a0] = std::get<typename avail::Present>(this->v());
         return a0;
       } else {
-        throw std::logic_error("unreachable");
+        return crane::any_cast<uint64_t>(
+            ([]() -> crane::obj { throw std::logic_error("unreachable"); })());
       }
     }
 

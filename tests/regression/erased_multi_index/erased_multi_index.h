@@ -43,14 +43,14 @@ struct ErasedMultiIndex {
 
     template <typename T1, typename T2, typename T3, typename F0>
     T1 tagged_rec(F0 &&f) const {
-      return this->template tagged_rect<T2, T3>(crane_erase_fn<T1>(f));
+      return this->template tagged_rect<T1, T2, T3>(crane_erase_fn<T1>(f));
     }
 
-    template <typename T2, typename T3, typename F0>
-    crane::obj tagged_rect(F0 &&f) const {
+    template <typename T1, typename T2, typename T3, typename F0>
+    T1 tagged_rect(F0 &&f) const {
       const auto &[k0, v_1] = *this;
-      return crane_call_erased(f, crane_any_cast<T2>(k0),
-                               crane_any_cast<T3>(v_1));
+      return crane_any_cast<T1>(crane_call_erased(f, crane_any_cast<T2>(k0),
+                                                  crane_any_cast<T3>(v_1)));
     }
   };
 
@@ -202,7 +202,7 @@ struct ErasedMultiIndex {
           crane::obj a0 = std::move(_f.a0);
           std::shared_ptr<hlist> a1 = std::move(_f.a1);
           std::decay_t<F1> f0 = std::move(_f.f0);
-          _result = f0(a0, *a1, std::move(_result));
+          _result = crane_any_cast<T1>(f0(a0, *a1, std::move(_result)));
         }
       }
       return _result;

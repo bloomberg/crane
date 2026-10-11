@@ -597,6 +597,12 @@ and cpp_expr =
           be constructible from the other's, which an erased component is not
           -- the helper takes the value apart and puts it back together. *)
   | CPPerase_fn of cpp_type option * cpp_expr
+      (** [crane_erase_fn<Ret>(expr)] — adapts a concrete callable to an
+          erased representation.  [None] is a callable boxed whole into a
+          [std::any], stored curried as [std::function<std::any(std::any)>]
+          since a box is opened one argument at a time ({!CPPerased_call});
+          [Some t] is a slot declaring its own signature,
+          [std::function<t(std::any...)>]. *)
   | CPPerased_call of cpp_expr * cpp_expr
       (** Applies a callable whose representation was erased, recovering it at
           the one signature {!CPPerase_fn} stores it under:

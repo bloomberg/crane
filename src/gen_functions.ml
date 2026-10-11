@@ -1541,7 +1541,7 @@ let gen_decl__inner n b ty =
         else body_expr
       in
       let body_expr =
-        if resolves_to_any_type cty then erase_fn_for_any_slot b body_expr
+        if resolves_to_any_type cty then box_for_any_slot ~into:cty b body_expr
         else body_expr
       in
       let inner = snd (deapply_plain_tvars temps (Dasgn (n, cty, body_expr))) in
@@ -1745,7 +1745,7 @@ let gen_spec__inner n b ty =
         else b_expr
       in
       let b_expr =
-        if resolves_to_any_type ty then erase_fn_for_any_slot inner_body b_expr
+        if resolves_to_any_type ty then box_for_any_slot ~into:ty inner_body b_expr
         else b_expr
       in
       (* A type naming a class field this scope cannot resolve would spell

@@ -537,7 +537,8 @@ struct ResumIdEtaLambda {
                     x1, crane::any_cast<IFun<crane::obj, crane::obj>>(x2), _x0);
               };
             },
-            crane::obj(), crane::obj(), crane::obj(), crane_erase_fn([]() {
+            crane::obj(), crane::obj(), crane::obj(),
+            crane_erase_fn<crane::obj>([]() {
               return [](BE _x0)
                          -> stateT<Nat, crane_carrier_tch<_tcI0>::template c,
                                    crane::obj> {
@@ -591,7 +592,7 @@ struct ResumIdEtaLambda {
                     _x0);
               };
             }()),
-            crane_erase_fn([]() {
+            crane_erase_fn<crane::obj>([]() {
               return [](CE _x0)
                          -> stateT<Nat, crane_carrier_tch<_tcI0>::template c,
                                    crane::obj> {

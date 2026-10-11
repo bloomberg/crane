@@ -12101,3 +12101,47 @@
   (deps wf_fix_sigma_domain.t.exe)
   (action (run ./wf_fix_sigma_domain.t.exe))))
 
+(subdir arrow_behind_type_function
+ (rule
+  (targets arrow_behind_type_function.t.exe)
+  (deps ArrowBehindTypeFunction.vo arrow_behind_type_function.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} arrow_behind_type_function.t.exe arrow_behind_type_function.cpp arrow_behind_type_function.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps arrow_behind_type_function.t.exe)
+  (action (run ./arrow_behind_type_function.t.exe))))
+
+(subdir den_value_not_deep_erased
+ (rule
+  (targets den_value_not_deep_erased.t.exe)
+  (deps DenValueNotDeepErased.vo den_value_not_deep_erased.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} den_value_not_deep_erased.t.exe den_value_not_deep_erased.cpp den_value_not_deep_erased.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps den_value_not_deep_erased.t.exe)
+  (action (run ./den_value_not_deep_erased.t.exe))))
+
+(subdir den_fn_result_not_cast
+ (rule
+  (targets den_fn_result_not_cast.t.exe)
+  (deps DenFnResultNotCast.vo den_fn_result_not_cast.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} den_fn_result_not_cast.t.exe den_fn_result_not_cast.cpp den_fn_result_not_cast.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps den_fn_result_not_cast.t.exe)
+  (action (run ./den_fn_result_not_cast.t.exe))))
+
+(subdir den_fn_ctor_arg_not_wrapped
+ (rule
+  (targets den_fn_ctor_arg_not_wrapped.t.exe)
+  (deps DenFnCtorArgNotWrapped.vo den_fn_ctor_arg_not_wrapped.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} den_fn_ctor_arg_not_wrapped.t.exe den_fn_ctor_arg_not_wrapped.cpp den_fn_ctor_arg_not_wrapped.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps den_fn_ctor_arg_not_wrapped.t.exe)
+  (action (run ./den_fn_ctor_arg_not_wrapped.t.exe))))
+

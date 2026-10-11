@@ -372,28 +372,27 @@ struct RocqBug14174 {
 
       template <typename T1>
       T1 eq_sig_rec_uncurried(const sig<A> &x1_, T1 x2_) const {
-        return this->template eq_sig_rect_uncurried<crane::obj>(x1_,
-                                                                std::move(x2_));
+        return this->template eq_sig_rect_uncurried<T1>(x1_, std::move(x2_));
       }
 
       template <typename T1>
       T1 eq_sig_rect_uncurried(const sig<A> &v, T1 f) const {
-        return this->template eq_sig_rect<crane::obj>(v, [=]() { return f; }());
+        return this->template eq_sig_rect<T1>(v, [=]() { return f; }());
       }
 
       template <typename T1>
       T1 eq_sig_rect_exist_r(const A &v1, const T1 &f) const {
-        return this->template eq_sig_rect<crane::obj>(sig<A>::exist(v1), f);
+        return this->template eq_sig_rect<T1>(sig<A>::exist(v1), f);
       }
 
       template <typename T1>
       T1 eq_sig_rect_exist_l(const A &u1, const T1 &f) const {
-        return sig<A>::exist(u1).template eq_sig_rect<crane::obj>(*this, f);
+        return sig<A>::exist(u1).template eq_sig_rect<T1>(*this, f);
       }
 
       template <typename T1>
       T1 eq_sig_rec(const sig<A> &x1_, const T1 &x2_) const {
-        return this->template eq_sig_rect<crane::obj>(x1_, x2_);
+        return this->template eq_sig_rect<T1>(x1_, x2_);
       }
 
       template <typename T1> T1 eq_sig_rect(const sig<A> &, const T1 &f) const {
@@ -440,29 +439,27 @@ struct RocqBug14174 {
 
       template <typename T1>
       T1 eq_sig2_rec_uncurried(const sig2<A> &x1_, T1 x2_) const {
-        return this->template eq_sig2_rect_uncurried<crane::obj>(
-            x1_, std::move(x2_));
+        return this->template eq_sig2_rect_uncurried<T1>(x1_, std::move(x2_));
       }
 
       template <typename T1>
       T1 eq_sig2_rect_uncurried(const sig2<A> &v, T1 f) const {
-        return this->template eq_sig2_rect<crane::obj>(v,
-                                                       [=]() { return f; }());
+        return this->template eq_sig2_rect<T1>(v, [=]() { return f; }());
       }
 
       template <typename T1>
       T1 eq_sig2_rect_exist2_r(const A &v1, const T1 &f) const {
-        return this->template eq_sig2_rect<crane::obj>(sig2<A>::exist2(v1), f);
+        return this->template eq_sig2_rect<T1>(sig2<A>::exist2(v1), f);
       }
 
       template <typename T1>
       T1 eq_sig2_rect_exist2_l(const A &u1, const T1 &f) const {
-        return sig2<A>::exist2(u1).template eq_sig2_rect<crane::obj>(*this, f);
+        return sig2<A>::exist2(u1).template eq_sig2_rect<T1>(*this, f);
       }
 
       template <typename T1>
       T1 eq_sig2_rec(const sig2<A> &x1_, const T1 &x2_) const {
-        return this->template eq_sig2_rect<crane::obj>(x1_, x2_);
+        return this->template eq_sig2_rect<T1>(x1_, x2_);
       }
 
       template <typename T1>

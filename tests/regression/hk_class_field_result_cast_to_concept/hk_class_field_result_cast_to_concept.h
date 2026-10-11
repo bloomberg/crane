@@ -129,7 +129,7 @@ template <typename _tcI0, typename T1 = void, typename T2 = void, typename F1>
                typename _tcI0::PROV::provenance,
                typename _tcI0::mm_state::state>
 memM<T2> mbind(memM<crane::obj> x, F1 &&x0) {
-  return _tcI0::mbind(std::move(x), crane_erase_fn(x0));
+  return _tcI0::mbind(std::move(x), crane_erase_fn<crane::obj>(x0));
 }
 
 template <typename _tcI0>

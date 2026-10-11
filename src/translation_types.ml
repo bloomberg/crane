@@ -91,8 +91,8 @@ let recover_carrier_result ~fun_ty ~n_args ~want expr =
 let binder_cpp_type i =
   Option.map fst (IntMap.find_opt i (!tctx).cpp_binder_types)
 
-(** Wrap [expr] in the [crane_erase_fn] runtime helper, flagging the header
-    that the helper is needed. *)
+(** Wrap [expr] in the [crane_erase_fn] runtime helper: boxed whole without
+    [ret_ty], at a declared signature with it (see {!Minicpp.CPPerase_fn}). *)
 let wrap_crane_erase_fn ?ret_ty expr =
   CPPerase_fn (ret_ty, expr)
 
@@ -1220,7 +1220,7 @@ let apply_erased_curried ?(box = false) callee arg_exprs =
 
 (** Apply a callee whose static C++ type is the erased [std::any].  [std::any]
     is not callable, so the canonical [std::function<std::any(std::any...)>]
-    adapter the producer stored via {!erase_fn_for_any_slot} is recovered with
+    adapter the producer stored via {!box_for_any_slot} is recovered with
     an [any_cast] and each argument is boxed.  The result is a [std::any]. *)
 let apply_erased_callee callee arg_exprs =
   apply_erased_curried ~box:true callee arg_exprs
@@ -3035,15 +3035,41 @@ let absurd_coercion from into =
   && into <> Tvoid
   && not (resolves_to_any_type into)
 
-(** Adapt a function value being stored into a slot whose C++ type is the
-    erased [std::any].  The application side reads such a callable back with
-    [any_cast<std::function<std::any(std::any...)>>], so the producer must
-    store that same canonical representation rather than the raw closure --
+(** A list computed at a concrete element type (a call's result, a variable)
+    going into a slot [into] that is a value-indexed family ([den t]): the
+    family's generic consumers read it with its elements boxed one at a time
+    ({!Cpp_erasure.erased_list_shape}), so it is converted to that shape.  A
+    literal needs no conversion, being built at the erased shape already
+    ([deep_erase]); nor does a custom list, which a consumer converts itself.
+    A box for a type variable -- an existential's payload -- is read at
+    whatever type its consumer knows, and keeps the value as it is. *)
+let box_list_for_family ~into e expr =
+  if not (names_erased_alias into) then expr
+  else
+    match strip_magic e with
+    | MLcons _ -> expr
+    | e -> (
+      match
+        Option.bind (infer_ml_body_type e) (fun t ->
+            Cpp_erasure.erased_list_shape (cpp_of_ml (empty_env ()) t) )
+      with
+      | Some (g, shape) when not (Table.is_custom g) ->
+        Cpp_erasure.converting_ctor shape [expr]
+      | _ -> expr )
+
+(** Adapt a value being stored into a slot whose C++ type is the erased
+    [std::any] to the shape its consumers read back out of the box.  A
+    function value is read with [any_cast<std::function<std::any(std::any)>>],
     which is what the [crane_erase_fn] runtime helper builds, deducing the
-    callable's signature with [std::function] CTAD.  Non-function values are
-    returned unchanged. *)
-let erase_fn_for_any_slot e expr =
-  if ml_expr_is_function_value e then wrap_crane_erase_fn expr else expr
+    callable's signature with [std::function] CTAD; a list, where the slot
+    [into] says, by {!box_list_for_family}.  Anything else, and a callable
+    already adapted, is returned unchanged. *)
+let box_for_any_slot ?into e expr =
+  match expr with
+  | CPPerase_fn _ -> expr
+  | _ when ml_expr_is_function_value e -> wrap_crane_erase_fn expr
+  | _ -> (
+    match into with Some into -> box_list_for_family ~into e expr | None -> expr )
 
 (** True when environment variable at de Bruijn index [i] has an erased C++
     type (i.e. [std::any] or a dummy type, arising from dependent-parameter

@@ -483,10 +483,13 @@ and cpp_expr =
        other's, which an erased component is not, so the helper takes it
        apart and puts it back together instead *)
   | CPPerase_fn of cpp_type option * cpp_expr
-    (* crane_erase_fn<Ret>(expr) — adapts a concrete callable to the canonical
-       erased representation std::function<Ret(std::any...)>.  [None] means the
-       result is erased too (Ret = std::any); [Some t] keeps the codomain, for
-       a consumer that erases only the argument types. *)
+    (* crane_erase_fn<Ret>(expr) — adapts a concrete callable to an erased
+       representation.  [None] is a callable boxed whole into a std::any:
+       stored as std::function<std::any(std::any)>, curried, since a box is
+       opened one argument at a time ({!CPPerased_call}).  [Some t] is a slot
+       declaring its own signature, std::function<t(std::any...)> -- t is
+       std::any where the result erased too, and a concrete type for a
+       consumer that erases only the argument types. *)
   | CPPerased_call of cpp_expr * cpp_expr
     (* std::any_cast<std::function<std::any(std::any)>>(f)(a) -- applies a
        callable whose representation was erased, recovering it at the one

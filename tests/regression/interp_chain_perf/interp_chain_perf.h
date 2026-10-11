@@ -853,13 +853,13 @@ struct InterpChainPerf {
               };
             },
             crane::obj(), crane::obj(), crane::obj(),
-            crane_erase_fn(
+            crane_erase_fn<crane::obj>(
                 [](const GetE &a0)
                     -> Monads::template stateT<
                         Nat, crane_carrier_tc_e4b67e60f94a9e42, crane::obj> {
                   return h_get<crane::obj>(crane_convert<GetE>(a0));
                 }),
-            crane_erase_fn([]() {
+            crane_erase_fn<crane::obj>([]() {
               return [](outE _x0) -> Monads::template stateT<
                                       Nat, crane_carrier_tc_e4b67e60f94a9e42,
                                       crane::obj> {

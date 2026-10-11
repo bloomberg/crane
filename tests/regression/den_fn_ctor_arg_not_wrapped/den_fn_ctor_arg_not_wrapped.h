@@ -1,5 +1,5 @@
-#ifndef INCLUDED_DEN_FN_RESULT_NOT_CAST
-#define INCLUDED_DEN_FN_RESULT_NOT_CAST
+#ifndef INCLUDED_DEN_FN_CTOR_ARG_NOT_WRAPPED
+#define INCLUDED_DEN_FN_CTOR_ARG_NOT_WRAPPED
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -13,7 +13,7 @@
 #include <utility>
 #include <variant>
 
-struct DenFnResultNotCast {
+struct DenFnCtorArgNotWrapped {
   struct ty {
     // TYPES
     struct TNat {};
@@ -154,56 +154,35 @@ struct DenFnResultNotCast {
 
   using den = crane::obj;
 
-  struct val {
+  struct box {
     // DATA
-    ty t;
-    den a1;
+    den a0;
 
     // ACCESSORS
-    val clone() const { return {t, a1}; }
+    box clone() const { return {a0}; }
 
     // CREATORS
-    static val V_(ty t, den a1) { return {std::move(t), std::move(a1)}; }
-
-    uint64_t app(uint64_t n) const {
-      const auto &[t0, a1] = *this;
-      if (std::holds_alternative<typename ty::TNat>(t0.v())) {
-        return UINT64_C(0);
-      } else {
-        const auto &[a00, a10] = std::get<typename ty::TFun>(t0.v());
-        auto &&_sv = *a00;
-        if (std::holds_alternative<typename ty::TNat>(_sv.v())) {
-          auto &&_sv = *a10;
-          if (std::holds_alternative<typename ty::TNat>(_sv.v())) {
-            return crane::any_cast<crane::fn<crane::obj(crane::obj)>>(a1)(n);
-          } else {
-            return UINT64_C(0);
-          }
-        } else {
-          return UINT64_C(0);
-        }
-      }
-    }
+    static box box0(den a0) { return {std::move(a0)}; }
   };
 
-  template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, const ty &, const den &>
-  static T1 val_rect(F0 &&f, const val &v) {
-    const auto &[t0, a1] = v;
-    return f(t0, a1);
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, const den &>
+  static T1 box_rect(const ty &, F1 &&f, const box &b) {
+    const auto &[a0] = b;
+    return f(a0);
   }
 
-  template <typename T1, typename F0> static T1 val_rec(F0 &&f, const val &v) {
-    return val_rect<T1>(crane_erase_fn<T1>(f), v);
+  template <typename T1, typename F1>
+  static T1 box_rec(const ty &_x, F1 &&f, const box &b) {
+    return box_rect<T1>(_x, crane_erase_fn<T1>(f), b);
   }
 
-  static inline const uint64_t result =
-      (val::V_(ty::tfun(ty::tnat(), ty::tnat()),
-               [](uint64_t x) { return (x + 1); })
-           .app(UINT64_C(4)) +
-       val::V_(ty::tfun(ty::tnat(), ty::tnat()), [](uint64_t x) {
-         return (x * UINT64_C(2));
-       }).app(UINT64_C(4)));
+  static den unbox(const ty &_x, const box &b);
+  static inline const box fb =
+      box::box0(crane_erase_fn([](uint64_t x) { return (x + 1); }));
+  static inline const uint64_t result = crane::any_cast<uint64_t>(
+      crane::any_cast<crane::fn<crane::obj(crane::obj)>>(unbox(
+          ty::tfun(ty::tnat(), ty::tnat()), fb))(crane::obj(UINT64_C(4))));
 };
 
-#endif // INCLUDED_DEN_FN_RESULT_NOT_CAST
+#endif // INCLUDED_DEN_FN_CTOR_ARG_NOT_WRAPPED

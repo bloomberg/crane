@@ -1611,10 +1611,15 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
        Keep only the binders the expected type takes and let the remainder
        become the closure it returns. *)
     let args, a =
+      (* An alias for a function type -- a codomain [cont R A] -- is one the
+         lambda has to return as much as a spelled-out [std::function]. *)
       let rec fun_ty_of = function
         | Tconst t | Tref (_, t) -> fun_ty_of t
         | Tfun (dom, cod) -> Some (List.length dom, cod)
-        | _ -> None
+        | t -> (
+          match unfold_cpp_typedef env t with
+          | Tfun _ as f when f <> t -> fun_ty_of f
+          | _ -> None )
       in
       let is_runtime_binder (_, ty) =
         (not (isTdummy ty)) && not (ml_type_is_void ty)
@@ -2084,7 +2089,19 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                      the body at [std::any] and fails inside it, where no
                      [requires] can catch it. *)
                   Tref (Lvalue, Tconst Tauto)
-                | None -> wrap_param_by_ownership ~is_owned:owned bare_cpp_ty
+                | None ->
+                  (* A function the slot takes at fewer domains than the
+                     binder's arrows flatten to -- [esc : A -> cont R B], with
+                     [cont R B] an alias for a function type -- is curried
+                     where the slot says; see {!Minicpp.recurry_to}. *)
+                  let declared_arity =
+                    match Option.map (unfold_cpp_typedef env) (slot_dom_cpp_ty j) with
+                    | Some (Tfun (doms, _)) -> List.length doms
+                    | _ -> 0
+                  in
+                  wrap_param_by_ownership ~is_owned:owned
+                    (if declared_arity > 0 then recurry_to declared_arity bare_cpp_ty
+                     else bare_cpp_ty)
               in
               (param_cpp_ty, Some id, body_subst) )
             filtered_args_with_owned
@@ -3301,10 +3318,14 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
              Concrete field values implicitly convert to [std::any], so the
              factory call still type-checks.  This mirrors the custom-list
              element erasure in the custom-cons path, extending it to plain
-             value-type constructors. *)
+             value-type constructors.  A list is the exception to keeping
+             the structure: it goes into a box with its elements boxed one at
+             a time ({!Cpp_erasure.erased_list_shape}), so a list of lists is
+             a [List<std::any>] whose elements are boxed lists in turn. *)
           let temps =
             if slot.deep_erase && temps <> [] then
-              List.map index_erase_type temps
+              if is_list_global n then List.map (fun _ -> Tany) temps
+              else List.map index_erase_type temps
             else temps
           in
           (* The slot has already written this constructor's type down -- a
@@ -3647,7 +3668,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                      (unbox each argument, box the result). *)
                   (* Wrap via the [crane_erase_fn] runtime helper (emitted as
                      [#include "crane_fn.h"] in the header preamble). *)
-                  erase_fn_for_any_slot ml_e expr
+                  box_for_any_slot ml_e expr
                 end )
             | Tfun (param_tys, ret_ty) when List.exists (fun t -> t = Tany) param_tys ->
               ( match expr with
@@ -3773,9 +3794,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                  callable's signature and unboxes each argument.  The field's
                  own codomain stays concrete. *)
               | _ when ml_expr_is_function_value ml_e ->
-                wrap_crane_erase_fn
-                  ?ret_ty:(if ret_ty = Tany then None else Some ret_ty)
-                  expr
+                wrap_crane_erase_fn ~ret_ty expr
               | _ -> expr )
             | _ -> expr
             with Failure _ | Invalid_argument _ ->
@@ -3954,8 +3973,12 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             let ret_ty = cpp_of_ml env (codomain ft) in
             let expr = erased_fn_instantiation expr in
             wrap_crane_erase_fn
-              ?ret_ty:(if prints_as_any ret_ty then None else Some ret_ty)
+              ~ret_ty:(if prints_as_any ret_ty then Tany else ret_ty)
               expr
+          (* A field erased whole -- [den t], whatever [t] the call names --
+             holds a function as the canonical callable it is read back as. *)
+          | _ when ft_has_erased_tvar ft ->
+            box_for_any_slot ~into:(cpp_of_ml env ft) ml_e expr
           | _ -> expr )
       in
       let gen_and_wrap i e =
@@ -4416,12 +4439,19 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                   cpp_of_ml env ft
                 in
                 (* A closure written at the concrete domain does not convert
-                   to the erased signature the field is declared at; [coerce]
-                   supplies the [crane_erase_fn] adapter. *)
+                   to the erased signature the field is declared at, nor is it
+                   the canonical callable a field erased whole ([den t] at a
+                   [TFun] index) is read back as; [coerce] supplies the
+                   [crane_erase_fn] adapter for the one, and
+                   {!box_for_any_slot} for the other. *)
                 let declared_ty = declared_field_cpp_ty ft in
                 let expr =
                   if erased_domain_fun_ty declared_ty then
                     coerce ?term:(List.nth_opt ts i) ~into:declared_ty expr
+                  else if prints_as_any (unfold_cpp_typedef env declared_ty) then
+                    match List.nth_opt ts i with
+                    | Some e -> box_for_any_slot ~into:declared_ty e expr
+                    | None -> expr
                   else expr
                 in
                 wrap_storage_expr ~storage_ty ~api_ty expr
@@ -6818,12 +6848,27 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
     let arg_slot =
       {slot with deep_erase = slot.deep_erase || callee_has_erased_params}
     in
+    (* The callee's declared domain at an argument's position, where the
+       binding site recorded a declaration: a lambda is written against it,
+       curried as it says ([fun a _ => k a] for an [A -> cont R B]).  Not one
+       with an erased position, which says less than the lambda's own
+       binders -- a handler the callee takes polymorphically is a function
+       object, not the erased signature. *)
+    let declared_dom i =
+      match Option.bind callee_rel_idx binder_cpp_type with
+      | Some (Tfun (dom, _)) -> (
+        match List.nth_opt dom i with
+        | Some t when not (exists_cpp_type prints_as_any t) -> Some t
+        | _ -> None )
+      | _ -> None
+    in
     let args =
       List.mapi (fun i x ->
       let expr =
         match x with
         | e when ml_value_is_void_call e ->
           wrap_void_call_as_value (gen_expr ~slot:arg_slot env x)
+        | MLlam _ -> gen_expr ?expected_ty:(declared_dom i) ~slot:arg_slot env x
         | MLmagic (_, _) ->
           let expected = param_expected_cpp_ty env callee_param_tys i in
           gen_expr ?expected_ty:expected ~slot:arg_slot env x
@@ -10249,7 +10294,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       let value =
         match (!tctx).current_cpp_return_type with
         | Some ret_ty when resolves_to_any_type ret_ty ->
-          erase_fn_for_any_slot ast value
+          box_for_any_slot ~into:ret_ty ast value
         | _ -> value
       in
       let result = inline_iife k value in
@@ -10387,6 +10432,8 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
          erased. *)
       let e =
         match (!tctx).current_cpp_return_type with
+        | Some rt when k_returns && resolves_to_any_type rt ->
+          box_list_for_family ~into:rt t e
         | Some rt when k_returns -> recover_boxed_component rt e
         | _ -> e
       in
@@ -10535,7 +10582,7 @@ let with_method_ns_for_locals ?base (f : unit -> 'a) : 'a =
 
 (** Adapt closures returned from a function whose return type is the erased
     [std::any] (e.g. the [nat -> nat] branch of a dependent
-    [if b then nat else nat -> nat]).  Like {!erase_fn_for_any_slot} at
+    [if b then nat else nat -> nat]).  Like {!box_for_any_slot} at
     argument and value-declaration positions, the callable must be stored in
     the canonical [std::function<std::any(std::any...)>] form that the
     application site recovers with an [any_cast].  Nested lambda bodies are

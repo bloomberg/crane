@@ -567,8 +567,11 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
             (List.mapi (fun i o -> (i, o)) method_owned_flags) };
   (* The scope covers both the inductive's type vars and the extra ones, so
      that gen_expr/eta_fun convert Tvars to the named C++ types the method
-     body expects (e.g. recursive calls carry type args). *)
+     body expects (e.g. recursive calls carry type args).  The return type is
+     exposed to the body as [gen_dfun] exposes a function's, so a result
+     recovered from a box is recovered at it. *)
   let stmts =
+    with_cpp_return_type (Some ret_cpp) @@ fun () ->
     with_type_vars (vars @ extra_tvar_names) (fun () ->
         (* Include all local value-type inductives with recursive fields in the
            method ns.  This ensures that when the method body constructs or
