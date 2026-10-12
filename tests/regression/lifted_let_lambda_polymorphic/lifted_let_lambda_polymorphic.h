@@ -1,11 +1,10 @@
-#ifndef INCLUDED_MODULE_TYPE_MENTIONS_OUTER_RECORD
-#define INCLUDED_MODULE_TYPE_MENTIONS_OUTER_RECORD
+#ifndef INCLUDED_LIFTED_LET_LAMBDA_POLYMORPHIC
+#define INCLUDED_LIFTED_LET_LAMBDA_POLYMORPHIC
 
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
 #include <atomic>
-#include <concepts>
 #include <cstdint>
 #include <memory>
 #include <stdexcept>
@@ -113,61 +112,38 @@ public:
   }
 };
 
-struct ModuleTypeMentionsOuterRecord {
-  template <typename A> struct ops {
-    crane::fn<A(A, A)> plus;
-    A zero;
+struct LiftedLetLambdaPolymorphic {
+  template <typename T1, typename F0>
+  static List<crane::fn<T1(T1)>> all(F0 &&op) {
+    crane::fn<T1(crane::fn<T1(T1)>, crane::fn<T1(T1)>, T1)> compose =
+        [](const crane::fn<T1(T1)> &f, const crane::fn<T1(T1)> &g,
+           const T1 &x) { return f(g(x)); };
+    return List<crane::fn<T1(T1)>>::cons(
+        [=, compose = std::move(compose)](T1 _pa0) {
+          return compose(op, op, _pa0);
+        },
+        List<crane::fn<T1(T1)>>::cons(op, List<crane::fn<T1(T1)>>::nil()));
+  }
 
-    // ACCESSORS
-    template <typename CraneU> operator ops<CraneU>() const {
-      return {crane_convert<crane::fn<CraneU(CraneU, CraneU)>>(plus),
-              [&]() -> CraneU {
-                if constexpr (crane_convertible<CraneU, const A &>) {
-                  return crane_convert<CraneU>(zero);
-                } else {
-                  throw std::logic_error("unreachable: inactive constructor "
-                                         "field at this instantiation");
-                }
-              }()};
-    }
-  };
+  static inline const uint64_t from_let =
+      all<uint64_t>(
+          [](uint64_t _x0) -> uint64_t { return (UINT64_C(2) * _x0); })
+          .template fold_left<uint64_t>(
+              [](uint64_t a, const crane::fn<uint64_t(uint64_t)> &f) {
+                return f(a);
+              },
+              UINT64_C(1));
 
-  struct NatT {
-    using t = uint64_t;
-    static inline const ops<uint64_t> o = ops<uint64_t>{
-        [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
-        UINT64_C(0)};
-  };
+  template <typename T1>
+  static T1 quad(const std::type_identity_t<crane::fn<T1(T1, T1)>> &op,
+                 T1 x0_) {
+    crane::fn<T1(T1)> twice = [=](const T1 &x) { return op(x, x); };
+    return twice(twice(std::move(x0_)));
+  }
 
-  template <T X> struct Use {
-    static typename X::t sum(const List<typename X::t> &l) {
-      return l.template fold_left<typename X::t>(X::o.plus, X::o.zero);
-    }
-  };
-
-  using U = Use<NatT>;
-  static inline const uint64_t result = U::sum(List<uint64_t>::cons(
-      UINT64_C(1), List<uint64_t>::cons(
-                       UINT64_C(2), List<uint64_t>::cons(
-                                        UINT64_C(3), List<uint64_t>::nil()))));
+  static inline const uint64_t from_section = quad<uint64_t>(
+      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
+      UINT64_C(1));
 };
 
-template <typename M>
-concept T = requires {
-  typename M::t;
-  requires(
-      requires {
-        {
-          M::o
-        } -> std::convertible_to<
-            ModuleTypeMentionsOuterRecord::ops<typename M::t>>;
-      } ||
-      requires {
-        {
-          M::o()
-        } -> std::convertible_to<
-            ModuleTypeMentionsOuterRecord::ops<typename M::t>>;
-      });
-};
-
-#endif // INCLUDED_MODULE_TYPE_MENTIONS_OUTER_RECORD
+#endif // INCLUDED_LIFTED_LET_LAMBDA_POLYMORPHIC

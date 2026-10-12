@@ -13,8 +13,8 @@
 
 template <typename M>
 concept T = requires {
-  typename M::tr;
-  typename M::box;
+  typename M::template tr<crane::obj>;
+  typename M::template box<crane::obj>;
 };
 
 struct ModuleTypeParameterisedInductive {

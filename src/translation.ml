@@ -9189,7 +9189,13 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     in
     if not has_extra then
       gen_normal_letin ()
-    else (* Lift the polymorphic lambda to a top-level template function. *)
+    else (
+    match sole_instance ~n_outer t b with
+    | Some inst ->
+      (* Used at one instance only: bound at it, not lifted. *)
+      let subst = Mlutil.type_subst_list inst in
+      gen_stmts ~slot env k (MLletin (x, subst t, Mlutil.ast_map_types subst a, b))
+    | None -> (* Lift the polymorphic lambda to a top-level template function. *)
       let params, body = collect_lams a in
       let n_params = List.length params in
       let x' = cpp_id_of_id (id_of_mlid x) in
@@ -9513,7 +9519,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           (subst_lifted_call_stmt x_lifted
              (mk_cppglob lifted_ref call_type_args)
              free_var_cpps )
-          cont
+          cont )
   | MLletin (x, t, a, b) ->
     let x' = cpp_id_of_id (id_of_mlid x) in
     let ids_renamed, env' = push_vars' [(x', t)] env in

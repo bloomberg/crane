@@ -10,7 +10,7 @@ concept T = requires {
   typename M::Color;
   typename M::t;
   {
-    M::paint(std::declval<typename M::color>(), std::declval<typename M::t>())
+    M::paint(std::declval<typename M::Color>(), std::declval<typename M::t>())
   } -> std::same_as<typename M::t>;
   requires(
       requires {

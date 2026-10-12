@@ -787,9 +787,15 @@ and eq_ml_branch (id1, _, p1, t1) (id2, _, p2, t2) =
 (** {2 [ast_iter_rel f t] applies [f] on every [MLrel] in t. It takes care of
     the number of bindings crossed before reaching the [MLrel]} *)
 
-let ast_iter_rel f =
+(** [ast_iter_rel_applied f t] calls [f n i args] on every [MLrel i] in [t],
+    with [n] the number of bindings crossed to reach it and [args] the
+    arguments it is applied to there, if any. *)
+let ast_iter_rel_applied f =
   let rec iter n = function
-    | MLrel i -> f (i - n)
+    | MLrel i -> f n i []
+    | MLapp (MLrel i, l) ->
+      f n i l;
+      List.iter (iter n) l
     | MLlam (_, _, a) -> iter (n + 1) a
     | MLletin (_, _, a, b) ->
       iter n a;
@@ -817,6 +823,8 @@ let ast_iter_rel f =
      |MLstring _ -> ()
   in
   iter 0
+
+let ast_iter_rel f = ast_iter_rel_applied (fun n i _ -> f (i - n))
 
 (** {2 Map over asts} *)
 

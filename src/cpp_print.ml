@@ -2035,10 +2035,13 @@ and pp_cpp_expr env args t =
      than required to be absent.  Applied at a type -- as a projection of a
      module obtained by functor application is -- this used to miss and fall
      through to the ordinary qualified call, naming a function that a
-     suppressed projection never has. *)
-  | CPPfun_call (_, CPPglob (r, _, _), {rev = [arg]}) when Table.is_projection r ->
+     suppressed projection never has.  Applied to more than the record, it
+     reads a field holding a function, which takes the rest. *)
+  | CPPfun_call (_, CPPglob (r, _, _), ts) when Table.is_projection r && call_args ts <> [] ->
     let field_name = projection_field_name r in
-    pp_cpp_expr env args arg ++ str "." ++ str field_name
+    let record, rest = match call_args ts with a :: rest -> (a, rest) | [] -> assert false in
+    pp_cpp_expr env args record ++ str "." ++ str field_name
+    ++ (if rest = [] then mt () else str "(" ++ pp_list (pp_cpp_expr env args) rest ++ str ")")
   | CPPfun_call (_, f, ts) ->
     let args_s = pp_list (pp_cpp_expr env args) (call_args ts) in
     let prefix = match f with

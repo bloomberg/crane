@@ -182,11 +182,20 @@ type held_concept =
 (** Equality on {!held_concept}. *)
 val held_concept_equal : held_concept -> held_concept -> bool
 
+(** The functor bodies whose module types are file-scope concepts over the
+    functor's parameters as well as [M]: the body's path, the functor's
+    label, and its parameters. *)
+val functor_concept_scopes : (Names.ModPath.t * (Names.Label.t * Names.ModPath.t list)) list ref
+
 (** The concepts the struct now being rendered has held back. *)
 val held_back_concepts : held_concept list ref
 
 (** Whether a concept is one the current frame is holding back. *)
 val is_held_back_in : held_concept list -> held_concept -> bool
+
+(** Whether the struct now being rendered holds concept [c] back: declared
+    after it, so a constraint inside it cannot name [c] yet. *)
+val concept_held_back : held_concept -> bool
 
 (** Whether the concept of type class [r] is held back by the struct now being
     rendered: declared after it, so nothing inside may name it.  A

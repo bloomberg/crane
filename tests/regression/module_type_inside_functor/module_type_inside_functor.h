@@ -4,6 +4,10 @@
 #include <concepts>
 #include <cstdint>
 
+template <typename M, typename X>
+concept Make_HasF = requires {
+  { M::f(std::declval<typename X::t>()) } -> std::same_as<uint64_t>;
+};
 template <typename M>
 concept T = requires {
   typename M::t;
@@ -18,7 +22,7 @@ concept T = requires {
 
 struct ModuleTypeInsideFunctor {
   template <T X> struct Make {
-    template <HasF Y> struct Apply {
+    template <Make_HasF<X> Y> struct Apply {
       static const uint64_t &go() {
         static const uint64_t v = Y::f(X::z);
         return v;

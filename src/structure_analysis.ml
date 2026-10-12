@@ -34,6 +34,7 @@ type t = {
   wrapper_bystanders : (ModPath.t * string) list;
   functor_app_sources : (ModPath.t * ModPath.t) list;
   eponymous_records : GlobRef.t list;
+  functor_concept_scopes : (ModPath.t * (Label.t * ModPath.t list)) list;
   concept_renames : (GlobRef.t * string) list;
   lifted_instances : GlobRef.t list;
 }
@@ -127,6 +128,31 @@ let collect_functor_app_sources (s : ml_structure) :
            match module_expr_source m.ml_mod_expr with
            | Some src -> (MPdot (mp, l), src) :: acc
            | None -> acc )
+         | _ -> acc )
+       s [])
+
+(** [(body, (functor, params))] for every functor whose body declares a module
+    type.  A concept cannot be declared inside the class template a functor
+    becomes, and the module type may mention the functor's parameters, so its
+    concept is declared at file scope over those parameters too; the name it
+    goes by there, and the arguments every use passes, are settled here. *)
+let collect_functor_concept_scopes (s : ml_structure) :
+    (ModPath.t * (Label.t * ModPath.t list)) list =
+  let rec params acc = function
+    | MEfunctor (mbid, _, body) -> params (MPbound mbid :: acc) body
+    | body -> (List.rev acc, body)
+  in
+  List.rev
+    (fold_structure ~root:ignore
+       ~enter:(fun () _ -> ())
+       (fun () _ l se acc ->
+         match se with
+         | SEmodule {ml_mod_expr = MEfunctor _ as me; _} -> (
+           match params [] me with
+           | ps, MEstruct (body_mp, sel)
+             when List.exists (function _, SEmodtype _ -> true | _ -> false) sel ->
+             (body_mp, (l, ps)) :: acc
+           | _ -> acc )
          | _ -> acc )
        s [])
 
@@ -1017,5 +1043,6 @@ let analyze (reg : Method_registry.t) (s : ml_structure) : t =
     wrapper_bystanders;
     functor_app_sources;
     eponymous_records;
+    functor_concept_scopes = collect_functor_concept_scopes s;
     concept_renames;
     lifted_instances = collect_lifted_instances sorted_modules }

@@ -30,9 +30,7 @@ struct AbstractProjectionOverapplied {
 
   template <T X> struct Use {
     static const uint64_t &go() {
-      static const uint64_t v = [](const auto &_x) {
-        return _x.step;
-      }(X::a, X::a.base);
+      static const uint64_t v = X::a.step(X::a.base);
       return v;
     }
   };

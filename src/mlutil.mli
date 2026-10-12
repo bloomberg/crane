@@ -411,6 +411,11 @@ val nb_occur_match : ml_ast -> int
     @return [true] if some [MLrel i] with [k <= i <= k'] appears free in [t] *)
 val ast_occurs_itvl : int -> int -> ml_ast -> bool
 
+(** [ast_iter_rel_applied f t] calls [f n i args] on every [MLrel i] in [t],
+    with [n] the number of bindings crossed to reach it and [args] the
+    arguments it is applied to there ([[]] where it is not applied). *)
+val ast_iter_rel_applied : (int -> int -> ml_ast list -> unit) -> ml_ast -> unit
+
 (** Lift de Bruijn indices in a term.
     @param k the amount to add to each free de Bruijn index in [t]
     @param t the term whose free indices are to be lifted *)

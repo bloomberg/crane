@@ -12233,3 +12233,69 @@
   (deps fix_let_binder_self_reference.t.exe)
   (action (run ./fix_let_binder_self_reference.t.exe))))
 
+(subdir module_type_parameterised_inductive
+ (rule
+  (targets module_type_parameterised_inductive.t.exe)
+  (deps ModuleTypeParameterisedInductive.vo module_type_parameterised_inductive.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} module_type_parameterised_inductive.t.exe module_type_parameterised_inductive.cpp module_type_parameterised_inductive.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps module_type_parameterised_inductive.t.exe)
+  (action (run ./module_type_parameterised_inductive.t.exe))))
+
+(subdir module_type_enum_in_parameter
+ (rule
+  (targets module_type_enum_in_parameter.t.exe)
+  (deps ModuleTypeEnumInParameter.vo module_type_enum_in_parameter.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} module_type_enum_in_parameter.t.exe module_type_enum_in_parameter.cpp module_type_enum_in_parameter.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps module_type_enum_in_parameter.t.exe)
+  (action (run ./module_type_enum_in_parameter.t.exe))))
+
+(subdir module_type_mentions_outer_record
+ (rule
+  (targets module_type_mentions_outer_record.t.exe)
+  (deps ModuleTypeMentionsOuterRecord.vo module_type_mentions_outer_record.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} module_type_mentions_outer_record.t.exe module_type_mentions_outer_record.cpp module_type_mentions_outer_record.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps module_type_mentions_outer_record.t.exe)
+  (action (run ./module_type_mentions_outer_record.t.exe))))
+
+(subdir abstract_projection_overapplied
+ (rule
+  (targets abstract_projection_overapplied.t.exe)
+  (deps AbstractProjectionOverapplied.vo abstract_projection_overapplied.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} abstract_projection_overapplied.t.exe abstract_projection_overapplied.cpp abstract_projection_overapplied.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps abstract_projection_overapplied.t.exe)
+  (action (run ./abstract_projection_overapplied.t.exe))))
+
+(subdir module_type_inside_functor
+ (rule
+  (targets module_type_inside_functor.t.exe)
+  (deps ModuleTypeInsideFunctor.vo module_type_inside_functor.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} module_type_inside_functor.t.exe module_type_inside_functor.cpp module_type_inside_functor.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps module_type_inside_functor.t.exe)
+  (action (run ./module_type_inside_functor.t.exe))))
+
+(subdir lifted_let_lambda_polymorphic
+ (rule
+  (targets lifted_let_lambda_polymorphic.t.exe)
+  (deps LiftedLetLambdaPolymorphic.vo lifted_let_lambda_polymorphic.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} lifted_let_lambda_polymorphic.t.exe lifted_let_lambda_polymorphic.cpp lifted_let_lambda_polymorphic.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps lifted_let_lambda_polymorphic.t.exe)
+  (action (run ./lifted_let_lambda_polymorphic.t.exe))))
+

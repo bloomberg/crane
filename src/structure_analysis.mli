@@ -125,6 +125,12 @@ type t = {
           copies this set when it is built, so a record discovered later --
           while rendering a module the resolver has already answered for --
           would never reach it. *)
+  functor_concept_scopes : (ModPath.t * (Label.t * ModPath.t list)) list;
+      (** [(body, (functor, params))] for every functor whose body declares a
+          module type.  The concept of such a module type is declared at file
+          scope, over the functor's parameters as well as the module it
+          constrains, and is named after the functor; every use, the ones
+          rendered before the functor included, needs both. *)
   concept_renames : (GlobRef.t * string) list;
       (** [(class, concept_name)] for every type class whose C++ concept name
           is not simply its own name.  A concept is declared at file scope, so

@@ -2873,6 +2873,54 @@ and fill_erased_tys ?(only_alias_args = false) id tys args =
             t )
         tys
 
+(** The instance of [t], the type of a let-bound function, that every use in
+    its scope [body] is at, when the uses agree on one that pins each of the
+    binding's own variables -- those above [n_outer] -- down to the enclosing
+    declaration's.  Extraction generalises a let-bound function's type
+    whatever the Rocq annotation says, and a binding used at one instance is
+    polymorphic in name only: lifting it makes a template whose variables no
+    call can deduce, and whose partial applications erase what they do not
+    know.  [None] where the binder is used other than applied, or where the
+    uses disagree.  The enclosing scope's binder types must be in scope. *)
+let sole_instance ~n_outer t body =
+  let exception Not_sole in
+  try
+    let instances = ref [] in
+    Mlutil.ast_iter_rel_applied
+      (fun n i args ->
+        if Int.equal i (n + 1) then begin
+          if args = [] then raise Not_sole;
+          let args =
+            List.map
+              (fun a ->
+                if Mlutil.ast_occurs_itvl 1 (n + 1) a then raise Not_sole
+                else Mlutil.ast_lift (-(n + 1)) a )
+              args
+          in
+          instances := tvar_instantiation_found ~in_scope:true t args :: !instances
+        end )
+      body;
+    let vars = IntSet.elements (collect_tvars_set IntSet.empty t) in
+    let outer_only ty = IntSet.for_all (fun k -> k <= n_outer) (collect_tvars_set IntSet.empty ty) in
+    let agreed k =
+      match List.map (List.assoc_opt k) !instances with
+      | Some ty :: rest when List.for_all (function Some ty' -> Mlutil.eq_ml_type ty ty' | None -> false) rest ->
+        Some ty
+      | _ -> None
+    in
+    let instance k =
+      match agreed k with
+      | Some ty when k > n_outer && outer_only ty -> ty
+      | Some (Miniml.Tvar (_, k')) when Int.equal k k' -> Miniml.Tvar (Miniml.Schematic, k)
+      | None when k <= n_outer -> Miniml.Tvar (Miniml.Schematic, k)
+      | _ -> raise Not_sole
+    in
+    if !instances = [] then None
+    else
+      let n = List.fold_left max 0 vars in
+      Some (List.init n (fun j -> if List.mem (j + 1) vars then instance (j + 1) else Miniml.Tvar (Miniml.Schematic, j + 1)))
+  with Not_sole -> None
+
 (** Check if a GlobRef returns a typeclass type (possibly through Tarr layers).
 *)
 let ref_returns_typeclass r =

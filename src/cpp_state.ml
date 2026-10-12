@@ -512,6 +512,13 @@ let drain (b : band) =
     requires bodies *)
 let hoisted_concept_defs : Pp.t list ref = owned_list "hoisted_concept_defs"
 
+(** The functor bodies whose module types are file-scope concepts over the
+    functor's parameters as well as [M]: the body's path, the functor's
+    label, and its parameters.  A concept cannot be declared in the class
+    template a functor becomes, and the module type may mention a parameter. *)
+let functor_concept_scopes : (Names.ModPath.t * (Names.Label.t * Names.ModPath.t list)) list ref =
+  owned_list "functor_concept_scopes"
+
 (** Concepts from typeclasses declared inside a module.  A concept may only
     appear at namespace scope, so one declared in a module -- which is emitted
     as a struct -- cannot stay where it was written; it is collected here and
@@ -559,8 +566,12 @@ let held_back_concepts : held_concept list ref =
 let is_held_back_in held_back c =
   List.exists (held_concept_equal c) held_back
 
-let class_concept_held_back r =
-  !render_ctx.rc_in_struct && is_held_back_in !held_back_concepts (HCclass r)
+(** Whether the struct being rendered holds concept [c] back, so that a
+    constraint written inside it cannot name [c] yet. *)
+let concept_held_back c =
+  !render_ctx.rc_in_struct && is_held_back_in !held_back_concepts c
+
+let class_concept_held_back r = concept_held_back (HCclass r)
 
 (** Assertions deferred out of the struct being rendered.  Each entry is the
     concept held back, its name, and the asserted subject -- qualified as far
