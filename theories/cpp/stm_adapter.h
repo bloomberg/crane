@@ -10,6 +10,7 @@
 #include "crane-stm/src/stm.h"
 
 #include <cassert>
+#include <type_traits>
 
 namespace stm {
 
@@ -50,9 +51,11 @@ T readTVar(const TVar<T>& tv) {
     return tv.read(compat::current_tx());
 }
 
-/// Write a TVar using the implicit thread-local transaction.
+/// Write a TVar using the implicit thread-local transaction.  The value is
+/// converted to the TVar's element type, which it is not deduced from: a
+/// lambda written for a TVar of functions is its own closure type.
 template <typename T>
-void writeTVar(const TVar<T>& tv, T val) {
+void writeTVar(const TVar<T>& tv, std::type_identity_t<T> val) {
     tv.write(compat::current_tx(), std::move(val));
 }
 

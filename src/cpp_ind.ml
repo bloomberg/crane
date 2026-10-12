@@ -720,11 +720,15 @@ let generate d =
     end;
     ( match t with
     | Miniml.Tdummy Miniml.Ktype -> Nothing (* erased Type aliases *)
-    | t when Ml_type_util.ml_type_has_no_spelling t ->
+    | t
+      when Ml_type_util.has_no_cpp_spelling
+             (Translation.convert_ml_type_to_cpp_type (empty_env ()) l t) ->
       (* An abbreviation for a type that is not written in C++ is not written
-         either: [Definition E2 := (FailE +' FailE)%type] would otherwise give
-         a [using E2 = ;].  What names the abbreviation was for -- an event
-         family -- is erased at every use, so nothing looks for it. *)
+         either, asked of the type as it would be printed: [Definition bigE :=
+         ioE +' envE] is a [Sum1] of event families that have no C++ name, and
+         would give [using bigE = Sum1<, >].  What names the abbreviation was
+         for -- an event family -- is erased at every use, so nothing looks
+         for it. *)
       Nothing
     | t -> Header_only (fun () -> [(empty_env (), gen_type_alias r l (Some t))]) )
   | Dterm (r, a, (Tglob (ty, _, _) as t)) when is_monad ty ->

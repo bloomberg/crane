@@ -270,8 +270,10 @@ template <typename K, typename V> struct CHT {
           return buckets;
         } else {
           uint64_t n_ = _lc1_loop_n - 1;
-          stm::TVar<List<std::pair<T1, T2>>> b = stm::atomically(
-              [&] { return stm::newTVar(List<std::pair<T1, T2>>::nil()); });
+          stm::TVar<List<std::pair<T1, T2>>> b = stm::atomically([&] {
+            return stm::newTVar<List<std::pair<T1, T2>>>(
+                List<std::pair<T1, T2>>::nil());
+          });
           buckets.push_back(std::move(b));
           _lc1_loop_n = n_;
         }
@@ -286,8 +288,10 @@ template <typename K, typename V> struct CHT {
         CHT<int, int>::template mk_buckets<T1, T2>(n);
     bool empt = bs.empty();
     if (empt) {
-      stm::TVar<List<std::pair<T1, T2>>> fb = stm::atomically(
-          [&] { return stm::newTVar(List<std::pair<T1, T2>>::nil()); });
+      stm::TVar<List<std::pair<T1, T2>>> fb = stm::atomically([&] {
+        return stm::newTVar<List<std::pair<T1, T2>>>(
+            List<std::pair<T1, T2>>::nil());
+      });
       std::vector<stm::TVar<List<std::pair<T1, T2>>>> v = {};
       v.push_back(fb);
       return CHT<T1, T2>{eqb, hash, std::move(v), 1, std::move(fb)};

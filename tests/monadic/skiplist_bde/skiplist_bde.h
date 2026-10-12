@@ -981,8 +981,8 @@ template <typename K, typename V> struct SkipList {
     auto &&_once1 = 16u;
     bsl::shared_ptr<SkipNode<T1, T2>> headNode = SkipNode<T1, T2>::create(
         dummyKey, dummyVal, (((_once1 - 1u) > _once1 ? 0 : (_once1 - 1u))));
-    stm::TVar<unsigned int> lvlTV = stm::newTVar(0u);
-    stm::TVar<unsigned int> lenTV = stm::newTVar(0u);
+    stm::TVar<unsigned int> lvlTV = stm::newTVar<unsigned int>(0u);
+    stm::TVar<unsigned int> lenTV = stm::newTVar<unsigned int>(0u);
     return SkipList<T1, T2>{bsl::move(headNode), 16u, bsl::move(lvlTV),
                             bsl::move(lenTV)};
   }

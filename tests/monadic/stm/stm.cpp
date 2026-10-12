@@ -1,7 +1,7 @@
 #include "stm.h"
 
 uint64_t stmtest::stm_basic_counter(std::monostate) {
-  stm::TVar<uint64_t> c = stm::newTVar(UINT64_C(0));
+  stm::TVar<uint64_t> c = stm::newTVar<uint64_t>(UINT64_C(0));
   stm::writeTVar(c, UINT64_C(1));
   return stm::readTVar(std::move(c));
 }
@@ -11,7 +11,7 @@ uint64_t stmtest::io_basic_counter() {
 }
 
 uint64_t stmtest::stm_inc(uint64_t x) {
-  stm::TVar<uint64_t> c = stm::newTVar(x);
+  stm::TVar<uint64_t> c = stm::newTVar<uint64_t>(x);
   STMDefs::template modifyTVar<uint64_t>(c, [](uint64_t n) { return (n + 1); });
   return stm::readTVar(std::move(c));
 }
@@ -21,7 +21,7 @@ uint64_t stmtest::io_inc(uint64_t x) {
 }
 
 uint64_t stmtest::stm_add_self(uint64_t x) {
-  stm::TVar<uint64_t> c = stm::newTVar(x);
+  stm::TVar<uint64_t> c = stm::newTVar<uint64_t>(x);
   uint64_t v = stm::readTVar(c);
   stm::writeTVar(c, (v + x));
   return stm::readTVar(std::move(c));
@@ -54,7 +54,8 @@ uint64_t stmtest::stm_tryDequeue(stm::TVar<List<uint64_t>> q, uint64_t dflt) {
 }
 
 uint64_t stmtest::stm_queue_roundtrip(uint64_t x) {
-  stm::TVar<List<uint64_t>> q = stm::newTVar(List<uint64_t>::nil());
+  stm::TVar<List<uint64_t>> q =
+      stm::newTVar<List<uint64_t>>(List<uint64_t>::nil());
   stm_enqueue(q, x);
   return stm_dequeue(std::move(q));
 }
@@ -64,7 +65,8 @@ uint64_t stmtest::io_queue_roundtrip(uint64_t x) {
 }
 
 uint64_t stmtest::stm_orElse_retry_example(std::monostate) {
-  stm::TVar<List<uint64_t>> q = stm::newTVar(List<uint64_t>::nil());
+  stm::TVar<List<uint64_t>> q =
+      stm::newTVar<List<uint64_t>>(List<uint64_t>::nil());
   return stm::orElse<uint64_t>(stm_dequeue(std::move(q)), UINT64_C(42));
 }
 

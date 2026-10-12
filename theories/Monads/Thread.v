@@ -15,8 +15,10 @@ Crane Extract Inductive threadE => ""
     "std::this_thread::sleep_for(std::chrono::milliseconds(%a0))" ]
   From "thread" "chrono".
 
-Crane Extract Inlined Constant thread => "std::thread" From "thread".
-Crane Extract Inlined Constant spawn => "std::thread(%a0, %a1)" From "thread".
+(* A [thread] is a value: copied, kept in data, joined any number of times or
+   never.  [crane::thread] gives a [std::thread] those semantics. *)
+Crane Extract Inlined Constant thread => "crane::thread" From "crane_thread.h".
+Crane Extract Inlined Constant spawn => "crane::thread(%a0, %a1)" From "crane_thread.h".
 Crane Extract Inlined Constant sleep =>
   "std::this_thread::sleep_for(std::chrono::milliseconds(%a0))"
   From "thread" "chrono".

@@ -1,17 +1,14 @@
-#ifndef INCLUDED_THREAD_HANDLE_SEMANTICS
-#define INCLUDED_THREAD_HANDLE_SEMANTICS
+#ifndef INCLUDED_PAR_FUTURE_READ_TWICE
+#define INCLUDED_PAR_FUTURE_READ_TWICE
 
 #include "crane_fn.h"
 #include "obj.h"
 #include "shared_block.h"
 #include <atomic>
-#include <chrono>
-#include <crane_itree.h>
 #include <cstdint>
-#include <iostream>
+#include <future>
 #include <memory>
 #include <stdexcept>
-#include <thread>
 #include <utility>
 #include <variant>
 static_assert(crane::rc_is_atomic,
@@ -99,23 +96,20 @@ public:
   const variant_t &v() const { return v_; }
 };
 
-struct ThreadHandleSemantics {
-  static void work(uint64_t _x);
-  static uint64_t never_joined(uint64_t n);
-  static uint64_t joined_twice(uint64_t n);
-  static List<std::thread> spawn_all(const List<uint64_t> &l);
-  static void join_all(const List<std::thread> &l);
-  static inline const uint64_t r1 = never_joined(UINT64_C(3));
-  static inline const uint64_t r2 = joined_twice(UINT64_C(4));
-  static inline const uint64_t r3 = []() {
-    List<std::thread> hs = spawn_all(List<uint64_t>::cons(
-        UINT64_C(1),
-        List<uint64_t>::cons(
-            UINT64_C(2),
-            List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))));
-    join_all(hs);
-    return UINT64_C(7);
+struct ParFutureReadTwice {
+  static uint64_t sq(uint64_t n);
+  static uint64_t twice(uint64_t n);
+  static List<std::shared_future<uint64_t>> spawn_all(const List<uint64_t> &l);
+  static uint64_t join_all(const List<std::shared_future<uint64_t>> &l);
+  static inline const uint64_t listed = []() {
+    List<std::shared_future<uint64_t>> _bind_result =
+        spawn_all(List<uint64_t>::cons(
+            UINT64_C(1),
+            List<uint64_t>::cons(
+                UINT64_C(2),
+                List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))));
+    return join_all(_bind_result);
   }();
 };
 
-#endif // INCLUDED_THREAD_HANDLE_SEMANTICS
+#endif // INCLUDED_PAR_FUTURE_READ_TWICE

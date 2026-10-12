@@ -1027,8 +1027,8 @@ template <typename K, typename V> struct SkipList {
     std::shared_ptr<SkipNode<T1, T2>> headNode = SkipNode<T1, T2>::create(
         dummyKey, dummyVal,
         (((_once1 - UINT64_C(1)) > _once1 ? 0 : (_once1 - UINT64_C(1)))));
-    stm::TVar<uint64_t> lvlTV = stm::newTVar(UINT64_C(0));
-    stm::TVar<uint64_t> lenTV = stm::newTVar(UINT64_C(0));
+    stm::TVar<uint64_t> lvlTV = stm::newTVar<uint64_t>(UINT64_C(0));
+    stm::TVar<uint64_t> lenTV = stm::newTVar<uint64_t>(UINT64_C(0));
     return SkipList<T1, T2>{std::move(headNode), 16u, std::move(lvlTV),
                             std::move(lenTV)};
   }

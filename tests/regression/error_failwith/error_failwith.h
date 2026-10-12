@@ -13,15 +13,10 @@
 #include <system_error>
 #include <utility>
 
-struct Empty_set;
 template <typename Err> struct ExceptE;
 struct Err;
 
 struct Nat {};
-
-struct Empty_set {
-  Empty_set() = delete;
-};
 
 template <typename Err> struct ExceptE {
   // DATA
@@ -45,11 +40,6 @@ template <typename Err> struct ExceptE {
   static ExceptE<Err> Throw_(Err a0) { return {std::move(a0)}; }
 };
 
-struct Exception {
-  template <typename T1, typename T2 = void, typename T3>
-  static T3 throw0(const T1 &e);
-};
-
 struct Err {
   // DATA
   std::string x;
@@ -61,25 +51,9 @@ struct Err {
   static Err error(std::string x) { return {std::move(x)}; }
 };
 
-struct Error {
-  template <typename T1 = void, typename T2> static T2 failwith(std::string s);
-};
-
 struct ErrorFailwith {
   static uint64_t safe_div(uint64_t a, uint64_t b);
   static uint64_t result();
 };
-
-template <typename T1, typename T2, typename T3>
-T3 Exception::throw0(const T1 &e) {
-  return <T2, T3, T3>(ExceptE<T1>::Throw_(e), [](crane::obj) -> T3 {
-    throw std::logic_error("absurd case");
-  });
-}
-
-template <typename T1, typename T2> T2 Error::failwith(std::string s) {
-  return Exception::template throw0<Err, crane::obj, T2>(
-      Err::error(std::move(s)));
-}
 
 #endif // INCLUDED_ERROR_FAILWITH

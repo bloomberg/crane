@@ -167,10 +167,14 @@ uint64_t ParUnitNotConcurrent::work(uint64_t k) {
 }
 
 uint64_t ParUnitNotConcurrent::race(uint64_t k) {
-  std::future<uint64_t> a = std::async(std::launch::async, work, k);
-  std::future<uint64_t> b = std::async(std::launch::async, work, k);
-  std::future<uint64_t> c = std::async(std::launch::async, work, k);
-  std::future<uint64_t> d = std::async(std::launch::async, work, k);
+  std::shared_future<uint64_t> a =
+      std::async(std::launch::async, work, k).share();
+  std::shared_future<uint64_t> b =
+      std::async(std::launch::async, work, k).share();
+  std::shared_future<uint64_t> c =
+      std::async(std::launch::async, work, k).share();
+  std::shared_future<uint64_t> d =
+      std::async(std::launch::async, work, k).share();
   uint64_t x = std::move(a).get();
   uint64_t y = std::move(b).get();
   uint64_t z = std::move(c).get();

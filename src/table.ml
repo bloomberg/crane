@@ -3496,11 +3496,13 @@ let get_custom_imports () =
   in
   StringSet.elements (StringSet.union !custom_imports used_imports)
 
-(* The header whose presence means this unit can spawn a thread. *)
-let concurrency_header = "thread"
+(* The headers that declare a way to start a thread -- [std::thread] and
+   [std::async], and Crane's [crane::thread] over the former: a unit whose used
+   customs pull one in can run its code on several threads. *)
+let thread_starting_headers = ["thread"; "future"; "crane_thread.h"]
 
 let unit_is_concurrent () =
-  List.exists (String.equal concurrency_header) (get_custom_imports ())
+  List.exists (fun h -> List.mem h thread_starting_headers) (get_custom_imports ())
 
 (* [Crane NonAtomicRc] is a promise about the extracted program: that it is
    single-threaded, so a refcount needs no atomics. A unit that reaches a

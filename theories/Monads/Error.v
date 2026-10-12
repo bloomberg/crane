@@ -21,3 +21,9 @@ Variant Err : Type :=
 Definition failwith
   {E : Type -> Type} `{exceptE Err -< E}
   {A:Type} (s:string) : itree E A := throw (Error s).
+
+(* An erased tree performs its events where it is built, and nothing handles
+   a [Throw] there: [failwith s] raises [s] as a C++ exception, at the type its
+   call yields. *)
+Crane Extract Inlined Constant failwith =>
+  "[&]() -> %ret { throw std::runtime_error(%a0); }()" From "stdexcept".

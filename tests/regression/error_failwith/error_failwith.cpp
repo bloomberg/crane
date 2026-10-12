@@ -2,7 +2,9 @@
 
 uint64_t ErrorFailwith::safe_div(uint64_t a, uint64_t b) {
   if (b == UINT64_C(0)) {
-    return Error::template failwith<void, uint64_t>("div by zero");
+    return [&]() -> uint64_t {
+      throw std::runtime_error(std::string("div by zero"));
+    }();
   } else {
     return (b ? a / b : 0);
   }

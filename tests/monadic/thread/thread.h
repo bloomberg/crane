@@ -4,6 +4,7 @@
 #include "shared_block.h"
 #include <chrono>
 #include <crane_itree.h>
+#include <crane_thread.h>
 #include <cstdint>
 #include <iostream>
 #include <string>

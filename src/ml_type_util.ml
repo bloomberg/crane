@@ -918,13 +918,17 @@ let ref_is_skipped r = Table.is_inline_custom r && ref_has_no_spelling r
     what [Crane Extract Skip] records -- vanishes, so a type applied to it
     renders as a bare argument list, [<typename I::PROV>].  A global from a
     module [Crane Extract Skip Module] left out renders as the name it would
-    have had, [IO_axioms::ioE], which nothing in the file introduces. *)
+    have had, [IO_axioms::ioE], which nothing in the file introduces -- unless
+    it is mapped itself, as [R] is to [Real] in the skipped
+    [RbaseSymbolsImpl]: its mapping is its name. *)
 let ref_has_no_cpp_name r =
   let rec mp_skipped mp =
     is_skip_module mp
     || match mp with MPdot (parent, _) -> mp_skipped parent | _ -> false
   in
-  ref_has_no_spelling r || mp_skipped (modpath_of_r r)
+  match Table.find_custom_opt r with
+  | Some s -> String.equal s ""
+  | None -> mp_skipped (modpath_of_r r)
 
 (** Whether [ty] mentions anywhere a global with no C++ name.
 
@@ -949,12 +953,6 @@ let has_no_cpp_spelling ty =
   Minicpp.exists_cpp_type
     (function Tglob (r, _, _) -> ref_has_no_cpp_name r | _ -> false)
     as_printed
-
-(** Whether an ML type has no C++ spelling, because its head has none. *)
-let ml_type_has_no_spelling ty =
-  match resolve_tmeta ty with
-  | Tglob (r, _, _) -> ref_has_no_spelling r
-  | _ -> false
 
 (** Whether an ML type's result is a skipped type -- a [ReSum] instance, say,
     whose class extraction records as a [ConstRef] mapped to the empty string,

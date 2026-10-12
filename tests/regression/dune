@@ -11732,6 +11732,7 @@
   (alias runtest)
   (deps mrec_fact.t.exe)
   (action (run ./mrec_fact.t.exe))))
+
 (subdir loopify_inner_fix_self_call
  (rule
   (targets loopify_inner_fix_self_call.t.exe)
@@ -12452,3 +12453,72 @@
   (alias runtest)
   (deps sig_parameter_le_precondition.t.exe)
   (action (run ./sig_parameter_le_precondition.t.exe))))
+
+(subdir stm_tvar_of_function
+ (rule
+  (targets stm_tvar_of_function.t.exe)
+  (deps StmTvarOfFunction.vo stm_tvar_of_function.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} stm_tvar_of_function.t.exe stm_tvar_of_function.cpp stm_tvar_of_function.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps stm_tvar_of_function.t.exe)
+  (action (run ./stm_tvar_of_function.t.exe))))
+
+(subdir par_future_read_twice
+ (rule
+  (targets par_future_read_twice.t.exe)
+  (deps ParFutureReadTwice.vo par_future_read_twice.t.cpp (source_tree .))
+  (action
+   (setenv CRANE_CPP_SANITIZE address,undefined
+    (run %{project_root}/scripts/compile-std.sh %{project_root} par_future_read_twice.t.exe par_future_read_twice.cpp par_future_read_twice.t.cpp))))
+ (rule
+  (alias runtest)
+  (deps par_future_read_twice.t.exe)
+  (action (run ./par_future_read_twice.t.exe))))
+
+(subdir thread_handle_semantics
+ (rule
+  (targets thread_handle_semantics.t.exe)
+  (deps ThreadHandleSemantics.vo thread_handle_semantics.t.cpp (source_tree .))
+  (action
+   (setenv CRANE_CPP_SANITIZE address
+    (run %{project_root}/scripts/compile-std.sh %{project_root} thread_handle_semantics.t.exe thread_handle_semantics.cpp thread_handle_semantics.t.cpp))))
+ (rule
+  (alias runtest)
+  (deps thread_handle_semantics.t.exe)
+  (action (run ./thread_handle_semantics.t.exe))))
+
+(subdir error_failwith
+ (rule
+  (targets error_failwith.t.exe)
+  (deps ErrorFailwith.vo error_failwith.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} error_failwith.t.exe error_failwith.cpp error_failwith.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps error_failwith.t.exe)
+  (action (run ./error_failwith.t.exe))))
+
+(subdir par_unit_not_concurrent
+ (rule
+  (targets par_unit_not_concurrent.t.exe)
+  (deps ParUnitNotConcurrent.vo par_unit_not_concurrent.t.cpp (source_tree .))
+  (action
+   (setenv CRANE_CPP_SANITIZE address,undefined
+    (run %{project_root}/scripts/compile-std.sh %{project_root} par_unit_not_concurrent.t.exe par_unit_not_concurrent.cpp par_unit_not_concurrent.t.cpp))))
+ (rule
+  (alias runtest)
+  (deps par_unit_not_concurrent.t.exe)
+  (action (run ./par_unit_not_concurrent.t.exe))))
+
+(subdir event_sum_alias
+ (rule
+  (targets event_sum_alias.t.exe)
+  (deps EventSumAlias.vo event_sum_alias.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} event_sum_alias.t.exe event_sum_alias.cpp event_sum_alias.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps event_sum_alias.t.exe)
+  (action (run ./event_sum_alias.t.exe))))

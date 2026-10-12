@@ -1,16 +1,19 @@
 #ifndef INCLUDED_PAR_UNIT_NOT_CONCURRENT
 #define INCLUDED_PAR_UNIT_NOT_CONCURRENT
 
+#include "crane_fn.h"
+#include "crane_variant.h"
+#include "shared_block.h"
+#include "shared_variant.h"
+#include "small_vector.h"
+#include <atomic>
 #include <cstdint>
 #include <future>
 #include <optional>
 #include <utility>
-#define CRANE_SINGLE_THREADED 1
-#include "crane_fn.h"
-#include "crane_variant.h"
-#include "shared_variant.h"
-#include "small_vector.h"
-#include <atomic>
+static_assert(crane::rc_is_atomic,
+              "this unit spawns threads, but a header included before it chose "
+              "CRANE_NON_ATOMIC_RC");
 
 struct ParUnitNotConcurrent {
   struct tree {
