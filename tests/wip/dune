@@ -217,3 +217,359 @@
   (deps interp_state_dict.t.exe)
   (action (run ./interp_state_dict.t.exe))))
 
+
+(subdir let_function_two_instances
+ (rule
+  (targets let_function_two_instances.t.exe)
+  (deps LetFunctionTwoInstances.vo let_function_two_instances.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} let_function_two_instances.t.exe let_function_two_instances.cpp let_function_two_instances.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps let_function_two_instances.t.exe)
+  (action (run ./let_function_two_instances.t.exe))))
+
+(subdir family_with_type_binder_at_function
+ (rule
+  (targets family_with_type_binder_at_function.t.exe)
+  (deps FamilyWithTypeBinderAtFunction.vo family_with_type_binder_at_function.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} family_with_type_binder_at_function.t.exe family_with_type_binder_at_function.cpp family_with_type_binder_at_function.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps family_with_type_binder_at_function.t.exe)
+  (action (run ./family_with_type_binder_at_function.t.exe))))
+
+(subdir three_argument_curried_slot
+ (rule
+  (targets three_argument_curried_slot.t.exe)
+  (deps ThreeArgumentCurriedSlot.vo three_argument_curried_slot.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} three_argument_curried_slot.t.exe three_argument_curried_slot.cpp three_argument_curried_slot.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps three_argument_curried_slot.t.exe)
+  (action (run ./three_argument_curried_slot.t.exe))))
+
+(subdir family_call_result_deep_shape
+ (rule
+  (targets family_call_result_deep_shape.t.exe)
+  (deps FamilyCallResultDeepShape.vo family_call_result_deep_shape.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} family_call_result_deep_shape.t.exe family_call_result_deep_shape.cpp family_call_result_deep_shape.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps family_call_result_deep_shape.t.exe)
+  (action (run ./family_call_result_deep_shape.t.exe))))
+
+(subdir family_call_result_mapped_list
+ (rule
+  (targets family_call_result_mapped_list.t.exe)
+  (deps FamilyCallResultMappedList.vo family_call_result_mapped_list.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} family_call_result_mapped_list.t.exe family_call_result_mapped_list.cpp family_call_result_mapped_list.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps family_call_result_mapped_list.t.exe)
+  (action (run ./family_call_result_mapped_list.t.exe))))
+
+(subdir higher_kinded_constant_type_function
+ (rule
+  (targets higher_kinded_constant_type_function.t.exe)
+  (deps HigherKindedConstantTypeFunction.vo higher_kinded_constant_type_function.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} higher_kinded_constant_type_function.t.exe higher_kinded_constant_type_function.cpp higher_kinded_constant_type_function.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps higher_kinded_constant_type_function.t.exe)
+  (action (run ./higher_kinded_constant_type_function.t.exe))))
+
+(subdir rank2_callback_kept_as_fn
+ (rule
+  (targets rank2_callback_kept_as_fn.t.exe)
+  (deps Rank2CallbackKeptAsFn.vo rank2_callback_kept_as_fn.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} rank2_callback_kept_as_fn.t.exe rank2_callback_kept_as_fn.cpp rank2_callback_kept_as_fn.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps rank2_callback_kept_as_fn.t.exe)
+  (action (run ./rank2_callback_kept_as_fn.t.exe))))
+
+(subdir loopify_moves_captured_closure
+ (rule
+  (targets loopify_moves_captured_closure.t.exe)
+  (deps LoopifyMovesCapturedClosure.vo loopify_moves_captured_closure.t.cpp (source_tree .))
+  (action
+   (setenv CRANE_CPP_SANITIZE address
+    (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_moves_captured_closure.t.exe loopify_moves_captured_closure.cpp loopify_moves_captured_closure.t.cpp))))
+ (rule
+  (alias runtest)
+  (deps loopify_moves_captured_closure.t.exe)
+  (action (run ./loopify_moves_captured_closure.t.exe))))
+
+(subdir type_only_global_as_rank2_argument
+ (rule
+  (targets type_only_global_as_rank2_argument.t.exe)
+  (deps TypeOnlyGlobalAsRank2Argument.vo type_only_global_as_rank2_argument.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} type_only_global_as_rank2_argument.t.exe type_only_global_as_rank2_argument.cpp type_only_global_as_rank2_argument.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps type_only_global_as_rank2_argument.t.exe)
+  (action (run ./type_only_global_as_rank2_argument.t.exe))))
+
+(subdir stm_tvar_of_function
+ (rule
+  (targets stm_tvar_of_function.t.exe)
+  (deps StmTvarOfFunction.vo stm_tvar_of_function.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} stm_tvar_of_function.t.exe stm_tvar_of_function.cpp stm_tvar_of_function.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps stm_tvar_of_function.t.exe)
+  (action (run ./stm_tvar_of_function.t.exe))))
+
+(subdir par_future_read_twice
+ (rule
+  (targets par_future_read_twice.t.exe)
+  (deps ParFutureReadTwice.vo par_future_read_twice.t.cpp (source_tree .))
+  (action
+   (setenv CRANE_CPP_SANITIZE address,undefined
+    (run %{project_root}/scripts/compile-std.sh %{project_root} par_future_read_twice.t.exe par_future_read_twice.cpp par_future_read_twice.t.cpp))))
+ (rule
+  (alias runtest)
+  (deps par_future_read_twice.t.exe)
+  (action (run ./par_future_read_twice.t.exe))))
+
+(subdir thread_handle_semantics
+ (rule
+  (targets thread_handle_semantics.t.exe)
+  (deps ThreadHandleSemantics.vo thread_handle_semantics.t.cpp (source_tree .))
+  (action
+   (setenv CRANE_CPP_SANITIZE address
+    (run %{project_root}/scripts/compile-std.sh %{project_root} thread_handle_semantics.t.exe thread_handle_semantics.cpp thread_handle_semantics.t.cpp))))
+ (rule
+  (alias runtest)
+  (deps thread_handle_semantics.t.exe)
+  (action (run ./thread_handle_semantics.t.exe))))
+
+(subdir error_failwith
+ (rule
+  (targets error_failwith.t.exe)
+  (deps ErrorFailwith.vo error_failwith.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} error_failwith.t.exe error_failwith.cpp error_failwith.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps error_failwith.t.exe)
+  (action (run ./error_failwith.t.exe))))
+
+(subdir par_unit_not_concurrent
+ (rule
+  (targets par_unit_not_concurrent.t.exe)
+  (deps ParUnitNotConcurrent.vo par_unit_not_concurrent.t.cpp (source_tree .))
+  (action
+   (setenv CRANE_CPP_SANITIZE address,undefined
+    (run %{project_root}/scripts/compile-std.sh %{project_root} par_unit_not_concurrent.t.exe par_unit_not_concurrent.cpp par_unit_not_concurrent.t.cpp))))
+ (rule
+  (alias runtest)
+  (deps par_unit_not_concurrent.t.exe)
+  (action (run ./par_unit_not_concurrent.t.exe))))
+
+(subdir event_sum_alias
+ (rule
+  (targets event_sum_alias.t.exe)
+  (deps EventSumAlias.vo event_sum_alias.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} event_sum_alias.t.exe event_sum_alias.cpp event_sum_alias.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps event_sum_alias.t.exe)
+  (action (run ./event_sum_alias.t.exe))))
+
+(subdir prop_binder_before_type_binder
+ (rule
+  (targets prop_binder_before_type_binder.t.exe)
+  (deps PropBinderBeforeTypeBinder.vo prop_binder_before_type_binder.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} prop_binder_before_type_binder.t.exe prop_binder_before_type_binder.cpp prop_binder_before_type_binder.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps prop_binder_before_type_binder.t.exe)
+  (action (run ./prop_binder_before_type_binder.t.exe))))
+
+(subdir record_at_sort_type_field
+ (rule
+  (targets record_at_sort_type_field.t.exe)
+  (deps RecordAtSortTypeField.vo record_at_sort_type_field.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} record_at_sort_type_field.t.exe record_at_sort_type_field.cpp record_at_sort_type_field.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps record_at_sort_type_field.t.exe)
+  (action (run ./record_at_sort_type_field.t.exe))))
+
+(subdir absurd_proof_only_definition
+ (rule
+  (targets absurd_proof_only_definition.t.exe)
+  (deps AbsurdProofOnlyDefinition.vo absurd_proof_only_definition.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} absurd_proof_only_definition.t.exe absurd_proof_only_definition.cpp absurd_proof_only_definition.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps absurd_proof_only_definition.t.exe)
+  (action (run ./absurd_proof_only_definition.t.exe))))
+
+(subdir type_field_record_concrete_lambda
+ (rule
+  (targets type_field_record_concrete_lambda.t.exe)
+  (deps TypeFieldRecordConcreteLambda.vo type_field_record_concrete_lambda.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} type_field_record_concrete_lambda.t.exe type_field_record_concrete_lambda.cpp type_field_record_concrete_lambda.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps type_field_record_concrete_lambda.t.exe)
+  (action (run ./type_field_record_concrete_lambda.t.exe))))
+
+(subdir nat_module_family_returns
+ (rule
+  (targets nat_module_family_returns.t.exe)
+  (deps NatModuleFamilyReturns.vo nat_module_family_returns.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nat_module_family_returns.t.exe nat_module_family_returns.cpp nat_module_family_returns.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps nat_module_family_returns.t.exe)
+  (action (run ./nat_module_family_returns.t.exe))))
+
+(subdir sig_parameter_le_precondition
+ (rule
+  (targets sig_parameter_le_precondition.t.exe)
+  (deps SigParameterLePrecondition.vo sig_parameter_le_precondition.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sig_parameter_le_precondition.t.exe sig_parameter_le_precondition.cpp sig_parameter_le_precondition.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sig_parameter_le_precondition.t.exe)
+  (action (run ./sig_parameter_le_precondition.t.exe))))
+
+(subdir module_alias_target_handling
+ (rule
+  (targets module_alias_target_handling.t.exe)
+  (deps ModuleAliasTargetHandling.vo module_alias_target_handling.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} module_alias_target_handling.t.exe module_alias_target_handling.cpp module_alias_target_handling.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps module_alias_target_handling.t.exe)
+  (action (run ./module_alias_target_handling.t.exe))))
+
+(subdir module_type_short_name_clash
+ (rule
+  (targets module_type_short_name_clash.t.exe)
+  (deps ModuleTypeShortNameClash.vo module_type_short_name_clash.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} module_type_short_name_clash.t.exe module_type_short_name_clash.cpp module_type_short_name_clash.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps module_type_short_name_clash.t.exe)
+  (action (run ./module_type_short_name_clash.t.exe))))
+
+(subdir same_named_file_modules
+ (rule
+  (targets same_named_file_modules.t.exe)
+  (deps SameNamedFileModules.vo same_named_file_modules.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} same_named_file_modules.t.exe same_named_file_modules.cpp same_named_file_modules.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps same_named_file_modules.t.exe)
+  (action (run ./same_named_file_modules.t.exe))))
+
+(subdir no_optimize_fold_left_accumulator
+ (rule
+  (targets no_optimize_fold_left_accumulator.t.exe)
+  (deps NoOptimizeFoldLeftAccumulator.vo no_optimize_fold_left_accumulator.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} no_optimize_fold_left_accumulator.t.exe no_optimize_fold_left_accumulator.cpp no_optimize_fold_left_accumulator.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps no_optimize_fold_left_accumulator.t.exe)
+  (action (run ./no_optimize_fold_left_accumulator.t.exe))))
+
+(subdir conservative_types_kept_parameter
+ (rule
+  (targets conservative_types_kept_parameter.t.exe)
+  (deps ConservativeTypesKeptParameter.vo conservative_types_kept_parameter.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} conservative_types_kept_parameter.t.exe conservative_types_kept_parameter.cpp conservative_types_kept_parameter.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps conservative_types_kept_parameter.t.exe)
+  (action (run ./conservative_types_kept_parameter.t.exe))))
+
+(subdir inline_polymorphic_function_as_element
+ (rule
+  (targets inline_polymorphic_function_as_element.t.exe)
+  (deps InlinePolymorphicFunctionAsElement.vo inline_polymorphic_function_as_element.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} inline_polymorphic_function_as_element.t.exe inline_polymorphic_function_as_element.cpp inline_polymorphic_function_as_element.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps inline_polymorphic_function_as_element.t.exe)
+  (action (run ./inline_polymorphic_function_as_element.t.exe))))
+
+(subdir file_comment_delimiters
+ (rule
+  (targets file_comment_delimiters.t.exe)
+  (deps FileCommentDelimiters.vo file_comment_delimiters.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} file_comment_delimiters.t.exe file_comment_delimiters.cpp file_comment_delimiters.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps file_comment_delimiters.t.exe)
+  (action (run ./file_comment_delimiters.t.exe))))
+
+(subdir extraction_implicit_call_sites
+ (rule
+  (targets extraction_implicit_call_sites.t.exe)
+  (deps ExtractionImplicitCallSites.vo extraction_implicit_call_sites.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} extraction_implicit_call_sites.t.exe extraction_implicit_call_sites.cpp extraction_implicit_call_sites.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps extraction_implicit_call_sites.t.exe)
+  (action (run ./extraction_implicit_call_sites.t.exe))))
+
+(subdir dependent_extraction_targets
+ (rule
+  (targets dependent_extraction_targets.t.exe)
+  (deps DependentExtractionTargets.vo dependent_extraction_targets.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} dependent_extraction_targets.t.exe dependent_extraction_targets.cpp dependent_extraction_targets.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps dependent_extraction_targets.t.exe)
+  (action (run ./dependent_extraction_targets.t.exe))))
+
+(subdir guard_compare_mapped_result
+ (rule
+  (targets guard_compare_mapped_result.t.exe)
+  (deps GuardCompareMappedResult.vo guard_compare_mapped_result.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} guard_compare_mapped_result.t.exe guard_compare_mapped_result.cpp guard_compare_mapped_result.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps guard_compare_mapped_result.t.exe)
+  (action (run ./guard_compare_mapped_result.t.exe))))
+
+(subdir recursive_library_datatypes
+ (rule
+  (targets recursive_library_datatypes.t.exe)
+  (deps Lib.vo recursive_library_datatypes.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} recursive_library_datatypes.t.exe Datatypes.cpp Decimal.cpp Hexadecimal.cpp Logic.cpp Nat.cpp Number.cpp Specif.cpp Src.cpp recursive_library_datatypes.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps recursive_library_datatypes.t.exe)
+  (action (run ./recursive_library_datatypes.t.exe))))
