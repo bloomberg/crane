@@ -217,16 +217,6 @@
   (deps interp_state_dict.t.exe)
   (action (run ./interp_state_dict.t.exe))))
 
- (rule
-  (targets fix_let_binder_self_reference.t.exe)
-  (deps FixLetBinderSelfReference.vo fix_let_binder_self_reference.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} fix_let_binder_self_reference.t.exe fix_let_binder_self_reference.cpp fix_let_binder_self_reference.t.cpp)))
- (rule
-  (alias runtest)
-  (deps fix_let_binder_self_reference.t.exe)
-  (action (run ./fix_let_binder_self_reference.t.exe))))
-
 (subdir rank2_family_argument_adapter
  (rule
   (targets rank2_family_argument_adapter.t.exe)
