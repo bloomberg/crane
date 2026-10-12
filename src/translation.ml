@@ -343,8 +343,26 @@ let constant_name e =
   in
   Option.default "k" name
 
+(** [slot], noting that a constructor built here goes straight into an erased
+    ([std::any]) result -- the enclosing function's C++ return type is opaque,
+    as for a definition whose return type is value-dependent.  The value must
+    then use the canonical erased shape: a consumer of such a slot recovers it
+    with a fixed [any_cast] and cannot know the concrete type arguments.  That
+    is the requirement [deep_erase] expresses for a value flowing into an
+    erased field or parameter, and it holds for a mapped constructor
+    ([std::make_optional<std::any>]) as for one of Crane's own. *)
+let into_erased_return slot =
+  { slot with
+    deep_erase =
+      slot.deep_erase
+      ||
+      ( match (!tctx).current_cpp_return_type with
+      | Some t -> resolves_to_any_type t
+      | None -> false ) }
+
 let rec gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
     r ts =
+  let slot = into_erased_return slot in
   (* Extraction leaves a type argument [Tunresolved] where it could not read the
      type off the term -- the element of [Some 1] passed at a parameter of an
      inductive that applies its own higher-kinded parameter ([F nat]).  The
@@ -2226,8 +2244,18 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
            unit-returning lambda spells its result [std::monostate] or nothing
            at all depending on what consumes it, which is a decision for the
            body's own generation. *)
+        (* Every binder is a type or a proof: no lambda is emitted, the body is
+           the value the slot takes, and it returns the slot's type itself --
+           an absurd case under [fun (e : p = q) => ...] passed where a [nat]
+           is wanted throws from a [uint64_t] thunk. *)
+        let binderless_result =
+          match (filtered_args, carrier, Option.map (unfold_cpp_typedef env) expected_ty) with
+          | [], None, Some t when t <> Tvoid -> Some t
+          | _ -> None
+        in
         let with_lam_return_type f =
           match Option.map (unfold_cpp_typedef env) expected_ty with
+          | _ when binderless_result <> None -> with_cpp_return_type binderless_result f
           | _ when carrier <> None ->
             (* A polymorphic function object returns at the type its own
                parameter fixes, so the enclosing function's return type is
@@ -2429,8 +2457,9 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
         let ret_ann =
           match body_stmts with
           | [Sthrow _] | [Sreturn (Some (CPPabort _))] -> (
-            match Option.map strip_cpp_ref_const expected_ty with
-            | Some (Tfun (_, cod)) when cod <> Tvoid -> Some cod
+            match (binderless_result, Option.map strip_cpp_ref_const expected_ty) with
+            | (Some _ as t), _ -> t
+            | None, Some (Tfun (_, cod)) when cod <> Tvoid -> Some cod
             | _ -> None )
           | _ -> (
             match branch_join with
@@ -2924,22 +2953,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       mk_call (CPPrt (Crane_rt.Constant (constant_name e))) [built]
     | _ -> built )
   | MLcons (ty, r, ts) ->
-    (* A value built directly into an erased ([std::any]) slot -- the
-       enclosing function's C++ return type is opaque, as for a definition
-       whose return type is value-dependent -- must use the canonical erased
-       shape: a consumer of such a slot recovers it with a fixed [any_cast]
-       and cannot know the concrete type arguments.  That is the same
-       requirement [deep_erase] expresses for a value flowing into an
-       erased field or parameter. *)
-    let slot =
-      { slot with
-        deep_erase =
-          slot.deep_erase
-          ||
-          ( match (!tctx).current_cpp_return_type with
-          | Some t -> resolves_to_any_type t
-          | None -> false ) }
-    in
+    let slot = into_erased_return slot in
     (* The annotation carries this producer's own instantiation, and a stored
        closure whose arrows extraction never unified leaves it erased -- a
        [rose (option (nat -> nat))] node is annotated at

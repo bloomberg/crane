@@ -217,38 +217,15 @@
   (deps interp_state_dict.t.exe)
   (action (run ./interp_state_dict.t.exe))))
 
-(subdir value_family_over_mapped_container
  (rule
-  (targets value_family_over_mapped_container.t.exe)
-  (deps ValueFamilyOverMappedContainer.vo value_family_over_mapped_container.t.cpp (source_tree .))
+  (targets fix_let_binder_self_reference.t.exe)
+  (deps FixLetBinderSelfReference.vo fix_let_binder_self_reference.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} value_family_over_mapped_container.t.exe value_family_over_mapped_container.cpp value_family_over_mapped_container.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fix_let_binder_self_reference.t.exe fix_let_binder_self_reference.cpp fix_let_binder_self_reference.t.cpp)))
  (rule
   (alias runtest)
-  (deps value_family_over_mapped_container.t.exe)
-  (action (run ./value_family_over_mapped_container.t.exe))))
-
-(subdir list_literal_lambda_mapped_result
- (rule
-  (targets list_literal_lambda_mapped_result.t.exe)
-  (deps ListLiteralLambdaMappedResult.vo list_literal_lambda_mapped_result.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} list_literal_lambda_mapped_result.t.exe list_literal_lambda_mapped_result.cpp list_literal_lambda_mapped_result.t.cpp)))
- (rule
-  (alias runtest)
-  (deps list_literal_lambda_mapped_result.t.exe)
-  (action (run ./list_literal_lambda_mapped_result.t.exe))))
-
-(subdir absurd_under_proof_binder
- (rule
-  (targets absurd_under_proof_binder.t.exe)
-  (deps AbsurdUnderProofBinder.vo absurd_under_proof_binder.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} absurd_under_proof_binder.t.exe absurd_under_proof_binder.cpp absurd_under_proof_binder.t.cpp)))
- (rule
-  (alias runtest)
-  (deps absurd_under_proof_binder.t.exe)
-  (action (run ./absurd_under_proof_binder.t.exe))))
+  (deps fix_let_binder_self_reference.t.exe)
+  (action (run ./fix_let_binder_self_reference.t.exe))))
 
 (subdir rank2_family_argument_adapter
  (rule
@@ -260,4 +237,3 @@
   (alias runtest)
   (deps rank2_family_argument_adapter.t.exe)
   (action (run ./rank2_family_argument_adapter.t.exe))))
-

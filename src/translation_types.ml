@@ -1289,8 +1289,18 @@ let field_stores_erased_fn_value ?field_cpp_ty field_types i e =
     let slot_is_erased =
       match field_cpp_ty with Some ct -> prints_as_any ct | None -> false
     in
+    (* A lambda's result is boxed only where the field's instantiation erases
+       it: a [list (nat -> option nat)] element keeps its [std::optional<
+       uint64_t>] result, and its body builds that, not the erased shape. *)
+    let result_is_erased =
+      match field_cpp_ty with
+      | Some (Tfun (_, cod)) -> exists_cpp_type prints_as_any cod
+      | Some ct -> prints_as_any ct
+      | None -> true
+    in
     field_is_abstract_var
-    && (slot_is_erased || match strip_magic e with MLlam _ -> true | _ -> false)
+    && (slot_is_erased
+       || (result_is_erased && match strip_magic e with MLlam _ -> true | _ -> false))
   | None -> false
 
 (** Adapt a callable produced with fewer parameters than its use site expects.

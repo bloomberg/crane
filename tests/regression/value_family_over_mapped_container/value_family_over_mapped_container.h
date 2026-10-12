@@ -83,8 +83,8 @@ struct ValueFamilyOverMappedContainer {
 
   using den = crane::obj;
   static uint64_t sz(const ty &t, den n);
-  static inline const den v = std::make_optional<std::optional<uint64_t>>(
-      crane::obj(std::make_optional<uint64_t>(crane::obj(UINT64_C(5)))));
+  static inline const den v = std::make_optional<crane::obj>(
+      crane::obj(std::make_optional<crane::obj>(crane::obj(UINT64_C(5)))));
   static inline const uint64_t from_literal =
       sz(ty::topt(ty::topt(ty::tnat())), v);
   static den mk(uint64_t n);

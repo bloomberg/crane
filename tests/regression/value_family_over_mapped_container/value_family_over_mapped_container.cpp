@@ -21,5 +21,5 @@ ValueFamilyOverMappedContainer::sz(const ValueFamilyOverMappedContainer::ty &t,
 
 ValueFamilyOverMappedContainer::den
 ValueFamilyOverMappedContainer::mk(uint64_t n) {
-  return std::make_optional<uint64_t>(crane::obj(n));
+  return std::make_optional<crane::obj>(crane::obj(n));
 }

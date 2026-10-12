@@ -2,7 +2,7 @@
 
 uint64_t AbsurdUnderProofBinder::hd(const List<uint64_t> &l) {
   if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
-    return app<uint64_t>(UINT64_C(0), UINT64_C(0), ([]() -> crane::obj {
+    return app<uint64_t>(UINT64_C(0), UINT64_C(0), ([]() -> uint64_t {
                            throw std::logic_error("absurd case");
                          })());
   } else {

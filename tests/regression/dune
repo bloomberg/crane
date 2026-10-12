@@ -12354,3 +12354,36 @@
   (deps polymorphic_value_eta_arity.t.exe)
   (action (run ./polymorphic_value_eta_arity.t.exe))))
 
+(subdir absurd_under_proof_binder
+ (rule
+  (targets absurd_under_proof_binder.t.exe)
+  (deps AbsurdUnderProofBinder.vo absurd_under_proof_binder.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} absurd_under_proof_binder.t.exe absurd_under_proof_binder.cpp absurd_under_proof_binder.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps absurd_under_proof_binder.t.exe)
+  (action (run ./absurd_under_proof_binder.t.exe))))
+
+(subdir value_family_over_mapped_container
+ (rule
+  (targets value_family_over_mapped_container.t.exe)
+  (deps ValueFamilyOverMappedContainer.vo value_family_over_mapped_container.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} value_family_over_mapped_container.t.exe value_family_over_mapped_container.cpp value_family_over_mapped_container.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps value_family_over_mapped_container.t.exe)
+  (action (run ./value_family_over_mapped_container.t.exe))))
+
+(subdir list_literal_lambda_mapped_result
+ (rule
+  (targets list_literal_lambda_mapped_result.t.exe)
+  (deps ListLiteralLambdaMappedResult.vo list_literal_lambda_mapped_result.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} list_literal_lambda_mapped_result.t.exe list_literal_lambda_mapped_result.cpp list_literal_lambda_mapped_result.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps list_literal_lambda_mapped_result.t.exe)
+  (action (run ./list_literal_lambda_mapped_result.t.exe))))
+
