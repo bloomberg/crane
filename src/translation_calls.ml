@@ -38,8 +38,15 @@ open Translation_types
     named the same way, and is curried the same way: {!curry_value_to_expected}
     takes the callee's ML type rather than its name.
 
+    [decl_arity] is how many parameters the C++ declaration itself takes,
+    where [ml_ty] is an instantiation of it: an instantiation can push arrows
+    into the codomain ([idf {A} : A -> A] at [A := nat -> nat] reads as two
+    arguments), and the arguments past the declared ones are applied to what
+    the call returns, one at a time, as a value at a type variable is
+    curried.
+
     Returns [cglob] unchanged when the declaration is already a value. *)
-let curry_value_to_expected env ?expected_ty ml_ty cglob =
+let curry_value_to_expected env ?expected_ty ?decl_arity ?(exact = false) ml_ty cglob =
   let decl_dom =
     match Option.map (cpp_of_ml env) ml_ty with
     | Some (Tfun (dom, _)) -> dom
@@ -67,39 +74,60 @@ let curry_value_to_expected env ?expected_ty ml_ty cglob =
        polymorphic function object, not the [std::function] its erasure
        spells: writing that type here would fix the very type argument the
        callee leaves to the caller.  [auto &&] passes whatever arrives
-       through, which is all this adapter does with it. *)
+       through, which is all this adapter does with it -- unless [exact]: a
+       value converted on to the erased signature is fixed at it anyway, and a
+       generic adapter has no signature to convert from. *)
     let decl_dom =
-      List.map
-        (fun ty ->
-          match ty with
-          | Tfun _ when has_tany_in_type ty -> rval_ref Tauto
-          | _ -> ty )
-        decl_dom
+      if exact then decl_dom
+      else
+        List.map
+          (fun ty ->
+            match ty with
+            | Tfun _ when has_tany_in_type ty -> rval_ref Tauto
+            | _ -> ty )
+          decl_dom
     in
     let params = adapter_params ~prefix:"_ec" decl_dom in
     let outer = List.filteri (fun i _ -> i < n_outer) params in
     let inner = List.filteri (fun i _ -> i >= n_outer) params in
-    let call = mk_call cglob (List.map adapter_arg params) in
+    let call =
+      let args = List.map adapter_arg params in
+      match decl_arity with
+      | Some n when n < List.length args ->
+        List.fold_left
+          (fun f a -> mk_call f [a])
+          (mk_call cglob (List.filteri (fun i _ -> i < n) args))
+          (List.filteri (fun i _ -> i >= n) args)
+      | _ -> mk_call cglob args
+    in
     let body =
       if inner = [] then call
       else mk_lambda inner None [Sreturn (Some call)] ~capture:Closure
     in
     mk_lambda outer None [Sreturn (Some body)] ~capture:Closure
 
+(** The type of the global [x] at the type arguments [tys] a use names it
+    at.  An adapter's parameters are spelled in the caller's scope, so the
+    callee's own type variables must not survive into them: this site's type
+    arguments are what they stand for. *)
+let instantiated_type ~tys x =
+  Option.map
+    (fun ml_ty ->
+      match tys with
+      | [] -> ml_ty
+      | _ -> ( try Mlutil.type_subst_list tys ml_ty with _ -> ml_ty ) )
+    (find_type_opt x)
+
 (** {!curry_value_to_expected} for the global [x], called at [tys]. *)
 let curry_to_expected env ?expected_ty ?(tys = []) x cglob =
-  (* The eta-parameters are spelled here, in the caller's scope, so the
-     callee's own type variables must not survive into them: this call
-     site's type arguments are what they stand for. *)
-  let ml_ty =
-    Option.map
-      (fun ml_ty ->
-        match tys with
-        | [] -> ml_ty
-        | _ -> ( try Mlutil.type_subst_list tys ml_ty with _ -> ml_ty ) )
-      (find_type_opt x)
+  let decl_ty = find_type_opt x in
+  let ml_ty = instantiated_type ~tys x in
+  let decl_arity =
+    match Option.map (cpp_of_ml env) decl_ty with
+    | Some (Tfun (dom, _)) -> Some (List.length dom)
+    | _ -> None
   in
-  curry_value_to_expected env ?expected_ty ml_ty cglob
+  curry_value_to_expected env ?expected_ty ?decl_arity ml_ty cglob
 
 (** [call_type_args ?expected_ty env id plan args] -- the type arguments a
     call to [id] writes, given its generated arguments: the dictionaries'

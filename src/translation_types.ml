@@ -3178,10 +3178,12 @@ let ctor_type_of_match env (typ : ml_type) (cname : GlobRef.t) : cpp_type =
       | _ -> tys
     in
     (* The constructor struct is nested in the instantiation, so it has to be
-       qualified by the same one the declaration spells. *)
+       qualified by the same one the declaration spells: an inductive's
+       argument at the flat arity a stored value has (see
+       {!template_arg_of_ml_type}). *)
     let temps =
       ind_promoted_type_args r
-      @ apply_hkt_tyctors r (template_params_of_ml env tys)
+      @ apply_hkt_tyctors r (template_params_of_ml ~curry:false env tys)
     in
     let is_local_ind =
       List.exists

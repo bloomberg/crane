@@ -163,6 +163,83 @@ template <class T> struct is_std_function : std::false_type {};
 template <class Sig>
 struct is_std_function<std::function<Sig>> : std::true_type {};
 
+// A Rocq function value means the same however its arrows are grouped, and
+// Crane groups them two ways: flat where a declaration spells the type --
+// [nat -> nat -> nat] as [fn<R(A, B)>] -- and curried where a type variable
+// stands for it, as [fn<fn<R(B)>(A)>], since a signature that writes an arrow
+// around a type variable takes its arguments one at a time.  A value crossing
+// from one spelling to the other is the same function regrouped: [regroup]
+// says whether a callable [F] reaches [R] from the arguments [A...] by some
+// grouping, and [regrouped] is the callable that applies it so.
+template <class... T> struct types {};
+
+template <class R> struct fn_parts {
+  static constexpr bool is_fn = false;
+};
+template <class R2, class... B> struct fn_parts<fn<R2(B...)>> {
+  static constexpr bool is_fn = true;
+  using result = R2;
+  using args = types<B...>;
+};
+
+template <class F, class R, class Args> struct regroup;
+template <class F, class R, class Args> struct regrouped;
+
+template <class F, class R, class... A> struct regroup<F, R, types<A...>> {
+  // [R] is itself a function: take its arguments as well, in one call.
+  static consteval bool into_result() {
+    if constexpr (fn_parts<R>::is_fn)
+      return []<class... B>(types<B...>) {
+        return regroup<F, typename fn_parts<R>::result, types<A..., B...>>::value;
+      }(typename fn_parts<R>::args{});
+    else
+      return false;
+  }
+  // [F] takes fewer: apply it to the first, and the rest to what it returns.
+  static consteval bool through_first() {
+    if constexpr (sizeof...(A) >= 2)
+      return []<class A0, class... As>(types<A0, As...>) {
+        if constexpr (std::is_invocable_v<const F &, A0>)
+          return regroup<std::invoke_result_t<const F &, A0>, R, types<As...>>::value;
+        else
+          return false;
+      }(types<A...>{});
+    else
+      return false;
+  }
+  static consteval bool compute() {
+    if constexpr (std::is_invocable_r_v<R, const F &, A...>)
+      return true;
+    else if constexpr (into_result())
+      return true;
+    else
+      return through_first();
+  }
+  static constexpr bool value = compute();
+};
+
+template <class F, class R, class... A> struct regrouped<F, R, types<A...>> {
+  F f;
+  R operator()(A... a) const {
+    using G = regroup<F, R, types<A...>>;
+    if constexpr (std::is_invocable_r_v<R, const F &, A...>)
+      return invoke_as<R>(f, std::move(a)...);
+    else if constexpr (G::into_result())
+      return [&]<class... B>(types<B...>) {
+        return R([f = f, ... a = std::move(a)](B... b) {
+          return regrouped<F, typename fn_parts<R>::result, types<A..., B...>>{f}(
+              a..., std::move(b)...);
+        });
+      }(typename fn_parts<R>::args{});
+    else
+      return [&]<class A0, class... As>(A0 &&a0, As &&...as) {
+        using H = std::invoke_result_t<const F &, A0>;
+        return regrouped<H, R, types<std::remove_cvref_t<As>...>>{
+            std::invoke(f, std::forward<A0>(a0))}(std::forward<As>(as)...);
+      }(std::move(a)...);
+  }
+};
+
 } // namespace fn_detail
 
 template <class Sig> class fn;
@@ -216,6 +293,17 @@ public:
     p_ = new fn_detail::holder<D, R, A...>(std::forward<F>(f));
     CRANE_FN_STAT(made);
   }
+
+  // The same function with its arrows grouped otherwise -- a curried value
+  // reaching a flat slot, or a flat one a curried slot; see
+  // [fn_detail::regroup].
+  template <class F, class D = std::decay_t<F>>
+    requires(!std::is_same_v<D, fn>) &&
+            (!std::is_invocable_r_v<R, const D &, A...>) &&
+            (fn_detail::regroup<D, R, fn_detail::types<A...>>::value) &&
+            (std::is_copy_constructible_v<D>)
+  fn(F &&f)
+      : fn(fn_detail::regrouped<D, R, fn_detail::types<A...>>{std::forward<F>(f)}) {}
 
   fn(const fn &o) noexcept : p_(o.p_) { retain(); }
   fn(fn &&o) noexcept : p_(std::exchange(o.p_, nullptr)) {}

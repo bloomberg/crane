@@ -12299,3 +12299,58 @@
   (deps lifted_let_lambda_polymorphic.t.exe)
   (action (run ./lifted_let_lambda_polymorphic.t.exe))))
 
+(subdir rank2_alias_definition_as_value
+ (rule
+  (targets rank2_alias_definition_as_value.t.exe)
+  (deps Rank2AliasDefinitionAsValue.vo rank2_alias_definition_as_value.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} rank2_alias_definition_as_value.t.exe rank2_alias_definition_as_value.cpp rank2_alias_definition_as_value.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps rank2_alias_definition_as_value.t.exe)
+  (action (run ./rank2_alias_definition_as_value.t.exe))))
+
+(subdir function_type_argument_curried
+ (rule
+  (targets function_type_argument_curried.t.exe)
+  (deps FunctionTypeArgumentCurried.vo function_type_argument_curried.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} function_type_argument_curried.t.exe function_type_argument_curried.cpp function_type_argument_curried.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps function_type_argument_curried.t.exe)
+  (action (run ./function_type_argument_curried.t.exe))))
+
+(subdir projection_result_overapplied
+ (rule
+  (targets projection_result_overapplied.t.exe)
+  (deps ProjectionResultOverapplied.vo projection_result_overapplied.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} projection_result_overapplied.t.exe projection_result_overapplied.cpp projection_result_overapplied.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps projection_result_overapplied.t.exe)
+  (action (run ./projection_result_overapplied.t.exe))))
+
+(subdir local_function_value_not_curried
+ (rule
+  (targets local_function_value_not_curried.t.exe)
+  (deps LocalFunctionValueNotCurried.vo local_function_value_not_curried.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} local_function_value_not_curried.t.exe local_function_value_not_curried.cpp local_function_value_not_curried.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps local_function_value_not_curried.t.exe)
+  (action (run ./local_function_value_not_curried.t.exe))))
+
+(subdir polymorphic_value_eta_arity
+ (rule
+  (targets polymorphic_value_eta_arity.t.exe)
+  (deps PolymorphicValueEtaArity.vo polymorphic_value_eta_arity.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} polymorphic_value_eta_arity.t.exe polymorphic_value_eta_arity.cpp polymorphic_value_eta_arity.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps polymorphic_value_eta_arity.t.exe)
+  (action (run ./polymorphic_value_eta_arity.t.exe))))
+

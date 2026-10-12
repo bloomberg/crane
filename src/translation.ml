@@ -1318,7 +1318,21 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
            else Cpp_erasure.unbox ty result
       | _ -> result
     end
-    else result
+    else
+      (* A local function that takes more arguments than the slot hands it at
+         once -- a [let fix] or a parameter of type [nat -> nat -> nat] where
+         a [nat -> (nat -> nat)] is expected -- is curried to the slot, as a
+         global named as a value is. *)
+      ( match
+        ( expected_ty,
+          Option.map
+            (fun t -> unfold_cpp_typedef env (strip_cpp_ref_const t))
+            (binder_cpp_type_or_derive env i) )
+      with
+      | Some (Tfun ((_ :: _ as exp_dom), _)), Some (Tfun (dom, _))
+        when List.length dom > List.length exp_dom ->
+        curry_value_to_expected env ?expected_ty (get_env_type_opt i) var_expr
+      | _ -> result )
   (* A singleton class's dictionary applied, which is the body of the class's
      projection: the method, called on the instance -- a template parameter,
      so a static member -- at the method's own type variables, which here are
@@ -2822,6 +2836,21 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
            the ones the use site supplied. *)
         let cglob =
           if is_fully_erased_fun_ty from then mk_cppglob x [] else cglob
+        in
+        (* Converted as a value, so named as one.  A callable parameter that
+           kept a type of its own is generalised to [F &&] -- a fully erased
+           one is not ({!Gen_functions.gen_dfun}) -- and a template is no
+           value a conversion can take whole: an adapter at the declared
+           signature, at this use's type arguments, is. *)
+        let cglob =
+          match from with
+          | Tfun (dom, _)
+            when List.exists
+                   (function Tfun _ as f -> not (is_fully_erased_fun_ty f) | _ -> false)
+                   dom ->
+            curry_value_to_expected env ~exact:true
+              (Option.map expand_ml_fun_alias (instantiated_type ~tys x)) cglob
+          | _ -> cglob
         in
         ( match into with
         | Some into -> coerce ~from ~into cglob
@@ -5383,6 +5412,12 @@ and gen_call_args ~slot ?expected_ty env id plan =
          type variable belong to the element type the callee is generic in,
          not to the callable it expects. *)
       | MLglob _ -> param_expected_at fn_param_ml_tys_orig param_index
+      (* So may a local function, for the same reason. *)
+      | MLrel j
+        when (match Option.map (unfold_cpp_typedef env) (binder_cpp_type_or_derive env j) with
+              | Some (Tfun _ | Tconst (Tfun _) | Tref (_, (Tfun _ | Tconst (Tfun _)))) -> true
+              | _ -> false) ->
+        param_expected_at fn_param_ml_tys_orig param_index
       (* A partial application is a callable built here rather than named,
          and reaches the slot at the arity the callee declared the parameter
          at, for the same reason a lambda does. *)
@@ -6012,10 +6047,12 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
         in
         (* A codomain that is a type variable takes its C++ shape from the
            template argument, which keeps its currying; one written in the
-           declaration is flattened there. *)
+           declaration is flattened there.  An inline custom constant has no
+           template argument: what it yields is whatever its text reads --
+           [fst]'s [%a0.first] is the pair's component, stored flat. *)
         let cod_is_curried =
           match find_type_opt id with
-          | Some ml_ty -> ml_codomain_is_tvar ml_ty
+          | Some ml_ty -> ml_codomain_is_tvar ml_ty && not (is_inline_custom id)
           | None -> false
         in
         (* A codomain that stays curried in C++ -- a [std::function] whose

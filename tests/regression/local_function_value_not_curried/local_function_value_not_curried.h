@@ -1,5 +1,5 @@
-#ifndef INCLUDED_POLYMORPHIC_VALUE_ETA_ARITY
-#define INCLUDED_POLYMORPHIC_VALUE_ETA_ARITY
+#ifndef INCLUDED_LOCAL_FUNCTION_VALUE_NOT_CURRIED
+#define INCLUDED_LOCAL_FUNCTION_VALUE_NOT_CURRIED
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -14,6 +14,8 @@
 #include <variant>
 
 template <typename A> struct List;
+
+struct Nat {};
 
 template <typename A> struct List {
   // TYPES
@@ -138,45 +140,38 @@ public:
   }
 };
 
-struct PolymorphicValueEtaArity {
-  template <typename T1> static T1 idf(T1 x) { return x; }
+struct LocalFunctionValueNotCurried {
+  static List<crane::fn<uint64_t(uint64_t)>> from_fix(const List<uint64_t> &l);
 
-  static inline const List<crane::fn<uint64_t(uint64_t)>> fs = []() {
-    return List<crane::fn<uint64_t(uint64_t)>>::cons(
-               [](uint64_t x) { return (x + 1); },
-               List<crane::fn<uint64_t(uint64_t)>>::cons(
-                   [](uint64_t _x0) -> uint64_t {
-                     return (_x0 ? _x0 - 1 : _x0);
-                   },
-                   List<crane::fn<uint64_t(uint64_t)>>::nil()))
-        .template map<crane::fn<uint64_t(uint64_t)>>(
-            [](crane::fn<uint64_t(uint64_t)> _ec0) {
-              return [=](uint64_t _ec1) {
-                return idf<crane::fn<uint64_t(uint64_t)>>(_ec0, _ec1);
-              };
-            });
-  }();
-  static inline const uint64_t through_idf = fs.template fold_left<uint64_t>(
-      [](uint64_t a, const crane::fn<uint64_t(uint64_t)> &g) { return g(a); },
-      UINT64_C(5));
-
-  template <typename T1, typename T2> static T1 constf(T1 a, const T2 &) {
-    return a;
+  template <typename F0>
+    requires std::is_invocable_r_v<uint64_t, const F0 &, const uint64_t &,
+                                   uint64_t &>
+  static List<crane::fn<uint64_t(uint64_t)>>
+  from_param(F0 &&x0_, const List<uint64_t> &x1_) {
+    return x1_.template map<crane::fn<uint64_t(uint64_t)>>([=](uint64_t _ec0) {
+      return [=](uint64_t _ec1) { return x0_(_ec0, _ec1); };
+    });
   }
 
-  static inline const List<crane::fn<uint64_t(bool)>> cs = []() {
-    return List<uint64_t>::cons(
+  static inline const uint64_t result =
+      (from_fix(List<uint64_t>::cons(
+                    UINT64_C(1),
+                    List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())))
+           .template fold_left<uint64_t>(
+               [](uint64_t a, const crane::fn<uint64_t(uint64_t)> &h) {
+                 return h(a);
+               },
+               UINT64_C(0)) +
+       from_param(
+           [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
+           List<uint64_t>::cons(
                UINT64_C(1),
-               List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil()))
-        .template map<crane::fn<uint64_t(bool)>>([](uint64_t _ec0) {
-          return [=](bool _ec1) { return constf<uint64_t, bool>(_ec0, _ec1); };
-        });
-  }();
-  static inline const uint64_t through_constf = cs.template fold_left<uint64_t>(
-      [](uint64_t a, const crane::fn<uint64_t(bool)> &g) {
-        return (a + g(true));
-      },
-      UINT64_C(0));
+               List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())))
+           .template fold_left<uint64_t>(
+               [](uint64_t a, const crane::fn<uint64_t(uint64_t)> &h) {
+                 return h(a);
+               },
+               UINT64_C(0)));
 };
 
-#endif // INCLUDED_POLYMORPHIC_VALUE_ETA_ARITY
+#endif // INCLUDED_LOCAL_FUNCTION_VALUE_NOT_CURRIED

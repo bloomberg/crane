@@ -14,5 +14,8 @@ LocalFunctionValueNotCurried::from_fix(const List<uint64_t> &l) {
                                               uint64_t x) -> uint64_t {
     return mk_impl(mk_impl, n, x);
   };
-  return l.template map<crane::fn<uint64_t(uint64_t)>>(std::move(mk));
+  return l.template map<crane::fn<uint64_t(uint64_t)>>(
+      [=, mk = std::move(mk)](uint64_t _ec0) {
+        return [=](uint64_t _ec1) { return mk(_ec0, _ec1); };
+      });
 }

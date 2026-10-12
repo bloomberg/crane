@@ -1,10 +1,9 @@
-#ifndef INCLUDED_FUNCTION_TYPE_ARGUMENT_CURRIED
-#define INCLUDED_FUNCTION_TYPE_ARGUMENT_CURRIED
+#ifndef INCLUDED_POLYMORPHIC_VALUE_ETA_ARITY
+#define INCLUDED_POLYMORPHIC_VALUE_ETA_ARITY
 
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include "shared_block.h"
 #include <atomic>
 #include <cstdint>
 #include <memory>
@@ -15,8 +14,6 @@
 #include <variant>
 
 template <typename A> struct List;
-
-struct Nat {};
 
 template <typename A> struct List {
   // TYPES
@@ -141,92 +138,45 @@ public:
   }
 };
 
-struct FunctionTypeArgumentCurried {
-  template <typename T1> static T1 idp(T1 x) { return x; }
+struct PolymorphicValueEtaArity {
+  template <typename T1> static T1 idf(T1 x) { return x; }
 
-  static uint64_t f2(uint64_t x0_, uint64_t x1_);
-
-  template <typename T1> static List<T1> wrap(const T1 &x) {
-    return List<T1>::cons(x, List<T1>::nil());
-  }
-
-  static inline const List<crane::fn<uint64_t(uint64_t, uint64_t)>> ws = []() {
-    return wrap<crane::fn<crane::fn<uint64_t(uint64_t)>(uint64_t)>>(
-        [](uint64_t _x0) {
-          return [=](uint64_t _x1) -> uint64_t { return (_x0 + _x1); };
-        });
-  }();
-  static inline const uint64_t from_wrap = []() {
-    auto &&_sv = ws;
-    if (std::holds_alternative<typename List<
-            crane::fn<crane::fn<uint64_t(uint64_t)>(uint64_t)>>::Nil>(
-            _sv.v())) {
-      return UINT64_C(0);
-    } else {
-      const auto &[a0, a1] = std::get<typename List<
-          crane::fn<crane::fn<uint64_t(uint64_t)>(uint64_t)>>::Cons>(_sv.v());
-      return a0(UINT64_C(3), UINT64_C(4));
-    }
-  }();
-
-  struct t {
-    // DATA
-    uint64_t a0;
-    uint64_t a1;
-    uint64_t a2;
-
-    // ACCESSORS
-    t clone() const { return {a0, a1, a2}; }
-
-    // CREATORS
-    static t a(uint64_t a0, uint64_t a1, uint64_t a2) { return {a0, a1, a2}; }
-  };
-
-  template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &, const uint64_t &,
-                                   const uint64_t &>
-  static T1 t_rect(F0 &&f, const t &t0) {
-    const auto &[a0, a1, a2] = t0;
-    return f(a0, a1, a2);
-  }
-
-  template <typename T1, typename F0> static T1 t_rec(F0 &&f, const t &t0) {
-    return t_rect<T1>(f, t0);
-  }
-
-  static uint64_t ev(const t &x);
-  static inline const List<crane::fn<t(uint64_t, uint64_t)>> fs = []() {
-    return List<uint64_t>::cons(
-               UINT64_C(1),
-               List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil()))
-        .template map<crane::fn<crane::fn<t(uint64_t)>(uint64_t)>>(
-            [](uint64_t x) {
-              return [=](uint64_t x0) {
-                return [=](uint64_t x1) { return t::a(x, x0, x1); };
+  static inline const List<crane::fn<uint64_t(uint64_t)>> fs = []() {
+    return List<crane::fn<uint64_t(uint64_t)>>::cons(
+               [](uint64_t x) { return (x + 1); },
+               List<crane::fn<uint64_t(uint64_t)>>::cons(
+                   [](uint64_t _x0) -> uint64_t {
+                     return (_x0 ? _x0 - 1 : _x0);
+                   },
+                   List<crane::fn<uint64_t(uint64_t)>>::nil()))
+        .template map<crane::fn<uint64_t(uint64_t)>>(
+            [](crane::fn<uint64_t(uint64_t)> _ec0) {
+              return [=](uint64_t _ec1) {
+                return idf<crane::fn<uint64_t(uint64_t)>>(_ec0)(_ec1);
               };
             });
   }();
-  static inline const uint64_t from_ctor = fs.template fold_left<uint64_t>(
-      [](uint64_t acc, const crane::fn<t(uint64_t, uint64_t)> &f) {
-        return (acc + ev(f(UINT64_C(0), UINT64_C(5))));
-      },
-      UINT64_C(0));
+  static inline const uint64_t through_idf = fs.template fold_left<uint64_t>(
+      [](uint64_t a, const crane::fn<uint64_t(uint64_t)> &g) { return g(a); },
+      UINT64_C(5));
 
-  template <typename T1, typename T2> static T1 myfst(std::pair<T1, T2> p) {
-    auto [a, _x] = std::move(p);
+  template <typename T1, typename T2> static T1 constf(T1 a, const T2 &) {
     return a;
   }
 
-  static inline const std::pair<crane::fn<uint64_t(uint64_t, uint64_t)>,
-                                uint64_t>
-      pf = std::make_pair(
-          [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
-          UINT64_C(1));
-  static inline const uint64_t from_pair =
-      myfst<crane::fn<crane::fn<uint64_t(uint64_t)>(uint64_t)>, uint64_t>(pf)(
-          UINT64_C(2))(UINT64_C(3));
-  static inline const uint64_t result =
-      (((f2(UINT64_C(1), UINT64_C(2)) + from_wrap) + from_ctor) + from_pair);
+  static inline const List<crane::fn<uint64_t(bool)>> cs = []() {
+    return List<uint64_t>::cons(
+               UINT64_C(1),
+               List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil()))
+        .template map<crane::fn<uint64_t(bool)>>([](uint64_t _ec0) {
+          return [=](bool _ec1) { return constf<uint64_t, bool>(_ec0, _ec1); };
+        });
+  }();
+  static inline const uint64_t through_constf = cs.template fold_left<uint64_t>(
+      [](uint64_t a, const crane::fn<uint64_t(bool)> &g) {
+        return (a + g(true));
+      },
+      UINT64_C(0));
 };
 
-#endif // INCLUDED_FUNCTION_TYPE_ARGUMENT_CURRIED
+#endif // INCLUDED_POLYMORPHIC_VALUE_ETA_ARITY
