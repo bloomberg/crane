@@ -59,7 +59,9 @@ let structure struc =
     | [] -> []
     | (l, SEdecl d) :: rest when function_def d <> None -> (
       let r, body, ty = Option.get (function_def d) in
-      let key = canonical r body in
+      (* A forwarder runs its target's precondition checks, so two
+         definitions are one only if those are the same too. *)
+      let key = (canonical r body, Table.get_sigma_assertions r) in
       match List.find_opt (fun (key', _, ty') -> key' = key && Mlutil.eq_ml_type ty' ty) seen with
       | Some (_, r', _) -> (l, SEdecl (Dterm (r, forwarder body ty r', ty))) :: elems seen rest
       | None -> (l, SEdecl d) :: elems ((key, r, ty) :: seen) rest )

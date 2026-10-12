@@ -139,6 +139,10 @@ type t = {
           Here for the same reason as {!collision_wrappers}: the name is read
           at every use of the concept, including ones rendered before the
           class itself. *)
+  modtype_concept_renames : (ModPath.t * string) list;
+      (** [(module_type, concept_name)] likewise for the module types: a name
+          shared with another module type or a class is qualified with the
+          declaring module's. *)
   lifted_instances : GlobRef.t list;
       (** The type-class instances declared in a module that is emitted as a
           wrapper struct.  An instance is a type, not a value: it is named from

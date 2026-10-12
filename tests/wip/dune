@@ -217,7 +217,6 @@
   (deps interp_state_dict.t.exe)
   (action (run ./interp_state_dict.t.exe))))
 
-
 (subdir let_function_two_instances
  (rule
   (targets let_function_two_instances.t.exe)
@@ -430,61 +429,6 @@
   (alias runtest)
   (deps type_field_record_concrete_lambda.t.exe)
   (action (run ./type_field_record_concrete_lambda.t.exe))))
-
-(subdir nat_module_family_returns
- (rule
-  (targets nat_module_family_returns.t.exe)
-  (deps NatModuleFamilyReturns.vo nat_module_family_returns.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} nat_module_family_returns.t.exe nat_module_family_returns.cpp nat_module_family_returns.t.cpp)))
- (rule
-  (alias runtest)
-  (deps nat_module_family_returns.t.exe)
-  (action (run ./nat_module_family_returns.t.exe))))
-
-(subdir sig_parameter_le_precondition
- (rule
-  (targets sig_parameter_le_precondition.t.exe)
-  (deps SigParameterLePrecondition.vo sig_parameter_le_precondition.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sig_parameter_le_precondition.t.exe sig_parameter_le_precondition.cpp sig_parameter_le_precondition.t.cpp)))
- (rule
-  (alias runtest)
-  (deps sig_parameter_le_precondition.t.exe)
-  (action (run ./sig_parameter_le_precondition.t.exe))))
-
-(subdir module_alias_target_handling
- (rule
-  (targets module_alias_target_handling.t.exe)
-  (deps ModuleAliasTargetHandling.vo module_alias_target_handling.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} module_alias_target_handling.t.exe module_alias_target_handling.cpp module_alias_target_handling.t.cpp)))
- (rule
-  (alias runtest)
-  (deps module_alias_target_handling.t.exe)
-  (action (run ./module_alias_target_handling.t.exe))))
-
-(subdir module_type_short_name_clash
- (rule
-  (targets module_type_short_name_clash.t.exe)
-  (deps ModuleTypeShortNameClash.vo module_type_short_name_clash.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} module_type_short_name_clash.t.exe module_type_short_name_clash.cpp module_type_short_name_clash.t.cpp)))
- (rule
-  (alias runtest)
-  (deps module_type_short_name_clash.t.exe)
-  (action (run ./module_type_short_name_clash.t.exe))))
-
-(subdir same_named_file_modules
- (rule
-  (targets same_named_file_modules.t.exe)
-  (deps SameNamedFileModules.vo same_named_file_modules.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} same_named_file_modules.t.exe same_named_file_modules.cpp same_named_file_modules.t.cpp)))
- (rule
-  (alias runtest)
-  (deps same_named_file_modules.t.exe)
-  (action (run ./same_named_file_modules.t.exe))))
 
 (subdir no_optimize_fold_left_accumulator
  (rule

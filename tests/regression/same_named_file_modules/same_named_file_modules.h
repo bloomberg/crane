@@ -2342,7 +2342,7 @@ struct Positive_as_OT {
   static bool eq_dec(const Positive &x0_, const Positive &x1_);
 };
 
-using Positive_as_OT = Coq_Pos;
+using Coq_Positive_as_OT = Coq_Pos;
 
 struct SameNamedFileModules {
   using PM = Make<Positive_as_OT>;

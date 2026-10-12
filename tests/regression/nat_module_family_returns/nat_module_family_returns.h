@@ -1,5 +1,5 @@
-#ifndef INCLUDED_MODULE_ALIAS_TARGET_HANDLING
-#define INCLUDED_MODULE_ALIAS_TARGET_HANDLING
+#ifndef INCLUDED_NAT_MODULE_FAMILY_RETURNS
+#define INCLUDED_NAT_MODULE_FAMILY_RETURNS
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -15,36 +15,100 @@
 #include <variant>
 
 enum class Reflect;
+template <typename A, typename B> struct Sum;
 enum class Comparison;
 enum class CompareSpecT;
 template <typename A> struct Sig;
-template <typename A> struct Sumor;
 struct Uint;
 struct Signed_int;
 struct Uint0;
 struct Signed_int0;
+struct Decidable;
 struct Uint1;
 struct Signed_int1;
 
 struct Little {
-  static Uint double_(const Uint &d);
-  static Uint succ_double(const Uint &d);
+  static Uint succ(const Uint &d);
 };
 
 struct Coq_Little {
-  static Uint0 double_(const Uint0 &d);
-  static Uint0 succ_double(const Uint0 &d);
+  static Uint0 succ(const Uint0 &d);
 };
 
 struct Bool {
   static Reflect iff_reflect(bool b);
 };
 enum class Reflect { REFLECTT, REFLECTF };
+
+template <typename A, typename B> struct Sum {
+  // TYPES
+  struct Inl {
+    A a0;
+  };
+
+  struct Inr {
+    B a0;
+  };
+
+  using variant_t = std::variant<Inl, Inr>;
+
+private:
+  // DATA
+  variant_t v_;
+
+public:
+  // CREATORS
+  Sum() {}
+
+  explicit Sum(Inl _v) : v_(std::move(_v)) {}
+
+  explicit Sum(Inr _v) : v_(std::move(_v)) {}
+
+  template <typename CraneU0, typename CraneU1>
+  Sum(const Sum<CraneU0, CraneU1> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename Sum<CraneU0, CraneU1>::Inl>(
+                  _other.v())) {
+            const auto &[a0] =
+                std::get<typename Sum<CraneU0, CraneU1>::Inl>(_other.v());
+            return Inl{[&]() -> A {
+              if constexpr (crane_convertible<A, const CraneU0 &>) {
+                return crane_convert<A>(a0);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }()};
+          } else {
+            const auto &[a0] =
+                std::get<typename Sum<CraneU0, CraneU1>::Inr>(_other.v());
+            return Inr{[&]() -> B {
+              if constexpr (crane_convertible<B, const CraneU1 &>) {
+                return crane_convert<B>(a0);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }()};
+          }
+        }()) {}
+
+  static Sum<A, B> inl(A a0) { return Sum<A, B>(Inl{std::move(a0)}); }
+
+  static Sum<A, B> inr(B a0) { return Sum<A, B>(Inr{std::move(a0)}); }
+
+  // MANIPULATORS
+  inline variant_t &v_mut() { return v_; }
+
+  // ACCESSORS
+  const variant_t &v() const { return v_; }
+};
 enum class Comparison { EQ, LT, GT };
 enum class CompareSpecT { COMPEQT, COMPLTT, COMPGTT };
 template <typename a = void> using CompSpecT = CompareSpecT;
 
 struct Datatypes {
+  static bool xorb(bool b1, bool b2);
   static CompareSpecT CompareSpec2Type(Comparison c);
   template <typename T1>
   static CompSpecT<T1> CompSpec2Type(const T1 &_x, const T1 &_x0,
@@ -71,59 +135,6 @@ template <typename A> struct Sig {
 
   // CREATORS
   static Sig<A> exist(A x) { return {std::move(x)}; }
-};
-
-template <typename A> struct Sumor {
-  // TYPES
-  struct Inleft {
-    A a0;
-  };
-
-  struct Inright {};
-
-  using variant_t = std::variant<Inleft, Inright>;
-
-private:
-  // DATA
-  variant_t v_;
-
-public:
-  // CREATORS
-  Sumor() {}
-
-  explicit Sumor(Inleft _v) : v_(std::move(_v)) {}
-
-  explicit Sumor(Inright _v) : v_(_v) {}
-
-  template <typename CraneU>
-  Sumor(const Sumor<CraneU> &_other)
-      : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Sumor<CraneU>::Inleft>(
-                  _other.v())) {
-            const auto &[a0] =
-                std::get<typename Sumor<CraneU>::Inleft>(_other.v());
-            return Inleft{[&]() -> A {
-              if constexpr (crane_convertible<A, const CraneU &>) {
-                return crane_convert<A>(a0);
-              } else {
-                throw std::logic_error("unreachable: inactive constructor "
-                                       "field at this instantiation");
-              }
-            }()};
-          } else {
-            return Inright{};
-          }
-        }()) {}
-
-  static Sumor<A> inleft(A a0) { return Sumor<A>(Inleft{std::move(a0)}); }
-
-  static Sumor<A> inright() { return Sumor<A>(Inright{}); }
-
-  // MANIPULATORS
-  inline variant_t &v_mut() { return v_; }
-
-  // ACCESSORS
-  const variant_t &v() const { return v_; }
 };
 
 struct Uint {
@@ -511,11 +522,11 @@ struct Uint0 {
   // TYPES
   struct Nil0 {};
 
-  struct D10 {
+  struct D11 {
     std::shared_ptr<Uint0> a0;
   };
 
-  struct D11 {
+  struct D10 {
     std::shared_ptr<Uint0> a0;
   };
 
@@ -523,15 +534,11 @@ struct Uint0 {
     std::shared_ptr<Uint0> a0;
   };
 
-  struct D14 {
-    std::shared_ptr<Uint0> a0;
-  };
-
   struct D13 {
     std::shared_ptr<Uint0> a0;
   };
 
-  struct D17 {
+  struct D14 {
     std::shared_ptr<Uint0> a0;
   };
 
@@ -539,11 +546,15 @@ struct Uint0 {
     std::shared_ptr<Uint0> a0;
   };
 
-  struct D18 {
+  struct D16 {
     std::shared_ptr<Uint0> a0;
   };
 
-  struct D16 {
+  struct D17 {
+    std::shared_ptr<Uint0> a0;
+  };
+
+  struct D18 {
     std::shared_ptr<Uint0> a0;
   };
 
@@ -575,8 +586,8 @@ struct Uint0 {
     std::shared_ptr<Uint0> a0;
   };
 
-  using variant_t = std::variant<Nil0, D10, D11, D12, D14, D13, D17, D15, D18,
-                                 D16, D19, Da, Db, Dc, Dd, De, Df>;
+  using variant_t = std::variant<Nil0, D11, D10, D12, D13, D14, D15, D16, D17,
+                                 D18, D19, Da, Db, Dc, Dd, De, Df>;
 
 private:
   // DATA
@@ -588,23 +599,23 @@ public:
 
   explicit Uint0(Nil0 _v) : v_(_v) {}
 
-  explicit Uint0(D10 _v) : v_(std::move(_v)) {}
-
   explicit Uint0(D11 _v) : v_(std::move(_v)) {}
+
+  explicit Uint0(D10 _v) : v_(std::move(_v)) {}
 
   explicit Uint0(D12 _v) : v_(std::move(_v)) {}
 
-  explicit Uint0(D14 _v) : v_(std::move(_v)) {}
-
   explicit Uint0(D13 _v) : v_(std::move(_v)) {}
 
-  explicit Uint0(D17 _v) : v_(std::move(_v)) {}
+  explicit Uint0(D14 _v) : v_(std::move(_v)) {}
 
   explicit Uint0(D15 _v) : v_(std::move(_v)) {}
 
-  explicit Uint0(D18 _v) : v_(std::move(_v)) {}
-
   explicit Uint0(D16 _v) : v_(std::move(_v)) {}
+
+  explicit Uint0(D17 _v) : v_(std::move(_v)) {}
+
+  explicit Uint0(D18 _v) : v_(std::move(_v)) {}
 
   explicit Uint0(D19 _v) : v_(std::move(_v)) {}
 
@@ -622,40 +633,40 @@ public:
 
   static Uint0 nil0() { return Uint0(Nil0{}); }
 
-  static Uint0 d10(Uint0 a0) {
-    return Uint0(D10{std::make_shared<Uint0>(std::move(a0))});
-  }
-
   static Uint0 d11(Uint0 a0) {
     return Uint0(D11{std::make_shared<Uint0>(std::move(a0))});
+  }
+
+  static Uint0 d10(Uint0 a0) {
+    return Uint0(D10{std::make_shared<Uint0>(std::move(a0))});
   }
 
   static Uint0 d12(Uint0 a0) {
     return Uint0(D12{std::make_shared<Uint0>(std::move(a0))});
   }
 
-  static Uint0 d14(Uint0 a0) {
-    return Uint0(D14{std::make_shared<Uint0>(std::move(a0))});
-  }
-
   static Uint0 d13(Uint0 a0) {
     return Uint0(D13{std::make_shared<Uint0>(std::move(a0))});
   }
 
-  static Uint0 d17(Uint0 a0) {
-    return Uint0(D17{std::make_shared<Uint0>(std::move(a0))});
+  static Uint0 d14(Uint0 a0) {
+    return Uint0(D14{std::make_shared<Uint0>(std::move(a0))});
   }
 
   static Uint0 d15(Uint0 a0) {
     return Uint0(D15{std::make_shared<Uint0>(std::move(a0))});
   }
 
-  static Uint0 d18(Uint0 a0) {
-    return Uint0(D18{std::make_shared<Uint0>(std::move(a0))});
-  }
-
   static Uint0 d16(Uint0 a0) {
     return Uint0(D16{std::make_shared<Uint0>(std::move(a0))});
+  }
+
+  static Uint0 d17(Uint0 a0) {
+    return Uint0(D17{std::make_shared<Uint0>(std::move(a0))});
+  }
+
+  static Uint0 d18(Uint0 a0) {
+    return Uint0(D18{std::make_shared<Uint0>(std::move(a0))});
   }
 
   static Uint0 d19(Uint0 a0) {
@@ -689,13 +700,13 @@ public:
   // MANIPULATORS
   ~Uint0() {
     auto _next = [&](variant_t &_v) -> std::shared_ptr<Uint0> {
-      if (auto *_alt = std::get_if<D10>(&_v)) {
+      if (auto *_alt = std::get_if<D11>(&_v)) {
         if (_alt->a0 && _alt->a0.use_count() == 1) {
           std::atomic_thread_fence(std::memory_order_acquire);
           return std::move(_alt->a0);
         }
       }
-      if (auto *_alt = std::get_if<D11>(&_v)) {
+      if (auto *_alt = std::get_if<D10>(&_v)) {
         if (_alt->a0 && _alt->a0.use_count() == 1) {
           std::atomic_thread_fence(std::memory_order_acquire);
           return std::move(_alt->a0);
@@ -707,19 +718,13 @@ public:
           return std::move(_alt->a0);
         }
       }
-      if (auto *_alt = std::get_if<D14>(&_v)) {
-        if (_alt->a0 && _alt->a0.use_count() == 1) {
-          std::atomic_thread_fence(std::memory_order_acquire);
-          return std::move(_alt->a0);
-        }
-      }
       if (auto *_alt = std::get_if<D13>(&_v)) {
         if (_alt->a0 && _alt->a0.use_count() == 1) {
           std::atomic_thread_fence(std::memory_order_acquire);
           return std::move(_alt->a0);
         }
       }
-      if (auto *_alt = std::get_if<D17>(&_v)) {
+      if (auto *_alt = std::get_if<D14>(&_v)) {
         if (_alt->a0 && _alt->a0.use_count() == 1) {
           std::atomic_thread_fence(std::memory_order_acquire);
           return std::move(_alt->a0);
@@ -731,13 +736,19 @@ public:
           return std::move(_alt->a0);
         }
       }
-      if (auto *_alt = std::get_if<D18>(&_v)) {
+      if (auto *_alt = std::get_if<D16>(&_v)) {
         if (_alt->a0 && _alt->a0.use_count() == 1) {
           std::atomic_thread_fence(std::memory_order_acquire);
           return std::move(_alt->a0);
         }
       }
-      if (auto *_alt = std::get_if<D16>(&_v)) {
+      if (auto *_alt = std::get_if<D17>(&_v)) {
+        if (_alt->a0 && _alt->a0.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a0);
+        }
+      }
+      if (auto *_alt = std::get_if<D18>(&_v)) {
         if (_alt->a0 && _alt->a0.use_count() == 1) {
           std::atomic_thread_fence(std::memory_order_acquire);
           return std::move(_alt->a0);
@@ -807,8 +818,8 @@ public:
     const Uint0 *_loop_self = this;
     while (true) {
       auto &&_sv = *_loop_self;
-      if (std::holds_alternative<typename Uint0::D10>(_sv.v())) {
-        const auto &[a0] = std::get<typename Uint0::D10>(_sv.v());
+      if (std::holds_alternative<typename Uint0::D11>(_sv.v())) {
+        const auto &[a0] = std::get<typename Uint0::D11>(_sv.v());
         _loop_self = crane_raw(a0);
       } else {
         return *_loop_self;
@@ -819,34 +830,34 @@ public:
   Uint0 unorm0() const {
     auto &&_sv = this->nzhead0();
     if (std::holds_alternative<typename Uint0::Nil0>(_sv.v())) {
-      return Uint0::d10(Uint0::nil0());
-    } else if (std::holds_alternative<typename Uint0::D10>(_sv.v())) {
-      const auto &[a0] = std::get<typename Uint0::D10>(_sv.v());
-      return Uint0::d10(*a0);
+      return Uint0::d11(Uint0::nil0());
     } else if (std::holds_alternative<typename Uint0::D11>(_sv.v())) {
       const auto &[a0] = std::get<typename Uint0::D11>(_sv.v());
       return Uint0::d11(*a0);
+    } else if (std::holds_alternative<typename Uint0::D10>(_sv.v())) {
+      const auto &[a0] = std::get<typename Uint0::D10>(_sv.v());
+      return Uint0::d10(*a0);
     } else if (std::holds_alternative<typename Uint0::D12>(_sv.v())) {
       const auto &[a0] = std::get<typename Uint0::D12>(_sv.v());
       return Uint0::d12(*a0);
-    } else if (std::holds_alternative<typename Uint0::D14>(_sv.v())) {
-      const auto &[a0] = std::get<typename Uint0::D14>(_sv.v());
-      return Uint0::d14(*a0);
     } else if (std::holds_alternative<typename Uint0::D13>(_sv.v())) {
       const auto &[a0] = std::get<typename Uint0::D13>(_sv.v());
       return Uint0::d13(*a0);
-    } else if (std::holds_alternative<typename Uint0::D17>(_sv.v())) {
-      const auto &[a0] = std::get<typename Uint0::D17>(_sv.v());
-      return Uint0::d17(*a0);
+    } else if (std::holds_alternative<typename Uint0::D14>(_sv.v())) {
+      const auto &[a0] = std::get<typename Uint0::D14>(_sv.v());
+      return Uint0::d14(*a0);
     } else if (std::holds_alternative<typename Uint0::D15>(_sv.v())) {
       const auto &[a0] = std::get<typename Uint0::D15>(_sv.v());
       return Uint0::d15(*a0);
-    } else if (std::holds_alternative<typename Uint0::D18>(_sv.v())) {
-      const auto &[a0] = std::get<typename Uint0::D18>(_sv.v());
-      return Uint0::d18(*a0);
     } else if (std::holds_alternative<typename Uint0::D16>(_sv.v())) {
       const auto &[a0] = std::get<typename Uint0::D16>(_sv.v());
       return Uint0::d16(*a0);
+    } else if (std::holds_alternative<typename Uint0::D17>(_sv.v())) {
+      const auto &[a0] = std::get<typename Uint0::D17>(_sv.v());
+      return Uint0::d17(*a0);
+    } else if (std::holds_alternative<typename Uint0::D18>(_sv.v())) {
+      const auto &[a0] = std::get<typename Uint0::D18>(_sv.v());
+      return Uint0::d18(*a0);
     } else if (std::holds_alternative<typename Uint0::D19>(_sv.v())) {
       const auto &[a0] = std::get<typename Uint0::D19>(_sv.v());
       return Uint0::d19(*a0);
@@ -878,42 +889,42 @@ public:
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename Uint0::Nil0>(_sv.v())) {
         return _loop_d_;
-      } else if (std::holds_alternative<typename Uint0::D10>(_sv.v())) {
-        const auto &[a0] = std::get<typename Uint0::D10>(_sv.v());
-        _loop_self = crane_raw(a0);
-        _loop_d_ = Uint0::d10(std::move(_loop_d_));
       } else if (std::holds_alternative<typename Uint0::D11>(_sv.v())) {
         const auto &[a0] = std::get<typename Uint0::D11>(_sv.v());
         _loop_self = crane_raw(a0);
         _loop_d_ = Uint0::d11(std::move(_loop_d_));
+      } else if (std::holds_alternative<typename Uint0::D10>(_sv.v())) {
+        const auto &[a0] = std::get<typename Uint0::D10>(_sv.v());
+        _loop_self = crane_raw(a0);
+        _loop_d_ = Uint0::d10(std::move(_loop_d_));
       } else if (std::holds_alternative<typename Uint0::D12>(_sv.v())) {
         const auto &[a0] = std::get<typename Uint0::D12>(_sv.v());
         _loop_self = crane_raw(a0);
         _loop_d_ = Uint0::d12(std::move(_loop_d_));
-      } else if (std::holds_alternative<typename Uint0::D14>(_sv.v())) {
-        const auto &[a0] = std::get<typename Uint0::D14>(_sv.v());
-        _loop_self = crane_raw(a0);
-        _loop_d_ = Uint0::d14(std::move(_loop_d_));
       } else if (std::holds_alternative<typename Uint0::D13>(_sv.v())) {
         const auto &[a0] = std::get<typename Uint0::D13>(_sv.v());
         _loop_self = crane_raw(a0);
         _loop_d_ = Uint0::d13(std::move(_loop_d_));
-      } else if (std::holds_alternative<typename Uint0::D17>(_sv.v())) {
-        const auto &[a0] = std::get<typename Uint0::D17>(_sv.v());
+      } else if (std::holds_alternative<typename Uint0::D14>(_sv.v())) {
+        const auto &[a0] = std::get<typename Uint0::D14>(_sv.v());
         _loop_self = crane_raw(a0);
-        _loop_d_ = Uint0::d17(std::move(_loop_d_));
+        _loop_d_ = Uint0::d14(std::move(_loop_d_));
       } else if (std::holds_alternative<typename Uint0::D15>(_sv.v())) {
         const auto &[a0] = std::get<typename Uint0::D15>(_sv.v());
         _loop_self = crane_raw(a0);
         _loop_d_ = Uint0::d15(std::move(_loop_d_));
-      } else if (std::holds_alternative<typename Uint0::D18>(_sv.v())) {
-        const auto &[a0] = std::get<typename Uint0::D18>(_sv.v());
-        _loop_self = crane_raw(a0);
-        _loop_d_ = Uint0::d18(std::move(_loop_d_));
       } else if (std::holds_alternative<typename Uint0::D16>(_sv.v())) {
         const auto &[a0] = std::get<typename Uint0::D16>(_sv.v());
         _loop_self = crane_raw(a0);
         _loop_d_ = Uint0::d16(std::move(_loop_d_));
+      } else if (std::holds_alternative<typename Uint0::D17>(_sv.v())) {
+        const auto &[a0] = std::get<typename Uint0::D17>(_sv.v());
+        _loop_self = crane_raw(a0);
+        _loop_d_ = Uint0::d17(std::move(_loop_d_));
+      } else if (std::holds_alternative<typename Uint0::D18>(_sv.v())) {
+        const auto &[a0] = std::get<typename Uint0::D18>(_sv.v());
+        _loop_self = crane_raw(a0);
+        _loop_d_ = Uint0::d18(std::move(_loop_d_));
       } else if (std::holds_alternative<typename Uint0::D19>(_sv.v())) {
         const auto &[a0] = std::get<typename Uint0::D19>(_sv.v());
         _loop_self = crane_raw(a0);
@@ -991,34 +1002,34 @@ public:
       const auto &[d1] = std::get<typename Signed_int0::Neg0>(this->v());
       auto &&_sv0 = d1.nzhead0();
       if (std::holds_alternative<typename Uint0::Nil0>(_sv0.v())) {
-        return Signed_int0::pos0(Uint0::d10(Uint0::nil0()));
-      } else if (std::holds_alternative<typename Uint0::D10>(_sv0.v())) {
-        const auto &[a00] = std::get<typename Uint0::D10>(_sv0.v());
-        return Signed_int0::neg0(Uint0::d10(*a00));
+        return Signed_int0::pos0(Uint0::d11(Uint0::nil0()));
       } else if (std::holds_alternative<typename Uint0::D11>(_sv0.v())) {
         const auto &[a00] = std::get<typename Uint0::D11>(_sv0.v());
         return Signed_int0::neg0(Uint0::d11(*a00));
+      } else if (std::holds_alternative<typename Uint0::D10>(_sv0.v())) {
+        const auto &[a00] = std::get<typename Uint0::D10>(_sv0.v());
+        return Signed_int0::neg0(Uint0::d10(*a00));
       } else if (std::holds_alternative<typename Uint0::D12>(_sv0.v())) {
         const auto &[a00] = std::get<typename Uint0::D12>(_sv0.v());
         return Signed_int0::neg0(Uint0::d12(*a00));
-      } else if (std::holds_alternative<typename Uint0::D14>(_sv0.v())) {
-        const auto &[a00] = std::get<typename Uint0::D14>(_sv0.v());
-        return Signed_int0::neg0(Uint0::d14(*a00));
       } else if (std::holds_alternative<typename Uint0::D13>(_sv0.v())) {
         const auto &[a00] = std::get<typename Uint0::D13>(_sv0.v());
         return Signed_int0::neg0(Uint0::d13(*a00));
-      } else if (std::holds_alternative<typename Uint0::D17>(_sv0.v())) {
-        const auto &[a00] = std::get<typename Uint0::D17>(_sv0.v());
-        return Signed_int0::neg0(Uint0::d17(*a00));
+      } else if (std::holds_alternative<typename Uint0::D14>(_sv0.v())) {
+        const auto &[a00] = std::get<typename Uint0::D14>(_sv0.v());
+        return Signed_int0::neg0(Uint0::d14(*a00));
       } else if (std::holds_alternative<typename Uint0::D15>(_sv0.v())) {
         const auto &[a00] = std::get<typename Uint0::D15>(_sv0.v());
         return Signed_int0::neg0(Uint0::d15(*a00));
-      } else if (std::holds_alternative<typename Uint0::D18>(_sv0.v())) {
-        const auto &[a00] = std::get<typename Uint0::D18>(_sv0.v());
-        return Signed_int0::neg0(Uint0::d18(*a00));
       } else if (std::holds_alternative<typename Uint0::D16>(_sv0.v())) {
         const auto &[a00] = std::get<typename Uint0::D16>(_sv0.v());
         return Signed_int0::neg0(Uint0::d16(*a00));
+      } else if (std::holds_alternative<typename Uint0::D17>(_sv0.v())) {
+        const auto &[a00] = std::get<typename Uint0::D17>(_sv0.v());
+        return Signed_int0::neg0(Uint0::d17(*a00));
+      } else if (std::holds_alternative<typename Uint0::D18>(_sv0.v())) {
+        const auto &[a00] = std::get<typename Uint0::D18>(_sv0.v());
+        return Signed_int0::neg0(Uint0::d18(*a00));
       } else if (std::holds_alternative<typename Uint0::D19>(_sv0.v())) {
         const auto &[a00] = std::get<typename Uint0::D19>(_sv0.v());
         return Signed_int0::neg0(Uint0::d19(*a00));
@@ -1043,6 +1054,10 @@ public:
       }
     }
   }
+};
+
+struct Decidable {
+  bool Decidable_witness;
 };
 
 struct Uint1 {
@@ -1121,293 +1136,83 @@ public:
   const variant_t &v() const { return v_; }
 };
 
-struct Pos {
-  static unsigned int succ(unsigned int x);
-  static unsigned int pred_double(unsigned int x);
+template <typename M>
+concept PrivateBitwiseSpec = true;
 
-  struct mask {
-    // TYPES
-    struct IsNul {};
+struct Nat {
+  using t = uint64_t;
+  static constexpr uint64_t zero = UINT64_C(0);
+  static constexpr uint64_t one = UINT64_C(1);
+  static constexpr uint64_t two = UINT64_C(2);
+  static uint64_t succ(uint64_t x);
+  static Comparison compare(uint64_t n, uint64_t m);
+  static bool even(uint64_t n);
+  static bool odd(uint64_t n);
+  static uint64_t pow(uint64_t n, uint64_t m);
+  static uint64_t tail_add(uint64_t n, uint64_t m);
+  static uint64_t tail_addmul(uint64_t r, uint64_t n, uint64_t m);
+  static uint64_t tail_mul(uint64_t n, uint64_t m);
+  static uint64_t of_uint_acc(const Uint &d, uint64_t acc);
+  static uint64_t of_uint(const Uint &d);
+  static uint64_t of_hex_uint_acc(const Uint0 &d, uint64_t acc);
+  static uint64_t of_hex_uint(const Uint0 &d);
+  static uint64_t of_num_uint(const Uint1 &d);
+  static Uint to_little_uint(uint64_t n, Uint acc);
+  static Uint to_uint(uint64_t n);
+  static Uint0 to_little_hex_uint(uint64_t n, Uint0 acc);
+  static Uint0 to_hex_uint(uint64_t n);
+  static Uint1 to_num_uint(uint64_t n);
+  static Uint1 to_num_hex_uint(uint64_t n);
+  static std::optional<uint64_t> of_int(const Signed_int &d);
+  static std::optional<uint64_t> of_hex_int(const Signed_int0 &d);
+  static std::optional<uint64_t> of_num_int(const Signed_int1 &d);
+  static Signed_int to_int(uint64_t n);
+  static Signed_int0 to_hex_int(uint64_t n);
+  static Signed_int1 to_num_int(uint64_t n);
+  static std::pair<uint64_t, uint64_t> divmod(uint64_t x, uint64_t y,
+                                              uint64_t q, uint64_t u);
+  static uint64_t gcd(uint64_t a, uint64_t b);
+  static uint64_t square(uint64_t n);
+  static uint64_t sqrt_iter(uint64_t k, uint64_t p, uint64_t q, uint64_t r);
+  static uint64_t sqrt(uint64_t n);
+  static uint64_t log2_iter(uint64_t k, uint64_t p, uint64_t q, uint64_t r);
+  static uint64_t log2(uint64_t n);
+  static uint64_t div2(uint64_t n);
+  static bool testbit(uint64_t a, uint64_t n);
+  static uint64_t shiftl(uint64_t a, uint64_t n);
+  static uint64_t shiftr(uint64_t a, uint64_t n);
 
-    struct IsPos {
-      unsigned int a0;
-    };
-
-    struct IsNeg {};
-
-    using variant_t = std::variant<IsNul, IsPos, IsNeg>;
-
-  private:
-    // DATA
-    variant_t v_;
-
-  public:
-    // CREATORS
-    mask() {}
-
-    explicit mask(IsNul _v) : v_(_v) {}
-
-    explicit mask(IsPos _v) : v_(std::move(_v)) {}
-
-    explicit mask(IsNeg _v) : v_(_v) {}
-
-    static mask isnul() { return mask(IsNul{}); }
-
-    static mask ispos(unsigned int a0) { return mask(IsPos{a0}); }
-
-    static mask isneg() { return mask(IsNeg{}); }
-
-    // MANIPULATORS
-    inline variant_t &v_mut() { return v_; }
-
-    // ACCESSORS
-    const variant_t &v() const { return v_; }
-  };
-
-  static mask succ_double_mask(const mask &x);
-  static mask double_mask(const mask &x);
-  static mask double_pred_mask(unsigned int x);
-  static mask sub_mask(unsigned int x, unsigned int y);
-  static mask sub_mask_carry(unsigned int x, unsigned int y);
-
-  template <typename T1, typename F0>
-  static T1 iter(F0 &&f0, const T1 &x, unsigned int n) {
-    if (n == 1u) {
-      return f0(x);
-    } else if (n % 2u != 0u) {
-      unsigned int n_ = (n - 1u) / 2u;
-      return f0(iter<T1>(f0, iter<T1>(f0, x, n_), n_));
+  template <typename F0>
+  static uint64_t bitwise(F0 &&op, uint64_t n, uint64_t a, uint64_t b) {
+    if (n <= 0) {
+      return UINT64_C(0);
     } else {
-      unsigned int n_ = n / 2u;
-      return iter<T1>(f0, iter<T1>(f0, x, n_), n_);
+      uint64_t n_ = n - 1;
+      return ((op(odd(a), odd(b)) ? UINT64_C(1) : UINT64_C(0)) +
+              (UINT64_C(2) * bitwise(op, n_, div2(a), div2(b))));
     }
   }
 
-  static Comparison compare_cont(Comparison r, unsigned int x, unsigned int y);
-  static Comparison compare(unsigned int x0_, unsigned int x1_);
-  static bool leb(unsigned int x, unsigned int y);
-
-  template <typename F0, typename F1>
-  static std::pair<unsigned int, mask>
-  sqrtrem_step(F0 &&f0, F1 &&g, std::pair<unsigned int, mask> p) {
-    auto [s, y] = std::move(p);
-    if (std::holds_alternative<typename mask::IsPos>(y.v_mut())) {
-      auto &[a0] = std::get<typename mask::IsPos>(y.v_mut());
-      unsigned int s_ = (2u * (2u * s) + 1u);
-      unsigned int r_ = g(f0(std::move(a0)));
-      if (leb(s_, r_)) {
-        return std::make_pair((2u * s + 1u), sub_mask(r_, s_));
-      } else {
-        return std::make_pair((2u * s), mask::ispos(r_));
-      }
-    } else {
-      return std::make_pair((2u * s), sub_mask(g(f0(1u)), (2u * (2u * 1u))));
-    }
-  }
-
-  static std::pair<unsigned int, mask> sqrtrem(unsigned int p);
-  static unsigned int sqrt(unsigned int p);
-  static unsigned int Nsucc_double(unsigned int x);
-  static unsigned int Ndouble(unsigned int n);
-  static unsigned int lor(unsigned int p, unsigned int q);
-  static unsigned int land(unsigned int p, unsigned int q);
-  static unsigned int ldiff(unsigned int p, unsigned int q);
-  static unsigned int lxor(unsigned int p, unsigned int q);
-};
-
-struct Coq_Pos {
-  static unsigned int add_carry(unsigned int x, unsigned int y);
-  static unsigned int pred_double(unsigned int x);
-  static unsigned int pred_N(unsigned int x);
-
-  template <typename T1, typename F0>
-  static T1 iter(F0 &&f0, const T1 &x, unsigned int n) {
-    if (n == 1u) {
-      return f0(x);
-    } else if (n % 2u != 0u) {
-      unsigned int n_ = (n - 1u) / 2u;
-      return f0(iter<T1>(f0, iter<T1>(f0, x, n_), n_));
-    } else {
-      unsigned int n_ = n / 2u;
-      return iter<T1>(f0, iter<T1>(f0, x, n_), n_);
-    }
-  }
-
-  static Comparison compare_cont(Comparison r, unsigned int x, unsigned int y);
-  static Comparison compare(unsigned int x0_, unsigned int x1_);
-  static unsigned int pow(unsigned int x, unsigned int x0_);
-  static unsigned int square(unsigned int p);
-  static uint64_t size_nat(unsigned int p);
-  static unsigned int size(unsigned int p);
-  static unsigned int gcdn(uint64_t n, unsigned int a, unsigned int b);
-  static unsigned int gcd(unsigned int a, unsigned int b);
-  static std::pair<unsigned int, std::pair<unsigned int, unsigned int>>
-  ggcdn(uint64_t n, unsigned int a, unsigned int b);
-  static std::pair<unsigned int, std::pair<unsigned int, unsigned int>>
-  ggcd(unsigned int a, unsigned int b);
-  static unsigned int shiftl(unsigned int p, unsigned int n);
-  static bool testbit_nat(unsigned int p, uint64_t n);
-  static bool testbit(unsigned int p, unsigned int n);
-  static unsigned int of_uint_acc(const Uint &d, unsigned int acc);
-  static unsigned int of_uint(const Uint &d);
-  static unsigned int of_hex_uint_acc(const Uint0 &d, unsigned int acc);
-  static unsigned int of_hex_uint(const Uint0 &d);
-  static Uint to_little_uint(unsigned int p);
-  static Uint to_uint(unsigned int p);
-  static Uint0 to_little_hex_uint(unsigned int p);
-  static Uint0 to_hex_uint(unsigned int p);
-  static bool eq_dec(unsigned int p, unsigned int x0);
-
-  template <typename T1>
-  static T1 peano_rect(T1 a,
-                       std::type_identity_t<crane::fn<T1(unsigned int, T1)>> f0,
-                       unsigned int p) {
-    crane::fn<T1(unsigned int)> f2 = [=](unsigned int _x0) -> T1 {
-      return peano_rect<T1>(
-          f0(1u, a),
-          [=](unsigned int p0, const T1 &x) {
-            return f0(((2u * p0) + 1u), f0((2u * p0), x));
-          },
-          _x0);
-    };
-    if (p == 1u) {
-      return a;
-    } else if (p % 2u != 0u) {
-      unsigned int q = (p - 1u) / 2u;
-      return f0((2u * q), f2(q));
-    } else {
-      unsigned int q = p / 2u;
-      return f2(q);
-    }
-  }
-};
-
-struct N {
-  static unsigned int succ_pos(unsigned int n);
-  static Comparison compare(unsigned int n, unsigned int m);
-  static std::pair<unsigned int, unsigned int> pos_div_eucl(unsigned int a,
-                                                            unsigned int b);
-  static unsigned int lor(unsigned int n, unsigned int m);
-  static unsigned int land(unsigned int n, unsigned int m);
-  static unsigned int ldiff(unsigned int n, unsigned int m);
-  static unsigned int lxor(unsigned int n, unsigned int m);
-  using t = unsigned int;
-  static constexpr unsigned int zero = 0u;
-  static constexpr unsigned int one = 1u;
-  static constexpr unsigned int two = 2u;
-  static unsigned int div2(unsigned int n);
-  static bool even(unsigned int n);
-  static bool odd(unsigned int n);
-  static unsigned int pow(unsigned int n, unsigned int p);
-  static unsigned int square(unsigned int n);
-  static unsigned int log2(unsigned int n);
-  static unsigned int size(unsigned int n);
-  static uint64_t size_nat(unsigned int n);
-  static std::pair<unsigned int, unsigned int> div_eucl(unsigned int a,
-                                                        unsigned int b);
-  static unsigned int gcd(unsigned int a, unsigned int b);
-  static std::pair<unsigned int, std::pair<unsigned int, unsigned int>>
-  ggcd(unsigned int a, unsigned int b);
-  static std::pair<unsigned int, unsigned int> sqrtrem(unsigned int n);
-  static unsigned int sqrt(unsigned int n);
-  static unsigned int shiftl_nat(unsigned int a, uint64_t n);
-  static unsigned int shiftr_nat(unsigned int a, uint64_t n);
-  static unsigned int shiftl(unsigned int a, unsigned int n);
-  static unsigned int shiftr(unsigned int a, unsigned int n);
-  static bool testbit_nat(unsigned int a, uint64_t x0_);
-  static bool testbit(unsigned int a, unsigned int n);
+  static uint64_t land(uint64_t a, uint64_t b);
+  static uint64_t lor(uint64_t a, uint64_t b);
+  static uint64_t ldiff(uint64_t a, uint64_t b);
+  static uint64_t lxor(uint64_t a, uint64_t b);
 
   template <typename T1, typename F1>
-  static T1 iter(unsigned int n, F1 &&f0, T1 x) {
-    if (n == 0u) {
+  static T1 recursion(T1 x, F1 &&f0, uint64_t n) {
+    if (n <= 0) {
       return x;
     } else {
-      unsigned int p = n;
-      return Pos::template iter<T1>(f0, std::move(x), p);
+      uint64_t n0 = n - 1;
+      return f0(n0, recursion<T1>(std::move(x), f0, n0));
     }
   }
 
-  static unsigned int of_uint(const Uint &x0_);
-  static unsigned int of_hex_uint(const Uint0 &x0_);
-  static unsigned int of_num_uint(const Uint1 &d);
-  static std::optional<unsigned int> of_int(const Signed_int &d);
-  static std::optional<unsigned int> of_hex_int(const Signed_int0 &d);
-  static std::optional<unsigned int> of_num_int(const Signed_int1 &d);
-  static Uint to_uint(unsigned int n);
-  static Uint0 to_hex_uint(unsigned int n);
-  static Uint1 to_num_uint(unsigned int n);
-  static Uint1 to_num_hex_uint(unsigned int n);
-  static Signed_int to_int(unsigned int n);
-  static Signed_int0 to_hex_int(unsigned int n);
-  static Signed_int1 to_num_int(unsigned int n);
-  static Signed_int1 to_num_hex_int(unsigned int n);
-  static bool eq_dec(unsigned int n, unsigned int m);
-  static Sumor<Sig<unsigned int>> discr(unsigned int n);
-
-  template <typename T1>
-  static T1
-  binary_rect(T1 f0, std::type_identity_t<crane::fn<T1(unsigned int, T1)>> f2,
-              std::type_identity_t<crane::fn<T1(unsigned int, T1)>> fS2,
-              unsigned int n) {
-    crane::fn<T1(unsigned int, T1)> f2_ =
-        [=, f2 = std::move(f2)](unsigned int p, const T1 &x) {
-          return f2(p, x);
-        };
-    crane::fn<T1(unsigned int, T1)> fS2_ = [=](unsigned int p, const T1 &x) {
-      return fS2(p, x);
-    };
-    if (n == 0u) {
-      return f0;
-    } else {
-      unsigned int p = n;
-      auto f1_impl = [&](auto &_self_f1, unsigned int p0) -> T1 {
-        if (p0 == 1u) {
-          return fS2(0u, f0);
-        } else if (p0 % 2u != 0u) {
-          unsigned int p1 = (p0 - 1u) / 2u;
-          return fS2_(p1, _self_f1(_self_f1, p1));
-        } else {
-          unsigned int p1 = p0 / 2u;
-          return f2_(p1, _self_f1(_self_f1, p1));
-        }
-      };
-      auto f1 = [&](unsigned int p0) -> T1 { return f1_impl(f1_impl, p0); };
-      return f1(p);
-    }
-  }
-
-  template <typename T1, typename F1, typename F2>
-  static T1 binary_rec(const T1 &x0_, F1 &&x1_, F2 &&x2_, unsigned int x3_) {
-    return binary_rect<T1>(x0_, x1_, x2_, x3_);
-  }
-
-  template <typename T1>
-  static T1 peano_rect(T1 f0,
-                       std::type_identity_t<crane::fn<T1(unsigned int, T1)>> f1,
-                       unsigned int n) {
-    crane::fn<T1(unsigned int, T1)> f_ = [=](unsigned int p, const T1 &x) {
-      return f1(p, x);
-    };
-    if (n == 0u) {
-      return f0;
-    } else {
-      unsigned int p = n;
-      return Coq_Pos::peano_rect(f1(0u, std::move(f0)), std::move(f_), p);
-    }
-  }
-
-  template <typename T1, typename F1>
-  static T1 peano_rec(const T1 &x0_, F1 &&x1_, unsigned int x2_) {
-    return peano_rect<T1>(x0_, x1_, x2_);
-  }
-
-  template <typename T1, typename F1>
-  static T1 recursion(const T1 &x0_, F1 &&x1_, unsigned int x2_) {
-    return peano_rect<T1>(x0_, x1_, x2_);
-  }
-
-  static Reflect leb_spec0(unsigned int x, unsigned int y);
-  static Reflect ltb_spec0(unsigned int x, unsigned int y);
+  static Decidable Decidable_eq_nat(uint64_t x, uint64_t y);
+  static Decidable Decidable_le_nat(uint64_t x, uint64_t y);
+  static bool eq_dec(uint64_t n, uint64_t m);
+  static Reflect leb_spec0(uint64_t x, uint64_t y);
+  static Reflect ltb_spec0(uint64_t x, uint64_t y);
 
   struct Private_OrderTac {
     struct IsTotal {};
@@ -1418,34 +1223,33 @@ struct N {
   template <typename T1, typename T2, typename F2>
     requires std::is_invocable_r_v<T2, const F2 &, T1 &, crane::fn<T2(T1)>>
   static T2
-  measure_right_induction(std::type_identity_t<crane::fn<unsigned int(T1)>> f0,
-                          unsigned int, F2 &&iH, const T1 &x) {
-    unsigned int t0 = f0(x);
-    auto f1_impl = [=, f0 = std::move(f0)](auto &_self_f1, T1, T1 y) -> T2 {
+  measure_right_induction(std::type_identity_t<crane::fn<uint64_t(T1)>> f,
+                          uint64_t, F2 &&iH, const T1 &x) {
+    uint64_t t0 = f(x);
+    auto f0_impl = [=, f = std::move(f)](auto &_self_f0, T1, T1 y) -> T2 {
       return iH(y, [=](const T1 &y_) {
-        T1 y0 = f0(y_);
-        return _self_f1(_self_f1, y0, y_);
+        T1 y0 = f(y_);
+        return _self_f0(_self_f0, y0, y_);
       });
     };
     {
       T1 _lc1_x0 = t0;
       T1 _lc1_y = x;
-      return f1_impl(f1_impl, std::move(_lc1_x0), std::move(_lc1_y));
+      return f0_impl(f0_impl, std::move(_lc1_x0), std::move(_lc1_y));
     }
   }
 
   template <typename T1, typename T2, typename F0, typename F2>
-  static T2 measure_left_induction(F0 &&f0, unsigned int _x, F2 &&iH,
-                                   const T1 &x) {
-    return measure_right_induction<T1, T2>(f0, _x, iH, x);
+  static T2 measure_left_induction(F0 &&f, uint64_t _x, F2 &&iH, const T1 &x) {
+    return measure_right_induction<T1, T2>(f, _x, iH, x);
   }
 
   template <typename T1, typename T2, typename F0>
   static T2 measure_induction(
-      F0 &&f0, std::type_identity_t<crane::fn<T2(T1, crane::fn<T2(T1)>)>> iH,
+      F0 &&f, std::type_identity_t<crane::fn<T2(T1, crane::fn<T2(T1)>)>> iH,
       const T1 &x) {
     return measure_right_induction<T1, T2>(
-        f0, 0u,
+        f, UINT64_C(0),
         [=, iH = std::move(iH)](const T1 &y, crane::fn<T2(T1)> iH_) {
           return iH(y, [=](const T1 &y0) { return iH_(y0); });
         },
@@ -1456,10 +1260,9 @@ struct N {
 
   struct Private_Dec {
     template <typename T1, typename F2>
-      requires std::is_invocable_r_v<T1, F2 &, unsigned int &, unsigned int,
-                                     const T1 &>
-    static T1 max_case_strong(unsigned int n, unsigned int m, F2 &&compat,
-                              const T1 &hl, const T1 &hr) {
+      requires std::is_invocable_r_v<T1, F2 &, uint64_t &, uint64_t, const T1 &>
+    static T1 max_case_strong(uint64_t n, uint64_t m, F2 &&compat, const T1 &hl,
+                              const T1 &hr) {
       CompareSpecT c = Datatypes::CompSpec2Type(n, m, compare(n, m));
       switch (c) {
       case CompareSpecT::COMPGTT: {
@@ -1472,19 +1275,18 @@ struct N {
     }
 
     template <typename T1, typename F2>
-    static T1 max_case(unsigned int n, unsigned int m, F2 &&x, const T1 &x0,
+    static T1 max_case(uint64_t n, uint64_t m, F2 &&x, const T1 &x0,
                        const T1 &x1) {
       return max_case_strong<T1>(
           n, m, x, [=]() { return x0; }(), [=]() { return x1; }());
     }
 
-    static bool max_dec(unsigned int n, unsigned int m);
+    static bool max_dec(uint64_t n, uint64_t m);
 
     template <typename T1, typename F2>
-      requires std::is_invocable_r_v<T1, F2 &, unsigned int &, unsigned int,
-                                     const T1 &>
-    static T1 min_case_strong(unsigned int n, unsigned int m, F2 &&compat,
-                              const T1 &hl, const T1 &hr) {
+      requires std::is_invocable_r_v<T1, F2 &, uint64_t &, uint64_t, const T1 &>
+    static T1 min_case_strong(uint64_t n, uint64_t m, F2 &&compat, const T1 &hl,
+                              const T1 &hr) {
       CompareSpecT c = Datatypes::CompSpec2Type(n, m, compare(n, m));
       switch (c) {
       case CompareSpecT::COMPGTT: {
@@ -1497,53 +1299,99 @@ struct N {
     }
 
     template <typename T1, typename F2>
-    static T1 min_case(unsigned int n, unsigned int m, F2 &&x, const T1 &x0,
+    static T1 min_case(uint64_t n, uint64_t m, F2 &&x, const T1 &x0,
                        const T1 &x1) {
       return min_case_strong<T1>(
           n, m, x, [=]() { return x0; }(), [=]() { return x1; }());
     }
 
-    static bool min_dec(unsigned int n, unsigned int m);
+    static bool min_dec(uint64_t n, uint64_t m);
   };
 
   template <typename T1>
-  static T1 max_case_strong(unsigned int n, unsigned int m, const T1 &x,
-                            const T1 &x0) {
+  static T1 max_case_strong(uint64_t n, uint64_t m, const T1 &x, const T1 &x0) {
     return Private_Dec::template max_case_strong<T1>(
-        n, m, [](unsigned int, unsigned int, T1 x1) { return x1; }, x, x0);
+        n, m, [](uint64_t, uint64_t, T1 x1) { return x1; }, x, x0);
   }
 
   template <typename T1>
-  static T1 max_case(unsigned int n, unsigned int m, const T1 &x,
-                     const T1 &x0) {
+  static T1 max_case(uint64_t n, uint64_t m, const T1 &x, const T1 &x0) {
     return max_case_strong<T1>(
         n, m, [=]() { return x; }(), [=]() { return x0; }());
   }
 
-  static bool max_dec(unsigned int x0_, unsigned int x1_);
+  static bool max_dec(uint64_t x0_, uint64_t x1_);
 
   template <typename T1>
-  static T1 min_case_strong(unsigned int n, unsigned int m, const T1 &x,
-                            const T1 &x0) {
+  static T1 min_case_strong(uint64_t n, uint64_t m, const T1 &x, const T1 &x0) {
     return Private_Dec::template min_case_strong<T1>(
-        n, m, [](unsigned int, unsigned int, T1 x1) { return x1; }, x, x0);
+        n, m, [](uint64_t, uint64_t, T1 x1) { return x1; }, x, x0);
   }
 
   template <typename T1>
-  static T1 min_case(unsigned int n, unsigned int m, const T1 &x,
-                     const T1 &x0) {
+  static T1 min_case(uint64_t n, uint64_t m, const T1 &x, const T1 &x0) {
     return min_case_strong<T1>(
         n, m, [=]() { return x; }(), [=]() { return x0; }());
   }
 
-  static bool min_dec(unsigned int x0_, unsigned int x1_);
+  static bool min_dec(uint64_t x0_, uint64_t x1_);
+
+  struct Private_Parity {};
+
+  template <typename T1, typename T2, typename F0, typename F3>
+  static T2 iter_rect(F0 &&f, T1 a, T2 h0, F3 &&hS, uint64_t n) {
+    if (n <= 0) {
+      return h0;
+    } else {
+      uint64_t n0 = n - 1;
+      return hS(
+          n0,
+          [&]() {
+            auto f0_impl = [&](auto &_self_f0, uint64_t n1) -> T1 {
+              if (n1 <= 0) {
+                return a;
+              } else {
+                uint64_t n2 = n1 - 1;
+                return f(_self_f0(_self_f0, n2));
+              }
+            };
+            auto f0 = [&](uint64_t n1) -> T1 { return f0_impl(f0_impl, n1); };
+            return f0(n0);
+          }(),
+          iter_rect<T1, T2>(f, a, std::move(h0), hS, n0));
+    }
+  }
+
+  struct PrivateImplementsBitwiseSpec {
+    static inline const crane::obj div2_double = crane::obj();
+    static inline const crane::obj div2_succ_double = crane::obj();
+    static inline const crane::obj testbit_odd_0 = crane::obj();
+    static inline const crane::obj testbit_even_0 = crane::obj();
+    static inline const crane::obj shiftl_spec_low = crane::obj();
+    static inline const crane::obj div2_bitwise = crane::obj();
+    static inline const crane::obj odd_bitwise = crane::obj();
+    static inline const crane::obj testbit_bitwise_1 = crane::obj();
+    static inline const crane::obj testbit_bitwise_2 = crane::obj();
+    static inline const crane::obj land_spec = crane::obj();
+    static inline const crane::obj ldiff_spec = crane::obj();
+    static inline const crane::obj lor_spec = crane::obj();
+    static inline const crane::obj lxor_spec = crane::obj();
+    static inline const crane::obj div2_spec = crane::obj();
+    static inline const crane::obj testbit_odd_succ = crane::obj();
+    static inline const crane::obj testbit_even_succ = crane::obj();
+    static inline const crane::obj testbit_neg_r = crane::obj();
+    static inline const crane::obj shiftl_spec_high = crane::obj();
+    static inline const crane::obj shiftr_spec = crane::obj();
+  };
+
+  static_assert(PrivateBitwiseSpec<PrivateImplementsBitwiseSpec>);
 
   struct Private_NZPow {};
 
   struct Private_NZSqrt {};
 
-  static unsigned int sqrt_up(unsigned int a);
-  static unsigned int log2_up(unsigned int a);
+  static uint64_t sqrt_up(uint64_t a);
+  static uint64_t log2_up(uint64_t a);
 
   struct Private_NZGcdProp {};
 
@@ -1554,87 +1402,85 @@ struct N {
   struct Div0 {};
 
   struct Private_NLcmProp {
-    static unsigned int lcm(unsigned int a, unsigned int b);
+    static uint64_t lcm(uint64_t a, uint64_t b);
   };
 
-  static unsigned int lcm(unsigned int a, unsigned int b);
+  static uint64_t lcm(uint64_t a, uint64_t b);
 
   struct Lcm0 {};
 
-  static Reflect eqb_spec(unsigned int x, unsigned int y);
-  static unsigned int b2n(bool b);
-  static unsigned int setbit(unsigned int a, unsigned int n);
-  static unsigned int clearbit(unsigned int a, unsigned int n);
-  static unsigned int ones(unsigned int n);
-  static unsigned int lnot(unsigned int a, unsigned int n);
+  static Reflect eqb_spec(uint64_t x, uint64_t y);
+  static uint64_t b2n(bool b);
+  static uint64_t setbit(uint64_t a, uint64_t n);
+  static uint64_t clearbit(uint64_t a, uint64_t n);
+  static uint64_t ones(uint64_t n);
+  static uint64_t lnot(uint64_t a, uint64_t n);
+  static bool Even_Odd_dec(uint64_t n);
+  using EvenT = Sig<uint64_t>;
+  using OddT = Sig<uint64_t>;
+  static inline const EvenT EvenT_0 = Sig<uint64_t>::exist(UINT64_C(0));
+  static EvenT EvenT_2(uint64_t _x, const Sig<uint64_t> &h0);
+  static inline const OddT OddT_1 = Sig<uint64_t>::exist(UINT64_C(0));
+  static OddT OddT_2(uint64_t _x, const Sig<uint64_t> &h0);
+  static OddT EvenT_S_OddT(uint64_t _x, const Sig<uint64_t> &h);
+  static EvenT OddT_S_EvenT(uint64_t _x, const Sig<uint64_t> &h);
+  static EvenT even_EvenT(uint64_t n);
+  static OddT odd_OddT(uint64_t n);
+  static EvenT Even_EvenT(uint64_t x0_);
+  static OddT Odd_OddT(uint64_t x0_);
+  static Sum<EvenT, OddT> EvenT_OddT_dec(uint64_t n);
+
+  template <typename T1, typename T2, typename F0, typename F2>
+  static T1
+  OddT_EvenT_rect(F0 &&hQP, T2 hQ0, F2 &&hPQ, uint64_t n0,
+                  const Sig<uint64_t> &h) { // Precondition: n == (2 * m + 1)
+    if (n0 <= 0) {
+      return [&]() {
+        const auto &[x0] = h;
+        if (x0 <= 0) {
+          throw std::logic_error("absurd case");
+        } else {
+          uint64_t _x = x0 - 1;
+          throw std::logic_error("absurd case");
+        }
+      }();
+    } else {
+      uint64_t n = n0 - 1;
+      if (n <= 0) {
+        return hQP(UINT64_C(0), EvenT_0, std::move(hQ0));
+      } else {
+        uint64_t n1 = n - 1;
+        EvenT hES = OddT_S_EvenT((n1 + 1), h);
+        OddT hO = EvenT_S_OddT(n1, hES);
+        return hQP(
+            (n1 + 1), std::move(hES),
+            hPQ(n1, hO,
+                OddT_EvenT_rect<T1, T2>(crane_erase_fn<T1>(hQP), std::move(hQ0),
+                                        crane_erase_fn<T2>(hPQ), n1, hO)));
+      }
+    }
+  }
+
+  template <typename T1, typename T2, typename F0, typename F2>
+  static T2
+  EvenT_OddT_rect(F0 &&hQP, T2 hQ0, F2 &&hPQ, uint64_t n0,
+                  const Sig<uint64_t> &hES) { // Precondition: n == (2 * m)
+    if (n0 <= 0) {
+      return hQ0;
+    } else {
+      uint64_t n = n0 - 1;
+      OddT hO = EvenT_S_OddT(n, hES);
+      return hPQ(n, hO,
+                 OddT_EvenT_rect<T1, T2>(crane_erase_fn<T1>(hQP),
+                                         std::move(hQ0),
+                                         crane_erase_fn<T2>(hPQ), n, hO));
+    }
+  }
 };
 
-struct ModuleAliasTargetHandling {
-  using NN = N;
-  static inline const unsigned int mapped = NN::max(3u, 4u);
-
-  struct T_Mod {
-    struct T {
-      // TYPES
-      struct A {};
-
-      struct B {
-        uint64_t a0;
-      };
-
-      using variant_t = std::variant<A, B>;
-
-    private:
-      // DATA
-      variant_t v_;
-
-    public:
-      // CREATORS
-      T() {}
-
-      explicit T(A _v) : v_(_v) {}
-
-      explicit T(B _v) : v_(std::move(_v)) {}
-
-      static T a() { return T(A{}); }
-
-      static T b(uint64_t a0) { return T(B{a0}); }
-
-      // MANIPULATORS
-      inline variant_t &v_mut() { return v_; }
-
-      // ACCESSORS
-      const variant_t &v() const { return v_; }
-
-      uint64_t f() const {
-        if (std::holds_alternative<typename T::A>(this->v())) {
-          return UINT64_C(0);
-        } else {
-          const auto &[a0] = std::get<typename T::B>(this->v());
-          return a0;
-        }
-      }
-
-      template <typename T1, typename F1> T1 T_rec(T1 f0, F1 &&f1) const {
-        return this->template T_rect<T1>(std::move(f0), f1);
-      }
-
-      template <typename T1, typename F1>
-        requires std::is_invocable_r_v<T1, F1 &, const uint64_t &>
-      T1 T_rect(T1 f0, F1 &&f1) const {
-        if (std::holds_alternative<typename T::A>(this->v())) {
-          return f0;
-        } else {
-          const auto &[a0] = std::get<typename T::B>(this->v());
-          return f1(a0);
-        }
-      }
-    };
-  };
-
-  using U = T_Mod;
-  static inline const uint64_t methodified =
-      (U::f(T_Mod::T::b(UINT64_C(3))) + U::f(U::T::a()));
+struct NatModuleFamilyReturns {
+  using X = Nat;
+  static inline const uint64_t result = std::max(UINT64_C(3), UINT64_C(4));
 };
 
 template <typename T1>
@@ -1642,4 +1488,4 @@ CompSpecT<T1> Datatypes::CompSpec2Type(const T1 &, const T1 &, Comparison x0_) {
   return Datatypes::CompareSpec2Type(x0_);
 }
 
-#endif // INCLUDED_MODULE_ALIAS_TARGET_HANDLING
+#endif // INCLUDED_NAT_MODULE_FAMILY_RETURNS

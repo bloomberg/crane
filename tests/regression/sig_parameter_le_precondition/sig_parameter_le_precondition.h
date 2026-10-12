@@ -3,6 +3,7 @@
 
 #include "crane_fn.h"
 #include "obj.h"
+#include <cassert>
 #include <cstdint>
 #include <stdexcept>
 #include <utility>

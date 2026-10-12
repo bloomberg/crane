@@ -5,7 +5,7 @@
 #include <cstdint>
 
 template <typename M>
-concept T = requires {
+concept A_T = requires {
   requires(
       requires {
         { M::x } -> std::convertible_to<uint64_t>;
@@ -15,7 +15,7 @@ concept T = requires {
       });
 };
 template <typename M>
-concept T = requires {
+concept B_T = requires {
   requires(
       requires {
         { M::y } -> std::convertible_to<bool>;
@@ -27,7 +27,7 @@ concept T = requires {
 
 struct ModuleTypeShortNameClash {
   struct A {
-    template <T X> struct F {
+    template <A_T X> struct F {
       static const uint64_t &get() {
         static const uint64_t v = (X::x + UINT64_C(1));
         return v;
@@ -36,7 +36,7 @@ struct ModuleTypeShortNameClash {
   };
 
   struct B {
-    template <T X> struct F {
+    template <B_T X> struct F {
       static const uint64_t &get() {
         static const uint64_t v = (X::y ? UINT64_C(1) : UINT64_C(0));
         return v;

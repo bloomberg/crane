@@ -27,6 +27,8 @@ type t = {
   concept_names : (GlobRef.t * string) list;
       (** The name a type class's concept is emitted under, where the class's
           own name does not settle it. *)
+  modtype_concept_names : (ModPath.t * string) list;
+      (** The same for a module type's concept. *)
   functor_app_sources : (ModPath.t * ModPath.t) list;
       (** The functor body each functor application's declarations are
           copies of. *)
@@ -49,6 +51,7 @@ val install : t -> unit
 
 val is_global_scope_enum : GlobRef.t -> bool
 val concept_name : GlobRef.t -> string option
+val modtype_concept_name : ModPath.t -> string option
 val functor_app_source : ModPath.t -> ModPath.t option
 val is_eponymous_record : GlobRef.t -> bool
 

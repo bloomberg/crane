@@ -689,7 +689,8 @@ struct RocqBug14174 {
     }
 
     template <typename T1>
-    static sigT<T1, crane::obj> sigT_of_sig(const sig<T1> &x) {
+    static sigT<T1, crane::obj>
+    sigT_of_sig(const sig<T1> &x) { // Precondition: P
       return sigT<T1, crane::obj>::existt(x.proj1_sig(), crane::obj());
     }
 

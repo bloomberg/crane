@@ -8,6 +8,7 @@ type wrapper_role = Own | Flattened | Bystander
 type t = {
   global_scope_enums : GlobRef.t list;
   concept_names : (GlobRef.t * string) list;
+  modtype_concept_names : (ModPath.t * string) list;
   functor_app_sources : (ModPath.t * ModPath.t) list;
   eponymous_records : GlobRef.t list;
   namespace_scope_refs : GlobRef.t list;
@@ -26,6 +27,7 @@ let table ?(scope = State.Extraction) name =
 
 let enums : (GlobRef.t, unit) Hashtbl.t = table "global_scope_enum_table"
 let concepts : (GlobRef.t, string) Hashtbl.t = table "concept_name_table"
+let modtype_concepts : (ModPath.t, string) Hashtbl.t = table "modtype_concept_name_table"
 let app_sources : (ModPath.t, ModPath.t) Hashtbl.t = table "functor_app_sources"
 let eponymous : (GlobRef.t, unit) Hashtbl.t = table "global_eponymous_record_registry"
 let eponymous_by_modpath : (ModPath.t, GlobRef.t) Hashtbl.t =
@@ -39,6 +41,7 @@ let install f =
   Hashtbl.reset enums;
   List.iter (fun r -> Hashtbl.replace enums r ()) f.global_scope_enums;
   List.iter (fun (r, name) -> Hashtbl.replace concepts r name) f.concept_names;
+  List.iter (fun (mp, name) -> Hashtbl.replace modtype_concepts mp name) f.modtype_concept_names;
   List.iter (fun (mp, src) -> Hashtbl.replace app_sources mp src) f.functor_app_sources;
   List.iter
     (fun r ->
@@ -64,6 +67,7 @@ let install f =
 
 let is_global_scope_enum r = Hashtbl.mem enums r
 let concept_name r = Hashtbl.find_opt concepts r
+let modtype_concept_name mp = Hashtbl.find_opt modtype_concepts mp
 let functor_app_source mp = Hashtbl.find_opt app_sources mp
 let is_eponymous_record r = Hashtbl.mem eponymous r
 let eponymous_record_containing = function

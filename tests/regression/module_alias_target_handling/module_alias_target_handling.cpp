@@ -180,18 +180,6 @@ Uint0 Coq_Little::succ_double(const Uint0 &d) {
   }
 }
 
-unsigned int Pos::succ(unsigned int x) {
-  if (x == 1u) {
-    return (2u * 1u);
-  } else if (x % 2u != 0u) {
-    unsigned int p = (x - 1u) / 2u;
-    return (2u * succ(p));
-  } else {
-    unsigned int p = x / 2u;
-    return (2u * p + 1u);
-  }
-}
-
 unsigned int Pos::pred_double(unsigned int x) {
   if (x == 1u) {
     return 1u;
@@ -340,17 +328,6 @@ Comparison Pos::compare_cont(Comparison r, unsigned int x, unsigned int y) {
 
 Comparison Pos::compare(unsigned int x0_, unsigned int x1_) {
   return compare_cont(Comparison::EQ, x0_, x1_);
-}
-
-bool Pos::leb(unsigned int x, unsigned int y) {
-  switch (compare(x, y)) {
-  case Comparison::GT: {
-    return false;
-  }
-  default: {
-    return true;
-  }
-  }
 }
 
 std::pair<unsigned int, Pos::mask> Pos::sqrtrem(unsigned int p) {
@@ -1146,7 +1123,7 @@ unsigned int N::succ_pos(unsigned int n) {
     return 1u;
   } else {
     unsigned int p = n;
-    return Pos::succ(p);
+    return (p + 1u);
   }
 }
 

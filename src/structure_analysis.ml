@@ -36,6 +36,7 @@ type t = {
   eponymous_records : GlobRef.t list;
   functor_concept_scopes : (ModPath.t * (Label.t * ModPath.t list)) list;
   concept_renames : (GlobRef.t * string) list;
+  modtype_concept_renames : (ModPath.t * string) list;
   lifted_instances : GlobRef.t list;
 }
 
@@ -866,47 +867,48 @@ let collect_eponymous_records (s : ml_structure) : GlobRef.t list =
            (element_inductives se) )
        s [])
 
-(** Decide the name every type class's concept is emitted under, for the
-    classes whose own name does not settle it.
+(** Decide the name every concept is emitted under, for the type classes and
+    module types whose own name does not settle it.
 
-    A concept is declared at C++ file scope whatever module the class was
-    declared in, so two classes called [C] in different modules would be one
-    redefinition of the other.  Where a name is shared, each of its classes is
-    qualified with the module that declares it -- all of them, so that which
-    name a class gets does not depend on the order they were rendered in. *)
-let collect_concept_renames (s : ml_structure) : (GlobRef.t * string) list =
-  let classes =
-    List.rev
-      (fold_structure ~root:ignore
-         ~enter:(fun () _ -> ())
-         (fun () _mp _l se acc ->
-           List.fold_left
-             (fun acc (ind_ref, _i, ind) ->
-               match ind.ind_kind with
-               | TypeClass _ -> ind_ref :: acc
-               | _ -> acc )
-             acc
-             (element_inductives se) )
-         s [])
+    A concept is declared at C++ file scope whatever module declared the class
+    or module type, so two called [T] in different modules -- two classes, two
+    module types, or one of each -- would be one redefinition of the other.
+    Where a name is shared, each holder is qualified with the module that
+    declares it -- all of them, so that which name one gets does not depend on
+    the order they were rendered in.  A module type declared in a functor's
+    body is named after the functor already ({!collect_functor_concept_scopes})
+    and is not among them. *)
+let collect_concept_renames (s : ml_structure) :
+    (GlobRef.t * string) list * (ModPath.t * string) list =
+  let classes, modtypes =
+    fold_structure ~root:ignore
+      ~enter:(fun () _ -> ())
+      (fun () mp l se (classes, modtypes) ->
+        match se with
+        | SEmodtype _ ->
+          (classes, (MPdot (mp, l), Common.modular_rename Type (Label.to_id l)) :: modtypes)
+        | _ ->
+          ( List.fold_left
+              (fun acc (ind_ref, _i, ind) ->
+                match ind.ind_kind with
+                | TypeClass _ -> (ind_ref, Common.last_component (Common.pp_global_name Type ind_ref)) :: acc
+                | _ -> acc )
+              classes (element_inductives se),
+            modtypes ) )
+      s ([], [])
   in
-  let base r = Common.last_component (Common.pp_global_name Type r) in
-  let shared =
-    let counts = Hashtbl.create 8 in
-    List.iter
-      (fun r ->
-        let b = base r in
-        Hashtbl.replace counts b
-          (1 + Option.default 0 (Hashtbl.find_opt counts b)) )
-      classes;
-    fun b -> Option.default 0 (Hashtbl.find_opt counts b) > 1
+  let counts = Hashtbl.create 8 in
+  List.iter
+    (fun b -> Hashtbl.replace counts b (1 + Option.default 0 (Hashtbl.find_opt counts b)))
+    (List.map snd classes @ List.map snd modtypes);
+  let renames scope_of =
+    List.filter_map (fun (holder, b) ->
+        if Hashtbl.find counts b > 1 then
+          Some (holder, Common.emitted_module_name (scope_of holder) ^ "_" ^ b)
+        else None )
   in
-  List.filter_map
-    (fun r ->
-      let b = base r in
-      if shared b then
-        Some (r, Common.emitted_module_name (modpath_of_r r) ^ "_" ^ b)
-      else None )
-    classes
+  ( renames modpath_of_r (List.rev classes),
+    renames (function MPdot (mp, _) -> mp | mp -> mp) (List.rev modtypes) )
 
 (** The instances a wrapper struct does not keep.  An instance is emitted as a
     struct at namespace scope wherever it was declared, because it is named as
@@ -1034,7 +1036,7 @@ let analyze (reg : Method_registry.t) (s : ml_structure) : t =
   in
   (* 6. Collect the eponymous records, for the same reason. *)
   let eponymous_records = collect_eponymous_records s in
-  let concept_renames = collect_concept_renames s in
+  let concept_renames, modtype_concept_renames = collect_concept_renames s in
   (* 7. Collect the alias and functor-application targets, likewise. *)
   let functor_app_sources = collect_functor_app_sources s in
   { sorted_modules;
@@ -1045,4 +1047,5 @@ let analyze (reg : Method_registry.t) (s : ml_structure) : t =
     eponymous_records;
     functor_concept_scopes = collect_functor_concept_scopes s;
     concept_renames;
+    modtype_concept_renames;
     lifted_instances = collect_lifted_instances sorted_modules }

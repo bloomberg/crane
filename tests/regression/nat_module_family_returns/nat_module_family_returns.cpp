@@ -684,20 +684,20 @@ bool Nat::Even_Odd_dec(uint64_t n) {
   }
 }
 
-crane::obj Nat::EvenT_2(uint64_t,
+Nat::EvenT Nat::EvenT_2(uint64_t,
                         const Sig<uint64_t> &h0) { // Precondition: n == (2 * m)
   const auto &[x0] = h0;
-  return Sig<crane::obj>::exist((x0 + 1));
+  return Sig<uint64_t>::exist((x0 + 1));
 }
 
-crane::obj
+Nat::OddT
 Nat::OddT_2(uint64_t,
             const Sig<uint64_t> &h0) { // Precondition: n == (2 * m + 1)
   const auto &[x0] = h0;
-  return Sig<crane::obj>::exist((x0 + 1));
+  return Sig<uint64_t>::exist((x0 + 1));
 }
 
-crane::obj
+Nat::OddT
 Nat::EvenT_S_OddT(uint64_t,
                   const Sig<uint64_t> &h) { // Precondition: (S n) == (2 * m)
   return [&]() {
@@ -706,18 +706,18 @@ Nat::EvenT_S_OddT(uint64_t,
       throw std::logic_error("absurd case");
     } else {
       uint64_t n = x0 - 1;
-      return Sig<crane::obj>::exist(n);
+      return Sig<uint64_t>::exist(n);
     }
   }();
 }
 
-crane::obj Nat::OddT_S_EvenT(
+Nat::EvenT Nat::OddT_S_EvenT(
     uint64_t, const Sig<uint64_t> &h) { // Precondition: (S n) == (2 * m + 1)
   const auto &[x0] = h;
-  return Sig<crane::obj>::exist(x0);
+  return Sig<uint64_t>::exist(x0);
 }
 
-crane::obj Nat::even_EvenT(uint64_t n) {
+Nat::EvenT Nat::even_EvenT(uint64_t n) {
   if (n <= 0) {
     return EvenT_0;
   } else {
@@ -726,13 +726,13 @@ crane::obj Nat::even_EvenT(uint64_t n) {
       throw std::logic_error("absurd case");
     } else {
       uint64_t n1 = n0 - 1;
-      auto he = even_EvenT(n1);
+      Nat::EvenT he = even_EvenT(n1);
       return EvenT_2(n1, std::move(he));
     }
   }
 }
 
-crane::obj Nat::odd_OddT(uint64_t n) {
+Nat::OddT Nat::odd_OddT(uint64_t n) {
   if (n <= 0) {
     throw std::logic_error("absurd case");
   } else {
@@ -741,21 +741,21 @@ crane::obj Nat::odd_OddT(uint64_t n) {
       return OddT_1;
     } else {
       uint64_t n1 = n0 - 1;
-      auto he = odd_OddT(n1);
+      Nat::OddT he = odd_OddT(n1);
       return OddT_2(n1, std::move(he));
     }
   }
 }
 
-crane::obj Nat::Even_EvenT(uint64_t x0_) { return even_EvenT(x0_); }
+Nat::EvenT Nat::Even_EvenT(uint64_t x0_) { return even_EvenT(x0_); }
 
-crane::obj Nat::Odd_OddT(uint64_t x0_) { return odd_OddT(x0_); }
+Nat::OddT Nat::Odd_OddT(uint64_t x0_) { return odd_OddT(x0_); }
 
-Sum<crane::obj, crane::obj> Nat::EvenT_OddT_dec(uint64_t n) {
+Sum<Nat::EvenT, Nat::OddT> Nat::EvenT_OddT_dec(uint64_t n) {
   if (even(n)) {
-    return Sum<crane::obj, crane::obj>::inl(even_EvenT(n));
+    return Sum<Nat::EvenT, Nat::OddT>::inl(even_EvenT(n));
   } else {
-    return Sum<crane::obj, crane::obj>::inr(odd_OddT(n));
+    return Sum<Nat::EvenT, Nat::OddT>::inr(odd_OddT(n));
   }
 }
 

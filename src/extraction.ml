@@ -2493,6 +2493,7 @@ let translate_predicate_body env sg body =
       when is_ref "num.nat.O" (GlobRef.ConstructRef (ind, 1)) ->
       AssertComment "0 <= n" (* tautology for nat *)
     | Rel 1, Rel n -> AssertExpr (Printf.sprintf "%%0 <= %%%d" (n - 1))
+    | Rel n, Rel 1 -> AssertExpr (Printf.sprintf "%%%d <= %%0" (n - 1))
     | _, Rel 1 ->
       ( match try_peano_nat env sg lhs with
       | Some n_val -> AssertExpr (Printf.sprintf "%%0 >= %d" n_val)
@@ -2518,6 +2519,7 @@ let translate_predicate_body env sg body =
       when is_ref "num.nat.O" (GlobRef.ConstructRef (ind, 1)) ->
       AssertExpr "%0 > 0"
     | Rel 1, Rel n -> AssertExpr (Printf.sprintf "%%0 < %%%d" (n - 1))
+    | Rel n, Rel 1 -> AssertExpr (Printf.sprintf "%%%d < %%0" (n - 1))
     | _, Rel 1 ->
       ( match try_peano_nat env sg lhs with
       | Some n_val -> AssertExpr (Printf.sprintf "%%0 > %d" n_val)
@@ -2538,8 +2540,9 @@ let translate_predicate_body env sg body =
     AssertComment (Pp.string_of_ppcmds (Printer.pr_econstr_env env sg body))
 
 (* Walk a function type, detect sigma-typed parameters, and register assertions.
-   info_idx counts only informative (Keep) parameters — matching C++ param
-   indices. *)
+   info_idx counts the parameters that survive as values -- matching C++ param
+   indices -- not the types, which become template parameters, nor the
+   proofs. *)
 
 (** Detects sigma type assertions (dependent pair projections) in function
     parameters and registers them.
@@ -2552,7 +2555,6 @@ let detect_sigma_assertions env sg kn typ =
   let rec walk env info_idx typ =
     match EConstr.kind sg (whd_all env sg typ) with
     | Prod (n, t, d) ->
-      let is_info = is_info_scheme env sg t in
       let t_whnf = whd_all env sg t in
       (* Check if t is @sig A P — check regardless of is_info since sig is
          sometimes classified as non-informative due to its Prop component *)
@@ -2577,7 +2579,7 @@ let detect_sigma_assertions env sg kn typ =
          params *)
       let is_sig_type = head_is_ref sg "core.sig.type" t_whnf in
       let next_info =
-        if is_info || is_sig_type then info_idx + 1 else info_idx
+        if is_default env sg t || is_sig_type then info_idx + 1 else info_idx
       in
       walk (push_rel_assum (n, t) env) next_info d
     | _ -> ()
@@ -3050,14 +3052,21 @@ let extract_constant_spec env kn cb =
          representable as a C++ type; record it so that
          [convert_ml_type_to_cpp_type] erases it to [std::any] at use sites
          instead of emitting [typename M::sym_semty] and needing a runtime
-         [any_cast] guard. *)
-      if List.length s > List.length vl then Table.add_value_dep_type_scheme r;
+         [any_cast] guard.  A family with a body is that only if the body says
+         so, as a declaration's does ({!extract_constant}): [EvenT n := {m |
+         n = 2 * m}] mentions its value only in a proof, and is [Sig<nat>]. *)
+      let value_dep = List.length s > List.length vl in
       ( match cb.const_body with
-      | Undef _ | OpaqueDef _ | Primitive _ | Symbol _ -> Stype (r, vl, None)
+      | Undef _ | OpaqueDef _ | Primitive _ | Symbol _ ->
+        if value_dep then Table.add_value_dep_type_scheme r;
+        Stype (r, vl, None)
       | Def body ->
         let db = db_from_sign s in
         let body = get_body body in
         let t = extract_type_scheme env sg db body (List.length s) in
+        ( match t with
+        | (Tunknown | Taxiom) when value_dep -> Table.add_value_dep_type_scheme r
+        | _ -> () );
         Stype (r, vl, Some t) )
     | Info, Default ->
       let t = snd (record_constant_type env sg kn (Some typ)) in

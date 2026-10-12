@@ -7,7 +7,8 @@
     two the same recursive function; any two definitions of one module can
     coincide the same way.  A later fixpoint whose body is an earlier one's --
     up to the names of its binders and its own name in its recursive calls --
-    and whose type is the same, becomes a forwarder to the earlier: it keeps
+    and whose type and precondition checks are the same, becomes a forwarder
+    to the earlier: it keeps
     its name and signature, and its body is the call.  This compares bodies,
     not behaviour: two algorithms for one function stay two. *)
 

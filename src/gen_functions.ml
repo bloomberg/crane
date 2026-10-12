@@ -1469,6 +1469,16 @@ let recover_erased_body_types ty b =
   let b = Mlutil.recover_erased_types ~only:names_promoted_type_var ty b in
   Mlutil.recover_erased_types ~only:writable_offer ~refine_only:true ty b
 
+(** A constant's initialiser: its body, or -- for an erased proof, a lemma of
+    a module whose other members are extracted -- the empty box an erased
+    constructor argument is.  The [MLdummy] case of {!Translation.gen_expr}
+    is for dead code, an abort; a constant is evaluated, at static
+    initialisation. *)
+let gen_constant_value ?expected_ty b =
+  match b with
+  | MLdummy _ -> Cpp_erasure.empty_box
+  | _ -> gen_expr ?expected_ty (empty_env ()) b
+
 (** Generate C++ declaration from ML definition (main entry point) *)
 let gen_decl__inner n b ty =
   with_body_resolutions n b @@ fun () ->
@@ -1494,9 +1504,7 @@ let gen_decl__inner n b ty =
       | l -> (Dtemplate (l, None, inner), empty_env (), tvars) )
     | _ ->
       begin_body ();
-      let body_expr =
-        with_cpp_return_type (Some cty) (fun () -> gen_expr (empty_env ()) b)
-      in
+      let body_expr = with_cpp_return_type (Some cty) (fun () -> gen_constant_value b) in
       (* When a unit-typed constant's body calls a void-ified function,
          the call produces no value.  Wrap in an IIFE that executes the
          body for side effects and returns Unit::e_TT. *)
@@ -1676,7 +1684,7 @@ let gen_spec__inner n b ty =
       (* The constant's own type is also the expected type of its body, so an
          IIFE standing in for a let-in tail expression re-bases onto it rather
          than onto nothing. *)
-      let b_expr = gen_expr ~expected_ty:ty (empty_env ()) inner_body in
+      let b_expr = gen_constant_value ~expected_ty:ty inner_body in
       (* Wrap with std::any_cast when the C++ expression returns std::any but the
          declared type is concrete.  Two detection paths:
          (a) MLmagic — the extraction explicitly flagged a type coercion.

@@ -33,6 +33,7 @@ module Refset' = GlobRef.Set_env
    from different functor instantiation paths compare equal if they share
    the same canonical kernel name. *)
 module RefsetCan = GlobRef.Set
+module RefmapCan = GlobRef.Map
 module StringMap = HMap.Make (String)
 module StringSet = StringMap.Set
 
@@ -360,8 +361,11 @@ let add_type id ty = glob_tys := Refmap'.add id ty !glob_tys
 let find_type id = Refmap'.find id !glob_tys
 
 (* The custom extraction mappings, by global; declared here, ahead of their
-   commands, because whether a class is kept depends on them. *)
-let customs = Summary.ref Refmap'.empty ~name:"CraneExtrCustom"
+   commands, because whether a class is kept depends on them.  A mapping is
+   about a definition, so it is keyed by the canonical name: a reference
+   through a module alias -- [NN.max] for [Module NN := BinNat.N] -- is
+   [N.max] mapped. *)
+let customs = Summary.ref RefmapCan.empty ~name:"CraneExtrCustom"
 
 (** A class declared as one method's type -- [Class MonadIter M := iter :
     forall R I, ...] -- whose dictionary is that method: such a class is kept
@@ -372,7 +376,7 @@ let customs = Summary.ref Refmap'.empty ~name:"CraneExtrCustom"
     class. *)
 let singleton_class_method r =
   match r with
-  | GlobRef.ConstRef _ when not (Refmap'.mem r !customs) -> (
+  | GlobRef.ConstRef _ when not (RefmapCan.mem r !customs) -> (
     let closed_arity decl =
       let t = Context.Rel.Declaration.get_type decl in
       Term.isArity t && Vars.closed0 t
@@ -2656,19 +2660,21 @@ let extraction_language x = Lib.add_leaf (extr_lang x)
 
 (** {2 Crane Extraction Inline/NoInline} *)
 
-let empty_inline_table = (Refset'.empty, Refset'.empty)
+(* Keyed canonically, as [customs] is: inlining a definition inlines it
+   under every name it is reached by. *)
+let empty_inline_table = (RefsetCan.empty, RefsetCan.empty)
 
 let inline_table = Summary.ref empty_inline_table ~name:"CraneExtrInline"
 
-let to_inline r = Refset'.mem r (fst !inline_table)
+let to_inline r = RefsetCan.mem r (fst !inline_table)
 
 (* Extension for supporting foreign function call extraction. *)
 
-let empty_foreign_set = Refset'.empty
+let empty_foreign_set = RefsetCan.empty
 
 let foreign_set = Summary.ref empty_foreign_set ~name:"CraneExtrForeign"
 
-let to_foreign r = Refset'.mem r !foreign_set
+let to_foreign r = RefsetCan.mem r !foreign_set
 
 (* End of Extension for supporting foreign function call extraction. *)
 
@@ -2681,15 +2687,15 @@ let callback_map = Summary.ref empty_callback_map ~name:"CraneExtrCallback"
 
 (* End of Extension for supporting callback registration extraction. *)
 
-let to_keep r = Refset'.mem r (snd !inline_table)
+let to_keep r = RefsetCan.mem r (snd !inline_table)
 
 let add_inline_entries b l =
-  let f b = if b then Refset'.add else Refset'.remove in
+  let f b = if b then RefsetCan.add else RefsetCan.remove in
   let i, k = !inline_table in
   inline_table := (List.fold_right (f b) l i, List.fold_right (f (not b)) l k)
 
 let add_foreign_entries l =
-  foreign_set := List.fold_right Refset'.add l !foreign_set
+  foreign_set := List.fold_right RefsetCan.add l !foreign_set
 
 (* Adds the qualid_ref and alias opt to the callback_map. *)
 let add_callback_entry alias_opt qualid_ref =
@@ -2741,7 +2747,7 @@ let extraction_inline b l =
 let print_extraction_inline () =
   let i, n = !inline_table in
   let i' =
-    Refset'.filter
+    RefsetCan.filter
       (function
         | GlobRef.ConstRef _ -> true
         | _ -> false )
@@ -2749,13 +2755,13 @@ let print_extraction_inline () =
   in
   str "Extraction Inline:"
   ++ fnl ()
-  ++ Refset'.fold
+  ++ RefsetCan.fold
        (fun r p -> p ++ str "  " ++ safe_pr_long_global r ++ fnl ())
        i'
        (mt ())
   ++ str "Extraction NoInline:"
   ++ fnl ()
-  ++ Refset'.fold
+  ++ RefsetCan.fold
        (fun r p -> p ++ str "  " ++ safe_pr_long_global r ++ fnl ())
        n
        (mt ())
@@ -3029,11 +3035,11 @@ let warn_overlapping_mapping =
       ++ strbrk "Mapping modules were imported together.")
 
 let add_custom r ids s =
-  (match Refmap'.find_opt r !customs with
+  (match RefmapCan.find_opt r !customs with
   | Some (_old_ids, old_s) when not (String.equal old_s s) ->
     warn_overlapping_mapping (r, old_s, s)
   | _ -> ());
-  customs := Refmap'.add r (ids, s) !customs
+  customs := RefmapCan.add r (ids, s) !customs
 
 (** Whether [r1] and [r2] are inductive types declared in the same mutual
     block ([tree] and [forest] of an [Inductive tree ... with forest ...]).
@@ -3044,7 +3050,7 @@ let same_mutual_block r1 r2 =
   | GlobRef.IndRef (m1, _), GlobRef.IndRef (m2, _) -> MutInd.CanOrd.equal m1 m2
   | _ -> false
 
-let is_custom r = Refmap'.mem r !customs
+let is_custom r = RefmapCan.mem r !customs
 
 (** Whether an inductive packet is generated as a flat struct -- its one
     constructor's fields directly, with no variant: an ordinary inductive
@@ -3128,7 +3134,7 @@ let is_inline_custom r = is_custom r && to_inline r
 (** The replacement text of the inline custom [r], without marking [r] used:
     reading a template to reason about it is not using it. *)
 let inline_custom_text r =
-  if to_inline r then Option.map snd (Refmap'.find_opt r !customs) else None
+  if to_inline r then Option.map snd (RefmapCan.find_opt r !customs) else None
 
 let is_foreign_custom r = is_custom r && to_foreign r
 
@@ -3136,10 +3142,10 @@ let find_callback r = Refmap'.find r !callback_map
 
 let find_custom r =
   mark_custom_used r;
-  snd (Refmap'.find r !customs)
+  snd (RefmapCan.find r !customs)
 
 let find_custom_opt r =
-  match Refmap'.find_opt r !customs with
+  match RefmapCan.find_opt r !customs with
   | Some (ids, s) ->
     mark_custom_used r;
     Some s
@@ -3252,7 +3258,7 @@ let extraction_trivially_copyable (l : qualid list) =
       let r = Smartlocate.global_with_alias q in
       (* Read [customs] directly rather than through [find_custom_opt], which
          would mark the mapping used and pull in its headers. *)
-      match Refmap'.find_opt r !customs with
+      match RefmapCan.find_opt r !customs with
       | Some (_, s) ->
         Lib.add_leaf (trivially_copyable_object (r, template_head s))
       | None ->
@@ -3280,7 +3286,7 @@ let reserved_global_cpp_names =
 let escape_reserved_struct_name s =
   if List.mem s reserved_global_cpp_names then s ^ "_" else s
 
-let find_type_custom r = Refmap'.find r !customs
+let find_type_custom r = RefmapCan.find r !customs
 
 let custom_matchs = Summary.ref Refmap'.empty ~name:"CraneExtrCustomMatchs"
 
@@ -3360,7 +3366,7 @@ let find_custom_ctor_templates (ip : Names.inductive) =
   let n = Array.length mib.mind_packets.(snd ip).mind_consnames in
   List.init n (fun j ->
     let g = GlobRef.ConstructRef (ip, succ j) in
-    match Refmap'.find_opt g !customs with
+    match RefmapCan.find_opt g !customs with
     | Some (_, s) -> s
     | None -> "")
 
@@ -3392,7 +3398,7 @@ let print_constref_extractions ref_set val_lookup_f section_str =
 
 let print_extraction_foreign () =
   print_constref_extractions
-    !foreign_set
+    (RefsetCan.fold Refset'.add !foreign_set Refset'.empty)
     find_custom
     "Extraction Foreign Constant:"
 

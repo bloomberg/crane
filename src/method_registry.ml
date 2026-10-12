@@ -49,10 +49,20 @@ type method_info = {
 (** A method candidate: (func_ref, body, type, this_pos). *)
 type method_candidate = GlobRef.t * Miniml.ml_ast * Miniml.ml_type * int
 
+(** Tables keyed by a global's canonical name.  Being a method is a property
+    of the definition, so it holds under every name the definition is reached
+    by: [U.f] for [Module U := T] is [T]'s method [f]. *)
+module RefTbl = Hashtbl.Make (struct
+  type t = GlobRef.t
+
+  let equal = GlobRef.CanOrd.equal
+  let hash = GlobRef.CanOrd.hash
+end)
+
 (** The method registry: maps function refs to method info and stores
     candidates. *)
 type t = {
-  methods : (GlobRef.t, method_info) Hashtbl.t;
+  methods : method_info RefTbl.t;
   (* Reverse index: inductive GlobRef -> list of method candidates. Populated
      during pre-scan so cpp.ml doesn't need to re-collect. *)
   candidates : (GlobRef.t, method_candidate list) Hashtbl.t;
@@ -395,7 +405,7 @@ let register_into
   (* The function is emitted inside its inductive's struct, so the naming layer
      has to keep its C++ name clear of the members that struct generates. *)
   Common.reserve_methodified ~ind:epon_ref func_ref;
-  Hashtbl.replace
+  RefTbl.replace
     tbl
     func_ref
     {
@@ -1018,7 +1028,7 @@ let compute_returns_any
   List.iter (fun (_mp, sel) -> collect_from_sel sel) s;
   (* Step 2: For each registered method, find its ML type and check whether the
      return type is erased. *)
-  Hashtbl.iter
+  RefTbl.iter
     (fun func_ref info ->
       match Hashtbl.find_opt ind_param_vars info.epon_ref with
       | None -> ()
@@ -1035,7 +1045,7 @@ let compute_returns_any
         | Some ty ->
           let ret_ml = get_return_type ty in
           if ret_is_erased param_vars ret_ml then
-            Hashtbl.replace tbl func_ref {info with returns_any = true} ) )
+            RefTbl.replace tbl func_ref {info with returns_any = true} ) )
     tbl
 
 (** {2 Public API} *)
@@ -1049,7 +1059,7 @@ let compute_returns_any
     necessary because [compute_returns_any] needs the full set of registered
     methods and all inductives' parameter information to work correctly. *)
 let create ~ret_is_erased (s : ml_structure) : t =
-  let tbl = Hashtbl.create 100 in
+  let tbl = RefTbl.create 100 in
   let cands = Hashtbl.create 32 in
   (* Gather all top-level declarations across all modules. These serve as
      [parent_decls] for the recursive scan, enabling cross-module method
@@ -1073,7 +1083,7 @@ let create ~ret_is_erased (s : ml_structure) : t =
   List.iter
     (fun (_, _, register) -> register ())
     (settle_file_calls
-       ~already_method:(fun c -> Hashtbl.mem tbl c)
+       ~already_method:(fun c -> RefTbl.mem tbl c)
        ~calls:(fun (_, callees, _) -> callees)
        ~ref_of:(fun (r, _, _) -> r)
        deferred);
@@ -1083,19 +1093,19 @@ let create ~ret_is_erased (s : ml_structure) : t =
 (** Lookup full method information for a registered function. Returns
     [Some method_info] if the function is a method, [None] otherwise. *)
 let lookup (reg : t) (func_ref : GlobRef.t) : method_info option =
-  Hashtbl.find_opt reg.methods func_ref
+  RefTbl.find_opt reg.methods func_ref
 
 (** Check if a function reference is registered as a method. Returns
     [Some (epon_ref, this_pos)] if registered, [None] otherwise. *)
 let is_registered_method (reg : t) (func_ref : GlobRef.t) :
     (GlobRef.t * int) option =
-  match Hashtbl.find_opt reg.methods func_ref with
+  match RefTbl.find_opt reg.methods func_ref with
   | Some info -> Some (info.epon_ref, info.this_pos)
   | None -> None
 
 (** The method's value-parameter count, receiver included; [0] when unknown. *)
 let lookup_arity (reg : t) (func_ref : GlobRef.t) : int =
-  match Hashtbl.find_opt reg.methods func_ref with
+  match RefTbl.find_opt reg.methods func_ref with
   | Some info -> info.arity
   | None -> 0
 
@@ -1103,7 +1113,7 @@ let lookup_arity (reg : t) (func_ref : GlobRef.t) : int =
     Returns the list of type variable indices that can be omitted from the
     method's template parameters. *)
 let lookup_ind_tvar_positions (reg : t) (func_ref : GlobRef.t) : int list =
-  match Hashtbl.find_opt reg.methods func_ref with
+  match RefTbl.find_opt reg.methods func_ref with
   | Some info -> info.ind_tvar_positions
   | None -> []
 
@@ -1111,7 +1121,7 @@ let lookup_ind_tvar_positions (reg : t) (func_ref : GlobRef.t) : int list =
     types. Returns [true] if the method's return type cannot be expressed in C++
     template parameters. *)
 let method_returns_any (reg : t) (func_ref : GlobRef.t) : bool =
-  match Hashtbl.find_opt reg.methods func_ref with
+  match RefTbl.find_opt reg.methods func_ref with
   | Some info -> info.returns_any
   | None -> false
 
@@ -1193,9 +1203,9 @@ let collect_module_type_aliases ~extract_decl modpath decls =
     method's [returns_any] flag to true. No-op if the function is not
     registered. *)
 let register_method_returns_any (reg : t) (func_ref : GlobRef.t) =
-  match Hashtbl.find_opt reg.methods func_ref with
+  match RefTbl.find_opt reg.methods func_ref with
   | Some info ->
-    Hashtbl.replace reg.methods func_ref {info with returns_any = true}
+    RefTbl.replace reg.methods func_ref {info with returns_any = true}
   | None -> ()
 
 (** Record the C++ types a registered method's non-receiver parameters were
@@ -1203,15 +1213,15 @@ let register_method_returns_any (reg : t) (func_ref : GlobRef.t) =
     those types are decided.  No-op if the function is not registered. *)
 let register_method_param_cpp_types (reg : t) (func_ref : GlobRef.t)
     (tys : Minicpp.cpp_type list) =
-  match Hashtbl.find_opt reg.methods func_ref with
+  match RefTbl.find_opt reg.methods func_ref with
   | Some info ->
-    Hashtbl.replace reg.methods func_ref {info with param_cpp_types = Some tys}
+    RefTbl.replace reg.methods func_ref {info with param_cpp_types = Some tys}
   | None -> ()
 
 (** The C++ types of a registered method's non-receiver parameters, in
     declaration order, or [None] when its declaration has not been generated
     yet -- or when there is no such method at all. *)
 let lookup_method_param_cpp_types (reg : t) (func_ref : GlobRef.t) =
-  match Hashtbl.find_opt reg.methods func_ref with
+  match RefTbl.find_opt reg.methods func_ref with
   | Some info -> info.param_cpp_types
   | None -> None

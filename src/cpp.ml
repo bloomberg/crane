@@ -74,6 +74,14 @@ let concept_name_of_label l =
 (** {!concept_name_of_label} as a document. *)
 let pp_concept_name l = str (concept_name_of_label l)
 
+(** The concept identifier of the module type [l] declared in [mp]: its
+    label's, unless the structure analysis qualified it because another
+    concept shares that name ({!Structure_analysis.collect_concept_renames}). *)
+let pp_modtype_concept_name mp l =
+  match Program_facts.modtype_concept_name (MPdot (mp, l)) with
+  | Some name -> str name
+  | None -> pp_concept_name l
+
 (** What a module type contributes where a concept body is expected.
 
     [MTident] and its refinements name a concept that already exists; only an
@@ -435,7 +443,7 @@ and pp_concept_ref kn =
          pp_module_type.  Keep the short label and just trigger include
          tracking. *)
       ignore (Common.pp_module kn);
-      pp_concept_name l'
+      pp_modtype_concept_name mp0 l'
     end
   | _ -> pp_modname kn
 
@@ -1061,8 +1069,10 @@ let rec pp_structure_elem ~is_header f = function
            share the same short name (e.g. a top-level [Module Impl] and an
            inner [Module Impl := ...] inside a functor body).  Since aliases
            don't introduce new identifiers into the qualified-name namespace,
-           we compute the label name without registering it. *)
-        let s = Common.module_label_name l in
+           we compute the name without registering it -- the name references
+           spell, a renamed one where another module shares the label
+           ([OrdersEx.Positive_as_OT] beside [OrderedTypeEx.Positive_as_OT]). *)
+        let s = Common.emitted_module_name mp in
         str (Table.escape_reserved_struct_name s)
       | _ ->
         let raw = pp_modname mp in
@@ -1334,7 +1344,7 @@ let rec pp_structure_elem ~is_header f = function
               (fun (l, se) ->
                 match se with
                 | SEmodtype m ->
-                  let modtype_name = pp_concept_name l in
+                  let modtype_name = pp_modtype_concept_name mp l in
                   let concept_pp, mentions_outer =
                     watching_for_reference_to (Pp.string_of_ppcmds name)
                     @@ fun () -> pp_modtype_concept modtype_name m
@@ -1799,9 +1809,9 @@ let rec pp_structure_elem ~is_header f = function
       mt ()
     else
       (* Every site naming a module-type concept goes through
-         {!concept_name_of_label}, the declaration included: a label reaches
+         {!pp_modtype_concept_name}, the declaration included: a label reaches
          the output verbatim otherwise, primes and all. *)
-      pp_modtype_concept (pp_concept_name l) m
+      pp_modtype_concept (pp_modtype_concept_name (top_visible_mp ()) l) m
 
 (** Render a functor application, and say whether the result comes out with a
     [::] qualifier.
@@ -2136,6 +2146,7 @@ let install_analysis
        eponymous_records;
        functor_concept_scopes = scopes;
        concept_renames;
+       modtype_concept_renames;
        lifted_instances;
        _ } :
       Structure_analysis.t ) : unit =
@@ -2149,6 +2160,7 @@ let install_analysis
   Program_facts.install
     { global_scope_enums;
       concept_names = concept_renames;
+      modtype_concept_names = modtype_concept_renames;
       functor_app_sources;
       eponymous_records;
       namespace_scope_refs = lifted_instances;
