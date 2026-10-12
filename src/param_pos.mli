@@ -75,4 +75,10 @@ val subst_at_declared : orig pos -> subst pos
     registry records it. *)
 val of_receiver : int -> orig pos
 
+(** The source index of the binder at a declared position, among a
+    definition's leading binders [binder_tys] in source order -- each binder
+    a position, as an erased one is not in the declared list.  [None] past
+    the binders. *)
+val source_index : Miniml.ml_type list -> orig pos -> int option
+
 val equal : 'k pos -> 'k pos -> bool

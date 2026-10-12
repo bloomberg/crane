@@ -2344,6 +2344,39 @@ let ungeneralised_callable_params ~self_ref ~suspended n_params body =
     (detect_non_forwarded_params self_ref n_params body
     @ escaping_params ~suspended n_params body)
 
+(** A definition's parameters as its function takes them: the leading
+    lambdas of [b], innermost first, as many as its type [ty] has domains.
+    Extraction may uncurry a body whose codomain is an alias for a function
+    type ([State S A]); the lambdas past the type's arrows stay in the body,
+    as the closure it returns. *)
+let collect_typed_lams ty b =
+  let n_type_dom = List.length (Ml_type_util.ml_domains ty) in
+  let all_ids, inner = collect_lams b in
+  let n_excess = List.length all_ids - n_type_dom in
+  if n_excess > 0 then
+    (List.skipn n_excess all_ids, named_lams (safe_firstn n_excess all_ids) inner)
+  else (all_ids, inner)
+
+(** {!ungeneralised_callable_params} for the definition of [r] at type [ty]
+    with body [b], over the parameters {!collect_typed_lams} finds: the ones
+    its function is generated with. *)
+let ungeneralised_callables_of_definition r ty b =
+  let ids, body = collect_typed_lams ty b in
+  ungeneralised_callable_params ~self_ref:r
+    ~suspended:(Table.is_coinductive_type (ml_return_type ty))
+    (List.length ids) body
+
+(** Whether a function takes its callable parameter at source position [i],
+    of C++ type [f], as a deduced [F &&] rather than a [crane::fn]: unless
+    [ungeneralised] holds it, or [f] erased to [std::any] throughout in a
+    signature whose deducible type variables [primary] are none.  A callable
+    deduced there pins nothing down, and the template it forces costs the
+    definition its use as a value of the type its Rocq signature names
+    ([church]). *)
+let generalises_callable ~ungeneralised ~primary i f =
+  (not (IntSet.mem i ungeneralised))
+  && not (IntSet.is_empty primary && is_fully_erased_fun_ty f)
+
 (** Convert ML params to C++ types with const/ref wrapping, and create
     forwarding-ref template parameters for function-typed params. convert_fn:
     function to convert ml_type -> cpp_type (typically

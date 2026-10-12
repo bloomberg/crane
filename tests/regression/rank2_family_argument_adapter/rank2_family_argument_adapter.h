@@ -3,7 +3,6 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include "shared_block.h"
 #include <atomic>
 #include <cstdint>
 #include <memory>
@@ -105,9 +104,9 @@ struct Rank2FamilyArgumentAdapter {
   }
 
   template <typename T1> static uint64_t len2(const List<T1> &l) {
-    static const auto erased_fn = crane::immortal(crane_erase_fn<crane::obj>(
-        [](crane::obj, List<crane::obj>, uint64_t k) { return (k + 1); }));
-    return grect2<uint64_t, T1>([]() { return UINT64_C(0); }(), erased_fn, l);
+    return grect2<uint64_t, T1>(
+        []() { return UINT64_C(0); }(),
+        [](const auto &, const auto &, uint64_t k) { return (k + 1); }, l);
   }
 
   static inline const uint64_t result = len2<uint64_t>(List<uint64_t>::cons(

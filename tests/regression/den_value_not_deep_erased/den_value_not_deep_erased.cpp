@@ -11,10 +11,9 @@ uint64_t DenValueNotDeepErased::size(const DenValueNotDeepErased::ty &t,
     return List<DenValueNotDeepErased::den>(
                crane::any_cast<List<crane::obj>>(n))
         .template fold_left<uint64_t>(
-            crane_erase_fn<uint64_t>(
-                [=](uint64_t acc, DenValueNotDeepErased::den x) {
-                  return (acc + size(a0_value, x));
-                }),
+            [=](uint64_t acc, DenValueNotDeepErased::den x) {
+              return (acc + size(a0_value, x));
+            },
             UINT64_C(0));
   }
 }

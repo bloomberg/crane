@@ -327,23 +327,7 @@ let gen_dfun n b cty ty temps =
   let cod = apply_unit_void unit_void cod in
   (* Reversed: the lambda collection below peels the innermost arrow first. *)
   let mldom = List.rev (Ml_type_util.ml_domains ty) in
-  (* Limit lambda collection to the number of type arrows. When a type alias
-     like [State S A = S -> A * S] is used as a return type, the extraction may
-     fully uncurry the body (producing more lambdas than the type has arrows),
-     but the type [ty] preserves the alias. We must only collect as many lambdas
-     as the type has domain arrows, leaving the rest in the body as returned
-     closures (C++ lambdas). *)
-  let n_type_dom = List.length mldom in
-  let all_ids, inner_b = collect_lams b in
-  let ids, b =
-    if List.length all_ids > n_type_dom then
-      let n_excess = List.length all_ids - n_type_dom in
-      let kept_ids = List.skipn n_excess all_ids in
-      let excess_ids = safe_firstn n_excess all_ids in
-      (kept_ids, named_lams excess_ids inner_b)
-    else
-      (all_ids, inner_b)
-  in
+  let ids, b = collect_typed_lams ty b in
   (* get_missing computes the types for eta-expansion parameters. mldom contains
      domain types in reversed order (innermost type first). ids contains
      explicit lambdas in reversed order (innermost lambda first).
@@ -617,7 +601,6 @@ let gen_dfun n b cty ty temps =
       ~suspended:(Table.is_coinductive_type (ml_return_type ty))
       (List.length ids) b
   in
-  let is_non_fwd_param_source i = IntSet.mem i non_fwd_set in
   let all_params = missing @ ids in
   (* Type class instance parameters become C++ template type parameters. We
      assign unique names (_tcI0, _tcI1, ...) to avoid collision with: - User
@@ -784,8 +767,8 @@ let gen_dfun n b cty ty temps =
      - [l] is not function-typed → stays as-is
      - [k] receives a different expression at the recursive call → [const std::function<...> k]
 
-     This loop iterates [List.rev ids] which is in source order,
-     so we use [is_non_fwd_param_source] for the guard. *)
+     This loop iterates [List.rev ids] which is in source order, the order
+     {!generalises_callable} indexes parameters by. *)
   (* Determine which tvars are "primary" — deducible from non-function domain
      params or the return type.  Function-typed params that reference tvars
      outside this set (e.g., erased HKT type variables) get TTtypename (no
@@ -797,25 +780,12 @@ let gen_dfun n b cty ty temps =
     | Tfun _ as f -> Some f
     | _ -> None
   in
-  (* A parameter whose function type erased to [std::any] throughout, in a
-     signature that deduces no type variable at all, is not worth generalising:
-     the deduced callable pins nothing down, and the template it forces costs
-     the definition its usability as a value of the type its Rocq signature
-     names ([church]). *)
-  let is_erased_fun_param ty =
-    IntSet.is_empty primary
-    &&
-    match unwrap_fun_ty2 ty with
-    | Some f -> Ml_type_util.is_fully_erased_fun_ty f
-    | None -> false
-  in
   let fun_tys =
     List.filter_map
       (fun (x, ty, i) ->
         match unwrap_fun_ty2 ty with
-        | Some (Tfun (fdom, fcod))
-          when (not (is_non_fwd_param_source i)) && not (is_erased_fun_param ty)
-          ->
+        | Some (Tfun (fdom, fcod) as f)
+          when generalises_callable ~ungeneralised:non_fwd_set ~primary i f ->
           let fun_idx = get_tvar_indices (Tfun (fdom, fcod)) in
           let has_undeclared =
             List.exists (fun idx -> not (IntSet.mem idx primary)) fun_idx
@@ -836,9 +806,9 @@ let gen_dfun n b cty ty temps =
     List.mapi
       (fun i (x, ty) ->
         match unwrap_fun_ty2 ty with
-        | Some (Tfun _)
-          when (not (is_non_fwd_param_source (List.length ids - i - 1)))
-               && not (is_erased_fun_param ty) ->
+        | Some (Tfun _ as f)
+          when generalises_callable ~ungeneralised:non_fwd_set ~primary
+                 (List.length ids - i - 1) f ->
           ( x,
             Tref (Forwarding, named_tvar (fun_tparam_id (List.length ids - i - 1))) )
         | _ -> (x, ty) )

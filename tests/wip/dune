@@ -217,13 +217,3 @@
   (deps interp_state_dict.t.exe)
   (action (run ./interp_state_dict.t.exe))))
 
-(subdir rank2_family_argument_adapter
- (rule
-  (targets rank2_family_argument_adapter.t.exe)
-  (deps Rank2FamilyArgumentAdapter.vo rank2_family_argument_adapter.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} rank2_family_argument_adapter.t.exe rank2_family_argument_adapter.cpp rank2_family_argument_adapter.t.cpp)))
- (rule
-  (alias runtest)
-  (deps rank2_family_argument_adapter.t.exe)
-  (action (run ./rank2_family_argument_adapter.t.exe))))

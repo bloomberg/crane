@@ -1027,6 +1027,32 @@ let erase_fn_arg_for_param env param_ml_ty e expr =
   | Some ret_ty when ml_expr_is_function_value e -> wrap_crane_erase_fn ?ret_ty expr
   | _ -> convert_carrier_arg param_ml_ty param_cpp_ty e expr
 
+(** Whether the global [id] takes the callable it declares at [pos], of ML
+    type [param_ml_ty], as a deduced [F &&] ({!Ownership.generalises_callable}):
+    the callee then calls it at its own instantiation, and an argument written
+    against the erased slot -- adapted to unbox [List<std::any>] where the
+    callee hands it a [List<T2>] -- reads the wrong type out of every box.  The
+    answer is the one the callee's own signature is built from: its declared
+    type converted as {!Gen_functions} converts it. *)
+let deduces_callable id pos param_ml_ty =
+  let declared t = convert_ml_type_to_cpp_type (Common.empty_env ()) [] (type_simpl t) in
+  match (declared param_ml_ty, Option.map declared (find_type_opt id)) with
+  | (Tfun _ as f), Some (Tfun (dom, cod)) ->
+    Ownership.generalises_callable id pos ~primary:(primary_tvar_indices dom cod) f
+  | _ -> false
+
+(** [slot] for a lambda going to a callable its callee deduces: the positions
+    the slot erases are left to deduction ([const auto&]), so the lambda takes
+    whatever its callee's instantiation hands it there. *)
+let deduce_erased_domains = function
+  | Tfun (doms, cod) ->
+    Tfun
+      ( List.map
+          (fun d -> if exists_cpp_type prints_as_any d then Tref (Lvalue, Tconst Tauto) else d)
+          doms,
+        cod )
+  | t -> t
+
 (** [record_call_sig env callee_ty e] records what the callee's ML type says
     about [e], when [e] is a call nothing has been recorded on yet.
 

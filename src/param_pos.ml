@@ -39,4 +39,15 @@ let subst_of_orig ~erased orig o =
 
 let subst_at_declared o = o
 let of_receiver p = p
+
+let source_index binder_tys o =
+  let rec go i k = function
+    | [] -> None
+    | t :: rest -> (
+      match Ml_type_util.resolve_tmeta t with
+      | Miniml.Tdummy _ -> go (i + 1) k rest
+      | _ when k = o -> Some i
+      | _ -> go (i + 1) (k + 1) rest )
+  in
+  go 0 0 binder_tys
 let equal = Int.equal

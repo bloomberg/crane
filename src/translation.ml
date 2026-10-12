@@ -5517,6 +5517,20 @@ and gen_call_args ~slot ?expected_ty env id plan =
       | Some ml_ty when not (ml_type_contains_erased ml_ty) -> Some ml_ty
       | _ -> slot.expected_ml_ty
     in
+    (* A lambda for a callable the callee deduces is called at the callee's
+       instantiation: it takes what it is given where the slot erases, and
+       goes over unadapted ({!deduces_callable}). *)
+    let deduced_callable =
+      (match ml_arg with MLlam _ | MLmagic (_, MLlam _) -> true | _ -> false)
+      &&
+      match Param_pos.nth fn_param_ml_tys_orig param_index with
+      | Some pt -> deduces_callable id param_index pt
+      | None -> false
+    in
+    let arg_expected_ty =
+      if deduced_callable then Option.map deduce_erased_domains arg_expected_ty
+      else arg_expected_ty
+    in
     (* When the callee's declared parameter type is value-dependent and
        resolves to [std::any] (e.g. [syms_semty xs]), a concrete pair/tuple
        literal passed at this call site (e.g. [(n, (n, tt))] for a literal
@@ -5599,8 +5613,9 @@ and gen_call_args ~slot ?expected_ty env id plan =
     in
     let expr =
       match param_ml_ty with
-      | Some param_ty -> erase_fn_arg_for_param env param_ty ml_arg expr
-      | None -> expr
+      | Some param_ty when not deduced_callable ->
+        erase_fn_arg_for_param env param_ty ml_arg expr
+      | _ -> expr
     in
     (* A methodified callee is spelled [recv.f(rest)], and [std::any] has no
        members: unlike every other argument, the receiver cannot arrive as a
