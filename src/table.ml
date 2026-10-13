@@ -340,15 +340,19 @@ let inductive_kind_of r =
     Mindmap_env.find_opt kn !inductive_kinds
   | ConstRef _ | VarRef _ -> None
 
-let glob_tys = Summary.ref Ref.User.Map.empty ~name:"GlobalDefTypes"
+(* A definition's ML type, keyed by the definition: measured over the test
+   corpus, every definition registered under two names -- a module alias, an
+   [Include] -- registers the same type under each, up to the names of the
+   definitions it mentions. *)
+let glob_tys = Summary.ref Ref.Can.Map.empty ~name:"GlobalDefTypes"
 
-let init_glob_tys () = glob_tys := Ref.User.Map.empty
+let init_glob_tys () = glob_tys := Ref.Can.Map.empty
 
 let () = on_reset init_glob_tys
 
-let add_type id ty = glob_tys := Ref.User.Map.add id ty !glob_tys
+let add_type id ty = glob_tys := Ref.Can.Map.add id ty !glob_tys
 
-let find_type id = Ref.User.Map.find id !glob_tys
+let find_type id = Ref.Can.Map.find id !glob_tys
 
 (* The custom extraction mappings, by global; declared here, ahead of their
    commands, because whether a class is kept depends on them.  A mapping is
@@ -762,15 +766,15 @@ let drop_hkt_args r args =
     a class's type-constructor argument can be applied to the right number of
     erased arguments ([Opt<std::any>]) when it becomes an associated type. *)
 
-let type_scheme_arities = ref (Ref.User.Map.empty : int Ref.User.Map.t)
+let type_scheme_arities = ref (Ref.Can.Map.empty : int Ref.Can.Map.t)
 
 let add_type_scheme_arity r n =
-  if n > 0 then type_scheme_arities := Ref.User.Map.add r n !type_scheme_arities
+  if n > 0 then type_scheme_arities := Ref.Can.Map.add r n !type_scheme_arities
 
-let () = on_reset (fun () -> type_scheme_arities := Ref.User.Map.empty)
+let () = on_reset (fun () -> type_scheme_arities := Ref.Can.Map.empty)
 
 let get_type_scheme_arity r =
-  try Ref.User.Map.find r !type_scheme_arities with Not_found -> 0
+  try Ref.Can.Map.find r !type_scheme_arities with Not_found -> 0
 
 let get_ctor_ip_types_opt r =
   let open GlobRef in
@@ -1305,16 +1309,16 @@ let () = on_reset init_ind_promoted_params
    (dval * nat)] under a [Context] depends on that context variable through its
    body, and an alias has no constructors for a closure over payloads to
    reach. *)
-let type_alias_bodies = ref (Ref.User.Map.empty : Miniml.ml_type Ref.User.Map.t)
+let type_alias_bodies = ref (Ref.Can.Map.empty : Miniml.ml_type Ref.Can.Map.t)
 
-let init_type_alias_bodies () = type_alias_bodies := Ref.User.Map.empty
+let init_type_alias_bodies () = type_alias_bodies := Ref.Can.Map.empty
 
 let () = on_reset init_type_alias_bodies
 
-let has_type_alias_body r = Ref.User.Map.mem r !type_alias_bodies
+let has_type_alias_body r = Ref.Can.Map.mem r !type_alias_bodies
 
 let add_type_alias_body r t =
-  type_alias_bodies := Ref.User.Map.add r t !type_alias_bodies
+  type_alias_bodies := Ref.Can.Map.add r t !type_alias_bodies
 
 (* The types [r]'s own definition writes: an inductive's constructor payloads,
    a type alias's right-hand side.  Folded with [f] over every subterm. *)
@@ -1347,7 +1351,7 @@ let fold_type_body_types f r acc =
               [] ind.Miniml.ind_packets
         with Not_found | Invalid_argument _ -> [] )
     | GlobRef.ConstRef _ ->
-      ( match Ref.User.Map.find_opt r !type_alias_bodies with
+      ( match Ref.Can.Map.find_opt r !type_alias_bodies with
       | Some t -> [t]
       | None -> [] )
     | _ -> []
@@ -1374,7 +1378,7 @@ let rec type_globals_reached ~seen r =
   let known g =
     match g with
     | GlobRef.IndRef _ -> true
-    | GlobRef.ConstRef _ -> Ref.User.Map.mem g !type_alias_bodies
+    | GlobRef.ConstRef _ -> Ref.Can.Map.mem g !type_alias_bodies
     | _ -> false
   in
   fold_type_body_types
