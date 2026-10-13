@@ -882,6 +882,20 @@ let collect_eponymous_records (s : ml_structure) : GlobRef.t list =
            (element_inductives se) )
        s [])
 
+(** The template parameter every module-type concept is written over:
+    [pp_spec_as_requirement] spells the modelled module ["M"] throughout the
+    requirement bodies it builds. *)
+let concept_self_param = "M"
+
+(** The C++ concept identifier a module type labelled [l] takes unless a
+    clash qualifies it: the label as {!Common.modular_rename} escapes any
+    identifier -- C++ keywords and primes -- and one escape more, since a
+    concept named [concept_self_param] would be shadowed by its own template
+    parameter. *)
+let concept_name_of_label l =
+  let s = Common.modular_rename Type (Label.to_id l) in
+  if String.equal s concept_self_param then s ^ "_" else s
+
 (** Decide the name every concept is emitted under, for the type classes and
     module types whose own name does not settle it.
 
@@ -901,7 +915,7 @@ let collect_concept_renames (s : ml_structure) :
       (fun () mp l se (classes, modtypes) ->
         match se with
         | SEmodtype _ ->
-          (classes, (MPdot (mp, l), Common.modular_rename Type (Label.to_id l)) :: modtypes)
+          (classes, (MPdot (mp, l), concept_name_of_label l) :: modtypes)
         | _ ->
           ( List.fold_left
               (fun acc (ind_ref, _i, ind) ->

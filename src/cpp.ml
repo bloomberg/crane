@@ -50,38 +50,6 @@ let qualify_custom_template custom_str args qualify_type =
   render_type_template custom_str
     ~hole:(fun i -> Option.map qualify_type (List.nth_opt args i))
 
-(** The template parameter every module-type concept is written over.
-
-    [pp_spec_as_requirement] spells the modelled module ["M"] throughout the
-    requirement bodies it builds, so the name is fixed rather than generated;
-    {!concept_name_of_label} is what keeps a concept from colliding with it. *)
-let concept_self_param = "M"
-
-(** The C++ concept identifier for the module type labelled [l].
-
-    A label otherwise reaches the output verbatim, so it needs the same
-    escaping as any other identifier — C++ keywords and primes, via
-    {!Common.modular_rename} — and one more besides: a concept named
-    [concept_self_param] would be shadowed by its own template parameter
-    ([template<typename M> concept M = ...]), which C++ rejects outright.
-
-    Every site that names a module-type concept, defining or referring, must
-    go through this function or the two will disagree. *)
-let concept_name_of_label l =
-  let s = Common.modular_rename Type (Label.to_id l) in
-  if String.equal s concept_self_param then s ^ "_" else s
-
-(** {!concept_name_of_label} as a document. *)
-let pp_concept_name l = str (concept_name_of_label l)
-
-(** The concept identifier of the module type [l] declared in [mp]: its
-    label's, unless the structure analysis qualified it because another
-    concept shares that name ({!Structure_analysis.collect_concept_renames}). *)
-let pp_modtype_concept_name mp l =
-  match Program_facts.modtype_concept_name (MPdot (mp, l)) with
-  | Some name -> str name
-  | None -> pp_concept_name l
-
 (** What a module type contributes where a concept body is expected.
 
     [MTident] and its refinements name a concept that already exists; only an
@@ -154,6 +122,23 @@ let concept_extra_args kn =
   | MPdot (mp0, _) -> (
     match functor_concept_scope mp0 with Some (_, params) -> params | None -> [] )
   | _ -> []
+
+(** The C++ identifier of the concept the module type at [mp] becomes, at
+    its declaration and at every reference: named after the functor whose
+    body declares it, where one does ({!functor_concept_scope}); qualified
+    with its module where another concept shares its name
+    ({!Program_facts.modtype_concept_name}); and otherwise its label
+    ({!Structure_analysis.concept_name_of_label}).  Every site naming a
+    module-type concept goes through this, so no two can disagree. *)
+let modtype_concept_name mp =
+  let base = Structure_analysis.concept_name_of_label in
+  match mp with
+  | MPdot (mp0, l) -> (
+    match functor_concept_scope mp0 with
+    | Some (fl, _) -> base fl ^ "_" ^ base l
+    | None -> Option.default (base l) (Program_facts.modtype_concept_name mp) )
+  | MPfile _ | MPbound _ ->
+    CErrors.anomaly (Pp.str "modtype_concept_name: a module type is a member of a structure")
 
 (** Convert a signature spec element to a C++20 [requires] clause requirement.
     Used for module type -> concept conversion.
@@ -408,10 +393,9 @@ let rec pp_spec_as_requirement modtype_mp modtype_refs spec =
     [X::X] from outside. *)
 and pp_concept_ref kn =
   match kn with
-  | MPdot (mp0, l') when Option.has_some (functor_concept_scope mp0) ->
+  | MPdot (mp0, _) when Option.has_some (functor_concept_scope mp0) ->
     (* Declared at file scope, so named after the functor declaring it. *)
-    let fl = fst (Option.get (functor_concept_scope mp0)) in
-    str (concept_name_of_label fl ^ "_" ^ concept_name_of_label l')
+    str (modtype_concept_name kn)
   | MPdot (mp0, l') ->
     if get_force_cross_file_qualification () then begin
       (* Separate extraction: pp_modname produces visibility-aware names. *)
@@ -434,7 +418,7 @@ and pp_concept_ref kn =
       if (match mp0 with MPfile _ -> true | _ -> false)
          && not (ModPath.equal mp0 current_file_mp)
          && not (Common.resolved_is_qualified resolved) then
-        name ++ str "::" ++ pp_concept_name l'
+        name ++ str "::" ++ str (modtype_concept_name kn)
       else
         name
     end else begin
@@ -443,7 +427,7 @@ and pp_concept_ref kn =
          pp_module_type.  Keep the short label and just trigger include
          tracking. *)
       ignore (Common.pp_module kn);
-      pp_modtype_concept_name mp0 l'
+      str (modtype_concept_name kn)
     end
   | _ -> pp_modname kn
 
@@ -490,7 +474,7 @@ and pp_module_type params = function
         | _ -> mt () )
       | Smodtype nested_mt ->
         let def = concept_body_pp (pp_module_type [] nested_mt) in
-        let modtype_name = pp_concept_name label in
+        let modtype_name = str (modtype_concept_name (MPdot (mp, label))) in
         let concept_pp = pp_concept_def modtype_name def in
         hoisted_concept_defs := concept_pp :: !hoisted_concept_defs;
         mt ()
@@ -1344,7 +1328,7 @@ let rec pp_structure_elem ~is_header f = function
               (fun (l, se) ->
                 match se with
                 | SEmodtype m ->
-                  let modtype_name = pp_modtype_concept_name mp l in
+                  let modtype_name = str (modtype_concept_name (MPdot (mp, l))) in
                   let concept_pp, mentions_outer =
                     watching_for_reference_to (Pp.string_of_ppcmds name)
                     @@ fun () -> pp_modtype_concept modtype_name m
@@ -1808,10 +1792,7 @@ let rec pp_structure_elem ~is_header f = function
     if (not is_header) || (!render_ctx).rc_in_struct then
       mt ()
     else
-      (* Every site naming a module-type concept goes through
-         {!pp_modtype_concept_name}, the declaration included: a label reaches
-         the output verbatim otherwise, primes and all. *)
-      pp_modtype_concept (pp_modtype_concept_name (top_visible_mp ()) l) m
+      pp_modtype_concept (str (modtype_concept_name (MPdot (top_visible_mp (), l)))) m
 
 (** Render a functor application, and say whether the result comes out with a
     [::] qualifier.

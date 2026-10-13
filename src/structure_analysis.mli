@@ -182,3 +182,11 @@ val register_shared_variants : ml_structure -> unit
     ([Table.add_throwing_value]): emitted as zero-argument functions, and
     called wherever they are named. *)
 val register_throwing_values : ml_structure -> unit
+
+(** The template parameter every module-type concept is written over. *)
+val concept_self_param : string
+
+(** The concept identifier a module type labelled [l] takes unless a clash
+    qualifies it ({!Cpp.modtype_concept_name} is the only reader outside this
+    module). *)
+val concept_name_of_label : Label.t -> string
