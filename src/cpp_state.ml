@@ -1174,9 +1174,9 @@ let current_structure_decls : (Label.t * Miniml.ml_structure_elem) list ref =
 (** [promoted_inductives] lives in {!Table} but is reset and censused here,
     since this is the module that fills it. *)
 let () =
-  on_reset (fun () -> Hashtbl.clear promoted_inductives);
+  on_reset (fun () -> Ref.User.Tbl.clear promoted_inductives);
   Table.register_census "promoted_inductives" (fun () ->
-      Hashtbl.length promoted_inductives )
+      Ref.User.Tbl.length promoted_inductives )
 
 (** Reset all state owned by this module, so that one extraction in a process
     cannot affect the next.  Every cell created by {!owned_table},

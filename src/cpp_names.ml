@@ -83,14 +83,14 @@ let pp_global_name k r = str (Common.pp_global k r)
     never needs resetting: the same reference always prints the same path,
     consistent with the polymorphic [Hashtbl] keying already used in this file for
     [GlobRef.t]. *)
-let globref_full_path_cache : (GlobRef.t, string) Hashtbl.t = Hashtbl.create 512
+let globref_full_path_cache : string Ref.User.Tbl.t = Ref.User.Tbl.create 512
 
 let globref_full_path r =
-  match Hashtbl.find_opt globref_full_path_cache r with
+  match Ref.User.Tbl.find_opt globref_full_path_cache r with
   | Some s -> s
   | None ->
     let s = Pp.string_of_ppcmds (GlobRef.print r) in
-    Hashtbl.add globref_full_path_cache r s;
+    Ref.User.Tbl.add globref_full_path_cache r s;
     s
 
 (** Pretty-print a module path as a Pp.t. *)
@@ -101,7 +101,7 @@ let pp_modname mp = str (Common.pp_module mp)
     use List<A>). Returns false if it was NOT merged (has pending declarations →
     use List::list<A>). *)
 let is_merged_inductive (r : GlobRef.t) : bool =
-  Hashtbl.mem promoted_inductives r
+  Ref.User.Tbl.mem promoted_inductives r
   ||
   let base = str_global Type r in
   let wrapper_name =
@@ -198,7 +198,7 @@ let inductive_name_info r =
   match r with
   | GlobRef.IndRef _ when Program_facts.is_eponymous_record r ->
     (str (Common.pp_type_name_capitalized r), false)
-  | GlobRef.IndRef _ when Hashtbl.mem promoted_inductives r ->
+  | GlobRef.IndRef _ when Ref.User.Tbl.mem promoted_inductives r ->
     let s = str_global Type r in
     let cap = if Common.get_force_cross_file_qualification ()
               then Common.capitalize_last_component s
@@ -336,7 +336,7 @@ let pp_inductive_type_name r =
         else
           str cap_name
       else str cap_name
-    | GlobRef.IndRef _ when Hashtbl.mem promoted_inductives r ->
+    | GlobRef.IndRef _ when Ref.User.Tbl.mem promoted_inductives r ->
       if is_local_inductive r then
         str (String.capitalize_ascii (Common.pp_global_name Type r))
       else
@@ -688,7 +688,7 @@ let is_global_scope_enum_cached : GlobRef.t -> bool =
     inductives always count as merged regardless of cache. *)
 let is_merged_inductive_cached : GlobRef.t -> bool =
  fun r ->
-   Hashtbl.mem promoted_inductives r
+   Ref.User.Tbl.mem promoted_inductives r
    || with_cache
         (fun cache r ->
           match Name_resolution.resolve_type cache r with

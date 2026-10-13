@@ -52,12 +52,7 @@ type method_candidate = GlobRef.t * Miniml.ml_ast * Miniml.ml_type * int
 (** Tables keyed by a global's canonical name.  Being a method is a property
     of the definition, so it holds under every name the definition is reached
     by: [U.f] for [Module U := T] is [T]'s method [f]. *)
-module RefTbl = Hashtbl.Make (struct
-  type t = GlobRef.t
-
-  let equal = GlobRef.CanOrd.equal
-  let hash = GlobRef.CanOrd.hash
-end)
+module RefTbl = Ref.Can.Tbl
 
 (** The method registry: maps function refs to method info and stores
     candidates. *)
@@ -65,7 +60,7 @@ type t = {
   methods : method_info RefTbl.t;
   (* Reverse index: inductive GlobRef -> list of method candidates. Populated
      during pre-scan so cpp.ml doesn't need to re-collect. *)
-  candidates : (GlobRef.t, method_candidate list) Hashtbl.t;
+  candidates : method_candidate list Ref.User.Tbl.t;
 }
 
 (** {2 Return type helpers} *)
@@ -445,12 +440,12 @@ let register_into
     custom extraction is left out: it is spelled at the call site ([andb] as
     [&&]) and never names the file's struct. *)
 let file_calls modpath decls =
-  let terms : (GlobRef.t, unit) Hashtbl.t = Hashtbl.create 16 in
+  let terms : unit Ref.User.Tbl.t = Ref.User.Tbl.create 16 in
   let add r =
     if
       ModPath.equal (modpath_of_r r) modpath
       && not (Table.is_any_inline_custom r)
-    then Hashtbl.replace terms r ()
+    then Ref.User.Tbl.replace terms r ()
   in
   List.iter
     (fun (_l, se) ->
@@ -461,7 +456,7 @@ let file_calls modpath decls =
   fun body ->
     let acc = ref [] in
     Modutil.ast_iter_references
-      (fun r -> if Hashtbl.mem terms r then acc := r :: !acc)
+      (fun r -> if Ref.User.Tbl.mem terms r then acc := r :: !acc)
       (fun _ -> ())
       (fun _ -> ())
       body;
@@ -651,7 +646,7 @@ let register_methods_for_epon
       register_into ~arity:(ml_value_arity ty) tbl r epon_ref
         (cpp_arg_pos ty pos) ~ind_tvar_positions;
       let existing =
-        match Hashtbl.find_opt cands epon_ref with
+        match Ref.User.Tbl.find_opt cands epon_ref with
         | Some l -> l
         | None -> []
       in
@@ -660,7 +655,7 @@ let register_methods_for_epon
          candidate list must not emit it twice. *)
       if not (List.exists (fun (r', _, _, _) -> globref_equal r' r) existing)
       then
-        Hashtbl.replace cands epon_ref (existing @ [(r, body, ty, pos)])
+        Ref.User.Tbl.replace cands epon_ref (existing @ [(r, body, ty, pos)])
     in
     let pending = ref [] in
     let consider r body ty pos ind_tvar_positions =
@@ -759,12 +754,12 @@ let register_methods_for_all_inductives tbl cands ind_refs decls =
   let add_candidate ind_ref r body ty pos ind_tvar_positions =
     register_into ~arity:(ml_value_arity ty) tbl r ind_ref
       (cpp_arg_pos ty pos) ~ind_tvar_positions;
-    let existing = match Hashtbl.find_opt cands ind_ref with
+    let existing = match Ref.User.Tbl.find_opt cands ind_ref with
       | Some l -> l | None -> []
     in
     (* Dedup by function reference (see the note in [register_methods_for_epon]). *)
     if not (List.exists (fun (r', _, _, _) -> globref_equal r' r) existing) then
-      Hashtbl.replace cands ind_ref (existing @ [(r, body, ty, pos)])
+      Ref.User.Tbl.replace cands ind_ref (existing @ [(r, body, ty, pos)])
   in
   (* Check if the inductive argument at position [pos] in [ty] uses concrete
      type parameters. Functions specialized to e.g. [tree nat] instead of
@@ -997,8 +992,8 @@ let compute_returns_any
      for all inductives and (b) a term-ref -> ML type index so step 2 can look
      up each method's type in O(1) instead of re-walking the whole structure
      per method (which was O(methods x structure)). *)
-  let ind_param_vars : (GlobRef.t, Id.t list) Hashtbl.t = Hashtbl.create 32 in
-  let method_types : (GlobRef.t, Miniml.ml_type) Hashtbl.t = Hashtbl.create 256 in
+  let ind_param_vars : Id.t list Ref.User.Tbl.t = Ref.User.Tbl.create 32 in
+  let method_types : Miniml.ml_type Ref.User.Tbl.t = Ref.User.Tbl.create 256 in
   let rec collect_from_sel sel =
     List.iter
       (fun (_l, se) ->
@@ -1011,12 +1006,12 @@ let compute_returns_any
               (* Including the promoted variables the payloads name: those are
                  parameters of the generated struct too, so they are in scope
                  in a method's return type.  See {!Table.ind_promoted_params}. *)
-              Hashtbl.replace ind_param_vars ind_ref
+              Ref.User.Tbl.replace ind_param_vars ind_ref
                 (Table.ind_promoted_params kn @ param_vars) )
             ind.ind_packets
         | SEdecl ((Dterm _ | Dfix _) as d) ->
           List.iter
-            (fun fd -> Hashtbl.replace method_types fd.fd_ref fd.fd_type)
+            (fun fd -> Ref.User.Tbl.replace method_types fd.fd_ref fd.fd_type)
             (Mlutil.term_defs d)
         | SEmodule m ->
           ( match m.ml_mod_expr with
@@ -1030,7 +1025,7 @@ let compute_returns_any
      return type is erased. *)
   RefTbl.iter
     (fun func_ref info ->
-      match Hashtbl.find_opt ind_param_vars info.epon_ref with
+      match Ref.User.Tbl.find_opt ind_param_vars info.epon_ref with
       | None -> ()
       | Some param_vars ->
         (* Extract the return type from a curried arrow type. *)
@@ -1040,7 +1035,7 @@ let compute_returns_any
         in
         (* Step 3: Look up this method's ML type (indexed in step 1) and check
            whether its return type is erased. *)
-        ( match Hashtbl.find_opt method_types func_ref with
+        ( match Ref.User.Tbl.find_opt method_types func_ref with
         | None -> ()
         | Some ty ->
           let ret_ml = get_return_type ty in
@@ -1060,7 +1055,7 @@ let compute_returns_any
     methods and all inductives' parameter information to work correctly. *)
 let create ~ret_is_erased (s : ml_structure) : t =
   let tbl = RefTbl.create 100 in
-  let cands = Hashtbl.create 32 in
+  let cands = Ref.User.Tbl.create 32 in
   (* Gather all top-level declarations across all modules. These serve as
      [parent_decls] for the recursive scan, enabling cross-module method
      detection (e.g. a function at file scope that takes a type from a
@@ -1129,7 +1124,7 @@ let method_returns_any (reg : t) (func_ref : GlobRef.t) : bool =
     list of (func_ref, body, type, this_position) tuples for methods belonging
     to this type. *)
 let get_candidates (reg : t) (ind_ref : GlobRef.t) : method_candidate list =
-  match Hashtbl.find_opt reg.candidates ind_ref with
+  match Ref.User.Tbl.find_opt reg.candidates ind_ref with
   | Some l -> l
   | None -> []
 
@@ -1148,7 +1143,7 @@ let register_method
     Appends the candidate to the existing list for that inductive. *)
 let add_candidate (reg : t) (ind_ref : GlobRef.t) (cand : method_candidate) =
   let existing =
-    match Hashtbl.find_opt reg.candidates ind_ref with
+    match Ref.User.Tbl.find_opt reg.candidates ind_ref with
     | Some l -> l
     | None -> []
   in
@@ -1157,7 +1152,7 @@ let add_candidate (reg : t) (ind_ref : GlobRef.t) (cand : method_candidate) =
      cpp.ml/cpp_ind.ml) isn't appended twice into the candidate list. *)
   if not (List.exists (fun (r', _, _, _) -> globref_equal r' cand_ref) existing)
   then
-    Hashtbl.replace reg.candidates ind_ref (existing @ [cand])
+    Ref.User.Tbl.replace reg.candidates ind_ref (existing @ [cand])
 
 (** Check if a function qualifies as a method on [epon_ref] and register it
     if so.  This is the single entry point for the

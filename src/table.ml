@@ -24,16 +24,6 @@ open Util
 open Pp
 open Miniml
 
-(** Sets and maps for [global_reference] that use the "user" [kernel_name]
-    instead of the canonical one *)
-
-module Refmap' = GlobRef.Map_env
-module Refset' = GlobRef.Set_env
-(* Canonical-comparison set: use GlobRef.Set (CanOrd) so that references
-   from different functor instantiation paths compare equal if they share
-   the same canonical kernel name. *)
-module RefsetCan = GlobRef.Set
-module RefmapCan = GlobRef.Map
 module StringMap = HMap.Make (String)
 module StringSet = StringMap.Set
 
@@ -61,21 +51,21 @@ let on_reset f = State.on_reset State.Extraction f
 
 (* Create a ref-based membership set with init/add/mem interface. *)
 let make_refset ~name () =
-  let tbl = ref Refset'.empty in
-  let init () = tbl := Refset'.empty in
-  let add r = tbl := Refset'.add r !tbl in
-  let mem r = Refset'.mem r !tbl in
-  register_census name (fun () -> Refset'.cardinal !tbl);
+  let tbl = ref Ref.User.Set.empty in
+  let init () = tbl := Ref.User.Set.empty in
+  let add r = tbl := Ref.User.Set.add r !tbl in
+  let mem r = Ref.User.Set.mem r !tbl in
+  register_census name (fun () -> Ref.User.Set.cardinal !tbl);
   on_reset init;
   (init, add, mem)
 
 (* Create a canonical-key ref-based set (for cross-functor identity). *)
 let make_refset_can ~name () =
-  let tbl = ref RefsetCan.empty in
-  let init () = tbl := RefsetCan.empty in
-  let add r = tbl := RefsetCan.add r !tbl in
-  let mem r = RefsetCan.mem r !tbl in
-  register_census name (fun () -> RefsetCan.cardinal !tbl);
+  let tbl = ref Ref.Can.Set.empty in
+  let init () = tbl := Ref.Can.Set.empty in
+  let add r = tbl := Ref.Can.Set.add r !tbl in
+  let mem r = Ref.Can.Set.mem r !tbl in
+  register_census name (fun () -> Ref.Can.Set.cardinal !tbl);
   on_reset init;
   (init, add, mem)
 
@@ -350,22 +340,22 @@ let inductive_kind_of r =
     Mindmap_env.find_opt kn !inductive_kinds
   | ConstRef _ | VarRef _ -> None
 
-let glob_tys = Summary.ref Refmap'.empty ~name:"GlobalDefTypes"
+let glob_tys = Summary.ref Ref.User.Map.empty ~name:"GlobalDefTypes"
 
-let init_glob_tys () = glob_tys := Refmap'.empty
+let init_glob_tys () = glob_tys := Ref.User.Map.empty
 
 let () = on_reset init_glob_tys
 
-let add_type id ty = glob_tys := Refmap'.add id ty !glob_tys
+let add_type id ty = glob_tys := Ref.User.Map.add id ty !glob_tys
 
-let find_type id = Refmap'.find id !glob_tys
+let find_type id = Ref.User.Map.find id !glob_tys
 
 (* The custom extraction mappings, by global; declared here, ahead of their
    commands, because whether a class is kept depends on them.  A mapping is
    about a definition, so it is keyed by the canonical name: a reference
    through a module alias -- [NN.max] for [Module NN := BinNat.N] -- is
    [N.max] mapped. *)
-let customs = Summary.ref RefmapCan.empty ~name:"CraneExtrCustom"
+let customs = Summary.ref Ref.Can.Map.empty ~name:"CraneExtrCustom"
 
 (** A class declared as one method's type -- [Class MonadIter M := iter :
     forall R I, ...] -- whose dictionary is that method: such a class is kept
@@ -376,7 +366,7 @@ let customs = Summary.ref RefmapCan.empty ~name:"CraneExtrCustom"
     class. *)
 let singleton_class_method r =
   match r with
-  | GlobRef.ConstRef _ when not (RefmapCan.mem r !customs) -> (
+  | GlobRef.ConstRef _ when not (Ref.Can.Map.mem r !customs) -> (
     let closed_arity decl =
       let t = Context.Rel.Declaration.get_type decl in
       Term.isArity t && Vars.closed0 t
@@ -716,13 +706,13 @@ let get_ind_nb_sign_keeps r =
     and wrapper generators in {!Gen_decls} consult them to move the parameter
     from the template-parameter list to the associated-type requirements. *)
 
-let hkt_params_table = ref (Refmap'.empty : (int * int) list Refmap'.t)
+let hkt_params_table = ref (Ref.User.Map.empty : (int * int) list Ref.User.Map.t)
 
 let add_ind_hkt_params r positions =
   if positions <> [] then
-    hkt_params_table := Refmap'.add r positions !hkt_params_table
+    hkt_params_table := Ref.User.Map.add r positions !hkt_params_table
 
-let () = on_reset (fun () -> hkt_params_table := Refmap'.empty)
+let () = on_reset (fun () -> hkt_params_table := Ref.User.Map.empty)
 
 (** Positions (0-based among the [Keep] type parameters) of [r]'s parameters
     that are type constructors, each with its arity.  Empty for everything
@@ -739,7 +729,7 @@ let get_ind_hkt_params_arities r =
   else
     match singleton_shape r with
     | Some s -> s.sc_hkt
-    | None -> ( try Refmap'.find r !hkt_params_table with Not_found -> [] )
+    | None -> ( try Ref.User.Map.find r !hkt_params_table with Not_found -> [] )
 
 (** Positions (0-based among the [Keep] type parameters) of [r]'s parameters
     that are type constructors. Empty for everything else. *)
@@ -772,15 +762,15 @@ let drop_hkt_args r args =
     a class's type-constructor argument can be applied to the right number of
     erased arguments ([Opt<std::any>]) when it becomes an associated type. *)
 
-let type_scheme_arities = ref (Refmap'.empty : int Refmap'.t)
+let type_scheme_arities = ref (Ref.User.Map.empty : int Ref.User.Map.t)
 
 let add_type_scheme_arity r n =
-  if n > 0 then type_scheme_arities := Refmap'.add r n !type_scheme_arities
+  if n > 0 then type_scheme_arities := Ref.User.Map.add r n !type_scheme_arities
 
-let () = on_reset (fun () -> type_scheme_arities := Refmap'.empty)
+let () = on_reset (fun () -> type_scheme_arities := Ref.User.Map.empty)
 
 let get_type_scheme_arity r =
-  try Refmap'.find r !type_scheme_arities with Not_found -> 0
+  try Ref.User.Map.find r !type_scheme_arities with Not_found -> 0
 
 let get_ctor_ip_types_opt r =
   let open GlobRef in
@@ -992,11 +982,11 @@ type sigma_assertion =
   | AssertComment of string (* untranslatable: Rocq predicate as comment *)
 
 (* Maps function GlobRef to list of (param_index, assertion) *)
-let sigma_assertions : (int * sigma_assertion) list Refmap'.t ref =
-  ref Refmap'.empty
+let sigma_assertions : (int * sigma_assertion) list Ref.User.Map.t ref =
+  ref Ref.User.Map.empty
 
 (** Initialize the sigma type assertion table. *)
-let init_sigma_assertions () = sigma_assertions := Refmap'.empty
+let init_sigma_assertions () = sigma_assertions := Ref.User.Map.empty
 
 let () = on_reset init_sigma_assertions
 
@@ -1004,15 +994,15 @@ let () = on_reset init_sigma_assertions
 *)
 let add_sigma_assertion r idx a =
   let existing =
-    match Refmap'.find_opt r !sigma_assertions with
+    match Ref.User.Map.find_opt r !sigma_assertions with
     | Some l -> l
     | None -> []
   in
-  sigma_assertions := Refmap'.add r ((idx, a) :: existing) !sigma_assertions
+  sigma_assertions := Ref.User.Map.add r ((idx, a) :: existing) !sigma_assertions
 
 (** Retrieve all sigma type assertions for a given function reference. *)
 let get_sigma_assertions r =
-  match Refmap'.find_opt r !sigma_assertions with
+  match Ref.User.Map.find_opt r !sigma_assertions with
   | Some l -> l
   | None -> []
 
@@ -1273,19 +1263,19 @@ let get_context_instance_apps r =
    inductive keeps: the dictionary is erased and [ptr] arrives applied to no
    arguments.  Recorded in the same shape as {!instance_class_shapes} -- a
    {!class_arg} -- so that one reader serves both. *)
-let ind_class_arg_shapes = ref (Refmap'.empty : class_arg list Refmap'.t)
+let ind_class_arg_shapes = ref (Ref.User.Map.empty : class_arg list Ref.User.Map.t)
 
-let init_ind_class_arg_shapes () = ind_class_arg_shapes := Refmap'.empty
+let init_ind_class_arg_shapes () = ind_class_arg_shapes := Ref.User.Map.empty
 
 let () = on_reset init_ind_class_arg_shapes
 
 let add_ind_class_arg r shape =
-  let prev = Option.default [] (Refmap'.find_opt r !ind_class_arg_shapes) in
+  let prev = Option.default [] (Ref.User.Map.find_opt r !ind_class_arg_shapes) in
   if not (List.mem shape prev) then
-    ind_class_arg_shapes := Refmap'.add r (prev @ [shape]) !ind_class_arg_shapes
+    ind_class_arg_shapes := Ref.User.Map.add r (prev @ [shape]) !ind_class_arg_shapes
 
 let get_class_args_own r =
-  Option.default [] (Refmap'.find_opt r !ind_class_arg_shapes)
+  Option.default [] (Ref.User.Map.find_opt r !ind_class_arg_shapes)
 
 (* The promoted type variables an inductive's constructor payloads mention.
 
@@ -1300,9 +1290,9 @@ let get_class_args_own r =
    Computed on demand and cached, not recorded during extraction: whether a
    reference is a promoted variable is only settled once the class it belongs
    to has been extracted, and an inductive may be reached before that. *)
-let promoted_type_params_cache = ref (Refmap'.empty : Id.t list Refmap'.t)
+let promoted_type_params_cache = ref (Ref.User.Map.empty : Id.t list Ref.User.Map.t)
 
-let init_ind_promoted_params () = promoted_type_params_cache := Refmap'.empty
+let init_ind_promoted_params () = promoted_type_params_cache := Ref.User.Map.empty
 
 let () = on_reset init_ind_promoted_params
 
@@ -1311,16 +1301,16 @@ let () = on_reset init_ind_promoted_params
    (dval * nat)] under a [Context] depends on that context variable through its
    body, and an alias has no constructors for a closure over payloads to
    reach. *)
-let type_alias_bodies = ref (Refmap'.empty : Miniml.ml_type Refmap'.t)
+let type_alias_bodies = ref (Ref.User.Map.empty : Miniml.ml_type Ref.User.Map.t)
 
-let init_type_alias_bodies () = type_alias_bodies := Refmap'.empty
+let init_type_alias_bodies () = type_alias_bodies := Ref.User.Map.empty
 
 let () = on_reset init_type_alias_bodies
 
-let has_type_alias_body r = Refmap'.mem r !type_alias_bodies
+let has_type_alias_body r = Ref.User.Map.mem r !type_alias_bodies
 
 let add_type_alias_body r t =
-  type_alias_bodies := Refmap'.add r t !type_alias_bodies
+  type_alias_bodies := Ref.User.Map.add r t !type_alias_bodies
 
 (* The types [r]'s own definition writes: an inductive's constructor payloads,
    a type alias's right-hand side.  Folded with [f] over every subterm. *)
@@ -1353,7 +1343,7 @@ let fold_type_body_types f r acc =
               [] ind.Miniml.ind_packets
         with Not_found | Invalid_argument _ -> [] )
     | GlobRef.ConstRef _ ->
-      ( match Refmap'.find_opt r !type_alias_bodies with
+      ( match Ref.User.Map.find_opt r !type_alias_bodies with
       | Some t -> [t]
       | None -> [] )
     | _ -> []
@@ -1380,7 +1370,7 @@ let rec type_globals_reached ~seen r =
   let known g =
     match g with
     | GlobRef.IndRef _ -> true
-    | GlobRef.ConstRef _ -> Refmap'.mem g !type_alias_bodies
+    | GlobRef.ConstRef _ -> Ref.User.Map.mem g !type_alias_bodies
     | _ -> false
   in
   fold_type_body_types
@@ -1434,7 +1424,7 @@ let own_promoted_type_params r =
 
 let promoted_type_params r =
   let r = type_key r in
-  match Refmap'.find_opt r !promoted_type_params_cache with
+  match Ref.User.Map.find_opt r !promoted_type_params_cache with
   | Some v -> v
   | None ->
     let v =
@@ -1448,7 +1438,7 @@ let promoted_type_params r =
         (own_promoted_type_params r)
         (type_globals_reached ~seen:[] r)
     in
-    promoted_type_params_cache := Refmap'.add r v !promoted_type_params_cache;
+    promoted_type_params_cache := Ref.User.Map.add r v !promoted_type_params_cache;
     v
 
 let ind_promoted_params kn = promoted_type_params (GlobRef.IndRef (kn, 0))
@@ -1475,57 +1465,57 @@ let (init_higher_order_projections, mark_higher_order_projection,
 
 (** {2 Phantom type variables table} *)
 
-let phantom_tvars : (int list) Refmap'.t ref = ref Refmap'.empty
+let phantom_tvars : (int list) Ref.User.Map.t ref = ref Ref.User.Map.empty
 
-let init_phantom_tvars () = phantom_tvars := Refmap'.empty
+let init_phantom_tvars () = phantom_tvars := Ref.User.Map.empty
 
 let () = on_reset init_phantom_tvars
 
-let set_phantom_tvars r indices = phantom_tvars := Refmap'.add r indices !phantom_tvars
+let set_phantom_tvars r indices = phantom_tvars := Ref.User.Map.add r indices !phantom_tvars
 
 let get_phantom_tvars r =
-  match Refmap'.find_opt r !phantom_tvars with
+  match Ref.User.Map.find_opt r !phantom_tvars with
   | Some indices -> indices
   | None -> []
 
 (** {2 Table of used axioms} *)
 
-let info_axioms = ref Refset'.empty
+let info_axioms = ref Ref.User.Set.empty
 
-let log_axioms = ref Refset'.empty
+let log_axioms = ref Ref.User.Set.empty
 
-let cofixpoints = ref Refset'.empty
+let cofixpoints = ref Ref.User.Set.empty
 
-let throwing_values = ref Refset'.empty
+let throwing_values = ref Ref.User.Set.empty
 
-let symbols = ref Refmap'.empty
+let symbols = ref Ref.User.Map.empty
 
 let init_axioms () =
-  info_axioms := Refset'.empty;
-  log_axioms := Refset'.empty;
-  cofixpoints := Refset'.empty;
-  throwing_values := Refset'.empty;
-  symbols := Refmap'.empty
+  info_axioms := Ref.User.Set.empty;
+  log_axioms := Ref.User.Set.empty;
+  cofixpoints := Ref.User.Set.empty;
+  throwing_values := Ref.User.Set.empty;
+  symbols := Ref.User.Map.empty
 
 let () = on_reset init_axioms
 
-let add_info_axiom r = info_axioms := Refset'.add r !info_axioms
+let add_info_axiom r = info_axioms := Ref.User.Set.add r !info_axioms
 
-let remove_info_axiom r = info_axioms := Refset'.remove r !info_axioms
+let remove_info_axiom r = info_axioms := Ref.User.Set.remove r !info_axioms
 
-let add_log_axiom r = log_axioms := Refset'.add r !log_axioms
+let add_log_axiom r = log_axioms := Ref.User.Set.add r !log_axioms
 
-let add_cofixpoint r = cofixpoints := Refset'.add r !cofixpoints
+let add_cofixpoint r = cofixpoints := Ref.User.Set.add r !cofixpoints
 
-let is_cofixpoint r = Refset'.mem r !cofixpoints
+let is_cofixpoint r = Ref.User.Set.mem r !cofixpoints
 
-let add_throwing_value r = throwing_values := Refset'.add r !throwing_values
+let add_throwing_value r = throwing_values := Ref.User.Set.add r !throwing_values
 
-let is_throwing_value r = Refset'.mem r !throwing_values
+let is_throwing_value r = Ref.User.Set.mem r !throwing_values
 
 let add_symbol r =
   symbols :=
-    Refmap'.update
+    Ref.User.Map.update
       r
       (function
         | Some l -> Some l
@@ -1534,22 +1524,22 @@ let add_symbol r =
 
 let add_symbol_rule r l =
   symbols :=
-    Refmap'.update
+    Ref.User.Map.update
       r
       (function
         | Some lst -> Some (l :: lst)
         | _ -> Some [l] )
       !symbols
 
-let opaques = ref Refset'.empty
+let opaques = ref Ref.User.Set.empty
 
-let init_opaques () = opaques := Refset'.empty
+let init_opaques () = opaques := Ref.User.Set.empty
 
 let () = on_reset init_opaques
 
-let add_opaque r = opaques := Refset'.add r !opaques
+let add_opaque r = opaques := Ref.User.Set.add r !opaques
 
-let remove_opaque r = opaques := Refset'.remove r !opaques
+let remove_opaque r = opaques := Ref.User.Set.remove r !opaques
 
 (** {2 Extraction modes: modular or monolithic, library or minimal ?
 
@@ -1701,13 +1691,13 @@ let warn_extraction_symbols =
     ++ fnl () )
 
 let warning_axioms () =
-  let info_axioms = Refset'.elements !info_axioms in
+  let info_axioms = Ref.User.Set.elements !info_axioms in
   if not (List.is_empty info_axioms) then
     warn_extraction_axiom_to_realize info_axioms;
-  let log_axioms = Refset'.elements !log_axioms in
+  let log_axioms = Ref.User.Set.elements !log_axioms in
   if not (List.is_empty log_axioms) then
     warn_extraction_logical_axiom log_axioms;
-  let symbols = Refmap'.bindings !symbols in
+  let symbols = Ref.User.Map.bindings !symbols in
   if not (List.is_empty symbols) then
     warn_extraction_symbols symbols
 
@@ -1737,7 +1727,7 @@ let warn_extraction_opaque_as_axiom =
     ++ fnl () )
 
 let warning_opaques accessed =
-  let opaques = Refset'.elements !opaques in
+  let opaques = Ref.User.Set.elements !opaques in
   if not (List.is_empty opaques) then
     let lst = hov 1 (spc () ++ prlist_with_sep spc safe_pr_global opaques) in
     if accessed then
@@ -2211,7 +2201,7 @@ let key_suffix n key =
   if len <= n then key
   else String.concat "." (List.filteri (fun i _ -> i >= len - n) parts)
 
-let empty_loopify_table = (Refset'.empty, Refset'.empty)
+let empty_loopify_table = (Ref.User.Set.empty, Ref.User.Set.empty)
 
 let loopify_table = Summary.ref empty_loopify_table ~name:"CraneExtrLoopify"
 
@@ -2233,9 +2223,9 @@ let loopify_key = function
     function, falling back to the global [Crane Loopify] setting. *)
 let should_loopify ?default r =
   let yes, no = !loopify_table in
-  if Refset'.mem r yes then
+  if Ref.User.Set.mem r yes then
     true
-  else if Refset'.mem r no then
+  else if Ref.User.Set.mem r no then
     false
   else
     match Option.bind (loopify_key r) (fun k -> CString.Map.find_opt k !loopify_suffix_table) with
@@ -2249,7 +2239,7 @@ let loopifies_methods_of r = should_loopify ~default:(not (is_coinductive r)) r
 let loopifies_method r = should_loopify ~default:true r
 
 let add_loopify_entries b l =
-  let f b = if b then Refset'.add else Refset'.remove in
+  let f b = if b then Ref.User.Set.add else Ref.User.Set.remove in
   let y, n = !loopify_table in
   loopify_table := (List.fold_right (f b) l y, List.fold_right (f (not b)) l n);
   List.iter
@@ -2327,7 +2317,7 @@ let {Goptions.get = reuse} =
 
 (* Per-function reuse/noreuse table. First set = force-reuse, second = force-off. *)
 
-let empty_reuse_table = (Refset'.empty, Refset'.empty)
+let empty_reuse_table = (Ref.User.Set.empty, Ref.User.Set.empty)
 
 let reuse_table = Summary.ref empty_reuse_table ~name:"CraneExtrReuse"
 
@@ -2335,15 +2325,15 @@ let reuse_table = Summary.ref empty_reuse_table ~name:"CraneExtrReuse"
     else the global [Crane Reuse] setting. *)
 let should_reuse r =
   let yes, no = !reuse_table in
-  if Refset'.mem r yes then
+  if Ref.User.Set.mem r yes then
     true
-  else if Refset'.mem r no then
+  else if Ref.User.Set.mem r no then
     false
   else
     reuse ()
 
 let add_reuse_entries b l =
-  let f b = if b then Refset'.add else Refset'.remove in
+  let f b = if b then Ref.User.Set.add else Ref.User.Set.remove in
   let y, n = !reuse_table in
   reuse_table := (List.fold_right (f b) l y, List.fold_right (f (not b)) l n)
 
@@ -2477,10 +2467,10 @@ let {Goptions.get = arena_enabled} =
    means "never bump-allocate this type's nodes even when an arena scope is
    open" -- for types with program-lifetime identity requirements or a
    comparator/hash that assumes stable heap addresses across scope boundaries.
-   Reuses the same Refset' + canonical-path 2-component suffix-match machinery
+   Reuses the same Ref.User.Set + canonical-path 2-component suffix-match machinery
    the old arena_table used, so functor-internal directives still match. *)
 
-let empty_no_arena_table = Refset'.empty
+let empty_no_arena_table = Ref.User.Set.empty
 
 let no_arena_table = Summary.ref empty_no_arena_table ~name:"CraneExtrNoArena"
 
@@ -2508,7 +2498,7 @@ let no_arena_suffix_table : unit CString.Map.t ref = ref CString.Map.empty
     Exact-[GlobRef] miss falls back to a canonical-path 2-component suffix
     match against registered exclusions. *)
 let should_use_arena_at_runtime r =
-  if Refset'.mem r !no_arena_table then false
+  if Ref.User.Set.mem r !no_arena_table then false
   else
     match arena_ref_key_string r with
     | None -> true
@@ -2518,7 +2508,7 @@ let should_use_arena_at_runtime r =
              !no_arena_suffix_table)
 
 let add_no_arena_entries l =
-  no_arena_table := List.fold_right Refset'.add l !no_arena_table;
+  no_arena_table := List.fold_right Ref.User.Set.add l !no_arena_table;
   List.iter
     (fun r ->
       match arena_ref_key_string r with
@@ -2556,7 +2546,7 @@ let extraction_no_arena l =
    later re-resolved by Crane's codegen (which sees it via the module's
    external/extraction-time-elaborated copy) -- confirmed via debug tracing:
    both resolve to the same [Constant.canonical] printed string, yet neither
-   [GlobRef.Map] (canonical-KerName-based) nor [Refmap'] (user-KerName-based)
+   [GlobRef.Map] (canonical-KerName-based) nor [Ref.User.Map] (user-KerName-based)
    report a match. String-keying on the canonical path collapses these two
    while still requiring an exact dirpath+label match, so it does not
    resurrect the earlier same-named-different-modules Label-keying collision
@@ -2666,44 +2656,44 @@ let extraction_language x = Lib.add_leaf (extr_lang x)
 
 (* Keyed canonically, as [customs] is: inlining a definition inlines it
    under every name it is reached by. *)
-let empty_inline_table = (RefsetCan.empty, RefsetCan.empty)
+let empty_inline_table = (Ref.Can.Set.empty, Ref.Can.Set.empty)
 
 let inline_table = Summary.ref empty_inline_table ~name:"CraneExtrInline"
 
-let to_inline r = RefsetCan.mem r (fst !inline_table)
+let to_inline r = Ref.Can.Set.mem r (fst !inline_table)
 
 (* Extension for supporting foreign function call extraction. *)
 
-let empty_foreign_set = RefsetCan.empty
+let empty_foreign_set = Ref.Can.Set.empty
 
 let foreign_set = Summary.ref empty_foreign_set ~name:"CraneExtrForeign"
 
-let to_foreign r = RefsetCan.mem r !foreign_set
+let to_foreign r = Ref.Can.Set.mem r !foreign_set
 
 (* End of Extension for supporting foreign function call extraction. *)
 
 (* Extension for supporting callback registration extraction. *)
 
 (* A map from qualid to string opt (alias) *)
-let empty_callback_map = Refmap'.empty
+let empty_callback_map = Ref.User.Map.empty
 
 let callback_map = Summary.ref empty_callback_map ~name:"CraneExtrCallback"
 
 (* End of Extension for supporting callback registration extraction. *)
 
-let to_keep r = RefsetCan.mem r (snd !inline_table)
+let to_keep r = Ref.Can.Set.mem r (snd !inline_table)
 
 let add_inline_entries b l =
-  let f b = if b then RefsetCan.add else RefsetCan.remove in
+  let f b = if b then Ref.Can.Set.add else Ref.Can.Set.remove in
   let i, k = !inline_table in
   inline_table := (List.fold_right (f b) l i, List.fold_right (f (not b)) l k)
 
 let add_foreign_entries l =
-  foreign_set := List.fold_right RefsetCan.add l !foreign_set
+  foreign_set := List.fold_right Ref.Can.Set.add l !foreign_set
 
 (* Adds the qualid_ref and alias opt to the callback_map. *)
 let add_callback_entry alias_opt qualid_ref =
-  callback_map := Refmap'.add qualid_ref alias_opt !callback_map
+  callback_map := Ref.User.Map.add qualid_ref alias_opt !callback_map
 
 (* Registration of operations for rollback. *)
 
@@ -2751,7 +2741,7 @@ let extraction_inline b l =
 let print_extraction_inline () =
   let i, n = !inline_table in
   let i' =
-    RefsetCan.filter
+    Ref.Can.Set.filter
       (function
         | GlobRef.ConstRef _ -> true
         | _ -> false )
@@ -2759,13 +2749,13 @@ let print_extraction_inline () =
   in
   str "Extraction Inline:"
   ++ fnl ()
-  ++ RefsetCan.fold
+  ++ Ref.Can.Set.fold
        (fun r p -> p ++ str "  " ++ safe_pr_long_global r ++ fnl ())
        i'
        (mt ())
   ++ str "Extraction NoInline:"
   ++ fnl ()
-  ++ RefsetCan.fold
+  ++ Ref.Can.Set.fold
        (fun r p -> p ++ str "  " ++ safe_pr_long_global r ++ fnl ())
        n
        (mt ())
@@ -2813,12 +2803,12 @@ type int_or_id =
   | ArgInt of int
   | ArgId of Id.t
 
-let implicits_table = Summary.ref Refmap'.empty ~name:"CraneExtrImplicit"
+let implicits_table = Summary.ref Ref.User.Map.empty ~name:"CraneExtrImplicit"
 
 (** Returns the set of argument positions marked as implicit for extraction of
     global reference [r]. *)
 let implicits_of_global r =
-  match Refmap'.find_opt r !implicits_table with
+  match Ref.User.Map.find_opt r !implicits_table with
   | Some s -> s
   | None -> Int.Set.empty
 
@@ -2844,7 +2834,7 @@ let add_implicits r l =
       err (str "No argument " ++ Id.print id ++ str " for " ++ safe_pr_global r)
   in
   let ints = List.fold_left add_arg Int.Set.empty l in
-  implicits_table := Refmap'.add r ints !implicits_table
+  implicits_table := Ref.User.Map.add r ints !implicits_table
 
 (* Registration of operations for rollback. *)
 
@@ -2873,12 +2863,12 @@ let modfile_mps = ref MPmap.empty
     (e.g. [String.string] → [namespace String { struct String { ... }; }]).
     Referenced by both [Translation] and the [Cpp_state]/[Cpp_print] pipeline
     so it lives here to avoid a dependency cycle. *)
-let promoted_inductives : (GlobRef.t, unit) Hashtbl.t = Hashtbl.create 4
+let promoted_inductives : unit Ref.User.Tbl.t = Ref.User.Tbl.create 4
 
 (** Record that [r] is promoted.  A promotion outlives the rendering that
     decided it: every later mention of the inductive has to spell it the
     promoted way. *)
-let promote_inductive r = Hashtbl.replace promoted_inductives r ()
+let promote_inductive r = Ref.User.Tbl.replace promoted_inductives r ()
 
 (** Run [body] with [r] not promoted, putting its promotion back afterwards.
 
@@ -2889,8 +2879,8 @@ let with_demoted_inductive r body =
   match r with
   | None -> body ()
   | Some r ->
-    let was_promoted = Hashtbl.mem promoted_inductives r in
-    Hashtbl.remove promoted_inductives r;
+    let was_promoted = Ref.User.Tbl.mem promoted_inductives r in
+    Ref.User.Tbl.remove promoted_inductives r;
     Fun.protect
       ~finally:(fun () -> if was_promoted then promote_inductive r)
       body
@@ -2997,18 +2987,18 @@ let reset_extraction_blacklist () = Lib.add_leaf (reset_blacklist ())
 (** {2 Crane Extract Constant/Inductive} *)
 
 (* Track which custom GlobRefs are actually used during extraction. *)
-let used_refs = ref Refset'.empty
+let used_refs = ref Ref.User.Set.empty
 
 let mark_custom_used r =
-  used_refs := Refset'.add r !used_refs;
+  used_refs := Ref.User.Set.add r !used_refs;
   (* When a constructor is used, also mark its parent inductive so that imports
      registered on the IndRef are included. *)
   match r with
   | GlobRef.ConstructRef (ip, _) ->
-    used_refs := Refset'.add (GlobRef.IndRef ip) !used_refs
+    used_refs := Ref.User.Set.add (GlobRef.IndRef ip) !used_refs
   | _ -> ()
 
-let reset_used_custom_imports () = used_refs := Refset'.empty
+let reset_used_custom_imports () = used_refs := Ref.User.Set.empty
 
 let () = on_reset reset_used_custom_imports
 
@@ -3039,11 +3029,11 @@ let warn_overlapping_mapping =
       ++ strbrk "Mapping modules were imported together.")
 
 let add_custom r ids s =
-  (match RefmapCan.find_opt r !customs with
+  (match Ref.Can.Map.find_opt r !customs with
   | Some (_old_ids, old_s) when not (String.equal old_s s) ->
     warn_overlapping_mapping (r, old_s, s)
   | _ -> ());
-  customs := RefmapCan.add r (ids, s) !customs
+  customs := Ref.Can.Map.add r (ids, s) !customs
 
 (** Whether [r1] and [r2] are inductive types declared in the same mutual
     block ([tree] and [forest] of an [Inductive tree ... with forest ...]).
@@ -3054,7 +3044,7 @@ let same_mutual_block r1 r2 =
   | GlobRef.IndRef (m1, _), GlobRef.IndRef (m2, _) -> MutInd.CanOrd.equal m1 m2
   | _ -> false
 
-let is_custom r = RefmapCan.mem r !customs
+let is_custom r = Ref.Can.Map.mem r !customs
 
 (** Whether an inductive packet is generated as a flat struct -- its one
     constructor's fields directly, with no variant: an ordinary inductive
@@ -3138,18 +3128,18 @@ let is_inline_custom r = is_custom r && to_inline r
 (** The replacement text of the inline custom [r], without marking [r] used:
     reading a template to reason about it is not using it. *)
 let inline_custom_text r =
-  if to_inline r then Option.map snd (RefmapCan.find_opt r !customs) else None
+  if to_inline r then Option.map snd (Ref.Can.Map.find_opt r !customs) else None
 
 let is_foreign_custom r = is_custom r && to_foreign r
 
-let find_callback r = Refmap'.find r !callback_map
+let find_callback r = Ref.User.Map.find r !callback_map
 
 let find_custom r =
   mark_custom_used r;
-  snd (RefmapCan.find r !customs)
+  snd (Ref.Can.Map.find r !customs)
 
 let find_custom_opt r =
-  match RefmapCan.find_opt r !customs with
+  match Ref.Can.Map.find_opt r !customs with
   | Some (ids, s) ->
     mark_custom_used r;
     Some s
@@ -3181,7 +3171,7 @@ let trivially_copyable_heads =
     Both keys are needed because the question is asked from both sides: a
     [Tglob] still knows its {!GlobRef.t}, while a type Crane has already
     rendered to a name has nothing left but the name. *)
-let trivially_copyable_refs = Summary.ref Refset'.empty ~name:"CraneExtrTCRefs"
+let trivially_copyable_refs = Summary.ref Ref.User.Set.empty ~name:"CraneExtrTCRefs"
 
 (** True when [s] names a C++ scalar type that is trivially copyable, or names
     a type the user declared with [Crane TriviallyCopyable].
@@ -3238,7 +3228,7 @@ let trivially_copyable_object : GlobRef.t * string -> obj =
        ~cache:(fun (r, s) ->
          trivially_copyable_heads :=
            CString.Set.add s !trivially_copyable_heads;
-         trivially_copyable_refs := Refset'.add r !trivially_copyable_refs )
+         trivially_copyable_refs := Ref.User.Set.add r !trivially_copyable_refs )
        ~subst:(Some (fun (sub, (r, s)) -> (fst (subst_global sub r), s)))
        ~discharge:(fun x -> Some x)
 
@@ -3246,7 +3236,7 @@ let trivially_copyable_object : GlobRef.t * string -> obj =
     [Crane TriviallyCopyable].  The declaration is conditional: the caller
     must still check the type arguments. *)
 let is_trivially_copyable_ref (r : GlobRef.t) : bool =
-  Refset'.mem r !trivially_copyable_refs
+  Ref.User.Set.mem r !trivially_copyable_refs
 
 (** Declare that the C++ type each of [l] is mapped to is trivially copyable
     whenever its type arguments are.
@@ -3262,7 +3252,7 @@ let extraction_trivially_copyable (l : qualid list) =
       let r = Smartlocate.global_with_alias q in
       (* Read [customs] directly rather than through [find_custom_opt], which
          would mark the mapping used and pull in its headers. *)
-      match RefmapCan.find_opt r !customs with
+      match Ref.Can.Map.find_opt r !customs with
       | Some (_, s) ->
         Lib.add_leaf (trivially_copyable_object (r, template_head s))
       | None ->
@@ -3290,11 +3280,11 @@ let reserved_global_cpp_names =
 let escape_reserved_struct_name s =
   if List.mem s reserved_global_cpp_names then s ^ "_" else s
 
-let find_type_custom r = RefmapCan.find r !customs
+let find_type_custom r = Ref.Can.Map.find r !customs
 
-let custom_matchs = Summary.ref Refmap'.empty ~name:"CraneExtrCustomMatchs"
+let custom_matchs = Summary.ref Ref.User.Map.empty ~name:"CraneExtrCustomMatchs"
 
-let add_custom_match r s = custom_matchs := Refmap'.add r s !custom_matchs
+let add_custom_match r s = custom_matchs := Ref.User.Map.add r s !custom_matchs
 
 (* Completeness-aware element wrapping (see WRAP.md).
 
@@ -3305,11 +3295,11 @@ let add_custom_match r s = custom_matchs := Refmap'.add r s !custom_matchs
    type/nil templates spell the (possibly wrapped) element with [%elem]; the
    match/cons templates keep [%t0]/[%aN] (bare — relying on the wrapper's
    implicit conversions), so nothing is boxed unless the element is recursive. *)
-let boxed_wrappers = Summary.ref Refmap'.empty ~name:"CraneExtrBoxedWrap"
+let boxed_wrappers = Summary.ref Ref.User.Map.empty ~name:"CraneExtrBoxedWrap"
 
-let add_boxed_wrapper r s = boxed_wrappers := Refmap'.add r s !boxed_wrappers
+let add_boxed_wrapper r s = boxed_wrappers := Ref.User.Map.add r s !boxed_wrappers
 
-let find_boxed_wrapper_opt r = Refmap'.find_opt r !boxed_wrappers
+let find_boxed_wrapper_opt r = Ref.User.Map.find_opt r !boxed_wrappers
 
 (* Custom drain templates (iterative-destructor support). Maps a custom container
    inductive (e.g. [list] mapped to [std::deque] / [immer::flex_vector]) to the
@@ -3319,31 +3309,31 @@ let find_boxed_wrapper_opt r = Refmap'.find_opt r !boxed_wrappers
    expression; [%yield(e)] pushes child [e] onto the worklist. Without this the
    iterative destructor assumes a smart-pointer-wrapped container
    ([use_count]/[reset]), which is invalid for bare value-type containers. *)
-let custom_drains = Summary.ref Refmap'.empty ~name:"CraneExtrCustomDrains"
+let custom_drains = Summary.ref Ref.User.Map.empty ~name:"CraneExtrCustomDrains"
 
-let add_custom_drain r s = custom_drains := Refmap'.add r s !custom_drains
+let add_custom_drain r s = custom_drains := Ref.User.Map.add r s !custom_drains
 
-let find_custom_drain_opt r = Refmap'.find_opt r !custom_drains
+let find_custom_drain_opt r = Ref.User.Map.find_opt r !custom_drains
 
 (* Set of inductives that recurse *through* a boxed-element container (e.g.
    [json_value] with a [list json_value] field). Populated during inductive
    codegen; an element type that structurally mentions one of these is
    incomplete at a container-naming site and must be boxed everywhere. Not
    persisted: recomputed within each extraction run. *)
-let boxed_recursive_inds = Summary.ref Refset'.empty ~name:"CraneExtrBoxedRec"
+let boxed_recursive_inds = Summary.ref Ref.User.Set.empty ~name:"CraneExtrBoxedRec"
 
 (* Recomputed within each extraction run (see its definition); cleared so a
    prior run's boxing decisions don't leak into the next. *)
-let () = on_reset (fun () -> boxed_recursive_inds := Refset'.empty)
+let () = on_reset (fun () -> boxed_recursive_inds := Ref.User.Set.empty)
 
 let () =
   register_census "boxed_recursive_inds" (fun () ->
-      Refset'.cardinal !boxed_recursive_inds )
+      Ref.User.Set.cardinal !boxed_recursive_inds )
 
 let add_boxed_recursive_ind r =
-  boxed_recursive_inds := Refset'.add r !boxed_recursive_inds
+  boxed_recursive_inds := Ref.User.Set.add r !boxed_recursive_inds
 
-let is_boxed_recursive_ind r = Refset'.mem r !boxed_recursive_inds
+let is_boxed_recursive_ind r = Ref.User.Set.mem r !boxed_recursive_inds
 
 (** Extracts the inductive reference from a match pattern array by inspecting
     the first branch's constructor. Raises [Not_found] if not possible. *)
@@ -3357,20 +3347,20 @@ let indref_of_match pv =
 
 let is_custom_match pv =
   match indref_of_match pv with
-  | r -> Refmap'.mem r !custom_matchs
+  | r -> Ref.User.Map.mem r !custom_matchs
   | exception Not_found -> false
 
 let find_custom_match pv =
   let r = indref_of_match pv in
   mark_custom_used r;
-  Refmap'.find r !custom_matchs
+  Ref.User.Map.find r !custom_matchs
 
 let find_custom_ctor_templates (ip : Names.inductive) =
   let mib = Global.lookup_mind (fst ip) in
   let n = Array.length mib.mind_packets.(snd ip).mind_consnames in
   List.init n (fun j ->
     let g = GlobRef.ConstructRef (ip, succ j) in
-    match RefmapCan.find_opt g !customs with
+    match Ref.Can.Map.find_opt g !customs with
     | Some (_, s) -> s
     | None -> "")
 
@@ -3380,7 +3370,7 @@ let find_custom_ctor_templates (ip : Names.inductive) =
     formatted as a section with the given title. *)
 let print_constref_extractions ref_set val_lookup_f section_str =
   let i' =
-    Refset'.filter
+    Ref.User.Set.filter
       (function
         | GlobRef.ConstRef _ -> true
         | _ -> false )
@@ -3388,7 +3378,7 @@ let print_constref_extractions ref_set val_lookup_f section_str =
   in
   str section_str
   ++ fnl ()
-  ++ Refset'.fold
+  ++ Ref.User.Set.fold
        (fun r p ->
          p
          ++ str "  "
@@ -3402,12 +3392,12 @@ let print_constref_extractions ref_set val_lookup_f section_str =
 
 let print_extraction_foreign () =
   print_constref_extractions
-    (RefsetCan.fold Refset'.add !foreign_set Refset'.empty)
+    (Ref.Can.Set.fold Ref.User.Set.add !foreign_set Ref.User.Set.empty)
     find_custom
     "Extraction Foreign Constant:"
 
 let print_extraction_callback () =
-  let keys = Refmap'.domain !callback_map in
+  let keys = Ref.User.Map.domain !callback_map in
   print_constref_extractions
     keys
     (fun r ->
@@ -3457,16 +3447,16 @@ let in_custom_drains : GlobRef.t * string -> obj =
    unused mappings (e.g. PrimArray in a file that only uses PrimInt63) from
    injecting spurious #include directives. *)
 
-let ref_imports = Summary.ref Refmap'.empty ~name:"CraneRefImports"
+let ref_imports = Summary.ref Ref.User.Map.empty ~name:"CraneRefImports"
 
 let add_ref_import r s =
   if not (String.is_empty s) then
     let existing =
-      match Refmap'.find_opt r !ref_imports with
+      match Ref.User.Map.find_opt r !ref_imports with
       | Some s -> s
       | None -> StringSet.empty
     in
-    ref_imports := Refmap'.add r (StringSet.add s existing) !ref_imports
+    ref_imports := Ref.User.Map.add r (StringSet.add s existing) !ref_imports
 
 let ref_imports_object : GlobRef.t * string -> obj =
   declare_object
@@ -3476,7 +3466,7 @@ let ref_imports_object : GlobRef.t * string -> obj =
        ~subst:(Some (fun (sub, (r, s)) -> (fst (subst_global sub r), s)))
 
 let get_ref_import_list r =
-  match Refmap'.find_opt r !ref_imports with
+  match Ref.User.Map.find_opt r !ref_imports with
   | Some imports -> StringSet.elements imports
   | None -> []
 
@@ -3490,9 +3480,9 @@ let custom_imports = Summary.ref empty_custom_imports ~name:"CraneCustomImports"
    referenced during extraction, plus any legacy global imports. *)
 let get_custom_imports () =
   let used_imports =
-    Refset'.fold
+    Ref.User.Set.fold
       (fun r acc ->
-        match Refmap'.find_opt r !ref_imports with
+        match Ref.User.Map.find_opt r !ref_imports with
         | Some imports -> StringSet.union imports acc
         | None -> acc )
       !used_refs
@@ -3731,26 +3721,26 @@ let register_glob_def id ty =
   add_type id ty;
   Lib.add_leaf (glob_def_registration (id, ty))
 
-let monads = Summary.ref Refmap'.empty ~name:"CraneExtrMonad"
+let monads = Summary.ref Ref.User.Map.empty ~name:"CraneExtrMonad"
 
-let binds = Summary.ref Refmap'.empty ~name:"CraneExtrMonadBind"
+let binds = Summary.ref Ref.User.Map.empty ~name:"CraneExtrMonadBind"
 
-let rets = Summary.ref Refmap'.empty ~name:"CraneExtrMonadRet"
+let rets = Summary.ref Ref.User.Map.empty ~name:"CraneExtrMonadRet"
 
-let add_monad m b r s = monads := Refmap'.add m (b, r, s) !monads
+let add_monad m b r s = monads := Ref.User.Map.add m (b, r, s) !monads
 
-let add_bind m b r s = binds := Refmap'.add b (m, r, s) !binds
+let add_bind m b r s = binds := Ref.User.Map.add b (m, r, s) !binds
 
-let add_ret m b r s = rets := Refmap'.add r (m, b, s) !rets
+let add_ret m b r s = rets := Ref.User.Map.add r (m, b, s) !rets
 
-let is_monad m = Refmap'.mem m !monads
+let is_monad m = Ref.User.Map.mem m !monads
 
-let is_bind b = Refmap'.mem b !binds
+let is_bind b = Ref.User.Map.mem b !binds
 
-let is_ret r = Refmap'.mem r !rets
+let is_ret r = Ref.User.Map.mem r !rets
 
 let get_monad_template_opt m =
-  match Refmap'.find_opt m !monads with
+  match Ref.User.Map.find_opt m !monads with
   | Some (_, _, template) -> Some template
   | None -> None
 
@@ -3812,17 +3802,17 @@ let extract_monad m b r s imports =
     handle_monad_extraction mon bind ret s imports
   | _ -> error_constant ?loc:m.CAst.loc mon
 
-let void_ty = Summary.ref Refmap'.empty ~name:"CraneVoidTy"
+let void_ty = Summary.ref Ref.User.Map.empty ~name:"CraneVoidTy"
 
-let ghost_tm = Summary.ref Refmap'.empty ~name:"CraneVoidTm"
+let ghost_tm = Summary.ref Ref.User.Map.empty ~name:"CraneVoidTm"
 
-let add_void_ty v g = void_ty := Refmap'.add v g !void_ty
+let add_void_ty v g = void_ty := Ref.User.Map.add v g !void_ty
 
-let add_ghost_tm v g = ghost_tm := Refmap'.add g v !ghost_tm
+let add_ghost_tm v g = ghost_tm := Ref.User.Map.add g v !ghost_tm
 
-let is_void v = Refmap'.mem v !void_ty
+let is_void v = Ref.User.Map.mem v !void_ty
 
-let is_ghost g = Refmap'.mem g !ghost_tm
+let is_ghost g = Ref.User.Map.mem g !ghost_tm
 
 (** Cached GlobRef for Rocq's [unit] type and [tt] constructor. *)
 let unit_type_ref : GlobRef.t option ref = ref None
@@ -3949,24 +3939,24 @@ type numeral_info = {
        info can still ask what C++ type the literal has to fit in. *)
 }
 
-let numeral_table = Summary.ref Refmap'.empty ~name:"CraneExtrNumeral"
+let numeral_table = Summary.ref Ref.User.Map.empty ~name:"CraneExtrNumeral"
 
 (* Reverse lookup: converter function → numeral inductive it targets. *)
-let converter_table = Summary.ref Refmap'.empty ~name:"CraneExtrNumeralConv"
+let converter_table = Summary.ref Ref.User.Map.empty ~name:"CraneExtrNumeralConv"
 
 let add_numeral_inductive r info =
-  numeral_table := Refmap'.add r info !numeral_table;
+  numeral_table := Ref.User.Map.add r info !numeral_table;
   List.iter
-    (fun conv -> converter_table := Refmap'.add conv r !converter_table)
+    (fun conv -> converter_table := Ref.User.Map.add conv r !converter_table)
     info.num_converters
 
-let is_numeral_inductive r = Refmap'.mem r !numeral_table
+let is_numeral_inductive r = Ref.User.Map.mem r !numeral_table
 
-let get_numeral_info r = Refmap'.find_opt r !numeral_table
+let get_numeral_info r = Ref.User.Map.find_opt r !numeral_table
 
-let is_numeral_converter r = Refmap'.mem r !converter_table
+let is_numeral_converter r = Ref.User.Map.mem r !converter_table
 
-let numeral_ind_of_converter r = Refmap'.find_opt r !converter_table
+let numeral_ind_of_converter r = Ref.User.Map.find_opt r !converter_table
 
 let in_numeral : GlobRef.t * numeral_info -> obj =
   declare_object

@@ -8,7 +8,6 @@ open Common
 open Miniml
 open Minicpp
 open Names
-open Table
 open Util
 open Ml_type_util
 open Translation
@@ -56,7 +55,7 @@ let gen_record_cpp name fields ind =
         all_vars
     in
     let ct =
-      convert_ml_type_to_cpp_type (empty_env ()) ~ns:(Refset'.singleton name)
+      convert_ml_type_to_cpp_type (empty_env ()) ~ns:(Ref.User.Set.singleton name)
         spelling t
     in
         let ct = Minicpp.map_cpp_type replace_promoted ct in

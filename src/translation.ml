@@ -3529,7 +3529,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
               let inner_g = match inner with
                 | Tglob (g, _, _) -> Some g | _ -> None in
               ( match inner_g with
-              | Some g when Refset'.mem g (!tctx).method_self_ns ->
+              | Some g when Ref.User.Set.mem g (!tctx).method_self_ns ->
                 mk_call (CPPalloc (Alloc_heap, inner)) [expr]
               | _ -> expr )
             | ct when prints_as_any ct
@@ -4395,7 +4395,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           match ty with
           | Tglob ((GlobRef.IndRef (kn, _) as n), _, _) ->
             let t =
-              convert_ml_type_to_cpp_type env ~ns:(Refset'.singleton n) tvars ft
+              convert_ml_type_to_cpp_type env ~ns:(Ref.User.Set.singleton n) tvars ft
             in
             if Table.get_ind_num_param_vars_opt kn = Some 0 then
               Ml_type_util.tvar_erase_type t
@@ -4464,7 +4464,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                   | None -> expr
                 in
                 let storage_ty =
-                  convert_ml_type_to_cpp_type env ~ns:(Refset'.singleton n) tvars ft
+                  convert_ml_type_to_cpp_type env ~ns:(Ref.User.Set.singleton n) tvars ft
                 in
                 let api_ty =
                   cpp_of_ml env ft
@@ -4543,7 +4543,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       | Some record_ref, Some ml_ty ->
         let tvars = get_current_type_vars () in
         let storage_ty =
-          convert_ml_type_to_cpp_type env ~ns:(Refset'.singleton record_ref)
+          convert_ml_type_to_cpp_type env ~ns:(Ref.User.Set.singleton record_ref)
             tvars
             ml_ty
         in
@@ -4896,7 +4896,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
               match typ with
               | Tglob (record_ref, _, _) ->
                 let storage_ty =
-                  convert_ml_type_to_cpp_type env ~ns:(Refset'.singleton record_ref)
+                  convert_ml_type_to_cpp_type env ~ns:(Ref.User.Set.singleton record_ref)
                     []
                     ty
                 in
@@ -7328,7 +7328,7 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
       && (match List.nth_opt non_erased_def_site_field_tys i with
           | Some def_ty when num_pv = 0 ->
             let cpp_ty =
-              convert_ml_type_to_cpp_type (empty_env ()) ~ns:(Refset'.singleton ind_ref) [] def_ty
+              convert_ml_type_to_cpp_type (empty_env ()) ~ns:(Ref.User.Set.singleton ind_ref) [] def_ty
             in
             has_unnamed_tvar cpp_ty
           | Some (Miniml.Tvar (_, k)) ->
@@ -7360,7 +7360,7 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
           cpp_of_ml env ml_ty
         in
         let storage_field_cpp_ty =
-          convert_ml_type_to_cpp_type env ~ns:(Refset'.singleton ind_ref)
+          convert_ml_type_to_cpp_type env ~ns:(Ref.User.Set.singleton ind_ref)
             tvars
             ml_ty
         in
@@ -8222,9 +8222,9 @@ and gen_cpp_custom_body env k rty ids body scrut_ind_opt =
               | Miniml.Tglob (g, [], _) -> GlobRef.CanOrd.equal g g_scrut
               | _ -> false
             in
-            if is_direct_self_ref then Refset'.empty
-            else Refset'.singleton g_scrut
-          | _ -> Refset'.empty
+            if is_direct_self_ref then Ref.User.Set.empty
+            else Ref.User.Set.singleton g_scrut
+          | _ -> Ref.User.Set.empty
         in
         (x, convert_ml_type_to_cpp_type env ~ns tvars ty) )
       (List.rev ids)
@@ -10420,7 +10420,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
               match typ with
               | Tglob (record_ref, _, _) ->
                 let storage_ty =
-                  convert_ml_type_to_cpp_type env ~ns:(Refset'.singleton record_ref)
+                  convert_ml_type_to_cpp_type env ~ns:(Ref.User.Set.singleton record_ref)
                     tvars
                     ty
                 in
@@ -10679,7 +10679,7 @@ let with_method_ns_for_locals ?base (f : unit -> 'a) : 'a =
     List.fold_left
       (fun acc g ->
         if Table.has_recursive_fields g && not (is_enum_inductive g)
-        then Refset'.add g acc
+        then Ref.User.Set.add g acc
         else acc)
       (Option.default (!tctx).method_self_ns base)
       (get_local_inductives ())

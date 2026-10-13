@@ -31,13 +31,13 @@ open Minicpp
     {!Cpp_print} (which suppresses [__attribute__((pure))] on functions whose
     type mentions one, since they may call a throwing axiom stub). *)
 
-let axiom_type_refs : (GlobRef.t, unit) Hashtbl.t = Hashtbl.create 16
+let axiom_type_refs : unit Ref.User.Tbl.t = Ref.User.Tbl.create 16
 
 (** Register a GlobRef as an axiom type. *)
-let register_axiom_type (r : GlobRef.t) = Hashtbl.replace axiom_type_refs r ()
+let register_axiom_type (r : GlobRef.t) = Ref.User.Tbl.replace axiom_type_refs r ()
 
 (** Whether a GlobRef has been registered as an axiom type. *)
-let is_axiom_type_ref (r : GlobRef.t) = Hashtbl.mem axiom_type_refs r
+let is_axiom_type_ref (r : GlobRef.t) = Ref.User.Tbl.mem axiom_type_refs r
 
 (** {2 The boxedness oracle} *)
 

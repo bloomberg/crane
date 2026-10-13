@@ -14,7 +14,6 @@ open Common
 open Miniml
 open Minicpp
 open Names
-open Table
 
 (** {1 Translation: MiniML to MiniCpp}
 
@@ -51,7 +50,7 @@ val get_local_inductives : unit -> GlobRef.t list
 (** [with_method_ns_for_locals () f] runs [f] with the module's local
     inductives added to [method_self_ns], restoring the enclosing namespace on
     the way out however [f] leaves. *)
-val with_method_ns_for_locals : ?base:Refset'.t -> (unit -> 'a) -> 'a
+val with_method_ns_for_locals : ?base:Ref.User.Set.t -> (unit -> 'a) -> 'a
 
 (** Return the codomain of an ML type, chasing through arrows and meta
     indirections. For [A -> B -> C] this returns [C]. *)
@@ -68,7 +67,7 @@ val ml_codomain : Miniml.ml_type -> Miniml.ml_type
     @param tvars Type variable names for substitution
     @param ml_type The ML type to convert *)
 val convert_ml_type_to_cpp_type :
-  env -> ?ns:Refset'.t -> Id.t list -> ml_type -> cpp_type
+  env -> ?ns:Ref.User.Set.t -> Id.t list -> ml_type -> cpp_type
 
 (** Check if a C++ type is erased to std::any (for indexed inductive methods).
     Returns true if the type is Tany or contains an unnamed Tvar. *)

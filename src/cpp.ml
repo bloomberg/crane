@@ -2308,7 +2308,7 @@ let concept_prereqs ~wrapper_sels (s : ml_structure) : Names.Label.Set.t =
   let add_type_refs acc ty =
     let rec go acc = function
       | Miniml.Tglob (r, args, _) ->
-        List.fold_left go (Refset'.add r acc) args
+        List.fold_left go (Ref.User.Set.add r acc) args
       | Miniml.Tarr (a, b) -> go (go acc a) b
       | Miniml.Tmeta {contents = Some t} -> go acc t
       | _ -> acc
@@ -2337,7 +2337,7 @@ let concept_prereqs ~wrapper_sels (s : ml_structure) : Names.Label.Set.t =
               acc ind.Miniml.ind_packets
           | _ -> acc )
         | _ -> acc )
-      Refset'.empty elements
+      Ref.User.Set.empty elements
   in
   let packet_refs kn ind =
     List.init (Array.length ind.Miniml.ind_packets) (fun i ->
@@ -2352,7 +2352,7 @@ let concept_prereqs ~wrapper_sels (s : ml_structure) : Names.Label.Set.t =
           Array.fold_left
             (fun acc tys -> List.fold_left add_type_refs acc tys)
             acc p.Miniml.ip_types )
-        Refset'.empty ind.Miniml.ind_packets
+        Ref.User.Set.empty ind.Miniml.ind_packets
     in
     List.fold_left
       (fun acc r ->
@@ -2371,7 +2371,7 @@ let concept_prereqs ~wrapper_sels (s : ml_structure) : Names.Label.Set.t =
   let label_of (mp, l, se) (needed, complete) =
     match se with
     | Miniml.SEdecl (Miniml.Dtype (r, _, _)) ->
-      if Refset'.mem r needed then Some l else None
+      if Ref.User.Set.mem r needed then Some l else None
     | Miniml.SEdecl (Miniml.Dind (kn, ind)) -> (
       match ind.Miniml.ind_kind with
       | Miniml.TypeClass _ -> None
@@ -2379,8 +2379,8 @@ let concept_prereqs ~wrapper_sels (s : ml_structure) : Names.Label.Set.t =
         if
           List.exists
             (fun r ->
-              Refset'.mem r complete
-              || (Refset'.mem r needed && Cpp_print.nested_in_wrapper r) )
+              Ref.User.Set.mem r complete
+              || (Ref.User.Set.mem r needed && Cpp_print.nested_in_wrapper r) )
             (packet_refs kn ind)
         then Some l
         else None )
@@ -2391,7 +2391,7 @@ let concept_prereqs ~wrapper_sels (s : ml_structure) : Names.Label.Set.t =
         || match m with MPdot (m', _) -> under m' | _ -> false
       in
       if
-        Refset'.exists
+        Ref.User.Set.exists
           (fun r -> under (modpath_of_r r))
           needed
       then Some l
@@ -2412,20 +2412,20 @@ let concept_prereqs ~wrapper_sels (s : ml_structure) : Names.Label.Set.t =
                 (add_type_refs needed ty, complete)
               | Miniml.SEdecl (Miniml.Dind (kn, ind)) ->
                 let body = body_refs kn ind in
-                (Refset'.union body needed, Refset'.union body complete)
+                (Ref.User.Set.union body needed, Ref.User.Set.union body complete)
               | _ -> refs
             in
             (labels, refs) )
         (labels, refs) elements
     in
     if
-      Refset'.equal needed needed'
-      && Refset'.equal complete complete'
+      Ref.User.Set.equal needed needed'
+      && Ref.User.Set.equal complete complete'
       && Names.Label.Set.equal labels labels'
     then labels'
     else fixpoint (needed', complete') labels'
   in
-  fixpoint (seed, Refset'.empty) Names.Label.Set.empty
+  fixpoint (seed, Ref.User.Set.empty) Names.Label.Set.empty
 
 (** Main structure renderer with declaration tracking.
 

@@ -246,7 +246,7 @@ type registered_fn = {
 }
 
 (** Table mapping GlobRef → definition, for function definitions. *)
-let mutual_fn_table : (GlobRef.t, registered_fn) Hashtbl.t = Hashtbl.create 32
+let mutual_fn_table : registered_fn Ref.User.Tbl.t = Ref.User.Tbl.create 32
 
 (** Register a function definition for mutual recursion detection. Each
     [GlobRef.t] in [refs] maps to the function's definition. *)
@@ -256,7 +256,7 @@ let register_fundef
     (params : (Id.t * cpp_type) list)
     (body : cpp_stmt list) =
   List.iter
-    (fun (r, _) -> Hashtbl.replace mutual_fn_table r {rf_ret_ty = ret_ty; rf_params = params; rf_body = body})
+    (fun (r, _) -> Ref.User.Tbl.replace mutual_fn_table r {rf_ret_ty = ret_ty; rf_params = params; rf_body = body})
     refs
 
 (** [register_decl d] registers [d] with {!register_fundef} if it is a
@@ -272,7 +272,7 @@ let register_decl = function
   | _ -> ()
 
 (** Clear the mutual recursion table. Called between extraction units. *)
-let clear_mutual_table () = Hashtbl.clear mutual_fn_table
+let clear_mutual_table () = Ref.User.Tbl.clear mutual_fn_table
 
 let () = State.on_reset State.Unit clear_mutual_table
 

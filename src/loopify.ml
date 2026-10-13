@@ -294,11 +294,11 @@ let try_inline_mutual_into names body =
       if List.exists (Common.globref_equal r) !visited then false
       else begin
         visited := r :: !visited;
-        match Hashtbl.find_opt mutual_fn_table r with
+        match Ref.User.Tbl.find_opt mutual_fn_table r with
         | None -> false
         | Some {rf_body = b; _} ->
           body_calls_any_ref self_refs b
-          || Hashtbl.fold
+          || Ref.User.Tbl.fold
                (fun r2 _ acc ->
                  acc
                  || ((not (is_self r2)) && body_calls_reg r2 b && go r2) )
@@ -311,7 +311,7 @@ let try_inline_mutual_into names body =
   let find_registered_callee_by_ref r =
     if is_self r then None
     else
-      match Hashtbl.find_opt mutual_fn_table r with
+      match Ref.User.Tbl.find_opt mutual_fn_table r with
       | Some {rf_ret_ty; rf_params; rf_body} when reaches_self r ->
         Some (r, rf_ret_ty, rf_params, rf_body)
       | _ -> None
@@ -428,7 +428,7 @@ let try_inline_mutual_into names body =
       | None -> body
       | Some callee -> loop (inline_one callee body) (iters - 1)
   in
-  loop body (Hashtbl.length mutual_fn_table + 1)
+  loop body (Ref.User.Tbl.length mutual_fn_table + 1)
 
 (** {2 Inner lambda loopification}
 
@@ -1013,7 +1013,7 @@ let try_inline_functional_into names body =
   let lookup_functional callee =
     match callee with
     | CPPglob (r, _, _) when not (is_self_call callee) ->
-      Hashtbl.find_opt mutual_fn_table r
+      Ref.User.Tbl.find_opt mutual_fn_table r
     | _ -> None
   in
   (* Find, anywhere in [body], a call to a registered functional with an

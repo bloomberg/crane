@@ -481,7 +481,7 @@ let mk_itree_type (r_cpp : cpp_type) : cpp_type =
 (** Recursively wrap [Tglob] inductive references with [Tnamespace] so that
     the type printer produces fully-qualified names.  The [~skip]
     predicate controls which references are left unwrapped: [qualify_inductives]
-    wraps all inductives, while [qualify_inductives ~skip:(Refset'.mem g set)]
+    wraps all inductives, while [qualify_inductives ~skip:(Ref.User.Set.mem g set)]
     leaves members of [set] bare.  Used when the rendered type will appear in
     a context where inductives may not be in scope (e.g. [clone_as_value]
     template arguments in standalone free functions). *)

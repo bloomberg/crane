@@ -40,7 +40,7 @@ val pp_global_name : Common.kind -> Names.GlobRef.t -> Pp.t
 (** {2 Full paths and module names} *)
 
 (** Cache mapping globals to their fully-qualified path strings. *)
-val globref_full_path_cache : (Names.GlobRef.t, string) Hashtbl.t
+val globref_full_path_cache : string Ref.User.Tbl.t
 
 (** The fully-qualified path string of a global. *)
 val globref_full_path : Names.GlobRef.t -> string

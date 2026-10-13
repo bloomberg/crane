@@ -24,12 +24,6 @@ open Libnames
 open Miniml
 open Declarations
 
-(** Sets of global references, keyed on the canonical form of [GlobRef.t]. *)
-module Refset' : CSig.USetS with type elt = GlobRef.t
-
-(** Maps from global references (canonical [GlobRef.t]) to arbitrary values. *)
-module Refmap' : CSig.UMapS with type key = GlobRef.t
-
 (** Get a safe basename identifier from a global reference. *)
 val safe_basename_of_global : GlobRef.t -> Id.t
 
@@ -1338,7 +1332,7 @@ val print_extraction_blacklist : unit -> Pp.t
 (** Inductives promoted into their own namespace struct (e.g. String.string →
     [namespace String { struct String }]).  Lives here to break the
     Translation ↔ Cpp_state cycle. *)
-val promoted_inductives : (GlobRef.t, unit) Hashtbl.t
+val promoted_inductives : unit Ref.User.Tbl.t
 
 (** Record that a reference is promoted; see {!promoted_inductives}.  A
     promotion outlives the rendering that decided it. *)

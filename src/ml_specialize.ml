@@ -14,8 +14,8 @@ let same = GlobRef.CanOrd.equal
 type def = Term of ml_ast * ml_type | Fix of ml_fix_def
 
 let definitions struc =
-  let defs = ref Table.Refmap'.empty in
-  let add r d = defs := Table.Refmap'.add r d !defs in
+  let defs = ref Ref.User.Map.empty in
+  let add r d = defs := Ref.User.Map.add r d !defs in
   let rec elems l =
     List.iter
       (fun (_, se) ->
@@ -43,7 +43,7 @@ let body_of defs g tys =
         Some (Mlutil.ast_map_types (Mlutil.type_subst_list tys) body)
       else None
     in
-    match Table.Refmap'.find_opt g defs with
+    match Ref.User.Map.find_opt g defs with
     | Some (Term (b, ty)) -> at b ty
     | Some (Fix fd) -> at fd.fd_body fd.fd_type
     | None -> None
@@ -303,7 +303,7 @@ let decl defs r body ty =
   let ps, inner = Mlutil.collect_lams body in
   match inner with
   | MLapp (MLglob (f, tys), args) when not (Table.is_custom r) -> (
-    match Table.Refmap'.find_opt f defs with
+    match Ref.User.Map.find_opt f defs with
     | Some (Fix fd) when not (Table.is_custom f) -> (
       match specialize f fd tys args with
       | None -> None

@@ -306,7 +306,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
      (matching how struct fields are defined).  Then strip the top-level
      shared_ptr for the method's own type (value-type inductives are
      passed/returned by value, not by shared_ptr). *)
-  let method_ns = Refset'.singleton name in
+  let method_ns = Ref.User.Set.singleton name in
   let rec strip_self_ptr ty =
     match ty with
     | Tshared_ptr (Tglob (g, _, _)) when not (is_enum_inductive g) ->
@@ -497,7 +497,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
   let method_k x =
     if is_cofix_method then
       suspend_whole
-        ~cpp_of:(convert_ml_type_to_cpp_type (empty_env ()) ~ns:(Refset'.singleton name) vars)
+        ~cpp_of:(convert_ml_type_to_cpp_type (empty_env ()) ~ns:(Ref.User.Set.singleton name) vars)
         ~cod:ret_cpp ret_ty x
     else
       Sreturn (Some x)
@@ -1086,7 +1086,7 @@ let gen_ind_header_v2
          field type. *)
       let field_storage_ty var_names ty =
         let cpp_ty =
-          convert_ml_type_to_cpp_type (empty_env ()) ~ns:(Refset'.singleton name)
+          convert_ml_type_to_cpp_type (empty_env ()) ~ns:(Ref.User.Set.singleton name)
             var_names
             ty
         in

@@ -11,47 +11,45 @@
     parameterised by a family, and that used to be a hook {!Table} installed
     into {!Minicpp} at load time. *)
 
-open Names
 
 (* Positions declared [template <typename> class], each with its arity. *)
-let template_template : (GlobRef.t, (int * int) list) Hashtbl.t =
-  Hashtbl.create 16
+let template_template : (int * int) list Ref.User.Tbl.t = Ref.User.Tbl.create 16
 
 (* Positions applied in the definition but still declared a plain [typename]:
    event families, applied only at indices, whose argument is the family's
    own struct. *)
-let family : (GlobRef.t, int list) Hashtbl.t = Hashtbl.create 16
+let family : int list Ref.User.Tbl.t = Ref.User.Tbl.create 16
 
 (* Positions the definition never spells -- an erased event family -- so no
    instantiation may be written in them at a use. *)
-let phantom : (GlobRef.t, int list) Hashtbl.t = Hashtbl.create 16
+let phantom : int list Ref.User.Tbl.t = Ref.User.Tbl.create 16
 
 let reset () =
-  Hashtbl.reset template_template;
-  Hashtbl.reset family;
-  Hashtbl.reset phantom
+  Ref.User.Tbl.reset template_template;
+  Ref.User.Tbl.reset family;
+  Ref.User.Tbl.reset phantom
 
 let sizes () =
-  [ ("hkt_ind_params", Hashtbl.length template_template);
-    ("phantom_type_params", Hashtbl.length phantom) ]
+  [ ("hkt_ind_params", Ref.User.Tbl.length template_template);
+    ("phantom_type_params", Ref.User.Tbl.length phantom) ]
 
-let record tbl r positions = if positions <> [] then Hashtbl.replace tbl r positions
+let record tbl r positions = if positions <> [] then Ref.User.Tbl.replace tbl r positions
 
 let add_template_template r = record template_template r
 
 let template_template_arity r i =
-  match Hashtbl.find_opt template_template r with
+  match Ref.User.Tbl.find_opt template_template r with
   | Some s -> List.assoc_opt i s
   | None -> None
 
 let add_family r = record family r
 
 let is_family r i =
-  match Hashtbl.find_opt family r with Some l -> List.mem i l | None -> false
+  match Ref.User.Tbl.find_opt family r with Some l -> List.mem i l | None -> false
 
-let has_family r = Hashtbl.mem family r
+let has_family r = Ref.User.Tbl.mem family r
 
 let add_phantom r = record phantom r
 
 let is_phantom r i =
-  match Hashtbl.find_opt phantom r with Some l -> List.mem i l | None -> false
+  match Ref.User.Tbl.find_opt phantom r with Some l -> List.mem i l | None -> false

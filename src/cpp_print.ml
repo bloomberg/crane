@@ -1700,7 +1700,7 @@ and pp_cpp_expr env args t =
         (* Check eponymous record FIRST because they can also be local *)
         if is_eponymous_record_cached x then
           str (Common.pp_type_name_capitalized x)
-        else if Hashtbl.mem promoted_inductives x then
+        else if Ref.User.Tbl.mem promoted_inductives x then
           let cap =
             if Common.get_force_cross_file_qualification ()
             then Common.capitalize_last_component type_name_str
@@ -4350,7 +4350,7 @@ and pp_leaf_decl env (d : cpp_decl) =
       match id with
       | GlobRef.IndRef _ when is_eponymous_record_cached id ->
         str (Common.pp_type_name_capitalized id)
-      | GlobRef.IndRef _ when Hashtbl.mem promoted_inductives id ->
+      | GlobRef.IndRef _ when Ref.User.Tbl.mem promoted_inductives id ->
         str (String.capitalize_ascii (Common.pp_global_name Type id))
       | GlobRef.IndRef _ when is_record_cached id -> pp_global Type id
       | GlobRef.IndRef _ when Common.get_force_cross_file_qualification () ->

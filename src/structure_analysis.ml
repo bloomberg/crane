@@ -519,12 +519,12 @@ let topological_sort
     its body needs is part of what the inductive needs -- even though the
     declaration itself may live in another module. *)
 let methods_by_owner (reg : Method_registry.t) (s : ml_structure) =
-  let tbl : (GlobRef.t, ml_decl list) Hashtbl.t = Hashtbl.create 16 in
+  let tbl : ml_decl list Ref.User.Tbl.t = Ref.User.Tbl.create 16 in
   let add r d =
     match Method_registry.is_registered_method reg r with
     | Some (owner, _pos) ->
-      let prev = Option.default [] (Hashtbl.find_opt tbl owner) in
-      Hashtbl.replace tbl owner (d :: prev)
+      let prev = Option.default [] (Ref.User.Tbl.find_opt tbl owner) in
+      Ref.User.Tbl.replace tbl owner (d :: prev)
     | None -> ()
   in
   List.iter
@@ -541,14 +541,14 @@ let methods_by_owner (reg : Method_registry.t) (s : ml_structure) =
 (** Index every term declaration in the structure by the reference it defines,
     so a method body's dependencies can be followed one call further. *)
 let decls_by_ref (s : ml_structure) =
-  let tbl : (GlobRef.t, ml_decl) Hashtbl.t = Hashtbl.create 64 in
+  let tbl : ml_decl Ref.User.Tbl.t = Ref.User.Tbl.create 64 in
   List.iter
     (fun (_mp, sel) ->
       List.iter
         (fun (_l, se) ->
           match se with
           | SEdecl d ->
-            List.iter (fun fd -> Hashtbl.replace tbl fd.fd_ref d) (Mlutil.term_defs d)
+            List.iter (fun fd -> Ref.User.Tbl.replace tbl fd.fd_ref d) (Mlutil.term_defs d)
           | _ -> () )
         sel )
     s;
@@ -576,14 +576,14 @@ let sort_inductives_within_module reg (s : ml_structure) sel =
     let methods = methods_by_owner reg s in
     let term_decls = decls_by_ref s in
     (* Which slot defines a given inductive reference. *)
-    let slot_of_ref : (GlobRef.t, int) Hashtbl.t = Hashtbl.create 16 in
+    let slot_of_ref : int Ref.User.Tbl.t = Ref.User.Tbl.create 16 in
     List.iter
       (fun i ->
         match arr.(i) with
         | _l, SEdecl (Dind (kn, ind)) ->
           Array.iteri
             (fun j _p ->
-              Hashtbl.replace slot_of_ref (GlobRef.IndRef (kn, j)) i )
+              Ref.User.Tbl.replace slot_of_ref (GlobRef.IndRef (kn, j)) i )
             ind.ind_packets
         | _ -> () )
       ind_slots;
@@ -591,11 +591,11 @@ let sort_inductives_within_module reg (s : ml_structure) sel =
        holding [list final_instruction], where [final_instruction] is
        [instruction pc] -- needs the inductive the alias names just as much as
        a field that names it directly. *)
-    let alias_body : (GlobRef.t, ml_type) Hashtbl.t = Hashtbl.create 8 in
+    let alias_body : ml_type Ref.User.Tbl.t = Ref.User.Tbl.create 8 in
     List.iter
       (fun (_l, se) ->
         match se with
-        | SEdecl (Dtype (r, _, ty)) -> Hashtbl.replace alias_body r ty
+        | SEdecl (Dtype (r, _, ty)) -> Ref.User.Tbl.replace alias_body r ty
         | _ -> () )
       sel;
     let deps : (int, int list) Hashtbl.t = Hashtbl.create 16 in
@@ -603,16 +603,16 @@ let sort_inductives_within_module reg (s : ml_structure) sel =
       (fun i ->
         let acc = ref [] in
         let add_dep r =
-          match Hashtbl.find_opt slot_of_ref r with
+          match Ref.User.Tbl.find_opt slot_of_ref r with
           | Some j when j <> i && not (List.mem j !acc) -> acc := j :: !acc
           | _ -> ()
         in
-        let seen_alias : (GlobRef.t, unit) Hashtbl.t = Hashtbl.create 8 in
+        let seen_alias : unit Ref.User.Tbl.t = Ref.User.Tbl.create 8 in
         let rec add_type_dep r =
           add_dep r;
-          match Hashtbl.find_opt alias_body r with
-          | Some ty when not (Hashtbl.mem seen_alias r) ->
-            Hashtbl.replace seen_alias r ();
+          match Ref.User.Tbl.find_opt alias_body r with
+          | Some ty when not (Ref.User.Tbl.mem seen_alias r) ->
+            Ref.User.Tbl.replace seen_alias r ();
             Modutil.type_iter_references add_type_dep ty
           | _ -> ()
         in
@@ -620,14 +620,14 @@ let sort_inductives_within_module reg (s : ml_structure) sel =
            calls -- [nat::div] calls [Nat::divmod], and it is [divmod] that
            returns a [Prod] -- so follow the call graph, not just the immediate
            references. *)
-        let seen : (GlobRef.t, unit) Hashtbl.t = Hashtbl.create 16 in
+        let seen : unit Ref.User.Tbl.t = Ref.User.Tbl.create 16 in
         let rec scan d =
           Modutil.decl_iter_references (follow add_dep) add_dep add_type_dep d
         and follow k r =
           k r;
-          if not (Hashtbl.mem seen r) then begin
-            Hashtbl.replace seen r ();
-            Option.iter scan (Hashtbl.find_opt term_decls r)
+          if not (Ref.User.Tbl.mem seen r) then begin
+            Ref.User.Tbl.replace seen r ();
+            Option.iter scan (Ref.User.Tbl.find_opt term_decls r)
           end
         in
         ( match arr.(i) with
@@ -639,7 +639,7 @@ let sort_inductives_within_module reg (s : ml_structure) sel =
                 scan
                 (Option.default
                    []
-                   (Hashtbl.find_opt methods (GlobRef.IndRef (kn, j)))) )
+                   (Ref.User.Tbl.find_opt methods (GlobRef.IndRef (kn, j)))) )
             ind.ind_packets
         | _ -> () );
         Hashtbl.replace deps i !acc )

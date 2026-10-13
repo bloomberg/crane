@@ -15,7 +15,6 @@
 
 open Names
 open Miniml
-open Table
 
 (** {2 Generic traversals}
 
@@ -437,7 +436,7 @@ val ast_subst : ml_ast -> ml_ast -> ml_ast
 (** Substitute global references in a term using the given map.
     @param s a map from [GlobRef.t] to replacement [ml_ast] bodies
     @param t the term in which to perform the substitution *)
-val ast_glob_subst : ml_ast Refmap'.t -> ml_ast -> ml_ast
+val ast_glob_subst : ml_ast Ref.User.Map.t -> ml_ast -> ml_ast
 
 (** Remove unused variable bindings from a term. *)
 val dump_unused_vars : ml_ast -> ml_ast

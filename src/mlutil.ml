@@ -1615,7 +1615,7 @@ let rec ast_glob_subst s t =
      caller's own reconstruction may fill.  None of the body's variables
      survives to be read in the caller's numbering. *)
   let body refe tys =
-    let b = freshen_metas (Refmap'.find refe s) in
+    let b = freshen_metas (Ref.User.Map.find refe s) in
     if tys = [] then b
     else
       let informative = function Tdummy _ | Tunknown -> false | _ -> true in

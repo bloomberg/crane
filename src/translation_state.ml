@@ -14,7 +14,6 @@ open Common
 open Miniml
 open Minicpp
 open Names
-open Table
 
 let local_inductives : GlobRef.t list ref = ref []
 
@@ -133,7 +132,7 @@ type translation_ctx = {
      argument of convert_ml_type_to_cpp_type so that self-refs inside
      container types (e.g. List<tree>) get shared_ptr wrapping, matching
      the struct definition. Empty outside method bodies. *)
-  method_self_ns : Refset'.t;
+  method_self_ns : Ref.User.Set.t;
   (** The C++ type of {e every} binder in scope, by de Bruijn index, paired
       with what decided it.
 
@@ -209,7 +208,7 @@ let tctx =
         itree_mode = Sequential;
         cs_counter = 0;
         pending_reuse_token = None;
-        method_self_ns = Refset'.empty;
+        method_self_ns = Ref.User.Set.empty;
         cpp_binder_types = IntMap.empty;
     }
 
@@ -311,7 +310,7 @@ let with_param_types (params : (Id.t * ml_type) list) (f : unit -> 'a) : 'a =
 (** [with_method_self_ns ns f] runs [f] with [ns] as the inductives whose
     methods are being generated, so self-references inside container types get
     the same [shared_ptr] wrapping as in the struct definition. *)
-let with_method_self_ns (ns : Refset'.t) (f : unit -> 'a) : 'a =
+let with_method_self_ns (ns : Ref.User.Set.t) (f : unit -> 'a) : 'a =
   with_field
     (fun c -> c.method_self_ns)
     (fun ns -> tctx := { !tctx with method_self_ns = ns })

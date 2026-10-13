@@ -36,13 +36,13 @@ type resolved_term_name = {
 (** Name resolution cache. Pre-computed type and term names indexed by GlobRef.
 *)
 type t = {
-  type_names : (GlobRef.t, resolved_type_name) Hashtbl.t;
-  ind_kinds : (GlobRef.t, cpp_ind_kind) Hashtbl.t;
+  type_names : resolved_type_name Ref.User.Tbl.t;
+  ind_kinds : cpp_ind_kind Ref.User.Tbl.t;
 }
 
 (** Looks up the pre-computed C++ name for a type reference. Returns None if the
     reference has not been registered. *)
-let resolve_type t r = Hashtbl.find_opt t.type_names r
+let resolve_type t r = Ref.User.Tbl.find_opt t.type_names r
 
 (** Looks up the pre-computed C++ name for a term reference. Currently stubbed:
     term names are not pre-computed to avoid side effects. *)
@@ -50,7 +50,7 @@ let resolve_term _t _r = None (* term names not pre-computed — see note above 
 
 (** Registers a resolved type name in the cache. Overwrites any existing entry
     for the given reference. *)
-let register_type t r name = Hashtbl.replace t.type_names r name
+let register_type t r name = Ref.User.Tbl.replace t.type_names r name
 
 (** Registers a resolved term name in the cache. Currently a no-op as term names
     are not pre-computed. *)
@@ -66,11 +66,11 @@ let is_global_scope_enum _ r = Program_facts.is_global_scope_enum r
 
 (** Retrieves the inductive kind classification for a type reference. Returns
     None if the reference is not an inductive type. *)
-let get_ind_kind t r = Hashtbl.find_opt t.ind_kinds r
+let get_ind_kind t r = Ref.User.Tbl.find_opt t.ind_kinds r
 
 (** Registers an inductive kind in the cache. Overwrites any existing entry for
     the given reference. *)
-let register_ind_kind t r kind = Hashtbl.replace t.ind_kinds r kind
+let register_ind_kind t r kind = Ref.User.Tbl.replace t.ind_kinds r kind
 
 (** Classifies an inductive type using side-effect-free queries. Uses raw names
     from miniml packets to avoid triggering renaming side effects. Returns a
@@ -150,8 +150,8 @@ let create
     ~structure_analysis:_
     ~unmerged
     s =
-  let type_names = Hashtbl.create 256 in
-  let ind_kinds = Hashtbl.create 64 in
+  let type_names = Ref.User.Tbl.create 256 in
+  let ind_kinds = Ref.User.Tbl.create 64 in
   (* Pre-classify all inductive types using side-effect-free queries only. We do
      NOT call pp_global_name or pp_global here — those have side effects on
      Common.ml's renaming tables that would change the output. *)
@@ -170,8 +170,8 @@ let create
                   ind
               in
               let ind_ref, rtn, kind = thunk () in
-              Hashtbl.replace type_names ind_ref rtn;
-              Hashtbl.replace ind_kinds ind_ref kind )
+              Ref.User.Tbl.replace type_names ind_ref rtn;
+              Ref.User.Tbl.replace ind_kinds ind_ref kind )
             ind.Miniml.ind_packets
         | Miniml.SEmodule m ->
           ( match m.Miniml.ml_mod_expr with

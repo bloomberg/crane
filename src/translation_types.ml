@@ -1520,7 +1520,7 @@ let try_fold_num_uint expr =
 
 let rec convert_ml_type_to_cpp_type
     env
-    ?(ns : Refset'.t = Refset'.empty)
+    ?(ns : Ref.User.Set.t = Ref.User.Set.empty)
     (tvars : Id.t list)
     (ml_t : ml_type) : cpp_type =
   (* [ns] is the only source of recursive-storage wrapping.  Most callers
@@ -1636,7 +1636,7 @@ let rec convert_ml_type_to_cpp_type
           (* Fallback: if tvars is non-empty and this is a local reference, use
              tvars length *)
           let is_local =
-            Refset'.mem g ns
+            Ref.User.Set.mem g ns
             || List.exists
                  (globref_equal g)
                  !local_inductives
@@ -1653,7 +1653,7 @@ let rec convert_ml_type_to_cpp_type
        stay bare — the field-level wrapping handles the cycle-breaking.
        This ensures type variables are never shared_ptr-wrapped at instantiation. *)
     let ns_for_args =
-      if Refset'.mem g ns then ns else Refset'.empty
+      if Ref.User.Set.mem g ns then ns else Ref.User.Set.empty
     in
     let converted_ts =
       List.map (convert_ml_type_to_cpp_type env ~ns:ns_for_args tvars) filtered_ts
@@ -1687,7 +1687,7 @@ let rec convert_ml_type_to_cpp_type
       (* Enum inductives are value types - no shared_ptr wrapping *)
       if is_enum_inductive g then
         let is_local =
-          Refset'.mem g ns
+          Ref.User.Set.mem g ns
           || List.exists
                (globref_equal g)
                !local_inductives
@@ -1699,7 +1699,7 @@ let rec convert_ml_type_to_cpp_type
       else
         (* Check if this inductive is in the explicit ns list or in
            local_inductives context *)
-        let is_self_ref = Refset'.mem g ns in
+        let is_self_ref = Ref.User.Set.mem g ns in
         (* Check if g is a mutual sibling: shares the same MutInd.t KerName
            as any member of ns, but at a different index. Mutual siblings
            need shared_ptr because their types are incomplete (forward-declared). *)
@@ -1707,7 +1707,7 @@ let rec convert_ml_type_to_cpp_type
           (not is_self_ref) &&
           match g with
           | GlobRef.IndRef (kn_g, _) ->
-            Refset'.exists (fun r ->
+            Ref.User.Set.exists (fun r ->
               match r with
               | GlobRef.IndRef (kn_r, _) ->
                 MutInd.CanOrd.equal kn_g kn_r
@@ -1920,7 +1920,7 @@ let template_arg_of_ml_type ?(curry = true) env tvars ty =
      types. Recursive storage wrapping is introduced only when converting
      constructor fields with an explicit storage namespace. *)
   let t =
-    convert_ml_type_to_cpp_type env ~ns:Refset'.empty tvars (type_simpl ty)
+    convert_ml_type_to_cpp_type env ~ns:Ref.User.Set.empty tvars (type_simpl ty)
   in
   if curry then curry_fun_type t else t
 
@@ -2223,7 +2223,7 @@ let populate_erased_field_env ?scrut_db ~cname ~typ ~env ~n_pat_vars ~n_fields
       match List.nth_opt non_erased_def_site_field_tys field_i with
       | Some def_ty ->
         let cpp_ty =
-          convert_ml_type_to_cpp_type (empty_env ()) ~ns:Refset'.empty [] def_ty
+          convert_ml_type_to_cpp_type (empty_env ()) ~ns:Ref.User.Set.empty [] def_ty
         in
         has_unnamed_tvar cpp_ty
       | None -> false
@@ -3136,7 +3136,7 @@ let record_field_cpp_ty env typ fld =
     | Some ml_ty -> (
       try
         Some
-          (convert_ml_type_to_cpp_type env ~ns:(Refset'.singleton r)
+          (convert_ml_type_to_cpp_type env ~ns:(Ref.User.Set.singleton r)
              (get_current_type_vars ())
              (Mlutil.type_subst_list args ml_ty))
       with e when CErrors.noncritical e -> None )

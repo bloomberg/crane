@@ -348,13 +348,13 @@ let dfix_to_mlfix fds i =
     if n < 0 then
       s
     else
-      make_subst (n - 1) (Refmap'.add rv.(n) (n + 1) s)
+      make_subst (n - 1) (Ref.User.Map.add rv.(n) (n + 1) s)
   in
-  let s = make_subst (Array.length rv - 1) Refmap'.empty in
+  let s = make_subst (Array.length rv - 1) Ref.User.Map.empty in
   let rec subst n t =
     match t with
     | MLglob ((GlobRef.ConstRef kn as refe), _) ->
-      (try MLrel (n + Refmap'.find refe s) with Not_found -> t)
+      (try MLrel (n + Ref.User.Map.find refe s) with Not_found -> t)
     | _ -> ast_map_lift subst n t
   in
   let ids =
@@ -383,7 +383,7 @@ let rec optim_se top to_appear s = function
   | (l, SEdecl (Dterm (r, a, t))) :: lse ->
     let a = normalize (ast_glob_subst !s a) in
     let i = inline r a in
-    if i then s := Refmap'.add r a !s;
+    if i then s := Ref.User.Map.add r a !s;
     let d = decl_of_term r a t in
     (l, SEdecl d) :: optim_se top to_appear s lse
   | (l, SEdecl (Dfix fds)) :: lse ->
@@ -397,7 +397,7 @@ let rec optim_se top to_appear s = function
     List.iteri
       (fun i fd ->
         if inline fd.fd_ref fake_body then
-          s := Refmap'.add fd.fd_ref (dfix_to_mlfix fds i) !s )
+          s := Ref.User.Map.add fd.fd_ref (dfix_to_mlfix fds i) !s )
       fds;
     let fds = List.map (fun fd -> {fd with fd_body = dump_unused_vars fd.fd_body}) fds in
     (l, SEdecl (Dfix fds)) :: optim_se top to_appear s lse
@@ -428,17 +428,17 @@ let base_r =
 
 (** Dependency tracking: manage the set of needed references. *)
 let reset_needed, add_needed, add_needed_mp, found_needed, is_needed =
-  let needed = ref Refset'.empty
+  let needed = ref Ref.User.Set.empty
   and needed_mps = ref MPset.empty in
   ( (fun () ->
-      needed := Refset'.empty;
+      needed := Ref.User.Set.empty;
       needed_mps := MPset.empty ),
-    (fun r -> needed := Refset'.add (base_r r) !needed),
+    (fun r -> needed := Ref.User.Set.add (base_r r) !needed),
     (fun mp -> needed_mps := MPset.add mp !needed_mps),
-    (fun r -> needed := Refset'.remove (base_r r) !needed),
+    (fun r -> needed := Ref.User.Set.remove (base_r r) !needed),
     fun r ->
       let r = base_r r in
-      Refset'.mem r !needed || MPset.mem (modpath_of_r r) !needed_mps )
+      Ref.User.Set.mem r !needed || MPset.mem (modpath_of_r r) !needed_mps )
 
 (** List all GlobRef.t declared by a declaration. *)
 let declared_refs = function
@@ -518,7 +518,7 @@ let check_for_remaining_implicits struc =
 
 (** Full optimization pipeline: normalize, inline, eliminate dead code. *)
 let optimize_struct to_appear struc =
-  let subst = ref (Refmap'.empty : ml_ast Refmap'.t) in
+  let subst = ref (Ref.User.Map.empty : ml_ast Ref.User.Map.t) in
   let opt_struc =
     List.map
       (fun (mp, lse) -> (mp, optim_se true (fst to_appear) subst lse))

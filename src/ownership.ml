@@ -5,12 +5,12 @@
 
 open Miniml
 
-let flags : bool list Table.Refmap'.t ref = State.cell State.Extraction Table.Refmap'.empty
+let flags : bool list Ref.User.Map.t ref = State.cell State.Extraction Ref.User.Map.empty
 
-let () = Escape.callee_flags := fun r -> Table.Refmap'.find_opt r !flags
+let () = Escape.callee_flags := fun r -> Ref.User.Map.find_opt r !flags
 
-let callables : (ml_type list * Escape.IntSet.t) Table.Refmap'.t ref =
-  State.cell State.Extraction Table.Refmap'.empty
+let callables : (ml_type list * Escape.IntSet.t) Ref.User.Map.t ref =
+  State.cell State.Extraction Ref.User.Map.empty
 
 (* Every function of the structure: its name, body and type. *)
 let functions struc =
@@ -31,18 +31,18 @@ let functions struc =
 
 let settle struc =
   let fns = functions struc in
-  flags := Table.Refmap'.empty;
+  flags := Ref.User.Map.empty;
   (* Which callables are generalised is each function's own business: one
      pass, the question {!Gen_functions.gen_dfun} asks of the same body. *)
   callables :=
     List.fold_left
       (fun m (r, b, ty) ->
         let ids, _ = Translation_support.collect_typed_lams ty b in
-        Table.Refmap'.add r
+        Ref.User.Map.add r
           ( List.rev_map snd ids,
             Translation_support.ungeneralised_callables_of_definition r ty b )
           m )
-      Table.Refmap'.empty fns;
+      Ref.User.Map.empty fns;
   (* Each round can only turn borrowed parameters owned, so it stops. *)
   let rec round () =
     let changed = ref false in
@@ -50,16 +50,16 @@ let settle struc =
       (fun (r, b, _) ->
         let params, body = Mlutil.collect_lams b in
         let f = Escape.infer_owned_params (List.length params) body in
-        if Table.Refmap'.find_opt r !flags <> Some f then (
+        if Ref.User.Map.find_opt r !flags <> Some f then (
           changed := true;
-          flags := Table.Refmap'.add r f !flags ))
+          flags := Ref.User.Map.add r f !flags ))
       fns;
     if !changed then round ()
   in
   round ()
 
 let generalises_callable r pos ~primary f =
-  match Table.Refmap'.find_opt r !callables with
+  match Ref.User.Map.find_opt r !callables with
   | Some (binder_tys, ungeneralised) -> (
     match Param_pos.source_index binder_tys pos with
     | Some i ->
