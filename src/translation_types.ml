@@ -693,6 +693,7 @@ let declared_tvar_count id =
 (** [targs] without the position {!relaxed_tt_return_var} names, where the list
     is still indexed by kept position. *)
 let drop_relaxed_tt_position id targs =
+  Probe.changed "REPAIR_drop_relaxed_tt_position" id ~before:targs @@
   match (relaxed_tt_return_var id, declared_tvar_count id) with
   | Some h, Some n ->
     let kept =
@@ -769,6 +770,7 @@ let writable_tvar_count id =
 
 (** [targs] cut back to the prefix {!writable_tvar_count} says is reachable. *)
 let truncate_to_writable id targs =
+  Probe.changed "REPAIR_truncate_to_writable" id ~before:targs @@
   match writable_tvar_count id with
   | Some n when n < List.length targs -> List.filteri (fun i _ -> i < n) targs
   | _ -> targs
@@ -2484,6 +2486,7 @@ let rec normalize_erased_types = function
     the other -- which matters because a call can precede its callee's
     declaration (mutual recursion, forward references). *)
 let phantom_prefix_args id =
+  Probe.changed "REPAIR_phantom_prefix_args" id ~before:[] @@
   match find_type_opt id with
   | None -> []
   | Some ml_ty ->
@@ -2507,6 +2510,7 @@ let phantom_prefix_args id =
     deduction, and it is only a call already committed to writing its
     arguments that has to get their count right. *)
 let fit_to_declared_tvars id targs =
+  Probe.changed "REPAIR_fit_to_declared_tvars" id ~before:targs @@
   match declared_tvar_count id with
   | Some n when n < List.length targs ->
     List.filteri (fun i _ -> i < n) targs
@@ -2548,6 +2552,7 @@ let fit_to_declared_tvars id targs =
     ({!Mlutil.apply_ml_type}), and has no template to name: it is the type
     function {!Crane_rt.constant_tc} makes of it. *)
 let hkt_carrier_type_args env tvars ?result id tys =
+  Probe.changed "REPAIR_hkt_carrier_type_args" id ~before:None @@
   let ( let* ) = Option.bind in
   let* ml_ty = find_type_opt id in
   match List.nth_opt tys 0 with
@@ -2713,6 +2718,7 @@ let lifted_call_type_args
     against an already-erased argument), so even a carrier that is a plain
     template name has to be named rather than left to deduction. *)
 let dict_carrier_type_args env tvars id args =
+  Probe.changed "REPAIR_dict_carrier_type_args" id ~before:None @@
   let ( let* ) = Option.bind in
   let* cod = dict_carrier_ml_type id args in
   (* Abstracted over the traversed type, as {!apply_hkt_tyctors} does: the

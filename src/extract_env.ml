@@ -1476,6 +1476,7 @@ let optimize_struct to_appear struc =
     |> Fix_shape.structure
     |> Normalize.structure
   in
+  Ml_ir_check.structure struc;
   (* With the bodies final, which definitions only throw, and which
      parameters are owned, are settled across calls, before any signature is
      written. *)

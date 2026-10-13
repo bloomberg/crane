@@ -817,10 +817,16 @@ let is_cpp_dummy_prop = function
     @param tys List of C++ types (template arguments)
     @return Filtered list: either all concrete types or empty list *)
 let filter_erased_type_args ?(preserve_positions = false) tys =
+  let all = tys in
   let tys = List.filter (fun t -> not (is_cpp_dummy_prop t)) tys in
+  if List.length tys <> List.length all then
+    Probe.hit "REPAIR_filter_erased_type_args_prop" (fun () -> "");
   if preserve_positions then
     List.map (fun t -> if prints_as_any t then Minicpp.Tany else t) tys
-  else if List.exists prints_as_any tys then [] else tys
+  else if List.exists prints_as_any tys then (
+    Probe.hit "REPAIR_filter_erased_type_args_drop" (fun () -> "");
+    [] )
+  else tys
 
 (** Check if an ML type contains any unresolved type variable or placeholder.
     Returns true for Tvar, unresolved Tmeta, and Tunknown. Used to

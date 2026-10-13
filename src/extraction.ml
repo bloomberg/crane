@@ -579,47 +579,77 @@ let with_extracting mind f =
       extracting_inds := Names.Mindset.remove mind !extracting_inds )
     f
 
-let rec extract_type env sg db j c args =
+(** A binder of a declaration's product spine, as {!extract_spine} met it:
+    the kill reason its arrow's domain was extracted with, if erased, and the
+    type variable it was numbered, if it was given one. *)
+type spine_binder = {
+  sb_erased : kill_reason option;
+  sb_tvar : int option;
+}
+
+let rec extract_type env sg db j c args = fst (extract_spine env sg db j c args)
+
+(** {!extract_type}, together with the binders of the product spine it walked
+    while [j > 0] -- the spine whose type binders it numbers as variables, one
+    entry per binder in source order.  Under [j = 0] no variable is numbered
+    and the list is empty. *)
+and extract_spine env sg db j c args =
+  let leaf t = (t, []) in
   match EConstr.kind sg (whd_betaiotazeta env sg c) with
   | App (d, args') ->
     (* We just accumulate the arguments. *)
-    extract_type env sg db j d (Array.to_list args' @ args)
+    extract_spine env sg db j d (Array.to_list args' @ args)
   | Lambda (_, _, d) ->
     ( match args with
     | [] -> assert false (* A lambda cannot be a type. *)
-    | a :: args -> extract_type env sg db j (EConstr.Vars.subst1 a d) args )
+    | a :: args -> extract_spine env sg db j (EConstr.Vars.subst1 a d) args )
   | Prod (n, t, d) ->
     assert (List.is_empty args);
     let env' = push_rel_assum (n, t) env in
+    (* The binder's entry: the kill reason its arrow's domain carries, read
+       as {!Mlutil.type_to_signature} reads it, and the variable it was
+       numbered, if any. *)
+    let binder ~tvar dom (mld, spine) =
+      if Int.equal j 0 then (mld, [])
+      else
+        let sb_erased =
+          match Option.map (expand env) dom with
+          | Some (Tdummy k) -> Some k
+          | _ -> None
+        in
+        (mld, {sb_erased; sb_tvar = tvar} :: spine)
+    in
+    let arrow dom (mld, spine) =
+      match expand env mld with
+      | Tdummy d -> (Tdummy d, spine)
+      | _ -> (Tarr (Lazy.force dom, mld), spine)
+    in
     ( match flag_of_type env sg t with
     | Info, Default ->
       (* Standard case: two [extract_type] ... *)
-      let mld = extract_type env' sg (0 :: db) j d [] in
-      ( match expand env mld with
-      | Tdummy d -> Tdummy d
-      | _ -> Tarr (extract_type env sg db 0 t [], mld) )
+      let dom = lazy (extract_type env sg db 0 t []) in
+      let ((mlt, _) as res) = arrow dom (extract_spine env' sg (0 :: db) j d []) in
+      binder ~tvar:None (match mlt with Tarr _ -> Some (Lazy.force dom) | _ -> None) res
     | Info, TypeScheme when j > 0 ->
       (* A new type var. *)
-      let mld = extract_type env' sg (j :: db) (j + 1) d [] in
-      ( match expand env mld with
-      | Tdummy d -> Tdummy d
-      | _ -> Tarr (Tdummy Ktype, mld) )
+      let dom = Tdummy Ktype in
+      binder ~tvar:(Some j) (Some dom)
+        (arrow (lazy dom) (extract_spine env' sg (j :: db) (j + 1) d []))
     | _, lvl ->
-      let mld = extract_type env' sg (0 :: db) j d [] in
-      ( match expand env mld with
-      | Tdummy d -> Tdummy d
-      | _ ->
-        let reason = if lvl == TypeScheme then Ktype else Kprop in
-        Tarr (Tdummy reason, mld) ) )
-  | Sort _ -> Tdummy Ktype (* The two logical cases. *)
+      let reason = if lvl == TypeScheme then Ktype else Kprop in
+      let dom = Tdummy reason in
+      binder ~tvar:None (Some dom)
+        (arrow (lazy dom) (extract_spine env' sg (0 :: db) j d [])) )
+  | Sort _ -> leaf (Tdummy Ktype) (* The two logical cases. *)
   | _ when info_of_family (sort_of env sg (applistc c args)) == Logic ->
-    Tdummy Kprop
+    leaf (Tdummy Kprop)
   | Rel n ->
     ( match EConstr.lookup_rel n env with
     | LocalDef (_, t, _) ->
-      extract_type env sg db j (EConstr.Vars.lift n t) args
+      extract_spine env sg db j (EConstr.Vars.lift n t) args
     | _ ->
       (* Asks [db] a translation for [n]. *)
+      leaf @@
       if n > List.length db then
         Tunknown
       else
@@ -644,6 +674,7 @@ let rec extract_type env sg db j c args =
     ( match flag_of_type env sg typ with
     | Logic, _ -> assert false (* Cf. logical cases above *)
     | Info, TypeScheme ->
+      leaf @@
       (* For promoted type var projections (e.g., Obj, Hom) applied to
          concrete arguments, try full reduction with whd_all.  This resolves
          expressions like Obj(base_category(toy_prestable)) → nat, which
@@ -700,36 +731,36 @@ let rec extract_type env sg db j c args =
     (* Not an ML type, for example [(c:forall X, X->X) Type nat] *)
     match (lookup_constant kn env).const_body with
     | Undef _ | OpaqueDef _ | Primitive _ | Symbol _ ->
-      Tunknown (* Brutal approx ... *)
+      leaf Tunknown (* Brutal approx ... *)
     | Def lbody ->
       (* We try to reduce. *)
       let newc = applistc (get_body lbody) args in
-      extract_type env sg db j newc [] )
+      extract_spine env sg db j newc [] )
   | Ind (((kn, i) as ind), u) ->
     let () = check_sort_poly sg (IndRef ind) u in
     let s = (extract_ind env kn).ind_packets.(i).ip_sign in
-    extract_type_app env sg db (GlobRef.IndRef (kn, i), s) args
+    leaf (extract_type_app env sg db (GlobRef.IndRef (kn, i), s) args)
   | Proj (p, r, t) ->
     (* Let's try to reduce, if it hasn't already been done. *)
     if Projection.unfolded p then
-      Tunknown
+      leaf Tunknown
     else
-      extract_type env sg db j (EConstr.mkProj (Projection.unfold p, r, t)) args
-  | Case _ | Fix _ | CoFix _ -> Tunknown
-  | Evar _ | Meta _ -> Taxiom (* only possible during Show Extraction *)
+      extract_spine env sg db j (EConstr.mkProj (Projection.unfold p, r, t)) args
+  | Case _ | Fix _ | CoFix _ -> leaf Tunknown
+  | Evar _ | Meta _ -> leaf Taxiom (* only possible during Show Extraction *)
   | Var v ->
     (* For Show Extraction *)
     let open Context.Named.Declaration in
     ( match EConstr.lookup_named v env with
     | LocalDef (_, body, _) ->
-      extract_type env sg db j (EConstr.applist (body, args)) []
+      extract_spine env sg db j (EConstr.applist (body, args)) []
     | LocalAssum (_, ty) ->
       let r = GlobRef.VarRef v in
       ( match flag_of_type env sg ty with
       | Logic, _ -> assert false (* Cf. logical cases above *)
       | Info, TypeScheme ->
-        extract_type_app env sg db (r, type_sign env sg ty) args
-      | Info, Default -> Tunknown ) )
+        leaf (extract_type_app env sg db (r, type_sign env sg ty) args)
+      | Info, Default -> leaf Tunknown ) )
   | Cast _ | LetIn _ | Construct _ | Int _ | Float _ | String _ | Array _ ->
     assert false
 
@@ -1404,8 +1435,24 @@ and record_constant_type env sg kn opt_typ =
       | None -> EConstr.of_constr cb.const_type
       | Some typ -> typ
     in
-    let mlt = extract_type env sg [] 1 typ [] in
+    let mlt, spine = extract_spine env sg [] 1 typ [] in
     let schema = (type_maxvar mlt, mlt) in
+    let () =
+      let claimed =
+        List.filter_map
+          (fun b ->
+            Option.bind b.sb_tvar (fun v ->
+                if v <= fst schema then Some v else None ) )
+          spine
+      in
+      if claimed <> List.init (fst schema) succ then
+        Probe.violation "schema"
+          Pp.(
+            str "the type binders of " ++ Names.Constant.print kn
+            ++ str " number " ++ prlist_with_sep spc int claimed
+            ++ str ", not each of its " ++ int (fst schema)
+            ++ str " variables once in source order" )
+    in
     let () = add_cst_type kn cb schema in
     register mlt;
     schema
@@ -1672,7 +1719,8 @@ and make_mlargs env sg e s args typs =
     @param args Actual Rocq terms being passed as arguments
     @param typs Inferred ML types after unification (may contain Tdummy)
     @param orig_typs Original schema types from function signature
-    @return List of ML types for the type arguments *)
+    @return The type arguments, each with the position of the argument it
+      was read from *)
 and make_tyargs env sg mle args typs ~orig_typs =
   let db = db_from_rel_context env in
   let is_kprop = function Tdummy Kprop -> true | _ -> false in
@@ -1692,7 +1740,7 @@ and make_tyargs env sg mle args typs ~orig_typs =
       Returns an ML type list with the same length as the number of Kill
       positions in the input. This maintains positional correspondence between
       type arguments in the ML AST and C++ template parameters. *)
-  let rec f = function
+  let rec f k = function
     | [], [], [] ->
       (* Base case: all lists exhausted simultaneously (well-formed input) *)
       []
@@ -1713,7 +1761,7 @@ and make_tyargs env sg mle args typs ~orig_typs =
          - Function schema: [forall (A : Type) (H : A = A), ...]
          - [A] is Keep Ktype, [H] is Kill Kprop
          - Result: [[extract_type A; Tdummy Kprop]] *)
-      Tdummy Kprop :: f (la, lt, lo)
+      (k, Tdummy Kprop) :: f (k + 1) (la, lt, lo)
     | a :: la, t :: lt, o :: lo when is_tdummy t || is_tdummy o ->
       (* Kill Ktype position — this is a type parameter slot.
 
@@ -1733,7 +1781,7 @@ and make_tyargs env sg mle args typs ~orig_typs =
 
          The fallback preserves positional consistency: we always emit exactly
          one ML type for each type argument position, even if it's Tdummy. *)
-      ( try extract_family_type env sg db a :: f (la, lt, lo)
+      ( try (k, extract_family_type env sg db a) :: f (k + 1) (la, lt, lo)
         with _ ->
           let fallback =
             match EConstr.kind sg (whd_betaiotazeta env sg a) with
@@ -1866,20 +1914,65 @@ and make_tyargs env sg mle args typs ~orig_typs =
                  unusual higher-order type manipulation. Conservatively erase. *)
               Tdummy Ktype
           in
-          fallback :: f (la, lt, lo) )
+          (k, fallback) :: f (k + 1) (la, lt, lo) )
     | _a :: la, _t :: lt, _o :: lo ->
       (* Non-Kill position - this is a value argument, not a type argument.
          Skip it and continue processing the remaining lists. *)
-      f (la, lt, lo)
+      f (k + 1) (la, lt, lo)
     | _ ->
       (* List length mismatch or all lists exhausted.
          This terminates the recursion. In a well-formed extraction, all three
          lists should have the same length and reach [] simultaneously. *)
       []
   in
-  f (args, List.map type_simpl typs, orig_typs)
+  f 0 (args, List.map type_simpl typs, orig_typs)
 
 (** {2 Extraction of a constant applied to arguments} *)
+
+(** Reports a call whose written type arguments do not line up with its
+    callee's scheme variables: [TYARGS_COUNT] where the counts differ, the
+    case the hint guard in {!extract_cst_app} refuses, and
+    [TYARGS_COINCIDENCE] where they agree while some entry was read at a
+    binder that is not its position's variable -- the case the guard cannot
+    see.  [positioned] pairs each entry with its argument position. *)
+and probe_tyarg_alignment env sg kn ~nargs ~scheme_vars s_full positioned =
+  let callee = Names.Constant.to_string kn in
+  let code = function
+    | Kill Ktype -> "t"
+    | Kill Kprop -> "p"
+    | Kill (Kimplicit _) -> "i"
+    | Keep -> "K"
+  in
+  let typ = EConstr.of_constr (lookup_constant kn env).const_type in
+  let spine = Array.of_list (snd (extract_spine env sg [] 1 typ [])) in
+  let spine_code =
+    Array.fold_right
+      (fun b acc ->
+        ( match (b.sb_tvar, b.sb_erased) with
+        | Some v, _ when v <= scheme_vars -> string_of_int v
+        | _, Some k -> code (Kill k)
+        | _, None -> "K" )
+        ^ acc )
+      spine ""
+  in
+  let detail () =
+    Printf.sprintf "%s args=%d tyargs=%d scheme_vars=%d sig=%s spine=%s" callee
+      nargs (List.length positioned) scheme_vars
+      (String.concat "" (List.map code s_full))
+      spine_code
+  in
+  let exact k =
+    if k < Array.length spine then
+      Option.bind spine.(k).sb_tvar (fun v ->
+          if v <= scheme_vars then Some v else None )
+    else None
+  in
+  if List.length positioned <> scheme_vars then Probe.hit "TYARGS_COUNT" detail
+  else if
+    List.exists
+      (fun (i, (k, _)) -> exact k <> Some (i + 1))
+      (List.mapi (fun i e -> (i, e)) positioned)
+  then Probe.hit "TYARGS_COINCIDENCE" detail
 
 (** Extracts a constant application (function call), handling type instantiation
     and partial application.
@@ -1932,7 +2025,15 @@ and extract_cst_app env sg mle mlt kn args =
      as everything reading [MLglob]'s list indexes it: a proof's slot -- or a
      binder ranging over propositions, [{P : Prop}] -- has no variable, and
      left in it would hand the next one's place to the dummy. *)
-  let tyargs = List.filter (function Tdummy Kprop -> false | _ -> true) domain in
+  let positioned =
+    List.filter (function _, Tdummy Kprop -> false | _ -> true) domain
+  in
+  let tyargs = List.map snd positioned in
+  let () =
+    if Probe.enabled () then
+      probe_tyarg_alignment env sg kn ~nargs:la ~scheme_vars:(fst schema)
+        s_full positioned
+  in
   (* The type arguments the Rocq term passes are a statement about the
      scheme's type variables, and the value arguments need not repeat it: a
      monad's [bind] erases its carrier, so [m A] pins nothing, and [A] reaches

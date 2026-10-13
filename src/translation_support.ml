@@ -2783,6 +2783,7 @@ and tvar_instantiation callee_ty args =
     Positions the compiler can deduce are left to it -- naming a type twice is
     an opportunity to spell it differently, not a safeguard. *)
 and complete_short_tys id tys args =
+  Probe.changed "REPAIR_complete_short_tys" id ~before:tys @@
   match find_type_opt id with
   | None -> tys
   | Some callee_ty ->
@@ -2822,6 +2823,7 @@ and complete_short_tys id tys args =
     for the same reason: the entry it replaces stands for a variable the callee
     quantifies at exactly that position. *)
 and fill_erased_tys ?(only_alias_args = false) id tys args =
+  Probe.changed "REPAIR_fill_erased_tys" id ~before:tys @@
   let erased = function
     | Miniml.Tdummy Miniml.Ktype -> true
     | _ -> false
