@@ -394,6 +394,7 @@ and cpp_expr =
   | CPPmove of cpp_expr
   | CPPforward of cpp_type * cpp_expr
   | CPPlambda of cpp_lambda
+  | CPPsuspend of cpp_type * cpp_expr (* ty::lazy_(thunk), see minicpp.mli *)
   | CPPalloc of alloc_kind * cpp_type
   | CPPstructmk of GlobRef.t * cpp_type list * cpp_expr list
   | CPPstruct of
@@ -1419,6 +1420,7 @@ let map_expr ?fl
     in
     CPPunbox (u, fe e')
   | CPPerase_fn (ty, e') -> CPPerase_fn (Option.map ft ty, fe e')
+  | CPPsuspend (ty, e') -> CPPsuspend (ft ty, fe e')
   | CPPerased_call (f, a) -> CPPerased_call (fe f, fe a)
   | CPPtolerant_call (f, args) -> CPPtolerant_call (fe f, List.map fe args)
   | CPPfn_value e' -> CPPfn_value (fe e')
@@ -1526,7 +1528,7 @@ let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
   | CPPshared_ptr_ctor (_, e')
   | CPPany_cast (_, e') | CPPany_cast_tolerant (_, e') | CPPconvert (_, e') | CPPunbox (_, e')
   | CPPcontainer_cast (_, e', _) | CPPerase_fn (_, e') | CPPfn_value e'
-  | CPPunop (_, e') | CPPstd_get_if (_, e') ->
+  | CPPunop (_, e') | CPPstd_get_if (_, e') | CPPsuspend (_, e') ->
     on_expr e'
   | CPPlambda l -> on_stmts l.cl_body
   | CPPstructmk (_, _, es) | CPPstruct (_, _, es)
@@ -1673,7 +1675,7 @@ let fold_expr_children ~(on_expr : 'a -> cpp_expr -> 'a)
   | CPPshared_ptr_ctor (_, e')
   | CPPany_cast (_, e') | CPPany_cast_tolerant (_, e') | CPPconvert (_, e') | CPPunbox (_, e')
   | CPPcontainer_cast (_, e', _) | CPPerase_fn (_, e') | CPPfn_value e'
-  | CPPunop (_, e') | CPPstd_get_if (_, e') ->
+  | CPPunop (_, e') | CPPstd_get_if (_, e') | CPPsuspend (_, e') ->
     fe acc e'
   | CPPstructmk (_, _, es) | CPPstruct (_, _, es)
   | CPPstruct_id (_, _, es) | CPPnew (_, es) ->

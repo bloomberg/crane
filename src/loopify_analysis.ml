@@ -46,7 +46,6 @@ let id_get          = Id.of_string "get"
 
 (* [lazy_]: the factory a coinductive type's cofixpoint body returns.  Its
    presence is how a cofixpoint is told from a fixpoint here. *)
-let id_lazy         = Id.of_string "lazy_"
 
 (* [crane_raw] (crane_fn.h): extracts a raw pointer from either a
    [std::shared_ptr<T>] or an already-raw [T*] (arena mode), by overload
@@ -150,14 +149,11 @@ and stmt_exists (pred : cpp_expr -> bool) (s : cpp_stmt) : bool =
 let body_exists (pred : cpp_expr -> bool) (stmts : cpp_stmt list) : bool =
   List.exists (stmt_exists pred) stmts
 
-(** Whether the expression tree contains a [lazy_] factory call.
-    Used to detect cofixpoint bodies even when the [lazy_] return is buried
-    inside branches rather than at the top level (where {!Loopify.has_lazy_body}
-    catches it). *)
-let is_lazy_factory_call = function
-  | CPPfun_call (_, (CPPscope (_, lazy_id, []) | CPPqualified_t (_, lazy_id)), _) ->
-    Id.equal lazy_id id_lazy
-  | _ -> false
+(** Whether the expression is a suspension ({!Minicpp.CPPsuspend}): the mark
+    of a cofixpoint body, even where the suspension is buried inside branches
+    rather than at the top level (where {!Loopify.has_lazy_body} catches
+    it). *)
+let is_lazy_factory_call = function CPPsuspend _ -> true | _ -> false
 
 let body_contains_lazy_factory body =
   body_exists is_lazy_factory_call body
@@ -757,7 +753,7 @@ let rec collect_expr (check : call_checker) expr =
     collect_expr check obj @ List.concat_map (collect_expr check) args
   | CPPaccess_call (Adot, obj, _id, args) ->
     collect_expr check obj @ List.concat_map (collect_expr check) args
-  | CPPmove e | CPPderef e | CPPforward (_, e) | CPPnamespace (_, e) ->
+  | CPPmove e | CPPderef e | CPPforward (_, e) | CPPnamespace (_, e) | CPPsuspend (_, e) ->
     collect_expr check e
   | CPPlambda {cl_body = stmts; _} ->
     (* Calls inside lambdas found via collect_expr are NOT tail calls of the

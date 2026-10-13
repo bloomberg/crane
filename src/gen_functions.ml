@@ -1036,11 +1036,8 @@ let gen_dfun n b cty ty temps =
             args
         | _ -> []
       in
-      let lazy_factory =
-        CPPscope (mk_cppglob coind_ref type_args, Id.of_string "lazy_", [])
-      in
       let thunk = mk_lambda [] (Some ret_cpp) [Sreturn (Some x)] ~capture:Closure in
-      Sreturn (Some (mk_call lazy_factory [thunk]))
+      Sreturn (Some (CPPsuspend (Tglob (coind_ref, type_args, []), thunk)))
     else if cod = Tvoid then
       (* void function: execute expression for side effects, then return.
          Some tail expressions (like writeTVar) have side effects that must

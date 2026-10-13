@@ -518,11 +518,8 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
             (Pp.str
                "gen_method_field: cofixpoint return type expected to be Tglob" )
       in
-      let lazy_factory =
-        CPPscope (mk_cppglob coind_ref type_args, Id.of_string "lazy_", [])
-      in
       let thunk = mk_lambda [] (Some ret_cpp) [Sreturn (Some x)] ~capture:Closure in
-      Sreturn (Some (mk_call lazy_factory [thunk]))
+      Sreturn (Some (CPPsuspend (Tglob (coind_ref, type_args, []), thunk)))
     else
       Sreturn (Some x)
   in

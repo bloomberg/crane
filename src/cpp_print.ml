@@ -2481,6 +2481,12 @@ and pp_cpp_expr env args t =
        | None -> mt ()
        | Some ty -> str ", " ++ pp_cpp_type false [] ty )
     ++ str ">()"
+  | CPPsuspend (ty, thunk) ->
+    pp_cpp_expr env args
+      (CPPfun_call
+         ( Minicpp.call_sig ~yields:ty ~nargs:1 (),
+           CPPqualified_t (ty, Id.of_string "lazy_"),
+           of_reversed [thunk] ))
   | CPPerase_fn (ret_ty, e) ->
     Table.mark_needs_erase_fn ();
     str Crane_rt.erase_fn

@@ -1453,12 +1453,10 @@ let args_may_corecurse ts =
     cell already holding its value, where a suspension would be a closure
     to allocate, run and free. *)
 let suspend_ctor ty ctor args =
-  CPPfun_call
-    ( Minicpp.call_sig ~yields:ty ~nargs:1 (),
-      CPPqualified_t (ty, Id.of_string "lazy_"),
-      of_reversed
-        [ mk_lambda [] (Some (Tqualified (ty, ctor)))
-            [Sreturn (Some (CPPbraced (call_args args)))] ~capture:Closure ] )
+  CPPsuspend
+    ( ty,
+      mk_lambda [] (Some (Tqualified (ty, ctor)))
+        [Sreturn (Some (CPPbraced (call_args args)))] ~capture:Closure )
 
 (** Run [f] in a fresh escape-analysis scope, restoring the enclosing one
     afterwards.  Escape analysis runs at several nesting levels (lambdas,

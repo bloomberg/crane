@@ -855,18 +855,11 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
 
 (** Detect a [lazy_]-wrapped cofixpoint body.
 
-    Matches the AST pattern produced by [cofix_wrap] in [translation.ml]
-    (lines ~7620--7650 and ~8878--8883).  The pattern is:
+    The pattern is a return of a suspension ({!Minicpp.CPPsuspend}) whose
+    thunk takes nothing:
 
     {v
-      Sreturn(Some(
-        CPPfun_call(
-          CPPscope (type_expr, "lazy_", []),
-          [CPPlambda
-            { cl_params = [];
-              cl_ret = Some ret_ty;
-              cl_body = inner_body;
-              cl_capture = capture }])))
+      Sreturn (Some (CPPsuspend (ty, CPPlambda { cl_params = []; cl_ret = Some _; ... })))
     v}
 
     This appears as the {e last} statement in the function body.  Cofixpoints
@@ -890,11 +883,15 @@ let has_lazy_body body =
     | _ :: rest -> last_stmt rest
   in
   match last_stmt body with
-  | Some (Sreturn (Some (CPPfun_call (_, 
-      CPPscope (_, lazy_id, []),
-      {rev = [CPPlambda {cl_params = {rev = []}; cl_ret = Some _; _}]}))))
-    when Id.equal lazy_id id_lazy -> true
+  | Some (Sreturn (Some (CPPsuspend (_, CPPlambda {cl_params = {rev = []}; cl_ret = Some _; _}))))
+    -> true
   | _ -> false
+
+(** Whether [body] is a cofixpoint's: it returns a suspension, or holds one
+    in a branch.  Its calls run when a thunk is forced, after it has
+    returned, so there is no stack for a loop to save -- for a function and a
+    method alike. *)
+let is_cofix_body body = has_lazy_body body || body_contains_lazy_factory body
 
 (** Apply nontail-recursion loopification, trying strategies in priority order:
     {ol
@@ -1328,7 +1325,7 @@ let transform_fundef_exn ~tparams (f : dfun) params body =
      any nested [std::function] fixpoints inside the lazy thunk. *)
   let body =
     let name = fundef_display_name f.df_path in
-    if has_lazy_body body || body_contains_lazy_factory body then begin
+    if is_cofix_body body then begin
       if classify check body <> No_recursion then
         record_outcome name (Lp_deferred "cofixpoint body is lazy_-wrapped");
       loopify_inner_lambdas ~tparams ~outer_env:params body
@@ -1460,7 +1457,7 @@ let transform_method ~tparams ~self_ty mf =
       mf_body =
         hoist_rec_conditions check mf.mf_params mf.mf_ret_type mf.mf_body }
   in
-  if has_lazy_body mf.mf_body then begin
+  if is_cofix_body mf.mf_body then begin
     let basic_check =
       method_checker ~n_params ~has_self_param:false ~this_pos
         ?self_ref:mf.mf_globref mf.mf_name

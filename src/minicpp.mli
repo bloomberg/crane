@@ -486,6 +486,12 @@ and cpp_expr =
   | CPPforward of cpp_type * cpp_expr
       (** std::forward<T> for perfect forwarding *)
   | CPPlambda of cpp_lambda  (** Lambda: see {!cpp_lambda}. *)
+  | CPPsuspend of cpp_type * cpp_expr
+      (** [ty::lazy_(thunk)]: the coinductive value of type [ty] with its
+          constructor suspended in [thunk], a nullary lambda.  The one way a
+          suspension is written, so that every pass asking whether a body
+          suspends -- the loop transforms, which must not loop one -- matches
+          this node rather than the factory's name. *)
   | CPPalloc of alloc_kind * cpp_type
       (** An allocation: see {!alloc_kind}.  Used as the callee of a
           {!CPPfun_call} whose arguments are the constructor arguments. *)

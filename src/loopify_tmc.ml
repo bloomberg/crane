@@ -132,7 +132,7 @@ let is_ctor_factory_call = function
           (Common.ctor_owner_key owner, struct_name)
       | None -> None
     in
-    if factory_s = "v" || factory_s = "v_mut" || factory_s = "lazy_"
+    if factory_s = "v" || factory_s = "v_mut"
        || ptr_fields = None
     then None
     else
