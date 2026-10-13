@@ -104,9 +104,10 @@ val is_foldable_numeral_converter_app : Miniml.ml_ast -> bool
     every position whose value ends up in the same slot; callers outside
     translation describe no slot and leave them at {!empty_slot}. *)
 type slot = {
-  deep_erase : bool;
-      (** The slot is really [std::any], so a constructor built for it must use
-          the canonical erased shape every other producer of the same Coq type
+  repr : Ml_type_util.slot_repr;
+      (** How the value is represented in the slot; [Boxed] when the slot is
+          really [std::any], so a constructor built for it must use the
+          canonical erased shape every other producer of the same Coq type
           agrees on. *)
   expected_ml_ty : ml_type option;
       (** The ML type of the slot, when the caller knows it more precisely than
@@ -348,12 +349,19 @@ val classify_erasure :
     canonical representation. *)
 val erase_returned_fn_values : cpp_type -> cpp_stmt list -> cpp_stmt list
 
-(** [box_for_any_slot ?into e expr] adapts [expr], generated from [e], to the
-    shape a slot erased to [std::any] is read back at: a function value in the
-    [crane_erase_fn] adapter, and -- where the slot [into] is a value-indexed
-    family -- a list at a concrete element type converted to the
+(** The representation a value takes in a slot of the given C++ type: the
+    one classifier a slot's {!Ml_type_util.slot_repr} is decided by. *)
+val slot_repr_of_cpp_type : cpp_type -> Ml_type_util.slot_repr
+
+(** The {!Ml_type_util.box_kind} of a slot of the given C++ type already known
+    to be boxed. *)
+val box_kind_of_cpp_type : cpp_type -> Ml_type_util.box_kind
+
+(** [box_for_any_slot kind e expr] adapts [expr], generated from [e], to the
+    shape a boxed slot of kind [kind] is read back at: a function value in
+    the [crane_erase_fn] adapter, and a list in a [Family_box] at the
     element-boxed shape.  Other expressions are returned unchanged. *)
-val box_for_any_slot : ?into:cpp_type -> ml_ast -> cpp_expr -> cpp_expr
+val box_for_any_slot : Ml_type_util.box_kind -> ml_ast -> cpp_expr -> cpp_expr
 
 (** True when a single-branch match body is a direct projection returning a
     field stored as an erased [std::any]. *)

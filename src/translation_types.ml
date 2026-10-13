@@ -1245,7 +1245,7 @@ let rec mark_own_param_for_pair_erasure n body =
   | MLmagic (m, a) -> MLmagic (m, mark_own_param_for_pair_erasure n a)
   | other -> other
 
-(** [field_stores_erased_fn_value ?field_cpp_ty field_types i e] — true when
+(** [field_stores_erased_fn_value ~field_cpp_ty field_types i e] — true when
     constructor field [i] has an abstract type-variable (schema) type — a
     value-dependent field such as the predicate [P] of [sigT A P] — and the
     argument [e] is either a lambda function value or any value landing in a
@@ -1256,13 +1256,13 @@ let rec mark_own_param_for_pair_erasure n body =
     runtime and recovered by consumers with a fixed [any_cast] shape.  To keep
     that shape consistent across every producer of the same Coq type (e.g. the
     "cons" and "nil" productions of a value-dependent [list (nat*nat)] action),
-    the function body must be generated with [deep_erase] so its
+    the function body must be generated in a [Boxed] slot so its
     list/pair/record producers deep-erase to the canonical erased C++ form.
     Without this, a "cons" production built from concrete values would keep a
     concrete element type (e.g. [deque<Prod<Nat,Nat>>]) while the matching
     "nil" production erases to [deque<Prod<any,any>>], and reading the value
     back out of the [std::any] throws [std::bad_any_cast]. *)
-let field_stores_erased_fn_value ?field_cpp_ty field_types i e =
+let field_stores_erased_fn_value ~field_cpp_ty field_types i e =
   match List.nth_opt field_types i with
   | Some ft ->
     (* The (schema) field type must be an abstract type VARIABLE — e.g. the
@@ -1291,6 +1291,9 @@ let field_stores_erased_fn_value ?field_cpp_ty field_types i e =
     (* A lambda's result is boxed only where the field's instantiation erases
        it: a [list (nat -> option nat)] element keeps its [std::optional<
        uint64_t>] result, and its body builds that, not the erased shape. *)
+    (* A field whose instantiation the caller cannot state -- a record
+       field, whose type is spelled once for every instance -- is taken to box
+       a lambda's result, the shape every instance can read. *)
     let result_is_erased =
       match field_cpp_ty with
       | Some (Tfun (_, cod)) -> exists_cpp_type prints_as_any cod
@@ -1895,6 +1898,17 @@ let rec resolves_to_any_type = function
      | None -> false)
   | t when prints_as_any t -> true
   | _ -> false
+
+(** The representation a value takes in a slot of C++ type [t]: the one
+    classifier a slot's {!Ml_type_util.slot_repr} is decided by.  A type that
+    resolves to [std::any] is boxed, as a [Family_box] where it names a
+    declaration whose body erased, spelled through its alias -- a
+    value-indexed family -- and as a [Var_box] otherwise
+    ({!box_kind_of_cpp_type}, for a slot already known to be boxed). *)
+let box_kind_of_cpp_type t = if names_erased_alias t then Family_box else Var_box
+
+let slot_repr_of_cpp_type t =
+  if resolves_to_any_type t then Boxed (box_kind_of_cpp_type t) else Native
 
 (** [cpp_of_ml env t] converts an ML type in the type-variable scope that is
     currently in effect.  Nearly every conversion inside expression generation
@@ -3071,40 +3085,36 @@ let absurd_coercion from into =
   && not (resolves_to_any_type into)
 
 (** A list computed at a concrete element type (a call's result, a variable)
-    going into a slot [into] that is a value-indexed family ([den t]): the
-    family's generic consumers read it with every level boxed in turn -- its
-    elements, and their components and elements -- so it is boxed at that
-    shape ([crane_deep_box]), whatever container the [list] mapping makes
-    it.  A literal needs no conversion, being built at the erased shape
-    already ([deep_erase]).  A box for a type variable -- an existential's
-    payload -- is read at whatever type its consumer knows, and keeps the
-    value as it is. *)
-let box_list_for_family ~into e expr =
-  if not (names_erased_alias into) then expr
-  else
-    match strip_magic e with
-    | MLcons _ -> expr
-    | e -> (
-      match
-        Option.bind (infer_ml_body_type e) (fun t ->
-            Cpp_erasure.erased_list_shape (cpp_of_ml (empty_env ()) t) )
-      with
-      | Some _ -> mk_call (CPPrt Crane_rt.Deep_box) [expr]
-      | None -> expr )
+    going into a [Family_box] slot ([den t]): the family's generic consumers
+    read it with every level boxed in turn -- its elements, and their
+    components and elements -- so it is boxed at that shape
+    ([crane_deep_box]), whatever container the [list] mapping makes it.  A
+    literal needs no conversion, being built at the erased shape already (its
+    slot is [Boxed]). *)
+let deep_box_list e expr =
+  match strip_magic e with
+  | MLcons _ -> expr
+  | e -> (
+    match
+      Option.bind (infer_ml_body_type e) (fun t ->
+          Cpp_erasure.erased_list_shape (cpp_of_ml (empty_env ()) t) )
+    with
+    | Some _ -> mk_call (CPPrt Crane_rt.Deep_box) [expr]
+    | None -> expr )
 
-(** Adapt a value being stored into a slot whose C++ type is the erased
-    [std::any] to the shape its consumers read back out of the box.  A
-    function value is read with [any_cast<std::function<std::any(std::any)>>],
-    which is what the [crane_erase_fn] runtime helper builds, deducing the
-    callable's signature with [std::function] CTAD; a list, where the slot
-    [into] says, by {!box_list_for_family}.  Anything else, and a callable
-    already adapted, is returned unchanged. *)
-let box_for_any_slot ?into e expr =
+(** Adapt a value being stored into a boxed slot of kind [kind] to the shape
+    its consumers read back out of the box.  A function value is read with
+    [any_cast<std::function<std::any(std::any)>>], which is what the
+    [crane_erase_fn] runtime helper builds, deducing the callable's signature
+    with [std::function] CTAD; a list in a [Family_box], by
+    {!deep_box_list}.  A [Var_box] -- an existential's payload -- is read at
+    whatever type its consumer knows, and keeps any other value as it is, as
+    does a callable already adapted. *)
+let box_for_any_slot kind e expr =
   match expr with
   | CPPerase_fn _ -> expr
   | _ when ml_expr_is_function_value e -> wrap_crane_erase_fn Boxed_whole expr
-  | _ -> (
-    match into with Some into -> box_list_for_family ~into e expr | None -> expr )
+  | _ -> ( match kind with Family_box -> deep_box_list e expr | Var_box -> expr )
 
 (** True when environment variable at de Bruijn index [i] has an erased C++
     type (i.e. [std::any] or a dummy type, arising from dependent-parameter

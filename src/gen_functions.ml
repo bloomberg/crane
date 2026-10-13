@@ -1531,8 +1531,9 @@ let gen_decl__inner n b ty =
         else body_expr
       in
       let body_expr =
-        if resolves_to_any_type cty then box_for_any_slot ~into:cty b body_expr
-        else body_expr
+        match slot_repr_of_cpp_type cty with
+        | Boxed kind -> box_for_any_slot kind b body_expr
+        | Native -> body_expr
       in
       let inner = snd (deapply_plain_tvars temps (Dasgn (n, cty, body_expr))) in
       ( match temps with
@@ -1735,8 +1736,9 @@ let gen_spec__inner n b ty =
         else b_expr
       in
       let b_expr =
-        if resolves_to_any_type ty then box_for_any_slot ~into:ty inner_body b_expr
-        else b_expr
+        match slot_repr_of_cpp_type ty with
+        | Boxed kind -> box_for_any_slot kind inner_body b_expr
+        | Native -> b_expr
       in
       (* A type naming a class field this scope cannot resolve would spell
          the field's file-scope erased alias, while the initialiser -- built

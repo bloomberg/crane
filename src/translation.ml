@@ -340,17 +340,13 @@ let constant_name e =
     as for a definition whose return type is value-dependent.  The value must
     then use the canonical erased shape: a consumer of such a slot recovers it
     with a fixed [any_cast] and cannot know the concrete type arguments.  That
-    is the requirement [deep_erase] expresses for a value flowing into an
+    is the requirement a [Boxed] slot expresses for a value flowing into an
     erased field or parameter, and it holds for a mapped constructor
     ([std::make_optional<std::any>]) as for one of Crane's own. *)
 let into_erased_return slot =
-  { slot with
-    deep_erase =
-      slot.deep_erase
-      ||
-      ( match (!tctx).current_cpp_return_type with
-      | Some t -> resolves_to_any_type t
-      | None -> false ) }
+  match Option.map slot_repr_of_cpp_type (!tctx).current_cpp_return_type with
+  | Some (Boxed kind) -> into_box kind slot
+  | Some Native | None -> slot
 
 let rec gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
     r ts =
@@ -370,7 +366,7 @@ let rec gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type
     match ty with
     | Miniml.Tglob (n, tys, sc)
       when List.exists (fun t -> t = Miniml.Tunknown) tys
-           && (not slot.deep_erase)
+           && (not (boxed slot))
            (* Nor when the destination is (or contains) [std::any]: there the
               erased shape is the canonical one every producer has to agree
               on, and grounding this one is what makes the consumer's fixed
@@ -446,7 +442,7 @@ let rec gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type
      outermost arguments. *)
   let ty =
     if
-      slot.deep_erase
+      boxed slot
       || ( match expected_ty with
          | Some t -> has_tany_in_type (unfold_cpp_typedef env t)
          | None -> false )
@@ -475,7 +471,7 @@ let rec gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type
     match (ty, Option.map (fun t -> Ml_type_util.unqualify_ty (unfold_cpp_typedef env t)) expected) with
     | Miniml.Tglob (n, tys, sc), Some (Tglob (n', etys, _))
       when GlobRef.CanOrd.equal n n' && List.length tys = List.length etys
-           && (not slot.deep_erase) ->
+           && (not (boxed slot)) ->
       Miniml.Tglob
         ( n,
           List.map2
@@ -894,7 +890,7 @@ let rec gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type
                so at runtime it is invoked with its argument boxed as a single
                [std::any] holding the fully-erased representation
                ([pair<any,any>] for a pair domain) — that is what producers of
-               a value-dependent type emit (see [deep_erase]).  Its
+               a value-dependent type emit (see a [Boxed] slot).  Its
                parameter's own pattern match must therefore treat the scrutinee
                as erased and go through [any_cast<pair<any,any>>]. *)
             let param_cpp_ty = cpp_of_ml env ty in
@@ -981,7 +977,7 @@ let rec gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type
       let into =
         match field_slot with
         | Some _ as slot -> slot
-        | None when slot.deep_erase ->
+        | None when boxed slot ->
           (* This constructor names a concrete type for the field, so there is
              no erased slot to box into: the custom C++ form consumes the
              argument at that type.  [Ascii] is the clearest case -- its eight
@@ -1159,7 +1155,7 @@ let rec gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type
          to bare [std::any] would produce two incompatible container shapes
          for the same runtime list, causing an [any_cast] mismatch at the
          consumer.  Collapse to bare [std::any] whenever the container is
-         hollow, regardless of [deep_erase], so nil/cons always
+         hollow, whether or not its slot is [Boxed], so nil/cons always
          agree on representation. *)
       let is_custom_list =
         match r with
@@ -1192,7 +1188,7 @@ let rec gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type
       let temps =
         if hollow_container && temps <> [] then
           List.map (fun _ -> Tany) temps
-        else if slot.deep_erase && temps <> [] then
+        else if boxed slot && temps <> [] then
           (* Canonical erased shape for a list is [deque<std::any>] -- a bare
              [std::any] per element, not a structure-preserving
              [deque<pair<any,any>>].  A sibling production for the same Coq
@@ -1230,7 +1226,7 @@ let rec gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type
     lambdas, applications, constructors, pattern matching, etc. Monadic
     non-function globals are wrapped in CPPfun_call by the MLglob case below.
 
-    [deep_erase] says that [ml_e] flows into a slot that is really
+    A [Boxed] slot says that [ml_e] flows into a slot that is really
     [std::any], so any constructor it builds has to use the canonical erased
     shape: every producer of the same Coq type must agree with the fixed
     [any_cast] that reads it back.  A "cons" production keeping
@@ -1805,7 +1801,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       | t -> t
     in
     let args =
-      match (slot.deep_erase, slot.expected_ml_ty) with
+      match (boxed slot, slot.expected_ml_ty) with
       | false, Some fn_ty ->
         let rec domains ty =
           match resolve_tmeta ty with
@@ -2239,7 +2235,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
            lambda to capture by value to avoid dangling references to the outer
            lambda's parameters. *)
         (* A lambda stored into an erased slot IS the value in that slot, so
-           what it returns is erased too and its body inherits [deep_erase]. *)
+           what it returns is erased too and its body inherits the [Boxed] slot. *)
         (* A [return] inside this lambda returns from the lambda, not from the
            enclosing function, so the body must not inherit the enclosing
            function's return type.  The slot this lambda flows into is the only
@@ -2955,12 +2951,12 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
        [rose<optional<function<any(any)>>>] while the consumer names the
        concrete one.  Where the position states the same inductive, its
        arguments are the ones both sides agree on, so take them for the
-       positions the annotation erased.  Not under [deep_erase]: there the
+       positions the annotation erased.  Not in a [Boxed] slot: there the
        erased instantiation {i is} the canonical one. *)
     let ty =
       match (resolve_tmeta ty, Option.map resolve_tmeta slot.expected_ml_ty) with
       | Miniml.Tglob (n, tys, sc), Some (Miniml.Tglob (n', exp_tys, _))
-        when (not slot.deep_erase)
+        when (not (boxed slot))
              && globref_equal n n'
              && List.length tys = List.length exp_tys
              && List.exists (ml_type_contains_erased ~in_arrows:true) tys ->
@@ -3354,7 +3350,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           in
           let temps = erase_past_type_arg temps in
           (* When this constructor value flows into an erased ([std::any]) slot
-             ([deep_erase]) — e.g. a [Prod] pair built inside a
+             (its slot is [Boxed]) — e.g. a [Prod] pair built inside a
              value-dependent action whose result is boxed into [std::any] —
              erase its type arguments so a "cons" production's element type
              (e.g. [Prod<Nat,Nat>]) matches the canonical erased form the
@@ -3367,7 +3363,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
              a time ({!Cpp_erasure.erased_list_shape}), so a list of lists is
              a [List<std::any>] whose elements are boxed lists in turn. *)
           let temps =
-            if slot.deep_erase && temps <> [] then
+            if boxed slot && temps <> [] then
               if is_list_global n then List.map (fun _ -> Tany) temps
               else List.map index_erase_type temps
             else temps
@@ -3378,7 +3374,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
              from this producer's own instantiation is what the value has to
              be built at, or two producers for one field disagree about the
              erasure and neither initialises it. *)
-          (* Under [deep_erase] a slot that erases nothing is this value's own
+          (* In a [Boxed] slot, a slot that erases nothing is this value's own
              type, not a statement about which positions are boxed. *)
           let temps =
             let slot_erases_something =
@@ -3386,7 +3382,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
               | Some e -> Ml_type_util.has_tany_in_type (unfold_cpp_typedef env e)
               | None -> true
             in
-            if slot.deep_erase && not slot_erases_something then temps
+            if boxed slot && not slot_erases_something then temps
             else temps_from_slot n temps
           in
           (* The factory has to be qualified by the very instantiation the
@@ -3669,7 +3665,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                 wrap_crane_erase_fn Boxed_whole new_lambda
               | _ ->
                 (* When a custom list literal (e.g. deque<Val>) is stored in a
-                   std::any field, regenerate it with [deep_erase] so
+                   std::any field, regenerate it in a [Boxed] slot so
                    elements are erased to std::any.  The stored value becomes
                    deque<any>, matching what any_cast<deque<any>> expects when
                    consuming through the erased field. *)
@@ -3681,7 +3677,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                   | _ -> false
                 in
                 if is_custom_list_cons ml_e then begin
-                  gen_ctor_arg ~slot:{slot with deep_erase = true} ml_e
+                  gen_ctor_arg ~slot:(into_box Var_box slot) ml_e
                 end else begin
                   (* A non-lambda FUNCTION value (e.g. a forwarded callback
                      parameter [f]) stored into an erased field must be wrapped
@@ -3703,7 +3699,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                      (unbox each argument, box the result). *)
                   (* Wrap via the [crane_erase_fn] runtime helper (emitted as
                      [#include "crane_fn.h"] in the header preamble). *)
-                  box_for_any_slot ml_e expr
+                  box_for_any_slot Var_box ml_e expr
                 end )
             | Tfun (param_tys, ret_ty) when List.exists (fun t -> t = Tany) param_tys ->
               ( match expr with
@@ -4013,7 +4009,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           (* A field erased whole -- [den t], whatever [t] the call names --
              holds a function as the canonical callable it is read back as. *)
           | _ when ft_has_erased_tvar ft ->
-            box_for_any_slot ~into:(cpp_of_ml env ft) ml_e expr
+            box_for_any_slot (box_kind_of_cpp_type (cpp_of_ml env ft)) ml_e expr
           | _ -> expr )
       in
       let gen_and_wrap i e =
@@ -4210,7 +4206,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
              concrete pair values would otherwise stay [deque<Prod<Nat,Nat>>] --
              a different C++ type for the same Coq type, causing
              [std::bad_any_cast] at the consumer.  Generate the body with
-             [deep_erase] so cons productions deep-erase their element
+             a [Boxed] slot so cons productions deep-erase their element
              type to match nil.  See the mirror in the record-constructor path. *)
           (* The same field type on the ML side.  A field's declared type says
              nothing on its own -- a bare parameter ([A]) or an applied one
@@ -4247,13 +4243,13 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           let expr =
             gen_ctor_arg
               ~slot:
-                { slot with
-                  expected_ml_ty = expected_ml_for_arg;
-                  deep_erase =
-                    slot.deep_erase
-                    || field_stores_erased_fn_value
-                         ?field_cpp_ty:(Option.map instantiated_field_cpp_ty ft_opt)
-                         field_types i e }
+                (let slot = { slot with expected_ml_ty = expected_ml_for_arg } in
+                 if
+                   field_stores_erased_fn_value
+                     ~field_cpp_ty:(Option.map instantiated_field_cpp_ty ft_opt)
+                     field_types i e
+                 then into_box Var_box slot
+                 else slot)
               ?expected_ty:expected_for_arg e
           in
             (ft_opt, expr) )
@@ -4408,7 +4404,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
            same instantiation.  Each producer would otherwise build its own
            ([SigT<std::any, List<std::any>>] for a list payload), which is a
            different C++ type and does not initialise the field.  Generating
-           the argument with [deep_erase] boxes its components, so every
+           the argument in a [Boxed] slot boxes its components, so every
            producer arrives at the one shape the field is declared at. *)
         let field_declared_erased i =
           match List.nth_opt field_types_rec i with
@@ -4436,10 +4432,9 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             (fun i e ->
               gen_stored_value
                 ~slot:
-                  { arg_slot with
-                    deep_erase =
-                      arg_slot.deep_erase
-                      || field_stores_erased_fn_value field_types_rec i e }
+                  ( if field_stores_erased_fn_value ~field_cpp_ty:None field_types_rec i e
+                    then into_box Var_box arg_slot
+                    else arg_slot )
                 ?expected_ty:
                   ( match expected_for_field i e with
                   | Some _ as t -> t
@@ -4481,7 +4476,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                     coerce ?term:(List.nth_opt ts i) ~into:declared_ty expr
                   else if prints_as_any (unfold_cpp_typedef env declared_ty) then
                     match List.nth_opt ts i with
-                    | Some e -> box_for_any_slot ~into:declared_ty e expr
+                    | Some e -> box_for_any_slot (box_kind_of_cpp_type declared_ty) e expr
                     | None -> expr
                   else expr
                 in
@@ -4944,10 +4939,11 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
        consumer recovers it with a fixed [any_cast] and cannot know the
        concrete component types.  Extraction recorded both sides of this
        boundary, so ask for that shape whenever [into] is the erased one and
-       [from] is not.  See [deep_erase] on {!gen_expr}. *)
-    let into_is_erased_only =
+       [from] is not.  See {!Ml_type_util.slot_repr}. *)
+    let into_box_kind =
       match m with
-      | Mcoerce (from, into) ->
+      | Mcoerce (from, into)
+        when
         (* The destination this value is actually being built into outranks
            the coercion's inferred target: a call site that names a concrete
            parameter type -- an instance's associated type, say -- has pinned
@@ -4957,8 +4953,9 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             | Some t -> prints_as_any t
             | None -> true)
         && prints_as_any (cpp_of_ml env into)
-        && not (prints_as_any (cpp_of_ml env from))
-      | Mboxed | Mbarrier -> false
+        && not (prints_as_any (cpp_of_ml env from)) ->
+        Some (box_kind_of_cpp_type (cpp_of_ml env into))
+      | Mcoerce _ | Mboxed | Mbarrier -> None
     in
     (* A lambda is written against the slot it fills -- its binders and
        arity are the slot's -- and a coercion cannot reshape a callable after
@@ -4966,7 +4963,9 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     let inner =
       gen_expr
         ?expected_ty:(match t with MLlam _ -> expected_ty | _ -> None)
-        ~slot:{slot with deep_erase = slot.deep_erase || into_is_erased_only} env t
+        ~slot:
+          (match into_box_kind with Some kind -> into_box kind slot | None -> slot)
+        env t
     in
     (* What extraction recorded about the term's own side of the boundary.
        Not materialised: this is an inferred type, so a [Topaque] here stays
@@ -6937,7 +6936,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
        [std::function] CTAD once C++ instantiates the template. *)
     let has_unresolved_boxed_arg = ref false in
     let arg_slot =
-      {slot with deep_erase = slot.deep_erase || callee_has_erased_params}
+      if callee_has_erased_params then into_box Var_box slot else slot
     in
     (* The callee's declared domain at an argument's position, where the
        binding site recorded a declaration: a lambda is written against it,
@@ -9864,7 +9863,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
             gen_stmts
               ~slot:
                 { slot with
-                  deep_erase = false;
+                  repr = Native;
                   expected_ml_ty = Some t_effective;
                   eta_keep_moves = is_single_use_partial_app }
               env_rhs afun a ) )
@@ -10407,10 +10406,9 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
          nat -> nat] -- must be stored in the canonical adapter form the
          application site casts back to. *)
       let value =
-        match (!tctx).current_cpp_return_type with
-        | Some ret_ty when resolves_to_any_type ret_ty ->
-          box_for_any_slot ~into:ret_ty ast value
-        | _ -> value
+        match Option.map slot_repr_of_cpp_type (!tctx).current_cpp_return_type with
+        | Some (Boxed kind) -> box_for_any_slot kind ast value
+        | Some Native | None -> value
       in
       let result = inline_iife k value in
       tctx := { !tctx with move_dead_after = saved_dead };
@@ -10547,9 +10545,11 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
          erased. *)
       let e =
         match (!tctx).current_cpp_return_type with
-        | Some rt when k_returns && resolves_to_any_type rt ->
-          box_list_for_family ~into:rt t e
-        | Some rt when k_returns -> recover_boxed_component rt e
+        | Some rt when k_returns -> (
+          match slot_repr_of_cpp_type rt with
+          | Boxed Family_box -> deep_box_list t e
+          | Boxed Var_box -> e
+          | Native -> recover_boxed_component rt e )
         | _ -> e
       in
       let result = inline_iife k e in

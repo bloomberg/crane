@@ -508,6 +508,19 @@ type fun_erasure =
           signature kept, or [None] when the result erased along with the
           arguments *)
 
+(** How a value is represented in the slot it is built into.  [Native]: at its
+    own type.  [Boxed]: inside a [std::any], so it must take the canonical
+    erased shape every producer of its Rocq type agrees on, which the fixed
+    [any_cast] reading it back expects; and the {!box_kind} says how deep
+    that shape goes. *)
+type slot_repr = Native | Boxed of box_kind
+
+(** What a boxed slot stands for.  [Var_box]: a type variable -- an erased
+    field, an existential's payload -- read at whatever type its consumer
+    knows.  [Family_box]: a value-indexed family ([den t]), whose generic
+    consumers read every level boxed in turn, a list's elements included. *)
+and box_kind = Var_box | Family_box
+
 (** [names_erased_alias t] -- [t] names a type-level declaration whose body
     erased, spelled through its alias [using memCType = std::any]: a
     type-level function of a value ([memCType c]), or a class field with no

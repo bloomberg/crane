@@ -3360,10 +3360,11 @@ let rec ml_ast_type_hint = function
     stored value.  A position that opens a new slot (a let-bound right-hand
     side, a non-tail statement) starts again from {!empty_slot}. *)
 type slot = {
-  deep_erase : bool;
-      (** The slot is really [std::any], so a constructor built for it has to
-          use the canonical erased shape: every producer of the same Coq type
-          must agree with the fixed [any_cast] that reads it back.  A "cons"
+  repr : slot_repr;
+      (** How the value is represented in the slot.  [Boxed]: the slot is
+          really [std::any], so a constructor built for it has to use the
+          canonical erased shape -- every producer of the same Coq type must
+          agree with the fixed [any_cast] that reads it back.  A "cons"
           production keeping [deque<Prod<Nat, Nat>>] where the matching "nil"
           erased to [deque<Prod<any, any>>] is what [std::bad_any_cast] at the
           consumer looks like. *)
@@ -3427,13 +3428,21 @@ type call_plan = {
 
 (** The slot properties of a position that constrains nothing. *)
 let empty_slot =
-  { deep_erase = false;
+  { repr = Native;
     expected_ml_ty = None;
     in_ctor_arg = false;
     eta_keep_moves = false;
     call_result = None;
     stated_ml_ty = None;
     building_constant = false }
+
+(** Whether the value of [slot] is built inside a [std::any], at the
+    canonical erased shape. *)
+let boxed slot = match slot.repr with Boxed _ -> true | Native -> false
+
+(** [slot], its value boxed as [kind] says unless it already is: an erasure
+    the slot already carries is kept, being the outer and earlier one. *)
+let into_box kind slot = if boxed slot then slot else { slot with repr = Boxed kind }
 
 (** Mark the template arguments of [g] that its declaration spells
     [template <typename> class].  Such a position takes a bare template name

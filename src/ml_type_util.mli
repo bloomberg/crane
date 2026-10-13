@@ -238,6 +238,18 @@ type fun_erasure =
       (** at least one argument erased; the payload is the result type the
           signature kept, or [None] when the result erased too *)
 
+(** How a value is represented in the slot it is built into: [Native], at its
+    own type, or [Boxed] inside a [std::any] at the canonical erased shape,
+    whose depth the {!box_kind} says.  Decided once per slot
+    ({!Translation.slot_repr_of_cpp_type}) and carried in the slot. *)
+type slot_repr = Native | Boxed of box_kind
+
+(** What a boxed slot stands for: [Var_box], a type variable (an erased field,
+    an existential's payload), read at whatever type its consumer knows;
+    [Family_box], a value-indexed family ([den t]), whose generic consumers
+    read every level boxed, a list's elements included. *)
+and box_kind = Var_box | Family_box
+
 (** [names_erased_alias t] -- [t] names a type-level declaration whose body
     erased, spelled through its alias [using X = std::any]. *)
 val names_erased_alias : Minicpp.cpp_type -> bool
