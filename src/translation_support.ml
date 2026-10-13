@@ -3264,6 +3264,22 @@ let rec clean_self_ns t =
   | Tshared_ptr t -> Tshared_ptr (clean_self_ns t)
   | t -> t
 
+(** One function of a local fixpoint block, as its Y-combinator form names
+    it: the fixpoint's own name, the self parameter every impl lambda takes
+    for it, and its parameters' C++ types, innermost first. *)
+type local_fix_self = { fix_id : Id.t; self_id : Id.t; param_tys_rev : cpp_type list }
+
+(** The {!local_fix_self} of each function of a block, from the fixpoints'
+    renamed names and the parameters [gen_fix] gave them; [cpp_of] spells a
+    parameter's type. *)
+let local_fix_selves cpp_of renamed_ids funs_with_params =
+  List.map2
+    (fun (fix_id, _) (args, _) ->
+      { fix_id;
+        self_id = Id.of_string ("_self_" ^ Id.to_string fix_id);
+        param_tys_rev = List.map (fun (_, ty) -> cpp_of ty) args } )
+    renamed_ids funs_with_params
+
 (** Rewrite a local fixpoint's recursive calls to pass the self-parameters.
 
     Both lowerings of a local fixpoint -- the by-reference one and the
@@ -3285,20 +3301,15 @@ let rec clean_self_ns t =
     the wrapper is not yet declared: a closure over its parameters, of the
     C++ types [param_tys_rev] gives in reverse, calling the self-parameter.
 
-    [renamed_ids], [self_ids] and [param_tys_rev] are positionally paired.
     @return the expression and statement rewriters, which are mutually
       recursive and must be taken together. *)
-let self_call_rewriter (renamed_ids : (Id.t * 'a) list) (self_ids : Id.t list)
-    (param_tys_rev : cpp_type list list) : (cpp_expr -> cpp_expr) * (cpp_stmt -> cpp_stmt) =
-  let self_vars_rev = List.rev_map (fun id -> CPPvar id) self_ids in
+let self_call_rewriter (selves : local_fix_self list) :
+    (cpp_expr -> cpp_expr) * (cpp_stmt -> cpp_stmt) =
+  let self_vars_rev = List.rev_map (fun s -> CPPvar s.self_id) selves in
   let find_self id =
-    let rec aux ids sids tys =
-      match (ids, sids, tys) with
-      | (fix_id, _) :: _, sid :: _, ty :: _ when Id.equal id fix_id -> Some (sid, ty)
-      | _ :: ids', _ :: sids', _ :: tys' -> aux ids' sids' tys'
-      | _ -> None
-    in
-    aux renamed_ids self_ids param_tys_rev
+    Option.map
+      (fun s -> (s.self_id, s.param_tys_rev))
+      (List.find_opt (fun s -> Id.equal id s.fix_id) selves)
   in
   let find_self_id id = Option.map fst (find_self id) in
   (* The self id this application spine calls, with every argument along it

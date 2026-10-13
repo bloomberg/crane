@@ -71,19 +71,15 @@ let gen_local_fix_ycomb env renamed_ids funs_with_params =
     | _ -> None
   in
   (* Create self-parameter IDs and impl IDs for each fixpoint. *)
-  let self_ids =
-    List.map
-      (fun (id, _) -> Id.of_string ("_self_" ^ Id.to_string id))
-      renamed_ids
-  in
+  let selves = local_fix_selves (cpp_of_ml env) renamed_ids funs_with_params in
+  let self_ids = List.map (fun s -> s.self_id) selves in
   let impl_ids =
     List.map
       (fun (id, _) -> Id.of_string (Id.to_string id ^ "_impl"))
       renamed_ids
   in
   let rewrite_expr, rewrite_stmt =
-    self_call_rewriter renamed_ids self_ids
-      (List.map (fun (args, _) -> List.map (fun (_, ty) -> cpp_of_ml env ty) args) funs_with_params)
+    self_call_rewriter selves
   in
   (* Generate impl lambdas: each takes all self params (auto &) + original params. *)
   let impl_stmts =
@@ -181,19 +177,15 @@ let gen_local_fix_by_ref env renamed_ids funs_with_params owned_flags_per_fun =
       | _ -> Some t )
     | _ -> None
   in
-  let self_ids =
-    List.map
-      (fun (id, _) -> Id.of_string ("_self_" ^ Id.to_string id))
-      renamed_ids
-  in
+  let selves = local_fix_selves (cpp_of_ml env) renamed_ids funs_with_params in
+  let self_ids = List.map (fun s -> s.self_id) selves in
   let impl_ids =
     List.map
       (fun (id, _) -> Id.of_string (Id.to_string id ^ "_impl"))
       renamed_ids
   in
   let rewrite_expr, rewrite_stmt =
-    self_call_rewriter renamed_ids self_ids
-      (List.map (fun (args, _) -> List.map (fun (_, ty) -> cpp_of_ml env ty) args) funs_with_params)
+    self_call_rewriter selves
   in
   let impl_stmts =
     List.map2
