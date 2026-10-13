@@ -10,6 +10,6 @@
     user. *)
 
 From Crane Require Import Extraction.
-From CraneTestsWIP Require recursive_library_datatypes.Src.
+From CraneTestsRegression Require recursive_library_datatypes.Src.
 
 Crane Recursive Extraction Library Src.
