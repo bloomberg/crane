@@ -2598,23 +2598,15 @@ let hkt_carrier_type_args env tvars ?result id tys =
     Every lift path asks this, and the only difference between them is where
     the type and the parameters come from.  [all_tvar_names] is in index
     order, as type conversion reads it; the arguments follow the order of the
-    [head], where one is given. *)
+    [head], the type parameters the lifted template declares. *)
 let lifted_call_type_args
     ~class_args ~env ~outer_tvars ~head ~all_tvar_names ~binder_ty ~param_ml_tys =
-  (* Only what the declaration's head still declares can be named; [None]
-     where the head is every variable. *)
-  let in_head id =
-    match head with
-    | None -> true
-    | Some h -> List.exists (Id.equal id) h
-  in
+  (* Only what the declaration's [head] -- the type parameters its template
+     declares, in order -- still declares can be named, and in that order. *)
+  let in_head id = List.exists (Id.equal id) head in
   let outer_tvars = List.filter in_head outer_tvars in
   let all_tvar_names = List.filter in_head all_tvar_names in
-  let in_head_order =
-    match head with
-    | None -> all_tvar_names
-    | Some h -> List.filter (fun id -> List.exists (Id.equal id) all_tvar_names) h
-  in
+  let in_head_order = List.filter (fun id -> List.exists (Id.equal id) all_tvar_names) head in
   class_args
   @
   let extra_tvar_names =

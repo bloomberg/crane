@@ -8986,8 +8986,8 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
          references, extra tvars are resolved to concrete types from the
          enclosing function's return type. *)
       let call_type_args =
-        lifted_call_type_args ~class_args ~env ~outer_tvars ~head:None
-          ~all_tvar_names ~binder_ty:(snd ids.(0))
+        lifted_call_type_args ~class_args ~env ~outer_tvars
+          ~head:(List.map snd all_temps) ~all_tvar_names ~binder_ty:(snd ids.(0))
           ~param_ml_tys:
             ( match List.nth_opt funs_compiled x with
             | Some (_, params, _) -> List.map snd params
@@ -9591,7 +9591,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
            a parameter out of it. *)
         let call_type_args =
           lifted_call_type_args ~class_args ~env ~outer_tvars
-            ~head:(Some (List.map snd all_temps_with_funs))
+            ~head:(List.map snd all_temps_with_funs)
             ~all_tvar_names ~binder_ty:t ~param_ml_tys
         in
         List.map
@@ -10048,8 +10048,8 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           add_lifted_decl lifted_decl )
         funs_compiled;
       let call_type_args =
-        lifted_call_type_args ~class_args ~env ~outer_tvars ~head:None
-          ~all_tvar_names ~binder_ty:(snd ids.(x))
+        lifted_call_type_args ~class_args ~env ~outer_tvars
+          ~head:(List.map snd all_temps) ~all_tvar_names ~binder_ty:(snd ids.(x))
           ~param_ml_tys:
             ( match List.nth_opt funs_compiled x with
             | Some (_, params, _) -> List.map snd params
