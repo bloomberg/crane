@@ -1355,13 +1355,14 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
        alone: calling it would apply the throwing thunk's [std::any] result
        as though it were a function. *)
     gen_expr ?expected_ty env absurd
-  | MLapp (MLglob (r, ret_tys), a1 :: l) when is_ret r ->
+  | MLapp (MLglob ({callee = r; _} as use), a1 :: l) when is_ret r ->
+    let ret_tys = Global_use.legacy_source_order use in
     if (!tctx).itree_mode = Reified then begin
       (* Reified mode: Ret produces ITree<R>::ret(value). Don't strip it. *)
       Table.require_itree_header ();
       let t = Common.last (a1 :: l) in
       match t with
-      | MLglob (g, _) when is_ghost g ->
+      | MLglob {callee = g; _} when is_ghost g ->
         mk_itree_ret Tvoid []
       | _ ->
         let inner = gen_expr env t in
@@ -1381,9 +1382,9 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       let t = Common.last (a1 :: l) in
       gen_expr env t
     end
-  (* | MLapp (MLglob (h, _), a1 :: a2 :: l) when is_hoist h -> gen_expr env
+  (* | MLapp (MLglob {callee = h; _}, a1 :: a2 :: l) when is_hoist h -> gen_expr env
      (MLapp (a1, a2::[])) *)
-  | MLapp (MLglob (r, _), _ :: _ :: _) as a when is_bind r
+  | MLapp (MLglob {callee = r; _}, _ :: _ :: _) as a when is_bind r
       && (!tctx).itree_mode <> Reified ->
     (* Sequential mode: bind in expression context (e.g., nested inside
        another expression). Wrap in IIFE so gen_stmts can sequentialize. *)
@@ -1402,7 +1403,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
        MLapp(MLglob(dcs), [x,f1,f2,l]) lets eta_fun see the complete argument
        list and generate a direct call. *)
     gen_expr ?expected_ty ~slot env (MLapp (g, inner_args @ outer_args))
-  | MLapp (MLglob (r, _), [arg]) when Table.is_numeral_converter r ->
+  | MLapp (MLglob {callee = r; _}, [arg]) when Table.is_numeral_converter r ->
     (* Fold Number.uint/signed_int digit chain into a direct integer literal.
        Tries unsigned (of_num_uint) then signed (of_num_int).
        Falls through to eta_fun on failure. *)
@@ -1416,8 +1417,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       ( match folded with
       | Some n ->
         render_numeral info n
-      | None -> eta_fun env (MLglob (r, [])) [arg] )
-    | None -> eta_fun env (MLglob (r, [])) [arg] )
+      | None -> eta_fun env (MLglob (Global_use.legacy_untagged r [])) [arg] )
+    | None -> eta_fun env (MLglob (Global_use.legacy_untagged r [])) [arg] )
   | MLapp (MLcase (typ, scrut, pv), outer_args) when Array.length pv = 1 ->
     (* Flatten outer args into a single-branch case body.  A case with one
        branch is a destructuring and nothing else, whatever it scrutinises --
@@ -1440,7 +1441,9 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
   (* A class field is projected through the instance wherever the instance
      survived, whatever mapping the field carries -- see
      {!static_projection_instance}. *)
-  | MLapp (MLglob (x, tys), args) when static_projection_instance env x args <> None -> (
+  | MLapp (MLglob ({callee = x; _} as use), args)
+    when static_projection_instance env x args <> None -> (
+    let tys = Global_use.legacy_source_order use in
     let inst = Option.get (static_projection_instance env x args) in
     match static_projection_missing env x tys args inst with
     | [] -> project_through_instance env x tys args inst
@@ -1448,7 +1451,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       let k = List.length missing in
       let call =
         MLapp
-          ( MLglob (x, tys),
+          ( MLglob use,
             List.map (Mlutil.ast_lift k) args @ List.init k (fun i -> MLrel (k - i)) )
       in
       gen_expr ?expected_ty ~slot env
@@ -1461,7 +1464,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
      closures.  It is built once and kept, as a closed constructor term is
      (see {!Cpp_constants}).  An instance is a pure value, so building it
      once cannot drop an effect; only where it comes out as a call. *)
-  | MLapp (MLglob (f, _), args) as e
+  | MLapp (MLglob {callee = f; _}, args) as e
     when (not slot.building_constant) && is_closed_instance_call env f args e -> (
     let built = gen_expr ?expected_ty ~slot:{slot with building_constant = true} env e in
     match built with
@@ -1478,7 +1481,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
        this position expects. *)
     let callee_ty =
       match f with
-      | MLglob (r, _) -> find_type_opt r
+      | MLglob {callee = r; _} -> find_type_opt r
       | MLrel i -> get_env_type_opt i
       | _ -> None
     in
@@ -1486,7 +1489,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
        yields is the codomain of *that*, not of the general scheme. *)
     let callee_ty_inst =
       match (f, callee_ty) with
-      | MLglob (id, tys), Some ty ->
+      | MLglob ({callee = id; _} as use), Some ty ->
+        let tys = Global_use.legacy_source_order use in
         let value_args =
           List.filter (function MLdummy _ -> false | _ -> true) args
         in
@@ -1533,7 +1537,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
        at [crane::obj] -- hand back anything else, however this call
        instantiates it. *)
     let declared_result_is_boxed =
-      match f with MLglob (r, _) -> glob_declared_cod_erases r | _ -> false
+      match f with MLglob {callee = r; _} -> glob_declared_cod_erases r | _ -> false
     in
     let result =
       if
@@ -1953,7 +1957,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           in
           let rec reads depth e =
             match e with
-            | MLapp (MLglob (g, _), MLrel k :: _)
+            | MLapp (MLglob {callee = g; _}, MLrel k :: _)
               when k = depth + 1 && member_access g ->
               true
             | MLlam (_, _, b) -> reads (depth + 1) b
@@ -2482,7 +2486,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
          generic forwarding lambda — C++ cannot pass overloaded or template
          function names as first-class values. *)
       ( match a with
-      | MLglob (r, tys_inner) ->
+      | MLglob ({callee = r; _} as use) ->
+        let tys_inner = Global_use.legacy_source_order use in
         let ml_ty =
           match find_type_opt r with
           | Some ty -> ty
@@ -2724,16 +2729,18 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       in
       eta_expand_to_expected ?expected_ty ~ml_arity ~returns_a_lambda
         ~arity:(List.length filtered_args) f )
-  | MLglob (x, tys) when is_inline_custom x ->
+  | MLglob ({callee = x; _} as use) when is_inline_custom x ->
+    let tys = Global_use.legacy_source_order use in
     let ml_ty = find_type x in
     let ty = cpp_of_ml env ml_ty in
     ( match ty with
     | Tfun (dom, cod) ->
-      eta_fun ?expected_ty env (MLglob (x, tys)) []
+      eta_fun ?expected_ty env (MLglob use) []
     | _ ->
       mk_cppglob ?yields:(glob_yields env x tys)
         x (template_params_of_ml ~site:Through_tvar env tys) )
-  | MLglob (x, tys) ->
+  | MLglob ({callee = x; _} as use) ->
+    let tys = Global_use.legacy_source_order use in
     let tvars = get_current_type_vars () in
     let tys_cpp =
       List.map
@@ -4661,7 +4668,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                off the receiver, which names a concrete instance. *)
             let from_receiver =
               match t with
-              | MLglob (r, _) | MLmagic (_, MLglob (r, _)) -> (
+              | MLglob {callee = r; _} | MLmagic (_, MLglob {callee = r; _}) -> (
                 match resolve_tmeta (Table.find_type r) with
                 | Miniml.Tglob (_, (_ :: _ as args), _) -> Some args
                 | _ | (exception Not_found) -> None )
@@ -5818,7 +5825,7 @@ and gen_call_args ~slot ?expected_ty env id plan =
        accepts void-returning functions. *)
     | Some param_ty
       when (match ml_arg with
-            | MLglob (r, _) | MLmagic (_, MLglob (r, _)) -> is_void_ified_ref r
+            | MLglob {callee = r; _} | MLmagic (_, MLglob {callee = r; _}) -> is_void_ified_ref r
             | _ -> false)
            && (match param_ty with Miniml.Tarr _ -> true | _ -> false)
            && ml_type_is_unit (ml_codomain param_ty)
@@ -5872,7 +5879,8 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
   (* Read once: the flag describes this closure, not anything built inside it. *)
   let slot = {slot with eta_keep_moves = false} in
   match f with
-  | MLglob (id, tys) ->
+  | MLglob ({callee = id; _} as use) ->
+    let tys = Global_use.legacy_source_order use in
     let plan = plan_call ~slot ?expected_ty env id tys args in
     let {
       cp_excess_args = excess_args;
@@ -6341,7 +6349,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
                 List.concat_map
                   (fun tc_arg ->
                     match tc_arg with
-                    | MLglob (r, _) ->
+                    | MLglob {callee = r; _} ->
                       let bindings = Table.get_instance_promoted_types r in
                       List.map
                         (fun (var_name, ml_ty) ->
@@ -6667,7 +6675,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
               | Some ty -> rel_is_erased ty
               | None -> true )
             | MLmagic (_, _) -> true
-            | MLapp (MLglob (r, _), args) as node ->
+            | MLapp (MLglob {callee = r; _}, args) as node ->
               (* If the callee is itself a pair accessor (.first/.second) and
                  its product arg was coerced, result is also std::any *)
               let is_pair_accessor =
@@ -6691,7 +6699,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
                 || ( match infer_ml_body_type node with
                    | Some t -> is_boxed_source (cpp_of_ml env t)
                    | None -> false )
-            | MLglob (r, _) -> glob_declared_cod_erases r
+            | MLglob {callee = r; _} -> glob_declared_cod_erases r
             | MLapp (MLmagic (_, _), _) -> true
             | MLrel i -> (
               match get_env_type_opt i with
@@ -6798,7 +6806,8 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
        call goes through. *)
     let callee_fun_ml_ty =
       match f with
-        | MLglob (r, tys) when tys <> [] ->
+        | MLglob ({callee = r; _} as use) when Global_use.legacy_source_order use <> [] ->
+          let tys = Global_use.legacy_source_order use in
           (match find_type_opt r with
            | Some ty -> Some (Mlutil.type_subst_list tys ty)
            | None -> infer_ml_body_type f)
@@ -8307,7 +8316,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
     | _ -> false
   in
   (* [scrut_callee_ret_erased]: the scrutinee is a call to a global function
-     ([MLapp (MLglob (r, _), args)], possibly [MLmagic]-wrapped) whose
+     ([MLapp (MLglob {callee = r; _}, args)], possibly [MLmagic]-wrapped) whose
      DECLARED (un-instantiated) codomain resolves to [std::any] — e.g.
      [rev_tuple : forall xs, syms_semty xs -> syms_semty (rev xs)], a single
      C++ function generic over [xs], so its actual return type is the
@@ -8326,7 +8335,8 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
   in
   let scrut_callee_ret_erased =
     match flatten_app t with
-    | MLapp (MLglob (r, tys), args) ->
+    | MLapp (MLglob ({callee = r; _} as use), args) ->
+      let tys = Global_use.legacy_source_order use in
       ( match find_type_opt r with
       | Some fty ->
         let fty = match tys with [] -> fty | _ -> Mlutil.type_subst_list tys fty in
@@ -8432,7 +8442,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
   let scrut_db = scrutinee_binder t in
   let scrut_expected =
     match flatten_app t with
-    | MLapp (MLglob (r, _), _)
+    | MLapp (MLglob {callee = r; _}, _)
       when (match find_type_opt r with
             | Some fty -> result_is_index_only_tvar fty
             | None -> false) -> Some typ
@@ -9767,8 +9777,8 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
               let try_app_body (b_inner : Miniml.ml_ast) db_offset =
                 let target_rel = 1 + db_offset in
                 match b_inner with
-                | Miniml.MLapp (Miniml.MLglob (func_ref, _), app_args)
-                | Miniml.MLapp (Miniml.MLmagic (_, Miniml.MLglob (func_ref, _)), app_args) ->
+                | Miniml.MLapp (Miniml.MLglob {callee = func_ref; _}, app_args)
+                | Miniml.MLapp (Miniml.MLmagic (_, Miniml.MLglob {callee = func_ref; _}), app_args) ->
                   let rec find_pos args i =
                     match args with
                     | [] -> None
@@ -10169,9 +10179,10 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     in
     let fix_id = fst (List.nth renamed_ids x) in
     decls @ defs @ [k (CPPvar fix_id)]
-  (* | MLapp (MLglob (h, _), a1 :: a2 :: l) when is_hoist h -> gen_stmts env k
+  (* | MLapp (MLglob {callee = h; _}, a1 :: a2 :: l) when is_hoist h -> gen_stmts env k
      (MLapp (a1, a2::[])) *)
-  | MLapp (MLglob (r, bind_tys), a1 :: a2 :: l) when is_bind r ->
+  | MLapp (MLglob ({callee = r; _} as use), a1 :: a2 :: l) when is_bind r ->
+    let bind_tys = Global_use.legacy_source_order use in
     (* Reified mode: bind is a real function call, not desugared. *)
     if (!tctx).itree_mode = Reified then
       let saved_dead = (!tctx).move_dead_after in
@@ -10224,7 +10235,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
            can reference it if needed. *)
         let action_is_pure_ret =
           match a_ml with
-          | MLapp (MLglob (r, _), _) when is_ret r -> true
+          | MLapp (MLglob {callee = r; _}, _) when is_ret r -> true
           | _ -> false
         in
         let side_effect =
@@ -10263,7 +10274,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         match a with CPPenum_val _ -> [] | _ -> [Sexpr a]
       in
       ( match f with
-      | MLglob (r, _) when is_ret r ->
+      | MLglob {callee = r; _} when is_ret r ->
         (* Eta-reduced Ret: bind action Ret = action (monad right identity).
            In sequential mode, just execute the action and return. *)
         if (!tctx).current_cpp_return_type = Some Tvoid then
@@ -10295,7 +10306,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         | None ->
           side_effect @ gen_stmts ~slot env k f ) ) )
     end
-  | MLapp (MLglob (r, _), a1 :: l) when is_ret r ->
+  | MLapp (MLglob {callee = r; _}, a1 :: l) when is_ret r ->
     if (!tctx).itree_mode = Reified then begin
       (* Reified mode: Ret is a constructor call, not desugared. *)
       let saved_dead = (!tctx).move_dead_after in
@@ -10341,7 +10352,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     end
     else
       [Sreturn None]
-  | MLglob (r, _) when is_ghost r ->
+  | MLglob {callee = r; _} when is_ghost r ->
     if (!tctx).itree_mode = Reified then begin
       (* Reified mode: ghost (void value) at tail position must produce
          ITree<void>::ret() rather than bare return, since the function
@@ -10482,7 +10493,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         (* Only treat as void if fully applied — partial applications
            return a function value, not void. *)
         && ( match f with
-           | MLglob (r, _) ->
+           | MLglob {callee = r; _} ->
              ( match find_type_opt r with
              | Some ty ->
                let n_non_dummy_args =
@@ -10672,7 +10683,7 @@ let () = type_term_arg := fun env a -> gen_expr env a
     never emitted.  Dependency collection uses this to avoid pulling in the
     vestigial [of_num_uint]/[of_uint]/[Uint] machinery. *)
 let is_foldable_numeral_converter_app = function
-  | MLapp (MLglob (r, _), [arg]) when Table.is_numeral_converter r ->
+  | MLapp (MLglob {callee = r; _}, [arg]) when Table.is_numeral_converter r ->
     ( match try_fold_num_uint arg with
     | Some _ -> true
     | None -> Option.has_some (try_fold_num_int arg) )

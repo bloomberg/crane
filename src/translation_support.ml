@@ -421,9 +421,9 @@ let wrap_void_call_as_value (call_expr : cpp_expr) : cpp_expr =
 let rec ml_callee_is_void = function
   (* A record field of a [unit]-returning function type is stored as a
      [std::function<void(...)>]: [globals_object.(globals_set) gs]. *)
-  | MLglob (r, _) when Table.is_projection r -> (
+  | MLglob {callee = r; _} when Table.is_projection r -> (
     try ml_type_is_void_call (Table.find_type r) with Not_found -> false )
-  | MLglob (r, _) -> is_void_ified_ref r
+  | MLglob {callee = r; _} -> is_void_ified_ref r
   | MLmagic (_, inner) -> ml_callee_is_void inner
   | MLrel i -> ( try ml_type_is_void_call (get_env_type i) with _ -> false )
   | _ -> false
@@ -1243,7 +1243,7 @@ let rec is_reified_monadic_expr ml_expr =
           | _ -> false
         in
         ( match a with
-        | Miniml.MLglob (g, _) when fills_this_carrier ->
+        | Miniml.MLglob {callee = g; _} when fills_this_carrier ->
           instance_carrier_is_reified g
         | _ -> go doms' args' )
       | _ -> false
@@ -1277,7 +1277,7 @@ let rec is_reified_monadic_expr ml_expr =
   (* A global of monadic type is already a tree whether or not it is applied:
      a zero-arity constant like [get : itree E nat] is the same value that its
      applied form would be, and wrapping it in [ret] builds a tree of trees. *)
-  | MLglob (r, _) | MLapp (MLglob (r, _), _) ->
+  | MLglob {callee = r; _} | MLapp (MLglob {callee = r; _}, _) ->
     let nargs = match ml_expr with MLapp (_, args) -> List.length args | _ -> 0 in
     (not (is_void_ified_ref r))
     && ( match find_type_opt r with
@@ -1402,7 +1402,7 @@ let naming_calls ~cpp_of r =
     values.  A global is a value unless naming it calls it ({!thunk_reason}). *)
 let rec ml_is_value = function
   | MLrel _ | MLlam _ | MLdummy _ | MLuint _ | MLfloat _ | MLstring _ -> true
-  | MLglob (r, _) -> thunk_reason r = None
+  | MLglob {callee = r; _} -> thunk_reason r = None
   | MLcons (_, _, args) | MLtuple args -> List.for_all ml_is_value args
   | MLmagic (_, e) -> ml_is_value e
   | _ -> false
@@ -1417,7 +1417,7 @@ let calls_eagerly r body =
   let exception Found in
   let rec walk e =
     match e with
-    | MLglob (r', _) when globref_equal r r' -> raise Found
+    | MLglob {callee = r'; _} when globref_equal r r' -> raise Found
     | MLlam _ -> ()
     | MLcons (ty, _, _) when Table.is_coinductive_type ty -> ()
     | _ -> Mlutil.ast_iter walk e
@@ -1436,7 +1436,7 @@ let args_may_corecurse ts =
   let yields_coinductive ty = Table.is_coinductive_type (ml_codomain ty) in
   let rec corec depth t =
     match t with
-    | MLglob (g, _) -> (
+    | MLglob {callee = g; _} -> (
       (match !Table.current_decl_ref with
        | Some self -> globref_equal g self
        | None -> false)
@@ -1762,7 +1762,8 @@ let rec collect_tvars_ast acc = function
   | MLlam (_, ty, body) -> collect_tvars_ast (collect_tvars acc ty) body
   | MLletin (_, ty, a, b) ->
     collect_tvars_ast (collect_tvars_ast (collect_tvars acc ty) a) b
-  | MLglob (_, tys) -> List.fold_left collect_tvars acc tys
+  | MLglob use ->
+    List.fold_left collect_tvars acc (Global_use.legacy_source_order use)
   | MLcons (ty, _, args) ->
     List.fold_left collect_tvars_ast (collect_tvars acc ty) args
   | MLcase (ty, e, brs) ->
@@ -1800,7 +1801,7 @@ let rec collect_tvars_ast acc = function
     exception handlers or discard them when their result is unused. *)
 let rec ast_may_throw = function
   | MLaxiom _ | MLexn _ -> true
-  | MLglob (r, _) -> Table.is_throwing_value r
+  | MLglob {callee = r; _} -> Table.is_throwing_value r
   | MLlam (_, _, body) -> ast_may_throw body
   | MLletin (_, _, a, b) -> ast_may_throw a || ast_may_throw b
   | MLcons (_, _, args) -> List.exists ast_may_throw args
@@ -1987,7 +1988,7 @@ let rec resolve_metas_in_ast resolve_metas = function
     resolve_metas ty;
     resolve_metas_in_ast resolve_metas a;
     resolve_metas_in_ast resolve_metas b
-  | MLglob (_, tys) -> List.iter resolve_metas tys
+  | MLglob use -> Global_use.iter_types resolve_metas use
   | MLcons (ty, _, args) ->
     resolve_metas ty;
     List.iter (resolve_metas_in_ast resolve_metas) args
@@ -2220,7 +2221,7 @@ let escaping_params ~suspended n_params body =
       in
       spine (List.length args) depth f;
       List.iter (walk under depth) args
-    | MLapp (MLglob (r, _), (_ :: _ :: _ as args))
+    | MLapp (MLglob {callee = r; _}, (_ :: _ :: _ as args))
       when Table.is_bind r && (!tctx).itree_mode <> Reified ->
       (* A bind outside reified mode is desugared into statements: its
          continuation runs where it is written, so the binders it opens are
@@ -2311,7 +2312,7 @@ let detect_non_forwarded_params (self_ref : GlobRef.t) (n_params : int)
     (body : ml_ast) : int list =
   detect_non_forwarded_params_generic
     ~is_self_call:(fun _depth -> function
-      | MLglob (r, _) -> globref_equal r self_ref
+      | MLglob {callee = r; _} -> globref_equal r self_ref
       | _ -> false )
     n_params body
 
@@ -2581,7 +2582,8 @@ let deducible_tvars_of_glob id =
     a second one here would be a second oracle, free to disagree. *)
 let rec infer_ml_body_type (a : ml_ast) : ml_type option =
   match a with
-  | MLapp (MLglob (r, tys), args) ->
+  | MLapp (MLglob ({callee = r; _} as use), args) ->
+    let tys = Global_use.legacy_source_order use in
     ( match find_type_opt r with
     | Some ty ->
       (* Instantiate type schema variables with actual type arguments -- the
@@ -2606,7 +2608,7 @@ let rec infer_ml_body_type (a : ml_ast) : ml_type option =
   | MLletin (_, _, _, body) -> infer_ml_body_type body
   | MLlam (_, ty, body) ->
     Option.map (fun rty -> Tarr (ty, rty)) (infer_ml_body_type body)
-  | MLglob (r, _) -> find_type_opt r
+  | MLglob {callee = r; _} -> find_type_opt r
   | MLmagic (_, e) -> infer_ml_body_type e
   | _ -> None
 
@@ -3166,7 +3168,11 @@ let ml_projection_field_type = function
     Coq type says the result is [nat = unsigned int], but the C++ expression
     [forward_functor->object_of(7u)] actually returns [std::any]. *)
 let rec ml_body_returns_erased_field = function
-  | Miniml.MLapp ((MLglob (r, tys) | MLmagic (_, MLglob (r, tys))), args) as full ->
+  | Miniml.MLapp
+      ( ( MLglob ({callee = r; _} as use)
+        | MLmagic (_, MLglob ({callee = r; _} as use)) ),
+        args ) as full ->
+    let tys = Global_use.legacy_source_order use in
     let direct =
       match find_type_opt r with
       | Some ty ->

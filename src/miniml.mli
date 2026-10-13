@@ -220,7 +220,7 @@ and ml_ast =
   | MLapp of ml_ast * ml_ast list
   | MLlam of ml_ident * ml_type * ml_ast
   | MLletin of ml_ident * ml_type * ml_ast * ml_ast
-  | MLglob of GlobRef.t * ml_type list
+  | MLglob of global_use
   | MLcons of ml_type * GlobRef.t * ml_ast list
   | MLtuple of ml_ast list
   | MLcase of ml_type * ml_ast * ml_branch array
@@ -233,6 +233,27 @@ and ml_ast =
   | MLfloat of Float64.t
   | MLstring of Pstring.t
   | MLparray of ml_ast array * ml_ast
+
+(** A global named at a use: the callee and the type arguments the use
+    wrote.  Built and read only through {!Global_use}; a reader that needs
+    only the callee matches [MLglob {callee; _}] and never sees the rest.
+
+    The written arguments are the bridge representation of the refactor in
+    docs/Type-Argument-Numbering-Refactor-Plan.md: one entry per type-level
+    argument of the Rocq application, in source order, each tagged with the
+    binder it was written at and the callee's scheme variable that binder
+    stands for -- [None] where the binder has none (an erased family) or the
+    entry was synthesised rather than written. *)
+and global_use = private {
+  callee : GlobRef.t;
+  legacy_written : written_tyarg list;
+}
+
+and written_tyarg = {
+  wt_type : ml_type;
+  wt_binder : Scheme.Binder.t option;
+  wt_var : Scheme.Var.t option;
+}
 
 (** What an [MLmagic] node is doing.  Extraction emits these wherever erasure
     has opened a gap between the type a term has and the type its context
@@ -392,3 +413,30 @@ type language_descr = {
   (* for an isolated declaration print *)
   pp_decl : ml_decl -> Pp.t;
 }
+
+(** Building and reading {!global_use}. *)
+module Global_use : sig
+  val callee : global_use -> GlobRef.t
+
+  (** A use with the entries extraction wrote and tagged. *)
+  val written : GlobRef.t -> written_tyarg list -> global_use
+
+  (** A use with an untagged list, as every synthesised reference builds
+      one today -- the empty list included, which says nothing about whether
+      the callee is polymorphic. *)
+  val legacy_untagged : GlobRef.t -> ml_type list -> global_use
+
+  (** The written types in source order: the list [MLglob] used to carry,
+      read positionally by the readers not yet migrated. *)
+  val legacy_source_order : global_use -> ml_type list
+
+  (** The written types the use gave the callee's scheme variables, each
+      with its variable; entries with no variable are not here. *)
+  val scheme_evidence : global_use -> (Scheme.Var.t * ml_type) list
+
+  (** Maps every written type, keeping the tags. *)
+  val map_types : (ml_type -> ml_type) -> global_use -> global_use
+
+  val iter_types : (ml_type -> unit) -> global_use -> unit
+  val exists_type : (ml_type -> bool) -> global_use -> bool
+end

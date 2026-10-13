@@ -42,7 +42,7 @@ let nb_occur_match =
       let k' = k + Array.length ids in
       Array.fold_left (fun total body -> total + nb k' body) 0 bodies
     | MLlam (_, _, body) -> nb (k + 1) body
-    | MLapp ((MLglob (r, _) as head), args) when Table.is_inline_custom r ->
+    | MLapp ((MLglob {callee = r; _} as head), args) when Table.is_inline_custom r ->
       let mentions =
         match Table.inline_custom_text r with
         | Some s -> Foreign_template.arg_mentions s
@@ -105,7 +105,7 @@ let partial_app_remaining head args =
     try Some (find_type r) with Not_found -> None
   in
   match head with
-  | MLglob (r, _) ->
+  | MLglob {callee = r; _} ->
     ( match find_type_opt r with
     | Some ty ->
       let rec count_value_dom = function
@@ -202,7 +202,7 @@ let escapes ?(query = Conservative) ?(return_escapes = true) k t =
         check (k + 1) false false body
       else
         occurs (k + 1) body
-    | MLapp (MLglob (g, _), args) when query = Of_param && passed_to_owned g k args -> true
+    | MLapp (MLglob {callee = g; _}, args) when query = Of_param && passed_to_owned g k args -> true
     | MLapp (head, args) ->
       check k false false head
       || List.exists (check k false (refined)) args

@@ -152,7 +152,7 @@ and ml_ast =
   | MLapp of ml_ast * ml_ast list
   | MLlam of ml_ident * ml_type * ml_ast
   | MLletin of ml_ident * ml_type * ml_ast * ml_ast
-  | MLglob of GlobRef.t * ml_type list
+  | MLglob of global_use
   | MLcons of ml_type * GlobRef.t * ml_ast list
   | MLtuple of ml_ast list
   | MLcase of ml_type * ml_ast * ml_branch array
@@ -165,6 +165,18 @@ and ml_ast =
   | MLfloat of Float64.t
   | MLstring of Pstring.t
   | MLparray of ml_ast array * ml_ast
+
+(** A global at a use.  See miniml.mli. *)
+and global_use = {
+  callee : GlobRef.t;
+  legacy_written : written_tyarg list;
+}
+
+and written_tyarg = {
+  wt_type : ml_type;
+  wt_binder : Scheme.Binder.t option;
+  wt_var : Scheme.Var.t option;
+}
 
 (** What an [MLmagic] node is doing.  Extraction inserts these wherever type
     erasure has opened a gap, but not every gap is a coercion, and the two
@@ -293,3 +305,27 @@ type language_descr = {
   (* for an isolated declaration print *)
   pp_decl : ml_decl -> Pp.t;
 }
+
+module Global_use = struct
+  let callee g = g.callee
+  let written callee legacy_written = {callee; legacy_written}
+
+  let legacy_untagged callee tys =
+    { callee;
+      legacy_written =
+        List.map (fun wt_type -> {wt_type; wt_binder = None; wt_var = None}) tys }
+
+  let legacy_source_order g = List.map (fun w -> w.wt_type) g.legacy_written
+
+  let scheme_evidence g =
+    List.filter_map
+      (fun w -> Option.map (fun v -> (v, w.wt_type)) w.wt_var)
+      g.legacy_written
+
+  let map_types f g =
+    { g with
+      legacy_written = List.map (fun w -> {w with wt_type = f w.wt_type}) g.legacy_written }
+
+  let iter_types f g = List.iter (fun w -> f w.wt_type) g.legacy_written
+  let exists_type p g = List.exists (fun w -> p w.wt_type) g.legacy_written
+end

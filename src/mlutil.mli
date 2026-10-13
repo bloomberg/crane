@@ -59,6 +59,26 @@ val apply_ml_type : ml_type -> ml_type list -> ml_type
     @param t the ML type to substitute into *)
 val type_subst_list : ml_type list -> ml_type -> ml_type
 
+(** [type_subst_fun f t] substitutes each [Tvar j] for which [f j] answers,
+    leaving the others unchanged. *)
+val type_subst_fun : (int -> ml_type option) -> ml_type -> ml_type
+
+(** A one-line rendering of an ML type, for diagnostics. *)
+val debug_ml_type : ml_type -> string
+
+(** [subst_written_evidence use t] is [t], a type in [use]'s callee's
+    scheme variables, with each variable the use wrote an argument for at
+    that variable's own binder replaced by the argument.  A variable the use
+    did not write is left unchanged, and an argument written at a binder with
+    no variable replaces nothing. *)
+val subst_written_evidence : global_use -> ml_type -> ml_type
+
+(** {!subst_written_evidence}, the reading a migrated reader makes.  Under
+    [CRANE_PROBE] it is compared with the positional reading of the same
+    list, and a difference is recorded as [SUBST_DIFF], naming [reader], the
+    callee, every entry's binder, variable and type, and both answers. *)
+val instantiate_written : reader:string -> global_use -> ml_type -> ml_type
+
 (** Substitute type variables using an array of types.
     @param v replacement types for [Tvar 1], [Tvar 2], ... (zero-indexed in the array)
     @param t the ML type to substitute into *)

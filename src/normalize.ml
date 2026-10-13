@@ -54,7 +54,7 @@ let full_result = function Some (Tarr _) -> None | ty -> ty
 (* The type a call at binder depth [depth] to one of [group]'s functions
    yields, if it is one and is applied fully. *)
 let group_call group ~depth = function
-  | MLapp ((MLglob (r, _) as f), args) when List.exists (GlobRef.UserOrd.equal r) group.globals ->
+  | MLapp ((MLglob {callee = r; _} as f), args) when List.exists (GlobRef.UserOrd.equal r) group.globals ->
     full_result (Translation_types.ml_app_result_type f args)
   | MLapp (MLrel k, args) -> (
     match
@@ -128,7 +128,7 @@ let rec scope ~group ~depth e =
   in
   let rec strict ~tail e =
     match e with
-    | MLapp ((MLglob (r, _) as f), args) when Table.is_bind r ->
+    | MLapp ((MLglob {callee = r; _} as f), args) when Table.is_bind r ->
       (* Monadic sequencing: the action runs where the bind puts it, and a
          recursive call that is the whole action is a tail call there. *)
       MLapp (f, List.map (inner 0) args)

@@ -1602,7 +1602,7 @@ and extract_term env sg mle mlt c args =
     (* let metas = List.map new_meta args in let domain = make_tyargs env sg mle
        args metas in *)
     let extract_var mlt =
-      put_magic ~from:vty ~into:mlt (MLglob (GlobRef.VarRef v, []))
+      put_magic ~from:vty ~into:mlt (MLglob (Global_use.legacy_untagged (GlobRef.VarRef v) []))
     in
     extract_app env sg mle mlt extract_var args
   | Int i ->
@@ -2025,7 +2025,19 @@ and extract_cst_app env sg mle mlt kn args =
   let positioned =
     List.filter (function _, Tdummy Kprop -> false | _ -> true) domain
   in
-  let tyargs = List.map snd positioned in
+  (* Each entry tagged with the binder it was written at and the variable
+     that binder stands for. *)
+  let written =
+    List.map
+      (fun (k, t) ->
+        let binder = Scheme.Binder.of_position k in
+        { wt_type = type_simpl t;
+          wt_binder = Some binder;
+          wt_var =
+            Option.bind (Ml_schema.binder schema binder) (fun b ->
+                b.Ml_schema.scheme_var ) } )
+      positioned
+  in
   let () =
     if Probe.enabled () then
       probe_tyarg_alignment kn schema ~nargs:la s_full positioned
@@ -2077,7 +2089,7 @@ and extract_cst_app env sg mle mlt kn args =
       ~from:(type_recomp (metas, a))
       ~into:instantiated
       magic1
-      (MLglob (GlobRef.ConstRef kn, List.map type_simpl tyargs))
+      (MLglob (Global_use.written (GlobRef.ConstRef kn) written))
   in
   (* For strict languages, purely logical signatures lead to a dummy lam (except
      when [Kill Ktype] everywhere). So a [MLdummy] is left accordingly. *)

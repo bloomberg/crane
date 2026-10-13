@@ -142,9 +142,9 @@ let ast_iter_references ?(prune = fun _ -> false) do_term do_cons do_type a =
        [Prop] type reached this way is marked needed too, but it is dropped
        again where declarations are emitted: see the [logical_decl] guard in
        {!Extract_env}. *)
-    | MLglob (r, tys) ->
+    | MLglob ({callee = r; _} as use) ->
       do_term r;
-      List.iter (type_iter_references do_type) tys
+      Global_use.iter_types (type_iter_references do_type) use
     | MLcons (_, r, _) -> do_cons r
     | MLcase (ty, _, v) ->
       type_iter_references do_type ty;
@@ -353,7 +353,7 @@ let dfix_to_mlfix fds i =
   let s = make_subst (Array.length rv - 1) Ref.User.Map.empty in
   let rec subst n t =
     match t with
-    | MLglob ((GlobRef.ConstRef kn as refe), _) ->
+    | MLglob {callee = (GlobRef.ConstRef kn as refe); _} ->
       (try MLrel (n + Ref.User.Map.find refe s) with Not_found -> t)
     | _ -> ast_map_lift subst n t
   in
@@ -373,7 +373,7 @@ let decl_of_term r a t =
   (* An instance of a singleton class stays an instance, whose method the
      fixpoint is. *)
   | MLfix (0, _, [|c|], _) when singleton_instance_class r = None ->
-    Dfix [{fd_ref = r; fd_body = ast_subst (MLglob (r, [])) c; fd_type = t}]
+    Dfix [{fd_ref = r; fd_body = ast_subst (MLglob (Global_use.legacy_untagged r [])) c; fd_type = t}]
     (* The [] ML type args are safe: gen_expr reads template args from the
        C++ environment, not from MLglob's arg list. *)
   | a -> Dterm (r, a, t)

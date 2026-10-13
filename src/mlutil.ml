@@ -299,16 +299,13 @@ let rec apply_ml_type head args =
     | _ -> head )
 
 
-(** Simultaneously substitutes [[Tvar 1; ...; Tvar n]] by the types in [l]
-    within ML type [t]. *)
-let type_subst_list l t =
-  let n = List.length l in
+(** Substitutes each [Tvar j] (either rigidity: rigidity constrains
+    unification, not substitution) for which [f j] answers, leaving the
+    others unchanged. *)
+let type_subst_fun f t =
   let rec subst t =
     match t with
-    | Tvar (Schematic, j) when j >= 1 && j <= n -> List.nth l (j - 1)
-    | Tvar (Schematic, _) -> t (* Out-of-range: leave unchanged (promoted dep record vars) *)
-    | Tvar (Rigid, j) when j >= 1 && j <= n -> List.nth l (j - 1)
-    | Tvar (Rigid, _) -> t (* Out-of-range: leave unchanged *)
+    | Tvar (_, j) -> ( match f j with Some u -> u | None -> t )
     | Tapp (j, args) ->
       apply_ml_type (subst (Tvar (Schematic, j))) (List.map subst args)
     | Tmeta {contents = None} -> t
@@ -318,6 +315,12 @@ let type_subst_list l t =
     | a -> a
   in
   subst t
+
+(** Simultaneously substitutes [[Tvar 1; ...; Tvar n]] by the types in [l]
+    within ML type [t].  A variable out of range is left unchanged (promoted
+    dependent-record variables). *)
+let type_subst_list l t =
+  type_subst_fun (fun j -> if j >= 1 then List.nth_opt l (j - 1) else None) t
 
 (** Simultaneously substitutes [[|Tvar 1; ...; Tvar n|]] by the types in
     array [v] within ML type [t]. Type vars with indices > n are left unchanged
@@ -553,6 +556,56 @@ end
 
 (** {2 Does a section path occur in a ML type ?} *)
 
+(** {2 A global use's written type arguments, read by scheme variable} *)
+
+(** A one-line rendering of an ML type, for diagnostics. *)
+let rec debug_ml_type = function
+  | Tarr (a, b) -> "(" ^ debug_ml_type a ^ " -> " ^ debug_ml_type b ^ ")"
+  | Tglob (r, [], _) -> Pp.string_of_ppcmds (GlobRef.print r)
+  | Tglob (r, l, _) ->
+    Pp.string_of_ppcmds (GlobRef.print r)
+    ^ "(" ^ String.concat ", " (List.map debug_ml_type l) ^ ")"
+  | Tvar (Schematic, i) -> "'" ^ string_of_int i
+  | Tvar (Rigid, i) -> "'!" ^ string_of_int i
+  | Tapp (i, l) ->
+    "'" ^ string_of_int i ^ "(" ^ String.concat ", " (List.map debug_ml_type l) ^ ")"
+  | Tmeta {contents = Some t} -> debug_ml_type t
+  | Tmeta {id; contents = None} -> "?" ^ string_of_int id
+  | Tdummy Ktype -> "__type"
+  | Tdummy Kprop -> "__prop"
+  | Tdummy (Kimplicit _) -> "__implicit"
+  | Tunknown -> "unknown"
+  | Taxiom -> "axiom"
+  | Tstring -> "string"
+
+let subst_written_evidence use t =
+  let evidence = Global_use.scheme_evidence use in
+  type_subst_fun
+    (fun j ->
+      List.find_map
+        (fun (v, ty) -> if Int.equal (Scheme.Var.ordinal v) j then Some ty else None)
+        evidence )
+    t
+
+let instantiate_written ~reader use t =
+  let by_variable = subst_written_evidence use t in
+  if Probe.enabled () then begin
+    let by_position = type_subst_list (Global_use.legacy_source_order use) t in
+    if not (eq_ml_type by_position by_variable) then
+      Probe.hit "SUBST_DIFF" (fun () ->
+          let entry {wt_type; wt_binder; wt_var} =
+            Printf.sprintf "%s->%s:%s"
+              (Option.cata (fun b -> string_of_int (Scheme.Binder.position b)) "_" wt_binder)
+              (Option.cata (fun v -> string_of_int (Scheme.Var.ordinal v)) "_" wt_var)
+              (debug_ml_type wt_type)
+          in
+          Printf.sprintf "%s %s [%s] position=%s variable=%s" reader
+            (Pp.string_of_ppcmds (GlobRef.print use.callee))
+            (String.concat "; " (List.map entry use.legacy_written))
+            (debug_ml_type by_position) (debug_ml_type by_variable) )
+  end;
+  by_variable
+
 let rec type_mem_kn kn = function
   | Tmeta {contents = Some t} -> type_mem_kn kn t
   | Tglob (r, l, _) -> occur_kn_in_ref kn r || List.exists (type_mem_kn kn) l
@@ -721,7 +774,7 @@ let rec eq_ml_ast t1 t2 =
     eq_ml_ident na1 na2 && eq_ml_ast t1 t2
   | MLletin (na1, ty1, c1, t1), MLletin (na2, ty2, c2, t2) ->
     eq_ml_ident na1 na2 && eq_ml_ast c1 c2 && eq_ml_ast t1 t2
-  | MLglob (gr1, _), MLglob (gr2, _) -> GlobRef.CanOrd.equal gr1 gr2
+  | MLglob {callee = gr1; _}, MLglob {callee = gr2; _} -> GlobRef.CanOrd.equal gr1 gr2
   | MLcons (t1, gr1, c1), MLcons (t2, gr2, c2) ->
     eq_ml_type t1 t2
     && GlobRef.CanOrd.equal gr1 gr2
@@ -860,7 +913,7 @@ let rec ast_map_types f = function
   | MLlam (i, t, a) -> MLlam (i, f t, ast_map_types f a)
   | MLletin (i, t, a, b) ->
     MLletin (i, f t, ast_map_types f a, ast_map_types f b)
-  | MLglob (r, tys) -> MLglob (r, List.map f tys)
+  | MLglob use -> MLglob (Global_use.map_types f use)
   | MLcons (t, c, l) -> MLcons (f t, c, List.map (ast_map_types f) l)
   | MLtuple l -> MLtuple (List.map (ast_map_types f) l)
   | MLcase (t, a, v) ->
@@ -1094,13 +1147,18 @@ let recover_erased_types ?only ?(refine_only = false) (expected : ml_type)
       MLcase (ty, go env None scrut, Array.map branch branches)
     | MLcons (ty, c, args) ->
       MLcons (better ~have:ty ~from:expected, c, List.map (go env None) args)
-    | MLapp ((MLglob (r, tys) as f), args) when callee_doms r tys args <> [] ->
+    | MLapp ((MLglob ({callee = r; _} as use) as f), args)
+      when callee_doms r (Global_use.legacy_source_order use) args <> [] ->
       (* A lambda passed as an argument is the case with no second witness:
          its binder's type occurs nowhere in the enclosing declaration -- it
          is spelled only by the callee's parameter at that position, with this
          call's type arguments substituted in.  That is an authority of the
          same kind as the declared type, so it is pushed down the same way. *)
-      MLapp (f, List.map2 (fun d e -> go env d e) (callee_doms r tys args) args)
+      MLapp
+        ( f,
+          List.map2 (fun d e -> go env d e)
+            (callee_doms r (Global_use.legacy_source_order use) args)
+            args )
     | MLapp (f, args) ->
       MLapp (go env None f, List.map (go env None) args)
     | MLmagic (m, e) -> MLmagic (m, go env expected e)
@@ -1615,12 +1673,12 @@ let rec ast_glob_subst s t =
       ast_map_types (type_subst_list tys) b
   in
   match t with
-  | MLapp ((MLglob ((GlobRef.ConstRef kn as refe), tys) as f), a) ->
+  | MLapp ((MLglob ({callee = GlobRef.ConstRef _ as refe; _} as use) as f), a) ->
     let a = List.map (fun e -> tmp_head_lams (ast_glob_subst s e)) a in
-    ( try linear_beta_red a (body refe tys)
+    ( try linear_beta_red a (body refe (Global_use.legacy_source_order use))
       with Not_found -> MLapp (f, a) )
-  | MLglob ((GlobRef.ConstRef kn as refe), tys) ->
-    (try body refe tys with Not_found -> t)
+  | MLglob ({callee = GlobRef.ConstRef _ as refe; _} as use) ->
+    (try body refe (Global_use.legacy_source_order use) with Not_found -> t)
   | _ -> ast_map (ast_glob_subst s) t
 
 (** {1 Auxiliary functions used in simplification of ML cases} *)
@@ -2529,7 +2587,7 @@ let remap_tvars f =
     | MLletin (id, ty, def, body) ->
       MLletin (id, remap_type ty, remap_ast def, remap_ast body)
     | MLapp (f', args) -> MLapp (remap_ast f', List.map remap_ast args)
-    | MLglob (r, tys) -> MLglob (r, List.map remap_type tys)
+    | MLglob use -> MLglob (Global_use.map_types remap_type use)
     | MLcons (ty, r, args) -> MLcons (remap_type ty, r, List.map remap_ast args)
     | MLtuple args -> MLtuple (List.map remap_ast args)
     | MLcase (ty, scrut, branches) ->

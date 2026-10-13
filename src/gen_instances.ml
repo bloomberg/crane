@@ -268,8 +268,9 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
           let n_class = Ml_type_util.projection_class_arity m in
           Mlutil.ast_subst
             (MLapp
-               ( MLglob (m, []),
-                 List.init n_class (fun _ -> MLdummy Ktype) @ [MLglob (name, [])] ))
+               ( MLglob (Global_use.legacy_untagged m []),
+                 List.init n_class (fun _ -> MLdummy Ktype)
+                 @ [MLglob (Global_use.legacy_untagged name [])] ))
             c
         | b -> b
       in
@@ -936,7 +937,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                      section's (erased) variables, so the reference is under an
                      application of dummies rather than bare. *)
                   let rec body_ref = function
-                    | MLglob (r, _) -> Some r
+                    | MLglob {callee = r; _} -> Some r
                     | MLapp (f, args)
                       when List.for_all
                              (function MLdummy _ -> true | _ -> false) args ->
@@ -1133,8 +1134,8 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
          - [MLmagic e] → strip magic wrapper *)
       let rec ml_expr_to_cpp_type body =
         match body with
-        | MLglob (r, _) -> Tglob (r, [], [])
-        | MLapp (MLglob (r, _), args) ->
+        | MLglob {callee = r; _} -> Tglob (r, [], [])
+        | MLapp (MLglob {callee = r; _}, args) ->
           let type_args = List.filter_map ml_expr_to_cpp_type_opt args in
           Tglob (r, type_args, [])
         | MLapp (f, args) -> (
@@ -1437,7 +1438,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
             (apply_hkt_resolutions_decl (hkt_tvar_resolutions_of_type ~source_order:true ty) decl),
           Some class_ref,
           concept_args class_ref non_promoted_type_args )
-    | MLglob (other, _) ->
+    | MLglob {callee = other; _} ->
       (* The instance is nothing but another instance's name.  C++ has a
          spelling for exactly that, and without it the name is never
          declared at all. *)

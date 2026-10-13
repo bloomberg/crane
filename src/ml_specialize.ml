@@ -107,15 +107,15 @@ let instantiate b args =
 let known_ctor defs e =
   match e with
   | MLcons _ -> Some e
-  | MLapp (MLglob (g, tys), args) -> (
-    match body_of defs g tys with
+  | MLapp (MLglob ({callee = g; _} as use), args) -> (
+    match body_of defs g (Global_use.legacy_source_order use) with
     | Some b -> (
       match (snd (Mlutil.collect_lams b), instantiate b args) with
       | MLcons _, Some e' -> Some (Mlutil.normalize e')
       | _ -> None )
     | None -> None )
-  | MLglob (g, tys) -> (
-    match body_of defs g tys with Some (MLcons _ as c) -> Some c | _ -> None )
+  | MLglob ({callee = g; _} as use) -> (
+    match body_of defs g (Global_use.legacy_source_order use) with Some (MLcons _ as c) -> Some c | _ -> None )
   | _ -> None
 
 (* [e] with each [let] of a value read at most once substituted: a
@@ -138,17 +138,17 @@ let fuel = 16
 let rec reduce defs shrunk fuel e =
   let e = Mlutil.ast_map (reduce defs shrunk fuel) e in
   match e with
-  | MLapp (MLglob (g, tys), args) when fuel > 0 -> (
-    match unfold defs shrunk fuel g tys args with
+  | MLapp (MLglob ({callee = g; _} as use), args) when fuel > 0 -> (
+    match unfold defs shrunk fuel use args with
     | Some e' -> e'
-    | None -> Option.default e (push defs shrunk fuel g tys args) )
+    | None -> Option.default e (push defs shrunk fuel use args) )
   | _ -> e
 
-and unfold defs shrunk fuel g tys args =
+and unfold defs shrunk fuel use args =
   let known = List.map (known_ctor defs) args in
   if List.for_all Option.is_empty known then None
   else
-    match body_of defs g tys with
+    match body_of defs use.callee (Global_use.legacy_source_order use) with
     | None -> None
     | Some b -> (
       let args' = List.map2 (fun a k -> Option.default a k) args known in
@@ -156,7 +156,7 @@ and unfold defs shrunk fuel g tys args =
       | None -> None
       | Some e ->
         let e' = settle defs (fuel - 1) e in
-        if size e' < size (MLapp (MLglob (g, []), args)) then (
+        if size e' < size (MLapp (MLglob use, args)) then (
           shrunk := true;
           Some e' )
         else None )
@@ -173,7 +173,7 @@ and settle defs fuel e =
   in
   go fuel e
 
-and push defs shrunk fuel g tys args =
+and push defs shrunk fuel use args =
   let rec split before = function
     | (MLcase (ty, s, brs) as m) :: after
       when List.for_all is_value before && List.for_all is_value after ->
@@ -191,7 +191,7 @@ and push defs shrunk fuel g tys args =
         (fun (ids, bty, p, b) ->
           let k = List.length ids in
           let lift = List.map (Mlutil.ast_lift k) in
-          let call = MLapp (MLglob (g, tys), lift before @ [b] @ lift after) in
+          let call = MLapp (MLglob use, lift before @ [b] @ lift after) in
           let call' = settle defs fuel call in
           if size call' < size call then (
             any := true;
@@ -205,7 +205,7 @@ and push defs shrunk fuel g tys args =
             ( ids, bty, p,
               MLletin
                 ( Id (Id.of_string "step"), bty, b,
-                  MLapp (MLglob (g, tys), lift1 before @ [MLrel 1] @ lift1 after) ) ) )
+                  MLapp (MLglob use, lift1 before @ [MLrel 1] @ lift1 after) ) ) )
         brs
     in
     if !any then (
@@ -226,12 +226,12 @@ let static_param f k j b =
   let exception No in
   let rec walk d e =
     match e with
-    | MLapp (MLglob (g, _), a) when same g f ->
+    | MLapp (MLglob {callee = g; _}, a) when same g f ->
       ( match List.nth_opt a j with
       | Some (MLrel i) when i = k - j + d -> ()
       | _ -> raise_notrace No );
       List.iter (walk d) a
-    | MLglob (g, _) when same g f -> raise_notrace No
+    | MLglob {callee = g; _} when same g f -> raise_notrace No
     | _ -> ignore (Mlutil.ast_map_lift (fun d e -> walk d e; e) d e)
   in
   try walk 0 b; true with No -> false
@@ -270,7 +270,7 @@ let specialize f fd tys args =
            the [k - 1] remaining parameters and the fixpoint's binder. *)
         let rec self d e =
           match e with
-          | MLapp (MLglob (g, _), a) when same g f ->
+          | MLapp (MLglob {callee = g; _}, a) when same g f ->
             let a = List.map (self d) a in
             MLapp (MLrel (d + k), List.filteri (fun i _ -> i <> j) a)
           | _ -> Mlutil.ast_map_lift self d e
@@ -302,10 +302,10 @@ let specialize f fd tys args =
 let decl defs r body ty =
   let ps, inner = Mlutil.collect_lams body in
   match inner with
-  | MLapp (MLglob (f, tys), args) when not (Table.is_custom r) -> (
+  | MLapp (MLglob ({callee = f; _} as use), args) when not (Table.is_custom r) -> (
     match Ref.User.Map.find_opt f defs with
     | Some (Fix fd) when not (Table.is_custom f) -> (
-      match specialize f fd tys args with
+      match specialize f fd (Global_use.legacy_source_order use) args with
       | None -> None
       | Some spec ->
         let shrunk = ref false in

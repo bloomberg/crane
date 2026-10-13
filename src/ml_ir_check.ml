@@ -11,7 +11,7 @@ let check_global_use r tys =
         ++ str " hold a proof placeholder, which no scheme variable stands for" )
 
 let check_node = function
-  | MLglob (r, tys) -> check_global_use r tys
+  | MLglob ({callee = r; _} as use) -> check_global_use r (Global_use.legacy_source_order use)
   | _ -> ()
 
 let structure struc =

@@ -392,7 +392,7 @@ let dict_carrier_ml_type id args =
   let rec head_glob = function
     | Miniml.MLlam (_, _, b) | Miniml.MLmagic (_, b) | Miniml.MLapp (b, _) ->
       head_glob b
-    | Miniml.MLglob (r, _) -> Some r
+    | Miniml.MLglob {callee = r; _} -> Some r
     | _ -> None
   in
   (* [depth] counts the binders descended through to reach the term in hand.
@@ -425,7 +425,7 @@ let dict_carrier_ml_type id args =
              | Some carrier -> subst_dict_carrier ~at:k carrier acc
              | None -> acc )
            cod params )
-    | Miniml.MLglob (r, _) ->
+    | Miniml.MLglob {callee = r; _} ->
       (* The instance's method returns [T1] applied: [TFunctor_box]'s codomain
          is [box B]. *)
       Option.map (fun t -> resolve_tmeta (ml_codomain t)) (find_type_opt r)
@@ -488,7 +488,8 @@ let instantiate_at_call id tys value_args ty =
 let ml_app_result_type (f : ml_ast) (args : ml_ast list) : ml_type option =
   let ( let* ) = Option.bind in
   match f with
-  | MLglob (id, tys) ->
+  | MLglob ({callee = id; _} as use) ->
+    let tys = Global_use.legacy_source_order use in
     let value_args =
       List.filter (function MLdummy _ -> false | _ -> true) args
     in
@@ -1049,7 +1050,7 @@ let singleton_dictionary env head =
    value. *)
 let is_typeclass_instance_arg env ml_arg =
   match strip_dictionary ml_arg with
-  | MLglob (r, _) ->
+  | MLglob {callee = r; _} ->
     (* An instance parameterised over types alone carries its parameters in
        the [MLglob]'s type arguments, so its ML type is still an arrow --
        [MList : forall A, Monoid (list A)].  Read the codomain, as the
@@ -1057,7 +1058,7 @@ let is_typeclass_instance_arg env ml_arg =
        position and the call names the instance struct as if it were one. *)
     ref_is_instance r
   | MLrel i -> binder_is_instance env i
-  | MLapp (MLglob (r, _), _) ->
+  | MLapp (MLglob {callee = r; _}, _) ->
     (* Parameterized instance application, e.g. numList A H. Check if r's
        return type (after stripping Tarr) is a typeclass type, or if it
        returns a skipped type (e.g. ReSum instances where the Class is a
@@ -1102,7 +1103,7 @@ let instance_arg_is_erased env ml_arg =
      Passing it anyway put the instance in the callee's template argument
      list, where it names no type. *)
   match strip_magic ml_arg with
-  | MLglob (r, _) | MLapp (MLglob (r, _), _) ->
+  | MLglob {callee = r; _} | MLapp (MLglob {callee = r; _}, _) ->
     (* Either the instance's class is infrastructure Crane skips -- [E -< F],
        whose [ReSum] is a [ConstRef] mapped to the empty string -- or the
        instance itself is, as [Monad_itree] is in both ITree modes.  Skipping
@@ -1341,7 +1342,7 @@ let instance_class_ty env ml_arg =
     | exception Not_found -> Miniml.Tunknown
   in
   match strip_dictionary ml_arg with
-  | MLglob (r, _) | MLapp (MLglob (r, _), _) -> of_ref r
+  | MLglob {callee = r; _} | MLapp (MLglob {callee = r; _}, _) -> of_ref r
   | MLrel i -> (
     match get_env_type_opt i with
     | Some ty -> ml_return_type ty
@@ -3066,7 +3067,8 @@ let regroup_crossing ~from ~into expr =
 let value_cpp_type env e =
   match strip_magic e with
   | MLrel j -> binder_cpp_type_or_derive env j
-  | MLglob (r, []) -> Option.map (cpp_of_ml env) (find_type_opt r)
+  | MLglob ({callee = r; _} as use) when Global_use.legacy_source_order use = [] ->
+    Option.map (cpp_of_ml env) (find_type_opt r)
   | _ -> None
 
 (** Whether a coercion is one the Rocq indices rule out, rather than one C++
@@ -3153,14 +3155,14 @@ let rec ml_expr_is_erased env (t : ml_ast) : bool =
         match a with MLdummy _ -> false | _ -> true) args)
     in
     let ml_ty_opt = match f with
-      | MLglob (r, _) -> find_type_opt r
+      | MLglob {callee = r; _} -> find_type_opt r
       | MLrel i -> get_env_type_opt i
       | _ -> None
     in
     ( match ml_ty_opt with
       | Some ml_ty -> ml_codomain_erases_to_any n_value_args ml_ty
       | None -> false )
-  | MLglob (r, _) ->
+  | MLglob {callee = r; _} ->
     ( match find_type_opt r with
       | Some ml_ty -> prints_as_any (cpp_of_ml env ml_ty)
       | None -> false )

@@ -859,7 +859,8 @@ let rec ml_arg_to_template_type ?expected env ml_arg =
       else None
   in
   match strip_dictionary ml_arg with
-  | MLglob (r, ts) ->
+  | MLglob ({callee = r; _} as use) ->
+    let ts = Global_use.legacy_source_order use in
     if ref_returns_skipped r then None
     else
       (* Use the instance struct as a type - convert to Tglob *)
@@ -876,8 +877,9 @@ let rec ml_arg_to_template_type ?expected env ml_arg =
     let db, _ = env in
     let name = List.nth db (pred i) in
     Some (named_tvar name)
-  | MLapp (MLglob (r, _), _) when ref_returns_skipped r -> None
-  | MLapp (MLglob (r, ts), inner_args) ->
+  | MLapp (MLglob {callee = r; _}, _) when ref_returns_skipped r -> None
+  | MLapp (MLglob ({callee = r; _} as use), inner_args) ->
+    let ts = Global_use.legacy_source_order use in
     (* Parameterized instance application, e.g. numList A H. Convert to
        Tglob(r, template_args, []) where template_args are built from the
        inner args. *)
@@ -1314,7 +1316,9 @@ let plan_call ~slot ?expected_ty env id tys args =
     List.filter_map
       (fun a ->
         match strip_magic a with
-        | MLglob (r, ts) -> instance_family_binding env r ts expected_result
+        | MLglob ({callee = r; _} as use) ->
+          instance_family_binding env r (Global_use.legacy_source_order use)
+            expected_result
         | _ -> None )
       typeclass_ml_args
   in
@@ -1517,7 +1521,7 @@ let plan_call ~slot ?expected_ty env id tys args =
   let instance_promoted_map =
     List.concat_map (fun tc_arg ->
       match tc_arg with
-      | MLglob (r, _) ->
+      | MLglob {callee = r; _} ->
         List.filter_map (fun (var_name, ml_ty) ->
           let cpp_ty = cpp_of_ml env ml_ty in
           if prints_as_any cpp_ty then None

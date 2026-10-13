@@ -506,7 +506,7 @@ let promoted_resolutions_of_body ?r ?ty b =
   in
   let rec walk_at d e =
     match strip_magic e with
-    | MLapp (MLglob (r, _), args)
+    | MLapp (MLglob {callee = r; _}, args)
       when instance_class_at r <> None && (not (closed (strip_magic e)))
            && leading <> [] && spellable d (strip_magic e) ->
       Option.iter
@@ -517,7 +517,7 @@ let promoted_resolutions_of_body ?r ?ty b =
       List.iter
         (fun a ->
           match strip_magic a with
-          | MLglob (r', _) | MLapp (MLglob (r', _), _)
+          | MLglob {callee = r'; _} | MLapp (MLglob {callee = r'; _}, _)
             when instance_class r' <> None ->
             ()
           | _ -> walk_at d a )
@@ -532,7 +532,7 @@ let promoted_resolutions_of_body ?r ?ty b =
   in
   let rec walk e =
         match strip_magic e with
-    | MLapp (MLglob (r, _), args)
+    | MLapp (MLglob {callee = r; _}, args)
       when instance_class r <> None && closed (strip_magic e) ->
       Option.iter (add r)
         (ml_arg_to_template_type (empty_env ()) (strip_magic e));
@@ -545,12 +545,12 @@ let promoted_resolutions_of_body ?r ?ty b =
       List.iter
         (fun a ->
           match strip_magic a with
-          | MLglob (r', _) | MLapp (MLglob (r', _), _)
+          | MLglob {callee = r'; _} | MLapp (MLglob {callee = r'; _}, _)
             when instance_class r' <> None ->
             ()
           | _ -> walk a )
         args
-    | MLglob (r, _) -> add r (Tglob (r, [], []))
+    | MLglob {callee = r; _} -> add r (Tglob (r, [], []))
     | _ -> Mlutil.ast_iter walk e
   in
   walk b;
@@ -576,7 +576,7 @@ let promoted_resolutions_of_body ?r ?ty b =
           let names = List.map Option.get names in
           let n = List.length names in
           let app =
-            MLapp (MLglob (inst, []), List.init n (fun i -> MLrel (n - i)))
+            MLapp (MLglob (Global_use.legacy_untagged inst []), List.init n (fun i -> MLrel (n - i)))
           in
           Option.iter (add_at class_ref inst)
             (ml_arg_to_template_type
@@ -604,7 +604,7 @@ let type_resolutions_of_referenced_globals b =
   let found = ref [] in
   let rec walk e =
     ( match strip_magic e with
-    | MLglob (r, _) -> found := !found @ ind_type_resolutions r
+    | MLglob {callee = r; _} -> found := !found @ ind_type_resolutions r
     | _ -> () );
     Mlutil.ast_iter walk e
   in

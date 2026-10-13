@@ -1209,7 +1209,7 @@ let mark_used_customs struc =
 let mark_higher_order_projections struc =
   Table.init_higher_order_projections ();
   let rec scan_ast = function
-    | MLglob (r, _) when Table.is_projection r ->
+    | MLglob {callee = r; _} when Table.is_projection r ->
       Table.mark_higher_order_projection r
     | a -> Mlutil.ast_iter scan_ast a
   in
