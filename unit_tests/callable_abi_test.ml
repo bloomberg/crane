@@ -46,7 +46,7 @@ let () =
   check "T01 is no variable"
     (match template_head other with [{origin = Derived _; _}] -> true | _ -> false);
   (* A plan of a callable Crane does not generate states its scheme. *)
-  let f = foreign ~callee ~scheme:(Some scheme) in
+  let f = foreign ~callee ~scheme:(Some scheme) () in
   check "foreign plans one writable parameter per variable"
     ( List.map (fun p -> (p.origin, p.write)) (template_head f)
       |> function

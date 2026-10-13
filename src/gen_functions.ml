@@ -1354,7 +1354,10 @@ let gen_dfun n b cty ty temps =
   in
   let temps, inner = default_unmentioned_temps temps inner in
   Callable_abi.record
-    (Callable_abi.of_head ~callee:n ~scheme:(Mlutil.reference_scheme n) temps);
+    (Callable_abi.of_head
+       ~phantom_prefix:(Translation_types.leading_phantom_count n)
+       ~relaxed:(fun i -> IntSet.mem i (Ml_type_util.relaxed_higher_kinded_tvars ty))
+       ~callee:n ~scheme:(Mlutil.reference_scheme n) temps );
   match temps with
   | [] -> (inner, env)
   | l -> (Dtemplate (l, None, inner), env)

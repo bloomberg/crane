@@ -1734,7 +1734,7 @@ let hkt_spelled_type_args r ts =
     let hk = Ml_type_util.higher_kinded_ml_tvars [ml_ty] in
     (* Only a higher-kinded variable is relaxed out of a head: a family is a
        plain parameter the declaration keeps. *)
-    let relaxed = IntSet.inter (Ml_type_util.relaxed_applied_ml_tvars ml_ty) hk in
+    let relaxed = Ml_type_util.relaxed_higher_kinded_tvars ml_ty in
     let ts = types_at_plain_positions r ts in
     if IntSet.is_empty hk && IntSet.is_empty relaxed then ts
     else

@@ -48,6 +48,10 @@ type write_policy =
   | Deduce_only  (** No call writes it: C++ deduces it from an argument. *)
   | Defaulted of Minicpp.cpp_type
       (** A call may leave it to the default the declaration gives it. *)
+  | Phantom of Minicpp.cpp_type
+      (** A leading parameter no signature mentions, declared without a
+          default: nothing deduces it, so a call writing anything after it
+          writes it too, as this filler. *)
 
 type template_parameter = {
   id : Template_param.t;
@@ -65,8 +69,13 @@ val template_head : t -> template_parameter list
 
 (** The plan of a declaration of [callee] whose head is [temps], as
     {!Gen_functions} finalises it.  [scheme] is the callee's scheme, which
-    the parameters named for its variables ([T1], [T2], ...) declare. *)
+    the parameters named for its variables ([T1], [T2], ...) declare; the
+    first [phantom_prefix] of those are its leading phantoms.  A variable
+    [relaxed] says the declaration relaxed out of its head declares nothing
+    any more: the parameter left at it is [Derived]. *)
 val of_head :
+  ?phantom_prefix:int ->
+  ?relaxed:(int -> bool) ->
   callee:Names.GlobRef.t ->
   scheme:Scheme.Id.t option ->
   (Minicpp.template_type * Names.Id.t) list ->
@@ -89,15 +98,37 @@ val validate : t -> string list
     error. *)
 val record : t -> unit
 
-(** The recorded plan of a declaration: its only one, or the one for the
-    current render context. *)
+(** The recorded plan of a declaration: the one for the current render
+    context, or else the one recorded first. *)
 val lookup : Names.GlobRef.t -> t option
 
 (** The plan of a callable Crane does not generate here -- a custom mapping,
     a declaration of another file or library, one not generated yet -- as
-    its scheme alone states it: one writable [typename] per variable, in
-    order. *)
-val foreign : callee:Names.GlobRef.t -> scheme:Scheme.Id.t option -> t
+    the conventions its call sites assume state it: [instances]
+    dictionaries first, then one parameter per variable [kept] keeps, in
+    order and no more than [reachable] of them, a template-template one
+    where [higher_kinded] says so, a [relaxed] one a [Derived] parameter
+    defaulted to [void], the first [phantom_prefix] of them phantoms. *)
+val foreign :
+  ?instances:int ->
+  ?higher_kinded:(Scheme.Var.t -> bool) ->
+  ?kept:(Scheme.Var.t -> bool) ->
+  ?reachable:int ->
+  ?relaxed:(int -> bool) ->
+  ?phantom_prefix:int ->
+  callee:Names.GlobRef.t ->
+  scheme:Scheme.Id.t option ->
+  unit ->
+  t
 
 (** The recorded plan of [callee], or else its {!foreign} one. *)
-val plan : Names.GlobRef.t -> scheme:Scheme.Id.t option -> t
+val plan :
+  ?instances:int ->
+  ?higher_kinded:(Scheme.Var.t -> bool) ->
+  ?kept:(Scheme.Var.t -> bool) ->
+  ?reachable:int ->
+  ?relaxed:(int -> bool) ->
+  ?phantom_prefix:int ->
+  Names.GlobRef.t ->
+  scheme:Scheme.Id.t option ->
+  t

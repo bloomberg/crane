@@ -358,6 +358,11 @@ val has_unresolved_promoted_in_type : Minicpp.cpp_type -> bool
 (** Whether a C++ type is a dummy Prop type. *)
 val is_cpp_dummy_prop : Minicpp.cpp_type -> bool
 
+(** {!filter_erased_type_args} over arguments each carrying a key -- the
+    scheme variable it stands for -- which survives with it. *)
+val filter_erased_keyed :
+  ?preserve_positions:bool -> ('k * Minicpp.cpp_type) list -> ('k * Minicpp.cpp_type) list
+
 (** Filter erased type arguments out of a C++ type-argument list, optionally
     preserving positions. *)
 val filter_erased_type_args :
@@ -678,6 +683,11 @@ val applied_ml_tvar_arities : Miniml.ml_type list -> (int, int) Hashtbl.t
     it at plain [typename], because the index it is applied at is erased.  For
     those the application can simply be taken back off. *)
 val higher_kinded_ml_tvars : Miniml.ml_type list -> IntSet.t
+
+(** The higher-kinded variables a declaration relaxes out of its head
+    ({!relaxed_applied_ml_tvars}): the parameter left at such a variable is
+    a phantom defaulted to [void], the application it stood for deduced. *)
+val relaxed_higher_kinded_tvars : Miniml.ml_type -> IntSet.t
 
 (** The type variables a declaration of type [ml_ty] relaxes out of its
     template head: applied somewhere in the domains, and spelled nowhere

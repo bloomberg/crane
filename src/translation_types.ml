@@ -2500,16 +2500,19 @@ let rec normalize_erased_types = function
     undefaulted, so the two stay in step without either recording anything for
     the other -- which matters because a call can precede its callee's
     declaration (mutual recursion, forward references). *)
-let phantom_prefix_args id =
-  Probe.changed "REPAIR_phantom_prefix_args" id ~before:[] @@
+let leading_phantom_count id =
   match find_type_opt id with
-  | None -> []
+  | None -> 0
   | Some ml_ty ->
     let cty =
       convert_ml_type_to_cpp_type (empty_env ()) [] (type_simpl ml_ty)
     in
     let force_required = collect_ml_type_index_tvars ml_ty in
-    List.init (explicit_tvar_prefix ~force_required cty) (fun _ -> Tvoid)
+    explicit_tvar_prefix ~force_required cty
+
+let phantom_prefix_args id =
+  Probe.changed "REPAIR_phantom_prefix_args" id ~before:[] @@
+  List.init (leading_phantom_count id) (fun _ -> Tvoid)
 
 (** Make an explicit argument list as long as {!writable_tvar_count} says the
     callee's parameter list is.
@@ -2535,6 +2538,19 @@ let fit_to_declared_tvars id targs =
     if List.length fillers < missing then targs
     else List.filteri (fun i _ -> i < missing) fillers @ targs
   | _ -> targs
+
+(** The template name a written type [c] stands for at a higher-kinded
+    variable: [c] itself as a constructor, unless applying it changes
+    nothing -- [fun T => list nat], which extraction writes as its body
+    [list nat] -- when it is the constant one, [crane::constant_tc<c>::c]. *)
+let carrier_template env tvars c =
+  let carrier = template_arg_of_ml_type ~site:Through_tvar env tvars c in
+  let constant = Mlutil.eq_ml_type (Mlutil.apply_ml_type c [Miniml.Tunknown]) c in
+  Minicpp.Ttyctor
+    ( if constant then
+        Minicpp.Tqualified
+          (Minicpp.Tid_external (Crane_rt.constant_tc, [carrier]), Id.of_string "c")
+      else carrier )
 
 (** The explicit type arguments a call needs when the callee is generic in a
     type {e constructor} and Rocq erased which one.
@@ -2575,14 +2591,7 @@ let hkt_carrier_type_args env tvars ?result id tys =
     when IntSet.mem 1 (Ml_type_util.higher_kinded_ml_tvars [ml_ty])
          && not (Mlutil.isTdummy (resolve_tmeta c))
          && not (ml_type_contains_erased c) ->
-    let carrier = template_arg_of_ml_type ~site:Through_tvar env tvars c in
-    let constant = Mlutil.eq_ml_type (Mlutil.apply_ml_type c [Miniml.Tunknown]) c in
-    Some
-      [ Minicpp.Ttyctor
-          ( if constant then
-              Minicpp.Tqualified
-                (Minicpp.Tid_external (Crane_rt.constant_tc, [carrier]), Id.of_string "c")
-            else carrier ) ]
+    Some [carrier_template env tvars c]
   | _ ->
   let* p, v =
     match resolve_tmeta (ml_return_type ml_ty) with

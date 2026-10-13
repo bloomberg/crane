@@ -496,7 +496,7 @@ struct ResumIdEtaLambda {
         },
         crane::obj(), crane::obj(), crane::obj(),
         []() {
-          return [](crane::obj _x0)
+          return [](const auto &_x0)
                      -> stateT<Nat, crane_carrier_tch<_tcI0>::template c,
                                crane::obj> {
             return fused_trigger<_tcI0, void, crane::obj>(
@@ -524,7 +524,7 @@ struct ResumIdEtaLambda {
                                                     crane::obj>();
                         },
                         crane::obj())),
-                _x0);
+                crane_convert<T1>(_x0));
           };
         }(),
         CategoryOps::template case_<crane::obj,

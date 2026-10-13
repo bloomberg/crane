@@ -125,6 +125,34 @@ let curry_to_expected env ?expected_ty use cglob =
   in
   curry_value_to_expected env ?expected_ty ~callee_site ml_ty cglob
 
+(** The plan a call to [id] is written against: the head [id] was declared
+    with, or, where it is not generated here, the conventions its call sites
+    assume -- [instances] dictionaries first, then the variables it keeps up
+    to the last one a call can reach, the leading phantoms among them, each
+    at the kind its type demands. *)
+let callee_abi ~instances id =
+  let ml_ty = find_type_opt id in
+  let hk = Option.cata declared_higher_kinded_tvars IntSet.empty ml_ty in
+  let relaxed_tt = relaxed_tt_return_var id in
+  Callable_abi.plan id ~scheme:(Mlutil.reference_scheme id) ~instances
+    ~higher_kinded:(fun v -> IntSet.mem (Scheme.Var.ordinal v) hk)
+    ~kept:(fun v ->
+      let i = Scheme.Var.ordinal v in
+      keeps_type_arg_position id i && relaxed_tt <> Some i )
+    ?reachable:(writable_tvar_count id)
+    ~relaxed:(fun i ->
+      IntSet.mem i (Option.cata Ml_type_util.relaxed_higher_kinded_tvars IntSet.empty ml_ty) )
+    ~phantom_prefix:(leading_phantom_count id)
+
+(** The explicit template arguments of a reference to [id] that is given a
+    value for some of its variables, [by_var] pairing each variable with its
+    C++ type: planned against [id]'s head, no dictionary among them. *)
+let written_at_variables id by_var =
+  Template_application.to_list
+    (Template_application.plan (callee_abi ~instances:0 id)
+       ~instance:(fun _ -> None)
+       ~scheme:(fun v -> List.assoc_opt (Scheme.Var.ordinal v) by_var) )
+
 (** [call_type_args ?expected_ty env id plan args] -- the type arguments a
     call to [id] writes, given its generated arguments: the dictionaries'
     first, then the regular ones that survive the erasure filters, recovered
@@ -355,6 +383,32 @@ let call_type_args ?expected_ty env id plan args =
         | _ -> None )
       (Param_pos.positioned fn_param_ml_tys_orig)
   in
+  (* The callee's leading phantoms: the first [leading_phantom_count] of the
+     variables it keeps, which its plan writes [void] at when anything after
+     them is written.  An erased argument there costs the call nothing. *)
+  let phantom_vars =
+    match find_type_opt id with
+    | Some ml_ty ->
+      let n = IntSet.fold max (collect_tvars_set IntSet.empty ml_ty) 0 in
+      List.filteri
+        (fun k _ -> k < leading_phantom_count id)
+        (kept_type_arg_positions id n)
+    | None -> []
+  in
+  (* Each value is kept with the scheme variable it stands for, from here to
+     the plan: a recovery that fills or drops one leaves the others where
+     they are. *)
+  let constant_at_higher_kind =
+    let hk =
+      Option.cata (fun t -> Ml_type_util.higher_kinded_ml_tvars [t]) IntSet.empty
+        (find_type_opt id)
+    in
+    fun i ty ->
+      IntSet.mem i hk
+      && (not (Mlutil.isTdummy (resolve_tmeta ty)))
+      && (not (ml_type_contains_erased ty))
+      && Mlutil.eq_ml_type (Mlutil.apply_ml_type ty [Miniml.Tunknown]) ty
+  in
   let regular_of tys =
     (* A type argument standing for a higher-kinded class parameter is not a
        template parameter of the callee (it is the instance's associated
@@ -365,7 +419,12 @@ let call_type_args ?expected_ty env id plan args =
     |> List.filter (fun (i, _) -> keeps_type_arg_position id i)
     |> List.map
          (fun (i, ty) ->
-           let t = template_arg_of_ml_type ~site:Through_tvar env tvars ty in
+           (* A constant type function written at a higher-kinded variable is
+              the constant carrier, not the head of the type it returns. *)
+           let t =
+             if constant_at_higher_kind i ty then carrier_template env tvars ty
+             else template_arg_of_ml_type ~site:Through_tvar env tvars ty
+           in
            (* A higher-kinded variable of the caller's reaching such a
               position is spelled as the template it is, which names no
               type; the position takes it at the erased element. *)
@@ -387,12 +446,13 @@ let call_type_args ?expected_ty env id plan args =
               std::any>>] for [bind]'s [S * (I + R)] with the method's own
               [I] and [R] gone.  Only a type that is nothing else says
               nothing. *)
-           match t with
-           | Tvar (Tv_index (_, None)) ->
-             Terased Ek_type
-           | t when has_unnamed_tvar t -> Ml_type_util.resolve_tvars_to_any t
-           | t -> t )
-    |> fill_phantom_prefix id
+           ( i,
+             match t with
+             | Tvar (Tv_index (_, None)) ->
+               Terased Ek_type
+             | t when has_unnamed_tvar t -> Ml_type_util.resolve_tvars_to_any t
+             | t -> t ) )
+    |> List.filter (fun (i, t) -> not (List.mem i phantom_vars && prints_as_any t))
   in
   let regular_type_args = regular_of tys in
   (* Recover erased type args that C++ cannot deduce. Two cases: (a) tys is
@@ -410,17 +470,14 @@ let call_type_args ?expected_ty env id plan args =
      arguments — lambdas don't participate in template argument deduction. *)
   let regular_type_args =
     let filtered =
-      filter_erased_type_args
+      filter_erased_keyed
         ~preserve_positions:(Table.is_inline_custom id)
         regular_type_args
     in
-    (* Check if the callee's return type is a Tvar pointing to an erased
-       (Tdummy Ktype) domain position, and if so, return the position index,
-       the concrete C++ type to use, and the full ML domain. *)
+    (* Check if the callee's return type is a Tvar standing for an erased
+       (Tdummy Ktype) domain, and if so, return the variable, the concrete
+       C++ type to use, and the full ML domain. *)
     let try_recover_erased_return_type () =
-      (* [resolve_tmeta] is the one included from Ml_type_util (via the
-         module-level [include]); it is identical to the local shadow that
-         used to be defined here. *)
       match (!tctx).current_cpp_return_type with
       | None -> None
       | Some ret_ty ->
@@ -431,17 +488,9 @@ let call_type_args ?expected_ty env id plan args =
         ( match ret with
         | Miniml.Tvar (_, i) ->
           let all_dom = List.map resolve_tmeta (ml_domains ml_ty_orig) in
-          (* Tvar uses 1-based indexing (matching type_subst_list); convert to
-             0-based for list access. *)
-          let idx = i - 1 in
-          if idx >= 0 && idx < List.length all_dom then
-            match
-              List.nth all_dom idx
-            with
-            | Miniml.Tdummy Miniml.Ktype -> Some (idx, ret_ty, all_dom)
-            | _ -> None
-          else
-            None
+          ( match List.nth_opt all_dom (i - 1) with
+          | Some (Miniml.Tdummy Miniml.Ktype) when i >= 1 -> Some (i, ret_ty, all_dom)
+          | _ -> None )
         | _ -> None )
     in
     (* Value args normally let C++ deduce the type params, but not when
@@ -486,17 +535,10 @@ let call_type_args ?expected_ty env id plan args =
       | None -> true
       | Some ml_ty ->
         let hk = declared_higher_kinded_tvars ml_ty in
-        IntSet.is_empty hk
-        ||
-        let n = IntSet.fold max (collect_tvars_set IntSet.empty ml_ty) 0 in
-        let kept =
-          kept_type_arg_positions id n
-        in
-        List.length kept <> List.length regular_type_args
-        || not
-             (List.exists2
-                (fun i t -> IntSet.mem i hk && prints_as_any t)
-                kept regular_type_args)
+        not
+          (List.exists
+             (fun (i, t) -> IntSet.mem i hk && prints_as_any t)
+             regular_type_args )
     in
     (* Writing the list out is what this call is left with once the
        recoveries have declined, so an erased family is worth filling from
@@ -508,25 +550,23 @@ let call_type_args ?expected_ty env id plan args =
        The callee's declared codomain is matched against it. *)
     let from_expected targs =
       let names, m = Lazy.force result_tvar_map in
-      let kept =
-        kept_type_arg_positions id (List.length names)
-      in
-      if List.length kept <> List.length targs then targs
-      else
-        (* A type-level lambda extraction could only write as its head
-           ({!under_applied_ind}) is filled the same way. *)
-        List.map2
-          (fun i t ->
-            let bound () =
-              match
-                List.find_opt (fun (v, _) -> Id.equal v (List.nth names (i - 1))) m
-              with
-              | Some (v, t') -> (
-                match erase_carrier_elements i t' with
-                | Some t'' -> Some (v, t'')
-                | None -> None )
-              | None -> None
-            in
+      (* A type-level lambda extraction could only write as its head
+         ({!under_applied_ind}) is filled the same way. *)
+      List.map
+        (fun (i, t) ->
+          let bound () =
+            match
+              Option.bind
+                (if i >= 1 then List.nth_opt names (i - 1) else None)
+                (fun name -> List.find_opt (fun (v, _) -> Id.equal v name) m)
+            with
+            | Some (v, t') -> (
+              match erase_carrier_elements i t' with
+              | Some t'' -> Some (v, t'')
+              | None -> None )
+            | None -> None
+          in
+          ( i,
             if prints_as_any t || under_applied_ind t then
               match bound () with
               | Some (_, t') -> t'
@@ -538,17 +578,17 @@ let call_type_args ?expected_ty env id plan args =
               match bound () with
               | Some (_, t') -> Ml_type_util.refine_erased_by ~expected:t' t
               | None -> t
-            else t )
-          kept targs
+            else t ) )
+        targs
     in
     let written_out () =
       if some_tvar_undeducible () && no_erased_hkt_arg () then
-        filter_erased_type_args ~preserve_positions:true
+        filter_erased_keyed ~preserve_positions:true
           (from_expected (regular_of (fill_erased_tys id tys primary_ml_args)))
       else filtered
     in
     if filtered = [] && regular_type_args <> [] && dictionary_filled then
-      filter_erased_type_args ~preserve_positions:true regular_type_args
+      filter_erased_keyed ~preserve_positions:true regular_type_args
     else if filtered = [] && regular_type_args <> [] then
       (* Case (a): tys was non-empty but all got filtered. Only attempt
          recovery when there are no non-erased value args — if there are value
@@ -560,11 +600,11 @@ let call_type_args ?expected_ty env id plan args =
             try_recover_erased_return_type ()
           else None
         with
-      | Some (idx, ret_ty, _) ->
-        (* Replace the erased position with the concrete return type, then
-           filter out any remaining erased entries. *)
-        List.mapi (fun j t -> if j = idx then ret_ty else t) regular_type_args
-        |> List.filter (fun t -> not (prints_as_any t))
+      | Some (v, ret_ty, _) ->
+        (* The erased variable is the concrete return type; any other erased
+           entry is dropped. *)
+        List.map (fun (j, t) -> (j, if j = v then ret_ty else t)) regular_type_args
+        |> List.filter (fun (_, t) -> not (prints_as_any t))
       | None -> written_out ()
     else if tys = [] then
       (* Case (b): tys is empty — synthesize type args from scratch. Build one
@@ -581,72 +621,74 @@ let call_type_args ?expected_ty env id plan args =
         match
           if should_recover then try_recover_erased_return_type () else None
         with
-      | Some (_idx, _ret_ty, all_dom) ->
+      | Some (_v, _ret_ty, all_dom) ->
         (* Use [concrete_tvar_type] when available (excess args case),
-           otherwise fall back to the enclosing function's return type. *)
+           otherwise fall back to the enclosing function's return type.  The
+           erased domains are the type binders, the [k]th one variable
+           [k]. *)
         let t1 = match concrete_tvar_type with
           | Some t -> t
           | None -> _ret_ty
         in
-        List.filter_map
-          (function
-            | Miniml.Tdummy Miniml.Ktype -> Some t1
-            | _ -> None )
-          all_dom
+        List.mapi (fun k t -> (k + 1, t))
+          (List.filter_map
+             (function
+               | Miniml.Tdummy Miniml.Ktype -> Some t1
+               | _ -> None )
+             all_dom )
       | None -> filtered
     else
       from_expected filtered
   in
-  (* Whatever survived above is what the call writes, so it is here -- and
-     not before the erasure filters, which read the list at its Rocq length
-     -- that it has to be made to fit the callee's parameter list. *)
-  let regular_type_args = fit_to_declared_tvars id regular_type_args in
-  (* Promoted type vars ([Tpromoted name]) are no longer separate
-     template parameters — they're resolved through typeclass instance
-     access (e.g. [typename _tcI0::Obj]) by [gen_dfun]'s promoted var
-     resolution.  No additional template type arguments are needed at
-     call sites. *)
-  let promoted_type_args = [] in
-  (* Skipped infrastructure (ReSum instances, say) was classified as a
-     dictionary only to take it out of the regular arguments; it is not a
-     template argument. *)
-  List.filter_map Fun.id typeclass_type_args
-  (* Truncated last: {!hkt_spelled_type_args} rebuilds the correspondence
-     between arguments and positions by length, so a list shortened before
-     it reaches it is left unrespelled -- the carrier comes out as
-     [typename I::m] where the position wants [I::template m]. *)
-  @ drop_relaxed_tt_position id
-      (truncate_to_writable id (hkt_spelled_type_args id regular_type_args))
-  @ promoted_type_args
+  regular_type_args
   in
-  let all_type_args = build_type_args tys in
+  let instance_args = List.filter_map Fun.id typeclass_type_args in
+  let abi = callee_abi ~instances:(List.length instance_args) id in
+  (* A plain position takes a type: a family recovered as its bare head --
+     [box] for [TFunctor_list'], whose [F] the declaration writes plain -- is
+     that family at its erased index. *)
+  let at_plain_positions regular =
+    let hk =
+      Option.cata (fun t -> Ml_type_util.higher_kinded_ml_tvars [t]) IntSet.empty
+        (find_type_opt id)
+    in
+    List.map
+      (fun (i, t) ->
+        (i, if (not (IntSet.mem i hk)) && under_applied_ind t then saturate_at_any t else t) )
+      regular
+  in
+  let apply regular =
+    let regular = at_plain_positions regular in
+    Template_application.plan abi
+      ~instance:(fun k -> List.nth_opt instance_args k)
+      ~scheme:(fun v -> List.assoc_opt (Scheme.Var.ordinal v) regular)
+  in
+  let regular = build_type_args tys in
+
   (* Nothing survived the erasure filters, so if the callee opens with
      parameters its signature never mentions, deduction has nothing to work
      from and the call has to name them. *)
-  let all_type_args =
-    if all_type_args = [] then
+  let regular =
+    if regular = [] && instance_args = [] then
       (* The call writes nothing, so every parameter is left to deduction --
          and a type constructor is the one thing deduction can get wrong
          rather than merely miss.  Where it cannot be read off the value
-         argument, name it; where the call names nothing else either, fall
-         back to the phantom prefix. *)
+         argument, name it -- the carrier is the callee's first variable. *)
       match
         hkt_carrier_type_args env tvars ?result:expected_ty id tys
       with
-      | Some targs -> targs
-      | None -> (
+      | Some [carrier] -> [(1, carrier)]
+      | _ -> (
         (* The result did not say what the carrier is; the dictionary the
            call passes for the class still does. *)
         match dict_carrier_type_args env tvars id primary_ml_args with
-        | Some targs -> targs
-        | None -> (
+        | Some [carrier] -> [(1, carrier)]
+        | _ ->
           (* Neither route knew the carrier.  An argument's type may still
              say what an erased plain type argument was, which is worth
              writing only here: filling a position is what would have taken
              the two routes above out of reach. *)
-          match build_type_args (fill_erased_tys id tys primary_ml_args) with
-          | [] -> phantom_prefix_args id
-          | targs -> targs ) )
+          build_type_args (fill_erased_tys id tys primary_ml_args) )
     else
       (* A list the call does write may still hold a family MiniML erased
          -- [translate inr1]'s source, taken off a morphism that erases it --
@@ -669,55 +711,52 @@ let call_type_args ?expected_ty env id plan args =
             if Table.is_phantom_type_param id k || no_struct then t else f)
           (List.combine (fill_erased_tys id tys primary_ml_args) tys)
       in
-      if List.for_all2 ( == ) filled tys then all_type_args
+      if List.for_all2 ( == ) filled tys then regular
       else
         match build_type_args filled with
-        | [] -> all_type_args
-        | targs -> targs
+        | [] when instance_args = [] -> regular
+        | refilled -> refilled
   in
-  (* The same holds past a class dictionary: a call that writes only the
-     instance still leaves the callee's leading phantom parameters with
-     nothing to deduce them from. *)
-  let all_type_args =
-    let tc = List.filter_map Fun.id typeclass_type_args in
-    if tc <> [] && all_type_args = tc then
-      match phantom_prefix_args id with
-      | [] -> all_type_args
-      | fillers -> tc @ fillers
-    else all_type_args
-  in
-  (* Whichever route wrote the list, a plain position takes a type. *)
-  let all_type_args =
-    let n_tc = List.length typeclass_type_args in
-    if n_tc = 0 then types_at_plain_positions id all_type_args
-    else all_type_args
-  in
+  let application = apply regular in
+  let all_type_args = Template_application.to_list application in
+
+  List.iter
+    (fun problem ->
+      Probe.violation "template application"
+        Pp.(str "the call to " ++ GlobRef.print id ++ str ": " ++ str problem) )
+    (Template_application.validate abi application);
   (* The written arguments that instantiate the callee's own type variables,
-     by position: the class-dictionary arguments lead the list and are no
-     variable's.  Substituting the whole list shifts every variable one
-     place per dictionary -- a family's position given the instance. *)
+     by variable: each argument the plan wrote at a parameter declaring one,
+     and at a carrier the call's class resolves -- a variable the head does
+     not keep, quantified first ([MonadIter_stateT0]'s [M]) -- the
+     dictionary written for it. *)
   let written_tvar_args =
-    let n_tc =
-      List.length (List.filter_map Fun.id typeclass_type_args)
+    let by_parameter =
+      List.concat
+        (List.mapi
+           (fun k p ->
+             match (p.Callable_abi.origin, List.nth_opt all_type_args k) with
+             | Callable_abi.From_scheme v, Some t -> [(Scheme.Var.ordinal v, t)]
+             | _ -> [] )
+           (Callable_abi.template_head abi) )
     in
-    (* ... except those standing at a carrier's position: a class whose
-       parameter is higher-kinded quantifies it as one of the callee's own
-       variables ([MonadIter_stateT0]'s [M]), which the regular list does not
-       keep, and the dictionary written there is what it resolves through. *)
-    let n_carriers =
+    let carriers =
       match find_type_opt id with
       | Some ml_ty ->
         let n = IntSet.fold max (collect_tvars_set IntSet.empty ml_ty) 0 in
-        List.length
-          (List.filter
-             (fun i -> not (keeps_type_arg_position id i))
-             (List.init n (fun i -> i + 1)))
-      | None -> 0
+        List.filter (fun i -> not (keeps_type_arg_position id i)) (List.init n (fun i -> i + 1))
+      | None -> []
     in
-    let skip = max 0 (n_tc - n_carriers) in
-    List.filteri (fun i _ -> i >= skip) all_type_args
+    let dictionaries =
+      List.filteri
+        (fun j _ -> j >= List.length instance_args - List.length carriers)
+        instance_args
+    in
+    List.combine
+      (List.filteri (fun j _ -> j < List.length dictionaries) carriers)
+      (List.filteri (fun j _ -> j < List.length carriers) dictionaries)
+    @ by_parameter
   in
-
   (ty, tys, all_type_args, written_tvar_args)
 
 (** The callee [id]'s type variables as the type [expected] that its result

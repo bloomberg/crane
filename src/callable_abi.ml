@@ -24,6 +24,7 @@ type write_policy =
   | Writable
   | Deduce_only
   | Defaulted of Minicpp.cpp_type
+  | Phantom of Minicpp.cpp_type
 
 type template_parameter = {
   id : Template_param.t;
@@ -53,10 +54,10 @@ let numbered spell name =
     (int_of_string_opt (String.sub s start (String.length s - start)))
     (fun n -> if String.equal (spell n) s then Some n else None)
 
-let origin_of ~scheme name =
+let origin_of ?(relaxed = fun _ -> false) ~scheme name =
   let var =
     Option.bind (numbered Minicpp.tvar_spelling name) (fun i ->
-        Option.bind scheme (fun s -> Scheme.Var.of_tvar s i) )
+        if relaxed i then None else Option.bind scheme (fun s -> Scheme.Var.of_tvar s i) )
   in
   match var with
   | Some v -> From_scheme v
@@ -68,11 +69,31 @@ let origin_of ~scheme name =
       | Some i -> From_callable i
       | None -> Derived name ) )
 
-let of_head ~callee ~scheme temps =
+(* The first [n] parameters standing for scheme variables are the
+   declaration's leading phantoms: no signature mentions them, so nothing
+   deduces them, and a call writes them -- as their default, or [void]. *)
+let mark_phantoms n head =
+  let rec go n = function
+    | [] -> []
+    | ({origin = From_scheme _; kind; _} as p) :: rest when n > 0 ->
+      let filler =
+        match kind with Minicpp.TTtypename_default d -> d | _ -> Minicpp.Tvoid
+      in
+      let p =
+        match kind with
+        | Minicpp.TTtypename | Minicpp.TTtypename_default _ -> {p with write = Phantom filler}
+        | _ -> p
+      in
+      p :: go (n - 1) rest
+    | p :: rest -> p :: go n rest
+  in
+  go n head
+
+let of_head ?(phantom_prefix = 0) ?relaxed ~callee ~scheme temps =
   let head =
     List.mapi
       (fun position (kind, name) ->
-        let origin = origin_of ~scheme name in
+        let origin = origin_of ?relaxed ~scheme name in
         let write =
           match (kind, origin) with
           | Minicpp.TTtypename_default d, _ -> Defaulted d
@@ -82,7 +103,7 @@ let of_head ~callee ~scheme temps =
         {id = {Template_param.position; name}; origin; kind; write} )
       temps
   in
-  {callee; head; phase = Common.get_phase ()}
+  {callee; head = mark_phantoms phantom_prefix head; phase = Common.get_phase ()}
 
 let parameter_of_var abi v =
   List.find_opt
@@ -199,22 +220,41 @@ let record abi =
 let lookup r =
   match GlobRef.Map_env.find_opt r !plans with
   | None | Some [] -> None
-  | Some [(_, abi)] -> Some abi
-  | Some recorded -> List.assoc_opt (context ()) recorded
+  | Some recorded -> (
+    match List.assoc_opt (context ()) recorded with
+    | Some abi -> Some abi
+    | None -> Some (snd (List.hd (List.rev recorded))) )
 
-let foreign ~callee ~scheme =
+let foreign ?(instances = 0) ?(higher_kinded = fun _ -> false) ?(kept = fun _ -> true)
+    ?(reachable = max_int) ?(relaxed = fun _ -> false) ?(phantom_prefix = 0) ~callee ~scheme () =
+  let dictionaries =
+    List.init instances (fun k ->
+        (Minicpp.TTtypename, Common.tc_instance_id k, From_instance k) )
+  in
+  let variables =
+    List.map
+      (fun v ->
+        let name = Minicpp.tvar_id (Scheme.Var.ordinal v) in
+        if relaxed (Scheme.Var.ordinal v) then
+          (Minicpp.TTtypename_default Minicpp.Tvoid, name, Derived name)
+        else
+          ( (if higher_kinded v then Minicpp.TTtemplate 1 else Minicpp.TTtypename),
+            name,
+            From_scheme v ) )
+      (List.filteri (fun k _ -> k < reachable)
+         (List.filter kept (Option.cata Scheme.Var.all [] scheme)) )
+  in
   let head =
     List.mapi
-      (fun position v ->
-        { id = {Template_param.position; name = Minicpp.tvar_id (Scheme.Var.ordinal v)};
-          origin = From_scheme v;
-          kind = Minicpp.TTtypename;
-          write = Writable } )
-      (Option.cata Scheme.Var.all [] scheme)
+      (fun position (kind, name, origin) ->
+        let write = match kind with Minicpp.TTtypename_default d -> Defaulted d | _ -> Writable in
+        {id = {Template_param.position; name}; origin; kind; write} )
+      (dictionaries @ variables)
   in
-  {callee; head; phase = Common.get_phase ()}
+  {callee; head = mark_phantoms phantom_prefix head; phase = Common.get_phase ()}
 
-let plan callee ~scheme =
+let plan ?instances ?higher_kinded ?kept ?reachable ?relaxed ?phantom_prefix callee ~scheme =
   match lookup callee with
   | Some abi -> abi
-  | None -> foreign ~callee ~scheme
+  | None ->
+    foreign ?instances ?higher_kinded ?kept ?reachable ?relaxed ?phantom_prefix ~callee ~scheme ()

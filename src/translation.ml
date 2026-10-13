@@ -2600,11 +2600,13 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                        deducible_tvars )
             in
             let ty_args =
-              List.map
-                (fun i ->
-                  if IntSet.mem i deducible_set then Tvar (Tv_index (i, Some (local_tvar i)))
-                  else invoke_result )
-                (List.sort compare (deducible_tvars @ non_deducible_tvars))
+              written_at_variables r
+                (List.map
+                   (fun i ->
+                     ( i,
+                       if IntSet.mem i deducible_set then Tvar (Tv_index (i, Some (local_tvar i)))
+                       else invoke_result ) )
+                   (List.sort compare (deducible_tvars @ non_deducible_tvars)) )
             in
             let ret =
               Minicpp.subst_cpp_tvars
@@ -2657,11 +2659,11 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                   | _ -> forward x )
                 arg_vars non_dummy_param_tys
             in
-            (* Convert inner type args to C++ types, filtering out Tany *)
+            (* The inner type arguments as C++ types, by variable. *)
             let inner_tvars = get_current_type_vars () in
-            let tys_cpp =
-              List.map
-                (convert_ml_type_to_cpp_type env inner_tvars)
+            let by_var =
+              List.mapi
+                (fun k ty -> (k + 1, convert_ml_type_to_cpp_type env inner_tvars ty))
                 tys_inner
             in
             (* An erased argument is left to deduction -- unless nothing can
@@ -2670,19 +2672,19 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                too, takes the tree at [std::any].  With no argument given at
                all -- the index is this lambda's own type binder -- every
                variable is such a one, since none is deducible here. *)
-            let tys_cpp =
+            let by_var =
               if own_index then
-                List.init (List.fold_left max 0 all_tvars) (fun _ -> Tany)
-              else if non_deducible_tvars = [] then List.filter (fun t -> t <> Tany) tys_cpp
-              else if tys_cpp = [] then List.map (fun _ -> Tany) non_deducible_tvars
-              else tys_cpp
+                List.init (List.fold_left max 0 all_tvars) (fun k -> (k + 1, Tany))
+              else if non_deducible_tvars = [] then List.filter (fun (_, t) -> t <> Tany) by_var
+              else if by_var = [] then List.map (fun i -> (i, Tany)) non_deducible_tvars
+              else by_var
             in
             let ret =
               Minicpp.subst_cpp_tvars
-                (fun i -> List.nth_opt tys_cpp (i - 1))
+                (fun i -> List.assoc_opt i by_var)
                 (convert_ml_type_to_cpp_type env [] result_ml)
             in
-            lambda ~ret [] params (mk_call (mk_cppglob r tys_cpp) fwd_args)
+            lambda ~ret [] params (mk_call (mk_cppglob r (written_at_variables r by_var)) fwd_args)
         else
           (* Every binder was a type: the body is the value the slot takes. *)
           gen_expr ?expected_ty ~slot env a
@@ -2741,84 +2743,72 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
   | MLglob ({callee = x; _} as use) ->
     let tys = Global_use.legacy_template_args use in
     let tvars = get_current_type_vars () in
-    let tys_cpp =
-      List.map
-        (fun ty ->
-          let t =
-            cpp_of_ml env (type_simpl ty)
-          in
-          match t with
-          | Tvar (Tv_index (_, None)) when tvars <> [] ->
-            Terased Ek_type
-          | _ -> t )
+    (* Each argument with the variable it was written for. *)
+    let by_var =
+      List.mapi
+        (fun k ty ->
+          let t = cpp_of_ml env (type_simpl ty) in
+          ( k + 1,
+            match t with
+            | Tvar (Tv_index (_, None)) when tvars <> [] -> Terased Ek_type
+            | _ -> t ) )
         tys
     in
-    let tys_cpp = hkt_spelled_type_args x tys_cpp in
+    (* An erased variable bound by a result: the [i]th of [names] stands for
+       variable [i]. *)
+    let fill_from (names, m) by_var =
+      List.map
+        (fun (i, t) ->
+          ( i,
+            if not (prints_as_any t) then t
+            else
+              match List.nth_opt names (i - 1) with
+              | Some v -> (
+                match List.find_opt (fun (v', _) -> Id.equal v v') m with
+                | Some (_, b) when names_only_scoped_tvars b -> b
+                | _ -> t )
+              | None -> t ) )
+        by_var
+    in
     (* A global passed as a function value -- [MonadIter_itree] at a slot
        [MonadIter m] -- has its erased type arguments stated by the callable
        the slot takes. *)
-    let tys_cpp =
-      match (List.exists prints_as_any tys_cpp, slot.call_result) with
+    let by_var =
+      match (List.exists (fun (_, t) -> prints_as_any t) by_var, slot.call_result) with
       | true, (Some _ as res) -> (
         match instance_family_binding env x tys res with
-        | Some (_, names, m) ->
-          List.mapi
-            (fun k t ->
-              if not (prints_as_any t) then t
-              else
-                match List.nth_opt names k with
-                | Some v -> (
-                  match List.find_opt (fun (v', _) -> Id.equal v v') m with
-                  | Some (_, b) when names_only_scoped_tvars b -> b
-                  | _ -> t )
-                | None -> t )
-            tys_cpp
-        | None -> tys_cpp )
-      | _ -> tys_cpp
+        | Some (_, names, m) -> fill_from (names, m) by_var
+        | None -> by_var )
+      | _ -> by_var
     in
-    let tys_cpp =
+    let by_var =
       match expected_ty with
-      | Some _ when tys_cpp = [] -> (
+      | Some _ when by_var = [] -> (
         (* None written at all: every variable, if the callable binds each. *)
         match callee_result_bindings env x ~explicit:true expected_ty with
         | (_ :: _ as names), (_ :: _ as m) -> (
           let bound =
-            List.map
-              (fun v ->
+            List.mapi
+              (fun k v ->
                 match List.find_opt (fun (v', _) -> Id.equal v v') m with
-                | Some (_, b) when names_only_scoped_tvars b -> Some b
+                | Some (_, b) when names_only_scoped_tvars b -> Some (k + 1, b)
                 | _ -> None )
               names
           in
-          if List.for_all (fun b -> b <> None) bound then
-            List.map Option.get bound
-          else tys_cpp )
-        | _ -> tys_cpp )
-      | Some _ when List.exists prints_as_any tys_cpp -> (
+          if List.for_all Option.has_some bound then List.map Option.get bound
+          else by_var )
+        | _ -> by_var )
+      | Some _ when List.exists (fun (_, t) -> prints_as_any t) by_var -> (
         match callee_result_bindings env x ~explicit:true expected_ty with
-        | names, (_ :: _ as m) ->
-          List.mapi
-            (fun k t ->
-              if not (prints_as_any t) then t
-              else
-                match List.nth_opt names k with
-                | Some v -> (
-                  match List.find_opt (fun (v', _) -> Id.equal v v') m with
-                  | Some (_, b) when names_only_scoped_tvars b -> b
-                  | _ -> t )
-                | None -> t )
-            tys_cpp
-        | _ -> tys_cpp )
-      | _ -> tys_cpp
+        | names, (_ :: _ as m) -> fill_from (names, m) by_var
+        | _ -> by_var )
+      | _ -> by_var
     in
+    let tys_cpp = List.map snd by_var in
     let yields =
       glob_yields env x (Mlutil.instantiate_written ~reader:"glob_yields" use)
     in
-    let cglob =
-      match filter_erased_type_args tys_cpp with
-      | [] -> mk_cppglob ?yields x (phantom_prefix_args x)
-      | tys_cpp -> mk_cppglob ?yields x tys_cpp
-    in
+    let cglob = mk_cppglob ?yields x (written_at_variables x (filter_erased_keyed by_var)) in
     if naming_calls ~cpp_of:(cpp_of_ml env) x then
       mk_call cglob []
     else
@@ -5120,7 +5110,14 @@ and project_through_instance env use args inst =
      result. *)
   let targs =
     let n_class = Ml_type_util.projection_class_arity x in
-    List.map (cpp_of_ml env) (List.filteri (fun i _ -> i >= n_class) tys)
+    let by_var = List.mapi (fun k t -> (k + 1, cpp_of_ml env t)) tys in
+    Template_application.to_list
+      (Template_application.plan
+         (Callable_abi.foreign ~callee:x ~scheme:(Mlutil.reference_scheme x)
+            ~kept:(fun v -> Scheme.Var.ordinal v > n_class)
+            () )
+         ~instance:(fun _ -> None)
+         ~scheme:(fun v -> List.assoc_opt (Scheme.Var.ordinal v) by_var) )
   in
   (* What each operand is written into.  [tys] leads with the carrier, which
      is how the field's own type numbers the class parameter, so the single
@@ -5917,7 +5914,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
        for a function type is spelled curried ([Through_tvar]), where the
        value passed was spelled where it was declared. *)
     let written_fn_ty =
-      let subst i = if i >= 1 then List.nth_opt written_tvar_args (i - 1) else None in
+      let subst i = List.assoc_opt i written_tvar_args in
       (* An inline custom has no signature its type arguments instantiate:
          its text reads the values as they are ({!call_result_site}). *)
       if written_tvar_args = [] || is_inline_custom id then None
@@ -6100,7 +6097,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
            [T2] written [std::function<std::any(std::any)>] where the ML
            instantiation erased the morphism type. *)
         let written_cod =
-          let subst i = if i >= 1 then List.nth_opt written_tvar_args (i - 1) else None in
+          let subst i = List.assoc_opt i written_tvar_args in
           match
             Option.map
               (fun t -> Minicpp.subst_cpp_tvars subst (cpp_of_ml env t))
@@ -6417,14 +6414,10 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
                not use -- [fused_trigger]'s [F], whose only occurrence it
                relaxed to a deduced parameter -- so in a domain it is erased,
                and applied it is the erased type ([void<std::any>] is none). *)
-            let subst =
-              let by_index =
-                List.mapi (fun k t -> (k + 1, t)) written_tvar_args
-              in
-              fun i ->
-                match List.assoc_opt i by_index with
-                | Some Tvoid -> Some Tany
-                | t -> t
+            let subst i =
+              match List.assoc_opt i written_tvar_args with
+              | Some Tvoid -> Some Tany
+              | t -> t
             in
             let collapse_erased_heads =
               map_cpp_type (function Tapply (h, args) -> Minicpp.tapply h args | t -> t)

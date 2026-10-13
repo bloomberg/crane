@@ -816,17 +816,20 @@ let is_cpp_dummy_prop = function
 
     @param tys List of C++ types (template arguments)
     @return Filtered list: either all concrete types or empty list *)
-let filter_erased_type_args ?(preserve_positions = false) tys =
-  let all = tys in
-  let tys = List.filter (fun t -> not (is_cpp_dummy_prop t)) tys in
-  if List.length tys <> List.length all then
+let filter_erased_keyed ?(preserve_positions = false) pairs =
+  let all = pairs in
+  let pairs = List.filter (fun (_, t) -> not (is_cpp_dummy_prop t)) pairs in
+  if List.length pairs <> List.length all then
     Probe.hit "REPAIR_filter_erased_type_args_prop" (fun () -> "");
   if preserve_positions then
-    List.map (fun t -> if prints_as_any t then Minicpp.Tany else t) tys
-  else if List.exists prints_as_any tys then (
+    List.map (fun (k, t) -> (k, if prints_as_any t then Minicpp.Tany else t)) pairs
+  else if List.exists (fun (_, t) -> prints_as_any t) pairs then (
     Probe.hit "REPAIR_filter_erased_type_args_drop" (fun () -> "");
     [] )
-  else tys
+  else pairs
+
+let filter_erased_type_args ?preserve_positions tys =
+  List.map snd (filter_erased_keyed ?preserve_positions (List.map (fun t -> ((), t)) tys))
 
 (** Check if an ML type contains any unresolved type variable or placeholder.
     Returns true for Tvar, unresolved Tmeta, and Tunknown. Used to
@@ -1748,6 +1751,9 @@ let higher_kinded_ml_tvars tys =
   in
   List.iter (scan ~generated_arg:false) tys;
   !hk
+
+let relaxed_higher_kinded_tvars ml_ty =
+  IntSet.inter (relaxed_applied_ml_tvars ml_ty) (higher_kinded_ml_tvars [ml_ty])
 
 (** [hkt_arg_ml_tvar_arities tys] maps a type variable to the arity it is
     higher-kinded at because [tys] hands it, bare, to a position another

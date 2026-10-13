@@ -141,7 +141,7 @@ struct TyargFamilyBinderShift {
     }
   }
 
-  static inline const uint64_t picked = after_family<uint64_t, uint64_t>(
+  static inline const uint64_t picked = after_family<uint64_t>(
       UINT64_C(7), List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()));
 
   template <typename T1, typename T2>
