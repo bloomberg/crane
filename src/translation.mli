@@ -309,12 +309,12 @@ val ungeneralised_callable_params :
     in the body as the closure it returns. *)
 val collect_typed_lams : ml_type -> ml_ast -> (ml_ident * ml_type) list * ml_ast
 
-(** Whether a function takes its callable parameter at source position [i],
-    of C++ type [f], as a deduced [F &&] rather than a [crane::fn]: unless the
-    [ungeneralised] set holds it, or [f] erased throughout in a signature
-    deducing no type variable ([primary] empty). *)
+(** Whether a function takes a callable parameter of C++ type [f] as a
+    deduced [F &&] rather than a [crane::fn]: unless the parameter is
+    [kept_as_fn] (in {!ungeneralised_callable_params}' set), or [f] erased
+    throughout in a signature deducing no type variable ([primary] empty). *)
 val generalises_callable :
-  ungeneralised:Escape.IntSet.t -> primary:Escape.IntSet.t -> int -> cpp_type -> bool
+  kept_as_fn:bool -> primary:Escape.IntSet.t -> cpp_type -> bool
 
 (** Infer, for each of [n_params] parameters, whether it is "owned" (should be
     passed by value / moved) based on escape analysis of [body]. *)

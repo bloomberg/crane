@@ -62,6 +62,8 @@ let generalises_callable r pos ~primary f =
   match Table.Refmap'.find_opt r !callables with
   | Some (binder_tys, ungeneralised) -> (
     match Param_pos.source_index binder_tys pos with
-    | Some i -> Translation_support.generalises_callable ~ungeneralised ~primary i f
+    | Some i ->
+      Translation_support.generalises_callable
+        ~kept_as_fn:(Escape.IntSet.mem i ungeneralised) ~primary f
     | None -> false )
   | None -> false

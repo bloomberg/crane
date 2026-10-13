@@ -7,7 +7,6 @@
 #include <concepts>
 #include <memory>
 #include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -124,11 +123,11 @@ struct HktLambdaParamCarrier {
 
   static_assert(Monad<OptM>);
 
-  template <Monad _tcI0, typename T2, typename F1>
-    requires std::is_invocable_r_v<typename _tcI0::template M<T2>, const F1 &,
-                                   const T2 &>
-  static typename _tcI0::template M<T2> twice(typename _tcI0::template M<T2> m,
-                                              F1 &&f) {
+  template <Monad _tcI0, typename T2>
+  static typename _tcI0::template M<T2> twice(
+      typename _tcI0::template M<T2> m,
+      const std::type_identity_t<crane::fn<typename _tcI0::template M<T2>(T2)>>
+          &f) {
     return _tcI0::template bind<T2, T2>(std::move(m), [=](const T2 &x) {
       return _tcI0::template bind<T2, T2>(
           f(x), [](const T2 &y) { return _tcI0::template ret<T2>(y); });

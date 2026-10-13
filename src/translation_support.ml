@@ -2348,16 +2348,16 @@ let ungeneralised_callables_of_definition r ty b =
     ~suspended:(Table.is_coinductive_type (ml_return_type ty))
     (List.length ids) body
 
-(** Whether a function takes its callable parameter at source position [i],
-    of C++ type [f], as a deduced [F &&] rather than a [crane::fn]: unless
-    [ungeneralised] holds it, or [f] erased to [std::any] throughout in a
-    signature whose deducible type variables [primary] are none.  A callable
-    deduced there pins nothing down, and the template it forces costs the
-    definition its use as a value of the type its Rocq signature names
-    ([church]). *)
-let generalises_callable ~ungeneralised ~primary i f =
-  (not (IntSet.mem i ungeneralised))
-  && not (IntSet.is_empty primary && is_fully_erased_fun_ty f)
+(** Whether a function takes a callable parameter of C++ type [f] as a
+    deduced [F &&] rather than a [crane::fn]: unless the parameter is
+    [kept_as_fn] -- in {!ungeneralised_callable_params}' set, a fact about the
+    binder decided where its source position is known -- or [f] erased to
+    [std::any] throughout in a signature whose deducible type variables
+    [primary] are none.  A callable deduced there pins nothing down, and the
+    template it forces costs the definition its use as a value of the type
+    its Rocq signature names ([church]). *)
+let generalises_callable ~kept_as_fn ~primary f =
+  (not kept_as_fn) && not (IntSet.is_empty primary && is_fully_erased_fun_ty f)
 
 (** Convert ML params to C++ types with const/ref wrapping, and create
     forwarding-ref template parameters for function-typed params. convert_fn:

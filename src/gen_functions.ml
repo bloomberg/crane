@@ -734,6 +734,17 @@ let gen_dfun n b cty ty temps =
   let all_ids_with_owned =
     List.map2 (fun (id, ty) owned -> (id, ty, owned)) all_ids owned_flags
   in
+  (* The callables kept as [crane::fn], by binder: decided here, where every
+     binder is still at its source position -- [all_ids] is innermost first,
+     so the [p]th is source parameter [n_params - 1 - p] -- and read by name
+     below, after the dictionaries and erased binders are filtered out. *)
+  let kept_as_fn =
+    List.fold_left
+      (fun acc (p, (id, _)) ->
+        if IntSet.mem (n_params - 1 - p) non_fwd_set then Id.Set.add id acc else acc )
+      Id.Set.empty
+      (List.mapi (fun p x -> (p, x)) all_ids)
+  in
   (* For function signature, use renamed ids but exclude typeclass, void,
      and skipped-type params (e.g. ReSum instances from the ITree library
      that are not recognized by is_typeclass because ReSum's GlobRef is a
@@ -794,8 +805,8 @@ let gen_dfun n b cty ty temps =
      - [l] is not function-typed → stays as-is
      - [k] receives a different expression at the recursive call → [const std::function<...> k]
 
-     This loop iterates [List.rev ids] which is in source order, the order
-     {!generalises_callable} indexes parameters by. *)
+     Whether a callable is kept is read by binder ([kept_as_fn]), not by its
+     position here, which the filtering above has shifted. *)
   (* Determine which tvars are "primary" — deducible from non-function domain
      params or the return type.  Function-typed params that reference tvars
      outside this set (e.g., erased HKT type variables) get TTtypename (no
@@ -812,7 +823,7 @@ let gen_dfun n b cty ty temps =
       (fun (x, ty, i) ->
         match unwrap_fun_ty2 ty with
         | Some (Tfun (fdom, fcod) as f)
-          when generalises_callable ~ungeneralised:non_fwd_set ~primary i f ->
+          when generalises_callable ~kept_as_fn:(Id.Set.mem x kept_as_fn) ~primary f ->
           let fun_idx = get_tvar_indices (Tfun (fdom, fcod)) in
           let has_undeclared =
             List.exists (fun idx -> not (IntSet.mem idx primary)) fun_idx
@@ -834,8 +845,7 @@ let gen_dfun n b cty ty temps =
       (fun i (x, ty) ->
         match unwrap_fun_ty2 ty with
         | Some (Tfun _ as f)
-          when generalises_callable ~ungeneralised:non_fwd_set ~primary
-                 (List.length ids - i - 1) f ->
+          when generalises_callable ~kept_as_fn:(Id.Set.mem x kept_as_fn) ~primary f ->
           ( x,
             Tref (Forwarding, named_tvar (fun_tparam_id (List.length ids - i - 1))) )
         | _ -> (x, ty) )

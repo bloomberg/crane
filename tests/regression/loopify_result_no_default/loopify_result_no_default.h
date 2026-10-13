@@ -11,7 +11,6 @@
 #include <cstdint>
 #include <memory>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -348,13 +347,12 @@ template <typename T1> struct Monad_itree {
 /// Found in Vellvm with the global Set Crane Loopify: 35 of the 59 errors
 /// are this one, in ListUtil.monad_fold_right and ListUtil.map_monad.
 struct LoopifyResultNoDefault {
-  template <Monad _tcI0, typename T2, typename T3, typename F0>
-    requires std::is_invocable_r_v<typename _tcI0::template m<T3>, const F0 &,
-                                   const T3 &, const T2 &>
+  template <Monad _tcI0, typename T2, typename T3>
   static typename _tcI0::template m<T3>
-  mfr(F0 &&f, const List<T2> &l,
-      const T3 &b) { /// CraneEnter: captures varying parameters for each
-                     /// recursive call.
+  mfr(const std::type_identity_t<
+          crane::fn<typename _tcI0::template m<T3>(T3, T2)>> &f,
+      const List<T2> &l, const T3 &b) { /// CraneEnter: captures varying
+                                        /// parameters for each recursive call.
 
     struct CraneEnter {
       const List<T2> *l;
