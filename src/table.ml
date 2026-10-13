@@ -1484,17 +1484,21 @@ let info_axioms = ref Ref.User.Set.empty
 
 let log_axioms = ref Ref.User.Set.empty
 
-let cofixpoints = ref Ref.User.Set.empty
+(* Whether a definition is a cofixpoint, or only throws, is a fact about the
+   definition, and it decides whether naming it calls it
+   ({!Translation_support.thunk_reason}): keyed canonically, so a reference
+   through a module alias is called as the definition's own name is. *)
+let cofixpoints = ref Ref.Can.Set.empty
 
-let throwing_values = ref Ref.User.Set.empty
+let throwing_values = ref Ref.Can.Set.empty
 
 let symbols = ref Ref.User.Map.empty
 
 let init_axioms () =
   info_axioms := Ref.User.Set.empty;
   log_axioms := Ref.User.Set.empty;
-  cofixpoints := Ref.User.Set.empty;
-  throwing_values := Ref.User.Set.empty;
+  cofixpoints := Ref.Can.Set.empty;
+  throwing_values := Ref.Can.Set.empty;
   symbols := Ref.User.Map.empty
 
 let () = on_reset init_axioms
@@ -1505,13 +1509,13 @@ let remove_info_axiom r = info_axioms := Ref.User.Set.remove r !info_axioms
 
 let add_log_axiom r = log_axioms := Ref.User.Set.add r !log_axioms
 
-let add_cofixpoint r = cofixpoints := Ref.User.Set.add r !cofixpoints
+let add_cofixpoint r = cofixpoints := Ref.Can.Set.add r !cofixpoints
 
-let is_cofixpoint r = Ref.User.Set.mem r !cofixpoints
+let is_cofixpoint r = Ref.Can.Set.mem r !cofixpoints
 
-let add_throwing_value r = throwing_values := Ref.User.Set.add r !throwing_values
+let add_throwing_value r = throwing_values := Ref.Can.Set.add r !throwing_values
 
-let is_throwing_value r = Ref.User.Set.mem r !throwing_values
+let is_throwing_value r = Ref.Can.Set.mem r !throwing_values
 
 let add_symbol r =
   symbols :=

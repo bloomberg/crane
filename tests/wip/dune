@@ -217,13 +217,3 @@
   (deps interp_state_dict.t.exe)
   (action (run ./interp_state_dict.t.exe))))
 
-(subdir alias_thunk_reference
- (rule
-  (targets alias_thunk_reference.t.exe)
-  (deps AliasThunkReference.vo alias_thunk_reference.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} alias_thunk_reference.t.exe alias_thunk_reference.cpp alias_thunk_reference.t.cpp)))
- (rule
-  (alias runtest)
-  (deps alias_thunk_reference.t.exe)
-  (action (run ./alias_thunk_reference.t.exe))))

@@ -62,9 +62,9 @@ struct AliasThunkReference {
   };
 
   using B = A;
-  static inline const uint64_t from_cofix = B::hd(B::ones);
+  static inline const uint64_t from_cofix = B::hd(B::ones());
   static inline const uint64_t from_throwing =
-      (Nat::eq_dec(UINT64_C(0), UINT64_C(1)) ? B::absurd_nat : UINT64_C(9));
+      (Nat::eq_dec(UINT64_C(0), UINT64_C(1)) ? B::absurd_nat() : UINT64_C(9));
 };
 
 #endif // INCLUDED_ALIAS_THUNK_REFERENCE
