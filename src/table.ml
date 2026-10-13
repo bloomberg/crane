@@ -998,7 +998,11 @@ let add_sigma_assertion r idx a =
     | Some l -> l
     | None -> []
   in
-  sigma_assertions := Ref.Can.Map.add r ((idx, a) :: existing) !sigma_assertions
+  (* A definition reached under two names -- [Nat] and [Module X :=
+     PeanoNat.Nat] -- is extracted under each, and states the same
+     precondition each time: it is recorded once. *)
+  if not (List.mem (idx, a) existing) then
+    sigma_assertions := Ref.Can.Map.add r ((idx, a) :: existing) !sigma_assertions
 
 (** Retrieve all sigma type assertions for a given function reference. *)
 let get_sigma_assertions r =
