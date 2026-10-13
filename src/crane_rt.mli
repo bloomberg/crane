@@ -104,6 +104,10 @@ val itree_header : string  (** [crane_itree.h] -- reified interaction trees. *)
 
 val rebind : string  (** [crane::rebind_t], a plain carrier read at an element *)
 
+val constant_tc : string
+(** [crane::constant_tc<T>::template c], the type function ignoring its
+    argument: the carrier [fun _ => T]. *)
+
 val variant : string  (** [crane::variant], the tagged union of [Crane FastVariant] *)
 
 val variant_header : string  (** [crane_variant.h] -- {!variant}. *)
@@ -151,6 +155,10 @@ type helper =
   | Reuse_step
   | Raw  (** [crane_raw(p)] -- the raw pointer a smart pointer holds. *)
   | Unbox_field  (** [crane::unbox(f)] -- a {!field} read as [const T&]. *)
+  | Deep_box
+      (** [crane_deep_box(v)] -- [v] boxed at the shape a value-indexed
+          family's generic consumers read: every component and element boxed
+          in turn, whatever the container. *)
   | Share_child
       (** Marks a constructor argument for a field holding the inductive
           itself.  Printed as [crane::child(p)] when the argument is a field

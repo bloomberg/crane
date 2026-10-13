@@ -31,7 +31,7 @@ struct ExistentialClosureProbe {
 
   template <typename T1, typename T2 = void, typename F0>
   static T1 wrap_rec(F0 &&f, const wrap &w) {
-    return wrap_rect<T1, crane::obj>(crane_erase_fn<T1>(f), w);
+    return wrap_rect<T1, crane::obj>(f, w);
   }
 
   template <typename T1> static T1 unwrap(const wrap &w) {

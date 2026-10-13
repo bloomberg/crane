@@ -23,7 +23,7 @@ FamilyCallResultMappedList::size(const FamilyCallResultMappedList::ty &t,
 }
 
 FamilyCallResultMappedList::den FamilyCallResultMappedList::mk(uint64_t n) {
-  return ListDef::seq(UINT64_C(0), n);
+  return crane_deep_box(ListDef::seq(UINT64_C(0), n));
 }
 
 std::deque<uint64_t> ListDef::seq(uint64_t start, uint64_t len) {

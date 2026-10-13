@@ -812,16 +812,28 @@ and extract_type_scheme env sg db c p =
 (** Extracts [c], the argument a type variable is instantiated at, when that
     variable stands for a family over values: [P : nat -> Type], whose every
     application [P n] {!extract_type} reads as the variable itself.  The ML type
-    the variable is instantiated at is then the family's body, its value
-    binders erased as any index is -- [fun _ => bool] instantiates it at
-    [bool], [fun n => vec A n] at [vec A].  A binder ranging over types is a
-    type constructor, not a family, and stays the plain {!extract_type}
-    question. *)
+    the variable is instantiated at is then the family's body, its binders
+    erased as any index is -- [fun _ => bool] instantiates it at [bool],
+    [fun n => vec A n] at [vec A].  One value binder is enough to make the
+    variable such a family: [P : Type -> nat -> Type] is read whole as well,
+    so [fun _ _ => nat -> nat] instantiates it at [nat -> nat].  A family
+    whose binders all range over types is a type constructor, and stays the
+    plain {!extract_type} question -- unless it ignores them: [fun T => list
+    nat] is the carrier [list nat], whatever it is applied to (see
+    {!Mlutil.apply_ml_type}). *)
 and extract_family_type env sg db c =
-  match EConstr.kind sg (whd_betaiotazeta env sg c) with
-  | Lambda (n, t, d) when snd (flag_of_type env sg t) == Default ->
-    extract_family_type (push_rel_assum (n, t) env) sg (0 :: db) d
-  | _ -> extract_type env sg db 0 c []
+  let rec peel env db n has_value c =
+    match EConstr.kind sg (whd_betaiotazeta env sg c) with
+    | Lambda (x, t, d) ->
+      peel (push_rel_assum (x, t) env) (0 :: db) (n + 1)
+        (has_value || snd (flag_of_type env sg t) == Default) d
+    | _ when has_value || (n > 0 && EConstr.Vars.noccur_between sg 1 n c) ->
+      Some (extract_type env sg db 0 c [])
+    | _ -> None
+  in
+  match peel env db 0 false c with
+  | Some t -> t
+  | None -> extract_type env sg db 0 c []
 
 (* First, a version with cache *)
 

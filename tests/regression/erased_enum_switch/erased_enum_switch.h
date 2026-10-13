@@ -115,7 +115,7 @@ struct ErasedEnumSwitch {
   }
 
   template <typename T1, typename F0> static T1 dep_rec(F0 &&f, const dep &d) {
-    return dep_rect<T1>(crane_erase_fn<T1>(f), d);
+    return dep_rect<T1>(f, d);
   }
 
   static Nat run(const dep &d);

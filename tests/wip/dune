@@ -217,61 +217,6 @@
   (deps interp_state_dict.t.exe)
   (action (run ./interp_state_dict.t.exe))))
 
-(subdir family_with_type_binder_at_function
- (rule
-  (targets family_with_type_binder_at_function.t.exe)
-  (deps FamilyWithTypeBinderAtFunction.vo family_with_type_binder_at_function.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} family_with_type_binder_at_function.t.exe family_with_type_binder_at_function.cpp family_with_type_binder_at_function.t.cpp)))
- (rule
-  (alias runtest)
-  (deps family_with_type_binder_at_function.t.exe)
-  (action (run ./family_with_type_binder_at_function.t.exe))))
-
-(subdir family_call_result_deep_shape
- (rule
-  (targets family_call_result_deep_shape.t.exe)
-  (deps FamilyCallResultDeepShape.vo family_call_result_deep_shape.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} family_call_result_deep_shape.t.exe family_call_result_deep_shape.cpp family_call_result_deep_shape.t.cpp)))
- (rule
-  (alias runtest)
-  (deps family_call_result_deep_shape.t.exe)
-  (action (run ./family_call_result_deep_shape.t.exe))))
-
-(subdir family_call_result_mapped_list
- (rule
-  (targets family_call_result_mapped_list.t.exe)
-  (deps FamilyCallResultMappedList.vo family_call_result_mapped_list.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} family_call_result_mapped_list.t.exe family_call_result_mapped_list.cpp family_call_result_mapped_list.t.cpp)))
- (rule
-  (alias runtest)
-  (deps family_call_result_mapped_list.t.exe)
-  (action (run ./family_call_result_mapped_list.t.exe))))
-
-(subdir higher_kinded_constant_type_function
- (rule
-  (targets higher_kinded_constant_type_function.t.exe)
-  (deps HigherKindedConstantTypeFunction.vo higher_kinded_constant_type_function.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} higher_kinded_constant_type_function.t.exe higher_kinded_constant_type_function.cpp higher_kinded_constant_type_function.t.cpp)))
- (rule
-  (alias runtest)
-  (deps higher_kinded_constant_type_function.t.exe)
-  (action (run ./higher_kinded_constant_type_function.t.exe))))
-
-(subdir rank2_callback_kept_as_fn
- (rule
-  (targets rank2_callback_kept_as_fn.t.exe)
-  (deps Rank2CallbackKeptAsFn.vo rank2_callback_kept_as_fn.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} rank2_callback_kept_as_fn.t.exe rank2_callback_kept_as_fn.cpp rank2_callback_kept_as_fn.t.cpp)))
- (rule
-  (alias runtest)
-  (deps rank2_callback_kept_as_fn.t.exe)
-  (action (run ./rank2_callback_kept_as_fn.t.exe))))
-
 (subdir no_optimize_fold_left_accumulator
  (rule
   (targets no_optimize_fold_left_accumulator.t.exe)

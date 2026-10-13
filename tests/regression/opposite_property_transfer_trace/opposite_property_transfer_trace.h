@@ -1,7 +1,6 @@
 #ifndef INCLUDED_OPPOSITE_PROPERTY_TRANSFER_TRACE
 #define INCLUDED_OPPOSITE_PROPERTY_TRANSFER_TRACE
 
-#include "crane_fn.h"
 #include "fn.h"
 #include <cstdint>
 #include <type_traits>
@@ -89,8 +88,8 @@ struct OppositePropertyTransferTraceCase {
                                              const RightStableWitness &h_right,
                                              const Triangle2Witness &h_tri2) {
     return theorem_doubling_principle_correct<T1, T2>(
-        h_dual, crane_erase_fn<T1>(h_theorem), pS,
-        right_stable_gives_opposite_left(pS, h_right), [&]() {
+        h_dual, h_theorem, pS, right_stable_gives_opposite_left(pS, h_right),
+        [&]() {
           std::pair<crane::fn<satisfies_triangle_2(satisfies_triangle_1)>,
                     crane::fn<satisfies_triangle_1(satisfies_triangle_2)>>
               e = triangle_identity_duality(opposite_prestable_category(pS));
@@ -113,9 +112,8 @@ struct OppositePropertyTransferTraceCase {
       Triangle2Witness{UINT64_C(8), UINT64_C(16)};
   static inline const RightProperty sample_right_property =
       theorem_doubling_principle_final<LeftProperty, RightProperty>(
-          dual_property_equiv,
-          crane_erase_global<sample_left_property, LeftProperty>(),
-          sample_category, sample_right_stable, sample_triangle2);
+          dual_property_equiv, sample_left_property, sample_category,
+          sample_right_stable, sample_triangle2);
   static inline const uint64_t sample_opposite_tag =
       opposite_prestable_category(sample_category).ps_tag;
   static inline const uint64_t sample_opposite_loop_value =

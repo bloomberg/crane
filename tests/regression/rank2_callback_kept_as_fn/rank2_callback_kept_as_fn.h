@@ -104,7 +104,7 @@ struct Rank2CallbackKeptAsFn {
         return f;
       } else {
         const auto &[a0, a1] = std::get<typename List<crane::obj>::Cons>(m.v());
-        return crane_any_cast<std::pair<T1, T1>>(
+        return crane_any_cast<T1>(
             crane_call_erased(g, a0, *a1, _self_f0(_self_f0, *a1)));
       }
     };
@@ -115,7 +115,7 @@ struct Rank2CallbackKeptAsFn {
   }
 
   template <typename T1> static uint64_t len(const List<T1> &l) {
-    static const auto erased_fn = crane::immortal(crane_erase_fn<crane::obj>(
+    static const auto erased_fn = crane::immortal(crane_erase_fn<uint64_t>(
         [](crane::obj, List<crane::obj>, uint64_t k) { return (k + 1); }));
     return both<uint64_t, T1>([]() { return UINT64_C(0); }(), erased_fn, l)
         .first;

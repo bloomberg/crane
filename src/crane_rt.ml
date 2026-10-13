@@ -29,6 +29,7 @@ let lazy_header = "lazy.h"
 let erasure_header = "crane_fn.h"
 let itree_header = "crane_itree.h"
 let rebind = "crane::rebind_t"
+let constant_tc = "crane::constant_tc"
 let variant = "crane::variant"
 let variant_header = "crane_variant.h"
 let shared_variant = "crane::shared_variant"
@@ -50,6 +51,7 @@ type helper =
   | Reuse_step
   | Raw
   | Unbox_field
+  | Deep_box
   | Share_child
   | Apply2
   | Constant of string
@@ -62,5 +64,6 @@ let name = function
   | Make_rc_reusing_unchecked -> make_rc_reusing_unchecked
   | Raw -> raw
   | Unbox_field -> "crane::unbox"
+  | Deep_box -> "crane_deep_box"
   | Share_child -> "crane::child"
   | Reuse_step -> reuse_step

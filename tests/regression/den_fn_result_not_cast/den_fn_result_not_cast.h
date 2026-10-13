@@ -195,7 +195,7 @@ struct DenFnResultNotCast {
   }
 
   template <typename T1, typename F0> static T1 val_rec(F0 &&f, const val &v) {
-    return val_rect<T1>(crane_erase_fn<T1>(f), v);
+    return val_rect<T1>(f, v);
   }
 
   static inline const uint64_t result =

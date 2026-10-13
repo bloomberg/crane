@@ -37,7 +37,7 @@ struct TypeIndexedInductiveProbe {
 
   template <typename T1, typename T2 = void, typename F0>
   static T1 wrap_rec(F0 &&f, const wrap &w0) {
-    return wrap_rect<T1, crane::obj>(crane_erase_fn<T1>(f), w0);
+    return wrap_rect<T1, crane::obj>(f, w0);
   }
 
   static inline const wrap w = wrap::wrap0(Bool0::TRUE_);

@@ -5514,19 +5514,20 @@ and gen_call_args ~slot ?expected_ty env id plan =
       | Some ml_ty when not (ml_type_contains_erased ml_ty) -> Some ml_ty
       | _ -> slot.expected_ml_ty
     in
-    (* A lambda for a callable the callee deduces is called at the callee's
-       instantiation: it takes what it is given where the slot erases, and
-       goes over unadapted ({!deduces_callable}). *)
+    (* A callable the callee deduces is called at the callee's instantiation,
+       so it goes over unadapted -- a lambda, or a callable passed on, as a
+       self-call forwards its own ({!deduces_callable}); and a lambda takes
+       what it is given where the slot erases. *)
     let deduced_callable =
-      (match ml_arg with MLlam _ | MLmagic (_, MLlam _) -> true | _ -> false)
-      &&
       match Param_pos.nth fn_param_ml_tys_orig param_index with
       | Some pt -> deduces_callable id param_index pt
       | None -> false
     in
     let arg_expected_ty =
-      if deduced_callable then Option.map deduce_erased_domains arg_expected_ty
-      else arg_expected_ty
+      match ml_arg with
+      | (MLlam _ | MLmagic (_, MLlam _)) when deduced_callable ->
+        Option.map deduce_erased_domains arg_expected_ty
+      | _ -> arg_expected_ty
     in
     (* When the callee's declared parameter type is value-dependent and
        resolves to [std::any] (e.g. [syms_semty xs]), a concrete pair/tuple
@@ -10651,8 +10652,21 @@ and gen_fix env ?(all_fix_ids = []) ~fix_idx (n, ty) f =
             (List.init n_fix_params (fun i -> i)) };
   tctx := { !tctx with move_dead_after = Escape.IntSet.empty };
   tctx := { !tctx with move_n_params = n_fix_params + n_fix_funs };
+  (* The body returns the fixpoint's own codomain, not the enclosing
+     function's: a result recovered from a box inside it is recovered at
+     the [T1] a [fix F (m : list A) : P A m] returns, not at the pair the
+     function around it builds from two calls. *)
+  let fix_return_type =
+    let n_values = List.length (List.filter (fun (_, t) -> not (isTdummy t)) ids) in
+    match Option.map (cpp_of_ml env) (ml_codomain_after n_values ty) with
+    | Some t when not (exists_cpp_type prints_as_any t) -> Some t
+    | _ -> (!tctx).current_cpp_return_type
+  in
   let result =
-    ((renamed_n, ty), ids, gen_stmts env (fun x -> Sreturn (Some x)) f)
+    ( (renamed_n, ty),
+      ids,
+      with_cpp_return_type fix_return_type (fun () ->
+          gen_stmts env (fun x -> Sreturn (Some x)) f ) )
   in
   restore_env_types saved_env_types;
   tctx := { !tctx with move_dead_after = saved_dead };

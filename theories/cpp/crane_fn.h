@@ -246,6 +246,11 @@ template <template <class...> class C, class... A>
 struct crane_all_any<C<A...>> {
   using type = C<std::conditional_t<true, crane::obj, A>...>;
 };
+// A pair, too, is boxed with each component boxed in turn: the shape
+// [crane_any_cast] reads a pair at when its components were erased.
+template <class X, class Y> struct crane_all_any<std::pair<X, Y>> {
+  using type = std::pair<crane::obj, crane::obj>;
+};
 
 // [crane::any_cast<T>], generalized to recover a pair [T = std::pair<X, Y>]
 // whose components were themselves boxed independently as
@@ -295,6 +300,16 @@ template <class T> T crane_any_cast(const crane::obj &a) {
     }
     return crane::any_cast<T>(a);
   }
+}
+
+// A value that was never boxed -- what a callable the callee deduces returns
+// at its caller's own type, a closure where the erased signature says
+// [crane::obj] -- is converted to [T], not unboxed.
+template <class T, class S>
+  requires(!std::is_same_v<std::remove_cvref_t<S>, crane::obj> &&
+           std::is_constructible_v<T, S &&>)
+T crane_any_cast(S &&s) {
+  return T(std::forward<S>(s));
 }
 
 // Converts a type-erased sequence container (element type [crane::obj], e.g. a
@@ -347,24 +362,12 @@ struct crane_is_boxlike<
 // one need not know the carrier exists.
 template <class T> struct crane_tag {};
 
-template <class Dst, class Src> Dst crane_container_cast_impl(Src &&src) {
+// Walks [src] into a [Dst], each element through [convert]: a container
+// built from a range, one appended to in place or by value, or a carrier
+// holding at most one element.
+template <class Dst, class Src, class Convert>
+Dst crane_container_walk(Src &&src, Convert &&_convert) {
   using Elt = typename Dst::value_type;
-  auto _convert = [](auto &&_e) -> Elt {
-    if constexpr (std::is_same_v<std::decay_t<decltype(_e)>, Elt>)
-      return _e;
-    // The other direction: a concrete element going INTO an erased carrier
-    // ([std::optional<Nat>] handed to a dictionary method declared over
-    // [std::optional<crane::obj>]).  Boxing is the conversion; nothing is cast
-    // out.
-    else if constexpr (std::is_same_v<Elt, crane::obj>)
-      return crane::obj(_e);
-    else if constexpr (crane_is_boxlike<Elt>::value) {
-      using U = typename Elt::value_type;
-      const crane::obj &_a = _e; // box<any> -> const any&, or any -> any
-      return Elt(crane_any_cast<U>(_a));
-    } else
-      return crane_any_cast<Elt>(_e);
-  };
   // A carrier holding at most one element (std::optional) is not a range, so
   // no walk reaches its element: convert the contained value, if any.
   if constexpr (!requires(Src &_s) { _s.begin(); } &&
@@ -400,6 +403,27 @@ template <class Dst, class Src> Dst crane_container_cast_impl(Src &&src) {
     }
     return dst;
   }
+}
+
+template <class Dst, class Src> Dst crane_container_cast_impl(Src &&src) {
+  using Elt = typename Dst::value_type;
+  auto _convert = [](auto &&_e) -> Elt {
+    if constexpr (std::is_same_v<std::decay_t<decltype(_e)>, Elt>)
+      return _e;
+    // The other direction: a concrete element going INTO an erased carrier
+    // ([std::optional<Nat>] handed to a dictionary method declared over
+    // [std::optional<crane::obj>]).  Boxing is the conversion; nothing is cast
+    // out.
+    else if constexpr (std::is_same_v<Elt, crane::obj>)
+      return crane::obj(_e);
+    else if constexpr (crane_is_boxlike<Elt>::value) {
+      using U = typename Elt::value_type;
+      const crane::obj &_a = _e; // box<any> -> const any&, or any -> any
+      return Elt(crane_any_cast<U>(_a));
+    } else
+      return crane_any_cast<Elt>(_e);
+  };
+  return crane_container_walk<Dst>(std::forward<Src>(src), _convert);
 }
 
 template <class Dst, class Src> Dst crane_container_cast(Src &&src) {
@@ -483,8 +507,9 @@ template <class Dst, class Src> Dst crane_convert(Src &&src) {
   else if constexpr (route == crane_route::box_all_any) {
     using S = std::remove_cvref_t<Src>;
     using E = typename crane_all_any<S>::type;
-    if constexpr (!std::is_same_v<E, S> && std::is_constructible_v<E, const S &>)
-      return crane::obj(E(src));
+    if constexpr (!std::is_same_v<E, S> &&
+                  crane_convert_route<E, const S &>() != crane_route::none)
+      return crane::obj(crane_convert<E>(src));
     else
       return crane::obj(std::forward<Src>(src));
   } else if constexpr (route == crane_route::hook)
@@ -497,6 +522,33 @@ template <class Dst, class Src> Dst crane_convert(Src &&src) {
     // No route: let the conversion itself be the diagnostic, rather than a
     // failure inside machinery the reader did not write.
     return Dst(std::forward<Src>(src));
+}
+
+// A value boxed at the shape the generic consumers of a value-indexed family
+// ([den t]) read it at: every level boxed in turn, so a consumer that knows
+// nothing but [crane::obj] at each level can open each level, and a reader
+// at a concrete type still recovers it through [crane_any_cast].  Boxing does
+// that for a generated inductive and for a pair (see [crane_all_any]); a
+// mapped container -- the [std::deque] a [list] mapping makes -- is walked
+// into the same container at [crane::obj] elements.
+template <class T> struct crane_obj_elements {};
+template <template <class...> class C, class T, class... R>
+  requires requires { typename C<T, R...>::value_type; } &&
+           (!std::is_same_v<C<T, R...>, std::basic_string<T, R...>>)
+struct crane_obj_elements<C<T, R...>> {
+  using type = C<crane::obj>;
+};
+
+template <class T> crane::obj crane_deep_box(const T &v) {
+  if constexpr (requires { typename crane_obj_elements<T>::type; }) {
+    using D = typename crane_obj_elements<T>::type;
+    if constexpr (!std::is_same_v<D, T>)
+      return crane::obj(
+          crane_container_walk<D>(v, [](const auto &e) { return crane_deep_box(e); }));
+    else
+      return crane::obj(v);
+  } else
+    return crane_convert<crane::obj>(v);
 }
 
 // A composite carrier -- a Rocq carrier of the shape [fun T => (T * box T)] --

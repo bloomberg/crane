@@ -79,7 +79,7 @@ struct AxiomTypes {
 
   template <typename T1, typename F0, typename F1>
   static T1 AxiomInductive_rec(F0 &&f, F1 &&f0, const AxiomInductive &a) {
-    return AxiomInductive_rect<T1>(f, crane_erase_fn<T1>(f0), a);
+    return AxiomInductive_rect<T1>(f, f0, a);
   }
 
   static AxiomInductive use_axiom_inductive(std::monostate _x);

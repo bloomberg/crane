@@ -964,6 +964,9 @@ let rec pp_cpp_type ?(lead = true) par vl t =
         if String.equal id_s "std::vector" then begin
           require_header "vector";
           if (sn ()).ns <> "std" then "bsl::vector" else id_s
+        end else if String.equal id_s Crane_rt.constant_tc then begin
+          require_obj_header ();
+          id_s
         end else id_s
       in
       ( match args with
@@ -2375,7 +2378,7 @@ and pp_cpp_expr env args t =
   (* Low-level constructs for reuse optimization *)
   | CPPrt h ->
     (match h with
-     | Crane_rt.Raw -> Table.mark_needs_erase_fn ()
+     | Crane_rt.Raw | Crane_rt.Deep_box -> Table.mark_needs_erase_fn ()
      | Crane_rt.Unbox_field -> Table.demand_header (Table.Runtime Crane_rt.field_header)
      | Crane_rt.Apply2 -> Table.demand_header (Table.Runtime Crane_rt.fn_header)
      | Crane_rt.Constant _ | Crane_rt.Immortal ->

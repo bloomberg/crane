@@ -27,7 +27,7 @@ uint64_t FamilyCallResultDeepShape::sz(const FamilyCallResultDeepShape::ty &t,
 }
 
 FamilyCallResultDeepShape::den FamilyCallResultDeepShape::mk(uint64_t n) {
-  return List<crane::obj>(
+  return crane_deep_box(
       ListDef::seq(UINT64_C(0), n)
           .template map<std::pair<uint64_t, uint64_t>>(
               [](uint64_t k) { return std::make_pair(k, k); }));

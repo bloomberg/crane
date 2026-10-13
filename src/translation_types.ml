@@ -2517,10 +2517,31 @@ let fit_to_declared_tvars id targs =
     Nothing is claimed where the abstraction does not fire.  If [v]'s
     instantiation does not occur in the result then the carrier is constant in
     its argument and the result says nothing about it, and if the result type
-    is unknown there is nothing to read. *)
+    is unknown there is nothing to read.
+
+    Where extraction did name the carrier -- [list], or a constant [fun T =>
+    list nat] -- it is written as it is: a parameter that applies it to an
+    erased element, a rank-2 argument at [T1<std::any>], deduces nothing.  A
+    constant one is a complete type that an application leaves unchanged
+    ({!Mlutil.apply_ml_type}), and has no template to name: it is the type
+    function {!Crane_rt.constant_tc} makes of it. *)
 let hkt_carrier_type_args env tvars ?result id tys =
   let ( let* ) = Option.bind in
   let* ml_ty = find_type_opt id in
+  match List.nth_opt tys 0 with
+  | Some c
+    when IntSet.mem 1 (Ml_type_util.higher_kinded_ml_tvars [ml_ty])
+         && not (Mlutil.isTdummy (resolve_tmeta c))
+         && not (ml_type_contains_erased c) ->
+    let carrier = template_arg_of_ml_type env tvars c in
+    let constant = Mlutil.eq_ml_type (Mlutil.apply_ml_type c [Miniml.Tunknown]) c in
+    Some
+      [ Minicpp.Ttyctor
+          ( if constant then
+              Minicpp.Tqualified
+                (Minicpp.Tid_external (Crane_rt.constant_tc, [carrier]), Id.of_string "c")
+            else carrier ) ]
+  | _ ->
   let* p, v =
     match resolve_tmeta (ml_return_type ml_ty) with
     (* Only a leading carrier is written: an explicit argument list is
@@ -3025,12 +3046,13 @@ let absurd_coercion from into =
 
 (** A list computed at a concrete element type (a call's result, a variable)
     going into a slot [into] that is a value-indexed family ([den t]): the
-    family's generic consumers read it with its elements boxed one at a time
-    ({!Cpp_erasure.erased_list_shape}), so it is converted to that shape.  A
-    literal needs no conversion, being built at the erased shape already
-    ([deep_erase]); nor does a custom list, which a consumer converts itself.
-    A box for a type variable -- an existential's payload -- is read at
-    whatever type its consumer knows, and keeps the value as it is. *)
+    family's generic consumers read it with every level boxed in turn -- its
+    elements, and their components and elements -- so it is boxed at that
+    shape ([crane_deep_box]), whatever container the [list] mapping makes
+    it.  A literal needs no conversion, being built at the erased shape
+    already ([deep_erase]).  A box for a type variable -- an existential's
+    payload -- is read at whatever type its consumer knows, and keeps the
+    value as it is. *)
 let box_list_for_family ~into e expr =
   if not (names_erased_alias into) then expr
   else
@@ -3041,9 +3063,8 @@ let box_list_for_family ~into e expr =
         Option.bind (infer_ml_body_type e) (fun t ->
             Cpp_erasure.erased_list_shape (cpp_of_ml (empty_env ()) t) )
       with
-      | Some (g, shape) when not (Table.is_custom g) ->
-        Cpp_erasure.converting_ctor shape [expr]
-      | _ -> expr )
+      | Some _ -> mk_call (CPPrt Crane_rt.Deep_box) [expr]
+      | None -> expr )
 
 (** Adapt a value being stored into a slot whose C++ type is the erased
     [std::any] to the shape its consumers read back out of the box.  A

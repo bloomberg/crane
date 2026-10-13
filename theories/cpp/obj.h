@@ -260,4 +260,10 @@ struct rebind<Tm<A...>, X> {
 };
 template <class F, class X> using rebind_t = typename rebind<F, X>::type;
 
+// constant_tc<T>::c: the type function that ignores its argument -- the
+// carrier [fun _ => T], which has no template of its own to name.
+template <class T> struct constant_tc {
+  template <class> using c = T;
+};
+
 } // namespace crane

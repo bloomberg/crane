@@ -19,7 +19,7 @@ uint64_t DenValueNotDeepErased::size(const DenValueNotDeepErased::ty &t,
 }
 
 DenValueNotDeepErased::den DenValueNotDeepErased::mk(uint64_t n) {
-  return List<crane::obj>(ListDef::seq(UINT64_C(0), n));
+  return crane_deep_box(ListDef::seq(UINT64_C(0), n));
 }
 
 List<uint64_t> ListDef::seq(uint64_t start, uint64_t len) {

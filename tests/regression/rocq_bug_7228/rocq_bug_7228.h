@@ -86,7 +86,7 @@ struct RocqBug7228 {
 
   template <typename T1, typename F0>
   static T1 data_rec(F0 &&f, const data &d) {
-    return data_rect<T1>(crane_erase_fn<T1>(f), d);
+    return data_rect<T1>(f, d);
   }
 
   using t_of = crane::obj;

@@ -41,7 +41,7 @@ struct ErasedFieldDangle {
     }
 
     template <typename T1, typename T2, typename F0> T1 box_rec(F0 &&f) const {
-      return this->template box_rect<T1, T2>(crane_erase_fn<T1>(f));
+      return this->template box_rect<T1, T2>(f);
     }
 
     template <typename T1, typename T2, typename F0> T1 box_rect(F0 &&f) const {
@@ -103,7 +103,7 @@ struct ErasedFieldDangle {
     }
 
     template <typename T1, typename F0> T1 exists_box_rec(F0 &&f) const {
-      return this->template exists_box_rect<T1>(crane_erase_fn<T1>(f));
+      return this->template exists_box_rect<T1>(f);
     }
 
     template <typename T1, typename F0> T1 exists_box_rect(F0 &&f) const {

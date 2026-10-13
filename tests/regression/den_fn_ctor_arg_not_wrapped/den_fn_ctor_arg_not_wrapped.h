@@ -174,7 +174,7 @@ struct DenFnCtorArgNotWrapped {
 
   template <typename T1, typename F1>
   static T1 box_rec(const ty &_x, F1 &&f, const box &b) {
-    return box_rect<T1>(_x, crane_erase_fn<T1>(f), b);
+    return box_rect<T1>(_x, f, b);
   }
 
   static den unbox(const ty &_x, const box &b);
