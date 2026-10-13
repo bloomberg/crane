@@ -113,7 +113,7 @@ struct PropBinderBeforeTypeBinder {
   template <typename T1> static T1 pick2(const T1 &, T1 e) { return e; }
 
   static inline const uint64_t second =
-      pick2<uint64_t>(crane::obj(UINT64_C(5)), crane::obj(UINT64_C(4)));
+      pick2<uint64_t>(crane::obj(UINT64_C(4)), crane::obj(UINT64_C(5)));
 
   template <typename A> struct guarded {
     // TYPES

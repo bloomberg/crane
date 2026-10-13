@@ -1,10 +1,8 @@
-#ifndef INCLUDED_THREE_ARGUMENT_CURRIED_SLOT
-#define INCLUDED_THREE_ARGUMENT_CURRIED_SLOT
+#ifndef INCLUDED_TYPE_ONLY_GLOBAL_AS_RANK2_ARGUMENT
+#define INCLUDED_TYPE_ONLY_GLOBAL_AS_RANK2_ARGUMENT
 
 #include "crane_fn.h"
-#include "fn.h"
 #include "obj.h"
-#include "shared_block.h"
 #include <atomic>
 #include <cstdint>
 #include <memory>
@@ -93,40 +91,38 @@ public:
   const variant_t &v() const { return v_; }
 };
 
-struct ThreeArgumentCurriedSlot {
-  template <typename T1> static T1 idp(T1 x) { return x; }
-
-  static uint64_t add3(uint64_t a, uint64_t b, uint64_t c);
-  static uint64_t f3(uint64_t x0_, uint64_t x1_, uint64_t x2_);
-
-  template <typename T1> static List<T1> wrap(const T1 &x) {
-    return List<T1>::cons(x, List<T1>::nil());
+struct TypeOnlyGlobalAsRank2Argument {
+  template <typename T1, typename T2, typename F1>
+  static T1 grect(const T1 &f, F1 &&f0, const List<T2> &l) {
+    if (std::holds_alternative<typename List<T2>::Nil>(l.v())) {
+      return f;
+    } else {
+      const auto &[a0, a1] = std::get<typename List<T2>::Cons>(l.v());
+      return crane_any_cast<T1>(
+          f0(a0, *a1, grect<T1, T2>(f, crane_erase_fn<T1>(f0), *a1)));
+    }
   }
 
-  static inline const List<crane::fn<uint64_t(uint64_t, uint64_t, uint64_t)>>
-      ws = []() {
-        return wrap<crane::fn<
-            crane::fn<crane::fn<uint64_t(uint64_t)>(uint64_t)>(uint64_t)>>(
-            [](uint64_t _ec0) {
-              return [=](uint64_t _ec1, uint64_t _ec2) {
-                return add3(_ec0, _ec1, _ec2);
-              };
-            });
-      }();
-  static inline const uint64_t result =
-      (f3(UINT64_C(1), UINT64_C(2), UINT64_C(3)) + []() {
-        auto &&_sv = ws;
-        if (std::holds_alternative<typename List<
-                crane::fn<uint64_t(uint64_t, uint64_t, uint64_t)>>::Nil>(
-                _sv.v())) {
-          return UINT64_C(0);
-        } else {
-          const auto &[a0, a1] = std::get<typename List<
-              crane::fn<uint64_t(uint64_t, uint64_t, uint64_t)>>::Cons>(
-              _sv.v());
-          return a0(UINT64_C(1), UINT64_C(1), UINT64_C(1));
-        }
-      }());
+  template <typename T1>
+  static uint64_t step(const T1 &, const List<T1> &, uint64_t k) {
+    return (k + 1);
+  }
+
+  static constexpr uint64_t base = UINT64_C(0);
+
+  template <typename T1> static uint64_t len(const List<T1> &l) {
+    return grect<uint64_t, T1>(
+        base,
+        [](const auto &a0, const auto &a1, const uint64_t &a2) -> uint64_t {
+          return step<crane::obj>(crane_convert<crane::obj>(a0),
+                                  crane_convert<List<crane::obj>>(a1),
+                                  std::forward<decltype(a2)>(a2));
+        },
+        l);
+  }
+
+  static inline const uint64_t result = len<bool>(
+      List<bool>::cons(true, List<bool>::cons(true, List<bool>::nil())));
 };
 
-#endif // INCLUDED_THREE_ARGUMENT_CURRIED_SLOT
+#endif // INCLUDED_TYPE_ONLY_GLOBAL_AS_RANK2_ARGUMENT

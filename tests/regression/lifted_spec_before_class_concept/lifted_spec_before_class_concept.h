@@ -22,6 +22,8 @@ I>concept Params = requires {
   } || requires {
     { I::zero } -> std::convertible_to<typename I::addr>;
   });
+template <Params _tcI0, typename T2, typename T1>
+Tagged<T2> walk_crane_mk(const T1 _x);
 
 struct Nat {
   // TYPES
@@ -105,18 +107,18 @@ template <typename addr> struct Box {
   static Box<addr> box0(addr a0) { return {std::move(a0)}; }
 };
 
-template <Params _tcI0, typename T1>
-Tagged<crane::obj> walk_crane_mk(const T1) {
-  return Tagged<Box<typename _tcI0::addr>>::tag(Nat::s(Nat::o()));
+template <Params _tcI0, typename T2, typename T1>
+Tagged<T2> walk_crane_mk(const T1) {
+  return Tagged<T2>::tag(Nat::s(Nat::o()));
 }
 
 template <Params _tcI0>
 Tagged<Box<typename _tcI0::addr>> walk(const Nat &n,
                                        const typename _tcI0::addr &a) {
   if (std::holds_alternative<typename Nat::O>(n.v())) {
-    return walk_crane_mk<_tcI0>(a);
+    return walk_crane_mk<_tcI0, Box<typename _tcI0::addr>>(a);
   } else {
-    return walk_crane_mk<_tcI0>(_tcI0::bump(a));
+    return walk_crane_mk<_tcI0, Box<typename _tcI0::addr>>(_tcI0::bump(a));
   }
 }
 

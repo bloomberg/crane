@@ -294,7 +294,7 @@ struct LoopifyFrameLambdaType {
             _result = Monad_res::template ret<
                 std::pair<List<std::pair<T1, T2>>, List<T2>>>(
                 std::make_pair(List<std::pair<crane::obj, crane::obj>>::nil(),
-                               List<crane::obj>::nil()));
+                               List<T2>::nil()));
           } else {
             _result = Monad_res::template ret<
                 std::pair<List<std::pair<T1, T2>>, List<T2>>>(std::make_pair(

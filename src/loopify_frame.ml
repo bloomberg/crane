@@ -2552,10 +2552,15 @@ let transform_nontail ?(fn_name : string option) ?adopted ?(outer_env = [])
   (* Rewrite body for Enter handler and collect call frame info *)
   let call_counter = ref 1 in
   let frames_ref = ref [] in
+  (* What no re-entry rebinds: the parameters that do not vary, and what the
+     body reads from an enclosing scope -- a local fixpoint's captures, bound
+     before the loop and in scope for all of it.  A frame that saved one
+     would move it out of that scope at the first push. *)
   let invariant_params =
     List.fold_left2 (fun acc (id, _) v ->
       if not v then Id.Set.add id acc else acc)
-      Id.Set.empty params varying
+      (Id.Set.diff (Id.Set.of_list (free_vars_body body)) (Id.Set.of_list (List.map fst params)))
+      params varying
   in
   (* Entry 1, when a body was adopted.  Every one of its parameters varies --
      each re-entry rebinds them -- so the mask is all-true. *)

@@ -12522,3 +12522,48 @@
   (alias runtest)
   (deps event_sum_alias.t.exe)
   (action (run ./event_sum_alias.t.exe))))
+
+(subdir let_function_two_instances
+ (rule
+  (targets let_function_two_instances.t.exe)
+  (deps LetFunctionTwoInstances.vo let_function_two_instances.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} let_function_two_instances.t.exe let_function_two_instances.cpp let_function_two_instances.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps let_function_two_instances.t.exe)
+  (action (run ./let_function_two_instances.t.exe))))
+
+(subdir three_argument_curried_slot
+ (rule
+  (targets three_argument_curried_slot.t.exe)
+  (deps ThreeArgumentCurriedSlot.vo three_argument_curried_slot.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} three_argument_curried_slot.t.exe three_argument_curried_slot.cpp three_argument_curried_slot.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps three_argument_curried_slot.t.exe)
+  (action (run ./three_argument_curried_slot.t.exe))))
+
+(subdir loopify_moves_captured_closure
+ (rule
+  (targets loopify_moves_captured_closure.t.exe)
+  (deps LoopifyMovesCapturedClosure.vo loopify_moves_captured_closure.t.cpp (source_tree .))
+  (action
+   (setenv CRANE_CPP_SANITIZE address
+    (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_moves_captured_closure.t.exe loopify_moves_captured_closure.cpp loopify_moves_captured_closure.t.cpp))))
+ (rule
+  (alias runtest)
+  (deps loopify_moves_captured_closure.t.exe)
+  (action (run ./loopify_moves_captured_closure.t.exe))))
+
+(subdir type_only_global_as_rank2_argument
+ (rule
+  (targets type_only_global_as_rank2_argument.t.exe)
+  (deps TypeOnlyGlobalAsRank2Argument.vo type_only_global_as_rank2_argument.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} type_only_global_as_rank2_argument.t.exe type_only_global_as_rank2_argument.cpp type_only_global_as_rank2_argument.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps type_only_global_as_rank2_argument.t.exe)
+  (action (run ./type_only_global_as_rank2_argument.t.exe))))

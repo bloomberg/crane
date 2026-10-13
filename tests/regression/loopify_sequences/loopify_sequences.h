@@ -224,11 +224,10 @@ struct LoopifySequences {
         struct CraneEnter {
           const List<T1> *rest;
         };
-        /// CraneCont_Cons: saves [a00, sep], resumes after recursive call, then
+        /// CraneCont_Cons: saves [a00], resumes after recursive call, then
         /// processes rest.
         struct CraneCont_Cons {
           T1 a00;
-          T1 sep;
         };
         using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
         List<T1> _result{};
@@ -246,13 +245,12 @@ struct LoopifySequences {
             } else {
               const auto &[a00, a10] =
                   std::get<typename List<T1>::Cons>(rest.v());
-              _stack.emplace_back(CraneCont_Cons{a00, sep});
+              _stack.emplace_back(CraneCont_Cons{a00});
               _stack.emplace_back(CraneEnter{crane_raw(a10)});
             }
           } else {
             auto _f = std::move(std::get<CraneCont_Cons>(_frame));
             auto a00 = std::move(_f.a00);
-            auto sep = std::move(_f.sep);
             _result =
                 List<T1>::cons(sep, List<T1>::cons(a00, std::move(_result)));
           }

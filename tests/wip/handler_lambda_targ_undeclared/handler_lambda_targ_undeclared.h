@@ -130,7 +130,7 @@ on_ls(std::type_identity_t<
       Monads::template stateT<lenv, itree_tc_609e8855cd7ad294, T2>>
           c) {
   return [=, c = std::move(c)](const std::pair<Nat, Nat> &b) {
-    std::pair<lenv, T2> sa = c(b.first);
+    std::pair<Nat, T2> sa = c(b.first);
     return itree_ret(
         std::make_pair(std::make_pair(sa.first, b.second), sa.second));
   };

@@ -2490,7 +2490,16 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           | Tarr (t, _) when isTdummy t -> true
           | _ -> false
         in
-        if has_dummy_prefix ml_ty then
+        let rec collect_non_dummy_types = function
+          | Miniml.Tarr (t, rest) when not (isTdummy t) ->
+            t :: collect_non_dummy_types rest
+          | Miniml.Tarr (_, rest) -> collect_non_dummy_types rest
+          | _ -> []
+        in
+        let non_dummy_param_tys = collect_non_dummy_types ml_ty in
+        (* A callee taking no value parameter -- [base (A : Type) : nat] -- is
+           a value, declared as one: nothing to forward. *)
+        if has_dummy_prefix ml_ty && non_dummy_param_tys <> [] then
           (* The function is a template that had type-level leading params. We
              need a forwarding lambda because C++ can't pass template function
              names as first-class values.
@@ -2500,13 +2509,6 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
              explicitly typed value parameters. This lets the compiler deduce
              type variables from the argument types, and we compute
              non-deducible tvars via std::invoke_result_t. *)
-          let rec collect_non_dummy_types = function
-            | Miniml.Tarr (t, rest) when not (isTdummy t) ->
-              t :: collect_non_dummy_types rest
-            | Miniml.Tarr (_, rest) -> collect_non_dummy_types rest
-            | _ -> []
-          in
-          let non_dummy_param_tys = collect_non_dummy_types ml_ty in
           let n = List.length non_dummy_param_tys in
           let is_unary_method = n = 1 && is_methodified r in
           if is_unary_method then
@@ -6333,7 +6335,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
             (* Nothing is missing, so there is nothing to fill: the template
                renders with what it was given. *)
             cglob
-          else mk_call cglob args
+          else apply_global id cglob args
         else
           (* Substitute promoted type vars in eta-expanded lambda params. When
              partially applying a function like pick_op<nat_magma>, the domain
@@ -6433,10 +6435,13 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
             | _ -> ([], None)
           in
           (* The eta parameters fill the callee's {e trailing} domains; the
-             arguments the call already has fill the leading ones. *)
+             arguments the call already has fill the leading ones.  An
+             instantiation may have more arrows than the declaration --
+             [idp] at [A := nat -> nat -> nat] -- and a parameter before the
+             declaration's own domains has no slot there. *)
           let slot_dom i =
-            List.nth_opt decl_doms
-              (List.length decl_doms - List.length missing_args + i)
+            let k = List.length decl_doms - List.length missing_args + i in
+            if k < 0 then None else List.nth_opt decl_doms k
           in
           let tvars = get_current_type_vars () in
           let erased_eta_param ty =
@@ -6535,15 +6540,15 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
                function type. *)
             let callee_arity =
               match inline_custom_arg_arity id with
-              | Some _ as a -> a
+              | Some a -> Some (a, `Flat)
               | None -> (
                 match find_type_opt id with
                 | Some ml_ty when ml_codomain_is_tvar ml_ty ->
-                  Some (count_ml_value_arrows ml_ty)
+                  Some (count_ml_value_arrows ml_ty, `Curried)
                 | _ -> None )
             in
             match callee_arity with
-            | Some arity ->
+            | Some (arity, result_shape) ->
               (* The eta parameters first finish filling the callee, and only
                  what is left over is applied to its result -- which is a
                  callable, since that is why there were missing arguments to
@@ -6554,7 +6559,13 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
               (* A call that fills the callee exactly yields the lambda's
                  result: recorded, so a mapping's [%ret] can name it. *)
               let yields = if surplus = [] && cod <> Tvoid then Some cod else None in
-              mk_apply (mk_call ?yields cglob (args @ fill)) surplus
+              let filled = mk_call ?yields cglob (args @ fill) in
+              (* An instantiated type variable is spelled curried, so its
+                 arguments go one at a time; an inline custom's result is
+                 whatever its text reads, flat. *)
+              ( match result_shape with
+              | `Curried -> List.fold_left (fun f a -> mk_call f [a]) filled surplus
+              | `Flat -> mk_apply filled surplus )
             | None -> mk_call cglob call_args
           in
           let ret_ty, body =
@@ -6616,16 +6627,14 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
           (* Zero-arg inline custom: return the glob directly so the
              template string renders as-is, without an appended (). *)
           cglob
-        else if args = [] && not (glob_is_nullary_function id) then
+        else
           (* A reference to a global {i value} whose C++ type is not a
-             function type (e.g. a state-monad-style [std::function] synonym):
-             it is a data member, not a nullary function, so it must not be
+             function type (e.g. a state-monad-style [std::function] synonym)
+             is a data member, not a nullary function, so it must not be
              called.  Only globals whose declaration really takes no C++
              parameters -- thunks and those whose every parameter is erased --
              get the [()]. *)
-          cglob
-        else
-          CPPfun_call (call_opaque, cglob, of_reversed args)
+          apply_global id cglob args
     in
     (* Collapse identity inline customs (%a0) at AST level.  This prevents
        unnecessary IIFE wrapping when a void call passes through an identity
@@ -9124,7 +9133,12 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
   | MLletin (x, t, (MLlam _ as a), b) ->
     (* Check if this is a polymorphic lambda that should be lifted to a
        top-level template function. *)
-    let next_tvar = ref 1 in
+    let outer_tvars = get_current_type_vars () in
+    let n_outer = List.length outer_tvars in
+    (* A type the binding leaves open is the binding's own: numbered past the
+       enclosing declaration's variables, which [Tvar 1] .. [Tvar n_outer]
+       already name. *)
+    let next_tvar = ref (n_outer + 1) in
     let resolve_metas = resolve_type_metas ~next_tvar in
     resolve_metas t;
     resolve_metas_in_ast resolve_metas a;
@@ -9134,8 +9148,6 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     let body_tvars = collect_tvars_ast [] a in
     let all_body_tvars = List.sort_uniq Int.compare body_tvars in
     let tvar_indices = List.sort Int.compare tvar_indices in
-    let outer_tvars = get_current_type_vars () in
-    let n_outer = List.length outer_tvars in
     let has_extra = List.exists (fun i -> i > n_outer) tvar_indices in
     (* Normal MLletin fallback (shared by no-extra-tvars and
        thunk-with-free-vars cases) *)
@@ -9301,9 +9313,24 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         gen_stmts ~slot env k b'
       else
         (* 2. Build tvar names: outer tvars keep their names, extra tvars get
-           fresh names *)
+           fresh names.  In the template head, the extras a call cannot
+           deduce -- named by the result alone, like [A] in [fun (A : Type) x
+           => @Tag A 1] -- go first: explicit type arguments are positional,
+           so the deducible ones then form the trailing run a call leaves
+           out. *)
         let all_tvar_names = build_tvar_names ~outer_tvars tvar_indices in
-        let all_temps = List.map (fun id -> (TTtypename, id)) all_tvar_names in
+        let all_temps =
+          let deducible =
+            List.fold_left
+              (fun acc (_, ty) -> if isTdummy ty then acc else collect_tvars_set acc ty)
+              IntSet.empty params
+          in
+          let outer, extra =
+            List.partition (fun (i, _) -> i <= n_outer) (List.combine tvar_indices all_tvar_names)
+          in
+          let fixed, deduced = List.partition (fun (i, _) -> not (IntSet.mem i deducible)) extra in
+          List.map (fun (_, id) -> (TTtypename, id)) (outer @ fixed @ deduced)
+        in
         (* The body being lifted was written against the enclosing
            declaration's class instances -- it spells [typename
            _tcI0::PTR::ptr] -- and a concept-constrained parameter is not an

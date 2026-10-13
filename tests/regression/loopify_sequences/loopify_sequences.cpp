@@ -622,10 +622,9 @@ List<List<uint64_t>> LoopifySequences::string_subsequences(
         struct CraneEnter {
           const List<List<uint64_t>> *lsts;
         };
-        /// CraneCont_Cons: saves [a0, a00], resumes after recursive call, then
+        /// CraneCont_Cons: saves [a00], resumes after recursive call, then
         /// processes rest.
         struct CraneCont_Cons {
-          std::decay_t<decltype(a0)> a0;
           List<uint64_t> a00;
         };
         using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
@@ -645,12 +644,11 @@ List<List<uint64_t>> LoopifySequences::string_subsequences(
             } else {
               const auto &[a00, a10] =
                   std::get<typename List<List<uint64_t>>::Cons>(lsts.v());
-              _stack.emplace_back(CraneCont_Cons{a0, a00});
+              _stack.emplace_back(CraneCont_Cons{a00});
               _stack.emplace_back(CraneEnter{crane_raw(a10)});
             }
           } else {
             auto _f = std::move(std::get<CraneCont_Cons>(_frame));
-            a0 = _f.a0;
             List<uint64_t> a00 = std::move(_f.a00);
             _result = List<List<uint64_t>>::cons(List<uint64_t>::cons(a0, a00),
                                                  std::move(_result));

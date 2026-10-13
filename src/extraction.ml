@@ -2069,7 +2069,10 @@ and extract_cons_app env sg mle mlt ((((kn, i) as ip), j) as cp) args =
                   ( try
                       let ty = extract_type env sg db 0 coq_arg [] in
                       ( match type_simpl ty with
-                      | Tunknown | Tdummy _ -> ()
+                      (* A type variable is not an erased position: left open,
+                         it generalises with the term that names it -- [B] in
+                         [fun (B : Type) (x : B) => [x]], a binding of its own. *)
+                      | Tunknown | Tdummy _ | Tvar _ -> ()
                       | concrete ->
                         let rec erase_leaves = function
                           | Tglob (_, [], _) -> Tdummy Ktype

@@ -88,8 +88,6 @@ let curry_value_to_expected env ?expected_ty ?decl_arity ?(exact = false) ml_ty 
           decl_dom
     in
     let params = adapter_params ~prefix:"_ec" decl_dom in
-    let outer = List.filteri (fun i _ -> i < n_outer) params in
-    let inner = List.filteri (fun i _ -> i >= n_outer) params in
     let call =
       let args = List.map adapter_arg params in
       match decl_arity with
@@ -100,11 +98,21 @@ let curry_value_to_expected env ?expected_ty ?decl_arity ?(exact = false) ml_ty 
           (List.filteri (fun i _ -> i >= n) args)
       | _ -> mk_call cglob args
     in
-    let body =
-      if inner = [] then call
-      else mk_lambda inner None [Sreturn (Some call)] ~capture:Closure
+    (* One lambda per group of arguments the slot takes at a time, as deep as
+       it nests: [fn<fn<fn<R(C)>(B)>(A)>] takes [A], then [B], then [C]. *)
+    let rec nest params expected =
+      match expected with
+      | Some (Tconst t | Tref (_, t)) -> nest params (Some t)
+      | Some (Tfun (dom, cod)) when dom <> [] && List.length params > List.length dom ->
+        let k = List.length dom in
+        mk_lambda
+          (List.filteri (fun i _ -> i < k) params)
+          None
+          [Sreturn (Some (nest (List.filteri (fun i _ -> i >= k) params) (Some cod)))]
+          ~capture:Closure
+      | _ -> mk_lambda params None [Sreturn (Some call)] ~capture:Closure
     in
-    mk_lambda outer None [Sreturn (Some body)] ~capture:Closure
+    nest params (if n_outer < List.length params then expected_ty else None)
 
 (** The type of the global [x] at the type arguments [tys] a use names it
     at.  An adapter's parameters are spelled in the caller's scope, so the

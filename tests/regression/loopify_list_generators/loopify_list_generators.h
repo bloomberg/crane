@@ -236,12 +236,10 @@ struct LoopifyListGenerators {
           struct CraneEnter {
             uint64_t i;
           };
-          /// CraneCont_i_: saves [f, i, n], resumes after recursive call, then
+          /// CraneCont_i_: saves [i], resumes after recursive call, then
           /// processes rest.
           struct CraneCont_i_ {
-            std::decay_t<F1> f;
             uint64_t i;
-            uint64_t n;
           };
           using CraneFrame = std::variant<CraneEnter, CraneCont_i_>;
           List<uint64_t> _result{};
@@ -258,14 +256,12 @@ struct LoopifyListGenerators {
                 _result = List<uint64_t>::nil();
               } else {
                 uint64_t i_ = i - 1;
-                _stack.emplace_back(CraneCont_i_{f, i, n});
+                _stack.emplace_back(CraneCont_i_{i});
                 _stack.emplace_back(CraneEnter{i_});
               }
             } else {
               auto _f = std::move(std::get<CraneCont_i_>(_frame));
-              std::decay_t<F1> f = std::move(_f.f);
               uint64_t i = _f.i;
-              uint64_t n = _f.n;
               _result = List<uint64_t>::cons(f((((n - i) > n ? 0 : (n - i)))),
                                              std::move(_result));
             }
@@ -291,10 +287,9 @@ struct LoopifyListGenerators {
         struct CraneEnter {
           uint64_t idx;
         };
-        /// CraneCont_idx_: saves [f, idx], resumes after recursive call, then
+        /// CraneCont_idx_: saves [idx], resumes after recursive call, then
         /// processes rest.
         struct CraneCont_idx_ {
-          std::decay_t<F1> f;
           uint64_t idx;
         };
         using CraneFrame = std::variant<CraneEnter, CraneCont_idx_>;
@@ -313,12 +308,11 @@ struct LoopifyListGenerators {
                   List<uint64_t>::cons(f(UINT64_C(0)), List<uint64_t>::nil());
             } else {
               uint64_t idx_ = idx - 1;
-              _stack.emplace_back(CraneCont_idx_{f, idx});
+              _stack.emplace_back(CraneCont_idx_{idx});
               _stack.emplace_back(CraneEnter{idx_});
             }
           } else {
             auto _f = std::move(std::get<CraneCont_idx_>(_frame));
-            std::decay_t<F1> f = std::move(_f.f);
             uint64_t idx = _f.idx;
             _result = std::move(_result).app(
                 List<uint64_t>::cons(f(idx), List<uint64_t>::nil()));

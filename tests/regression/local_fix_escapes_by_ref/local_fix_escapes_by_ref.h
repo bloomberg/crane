@@ -238,22 +238,21 @@ struct LocalFixEscapesByRef {
   template <typename T1, typename T2, typename F0>
     requires std::is_invocable_r_v<st<T2>, const F0 &, const T1 &>
   static st<List<T2>> map_monad_acc(F0 &&f, const List<T1> &l) {
-    auto loop_impl = [=](auto &_self_loop, List<crane::obj> acc,
+    auto loop_impl = [=](auto &_self_loop, List<T1> acc,
                          List<T1> l0) -> st<List<T2>> {
       if (std::holds_alternative<typename List<T1>::Nil>(l0.v())) {
         return Monad_st::template ret<List<T2>>(
-            acc.rev_append(List<T2>::nil()));
+            acc.rev_append(List<T1>::nil()));
       } else {
         const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l0.v());
         const List<T1> &a1_value = *a1;
-        return Monad_st::template bind<T2, List<T2>>(f(a0), [=](const T2 &b) {
-          return _self_loop(_self_loop, List<crane::obj>::cons(b, acc),
-                            a1_value);
+        return Monad_st::template bind<T2, List<T2>>(f(a0), [=](const T1 &b) {
+          return _self_loop(_self_loop, List<T1>::cons(b, acc), a1_value);
         });
       }
     };
     {
-      List<crane::obj> _lc1_acc = List<crane::obj>::nil();
+      List<T1> _lc1_acc = List<T1>::nil();
       List<T1> _lc1_l0 = l;
       return loop_impl(loop_impl, std::move(_lc1_acc), std::move(_lc1_l0));
     }

@@ -1855,6 +1855,11 @@ let glob_is_nullary_function x =
        | Tfun _ -> true
        | _ -> false )
 
+(** The global [x], spelled [cglob], applied to [args]: a call, except that a
+    global value referenced bare stays a value ({!glob_is_nullary_function}). *)
+let apply_global x cglob args =
+  if args = [] && not (glob_is_nullary_function x) then cglob else mk_call cglob args
+
 (** [resolves_to_any_type ty] — true if [ty] ultimately resolves to
     [std::any].  Handles direct [Tany], erased-type constants (aliases for
     [std::any] registered via {!Table.is_erased_type_const}), and type
@@ -2571,7 +2576,9 @@ let hkt_carrier_type_args env tvars ?result id tys =
     dropped.
 
     Every lift path asks this, and the only difference between them is where
-    the type and the parameters come from. *)
+    the type and the parameters come from.  [all_tvar_names] is in index
+    order, as type conversion reads it; the arguments follow the order of the
+    [head], where one is given. *)
 let lifted_call_type_args
     ~class_args ~env ~outer_tvars ~head ~all_tvar_names ~binder_ty ~param_ml_tys =
   (* Only what the declaration's head still declares can be named; [None]
@@ -2583,12 +2590,17 @@ let lifted_call_type_args
   in
   let outer_tvars = List.filter in_head outer_tvars in
   let all_tvar_names = List.filter in_head all_tvar_names in
+  let in_head_order =
+    match head with
+    | None -> all_tvar_names
+    | Some h -> List.filter (fun id -> List.exists (Id.equal id) all_tvar_names) h
+  in
   class_args
   @
   let extra_tvar_names =
     List.filter
       (fun id -> not (List.exists (Id.equal id) outer_tvars))
-      all_tvar_names
+      in_head_order
   in
   if extra_tvar_names = [] then
     List.map (fun id -> named_tvar id) outer_tvars
@@ -2623,7 +2635,7 @@ let lifted_call_type_args
           get_tvars (convert_ml_type_to_cpp_type env all_tvar_names ml_ty) )
         param_ml_tys
     in
-    if List.length all_tvar_names <> List.length args then
+    if List.length in_head_order <> List.length args then
       args
     else
       let rec strip = function
@@ -2633,7 +2645,7 @@ let lifted_call_type_args
           | [] when List.exists (Id.equal id) deducible -> []
           | rest -> (id, ty) :: rest )
       in
-      List.map snd (strip (List.combine all_tvar_names args))
+      List.map snd (strip (List.combine in_head_order args))
 
 (** The carrier of a higher-kinded class parameter, read off the {e dictionary}
     the call passes for that class.

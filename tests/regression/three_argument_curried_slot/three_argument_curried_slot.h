@@ -1,9 +1,10 @@
-#ifndef INCLUDED_LET_FUNCTION_TWO_INSTANCES
-#define INCLUDED_LET_FUNCTION_TWO_INSTANCES
+#ifndef INCLUDED_THREE_ARGUMENT_CURRIED_SLOT
+#define INCLUDED_THREE_ARGUMENT_CURRIED_SLOT
 
 #include "crane_fn.h"
+#include "fn.h"
 #include "obj.h"
-#include "small_vector.h"
+#include "shared_block.h"
 #include <atomic>
 #include <cstdint>
 #include <memory>
@@ -90,58 +91,42 @@ public:
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
-
-  uint64_t length() const {
-    const List<A> *_self = this;
-
-    /// CraneEnter: captures varying parameters for each recursive call.
-    struct CraneEnter {
-      const List<A> *_self;
-    };
-
-    /// CraneCont_Cons: resumes after recursive call, then processes rest.
-    struct CraneCont_Cons {};
-
-    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
-    uint64_t _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{_self});
-    /// Loopified length: CraneEnter -> CraneCont_Cons.
-    while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      if (std::holds_alternative<CraneEnter>(_frame)) {
-        auto _f = std::move(std::get<CraneEnter>(_frame));
-        const List<A> *_self = _f._self;
-        auto &&_sv = *_self;
-        if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
-          _result = UINT64_C(0);
-        } else {
-          const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-          _stack.emplace_back(CraneCont_Cons{});
-          _stack.emplace_back(CraneEnter{crane_raw(a1)});
-        }
-      } else {
-        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
-        _result = (std::move(_result) + 1);
-      }
-    }
-    return _result;
-  }
 };
 
-struct LetFunctionTwoInstances {
-  template <typename T1>
-  static std::pair<List<T1>, List<uint64_t>> both(const T1 &a) {
-    List<crane::obj> wrap = [](crane::obj x) {
-      return List<crane::obj>::cons(x, List<crane::obj>::nil());
-    };
-    return std::make_pair(wrap(a), wrap(UINT64_C(4)));
+struct ThreeArgumentCurriedSlot {
+  template <typename T1> static T1 idp(T1 x) { return x; }
+
+  static uint64_t add3(uint64_t a, uint64_t b, uint64_t c);
+  static uint64_t f3(uint64_t x0_, uint64_t x1_, uint64_t x2_);
+
+  template <typename T1> static List<T1> wrap(const T1 &x) {
+    return List<T1>::cons(x, List<T1>::nil());
   }
 
+  static inline const List<crane::fn<uint64_t(uint64_t, uint64_t, uint64_t)>>
+      ws = []() {
+        return wrap<crane::fn<
+            crane::fn<crane::fn<uint64_t(uint64_t)>(uint64_t)>(uint64_t)>>(
+            [](uint64_t _ec0) {
+              return [=](uint64_t _ec1) {
+                return [=](uint64_t _ec2) { return add3(_ec0, _ec1, _ec2); };
+              };
+            });
+      }();
   static inline const uint64_t result =
-      (both<uint64_t>(UINT64_C(7)).first.length() +
-       both<uint64_t>(UINT64_C(7)).second.length());
+      (f3(UINT64_C(1), UINT64_C(2), UINT64_C(3)) + []() {
+        auto &&_sv = ws;
+        if (std::holds_alternative<typename List<
+                crane::fn<uint64_t(uint64_t, uint64_t, uint64_t)>>::Nil>(
+                _sv.v())) {
+          return UINT64_C(0);
+        } else {
+          const auto &[a0, a1] = std::get<typename List<
+              crane::fn<uint64_t(uint64_t, uint64_t, uint64_t)>>::Cons>(
+              _sv.v());
+          return a0(UINT64_C(1), UINT64_C(1), UINT64_C(1));
+        }
+      }());
 };
 
-#endif // INCLUDED_LET_FUNCTION_TWO_INSTANCES
+#endif // INCLUDED_THREE_ARGUMENT_CURRIED_SLOT

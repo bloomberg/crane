@@ -266,7 +266,9 @@ struct LoopifyGenerators {
 
   /// tabulate n f generates f 0, f 1, ..., f (n-1) (same as init_list but
   /// different naming).
-  template <typename F1> static List<uint64_t> tabulate(uint64_t n, F1 &&f) {
+  template <typename F1>
+    requires std::is_invocable_r_v<uint64_t, F1 &, uint64_t>
+  static List<uint64_t> tabulate(uint64_t n, F1 &&f) {
     {
       uint64_t _lc1_i = n;
 
@@ -275,12 +277,10 @@ struct LoopifyGenerators {
         uint64_t i;
       };
 
-      /// CraneCont_j: saves [f, i, n], resumes after recursive call, then
-      /// processes rest.
+      /// CraneCont_j: saves [i], resumes after recursive call, then processes
+      /// rest.
       struct CraneCont_j {
-        std::decay_t<F1> f;
         uint64_t i;
-        uint64_t n;
       };
 
       using CraneFrame = std::variant<CraneEnter, CraneCont_j>;
@@ -298,14 +298,12 @@ struct LoopifyGenerators {
             _lc1_result = List<uint64_t>::nil();
           } else {
             uint64_t j = _lc1_i - 1;
-            _lc1_stack.emplace_back(CraneCont_j{std::move(f), _lc1_i, n});
+            _lc1_stack.emplace_back(CraneCont_j{_lc1_i});
             _lc1_stack.emplace_back(CraneEnter{j});
           }
         } else {
           auto _f = std::move(std::get<CraneCont_j>(_frame));
-          std::decay_t<F1> f = std::move(_f.f);
           uint64_t _lc1_i = _f.i;
-          uint64_t n = _f.n;
           _lc1_result =
               List<uint64_t>::cons(f((((n - _lc1_i) > n ? 0 : (n - _lc1_i)))),
                                    std::move(_lc1_result));
