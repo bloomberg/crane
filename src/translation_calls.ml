@@ -994,17 +994,16 @@ let erase_fn_arg_for_param env param_ml_ty e expr =
        [std::function<typename I::M(std::any)>] for a higher-kinded class
        method) keeps that result type, since erasing it too would box the
        result twice. *)
-    | Fe_erased_domain kept -> Some (Some (Option.default Tany kept))
+    | Fe_erased_domain kept -> Some (At_signature (Option.default Tany kept))
     | Fe_concrete_domain | Fe_not_a_function -> (
       match param_cpp_ty with
-      | Tfun (_, cod) when cod = Tany -> Some (Some Tany)
+      | Tfun (_, cod) when cod = Tany -> Some (At_signature Tany)
       (* The whole parameter is boxed -- a type-level [Fixpoint] landing on
          [using sem = std::any], say.  A callee that applies such a value goes
          through the canonical [std::function<std::any(std::any)>] adapter,
          so a raw closure dropped into the [std::any] would not match the cast
-         that reads it back out.  Boxed whole, it is adapted at no result
-         type: see {!Minicpp.CPPerase_fn}. *)
-      | ty when resolves_to_any_type ty -> Some None
+         that reads it back out. *)
+      | ty when resolves_to_any_type ty -> Some Boxed_whole
       | _ -> None )
   in
   (* The instantiation this call sees may still hide an erasure the callee's
@@ -1027,12 +1026,12 @@ let erase_fn_arg_for_param env param_ml_ty e expr =
       | Miniml.Tarr _ as t
         when List.exists mentions_family (ml_domains t) ->
         let cod = ml_codomain t in
-        if mentions_family cod then Some (Some Tany)
-        else Some (Some (cpp_of_ml env cod))
+        if mentions_family cod then Some (At_signature Tany)
+        else Some (At_signature (cpp_of_ml env cod))
       | _ -> None )
   in
   match erased_fn_param with
-  | Some ret_ty when ml_expr_is_function_value e -> wrap_crane_erase_fn ?ret_ty expr
+  | Some shape when ml_expr_is_function_value e -> wrap_crane_erase_fn shape expr
   | _ -> convert_carrier_arg param_ml_ty param_cpp_ty e expr
 
 (** Whether the global [id] takes the callable it declares at [pos], of ML

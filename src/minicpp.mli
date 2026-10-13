@@ -415,6 +415,17 @@ and alloc_kind =
           the rest construct the new [T].  Only emitted under
           [Crane NonAtomicRc]. *)
 
+(** The erased representation {!CPPerase_fn} adapts a callable to. *)
+and erase_shape =
+  | Boxed_whole
+      (** Boxed whole into a [crane::obj]: stored curried, as
+          [crane::fn<crane::obj(crane::obj)>], since a box is opened one
+          argument at a time ({!CPPerased_call}).  [crane_erase_fn(expr)]. *)
+  | At_signature of cpp_type
+      (** In a slot that declares its own signature,
+          [crane::fn<t(crane::obj...)>] with [t] the result it keeps --
+          [crane::obj] where the result erased too.  [crane_erase_fn<t>(expr)]. *)
+
 (** What translation knew about a call.
 
     Translation knows the C++ types of every call it builds -- it has to, to
@@ -602,13 +613,9 @@ and cpp_expr =
           has one; where it does not -- [std::pair]'s asks each component to
           be constructible from the other's, which an erased component is not
           -- the helper takes the value apart and puts it back together. *)
-  | CPPerase_fn of cpp_type option * cpp_expr
-      (** [crane_erase_fn<Ret>(expr)] — adapts a concrete callable to an
-          erased representation.  [None] is a callable boxed whole into a
-          [std::any], stored curried as [std::function<std::any(std::any)>]
-          since a box is opened one argument at a time ({!CPPerased_call});
-          [Some t] is a slot declaring its own signature,
-          [std::function<t(std::any...)>]. *)
+  | CPPerase_fn of erase_shape * cpp_expr
+      (** [crane_erase_fn<Ret>(expr)] — adapts a concrete callable to the
+          erased representation {!erase_shape} names. *)
   | CPPerased_call of cpp_expr * cpp_expr
       (** Applies a callable whose representation was erased, recovering it at
           the one signature {!CPPerase_fn} stores it under:

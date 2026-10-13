@@ -3687,7 +3687,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                    non-lambda case below stores.  The lambda keeps its own
                    concrete result type; [crane_erase_fn] deduces it and boxes
                    what it returns. *)
-                wrap_crane_erase_fn new_lambda
+                wrap_crane_erase_fn Boxed_whole new_lambda
               | _ ->
                 (* When a custom list literal (e.g. deque<Val>) is stored in a
                    std::any field, regenerate it with [deep_erase] so
@@ -3850,7 +3850,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                  callable's signature and unboxes each argument.  The field's
                  own codomain stays concrete. *)
               | _ when ml_expr_is_function_value ml_e ->
-                wrap_crane_erase_fn ~ret_ty expr
+                wrap_crane_erase_fn (At_signature ret_ty) expr
               | _ -> expr )
             | _ -> expr
             with Failure _ | Invalid_argument _ ->
@@ -4029,7 +4029,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             let ret_ty = cpp_of_ml env (codomain ft) in
             let expr = erased_fn_instantiation expr in
             wrap_crane_erase_fn
-              ~ret_ty:(if prints_as_any ret_ty then Tany else ret_ty)
+              (At_signature (if prints_as_any ret_ty then Tany else ret_ty))
               expr
           (* A field erased whole -- [den t], whatever [t] the call names --
              holds a function as the canonical callable it is read back as. *)
@@ -10723,7 +10723,7 @@ let erase_returned_fn_values (ret_ty : cpp_type) (body : cpp_stmt list) =
     let rec fix_stmt s =
       match s with
       | Sreturn (Some (CPPlambda _ as e)) ->
-        Sreturn (Some (wrap_crane_erase_fn e))
+        Sreturn (Some (wrap_crane_erase_fn Boxed_whole e))
       | _ -> map_stmt Fun.id fix_stmt Fun.id s
     in
     List.map fix_stmt body

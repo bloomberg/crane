@@ -2471,15 +2471,15 @@ and pp_cpp_expr env args t =
     str caster ++ str "<" ++ pp_cpp_type false [] ty ++ str ">(" ++ inner
     ++ str ")"
   | CPPerase_fn
-      (ret_ty, (CPPglob ((GlobRef.ConstRef _ as r), [], (None | Some {ci_inline = None; _})) as g))
+      (shape, (CPPglob ((GlobRef.ConstRef _ as r), [], (None | Some {ci_inline = None; _})) as g))
     when lookup_method_this_pos r = None ->
     (* A global never changes, so neither does its adapter: made once.  Not a
        method, which is named through a lambda, never as itself. *)
     Table.mark_needs_erase_fn ();
     str Crane_rt.erase_global ++ str "<" ++ pp_cpp_expr env args g
-    ++ ( match ret_ty with
-       | None -> mt ()
-       | Some ty -> str ", " ++ pp_cpp_type false [] ty )
+    ++ ( match shape with
+       | Boxed_whole -> mt ()
+       | At_signature ty -> str ", " ++ pp_cpp_type false [] ty )
     ++ str ">()"
   | CPPsuspend (ty, thunk) ->
     pp_cpp_expr env args
@@ -2487,12 +2487,12 @@ and pp_cpp_expr env args t =
          ( Minicpp.call_sig ~yields:ty ~nargs:1 (),
            CPPqualified_t (ty, Id.of_string "lazy_"),
            of_reversed [thunk] ))
-  | CPPerase_fn (ret_ty, e) ->
+  | CPPerase_fn (shape, e) ->
     Table.mark_needs_erase_fn ();
     str Crane_rt.erase_fn
-    ++ ( match ret_ty with
-       | None -> mt ()
-       | Some ty -> str "<" ++ pp_cpp_type false [] ty ++ str ">" )
+    ++ ( match shape with
+       | Boxed_whole -> mt ()
+       | At_signature ty -> str "<" ++ pp_cpp_type false [] ty ++ str ">" )
     ++ str "("
     ++ pp_cpp_expr env args e
     ++ str ")"

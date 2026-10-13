@@ -91,10 +91,9 @@ let recover_carrier_result ~fun_ty ~n_args ~want expr =
 let binder_cpp_type i =
   Option.map fst (IntMap.find_opt i (!tctx).cpp_binder_types)
 
-(** Wrap [expr] in the [crane_erase_fn] runtime helper: boxed whole without
-    [ret_ty], at a declared signature with it (see {!Minicpp.CPPerase_fn}). *)
-let wrap_crane_erase_fn ?ret_ty expr =
-  CPPerase_fn (ret_ty, expr)
+(** Wrap [expr] in the [crane_erase_fn] runtime helper, adapting it to the
+    erased representation [shape] names (see {!Minicpp.erase_shape}). *)
+let wrap_crane_erase_fn shape expr = CPPerase_fn (shape, expr)
 
 (** Re-instantiate a function value that is being adapted for an erased slot:
     the values it will be applied to reached that slot erased too -- a
@@ -2976,7 +2975,7 @@ let rec coerce ?term ?from ~into expr =
              the consumer expects [pair<any,any>]. *)
           let adapted =
             if is_function_value then
-              wrap_crane_erase_fn (erased_fn_instantiation expr)
+              wrap_crane_erase_fn Boxed_whole (erased_fn_instantiation expr)
             else expr
           in
           Cpp_erasure.converting_ctor Tany [adapted]
@@ -2990,7 +2989,7 @@ let rec coerce ?term ?from ~into expr =
            [crane_erase_fn] adapter an erased parameter uses, whether or not the
            result erased along with the arguments. *)
         | Tfun (_, cod) when is_function_value && erased_domain_fun_ty into ->
-          wrap_crane_erase_fn ~ret_ty:cod expr
+          wrap_crane_erase_fn (At_signature cod) expr
         (* The mirror image: a callable whose result erased -- a constant
            whose Rocq type hides its quantifier behind a type alias, or whose
            result a type index alone pins down -- reaching a slot that names
@@ -3076,7 +3075,7 @@ let box_list_for_family ~into e expr =
 let box_for_any_slot ?into e expr =
   match expr with
   | CPPerase_fn _ -> expr
-  | _ when ml_expr_is_function_value e -> wrap_crane_erase_fn expr
+  | _ when ml_expr_is_function_value e -> wrap_crane_erase_fn Boxed_whole expr
   | _ -> (
     match into with Some into -> box_list_for_family ~into e expr | None -> expr )
 

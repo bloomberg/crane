@@ -355,6 +355,10 @@ and alloc_kind =
        under [Crane NonAtomicRc] (needs crane::rc's control block). *)
 
 (** What translation knew about a call; see [minicpp.mli]. *)
+and erase_shape =
+  | Boxed_whole
+  | At_signature of cpp_type
+
 and call_sig = {
   cs_yields : call_result;
   cs_params : call_params;
@@ -483,7 +487,7 @@ and cpp_expr =
        with: std::pair's asks each component to be constructible from the
        other's, which an erased component is not, so the helper takes it
        apart and puts it back together instead *)
-  | CPPerase_fn of cpp_type option * cpp_expr
+  | CPPerase_fn of erase_shape * cpp_expr
     (* crane_erase_fn<Ret>(expr) — adapts a concrete callable to an erased
        representation.  [None] is a callable boxed whole into a std::any:
        stored as std::function<std::any(std::any)>, curried, since a box is
@@ -1419,7 +1423,8 @@ let map_expr ?fl
       | Unbox_list (l, f) -> Unbox_list (ft l, ft f)
     in
     CPPunbox (u, fe e')
-  | CPPerase_fn (ty, e') -> CPPerase_fn (Option.map ft ty, fe e')
+  | CPPerase_fn (shape, e') ->
+    CPPerase_fn ((match shape with Boxed_whole -> Boxed_whole | At_signature t -> At_signature (ft t)), fe e')
   | CPPsuspend (ty, e') -> CPPsuspend (ft ty, fe e')
   | CPPerased_call (f, a) -> CPPerased_call (fe f, fe a)
   | CPPtolerant_call (f, args) -> CPPtolerant_call (fe f, List.map fe args)
