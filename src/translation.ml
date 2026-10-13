@@ -2822,20 +2822,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       | [] -> mk_cppglob ?yields x (phantom_prefix_args x)
       | tys_cpp -> mk_cppglob ?yields x tys_cpp
     in
-    let needs_call =
-      match find_type_opt x with
-      | Some ml_ty when is_monadic_ml_type ml_ty -> true
-      | Some _ when Table.is_cofixpoint x -> true
-      (* A definition that only throws is emitted as a zero-parameter function
-         unless it has C++ parameters of its own, in which case naming it is
-         naming a function. *)
-      | Some ml_ty when Table.is_throwing_value x ->
-        ( match cpp_of_ml env ml_ty with
-        | Tfun _ -> false
-        | _ -> true )
-      | _ -> false
-    in
-    if needs_call then
+    if naming_calls ~cpp_of:(cpp_of_ml env) x then
       mk_call cglob []
     else
       ( match

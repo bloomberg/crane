@@ -1369,18 +1369,40 @@ let return_captures_by_value stmts =
       | s -> s )
     stmts
 
+(** Why a global is emitted as a function of no parameters, so that naming it
+    calls it: a cofixpoint, whose value is built when asked for; a definition
+    whose body only throws ({!Structure_analysis.register_throwing_values}),
+    which must throw when asked for rather than during static
+    initialisation; a monadic action, run when performed. *)
+type thunk_reason = Cofixpoint | Throws | Monadic
+
+(** The {!thunk_reason} of the global [r], if it has one: the one place that
+    decides it, which the declaration of [r] and every reference to it read. *)
+let thunk_reason r =
+  if Table.is_cofixpoint r then Some Cofixpoint
+  else if Table.is_throwing_value r then Some Throws
+  else
+    match find_type_opt r with
+    | Some t when is_monadic_ml_type t -> Some Monadic
+    | _ -> None
+
+(** Whether naming the global [r] calls it.  A definition that only throws is
+    emitted as a zero-parameter function unless it has C++ parameters of its
+    own -- [cpp_of] spells its type -- in which case naming it names the
+    function. *)
+let naming_calls ~cpp_of r =
+  match thunk_reason r with
+  | None -> false
+  | Some (Cofixpoint | Monadic) -> true
+  | Some Throws -> (
+    match Option.map cpp_of (find_type_opt r) with Some (Tfun _) -> false | _ -> true )
+
 (** Whether evaluating [e] is only building a value: no call is made, so it
     cannot fail to terminate.  A lambda is a value; so is a constructor of
-    values.  A global is a value unless naming it calls it -- a cofixpoint
-    or a monadic definition is emitted as a nullary function. *)
+    values.  A global is a value unless naming it calls it ({!thunk_reason}). *)
 let rec ml_is_value = function
   | MLrel _ | MLlam _ | MLdummy _ | MLuint _ | MLfloat _ | MLstring _ -> true
-  | MLglob (r, _) ->
-    not
-      ( Table.is_cofixpoint r || Table.is_throwing_value r
-      || match find_type_opt r with
-         | Some t -> is_monadic_ml_type t
-         | None -> false )
+  | MLglob (r, _) -> thunk_reason r = None
   | MLcons (_, _, args) | MLtuple args -> List.for_all ml_is_value args
   | MLmagic (_, e) -> ml_is_value e
   | _ -> false

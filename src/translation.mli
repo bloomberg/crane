@@ -289,6 +289,14 @@ val calls_eagerly : Names.GlobRef.t -> ml_ast -> bool
     spot, or anywhere when [suspended]. *)
 val escaping_params : suspended:bool -> int -> ml_ast -> int list
 
+(** Why a global is emitted as a function of no parameters, so that naming
+    it calls it (see {!Translation_support.thunk_reason}). *)
+type thunk_reason = Translation_support.thunk_reason = Cofixpoint | Throws | Monadic
+
+(** The {!thunk_reason} of a global, if it has one: what its declaration and
+    every reference to it read. *)
+val thunk_reason : Names.GlobRef.t -> thunk_reason option
+
 (** The source-order indices of the callable parameters, among the first
     [n_params], that a function made from [self_ref] takes as a [crane::fn]
     rather than generalising to [F &&]: those a self-call passes something

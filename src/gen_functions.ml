@@ -1490,7 +1490,7 @@ let gen_decl__inner n b ty =
       (f, env, tvars)
     | _ ->
     match b with
-    | _ when only_throws b ->
+    | _ when thunk_reason n = Some Throws ->
       (* A body that only throws becomes a zero-arg function, so the throw
          happens when the value is asked for rather than during static
          initialisation (which terminates the program before main). *)
@@ -1601,7 +1601,7 @@ let gen_decl_for_pp__inner n b ty =
   | Tfun _ ->
     let f, env, tvars = gen_function n ty h in
     (Some f, env, tvars)
-  | cty when only_throws h.fh_body ->
+  | cty when thunk_reason n = Some Throws ->
     let body_expr = gen_expr (empty_env ()) h.fh_body in
     let inner = Dfun (mk_dfun n ~ret:cty (Ddef ([], [Sreturn (Some body_expr)]))) in
     let ds =
@@ -1639,7 +1639,7 @@ let gen_spec__inner n b ty =
       gen_sfun n b dom cod temps
     | _ ->
     match b with
-    | _ when only_throws b ->
+    | _ when thunk_reason n = Some Throws ->
       (* Throws when called, so: a zero-arg function declaration. *)
       let inner = Dfun (mk_dfun n ~ret:ty (Ddef ([], []))) in
       ( match temps with

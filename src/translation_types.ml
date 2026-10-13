@@ -1847,9 +1847,7 @@ let glob_is_nullary_function x =
   match find_type_opt x with
   | None -> false
   | Some ml_ty ->
-    is_monadic_ml_type ml_ty
-    || Table.is_cofixpoint x
-    || Table.is_throwing_value x
+    thunk_reason x <> None
     || ( match convert_ml_type_to_cpp_type (empty_env ()) [] ml_ty with
        | Tfun _ -> true
        | _ -> false )
