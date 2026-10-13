@@ -205,6 +205,21 @@ let register_shared_variants (s : ml_structure) : unit =
           (element_inductives se) )
       s
 
+(** Register every definition whose body only raises -- an axiom, an absurd
+    case, a proof-only definition whose body extraction simplifies to one -- as
+    a throwing value ([Table.add_throwing_value]): it is emitted as a
+    zero-argument function that throws when called rather than a constant
+    that throws during static initialisation, and every reference must call
+    it.  Read off the final bodies, since simplification is what can turn
+    [False_rect _ h] into the throw. *)
+let register_throwing_values (s : ml_structure) : unit =
+  iter_structure
+    (fun _mp _l se ->
+      match se with
+      | SEdecl (Dterm (r, e, _)) when Mlutil.only_throws e -> Table.add_throwing_value r
+      | _ -> () )
+    s
+
 (** {2 Inductive name collection} *)
 
 (** Collect (name, defining_modpath) for every inductive type in the structure,

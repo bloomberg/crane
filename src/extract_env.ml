@@ -1479,8 +1479,10 @@ let optimize_struct to_appear struc =
     |> Ml_specialize.structure
     |> Normalize.structure
   in
-  (* With the bodies final, which parameters are owned is settled across
-     calls, before any signature is written. *)
+  (* With the bodies final, which definitions only throw, and which
+     parameters are owned, are settled across calls, before any signature is
+     written. *)
+  Structure_analysis.register_throwing_values struc;
   Ownership.settle struc;
   struc
 

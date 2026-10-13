@@ -574,23 +574,14 @@ let rec gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type
   in
   let result =
     with_in_constructor_expr true @@ fun () ->
-  (* Convert value arguments to C++ expressions.
-
-     Erased proof/type arguments ([MLdummy]) produce [std::any{}] rather
-     than [CPPabort]: the corresponding C++ parameter type is [std::any]
-     (all erased types map to [std::any]), and custom constructors like
-     [std::make_pair] are evaluated eagerly so a throw would crash at
-     runtime.  This mirrors the [gen_ctor_arg] in the [MLcons] case of
-     {!gen_expr}. *)
+  (* Convert value arguments to C++ expressions.  An erased proof or type
+     argument ([MLdummy]) is the empty box its erased slot takes; see that
+     case of {!gen_expr}. *)
   (* Generate constructor arguments with live move_dead_after so the move
      analysis can fire for single-use variables (nb_occur_match = 1 already
      prevents moving variables that appear more than once across all args). *)
   let gen_ctor_arg ?expected_ty ?(slot = slot) e =
-    match e with
-    | MLdummy _ -> Cpp_erasure.empty_box
-    | e when ml_value_is_void_call e ->
-      wrap_void_call_as_value (gen_expr ~slot env e)
-    | _ -> gen_expr ?expected_ty ~slot env e
+    gen_stored_value ?expected_ty ~slot env e
   in
   (* Generate args with expected type hints: pass the i-th type arg of the constructor's inductive type before generating
      the i-th value arg.  This allows gen_ctor_call to recover concrete element
@@ -1998,6 +1989,28 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
            | _ -> false)
           || reads 0 body
         in
+        (* The type a match in [body] reads its single binder at, where that
+           type has no parameters -- and so one spelling, which the body cannot
+           be reading at some other, erased, view: [if b] states [bool]
+           whatever the binder's own annotation lost. *)
+        let binder_matched_at body =
+          let found = ref None in
+          let rec walk depth e =
+            match e with
+            | MLcase ((Miniml.Tglob (_, [], _) as t), sc, _)
+              when strip_magic sc = MLrel (depth + 1) && !found = None ->
+              found := Some t
+            | MLlam (_, _, b) -> walk (depth + 1) b
+            | MLletin (_, _, x, b) -> walk depth x; walk (depth + 1) b
+            | MLcase (_, sc, pv) ->
+              walk depth sc;
+              Array.iter (fun (ids, _, _, br) -> walk (depth + List.length ids) br) pv
+            | MLfix (_, ids, funs, _) -> Array.iter (walk (depth + Array.length ids)) funs
+            | e -> Mlutil.ast_iter (walk depth) e
+          in
+          walk 0 body;
+          !found
+        in
         let cpp_arg_info =
           List.mapi
             (fun j (id, ty, owned) ->
@@ -2064,7 +2077,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                 | None
                   when Ml_type_util.has_tany_written bare_cpp_ty
                        && n_all_params = 1
-                       && body_reads_members_of_binder a ->
+                       && (body_reads_members_of_binder a || binder_matched_at a <> None) ->
                   (* A pattern lambda: the body decomposes this parameter with
                      a structured binding, which is ill-formed at [std::any].
                      Or it reads one of its members through a projection that
@@ -2090,13 +2103,16 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                      It may refine the spelling only as far as still-erased,
                      though.  The body was generated against the erased view
                      and unboxes at it; a signature that erases nowhere is one
-                     the body's casts no longer agree with. *)
+                     the body's casts no longer agree with.  The exception is a
+                     match that reads the binder at a fully known type -- [if b]
+                     at [bool] -- since the body reads it at that type, uncast. *)
                   let refined =
-                    match slot_dom_cpp_ty j with
-                    | Some slot ->
+                    match (binder_matched_at a, slot_dom_cpp_ty j) with
+                    | Some t, _ -> cpp_of_ml env t
+                    | None, Some slot ->
                       Ml_type_util.refine_param_from_slot ~tvars ~slot
                         bare_cpp_ty
-                    | None -> bare_cpp_ty
+                    | None, None -> bare_cpp_ty
                   in
                   wrap_param_by_ownership ~is_owned:owned refined
                 | None
@@ -3441,23 +3457,14 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             (call_opaque, CPPqualified_t (Tglob (r, [], []), Id.of_string fname),
               of_reversed args )
       in
-      (* [CPPfun_call] stores args reversed; [List.rev_map] compensates.
-         Erased proof/type args ([MLdummy]) produce [std::any{}] — the
-         corresponding C++ parameter type is [std::any] and [CPPabort]
-         would throw at runtime.  The same pattern is used in
-         {!gen_expr_custom_cons} for inline-extracted constructors
-         (e.g., [std::make_pair]). *)
+      (* [CPPfun_call] stores args reversed; [List.rev_map] compensates. *)
       (* Generate constructor arguments with live move_dead_after so the move
          analysis from gen_tail_expr flows through.  Safety note: gen_tail_expr
          only marks variables that occur exactly once in the entire tail
          expression (nb_occur_match = 1), so a variable appearing in multiple
          constructor args is NOT in move_dead_after and cannot be moved twice. *)
       let gen_ctor_arg ?expected_ty ?(slot = slot) e =
-      match e with
-        | MLdummy _ -> Cpp_erasure.empty_box
-        | e when ml_value_is_void_call e ->
-          wrap_void_call_as_value (gen_expr ~slot env e)
-        | _ -> gen_expr ?expected_ty ~slot env e
+        gen_stored_value ?expected_ty ~slot env e
       in
       (* When a constructor's field type is a type variable (Tvar i) that
          resolves to an owning pointer type (because T is in method_self_ns),
@@ -4450,21 +4457,17 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
         let base_args =
           List.mapi
             (fun i e ->
-              match e with
-              | e when ml_value_is_void_call e ->
-                wrap_void_call_as_value (gen_expr ~slot:arg_slot env e)
-              | _ ->
-                gen_expr
-                  ~slot:
-                    { arg_slot with
-                      deep_erase =
-                        arg_slot.deep_erase
-                        || field_stores_erased_fn_value field_types_rec i e }
-                  ?expected_ty:
-                    ( match expected_for_field i e with
-                    | Some _ as t -> t
-                    | None -> field_declared_erased i )
-                  env e)
+              gen_stored_value
+                ~slot:
+                  { arg_slot with
+                    deep_erase =
+                      arg_slot.deep_erase
+                      || field_stores_erased_fn_value field_types_rec i e }
+                ?expected_ty:
+                  ( match expected_for_field i e with
+                  | Some _ as t -> t
+                  | None -> field_declared_erased i )
+                env e)
             ts
         in
         match ty with
@@ -4803,11 +4806,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             with_shifted_move_tracking (List.length branch_binders) @@ fun () ->
             List.mapi
               (fun j a ->
-                let e =
-                  match a with
-                  | MLdummy _ -> Cpp_erasure.empty_box
-                  | _ -> gen_expr ~slot env' a
-                in
+                let e = gen_stored_value ~slot env' a in
                 match List.nth_opt fld_param_tys j with
                 | Some (Miniml.Tapp _ as pt) when not is_typeclass ->
                   (* The dictionary's method is stored monomorphically, over
@@ -5108,13 +5107,9 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             | _ -> inner )
       | _ -> inner )
   | MLdummy _ ->
-    (* Erased proof or type argument.  [CPPabort] is safe here because this
-       case only fires in dead code positions (absurd match branches).
-       Evaluated positions — constructor args and custom-constructor args —
-       are handled before reaching this point: see [gen_ctor_arg] in the
-       [MLcons] case and in {!gen_expr_custom_cons}, which produce
-       [std::any{}] instead.  The reuse optimization in {!gen_cpp_case}
-       skips [MLdummy] fields entirely. *)
+    (* An erased proof or type reaching an expression position: a dead one,
+       an absurd branch.  Where it is a value a constructor stores it is the
+       empty box instead, see {!gen_stored_value}. *)
     CPPabort ("unreachable", abort_ty expected_ty)
   | MLexn msg ->
     (* Unreachable/absurd case - e.g., match on empty type *)
@@ -10552,6 +10547,19 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       tctx := { !tctx with move_dead_after = saved_dead };
       result
     end
+
+(** A value a constructor stores: an argument of a constructor or a custom
+    constructor, or a record's field.  An erased proof or type there --
+    [{| unwrap := nat |}] at [wrap Set] -- is the empty box its erased slot
+    takes, not the throw a dead position gets, since the constructor runs as
+    the value is built; a call returning [unit] is the value its void call
+    stands for. *)
+and gen_stored_value ?expected_ty ~slot env e =
+  match e with
+  | MLdummy _ -> Cpp_erasure.empty_box
+  | e when ml_value_is_void_call e -> wrap_void_call_as_value (gen_expr ~slot env e)
+  | _ -> gen_expr ?expected_ty ~slot env e
+
 
 (** Generate a C++ expression for [t] in tail position.
     Marks owned variables that occur exactly once as dead-after (for

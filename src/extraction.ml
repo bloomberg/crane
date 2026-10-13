@@ -1886,6 +1886,11 @@ and extract_cst_app env sg mle mlt kn args =
     with Failure _ -> List.map (fun _ -> Tunknown) args
   in
   let domain = make_tyargs env sg mle args metas ~orig_typs in
+  (* The type arguments a call writes, one per type variable of the scheme,
+     as everything reading [MLglob]'s list indexes it: a proof's slot -- or a
+     binder ranging over propositions, [{P : Prop}] -- has no variable, and
+     left in it would hand the next one's place to the dummy. *)
+  let tyargs = List.filter (function Tdummy Kprop -> false | _ -> true) domain in
   (* The type arguments the Rocq term passes are a statement about the
      scheme's type variables, and the value arguments need not repeat it: a
      monad's [bind] erases its carrier, so [m A] pins nothing, and [A] reaches
@@ -1908,9 +1913,6 @@ and extract_cst_app env sg mle mlt kn args =
         | Tmeta {contents = Some u} -> informative u
         | Tstring -> true
       in
-      let tyargs =
-        List.filter (function Tdummy Kprop -> false | _ -> true) domain
-      in
       if List.length tyargs = Array.length tvar_metas then
         List.iteri
           (fun i t -> if informative t then try_mgu tvar_metas.(i) (expand env t))
@@ -1925,7 +1927,7 @@ and extract_cst_app env sg mle mlt kn args =
       ~from:(type_recomp (metas, a))
       ~into:instantiated
       magic1
-      (MLglob (GlobRef.ConstRef kn, List.map type_simpl domain))
+      (MLglob (GlobRef.ConstRef kn, List.map type_simpl tyargs))
   in
   (* For strict languages, purely logical signatures lead to a dummy lam (except
      when [Kill Ktype] everywhere). So a [MLdummy] is left accordingly. *)
@@ -2812,13 +2814,6 @@ let extract_constant access env kn cb =
     if has_args && all_args_dummy t then
       Dterm (r, MLdummy Kprop, Tdummy Kprop)
     else (
-      (* Register axioms as axiom values.  These are generated as zero-arg
-         functions so they throw when called, not at static init time.  An
-         axiom with arguments qualifies too when they are all erased -- a
-         [forall (P : Prop), P -> nat] takes no C++ parameter -- and there is
-         no harm in registering the rest: an axiom reference may throw
-         whatever its arity. *)
-      add_throwing_value r;
       Dterm (r, MLaxiom (Constant.to_string kn), t) )
   in
   (* An instance's class arguments are where its erased names come from.
@@ -2977,11 +2972,6 @@ let extract_constant access env kn cb =
         List.length (Ml_type_util.ml_value_domains short)
         < List.length (Ml_type_util.ml_value_domains t)
       then register_glob_def r t );
-    (* A body that only raises returns no value, so it gets an axiom's
-       treatment for an axiom's reason: a zero-argument function that throws
-       when called, rather than a constant that throws at static
-       initialisation. *)
-    if Mlutil.only_throws e then add_throwing_value r;
     Dterm (r, e, t)
   in
   try

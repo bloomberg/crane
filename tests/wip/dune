@@ -272,50 +272,6 @@
   (deps rank2_callback_kept_as_fn.t.exe)
   (action (run ./rank2_callback_kept_as_fn.t.exe))))
 
-(subdir prop_binder_before_type_binder
- (rule
-  (targets prop_binder_before_type_binder.t.exe)
-  (deps PropBinderBeforeTypeBinder.vo prop_binder_before_type_binder.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} prop_binder_before_type_binder.t.exe prop_binder_before_type_binder.cpp prop_binder_before_type_binder.t.cpp)))
- (rule
-  (alias runtest)
-  (deps prop_binder_before_type_binder.t.exe)
-  (action (run ./prop_binder_before_type_binder.t.exe))))
-
-(subdir record_at_sort_type_field
- (rule
-  (targets record_at_sort_type_field.t.exe)
-  (deps RecordAtSortTypeField.vo record_at_sort_type_field.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} record_at_sort_type_field.t.exe record_at_sort_type_field.cpp record_at_sort_type_field.t.cpp)))
- (rule
-  (alias runtest)
-  (deps record_at_sort_type_field.t.exe)
-  (action (run ./record_at_sort_type_field.t.exe))))
-
-(subdir absurd_proof_only_definition
- (rule
-  (targets absurd_proof_only_definition.t.exe)
-  (deps AbsurdProofOnlyDefinition.vo absurd_proof_only_definition.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} absurd_proof_only_definition.t.exe absurd_proof_only_definition.cpp absurd_proof_only_definition.t.cpp)))
- (rule
-  (alias runtest)
-  (deps absurd_proof_only_definition.t.exe)
-  (action (run ./absurd_proof_only_definition.t.exe))))
-
-(subdir type_field_record_concrete_lambda
- (rule
-  (targets type_field_record_concrete_lambda.t.exe)
-  (deps TypeFieldRecordConcreteLambda.vo type_field_record_concrete_lambda.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} type_field_record_concrete_lambda.t.exe type_field_record_concrete_lambda.cpp type_field_record_concrete_lambda.t.cpp)))
- (rule
-  (alias runtest)
-  (deps type_field_record_concrete_lambda.t.exe)
-  (action (run ./type_field_record_concrete_lambda.t.exe))))
-
 (subdir no_optimize_fold_left_accumulator
  (rule
   (targets no_optimize_fold_left_accumulator.t.exe)

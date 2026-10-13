@@ -177,3 +177,8 @@ val analyze : Method_registry.t -> ml_structure -> t
     final and before anything asks: the type's declaration, every slot holding
     it and the method registry must give one answer. *)
 val register_shared_variants : ml_structure -> unit
+
+(** Register the definitions whose final bodies only raise as throwing values
+    ([Table.add_throwing_value]): emitted as zero-argument functions, and
+    called wherever they are named. *)
+val register_throwing_values : ml_structure -> unit

@@ -118,7 +118,7 @@ struct TypeFieldRecordConcreteLambda {
 
   using T = crane::obj;
   static inline const alg bool_alg =
-      alg{true, crane_erase_fn<uint64_t>([](const auto &b) {
+      alg{true, crane_erase_fn<uint64_t>([](bool b) {
             if (b) {
               return UINT64_C(1);
             } else {

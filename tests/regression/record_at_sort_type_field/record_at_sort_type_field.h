@@ -26,8 +26,7 @@ struct RecordAtSortTypeField {
     }
   };
 
-  static inline const wrap<crane::obj> w = wrap<crane::obj>{
-      ([]() -> crane::obj { throw std::logic_error("unreachable"); })()};
+  static inline const wrap<crane::obj> w = wrap<crane::obj>{crane::obj()};
 
   template <typename A, typename B> struct pair {
     A pfst;
@@ -56,9 +55,7 @@ struct RecordAtSortTypeField {
   };
 
   static inline const pair<crane::obj, crane::obj> tp =
-      pair<crane::obj, crane::obj>{
-          ([]() -> crane::obj { throw std::logic_error("unreachable"); })(),
-          ([]() -> crane::obj { throw std::logic_error("unreachable"); })()};
+      pair<crane::obj, crane::obj>{crane::obj(), crane::obj()};
 
   template <typename A, typename B> struct pr {
     // DATA

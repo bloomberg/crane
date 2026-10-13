@@ -106,14 +106,13 @@ struct PropBinderBeforeTypeBinder {
     }
   }
 
-  static inline const uint64_t picked =
-      pick<uint64_t>(crane::obj(UINT64_C(0)),
-                     List<uint64_t>::cons(UINT64_C(5), List<uint64_t>::nil()));
+  static inline const uint64_t picked = pick<uint64_t>(
+      UINT64_C(0), List<uint64_t>::cons(UINT64_C(5), List<uint64_t>::nil()));
 
   template <typename T1> static T1 pick2(const T1 &, T1 e) { return e; }
 
   static inline const uint64_t second =
-      pick2<uint64_t>(crane::obj(UINT64_C(4)), crane::obj(UINT64_C(5)));
+      pick2<uint64_t>(UINT64_C(4), UINT64_C(5));
 
   template <typename A> struct guarded {
     // TYPES
@@ -194,9 +193,8 @@ struct PropBinderBeforeTypeBinder {
   }
 
   static inline const uint64_t guard_sum =
-      (gget<uint64_t>(crane::obj(UINT64_C(0)),
-                      guarded<uint64_t>::g(UINT64_C(5))) +
-       gget<uint64_t>(crane::obj(UINT64_C(7)), guarded<uint64_t>::n()));
+      (gget<uint64_t>(UINT64_C(0), guarded<uint64_t>::g(UINT64_C(5))) +
+       gget<uint64_t>(UINT64_C(7), guarded<uint64_t>::n()));
 
   template <typename T1, typename F0>
   static T1 sel(F0 &&dec, T1 def, uint64_t n, T1 a) {
@@ -207,9 +205,9 @@ struct PropBinderBeforeTypeBinder {
     }
   }
 
-  static inline const uint64_t selected = sel<uint64_t>(
-      [](uint64_t n) { return Nat::eq_dec(n, UINT64_C(2)); },
-      crane::obj(UINT64_C(0)), UINT64_C(2), crane::obj(UINT64_C(6)));
+  static inline const uint64_t selected =
+      sel<uint64_t>([](uint64_t n) { return Nat::eq_dec(n, UINT64_C(2)); },
+                    UINT64_C(0), UINT64_C(2), UINT64_C(6));
 };
 
 #endif // INCLUDED_PROP_BINDER_BEFORE_TYPE_BINDER

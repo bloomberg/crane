@@ -137,10 +137,10 @@ public:
 struct AbsurdProofOnlyDefinition {
   static uint64_t absurd_nat();
   static inline const uint64_t r1 =
-      (Nat::eq_dec(UINT64_C(0), UINT64_C(1)) ? absurd_nat : UINT64_C(9));
+      (Nat::eq_dec(UINT64_C(0), UINT64_C(1)) ? absurd_nat() : UINT64_C(9));
   static List<uint64_t> absurd_list();
   static inline const uint64_t r2 =
-      (Nat::eq_dec(UINT64_C(0), UINT64_C(1)) ? absurd_list.length()
+      (Nat::eq_dec(UINT64_C(0), UINT64_C(1)) ? absurd_list().length()
                                              : UINT64_C(9));
 };
 
