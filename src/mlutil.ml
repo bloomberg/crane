@@ -1607,18 +1607,20 @@ let rec tmp_head_lams = function
     for later linear reduction (this helps the inlining of recursors)} *)
 
 let rec ast_glob_subst s t =
-  (* The body of [refe] at the type arguments [tys] an occurrence names:
-     inlined, its own type variables stand for nothing in the caller.  Only
-     where the occurrence names every one: an erased argument says nothing,
-     and a body read at some of the caller's types while keeping its own
-     variables elsewhere would mix the two numberings -- [Fix_F]'s family
-     [P], erased where Equations calls it, keeps the body as it is. *)
+  (* The body of [refe] at the type arguments [tys] an occurrence names,
+     with cells of its own ({!freshen_metas}).  Inlined, the body's type
+     variables stand for nothing in the caller, so each is replaced: by the
+     type the occurrence names, or, where it leaves one erased, by a hole
+     ([Fix_F]'s family [P], erased where Equations calls it), which the
+     caller's own reconstruction may fill.  None of the body's variables
+     survives to be read in the caller's numbering. *)
   let body refe tys =
-    let b = Refmap'.find refe s in
-    let informative = function Tdummy _ | Tunknown -> false | _ -> true in
-    if tys <> [] && List.for_all informative tys then
+    let b = freshen_metas (Refmap'.find refe s) in
+    if tys = [] then b
+    else
+      let informative = function Tdummy _ | Tunknown -> false | _ -> true in
+      let tys = List.map (fun t -> if informative t then t else new_meta ()) tys in
       ast_map_types (type_subst_list tys) b
-    else b
   in
   match t with
   | MLapp ((MLglob ((GlobRef.ConstRef kn as refe), tys) as f), a) ->
