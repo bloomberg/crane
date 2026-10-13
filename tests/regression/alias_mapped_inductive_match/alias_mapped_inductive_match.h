@@ -4,7 +4,6 @@
 #include <cstdint>
 #include <optional>
 #include <utility>
-#include <variant>
 
 struct AliasMappedInductiveMatch {
   struct M {

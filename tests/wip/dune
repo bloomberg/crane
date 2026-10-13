@@ -217,17 +217,6 @@
   (deps interp_state_dict.t.exe)
   (action (run ./interp_state_dict.t.exe))))
 
-(subdir alias_mapped_inductive_match
- (rule
-  (targets alias_mapped_inductive_match.t.exe)
-  (deps AliasMappedInductiveMatch.vo alias_mapped_inductive_match.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} alias_mapped_inductive_match.t.exe alias_mapped_inductive_match.cpp alias_mapped_inductive_match.t.cpp)))
- (rule
-  (alias runtest)
-  (deps alias_mapped_inductive_match.t.exe)
-  (action (run ./alias_mapped_inductive_match.t.exe))))
-
 (subdir alias_thunk_reference
  (rule
   (targets alias_thunk_reference.t.exe)

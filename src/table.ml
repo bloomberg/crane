@@ -3171,7 +3171,7 @@ let trivially_copyable_heads =
     Both keys are needed because the question is asked from both sides: a
     [Tglob] still knows its {!GlobRef.t}, while a type Crane has already
     rendered to a name has nothing left but the name. *)
-let trivially_copyable_refs = Summary.ref Ref.User.Set.empty ~name:"CraneExtrTCRefs"
+let trivially_copyable_refs = Summary.ref Ref.Can.Set.empty ~name:"CraneExtrTCRefs"
 
 (** True when [s] names a C++ scalar type that is trivially copyable, or names
     a type the user declared with [Crane TriviallyCopyable].
@@ -3228,7 +3228,7 @@ let trivially_copyable_object : GlobRef.t * string -> obj =
        ~cache:(fun (r, s) ->
          trivially_copyable_heads :=
            CString.Set.add s !trivially_copyable_heads;
-         trivially_copyable_refs := Ref.User.Set.add r !trivially_copyable_refs )
+         trivially_copyable_refs := Ref.Can.Set.add r !trivially_copyable_refs )
        ~subst:(Some (fun (sub, (r, s)) -> (fst (subst_global sub r), s)))
        ~discharge:(fun x -> Some x)
 
@@ -3236,7 +3236,7 @@ let trivially_copyable_object : GlobRef.t * string -> obj =
     [Crane TriviallyCopyable].  The declaration is conditional: the caller
     must still check the type arguments. *)
 let is_trivially_copyable_ref (r : GlobRef.t) : bool =
-  Ref.User.Set.mem r !trivially_copyable_refs
+  Ref.Can.Set.mem r !trivially_copyable_refs
 
 (** Declare that the C++ type each of [l] is mapped to is trivially copyable
     whenever its type arguments are.
@@ -3282,9 +3282,14 @@ let escape_reserved_struct_name s =
 
 let find_type_custom r = Ref.Can.Map.find r !customs
 
-let custom_matchs = Summary.ref Ref.User.Map.empty ~name:"CraneExtrCustomMatchs"
+(* The rest of a mapping -- its match template, its element wrapping and
+   drain, its includes, its numeral and void forms, whether it is trivially
+   copyable -- is keyed as [customs] is, by the definition: a mapped
+   inductive reached through a module alias gets all of its mapping or none
+   of it. *)
+let custom_matchs = Summary.ref Ref.Can.Map.empty ~name:"CraneExtrCustomMatchs"
 
-let add_custom_match r s = custom_matchs := Ref.User.Map.add r s !custom_matchs
+let add_custom_match r s = custom_matchs := Ref.Can.Map.add r s !custom_matchs
 
 (* Completeness-aware element wrapping (see WRAP.md).
 
@@ -3295,11 +3300,11 @@ let add_custom_match r s = custom_matchs := Ref.User.Map.add r s !custom_matchs
    type/nil templates spell the (possibly wrapped) element with [%elem]; the
    match/cons templates keep [%t0]/[%aN] (bare — relying on the wrapper's
    implicit conversions), so nothing is boxed unless the element is recursive. *)
-let boxed_wrappers = Summary.ref Ref.User.Map.empty ~name:"CraneExtrBoxedWrap"
+let boxed_wrappers = Summary.ref Ref.Can.Map.empty ~name:"CraneExtrBoxedWrap"
 
-let add_boxed_wrapper r s = boxed_wrappers := Ref.User.Map.add r s !boxed_wrappers
+let add_boxed_wrapper r s = boxed_wrappers := Ref.Can.Map.add r s !boxed_wrappers
 
-let find_boxed_wrapper_opt r = Ref.User.Map.find_opt r !boxed_wrappers
+let find_boxed_wrapper_opt r = Ref.Can.Map.find_opt r !boxed_wrappers
 
 (* Custom drain templates (iterative-destructor support). Maps a custom container
    inductive (e.g. [list] mapped to [std::deque] / [immer::flex_vector]) to the
@@ -3309,11 +3314,11 @@ let find_boxed_wrapper_opt r = Ref.User.Map.find_opt r !boxed_wrappers
    expression; [%yield(e)] pushes child [e] onto the worklist. Without this the
    iterative destructor assumes a smart-pointer-wrapped container
    ([use_count]/[reset]), which is invalid for bare value-type containers. *)
-let custom_drains = Summary.ref Ref.User.Map.empty ~name:"CraneExtrCustomDrains"
+let custom_drains = Summary.ref Ref.Can.Map.empty ~name:"CraneExtrCustomDrains"
 
-let add_custom_drain r s = custom_drains := Ref.User.Map.add r s !custom_drains
+let add_custom_drain r s = custom_drains := Ref.Can.Map.add r s !custom_drains
 
-let find_custom_drain_opt r = Ref.User.Map.find_opt r !custom_drains
+let find_custom_drain_opt r = Ref.Can.Map.find_opt r !custom_drains
 
 (* Set of inductives that recurse *through* a boxed-element container (e.g.
    [json_value] with a [list json_value] field). Populated during inductive
@@ -3347,13 +3352,13 @@ let indref_of_match pv =
 
 let is_custom_match pv =
   match indref_of_match pv with
-  | r -> Ref.User.Map.mem r !custom_matchs
+  | r -> Ref.Can.Map.mem r !custom_matchs
   | exception Not_found -> false
 
 let find_custom_match pv =
   let r = indref_of_match pv in
   mark_custom_used r;
-  Ref.User.Map.find r !custom_matchs
+  Ref.Can.Map.find r !custom_matchs
 
 let find_custom_ctor_templates (ip : Names.inductive) =
   let mib = Global.lookup_mind (fst ip) in
@@ -3447,16 +3452,16 @@ let in_custom_drains : GlobRef.t * string -> obj =
    unused mappings (e.g. PrimArray in a file that only uses PrimInt63) from
    injecting spurious #include directives. *)
 
-let ref_imports = Summary.ref Ref.User.Map.empty ~name:"CraneRefImports"
+let ref_imports = Summary.ref Ref.Can.Map.empty ~name:"CraneRefImports"
 
 let add_ref_import r s =
   if not (String.is_empty s) then
     let existing =
-      match Ref.User.Map.find_opt r !ref_imports with
+      match Ref.Can.Map.find_opt r !ref_imports with
       | Some s -> s
       | None -> StringSet.empty
     in
-    ref_imports := Ref.User.Map.add r (StringSet.add s existing) !ref_imports
+    ref_imports := Ref.Can.Map.add r (StringSet.add s existing) !ref_imports
 
 let ref_imports_object : GlobRef.t * string -> obj =
   declare_object
@@ -3466,7 +3471,7 @@ let ref_imports_object : GlobRef.t * string -> obj =
        ~subst:(Some (fun (sub, (r, s)) -> (fst (subst_global sub r), s)))
 
 let get_ref_import_list r =
-  match Ref.User.Map.find_opt r !ref_imports with
+  match Ref.Can.Map.find_opt r !ref_imports with
   | Some imports -> StringSet.elements imports
   | None -> []
 
@@ -3482,7 +3487,7 @@ let get_custom_imports () =
   let used_imports =
     Ref.User.Set.fold
       (fun r acc ->
-        match Ref.User.Map.find_opt r !ref_imports with
+        match Ref.Can.Map.find_opt r !ref_imports with
         | Some imports -> StringSet.union imports acc
         | None -> acc )
       !used_refs
@@ -3802,17 +3807,17 @@ let extract_monad m b r s imports =
     handle_monad_extraction mon bind ret s imports
   | _ -> error_constant ?loc:m.CAst.loc mon
 
-let void_ty = Summary.ref Ref.User.Map.empty ~name:"CraneVoidTy"
+let void_ty = Summary.ref Ref.Can.Map.empty ~name:"CraneVoidTy"
 
-let ghost_tm = Summary.ref Ref.User.Map.empty ~name:"CraneVoidTm"
+let ghost_tm = Summary.ref Ref.Can.Map.empty ~name:"CraneVoidTm"
 
-let add_void_ty v g = void_ty := Ref.User.Map.add v g !void_ty
+let add_void_ty v g = void_ty := Ref.Can.Map.add v g !void_ty
 
-let add_ghost_tm v g = ghost_tm := Ref.User.Map.add g v !ghost_tm
+let add_ghost_tm v g = ghost_tm := Ref.Can.Map.add g v !ghost_tm
 
-let is_void v = Ref.User.Map.mem v !void_ty
+let is_void v = Ref.Can.Map.mem v !void_ty
 
-let is_ghost g = Ref.User.Map.mem g !ghost_tm
+let is_ghost g = Ref.Can.Map.mem g !ghost_tm
 
 (** Cached GlobRef for Rocq's [unit] type and [tt] constructor. *)
 let unit_type_ref : GlobRef.t option ref = ref None
@@ -3939,24 +3944,24 @@ type numeral_info = {
        info can still ask what C++ type the literal has to fit in. *)
 }
 
-let numeral_table = Summary.ref Ref.User.Map.empty ~name:"CraneExtrNumeral"
+let numeral_table = Summary.ref Ref.Can.Map.empty ~name:"CraneExtrNumeral"
 
 (* Reverse lookup: converter function → numeral inductive it targets. *)
-let converter_table = Summary.ref Ref.User.Map.empty ~name:"CraneExtrNumeralConv"
+let converter_table = Summary.ref Ref.Can.Map.empty ~name:"CraneExtrNumeralConv"
 
 let add_numeral_inductive r info =
-  numeral_table := Ref.User.Map.add r info !numeral_table;
+  numeral_table := Ref.Can.Map.add r info !numeral_table;
   List.iter
-    (fun conv -> converter_table := Ref.User.Map.add conv r !converter_table)
+    (fun conv -> converter_table := Ref.Can.Map.add conv r !converter_table)
     info.num_converters
 
-let is_numeral_inductive r = Ref.User.Map.mem r !numeral_table
+let is_numeral_inductive r = Ref.Can.Map.mem r !numeral_table
 
-let get_numeral_info r = Ref.User.Map.find_opt r !numeral_table
+let get_numeral_info r = Ref.Can.Map.find_opt r !numeral_table
 
-let is_numeral_converter r = Ref.User.Map.mem r !converter_table
+let is_numeral_converter r = Ref.Can.Map.mem r !converter_table
 
-let numeral_ind_of_converter r = Ref.User.Map.find_opt r !converter_table
+let numeral_ind_of_converter r = Ref.Can.Map.find_opt r !converter_table
 
 let in_numeral : GlobRef.t * numeral_info -> obj =
   declare_object
