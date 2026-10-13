@@ -2583,21 +2583,19 @@ let deducible_tvars_of_glob id =
 let rec infer_ml_body_type (a : ml_ast) : ml_type option =
   match a with
   | MLapp (MLglob ({callee = r; _} as use), args) ->
-    let tys = Global_use.legacy_source_order use in
     ( match find_type_opt r with
     | Some ty ->
       (* Instantiate type schema variables with actual type arguments -- the
-         ones the call site carries, or, where it carries none, the ones its
-         arguments imply. *)
-      let tys =
-        if tys <> [] then tys
+         ones the call site wrote, by variable, or, where it wrote none, the
+         ones its arguments imply. *)
+      let ty =
+        if Global_use.legacy_source_order use <> [] then
+          Mlutil.instantiate_written ~reader:"infer_ml_body_type" use ty
         else
-          tvar_instantiation ty
-            (List.filter (function MLdummy _ -> false | _ -> true) args)
-      in
-      let ty = match tys with
-        | [] -> ty
-        | _ -> Mlutil.type_subst_list tys ty
+          Mlutil.type_subst_list
+            (tvar_instantiation ty
+               (List.filter (function MLdummy _ -> false | _ -> true) args) )
+            ty
       in
       strip_tarr_n (count_real_ml_args args) ty
     | None -> None )
@@ -3172,11 +3170,10 @@ let rec ml_body_returns_erased_field = function
       ( ( MLglob ({callee = r; _} as use)
         | MLmagic (_, MLglob ({callee = r; _} as use)) ),
         args ) as full ->
-    let tys = Global_use.legacy_source_order use in
     let direct =
       match find_type_opt r with
       | Some ty ->
-        let ty = match tys with [] -> ty | _ -> Mlutil.type_subst_list tys ty in
+        let ty = Mlutil.instantiate_written ~reader:"ml_body_returns_erased_field" use ty in
         ( match strip_tarr_n (count_real_ml_args args) ty with
         | Some ret_ty -> ml_return_type_is_erased ret_ty
         | None -> false )

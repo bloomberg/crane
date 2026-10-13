@@ -105,22 +105,19 @@ let curry_value_to_expected env ?expected_ty ?(callee_site = Declared) ?(exact =
     in
     nest params (if n_outer < List.length params then expected_ty else None)
 
-(** The type of the global [x] at the type arguments [tys] a use names it
-    at.  An adapter's parameters are spelled in the caller's scope, so the
+(** The type of the global [use] names, at the type arguments the use wrote.
+    An adapter's parameters are spelled in the caller's scope, so the
     callee's own type variables must not survive into them: this site's type
     arguments are what they stand for. *)
-let instantiated_type ~tys x =
+let instantiated_type use =
   Option.map
-    (fun ml_ty ->
-      match tys with
-      | [] -> ml_ty
-      | _ -> ( try Mlutil.type_subst_list tys ml_ty with _ -> ml_ty ) )
-    (find_type_opt x)
+    (Mlutil.instantiate_written ~reader:"instantiated_type" use)
+    (find_type_opt use.callee)
 
-(** {!curry_value_to_expected} for the global [x], called at [tys]. *)
-let curry_to_expected env ?expected_ty ?(tys = []) x cglob =
-  let decl_ty = find_type_opt x in
-  let ml_ty = instantiated_type ~tys x in
+(** {!curry_value_to_expected} for the global [use] names. *)
+let curry_to_expected env ?expected_ty use cglob =
+  let decl_ty = find_type_opt use.callee in
+  let ml_ty = instantiated_type use in
   let callee_site =
     match Option.map (cpp_of_ml env) decl_ty with
     | Some (Tfun (dom, _)) -> Declared_at (List.length dom)
@@ -1564,8 +1561,8 @@ let plan_call ~slot ?expected_ty env id tys args =
     cp_result_tvar_map = result_tvar_map
   }
 
-(** What a reference to global [x], instantiated at [tys], evaluates to as it
-    is printed.
+(** What a reference to global [x], its type instantiated by [instantiate],
+    evaluates to as it is printed.
 
     Usually that is simply the global's type.  The exception is a [%result]
     block template, which prints as an immediately invoked lambda: the block
@@ -1577,7 +1574,7 @@ let plan_call ~slot ?expected_ty env id tys args =
     itself.  Consumers must not re-derive it -- doing so means reading the
     uninstantiated scheme back out of the front-end table, answering
     [List<T1>] where [List<uint64_t>] was meant. *)
-let glob_yields env x tys =
+let glob_yields env x instantiate =
   match find_type_opt x with
   | None -> None
   | Some ml_ty -> (
@@ -1587,7 +1584,7 @@ let glob_yields env x tys =
          | Some tmpl -> (Minicpp.inline_template tmpl).it_form = Block_iife
          | None -> false
     in
-    let inst = Mlutil.type_subst_list tys ml_ty in
+    let inst = instantiate ml_ty in
     let value_ty = if is_result_block then ml_codomain inst else inst in
     try Some (cpp_of_ml env value_ty)
     with e when CErrors.noncritical e -> None )

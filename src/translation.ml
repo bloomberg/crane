@@ -1443,10 +1443,9 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
      {!static_projection_instance}. *)
   | MLapp (MLglob ({callee = x; _} as use), args)
     when static_projection_instance env x args <> None -> (
-    let tys = Global_use.legacy_source_order use in
     let inst = Option.get (static_projection_instance env x args) in
-    match static_projection_missing env x tys args inst with
-    | [] -> project_through_instance env x tys args inst
+    match static_projection_missing env use args inst with
+    | [] -> project_through_instance env use args inst
     | missing ->
       let k = List.length missing in
       let call =
@@ -1489,12 +1488,11 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
        yields is the codomain of *that*, not of the general scheme. *)
     let callee_ty_inst =
       match (f, callee_ty) with
-      | MLglob ({callee = id; _} as use), Some ty ->
-        let tys = Global_use.legacy_source_order use in
+      | MLglob use, Some ty ->
         let value_args =
           List.filter (function MLdummy _ -> false | _ -> true) args
         in
-        Some (instantiate_at_call id tys value_args ty)
+        Some (instantiate_use_at_call use value_args ty)
       | _ -> callee_ty
     in
     (* A callee typed by a function alias ([church]) hands back whatever the
@@ -2737,7 +2735,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     | Tfun (dom, cod) ->
       eta_fun ?expected_ty env (MLglob use) []
     | _ ->
-      mk_cppglob ?yields:(glob_yields env x tys)
+      mk_cppglob
+        ?yields:(glob_yields env x (Mlutil.instantiate_written ~reader:"glob_yields" use))
         x (template_params_of_ml ~site:Through_tvar env tys) )
   | MLglob ({callee = x; _} as use) ->
     let tys = Global_use.legacy_source_order use in
@@ -2812,7 +2811,9 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
         | _ -> tys_cpp )
       | _ -> tys_cpp
     in
-    let yields = glob_yields env x tys in
+    let yields =
+      glob_yields env x (Mlutil.instantiate_written ~reader:"glob_yields" use)
+    in
     let cglob =
       match filter_erased_type_args tys_cpp with
       | [] -> mk_cppglob ?yields x (phantom_prefix_args x)
@@ -2869,13 +2870,13 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                    (function Tfun _ as f -> not (is_fully_erased_fun_ty f) | _ -> false)
                    dom ->
             curry_value_to_expected env ~exact:true
-              (Option.map expand_ml_fun_alias (instantiated_type ~tys x)) cglob
+              (Option.map expand_ml_fun_alias (instantiated_type use)) cglob
           | _ -> cglob
         in
         ( match into with
         | Some into -> coerce ~from ~into cglob
         | None -> cglob )
-      | _ -> curry_to_expected env ?expected_ty ~tys x cglob )
+      | _ -> curry_to_expected env ?expected_ty use cglob )
   | MLcons (_ty, r, _ts)
     when match r with
          | GlobRef.ConstructRef ((kn, i), _) ->
@@ -5099,7 +5100,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
    concrete, so the term is an ordinary application and not the single-branch
    match a projection through an instance {e variable} extracts to; the C++ is
    the same either way. *)
-and project_through_instance env x tys args inst =
+and project_through_instance env use args inst =
+  let x = use.callee and tys = Global_use.legacy_source_order use in
   let operands =
     List.filter
       (fun a ->
@@ -5130,7 +5132,7 @@ and project_through_instance env x tys args inst =
 
      Only a suffix as long as the operand list is safe to read. *)
   let operand_ml_tys =
-    let doms = projection_value_domains env x tys inst in
+    let doms = projection_value_domains env use inst in
     let extra = List.length doms - List.length operands in
     if extra >= 0 then List.filteri (fun i _ -> i >= extra) doms else []
   in
@@ -5964,7 +5966,9 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
                 | _ -> false )
               | None -> false) ->
         CPPscope (CPPtype_name inst_ty, Common.id_of_global Term id, method_targs)
-      | _ -> mk_cppglob ?yields:(glob_yields env id tys) id all_type_args
+      | _ ->
+        mk_cppglob ?yields:(glob_yields env id (Mlutil.type_subst_list tys)) id
+          all_type_args
     in
     (* Check if this is a typeclass instance used as a type (for :: access).
        When all args are consumed (domain and args both empty after filtering),
@@ -6807,9 +6811,8 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
     let callee_fun_ml_ty =
       match f with
         | MLglob ({callee = r; _} as use) when Global_use.legacy_source_order use <> [] ->
-          let tys = Global_use.legacy_source_order use in
           (match find_type_opt r with
-           | Some ty -> Some (Mlutil.type_subst_list tys ty)
+           | Some ty -> Some (Mlutil.instantiate_written ~reader:"callee_fun_ml_ty" use ty)
            | None -> infer_ml_body_type f)
         | _ ->
           ( match infer_ml_body_type f with
@@ -8336,10 +8339,9 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
   let scrut_callee_ret_erased =
     match flatten_app t with
     | MLapp (MLglob ({callee = r; _} as use), args) ->
-      let tys = Global_use.legacy_source_order use in
       ( match find_type_opt r with
       | Some fty ->
-        let fty = match tys with [] -> fty | _ -> Mlutil.type_subst_list tys fty in
+        let fty = Mlutil.instantiate_written ~reader:"scrut_callee_ret_erased" use fty in
         ( match strip_tarr_n (count_real_ml_args args) fty with
         | Some rty ->
           (* Both spellings of "is a [std::any] at run time" are needed here:

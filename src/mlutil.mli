@@ -73,6 +73,10 @@ val debug_ml_type : ml_type -> string
     no variable replaces nothing. *)
 val subst_written_evidence : global_use -> ml_type -> ml_type
 
+(** Whether [use] wrote an argument for each of its callee's variables
+    [1 .. n] at that variable's own binder. *)
+val written_covers : global_use -> int -> bool
+
 (** {!subst_written_evidence}, the reading a migrated reader makes.  Under
     [CRANE_PROBE] it is compared with the positional reading of the same
     list, and a difference is recorded as [SUBST_DIFF], naming [reader], the

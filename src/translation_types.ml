@@ -466,13 +466,20 @@ let dict_carrier_ml_type id args =
     every type as the carrier applied -- so the dictionary argument has to be
     read first, or a [bind]'s [m A] resolves to nothing: erased, where the
     type argument written for it is a dummy. *)
+let with_dict_carrier id value_args ty =
+  match dict_carrier_ml_type id value_args with
+  | Some carrier -> subst_dict_carrier carrier ty
+  | None -> ty
+
 let instantiate_at_call id tys value_args ty =
-  let ty =
-    match dict_carrier_ml_type id value_args with
-    | Some carrier -> subst_dict_carrier carrier ty
-    | None -> ty
-  in
+  let ty = with_dict_carrier id value_args ty in
   try type_subst_list tys ty with _ -> ty
+
+(** {!instantiate_at_call} at the type arguments [use] wrote, read by the
+    callee's scheme variables. *)
+let instantiate_use_at_call use value_args ty =
+  Mlutil.instantiate_written ~reader:"instantiate_use_at_call" use
+    (with_dict_carrier use.callee value_args ty)
 
 (** What an application of a global yields, as an ML type.
 
@@ -489,13 +496,12 @@ let ml_app_result_type (f : ml_ast) (args : ml_ast list) : ml_type option =
   let ( let* ) = Option.bind in
   match f with
   | MLglob ({callee = id; _} as use) ->
-    let tys = Global_use.legacy_source_order use in
     let value_args =
       List.filter (function MLdummy _ -> false | _ -> true) args
     in
     let* ty = find_type_opt id in
     Ml_type_util.ml_codomain_after (List.length value_args)
-      (instantiate_at_call id tys value_args ty)
+      (instantiate_use_at_call use value_args ty)
   | _ -> None
 
 (** The binder a match scrutinee names, seen through the wrappers that leave
@@ -1395,8 +1401,8 @@ let static_projection_instance env x args =
    its class type; without it every [m A] absorbs its argument and says
    [std::any].  The carrier, the dictionary and the erased type arguments
    all stand in front of the value parameters. *)
-let projection_value_domains env x tys inst =
-  match Table.find_type x with
+let projection_value_domains env use inst =
+  match Table.find_type use.callee with
   | exception Not_found -> []
   | ty ->
     let ty =
@@ -1404,7 +1410,8 @@ let projection_value_domains env x tys inst =
       | Tglob (_, [carrier], _) -> subst_dict_carrier carrier ty
       | _ -> ty
     in
-    ml_domains (if tys = [] then ty else Mlutil.type_subst_list tys ty)
+    ml_domains
+      (Mlutil.instantiate_written ~reader:"projection_value_domains" use ty)
     |> List.filter (fun t ->
            match resolve_tmeta t with
            | Tdummy _ -> false
@@ -1413,15 +1420,15 @@ let projection_value_domains env x tys inst =
 (* The operands a singleton method's call through [inst] leaves out: a
    static member takes them all, so a partial application closes over the
    rest. *)
-let static_projection_missing env x tys args inst =
-  if Table.is_inline_custom x then []
+let static_projection_missing env use args inst =
+  if Table.is_inline_custom use.callee then []
   else
     let operands =
       List.filter (fun a -> not (Mlutil.isMLdummy a || a == inst)) args
     in
     List.filteri
       (fun i _ -> i >= List.length operands)
-      (projection_value_domains env x tys inst)
+      (projection_value_domains env use inst)
 
 (** The shape a value physically has once it has been through a [std::any]:
     unchanged for a leaf, and one level of template with every argument boxed

@@ -29,18 +29,24 @@ let definitions struc =
   List.iter (fun (_, l) -> elems l) struc;
   !defs
 
-(* The body of a global this pass may unfold, at the type arguments [tys]
-   of the use: its annotations name the definition's own type variables,
-   which mean something else where the body lands.  [None] for a mapped
-   global, whose text is what is emitted, and where [tys] does not give
-   every variable its type mentions. *)
-let body_of defs g tys =
+(* The body of the global [use] names, where this pass may unfold it, at the
+   type arguments the use wrote for its variables: its annotations name the
+   definition's own type variables, which mean something else where the body
+   lands.  [None] for a mapped global, whose text is what is emitted, and
+   where the use did not write an argument for every variable its type
+   mentions -- an open instantiation is declined, not guessed. *)
+let body_of defs use =
+  let g = use.callee in
   if Table.is_custom g then None
   else
     let at body ty =
-      if Mlutil.type_maxvar ty = 0 then Some body
-      else if Mlutil.type_maxvar ty <= List.length tys then
-        Some (Mlutil.ast_map_types (Mlutil.type_subst_list tys) body)
+      let n = Mlutil.type_maxvar ty in
+      if n = 0 then Some body
+      else if Mlutil.written_covers use n then
+        Some
+          (Mlutil.ast_map_types
+             (Mlutil.instantiate_written ~reader:"ml_specialize.body_of" use)
+             body )
       else None
     in
     match Ref.User.Map.find_opt g defs with
@@ -107,15 +113,15 @@ let instantiate b args =
 let known_ctor defs e =
   match e with
   | MLcons _ -> Some e
-  | MLapp (MLglob ({callee = g; _} as use), args) -> (
-    match body_of defs g (Global_use.legacy_source_order use) with
+  | MLapp (MLglob use, args) -> (
+    match body_of defs use with
     | Some b -> (
       match (snd (Mlutil.collect_lams b), instantiate b args) with
       | MLcons _, Some e' -> Some (Mlutil.normalize e')
       | _ -> None )
     | None -> None )
-  | MLglob ({callee = g; _} as use) -> (
-    match body_of defs g (Global_use.legacy_source_order use) with Some (MLcons _ as c) -> Some c | _ -> None )
+  | MLglob use -> (
+    match body_of defs use with Some (MLcons _ as c) -> Some c | _ -> None )
   | _ -> None
 
 (* [e] with each [let] of a value read at most once substituted: a
@@ -148,7 +154,7 @@ and unfold defs shrunk fuel use args =
   let known = List.map (known_ctor defs) args in
   if List.for_all Option.is_empty known then None
   else
-    match body_of defs use.callee (Global_use.legacy_source_order use) with
+    match body_of defs use with
     | None -> None
     | Some b -> (
       let args' = List.map2 (fun a k -> Option.default a k) args known in
@@ -250,19 +256,19 @@ let rec domains n ty =
     | Tarr (d, c) -> Option.map (fun ds -> d :: ds) (domains (n - 1) c)
     | _ -> None
 
-(** [specialize f fd tys args] is the call [f args] (at type arguments
-    [tys]) with [f] specialized to the lambda among [args] that it passes
+(** [specialize f fd use args] is the call [f args] (at the type arguments
+    [use] wrote) with [f] specialized to the lambda among [args] that it passes
     unchanged to itself: a local fixpoint applied to the other arguments. *)
-let specialize f fd tys args =
+let specialize f fd use args =
   let ps, b0 = params_of fd in
   let k = List.length ps in
   let candidate j a = j < k && (match a with MLlam _ -> true | _ -> false) && static_param f k j b0 in
   match List.find_opt (fun (j, a) -> candidate j a) (List.mapi (fun j a -> (j, a)) args) with
   | None -> None
   | Some (j, lam) -> (
-    if Mlutil.type_maxvar fd.fd_type > List.length tys then None
+    if not (Mlutil.written_covers use (Mlutil.type_maxvar fd.fd_type)) then None
     else
-      let inst = Mlutil.type_subst_list tys in
+      let inst = Mlutil.instantiate_written ~reader:"ml_specialize.specialize" use in
       let fty = inst fd.fd_type in
       match (drop_domain j fty, domains k fty) with
       | Some spec_ty, Some doms ->
@@ -305,7 +311,7 @@ let decl defs r body ty =
   | MLapp (MLglob ({callee = f; _} as use), args) when not (Table.is_custom r) -> (
     match Ref.User.Map.find_opt f defs with
     | Some (Fix fd) when not (Table.is_custom f) -> (
-      match specialize f fd (Global_use.legacy_source_order use) args with
+      match specialize f fd use args with
       | None -> None
       | Some spec ->
         let shrunk = ref false in

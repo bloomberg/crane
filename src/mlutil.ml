@@ -587,6 +587,10 @@ let subst_written_evidence use t =
         evidence )
     t
 
+let written_covers use n =
+  let written = List.map (fun (v, _) -> Scheme.Var.ordinal v) (Global_use.scheme_evidence use) in
+  List.for_all (fun j -> List.mem j written) (List.init n succ)
+
 let instantiate_written ~reader use t =
   let by_variable = subst_written_evidence use t in
   if Probe.enabled () then begin
@@ -1060,12 +1064,12 @@ let recover_erased_types ?only ?(refine_only = false) (expected : ml_type)
      declaration actually spells are offered, which is exactly the prefix.
      Requiring the lengths to agree instead withdrew every offer at such a
      call -- including the ones the declaration named perfectly well. *)
-  let callee_doms r tys args =
-    match (try Some (Table.find_type r) with Not_found -> None) with
+  let callee_doms use args =
+    match (try Some (Table.find_type use.callee) with Not_found -> None) with
     | None -> []
     | Some sch ->
       let doms, _ =
-        type_decomp (if tys = [] then sch else type_subst_list tys sch)
+        type_decomp (instantiate_written ~reader:"callee_doms" use sch)
       in
       (* An erased type argument is an arrow in the declaration and nothing in
          the application, so the two are only comparable once it is dropped.
@@ -1147,8 +1151,7 @@ let recover_erased_types ?only ?(refine_only = false) (expected : ml_type)
       MLcase (ty, go env None scrut, Array.map branch branches)
     | MLcons (ty, c, args) ->
       MLcons (better ~have:ty ~from:expected, c, List.map (go env None) args)
-    | MLapp ((MLglob ({callee = r; _} as use) as f), args)
-      when callee_doms r (Global_use.legacy_source_order use) args <> [] ->
+    | MLapp ((MLglob use as f), args) when callee_doms use args <> [] ->
       (* A lambda passed as an argument is the case with no second witness:
          its binder's type occurs nowhere in the enclosing declaration -- it
          is spelled only by the callee's parameter at that position, with this
@@ -1156,9 +1159,7 @@ let recover_erased_types ?only ?(refine_only = false) (expected : ml_type)
          same kind as the declared type, so it is pushed down the same way. *)
       MLapp
         ( f,
-          List.map2 (fun d e -> go env d e)
-            (callee_doms r (Global_use.legacy_source_order use) args)
-            args )
+          List.map2 (fun d e -> go env d e) (callee_doms use args) args )
     | MLapp (f, args) ->
       MLapp (go env None f, List.map (go env None) args)
     | MLmagic (m, e) -> MLmagic (m, go env expected e)
@@ -1664,21 +1665,21 @@ let rec ast_glob_subst s t =
      ([Fix_F]'s family [P], erased where Equations calls it), which the
      caller's own reconstruction may fill.  None of the body's variables
      survives to be read in the caller's numbering. *)
-  let body refe tys =
-    let b = freshen_metas (Ref.User.Map.find refe s) in
-    if tys = [] then b
-    else
-      let informative = function Tdummy _ | Tunknown -> false | _ -> true in
-      let tys = List.map (fun t -> if informative t then t else new_meta ()) tys in
-      ast_map_types (type_subst_list tys) b
+  let body use =
+    let b = freshen_metas (Ref.User.Map.find use.callee s) in
+    let informative = function Tdummy _ | Tunknown -> false | _ -> true in
+    let use =
+      Global_use.map_types (fun t -> if informative t then t else new_meta ()) use
+    in
+    ast_map_types (instantiate_written ~reader:"ast_glob_subst" use) b
   in
   match t with
-  | MLapp ((MLglob ({callee = GlobRef.ConstRef _ as refe; _} as use) as f), a) ->
+  | MLapp ((MLglob ({callee = GlobRef.ConstRef _; _} as use) as f), a) ->
     let a = List.map (fun e -> tmp_head_lams (ast_glob_subst s e)) a in
-    ( try linear_beta_red a (body refe (Global_use.legacy_source_order use))
+    ( try linear_beta_red a (body use)
       with Not_found -> MLapp (f, a) )
-  | MLglob ({callee = GlobRef.ConstRef _ as refe; _} as use) ->
-    (try body refe (Global_use.legacy_source_order use) with Not_found -> t)
+  | MLglob ({callee = GlobRef.ConstRef _; _} as use) ->
+    (try body use with Not_found -> t)
   | _ -> ast_map (ast_glob_subst s) t
 
 (** {1 Auxiliary functions used in simplification of ML cases} *)
