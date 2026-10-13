@@ -351,8 +351,8 @@ halist<T1, T2> HAList0::halist_remove(std::type_identity_t<EqDec<T1>> eq,
                                       const List<SigT<T1, T2>> &m) {
   return m.filter([=](const SigT<T1, T2> &k_v) {
     return !([&]() {
-      const auto &_sv =
-          Sumbool::bool_of_sumbool(EquivDec::equiv_dec(eq, k_v.projT1(), k));
+      const auto &_sv = Sumbool::bool_of_sumbool(
+          EquivDec::template equiv_dec<T1>(eq, k_v.projT1(), k));
       const auto &[x] = _sv;
       return x;
     }());
@@ -377,7 +377,7 @@ std::optional<T2> HAList0::halist_lookup(std::type_identity_t<EqDec<T1>> eq,
   } else {
     const auto &[a0, a1] = std::get<typename List<SigT<T1, T2>>::Cons>(l.v());
     const auto &[x0, a10] = a0;
-    if (EquivDec::equiv_dec(eq, x0, k)) {
+    if (EquivDec::template equiv_dec<T1>(eq, x0, k)) {
       return std::make_optional<T2>(a10);
     } else {
       return HAList0::template halist_lookup<T1, T2>(eq, k, *a1);

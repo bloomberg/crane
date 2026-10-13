@@ -32,8 +32,11 @@ let rec holes acc = function
    hole belongs to one use, and only a copy of that whole use may hold it
    again. *)
 let check_instantiation owners r inst =
-  if not (GlobRef.CanOrd.equal (Scheme.Id.owner (Scheme.Instantiation.scheme inst)) r)
-  then violation r "is instantiated at another declaration's scheme";
+  let owner = Scheme.Id.owner (Scheme.Instantiation.scheme inst) in
+  if not (GlobRef.UserOrd.equal owner r) then
+    violation r
+      ( "is instantiated at the scheme of "
+      ^ Pp.string_of_ppcmds (GlobRef.print owner) );
   let tys = solution_types inst in
   if List.exists Mlutil.type_has_meta tys then
     violation r "holds a metavariable in its frozen instantiation";
@@ -51,12 +54,7 @@ let check_instantiation owners r inst =
     (List.fold_left holes [] tys)
 
 let check_global_use owners use =
-  let r = use.callee in
-  if List.exists
-       (function Tdummy Kprop -> true | _ -> false)
-       (Global_use.legacy_source_order use)
-  then violation r "holds a proof placeholder, which no scheme variable stands for";
-  Option.iter (check_instantiation owners r) (Global_use.instantiation use)
+  Option.iter (check_instantiation owners use.callee) (Global_use.instantiation use)
 
 let structure struc =
   if Probe.checking () then

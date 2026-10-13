@@ -3081,7 +3081,7 @@ let regroup_crossing ~from ~into expr =
 let value_cpp_type env e =
   match strip_magic e with
   | MLrel j -> binder_cpp_type_or_derive env j
-  | MLglob ({callee = r; _} as use) when Global_use.legacy_source_order use = [] ->
+  | MLglob ({callee = r; _} as use) when Global_use.legacy_template_args use = [] ->
     Option.map (cpp_of_ml env) (find_type_opt r)
   | _ -> None
 

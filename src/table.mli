@@ -199,6 +199,11 @@ val add_cst_type : Constant.t -> constant_body -> Ml_schema.t -> unit
     @return [Some s] if found and the checksum matches, [None] otherwise *)
 val lookup_cst_type : Constant.t -> constant_body -> Ml_schema.t option
 
+(** The scheme recorded for a constant, without the checksum: for a
+    reference synthesised after extraction, which has no body to check
+    against. *)
+val constant_schema : Constant.t -> Ml_schema.t option
+
 (** Add inductive to cache.
     @param kn    the mutual inductive name being cached
     @param mib   the inductive body used as a checksum to detect stale entries

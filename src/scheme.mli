@@ -66,6 +66,12 @@ module Binder : sig
   val pp : t -> Pp.t
 end
 
+(** Identities of inference holes ({!Miniml.Thole}). *)
+module Hole : sig
+  (** A hole distinct from every other minted in this process. *)
+  val fresh : unit -> int
+end
+
 (** What a use solved a scheme variable to.  [Identity] is a rigid self-call
     inside the declaration's own fixpoint: the variable stands for itself. *)
 type 'ty solution =

@@ -59,6 +59,14 @@ module Binder = struct
   let pp b = Pp.(str "binder#" ++ int b)
 end
 
+module Hole = struct
+  let last = ref 0
+
+  let fresh () =
+    incr last;
+    !last
+end
+
 type 'ty solution =
   | Identity
   | Type of 'ty

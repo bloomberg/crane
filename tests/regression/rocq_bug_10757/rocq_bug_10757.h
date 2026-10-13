@@ -68,7 +68,7 @@ struct RocqBug10757 {
 
   template <typename T1, typename F0, typename F1>
   static Sig<T1> iterate(F0 &&beq, F1 &&f, const T1 &x) {
-    return iterate_func(beq, f, Sig<T1>::exist(x));
+    return iterate_func<T1>(beq, f, Sig<T1>::exist(x));
   }
 };
 

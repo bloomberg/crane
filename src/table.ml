@@ -226,6 +226,8 @@ let add_cst_type kn cb s = cst_types := Cmap_env.add kn (cb, s) !cst_types
 let lookup_cst_type kn cb =
   lookup_with_body_check (fun kn -> Cmap_env.find_opt kn !cst_types) kn cb
 
+let constant_schema kn = Option.map snd (Cmap_env.find_opt kn !cst_types)
+
 (** {2 Inductives table} *)
 
 let inductives =

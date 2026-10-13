@@ -1356,7 +1356,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
        as though it were a function. *)
     gen_expr ?expected_ty env absurd
   | MLapp (MLglob ({callee = r; _} as use), a1 :: l) when is_ret r ->
-    let ret_tys = Global_use.legacy_source_order use in
+    let ret_tys = Global_use.legacy_template_args use in
     if (!tctx).itree_mode = Reified then begin
       (* Reified mode: Ret produces ITree<R>::ret(value). Don't strip it. *)
       Table.require_itree_header ();
@@ -1403,7 +1403,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
        MLapp(MLglob(dcs), [x,f1,f2,l]) lets eta_fun see the complete argument
        list and generate a direct call. *)
     gen_expr ?expected_ty ~slot env (MLapp (g, inner_args @ outer_args))
-  | MLapp (MLglob {callee = r; _}, [arg]) when Table.is_numeral_converter r ->
+  | MLapp (MLglob ({callee = r; _} as use), [arg]) when Table.is_numeral_converter r ->
     (* Fold Number.uint/signed_int digit chain into a direct integer literal.
        Tries unsigned (of_num_uint) then signed (of_num_int).
        Falls through to eta_fun on failure. *)
@@ -1417,8 +1417,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       ( match folded with
       | Some n ->
         render_numeral info n
-      | None -> eta_fun env (MLglob (Global_use.legacy_untagged r [])) [arg] )
-    | None -> eta_fun env (MLglob (Global_use.legacy_untagged r [])) [arg] )
+      | None -> eta_fun env (MLglob use) [arg] )
+    | None -> eta_fun env (MLglob use) [arg] )
   | MLapp (MLcase (typ, scrut, pv), outer_args) when Array.length pv = 1 ->
     (* Flatten outer args into a single-branch case body.  A case with one
        branch is a destructuring and nothing else, whatever it scrutinises --
@@ -2485,7 +2485,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
          function names as first-class values. *)
       ( match a with
       | MLglob ({callee = r; _} as use) ->
-        let tys_inner = Global_use.legacy_source_order use in
+        let tys_inner = Global_use.legacy_template_args use in
         let ml_ty =
           match find_type_opt r with
           | Some ty -> ty
@@ -2728,7 +2728,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       eta_expand_to_expected ?expected_ty ~ml_arity ~returns_a_lambda
         ~arity:(List.length filtered_args) f )
   | MLglob ({callee = x; _} as use) when is_inline_custom x ->
-    let tys = Global_use.legacy_source_order use in
+    let tys = Global_use.legacy_template_args use in
     let ml_ty = find_type x in
     let ty = cpp_of_ml env ml_ty in
     ( match ty with
@@ -2739,7 +2739,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
         ?yields:(glob_yields env x (Mlutil.instantiate_written ~reader:"glob_yields" use))
         x (template_params_of_ml ~site:Through_tvar env tys) )
   | MLglob ({callee = x; _} as use) ->
-    let tys = Global_use.legacy_source_order use in
+    let tys = Global_use.legacy_template_args use in
     let tvars = get_current_type_vars () in
     let tys_cpp =
       List.map
@@ -5101,7 +5101,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
    match a projection through an instance {e variable} extracts to; the C++ is
    the same either way. *)
 and project_through_instance env use args inst =
-  let x = use.callee and tys = Global_use.legacy_source_order use in
+  let x = use.callee and tys = Global_use.legacy_template_args use in
   let operands =
     List.filter
       (fun a ->
@@ -5882,7 +5882,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
   let slot = {slot with eta_keep_moves = false} in
   match f with
   | MLglob ({callee = id; _} as use) ->
-    let tys = Global_use.legacy_source_order use in
+    let tys = Global_use.legacy_template_args use in
     let plan = plan_call ~slot ?expected_ty env id tys args in
     let {
       cp_excess_args = excess_args;
@@ -6810,7 +6810,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
        call goes through. *)
     let callee_fun_ml_ty =
       match f with
-        | MLglob ({callee = r; _} as use) when Global_use.legacy_source_order use <> [] ->
+        | MLglob ({callee = r; _} as use) when Global_use.legacy_template_args use <> [] ->
           (match find_type_opt r with
            | Some ty -> Some (Mlutil.instantiate_written ~reader:"callee_fun_ml_ty" use ty)
            | None -> infer_ml_body_type f)
@@ -10184,7 +10184,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
   (* | MLapp (MLglob {callee = h; _}, a1 :: a2 :: l) when is_hoist h -> gen_stmts env k
      (MLapp (a1, a2::[])) *)
   | MLapp (MLglob ({callee = r; _} as use), a1 :: a2 :: l) when is_bind r ->
-    let bind_tys = Global_use.legacy_source_order use in
+    let bind_tys = Global_use.legacy_template_args use in
     (* Reified mode: bind is a real function call, not desugared. *)
     if (!tctx).itree_mode = Reified then
       let saved_dead = (!tctx).move_dead_after in

@@ -373,7 +373,7 @@ let decl_of_term r a t =
   (* An instance of a singleton class stays an instance, whose method the
      fixpoint is. *)
   | MLfix (0, _, [|c|], _) when singleton_instance_class r = None ->
-    Dfix [{fd_ref = r; fd_body = ast_subst (MLglob (Global_use.legacy_untagged r [])) c; fd_type = t}]
+    Dfix [{fd_ref = r; fd_body = ast_subst (MLglob (Mlutil.self_reference r)) c; fd_type = t}]
     (* The [] ML type args are safe: gen_expr reads template args from the
        C++ environment, not from MLglob's arg list. *)
   | a -> Dterm (r, a, t)

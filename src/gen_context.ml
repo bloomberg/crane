@@ -576,7 +576,7 @@ let promoted_resolutions_of_body ?r ?ty b =
           let names = List.map Option.get names in
           let n = List.length names in
           let app =
-            MLapp (MLglob (Global_use.legacy_untagged inst []), List.init n (fun i -> MLrel (n - i)))
+            MLapp (MLglob (Mlutil.open_reference inst), List.init n (fun i -> MLrel (n - i)))
           in
           Option.iter (add_at class_ref inst)
             (ml_arg_to_template_type

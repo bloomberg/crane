@@ -66,6 +66,20 @@ val type_subst_fun : (int -> ml_type option) -> ml_type -> ml_type
 (** A one-line rendering of an ML type, for diagnostics. *)
 val debug_ml_type : ml_type -> string
 
+(** A reference to the declaration [r] that a pass synthesises: open
+    ({!Global_use.infer_all}) at [r]'s scheme -- the recorded one, or one
+    of the arity [r]'s registered type has -- and monomorphic for a
+    declaration quantifying nothing. *)
+val open_reference : GlobRef.t -> global_use
+
+(** A declaration's reference to itself in its own body
+    ({!Global_use.identity}). *)
+val self_reference : GlobRef.t -> global_use
+
+(** A call to [target] written at the caller's own variables, in order: what
+    a forwarder with [target]'s type writes. *)
+val forwarding_use : GlobRef.t -> global_use
+
 (** [subst_written_evidence use t] is [t], a type in [use]'s callee's
     scheme variables, with each variable the use wrote an argument for at
     that variable's own binder replaced by the argument.  A variable the use
@@ -117,10 +131,9 @@ module Partial : sig
   val resolve : (int -> ml_type option) -> t -> t
 end
 
-(** {!subst_written_evidence}, the reading a migrated reader makes.  Under
-    [CRANE_PROBE] it is compared with the positional reading of the same
-    list, and a difference is recorded as [SUBST_DIFF], naming [reader], the
-    callee, every entry's binder, variable and type, and both answers. *)
+(** {!subst_written_evidence}, the reading a substitution reader makes.
+    Under [CRANE_PROBE] it is compared with the reading at the use's solved
+    instantiation ([INSTW_same], [INSTW_differ], [INSTW_holes]). *)
 val instantiate_written : reader:string -> global_use -> ml_type -> ml_type
 
 (** Substitute type variables using an array of types.

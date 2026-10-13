@@ -36,10 +36,11 @@ type t
 (** The largest schematic variable [ty] mentions, [0] if none. *)
 val max_tvar : Miniml.ml_type -> int
 
-(** [make owner body layout] finalizes a scheme: its arity is the largest
-    variable [body] mentions, a binder numbered past it gets no variable, and
-    the identity is fresh.  Raises [Invalid_argument] if two binders claim
-    one variable. *)
+(** [make owner body layout] finalizes a scheme: every binder [layout]
+    numbers is a variable, whether or not [body] mentions it -- the scheme
+    quantifies what the source quantifies, and which of those survive into
+    the body is a fact about the body -- and the identity is fresh.  Raises
+    [Invalid_argument] if two binders claim one variable. *)
 val make : Names.GlobRef.t -> Miniml.ml_type -> raw_binder list -> t
 
 val id : t -> Scheme.Id.t

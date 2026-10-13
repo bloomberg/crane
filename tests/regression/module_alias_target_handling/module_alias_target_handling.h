@@ -1460,7 +1460,8 @@ struct N {
                                      const T1 &>
     static T1 max_case_strong(unsigned int n, unsigned int m, F2 &&compat,
                               const T1 &hl, const T1 &hr) {
-      CompareSpecT c = Datatypes::CompSpec2Type(n, m, compare(n, m));
+      CompareSpecT c =
+          Datatypes::template CompSpec2Type<unsigned int>(n, m, compare(n, m));
       switch (c) {
       case CompareSpecT::COMPGTT: {
         return compat(n, std::max(n, m), hl);
@@ -1485,7 +1486,8 @@ struct N {
                                      const T1 &>
     static T1 min_case_strong(unsigned int n, unsigned int m, F2 &&compat,
                               const T1 &hl, const T1 &hr) {
-      CompareSpecT c = Datatypes::CompSpec2Type(n, m, compare(n, m));
+      CompareSpecT c =
+          Datatypes::template CompSpec2Type<unsigned int>(n, m, compare(n, m));
       switch (c) {
       case CompareSpecT::COMPGTT: {
         return compat(m, std::min(n, m), hr);

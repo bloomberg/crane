@@ -645,8 +645,51 @@ let rec debug_ml_type = function
   | Taxiom -> "axiom"
   | Tstring -> "string"
 
+(* The scheme a synthesised reference to [r] is at: the one extraction
+   recorded, or else one minted at the arity of the type [r] is registered
+   with.  [None] for a declaration quantifying nothing, or with no type. *)
+let reference_scheme r =
+  match r with
+  | GlobRef.ConstRef kn when Option.has_some (Table.constant_schema kn) ->
+    Option.map Ml_schema.id (Table.constant_schema kn)
+  | _ -> (
+    match Table.find_type r with
+    | exception Not_found -> None
+    | ty ->
+      let arity = Ml_schema.max_tvar ty in
+      if arity = 0 then None else Some (Scheme.Id.fresh r ~arity) )
+
+let open_reference r =
+  match reference_scheme r with
+  | Some scheme -> Global_use.infer_all r scheme
+  | None -> Global_use.monomorphic r
+
+let self_reference r =
+  match reference_scheme r with
+  | Some scheme -> Global_use.identity r scheme
+  | None -> Global_use.monomorphic r
+
+let forwarding_use target =
+  match reference_scheme target with
+  | None -> Global_use.monomorphic target
+  | Some scheme ->
+    let schema =
+      match target with
+      | GlobRef.ConstRef kn -> Table.constant_schema kn
+      | _ -> None
+    in
+    Global_use.polymorphic target
+      (Scheme.Instantiation.make scheme (fun v ->
+           let own = Tvar (Schematic, Scheme.Var.ordinal v) in
+           let source =
+             match Option.bind schema (fun s -> Ml_schema.origin s v) with
+             | Some b -> Scheme.Written {binder = b.Ml_schema.binder; observed = Some own}
+             | None -> Scheme.Not_written
+           in
+           {Scheme.solution = Scheme.Type own; source} ) )
+
 let subst_written_evidence use t =
-  let evidence = Global_use.scheme_evidence use in
+  let evidence = Global_use.written_evidence use in
   type_subst_fun
     (fun j ->
       List.find_map
@@ -655,7 +698,7 @@ let subst_written_evidence use t =
     t
 
 let written_covers use n =
-  let written = List.map (fun (v, _) -> Scheme.Var.ordinal v) (Global_use.scheme_evidence use) in
+  let written = List.map (fun (v, _) -> Scheme.Var.ordinal v) (Global_use.written_evidence use) in
   List.for_all (fun j -> List.mem j written) (List.init n succ)
 
 let instantiate_written ~reader use t =
@@ -673,22 +716,7 @@ let instantiate_written ~reader use t =
             Printf.sprintf "%s %s written=%s solved=%s" reader
               (Pp.string_of_ppcmds (GlobRef.print use.callee))
               (debug_ml_type by_variable) (debug_ml_type solved) ) )
-      use.instantiation;
-  if Probe.enabled () then begin
-    let by_position = type_subst_list (Global_use.legacy_source_order use) t in
-    if not (eq_ml_type by_position by_variable) then
-      Probe.hit "SUBST_DIFF" (fun () ->
-          let entry {wt_type; wt_binder; wt_var} =
-            Printf.sprintf "%s->%s:%s"
-              (Option.cata (fun b -> string_of_int (Scheme.Binder.position b)) "_" wt_binder)
-              (Option.cata (fun v -> string_of_int (Scheme.Var.ordinal v)) "_" wt_var)
-              (debug_ml_type wt_type)
-          in
-          Printf.sprintf "%s %s [%s] position=%s variable=%s" reader
-            (Pp.string_of_ppcmds (GlobRef.print use.callee))
-            (String.concat "; " (List.map entry use.legacy_written))
-            (debug_ml_type by_position) (debug_ml_type by_variable) )
-  end;
+      (Global_use.instantiation use);
   by_variable
 
 (** {2 Does a section path occur in a ML type ?} *)

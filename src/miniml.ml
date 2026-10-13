@@ -170,15 +170,12 @@ and ml_ast =
 (** A global at a use.  See miniml.mli. *)
 and global_use = {
   callee : GlobRef.t;
-  legacy_written : written_tyarg list;
-  instantiation : ml_type Scheme.Instantiation.t option;
+  instance : global_instance;
 }
 
-and written_tyarg = {
-  wt_type : ml_type;
-  wt_binder : Scheme.Binder.t option;
-  wt_var : Scheme.Var.t option;
-}
+and global_instance =
+  | Monomorphic
+  | Polymorphic of ml_type Scheme.Instantiation.t
 
 (** What an [MLmagic] node is doing.  Extraction inserts these wherever type
     erasure has opened a gap, but not every gap is a coercion, and the two
@@ -310,29 +307,71 @@ type language_descr = {
 
 module Global_use = struct
   let callee g = g.callee
-  let written callee legacy_written instantiation =
-    {callee; legacy_written; instantiation = Some instantiation}
+  let monomorphic callee = {callee; instance = Monomorphic}
 
-  let legacy_untagged callee tys =
-    { callee;
-      legacy_written =
-        List.map (fun wt_type -> {wt_type; wt_binder = None; wt_var = None}) tys;
-      instantiation = None }
+  let polymorphic callee inst =
+    if Scheme.Id.arity (Scheme.Instantiation.scheme inst) = 0 then monomorphic callee
+    else {callee; instance = Polymorphic inst}
 
-  let instantiation g = g.instantiation
+  let with_slots callee scheme slot = polymorphic callee (Scheme.Instantiation.make scheme slot)
 
-  let legacy_source_order g = List.map (fun w -> w.wt_type) g.legacy_written
+  let infer_all callee scheme =
+    with_slots callee scheme (fun _ ->
+        {Scheme.solution = Scheme.Type (Thole (Scheme.Hole.fresh ())); source = Scheme.Not_written} )
 
-  let scheme_evidence g =
-    List.filter_map
-      (fun w -> Option.map (fun v -> (v, w.wt_type)) w.wt_var)
-      g.legacy_written
+  let identity callee scheme =
+    with_slots callee scheme (fun _ -> {Scheme.solution = Scheme.Identity; source = Scheme.Not_written})
+
+  let instantiation g =
+    match g.instance with
+    | Monomorphic -> None
+    | Polymorphic inst -> Some inst
+
+  let fold_slots f g acc =
+    match g.instance with
+    | Monomorphic -> acc
+    | Polymorphic inst -> Scheme.Instantiation.fold f inst acc
+
+  (* What a slot's [Written] evidence stands for in the written list the
+     readers were built on: an argument extraction could not read is the
+     [Tdummy] it wrote there. *)
+  let written_type = function
+    | Scheme.Written {observed = Some t; _} -> Some t
+    | Scheme.Written {observed = None; _} -> Some (Tdummy Ktype)
+    | Scheme.Not_written -> None
+
+  let written_evidence g =
+    List.rev
+      (fold_slots
+         (fun v s acc ->
+           match written_type s.Scheme.source with
+           | Some t -> (v, t) :: acc
+           | None -> acc )
+         g [] )
+
+  let legacy_template_args g =
+    let by_var = List.rev (fold_slots (fun _ s acc -> written_type s.Scheme.source :: acc) g []) in
+    let rec trim = function
+      | None :: rest -> trim rest
+      | l -> l
+    in
+    List.rev_map (Option.default (Tdummy Ktype)) (trim (List.rev by_var))
 
   let map_types f g =
-    { g with
-      legacy_written = List.map (fun w -> {w with wt_type = f w.wt_type}) g.legacy_written;
-      instantiation = Option.map (Scheme.Instantiation.map f) g.instantiation }
+    match g.instance with
+    | Monomorphic -> g
+    | Polymorphic inst -> {g with instance = Polymorphic (Scheme.Instantiation.map f inst)}
 
-  let iter_types f g = List.iter (fun w -> f w.wt_type) g.legacy_written
-  let exists_type p g = List.exists (fun w -> p w.wt_type) g.legacy_written
+  let slot_types g =
+    List.rev
+      (fold_slots
+         (fun _ {Scheme.solution; source} acc ->
+           let acc = match solution with Scheme.Type t -> t :: acc | Scheme.Identity -> acc in
+           match source with
+           | Scheme.Written {observed = Some t; _} -> t :: acc
+           | _ -> acc )
+         g [] )
+
+  let iter_types f g = List.iter f (slot_types g)
+  let exists_type p g = List.exists p (slot_types g)
 end

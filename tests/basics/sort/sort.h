@@ -243,9 +243,9 @@ struct Sort {
       const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
       return x0(a0, *a1,
                 div_conq_pivot<T1, T2>(le_dec0, x, x0,
-                                       split_pivot(le_dec0, a0, *a1).first),
-                div_conq_pivot<T1, T2>(le_dec0, x, x0,
-                                       split_pivot(le_dec0, a0, *a1).second));
+                                       split_pivot<T1>(le_dec0, a0, *a1).first),
+                div_conq_pivot<T1, T2>(
+                    le_dec0, x, x0, split_pivot<T1>(le_dec0, a0, *a1).second));
     }
   }
 

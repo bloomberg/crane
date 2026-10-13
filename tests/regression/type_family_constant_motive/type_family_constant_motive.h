@@ -27,7 +27,8 @@ struct Nat {
       requires std::is_invocable_r_v<T1, F2 &, uint64_t &, uint64_t, const T1 &>
     static T1 max_case_strong(uint64_t n, uint64_t m, F2 &&compat, const T1 &hl,
                               const T1 &hr) {
-      CompareSpecT c = Datatypes::CompSpec2Type(n, m, compare(n, m));
+      CompareSpecT c =
+          Datatypes::template CompSpec2Type<uint64_t>(n, m, compare(n, m));
       switch (c) {
       case CompareSpecT::COMPGTT: {
         return compat(n, std::max(n, m), hl);

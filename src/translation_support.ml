@@ -1763,7 +1763,7 @@ let rec collect_tvars_ast acc = function
   | MLletin (_, ty, a, b) ->
     collect_tvars_ast (collect_tvars_ast (collect_tvars acc ty) a) b
   | MLglob use ->
-    List.fold_left collect_tvars acc (Global_use.legacy_source_order use)
+    List.fold_left collect_tvars acc (Global_use.legacy_template_args use)
   | MLcons (ty, _, args) ->
     List.fold_left collect_tvars_ast (collect_tvars acc ty) args
   | MLcase (ty, e, brs) ->
@@ -1979,7 +1979,9 @@ let resolve_fix_types ~app_result ~next_tvar ids funs =
 
 (** Resolve unresolved metas in an ML AST by walking its sub-types.
     resolve_metas should be a function that resolves metas in a single ml_type.
-*)
+    A global use is not walked: its instantiation was frozen by extraction and
+    holds no metavariable, and a hole in it is not to be renumbered into one
+    of the caller's variables. *)
 let rec resolve_metas_in_ast resolve_metas = function
   | MLlam (_, ty, body) ->
     resolve_metas ty;
@@ -1988,7 +1990,7 @@ let rec resolve_metas_in_ast resolve_metas = function
     resolve_metas ty;
     resolve_metas_in_ast resolve_metas a;
     resolve_metas_in_ast resolve_metas b
-  | MLglob use -> Global_use.iter_types resolve_metas use
+  | MLglob _ -> ()
   | MLcons (ty, _, args) ->
     resolve_metas ty;
     List.iter (resolve_metas_in_ast resolve_metas) args
@@ -2589,7 +2591,7 @@ let rec infer_ml_body_type (a : ml_ast) : ml_type option =
          ones the call site wrote, by variable, or, where it wrote none, the
          ones its arguments imply. *)
       let ty =
-        if Global_use.legacy_source_order use <> [] then
+        if Global_use.legacy_template_args use <> [] then
           Mlutil.instantiate_written ~reader:"infer_ml_body_type" use ty
         else
           Mlutil.type_subst_list

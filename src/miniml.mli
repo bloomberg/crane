@@ -243,34 +243,26 @@ and ml_ast =
   | MLstring of Pstring.t
   | MLparray of ml_ast array * ml_ast
 
-(** A global named at a use: the callee and the type arguments the use
-    wrote.  Built and read only through {!Global_use}; a reader that needs
-    only the callee matches [MLglob {callee; _}] and never sees the rest.
-
-    The written arguments are the bridge representation of the refactor in
-    docs/Type-Argument-Numbering-Refactor-Plan.md: one entry per type-level
-    argument of the Rocq application, in source order, each tagged with the
-    binder it was written at and the callee's scheme variable that binder
-    stands for -- [None] where the binder has none (an erased family) or the
-    entry was synthesised rather than written. *)
+(** A global named at a use: the callee, and what the use means for the
+    callee's type scheme.  Built only through {!Global_use}; a reader that
+    needs only the callee matches [MLglob {callee; _}] and never sees the
+    rest (docs/Type-Argument-Numbering-Refactor-Plan.md, section 3.2). *)
 and global_use = private {
   callee : GlobRef.t;
-  legacy_written : written_tyarg list;
-  instantiation : ml_type Scheme.Instantiation.t option;
-      (** What the use solved the callee's scheme variables to, frozen as
-          extraction finished the call: one slot per variable, each a type
-          that may hold {!Thole}s but no [Tmeta], or [Identity] for a rigid
-          self-call; with the argument written at the variable's binder, if
-          any.  [None] for a synthesised reference.  Built alongside the
-          written list, which stays authoritative until every reader has
-          moved to this. *)
+  instance : global_instance;
 }
 
-and written_tyarg = {
-  wt_type : ml_type;
-  wt_binder : Scheme.Binder.t option;
-  wt_var : Scheme.Var.t option;
-}
+(** A use of a declaration with no scheme variable is [Monomorphic].  Any
+    other is [Polymorphic], with an instantiation at the callee's scheme: one
+    slot per variable, indexed by {!Scheme.Var.t}, each holding what the use
+    solved the variable to -- a type that may contain {!Thole}s but no
+    [Tmeta], or [Identity] for a rigid self-call -- and the argument the
+    source wrote at the variable's binder, if it reached it.  There is no
+    list of type arguments: which of them C++ writes, and where, is a
+    question about the callee's declaration, not about this use. *)
+and global_instance =
+  | Monomorphic
+  | Polymorphic of ml_type Scheme.Instantiation.t
 
 (** What an [MLmagic] node is doing.  Extraction emits these wherever erasure
     has opened a gap between the type a term has and the type its context
@@ -435,30 +427,41 @@ type language_descr = {
 module Global_use : sig
   val callee : global_use -> GlobRef.t
 
-  (** A use with the entries extraction wrote and tagged, and its frozen
-      instantiation. *)
-  val written :
-    GlobRef.t -> written_tyarg list -> ml_type Scheme.Instantiation.t -> global_use
+  (** A use of a declaration known to quantify nothing. *)
+  val monomorphic : GlobRef.t -> global_use
 
-  (** A use with an untagged list, as every synthesised reference builds
-      one today -- the empty list included, which says nothing about whether
-      the callee is polymorphic. *)
-  val legacy_untagged : GlobRef.t -> ml_type list -> global_use
+  (** A use at an instantiation; [monomorphic] when the scheme has no
+      variable. *)
+  val polymorphic : GlobRef.t -> ml_type Scheme.Instantiation.t -> global_use
 
+  (** An open occurrence of a polymorphic declaration: every variable a
+      fresh hole, nothing written. *)
+  val infer_all : GlobRef.t -> Scheme.Id.t -> global_use
+
+  (** A declaration's reference to itself within its own body: every
+      variable stands for itself. *)
+  val identity : GlobRef.t -> Scheme.Id.t -> global_use
+
+  (** [None] for a monomorphic use. *)
   val instantiation : global_use -> ml_type Scheme.Instantiation.t option
 
-  (** The written types in source order: the list [MLglob] used to carry,
-      read positionally by the readers not yet migrated. *)
-  val legacy_source_order : global_use -> ml_type list
+  (** The arguments the source wrote, by the variable each was written for;
+      one extraction could not read is [Tdummy Ktype], the erased argument it
+      stood as. *)
+  val written_evidence : global_use -> (Scheme.Var.t * ml_type) list
 
-  (** The written types the use gave the callee's scheme variables, each
-      with its variable; entries with no variable are not here. *)
-  val scheme_evidence : global_use -> (Scheme.Var.t * ml_type) list
+  (** Compatibility view for the template-argument readers not yet
+      replaced by the call planner: the written arguments in scheme-variable
+      order, up to the last variable written, a variable not written before
+      it standing as [Tdummy Ktype]. *)
+  val legacy_template_args : global_use -> ml_type list
 
-  (** Maps every written type and every type of the instantiation, keeping
-      the tags, the schema and the holes. *)
+  (** Maps every type of the instantiation, keeping the scheme, the slots'
+      evidence and the holes. *)
   val map_types : (ml_type -> ml_type) -> global_use -> global_use
 
+  (** Every type of the instantiation: solutions and written arguments. *)
   val iter_types : (ml_type -> unit) -> global_use -> unit
+
   val exists_type : (ml_type -> bool) -> global_use -> bool
 end

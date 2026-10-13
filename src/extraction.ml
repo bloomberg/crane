@@ -309,6 +309,15 @@ let sign_with_implicits r s nb_params =
   in
   add_impl (1 + nb_params) s
 
+(** [c] with every product of its spine exposed: each codomain reduced to
+    weak head normal form, constants unfolded. *)
+let rec unfold_spine env sg c =
+  let c = Reductionops.whd_all env sg c in
+  match EConstr.kind sg c with
+  | Prod (n, t, d) ->
+    EConstr.mkProd (n, t, unfold_spine (push_rel_assum (n, t) env) sg d)
+  | _ -> c
+
 (** The schema's binder roles as a call to [r] reads them under this run's
     configuration: a binder declared implicit is erased as
     {!sign_with_implicits} erases it, and under conservative types no binder
@@ -1446,6 +1455,17 @@ and record_constant_type env sg kn opt_typ =
     (* The binder layout comes out of the same walk that numbers the
        variables, and is cached with the body it describes. *)
     let mlt, spine = extract_spine env sg [] 1 typ [] in
+    (* An abbreviation on the spine -- [id : ID], [ID := forall A, A -> A] --
+       hides binders the walk above stops at, and a call passes arguments for
+       them as for the constant's own.  The layout is read off the type with
+       the spine's abbreviations unfolded, by the same walk: it extends the
+       spine above, numbering the binders it uncovers after the ones the body
+       already names. *)
+    let spine =
+      let unfolded = unfold_spine env sg typ in
+      if EConstr.eq_constr sg unfolded typ then spine
+      else snd (extract_spine env sg [] 1 unfolded [])
+    in
     let schema = Ml_schema.make (GlobRef.ConstRef kn) mlt spine in
     List.iter
       (fun problem ->
@@ -1602,7 +1622,7 @@ and extract_term env sg mle mlt c args =
     (* let metas = List.map new_meta args in let domain = make_tyargs env sg mle
        args metas in *)
     let extract_var mlt =
-      put_magic ~from:vty ~into:mlt (MLglob (Global_use.legacy_untagged (GlobRef.VarRef v) []))
+      put_magic ~from:vty ~into:mlt (MLglob (Global_use.monomorphic (GlobRef.VarRef v)))
     in
     extract_app env sg mle mlt extract_var args
   | Int i ->
@@ -2084,19 +2104,6 @@ and extract_cst_app env sg mle mlt kn args =
   let positioned =
     List.filter (function _, Tdummy Kprop -> false | _ -> true) domain
   in
-  (* Each entry tagged with the binder it was written at and the variable
-     that binder stands for. *)
-  let written =
-    List.map
-      (fun (k, t) ->
-        let binder = Scheme.Binder.of_position k in
-        { wt_type = type_simpl t;
-          wt_binder = Some binder;
-          wt_var =
-            Option.bind (Ml_schema.binder schema binder) (fun b ->
-                b.Ml_schema.scheme_var ) } )
-      positioned
-  in
   let () =
     if Probe.enabled () then
       probe_tyarg_alignment kn schema ~nargs:la s_full positioned
@@ -2152,7 +2159,7 @@ and extract_cst_app env sg mle mlt kn args =
       ~from:(type_recomp (metas, a))
       ~into:instantiated
       magic1
-      (MLglob (Global_use.written (GlobRef.ConstRef kn) written instantiation))
+      (MLglob (Global_use.polymorphic (GlobRef.ConstRef kn) instantiation))
   in
   (* For strict languages, purely logical signatures lead to a dummy lam (except
      when [Kill Ktype] everywhere). So a [MLdummy] is left accordingly. *)

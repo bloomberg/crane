@@ -14,7 +14,7 @@ let rec canonical self body =
   let anon = Dummy in
   match body with
   | MLglob {callee = r; _} when GlobRef.CanOrd.equal r self -> MLrel 0
-  | MLglob {callee = r; _} -> MLglob (Global_use.legacy_untagged r [])
+  | MLglob {callee = r; _} -> MLglob (Global_use.monomorphic r)
   | MLlam (_, _, b) -> MLlam (anon, Tunknown, canonical self b)
   | MLletin (_, _, a, b) -> MLletin (anon, Tunknown, canonical self a, canonical self b)
   | MLcons (_, c, args) -> MLcons (Tunknown, c, List.map (canonical self) args)
@@ -34,14 +34,13 @@ let rec canonical self body =
   | MLmagic (m, a) -> MLmagic (m, canonical self a)
   | e -> Mlutil.ast_map (canonical self) e
 
-(* A forwarder with [body]'s parameters, calling [target] at the type
-   variables of [ty], in order. *)
-let forwarder body ty target =
+(* A forwarder with [body]'s parameters, calling [target] at its own type
+   variables, in order. *)
+let forwarder body target =
   let params, _ = Mlutil.collect_lams body in
   let n = List.length params in
-  let tys = List.init (Mlutil.type_maxvar ty) (fun i -> Tvar (Schematic, i + 1)) in
   Mlutil.named_lams params
-    (MLapp (MLglob (Global_use.legacy_untagged target tys), List.init n (fun i -> MLrel (n - i))))
+    (MLapp (MLglob (Mlutil.forwarding_use target), List.init n (fun i -> MLrel (n - i))))
 
 (* A function definition: a fixpoint, or a term that is a lambda, emitted
    as a function.  A constant is left alone -- a forwarder would compute it
@@ -63,7 +62,7 @@ let structure struc =
          definitions are one only if those are the same too. *)
       let key = (canonical r body, Table.get_sigma_assertions r) in
       match List.find_opt (fun (key', _, ty') -> key' = key && Mlutil.eq_ml_type ty' ty) seen with
-      | Some (_, r', _) -> (l, SEdecl (Dterm (r, forwarder body ty r', ty))) :: elems seen rest
+      | Some (_, r', _) -> (l, SEdecl (Dterm (r, forwarder body r', ty))) :: elems seen rest
       | None -> (l, SEdecl d) :: elems ((key, r, ty) :: seen) rest )
     | (l, SEmodule m) :: rest ->
       (l, SEmodule {m with ml_mod_expr = module_expr m.ml_mod_expr}) :: elems seen rest

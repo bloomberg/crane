@@ -27,7 +27,7 @@ bool small_dec(const Nat &n) {
 
 /// The call site that fails: a lambda passed where deduction runs.
 bool allsmall(const List<Nat> &l) {
-  if (forall_dec(l, [](const Nat &a) { return small_dec(a); })) {
+  if (forall_dec<Nat>(l, [](const Nat &a) { return small_dec(a); })) {
     return true;
   } else {
     return false;

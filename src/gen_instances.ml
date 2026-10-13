@@ -268,9 +268,9 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
           let n_class = Ml_type_util.projection_class_arity m in
           Mlutil.ast_subst
             (MLapp
-               ( MLglob (Global_use.legacy_untagged m []),
+               ( MLglob (Mlutil.open_reference m),
                  List.init n_class (fun _ -> MLdummy Ktype)
-                 @ [MLglob (Global_use.legacy_untagged name [])] ))
+                 @ [MLglob (Mlutil.open_reference name)] ))
             c
         | b -> b
       in

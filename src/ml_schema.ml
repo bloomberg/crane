@@ -36,7 +36,8 @@ let max_tvar t =
   parse 0 t
 
 let make owner body raw =
-  let id = Scheme.Id.fresh owner ~arity:(max_tvar body) in
+  let numbered = List.fold_left (fun m b -> Option.fold_left max m b.raw_tvar) 0 raw in
+  let id = Scheme.Id.fresh owner ~arity:(max (max_tvar body) numbered) in
   let layout =
     List.mapi
       (fun k {raw_erased; raw_tvar} ->

@@ -1747,7 +1747,8 @@ struct Coq_Pos {
       requires std::is_invocable_r_v<T1, F2 &, Positive &, Positive, const T1 &>
     static T1 max_case_strong(Positive n, Positive m0, F2 &&compat,
                               const T1 &hl, const T1 &hr) {
-      CompareSpecT c = Datatypes::CompSpec2Type(n, m0, compare(n, m0));
+      CompareSpecT c =
+          Datatypes::template CompSpec2Type<Positive>(n, m0, compare(n, m0));
       switch (c) {
       case CompareSpecT::COMPGTT: {
         return compat(n, max(n, std::move(m0)), hl);
@@ -1772,7 +1773,8 @@ struct Coq_Pos {
       requires std::is_invocable_r_v<T1, F2 &, Positive &, Positive, const T1 &>
     static T1 min_case_strong(Positive n, Positive m0, F2 &&compat,
                               const T1 &hl, const T1 &hr) {
-      CompareSpecT c = Datatypes::CompSpec2Type(n, m0, compare(n, m0));
+      CompareSpecT c =
+          Datatypes::template CompSpec2Type<Positive>(n, m0, compare(n, m0));
       switch (c) {
       case CompareSpecT::COMPGTT: {
         return compat(m0, min(std::move(n), m0), hr);
