@@ -5910,6 +5910,43 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
     let ty, tys, all_type_args, written_tvar_args =
       call_type_args ?expected_ty env id plan args
     in
+    (* The callee's declared type at the type arguments the call writes: what
+       C++ checks the arguments against and returns.  A type argument standing
+       for a function type is spelled curried ([Through_tvar]), where the
+       value passed was spelled where it was declared. *)
+    let written_fn_ty =
+      let subst i = if i >= 1 then List.nth_opt written_tvar_args (i - 1) else None in
+      (* An inline custom has no signature its type arguments instantiate:
+         its text reads the values as they are ({!call_result_site}). *)
+      if written_tvar_args = [] || is_inline_custom id then None
+      else
+        Option.map
+          (fun t -> Minicpp.subst_cpp_tvars subst (cpp_of_ml env t))
+          (find_type_opt id)
+    in
+    (* Each argument read at its parameter as the call writes it
+       ({!regroup_crossing}): [pf : pair<fn<R(A, B)>, nat>] passed to
+       [myfst<fn<fn<R(B)>(A)>, nat>].  Only where every argument has its own
+       parameter to line up with: no erased argument, no erased domain, and
+       no receiver -- a method's is read at its struct's own instantiation,
+       not at type arguments the call writes. *)
+    let args =
+      match written_fn_ty with
+      | Some (Tfun (doms, _))
+        when Cpp_names.lookup_method_this_pos id = None
+             && List.length doms >= List.length args
+             && List.length regular_ml_args = List.length args
+             && not (List.exists (function MLdummy _ -> true | _ -> false) regular_ml_args)
+             && not (List.exists (fun t -> Table.is_typeclass_type_cpp t || is_cpp_dummy_type t || is_skipped_cpp_type t) doms) ->
+        List.map2
+          (fun (ml_arg, a) into ->
+            match value_cpp_type env ml_arg with
+            | Some from -> regroup_crossing ~from ~into a
+            | None -> a )
+          (List.combine regular_ml_args args)
+          (List.filteri (fun i _ -> i < List.length args) doms)
+      | _ -> args
+    in
     (* A class field called with the instance it projects through, where
        that instance was kept and declares the field as a member template:
        the instance's own method, at the type arguments the projection's body
@@ -6729,7 +6766,16 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
           primary_result
       | _ -> primary_result
     in
-    wrap_excess primary_result
+    let result = wrap_excess primary_result in
+    (* A saturated call's result read at the type expected of it, where the
+       two differ only in how their arrows are grouped
+       ({!regroup_crossing}): [wrap<fn<fn<R(B)>(A)>>(f)] stored as a
+       [list (A -> B -> R)]. *)
+    ( match (written_fn_ty, expected_ty) with
+    | Some (Tfun (doms, written_cod)), Some into
+      when excess_args = [] && List.length doms = List.length args ->
+      regroup_crossing ~from:written_cod ~into result
+    | _ -> result )
   | _ ->
     (* Non-global callee (e.g., a local variable from MLrel). Filter out MLdummy
        args — these are erased type/prop parameters that have no runtime

@@ -3023,6 +3023,32 @@ let rec coerce ?term ?from ~into expr =
             gen_type_conversion_expr ~src_ty:f ~dst_ty:into expr
           | _ -> expr )
 
+(** [regroup_crossing ~from ~into expr]: [expr], whose C++ type is [from],
+    read at [into] where the two differ only in how their arrows are grouped
+    ({!Minicpp.arrow_site}) -- a value spelled where it was declared reaching
+    a slot a type argument spells curried, or back.  [crane_convert] regroups
+    every function the value holds ([crane_cast_to] for [crane::fn] of
+    another arity).  A function value itself is not this: it reaches a slot
+    through the adapter {!Translation_calls.curry_value_to_expected} writes,
+    whose type is the slot's. *)
+let regroup_crossing ~from ~into expr =
+  let bare t = strip_cpp_ref_const t in
+  let from = bare from and into = bare into in
+  match (from, into) with
+  | Tfun _, _ | _, Tfun _ -> expr
+  | _ when from = into || not (same_arrows from into) -> expr
+  | _ when prints_as_any from || prints_as_any into -> expr
+  | _ -> CPPconvert (into, expr)
+
+(** The C++ type the value [e] has where that is known without generating
+    it: a variable's binder type, a global value's declared type.  [None]
+    for anything else. *)
+let value_cpp_type env e =
+  match strip_magic e with
+  | MLrel j -> binder_cpp_type_or_derive env j
+  | MLglob (r, []) -> Option.map (cpp_of_ml env) (find_type_opt r)
+  | _ -> None
+
 (** Whether a coercion is one the Rocq indices rule out, rather than one C++
     can perform.
 

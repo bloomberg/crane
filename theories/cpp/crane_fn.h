@@ -601,3 +601,17 @@ crane::fn<R(A...)> crane_cast_to(crane_tag<crane::fn<R(A...)>>,
     return crane_convert<R>(src(crane_convert_arg<B>(std::forward<A>(a))...));
   };
 }
+
+// A function whose arrows are grouped otherwise -- the curried
+// [crane::fn<crane::fn<R(B)>(A)>] a type variable is spelled at, reaching the
+// flat [crane::fn<R(A, B)>] a declaration writes, or the other way -- is read
+// by regrouping it ([crane::regroup]).  Through this hook a container of
+// functions converts element by element, as any [crane_convert] does.
+template <class R, class... A, class S, class... B>
+  requires(sizeof...(A) != sizeof...(B)) &&
+          crane::fn_detail::regroup<crane::fn<S(B...)>, R,
+                                    crane::fn_detail::types<A...>>::value
+crane::fn<R(A...)> crane_cast_to(crane_tag<crane::fn<R(A...)>>,
+                                 const crane::fn<S(B...)> &src) {
+  return crane::regroup<crane::fn<R(A...)>>(src);
+}

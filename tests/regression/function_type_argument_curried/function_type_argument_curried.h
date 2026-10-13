@@ -151,10 +151,11 @@ struct FunctionTypeArgumentCurried {
   }
 
   static inline const List<crane::fn<uint64_t(uint64_t, uint64_t)>> ws = []() {
-    return wrap<crane::fn<crane::fn<uint64_t(uint64_t)>(uint64_t)>>(
-        [](uint64_t _x0) {
-          return [=](uint64_t _x1) -> uint64_t { return (_x0 + _x1); };
-        });
+    return crane_convert<List<crane::fn<uint64_t(uint64_t, uint64_t)>>>(
+        wrap<crane::fn<crane::fn<uint64_t(uint64_t)>(uint64_t)>>(
+            [](uint64_t _x0) {
+              return [=](uint64_t _x1) -> uint64_t { return (_x0 + _x1); };
+            }));
   }();
   static inline const uint64_t from_wrap = []() {
     auto &&_sv = ws;
@@ -197,15 +198,16 @@ struct FunctionTypeArgumentCurried {
 
   static uint64_t ev(const t &x);
   static inline const List<crane::fn<t(uint64_t, uint64_t)>> fs = []() {
-    return List<uint64_t>::cons(
-               UINT64_C(1),
-               List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil()))
-        .template map<crane::fn<crane::fn<t(uint64_t)>(uint64_t)>>(
-            [](uint64_t x) {
-              return [=](uint64_t x0) {
-                return [=](uint64_t x1) { return t::a(x, x0, x1); };
-              };
-            });
+    return crane_convert<List<crane::fn<t(uint64_t, uint64_t)>>>(
+        List<uint64_t>::cons(
+            UINT64_C(1),
+            List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil()))
+            .template map<crane::fn<crane::fn<t(uint64_t)>(uint64_t)>>(
+                [](uint64_t x) {
+                  return [=](uint64_t x0) {
+                    return [=](uint64_t x1) { return t::a(x, x0, x1); };
+                  };
+                }));
   }();
   static inline const uint64_t from_ctor = fs.template fold_left<uint64_t>(
       [](uint64_t acc, const crane::fn<t(uint64_t, uint64_t)> &f) {
@@ -224,8 +226,10 @@ struct FunctionTypeArgumentCurried {
           [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
           UINT64_C(1));
   static inline const uint64_t from_pair =
-      myfst<crane::fn<crane::fn<uint64_t(uint64_t)>(uint64_t)>, uint64_t>(pf)(
-          UINT64_C(2))(UINT64_C(3));
+      myfst<crane::fn<crane::fn<uint64_t(uint64_t)>(uint64_t)>, uint64_t>(
+          crane_convert<std::pair<
+              crane::fn<crane::fn<uint64_t(uint64_t)>(uint64_t)>, uint64_t>>(
+              pf))(UINT64_C(2))(UINT64_C(3));
   static inline const uint64_t result =
       (((f2(UINT64_C(1), UINT64_C(2)) + from_wrap) + from_ctor) + from_pair);
 };

@@ -63,6 +63,12 @@ PCH_FILE="$PCH_DIR/crane_pch_${CXX_STD}_${OPT_LEVEL}.h.pch"
 # Detect Homebrew LLVM
 HB_LLVM="${HB_LLVM:-/opt/homebrew/opt/llvm}"
 
+# The test suite compiles with CRANE_STRICT_ARITY, which takes away
+# [crane::fn]'s implicit conversion between the two groupings of a chain of
+# arrows (theories/cpp/fn.h): generated code writes every such crossing
+# itself, and one it misses is a compile error here rather than a silent
+# adapter in a user's build.
+
 # Build the compiler command
 if [ -d "$HB_LLVM" ]; then
     CXX="$HB_LLVM/bin/clang++"
@@ -92,6 +98,7 @@ if [ -d "$HB_LLVM" ]; then
         -Wno-unused-variable -Wno-unused-value
         -Wno-constant-conversion -Wno-sign-conversion
         -Wno-implicit-int-conversion -Werror
+        -DCRANE_STRICT_ARITY
     )
     LINK_FLAGS=(
         -L"$HB_LLVM/lib"
@@ -116,6 +123,7 @@ else
         -Wno-unused-variable -Wno-unused-value
         -Wno-constant-conversion -Wno-sign-conversion
         -Wno-implicit-int-conversion -Werror
+        -DCRANE_STRICT_ARITY
     )
     LINK_FLAGS=()
 fi

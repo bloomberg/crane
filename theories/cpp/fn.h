@@ -294,9 +294,13 @@ public:
     CRANE_FN_STAT(made);
   }
 
+#ifndef CRANE_STRICT_ARITY
   // The same function with its arrows grouped otherwise -- a curried value
   // reaching a flat slot, or a flat one a curried slot; see
-  // [fn_detail::regroup].
+  // [fn_detail::regroup].  Generated code writes such a crossing itself, as
+  // [crane::regroup<Into>(f)]; this conversion is the safety net for one it
+  // missed, and [CRANE_STRICT_ARITY], which the test suite compiles with,
+  // takes it away so that a missed crossing does not compile.
   template <class F, class D = std::decay_t<F>>
     requires(!std::is_same_v<D, fn>) &&
             (!std::is_invocable_r_v<R, const D &, A...>) &&
@@ -304,6 +308,7 @@ public:
             (std::is_copy_constructible_v<D>)
   fn(F &&f)
       : fn(fn_detail::regrouped<D, R, fn_detail::types<A...>>{std::forward<F>(f)}) {}
+#endif
 
   fn(const fn &o) noexcept : p_(o.p_) { retain(); }
   fn(fn &&o) noexcept : p_(std::exchange(o.p_, nullptr)) {}
@@ -388,6 +393,15 @@ R2 apply2(const fn<fn<R2(B)>(A0)> &f, const std::type_identity_t<A0> &a,
     throw std::bad_function_call();
   CRANE_FN_STAT(calls);
   return f.p_->invoke2(f.p_, a, b);
+}
+
+// [f] as the function type [Into], its arrows grouped as [Into] groups them:
+// the crossing generated code writes where a value spelled at one arrow site
+// reaches a slot spelled at another ([fn_detail::regroup]).
+template <class Into, class F> Into regroup(F &&f) {
+  using P = fn_detail::fn_parts<Into>;
+  return Into(fn_detail::regrouped<std::decay_t<F>, typename P::result, typename P::args>{
+      std::forward<F>(f)});
 }
 
 template <class R, class... A> fn(R (*)(A...)) -> fn<R(A...)>;

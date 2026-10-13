@@ -105,13 +105,14 @@ struct ThreeArgumentCurriedSlot {
 
   static inline const List<crane::fn<uint64_t(uint64_t, uint64_t, uint64_t)>>
       ws = []() {
-        return wrap<crane::fn<
-            crane::fn<crane::fn<uint64_t(uint64_t)>(uint64_t)>(uint64_t)>>(
-            [](uint64_t _ec0) {
+        return crane_convert<
+            List<crane::fn<uint64_t(uint64_t, uint64_t, uint64_t)>>>(
+            wrap<crane::fn<crane::fn<crane::fn<uint64_t(uint64_t)>(uint64_t)>(
+                uint64_t)>>([](uint64_t _ec0) {
               return [=](uint64_t _ec1) {
                 return [=](uint64_t _ec2) { return add3(_ec0, _ec1, _ec2); };
               };
-            });
+            }));
       }();
   static inline const uint64_t result =
       (f3(UINT64_C(1), UINT64_C(2), UINT64_C(3)) + []() {
