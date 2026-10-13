@@ -747,8 +747,10 @@ val claim_output_target : string -> unit
     [Require]s [mp] can see it. *)
 val claim_extracted_unit : ModPath.t -> string -> unit
 
-(** [extracted_unit_of mp] is the C++ unit the Rocq library [mp] was extracted
-    into, if one has claimed it. *)
+(** [extracted_unit_of mp] is the C++ unit another file's extraction put the
+    Rocq library [mp] into, if one has claimed it.  A unit of the file being
+    compiled is never one: it emits that file's own modules, as each of the
+    file's units does, so no other of them can include its header. *)
 val extracted_unit_of : ModPath.t -> string option
 
 (** {2 AccessOpaque parameter} *)

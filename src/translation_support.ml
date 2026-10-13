@@ -567,6 +567,9 @@ let guard_compare n ids body =
     | Some (p1, p2) ->
       let ctor_expr =
         match ctor_ref with
+        (* A mapped constructor ([bool]'s [true]) is its mapping's text, as
+           any use of it is, whatever shape its inductive has. *)
+        | _ when Table.is_custom ctor_ref -> mk_cppglob ctor_ref []
         | GlobRef.ConstructRef ((kn, i), cidx)
           when Table.is_enum_inductive (GlobRef.IndRef (kn, i)) ->
           let ctor_name = Id.of_string (Common.enum_ctor_name_of_ref kn i cidx) in

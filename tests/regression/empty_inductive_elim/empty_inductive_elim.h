@@ -17,9 +17,7 @@ struct EmptyInductiveElim {
   }
 
   template <typename T1> static const T1 &void_rec() {
-    static const T1 v = [](crane::obj) {
-      throw std::logic_error("untranslatable curried proof term");
-    };
+    static const T1 v = [](crane::obj) { return void_rect<T1>(); };
     return v;
   }
 

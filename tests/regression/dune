@@ -12666,3 +12666,91 @@
   (alias runtest)
   (deps rank2_callback_kept_as_fn.t.exe)
   (action (run ./rank2_callback_kept_as_fn.t.exe))))
+
+(subdir no_optimize_fold_left_accumulator
+ (rule
+  (targets no_optimize_fold_left_accumulator.t.exe)
+  (deps NoOptimizeFoldLeftAccumulator.vo no_optimize_fold_left_accumulator.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} no_optimize_fold_left_accumulator.t.exe no_optimize_fold_left_accumulator.cpp no_optimize_fold_left_accumulator.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps no_optimize_fold_left_accumulator.t.exe)
+  (action (run ./no_optimize_fold_left_accumulator.t.exe))))
+
+(subdir conservative_types_kept_parameter
+ (rule
+  (targets conservative_types_kept_parameter.t.exe)
+  (deps ConservativeTypesKeptParameter.vo conservative_types_kept_parameter.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} conservative_types_kept_parameter.t.exe conservative_types_kept_parameter.cpp conservative_types_kept_parameter.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps conservative_types_kept_parameter.t.exe)
+  (action (run ./conservative_types_kept_parameter.t.exe))))
+
+(subdir inline_polymorphic_function_as_element
+ (rule
+  (targets inline_polymorphic_function_as_element.t.exe)
+  (deps InlinePolymorphicFunctionAsElement.vo inline_polymorphic_function_as_element.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} inline_polymorphic_function_as_element.t.exe inline_polymorphic_function_as_element.cpp inline_polymorphic_function_as_element.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps inline_polymorphic_function_as_element.t.exe)
+  (action (run ./inline_polymorphic_function_as_element.t.exe))))
+
+(subdir file_comment_delimiters
+ (rule
+  (targets file_comment_delimiters.t.exe)
+  (deps FileCommentDelimiters.vo file_comment_delimiters.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} file_comment_delimiters.t.exe file_comment_delimiters.cpp file_comment_delimiters.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps file_comment_delimiters.t.exe)
+  (action (run ./file_comment_delimiters.t.exe))))
+
+(subdir extraction_implicit_call_sites
+ (rule
+  (targets extraction_implicit_call_sites.t.exe)
+  (deps ExtractionImplicitCallSites.vo extraction_implicit_call_sites.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} extraction_implicit_call_sites.t.exe extraction_implicit_call_sites.cpp extraction_implicit_call_sites.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps extraction_implicit_call_sites.t.exe)
+  (action (run ./extraction_implicit_call_sites.t.exe))))
+
+(subdir dependent_extraction_targets
+ (rule
+  (targets dependent_extraction_targets.t.exe)
+  (deps DependentExtractionTargets.vo dependent_extraction_targets.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} dependent_extraction_targets.t.exe dependent_extraction_targets.cpp dependent_extraction_targets.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps dependent_extraction_targets.t.exe)
+  (action (run ./dependent_extraction_targets.t.exe))))
+
+(subdir guard_compare_mapped_result
+ (rule
+  (targets guard_compare_mapped_result.t.exe)
+  (deps GuardCompareMappedResult.vo guard_compare_mapped_result.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} guard_compare_mapped_result.t.exe guard_compare_mapped_result.cpp guard_compare_mapped_result.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps guard_compare_mapped_result.t.exe)
+  (action (run ./guard_compare_mapped_result.t.exe))))
+
+(subdir recursive_library_datatypes
+ (rule
+  (targets recursive_library_datatypes.t.exe)
+  (deps Lib.vo recursive_library_datatypes.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} recursive_library_datatypes.t.exe Datatypes.cpp Decimal.cpp Hexadecimal.cpp Logic.cpp Nat.cpp Number.cpp Specif.cpp Src.cpp recursive_library_datatypes.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps recursive_library_datatypes.t.exe)
+  (action (run ./recursive_library_datatypes.t.exe))))

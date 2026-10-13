@@ -4135,6 +4135,7 @@ and pp_wrapper_nspace env id (members : Cpp_erasure.settled list) =
   | ( [
         Dstruct
           {
+            ds_ref;
             ds_fields = fields;
             ds_tparams = [];
             ds_needs_shared_from_this = sft;
@@ -4147,7 +4148,8 @@ and pp_wrapper_nspace env id (members : Cpp_erasure.settled list) =
     let f_s =
       with_render_ctx
         (fun c -> { c with rc_in_struct = true })
-        (fun () -> pp_cpp_fields_with_vis ~struct_name env fields)
+        (fun () ->
+          with_struct_scope ds_ref (fun () -> pp_cpp_fields_with_vis ~struct_name env fields) )
     in
     let inherit_clause =
       if sft then
@@ -4168,6 +4170,7 @@ and pp_wrapper_nspace env id (members : Cpp_erasure.settled list) =
   | ( [
         Dstruct
           {
+            ds_ref;
             ds_fields = fields;
             ds_tparams = temps;
             ds_constraint = cstr;
@@ -4181,7 +4184,8 @@ and pp_wrapper_nspace env id (members : Cpp_erasure.settled list) =
     let f_s =
       with_render_ctx
         (fun c -> { c with rc_in_struct = true; rc_in_template = true })
-        (fun () -> pp_cpp_fields_with_vis ~struct_name env fields)
+        (fun () ->
+          with_struct_scope ds_ref (fun () -> pp_cpp_fields_with_vis ~struct_name env fields) )
     in
     let args = pp_list pp_template_param temps in
     let req = pp_requires_of_tparams temps in

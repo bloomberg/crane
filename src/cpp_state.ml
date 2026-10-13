@@ -426,8 +426,11 @@ let pp_open mp =
   else
     str ("#include \"" ^ file_of_modfile mp ^ ".h\"") ++ fnl ()
 
-(** Pretty-print a comment with OCaml-style delimiters. *)
-let pp_comment s = str "(* " ++ s ++ str " *)"
+(** The text [s] as C++ line comments, one per line of [s]: a line comment
+    ends at its newline, so no text it holds -- a star-slash included -- can
+    end it early. *)
+let pp_comment s =
+  prlist_with_sep fnl (fun l -> str ("// " ^ l)) (String.split_on_char '\n' s)
 
 (** Pretty-print an optional header comment. *)
 let pp_header_comment = function

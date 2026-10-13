@@ -451,7 +451,7 @@ struct Equations {
            std::type_identity_t<crane::fn<T1(uint64_t, uint64_t, T1)>> f2,
            std::type_identity_t<crane::fn<T1(uint64_t, uint64_t, T1)>> f3,
            std::pair<uint64_t, uint64_t> p) {
-    return gcd_graph_mut<T1>(
+    return gcd_graph_mut<T1, T1>(
         f, f0,
         [=](uint64_t, uint64_t, gcd_clause_3_graph, const T1 &x) {
           const auto &[_x2, _x3] = p;
@@ -873,7 +873,7 @@ struct Equations {
   static T1 collatz_steps_elim(
       T1 f, T1 f0, std::type_identity_t<crane::fn<T1(uint64_t, T1)>> f2,
       std::type_identity_t<crane::fn<T1(uint64_t, T1)>> f3, uint64_t n) {
-    return collatz_steps_graph_mut<T1, crane::obj>(
+    return collatz_steps_graph_mut<T1, T1>(
         std::move(f), std::move(f0),
         [](uint64_t, collatz_steps_clause_3_graph, const T1 &x) { return x; },
         [=, f2 = std::move(f2)](uint64_t n0, collatz_steps_graph,

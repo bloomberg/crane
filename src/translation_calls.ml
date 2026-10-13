@@ -1137,6 +1137,13 @@ let plan_call ~slot ?expected_ty env id tys args =
   let args, excess_args =
     let is_value_arg = function
       | MLdummy _ -> false
+      (* A variable bound at an erased type carries no more than a dummy:
+         under [Conservative Types] a definition keeps its type binders and
+         passes them on ([length A l']). *)
+      | MLrel i -> (
+        match get_env_type_opt i with
+        | Some t -> not (Mlutil.isTdummy (resolve_tmeta t))
+        | None -> true )
       | _ -> true
     in
     let is_value_dom t =

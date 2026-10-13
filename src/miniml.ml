@@ -284,7 +284,7 @@ type language_descr = {
   file_suffix : string;
   file_naming : ModPath.t -> string;
   (* the second argument is a comment to add to the preamble *)
-  preamble : Id.t -> Pp.t option -> ModPath.t list -> unsafe_needs -> Pp.t;
+  preamble : Id.t -> string option -> ModPath.t list -> unsafe_needs -> Pp.t;
   (* decide what both passes below will read; run once, before either *)
   prepare : ml_structure -> unit;
   pp_struct : ml_structure -> Pp.t;
@@ -292,7 +292,7 @@ type language_descr = {
   (* Concerning a possible interface file *)
   sig_suffix : string option;
   (* the second argument is a comment to add to the preamble *)
-  sig_preamble : Id.t -> Pp.t option -> ModPath.t list -> unsafe_needs -> Pp.t;
+  sig_preamble : Id.t -> string option -> ModPath.t list -> unsafe_needs -> Pp.t;
   (* for an isolated declaration print *)
   pp_decl : ml_decl -> Pp.t;
 }

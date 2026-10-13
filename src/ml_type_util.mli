@@ -149,6 +149,10 @@ val is_monadic_ml_type : Miniml.ml_type -> bool
 (** Whether a MiniML type is void. *)
 val ml_type_is_void : Miniml.ml_type -> bool
 
+(** Whether a binder of the type is a parameter at run time: not erased to a
+    [Tdummy], for which no argument is passed, and not [void]. *)
+val is_runtime_binder_type : Miniml.ml_type -> bool
+
 (** Whether a MiniML type is unit. *)
 val ml_type_is_unit : Miniml.ml_type -> bool
 

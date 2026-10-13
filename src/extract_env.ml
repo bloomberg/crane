@@ -1086,14 +1086,10 @@ let formatter dry file =
   (* note: max_indent should be < margin above, otherwise it's ignored *)
   ft
 
-(** Returns the user-set file comment split into words, or [None] if empty. *)
+(** Returns the user-set file comment, or [None] if empty. *)
 let get_comment () =
   let s = file_comment () in
-  if String.is_empty s then
-    None
-  else
-    let split_comment = Str.split (Str.regexp "[ \t\n]+") s in
-    Some (prlist_with_sep spc str split_comment)
+  if String.is_empty s then None else Some s
 
 (** Checks if an executable is available on the system PATH. Returns true if the
     executable can be found. *)
@@ -1858,19 +1854,19 @@ let full_extraction_exports ?(validate = true) ~opaque_access f lr =
 (** {2 Separate extraction is similar to recursive extraction, with the output
     decomposed in many files, one per Rocq .v file} *)
 
-(** Entry point for extracting specific references to separate files. Each Rocq
-    .v file gets its own C++ output file. *)
-let separate_extraction ~opaque_access lr =
-  init true false;
+(** Prints [struc], one structure per Rocq library, one file per library,
+    each in a namespace of its own: [Separate Extraction]'s layout, and
+    [Extraction Library]'s.  The file of a library [dry] says is rendered but
+    not written. *)
+let print_per_library ~dry struc =
   (* Run all per-unit cleanup in [~finally] so state is reset even when the
-     body aborts (e.g. the "from inside a module" [user_err] below). *)
+     body aborts. *)
   Fun.protect
     ~finally:(fun () ->
       Cpp_state.clear_global_method_registry ();
       Cpp_state.clear_valid_output_modules ();
       Cpp_state.clear_global_unmerged ();
-      Common.clear_non_output_modules ();
-      reset () )
+      Common.clear_non_output_modules () )
   @@ fun () ->
   (* Descend through applications/functors to the underlying struct body,
      returning its substructure (or [] for a bare module identifier). *)
@@ -1879,19 +1875,6 @@ let separate_extraction ~opaque_access lr =
     | MEapply (me, _) -> module_substructs me
     | MEfunctor (_, _, me) -> module_substructs me
     | MEident _ -> []
-  in
-  let refs, mps = locate_ref lr in
-  let struc =
-    optimize_struct (refs, mps) (mono_environment ~opaque_access refs mps)
-  in
-  let () =
-    List.iter
-      (function
-        | MPfile _, _ -> ()
-        | (MPdot _ | MPbound _), _ ->
-          user_err
-            (str "Separate Extraction from inside a module is not supported.") )
-      struc
   in
   warns ();
   (* Skip modules whose declarations are all custom-extracted (they would
@@ -2080,7 +2063,7 @@ let separate_extraction ~opaque_access lr =
             match Hashtbl.find_opt topo_index mp' with
             | Some j -> j < current_idx
             | None -> true);
-        print_structure_to_file ~namespace:(Some ns) (module_filename mp) false [e];
+        print_structure_to_file ~namespace:(Some ns) (module_filename mp) (dry mp) [e];
         opened_filter := (fun _ -> true)
       end
     | (MPdot _ | MPbound _), _ -> assert false
@@ -2139,6 +2122,24 @@ let separate_extraction ~opaque_access lr =
   Common.mpfiles_restore saved_mpfiles;
   List.iter print struc
 
+(** Entry point for extracting specific references to separate files. Each Rocq
+    .v file gets its own C++ output file. *)
+let separate_extraction ~opaque_access lr =
+  init true false;
+  Fun.protect ~finally:reset @@ fun () ->
+  let refs, mps = locate_ref lr in
+  let struc =
+    optimize_struct (refs, mps) (mono_environment ~opaque_access refs mps)
+  in
+  List.iter
+    (function
+      | MPfile _, _ -> ()
+      | (MPdot _ | MPbound _), _ ->
+        user_err
+          (str "Separate Extraction from inside a module is not supported.") )
+    struc;
+  print_per_library ~dry:(fun _ -> false) struc
+
 (** {2 Simple extraction in the Rocq toplevel. The vernacular command is
     \verb!Extraction! [qualid]} *)
 
@@ -2182,14 +2183,13 @@ let extraction_library ~opaque_access is_rec CAst.{loc; v = m} =
   in
   let struc = List.fold_left select [] l in
   let struc = optimize_struct ([], []) struc in
-  warns ();
-  let print = function
-    | ((MPfile dir as mp), sel) as e ->
-      let dry = (not is_rec) && not (DirPath.equal dir dir_m) in
-      print_structure_to_file (module_filename mp) dry [e]
-    | _ -> assert false
+  (* Without [Recursive], only [m]'s own file is written; the libraries it
+     depends on are rendered for what [m]'s file needs to know of them. *)
+  let dry = function
+    | MPfile dir -> (not is_rec) && not (DirPath.equal dir dir_m)
+    | _ -> false
   in
-  List.iter print struc
+  print_per_library ~dry struc
 
 (* Helper to detect if we're running under dune (for test output formatting).
    When INSIDE_DUNE=1 is set in the environment, we emit machine-parseable

@@ -1607,13 +1607,25 @@ let rec tmp_head_lams = function
     for later linear reduction (this helps the inlining of recursors)} *)
 
 let rec ast_glob_subst s t =
+  (* The body of [refe] at the type arguments [tys] an occurrence names:
+     inlined, its own type variables stand for nothing in the caller.  An
+     argument the occurrence leaves erased says nothing, and the body keeps
+     its own variable there: [Fix_F]'s family [P], erased where Equations
+     calls it, would otherwise erase the fixpoint's codomain. *)
+  let body refe tys =
+    let b = Refmap'.find refe s in
+    let informative i t =
+      match t with Tdummy _ | Tunknown -> Tvar (Schematic, i + 1) | t -> t
+    in
+    if tys = [] then b else ast_map_types (type_subst_list (List.mapi informative tys)) b
+  in
   match t with
-  | MLapp ((MLglob ((GlobRef.ConstRef kn as refe), _) as f), a) ->
+  | MLapp ((MLglob ((GlobRef.ConstRef kn as refe), tys) as f), a) ->
     let a = List.map (fun e -> tmp_head_lams (ast_glob_subst s e)) a in
-    ( try linear_beta_red a (Refmap'.find refe s)
+    ( try linear_beta_red a (body refe tys)
       with Not_found -> MLapp (f, a) )
-  | MLglob ((GlobRef.ConstRef kn as refe), _) ->
-    (try Refmap'.find refe s with Not_found -> t)
+  | MLglob ((GlobRef.ConstRef kn as refe), tys) ->
+    (try body refe tys with Not_found -> t)
   | _ -> ast_map (ast_glob_subst s) t
 
 (** {1 Auxiliary functions used in simplification of ML cases} *)

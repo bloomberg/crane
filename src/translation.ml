@@ -1650,9 +1650,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           | Tfun _ as f when f <> t -> fun_ty_of f
           | _ -> None )
       in
-      let is_runtime_binder (_, ty) =
-        (not (isTdummy ty)) && not (ml_type_is_void ty)
-      in
+      let is_runtime_binder (_, ty) = is_runtime_binder_type ty in
       let split_after_runtime n binders =
         (* Prefix of [binders] holding exactly [n] runtime binders, or [None]
            if there are no more than [n] of them. *)
@@ -2345,7 +2343,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             let fix_lam_params, _ = Mlutil.collect_lams fix_funs.(fix_x) in
             let fix_value_params =
               List.filter
-                (fun (_, ty) -> not (isTdummy ty) && not (ml_type_is_void ty))
+                (fun (_, ty) -> is_runtime_binder_type ty)
                 fix_lam_params
             in
             ( match fix_value_params with
@@ -9280,7 +9278,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       (* Check if all parameters are dummy/void - if so, this is likely a thunk
          for monadic ops *)
       let all_params_dummy =
-        List.for_all (fun (_, ty) -> isTdummy ty || ml_type_is_void ty) params
+        List.for_all (fun (_, ty) -> not (is_runtime_binder_type ty)) params
       in
 
       if all_params_dummy then
@@ -9516,7 +9514,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         let all_lifted_params =
           free_var_params
           @ List.filter
-              (fun (_, ty) -> (not (ml_type_is_void ty)) && not (isTdummy ty))
+              (fun (_, ty) -> is_runtime_binder_type ty)
               lam_param_ids
         in
         let cpp_params, all_temps_with_funs =

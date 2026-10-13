@@ -2039,23 +2039,27 @@ let claim_output_target target =
    depends on that library must include its header rather than re-emit its
    declarations, which would be a duplicate symbol at link time.  The map is
    written into the [.vo] so that [Require]-ing the library carries it. *)
+(* Each claim keeps the library whose compilation made it. *)
 let extracted_units = Summary.ref MPmap.empty ~name:"CraneExtractedUnits"
 
-let set_extracted_unit mp target =
-  extracted_units := MPmap.add mp target !extracted_units
+let set_extracted_unit mp claim =
+  extracted_units := MPmap.add mp claim !extracted_units
 
-let extracted_units_object : ModPath.t * string -> obj =
+let extracted_units_object : ModPath.t * (string * DirPath.t) -> obj =
   declare_object
   @@ superglobal_object_nodischarge
        "Crane Extracted Units"
-       ~cache:(fun (mp, target) -> set_extracted_unit mp target)
+       ~cache:(fun (mp, claim) -> set_extracted_unit mp claim)
        ~subst:None
 
 let claim_extracted_unit mp target =
   if not (MPmap.mem mp !extracted_units) then
-    Lib.add_leaf (extracted_units_object (mp, target))
+    Lib.add_leaf (extracted_units_object (mp, (target, Lib.library_dp ())))
 
-let extracted_unit_of mp = MPmap.find_opt mp !extracted_units
+let extracted_unit_of mp =
+  match MPmap.find_opt mp !extracted_units with
+  | Some (target, dp) when not (DirPath.equal dp (Lib.library_dp ())) -> Some target
+  | _ -> None
 
 (** {2 Crane Extraction AccessOpaque} *)
 

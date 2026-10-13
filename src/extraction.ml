@@ -1364,9 +1364,23 @@ and type2sign env = type_to_sign (mlt_env env)
     @return A pair [(n, mlt)] where [n] is the number of type variables and [mlt] is the ML type *)
 and record_constant_type env sg kn opt_typ =
   let cb = lookup_constant kn env in
+  (* The type call sites read says which arguments the declaration takes: one
+     declared implicit ([Crane Extraction Implicit]) is dropped from the
+     declaration as an erased one is, so its domain is a [Tdummy] there. *)
+  let register mlt =
+    let r = GlobRef.ConstRef kn in
+    let rec mark s t =
+      match (s, t) with
+      | Kill k :: s, Tarr (a, b) when not (isTdummy a) -> Tarr (Tdummy k, mark s b)
+      | _ :: s, Tarr (a, b) -> Tarr (a, mark s b)
+      | _, Tmeta {contents = Some t} -> mark s t
+      | _ -> t
+    in
+    register_glob_def r (mark (sign_with_implicits r (type2signature env mlt) 0) mlt)
+  in
   match lookup_cst_type kn cb with
   | Some schema ->
-    register_glob_def (GlobRef.ConstRef kn) (snd schema);
+    register (snd schema);
     schema
   | None ->
     let typ =
@@ -1377,7 +1391,7 @@ and record_constant_type env sg kn opt_typ =
     let mlt = extract_type env sg [] 1 typ [] in
     let schema = (type_maxvar mlt, mlt) in
     let () = add_cst_type kn cb schema in
-    register_glob_def (GlobRef.ConstRef kn) mlt;
+    register mlt;
     schema
 
 (* Precondition: [(c args)] is not a type scheme, and is informative. *)

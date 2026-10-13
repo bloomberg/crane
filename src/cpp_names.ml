@@ -292,9 +292,12 @@ let cpp_name_of_promoted (base : string) : string =
     "::" components are equal and [allow_bare] is false, collapse only if
     there is an outer prefix (e.g. "X::A::A" → "X::A").  When [allow_bare]
     is true, also collapse bare "A::A" → "A".  Returns the (possibly
-    shortened) string unchanged if no dedup applies. *)
-let dedup_qualified_tail ?(allow_bare = false) cap =
+    shortened) string unchanged if no dedup applies.  A leading [::], naming
+    the global scope, is not a component: it stays in front of the result. *)
+let rec dedup_qualified_tail ?(allow_bare = false) cap =
   match String.rindex_opt cap ':' with
+  | _ when String.starts_with ~prefix:"::" cap ->
+    "::" ^ dedup_qualified_tail ~allow_bare (String.sub cap 2 (String.length cap - 2))
   | Some last_colon when last_colon < String.length cap - 1 ->
     let last = String.sub cap (last_colon + 1) (String.length cap - last_colon - 1) in
     let prev_start =

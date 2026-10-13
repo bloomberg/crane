@@ -317,6 +317,12 @@ let ml_type_is_void (ty : ml_type) : bool =
   | Tglob (r, _, _) -> is_void r
   | _ -> false
 
+(** Whether a binder of type [ty] is a parameter at run time: not erased whole
+    to a [Tdummy] -- no call passes an argument for one, an [MLdummy] being
+    dropped from every argument list -- and not [void]. *)
+let is_runtime_binder_type (ty : ml_type) : bool =
+  (not (Mlutil.isTdummy (resolve_tmeta ty))) && not (ml_type_is_void ty)
+
 (** Check if an ML type is Rocq's [unit] type. *)
 let ml_type_is_unit (ty : ml_type) : bool =
   match resolve_tmeta ty with

@@ -289,7 +289,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
     | Miniml.Tmeta {contents = Some t} -> remap_ml_type t
     | t -> t
   in
-  let _ty = if needs_remap then remap_ml_type ty else ty in
+  let ty = if needs_remap then remap_ml_type ty else ty in
   let ret_ty = if needs_remap then remap_ml_type ret_ty else ret_ty in
   let body =
     if needs_remap then Mlutil.remap_tvars remap_ml_tvar body else body
@@ -409,7 +409,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
            and {!Ml_type_util.ml_type_is_instance} is where both cases are
            recognised -- a skipped class is a [ConstRef] mapped to the empty
            string, which [is_typeclass_type] alone does not see. *)
-        (not (ml_type_is_void ty)) && not (Ml_type_util.ml_type_is_instance ty) )
+        Ml_type_util.is_runtime_binder_type ty && not (Ml_type_util.ml_type_is_instance ty) )
       param_ids_with_pos
   in
 

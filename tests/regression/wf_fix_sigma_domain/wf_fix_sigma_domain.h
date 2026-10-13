@@ -60,13 +60,6 @@ struct WfFixSigmaDomain {
     }
   }
 
-  template <typename T1> static uint64_t sw_crane_Fix_F(const T1 x) {
-    return sw_functional(x.pr1, x.pr2, [](uint64_t a0, uint64_t b0) {
-      T1 y = sigma<uint64_t, uint64_t>{a0, b0};
-      return sw_crane_Fix_F<T1>(y);
-    });
-  }
-
   static uint64_t sw(uint64_t a, uint64_t b);
   static uint64_t sw_unfold(uint64_t a, uint64_t b);
 
@@ -146,21 +139,6 @@ struct WfFixSigmaDomain {
           std::get<typename sw_graph::Sw_graph_equation_2>(s.v());
       return f0(a0, b0, *hind0,
                 sw_graph_rect<T1>(f, f0, b0, a0, sw(b0, a0), *hind0));
-    }
-  }
-
-  template <typename T1>
-  static sw_graph sw_graph_correct_crane_Fix_F(const T1 x) {
-    uint64_t x0 = x.pr2;
-    crane::fn<sw_graph(uint64_t, uint64_t)> h = [](uint64_t a0, uint64_t b0) {
-      T1 y = sigma<uint64_t, uint64_t>{a0, b0};
-      return sw_graph_correct_crane_Fix_F<T1>(y);
-    };
-    if (x.pr1 <= 0) {
-      return sw_graph::sw_graph_equation_1(x0);
-    } else {
-      uint64_t n = x.pr1 - 1;
-      return sw_graph::sw_graph_equation_2(n, x0, h(x0, n));
     }
   }
 

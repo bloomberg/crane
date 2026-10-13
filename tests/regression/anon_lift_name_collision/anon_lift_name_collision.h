@@ -115,19 +115,22 @@ struct Helper {
 };
 
 struct AnonLiftNameCollision {
-  template <typename T1> static uint64_t run_crane_F(const List<T1> l) {
-    if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
-      return UINT64_C(0);
-    } else {
-      const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
-      return (run_crane_F<T1>(*a1) + 1);
-    }
-  }
-
-  static inline const uint64_t run = (Helper::count + []() {
-    return run_crane_F(
-        List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil()));
-  }());
+  static inline const uint64_t run = []() {
+    return (Helper::count + []() {
+      auto f_impl = [](auto &_self_f, const List<uint64_t> &l) -> uint64_t {
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+          return UINT64_C(0);
+        } else {
+          const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+          return (_self_f(_self_f, *a1) + 1);
+        }
+      };
+      auto f = [&](const List<uint64_t> &l) -> uint64_t {
+        return f_impl(f_impl, l);
+      };
+      return f(List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil()));
+    }());
+  }();
 };
 
 #endif // INCLUDED_ANON_LIFT_NAME_COLLISION

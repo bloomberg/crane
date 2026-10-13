@@ -764,6 +764,18 @@ let add_visible_members ids =
   let visible = top_visible () in
   visible.members <- Id.Set.union ids visible.members
 
+(** Whether a visible scope nearer than global scope declares [name] -- a
+    member of a module's struct, or a constructor's struct inside an
+    inductive's ({!add_visible_members}) -- hiding a global name spelled so.
+    Of a qualified name, its first component is the one looked up. *)
+let hidden_by_member name =
+  let head =
+    match Str.bounded_split (Str.regexp_string "::") name 2 with
+    | h :: _ -> h
+    | [] -> name
+  in
+  List.exists (fun v -> Id.Set.mem (Id.of_string head) v.members) (get_visible ())
+
 (** What to reset: all renaming tables, or also external file content. *)
 type reset_kind =
   | AllButExternal
@@ -1395,6 +1407,12 @@ let pp_ocaml_extern k base rls =
   | [] -> CErrors.anomaly (Pp.str "pp_ocaml_extern: empty renaming list")
   | base_s :: rls' ->
     if extern_needs_file k base rls' then
+      if !force_cross_file_qualification && hidden_by_member base_s then
+        (* A file is a namespace at global scope, so it is named from there
+           where a nearer name hides it: [Decimal] inside [Number]'s struct,
+           whose constructor of that name is a struct too. *)
+        plain (("::" ^ base_s) :: rls')
+      else
       (* We need to fully qualify. Last clash situation is unsupported *)
         match
           visible_clash_dbg base (Mod, base_s)

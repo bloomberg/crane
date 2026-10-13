@@ -103,12 +103,12 @@ val clear_global_unmerged : unit -> unit
 (** Pretty-printers for includes, comments, and file preambles. *)
 val pp_open : Names.ModPath.t -> Pp.t
 
-(** Wrap the given document in OCaml-style comment delimiters [(* ... *)]. *)
-val pp_comment : Pp.t -> Pp.t
+(** The text as C++ line comments, one per line. *)
+val pp_comment : string -> Pp.t
 
 (** Print an optional header comment followed by a blank line; empty for
     [None]. *)
-val pp_header_comment : Pp.t option -> Pp.t
+val pp_header_comment : string option -> Pp.t
 
 (** Append a newline to the document unless it is empty. *)
 val then_nl : Pp.t -> Pp.t
@@ -116,11 +116,11 @@ val then_nl : Pp.t -> Pp.t
 (** Build the preamble of an implementation file: the optional header comment
     followed by one [pp_open] line per used module. The first and last
     arguments are ignored. *)
-val preamble : 'a -> Pp.t option -> Names.ModPath.t list -> 'b -> Pp.t
+val preamble : 'a -> string option -> Names.ModPath.t list -> 'b -> Pp.t
 
 (** Build the preamble of a header/signature file; currently identical to
     [preamble]. *)
-val sig_preamble : 'a -> Pp.t option -> Names.ModPath.t list -> 'b -> Pp.t
+val sig_preamble : 'a -> string option -> Names.ModPath.t list -> 'b -> Pp.t
 
 (** {2 Render context} *)
 

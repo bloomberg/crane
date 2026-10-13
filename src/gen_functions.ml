@@ -715,7 +715,7 @@ let gen_dfun n b cty ty temps =
     List.filter
       (fun (_, ty, _) ->
         (not (Table.is_typeclass_type ty))
-        && not (ml_type_is_void ty)
+        && is_runtime_binder_type ty
         && not (is_skipped_ml_type ty) )
       all_ids_with_owned
   in
@@ -1361,7 +1361,7 @@ let gen_sfun n b dom cod temps =
     List.map2 (fun (x, ty) owned -> (x, ty, owned)) ids owned_flags
   in
   let ids_with_owned =
-    List.filter (fun (_, ty, _) -> not (ml_type_is_void ty)) ids_with_owned
+    List.filter (fun (_, ty, _) -> is_runtime_binder_type ty) ids_with_owned
   in
   (* Convert ML types to C++ types and wrap with const. Owned shared_ptr params:
      pass by value; Borrowed: const ref *)

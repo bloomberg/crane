@@ -270,6 +270,10 @@ val pop_visible : unit -> unit
     printed ahead of their declarations. *)
 val add_visible_members : Id.Set.t -> unit
 
+(** Whether a visible scope nearer than global scope declares the name,
+    hiding a global name spelled the same. *)
+val hidden_by_member : string -> bool
+
 (** The C++ names a structure declares as members of its struct, as
     {!add_visible_members} takes them. *)
 val member_names_of_sel : Miniml.ml_module_structure -> Id.Set.t
