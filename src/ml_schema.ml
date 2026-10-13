@@ -101,4 +101,11 @@ let validate s =
     then []
     else ["two binders claim one variable"]
   in
-  dense @ ordered @ owned @ unique
+  let originated =
+    List.filter_map
+      (fun v ->
+        if Option.has_some (origin s v) then None
+        else Some (Printf.sprintf "variable %d has no source binder" (Scheme.Var.ordinal v)) )
+      (vars s)
+  in
+  dense @ ordered @ owned @ unique @ originated

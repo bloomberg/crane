@@ -309,6 +309,22 @@ let sign_with_implicits r s nb_params =
   in
   add_impl (1 + nb_params) s
 
+(** The schema's binder roles as a call to [r] reads them under this run's
+    configuration: a binder declared implicit is erased as
+    {!sign_with_implicits} erases it, and under conservative types no binder
+    is.  Which variable comes from which binder does not change. *)
+let schema_view r schema =
+  let implicits = implicits_of_global r in
+  Ml_schema.with_roles
+    (fun {Ml_schema.binder; role; _} ->
+      let i = Scheme.Binder.position binder + 1 in
+      match role with
+      | Ml_schema.Erased _ when conservative_types () -> Ml_schema.Value
+      | Ml_schema.Value when Int.Set.mem i implicits ->
+        Ml_schema.Erased (Kimplicit (r, i))
+      | role -> role )
+    schema
+
 (** {1 Management of type variable contexts} *)
 
 (* A De Bruijn variable context (db) is a context for translating Rocq [Rel]
@@ -579,14 +595,6 @@ let with_extracting mind f =
       extracting_inds := Names.Mindset.remove mind !extracting_inds )
     f
 
-(** A binder of a declaration's product spine, as {!extract_spine} met it:
-    the kill reason its arrow's domain was extracted with, if erased, and the
-    type variable it was numbered, if it was given one. *)
-type spine_binder = {
-  sb_erased : kill_reason option;
-  sb_tvar : int option;
-}
-
 let rec extract_type env sg db j c args = fst (extract_spine env sg db j c args)
 
 (** {!extract_type}, together with the binders of the product spine it walked
@@ -612,12 +620,12 @@ and extract_spine env sg db j c args =
     let binder ~tvar dom (mld, spine) =
       if Int.equal j 0 then (mld, [])
       else
-        let sb_erased =
+        let raw_erased =
           match Option.map (expand env) dom with
           | Some (Tdummy k) -> Some k
           | _ -> None
         in
-        (mld, {sb_erased; sb_tvar = tvar} :: spine)
+        (mld, {Ml_schema.raw_erased; raw_tvar = tvar} :: spine)
     in
     let arrow dom (mld, spine) =
       match expand env mld with
@@ -1428,35 +1436,25 @@ and record_constant_type env sg kn opt_typ =
   match lookup_cst_type kn cb with
   | Some schema ->
     register (Ml_schema.body schema);
-    schema
+    schema_view (GlobRef.ConstRef kn) schema
   | None ->
     let typ =
       match opt_typ with
       | None -> EConstr.of_constr cb.const_type
       | Some typ -> typ
     in
+    (* The binder layout comes out of the same walk that numbers the
+       variables, and is cached with the body it describes. *)
     let mlt, spine = extract_spine env sg [] 1 typ [] in
-    let schema = Ml_schema.make (GlobRef.ConstRef kn) mlt [] in
-    let arity = Ml_schema.arity schema in
-    let () =
-      let claimed =
-        List.filter_map
-          (fun b ->
-            Option.bind b.sb_tvar (fun v ->
-                if v <= arity then Some v else None ) )
-          spine
-      in
-      if claimed <> List.init arity succ then
+    let schema = Ml_schema.make (GlobRef.ConstRef kn) mlt spine in
+    List.iter
+      (fun problem ->
         Probe.violation "schema"
-          Pp.(
-            str "the type binders of " ++ Names.Constant.print kn
-            ++ str " number " ++ prlist_with_sep spc int claimed
-            ++ str ", not each of its " ++ int arity
-            ++ str " variables once in source order" )
-    in
-    let () = add_cst_type kn cb schema in
+          Pp.(str "the scheme of " ++ Names.Constant.print kn ++ str ": " ++ str problem) )
+      (Ml_schema.validate schema);
+    add_cst_type kn cb schema;
     register mlt;
-    schema
+    schema_view (GlobRef.ConstRef kn) schema
 
 (* Precondition: [(c args)] is not a type scheme, and is informative. *)
 
@@ -1930,45 +1928,43 @@ and make_tyargs env sg mle args typs ~orig_typs =
 
 (** {2 Extraction of a constant applied to arguments} *)
 
-(** Reports a call whose written type arguments do not line up with its
-    callee's scheme variables: [TYARGS_COUNT] where the counts differ, the
-    case the hint guard in {!extract_cst_app} refuses, and
+(** Reports a call whose written type-argument list does not line up with
+    its callee's scheme variables when read by list position, as the readers
+    of [MLglob]'s list read it: [TYARGS_COUNT] where the counts differ, and
     [TYARGS_COINCIDENCE] where they agree while some entry was read at a
-    binder that is not its position's variable -- the case the guard cannot
-    see.  [positioned] pairs each entry with its argument position. *)
-and probe_tyarg_alignment env sg kn ~nargs ~scheme_vars s_full positioned =
-  let callee = Names.Constant.to_string kn in
+    binder that is not its position's variable, the case a length check
+    cannot see.  [positioned] pairs each entry with its argument position. *)
+and probe_tyarg_alignment kn schema ~nargs s_full positioned =
   let code = function
     | Kill Ktype -> "t"
     | Kill Kprop -> "p"
     | Kill (Kimplicit _) -> "i"
     | Keep -> "K"
   in
-  let typ = EConstr.of_constr (lookup_constant kn env).const_type in
-  let spine = Array.of_list (snd (extract_spine env sg [] 1 typ [])) in
-  let spine_code =
-    Array.fold_right
-      (fun b acc ->
-        ( match (b.sb_tvar, b.sb_erased) with
-        | Some v, _ when v <= scheme_vars -> string_of_int v
-        | _, Some k -> code (Kill k)
-        | _, None -> "K" )
-        ^ acc )
-      spine ""
+  let layout =
+    String.concat ""
+      (List.map
+         (fun {Ml_schema.role; scheme_var; _} ->
+           match (scheme_var, role) with
+           | Some v, _ -> string_of_int (Scheme.Var.ordinal v)
+           | None, Ml_schema.Erased k -> code (Kill k)
+           | None, Ml_schema.Value -> "K" )
+         (Ml_schema.binders schema) )
   in
   let detail () =
-    Printf.sprintf "%s args=%d tyargs=%d scheme_vars=%d sig=%s spine=%s" callee
-      nargs (List.length positioned) scheme_vars
+    Printf.sprintf "%s args=%d tyargs=%d scheme_vars=%d sig=%s spine=%s"
+      (Names.Constant.to_string kn) nargs (List.length positioned)
+      (Ml_schema.arity schema)
       (String.concat "" (List.map code s_full))
-      spine_code
+      layout
   in
   let exact k =
-    if k < Array.length spine then
-      Option.bind spine.(k).sb_tvar (fun v ->
-          if v <= scheme_vars then Some v else None )
-    else None
+    Option.bind
+      (Ml_schema.binder schema (Scheme.Binder.of_position k))
+      (fun b -> Option.map Scheme.Var.ordinal b.Ml_schema.scheme_var)
   in
-  if List.length positioned <> scheme_vars then Probe.hit "TYARGS_COUNT" detail
+  if List.length positioned <> Ml_schema.arity schema then
+    Probe.hit "TYARGS_COUNT" detail
   else if
     List.exists
       (fun (i, (k, _)) -> exact k <> Some (i + 1))
@@ -2032,15 +2028,22 @@ and extract_cst_app env sg mle mlt kn args =
   let tyargs = List.map snd positioned in
   let () =
     if Probe.enabled () then
-      probe_tyarg_alignment env sg kn ~nargs:la ~scheme_vars:(Ml_schema.arity schema)
-        s_full positioned
+      probe_tyarg_alignment kn schema ~nargs:la s_full positioned
+  in
+  (* What the call wrote for a scheme variable: the entry read at the binder
+     the variable comes from.  A binder with no variable -- a proof, an erased
+     family, a binder over propositions -- writes nothing any variable
+     reads. *)
+  let written_at v =
+    Option.bind (Ml_schema.origin schema v) (fun b ->
+        List.assoc_opt (Scheme.Binder.position b.Ml_schema.binder) positioned )
   in
   (* The type arguments the Rocq term passes are a statement about the
      scheme's type variables, and the value arguments need not repeat it: a
      monad's [bind] erases its carrier, so [m A] pins nothing, and [A] reaches
-     the continuation's binder only from here.  Given where the count lines
-     up and the argument says something; a variable an argument already
-     settled otherwise keeps that answer.
+     the continuation's binder only from here.  Each is given to the variable
+     its binder stands for, where it says something; a variable an argument
+     already settled otherwise keeps that answer.
 
      Only a ground argument is given.  One naming a type variable names it
      the way [make_tyargs] reads the Rocq context, which need not be the way
@@ -2057,10 +2060,13 @@ and extract_cst_app env sg mle mlt kn args =
         | Tmeta {contents = Some u} -> informative u
         | Tstring -> true
       in
-      if List.length tyargs = Array.length tvar_metas then
-        List.iteri
-          (fun i t -> if informative t then try_mgu tvar_metas.(i) (expand env t))
-          tyargs
+      List.iter
+        (fun v ->
+          match written_at v with
+          | Some t when informative t ->
+            try_mgu tvar_metas.(Scheme.Var.ordinal v - 1) (expand env t)
+          | _ -> () )
+        (Ml_schema.vars schema)
   in
   let mla = make_mlargs env sg mle s args metas in
   (* let dargs = List.map (fun t -> extract_type env sg [] 1 t []) (List.firstn (max 1 (la - (List.length mla))) args) in *)

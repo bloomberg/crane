@@ -217,3 +217,47 @@
   (deps interp_state_dict.t.exe)
   (action (run ./interp_state_dict.t.exe))))
 
+
+(subdir tyarg_family_binder_shift
+ (rule
+  (targets tyarg_family_binder_shift.t.exe)
+  (deps TyargFamilyBinderShift.vo tyarg_family_binder_shift.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} tyarg_family_binder_shift.t.exe tyarg_family_binder_shift.cpp tyarg_family_binder_shift.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps tyarg_family_binder_shift.t.exe)
+  (action (run ./tyarg_family_binder_shift.t.exe))))
+
+(subdir tyarg_equal_count_shift
+ (rule
+  (targets tyarg_equal_count_shift.t.exe)
+  (deps TyargEqualCountShift.vo tyarg_equal_count_shift.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} tyarg_equal_count_shift.t.exe tyarg_equal_count_shift.cpp tyarg_equal_count_shift.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps tyarg_equal_count_shift.t.exe)
+  (action (run ./tyarg_equal_count_shift.t.exe))))
+
+(subdir tyarg_partial_type_application
+ (rule
+  (targets tyarg_partial_type_application.t.exe)
+  (deps TyargPartialTypeApplication.vo tyarg_partial_type_application.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} tyarg_partial_type_application.t.exe tyarg_partial_type_application.cpp tyarg_partial_type_application.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps tyarg_partial_type_application.t.exe)
+  (action (run ./tyarg_partial_type_application.t.exe))))
+
+(subdir tyarg_implicit_type_binder
+ (rule
+  (targets tyarg_implicit_type_binder.t.exe)
+  (deps TyargImplicitTypeBinder.vo tyarg_implicit_type_binder.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} tyarg_implicit_type_binder.t.exe tyarg_implicit_type_binder.cpp tyarg_implicit_type_binder.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps tyarg_implicit_type_binder.t.exe)
+  (action (run ./tyarg_implicit_type_binder.t.exe))))

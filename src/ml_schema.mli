@@ -62,6 +62,7 @@ val with_roles : (binder_info -> binder_role) -> t -> t
     abbreviations), keeping the identity and the layout. *)
 val with_body : Miniml.ml_type -> t -> t
 
-(** The schema invariants of section 8.1, as a list of violations: variables
-    dense and owned, binder mappings source-ordered, in range and unique. *)
+(** The schema invariants of section 8.1, as a list of violations: the body
+    names no variable past the arity, every variable has exactly one source
+    binder, and binder mappings are source-ordered, owned and unique. *)
 val validate : t -> string list
