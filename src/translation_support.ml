@@ -1963,59 +1963,18 @@ let recover_fix_codomain ~app_result ((id, ty) : Id.t * ml_type)
 (** Settle the types of a fixpoint's functions: recover each codomain from its
     body where erasure lost it, then mint [Tvar]s for the metas that remain.
     The order is the point -- a variable already standing for the result type
-    is no longer asking what the body builds.
-
-    A body is first made the function its type says it is: the [let]s between
-    a fixpoint's binder and its first lambda go under the lambdas --
-    [fix F (h := H F) (l : L) := b] as [fix F (l : L) := let h := H F in b]
-    ({!float_lets_under_lams}).  A call unfolds the body, so the [let]s run
-    at every call either way; floated, the fixpoint's parameters are its
-    lambdas', and a reference to [F] in [H F] is a function, not a fixpoint
-    of no parameters returning one.
+    is no longer asking what the body builds.  The bodies already have the
+    shape their types say ({!Fix_shape}).
 
     The settled signatures and bodies come back in new arrays.  The fixpoint's
     own are shared by every declaration its definition was inlined into --
     [Fix_F] into each function defined by well-founded recursion -- and what
     one of them returns is not what the next one does. *)
-let rec float_lets_under_lams = function
-  | MLletin (x, t, a, b) -> (
-    match float_lets_under_lams b with
-    | MLlam (y, ty, c) ->
-      MLlam
-        ( y, ty,
-          float_lets_under_lams (MLletin (x, t, Mlutil.ast_lift 1 a, Mlutil.permut_rels 1 1 c)) )
-    | b -> MLletin (x, t, a, b) )
-  | e -> e
-
 let resolve_fix_types ~app_result ~next_tvar ids funs =
-  let funs = Array.map float_lets_under_lams funs in
   let settled = Array.map2 (recover_fix_codomain ~app_result) ids funs in
   let ids = Array.map fst settled and funs = Array.map snd settled in
   Array.iter (fun (_, ty) -> resolve_type_metas ~next_tvar ty) ids;
   (ids, funs)
-
-(** A cofixpoint whose functions take no parameter -- [cofix o := Cons 1 o]
-    -- as the call [(cofix o (_ : unit) := Cons 1 (o tt)) tt].  A value cannot
-    name itself before it is built, a function can: each occurrence of [o]
-    becomes a corecursive call, which the constructor guarding it suspends,
-    as it does a top-level [CoFixpoint]'s.  [None] for any other fixpoint. *)
-let thunk_nullary_cofix x ids funs is_cofix =
-  match (Table.resolve_unit_type (), Table.resolve_tt_ctor ()) with
-  | Some u, Some tt
-    when is_cofix && Array.for_all (function MLlam _ -> false | _ -> true) funs ->
-    let unit_ty = Miniml.Tglob (u, [], []) in
-    let tt_v = MLcons (unit_ty, tt, []) in
-    let n = Array.length ids in
-    (* Under the new binder the block's functions are [MLrel (k + 1)] to
-       [MLrel (k + n)] at [k] binders deeper still. *)
-    let rec call_self k = function
-      | MLrel i when i > k && i <= k + n -> MLapp (MLrel i, [tt_v])
-      | t -> Mlutil.ast_map_lift call_self k t
-    in
-    let thunk f = MLlam (Id (Id.of_string "u"), unit_ty, call_self 1 (Mlutil.ast_lift 1 f)) in
-    let ids = Array.map (fun (id, ty) -> (id, Tarr (unit_ty, ty))) ids in
-    Some (MLapp (MLfix (x, ids, Array.map thunk funs, is_cofix), [tt_v]))
-  | _ -> None
 
 (** Resolve unresolved metas in an ML AST by walking its sub-types.
     resolve_metas should be a function that resolves metas in a single ml_type.

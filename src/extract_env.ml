@@ -1473,6 +1473,7 @@ let optimize_struct to_appear struc =
     struc
     |> Ml_dedup.structure
     |> Ml_specialize.structure
+    |> Fix_shape.structure
     |> Normalize.structure
   in
   (* With the bodies final, which definitions only throw, and which

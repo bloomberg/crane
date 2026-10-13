@@ -107,3 +107,7 @@ val optimize_struct :
 (** The references a declaration defines; an inductive block is represented
     by its first packet. *)
 val declared_refs : ml_decl -> GlobRef.t list
+
+(** [map_struct_decls f s] applies [f] to every declaration of [s], in modules
+    and functor bodies alike. *)
+val map_struct_decls : (ml_decl -> ml_decl) -> ml_structure -> ml_structure

@@ -10124,35 +10124,32 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         decls @ defs
         @ [k (CPPfun_call (call_opaque, CPPvar (fst (List.nth renamed_ids x)), of_reversed args))]
       end
-  | MLfix (x, ids, funs, is_cofix) -> (
-    match thunk_nullary_cofix x ids funs is_cofix with
-    | Some thunked -> gen_stmts ~slot env k thunked
-    | None ->
-      (* Standalone fixpoint (not immediately applied) — e.g., appearing as the
-         RHS of a let-binding.  Since the fixpoint value itself is returned (not
-         called in place), it will always escape.  Use the Y-combinator pattern:
-         the generated wrapper lambda [fix_name] is already a plain callable. *)
-      let next_tvar = ref 1 in
-      let ids, funs = resolve_fix_types ~app_result:ml_app_result_type ~next_tvar ids funs in
-      let all_fix_ids_list = Array.to_list ids in
-      let funs_compiled =
-        Array.to_list
-          (Array.mapi
-             (fun i f ->
-               gen_fix env ~all_fix_ids:all_fix_ids_list ~fix_idx:i ids.(i) f )
-             funs )
-      in
-      let renamed_ids =
-        List.map (fun (renamed_id, _, _) -> renamed_id) funs_compiled
-      in
-      let funs_with_params =
-        List.map (fun (_, params, body) -> (params, body)) funs_compiled
-      in
-      let decls, defs, _deref_subst =
-        gen_local_fix_ycomb env renamed_ids funs_with_params
-      in
-      let fix_id = fst (List.nth renamed_ids x) in
-      decls @ defs @ [k (CPPvar fix_id)] )
+  | MLfix (x, ids, funs, _) ->
+    (* Standalone fixpoint (not immediately applied) — e.g., appearing as the
+       RHS of a let-binding.  Since the fixpoint value itself is returned (not
+       called in place), it will always escape.  Use the Y-combinator pattern:
+       the generated wrapper lambda [fix_name] is already a plain callable. *)
+    let next_tvar = ref 1 in
+    let ids, funs = resolve_fix_types ~app_result:ml_app_result_type ~next_tvar ids funs in
+    let all_fix_ids_list = Array.to_list ids in
+    let funs_compiled =
+      Array.to_list
+        (Array.mapi
+           (fun i f ->
+             gen_fix env ~all_fix_ids:all_fix_ids_list ~fix_idx:i ids.(i) f )
+           funs )
+    in
+    let renamed_ids =
+      List.map (fun (renamed_id, _, _) -> renamed_id) funs_compiled
+    in
+    let funs_with_params =
+      List.map (fun (_, params, body) -> (params, body)) funs_compiled
+    in
+    let decls, defs, _deref_subst =
+      gen_local_fix_ycomb env renamed_ids funs_with_params
+    in
+    let fix_id = fst (List.nth renamed_ids x) in
+    decls @ defs @ [k (CPPvar fix_id)]
   (* | MLapp (MLglob (h, _), a1 :: a2 :: l) when is_hoist h -> gen_stmts env k
      (MLapp (a1, a2::[])) *)
   | MLapp (MLglob (r, bind_tys), a1 :: a2 :: l) when is_bind r ->

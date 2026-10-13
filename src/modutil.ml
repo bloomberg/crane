@@ -535,3 +535,21 @@ let optimize_struct to_appear struc =
   in
   let () = check_for_remaining_implicits mini_struc in
   mini_struc
+
+(** [s] with [f] applied to every declaration, in modules and functor bodies
+    alike: the frame of a pass that rewrites declarations one at a time. *)
+let map_struct_decls f s =
+  let rec elems sel =
+    List.map
+      (fun (l, se) ->
+        match se with
+        | SEdecl d -> (l, SEdecl (f d))
+        | SEmodule m -> (l, SEmodule {m with ml_mod_expr = module_expr m.ml_mod_expr})
+        | se -> (l, se) )
+      sel
+  and module_expr = function
+    | MEstruct (mp, sel) -> MEstruct (mp, elems sel)
+    | MEfunctor (mbid, mt, me) -> MEfunctor (mbid, mt, module_expr me)
+    | me -> me
+  in
+  List.map (fun (mp, sel) -> (mp, elems sel)) s

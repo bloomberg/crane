@@ -235,21 +235,6 @@ let decl ~methods = function
     Dterm (r, body ~globals:[] b, ty)
   | d -> d
 
-let rec structure_elems ~methods sel =
-  List.map
-    (fun (l, se) ->
-      match se with
-      | SEdecl d -> (l, SEdecl (decl ~methods d))
-      | SEmodule m ->
-        (l, SEmodule {m with ml_mod_expr = module_expr ~methods m.ml_mod_expr})
-      | se -> (l, se) )
-    sel
-
-and module_expr ~methods = function
-  | MEstruct (mp, sel) -> MEstruct (mp, structure_elems ~methods sel)
-  | MEfunctor (mbid, mt, me) -> MEfunctor (mbid, mt, module_expr ~methods me)
-  | me -> me
-
 (* The methods the structure's functions become.  The registry is built as
    [Extract_env] builds its own, in the discovery phase (naming a file-level
    module asserts it); and naming records the modules names live in, which is
@@ -264,6 +249,4 @@ let methods_of struc =
       Common.mpfiles_restore saved )
     (fun () -> Method_registry.create ~ret_is_erased:Translation.return_type_is_erased struc)
 
-let structure struc =
-  let methods = methods_of struc in
-  List.map (fun (mp, sel) -> (mp, structure_elems ~methods sel)) struc
+let structure struc = Modutil.map_struct_decls (decl ~methods:(methods_of struc)) struc
