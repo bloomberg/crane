@@ -200,6 +200,33 @@ let dead_unit_returns_to_abort (cod : cpp_type) (body : cpp_stmt list) =
   in
   fix_stmts (Some cod) body
 
+(** The rewrites every generated function body takes at its C++ result type
+    [cod], a free function's and a method's alike: a [tt] returned where the
+    result is not [unit] is dead ({!dead_unit_returns_to_abort}), and a
+    closure returned where the result erased is stored in the canonical form
+    its caller reads ({!Translation.erase_returned_fn_values}). *)
+let finish_fn_body cod body = dead_unit_returns_to_abort cod (erase_returned_fn_values cod body)
+
+(** Whether the definition [r], whose ML result type is [ml_ret], is suspended
+    whole: a coinductive result, and a body [b] that calls [r] outside every
+    constructor -- Rocq's guard condition holds only up to unfolding.  Any
+    other coinductive body is suspended at its constructors
+    ({!Translation_support.suspend_ctor}). *)
+let suspends_whole r ml_ret b = Table.is_coinductive_type ml_ret && calls_eagerly r b
+
+(** [return ty::lazy_([=]() -> cod { return x; })]: the body's result [x], of
+    C++ type [cod], suspended whole as the coinductive [ml_ret], whose type
+    arguments [cpp_of] spells. *)
+let suspend_whole ~cpp_of ~cod ml_ret x =
+  match ml_ret with
+  | Miniml.Tglob (r, args, _) ->
+    Sreturn
+      (Some
+         (CPPsuspend
+            ( Tglob (r, List.map cpp_of args, []),
+              mk_lambda [] (Some cod) [Sreturn (Some x)] ~capture:Closure )))
+  | _ -> CErrors.anomaly (Pp.str "suspend_whole: a coinductive result is a Tglob")
+
 (** The C++ expression stating the witness held by a [sig]-typed parameter
     called [name], when it can be stated at all.  A transparently extracted
     [sig] {i is} its witness, so the parameter stands for it; one left as a
@@ -1014,30 +1041,10 @@ let gen_dfun n b cty ty temps =
      body that calls itself outside every constructor -- guarded, for Rocq,
      only up to unfolding -- is suspended whole. *)
   let ml_ret = ml_return_type ty in
-  let is_cofix_return =
-    Table.is_coinductive_type ml_ret && calls_eagerly n b
-  in
+  let is_cofix_return = suspends_whole n ml_ret b in
   let cofix_wrap x =
     if is_cofix_return then
-      let ret_cpp = cod in
-      let coind_ref =
-        match ml_ret with
-        | Miniml.Tglob (r, _, _) -> r
-        | _ ->
-          CErrors.anomaly
-            (Pp.str "gen_decl: cofixpoint return type expected to be Tglob")
-      in
-      let type_args =
-        match ml_ret with
-        | Miniml.Tglob (_, args, _) ->
-          List.map
-            (fun t ->
-              convert_ml_type_to_cpp_type env type_var_ids t )
-            args
-        | _ -> []
-      in
-      let thunk = mk_lambda [] (Some ret_cpp) [Sreturn (Some x)] ~capture:Closure in
-      Sreturn (Some (CPPsuspend (Tglob (coind_ref, type_args, []), thunk)))
+      suspend_whole ~cpp_of:(convert_ml_type_to_cpp_type env type_var_ids) ~cod ml_ret x
     else if cod = Tvoid then
       (* void function: execute expression for side effects, then return.
          Some tail expressions (like writeTVar) have side effects that must
@@ -1181,8 +1188,7 @@ let gen_dfun n b cty ty temps =
         (mk_dfun n ~ret:cod ~no_pure
            (Ddef
               ( ids,
-                dead_unit_returns_to_abort cod
-                  (erase_returned_fn_values cod (guard_compare n ids (sigma_asserts @ b))) ) ) ) )
+                finish_fn_body cod (guard_compare n ids (sigma_asserts @ b)) ) ) ) )
     else
       (* Eta-expansion: the body 'b' references original params starting at
          MLrel 1. After adding k=|missing| new params to the environment, the
@@ -1230,8 +1236,7 @@ let gen_dfun n b cty ty temps =
         (mk_dfun n ~ret:cod ~no_pure
            (Ddef
               ( ids,
-                dead_unit_returns_to_abort cod
-                  (erase_returned_fn_values cod (guard_compare n ids (sigma_asserts @ b))) ) ) )
+                finish_fn_body cod (guard_compare n ids (sigma_asserts @ b)) ) ) )
   in
   tctx := { !tctx with current_cpp_return_type = saved_return_type };
   Table.current_decl_ref := saved_decl_ref;

@@ -493,33 +493,12 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
 
   (* Suspended at its constructors, and whole only where it calls itself
      outside all of them: see [cofix_wrap] in [gen_dfun]. *)
-  let is_cofix_method =
-    Table.is_coinductive_type ret_ty
-    && calls_eagerly func_ref (snd (collect_lams body))
-  in
+  let is_cofix_method = suspends_whole func_ref ret_ty (snd (collect_lams body)) in
   let method_k x =
     if is_cofix_method then
-      let type_args =
-        match ret_ty with
-        | Miniml.Tglob (_, args, _) ->
-          List.map
-            (fun t ->
-              convert_ml_type_to_cpp_type (empty_env ()) ~ns:(Refset'.singleton name)
-                vars
-                t )
-            args
-        | _ -> []
-      in
-      let coind_ref =
-        match ret_ty with
-        | Miniml.Tglob (r, _, _) -> r
-        | _ ->
-          CErrors.anomaly
-            (Pp.str
-               "gen_method_field: cofixpoint return type expected to be Tglob" )
-      in
-      let thunk = mk_lambda [] (Some ret_cpp) [Sreturn (Some x)] ~capture:Closure in
-      Sreturn (Some (CPPsuspend (Tglob (coind_ref, type_args, []), thunk)))
+      suspend_whole
+        ~cpp_of:(convert_ml_type_to_cpp_type (empty_env ()) ~ns:(Refset'.singleton name) vars)
+        ~cod:ret_cpp ret_ty x
     else
       Sreturn (Some x)
   in
@@ -657,7 +636,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
   (* A [tt] the method returns is dead where its result is not [unit] -- with
      the codomain read as a top-level function's is, a monad's unit included. *)
   let stmts =
-    dead_unit_returns_to_abort
+    finish_fn_body
       (apply_unit_void (ml_type_is_void_call ty) ret_cpp)
       (List.map (tvar_subst_stmt extended_vars) stmts)
   in
