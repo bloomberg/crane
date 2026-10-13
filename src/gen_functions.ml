@@ -1232,7 +1232,7 @@ let gen_dfun n b cty ty temps =
              IIFE as an extra argument to a [std::function] field that only
              takes one value argument. *)
           let args = List.rev (List.filter_map
-            (fun (i, (_, t)) -> if isTdummy t then None else Some (MLrel (i + 1)))
+            (fun (i, (_, t)) -> if erased_by_extraction t then None else Some (MLrel (i + 1)))
             (List.mapi (fun i x -> (i, x)) missing)) in
           List.map
             (glob_subst_stmt n rec_call)

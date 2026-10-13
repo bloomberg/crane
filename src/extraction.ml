@@ -1380,7 +1380,9 @@ and record_constant_type env sg kn opt_typ =
   let cb = lookup_constant kn env in
   (* The type call sites read says which arguments the declaration takes: one
      declared implicit ([Crane Extraction Implicit]) is dropped from the
-     declaration as an erased one is, so its domain is a [Tdummy] there. *)
+     declaration as an erased one is, so its domain is a [Tdummy] there,
+     carrying the signature's [Kimplicit] -- the binder's role,
+     [Erased (Implicit _)], as {!Ml_type_util.binder_role} reads it. *)
   let register mlt =
     let r = GlobRef.ConstRef kn in
     let rec mark s t =

@@ -154,6 +154,37 @@ let rec ml_codomain = function
   | Miniml.Tmeta {contents = Some t} -> ml_codomain t
   | t -> t
 
+(** Why a binder -- a lambda's, a fixpoint's, a declaration's domain -- is
+    not a parameter at run time.  Extraction erases a binder whose type is a
+    type, a proof, or an argument declared implicit ([Crane Extraction
+    Implicit]); every argument list drops it, an [MLdummy] standing for its
+    argument.  A binder of [void] type survives extraction but takes no C++
+    parameter. *)
+type erasure =
+  | Type_binder
+  | Proof
+  | Implicit of GlobRef.t * int
+  | Void
+
+(** What a binder is at run time: a parameter, or erased for the
+    {!erasure} given.  See {!binder_role}. *)
+type binder_role =
+  | Runtime
+  | Erased of erasure
+
+(** The erasure extraction recorded in a binder's type, if it did: its
+    [Tdummy], whose kill reason says why. *)
+let extraction_erasure (ty : ml_type) : erasure option =
+  match resolve_tmeta ty with
+  | Tdummy Ktype -> Some Type_binder
+  | Tdummy Kprop -> Some Proof
+  | Tdummy (Kimplicit (r, i)) -> Some (Implicit (r, i))
+  | _ -> None
+
+(** Whether extraction erased a binder of type [ty]: no call passes an
+    argument for it. *)
+let erased_by_extraction ty = Option.has_some (extraction_erasure ty)
+
 (** The domains of an ML type, in argument order -- every arrow it has,
     including the erased ones, so a position in the result is a position in the
     type.  Callers that need the arguments a C++ call actually passes want
@@ -171,7 +202,7 @@ let rec ml_domains t =
     ([Tdummy]) ones -- so the result lines up with the arguments a C++ call
     actually passes. *)
 let ml_value_domains t =
-  List.filter (fun d -> not (Mlutil.isTdummy d)) (ml_domains t)
+  List.filter (fun d -> not (erased_by_extraction d)) (ml_domains t)
 
 (** Give [b] as many binders as [ty] has value arrows.
 
@@ -282,12 +313,7 @@ let rec ml_drop_arrows n t =
 
 (** Count the number of non-erased (non-[Tdummy]) arrow levels in an ML type.
     For example [Tdummy -> A -> B -> C] counts as 2 (the dummy is skipped). *)
-let rec count_ml_value_arrows = function
-  | Miniml.Tarr (t1, t2) when not (Mlutil.isTdummy t1) ->
-    1 + count_ml_value_arrows t2
-  | Miniml.Tarr (_, t2) -> count_ml_value_arrows t2
-  | Miniml.Tmeta {contents = Some t} -> count_ml_value_arrows t
-  | _ -> 0
+let count_ml_value_arrows t = List.length (ml_value_domains t)
 
 (** Check if the codomain of an ML type (after all arrows) is a type variable.
     When true, the type variable might hide additional arrows, so the arrow
@@ -317,11 +343,23 @@ let ml_type_is_void (ty : ml_type) : bool =
   | Tglob (r, _, _) -> is_void r
   | _ -> false
 
-(** Whether a binder of type [ty] is a parameter at run time: not erased whole
-    to a [Tdummy] -- no call passes an argument for one, an [MLdummy] being
-    dropped from every argument list -- and not [void]. *)
+(** The role of a binder of type [ty]: the one classification every site
+    asking whether a binder is a run-time parameter reads. *)
+let binder_role (ty : ml_type) : binder_role =
+  match extraction_erasure ty with
+  | Some e -> Erased e
+  | None -> if ml_type_is_void ty then Erased Void else Runtime
+
+(** Whether a binder of type [ty] is a parameter at run time
+    ({!binder_role}). *)
 let is_runtime_binder_type (ty : ml_type) : bool =
-  (not (Mlutil.isTdummy (resolve_tmeta ty))) && not (ml_type_is_void ty)
+  match binder_role ty with Runtime -> true | Erased _ -> false
+
+(** Whether a binder of type [ty] is erased for being [void]: it survives
+    extraction, and an argument list keeps it, but a C++ signature does
+    not. *)
+let void_binder (ty : ml_type) : bool =
+  match binder_role ty with Erased Void -> true | Runtime | Erased _ -> false
 
 (** Check if an ML type is Rocq's [unit] type. *)
 let ml_type_is_unit (ty : ml_type) : bool =

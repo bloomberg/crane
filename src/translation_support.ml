@@ -1235,7 +1235,7 @@ let rec is_reified_monadic_expr ml_expr =
     in
     let rec go doms args =
       match (doms, args) with
-      | dom :: doms', _ when Mlutil.isTdummy dom -> go doms' args
+      | dom :: doms', _ when erased_by_extraction dom -> go doms' args
       | dom :: doms', a :: args' ->
         let fills_this_carrier =
           match Ml_type_util.resolve_tmeta dom with
@@ -3055,8 +3055,7 @@ let lifted_free_vars ~class_temps env free_indices =
       let ty = get_env_type i in
       if
         List.exists (fun (_, id) -> Id.equal id name) class_temps
-        || isTdummy ty
-        || ml_type_is_void ty
+        || not (is_runtime_binder_type ty)
       then
         None
       else

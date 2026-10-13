@@ -91,8 +91,37 @@ val ml_codomain : Miniml.ml_type -> Miniml.ml_type
     type. Only the arrow spine is chased through metavariables. *)
 val ml_domains : Miniml.ml_type -> Miniml.ml_type list
 
-(** The domains of a MiniML arrow type, in argument order, with the erased
-    ([Tdummy]) ones dropped -- one entry per argument a C++ call passes. *)
+(** Why a binder -- a lambda's, a fixpoint's, a declaration's domain -- is
+    not a parameter at run time: extraction erased it, its type being a type
+    ([Type_binder]), a proof ([Proof]) or an argument declared implicit
+    ([Implicit], from [Crane Extraction Implicit]), so every argument list
+    drops it; or its type is [void], so it takes no C++ parameter. *)
+type erasure =
+  | Type_binder
+  | Proof
+  | Implicit of Names.GlobRef.t * int
+  | Void
+
+(** What a binder is at run time.  Every site asking whether a binder is a
+    run-time parameter reads {!binder_role}, or one of the predicates below
+    built on it, never the binder's type directly. *)
+type binder_role =
+  | Runtime
+  | Erased of erasure
+
+(** The role of a binder of the type. *)
+val binder_role : Miniml.ml_type -> binder_role
+
+(** The erasure extraction recorded in a binder's type ([Type_binder],
+    [Proof] or [Implicit]), if it did. *)
+val extraction_erasure : Miniml.ml_type -> erasure option
+
+(** Whether extraction erased a binder of the type: no call passes an
+    argument for it.  A [void] binder is not one -- see {!binder_role}. *)
+val erased_by_extraction : Miniml.ml_type -> bool
+
+(** The domains of a MiniML arrow type, in argument order, with the ones
+    extraction erased dropped -- one entry per argument a C++ call passes. *)
 val ml_value_domains : Miniml.ml_type -> Miniml.ml_type list
 
 (** [eta_expand_to ty b] gives [b] as many binders as [ty] has value arrows,
@@ -149,9 +178,13 @@ val is_monadic_ml_type : Miniml.ml_type -> bool
 (** Whether a MiniML type is void. *)
 val ml_type_is_void : Miniml.ml_type -> bool
 
-(** Whether a binder of the type is a parameter at run time: not erased to a
-    [Tdummy], for which no argument is passed, and not [void]. *)
+(** Whether a binder of the type is a parameter at run time: its
+    {!binder_role} is [Runtime]. *)
 val is_runtime_binder_type : Miniml.ml_type -> bool
+
+(** Whether a binder of the type is erased for being [void] ([Erased Void]):
+    an argument list keeps it, a C++ signature does not. *)
+val void_binder : Miniml.ml_type -> bool
 
 (** Whether a MiniML type is unit. *)
 val ml_type_is_unit : Miniml.ml_type -> bool

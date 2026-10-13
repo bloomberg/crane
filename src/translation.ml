@@ -1561,7 +1561,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       in
       let rec value_doms t =
         match resolve_tmeta (expand_ml_fun_alias t) with
-        | Miniml.Tarr (d, c) -> not (Mlutil.isTdummy (resolve_tmeta d)) :: value_doms c
+        | Miniml.Tarr (d, c) -> not (erased_by_extraction d) :: value_doms c
         | _ -> []
       in
       match Option.bind expected_ty alias_ref with
@@ -1599,7 +1599,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     in
     let binder_emitted ~body binders i ty =
       slot_keeps binders i
-      || ((not (isTdummy ty)) && ty <> Miniml.Taxiom && not (ml_type_is_void ty))
+      || (is_runtime_binder_type ty && ty <> Miniml.Taxiom)
       || Mlutil.ast_occurs (i + 1) body
     in
     (* A slot spelled [std::type_identity_t<Id_<...>>] -- a definitional
@@ -2188,7 +2188,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                  (* A binder erasure would have removed, kept because the slot
                     takes it ({!binder_emitted}), holds whatever box the caller
                     passes. *)
-                 if isTdummy ml_ty then (id, Tany)
+                 if erased_by_extraction ml_ty then (id, Tany)
                  else
                  (* A parameter the slot declares erased arrives as a box, even
                     though it is declared [const auto&] so the deduction can
@@ -2427,7 +2427,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           | _ -> []
         in
         let dropped_type_binder =
-          List.exists (fun (_, ty, _) -> isTdummy ty) args_with_owned
+          List.exists (fun (_, ty, _) -> erased_by_extraction ty) args_with_owned
         in
         let branch_join =
           if not dropped_type_binder then None
@@ -2488,17 +2488,10 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           | Some ty -> ty
           | None -> Tunknown
         in
-        let has_dummy_prefix = function
-          | Tarr (t, _) when isTdummy t -> true
-          | _ -> false
+        let has_dummy_prefix t =
+          match ml_domains t with d :: _ -> erased_by_extraction d | [] -> false
         in
-        let rec collect_non_dummy_types = function
-          | Miniml.Tarr (t, rest) when not (isTdummy t) ->
-            t :: collect_non_dummy_types rest
-          | Miniml.Tarr (_, rest) -> collect_non_dummy_types rest
-          | _ -> []
-        in
-        let non_dummy_param_tys = collect_non_dummy_types ml_ty in
+        let non_dummy_param_tys = ml_value_domains ml_ty in
         (* A callee taking no value parameter -- [base (A : Type) : nat] -- is
            a value, declared as one: nothing to forward. *)
         if has_dummy_prefix ml_ty && non_dummy_param_tys <> [] then
@@ -4722,7 +4715,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           | Some ft ->
             List.filter_map
               (fun t ->
-                if isTdummy t || Table.is_typeclass_type t then None
+                if erased_by_extraction t || Table.is_typeclass_type t then None
                 else Some (at_instance_args t) )
               (fst (get_args_and_ret [] ft))
           | None -> []
@@ -4750,7 +4743,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           if member_template || List.length doms <> List.length args then dropped
           else
             List.filteri
-              (fun i a -> not (is_erased a) || not (isTdummy (List.nth doms i)))
+              (fun i a -> not (is_erased a) || not (erased_by_extraction (List.nth doms i)))
               args
         in
         (* A class-typed argument is not a value: the concept is met by a type,
@@ -5227,7 +5220,7 @@ and gen_call_args ~slot ?expected_ty env id plan =
       | Some i -> Param_pos.nth fn_param_ml_tys i
       | None -> (
         match Param_pos.nth fn_param_ml_tys_orig param_index with
-        | Some t when not (Mlutil.isTdummy t) -> Some t
+        | Some t when not (erased_by_extraction t) -> Some t
         | _ -> None )
     in
     (* {b Lambda arity limiting.}  When a lambda argument has more binders
@@ -9121,7 +9114,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
             let n_params =
               List.length
                 (List.filter
-                   (fun (_, ty) -> not (ml_type_is_void ty))
+                   (fun (_, ty) -> not (void_binder ty))
                    lam_ids)
             in
             let n_fix = Array.length funs in
@@ -9177,22 +9170,15 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           let binders, body = collect_lams a in
           let n_have =
             List.length
-              (List.filter (fun (_, ty) -> not (Mlutil.isTdummy ty)) binders)
+              (List.filter (fun (_, ty) -> not (erased_by_extraction ty)) binders)
           in
           if n_want <= n_have then
             a
           else
-            let rec value_arrow_domains = function
-              | Miniml.Tarr (t1, t2) when not (Mlutil.isTdummy t1) ->
-                t1 :: value_arrow_domains t2
-              | Miniml.Tarr (_, t2) -> value_arrow_domains t2
-              | Miniml.Tmeta {contents = Some t} -> value_arrow_domains t
-              | _ -> []
-            in
             (* Domains of the value-arrows not yet abstracted by the lambda,
                in binding order (outermost first). *)
             let new_doms =
-              List.filteri (fun i _ -> i >= n_have) (value_arrow_domains t)
+              List.filteri (fun i _ -> i >= n_have) (ml_value_domains t)
             in
             let d = List.length new_doms in
             if d = 0 then
@@ -9328,7 +9314,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         let all_temps =
           let deducible =
             List.fold_left
-              (fun acc (_, ty) -> if isTdummy ty then acc else collect_tvars_set acc ty)
+              (fun acc (_, ty) -> if erased_by_extraction ty then acc else collect_tvars_set acc ty)
               IntSet.empty params
           in
           let outer, extra =
@@ -9368,7 +9354,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           List.rev
             (List.filter_map
                (fun (_, ty) ->
-                 if isTdummy ty || ml_type_is_void ty then None else Some ty )
+                 if is_runtime_binder_type ty then Some ty else None )
                params )
         in
         let n_actual_params = List.length param_ml_tys in
@@ -9565,7 +9551,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
              defined. *)
           let ml_dom, _ = Mlutil.type_decomp t in
           let value_dom =
-            List.filter (fun d -> not (isTdummy d) && not (ml_type_is_void d)) ml_dom
+            List.filter is_runtime_binder_type ml_dom
           in
           if List.length value_dom > n_params then Tauto
           else
@@ -10140,7 +10126,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
             let n_params =
               List.length
                 (List.filter
-                   (fun (_, ty) -> not (ml_type_is_void ty))
+                   (fun (_, ty) -> not (void_binder ty))
                    lam_ids)
             in
             let n_fix = Array.length funs in
@@ -10499,17 +10485,11 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
            | MLglob (r, _) ->
              ( match find_type_opt r with
              | Some ty ->
-               let rec count_arrows = function
-                 | Miniml.Tarr (t1, rest) ->
-                   if isTdummy t1 then count_arrows rest
-                   else 1 + count_arrows rest
-                 | _ -> 0
-               in
                let n_non_dummy_args =
                  List.length (List.filter (fun a ->
                    match a with MLdummy _ -> false | _ -> true) args)
                in
-               n_non_dummy_args >= count_arrows ty
+               n_non_dummy_args >= count_ml_value_arrows ty
              | None -> true )
            | _ -> true )
       | _ -> false
@@ -10619,7 +10599,7 @@ and gen_fix env ?(all_fix_ids = []) ~fix_idx (n, ty) f =
   let renamed_n =
     fst (List.nth renamed_fix_ids
            (n_lam_params + (n_fix_funs - 1 - fix_idx))) in
-  let ids = List.filter (fun (_, ty) -> not (ml_type_is_void ty)) ids in
+  let ids = List.filter (fun (_, ty) -> not (void_binder ty)) ids in
   (* Phase 2: set up move state for fixpoint body. Fix params are owned (passed
      by value in the generated std::function lambda). After push_vars'(ids @
      fix_names), de Bruijn indices in f are: ids[0] → db 1, ..., ids[k-1] → db
@@ -10665,7 +10645,7 @@ and gen_fix env ?(all_fix_ids = []) ~fix_idx (n, ty) f =
      the [T1] a [fix F (m : list A) : P A m] returns, not at the pair the
      function around it builds from two calls. *)
   let fix_return_type =
-    let n_values = List.length (List.filter (fun (_, t) -> not (isTdummy t)) ids) in
+    let n_values = List.length (List.filter (fun (_, t) -> not (erased_by_extraction t)) ids) in
     match Option.map (cpp_of_ml env) (ml_codomain_after n_values ty) with
     | Some t when not (exists_cpp_type prints_as_any t) -> Some t
     | _ -> (!tctx).current_cpp_return_type

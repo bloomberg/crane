@@ -1132,7 +1132,7 @@ let plan_call ~slot ?expected_ty env id tys args =
          passes them on ([length A l']). *)
       | MLrel i -> (
         match get_env_type_opt i with
-        | Some t -> not (Mlutil.isTdummy (resolve_tmeta t))
+        | Some t -> not (erased_by_extraction t)
         | None -> true )
       | _ -> true
     in

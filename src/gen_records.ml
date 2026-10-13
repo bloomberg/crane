@@ -307,7 +307,7 @@ let gen_typeclass_cpp name fields =
            template) *)
         let args =
           List.filter (fun t ->
-            not (Table.is_typeclass_type t) && not (Mlutil.isTdummy t)) args
+            not (Table.is_typeclass_type t) && not (erased_by_extraction t)) args
         in
         let ret_cpp =
           convert_ml_type_to_cpp_type
@@ -441,7 +441,7 @@ let gen_typeclass_cpp name fields =
     writes an erased binder's type as [Tdummy], and one it could not type at
     all as [Taxiom]. *)
 let is_erasable_binder_ty ty =
-  Mlutil.isTdummy ty || match ty with Miniml.Taxiom -> true | _ -> false
+  erased_by_extraction ty || match ty with Miniml.Taxiom -> true | _ -> false
 
 (** The number of lambdas a term opens with. *)
 let rec count_leading_lams = function

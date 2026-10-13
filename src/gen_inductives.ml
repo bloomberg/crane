@@ -369,7 +369,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
         List.rev
           (List.filter_map
              (fun (i, (_, t)) ->
-               if isTdummy t then None else Some (MLrel (i + 1)) )
+               if erased_by_extraction t then None else Some (MLrel (i + 1)) )
              (List.mapi (fun i x -> (i, x)) missing) )
       in
       (missing @ ids_with_types, apply_eta_args lifted_b args)

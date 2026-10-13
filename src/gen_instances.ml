@@ -36,7 +36,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
   let rec strip_outer_layers ty body tc_idx tc_acc lam_acc =
     match (ty, body) with
     | Tarr (arg_ty, rest_ty), MLlam (ml_id, lam_ty, rest_body) ->
-      if Mlutil.isTdummy arg_ty then
+      if erased_by_extraction arg_ty then
         (* Erased type parameter — skip (template params are inferred from type
            variables in the return type via collect_ml_tvars below) *)
         strip_outer_layers
@@ -74,10 +74,10 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
       else (* Not a type param or typeclass — stop stripping *)
         (ty, body, List.rev tc_acc, List.rev lam_acc)
     | Tarr (arg_ty, _), _
-      when Mlutil.isTdummy arg_ty || Table.is_typeclass_type arg_ty ->
+      when erased_by_extraction arg_ty || Table.is_typeclass_type arg_ty ->
       (* An instance eta-reduced past its own parameters -- [TFunctor_pair
          := ft_pair] -- takes them all the same. *)
-      let arg = if Mlutil.isTdummy arg_ty then MLdummy Ktype else MLrel 1 in
+      let arg = if erased_by_extraction arg_ty then MLdummy Ktype else MLrel 1 in
       let applied =
         match Mlutil.ast_lift 1 body with
         | MLapp (f, args) -> MLapp (f, args @ [arg])
@@ -486,7 +486,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
             let args, ret = get_args_and_ret [] ty in
             let rec split n acc = function
               | t :: rest
-                when Mlutil.isTdummy t || Table.is_typeclass_type t ->
+                when erased_by_extraction t || Table.is_typeclass_type t ->
                 split n (t :: acc) rest
               | t :: rest when n > 0 -> split (n - 1) (t :: acc) rest
               | surplus -> (List.rev acc, surplus)
@@ -566,7 +566,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
              concrete type the named body expects. *)
           let rec nb_lams = function
             | MLlam (_, ty, rest) ->
-              (if Mlutil.isTdummy ty then 0 else 1) + nb_lams rest
+              (if erased_by_extraction ty then 0 else 1) + nb_lams rest
             | _ -> 0
           in
           (* A binder whose type extraction erased away ([token], a
@@ -590,12 +590,11 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                        [forall A], which stands at no declared argument.  Any
                        other erased annotation is a value binder whose type
                        carried no information. *)
-                    match bty with
-                    | Miniml.Tdummy Miniml.Ktype -> false
-                    | Miniml.Tdummy _ -> true
-                    | _ -> false
+                    match extraction_erasure bty with
+                    | Some (Proof | Implicit _) -> true
+                    | Some (Type_binder | Void) | None -> false
                   in
-                  let bty = if erased_value && not (Mlutil.isTdummy ty) then ty else bty in
+                  let bty = if erased_value && not (erased_by_extraction ty) then ty else bty in
                   MLlam (id, bty, retype rest b)
                 | _ -> body
               in
@@ -608,7 +607,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
             let arg_types =
               List.filter
                 (fun t ->
-                  not (Table.is_typeclass_type t) && not (Mlutil.isTdummy t) )
+                  not (Table.is_typeclass_type t) && not (erased_by_extraction t) )
                 (fst (method_args_and_ret ()))
             in
             let missing =
@@ -699,7 +698,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
             else List.map (fun s -> (s, None)) subst_args
           in
           let kept_arg_pairs =
-            List.filter (fun (t, _) -> not (Mlutil.isTdummy t))
+            List.filter (fun (t, _) -> not (erased_by_extraction t))
               declared_arg_pairs
           in
           (* A class-typed binder keeps its slot here: it still stands as a
@@ -880,7 +879,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
               (* Filter out type class instance and erased args *)
               let arg_types =
                 List.filter (fun t ->
-                  not (Table.is_typeclass_type t) && not (Mlutil.isTdummy t))
+                  not (Table.is_typeclass_type t) && not (erased_by_extraction t))
                   all_arg_types
               in
               if arg_types = [] then
@@ -915,7 +914,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                 let ml_rels =
                   let real_idx = ref nparams in
                   List.map (fun t ->
-                    if Mlutil.isTdummy t || Table.is_typeclass_type t then
+                    if erased_by_extraction t || Table.is_typeclass_type t then
                       MLdummy Ktype
                     else begin
                       let r = MLrel !real_idx in
@@ -951,7 +950,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                       let bty = Table.find_type r in
                       let bargs, _ = get_args_and_ret [] bty in
                       let bargs = List.filter (fun t ->
-                        not (Mlutil.isTdummy t)
+                        not (erased_by_extraction t)
                         && not (Table.is_typeclass_type t)) bargs in
                       if List.length bargs = List.length params then
                         Some bargs

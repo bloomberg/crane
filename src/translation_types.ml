@@ -130,7 +130,7 @@ let rec strip_magic = function MLmagic (_, e) -> strip_magic e | e -> e
     whose body never mentions them. *)
 let rec strip_dictionary e =
   match strip_magic e with
-  | MLlam (_, ty, b) when Mlutil.isTdummy ty && not (Mlutil.ast_occurs 1 b) ->
+  | MLlam (_, ty, b) when erased_by_extraction ty && not (Mlutil.ast_occurs 1 b) ->
     strip_dictionary (Mlutil.ast_pop b)
   | e -> e
 
@@ -1550,7 +1550,7 @@ let rec convert_ml_type_to_cpp_type
        also catches Tany (std::any), which is a valid type for universally
        quantified parameters — stripping it would incorrectly collapse (A -> IO)
        into just IO. *)
-    if isTdummy t1 || is_cpp_dummy_type t1c then
+    if erased_by_extraction t1 || is_cpp_dummy_type t1c then
       t2c
     else (
       (* Void-ify unit codomain: function types returning [unit] (directly
