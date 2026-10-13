@@ -66,6 +66,11 @@ val type_subst_fun : (int -> ml_type option) -> ml_type -> ml_type
 (** A one-line rendering of an ML type, for diagnostics. *)
 val debug_ml_type : ml_type -> string
 
+(** The scheme a reference to [r] is at: the one extraction recorded, or
+    else one minted at the arity of the type [r] is registered with.  [None]
+    for a declaration quantifying nothing, or with no type. *)
+val reference_scheme : GlobRef.t -> Scheme.Id.t option
+
 (** A reference to the declaration [r] that a pass synthesises: open
     ({!Global_use.infer_all}) at [r]'s scheme -- the recorded one, or one
     of the arity [r]'s registered type has -- and monomorphic for a

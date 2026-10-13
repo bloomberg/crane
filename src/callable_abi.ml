@@ -1,0 +1,220 @@
+(* Copyright 2025 Bloomberg Finance L.P. *)
+(* Distributed under the terms of the GNU LGPL v2.1 license. *)
+
+open Names
+
+module Template_param = struct
+  type t = {
+    position : int;
+    name : Id.t;
+  }
+
+  let position p = p.position
+  let name p = p.name
+  let equal a b = Int.equal a.position b.position && Id.equal a.name b.name
+end
+
+type origin =
+  | From_scheme of Scheme.Var.t
+  | From_instance of int
+  | From_callable of int
+  | Derived of Id.t
+
+type write_policy =
+  | Writable
+  | Deduce_only
+  | Defaulted of Minicpp.cpp_type
+
+type template_parameter = {
+  id : Template_param.t;
+  origin : origin;
+  kind : Minicpp.template_type;
+  write : write_policy;
+}
+
+type t = {
+  callee : GlobRef.t;
+  head : template_parameter list;
+  phase : Common.phase;
+}
+
+let callee abi = abi.callee
+let template_head abi = abi.head
+
+(* The [n] for which [spell n] is [name]: the number a generated name
+   carries, read back through the function that minted it. *)
+let numbered spell name =
+  let s = Id.to_string name in
+  let rec digits_from i =
+    if i > 0 && s.[i - 1] >= '0' && s.[i - 1] <= '9' then digits_from (i - 1) else i
+  in
+  let start = digits_from (String.length s) in
+  Option.bind
+    (int_of_string_opt (String.sub s start (String.length s - start)))
+    (fun n -> if String.equal (spell n) s then Some n else None)
+
+let origin_of ~scheme name =
+  let var =
+    Option.bind (numbered Minicpp.tvar_spelling name) (fun i ->
+        Option.bind scheme (fun s -> Scheme.Var.of_tvar s i) )
+  in
+  match var with
+  | Some v -> From_scheme v
+  | None -> (
+    match numbered Common.tc_instance_name name with
+    | Some k -> From_instance k
+    | None -> (
+      match numbered Common.fun_tparam_name name with
+      | Some i -> From_callable i
+      | None -> Derived name ) )
+
+let of_head ~callee ~scheme temps =
+  let head =
+    List.mapi
+      (fun position (kind, name) ->
+        let origin = origin_of ~scheme name in
+        let write =
+          match (kind, origin) with
+          | Minicpp.TTtypename_default d, _ -> Defaulted d
+          | _, From_callable _ -> Deduce_only
+          | _ -> Writable
+        in
+        {id = {Template_param.position; name}; origin; kind; write} )
+      temps
+  in
+  {callee; head; phase = Common.get_phase ()}
+
+let parameter_of_var abi v =
+  List.find_opt
+    (fun p ->
+      match p.origin with
+      | From_scheme v' -> Scheme.Var.equal v v'
+      | _ -> false )
+    abi.head
+
+let validate abi =
+  let positions =
+    List.concat
+      (List.mapi
+         (fun k p ->
+           if Template_param.position p.id = k then []
+           else [Printf.sprintf "parameter %d out of order" k] )
+         abi.head )
+  in
+  let names = List.map (fun p -> Template_param.name p.id) abi.head in
+  let unique_names =
+    if List.length (List.sort_uniq Id.compare names) = List.length names then []
+    else ["two parameters share a name"]
+  in
+  let scheme_origins = List.filter_map (fun p -> match p.origin with From_scheme v -> Some v | _ -> None) abi.head in
+  let owned =
+    List.filter_map
+      (fun v ->
+        if GlobRef.UserOrd.equal (Scheme.Id.owner (Scheme.Var.owner v)) abi.callee then None
+        else Some "a parameter declares another declaration's variable" )
+      scheme_origins
+  in
+  let unique_origins =
+    if List.length (List.sort_uniq Scheme.Var.compare scheme_origins) = List.length scheme_origins
+    then []
+    else ["two parameters declare one variable"]
+  in
+  positions @ unique_names @ owned @ unique_origins
+
+(* Two plans of one declaration agree when their heads do; a scheme origin
+   is compared by its variable's place, as a scheme minted for a declaration
+   with none recorded is a new identity each time it is asked for. *)
+let same_head a b =
+  let origin_key = function
+    | From_scheme v -> `Scheme (Scheme.Var.ordinal v)
+    | From_instance k -> `Instance k
+    | From_callable i -> `Callable i
+    | Derived n -> `Derived (Id.to_string n)
+  in
+  let key p = (Id.to_string (Template_param.name p.id), origin_key p.origin, p.kind, p.write) in
+  List.equal (fun p q -> key p = key q) a.head b.head
+
+(* Where a declaration is generated decides parts of its head -- a function
+   rendered inside a struct is not the same C++ entity as one at namespace
+   scope -- so a plan is recorded for the place it was generated in. *)
+let context () =
+  let rc = !Cpp_state.render_ctx in
+  (rc.Cpp_state.rc_in_struct, rc.Cpp_state.rc_in_template, Option.map ModPath.to_string rc.Cpp_state.rc_struct_mp)
+
+let plans = ref Names.GlobRef.Map_env.empty
+
+let () =
+  Table.register_census "callable ABI plans" (fun () ->
+      GlobRef.Map_env.fold (fun _ l n -> n + List.length l) !plans 0 )
+let () = State.on_reset State.Extraction (fun () -> plans := GlobRef.Map_env.empty)
+
+let describe abi =
+  let kind = function
+    | Minicpp.TTtypename -> "typename"
+    | Minicpp.TTtypename_default _ -> "typename="
+    | Minicpp.TTtemplate n -> Printf.sprintf "template/%d" n
+    | Minicpp.TTfun _ -> "callable"
+    | Minicpp.TTinvocable _ -> "invocable"
+    | Minicpp.TTconcept _ -> "concept"
+  in
+  let origin = function
+    | From_scheme v -> Printf.sprintf "var %d" (Scheme.Var.ordinal v)
+    | From_instance k -> Printf.sprintf "instance %d" k
+    | From_callable i -> Printf.sprintf "callable %d" i
+    | Derived _ -> "derived"
+  in
+  String.concat ", "
+    (List.map
+       (fun p ->
+         Printf.sprintf "%s %s (%s)" (kind p.kind)
+           (Id.to_string (Template_param.name p.id))
+           (origin p.origin) )
+       abi.head )
+
+let phase_name = function
+  | Common.Discover -> "in discovery"
+  | Common.Emit Common.Impl -> "emitting the implementation"
+  | Common.Emit Common.Intf -> "emitting the interface"
+
+let record abi =
+  List.iter
+    (fun problem ->
+      Probe.violation "callable ABI"
+        Pp.(str "the plan of " ++ GlobRef.print abi.callee ++ str ": " ++ str problem) )
+    (validate abi);
+  let here = context () in
+  let recorded = Option.default [] (GlobRef.Map_env.find_opt abi.callee !plans) in
+  match List.assoc_opt here recorded with
+  | Some old when same_head old abi -> ()
+  | Some old ->
+    Probe.violation "callable ABI"
+      Pp.(
+        str "the declaration of " ++ GlobRef.print abi.callee
+        ++ str " was generated with the head <" ++ str (describe abi)
+        ++ str "> where its plan, recorded " ++ str (phase_name old.phase)
+        ++ str ", says <" ++ str (describe old) ++ str ">; generated "
+        ++ str (phase_name abi.phase) )
+  | None -> plans := GlobRef.Map_env.add abi.callee ((here, abi) :: recorded) !plans
+
+let lookup r =
+  match GlobRef.Map_env.find_opt r !plans with
+  | None | Some [] -> None
+  | Some [(_, abi)] -> Some abi
+  | Some recorded -> List.assoc_opt (context ()) recorded
+
+let foreign ~callee ~scheme =
+  let head =
+    List.mapi
+      (fun position v ->
+        { id = {Template_param.position; name = Minicpp.tvar_id (Scheme.Var.ordinal v)};
+          origin = From_scheme v;
+          kind = Minicpp.TTtypename;
+          write = Writable } )
+      (Option.cata Scheme.Var.all [] scheme)
+  in
+  {callee; head; phase = Common.get_phase ()}
+
+let plan callee ~scheme =
+  match lookup callee with
+  | Some abi -> abi
+  | None -> foreign ~callee ~scheme

@@ -1353,6 +1353,8 @@ let gen_dfun n b cty ty temps =
         deapply_plain_tvars ]
   in
   let temps, inner = default_unmentioned_temps temps inner in
+  Callable_abi.record
+    (Callable_abi.of_head ~callee:n ~scheme:(Mlutil.reference_scheme n) temps);
   match temps with
   | [] -> (inner, env)
   | l -> (Dtemplate (l, None, inner), env)

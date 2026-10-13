@@ -1519,6 +1519,7 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   ( match namespace with
   | Some _ -> Common.set_force_cross_file_qualification ()
   | None -> () );
+  Cpp_ind.plan_template_kinds struc;
   discover d struc;
   let census_after_discovery = Table.census () in
   (* Both bodies are rendered before either file is opened.  A preamble has to

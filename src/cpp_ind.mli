@@ -88,6 +88,13 @@ val finalized :
   Gen_decls.generated_fun list ->
   (Gen_decls.generated_fun * Function_entity.t option) list
 
+(** Records the kinds of every generated inductive's and type alias's
+    template parameters in [struc] ({!Plan_templates.hkt_templates}), and
+    which of them are phantom, before any declaration is generated: a use
+    converted before the declaration's header would otherwise see its
+    positions one way, and a later use another. *)
+val plan_template_kinds : Miniml.ml_structure -> unit
+
 (** The implementation-file declarations for one MiniML declaration. *)
 val impl_decls : Miniml.ml_decl -> rendered
 
