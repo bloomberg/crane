@@ -982,11 +982,11 @@ type sigma_assertion =
   | AssertComment of string (* untranslatable: Rocq predicate as comment *)
 
 (* Maps function GlobRef to list of (param_index, assertion) *)
-let sigma_assertions : (int * sigma_assertion) list Ref.User.Map.t ref =
-  ref Ref.User.Map.empty
+let sigma_assertions : (int * sigma_assertion) list Ref.Can.Map.t ref =
+  ref Ref.Can.Map.empty
 
 (** Initialize the sigma type assertion table. *)
-let init_sigma_assertions () = sigma_assertions := Ref.User.Map.empty
+let init_sigma_assertions () = sigma_assertions := Ref.Can.Map.empty
 
 let () = on_reset init_sigma_assertions
 
@@ -994,15 +994,15 @@ let () = on_reset init_sigma_assertions
 *)
 let add_sigma_assertion r idx a =
   let existing =
-    match Ref.User.Map.find_opt r !sigma_assertions with
+    match Ref.Can.Map.find_opt r !sigma_assertions with
     | Some l -> l
     | None -> []
   in
-  sigma_assertions := Ref.User.Map.add r ((idx, a) :: existing) !sigma_assertions
+  sigma_assertions := Ref.Can.Map.add r ((idx, a) :: existing) !sigma_assertions
 
 (** Retrieve all sigma type assertions for a given function reference. *)
 let get_sigma_assertions r =
-  match Ref.User.Map.find_opt r !sigma_assertions with
+  match Ref.Can.Map.find_opt r !sigma_assertions with
   | Some l -> l
   | None -> []
 
@@ -1480,9 +1480,9 @@ let get_phantom_tvars r =
 
 (** {2 Table of used axioms} *)
 
-let info_axioms = ref Ref.User.Set.empty
+let info_axioms = ref Ref.Can.Set.empty
 
-let log_axioms = ref Ref.User.Set.empty
+let log_axioms = ref Ref.Can.Set.empty
 
 (* Whether a definition is a cofixpoint, or only throws, is a fact about the
    definition, and it decides whether naming it calls it
@@ -1495,19 +1495,19 @@ let throwing_values = ref Ref.Can.Set.empty
 let symbols = ref Ref.User.Map.empty
 
 let init_axioms () =
-  info_axioms := Ref.User.Set.empty;
-  log_axioms := Ref.User.Set.empty;
+  info_axioms := Ref.Can.Set.empty;
+  log_axioms := Ref.Can.Set.empty;
   cofixpoints := Ref.Can.Set.empty;
   throwing_values := Ref.Can.Set.empty;
   symbols := Ref.User.Map.empty
 
 let () = on_reset init_axioms
 
-let add_info_axiom r = info_axioms := Ref.User.Set.add r !info_axioms
+let add_info_axiom r = info_axioms := Ref.Can.Set.add r !info_axioms
 
-let remove_info_axiom r = info_axioms := Ref.User.Set.remove r !info_axioms
+let remove_info_axiom r = info_axioms := Ref.Can.Set.remove r !info_axioms
 
-let add_log_axiom r = log_axioms := Ref.User.Set.add r !log_axioms
+let add_log_axiom r = log_axioms := Ref.Can.Set.add r !log_axioms
 
 let add_cofixpoint r = cofixpoints := Ref.Can.Set.add r !cofixpoints
 
@@ -1535,15 +1535,15 @@ let add_symbol_rule r l =
         | _ -> Some [l] )
       !symbols
 
-let opaques = ref Ref.User.Set.empty
+let opaques = ref Ref.Can.Set.empty
 
-let init_opaques () = opaques := Ref.User.Set.empty
+let init_opaques () = opaques := Ref.Can.Set.empty
 
 let () = on_reset init_opaques
 
-let add_opaque r = opaques := Ref.User.Set.add r !opaques
+let add_opaque r = opaques := Ref.Can.Set.add r !opaques
 
-let remove_opaque r = opaques := Ref.User.Set.remove r !opaques
+let remove_opaque r = opaques := Ref.Can.Set.remove r !opaques
 
 (** {2 Extraction modes: modular or monolithic, library or minimal ?
 
@@ -1695,10 +1695,10 @@ let warn_extraction_symbols =
     ++ fnl () )
 
 let warning_axioms () =
-  let info_axioms = Ref.User.Set.elements !info_axioms in
+  let info_axioms = Ref.Can.Set.elements !info_axioms in
   if not (List.is_empty info_axioms) then
     warn_extraction_axiom_to_realize info_axioms;
-  let log_axioms = Ref.User.Set.elements !log_axioms in
+  let log_axioms = Ref.Can.Set.elements !log_axioms in
   if not (List.is_empty log_axioms) then
     warn_extraction_logical_axiom log_axioms;
   let symbols = Ref.User.Map.bindings !symbols in
@@ -1731,7 +1731,7 @@ let warn_extraction_opaque_as_axiom =
     ++ fnl () )
 
 let warning_opaques accessed =
-  let opaques = Ref.User.Set.elements !opaques in
+  let opaques = Ref.Can.Set.elements !opaques in
   if not (List.is_empty opaques) then
     let lst = hov 1 (spc () ++ prlist_with_sep spc safe_pr_global opaques) in
     if accessed then
@@ -3730,26 +3730,26 @@ let register_glob_def id ty =
   add_type id ty;
   Lib.add_leaf (glob_def_registration (id, ty))
 
-let monads = Summary.ref Ref.User.Map.empty ~name:"CraneExtrMonad"
+let monads = Summary.ref Ref.Can.Map.empty ~name:"CraneExtrMonad"
 
-let binds = Summary.ref Ref.User.Map.empty ~name:"CraneExtrMonadBind"
+let binds = Summary.ref Ref.Can.Map.empty ~name:"CraneExtrMonadBind"
 
-let rets = Summary.ref Ref.User.Map.empty ~name:"CraneExtrMonadRet"
+let rets = Summary.ref Ref.Can.Map.empty ~name:"CraneExtrMonadRet"
 
-let add_monad m b r s = monads := Ref.User.Map.add m (b, r, s) !monads
+let add_monad m b r s = monads := Ref.Can.Map.add m (b, r, s) !monads
 
-let add_bind m b r s = binds := Ref.User.Map.add b (m, r, s) !binds
+let add_bind m b r s = binds := Ref.Can.Map.add b (m, r, s) !binds
 
-let add_ret m b r s = rets := Ref.User.Map.add r (m, b, s) !rets
+let add_ret m b r s = rets := Ref.Can.Map.add r (m, b, s) !rets
 
-let is_monad m = Ref.User.Map.mem m !monads
+let is_monad m = Ref.Can.Map.mem m !monads
 
-let is_bind b = Ref.User.Map.mem b !binds
+let is_bind b = Ref.Can.Map.mem b !binds
 
-let is_ret r = Ref.User.Map.mem r !rets
+let is_ret r = Ref.Can.Map.mem r !rets
 
 let get_monad_template_opt m =
-  match Ref.User.Map.find_opt m !monads with
+  match Ref.Can.Map.find_opt m !monads with
   | Some (_, _, template) -> Some template
   | None -> None
 
