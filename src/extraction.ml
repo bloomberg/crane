@@ -1406,7 +1406,7 @@ and type2sign env = type_to_sign (mlt_env env)
     @param sg Evar map for universe and sort operations
     @param kn The constant whose ML type is computed
     @param opt_typ Optional pre-computed Rocq type of [kn]; if [None], the type is read from [env]
-    @return A pair [(n, mlt)] where [n] is the number of type variables and [mlt] is the ML type *)
+    @return The constant's scheme *)
 and record_constant_type env sg kn opt_typ =
   let cb = lookup_constant kn env in
   (* The type call sites read says which arguments the declaration takes: one
@@ -1427,7 +1427,7 @@ and record_constant_type env sg kn opt_typ =
   in
   match lookup_cst_type kn cb with
   | Some schema ->
-    register (snd schema);
+    register (Ml_schema.body schema);
     schema
   | None ->
     let typ =
@@ -1436,21 +1436,22 @@ and record_constant_type env sg kn opt_typ =
       | Some typ -> typ
     in
     let mlt, spine = extract_spine env sg [] 1 typ [] in
-    let schema = (type_maxvar mlt, mlt) in
+    let schema = Ml_schema.make (GlobRef.ConstRef kn) mlt [] in
+    let arity = Ml_schema.arity schema in
     let () =
       let claimed =
         List.filter_map
           (fun b ->
             Option.bind b.sb_tvar (fun v ->
-                if v <= fst schema then Some v else None ) )
+                if v <= arity then Some v else None ) )
           spine
       in
-      if claimed <> List.init (fst schema) succ then
+      if claimed <> List.init arity succ then
         Probe.violation "schema"
           Pp.(
             str "the type binders of " ++ Names.Constant.print kn
             ++ str " number " ++ prlist_with_sep spc int claimed
-            ++ str ", not each of its " ++ int (fst schema)
+            ++ str ", not each of its " ++ int arity
             ++ str " variables once in source order" )
     in
     let () = add_cst_type kn cb schema in
@@ -1984,21 +1985,21 @@ and probe_tyarg_alignment env sg kn ~nargs ~scheme_vars s_full positioned =
     @param args Rocq arguments (may be fewer than the full arity — partial application) *)
 and extract_cst_app env sg mle mlt kn args =
   (* First, the [ml_schema] of the constant, in expanded version. *)
-  let nb, t = record_constant_type env sg kn None in
-  let schema = (nb, expand env t) in
+  let schema = record_constant_type env sg kn None in
+  let schema = Ml_schema.with_body (expand env (Ml_schema.body schema)) schema in
   (* Can we instantiate types variables for this constant ? *)
   (* In Ocaml, inside the definition of this constant, the answer is no. *)
   (* The metas the scheme's type variables are instantiated with, kept so
      that the call's own type arguments can be given to them below. *)
-  let tvar_metas = Array.init (fst schema) (fun _ -> new_meta ()) in
+  let tvar_metas = Array.init (Ml_schema.arity schema) (fun _ -> new_meta ()) in
   let rigid =
     lang () == Cpp
     && List.exists (fun c -> QConstant.equal env kn c) !current_fixpoints
   in
   let instantiated =
     (* This is the version of the type that is instantiated (shocker) *)
-    if rigid then rigidify (snd schema)
-    else type_subst_vect tvar_metas (snd schema)
+    if rigid then rigidify (Ml_schema.body schema)
+    else type_subst_vect tvar_metas (Ml_schema.body schema)
   in
   (* Then the expected type of this constant. *)
   let a = new_meta () in
@@ -2009,13 +2010,13 @@ and extract_cst_app env sg mle mlt kn args =
   (* Second, is the resulting type compatible with the expected type [mlt] ? *)
   let magic2 = needs_magic (a, mlt) in
   (* Now, the extraction of the arguments. *)
-  let s_full = type2signature env (snd schema) in
+  let s_full = type2signature env (Ml_schema.body schema) in
   let s_full = sign_with_implicits (GlobRef.ConstRef kn) s_full 0 in
   let s = sign_no_final_keeps s_full in
   let ls = List.length s in
   let la = List.length args in
   (* The ml arguments, already expunged from known logical ones *)
-  let orig_schema_params = fst (type_decomp (snd schema)) in
+  let orig_schema_params = fst (type_decomp (Ml_schema.body schema)) in
   let orig_typs =
     try List.firstn la orig_schema_params
     with Failure _ -> List.map (fun _ -> Tunknown) args
@@ -2031,7 +2032,7 @@ and extract_cst_app env sg mle mlt kn args =
   let tyargs = List.map snd positioned in
   let () =
     if Probe.enabled () then
-      probe_tyarg_alignment env sg kn ~nargs:la ~scheme_vars:(fst schema)
+      probe_tyarg_alignment env sg kn ~nargs:la ~scheme_vars:(Ml_schema.arity schema)
         s_full positioned
   in
   (* The type arguments the Rocq term passes are a statement about the
@@ -2131,7 +2132,7 @@ and extract_cons_app env sg mle mlt ((((kn, i) as ip), j) as cp) args =
   let type_cons =
     type_recomp (types, Tglob (GlobRef.IndRef ip, list_tvar, []))
   in
-  let type_cons = instantiation (nb_tvars, type_cons) in
+  let type_cons = instantiate_prenex nb_tvars type_cons in
   (* Then, the usual variables [s], [ls], [la], ... *)
   let s = List.map (type2sign env) types in
   let s = sign_with_implicits (GlobRef.ConstructRef cp) s params_nb in
@@ -2746,7 +2747,8 @@ let extract_std_constant env sg kn body typ =
   reset_meta_count ();
   pending_cpp_meta_fills := [];
   (* The short type [t] (i.e. possibly with abbreviations). *)
-  let numtvars, t = record_constant_type env sg kn (Some typ) in
+  let schema = record_constant_type env sg kn (Some typ) in
+  let numtvars = Ml_schema.arity schema and t = Ml_schema.body schema in
   (* Detect sigma type preconditions and register assertions *)
   (try detect_sigma_assertions env sg kn typ with _ -> ());
   (* An instance of a singleton class keeps its class's type, but its body is
@@ -2848,7 +2850,7 @@ let extract_std_constant env sg kn body typ =
 let extract_axiom env sg kn typ =
   reset_meta_count ();
   (* The short type [t] (i.e. possibly with abbreviations). *)
-  let t = snd (record_constant_type env sg kn (Some typ)) in
+  let t = Ml_schema.body (record_constant_type env sg kn (Some typ)) in
   (* The real type [t']: without head products, expanded, *)
   (* and with its own type variables made rigid (not instantiable). *)
   let l, _ = type_decomp (expand env (rigidify t)) in
@@ -3205,7 +3207,7 @@ let extract_constant_spec env kn cb =
         | _ -> () );
         Stype (r, vl, Some t) )
     | Info, Default ->
-      let t = snd (record_constant_type env sg kn (Some typ)) in
+      let t = Ml_schema.body (record_constant_type env sg kn (Some typ)) in
       let sg = Evd.from_env env in
       let mk_spec c =
         let e, ty = extract_std_constant env sg kn c typ in

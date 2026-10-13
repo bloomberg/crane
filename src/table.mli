@@ -191,13 +191,13 @@ val lookup_typedef_unchecked : Constant.t -> ml_type option
     @param kn the constant being cached
     @param cb the constant body used as a checksum to detect stale entries
     @param s  the extracted ML type schema to store *)
-val add_cst_type : Constant.t -> constant_body -> ml_schema -> unit
+val add_cst_type : Constant.t -> constant_body -> Ml_schema.t -> unit
 
 (** Lookup constant type schema from cache.
     @param kn the constant to look up
     @param cb the current constant body; [None] is returned on checksum mismatch
     @return [Some s] if found and the checksum matches, [None] otherwise *)
-val lookup_cst_type : Constant.t -> constant_body -> ml_schema option
+val lookup_cst_type : Constant.t -> constant_body -> Ml_schema.t option
 
 (** Add inductive to cache.
     @param kn    the mutual inductive name being cached

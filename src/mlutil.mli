@@ -64,8 +64,9 @@ val type_subst_list : ml_type list -> ml_type -> ml_type
     @param t the ML type to substitute into *)
 val type_subst_vect : ml_type array -> ml_type -> ml_type
 
-(** Instantiate a type schema with fresh meta variables. *)
-val instantiation : ml_schema -> ml_type
+(** [instantiate_prenex n t] instantiates the prenex type [t], quantifying
+    [Tvar 1 .. Tvar n], with fresh meta variables. *)
+val instantiate_prenex : int -> ml_type -> ml_type
 
 (** Replace unknown meta variables with fresh type variables. *)
 val instantiate_unknowns : ml_type -> ml_type

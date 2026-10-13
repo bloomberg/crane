@@ -343,7 +343,7 @@ let type_subst_vect v t =
 
 (** {2 From a type schema to a type. All [Tvar] become fresh [Tmeta]} *)
 
-let instantiation (nb, t) = type_subst_vect (Array.init nb new_meta) t
+let instantiate_prenex nb t = type_subst_vect (Array.init nb new_meta) t
 
 (** {2 Replace all [Tunknown] in a type with fresh [Tmeta]. This is used for
     existential type variables that were marked as Tunknown during extraction.
@@ -465,7 +465,7 @@ module Mlenv = struct
      record the free meta variables occurring in [env]. *)
 
   type t = {
-    env : ml_schema list;
+    env : (int * ml_type) list;
     mutable free : Metaset.t;
   }
 
@@ -478,7 +478,8 @@ module Mlenv = struct
 
   let get mle n =
     assert (List.length mle.env >= n);
-    instantiation (List.nth mle.env (n - 1))
+    let nb, t = List.nth mle.env (n - 1) in
+    instantiate_prenex nb t
 
   (* [find_free] finds the free meta in a type. *)
 
@@ -561,16 +562,7 @@ let rec type_mem_kn kn = function
 
 (** {2 Greatest variable occurring in [t]} *)
 
-let type_maxvar t =
-  let rec parse n = function
-    | Tmeta {contents = Some t} -> parse n t
-    | Tvar (Schematic, i) -> max i n
-    | Tapp (i, l) -> List.fold_left parse (max i n) l
-    | Tarr (a, b) -> parse (parse n a) b
-    | Tglob (_, l, _) -> List.fold_left parse n l
-    | _ -> n
-  in
-  parse 0 t
+let type_maxvar = Ml_schema.max_tvar
 
 (** {2 From [a -> b -> c] to [[a;b],c]} *)
 

@@ -266,11 +266,6 @@ and ml_pattern =
   | Pwild
   | Pusual of GlobRef.t  (** Shortcut for Pcons (r,[Prel n;...;Prel 1]) **)
 
-(** An ML type schema (prenex polymorphic type): the [int] is the number of
-    universally quantified type variables, [ml_type] the body that may mention
-    them as [Tvar]s. *)
-type ml_schema = int * ml_type
-
 (** {2 ML declarations} *)
 
 (** One definition of a group of mutually recursive definitions. *)

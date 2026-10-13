@@ -210,7 +210,7 @@ let lookup_typedef_unchecked kn =
   | None -> None
 
 (** Cache of constant type schemes, keyed by constant. *)
-let cst_types = ref (Cmap_env.empty : (constant_body * ml_schema) Cmap_env.t)
+let cst_types = ref (Cmap_env.empty : (constant_body * Ml_schema.t) Cmap_env.t)
 
 (** Initialize the constant type scheme cache table. *)
 let init_cst_types () = cst_types := Cmap_env.empty
