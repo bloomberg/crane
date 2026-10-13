@@ -654,7 +654,7 @@ let rec gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type
       in
       (* Resolve against the enclosing type-variable names: inside a member
          template a [Tvar] is a real parameter, not an erased type. *)
-      let temps = template_params_of_ml env tys in
+      let temps = template_params_of_ml ~site:Through_tvar env tys in
       (* When all type args are erased and promoted_var_map is active, use
          concrete promoted types so elements don't get wrapped in std::any. *)
       if List.for_all prints_as_any temps && (!tctx).promoted_var_map <> [] then
@@ -1101,9 +1101,9 @@ let rec gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type
          method's own parameters ([_A0]), not an anonymous [T2].  The
          arguments instantiate an {i inductive's} parameters, so a stored
          function type keeps the flat arity its declaration is written at
-         ([~curry:false]); currying here would make the instantiation
+         ([~site:Declared]); currying here would make the instantiation
          disagree with the type the declaration spells. *)
-      let temps = template_params_of_ml ~curry:false env tys in
+      let temps = template_params_of_ml ~site:Declared env tys in
       let temps = filter_erased_type_args temps in
       let temps = ind_promoted_type_args n @ temps in
       (* Step 2b: Recover type args from the return type when unresolved metas
@@ -1121,7 +1121,7 @@ let rec gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type
             | Some (Miniml.Tglob (exp_r, exp_tys, _))
               when Names.GlobRef.CanOrd.equal exp_r n
                    && List.length exp_tys = List.length tys ->
-              let exp_temps = build_template_params env [] exp_tys in
+              let exp_temps = build_template_params ~site:Through_tvar env [] exp_tys in
               let r = filter_erased_type_args exp_temps in
               if r <> [] && not (List.exists (function Tvar (Tv_index (_, None)) -> true | _ -> false) r)
               then r
@@ -2137,14 +2137,14 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                   (* A function the slot takes at fewer domains than the
                      binder's arrows flatten to -- [esc : A -> cont R B], with
                      [cont R B] an alias for a function type -- is curried
-                     where the slot says; see {!Minicpp.recurry_to}. *)
+                     where the slot says ([Declared_at]). *)
                   let declared_arity =
                     match Option.map (unfold_cpp_typedef env) (slot_dom_cpp_ty j) with
                     | Some (Tfun (doms, _)) -> List.length doms
                     | _ -> 0
                   in
                   wrap_param_by_ownership ~is_owned:owned
-                    (if declared_arity > 0 then recurry_to declared_arity bare_cpp_ty
+                    (if declared_arity > 0 then spell_arrows (Declared_at declared_arity) bare_cpp_ty
                      else bare_cpp_ty)
               in
               (param_cpp_ty, Some id, body_subst) )
@@ -2558,7 +2558,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           let local_tvars =
             List.init (List.fold_left max 0 all_tvars) (fun k -> local_tvar (k + 1))
           in
-          let local_ty ty = template_arg_of_ml_type env local_tvars ty in
+          let local_ty ty = template_arg_of_ml_type ~site:Through_tvar env local_tvars ty in
           (* A forwarding parameter, and the argument that forwards it. *)
           let forwarding = Tref (Forwarding, Tauto) in
           let forward x = CPPforward (Texpr_type x, x) in
@@ -2743,7 +2743,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       eta_fun ?expected_ty env (MLglob (x, tys)) []
     | _ ->
       mk_cppglob ?yields:(glob_yields env x tys)
-        x (template_params_of_ml env tys) )
+        x (template_params_of_ml ~site:Through_tvar env tys) )
   | MLglob (x, tys) ->
     let tvars = get_current_type_vars () in
     let tys_cpp =
@@ -3171,7 +3171,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
               in
               let norm t = map_cpp_type expand t in
               let same_type a b =
-                curry_fun_type (norm a) = curry_fun_type (norm b)
+                same_arrows (norm a) (norm b)
               in
               if
                 erased_anywhere local || erased_anywhere outer
@@ -3256,7 +3256,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             else
               tys
           in
-          let temps = template_params_of_ml ~curry:false env tys in
+          let temps = template_params_of_ml ~site:Declared env tys in
           (* Where the position expects this very inductive, it -- not the
              constructor's own type annotation -- says how the arguments are
              spelled.  An element type that reached the slot through one of
@@ -3344,7 +3344,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                    to std::any by the constructor-expression shortcut. *)
                 let recovered =
                   with_in_constructor_expr false (fun () ->
-                      template_params_of_ml ~curry:false env exp_tys )
+                      template_params_of_ml ~site:Declared env exp_tys )
                 in
                 if List.for_all (fun t -> not (prints_as_any t)) recovered
                 then recovered
@@ -3488,7 +3488,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
              printed with, so a position the call erases is erased here too. *)
           let temps =
             erase_past_type_arg
-              (temps_from_slot n (template_params_of_ml ~curry:false env tys_filt))
+              (temps_from_slot n (template_params_of_ml ~site:Declared env tys_filt))
           in
           if Table.has_dependent_params n then
             let expected_temps =
@@ -4321,7 +4321,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
              instance member template a recovered [Tvar 3] is the method's
              own [_A0], and an empty name list spells it as the anonymous
              [T3] -- a free name where the erasure at least compiled. *)
-          let temps = ind_promoted_type_args n @ template_params_of_ml env tys in
+          let temps = ind_promoted_type_args n @ template_params_of_ml ~site:Through_tvar env tys in
           if Table.is_coinductive n then
             mk_call
               (CPPalloc (Alloc_heap, Tglob (n, temps, [])))
@@ -5330,7 +5330,7 @@ and gen_call_args ~slot ?expected_ty env id plan =
       match Param_pos.nth fn_param_ml_tys_orig param_index with
       | Some orig ->
         Option.bind (param_expected_subst ())
-          (recurry_to_opt (count_ml_value_arrows orig))
+          (respell_arrows (Declared_at (count_ml_value_arrows orig)))
       | None -> None
     in
     let param_expected_at_declared_arity () =
@@ -6049,16 +6049,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
           | Some ml_ty -> Some (instantiated_codomain ml_ty)
           | None -> None
         in
-        (* A codomain that is a type variable takes its C++ shape from the
-           template argument, which keeps its currying; one written in the
-           declaration is flattened there.  An inline custom constant has no
-           template argument: what it yields is whatever its text reads --
-           [fst]'s [%a0.first] is the pair's component, stored flat. *)
-        let cod_is_curried =
-          match find_type_opt id with
-          | Some ml_ty -> ml_codomain_is_tvar ml_ty && not (is_inline_custom id)
-          | None -> false
-        in
+        let cod_site = call_result_site id in
         (* A codomain that stays curried in C++ -- a [std::function] whose
            result is another [std::function] -- takes only the arguments of
            its own arrow, so applying every excess arg in one call would
@@ -6112,7 +6103,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
             let n_here, cod' =
               let cod_cpp c =
                 let t = cpp_of_ml env c in
-                if cod_is_curried then curry_fun_type t else t
+                spell_arrows cod_site t
               in
               match Option.map cod_cpp cod with
               | Some (Tfun (dom, _)) when List.length dom < List.length excess
@@ -6513,15 +6504,15 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
                function type. *)
             let callee_arity =
               match inline_custom_arg_arity id with
-              | Some a -> Some (a, `Flat)
+              | Some _ as a -> a
               | None -> (
                 match find_type_opt id with
-                | Some ml_ty when ml_codomain_is_tvar ml_ty ->
-                  Some (count_ml_value_arrows ml_ty, `Curried)
+                | Some ml_ty when codomain_site ml_ty = Through_tvar ->
+                  Some (count_ml_value_arrows ml_ty)
                 | _ -> None )
             in
             match callee_arity with
-            | Some (arity, result_shape) ->
+            | Some arity ->
               (* The eta parameters first finish filling the callee, and only
                  what is left over is applied to its result -- which is a
                  callable, since that is why there were missing arguments to
@@ -6533,12 +6524,9 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
                  result: recorded, so a mapping's [%ret] can name it. *)
               let yields = if surplus = [] && cod <> Tvoid then Some cod else None in
               let filled = mk_call ?yields cglob (args @ fill) in
-              (* An instantiated type variable is spelled curried, so its
-                 arguments go one at a time; an inline custom's result is
-                 whatever its text reads, flat. *)
-              ( match result_shape with
-              | `Curried -> List.fold_left (fun f a -> mk_call f [a]) filled surplus
-              | `Flat -> mk_apply filled surplus )
+              (* The surplus goes to the result in the groups its spelling
+                 takes them in ({!call_result_site}). *)
+              apply_at_site (call_result_site id) filled surplus
             | None -> mk_call cglob call_args
           in
           let ret_ty, body =
@@ -6973,7 +6961,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
                 List.length dom
               | _ -> n
             in
-            if n < List.length args && ml_codomain_is_tvar ty then
+            if n < List.length args && codomain_site ty = Through_tvar then
               List.length args
             else n
           with _ -> List.length args )
@@ -8511,7 +8499,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
   let temps =
     match ml_typ with
     | Tglob (_, tys, _) ->
-      let raw = template_params_of_ml ~curry:false env tys in
+      let raw = template_params_of_ml ~site:Declared env tys in
       List.map (fun ty ->
         if fix_a_fired || has_tany_in_type ty then Tauto else ty) raw
     | _ -> []

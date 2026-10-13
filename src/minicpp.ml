@@ -1006,51 +1006,53 @@ let dead_branch_message = "unreachable: impossible dependent match branch"
 let inactive_field_message =
   "unreachable: inactive constructor field at this instantiation"
 
-(** [curry_fun_type ty] respells every multi-parameter function type inside
-    [ty] as nested single-parameter ones: [Nat(Nat, Nat)] becomes
-    [std::function<Nat(Nat)>(Nat)].
+(** {2 Arity}
 
-    Crane's calling convention flattens a chain of Rocq arrows into one
-    multi-parameter function, which is what a {e definition} wants.  A type
-    standing at a template argument position cannot be flattened: a signature
-    that rebuilds an arrow out of separate template parameters ([F<function<B
-    (A)>>]) spells it one argument at a time, so an instantiation has to as
-    well or the two do not match. *)
-let curry_fun_type ty =
-  map_cpp_type
-    (function
-      | Tfun (a :: (_ :: _ as rest), cod) -> Tfun ([a], Tfun (rest, cod))
-      | t -> t )
-    ty
+    A chain of Rocq arrows has two C++ spellings, and which one a type takes
+    is decided here alone, by the {e site} it stands at:
 
-(** [recurry_to n ty] respells the function type [ty] as one taking [n]
-    parameters and returning a curried function of whatever is left, using
-    {!curry_fun_type} for the remainder.  [n = 0] curries throughout, which is
-    what a position declared as a bare type variable asks for.
+    - [Declared]: a declaration's own parameter, field or result.  Crane's
+      calling convention flattens the chain into one multi-parameter
+      function, [crane::fn<R(A, B)>], which is the spelling
+      {!Translation_types.convert_ml_type_to_cpp_type} produces.
+    - [Through_tvar]: a type standing for a type variable -- a template
+      argument, or what a callee whose codomain is a type variable returns.
+      A signature that rebuilds an arrow out of separate template parameters
+      ([F<crane::fn<B(A)>>]) spells it one argument at a time, so the type
+      that instantiates it is curried throughout:
+      [crane::fn<crane::fn<R(B)>(A)>].
+    - [Declared_at n]: a callable its declaration wrote at [n] parameters,
+      whose codomain is a type variable this use instantiates at a function
+      type.  Substitution flattens the element type's arrows into the
+      callable's own parameter list; [n] puts them back where the signature
+      had them, the remainder curried.  [Declared_at 0] is [Through_tvar].
 
-    Substituting a concrete function type into a codomain that was a type
-    variable flattens arrows belonging to the {e element} type into the
-    callable's own parameter list.  [n] is the arity the declaration was
-    written at, so this restores the shape the signature actually has. *)
-let recurry_to n ty =
-  match ty with
-  | Tfun (dom, cod) when n > 0 && List.length dom > n ->
-    let outer = List.filteri (fun i _ -> i < n) dom in
-    let inner = List.filteri (fun i _ -> i >= n) dom in
-    Tfun (outer, curry_fun_type (Tfun (inner, cod)))
-  | _ -> if n = 0 then curry_fun_type ty else ty
+    A value that crosses from one spelling to another is the same function
+    regrouped, and the crossing is written ({!CPPregroup}). *)
+type arrow_site = Declared | Through_tvar | Declared_at of int
 
-(** [recurry_to_opt n ty] is [recurry_to n ty] where the declaration's arity
-    actually respells [ty], and [None] where it leaves it alone.
+let rec spell_arrows site ty =
+  match site with
+  | Declared -> ty
+  | Through_tvar | Declared_at 0 ->
+    map_cpp_type
+      (function
+        | Tfun (a :: (_ :: _ as rest), cod) -> Tfun ([a], Tfun (rest, cod))
+        | t -> t )
+      ty
+  | Declared_at n -> (
+    match ty with
+    | Tfun (dom, cod) when List.length dom > n ->
+      let outer = List.filteri (fun i _ -> i < n) dom in
+      let inner = List.filteri (fun i _ -> i >= n) dom in
+      Tfun (outer, spell_arrows Through_tvar (Tfun (inner, cod)))
+    | _ -> ty )
 
-    A site that has a second, usually better source for a type -- a constructor
-    knows the instantiation it was built at, which the parameter type may have
-    erased -- defers to the slot only for the one thing the slot alone can say:
-    how the arrows are curried.  Asking here keeps that judgement with the
-    rewrite that makes it. *)
-let recurry_to_opt n ty =
-  let recurried = recurry_to n ty in
-  if recurried = ty then None else Some recurried
+let respell_arrows site ty =
+  let spelled = spell_arrows site ty in
+  if spelled = ty then None else Some spelled
+
+let same_arrows a b = spell_arrows Through_tvar a = spell_arrows Through_tvar b
 
 (** [subst_cpp_tvars sub ty] replaces every [Tvar (Tv_index (i, _))] in [ty] by
     [sub i], leaving the substituted type alone.
@@ -1184,6 +1186,18 @@ let mk_call ?yields ?params fn args =
     where the arguments are whatever a call site had left over. *)
 let mk_apply ?yields ?params fn args =
   match args with [] -> fn | _ -> mk_call ?yields ?params fn args
+
+let apply_at_site site f args =
+  let one_at_a_time f args = List.fold_left (fun f a -> mk_call f [a]) f args in
+  match site with
+  | Declared -> mk_apply f args
+  | Through_tvar | Declared_at 0 -> one_at_a_time f args
+  | Declared_at n ->
+    if List.length args <= n then mk_apply f args
+    else
+      one_at_a_time
+        (mk_call f (List.filteri (fun i _ -> i < n) args))
+        (List.filteri (fun i _ -> i >= n) args)
 
 (** [named_tvar x] is the type variable named [x].  Its index is 0 because it
     numbers against no declaration's parameter list -- a lambda's own template

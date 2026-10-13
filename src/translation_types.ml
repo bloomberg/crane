@@ -1903,31 +1903,42 @@ let rec resolves_to_any_type = function
 let cpp_of_ml env t =
   convert_ml_type_to_cpp_type env (get_current_type_vars ()) t
 
-(** [template_arg_of_ml_type env tvars ty] converts [ty] for a template
-    argument position, where a function type has to keep the currying the
-    Rocq arrows had; see {!Minicpp.curry_fun_type}.
+(** [template_arg_of_ml_type ~site env tvars ty] converts [ty] for a template
+    argument position, its arrows spelled as [site] says
+    ({!Minicpp.arrow_site}).
 
-    [~curry:false] for an argument that instantiates an {e inductive}'s
+    [Declared] for an argument that instantiates an {e inductive}'s
     parameter.  Such a parameter only names the type of a stored value, and the
     value is spelled at the flat arity {!convert_ml_type_to_cpp_type} gives the
     declaration; currying it would make the instantiation disagree with the
-    type the declaration writes.  A {e function}'s parameter is different: the
-    signature may mention it inside an arrow it writes out itself (as [ap : F
-    (A -> B) -> ...] does), and there the currying is what makes the argument
-    match. *)
-let template_arg_of_ml_type ?(curry = true) env tvars ty =
+    type the declaration writes.  [Through_tvar] for a {e function}'s type
+    parameter: the signature may mention it inside an arrow it writes out
+    itself (as [ap : F (A -> B) -> ...] does), and there the currying is what
+    makes the argument match. *)
+let template_arg_of_ml_type ~site env tvars ty =
   (* Template params emitted at expression/function-call sites are public API
      types. Recursive storage wrapping is introduced only when converting
      constructor fields with an explicit storage namespace. *)
-  let t =
-    convert_ml_type_to_cpp_type env ~ns:Ref.User.Set.empty tvars (type_simpl ty)
-  in
-  if curry then curry_fun_type t else t
+  spell_arrows site
+    (convert_ml_type_to_cpp_type env ~ns:Ref.User.Set.empty tvars (type_simpl ty))
 
-let build_template_params ?curry env tvars tys =
+(** The site a callee's {e result} is spelled at ({!Minicpp.arrow_site}): a
+    codomain that is a type variable takes its C++ shape from the template
+    argument instantiating it, so it is curried; one the declaration writes
+    out is flat there. *)
+let codomain_site ml_ty = if ml_codomain_is_tvar ml_ty then Through_tvar else Declared
+
+(** {!codomain_site} for a call to the global [id].  An inline custom
+    constant has no template argument: what it yields is whatever its text
+    reads -- [fst]'s [%a0.first] is the pair's component, stored flat. *)
+let call_result_site id =
+  if is_inline_custom id then Declared
+  else match find_type_opt id with Some ml_ty -> codomain_site ml_ty | None -> Declared
+
+let build_template_params ~site env tvars tys =
   List.map
     (fun ty ->
-      let t = template_arg_of_ml_type ?curry env tvars ty in
+      let t = template_arg_of_ml_type ~site env tvars ty in
       (* Check for unbound type variables *)
       match t with
       | Tvar (Tv_index (_, None)) when tvars <> [] ->
@@ -1974,10 +1985,10 @@ let build_template_params ?curry env tvars tys =
     @param ts  ML expression arguments (converted to C++ recursively)
     @return C++ expression applying custom syntax with type/value arguments *)
 
-(** [template_params_of_ml env tys] is {!build_template_params} against the
+(** [template_params_of_ml ~site:Through_tvar env tys] is {!build_template_params} against the
     type variables the enclosing scope has in hand; see {!cpp_of_ml}. *)
-let template_params_of_ml ?curry env tys =
-  build_template_params ?curry env (get_current_type_vars ()) tys
+let template_params_of_ml ~site env tys =
+  build_template_params ~site env (get_current_type_vars ()) tys
 
 (** [param_expected_cpp_ty env param_tys i] is the C++ type the callee declares
     for its [i]th parameter, and so the type an argument generated for that
@@ -2530,7 +2541,7 @@ let hkt_carrier_type_args env tvars ?result id tys =
     when IntSet.mem 1 (Ml_type_util.higher_kinded_ml_tvars [ml_ty])
          && not (Mlutil.isTdummy (resolve_tmeta c))
          && not (ml_type_contains_erased c) ->
-    let carrier = template_arg_of_ml_type env tvars c in
+    let carrier = template_arg_of_ml_type ~site:Through_tvar env tvars c in
     let constant = Mlutil.eq_ml_type (Mlutil.apply_ml_type c [Miniml.Tunknown]) c in
     Some
       [ Minicpp.Ttyctor
@@ -2556,7 +2567,7 @@ let hkt_carrier_type_args env tvars ?result id tys =
   let* result =
     match result with None -> (!tctx).current_cpp_return_type | r -> r
   in
-  let over = template_arg_of_ml_type env tvars v_ml in
+  let over = template_arg_of_ml_type ~site:Through_tvar env tvars v_ml in
   let* carrier = Minicpp.abstract_cpp_type ~over result in
   (* A carrier that is one template applied to the argument is left to
      deduction, which reads it off the value argument and gets it right.  Only
@@ -2753,11 +2764,11 @@ let dict_carrier_type_args env tvars id args =
     | Miniml.Tglob (_, (t0 :: _ as targs), _)
     | Miniml.Tapp (_, (t0 :: _ as targs)) ->
       let whole = if List.exists unrecovered targs then t0 else traversed cod in
-      Some (template_arg_of_ml_type env tvars whole)
+      Some (template_arg_of_ml_type ~site:Through_tvar env tvars whole)
     | _ -> None
   in
   let* carrier =
-    Minicpp.abstract_cpp_type ~over (template_arg_of_ml_type env tvars cod)
+    Minicpp.abstract_cpp_type ~over (template_arg_of_ml_type ~site:Through_tvar env tvars cod)
   in
   Some [Minicpp.Ttyctor carrier]
 
@@ -3215,7 +3226,7 @@ let ctor_type_of_match env (typ : ml_type) (cname : GlobRef.t) : cpp_type =
        {!template_arg_of_ml_type}). *)
     let temps =
       ind_promoted_type_args r
-      @ apply_hkt_tyctors r (template_params_of_ml ~curry:false env tys)
+      @ apply_hkt_tyctors r (template_params_of_ml ~site:Declared env tys)
     in
     let is_local_ind =
       List.exists

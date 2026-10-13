@@ -38,15 +38,15 @@ open Translation_types
     named the same way, and is curried the same way: {!curry_value_to_expected}
     takes the callee's ML type rather than its name.
 
-    [decl_arity] is how many parameters the C++ declaration itself takes,
-    where [ml_ty] is an instantiation of it: an instantiation can push arrows
-    into the codomain ([idf {A} : A -> A] at [A := nat -> nat] reads as two
-    arguments), and the arguments past the declared ones are applied to what
-    the call returns, one at a time, as a value at a type variable is
-    curried.
+    [callee_site] is the arrow site the callee is spelled at
+    ({!Minicpp.arrow_site}), where [ml_ty] is an instantiation of it: an
+    instantiation can push arrows into the codomain ([idf {A} : A -> A] at
+    [A := nat -> nat] reads as two arguments), and the declaration takes only
+    the arguments it wrote, the rest going to what the call returns one at a
+    time ([Declared_at n]).
 
     Returns [cglob] unchanged when the declaration is already a value. *)
-let curry_value_to_expected env ?expected_ty ?decl_arity ?(exact = false) ml_ty cglob =
+let curry_value_to_expected env ?expected_ty ?(callee_site = Declared) ?(exact = false) ml_ty cglob =
   let decl_dom =
     match Option.map (cpp_of_ml env) ml_ty with
     | Some (Tfun (dom, _)) -> dom
@@ -88,16 +88,7 @@ let curry_value_to_expected env ?expected_ty ?decl_arity ?(exact = false) ml_ty 
           decl_dom
     in
     let params = adapter_params ~prefix:"_ec" decl_dom in
-    let call =
-      let args = List.map adapter_arg params in
-      match decl_arity with
-      | Some n when n < List.length args ->
-        List.fold_left
-          (fun f a -> mk_call f [a])
-          (mk_call cglob (List.filteri (fun i _ -> i < n) args))
-          (List.filteri (fun i _ -> i >= n) args)
-      | _ -> mk_call cglob args
-    in
+    let call = apply_at_site callee_site cglob (List.map adapter_arg params) in
     (* One lambda per group of arguments the slot takes at a time, as deep as
        it nests: [fn<fn<fn<R(C)>(B)>(A)>] takes [A], then [B], then [C]. *)
     let rec nest params expected =
@@ -130,12 +121,12 @@ let instantiated_type ~tys x =
 let curry_to_expected env ?expected_ty ?(tys = []) x cglob =
   let decl_ty = find_type_opt x in
   let ml_ty = instantiated_type ~tys x in
-  let decl_arity =
+  let callee_site =
     match Option.map (cpp_of_ml env) decl_ty with
-    | Some (Tfun (dom, _)) -> Some (List.length dom)
-    | _ -> None
+    | Some (Tfun (dom, _)) -> Declared_at (List.length dom)
+    | _ -> Declared
   in
-  curry_value_to_expected env ?expected_ty ?decl_arity ml_ty cglob
+  curry_value_to_expected env ?expected_ty ~callee_site ml_ty cglob
 
 (** [call_type_args ?expected_ty env id plan args] -- the type arguments a
     call to [id] writes, given its generated arguments: the dictionaries'
@@ -254,7 +245,7 @@ let call_type_args ?expected_ty env id plan args =
             | Miniml.Tvar (_, j) -> (
               match List.nth_opt tys (j - 1) with
               | Some ty when not (Mlutil.isTdummy (resolve_tmeta ty)) ->
-                let c = template_arg_of_ml_type env tvars ty in
+                let c = template_arg_of_ml_type ~site:Through_tvar env tvars ty in
                 if prints_as_any c then None else Some c
               | _ -> None )
             | _ -> None )
@@ -333,7 +324,7 @@ let call_type_args ?expected_ty env id plan args =
                              | _ -> false
                            in
                            has_class x) ->
-                let c = template_arg_of_ml_type env tvars x in
+                let c = template_arg_of_ml_type ~site:Through_tvar env tvars x in
                 (* A carrier is written at the erased element, so an
                    instantiation that erases nothing is some application
                    of it, not the carrier. *)
@@ -377,7 +368,7 @@ let call_type_args ?expected_ty env id plan args =
     |> List.filter (fun (i, _) -> keeps_type_arg_position id i)
     |> List.map
          (fun (i, ty) ->
-           let t = template_arg_of_ml_type env tvars ty in
+           let t = template_arg_of_ml_type ~site:Through_tvar env tvars ty in
            (* A higher-kinded variable of the caller's reaching such a
               position is spelled as the template it is, which names no
               type; the position takes it at the erased element. *)
@@ -385,7 +376,7 @@ let call_type_args ?expected_ty env id plan args =
              match (t, resolve_tmeta ty) with
              | (Tqualified _ | Tvar _), Miniml.Tvar (_, j)
                when IntSet.mem i plain_carriers && caller_higher_kinded j ->
-               template_arg_of_ml_type env tvars
+               template_arg_of_ml_type ~site:Through_tvar env tvars
                  (Miniml.Tapp (j, [Miniml.Tunknown]))
              | _ when (prints_as_any t || under_applied_ind t)
                       && IntSet.mem i plain_carriers -> (
@@ -844,7 +835,7 @@ let rec ml_arg_to_template_type ?expected env ml_arg =
      a call applies to its own: a position is what gives the others their
      meaning, so one that cannot be written costs the list. *)
   let instance_type_args r ts =
-    filter_erased_type_args (build_template_params env [] (kept_type_args r ts))
+    filter_erased_type_args (build_template_params ~site:Through_tvar env [] (kept_type_args r ts))
   in
   let instance_type_args_from_expected r ts =
     match instance_family_binding env r ts expected with
@@ -854,7 +845,7 @@ let rec ml_arg_to_template_type ?expected env ml_arg =
         List.mapi
           (fun k t ->
             if not (Mlutil.isTdummy (resolve_tmeta t)) then
-              Some (List.hd (build_template_params env [] [t]))
+              Some (List.hd (build_template_params ~site:Through_tvar env [] [t]))
             else
               Option.bind (List.nth_opt names k) (fun v ->
                   Option.map snd (List.find_opt (fun (v', _) -> Id.equal v v') m) ) )

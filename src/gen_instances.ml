@@ -738,9 +738,8 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                  kept_arg_pairs )
           in
           (* The parameter's C++ type at the arity its declaration was written
-             at.  {!Minicpp.recurry_to} exists for exactly this: it puts the
-             arrows substitution moved into the callable's parameter list back
-             where the signature had them. *)
+             at ([Declared_at]): the arrows substitution moved into the
+             callable's parameter list go back where the signature had them. *)
           let param_cpp_ty n ml_ty =
             let ty = convert_ml_type_to_cpp_type base_env type_var_names ml_ty in
             match
@@ -748,7 +747,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                  declared_arg_arities.(n)
                else None)
             with
-            | Some k when k > 0 -> Minicpp.recurry_to k ty
+            | Some k when k > 0 -> Minicpp.spell_arrows (Declared_at k) ty
             | _ -> ty
           in
           (* A class-typed argument is not a value in C++: the class is a

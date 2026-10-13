@@ -1003,20 +1003,31 @@ val dead_branch_message : string
     so no conversion can be written. *)
 val inactive_field_message : string
 
-(** [curry_fun_type ty] respells every multi-parameter function type inside
-    [ty] as nested single-parameter ones, as required of a type standing at a
-    template argument position. *)
-val curry_fun_type : cpp_type -> cpp_type
+(** The site a function type stands at, which decides how its chain of
+    arrows is spelled in C++: flat where a declaration writes it
+    ([crane::fn<R(A, B)>]), curried where a type variable stands for it
+    ([crane::fn<crane::fn<R(B)>(A)>]), or flat for the first [n] parameters
+    a declaration wrote and curried for the rest.  See the implementation's
+    {b Arity} section. *)
+type arrow_site = Declared | Through_tvar | Declared_at of int
 
-(** [recurry_to n ty] respells the function type [ty] as one taking [n]
-    parameters and returning a curried function of the rest; [n = 0] curries
-    throughout. *)
-val recurry_to : int -> cpp_type -> cpp_type
+(** [spell_arrows site ty] respells every function type in [ty] as [site]
+    spells it.  The only place a chain of arrows is regrouped. *)
+val spell_arrows : arrow_site -> cpp_type -> cpp_type
 
-(** [recurry_to_opt n ty] is [recurry_to n ty] where the declaration's arity
-    actually respells [ty], and [None] where it leaves it alone -- for sites
-    that want the slot's word on the currying and nothing else. *)
-val recurry_to_opt : int -> cpp_type -> cpp_type option
+(** [respell_arrows site ty] is [spell_arrows site ty] where that differs
+    from [ty], and [None] where the site leaves it alone -- for sites that
+    want the slot's word on the grouping and nothing else. *)
+val respell_arrows : arrow_site -> cpp_type -> cpp_type option
+
+(** Whether two function types have the same arrows, however grouped. *)
+val same_arrows : cpp_type -> cpp_type -> bool
+
+(** [apply_at_site site f args]: [f], a callable spelled at [site], applied to
+    [args] -- in one call where its arrows are flat, one argument at a time
+    where they are curried, and the first [n] in one call then the rest one
+    at a time at [Declared_at n]. *)
+val apply_at_site : arrow_site -> cpp_expr -> cpp_expr list -> cpp_expr
 
 (** [subst_cpp_tvars sub ty] replaces every [Tvar (i, _)] in [ty] by [sub i].
 
