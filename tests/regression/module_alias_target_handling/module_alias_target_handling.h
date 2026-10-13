@@ -1390,7 +1390,8 @@ struct N {
       return f0;
     } else {
       unsigned int p = n;
-      return Coq_Pos::peano_rect(f1(0u, std::move(f0)), std::move(f_), p);
+      return Coq_Pos::template peano_rect<T1>(f1(0u, std::move(f0)),
+                                              std::move(f_), p);
     }
   }
 
@@ -1419,16 +1420,17 @@ struct N {
   measure_right_induction(std::type_identity_t<crane::fn<unsigned int(T1)>> f0,
                           unsigned int, F2 &&iH, const T1 &x) {
     unsigned int t0 = f0(x);
-    auto f1_impl = [=, f0 = std::move(f0)](auto &_self_f1, T1, T1 y) -> T2 {
+    auto f1_impl = [=, f0 = std::move(f0)](auto &_self_f1, unsigned int,
+                                           T1 y) -> T2 {
       return iH(y, [=](const T1 &y_) {
-        T1 y0 = f0(y_);
+        unsigned int y0 = f0(y_);
         return _self_f1(_self_f1, y0, y_);
       });
     };
     {
-      T1 _lc1_x0 = t0;
+      unsigned int _lc1_x0 = t0;
       T1 _lc1_y = x;
-      return f1_impl(f1_impl, std::move(_lc1_x0), std::move(_lc1_y));
+      return f1_impl(f1_impl, _lc1_x0, std::move(_lc1_y));
     }
   }
 

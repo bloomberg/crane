@@ -42,7 +42,9 @@ struct ErasedMultiIndex {
 
     template <typename T1, typename T2, typename T3, typename F0>
     T1 tagged_rec(F0 &&f) const {
-      return this->template tagged_rect<T1, T2, T3>(f);
+      const auto &[k0, v_1] = *this;
+      return crane_any_cast<T1>(crane_call_erased(f, crane_any_cast<T2>(k0),
+                                                  crane_any_cast<T3>(v_1)));
     }
 
     template <typename T1, typename T2, typename T3, typename F0>

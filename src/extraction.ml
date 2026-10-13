@@ -822,6 +822,20 @@ and extract_type_scheme env sg db c p =
     nat] is the carrier [list nat], whatever it is applied to (see
     {!Mlutil.apply_ml_type}). *)
 and extract_family_type env sg db c =
+  (* A type function bound by a [let] is its definition: [N.binary_rect]
+     passes [positive_rect] its [let P' p := P (pos p)], which has no type
+     variable of its own to stand for. *)
+  let rec unfold_local c =
+    let head, args = EConstr.decompose_app sg c in
+    match EConstr.kind sg head with
+    | Rel i -> (
+      match EConstr.lookup_rel i env with
+      | Context.Rel.Declaration.LocalDef (_, b, _) ->
+        unfold_local (EConstr.mkApp (EConstr.Vars.lift i b, args))
+      | Context.Rel.Declaration.LocalAssum _ -> c )
+    | _ -> c
+  in
+  let c = unfold_local c in
   let rec peel env db n has_value c =
     match EConstr.kind sg (whd_betaiotazeta env sg c) with
     | Lambda (x, t, d) ->

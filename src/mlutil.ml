@@ -1608,16 +1608,17 @@ let rec tmp_head_lams = function
 
 let rec ast_glob_subst s t =
   (* The body of [refe] at the type arguments [tys] an occurrence names:
-     inlined, its own type variables stand for nothing in the caller.  An
-     argument the occurrence leaves erased says nothing, and the body keeps
-     its own variable there: [Fix_F]'s family [P], erased where Equations
-     calls it, would otherwise erase the fixpoint's codomain. *)
+     inlined, its own type variables stand for nothing in the caller.  Only
+     where the occurrence names every one: an erased argument says nothing,
+     and a body read at some of the caller's types while keeping its own
+     variables elsewhere would mix the two numberings -- [Fix_F]'s family
+     [P], erased where Equations calls it, keeps the body as it is. *)
   let body refe tys =
     let b = Refmap'.find refe s in
-    let informative i t =
-      match t with Tdummy _ | Tunknown -> Tvar (Schematic, i + 1) | t -> t
-    in
-    if tys = [] then b else ast_map_types (type_subst_list (List.mapi informative tys)) b
+    let informative = function Tdummy _ | Tunknown -> false | _ -> true in
+    if tys <> [] && List.for_all informative tys then
+      ast_map_types (type_subst_list tys) b
+    else b
   in
   match t with
   | MLapp ((MLglob ((GlobRef.ConstRef kn as refe), tys) as f), a) ->

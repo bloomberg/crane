@@ -897,7 +897,7 @@ struct RocqBug14174 {
     }
 
     template <typename T1> static const T1 &absurd_set() {
-      static const T1 v = [](crane::obj) { return except<T1>; };
+      static const T1 v = [](crane::obj) { return except<T1>(); };
       return v;
     }
   };

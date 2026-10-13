@@ -357,7 +357,8 @@ template <typename A, typename P, typename Q> struct SigT2 {
   }
 };
 
-template <typename T1> SigT<T1, crane::obj> sigT_of_sig(const Sig<T1> &x) {
+template <typename T1>
+SigT<T1, crane::obj> sigT_of_sig(const Sig<T1> &x) { // Precondition: P
   return SigT<T1, crane::obj>::existt(
       [&]() {
         const auto &[x0] = x;
@@ -550,7 +551,7 @@ template <typename T1> const std::optional<T1> error = std::optional<T1>();
 template <typename T1> T1 except() { throw std::logic_error("absurd case"); }
 
 template <typename T1>
-const T1 absurd_set = [](crane::obj) { return except<T1>; };
+const T1 absurd_set = [](crane::obj) { return except<T1>(); };
 
 } // namespace Specif
 

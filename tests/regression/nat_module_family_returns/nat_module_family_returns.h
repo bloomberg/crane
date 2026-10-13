@@ -1226,16 +1226,16 @@ struct Nat {
   measure_right_induction(std::type_identity_t<crane::fn<uint64_t(T1)>> f,
                           uint64_t, F2 &&iH, const T1 &x) {
     uint64_t t0 = f(x);
-    auto f0_impl = [=, f = std::move(f)](auto &_self_f0, T1, T1 y) -> T2 {
+    auto f0_impl = [=, f = std::move(f)](auto &_self_f0, uint64_t, T1 y) -> T2 {
       return iH(y, [=](const T1 &y_) {
-        T1 y0 = f(y_);
+        uint64_t y0 = f(y_);
         return _self_f0(_self_f0, y0, y_);
       });
     };
     {
-      T1 _lc1_x0 = t0;
+      uint64_t _lc1_x0 = t0;
       T1 _lc1_y = x;
-      return f0_impl(f0_impl, std::move(_lc1_x0), std::move(_lc1_y));
+      return f0_impl(f0_impl, _lc1_x0, std::move(_lc1_y));
     }
   }
 
@@ -1455,8 +1455,7 @@ struct Nat {
         return hQP(
             (n1 + 1), std::move(hES),
             hPQ(n1, hO,
-                OddT_EvenT_rect<T1, T2>(crane_erase_fn<T1>(hQP), std::move(hQ0),
-                                        crane_erase_fn<T2>(hPQ), n1, hO)));
+                OddT_EvenT_rect<T1, T2>(hQP, std::move(hQ0), hPQ, n1, hO)));
       }
     }
   }
@@ -1471,9 +1470,7 @@ struct Nat {
       uint64_t n = n0 - 1;
       OddT hO = EvenT_S_OddT(n, hES);
       return hPQ(n, hO,
-                 OddT_EvenT_rect<T1, T2>(crane_erase_fn<T1>(hQP),
-                                         std::move(hQ0),
-                                         crane_erase_fn<T2>(hPQ), n, hO));
+                 OddT_EvenT_rect<T1, T2>(hQP, std::move(hQ0), hPQ, n, hO));
     }
   }
 };

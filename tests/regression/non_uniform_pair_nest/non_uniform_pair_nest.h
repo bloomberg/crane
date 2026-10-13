@@ -61,8 +61,15 @@ struct NonUniformPairNest {
   }
 
   template <typename T1, typename T2 = void, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, const crane::obj &>
   static T1 nest_rec(F0 &&f, F1 &&f0, const nest &n) {
-    return nest_rect<T1, crane::obj>(f, f0, n);
+    if (std::holds_alternative<typename nest::NZ>(n.v())) {
+      const auto &[a0] = std::get<typename nest::NZ>(n.v());
+      return crane_any_cast<T1>(f(a0));
+    } else {
+      const auto &[a0] = std::get<typename nest::NS>(n.v());
+      return crane_any_cast<T1>(f0(*a0, nest_rec(f, f0, *a0)));
+    }
   }
 
   template <typename T1 = void> static uint64_t size(const nest &n) {

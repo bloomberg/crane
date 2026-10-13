@@ -222,7 +222,12 @@ struct NestedTree {
 
   template <typename T1, typename T2 = void, typename F1>
   static T1 tree_rec(const T1 &f, F1 &&f0, const tree &t) {
-    return tree_rect<T1, crane::obj>(f, f0, t);
+    if (std::holds_alternative<typename tree::Leaf>(t.v())) {
+      return f;
+    } else {
+      const auto &[a0, a1] = std::get<typename tree::Node>(t.v());
+      return crane_any_cast<T1>(f0(a0, *a1, tree_rec(f, f0, *a1)));
+    }
   }
 
   static inline const tree example1 = tree::node(
