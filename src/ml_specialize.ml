@@ -43,10 +43,7 @@ let body_of defs use =
       let n = Mlutil.type_maxvar ty in
       if n = 0 then Some body
       else if Mlutil.written_covers use n then
-        Some
-          (Mlutil.ast_map_types
-             (Mlutil.instantiate_written ~reader:"ml_specialize.body_of" use)
-             body )
+        Some (Mlutil.instantiate_body ~reader:"ml_specialize.body_of" use body)
       else None
     in
     match Ref.User.Map.find_opt g defs with
@@ -281,7 +278,9 @@ let specialize f fd use args =
             MLapp (MLrel (d + k), List.filteri (fun i _ -> i <> j) a)
           | _ -> Mlutil.ast_map_lift self d e
         in
-        let b_rec = Mlutil.ast_map_types inst (self 0 fd.fd_body) in
+        let b_rec =
+          Mlutil.instantiate_body ~reader:"ml_specialize.specialize" use (self 0 fd.fd_body)
+        in
         let q i = MLrel (k - 1 - i) in
         let args_b =
           List.init k (fun i ->

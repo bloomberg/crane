@@ -151,6 +151,7 @@ let rec eq_ml_type t1 t2 =
   | Tapp (i1, l1), Tapp (i2, l2) ->
     Int.equal i1 i2 && List.equal eq_ml_type l1 l2
   | Tmeta m1, Tmeta m2 -> eq_ml_meta m1 m2
+  | Thole h1, Thole h2 -> Int.equal h1 h2
   | Tdummy k1, Tdummy k2 -> k1 == k2
   | Tunknown, Tunknown -> true
   | Taxiom, Taxiom -> true
@@ -160,6 +161,7 @@ let rec eq_ml_type t1 t2 =
       | Tvar (_, _)
       | Tapp _
       | Tmeta _
+      | Thole _
       | Tdummy _
       | Tunknown
       | Taxiom
@@ -373,7 +375,7 @@ let rec type_occurs alpha t =
   | Tarr (t1, t2) -> type_occurs alpha t1 || type_occurs alpha t2
   | Tglob (r, l, a) -> List.exists (type_occurs alpha) l
   | Tapp (_, l) -> List.exists (type_occurs alpha) l
-  | Tdummy _ | Tvar (_, _) | Taxiom | Tunknown | Tstring -> false
+  | Tdummy _ | Tvar (_, _) | Thole _ | Taxiom | Tunknown | Tstring -> false
 
 (** {2 Most General Unificator} *)
 
@@ -554,7 +556,71 @@ end
 
 (** {1 Operations upon ML types (without meta)} *)
 
-(** {2 Does a section path occur in a ML type ?} *)
+(** {2 Frozen instantiations} *)
+
+let last_hole = ref 0
+
+let fresh_hole () =
+  incr last_hole;
+  Thole !last_hole
+
+let freeze_types tys =
+  let holes = Hashtbl.create 4 in
+  let rec freeze = function
+    | Tmeta {contents = Some t} -> freeze t
+    | Tmeta {id; contents = None} -> (
+      match Hashtbl.find_opt holes id with
+      | Some h -> h
+      | None ->
+        let h = fresh_hole () in
+        Hashtbl.add holes id h;
+        h )
+    | Tarr (a, b) -> Tarr (freeze a, freeze b)
+    | Tglob (r, l, args) -> Tglob (r, List.map freeze l, args)
+    | Tapp (i, l) -> Tapp (i, List.map freeze l)
+    | t -> t
+  in
+  List.map freeze tys
+
+let rec type_holes acc = function
+  | Thole h -> if List.mem h acc then acc else h :: acc
+  | Tarr (a, b) -> type_holes (type_holes acc a) b
+  | Tglob (_, l, _) | Tapp (_, l) -> List.fold_left type_holes acc l
+  | Tmeta {contents = Some t} -> type_holes acc t
+  | _ -> acc
+
+let rec type_has_meta = function
+  | Tmeta {contents = None} -> true
+  | Tmeta {contents = Some _} -> true
+  | Tarr (a, b) -> type_has_meta a || type_has_meta b
+  | Tglob (_, l, _) | Tapp (_, l) -> List.exists type_has_meta l
+  | _ -> false
+
+let rec fill_holes f = function
+  | Thole h as t -> ( match f h with Some u -> u | None -> t )
+  | Tarr (a, b) -> Tarr (fill_holes f a, fill_holes f b)
+  | Tglob (r, l, args) -> Tglob (r, List.map (fill_holes f) l, args)
+  | Tapp (i, l) -> Tapp (i, List.map (fill_holes f) l)
+  | Tmeta {contents = Some t} -> fill_holes f t
+  | t -> t
+
+module Partial = struct
+  type t = ml_type
+
+  let instantiate inst ty =
+    let scheme = Scheme.Instantiation.scheme inst in
+    type_subst_fun
+      (fun j ->
+        Option.bind (Scheme.Var.of_tvar scheme j) (fun v ->
+            match (Scheme.Instantiation.slot inst v).solution with
+            | Scheme.Type u -> Some u
+            | Scheme.Identity -> None ) )
+      ty
+
+  let holes t = List.rev (type_holes [] t)
+  let close t = if type_holes [] t = [] then Some t else None
+  let resolve = fill_holes
+end
 
 (** {2 A global use's written type arguments, read by scheme variable} *)
 
@@ -571,6 +637,7 @@ let rec debug_ml_type = function
     "'" ^ string_of_int i ^ "(" ^ String.concat ", " (List.map debug_ml_type l) ^ ")"
   | Tmeta {contents = Some t} -> debug_ml_type t
   | Tmeta {id; contents = None} -> "?" ^ string_of_int id
+  | Thole h -> "_" ^ string_of_int h
   | Tdummy Ktype -> "__type"
   | Tdummy Kprop -> "__prop"
   | Tdummy (Kimplicit _) -> "__implicit"
@@ -593,6 +660,20 @@ let written_covers use n =
 
 let instantiate_written ~reader use t =
   let by_variable = subst_written_evidence use t in
+  if Probe.enabled () then
+    Option.iter
+      (fun inst ->
+        let solved = (Partial.instantiate inst t :> ml_type) in
+        let tag =
+          if eq_ml_type solved by_variable then "INSTW_same"
+          else if Option.is_empty (Partial.close (Partial.instantiate inst t)) then "INSTW_holes"
+          else "INSTW_differ"
+        in
+        Probe.hit tag (fun () ->
+            Printf.sprintf "%s %s written=%s solved=%s" reader
+              (Pp.string_of_ppcmds (GlobRef.print use.callee))
+              (debug_ml_type by_variable) (debug_ml_type solved) ) )
+      use.instantiation;
   if Probe.enabled () then begin
     let by_position = type_subst_list (Global_use.legacy_source_order use) t in
     if not (eq_ml_type by_position by_variable) then
@@ -609,6 +690,8 @@ let instantiate_written ~reader use t =
             (debug_ml_type by_position) (debug_ml_type by_variable) )
   end;
   by_variable
+
+(** {2 Does a section path occur in a ML type ?} *)
 
 let rec type_mem_kn kn = function
   | Tmeta {contents = Some t} -> type_mem_kn kn t
@@ -1657,6 +1740,25 @@ let rec tmp_head_lams = function
     reductions at modified positions. Moreover, we mark some lambdas as suitable
     for later linear reduction (this helps the inlining of recursors)} *)
 
+(* [a] with the holes of its global uses renamed apart from every other: a
+   body inlined at a call is a new set of uses, each of which leaves open
+   what its original did, independently of the original and of every other
+   copy. *)
+let freshen_holes a =
+  let renamed = Hashtbl.create 4 in
+  ast_map_types
+    (fill_holes (fun h ->
+         match Hashtbl.find_opt renamed h with
+         | Some t -> Some t
+         | None ->
+           let t = fresh_hole () in
+           Hashtbl.add renamed h t;
+           Some t ) )
+    a
+
+let instantiate_body ~reader use body =
+  freshen_holes (ast_map_types (instantiate_written ~reader use) body)
+
 let rec ast_glob_subst s t =
   (* The body of [refe] at the type arguments [tys] an occurrence names,
      with cells of its own ({!freshen_metas}).  Inlined, the body's type
@@ -1671,7 +1773,7 @@ let rec ast_glob_subst s t =
     let use =
       Global_use.map_types (fun t -> if informative t then t else new_meta ()) use
     in
-    ast_map_types (instantiate_written ~reader:"ast_glob_subst" use) b
+    instantiate_body ~reader:"ast_glob_subst" use b
   in
   match t with
   | MLapp ((MLglob ({callee = GlobRef.ConstRef _; _} as use) as f), a) ->

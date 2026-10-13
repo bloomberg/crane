@@ -1971,6 +1971,65 @@ and probe_tyarg_alignment kn schema ~nargs s_full positioned =
       (List.mapi (fun i e -> (i, e)) positioned)
   then Probe.hit "TYARGS_COINCIDENCE" detail
 
+(** The use's instantiation of [schema]: for each variable, the type its
+    metavariable in [metas] was solved to, frozen ({!Mlutil.freeze_types}), or
+    [Identity] for a [rigid] self-call; and the argument the call wrote at the
+    variable's binder, if the call reaches that binder -- [observed = None]
+    where what was written could not be read as a type. *)
+and freeze_instantiation schema ~rigid ~nargs metas written_at =
+  let frozen = Array.of_list (freeze_types (Array.to_list metas)) in
+  Scheme.Instantiation.make (Ml_schema.id schema) (fun v ->
+      let source =
+        match Ml_schema.origin schema v with
+        | Some b when Scheme.Binder.position b.Ml_schema.binder < nargs ->
+          let observed =
+            match written_at v with
+            | Some (Tdummy _) | None -> None
+            | Some t -> Some (type_simpl t)
+          in
+          Scheme.Written {binder = b.Ml_schema.binder; observed}
+        | _ -> Scheme.Not_written
+      in
+      let solution =
+        if rigid then Scheme.Identity
+        else Scheme.Type frozen.(Scheme.Var.ordinal v - 1)
+      in
+      {Scheme.solution; source} )
+
+(** Reports how a frozen instantiation's solutions relate to what the call
+    wrote: [INST_agree], [INST_disagree] (both a type, different), and, per
+    side left without one, [INST_written_open], [INST_unread_solved],
+    [INST_unread_open], [INST_unwritten_solved], [INST_unwritten_open],
+    [INST_identity].  Variables are compared without their rigidity. *)
+and probe_instantiation kn inst =
+  let rec flex = function
+    | Tvar (_, i) -> Tvar (Schematic, i)
+    | Tarr (a, b) -> Tarr (flex a, flex b)
+    | Tglob (r, l, args) -> Tglob (r, List.map flex l, args)
+    | Tapp (i, l) -> Tapp (i, List.map flex l)
+    | Tmeta {contents = Some t} -> flex t
+    | t -> t
+  in
+  let is_hole = function Thole _ -> true | _ -> false in
+  Scheme.Instantiation.fold
+    (fun v {Scheme.solution; source} () ->
+      let tag, detail =
+        match (solution, source) with
+        | Scheme.Identity, _ -> ("INST_identity", "")
+        | Scheme.Type s, Scheme.Written {observed = Some o; _} ->
+          if is_hole s then ("INST_written_open", debug_ml_type o)
+          else if eq_ml_type (flex (type_simpl o)) (flex (type_simpl s)) then ("INST_agree", "")
+          else ("INST_disagree", debug_ml_type o ^ " solved " ^ debug_ml_type s)
+        | Scheme.Type s, Scheme.Written {observed = None; _} ->
+          ((if is_hole s then "INST_unread_open" else "INST_unread_solved"), "")
+        | Scheme.Type s, Scheme.Not_written ->
+          ((if is_hole s then "INST_unwritten_open" else "INST_unwritten_solved"), "")
+      in
+      Probe.hit tag (fun () ->
+          Printf.sprintf "%s var=%d %s" (Names.Constant.to_string kn)
+            (Scheme.Var.ordinal v) detail ) )
+    inst ()
+
 (** Extracts a constant application (function call), handling type instantiation
     and partial application.
     @param env Rocq environment for schema lookup and argument extraction
@@ -2065,7 +2124,7 @@ and extract_cst_app env sg mle mlt kn args =
   let () =
     if lang () == Cpp && not rigid then
       let rec informative = function
-        | Tdummy _ | Tunknown | Taxiom | Tapp _ | Tvar _ -> false
+        | Tdummy _ | Tunknown | Taxiom | Tapp _ | Tvar _ | Thole _ -> false
         | Tmeta {contents = None} -> false
         | Tarr (a, b) -> informative a && informative b
         | Tglob (_, l, _) -> List.for_all informative l
@@ -2081,15 +2140,19 @@ and extract_cst_app env sg mle mlt kn args =
         (Ml_schema.vars schema)
   in
   let mla = make_mlargs env sg mle s args metas in
-  (* let dargs = List.map (fun t -> extract_type env sg [] 1 t []) (List.firstn (max 1 (la - (List.length mla))) args) in *)
-  (* let domain = List.firstn (la - (List.length mla)) metas in (* or (fst (type_decomp instantiated)) *) *)
+  (* The arguments are extracted, so the local unification is over: what it
+     solved the scheme's variables to is frozen into the use, a variable it
+     left open becoming a hole rather than a metavariable some later pass
+     could bind to whatever it meets. *)
+  let instantiation = freeze_instantiation schema ~rigid ~nargs:la tvar_metas written_at in
+  let () = if Probe.enabled () then probe_instantiation kn instantiation in
   (* The internal head receives a magic if [magic1] *)
   let head =
     put_magic_if
       ~from:(type_recomp (metas, a))
       ~into:instantiated
       magic1
-      (MLglob (Global_use.written (GlobRef.ConstRef kn) written))
+      (MLglob (Global_use.written (GlobRef.ConstRef kn) written instantiation))
   in
   (* For strict languages, purely logical signatures lead to a dummy lam (except
      when [Kill Ktype] everywhere). So a [MLdummy] is left accordingly. *)

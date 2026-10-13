@@ -105,6 +105,15 @@ type ml_type =
           [mret : forall A, A -> M A], where [M : Type -> Type] is a
           higher-kinded class parameter.  The head is a [Tvar] index. *)
   | Tmeta of ml_meta  (** used during ML type reconstruction *)
+  | Thole of int
+      (** An inference hole: a scheme variable a use's local unification left
+          unsolved, frozen into the use's instantiation in place of the
+          metavariable.  Unlike a [Tmeta] it is immutable and shared with no
+          other term; unlike a [Tvar] it names no variable of any scheme; and
+          it is not [Tunknown], [Tdummy] or [Taxiom], each of which says
+          something a hole does not.  Only an instantiation and the types a
+          reader computes from one may hold it; a consumer resolves it from
+          other evidence, leaves the parameter to deduction, or reports it. *)
   | Tdummy of kill_reason
   | Tunknown
   | Taxiom
@@ -247,6 +256,14 @@ and ml_ast =
 and global_use = private {
   callee : GlobRef.t;
   legacy_written : written_tyarg list;
+  instantiation : ml_type Scheme.Instantiation.t option;
+      (** What the use solved the callee's scheme variables to, frozen as
+          extraction finished the call: one slot per variable, each a type
+          that may hold {!Thole}s but no [Tmeta], or [Identity] for a rigid
+          self-call; with the argument written at the variable's binder, if
+          any.  [None] for a synthesised reference.  Built alongside the
+          written list, which stays authoritative until every reader has
+          moved to this. *)
 }
 
 and written_tyarg = {
@@ -418,13 +435,17 @@ type language_descr = {
 module Global_use : sig
   val callee : global_use -> GlobRef.t
 
-  (** A use with the entries extraction wrote and tagged. *)
-  val written : GlobRef.t -> written_tyarg list -> global_use
+  (** A use with the entries extraction wrote and tagged, and its frozen
+      instantiation. *)
+  val written :
+    GlobRef.t -> written_tyarg list -> ml_type Scheme.Instantiation.t -> global_use
 
   (** A use with an untagged list, as every synthesised reference builds
       one today -- the empty list included, which says nothing about whether
       the callee is polymorphic. *)
   val legacy_untagged : GlobRef.t -> ml_type list -> global_use
+
+  val instantiation : global_use -> ml_type Scheme.Instantiation.t option
 
   (** The written types in source order: the list [MLglob] used to carry,
       read positionally by the readers not yet migrated. *)
@@ -434,7 +455,8 @@ module Global_use : sig
       with its variable; entries with no variable are not here. *)
   val scheme_evidence : global_use -> (Scheme.Var.t * ml_type) list
 
-  (** Maps every written type, keeping the tags. *)
+  (** Maps every written type and every type of the instantiation, keeping
+      the tags, the schema and the holes. *)
   val map_types : (ml_type -> ml_type) -> global_use -> global_use
 
   val iter_types : (ml_type -> unit) -> global_use -> unit

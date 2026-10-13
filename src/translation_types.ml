@@ -1811,6 +1811,13 @@ let rec convert_ml_type_to_cpp_type
   (* Extraction gave up naming this type.  It prints as [std::any], but we
      know nothing about how the value is actually represented. *)
   | Tunknown -> Topaque
+  (* A hole is ordinary data inside an instantiation, and a reader resolves
+     it, leaves the parameter to deduction, or declines before converting:
+     one reaching a C++ type is a reader that did none of these. *)
+  | Thole hole ->
+    Probe.violation "inference hole"
+      Pp.(str "hole _" ++ int hole ++ str " reached a C++ type");
+    Topaque
   | Taxiom -> Tglob (GlobRef.VarRef (Id.of_string "axiom"), [], [])
 
 (** Convert ML type arguments to C++ template parameters, applying type

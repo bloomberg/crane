@@ -63,6 +63,7 @@ type ml_type =
           argument types are lost, which is why a higher-kinded carrier used
           to be element-erased. *)
   | Tmeta of ml_meta  (** used during ML type reconstruction *)
+  | Thole of int  (** an inference hole of a frozen instantiation *)
   | Tdummy of kill_reason
   | Tunknown
   | Taxiom
@@ -170,6 +171,7 @@ and ml_ast =
 and global_use = {
   callee : GlobRef.t;
   legacy_written : written_tyarg list;
+  instantiation : ml_type Scheme.Instantiation.t option;
 }
 
 and written_tyarg = {
@@ -308,12 +310,16 @@ type language_descr = {
 
 module Global_use = struct
   let callee g = g.callee
-  let written callee legacy_written = {callee; legacy_written}
+  let written callee legacy_written instantiation =
+    {callee; legacy_written; instantiation = Some instantiation}
 
   let legacy_untagged callee tys =
     { callee;
       legacy_written =
-        List.map (fun wt_type -> {wt_type; wt_binder = None; wt_var = None}) tys }
+        List.map (fun wt_type -> {wt_type; wt_binder = None; wt_var = None}) tys;
+      instantiation = None }
+
+  let instantiation g = g.instantiation
 
   let legacy_source_order g = List.map (fun w -> w.wt_type) g.legacy_written
 
@@ -324,7 +330,8 @@ module Global_use = struct
 
   let map_types f g =
     { g with
-      legacy_written = List.map (fun w -> {w with wt_type = f w.wt_type}) g.legacy_written }
+      legacy_written = List.map (fun w -> {w with wt_type = f w.wt_type}) g.legacy_written;
+      instantiation = Option.map (Scheme.Instantiation.map f) g.instantiation }
 
   let iter_types f g = List.iter (fun w -> f w.wt_type) g.legacy_written
   let exists_type p g = List.exists (fun w -> p w.wt_type) g.legacy_written

@@ -73,9 +73,49 @@ val debug_ml_type : ml_type -> string
     no variable replaces nothing. *)
 val subst_written_evidence : global_use -> ml_type -> ml_type
 
+(** [instantiate_body ~reader use body] is a copy of [body], the callee's
+    definition, at [use]: its types read at the arguments the use wrote
+    ({!instantiate_written}), the uses inside it composed with that reading,
+    and every hole they leave open renamed apart from the original's -- a
+    copy is new uses, which do not share what they leave open. *)
+val instantiate_body : reader:string -> global_use -> ml_ast -> ml_ast
+
 (** Whether [use] wrote an argument for each of its callee's variables
     [1 .. n] at that variable's own binder. *)
 val written_covers : global_use -> int -> bool
+
+(** {2 Frozen instantiations} *)
+
+(** [freeze_types tys] copies [tys] with every solved metavariable replaced
+    by its contents and every unsolved one by a {!Miniml.Thole} -- one per
+    metavariable, shared by the copies, and distinct from every hole minted
+    before. *)
+val freeze_types : ml_type list -> ml_type list
+
+(** A hole distinct from every other. *)
+val fresh_hole : unit -> ml_type
+
+(** Whether the type mentions a metavariable, solved or not. *)
+val type_has_meta : ml_type -> bool
+
+(** A callee's type at a use's frozen instantiation: every variable the
+    instantiation solves is replaced, so the result may hold holes.  It is
+    not an ordinary MiniML type until {!close} says it is hole-free or
+    {!resolve} has filled its holes from other evidence. *)
+module Partial : sig
+  type t = private ml_type
+
+  val instantiate : ml_type Scheme.Instantiation.t -> ml_type -> t
+
+  (** The holes, in order of first occurrence. *)
+  val holes : t -> int list
+
+  (** The type, when it holds no hole. *)
+  val close : t -> ml_type option
+
+  (** Fills each hole [h] for which [f h] answers. *)
+  val resolve : (int -> ml_type option) -> t -> t
+end
 
 (** {!subst_written_evidence}, the reading a migrated reader makes.  Under
     [CRANE_PROBE] it is compared with the positional reading of the same

@@ -1458,7 +1458,7 @@ let rec is_closed_type = function
   | Miniml.Tarr (a, b) -> is_closed_type a && is_closed_type b
   | Miniml.Tmeta {contents = Some t} -> is_closed_type t
   | Miniml.Tstring -> true
-  | Miniml.Tdummy _ | Miniml.Tvar _ | Miniml.Tapp _
+  | Miniml.Tdummy _ | Miniml.Tvar _ | Miniml.Tapp _ | Miniml.Thole _
   | Miniml.Tmeta {contents = None} | Miniml.Tunknown | Miniml.Taxiom ->
     false
 

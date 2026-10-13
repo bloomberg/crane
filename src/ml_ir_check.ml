@@ -1,24 +1,71 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
+open Names
 open Miniml
 
-let check_global_use r tys =
-  if List.exists (function Tdummy Kprop -> true | _ -> false) tys then
-    Probe.violation "global use"
-      Pp.(
-        str "the type arguments of " ++ Names.GlobRef.print r
-        ++ str " hold a proof placeholder, which no scheme variable stands for" )
+let violation r what =
+  Probe.violation "global use"
+    Pp.(str "the use of " ++ GlobRef.print r ++ str " " ++ str what)
 
-let check_node = function
-  | MLglob ({callee = r; _} as use) -> check_global_use r (Global_use.legacy_source_order use)
-  | _ -> ()
+let solution_types inst =
+  Scheme.Instantiation.fold
+    (fun _ {Scheme.solution; source} acc ->
+      let acc =
+        match solution with
+        | Scheme.Type t -> t :: acc
+        | Scheme.Identity -> acc
+      in
+      match source with
+      | Scheme.Written {observed = Some t; _} -> t :: acc
+      | _ -> acc )
+    inst []
+
+let rec holes acc = function
+  | Thole h -> h :: acc
+  | Tarr (a, b) -> holes (holes acc a) b
+  | Tglob (_, l, _) | Tapp (_, l) -> List.fold_left holes acc l
+  | Tmeta {contents = Some t} -> holes acc t
+  | _ -> acc
+
+(* [owners] maps each hole met so far to the instantiation holding it: a
+   hole belongs to one use, and only a copy of that whole use may hold it
+   again. *)
+let check_instantiation owners r inst =
+  if not (GlobRef.CanOrd.equal (Scheme.Id.owner (Scheme.Instantiation.scheme inst)) r)
+  then violation r "is instantiated at another declaration's scheme";
+  let tys = solution_types inst in
+  if List.exists Mlutil.type_has_meta tys then
+    violation r "holds a metavariable in its frozen instantiation";
+  List.iter
+    (fun h ->
+      match Hashtbl.find_opt owners h with
+      | None -> Hashtbl.add owners h inst
+      | Some inst' when inst' = inst -> ()
+      | Some inst' ->
+        let show i = String.concat ", " (List.map Mlutil.debug_ml_type (solution_types i)) in
+        violation r
+          (Printf.sprintf
+             "shares hole _%d with a different use (%s against %s); a copied use was not freshened"
+             h (show inst) (show inst') ) )
+    (List.fold_left holes [] tys)
+
+let check_global_use owners use =
+  let r = use.callee in
+  if List.exists
+       (function Tdummy Kprop -> true | _ -> false)
+       (Global_use.legacy_source_order use)
+  then violation r "holds a proof placeholder, which no scheme variable stands for";
+  Option.iter (check_instantiation owners r) (Global_use.instantiation use)
 
 let structure struc =
   if Probe.checking () then
+    let owners = Hashtbl.create 64 in
     ignore
       (Modutil.struct_ast_search
          (fun a ->
-           check_node a;
+           ( match a with
+           | MLglob use -> check_global_use owners use
+           | _ -> () );
            false )
          struc )
