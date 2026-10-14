@@ -409,22 +409,15 @@ val compute_and_register_field_names :
   string -> Id.t option list -> Id.t option list -> int -> Id.t list
 
 
-(** Clear and return any pending lifted declarations. Used to prevent stale
-    lifted decls from leaking between extraction passes. *)
-val take_lifted_decls : unit -> cpp_decl list
-
 (** [collecting_lifted f] runs [f] and returns, with its result, the
-    declarations lifted while it ran, leaving the queue's earlier contents
-    in place. *)
+    declarations lifted while it ran.  Every helper is lifted inside one: a
+    generator's helpers are its output, for it to place, and a helper lifted
+    outside every collection is an anomaly. *)
 val collecting_lifted : (unit -> 'a) -> 'a * cpp_decl list
-
-(** [observing_lifted f] runs [f] and returns, with its result, the
-    declarations lifted while it ran, which stay queued. *)
-val observing_lifted : (unit -> 'a) -> 'a * cpp_decl list
 
 (** [claim_lifted ds] is what of [ds] generating them again would lift: each
     is kept unless this file has already lifted a declaration of the same
-    name, and is then marked lifted.  The queue is left as it was. *)
+    name, and is then marked lifted. *)
 val claim_lifted : cpp_decl list -> cpp_decl list
 
 (** Reset the seen-lifted-refs deduplication set. Call at the start of each

@@ -854,14 +854,12 @@ let module_struct_is_hoistable rendered =
     {!do_struct_with_decl_tracking}. *)
 let hoisted_module_structs : Pp.t list ref = ref []
 
-(** Report what a lifted helper met at the drain that consumed it, under
+(** Report what a lifted helper met at the site that placed it, under
     [CRANE_DBG_LIFTED].
 
-    Three sites drain one queue, and the first to reach a helper is the only
-    one that sees it -- so which site handled a helper, and which of that
-    site's conditions it failed, is not recoverable from the output.  A helper
-    whose declaration is missing and a helper that was never lifted print the
-    same thing, which is nothing.
+    A helper comes back from the generation that lifted it to the site that
+    places that generation, and which of the site's conditions it failed is
+    not recoverable from the output.
 
     The rendered declaration is printed with it, because that text is what
     {!spec_is_hoistable} reads: a rejection is only interpretable next to the
@@ -958,7 +956,6 @@ let rec pp_structure_elem ~is_header f = function
        referring to an undeclared name.  Emit it as a static member template
        right before the declaration that produced it instead; helpers produced
        elsewhere keep their file-scope placement. *)
-    ignore (Translation.take_lifted_decls ());
     let {Cpp_ind.rendered; helpers} = f d in
     (* An erasure landing pad -- [using X = std::any;] -- travels to the very
        top of the file, ahead of the concepts.
@@ -2552,7 +2549,6 @@ let do_struct_with_decl_tracking ~is_header f s =
   concept_prereq_labels := Names.Label.Set.empty;
   ignore (drain file_scope_concept_prereqs);
   Cpp_print.reset_ctor_alias_emitted ();
-  ignore (Translation.take_lifted_decls ());
   hoisted_module_structs := [];
   Cpp_ind.discard Cpp_ind.deferred_member_defs;
   Cpp_ind.discard Cpp_ind.file_scope_erased_aliases;
@@ -2908,42 +2904,6 @@ let do_struct_with_decl_tracking ~is_header f s =
                     order." ) )
       pending_wrapper_decls;
   Hashtbl.clear pending_wrapper_decls;
-  let pass2_lifted =
-    Translation.take_lifted_decls ()
-    |> dedup_lifted_decls
-    |> List.filter_map (fun d ->
-           dbg_lifted ~site:"pass2" d;
-           if is_header then Some (lifted_views d) else None )
-  in
-  let pass2_pre_pp, pass2_post_pp =
-    if is_header then
-      let main_module_name =
-        match List.rev wrapper_names with
-        | ((mp, _sel), None) :: _ ->
-          Some (Table.escape_reserved_struct_name (String.capitalize_ascii (string_of_modfile mp)))
-        | _ -> None
-      in
-      (* A lifted helper that names a type of the main module's struct cannot
-         precede it.  Which ones those are is a question about the references
-         each helper resolves, so it is asked while they are rendered. *)
-      let rendered_lifted =
-        List.map
-          (fun entry ->
-            let render () = pp_cpp_decl (empty_env ()) (fst entry) in
-            match main_module_name with
-            | Some name -> watching_for_reference_to name render
-            | None -> (render (), false) )
-          pass2_lifted
-      in
-      let pre, post =
-        List.partition (fun (_, mentions_main) -> not mentions_main)
-          rendered_lifted
-      in
-      let join lst = prlist_sep_nonempty cut2 fst lst in
-      (join pre, join post)
-    else
-      (mt (), mt ())
-  in
   let rev_rendered = List.rev rendered in
   let main_entry, pre_entries =
     match rev_rendered with
@@ -2954,7 +2914,7 @@ let do_struct_with_decl_tracking ~is_header f s =
   let p =
     prlist_sep_nonempty cut2 (fun x -> x)
       ( match main_entry with
-      | Some main_p -> [p_pre; pass2_pre_pp; main_p]
+      | Some main_p -> [p_pre; main_p]
       | None -> [p_pre] )
   in
   if not (modular ()) then
@@ -3004,9 +2964,6 @@ let do_struct_with_decl_tracking ~is_header f s =
         List.filter_map
           (fun w -> if Pp.ismt w.wr_lifted_specs then None else Some w.wr_lifted_specs)
           wrapper_parts
-        @ List.filter_map
-            (fun (_, spec) -> Option.map (pp_cpp_decl (empty_env ())) spec)
-            pass2_lifted
         @ Cpp_ind.render_deferred pending_lifted_specs
       in
       match List.filter (fun x -> not (Pp.ismt x)) parts with
@@ -3037,7 +2994,7 @@ let do_struct_with_decl_tracking ~is_header f s =
      of the first section that spells it rather than in the prologue. *)
   let sections =
     List.map (prefix_mentioned_aliases ~is_header)
-      [ hoisted_erased_aliases; hoisted_concept_prereqs; hoisted_concepts; hoisted_wrappers; lifted_fun_specs; p; pass2_post_pp;
+      [ hoisted_erased_aliases; hoisted_concept_prereqs; hoisted_concepts; hoisted_wrappers; lifted_fun_specs; p;
         deferred_lifted; deferred_defs; deferred_members ]
   in
   (* Whatever nothing spelled.  A body may still name something defined later,

@@ -160,7 +160,9 @@ type translation_ctx = {
     where a bracket that lists the fields it saves is one field away from
     being wrong. *)
 and translation_output = {
-  (* Declarations to be lifted to the enclosing scope (hoisted fixpoints). *)
+  (* Declarations lifted out of bodies (hoisted fixpoints and lambdas) inside
+     the innermost {!collecting_lifted}, which hands them to the generator
+     that places them. *)
   pending_lifted_decls : cpp_decl list;
   (* Tracks which lifted function refs have already been emitted so that
      the same helper (e.g. _index_eq_dec_F) appears only once per file.
@@ -222,7 +224,7 @@ let update_output f = tctx := { !tctx with output = f (!tctx).output }
     returning or raising.
 
     Only the one field is restored, deliberately: the effects [f] means to
-    have on the rest of the context (a lifted declaration enqueued, a counter
+    have on the rest of the context (a lifted declaration collected, a counter
     advanced) must survive, so saving and restoring the whole record would be
     wrong here even though it is right at a declaration boundary.
 
@@ -411,11 +413,19 @@ let get_param_type_by_index (idx : int) : ml_type option =
 let clear_current_param_types () =
   tctx := { !tctx with current_param_types = [] }
 
-(** Enqueue a declaration to be lifted to the enclosing scope.
+(** How many {!collecting_lifted} calls are running.  A helper lifted outside
+    every one of them has no generator to place it, and would be called and
+    never declared. *)
+let collecting_depth = ref 0
+
+(** Lift a declaration to the generator collecting this body's helpers.
     Skips duplicate declarations (same GlobRef) so that identical helpers
     (e.g. [_index_eq_dec_F]) are only emitted once per file even when
     multiple functions in the same module use them. *)
 let add_lifted_decl (d : cpp_decl) =
+  if !collecting_depth = 0 then
+    CErrors.anomaly
+      Pp.(str "Crane: a helper was lifted outside every generation that places one.");
   let keep =
     match decl_globref d with
     | None -> true
@@ -434,37 +444,23 @@ let add_lifted_decl (d : cpp_decl) =
         {o with pending_lifted_decls = d :: o.pending_lifted_decls} )
   end
 
-(** Drain and return the pending lifted declarations in definition order. *)
-let take_lifted_decls () =
-  let ds = List.rev (!tctx).output.pending_lifted_decls in
-  update_output (fun o -> { o with pending_lifted_decls = [] });
-  ds
-
 (** [collecting_lifted f] runs [f] and returns, with its result, the
-    declarations lifted while it ran.  The queue's earlier contents are left
-    where they were: a generator's helpers are its output, not something a
-    later drain happens to find. *)
+    declarations lifted while it ran: a generator's helpers are its output,
+    for it to place. *)
 let collecting_lifted f =
   let earlier = (!tctx).output.pending_lifted_decls in
   update_output (fun o -> {o with pending_lifted_decls = []});
+  incr collecting_depth;
   Fun.protect
     ~finally:(fun () ->
+      decr collecting_depth;
       update_output (fun o -> {o with pending_lifted_decls = earlier}) )
     (fun () ->
       let v = f () in
       (v, List.rev (!tctx).output.pending_lifted_decls) )
 
-(** [observing_lifted f] runs [f] and returns, with its result, the
-    declarations lifted while it ran, which stay queued. *)
-let observing_lifted f =
-  let before = List.length (!tctx).output.pending_lifted_decls in
-  let v = f () in
-  let after = (!tctx).output.pending_lifted_decls in
-  (v, List.rev (List.filteri (fun i _ -> i < List.length after - before) after))
-
 (** [claim_lifted ds] is what of [ds] generating them again would lift: those
-    this file has not lifted already, which are marked lifted now.  The queue
-    is left as it was. *)
+    this file has not lifted already, which are marked lifted now. *)
 let claim_lifted ds = snd (collecting_lifted (fun () -> List.iter add_lifted_decl ds))
 
 (** Reset the seen-lifted-refs deduplication set. Call at the start of each
