@@ -640,16 +640,14 @@ let get_mpfiles_content mp =
 
 (** The list of external modules that will be opened initially *)
 
-let mpfiles_add, mpfiles_mem, mpfiles_list, mpfiles_save, mpfiles_restore =
+let mpfiles_add, mpfiles_mem, mpfiles_list =
   let m = ref MPset.empty in
   let add mp = m := MPset.add mp !m
   and mem mp = MPset.mem mp !m
   and list () = MPset.elements !m
-  and clear () = m := MPset.empty
-  and save () = !m
-  and restore s = m := s in
+  and clear () = m := MPset.empty in
   register_cleanup clear;
-  (add, mem, list, save, restore)
+  (add, mem, list)
 
 (** Separate extraction: every cross-file reference is spelled in full, since
     each file is emitted into its own namespace and nothing is brought into
@@ -1054,6 +1052,20 @@ let modfstlev_rename =
 
 (** {2 Creating renaming for a module_path} *)
 
+(** Record that the file being emitted names something the file defining
+    [mp] declares, so it includes that file's header.  A name is a function
+    of the program, computed once and wherever it is first wanted, so
+    computing one demands nothing; emitting it does.  The visibility stack is
+    empty outside every file being emitted, and a name wanted there is
+    conservatively taken to be another file's. *)
+let note_file_reference mp =
+  match (get_phase (), base_mp mp) with
+  | Emit _, (MPfile _ as file) when modular () -> (
+    match get_visible () with
+    | [] -> mpfiles_add file
+    | vis -> if not (ModPath.equal file (List.last vis).mp) then mpfiles_add file )
+  | _ -> ()
+
 (** First, the real function ... *)
 let rec mp_renaming_fun full_mp =
   match full_mp with
@@ -1082,16 +1094,6 @@ let rec mp_renaming_fun full_mp =
   | MPfile _ ->
     assert (modular ());
     (* see [at_toplevel] above *)
-    assert (get_phase () = Discover);
-    (* During Separate Extraction, the visibility stack may be empty when
-       mp_renaming_fun is called before do_struct_with_decl_tracking has
-       pushed the top-level module.  In that case we conservatively register
-       the file as an external dependency. *)
-    (match get_visible () with
-     | [] -> mpfiles_add full_mp
-     | vis ->
-       let current_mpfile = (List.last vis).mp in
-       if not (ModPath.equal full_mp current_mpfile) then mpfiles_add full_mp);
     [ ( match Hashtbl.find_opt file_namespace_renames full_mp with
       | Some ns -> ns
       | None -> string_of_modfile full_mp ) ]
@@ -1101,6 +1103,7 @@ let rec mp_renaming_fun full_mp =
 and mp_renaming =
   let add, get, _ = mktable_modpath ~census:"mp_renaming" true in
   fun x ->
+    note_file_reference x;
     try
       if is_mp_bound (base_mp x) then raise Not_found;
       get x
@@ -1258,6 +1261,7 @@ let ref_renaming_fun (k, r) =
 let ref_renaming =
   let add, get, _ = mktable_ref ~census:"ref_renaming" true in
   fun ((k, r) as x) ->
+    note_file_reference (modpath_of_r r);
     try
       if is_mp_bound (base_mp (modpath_of_r r)) then raise Not_found;
       get r

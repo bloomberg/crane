@@ -2067,10 +2067,7 @@ let print_per_library ~dry core =
     | _ -> assert false
   in
   (* Pre-build the method registry from the full structure so that
-     cross-module method calls are recognized during per-module rendering.
-     The registry creation calls pp_global_name which has side effects on
-     mpfiles (include tracking), so save/restore the mpfiles state. *)
-  let saved_mpfiles = Common.mpfiles_save () in
+     cross-module method calls are recognized during per-module rendering. *)
   set_phase Discover;
   Cpp_state.set_global_method_registry (Method_registry.create ~ret_is_erased:Translation.return_type_is_erased struc);
   (* Generic traversal of ml_structure: walks MEstruct/MEfunctor/MEapply
@@ -2117,7 +2114,6 @@ let print_per_library ~dry core =
     | _ -> ()
   ) struc;
   set_phase (Emit Impl);
-  Common.mpfiles_restore saved_mpfiles;
   List.iter print (Core.modules core)
 
 (** Entry point for extracting specific references to separate files. Each Rocq

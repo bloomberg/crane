@@ -235,18 +235,7 @@ let decl ~methods = function
     Dterm (r, body ~globals:[] b, ty)
   | d -> d
 
-(* The methods the structure's functions become.  The registry is built as
-   [Extract_env] builds its own, in the discovery phase (naming a file-level
-   module asserts it); and naming records the modules names live in, which is
-   the printer's business, not ours, so that is put back afterwards. *)
-let methods_of struc =
-  let saved = Common.mpfiles_save () in
-  let phase = Common.get_phase () in
-  Common.set_phase Common.Discover;
-  Fun.protect
-    ~finally:(fun () ->
-      Common.set_phase phase;
-      Common.mpfiles_restore saved )
-    (fun () -> Method_registry.create ~ret_is_erased:Translation.return_type_is_erased struc)
+(* The methods the structure's functions become. *)
+let methods_of struc = Method_registry.create ~ret_is_erased:Translation.return_type_is_erased struc
 
 let structure struc = Modutil.map_struct_decls (decl ~methods:(methods_of struc)) struc

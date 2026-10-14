@@ -154,12 +154,6 @@ val phase_name : phase -> string
 (** Compute which libraries should be opened initially. *)
 val opened_libraries : unit -> ModPath.t list
 
-(** Save the current set of opened-module paths, for later restoration. *)
-val mpfiles_save : unit -> Names.MPset.t
-
-(** Restore a previously-saved set of opened-module paths. *)
-val mpfiles_restore : Names.MPset.t -> unit
-
 (** Activate separate-extraction naming: every cross-file reference is spelled
     in full, and the last component of a qualified type name is capitalized to
     match the C++ struct name ([Datatypes::List]).  Cleared automatically on
