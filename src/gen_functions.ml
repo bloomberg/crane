@@ -314,6 +314,21 @@ let promote_typeclass_params (params : (Id.t * ml_type) list) =
   in
   (params, List.rev !temps)
 
+(** The head [n] is declared with: [temps] relaxed against [signature]
+    ({!Plan_templates.relax_function_head}), with the rewrite that carries the
+    relaxations through the declaration.  Recorded as [n]'s callable plan
+    before the body is generated, so a call in the body -- a self-call, or
+    one in a helper lifted out of it -- reads the head its callee is declared
+    with. *)
+let plan_function_head n ty temps signature =
+  let temps, rewrite = relax_function_head temps signature in
+  Callable_abi.record
+    (Callable_abi.of_head
+       ~phantom_prefix:(Translation_types.leading_phantom_count n)
+       ~relaxed:(fun i -> IntSet.mem i (Ml_type_util.relaxed_higher_kinded_tvars ty))
+       ~callee:n ~scheme:(Mlutil.reference_scheme n) temps );
+  (temps, rewrite)
+
 (** Generate a C++ function definition from an ML function body.
 
     When the body has fewer lambda binders than the ML type's domain (i.e. it
@@ -336,11 +351,12 @@ let gen_dfun n b cty ty temps =
   let dom, cod =
     match cty with Tfun (d, c) -> (d, c) | t -> ([ Tvoid ], t)
   in
+  let callers_itree_mode = (!tctx).itree_mode in
   (* Suppress __attribute__((pure)) for functions whose ML return type is
      monadic — these perform side effects even though the C++ return type
      may look pure after type erasure. *)
   let no_pure = is_monadic_ml_type (ml_codomain ty) || ast_may_throw b in
-  let temps, inner, env =
+  let (temps, rewrite), inner, env =
     with_itree_mode_for ty @@ fun () ->
   (* Void-ify unit codomain: unit as return type maps to C++ void.
      Check the ML result type (unwrapping monad if present) to determine
@@ -1007,6 +1023,13 @@ let gen_dfun n b cty ty temps =
           if is_hkt_temp t then None else Some t )
         regular_temps
   in
+  (* Planned as the declaration's callers see it: outside the itree mode
+     and the type-variable scope its body is generated in. *)
+  let head =
+    with_itree_mode callers_itree_mode (fun () ->
+        with_type_vars [] (fun () ->
+            plan_function_head n ty temps (Dfun (mk_dfun n ~ret:cod ~no_pure (Ddef (ids, []))))))
+  in
   (* Requires clause for typeclass constraints not yet implemented. *)
   (* Set current type variables for pattern matching lambda generation.
      These are the template parameters that can be used in type annotations.
@@ -1351,26 +1374,9 @@ let gen_dfun n b cty ty temps =
         inner
     | _ -> inner
   in
-    (temps, inner, env)
+    (head, inner, env)
   in
-  (* The signature relaxations: each answers one way a template parameter can
-     be left with no value at the call site, and each is a no-op on a
-     signature that does not have that shape. *)
-  let temps, inner =
-    List.fold_left
-      (fun (temps, inner) relax -> relax temps inner)
-      (temps, inner)
-      [ relax_applied_return;
-        relax_tt_applied_return;
-        relax_applied_param;
-        deapply_plain_tvars ]
-  in
-  let temps, inner = default_unmentioned_temps temps inner in
-  Callable_abi.record
-    (Callable_abi.of_head
-       ~phantom_prefix:(Translation_types.leading_phantom_count n)
-       ~relaxed:(fun i -> IntSet.mem i (Ml_type_util.relaxed_higher_kinded_tvars ty))
-       ~callee:n ~scheme:(Mlutil.reference_scheme n) temps );
+  let inner = rewrite inner in
   match temps with
   | [] -> (inner, env)
   | l -> (Dtemplate (l, None, inner), env)
@@ -1553,7 +1559,7 @@ let gen_decl__inner n b ty =
         | Boxed kind -> box_for_any_slot kind b body_expr
         | Native -> body_expr
       in
-      let inner = snd (deapply_plain_tvars temps (Dasgn (n, cty, body_expr))) in
+      let inner = deapply_plain_tvars temps (Dasgn (n, cty, body_expr)) in
       ( match temps with
       | [] -> (inner, empty_env (), tvars)
       | l -> (Dtemplate (l, None, inner), empty_env (), tvars) )
@@ -1766,7 +1772,7 @@ let gen_spec__inner n b ty =
       let ty = if mentions_unresolved_promoted ty then Tauto else ty in
       (* A polymorphic constant's family parameter is plain, as a
          function's is, and written applied until deapplied. *)
-      let inner = snd (deapply_plain_tvars temps (Dasgn (n, Tconst ty, b_expr))) in
+      let inner = deapply_plain_tvars temps (Dasgn (n, Tconst ty, b_expr)) in
       ( match temps with
       | [] -> (inner, empty_env ())
       | l -> (Dtemplate (l, None, inner), empty_env ()) )
