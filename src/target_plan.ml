@@ -19,6 +19,7 @@ type representation = {
   field_names : (GlobRef.t * Id.t list) list;
   pointer_fields : (GlobRef.t * string * (int * bool) list) list;
   unmerged_wrappers : string list;
+  accessors : GlobRef.t list;
 }
 
 type t = {
@@ -268,7 +269,7 @@ let plan (_ : Program_facts.t) struc =
     inductive_kinds = aligned @ value_use_demotion aligned struc;
     template_kinds = [];
     modules = Module_plan.empty;
-    representation = {names = []; field_names = []; pointer_fields = []; unmerged_wrappers = []};
+    representation = {names = []; field_names = []; pointer_fields = []; unmerged_wrappers = []; accessors = []};
     callables = [];
     assumed_callables = [] }
 
@@ -313,6 +314,7 @@ let equal a b =
        (fun (r, c, fs) (r', c', fs') -> GlobRef.UserOrd.equal r r' && String.equal c c' && fs = fs')
        a.representation.pointer_fields b.representation.pointer_fields
   && List.equal String.equal a.representation.unmerged_wrappers b.representation.unmerged_wrappers
+  && List.equal GlobRef.UserOrd.equal a.representation.accessors b.representation.accessors
   && same_callables a.callables b.callables
   && List.equal
        (fun (r, ps) (r', ps') -> GlobRef.UserOrd.equal r r' && List.equal Param_pos.equal ps ps')

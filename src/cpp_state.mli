@@ -246,6 +246,9 @@ val non_accessor_labels : (Names.Label.t, unit) Hashtbl.t
 val register_template_static_accessor :
   Names.ModPath.t -> Names.Label.t -> unit
 
+(** Whether the definition [lbl] of [mp] is recorded as an accessor. *)
+val is_template_static_accessor : Names.ModPath.t -> Names.Label.t -> bool
+
 (** {!register_template_static_accessor} for a global reference, which also
     records the constant's kername for cross-functor matching. *)
 val register_template_static_accessor_ref : Names.GlobRef.t -> unit

@@ -2423,6 +2423,70 @@ let plan_names s =
       | Dfix fds -> List.concat_map (fun fd -> name Term fd.fd_ref) fds )
     (declarations s)
 
+let plan_accessors s =
+  let accessor ~in_struct ~in_template r b ty =
+    if is_any_inline_custom r || Table.is_projection r || is_registered_method r <> None
+       || is_typeclass_instance b ty
+    then false
+    else
+      match ty with
+      | Tglob (m, _, _) when is_monad m -> false
+      | _ -> (
+        match convert_ml_type_to_cpp_type (empty_env ()) [] ty with
+        | Tfun _ -> false
+        | _ when thunk_reason r = Some Throws -> false
+        | cty ->
+          in_template
+          || in_struct
+             && (Ml_type_util.get_tvars cty <> [] || Common.get_force_cross_file_qualification ()) )
+  in
+  (* A module outside any struct whose struct is its eponymous inductive's,
+     a template where the inductive has parameters: its other definitions
+     are written in the template ({!pp_structure_elem}'s promotion). *)
+  let promoted_template mp sel =
+    let module_name = String.lowercase_ascii (Common.emitted_module_name mp) in
+    let inductives = List.filter_map (function _, SEdecl (Dind (kn, ind)) -> Some (kn, ind) | _ -> None) sel in
+    (not (List.exists (function _, SEmodule _ -> true | _ -> false) sel))
+    && match inductives with
+       | [(kn, ind)] ->
+         List.exists
+           (fun (i, p) ->
+             String.equal (String.lowercase_ascii (Common.pp_global_name Type (GlobRef.IndRef (kn, i)))) module_name
+             && (match ind.ind_kind with Standard | Coinductive -> true | Record _ | TypeClass _ -> false)
+             && Table.ind_promoted_params kn @ fst (Table.ind_param_vars ind p) <> [] )
+           (List.mapi (fun i p -> (i, p)) (Array.to_list ind.ind_packets))
+       | _ -> false
+  in
+  let rec elems ~in_struct ~in_template sel =
+    List.concat_map
+      (fun (_, se) ->
+        match se with
+        | SEdecl (Dterm (r, b, ty)) when accessor ~in_struct ~in_template r b ty -> [r]
+        | SEmodule {ml_mod_expr = MEstruct (mp, sel); _} ->
+          elems ~in_struct:true
+            ~in_template:(in_template || ((not in_struct) && promoted_template mp sel))
+            sel
+        | SEmodule {ml_mod_expr; _} -> module_expr ml_mod_expr
+        | SEdecl _ | SEmodtype _ -> [] )
+      sel
+  and module_expr = function
+    | MEstruct (_, sel) -> elems ~in_struct:true ~in_template:true sel
+    | MEfunctor (_, _, body) -> module_expr body
+    | MEident _ | MEapply _ -> []
+  in
+  (* A library file is written as a wrapper struct; the file being extracted
+     is not. *)
+  let wrapped =
+    List.filter_map
+      (fun (mi : Structure_analysis.module_info) ->
+        if mi.wrapper_name <> None then Some mi.modpath else None )
+      (get_structure_analysis ()).sorted_modules
+  in
+  List.concat_map
+    (fun (mp, sel) ->
+      elems ~in_struct:(List.exists (ModPath.equal mp) wrapped) ~in_template:false sel )
+    s
+
 let plan_unmerged_wrappers () =
   let is_member (_, se) =
     match se with

@@ -55,6 +55,14 @@ val plan_names : Miniml.ml_structure -> (Names.GlobRef.t * string) list
     constructors' names are. *)
 val plan_field_names : Miniml.ml_structure -> (Names.GlobRef.t * Names.Id.t list) list
 
+(** The constants emitted as an accessor function returning a function-local
+    static (a Meyers singleton), which a use spells as a call: one written in
+    a template -- a functor's body, or a module promoted to its eponymous
+    inductive's struct where that has parameters -- and, inside a module's
+    struct, one that is a template itself, or any under separate extraction;
+    each a constant its generation does not make a function. *)
+val plan_accessors : Miniml.ml_structure -> Names.GlobRef.t list
+
 (** The wrapper structs that hold declarations of their module's -- its
     functions, generated as the wrapper's members -- and so cannot be merged
     with the eponymous inductive's struct: a reference to the inductive then

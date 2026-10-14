@@ -26,6 +26,8 @@ let install_callables = Callable_abi.install
 
 let install_pointer_fields = Loopify_analysis.install_ctor_ptr_fields
 
+let install_accessors = List.iter Cpp_state.register_template_static_accessor_ref
+
 let install_unmerged_wrappers =
   List.iter (fun name -> Hashtbl.replace Cpp_state.unmerged_wrappers name ())
 

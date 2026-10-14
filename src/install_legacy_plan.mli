@@ -23,6 +23,10 @@ val install_modules : Module_plan.t -> unit
     loop transformations to read. *)
 val install_pointer_fields : (Names.GlobRef.t * string * (int * bool) list) list -> unit
 
+(** [install_accessors constants] installs the constants emitted as accessor
+    functions, as {!Target_plan.representation} holds them. *)
+val install_accessors : Names.GlobRef.t list -> unit
+
 (** [install_unmerged_wrappers names] installs the wrapper structs that hold
     declarations, as {!Target_plan.representation} holds them. *)
 val install_unmerged_wrappers : string list -> unit

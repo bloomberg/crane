@@ -632,6 +632,10 @@ let register_template_static_accessor mp lbl =
   if not (List.exists known !template_static_accessors) then
     template_static_accessors := (mp, lbl) :: !template_static_accessors
 
+(** Whether the definition [lbl] of [mp] is recorded as an accessor. *)
+let is_template_static_accessor mp lbl =
+  List.exists (fun (mp', lbl') -> ModPath.equal mp mp' && Label.equal lbl lbl') !template_static_accessors
+
 (** {!register_template_static_accessor} for a global reference, which also
     records the constant's kername for cross-functor matching. *)
 let register_template_static_accessor_ref r =

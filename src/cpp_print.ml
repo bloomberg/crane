@@ -3990,6 +3990,9 @@ and pp_cpp_fields_with_vis ?(struct_name : Pp.t option) env fields =
                     before use inside the function body
     @param expr_pp  already pretty-printed initializer expression *)
 let pp_meyers_singleton env id ty expr_pp =
+  if not (is_template_static_accessor (modpath_of_r id) (label_of_r id)) then
+    Probe.violation "template static accessors"
+      Pp.(str "the accessor " ++ GlobRef.print id ++ str " was printed without being planned");
   register_template_static_accessor (modpath_of_r id) (label_of_r id);
   let bare_ty =
     match ty with
