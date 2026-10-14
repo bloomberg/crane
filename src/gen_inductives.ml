@@ -203,14 +203,40 @@ and stmt_has_shared_from_this = function
   | Sasgn (_, _, e) -> expr_has_shared_from_this e
   | _ -> false
 
-(** Generate a single method for an inductive type from a method candidate.
+(** What a method is generated under, settled before its body: the
+    function's type and body with its variables renumbered so the
+    inductive's come first, the variables of its own and their names, its
+    return type, its parameters and the environment naming them, and the head
+    before {!method_head} decides which of its own variables it keeps.
     @param name     [GlobRef] of the containing inductive type
     @param vars     Template type variables of the containing inductive
     @param func_ref Rocq reference for the Rocq function being methodified
     @param body     ML body of the function
     @param ty       ML type of the function
     @param this_pos 0-based index of the [this] argument in the parameter list *)
-let gen_single_method name vars (func_ref, body, ty, this_pos) =
+type method_scope = {
+  ms_ty : ml_type;
+  ms_ret_ty : ml_type;
+  ms_body : ml_ast;
+  ms_all_tvars : int list;
+  ms_remap : int -> int;
+  ms_extra_tvars_orig : int list;
+  ms_extra_tvar_names : Id.t list;
+  ms_subst_extra_tvars : cpp_type -> cpp_type;
+  ms_method_ns : Ref.User.Set.t;
+  ms_strip_self_ptr : cpp_type -> cpp_type;
+  ms_ret_cpp : cpp_type;
+  ms_ids_with_types : (ml_ident * ml_type) list;
+  ms_inner_body : ml_ast;
+  ms_env : env;
+  ms_method_owned_flags : bool list;
+  ms_this_arg_id : Id.t option;
+  ms_params : (Id.t * cpp_type) list;
+  ms_fun_params : (Id.t * template_type * Id.t) list;
+  ms_template_params : (template_type * Id.t) list;
+}
+
+let method_scope name vars (func_ref, body, ty, this_pos) =
   (* Promotion moves a function into a struct; it does not change what the
      function returns.  The mode is read off the codomain here exactly as it is
      for a function left at top level -- otherwise an [itree] body reached as a
@@ -218,7 +244,6 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
      given says [shared_ptr<ITree<_>>]. *)
   with_itree_mode_for ty @@ fun () ->
   let num_ind_vars = List.length vars in
-  let func_name = Common.id_of_global Term func_ref in
 
   (* Get return type *)
   let all_args, ret_ty = get_args_and_ret [] ty in
@@ -491,6 +516,179 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
       params_with_idx
   in
 
+  {
+    ms_ty = ty;
+    ms_ret_ty = ret_ty;
+    ms_body = body;
+    ms_all_tvars = all_tvars;
+    ms_remap = remap_ml_tvar;
+    ms_extra_tvars_orig = extra_tvars_orig;
+    ms_extra_tvar_names = extra_tvar_names;
+    ms_subst_extra_tvars = subst_extra_tvars;
+    ms_method_ns = method_ns;
+    ms_strip_self_ptr = strip_top_level_self_ptr;
+    ms_ret_cpp = ret_cpp;
+    ms_ids_with_types = ids_with_types;
+    ms_inner_body = inner_body;
+    ms_env = env;
+    ms_method_owned_flags = method_owned_flags;
+    ms_this_arg_id = this_arg_id;
+    ms_params = params;
+    ms_fun_params = fun_params;
+    ms_template_params = template_params;
+  }
+
+(** Whether a type mentions the template parameter [name] anywhere. *)
+let cpp_type_has_tvar name =
+  exists_cpp_type (function
+    | Tvar (Tv_index (_, Some n) | Tv_named n) -> Id.equal n name
+    | _ -> false )
+
+(** The head of the method [s] is the scope of, with which of its own
+    variables it keeps decided: its template parameters, its return type, the
+    variables of its own the return type alone mentions, which it erases
+    there, and those it drops, each with the variable of the function's
+    scheme it stood for.  Decided from the signature and the body's
+    annotations, so before the body is generated. *)
+type method_head = {
+  mh_tparams : (template_type * Id.t) list;
+  mh_ret : cpp_type;
+  mh_return_only : Id.Set.t;
+  mh_dropped : (int * Id.t) list;
+}
+
+let method_head vars s =
+  let {
+    ms_extra_tvars_orig = extra_tvars_orig;
+    ms_extra_tvar_names = extra_tvar_names;
+    ms_subst_extra_tvars = subst_extra_tvars;
+    ms_method_ns = method_ns;
+    ms_strip_self_ptr = strip_top_level_self_ptr;
+    ms_ret_cpp = ret_cpp;
+    ms_inner_body = inner_body;
+    ms_params = params;
+    ms_fun_params = fun_params;
+    ms_template_params = template_params;
+    _
+  } = s in
+  (* Filter out phantom extra template params: if an extra tvar name doesn't
+     appear in any param type or the return type, it's phantom (e.g., a killed
+     inductive type arg) and shouldn't be a template param. *)
+  let extra_tvar_name_set =
+    List.fold_left (fun s n -> Id.Set.add n s) Id.Set.empty extra_tvar_names
+  in
+  (* The body counts too.  A tvar the signature never mentions is usually one
+     erasure killed outright, but a local binding can still be declared at it
+     -- the result of a trigger is an index of the event type, so it has no
+     spelling but the variable's own -- and dropping the parameter leaves the
+     body naming something that is no longer declared.  Read off the body's
+     own annotations as C++ spells them, and the callables the head deduces,
+     so the head is decided without generating the body. *)
+  let body_names =
+    let annotations = ref [] in
+    ignore
+      (Mlutil.ast_map_types
+         (fun t ->
+           annotations := t :: !annotations;
+           t )
+         inner_body );
+    (* A hole names no variable; it is declined rather than converted. *)
+    let declined = Mlutil.map_ml_type (function Thole _ -> Tunknown | t -> t) in
+    let annotations =
+      with_type_vars (vars @ extra_tvar_names) (fun () ->
+          List.rev_map
+            (fun t ->
+              subst_extra_tvars
+                (strip_top_level_self_ptr
+                   (convert_ml_type_to_cpp_type (empty_env ()) ~ns:method_ns vars (declined t)) ) )
+            !annotations )
+    in
+    let constraints =
+      List.concat_map (fun (_, tt, _) -> match tt with TTfun (d, c) -> c :: d | _ -> []) fun_params
+    in
+    fun name -> List.exists (cpp_type_has_tvar name) (constraints @ annotations)
+  in
+  (* An extra tvar the return type is alone in mentioning is a dead letter.
+     Nothing deduces it -- the receiver carries only the inductive's own
+     parameters, and no value parameter names it -- and the body cannot honour
+     it either, since the body never names it: whatever the body builds, it
+     builds at one fixed type.  Quantifying it declares a method no call can
+     name; the honest spelling is the erased one, which is also what the index
+     of an event family reaches C++ as everywhere else. *)
+  let return_only_tvars =
+    List.filter_map
+      (fun (_tt, tname) ->
+        if
+          Id.Set.mem tname extra_tvar_name_set
+          && cpp_type_has_tvar tname ret_cpp
+          && (not (List.exists (fun (_, pty) -> cpp_type_has_tvar tname pty) params))
+          && not (body_names tname)
+        then Some tname
+        else None )
+      template_params
+  in
+  let return_only_set =
+    List.fold_left (fun s n -> Id.Set.add n s) Id.Set.empty return_only_tvars
+  in
+  let ret_cpp =
+    if Id.Set.is_empty return_only_set then ret_cpp
+    else
+      map_cpp_type
+        (function
+          | Tvar (Tv_index (_, Some n) | Tv_named n) when Id.Set.mem n return_only_set -> Tany
+          | t -> t )
+        ret_cpp
+  in
+  let template_params =
+    List.filter (fun (_tt, tname) ->
+      if not (Id.Set.mem tname extra_tvar_name_set) then true
+      else if Id.Set.mem tname return_only_set then false
+      else
+        cpp_type_has_tvar tname ret_cpp
+        || List.exists (fun (_, pty) -> cpp_type_has_tvar tname pty) params
+        || body_names tname)
+    template_params
+  in
+  let surviving_names =
+    List.fold_left (fun s (_, n) -> Id.Set.add n s) Id.Set.empty template_params
+  in
+  {
+    mh_tparams = template_params;
+    mh_ret = ret_cpp;
+    mh_return_only = return_only_set;
+    mh_dropped =
+      List.filter
+        (fun (_, n) -> Id.Set.mem n extra_tvar_name_set && not (Id.Set.mem n surviving_names))
+        (List.combine extra_tvars_orig extra_tvar_names);
+  }
+
+(** Generate a single method for an inductive type from a method candidate:
+    its body, generated under {!method_scope} and the head {!method_head}
+    decided. *)
+let gen_single_method name vars ((func_ref, _, ty, this_pos) as candidate) =
+  let s = method_scope name vars candidate in
+  (* Promotion moves a function into a struct; it does not change what the
+     function returns: see {!method_scope}. *)
+  with_itree_mode_for ty @@ fun () ->
+  let h = method_head vars s in
+  let func_name = Common.id_of_global Term func_ref in
+  let {
+    ms_ty = ty;
+    ms_ret_ty = ret_ty;
+    ms_body = body;
+    ms_all_tvars = all_tvars;
+    ms_remap = remap_ml_tvar;
+    ms_extra_tvar_names = extra_tvar_names;
+    ms_method_ns = method_ns;
+    ms_ret_cpp = ret_cpp;
+    ms_ids_with_types = ids_with_types;
+    ms_inner_body = inner_body;
+    ms_env = env;
+    ms_method_owned_flags = method_owned_flags;
+    ms_this_arg_id = this_arg_id;
+    ms_params = params;
+    _
+  } = s in
   (* Suspended at its constructors, and whole only where it calls itself
      outside all of them: see [cofix_wrap] in [gen_dfun]. *)
   let is_cofix_method = suspends_whole func_ref ret_ty (snd (collect_lams body)) in
@@ -642,50 +840,8 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
       (List.map (tvar_subst_stmt extended_vars) stmts)
   in
 
+
   let no_pure = is_monadic_ml_type ret_ty in
-  (* Filter out phantom extra template params: if an extra tvar name doesn't
-     appear in any param type or the return type, it's phantom (e.g., a killed
-     inductive type arg) and shouldn't be a template param. *)
-  (* Whether a type mentions the template parameter [name] anywhere. *)
-  let cpp_type_has_tvar name =
-    exists_cpp_type (function
-      | Tvar (Tv_index (_, Some n) | Tv_named n) -> Id.equal n name
-      | _ -> false )
-  in
-  let extra_tvar_name_set =
-    List.fold_left (fun s n -> Id.Set.add n s) Id.Set.empty extra_tvar_names
-  in
-  (* The body counts too.  A tvar the signature never mentions is usually one
-     erasure killed outright, but a local binding can still be declared at it
-     -- the result of a trigger is an index of the event type, so it has no
-     spelling but the variable's own -- and dropping the parameter leaves the
-     body naming something that is no longer declared.  Read off the body's
-     own annotations as C++ spells them, and the callables the head deduces,
-     so the head is decided without generating the body. *)
-  let body_names =
-    let annotations = ref [] in
-    ignore
-      (Mlutil.ast_map_types
-         (fun t ->
-           annotations := t :: !annotations;
-           t )
-         inner_body );
-    (* A hole names no variable; it is declined rather than converted. *)
-    let declined = Mlutil.map_ml_type (function Thole _ -> Tunknown | t -> t) in
-    let annotations =
-      with_type_vars (vars @ extra_tvar_names) (fun () ->
-          List.rev_map
-            (fun t ->
-              subst_extra_tvars
-                (strip_top_level_self_ptr
-                   (convert_ml_type_to_cpp_type (empty_env ()) ~ns:method_ns vars (declined t)) ) )
-            !annotations )
-    in
-    let constraints =
-      List.concat_map (fun (_, tt, _) -> match tt with TTfun (d, c) -> c :: d | _ -> []) fun_params
-    in
-    fun name -> List.exists (cpp_type_has_tvar name) (constraints @ annotations)
-  in
   (* What the body generated does name.  A callee printed verbatim from its
      custom text names its type arguments, and the signature recorded on a
      call to it, only where the text spells them: not at all, here. *)
@@ -708,90 +864,33 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
      the body would name a parameter no longer declared. *)
   if Probe.checking () then
     List.iter
-      (fun name ->
-        if
-          (not (List.exists (fun (_, pty) -> cpp_type_has_tvar name pty) params))
-          && (not (body_names name))
-          && stmt_has_tvar name stmts
-        then
+      (fun (_, name) ->
+        if stmt_has_tvar name stmts then
           Probe.violation "method head"
             Pp.(
               str "the body of " ++ GlobRef.print func_ref ++ str " names " ++ Id.print name
               ++ str ", which none of its annotations does" ) )
-      extra_tvar_names;
-  (* An extra tvar the return type is alone in mentioning is a dead letter.
-     Nothing deduces it -- the receiver carries only the inductive's own
-     parameters, and no value parameter names it -- and the body cannot honour
-     it either, since the body never names it: whatever the body builds, it
-     builds at one fixed type.  Quantifying it declares a method no call can
-     name; the honest spelling is the erased one, which is also what the index
-     of an event family reaches C++ as everywhere else. *)
-  let return_only_tvars =
-    List.filter_map
-      (fun (_tt, tname) ->
-        if
-          Id.Set.mem tname extra_tvar_name_set
-          && cpp_type_has_tvar tname ret_cpp
-          && (not (List.exists (fun (_, pty) -> cpp_type_has_tvar tname pty) params))
-          && not (body_names tname)
-        then Some tname
-        else None )
-      template_params
-  in
-  let return_only_set =
-    List.fold_left (fun s n -> Id.Set.add n s) Id.Set.empty return_only_tvars
-  in
-  let ret_cpp, stmts =
-    if Id.Set.is_empty return_only_set then (ret_cpp, stmts)
-    else
-      let erased =
-        map_cpp_type
-          (function
-            | Tvar (Tv_index (_, Some n) | Tv_named n) when Id.Set.mem n return_only_set -> Tany
-            | t -> t )
-          ret_cpp
-      in
-      (* The body still builds its value at the one type it knows; the
-         signature now promises the erased one.  [crane_container_cast] is the
-         conversion between the two, and it is the identity when they agree.
+      h.mh_dropped;
+  (* The body still builds its value at the one type it knows; the signature
+     now promises the erased one.  [crane_container_cast] is the conversion
+     between the two, and it is the identity when they agree.
 
-         A return type that erased away entirely needs nothing said: anything
-         converts to [std::any] by boxing. *)
+     A return type that erased away entirely needs nothing said: anything
+     converts to [std::any] by boxing. *)
+  let stmts =
+    if Id.Set.is_empty h.mh_return_only || h.mh_ret = Tany then stmts
+    else
       let rec cast_stmt s =
         match s with
-        | Sreturn (Some e) -> Sreturn (Some (CPPcontainer_cast (erased, e, false)))
+        | Sreturn (Some e) -> Sreturn (Some (CPPcontainer_cast (h.mh_ret, e, false)))
         | _ -> Minicpp.map_stmt (fun e -> e) cast_stmt (fun t -> t) s
       in
-      if erased = Tany then (erased, stmts) else (erased, List.map cast_stmt stmts)
+      List.map cast_stmt stmts
   in
-  let template_params =
-    List.filter (fun (_tt, tname) ->
-      if not (Id.Set.mem tname extra_tvar_name_set) then true
-      else if Id.Set.mem tname return_only_set then false
-      else
-        cpp_type_has_tvar tname ret_cpp
-        || List.exists (fun (_, pty) -> cpp_type_has_tvar tname pty) params
-        || body_names tname)
-    template_params
-  in
-  let surviving_names =
-    List.fold_left (fun s (_, n) -> Id.Set.add n s) Id.Set.empty template_params
-  in
-  let phantom_positions =
-    List.filter_map (fun (orig_idx, name) ->
-      if Id.Set.mem name extra_tvar_name_set
-         && not (Id.Set.mem name surviving_names) then
-        Some (orig_idx - 1)
-      else None)
-      (List.combine extra_tvars_orig extra_tvar_names)
-  in
-  if phantom_positions <> [] then
-    Table.set_phantom_tvars func_ref phantom_positions;
+  if h.mh_dropped <> [] then
+    Table.set_phantom_tvars func_ref (List.map (fun (orig_idx, _) -> orig_idx - 1) h.mh_dropped);
   let phantom_name_set =
-    List.fold_left (fun s (_, n) -> Id.Set.add n s) Id.Set.empty
-      (List.filter (fun (_, n) ->
-        Id.Set.mem n extra_tvar_name_set && not (Id.Set.mem n surviving_names))
-        (List.combine extra_tvars_orig extra_tvar_names))
+    List.fold_left (fun s (_, n) -> Id.Set.add n s) Id.Set.empty h.mh_dropped
   in
   let rec strip_phantom_any_cast_expr e =
     let e = match e with
@@ -815,8 +914,8 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
       {
         mf_name = func_name;
         mf_globref = Some func_ref;
-        mf_tparams = template_params;
-        mf_ret_type = ret_cpp;
+        mf_tparams = h.mh_tparams;
+        mf_ret_type = h.mh_ret;
         mf_params = params;
         mf_body = stmts;
         mf_receiver = Instance { this_pos = this_pos; is_const = true; ref_qual = Rq_any };
