@@ -5879,7 +5879,9 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
   let slot = {slot with eta_keep_moves = false} in
   match f with
   | MLglob ({callee = id; _} as use) ->
-    let elaborated = elaborate_call ~slot ?expected_ty env use args in
+    let elaborated =
+      elaborate_call ~caller:!Table.current_decl_ref ~slot ?expected_ty env use args
+    in
     let plan = elaborated.ec_plan in
     let {
       cp_excess_args = excess_args;

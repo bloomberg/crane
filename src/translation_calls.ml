@@ -168,14 +168,15 @@ type elaborated_call = {
   ec_written_by_var : (int * cpp_type) list;
 }
 
-(** [call_type_args ?expected_ty env id plan args] -- the type arguments a
-    call to [id] writes, given its generated arguments: the dictionaries'
+(** [call_type_args ~caller ?expected_ty env id plan args] -- the type
+    arguments a call to [id] from the declaration [caller] writes, given its
+    generated arguments: the dictionaries'
     first, then the regular ones that survive the erasure filters, recovered
     from the expected result, a dictionary or an argument where the filters
     left nothing.  Also the callee's instantiated C++ type and the
     instantiation the type arguments were read from, which the assembly
     needs. *)
-let call_type_args ?expected_ty env id plan ~has_value_args =
+let call_type_args ~caller ?expected_ty env id plan ~has_value_args =
   let args = if has_value_args then [()] else [] in
   let {
     cp_primary_args = primary_ml_args;
@@ -251,7 +252,7 @@ let call_type_args ?expected_ty env id plan ~has_value_args =
      whatever its declaration made of it -- a class carrier, a template
      name, or a family written plain, which applied is itself again. *)
   let caller_higher_kinded j =
-    match !Table.current_decl_ref with
+    match caller with
     | Some r -> (
       match find_type_opt r with
       | Some caller_ty ->
@@ -1169,8 +1170,9 @@ let record_call_sig env callee_ty e =
       CPPfun_call (sg, f, args) )
   | _ -> e
 
-(** [plan_call ~slot ?expected_ty env id tys args] -- everything a call to
-    the global [id] needs to know before its arguments are generated: which
+(** [plan_call ~caller ~slot ?expected_ty env id tys args] -- everything a
+    call to the global [id] from the declaration [caller] needs to know
+    before its arguments are generated: which
     arguments are dictionaries, regular or curried past the callee's arity,
     the type arguments the call instantiates the callee at, and the
     callee's parameter types at that instantiation.  Read by
@@ -1190,7 +1192,7 @@ let binding_results_of id compute =
       compute
   end
 
-let plan_call ~slot ?expected_ty env id tys args =
+let plan_call ~caller ~slot ?expected_ty env id tys args =
   (* When the call has more args than the function's ML value-domain, the
      excess args are curried applications to the result. This is common with
      Rocq's Function vernacular _correct proof terms, where the extraction
@@ -1493,7 +1495,7 @@ let plan_call ~slot ?expected_ty env id tys args =
        instantiate, and keeps itself.  And not in a call to the declaration
        being generated, whose variables {e are} the caller's. *)
     let self_call =
-      match !Table.current_decl_ref with
+      match caller with
       | Some r -> GlobRef.UserOrd.equal r id
       | None -> false
     in
@@ -1641,15 +1643,16 @@ let plan_call ~slot ?expected_ty env id tys args =
     cp_result_tvar_map = result_tvar_map
   }
 
-(** [elaborate_call ~slot ?expected_ty env use args]: the call [use] [args]
-    elaborated before any of its arguments is lowered -- how its arguments
+(** [elaborate_call ~caller ~slot ?expected_ty env use args]: the call [use]
+    [args] in the declaration [caller], elaborated before any of its
+    arguments is lowered -- how its arguments
     meet the callee's parameters ({!plan_call}), and the template application
     planned and validated against the callee's ABI ({!call_type_args}).
     Lowering reads the result and decides neither. *)
-let elaborate_call ~slot ?expected_ty env use args =
+let elaborate_call ~caller ~slot ?expected_ty env use args =
   let id = use.callee in
-  let plan = plan_call ~slot ?expected_ty env id (Mlutil.written_type_args use) args in
-  call_type_args ?expected_ty env id plan
+  let plan = plan_call ~caller ~slot ?expected_ty env id (Mlutil.written_type_args use) args in
+  call_type_args ~caller ?expected_ty env id plan
     ~has_value_args:(plan.cp_regular_args <> [])
 
 (** What a reference to global [x], its type instantiated by [instantiate],
