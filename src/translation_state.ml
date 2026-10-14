@@ -428,9 +428,11 @@ let add_lifted_decl (d : cpp_decl) =
             {o with seen_lifted_refs = r :: o.seen_lifted_refs} );
       fresh
   in
-  if keep then
+  if keep then begin
+    Option.iter Generated_program.record_helper (Generated_program.helper d);
     update_output (fun o ->
         {o with pending_lifted_decls = d :: o.pending_lifted_decls} )
+  end
 
 (** Drain and return the pending lifted declarations in definition order. *)
 let take_lifted_decls () =
@@ -460,8 +462,10 @@ let observing_lifted f =
   let after = (!tctx).output.pending_lifted_decls in
   (v, List.rev (List.filteri (fun i _ -> i < List.length after - before) after))
 
-(** [relift ds] queues [ds] as generating them would have. *)
-let relift ds = List.iter add_lifted_decl ds
+(** [claim_lifted ds] is what of [ds] generating them again would lift: those
+    this file has not lifted already, which are marked lifted now.  The queue
+    is left as it was. *)
+let claim_lifted ds = snd (collecting_lifted (fun () -> List.iter add_lifted_decl ds))
 
 (** Reset the seen-lifted-refs deduplication set. Call at the start of each
     new output file so identical helpers in different files are not suppressed. *)

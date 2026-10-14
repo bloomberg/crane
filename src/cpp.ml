@@ -901,6 +901,42 @@ let pending_lifted_specs = Cpp_ind.deferred "pending_lifted_specs"
 (** Lifted helpers already emitted as members of the struct being rendered. *)
 let emitted_member_lifted : (Id.t, unit) Hashtbl.t = Hashtbl.create 16
 
+(** The concept of the type class [r], recorded as [r]'s generation. *)
+let generated_concept r fields =
+  let d = Gen_decls.gen_typeclass_cpp r fields in
+  ignore (record_entity r [d] []);
+  d
+
+(** The methods of the eponymous record [r] made of [candidates], each
+    recorded as the generation of the function it was made of, with the
+    helpers lifted out of its body. *)
+let generated_record_methods r vars candidates =
+  let fields, lifted =
+    Translation.observing_lifted (fun () -> Gen_decls.gen_record_methods r vars candidates)
+  in
+  List.iter
+    (fun ((f, _, _) as field) ->
+      ignore
+        ( match f with
+        | Fmethod {mf_globref = Some m; _} ->
+          let own d =
+            match Option.bind (decl_globref d) Lifted.of_ref with
+            | Some h -> Option.equal Names.GlobRef.UserOrd.equal (Lifted.origin h) (Some m)
+            | None -> false
+          in
+          Some
+            (record_entity m
+               [ Dfields
+                   { ds_ref = r;
+                     ds_fields = [field];
+                     ds_tparams = [];
+                     ds_constraint = None;
+                     ds_needs_shared_from_this = false } ]
+               (List.filter own lifted) )
+        | _ -> None ) )
+    fields;
+  fields
+
 (** Pretty-print a structure element (label, elem) pair. Handles modules, module
     types, and declarations.
 
@@ -923,7 +959,7 @@ let rec pp_structure_elem ~is_header f = function
        right before the declaration that produced it instead; helpers produced
        elsewhere keep their file-scope placement. *)
     ignore (Translation.take_lifted_decls ());
-    let rendered = f d in
+    let {Cpp_ind.rendered; helpers} = f d in
     (* An erasure landing pad -- [using X = std::any;] -- travels to the very
        top of the file, ahead of the concepts.
 
@@ -982,7 +1018,7 @@ let rec pp_structure_elem ~is_header f = function
       if not is_header then mt ()
       else
         let lifted =
-          Translation.take_lifted_decls ()
+          helpers
           |> dedup_lifted_decls
           |> List.filter (fun d' ->
                  match lifted_decl_key d' with
@@ -1274,7 +1310,7 @@ let rec pp_structure_elem ~is_header f = function
                            @@ fun () ->
                            render_decl
                              (empty_env ())
-                             (Gen_decls.gen_typeclass_cpp ind_ref fields)
+                             (generated_concept ind_ref fields)
                          in
                          let doc = pp_doc_comment l in
                          [(HCclass ind_ref, doc ++ concept_pp, mentions_outer)]
@@ -1285,7 +1321,7 @@ let rec pp_structure_elem ~is_header f = function
                   let concept_pp, mentions_outer =
                     watching_for_reference_to (Pp.string_of_ppcmds name) @@ fun () ->
                     render_decl (empty_env ())
-                      (Gen_decls.gen_typeclass_cpp r (Table.get_record_field_bindings r))
+                      (generated_concept r (Table.get_record_field_bindings r))
                   in
                   [(HCclass r, pp_doc_comment l ++ concept_pp, mentions_outer)]
                 | _ -> [] )
@@ -1624,10 +1660,7 @@ let rec pp_structure_elem ~is_header f = function
                     (List.rev this_method_candidates)
                 in
                 let method_fields =
-                  Gen_decls.gen_record_methods
-                    epon_ref
-                    ty_vars
-                    non_projection_candidates
+                  generated_record_methods epon_ref ty_vars non_projection_candidates
                 in
                 let methods_pp =
                   if method_fields = [] then
@@ -2026,9 +2059,10 @@ let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
        instance declared at the extraction root is emitted.  Dropping it here
        left every use of it undeclared. *)
     | SEdecl (Dterm (r, a, t)) when is_typeclass_instance a t ->
-      ([], List.map snd (instance_decls r a t))
+      ([], List.map snd (record_generated r (fun () -> instance_decls r a t)))
     | SEdecl (Dterm (r, a, t)) ->
       let gs = generated_once se (fun () -> [gen_decl_for_pp_dual r a t]) in
+      record_funs ~fallback:r gs;
       let lifted = List.concat_map (fun g -> g.gf_lifted) gs in
       List.iter (dbg_lifted ~site:"wrapper-dterm") lifted;
       (gs, lifted)
@@ -2036,8 +2070,9 @@ let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
       List.iter add_registered_candidate fds;
       match filter_dfix fds with
       | [] -> ([], [])
-      | fds ->
+      | ({fd_ref; _} :: _) as fds ->
         let results = generated_once se (fun () -> gen_dfuns_dual fds) in
+        record_funs ~fallback:fd_ref results;
         (results, List.concat_map (fun g -> g.gf_lifted) results) )
     | _ -> ([], [])
   in
@@ -3030,5 +3065,5 @@ let cpp_descr =
     pp_hstruct;
     sig_suffix = Some ".h";
     sig_preamble;
-    pp_decl = (fun d -> pp_decls (impl_decls d));
+    pp_decl = (fun d -> pp_decls (impl_decls d).rendered);
   }

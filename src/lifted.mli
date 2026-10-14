@@ -39,4 +39,10 @@ val of_ref : Names.GlobRef.t -> t option
 (** The C++ name the helper is emitted under. *)
 val name : t -> Names.Id.t
 
+(** The declaration the helper was lifted out of. *)
+val origin : t -> Names.GlobRef.t option
+
+(** The binder the helper was bound to in {!origin}. *)
+val binder : t -> Names.Id.t
+
 val equal : t -> t -> bool

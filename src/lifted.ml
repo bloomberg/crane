@@ -74,5 +74,7 @@ let of_ref = function
   | _ -> None
 
 let name t = t.name
+let origin t = fst t.key
+let binder t = snd t.key
 
 let equal a b = Key.compare a.key b.key = 0

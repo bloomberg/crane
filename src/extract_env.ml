@@ -1584,6 +1584,7 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   report_body_generations fn;
   Table.freeze_demands ();
   check_no_late_decisions census_after_discovery;
+  Generated_program.check_emission_matches_discovery ();
   report_structure_changes planned struc;
   let opened = List.filter !opened_filter (opened_libraries ()) in
   let ns_open =

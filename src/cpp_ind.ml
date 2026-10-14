@@ -639,20 +639,23 @@ let instance_decls r a t =
 type generation =
   | Functions of {
       funs : Gen_decls.generated_fun list;
-      lifted_inline : bool;
-          (** Whether the header writes the helpers lifted out of each
-              function in front of it.  A constant's or function's stay
-              queued instead, for the element's own placement; a fixpoint
-              inside a template struct writes none. *)
+      lifted : lifted_placement;
     }
   | Header_only of (unit -> generated)
       (** Written in the header alone, and generated only for it: generating
           an inductive's header defers member definitions as it goes. *)
   | Nothing
 
-(** [functions ~lifted_inline funs], with every definition filed in the
-    header inside a template struct, which has no implementation file. *)
-let functions ~lifted_inline (funs : Gen_decls.generated_fun list) =
+(** Where the helpers lifted out of generated functions are written. *)
+and lifted_placement =
+  | Inline  (** The header writes each function's helpers in front of it. *)
+  | By_element of cpp_decl list
+      (** The element places them, as a constant's or a function's are. *)
+  | Unwritten  (** A fixpoint inside a template struct writes none. *)
+
+(** [functions ~lifted funs], with every definition filed in the header
+    inside a template struct, which has no implementation file. *)
+let functions ~lifted (funs : Gen_decls.generated_fun list) =
   let in_header (g : Gen_decls.generated_fun) =
     match g.gf_entity with
     | Defined (d, _) -> {g with gf_entity = Defined (d, Header)}
@@ -661,7 +664,7 @@ let functions ~lifted_inline (funs : Gen_decls.generated_fun list) =
   let funs =
     if (!render_ctx).rc_in_template then List.map in_header funs else funs
   in
-  Functions {funs; lifted_inline}
+  Functions {funs; lifted}
 
 (** {2 Generating once}
 
@@ -743,7 +746,7 @@ let generate d =
     | [] -> Nothing
     | fds ->
       functions
-        ~lifted_inline:(not (!render_ctx).rc_in_template)
+        ~lifted:(if (!render_ctx).rc_in_template then Unwritten else Inline)
         (generated_once d (fun () -> gen_dfuns_dual fds))
   in
   match d with
@@ -779,11 +782,12 @@ let generate d =
   | Dterm (r, a, t) when is_typeclass_instance a t ->
     Header_only (fun () -> instance_decls r a t)
   | Dterm (r, a, t) ->
-    (* The helpers lifted out of the body stay queued, for the element's own
-       placement; reusing the generation queues them again. *)
+    (* The helpers lifted out of the body are the element's to place.  A
+       generation the header pass reuses claims them again, keeping those no
+       earlier element of this file has claimed, as generating would. *)
     let gen () =
       let (gf_entity, gf_env), gf_lifted =
-        Translation.observing_lifted @@ fun () ->
+        Translation.collecting_lifted @@ fun () ->
         match gen_decl_for_pp r a t with
         | Some ds, env, tvars -> (Gen_decls.defined ds tvars, env)
         | None, _, _ when (!render_ctx).rc_in_template ->
@@ -796,10 +800,18 @@ let generate d =
       in
       [{Gen_decls.gf_entity; gf_env; gf_lifted}]
     in
+    let claimed = ref None in
     let reuse funs =
-      Translation.relift (List.concat_map (fun g -> g.Gen_decls.gf_lifted) funs)
+      claimed :=
+        Some (Translation.claim_lifted (List.concat_map (fun g -> g.Gen_decls.gf_lifted) funs))
     in
-    functions ~lifted_inline:false (generated_once ~on_reuse:reuse d gen)
+    let funs = generated_once ~on_reuse:reuse d gen in
+    let helpers =
+      match !claimed with
+      | Some helpers -> helpers
+      | None -> List.concat_map (fun g -> g.Gen_decls.gf_lifted) funs
+    in
+    functions ~lifted:(By_element helpers) funs
   | Dfix fds -> group fds
 
 (** The entity the implementation pass finalized for each generated
@@ -910,11 +922,67 @@ let function_views ~is_header ~lifted_inline funs =
       lifted @ views )
     paired
 
+(** {2 The generated program}
+
+    Every generation the printer is about to render is recorded as an entity
+    of {!Generated_program}, and what the printer writes is read back from
+    the recorded entity. *)
+
+(** The source entity a MiniML declaration is: an inductive block by its
+    first packet. *)
+let decl_entity = function
+  | Dind (kn, _) -> GlobRef.IndRef (kn, 0)
+  | Dtype (r, _, _) | Dterm (r, _, _) -> r
+  | Dfix fds -> (List.hd fds).fd_ref
+
+(** [record_entity r decls helpers] records the generation of [r]. *)
+let record_entity r decls helpers =
+  Generated_program.record
+    { entity_id = Entity_id.of_ref r;
+      decls;
+      helpers = List.filter_map Generated_program.helper helpers }
+
+(** [record_funs ~fallback funs] records each generated function as the
+    entity its declaration is about, [fallback] where it says none. *)
+let record_funs ~fallback (funs : Gen_decls.generated_fun list) =
+  List.iter
+    (fun (g : Gen_decls.generated_fun) ->
+      let d = match g.gf_entity with Defined (d, _) | Declared d -> d in
+      ignore
+        (record_entity (Option.default fallback (decl_globref d)) [d] g.gf_lifted) )
+    funs
+
+(** [recorded capture r ds] runs the generation [ds] under [capture],
+    recording what it produced and the helpers it lifted as the entity [r]. *)
+let recorded capture r (ds : unit -> generated) =
+  let ds, lifted = capture ds in
+  ignore (record_entity r (List.map snd ds) lifted);
+  (ds, lifted)
+
+let record_generated r ds = fst (recorded Translation.observing_lifted r ds)
+
+(** What a file writes for one MiniML declaration, and the helpers lifted
+    out of it that the element places. *)
+type element = {
+  rendered : rendered;
+  helpers : cpp_decl list;
+}
+
 let decls_for ~is_header d =
   match generate d with
-  | Functions {funs; lifted_inline} -> function_views ~is_header ~lifted_inline funs
-  | Header_only ds -> if is_header then finished (ds ()) else []
-  | Nothing -> []
+  | Functions {funs; lifted} ->
+    record_funs ~fallback:(decl_entity d) funs;
+    let lifted_inline, helpers =
+      match lifted with
+      | Inline -> (true, [])
+      | By_element helpers -> (false, helpers)
+      | Unwritten -> (false, [])
+    in
+    { rendered = function_views ~is_header ~lifted_inline funs; helpers }
+  | Header_only ds when is_header ->
+    let ds, helpers = recorded Translation.collecting_lifted (decl_entity d) ds in
+    { rendered = finished ds; helpers }
+  | Header_only _ | Nothing -> { rendered = []; helpers = [] }
 
 let impl_decls = decls_for ~is_header:false
 let header_decls = decls_for ~is_header:true

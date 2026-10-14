@@ -95,9 +95,36 @@ val finalized :
     positions one way, and a later use another. *)
 val plan_template_kinds : Miniml.ml_structure -> unit
 
+(** {2 Recording the generated program}
+
+    What the printer renders is recorded in {!Generated_program} as it is
+    generated. *)
+
+(** [record_entity r decls helpers] records that generating the source
+    entity [r] produced [decls] and lifted [helpers]. *)
+val record_entity :
+  Names.GlobRef.t -> Minicpp.cpp_decl list -> Minicpp.cpp_decl list -> Generated_program.entity
+
+(** [record_funs ~fallback funs] records each generated function as the
+    entity its declaration is about, [fallback] where it names none. *)
+val record_funs : fallback:Names.GlobRef.t -> Gen_decls.generated_fun list -> unit
+
+(** [record_generated r ds] runs the generation [ds], recording what it
+    produced and the helpers it lifted as the entity [r].  The helpers stay
+    queued, for the drains that place what no element claims. *)
+val record_generated : Names.GlobRef.t -> (unit -> generated) -> generated
+
+(** What a file writes for one MiniML declaration, and the helpers lifted
+    out of it that the element places: a constant's or a function's.  A
+    fixpoint's helpers are written in front of it, and are not among them. *)
+type element = {
+  rendered : rendered;
+  helpers : Minicpp.cpp_decl list;
+}
+
 (** The implementation-file declarations for one MiniML declaration. *)
-val impl_decls : Miniml.ml_decl -> rendered
+val impl_decls : Miniml.ml_decl -> element
 
 (** The header declarations for one MiniML declaration. *)
-val header_decls : Miniml.ml_decl -> rendered
+val header_decls : Miniml.ml_decl -> element
 
