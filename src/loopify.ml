@@ -266,7 +266,10 @@ and generic_inline_expr spec expr =
     becomes self-recursive (the callee's calls back to the current function are
     now direct self-calls) and can be loopified by {!transform_fundef}.
 
-    Only the first mutual partner found is inlined (at most one level).
+    Each partner is inlined at most once.  A partner that is itself
+    recursive leaves a call to itself in the body it was inlined into, and
+    inlining it again only unrolls that recursion by one more level without
+    bringing this function any closer to self-recursion.
 
     @param names List of [(GlobRef.t, Id.t)] pairs identifying the current
                  function (used to skip self-calls and detect back-calls)
@@ -307,49 +310,52 @@ let try_inline_mutual_into names body =
     in
     go start
   in
-  (* Whether a callee is a registered function on a cycle. *)
-  let find_registered_callee_by_ref r =
-    if is_self r then None
+  (* Whether a callee is a registered function on a cycle, not yet inlined. *)
+  let find_registered_callee_by_ref inlined r =
+    if is_self r || List.exists (Common.globref_equal r) inlined then None
     else
       match Ref.User.Tbl.find_opt mutual_fn_table r with
       | Some {rf_ret_ty; rf_params; rf_body} when reaches_self r ->
         Some (r, rf_ret_ty, rf_params, rf_body)
       | _ -> None
   in
-  let rec find_callee_in_expr expr =
-    match expr with
-    | CPPfun_call (_, CPPglob (r, _, _), _) ->
-      ( match find_registered_callee_by_ref r with
-      | Some _ as result -> result
-      | None -> None )
-    | CPPfun_call (_, _, args) ->
-      List.find_map find_callee_in_expr (to_reversed args)
-    | CPPbinop (_, e1, e2) ->
-      ( match find_callee_in_expr e1 with
-      | Some _ as r -> r
-      | None -> find_callee_in_expr e2 )
-    | CPPmove e | CPPderef e | CPPnamespace (_, e) -> find_callee_in_expr e
-    | CPPlambda {cl_body = stmts; _} -> find_callee_in_stmts stmts
-    | _ -> None
-  and find_callee_in_stmts stmts = List.find_map find_callee_in_stmt stmts
-  and find_callee_in_stmt = function
-    | Sreturn (Some e) -> find_callee_in_expr e
-    | Sasgn (_, _, e) | Sexpr e -> find_callee_in_expr e
-    | Sif (_, t, e) ->
-      ( match find_callee_in_stmts t with
-      | Some _ as r -> r
-      | None -> find_callee_in_stmts e )
-    | Scustom_case (_, scrut, _, branches, _) ->
-      ( match find_callee_in_expr scrut with
-      | Some _ as r -> r
-      | None -> List.find_map (fun (_, _, b) -> find_callee_in_stmts b) branches
-      )
-    | Smatch (scrut, branches, default) ->
-      ( match List.find_map (fun br -> find_callee_in_stmts br.smb_body) branches with
-      | Some _ as r -> r
-      | None -> match default with Some ss -> find_callee_in_stmts ss | None -> None )
-    | Sblock ss -> find_callee_in_stmts ss
-    | _ -> None
+  let find_callee_in_stmts inlined stmts =
+    let rec find_callee_in_expr expr =
+      match expr with
+      | CPPfun_call (_, CPPglob (r, _, _), _) ->
+        ( match find_registered_callee_by_ref inlined r with
+        | Some _ as result -> result
+        | None -> None )
+      | CPPfun_call (_, _, args) ->
+        List.find_map find_callee_in_expr (to_reversed args)
+      | CPPbinop (_, e1, e2) ->
+        ( match find_callee_in_expr e1 with
+        | Some _ as r -> r
+        | None -> find_callee_in_expr e2 )
+      | CPPmove e | CPPderef e | CPPnamespace (_, e) -> find_callee_in_expr e
+      | CPPlambda {cl_body = stmts; _} -> find_callee_in_stmts stmts
+      | _ -> None
+    and find_callee_in_stmts stmts = List.find_map find_callee_in_stmt stmts
+    and find_callee_in_stmt = function
+      | Sreturn (Some e) -> find_callee_in_expr e
+      | Sasgn (_, _, e) | Sexpr e -> find_callee_in_expr e
+      | Sif (_, t, e) ->
+        ( match find_callee_in_stmts t with
+        | Some _ as r -> r
+        | None -> find_callee_in_stmts e )
+      | Scustom_case (_, scrut, _, branches, _) ->
+        ( match find_callee_in_expr scrut with
+        | Some _ as r -> r
+        | None -> List.find_map (fun (_, _, b) -> find_callee_in_stmts b) branches
+        )
+      | Smatch (scrut, branches, default) ->
+        ( match List.find_map (fun br -> find_callee_in_stmts br.smb_body) branches with
+        | Some _ as r -> r
+        | None -> match default with Some ss -> find_callee_in_stmts ss | None -> None )
+      | Sblock ss -> find_callee_in_stmts ss
+      | _ -> None
+    in
+    find_callee_in_stmts stmts
   in
   (* Inline one cycle partner ([callee_ref]) into [body], returning the new
      body.  Applied repeatedly by the loop below until this function only calls
@@ -419,16 +425,17 @@ let try_inline_mutual_into names body =
     } in
     generic_inline_stmts spec body
   in
-  (* Inline cycle partners one hop at a time until self-recursive.  Bounded by
-     the number of registered functions to guarantee termination. *)
-  let rec loop body iters =
-    if iters <= 0 then body
-    else
-      match find_callee_in_stmts body with
-      | None -> body
-      | Some callee -> loop (inline_one callee body) (iters - 1)
+  (* Inline cycle partners one hop at a time until self-recursive.  Each is
+     inlined once, so this ends after at most as many hops as there are
+     partners on a cycle through this function -- a number fixed by the
+     recursive group, not by how many other functions happen to be
+     registered when this one is transformed. *)
+  let rec loop inlined body =
+    match find_callee_in_stmts inlined body with
+    | None -> body
+    | Some ((r, _, _, _) as callee) -> loop (r :: inlined) (inline_one callee body)
   in
-  loop body (Ref.User.Tbl.length mutual_fn_table + 1)
+  loop [] body
 
 (** {2 Inner lambda loopification}
 

@@ -16,66 +16,11 @@ uint64_t MutualLoopifyAcc::tsum(
     std::shared_ptr<MutualLoopifyAcc::forest> _inl_a1;
   };
 
-  /// CraneCont_Fcons_1: saves [_inl_a1], resumes after recursive call, then
-  /// processes rest.
-  struct CraneCont_Fcons_1 {
-    std::shared_ptr<MutualLoopifyAcc::forest> _inl_a1;
-  };
-
-  /// CraneCont_Fcons_2: saves [_inl_a1], resumes after recursive call, then
-  /// processes rest.
-  struct CraneCont_Fcons_2 {
-    std::shared_ptr<MutualLoopifyAcc::forest> _inl_a1;
-  };
-
-  /// CraneCont_Fcons_3: saves [_inl_a1], resumes after recursive call, then
-  /// processes rest.
-  struct CraneCont_Fcons_3 {
-    std::shared_ptr<MutualLoopifyAcc::forest> _inl_a1;
-  };
-
-  /// CraneCont_Fcons_4: saves [_inl_a1], resumes after recursive call, then
-  /// processes rest.
-  struct CraneCont_Fcons_4 {
-    std::shared_ptr<MutualLoopifyAcc::forest> _inl_a1;
-  };
-
-  /// CraneCont_Fcons_5: saves [_inl_a1], resumes after recursive call, then
-  /// processes rest.
-  struct CraneCont_Fcons_5 {
-    std::shared_ptr<MutualLoopifyAcc::forest> _inl_a1;
-  };
-
-  /// CraneCont_Fcons_6: saves [_inl_a1], resumes after recursive call, then
-  /// processes rest.
-  struct CraneCont_Fcons_6 {
-    std::shared_ptr<MutualLoopifyAcc::forest> _inl_a1;
-  };
-
-  /// CraneCont_Fcons_7: saves [_inl_a1], resumes after recursive call, then
-  /// processes rest.
-  struct CraneCont_Fcons_7 {
-    std::shared_ptr<MutualLoopifyAcc::forest> _inl_a1;
-  };
-
-  /// CraneCont_Fcons_8: saves [_inl_a1], resumes after recursive call, then
-  /// processes rest.
-  struct CraneCont_Fcons_8 {
-    std::shared_ptr<MutualLoopifyAcc::forest> _inl_a1;
-  };
-
-  using CraneFrame =
-      std::variant<CraneEnter, CraneCont_Fcons, CraneCont_Fcons_1,
-                   CraneCont_Fcons_2, CraneCont_Fcons_3, CraneCont_Fcons_4,
-                   CraneCont_Fcons_5, CraneCont_Fcons_6, CraneCont_Fcons_7,
-                   CraneCont_Fcons_8>;
+  using CraneFrame = std::variant<CraneEnter, CraneCont_Fcons>;
   uint64_t _result{};
   crane::small_vector<CraneFrame> _stack;
   _stack.emplace_back(CraneEnter{&t, acc});
-  /// Loopified tsum: CraneEnter -> CraneCont_Fcons -> CraneCont_Fcons_1 ->
-  /// CraneCont_Fcons_2 -> CraneCont_Fcons_3 -> CraneCont_Fcons_4 ->
-  /// CraneCont_Fcons_5 -> CraneCont_Fcons_6 -> CraneCont_Fcons_7 ->
-  /// CraneCont_Fcons_8.
+  /// Loopified tsum: CraneEnter -> CraneCont_Fcons.
   while (!_stack.empty()) {
     CraneFrame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -103,128 +48,8 @@ uint64_t MutualLoopifyAcc::tsum(
           _stack.emplace_back(CraneEnter{crane_raw(_inl_a0), _inl_acc});
         }
       }
-    } else if (std::holds_alternative<CraneCont_Fcons>(_frame)) {
-      auto _f = std::move(std::get<CraneCont_Fcons>(_frame));
-      std::shared_ptr<MutualLoopifyAcc::forest> _inl_a1 = std::move(_f._inl_a1);
-      uint64_t _inl_tmp1 = std::move(_result);
-      const MutualLoopifyAcc::forest &_inl_f = *_inl_a1;
-      uint64_t _inl_acc = _inl_tmp1;
-      if (std::holds_alternative<typename MutualLoopifyAcc::forest::Fnil>(
-              _inl_f.v())) {
-        _result = std::move(_inl_acc);
-      } else {
-        const auto &[_inl_a0, _inl_a1] =
-            std::get<typename MutualLoopifyAcc::forest::Fcons>(_inl_f.v());
-        _stack.emplace_back(CraneCont_Fcons_1{_inl_a1});
-        _stack.emplace_back(CraneEnter{crane_raw(_inl_a0), _inl_acc});
-      }
-    } else if (std::holds_alternative<CraneCont_Fcons_1>(_frame)) {
-      auto _f = std::move(std::get<CraneCont_Fcons_1>(_frame));
-      std::shared_ptr<MutualLoopifyAcc::forest> _inl_a1 = std::move(_f._inl_a1);
-      uint64_t _inl_tmp1 = std::move(_result);
-      const MutualLoopifyAcc::forest &_inl_f = *_inl_a1;
-      uint64_t _inl_acc = _inl_tmp1;
-      if (std::holds_alternative<typename MutualLoopifyAcc::forest::Fnil>(
-              _inl_f.v())) {
-        _result = std::move(_inl_acc);
-      } else {
-        const auto &[_inl_a0, _inl_a1] =
-            std::get<typename MutualLoopifyAcc::forest::Fcons>(_inl_f.v());
-        _stack.emplace_back(CraneCont_Fcons_2{_inl_a1});
-        _stack.emplace_back(CraneEnter{crane_raw(_inl_a0), _inl_acc});
-      }
-    } else if (std::holds_alternative<CraneCont_Fcons_2>(_frame)) {
-      auto _f = std::move(std::get<CraneCont_Fcons_2>(_frame));
-      std::shared_ptr<MutualLoopifyAcc::forest> _inl_a1 = std::move(_f._inl_a1);
-      uint64_t _inl_tmp1 = std::move(_result);
-      const MutualLoopifyAcc::forest &_inl_f = *_inl_a1;
-      uint64_t _inl_acc = _inl_tmp1;
-      if (std::holds_alternative<typename MutualLoopifyAcc::forest::Fnil>(
-              _inl_f.v())) {
-        _result = std::move(_inl_acc);
-      } else {
-        const auto &[_inl_a0, _inl_a1] =
-            std::get<typename MutualLoopifyAcc::forest::Fcons>(_inl_f.v());
-        _stack.emplace_back(CraneCont_Fcons_3{_inl_a1});
-        _stack.emplace_back(CraneEnter{crane_raw(_inl_a0), _inl_acc});
-      }
-    } else if (std::holds_alternative<CraneCont_Fcons_3>(_frame)) {
-      auto _f = std::move(std::get<CraneCont_Fcons_3>(_frame));
-      std::shared_ptr<MutualLoopifyAcc::forest> _inl_a1 = std::move(_f._inl_a1);
-      uint64_t _inl_tmp1 = std::move(_result);
-      const MutualLoopifyAcc::forest &_inl_f = *_inl_a1;
-      uint64_t _inl_acc = _inl_tmp1;
-      if (std::holds_alternative<typename MutualLoopifyAcc::forest::Fnil>(
-              _inl_f.v())) {
-        _result = std::move(_inl_acc);
-      } else {
-        const auto &[_inl_a0, _inl_a1] =
-            std::get<typename MutualLoopifyAcc::forest::Fcons>(_inl_f.v());
-        _stack.emplace_back(CraneCont_Fcons_4{_inl_a1});
-        _stack.emplace_back(CraneEnter{crane_raw(_inl_a0), _inl_acc});
-      }
-    } else if (std::holds_alternative<CraneCont_Fcons_4>(_frame)) {
-      auto _f = std::move(std::get<CraneCont_Fcons_4>(_frame));
-      std::shared_ptr<MutualLoopifyAcc::forest> _inl_a1 = std::move(_f._inl_a1);
-      uint64_t _inl_tmp1 = std::move(_result);
-      const MutualLoopifyAcc::forest &_inl_f = *_inl_a1;
-      uint64_t _inl_acc = _inl_tmp1;
-      if (std::holds_alternative<typename MutualLoopifyAcc::forest::Fnil>(
-              _inl_f.v())) {
-        _result = std::move(_inl_acc);
-      } else {
-        const auto &[_inl_a0, _inl_a1] =
-            std::get<typename MutualLoopifyAcc::forest::Fcons>(_inl_f.v());
-        _stack.emplace_back(CraneCont_Fcons_5{_inl_a1});
-        _stack.emplace_back(CraneEnter{crane_raw(_inl_a0), _inl_acc});
-      }
-    } else if (std::holds_alternative<CraneCont_Fcons_5>(_frame)) {
-      auto _f = std::move(std::get<CraneCont_Fcons_5>(_frame));
-      std::shared_ptr<MutualLoopifyAcc::forest> _inl_a1 = std::move(_f._inl_a1);
-      uint64_t _inl_tmp1 = std::move(_result);
-      const MutualLoopifyAcc::forest &_inl_f = *_inl_a1;
-      uint64_t _inl_acc = _inl_tmp1;
-      if (std::holds_alternative<typename MutualLoopifyAcc::forest::Fnil>(
-              _inl_f.v())) {
-        _result = std::move(_inl_acc);
-      } else {
-        const auto &[_inl_a0, _inl_a1] =
-            std::get<typename MutualLoopifyAcc::forest::Fcons>(_inl_f.v());
-        _stack.emplace_back(CraneCont_Fcons_6{_inl_a1});
-        _stack.emplace_back(CraneEnter{crane_raw(_inl_a0), _inl_acc});
-      }
-    } else if (std::holds_alternative<CraneCont_Fcons_6>(_frame)) {
-      auto _f = std::move(std::get<CraneCont_Fcons_6>(_frame));
-      std::shared_ptr<MutualLoopifyAcc::forest> _inl_a1 = std::move(_f._inl_a1);
-      uint64_t _inl_tmp1 = std::move(_result);
-      const MutualLoopifyAcc::forest &_inl_f = *_inl_a1;
-      uint64_t _inl_acc = _inl_tmp1;
-      if (std::holds_alternative<typename MutualLoopifyAcc::forest::Fnil>(
-              _inl_f.v())) {
-        _result = std::move(_inl_acc);
-      } else {
-        const auto &[_inl_a0, _inl_a1] =
-            std::get<typename MutualLoopifyAcc::forest::Fcons>(_inl_f.v());
-        _stack.emplace_back(CraneCont_Fcons_7{_inl_a1});
-        _stack.emplace_back(CraneEnter{crane_raw(_inl_a0), _inl_acc});
-      }
-    } else if (std::holds_alternative<CraneCont_Fcons_7>(_frame)) {
-      auto _f = std::move(std::get<CraneCont_Fcons_7>(_frame));
-      std::shared_ptr<MutualLoopifyAcc::forest> _inl_a1 = std::move(_f._inl_a1);
-      uint64_t _inl_tmp1 = std::move(_result);
-      const MutualLoopifyAcc::forest &_inl_f = *_inl_a1;
-      uint64_t _inl_acc = _inl_tmp1;
-      if (std::holds_alternative<typename MutualLoopifyAcc::forest::Fnil>(
-              _inl_f.v())) {
-        _result = std::move(_inl_acc);
-      } else {
-        const auto &[_inl_a0, _inl_a1] =
-            std::get<typename MutualLoopifyAcc::forest::Fcons>(_inl_f.v());
-        _stack.emplace_back(CraneCont_Fcons_8{_inl_a1});
-        _stack.emplace_back(CraneEnter{crane_raw(_inl_a0), _inl_acc});
-      }
     } else {
-      auto _f = std::move(std::get<CraneCont_Fcons_8>(_frame));
+      auto _f = std::move(std::get<CraneCont_Fcons>(_frame));
       std::shared_ptr<MutualLoopifyAcc::forest> _inl_a1 = std::move(_f._inl_a1);
       uint64_t _inl_tmp1 = std::move(_result);
       _result = fsum(_inl_tmp1, *_inl_a1);
