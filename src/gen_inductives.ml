@@ -659,17 +659,66 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
      erasure killed outright, but a local binding can still be declared at it
      -- the result of a trigger is an index of the event type, so it has no
      spelling but the variable's own -- and dropping the parameter leaves the
-     body naming something that is no longer declared. *)
+     body naming something that is no longer declared.  Read off the body's
+     own annotations as C++ spells them, and the callables the head deduces,
+     so the head is decided without generating the body. *)
+  let body_names =
+    let annotations = ref [] in
+    ignore
+      (Mlutil.ast_map_types
+         (fun t ->
+           annotations := t :: !annotations;
+           t )
+         inner_body );
+    (* A hole names no variable; it is declined rather than converted. *)
+    let declined = Mlutil.map_ml_type (function Thole _ -> Tunknown | t -> t) in
+    let annotations =
+      with_type_vars (vars @ extra_tvar_names) (fun () ->
+          List.rev_map
+            (fun t ->
+              subst_extra_tvars
+                (strip_top_level_self_ptr
+                   (convert_ml_type_to_cpp_type (empty_env ()) ~ns:method_ns vars (declined t)) ) )
+            !annotations )
+    in
+    let constraints =
+      List.concat_map (fun (_, tt, _) -> match tt with TTfun (d, c) -> c :: d | _ -> []) fun_params
+    in
+    fun name -> List.exists (cpp_type_has_tvar name) (constraints @ annotations)
+  in
+  (* What the body generated does name.  A callee printed verbatim from its
+     custom text names its type arguments, and the signature recorded on a
+     call to it, only where the text spells them: not at all, here. *)
   let stmt_has_tvar name stmts =
     let found = ref false in
     let rec on_type t =
       if cpp_type_has_tvar name t then found := true;
       t
-    and on_expr e = Minicpp.map_expr on_expr on_stmt on_type e
+    and on_expr = function
+      | CPPglob (_, _, Some {ci_inline = Some _; _}) as e -> e
+      | CPPfun_call (_, CPPglob (_, _, Some {ci_inline = Some _; _}), args) as e ->
+        List.iter (fun a -> ignore (on_expr a)) (to_reversed args);
+        e
+      | e -> Minicpp.map_expr on_expr on_stmt on_type e
     and on_stmt s = Minicpp.map_stmt on_expr on_stmt on_type s in
     List.iter (fun s -> ignore (on_stmt s)) stmts;
     !found
   in
+  (* A variable the head drops must be one the body does not name either:
+     the body would name a parameter no longer declared. *)
+  if Probe.checking () then
+    List.iter
+      (fun name ->
+        if
+          (not (List.exists (fun (_, pty) -> cpp_type_has_tvar name pty) params))
+          && (not (body_names name))
+          && stmt_has_tvar name stmts
+        then
+          Probe.violation "method head"
+            Pp.(
+              str "the body of " ++ GlobRef.print func_ref ++ str " names " ++ Id.print name
+              ++ str ", which none of its annotations does" ) )
+      extra_tvar_names;
   (* An extra tvar the return type is alone in mentioning is a dead letter.
      Nothing deduces it -- the receiver carries only the inductive's own
      parameters, and no value parameter names it -- and the body cannot honour
@@ -684,7 +733,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
           Id.Set.mem tname extra_tvar_name_set
           && cpp_type_has_tvar tname ret_cpp
           && (not (List.exists (fun (_, pty) -> cpp_type_has_tvar tname pty) params))
-          && not (stmt_has_tvar tname stmts)
+          && not (body_names tname)
         then Some tname
         else None )
       template_params
@@ -722,7 +771,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
       else
         cpp_type_has_tvar tname ret_cpp
         || List.exists (fun (_, pty) -> cpp_type_has_tvar tname pty) params
-        || stmt_has_tvar tname stmts)
+        || body_names tname)
     template_params
   in
   let surviving_names =

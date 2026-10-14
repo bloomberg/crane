@@ -79,8 +79,7 @@ struct AE {
   // CREATORS
   static AE a0(Nat a0_0) { return {std::move(a0_0)}; }
 
-  template <typename T1, typename T2>
-  std::shared_ptr<ITree<T2>> handle() const {
+  template <typename T2> std::shared_ptr<ITree<T2>> handle() const {
     const auto &[a0] = *this;
     return itree_ret(a0);
   }
@@ -99,10 +98,10 @@ std::shared_ptr<ITree<crane::obj>> F_trigger(T2 e) {
 template <typename T1 = void, typename T2 = void>
 std::shared_ptr<ITree<crane::obj>>
 h(Sum1<crane::obj, Sum1<AE, crane::obj, crane::obj>, crane::obj> x) {
-  return itree_case(
-      E_trigger<crane::obj, crane::obj>,
-      itree_case([](const auto &_x) { return _x.template handle<void>(); },
-                 F_trigger<crane::obj, crane::obj>))(std::move(x));
+  return itree_case(E_trigger<crane::obj, crane::obj>,
+                    itree_case([](const auto &_x) { return _x.handle(); },
+                               F_trigger<crane::obj, crane::obj>))(
+      std::move(x));
 }
 
 #endif // INCLUDED_APPLIED_TYPENAME_NOT_HK
