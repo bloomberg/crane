@@ -994,6 +994,37 @@ let module_filename mp =
   let fimpl = Filename.concat (output_directory_for_module ()) fimpl_base in
   (Some fimpl, Option.map (( ^ ) f) d.sig_suffix, id)
 
+(** Discovery's passes: what it decides before rendering anything, and the
+    renders whose documents it discards. *)
+let discover_passes ~interface d : ml_structure Pipeline_trace.pass list * ml_structure Pipeline_trace.pass list =
+  let open Pipeline_trace in
+  ( [effect "prepare" d.prepare],
+    effect "render_impl" (fun s -> ignore (d.pp_struct s))
+    :: (if interface then [effect "render_intf" (fun s -> ignore (d.pp_hstruct s))] else []) )
+
+let discover_pass_names =
+  let planning, renders = discover_passes ~interface:true (descr ()) in
+  Pipeline_trace.names (planning @ renders)
+
+(** Under [CRANE_TRACE_PIPELINE], report the decisions first made while
+    discovery rendered: what each census table gained between [before] and
+    now.  Rendering is analysis exactly to the extent of this report, and
+    discovery's renders can go when it is empty for every unit. *)
+let report_decided_while_rendering before =
+  if Pipeline_trace.enabled () then
+    let grown =
+      List.filter_map
+        (fun (name, n) ->
+          match List.assoc_opt name before with
+          | Some m when n > m -> Some (Printf.sprintf "%s +%d" name (n - m))
+          | None when n > 0 -> Some (Printf.sprintf "%s +%d" name n)
+          | _ -> None )
+        (Table.census ())
+    in
+    Pipeline_trace.event "discover"
+      ( "decided while rendering: "
+      ^ if grown = [] then "nothing" else String.concat ", " grown )
+
 (** Run the discovery pass over [struc]: allocate every name and record every
     fact the emissions will go on to read.  Its output is discarded -- the
     point of it is the tables it leaves behind, which are complete only once a
@@ -1004,18 +1035,14 @@ let module_filename mp =
     the other does not -- measured: dropping either half renames binders in the
     output and trips {!check_no_late_decisions} -- so [~interface:false] is for
     callers that emit no interface at all. *)
-let discover_passes ~interface d : ml_structure Pipeline_trace.pass list =
-  let open Pipeline_trace in
-  [ effect "prepare" d.prepare;
-    effect "render_impl" (fun s -> ignore (d.pp_struct s)) ]
-  @ if interface then [effect "render_intf" (fun s -> ignore (d.pp_hstruct s))] else []
-
-let discover_pass_names = Pipeline_trace.names (discover_passes ~interface:true (descr ()))
-
 let discover ?(interface = true) d struc =
   set_phase Discover;
   Callable_abi.open_for_discovery ();
-  ignore (Pipeline_trace.run ~stage:"discover" (discover_passes ~interface d) struc);
+  let planning, renders = discover_passes ~interface d in
+  ignore (Pipeline_trace.run ~stage:"discover" planning struc);
+  let planned = if Pipeline_trace.enabled () then Table.census () else [] in
+  ignore (Pipeline_trace.run ~stage:"discover" renders struc);
+  report_decided_while_rendering planned;
   Callable_abi.freeze ()
 
 (** {2 Extraction of one decl to stdout} *)
