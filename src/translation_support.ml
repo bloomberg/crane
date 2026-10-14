@@ -3312,24 +3312,20 @@ type slot = {
           again: the constant is the outermost closed term. *)
 }
 
-(** What a call to a global is, before its arguments are generated; see
+(** What a call to a global is, before its arguments are generated: the call
+    as Core elaborated it, and what planning its C++ added; see
     {!plan_call}. *)
 type call_plan = {
-  cp_excess_args : ml_ast list;
-  cp_primary_args : ml_ast list;
-  cp_instance_args : ml_ast list;
-  cp_regular_args : ml_ast list;
-  cp_leading_params : int;
+  cp_call : Elaborated_call.t;
   cp_expected_result : cpp_type option;
   cp_instance_type_args : cpp_type option list;
   cp_instance_families : (cpp_type * Id.t list * (Id.t * cpp_type) list) list;
-  cp_fn_ml_ty : ml_type;
   cp_tyargs : Call_tyargs.t;
-      (** The callee's scheme variables as the call reads them. *)
+      (** The callee's scheme variables as the call reads them, spelled in
+          the caller's scope. *)
   cp_tys : ml_type list;
       (** {!cp_tyargs} as the list substitutions take
           ({!Call_tyargs.by_variable}). *)
-  cp_dictionary_filled : bool;
   cp_fn_ml_ty_subst : ml_type;
   cp_params : Param_pos.subst Param_pos.params;
   cp_params_orig : Param_pos.orig Param_pos.params;

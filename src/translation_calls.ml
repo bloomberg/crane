@@ -179,12 +179,9 @@ type lowered_call = {
 let call_type_args ~caller ?expected_ty env id plan ~has_value_args =
   let args = if has_value_args then [()] else [] in
   let {
-    cp_primary_args = primary_ml_args;
-    cp_regular_args = regular_ml_args;
-    cp_leading_params = leading_params;
+    cp_call = {Elaborated_call.primary = primary_ml_args; regular = regular_ml_args; _} as call;
     cp_instance_type_args = typeclass_type_args;
     cp_tyargs = tyargs;
-    cp_dictionary_filled = dictionary_filled;
     cp_fn_ml_ty_subst = fn_ml_ty_subst;
     cp_params = fn_param_ml_tys;
     cp_params_orig = fn_param_ml_tys_orig;
@@ -194,6 +191,8 @@ let call_type_args ~caller ?expected_ty env id plan ~has_value_args =
     cp_result_tvar_map = result_tvar_map;
     _
   } = plan in
+  let leading_params = Elaborated_call.leading_params call in
+  let dictionary_filled = Elaborated_call.dictionary_filled call in
   let ty = fn_ml_ty_subst in
   let ty = cpp_of_ml env ty in
   (* Combine: instance types first, then regular type args. If any regular
@@ -1224,14 +1223,6 @@ let record_call_sig env callee_ty e =
       CPPfun_call (sg, f, args) )
   | _ -> e
 
-(** [plan_call ~caller ~slot ?expected_ty env tyargs args] -- everything a
-    call from the declaration [caller] to the callee of [tyargs], the call's
-    reading of its type arguments, needs to know before its arguments are
-    generated: which
-    arguments are dictionaries, regular or curried past the callee's arity,
-    the type arguments the call instantiates the callee at, and the
-    callee's parameter types at that instantiation.  Read by
-    {!gen_call_args} and by the assembly in {!eta_fun}. *)
 (* The callees whose result bindings are being computed.  Reading the
    expected type can convert value arguments that a type carries, and
    generating one of them can be the very call whose binding is asked for: a
@@ -1247,7 +1238,14 @@ let binding_results_of id compute =
       compute
   end
 
-let plan_call ~caller ~slot ?expected_ty env tyargs args =
+(** [elaborate_call ~slot env tyargs args] -- the call of the callee of
+    [tyargs], the call's reading of its type arguments, to [args], as Core
+    elaborates it ({!Elaborated_call}): which arguments are dictionaries,
+    regular, or past the callee's arity and so applied to its result, and
+    the scheme variables the arguments' types, and the ML types [slot]
+    expects or states, resolve.  [env] is the lexical environment the
+    arguments are generated in. *)
+let elaborate_call ~slot env tyargs args =
   let id = Call_tyargs.callee tyargs in
   (* When the call has more args than the function's ML value-domain, the
      excess args are curried applications to the result. This is common with
@@ -1377,9 +1375,6 @@ let plan_call ~caller ~slot ?expected_ty env tyargs args =
   let typeclass_ml_args, n_erased_instance_args, regular_ml_args =
     split_instance_args env args
   in
-  (* How many of the callee's declared parameters the dictionaries occupy:
-     a regular argument's declared position starts after them. *)
-  let leading_params = List.length typeclass_ml_args + n_erased_instance_args in
   (* Order the instance arguments the way the callee numbered its own
      [_tcI] parameters.  [Gen_decls.gen_dfun] iterates [collect_lams]
      output, which is reversed from source order, so a plain constrained
@@ -1390,6 +1385,90 @@ let plan_call ~caller ~slot ?expected_ty env tyargs args =
   let typeclass_ml_args =
     if callee_is_instance_struct then typeclass_ml_args
     else List.rev typeclass_ml_args
+  in
+  (* The erased arguments left here are the ones the declaration takes a
+     value at (see [value_args] above); they are generated as empty boxes
+     below rather than as the [CPPabort] an [MLdummy] is elsewhere. *)
+  (* Compute the function's ML type after type arg substitution, to detect
+     arguments that return std::any (from erased record fields like
+     Functor::object_of) but where the parameter expects a concrete type
+     (e.g., unsigned int after resolving a promoted type var). *)
+  let fn_ml_ty = find_type id in
+  (* An erased event family the position's type names: [memM_interp]'s [E],
+     given unapplied where [on_mem] takes a handler into [itree BotE].  The
+     family occurs in the callee's result only, where nothing deduces it and
+     the phantom filler would write [void]. *)
+  let tyargs =
+    match
+      match slot.expected_ml_ty with
+      | Some _ as t -> t
+      | None -> slot.stated_ml_ty
+    with
+    | Some result when Call_tyargs.interior_holes tyargs <> [] ->
+      let families = Ml_type_util.event_family_ml_tvars [fn_ml_ty] in
+      (* A family is a head, or one applied at the index it erases
+         ([BotE _]); [box nat] met at a bare variable is a value type, not
+         the family. *)
+      let family_shaped b =
+        match resolve_tmeta b with
+        | Miniml.Tglob (_, [], _) -> true
+        | Miniml.Tglob (_, args, _) ->
+          Ml_type_util.is_ml_erased_ty (List.nth args (List.length args - 1))
+        | _ -> false
+      in
+      (* With [~constructors]: an applied variable against an application
+         is the head, which for a family -- the only variables filled here --
+         is the answer. *)
+      let found =
+        tvar_instantiation_found ~in_scope:true ~constructors:true ~result
+          fn_ml_ty primary_ml_args
+      in
+      (* Only where nothing deduces it: a family a parameter spells is the
+         compiler's to read off the argument. *)
+      let deducible =
+        Option.default IntSet.empty (deducible_tvars_of_glob id)
+      in
+      Call_tyargs.resolve Call_tyargs.Expected_result
+        (fun v ->
+          let k = Scheme.Var.ordinal v in
+          match List.assoc_opt k found with
+          | Some b
+            when IntSet.mem k families && (not (IntSet.mem k deducible))
+                 && family_shaped b ->
+            Some b
+          | _ -> None )
+        (Call_tyargs.interior_holes tyargs) tyargs
+    | _ -> tyargs
+  in
+
+  (* A type-level function passed where a type alias in a domain names it
+     -- the category's [C] in [Id_ obj C] -- is a hole of the reading, stated
+     by the dictionary argument.  Filled before anything is substituted, so
+     the parameter types the arguments are generated against and the
+     explicit type arguments the call writes agree. *)
+  let tyargs = resolve_from_argument_heads ~only_alias_args:true tyargs primary_ml_args in
+  Elaborated_call.make ~callee:id ~callee_type:fn_ml_ty ~primary:primary_ml_args
+    ~excess:excess_args ~instances:typeclass_ml_args ~erased_instances:n_erased_instance_args
+    ~regular:regular_ml_args ~tyargs
+
+(** [plan_call ~caller ?expected_ty env call] -- what the elaborated [call]
+    from the declaration [caller] needs to know before its arguments are
+    generated, beyond its elaboration: its scheme variables spelled in the
+    caller's scope, the callee's parameter types at that instantiation, and
+    the C++ types its result and its dictionaries are expected at.  Read by
+    {!gen_call_args} and by the assembly in {!eta_fun}. *)
+let plan_call ~caller ?expected_ty env (call : Elaborated_call.t) =
+  let {
+    Elaborated_call.callee = id;
+    callee_type = fn_ml_ty;
+    primary = primary_ml_args;
+    excess = excess_args;
+    instances = typeclass_ml_args;
+    regular = regular_ml_args;
+    tyargs;
+    _
+  } =
+    call
   in
   let expected_result = expected_ty in
   (* Where the position erased the result's family, the arguments may still
@@ -1456,73 +1535,6 @@ let plan_call ~caller ~slot ?expected_ty env tyargs args =
         | _ -> None )
       typeclass_ml_args
   in
-  (* The erased arguments left here are the ones the declaration takes a
-     value at (see [value_args] above); they are generated as empty boxes
-     below rather than as the [CPPabort] an [MLdummy] is elsewhere. *)
-  (* Compute the function's ML type after type arg substitution, to detect
-     arguments that return std::any (from erased record fields like
-     Functor::object_of) but where the parameter expects a concrete type
-     (e.g., unsigned int after resolving a promoted type var). *)
-  let fn_ml_ty = find_type id in
-  (* An erased event family the position's type names: [memM_interp]'s [E],
-     given unapplied where [on_mem] takes a handler into [itree BotE].  The
-     family occurs in the callee's result only, where nothing deduces it and
-     the phantom filler would write [void]. *)
-  let tyargs =
-    match
-      match slot.expected_ml_ty with
-      | Some _ as t -> t
-      | None -> slot.stated_ml_ty
-    with
-    | Some result when Call_tyargs.interior_holes tyargs <> [] ->
-      let families = Ml_type_util.event_family_ml_tvars [fn_ml_ty] in
-      (* A family is a head, or one applied at the index it erases
-         ([BotE _]); [box nat] met at a bare variable is a value type, not
-         the family. *)
-      let family_shaped b =
-        match resolve_tmeta b with
-        | Miniml.Tglob (_, [], _) -> true
-        | Miniml.Tglob (_, args, _) ->
-          Ml_type_util.is_ml_erased_ty (List.nth args (List.length args - 1))
-        | _ -> false
-      in
-      (* With [~constructors]: an applied variable against an application
-         is the head, which for a family -- the only variables filled here --
-         is the answer. *)
-      let found =
-        tvar_instantiation_found ~in_scope:true ~constructors:true ~result
-          fn_ml_ty primary_ml_args
-      in
-      (* Only where nothing deduces it: a family a parameter spells is the
-         compiler's to read off the argument. *)
-      let deducible =
-        Option.default IntSet.empty (deducible_tvars_of_glob id)
-      in
-      Call_tyargs.resolve Call_tyargs.Expected_result
-        (fun v ->
-          let k = Scheme.Var.ordinal v in
-          match List.assoc_opt k found with
-          | Some b
-            when IntSet.mem k families && (not (IntSet.mem k deducible))
-                 && family_shaped b ->
-            Some b
-          | _ -> None )
-        (Call_tyargs.interior_holes tyargs) tyargs
-    | _ -> tyargs
-  in
-
-  (* A type-level function passed where a type alias in a domain names it
-     -- the category's [C] in [Id_ obj C] -- is a hole of the reading, stated
-     by the dictionary argument.  Filled before anything is substituted, so
-     the parameter types the arguments are generated against and the
-     explicit type arguments the call writes agree. *)
-  let tyargs = resolve_from_argument_heads ~only_alias_args:true tyargs primary_ml_args in
-  (* The dictionary stated a position the call had erased -- [case_]'s
-     morphism type [C := Handler] at a category over families.  Its
-     arguments at that position are then built at that type rather than
-     boxed, so the call has to write it, the erased positions beside it
-     as the boxes they are. *)
-  let dictionary_filled = Call_tyargs.resolved_from Call_tyargs.Argument_heads tyargs in
   (* A partial application is eta-expanded into a lambda spelled in the
      caller's scope, and a variable of the callee's that neither the call
      nor its arguments instantiate is not one of the caller's: left in, it
@@ -1683,18 +1695,12 @@ let plan_call ~caller ~slot ?expected_ty env tyargs args =
              | None -> (!tctx).current_cpp_return_type ) ) )
   in
   {
-    cp_excess_args = excess_args;
-    cp_primary_args = primary_ml_args;
-    cp_instance_args = typeclass_ml_args;
-    cp_regular_args = regular_ml_args;
-    cp_leading_params = leading_params;
+    cp_call = call;
     cp_expected_result = expected_result;
     cp_instance_type_args = typeclass_type_args;
     cp_instance_families = instance_families;
-    cp_fn_ml_ty = fn_ml_ty;
     cp_tyargs = tyargs;
     cp_tys = tys;
-    cp_dictionary_filled = dictionary_filled;
     cp_fn_ml_ty_subst = fn_ml_ty_subst;
     cp_params = fn_param_ml_tys;
     cp_params_orig = fn_param_ml_tys_orig;
@@ -1713,9 +1719,9 @@ let plan_call ~caller ~slot ?expected_ty env tyargs args =
     reads the result and decides neither. *)
 let lower_call ~caller ~slot ?expected_ty env use args =
   let id = use.callee in
-  let plan = plan_call ~caller ~slot ?expected_ty env (Call_tyargs.of_use use) args in
-  call_type_args ~caller ?expected_ty env id plan
-    ~has_value_args:(plan.cp_regular_args <> [])
+  let call = elaborate_call ~slot env (Call_tyargs.of_use use) args in
+  let plan = plan_call ~caller ?expected_ty env call in
+  call_type_args ~caller ?expected_ty env id plan ~has_value_args:(call.regular <> [])
 
 (** What a reference to global [x], its type instantiated by [instantiate],
     evaluates to as it is printed.
