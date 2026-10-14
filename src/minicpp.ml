@@ -1225,6 +1225,14 @@ let tvar_spelling i = "T" ^ string_of_int i
 
 let tvar_id i = Id.of_string (tvar_spelling i)
 
+let tvar_number id =
+  let s = Id.to_string id in
+  let n = String.length s in
+  if n < 2 || s.[0] <> 'T' then None
+  else
+    Option.bind (int_of_string_opt (String.sub s 1 (n - 1))) (fun i ->
+        if i >= 1 && String.equal (tvar_spelling i) s then Some i else None )
+
 (** Whether a type is the type variable named [id].  The head of a tvar is not
     always resolved to its parameter name, so a tvar answers to either
     spelling; cf. {!Gen_decls.applied_tvar_arities}. *)

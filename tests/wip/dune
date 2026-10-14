@@ -218,17 +218,6 @@
   (action (run ./interp_state_dict.t.exe))))
 
 
-(subdir tyarg_family_binder_shift
- (rule
-  (targets tyarg_family_binder_shift.t.exe)
-  (deps TyargFamilyBinderShift.vo tyarg_family_binder_shift.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} tyarg_family_binder_shift.t.exe tyarg_family_binder_shift.cpp tyarg_family_binder_shift.t.cpp)))
- (rule
-  (alias runtest)
-  (deps tyarg_family_binder_shift.t.exe)
-  (action (run ./tyarg_family_binder_shift.t.exe))))
-
 (subdir tyarg_equal_count_shift
  (rule
   (targets tyarg_equal_count_shift.t.exe)

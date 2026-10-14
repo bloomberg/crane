@@ -133,10 +133,10 @@ public:
 
 struct TyargFamilyBinderShift {
   template <typename T2> static T2 after_family(T2 d, const List<T2> &l) {
-    if (std::holds_alternative<typename List<crane::obj>::Nil>(l.v())) {
+    if (std::holds_alternative<typename List<T2>::Nil>(l.v())) {
       return d;
     } else {
-      const auto &[a0, a1] = std::get<typename List<crane::obj>::Cons>(l.v());
+      const auto &[a0, a1] = std::get<typename List<T2>::Cons>(l.v());
       return a0;
     }
   }

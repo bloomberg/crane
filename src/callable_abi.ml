@@ -56,7 +56,7 @@ let numbered spell name =
 
 let origin_of ?(relaxed = fun _ -> false) ~scheme name =
   let var =
-    Option.bind (numbered Minicpp.tvar_spelling name) (fun i ->
+    Option.bind (Minicpp.tvar_number name) (fun i ->
         if relaxed i then None else Option.bind scheme (fun s -> Scheme.Var.of_tvar s i) )
   in
   match var with

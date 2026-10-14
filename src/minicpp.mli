@@ -1186,6 +1186,9 @@ val tvar_spelled : tvar -> Id.t
 val tvar_spelling : int -> string
 val tvar_id : int -> Names.Id.t
 
+(** [tvar_number id] is the [i] for which [tvar_id i] is [id]. *)
+val tvar_number : Names.Id.t -> int option
+
 (** [tvar_is id ty] is whether [ty] is the type variable [id].  A tvar whose
     head was never resolved to its parameter name answers to the generated
     spelling of its index as well. *)

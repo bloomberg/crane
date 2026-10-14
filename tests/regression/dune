@@ -12776,3 +12776,14 @@
   (alias runtest)
   (deps alias_thunk_reference.t.exe)
   (action (run ./alias_thunk_reference.t.exe))))
+
+(subdir tyarg_family_binder_shift
+ (rule
+  (targets tyarg_family_binder_shift.t.exe)
+  (deps TyargFamilyBinderShift.vo tyarg_family_binder_shift.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} tyarg_family_binder_shift.t.exe tyarg_family_binder_shift.cpp tyarg_family_binder_shift.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps tyarg_family_binder_shift.t.exe)
+  (action (run ./tyarg_family_binder_shift.t.exe))))

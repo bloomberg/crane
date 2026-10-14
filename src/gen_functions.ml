@@ -1011,15 +1011,28 @@ let gen_dfun n b cty ty temps =
   (* Set current type variables for pattern matching lambda generation.
      These are the template parameters that can be used in type annotations.
      Exclude typeclass instance params — they are not ML type variables
-     and should not participate in Tvar index resolution. ML Tvar indices
-     (Tvar 1, Tvar 2, ...) correspond to regular type params only. *)
+     and should not participate in Tvar index resolution.
+
+     The scope is read by ML variable -- entry [i - 1] names [Tvar i] -- and
+     the head is not: it leaves out a variable the C++ type never spells
+     ([after_family]'s [A], mentioned only by an erased family), and a
+     parameter named for scheme variable [i] ({!Callable_abi}) is then not
+     the head's [i]th.  Where the head names its parameters for the scheme,
+     the scope is laid out by those numbers; a variable the head omits
+     keeps its own name, which nothing declares, rather than taking a
+     neighbour's. *)
   let type_var_ids =
-    List.filter_map
-      (fun (tt, id) ->
-        match tt with
-        | TTtypename | TTtypename_default _ | TTtemplate _ -> Some id
-        | _ -> None )
-      regular_temps
+    let declared =
+      List.filter_map
+        (fun (tt, id) ->
+          match tt with
+          | TTtypename | TTtypename_default _ | TTtemplate _ -> Some id
+          | _ -> None )
+        regular_temps
+    in
+    match List.filter_map tvar_number declared with
+    | [] -> declared
+    | numbers -> List.init (List.fold_left max 0 numbers) (fun k -> tvar_id (k + 1))
   in
   set_current_type_vars type_var_ids;
   (* The head itself, at the kinds it declares: see

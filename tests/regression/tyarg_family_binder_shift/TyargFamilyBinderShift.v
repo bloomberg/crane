@@ -7,7 +7,9 @@
     later type argument onto the wrong scheme variable; read through the
     schema's binder map, it has no variable at all.
     - [after_family {A} (P : A -> Prop) {B}] has two scheme variables and
-      three written type arguments.
+      three written type arguments.  Its head declares only [B]'s [T2], and
+      its body's annotations are still read in scheme variables: the match
+      on [l] is at [List<T2>], not at whichever name sits first in the head.
     - [nil_after_family] mentions [B] only in its result, so a call cannot
       leave it to deduction and must name it at its own variable.
     - [Fix_F] and [eq_sig_rect] are the library shapes of the same thing. *)
