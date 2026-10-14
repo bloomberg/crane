@@ -2382,16 +2382,20 @@ let plan_callables ?(reversed = false) s =
             (order analysis.sorted_modules) ) );
   List.rev !plans
 
-(* The declarations of [s] outside a functor, in order. *)
+(* The declarations of [s], a functor's body's among them, in order. *)
 let declarations s =
   let rec elems sel =
     List.concat_map
       (fun (_, se) ->
         match se with
         | SEdecl d -> [d]
-        | SEmodule {ml_mod_expr = MEstruct (_, sel); _} -> elems sel
-        | SEmodule _ | SEmodtype _ -> [] )
+        | SEmodule {ml_mod_expr; _} -> module_expr ml_mod_expr
+        | SEmodtype _ -> [] )
       sel
+  and module_expr = function
+    | MEstruct (_, sel) -> elems sel
+    | MEfunctor (_, _, body) -> module_expr body
+    | MEident _ | MEapply _ -> []
   in
   List.concat_map (fun (_, sel) -> elems sel) s
 
