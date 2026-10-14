@@ -98,6 +98,13 @@ val validate : t -> string list
     error. *)
 val record : t -> unit
 
+(** Discovery records plans; {!freeze} ends it.  Once frozen the map is an
+    immutable program fact: a declaration generated with no plan recorded is
+    a [CRANE_CHECK_IR] error and adds nothing. *)
+val open_for_discovery : unit -> unit
+
+val freeze : unit -> unit
+
 (** The recorded plan of a declaration: the one for the current render
     context, or else the one recorded first. *)
 val lookup : Names.GlobRef.t -> t option

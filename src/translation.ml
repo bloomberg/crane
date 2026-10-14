@@ -5879,8 +5879,8 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
   let slot = {slot with eta_keep_moves = false} in
   match f with
   | MLglob ({callee = id; _} as use) ->
-    let tys = Mlutil.written_type_args use in
-    let plan = plan_call ~slot ?expected_ty env id tys args in
+    let elaborated = elaborate_call ~slot ?expected_ty env use args in
+    let plan = elaborated.ec_plan in
     let {
       cp_excess_args = excess_args;
       cp_primary_args = primary_ml_args;
@@ -5906,9 +5906,10 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
       with_promoted_var_map (instance_promoted_map @ (!tctx).promoted_var_map)
         (fun () -> gen_call_args ~slot ?expected_ty env id plan)
     in
-    let ty, tys, all_type_args, written_tvar_args =
-      call_type_args ?expected_ty env id plan args
-    in
+    let ty = elaborated.ec_callee_type
+    and tys = elaborated.ec_written
+    and all_type_args = Template_application.to_list elaborated.ec_application
+    and written_tvar_args = elaborated.ec_written_by_var in
     (* The callee's declared type at the type arguments the call writes: what
        C++ checks the arguments against and returns.  A type argument standing
        for a function type is spelled curried ([Through_tvar]), where the

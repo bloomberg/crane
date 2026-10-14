@@ -163,11 +163,17 @@ let context () =
   (rc.Cpp_state.rc_in_struct, rc.Cpp_state.rc_in_template, Option.map ModPath.to_string rc.Cpp_state.rc_struct_mp)
 
 let plans = ref Names.GlobRef.Map_env.empty
+let frozen = ref false
+let open_for_discovery () = frozen := false
+let freeze () = frozen := true
 
 let () =
   Table.register_census "callable ABI plans" (fun () ->
       GlobRef.Map_env.fold (fun _ l n -> n + List.length l) !plans 0 )
-let () = State.on_reset State.Extraction (fun () -> plans := GlobRef.Map_env.empty)
+let () =
+  State.on_reset State.Extraction (fun () ->
+      plans := GlobRef.Map_env.empty;
+      frozen := false )
 
 let describe abi =
   let kind = function
@@ -215,6 +221,12 @@ let record abi =
         ++ str "> where its plan, recorded " ++ str (phase_name old.phase)
         ++ str ", says <" ++ str (describe old) ++ str ">; generated "
         ++ str (phase_name abi.phase) )
+  | None when !frozen ->
+    Probe.violation "callable ABI"
+      Pp.(
+        str "the declaration of " ++ GlobRef.print abi.callee
+        ++ str " was generated after the plans were frozen, with no plan recorded in \
+                discovery" )
   | None -> plans := GlobRef.Map_env.add abi.callee ((here, abi) :: recorded) !plans
 
 let lookup r =

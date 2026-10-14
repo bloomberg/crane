@@ -1006,9 +1006,11 @@ let module_filename mp =
     callers that emit no interface at all. *)
 let discover ?(interface = true) d struc =
   set_phase Discover;
+  Callable_abi.open_for_discovery ();
   d.prepare struc;
   ignore (d.pp_struct struc);
-  if interface then ignore (d.pp_hstruct struc)
+  if interface then ignore (d.pp_hstruct struc);
+  Callable_abi.freeze ()
 
 (** {2 Extraction of one decl to stdout} *)
 
