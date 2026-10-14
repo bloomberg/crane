@@ -5199,6 +5199,17 @@
   (deps closure_pair_this.t.exe)
   (action (run ./closure_pair_this.t.exe))))
 
+(subdir coind_projection_borrow
+ (rule
+  (targets coind_projection_borrow.t.exe)
+  (deps CoindProjectionBorrow.vo coind_projection_borrow.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} coind_projection_borrow.t.exe coind_projection_borrow.cpp coind_projection_borrow.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps coind_projection_borrow.t.exe)
+  (action (run ./coind_projection_borrow.t.exe))))
+
 (subdir cofix_this_thunk
  (rule
   (targets cofix_this_thunk.t.exe)

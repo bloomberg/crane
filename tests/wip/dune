@@ -12,6 +12,28 @@
    ITree Equations ExtLib Paco)
  (flags (:standard -output-directory ../../tests/wip)))
 
+(subdir cofix_ctor_outside_eponymous
+ (rule
+  (targets cofix_ctor_outside_eponymous.t.exe)
+  (deps CofixCtorOutsideEponymous.vo cofix_ctor_outside_eponymous.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} cofix_ctor_outside_eponymous.t.exe cofix_ctor_outside_eponymous.cpp cofix_ctor_outside_eponymous.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps cofix_ctor_outside_eponymous.t.exe)
+  (action (run ./cofix_ctor_outside_eponymous.t.exe))))
+
+(subdir cofix_nested_eponymous_undefined
+ (rule
+  (targets cofix_nested_eponymous_undefined.t.exe)
+  (deps CofixNestedEponymousUndefined.vo cofix_nested_eponymous_undefined.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} cofix_nested_eponymous_undefined.t.exe cofix_nested_eponymous_undefined.cpp cofix_nested_eponymous_undefined.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps cofix_nested_eponymous_undefined.t.exe)
+  (action (run ./cofix_nested_eponymous_undefined.t.exe))))
+
 (subdir z_abs_min
  (rule
   (targets z_abs_min.t.exe)
