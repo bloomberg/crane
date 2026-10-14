@@ -283,10 +283,9 @@ let ind_header_decls kn ind =
       in
       (* Check if function comes from the same Rocq module as the inductive *)
       let same_module r = ModPath.equal (modpath_of_r r) ind_modpath in
-      (* Collect the candidates first and register only those the rule about
-         calls keeps ([Method_registry.settle_file_calls]).  Registering is a
-         side effect: a function registered but then not rendered as a method
-         would be called with method syntax that nothing defines. *)
+      (* Collect the candidates first and keep only those the rule about
+         calls keeps ([Method_registry.settle_file_calls]), as the registry's
+         scan did. *)
       let eligible = ref [] in
       let consider r body ty =
         if
@@ -321,7 +320,7 @@ let ind_header_decls kn ind =
       (* Newest first, as before. *)
       List.rev
         (List.filter_map
-           (fun (r, body, ty) -> try_register_method ind_ref r body ty)
+           (fun (r, body, ty) -> planned_method_candidate ind_ref r body ty)
            kept)
     in
     let rec pp i =
@@ -461,28 +460,6 @@ let ind_header_decls kn ind =
              covers all args (params + indices). Count Keep entries in the first
              nparams positions to get param type var count. *)
           let param_vars = Common.ind_struct_tparams kn ind p in
-          (* Register methods that return std::any (for indexed inductives). A
-             method returns std::any if its ML return type becomes an unnamed
-             Tvar (indicating type erasure) after C++ conversion. *)
-          List.iter
-            (fun (r, _body, ty, _pos) ->
-              (* Get return type from ML type *)
-              let rec get_return_type = function
-                | Miniml.Tarr (_, t2) -> get_return_type t2
-                | ret -> ret
-              in
-              let ret_ml = get_return_type ty in
-              (* Convert to C++ type with param_vars as template params *)
-              let ret_cpp =
-                Translation.convert_ml_type_to_cpp_type
-                  (empty_env ())
-                  param_vars
-                  ret_ml
-              in
-              (* Check if the return type is erased (Tany or unnamed Tvar) *)
-              if Translation.type_is_erased ret_cpp then
-                register_method_returns_any r )
-            methods;
           let mutual_partners =
             if is_mutual then
               let partners = ref [] in

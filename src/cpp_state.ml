@@ -1058,38 +1058,10 @@ let wrapper_qualify_modname (mp : ModPath.t) (name : string) : string =
     if String.starts_with ~prefix name then name else prefix ^ name
   | _ -> name
 
-(** Register a method with the method registry.
-    @param func_ref the global reference of the function being registered as a method
-    @param epon_ref the global reference of the eponymous inductive type on which
-      the method is defined (i.e., the C++ [this] type)
-    @param this_pos 0-based index of the argument whose type is [epon_ref]
-    @param ind_tvar_positions 0-based indices into the function's type variable
-      list that correspond to the inductive's own template parameters; these are
-      deducible from the receiver and omitted from explicit template arguments *)
-let register_method
-    (func_ref : GlobRef.t)
-    (epon_ref : GlobRef.t)
-    (this_pos : int)
-    ?(ind_tvar_positions : int list = [])
-    () =
-  Method_registry.register_method
-    (get_method_registry ())
-    func_ref
-    epon_ref
-    this_pos
-    ~ind_tvar_positions
-
-(** Check if a function qualifies as a method on [epon_ref] and register it
-    if so.  Single entry point replacing the manual
-    [find_epon_arg_pos] + [body_safe_for_method] + [register_method] +
-    [add_candidate] sequence.
-    @param epon_ref the eponymous inductive type that [func_ref] might become a method on
-    @param func_ref the global reference of the function being tested
-    @param body the Miniml AST body of the function
-    @param ty the Miniml type of the function *)
-let try_register_method epon_ref func_ref body ty =
-  Method_registry.try_register_method
-    (get_method_registry ()) epon_ref func_ref body ty
+(** The candidate a function the render meets is as a method of [epon_ref]
+    ({!Method_registry.planned_candidate}). *)
+let planned_method_candidate epon_ref func_ref body ty =
+  Method_registry.planned_candidate (get_method_registry ()) epon_ref func_ref body ty
 
 (** Check if a function is registered as a method, returning its eponymous type
     and this position if so. *)
@@ -1126,10 +1098,6 @@ let method_receiver_cpp_type (func_ref : GlobRef.t)
        an inductive spelled with too few is not a type. *)
     if List.length ind_tys <> Table.get_ind_nb_tparams epon_ref then None
     else Some (Minicpp.Tglob (epon_ref, ind_tys, []))
-
-(** Register that a method returns std::any or bsl::any. *)
-let register_method_returns_any (func_ref : GlobRef.t) =
-  Method_registry.register_method_returns_any (get_method_registry ()) func_ref
 
 (** Check if a method is registered as returning std::any or bsl::any. *)
 let method_returns_any (func_ref : GlobRef.t) : bool =

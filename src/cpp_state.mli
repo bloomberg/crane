@@ -396,16 +396,10 @@ val wrapper_qualify_name : Names.GlobRef.t -> string -> string
 
 (** {2 Method registration} *)
 
-(** Register and query methods and their any-returning status. *)
-val register_method :
-  Names.GlobRef.t ->
-  Names.GlobRef.t -> int -> ?ind_tvar_positions:int list -> unit -> unit
-
-(** Test whether a function qualifies as a method on an eponymous type (given
-    its body and type) and register it if so; single entry point replacing the
-    manual argument-position/body-safety/registration sequence.
-    @return the resulting candidate, or [None] if it does not qualify *)
-val try_register_method :
+(** The candidate a function, given its body and type, is as a method of an
+    eponymous type, where the registry made it one
+    ({!Method_registry.planned_candidate}); the render adds no method. *)
+val planned_method_candidate :
   Names.GlobRef.t ->
   Names.GlobRef.t ->
   Miniml.ml_ast -> Miniml.ml_type -> Method_registry.method_candidate option
@@ -431,11 +425,8 @@ val lookup_method_ind_tvar_positions : Names.GlobRef.t -> int list
 val method_receiver_cpp_type :
   Names.GlobRef.t -> Minicpp.cpp_type list -> Minicpp.cpp_type option
 
-(** Record in the method registry that the given method returns [std::any] /
-    [bsl::any]. *)
-val register_method_returns_any : Names.GlobRef.t -> unit
-
-(** [true] if the method was marked by [register_method_returns_any]. *)
+(** Whether the method's return type is erased to [std::any]
+    ({!Method_registry.method_returns_any}). *)
 val method_returns_any : Names.GlobRef.t -> bool
 
 (** {2 Eponymous record registry} *)

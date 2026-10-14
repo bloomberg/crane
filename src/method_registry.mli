@@ -31,10 +31,8 @@
       is told what erases rather than deciding it, so that this module stays
       below the type translation rather than beside it.
     + During rendering, [lookup] / [is_registered_method] / [method_returns_any]
-      are used to query the registry.
-    + [register_method] / [register_method_returns_any] allow cpp.ml to add
-      late-discovered methods (e.g. from functor applications or module
-      processing that is interleaved with rendering). *)
+      are used to query the registry, which is complete once created:
+      rendering adds nothing to it ({!planned_candidate}). *)
 
 open Names
 
@@ -154,47 +152,14 @@ val method_returns_any : t -> GlobRef.t -> bool
     registered. *)
 val get_candidates : t -> GlobRef.t -> method_candidate list
 
-(** {2 Mutation interface}
-
-    During rendering, additional methods may be discovered that were not visible
-    during the initial scan — for example, methods generated from functor
-    applications or from module-level processing in [cpp.ml]. These functions
-    allow adding entries to an already-created registry. *)
-
-(** Register a new method after initial creation.
-    @param t the registry
-    @param func_ref the function being registered as a method
-    @param epon_ref the eponymous type it belongs to
-    @param this_pos argument index that becomes [this]
-    @param ind_tvar_positions type-variable indices deducible from receiver *)
-val register_method :
-  t -> GlobRef.t -> GlobRef.t -> int -> ind_tvar_positions:int list -> unit
-
-(** Add a method candidate for an inductive after initial creation. Appends the
-    candidate to the existing list for that inductive. *)
-val add_candidate : t -> GlobRef.t -> method_candidate -> unit
-
-(** Check if [func_ref] qualifies as a method on [epon_ref] and register it
-    if so.  Combines [find_epon_arg_pos], [body_safe_for_method],
-    [register_method], and [add_candidate] into a single call.
-
-    Returns [Some (func_ref, body, ty, this_pos)] on success, [None] if the
-    function does not qualify.
-    @param t the registry to update
-    @param epon_ref the eponymous inductive type the function might belong to
-    @param func_ref the function being tested for method eligibility
-    @param body the MiniML AST body of the function (used by [body_safe_for_method])
-    @param ty the MiniML type of the function (used by [find_epon_arg_pos])
-    @return [Some (func_ref, body, ty, this_pos)] if the function was
-      successfully registered as a method; [None] if it does not take [epon_ref]
-      as an argument or its body is unsafe *)
-val try_register_method :
-  t -> GlobRef.t -> GlobRef.t -> Miniml.ml_ast -> Miniml.ml_type ->
-  method_candidate option
-
-(** Mark an existing registered method as returning [std::any]. No-op if the
-    function is not registered. *)
-val register_method_returns_any : t -> GlobRef.t -> unit
+(** [planned_candidate t epon_ref func_ref body ty] is the candidate
+    rendering would make of [func_ref], of body [body] and type [ty], as a
+    method of [epon_ref]: [Some] where the function qualifies and {!create}
+    registered it so, [None] where it does not qualify.  Under
+    [CRANE_CHECK_IR] one that qualifies but was not registered is reported,
+    as a method the scan missed. *)
+val planned_candidate :
+  t -> GlobRef.t -> GlobRef.t -> Miniml.ml_ast -> Miniml.ml_type -> method_candidate option
 
 (** {2 Body safety check} *)
 
@@ -291,8 +256,7 @@ val settle_file_calls :
   ref_of:('a -> GlobRef.t) ->
   'a list -> 'a list
 
-(** Whether [try_register_method] would accept the function, without
-    registering anything. *)
+(** Whether the function qualifies as a method of the inductive. *)
 val would_register : GlobRef.t -> Miniml.ml_ast -> Miniml.ml_type -> bool
 
 (** {2 Eponymous-type helpers}

@@ -494,7 +494,7 @@ let method_receiver epon_ref body ty =
     if consumed () then None else r
   | _ -> None
 
-(** Whether [try_register_method] would accept the function, without
+(** Whether the function qualifies as a method of the inductive, without
     registering anything. *)
 let would_register epon_ref body ty = Option.has_some (method_receiver epon_ref body ty)
 
@@ -1119,52 +1119,23 @@ let get_candidates (reg : t) (ind_ref : GlobRef.t) : method_candidate list =
   | Some l -> l
   | None -> []
 
-(** Register a method manually for late-discovered methods not found during
-    initial scan. Used by cpp.ml when processing functors or modules that
-    generate methods dynamically. *)
-let register_method
-    (reg : t)
-    (func_ref : GlobRef.t)
-    (epon_ref : GlobRef.t)
-    (this_pos : int)
-    ~(ind_tvar_positions : int list) =
-  register_into reg.methods func_ref epon_ref this_pos ~ind_tvar_positions
-
-(** Add a method candidate to the registry for a specific inductive type.
-    Appends the candidate to the existing list for that inductive. *)
-let add_candidate (reg : t) (ind_ref : GlobRef.t) (cand : method_candidate) =
-  let existing =
-    match Ref.User.Tbl.find_opt reg.candidates ind_ref with
-    | Some l -> l
-    | None -> []
-  in
-  let cand_ref, _, _, _ = cand in
-  (* Dedup by function reference so a manually-registered method (e.g. from
-     cpp.ml/cpp_ind.ml) isn't appended twice into the candidate list. *)
-  if not (List.exists (fun (r', _, _, _) -> globref_equal r' cand_ref) existing)
-  then
-    Ref.User.Tbl.replace reg.candidates ind_ref (existing @ [cand])
-
-(** Check if a function qualifies as a method on [epon_ref] and register it
-    if so.  This is the single entry point for the
-    [find_epon_arg_pos] + [body_safe_for_method] + [register_method] +
-    [add_candidate] sequence that was previously duplicated across
-    [method_registry.ml], [cpp.ml], and [cpp_ind.ml].
-
-    Returns [Some (func_ref, body, ty, this_pos)] on success, [None] if the
-    function does not qualify. *)
-let try_register_method (reg : t) (epon_ref : GlobRef.t)
-    (func_ref : GlobRef.t) (body : Miniml.ml_ast) (ty : Miniml.ml_type) :
-    method_candidate option =
+(** The candidate rendering would make of [func_ref] as a method of
+    [epon_ref], which the scan in {!create} must already have registered:
+    rendering reads the registry and adds nothing to it.  Under
+    [CRANE_CHECK_IR] a method the scan missed is reported. *)
+let planned_candidate (reg : t) (epon_ref : GlobRef.t) (func_ref : GlobRef.t)
+    (body : Miniml.ml_ast) (ty : Miniml.ml_type) : method_candidate option =
   match method_receiver epon_ref body ty with
-  | Some (pos, ind_tvar_positions) ->
-    register_into ~arity:(ml_value_arity ty) reg.methods func_ref epon_ref
-      (cpp_arg_pos ty pos)
-      ~ind_tvar_positions;
-    let cand = (func_ref, body, ty, pos) in
-    add_candidate reg epon_ref cand;
-    Some cand
-  | _ -> None
+  | None -> None
+  | Some (pos, _) -> (
+    match RefTbl.find_opt reg.methods func_ref with
+    | Some info when globref_equal info.epon_ref epon_ref -> Some (func_ref, body, ty, pos)
+    | _ ->
+      Probe.violation "method registry"
+        Pp.(
+          str "rendering found " ++ GlobRef.print func_ref ++ str " a method of "
+          ++ GlobRef.print epon_ref ++ str ", which the registry's scan did not" );
+      None )
 
 (** Collect [Dtype] refs from a declaration list that share [modpath],
     excluding inline-custom types (e.g., [Crane Extract Inlined Constant]).
@@ -1184,12 +1155,3 @@ let collect_module_type_aliases ~extract_decl modpath decls =
         r :: acc
       | _ -> acc)
     [] decls
-
-(** Mark a registered method's return type as erased to [std::any]. Updates the
-    method's [returns_any] flag to true. No-op if the function is not
-    registered. *)
-let register_method_returns_any (reg : t) (func_ref : GlobRef.t) =
-  match RefTbl.find_opt reg.methods func_ref with
-  | Some info ->
-    RefTbl.replace reg.methods func_ref {info with returns_any = true}
-  | None -> ()
