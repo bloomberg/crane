@@ -17,11 +17,11 @@
 
     A callee has one plan, wherever it is generated: a function rendered
     inside a struct and the same function at namespace scope take one head.
-    The plan is recorded before discovery renders where the callee is planned
-    ahead, and otherwise as its declaration is generated in discovery; it is
-    frozen there.  Generating the declaration again must reproduce it exactly,
-    and a plan first recorded while output is emitted is a decision discovery
-    missed.  Both are reported under [CRANE_CHECK_IR]. *)
+    Every plan is recorded before anything is rendered, by planning the
+    unit's callables ({!Cpp.plan_callables}), and frozen then.  Generating a
+    declaration must reproduce its plan exactly, and a declaration generated
+    with no plan is one the planning missed.  Both are reported under
+    [CRANE_CHECK_IR]. *)
 
 (** A parameter of one head. *)
 module Template_param : sig
@@ -99,10 +99,10 @@ val validate : t -> string list
     different one is an error. *)
 val record : t -> unit
 
-(** Discovery records plans; {!freeze} ends it.  Once frozen the map is an
-    immutable program fact: a declaration generated with no plan recorded is
-    a [CRANE_CHECK_IR] error and adds nothing. *)
-val open_for_discovery : unit -> unit
+(** Planning records plans; {!freeze} ends it, before anything is rendered.
+    Once frozen the map is an immutable program fact: a declaration generated
+    with no plan recorded is a [CRANE_CHECK_IR] error and adds nothing. *)
+val open_for_planning : unit -> unit
 
 val freeze : unit -> unit
 
@@ -110,8 +110,8 @@ val freeze : unit -> unit
 val lookup : Names.GlobRef.t -> t option
 
 (** The plan of a callable Crane does not generate here -- a custom mapping,
-    a declaration of another file or library, one not generated yet -- as
-    the conventions its call sites assume state it: [instances]
+    a declaration of another file or library -- as the conventions its call
+    sites assume state it: [instances]
     dictionaries first, then one parameter per variable [kept] keeps, in
     order and no more than [reachable] of them, a template-template one
     where [higher_kinded] says so, a [relaxed] one a [Derived] parameter

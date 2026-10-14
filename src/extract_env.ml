@@ -1037,13 +1037,13 @@ let report_decided_while_rendering before =
     callers that emit no interface at all. *)
 let discover ?(interface = true) d struc =
   set_phase Discover;
-  Callable_abi.open_for_discovery ();
+  Callable_abi.open_for_planning ();
   let planning, renders = discover_passes ~interface d in
   ignore (Pipeline_trace.run ~stage:"discover" planning struc);
+  Callable_abi.freeze ();
   let planned = if Pipeline_trace.enabled () then Table.census () else [] in
   ignore (Pipeline_trace.run ~stage:"discover" renders struc);
-  report_decided_while_rendering planned;
-  Callable_abi.freeze ()
+  report_decided_while_rendering planned
 
 (** {2 Extraction of one decl to stdout} *)
 

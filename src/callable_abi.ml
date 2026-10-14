@@ -157,7 +157,7 @@ let same_head a b =
 
 let plans : t GlobRef.Map_env.t ref = ref GlobRef.Map_env.empty
 let frozen = ref false
-let open_for_discovery () = frozen := false
+let open_for_planning () = frozen := false
 let freeze () = frozen := true
 
 let () =
@@ -215,8 +215,7 @@ let record abi =
     Probe.violation "callable ABI"
       Pp.(
         str "the declaration of " ++ GlobRef.print abi.callee
-        ++ str " was generated after the plans were frozen, with no plan recorded in \
-                discovery" )
+        ++ str " was generated with no plan: planning the callables missed it" )
   | None -> plans := GlobRef.Map_env.add abi.callee abi !plans
 
 let lookup r = GlobRef.Map_env.find_opt r !plans
