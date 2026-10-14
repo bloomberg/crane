@@ -401,17 +401,16 @@ let call_type_args ~caller ?expected_ty env id plan ~has_value_args =
         | _ -> None )
       (Param_pos.positioned fn_param_ml_tys_orig)
   in
-  (* The callee's leading phantoms: the first [leading_phantom_count] of the
-     variables it keeps, which its plan writes [void] at when anything after
-     them is written.  An erased argument there costs the call nothing. *)
+  (* The callee's leading phantoms, as its plan has them: it writes [void]
+     at them when anything after them is written.  An erased argument there
+     costs the call nothing. *)
   let phantom_vars =
-    match find_type_opt id with
-    | Some ml_ty ->
-      let n = IntSet.fold max (collect_tvars_set IntSet.empty ml_ty) 0 in
-      List.filteri
-        (fun k _ -> k < leading_phantom_count id)
-        (kept_type_arg_positions id n)
-    | None -> []
+    List.filter_map
+      (fun p ->
+        match (p.Callable_abi.write, p.Callable_abi.origin) with
+        | Callable_abi.Phantom _, Callable_abi.From_scheme v -> Some (Scheme.Var.ordinal v)
+        | _ -> None )
+      (Callable_abi.template_head (callee_abi ~instances:0 id))
   in
   (* Each value is kept with the scheme variable it stands for, from here to
      the plan: a recovery that fills or drops one leaves the others where
