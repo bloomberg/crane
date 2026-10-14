@@ -94,8 +94,7 @@ struct ErasedLetNotResultType {
     template <typename T1, typename F1, typename F2, typename F3>
     static T1 result_rec(uint64_t _x, F1 &&f, F2 &&f0, F3 &&f1,
                          const result &r) {
-      return result_rect<T1>(_x, crane_erase_fn<T1>(f), crane_erase_fn<T1>(f0),
-                             f1, r);
+      return result_rect<T1>(_x, f, f0, f1, r);
     }
 
     static result finish(uint64_t x, uint64_t x_, bool un, crane::obj v_) {

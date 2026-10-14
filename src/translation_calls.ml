@@ -1111,18 +1111,22 @@ let erase_fn_arg_for_param env param_ml_ty e expr =
   | _ -> convert_carrier_arg param_ml_ty param_cpp_ty e expr
 
 (** Whether the global [id] takes the callable it declares at [pos], of ML
-    type [param_ml_ty], as a deduced [F &&] ({!Ownership.generalises_callable}):
-    the callee then calls it at its own instantiation, and an argument written
-    against the erased slot -- adapted to unbox [List<std::any>] where the
-    callee hands it a [List<T2>] -- reads the wrong type out of every box.  The
-    answer is the one the callee's own signature is built from: its declared
-    type converted as {!Gen_functions} converts it. *)
+    type [param_ml_ty], as a deduced [F &&]: the callee then calls it at its
+    own instantiation, and an argument written against the erased slot --
+    adapted to unbox [List<std::any>] where the callee hands it a [List<T2>]
+    -- reads the wrong type out of every box.  The callee's plan says, where
+    it has one ({!Callable_abi.deduces_callable_at}).  A method has none, and
+    for it the decision is redone the way its signature is built
+    ({!Ownership.generalises_callable}). *)
 let deduces_callable id pos param_ml_ty =
-  let declared t = convert_ml_type_to_cpp_type (Common.empty_env ()) [] (type_simpl t) in
-  match (declared param_ml_ty, Option.map declared (find_type_opt id)) with
-  | (Tfun _ as f), Some (Tfun (dom, cod)) ->
-    Ownership.generalises_callable id pos ~primary:(primary_tvar_indices dom cod) f
-  | _ -> false
+  match Callable_abi.lookup id with
+  | Some abi -> Callable_abi.deduces_callable_at abi pos
+  | None -> (
+    let declared t = convert_ml_type_to_cpp_type (Common.empty_env ()) [] (type_simpl t) in
+    match (declared param_ml_ty, Option.map declared (find_type_opt id)) with
+    | (Tfun _ as f), Some (Tfun (dom, cod)) ->
+      Ownership.generalises_callable id pos ~primary:(primary_tvar_indices dom cod) f
+    | _ -> false )
 
 (** [slot] for a lambda going to a callable its callee deduces: the positions
     the slot erases are left to deduction ([const auto&]), so the lambda takes
