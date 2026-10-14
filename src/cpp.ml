@@ -1102,10 +1102,7 @@ let rec pp_structure_elem ~is_header f = function
        [Module Nat] hides the runtime [Nat] exactly as an [Inductive Nat]
        would.  Record it so {!Cpp_names.global_scope_qualifier_for} spells the
        global one [::Nat]. *)
-    if (!render_ctx).rc_in_struct then begin
-      printed_nested_struct (Pp.string_of_ppcmds name) (NSmodule mp);
-      add_nested_struct_name (Pp.string_of_ppcmds name) (NSmodule mp)
-    end;
+    if (!render_ctx).rc_in_struct then printed_nested_struct (Pp.string_of_ppcmds name) (NSmodule mp);
     let mod_pp =
       match m.ml_mod_expr with
       | MEfunctor _ ->
@@ -1483,7 +1480,6 @@ let rec pp_structure_elem ~is_header f = function
         let with_promotion_scope =
           if is_promoted then (
             eponymous_promote_ref := !eponymous_type_ref;
-            Option.iter Table.promote_inductive !eponymous_type_ref;
             Option.iter rendered_promotion !eponymous_type_ref;
             eponymous_deferred := Pp.mt ();
             eponymous_promote_sft := false;

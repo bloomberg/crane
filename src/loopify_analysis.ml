@@ -309,20 +309,15 @@ let install_ctor_ptr_fields planned =
         (List.map (fun (i, recursive) -> if recursive then Recursive i else Boxed i) fields) )
     planned
 
-(** Record the pointer fields read off a generated constructor struct: one
-    planned before rendering must say the same, under [CRANE_CHECK_IR]; one
-    not planned -- a struct declared in a functor's body -- is recorded as it
-    is read. *)
+(** Check the pointer fields read off a generated constructor struct against
+    the ones planned before rendering, under [CRANE_CHECK_IR]. *)
 let agree_ptr_fields owner ctor_name fields =
   let key = (Common.ctor_owner_key owner, ctor_name) in
-  match Hashtbl.find_opt ctor_ptr_fields key with
-  | Some planned when planned = fields -> ()
-  | Some _ ->
+  if Hashtbl.find_opt ctor_ptr_fields key <> Some fields then
     Probe.violation "constructor pointer fields"
       Pp.(
         str "the struct " ++ str ctor_name ++ str " of " ++ GlobRef.print owner
         ++ str " stores other fields behind the pointer than planned" )
-  | None -> Hashtbl.replace ctor_ptr_fields key fields
 
 (** The inductive a TMC cell belongs to, read off the cell's own type.  A
     factory call is always qualified by that type ([Type<...>::cons]), which

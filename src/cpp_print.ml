@@ -3980,8 +3980,8 @@ and pp_cpp_fields_with_vis ?(struct_name : Pp.t option) env fields =
     fiasco for template static inline members whose initialization order
     relative to other inline variables is unspecified.
 
-    Registers the accessor in {!template_static_accessors} so that call sites
-    append [()] after the template arguments (see {!pp_cpp_expr}).
+    The accessor was planned before rendering ({!Cpp.plan_accessors}), so that
+    call sites append [()] after the template arguments (see {!pp_cpp_expr}).
 
     @param env      name environment (passed through for sub-expression use)
     @param id       global reference identifying the data member (used for the
@@ -3993,7 +3993,6 @@ let pp_meyers_singleton env id ty expr_pp =
   if not (is_template_static_accessor (modpath_of_r id) (label_of_r id)) then
     Probe.violation "template static accessors"
       Pp.(str "the accessor " ++ GlobRef.print id ++ str " was printed without being planned");
-  register_template_static_accessor (modpath_of_r id) (label_of_r id);
   let bare_ty =
     match ty with
     | Tconst inner -> inner
@@ -4356,10 +4355,7 @@ and pp_leaf_decl env (d : cpp_decl) =
     in
     register_forward_struct_decl ~env ~name:struct_name ~tparams ~cstr;
     record_file_scope_name struct_name;
-    if (!render_ctx).rc_in_struct then begin
-      printed_nested_struct (Pp.string_of_ppcmds struct_name) (NSref id);
-      add_nested_struct_name (Pp.string_of_ppcmds struct_name) (NSref id)
-    end;
+    if (!render_ctx).rc_in_struct then printed_nested_struct (Pp.string_of_ppcmds struct_name) (NSref id);
     let f_s =
       with_struct_scope id (fun () ->
           match tparams with
@@ -4569,10 +4565,7 @@ and pp_leaf_decl env (d : cpp_decl) =
        same way -- the standard library's [comparison] is emitted globally and
        a user type spelled [Comparison] inside the struct would otherwise
        capture every unqualified mention of it. *)
-    if (!render_ctx).rc_in_struct then begin
-      printed_nested_struct (Pp.string_of_ppcmds struct_name) (NSref name);
-      add_nested_struct_name (Pp.string_of_ppcmds struct_name) (NSref name)
-    end;
+    if (!render_ctx).rc_in_struct then printed_nested_struct (Pp.string_of_ppcmds struct_name) (NSref name);
     str "enum class "
     ++ struct_name
     ++ str " {"
