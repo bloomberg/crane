@@ -56,10 +56,10 @@ GlobalStateTests::fib_fun(uint64_t n) { /// CraneEnter: captures varying
 }
 
 uint64_t GlobalStateTests::counter() {
-  return (_crane_globals[GlobalStateExamples::template ctr_idx<
-              GlobalStateTests::nat_idx, uint64_t>()] = UINT64_C(0),
-          GlobalStateExamples::template ctr_idx<GlobalStateTests::nat_idx,
-                                                uint64_t>());
+  auto &&_once1 =
+      GlobalStateExamples::template ctr_idx<GlobalStateTests::nat_idx,
+                                            uint64_t>();
+  return (_crane_globals[_once1] = UINT64_C(0), _once1);
 }
 
 uint64_t GlobalStateTests::counter_next_mine(uint64_t ctr) {
@@ -74,24 +74,28 @@ std::string GlobalStateTests::gensym(uint64_t counter0, std::string prefix) {
 }
 
 List<uint64_t> ListDef::seq(uint64_t start, uint64_t len) {
-  std::shared_ptr<List<uint64_t>> _head{};
-  std::shared_ptr<List<uint64_t>> *_write = &_head;
-  uint64_t _loop_len = std::move(len);
-  uint64_t _loop_start = std::move(start);
+  std::optional<List<uint64_t>> _root{};
+  std::shared_ptr<List<uint64_t>> *_write = nullptr;
+  uint64_t _loop_len = len;
+  uint64_t _loop_start = start;
   while (true) {
     if (_loop_len <= 0) {
-      *_write = std::make_shared<List<uint64_t>>(List<uint64_t>::nil());
+      auto _value = List<uint64_t>::nil();
+      (_write ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
+              : _root.emplace(std::move(_value)));
       break;
     } else {
       uint64_t len0 = _loop_len - 1;
-      auto _cell = std::make_shared<List<uint64_t>>(
-          typename List<uint64_t>::Cons(_loop_start, nullptr));
-      *_write = std::move(_cell);
-      _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
+      auto _cell = typename List<uint64_t>::Cons(_loop_start, nullptr);
+      List<uint64_t> &_node =
+          (_write
+               ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_cell)))
+               : _root.emplace(std::move(_cell)));
+      _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
       _loop_len = len0;
       _loop_start = (_loop_start + 1);
       continue;
     }
   }
-  return std::move(*_head);
+  return std::move(*_root);
 }

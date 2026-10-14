@@ -1817,9 +1817,7 @@ let rec transform_decl ?(tparams = []) = function
             var_fields
           |> List.filter_map Fun.id
         in
-        if ptr_fields <> [] then
-          Hashtbl.replace ctor_ptr_fields
-            (Common.ctor_owner_key ds.ds_ref, ctor_name) ptr_fields;
+        if ptr_fields <> [] then agree_ptr_fields ds.ds_ref ctor_name ptr_fields;
         List.iter collect_uptr_fields sub_fields
       | _ -> ()
     in

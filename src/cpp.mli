@@ -53,3 +53,10 @@ val plan_names : Miniml.ml_structure -> (Names.GlobRef.t * string) list
     ({!Translation_support.compute_and_register_field_names}), once the
     constructors' names are. *)
 val plan_field_names : Miniml.ml_structure -> (Names.GlobRef.t * Names.Id.t list) list
+
+(** The fields each such constructor struct stores behind the smart pointer
+    ({!Gen_decls.constructor_pointer_fields}): the inductive, the
+    constructor's struct name, and each field's index with whether it holds
+    the inductive itself.  A flat inductive has no constructor struct. *)
+val plan_pointer_fields :
+  Miniml.ml_structure -> (Names.GlobRef.t * string * (int * bool) list) list

@@ -18,6 +18,11 @@ val install_template_kinds : Target_plan.t -> unit
     {!Target_plan.modules} holds it. *)
 val install_modules : Module_plan.t -> unit
 
+(** [install_pointer_fields fields] installs the constructor structs'
+    pointer fields, as {!Target_plan.representation} holds them, for the
+    loop transformations to read. *)
+val install_pointer_fields : (Names.GlobRef.t * string * (int * bool) list) list -> unit
+
 (** [install_callables callables assumed] installs the callable plans and
     the assumed callables, as {!Target_plan.callables} and
     {!Target_plan.assumed_callables} hold them ({!Callable_abi.install}):

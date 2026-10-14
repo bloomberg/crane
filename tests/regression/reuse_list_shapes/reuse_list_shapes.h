@@ -12,7 +12,6 @@
 #include "field.h"
 #include "obj.h"
 #include "rc.h"
-#include "small_vector.h"
 
 template <typename A> struct List;
 enum class Comparison;

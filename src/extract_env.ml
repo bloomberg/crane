@@ -998,16 +998,23 @@ let module_filename mp =
 let prepare_layout = "prepare"
 let plan_names = "plan_names"
 let plan_field_names = "plan_field_names"
+let plan_pointer_fields = "plan_pointer_fields"
 let plan_callables = "plan_callables"
 let install_callables = "install_callables"
 
 let layout_pass_names =
-  [prepare_layout; plan_names; plan_field_names; plan_callables; install_callables]
+  [ prepare_layout;
+    plan_names;
+    plan_field_names;
+    plan_pointer_fields;
+    plan_callables;
+    install_callables ]
 
 (** Settle the unit's layout -- where each declaration lives and what it is
     called ({!Module_plan}) -- then the names of the globals it declares, in
     declaration order ({!Cpp.plan_names}), and of its constructors' fields
-    ({!Cpp.plan_field_names}), then plan the callable of each
+    ({!Cpp.plan_field_names}), and which of those fields are stored behind
+    the pointer ({!Cpp.plan_pointer_fields}), then plan the callable of each
     function and method a render will generate, installing each before the
     next is decided.  Returns all of them, with the callables assumed of the
     functions that have no plan.  Under [CRANE_CHECK_IR] the callables are
@@ -1023,6 +1030,9 @@ let plan_layout struc =
   let names = Cpp.plan_names struc in
   Pipeline_trace.event "layout" plan_field_names;
   let field_names = Cpp.plan_field_names struc in
+  Pipeline_trace.event "layout" plan_pointer_fields;
+  let pointer_fields = Cpp.plan_pointer_fields struc in
+  Install_legacy_plan.install_pointer_fields pointer_fields;
   Pipeline_trace.event "layout" plan_callables;
   let callables = Cpp.plan_callables struc in
   if
@@ -1032,7 +1042,7 @@ let plan_layout struc =
   let assumed = Translation_calls.assumed_callables struc callables in
   Pipeline_trace.event "layout" install_callables;
   Install_legacy_plan.install_callables callables assumed;
-  (modules, names, field_names, callables, assumed)
+  (modules, {Target_plan.names; field_names; pointer_fields}, callables, assumed)
 
 (** The renders discovery runs. *)
 let discover_passes ~interface d : ml_structure Pipeline_trace.pass list =
@@ -1449,8 +1459,8 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   ignore (Pipeline_trace.run ~stage:"unit" (unit_passes ~namespace) struc);
   let plan = plan_representation plan struc in
   let planned = observed_fingerprint ~stage:"unit" struc in
-  let modules, names, field_names, callables, assumed = plan_layout struc in
-  let plan = Target_plan.with_layout plan modules names field_names callables assumed in
+  let modules, representation, callables, assumed = plan_layout struc in
+  let plan = Target_plan.with_layout plan modules representation callables assumed in
   discover d struc;
   let census_after_discovery = Table.census () in
   (* Both bodies are rendered before either file is opened.  A preamble has to

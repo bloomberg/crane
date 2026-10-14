@@ -191,9 +191,8 @@ struct GlobRefNat {
 struct GlobalStateTests {
   struct nat_idx {
     static List<uint64_t> range(uint64_t fp, uint64_t sp) {
-      return ListDef::seq(fp, ((((UINT64_C(1) + sp) - fp) > (UINT64_C(1) + sp)
-                                    ? 0
-                                    : ((UINT64_C(1) + sp) - fp))));
+      auto &&_once1 = (UINT64_C(1) + sp);
+      return ListDef::seq(fp, (((_once1 - fp) > _once1 ? 0 : (_once1 - fp))));
     }
 
     static std::optional<uint64_t> index(uint64_t fp, uint64_t sp, uint64_t i) {
@@ -204,25 +203,26 @@ struct GlobalStateTests {
       }
     }
 
-    static uint64_t rangeSize(uint64_t fp, uint64_t sp) {
-      return ((((UINT64_C(1) + sp) - fp) > (UINT64_C(1) + sp)
-                   ? 0
-                   : ((UINT64_C(1) + sp) - fp)));
+    constexpr static uint64_t rangeSize(uint64_t fp, uint64_t sp) {
+      auto &&_once2 = (UINT64_C(1) + sp);
+      return (((_once2 - fp) > _once2 ? 0 : (_once2 - fp)));
     }
 
-    static uint64_t toNat(uint64_t n) { return n; }
+    constexpr static uint64_t toNat(uint64_t n) { return n; }
 
-    static uint64_t fromNat(uint64_t n) { return n; }
+    constexpr static uint64_t fromNat(uint64_t n) { return n; }
 
-    static uint64_t suc(uint64_t x) { return (x + 1); }
+    constexpr static uint64_t suc(uint64_t x) { return (x + 1); }
 
-    static uint64_t sub(uint64_t a0, uint64_t a1) {
+    constexpr static uint64_t sub(uint64_t a0, uint64_t a1) {
       return (((a0 - a1) > a0 ? 0 : (a0 - a1)));
     }
 
-    static uint64_t max(uint64_t a0, uint64_t a1) { return std::max(a0, a1); }
+    constexpr static uint64_t max(uint64_t a0, uint64_t a1) {
+      return std::max(a0, a1);
+    }
 
-    static uint64_t zero() { return UINT64_C(0); }
+    constexpr static uint64_t zero() { return UINT64_C(0); }
   };
 
   static_assert(Ix<nat_idx, uint64_t>);
@@ -241,9 +241,10 @@ struct GlobalStateTests {
   template <typename _tcI0, typename _tcI1>
     requires GlobRefClass<_tcI0, uint64_t> && Ix<_tcI1, uint64_t>
   static std::pair<uint64_t, uint64_t> new_and_read_both_nat() {
-    uint64_t r1 = (_crane_globals[_tcI1::zero()] = UINT64_C(5), _tcI1::zero());
-    uint64_t r2 = (_crane_globals[_tcI1::suc(_tcI1::zero())] = UINT64_C(6),
-                   _tcI1::suc(_tcI1::zero()));
+    auto &&_once1 = _tcI1::zero();
+    uint64_t r1 = (_crane_globals[_once1] = UINT64_C(5), _once1);
+    auto &&_once2 = _tcI1::suc(_tcI1::zero());
+    uint64_t r2 = (_crane_globals[_once2] = UINT64_C(6), _once2);
     uint64_t x1 = crane::any_cast<uint64_t>(_crane_globals.at(std::move(r1)));
     uint64_t x2 = crane::any_cast<uint64_t>(_crane_globals.at(std::move(r2)));
     return std::make_pair(x1, x2);
@@ -255,12 +256,12 @@ struct GlobalStateTests {
     if (n < UINT64_C(2)) {
       return n;
     } else {
-      uint64_t x = (_crane_globals[_tcI1::zero()] = UINT64_C(0), _tcI1::zero());
-      uint64_t y = (_crane_globals[_tcI1::suc(_tcI1::zero())] = UINT64_C(1),
-                    _tcI1::suc(_tcI1::zero()));
-      auto fib_loop_impl = [](auto &, uint64_t k, uint64_t x0,
-                              uint64_t y0) -> uint64_t {
-        uint64_t _loop_k = std::move(k);
+      auto &&_once1 = _tcI1::zero();
+      uint64_t x = (_crane_globals[_once1] = UINT64_C(0), _once1);
+      auto &&_once2 = _tcI1::suc(_tcI1::zero());
+      uint64_t y = (_crane_globals[_once2] = UINT64_C(1), _once2);
+      auto fib_loop = [](uint64_t k, uint64_t x0, uint64_t y0) -> uint64_t {
+        uint64_t _loop_k = k;
         while (true) {
           if (_loop_k <= 0) {
             return crane::any_cast<uint64_t>(_crane_globals.at(x0));
@@ -273,9 +274,6 @@ struct GlobalStateTests {
             _loop_k = k_;
           }
         }
-      };
-      auto fib_loop = [&](uint64_t k, uint64_t x0, uint64_t y0) -> uint64_t {
-        return fib_loop_impl(fib_loop_impl, k, x0, y0);
       };
       return fib_loop(n, std::move(x), std::move(y));
     }

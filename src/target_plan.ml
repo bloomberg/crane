@@ -14,13 +14,18 @@ type kind_decision = {
   reason : kind_reason;
 }
 
+type representation = {
+  names : (GlobRef.t * string) list;
+  field_names : (GlobRef.t * Id.t list) list;
+  pointer_fields : (GlobRef.t * string * (int * bool) list) list;
+}
+
 type t = {
   input : Ml_fingerprint.t option;
   inductive_kinds : kind_decision list;
   template_kinds : (GlobRef.t * Tparam_kinds.t) list;
   modules : Module_plan.t;
-  names : (GlobRef.t * string) list;
-  field_names : (GlobRef.t * Id.t list) list;
+  representation : representation;
   callables : Callable_abi.t list;
   assumed_callables : (GlobRef.t * Param_pos.orig Param_pos.pos list) list;
 }
@@ -262,15 +267,14 @@ let plan (_ : Program_facts.t) struc =
     inductive_kinds = aligned @ value_use_demotion aligned struc;
     template_kinds = [];
     modules = Module_plan.empty;
-    names = [];
-    field_names = [];
+    representation = {names = []; field_names = []; pointer_fields = []};
     callables = [];
     assumed_callables = [] }
 
 let with_template_kinds t template_kinds = {t with template_kinds}
 
-let with_layout t modules names field_names callables assumed_callables =
-  {t with modules; names; field_names; callables; assumed_callables}
+let with_layout t modules representation callables assumed_callables =
+  {t with modules; representation; callables; assumed_callables}
 
 let same_callables a b =
   List.length a = List.length b
@@ -298,10 +302,15 @@ let equal a b =
        (fun (r, k) (r', k') -> GlobRef.UserOrd.equal r r' && Tparam_kinds.equal k k')
        a.template_kinds b.template_kinds
   && Module_plan.equal a.modules b.modules
-  && List.equal (fun (r, s) (r', s') -> GlobRef.UserOrd.equal r r' && String.equal s s') a.names b.names
+  && List.equal
+       (fun (r, s) (r', s') -> GlobRef.UserOrd.equal r r' && String.equal s s')
+       a.representation.names b.representation.names
   && List.equal
        (fun (r, ids) (r', ids') -> GlobRef.UserOrd.equal r r' && List.equal Id.equal ids ids')
-       a.field_names b.field_names
+       a.representation.field_names b.representation.field_names
+  && List.equal
+       (fun (r, c, fs) (r', c', fs') -> GlobRef.UserOrd.equal r r' && String.equal c c' && fs = fs')
+       a.representation.pointer_fields b.representation.pointer_fields
   && same_callables a.callables b.callables
   && List.equal
        (fun (r, ps) (r', ps') -> GlobRef.UserOrd.equal r r' && List.equal Param_pos.equal ps ps')

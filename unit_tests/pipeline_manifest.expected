@@ -2,6 +2,6 @@ core: modutil shared_variants dedup specialize fix_shape normalize ir_check thro
 plan: analyze_program plan_target install_legacy_plan
 unit: non_atomic_rc reset_demands cross_file_qualification
 represent: template_kinds install_template_kinds
-layout: prepare plan_names plan_field_names plan_callables install_callables
+layout: prepare plan_names plan_field_names plan_pointer_fields plan_callables install_callables
 discover: render_impl render_intf
 finish: loopify local_closures constants temporaries shared_args simplify depth last_use borrow_projection constraints materialise casts free_tvars boxed_reads

@@ -2415,6 +2415,30 @@ let plan_names s =
       | Dfix fds -> List.concat_map (fun fd -> name Term fd.fd_ref) fds )
     (declarations s)
 
+let plan_pointer_fields s =
+  List.concat_map
+    (function
+      | Dind (kn, ({ind_kind = (Standard | Coinductive) as kind; _} as ind)) ->
+        List.concat
+          (List.mapi
+             (fun i p ->
+               let name = GlobRef.IndRef (kn, i) in
+               if is_custom name || is_monad name || Table.is_flat_inductive name then []
+               else
+                 let vars = Common.ind_struct_tparams kn ind p in
+                 List.concat
+                   (List.init (Array.length p.ip_types) (fun j ->
+                        let c = GlobRef.ConstructRef ((kn, i), j + 1) in
+                        match
+                          Gen_decls.constructor_pointer_fields ~name
+                            ~is_coinductive:(kind = Coinductive) vars p.ip_types.(j)
+                        with
+                        | [] -> []
+                        | fields -> [(name, Ml_type_util.ctor_struct_name_of_ref ~fallback_idx:j c, fields)] )) )
+             (Array.to_list ind.ind_packets) )
+      | Dind _ | Dtype _ | Dterm _ | Dfix _ -> [] )
+    (declarations s)
+
 let plan_field_names s =
   List.concat_map
     (function

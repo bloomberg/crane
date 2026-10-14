@@ -24,6 +24,8 @@ let install_modules = Module_plan.install
 
 let install_callables = Callable_abi.install
 
+let install_pointer_fields = Loopify_analysis.install_ctor_ptr_fields
+
 let check_installed (facts : Program_facts.t) (plan : Target_plan.t) =
   if Sys.getenv_opt "CRANE_CHECK_IR" <> None then begin
     let fail what =
@@ -52,7 +54,7 @@ let check_installed (facts : Program_facts.t) (plan : Target_plan.t) =
        consulted again. *)
     List.iter
       (fun (r, s) -> if not (String.equal (Common.pp_global_name Common.Term r) s) then fail "global names")
-      plan.names;
+      plan.representation.names;
     List.iter
       (fun (c, ids) ->
         let ctor = Ml_type_util.ctor_struct_name_of_ref c in
@@ -61,7 +63,7 @@ let check_installed (facts : Program_facts.t) (plan : Target_plan.t) =
             if not (Names.Id.equal (Common.lookup_ctor_field_name ~owner:c ctor j) id) then
               fail "constructor field names" )
           ids )
-      plan.field_names;
+      plan.representation.field_names;
     List.iter
       (fun abi ->
         if not (Option.equal Callable_abi.equal (Callable_abi.lookup (Callable_abi.callee abi)) (Some abi))

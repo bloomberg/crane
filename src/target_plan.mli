@@ -7,8 +7,8 @@
     Transitional: the plan holds the decisions converted so far -- the kinds
     inductives are emitted as, the kinds of their template parameters, the
     layout, the names of the globals the unit declares and of their
-    constructors' fields, and the callable plan of every generated function
-    and method.
+    constructors' fields, which of those fields are stored behind the
+    pointer, and the callable plan of every generated function and method.
     {!Install_legacy_plan} fills the tables unconverted readers consult. *)
 
 (** Why an inductive is emitted as a kind other than the one extraction
@@ -27,6 +27,20 @@ type kind_decision = {
   reason : kind_reason;
 }
 
+(** How the unit's declarations are spelled and stored, decided once its
+    layout is ({!with_layout}). *)
+type representation = {
+  names : (Names.GlobRef.t * string) list;
+      (** The C++ name of each global the unit declares, in declaration
+          order. *)
+  field_names : (Names.GlobRef.t * Names.Id.t list) list;
+      (** The names of each generated constructor struct's fields. *)
+  pointer_fields : (Names.GlobRef.t * string * (int * bool) list) list;
+      (** The fields each generated constructor struct stores behind the
+          smart pointer, by inductive and constructor struct name, each with
+          whether it holds the inductive itself. *)
+}
+
 type t = {
   input : Ml_fingerprint.t option;
       (** The structure planned, where something reads it: under
@@ -41,12 +55,7 @@ type t = {
   modules : Module_plan.t;
       (** Where each declaration lives and what it is called, decided once
           the template-parameter kinds are installed ({!with_layout}). *)
-  names : (Names.GlobRef.t * string) list;
-      (** The C++ name of each global the unit declares, decided in
-          declaration order once the layout is ({!with_layout}). *)
-  field_names : (Names.GlobRef.t * Names.Id.t list) list;
-      (** The names of each generated constructor struct's fields, decided
-          once the constructors' names are. *)
+  representation : representation;
   callables : Callable_abi.t list;
       (** The callable plan of each function and method the unit generates,
           decided once the layout is installed ({!with_layout}). *)
@@ -63,13 +72,12 @@ val plan : Program_facts.t -> Miniml.ml_structure -> t
 (** [plan] with the template-parameter kinds decided. *)
 val with_template_kinds : t -> (Names.GlobRef.t * Tparam_kinds.t) list -> t
 
-(** [plan] with its layout, the declared globals' names, their constructors'
-    field names, the callable plans and the assumed callables decided. *)
+(** [plan] with its layout, the representation of its declarations, the
+    callable plans and the assumed callables decided. *)
 val with_layout :
   t ->
   Module_plan.t ->
-  (Names.GlobRef.t * string) list ->
-  (Names.GlobRef.t * Names.Id.t list) list ->
+  representation ->
   Callable_abi.t list ->
   (Names.GlobRef.t * Param_pos.orig Param_pos.pos list) list ->
   t

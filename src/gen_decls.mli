@@ -76,6 +76,12 @@ val plan_method :
 
 (** {2 Inductive Type Generation} *)
 
+(** The fields of a constructor of the inductive [name], of types [tys], that
+    its struct stores behind the smart pointer, each with whether it holds
+    [name] itself; [vars] are the inductive's struct's variables. *)
+val constructor_pointer_fields :
+  name:GlobRef.t -> is_coinductive:bool -> Id.t list -> ml_type list -> (int * bool) list
+
 (** Generate C++ code for a record type. *)
 val gen_record_cpp :
   GlobRef.t -> Miniml.record_field list -> ml_ind_packet -> cpp_decl

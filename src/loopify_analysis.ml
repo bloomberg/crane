@@ -296,6 +296,34 @@ let ptr_field_index = function Recursive i | Boxed i -> i
 
 let ctor_ptr_fields : (string * string, ptr_field list) Hashtbl.t = Hashtbl.create 32
 
+(** Install the pointer fields of each constructor struct planned before
+    rendering, the inductive, the constructor's struct name and each field's
+    index with whether it holds the inductive itself
+    ({!Gen_inductives.constructor_pointer_fields}); the struct read later
+    must agree ({!agree_ptr_fields}). *)
+let install_ctor_ptr_fields planned =
+  List.iter
+    (fun (owner, ctor_name, fields) ->
+      Hashtbl.replace ctor_ptr_fields
+        (Common.ctor_owner_key owner, ctor_name)
+        (List.map (fun (i, recursive) -> if recursive then Recursive i else Boxed i) fields) )
+    planned
+
+(** Record the pointer fields read off a generated constructor struct: one
+    planned before rendering must say the same, under [CRANE_CHECK_IR]; one
+    not planned -- a struct declared in a functor's body -- is recorded as it
+    is read. *)
+let agree_ptr_fields owner ctor_name fields =
+  let key = (Common.ctor_owner_key owner, ctor_name) in
+  match Hashtbl.find_opt ctor_ptr_fields key with
+  | Some planned when planned = fields -> ()
+  | Some _ ->
+    Probe.violation "constructor pointer fields"
+      Pp.(
+        str "the struct " ++ str ctor_name ++ str " of " ++ GlobRef.print owner
+        ++ str " stores other fields behind the pointer than planned" )
+  | None -> Hashtbl.replace ctor_ptr_fields key fields
+
 (** The inductive a TMC cell belongs to, read off the cell's own type.  A
     factory call is always qualified by that type ([Type<...>::cons]), which
     is what makes the owner recoverable from the C++ AST alone. *)
