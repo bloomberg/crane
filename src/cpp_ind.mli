@@ -109,10 +109,11 @@ val record_entity :
     entity its declaration is about, [fallback] where it names none. *)
 val record_funs : fallback:Names.GlobRef.t -> Gen_decls.generated_fun list -> unit
 
-(** [record_generated r ds] runs the generation [ds], recording what it
-    produced and the helpers it lifted as the entity [r].  The helpers stay
-    queued, for the drains that place what no element claims. *)
-val record_generated : Names.GlobRef.t -> (unit -> generated) -> generated
+(** [generated_entity r ds] runs the generation [ds], recording what it
+    produced and the helpers it lifted as the entity [r], and returns both:
+    the helpers are the caller's to place. *)
+val generated_entity :
+  Names.GlobRef.t -> (unit -> generated) -> generated * Minicpp.cpp_decl list
 
 (** What a file writes for one MiniML declaration, and the helpers lifted
     out of it that the element places: a constant's or a function's.  A

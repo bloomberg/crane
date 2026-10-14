@@ -959,7 +959,7 @@ let recorded capture r (ds : unit -> generated) =
   ignore (record_entity r (List.map snd ds) lifted);
   (ds, lifted)
 
-let record_generated r ds = fst (recorded Translation.observing_lifted r ds)
+let generated_entity r ds = recorded Translation.collecting_lifted r ds
 
 (** What a file writes for one MiniML declaration, and the helpers lifted
     out of it that the element places. *)
@@ -980,7 +980,7 @@ let decls_for ~is_header d =
     in
     { rendered = function_views ~is_header ~lifted_inline funs; helpers }
   | Header_only ds when is_header ->
-    let ds, helpers = recorded Translation.collecting_lifted (decl_entity d) ds in
+    let ds, helpers = generated_entity (decl_entity d) ds in
     { rendered = finished ds; helpers }
   | Header_only _ | Nothing -> { rendered = []; helpers = [] }
 

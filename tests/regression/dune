@@ -5199,6 +5199,28 @@
   (deps closure_pair_this.t.exe)
   (action (run ./closure_pair_this.t.exe))))
 
+(subdir wrapper_instance_lifted_helper
+ (rule
+  (targets wrapper_instance_lifted_helper.t.exe)
+  (deps Sizes.vo WrapperInstanceLiftedHelper.vo wrapper_instance_lifted_helper.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} wrapper_instance_lifted_helper.t.exe wrapper_instance_lifted_helper.cpp wrapper_instance_lifted_helper.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps wrapper_instance_lifted_helper.t.exe)
+  (action (run ./wrapper_instance_lifted_helper.t.exe))))
+
+(subdir record_method_lifted_helper
+ (rule
+  (targets record_method_lifted_helper.t.exe)
+  (deps RecordMethodLiftedHelper.vo record_method_lifted_helper.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} record_method_lifted_helper.t.exe record_method_lifted_helper.cpp record_method_lifted_helper.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps record_method_lifted_helper.t.exe)
+  (action (run ./record_method_lifted_helper.t.exe))))
+
 (subdir coind_projection_borrow
  (rule
   (targets coind_projection_borrow.t.exe)

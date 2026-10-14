@@ -908,11 +908,11 @@ let generated_concept r fields =
   d
 
 (** The methods of the eponymous record [r] made of [candidates], each
-    recorded as the generation of the function it was made of, with the
-    helpers lifted out of its body. *)
+    recorded as the generation of the function it was made of, and the
+    helpers lifted out of their bodies, which are members beside them. *)
 let generated_record_methods r vars candidates =
   let fields, lifted =
-    Translation.observing_lifted (fun () -> Gen_decls.gen_record_methods r vars candidates)
+    Translation.collecting_lifted (fun () -> Gen_decls.gen_record_methods r vars candidates)
   in
   List.iter
     (fun ((f, _, _) as field) ->
@@ -935,7 +935,7 @@ let generated_record_methods r vars candidates =
                (List.filter own lifted) )
         | _ -> None ) )
     fields;
-  fields
+  (fields, lifted)
 
 (** Pretty-print a structure element (label, elem) pair. Handles modules, module
     types, and declarations.
@@ -1659,8 +1659,18 @@ let rec pp_structure_elem ~is_header f = function
                     (fun (r, _, _, _) -> not (Table.is_projection r))
                     (List.rev this_method_candidates)
                 in
-                let method_fields =
+                let method_fields, method_helpers =
                   generated_record_methods epon_ref ty_vars non_projection_candidates
+                in
+                (* A struct is a complete-class context, so a helper lifted out
+                   of a method is a member that may follow the methods calling
+                   it; it precedes them here. *)
+                let helpers_pp =
+                  prlist
+                    (fun h ->
+                      pp_cpp_decl (empty_env ()) (fst (lifted_views ~may_hoist:false h))
+                      ++ fnl () )
+                    (dedup_lifted_decls method_helpers)
                 in
                 let methods_pp =
                   if method_fields = [] then
@@ -1686,10 +1696,11 @@ let rec pp_structure_elem ~is_header f = function
                       | _ -> method_fields
                     in
                     setting method_candidates this_method_candidates (fun () ->
-                        prlist_with_sep
-                          fnl
-                          (fun (fld, _vis, _tag) -> pp_cpp_field (empty_env ()) fld)
-                          fields
+                        helpers_pp
+                        ++ prlist_with_sep
+                             fnl
+                             (fun (fld, _vis, _tag) -> pp_cpp_field (empty_env ()) fld)
+                             fields
                         ++ fnl () )
                 in
                 (template_str, fields_pp, methods_pp)
@@ -2059,7 +2070,10 @@ let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
        instance declared at the extraction root is emitted.  Dropping it here
        left every use of it undeclared. *)
     | SEdecl (Dterm (r, a, t)) when is_typeclass_instance a t ->
-      ([], List.map snd (record_generated r (fun () -> instance_decls r a t)))
+      (* The helpers lifted out of its methods come first: the instance
+         struct calls them. *)
+      let ds, helpers = generated_entity r (fun () -> instance_decls r a t) in
+      ([], helpers @ List.map snd ds)
     | SEdecl (Dterm (r, a, t)) ->
       let gs = generated_once se (fun () -> [gen_decl_for_pp_dual r a t]) in
       record_funs ~fallback:r gs;
