@@ -446,6 +446,11 @@ let set_phase, get_phase =
   let ph = ref (Emit Impl) in
   (( := ) ph, fun () -> !ph)
 
+let phase_name = function
+  | Discover -> "discovery"
+  | Emit Impl -> "implementation"
+  | Emit Intf -> "header"
+
 (** Get/set the set of reserved keywords. *)
 let set_keywords, get_keywords =
   let k = ref Id.Set.empty in

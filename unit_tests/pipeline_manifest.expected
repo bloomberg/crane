@@ -1,0 +1,4 @@
+core: modutil shared_variants dedup specialize fix_shape normalize ir_check throwing_values ownership
+unit: used_customs non_atomic_rc higher_order_projections functor_instance_kinds value_typeclass_demotion reset_demands cross_file_qualification template_kinds
+discover: prepare render_impl render_intf
+finish: loopify local_closures constants temporaries shared_args simplify depth last_use borrow_projection constraints materialise casts free_tvars boxed_reads

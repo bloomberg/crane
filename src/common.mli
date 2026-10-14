@@ -148,6 +148,9 @@ val set_phase : phase -> unit
 (** Get the current extraction phase. *)
 val get_phase : unit -> phase
 
+(** How diagnostics name a phase: [discovery], [implementation], [header]. *)
+val phase_name : phase -> string
+
 (** Compute which libraries should be opened initially. *)
 val opened_libraries : unit -> ModPath.t list
 

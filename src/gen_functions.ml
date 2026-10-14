@@ -1137,7 +1137,7 @@ let gen_dfun n b cty ty temps =
             | Table.AssertComment comment -> Some (Sassert (Pstated comment)) )
         assertions
   in
-  begin_body ();
+  begin_body ~owner:n ();
   (* Phase 2: Initialize owned-variable tracking for move insertion. Parameters
      at de Bruijn indices 1..n_params; owned ones get added to the set. *)
   let n_all_params = List.length all_params in
@@ -1533,7 +1533,7 @@ let gen_decl__inner n b ty =
       | [] -> (inner, empty_env (), tvars)
       | l -> (Dtemplate (l, None, inner), empty_env (), tvars) )
     | _ ->
-      begin_body ();
+      begin_body ~owner:n ();
       let body_expr = with_cpp_return_type (Some cty) (fun () -> gen_constant_value b) in
       (* When a unit-typed constant's body calls a void-ified function,
          the call produces no value.  Wrap in an IIFE that executes the
@@ -1711,7 +1711,7 @@ let gen_spec__inner n b ty =
           (Ml_type_util.expand_ml_fun_alias ml_ty)
           inner_body
       in
-      begin_body ();
+      begin_body ~owner:n ();
       (* The constant's own type is also the expected type of its body, so an
          IIFE standing in for a let-in tail expression re-bases onto it rather
          than onto nothing. *)

@@ -507,7 +507,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
   let saved_dead = (!tctx).move_dead_after in
   let saved_owned = (!tctx).move_owned_vars in
   let saved_nparams = (!tctx).move_n_params in
-  begin_body ();
+  begin_body ~owner:func_ref ();
   (* Initialize owned-variable tracking for method parameters.
      The de Bruijn environment has parameters in reverse order:
      ids_normal_order has outermost-first, push_vars' reverses them. *)

@@ -106,6 +106,64 @@ let node_count (d : cpp_decl) =
   ignore (map_decl fe fs ft d);
   !n
 
+(** Every pass before the {!Cpp_erasure} seam, in the order they run. *)
+let minicpp_passes : cpp_decl Pipeline_trace.pass list =
+  let open Pipeline_trace in
+  [ pass "loopify" (fun d ->
+        if should_loopify d then Loopify.transform_decl d
+        else Loopify.transform_local_tail_loops d );
+    (* Closures made and used in one place become the code they stand for,
+       before ownership is decided, so what they captured is seen as local. *)
+    pass "local_closures" Cpp_local_closures.transform_decl;
+    (* A function's constants are declared once at its top, now that nothing
+       moves code between functions -- and before the passes that rewrite what
+       an initialiser holds: [depth] splits a deep one into bindings, which in
+       a static's initialiser run once. *)
+    pass "constants" Cpp_constants.decl;
+    (* The temporaries Normalize named for loopification and loopification did
+       not need go back where they are read. *)
+    pass "temporaries" Cpp_temporaries.decl;
+    (* An argument a mapping would splice, and so evaluate, more than once is
+       named once -- after the temporaries went back, so that none of them is
+       put back into the text that repeats it. *)
+    pass "shared_args" Cpp_shared_args.transform_decl;
+    (* Small local simplifications, before ownership reads the uses. *)
+    pass "simplify" Cpp_simplify.transform_decl;
+    (* An initialiser nested deeper than a compiler will parse becomes a run of
+       bindings; everything shallower is left as it stands. *)
+    pass "depth" Cpp_depth.flatten;
+    (* With the frames and temporaries in their final places, a local's last
+       read is visible, and becomes a move. *)
+    pass "last_use" (fun d ->
+        if Table.move_last_use () then Last_use.transform_decl d else d );
+    (* A coinductive's field projection hands out a reference into an lvalue
+       receiver, and a copy only to a temporary one. *)
+    pass "borrow_projection" Borrow_projection.transform_decl;
+    (* Which callable parameters keep a constraint is decided here, with the
+       body that decides it in hand; the printer writes what it is given. *)
+    pass "constraints" Minicpp.settle_constraints ]
+
+(** Writing a type down is what decides its representation, so the [Topaque]
+    slots are settled before anything reads the declaration as final.
+    Crossing this seam is what gives {!Cpp_erasure.settled}, the printer's
+    input type. *)
+let seam = "materialise"
+
+(** Every pass after the seam, in the order they run. *)
+let settled_passes : Cpp_erasure.settled Pipeline_trace.pass list =
+  let open Pipeline_trace in
+  [ pass "casts" Cpp_erasure.resolve_casts;
+    (* With the heads final, a body naming a type variable no head declares
+       is a name nothing in scope introduces; spell it [std::any] rather than
+       emit it. *)
+    pass "free_tvars" Cpp_erasure.bind_free_tvars;
+    (* With every type final, a read of a boxed value the context needs at a
+       concrete type is written down. *)
+    pass "boxed_reads" Cpp_erasure.lower_boxed_reads ]
+
+let pass_names =
+  Pipeline_trace.names minicpp_passes @ [seam] @ Pipeline_trace.names settled_passes
+
 let finish decl =
   let trace = traced decl in
   let steps = ref [] in
@@ -118,70 +176,21 @@ let finish decl =
               (node_count after) )
         :: !steps
   in
-  let pass name f d =
-    let d' = f d in
-    note name d d';
-    d'
+  let run : type a. (a -> cpp_decl) -> a Pipeline_trace.pass list -> a -> a =
+   fun inj passes d ->
+    List.fold_left
+      (fun d (p : _ Pipeline_trace.pass) ->
+        let d' = p.run d in
+        note p.name (inj d) (inj d');
+        d' )
+      d passes
   in
-  let settled_pass name (f : Cpp_erasure.settled -> Cpp_erasure.settled) d =
-    let d' = f d in
-    note name (d :> cpp_decl) (d' :> cpp_decl);
-    d'
-  in
-  let decl =
-    pass "loopify"
-      (fun d ->
-        if should_loopify d then Loopify.transform_decl d
-        else Loopify.transform_local_tail_loops d)
-      decl
-  in
-  (* Closures made and used in one place become the code they stand for,
-     before ownership is decided, so what they captured is seen as local. *)
-  let decl = pass "local_closures" Cpp_local_closures.transform_decl decl in
-  (* A function's constants are declared once at its top, now that nothing
-     moves code between functions -- and before the passes that rewrite what
-     an initialiser holds: [depth] splits a deep one into bindings, which in
-     a static's initialiser run once. *)
-  let decl = pass "constants" Cpp_constants.decl decl in
-  (* The temporaries Normalize named for loopification and loopification did
-     not need go back where they are read. *)
-  let decl = pass "temporaries" Cpp_temporaries.decl decl in
-  (* An argument a mapping would splice, and so evaluate, more than once is
-     named once -- after the temporaries went back, so that none of them is
-     put back into the text that repeats it. *)
-  let decl = pass "shared_args" Cpp_shared_args.transform_decl decl in
-  (* Small local simplifications, before ownership reads the uses. *)
-  let decl = pass "simplify" Cpp_simplify.transform_decl decl in
-  (* An initialiser nested deeper than a compiler will parse becomes a run of
-     bindings; everything shallower is left as it stands. *)
-  let decl = pass "depth" Cpp_depth.flatten decl in
-  (* With the frames and temporaries in their final places, a local's last
-     read is visible, and becomes a move. *)
-  let decl =
-    pass "last_use"
-      (fun d -> if Table.move_last_use () then Last_use.transform_decl d else d)
-      decl
-  in
-  (* A coinductive's field projection hands out a reference into an lvalue
-     receiver, and a copy only to a temporary one. *)
-  let decl = pass "borrow_projection" Borrow_projection.transform_decl decl in
-  (* Which callable parameters keep a constraint is decided here, with the
-     body that decides it in hand; the printer writes what it is given. *)
-  let decl = pass "constraints" Minicpp.settle_constraints decl in
-  (* Writing a type down is what decides its representation, so settle the
-     [Topaque] slots before anything reads the declaration as final.  Crossing
-     this seam is what gives {!Cpp_erasure.settled}, the printer's input
-     type. *)
+  let decl = run Fun.id minicpp_passes decl in
   let settled = Cpp_erasure.materialise decl in
-  note "materialise" decl (settled :> cpp_decl);
-  let decl = settled_pass "casts" Cpp_erasure.resolve_casts settled in
-  (* With the heads final, a body naming a type variable no head declares is
-     a name nothing in scope introduces; spell it [std::any] rather than emit
-     it. *)
-  let decl = settled_pass "free_tvars" Cpp_erasure.bind_free_tvars decl in
-  (* With every type final, a read of a boxed value the context needs at a
-     concrete type is written down. *)
-  let decl = settled_pass "boxed_reads" Cpp_erasure.lower_boxed_reads decl in
+  note seam decl (settled :> cpp_decl);
+  let decl =
+    run (fun (d : Cpp_erasure.settled) -> (d :> cpp_decl)) settled_passes settled
+  in
   if Sys.getenv_opt "CRANE_CHECK_IR" <> None then check_settled decl;
   Option.iter
     (fun name ->

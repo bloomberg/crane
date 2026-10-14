@@ -128,3 +128,17 @@ val print_one_decl : Miniml.ml_structure -> ModPath.t -> Miniml.ml_decl -> Pp.t
 (** [Show Extraction]: show the extraction of the current ongoing proof.
     @param pstate the current proof state *)
 val show_extraction : pstate:Declare.Proof.t -> unit
+
+(** {2 Pass order}
+
+    The names of the passes each stage runs, in order; see {!Pipeline_trace}.
+    Read by [unit_tests/pipeline_manifest.ml]. *)
+
+(** Rewrites and analyses of the extracted structure, once per extraction. *)
+val core_pass_names : string list
+
+(** Analyses of one unit's structure, before its discovery pass. *)
+val unit_pass_names : string list
+
+(** One unit's discovery pass, whose renders are discarded. *)
+val discover_pass_names : string list

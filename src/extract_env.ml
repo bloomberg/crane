@@ -1004,12 +1004,18 @@ let module_filename mp =
     the other does not -- measured: dropping either half renames binders in the
     output and trips {!check_no_late_decisions} -- so [~interface:false] is for
     callers that emit no interface at all. *)
+let discover_passes ~interface d : ml_structure Pipeline_trace.pass list =
+  let open Pipeline_trace in
+  [ effect "prepare" d.prepare;
+    effect "render_impl" (fun s -> ignore (d.pp_struct s)) ]
+  @ if interface then [effect "render_intf" (fun s -> ignore (d.pp_hstruct s))] else []
+
+let discover_pass_names = Pipeline_trace.names (discover_passes ~interface:true (descr ()))
+
 let discover ?(interface = true) d struc =
   set_phase Discover;
   Callable_abi.open_for_discovery ();
-  d.prepare struc;
-  ignore (d.pp_struct struc);
-  if interface then ignore (d.pp_hstruct struc);
+  ignore (Pipeline_trace.run ~stage:"discover" (discover_passes ~interface d) struc);
   Callable_abi.freeze ()
 
 (** {2 Extraction of one decl to stdout} *)
@@ -1445,11 +1451,6 @@ let opened_filter : (ModPath.t -> bool) ref = ref (fun _ -> true)
     phase generated for the unit written to [fn]. *)
 let report_body_generations fn =
   if Sys.getenv_opt "CRANE_COUNT_GENERATION" <> None then
-    let phase_name = function
-      | Discover -> "discovery"
-      | Emit Impl -> "implementation"
-      | Emit Intf -> "header"
-    in
     Feedback.msg_notice
       Pp.(
         str "Crane: bodies generated for "
@@ -1465,26 +1466,85 @@ let report_body_generations fn =
     method registry built before printing as much as the printer) sees the
     same bodies, and a body a rewrite introduces meets Normalize's contract
     like any other. *)
+let core_passes to_appear : ml_structure Pipeline_trace.pass list =
+  let open Pipeline_trace in
+  [ pass "modutil" (Modutil.optimize_struct to_appear);
+    (* Which inductives are shared variants is a property of their
+       declarations, final from here; the method registry {!Normalize} builds
+       already asks. *)
+    effect "shared_variants" Structure_analysis.register_shared_variants;
+    pass "dedup" Ml_dedup.structure;
+    pass "specialize" Ml_specialize.structure;
+    pass "fix_shape" Fix_shape.structure;
+    pass "normalize" Normalize.structure;
+    effect "ir_check" Ml_ir_check.structure;
+    (* With the bodies final, which definitions only throw, and which
+       parameters are owned, are settled across calls, before any signature is
+       written. *)
+    effect "throwing_values" Structure_analysis.register_throwing_values;
+    effect "ownership" Ownership.settle ]
+
+let core_pass_names = Pipeline_trace.names (core_passes ([], []))
+
+(** Under [CRANE_TRACE_PIPELINE], report the fingerprint of [struc], and
+    keep its elements' for {!report_structure_changes}. *)
+let observed_fingerprint ~stage struc =
+  if Pipeline_trace.enabled () then begin
+    Pipeline_trace.event stage
+      ("fingerprint " ^ Ml_fingerprint.to_hex (Ml_fingerprint.structure struc));
+    Some (Ml_fingerprint.elements struc)
+  end
+  else None
+
+(** Report the elements rendering changed.
+
+    Everything discovery records is a fact about one structure, and emission
+    reads those facts back against the structure it is handed, so a structure
+    that changes while it is rendered is read by emission as a different
+    program from the one discovery planned.  Some do change: translation
+    solves the metavariables a local fixpoint's binder types still hold
+    (tests/regression/let_fix), so the first render decides those types and
+    emission reads them solved.  That is reported rather than refused, until a
+    frozen structure, with no metavariable left to solve, makes it a check. *)
+let report_structure_changes planned struc =
+  Option.iter
+    (fun before ->
+      List.iter2
+        (fun (l, fp) (_, fp') ->
+          if not (Ml_fingerprint.equal fp fp') then
+            Pipeline_trace.event "emit" ("changed by rendering: " ^ Label.to_string l) )
+        before (Ml_fingerprint.elements struc) )
+    planned
+
 let optimize_struct to_appear struc =
-  let struc = Modutil.optimize_struct to_appear struc in
-  (* Which inductives are shared variants is a property of their
-     declarations, final from here; the method registry {!Normalize} builds
-     already asks. *)
-  Structure_analysis.register_shared_variants struc;
-  let struc =
-    struc
-    |> Ml_dedup.structure
-    |> Ml_specialize.structure
-    |> Fix_shape.structure
-    |> Normalize.structure
-  in
-  Ml_ir_check.structure struc;
-  (* With the bodies final, which definitions only throw, and which
-     parameters are owned, are settled across calls, before any signature is
-     written. *)
-  Structure_analysis.register_throwing_values struc;
-  Ownership.settle struc;
+  let struc = Pipeline_trace.run ~stage:"core" (core_passes to_appear) struc in
+  if Pipeline_trace.enabled () then ignore (observed_fingerprint ~stage:"core" struc);
   struc
+
+(** What a unit decides about its structure before discovery, in order.
+    [namespace] is the C++ namespace of a separately extracted file. *)
+let unit_passes ~namespace : ml_structure Pipeline_trace.pass list =
+  let open Pipeline_trace in
+  [ (* Which custom constants are actually used, so that only their
+       associated imports appear in the generated header. *)
+    effect "used_customs" mark_used_customs;
+    (* The used customs decide whether this unit can spawn a thread, which is
+       what resolves a [Crane NonAtomicRc] or [Crane SingleThreaded]
+       request. *)
+    effect "non_atomic_rc" (fun _ -> Table.check_non_atomic_rc_request ());
+    effect "higher_order_projections" mark_higher_order_projections;
+    effect "functor_instance_kinds" align_functor_instance_kinds;
+    effect "value_typeclass_demotion" demote_value_typeclasses;
+    (* This file's demands start from nothing, so that one file's needs don't
+       leak into a later file of a separate extraction. *)
+    effect "reset_demands" (fun _ -> Table.reset_demands ());
+    (* In separate extraction, cross-module references are fully qualified
+       ([Datatypes::List] rather than [List]). *)
+    effect "cross_file_qualification" (fun _ ->
+        if namespace <> None then Common.set_force_cross_file_qualification () );
+    effect "template_kinds" Cpp_ind.plan_template_kinds ]
+
+let unit_pass_names = Pipeline_trace.names (unit_passes ~namespace:None)
 
 (** Renders an entire ML structure to C++ header and implementation files.
     Performs dry run first for renaming, then generates and formats the output.
@@ -1504,24 +1564,8 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
       magic = false;
     }
   in
-  (* Scan the structure to find which custom constants are actually used, so
-     that only their associated imports appear in the generated header. *)
-  mark_used_customs struc;
-  (* The used customs decide whether this unit can spawn a thread, which is
-     what resolves a [Crane NonAtomicRc] or [Crane SingleThreaded] request. *)
-  Table.check_non_atomic_rc_request ();
-  mark_higher_order_projections struc;
-  align_functor_instance_kinds struc;
-  demote_value_typeclasses struc;
-  (* Start this file's demands from nothing, so that one file's needs don't
-     leak into a later file of a separate extraction. *)
-  Table.reset_demands ();
-  (* In separate extraction, force fully qualified cross-module references
-     (e.g. Datatypes::List instead of bare List). *)
-  ( match namespace with
-  | Some _ -> Common.set_force_cross_file_qualification ()
-  | None -> () );
-  Cpp_ind.plan_template_kinds struc;
+  ignore (Pipeline_trace.run ~stage:"unit" (unit_passes ~namespace) struc);
+  let planned = observed_fingerprint ~stage:"unit" struc in
   discover d struc;
   let census_after_discovery = Table.census () in
   (* Both bodies are rendered before either file is opened.  A preamble has to
@@ -1532,12 +1576,15 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
      raised after this point is too late, which [freeze_demands] is there to
      catch. *)
   set_phase (Emit Impl);
+  Pipeline_trace.event "emit" "render_impl";
   let body_impl = d.pp_struct struc in
   set_phase (Emit Intf);
+  Pipeline_trace.event "emit" "render_intf";
   let body_hstruct = d.pp_hstruct struc in
   report_body_generations fn;
   Table.freeze_demands ();
   check_no_late_decisions census_after_discovery;
+  report_structure_changes planned struc;
   let opened = List.filter !opened_filter (opened_libraries ()) in
   let ns_open =
     match namespace with
