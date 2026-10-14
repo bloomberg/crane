@@ -20,6 +20,11 @@ let install struc (facts : Program_facts.t) (plan : Target_plan.t) =
 let install_template_kinds (plan : Target_plan.t) =
   List.iter (fun (r, kinds) -> Tparam_kinds.record r kinds) plan.template_kinds
 
+let install_callables callables =
+  Callable_abi.open_for_planning ();
+  List.iter Callable_abi.record callables;
+  Callable_abi.freeze ()
+
 let check_installed (facts : Program_facts.t) (plan : Target_plan.t) =
   if Sys.getenv_opt "CRANE_CHECK_IR" <> None then begin
     let fail what =
@@ -42,5 +47,10 @@ let check_installed (facts : Program_facts.t) (plan : Target_plan.t) =
       (fun (r, kinds) ->
         if not (Tparam_kinds.equal (Tparam_kinds.recorded r) kinds) then
           fail "template-parameter kinds" )
-      plan.template_kinds
+      plan.template_kinds;
+    List.iter
+      (fun abi ->
+        if not (Option.equal Callable_abi.equal (Callable_abi.lookup (Callable_abi.callee abi)) (Some abi))
+        then fail "callable plans" )
+      plan.callables
   end

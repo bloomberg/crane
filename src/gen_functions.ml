@@ -324,19 +324,18 @@ let promote_typeclass_params (params : (Id.t * ml_type) list) =
   (params, List.rev !temps)
 
 (** The head [n] is declared with: [temps] relaxed against [signature]
-    ({!Plan_templates.relax_function_head}), with the rewrite that carries the
-    relaxations through the declaration.  Recorded as [n]'s callable plan
-    before the body is generated, so a call in the body -- a self-call, or
-    one in a helper lifted out of it -- reads the head its callee is declared
-    with. *)
+    ({!Plan_templates.relax_function_head}), as [n]'s callable plan and as a
+    template head, with the rewrite that carries the relaxations through the
+    declaration. *)
 let plan_function_head n ty temps signature =
   let temps, rewrite = relax_function_head temps signature in
-  Callable_abi.record
-    (Callable_abi.of_head
-       ~phantom_prefix:(Translation_types.leading_phantom_count n)
-       ~relaxed:(fun i -> IntSet.mem i (Ml_type_util.relaxed_higher_kinded_tvars ty))
-       ~callee:n ~scheme:(Mlutil.reference_scheme n) temps );
-  (temps, rewrite)
+  let abi =
+    Callable_abi.of_head
+      ~phantom_prefix:(Translation_types.leading_phantom_count n)
+      ~relaxed:(fun i -> IntSet.mem i (Ml_type_util.relaxed_higher_kinded_tvars ty))
+      ~callee:n ~scheme:(Mlutil.reference_scheme n) temps
+  in
+  (abi, temps, rewrite)
 
 (** What a function's body is generated under, settled before the body:
     its return type, its parameters and the environment that names them, the
@@ -1079,7 +1078,10 @@ let plan_scope_head n ty scope =
 
 let gen_dfun n b cty ty temps =
   let scope = dfun_body_scope n b cty ty temps in
-  let temps, rewrite = plan_scope_head n ty scope in
+  let abi, temps, rewrite = plan_scope_head n ty scope in
+  (* The head was planned before anything was generated; what is generated
+     must be it. *)
+  Callable_abi.record abi;
   let inner, env =
     with_itree_mode_for ty @@ fun () ->
   let {
@@ -1701,17 +1703,21 @@ let gen_function n ty h =
   in
   (f, env, h.fh_tvars @ callable_tparams)
 
-(** [plan_function ~fixpoint n b ty] plans and records the head of the
-    function [n] -- [b] its body, [ty] its type -- as its generation would,
+(** [plan_function ~fixpoint n b ty] is the callable plan of the function
+    [n] -- [b] its body, [ty] its type -- as generating it would plan it,
     without generating the body.  A member of a recursive group is always
     generated as a function; a constant only where its C++ type is one. *)
 let plan_function ~fixpoint n b ty =
   Table.with_decl_ref n @@ fun () ->
   with_function_head n b ty @@ fun ty h ->
+  let plan cty =
+    let abi, _, _ = plan_scope_head n ty (dfun_body_scope n h.fh_body cty ty h.fh_temps) in
+    Some abi
+  in
   match h.fh_cty with
-  | Tfun _ -> ignore (plan_scope_head n ty (dfun_body_scope n h.fh_body h.fh_cty ty h.fh_temps))
-  | cty when fixpoint -> ignore (plan_scope_head n ty (dfun_body_scope n h.fh_body cty ty h.fh_temps))
-  | _ -> ()
+  | Tfun _ as cty -> plan cty
+  | cty when fixpoint -> plan cty
+  | _ -> None
 
 (** Generate C++ declaration with pretty-printing adjustments: a function, a
     constant whose body only throws (as a zero-argument function, so it

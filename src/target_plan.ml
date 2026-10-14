@@ -18,6 +18,7 @@ type t = {
   input : Ml_fingerprint.t option;
   inductive_kinds : kind_decision list;
   template_kinds : (GlobRef.t * Tparam_kinds.t) list;
+  callables : Callable_abi.t list;
 }
 
 (** The last of [decisions] about [kn]. *)
@@ -253,9 +254,24 @@ let plan (_ : Program_facts.t) struc =
     else None
   in
   let aligned = functor_alignment struc in
-  { input; inductive_kinds = aligned @ value_use_demotion aligned struc; template_kinds = [] }
+  { input;
+    inductive_kinds = aligned @ value_use_demotion aligned struc;
+    template_kinds = [];
+    callables = [] }
 
 let with_template_kinds t template_kinds = {t with template_kinds}
+let with_callables t callables = {t with callables}
+
+let same_callables a b =
+  List.length a = List.length b
+  && List.for_all
+       (fun abi ->
+         List.exists
+           (fun abi' ->
+             GlobRef.UserOrd.equal (Callable_abi.callee abi) (Callable_abi.callee abi')
+             && Callable_abi.equal abi abi' )
+           b )
+       a
 
 let kind_equal a b =
   let fields_equal = List.equal (fun (r, _) (r', _) -> Option.equal GlobRef.UserOrd.equal r r') in
@@ -271,3 +287,4 @@ let equal a b =
   && List.equal
        (fun (r, k) (r', k') -> GlobRef.UserOrd.equal r r' && Tparam_kinds.equal k k')
        a.template_kinds b.template_kinds
+  && same_callables a.callables b.callables

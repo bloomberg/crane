@@ -2261,13 +2261,26 @@ let prepare_structure s =
   List.iter (fun _ -> pop_visible ()) initial_mps;
   structure_analysis := Some analysis
 
-(* The walk of {!plan_callables}, visiting each list backwards if
-   [reversed]. *)
-let plan_callables_in ~reversed s =
+(** The callable plan of each function the renders will generate, in the
+    order of the unit's modules and declarations, or the reverse if
+    [reversed]: planned before anything is rendered
+    ({!Gen_decls.plan_function}), so that a call rendered ahead of its callee
+    reads the head the callee is declared with.
+
+    The modules are walked as a render walks them, for the two things a head
+    is converted against: the visibility stack, and the inductives local to
+    the enclosing modules.  Only what a render generates as a function is
+    planned: a method, a projection, an inline custom and an alias's copy are
+    not, and neither is a wrapper module's monadic constant, which no render
+    generates at all.  Planning one of those would hand its call sites a head
+    other than the one they assume; missing one is reported when it is
+    generated ({!Callable_abi.record}). *)
+let plan_callables ?(reversed = false) s =
   let order l = if reversed then List.rev l else l in
+  let plans = ref [] in
   let plan ~fixpoint r a t =
     if not (is_any_inline_custom r || Table.is_projection r || is_registered_method r <> None)
-    then Gen_decls.plan_function ~fixpoint r a t
+    then Option.iter (fun abi -> plans := abi :: !plans) (Gen_decls.plan_function ~fixpoint r a t)
   in
   (* A monadic constant is generated as a recursive group of one. *)
   let plan_decl ~wrapper = function
@@ -2356,26 +2369,8 @@ let plan_callables_in ~reversed s =
             (fun (mi : Structure_analysis.module_info) ->
               if mi.wrapper_name = None then
                 in_module mi.modpath (fun () -> List.iter (plan_elem ~wrapper:false) (order mi.sels)) )
-            (order analysis.sorted_modules) ) )
-
-(** Plan the head of each function the renders will generate, before either
-    renders anything ({!Gen_decls.plan_function}), so that a call rendered
-    ahead of its callee reads the head the callee is declared with.
-
-    The modules are walked as a render walks them, for the two things a head
-    is converted against: the visibility stack, and the inductives local to
-    the enclosing modules.  Only what a render generates as a function is
-    planned: a method, a projection, an inline custom and an alias's copy are
-    not, and neither is a wrapper module's monadic constant, which no render
-    generates at all.  Planning one of those would hand its call sites a head
-    other than the one they assume; missing one is reported when it is
-    generated ({!Callable_abi.record}). *)
-let plan_callables s =
-  plan_callables_in ~reversed:false s;
-  (* A head is a function of its declaration, not of what was planned before
-     it: planned again in the reverse order, every one must come out the
-     same, which recording it again checks. *)
-  if Sys.getenv_opt "CRANE_CHECK_IR" <> None then plan_callables_in ~reversed:true s
+            (order analysis.sorted_modules) ) );
+  List.rev !plans
 
 (** [pp_wrapper_struct name specs] is the struct a library module is rendered
     as: its member declarations, [specs], inside a struct of that name. *)
@@ -3148,7 +3143,6 @@ let cpp_descr =
     file_naming = file_of_modfile;
     preamble;
     prepare = prepare_structure;
-    plan_callables;
     pp_struct;
     pp_hstruct;
     sig_suffix = Some ".h";

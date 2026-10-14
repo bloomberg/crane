@@ -155,6 +155,8 @@ let same_head a b =
   let key p = (Id.to_string (Template_param.name p.id), origin_key p.origin, p.kind, p.write) in
   List.equal (fun p q -> key p = key q) a.head b.head
 
+let equal a b = GlobRef.UserOrd.equal a.callee b.callee && same_head a b
+
 let plans : t GlobRef.Map_env.t ref = ref GlobRef.Map_env.empty
 let frozen = ref false
 let open_for_planning () = frozen := false

@@ -25,15 +25,18 @@
 
     + {b Extraction} ([mono_environment], [optimize_struct]): Rocq terms to
       the MiniML structure, simplified.
-    + {b Source analysis}, mutating tables and packets in place:
-      [mark_used_customs] (and the non-atomic reference-count check that
-      depends on it), [mark_higher_order_projections],
-      [align_functor_instance_kinds], [demote_value_typeclasses].
-    + {b Discovery} ([Common.Discover]): {!Cpp.prepare_structure} runs
-      {!Structure_analysis.analyze} and installs its layout facts, then both
-      files are rendered and the text discarded.  What survives is what the
-      renders recorded: names, method registrations, wrapper and alias
-      tables.  Every body is translated here.
+    + {b Planning}, as values: the unit's {!Program_facts} and its
+      {!Target_plan} -- the inductive kinds, then, once the unit's preparation
+      has run, the template-parameter kinds -- each installed by
+      {!Install_legacy_plan} into the tables unconverted readers consult.
+    + {b Layout} ([Common.Discover]): {!Cpp.prepare_structure} runs
+      {!Structure_analysis.analyze} and installs its layout facts
+      ({!Module_plan}); then every generated function's callable plan is
+      planned ({!Cpp.plan_callables}) into the target plan and frozen.
+    + {b Discovery} ([Common.Discover]): both files are rendered and the text
+      discarded.  What survives is what the renders recorded: names, method
+      registrations, wrapper and alias tables.  Every body is translated
+      here.
     + {b Emission} ([Common.Emit Impl], then [Emit Intf]): both files are
       rendered for real.  Emission is meant to decide nothing; the table
       census taken after discovery is compared after emission
@@ -145,6 +148,10 @@ val unit_pass_names : string list
 
 (** Deciding the unit's data representation once its preparation has run. *)
 val represent_pass_names : string list
+
+(** Settling the unit's layout and planning its callables, before its
+    discovery pass. *)
+val layout_pass_names : string list
 
 (** One unit's discovery pass, whose renders are discarded. *)
 val discover_pass_names : string list

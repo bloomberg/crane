@@ -14,8 +14,14 @@ val install : Miniml.ml_structure -> Program_facts.t -> Target_plan.t -> unit
     decided, which the inductive kinds {!install} wrote went into deciding. *)
 val install_template_kinds : Target_plan.t -> unit
 
-(** Under [CRANE_CHECK_IR], fail unless every table {!install} and
-    {!install_template_kinds} filled still answers what the values say.  A census sees an entry added; this sees one
+(** [install_callables callables] records the callable plans, as
+    {!Target_plan.callables} holds them, and freezes them: from here a
+    generated declaration only checks its head against its plan. *)
+val install_callables : Callable_abi.t list -> unit
+
+(** Under [CRANE_CHECK_IR], fail unless every table {!install},
+    {!install_template_kinds} and {!install_callables} filled still answers
+    what the values say.  A census sees an entry added; this sees one
     overwritten.  The used customs are the exception that may grow: emitting a
     custom's replacement marks it used, and the header's includes follow what
     was emitted. *)

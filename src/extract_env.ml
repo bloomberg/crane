@@ -994,17 +994,40 @@ let module_filename mp =
   let fimpl = Filename.concat (output_directory_for_module ()) fimpl_base in
   (Some fimpl, Option.map (( ^ ) f) d.sig_suffix, id)
 
-(** Discovery's passes: what it decides before rendering anything, and the
-    renders whose documents it discards. *)
-let discover_passes ~interface d : ml_structure Pipeline_trace.pass list * ml_structure Pipeline_trace.pass list =
-  let open Pipeline_trace in
-  ( [effect "prepare" d.prepare; effect "plan_callables" d.plan_callables],
-    effect "render_impl" (fun s -> ignore (d.pp_struct s))
-    :: (if interface then [effect "render_intf" (fun s -> ignore (d.pp_hstruct s))] else []) )
+(** The steps of {!plan_layout}, in order. *)
+let prepare_layout = "prepare"
+let plan_callables = "plan_callables"
+let install_callables = "install_callables"
+let layout_pass_names = [prepare_layout; plan_callables; install_callables]
 
-let discover_pass_names =
-  let planning, renders = discover_passes ~interface:true (descr ()) in
-  Pipeline_trace.names (planning @ renders)
+(** Settle the unit's layout -- where each declaration lives and what it is
+    called ({!Module_plan}) -- then plan the callable of each function a
+    render will generate, and install the plans.  Returns them.  Under
+    [CRANE_CHECK_IR] they are planned a second time with every list reversed,
+    and the two must agree: a head is a function of its declaration, not of
+    what was planned before it.  Runs in the discovery phase, which is the one
+    that names modules. *)
+let plan_layout d struc =
+  set_phase Discover;
+  Pipeline_trace.event "layout" prepare_layout;
+  d.prepare struc;
+  Pipeline_trace.event "layout" plan_callables;
+  let callables = Cpp.plan_callables struc in
+  if
+    Sys.getenv_opt "CRANE_CHECK_IR" <> None
+    && not (Target_plan.same_callables callables (Cpp.plan_callables ~reversed:true struc))
+  then CErrors.anomaly Pp.(str "Crane: planning the callables in reverse order decided differently.");
+  Pipeline_trace.event "layout" install_callables;
+  Install_legacy_plan.install_callables callables;
+  callables
+
+(** The renders discovery runs. *)
+let discover_passes ~interface d : ml_structure Pipeline_trace.pass list =
+  let open Pipeline_trace in
+  effect "render_impl" (fun s -> ignore (d.pp_struct s))
+  :: (if interface then [effect "render_intf" (fun s -> ignore (d.pp_hstruct s))] else [])
+
+let discover_pass_names = Pipeline_trace.names (discover_passes ~interface:true (descr ()))
 
 (** Under [CRANE_TRACE_PIPELINE], report the decisions first made while
     discovery rendered: what each census table gained between [before] and
@@ -1025,11 +1048,11 @@ let report_decided_while_rendering before =
       ( "decided while rendering: "
       ^ if grown = [] then "nothing" else String.concat ", " grown )
 
-(** Run the discovery pass over [struc]: allocate every name and record every
-    fact the emissions will go on to read.  Its output is discarded -- the
-    point of it is the tables it leaves behind, which are complete only once a
-    whole traversal has run, because a use can be rendered before its
-    declaration.
+(** Run the discovery pass over [struc], once its layout is planned
+    ({!plan_layout}): allocate every name and record every fact the emissions
+    will go on to read.  Its output is discarded -- the point of it is the
+    tables it leaves behind, which are complete only once a whole traversal
+    has run, because a use can be rendered before its declaration.
 
     Discover exactly the passes you will emit.  Each emission allocates names
     the other does not -- measured: dropping either half renames binders in the
@@ -1037,12 +1060,8 @@ let report_decided_while_rendering before =
     callers that emit no interface at all. *)
 let discover ?(interface = true) d struc =
   set_phase Discover;
-  Callable_abi.open_for_planning ();
-  let planning, renders = discover_passes ~interface d in
-  ignore (Pipeline_trace.run ~stage:"discover" planning struc);
-  Callable_abi.freeze ();
   let planned = if Pipeline_trace.enabled () then Table.census () else [] in
-  ignore (Pipeline_trace.run ~stage:"discover" renders struc);
+  ignore (Pipeline_trace.run ~stage:"discover" (discover_passes ~interface d) struc);
   report_decided_while_rendering planned
 
 (** {2 Extraction of one decl to stdout} *)
@@ -1052,6 +1071,7 @@ let discover ?(interface = true) d struc =
 let print_one_decl struc mp decl =
   let d = descr () in
   reset_renaming_tables AllButExternal;
+  ignore (plan_layout d struc);
   discover ~interface:false d struc;
   set_phase (Emit Impl);
   push_visible mp [];
@@ -1416,6 +1436,7 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   ignore (Pipeline_trace.run ~stage:"unit" (unit_passes ~namespace) struc);
   let plan = plan_representation plan struc in
   let planned = observed_fingerprint ~stage:"unit" struc in
+  let plan = Target_plan.with_callables plan (plan_layout d struc) in
   discover d struc;
   let census_after_discovery = Table.census () in
   (* Both bodies are rendered before either file is opened.  A preamble has to

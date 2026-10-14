@@ -87,6 +87,10 @@ val of_head :
 (** The parameter declaring scheme variable [v], if the head has one. *)
 val parameter_of_var : t -> Scheme.Var.t -> template_parameter option
 
+(** The same callee, with the same head; where a plan was recorded is not
+    part of it. *)
+val equal : t -> t -> bool
+
 (** The plan invariants of section 8.1, as violations: positions and names
     unique and in order, every scheme origin the callee's scheme's, no
     origin declared twice. *)
