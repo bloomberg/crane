@@ -88,7 +88,7 @@ let traced decl =
       | [] -> "<anonymous>"
       | rs ->
         String.concat ", "
-          (List.map (fun r -> Pp.string_of_ppcmds (Printer.pr_global r)) rs)
+          (List.map (fun r -> Pp.string_of_ppcmds (Table.safe_pr_global r)) rs)
     in
     let contains s sub =
       let n = String.length s and m = String.length sub in

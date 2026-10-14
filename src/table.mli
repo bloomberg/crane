@@ -27,6 +27,10 @@ open Declarations
 (** Get a safe basename identifier from a global reference. *)
 val safe_basename_of_global : GlobRef.t -> Id.t
 
+(** A global's shortest qualified name, or its basename where the name table
+    has none -- a functor's member, named through its bound parameter. *)
+val safe_pr_global : GlobRef.t -> Pp.t
+
 (** The kernel name of a global, spelled out in full -- for debug diagnostics,
     where two constants printing the same name is the difficulty rather than a
     tidiness question.  User-facing messages want a short name instead. *)

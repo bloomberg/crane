@@ -39,7 +39,7 @@ let begin_body ~owner () =
     (1 + Option.default 0 (Hashtbl.find_opt body_generations phase));
   if Pipeline_trace.enabled () then
     Pipeline_trace.event "body"
-      (phase_name phase ^ " " ^ Pp.string_of_ppcmds (Printer.pr_global owner));
+      (phase_name phase ^ " " ^ Pp.string_of_ppcmds (Table.safe_pr_global owner));
   tctx :=
     { !tctx with
       match_param_counter = 0;
