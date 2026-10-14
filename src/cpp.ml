@@ -1217,7 +1217,10 @@ let rec pp_structure_elem ~is_header f = function
           | None, None -> None
         in
         ( match epon_ref_opt with
-        | Some epon_ref ->
+        (* A custom type has no struct of Crane's, and an enum is an [enum
+           class]: neither can hold a method, as the registry's own scan
+           already says. *)
+        | Some epon_ref when not (is_custom epon_ref || Table.is_enum_inductive epon_ref) ->
           let epon_modpath = modpath_of_r epon_ref in
           let same_module r = ModPath.equal (modpath_of_r r) epon_modpath in
           let module_type_aliases =
@@ -1269,7 +1272,7 @@ let rec pp_structure_elem ~is_header f = function
           in
           List.iter process_decl sel;
           List.iter process_decl !current_structure_decls
-        | None -> () );
+        | Some _ | None -> () );
         let this_eponymous_record = !eponymous_record in
         let module_name_str_raw = Common.pp_module mp in
         let has_concept_collision =
