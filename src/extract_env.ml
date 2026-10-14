@@ -1305,9 +1305,11 @@ let report_structure_changes planned struc =
     planned
 
 let optimize_struct to_appear struc =
-  let struc = Pipeline_trace.run ~stage:"core" (core_passes to_appear) struc in
-  if Pipeline_trace.enabled () then ignore (observed_fingerprint ~stage:"core" struc);
-  struc
+  let core =
+    Core.optimize (Pipeline_trace.run ~stage:"core" (core_passes to_appear)) (Core.extracted struc)
+  in
+  if Pipeline_trace.enabled () then ignore (observed_fingerprint ~stage:"core" (Core.structure core));
+  core
 
 (** The steps of {!analyze_and_plan}, in order. *)
 let analyze_program = "analyze_program"
@@ -1360,7 +1362,8 @@ let unit_pass_names = Pipeline_trace.names (unit_passes ~namespace:None)
     Performs dry run first for renaming, then generates and formats the output.
 *)
 let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
-    (fn, si, mo) dry struc =
+    (fn, si, mo) dry core =
+  let struc = Core.structure core in
   Buffer.clear buf;
   let d = descr () in
   (* Empties every per-file cell, the mutual-recursion registry among them,
@@ -1651,7 +1654,7 @@ let full_extr_reading opaque_access f (refs, mps) read =
     ~finally:reset
     (fun () ->
       List.iter (fun mp -> if is_modfile mp then error_MPfile_as_mod mp true) mps;
-      let struc =
+      let core =
         optimize_struct (refs, mps) (mono_environment ~opaque_access refs mps)
       in
       (* A Rocq library that an earlier extraction already emitted belongs to
@@ -1659,9 +1662,9 @@ let full_extr_reading opaque_access f (refs, mps) read =
          time, so linking both units would fail; this unit includes that unit's
          header and drops the library from its own output.  The libraries that
          remain are claimed for this unit, for the next extraction to see. *)
-      let foreign, struc =
+      let foreign, core =
         match f with
-        | None -> ([], struc)
+        | None -> ([], core)
         | Some target ->
           (* Only a library from another file can be dropped.  Several modules
              of the file being compiled are routinely extracted into units of
@@ -1670,21 +1673,20 @@ let full_extr_reading opaque_access f (refs, mps) read =
              nothing. *)
           let current = MPfile (Lib.library_dp ()) in
           let foreign, own =
-            List.partition
-              (fun (mp, _) ->
+            Core.partition
+              (fun mp ->
                 (not (ModPath.equal mp current))
                 &&
                 match Table.extracted_unit_of mp with
                 | Some unit -> not (String.equal unit target)
                 | None -> false )
-              struc
+              core
           in
-          List.iter (fun (mp, _) -> Table.claim_extracted_unit mp target) own;
-          (foreign, own)
+          List.iter (fun (mp, _) -> Table.claim_extracted_unit mp target) (Core.modules own);
+          (List.map fst (Core.modules foreign), own)
       in
       let unit_includes =
-        List.sort_uniq String.compare
-          (List.filter_map (fun (mp, _) -> Table.extracted_unit_of mp) foreign)
+        List.sort_uniq String.compare (List.filter_map Table.extracted_unit_of foreign)
       in
       warns ();
       let filenames = mono_filename f in
@@ -1695,7 +1697,7 @@ let full_extr_reading opaque_access f (refs, mps) read =
         if source <> "" then
           Doc_comments.set_table (Doc_comments.parse_file source)
       | _ -> () );
-      print_structure_to_file ~unit_includes filenames false struc;
+      print_structure_to_file ~unit_includes filenames false (Core.freeze core);
       read refs )
 
 let full_extr opaque_access f refs =
@@ -1723,7 +1725,8 @@ let full_extraction_exports ?(validate = true) ~opaque_access f lr =
     each in a namespace of its own: [Separate Extraction]'s layout, and
     [Extraction Library]'s.  The file of a library [dry] says is rendered but
     not written. *)
-let print_per_library ~dry struc =
+let print_per_library ~dry core =
+  let struc = Core.structure core in
   (* Run all per-unit cleanup in [~finally] so state is reset even when the
      body aborts. *)
   Fun.protect
@@ -1911,8 +1914,9 @@ let print_per_library ~dry struc =
         if not (String.equal ns (ns_of_modfile mp)) then
           Common.rename_file_namespace mp ns )
     struc;
-  let print = function
-    | ((MPfile _dir as mp), sel) as e ->
+  let print (mp, unit) =
+    match (mp, Core.structure unit) with
+    | MPfile _, [(_, sel)] ->
       if has_real_decls sel then begin
         let ns = file_namespace mp sel in
         (* Only include modules that are topologically earlier (i.e., come
@@ -1928,10 +1932,10 @@ let print_per_library ~dry struc =
             match Hashtbl.find_opt topo_index mp' with
             | Some j -> j < current_idx
             | None -> true);
-        print_structure_to_file ~namespace:(Some ns) (module_filename mp) (dry mp) [e];
+        print_structure_to_file ~namespace:(Some ns) (module_filename mp) (dry mp) unit;
         opened_filter := (fun _ -> true)
       end
-    | (MPdot _ | MPbound _), _ -> assert false
+    | _ -> assert false
   in
   (* Pre-build the method registry from the full structure so that
      cross-module method calls are recognized during per-module rendering.
@@ -1985,7 +1989,7 @@ let print_per_library ~dry struc =
   ) struc;
   set_phase (Emit Impl);
   Common.mpfiles_restore saved_mpfiles;
-  List.iter print struc
+  List.iter print (Core.modules core)
 
 (** Entry point for extracting specific references to separate files. Each Rocq
     .v file gets its own C++ output file. *)
@@ -1993,7 +1997,7 @@ let separate_extraction ~opaque_access lr =
   init true false;
   Fun.protect ~finally:reset @@ fun () ->
   let refs, mps = locate_ref lr in
-  let struc =
+  let core =
     optimize_struct (refs, mps) (mono_environment ~opaque_access refs mps)
   in
   List.iter
@@ -2002,8 +2006,8 @@ let separate_extraction ~opaque_access lr =
       | (MPdot _ | MPbound _), _ ->
         user_err
           (str "Separate Extraction from inside a module is not supported.") )
-    struc;
-  print_per_library ~dry:(fun _ -> false) struc
+    (Core.modules core);
+  print_per_library ~dry:(fun _ -> false) (Core.freeze core)
 
 (** {2 Simple extraction in the Rocq toplevel. The vernacular command is
     \verb!Extraction! [qualid]} *)
@@ -2015,13 +2019,13 @@ let simple_extraction ~opaque_access r =
   | [r], [] ->
     init false false;
     Fun.protect ~finally:reset (fun () ->
-        let struc =
+        let core =
           optimize_struct ([r], []) (mono_environment ~opaque_access [r] [])
         in
         warns ();
         if is_any_custom r then
           Feedback.msg_notice (str "/* User defined extraction */" ++ fnl ());
-        print_structure_to_file (mono_filename None) false struc )
+        print_structure_to_file (mono_filename None) false (Core.freeze core) )
   | _ -> assert false
 
 (** {2 (Recursive) Extraction of a library. The vernacular command is
@@ -2047,14 +2051,14 @@ let extraction_library ~opaque_access is_rec CAst.{loc; v = m} =
       l
   in
   let struc = List.fold_left select [] l in
-  let struc = optimize_struct ([], []) struc in
+  let core = optimize_struct ([], []) struc in
   (* Without [Recursive], only [m]'s own file is written; the libraries it
      depends on are rendered for what [m]'s file needs to know of them. *)
   let dry = function
     | MPfile dir -> (not is_rec) && not (DirPath.equal dir dir_m)
     | _ -> false
   in
-  print_per_library ~dry struc
+  print_per_library ~dry (Core.freeze core)
 
 (* Helper to detect if we're running under dune (for test output formatting).
    When INSIDE_DUNE=1 is set in the environment, we emit machine-parseable
