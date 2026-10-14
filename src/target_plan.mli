@@ -39,6 +39,9 @@ type representation = {
       (** The fields each generated constructor struct stores behind the
           smart pointer, by inductive and constructor struct name, each with
           whether it holds the inductive itself. *)
+  unmerged_wrappers : string list;
+      (** The wrapper structs that hold declarations, and so are not merged
+          with their eponymous inductive's struct. *)
 }
 
 type t = {

@@ -23,6 +23,10 @@ val install_modules : Module_plan.t -> unit
     loop transformations to read. *)
 val install_pointer_fields : (Names.GlobRef.t * string * (int * bool) list) list -> unit
 
+(** [install_unmerged_wrappers names] installs the wrapper structs that hold
+    declarations, as {!Target_plan.representation} holds them. *)
+val install_unmerged_wrappers : string list -> unit
+
 (** [install_callables callables assumed] installs the callable plans and
     the assumed callables, as {!Target_plan.callables} and
     {!Target_plan.assumed_callables} hold them ({!Callable_abi.install}):

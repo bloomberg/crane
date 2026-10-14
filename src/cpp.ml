@@ -2415,6 +2415,28 @@ let plan_names s =
       | Dfix fds -> List.concat_map (fun fd -> name Term fd.fd_ref) fds )
     (declarations s)
 
+let plan_unmerged_wrappers () =
+  let is_member (_, se) =
+    match se with
+    | SEdecl (Dterm (r, _, _))
+      when is_any_inline_custom r
+           || is_eponymous_record_projection r
+           || is_suppressed_projection r
+           || is_registered_method r <> None ->
+      false
+    | SEdecl (Dterm (_, _, Tglob (ty, _, _))) when is_monad ty -> false
+    | SEdecl (Dterm (_, a, t)) when is_typeclass_instance a t -> false
+    | SEdecl (Dterm _) -> true
+    | SEdecl (Dfix fds) -> filter_dfix fds <> []
+    | _ -> false
+  in
+  List.filter_map
+    (fun (mi : Structure_analysis.module_info) ->
+      match mi.wrapper_name with
+      | Some name when List.exists is_member mi.sels -> Some name
+      | Some _ | None -> None )
+    (get_structure_analysis ()).sorted_modules
+
 let plan_pointer_fields s =
   List.concat_map
     (function
@@ -2799,9 +2821,14 @@ let do_struct_with_decl_tracking ~is_header f s =
             pp_wrapper_module_dual ~is_header ~wrapper_mp:mp name func_sels
           in
           current_structure_decls := old_decls;
-          if not (Pp.ismt p_specs) then (
-            Hashtbl.replace pending_wrapper_decls name p_specs;
-            Hashtbl.replace unmerged_wrappers name () );
+          if not (Pp.ismt p_specs) then Hashtbl.replace pending_wrapper_decls name p_specs;
+          if is_header && Pp.ismt p_specs = Hashtbl.mem unmerged_wrappers name then
+            Probe.violation "unmerged wrappers"
+              Pp.(
+                str "the wrapper " ++ str name
+                ++ str
+                     ( if Pp.ismt p_specs then " was planned to hold declarations and holds none"
+                       else " holds declarations it was not planned to" ) );
           pop_visible ();
           Some
             {

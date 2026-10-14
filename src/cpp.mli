@@ -54,6 +54,13 @@ val plan_names : Miniml.ml_structure -> (Names.GlobRef.t * string) list
     constructors' names are. *)
 val plan_field_names : Miniml.ml_structure -> (Names.GlobRef.t * Names.Id.t list) list
 
+(** The wrapper structs that hold declarations of their module's -- its
+    functions, generated as the wrapper's members -- and so cannot be merged
+    with the eponymous inductive's struct: a reference to the inductive then
+    spells the wrapper's member.  Decided from what the wrapper's module
+    declares, before the header renders the members. *)
+val plan_unmerged_wrappers : unit -> string list
+
 (** The fields each such constructor struct stores behind the smart pointer
     ({!Gen_decls.constructor_pointer_fields}): the inductive, the
     constructor's struct name, and each field's index with whether it holds

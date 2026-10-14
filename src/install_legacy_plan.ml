@@ -26,6 +26,9 @@ let install_callables = Callable_abi.install
 
 let install_pointer_fields = Loopify_analysis.install_ctor_ptr_fields
 
+let install_unmerged_wrappers =
+  List.iter (fun name -> Hashtbl.replace Cpp_state.unmerged_wrappers name ())
+
 let check_installed (facts : Program_facts.t) (plan : Target_plan.t) =
   if Sys.getenv_opt "CRANE_CHECK_IR" <> None then begin
     let fail what =

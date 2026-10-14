@@ -999,6 +999,7 @@ let prepare_layout = "prepare"
 let plan_names = "plan_names"
 let plan_field_names = "plan_field_names"
 let plan_pointer_fields = "plan_pointer_fields"
+let plan_unmerged_wrappers = "plan_unmerged_wrappers"
 let plan_callables = "plan_callables"
 let install_callables = "install_callables"
 
@@ -1007,14 +1008,17 @@ let layout_pass_names =
     plan_names;
     plan_field_names;
     plan_pointer_fields;
+    plan_unmerged_wrappers;
     plan_callables;
     install_callables ]
 
 (** Settle the unit's layout -- where each declaration lives and what it is
     called ({!Module_plan}) -- then the names of the globals it declares, in
     declaration order ({!Cpp.plan_names}), and of its constructors' fields
-    ({!Cpp.plan_field_names}), and which of those fields are stored behind
-    the pointer ({!Cpp.plan_pointer_fields}), then plan the callable of each
+    ({!Cpp.plan_field_names}), which of those fields are stored behind the
+    pointer ({!Cpp.plan_pointer_fields}), and which wrapper structs hold
+    declarations ({!Cpp.plan_unmerged_wrappers}), then plan the callable of
+    each
     function and method a render will generate, installing each before the
     next is decided.  Returns all of them, with the callables assumed of the
     functions that have no plan.  Under [CRANE_CHECK_IR] the callables are
@@ -1033,6 +1037,9 @@ let plan_layout struc =
   Pipeline_trace.event "layout" plan_pointer_fields;
   let pointer_fields = Cpp.plan_pointer_fields struc in
   Install_legacy_plan.install_pointer_fields pointer_fields;
+  Pipeline_trace.event "layout" plan_unmerged_wrappers;
+  let unmerged_wrappers = Cpp.plan_unmerged_wrappers () in
+  Install_legacy_plan.install_unmerged_wrappers unmerged_wrappers;
   Pipeline_trace.event "layout" plan_callables;
   let callables = Cpp.plan_callables struc in
   if
@@ -1042,7 +1049,7 @@ let plan_layout struc =
   let assumed = Translation_calls.assumed_callables struc callables in
   Pipeline_trace.event "layout" install_callables;
   Install_legacy_plan.install_callables callables assumed;
-  (modules, {Target_plan.names; field_names; pointer_fields}, callables, assumed)
+  (modules, {Target_plan.names; field_names; pointer_fields; unmerged_wrappers}, callables, assumed)
 
 (** The renders discovery runs. *)
 let discover_passes ~interface d : ml_structure Pipeline_trace.pass list =
