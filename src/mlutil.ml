@@ -688,6 +688,17 @@ let forwarding_use target =
            in
            {Scheme.solution = Scheme.Type own; source} ) )
 
+let written_type_args use =
+  let evidence = Global_use.written_evidence use in
+  let last = List.fold_left (fun m (v, _) -> max m (Scheme.Var.ordinal v)) 0 evidence in
+  List.init last (fun k ->
+      match List.find_opt (fun (v, _) -> Scheme.Var.ordinal v = k + 1) evidence with
+      | Some (_, t) -> t
+      | None -> Tdummy Ktype )
+
+let subst_by_variable tys t =
+  type_subst_fun (fun j -> if j >= 1 then List.nth_opt tys (j - 1) else None) t
+
 let subst_written_evidence use t =
   let evidence = Global_use.written_evidence use in
   type_subst_fun

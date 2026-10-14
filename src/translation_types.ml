@@ -472,8 +472,7 @@ let with_dict_carrier id value_args ty =
   | None -> ty
 
 let instantiate_at_call id tys value_args ty =
-  let ty = with_dict_carrier id value_args ty in
-  try type_subst_list tys ty with _ -> ty
+  Mlutil.subst_by_variable tys (with_dict_carrier id value_args ty)
 
 (** {!instantiate_at_call} at the type arguments [use] wrote, read by the
     callee's scheme variables. *)
@@ -682,40 +681,6 @@ let relaxed_tt_return_var id =
       else None
     | _ -> None )
 
-(** How many template parameters [id]'s declaration has room for.
-
-    A call can hold more type arguments than the callee has parameters: Rocq
-    counts every variable the definition quantified, C++ only those the
-    converted signature can mention.  A variable no converted type mentions
-    never became a parameter -- the erased [itree] index of [h AE AE nat] is
-    the case -- and an argument written for it overruns the list.  Recomputed
-    from [id]'s type rather than recorded, for the same reason
-    {!phantom_prefix_args} recomputes its own: a call can precede its callee's
-    declaration. *)
-let declared_tvar_count id =
-  match find_type_opt id with
-  | None -> None
-  | Some ml_ty -> Some (Mlutil.type_maxvar (type_simpl ml_ty))
-
-(** [targs] without the position {!relaxed_tt_return_var} names, where the list
-    is still indexed by kept position. *)
-let drop_relaxed_tt_position id targs =
-  Probe.changed "REPAIR_drop_relaxed_tt_position" id ~before:targs @@
-  match (relaxed_tt_return_var id, declared_tvar_count id) with
-  | Some h, Some n ->
-    let kept =
-      kept_type_arg_positions id n
-    in
-    let rec index k = function
-      | [] -> None
-      | i :: rest -> if i = h then Some k else index (k + 1) rest
-    in
-    ( match index 0 kept with
-    | Some k when k < List.length targs ->
-      List.filteri (fun i _ -> i <> k) targs
-    | _ -> targs )
-  | _ -> targs
-
 (** The Rocq type-variable positions a call may still write, given that the
     declaration reorders some of them out of reach.
 
@@ -740,8 +705,8 @@ let drop_relaxed_tt_position id targs =
     collapses to a deduced callable and stops naming. *)
 let writable_tvar_count id =
   let ( let* ) o f = match o with None -> None | Some x -> f x in
-  let* n = declared_tvar_count id in
   let* ml_ty = find_type_opt id in
+  let n = Mlutil.type_maxvar (type_simpl ml_ty) in
   let occurs v t = IntSet.mem v (collect_tvars_set IntSet.empty t) in
   let cod = resolve_tmeta (ml_codomain ml_ty) in
   (* Only a codomain that {e applies} a variable is relaxed.  [list B] names
@@ -774,13 +739,6 @@ let writable_tvar_count id =
      cannot be fixed by cutting its tail, it is left exactly as it was. *)
   let rec suffix_start v = if v < 1 then 1 else if derived v then suffix_start (v - 1) else v + 1 in
   Some (suffix_start n - 1)
-
-(** [targs] cut back to the prefix {!writable_tvar_count} says is reachable. *)
-let truncate_to_writable id targs =
-  Probe.changed "REPAIR_truncate_to_writable" id ~before:targs @@
-  match writable_tvar_count id with
-  | Some n when n < List.length targs -> List.filteri (fun i _ -> i < n) targs
-  | _ -> targs
 
 (** [mk_arity_call ~params ~saturated args] applies a callee to [args], given
     in {e source} order, where the callee's declaration fixes its parameters
@@ -2485,21 +2443,12 @@ let rec normalize_erased_types = function
     Tfun (List.map normalize_erased_types ps, normalize_erased_types r)
   | t -> t
 
-(** [phantom_prefix_args id] is the list of template arguments a call to [id]
-    has to spell out because [id]'s generated signature does not represent
-    them: one filler per leading phantom parameter, as counted by
-    {!Ml_type_util.explicit_tvar_prefix} off [id]'s declared type.
-
-    The filler is [void] where the signature writes the parameter nowhere --
-    nothing can then disagree with it -- and [std::any] where it does.  A
-    return-only parameter is the second case: it is undeducible, so the call
-    must still spell it, but [void] there is not a filler but a claim, and
-    [ITree<void>] is one the body goes on to contradict.
-
-    The declaration emitter counts the same run and leaves those parameters
-    undefaulted, so the two stay in step without either recording anything for
-    the other -- which matters because a call can precede its callee's
-    declaration (mutual recursion, forward references). *)
+(** How many of [id]'s leading template parameters no signature mentions,
+    counted by {!Ml_type_util.explicit_tvar_prefix} off its declared type: its
+    leading phantoms.  Nothing deduces them, so a call writes them, and
+    {!Callable_abi} records them as [Phantom] parameters of [id]'s plan.  The
+    declaration emitter counts the same run and leaves those parameters
+    undefaulted. *)
 let leading_phantom_count id =
   match find_type_opt id with
   | None -> 0
@@ -2509,35 +2458,6 @@ let leading_phantom_count id =
     in
     let force_required = collect_ml_type_index_tvars ml_ty in
     explicit_tvar_prefix ~force_required cty
-
-let phantom_prefix_args id =
-  Probe.changed "REPAIR_phantom_prefix_args" id ~before:[] @@
-  List.init (leading_phantom_count id) (fun _ -> Tvoid)
-
-(** Make an explicit argument list as long as {!writable_tvar_count} says the
-    callee's parameter list is.
-
-    Extraction and C++ disagree at both ends.  A Rocq application can carry an
-    argument for a variable the declaration never got -- an erased index -- and
-    writing it overruns the list.  It can also be missing the leading ones,
-    which erasure dropped before the call was built; those are exactly the
-    positions {!phantom_prefix_args} has fillers for, and without them the
-    arguments that remain are read at the wrong positions.
-
-    An empty list is left empty: a call that writes nothing is asking for
-    deduction, and it is only a call already committed to writing its
-    arguments that has to get their count right. *)
-let fit_to_declared_tvars id targs =
-  Probe.changed "REPAIR_fit_to_declared_tvars" id ~before:targs @@
-  match declared_tvar_count id with
-  | Some n when n < List.length targs ->
-    List.filteri (fun i _ -> i < n) targs
-  | Some n when targs <> [] && n > List.length targs ->
-    let missing = n - List.length targs in
-    let fillers = phantom_prefix_args id in
-    if List.length fillers < missing then targs
-    else List.filteri (fun i _ -> i < missing) fillers @ targs
-  | _ -> targs
 
 (** The template name a written type [c] stands for at a higher-kinded
     variable: [c] itself as a constructor, unless applying it changes
@@ -2816,30 +2736,6 @@ let dict_carrier_type_args env tvars id args =
   in
   Some [Minicpp.Ttyctor carrier]
 
-(** Spell the erased arguments of [id]'s phantom prefix with the fillers
-    {!phantom_prefix_args} gives them.
-
-    An erased argument normally costs a call its whole explicit argument list:
-    the positions are what give the others their meaning, so one that cannot be
-    written drops all of them ({!Ml_type_util.filter_erased_type_args}).  A
-    phantom position is the exception, because it has a filler that is right
-    whatever the argument was -- the signature does not mention the parameter,
-    so nothing can disagree with [void] -- and the arguments after it keep
-    their positions.
-
-    This is what an erased {e event} needs.  A single event family reaches C++
-    as its own struct and is written as itself, but a sum ([E +' F]) has no
-    spelling; without the filler, [raise]'s result type goes unwritten too, and
-    it appears only in the return position, where nothing can deduce it. *)
-let fill_phantom_prefix id targs =
-  let fillers = phantom_prefix_args id in
-  List.mapi
-    (fun i t ->
-      match List.nth_opt fillers i with
-      | Some f when prints_as_any t -> f
-      | _ -> t )
-    targs
-
 (** Whether [e] denotes a value whose ML type is a function (at least one value
     arrow).  Used to decide, at a constructor argument that is stored into an
     erased ([std::any]) field, whether to route it through the [crane_erase_fn]
@@ -3090,7 +2986,7 @@ let regroup_crossing ~from ~into expr =
 let value_cpp_type env e =
   match strip_magic e with
   | MLrel j -> binder_cpp_type_or_derive env j
-  | MLglob ({callee = r; _} as use) when Global_use.legacy_template_args use = [] ->
+  | MLglob ({callee = r; _} as use) when Mlutil.written_type_args use = [] ->
     Option.map (cpp_of_ml env) (find_type_opt r)
   | _ -> None
 

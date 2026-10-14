@@ -561,8 +561,9 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
   tctx := { !tctx with move_owned_vars = saved_owned };
   tctx := { !tctx with move_n_params = saved_nparams };
   (* Add type args to recursive self-calls. Inside fixpoint bodies, the
-     extraction produces MLglob(func_ref, []) with empty type args for recursive
-     references. When the function is a method, the recursive call needs
+     extraction produces a self reference whose variables stand for themselves
+     and are written nowhere ({!Mlutil.self_reference}). When the function is a
+     method, the recursive call needs
      explicit template args for non-deducible params. Replace CPPglob(func_ref,
      []) with CPPglob(func_ref, all_type_args).
 

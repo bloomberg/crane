@@ -1076,8 +1076,8 @@ let rec gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type
 
          We use [get_ind_num_param_vars_opt] to find the parameter count and
          [safe_firstn] to extract them. [safe_firstn] handles cases where the
-         type arg list is shorter than expected (e.g., due to Tdummy Ktype
-         erasure in make_tyargs). *)
+         use wrote fewer type arguments than the parameters (a partial
+         application). *)
       let tys =
         match n with
         | GlobRef.IndRef (kn, _) ->
@@ -1356,7 +1356,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
        as though it were a function. *)
     gen_expr ?expected_ty env absurd
   | MLapp (MLglob ({callee = r; _} as use), a1 :: l) when is_ret r ->
-    let ret_tys = Global_use.legacy_template_args use in
+    let ret_tys = Mlutil.written_type_args use in
     if (!tctx).itree_mode = Reified then begin
       (* Reified mode: Ret produces ITree<R>::ret(value). Don't strip it. *)
       Table.require_itree_header ();
@@ -2485,7 +2485,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
          function names as first-class values. *)
       ( match a with
       | MLglob ({callee = r; _} as use) ->
-        let tys_inner = Global_use.legacy_template_args use in
+        let tys_inner = Mlutil.written_type_args use in
         let ml_ty =
           match find_type_opt r with
           | Some ty -> ty
@@ -2730,7 +2730,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       eta_expand_to_expected ?expected_ty ~ml_arity ~returns_a_lambda
         ~arity:(List.length filtered_args) f )
   | MLglob ({callee = x; _} as use) when is_inline_custom x ->
-    let tys = Global_use.legacy_template_args use in
+    let tys = Mlutil.written_type_args use in
     let ml_ty = find_type x in
     let ty = cpp_of_ml env ml_ty in
     ( match ty with
@@ -2741,7 +2741,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
         ?yields:(glob_yields env x (Mlutil.instantiate_written ~reader:"glob_yields" use))
         x (template_params_of_ml ~site:Through_tvar env tys) )
   | MLglob ({callee = x; _} as use) ->
-    let tys = Global_use.legacy_template_args use in
+    let tys = Mlutil.written_type_args use in
     let tvars = get_current_type_vars () in
     (* Each argument with the variable it was written for. *)
     let by_var =
@@ -5091,7 +5091,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
    match a projection through an instance {e variable} extracts to; the C++ is
    the same either way. *)
 and project_through_instance env use args inst =
-  let x = use.callee and tys = Global_use.legacy_template_args use in
+  let x = use.callee and tys = Mlutil.written_type_args use in
   let operands =
     List.filter
       (fun a ->
@@ -5372,7 +5372,7 @@ and gen_call_args ~slot ?expected_ty env id plan =
             && param_states_type_args id orig
             && mentions j orig
             && Ml_type_util.has_erased_type_in_type
-                 (unfold_cpp_typedef env (cpp_of_ml env (type_subst_list tys orig))))
+                 (unfold_cpp_typedef env (cpp_of_ml env (Mlutil.subst_by_variable tys orig))))
           (Param_pos.positioned fn_param_ml_tys_orig)
       | _ -> false
     in
@@ -5879,7 +5879,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
   let slot = {slot with eta_keep_moves = false} in
   match f with
   | MLglob ({callee = id; _} as use) ->
-    let tys = Global_use.legacy_template_args use in
+    let tys = Mlutil.written_type_args use in
     let plan = plan_call ~slot ?expected_ty env id tys args in
     let {
       cp_excess_args = excess_args;
@@ -5964,7 +5964,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
               | None -> false) ->
         CPPscope (CPPtype_name inst_ty, Common.id_of_global Term id, method_targs)
       | _ ->
-        mk_cppglob ?yields:(glob_yields env id (Mlutil.type_subst_list tys)) id
+        mk_cppglob ?yields:(glob_yields env id (Mlutil.subst_by_variable tys)) id
           all_type_args
     in
     (* Check if this is a typeclass instance used as a type (for :: access).
@@ -6003,7 +6003,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
     (* The callee's codomain as this call instantiates it. *)
     let instantiated_codomain ml_ty =
       let cod = ml_codomain ml_ty in
-      if inst_tys = [] then cod else Mlutil.type_subst_list inst_tys cod
+      if inst_tys = [] then cod else Mlutil.subst_by_variable inst_tys cod
     in
     let wrap_excess base =
       if excess_args = [] then
@@ -6044,8 +6044,8 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
                  another layer of arrows and reject valid cases like
                  [fold_right] instantiated at [A = nat -> nat].
 
-                 When [tys] is empty (type args carried as [MLdummy] in
-                 [args] rather than in the [MLglob] type-arg list),
+                 When [tys] is empty (the use wrote no type argument, its
+                 types carried as [MLdummy] in [args] instead),
                  substitution is a no-op and the [Tvar] stays unresolved.
                  In this case, chain unconditionally: Rocq's type system
                  guarantees that excess {i value} args (non-[MLdummy]) can
@@ -6055,7 +6055,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
               if inst_tys = [] then
                 true
               else
-                let cod_inst = Mlutil.type_subst_list inst_tys cod in
+                let cod_inst = Mlutil.subst_by_variable inst_tys cod in
                 ( match resolve_tmeta cod_inst with
                 | Miniml.Tarr _ -> true
                 | Miniml.Tglob _ -> true
@@ -6776,8 +6776,8 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
   | _ ->
     (* Non-global callee (e.g., a local variable from MLrel). Filter out MLdummy
        args — these are erased type/prop parameters that have no runtime
-       representation. Unlike the MLglob case above, there is no type-arg list
-       to filter here; we only need to drop value-level dummies. *)
+       representation. Unlike the MLglob case above, there is no use to
+       instantiate here; we only need to drop value-level dummies. *)
     let args =
       List.filter
         (fun x ->
@@ -6803,7 +6803,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
        call goes through. *)
     let callee_fun_ml_ty =
       match f with
-        | MLglob ({callee = r; _} as use) when Global_use.legacy_template_args use <> [] ->
+        | MLglob ({callee = r; _} as use) when Mlutil.written_type_args use <> [] ->
           (match find_type_opt r with
            | Some ty -> Some (Mlutil.instantiate_written ~reader:"callee_fun_ml_ty" use ty)
            | None -> infer_ml_body_type f)
@@ -10177,7 +10177,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
   (* | MLapp (MLglob {callee = h; _}, a1 :: a2 :: l) when is_hoist h -> gen_stmts env k
      (MLapp (a1, a2::[])) *)
   | MLapp (MLglob ({callee = r; _} as use), a1 :: a2 :: l) when is_bind r ->
-    let bind_tys = Global_use.legacy_template_args use in
+    let bind_tys = Mlutil.written_type_args use in
     (* Reified mode: bind is a real function call, not desugared. *)
     if (!tctx).itree_mode = Reified then
       let saved_dead = (!tctx).move_dead_after in
@@ -10194,9 +10194,9 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
        arguments. bind has type forall A B, IO A -> (A -> IO B) -> IO B. The
        first type argument is A, which is the type of the continuation
        parameter. Use mgu to unify them, which mutably resolves metas. Skip
-       Tdummy entries in bind_tys — these come from failed type extractions in
-       make_tyargs (e.g., HKT type constructors that can't be extracted).
-       Unifying a meta with Tdummy would not resolve it usefully. *)
+       Tdummy entries in bind_tys -- an argument extraction could not read
+       ({!Extraction.observe_type_arg}: a type constructor such as an HKT
+       carrier).  Unifying a meta with Tdummy would not resolve it usefully. *)
     let non_dummy_bind_tys = filter_value_types bind_tys in
     let () =
       match non_dummy_bind_tys with

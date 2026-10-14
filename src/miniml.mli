@@ -205,8 +205,9 @@ and ml_branch = (ml_ident * ml_type) list * ml_type * ml_pattern * ml_ast
 (** An erased ML term — the computational residue of a CIC term. Key
     constructors: [MLrel] a De Bruijn-indexed local variable; [MLapp] an
     application of a head to a list of arguments; [MLlam] a lambda (binder, its
-    type, body); [MLletin] a let-binding; [MLglob] a reference to a global
-    constant with its type arguments; [MLcons] a constructor application (its
+    type, body); [MLletin] a let-binding; [MLglob] a use of a global, with
+    what the use instantiates the global's type scheme at
+    ({!global_use}); [MLcons] a constructor application (its
     {!ml_type} records the constructed type); [MLtuple] an anonymous tuple;
     [MLcase] a pattern match (matched-head type, scrutinee, branches); [MLfix]
     a block of mutually recursive fixpoints (index of the selected component,
@@ -449,12 +450,6 @@ module Global_use : sig
       one extraction could not read is [Tdummy Ktype], the erased argument it
       stood as. *)
   val written_evidence : global_use -> (Scheme.Var.t * ml_type) list
-
-  (** Compatibility view for the template-argument readers not yet
-      replaced by the call planner: the written arguments in scheme-variable
-      order, up to the last variable written, a variable not written before
-      it standing as [Tdummy Ktype]. *)
-  val legacy_template_args : global_use -> ml_type list
 
   (** Maps every type of the instantiation, keeping the scheme, the slots'
       evidence and the holes. *)

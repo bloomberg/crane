@@ -85,6 +85,16 @@ val self_reference : GlobRef.t -> global_use
     a forwarder with [target]'s type writes. *)
 val forwarding_use : GlobRef.t -> global_use
 
+(** The arguments [use] wrote, indexed by the scheme variable each is for:
+    entry [k] is variable [k + 1]'s, up to the last variable written, a
+    variable not written before it standing as the erased [Tdummy Ktype]. *)
+val written_type_args : global_use -> ml_type list
+
+(** [subst_by_variable tys t] instantiates [t], a type in a callee's scheme
+    variables, at [tys] indexed by variable as {!written_type_args} is: entry
+    [k] replaces variable [k + 1], and a variable past the end stays. *)
+val subst_by_variable : ml_type list -> ml_type -> ml_type
+
 (** [subst_written_evidence use t] is [t], a type in [use]'s callee's
     scheme variables, with each variable the use wrote an argument for at
     that variable's own binder replaced by the argument.  A variable the use

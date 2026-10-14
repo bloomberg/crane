@@ -1611,8 +1611,8 @@ let collect_tvars acc ty =
     alongside it.  Neither is a variable that does not occur in [r]'s type at
     all ([mbind]'s [B] only ever appears under the carrier [M B]).
 
-    Asked both of a call's type arguments and of an instance's, which are the
-    same list read at the same positions. *)
+    Asked of a call's scheme variables and of an instance's type arguments,
+    both indexed by the variable each is for. *)
 let keeps_type_arg_position r =
   match find_type_opt r with
   | None -> fun _ -> true
@@ -1681,81 +1681,6 @@ let saturate_at_any t =
   | Tnamespace (ns, Tglob (g, args, es)) -> Tnamespace (ns, Tglob (g, pad g args, es))
   | t -> t
 
-(** [ts], an explicit argument list for [r] read from the front, with a
-    plain position given a type: a family recovered as its bare head --
-    [box] for [TFunctor_list'], whose [F] the declaration writes plain -- is
-    that family at its erased index, [box<std::any>]. *)
-let types_at_plain_positions r ts =
-  match find_type_opt r with
-  | None -> ts
-  | Some ml_ty ->
-    let hk = Ml_type_util.higher_kinded_ml_tvars [ml_ty] in
-    let n = IntSet.fold max (collect_tvars_set IntSet.empty ml_ty) 0 in
-    let kept = kept_type_arg_positions r n in
-    List.mapi
-      (fun k t ->
-        match List.nth_opt kept k with
-        | Some i when not (IntSet.mem i hk) -> (
-          (* A carrier abstraction is applied at the erased index; a bare
-             head has its missing arguments erased. *)
-          let t =
-            match t with
-            | Ttyctor body -> (
-              match Minicpp.tapply t [Tany] with Tapply _ -> body | applied -> applied )
-            | t -> t
-          in
-          if under_applied_ind t then saturate_at_any t else t )
-        | _ -> t )
-      ts
-
-(** [r]'s type arguments, with those standing for a parameter of kind
-    [Type -> Type] spelled as the bare template names they are.
-
-    Such a parameter is declared [template <typename> class], so an explicit
-    argument for it is a template, not a type: [iter<_tcI0::template F, R>].
-    Written as a type it reads [typename _tcI0::F], which names the alias's
-    result rather than the alias, and C++ rejects it outright.  Which
-    positions those are is read off [r]'s own type -- the same question its
-    declaration asked of it.
-
-    [ts] is the list {!kept_type_args} produced, so it is indexed by kept
-    position, not by de Bruijn index: the variables a class resolved away are
-    no longer in it.  The correspondence is rebuilt from the same predicate
-    that dropped them, and a list of some other length -- one a later pass
-    filtered or padded -- is left alone rather than guessed at. *)
-let hkt_spelled_type_args r ts =
-  match find_type_opt r with
-  | None -> ts
-  | Some ml_ty ->
-    (* Higher-kinded as the declaration has it: an event family is applied
-       everywhere it occurs, and is still declared a plain [typename] --
-       whose argument is the family's own type, promoted arguments and all,
-       and not its bare template name. *)
-    let hk = Ml_type_util.higher_kinded_ml_tvars [ml_ty] in
-    (* Only a higher-kinded variable is relaxed out of a head: a family is a
-       plain parameter the declaration keeps. *)
-    let relaxed = Ml_type_util.relaxed_higher_kinded_tvars ml_ty in
-    let ts = types_at_plain_positions r ts in
-    if IntSet.is_empty hk && IntSet.is_empty relaxed then ts
-    else
-      let n = IntSet.fold max (collect_tvars_set IntSet.empty ml_ty) 0 in
-      let keep = keeps_type_arg_position r in
-      let kept = List.filter keep (List.init n (fun i -> i + 1)) in
-      if List.length kept <> List.length ts then ts
-      else
-        List.map2
-          (fun i t ->
-            (* The declaration relaxed this one out of its head: what is left
-               at the position is a phantom defaulted to [void], and the
-               application it stood for is deduced from the argument. *)
-            if IntSet.mem i relaxed then Minicpp.Tvoid
-            else
-              match t with
-              | Minicpp.Ttyctor _ -> t
-              | _ when IntSet.mem i hk -> Minicpp.Ttyctor t
-              | _ -> t )
-          kept ts
-
 (** Collect all Tvar indices from an ML AST, using collect_tvars on embedded
     types. Used to find all type variables referenced in a function body. *)
 let rec collect_tvars_ast acc = function
@@ -1763,7 +1688,7 @@ let rec collect_tvars_ast acc = function
   | MLletin (_, ty, a, b) ->
     collect_tvars_ast (collect_tvars_ast (collect_tvars acc ty) a) b
   | MLglob use ->
-    List.fold_left collect_tvars acc (Global_use.legacy_template_args use)
+    List.fold_left collect_tvars acc (Mlutil.written_type_args use)
   | MLcons (ty, _, args) ->
     List.fold_left collect_tvars_ast (collect_tvars acc ty) args
   | MLcase (ty, e, brs) ->
@@ -2591,10 +2516,10 @@ let rec infer_ml_body_type (a : ml_ast) : ml_type option =
          ones the call site wrote, by variable, or, where it wrote none, the
          ones its arguments imply. *)
       let ty =
-        if Global_use.legacy_template_args use <> [] then
+        if Mlutil.written_type_args use <> [] then
           Mlutil.instantiate_written ~reader:"infer_ml_body_type" use ty
         else
-          Mlutil.type_subst_list
+          Mlutil.subst_by_variable
             (tvar_instantiation ty
                (List.filter (function MLdummy _ -> false | _ -> true) args) )
             ty
@@ -2615,9 +2540,9 @@ let rec infer_ml_body_type (a : ml_ast) : ml_type option =
 (** [tvar_instantiation callee_ty args] is the callee's type-variable
     instantiation, read off the arguments' own ML types.
 
-    A call site does not always carry its type arguments: when they were
-    erased, the [MLglob]'s list is empty and the callee's schema stays
-    uninstantiated, so a codomain like [projT2]'s reads as a bare [Tvar] and
+    A call site does not always carry its type arguments: where the use wrote
+    none, the callee's schema stays uninstantiated at the written arguments,
+    so a codomain like [projT2]'s reads as a bare [Tvar] and
     nothing downstream can tell whether it erases.  The arguments still pin
     the variables down -- matching the declared domain against the type each
     argument actually has recovers them.
@@ -2870,11 +2795,7 @@ and fill_erased_tys ?(only_alias_args = false) id tys args =
             (List.map resolve_tmeta (ml_domains callee_ty))
       in
       let found =
-        tvar_instantiation_found
-          ~in_scope:true
-          ~constructors:true
-          callee_ty
-          args
+        tvar_instantiation_found ~in_scope:true ~constructors:true callee_ty args
       in
       List.mapi
         (fun k t ->
@@ -2883,9 +2804,7 @@ and fill_erased_tys ?(only_alias_args = false) id tys args =
             && ((not only_alias_args) && Hashtbl.mem applied (k + 1)
                || in_dictionary (k + 1))
           then
-            match
-              List.assoc_opt (k + 1) found
-            with
+            match List.assoc_opt (k + 1) found with
             | Some t' when not (erased t') -> t'
             | _ -> t
           else

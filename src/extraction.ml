@@ -865,10 +865,11 @@ and extract_type_scheme env sg db c p =
     [fun n => vec A n] at [vec A].  One value binder is enough to make the
     variable such a family: [P : Type -> nat -> Type] is read whole as well,
     so [fun _ _ => nat -> nat] instantiates it at [nat -> nat].  A family
-    whose binders all range over types is a type constructor, and stays the
-    plain {!extract_type} question -- unless it ignores them: [fun T => list
-    nat] is the carrier [list nat], whatever it is applied to (see
-    {!Mlutil.apply_ml_type}). *)
+    whose binders all range over types is a type constructor, and has no ML
+    type: [None] -- unless it ignores them: [fun T => list nat] is the
+    carrier [list nat], whatever it is applied to (see
+    {!Mlutil.apply_ml_type}).  Anything else is the plain {!extract_type}
+    question. *)
 and extract_family_type env sg db c =
   (* A type function bound by a [let] is its definition: [N.binary_rect]
      passes [positive_rect] its [let P' p := P (pos p)], which has no type
@@ -894,8 +895,11 @@ and extract_family_type env sg db c =
     | _ -> None
   in
   match peel env db 0 false c with
-  | Some t -> t
-  | None -> extract_type env sg db 0 c []
+  | Some t -> Some t
+  | None -> (
+    match EConstr.kind sg (whd_betaiotazeta env sg c) with
+    | Lambda _ -> None
+    | _ -> Some (extract_type env sg db 0 c []) )
 
 (* First, a version with cache *)
 
@@ -1619,8 +1623,6 @@ and extract_term env sg mle mlt c args =
       | LocalDef (_, _, ty) -> ty
     in
     let vty = extract_type env sg [] 0 ty [] in
-    (* let metas = List.map new_meta args in let domain = make_tyargs env sg mle
-       args metas in *)
     let extract_var mlt =
       put_magic ~from:vty ~into:mlt (MLglob (Global_use.monomorphic (GlobRef.VarRef v)))
     in
@@ -1698,316 +1700,69 @@ and make_mlargs env sg e s args typs =
   in
   f (args, typs, s)
 
-(* Extract type arguments from a constant application. Walks the Rocq arguments
-   in parallel with both the unified (instantiated) types and the original
-   (pre-unification) schema types. A slot is a type parameter if either the
-   unified type is Tdummy (the standard case — extraction marks Type-kinded
-   params as Tdummy) or the original schema type was Tdummy (handles cases where
-   unification resolved a Tdummy to a concrete type).
+(** What the Rocq argument [a], written at a binder that is one of the
+    callee's scheme variables, says the variable's type is -- the source
+    evidence an instantiation slot records; [None] where it says nothing
+    extraction can read.  [db] translates the caller's own [Rel]s into its
+    type variables.
 
-   On successful extraction, the concrete ML type is emitted (e.g.,
-   vector<int>). On failure (e.g., HKT type constructors like F : Type -> Type
-   that can't be extracted to an ML type), Tdummy Ktype is emitted to preserve
-   positional consistency — this ensures that call-site type args remain aligned
-   with declaration params. The downstream translation handles Tdummy entries:
-   filter_erased_type_args drops all explicit type args when any is Tdummy, and
-   the bind handler skips Tdummy entries when resolving continuation metas. *)
-
-(** Builds type argument list, filtering by signature. Extracts concrete ML
-    types for type parameters, emitting Tdummy Ktype for HKT failures to
-    preserve positional consistency.
-
-    This function processes three parallel lists (args, typs, orig_typs) in
-    lockstep to build the ML type argument list for a function application.
-    At Kill positions (marked Tdummy in typs or orig_typs), we attempt to
-    extract the concrete type. When extraction fails, fallback logic determines
-    whether to preserve the term as a Tglob or erase it as Tdummy Ktype.
-
-    The fallback classification is critical for C++ code generation:
-    - Kprop (proof) positions: always emit Tdummy Kprop (erased, no C++ analog)
-    - Ktype positions with Ind terms: preserve or erase based on semantic check
-    - Ktype positions with Rel terms: preserve as Tvar if genuine type parameter
-    - Other Ktype positions: conservatively erase as Tdummy Ktype
-
-    See docs/kprop_ktype_conflict_detailed.md for detailed analysis of the
-    classification problem and solutions.
-
-    @param env  Rocq environment for type checking and lookup
-    @param sg   Evar map for term operations and reduction
-    @param mle  ML environment (unused in current implementation)
-    @param args Actual Rocq terms being passed as arguments
-    @param typs Inferred ML types after unification (may contain Tdummy)
-    @param orig_typs Original schema types from function signature
-    @return The type arguments, each with the position of the argument it
-      was read from *)
-and make_tyargs env sg mle args typs ~orig_typs =
-  let db = db_from_rel_context env in
-  let is_kprop = function Tdummy Kprop -> true | _ -> false in
-  let is_tdummy = function Tdummy _ -> true | _ -> false in
-  (* Recursive helper that processes args/typs/orig_typs in parallel.
-
-     The function walks three lists in lockstep:
-      - [args]: Rocq terms being passed as arguments
-      - [typs]: ML types after unification (may contain Tdummy)
-      - [orig_typs]: Original schema types from function signature
-
-      At each position, we determine whether it's a Kill position (Tdummy in
-      typs or orig_typs) or a Keep position. Kill positions are type parameters
-      that may need special handling. Keep positions are value arguments that
-      we skip.
-
-      Returns an ML type list with the same length as the number of Kill
-      positions in the input. This maintains positional correspondence between
-      type arguments in the ML AST and C++ template parameters. *)
-  let rec f k = function
-    | [], [], [] ->
-      (* Base case: all lists exhausted simultaneously (well-formed input) *)
-      []
-    | _a :: la, t :: lt, o :: lo when is_kprop t || is_kprop o ->
-      (* Kill Kprop position - proof parameter.
-
-         Proofs are always erased in extraction. We emit [Tdummy Kprop] to
-         maintain positional alignment in the ML AST. Later, during C++ type
-         conversion, [Tdummy Kprop] becomes [Tglob(VarRef "dummy_prop")],
-         which [filter_erased_type_args] strips out before the all-or-nothing
-         erasure check.
-
-         We don't examine the term [a] because proofs are unconditionally
-         erased regardless of their content. The term might be a proof of
-         [P], an axiom, a lemma, etc. - all are erased.
-
-         Example:
-         - Function schema: [forall (A : Type) (H : A = A), ...]
-         - [A] is Keep Ktype, [H] is Kill Kprop
-         - Result: [[extract_type A; Tdummy Kprop]] *)
-      (k, Tdummy Kprop) :: f (k + 1) (la, lt, lo)
-    | a :: la, t :: lt, o :: lo when is_tdummy t || is_tdummy o ->
-      (* Kill Ktype position — this is a type parameter slot.
-
-         We first attempt to extract the term as a concrete ML type via
-         [extract_type]. This succeeds for most well-formed type arguments
-         like [option nat], [list A], [Tree T], etc.
-
-         When [extract_type] fails (exception thrown), we enter fallback
-         classification based on the term's syntactic form. The fallback
-         determines whether to preserve type information (Tglob/Tvar) or
-         erase it (Tdummy Ktype).
-
-         Fallback cases:
-         - Ind: inductive/record type constructor → classify by semantics
-         - Rel: de Bruijn index referencing a type parameter → classify by sort
-         - Other: conservatively erase as Tdummy Ktype
-
-         The fallback preserves positional consistency: we always emit exactly
-         one ML type for each type argument position, even if it's Tdummy. *)
-      ( try (k, extract_family_type env sg db a) :: f (k + 1) (la, lt, lo)
-        with _ ->
-          let fallback =
-            match EConstr.kind sg (whd_betaiotazeta env sg a) with
-            | Ind ((kn, i), _) ->
-              (* Inductive or Record type constructor (possibly unapplied).
-
-                 Examples:
-                 - [option] (custom-extracted to std::optional)
-                 - [list] (custom-extracted to std::vector)
-                 - [Tree] (user-defined inductive)
-                 - [LeftProperty] (user-defined record)
-
-                 The key question: Can we reference this type's C++ name
-                 bare (without template arguments) in a template argument list?
-
-                 Two conditions must both hold for the bare name to be valid:
-
-                 1. NOT custom-extracted: Custom-extracted types like
-                    [option] → [std::optional<%t0>] have no standalone C++ name;
-                    they only exist via custom syntax that requires template args.
-
-                 2. No C++ template parameters: If the Rocq inductive has type
-                    parameters that become C++ [typename] params (e.g.,
-                    [Tree : Type -> Type] → [template<typename t_A> struct Tree]),
-                    then [Tree] alone is an incomplete type in C++.
-
-                 Only non-custom, non-template inductives can be preserved.
-                 These are inductives whose Rocq parameters are all erased
-                 values (not types), so the C++ struct has no template params.
-
-                 Examples:
-                 - [option : Type -> Type] → custom → erase
-                 - [Tree : Type -> Type] → non-custom, 1 template param → erase
-                 - [LeftProperty : PreStableCategory -> Set] →
-                   non-custom, 0 template params (PS is a value, erased) → preserve
-
-                 The [Tglob] with empty type args list preserves the type
-                 constructor name for explicit C++ template argument lists at
-                 call sites, which is needed when C++ cannot deduce the type
-                 from value arguments alone. *)
-              let ind_ref = GlobRef.IndRef (kn, i) in
-              (* Check whether this inductive has C++ template parameters.
-                 If it does, bare use (e.g. [Tree] without [<T>]) is invalid
-                 in C++, so we must erase it. If it has no template params
-                 (e.g. [LeftProperty] — its Rocq parameter [PS : PreStableCategory]
-                 is a value, not a type, so it's erased and the C++ struct is
-                 non-template), the bare name is a valid C++ type. *)
-              let has_cpp_template_params =
-                match Table.get_ind_num_param_vars_opt kn with
-                | Some n -> n > 0
-                | None -> false
-              in
-              (* A logical family -- [void1 : Type -> Prop] -- is erased
-                 wherever it is applied, so no struct is ever emitted for it
-                 and its name is no C++ type.  Its position stays, erased like
-                 the types that apply it. *)
-              let logical =
-                try (extract_ind env kn).ind_packets.(i).ip_logical
-                with _ -> false
-              in
-              if logical || Table.is_custom ind_ref || has_cpp_template_params
-              then
-                (* Custom syntax needs template args, or the C++ struct is
-                   templated — bare name is invalid. Erase so that
-                   [filter_erased_type_args] drops all type args and lets
-                   C++ template argument deduction handle it. *)
-                Tdummy Ktype
-              else
-                (* Non-custom, non-template struct — bare C++ name is valid.
-                   Preserve as [Tglob] so it appears in explicit template
-                   argument lists at call sites (needed when C++ can't
-                   deduce the type from value arguments alone). *)
-                Tglob (ind_ref, [], [])
-            | Rel n ->
-              (* De Bruijn index referencing a bound variable (parameter or local).
-
-                 Rels at Kill Ktype positions typically represent type parameters
-                 from outer scopes. We need to determine if the Rel denotes:
-                 1. A genuine type parameter (preserve as Tvar)
-                 2. A proof parameter or value (erase as Tdummy Ktype)
-
-                 The classification uses [returns_type_sort] to check if the Rel's
-                 Rocq type ultimately reduces to a Type/Set sort. This handles both:
-                 - Simple type params: [A : Type] → type is [Type] (Sort) → preserve
-                 - Higher-kinded type params: [F : Type -> Type] → type is [Type -> Type]
-                   but the codomain is [Type] (Sort) → preserve
-                 - Proof params: [H : P] where [P : Prop] → type is [P], which is
-                   Prop (Sort), but we filter by sort family → erase
-                 - Value params: [n : nat] → type is [nat], not a Sort → erase
-
-                 The [returns_type_sort] helper recursively strips Prod constructors
-                 to find the ultimate codomain sort. For example:
-                 - [Type] → Sort → check family (InType → true)
-                 - [Type -> Type] → Prod → recurse → Sort → true
-                 - [Type -> Prop] → Prod → recurse → Sort (InProp) → false
-                 - [nat] → not Sort/Prod → false
-
-                 If the Rel is a type parameter, we map its de Bruijn index [n]
-                 to an ML type variable index via the [db] list (which reverses
-                 and renumbers the environment). If the mapping succeeds, emit
-                 [Tvar n'], else [Tdummy Ktype].
-
-                 If the Rel is not a type parameter (proof or value), erase it. *)
-              let is_type_param =
-                try
-                  (* Look up the Rel's declaration in the environment *)
-                  let decl = Environ.lookup_rel n env in
-                  (* Extract its Rocq type and check if it returns Type/Set *)
-                  returns_type_sort
-                    (Context.Rel.Declaration.get_type decl)
-                with _ ->
-                  (* Lookup failed (out of bounds, etc.) - conservatively erase *)
-                  false
-              in
-              if is_type_param then
-                (* Map de Bruijn index to ML type variable index via db list.
-                   The db list is a reverse-indexed map from Rel indices to
-                   ML Tvar indices, built from env_rel_context. *)
-                let n' =
-                  if n <= List.length db then List.nth db (n - 1) else 0
-                in
-                (* If mapping succeeded (n' > 0), emit Tvar; else erase *)
-                if n' > 0 then Tvar (Schematic, n') else Tdummy Ktype
-              else
-                (* Not a type parameter - erase *)
-                Tdummy Ktype
-            | _ ->
-              (* Other term forms (App, Lambda, Let, Case, Fix, CoFix, Proj, etc.)
-                 at Kill Ktype positions. These are rare and typically indicate
-                 unusual higher-order type manipulation. Conservatively erase. *)
-              Tdummy Ktype
-          in
-          (k, fallback) :: f (k + 1) (la, lt, lo) )
-    | _a :: la, _t :: lt, _o :: lo ->
-      (* Non-Kill position - this is a value argument, not a type argument.
-         Skip it and continue processing the remaining lists. *)
-      f (k + 1) (la, lt, lo)
-    | _ ->
-      (* List length mismatch or all lists exhausted.
-         This terminates the recursion. In a well-formed extraction, all three
-         lists should have the same length and reach [] simultaneously. *)
-      []
+    A type extracts as itself ({!extract_family_type}, which also reads a
+    family over values at its body).  Where extraction fails -- a type
+    constructor such as [F : Type -> Type] -- two shapes still name something
+    C++ can spell:
+    - an inductive with no C++ template parameter and no custom spelling,
+      whose bare name is a type ([LeftProperty], whose only parameter is a
+      value); one with template parameters, a custom one ([option]) or a
+      logical one has no bare spelling;
+    - a [Rel] the caller binds at a type ([returns_type_sort]: [A : Type],
+      [F : Type -> Type]) and numbers as one of its variables.
+    Anything else -- a proof or value [Rel], an application, a lambda -- says
+    nothing. *)
+and observe_type_arg env sg db a =
+  let extracted =
+    try extract_family_type env sg db a with e when CErrors.noncritical e -> None
   in
-  f 0 (args, List.map type_simpl typs, orig_typs)
+  match extracted with
+  | Some (Tdummy _) -> None
+  | Some t -> Some t
+  | None -> (
+    match EConstr.kind sg (whd_betaiotazeta env sg a) with
+    | Ind ((kn, i), _) ->
+      let ind_ref = GlobRef.IndRef (kn, i) in
+      let has_cpp_template_params =
+        match Table.get_ind_num_param_vars_opt kn with
+        | Some n -> n > 0
+        | None -> false
+      in
+      let logical =
+        try (extract_ind env kn).ind_packets.(i).ip_logical
+        with e when CErrors.noncritical e -> false
+      in
+      if logical || Table.is_custom ind_ref || has_cpp_template_params then None
+      else Some (Tglob (ind_ref, [], []))
+    | Rel n ->
+      let is_type_param =
+        try returns_type_sort (Context.Rel.Declaration.get_type (Environ.lookup_rel n env))
+        with e when CErrors.noncritical e -> false
+      in
+      let n' = if is_type_param && n <= List.length db then List.nth db (n - 1) else 0 in
+      if n' > 0 then Some (Tvar (Schematic, n')) else None
+    | _ -> None )
 
 (** {2 Extraction of a constant applied to arguments} *)
-
-(** Reports a call whose written type-argument list does not line up with
-    its callee's scheme variables when read by list position, as the readers
-    of [MLglob]'s list read it: [TYARGS_COUNT] where the counts differ, and
-    [TYARGS_COINCIDENCE] where they agree while some entry was read at a
-    binder that is not its position's variable, the case a length check
-    cannot see.  [positioned] pairs each entry with its argument position. *)
-and probe_tyarg_alignment kn schema ~nargs s_full positioned =
-  let code = function
-    | Kill Ktype -> "t"
-    | Kill Kprop -> "p"
-    | Kill (Kimplicit _) -> "i"
-    | Keep -> "K"
-  in
-  let layout =
-    String.concat ""
-      (List.map
-         (fun {Ml_schema.role; scheme_var; _} ->
-           match (scheme_var, role) with
-           | Some v, _ -> string_of_int (Scheme.Var.ordinal v)
-           | None, Ml_schema.Erased k -> code (Kill k)
-           | None, Ml_schema.Value -> "K" )
-         (Ml_schema.binders schema) )
-  in
-  let detail () =
-    Printf.sprintf "%s args=%d tyargs=%d scheme_vars=%d sig=%s spine=%s"
-      (Names.Constant.to_string kn) nargs (List.length positioned)
-      (Ml_schema.arity schema)
-      (String.concat "" (List.map code s_full))
-      layout
-  in
-  let exact k =
-    Option.bind
-      (Ml_schema.binder schema (Scheme.Binder.of_position k))
-      (fun b -> Option.map Scheme.Var.ordinal b.Ml_schema.scheme_var)
-  in
-  if List.length positioned <> Ml_schema.arity schema then
-    Probe.hit "TYARGS_COUNT" detail
-  else if
-    List.exists
-      (fun (i, (k, _)) -> exact k <> Some (i + 1))
-      (List.mapi (fun i e -> (i, e)) positioned)
-  then Probe.hit "TYARGS_COINCIDENCE" detail
 
 (** The use's instantiation of [schema]: for each variable, the type its
     metavariable in [metas] was solved to, frozen ({!Mlutil.freeze_types}), or
     [Identity] for a [rigid] self-call; and the argument the call wrote at the
     variable's binder, if the call reaches that binder -- [observed = None]
     where what was written could not be read as a type. *)
-and freeze_instantiation schema ~rigid ~nargs metas written_at =
+and freeze_instantiation schema ~rigid metas written_at =
   let frozen = Array.of_list (freeze_types (Array.to_list metas)) in
   Scheme.Instantiation.make (Ml_schema.id schema) (fun v ->
       let source =
-        match Ml_schema.origin schema v with
-        | Some b when Scheme.Binder.position b.Ml_schema.binder < nargs ->
-          let observed =
-            match written_at v with
-            | Some (Tdummy _) | None -> None
-            | Some t -> Some (type_simpl t)
-          in
-          Scheme.Written {binder = b.Ml_schema.binder; observed}
+        match (Ml_schema.origin schema v, written_at v) with
+        | Some b, Some observed ->
+          Scheme.Written {binder = b.Ml_schema.binder; observed = Option.map type_simpl observed}
         | _ -> Scheme.Not_written
       in
       let solution =
@@ -2015,40 +1770,6 @@ and freeze_instantiation schema ~rigid ~nargs metas written_at =
         else Scheme.Type frozen.(Scheme.Var.ordinal v - 1)
       in
       {Scheme.solution; source} )
-
-(** Reports how a frozen instantiation's solutions relate to what the call
-    wrote: [INST_agree], [INST_disagree] (both a type, different), and, per
-    side left without one, [INST_written_open], [INST_unread_solved],
-    [INST_unread_open], [INST_unwritten_solved], [INST_unwritten_open],
-    [INST_identity].  Variables are compared without their rigidity. *)
-and probe_instantiation kn inst =
-  let rec flex = function
-    | Tvar (_, i) -> Tvar (Schematic, i)
-    | Tarr (a, b) -> Tarr (flex a, flex b)
-    | Tglob (r, l, args) -> Tglob (r, List.map flex l, args)
-    | Tapp (i, l) -> Tapp (i, List.map flex l)
-    | Tmeta {contents = Some t} -> flex t
-    | t -> t
-  in
-  let is_hole = function Thole _ -> true | _ -> false in
-  Scheme.Instantiation.fold
-    (fun v {Scheme.solution; source} () ->
-      let tag, detail =
-        match (solution, source) with
-        | Scheme.Identity, _ -> ("INST_identity", "")
-        | Scheme.Type s, Scheme.Written {observed = Some o; _} ->
-          if is_hole s then ("INST_written_open", debug_ml_type o)
-          else if eq_ml_type (flex (type_simpl o)) (flex (type_simpl s)) then ("INST_agree", "")
-          else ("INST_disagree", debug_ml_type o ^ " solved " ^ debug_ml_type s)
-        | Scheme.Type s, Scheme.Written {observed = None; _} ->
-          ((if is_hole s then "INST_unread_open" else "INST_unread_solved"), "")
-        | Scheme.Type s, Scheme.Not_written ->
-          ((if is_hole s then "INST_unwritten_open" else "INST_unwritten_solved"), "")
-      in
-      Probe.hit tag (fun () ->
-          Printf.sprintf "%s var=%d %s" (Names.Constant.to_string kn)
-            (Scheme.Var.ordinal v) detail ) )
-    inst ()
 
 (** Extracts a constant application (function call), handling type instantiation
     and partial application.
@@ -2090,31 +1811,23 @@ and extract_cst_app env sg mle mlt kn args =
   let s = sign_no_final_keeps s_full in
   let ls = List.length s in
   let la = List.length args in
-  (* The ml arguments, already expunged from known logical ones *)
-  let orig_schema_params = fst (type_decomp (Ml_schema.body schema)) in
-  let orig_typs =
-    try List.firstn la orig_schema_params
-    with Failure _ -> List.map (fun _ -> Tunknown) args
+  (* What the call wrote for a scheme variable: the observation of the
+     argument at the binder the variable comes from, [Some None] where that
+     argument says nothing readable, [None] where the call does not reach the
+     binder.  A binder with no variable -- a proof, an erased family, a
+     binder over propositions -- is not observed at all. *)
+  let db = db_from_rel_context env in
+  let observations =
+    List.map
+      (fun v ->
+        ( v,
+          Option.bind (Ml_schema.origin schema v) (fun b ->
+              Option.map (observe_type_arg env sg db)
+                (List.nth_opt args (Scheme.Binder.position b.Ml_schema.binder)) ) ) )
+      (Ml_schema.vars schema)
   in
-  let domain = make_tyargs env sg mle args metas ~orig_typs in
-  (* The type arguments a call writes, one per type variable of the scheme,
-     as everything reading [MLglob]'s list indexes it: a proof's slot -- or a
-     binder ranging over propositions, [{P : Prop}] -- has no variable, and
-     left in it would hand the next one's place to the dummy. *)
-  let positioned =
-    List.filter (function _, Tdummy Kprop -> false | _ -> true) domain
-  in
-  let () =
-    if Probe.enabled () then
-      probe_tyarg_alignment kn schema ~nargs:la s_full positioned
-  in
-  (* What the call wrote for a scheme variable: the entry read at the binder
-     the variable comes from.  A binder with no variable -- a proof, an erased
-     family, a binder over propositions -- writes nothing any variable
-     reads. *)
   let written_at v =
-    Option.bind (Ml_schema.origin schema v) (fun b ->
-        List.assoc_opt (Scheme.Binder.position b.Ml_schema.binder) positioned )
+    Option.flatten (List.find_map (fun (v', o) -> if Scheme.Var.equal v v' then Some o else None) observations)
   in
   (* The type arguments the Rocq term passes are a statement about the
      scheme's type variables, and the value arguments need not repeat it: a
@@ -2124,7 +1837,7 @@ and extract_cst_app env sg mle mlt kn args =
      already settled otherwise keeps that answer.
 
      Only a ground argument is given.  One naming a type variable names it
-     the way [make_tyargs] reads the Rocq context, which need not be the way
+     the way [observe_type_arg] reads the Rocq context, which need not be the way
      the term around it numbers its own -- a fixpoint's are rigid -- and
      binding a meta to the wrong one plants a mismatch that surfaces later as
      a coercion. *)
@@ -2141,7 +1854,7 @@ and extract_cst_app env sg mle mlt kn args =
       List.iter
         (fun v ->
           match written_at v with
-          | Some t when informative t ->
+          | Some (Some t) when informative t ->
             try_mgu tvar_metas.(Scheme.Var.ordinal v - 1) (expand env t)
           | _ -> () )
         (Ml_schema.vars schema)
@@ -2151,8 +1864,7 @@ and extract_cst_app env sg mle mlt kn args =
      solved the scheme's variables to is frozen into the use, a variable it
      left open becoming a hole rather than a metavariable some later pass
      could bind to whatever it meets. *)
-  let instantiation = freeze_instantiation schema ~rigid ~nargs:la tvar_metas written_at in
-  let () = if Probe.enabled () then probe_instantiation kn instantiation in
+  let instantiation = freeze_instantiation schema ~rigid tvar_metas written_at in
   (* The internal head receives a magic if [magic1] *)
   let head =
     put_magic_if

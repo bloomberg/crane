@@ -349,14 +349,6 @@ module Global_use = struct
            | None -> acc )
          g [] )
 
-  let legacy_template_args g =
-    let by_var = List.rev (fold_slots (fun _ s acc -> written_type s.Scheme.source :: acc) g []) in
-    let rec trim = function
-      | None :: rest -> trim rest
-      | l -> l
-    in
-    List.rev_map (Option.default (Tdummy Ktype)) (trim (List.rev by_var))
-
   let map_types f g =
     match g.instance with
     | Monomorphic -> g

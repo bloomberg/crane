@@ -896,7 +896,7 @@ let rec ml_arg_to_template_type ?expected env ml_arg =
   in
   match strip_dictionary ml_arg with
   | MLglob ({callee = r; _} as use) ->
-    let ts = Global_use.legacy_template_args use in
+    let ts = Mlutil.written_type_args use in
     if ref_returns_skipped r then None
     else
       (* Use the instance struct as a type - convert to Tglob *)
@@ -915,7 +915,7 @@ let rec ml_arg_to_template_type ?expected env ml_arg =
     Some (named_tvar name)
   | MLapp (MLglob {callee = r; _}, _) when ref_returns_skipped r -> None
   | MLapp (MLglob ({callee = r; _} as use), inner_args) ->
-    let ts = Global_use.legacy_template_args use in
+    let ts = Mlutil.written_type_args use in
     (* Parameterized instance application, e.g. numList A H. Convert to
        Tglob(r, template_args, []) where template_args are built from the
        inner args. *)
@@ -1150,6 +1150,21 @@ let record_call_sig env callee_ty e =
     the type arguments the call instantiates the callee at, and the
     callee's parameter types at that instantiation.  Read by
     {!gen_call_args} and by the assembly in {!eta_fun}. *)
+(* The callees whose result bindings are being computed.  Reading the
+   expected type can convert value arguments that a type carries, and
+   generating one of them can be the very call whose binding is asked for: a
+   binding cannot depend on itself, so the inner request finds none. *)
+let binding_results = ref Names.GlobRef.Set_env.empty
+
+let binding_results_of id compute =
+  if Names.GlobRef.Set_env.mem id !binding_results then ([], [])
+  else begin
+    binding_results := Names.GlobRef.Set_env.add id !binding_results;
+    Fun.protect
+      ~finally:(fun () -> binding_results := Names.GlobRef.Set_env.remove id !binding_results)
+      compute
+  end
+
 let plan_call ~slot ?expected_ty env id tys args =
   (* When the call has more args than the function's ML value-domain, the
      excess args are curried applications to the result. This is common with
@@ -1353,7 +1368,7 @@ let plan_call ~slot ?expected_ty env id tys args =
       (fun a ->
         match strip_magic a with
         | MLglob ({callee = r; _} as use) ->
-          instance_family_binding env r (Global_use.legacy_template_args use)
+          instance_family_binding env r (Mlutil.written_type_args use)
             expected_result
         | _ -> None )
       typeclass_ml_args
@@ -1572,11 +1587,12 @@ let plan_call ~slot ?expected_ty env id tys args =
      loop below for a parameter the substitution left erased. *)
   let result_tvar_map =
     lazy
-      (callee_result_bindings env id
-         ~explicit:(expected_ty <> None)
-         ( match expected_ty with
-         | Some _ -> expected_ty
-         | None -> (!tctx).current_cpp_return_type ) )
+      (binding_results_of id (fun () ->
+           callee_result_bindings env id
+             ~explicit:(expected_ty <> None)
+             ( match expected_ty with
+             | Some _ -> expected_ty
+             | None -> (!tctx).current_cpp_return_type ) ) )
   in
   {
     cp_excess_args = excess_args;
