@@ -39,9 +39,9 @@ concept Monad = requires {
     I::template ret<crane::obj>(std::declval<crane::obj>())
   } -> std::convertible_to<typename I::template m<crane::obj>>;
   {
-    I::bind(std::declval<typename I::template m<crane::obj>>(),
-            std::declval<
-                crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
+    I::bind0(std::declval<typename I::template m<crane::obj>>(),
+             std::declval<
+                 crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
   } -> std::convertible_to<typename I::template m<crane::obj>>;
 };
 
@@ -646,8 +646,8 @@ template <typename T1> struct Monad_itree {
   }
 
   static Itree<T1, crane::obj>
-  bind(Itree<T1, crane::obj> a0,
-       crane::fn<Itree<T1, crane::obj>(crane::obj)> a1) {
+  bind0(Itree<T1, crane::obj> a0,
+        crane::fn<Itree<T1, crane::obj>(crane::obj)> a1) {
     return ITree::template bind<T1, crane::obj, crane::obj>(a0, std::move(a1));
   }
 };

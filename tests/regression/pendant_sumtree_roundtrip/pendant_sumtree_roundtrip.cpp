@@ -12,10 +12,10 @@ PendantSumtreeRoundtripCase::digit_of_nat(uint64_t n) {
 }
 
 uint64_t PendantSumtreeRoundtripCase::value_digits(uint64_t, const T0<T> &ds) {
-  if (std::holds_alternative<typename T0<T>::Nil>(ds.v())) {
+  if (std::holds_alternative<typename T0<T>::Nil0>(ds.v())) {
     return UINT64_C(0);
   } else {
-    const auto &[h, n, a2] = std::get<typename T0<T>::Cons>(ds.v());
+    const auto &[h, n, a2] = std::get<typename T0<T>::Cons0>(ds.v());
     return (digit_to_nat(h) + (UINT64_C(10) * value_digits(n, *a2)));
   }
 }
@@ -23,21 +23,21 @@ uint64_t PendantSumtreeRoundtripCase::value_digits(uint64_t, const T0<T> &ds) {
 std::optional<T0<PendantSumtreeRoundtripCase::digit>>
 PendantSumtreeRoundtripCase::list_to_vector_opt(uint64_t n, const List<T> &xs) {
   if (n <= 0) {
-    if (std::holds_alternative<typename List<T>::Nil0>(xs.v())) {
-      return std::make_optional<T0<T>>(T0<T>::nil());
+    if (std::holds_alternative<typename List<T>::Nil>(xs.v())) {
+      return std::make_optional<T0<T>>(T0<T>::nil0());
     } else {
       return std::optional<T0<T>>();
     }
   } else {
     uint64_t n_ = n - 1;
-    if (std::holds_alternative<typename List<T>::Nil0>(xs.v())) {
+    if (std::holds_alternative<typename List<T>::Nil>(xs.v())) {
       return std::optional<T0<T>>();
     } else {
-      const auto &[a00, a10] = std::get<typename List<T>::Cons0>(xs.v());
+      const auto &[a00, a10] = std::get<typename List<T>::Cons>(xs.v());
       auto _cs = list_to_vector_opt(n_, *a10);
       if (_cs.has_value()) {
         const T0<T> &v = *_cs;
-        return std::make_optional<T0<T>>(T0<T>::cons(a00, n_, v));
+        return std::make_optional<T0<T>>(T0<T>::cons0(a00, n_, v));
       } else {
         return std::optional<T0<T>>();
       }
@@ -76,7 +76,7 @@ PendantSumtreeRoundtripCase::decode_multi(uint64_t n,
               if (acc.has_value()) {
                 const List<T0<T>> &vs = *acc;
                 return std::make_optional<List<T0<T>>>(
-                    List<T0<T>>::cons0(v, vs));
+                    List<T0<T>>::cons(v, vs));
               } else {
                 return std::optional<List<T0<T>>>();
               }
@@ -84,22 +84,22 @@ PendantSumtreeRoundtripCase::decode_multi(uint64_t n,
               return std::optional<List<T0<T>>>();
             }
           },
-          std::make_optional<List<T0<T>>>(List<T0<T>>::nil0()));
+          std::make_optional<List<T0<T>>>(List<T0<T>>::nil()));
 }
 
 std::optional<T0<PendantSumtreeRoundtripCase::digit>>
 PendantSumtreeRoundtripCase::pendant_digits(
     uint64_t n, const PendantSumtreeRoundtripCase::CertifiedPendant &p) {
   auto _cs = decode_multi(
-      n, encode_multi(n, List<T0<T>>::cons0(p.cp_digits, List<T0<T>>::nil0())));
+      n, encode_multi(n, List<T0<T>>::cons(p.cp_digits, List<T0<T>>::nil())));
   if (_cs.has_value()) {
     const List<T0<T>> &l = *_cs;
-    if (std::holds_alternative<typename List<T0<T>>::Nil0>(l.v())) {
+    if (std::holds_alternative<typename List<T0<T>>::Nil>(l.v())) {
       return std::optional<T0<T>>();
     } else {
-      const auto &[a0, a1] = std::get<typename List<T0<T>>::Cons0>(l.v());
+      const auto &[a0, a1] = std::get<typename List<T0<T>>::Cons>(l.v());
       auto &&_sv = *a1;
-      if (std::holds_alternative<typename List<T0<T>>::Nil0>(_sv.v())) {
+      if (std::holds_alternative<typename List<T0<T>>::Nil>(_sv.v())) {
         return std::make_optional<T0<T>>(a0);
       } else {
         return std::optional<T0<T>>();
@@ -124,16 +124,16 @@ List<std::optional<uint64_t>> PendantSumtreeRoundtripCase::ledger_values(
     const List<SigT<uint64_t, PendantSumtreeRoundtripCase::CertifiedPendant>>
         &l) {
   if (std::holds_alternative<typename List<
-          SigT<uint64_t, PendantSumtreeRoundtripCase::CertifiedPendant>>::Nil0>(
+          SigT<uint64_t, PendantSumtreeRoundtripCase::CertifiedPendant>>::Nil>(
           l.v())) {
-    return List<std::optional<uint64_t>>::nil0();
+    return List<std::optional<uint64_t>>::nil();
   } else {
     const auto &[a0, a1] = std::get<typename List<
-        SigT<uint64_t, PendantSumtreeRoundtripCase::CertifiedPendant>>::Cons0>(
+        SigT<uint64_t, PendantSumtreeRoundtripCase::CertifiedPendant>>::Cons>(
         l.v());
     const auto &[x0, a10] = a0;
-    return List<std::optional<uint64_t>>::cons0(pendant_value(x0, a10),
-                                                ledger_values(*a1));
+    return List<std::optional<uint64_t>>::cons(pendant_value(x0, a10),
+                                               ledger_values(*a1));
   }
 }
 
@@ -201,8 +201,8 @@ PendantSumtreeRoundtripCase::sumtree_leaves(
     const auto &[a0] =
         std::get<typename PendantSumtreeRoundtripCase::SumTree::SumLeaf>(
             st.v());
-    return List<PendantSumtreeRoundtripCase::CertifiedPendant>::cons0(
-        a0, List<PendantSumtreeRoundtripCase::CertifiedPendant>::nil0());
+    return List<PendantSumtreeRoundtripCase::CertifiedPendant>::cons(
+        a0, List<PendantSumtreeRoundtripCase::CertifiedPendant>::nil());
   } else {
     const auto &[a0, a1] =
         std::get<typename PendantSumtreeRoundtripCase::SumTree::SumNode>(
@@ -304,18 +304,18 @@ std::optional<uint64_t> PendantSumtreeRoundtripCase::sumtree_leaf_total(
 
 bool PendantSumtreeRoundtripCase::nat_list_eqb(const List<uint64_t> &xs,
                                                const List<uint64_t> &ys) {
-  if (std::holds_alternative<typename List<uint64_t>::Nil0>(xs.v())) {
-    if (std::holds_alternative<typename List<uint64_t>::Nil0>(ys.v())) {
+  if (std::holds_alternative<typename List<uint64_t>::Nil>(xs.v())) {
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(ys.v())) {
       return true;
     } else {
       return false;
     }
   } else {
-    const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons0>(xs.v());
-    if (std::holds_alternative<typename List<uint64_t>::Nil0>(ys.v())) {
+    const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(xs.v());
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(ys.v())) {
       return false;
     } else {
-      const auto &[a00, a10] = std::get<typename List<uint64_t>::Cons0>(ys.v());
+      const auto &[a00, a10] = std::get<typename List<uint64_t>::Cons>(ys.v());
       return (a0 == a00 && nat_list_eqb(*a1, *a10));
     }
   }
@@ -353,18 +353,18 @@ bool PendantSumtreeRoundtripCase::option_nat_is_some(
 
 T0<PendantSumtreeRoundtripCase::digit>
 PendantSumtreeRoundtripCase::digit_vec1(const T &a) {
-  return T0<PendantSumtreeRoundtripCase::digit>::cons(
-      a, UINT64_C(0), T0<PendantSumtreeRoundtripCase::digit>::nil());
+  return T0<PendantSumtreeRoundtripCase::digit>::cons0(
+      a, UINT64_C(0), T0<PendantSumtreeRoundtripCase::digit>::nil0());
 }
 
 T0<PendantSumtreeRoundtripCase::digit>
 PendantSumtreeRoundtripCase::digit_vec3(const T &a, const T &b, const T &c) {
-  return T0<PendantSumtreeRoundtripCase::digit>::cons(
+  return T0<PendantSumtreeRoundtripCase::digit>::cons0(
       a, UINT64_C(2),
-      T0<PendantSumtreeRoundtripCase::digit>::cons(
+      T0<PendantSumtreeRoundtripCase::digit>::cons0(
           b, UINT64_C(1),
-          T0<PendantSumtreeRoundtripCase::digit>::cons(
-              c, UINT64_C(0), T0<PendantSumtreeRoundtripCase::digit>::nil())));
+          T0<PendantSumtreeRoundtripCase::digit>::cons0(
+              c, UINT64_C(0), T0<PendantSumtreeRoundtripCase::digit>::nil0())));
 }
 
 T Fin::of_nat_lt(uint64_t p, uint64_t n) {

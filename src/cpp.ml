@@ -2382,6 +2382,32 @@ let plan_callables ?(reversed = false) s =
             (order analysis.sorted_modules) ) );
   List.rev !plans
 
+let plan_names s =
+  let names = ref [] in
+  let name k r =
+    if not (is_custom r || is_any_inline_custom r) then
+      names := (r, Common.global_name k r) :: !names
+  in
+  let rec elems sel =
+    List.iter
+      (fun (_, se) ->
+        match se with
+        | SEdecl (Dind (kn, ind)) ->
+          Array.iteri
+            (fun i p ->
+              name Type (GlobRef.IndRef (kn, i));
+              Array.iteri (fun j _ -> name Cons (GlobRef.ConstructRef ((kn, i), j + 1))) p.ip_types )
+            ind.ind_packets
+        | SEdecl (Dtype (r, _, _)) -> name Type r
+        | SEdecl (Dterm (r, _, _)) -> name Term r
+        | SEdecl (Dfix fds) -> List.iter (fun fd -> name Term fd.fd_ref) fds
+        | SEmodule {ml_mod_expr = MEstruct (_, sel); _} -> elems sel
+        | SEmodule _ | SEmodtype _ -> () )
+      sel
+  in
+  List.iter (fun (_, sel) -> elems sel) s;
+  List.rev !names
+
 (** [pp_wrapper_struct name specs] is the struct a library module is rendered
     as: its member declarations, [specs], inside a struct of that name. *)
 let pp_wrapper_struct name specs =

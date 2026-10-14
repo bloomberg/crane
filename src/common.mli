@@ -206,6 +206,11 @@ val pp_global_with_key : kind -> KerName.t -> GlobRef.t -> string
     renaming tables. *)
 val pp_global : kind -> GlobRef.t -> string
 
+(** [global_name k r] is [r]'s short C++ name as a reference of kind [k],
+    decided by the first request for it and the same for every later one;
+    [r]'s module's names, and every global name, then include it. *)
+val global_name : kind -> GlobRef.t -> string
+
 (** Emit the file [mp] under the namespace [ns] rather than its own name, in
     its declaration and in every reference to it.  Must be decided before any
     file is rendered. *)

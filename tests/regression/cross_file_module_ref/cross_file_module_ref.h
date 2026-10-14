@@ -12,7 +12,7 @@
 struct Nat;
 
 struct Lib2 {
-  static Nat bump(const Nat &n);
+  static Nat bump0(const Nat &n);
 };
 
 struct Nat {
@@ -100,7 +100,7 @@ struct Ord {
   static inline const t zero = Nat::o();
 };
 
-Nat bump0(const Nat &n);
+Nat bump(const Nat &n);
 template <typename M>
 concept S = requires {
   typename M::t;
@@ -122,7 +122,7 @@ template <S X> struct F {
 using M = F<Ord>;
 
 struct CrossFileModuleRef {
-  static inline const Nat use = M::twice(bump0).add(Lib2::bump(Nat::o()));
+  static inline const Nat use = M::twice(bump).add(Lib2::bump0(Nat::o()));
 };
 
 #endif // INCLUDED_CROSS_FILE_MODULE_REF

@@ -38,12 +38,12 @@ Uint Little::succ(const Uint &d) {
 
 Uint0 Coq_Little::succ(const Uint0 &d) {
   if (std::holds_alternative<typename Uint0::Nil0>(d.v())) {
-    return Uint0::d10(Uint0::nil0());
-  } else if (std::holds_alternative<typename Uint0::D11>(d.v())) {
-    const auto &[a0] = std::get<typename Uint0::D11>(d.v());
-    return Uint0::d10(*a0);
+    return Uint0::d11(Uint0::nil0());
   } else if (std::holds_alternative<typename Uint0::D10>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D10>(d.v());
+    return Uint0::d11(*a0);
+  } else if (std::holds_alternative<typename Uint0::D11>(d.v())) {
+    const auto &[a0] = std::get<typename Uint0::D11>(d.v());
     return Uint0::d12(*a0);
   } else if (std::holds_alternative<typename Uint0::D12>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D12>(d.v());
@@ -86,7 +86,7 @@ Uint0 Coq_Little::succ(const Uint0 &d) {
     return Uint0::df(*a0);
   } else {
     const auto &[a0] = std::get<typename Uint0::Df>(d.v());
-    return Uint0::d11(succ(*a0));
+    return Uint0::d10(succ(*a0));
   }
 }
 
@@ -212,11 +212,11 @@ uint64_t Nat::of_uint(const Uint &d) { return of_uint_acc(d, UINT64_C(0)); }
 uint64_t Nat::of_hex_uint_acc(const Uint0 &d, uint64_t acc) {
   if (std::holds_alternative<typename Uint0::Nil0>(d.v())) {
     return acc;
-  } else if (std::holds_alternative<typename Uint0::D11>(d.v())) {
-    const auto &[a0] = std::get<typename Uint0::D11>(d.v());
-    return of_hex_uint_acc(*a0, tail_mul(UINT64_C(16), acc));
   } else if (std::holds_alternative<typename Uint0::D10>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D10>(d.v());
+    return of_hex_uint_acc(*a0, tail_mul(UINT64_C(16), acc));
+  } else if (std::holds_alternative<typename Uint0::D11>(d.v())) {
+    const auto &[a0] = std::get<typename Uint0::D11>(d.v());
     return of_hex_uint_acc(*a0, (tail_mul(UINT64_C(16), acc) + 1));
   } else if (std::holds_alternative<typename Uint0::D12>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D12>(d.v());
@@ -366,7 +366,7 @@ Uint0 Nat::to_little_hex_uint(uint64_t n, Uint0 acc) {
 }
 
 Uint0 Nat::to_hex_uint(uint64_t n) {
-  return to_little_hex_uint(n, Uint0::d11(Uint0::nil0())).rev0();
+  return to_little_hex_uint(n, Uint0::d10(Uint0::nil0())).rev0();
 }
 
 Uint1 Nat::to_num_uint(uint64_t n) { return Uint1::uintdecimal(to_uint(n)); }

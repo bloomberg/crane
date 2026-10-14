@@ -183,13 +183,13 @@ public:
 };
 
 struct Other {
-  static inline const String banner = String::string0(
+  static inline const String banner0 = String::string0(
       Ascii::ascii0(true, true, true, true, false, true, true, false),
       String::emptystring());
 };
 
 struct StringUtil {
-  static inline const String banner0 = String::string0(
+  static inline const String banner = String::string0(
       Ascii::ascii0(true, false, true, false, true, true, true, false),
       String::emptystring());
 };

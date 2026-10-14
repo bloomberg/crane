@@ -519,15 +519,11 @@ struct Uint0 {
     std::shared_ptr<Uint0> a0;
   };
 
-  struct D14 {
-    std::shared_ptr<Uint0> a0;
-  };
-
   struct D13 {
     std::shared_ptr<Uint0> a0;
   };
 
-  struct D17 {
+  struct D14 {
     std::shared_ptr<Uint0> a0;
   };
 
@@ -535,11 +531,15 @@ struct Uint0 {
     std::shared_ptr<Uint0> a0;
   };
 
-  struct D18 {
+  struct D16 {
     std::shared_ptr<Uint0> a0;
   };
 
-  struct D16 {
+  struct D17 {
+    std::shared_ptr<Uint0> a0;
+  };
+
+  struct D18 {
     std::shared_ptr<Uint0> a0;
   };
 
@@ -571,8 +571,8 @@ struct Uint0 {
     std::shared_ptr<Uint0> a0;
   };
 
-  using variant_t = std::variant<Nil0, D10, D11, D12, D14, D13, D17, D15, D18,
-                                 D16, D19, Da, Db, Dc, Dd, De, Df>;
+  using variant_t = std::variant<Nil0, D10, D11, D12, D13, D14, D15, D16, D17,
+                                 D18, D19, Da, Db, Dc, Dd, De, Df>;
 
 private:
   // DATA
@@ -590,17 +590,17 @@ public:
 
   explicit Uint0(D12 _v) : v_(std::move(_v)) {}
 
-  explicit Uint0(D14 _v) : v_(std::move(_v)) {}
-
   explicit Uint0(D13 _v) : v_(std::move(_v)) {}
 
-  explicit Uint0(D17 _v) : v_(std::move(_v)) {}
+  explicit Uint0(D14 _v) : v_(std::move(_v)) {}
 
   explicit Uint0(D15 _v) : v_(std::move(_v)) {}
 
-  explicit Uint0(D18 _v) : v_(std::move(_v)) {}
-
   explicit Uint0(D16 _v) : v_(std::move(_v)) {}
+
+  explicit Uint0(D17 _v) : v_(std::move(_v)) {}
+
+  explicit Uint0(D18 _v) : v_(std::move(_v)) {}
 
   explicit Uint0(D19 _v) : v_(std::move(_v)) {}
 
@@ -630,28 +630,28 @@ public:
     return Uint0(D12{std::make_shared<Uint0>(std::move(a0))});
   }
 
-  static Uint0 d14(Uint0 a0) {
-    return Uint0(D14{std::make_shared<Uint0>(std::move(a0))});
-  }
-
   static Uint0 d13(Uint0 a0) {
     return Uint0(D13{std::make_shared<Uint0>(std::move(a0))});
   }
 
-  static Uint0 d17(Uint0 a0) {
-    return Uint0(D17{std::make_shared<Uint0>(std::move(a0))});
+  static Uint0 d14(Uint0 a0) {
+    return Uint0(D14{std::make_shared<Uint0>(std::move(a0))});
   }
 
   static Uint0 d15(Uint0 a0) {
     return Uint0(D15{std::make_shared<Uint0>(std::move(a0))});
   }
 
-  static Uint0 d18(Uint0 a0) {
-    return Uint0(D18{std::make_shared<Uint0>(std::move(a0))});
-  }
-
   static Uint0 d16(Uint0 a0) {
     return Uint0(D16{std::make_shared<Uint0>(std::move(a0))});
+  }
+
+  static Uint0 d17(Uint0 a0) {
+    return Uint0(D17{std::make_shared<Uint0>(std::move(a0))});
+  }
+
+  static Uint0 d18(Uint0 a0) {
+    return Uint0(D18{std::make_shared<Uint0>(std::move(a0))});
   }
 
   static Uint0 d19(Uint0 a0) {
@@ -703,19 +703,13 @@ public:
           return std::move(_alt->a0);
         }
       }
-      if (auto *_alt = std::get_if<D14>(&_v)) {
-        if (_alt->a0 && _alt->a0.use_count() == 1) {
-          std::atomic_thread_fence(std::memory_order_acquire);
-          return std::move(_alt->a0);
-        }
-      }
       if (auto *_alt = std::get_if<D13>(&_v)) {
         if (_alt->a0 && _alt->a0.use_count() == 1) {
           std::atomic_thread_fence(std::memory_order_acquire);
           return std::move(_alt->a0);
         }
       }
-      if (auto *_alt = std::get_if<D17>(&_v)) {
+      if (auto *_alt = std::get_if<D14>(&_v)) {
         if (_alt->a0 && _alt->a0.use_count() == 1) {
           std::atomic_thread_fence(std::memory_order_acquire);
           return std::move(_alt->a0);
@@ -727,13 +721,19 @@ public:
           return std::move(_alt->a0);
         }
       }
-      if (auto *_alt = std::get_if<D18>(&_v)) {
+      if (auto *_alt = std::get_if<D16>(&_v)) {
         if (_alt->a0 && _alt->a0.use_count() == 1) {
           std::atomic_thread_fence(std::memory_order_acquire);
           return std::move(_alt->a0);
         }
       }
-      if (auto *_alt = std::get_if<D16>(&_v)) {
+      if (auto *_alt = std::get_if<D17>(&_v)) {
+        if (_alt->a0 && _alt->a0.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a0);
+        }
+      }
+      if (auto *_alt = std::get_if<D18>(&_v)) {
         if (_alt->a0 && _alt->a0.use_count() == 1) {
           std::atomic_thread_fence(std::memory_order_acquire);
           return std::move(_alt->a0);
@@ -818,30 +818,30 @@ public:
         const auto &[a0] = std::get<typename Uint0::D12>(_sv.v());
         _loop_self = crane_raw(a0);
         _loop_d_ = Uint0::d12(std::move(_loop_d_));
-      } else if (std::holds_alternative<typename Uint0::D14>(_sv.v())) {
-        const auto &[a0] = std::get<typename Uint0::D14>(_sv.v());
-        _loop_self = crane_raw(a0);
-        _loop_d_ = Uint0::d14(std::move(_loop_d_));
       } else if (std::holds_alternative<typename Uint0::D13>(_sv.v())) {
         const auto &[a0] = std::get<typename Uint0::D13>(_sv.v());
         _loop_self = crane_raw(a0);
         _loop_d_ = Uint0::d13(std::move(_loop_d_));
-      } else if (std::holds_alternative<typename Uint0::D17>(_sv.v())) {
-        const auto &[a0] = std::get<typename Uint0::D17>(_sv.v());
+      } else if (std::holds_alternative<typename Uint0::D14>(_sv.v())) {
+        const auto &[a0] = std::get<typename Uint0::D14>(_sv.v());
         _loop_self = crane_raw(a0);
-        _loop_d_ = Uint0::d17(std::move(_loop_d_));
+        _loop_d_ = Uint0::d14(std::move(_loop_d_));
       } else if (std::holds_alternative<typename Uint0::D15>(_sv.v())) {
         const auto &[a0] = std::get<typename Uint0::D15>(_sv.v());
         _loop_self = crane_raw(a0);
         _loop_d_ = Uint0::d15(std::move(_loop_d_));
-      } else if (std::holds_alternative<typename Uint0::D18>(_sv.v())) {
-        const auto &[a0] = std::get<typename Uint0::D18>(_sv.v());
-        _loop_self = crane_raw(a0);
-        _loop_d_ = Uint0::d18(std::move(_loop_d_));
       } else if (std::holds_alternative<typename Uint0::D16>(_sv.v())) {
         const auto &[a0] = std::get<typename Uint0::D16>(_sv.v());
         _loop_self = crane_raw(a0);
         _loop_d_ = Uint0::d16(std::move(_loop_d_));
+      } else if (std::holds_alternative<typename Uint0::D17>(_sv.v())) {
+        const auto &[a0] = std::get<typename Uint0::D17>(_sv.v());
+        _loop_self = crane_raw(a0);
+        _loop_d_ = Uint0::d17(std::move(_loop_d_));
+      } else if (std::holds_alternative<typename Uint0::D18>(_sv.v())) {
+        const auto &[a0] = std::get<typename Uint0::D18>(_sv.v());
+        _loop_self = crane_raw(a0);
+        _loop_d_ = Uint0::d18(std::move(_loop_d_));
       } else if (std::holds_alternative<typename Uint0::D19>(_sv.v())) {
         const auto &[a0] = std::get<typename Uint0::D19>(_sv.v());
         _loop_self = crane_raw(a0);

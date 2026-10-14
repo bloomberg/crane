@@ -48,6 +48,11 @@ let check_installed (facts : Program_facts.t) (plan : Target_plan.t) =
           fail "template-parameter kinds" )
       plan.template_kinds;
     if not (Module_plan.installed plan.modules) then fail "module plan";
+    (* Each was decided when it was planned, so the kind asked at is not
+       consulted again. *)
+    List.iter
+      (fun (r, s) -> if not (String.equal (Common.global_name Common.Term r) s) then fail "global names")
+      plan.names;
     List.iter
       (fun abi ->
         if not (Option.equal Callable_abi.equal (Callable_abi.lookup (Callable_abi.callee abi)) (Some abi))

@@ -83,37 +83,37 @@ Uint0 Coq_Little::double_(const Uint0 &d) {
     return Uint0::d12(double_(*a0));
   } else if (std::holds_alternative<typename Uint0::D12>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D12>(d.v());
-    return Uint0::d13(double_(*a0));
-  } else if (std::holds_alternative<typename Uint0::D14>(d.v())) {
-    const auto &[a0] = std::get<typename Uint0::D14>(d.v());
-    return Uint0::d15(double_(*a0));
+    return Uint0::d14(double_(*a0));
   } else if (std::holds_alternative<typename Uint0::D13>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D13>(d.v());
     return Uint0::d16(double_(*a0));
-  } else if (std::holds_alternative<typename Uint0::D17>(d.v())) {
-    const auto &[a0] = std::get<typename Uint0::D17>(d.v());
-    return Uint0::da(double_(*a0));
+  } else if (std::holds_alternative<typename Uint0::D14>(d.v())) {
+    const auto &[a0] = std::get<typename Uint0::D14>(d.v());
+    return Uint0::d18(double_(*a0));
   } else if (std::holds_alternative<typename Uint0::D15>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D15>(d.v());
-    return Uint0::dc(double_(*a0));
-  } else if (std::holds_alternative<typename Uint0::D18>(d.v())) {
-    const auto &[a0] = std::get<typename Uint0::D18>(d.v());
-    return Uint0::de(double_(*a0));
+    return Uint0::da(double_(*a0));
   } else if (std::holds_alternative<typename Uint0::D16>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D16>(d.v());
+    return Uint0::dc(double_(*a0));
+  } else if (std::holds_alternative<typename Uint0::D17>(d.v())) {
+    const auto &[a0] = std::get<typename Uint0::D17>(d.v());
+    return Uint0::de(double_(*a0));
+  } else if (std::holds_alternative<typename Uint0::D18>(d.v())) {
+    const auto &[a0] = std::get<typename Uint0::D18>(d.v());
     return Uint0::d10(succ_double(*a0));
   } else if (std::holds_alternative<typename Uint0::D19>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D19>(d.v());
     return Uint0::d12(succ_double(*a0));
   } else if (std::holds_alternative<typename Uint0::Da>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::Da>(d.v());
-    return Uint0::d13(succ_double(*a0));
+    return Uint0::d14(succ_double(*a0));
   } else if (std::holds_alternative<typename Uint0::Db>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::Db>(d.v());
-    return Uint0::d15(succ_double(*a0));
+    return Uint0::d16(succ_double(*a0));
   } else if (std::holds_alternative<typename Uint0::Dc>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::Dc>(d.v());
-    return Uint0::d16(succ_double(*a0));
+    return Uint0::d18(succ_double(*a0));
   } else if (std::holds_alternative<typename Uint0::Dd>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::Dd>(d.v());
     return Uint0::da(succ_double(*a0));
@@ -134,37 +134,37 @@ Uint0 Coq_Little::succ_double(const Uint0 &d) {
     return Uint0::d11(double_(*a0));
   } else if (std::holds_alternative<typename Uint0::D11>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D11>(d.v());
-    return Uint0::d14(double_(*a0));
+    return Uint0::d13(double_(*a0));
   } else if (std::holds_alternative<typename Uint0::D12>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D12>(d.v());
+    return Uint0::d15(double_(*a0));
+  } else if (std::holds_alternative<typename Uint0::D13>(d.v())) {
+    const auto &[a0] = std::get<typename Uint0::D13>(d.v());
     return Uint0::d17(double_(*a0));
   } else if (std::holds_alternative<typename Uint0::D14>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D14>(d.v());
-    return Uint0::d18(double_(*a0));
-  } else if (std::holds_alternative<typename Uint0::D13>(d.v())) {
-    const auto &[a0] = std::get<typename Uint0::D13>(d.v());
     return Uint0::d19(double_(*a0));
-  } else if (std::holds_alternative<typename Uint0::D17>(d.v())) {
-    const auto &[a0] = std::get<typename Uint0::D17>(d.v());
-    return Uint0::db(double_(*a0));
   } else if (std::holds_alternative<typename Uint0::D15>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D15>(d.v());
-    return Uint0::dd(double_(*a0));
-  } else if (std::holds_alternative<typename Uint0::D18>(d.v())) {
-    const auto &[a0] = std::get<typename Uint0::D18>(d.v());
-    return Uint0::df(double_(*a0));
+    return Uint0::db(double_(*a0));
   } else if (std::holds_alternative<typename Uint0::D16>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D16>(d.v());
+    return Uint0::dd(double_(*a0));
+  } else if (std::holds_alternative<typename Uint0::D17>(d.v())) {
+    const auto &[a0] = std::get<typename Uint0::D17>(d.v());
+    return Uint0::df(double_(*a0));
+  } else if (std::holds_alternative<typename Uint0::D18>(d.v())) {
+    const auto &[a0] = std::get<typename Uint0::D18>(d.v());
     return Uint0::d11(succ_double(*a0));
   } else if (std::holds_alternative<typename Uint0::D19>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D19>(d.v());
-    return Uint0::d14(succ_double(*a0));
+    return Uint0::d13(succ_double(*a0));
   } else if (std::holds_alternative<typename Uint0::Da>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::Da>(d.v());
-    return Uint0::d17(succ_double(*a0));
+    return Uint0::d15(succ_double(*a0));
   } else if (std::holds_alternative<typename Uint0::Db>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::Db>(d.v());
-    return Uint0::d18(succ_double(*a0));
+    return Uint0::d17(succ_double(*a0));
   } else if (std::holds_alternative<typename Uint0::Dc>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::Dc>(d.v());
     return Uint0::d19(succ_double(*a0));
@@ -935,28 +935,28 @@ unsigned int Coq_Pos::of_hex_uint_acc(const Uint0 &d, unsigned int acc) {
     const auto &[a0] = std::get<typename Uint0::D12>(d.v());
     return of_hex_uint_acc(
         *a0, ((2u * 1u) + ((2u * (2u * (2u * (2u * 1u)))) * acc)));
-  } else if (std::holds_alternative<typename Uint0::D14>(d.v())) {
-    const auto &[a0] = std::get<typename Uint0::D14>(d.v());
-    return of_hex_uint_acc(
-        *a0, ((2u * 1u + 1u) + ((2u * (2u * (2u * (2u * 1u)))) * acc)));
   } else if (std::holds_alternative<typename Uint0::D13>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D13>(d.v());
     return of_hex_uint_acc(
-        *a0, ((2u * (2u * 1u)) + ((2u * (2u * (2u * (2u * 1u)))) * acc)));
-  } else if (std::holds_alternative<typename Uint0::D17>(d.v())) {
-    const auto &[a0] = std::get<typename Uint0::D17>(d.v());
+        *a0, ((2u * 1u + 1u) + ((2u * (2u * (2u * (2u * 1u)))) * acc)));
+  } else if (std::holds_alternative<typename Uint0::D14>(d.v())) {
+    const auto &[a0] = std::get<typename Uint0::D14>(d.v());
     return of_hex_uint_acc(
-        *a0, ((2u * (2u * 1u) + 1u) + ((2u * (2u * (2u * (2u * 1u)))) * acc)));
+        *a0, ((2u * (2u * 1u)) + ((2u * (2u * (2u * (2u * 1u)))) * acc)));
   } else if (std::holds_alternative<typename Uint0::D15>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D15>(d.v());
     return of_hex_uint_acc(
-        *a0, ((2u * (2u * 1u + 1u)) + ((2u * (2u * (2u * (2u * 1u)))) * acc)));
-  } else if (std::holds_alternative<typename Uint0::D18>(d.v())) {
-    const auto &[a0] = std::get<typename Uint0::D18>(d.v());
-    return of_hex_uint_acc(*a0, ((2u * (2u * 1u + 1u) + 1u) +
-                                 ((2u * (2u * (2u * (2u * 1u)))) * acc)));
+        *a0, ((2u * (2u * 1u) + 1u) + ((2u * (2u * (2u * (2u * 1u)))) * acc)));
   } else if (std::holds_alternative<typename Uint0::D16>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D16>(d.v());
+    return of_hex_uint_acc(
+        *a0, ((2u * (2u * 1u + 1u)) + ((2u * (2u * (2u * (2u * 1u)))) * acc)));
+  } else if (std::holds_alternative<typename Uint0::D17>(d.v())) {
+    const auto &[a0] = std::get<typename Uint0::D17>(d.v());
+    return of_hex_uint_acc(*a0, ((2u * (2u * 1u + 1u) + 1u) +
+                                 ((2u * (2u * (2u * (2u * 1u)))) * acc)));
+  } else if (std::holds_alternative<typename Uint0::D18>(d.v())) {
+    const auto &[a0] = std::get<typename Uint0::D18>(d.v());
     return of_hex_uint_acc(*a0, ((2u * (2u * (2u * 1u))) +
                                  ((2u * (2u * (2u * (2u * 1u)))) * acc)));
   } else if (std::holds_alternative<typename Uint0::D19>(d.v())) {
@@ -1002,23 +1002,23 @@ unsigned int Coq_Pos::of_hex_uint(const Uint0 &d) {
   } else if (std::holds_alternative<typename Uint0::D12>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D12>(d.v());
     return of_hex_uint_acc(*a0, (2u * 1u));
-  } else if (std::holds_alternative<typename Uint0::D14>(d.v())) {
-    const auto &[a0] = std::get<typename Uint0::D14>(d.v());
-    return of_hex_uint_acc(*a0, (2u * 1u + 1u));
   } else if (std::holds_alternative<typename Uint0::D13>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D13>(d.v());
+    return of_hex_uint_acc(*a0, (2u * 1u + 1u));
+  } else if (std::holds_alternative<typename Uint0::D14>(d.v())) {
+    const auto &[a0] = std::get<typename Uint0::D14>(d.v());
     return of_hex_uint_acc(*a0, (2u * (2u * 1u)));
-  } else if (std::holds_alternative<typename Uint0::D17>(d.v())) {
-    const auto &[a0] = std::get<typename Uint0::D17>(d.v());
-    return of_hex_uint_acc(*a0, (2u * (2u * 1u) + 1u));
   } else if (std::holds_alternative<typename Uint0::D15>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D15>(d.v());
-    return of_hex_uint_acc(*a0, (2u * (2u * 1u + 1u)));
-  } else if (std::holds_alternative<typename Uint0::D18>(d.v())) {
-    const auto &[a0] = std::get<typename Uint0::D18>(d.v());
-    return of_hex_uint_acc(*a0, (2u * (2u * 1u + 1u) + 1u));
+    return of_hex_uint_acc(*a0, (2u * (2u * 1u) + 1u));
   } else if (std::holds_alternative<typename Uint0::D16>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D16>(d.v());
+    return of_hex_uint_acc(*a0, (2u * (2u * 1u + 1u)));
+  } else if (std::holds_alternative<typename Uint0::D17>(d.v())) {
+    const auto &[a0] = std::get<typename Uint0::D17>(d.v());
+    return of_hex_uint_acc(*a0, (2u * (2u * 1u + 1u) + 1u));
+  } else if (std::holds_alternative<typename Uint0::D18>(d.v())) {
+    const auto &[a0] = std::get<typename Uint0::D18>(d.v());
     return of_hex_uint_acc(*a0, (2u * (2u * (2u * 1u))));
   } else if (std::holds_alternative<typename Uint0::D19>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D19>(d.v());

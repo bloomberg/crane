@@ -39,3 +39,9 @@ val prepare_structure : Miniml.ml_structure -> Module_plan.t
     installed, and before anything is rendered.  A function no render generates -- a method, a projection, an
     inline custom -- has none. *)
 val plan_callables : ?reversed:bool -> Miniml.ml_structure -> Callable_abi.t list
+
+(** The C++ name of each global the unit declares outside a functor, decided
+    in declaration order ({!Common.global_name}): an inductive's, then its
+    constructors', at the kind a declaration is printed at.  A custom
+    mapping's name is its text, and is not among them. *)
+val plan_names : Miniml.ml_structure -> (Names.GlobRef.t * string) list

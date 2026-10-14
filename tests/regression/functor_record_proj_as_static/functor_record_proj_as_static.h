@@ -94,7 +94,7 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  Nat add0(Nat m) const {
+  Nat add(Nat m) const {
     std::optional<Nat> _root{};
     std::shared_ptr<Nat> *_write = nullptr;
     const Nat *_loop_self = this;
@@ -1153,7 +1153,7 @@ template <Int I, OrderedType X> struct Raw {
     } else {
       const auto &[a0, a1, a2, a3, a4] =
           std::get<typename tree<T1>::Node>(m.v());
-      return Nat::s(cardinal<T1>(*a0).add0(cardinal<T1>(*a3)));
+      return Nat::s(cardinal<T1>(*a0).add(cardinal<T1>(*a3)));
     }
   }
 

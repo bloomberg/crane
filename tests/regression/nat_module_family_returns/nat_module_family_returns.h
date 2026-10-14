@@ -522,11 +522,11 @@ struct Uint0 {
   // TYPES
   struct Nil0 {};
 
-  struct D11 {
+  struct D10 {
     std::shared_ptr<Uint0> a0;
   };
 
-  struct D10 {
+  struct D11 {
     std::shared_ptr<Uint0> a0;
   };
 
@@ -586,7 +586,7 @@ struct Uint0 {
     std::shared_ptr<Uint0> a0;
   };
 
-  using variant_t = std::variant<Nil0, D11, D10, D12, D13, D14, D15, D16, D17,
+  using variant_t = std::variant<Nil0, D10, D11, D12, D13, D14, D15, D16, D17,
                                  D18, D19, Da, Db, Dc, Dd, De, Df>;
 
 private:
@@ -599,9 +599,9 @@ public:
 
   explicit Uint0(Nil0 _v) : v_(_v) {}
 
-  explicit Uint0(D11 _v) : v_(std::move(_v)) {}
-
   explicit Uint0(D10 _v) : v_(std::move(_v)) {}
+
+  explicit Uint0(D11 _v) : v_(std::move(_v)) {}
 
   explicit Uint0(D12 _v) : v_(std::move(_v)) {}
 
@@ -633,12 +633,12 @@ public:
 
   static Uint0 nil0() { return Uint0(Nil0{}); }
 
-  static Uint0 d11(Uint0 a0) {
-    return Uint0(D11{std::make_shared<Uint0>(std::move(a0))});
-  }
-
   static Uint0 d10(Uint0 a0) {
     return Uint0(D10{std::make_shared<Uint0>(std::move(a0))});
+  }
+
+  static Uint0 d11(Uint0 a0) {
+    return Uint0(D11{std::make_shared<Uint0>(std::move(a0))});
   }
 
   static Uint0 d12(Uint0 a0) {
@@ -700,13 +700,13 @@ public:
   // MANIPULATORS
   ~Uint0() {
     auto _next = [&](variant_t &_v) -> std::shared_ptr<Uint0> {
-      if (auto *_alt = std::get_if<D11>(&_v)) {
+      if (auto *_alt = std::get_if<D10>(&_v)) {
         if (_alt->a0 && _alt->a0.use_count() == 1) {
           std::atomic_thread_fence(std::memory_order_acquire);
           return std::move(_alt->a0);
         }
       }
-      if (auto *_alt = std::get_if<D10>(&_v)) {
+      if (auto *_alt = std::get_if<D11>(&_v)) {
         if (_alt->a0 && _alt->a0.use_count() == 1) {
           std::atomic_thread_fence(std::memory_order_acquire);
           return std::move(_alt->a0);
@@ -818,8 +818,8 @@ public:
     const Uint0 *_loop_self = this;
     while (true) {
       auto &&_sv = *_loop_self;
-      if (std::holds_alternative<typename Uint0::D11>(_sv.v())) {
-        const auto &[a0] = std::get<typename Uint0::D11>(_sv.v());
+      if (std::holds_alternative<typename Uint0::D10>(_sv.v())) {
+        const auto &[a0] = std::get<typename Uint0::D10>(_sv.v());
         _loop_self = crane_raw(a0);
       } else {
         return *_loop_self;
@@ -830,13 +830,13 @@ public:
   Uint0 unorm0() const {
     auto &&_sv = this->nzhead0();
     if (std::holds_alternative<typename Uint0::Nil0>(_sv.v())) {
-      return Uint0::d11(Uint0::nil0());
-    } else if (std::holds_alternative<typename Uint0::D11>(_sv.v())) {
-      const auto &[a0] = std::get<typename Uint0::D11>(_sv.v());
-      return Uint0::d11(*a0);
+      return Uint0::d10(Uint0::nil0());
     } else if (std::holds_alternative<typename Uint0::D10>(_sv.v())) {
       const auto &[a0] = std::get<typename Uint0::D10>(_sv.v());
       return Uint0::d10(*a0);
+    } else if (std::holds_alternative<typename Uint0::D11>(_sv.v())) {
+      const auto &[a0] = std::get<typename Uint0::D11>(_sv.v());
+      return Uint0::d11(*a0);
     } else if (std::holds_alternative<typename Uint0::D12>(_sv.v())) {
       const auto &[a0] = std::get<typename Uint0::D12>(_sv.v());
       return Uint0::d12(*a0);
@@ -889,14 +889,14 @@ public:
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename Uint0::Nil0>(_sv.v())) {
         return _loop_d_;
-      } else if (std::holds_alternative<typename Uint0::D11>(_sv.v())) {
-        const auto &[a0] = std::get<typename Uint0::D11>(_sv.v());
-        _loop_self = crane_raw(a0);
-        _loop_d_ = Uint0::d11(std::move(_loop_d_));
       } else if (std::holds_alternative<typename Uint0::D10>(_sv.v())) {
         const auto &[a0] = std::get<typename Uint0::D10>(_sv.v());
         _loop_self = crane_raw(a0);
         _loop_d_ = Uint0::d10(std::move(_loop_d_));
+      } else if (std::holds_alternative<typename Uint0::D11>(_sv.v())) {
+        const auto &[a0] = std::get<typename Uint0::D11>(_sv.v());
+        _loop_self = crane_raw(a0);
+        _loop_d_ = Uint0::d11(std::move(_loop_d_));
       } else if (std::holds_alternative<typename Uint0::D12>(_sv.v())) {
         const auto &[a0] = std::get<typename Uint0::D12>(_sv.v());
         _loop_self = crane_raw(a0);
@@ -1002,13 +1002,13 @@ public:
       const auto &[d1] = std::get<typename Signed_int0::Neg0>(this->v());
       auto &&_sv0 = d1.nzhead0();
       if (std::holds_alternative<typename Uint0::Nil0>(_sv0.v())) {
-        return Signed_int0::pos0(Uint0::d11(Uint0::nil0()));
-      } else if (std::holds_alternative<typename Uint0::D11>(_sv0.v())) {
-        const auto &[a00] = std::get<typename Uint0::D11>(_sv0.v());
-        return Signed_int0::neg0(Uint0::d11(*a00));
+        return Signed_int0::pos0(Uint0::d10(Uint0::nil0()));
       } else if (std::holds_alternative<typename Uint0::D10>(_sv0.v())) {
         const auto &[a00] = std::get<typename Uint0::D10>(_sv0.v());
         return Signed_int0::neg0(Uint0::d10(*a00));
+      } else if (std::holds_alternative<typename Uint0::D11>(_sv0.v())) {
+        const auto &[a00] = std::get<typename Uint0::D11>(_sv0.v());
+        return Signed_int0::neg0(Uint0::d11(*a00));
       } else if (std::holds_alternative<typename Uint0::D12>(_sv0.v())) {
         const auto &[a00] = std::get<typename Uint0::D12>(_sv0.v());
         return Signed_int0::neg0(Uint0::d12(*a00));

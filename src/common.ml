@@ -1494,6 +1494,8 @@ let pp_global_with_key k key r =
     @param r The global reference to print *)
 let pp_global k r = pp_global_with_key k (repr_of_r r) r
 
+let global_name k r = List.hd (ref_renaming (k, r))
+
 (** The file part of {!pp_global}'s answer: the name of the file defining
     [r] when a reference to it from here must name it, as {!pp_cpp_gen}
     decides.  For a name hoisted out of its module's structs to the file's
