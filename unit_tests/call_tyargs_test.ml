@@ -43,6 +43,10 @@ let () =
            Call_tyargs.is_hole t v
            = match s with Scheme.Written {observed = Some _; _} -> false | _ -> true )
          sources );
+    check "a variable is unwritten exactly where the use wrote nothing"
+      (List.for_all
+         (fun (v, s) -> Call_tyargs.is_unwritten t v = (s = Scheme.Not_written))
+         sources );
     let extent = List.length (Call_tyargs.by_variable t) in
     check "interior holes and the variables beyond partition by the extent"
       (List.for_all (fun v -> Scheme.Var.ordinal v <= extent) (Call_tyargs.interior_holes t)
@@ -82,6 +86,10 @@ let () =
                && not
                     ( List.exists (Scheme.Var.equal v) asked
                     && match answer v with Some (Tdummy _) | None -> false | Some _ -> true ) ) )
+         (Call_tyargs.vars t) );
+    check "a resolved variable is no longer unwritten"
+      (List.for_all
+         (fun v -> Call_tyargs.is_hole r v || not (Call_tyargs.is_unwritten r v))
          (Call_tyargs.vars t) );
     let all = Call_tyargs.resolve_all Call_tyargs.Argument_types answer asked t in
     check "all or nothing"

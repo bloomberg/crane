@@ -55,6 +55,11 @@ let is_hole t v =
   | Known _ -> false
   | Unreadable | Unwritten -> true
 
+let is_unwritten t v =
+  match slot t v with
+  | Unwritten -> true
+  | Known _ | Unreadable -> false
+
 let holes t = List.filter (is_hole t) (vars t)
 
 let extent t =

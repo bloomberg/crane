@@ -46,6 +46,11 @@ val vars : t -> Scheme.Var.t list
 (** Whether nothing is known of the variable. *)
 val is_hole : t -> Scheme.Var.t -> bool
 
+(** Whether the use wrote nothing at the variable's binder and nothing has
+    resolved it since: a hole with no evidence at all, which C++ may only
+    deduce. *)
+val is_unwritten : t -> Scheme.Var.t -> bool
+
 (** Every variable nothing is known of. *)
 val holes : t -> Scheme.Var.t list
 

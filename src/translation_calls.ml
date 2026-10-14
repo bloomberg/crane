@@ -742,11 +742,27 @@ let call_type_args ~caller ?expected_ty env id plan ~has_value_args =
   let application = apply regular in
   let all_type_args = Template_application.to_list application in
 
+  (* An argument written as an erased placeholder at a variable the use
+     wrote nothing for, and nothing resolved since, is a guess: such a
+     variable is C++'s to deduce. *)
+  let guessed =
+    List.concat
+      (List.mapi
+         (fun k p ->
+           match (p.Callable_abi.origin, List.nth_opt all_type_args k) with
+           | Callable_abi.From_scheme v, Some a
+             when prints_as_any a && Call_tyargs.is_unwritten tyargs v ->
+             [ Printf.sprintf "variable %d, of which nothing is known, is written as %s"
+                 (Scheme.Var.ordinal v)
+                 (Pp.string_of_ppcmds (Cpp_print.pp_cpp_type false [] a)) ]
+           | _ -> [] )
+         (Callable_abi.template_head abi) )
+  in
   List.iter
     (fun problem ->
       Probe.violation "template application"
         Pp.(str "the call to " ++ GlobRef.print id ++ str ": " ++ str problem) )
-    (Template_application.validate abi application);
+    (Template_application.validate abi application @ guessed);
   (* The written arguments that instantiate the callee's own type variables,
      by variable: each argument the plan wrote at a parameter declaring one,
      and at a carrier the call's class resolves -- a variable the head does
