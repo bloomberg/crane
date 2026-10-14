@@ -2585,6 +2585,16 @@ let plan_nested_structs s =
       elems ~in_struct:collision ~local:(not collision) ~role mp sel )
     s
 
+let plan_instance_promoted_types s =
+  List.concat_map
+    (function
+      | Dterm (r, a, t) when is_typeclass_instance a t -> (
+        match Gen_decls.instance_promoted_types r a t with
+        | [] -> []
+        | bindings -> [(r, bindings)] )
+      | Dind _ | Dtype _ | Dterm _ | Dfix _ -> [] )
+    (declarations s)
+
 let plan_unmerged_wrappers () =
   let is_member (_, se) =
     match se with

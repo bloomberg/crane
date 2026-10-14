@@ -31,6 +31,12 @@ val install_accessors : Names.GlobRef.t list -> unit
     another struct, as {!Target_plan.representation} holds them. *)
 val install_nested_structs : (string * Cpp_state.nested_struct_owner) list -> unit
 
+(** [install_instance_promoted_types types] installs the concrete types the
+    unit's instances give their classes' promoted variables, as
+    {!Target_plan.representation} holds them. *)
+val install_instance_promoted_types :
+  (Names.GlobRef.t * (Names.Id.t * Miniml.ml_type) list) list -> unit
+
 (** [install_unmerged_wrappers names] installs the wrapper structs that hold
     declarations, as {!Target_plan.representation} holds them. *)
 val install_unmerged_wrappers : string list -> unit

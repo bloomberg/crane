@@ -74,6 +74,12 @@ val plan_function : fixpoint:bool -> GlobRef.t -> ml_ast -> ml_type -> Callable_
 val plan_method :
   GlobRef.t -> Id.t list -> GlobRef.t * ml_ast * ml_type * int -> Callable_abi.t
 
+(** The concrete types the instance [r] -- of body [b] and type [ty] -- gives
+    its class's promoted variables, which a call through it substitutes for
+    them; none where it builds no record of its class or does not give them
+    all. *)
+val instance_promoted_types : GlobRef.t -> ml_ast -> ml_type -> (Id.t * ml_type) list
+
 (** {2 Inductive Type Generation} *)
 
 (** The fields of a constructor of the inductive [name], of types [tys], that

@@ -46,6 +46,9 @@ type representation = {
       (** The constants emitted as accessor functions, which a use calls. *)
   nested_structs : (string * Cpp_state.nested_struct_owner) list;
       (** The structs written inside another struct, with their names. *)
+  instance_promoted_types : (Names.GlobRef.t * (Names.Id.t * Miniml.ml_type) list) list;
+      (** The concrete types each instance gives its class's promoted
+          variables. *)
 }
 
 type t = {

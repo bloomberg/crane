@@ -21,6 +21,7 @@ type representation = {
   unmerged_wrappers : string list;
   accessors : GlobRef.t list;
   nested_structs : (string * Cpp_state.nested_struct_owner) list;
+  instance_promoted_types : (GlobRef.t * (Id.t * Miniml.ml_type) list) list;
 }
 
 type t = {
@@ -270,7 +271,9 @@ let plan (_ : Program_facts.t) struc =
     inductive_kinds = aligned @ value_use_demotion aligned struc;
     template_kinds = [];
     modules = Module_plan.empty;
-    representation = {names = []; field_names = []; pointer_fields = []; unmerged_wrappers = []; accessors = []; nested_structs = []};
+    representation = {names = []; field_names = []; pointer_fields = []; unmerged_wrappers = []; accessors = [];
+        nested_structs = [];
+        instance_promoted_types = [] };
     callables = [];
     assumed_callables = [] }
 
@@ -319,6 +322,11 @@ let equal a b =
   && List.equal
        (fun (n, o) (n', o') -> String.equal n n' && Cpp_state.nested_struct_owner_equal o o')
        a.representation.nested_structs b.representation.nested_structs
+  && List.equal
+       (fun (r, bs) (r', bs') ->
+         GlobRef.UserOrd.equal r r'
+         && List.equal (fun (v, t) (v', t') -> Id.equal v v' && Mlutil.eq_ml_type t t') bs bs' )
+       a.representation.instance_promoted_types b.representation.instance_promoted_types
   && same_callables a.callables b.callables
   && List.equal
        (fun (r, ps) (r', ps') -> GlobRef.UserOrd.equal r r' && List.equal Param_pos.equal ps ps')

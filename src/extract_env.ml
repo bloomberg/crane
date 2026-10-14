@@ -1002,6 +1002,7 @@ let plan_pointer_fields = "plan_pointer_fields"
 let plan_unmerged_wrappers = "plan_unmerged_wrappers"
 let plan_accessors = "plan_accessors"
 let plan_nested_structs = "plan_nested_structs"
+let plan_instance_promoted_types = "plan_instance_promoted_types"
 let plan_callables = "plan_callables"
 let install_callables = "install_callables"
 
@@ -1013,6 +1014,7 @@ let layout_pass_names =
     plan_unmerged_wrappers;
     plan_accessors;
     plan_nested_structs;
+    plan_instance_promoted_types;
     plan_callables;
     install_callables ]
 
@@ -1051,6 +1053,9 @@ let plan_layout struc =
   Pipeline_trace.event "layout" plan_nested_structs;
   let nested_structs = Cpp.plan_nested_structs struc in
   Install_legacy_plan.install_nested_structs nested_structs;
+  Pipeline_trace.event "layout" plan_instance_promoted_types;
+  let instance_promoted_types = Cpp.plan_instance_promoted_types struc in
+  Install_legacy_plan.install_instance_promoted_types instance_promoted_types;
   Pipeline_trace.event "layout" plan_callables;
   let callables = Cpp.plan_callables struc in
   if
@@ -1061,7 +1066,13 @@ let plan_layout struc =
   Pipeline_trace.event "layout" install_callables;
   Install_legacy_plan.install_callables callables assumed;
   ( modules,
-    {Target_plan.names; field_names; pointer_fields; unmerged_wrappers; accessors; nested_structs},
+    { Target_plan.names;
+      field_names;
+      pointer_fields;
+      unmerged_wrappers;
+      accessors;
+      nested_structs;
+      instance_promoted_types },
     callables,
     assumed )
 

@@ -71,6 +71,12 @@ val plan_accessors : Miniml.ml_structure -> Names.GlobRef.t list
 val plan_nested_structs :
   Miniml.ml_structure -> (string * Cpp_state.nested_struct_owner) list
 
+(** The concrete types each instance the unit declares gives its class's
+    promoted variables ({!Gen_decls.instance_promoted_types}), which a call
+    through it substitutes for them. *)
+val plan_instance_promoted_types :
+  Miniml.ml_structure -> (Names.GlobRef.t * (Names.Id.t * Miniml.ml_type) list) list
+
 (** The wrapper structs that hold declarations of their module's -- its
     functions, generated as the wrapper's members -- and so cannot be merged
     with the eponymous inductive's struct: a reference to the inductive then

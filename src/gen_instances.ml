@@ -18,16 +18,11 @@ open Gen_records
 
 module IntSet = Escape.IntSet
 
-(** Generate a C++ struct for a type class instance.
-   Type class instances become structs with static methods.
-   Example: Instance IntEq : Eq int := { eqb := Int.eqb }.
-   becomes: struct IntEq { static bool eqb(int a, int b) { ... } };
-
-   Returns: (struct_decl option, class_ref option, type_args)
-   The class_ref and type_args are used to generate static_assert in cpp.ml *)
-let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
-    cpp_decl option * GlobRef.t option * cpp_type list =
-  let instance_ref = name in
+(** An instance's type and body past its own parameters -- erased type
+    binders and class dictionaries, an eta-reduced instance's included --
+    with the template parameters the dictionaries become and the binders
+    stripped. *)
+let instance_layers ty body =
   (* For parameterized instances, strip Tarr/MLlam layers to get to the inner
      typeclass type and constructor body. Collect template parameters along the
      way. Example: numOption has type Tarr(Tdummy, Tarr(Tglob(Numeric,[A],[]),
@@ -87,9 +82,91 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
       strip_outer_layers ty body tc_idx tc_acc lam_acc
     | _ -> (ty, body, List.rev tc_acc, List.rev lam_acc)
   in
-  let inner_ty, inner_body, tc_temps, lam_params =
-    strip_outer_layers ty body 0 [] []
+  strip_outer_layers ty body 0 [] []
+
+(** A singleton class's instance is its method: past the instance's own
+    parameters, the body is the record's one field.  A fixpoint is the
+    method calling itself, through this very instance. *)
+let instance_record_body name class_ref inner_ty lam_params inner_body =
+  let inner_body =
+    match inner_body with
+    | MLmagic (_, b) -> b
+    | b -> b
   in
+  let as_method m = function
+    | MLfix (0, [|_|], [|c|], _) when lam_params = [] ->
+      let n_class = Ml_type_util.projection_class_arity m in
+      Mlutil.ast_subst
+        (MLapp
+           ( MLglob (Mlutil.open_reference m),
+             List.init n_class (fun _ -> MLdummy Ktype)
+             @ [MLglob (Mlutil.open_reference name)] ))
+        c
+    | b -> b
+  in
+  match (Table.singleton_class_method class_ref, inner_body) with
+  | Some _, (MLcons _ as b) -> b
+  | Some m, b -> MLcons (inner_ty, class_ref, [as_method m b])
+  | None, b -> b
+
+(** The class arguments of an instance whose record constructor is typed
+    [cons_ty] and whose declared type gives [type_args]: the constructor's
+    where it says more, the declaration's where the constructor erased one. *)
+let record_type_args (cons_ty : ml_type) type_args =
+  let erased t =
+    match resolve_tmeta t with
+    | Miniml.Tunknown | Miniml.Tdummy _ -> true
+    | _ -> false
+  in
+  match cons_ty with
+  | Tglob (_, ta, _) when ta <> [] ->
+    List.mapi
+      (fun i t ->
+        if not (erased t) then t
+        else
+          match List.nth_opt type_args i with
+          | Some d when not (erased d) -> d
+          | _ -> t )
+      ta
+  | _ -> type_args
+
+(** The concrete types the instance [name] -- [body] of type [ty] -- gives
+    its class's promoted variables, which a call through the instance
+    substitutes for them: none where its body builds no record of its class,
+    or where it does not give them all. *)
+let instance_promoted_types name body ty =
+  let inner_ty, inner_body, _, lam_params = instance_layers ty body in
+  match (inner_ty : ml_type) with
+  | Tglob (class_ref, type_args, _) when Table.is_typeclass class_ref -> (
+    match instance_record_body name class_ref inner_ty lam_params inner_body with
+    | MLcons (cons_ty, _, _) ->
+      let type_args = record_type_args cons_ty type_args in
+      let promoted_vars = class_promoted_vars class_ref in
+      let promoted_concrete = class_promoted_concrete class_ref type_args in
+      if List.length promoted_vars = List.length promoted_concrete && promoted_vars <> [] then
+        List.map2
+          (fun var_name (params, ml_ty) ->
+            (* Call sites want a closed type; the alias template's own
+               element parameters ([Tvar 1 ...] here) have no meaning
+               outside the instance, so they are erased. *)
+            ( var_name,
+              Mlutil.type_subst_list (List.map (fun _ -> Miniml.Tunknown) params) ml_ty ) )
+          promoted_vars promoted_concrete
+      else []
+    | _ -> [] )
+  | _ -> []
+
+(** Generate a C++ struct for a type class instance.
+   Type class instances become structs with static methods.
+   Example: Instance IntEq : Eq int := { eqb := Int.eqb }.
+   becomes: struct IntEq { static bool eqb(int a, int b) { ... } };
+
+   Returns: (struct_decl option, class_ref option, type_args)
+   The class_ref and type_args are used to generate static_assert in cpp.ml *)
+let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
+    cpp_decl option * GlobRef.t option * cpp_type list =
+  let instance_ref = name in
+  let inner_ty, inner_body, tc_temps, lam_params = instance_layers ty body in
   (* Collect type variables from the inner return type's type args. For
      parameterized instances like numOption : Numeric (option A), the return
      type is Tglob(Numeric, [option A], []) which contains Tvar for A. These
@@ -251,65 +328,23 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
     (* Get the type class fields (method names) and field types (from
        ind_packet) *)
     let fields = Table.record_field_bindings_of_type inner_ty in
-    (* Strip MLmagic wrapper if present — promoted dependent records may have
-       their constructor wrapped in MLmagic due to Tvar/Tglob mismatches during
-       extraction unification. *)
-    let inner_body =
-      match inner_body with
-      | MLmagic (_, b) -> b
-      | b -> b
-    in
-    (* A singleton class's instance is its method: past the instance's own
-       parameters, the body is the record's one field.  A fixpoint is the
-       method calling itself, through this very instance. *)
-    let inner_body =
-      let as_method m = function
-        | MLfix (0, [|_|], [|c|], _) when lam_params = [] ->
-          let n_class = Ml_type_util.projection_class_arity m in
-          Mlutil.ast_subst
-            (MLapp
-               ( MLglob (Mlutil.open_reference m),
-                 List.init n_class (fun _ -> MLdummy Ktype)
-                 @ [MLglob (Mlutil.open_reference name)] ))
-            c
-        | b -> b
-      in
-      match (Table.singleton_class_method class_ref, inner_body) with
-      | Some _, (MLcons _ as b) -> b
-      | Some m, b -> MLcons (inner_ty, class_ref, [as_method m b])
-      | None, b -> b
-    in
+    (* Promoted dependent records may have their constructor wrapped in
+       MLmagic due to Tvar/Tglob mismatches during extraction unification. *)
+    let inner_body = instance_record_body name class_ref inner_ty lam_params inner_body in
     ( match inner_body with
     | MLcons (cons_ty, _ctor_ref, method_bodies) ->
       (* For promoted dependent records, the definition type Tglob(Magma,[],[])
          has no type_args, but the MLcons type Tglob(Magma,[nat],[]) carries the
-         concrete types extracted from the erased constructor args. *)
-      (* The constructor's type arguments are preferred because extraction
-         unified them against the body, which the definition's type need not
-         mention.  But a position extraction {e erased} says less, not more,
-         and the two disagree exactly there: [Instance showCarr {C : Carrier}
-         : Show carr] reaches here as [Show carr] in its declared type and
-         [Show _] in its constructor's, because a class field standing as a
-         type is a projection the constructor's unification drops.  Take the
-         better of the two at each position rather than one list whole. *)
-      let type_args =
-        let erased t =
-          match resolve_tmeta t with
-          | Miniml.Tunknown | Miniml.Tdummy _ -> true
-          | _ -> false
-        in
-        match cons_ty with
-        | Tglob (_, ta, _) when ta <> [] ->
-          List.mapi
-            (fun i t ->
-              if not (erased t) then t
-              else
-                match List.nth_opt type_args i with
-                | Some d when not (erased d) -> d
-                | _ -> t )
-            ta
-        | _ -> type_args
-      in
+         concrete types extracted from the erased constructor args.  The
+         constructor's type arguments are preferred because extraction unified
+         them against the body, which the definition's type need not mention.
+         But a position extraction {e erased} says less, not more, and the two
+         disagree exactly there: [Instance showCarr {C : Carrier} : Show carr]
+         reaches here as [Show carr] in its declared type and [Show _] in its
+         constructor's, because a class field standing as a type is a
+         projection the constructor's unification drops.  Take the better of
+         the two at each position rather than one list whole. *)
+      let type_args = record_type_args cons_ty type_args in
       (* How many type variables the instance itself binds.  Not the number of
          template parameters it declares: a higher-kinded carrier ([Instance
          ... (M : Type -> Type)]) is a variable the instance's arguments name,
@@ -330,29 +365,21 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
           (max (List.length tv_temps) (Mlutil.type_maxvar ty))
           type_args
       in
-      (* Register promoted type bindings for this instance so that call sites
-         (eta_fun) can substitute promoted Tvars with concrete types. E.g., for
-         nat_magma : Magma, register [(carrier, nat)] so pick_op<nat_magma>
-         eta-expansion uses unsigned int instead of std::any. *)
-      let promoted_vars = class_promoted_vars class_ref in
-      let promoted_concrete = class_promoted_concrete class_ref type_args in
-      if
-        List.length promoted_vars = List.length promoted_concrete
-        && promoted_vars <> []
-      then
-        Table.add_instance_promoted_types
-          name
-          (List.map2
-             (fun var_name (params, ml_ty) ->
-               (* Call sites want a closed type; the alias template's own
-                  element parameters ([Tvar 1 ...] here) have no meaning
-                  outside the instance, so they are erased. *)
-               ( var_name,
-                 Mlutil.type_subst_list
-                   (List.map (fun _ -> Miniml.Tunknown) params)
-                   ml_ty ) )
-             promoted_vars
-             promoted_concrete );
+      (* The concrete types it gives its class's promoted variables, which
+         call sites substitute, were planned before rendering
+         ({!instance_promoted_types}). *)
+      if Probe.checking () then begin
+        let planned = Table.get_instance_promoted_types name in
+        let generated = instance_promoted_types name body ty in
+        if
+          not
+            (List.equal
+               (fun (v, t) (v', t') -> Id.equal v v' && Mlutil.eq_ml_type t t')
+               planned generated )
+        then
+          Probe.violation "instance promoted types"
+            Pp.(str "the instance " ++ GlobRef.print name ++ str " gives its promoted variables other types than planned")
+      end;
       (* Build the environment with lambda parameters for de Bruijn resolution.
          For parameterized instances, method bodies reference the outer lambda
          parameters (e.g., the typeclass dictionary) via MLrel indices. We push

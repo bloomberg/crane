@@ -31,6 +31,9 @@ let install_accessors = List.iter Cpp_state.register_template_static_accessor_re
 let install_nested_structs =
   List.iter (fun (name, owner) -> Cpp_state.add_nested_struct_name name owner)
 
+let install_instance_promoted_types =
+  List.iter (fun (r, bindings) -> Table.add_instance_promoted_types r bindings)
+
 let install_unmerged_wrappers =
   List.iter (fun name -> Hashtbl.replace Cpp_state.unmerged_wrappers name ())
 
