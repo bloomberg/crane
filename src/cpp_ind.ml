@@ -118,7 +118,7 @@ let ind_template_kinds kn ind =
 let alias_template_kinds r l t =
   let written =
     match t with
-    | Miniml.Tdummy Miniml.Ktype | Miniml.Taxiom -> false
+    | Miniml.Tdummy Miniml.Ktype -> false
     | t ->
       not
         ( is_any_inline_custom r
