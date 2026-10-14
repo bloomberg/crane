@@ -155,21 +155,13 @@ let same_head a b =
   let key p = (Id.to_string (Template_param.name p.id), origin_key p.origin, p.kind, p.write) in
   List.equal (fun p q -> key p = key q) a.head b.head
 
-(* Where a declaration is generated decides parts of its head -- a function
-   rendered inside a struct is not the same C++ entity as one at namespace
-   scope -- so a plan is recorded for the place it was generated in. *)
-let context () =
-  let rc = !Cpp_state.render_ctx in
-  (rc.Cpp_state.rc_in_struct, rc.Cpp_state.rc_in_template, Option.map ModPath.to_string rc.Cpp_state.rc_struct_mp)
-
-let plans = ref Names.GlobRef.Map_env.empty
+let plans : t GlobRef.Map_env.t ref = ref GlobRef.Map_env.empty
 let frozen = ref false
 let open_for_discovery () = frozen := false
 let freeze () = frozen := true
 
 let () =
-  Table.register_census "callable ABI plans" (fun () ->
-      GlobRef.Map_env.fold (fun _ l n -> n + List.length l) !plans 0 )
+  Table.register_census "callable ABI plans" (fun () -> GlobRef.Map_env.cardinal !plans)
 let () =
   State.on_reset State.Extraction (fun () ->
       plans := GlobRef.Map_env.empty;
@@ -209,9 +201,7 @@ let record abi =
       Probe.violation "callable ABI"
         Pp.(str "the plan of " ++ GlobRef.print abi.callee ++ str ": " ++ str problem) )
     (validate abi);
-  let here = context () in
-  let recorded = Option.default [] (GlobRef.Map_env.find_opt abi.callee !plans) in
-  match List.assoc_opt here recorded with
+  match GlobRef.Map_env.find_opt abi.callee !plans with
   | Some old when same_head old abi -> ()
   | Some old ->
     Probe.violation "callable ABI"
@@ -227,15 +217,9 @@ let record abi =
         str "the declaration of " ++ GlobRef.print abi.callee
         ++ str " was generated after the plans were frozen, with no plan recorded in \
                 discovery" )
-  | None -> plans := GlobRef.Map_env.add abi.callee ((here, abi) :: recorded) !plans
+  | None -> plans := GlobRef.Map_env.add abi.callee abi !plans
 
-let lookup r =
-  match GlobRef.Map_env.find_opt r !plans with
-  | None | Some [] -> None
-  | Some recorded -> (
-    match List.assoc_opt (context ()) recorded with
-    | Some abi -> Some abi
-    | None -> Some (snd (List.hd (List.rev recorded))) )
+let lookup r = GlobRef.Map_env.find_opt r !plans
 
 let foreign ?(instances = 0) ?(higher_kinded = fun _ -> false) ?(kept = fun _ -> true)
     ?(reachable = max_int) ?(relaxed = fun _ -> false) ?(phantom_prefix = 0) ~callee ~scheme () =

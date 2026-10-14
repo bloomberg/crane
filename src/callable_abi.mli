@@ -15,9 +15,12 @@
     origin that is no scheme variable, and so cannot take a type argument
     meant for one.
 
-    A declaration's plan is recorded as it is generated, during discovery,
-    and frozen there: generating it again must reproduce it exactly, and a
-    plan first recorded while output is emitted is a decision discovery
+    A callee has one plan, wherever it is generated: a function rendered
+    inside a struct and the same function at namespace scope take one head.
+    The plan is recorded before discovery renders where the callee is planned
+    ahead, and otherwise as its declaration is generated in discovery; it is
+    frozen there.  Generating the declaration again must reproduce it exactly,
+    and a plan first recorded while output is emitted is a decision discovery
     missed.  Both are reported under [CRANE_CHECK_IR]. *)
 
 (** A parameter of one head. *)
@@ -91,11 +94,9 @@ val validate : t -> string list
 
 (** {2 The frozen map} *)
 
-(** Records the plan of a declaration being generated, for the render
-    context it is generated in: a function rendered inside a struct and one
-    at namespace scope are two C++ entities.  One already recorded there
-    must be reproduced exactly; under [CRANE_CHECK_IR] a different one is an
-    error. *)
+(** Records the plan of a declaration planned or being generated.  One
+    already recorded must be reproduced exactly; under [CRANE_CHECK_IR] a
+    different one is an error. *)
 val record : t -> unit
 
 (** Discovery records plans; {!freeze} ends it.  Once frozen the map is an
@@ -105,8 +106,7 @@ val open_for_discovery : unit -> unit
 
 val freeze : unit -> unit
 
-(** The recorded plan of a declaration: the one for the current render
-    context, or else the one recorded first. *)
+(** The recorded plan of a declaration. *)
 val lookup : Names.GlobRef.t -> t option
 
 (** The plan of a callable Crane does not generate here -- a custom mapping,
