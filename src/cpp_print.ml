@@ -1735,7 +1735,7 @@ and pp_cpp_expr env args t =
       | _ ->
       (* Check if this function is inside an eponymous template struct. If so,
          type args go on the struct name, not the function name. *)
-      match (Program_facts.eponymous_record_containing x, tys) with
+      match (Module_plan.eponymous_record_containing x, tys) with
       | Some record_ref, _ :: _ ->
         (* Function inside eponymous template struct with type args: Generate
            StructName<int, ...>::template funcName<Args> for static methods. We
@@ -1777,7 +1777,7 @@ and pp_cpp_expr env args t =
       let x_mp = modpath_of_r x in
       let x_lbl = label_of_r x in
       let rec resolve_mp mp =
-        match Program_facts.functor_app_source mp with
+        match Module_plan.functor_app_source mp with
         | Some source -> resolve_mp source  (* iterate to fixpoint *)
         | None ->
           match mp with
@@ -1807,7 +1807,7 @@ and pp_cpp_expr env args t =
                      || not (ModPath.equal x_mp resolved_x_mp))) )
     in
     let full_name =
-      match (tys, Program_facts.eponymous_record_containing x) with
+      match (tys, Module_plan.eponymous_record_containing x) with
       | [], _ -> base_name
       | _, Some _ -> base_name
       | _ ->

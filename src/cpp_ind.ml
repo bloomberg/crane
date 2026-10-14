@@ -60,7 +60,7 @@ let pp_decls (ds : rendered) =
     members are spelled.  Both kinds are emitted after every datatype, so a
     datatype's member naming either one is naming something still to come. *)
 let module_struct_name (mp : ModPath.t) : string option =
-  match Program_facts.wrapper_struct mp with
+  match Module_plan.wrapper_struct mp with
   | Some name -> Some name
   | None -> (
     match mp with

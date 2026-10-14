@@ -1,11 +1,13 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** What preparing a structure decided about its layout, before anything is
-    rendered: where declarations live and what they are called.  Installed
-    by {!Cpp.prepare_structure}, the one writer, and read-only afterwards --
-    which is what makes it safe to read from a [.cpp] body printed before the
-    [.h] that declares the names. *)
+(** The module plan: what preparing a structure decided about its layout,
+    before anything is rendered -- where declarations live and what they are
+    called.  These are backend decisions, part of a unit's target plan, not
+    observations about the program.  Installed by {!Cpp.prepare_structure},
+    the one writer, and read-only afterwards -- which is what makes it safe to
+    read from a [.cpp] body printed before the [.h] that declares the
+    names. *)
 
 open Names
 

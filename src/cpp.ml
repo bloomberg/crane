@@ -127,7 +127,7 @@ let concept_extra_args kn =
     its declaration and at every reference: named after the functor whose
     body declares it, where one does ({!functor_concept_scope}); qualified
     with its module where another concept shares its name
-    ({!Program_facts.modtype_concept_name}); and otherwise its label
+    ({!Module_plan.modtype_concept_name}); and otherwise its label
     ({!Structure_analysis.concept_name_of_label}).  Every site naming a
     module-type concept goes through this, so no two can disagree. *)
 let modtype_concept_name mp =
@@ -136,7 +136,7 @@ let modtype_concept_name mp =
   | MPdot (mp0, l) -> (
     match functor_concept_scope mp0 with
     | Some (fl, _) -> base fl ^ "_" ^ base l
-    | None -> Option.default (base l) (Program_facts.modtype_concept_name mp) )
+    | None -> Option.default (base l) (Module_plan.modtype_concept_name mp) )
   | MPfile _ | MPbound _ ->
     CErrors.anomaly (Pp.str "modtype_concept_name: a module type is a member of a structure")
 
@@ -2184,7 +2184,7 @@ let install_analysis
         Option.map (fun name -> (mi, name)) mi.wrapper_name )
       sorted_modules
   in
-  Program_facts.install
+  Module_plan.install
     { global_scope_enums;
       concept_names = concept_renames;
       modtype_concept_names = modtype_concept_renames;
@@ -2192,9 +2192,9 @@ let install_analysis
       eponymous_records;
       namespace_scope_refs = lifted_instances;
       wrappers =
-        List.map (fun (mp, name) -> (mp, name, Some Program_facts.Flattened)) collision_wrappers
+        List.map (fun (mp, name) -> (mp, name, Some Module_plan.Flattened)) collision_wrappers
         (* A bystander is nested inside the wrapper, not flattened into it. *)
-        @ List.map (fun (mp, name) -> (mp, name, Some Program_facts.Bystander)) wrapper_bystanders
+        @ List.map (fun (mp, name) -> (mp, name, Some Module_plan.Bystander)) wrapper_bystanders
         @ List.map (fun ((mi : Structure_analysis.module_info), name) -> (mi.modpath, name, None)) wrapped;
       (* Not everything a wrapper module declares ends up inside the wrapper
          struct.  A type alias is emitted at global C++ scope as
@@ -2713,13 +2713,13 @@ let do_struct_with_decl_tracking ~is_header f s =
            layout, decided by {!Structure_analysis} before any rendering began;
            here we only read the answer back. *)
         let is_colliding_child l _se =
-          Program_facts.wrapper_role (MPdot (mp, l)) = Some Program_facts.Flattened
+          Module_plan.wrapper_role (MPdot (mp, l)) = Some Module_plan.Flattened
         in
         (* Whether a wrapper formed is not the same question as which children
            it flattens: a bystander is recorded only when one did, so a child
            in either table says the struct is there to be written. *)
         let is_wrapped_child l =
-          match Program_facts.wrapper_role (MPdot (mp, l)) with
+          match Module_plan.wrapper_role (MPdot (mp, l)) with
           | Some (Flattened | Bystander) -> true
           | Some Own | None -> false
         in
@@ -2737,7 +2737,7 @@ let do_struct_with_decl_tracking ~is_header f s =
               (fun (l, se) ->
                 match se with
                 | SEmodule _ when is_wrapped_child l ->
-                  Program_facts.wrapper_struct (MPdot (mp, l))
+                  Module_plan.wrapper_struct (MPdot (mp, l))
                 | _ -> None )
               sel
             |> Option.default

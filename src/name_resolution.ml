@@ -58,11 +58,11 @@ let register_term _t _r _name = ()
 
 (** Checks if a reference is an eponymous record type. Eponymous records flatten
     their single constructor into the parent namespace. *)
-let is_eponymous _ r = Program_facts.is_eponymous_record r
+let is_eponymous _ r = Module_plan.is_eponymous_record r
 
 (** Checks if a reference is a globally-scoped enum. Global-scope enums have
     their variants hoisted to the parent namespace. *)
-let is_global_scope_enum _ r = Program_facts.is_global_scope_enum r
+let is_global_scope_enum _ r = Module_plan.is_global_scope_enum r
 
 (** Retrieves the inductive kind classification for a type reference. Returns
     None if the reference is not an inductive type. *)
@@ -84,7 +84,7 @@ let classify_inductive
   let ind_ref = GlobRef.IndRef (kn, i) in
   let p = ind.Miniml.ind_packets.(i) in
   let raw_name = Id.to_string p.Miniml.ip_typename in
-  let is_eponymous = Program_facts.is_eponymous_record ind_ref in
+  let is_eponymous = Module_plan.is_eponymous_record ind_ref in
   let is_rec =
     match ind.Miniml.ind_kind with
     | Miniml.Record _ -> true
@@ -114,7 +114,7 @@ let classify_inductive
         | None -> true)
     && not (has_bound_ancestor parent_mp)
   in
-  let is_gse = Program_facts.is_global_scope_enum ind_ref in
+  let is_gse = Module_plan.is_global_scope_enum ind_ref in
   let kind =
     match ind.Miniml.ind_kind with
     | Miniml.Standard | Miniml.Coinductive ->

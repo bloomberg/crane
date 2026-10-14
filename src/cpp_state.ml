@@ -995,12 +995,12 @@ let is_shadowed_global_name name r =
 let wrapper_qualify_name (r : GlobRef.t) (name : string) : string =
   match r with
   | GlobRef.VarRef _ -> name (* Lifted declarations: never qualify *)
-  | _ when Program_facts.is_namespace_scope_ref r ->
+  | _ when Module_plan.is_namespace_scope_ref r ->
     (* Lifted out of the wrapper's struct, so the struct is not its scope. *)
     name
   | _ ->
     let mp = modpath_of_r r in
-    ( match Program_facts.wrapper mp with
+    ( match Module_plan.wrapper mp with
     | Some (struct_name, role) when not (String.contains name ':') ->
       (* A bare name is the one a use written inside the reference's own module
          would say, and the wrapper's name alone does not get back to it: a
@@ -1008,7 +1008,7 @@ let wrapper_qualify_name (r : GlobRef.t) (name : string) : string =
          too.  Flattened children have no struct left to name, and for them the
          wrapper's name is the whole of it. *)
       let through_child =
-        if role = Program_facts.Bystander then Common.emitted_module_name mp ^ "::" else ""
+        if role = Module_plan.Bystander then Common.emitted_module_name mp ^ "::" else ""
       in
       struct_name ^ "::" ^ through_child ^ name
     | Some (struct_name, role) when String.contains name ':' ->
@@ -1029,7 +1029,7 @@ let wrapper_qualify_name (r : GlobRef.t) (name : string) : string =
           in
           struct_name ^ "::" ^ func_part
         | _ -> name
-      else if role = Program_facts.Bystander then
+      else if role = Module_plan.Bystander then
         (* Nested rather than flattened: the child's own qualifier stays and the
            wrapper's name goes in front of it, unless it is already there. *)
         let prefix = struct_name ^ "::" in
@@ -1052,8 +1052,8 @@ let wrapper_qualify_name (r : GlobRef.t) (name : string) : string =
     argument needs [typename], and that decision is left alone: a bystander's
     struct is a concrete one, never dependent. *)
 let wrapper_qualify_modname (mp : ModPath.t) (name : string) : string =
-  match Program_facts.wrapper mp with
-  | Some (struct_name, Program_facts.Bystander) ->
+  match Module_plan.wrapper mp with
+  | Some (struct_name, Module_plan.Bystander) ->
     let prefix = struct_name ^ "::" in
     if String.starts_with ~prefix name then name else prefix ^ name
   | _ -> name
