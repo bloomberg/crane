@@ -153,19 +153,19 @@ let written_at_variables id by_var =
        ~instance:(fun _ -> None)
        ~scheme:(fun v -> List.assoc_opt (Scheme.Var.ordinal v) by_var) )
 
-(** A call elaborated against its callee: the plan its arguments are lowered
-    by, the callee's C++ type at the call, the written type arguments by
+(** A call lowered against its callee's plan: the plan its arguments are
+    lowered by, the callee's C++ type at the call, the written type arguments by
     scheme variable after the evidence stage, the callee's ABI and the
     template application planned against it, and each scheme variable's
     written C++ type. *)
-type elaborated_call = {
-  ec_callee : GlobRef.t;
-  ec_plan : call_plan;
-  ec_callee_type : cpp_type;
-  ec_written : Miniml.ml_type list;
-  ec_abi : Callable_abi.t;
-  ec_application : Template_application.t;
-  ec_written_by_var : (int * cpp_type) list;
+type lowered_call = {
+  lc_callee : GlobRef.t;
+  lc_plan : call_plan;
+  lc_callee_type : cpp_type;
+  lc_written : Miniml.ml_type list;
+  lc_abi : Callable_abi.t;
+  lc_application : Template_application.t;
+  lc_written_by_var : (int * cpp_type) list;
 }
 
 (** [call_type_args ~caller ?expected_ty env id plan args] -- the type
@@ -796,13 +796,13 @@ let call_type_args ~caller ?expected_ty env id plan ~has_value_args =
     @ by_parameter
   in
   {
-    ec_callee = id;
-    ec_plan = plan;
-    ec_callee_type = ty;
-    ec_written = tys;
-    ec_abi = abi;
-    ec_application = application;
-    ec_written_by_var = written_tvar_args;
+    lc_callee = id;
+    lc_plan = plan;
+    lc_callee_type = ty;
+    lc_written = tys;
+    lc_abi = abi;
+    lc_application = application;
+    lc_written_by_var = written_tvar_args;
   }
 
 
@@ -1705,13 +1705,13 @@ let plan_call ~caller ~slot ?expected_ty env tyargs args =
     cp_result_tvar_map = result_tvar_map
   }
 
-(** [elaborate_call ~caller ~slot ?expected_ty env use args]: the call [use]
-    [args] in the declaration [caller], elaborated before any of its
-    arguments is lowered -- how its arguments
-    meet the callee's parameters ({!plan_call}), and the template application
-    planned and validated against the callee's ABI ({!call_type_args}).
-    Lowering reads the result and decides neither. *)
-let elaborate_call ~caller ~slot ?expected_ty env use args =
+(** [lower_call ~caller ~slot ?expected_ty env use args]: the call [use]
+    [args] in the declaration [caller], lowered against its callee before any
+    of its arguments is -- how its arguments meet the callee's parameters
+    ({!plan_call}), and the template application planned and validated
+    against the callee's ABI ({!call_type_args}).  Generating the arguments
+    reads the result and decides neither. *)
+let lower_call ~caller ~slot ?expected_ty env use args =
   let id = use.callee in
   let plan = plan_call ~caller ~slot ?expected_ty env (Call_tyargs.of_use use) args in
   call_type_args ~caller ?expected_ty env id plan
