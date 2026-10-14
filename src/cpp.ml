@@ -2261,18 +2261,10 @@ let prepare_structure s =
   List.iter (fun _ -> pop_visible ()) initial_mps;
   structure_analysis := Some analysis
 
-(** Plan the head of each function the renders will generate, before either
-    renders anything ({!Gen_decls.plan_function}), so that a call rendered
-    ahead of its callee reads the head the callee is declared with.
-
-    The modules are walked as a render walks them, for the two things a head
-    is converted against: the visibility stack, and the inductives local to
-    the enclosing modules.  Only what the walk can already tell is generated
-    as a function is planned.  A method, a projection and an alias's copy are
-    left to be planned as they are generated, and a wrapper module's monadic
-    constant is not generated at all: planning a function no render generates
-    would hand its call sites a head other than the one they assume. *)
-let plan_callables s =
+(* The walk of {!plan_callables}, visiting each list backwards if
+   [reversed]. *)
+let plan_callables_in ~reversed s =
+  let order l = if reversed then List.rev l else l in
   let plan ~fixpoint r a t =
     if not (is_any_inline_custom r || Table.is_projection r || is_registered_method r <> None)
     then Gen_decls.plan_function ~fixpoint r a t
@@ -2282,7 +2274,8 @@ let plan_callables s =
     | Dterm (r, a, (Tglob (ty, _, _) as t)) when is_monad ty ->
       if not wrapper then plan ~fixpoint:true r a t
     | Dterm (r, a, t) when not (is_typeclass_instance a t) -> plan ~fixpoint:false r a t
-    | Dfix fds -> List.iter (fun fd -> plan ~fixpoint:true fd.fd_ref fd.fd_body fd.fd_type) fds
+    | Dfix fds ->
+      List.iter (fun fd -> plan ~fixpoint:true fd.fd_ref fd.fd_body fd.fd_type) (order fds)
     | Dterm _ | Dind _ | Dtype _ -> ()
   in
   let declared_inductives mp sel =
@@ -2327,7 +2320,7 @@ let plan_callables s =
     | MEstruct (mp, sel) ->
       in_module ~params mp (fun () ->
           with_local_inductives (declared_inductives mp sel) (fun () ->
-              List.iter (plan_elem ~wrapper:false) sel ) )
+              List.iter (plan_elem ~wrapper:false) (order sel) ) )
     | MEident _ | MEapply _ | MEfunctor _ -> ()
   in
   let analysis = get_structure_analysis () in
@@ -2351,8 +2344,8 @@ let plan_callables s =
       List.iter
         (fun (mi : Structure_analysis.module_info) ->
           if mi.wrapper_name <> None then
-            in_module mi.modpath (fun () -> List.iter (plan_elem ~wrapper:true) mi.sels) )
-        analysis.sorted_modules;
+            in_module mi.modpath (fun () -> List.iter (plan_elem ~wrapper:true) (order mi.sels)) )
+        (order analysis.sorted_modules);
       let file_inductives =
         if modular () then
           List.concat_map (fun (mi : Structure_analysis.module_info) -> all_inductives mi.sels) analysis.sorted_modules
@@ -2362,8 +2355,27 @@ let plan_callables s =
           List.iter
             (fun (mi : Structure_analysis.module_info) ->
               if mi.wrapper_name = None then
-                in_module mi.modpath (fun () -> List.iter (plan_elem ~wrapper:false) mi.sels) )
-            analysis.sorted_modules ) )
+                in_module mi.modpath (fun () -> List.iter (plan_elem ~wrapper:false) (order mi.sels)) )
+            (order analysis.sorted_modules) ) )
+
+(** Plan the head of each function the renders will generate, before either
+    renders anything ({!Gen_decls.plan_function}), so that a call rendered
+    ahead of its callee reads the head the callee is declared with.
+
+    The modules are walked as a render walks them, for the two things a head
+    is converted against: the visibility stack, and the inductives local to
+    the enclosing modules.  Only what a render generates as a function is
+    planned: a method, a projection, an inline custom and an alias's copy are
+    not, and neither is a wrapper module's monadic constant, which no render
+    generates at all.  Planning one of those would hand its call sites a head
+    other than the one they assume; missing one is reported when it is
+    generated ({!Callable_abi.record}). *)
+let plan_callables s =
+  plan_callables_in ~reversed:false s;
+  (* A head is a function of its declaration, not of what was planned before
+     it: planned again in the reverse order, every one must come out the
+     same, which recording it again checks. *)
+  if Sys.getenv_opt "CRANE_CHECK_IR" <> None then plan_callables_in ~reversed:true s
 
 (** [pp_wrapper_struct name specs] is the struct a library module is rendered
     as: its member declarations, [specs], inside a struct of that name. *)
