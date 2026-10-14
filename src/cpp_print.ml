@@ -1653,11 +1653,10 @@ and pp_cpp_expr env args t =
       (* The non-receiver parameters get the types the method was declared at,
          for the same reason the receiver does: a generic lambda has no
          deducible signature, so nothing downstream can convert it to a
-         [std::function].  They are recorded in declaration order, so the
-         receiver's slot is not among them -- and [None] where the declaration
-         has not been generated yet, which leaves [const auto &] as the only
-         thing that can be said. *)
-      let declared = Option.default [] (Cpp_state.method_param_cpp_types x) in
+         [std::function].  The method's plan records them in declaration
+         order, so the receiver's slot is not among them; a method planned
+         nowhere leaves [const auto &] as the only thing that can be said. *)
+      let declared = Option.default [] (Callable_abi.method_params x) in
       (* A declared parameter carries however many qualifiers the declaration
          gave it; the lambda spells its own, so they all come off first. *)
       let rec unqualified = function

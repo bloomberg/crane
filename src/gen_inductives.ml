@@ -684,7 +684,9 @@ let method_plan func_ref s h =
   let scheme = Mlutil.reference_scheme func_ref in
   Callable_abi.of_head ~renumber ~deduced_callables:s.ms_deduced_callables
     ~receiver:
-      {dropped = List.filter_map (fun (i, _) -> Option.bind scheme (fun sc -> Scheme.Var.of_tvar sc i)) h.mh_dropped}
+      { dropped =
+          List.filter_map (fun (i, _) -> Option.bind scheme (fun sc -> Scheme.Var.of_tvar sc i)) h.mh_dropped;
+        params = List.map snd s.ms_params }
     ~callee:func_ref ~scheme h.mh_tparams
 
 (** [plan_method name vars candidate] is the callable plan of the method
@@ -937,10 +939,6 @@ let gen_single_method name vars ((func_ref, _, ty, this_pos) as candidate) =
     if Id.Set.is_empty phantom_name_set then stmts
     else List.map strip_phantom_any_cast_stmt stmts
   in
-  (* The parameter types are decided here; the printer needs them when the
-     method is later passed around as a function value and has to be spelled as
-     a forwarding lambda. *)
-  Cpp_state.register_method_param_cpp_types func_ref (List.map snd params);
   ( Fmethod
       {
         mf_name = func_name;

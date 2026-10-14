@@ -70,6 +70,9 @@ type receiver = {
   dropped : Scheme.Var.t list;
       (** The function's variables the method declares no parameter for: no
           signature or annotation of it mentions them. *)
+  params : Minicpp.cpp_type list;
+      (** The C++ types the method's parameters other than its receiver are
+          declared at, in declaration order. *)
 }
 
 type t
@@ -185,3 +188,8 @@ val plan :
     those the method [r] dropped ({!receiver}); none where [r] is not a
     planned method. *)
 val dropped_positions : Names.GlobRef.t -> int list
+
+(** The C++ types the planned method [r]'s parameters other than its
+    receiver are declared at ({!receiver}); [None] where [r] is not a
+    planned method. *)
+val method_params : Names.GlobRef.t -> Minicpp.cpp_type list option

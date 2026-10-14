@@ -33,7 +33,10 @@ type template_parameter = {
   write : write_policy;
 }
 
-type receiver = {dropped : Scheme.Var.t list}
+type receiver = {
+  dropped : Scheme.Var.t list;
+  params : Minicpp.cpp_type list;
+}
 
 type t = {
   callee : GlobRef.t;
@@ -166,7 +169,7 @@ let same_head a b =
     | Derived n -> `Derived (Id.to_string n)
   in
   let key p = (Id.to_string (Template_param.name p.id), origin_key p.origin, p.kind, p.write) in
-  let receiver_key r = List.map Scheme.Var.ordinal r.dropped in
+  let receiver_key r = (List.map Scheme.Var.ordinal r.dropped, r.params) in
   List.equal (fun p q -> key p = key q) a.head b.head
   && List.equal Param_pos.equal a.deduced_callables b.deduced_callables
   && Option.equal ( = ) (Option.map receiver_key a.receiver) (Option.map receiver_key b.receiver)
@@ -292,5 +295,10 @@ let plan ?instances ?higher_kinded ?kept ?reachable ?relaxed ?phantom_prefix cal
 
 let dropped_positions r =
   match lookup r with
-  | Some {receiver = Some {dropped}; _} -> List.map (fun v -> Scheme.Var.ordinal v - 1) dropped
+  | Some {receiver = Some {dropped; _}; _} -> List.map (fun v -> Scheme.Var.ordinal v - 1) dropped
   | _ -> []
+
+let method_params r =
+  match lookup r with
+  | Some {receiver = Some {params; _}; _} -> Some params
+  | _ -> None
