@@ -14,7 +14,7 @@
 
 open Names
 
-(** The [signature] type is used to know how many arguments a CIC object
+(** The [signature] type is used to know how many arguments a PCUIC object
     expects, and what these arguments will become in the ML object. *)
 
 (** We eliminate from terms: 1) types 2) logical parts 3) user-declared implicit

@@ -13,12 +13,13 @@
 (** {1 Extraction from Rocq Terms to MiniML}
 
     First stage of the extraction pipeline:
-    {v Rocq CIC  --[extraction.ml]-->  MiniML AST v}
+    {v Rocq PCUIC  --[extraction.ml]-->  MiniML AST v}
 
-    Converts Rocq's Calculus of Inductive Constructions into a simply-typed
-    functional language ({!Miniml}). This step performs type erasure (removing
-    propositions, universe levels, implicit arguments) and computes signatures
-    tracking which arguments survive extraction ([Keep]/[Kill]). *)
+    Converts Rocq's Polymorphic Cumulative Calculus of Inductive Constructions
+    (PCUIC) into a simply-typed functional language ({!Miniml}). This step
+    performs type erasure (removing propositions, universe levels, implicit
+    arguments) and computes signatures tracking which arguments survive
+    extraction ([Keep]/[Kill]). *)
 
 open Names
 open Declarations

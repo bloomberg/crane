@@ -583,7 +583,7 @@ let type_extraction_declined = function
   | Assert_failure _ -> true
   | e -> CErrors.noncritical e
 
-(** Extracts a Rocq CIC type into an ML type. The [db] context translates [Rel]
+(** Extracts a Rocq PCUIC type into an ML type. The [db] context translates [Rel]
     to [Tvar], and [j] is the next type var.
     @param env Rocq environment for reduction and sort checking
     @param sg Evar map for universe operations
@@ -1487,7 +1487,7 @@ and record_constant_type env sg kn opt_typ =
 
 (** {1 Extraction of a term} *)
 
-(** Extracts a Rocq CIC term into an ML AST expression. Precondition: term is
+(** Extracts a Rocq PCUIC term into an ML AST expression. Precondition: term is
     informative and not a type scheme.
     @param env Rocq environment, extended as lambdas and let-ins are entered
     @param sg Evar map for type-of and sort queries

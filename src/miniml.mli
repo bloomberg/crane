@@ -15,10 +15,10 @@
     MiniML is the language-agnostic functional intermediate representation at
     the heart of the extractor.  The pipeline is
 
-    {[ Rocq CIC --[extraction.ml]--> MiniML --[translation.ml]--> MiniCpp
+    {[ Rocq PCUIC --[extraction.ml]--> MiniML --[translation.ml]--> MiniCpp
        --[cpp.ml]--> C++ ]}
 
-    Extraction from Rocq's CIC first erases everything with no computational
+    Extraction from Rocq's PCUIC first erases everything with no computational
     content — types, logical ([Prop]) subterms, and user-declared implicit
     arguments — recording what was removed in a {!signature}.  The surviving
     computation is expressed in this AST: {!ml_type} for type expressions,
@@ -34,10 +34,10 @@
 
 open Names
 
-(* The [signature] type is used to know how many arguments a CIC object expects,
+(* The [signature] type is used to know how many arguments a PCUIC object expects,
    and what these arguments will become in the ML object. *)
 
-(** Why a CIC argument or subterm carries no computational content and is
+(** Why a PCUIC argument or subterm carries no computational content and is
     therefore erased during extraction. [Ktype] marks a type argument, [Kprop]
     a logical ([Prop]) part, and [Kimplicit (r, n)] the [n]-th argument of the
     constant or constructor [r] that the user declared implicit. *)
@@ -46,13 +46,13 @@ type kill_reason =
   | Kprop
   | Kimplicit of GlobRef.t * int  (** n-th arg of a cst or construct *)
 
-(** Fate of a single CIC argument once extraction has run: [Keep] it in the ML
+(** Fate of a single PCUIC argument once extraction has run: [Keep] it in the ML
     object, or [Kill] it with the recorded {!kill_reason}. *)
 type sign =
   | Keep
   | Kill of kill_reason
 
-(** Per-argument keep/kill decisions for a CIC object, one {!sign} per argument.
+(** Per-argument keep/kill decisions for a PCUIC object, one {!sign} per argument.
     Convention: the outermost lambda/product gives the head of the list, so the
     signature is read left-to-right in source order. *)
 type signature = sign list
@@ -73,7 +73,7 @@ type tvar_rigidity =
   | Schematic
   | Rigid
 
-(** An erased ML type expression, the residue of a CIC type after logical and
+(** An erased ML type expression, the residue of a PCUIC type after logical and
     type-only content is removed. Key constructors: [Tarr] is a (non-dependent)
     function arrow; [Tglob (r, tys, args)] applies the named inductive/type
     constant [r] to type arguments [tys] (Crane additionally carries value
@@ -202,7 +202,7 @@ and ml_ind = {
     [pattern] matches. *)
 and ml_branch = (ml_ident * ml_type) list * ml_type * ml_pattern * ml_ast
 
-(** An erased ML term — the computational residue of a CIC term. Key
+(** An erased ML term — the computational residue of a PCUIC term. Key
     constructors: [MLrel] a De Bruijn-indexed local variable; [MLapp] an
     application of a head to a list of arguments; [MLlam] a lambda (binder, its
     type, body); [MLletin] a let-binding; [MLglob] a use of a global, with

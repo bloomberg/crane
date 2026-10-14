@@ -19,7 +19,7 @@ open Names
 
     Expression-level lowering from the extracted {!Miniml} AST to the
     C++-oriented {!Minicpp} AST. This is the second stage of the pipeline
-    ({v Rocq CIC --> MiniML --> MiniCpp --> C++ v}), sitting below the
+    ({v Rocq PCUIC --> MiniML --> MiniCpp --> C++ v}), sitting below the
     declaration-level generators in {!Gen_decls} (which call into {!gen_expr},
     {!gen_stmts}, and the type-conversion helpers here) and above {!Cpp_print},
     which renders the resulting MiniCpp.

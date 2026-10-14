@@ -5,7 +5,7 @@
 
     Crane's extraction pipeline has two intermediate representations:
 
-    {[ Rocq CIC --[extraction.ml]--> MiniML --[translation.ml]--> MiniCpp
+    {[ Rocq PCUIC --[extraction.ml]--> MiniML --[translation.ml]--> MiniCpp
        --[cpp.ml]--> C++ ]}
 
     {!Miniml} handles type erasure, signature computation, and ML-level

@@ -5,19 +5,19 @@
 
     Crane's extraction pipeline has two intermediate representations:
 
-    Rocq CIC --[extraction.ml]--> MiniML --[translation.ml]--> MiniCpp
+    Rocq PCUIC --[extraction.ml]--> MiniML --[translation.ml]--> MiniCpp
     --[cpp.ml]--> C++
 
     MiniML and MiniCpp serve different purposes and cannot be merged:
 
-    MiniML (defined in miniml.ml) is the result of extracting Rocq's Calculus of
-    Inductive Constructions into a simply-typed functional language. This step
-    performs type erasure (removing propositions, universe levels, implicit
+    MiniML (defined in miniml.ml) is the result of extracting Rocq's Polymorphic
+    Cumulative Calculus of Inductive Constructions (PCUIC) into a simply-typed
+    functional language. This step performs type erasure (removing propositions, universe levels, implicit
     arguments), computes signatures that track which arguments survive
     extraction (Keep/Kill), and produces a clean ML-like AST with ~15
     constructors. MiniML enables 1,700 lines of optimizations in mlutil.ml
     (beta-iota reduction, dead code elimination, inlining, match simplification)
-    that operate on type-erased terms — much simpler than working on raw CIC
+    that operate on type-erased terms — much simpler than working on raw PCUIC
     terms with their 30+ constructors and dependent types. MiniML also provides
     type reconstruction infrastructure (Tmeta with mutable unification) and
     buffers Crane from changes to Rocq's internal term representation across
@@ -34,7 +34,7 @@
     an if/else-if chain over the variant, MLcons becomes a factory function
     returning shared_ptr, modules become structs, module types become concepts).
 
-    Attempting to go directly from Rocq CIC to MiniCpp would require combining
+    Attempting to go directly from Rocq PCUIC to MiniCpp would require combining
     type erasure, optimization, and C++ idiom selection into a single pass —
     losing the optimization opportunities that MiniML provides and coupling Rocq
     internals directly to C++ generation. *)
