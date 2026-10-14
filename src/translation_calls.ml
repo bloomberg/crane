@@ -183,7 +183,7 @@ let call_type_args ~caller ?expected_ty env id plan ~has_value_args =
     cp_regular_args = regular_ml_args;
     cp_leading_params = leading_params;
     cp_instance_type_args = typeclass_type_args;
-    cp_tys = tys;
+    cp_tyargs = tyargs;
     cp_dictionary_filled = dictionary_filled;
     cp_fn_ml_ty_subst = fn_ml_ty_subst;
     cp_params = fn_param_ml_tys;
@@ -211,13 +211,15 @@ let call_type_args ~caller ?expected_ty env id plan ~has_value_args =
      carrier and leaves [liftM]'s own element variables to inference, which
      in OCaml costs nothing and in C++ costs everything -- they occur only
      in [typename I::m<T>] and in the return type, both non-deduced.  The
-     arguments still say what they are, so finish the list from them. *)
-  let tys = complete_short_tys id tys primary_ml_args in
-  (* The whole list is built as a function of [tys] because it may have to be
-     built twice: what a call writes is decided by the erasure filters, and
-     the recoveries below run only where they left nothing.  A pass that
-     fills one position would otherwise silently disable them. *)
-  let build_type_args tys =
+     arguments still say what they are, so resolve them from those. *)
+  let tyargs = resolve_from_argument_types tyargs primary_ml_args in
+  let tys = Call_tyargs.by_variable tyargs in
+  (* The whole list is built as a function of the reading because it may
+     have to be built twice: what a call writes is decided by the erasure
+     filters, and the recoveries below run only where they left nothing.  A
+     pass that resolves one variable would otherwise silently disable them. *)
+  let build_type_args tyargs =
+  let tys = Call_tyargs.by_variable tyargs in
   (* The callee's variables it applies and still declares plain: a carrier
      it writes at the erased element ([Iter M]'s [M] is [T1], standing for
      [M<crane::obj>]). *)
@@ -558,8 +560,8 @@ let call_type_args ~caller ?expected_ty env id plan ~has_value_args =
              regular_type_args )
     in
     (* Writing the list out is what this call is left with once the
-       recoveries have declined, so an erased family is worth filling from
-       the value arguments first ({!fill_erased_tys}): written as
+       recoveries have declined, so an erased family is worth resolving from
+       the value arguments first ({!resolve_from_argument_heads}): written as
        [std::any], it types whatever parameter the callee declares at it. *)
     (* A position still erased after that may be stated by the type the
        call is expected to produce: [trigger]'s event family, erased as a
@@ -601,7 +603,9 @@ let call_type_args ~caller ?expected_ty env id plan ~has_value_args =
     let written_out () =
       if some_tvar_undeducible () && no_erased_hkt_arg () then
         filter_erased_keyed ~preserve_positions:true
-          (from_expected (regular_of (fill_erased_tys id tys primary_ml_args)))
+          (from_expected
+             (regular_of
+                (Call_tyargs.by_variable (resolve_from_argument_heads tyargs primary_ml_args)) ) )
       else filtered
     in
     if filtered = [] && regular_type_args <> [] && dictionary_filled then
@@ -680,7 +684,7 @@ let call_type_args ~caller ?expected_ty env id plan ~has_value_args =
       ~instance:(fun k -> List.nth_opt instance_args k)
       ~scheme:(fun v -> List.assoc_opt (Scheme.Var.ordinal v) regular)
   in
-  let regular = build_type_args tys in
+  let regular = build_type_args tyargs in
 
   (* Nothing survived the erasure filters, so if the callee opens with
      parameters its signature never mentions, deduction has nothing to work
@@ -705,32 +709,33 @@ let call_type_args ~caller ?expected_ty env id plan ~has_value_args =
              say what an erased plain type argument was, which is worth
              writing only here: filling a position is what would have taken
              the two routes above out of reach. *)
-          build_type_args (fill_erased_tys id tys primary_ml_args) )
+          build_type_args (resolve_from_argument_heads tyargs primary_ml_args) )
     else
       (* A list the call does write may still hold a family MiniML erased
          -- [translate inr1]'s source, taken off a morphism that erases it --
          which the argument constrained in it names.  Written erased, the
          argument is read at the erased family: converted node by node. *)
-      let filled =
-        List.mapi
-          (fun k (f, t) ->
-            (* Not where the family is an axiom: it has no struct to name. *)
-            let no_struct =
-              match resolve_tmeta f with
-              | Miniml.Tglob (g, _, _) ->
-                Table.is_custom g
-                || (match g with
-                    | GlobRef.IndRef _ -> false
-                    | GlobRef.ConstRef kn -> not (Option.has_some (Table.lookup_typedef_unchecked kn))
-                    | _ -> true)
-              | _ -> false
-            in
-            if Table.is_phantom_type_param id k || no_struct then t else f)
-          (List.combine (fill_erased_tys id tys primary_ml_args) tys)
+      (* Not where the family is an axiom: it has no struct to name. *)
+      let no_struct f =
+        match resolve_tmeta f with
+        | Miniml.Tglob (g, _, _) ->
+          Table.is_custom g
+          || (match g with
+              | GlobRef.IndRef _ -> false
+              | GlobRef.ConstRef kn -> not (Option.has_some (Table.lookup_typedef_unchecked kn))
+              | _ -> true)
+        | _ -> false
       in
-      if List.for_all2 ( == ) filled tys then regular
+      let refined =
+        resolve_from_argument_heads
+          ~accept:(fun v f ->
+            not (Table.is_phantom_type_param id (Scheme.Var.ordinal v - 1) || no_struct f) )
+          tyargs primary_ml_args
+      in
+      if List.equal Scheme.Var.equal (Call_tyargs.holes refined) (Call_tyargs.holes tyargs)
+      then regular
       else
-        match build_type_args filled with
+        match build_type_args refined with
         | [] when instance_args = [] -> regular
         | refilled -> refilled
   in
@@ -1170,9 +1175,10 @@ let record_call_sig env callee_ty e =
       CPPfun_call (sg, f, args) )
   | _ -> e
 
-(** [plan_call ~caller ~slot ?expected_ty env id tys args] -- everything a
-    call to the global [id] from the declaration [caller] needs to know
-    before its arguments are generated: which
+(** [plan_call ~caller ~slot ?expected_ty env tyargs args] -- everything a
+    call from the declaration [caller] to the callee of [tyargs], the call's
+    reading of its type arguments, needs to know before its arguments are
+    generated: which
     arguments are dictionaries, regular or curried past the callee's arity,
     the type arguments the call instantiates the callee at, and the
     callee's parameter types at that instantiation.  Read by
@@ -1192,7 +1198,8 @@ let binding_results_of id compute =
       compute
   end
 
-let plan_call ~caller ~slot ?expected_ty env id tys args =
+let plan_call ~caller ~slot ?expected_ty env tyargs args =
+  let id = Call_tyargs.callee tyargs in
   (* When the call has more args than the function's ML value-domain, the
      excess args are curried applications to the result. This is common with
      Rocq's Function vernacular _correct proof terms, where the extraction
@@ -1412,13 +1419,13 @@ let plan_call ~caller ~slot ?expected_ty env id tys args =
      given unapplied where [on_mem] takes a handler into [itree BotE].  The
      family occurs in the callee's result only, where nothing deduces it and
      the phantom filler would write [void]. *)
-  let tys =
+  let tyargs =
     match
       match slot.expected_ml_ty with
       | Some _ as t -> t
       | None -> slot.stated_ml_ty
     with
-    | Some result when List.exists Mlutil.isTdummy tys ->
+    | Some result when Call_tyargs.interior_holes tyargs <> [] ->
       let families = Ml_type_util.event_family_ml_tvars [fn_ml_ty] in
       (* A family is a head, or one applied at the index it erases
          ([BotE _]); [box nat] met at a bare variable is a value type, not
@@ -1431,7 +1438,7 @@ let plan_call ~caller ~slot ?expected_ty env id tys args =
         | _ -> false
       in
       (* With [~constructors]: an applied variable against an application
-         is the head, which for a family -- the only positions filled here --
+         is the head, which for a family -- the only variables filled here --
          is the answer. *)
       let found =
         tvar_instantiation_found ~in_scope:true ~constructors:true ~result
@@ -1442,43 +1449,38 @@ let plan_call ~caller ~slot ?expected_ty env id tys args =
       let deducible =
         Option.default IntSet.empty (deducible_tvars_of_glob id)
       in
-      List.mapi
-        (fun k t ->
-          match List.assoc_opt (k + 1) found with
+      Call_tyargs.resolve Call_tyargs.Expected_result
+        (fun v ->
+          let k = Scheme.Var.ordinal v in
+          match List.assoc_opt k found with
           | Some b
-            when Mlutil.isTdummy t && IntSet.mem (k + 1) families
-                 && (not (IntSet.mem (k + 1) deducible))
+            when IntSet.mem k families && (not (IntSet.mem k deducible))
                  && family_shaped b ->
-            b
-          | _ -> t )
-        tys
-    | _ -> tys
+            Some b
+          | _ -> None )
+        (Call_tyargs.interior_holes tyargs) tyargs
+    | _ -> tyargs
   in
 
   (* A type-level function passed where a type alias in a domain names it
-     -- the category's [C] in [Id_ obj C] -- is erased in [tys] and stated
+     -- the category's [C] in [Id_ obj C] -- is a hole of the reading, stated
      by the dictionary argument.  Filled before anything is substituted, so
      the parameter types the arguments are generated against and the
      explicit type arguments the call writes agree. *)
-  let tys_before_dictionary_fill = tys in
-  let tys = fill_erased_tys ~only_alias_args:true id tys primary_ml_args in
+  let tyargs = resolve_from_argument_heads ~only_alias_args:true tyargs primary_ml_args in
   (* The dictionary stated a position the call had erased -- [case_]'s
      morphism type [C := Handler] at a category over families.  Its
      arguments at that position are then built at that type rather than
      boxed, so the call has to write it, the erased positions beside it
      as the boxes they are. *)
-  let dictionary_filled =
-    List.exists2
-      (fun a b -> Mlutil.isTdummy (resolve_tmeta a) && not (Mlutil.isTdummy (resolve_tmeta b)))
-      tys_before_dictionary_fill tys
-  in
+  let dictionary_filled = Call_tyargs.resolved_from Call_tyargs.Argument_heads tyargs in
   (* A partial application is eta-expanded into a lambda spelled in the
      caller's scope, and a variable of the callee's that neither the call
      nor its arguments instantiate is not one of the caller's: left in, it
      prints as whichever caller variable shares its index -- [h_get]'s index
      as the enclosing handler's [T1].  It is erased, and a position nothing
      deduces is then written as the box it is. *)
-  let tys =
+  let tyargs =
     let n_params =
       let rec count ty =
         match expand_ml_fun_alias ty with
@@ -1499,14 +1501,20 @@ let plan_call ~caller ~slot ?expected_ty env id tys args =
       | Some r -> GlobRef.UserOrd.equal r id
       | None -> false
     in
-    if self_call || List.length primary_ml_args >= n_params then tys
+    if self_call || List.length primary_ml_args >= n_params then tyargs
     else
-      let tys = complete_short_tys id tys primary_ml_args in
+      let tyargs = resolve_from_argument_types tyargs primary_ml_args in
       let in_cod = collect_tvars_set IntSet.empty (ml_codomain fn_ml_ty) in
-      let have = List.length tys in
-      match IntSet.max_elt_opt (IntSet.filter (fun i -> i > have) in_cod) with
-      | None -> tys
-      | Some n ->
+      let open_vars = Call_tyargs.beyond_extent tyargs in
+      match
+        List.fold_left
+          (fun m v ->
+            let i = Scheme.Var.ordinal v in
+            if IntSet.mem i in_cod then max m i else m )
+          0 open_vars
+      with
+      | 0 -> tyargs
+      | n ->
         (* Erased only where it would be misread: a variable whose spelling
            no caller variable has is bound by the eta-lambda itself (see
            [eta_tparams]), and deduced there from the parameter that names
@@ -1516,12 +1524,16 @@ let plan_call ~caller ~slot ?expected_ty env id tys args =
             (fun v -> String.equal (Id.to_string v) (Minicpp.tvar_spelling i))
             (!tctx).current_type_vars
         in
-        tys
-        @ List.init (n - have) (fun k ->
-              let i = have + k + 1 in
-              if IntSet.mem i in_cod && collides i then Miniml.Tunknown
-              else Miniml.Tvar (Miniml.Schematic, i) )
+        Call_tyargs.resolve Call_tyargs.Eta_parameter
+          (fun v ->
+            let i = Scheme.Var.ordinal v in
+            Some
+              ( if IntSet.mem i in_cod && collides i then Miniml.Tunknown
+                else Miniml.Tvar (Miniml.Schematic, i) ) )
+          (List.filter (fun v -> Scheme.Var.ordinal v <= n) open_vars)
+          tyargs
   in
+  let tys = Call_tyargs.by_variable tyargs in
   (* The one substitution that takes the callee's declared types to this
      call's; without it the argument generated into a [bind]'s [m A] is left
      with no stated type at all. *)
@@ -1631,6 +1643,7 @@ let plan_call ~caller ~slot ?expected_ty env id tys args =
     cp_instance_type_args = typeclass_type_args;
     cp_instance_families = instance_families;
     cp_fn_ml_ty = fn_ml_ty;
+    cp_tyargs = tyargs;
     cp_tys = tys;
     cp_dictionary_filled = dictionary_filled;
     cp_fn_ml_ty_subst = fn_ml_ty_subst;
@@ -1651,7 +1664,7 @@ let plan_call ~caller ~slot ?expected_ty env id tys args =
     Lowering reads the result and decides neither. *)
 let elaborate_call ~caller ~slot ?expected_ty env use args =
   let id = use.callee in
-  let plan = plan_call ~caller ~slot ?expected_ty env id (Mlutil.written_type_args use) args in
+  let plan = plan_call ~caller ~slot ?expected_ty env (Call_tyargs.of_use use) args in
   call_type_args ~caller ?expected_ty env id plan
     ~has_value_args:(plan.cp_regular_args <> [])
 

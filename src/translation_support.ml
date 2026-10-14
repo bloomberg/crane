@@ -2700,116 +2700,101 @@ and tvar_instantiation callee_ty args =
         | Some t -> t
         | None -> Miniml.Tvar (Miniml.Schematic, k + 1) )
 
-(** [complete_short_tys id tys args] extends a call's type-argument list to the
-    length the callee's schema needs, where the arguments determine the
-    missing entries and C++ could not have deduced them.
+(** [resolve_from_argument_types tyargs args] resolves the variables after
+    the last one the call wrote or resolved ({!Call_tyargs.beyond_extent})
+    from what the call's value arguments [args] say they are, where C++ could
+    not have deduced them.
 
-    All or nothing: C++ takes a prefix of the parameter list, so a position
-    that cannot be named leaves every later one unnameable too, and writing a
-    shorter prefix than the undeducible variable's position achieves nothing.
-    Positions the compiler can deduce are left to it -- naming a type twice is
-    an opportunity to spell it differently, not a safeguard. *)
-and complete_short_tys id tys args =
-  Probe.changed "REPAIR_complete_short_tys" id ~before:tys @@
+    All or nothing: C++ takes a prefix of the parameter list, so a variable
+    that cannot be named leaves every later one unnameable too, and naming
+    some short of the undeducible one achieves nothing.  Variables the
+    compiler can deduce are left to it -- naming a type twice is an
+    opportunity to spell it differently, not a safeguard. *)
+and resolve_from_argument_types tyargs args =
+  let id = Call_tyargs.callee tyargs in
   match find_type_opt id with
-  | None -> tys
+  | None -> tyargs
   | Some callee_ty ->
     let n = IntSet.fold max (collect_tvars_set IntSet.empty callee_ty) 0 in
-    let have = List.length tys in
-    if have >= n then tys
+    let missing =
+      List.filter (fun v -> Scheme.Var.ordinal v <= n) (Call_tyargs.beyond_extent tyargs)
+    in
+    let deducible = Option.default IntSet.empty (deducible_tvars_of_glob id) in
+    if List.for_all (fun v -> IntSet.mem (Scheme.Var.ordinal v) deducible) missing then tyargs
     else
-      let deducible =
-        match deducible_tvars_of_glob id with
-        | Some d -> d
-        | None -> IntSet.empty
-      in
-      let missing = List.init (n - have) (fun k -> have + k + 1) in
-      if List.for_all (fun i -> IntSet.mem i deducible) missing then tys
-      else
-        let found = tvar_instantiation_found ~in_scope:true callee_ty args in
-        let recovered = List.map (fun i -> List.assoc_opt i found) missing in
-        if List.for_all Option.has_some recovered then
-          tys @ List.map Option.get recovered
-        else tys
+      let found = tvar_instantiation_found ~in_scope:true callee_ty args in
+      Call_tyargs.resolve_all Call_tyargs.Argument_types
+        (fun v -> List.assoc_opt (Scheme.Var.ordinal v) found)
+        missing tyargs
 
-(** [fill_erased_tys id tys args] replaces an erased entry of a call's
-    type-argument list with what the value arguments say it stands for.
+(** [resolve_from_argument_heads tyargs args] resolves a hole before the last
+    variable the call wrote ({!Call_tyargs.interior_holes}) from the head the
+    variable meets in a value argument's type.
 
     MiniML erases a [Type -> Type] argument, but the callee still declares a
     template parameter for it -- and the erasure is contagious: template
     arguments are positional, so the all-or-nothing rule in
-    {!Ml_type_util.filter_erased_type_args} drops the concrete entries beside
-    it. One lost family therefore costs every type argument the call could have
-    written, including the ones nothing can deduce.
+    {!Ml_type_util.filter_erased_type_args} drops the concrete arguments
+    beside it.  One lost family therefore costs every type argument the call
+    could have written, including the ones nothing can deduce.
 
-    The family survives in the type of whatever argument is constrained in it --
-    [Sub UBE E] against a [Sub UBE UBE] -- which is what
-    {!tvar_instantiation_found} reads.
-
-    Unlike {!complete_short_tys} this fills interior positions, which is sound
-    for the same reason: the entry it replaces stands for a variable the callee
-    quantifies at exactly that position. *)
-and fill_erased_tys ?(only_alias_args = false) id tys args =
-  Probe.changed "REPAIR_fill_erased_tys" id ~before:tys @@
-  let erased = function
-    | Miniml.Tdummy Miniml.Ktype -> true
-    | _ -> false
-  in
-  if not (List.exists erased tys) then
-    tys
-  else
-    match
-      find_type_opt id
-    with
-    | None -> tys
-    | Some callee_ty ->
-      (* Only a variable the callee applies: this pass exists because MiniML
-         erases a [Type -> Type] argument, and a plain type argument that came
-         out erased is erased for a reason a value argument cannot undo. *)
-      let applied = Ml_type_util.applied_ml_tvar_arities [callee_ty] in
-      (* Nor one a type alias in a domain is applied to: [ReSum_id : Id_ obj C
-         -> ...] takes the category's morphism constructor [C], a type-level
-         function erased for that reason alone, and the definitional class
-         [Id_] -- an alias -- states it through the argument passed at it.
-         A class, not any alias: [halist K V], a plain one, is applied to a
-         value-indexed family whose argument's type is one instance of it.
-         The erasure the rule above protects is a dependent inductive's
-         ([sigT]), never an alias's. *)
-      let in_dictionary =
-        let rec alias_arg v = function
-          | Miniml.Tglob ((GlobRef.ConstRef _ as g), l, _)
-            when Typeclasses.is_class g ->
-            List.exists
-              (fun a ->
-                (match resolve_tmeta a with
-                 | Miniml.Tvar (_, j) -> j = v
-                 | _ -> false)
-                || alias_arg v a )
-              l
-          | Miniml.Tglob (_, l, _) -> List.exists (alias_arg v) l
-          | Miniml.Tmeta {contents = Some t} -> alias_arg v t
-          | _ -> false
-        in
-        fun v ->
-          List.exists (alias_arg v)
-            (List.map resolve_tmeta (ml_domains callee_ty))
+    The family survives in the type of whatever argument is constrained in it
+    -- [Sub UBE E] against a [Sub UBE UBE] -- which is what
+    {!tvar_instantiation_found} reads.  [accept v t] may decline the answer
+    [t] for [v]. *)
+and resolve_from_argument_heads ?(only_alias_args = false) ?(accept = fun _ _ -> true) tyargs
+    args =
+  let id = Call_tyargs.callee tyargs in
+  match (Call_tyargs.interior_holes tyargs, find_type_opt id) with
+  | [], _ | _, None -> tyargs
+  | holes, Some callee_ty ->
+    (* Only a variable the callee applies: this pass exists because MiniML
+       erases a [Type -> Type] argument, and a plain type argument that came
+       out erased is erased for a reason a value argument cannot undo. *)
+    let applied = Ml_type_util.applied_ml_tvar_arities [callee_ty] in
+    (* Nor one a type alias in a domain is applied to: [ReSum_id : Id_ obj C
+       -> ...] takes the category's morphism constructor [C], a type-level
+       function erased for that reason alone, and the definitional class
+       [Id_] -- an alias -- states it through the argument passed at it.
+       A class, not any alias: [halist K V], a plain one, is applied to a
+       value-indexed family whose argument's type is one instance of it.
+       The erasure the rule above protects is a dependent inductive's
+       ([sigT]), never an alias's. *)
+    let in_dictionary =
+      let rec alias_arg v = function
+        | Miniml.Tglob ((GlobRef.ConstRef _ as g), l, _)
+          when Typeclasses.is_class g ->
+          List.exists
+            (fun a ->
+              (match resolve_tmeta a with
+               | Miniml.Tvar (_, j) -> j = v
+               | _ -> false)
+              || alias_arg v a )
+            l
+        | Miniml.Tglob (_, l, _) -> List.exists (alias_arg v) l
+        | Miniml.Tmeta {contents = Some t} -> alias_arg v t
+        | _ -> false
       in
-      let found =
-        tvar_instantiation_found ~in_scope:true ~constructors:true callee_ty args
-      in
-      List.mapi
-        (fun k t ->
-          if
-            erased t
-            && ((not only_alias_args) && Hashtbl.mem applied (k + 1)
-               || in_dictionary (k + 1))
-          then
-            match List.assoc_opt (k + 1) found with
-            | Some t' when not (erased t') -> t'
-            | _ -> t
-          else
-            t )
-        tys
+      fun v ->
+        List.exists (alias_arg v)
+          (List.map resolve_tmeta (ml_domains callee_ty))
+    in
+    let eligible =
+      List.filter
+        (fun v ->
+          let k = Scheme.Var.ordinal v in
+          ((not only_alias_args) && Hashtbl.mem applied k) || in_dictionary k )
+        holes
+    in
+    let found =
+      tvar_instantiation_found ~in_scope:true ~constructors:true callee_ty args
+    in
+    Call_tyargs.resolve Call_tyargs.Argument_heads
+      (fun v ->
+        match List.assoc_opt (Scheme.Var.ordinal v) found with
+        | Some t when accept v t -> Some t
+        | _ -> None )
+      eligible tyargs
 
 (** The instance of [t], the type of a let-bound function, that every use in
     its scope [body] is at, when the uses agree on one that pins each of the
@@ -3339,7 +3324,11 @@ type call_plan = {
   cp_instance_type_args : cpp_type option list;
   cp_instance_families : (cpp_type * Id.t list * (Id.t * cpp_type) list) list;
   cp_fn_ml_ty : ml_type;
+  cp_tyargs : Call_tyargs.t;
+      (** The callee's scheme variables as the call reads them. *)
   cp_tys : ml_type list;
+      (** {!cp_tyargs} as the list substitutions take
+          ({!Call_tyargs.by_variable}). *)
   cp_dictionary_filled : bool;
   cp_fn_ml_ty_subst : ml_type;
   cp_params : Param_pos.subst Param_pos.params;
