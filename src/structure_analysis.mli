@@ -178,10 +178,9 @@ val analyze : Method_registry.t -> ml_structure -> t
     it and the method registry must give one answer. *)
 val register_shared_variants : ml_structure -> unit
 
-(** Register the definitions whose final bodies only raise as throwing values
-    ([Table.add_throwing_value]): emitted as zero-argument functions, and
-    called wherever they are named. *)
-val register_throwing_values : ml_structure -> unit
+(** The definitions of [s] whose final bodies only raise: emitted as
+    zero-argument functions, and called wherever they are named. *)
+val throwing_values : ml_structure -> GlobRef.t list
 
 (** The template parameter every module-type concept is written over. *)
 val concept_self_param : string

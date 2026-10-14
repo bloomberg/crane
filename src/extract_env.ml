@@ -1349,12 +1349,7 @@ let core_passes to_appear : ml_structure Pipeline_trace.pass list =
     pass "specialize" Ml_specialize.structure;
     pass "fix_shape" Fix_shape.structure;
     pass "normalize" Normalize.structure;
-    effect "ir_check" Ml_ir_check.structure;
-    (* With the bodies final, which definitions only throw, and which
-       parameters are owned, are settled across calls, before any signature is
-       written. *)
-    effect "throwing_values" Structure_analysis.register_throwing_values;
-    effect "ownership" Ownership.settle ]
+    effect "ir_check" Ml_ir_check.structure ]
 
 let core_pass_names = Pipeline_trace.names (core_passes ([], []))
 
@@ -1400,6 +1395,16 @@ let report_late_solutions () =
       | l ->
         String.concat ", "
           (List.map (fun (r, n) -> Printf.sprintf "%s %d" (Miniml.Meta.late_solution_name r) n) l) )
+
+(** [freeze core]: the frozen program ({!Core.freeze}), with the facts the
+    whole of it is analysed for -- which definitions only throw, which
+    parameters are owned, settled across calls -- installed before any unit
+    is planned ({!Program_facts.analyze_program}). *)
+let freeze core =
+  let frozen = Core.freeze core in
+  Pipeline_trace.event "core" "analyze_program";
+  Install_legacy_plan.install_program (Program_facts.analyze_program frozen);
+  frozen
 
 let optimize_struct to_appear struc =
   let core =
@@ -1821,7 +1826,7 @@ let full_extr_reading opaque_access f (refs, mps) read =
         if source <> "" then
           Doc_comments.set_table (Doc_comments.parse_file source)
       | _ -> () );
-      print_structure_to_file ~unit_includes filenames false (Core.freeze core);
+      print_structure_to_file ~unit_includes filenames false (freeze core);
       read refs )
 
 let full_extr opaque_access f refs =
@@ -2131,7 +2136,7 @@ let separate_extraction ~opaque_access lr =
         user_err
           (str "Separate Extraction from inside a module is not supported.") )
     (Core.modules core);
-  print_per_library ~dry:(fun _ -> false) (Core.freeze core)
+  print_per_library ~dry:(fun _ -> false) (freeze core)
 
 (** {2 Simple extraction in the Rocq toplevel. The vernacular command is
     \verb!Extraction! [qualid]} *)
@@ -2149,7 +2154,7 @@ let simple_extraction ~opaque_access r =
         warns ();
         if is_any_custom r then
           Feedback.msg_notice (str "/* User defined extraction */" ++ fnl ());
-        print_structure_to_file (mono_filename None) false (Core.freeze core) )
+        print_structure_to_file (mono_filename None) false (freeze core) )
   | _ -> assert false
 
 (** {2 (Recursive) Extraction of a library. The vernacular command is
@@ -2182,7 +2187,7 @@ let extraction_library ~opaque_access is_rec CAst.{loc; v = m} =
     | MPfile dir -> (not is_rec) && not (DirPath.equal dir dir_m)
     | _ -> false
   in
-  print_per_library ~dry (Core.freeze core)
+  print_per_library ~dry (freeze core)
 
 (* Helper to detect if we're running under dune (for test output formatting).
    When INSIDE_DUNE=1 is set in the environment, we emit machine-parseable

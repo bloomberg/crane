@@ -17,6 +17,10 @@ let install struc (facts : Program_facts.t) (plan : Target_plan.t) =
         struc )
     plan.inductive_kinds
 
+let install_program (facts : Program_facts.program) =
+  List.iter Table.add_throwing_value facts.throwing_values;
+  Ownership.install facts.parameter_ownership
+
 let install_template_kinds (plan : Target_plan.t) =
   List.iter (fun (r, kinds) -> Tparam_kinds.record r kinds) plan.template_kinds
 

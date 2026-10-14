@@ -8,6 +8,16 @@ type t = {
   higher_order_projections : Ref.User.Set.t;
 }
 
+type program = {
+  throwing_values : Names.GlobRef.t list;
+  parameter_ownership : (Names.GlobRef.t * bool list) list;
+}
+
+let analyze_program frozen =
+  let struc = Core.structure frozen in
+  { throwing_values = Structure_analysis.throwing_values struc;
+    parameter_ownership = Ownership.summarize struc }
+
 let used_customs struc =
   let used = ref Ref.User.Set.empty in
   let add r = used := Ref.User.Set.add r !used in

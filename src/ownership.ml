@@ -7,8 +7,11 @@ let flags : bool list Ref.User.Map.t ref = State.cell State.Extraction Ref.User.
 
 let () = Escape.callee_flags := fun r -> Ref.User.Map.find_opt r !flags
 
-let settle struc =
+let summarize struc =
   let fns = Modutil.struct_functions struc in
+  (* The fixed point is computed apart from the installed flags, which
+     {!Escape} reads in the meantime as each round leaves them. *)
+  let installed = !flags in
   flags := Ref.User.Map.empty;
   (* Each round can only turn borrowed parameters owned, so it stops. *)
   let rec round () =
@@ -23,5 +26,11 @@ let settle struc =
       fns;
     if !changed then round ()
   in
-  round ()
+  round ();
+  let summary = Ref.User.Map.bindings !flags in
+  flags := installed;
+  summary
+
+let install summary =
+  flags := List.fold_left (fun m (r, f) -> Ref.User.Map.add r f m) Ref.User.Map.empty summary
 

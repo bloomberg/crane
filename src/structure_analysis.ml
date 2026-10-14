@@ -212,13 +212,15 @@ let register_shared_variants (s : ml_structure) : unit =
     that throws during static initialisation, and every reference must call
     it.  Read off the final bodies, since simplification is what can turn
     [False_rect _ h] into the throw. *)
-let register_throwing_values (s : ml_structure) : unit =
+let throwing_values (s : ml_structure) : GlobRef.t list =
+  let found = ref [] in
   iter_structure
     (fun _mp _l se ->
       match se with
-      | SEdecl (Dterm (r, e, _)) when Mlutil.only_throws e -> Table.add_throwing_value r
+      | SEdecl (Dterm (r, e, _)) when Mlutil.only_throws e -> found := r :: !found
       | _ -> () )
-    s
+    s;
+  List.rev !found
 
 (** {2 Inductive name collection} *)
 

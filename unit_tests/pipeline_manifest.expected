@@ -1,4 +1,4 @@
-core: modutil shared_variants dedup specialize fix_shape normalize ir_check throwing_values ownership
+core: modutil shared_variants dedup specialize fix_shape normalize ir_check
 plan: analyze_program plan_target install_legacy_plan
 unit: non_atomic_rc reset_demands cross_file_qualification
 represent: template_kinds install_template_kinds

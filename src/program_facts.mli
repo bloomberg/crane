@@ -19,4 +19,17 @@ type t = {
 }
 
 val analyze : Miniml.ml_structure -> t
+
+(** What analysing the whole frozen program observed, before it is split into
+    units: interprocedural summaries, fixed points over every function. *)
+type program = {
+  throwing_values : Names.GlobRef.t list;
+      (** The definitions whose body only throws. *)
+  parameter_ownership : (Names.GlobRef.t * bool list) list;
+      (** Which parameters of each function it owns rather than borrows,
+          innermost first ({!Ownership.summarize}). *)
+}
+
+(** [analyze_program p] analyses the frozen program [p]; it writes nothing. *)
+val analyze_program : Core.frozen Core.program -> program
 val equal : t -> t -> bool

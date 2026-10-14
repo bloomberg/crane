@@ -10,6 +10,10 @@
     which most readers still take the kind from. *)
 val install : Miniml.ml_structure -> Program_facts.t -> Target_plan.t -> unit
 
+(** [install_program facts] fills the tables a whole program's analysis
+    stands for: the throwing values and the parameter ownership. *)
+val install_program : Program_facts.program -> unit
+
 (** [install_template_kinds plan] records the template-parameter kinds [plan]
     decided, which the inductive kinds {!install} wrote went into deciding. *)
 val install_template_kinds : Target_plan.t -> unit

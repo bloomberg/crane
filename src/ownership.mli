@@ -14,5 +14,9 @@
     the least fixed point over every function of the structure, starting
     from every parameter borrowed. *)
 
-(** Settle the flags of [struc]'s functions, for {!Escape} to consult. *)
-val settle : Miniml.ml_structure -> unit
+(** The flags of [struc]'s functions, settled across calls: each
+    function's, innermost first. *)
+val summarize : Miniml.ml_structure -> (Names.GlobRef.t * bool list) list
+
+(** Install a {!summarize}d program's flags for {!Escape} to consult. *)
+val install : (Names.GlobRef.t * bool list) list -> unit
