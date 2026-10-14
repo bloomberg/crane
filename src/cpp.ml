@@ -1102,8 +1102,10 @@ let rec pp_structure_elem ~is_header f = function
        [Module Nat] hides the runtime [Nat] exactly as an [Inductive Nat]
        would.  Record it so {!Cpp_names.global_scope_qualifier_for} spells the
        global one [::Nat]. *)
-    if (!render_ctx).rc_in_struct then
-      add_nested_struct_name (Pp.string_of_ppcmds name) (NSmodule mp);
+    if (!render_ctx).rc_in_struct then begin
+      printed_nested_struct (Pp.string_of_ppcmds name) (NSmodule mp);
+      add_nested_struct_name (Pp.string_of_ppcmds name) (NSmodule mp)
+    end;
     let mod_pp =
       match m.ml_mod_expr with
       | MEfunctor _ ->
@@ -2485,6 +2487,102 @@ let plan_accessors s =
   List.concat_map
     (fun (mp, sel) ->
       elems ~in_struct:(List.exists (ModPath.equal mp) wrapped) ~in_template:false sel )
+    s
+
+let plan_nested_structs s =
+  (* An instance is a struct where, past its parameters, its body builds the
+     class's record -- as a singleton class's always does, its one method
+     being the record -- rather than naming another instance, which is a
+     [using] ({!Gen_decls.gen_instance_struct}). *)
+  let instance_has_struct body ty =
+    let rec past_parameters = function
+      | MLlam (_, _, b) | MLmagic (_, b) -> past_parameters b
+      | b -> b
+    in
+    match Ml_type_util.ml_return_type ty with
+    | Tglob (cls, _, _) when Table.is_typeclass cls -> (
+      match (Table.singleton_class_method cls, past_parameters body) with
+      | Some _, _ | None, MLcons _ -> true
+      | None, _ -> false )
+    | _ -> false
+  in
+  (* An inductive declared outside every struct is still written inside one
+     where its namespace wrapper holds declarations and so is not merged
+     with it. *)
+  let in_unmerged_wrapper r =
+    Hashtbl.mem unmerged_wrappers (String.capitalize_ascii (Common.pp_global_name Type r))
+  in
+  (* Whether the wrapper is merged, as a reference sees it at the
+     declaration ({!Cpp_names.is_merged_inductive}), which spells the
+     inductive the way the declaration does. *)
+  let merged r = Ref.User.Tbl.mem promoted_inductives r || not (in_unmerged_wrapper r) in
+  let inductives ~in_struct ~local kn ind =
+    List.concat
+      (List.mapi
+         (fun i _ ->
+           let r = GlobRef.IndRef (kn, i) in
+           if is_custom r || is_monad r || not (in_struct || in_unmerged_wrapper r) then []
+           else
+             match ind.ind_kind with
+             | TypeClass _ -> []
+             | Record _ when Module_plan.is_eponymous_record r -> []
+             | _ when Table.is_enum_inductive r ->
+               [(enum_declaration_name r, NSref r)]
+             | _ -> [(struct_declaration_name ~merged ~local r, NSref r)] )
+         (Array.to_list ind.ind_packets) )
+  in
+  let rec elems ~in_struct ~local ?(role = fun _ -> None) parent sel =
+    List.concat_map
+      (fun (l, se) ->
+        match se with
+        | SEdecl (Dind (kn, ind)) -> inductives ~in_struct ~local kn ind
+        (* An instance is a struct where its module is one, unless it was
+           lifted out to namespace scope. *)
+        | SEdecl (Dterm (r, a, t))
+          when in_struct && is_typeclass_instance a t && instance_has_struct a t
+               && not (Module_plan.is_namespace_scope_ref r) ->
+          [(Common.pp_global_name Type r, NSref r)]
+        | SEdecl _ | SEmodtype _ -> []
+        | SEmodule m -> (
+          let mp = MPdot (parent, l) in
+          match role l with
+          (* Only its functions are written, straight into the wrapper. *)
+          | Some Module_plan.Flattened -> []
+          | Some (Module_plan.Own | Module_plan.Bystander) | None ->
+            ( if in_struct then
+                [(Table.escape_reserved_struct_name (Common.emitted_module_name mp), NSmodule mp)]
+              else [] )
+            @ module_expr mp m.ml_mod_expr ) )
+      sel
+  and module_expr mp = function
+    | MEstruct (_, sel) -> elems ~in_struct:true ~local:true mp sel
+    | MEfunctor (_, _, body) -> module_expr mp body
+    | MEident _ | MEapply _ -> []
+  in
+  (* A file with no wrapper of its own whose child collides with a global
+     type is written inside a collision wrapper struct, its own declarations
+     among them, and they are not local there. *)
+  let wrapper_files =
+    List.filter_map
+      (fun (mi : Structure_analysis.module_info) ->
+        if mi.wrapper_name <> None then Some mi.modpath else None )
+      (get_structure_analysis ()).sorted_modules
+  in
+  List.concat_map
+    (fun (mp, sel) ->
+      let role l =
+        if List.exists (ModPath.equal mp) wrapper_files then None
+        else Module_plan.wrapper_role (MPdot (mp, l))
+      in
+      let collision =
+        List.exists
+          (fun (l, se) ->
+            match (se, role l) with
+            | SEmodule _, Some (Module_plan.Flattened | Module_plan.Bystander) -> true
+            | _ -> false )
+          sel
+      in
+      elems ~in_struct:collision ~local:(not collision) ~role mp sel )
     s
 
 let plan_unmerged_wrappers () =

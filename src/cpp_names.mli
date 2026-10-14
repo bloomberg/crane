@@ -99,6 +99,26 @@ val dedup_qualified_tail : ?allow_bare:bool -> string -> string
 (** Pretty-print the C++ type name of an inductive. *)
 val pp_inductive_type_name : Names.GlobRef.t -> Pp.t
 
+(** How an inductive's struct is spelled where it is declared. *)
+type struct_spelling =
+  | Eponymous_record_name  (** Its module's struct's name, capitalised. *)
+  | Capitalized  (** Its own name, capitalised. *)
+  | As_declared  (** Its own name. *)
+
+(** The spelling of an inductive's struct at its declaration, [local] where
+    the declaration is rendered among the inductives local to it; [merged]
+    says whether its namespace wrapper is merged with it, as a reference
+    sees it ({!is_merged_inductive_cached} by default). *)
+val struct_spelling :
+  ?merged:(Names.GlobRef.t -> bool) -> local:bool -> Names.GlobRef.t -> struct_spelling
+
+(** An enum's name where it is declared ({!pp_inductive_type_name} there). *)
+val enum_declaration_name : Names.GlobRef.t -> string
+
+(** {!struct_spelling} as a string. *)
+val struct_declaration_name :
+  ?merged:(Names.GlobRef.t -> bool) -> local:bool -> Names.GlobRef.t -> string
+
 (** The [typename] prefix required for the given qualified name. *)
 val typename_prefix_for : string -> Pp.t
 

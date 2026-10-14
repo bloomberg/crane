@@ -378,6 +378,17 @@ type nested_struct_owner =
     of the same name. Cleared by [reset_cpp_state]. *)
 val nested_struct_names : (string, nested_struct_owner list) Hashtbl.t
 
+(** The same owner. *)
+val nested_struct_owner_equal : nested_struct_owner -> nested_struct_owner -> bool
+
+(** The nested structs the printer printed, under [CRANE_CHECK_IR]. *)
+val printed_nested_structs : (string * nested_struct_owner) list ref
+
+(** Record that the printer printed [owner] as a nested struct named
+    [name], under [CRANE_CHECK_IR]: the planned ones must be exactly the
+    printed ones. *)
+val printed_nested_struct : string -> nested_struct_owner -> unit
+
 (** Record that an owner was emitted as a nested struct under the given C++
     name. *)
 val add_nested_struct_name : string -> nested_struct_owner -> unit

@@ -956,6 +956,16 @@ let nested_struct_owner_covers r = function
   | NSref r' -> Common.globref_equal r r'
   | NSmodule mp -> ModPath.equal mp (modpath_of_r r)
 
+(** The nested structs the printer printed, under [CRANE_CHECK_IR]: the
+    planned ones must be exactly these ({!printed_nested_struct}). *)
+let printed_nested_structs : (string * nested_struct_owner) list ref =
+  owned_list ~census:false "printed_nested_structs"
+
+(** Record that the printer printed [owner] as a nested struct named
+    [name]. *)
+let printed_nested_struct name owner =
+  if Probe.checking () then printed_nested_structs := (name, owner) :: !printed_nested_structs
+
 (** Record that [owner] was emitted as a nested struct named [name]. *)
 let add_nested_struct_name name owner =
   let prev = Option.default [] (Hashtbl.find_opt nested_struct_names name) in

@@ -63,6 +63,14 @@ val plan_field_names : Miniml.ml_structure -> (Names.GlobRef.t * Names.Id.t list
     each a constant its generation does not make a function. *)
 val plan_accessors : Miniml.ml_structure -> Names.GlobRef.t list
 
+(** The structs written inside another struct, each with the name it is
+    written under: a module's, and an inductive's -- its struct or its enum
+    -- declared in a module.  A global type of the same name is spelled
+    [::name] where one of them would capture it, and a reference to one of
+    them is qualified by its enclosing struct. *)
+val plan_nested_structs :
+  Miniml.ml_structure -> (string * Cpp_state.nested_struct_owner) list
+
 (** The wrapper structs that hold declarations of their module's -- its
     functions, generated as the wrapper's members -- and so cannot be merged
     with the eponymous inductive's struct: a reference to the inductive then

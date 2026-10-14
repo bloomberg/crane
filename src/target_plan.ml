@@ -20,6 +20,7 @@ type representation = {
   pointer_fields : (GlobRef.t * string * (int * bool) list) list;
   unmerged_wrappers : string list;
   accessors : GlobRef.t list;
+  nested_structs : (string * Cpp_state.nested_struct_owner) list;
 }
 
 type t = {
@@ -269,7 +270,7 @@ let plan (_ : Program_facts.t) struc =
     inductive_kinds = aligned @ value_use_demotion aligned struc;
     template_kinds = [];
     modules = Module_plan.empty;
-    representation = {names = []; field_names = []; pointer_fields = []; unmerged_wrappers = []; accessors = []};
+    representation = {names = []; field_names = []; pointer_fields = []; unmerged_wrappers = []; accessors = []; nested_structs = []};
     callables = [];
     assumed_callables = [] }
 
@@ -315,6 +316,9 @@ let equal a b =
        a.representation.pointer_fields b.representation.pointer_fields
   && List.equal String.equal a.representation.unmerged_wrappers b.representation.unmerged_wrappers
   && List.equal GlobRef.UserOrd.equal a.representation.accessors b.representation.accessors
+  && List.equal
+       (fun (n, o) (n', o') -> String.equal n n' && Cpp_state.nested_struct_owner_equal o o')
+       a.representation.nested_structs b.representation.nested_structs
   && same_callables a.callables b.callables
   && List.equal
        (fun (r, ps) (r', ps') -> GlobRef.UserOrd.equal r r' && List.equal Param_pos.equal ps ps')

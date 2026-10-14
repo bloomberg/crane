@@ -27,6 +27,10 @@ val install_pointer_fields : (Names.GlobRef.t * string * (int * bool) list) list
     functions, as {!Target_plan.representation} holds them. *)
 val install_accessors : Names.GlobRef.t list -> unit
 
+(** [install_nested_structs structs] installs the structs written inside
+    another struct, as {!Target_plan.representation} holds them. *)
+val install_nested_structs : (string * Cpp_state.nested_struct_owner) list -> unit
+
 (** [install_unmerged_wrappers names] installs the wrapper structs that hold
     declarations, as {!Target_plan.representation} holds them. *)
 val install_unmerged_wrappers : string list -> unit

@@ -4348,31 +4348,18 @@ and pp_leaf_decl env (d : cpp_decl) =
         ds_constraint = cstr;
         ds_needs_shared_from_this = sft;
       } ->
+    let local = is_local_inductive id in
     let struct_name =
-      match id with
-      | GlobRef.IndRef _ when is_eponymous_record_cached id ->
-        str (Common.pp_type_name_capitalized id)
-      | GlobRef.IndRef _ when Ref.User.Tbl.mem promoted_inductives id ->
-        str (String.capitalize_ascii (Common.pp_global_name Type id))
-      | GlobRef.IndRef _ when is_record_cached id -> pp_global Type id
-      | GlobRef.IndRef _ when Common.get_force_cross_file_qualification () ->
-        str (String.capitalize_ascii (Common.pp_global_name Type id))
-      | GlobRef.IndRef _
-        when is_merged_inductive_cached id && not (is_local_inductive id) ->
-        (* An inductive written straight into an enclosing struct has no
-           namespace wrapper to be merged with, so nothing capitalised its
-           declaration -- but a reference to it, being neither local nor
-           behind an unmerged wrapper, spells the merged name.  One struct
-           cannot be declared [dval] and named [Dval]; the reference is what
-           every other file sees, so the declaration follows it. *)
-        str (String.capitalize_ascii (Common.pp_global_name Type id))
-      | GlobRef.IndRef _ -> pp_global Type id
-      | _ -> pp_global Type id
+      match struct_spelling ~local id with
+      | As_declared -> pp_global Type id
+      | Eponymous_record_name | Capitalized -> str (struct_declaration_name ~local id)
     in
     register_forward_struct_decl ~env ~name:struct_name ~tparams ~cstr;
     record_file_scope_name struct_name;
-    if (!render_ctx).rc_in_struct then
-      add_nested_struct_name (Pp.string_of_ppcmds struct_name) (NSref id);
+    if (!render_ctx).rc_in_struct then begin
+      printed_nested_struct (Pp.string_of_ppcmds struct_name) (NSref id);
+      add_nested_struct_name (Pp.string_of_ppcmds struct_name) (NSref id)
+    end;
     let f_s =
       with_struct_scope id (fun () ->
           match tparams with
@@ -4582,8 +4569,10 @@ and pp_leaf_decl env (d : cpp_decl) =
        same way -- the standard library's [comparison] is emitted globally and
        a user type spelled [Comparison] inside the struct would otherwise
        capture every unqualified mention of it. *)
-    if (!render_ctx).rc_in_struct then
-      add_nested_struct_name (Pp.string_of_ppcmds struct_name) (NSref name);
+    if (!render_ctx).rc_in_struct then begin
+      printed_nested_struct (Pp.string_of_ppcmds struct_name) (NSref name);
+      add_nested_struct_name (Pp.string_of_ppcmds struct_name) (NSref name)
+    end;
     str "enum class "
     ++ struct_name
     ++ str " {"

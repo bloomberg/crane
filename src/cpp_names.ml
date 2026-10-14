@@ -715,6 +715,41 @@ let is_record_cached (r : GlobRef.t) : bool =
   | Some _ -> false
   | None -> is_record_inductive r
 
+(** How an inductive's struct is spelled where it is declared. *)
+type struct_spelling =
+  | Eponymous_record_name  (** Its module's struct's name, capitalised. *)
+  | Capitalized  (** Its own name, capitalised. *)
+  | As_declared  (** Its own name. *)
+
+(** The spelling of [id]'s struct at its declaration, [local] where the
+    declaration is rendered among the inductives local to it: a promoted
+    inductive, and one a reference sees as merged, take the merged spelling. *)
+let struct_spelling ?(merged = is_merged_inductive_cached) ~local id =
+  match id with
+  | GlobRef.IndRef _ when is_eponymous_record_cached id -> Eponymous_record_name
+  | GlobRef.IndRef _ when Ref.User.Tbl.mem promoted_inductives id -> Capitalized
+  | GlobRef.IndRef _ when is_record_cached id -> As_declared
+  | GlobRef.IndRef _ when Common.get_force_cross_file_qualification () -> Capitalized
+  | GlobRef.IndRef _ when (not local) && merged id ->
+    (* An inductive written straight into an enclosing struct has no
+       namespace wrapper to be merged with, so nothing capitalised its
+       declaration -- but a reference to it, being neither local nor behind
+       an unmerged wrapper, spells the merged name.  One struct cannot be
+       declared [dval] and named [Dval]; the reference is what every other
+       file sees, so the declaration follows it. *)
+    Capitalized
+  | _ -> As_declared
+
+(** An enum's name where it is declared: its own, unqualified there. *)
+let enum_declaration_name r = capitalize_enum_name (Common.pp_global_name Type r) r
+
+(** {!struct_spelling} as a string. *)
+let struct_declaration_name ?merged ~local id =
+  match struct_spelling ?merged ~local id with
+  | Eponymous_record_name -> Common.pp_type_name_capitalized id
+  | Capitalized -> String.capitalize_ascii (Common.pp_global_name Type id)
+  | As_declared -> Common.pp_global_name Type id
+
 (** Look up method info for a function reference. Checks both local
     method_candidates and global method_registry. Returns Some this_pos if the
     function is a method, None otherwise.
