@@ -12,7 +12,7 @@ let check name cond =
 let owner = Names.GlobRef.VarRef (Names.Id.of_string "f")
 let nat = Tglob (Names.GlobRef.VarRef (Names.Id.of_string "nat"), [], [])
 let list t = Tglob (Names.GlobRef.VarRef (Names.Id.of_string "list"), [t], [])
-let meta id contents = Tmeta {id; contents}
+let meta id = function None -> Tmeta (Meta.fresh id) | Some t -> Tmeta (Meta.solved id t)
 
 let rec gen_type depth metas =
   match Random.int (if depth = 0 then 3 else 5) with

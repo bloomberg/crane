@@ -411,7 +411,7 @@ let gen_dfun n b cty ty temps =
   let rec unify_param_types body_params sig_types =
     match (body_params, sig_types) with
     | (id, body_ty) :: rest_params, sig_ty :: rest_sig ->
-      (try try_mgu body_ty sig_ty with _ -> ());
+      (try try_mgu ~late:Binder_signature body_ty sig_ty with _ -> ());
       (id, body_ty) :: unify_param_types rest_params rest_sig
     | _ -> body_params
   in

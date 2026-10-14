@@ -10,13 +10,14 @@
     else builds a program.
 
     Transitional.  {!freeze} checks the structural invariants that hold
-    today; it does not yet establish that no metavariable is reachable.  Ten
-    backend sites still solve the metavariables binder, match and fixpoint
-    annotations hold while rendering, four of them from the C++ context the
-    term is generated in, so the first render decides those types.  Until
-    those become explicit obligations resolved without writing to the
-    program, {!freeze} reports how many it leaves, and {!structure} is the
-    read-only view unconverted consumers take. *)
+    today; it does not yet establish that no metavariable is reachable.  The
+    back end still solves the metavariables binder, match and fixpoint
+    annotations hold while rendering -- at the sites
+    {!Miniml.Meta.late_solution} enumerates, and only there, which freezing
+    enforces -- so the first render decides those types.  Until they become
+    obligations resolved without writing to the program, {!freeze} reports
+    how many it leaves, and {!structure} is the read-only view unconverted
+    consumers take. *)
 
 type extracted
 type optimized
@@ -31,7 +32,9 @@ val extracted : Miniml.ml_structure -> extracted program
 val optimize : (Miniml.ml_structure -> Miniml.ml_structure) -> extracted program -> optimized program
 
 (** [freeze p] is [p], checked: every recursive group is nonempty and its
-    selected member exists, and no reference is declared twice.  Under
+    selected member exists, and no reference is declared twice.  From here
+    until the extraction ends a metavariable may only be solved for one of
+    the reasons {!Miniml.Meta.late_solution} names.  Under
     [CRANE_TRACE_PIPELINE] it reports the unsolved metavariables still
     reachable. *)
 val freeze : optimized program -> frozen program

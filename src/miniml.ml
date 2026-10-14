@@ -367,3 +367,47 @@ module Global_use = struct
   let iter_types f g = List.iter f (slot_types g)
   let exists_type p g = List.exists p (slot_types g)
 end
+
+module Meta = struct
+  type late_solution =
+    | Fixpoint_codomain
+    | Fixpoint_variable
+    | Let_lambda_variable
+    | Bind_continuation
+    | Binder_signature
+    | Erased_slot
+
+  let late_solution_name = function
+    | Fixpoint_codomain -> "fixpoint codomain"
+    | Fixpoint_variable -> "fixpoint variable"
+    | Let_lambda_variable -> "let-lambda variable"
+    | Bind_continuation -> "bind continuation"
+    | Binder_signature -> "binder signature"
+    | Erased_slot -> "erased slot"
+
+  let fresh id = {id; contents = None}
+  let solved id t = {id; contents = Some t}
+  let frozen = ref false
+  let counts : (late_solution, int) Hashtbl.t = Hashtbl.create 6
+
+  let solve ?late m t =
+    ( match late with
+    | Some reason ->
+      Hashtbl.replace counts reason (1 + Option.default 0 (Hashtbl.find_opt counts reason))
+    | None ->
+      if !frozen && Sys.getenv_opt "CRANE_CHECK_IR" <> None then
+        CErrors.anomaly
+          Pp.(str "Crane: a metavariable of the frozen program was solved for no declared reason.") );
+    m.contents <- Some t
+
+  let freeze () =
+    frozen := true;
+    Hashtbl.reset counts
+
+  let thaw () = frozen := false
+
+  let late_solutions () =
+    List.filter_map
+      (fun r -> Option.map (fun n -> (r, n)) (Hashtbl.find_opt counts r))
+      [Fixpoint_codomain; Fixpoint_variable; Let_lambda_variable; Bind_continuation; Binder_signature; Erased_slot]
+end

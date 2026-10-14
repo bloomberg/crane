@@ -25,12 +25,12 @@ let () =
   check "type matters" (not (same d (term (Tarr (Tvar (Schematic, 1), Tstring)) lam)));
   check "rigidity matters" (not (same d (term (Tarr (Tvar (Rigid, 1), Tvar (Schematic, 1))) lam)));
   check "name matters" (not (same d (Dterm (r "g", lam, id_ty))));
-  let solved = Tmeta {id = 7; contents = Some (Tvar (Schematic, 1))} in
+  let solved = Tmeta (Meta.solved 7 (Tvar (Schematic, 1))) in
   check "a solved meta reads as its solution" (same d (term (Tarr (solved, solved)) lam));
   let hole_pair a b = term (Tarr (Thole a, Thole b)) lam in
   check "hole numbering is canonical" (same (hole_pair 3 3) (hole_pair 41 41));
   check "hole sharing matters" (not (same (hole_pair 3 3) (hole_pair 3 4)));
-  let meta i = Tmeta {id = i; contents = None} in
+  let meta i = Tmeta (Meta.fresh i) in
   check "unsolved metas are numbered canonically"
     (same (term (Tarr (meta 1, meta 2)) lam) (term (Tarr (meta 8, meta 9)) lam));
   check "a meta is not a hole" (not (same (term (Tarr (meta 1, meta 1)) lam) (hole_pair 1 1)));

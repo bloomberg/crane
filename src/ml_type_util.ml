@@ -1297,7 +1297,7 @@ let rec refine_erased ~writable have want =
        two.  Filling it is what keeps the body's generation in step with the
        signature; replacing the type around it would leave the body reading the
        hole. *)
-    cell.Miniml.contents <- Some w;
+    Miniml.Meta.solve ~late:Erased_slot cell w;
     w
   | h, w when erased h -> if (not (erased w)) && writable w then w else h
   | Miniml.Tglob (n, ha, sc), Miniml.Tglob (m, wa, _)

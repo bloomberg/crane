@@ -33,8 +33,8 @@ let () =
   check "a local group selecting a missing member is refused"
     (refused [term "h" (MLfix (2, [|(Id.of_string "go", nat)|], [|lam|], false)) nat]);
   check "a declaration made twice is refused" (refused (fine @ fine));
-  let shared = Tmeta {id = 1; contents = None} in
-  let solved = Tmeta {id = 2; contents = Some nat} in
+  let shared = Tmeta (Meta.fresh 1) in
+  let solved = Tmeta (Meta.solved 2 nat) in
   let open_term = term "k" (MLlam (Dummy, shared, MLrel 1)) (Tarr (shared, solved)) in
   check "each unsolved metavariable is counted once"
     (Core.unsolved_metas (frozen [open_term]) = 1);
@@ -44,3 +44,17 @@ let () =
     (List.map fst (Core.structure a) = [mp "A"] && List.map fst (Core.structure b) = [mp "B"]);
   check "modules keep each module with its own program"
     (List.map fst (Core.modules two) = [mp "A"; mp "B"])
+
+(* After freezing, a metavariable is solved only for a declared reason. *)
+let () =
+  let nat = Tglob (r "nat", [], []) in
+  let m = Meta.fresh 7 and m' = Meta.fresh 8 in
+  Meta.freeze ();
+  check "an undeclared solve of the frozen program is refused"
+    (match Meta.solve m nat with () -> false | exception e -> CErrors.is_anomaly e);
+  check "a refused solve writes nothing" (m.contents = None);
+  Meta.solve ~late:Meta.Erased_slot m nat;
+  check "a declared solve is counted" (Meta.late_solutions () = [(Meta.Erased_slot, 1)]);
+  Meta.thaw ();
+  Meta.solve m' nat;
+  check "a thawed program solves freely" (m'.contents = Some nat)

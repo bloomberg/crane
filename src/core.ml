@@ -89,6 +89,7 @@ let check_declared_once p =
     p.structure
 
 let freeze p =
+  Meta.freeze ();
   if Sys.getenv_opt "CRANE_CHECK_IR" <> None then begin
     check_recursive_groups p;
     check_declared_once p

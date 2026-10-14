@@ -9146,7 +9146,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
        enclosing declaration's variables, which [Tvar 1] .. [Tvar n_outer]
        already name. *)
     let next_tvar = ref (n_outer + 1) in
-    let resolve_metas = resolve_type_metas ~next_tvar in
+    let resolve_metas = resolve_type_metas ~late:Let_lambda_variable ~next_tvar in
     resolve_metas t;
     resolve_metas_in_ast resolve_metas a;
     (* Collect all Tvar indices from the let-binding type *)
@@ -9974,7 +9974,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     (* Resolve unresolved metas in fix function types to Tvars using mgu.
        Traverse types and assign Tvar 1, 2, ... to each unresolved meta. *)
     let next_tvar = ref 1 in
-    let resolve_metas = resolve_type_metas ~next_tvar in
+    let resolve_metas = resolve_type_metas ~late:Fixpoint_variable ~next_tvar in
     let ids, funs = resolve_fix_types ~app_result:ml_app_result_type ~next_tvar ids funs in
     Array.iter (resolve_metas_in_ast resolve_metas) funs;
     List.iter (resolve_metas_in_ast resolve_metas) args;
@@ -10203,7 +10203,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     let non_dummy_bind_tys = filter_value_types bind_tys in
     let () =
       match non_dummy_bind_tys with
-      | elem_ty :: _ -> List.iter (fun (_, ty) -> try_mgu ty elem_ty) ids'
+      | elem_ty :: _ -> List.iter (fun (_, ty) -> try_mgu ~late:Bind_continuation ty elem_ty) ids'
       | [] -> ()
     in
     let ids, env =

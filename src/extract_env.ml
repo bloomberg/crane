@@ -1304,6 +1304,19 @@ let report_structure_changes planned struc =
         before (Ml_fingerprint.elements struc) )
     planned
 
+(** Under [CRANE_TRACE_PIPELINE], report the metavariables of the frozen
+    program rendering solved, by the reason each solve gave. *)
+let report_late_solutions () =
+  if Pipeline_trace.enabled () then
+    Pipeline_trace.event "emit"
+      ( "late solutions: "
+      ^
+      match Miniml.Meta.late_solutions () with
+      | [] -> "none"
+      | l ->
+        String.concat ", "
+          (List.map (fun (r, n) -> Printf.sprintf "%s %d" (Miniml.Meta.late_solution_name r) n) l) )
+
 let optimize_struct to_appear struc =
   let core =
     Core.optimize (Pipeline_trace.run ~stage:"core" (core_passes to_appear)) (Core.extracted struc)
@@ -1401,6 +1414,7 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   Generated_program.check_emission_matches_discovery ();
   Install_legacy_plan.check_installed facts plan;
   report_structure_changes planned struc;
+  report_late_solutions ();
   let opened = List.filter !opened_filter (opened_libraries ()) in
   let ns_open =
     match namespace with
@@ -1516,7 +1530,8 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
 let reset () =
   Visit.reset ();
   reset_tables ();
-  reset_renaming_tables Everything
+  reset_renaming_tables Everything;
+  Miniml.Meta.thaw ()
 
 (** Initializes the extraction environment, checking section scope and setting
     mode flags (modular/library/compute). *)

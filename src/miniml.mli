@@ -121,8 +121,9 @@ type ml_type =
 
 (** A mutable type metavariable used while reconstructing ML types: [id]
     identifies it and [contents] is filled in with the resolved type once
-    unification succeeds (staying [None] until then). *)
-and ml_meta = {
+    unification succeeds (staying [None] until then).  Private: it is read
+    anywhere, but made and solved only through {!Meta}. *)
+and ml_meta = private {
   id : int;
   mutable contents : ml_type option;
 }
@@ -459,4 +460,49 @@ module Global_use : sig
   val iter_types : (ml_type -> unit) -> global_use -> unit
 
   val exists_type : (ml_type -> bool) -> global_use -> bool
+end
+
+(** Making and solving metavariables.
+
+    A metavariable is extraction's: unification solves it while types are
+    reconstructed, and the Core passes may still.  Once the program is frozen
+    ({!Core.freeze}) nothing should, but the back end still does, at the
+    sites {!late_solution} names, so the first render decides those types.
+    A solve after freezing must say which of them it is; under
+    [CRANE_CHECK_IR] one that does not is an anomaly. *)
+module Meta : sig
+  (** Why a metavariable is solved after the program was frozen. *)
+  type late_solution =
+    | Fixpoint_codomain
+        (** A local fixpoint's result type, read off what its body builds. *)
+    | Fixpoint_variable
+        (** A variable minted for what a local fixpoint's types leave open. *)
+    | Let_lambda_variable
+        (** The same for a let-bound lambda. *)
+    | Bind_continuation
+        (** A sequential bind's continuation binder, at the bound value's
+            type. *)
+    | Binder_signature
+        (** A function's binder, at its signature's domain. *)
+    | Erased_slot
+        (** An open slot, at the type its context expects. *)
+
+  val fresh : int -> ml_meta
+
+  (** A cell numbered [id], already solved to [t]. *)
+  val solved : int -> ml_type -> ml_meta
+
+  (** [solve ?late m t] solves [m] to [t]; [late] says why, after freezing. *)
+  val solve : ?late:late_solution -> ml_meta -> ml_type -> unit
+
+  (** From here a solve must be late.  Counts start afresh. *)
+  val freeze : unit -> unit
+
+  (** Solves need no reason again, as at the start of an extraction. *)
+  val thaw : unit -> unit
+
+  (** How many late solutions of each kind since {!freeze}. *)
+  val late_solutions : unit -> (late_solution * int) list
+
+  val late_solution_name : late_solution -> string
 end

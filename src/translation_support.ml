@@ -1821,16 +1821,16 @@ let resolve_body_tvars b ty =
     [try_mgu]) with [Tvar idx], where [idx] is drawn from [next_tvar] and
     incremented. Chases [Tmeta {contents = Some t}]. Recurses into [Tarr]
     and [Tglob] args. *)
-let rec resolve_type_metas ~next_tvar = function
+let rec resolve_type_metas ~late ~next_tvar = function
   | Miniml.Tmeta ({contents = None} as m) ->
     let idx = !next_tvar in
     next_tvar := idx + 1;
-    try_mgu (Miniml.Tmeta m) (Miniml.Tvar (Schematic, idx))
-  | Miniml.Tmeta {contents = Some t} -> resolve_type_metas ~next_tvar t
+    try_mgu ~late (Miniml.Tmeta m) (Miniml.Tvar (Schematic, idx))
+  | Miniml.Tmeta {contents = Some t} -> resolve_type_metas ~late ~next_tvar t
   | Miniml.Tarr (t1, t2) ->
-    resolve_type_metas ~next_tvar t1;
-    resolve_type_metas ~next_tvar t2
-  | Miniml.Tglob (_, args, _) -> List.iter (resolve_type_metas ~next_tvar) args
+    resolve_type_metas ~late ~next_tvar t1;
+    resolve_type_metas ~late ~next_tvar t2
+  | Miniml.Tglob (_, args, _) -> List.iter (resolve_type_metas ~late ~next_tvar) args
   | _ -> ()
 
 (** The type a term builds in tail position, where its own annotations say so.
@@ -1876,7 +1876,7 @@ let recover_fix_codomain ~app_result ((id, ty) : Id.t * ml_type)
     (* A hole, not a variable: the cell is shared with every annotation the
        body writes it into, so filling it {e is} the substitution. *)
     match tail_result_type ~app_result body with
-    | Some t -> cell.Miniml.contents <- Some t; ((id, ty), body)
+    | Some t -> Miniml.Meta.solve ~late:Fixpoint_codomain cell t; ((id, ty), body)
     | None -> ((id, ty), body) )
   | Miniml.Tvar (_, i)
     when (not (List.exists (fun t -> collect_tvars [] t |> List.mem i) dom))
@@ -1899,7 +1899,7 @@ let recover_fix_codomain ~app_result ((id, ty) : Id.t * ml_type)
 let resolve_fix_types ~app_result ~next_tvar ids funs =
   let settled = Array.map2 (recover_fix_codomain ~app_result) ids funs in
   let ids = Array.map fst settled and funs = Array.map snd settled in
-  Array.iter (fun (_, ty) -> resolve_type_metas ~next_tvar ty) ids;
+  Array.iter (fun (_, ty) -> resolve_type_metas ~late:Fixpoint_variable ~next_tvar ty) ids;
   (ids, funs)
 
 (** Resolve unresolved metas in an ML AST by walking its sub-types.

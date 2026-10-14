@@ -2247,7 +2247,7 @@ and extract_case env sg mle (((kn, i) as ip), c, br) mlt =
                   | _ -> false
                 in
                 if not (has_unknown ml_ty) then
-                  r.contents <- Some ml_ty
+                  Meta.solve r ml_ty
               | _ -> ()
             ) (Array.to_list metas) kept_args
           | _ -> ()
@@ -2621,7 +2621,7 @@ let extract_std_constant env sg kn body typ =
   if lang () == Cpp then
     List.iter
       (fun (r, erased) ->
-        if r.contents = None then r.contents <- Some erased)
+        if r.contents = None then Meta.solve r erased)
       !pending_cpp_meta_fills;
   pending_cpp_meta_fills := [];
   (* Expunging term and type from dummy lambdas. *)
