@@ -327,10 +327,10 @@ let promote_typeclass_params (params : (Id.t * ml_type) list) =
     ({!Plan_templates.relax_function_head}), as [n]'s callable plan and as a
     template head, with the rewrite that carries the relaxations through the
     declaration. *)
-let plan_function_head n ty temps signature =
+let plan_function_head ?deduced_callables n ty temps signature =
   let temps, rewrite = relax_function_head temps signature in
   let abi =
-    Callable_abi.of_head
+    Callable_abi.of_head ?deduced_callables
       ~phantom_prefix:(Translation_types.leading_phantom_count n)
       ~relaxed:(fun i -> IntSet.mem i (Ml_type_util.relaxed_higher_kinded_tvars ty))
       ~callee:n ~scheme:(Mlutil.reference_scheme n) temps
@@ -357,6 +357,7 @@ type body_scope = {
   bs_rec_call : cpp_expr;
   bs_gen_body_stmts : env -> (cpp_expr -> cpp_stmt) -> ml_ast -> cpp_stmt list;
   bs_no_pure : bool;
+  bs_deduced_callables : Param_pos.orig Param_pos.pos list;
 }
 
 (** Generate a C++ function definition from an ML function body.
@@ -880,6 +881,19 @@ let dfun_body_scope n b cty ty temps =
         | _ -> None )
       (List.mapi (fun i (x, ty) -> (x, ty, i)) (List.rev ids))
   in
+  (* The declared positions of the callables deduced as an [F &&], which the
+     plan records: a call site reads the decision there. *)
+  let deduced_callables =
+    let source = List.rev all_ids in
+    let binder_tys = List.map snd source in
+    let rec index_of x i = function
+      | [] -> None
+      | (y, _) :: rest -> if Id.equal x y then Some i else index_of x (i + 1) rest
+    in
+    List.filter_map
+      (fun (x, _, _) -> Option.bind (index_of x 0 source) (Param_pos.of_source_index binder_tys))
+      fun_tys
+  in
   (* Replace the parameter type of promoted (forwarded) function params with the
      template type variable [F&&]. Non-forwarded params are left untouched — they
      keep [Tconst (Tfun(dom, cod))] which prints as [const
@@ -1067,13 +1081,14 @@ let dfun_body_scope n b cty ty temps =
     bs_rec_call = rec_call;
     bs_gen_body_stmts = gen_body_stmts;
     bs_no_pure = no_pure;
+    bs_deduced_callables = deduced_callables;
   }
 
 (** The head of the function [n] generated under [scope], planned as its
     callers see it: outside the type-variable scope its body is generated in. *)
 let plan_scope_head n ty scope =
   with_type_vars [] (fun () ->
-      plan_function_head n ty scope.bs_temps
+      plan_function_head ~deduced_callables:scope.bs_deduced_callables n ty scope.bs_temps
         (Dfun (mk_dfun n ~ret:scope.bs_cod ~no_pure:scope.bs_no_pure (Ddef (scope.bs_ids, [])))))
 
 let gen_dfun n b cty ty temps =

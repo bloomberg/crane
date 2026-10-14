@@ -50,4 +50,14 @@ let source_index binder_tys o =
       | _ -> go (i + 1) (k + 1) rest )
   in
   go 0 0 binder_tys
+
+let of_source_index binder_tys i =
+  let erased t = match Ml_type_util.resolve_tmeta t with Miniml.Tdummy _ -> true | _ -> false in
+  let rec go j k = function
+    | [] -> None
+    | t :: _ when j = i -> if erased t then None else Some k
+    | t :: rest -> go (j + 1) (if erased t then k else k + 1) rest
+  in
+  go 0 0 binder_tys
+
 let equal = Int.equal

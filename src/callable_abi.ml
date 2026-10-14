@@ -36,6 +36,7 @@ type template_parameter = {
 type t = {
   callee : GlobRef.t;
   head : template_parameter list;
+  deduced_callables : Param_pos.orig Param_pos.pos list;
   phase : Common.phase;
 }
 
@@ -89,7 +90,7 @@ let mark_phantoms n head =
   in
   go n head
 
-let of_head ?(phantom_prefix = 0) ?relaxed ~callee ~scheme temps =
+let of_head ?(phantom_prefix = 0) ?relaxed ?(deduced_callables = []) ~callee ~scheme temps =
   let head =
     List.mapi
       (fun position (kind, name) ->
@@ -103,7 +104,9 @@ let of_head ?(phantom_prefix = 0) ?relaxed ~callee ~scheme temps =
         {id = {Template_param.position; name}; origin; kind; write} )
       temps
   in
-  {callee; head = mark_phantoms phantom_prefix head; phase = Common.get_phase ()}
+  {callee; head = mark_phantoms phantom_prefix head; deduced_callables; phase = Common.get_phase ()}
+
+let deduces_callable_at abi pos = List.exists (Param_pos.equal pos) abi.deduced_callables
 
 let parameter_of_var abi v =
   List.find_opt
@@ -154,6 +157,7 @@ let same_head a b =
   in
   let key p = (Id.to_string (Template_param.name p.id), origin_key p.origin, p.kind, p.write) in
   List.equal (fun p q -> key p = key q) a.head b.head
+  && List.equal Param_pos.equal a.deduced_callables b.deduced_callables
 
 let equal a b = GlobRef.UserOrd.equal a.callee b.callee && same_head a b
 
@@ -248,7 +252,7 @@ let foreign ?(instances = 0) ?(higher_kinded = fun _ -> false) ?(kept = fun _ ->
         {id = {Template_param.position; name}; origin; kind; write} )
       (dictionaries @ variables)
   in
-  {callee; head = mark_phantoms phantom_prefix head; phase = Common.get_phase ()}
+  {callee; head = mark_phantoms phantom_prefix head; deduced_callables = []; phase = Common.get_phase ()}
 
 let plan ?instances ?higher_kinded ?kept ?reachable ?relaxed ?phantom_prefix callee ~scheme =
   match lookup callee with

@@ -71,7 +71,8 @@ val callee : t -> Names.GlobRef.t
 val template_head : t -> template_parameter list
 
 (** The plan of a declaration of [callee] whose head is [temps], as
-    {!Gen_functions} finalises it.  [scheme] is the callee's scheme, which
+    {!Gen_functions} finalises it; [deduced_callables] are the declared
+    positions of the value parameters the head deduces as an [F &&].  [scheme] is the callee's scheme, which
     the parameters named for its variables ([T1], [T2], ...) declare; the
     first [phantom_prefix] of those are its leading phantoms.  A variable
     [relaxed] says the declaration relaxed out of its head declares nothing
@@ -79,10 +80,16 @@ val template_head : t -> template_parameter list
 val of_head :
   ?phantom_prefix:int ->
   ?relaxed:(int -> bool) ->
+  ?deduced_callables:Param_pos.orig Param_pos.pos list ->
   callee:Names.GlobRef.t ->
   scheme:Scheme.Id.t option ->
   (Minicpp.template_type * Names.Id.t) list ->
   t
+
+(** Whether the value parameter at the declared position [pos] is a callable
+    the head deduces as an [F &&]: the callee then calls it at its own
+    instantiation.  None is, in a foreign plan. *)
+val deduces_callable_at : t -> Param_pos.orig Param_pos.pos -> bool
 
 (** The parameter declaring scheme variable [v], if the head has one. *)
 val parameter_of_var : t -> Scheme.Var.t -> template_parameter option

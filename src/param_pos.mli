@@ -81,4 +81,9 @@ val of_receiver : int -> orig pos
     the binders. *)
 val source_index : Miniml.ml_type list -> orig pos -> int option
 
+(** [of_source_index binder_tys i] inverts {!source_index}: the declared
+    position of the binder at source index [i], [None] for an erased binder
+    or one past the binders. *)
+val of_source_index : Miniml.ml_type list -> int -> orig pos option
+
 val equal : 'k pos -> 'k pos -> bool
