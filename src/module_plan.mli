@@ -3,11 +3,12 @@
 
 (** The module plan: what preparing a structure decided about its layout,
     before anything is rendered -- where declarations live and what they are
-    called.  These are backend decisions, part of a unit's target plan, not
-    observations about the program.  Installed by {!Cpp.prepare_structure},
-    the one writer, and read-only afterwards -- which is what makes it safe to
-    read from a [.cpp] body printed before the [.h] that declares the
-    names. *)
+    called.  These are backend decisions, part of a unit's target plan
+    ({!Target_plan.modules}), not observations about the program.  Decided by
+    {!Cpp.prepare_structure} and installed by {!Install_legacy_plan}, the one
+    writer, before anything is rendered, and read-only afterwards -- which is
+    what makes it safe to read from a [.cpp] body printed before the [.h] that
+    declares the names. *)
 
 open Names
 
@@ -47,9 +48,19 @@ type t = {
           than to the struct: its aliases and its lifted instances. *)
 }
 
+(** The plan of a unit that decides nothing. *)
+val empty : t
+
+val equal : t -> t -> bool
+
 (** Record a unit's facts.  The enums replace the previous unit's; the rest
     accumulate over the extraction, the namespace-scope refs over the unit. *)
 val install : t -> unit
+
+(** Whether every decision of [t] reads back as {!install} recorded it: the
+    last answer [t] gives about a name, and a wrapper's role where [t] gives
+    one. *)
+val installed : t -> bool
 
 val is_global_scope_enum : GlobRef.t -> bool
 val concept_name : GlobRef.t -> string option

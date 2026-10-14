@@ -2155,16 +2155,16 @@ let get_structure_analysis () =
   | None ->
     CErrors.anomaly (Pp.str "cpp: rendering a structure that was never analysed")
 
-(** Copy a structure analysis's decisions into the tables rendering reads them
-    back from.
+(** The module plan a structure analysis decides, with the functor concept
+    scopes, which rendering reads from here, installed.
 
     Every field of {!Structure_analysis.t} but [sorted_modules] exists to be
-    read while rendering, so they are installed together, here: rendering only
-    ever reads these tables, and so cannot render a use before the decision it
+    read while rendering, so they are all taken here: rendering only ever
+    reads what they decide, and so cannot render a use before the decision it
     depends on has been made.  The record is destructured field by field under
     warning 9, which is what makes a field added to the analysis and not
     handled here a compile error rather than a decision nothing acts on. *)
-let install_analysis
+let module_plan_of_analysis
     ({ sorted_modules;
        global_scope_enums;
        collision_wrappers;
@@ -2176,7 +2176,7 @@ let install_analysis
        modtype_concept_renames;
        lifted_instances;
        _ } :
-      Structure_analysis.t ) : unit =
+      Structure_analysis.t ) : Module_plan.t =
   functor_concept_scopes := scopes;
   let wrapped =
     List.filter_map
@@ -2184,8 +2184,7 @@ let install_analysis
         Option.map (fun name -> (mi, name)) mi.wrapper_name )
       sorted_modules
   in
-  Module_plan.install
-    { global_scope_enums;
+  { global_scope_enums;
       concept_names = concept_renames;
       modtype_concept_names = modtype_concept_renames;
       functor_app_sources;
@@ -2217,7 +2216,8 @@ let install_analysis
           wrapped }
 
 (** Decide everything about the structure that does not depend on which file is
-    being written, and record it for the passes that do.
+    being written, record what rendering reads of it here, and return its
+    {!Module_plan} -- the layout -- for the target plan to hold.
 
     {!Structure_analysis} describes itself as running before rendering, and the
     tables it fills are read by both the header and the implementation; it was
@@ -2242,7 +2242,7 @@ let prepare_structure s =
         Method_registry.create
           ~ret_is_erased:Translation.return_type_is_erased s );
   let analysis = Structure_analysis.analyze (get_method_registry ()) s in
-  install_analysis analysis;
+  let modules = module_plan_of_analysis analysis in
   (* Whether an inductive is a flat struct is a property of its declaration;
      every reader, before or after its struct is generated, gets one answer. *)
   Modutil.struct_iter
@@ -2259,7 +2259,8 @@ let prepare_structure s =
     (fun _ -> ())
     s;
   List.iter (fun _ -> pop_visible ()) initial_mps;
-  structure_analysis := Some analysis
+  structure_analysis := Some analysis;
+  modules
 
 (** The callable plan of each function the renders will generate, in the
     order of the unit's modules and declarations, or the reverse if
@@ -3142,7 +3143,6 @@ let cpp_descr =
     file_suffix = ".cpp";
     file_naming = file_of_modfile;
     preamble;
-    prepare = prepare_structure;
     pp_struct;
     pp_hstruct;
     sig_suffix = Some ".h";

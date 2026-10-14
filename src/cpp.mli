@@ -27,9 +27,15 @@
     extraction pass. *)
 val cpp_descr : Miniml.language_descr
 
+(** Decide the unit's layout before either file is rendered: analyse the
+    structure ({!Structure_analysis}), record what rendering reads of the
+    analysis, and return the {!Module_plan} it decides, which is not yet
+    installed. *)
+val prepare_structure : Miniml.ml_structure -> Module_plan.t
+
 (** The callable plan of each function the renders will generate, in the
     order of the unit's modules and declarations, or the reverse if
-    [reversed]; planned after [cpp_descr]'s [prepare] and before anything is
-    rendered.  A function no render generates -- a method, a projection, an
+    [reversed]; planned once the plan {!prepare_structure} returns is
+    installed, and before anything is rendered.  A function no render generates -- a method, a projection, an
     inline custom -- has none. *)
 val plan_callables : ?reversed:bool -> Miniml.ml_structure -> Callable_abi.t list

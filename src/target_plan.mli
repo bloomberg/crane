@@ -5,9 +5,8 @@
     from the structure and its {!Program_facts}, as a value.
 
     Transitional: the plan holds the decisions converted so far -- the kinds
-    inductives are emitted as, the kinds of their template parameters, and
-    every generated function's callable plan.  The layout is still the
-    {!Module_plan} [prepare] installs; it belongs here.
+    inductives are emitted as, the kinds of their template parameters, the
+    layout, and every generated function's callable plan.
     {!Install_legacy_plan} fills the tables unconverted readers consult. *)
 
 (** Why an inductive is emitted as a kind other than the one extraction
@@ -37,9 +36,12 @@ type t = {
       (** The kinds of the template parameters of each inductive and type
           alias the unit generates, decided once the inductive kinds are
           installed ({!with_template_kinds}). *)
+  modules : Module_plan.t;
+      (** Where each declaration lives and what it is called, decided once
+          the template-parameter kinds are installed ({!with_layout}). *)
   callables : Callable_abi.t list;
       (** The callable plan of each function the unit generates, decided once
-          the layout is ({!with_callables}). *)
+          the layout is installed ({!with_layout}). *)
 }
 
 (** [plan facts struc] decides; it writes nothing. *)
@@ -48,8 +50,8 @@ val plan : Program_facts.t -> Miniml.ml_structure -> t
 (** [plan] with the template-parameter kinds decided. *)
 val with_template_kinds : t -> (Names.GlobRef.t * Tparam_kinds.t) list -> t
 
-(** [plan] with the callable plans decided. *)
-val with_callables : t -> Callable_abi.t list -> t
+(** [plan] with its layout and the callable plans decided. *)
+val with_layout : t -> Module_plan.t -> Callable_abi.t list -> t
 
 (** The same callable plans, whatever order they were planned in. *)
 val same_callables : Callable_abi.t list -> Callable_abi.t list -> bool

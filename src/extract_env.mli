@@ -30,9 +30,10 @@
       has run, the template-parameter kinds -- each installed by
       {!Install_legacy_plan} into the tables unconverted readers consult.
     + {b Layout} ([Common.Discover]): {!Cpp.prepare_structure} runs
-      {!Structure_analysis.analyze} and installs its layout facts
-      ({!Module_plan}); then every generated function's callable plan is
-      planned ({!Cpp.plan_callables}) into the target plan and frozen.
+      {!Structure_analysis.analyze} and decides the layout ({!Module_plan});
+      then every generated function's callable plan is planned
+      ({!Cpp.plan_callables}).  Both go into the target plan, and are
+      installed and frozen.
     + {b Discovery} ([Common.Discover]): both files are rendered and the text
       discarded.  What survives is what the renders recorded: names, method
       registrations, wrapper and alias tables.  Every body is translated

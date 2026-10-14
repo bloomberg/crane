@@ -45,6 +45,30 @@ let namespace_scope : unit Ref.User.Tbl.t =
 let wrapper_table : (ModPath.t, string * wrapper_role) Hashtbl.t = table "wrapper_table"
 let global_types : unit Ref.User.Tbl.t = ref_table "global_scope_type_table"
 
+let empty =
+  { global_scope_enums = [];
+    concept_names = [];
+    modtype_concept_names = [];
+    functor_app_sources = [];
+    eponymous_records = [];
+    namespace_scope_refs = [];
+    wrappers = [];
+    global_scope_types = [] }
+
+let equal a b =
+  let refs = List.equal GlobRef.UserOrd.equal in
+  let pairs eq_k eq_v = List.equal (fun (k, v) (k', v') -> eq_k k k' && eq_v v v') in
+  refs a.global_scope_enums b.global_scope_enums
+  && pairs GlobRef.UserOrd.equal String.equal a.concept_names b.concept_names
+  && pairs ModPath.equal String.equal a.modtype_concept_names b.modtype_concept_names
+  && pairs ModPath.equal ModPath.equal a.functor_app_sources b.functor_app_sources
+  && refs a.eponymous_records b.eponymous_records
+  && refs a.namespace_scope_refs b.namespace_scope_refs
+  && List.equal
+       (fun (mp, n, r) (mp', n', r') -> ModPath.equal mp mp' && String.equal n n' && r = r')
+       a.wrappers b.wrappers
+  && refs a.global_scope_types b.global_scope_types
+
 let install f =
   Ref.User.Tbl.reset enums;
   List.iter (fun r -> Ref.User.Tbl.replace enums r ()) f.global_scope_enums;
@@ -86,3 +110,32 @@ let wrapper mp = Hashtbl.find_opt wrapper_table mp
 let wrapper_struct mp = Option.map fst (wrapper mp)
 let wrapper_role mp = Option.map snd (wrapper mp)
 let is_global_scope_type r = Ref.User.Tbl.mem global_types r
+
+(* The last of [l]'s answers for each key, which is the one installing [l]
+   leaves. *)
+let last_answers equal_key l =
+  List.filteri
+    (fun i (k, _) -> not (List.exists (fun (k', _) -> equal_key k k') (List.filteri (fun j _ -> j > i) l)))
+    l
+
+let installed f =
+  let mp_equal = ModPath.equal and ref_equal = GlobRef.UserOrd.equal in
+  List.for_all is_global_scope_enum f.global_scope_enums
+  && List.for_all
+       (fun (r, name) -> concept_name r = Some name)
+       (last_answers ref_equal f.concept_names)
+  && List.for_all
+       (fun (mp, name) -> modtype_concept_name mp = Some name)
+       (last_answers mp_equal f.modtype_concept_names)
+  && List.for_all
+       (fun (mp, src) -> Option.equal ModPath.equal (functor_app_source mp) (Some src))
+       (last_answers mp_equal f.functor_app_sources)
+  && List.for_all is_eponymous_record f.eponymous_records
+  && List.for_all is_namespace_scope_ref f.namespace_scope_refs
+  && List.for_all
+       (fun (mp, (name, role)) ->
+         match wrapper mp with
+         | Some (name', role') -> String.equal name name' && Option.cata (( = ) role') true role
+         | None -> false )
+       (last_answers mp_equal (List.map (fun (mp, name, role) -> (mp, (name, role))) f.wrappers))
+  && List.for_all is_global_scope_type f.global_scope_types

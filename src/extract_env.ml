@@ -1002,15 +1002,17 @@ let layout_pass_names = [prepare_layout; plan_callables; install_callables]
 
 (** Settle the unit's layout -- where each declaration lives and what it is
     called ({!Module_plan}) -- then plan the callable of each function a
-    render will generate, and install the plans.  Returns them.  Under
+    render will generate, installing each before the next is decided.
+    Returns both.  Under
     [CRANE_CHECK_IR] they are planned a second time with every list reversed,
     and the two must agree: a head is a function of its declaration, not of
     what was planned before it.  Runs in the discovery phase, which is the one
     that names modules. *)
-let plan_layout d struc =
+let plan_layout struc =
   set_phase Discover;
   Pipeline_trace.event "layout" prepare_layout;
-  d.prepare struc;
+  let modules = Cpp.prepare_structure struc in
+  Install_legacy_plan.install_modules modules;
   Pipeline_trace.event "layout" plan_callables;
   let callables = Cpp.plan_callables struc in
   if
@@ -1019,7 +1021,7 @@ let plan_layout d struc =
   then CErrors.anomaly Pp.(str "Crane: planning the callables in reverse order decided differently.");
   Pipeline_trace.event "layout" install_callables;
   Install_legacy_plan.install_callables callables;
-  callables
+  (modules, callables)
 
 (** The renders discovery runs. *)
 let discover_passes ~interface d : ml_structure Pipeline_trace.pass list =
@@ -1071,7 +1073,7 @@ let discover ?(interface = true) d struc =
 let print_one_decl struc mp decl =
   let d = descr () in
   reset_renaming_tables AllButExternal;
-  ignore (plan_layout d struc);
+  ignore (plan_layout struc);
   discover ~interface:false d struc;
   set_phase (Emit Impl);
   push_visible mp [];
@@ -1436,7 +1438,8 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   ignore (Pipeline_trace.run ~stage:"unit" (unit_passes ~namespace) struc);
   let plan = plan_representation plan struc in
   let planned = observed_fingerprint ~stage:"unit" struc in
-  let plan = Target_plan.with_callables plan (plan_layout d struc) in
+  let modules, callables = plan_layout struc in
+  let plan = Target_plan.with_layout plan modules callables in
   discover d struc;
   let census_after_discovery = Table.census () in
   (* Both bodies are rendered before either file is opened.  A preamble has to

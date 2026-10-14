@@ -18,6 +18,7 @@ type t = {
   input : Ml_fingerprint.t option;
   inductive_kinds : kind_decision list;
   template_kinds : (GlobRef.t * Tparam_kinds.t) list;
+  modules : Module_plan.t;
   callables : Callable_abi.t list;
 }
 
@@ -257,10 +258,11 @@ let plan (_ : Program_facts.t) struc =
   { input;
     inductive_kinds = aligned @ value_use_demotion aligned struc;
     template_kinds = [];
+    modules = Module_plan.empty;
     callables = [] }
 
 let with_template_kinds t template_kinds = {t with template_kinds}
-let with_callables t callables = {t with callables}
+let with_layout t modules callables = {t with modules; callables}
 
 let same_callables a b =
   List.length a = List.length b
@@ -287,4 +289,5 @@ let equal a b =
   && List.equal
        (fun (r, k) (r', k') -> GlobRef.UserOrd.equal r r' && Tparam_kinds.equal k k')
        a.template_kinds b.template_kinds
+  && Module_plan.equal a.modules b.modules
   && same_callables a.callables b.callables
