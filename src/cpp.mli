@@ -41,7 +41,15 @@ val prepare_structure : Miniml.ml_structure -> Module_plan.t
 val plan_callables : ?reversed:bool -> Miniml.ml_structure -> Callable_abi.t list
 
 (** The C++ name of each global the unit declares outside a functor, decided
-    in declaration order ({!Common.global_name}): an inductive's, then its
+    in declaration order ({!Common.pp_global_name}): an inductive's, then its
     constructors', at the kind a declaration is printed at.  A custom
     mapping's name is its text, and is not among them. *)
 val plan_names : Miniml.ml_structure -> (Names.GlobRef.t * string) list
+
+(** The C++ names of the fields of each constructor whose struct the unit
+    generates outside a functor -- an inductive's, not a class's or a
+    record's, nor a custom type's -- decided from the binder names the
+    constructor was declared with
+    ({!Translation_support.compute_and_register_field_names}), once the
+    constructors' names are. *)
+val plan_field_names : Miniml.ml_structure -> (Names.GlobRef.t * Names.Id.t list) list

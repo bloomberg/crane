@@ -2382,31 +2382,63 @@ let plan_callables ?(reversed = false) s =
             (order analysis.sorted_modules) ) );
   List.rev !plans
 
-let plan_names s =
-  let names = ref [] in
-  let name k r =
-    if not (is_custom r || is_any_inline_custom r) then
-      names := (r, Common.global_name k r) :: !names
-  in
+(* The declarations of [s] outside a functor, in order. *)
+let declarations s =
   let rec elems sel =
-    List.iter
+    List.concat_map
       (fun (_, se) ->
         match se with
-        | SEdecl (Dind (kn, ind)) ->
-          Array.iteri
-            (fun i p ->
-              name Type (GlobRef.IndRef (kn, i));
-              Array.iteri (fun j _ -> name Cons (GlobRef.ConstructRef ((kn, i), j + 1))) p.ip_types )
-            ind.ind_packets
-        | SEdecl (Dtype (r, _, _)) -> name Type r
-        | SEdecl (Dterm (r, _, _)) -> name Term r
-        | SEdecl (Dfix fds) -> List.iter (fun fd -> name Term fd.fd_ref) fds
+        | SEdecl d -> [d]
         | SEmodule {ml_mod_expr = MEstruct (_, sel); _} -> elems sel
-        | SEmodule _ | SEmodtype _ -> () )
+        | SEmodule _ | SEmodtype _ -> [] )
       sel
   in
-  List.iter (fun (_, sel) -> elems sel) s;
-  List.rev !names
+  List.concat_map (fun (_, sel) -> elems sel) s
+
+let plan_names s =
+  let name k r =
+    if is_custom r || is_any_inline_custom r then [] else [(r, Common.pp_global_name k r)]
+  in
+  List.concat_map
+    (function
+      | Dind (kn, ind) ->
+        List.concat
+          (List.mapi
+             (fun i p ->
+               name Type (GlobRef.IndRef (kn, i))
+               @ List.concat
+                   (List.init (Array.length p.ip_types) (fun j ->
+                        name Cons (GlobRef.ConstructRef ((kn, i), j + 1)) )) )
+             (Array.to_list ind.ind_packets) )
+      | Dtype (r, _, _) -> name Type r
+      | Dterm (r, _, _) -> name Term r
+      | Dfix fds -> List.concat_map (fun fd -> name Term fd.fd_ref) fds )
+    (declarations s)
+
+let plan_field_names s =
+  List.concat_map
+    (function
+      | Dind (kn, ({ind_kind = Standard | Coinductive; _} as ind)) ->
+        List.concat
+          (List.mapi
+             (fun i p ->
+               let ind_ref = GlobRef.IndRef (kn, i) in
+               if is_custom ind_ref || is_monad ind_ref then []
+               else
+                 List.init (Array.length p.ip_types) (fun j ->
+                     let c = GlobRef.ConstructRef ((kn, i), j + 1) in
+                     let consarg_names =
+                       if j < Array.length p.ip_consarg_names then p.ip_consarg_names.(j) else []
+                     in
+                     ( c,
+                       Translation_support.compute_and_register_field_names ~owner:c
+                         (Ml_type_util.ctor_struct_name_of_ref ~fallback_idx:j c)
+                         (Translation_support.augment_with_args_renaming c consarg_names)
+                         consarg_names
+                         (List.length p.ip_types.(j)) ) ) )
+             (Array.to_list ind.ind_packets) )
+      | Dind _ | Dtype _ | Dterm _ | Dfix _ -> [] )
+    (declarations s)
 
 (** [pp_wrapper_struct name specs] is the struct a library module is rendered
     as: its member declarations, [specs], inside a struct of that name. *)

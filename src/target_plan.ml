@@ -20,6 +20,7 @@ type t = {
   template_kinds : (GlobRef.t * Tparam_kinds.t) list;
   modules : Module_plan.t;
   names : (GlobRef.t * string) list;
+  field_names : (GlobRef.t * Id.t list) list;
   callables : Callable_abi.t list;
   assumed_callables : (GlobRef.t * Param_pos.orig Param_pos.pos list) list;
 }
@@ -262,13 +263,14 @@ let plan (_ : Program_facts.t) struc =
     template_kinds = [];
     modules = Module_plan.empty;
     names = [];
+    field_names = [];
     callables = [];
     assumed_callables = [] }
 
 let with_template_kinds t template_kinds = {t with template_kinds}
 
-let with_layout t modules names callables assumed_callables =
-  {t with modules; names; callables; assumed_callables}
+let with_layout t modules names field_names callables assumed_callables =
+  {t with modules; names; field_names; callables; assumed_callables}
 
 let same_callables a b =
   List.length a = List.length b
@@ -297,6 +299,9 @@ let equal a b =
        a.template_kinds b.template_kinds
   && Module_plan.equal a.modules b.modules
   && List.equal (fun (r, s) (r', s') -> GlobRef.UserOrd.equal r r' && String.equal s s') a.names b.names
+  && List.equal
+       (fun (r, ids) (r', ids') -> GlobRef.UserOrd.equal r r' && List.equal Id.equal ids ids')
+       a.field_names b.field_names
   && same_callables a.callables b.callables
   && List.equal
        (fun (r, ps) (r', ps') -> GlobRef.UserOrd.equal r r' && List.equal Param_pos.equal ps ps')
