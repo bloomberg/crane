@@ -1061,15 +1061,16 @@ let dfun_body_scope n b cty ty temps =
     bs_no_pure = no_pure;
   }
 
+(** The head of the function [n] generated under [scope], planned as its
+    callers see it: outside the type-variable scope its body is generated in. *)
+let plan_scope_head n ty scope =
+  with_type_vars [] (fun () ->
+      plan_function_head n ty scope.bs_temps
+        (Dfun (mk_dfun n ~ret:scope.bs_cod ~no_pure:scope.bs_no_pure (Ddef (scope.bs_ids, [])))))
+
 let gen_dfun n b cty ty temps =
   let scope = dfun_body_scope n b cty ty temps in
-  (* Planned as the declaration's callers see it: outside the type-variable
-     scope its body is generated in. *)
-  let temps, rewrite =
-    with_type_vars [] (fun () ->
-        plan_function_head n ty scope.bs_temps
-          (Dfun (mk_dfun n ~ret:scope.bs_cod ~no_pure:scope.bs_no_pure (Ddef (scope.bs_ids, [])))))
-  in
+  let temps, rewrite = plan_scope_head n ty scope in
   let inner, env =
     with_itree_mode_for ty @@ fun () ->
   let {
@@ -1690,6 +1691,18 @@ let gen_function n ty h =
     | _ -> []
   in
   (f, env, h.fh_tvars @ callable_tparams)
+
+(** [plan_function ~fixpoint n b ty] plans and records the head of the
+    function [n] -- [b] its body, [ty] its type -- as its generation would,
+    without generating the body.  A member of a recursive group is always
+    generated as a function; a constant only where its C++ type is one. *)
+let plan_function ~fixpoint n b ty =
+  Table.with_decl_ref n @@ fun () ->
+  with_function_head n b ty @@ fun ty h ->
+  match h.fh_cty with
+  | Tfun _ -> ignore (plan_scope_head n ty (dfun_body_scope n h.fh_body h.fh_cty ty h.fh_temps))
+  | cty when fixpoint -> ignore (plan_scope_head n ty (dfun_body_scope n h.fh_body cty ty h.fh_temps))
+  | _ -> ()
 
 (** Generate C++ declaration with pretty-printing adjustments: a function, a
     constant whose body only throws (as a zero-argument function, so it

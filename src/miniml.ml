@@ -295,6 +295,7 @@ type language_descr = {
   preamble : Id.t -> string option -> ModPath.t list -> unsafe_needs -> Pp.t;
   (* decide what both passes below will read; run once, before either *)
   prepare : ml_structure -> unit;
+  plan_callables : ml_structure -> unit;
   pp_struct : ml_structure -> Pp.t;
   pp_hstruct : ml_structure -> Pp.t;
   (* Concerning a possible interface file *)

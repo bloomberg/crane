@@ -2261,6 +2261,92 @@ let prepare_structure s =
   List.iter (fun _ -> pop_visible ()) initial_mps;
   structure_analysis := Some analysis
 
+(** Plan the head of each function the renders will generate, before either
+    renders anything ({!Gen_decls.plan_function}), so that a call rendered
+    ahead of its callee reads the head the callee is declared with.
+
+    The modules are walked as a render walks them, for the two things a head
+    is converted against: the visibility stack, and the inductives local to
+    the enclosing modules.  Only what the walk can already tell is generated
+    as a function is planned.  A method, a projection, a monadic group, a
+    functor's member and an alias's copy are left to be planned as they are
+    generated: planning a function no render generates would hand its call
+    sites a head other than the one they assume. *)
+let plan_callables s =
+  let plan ~fixpoint r a t =
+    if not (is_any_inline_custom r || Table.is_projection r || is_registered_method r <> None)
+    then Gen_decls.plan_function ~fixpoint r a t
+  in
+  let plan_decl = function
+    | Dterm (_, _, Tglob (ty, _, _)) when is_monad ty -> ()
+    | Dterm (r, a, t) when not (is_typeclass_instance a t) -> plan ~fixpoint:false r a t
+    | Dfix fds -> List.iter (fun fd -> plan ~fixpoint:true fd.fd_ref fd.fd_body fd.fd_type) fds
+    | Dterm _ | Dind _ | Dtype _ -> ()
+  in
+  let declared_inductives mp sel =
+    List.concat_map
+      (fun (_, se) ->
+        match se with
+        | SEdecl (Dind (kn, ind))
+          when (not (modular ())) || ModPath.equal (MutInd.modpath kn) mp ->
+          List.init (Array.length ind.ind_packets) (fun i -> GlobRef.IndRef (kn, i))
+        | _ -> [] )
+      sel
+  in
+  let in_module mp k =
+    push_visible mp [];
+    Fun.protect ~finally:pop_visible k
+  in
+  let with_local_inductives refs k =
+    let outer = get_local_inductives () in
+    List.iter add_local_inductive refs;
+    Fun.protect
+      ~finally:(fun () ->
+        clear_local_inductives ();
+        List.iter add_local_inductive outer )
+      k
+  in
+  let rec plan_elem (_, se) =
+    match se with
+    | SEdecl d -> plan_decl d
+    | SEmodule {ml_mod_expr = MEstruct (mp, sel); _} ->
+      in_module mp (fun () ->
+          with_local_inductives (declared_inductives mp sel) (fun () -> List.iter plan_elem sel) )
+    | SEmodule _ | SEmodtype _ -> ()
+  in
+  let analysis = get_structure_analysis () in
+  let rec all_inductives sel =
+    List.concat_map
+      (fun (_, se) ->
+        match se with
+        | SEdecl (Dind (kn, ind)) ->
+          List.init (Array.length ind.ind_packets) (fun i -> GlobRef.IndRef (kn, i))
+        | SEmodule {ml_mod_expr = MEstruct (_, sub); _} -> all_inductives sub
+        | _ -> [] )
+      sel
+  in
+  let initial_mps = List.filter_map (fun (mp, _) -> if is_modfile mp then Some mp else None) s in
+  List.iter (fun mp -> push_visible mp []) initial_mps;
+  Fun.protect
+    ~finally:(fun () -> List.iter (fun _ -> pop_visible ()) initial_mps)
+    (fun () ->
+      (* A wrapper module's functions are generated before any inductive is
+         made local. *)
+      List.iter
+        (fun (mi : Structure_analysis.module_info) ->
+          if mi.wrapper_name <> None then in_module mi.modpath (fun () -> List.iter plan_elem mi.sels) )
+        analysis.sorted_modules;
+      let file_inductives =
+        if modular () then
+          List.concat_map (fun (mi : Structure_analysis.module_info) -> all_inductives mi.sels) analysis.sorted_modules
+        else []
+      in
+      with_local_inductives file_inductives (fun () ->
+          List.iter
+            (fun (mi : Structure_analysis.module_info) ->
+              if mi.wrapper_name = None then in_module mi.modpath (fun () -> List.iter plan_elem mi.sels) )
+            analysis.sorted_modules ) )
+
 (** [pp_wrapper_struct name specs] is the struct a library module is rendered
     as: its member declarations, [specs], inside a struct of that name. *)
 let pp_wrapper_struct name specs =
@@ -3032,6 +3118,7 @@ let cpp_descr =
     file_naming = file_of_modfile;
     preamble;
     prepare = prepare_structure;
+    plan_callables;
     pp_struct;
     pp_hstruct;
     sig_suffix = Some ".h";

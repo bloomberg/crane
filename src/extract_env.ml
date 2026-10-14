@@ -998,7 +998,7 @@ let module_filename mp =
     renders whose documents it discards. *)
 let discover_passes ~interface d : ml_structure Pipeline_trace.pass list * ml_structure Pipeline_trace.pass list =
   let open Pipeline_trace in
-  ( [effect "prepare" d.prepare],
+  ( [effect "prepare" d.prepare; effect "plan_callables" d.plan_callables],
     effect "render_impl" (fun s -> ignore (d.pp_struct s))
     :: (if interface then [effect "render_intf" (fun s -> ignore (d.pp_hstruct s))] else []) )
 

@@ -61,6 +61,13 @@ val gen_dfuns_dual : ml_fix_def list -> generated_fun list
 (** Generate a single Dterm function, translating its body once. *)
 val gen_decl_for_pp_dual : GlobRef.t -> ml_ast -> ml_type -> generated_fun
 
+(** [plan_function ~fixpoint r b ty] plans and records the head of the
+    function [r] -- [b] its body, [ty] its type -- as generating it would,
+    without generating its body ({!Callable_abi}).  A member of a recursive
+    group is always generated as a function; a constant only where its C++
+    type is one. *)
+val plan_function : fixpoint:bool -> GlobRef.t -> ml_ast -> ml_type -> unit
+
 (** {2 Inductive Type Generation} *)
 
 (** Generate C++ code for a record type. *)
