@@ -17,11 +17,12 @@
 
     A callee has one plan, wherever it is generated: a function rendered
     inside a struct and the same function at namespace scope take one head.
-    Every plan is recorded before anything is rendered, by planning the
-    unit's callables ({!Cpp.plan_callables}), and frozen then.  Generating a
-    declaration must reproduce its plan exactly, and a declaration generated
-    with no plan is one the planning missed.  Both are reported under
-    [CRANE_CHECK_IR]. *)
+    Every plan is decided before anything is rendered, by planning the
+    unit's callables ({!Cpp.plan_callables}), and installed then
+    ({!install}); generating a declaration only checks it ({!check}).
+    Generating a declaration must reproduce its plan exactly, and a
+    declaration generated with no plan is one the planning missed.  Both are
+    reported under [CRANE_CHECK_IR]. *)
 
 (** A parameter of one head. *)
 module Template_param : sig
@@ -125,29 +126,25 @@ val validate : t -> string list
 
 (** {2 The frozen map} *)
 
-(** Records the plan of a declaration planned or being generated.  One
-    already recorded must be reproduced exactly; under [CRANE_CHECK_IR] a
-    different one is an error. *)
-val record : t -> unit
+(** [install callables assumed] makes [callables] the unit's plans, and
+    [assumed] the callables a function of the unit with none is assumed to
+    deduce ({!deduces_callable}).  Done once, before anything is rendered:
+    from here the plans are an immutable program fact.  Under
+    [CRANE_CHECK_IR] a callee planned twice with two heads is an error. *)
+val install :
+  t list -> (Names.GlobRef.t * Param_pos.orig Param_pos.pos list) list -> unit
 
-(** Planning records plans; {!freeze} ends it, before anything is rendered.
-    Once frozen the map is an immutable program fact: a declaration generated
-    with no plan recorded is a [CRANE_CHECK_IR] error and adds nothing. *)
-val open_for_planning : unit -> unit
+(** Checks the head a declaration is generated with against its plan, adding
+    nothing: under [CRANE_CHECK_IR] a different head, or a declaration
+    generated with no plan, is an error. *)
+val check : t -> unit
 
-val freeze : unit -> unit
-
-(** The recorded plan of a declaration. *)
+(** The installed plan of a declaration. *)
 val lookup : Names.GlobRef.t -> t option
-
-(** Installs, for each function of the unit no plan is recorded for, the
-    declared positions of the callables its call sites assume it deduces
-    ({!Target_plan.t.assumed_callables}). *)
-val assume : (Names.GlobRef.t * Param_pos.orig Param_pos.pos list) list -> unit
 
 (** Whether a call to [r] passes the callable it declares at [pos] to a
     deduced [F &&]: as [r]'s plan says ({!deduces_callable_at}), or where it
-    has none as its call sites assume ({!assume}). *)
+    has none as its call sites assume ({!install}). *)
 val deduces_callable : Names.GlobRef.t -> Param_pos.orig Param_pos.pos -> bool
 
 (** The plan of a callable Crane does not generate here -- a custom mapping,
@@ -169,7 +166,7 @@ val foreign :
   unit ->
   t
 
-(** The recorded plan of [callee], or else its {!foreign} one.  A method's
+(** The installed plan of [callee], or else its {!foreign} one.  A method's
     call is still planned against its foreign one: it is written as its
     function's call would be, then printed on the receiver without the
     variables the receiver carries or {!dropped_positions}. *)

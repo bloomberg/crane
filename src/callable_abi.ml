@@ -176,17 +176,13 @@ let same_head a b =
 
 let equal a b = GlobRef.UserOrd.equal a.callee b.callee && same_head a b
 
-let plans : t GlobRef.Map_env.t ref = ref GlobRef.Map_env.empty
-let frozen = ref false
-let open_for_planning () = frozen := false
-let freeze () = frozen := true
+let plans : t GlobRef.Map_env.t ref = State.cell State.Extraction GlobRef.Map_env.empty
+
+let assumed : Param_pos.orig Param_pos.pos list Ref.User.Map.t ref =
+  State.cell State.Extraction Ref.User.Map.empty
 
 let () =
   Table.register_census "callable ABI plans" (fun () -> GlobRef.Map_env.cardinal !plans)
-let () =
-  State.on_reset State.Extraction (fun () ->
-      plans := GlobRef.Map_env.empty;
-      frozen := false )
 
 let describe abi =
   let kind = function
@@ -216,35 +212,45 @@ let phase_name = function
   | Common.Emit Common.Impl -> "emitting the implementation"
   | Common.Emit Common.Intf -> "emitting the interface"
 
-let record abi =
+let validated abi =
   List.iter
     (fun problem ->
       Probe.violation "callable ABI"
         Pp.(str "the plan of " ++ GlobRef.print abi.callee ++ str ": " ++ str problem) )
-    (validate abi);
-  match GlobRef.Map_env.find_opt abi.callee !plans with
-  | Some old when same_head old abi -> ()
-  | Some old ->
+    (validate abi)
+
+(* [abi], decided after [old], against it. *)
+let reproduces old abi =
+  if not (same_head old abi) then
     Probe.violation "callable ABI"
       Pp.(
-        str "the declaration of " ++ GlobRef.print abi.callee
-        ++ str " was generated with the head <" ++ str (describe abi)
-        ++ str "> where its plan, recorded " ++ str (phase_name old.phase)
-        ++ str ", says <" ++ str (describe old) ++ str ">; generated "
-        ++ str (phase_name abi.phase) )
-  | None when !frozen ->
+        str "the declaration of " ++ GlobRef.print abi.callee ++ str " was decided with the head <"
+        ++ str (describe abi) ++ str "> " ++ str (phase_name abi.phase)
+        ++ str " where its plan, decided " ++ str (phase_name old.phase) ++ str ", says <"
+        ++ str (describe old) ++ str ">" )
+
+let install callables assume =
+  plans :=
+    List.fold_left
+      (fun m abi ->
+        validated abi;
+        match GlobRef.Map_env.find_opt abi.callee m with
+        | Some old -> reproduces old abi; m
+        | None -> GlobRef.Map_env.add abi.callee abi m )
+      GlobRef.Map_env.empty callables;
+  assumed := List.fold_left (fun m (r, ps) -> Ref.User.Map.add r ps m) Ref.User.Map.empty assume
+
+let lookup r = GlobRef.Map_env.find_opt r !plans
+
+let check abi =
+  validated abi;
+  match lookup abi.callee with
+  | Some old -> reproduces old abi
+  | None ->
     Probe.violation "callable ABI"
       Pp.(
         str "the declaration of " ++ GlobRef.print abi.callee
         ++ str " was generated with no plan: planning the callables missed it" )
-  | None -> plans := GlobRef.Map_env.add abi.callee abi !plans
-
-let lookup r = GlobRef.Map_env.find_opt r !plans
-
-let assumed : Param_pos.orig Param_pos.pos list Ref.User.Map.t ref =
-  State.cell State.Extraction Ref.User.Map.empty
-
-let assume l = assumed := List.fold_left (fun m (r, ps) -> Ref.User.Map.add r ps m) Ref.User.Map.empty l
 
 let deduces_callable r pos =
   match lookup r with

@@ -1096,7 +1096,7 @@ let gen_dfun n b cty ty temps =
   let abi, temps, rewrite = plan_scope_head n ty scope in
   (* The head was planned before anything was generated; what is generated
      must be it. *)
-  Callable_abi.record abi;
+  Callable_abi.check abi;
   let inner, env =
     with_itree_mode_for ty @@ fun () ->
   let {

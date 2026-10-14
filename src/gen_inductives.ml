@@ -705,7 +705,7 @@ let gen_single_method name vars ((func_ref, _, ty, this_pos) as candidate) =
      function returns: see {!method_scope}. *)
   with_itree_mode_for ty @@ fun () ->
   let h = method_head vars s in
-  Callable_abi.record (method_plan func_ref s h);
+  Callable_abi.check (method_plan func_ref s h);
   let func_name = Common.id_of_global Term func_ref in
   let {
     ms_ty = ty;

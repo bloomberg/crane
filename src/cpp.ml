@@ -2262,7 +2262,7 @@ let prepare_structure s =
     not, and neither is a wrapper module's monadic constant, which no render
     generates at all.  Planning one of those would hand its call sites a head
     other than the one they assume; missing one is reported when it is
-    generated ({!Callable_abi.record}).
+    generated ({!Callable_abi.check}).
 
     A method is planned where its inductive is declared, for each function
     registered as one ({!Gen_decls.plan_method}): at the variables of an
