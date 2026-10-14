@@ -329,6 +329,28 @@ let plan_function_head n ty temps signature =
        ~callee:n ~scheme:(Mlutil.reference_scheme n) temps );
   (temps, rewrite)
 
+(** What a function's body is generated under, settled before the body:
+    its return type, its parameters and the environment that names them, the
+    body as the signature renumbers it, and the head before the relaxations
+    ({!plan_function_head}). *)
+type body_scope = {
+  bs_cod : cpp_type;
+  bs_env : env;
+  bs_all_ids : (Id.t * ml_type) list;
+  bs_all_params : (ml_ident * ml_type) list;
+  bs_ids : (Id.t * cpp_type) list;
+  bs_missing : (ml_ident * ml_type) list;
+  bs_b : ml_ast;
+  bs_typeclass_temps_basic : (template_type * Id.t) list;
+  bs_regular_temps : (template_type * Id.t) list;
+  bs_temps : (template_type * Id.t) list;
+  bs_promoted_var_resolutions : (Id.t * cpp_type) list;
+  bs_owned_flags : bool list;
+  bs_rec_call : cpp_expr;
+  bs_gen_body_stmts : env -> (cpp_expr -> cpp_stmt) -> ml_ast -> cpp_stmt list;
+  bs_no_pure : bool;
+}
+
 (** Generate a C++ function definition from an ML function body.
 
     When the body has fewer lambda binders than the ML type's domain (i.e. it
@@ -347,17 +369,15 @@ let plan_function_head n ty temps signature =
     @param ty    the original ML type (used for domain decomposition and type
                  inference)
     @param temps template type parameters *)
-let gen_dfun n b cty ty temps =
+let dfun_body_scope n b cty ty temps =
   let dom, cod =
     match cty with Tfun (d, c) -> (d, c) | t -> ([ Tvoid ], t)
   in
-  let callers_itree_mode = (!tctx).itree_mode in
   (* Suppress __attribute__((pure)) for functions whose ML return type is
      monadic — these perform side effects even though the C++ return type
      may look pure after type erasure. *)
   let no_pure = is_monadic_ml_type (ml_codomain ty) || ast_may_throw b in
-  let (temps, rewrite), inner, env =
-    with_itree_mode_for ty @@ fun () ->
+  with_itree_mode_for ty @@ fun () ->
   (* Void-ify unit codomain: unit as return type maps to C++ void.
      Check the ML result type (unwrapping monad if present) to determine
      if the function returns unit. Then recursively replace the unit enum
@@ -1023,12 +1043,52 @@ let gen_dfun n b cty ty temps =
           if is_hkt_temp t then None else Some t )
         regular_temps
   in
-  (* Planned as the declaration's callers see it: outside the itree mode
-     and the type-variable scope its body is generated in. *)
-  let head =
-    with_itree_mode callers_itree_mode (fun () ->
-        with_type_vars [] (fun () ->
-            plan_function_head n ty temps (Dfun (mk_dfun n ~ret:cod ~no_pure (Ddef (ids, []))))))
+  {
+    bs_cod = cod;
+    bs_env = env;
+    bs_all_ids = all_ids;
+    bs_all_params = all_params;
+    bs_ids = ids;
+    bs_missing = missing;
+    bs_b = b;
+    bs_typeclass_temps_basic = typeclass_temps_basic;
+    bs_regular_temps = regular_temps;
+    bs_temps = temps;
+    bs_promoted_var_resolutions = promoted_var_resolutions;
+    bs_owned_flags = owned_flags;
+    bs_rec_call = rec_call;
+    bs_gen_body_stmts = gen_body_stmts;
+    bs_no_pure = no_pure;
+  }
+
+let gen_dfun n b cty ty temps =
+  let scope = dfun_body_scope n b cty ty temps in
+  (* Planned as the declaration's callers see it: outside the type-variable
+     scope its body is generated in. *)
+  let temps, rewrite =
+    with_type_vars [] (fun () ->
+        plan_function_head n ty scope.bs_temps
+          (Dfun (mk_dfun n ~ret:scope.bs_cod ~no_pure:scope.bs_no_pure (Ddef (scope.bs_ids, [])))))
+  in
+  let inner, env =
+    with_itree_mode_for ty @@ fun () ->
+  let {
+    bs_cod = cod;
+    bs_env = env;
+    bs_all_ids = all_ids;
+    bs_all_params = all_params;
+    bs_ids = ids;
+    bs_missing = missing;
+    bs_b = b;
+    bs_typeclass_temps_basic = typeclass_temps_basic;
+    bs_regular_temps = regular_temps;
+    bs_promoted_var_resolutions = promoted_var_resolutions;
+    bs_owned_flags = owned_flags;
+    bs_rec_call = rec_call;
+    bs_gen_body_stmts = gen_body_stmts;
+    bs_no_pure = no_pure;
+  } =
+    scope
   in
   (* Requires clause for typeclass constraints not yet implemented. *)
   (* Set current type variables for pattern matching lambda generation.
@@ -1374,7 +1434,7 @@ let gen_dfun n b cty ty temps =
         inner
     | _ -> inner
   in
-    (head, inner, env)
+    (inner, env)
   in
   let inner = rewrite inner in
   match temps with
