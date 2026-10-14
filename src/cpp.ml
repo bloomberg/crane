@@ -2410,6 +2410,10 @@ let plan_names s =
                    (List.init (Array.length p.ip_types) (fun j ->
                         name Cons (GlobRef.ConstructRef ((kn, i), j + 1)) )) )
              (Array.to_list ind.ind_packets) )
+        (* A record's fields, named as its struct spells them. *)
+        @ ( match ind.ind_kind with
+          | Record fields -> List.concat_map (fun (f, _) -> Option.cata (name Type) [] f) fields
+          | Standard | Coinductive | TypeClass _ -> [] )
       | Dtype (r, _, _) -> name Type r
       | Dterm (r, _, _) -> name Term r
       | Dfix fds -> List.concat_map (fun fd -> name Term fd.fd_ref) fds )
