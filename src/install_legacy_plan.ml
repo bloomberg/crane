@@ -63,6 +63,9 @@ let check_installed (facts : Program_facts.t) (plan : Target_plan.t) =
           fail "template-parameter kinds" )
       plan.template_kinds;
     if not (Module_plan.installed plan.modules) then fail "module plan";
+    List.iter
+      (fun (mp, s) -> if not (String.equal (Common.emitted_module_name mp) s) then fail "module names")
+      plan.representation.module_names;
     (* Each was decided when it was planned, so the kind asked at is not
        consulted again. *)
     List.iter

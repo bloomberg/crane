@@ -30,6 +30,9 @@ type kind_decision = {
 (** How the unit's declarations are spelled and stored, decided once its
     layout is ({!with_layout}). *)
 type representation = {
+  module_names : (Names.ModPath.t * string) list;
+      (** The C++ name of each module the unit declares, in declaration
+          order. *)
   names : (Names.GlobRef.t * string) list;
       (** The C++ name of each global the unit declares, in declaration
           order. *)

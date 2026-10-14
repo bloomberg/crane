@@ -2678,6 +2678,23 @@ let plan_pointer_fields s =
       | Dind _ | Dtype _ | Dterm _ | Dfix _ -> [] )
     (declarations s)
 
+let plan_module_names s =
+  let rec elems parent sel =
+    List.concat_map
+      (fun (l, se) ->
+        match se with
+        | SEmodule {ml_mod_expr; _} ->
+          let mp = MPdot (parent, l) in
+          (mp, Common.emitted_module_name mp) :: module_expr mp ml_mod_expr
+        | SEdecl _ | SEmodtype _ -> [] )
+      sel
+  and module_expr mp = function
+    | MEstruct (_, sel) -> elems mp sel
+    | MEfunctor (_, _, body) -> module_expr mp body
+    | MEident _ | MEapply _ -> []
+  in
+  List.concat_map (fun (mp, sel) -> elems mp sel) s
+
 let plan_field_names s =
   List.concat_map
     (function

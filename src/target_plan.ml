@@ -15,6 +15,7 @@ type kind_decision = {
 }
 
 type representation = {
+  module_names : (ModPath.t * string) list;
   names : (GlobRef.t * string) list;
   field_names : (GlobRef.t * Id.t list) list;
   pointer_fields : (GlobRef.t * string * (int * bool) list) list;
@@ -272,7 +273,7 @@ let plan (_ : Program_facts.t) struc =
     inductive_kinds = aligned @ value_use_demotion aligned struc;
     template_kinds = [];
     modules = Module_plan.empty;
-    representation = {names = []; field_names = []; pointer_fields = []; unmerged_wrappers = [];
+    representation = {module_names = []; names = []; field_names = []; pointer_fields = []; unmerged_wrappers = [];
         promoted_inductives = [];
         accessors = [];
         nested_structs = [];
@@ -311,6 +312,9 @@ let equal a b =
        (fun (r, k) (r', k') -> GlobRef.UserOrd.equal r r' && Tparam_kinds.equal k k')
        a.template_kinds b.template_kinds
   && Module_plan.equal a.modules b.modules
+  && List.equal
+       (fun (mp, s) (mp', s') -> ModPath.equal mp mp' && String.equal s s')
+       a.representation.module_names b.representation.module_names
   && List.equal
        (fun (r, s) (r', s') -> GlobRef.UserOrd.equal r r' && String.equal s s')
        a.representation.names b.representation.names

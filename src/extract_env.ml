@@ -1021,8 +1021,9 @@ let layout_pass_names =
     install_callables ]
 
 (** Settle the unit's layout -- where each declaration lives and what it is
-    called ({!Module_plan}) -- then the names of the globals it declares, in
-    declaration order ({!Cpp.plan_names}), and of its constructors' fields
+    called ({!Module_plan}) -- then the names of the modules and the globals
+    it declares, in declaration order ({!Cpp.plan_module_names},
+    {!Cpp.plan_names}), and of its constructors' fields
     ({!Cpp.plan_field_names}), which of those fields are stored behind the
     pointer ({!Cpp.plan_pointer_fields}), which wrapper structs hold
     declarations ({!Cpp.plan_unmerged_wrappers}), and which constants are
@@ -1040,6 +1041,7 @@ let plan_layout struc =
   let modules = Cpp.prepare_structure struc in
   Install_legacy_plan.install_modules modules;
   Pipeline_trace.event "layout" plan_names;
+  let module_names = Cpp.plan_module_names struc in
   let names = Cpp.plan_names struc in
   Pipeline_trace.event "layout" plan_field_names;
   let field_names = Cpp.plan_field_names struc in
@@ -1071,7 +1073,8 @@ let plan_layout struc =
   Pipeline_trace.event "layout" install_callables;
   Install_legacy_plan.install_callables callables assumed;
   ( modules,
-    { Target_plan.names;
+    { Target_plan.module_names;
+      names;
       field_names;
       pointer_fields;
       unmerged_wrappers;

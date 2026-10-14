@@ -47,6 +47,10 @@ val plan_callables : ?reversed:bool -> Miniml.ml_structure -> Callable_abi.t lis
     not among them. *)
 val plan_names : Miniml.ml_structure -> (Names.GlobRef.t * string) list
 
+(** The C++ name of each module the unit declares, a functor's body's
+    included, decided in declaration order ({!Common.emitted_module_name}). *)
+val plan_module_names : Miniml.ml_structure -> (Names.ModPath.t * string) list
+
 (** The C++ names of the fields of each constructor whose struct the unit
     generates -- an inductive's, not a class's or a
     record's, nor a custom type's -- decided from the binder names the
