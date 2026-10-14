@@ -1033,6 +1033,73 @@ let maybe_record_boxed_recursive_ind ~ind_ref ml_ty =
   if ml_type_recurses_through_boxed_container ~ind_ref ml_ty then
     Table.add_boxed_recursive_ind ind_ref
 
+(** The type a constructor struct of the inductive [name] stores field [ty]
+    at, under the variable names [var_names]: recursive occurrences and,
+    under [Crane BoxedFields], held inductives behind the smart pointer.
+    Every reading of a field's storage -- the struct, its factories, its
+    conversion to another instantiation, the pointer fields planned before
+    rendering -- comes from here.  Scoped-arena redesign: recursive fields
+    are always the ordinary smart pointer ([Tshared_ptr], rendered as
+    std::shared_ptr / crane::rc); arena-ness is decided per-object at the
+    factory call site, not baked into the field type. *)
+let constructor_field_storage ~name ~is_coinductive var_names ty =
+  let cpp_ty =
+    convert_ml_type_to_cpp_type (empty_env ()) ~ns:(Ref.User.Set.singleton name) var_names ty
+  in
+  (* Wrap fields that contain a nested self-reference in
+     their type arguments (e.g. list(tree(A)) inside tree).
+     The cycle is broken at the field level using a bare
+     (no-ns) type so the outer shared_ptr provides pointer
+     indirection without extra inner shared_ptrs for elements.
+     E.g. option(chain) → shared_ptr<optional<chain>>,
+          list(tree)   → shared_ptr<List<tree>>.
+     The body sees *a0 at the bare type directly with no
+     element-wise conversion needed. *)
+  (* Completeness-aware element wrapping (WRAP.md). *)
+  maybe_record_boxed_recursive_ind ~ind_ref:name ty;
+  let bare_cpp_ty = convert_ml_type_to_cpp_type (empty_env ()) var_names ty in
+  if ml_type_has_nested_self_ref ~ind_ref:name ty && not is_coinductive then
+    (* If the field recurses THROUGH a boxed-element container, the
+       element box already breaks the completeness cycle, so the outer
+       shared_ptr/arena pointer is redundant: store the container by
+       value. *)
+    if ml_type_recurses_through_boxed_container ~ind_ref:name ty then bare_cpp_ty
+    else Tshared_ptr bare_cpp_ty
+  else
+    match cpp_ty with
+    | Tshared_ptr _ -> cpp_ty
+    | _ when (not is_coinductive) && boxes_field ty -> Tshared_ptr bare_cpp_ty
+    | _ when (not is_coinductive) && boxes_param_field ~owner:name ty && bare_cpp_ty <> Tany ->
+      Tid_external (Crane_rt.field, [bare_cpp_ty])
+    | _ -> cpp_ty
+
+(** A field's storage type at the inductive's own variables [vars], erased
+    where the inductive has none. *)
+let constructor_field_at_own_vars vars cpp_ty =
+  if vars = [] then
+    match cpp_ty with
+    | Tshared_ptr _ -> tvar_erase_type cpp_ty
+    | _ when has_unnamed_tvar cpp_ty -> Tany
+    | _ -> cpp_ty
+  else cpp_ty
+
+(** The fields of a constructor of [name], of types [tys], that its struct
+    stores behind the smart pointer, each with whether it holds [name]
+    itself: what {!Loopify} reads off the struct, decided before it is
+    generated. *)
+let constructor_pointer_fields ~name ~is_coinductive vars tys =
+  List.concat
+    (List.mapi
+       (fun i ty ->
+         match
+           constructor_field_at_own_vars vars
+             (constructor_field_storage ~name ~is_coinductive vars ty)
+         with
+         | Tshared_ptr (Tglob (r, _, _)) when globref_equal r name -> [(i, true)]
+         | Tshared_ptr _ -> [(i, false)]
+         | _ -> [] )
+       tys )
+
 (** Generate the C++ struct definition for an inductive type.
 
     Produces one of three shapes depending on the inductive:
@@ -1253,59 +1320,19 @@ let gen_ind_header_v2
       end else
 
 
-      (* The type a constructor struct stores field [ty] at, under the
-         variable names [var_names]: recursive occurrences and, under
-         [Crane BoxedFields], held inductives behind the smart pointer.  Every
-         reading of a field's storage -- the struct, its factories, its
-         conversion to another instantiation -- comes from here.  Scoped-arena
-         redesign: recursive fields are always the ordinary smart pointer
-         ([Tshared_ptr], rendered as std::shared_ptr / crane::rc); arena-ness
-         is decided per-object at the factory call site, not baked into the
-         field type. *)
+      (* A field stored as [crane::field] needs its runtime header in the
+         file the struct is rendered into. *)
       let field_storage_ty var_names ty =
-        let cpp_ty =
-          convert_ml_type_to_cpp_type (empty_env ()) ~ns:(Ref.User.Set.singleton name)
-            var_names
-            ty
-        in
-        (* Wrap fields that contain a nested self-reference in
-           their type arguments (e.g. list(tree(A)) inside tree).
-           The cycle is broken at the field level using a bare
-           (no-ns) type so the outer shared_ptr provides pointer
-           indirection without extra inner shared_ptrs for elements.
-           E.g. option(chain) → shared_ptr<optional<chain>>,
-                list(tree)   → shared_ptr<List<tree>>.
-           The body sees *a0 at the bare type directly with no
-           element-wise conversion needed. *)
-        (* Completeness-aware element wrapping (WRAP.md). *)
-        maybe_record_boxed_recursive_ind ~ind_ref:name ty;
-        let bare_cpp_ty = convert_ml_type_to_cpp_type (empty_env ()) var_names ty in
-        if ml_type_has_nested_self_ref ~ind_ref:name ty && not is_coinductive then
-          (* If the field recurses THROUGH a boxed-element container, the
-             element box already breaks the completeness cycle, so the outer
-             shared_ptr/arena pointer is redundant: store the container by
-             value. *)
-          if ml_type_recurses_through_boxed_container ~ind_ref:name ty then bare_cpp_ty
-          else Tshared_ptr bare_cpp_ty
-        else
-          match cpp_ty with
-          | Tshared_ptr _ -> cpp_ty
-          | _ when (not is_coinductive) && boxes_field ty -> Tshared_ptr bare_cpp_ty
-          | _ when (not is_coinductive) && boxes_param_field ~owner:name ty && bare_cpp_ty <> Tany ->
-            Table.demand_header (Table.Runtime Crane_rt.field_header);
-            Tid_external (Crane_rt.field, [bare_cpp_ty])
-          | _ -> cpp_ty
+        let t = constructor_field_storage ~name ~is_coinductive var_names ty in
+        ( match t with
+          | Tid_external (f, _) when String.equal f Crane_rt.field ->
+            Table.demand_header (Table.Runtime Crane_rt.field_header)
+          | _ -> () );
+        t
       in
-      (* A field's storage type at the inductive's own variables, erased
-         where the inductive has none. *)
       let compute_field_cpp_ty ty =
         let cpp_ty = field_storage_ty vars ty in
-        if vars = [] then
-          match cpp_ty with
-          | Tshared_ptr _ -> tvar_erase_type cpp_ty
-          | _ when has_unnamed_tvar cpp_ty -> Tany
-          | _ -> cpp_ty
-        else cpp_ty
+        constructor_field_at_own_vars vars cpp_ty
       in
       (* A coinductive's constructor struct holds values of the coinductive
          itself and of its mutual siblings, each incomplete inside its own
