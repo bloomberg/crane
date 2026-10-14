@@ -563,11 +563,12 @@ val projection_arity : GlobRef.t -> int
 (** Get projection info (inductive and arity). *)
 val projection_info : GlobRef.t -> inductive * int (* arity *)
 
-(** Initialize higher-order projections table. *)
-val init_higher_order_projections : unit -> unit
+(** Install the unit's projections used as function values
+    ({!Program_facts.higher_order_projections}). *)
+val set_higher_order_projections : Ref.User.Set.t -> unit
 
-(** Mark reference as higher-order projection. *)
-val mark_higher_order_projection : GlobRef.t -> unit
+(** The installed projections used as function values. *)
+val higher_order_projections : unit -> Ref.User.Set.t
 
 (** Check if reference is higher-order projection. *)
 val is_higher_order_projection : GlobRef.t -> bool
@@ -1197,11 +1198,12 @@ val extract_callback : string option -> qualid -> unit
 (** Get list of custom imports. *)
 val get_custom_imports : unit -> string list
 
-(** Mark custom extraction as used. *)
-val mark_custom_used : GlobRef.t -> unit
+(** Install the custom references the unit uses
+    ({!Program_facts.used_customs}), whose imports its header includes. *)
+val set_used_customs : Ref.User.Set.t -> unit
 
-(** Reset used custom imports tracking. *)
-val reset_used_custom_imports : unit -> unit
+(** The installed custom references the unit uses. *)
+val used_customs : unit -> Ref.User.Set.t
 
 (** Extract constant with inline custom code.
     @param inline [true] to mark the constant as Inline (inlined at call sites),

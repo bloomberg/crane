@@ -137,7 +137,10 @@ val show_extraction : pstate:Declare.Proof.t -> unit
 (** Rewrites and analyses of the extracted structure, once per extraction. *)
 val core_pass_names : string list
 
-(** Analyses of one unit's structure, before its discovery pass. *)
+(** Analysing and planning one unit, before anything else of it runs. *)
+val plan_pass_names : string list
+
+(** The unit's remaining preparation, before its discovery pass. *)
 val unit_pass_names : string list
 
 (** One unit's discovery pass, whose renders are discarded. *)

@@ -1,0 +1,38 @@
+(* Copyright 2025 Bloomberg Finance L.P. *)
+(* Distributed under the terms of the GNU LGPL v2.1 license. *)
+
+open Miniml
+
+let install struc (facts : Program_facts.t) (plan : Target_plan.t) =
+  Table.set_used_customs facts.used_customs;
+  Table.set_higher_order_projections facts.higher_order_projections;
+  List.iter
+    (fun ({block; kind; _} : Target_plan.kind_decision) ->
+      Table.add_inductive_kind block kind;
+      let write kn ind = if Names.MutInd.UserOrd.equal kn block then ind.ind_kind <- kind in
+      Modutil.struct_iter
+        (function Dind (kn, ind) -> write kn ind | _ -> ())
+        (function Sind (kn, ind) -> write kn ind | _ -> ())
+        (fun _ -> ())
+        struc )
+    plan.inductive_kinds
+
+let check_installed (facts : Program_facts.t) (plan : Target_plan.t) =
+  if Sys.getenv_opt "CRANE_CHECK_IR" <> None then begin
+    let fail what =
+      CErrors.anomaly
+        Pp.(str ("Crane: the installed " ^ what ^ " no longer agree with the plan."))
+    in
+    (* Emitting a custom marks it used too, so rendering may add to these;
+       what the structure names must still be there. *)
+    if not (Ref.User.Set.subset facts.used_customs (Table.used_customs ())) then
+      fail "used custom references";
+    if not (Ref.User.Set.equal (Table.higher_order_projections ()) facts.higher_order_projections)
+    then fail "higher-order projections";
+    List.iter
+      (fun ({block; _} : Target_plan.kind_decision) ->
+        let installed = Table.inductive_kind_of (Names.GlobRef.IndRef (block, 0)) in
+        if not (Option.equal Target_plan.kind_equal installed (Target_plan.kind_of plan block))
+        then fail "inductive kinds" )
+      plan.inductive_kinds
+  end

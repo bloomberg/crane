@@ -1227,245 +1227,6 @@ let format_file_inplace (filename : string) : unit =
         (format_timed_out filename
            (Subprocess.run ~timeout formatter formatter_args) )
 
-(** Scans the ML structure and marks all custom-extracted GlobRefs as "used"
-    so their associated [From "header.h"] imports are included. Must run before
-    [header()] which reads the used-import set. *)
-let mark_used_customs struc =
-  Table.reset_used_custom_imports ();
-  let mark r = if Table.is_custom r then Table.mark_custom_used r in
-  Modutil.struct_iter
-    (Modutil.decl_iter_references mark mark mark)
-    (Modutil.spec_iter_references mark mark mark)
-    (fun _ -> ())
-    struc
-
-(** Scans the ML structure for projections used in higher-order positions
-    (passed as function values rather than used as field accessors). *)
-let mark_higher_order_projections struc =
-  Table.init_higher_order_projections ();
-  let rec scan_ast = function
-    | MLglob {callee = r; _} when Table.is_projection r ->
-      Table.mark_higher_order_projection r
-    | a -> Mlutil.ast_iter scan_ast a
-  in
-  let scan_decl d =
-    List.iter (fun fd -> scan_ast fd.fd_body) (Mlutil.term_defs d)
-  in
-  Modutil.struct_iter scan_decl (fun _ -> ()) (fun _ -> ()) struc
-
-(** Give a functor application's inductives the kind the functor's own body
-    gave them.
-
-    [Module FN := F N] does not alias [F]'s declarations: Rocq builds a second
-    copy of every inductive in the body, with a kernel name of its own, and
-    Crane classifies that copy independently.  The two answers can differ --
-    instantiation registers a class declared inside a functor in Rocq's type
-    class database while the body's own copy stays unregistered, so [F.Cl] is
-    a {!Record} and [FN.Cl] a {!TypeClass}.  One declaration with two kinds is
-    a disagreement every later reader inherits: the struct is emitted from the
-    body's copy, which is the one that exists in C++, while a call site
-    reading the instantiated copy treats its instances as template arguments
-    and spells [FN::template use<FN::inst>()].
-
-    The body's copy governs, being the one emitted.  Only the classification
-    is taken; the field references stay the instantiated copy's, as those are
-    the ones its projections are spelled with. *)
-let align_functor_instance_kinds struc =
-  (* Every module body's inductive kinds, keyed by the module's own path and
-     the inductive's label -- the pair a functor application can name. *)
-  let body_kinds : (string * Label.t, inductive_kind) Hashtbl.t =
-    Hashtbl.create 16
-  in
-  let rec body_of (me : Miniml.ml_module_expr) =
-    match me with MEfunctor (_, _, me) -> body_of me | me -> me
-  in
-  let rec collect_expr (me : Miniml.ml_module_expr) =
-    match me with
-    | MEstruct (mp, sel) ->
-      List.iter
-        (fun (l, se) ->
-          match se with
-          | SEdecl (Dind (_, ind)) ->
-            Hashtbl.replace body_kinds (ModPath.to_string mp, l) ind.ind_kind
-          | SEmodule m -> collect_expr (body_of m.ml_mod_expr)
-          | _ -> () )
-        sel
-    | MEfunctor (_, _, me) -> collect_expr me
-    | MEident _ | MEapply _ -> ()
-  in
-  (* The functor an application applies, however many arguments it takes. *)
-  let rec applied_functor (me : Miniml.ml_module_expr) =
-    match me with
-    | MEapply (me, _) -> applied_functor me
-    | MEident mp -> Some mp
-    | MEstruct _ | MEfunctor _ -> None
-  in
-  let align_sig mp_functor (mt : Miniml.ml_module_type) =
-    match mt with
-    | MTsig (_, sigl) ->
-      List.iter
-        (fun (l, sp) ->
-          match sp with
-          | Spec (Sind (kn, ind)) -> (
-            match
-              Hashtbl.find_opt body_kinds (ModPath.to_string mp_functor, l)
-            with
-            | Some body_kind -> (
-              let aligned =
-                match (body_kind, ind.ind_kind) with
-                | TypeClass _, Record fields -> Some (TypeClass fields)
-                | Record _, TypeClass fields -> Some (Record fields)
-                | _ -> None
-              in
-              match aligned with
-              | Some k ->
-                Table.add_inductive_kind kn k;
-                ind.ind_kind <- k
-              | None -> () )
-            | None -> () )
-          | Spec _ | Smodule _ | Smodtype _ -> () )
-        sigl
-    | MTident _ | MTfunsig _ | MTwith _ -> ()
-  in
-  let rec walk_expr (me : Miniml.ml_module_expr) =
-    match me with
-    | MEstruct (_, sel) -> List.iter walk_elem sel
-    | MEfunctor (_, _, me) -> walk_expr me
-    | MEident _ | MEapply _ -> ()
-  and walk_elem (_l, se) =
-    match se with
-    | SEmodule m ->
-      Option.iter
-        (fun mp -> align_sig mp m.ml_mod_type)
-        (applied_functor m.ml_mod_expr);
-      walk_expr m.ml_mod_expr
-    | SEdecl _ | SEmodtype _ -> ()
-  in
-  List.iter
-    (fun (_mp, sel) ->
-      List.iter
-        (fun (_l, se) ->
-          match se with
-          | SEmodule m -> collect_expr (body_of m.ml_mod_expr)
-          | _ -> () )
-        sel )
-    struc;
-  List.iter (fun (_mp, sel) -> List.iter walk_elem sel) struc
-
-(** Demote a record classified as a type class back to a plain struct when the
-    structure uses it as a value.
-
-    A record with a [Type]-valued field models an algebraic structure -- a
-    [Monoid] whose carrier and operations are resolved statically -- and is
-    emitted as a C++ concept, which its instances satisfy as types.  But the
-    same record can also be packed as an existential and handled as data ([list
-    dyn]): a concept cannot be a list element, and the value carries its own
-    type, so it has to be a struct with the promoted field erased.
-
-    A type argument is the signal: an instance used statically appears as a
-    definition's parameter, which becomes a template parameter, and never
-    inside another type's arguments. *)
-let demote_value_typeclasses struc =
-  let demoted = ref Mindmap_env.empty in
-  let rec scan_arg t =
-    match t with
-    | Tglob ((GlobRef.IndRef (kn, _) as r), l, _) ->
-      if Table.is_typeclass r then demoted := Mindmap_env.add kn () !demoted;
-      List.iter scan_arg l
-    | Tglob (_, l, _) -> List.iter scan_arg l
-    | Tarr (a, b) ->
-      scan_arg a;
-      scan_arg b
-    | Tmeta {contents = Some t} -> scan_arg t
-    | _ -> ()
-  in
-  let rec scan_type = function
-    | Tglob (_, l, _) -> List.iter scan_arg l
-    | Tarr (a, b) ->
-      scan_type a;
-      scan_type b
-    | Tmeta {contents = Some t} -> scan_type t
-    | _ -> ()
-  in
-  (* A constructor field is data outright, so a class named as the field's own
-     type is used as data too -- not only one buried in its arguments.  A
-     class's own field is not: a superclass field is what a concept refines,
-     and demoting it would turn the refinement into a member. *)
-  let scan_ind ind =
-    let scan_field =
-      match ind.ind_kind with TypeClass _ -> scan_type | _ -> scan_arg
-    in
-    Array.iter
-      (fun p -> Array.iter (List.iter scan_field) p.ip_types)
-      ind.ind_packets
-  in
-  (* A class value a definition computes from data is data: the struct an
-     instance is otherwise emitted as is fixed at compile time, so it cannot
-     stand for [mkDict base], whose fields depend on an argument.  Type and
-     instance arguments do not count -- those an instance struct takes as
-     template parameters. *)
-  let scan_computed_class ty =
-    let rec walk had_value = function
-      | Tarr (a, b) ->
-        let is_erased =
-          match a with
-          | Tdummy _ -> true
-          | Tglob (r, _, _) -> Table.is_typeclass r
-          | _ -> false
-        in
-        walk (had_value || not is_erased) b
-      | Tmeta {contents = Some t} -> walk had_value t
-      | Tglob ((GlobRef.IndRef (kn, _) as r), _, _) when had_value ->
-        if Table.is_typeclass r then demoted := Mindmap_env.add kn () !demoted
-      | _ -> ()
-    in
-    walk false ty
-  in
-  let scan_term_type u =
-    scan_type u;
-    scan_computed_class u
-  in
-  (* A body says the same thing with the types it annotates: [[natalg;
-     natalg]] is a [list alg] whether or not any declaration's type says so. *)
-  let scan_body body =
-    ignore
-      (Mlutil.ast_map_types
-         (fun t ->
-           scan_type t;
-           t )
-         body)
-  in
-  let scan_decl = function
-    | Dind (_, ind) -> scan_ind ind
-    | Dtype (_, _, u) -> scan_type u
-    | (Dterm _ | Dfix _) as d ->
-      List.iter
-        (fun fd ->
-          scan_term_type fd.fd_type;
-          scan_body fd.fd_body )
-        (Mlutil.term_defs d)
-  in
-  let scan_spec = function
-    | Sind (_, ind) -> scan_ind ind
-    | Stype (_, _, ot) -> Option.iter scan_type ot
-    | Sval (_, _, u) -> scan_term_type u
-  in
-  Modutil.struct_iter scan_decl scan_spec (fun _ -> ()) struc;
-  if not (Mindmap_env.is_empty !demoted) then begin
-    let demote_ind kn ind =
-      match ind.ind_kind with
-      | TypeClass fields when Mindmap_env.mem kn !demoted ->
-        Table.add_inductive_kind kn (Record fields);
-        ind.ind_kind <- Record fields
-      | _ -> ()
-    in
-    Modutil.struct_iter
-      (function Dind (kn, ind) -> demote_ind kn ind | _ -> ())
-      (function Sind (kn, ind) -> demote_ind kn ind | _ -> ())
-      (fun _ -> ())
-      struc
-  end
-
 (** Filter applied to [opened_libraries ()] in [print_structure_to_file] to
     prune back-edges in the inter-module include graph during separate
     extraction.  A back-edge exists when module X includes module Y but Y is
@@ -1548,20 +1309,42 @@ let optimize_struct to_appear struc =
   if Pipeline_trace.enabled () then ignore (observed_fingerprint ~stage:"core" struc);
   struc
 
+(** The steps of {!analyze_and_plan}, in order. *)
+let analyze_program = "analyze_program"
+let plan_target = "plan_target"
+let install_plan = "install_legacy_plan"
+let plan_pass_names = [analyze_program; plan_target; install_plan]
+
+(** Analyse the unit's structure ({!Program_facts}), decide what the backend
+    makes of it ({!Target_plan}), and install both for the readers not yet
+    converted.  Both are values computed from the structure alone; under
+    [CRANE_CHECK_IR] each is computed twice and the two must agree, which is
+    what lets a plan stand for its input. *)
+let analyze_and_plan struc =
+  Pipeline_trace.event "plan" analyze_program;
+  let facts = Program_facts.analyze struc in
+  Pipeline_trace.event "plan" plan_target;
+  let plan = Target_plan.plan facts struc in
+  if Sys.getenv_opt "CRANE_CHECK_IR" <> None then begin
+    let facts' = Program_facts.analyze struc in
+    if
+      not
+        (Program_facts.equal facts facts'
+        && Target_plan.equal plan (Target_plan.plan facts' struc))
+    then CErrors.anomaly Pp.(str "Crane: planning the same structure twice decided differently.")
+  end;
+  Pipeline_trace.event "plan" install_plan;
+  Install_legacy_plan.install struc facts plan;
+  (facts, plan)
+
 (** What a unit decides about its structure before discovery, in order.
     [namespace] is the C++ namespace of a separately extracted file. *)
 let unit_passes ~namespace : ml_structure Pipeline_trace.pass list =
   let open Pipeline_trace in
-  [ (* Which custom constants are actually used, so that only their
-       associated imports appear in the generated header. *)
-    effect "used_customs" mark_used_customs;
-    (* The used customs decide whether this unit can spawn a thread, which is
+  [ (* The used customs decide whether this unit can spawn a thread, which is
        what resolves a [Crane NonAtomicRc] or [Crane SingleThreaded]
        request. *)
     effect "non_atomic_rc" (fun _ -> Table.check_non_atomic_rc_request ());
-    effect "higher_order_projections" mark_higher_order_projections;
-    effect "functor_instance_kinds" align_functor_instance_kinds;
-    effect "value_typeclass_demotion" demote_value_typeclasses;
     (* This file's demands start from nothing, so that one file's needs don't
        leak into a later file of a separate extraction. *)
     effect "reset_demands" (fun _ -> Table.reset_demands ());
@@ -1591,6 +1374,7 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
       magic = false;
     }
   in
+  let facts, plan = analyze_and_plan struc in
   ignore (Pipeline_trace.run ~stage:"unit" (unit_passes ~namespace) struc);
   let planned = observed_fingerprint ~stage:"unit" struc in
   discover d struc;
@@ -1612,6 +1396,7 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   Table.freeze_demands ();
   check_no_late_decisions census_after_discovery;
   Generated_program.check_emission_matches_discovery ();
+  Install_legacy_plan.check_installed facts plan;
   report_structure_changes planned struc;
   let opened = List.filter !opened_filter (opened_libraries ()) in
   let ns_open =

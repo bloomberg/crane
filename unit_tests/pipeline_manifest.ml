@@ -10,6 +10,7 @@ let () =
   List.iter
     (fun (stage, names) -> Printf.printf "%s: %s\n" stage (String.concat " " names))
     [ ("core", Crane_plugin.Extract_env.core_pass_names);
+      ("plan", Crane_plugin.Extract_env.plan_pass_names);
       ("unit", Crane_plugin.Extract_env.unit_pass_names);
       ("discover", Crane_plugin.Extract_env.discover_pass_names);
       ("finish", Crane_plugin.Cpp_pipeline.pass_names) ]

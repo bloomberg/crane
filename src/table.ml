@@ -1469,9 +1469,16 @@ let get_type_class_args r =
 (* Table of projections used in higher-order positions (as function values).
    Projections not in this set are only accessed via record->field syntax and
    don't need standalone C++ function definitions. *)
-let (init_higher_order_projections, mark_higher_order_projection,
-     is_higher_order_projection) =
-  make_refset ~name:"higher_order_projections" ()
+let higher_order_projection_set = ref Ref.User.Set.empty
+
+let () =
+  register_census "higher_order_projections" (fun () ->
+      Ref.User.Set.cardinal !higher_order_projection_set );
+  on_reset (fun () -> higher_order_projection_set := Ref.User.Set.empty)
+
+let set_higher_order_projections s = higher_order_projection_set := s
+let higher_order_projections () = !higher_order_projection_set
+let is_higher_order_projection r = Ref.User.Set.mem r !higher_order_projection_set
 
 (** {2 Phantom type variables table} *)
 
@@ -3003,18 +3010,18 @@ let reset_extraction_blacklist () = Lib.add_leaf (reset_blacklist ())
 (* Track which custom GlobRefs are actually used during extraction. *)
 let used_refs = ref Ref.User.Set.empty
 
+let set_used_customs s = used_refs := s
+let used_customs () = !used_refs
+
+(* Reading a custom's replacement to emit it uses it, whether or not the
+   structure named it: an inline custom's text can name another. *)
 let mark_custom_used r =
   used_refs := Ref.User.Set.add r !used_refs;
-  (* When a constructor is used, also mark its parent inductive so that imports
-     registered on the IndRef are included. *)
   match r with
-  | GlobRef.ConstructRef (ip, _) ->
-    used_refs := Ref.User.Set.add (GlobRef.IndRef ip) !used_refs
+  | GlobRef.ConstructRef (ip, _) -> used_refs := Ref.User.Set.add (GlobRef.IndRef ip) !used_refs
   | _ -> ()
 
-let reset_used_custom_imports () = used_refs := Ref.User.Set.empty
-
-let () = on_reset reset_used_custom_imports
+let () = on_reset (fun () -> used_refs := Ref.User.Set.empty)
 
 (* Fires when a global already has a Crane extraction mapping and a *different*
    one is registered on top of it -- almost always the symptom of importing two
