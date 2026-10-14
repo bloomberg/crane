@@ -2268,17 +2268,19 @@ let prepare_structure s =
     The modules are walked as a render walks them, for the two things a head
     is converted against: the visibility stack, and the inductives local to
     the enclosing modules.  Only what the walk can already tell is generated
-    as a function is planned.  A method, a projection, a monadic group, a
-    functor's member and an alias's copy are left to be planned as they are
-    generated: planning a function no render generates would hand its call
-    sites a head other than the one they assume. *)
+    as a function is planned.  A method, a projection and an alias's copy are
+    left to be planned as they are generated, and a wrapper module's monadic
+    constant is not generated at all: planning a function no render generates
+    would hand its call sites a head other than the one they assume. *)
 let plan_callables s =
   let plan ~fixpoint r a t =
     if not (is_any_inline_custom r || Table.is_projection r || is_registered_method r <> None)
     then Gen_decls.plan_function ~fixpoint r a t
   in
-  let plan_decl = function
-    | Dterm (_, _, Tglob (ty, _, _)) when is_monad ty -> ()
+  (* A monadic constant is generated as a recursive group of one. *)
+  let plan_decl ~wrapper = function
+    | Dterm (r, a, (Tglob (ty, _, _) as t)) when is_monad ty ->
+      if not wrapper then plan ~fixpoint:true r a t
     | Dterm (r, a, t) when not (is_typeclass_instance a t) -> plan ~fixpoint:false r a t
     | Dfix fds -> List.iter (fun fd -> plan ~fixpoint:true fd.fd_ref fd.fd_body fd.fd_type) fds
     | Dterm _ | Dind _ | Dtype _ -> ()
@@ -2293,8 +2295,8 @@ let plan_callables s =
         | _ -> [] )
       sel
   in
-  let in_module mp k =
-    push_visible mp [];
+  let in_module ?(params = []) mp k =
+    push_visible mp params;
     Fun.protect ~finally:pop_visible k
   in
   let with_local_inductives refs k =
@@ -2306,13 +2308,27 @@ let plan_callables s =
         List.iter add_local_inductive outer )
       k
   in
-  let rec plan_elem (_, se) =
+  let rec plan_elem ~wrapper (_, se) =
     match se with
-    | SEdecl d -> plan_decl d
-    | SEmodule {ml_mod_expr = MEstruct (mp, sel); _} ->
-      in_module mp (fun () ->
-          with_local_inductives (declared_inductives mp sel) (fun () -> List.iter plan_elem sel) )
-    | SEmodule _ | SEmodtype _ -> ()
+    | SEdecl d -> plan_decl ~wrapper d
+    | SEmodule {ml_mod_expr = MEfunctor _ as me; _} ->
+      (* A functor is a class template, its parameters visible in its body. *)
+      let rec split params = function
+        | MEfunctor (mbid, _, me) -> split (params @ [MPbound mbid]) me
+        | body -> (params, body)
+      in
+      let params, body = split [] me in
+      with_render_ctx
+        (fun c -> {c with rc_in_struct = true; rc_in_template = true})
+        (fun () -> plan_module_expr ~params body)
+    | SEmodule {ml_mod_expr; _} -> plan_module_expr ~params:[] ml_mod_expr
+    | SEmodtype _ -> ()
+  and plan_module_expr ~params = function
+    | MEstruct (mp, sel) ->
+      in_module ~params mp (fun () ->
+          with_local_inductives (declared_inductives mp sel) (fun () ->
+              List.iter (plan_elem ~wrapper:false) sel ) )
+    | MEident _ | MEapply _ | MEfunctor _ -> ()
   in
   let analysis = get_structure_analysis () in
   let rec all_inductives sel =
@@ -2334,7 +2350,8 @@ let plan_callables s =
          made local. *)
       List.iter
         (fun (mi : Structure_analysis.module_info) ->
-          if mi.wrapper_name <> None then in_module mi.modpath (fun () -> List.iter plan_elem mi.sels) )
+          if mi.wrapper_name <> None then
+            in_module mi.modpath (fun () -> List.iter (plan_elem ~wrapper:true) mi.sels) )
         analysis.sorted_modules;
       let file_inductives =
         if modular () then
@@ -2344,7 +2361,8 @@ let plan_callables s =
       with_local_inductives file_inductives (fun () ->
           List.iter
             (fun (mi : Structure_analysis.module_info) ->
-              if mi.wrapper_name = None then in_module mi.modpath (fun () -> List.iter plan_elem mi.sels) )
+              if mi.wrapper_name = None then
+                in_module mi.modpath (fun () -> List.iter (plan_elem ~wrapper:false) mi.sels) )
             analysis.sorted_modules ) )
 
 (** [pp_wrapper_struct name specs] is the struct a library module is rendered
