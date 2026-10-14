@@ -1366,10 +1366,32 @@ let unit_passes ~namespace : ml_structure Pipeline_trace.pass list =
     (* In separate extraction, cross-module references are fully qualified
        ([Datatypes::List] rather than [List]). *)
     effect "cross_file_qualification" (fun _ ->
-        if namespace <> None then Common.set_force_cross_file_qualification () );
-    effect "template_kinds" Cpp_ind.plan_template_kinds ]
+        if namespace <> None then Common.set_force_cross_file_qualification () ) ]
 
 let unit_pass_names = Pipeline_trace.names (unit_passes ~namespace:None)
+
+(** The steps of {!plan_representation}, in order. *)
+let template_kinds = "template_kinds"
+let install_template_kinds = "install_template_kinds"
+let represent_pass_names = [template_kinds; install_template_kinds]
+
+(** Decide the kinds of the template parameters of the unit's inductives and
+    type aliases, into [plan], and install them for the readers not yet
+    converted.  They are decided from the inductive kinds {!analyze_and_plan}
+    installed, so after it.  Deciding records each as it goes (see
+    {!Cpp_ind.template_kinds}); under [CRANE_CHECK_IR] they are decided a
+    second time, against the first's, and the two must agree. *)
+let plan_representation plan struc =
+  Pipeline_trace.event "represent" template_kinds;
+  let kinds = Cpp_ind.template_kinds struc in
+  let plan = Target_plan.with_template_kinds plan kinds in
+  if
+    Sys.getenv_opt "CRANE_CHECK_IR" <> None
+    && not (Target_plan.equal plan (Target_plan.with_template_kinds plan (Cpp_ind.template_kinds struc)))
+  then CErrors.anomaly Pp.(str "Crane: planning the same structure twice decided differently.");
+  Pipeline_trace.event "represent" install_template_kinds;
+  Install_legacy_plan.install_template_kinds plan;
+  plan
 
 (** Renders an entire ML structure to C++ header and implementation files.
     Performs dry run first for renaming, then generates and formats the output.
@@ -1392,6 +1414,7 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   in
   let facts, plan = analyze_and_plan struc in
   ignore (Pipeline_trace.run ~stage:"unit" (unit_passes ~namespace) struc);
+  let plan = plan_representation plan struc in
   let planned = observed_fingerprint ~stage:"unit" struc in
   discover d struc;
   let census_after_discovery = Table.census () in

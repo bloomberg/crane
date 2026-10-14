@@ -21,38 +21,47 @@ open Gen_records
 
 module IntSet = Escape.IntSet
 
-(** Build the [using] declaration for a type alias.
+(** The right-hand side of the type alias [r] over its parameters [vars],
+    with the note that goes with it.  [ot] is [None] for a signature entry
+    that names a type without defining it.  The three irregular right-hand
+    sides -- a custom extraction's verbatim spelling, an axiom's [std::any]
+    placeholder, and an absent definition -- are all expressed as
+    {!Minicpp.dusing} fields rather than as a rendered string handed to the
+    printer. *)
+let type_alias_rhs r vars ot =
+  with_method_ns_for_locals @@ fun () ->
+  match Cpp_state.find_type_custom_opt r with
+  | Some (_ids, s) -> (Some (Tid_external (s, [])), None)
+  | None -> (
+    match ot with
+    | None -> (None, None)
+    | Some Taxiom ->
+      Cpp_erasure.register_axiom_type r;
+      Table.add_erased_type_const r;
+      require_obj_header ();
+      (Some Tany, Some "AXIOM TO BE REALIZED")
+    | Some t ->
+      (* Name the body's type variables from the alias's own list.  Left
+         anonymous they are resolved by position against the emitted
+         parameters, and the promoted ones lead (they are defaulted, and a
+         default may not precede a plain parameter) -- so [Definition Top :=
+         itree TopE], eta-expanded to supply [itree]'s missing value
+         parameter, read the value slot off the FRONT and wrote [ITree<iptr>].
+         Eta-expansion appends; positional resolution reads from the
+         beginning. *)
+      (Some (convert_ml_type_to_cpp_type (empty_env ()) vars t), None) )
 
-    [ot] is [None] for a signature entry that names a type without defining it.
-    The three irregular right-hand sides -- a custom extraction's verbatim
-    spelling, an axiom's [std::any] placeholder, and an absent definition --
-    are all expressed as {!Minicpp.dusing} fields rather than as a rendered
-    string handed to the printer. *)
+(** The kinds of the parameters [vars] of the type alias [r], whose body is
+    [t], as {!gen_type_alias} declares them -- without recording them. *)
+let type_alias_kinds r vars t =
+  let vars = rename_tvars Cpp_state.keywords vars in
+  let rhs, _ = type_alias_rhs r vars (Some t) in
+  snd (template_kinds ?applied:rhs r vars [t])
+
+(** Build the [using] declaration for a type alias; see {!type_alias_rhs}. *)
 let gen_type_alias r vars ot =
   let vars = rename_tvars Cpp_state.keywords vars in
-  let du_rhs, du_note =
-    with_method_ns_for_locals @@ fun () ->
-    match Cpp_state.find_type_custom_opt r with
-    | Some (_ids, s) -> (Some (Tid_external (s, [])), None)
-    | None -> (
-      match ot with
-      | None -> (None, None)
-      | Some Taxiom ->
-        Cpp_erasure.register_axiom_type r;
-        Table.add_erased_type_const r;
-        require_obj_header ();
-        (Some Tany, Some "AXIOM TO BE REALIZED")
-      | Some t ->
-        (* Name the body's type variables from the alias's own list.  Left
-           anonymous they are resolved by position against the emitted
-           parameters, and the promoted ones lead (they are defaulted, and a
-           default may not precede a plain parameter) -- so [Definition Top :=
-           itree TopE], eta-expanded to supply [itree]'s missing value
-           parameter, read the value slot off the FRONT and wrote [ITree<iptr>].
-           Eta-expansion appends; positional resolution reads from the
-           beginning. *)
-        (Some (convert_ml_type_to_cpp_type (empty_env ()) vars t), None) )
-  in
+  let du_rhs, du_note = type_alias_rhs r vars ot in
   let du_tparams_head =
     hkt_templates ?applied:du_rhs r vars
       (match ot with Some t -> [t] | None -> [])

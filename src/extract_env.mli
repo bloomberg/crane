@@ -143,5 +143,8 @@ val plan_pass_names : string list
 (** The unit's remaining preparation, before its discovery pass. *)
 val unit_pass_names : string list
 
+(** Deciding the unit's data representation once its preparation has run. *)
+val represent_pass_names : string list
+
 (** One unit's discovery pass, whose renders are discarded. *)
 val discover_pass_names : string list

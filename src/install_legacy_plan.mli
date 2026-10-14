@@ -10,8 +10,12 @@
     which most readers still take the kind from. *)
 val install : Miniml.ml_structure -> Program_facts.t -> Target_plan.t -> unit
 
-(** Under [CRANE_CHECK_IR], fail unless every table {!install} filled still
-    answers what the values say.  A census sees an entry added; this sees one
+(** [install_template_kinds plan] records the template-parameter kinds [plan]
+    decided, which the inductive kinds {!install} wrote went into deciding. *)
+val install_template_kinds : Target_plan.t -> unit
+
+(** Under [CRANE_CHECK_IR], fail unless every table {!install} and
+    {!install_template_kinds} filled still answers what the values say.  A census sees an entry added; this sees one
     overwritten.  The used customs are the exception that may grow: emitting a
     custom's replacement marks it used, and the header's includes follow what
     was emitted. *)

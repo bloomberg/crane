@@ -100,11 +100,10 @@ let with_applied_tvars ?ml_ty cty temps =
 
 (** Template parameter list for a declaration whose parameters [vars] are used
     by the types [tys] -- an inductive's constructor fields, or the body of a
-    type alias.  The arities are read off the ML types rather than the
-    converted C++ ones because the parameter list has to be fixed before the
-    types are converted.  Registers the template template positions so that
-    {e uses} of [r] pass a bare template name; see {!Table.is_hkt_ind_param}. *)
-let hkt_templates ?applied r vars tys =
+    type alias -- with the kinds of its positions.  The arities are read off
+    the ML types rather than the converted C++ ones because the parameter list
+    has to be fixed before the types are converted.  Records nothing. *)
+let template_kinds ?applied r vars tys =
   (* Read from the rendered type where there is one: the ML body still applies
      a variable that erasure removed, and the parameter list has to agree with
      what the users of this name can see.  See
@@ -211,24 +210,31 @@ let hkt_templates ?applied r vars tys =
   let positions_of p =
     List.filteri (fun i _ -> p i) (List.mapi (fun i _ -> i) temps)
   in
-  Table.add_hkt_ind_params r
-    (List.filter_map
-       (fun i ->
-         match List.nth temps i with
-         | TTtemplate arity, _ -> Some (i, arity)
-         | _ -> None )
-       (List.mapi (fun i _ -> i) temps) );
-  Table.add_phantom_type_params r
-    (positions_of (fun i -> not (rendered_in_cpp (i + 1))));
   (* Applied in the definition and still plain: a family position. *)
   let applied_at_all =
     match applied with
     | Some a -> Ml_type_util.rendered_tvar_arities a
     | None -> Ml_type_util.applied_ml_tvar_arities tys
   in
-  Table.add_family_ind_params r
-    (positions_of (fun i ->
-         Hashtbl.mem applied_at_all (i + 1) && not (Hashtbl.mem arities (i + 1))));
+  ( temps,
+    { Tparam_kinds.template_templates =
+        List.filter_map
+          (fun i ->
+            match List.nth temps i with
+            | TTtemplate arity, _ -> Some (i, arity)
+            | _ -> None )
+          (List.mapi (fun i _ -> i) temps);
+      families =
+        positions_of (fun i ->
+            Hashtbl.mem applied_at_all (i + 1) && not (Hashtbl.mem arities (i + 1)) );
+      phantoms = positions_of (fun i -> not (rendered_in_cpp (i + 1))) } )
+
+(** {!template_kinds}' parameter list, its kinds recorded so that {e uses} of
+    [r] pass a bare template name where one is declared
+    ({!Table.is_hkt_ind_param}). *)
+let hkt_templates ?applied r vars tys =
+  let temps, kinds = template_kinds ?applied r vars tys in
+  Tparam_kinds.record r kinds;
   temps
 
 (** Relax a signature whose return type applies a template template parameter

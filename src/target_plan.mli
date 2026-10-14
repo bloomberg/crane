@@ -5,9 +5,9 @@
     from the structure and its {!Program_facts}, as a value.
 
     Transitional: the plan holds the decisions converted so far -- the kinds
-    inductives are emitted as.  The layout is still the {!Module_plan}
-    discovery's [prepare] installs, and template-parameter kinds are still
-    recorded by {!Cpp_ind.plan_template_kinds}; both belong here.
+    inductives are emitted as, and the kinds of their template parameters.
+    The layout is still the {!Module_plan} discovery's [prepare] installs; it
+    belongs here.
     {!Install_legacy_plan} fills the tables unconverted readers consult. *)
 
 (** Why an inductive is emitted as a kind other than the one extraction
@@ -33,10 +33,17 @@ type t = {
   inductive_kinds : kind_decision list;
       (** In the order they were decided; a later decision about a block
           supersedes an earlier one. *)
+  template_kinds : (Names.GlobRef.t * Tparam_kinds.t) list;
+      (** The kinds of the template parameters of each inductive and type
+          alias the unit generates, decided once the inductive kinds are
+          installed ({!with_template_kinds}). *)
 }
 
 (** [plan facts struc] decides; it writes nothing. *)
 val plan : Program_facts.t -> Miniml.ml_structure -> t
+
+(** [plan] with the template-parameter kinds decided. *)
+val with_template_kinds : t -> (Names.GlobRef.t * Tparam_kinds.t) list -> t
 
 (** The kind decided for [block], if any. *)
 val kind_of : t -> Names.MutInd.t -> Miniml.inductive_kind option

@@ -17,6 +17,9 @@ let install struc (facts : Program_facts.t) (plan : Target_plan.t) =
         struc )
     plan.inductive_kinds
 
+let install_template_kinds (plan : Target_plan.t) =
+  List.iter (fun (r, kinds) -> Tparam_kinds.record r kinds) plan.template_kinds
+
 let check_installed (facts : Program_facts.t) (plan : Target_plan.t) =
   if Sys.getenv_opt "CRANE_CHECK_IR" <> None then begin
     let fail what =
@@ -34,5 +37,10 @@ let check_installed (facts : Program_facts.t) (plan : Target_plan.t) =
         let installed = Table.inductive_kind_of (Names.GlobRef.IndRef (block, 0)) in
         if not (Option.equal Target_plan.kind_equal installed (Target_plan.kind_of plan block))
         then fail "inductive kinds" )
-      plan.inductive_kinds
+      plan.inductive_kinds;
+    List.iter
+      (fun (r, kinds) ->
+        if not (Tparam_kinds.equal (Tparam_kinds.recorded r) kinds) then
+          fail "template-parameter kinds" )
+      plan.template_kinds
   end

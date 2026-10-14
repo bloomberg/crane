@@ -95,26 +95,27 @@ let deferred_member_defs = deferred "deferred_member_defs"
 let file_scope_erased_aliases = deferred "file_scope_erased_aliases"
 
 (** The kinds of the template parameters of the inductive [kn]'s packets,
-    as {!ind_header_decls} gives them, recorded without generating anything
-    else: what a use must pass at each position is fixed before any use is
-    converted. *)
-let plan_ind_template_kinds kn ind =
+    as {!ind_header_decls} gives them. *)
+let ind_template_kinds kn ind =
   match ind.ind_kind with
-  | TypeClass _ | Record _ -> ()
+  | TypeClass _ | Record _ -> []
   | Standard | Coinductive ->
-    Array.iteri
-      (fun i p ->
+    List.filter_map
+      (fun (i, p) ->
         let r = GlobRef.IndRef (kn, i) in
-        if not (p.ip_logical || is_custom r || is_monad r) then
-          ignore
-            (Plan_templates.hkt_templates r
-               (Common.ind_struct_tparams kn ind p)
-               (List.concat (Array.to_list p.ip_types)) ) )
-      ind.ind_packets
+        if p.ip_logical || is_custom r || is_monad r then None
+        else
+          Some
+            ( r,
+              snd
+                (Plan_templates.template_kinds r
+                   (Common.ind_struct_tparams kn ind p)
+                   (List.concat (Array.to_list p.ip_types)) ) ) )
+      (List.mapi (fun i p -> (i, p)) (Array.to_list ind.ind_packets))
 
 (* The same for a type alias [generate] writes: its kinds come out of its
    rendered right-hand side, and only the alias's own generation renders it. *)
-let plan_alias_template_kinds r l t =
+let alias_template_kinds r l t =
   let written =
     match t with
     | Miniml.Tdummy Miniml.Ktype | Miniml.Taxiom -> false
@@ -125,17 +126,23 @@ let plan_alias_template_kinds r l t =
         || Ml_type_util.has_no_cpp_spelling
              (Translation.convert_ml_type_to_cpp_type (empty_env ()) l t) )
   in
-  if written then ignore (gen_type_alias r l (Some t))
+  if written then [(r, type_alias_kinds r l t)] else []
 
-let plan_template_kinds struc =
+let template_kinds struc =
+  let kinds = ref [] in
+  let decide l =
+    List.iter (fun (r, k) -> Tparam_kinds.record r k) l;
+    kinds := List.rev_append l !kinds
+  in
   Modutil.struct_iter
     (function
-      | Dind (kn, ind) -> plan_ind_template_kinds kn ind
-      | Dtype (r, l, t) -> plan_alias_template_kinds r l t
+      | Dind (kn, ind) -> decide (ind_template_kinds kn ind)
+      | Dtype (r, l, t) -> decide (alias_template_kinds r l t)
       | _ -> () )
     (fun _ -> ())
     (fun _ -> ())
-    struc
+    struc;
+  List.rev !kinds
 
 (** Render inductive type header (.h file).
     TypeClasses become C++ concepts, Records become structs,

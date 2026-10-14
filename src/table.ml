@@ -877,17 +877,11 @@ let () =
           List.assoc name (Tparam_kinds.sizes ()) ) )
     (Tparam_kinds.sizes ())
 
-let add_hkt_ind_params = Tparam_kinds.add_template_template
-
 let hkt_ind_param_arity = Tparam_kinds.template_template_arity
 
 let is_hkt_ind_param r i = hkt_ind_param_arity r i <> None
 
-let add_family_ind_params = Tparam_kinds.add_family
-
 let is_family_ind_param = Tparam_kinds.is_family
-
-let add_phantom_type_params = Tparam_kinds.add_phantom
 
 let is_phantom_type_param = Tparam_kinds.is_phantom
 

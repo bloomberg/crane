@@ -466,12 +466,6 @@ val add_flat_inductive : GlobRef.t -> unit
 (** Check if inductive is flat. *)
 val is_flat_inductive : GlobRef.t -> bool
 
-(** Record the 0-based positions of an inductive's template parameters that are
-    declared [template <typename> class] because a constructor field applies
-    them, each paired with the arity it is declared at; see
-    [Gen_decls.ind_templates]. *)
-val add_hkt_ind_params : GlobRef.t -> (int * int) list -> unit
-
 (** The arity the template template parameter at 0-based position [i] is
     declared at, or [None] where that position is not one.  A variable handed
     to such a position is higher-kinded whether or not anything applies it. *)
@@ -479,24 +473,17 @@ val hkt_ind_param_arity : GlobRef.t -> int -> int option
 
 (** Whether the template parameter at 0-based position [i] of this inductive is
     a template template parameter, so a use of the inductive must pass a bare
-    template name rather than an instantiation. *)
+    template name rather than an instantiation ({!Tparam_kinds}). *)
 val is_hkt_ind_param : GlobRef.t -> int -> bool
 
-(** Record the 0-based positions of an inductive's or alias's parameters that
-    its definition applies and still declares a plain [typename] -- event
-    families; see [Gen_decls.hkt_templates]. *)
-val add_family_ind_params : GlobRef.t -> int list -> unit
-
-(** Whether the parameter at 0-based position [i] is such a family position:
-    a variable handed to it is a family, not a higher-kinded variable. *)
+(** Whether the parameter at 0-based position [i] of an inductive or alias is
+    a family position -- applied in its definition and still declared a plain
+    [typename] -- so a variable handed to it is a family, not a higher-kinded
+    variable. *)
 val is_family_ind_param : GlobRef.t -> int -> bool
 
-(** [add_phantom_type_params r positions] records the 0-based positions of
-    [r]'s template parameters that its definition never spells. *)
-val add_phantom_type_params : GlobRef.t -> int list -> unit
-
-(** Whether position [i] of [r] is a parameter [r]'s definition never spells;
-    see {!add_phantom_type_params}. *)
+(** Whether position [i] of [r] is a parameter [r]'s definition never
+    spells. *)
 val is_phantom_type_param : GlobRef.t -> int -> bool
 
 (** Mark inductive as enum. *)

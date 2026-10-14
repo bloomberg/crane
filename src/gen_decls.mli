@@ -138,6 +138,11 @@ val gen_instance_struct :
     need, expressed in the IR rather than as rendered text. *)
 val gen_type_alias : GlobRef.t -> Id.t list -> ml_type option -> Minicpp.cpp_decl
 
+(** [type_alias_kinds r vars t] is the kinds of the parameters [vars] of the
+    type alias [r], whose body is [t], as {!gen_type_alias} declares them --
+    without recording them. *)
+val type_alias_kinds : GlobRef.t -> Id.t list -> ml_type -> Tparam_kinds.t
+
 (** Check if a term is a type class instance (constructs a type class record).
 *)
 val is_typeclass_instance : ml_ast -> ml_type -> bool
