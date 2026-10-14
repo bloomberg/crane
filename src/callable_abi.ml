@@ -238,6 +238,16 @@ let record abi =
 
 let lookup r = GlobRef.Map_env.find_opt r !plans
 
+let assumed : Param_pos.orig Param_pos.pos list Ref.User.Map.t ref =
+  State.cell State.Extraction Ref.User.Map.empty
+
+let assume l = assumed := List.fold_left (fun m (r, ps) -> Ref.User.Map.add r ps m) Ref.User.Map.empty l
+
+let deduces_callable r pos =
+  match lookup r with
+  | Some abi -> deduces_callable_at abi pos
+  | None -> List.exists (Param_pos.equal pos) (Option.default [] (Ref.User.Map.find_opt r !assumed))
+
 let foreign ?(instances = 0) ?(higher_kinded = fun _ -> false) ?(kept = fun _ -> true)
     ?(reachable = max_int) ?(relaxed = fun _ -> false) ?(phantom_prefix = 0) ~callee ~scheme () =
   let dictionaries =

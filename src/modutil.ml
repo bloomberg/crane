@@ -84,6 +84,22 @@ let se_iter do_decl do_spec do_mp =
   se_iter
 
 (** Iterate callbacks over all elements of a structure. *)
+let struct_functions struc =
+  let acc = ref [] in
+  let rec elems l =
+    List.iter
+      (fun (_, se) ->
+        match se with
+        | SEdecl (Dterm (r, (MLlam _ as b), ty)) -> acc := (r, b, ty) :: !acc
+        | SEdecl (Dfix fds) ->
+          List.iter (fun fd -> acc := (fd.fd_ref, fd.fd_body, fd.fd_type) :: !acc) fds
+        | SEmodule {ml_mod_expr = MEstruct (_, l); _} -> elems l
+        | _ -> () )
+      l
+  in
+  List.iter (fun (_, l) -> elems l) struc;
+  List.rev !acc
+
 let struct_iter do_decl do_spec do_mp s =
   List.iter
     (function

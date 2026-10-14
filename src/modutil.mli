@@ -29,6 +29,11 @@ val struct_ast_search : (ml_ast -> bool) -> ml_structure -> bool
     @return [true] if any type satisfies [f], [false] otherwise *)
 val struct_type_search : (ml_type -> bool) -> ml_structure -> bool
 
+(** Every function the structure defines outside a functor, with its body
+    and type: a constant whose body is a lambda, and each member of a
+    recursive group. *)
+val struct_functions : ml_structure -> (GlobRef.t * ml_ast * ml_type) list
+
 (** Iterate over all declarations, specifications, and module paths.
     @param do_decl callback invoked for each [ml_decl] found
     @param do_spec callback invoked for each [ml_spec] found

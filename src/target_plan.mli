@@ -42,6 +42,11 @@ type t = {
   callables : Callable_abi.t list;
       (** The callable plan of each function and method the unit generates,
           decided once the layout is installed ({!with_layout}). *)
+  assumed_callables : (Names.GlobRef.t * Param_pos.orig Param_pos.pos list) list;
+      (** For each function of the unit that has no callable plan -- a
+          custom mapping's, a projection's -- the declared positions of the
+          callables its call sites assume it deduces, decided with the
+          callable plans. *)
 }
 
 (** [plan facts struc] decides; it writes nothing. *)
@@ -50,8 +55,14 @@ val plan : Program_facts.t -> Miniml.ml_structure -> t
 (** [plan] with the template-parameter kinds decided. *)
 val with_template_kinds : t -> (Names.GlobRef.t * Tparam_kinds.t) list -> t
 
-(** [plan] with its layout and the callable plans decided. *)
-val with_layout : t -> Module_plan.t -> Callable_abi.t list -> t
+(** [plan] with its layout, the callable plans and the assumed callables
+    decided. *)
+val with_layout :
+  t ->
+  Module_plan.t ->
+  Callable_abi.t list ->
+  (Names.GlobRef.t * Param_pos.orig Param_pos.pos list) list ->
+  t
 
 (** The same callable plans, whatever order they were planned in. *)
 val same_callables : Callable_abi.t list -> Callable_abi.t list -> bool

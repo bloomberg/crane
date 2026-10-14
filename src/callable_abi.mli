@@ -137,6 +137,16 @@ val freeze : unit -> unit
 (** The recorded plan of a declaration. *)
 val lookup : Names.GlobRef.t -> t option
 
+(** Installs, for each function of the unit no plan is recorded for, the
+    declared positions of the callables its call sites assume it deduces
+    ({!Target_plan.t.assumed_callables}). *)
+val assume : (Names.GlobRef.t * Param_pos.orig Param_pos.pos list) list -> unit
+
+(** Whether a call to [r] passes the callable it declares at [pos] to a
+    deduced [F &&]: as [r]'s plan says ({!deduces_callable_at}), or where it
+    has none as its call sites assume ({!assume}). *)
+val deduces_callable : Names.GlobRef.t -> Param_pos.orig Param_pos.pos -> bool
+
 (** The plan of a callable Crane does not generate here -- a custom mapping,
     a declaration of another file or library -- as the conventions its call
     sites assume state it: [instances]

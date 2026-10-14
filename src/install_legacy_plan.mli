@@ -18,10 +18,12 @@ val install_template_kinds : Target_plan.t -> unit
     {!Target_plan.modules} holds it. *)
 val install_modules : Module_plan.t -> unit
 
-(** [install_callables callables] records the callable plans, as
-    {!Target_plan.callables} holds them, and freezes them: from here a
+(** [install_callables callables assumed] records the callable plans and
+    the assumed callables, as {!Target_plan.callables} and
+    {!Target_plan.assumed_callables} hold them, and freezes them: from here a
     generated declaration only checks its head against its plan. *)
-val install_callables : Callable_abi.t list -> unit
+val install_callables :
+  Callable_abi.t list -> (Names.GlobRef.t * Param_pos.orig Param_pos.pos list) list -> unit
 
 (** Under [CRANE_CHECK_IR], fail unless every table {!install},
     {!install_template_kinds}, {!install_modules} and {!install_callables}

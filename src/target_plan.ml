@@ -20,6 +20,7 @@ type t = {
   template_kinds : (GlobRef.t * Tparam_kinds.t) list;
   modules : Module_plan.t;
   callables : Callable_abi.t list;
+  assumed_callables : (GlobRef.t * Param_pos.orig Param_pos.pos list) list;
 }
 
 (** The last of [decisions] about [kn]. *)
@@ -259,10 +260,13 @@ let plan (_ : Program_facts.t) struc =
     inductive_kinds = aligned @ value_use_demotion aligned struc;
     template_kinds = [];
     modules = Module_plan.empty;
-    callables = [] }
+    callables = [];
+    assumed_callables = [] }
 
 let with_template_kinds t template_kinds = {t with template_kinds}
-let with_layout t modules callables = {t with modules; callables}
+
+let with_layout t modules callables assumed_callables =
+  {t with modules; callables; assumed_callables}
 
 let same_callables a b =
   List.length a = List.length b
@@ -291,3 +295,6 @@ let equal a b =
        a.template_kinds b.template_kinds
   && Module_plan.equal a.modules b.modules
   && same_callables a.callables b.callables
+  && List.equal
+       (fun (r, ps) (r', ps') -> GlobRef.UserOrd.equal r r' && List.equal Param_pos.equal ps ps')
+       a.assumed_callables b.assumed_callables

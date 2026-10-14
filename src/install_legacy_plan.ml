@@ -22,9 +22,10 @@ let install_template_kinds (plan : Target_plan.t) =
 
 let install_modules = Module_plan.install
 
-let install_callables callables =
+let install_callables callables assumed =
   Callable_abi.open_for_planning ();
   List.iter Callable_abi.record callables;
+  Callable_abi.assume assumed;
   Callable_abi.freeze ()
 
 let check_installed (facts : Program_facts.t) (plan : Target_plan.t) =

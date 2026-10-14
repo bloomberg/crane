@@ -5494,9 +5494,8 @@ and gen_call_args ~slot ?expected_ty env id plan =
        self-call forwards its own ({!deduces_callable}); and a lambda takes
        what it is given where the slot erases. *)
     let deduced_callable =
-      match Param_pos.nth fn_param_ml_tys_orig param_index with
-      | Some pt -> deduces_callable id param_index pt
-      | None -> false
+      Option.has_some (Param_pos.nth fn_param_ml_tys_orig param_index)
+      && deduces_callable id param_index
     in
     let arg_expected_ty =
       match ml_arg with

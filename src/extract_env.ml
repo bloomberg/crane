@@ -1019,9 +1019,10 @@ let plan_layout struc =
     Sys.getenv_opt "CRANE_CHECK_IR" <> None
     && not (Target_plan.same_callables callables (Cpp.plan_callables ~reversed:true struc))
   then CErrors.anomaly Pp.(str "Crane: planning the callables in reverse order decided differently.");
+  let assumed = Translation_calls.assumed_callables struc callables in
   Pipeline_trace.event "layout" install_callables;
-  Install_legacy_plan.install_callables callables;
-  (modules, callables)
+  Install_legacy_plan.install_callables callables assumed;
+  (modules, callables, assumed)
 
 (** The renders discovery runs. *)
 let discover_passes ~interface d : ml_structure Pipeline_trace.pass list =
@@ -1438,8 +1439,8 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   ignore (Pipeline_trace.run ~stage:"unit" (unit_passes ~namespace) struc);
   let plan = plan_representation plan struc in
   let planned = observed_fingerprint ~stage:"unit" struc in
-  let modules, callables = plan_layout struc in
-  let plan = Target_plan.with_layout plan modules callables in
+  let modules, callables, assumed = plan_layout struc in
+  let plan = Target_plan.with_layout plan modules callables assumed in
   discover d struc;
   let census_after_discovery = Table.census () in
   (* Both bodies are rendered before either file is opened.  A preamble has to

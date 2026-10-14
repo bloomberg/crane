@@ -1110,23 +1110,52 @@ let erase_fn_arg_for_param env param_ml_ty e expr =
   | Some shape when ml_expr_is_function_value e -> wrap_crane_erase_fn shape expr
   | _ -> convert_carrier_arg param_ml_ty param_cpp_ty e expr
 
-(** Whether the global [id] takes the callable it declares at [pos], of ML
-    type [param_ml_ty], as a deduced [F &&]: the callee then calls it at its
-    own instantiation, and an argument written against the erased slot --
-    adapted to unbox [List<std::any>] where the callee hands it a [List<T2>]
-    -- reads the wrong type out of every box.  The callee's plan says, where
-    it has one ({!Callable_abi.deduces_callable_at}).  A method has none, and
-    for it the decision is redone the way its signature is built
-    ({!Ownership.generalises_callable}). *)
-let deduces_callable id pos param_ml_ty =
-  match Callable_abi.lookup id with
-  | Some abi -> Callable_abi.deduces_callable_at abi pos
-  | None -> (
-    let declared t = convert_ml_type_to_cpp_type (Common.empty_env ()) [] (type_simpl t) in
-    match (declared param_ml_ty, Option.map declared (find_type_opt id)) with
-    | (Tfun _ as f), Some (Tfun (dom, cod)) ->
-      Ownership.generalises_callable id pos ~primary:(primary_tvar_indices dom cod) f
-    | _ -> false )
+(** Whether the global [id] takes the callable it declares at [pos] as a
+    deduced [F &&]: the callee then calls it at its own instantiation, and an
+    argument written against the erased slot -- adapted to unbox
+    [List<std::any>] where the callee hands it a [List<T2>] -- reads the
+    wrong type out of every box ({!Callable_abi.deduces_callable}). *)
+let deduces_callable = Callable_abi.deduces_callable
+
+(** For the function [r] of the unit, [b] its body and [ty] its type, the
+    declared positions of the callables a call to it assumes it deduces where
+    no plan of it is recorded -- a custom mapping's, a projection's: those
+    its signature would generalise were it generated as a function
+    ({!generalises_callable}), its body read for the ones it holds on to. *)
+let assumed_deduced_callables r b ty =
+  let ids, _ = collect_typed_lams ty b in
+  let binder_tys = List.rev_map snd ids in
+  let ungeneralised = ungeneralised_callables_of_definition r ty b in
+  let declared t = convert_ml_type_to_cpp_type (Common.empty_env ()) [] (type_simpl t) in
+  match find_type_opt r with
+  | None -> []
+  | Some fn_ml_ty -> (
+    match declared fn_ml_ty with
+    | Tfun (dom, cod) ->
+      let primary = primary_tvar_indices dom cod in
+      List.filter_map
+        (fun (pos, pt) ->
+          match (declared pt, Param_pos.source_index binder_tys pos) with
+          | (Tfun _ as f), Some i
+            when generalises_callable ~kept_as_fn:(Escape.IntSet.mem i ungeneralised) ~primary f ->
+            Some pos
+          | _ -> None )
+        (Param_pos.positioned (Param_pos.orig_params ~expand:expand_ml_fun_alias fn_ml_ty))
+    | _ -> [] )
+
+(** {!assumed_deduced_callables} for each function of [struc] that none of
+    the plans [callables] is of. *)
+let assumed_callables struc callables =
+  let planned =
+    List.fold_left
+      (fun s abi -> GlobRef.Map_env.add (Callable_abi.callee abi) () s)
+      GlobRef.Map_env.empty callables
+  in
+  List.filter_map
+    (fun (r, b, ty) ->
+      if GlobRef.Map_env.mem r planned then None
+      else Some (r, assumed_deduced_callables r b ty) )
+    (Modutil.struct_functions struc)
 
 (** [slot] for a lambda going to a callable its callee deduces: the positions
     the slot erases are left to deduction ([const auto&]), so the lambda takes

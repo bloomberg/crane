@@ -3,46 +3,13 @@
 
 (** Parameter ownership settled across calls.  See [ownership.mli]. *)
 
-open Miniml
-
 let flags : bool list Ref.User.Map.t ref = State.cell State.Extraction Ref.User.Map.empty
 
 let () = Escape.callee_flags := fun r -> Ref.User.Map.find_opt r !flags
 
-let callables : (ml_type list * Escape.IntSet.t) Ref.User.Map.t ref =
-  State.cell State.Extraction Ref.User.Map.empty
-
-(* Every function of the structure: its name, body and type. *)
-let functions struc =
-  let acc = ref [] in
-  let rec elems l =
-    List.iter
-      (fun (_, se) ->
-        match se with
-        | SEdecl (Dterm (r, (MLlam _ as b), ty)) -> acc := (r, b, ty) :: !acc
-        | SEdecl (Dfix fds) ->
-          List.iter (fun fd -> acc := (fd.fd_ref, fd.fd_body, fd.fd_type) :: !acc) fds
-        | SEmodule {ml_mod_expr = MEstruct (_, l); _} -> elems l
-        | _ -> ())
-      l
-  in
-  List.iter (fun (_, l) -> elems l) struc;
-  List.rev !acc
-
 let settle struc =
-  let fns = functions struc in
+  let fns = Modutil.struct_functions struc in
   flags := Ref.User.Map.empty;
-  (* Which callables are generalised is each function's own business: one
-     pass, the question {!Gen_functions.gen_dfun} asks of the same body. *)
-  callables :=
-    List.fold_left
-      (fun m (r, b, ty) ->
-        let ids, _ = Translation_support.collect_typed_lams ty b in
-        Ref.User.Map.add r
-          ( List.rev_map snd ids,
-            Translation_support.ungeneralised_callables_of_definition r ty b )
-          m )
-      Ref.User.Map.empty fns;
   (* Each round can only turn borrowed parameters owned, so it stops. *)
   let rec round () =
     let changed = ref false in
@@ -58,12 +25,3 @@ let settle struc =
   in
   round ()
 
-let generalises_callable r pos ~primary f =
-  match Ref.User.Map.find_opt r !callables with
-  | Some (binder_tys, ungeneralised) -> (
-    match Param_pos.source_index binder_tys pos with
-    | Some i ->
-      Translation_support.generalises_callable
-        ~kept_as_fn:(Escape.IntSet.mem i ungeneralised) ~primary f
-    | None -> false )
-  | None -> false
