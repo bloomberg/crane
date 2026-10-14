@@ -234,6 +234,7 @@ type method_scope = {
   ms_params : (Id.t * cpp_type) list;
   ms_fun_params : (Id.t * template_type * Id.t) list;
   ms_template_params : (template_type * Id.t) list;
+  ms_deduced_callables : Param_pos.orig Param_pos.pos list;
 }
 
 let method_scope name vars (func_ref, body, ty, this_pos) =
@@ -500,6 +501,18 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
     @ fun_template_params
   in
 
+  (* The declared positions of the callables deduced as an [F &&], among the
+     function's binders in source order. *)
+  let deduced_callables =
+    let binder_tys = List.rev_map snd ids_with_types in
+    List.filter_map
+      (fun ((_, cpp_ty, _, _, generalised), (_, _, orig_idx)) ->
+        match cpp_ty with
+        | Tfun _ when generalised -> Param_pos.of_source_index binder_tys orig_idx
+        | _ -> None )
+      (List.combine params_with_idx param_ids_with_pos)
+  in
+
   (* Build final params with proper wrapping. Use escape analysis to determine
      owned vs borrowed: owned params are passed by value (for move semantics),
      borrowed params are passed by const ref. This matches gen_dfun's logic to
@@ -536,6 +549,7 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
     ms_params = params;
     ms_fun_params = fun_params;
     ms_template_params = template_params;
+    ms_deduced_callables = deduced_callables;
   }
 
 (** Whether a type mentions the template parameter [name] anywhere. *)
@@ -662,15 +676,34 @@ let method_head vars s =
         (List.combine extra_tvars_orig extra_tvar_names);
   }
 
+(** The callable plan of the method [func_ref] whose scope is [s] and head
+    [h]: a parameter named for one of its own variables declares the
+    function's variable it was renumbered from. *)
+let method_plan func_ref s h =
+  let renumber k = Option.default k (List.nth_opt s.ms_extra_tvars_orig (k - 1)) in
+  let scheme = Mlutil.reference_scheme func_ref in
+  Callable_abi.of_head ~renumber ~deduced_callables:s.ms_deduced_callables
+    ~receiver:
+      {dropped = List.filter_map (fun (i, _) -> Option.bind scheme (fun sc -> Scheme.Var.of_tvar sc i)) h.mh_dropped}
+    ~callee:func_ref ~scheme h.mh_tparams
+
+(** [plan_method name vars candidate] is the callable plan of the method
+    made of [candidate] in the inductive [name] whose variables are [vars],
+    as generating it would plan it, without generating its body. *)
+let plan_method name vars ((func_ref, _, ty, _) as candidate) =
+  let s = method_scope name vars candidate in
+  with_itree_mode_for ty @@ fun () -> method_plan func_ref s (method_head vars s)
+
 (** Generate a single method for an inductive type from a method candidate:
     its body, generated under {!method_scope} and the head {!method_head}
-    decided. *)
+    decided, which it must reproduce the plan of. *)
 let gen_single_method name vars ((func_ref, _, ty, this_pos) as candidate) =
   let s = method_scope name vars candidate in
   (* Promotion moves a function into a struct; it does not change what the
      function returns: see {!method_scope}. *)
   with_itree_mode_for ty @@ fun () ->
   let h = method_head vars s in
+  Callable_abi.record (method_plan func_ref s h);
   let func_name = Common.id_of_global Term func_ref in
   let {
     ms_ty = ty;
@@ -887,8 +920,6 @@ let gen_single_method name vars ((func_ref, _, ty, this_pos) as candidate) =
       in
       List.map cast_stmt stmts
   in
-  if h.mh_dropped <> [] then
-    Table.set_phantom_tvars func_ref (List.map (fun (orig_idx, _) -> orig_idx - 1) h.mh_dropped);
   let phantom_name_set =
     List.fold_left (fun s (_, n) -> Id.Set.add n s) Id.Set.empty h.mh_dropped
   in

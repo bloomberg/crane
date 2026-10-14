@@ -2275,13 +2275,35 @@ let prepare_structure s =
     not, and neither is a wrapper module's monadic constant, which no render
     generates at all.  Planning one of those would hand its call sites a head
     other than the one they assume; missing one is reported when it is
-    generated ({!Callable_abi.record}). *)
+    generated ({!Callable_abi.record}).
+
+    A method is planned where its inductive is declared, for each function
+    registered as one ({!Gen_decls.plan_method}): at the variables of an
+    eponymous record's own declaration, which its methods are generated
+    with, and otherwise at those of the inductive's struct. *)
 let plan_callables ?(reversed = false) s =
   let order l = if reversed then List.rev l else l in
+  let analysis = get_structure_analysis () in
   let plans = ref [] in
   let plan ~fixpoint r a t =
     if not (is_any_inline_custom r || Table.is_projection r || is_registered_method r <> None)
     then Option.iter (fun abi -> plans := abi :: !plans) (Gen_decls.plan_function ~fixpoint r a t)
+  in
+  let plan_methods kn ind =
+    Array.iteri
+      (fun i p ->
+        let ind_ref = GlobRef.IndRef (kn, i) in
+        if not (is_custom ind_ref || is_monad ind_ref) then
+          let vars =
+            if List.exists (globref_equal ind_ref) analysis.eponymous_records then p.ip_vars
+            else Common.ind_struct_tparams kn ind p
+          in
+          List.iter
+            (fun ((r, _, _, _) as candidate) ->
+              if not (Table.is_projection r) then
+                plans := Gen_decls.plan_method ind_ref vars candidate :: !plans )
+            (order (Method_registry.get_candidates (get_method_registry ()) ind_ref)) )
+      ind.ind_packets
   in
   (* A monadic constant is generated as a recursive group of one. *)
   let plan_decl ~wrapper = function
@@ -2290,7 +2312,8 @@ let plan_callables ?(reversed = false) s =
     | Dterm (r, a, t) when not (is_typeclass_instance a t) -> plan ~fixpoint:false r a t
     | Dfix fds ->
       List.iter (fun fd -> plan ~fixpoint:true fd.fd_ref fd.fd_body fd.fd_type) (order fds)
-    | Dterm _ | Dind _ | Dtype _ -> ()
+    | Dind (kn, ind) -> plan_methods kn ind
+    | Dterm _ | Dtype _ -> ()
   in
   let declared_inductives mp sel =
     List.concat_map
@@ -2337,7 +2360,6 @@ let plan_callables ?(reversed = false) s =
               List.iter (plan_elem ~wrapper:false) (order sel) ) )
     | MEident _ | MEapply _ | MEfunctor _ -> ()
   in
-  let analysis = get_structure_analysis () in
   let rec all_inductives sel =
     List.concat_map
       (fun (_, se) ->

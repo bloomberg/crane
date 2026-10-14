@@ -564,16 +564,6 @@ val higher_order_projections : unit -> Ref.User.Set.t
 (** Check if reference is higher-order projection. *)
 val is_higher_order_projection : GlobRef.t -> bool
 
-(** Record phantom type variable indices for a function. Phantom tvars are
-    template type parameters that C++ cannot deduce from non-function value
-    parameters. They are removed from the template param list and replaced
-    with [auto] in the generated definition. Call sites must drop the
-    corresponding type arguments. Indices are 1-based (matching Tvar indexing). *)
-val set_phantom_tvars : GlobRef.t -> int list -> unit
-
-(** Get phantom type variable indices for a function (empty if none). *)
-val get_phantom_tvars : GlobRef.t -> int list
-
 (** Add promoted type variable. *)
 val add_promoted_type_var : GlobRef.t -> Names.Id.t -> unit
 

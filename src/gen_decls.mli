@@ -68,6 +68,12 @@ val gen_decl_for_pp_dual : GlobRef.t -> ml_ast -> ml_type -> generated_fun
     function; a constant only where its C++ type is one. *)
 val plan_function : fixpoint:bool -> GlobRef.t -> ml_ast -> ml_type -> Callable_abi.t option
 
+(** [plan_method name vars candidate] is the callable plan of the method
+    made of [candidate] in the inductive [name], whose variables are [vars],
+    as generating it would plan it, without generating its body. *)
+val plan_method :
+  GlobRef.t -> Id.t list -> GlobRef.t * ml_ast * ml_type * int -> Callable_abi.t
+
 (** {2 Inductive Type Generation} *)
 
 (** Generate C++ code for a record type. *)

@@ -33,15 +33,19 @@ type template_parameter = {
   write : write_policy;
 }
 
+type receiver = {dropped : Scheme.Var.t list}
+
 type t = {
   callee : GlobRef.t;
   head : template_parameter list;
   deduced_callables : Param_pos.orig Param_pos.pos list;
+  receiver : receiver option;
   phase : Common.phase;
 }
 
 let callee abi = abi.callee
 let template_head abi = abi.head
+let receiver abi = abi.receiver
 
 (* The [n] for which [spell n] is [name]: the number a generated name
    carries, read back through the function that minted it. *)
@@ -55,10 +59,11 @@ let numbered spell name =
     (int_of_string_opt (String.sub s start (String.length s - start)))
     (fun n -> if String.equal (spell n) s then Some n else None)
 
-let origin_of ?(relaxed = fun _ -> false) ~scheme name =
+let origin_of ?(relaxed = fun _ -> false) ?(renumber = Fun.id) ~scheme name =
   let var =
     Option.bind (Minicpp.tvar_number name) (fun i ->
-        if relaxed i then None else Option.bind scheme (fun s -> Scheme.Var.of_tvar s i) )
+        if relaxed i then None
+        else Option.bind scheme (fun s -> Scheme.Var.of_tvar s (renumber i)) )
   in
   match var with
   | Some v -> From_scheme v
@@ -90,11 +95,12 @@ let mark_phantoms n head =
   in
   go n head
 
-let of_head ?(phantom_prefix = 0) ?relaxed ?(deduced_callables = []) ~callee ~scheme temps =
+let of_head ?(phantom_prefix = 0) ?relaxed ?renumber ?(deduced_callables = []) ?receiver ~callee
+    ~scheme temps =
   let head =
     List.mapi
       (fun position (kind, name) ->
-        let origin = origin_of ?relaxed ~scheme name in
+        let origin = origin_of ?relaxed ?renumber ~scheme name in
         let write =
           match (kind, origin) with
           | Minicpp.TTtypename_default d, _ -> Defaulted d
@@ -104,7 +110,11 @@ let of_head ?(phantom_prefix = 0) ?relaxed ?(deduced_callables = []) ~callee ~sc
         {id = {Template_param.position; name}; origin; kind; write} )
       temps
   in
-  {callee; head = mark_phantoms phantom_prefix head; deduced_callables; phase = Common.get_phase ()}
+  { callee;
+    head = mark_phantoms phantom_prefix head;
+    deduced_callables;
+    receiver;
+    phase = Common.get_phase () }
 
 let deduces_callable_at abi pos = List.exists (Param_pos.equal pos) abi.deduced_callables
 
@@ -156,8 +166,10 @@ let same_head a b =
     | Derived n -> `Derived (Id.to_string n)
   in
   let key p = (Id.to_string (Template_param.name p.id), origin_key p.origin, p.kind, p.write) in
+  let receiver_key r = List.map Scheme.Var.ordinal r.dropped in
   List.equal (fun p q -> key p = key q) a.head b.head
   && List.equal Param_pos.equal a.deduced_callables b.deduced_callables
+  && Option.equal ( = ) (Option.map receiver_key a.receiver) (Option.map receiver_key b.receiver)
 
 let equal a b = GlobRef.UserOrd.equal a.callee b.callee && same_head a b
 
@@ -252,10 +264,23 @@ let foreign ?(instances = 0) ?(higher_kinded = fun _ -> false) ?(kept = fun _ ->
         {id = {Template_param.position; name}; origin; kind; write} )
       (dictionaries @ variables)
   in
-  {callee; head = mark_phantoms phantom_prefix head; deduced_callables = []; phase = Common.get_phase ()}
+  { callee;
+    head = mark_phantoms phantom_prefix head;
+    deduced_callables = [];
+    receiver = None;
+    phase = Common.get_phase () }
 
+(* A method's call is still written as its function's would be, against the
+   conventions of a callee generated nowhere, and printed on its receiver
+   without the variables the receiver carries or the method dropped
+   ({!dropped_positions}). *)
 let plan ?instances ?higher_kinded ?kept ?reachable ?relaxed ?phantom_prefix callee ~scheme =
   match lookup callee with
-  | Some abi -> abi
-  | None ->
+  | Some ({receiver = None; _} as abi) -> abi
+  | Some {receiver = Some _; _} | None ->
     foreign ?instances ?higher_kinded ?kept ?reachable ?relaxed ?phantom_prefix ~callee ~scheme ()
+
+let dropped_positions r =
+  match lookup r with
+  | Some {receiver = Some {dropped}; _} -> List.map (fun v -> Scheme.Var.ordinal v - 1) dropped
+  | _ -> []

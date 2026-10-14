@@ -63,9 +63,21 @@ type template_parameter = {
   write : write_policy;
 }
 
+(** What the plan of a method adds: it is generated as a member of an
+    inductive and called on its receiver, which carries the inductive's own
+    variables. *)
+type receiver = {
+  dropped : Scheme.Var.t list;
+      (** The function's variables the method declares no parameter for: no
+          signature or annotation of it mentions them. *)
+}
+
 type t
 
 val callee : t -> Names.GlobRef.t
+
+(** Where the callee is a method, what its plan says of it as one. *)
+val receiver : t -> receiver option
 
 (** The head, in declaration order. *)
 val template_head : t -> template_parameter list
@@ -76,11 +88,16 @@ val template_head : t -> template_parameter list
     the parameters named for its variables ([T1], [T2], ...) declare; the
     first [phantom_prefix] of those are its leading phantoms.  A variable
     [relaxed] says the declaration relaxed out of its head declares nothing
-    any more: the parameter left at it is [Derived]. *)
+    any more: the parameter left at it is [Derived].  A parameter named for
+    the [k]th variable declares the scheme's [renumber k]th, where a method
+    numbers its own variables after the receiver's, and [receiver] is what
+    the plan of a method adds. *)
 val of_head :
   ?phantom_prefix:int ->
   ?relaxed:(int -> bool) ->
+  ?renumber:(int -> int) ->
   ?deduced_callables:Param_pos.orig Param_pos.pos list ->
+  ?receiver:receiver ->
   callee:Names.GlobRef.t ->
   scheme:Scheme.Id.t option ->
   (Minicpp.template_type * Names.Id.t) list ->
@@ -139,7 +156,10 @@ val foreign :
   unit ->
   t
 
-(** The recorded plan of [callee], or else its {!foreign} one. *)
+(** The recorded plan of [callee], or else its {!foreign} one.  A method's
+    call is still planned against its foreign one: it is written as its
+    function's call would be, then printed on the receiver without the
+    variables the receiver carries or {!dropped_positions}. *)
 val plan :
   ?instances:int ->
   ?higher_kinded:(Scheme.Var.t -> bool) ->
@@ -150,3 +170,8 @@ val plan :
   Names.GlobRef.t ->
   scheme:Scheme.Id.t option ->
   t
+
+(** The places, among the variables of the function [r] was made from, of
+    those the method [r] dropped ({!receiver}); none where [r] is not a
+    planned method. *)
+val dropped_positions : Names.GlobRef.t -> int list

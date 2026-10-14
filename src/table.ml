@@ -1474,21 +1474,6 @@ let set_higher_order_projections s = higher_order_projection_set := s
 let higher_order_projections () = !higher_order_projection_set
 let is_higher_order_projection r = Ref.User.Set.mem r !higher_order_projection_set
 
-(** {2 Phantom type variables table} *)
-
-let phantom_tvars : (int list) Ref.User.Map.t ref = ref Ref.User.Map.empty
-
-let init_phantom_tvars () = phantom_tvars := Ref.User.Map.empty
-
-let () = on_reset init_phantom_tvars
-
-let set_phantom_tvars r indices = phantom_tvars := Ref.User.Map.add r indices !phantom_tvars
-
-let get_phantom_tvars r =
-  match Ref.User.Map.find_opt r !phantom_tvars with
-  | Some indices -> indices
-  | None -> []
-
 (** {2 Table of used axioms} *)
 
 let info_axioms = ref Ref.Can.Set.empty

@@ -6,7 +6,7 @@
 
     Transitional: the plan holds the decisions converted so far -- the kinds
     inductives are emitted as, the kinds of their template parameters, the
-    layout, and every generated function's callable plan.
+    layout, and the callable plan of every generated function and method.
     {!Install_legacy_plan} fills the tables unconverted readers consult. *)
 
 (** Why an inductive is emitted as a kind other than the one extraction
@@ -40,8 +40,8 @@ type t = {
       (** Where each declaration lives and what it is called, decided once
           the template-parameter kinds are installed ({!with_layout}). *)
   callables : Callable_abi.t list;
-      (** The callable plan of each function the unit generates, decided once
-          the layout is installed ({!with_layout}). *)
+      (** The callable plan of each function and method the unit generates,
+          decided once the layout is installed ({!with_layout}). *)
 }
 
 (** [plan facts struc] decides; it writes nothing. *)

@@ -1501,7 +1501,7 @@ and pp_method_call_name n method_name tys =
     | [] -> []
     | _ ->
       let ind_tvar_positions = lookup_method_ind_tvar_positions n in
-      let phantom_positions = Table.get_phantom_tvars n in
+      let phantom_positions = Callable_abi.dropped_positions n in
       List.filteri
         (fun i _ ->
           (not (List.mem i ind_tvar_positions))
