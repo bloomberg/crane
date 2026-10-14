@@ -1484,6 +1484,7 @@ let rec pp_structure_elem ~is_header f = function
           if is_promoted then (
             eponymous_promote_ref := !eponymous_type_ref;
             Option.iter Table.promote_inductive !eponymous_type_ref;
+            Option.iter rendered_promotion !eponymous_type_ref;
             eponymous_deferred := Pp.mt ();
             eponymous_promote_sft := false;
             fun body -> body () )
@@ -2425,6 +2426,47 @@ let plan_names s =
       | Dfix fds -> List.concat_map (fun fd -> name Term fd.fd_ref) fds )
     (declarations s)
 
+(* The inductive the module [mp], of elements [sel], is promoted to where it
+   is rendered outside every struct: its eponymous inductive, neither a record
+   nor a class, where it declares no other inductive and no submodule --
+   the last eponymous packet, as {!pp_structure_elem} reads them, with its
+   block. *)
+let promoted_inductive mp sel =
+  let module_name =
+    String.lowercase_ascii (Table.escape_reserved_struct_name (Common.emitted_module_name mp))
+  in
+  let inductives = List.filter_map (function _, SEdecl (Dind (kn, ind)) -> Some (kn, ind) | _ -> None) sel in
+  if List.exists (function _, SEmodule _ -> true | _ -> false) sel then None
+  else
+    match inductives with
+    | [(kn, ({ind_kind = Standard | Coinductive; _} as ind))] ->
+      List.fold_left
+        (fun found i ->
+          let r = GlobRef.IndRef (kn, i) in
+          if String.equal (String.lowercase_ascii (Common.pp_global_name Type r)) module_name then
+            Some (r, ind)
+          else found )
+        None
+        (List.init (Array.length ind.ind_packets) Fun.id)
+    | _ -> None
+
+(* The implementation enters a module without making it a struct, so every
+   module outside a functor's body is rendered outside every struct there, at
+   whatever depth, and is promoted where {!promoted_inductive} says.  A
+   promotion outlives the rendering that decided it. *)
+let plan_promoted_inductives s =
+  let rec elems parent sel =
+    List.concat_map
+      (fun (l, se) ->
+        match se with
+        | SEmodule {ml_mod_expr = MEstruct (_, sel'); _} ->
+          let mp = MPdot (parent, l) in
+          Option.cata (fun (r, _) -> [r]) [] (promoted_inductive mp sel') @ elems mp sel'
+        | SEdecl _ | SEmodule _ | SEmodtype _ -> [] )
+      sel
+  in
+  List.concat_map (fun (mp, sel) -> elems mp sel) s
+
 let plan_accessors s =
   let accessor ~in_struct ~in_template r b ty =
     if is_any_inline_custom r || Table.is_projection r || is_registered_method r <> None
@@ -2446,18 +2488,10 @@ let plan_accessors s =
      a template where the inductive has parameters: its other definitions
      are written in the template ({!pp_structure_elem}'s promotion). *)
   let promoted_template mp sel =
-    let module_name = String.lowercase_ascii (Common.emitted_module_name mp) in
-    let inductives = List.filter_map (function _, SEdecl (Dind (kn, ind)) -> Some (kn, ind) | _ -> None) sel in
-    (not (List.exists (function _, SEmodule _ -> true | _ -> false) sel))
-    && match inductives with
-       | [(kn, ind)] ->
-         List.exists
-           (fun (i, p) ->
-             String.equal (String.lowercase_ascii (Common.pp_global_name Type (GlobRef.IndRef (kn, i)))) module_name
-             && (match ind.ind_kind with Standard | Coinductive -> true | Record _ | TypeClass _ -> false)
-             && Table.ind_promoted_params kn @ fst (Table.ind_param_vars ind p) <> [] )
-           (List.mapi (fun i p -> (i, p)) (Array.to_list ind.ind_packets))
-       | _ -> false
+    match promoted_inductive mp sel with
+    | Some (GlobRef.IndRef (kn, i), ind) ->
+      Table.ind_promoted_params kn @ fst (Table.ind_param_vars ind ind.ind_packets.(i)) <> []
+    | Some _ | None -> false
   in
   let rec elems ~in_struct ~in_template sel =
     List.concat_map
@@ -2512,10 +2546,13 @@ let plan_nested_structs s =
   let in_unmerged_wrapper r =
     Hashtbl.mem unmerged_wrappers (String.capitalize_ascii (Common.pp_global_name Type r))
   in
-  (* Whether the wrapper is merged, as a reference sees it at the
-     declaration ({!Cpp_names.is_merged_inductive}), which spells the
-     inductive the way the declaration does. *)
-  let merged r = Ref.User.Tbl.mem promoted_inductives r || not (in_unmerged_wrapper r) in
+  (* A struct written inside another is its module's rendering, which demotes
+     the module's inductive while it lasts: none is promoted there.  Whether
+     its wrapper is merged is as a reference sees it at the declaration
+     ({!Cpp_names.is_merged_inductive}), which spells the inductive the way
+     the declaration does. *)
+  let promoted _ = false in
+  let merged r = not (in_unmerged_wrapper r) in
   let inductives ~in_struct ~local kn ind =
     List.concat
       (List.mapi
@@ -2528,7 +2565,7 @@ let plan_nested_structs s =
              | Record _ when Module_plan.is_eponymous_record r -> []
              | _ when Table.is_enum_inductive r ->
                [(enum_declaration_name r, NSref r)]
-             | _ -> [(struct_declaration_name ~merged ~local r, NSref r)] )
+             | _ -> [(struct_declaration_name ~merged ~promoted ~local r, NSref r)] )
          (Array.to_list ind.ind_packets) )
   in
   let rec elems ~in_struct ~local ?(role = fun _ -> None) parent sel =

@@ -956,6 +956,12 @@ let nested_struct_owner_covers r = function
   | NSref r' -> Common.globref_equal r r'
   | NSmodule mp -> ModPath.equal mp (modpath_of_r r)
 
+(** The inductives a module's rendering promoted, under [CRANE_CHECK_IR]:
+    the planned ones must be exactly these. *)
+let rendered_promotions : GlobRef.t list ref = owned_list ~census:false "rendered_promotions"
+
+let rendered_promotion r = if Probe.checking () then rendered_promotions := r :: !rendered_promotions
+
 (** The nested structs the printer printed, under [CRANE_CHECK_IR]: the
     planned ones must be exactly these ({!printed_nested_struct}). *)
 let printed_nested_structs : (string * nested_struct_owner) list ref =

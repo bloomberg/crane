@@ -19,6 +19,7 @@ type representation = {
   field_names : (GlobRef.t * Id.t list) list;
   pointer_fields : (GlobRef.t * string * (int * bool) list) list;
   unmerged_wrappers : string list;
+  promoted_inductives : GlobRef.t list;
   accessors : GlobRef.t list;
   nested_structs : (string * Cpp_state.nested_struct_owner) list;
   instance_promoted_types : (GlobRef.t * (Id.t * Miniml.ml_type) list) list;
@@ -271,7 +272,9 @@ let plan (_ : Program_facts.t) struc =
     inductive_kinds = aligned @ value_use_demotion aligned struc;
     template_kinds = [];
     modules = Module_plan.empty;
-    representation = {names = []; field_names = []; pointer_fields = []; unmerged_wrappers = []; accessors = [];
+    representation = {names = []; field_names = []; pointer_fields = []; unmerged_wrappers = [];
+        promoted_inductives = [];
+        accessors = [];
         nested_structs = [];
         instance_promoted_types = [] };
     callables = [];
@@ -318,6 +321,7 @@ let equal a b =
        (fun (r, c, fs) (r', c', fs') -> GlobRef.UserOrd.equal r r' && String.equal c c' && fs = fs')
        a.representation.pointer_fields b.representation.pointer_fields
   && List.equal String.equal a.representation.unmerged_wrappers b.representation.unmerged_wrappers
+  && List.equal GlobRef.UserOrd.equal a.representation.promoted_inductives b.representation.promoted_inductives
   && List.equal GlobRef.UserOrd.equal a.representation.accessors b.representation.accessors
   && List.equal
        (fun (n, o) (n', o') -> String.equal n n' && Cpp_state.nested_struct_owner_equal o o')

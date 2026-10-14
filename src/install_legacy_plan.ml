@@ -34,6 +34,8 @@ let install_nested_structs =
 let install_instance_promoted_types =
   List.iter (fun (r, bindings) -> Table.add_instance_promoted_types r bindings)
 
+let install_promoted_inductives = List.iter Table.promote_inductive
+
 let install_unmerged_wrappers =
   List.iter (fun name -> Hashtbl.replace Cpp_state.unmerged_wrappers name ())
 
@@ -85,6 +87,19 @@ let check_installed (facts : Program_facts.t) (plan : Target_plan.t) =
     let mem (n, o) l =
       List.exists (fun (n', o') -> String.equal n n' && Cpp_state.nested_struct_owner_equal o o') l
     in
+    let promoted = plan.representation.promoted_inductives
+    and rendered = !Cpp_state.rendered_promotions in
+    let has r l = List.exists (Names.GlobRef.UserOrd.equal r) l in
+    List.iter
+      (fun r ->
+        if not (has r promoted) then
+          fail ("promoted inductives: rendered but not planned " ^ Pp.string_of_ppcmds (Names.GlobRef.print r)) )
+      rendered;
+    List.iter
+      (fun r ->
+        if not (has r rendered) then
+          fail ("promoted inductives: planned but not rendered " ^ Pp.string_of_ppcmds (Names.GlobRef.print r)) )
+      promoted;
     let planned = plan.representation.nested_structs
     and printed = !Cpp_state.printed_nested_structs in
     List.iter

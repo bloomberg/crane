@@ -37,6 +37,10 @@ val install_nested_structs : (string * Cpp_state.nested_struct_owner) list -> un
 val install_instance_promoted_types :
   (Names.GlobRef.t * (Names.Id.t * Miniml.ml_type) list) list -> unit
 
+(** [install_promoted_inductives inductives] promotes the inductives, as
+    {!Target_plan.representation} holds them. *)
+val install_promoted_inductives : Names.GlobRef.t list -> unit
+
 (** [install_unmerged_wrappers names] installs the wrapper structs that hold
     declarations, as {!Target_plan.representation} holds them. *)
 val install_unmerged_wrappers : string list -> unit

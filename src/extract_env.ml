@@ -1000,6 +1000,7 @@ let plan_names = "plan_names"
 let plan_field_names = "plan_field_names"
 let plan_pointer_fields = "plan_pointer_fields"
 let plan_unmerged_wrappers = "plan_unmerged_wrappers"
+let plan_promoted_inductives = "plan_promoted_inductives"
 let plan_accessors = "plan_accessors"
 let plan_nested_structs = "plan_nested_structs"
 let plan_instance_promoted_types = "plan_instance_promoted_types"
@@ -1012,6 +1013,7 @@ let layout_pass_names =
     plan_field_names;
     plan_pointer_fields;
     plan_unmerged_wrappers;
+    plan_promoted_inductives;
     plan_accessors;
     plan_nested_structs;
     plan_instance_promoted_types;
@@ -1047,6 +1049,9 @@ let plan_layout struc =
   Pipeline_trace.event "layout" plan_unmerged_wrappers;
   let unmerged_wrappers = Cpp.plan_unmerged_wrappers () in
   Install_legacy_plan.install_unmerged_wrappers unmerged_wrappers;
+  Pipeline_trace.event "layout" plan_promoted_inductives;
+  let promoted_inductives = Cpp.plan_promoted_inductives struc in
+  Install_legacy_plan.install_promoted_inductives promoted_inductives;
   Pipeline_trace.event "layout" plan_accessors;
   let accessors = Cpp.plan_accessors struc in
   Install_legacy_plan.install_accessors accessors;
@@ -1070,6 +1075,7 @@ let plan_layout struc =
       field_names;
       pointer_fields;
       unmerged_wrappers;
+      promoted_inductives;
       accessors;
       nested_structs;
       instance_promoted_types },

@@ -378,6 +378,13 @@ type nested_struct_owner =
     of the same name. Cleared by [reset_cpp_state]. *)
 val nested_struct_names : (string, nested_struct_owner list) Hashtbl.t
 
+(** The inductives a module's rendering promoted, under [CRANE_CHECK_IR]. *)
+val rendered_promotions : Names.GlobRef.t list ref
+
+(** Record that a module's rendering promoted the inductive, under
+    [CRANE_CHECK_IR]: the planned ones must be exactly the rendered ones. *)
+val rendered_promotion : Names.GlobRef.t -> unit
+
 (** The same owner. *)
 val nested_struct_owner_equal : nested_struct_owner -> nested_struct_owner -> bool
 

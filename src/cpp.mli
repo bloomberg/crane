@@ -55,6 +55,12 @@ val plan_names : Miniml.ml_structure -> (Names.GlobRef.t * string) list
     constructors' names are. *)
 val plan_field_names : Miniml.ml_structure -> (Names.GlobRef.t * Names.Id.t list) list
 
+(** The inductives promoted to their eponymous module's struct, which the
+    module's struct then is ({!Table.promote_inductive}): those of the
+    modules outside a functor's body, which the implementation renders
+    outside every struct. *)
+val plan_promoted_inductives : Miniml.ml_structure -> Names.GlobRef.t list
+
 (** The constants emitted as an accessor function returning a function-local
     static (a Meyers singleton), which a use spells as a call: one written in
     a template -- a functor's body, or a module promoted to its eponymous

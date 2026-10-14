@@ -42,6 +42,8 @@ type representation = {
   unmerged_wrappers : string list;
       (** The wrapper structs that hold declarations, and so are not merged
           with their eponymous inductive's struct. *)
+  promoted_inductives : Names.GlobRef.t list;
+      (** The inductives promoted to their eponymous module's struct. *)
   accessors : Names.GlobRef.t list;
       (** The constants emitted as accessor functions, which a use calls. *)
   nested_structs : (string * Cpp_state.nested_struct_owner) list;
