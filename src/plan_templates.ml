@@ -4,9 +4,11 @@
 (** The template heads of generated declarations: which parameters are
     template-template parameters and at what arity, which applications a
     head takes back off, which defaults a parameter no signature mentions
-    gets, and which parameters are phantom.  Decided while a declaration is
-    generated, from its types; {!Gen_decls} asks, and the printer writes what
-    the head says. *)
+    gets, and which parameters are phantom.  Decided from a declaration's
+    types and signature, before anything is rendered -- the target plan's
+    template-parameter kinds and callable plans -- and again as the
+    declaration is generated, which must agree; {!Gen_decls} asks, and the
+    printer writes what the head says. *)
 
 open Miniml
 open Minicpp
