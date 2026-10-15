@@ -279,13 +279,17 @@ and walk_type lex ty =
    annotation with the declaration's type when it generates the head; an
    annotation that is still a bare metavariable is solved to the declared
    type there, so that is the type read here, without solving anything.  The
-   lambdas bind the declaration's outermost domains; any it lacks are
-   eta-expanded innermost. *)
+   lambdas bind the declaration's outermost domains; a body short of the
+   rest is generated eta-expanded, applied to a parameter at each of them
+   that is not erased ({!Gen_functions.dfun_body_scope}), and that
+   application is what is elaborated: a definition that is another
+   function, [add := Z.add], calls it. *)
 let declaration ty body =
   let ty = Mlutil.type_simpl ty in
   let params, body = collect_typed_lams ty body in
   let doms = List.rev (Ml_type_util.ml_domains ty) in
-  let declared = List.filteri (fun i _ -> i >= List.length doms - List.length params) doms in
+  let n_missing = max 0 (List.length doms - List.length params) in
+  let declared = List.skipn n_missing doms in
   let parameter (x, body_ty) sig_ty =
     let body_ty =
       match resolve_tmeta body_ty with Tmeta {contents = None} -> sig_ty | t -> t
@@ -293,8 +297,25 @@ let declaration ty body =
     let ty = reconcile_parameter_type body_ty sig_ty in
     binder (parameter_role ty) (x, ty)
   in
+  let missing =
+    List.mapi
+      (fun i t -> binder (parameter_role t) (Id (Common.eta_param_id (n_missing - 1 - i)), t))
+      (List.firstn n_missing doms)
+  in
+  let body =
+    match body with
+    | (MLaxiom _ | MLexn _) as b -> b
+    | b ->
+      let args =
+        List.rev
+          (List.filter_map
+             (fun (i, t) -> if erased_by_extraction t then None else Some (MLrel (i + 1)))
+             (List.mapi (fun i t -> (i, t)) (List.firstn n_missing doms)) )
+      in
+      Mlutil.apply_eta_args (Mlutil.ast_lift n_missing b) args
+  in
   walk_type Lexenv.empty ty;
-  walk (Lexenv.push (List.map2 parameter params declared) Lexenv.empty) body
+  walk (Lexenv.push missing (Lexenv.push (List.map2 parameter params declared) Lexenv.empty)) body
 
 let structure struc =
   Calls.reset planned;
