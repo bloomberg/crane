@@ -80,6 +80,9 @@ type t = {
   callables : Callable_abi.t list;
       (** The callable plan of each function and method the unit generates,
           decided once the layout is installed ({!with_layout}). *)
+  instance_methods : (Names.GlobRef.t * (Names.Id.t * Callable_abi.t) list) list;
+      (** The callable plan of each method of each instance's struct, by
+          name, decided with the callable plans. *)
   assumed_callables : (Names.GlobRef.t * Param_pos.orig Param_pos.pos list) list;
       (** For each function of the unit that has no callable plan -- a
           custom mapping's, a projection's -- the declared positions of the
@@ -99,12 +102,18 @@ val with_layout :
   t ->
   Module_plan.t ->
   representation ->
-  Callable_abi.t list ->
+  Callable_abi.t list * (Names.GlobRef.t * (Names.Id.t * Callable_abi.t) list) list ->
   (Names.GlobRef.t * Param_pos.orig Param_pos.pos list) list ->
   t
 
 (** The same callable plans, whatever order they were planned in. *)
 val same_callables : Callable_abi.t list -> Callable_abi.t list -> bool
+
+(** {!same_callables} for the plans of instances' methods. *)
+val same_instance_methods :
+  (Names.GlobRef.t * (Names.Id.t * Callable_abi.t) list) list ->
+  (Names.GlobRef.t * (Names.Id.t * Callable_abi.t) list) list ->
+  bool
 
 (** The kind decided for [block], if any. *)
 val kind_of : t -> Names.MutInd.t -> Miniml.inductive_kind option

@@ -35,6 +35,7 @@ type t = {
   modules : Module_plan.t;
   representation : representation;
   callables : Callable_abi.t list;
+  instance_methods : (GlobRef.t * (Id.t * Callable_abi.t) list) list;
   assumed_callables : (GlobRef.t * Param_pos.orig Param_pos.pos list) list;
 }
 
@@ -282,12 +283,23 @@ let plan (_ : Program_facts.t) struc =
         scopes = [];
         instance_promoted_types = [] };
     callables = [];
+    instance_methods = [];
     assumed_callables = [] }
 
 let with_template_kinds t template_kinds = {t with template_kinds}
 
-let with_layout t modules representation callables assumed_callables =
-  {t with modules; representation; callables; assumed_callables}
+let with_layout t modules representation (callables, instance_methods) assumed_callables =
+  {t with modules; representation; callables; instance_methods; assumed_callables}
+
+let same_instance_methods a b =
+  List.length a = List.length b
+  && List.for_all
+       (fun (r, ms) ->
+         match List.find_opt (fun (r', _) -> GlobRef.UserOrd.equal r r') b with
+         | Some (_, ms') ->
+           List.equal (fun (n, abi) (n', abi') -> Id.equal n n' && Callable_abi.equal abi abi') ms ms'
+         | None -> false )
+       a
 
 let same_callables a b =
   List.length a = List.length b
@@ -343,6 +355,7 @@ let equal a b =
          && List.equal (fun (v, t) (v', t') -> Id.equal v v' && Mlutil.eq_ml_type t t') bs bs' )
        a.representation.instance_promoted_types b.representation.instance_promoted_types
   && same_callables a.callables b.callables
+  && same_instance_methods a.instance_methods b.instance_methods
   && List.equal
        (fun (r, ps) (r', ps') -> GlobRef.UserOrd.equal r r' && List.equal Param_pos.equal ps ps')
        a.assumed_callables b.assumed_callables

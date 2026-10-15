@@ -144,10 +144,18 @@ val gen_record_methods :
     come back already converted and resolved, because they are only correct in
     the promoted-variable scope of the instance they were read in. *)
 val gen_instance_struct :
+  ?bodies:bool ->
   GlobRef.t ->
   ml_ast ->
   ml_type ->
   cpp_decl option * GlobRef.t option * cpp_type list
+
+(** [plan_instance_methods ~finish r b ty] is the callable plan of each
+    method of the instance [r] -- of body [b] and type [ty] -- by the method's
+    name: the head {!gen_instance_struct} declares it with, after [finish],
+    without generating its body. *)
+val plan_instance_methods :
+  finish:(cpp_decl -> cpp_decl) -> GlobRef.t -> ml_ast -> ml_type -> (Id.t * Callable_abi.t) list
 
 (** [gen_type_alias r vars ot] is the [using] declaration for a type alias.
 

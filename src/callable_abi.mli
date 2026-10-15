@@ -166,6 +166,11 @@ val of_head :
   (Minicpp.template_type * Names.Id.t) list ->
   t
 
+(** The plan of the method [mf] of the struct of [instance]: its head, its
+    parameters' types and its return type.  The method has no global of its
+    own, so the plan's callee is the instance. *)
+val of_instance_method : instance:Names.GlobRef.t -> Minicpp.method_field -> t
+
 (** Whether the value parameter at the declared position [pos] is a callable
     the head deduces as an [F &&]: the callee then calls it at its own
     instantiation.  None is, in a foreign plan. *)
@@ -200,6 +205,16 @@ val check : t -> unit
 
 (** The installed plan of a declaration. *)
 val lookup : Names.GlobRef.t -> t option
+
+(** [install_instance_methods planned] makes [planned] the plans of the unit's
+    instance structs' methods: for each instance, each method's by name. *)
+val install_instance_methods : (Names.GlobRef.t * (Names.Id.t * t) list) list -> unit
+
+(** The installed plan of the method [name] of [instance]'s struct. *)
+val instance_method : instance:Names.GlobRef.t -> Names.Id.t -> t option
+
+(** {!check} for the method [name] of [instance]'s struct. *)
+val check_instance_method : instance:Names.GlobRef.t -> Names.Id.t -> t -> unit
 
 (** Whether a call to [r] passes the callable it declares at [pos] to a
     deduced [F &&]: as [r]'s plan says ({!deduces_callable_at}), or where it

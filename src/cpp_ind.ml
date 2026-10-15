@@ -593,11 +593,48 @@ let ind_header_decls kn ind =
     only worth emitting for a ground instance.  Both declarations go to
     namespace scope; an instance declared inside a module is lifted out of the
     module's struct rather than emitted as a member of it. *)
+let finish_instance_struct = Plan_templates.deapply_plain_struct_tvars
+
+let plan_instance_methods r a t =
+  Gen_decls.plan_instance_methods ~finish:finish_instance_struct r a t
+
+(* Each method of the struct of the instance [r] declared with the head its
+   plan gives it, which was made before anything was generated; under
+   [CRANE_CHECK_IR] the head it was generated with is checked against it. *)
+let planned_methods r decl =
+  let planned mf =
+    if Probe.checking () then
+      Callable_abi.check_instance_method ~instance:r mf.mf_name
+        (Callable_abi.of_instance_method ~instance:r mf);
+    match Callable_abi.instance_method ~instance:r mf.mf_name with
+    | Some abi -> (
+      match Callable_abi.receiver abi with
+      | Some {params; ret; _} when List.length params = List.length mf.mf_params ->
+        { mf with
+          mf_tparams = Callable_abi.declared_head abi;
+          mf_ret_type = ret;
+          mf_params = List.map2 (fun (id, _) ty -> (id, ty)) mf.mf_params params }
+      | Some _ | None -> mf )
+    | None -> mf
+  in
+  let rec on_decl = function
+    | Dstruct ds ->
+      Dstruct
+        { ds with
+          ds_fields =
+            List.map
+              (function Fmethod mf, vis, tag -> (Fmethod (planned mf), vis, tag) | f -> f)
+              ds.ds_fields }
+    | Dtemplate (temps, c, d) -> Dtemplate (temps, c, on_decl d)
+    | d -> d
+  in
+  on_decl decl
+
 let instance_decls r a t =
   let ds_opt, class_ref_opt, concept_args =
     Gen_decls.gen_instance_struct r a t
   in
-  let ds_opt = Option.map Plan_templates.deapply_plain_struct_tvars ds_opt in
+  let ds_opt = Option.map (fun d -> planned_methods r (finish_instance_struct d)) ds_opt in
   let struct_decl =
     match ds_opt with
     | Some ds -> [(empty_env (), ds)]

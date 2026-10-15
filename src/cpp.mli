@@ -37,8 +37,12 @@ val prepare_structure : Miniml.ml_structure -> Module_plan.t
     order of the unit's modules and declarations, or the reverse if
     [reversed]; planned once the plan {!prepare_structure} returns is
     installed, and before anything is rendered.  A function no render generates -- a method, a projection, an
-    inline custom -- has none. *)
-val plan_callables : ?reversed:bool -> Miniml.ml_structure -> Callable_abi.t list
+    inline custom -- has none.  With them, the plans of each instance's
+    struct's methods, by name. *)
+val plan_callables :
+  ?reversed:bool ->
+  Miniml.ml_structure ->
+  Callable_abi.t list * (Names.GlobRef.t * (Names.Id.t * Callable_abi.t) list) list
 
 (** The C++ name of each global the unit declares, a functor's body
     included, decided in declaration order ({!Common.pp_global_name}): an

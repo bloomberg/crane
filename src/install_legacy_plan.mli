@@ -61,6 +61,11 @@ val install_unmerged_wrappers : string list -> unit
 val install_callables :
   Callable_abi.t list -> (Names.GlobRef.t * Param_pos.orig Param_pos.pos list) list -> unit
 
+(** [install_instance_methods planned] installs the plans of the instances'
+    methods, as {!Target_plan.instance_methods} holds them
+    ({!Callable_abi.install_instance_methods}). *)
+val install_instance_methods : (Names.GlobRef.t * (Names.Id.t * Callable_abi.t) list) list -> unit
+
 (** Under [CRANE_CHECK_IR], fail unless every table {!install},
     {!install_template_kinds}, {!install_modules} and {!install_callables}
     filled still answers what the values say.  A census sees an entry added; this sees one

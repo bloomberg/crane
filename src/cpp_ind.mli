@@ -69,6 +69,11 @@ val file_scope_erased_aliases : deferred
 val instance_decls :
   Names.GlobRef.t -> Miniml.ml_ast -> Miniml.ml_type -> generated
 
+(** The callable plan of each method of the instance's struct, by name: the
+    head {!instance_decls} declares it with, planned without a body. *)
+val plan_instance_methods :
+  Names.GlobRef.t -> Miniml.ml_ast -> Miniml.ml_type -> (Names.Id.t * Callable_abi.t) list
+
 (** [generated_once ?on_reuse node gen] is [gen ()], except that the header
     pass reuses what the implementation pass generated from the physical
     MiniML node [node] in the same render context and module -- emission

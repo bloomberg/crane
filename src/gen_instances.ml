@@ -71,9 +71,13 @@ let instance_promoted_types name body ty =
 
    Returns: (struct_decl option, class_ref option, type_args)
    The class_ref and type_args are used to generate static_assert in cpp.ml *)
-let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
+let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
     cpp_decl option * GlobRef.t option * cpp_type list =
   let instance_ref = name in
+  (* Without bodies the methods are their heads alone: what planning reads
+     ({!plan_instance_methods}), decided by the very code that generates
+     them. *)
+  let gen_stmts env k e = if bodies then gen_stmts env k e else [] in
   let inner_ty, inner_body, tc_temps, lam_params = instance_layers ty body in
   (* Collect type variables from the inner return type's type args. For
      parameterized instances like numOption : Numeric (option A), the return
@@ -445,7 +449,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
           in
           let cpp_params, ret_ty, body_stmts, tc_tparams =
             with_cpp_return_type (Some method_ret_ty) @@ fun () ->
-            begin_body ~owner:name ();
+            if bodies then begin_body ~owner:name ();
             if List.for_all (fun b -> b.mb_kind = `Erased) binders then
               (* No lambdas the accessor can take its parameters from -- either
                  a function reference that needs eta-expansion, or a
@@ -1002,6 +1006,23 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
         concept_args class_ref type_args )
     | _ -> (None, Some class_ref, concept_args class_ref type_args) )
   | _ -> (None, None, [])
+
+(** The callable plan of each method of the instance [name] -- [body] of
+    type [ty] -- by the method's name, as generating its struct declares it,
+    without generating a body: the struct's head is planned with the other
+    callables, before anything is rendered.  [finish] is what becomes of the
+    struct before it is written ({!Cpp_ind.instance_struct}). *)
+let plan_instance_methods ~finish name body ty =
+  let rec methods = function
+    | Dstruct ds ->
+      List.filter_map (function Fmethod mf, _, _ -> Some mf | _ -> None) ds.ds_fields
+    | Dtemplate (_, _, d) -> methods d
+    | _ -> []
+  in
+  match gen_instance_struct ~bodies:false name body ty with
+  | Some decl, _, _ ->
+    List.map (fun mf -> (mf.mf_name, Callable_abi.of_instance_method ~instance:name mf)) (methods (finish decl))
+  | None, _, _ -> []
 
 (** Check if a term is a type class instance (constructs a type class record) *)
 let is_typeclass_instance (_body : ml_ast) (ty : ml_type) : bool =

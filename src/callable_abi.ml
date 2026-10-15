@@ -164,6 +164,19 @@ let of_head ?omitted ?(phantom_prefix = 0) ?relaxed ?renumber ?(deduced_callable
 
 let passing abi = abi.passing
 
+(* A method of an instance's struct belongs to the instance: it has no
+   global of its own, and no scheme -- its variables are the method's own
+   quantifiers and the class-typed arguments it takes, all named. *)
+let of_instance_method ~instance (mf : Minicpp.method_field) =
+  of_head ~callee:instance ~scheme:None
+    ~receiver:
+      { dropped = [];
+        dropped_names = [];
+        params = List.map snd mf.mf_params;
+        ret = mf.mf_ret_type;
+        return_only = [] }
+    mf.mf_tparams
+
 let deduces_callable_at abi pos = List.exists (Param_pos.equal pos) abi.deduced_callables
 
 let parameter_of_var abi v =
@@ -296,6 +309,31 @@ let install callables assume =
   assumed := List.fold_left (fun m (r, ps) -> Ref.User.Map.add r ps m) Ref.User.Map.empty assume
 
 let lookup r = GlobRef.Map_env.find_opt r !plans
+
+(* The methods of each instance's struct, by name. *)
+let instance_methods : (Id.t * t) list Ref.User.Map.t ref = State.cell State.Extraction Ref.User.Map.empty
+
+let install_instance_methods planned =
+  instance_methods :=
+    List.fold_left
+      (fun m (instance, methods) ->
+        List.iter (fun (_, abi) -> validated abi) methods;
+        Ref.User.Map.add instance methods m )
+      Ref.User.Map.empty planned
+
+let instance_method ~instance name =
+  Option.bind (Ref.User.Map.find_opt instance !instance_methods) (fun methods ->
+      List.find_map (fun (n, abi) -> if Id.equal n name then Some abi else None) methods )
+
+let check_instance_method ~instance name abi =
+  validated abi;
+  match instance_method ~instance name with
+  | Some old -> reproduces old abi
+  | None ->
+    Probe.violation "callable ABI"
+      Pp.(
+        str "the method " ++ Id.print name ++ str " of " ++ GlobRef.print instance
+        ++ str " was generated with no plan: planning the callables missed it" )
 
 let check abi =
   validated abi;

@@ -2245,6 +2245,9 @@ let prepare_structure s =
     other than the one they assume; missing one is reported when it is
     generated ({!Callable_abi.check}).
 
+    An instance's struct is planned beside, each of its methods by name
+    ({!Cpp_ind.plan_instance_methods}).
+
     A method is planned where its inductive is declared, for each function
     registered as one ({!Gen_decls.plan_method}): at the variables of an
     eponymous record's own declaration, which its methods are generated
@@ -2253,6 +2256,7 @@ let plan_callables ?(reversed = false) s =
   let order l = if reversed then List.rev l else l in
   let analysis = get_structure_analysis () in
   let plans = ref [] in
+  let instance_plans = ref [] in
   let plan ~fixpoint r a t =
     if not (is_any_inline_custom r || Table.is_projection r || is_registered_method r <> None)
     then Option.iter (fun abi -> plans := abi :: !plans) (Gen_decls.plan_function ~fixpoint r a t)
@@ -2278,10 +2282,11 @@ let plan_callables ?(reversed = false) s =
     | Dterm (r, a, (Tglob (ty, _, _) as t)) when is_monad ty ->
       if not wrapper then plan ~fixpoint:true r a t
     | Dterm (r, a, t) when not (is_typeclass_instance a t) -> plan ~fixpoint:false r a t
+    | Dterm (r, a, t) -> instance_plans := (r, Cpp_ind.plan_instance_methods r a t) :: !instance_plans
     | Dfix fds ->
       List.iter (fun fd -> plan ~fixpoint:true fd.fd_ref fd.fd_body fd.fd_type) (order fds)
     | Dind (kn, ind) -> plan_methods kn ind
-    | Dterm _ | Dtype _ -> ()
+    | Dtype _ -> ()
   in
   let declared_inductives mp sel =
     List.concat_map
@@ -2361,7 +2366,7 @@ let plan_callables ?(reversed = false) s =
               if mi.wrapper_name = None then
                 in_module mi.modpath (fun () -> List.iter (plan_elem ~wrapper:false) (order mi.sels)) )
             (order analysis.sorted_modules) ) );
-  List.rev !plans
+  (List.rev !plans, List.rev !instance_plans)
 
 (* The declarations of [s], a functor's body's among them, in order. *)
 let declarations s =

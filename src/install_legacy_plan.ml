@@ -27,6 +27,7 @@ let install_template_kinds (plan : Target_plan.t) =
 let install_modules = Module_plan.install
 
 let install_callables = Callable_abi.install
+let install_instance_methods = Callable_abi.install_instance_methods
 
 let install_pointer_fields = Loopify_analysis.install_ctor_ptr_fields
 
@@ -122,5 +123,15 @@ let check_installed (facts : Program_facts.t) (plan : Target_plan.t) =
       (fun abi ->
         if not (Option.equal Callable_abi.equal (Callable_abi.lookup (Callable_abi.callee abi)) (Some abi))
         then fail "callable plans" )
-      plan.callables
+      plan.callables;
+    List.iter
+      (fun (instance, methods) ->
+        List.iter
+          (fun (name, abi) ->
+            if
+              not
+                (Option.equal Callable_abi.equal (Callable_abi.instance_method ~instance name) (Some abi))
+            then fail "instance method plans" )
+          methods )
+      plan.instance_methods
   end

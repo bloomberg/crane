@@ -1075,14 +1075,19 @@ let plan_layout struc =
   let instance_promoted_types = Cpp.plan_instance_promoted_types struc in
   Install_legacy_plan.install_instance_promoted_types instance_promoted_types;
   Pipeline_trace.event "layout" plan_callables;
-  let callables = Cpp.plan_callables struc in
+  let ((callables, instance_methods) as planned) = Cpp.plan_callables struc in
   if
     Sys.getenv_opt "CRANE_CHECK_IR" <> None
-    && not (Target_plan.same_callables callables (Cpp.plan_callables ~reversed:true struc))
+    &&
+    let callables', instance_methods' = Cpp.plan_callables ~reversed:true struc in
+    not
+      ( Target_plan.same_callables callables callables'
+      && Target_plan.same_instance_methods instance_methods instance_methods' )
   then CErrors.anomaly Pp.(str "Crane: planning the callables in reverse order decided differently.");
   let assumed = Translation_calls.assumed_callables struc callables in
   Pipeline_trace.event "layout" install_callables;
   Install_legacy_plan.install_callables callables assumed;
+  Install_legacy_plan.install_instance_methods instance_methods;
   ( modules,
     { Target_plan.module_names;
       names;
@@ -1095,7 +1100,7 @@ let plan_layout struc =
       nested_structs;
       scopes;
       instance_promoted_types },
-    callables,
+    planned,
     assumed )
 
 (** Under [CRANE_TRACE_PIPELINE], report what the tables gained between
